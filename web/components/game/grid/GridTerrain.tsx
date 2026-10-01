@@ -31,30 +31,34 @@ import {
   LEVEL_STEP,
   CLIFF_LEVELS,
   WATER_DROP,
+  LATTICE,
+  OVERLAY_SURFACES,
+  NATURAL_SURFACES,
+  NATURAL_EDGE,
+  DIR_OFFSETS,
   listChunks,
   levelAt,
   surfaceAt,
   isVoid,
-  isRiver,
+  isWater,
   isRamp,
   rampRun,
   inBounds,
   cellToWorldX,
   cellToWorldZ,
   needsCliff,
-  cellHeightRange,
-  ORTHOGONAL,
-  waterEdges,
   FRINGE_DROP,
   heightField,
-  sampleHeightField,
+  clampToCell,
+  beachDropAt,
   shoreSdf,
   sampleShore,
-  easedCellOutline,
-  isLandCell,
-  type LayerTest,
+  terrainOf,
+  cellPieces,
+  latticeAt,
+  overlayAlpha,
+  type ShoreSdf,
 } from "@/lib/game/grid";
-import { createSurfaceBlend } from "@/lib/game/surfaceBlend";
 import { terrainMaterial, setShoreField } from "./terrainMaterials";
 import { TUNING_DEFAULTS } from "@/lib/game/tuning";
 import { bedDepth } from "@/lib/game/waterShader";
@@ -70,17 +74,18 @@ const SURFACE_COLOR: Record<number, string> = {
   [Surface.River]: "#568CB2",
 };
 
-/** Surfaces that paint over the grass base, in the order they stack. */
-const OVERLAY_SURFACES = [
-  Surface.Sand,
-  Surface.Soil,
-  Surface.Stone,
-  Surface.Wood,
-  Surface.Brick,
-];
-
-/** Lift per overlay so it wins the depth test against the base without z-fighting. */
-const OVERLAY_LIFT = 0.004;
+/**
+ * Lift per overlay above the ground, in stacking order, so each wins the depth
+ * test against what it covers without z-fighting: sand under soil under the
+ * built surfaces, each built one above the last (a plaza meeting a boardwalk).
+ */
+const OVERLAY_LIFT: Record<number, number> = {
+  [Surface.Sand]: 0.004,
+  [Surface.Soil]: 0.008,
+  [Surface.Stone]: 0.012,
+  [Surface.Wood]: 0.014,
+  [Surface.Brick]: 0.016,
+};
 
 /**
  * Render layer for the riverbed. Not a map Surface: nothing authors a bed cell,
@@ -118,12 +123,13 @@ const FRINGE_OVERHANG = 0.06;
 // into hard green/yellow stripes — an ACNH ground texture is a tiling pattern
 // meant to run continuously across the terrain, not a per-tile decal.
 const UV_CELLS_PER_REPEAT = 2;
+const UV = 1 / (UV_CELLS_PER_REPEAT * TILE);
 
 /** A layer's triangles, accumulated flat rather than as 11k BufferGeometries. */
 interface Mesh {
   pos: number[];
   uv: number[];
-  /** Explicit, because banks are sloped and the flat +Y default would flatten them. */
+  /** Explicit, from the height field's own slope, so hills light as hills. */
   nrm: number[];
   idx: number[];
   color: number[];
@@ -131,165 +137,110 @@ interface Mesh {
 
 const emptyMesh = (): Mesh => ({ pos: [], uv: [], nrm: [], idx: [], color: [] });
 
+type Height = (x: number, z: number) => number;
+
 /**
- * Append one cell.
- *
- * Interior cells (nothing to ease) emit the plain two-triangle quad, so the
- * extra geometry stays on boundaries where it does something instead of on all
- * ~11k land cells. Boundary cells emit a centre-fan over the eased outline.
+ * One vertex on a height function: world UVs so neighbouring cells continue
+ * the pattern, and the normal from the surface's own slope (central
+ * differences), so every cell that shares a point agrees on it and a hill
+ * shades as one surface instead of as flat tiles. `color` is optional RGBA.
  */
-function addCell(
-  mesh: Mesh,
-  inLayer: LayerTest,
-  cx: number,
-  cz: number,
-  x: number,
-  y: number,
-  z: number,
-  /** Per-vertex height offset. The seabed uses it; every flat layer omits it. */
-  dip?: (px: number, pz: number) => number,
-  /**
-   * Per-vertex ground height. Supplied in smooth mode so a cell is no longer a
-   * flat quad: four independent corner heights make the surface continuous with
-   * its neighbours, which is the whole mechanism and costs no extra geometry.
-   */
-  heightAt?: (px: number, pz: number) => number,
-  /** Cuts the cell into subdiv x subdiv quads. 1 is the plain single quad. */
-  subdiv = 1,
-  blendAt?: (x: number, z: number) => number
-) {
-  const s = 1 / (UV_CELLS_PER_REPEAT * TILE);
-  const base = mesh.pos.length / 3;
-  const push = (px: number, pz: number) => {
-    const base = heightAt ? heightAt(px, pz) : y;
-    mesh.pos.push(px, dip ? base - dip(px, pz) : base, pz);
-    // UVs from WORLD position so neighbouring cells continue the pattern
-    // instead of each restarting it.
-    mesh.uv.push(px * s, pz * s);
-    mesh.nrm.push(0, 1, 0);
-    if (blendAt) mesh.color.push(1, 1, 1, blendAt(px, pz));
-  };
+function vertex(mesh: Mesh, h: Height, x: number, z: number, lift = 0, color?: readonly number[]) {
+  const e = 0.05;
+  const y = h(x, z), dx = (h(x + e, z) - h(x - e, z)) / (2 * e), dz = (h(x, z + e) - h(x, z - e)) / (2 * e);
+  const l = Math.hypot(dx, 1, dz);
+  mesh.pos.push(x, y + lift, z);
+  mesh.uv.push(x * UV, z * UV);
+  mesh.nrm.push(-dx / l, 1 / l, -dz / l);
+  if (color) mesh.color.push(...color);
+}
 
-  const outline = easedCellOutline(inLayer, cx, cz);
-  if (!outline) {
-    const h = TILE / 2;
-    if (subdiv > 1) {
-      /**
-       * A grid of quads, so a sloping cell curves rather than creasing. Only
-       * used inside a blend; a flat cell gets the single quad below, because
-       * subdividing 9200 flat cells would be 16x the triangles for nothing.
-       */
-      const step = TILE / subdiv;
-      for (let iz = 0; iz <= subdiv; iz++) {
-        for (let ix = 0; ix <= subdiv; ix++) {
-          push(x - h + ix * step, z - h + iz * step);
-        }
-      }
-      const row = subdiv + 1;
-      for (let iz = 0; iz < subdiv; iz++) {
-        for (let ix = 0; ix < subdiv; ix++) {
-          const a = base + iz * row + ix;
-          mesh.idx.push(a, a + row, a + row + 1, a, a + row + 1, a + 1);
-        }
-      }
-      return;
-    }
-    push(x - h, z - h);
-    push(x - h, z + h);
-    push(x + h, z + h);
-    push(x + h, z - h);
-    mesh.idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
-    return;
-  }
-
-  push(x, z);
-  const n = outline.length;
-  const rings = blendAt ? [0.45, 0.7, 1] : [1];
-  for (const radius of rings) for (const [ox, oz] of outline) push(x + ox * radius, z + oz * radius);
-  for (let i = 0; i < n; i++) mesh.idx.push(base, base + 1 + i, base + 1 + ((i + 1) % n));
-  for (let ring = 1; ring < rings.length; ring++) {
-    const inner = base + 1 + (ring - 1) * n, outer = inner + n;
-    for (let i = 0; i < n; i++) {
-      const j = (i + 1) % n;
-      mesh.idx.push(inner + i, outer + i, outer + j, inner + i, outer + j, inner + j);
-    }
+/** Append convex polygons (world XZ, in `cellPieces` order) as fans facing +Y. */
+function addPolygons(mesh: Mesh, polys: readonly number[][][], write: (x: number, z: number) => void) {
+  for (const poly of polys) {
+    const base = mesh.pos.length / 3;
+    for (const [x, z] of poly) write(x, z);
+    for (let i = 1; i < poly.length - 1; i++) mesh.idx.push(base, base + i + 1, base + i);
   }
 }
 
+/** A cell as polygons: one square, or LATTICE x LATTICE squares when its ground curves. */
+function cellSquares(map: IslandMap, cx: number, cz: number, subdiv: number): number[][][] {
+  const x0 = cellToWorldX(map, cx) - TILE / 2, z0 = cellToWorldZ(map, cz) - TILE / 2, step = TILE / subdiv, out: number[][][] = [];
+  for (let j = 0; j < subdiv; j++) for (let i = 0; i < subdiv; i++) {
+    const x = x0 + i * step, z = z0 + j * step;
+    out.push([[x, z], [x + step, z], [x + step, z + step], [x, z + step]]);
+  }
+  return out;
+}
+
 /**
- * Append the grass drape for one land-to-water edge.
+ * Append the grass drape along one stretch of shoreline (a, b).
  *
  * ACNH hangs a strip of alpha-cut grass over every water boundary, and it is
- * what makes the edge read as an edge rather than as the place the cells ran
- * out. The card is vertical, one tile wide, FRINGE_DROP tall, and hangs from
- * the land's own height -- so it reaches past the water surface (only 0.078u
- * below) and dips in.
+ * what makes the edge read as an edge rather than as the place the ground ran
+ * out. The card is vertical, FRINGE_DROP tall, hangs from the ground's own
+ * height and sits FRINGE_OVERHANG outboard, so it reaches past the water surface
+ * (only 0.078u below) and dips in. It follows the organic coast segment by
+ * segment, so it bends with the shore instead of running along cell edges.
  *
- * UVs run along WORLD position on the long axis, so the strip is continuous
- * across adjacent cells instead of restarting its blades at every boundary.
- * The source texture is 1024x32, a 32:1 strip, so one tile takes a 1/6 slice
- * to keep the blades at roughly their authored proportion.
+ * U runs along WORLD position on the segment's main axis, so neighbouring
+ * cards continue the same blades. The source texture is a 32:1 strip, so one
+ * tile takes a 1/6 slice to keep the blades at roughly their authored shape.
  */
-function addFringe(
-  mesh: Mesh,
-  x: number,
-  z: number,
-  topY: number,
-  dx: number,
-  dz: number
-) {
-  const half = TILE / 2;
-  // Along-edge axis is the perpendicular of the outward direction.
-  const ax = dz;
-  const az = dx;
-  const ex = x + dx * (half + FRINGE_OVERHANG);
-  const ez = z + dz * (half + FRINGE_OVERHANG);
-  const bottomY = topY - FRINGE_DROP;
-
+function addFringe(mesh: Mesh, h: Height, a: number[], b: number[], out: [number, number]) {
+  const [ox, oz] = [out[0] * FRINGE_OVERHANG, out[1] * FRINGE_OVERHANG];
+  const along = Math.abs(b[0] - a[0]) >= Math.abs(b[1] - a[1]) ? 0 : 1;
+  const ta = h(a[0], a[1]), tb = h(b[0], b[1]);
+  const pts: [number, number, number, number][] = [
+    [a[0] + ox, ta, a[1] + oz, 0],
+    [b[0] + ox, tb, b[1] + oz, 0],
+    [b[0] + ox, tb - FRINGE_DROP, b[1] + oz, 1],
+    [a[0] + ox, ta - FRINGE_DROP, a[1] + oz, 1],
+  ];
   const base = mesh.pos.length / 3;
-  const pts: [number, number, number][] = [
-    [ex - ax * half, topY, ez - az * half],
-    [ex + ax * half, topY, ez + az * half],
-    [ex + ax * half, bottomY, ez + az * half],
-    [ex - ax * half, bottomY, ez - az * half],
-  ];
-  // World-space U so neighbouring cards continue the same blades.
-  const U = 1 / 6;
-  const uAt = (px: number, pz: number) => (ax !== 0 ? px : pz) * U;
-  const uvs: [number, number][] = [
-    [uAt(pts[0][0], pts[0][2]), 0],
-    [uAt(pts[1][0], pts[1][2]), 0],
-    [uAt(pts[2][0], pts[2][2]), 1],
-    [uAt(pts[3][0], pts[3][2]), 1],
-  ];
-  for (let i = 0; i < 4; i++) {
-    mesh.pos.push(pts[i][0], pts[i][1], pts[i][2]);
-    mesh.uv.push(uvs[i][0], uvs[i][1]);
-    // Face outward over the water. The card is double-sided anyway, but a
-    // correct normal means it catches the key light like the ground it hangs
-    // from rather than going flat.
-    mesh.nrm.push(dx, 0.35, dz);
+  for (const [x, y, z, v] of pts) {
+    mesh.pos.push(x, y, z);
+    mesh.uv.push((along ? z : x) / 6, v);
+    // Face outward over the water, tipped up so it catches the key light like the ground it hangs from.
+    mesh.nrm.push(out[0], 0.35, out[1]);
   }
   mesh.idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
 }
 
 /**
- * Append a ramp: one cell that climbs a full level in `dir`.
+ * The shoreline inside one lattice sub-square of a cell: where the coast field
+ * crosses its edges, as one segment (the common case; a saddle is skipped).
+ */
+function shoreSegments(map: IslandMap, coast: Float32Array, cx: number, cz: number): number[][][] {
+  const S = LATTICE, LW = map.width * S + 1, x0 = map.originX - 0.5, z0 = map.originZ - 0.5, out: number[][][] = [];
+  for (let sk = 0; sk < S; sk++) for (let si = 0; si < S; si++) {
+    const i = cx * S + si, k = cz * S + sk, p = k * LW + i;
+    const c = [[0, 0, coast[p]], [1, 0, coast[p + 1]], [1, 1, coast[p + LW + 1]], [0, 1, coast[p + LW]]];
+    const hits: number[][] = [];
+    for (let e = 0; e < 4; e++) {
+      const [au, av, va] = c[e], [bu, bv, vb] = c[(e + 1) % 4];
+      if (va > 0 === vb > 0) continue;
+      const t = va / (va - vb);
+      hits.push([x0 + (i + au + (bu - au) * t) / S, z0 + (k + av + (bv - av) * t) / S]);
+    }
+    if (hits.length === 2) out.push(hits);
+  }
+  return out;
+}
+
+/**
+ * One tile's slice of a ramp run.
  *
- * The only way to change level on foot now that every drop is a cliff. Stored at
- * the LOWER level, so the low edge sits flush with the ground it leaves and the
- * high edge meets the plateau it joins.
+ * The only way to change level on foot across a cliff. Stored at the LOWER
+ * level, so the low edge sits flush with the ground it leaves and the high edge
+ * meets the plateau it joins. Takes both heights rather than deriving the top
+ * from LEVEL_STEP: a run spans CLIFF_LEVELS across however many tiles it is
+ * long, so each tile carries a fraction of the rise.
  *
  * The cliff outline routes AROUND this cell rather than sealing it, because
  * `sameLevelOrHigher` reports a ramp as the same tier and `dropTo` reports it as
  * no drop. Both live in grid.ts so the geometry and the autotile cannot disagree.
- */
-/**
- * One tile's slice of a ramp run.
- *
- * Takes both heights rather than deriving the top from LEVEL_STEP: a run now
- * spans CLIFF_LEVELS across however many tiles it is long, so each tile carries
- * a fraction of the rise and no tile knows the whole climb.
  */
 function addRamp(
   mesh: Mesh,
@@ -300,7 +251,6 @@ function addRamp(
   dx: number,
   dz: number
 ) {
-  const s = 1 / (UV_CELLS_PER_REPEAT * TILE);
   const half = TILE / 2;
   // Across-slope axis is the perpendicular of the climb.
   const ax = dz;
@@ -327,12 +277,12 @@ function addRamp(
   ];
   for (const [px, py, pz] of pts) {
     mesh.pos.push(px, py, pz);
-    mesh.uv.push(px * s, pz * s);
+    mesh.uv.push(px * UV, pz * UV);
     mesh.nrm.push(nx, ny, nz);
   }
-  // Wind from the cross product against the known normal, the same way addBank
-  // does -- keying on the sign of the direction instead gets two of the four
-  // orientations backfacing, which culls them into a hole.
+  // Wind from the cross product against the known normal: keying on the sign of
+  // the direction instead gets two of the four orientations backfacing, which
+  // culls them into a hole.
   const [a, b, c] = pts;
   const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
   const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
@@ -351,6 +301,169 @@ function build(mesh: Mesh): THREE.BufferGeometry | null {
   g.setIndex(mesh.idx);
   g.computeBoundingSphere();
   return g;
+}
+
+/**
+ * Every chunk's geometry, per render layer. Pure (no React), so the budget and
+ * tests can measure exactly what the game draws.
+ *
+ * THE GROUND IS CLIPPED TO THE COAST. A cell the shoreline crosses is cut into
+ * its lattice sub-squares, each clipped against the coast field (`cellPieces`),
+ * so the land ends on the organic contour the walker and the shore field use,
+ * not on the painted squares. A cell inside the coast is one quad, or a
+ * LATTICE x LATTICE grid where its ground curves (a slope, the beach).
+ *
+ * OVERLAYS FOLLOW THEIR OWN FIELDS. Sand and soil fade into the grass with a
+ * worn edge (per-vertex alpha from their field, `overlayAlpha`); stone, wood and
+ * brick are clipped to their field's 0-crossing, a crisp border with rounded
+ * corners. Each sits OVERLAY_LIFT above the ground on the same height function.
+ */
+export function terrainChunks(map: IslandMap, heights: Float32Array | null, shore: ShoreSdf = shoreSdf(map)): { key: string; surface: number; geometry: THREE.BufferGeometry }[] {
+  const out: { key: string; surface: number; geometry: THREE.BufferGeometry }[] = [];
+  const terrain = terrainOf(map);
+  const { coast } = terrain;
+  const S = LATTICE, LW = map.width * S + 1;
+
+  // How far the bed drops below the surface at a given point. Reads the
+  // SHIPPED tuning, not the live bench value: this is geometry, and rebuilding
+  // 128x128 cells of it on every slider frame would stall the tab. Moving
+  // `bedDepth` or `bedSlope` on the bench changes the colour instantly and the
+  // bed shape on reload.
+  const water = TUNING_DEFAULTS.water;
+  const dipAt = (px: number, pz: number) => Math.max(0.12, bedDepth(sampleShore(shore, px, pz), water));
+
+  /**
+   * The ground a cell draws: the level field clamped to what this cell can
+   * reach (a corner pinned to a cliff top must not drag the low ground beside it
+   * up the wall, see `cellHeightRange`), less the beach.
+   */
+  const groundFor = (cx: number, cz: number): Height => (px, pz) =>
+    (heights ? clampToCell(map, heights, cx, cz, px, pz) : levelAt(map, cx, cz) * LEVEL_STEP) - beachDropAt(map, px, pz);
+
+  /** Does the ground curve inside this cell (a slope or the beach)? Then it gets the finer grid. */
+  const curves = (h: Height, cx: number, cz: number) => {
+    const x = cellToWorldX(map, cx), z = cellToWorldZ(map, cz), y = h(x, z);
+    return [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5], [0, -0.5], [0.5, 0], [0, 0.5], [-0.5, 0]].some(([a, b]) => Math.abs(h(x + a, z + b) - y) > 1e-3);
+  };
+
+  /** The extremes of a lattice field over one cell. */
+  const cellMax = (f: Float32Array, cx: number, cz: number) => {
+    let m = -Infinity;
+    for (let k = cz * S; k <= cz * S + S; k++) for (let i = cx * S; i <= cx * S + S; i++) m = Math.max(m, f[k * LW + i]);
+    return m;
+  };
+  const cellMin = (f: Float32Array, cx: number, cz: number) => {
+    let m = Infinity;
+    for (let k = cz * S; k <= cz * S + S; k++) for (let i = cx * S; i <= cx * S + S; i++) m = Math.min(m, f[k * LW + i]);
+    return m;
+  };
+
+  /** Water surface for a cell the coast crosses: its own level, or the lowest water beside it. */
+  const waterYFor = (cx: number, cz: number) => {
+    if (isWater(surfaceAt(map, cx, cz))) return levelAt(map, cx, cz) * LEVEL_STEP - WATER_DROP;
+    let lowest = Infinity;
+    for (const [dx, dz] of DIR_OFFSETS) if (inBounds(map, cx + dx, cz + dz) && isWater(surfaceAt(map, cx + dx, cz + dz))) lowest = Math.min(lowest, levelAt(map, cx + dx, cz + dz));
+    return (Number.isFinite(lowest) ? lowest : 0) * LEVEL_STEP - WATER_DROP;
+  };
+
+  for (const chunk of listChunks(map)) {
+    const grass = emptyMesh();
+    const river = emptyMesh();
+    const bed = emptyMesh();
+    const fringe = emptyMesh();
+    const ramp = emptyMesh();
+    const overlays = new Map<number, Mesh>();
+
+    for (let cz = chunk.minCellZ; cz <= chunk.maxCellZ; cz++) {
+      for (let cx = chunk.minCellX; cx <= chunk.maxCellX; cx++) {
+        const s = surfaceAt(map, cx, cz);
+        if (isVoid(s)) continue; // legacy open sea: nothing to draw
+        if (needsCliff(map, cx, cz)) continue; // the cliff piece brings its own top
+        const x = cellToWorldX(map, cx);
+        const z = cellToWorldZ(map, cz);
+
+        // A ramp replaces its own ground: the sloped surface IS the cell.
+        if (isRamp(s)) {
+          const run = rampRun(map, cx, cz);
+          if (run) {
+            // This tile's slice of the run, so a two-tile ramp is one
+            // continuous slope rather than two separate one-level ramps.
+            const lowY = (run.base + (run.index / run.length) * run.rise) * LEVEL_STEP;
+            const highY = (run.base + ((run.index + 1) / run.length) * run.rise) * LEVEL_STEP;
+            addRamp(ramp, x, z, lowY, highY, run.dir[0], run.dir[1]);
+            continue;
+          }
+        }
+
+        const h = groundFor(cx, cz);
+        const land = cellPieces(map, cx, cz, [[coast, 1]]);
+
+        // Water wherever the coast crosses the cell or the beach runs down to it, so the
+        // swell can wash up the sand. The bed is clipped to the water side.
+        if (land !== "full" || cellMin(coast, cx, cz) < 0.2) {
+          const waterY = waterYFor(cx, cz);
+          addPolygons(river, cellSquares(map, cx, cz, 1), (px, pz) => vertex(river, () => waterY, px, pz));
+          const wet = cellPieces(map, cx, cz, [[coast, -1]]);
+          // The bed under it, sloping away from the bank. David approved
+          // bathymetry 2026-07-29: the reference colour ramp ends in the
+          // SEABED colour, so there has to be a seabed and it has to get
+          // further away as the water deepens, or the ramp has nothing to
+          // ramp over. Depth comes from `bedDepth`, the same function the
+          // shader mirrors in GLSL.
+          const bedH: Height = (px, pz) => waterY - dipAt(px, pz);
+          addPolygons(bed, wet === "full" ? cellSquares(map, cx, cz, 1) : wet, (px, pz) => vertex(bed, bedH, px, pz));
+        }
+        if (land !== "full" && !land.length) continue;
+
+        const pieces = land === "full" ? cellSquares(map, cx, cz, curves(h, cx, cz) ? S : 1) : land;
+        addPolygons(grass, pieces, (px, pz) => vertex(grass, h, px, pz));
+
+        for (const surface of OVERLAY_SURFACES) {
+          const f = terrain.overlays.get(surface);
+          if (!f) continue;
+          const natural = NATURAL_SURFACES.has(surface);
+          const reach = cellMax(f, cx, cz);
+          if (reach <= (natural ? -NATURAL_EDGE : 0)) continue;
+          const m = overlays.get(surface) ?? emptyMesh();
+          overlays.set(surface, m);
+          const lift = OVERLAY_LIFT[surface];
+          if (natural) {
+            addPolygons(m, pieces, (px, pz) => vertex(m, h, px, pz, lift, [1, 1, 1, overlayAlpha(surface, latticeAt(map, f, px, pz))]));
+          } else {
+            const built = cellPieces(map, cx, cz, [[coast, 1], [f, 1]]);
+            addPolygons(m, built === "full" ? pieces : built, (px, pz) => vertex(m, h, px, pz, lift));
+          }
+        }
+
+        // Grass hanging over the water's edge, along the organic shoreline, wherever the
+        // bank is grass (a beach runs into the water instead).
+        if (land !== "full") {
+          for (const [a, b] of shoreSegments(map, coast, cx, cz)) {
+            const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
+            if (OVERLAY_SURFACES.some((o) => { const f = terrain.overlays.get(o); return f && overlayAlpha(o, latticeAt(map, f, mx, mz)) > 0.5; })) continue;
+            const e = 0.05, gx = latticeAt(map, coast, mx + e, mz) - latticeAt(map, coast, mx - e, mz), gz = latticeAt(map, coast, mx, mz + e) - latticeAt(map, coast, mx, mz - e);
+            const l = Math.hypot(gx, gz) || 1;
+            addFringe(fringe, h, a, b, [-gx / l, -gz / l]);
+          }
+        }
+      }
+    }
+
+    const emit = (surface: number, mesh: Mesh) => {
+      const g = build(mesh);
+      if (g) out.push({ key: `${chunk.chunkX}:${chunk.chunkZ}:${surface}`, surface, geometry: g });
+    };
+    emit(Surface.Grass, grass);
+    emit(RIVER_BED, bed);
+    emit(Surface.River, river);
+    emit(WATER_FRINGE, fringe);
+    emit(RAMP_LAYER, ramp);
+    for (const s of OVERLAY_SURFACES) {
+      const m = overlays.get(s);
+      if (m) emit(s, m);
+    }
+  }
+  return out;
 }
 
 export type TerrainPalette = { grass: string; soil: string; sand: string };
@@ -397,202 +510,11 @@ export default function GridTerrain({ map, field: heights, palette }: { map: Isl
    * that is drawn -- two separate calculations is how a character ends up
    * hovering over a hill.
    */
-  const smooth = useMemo(
-    // Guarded on the constant, not on a URL flag. At CLIFF_LEVELS 1 every level
-    // change is a cliff, so the blur has nothing it is allowed to cross and
-    // every corner keeps its own height -- 20ms of work for an identical result.
-    // The branch stays so raising the constant revives smoothing for free.
-    () => (CLIFF_LEVELS > 1 ? heights ?? heightField(map) : null),
-    [map, heights]
+  const chunks = useMemo(
+    // Guarded on the constant: at CLIFF_LEVELS 1 every level change is a cliff and the blur has nothing to cross.
+    () => terrainChunks(map, CLIFF_LEVELS > 1 ? heights ?? heightField(map) : null, field),
+    [map, heights, field]
   );
-
-  const chunks = useMemo(() => {
-    const out: { key: string; surface: number; geometry: THREE.BufferGeometry }[] = [];
-
-    // ── Layer membership ────────────────────────────────────────
-    // These decide where a corner gets cut, so they are about the SHAPE of the
-    // land, not about which cells we happen to draw. `inGround` deliberately
-    // still counts cliff cells: excluding them would cut the ground away at
-    // the foot of every cliff and open a gap the cliff piece does not cover.
-
-    // How far the bed drops below the surface at a given point. Reads the
-    // SHIPPED tuning, not the live bench value: this is geometry, and rebuilding
-    // 128x128 cells of it on every slider frame would stall the tab. Moving
-    // `bedDepth` or `bedSlope` on the bench changes the colour instantly and the
-    // bed shape on reload.
-    const water = TUNING_DEFAULTS.water;
-    const dipAt = (px: number, pz: number) => Math.max(0.12, bedDepth(sampleShore(field, px, pz), water));
-
-    /**
-     * Per-CELL sampler, clamped to what that cell can legitimately reach.
-     *
-     * Not a single shared function, because the clamp depends on the cell: a
-     * corner on a cliff boundary is pinned to the cliff top, and without the
-     * clamp the low cell beside it samples that corner and rides halfway up the
-     * wall. See `cellHeightRange`.
-     */
-    const groundFor = smooth
-      ? (cx: number, cz: number) => {
-          const range = cellHeightRange(map, cx, cz);
-          if (!range) return (px: number, pz: number) => sampleHeightField(map, smooth, px, pz);
-          const [lo, hi] = range;
-          return (px: number, pz: number) => {
-            const h = sampleHeightField(map, smooth, px, pz);
-            return h < lo ? lo : h > hi ? hi : h;
-          };
-        }
-      : undefined;
-
-    /**
-     * How finely to cut a cell, so a blend curves instead of creasing.
-     *
-     * One quad per cell gives four height samples across a whole blend, and
-     * linear interpolation between them leaves visible facets -- measured second
-     * derivatives of 0.34 and -0.52 across a three-cell rise, which is a crease
-     * you can see. Subdividing only where the ground is actually sloping keeps
-     * the extra triangles off the ~9200 flat cells that do not need them.
-     */
-    const subdivFor = (cx: number, cz: number) => {
-      if (!smooth) return 1;
-      const here = levelAt(map, cx, cz);
-      for (const [dx, dz] of ORTHOGONAL) {
-        const nx = cx + dx;
-        const nz = cz + dz;
-        if (!inBounds(map, nx, nz) || isVoid(surfaceAt(map, nx, nz))) continue;
-        const d = Math.abs(levelAt(map, nx, nz) - here);
-        if (d > 0 && d < CLIFF_LEVELS) return 4; // inside a blend
-      }
-      return 1;
-    };
-
-    const inGround: LayerTest = (cx, cz) => isLandCell(map, cx, cz);
-    const inSurface = (s: number): LayerTest => (cx, cz) =>
-      inBounds(map, cx, cz) && surfaceAt(map, cx, cz) === s;
-
-    const blends = new Map<number, ReturnType<typeof createSurfaceBlend>>([Surface.Sand, Surface.Soil].map((surface) => [surface, createSurfaceBlend(map, surface)]));
-
-    for (const chunk of listChunks(map)) {
-      const grass = emptyMesh();
-      const river = emptyMesh();
-      const bed = emptyMesh();
-      const fringe = emptyMesh();
-      const ramp = emptyMesh();
-      const overlays = new Map<number, Mesh>();
-
-      for (let cz = chunk.minCellZ; cz <= chunk.maxCellZ; cz++) {
-        for (let cx = chunk.minCellX; cx <= chunk.maxCellX; cx++) {
-          const s = surfaceAt(map, cx, cz);
-          if (isVoid(s)) continue; // open sea: no ground, nothing to draw
-          if (needsCliff(map, cx, cz)) continue; // the cliff piece brings its own top
-
-          const x = cellToWorldX(map, cx);
-          const z = cellToWorldZ(map, cz);
-          const y = levelAt(map, cx, cz) * LEVEL_STEP;
-
-          // A ramp replaces its own ground quad: the sloped surface IS the cell.
-          if (isRamp(s)) {
-            const run = rampRun(map, cx, cz);
-            if (run) {
-              // This tile's slice of the run, so a two-tile ramp is one
-              // continuous slope rather than two separate one-level ramps.
-              const lowY = (run.base + (run.index / run.length) * run.rise) * LEVEL_STEP;
-              const highY = (run.base + ((run.index + 1) / run.length) * run.rise) * LEVEL_STEP;
-              addRamp(ramp, x, z, lowY, highY, run.dir[0], run.dir[1]);
-            } else {
-              addCell(grass, inGround, cx, cz, x, y, z, undefined, groundFor?.(cx, cz), subdivFor(cx, cz));
-            }
-            continue;
-          }
-
-          if (isRiver(s)) {
-            // NOT eased, and drawn full-square on purpose: the rounded grass
-            // bank overlaps it from above, so cutting its corners would open a
-            // gap between the two.
-            addCell(river, () => true, cx, cz, x, y - WATER_DROP, z);
-            // The bed under it, sloping away from the bank. David approved
-            // bathymetry 2026-07-29: the reference colour ramp ends in the
-            // SEABED colour, so there has to be a seabed and it has to get
-            // further away as the water deepens, or the ramp has nothing to
-            // ramp over. Depth comes from `bedDepth`, the same function the
-            // shader mirrors in GLSL.
-            addCell(bed, () => true, cx, cz, x, y - WATER_DROP, z, dipAt);
-            continue;
-          }
-
-          addCell(grass, inGround, cx, cz, x, y, z, undefined, groundFor?.(cx, cz), subdivFor(cx, cz));
-
-          // Rounded land corners expose part of this cell. Continue the water
-          // underneath so those cutouts reveal water instead of a dark gap.
-          const shoreEdges = waterEdges(map, cx, cz);
-          if (shoreEdges.length) {
-            const waterY = Math.min(...shoreEdges.map(([dx, dz]) =>
-              levelAt(map, cx + dx, cz + dz) * LEVEL_STEP)) - WATER_DROP;
-            addCell(river, () => true, cx, cz, x, waterY, z);
-            addCell(bed, () => true, cx, cz, x, waterY, z, dipAt);
-          }
-
-          // Walkable step down to a neighbour: a sloped skirt, not a kit
-          // piece. This is the whole visible difference between a bank and a
-          // cliff, and it lives here because it is terrain, not an object.
-          // A one-level drop is BLENDED, not faced. David, 2026-07-30: "the half
-          // steps needs blending, and will be rarely used for island
-          // naturalness, otherwise keep everything either flat or with 1 unit
-          // high cliffs."
-          //
-          // The height field already does exactly that: its blur crosses
-          // anything under CLIFF_LEVELS and treats a full drop as a barrier, so
-          // a one-level change comes out as a soft rise and a two-level change
-          // stays razor sharp for the kit piece. Nothing to draw here -- and the
-          // previous commit drew a vertical face INTO that same slope, which is
-          // the bug this replaces.
-
-          // Grass hanging over a water edge. Without this the river simply
-          // stops where its cells end -- the old world needed RiverBanks and
-          // RiverBankWalls to hide the same seam, and this is the kit's own
-          // answer to it.
-          for (const [dx, dz] of s === Surface.Grass ? shoreEdges : []) {
-            addFringe(fringe, x, z, groundFor ? groundFor(cx, cz)(x, z) : y, dx, dz);
-          }
-
-          if (s !== Surface.Grass) {
-            const m = overlays.get(s) ?? emptyMesh();
-            const blend = blends.get(s);
-            addCell(
-              m,
-              inSurface(s),
-              cx,
-              cz,
-              x,
-              y + OVERLAY_LIFT,
-              z,
-              undefined,
-              groundFor
-                ? ((g) => (px: number, pz: number) => g(px, pz) + OVERLAY_LIFT)(groundFor(cx, cz))
-                : undefined,
-              Math.max(subdivFor(cx, cz), blend?.nearEdge(cx, cz) ? 4 : 1),
-              blend?.sample
-            );
-            overlays.set(s, m);
-          }
-        }
-      }
-
-      const emit = (surface: number, mesh: Mesh) => {
-        const g = build(mesh);
-        if (g) out.push({ key: `${chunk.chunkX}:${chunk.chunkZ}:${surface}`, surface, geometry: g });
-      };
-      emit(Surface.Grass, grass);
-      emit(RIVER_BED, bed);
-      emit(Surface.River, river);
-      emit(WATER_FRINGE, fringe);
-      emit(RAMP_LAYER, ramp);
-      for (const s of OVERLAY_SURFACES) {
-        const m = overlays.get(s);
-        if (m) emit(s, m);
-      }
-    }
-    return out;
-  }, [map, field, smooth]);
 
   // The water reads its distance to the shore from a baked field rather than
   // from anything on the mesh, so this is a one-shot upload, not geometry.
@@ -763,7 +685,8 @@ export default function GridTerrain({ map, field: heights, palette }: { map: Isl
   return (
     <group>
       {chunks.map((c) => (
-        <mesh key={c.key} geometry={c.geometry} material={materials.get(c.surface)} receiveShadow />
+        // Sand then soil, so where a path meets the beach the soil is always the one on top.
+        <mesh key={c.key} geometry={c.geometry} material={materials.get(c.surface)} receiveShadow renderOrder={c.surface === Surface.Sand ? 1 : c.surface === Surface.Soil ? 2 : 0} />
       ))}
     </group>
   );

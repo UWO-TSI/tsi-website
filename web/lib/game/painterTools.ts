@@ -11,7 +11,7 @@
  * every op that turns land into water writes that, and "water" below means
  * River or legacy Void.
  */
-import { CLIFF_LEVELS, MAX_LEVEL, ORTHOGONAL, Surface, inBounds, isRamp, isWater, type IslandMap } from "./grid";
+import { CLIFF_LEVELS, MAX_LEVEL, ORTHOGONAL, Surface, inBounds, isRamp, isWater, valueNoise, type IslandMap } from "./grid";
 import type { MapObject, ObjectKind } from "./villageMap";
 
 export interface CellSnapshot { levels: Uint8Array; surfaces: Uint8Array }
@@ -87,19 +87,6 @@ export function organicCell(op: OrganicOp, map: IslandMap, before: CellSnapshot,
   if (here < 0 || isRamp(before.surfaces[i])) return;
   const same = levels.get(here) ?? 0, top = mode(levels);
   if (same < 3 && top && top[1] >= 5 && Math.abs(top[0] - here) <= CLIFF_LEVELS) map.levels[i] = top[0];
-}
-
-/** Smooth 2-D value noise in [0, 1], seeded. */
-export function valueNoise(x: number, z: number, seed = 1): number {
-  const hash = (a: number, b: number) => {
-    let h = (a * 374761393 + b * 668265263 + seed * 2246822519) | 0;
-    h = Math.imul(h ^ (h >>> 13), 1274126177);
-    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
-  };
-  const x0 = Math.floor(x), z0 = Math.floor(z), tx = x - x0, tz = z - z0;
-  const sx = tx * tx * (3 - 2 * tx), sz = tz * tz * (3 - 2 * tz);
-  const a = hash(x0, z0), b = hash(x0 + 1, z0), c = hash(x0, z0 + 1), d = hash(x0 + 1, z0 + 1);
-  return (a * (1 - sx) + b * sx) * (1 - sz) + (c * (1 - sx) + d * sx) * sz;
 }
 
 /** Cells whose centres fall inside a closed polygon (cell coordinates), even-odd. */

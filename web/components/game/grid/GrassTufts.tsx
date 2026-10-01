@@ -35,6 +35,7 @@ import {
   needsCliff,
   cellToWorldX,
   cellToWorldZ,
+  isGroundAtWorld,
 } from "@/lib/game/grid";
 import { useTuning } from "@/lib/game/tuning";
 import { worldTime } from "@/lib/game/worldClock";
@@ -167,6 +168,7 @@ export default function GrassTufts({ map, windScale = 1 }: { map: IslandMap; win
         if (hash01(cx, cz, 1) > chance) continue;
         const x = cellToWorldX(map, cx) + (hash01(cx, cz, 2) - 0.5) * TILE;
         const z = cellToWorldZ(map, cz) + (hash01(cx, cz, 3) - 0.5) * TILE;
+        if (!isGroundAtWorld(map, x, z)) continue; // the organic coast can take a cell's corner
         out.push({
           x, y: sampleGroundHeight(map, groundField, x, z), z,
           rot: hash01(cx, cz, 4) * Math.PI * 2,

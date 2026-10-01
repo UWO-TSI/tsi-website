@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { benchSeat, islandOf, landmark, landmarkPoint, landmarks, LANDMARK_IDS, propFootprint, villageIsland, villageSpawn, wharfDeck } from "./defaultIsland";
 import { clearSpot, walkTo } from "./movement/sim";
-import { createCenteredMap, setCell, Surface, heightField, sampleGroundHeight, sampleHeightField, isGroundAtWorld } from "./grid";
+import { createCenteredMap, setCell, Surface, heightField, sampleGroundHeight, sampleHeightField, isGroundAtWorld, surfaceAt } from "./grid";
 import { buildVillage, objectsOf, village, type VillageDoc } from "./villageMap";
 import frozen from "./fixtures/village-2026-09-28.json";
 
@@ -188,17 +188,17 @@ it("keeps the walker on the low side of cliff-pinned height corners", () => {
 });
 
 
-it("blocks the water exposed by rounded land corners while keeping straight crossings open", () => {
+it("holds every painted cell centre on its side of the organic coast, rounds corners, keeps a one-cell crossing open", () => {
   const map = createCenteredMap(7, 7);
   for (let z = 0; z < 7; z++) for (let x = 0; x < 7; x++) setCell(map, x, z, 0, Surface.River);
-  // A broad square of land has one rounded outer corner at (0.5, 0.5).
+  // A small square of land: the coast rounds its corners off.
   for (let z = 1; z <= 3; z++) for (let x = 1; x <= 3; x++) setCell(map, x, z, 0, Surface.Grass);
-  expect(isGroundAtWorld(map, 0, 0)).toBe(true);
-  expect(isGroundAtWorld(map, 0.45, 0.45)).toBe(false);
-  expect(isGroundAtWorld(map, 0.4, -0.4)).toBe(true);
-  expect(isGroundAtWorld(map, 1, 1)).toBe(false);
-  expect(isGroundAtWorld(map, 20, 20)).toBe(false);
+  // A one-cell wooden crossing over the water: built land keeps a crisp edge.
   for (let z = 0; z < 7; z++) setCell(map, 5, z, 0, Surface.Wood);
-  expect(isGroundAtWorld(map, 2, 0)).toBe(true);
-  expect(isGroundAtWorld(map, 2.4, 0.4)).toBe(true);
+  for (let z = 0; z < 7; z++) for (let x = 0; x < 7; x++) {
+    expect(isGroundAtWorld(map, map.originX + x, map.originZ + z), `${x},${z}`).toBe(surfaceAt(map, x, z) !== Surface.River);
+  }
+  expect(isGroundAtWorld(map, 0.45, 0.45)).toBe(false);
+  expect(isGroundAtWorld(map, 20, 20)).toBe(false);
+  for (let z = -2; z <= 2; z += 0.25) for (const dx of [-0.3, 0, 0.3]) expect(isGroundAtWorld(map, 2 + dx, z), `${2 + dx},${z}`).toBe(true);
 });

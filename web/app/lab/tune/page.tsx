@@ -37,11 +37,16 @@ import {
 import { patchWind, tuftGeometry } from "@/components/game/grid/GrassTufts";
 import { gullPose, type GullParams } from "@/lib/game/gullPath";
 import {
-  easedCellOutline,
+  cellPieces,
+  createMap,
+  isGroundAtWorld,
+  latticeAt,
   sdfFromMask,
   sampleShore,
+  setCell,
   SHORE_SDF_SCALE,
-  type LayerTest,
+  Surface,
+  terrainOf,
 } from "@/lib/game/grid";
 import { bedDepth } from "@/lib/game/waterShader";
 import { skyMaterial, advanceSky } from "@/lib/game/skyShader";
@@ -235,8 +240,8 @@ function GrassSpecimen() {
  * it is a distance field — so a bench with nothing to be near cannot show it.
  *
  * This is built the same way the world is, not mocked up to look similar:
- *   · the shoreline runs through `easedCellOutline`, the identical helper that
- *     rounds the island's coast, so the corner treatment here IS the shipped one
+ *   · the shoreline is a bench-sized map run through the island's own coast
+ *     derivation (`cellPieces`, `isGroundAtWorld`), so its shape IS the shipped one
  *   · the distance field goes through `sdfFromMask`, the identical transform
  *     that bakes it over the real map
  *   · the rocks are the shipped ACNH assets, measured at 1.0 x 0.5 x 1.0 — one
@@ -262,7 +267,12 @@ const bx = (i: number) => i - BENCH_CELLS / 2 + 0.5;
 /** The shoreline: a wandering curve so the eased corners have something to do. */
 const shoreAt = (z: number) => 3.1 + 1.35 * Math.sin(z * 0.52) + 0.5 * Math.sin(z * 1.31);
 const isLandAt = (x: number, z: number) => x > shoreAt(z);
-const benchLand: LayerTest = (cx, cz) => isLandAt(bx(cx), bx(cz));
+/** The bench as a map: land cells where the curve says, sea elsewhere. */
+const benchMap = (() => {
+  const m = createMap(BENCH_CELLS, BENCH_CELLS, bx(0), bx(0));
+  for (let cz = 0; cz < BENCH_CELLS; cz++) for (let cx = 0; cx < BENCH_CELLS; cx++) setCell(m, cx, cz, 0, isLandAt(bx(cx), bx(cz)) ? Surface.Grass : Surface.River);
+  return m;
+})();
 
 function WaterSpecimen() {
   const t = useTuning();
@@ -299,7 +309,7 @@ function WaterSpecimen() {
       for (let i = 0; i < n; i++) {
         const x = at(i);
         const z = at(j);
-        const solid = isLandAt(x, z) || ROCKS.some((r) => Math.hypot(x - r.x, z - r.z) < r.r);
+        const solid = isGroundAtWorld(benchMap, x, z) || ROCKS.some((r) => Math.hypot(x - r.x, z - r.z) < r.r);
         if (solid) mask[j * n + i] = 1;
       }
     }
@@ -329,7 +339,7 @@ function WaterSpecimen() {
     return g;
   }, []);
 
-  // The shore itself, through the world's own corner easing.
+  // The shore itself, through the world's own coast.
   const land = useMemo(() => {
     const pos: number[] = [];
     const nrm: number[] = [];
@@ -340,43 +350,31 @@ function WaterSpecimen() {
       nrm.push(...n);
       uvs.push(x / 2, z / 2);
     };
+    const { coast } = terrainOf(benchMap);
     for (let cz = 0; cz < BENCH_CELLS; cz++) {
       for (let cx = 0; cx < BENCH_CELLS; cx++) {
-        if (!benchLand(cx, cz)) continue;
         const x = bx(cx);
         const z = bx(cz);
-        const outline = easedCellOutline(benchLand, cx, cz) ?? [
-          [-0.5, -0.5],
-          [-0.5, 0.5],
-          [0.5, 0.5],
-          [0.5, -0.5],
-        ];
-        const base = pos.length / 3;
-        push(x, LAND_Y, z, [0, 1, 0]);
-        for (const [ox, oz] of outline) push(x + ox, LAND_Y, z + oz, [0, 1, 0]);
-        for (let i = 0; i < outline.length; i++) {
-          idx.push(base, base + 1 + i, base + 1 + ((i + 1) % outline.length));
-        }
-        // Bank face down into the water wherever this cell meets it.
-        for (const [dx, dz] of [
-          [1, 0],
-          [-1, 0],
-          [0, 1],
-          [0, -1],
-        ]) {
-          if (benchLand(cx + dx, cz + dz)) continue;
-          const ax = dz;
-          const az = dx;
-          const ex = x + dx * 0.5;
-          const ez = z + dz * 0.5;
-          const b = pos.length / 3;
-          const n: [number, number, number] = [dx, 0.35, dz];
-          push(ex - ax * 0.5, LAND_Y, ez - az * 0.5, n);
-          push(ex + ax * 0.5, LAND_Y, ez + az * 0.5, n);
-          push(ex + ax * 0.5, -0.5, ez + az * 0.5, n);
-          push(ex - ax * 0.5, -0.5, ez - az * 0.5, n);
-          if (dx !== 0) idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
-          else idx.push(b, b + 3, b + 2, b, b + 2, b + 1);
+        const pieces = cellPieces(benchMap, cx, cz, [[coast, 1]]);
+        for (const poly of pieces === "full" ? [[[x - 0.5, z - 0.5], [x + 0.5, z - 0.5], [x + 0.5, z + 0.5], [x - 0.5, z + 0.5]]] : pieces) {
+          const base = pos.length / 3;
+          for (const [px, pz] of poly) push(px, LAND_Y, pz, [0, 1, 0]);
+          for (let i = 1; i < poly.length - 1; i++) idx.push(base, base + i + 1, base + i);
+          // Bank face down into the water along every stretch of shoreline (both ends on the contour).
+          poly.forEach(([ax, az], i) => {
+            const [qx, qz] = poly[(i + 1) % poly.length];
+            if (Math.abs(latticeAt(benchMap, coast, ax, az)) > 1e-4 || Math.abs(latticeAt(benchMap, coast, qx, qz)) > 1e-4) return;
+            // Face outward, down the coast field: (dz, -dx) is the face's own normal, flipped when it looks inland.
+            const mx = (ax + qx) / 2, mz = (az + qz) / 2, l = Math.hypot(qx - ax, qz - az) || 1;
+            const inland = (latticeAt(benchMap, coast, mx + (qz - az) / l * 0.05, mz - (qx - ax) / l * 0.05) > 0) ? -1 : 1;
+            const n: [number, number, number] = [inland * (qz - az) / l, 0.35, -inland * (qx - ax) / l];
+            const b = pos.length / 3;
+            push(ax, LAND_Y, az, n);
+            push(qx, LAND_Y, qz, n);
+            push(qx, -0.5, qz, n);
+            push(ax, -0.5, az, n);
+            idx.push(...(inland > 0 ? [b, b + 1, b + 2, b, b + 2, b + 3] : [b, b + 2, b + 1, b, b + 3, b + 2]));
+          });
         }
       }
     }

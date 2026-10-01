@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { cellsInPolygon, nextObjectId, organicCell, snapPlacement, snapshotCells, valueNoise, type OrganicOp } from "./painterTools";
-import { createCenteredMap, levelAt, setCell, surfaceAt, Surface, isRiver, type IslandMap } from "./grid";
+import { cellsInPolygon, nextObjectId, organicCell, snapPlacement, snapshotCells, type OrganicOp } from "./painterTools";
+import { createCenteredMap, levelAt, setCell, surfaceAt, Surface, isRiver, valueNoise, type IslandMap } from "./grid";
 import { LANDMARK_INFO } from "./defaultIsland";
 
 /** 9×9 sea with a 3×3 grass square in the middle (cells 3..5). */

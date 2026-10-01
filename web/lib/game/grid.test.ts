@@ -764,12 +764,16 @@ describe("leveling: flat, full cliffs, and rare blended half steps", () => {
     const before = sampleHeightField(half, hf, cellToWorldX(half, 5), cellToWorldZ(half, 6));
     expect(before).toBeGreaterThan(0.01);
     expect(before).toBeLessThan(LEVEL_STEP);
-    // Halfway across the boundary itself, which is what makes it a blend rather
-    // than a step placed on one side.
-    expect(sampleHeightField(half, hf, cellToWorldX(half, 7), cellToWorldZ(half, 6))).toBeCloseTo(
+    // Halfway exactly on the boundary between the levels, which is what makes it
+    // a blend rather than a step placed on one side.
+    expect(sampleHeightField(half, hf, cellToWorldX(half, 7) - 0.5, cellToWorldZ(half, 6))).toBeCloseTo(
       LEVEL_STEP / 2,
       2
     );
+    // And symmetric about it.
+    const up = sampleHeightField(half, hf, cellToWorldX(half, 7) + 1.5, cellToWorldZ(half, 6));
+    const down = sampleHeightField(half, hf, cellToWorldX(half, 7) - 2.5, cellToWorldZ(half, 6));
+    expect(up + down).toBeCloseTo(LEVEL_STEP, 2);
 
     const full = createMap(13, 13);
     for (let z = 0; z < 13; z++) for (let x = 7; x < 13; x++) setCell(full, x, z, CLIFF_LEVELS, Surface.Grass);

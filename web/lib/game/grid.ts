@@ -145,29 +145,28 @@ export function heightField(map: IslandMap, spread = SLOPE_SPREAD): Float32Array
 
   // Transition width of a blurred step is about 3 sigma, so solve for sigma.
   const sigma = Math.max(0.5, spread / 3);
-  const radius = Math.ceil(sigma * 3);
-  const inv2s2 = 1 / (2 * sigma * sigma);
-
-  // Level of the cell nearest a corner, clamped into the map. Corners sit at
-  // cell boundaries, so the cell up-left of the corner is the natural home.
-  const homeLevel = (ix: number, iz: number) =>
-    levelAt(map, Math.min(map.width - 1, Math.max(0, ix - 1)), Math.min(map.depth - 1, Math.max(0, iz - 1)));
+  // Each cell weighs the kernel's integral over its own square, measured from the CORNER, so a
+  // blend is centred on the boundary between the levels. (Weighing by distance from one cell's
+  // centre, as this did, shifted every slope half a cell toward +x and +z.)
+  const { r: radius, w: weight } = cornerKernel(sigma);
 
   for (let iz = 0; iz < D; iz++) {
     for (let ix = 0; ix < W; ix++) {
-      const home = homeLevel(ix, iz);
+      // The highest of the four cells meeting at the corner is its home: at a cliff lip the
+      // corner belongs to the top, which the pinning pass below makes exact.
+      const home = Math.max(levelAt(map, ix - 1, iz - 1), levelAt(map, ix, iz - 1), levelAt(map, ix - 1, iz), levelAt(map, ix, iz));
       let sum = 0;
       let wsum = 0;
-      for (let dz = -radius; dz <= radius; dz++) {
-        for (let dx = -radius; dx <= radius; dx++) {
-          const cx = ix - 1 + dx;
-          const cz = iz - 1 + dz;
+      for (let dz = -radius; dz < radius; dz++) {
+        for (let dx = -radius; dx < radius; dx++) {
+          const cx = ix + dx;
+          const cz = iz + dz;
           if (!inBounds(map, cx, cz)) continue;
           const l = levelAt(map, cx, cz);
           // The cliff barrier. Anything a full cliff away is a different
           // terrace and must not bleed across.
           if (Math.abs(l - home) >= CLIFF_LEVELS) continue;
-          const w = Math.exp(-(dx * dx + dz * dz) * inv2s2);
+          const w = weight[dx + radius] * weight[dz + radius];
           sum += l * w;
           wsum += w;
         }
@@ -293,29 +292,22 @@ export function sampleHeightField(map: IslandMap, field: Float32Array, x: number
   return (a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + d * tx) * tz;
 }
 
-/** Shared ground query for walking and placement beside cliff-pinned corners. */
+/**
+ * THE ground height: walking, placement and the mesh all read this. The level
+ * field clamped beside cliffs, a ramp's slope, and the beach running down to the
+ * waterline (`beachDropAt`).
+ */
 export function sampleGroundHeight(map: IslandMap, field: Float32Array, x: number, z: number): number {
   const ramp = rampHeightAt(map, x, z);
   if (ramp !== null) return ramp;
-  const range = cellHeightRange(map, worldToCellX(map, x), worldToCellZ(map, z));
-  const h = sampleHeightField(map, field, x, z);
-  return range ? Math.max(range[0], Math.min(range[1], h)) : h;
+  return clampToCell(map, field, worldToCellX(map, x), worldToCellZ(map, z), x, z) - beachDropAt(map, x, z);
 }
 
-/**
- * Water edges: which orthogonal neighbours of a LAND cell are river.
- *
- * Draws hanging grass cards at riverbanks. Open sea is excluded because the
- * beach already runs below the waterline.
- */
-export function waterEdges(map: IslandMap, cx: number, cz: number): [number, number][] {
-  const here = surfaceAt(map, cx, cz);
-  if (isVoid(here) || isRiver(here)) return [];
-  const out: [number, number][] = [];
-  for (const [dx, dz] of ORTHOGONAL) {
-    if (isRiver(surfaceAt(map, cx + dx, cz + dz))) out.push([dx, dz]);
-  }
-  return out;
+/** The level field at a point, clamped to what cell (cx, cz) can reach (`cellHeightRange`). The mesh asks per cell. */
+export function clampToCell(map: IslandMap, field: Float32Array, cx: number, cz: number, x: number, z: number): number {
+  const range = cellHeightRange(map, cx, cz);
+  const h = sampleHeightField(map, field, x, z);
+  return range ? Math.max(range[0], Math.min(range[1], h)) : h;
 }
 
 /** Cells per chunk edge. One ACNH acre, and the culling/merge unit. */
@@ -539,6 +531,7 @@ export function setCell(map: IslandMap, cx: number, cz: number, level: number, s
   const i = cellIndex(map, cx, cz);
   map.levels[i] = Math.max(0, Math.min(MAX_LEVEL, level | 0));
   map.surfaces[i] = surface | 0;
+  forgetTerrain(map);
 }
 
 /**
@@ -1311,103 +1304,380 @@ export function sameSurface(surface: number) {
   return (map: IslandMap, nx: number, nz: number) => surfaceAt(map, nx, nz) === surface;
 }
 
-// ── Corner easing ────────────────────────────────────────────────
+// ── Natural shapes (rows 262, 263) ───────────────────────────────
 //
-// WHY THIS EXISTS. David, 2026-07-27: "game looks like minecraft now, need you
-// to have logic that eases land connections."
+// WHY. David, 2026-09-30: land "doesnt look chunky and looks like steps, instead
+// the inciment in width or length naturally smoothes out like a natural island",
+// and the same for paths and sand. The per-cell corner easing this replaces cut
+// each cell's convex corners by a fixed radius read off its 3x3 neighbourhood:
+// bays stayed square, an edge off 45 degrees stayed a staircase, and nothing
+// larger than one cell ever shaped the coast.
 //
-// Every boundary on a tile grid is made of axis-aligned cell edges, so a
-// diagonal run comes out as a pixel staircase and every corner is a hard 90
-// degrees. That is the Minecraft read, and it was worst at the coastline: a
-// level-0 cell next to open sea gets no cliff piece, so the island silhouette
-// was bare square quads and rendered as a 45-degree flight of stairs.
+// THE MODEL. Cells stay the data. Every natural edge is the 0-crossing of a FIELD
+// derived from them on a sub-cell lattice (LATTICE samples per cell side, on the
+// cell edges). A field is a cell mask blurred by a Gaussian -- each cell weighs
+// the kernel's integral over its own square, which is exact and separable --
+// plus low-frequency noise seeded by world position:
 //
-// ACNH never shows that edge because every one of its boundaries is drawn by an
-// autotile whose corner pieces are ROUNDED. We do not have a fringe kit for
-// grass-on-sand or for the shoreline, so we round the GEOMETRY instead: a cell
-// on a boundary gets its convex corners cut by a quarter-circle.
+//   · the blur turns stairs into straight runs and rounds points and bays, and
+//     it is local: a one-cell edit moves the field only within the kernel
+//   · the noise is a fixed function of where you are, so the same map always
+//     gives the same coast and a resize keeps it
+//   · a thin painted feature would blur away, so every cell centre is held on
+//     its painted side (`core`): a land cell's centre is land and a water cell's
+//     is water, which keeps every per-cell system (water classes, fishing,
+//     reachability) true to the contour
 //
-// The useful property is that a full-tile cut turns a staircase into an exact
-// straight diagonal. Take the blob { x >= z }: cell (1,1) spans [0.5,1.5]^2 and
-// its NW corner is convex, so cutting it leaves the hypotenuse (0.5,0.5) ->
-// (1.5,1.5); cell (2,2) contributes (1.5,1.5) -> (2.5,2.5); and cell (2,1)
-// between them is interior and untouched. The segments meet exactly. Below a
-// full tile the diagonal is scalloped rather than straight, which is the ACNH
-// coastline look and why EASE_RADIUS is not 1.0.
+// One derivation, read by everything: the ground mesh (`cellPieces`), walking
+// and every dry-land check (`isGroundAtWorld`), the shore field (`shoreSdf`),
+// the sloping beach (`sampleGroundHeight`), the path blends and the painter's
+// preview. `terrainOf(map)` builds it once per map; `setCell` forgets it, and
+// the painter re-derives only the cells a brush touched (`refreshTerrain`).
 
-/** How far into the cell a convex corner is cut, in tiles. */
-export const EASE_RADIUS = 0.72;
-
-/** Segments per rounded corner. 3 is smooth at our texel density; 1 is a bevel. */
-export const EASE_SEGMENTS = 3;
+/** Samples per cell side of every derived field. The lattice sits on cell edges: (width·LATTICE + 1) × (depth·LATTICE + 1) points. */
+export const LATTICE = 4;
 
 /**
- * Corner traversal order, as (signX, signZ).
- *
- * Counter-clockwise in the XZ plane, which is what makes a centre-fan wind
- * +Y-up: for a triangle (centre, b, c) the normal's Y component is
- * `b.z * c.x - b.x * c.z`, and this order keeps it positive.
+ * The coast: Gaussian sigma in cells, how far the noise moves it (in field
+ * units, which change about 0.4 per cell across a straight coast, so 0.2 is
+ * about half a cell), strong on open water and mild along a narrow river, and
+ * how far a cell centre is held inside its painted side.
  */
-const EASE_CORNERS: ReadonlyArray<readonly [number, number]> = [
-  [-1, -1],
-  [-1, 1],
-  [1, 1],
-  [1, -1],
-];
+export const COAST = { sigma: 1, sea: 0.2, river: 0.04, core: 0.1 };
+/** Coast noise: two octaves, [wavelength in cells, weight, seed]. */
+const COAST_WAVES: readonly Wave[] = [[5.5, 1, 11], [2.2, 0.45, 12]];
 
-/** Membership test for one draw layer: is this cell part of it? */
-export type LayerTest = (cx: number, cz: number) => boolean;
+/** Worn, soft-edged surfaces. The rest of the overlays are BUILT: crisp edges with rounded corners. */
+export const NATURAL_SURFACES: ReadonlySet<number> = new Set([Surface.Sand, Surface.Soil]);
+/** Surfaces drawn over the grass, bottom to top. */
+export const OVERLAY_SURFACES = [Surface.Sand, Surface.Soil, Surface.Stone, Surface.Wood, Surface.Brick] as const;
+const OVERLAY = {
+  natural: { sigma: 0.6, noise: 0.12, core: 0.12 },
+  built: { sigma: 0.5, noise: 0, core: 0.1 },
+};
+/** A natural surface fades over this much field either side of its edge: about half a cell. */
+export const NATURAL_EDGE = 0.1;
+/** The sloping beach: sand runs down to the waterline over this many cells. */
+export const BEACH_RUN = 1.5;
 
-/**
- * The cell's footprint as (x, z) offsets from its centre, in tiles.
- *
- * Returns null for a fully interior cell — the caller should emit a plain quad
- * and skip the fan, which keeps the extra triangles on the boundary where they
- * do something instead of on all 11k land cells.
- */
-export function easedCellOutline(inLayer: LayerTest, cx: number, cz: number): number[][] | null {
-  const half = TILE / 2;
-  const r = EASE_RADIUS * TILE;
-
-  // A corner is convex when both of the cells flanking it are outside the
-  // layer. The diagonal must be outside too: when it is inside, the two cells
-  // meet at a point, and cutting both corners would open a visible pinhole.
-  const cut = EASE_CORNERS.map(
-    ([sx, sz]) =>
-      !inLayer(cx + sx, cz) && !inLayer(cx, cz + sz) && !inLayer(cx + sx, cz + sz)
-  );
-  if (!cut.some(Boolean)) return null;
-
-  const out: number[][] = [];
-  for (let i = 0; i < EASE_CORNERS.length; i++) {
-    const [sx, sz] = EASE_CORNERS[i];
-    if (!cut[i]) {
-      out.push([sx * half, sz * half]);
-      continue;
-    }
-    // Quarter-circle centred inside the cell, from the z-edge to the x-edge.
-    const cxp = sx * (half - r);
-    const czp = sz * (half - r);
-    const arc: number[][] = [];
-    for (let s = 0; s <= EASE_SEGMENTS; s++) {
-      const th = (s / EASE_SEGMENTS) * (Math.PI / 2);
-      arc.push([cxp + sx * r * Math.sin(th), czp + sz * r * Math.cos(th)]);
-    }
-    // The traversal enters diagonally-opposite corners from opposite edges, so
-    // half of them walk the arc backwards. sx*sz picks which.
-    if (sx * sz < 0) arc.reverse();
-    out.push(...arc);
-  }
-  return out;
+/** How much of an overlay covers the ground at field value `f`: a worn fade for sand and soil, a crisp edge for built ones. */
+export function overlayAlpha(surface: number, f: number): number {
+  return NATURAL_SURFACES.has(surface) ? smoothstep(-NATURAL_EDGE, NATURAL_EDGE, f) : f > 0 ? 1 : 0;
 }
 
-/** Whether a point lies on the same eased land footprint drawn by GridTerrain. */
+/** Hermite 0..1 as x runs from a to b. */
+export function smoothstep(a: number, b: number, x: number): number {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+}
+
+/** Smooth 2-D value noise in [0, 1], seeded. */
+export function valueNoise(x: number, z: number, seed = 1): number {
+  const hash = (a: number, b: number) => {
+    let h = (a * 374761393 + b * 668265263 + seed * 2246822519) | 0;
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+  };
+  const x0 = Math.floor(x), z0 = Math.floor(z), tx = x - x0, tz = z - z0;
+  const sx = tx * tx * (3 - 2 * tx), sz = tz * tz * (3 - 2 * tz);
+  const a = hash(x0, z0), b = hash(x0 + 1, z0), c = hash(x0, z0 + 1), d = hash(x0 + 1, z0 + 1);
+  return (a * (1 - sx) + b * sx) * (1 - sz) + (c * (1 - sx) + d * sx) * sz;
+}
+
+/** Standard normal CDF (Abramowitz & Stegun 7.1.26, error under 1.5e-7). */
+function phi(x: number): number {
+  const z = Math.abs(x) * Math.SQRT1_2, t = 1 / (1 + 0.3275911 * z);
+  const erf = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-z * z);
+  return x < 0 ? 0.5 * (1 - erf) : 0.5 * (1 + erf);
+}
+
+/** Box-Gaussian weight of cell `corner + d`, d in [-r, r), for a point on a cell corner. */
+function cornerKernel(sigma: number): { r: number; w: Float64Array } {
+  const r = Math.ceil(3 * sigma) + 1, w = new Float64Array(2 * r);
+  for (let d = -r; d < r; d++) w[d + r] = phi((d + 1) / sigma) - phi(d / sigma);
+  return { r, w };
+}
+
+type Wave = readonly [wavelength: number, weight: number, seed: number];
+/** Box-Gaussian along a lattice row: the weight of cell floor(u) + o for a point at u = floor(u) + j / LATTICE is k[j·n + o + r]. */
+interface LatticeKernel { r: number; n: number; k: Float64Array }
+const KERNELS = new Map<number, LatticeKernel>();
+function latticeKernel(sigma: number): LatticeKernel {
+  let kern = KERNELS.get(sigma);
+  if (kern) return kern;
+  const r = Math.ceil(3 * sigma) + 1, n = 2 * r + 1, k = new Float64Array(LATTICE * n);
+  for (let j = 0; j < LATTICE; j++) for (let o = -r; o <= r; o++) {
+    const u = j / LATTICE - o; // the point, from the cell's low edge
+    k[j * n + o + r] = phi(u / sigma) - phi((u - 1) / sigma);
+  }
+  KERNELS.set(sigma, (kern = { r, n, k }));
+  return kern;
+}
+
+/** The map's derived natural shapes (see above). Lattice fields, row-major, (width·LATTICE + 1) wide. */
+export interface Terrain {
+  /** The coast: > 0 on land. */
+  coast: Float32Array;
+  /** Each overlay surface the map has: > 0 inside (natural ones fade across ±NATURAL_EDGE). */
+  overlays: Map<number, Float32Array>;
+  /** How far the ground dips toward the waterline, world units: the sloping beach. */
+  beach: Float32Array;
+  /** Built land on its own (stone, wood, brick): kept crisp where it meets the water, then merged into the coast. */
+  built: Float32Array;
+  scratch: { raw: Float32Array; num: Float32Array; den: Float32Array; corr: Float32Array; amp: Float32Array; cells: Int8Array };
+}
+
+const TERRAIN = new WeakMap<IslandMap, Terrain>();
+
+/** The map's natural shapes, derived on first use and kept until a cell changes. */
+export function terrainOf(map: IslandMap): Terrain {
+  let t = TERRAIN.get(map);
+  if (!t) {
+    const n = (map.width * LATTICE + 1) * (map.depth * LATTICE + 1), c = map.width * map.depth;
+    t = {
+      coast: new Float32Array(n), overlays: new Map(), beach: new Float32Array(n), built: new Float32Array(n),
+      scratch: { raw: new Float32Array(n), num: new Float32Array(n), den: new Float32Array(n), corr: new Float32Array(c), amp: new Float32Array(c), cells: new Int8Array(c) },
+    };
+    TERRAIN.set(map, t);
+    derive(map, t, 0, 0, map.width - 1, map.depth - 1);
+  }
+  return t;
+}
+
+/** Drop the derived shapes after editing cells in place. `setCell` does this itself. */
+export function forgetTerrain(map: IslandMap): void {
+  TERRAIN.delete(map);
+}
+
+/** Re-derive only what cells [x0..x1] × [z0..z1] reach, after editing them in place (the painter's brush). */
+export function refreshTerrain(map: IslandMap, x0: number, z0: number, x1: number, z1: number): void {
+  const t = TERRAIN.get(map);
+  if (t) derive(map, t, Math.max(0, x0), Math.max(0, z0), Math.min(map.width - 1, x1), Math.min(map.depth - 1, z1));
+}
+
+/** Cells past an edit whose lattice can change: the widest kernel's reach plus the centre corrections. */
+const REACH = Math.ceil(3 * COAST.sigma) + 3;
+
+function derive(map: IslandMap, t: Terrain, x0: number, z0: number, x1: number, z1: number): void {
+  const W = map.width, n = W * map.depth, { cells, amp } = t.scratch;
+  const built = (s: number) => s === Surface.Stone || s === Surface.Wood || s === Surface.Brick;
+  // The coast: land 1, water 0, off the map water. Built land is derived on its own, crisp, and merged.
+  for (let i = 0; i < n; i++) cells[i] = isWater(map.surfaces[i]) ? 0 : 1;
+  coastNoise(map, cells, amp);
+  deriveShape(map, cells, COAST.sigma, false, amp, COAST_WAVES, COAST.core, t.coast, t.scratch, x0, z0, x1, z1);
+  for (let i = 0; i < n; i++) cells[i] = built(map.surfaces[i]) ? 1 : 0;
+  deriveShape(map, cells, OVERLAY.built.sigma, false, 0, [], OVERLAY.built.core, t.built, t.scratch, x0, z0, x1, z1);
+  forLattice(map, x0, z0, x1, z1, (p) => { if (t.built[p] > t.coast[p]) t.coast[p] = t.built[p]; });
+
+  // Overlays. Water and ramps are "don't care" (-1), so a surface runs solid up to the water
+  // and fades only into grass. A natural surface also ignores every other overlay, so a path
+  // continues under a plaza's rounded edge or into the beach; a built one keeps to its own
+  // painted footprint, so two built surfaces meet on their shared edge.
+  for (const surface of OVERLAY_SURFACES) {
+    let field = t.overlays.get(surface);
+    let [a0, b0, a1, b1] = [x0, z0, x1, z1];
+    if (!field) {
+      if (!map.surfaces.includes(surface)) continue;
+      t.overlays.set(surface, (field = new Float32Array(t.coast.length)));
+      [a0, b0, a1, b1] = [0, 0, W - 1, map.depth - 1];
+    }
+    const natural = NATURAL_SURFACES.has(surface), spec = natural ? OVERLAY.natural : OVERLAY.built;
+    for (let i = 0; i < n; i++) {
+      const s = map.surfaces[i];
+      cells[i] = s === surface ? 1 : isWater(s) || isRamp(s) || (natural && s !== Surface.Grass) ? -1 : 0;
+    }
+    const waves: Wave[] = natural ? [[1.9, 1, 21 + surface], [0.8, 0.5, 31 + surface]] : [];
+    deriveShape(map, cells, spec.sigma, true, spec.noise, waves, spec.core, field, t.scratch, a0, b0, a1, b1);
+  }
+
+  // The beach: sand slopes down to the waterline, BEACH_RUN cells from the coast (its field over its slope).
+  const sand = t.overlays.get(Surface.Sand), LW = W * LATTICE + 1, LD = map.depth * LATTICE + 1;
+  forLattice(map, x0, z0, x1, z1, (p, i, k) => {
+    if (!sand) { t.beach[p] = 0; return; }
+    const c = t.coast;
+    const gx = (c[k * LW + Math.min(i + 1, LW - 1)] - c[k * LW + Math.max(i - 1, 0)]) * LATTICE / 2;
+    const gz = (c[Math.min(k + 1, LD - 1) * LW + i] - c[Math.max(k - 1, 0) * LW + i]) * LATTICE / 2;
+    const inland = c[p] / Math.max(Math.hypot(gx, gz), 0.1);
+    t.beach[p] = overlayAlpha(Surface.Sand, sand[p]) * WATER_DROP * (1 - smoothstep(0, BEACH_RUN, inland));
+  });
+}
+
+/** Visit every lattice point an edit of cells [x0..x1] × [z0..z1] can reach. */
+function forLattice(map: IslandMap, x0: number, z0: number, x1: number, z1: number, fn: (p: number, i: number, k: number) => void): void {
+  const LW = map.width * LATTICE + 1;
+  const i0 = Math.max(0, x0 - REACH) * LATTICE, i1 = (Math.min(map.width - 1, x1 + REACH) + 1) * LATTICE;
+  const k0 = Math.max(0, z0 - REACH) * LATTICE, k1 = (Math.min(map.depth - 1, z1 + REACH) + 1) * LATTICE;
+  for (let k = k0; k <= k1; k++) for (let i = i0; i <= i1; i++) fn(k * LW + i, i, k);
+}
+
+/** Coast noise per cell: strong where open water is near (a sea or a lake shore), mild along a narrow river. */
+function coastNoise(map: IslandMap, cells: Int8Array, amp: Float32Array): void {
+  const W = map.width, D = map.depth, R = 4, side = 2 * R + 1, SW = W + 1, sat = new Int32Array(SW * (D + 1));
+  for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
+    sat[(z + 1) * SW + x + 1] = (cells[z * W + x] ? 0 : 1) + sat[z * SW + x + 1] + sat[(z + 1) * SW + x] - sat[z * SW + x];
+  }
+  for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
+    const xa = Math.max(0, x - R), xb = Math.min(W, x + R + 1), za = Math.max(0, z - R), zb = Math.min(D, z + R + 1);
+    // Off the map is sea.
+    const water = sat[zb * SW + xb] - sat[za * SW + xb] - sat[zb * SW + xa] + sat[za * SW + xa] + side * side - (xb - xa) * (zb - za);
+    amp[z * W + x] = COAST.river + (COAST.sea - COAST.river) * smoothstep(0.25, 0.42, water / (side * side));
+  }
+}
+
+/**
+ * One field from a cell mask (1 inside, 0 outside, -1 don't care), into `out`
+ * over what cells [x0..x1] × [z0..z1] reach. `normalised` divides by the blur of
+ * the cells that count, so don't-care cells neither pull the edge in nor push it
+ * out; otherwise off the map is outside. Then the noise, then each cell centre
+ * held `core` inside its painted side, with the hold eased between centres.
+ */
+function deriveShape(
+  map: IslandMap, cells: Int8Array, sigma: number, normalised: boolean, amp: Float32Array | number, waves: readonly Wave[], core: number,
+  out: Float32Array, s: Terrain["scratch"], x0: number, z0: number, x1: number, z1: number
+): void {
+  const W = map.width, D = map.depth, S = LATTICE, LW = W * S + 1, kern = latticeKernel(sigma);
+  // Cells whose lattice is rewritten, and one ring more whose centres the hold reads.
+  const ox0 = Math.max(0, x0 - REACH), oz0 = Math.max(0, z0 - REACH), ox1 = Math.min(W - 1, x1 + REACH), oz1 = Math.min(D - 1, z1 + REACH);
+  const rx0 = Math.max(0, ox0 - 1), rz0 = Math.max(0, oz0 - 1), rx1 = Math.min(W - 1, ox1 + 1), rz1 = Math.min(D - 1, oz1 + 1);
+  const i0 = rx0 * S, i1 = (rx1 + 1) * S, k0 = rz0 * S, k1 = (rz1 + 1) * S;
+  blurCells(map, cells, false, kern, s.num, i0, i1, k0, k1);
+  if (normalised) blurCells(map, cells, true, kern, s.den, i0, i1, k0, k1);
+  for (let k = k0; k <= k1; k++) {
+    for (let i = i0; i <= i1; i++) {
+      const p = k * LW + i;
+      let v = (normalised ? s.num[p] / Math.max(s.den[p], 1e-4) : s.num[p]) - 0.5;
+      const a = typeof amp === "number" ? amp : cellLerp(map, amp, i, k, true);
+      if (a) {
+        const x = map.originX - 0.5 + i / S, z = map.originZ - 0.5 + k / S;
+        let nz = 0;
+        for (const [l, w, seed] of waves) nz += w * (valueNoise(x / l, z / l, seed) - 0.5);
+        v += a * nz;
+      }
+      s.raw[p] = v;
+    }
+  }
+  for (let cz = rz0; cz <= rz1; cz++) {
+    for (let cx = rx0; cx <= rx1; cx++) {
+      const c = cz * W + cx, v = s.raw[(cz * S + S / 2) * LW + cx * S + S / 2];
+      s.corr[c] = cells[c] === 1 ? Math.max(0, core - v) : cells[c] === 0 ? Math.min(0, -core - v) : 0;
+    }
+  }
+  for (let k = oz0 * S; k <= (oz1 + 1) * S; k++) {
+    for (let i = ox0 * S; i <= (ox1 + 1) * S; i++) out[k * LW + i] = s.raw[k * LW + i] + cellLerp(map, s.corr, i, k, false);
+  }
+}
+
+/** Box-Gaussian of a cell mask (cells === 1, or with `valid` cells >= 0) at lattice points [i0..i1] × [k0..k1]. */
+function blurCells(map: IslandMap, cells: Int8Array, valid: boolean, kern: LatticeKernel, out: Float32Array, i0: number, i1: number, k0: number, k1: number): void {
+  const W = map.width, D = map.depth, S = LATTICE, LW = W * S + 1, { r, n, k } = kern, cols = i1 - i0 + 1;
+  const za = Math.max(0, Math.floor(k0 / S) - r), zb = Math.min(D - 1, Math.floor(k1 / S) + r);
+  const rows = new Float64Array((zb - za + 1) * cols);
+  for (let cz = za; cz <= zb; cz++) {
+    for (let i = i0; i <= i1; i++) {
+      const a = Math.floor(i / S), j = i - a * S;
+      let sum = 0;
+      for (let o = -r; o <= r; o++) {
+        const cx = a + o;
+        if (cx < 0 || cx >= W) continue;
+        const c = cells[cz * W + cx];
+        if (valid ? c >= 0 : c === 1) sum += k[j * n + o + r];
+      }
+      rows[(cz - za) * cols + i - i0] = sum;
+    }
+  }
+  for (let kk = k0; kk <= k1; kk++) {
+    const b = Math.floor(kk / S), j = kk - b * S;
+    for (let i = i0; i <= i1; i++) {
+      let sum = 0;
+      for (let o = -r; o <= r; o++) {
+        const cz = b + o;
+        if (cz >= za && cz <= zb) sum += rows[(cz - za) * cols + i - i0] * k[j * n + o + r];
+      }
+      out[kk * LW + i] = sum;
+    }
+  }
+}
+
+/** A per-cell value at lattice point (i, k), eased (smoothstep) between cell centres. Off the map: the edge cell, or 0. */
+function cellLerp(map: IslandMap, vals: Float32Array, i: number, k: number, edge: boolean): number {
+  const W = map.width, D = map.depth, fx = i / LATTICE - 0.5, fz = k / LATTICE - 0.5, ax = Math.floor(fx), az = Math.floor(fz);
+  const ease = (t: number) => t * t * (3 - 2 * t), tx = ease(fx - ax), tz = ease(fz - az);
+  const at = (cx: number, cz: number) => {
+    if (edge) return vals[Math.min(D - 1, Math.max(0, cz)) * W + Math.min(W - 1, Math.max(0, cx))];
+    return cx < 0 || cz < 0 || cx >= W || cz >= D ? 0 : vals[cz * W + cx];
+  };
+  return (at(ax, az) * (1 - tx) + at(ax + 1, az) * tx) * (1 - tz) + (at(ax, az + 1) * (1 - tx) + at(ax + 1, az + 1) * tx) * tz;
+}
+
+/** A lattice field at a world point, bilinearly, clamped to the map. */
+export function latticeAt(map: IslandMap, f: Float32Array, x: number, z: number): number {
+  const S = LATTICE, LW = map.width * S + 1;
+  const u = Math.min(map.width * S, Math.max(0, (x - map.originX + 0.5) * S));
+  const v = Math.min(map.depth * S, Math.max(0, (z - map.originZ + 0.5) * S));
+  const i = Math.min(map.width * S - 1, Math.floor(u)), k = Math.min(map.depth * S - 1, Math.floor(v));
+  const tx = u - i, tz = v - k, p = k * LW + i;
+  return (f[p] * (1 - tx) + f[p + 1] * tx) * (1 - tz) + (f[p + LW] * (1 - tx) + f[p + LW + 1] * tx) * tz;
+}
+
+/** Whether a point is on land: inside the organic coast the ground mesh draws. Off the map is sea. */
 export function isGroundAtWorld(map: IslandMap, x: number, z: number): boolean {
-  const cx = worldToCellX(map, x), cz = worldToCellZ(map, z);
-  const inGround = (nx: number, nz: number) => isLandCell(map, nx, nz);
-  if (!inGround(cx, cz)) return false;
-  const outline = easedCellOutline(inGround, cx, cz);
-  return !outline || pointInPolygon(x - cellToWorldX(map, cx), z - cellToWorldZ(map, cz), outline);
+  const u = x - map.originX + 0.5, v = z - map.originZ + 0.5;
+  if (u < 0 || v < 0 || u > map.width || v > map.depth) return false;
+  return latticeAt(map, terrainOf(map).coast, x, z) > 0;
+}
+
+/** How much of an overlay surface covers the ground at a world point (0 where the map has none). */
+export function overlayAt(map: IslandMap, surface: number, x: number, z: number): number {
+  const f = terrainOf(map).overlays.get(surface);
+  return f ? overlayAlpha(surface, latticeAt(map, f, x, z)) : 0;
+}
+
+/** How far the sloping beach drops the ground below its level at a world point, world units. */
+export function beachDropAt(map: IslandMap, x: number, z: number): number {
+  return latticeAt(map, terrainOf(map).beach, x, z);
+}
+
+/**
+ * The part of a cell inside every field given (> 0; a sign of -1 flips one, for
+ * the water side), as convex polygons in world XZ, one per lattice sub-square
+ * that has any: each sub-square clipped against each field, linearly along its
+ * edges (marching squares without the case table). "full" when every lattice
+ * point of the cell is inside, so the caller can draw a plain quad.
+ */
+export function cellPieces(map: IslandMap, cx: number, cz: number, fields: readonly (readonly [Float32Array, number])[]): number[][][] | "full" {
+  const S = LATTICE, LW = map.width * S + 1, i0 = cx * S, k0 = cz * S;
+  let full = true;
+  for (let k = k0; k <= k0 + S && full; k++) {
+    for (let i = i0; i <= i0 + S && full; i++) for (const [f, sg] of fields) if (f[k * LW + i] * sg <= 0) full = false;
+  }
+  if (full) return "full";
+  const out: number[][][] = [];
+  const x0 = map.originX - 0.5, z0 = map.originZ - 0.5;
+  for (let sk = 0; sk < S; sk++) {
+    for (let si = 0; si < S; si++) {
+      const p = (k0 + sk) * LW + i0 + si;
+      let poly: number[][] = [[0, 0], [1, 0], [1, 1], [0, 1]];
+      for (const [f, sg] of fields) {
+        const a = f[p] * sg, b = f[p + 1] * sg, c = f[p + LW + 1] * sg, d = f[p + LW] * sg;
+        if (a > 0 && b > 0 && c > 0 && d > 0) continue;
+        if (a <= 0 && b <= 0 && c <= 0 && d <= 0) { poly = []; break; }
+        const val = (u: number, v: number) => (a * (1 - u) + b * u) * (1 - v) + (d * (1 - u) + c * u) * v;
+        const next: number[][] = [];
+        for (let e = 0; e < poly.length; e++) {
+          const [pu, pv] = poly[e], [qu, qv] = poly[(e + 1) % poly.length], vp = val(pu, pv), vq = val(qu, qv);
+          if (vp > 0) next.push(poly[e]);
+          if (vp > 0 !== vq > 0) {
+            const t = vp / (vp - vq);
+            next.push([pu + (qu - pu) * t, pv + (qv - pv) * t]);
+          }
+        }
+        poly = next.length >= 3 ? next : [];
+        if (!poly.length) break;
+      }
+      if (poly.length) out.push(poly.map(([u, v]) => [x0 + (i0 + si + u) / S, z0 + (k0 + sk + v) / S]));
+    }
+  }
+  return out;
 }
 
 // ── Water depth ──────────────────────────────────────────────────
@@ -1441,8 +1711,8 @@ export function isGroundAtWorld(map: IslandMap, x: number, z: number): boolean {
  * distance INTO land, water the positive distance into water, and 0 is the
  * shore. A foam width of 0.85 then means 0.85 cells of real world.
  *
- * RASTERISED AT SUB-CELL RESOLUTION AGAINST THE EASED OUTLINE, not the cell
- * grid, because the eased outline is the shoreline you can actually see.
+ * RASTERISED FROM THE COAST FIELD at its own lattice resolution, so the foam
+ * sits on the organic shoreline the mesh draws, not on the painted squares.
  *
  * This is also where props will earn their collar: stamping a footprint into
  * `land` before the transform gives it foam for free, with no per-object work
@@ -1473,26 +1743,13 @@ export const SHORE_SDF_SCALE = 4;
 export function shoreSdf(map: IslandMap, scale = SHORE_SDF_SCALE): ShoreSdf {
   const width = map.width * scale;
   const height = map.depth * scale;
-
-  const inGround: LayerTest = (cx, cz) => isLandCell(map, cx, cz);
-
-  // Rasterise the LAND, cell by cell, through the same outline the mesh uses.
-  // Sampling the cell grid instead would put the field's shoreline on the
-  // square boundary while the eye sees it on the eased one, and the foam would
-  // sit a corner-radius away from the corner it belongs to.
+  // Each sample at its centre, read off the same coast the mesh and the walker use.
+  const { coast } = terrainOf(map);
   const land = new Uint8Array(width * height);
-  const step = 1 / scale;
-  const first = -0.5 + step / 2; // first sample centre, relative to the cell centre
-  for (let cz = 0; cz < map.depth; cz++) {
-    for (let cx = 0; cx < map.width; cx++) {
-      if (!inGround(cx, cz)) continue;
-      const outline = easedCellOutline(inGround, cx, cz);
-      for (let sz = 0; sz < scale; sz++) {
-        for (let sx = 0; sx < scale; sx++) {
-          if (outline && !pointInPolygon(first + sx * step, first + sz * step, outline)) continue;
-          land[(cz * scale + sz) * width + (cx * scale + sx)] = 1;
-        }
-      }
+  for (let j = 0; j < height; j++) {
+    for (let i = 0; i < width; i++) {
+      const x = map.originX - TILE / 2 + (i + 0.5) / scale, z = map.originZ - TILE / 2 + (j + 0.5) / scale;
+      if (latticeAt(map, coast, x, z) > 0) land[j * width + i] = 1;
     }
   }
 
@@ -1533,17 +1790,6 @@ export function sdfFromMask(
     data[i] = d / scale;
   }
   return { data, width, height, scale, ...rect };
-}
-
-/** Even-odd crossing test. The outline is closed implicitly. */
-function pointInPolygon(x: number, z: number, poly: number[][]): boolean {
-  let inside = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const [xi, zi] = poly[i];
-    const [xj, zj] = poly[j];
-    if (zi > z !== zj > z && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) inside = !inside;
-  }
-  return inside;
 }
 
 /** Stand-in for infinity that survives the arithmetic in the 1-D pass. */
