@@ -10,9 +10,9 @@ import type { FaceOverride } from "./face";
 
 export type ClipName = "Idle" | "Walk" | "Run" | "Sit" | "Study" | "Sleep" | "Fish" | "FishHold" | "Forage" | "Dig" | "Net"
   | "Wave" | "Cheer" | "Laugh" | "Sad" | "Dance" | "AttackMelee" | "AttackBow" | "AttackCast" | "DodgeRoll" | "Hit" | "Defeat" | "Trace" | "Stretch"
-  | "Jump" | "Fall" | "Land" | "Roll" | "Mantle" | "Dash" | "Skid" | "Glide";
+  | "Jump" | "Air" | "Fall" | "Land" | "LandHeavy" | "Roll" | "Mantle" | "Dash" | "Skid" | "Glide";
 /** Movement clips (lib/game/movement): quick crossfades so hops and landings read on time. */
-export const SNAPPY_CLIPS = new Set<ClipName>(["DodgeRoll", "Hit", "Jump", "Fall", "Land", "Roll", "Mantle", "Dash", "Skid", "Glide"]);
+export const SNAPPY_CLIPS = new Set<ClipName>(["DodgeRoll", "Hit", "Jump", "Air", "Fall", "Land", "LandHeavy", "Roll", "Mantle", "Dash", "Skid", "Glide"]);
 
 /**
  * What the world asks of a character each frame. `speed` is ground speed in
@@ -30,7 +30,13 @@ export interface CharacterMotion { speed: number; yaw: number; lift: number; pos
   /** A forced face (dialogue portraits, the avatar bench): expression, eye frame or mouth cell. */
   face?: FaceOverride | null;
   /** The leaf glider in the right hand (specs/glider.md): its size, 0 furled (hidden) to 1 open, a little over 1 as it pops open. */
-  leaf?: number }
+  leaf?: number;
+  /** The Air clip's pose while `move` is "Air": 0 take-off, 0.5 the apex tuck, 1 reaching for the ground (airPhase). */
+  air?: number;
+  /** Foot contacts so far (the character counts them up as Walk or Run passes each foot's contact) and the last foot, 0 left 1 right. */
+  steps?: number; foot?: number;
+  /** Ask for an afterimage of this frame's pose (a dash); the character clears it. */
+  ghost?: boolean }
 
 export const isLoop = (clip: ClipName) => CLIP_BY_NAME.get(clip)?.loop ?? true;
 
@@ -43,6 +49,33 @@ export function tempo(clip: ClipName, speed: number, walkSpeed: number): number 
   if (clip === "Walk") return Math.min(1.6, Math.max(0.35, speed / walkSpeed));
   if (clip === "Run") return Math.min(1.4, Math.max(0.6, speed / (walkSpeed * 1.85)));
   return 1;
+}
+
+/**
+ * The contact a loop's playhead passed going from phase `from` to `to` this frame (wrapping past 1), as its index in
+ * `contacts`, or -1. Two in one frame (a long hitch) report the later one.
+ */
+export function contactCrossed(contacts: readonly number[] | undefined, from: number, to: number): number {
+  if (!contacts || from === to) return -1;
+  let hit = -1, best = -1;
+  for (let i = 0; i < contacts.length; i++) {
+    const c = contacts[i], past = to >= from ? c > from && c <= to : c > from || c <= to;
+    // How far past it the playhead is now: the smallest is the latest crossing.
+    const ago = past ? (to - c + 1) % 1 : -1;
+    if (past && (best < 0 || ago < best)) { best = ago; hit = i; }
+  }
+  return hit;
+}
+
+/**
+ * The Air pose for a vertical speed (specs/movement-feel.md): rising from the take-off (0) to the apex tuck (0.5) as
+ * `vy` falls from the take-off speed `vy0` to 0, then on to reaching for the ground (1) as the fall reaches `vy0`.
+ * Walking off an edge starts past the tuck (`jumped` false), at the early fall.
+ */
+export function airPhase(vy: number, vy0: number, jumped: boolean): number {
+  const v = Math.max(0.1, vy0);
+  if (vy > 0) return jumped ? 0.5 * (1 - Math.min(1, vy / v)) : 0.75;
+  return Math.min(1, (jumped ? 0.5 : 0.75) + (jumped ? 0.5 : 0.25) * Math.min(1, -vy / v));
 }
 
 /** One-shot (if still running) > movement state > held pose > locomotion. A pose is dropped the moment the character moves. */
