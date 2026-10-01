@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, useProgress, useTexture } from "@react-three/drei";
 import * as THREE from "three";
@@ -94,7 +94,7 @@ import CollectionBook from "./CollectionBook";
 import { usePeacefulContext } from "@/lib/game/usePeacefulContext";
 import { villageNodes } from "@/lib/game/islandNodes";
 import { villageWater, type FishingSpot } from "@/lib/game/fishingSpots";
-import { getPeacefulTarget } from "@/lib/game/peacefulNear";
+import { getPeacefulTarget, peacefulLabel, subscribePeacefulLabel } from "@/lib/game/peacefulNear";
 import type { WorldMoment } from "@/lib/collections/logic";
 import HomeIslandScene, { type HomeNear } from "./home/HomeIslandScene";
 import HomeInterior, { nearestBed, roomAt, type HouseNear } from "./home/HomeInterior";
@@ -700,6 +700,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (greeting + 1 < HQ_LEAD.lines.length) setWelcome(greeting + 1);
     else finishWelcome();
   }, [greeting, finishWelcome]);
+  // The forage/net prompt names the nearest node, re-read when it changes (it used to keep the first node's name).
+  const targetLabel = useSyncExternalStore(subscribePeacefulLabel, peacefulLabel, () => null);
   const greetingName = identity.display_name !== "You" ? identity.display_name : null;
   const holdObjective = step === "creator" || step === "welcome" || welcome === "arriving" || greeting !== null;
   useEffect(() => {
@@ -800,7 +802,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       </section>}
       {near && !sheet && greeting === null && !(reveal && inside === "oracle") && (CLOSED.includes(near)
         ? <p className={styles.interact} data-closed="true" role="status">{NEAR_LABELS[near]}</p>
-        : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>E</kbd>{(near === "forage" || near === "net") ? getPeacefulTarget()?.label ?? NEAR_LABELS[near] : NEAR_LABELS[near]}</button>)}
+        : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>E</kbd>{(near === "forage" || near === "net") ? targetLabel ?? NEAR_LABELS[near] : NEAR_LABELS[near]}</button>)}
       <FishingOverlay rod={peaceful.rod} onActiveChange={setFishing} />
       <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} onDonated={loadMuseum} />
       <ToastHub />
