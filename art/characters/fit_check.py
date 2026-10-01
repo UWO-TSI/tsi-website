@@ -689,10 +689,10 @@ def placed_verts(part, at):
     from mathutils import Matrix, Quaternion
     groups, _, _ = load_glb(os.path.join(HERE, part["glb"]))
     vs = [v for g in groups.values() for v in g[0]]
-    px, py, pz, qx, qy, qz, qw, r = at
+    px, py, pz, qx, qy, qz, qw, r, h = at
     C = Matrix(((1, 0, 0, 0), (0, 0, 1, 0), (0, -1, 0, 0), (0, 0, 0, 1)))          # Blender -> glTF: (x, z, -y)
     m = Matrix.Translation((px, py, pz)) @ Quaternion((qw, qx, qy, qz)).to_matrix().to_4x4()
-    m = m @ (Matrix.Scale(r / part["wrap"], 4) if part.get("wrap") else Matrix.Translation((0, r, 0)))
+    m = m @ (Matrix.Scale(r / part["wrap"], 4) if part.get("wrap") else Matrix.Translation((0, h, 0)))
     m = C.transposed() @ m @ C
     return [m @ v for v in vs]
 

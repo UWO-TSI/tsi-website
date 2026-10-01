@@ -65,7 +65,7 @@ describe("character rig assembly", () => {
     const before = Array.from(part.geometry.getAttribute("position").array);
     // a quarter turn about y and a move; a wrapping piece scaled to the anchor's radius, any other lifted by it
     const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
-    const at = [[0.1, 0.9, -0.1, q.x, q.y, q.z, q.w, 0.06]];
+    const at = [[0.1, 0.9, -0.1, q.x, q.y, q.z, q.w, 0.06, 0.06]];
     const [wrap] = anchorMatrices(at, 0.03), [sit] = anchorMatrices(at);
     const g = adoptPrimitive(part, new Map([["mixamorigHead", 0]]), null, false, wrap);
     const p = new THREE.Vector3().fromBufferAttribute(g.getAttribute("position"), 1);   // (1, 0, 0) -> scaled 2, turned to -z

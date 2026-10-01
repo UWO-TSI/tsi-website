@@ -118,9 +118,9 @@ describe("looks", () => {
     expect([hatted.acc.hair, hatted.acc.head]).toEqual(["hacc_bow", "acc_beanie"]);                  // they stack...
     expect(wornParts(hatted).some(p => p.group === "hair")).toBe(false);                             // ...but a hat covers it
     expect(wornParts(wear(hatted, "onepiece", "onepiece_raincape_hood")).some(p => p.group === "hair")).toBe(false);
-    // every piece's anchors are placements [p(3), q(4), r] with a unit quaternion
+    // every piece's anchors are placements [p(3), q(4), r, h] with a unit quaternion
     for (const p of PARTS) for (const at of Object.values(p.anchors ?? {})) for (const a of at) {
-      expect(a).toHaveLength(8);
+      expect(a).toHaveLength(9);
       expect(Math.abs(Math.hypot(a[3], a[4], a[5], a[6]) - 1), p.id).toBeLessThan(1e-3);
     }
   });

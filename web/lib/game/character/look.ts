@@ -24,7 +24,7 @@ export type PartSlot = "bangs" | "back" | "top" | "bottom" | "onepiece" | "shoes
 /** Accessory sub-slots, one item each (ruling 21; avatar v8: hair accessories). */
 export type AccGroup = "face" | "head" | "bag" | "neck" | "hair";
 export interface PartMaterial { name: string; tint?: "outfit" | "hair" | null; default?: number | string | null; decal?: boolean; color?: string }
-/** An anchor placement on a hair piece (art/characters/v8/anchors.py): [px, py, pz, qx, qy, qz, qw, radius], glTF space. */
+/** An anchor placement on a hair piece (art/characters/v8/anchors.py): [px, py, pz, qx, qy, qz, qw, radius, lift], glTF space. */
 export type AnchorPlacement = number[];
 export interface CatalogPart {
   id: string; slot: PartSlot; name: string; glb: string; tris: number; materials: PartMaterial[];

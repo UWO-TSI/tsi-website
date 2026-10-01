@@ -63,14 +63,14 @@ export function adoptPrimitive(mesh: THREE.SkinnedMesh, boneIndex: ReadonlyMap<s
 }
 
 /**
- * Where a hair accessory goes (avatar v8): one matrix per anchor placement [px, py, pz, qx, qy, qz, qw, r]. A piece
- * that wraps the gathered hair (`wrap`, its authored inner radius) is scaled to r; any other sits on the gathered
- * hair's surface, r out along the anchor's outward axis (local +y after the glTF export).
+ * Where a hair accessory goes (avatar v8): one matrix per anchor placement [px, py, pz, qx, qy, qz, qw, r, h]. A piece
+ * that wraps the gathered hair (`wrap`, its authored inner radius) is scaled to the hair's radius r; any other sits on
+ * the gathered hair's surface, h out along the anchor's outward axis (local +y after the glTF export).
  */
 export function anchorMatrices(at: readonly (readonly number[])[], wrap?: number): THREE.Matrix4[] {
-  return at.map(([px, py, pz, qx, qy, qz, qw, r]) => {
+  return at.map(([px, py, pz, qx, qy, qz, qw, r, h]) => {
     const m = new THREE.Matrix4().compose(new THREE.Vector3(px, py, pz), new THREE.Quaternion(qx, qy, qz, qw), new THREE.Vector3(1, 1, 1));
-    return m.multiply(wrap ? new THREE.Matrix4().makeScale(r / wrap, r / wrap, r / wrap) : new THREE.Matrix4().makeTranslation(0, r, 0));
+    return m.multiply(wrap ? new THREE.Matrix4().makeScale(r / wrap, r / wrap, r / wrap) : new THREE.Matrix4().makeTranslation(0, h, 0));
   });
 }
 

@@ -13,7 +13,7 @@ back_afro             1182      0.0     0.0789              0       0.0
 bangs_braids           432      0.0     0.0091              0    0.0007
 back_box_braids       1182      0.0     0.0216              0       0.0
 
-seam: default pair 0.0, worst 0.0138 (bangs_curls+back_high_pony), median over 16x pairs 0.0053; limit 0.014 for lock pairs
+seam: default pair 0.0, worst 0.0138 (bangs_curls+back_high_pony), median over the 252 bangs x back pairs 0.0053; limit 0.014 for lock pairs
 
 headwear (air max / poke max / rise median):
   acc_beanie            0.0/0.0/0.0123
