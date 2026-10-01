@@ -64,6 +64,26 @@ function matteACNH(root: THREE.Object3D) {
   });
 }
 
+/** Warm window light at night (living-village §5): a lit room seen through the glass. */
+const WINDOW_LIGHT = "#ffcf7a";
+/** Plain glass panes (no emissive map of their own) that glow from inside once it's dark. */
+const GLASS = /^m(?:WindowGlass|SideWindow)$/;
+/** Module scope: give the panes a warm emission shaped by their own texture, off until `lit` turns it up. */
+function lightPanes(root: THREE.Object3D) {
+  root.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+      if (!(m instanceof THREE.MeshStandardMaterial) || m.emissiveMap || !GLASS.test(m.name)) continue;
+      m.emissive.set(WINDOW_LIGHT);
+      m.emissiveMap = m.map;
+      m.emissiveIntensity = 0;
+      m.userData.pane = true;
+      m.needsUpdate = true;
+    }
+  });
+}
+
 /**
  * Mounts a part list as one group, turned to face the camera (ACNH). Parts share the source coordinate space.
  *
@@ -74,12 +94,16 @@ export function ACNHParts({
   parts,
   windowGlow,
   windowColor,
+  lit,
 }: {
   parts: readonly string[];
   windowGlow?: number;
   windowColor?: string;
+  /** Night (0 day → 1 night, islandLighting windowLit): the panes glow and the model's own lamps and lit rooms brighten, easing over a few seconds. */
+  lit?: number;
 }) {
   const gltfs = useGLTF(parts as string[]);
+  const lights = lit !== undefined;
   const group = useMemo(() => {
     const g = new THREE.Group();
     gltfs.forEach(({ scene }, index) => g.add(prepareModel(scene, parts[index])));
@@ -87,18 +111,19 @@ export function ACNHParts({
     g.rotation.y = Math.PI;
     matteACNH(g);
     if (windowColor) lightHQWindows(g, windowColor);
+    else if (lights) lightPanes(g);
     return g;
-  }, [gltfs, parts, windowColor]);
+  }, [gltfs, parts, windowColor, lights]);
   useContactShadow(group, useMemo(() => modelContact(group, parts[0], "solid"), [group, parts]));
 
-  const emitters = useRef<{ material: THREE.MeshStandardMaterial; gain: number }[]>([]);
+  const emitters = useRef<{ material: THREE.MeshStandardMaterial; gain: number; pane: boolean }[]>([]);
   useEffect(() => {
     const materials = new Set<THREE.MeshStandardMaterial>();
     group.traverse((object) => {
       const mesh = object as THREE.Mesh;
       if (!mesh.isMesh) return;
       for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
-        if (material instanceof THREE.MeshStandardMaterial && (material.emissiveMap || windowColor && /^m(?:Window[LR]|SideWindow)$/.test(material.name))) materials.add(material);
+        if (material instanceof THREE.MeshStandardMaterial && (material.emissiveMap || material.userData.pane || windowColor && /^m(?:Window[LR]|SideWindow)$/.test(material.name))) materials.add(material);
       }
     });
     const isHQ = parts.some((part) => part.endsWith("/hq-office.glb"));
@@ -106,15 +131,18 @@ export function ACNHParts({
       material,
       // The HQ window lightmaps are much dimmer than its clock/lamp map.
       gain: isHQ && !windowColor && /^mWindow[LR]$/.test(material.name) ? 4 : 1,
+      pane: !!material.userData.pane,
     }));
     return () => { emitters.current = []; };
   }, [group, parts, windowColor]);
   useFrame((_, delta) => {
-    if (windowGlow === undefined) return;
-    for (const { material, gain } of emitters.current) {
+    if (windowGlow === undefined && lit === undefined) return;
+    for (const { material, gain, pane } of emitters.current) {
+      // Lit: panes from dark to a warm glow, the model's own lamps and rooms from their day level up a little.
+      const target = windowGlow !== undefined ? windowGlow * gain : pane ? 1.3 * lit! : 1 + 0.7 * lit!;
       // These are instance-owned Three materials, animated outside React rendering.
       // eslint-disable-next-line react-hooks/immutability
-      material.emissiveIntensity = THREE.MathUtils.damp(material.emissiveIntensity, windowGlow * gain, 1.5, Math.min(delta, 0.1));
+      material.emissiveIntensity = THREE.MathUtils.damp(material.emissiveIntensity, target, 1.2, Math.min(delta, 0.1));
     }
   });
 
@@ -127,6 +155,6 @@ export function ACNHParts({
 }
 
 /** ACNH building: fixed scale, origin-grounded, original materials kept. */
-export function ACNHBuilding({ id, windowGlow, windowColor }: { id: string; windowGlow?: number; windowColor?: string }) {
-  return <ACNHParts parts={ACNH_GLB[id]} windowGlow={windowGlow} windowColor={windowColor} />;
+export function ACNHBuilding({ id, windowGlow, windowColor, lit }: { id: string; windowGlow?: number; windowColor?: string; lit?: number }) {
+  return <ACNHParts parts={ACNH_GLB[id]} windowGlow={windowGlow} windowColor={windowColor} lit={lit} />;
 }

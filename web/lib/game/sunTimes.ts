@@ -64,3 +64,25 @@ export function sunFor(date: Date, days?: readonly SunDay[] | null): { sunrise: 
 let liveDays: readonly SunDay[] | null = null;
 export function setLiveSunDays(days: readonly SunDay[] | null): void { liveDays = days; }
 export function liveSunDays(): readonly SunDay[] | null { return liveDays; }
+
+/** Minutes either side of a phase boundary over which the light blends from one phase's look to the next. */
+export const PHASE_BLEND_MIN = 20;
+/** Two phases and how far from the first to the second (0..1): the light at an hour, blended across each boundary. */
+export interface PhaseBlend { from: IslandPhase; to: IslandPhase; t: number }
+/**
+ * The phase blend at a Toronto hour: the phase alone away from its edges, and across each boundary (dawn's start,
+ * sunrise, golden hour's start and end) a smooth blend over PHASE_BLEND_MIN either side, so the light never steps.
+ */
+export function phaseBlend(hour: number, sun: { sunrise: number; sunset: number }): PhaseBlend {
+  const h = ((hour % 24) + 24) % 24, w = PHASE_BLEND_MIN / 60;
+  const edges: [number, IslandPhase, IslandPhase][] = [
+    [sun.sunrise - DAWN_HOURS, "night", "dawn"], [sun.sunrise, "dawn", "day"],
+    [sun.sunset - EVENING_HALF_HOURS, "day", "evening"], [sun.sunset + EVENING_HALF_HOURS, "evening", "night"],
+  ];
+  for (const [at, from, to] of edges) {
+    const d = h - at;
+    if (Math.abs(d) < w) { const u = (d + w) / (2 * w); return { from, to, t: u * u * (3 - 2 * u) }; }
+  }
+  const phase = phaseForSun(h, sun);
+  return { from: phase, to: phase, t: 0 };
+}

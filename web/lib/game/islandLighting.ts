@@ -83,6 +83,41 @@ export function islandLight(look: LookPreset, phase: IslandPhase, sun: SunAngles
   return lookToLight(look, PHASE_BASE[phase], phase, sun);
 }
 
+/**
+ * The light between two phases (`t` 0 = `from`, 1 = `to`): every number, colour and direction eased across, so
+ * dawn, sunrise, golden hour and nightfall come on gradually instead of stepping (living-village §5). The sun's
+ * position is the real one in both (the moon at night); lamps and fireflies switch at the midpoint, and the lamps
+ * and windows ease themselves on from there.
+ */
+export function islandLightAt(look: LookPreset, blend: { from: IslandPhase; to: IslandPhase; t: number }, sun: SunAngles | null = null): IslandLight {
+  const a = islandLight(look, blend.from, sun);
+  if (blend.from === blend.to || blend.t <= 0) return a;
+  const b = islandLight(look, blend.to, sun);
+  if (blend.t >= 1) return b;
+  // A rim only one side has fades in from nothing in that side's colour.
+  const rimA = a.rim ?? (b.rim && { color: b.rim.color, intensity: 0 }), rimB = b.rim ?? (a.rim && { color: a.rim.color, intensity: 0 });
+  return mixValue({ ...a, rim: rimA }, { ...b, rim: rimB }, blend.t, "") as IslandLight;
+}
+
+const _ca = new Color(), _cb = new Color();
+/** Ease two light values: numbers, #hex colours, packed colour numbers (water `*Color`), angles (`*zimuth`), objects. */
+function mixValue(a: unknown, b: unknown, t: number, key: string): unknown {
+  if (a === undefined || b === undefined) return t < 0.5 ? a : b;
+  if (typeof a === "number" && typeof b === "number") {
+    if (/Color$/.test(key)) return _ca.setHex(a).lerp(_cb.setHex(b), t).getHex();
+    if (/zimuth$/.test(key)) return a + (((b - a + 540) % 360) - 180) * t;
+    return a + (b - a) * t;
+  }
+  if (typeof a === "string" && typeof b === "string" && a.startsWith("#") && b.startsWith("#")) return `#${_ca.set(a).lerp(_cb.set(b), t).getHexString()}`;
+  if (Array.isArray(a) && Array.isArray(b)) return a.map((v, i) => mixValue(v, b[i], t, key));
+  if (a && b && typeof a === "object" && typeof b === "object") {
+    const out: Record<string, unknown> = {};
+    for (const k of Object.keys(a)) out[k] = mixValue((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k], t, k);
+    return out;
+  }
+  return t < 0.5 ? a : b;
+}
+
 /** The day David picked the look (row 236). Its 11:45 sun is the picked key light, within 3.5° (row 239). */
 const LOOK_DAY = new Date("2026-09-27T16:00:00Z");
 /** Each phase under the real sun at its preview time on LOOK_DAY (the applicant island's grade and the tests). */
@@ -155,6 +190,11 @@ export function withSeason(light: IslandLight, look: SeasonLook): IslandLight {
       midColor: leanWater(light.water.midColor, look.water, 0.15),
     },
   };
+}
+
+/** How lit the windows are (0 by day, 1 at night), from the porch-light curve: buildings' panes and lamps follow it. */
+export function windowLit(light: Pick<IslandLight, "windowGlow">): number {
+  return Math.min(1, Math.max(0, (light.windowGlow - PHASE_BASE.day.windowGlow) / (PHASE_BASE.night.windowGlow - PHASE_BASE.day.windowGlow)));
 }
 
 /** Fireflies every clear night, all year; off only in rain and snow (David, 2026-09-24). */

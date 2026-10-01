@@ -18,7 +18,8 @@ import { GLBProp, NatureTree, NatureBush, NatureFlowerCluster } from "../NatureM
 import { IslandAtmosphere, useFollowCamera, type TreeSpot } from "../IslandAtmosphere";
 import { PlacementLayer, type GridMapping } from "./PlacementLayer";
 import { createHomeIsland, HOME_SPAWN, HOUSE, HOME_MAILBOX, HOME_DOCK, HOME_TREES, HOME_BUSHES, HOME_FLOWERS, HOME_RADII } from "@/lib/game/homeIsland";
-import { ISLAND_TERRAIN, type IslandLight } from "@/lib/game/islandLighting";
+import { ISLAND_TERRAIN, windowLit, type IslandLight } from "@/lib/game/islandLighting";
+import { FadeLight } from "../AmbientProps";
 import { SEASON_TREES, SEASON_BUSHES, SEASON_FLOWERS, type SeasonLook } from "@/lib/game/seasonalLook";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import type { IslandPhase } from "@/lib/game/islandTime";
@@ -92,8 +93,8 @@ export default function HomeIslandScene({ identity, level, peaceful, fishSpot, f
     <GridOcean map={home.map} lite={liteMode} />
     <PeacefulLayer map={home.map} nodes={HOME_NODES} moment={peaceful.moment} member={peaceful.member} player={player} ground={home.ground} highTier={!liteMode} active={!fishing && !decorating} />
     {/* The dump's chalet house (5 × 4.2 cells, same model family as the village café/museum). */}
-    <group position={[HOUSE.x, 0, HOUSE.z]}><ACNHParts parts={CHALET_VARIANTS.brown} /></group>
-    <pointLight position={[HOUSE.door[0], 1.4, HOUSE.door[1] - 0.2]} color="#ffd68b" intensity={light.lampsOn ? light.lamp * 1.2 : 0} distance={4} />
+    <group position={[HOUSE.x, 0, HOUSE.z]}><ACNHParts parts={CHALET_VARIANTS.brown} lit={windowLit(light)} /></group>
+    <FadeLight position={[HOUSE.door[0], 1.4, HOUSE.door[1] - 0.2]} color="#ffd68b" intensity={light.lampsOn ? light.lamp * 1.2 : 0} distance={4} />
     <GLBProp url="/assets/acnh/furniture/mailbox.glb" position={[HOME_MAILBOX[0], home.ground(...HOME_MAILBOX), HOME_MAILBOX[1]]} scale={0.1} />
     <GLBProp url="/assets/acnh/furniture/monument-sign.glb" position={[HOME_DOCK[0] + 1.3, home.ground(...HOME_DOCK), HOME_DOCK[1] + 0.4]} scale={0.08} rotation={[0, -0.4, 0]} />
     <Html position={[HOME_DOCK[0], 2.4, HOME_DOCK[1]]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Boat to the village</div></Html>

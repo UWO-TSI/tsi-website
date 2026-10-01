@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { islandPhase, parseClockOverride, parseTimeOverride, type IslandPhase } from "./islandTime";
+import { islandPhase, parseClockOverride, parseTimeOverride, torontoHour, type IslandPhase } from "./islandTime";
 import { parseWeatherOverride, setLiveIslandWeather, weatherAt, type IslandWeather, type WeatherReport } from "./islandWeather";
 import { parseSeasonOverride, seasonBlend, type SeasonBlend } from "./season";
-import { setLiveSunDays, sunFor } from "./sunTimes";
+import { phaseBlend, setLiveSunDays, sunFor, type PhaseBlend } from "./sunTimes";
 import { phaseInstant, solarPosition, SUN_STEP_MS, type SunAngles } from "./sunPath";
 import { setWorldClockOffset, worldNow } from "./worldClock";
 
@@ -24,6 +24,8 @@ export interface IslandConditions {
   sun: SunAngles;
   /** World-clock ms (worldNow, so `?at=` moves it), read once a minute: the events, forage and bugs follow it. */
   now: number;
+  /** The light's phase blend (islandLightAt): across a boundary the two phases and how far; a forced phase is itself. */
+  blend: PhaseBlend;
 }
 
 /**
@@ -68,6 +70,13 @@ export function useIslandConditions(): IslandConditions {
   const sunStep = Math.floor((forcedPhase ? phaseInstant(forcedPhase, date, report?.sun) : date).getTime() / SUN_STEP_MS);
   const sun = useMemo(() => solarPosition(new Date(sunStep * SUN_STEP_MS)), [sunStep]);
   const weather = weatherOverride ?? (report && weatherAt(report, date)) ?? "clear";
+  // Keyed by value, so the light is only rebuilt when the blend moves (once a minute across a boundary).
+  const live = phaseBlend(torontoHour(date), sunFor(date, report?.sun));
+  const blendKey = forcedPhase ? `${forcedPhase} ${forcedPhase} 0` : `${live.from} ${live.to} ${Math.round(live.t * 1000) / 1000}`;
+  const blend = useMemo((): PhaseBlend => {
+    const [from, to, t] = blendKey.split(" ");
+    return { from: from as IslandPhase, to: to as IslandPhase, t: Number(t) };
+  }, [blendKey]);
   // Footsteps and the reel read it outside React (liveIslandWeather).
   useEffect(() => setLiveIslandWeather(weather), [weather]);
   // Resident routines read the same sun times outside React.
@@ -79,5 +88,6 @@ export function useIslandConditions(): IslandConditions {
     sunSource: sunFor(date, report?.sun).source,
     sun,
     now,
+    blend,
   };
 }
