@@ -59,3 +59,8 @@ export function sunFor(date: Date, days?: readonly SunDay[] | null): { sunrise: 
   const day = days?.find(d => d.date === key);
   return day ? { sunrise: day.sunrise, sunset: day.sunset, source: "open-meteo" } : { ...SUN_FALLBACK[month], source: "fallback" };
 }
+
+/** The latest forecast sun days (useIslandConditions sets them): routines outside React read the same sun times. */
+let liveDays: readonly SunDay[] | null = null;
+export function setLiveSunDays(days: readonly SunDay[] | null): void { liveDays = days; }
+export function liveSunDays(): readonly SunDay[] | null { return liveDays; }

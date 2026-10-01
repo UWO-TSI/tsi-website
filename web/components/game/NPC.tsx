@@ -1,377 +1,314 @@
 "use client";
 
-import { Suspense, useRef, useState, useMemo, useEffect, type RefObject } from "react";
-import { useFrame, ThreeEvent } from "@react-three/fiber";
+import { Suspense, useEffect, useMemo, useRef, type RefObject } from "react";
+import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
-import { getTerrainHeight } from "./terrain";
-import Character, { CHARACTER_HEIGHT, type CharacterMotion } from "./character/Character";
-import { hashSeed, randomLook, seeded } from "@/lib/game/character/look";
+import Character, { CHARACTER_HEIGHT, CHARACTER_SCALE, type CharacterMotion } from "./character/Character";
+import { hashSeed, parseLook, randomLook, seeded, type CharacterLook } from "@/lib/game/character/look";
+import { seatLift } from "@/lib/game/character/clips";
 import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
 import { AudioManager } from "@/lib/game/audio";
+import { easeFacing } from "@/lib/game/locomotion";
+import { worldNow } from "@/lib/game/worldClock";
+import { liveSunDays } from "@/lib/game/sunTimes";
+import { phaseInstant } from "@/lib/game/sunPath";
+import { landmark, type VillageIsland } from "@/lib/game/defaultIsland";
+import { objectsOf, type Village } from "@/lib/game/villageMap";
+import type { IslandPhase } from "@/lib/game/islandTime";
+import { RESIDENT_STRIDE, RESIDENT_WALK, ResidentDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResident, type DaySpan, type ResidentPose } from "@/lib/game/residentRoutine";
+import { hash01 } from "@/lib/game/worldFx";
+import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import type { NPCPersona } from "@/lib/content/types";
-
+import s from "./residents.module.css";
 
 /**
- * NPC (sprint D5) — a resident on the shared character rig (row 105). Until
- * the resident roster exists each persona wears a random look seeded by its
- * slug, so the same resident always looks the same. Wandering drives the
- * walk clip; a greeting (tsi:npc-greet) plays Wave.
+ * The village's residents (specs/polish/living-village.md deliverables 1-2; rows 85, 105, 122) on the shared
+ * character rig. Where each one is comes from their routine on the shared world clock (lib/game/residentRoutine.ts):
+ * they walk a path between stops at stride speed, stop and idle (look round, stretch, gaze at the water, sit on a
+ * bench, chat with whoever else is there), face where they're going, and turn to you only once they've stopped and
+ * you're close. At night they go in through their door or sit on a bench under the lamp.
  *
- * Click fires onClick (GameWorld wires this to setActiveNPC → D4 overlay).
+ * Only what one viewer sees is local: turning to you, the greeting bubble, waiting while you stand in their way (they
+ * catch up after, a little brisker). One frame loop drives them all; the overhead UI is plain DOM toggled by refs, so
+ * nothing calls setState per frame.
  */
 
-interface NPCProps {
-  persona: NPCPersona;
-  position: [number, number, number];
-  playerPosition?: THREE.Vector3;
-  playerPositionRef?: RefObject<THREE.Vector3>;
-  worldPositionRef?: RefObject<THREE.Vector3>;
-  groundHeight?: (x: number, z: number) => number;
-  constrainMove?: (x: number, z: number, nx: number, nz: number) => [number, number];
-  onClick: () => void;
-}
+/** How close before they notice you: the nameplate and the "!" show, and a greeting the first time. */
+const NOTICE_RANGE = 4.5;
+/** Stopped residents turn to face you inside this. */
+const FACE_RANGE = 3.4;
+/** Two stopped residents this close chat. */
+const CHAT_RANGE = 2.6;
+/** The greeting bubble's life and the quiet after it. */
+const BUBBLE_S = 4.2, BUBBLE_COOLDOWN_S = 22;
+/** Standing this close in front of a walking resident stops them. */
+const BLOCK_RANGE = 0.95;
+/** How fast a resident who fell behind (waited for you, talked) catches up: the routine runs this much faster. */
+const CATCH_UP = 0.35;
+/** The bubble stack never sits lower than this above the bottom edge: the prompt lives there. */
+const PROMPT_CLEAR = 132;
 
-const NAMEPLATE_OFFSET = CHARACTER_HEIGHT + 0.3;
-// P10: how close before the NPC visually "notices" the player (bob + "!"
-// indicator above head). Matches the keyboard-interact range felt in
-// playtest so the cue arrives just before the prompt would.
-const NOTICE_RANGE = 5.5;
-
-// G2 (cozy marathon): proximity speech bubble. On the noticed rising edge
-// the NPC greets with a floating line + voice blips — the ACNH "villagers
-// talk at you as you pass" beat. Once per approach, cooled down so
-// loitering nearby doesn't spam.
-const BUBBLE_MS = 4200;
-const BUBBLE_COOLDOWN_S = 22;
-// Fillers (no canned_dialogue) draw from a cozy pool. Original lines, gently
-// TSI-flavored so the courtyard feels lived-in without naming real people.
+// Fillers (no canned_dialogue) draw from a cozy pool. Original lines, gently TSI-flavoured.
 const FILLER_LINES = [
-  "Nice day, eh?",
-  "Hm hm hmm ♪",
-  "The bridge creaks a little. I like it.",
-  "Have you talked to the Mayor yet?",
-  "I could watch the river all day.",
-  "New folks keep arriving. It's good to see.",
-  "The fireflies come out by the water at night.",
-  "Someone shook the whole tree bare this morning!",
-  "If you're building something, the HQ's the place.",
-  "I caught a little one down by the bank earlier.",
-  "The flowers grow back if you're patient.",
-  "Feels like the whole village is waking up lately.",
-  "Pull up a bench, stay a while.",
-  "Heard the Oracle knows what class you'll be.",
-  "Quiet mornings are my favorite kind.",
+  "Nice day, eh?", "Hm hm hmm ♪", "The bridge creaks a little. I like it.", "I could watch the river all day.",
+  "New folks keep arriving. It's good to see.", "The fireflies come out by the water at night.", "If you're building something, the HQ's the place.",
+  "The flowers grow back if you're patient.", "Pull up a bench, stay a while.", "Quiet mornings are my favourite kind.",
 ];
+const POST_LABEL: Record<string, string> = {
+  hq_lead: "Clubhouse", shopkeeper: "Shopkeeper", cafe_owner: "Café owner", museum_curator: "Museum curator",
+  wharf_keeper: "Wharf keeper", oracle_keeper: "Oracle keeper", workshop_crafter: "Workshop", villager: "Villager",
+};
 
-// Hue from slug → consistent color per NPC, deterministic across sessions.
-function slugToHue(slug: string): number {
-  let h = 0;
-  for (let i = 0; i < slug.length; i++) {
-    h = (h * 31 + slug.charCodeAt(i)) % 360;
+const labelPoint = (object: THREE.Object3D, camera: THREE.Camera, size: { width: number; height: number }) => {
+  const [x, y] = calculateCurvedHtmlPosition(object, camera, size);
+  return [x, Math.min(y, size.height - PROMPT_CLEAR)];
+};
+
+interface Ui { root: HTMLDivElement | null; bubble: HTMLDivElement | null; text: HTMLSpanElement | null; notice: HTMLDivElement | null; plate: HTMLDivElement | null }
+/** One resident's live state, owned by its figure and driven by the residents' frame loop. */
+interface Runtime {
+  id: string; seed: number; lines: readonly string[]; day: ResidentDay; gather: readonly [number, number];
+  home: readonly [number, number] | null;
+  pose: ResidentPose; motion: RefObject<CharacterMotion>; group: RefObject<THREE.Group | null>; visual: RefObject<THREE.Group | null>; ui: Ui;
+  ready: boolean; x: number; z: number; speed: number; hidden: boolean; lift: number; lag: number;
+  /** A walk of its own off the routine (to the ceremony, catching up after a jump): points, next index. */
+  detour: [number, number][] | null; detourAt: number; detourGoal: [number, number];
+  /** The way they'd face before you or a chat turn them. */
+  want: number;
+  noticed: boolean; bubbleUntil: number; bubbleNext: number; shown: string;
+  idleKey: number; idleVisit: number; laughBeat: number; chat: Runtime | null; hopT: number; hopNext: number; greetAt: number; hovered: boolean;
+  timers: number[];
+}
+
+const dist = (ax: number, az: number, bx: number, bz: number) => Math.hypot(ax - bx, az - bz);
+
+/** Walk a detour on: toward its next point at `speed`, popping points as they're reached. Returns the step taken. */
+function stepDetour(r: Runtime, speed: number, dt: number): number {
+  const path = r.detour!;
+  let left = speed * dt, moved = 0;
+  while (left > 1e-6 && path.length) {
+    const [px, pz] = path[0], d = dist(r.x, r.z, px, pz);
+    if (d <= left) { r.x = px; r.z = pz; left -= d; moved += d; path.shift(); continue; }
+    r.x += (px - r.x) / d * left; r.z += (pz - r.z) / d * left; moved += left; left = 0;
   }
-  return Math.abs(h);
+  return moved;
 }
 
-// W1: gentle wander. Each NPC drifts within WANDER_RADIUS of its spawn on two
-// slow, coprime-ish sine components (so the path never repeats tightly), with
-// a slower "pause" envelope that eases the drift toward 0 periodically — the
-// ACNH "villager mills about, then stops to look around" feel. The billboard
-// nameplate, speech bubble, and click hitbox all ride the group, so they
-// follow for free. Radius is small enough to stay clear of buildings.
-const WANDER_RADIUS = 1.15;
-function wanderOffset(t: number, phase: number): [number, number] {
-  const pause = 0.5 + 0.5 * Math.sin(t * 0.11 + phase); // 0..1 slow envelope
-  const amp = WANDER_RADIUS * pause;
-  const x = Math.sin(t * 0.23 + phase) * amp;
-  const z = Math.sin(t * 0.31 + phase * 1.7) * amp * 0.8;
-  return [x, z];
+function show(el: HTMLElement | null, on: boolean) {
+  if (el && el.hidden === on) el.hidden = !on;
 }
 
-export default function NPC({ persona, position, playerPosition, playerPositionRef, worldPositionRef, groundHeight = getTerrainHeight, constrainMove, onClick }: NPCProps) {
-  const groupRef = useRef<THREE.Group>(null);
-  const visualRef = useRef<THREE.Group>(null);
-  const [hovered, setHovered] = useState(false);
-  const [noticed, setNoticed] = useState(false);
-  // G2 speech bubble state + timers (refs so useFrame can read/write freely).
-  const [bubble, setBubble] = useState<string | null>(null);
-  const bubbleUntilRef = useRef(0);
-  const bubbleCooldownRef = useRef(0);
-  const voiceTimers = useRef<number[]>([]);
-  useEffect(() => () => { voiceTimers.current.forEach(window.clearTimeout); }, []);
-  // P10: per-frame bob clock + smoothed proximity factor (0 = far, 1 = next
-  // to the NPC). Drives idle bob amplitude so the NPC subtly leans in as
-  // the player approaches.
-  const clockRef = useRef(0);
-  const proxRef = useRef(0);
-  // Loop iter 8 (2026-07-24): greeting hop — when a chat opens with this
-  // NPC (tsi:npc-greet {id}), fire the same hop as the startle. Cheap
-  // delight: they bounce hello as the overlay slides in.
+export default function Residents({ personas, phase, ceremony, player, island, v }: {
+  personas: readonly NPCPersona[]; phase: IslandPhase; ceremony: boolean; player: RefObject<THREE.Vector3>; island: VillageIsland; v: Village;
+}) {
+  const nav = useMemo(() => navGrid(island, v), [island, v]);
+  const residents = useMemo(() => {
+    const sorted = [...personas].sort((a, b) => a.slug.localeCompare(b.slug));
+    const sitters = sorted.filter(p => Object.values(p.schedule ?? {}).some(x => x === "bench" || (Array.isArray(x) && x.includes("bench"))));
+    const gather = objectsOf("gather", v);
+    return sorted.map((persona, i) => {
+      const plan = planResident(persona, i, v, island, Math.max(0, sitters.indexOf(persona)));
+      const g = gather.length ? gather[i % gather.length] : null;
+      const authored = RESIDENT_LOOKS[persona.slug];
+      return {
+        persona, plan, day: new ResidentDay(plan, nav),
+        look: authored ? parseLook(authored) : randomLook(seeded(hashSeed(persona.slug))),
+        gather: (g ? [g.x, g.z] : plan.home?.door ?? [0, 0]) as readonly [number, number],
+      };
+    });
+  }, [personas, v, island, nav]);
+  const registry = useRef(new Map<string, Runtime>());
+  const monument = useMemo(() => landmark("monument", v), [v]);
+  const clock = useRef<{ span: DaySpan | null; forced: IslandPhase | null; base: number; since: number }>({ span: null, forced: null, base: 0, since: 0 });
+
+  // A click (and the ceremony's cheer) greets: a wave and a hop.
   useEffect(() => {
     const onGreet = (e: Event) => {
-      const d = (e as CustomEvent<{ id: string }>).detail;
-      if (d?.id === persona.id) greetAtRef.current = performance.now();
+      const r = registry.current.get((e as CustomEvent<{ id: string }>).detail?.id);
+      if (r) r.greetAt = worldNow() / 1000;
     };
     window.addEventListener("tsi:npc-greet", onGreet);
     return () => window.removeEventListener("tsi:npc-greet", onGreet);
-  }, [persona.id]);
+  }, []);
 
-  // G4 (item 8): startle hop when the player barges in close — a little
-  // 0.35s bounce with a 3s cooldown.
-  const hopRef = useRef({ t: -1, cooldownUntil: 0 });
-  // Greet hop trigger: listener stamps the time; the frame loop only READS
-  // it (react-compiler forbids frame-writes to effect-shared refs) — the
-  // 150ms window + the hop.t latch make it one-shot.
-  const greetAtRef = useRef(0);
+  useFrame((_, raw) => {
+    const dt = Math.min(raw, 0.1), now = worldNow() / 1000, days = liveSunDays(), c = clock.current, p = player.current;
+    if (!c.span || now < c.span.t0 || now >= c.span.t1) c.span = daySpan(now * 1000, days);
+    // A forced phase (?time=, the options menu) runs the routine from that phase's preview time on.
+    let t = now;
+    if (phaseOn(c.span, now) !== phase) {
+      if (c.forced !== phase) { c.forced = phase; c.since = now; c.base = phaseInstant(phase, new Date(now * 1000), days).getTime() / 1000; }
+      t = c.base + (now - c.since);
+    } else c.forced = null;
 
-  // Spawn base (XZ). W1: the NPC wanders around this within WANDER_RADIUS.
-  const grounded: [number, number, number] = useMemo(() => {
-    return [position[0], groundHeight(position[0], position[2]), position[2]];
-  }, [position, groundHeight]);
-  // Deterministic per-NPC wander phase from the slug hash.
-  const wanderPhase = useMemo(() => slugToHue(persona.slug) * 0.017, [persona.slug]);
-
-  const look = useMemo(() => randomLook(seeded(hashSeed(persona.slug))), [persona.slug]);
-  const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null });
-
-  // Daily village life v1: the anchor eases toward the (phase-dependent)
-  // spawn base so a time-of-day move reads as a slow stroll, not a snap.
-  const easedBaseRef = useRef<[number, number] | null>(null);
-
-  // Smooth hover scale + idle bob + proximity reaction + W1 wander.
-  useFrame((_, delta) => {
-    clockRef.current += delta;
-
-    if (!easedBaseRef.current) easedBaseRef.current = [grounded[0], grounded[2]];
-    const eb = easedBaseRef.current;
-    eb[0] = THREE.MathUtils.damp(eb[0], grounded[0], 0.55, delta);
-    eb[1] = THREE.MathUtils.damp(eb[1], grounded[2], 0.55, delta);
-
-    // W1: current wandered XZ around the (eased) spawn base.
-    const [wx, wz] = wanderOffset(clockRef.current, wanderPhase);
-    const [curX, curZ] = constrainMove
-      ? constrainMove(grounded[0], grounded[2], eb[0] + wx, eb[1] + wz)
-      : [eb[0] + wx, eb[1] + wz];
-
-    // Distance to player uses the wandered position (XZ only).
-    let dist = Infinity;
-    const player = playerPositionRef?.current ?? playerPosition;
-    if (player) {
-      const dx = player.x - curX;
-      const dz = player.z - curZ;
-      dist = Math.hypot(dx, dz);
-    }
-    const targetProx = THREE.MathUtils.clamp(1 - dist / NOTICE_RANGE, 0, 1);
-    proxRef.current = THREE.MathUtils.damp(proxRef.current, targetProx, 8, delta);
-    const isNoticed = dist <= NOTICE_RANGE;
-    if (isNoticed !== noticed) setNoticed(isNoticed);
-
-    // G4 startle hop trigger.
-    const hop = hopRef.current;
-    const greeted = performance.now() - greetAtRef.current < 150;
-    if (greeted && hop.t < 0) {
-      hop.t = 0;
-      hop.cooldownUntil = clockRef.current + 2;
-      motion.current.play = "Wave";
-    }
-    if (dist < 1.05 && hop.t < 0 && clockRef.current > hop.cooldownUntil) {
-      hop.t = 0;
-      hop.cooldownUntil = clockRef.current + 3;
-    }
-    let hopY = 0;
-    if (hop.t >= 0) {
-      hop.t += delta;
-      if (hop.t > 0.35) hop.t = -1;
-      else hopY = Math.sin((hop.t / 0.35) * Math.PI) * 0.38;
+    // 1. Where everyone is.
+    for (const r of registry.current.values()) {
+      const pose = r.day.at(t - r.lag, days, r.pose), m = r.motion.current;
+      const goal: [number, number] = ceremony ? [r.gather[0], r.gather[1]] : (pose.inside || pose.seat > 0) && pose.stop?.door ? [pose.stop.door[0], pose.stop.door[1]] : [pose.x, pose.z];
+      if (!r.ready) { r.ready = true; r.x = pose.x; r.z = pose.z; r.hidden = pose.inside; m.yaw = pose.yaw; }
+      // Coming out of hiding somewhere else (a forced phase while indoors): out through their own door.
+      if (r.hidden && !pose.inside && dist(r.x, r.z, pose.x, pose.z) > 0.6 && r.home) { r.x = r.home[0]; r.z = r.home[1]; }
+      const onRoutine = !ceremony && !r.detour && dist(r.x, r.z, pose.x, pose.z) < 0.08 + (pose.speed + 1) * dt * 1.5;
+      let speed = 0, yaw = pose.yaw, blocked = false;
+      if (onRoutine) {
+        // Someone standing right in front of a walking resident: they wait (the routine waits with them).
+        const dx = p.x - pose.x, dz = p.z - pose.z;
+        blocked = pose.moving && dist(p.x, p.z, pose.x, pose.z) < BLOCK_RANGE && dx * Math.sin(pose.yaw) + dz * Math.cos(pose.yaw) > 0.1;
+        if (blocked) r.lag += dt;
+        else { speed = pose.moving ? pose.speed : 0; r.x = pose.x; r.z = pose.z; }
+        r.hidden = pose.inside;
+      } else if (dist(r.x, r.z, goal[0], goal[1]) < 0.03) {
+        // There (the ceremony spot, or a door or seat the routine is behind): step onto the routine.
+        r.detour = null;
+        if (!ceremony) { r.x = pose.x; r.z = pose.z; r.hidden = pose.inside; }
+      } else {
+        // Off the routine: walk (a path round every solid) to where it is now, or to the ceremony.
+        if (!r.detour || (dist(goal[0], goal[1], r.detourGoal[0], r.detourGoal[1]) > 1 && now - r.detourAt > 0.5)) {
+          r.detour = nav.path(r.x, r.z, goal[0], goal[1])?.slice(1) ?? [[goal[0], goal[1]]];
+          r.detourAt = now; r.detourGoal = goal;
+        }
+        const px = r.x, pz = r.z, moved = stepDetour(r, RESIDENT_WALK * (ceremony ? 1.25 : 1.35), dt);
+        speed = dt > 0 ? moved / dt : 0;
+        if (moved > 1e-5) yaw = Math.atan2(r.x - px, r.z - pz);
+        r.hidden = false;
+        if (!r.detour.length) {
+          r.detour = null;
+          // Arrived where the routine is: step back onto it (at a door or a seat, straight into it).
+          if (!ceremony && dist(r.x, r.z, goal[0], goal[1]) < 0.05) { r.x = pose.x; r.z = pose.z; r.hidden = pose.inside; }
+        }
+      }
+      if (!blocked && r.lag > 0 && !(r.bubbleUntil > now && !pose.moving)) r.lag = Math.max(0, r.lag - CATCH_UP * dt);
+      if (r.bubbleUntil > now && !pose.moving) r.lag += dt; // still talking: the routine holds
+      r.speed = speed;
+      m.speed = speed;
+      // Face the way they walk; stopped, the seat's way or the place's view (chat and you come next).
+      r.want = speed > 0.05 ? yaw : onRoutine ? pose.yaw : ceremony && monument ? Math.atan2(monument.x - r.x, monument.z - r.z) : m.yaw;
+      r.chat = null;
     }
 
-    // G2: greet on the noticed rising edge (with cooldown), clear on expiry.
-    const now = clockRef.current;
-    if (isNoticed && !noticed && now >= bubbleCooldownRef.current) {
-      const pool =
-        persona.canned_dialogue && persona.canned_dialogue.length > 0
-          ? persona.canned_dialogue
-          : FILLER_LINES;
-      const line = pool[Math.floor(Math.random() * pool.length)];
-      bubbleUntilRef.current = now + BUBBLE_MS / 1000;
-      bubbleCooldownRef.current = now + BUBBLE_COOLDOWN_S;
-      setBubble(line);
-      motion.current.talk = Math.min(3.2, 0.8 + line.length * 0.045); // the painted mouth talks while the line shows
-      // A couple of staggered voice blips sell the "they said something".
-      AudioManager.playBlip();
-      voiceTimers.current.forEach(window.clearTimeout);
-      voiceTimers.current = [140, 300].map((delay) => window.setTimeout(() => AudioManager.playBlip(), delay));
-    }
-    if (bubble && now > bubbleUntilRef.current) setBubble(null);
-
-    if (visualRef.current) {
-      // Hover takes precedence over notice scale; both feel like attention.
-      const scaleTarget = hovered ? 1.05 : 1 + proxRef.current * 0.04;
-      const next = THREE.MathUtils.damp(visualRef.current.scale.x, scaleTarget, 12, delta);
-      visualRef.current.scale.set(next, next, next);
+    // 2. Chats: two stopped standing residents near each other face each other and talk, taking turns.
+    const list = [...registry.current.values()];
+    for (const r of list) {
+      if (r.speed > 0.05 || r.hidden || r.pose.seat > 0 || ceremony || r.detour) continue;
+      let best: Runtime | null = null, bestD = CHAT_RANGE;
+      for (const o of list) {
+        if (o === r || o.speed > 0.05 || o.hidden || o.pose.seat > 0 || o.detour) continue;
+        const d = dist(r.x, r.z, o.x, o.z);
+        if (d < bestD) { bestD = d; best = o; }
+      }
+      r.chat = best;
     }
 
-    // Idle bob + W1 wander drift. XZ eases to the wandered spot; y resamples
-    // terrain there (+ bob) so the NPC stays grounded on slopes.
-    if (groupRef.current) {
-      const g = groupRef.current, m = motion.current;
-      const step = Math.hypot(curX - g.position.x, curZ - g.position.z);
-      m.speed = delta > 0 ? step / delta : 0;
-      // Face the way they stroll; turn to the player once noticed and still.
-      const heading = isNoticed && player ? Math.atan2(player.x - curX, player.z - curZ) : step > 1e-4 ? Math.atan2(curX - g.position.x, curZ - g.position.z) : m.yaw;
-      m.yaw += Math.atan2(Math.sin(heading - m.yaw), Math.cos(heading - m.yaw)) * Math.min(1, delta * 6);
-      m.lift = hopY;
-      g.position.set(curX, groundHeight(curX, curZ), curZ);
-      worldPositionRef?.current.copy(g.position);
+    // 3. Each one's clip, facing, talk and overhead UI.
+    for (const r of list) {
+      const m = r.motion.current, pose = r.pose, g = r.group.current;
+      const d = dist(p.x, p.z, r.x, r.z), stopped = r.speed < 0.05 && !r.detour, sitting = stopped && pose.seat > 0 && dist(r.x, r.z, pose.x, pose.z) < 0.05;
+      let want = r.want;
+      if (stopped && !sitting && !r.hidden) {
+        if (d < FACE_RANGE) want = Math.atan2(p.x - r.x, p.z - r.z);
+        else if (r.chat) want = Math.atan2(r.chat.x - r.x, r.chat.z - r.z);
+      }
+      m.yaw = easeFacing(m.yaw, want, r.speed > 0.05 ? 7 : 4, dt);
+      m.pose = sitting ? "Sit" : null;
+      // Chatting: one talks (the Chat clip, the mouth) while the other listens, swapping every few seconds; now and then a laugh.
+      if (r.chat && d >= FACE_RANGE) {
+        const pair = r.seed ^ r.chat.seed, turn = Math.floor(now / 3.4 + hash01(pair, 1) * 4) % 2;
+        const talking = (r.seed < r.chat.seed) === (turn === 0);
+        if (talking) { m.pose = "Chat"; m.talk = Math.max(m.talk ?? 0, 0.25); }
+        const beat = Math.floor(now / 6.5);
+        if (!talking && hash01(r.seed, beat) < 0.22 && r.laughBeat !== beat) { m.play = "Laugh"; r.laughBeat = beat; }
+      } else if (stopped && !sitting && pose.stop && d >= FACE_RANGE && !ceremony) {
+        // Idling at a stop: a look round, a stretch, gazing out, on the routine's own beat.
+        const { clip, key } = idleAt(pose.stop, pose.visit, r.seed, pose.stayed);
+        if (key !== r.idleKey || pose.visit !== r.idleVisit) {
+          if (clip && key >= 0) m.play = clip;
+          r.idleKey = key; r.idleVisit = pose.visit;
+        }
+      }
+      // Greeted (a click, the ceremony's cheer): a wave (a cheer at the ceremony) and a hop.
+      if (now - r.greetAt < 0.15 && r.hopT < 0) { r.hopT = 0; r.hopNext = now + 2; m.play = ceremony ? "Cheer" : sitting ? null : "Wave"; }
+      // Startle when you barge right in.
+      if (d < 1.05 && r.hopT < 0 && now > r.hopNext && !sitting && !r.hidden) { r.hopT = 0; r.hopNext = now + 3; }
+      let hop = 0;
+      if (r.hopT >= 0) { r.hopT += dt; if (r.hopT > 0.35) r.hopT = -1; else hop = Math.sin((r.hopT / 0.35) * Math.PI) * 0.38; }
+      r.lift = THREE.MathUtils.damp(r.lift, sitting ? seatLift("Sit", pose.seat, CHARACTER_SCALE) : 0, 7, dt);
+      m.lift = r.lift + hop;
+      if (g) {
+        g.visible = !r.hidden;
+        g.position.set(r.x, island.ground(r.x, r.z), r.z);
+      }
+      const vis = r.visual.current;
+      if (vis) { const k = THREE.MathUtils.damp(vis.scale.x, r.hovered ? 1.05 : 1, 12, dt); vis.scale.setScalar(k); }
+
+      // Noticing you: the name and "!" show; the first time (and after a quiet spell) they say a line.
+      const noticed = d < NOTICE_RANGE && !r.hidden;
+      if (noticed && !r.noticed && now >= r.bubbleNext) {
+        const line = r.lines[Math.floor(hash01(r.seed, Math.floor(now / 30)) * r.lines.length) % r.lines.length];
+        r.bubbleUntil = now + BUBBLE_S; r.bubbleNext = now + BUBBLE_COOLDOWN_S;
+        if (r.ui.text) r.ui.text.textContent = line;
+        r.shown = "";
+        m.talk = Math.min(3.2, 0.8 + line.length * 0.045);
+        if (stopped && !sitting && !r.chat) m.play = "Wave";
+        AudioManager.playBlip();
+        r.timers.forEach(window.clearTimeout);
+        r.timers = [140, 300].map(ms => window.setTimeout(() => AudioManager.playBlip(), ms));
+      }
+      r.noticed = noticed;
+      const bubble = r.bubbleUntil > now && !r.hidden, state = `${bubble ? "b" : ""}${noticed && !bubble ? "n" : ""}${(noticed || r.hovered) && !r.hidden ? "p" : ""}`;
+      if (state !== r.shown) {
+        r.shown = state;
+        show(r.ui.bubble, bubble); show(r.ui.notice, state.includes("n")); show(r.ui.plate, state.includes("p"));
+      }
     }
   }, -3);
 
-  const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
+  return <>{residents.map(({ persona, day, look, gather, plan }) => (
+    <Figure key={persona.id} persona={persona} day={day} look={look} gather={gather} home={plan.home?.door ?? null} seed={plan.seed} registry={registry} />
+  ))}</>;
+}
+
+function Figure({ persona, day, look, gather, home, seed, registry }: {
+  persona: NPCPersona; day: ResidentDay; look: CharacterLook; gather: readonly [number, number]; home: readonly [number, number] | null; seed: number;
+  registry: RefObject<Map<string, Runtime>>;
+}) {
+  const group = useRef<THREE.Group>(null), visual = useRef<THREE.Group>(null);
+  const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null });
+  const root = useRef<HTMLDivElement>(null), bubble = useRef<HTMLDivElement>(null), text = useRef<HTMLSpanElement>(null), notice = useRef<HTMLDivElement>(null), plate = useRef<HTMLDivElement>(null);
+  const runtime = useRef<Runtime | null>(null);
+  useEffect(() => {
+    const r: Runtime = {
+      id: persona.id, seed, lines: persona.canned_dialogue?.length ? persona.canned_dialogue : FILLER_LINES, day, gather, home,
+      pose: newPose(), motion, group, visual, ui: { root: root.current, bubble: bubble.current, text: text.current, notice: notice.current, plate: plate.current },
+      ready: false, x: 0, z: 0, speed: 0, hidden: false, lift: 0, lag: 0, detour: null, detourAt: 0, detourGoal: [0, 0],
+      want: 0, noticed: false, bubbleUntil: 0, bubbleNext: 0, shown: "-", idleKey: -1, idleVisit: -1, laughBeat: -1, chat: null, hopT: -1, hopNext: 0, greetAt: 0, hovered: false, timers: [],
+    };
+    runtime.current = r;
+    const map = registry.current;
+    map.set(persona.id, r);
+    return () => { r.timers.forEach(window.clearTimeout); map.delete(persona.id); runtime.current = null; };
+  }, [persona, day, gather, home, seed, registry]);
+
+  const hover = (on: boolean) => (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
-    setHovered(true);
-    document.body.style.cursor = "pointer";
+    if (runtime.current) runtime.current.hovered = on;
+    document.body.style.cursor = on ? "pointer" : "auto";
   };
-  const handlePointerOut = (e: ThreeEvent<PointerEvent>) => {
-    e.stopPropagation();
-    setHovered(false);
-    document.body.style.cursor = "auto";
-  };
-  const handleClick = (e: ThreeEvent<MouseEvent>) => {
+  const click = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     e.nativeEvent.preventDefault();
-    onClick();
+    window.dispatchEvent(new CustomEvent("tsi:npc-greet", { detail: { id: persona.id } }));
   };
-
-  return (
-    <group ref={groupRef} position={grounded}>
-      <group ref={visualRef}>
-      <group onClick={handleClick} onPointerOver={handlePointerOver} onPointerOut={handlePointerOut}>
-        <Suspense fallback={null}><Character look={look} motion={motion} walkSpeed={2} /></Suspense>
-      </group>
-
-      {/* G2: proximity speech bubble — ACNH-style rounded white bubble with
-          a tail, floating above the nameplate. Pointer-events off so it
-          never blocks the click-to-chat hitbox. */}
-      {bubble && (
-        <Html calculatePosition={calculateCurvedHtmlPosition}
-          zIndexRange={[40, 0]}
-          position={[0, NAMEPLATE_OFFSET + 0.95, 0]}
-          center
-          style={{ pointerEvents: "none" }}
-        >
-          <div
-            style={{
-              position: "relative",
-              maxWidth: 210,
-              padding: "8px 12px",
-              background: "#FFFDF5",
-              color: "#4A4034",
-              borderRadius: 14,
-              border: "2px solid #E8DFC8",
-              fontFamily: "var(--font-highlight, sans-serif)",
-              fontSize: 12,
-              lineHeight: 1.35,
-              textAlign: "center",
-              boxShadow: "0 3px 10px rgba(60, 45, 20, 0.18)",
-              animation: "npc-bubble-pop 0.25s ease-out",
-              whiteSpace: "normal",
-              width: "max-content",
-            }}
-          >
-            {bubble}
-            <span
-              style={{
-                position: "absolute",
-                left: "50%",
-                bottom: -7,
-                transform: "translateX(-50%) rotate(45deg)",
-                width: 12,
-                height: 12,
-                background: "#FFFDF5",
-                borderRight: "2px solid #E8DFC8",
-                borderBottom: "2px solid #E8DFC8",
-              }}
-            />
-            <style>{`
-              @keyframes npc-bubble-pop {
-                from { transform: scale(0.6); opacity: 0; }
-                to { transform: scale(1); opacity: 1; }
-              }
-            `}</style>
-          </div>
-        </Html>
-      )}
-
-      {/* P10: notice indicator — appears when player enters NOTICE_RANGE.
-          A subtle "!" bubble that signals "I see you, click to talk".
-          Mounted/unmounted by `noticed` state so animations restart cleanly. */}
-      {noticed && !bubble && (
-        <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}
-          position={[0, NAMEPLATE_OFFSET + 0.65, 0]}
-          center
-          style={{ pointerEvents: "none" }}
-        >
-          <div
-            style={{
-              background: "#FFD166",
-              color: "#1A1410",
-              fontFamily: "'IBM Plex Mono', monospace",
-              fontWeight: 800,
-              fontSize: "16px",
-              width: "22px",
-              height: "22px",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
-              animation: "npcNoticeBounce 700ms ease-in-out infinite",
-              userSelect: "none",
-            }}
-          >
-            !
-          </div>
-          <style jsx>{`
-            @keyframes npcNoticeBounce {
-              0%, 100% { transform: translateY(0); }
-              50% { transform: translateY(-4px); }
-            }
-          `}</style>
-        </Html>
-      )}
-
-      {/* Nameplate — proximity-gated (art pass pt2): always-on plates over
-          every NPC read as map clutter; they reveal alongside the greeting. */}
-      {(noticed || hovered) && (
-      <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}
-        position={[0, NAMEPLATE_OFFSET, 0]}
-        center
-        style={{ pointerEvents: "none" }}
-      >
-        <div
-          className="whitespace-nowrap text-center"
-          style={{
-            background: "rgba(15, 15, 16, 0.7)",
-            padding: "2px 8px",
-            borderRadius: "4px",
-            border: hovered ? "1px solid rgba(255,255,255,0.4)" : "1px solid rgba(255,255,255,0.15)",
-          }}
-        >
-          <div
-            style={{
-              fontSize: "11px",
-              fontWeight: 700,
-              color: "#f1ffff",
-              fontFamily: "'IBM Plex Mono', monospace",
-              lineHeight: 1.2,
-            }}
-          >
-            {persona.display_name}
-          </div>
-        </div>
-      </Html>
-      )}
-      </group>
+  return <group ref={group}>
+    <group ref={visual} onClick={click} onPointerOver={hover(true)} onPointerOut={hover(false)}>
+      <Suspense fallback={null}><Character look={look} motion={motion} walkSpeed={RESIDENT_STRIDE} /></Suspense>
     </group>
-  );
+    <Html calculatePosition={labelPoint} position={[0, CHARACTER_HEIGHT + 0.3, 0]} zIndexRange={[30, 0]} style={{ pointerEvents: "none" }}>
+      <div ref={root} className={s.stack}>
+        <div ref={bubble} className={s.bubble} hidden><b>{persona.display_name}</b><span ref={text} /></div>
+        <div ref={notice} className={s.notice} hidden aria-hidden="true">!</div>
+        <div ref={plate} className={s.plate} hidden>{persona.display_name}{persona.post && POST_LABEL[persona.post] && <small>{POST_LABEL[persona.post]}</small>}</div>
+      </div>
+    </Html>
+  </group>;
 }

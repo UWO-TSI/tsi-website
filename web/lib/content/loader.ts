@@ -17,6 +17,7 @@ import {
   DEFAULT_PALETTES,
   DEFAULT_SHOP_ITEMS,
 } from "@/data/content-defaults";
+import { withProposed } from "@/lib/content/residentRoster";
 import type {
   EmoteType,
   NPCPersona,
@@ -74,8 +75,12 @@ async function fetchDraftData(
 
 // ─── NPCs ───────────────────────────────────────────────────────────────────
 
+// Outside production the fallback carries the proposed resident roster (residentRoster.ts) until David approves its
+// seed migration; production keeps the seeded two.
+const FALLBACK_PERSONAS = process.env.NODE_ENV === "production" ? DEFAULT_NPC_PERSONAS : withProposed(DEFAULT_NPC_PERSONAS);
+
 async function fetchNPCPersonas(permanentOnly: boolean): Promise<NPCPersona[]> {
-  if (!hasSupabaseEnv()) return filterPermanent(DEFAULT_NPC_PERSONAS, permanentOnly);
+  if (!hasSupabaseEnv()) return filterPermanent(FALLBACK_PERSONAS, permanentOnly);
   try {
     const supabase = createClient();
     let query = supabase
@@ -87,12 +92,12 @@ async function fetchNPCPersonas(permanentOnly: boolean): Promise<NPCPersona[]> {
     // No rows (signed out, or every resident switched off) also falls back: the world never empties (principle 2).
     if (error || !data?.length) {
       if (error) console.warn("[contentLoader] npc_personas fetch failed, using defaults", error);
-      return filterPermanent(DEFAULT_NPC_PERSONAS, permanentOnly);
+      return filterPermanent(FALLBACK_PERSONAS, permanentOnly);
     }
     return data as unknown as NPCPersona[];
   } catch (err) {
     console.warn("[contentLoader] npc_personas threw, using defaults", err);
-    return filterPermanent(DEFAULT_NPC_PERSONAS, permanentOnly);
+    return filterPermanent(FALLBACK_PERSONAS, permanentOnly);
   }
 }
 
@@ -101,7 +106,7 @@ function filterPermanent(rows: NPCPersona[], permanentOnly: boolean): NPCPersona
   return permanentOnly ? active.filter((r) => r.is_permanent) : active;
 }
 // Stable fallbacks so memoised consumers don't recompute before the fetch lands.
-const DEFAULT_PERSONAS = { all: filterPermanent(DEFAULT_NPC_PERSONAS, false), permanent: filterPermanent(DEFAULT_NPC_PERSONAS, true) };
+const DEFAULT_PERSONAS = { all: filterPermanent(FALLBACK_PERSONAS, false), permanent: filterPermanent(FALLBACK_PERSONAS, true) };
 
 function applyNPCDraft(rows: NPCPersona[], draft: Record<string, unknown>): NPCPersona[] {
   if (!draft || typeof draft !== "object" || !("slug" in draft)) return rows;

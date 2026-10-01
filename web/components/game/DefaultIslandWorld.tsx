@@ -7,8 +7,7 @@ import * as THREE from "three";
 import GridWorld from "./grid/GridWorld";
 import GridOcean from "./grid/GridOcean";
 import PlayerAvatar from "./PlayerAvatar";
-import NPC from "./NPC";
-import { residentSpots } from "@/lib/content/residents";
+import Residents from "./NPC";
 import GameSceneBoundary from "./GameSceneBoundary";
 import PostFX from "./PostFX";
 import HQInterior from "./HQInterior";
@@ -228,7 +227,6 @@ function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fis
   const layout = useMemo(() => villageLayout(v), [v]);
   const { island, spawns, doors } = layout;
   const { data: personas } = useNPCPersonas({ permanentOnly: true });
-  const residents = useMemo(() => residentSpots(personas, phase, v), [personas, phase, v]);
   const exitSpot = exitFrom === "museum" ? spawns.museum : exitFrom === "cafe" ? spawns.cafe : exitFrom === "oracle" ? spawns.oracle : exitFrom === "ruins" ? spawns.ruins : null;
   const spawn = (devAt && !returned && !fromBoat && !exitFrom ? devAt : fromBoat ? spawns.boat : exitSpot ?? (returned ? spawns.returned : null)) ?? spawns.start;
   const terrain = useMemo(() => ({ ...ISLAND_TERRAIN, grass: look.grass }), [look.grass]);
@@ -284,10 +282,8 @@ function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fis
       {layout.lamps.map(l => <Lantern key={l.id} position={[l.x, island.ground(l.x, l.z), l.z]} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />)}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
       <InstancedModels items={scenery} />
-      {/* Residents stand where their schedule puts them this phase; during a ceremony they stroll to the monument and cheer. */}
-      {residents.map(({ persona, home, plaza }) => <NPC key={`npc-${persona.id}-${home.join()}-${reset}`} persona={persona} position={ceremony ? plaza : home} playerPositionRef={player}
-        groundHeight={island.ground} constrainMove={island.move}
-        onClick={() => window.dispatchEvent(new CustomEvent("tsi:npc-greet", { detail: { id: persona.id } }))} />)}
+      {/* Residents walk their routines on the world clock (residentRoutine.ts); during a ceremony they gather at the monument and cheer. */}
+      <Residents personas={personas} phase={phase} ceremony={ceremony} player={player} island={island} v={v} />
       <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={fishing}
         world={island} groundHeight={island.ground} groundSurface={island.surface} camTarget={focus} glider={peaceful.glider} />
       <CharacterCrowd player={player} ground={island.ground} />

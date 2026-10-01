@@ -829,6 +829,60 @@ def glide(p):
     return P
 
 
+# ---------------------------------------------------------------- residents' idles (specs/polish/living-village.md)
+def look_keys():
+    """Turn the head and shoulders to one side, then the other, curious: weight onto the near foot, a little tilt."""
+    left = body(turn=52, twist=16, tilt=7, nod=-5, side=2)
+    right = body(turn=-52, twist=-16, tilt=-7, nod=-5, side=-2)
+    for P, sx in ((left, 1), (right, -1)):
+        for s, sd in SIDES:
+            hand(P, s, V(sd * 0.165 + sx * 0.012, -0.03, 0.326))     # arms hang loose, drifting with the twist
+    return [(0, N, "lin"), (0.17, left, "io"), (0.4, left, "lin"), (0.6, right, "io"), (0.83, right, "lin"), (1.0, N, "io")]
+
+
+LOOK = look_keys()
+
+
+@clip("LookAround", 3.2, False)
+def look_around(p):
+    return plant(keys(p, LOOK))
+
+
+def stretch_up_keys():
+    """Standing stretch (the seated Stretch's reach, on the feet): arms up and back past the head in a V, up on the toes
+    a touch and leaning back, then over to one side, and let go with a little slump."""
+    reach = body(lean=-9, nod=-16, crouch=-0.012)
+    for s, sx in SIDES:
+        arm(reach, s, V(sx * 0.86, 0.36, 0.44), V(sx * 0.64, 0.5, 0.6))
+    lean = body(lean=-5, side=13, nod=-10, crouch=-0.008, tilt=-6)
+    arm(lean, "Left", V(0.8, 0.32, 0.55), V(0.55, 0.46, 0.72))
+    arm(lean, "Right", V(-0.9, 0.3, 0.32), V(-0.7, 0.45, 0.5))
+    drop = body(lean=4, nod=6, crouch=0.01)
+    return [(0, N, "lin"), (0.24, reach, "back"), (0.46, reach, "lin"), (0.64, lean, "io"), (0.78, lean, "lin"), (0.9, drop, "io"), (1.0, N, "io")]
+
+
+STRETCH_UP = stretch_up_keys()
+
+
+@clip("StretchUp", 2.6, False)
+def stretch_up(p):
+    P = keys(p, STRETCH_UP)
+    return plant(P, lift=max(0.0, P.loc.z - N.loc.z) * 0.8)
+
+
+@clip("Chat", 3.0, True)
+def chat(p):
+    """Talking with someone: weight shifting foot to foot, nods on the beats, the right hand making a point, the left
+    hand resting at the hip; ends where it starts."""
+    s, c = math.sin(TAU * p), math.cos(TAU * p)
+    beat = 0.5 + 0.5 * math.sin(2 * TAU * p - 0.6)
+    P = body(side=2.5 * s, twist=5 * s, tilt=4 * math.sin(TAU * p + 0.8), nod=-2 + 4 * math.sin(2 * TAU * p))
+    hand(P, "Right", V(-0.115 - 0.03 * beat, -0.12 - 0.025 * c, 0.35 + 0.045 * beat))
+    P.rot("RightHand", rx(-20 * beat))
+    hand(P, "Left", V(0.13, -0.005, 0.3 + 0.006 * c), V(1, 0.6, -0.2))
+    return plant(P)
+
+
 # ================================================================ bake, ground, check
 MESHES = [bpy.data.objects[n] for n in ("V6_Body", HEAD_OB)]
 
