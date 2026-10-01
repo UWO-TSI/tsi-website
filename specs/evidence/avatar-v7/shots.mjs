@@ -43,6 +43,9 @@ if (MODES.includes("bench")) {
   await bench("bench-styles-world512", "sheet=styles&face=512");
   await bench("bench-styles-black", "sheet=styles&hair=0");                          // beside hair-3d-set (black)
   await bench("bench-ref18-angle", "sheet=live&style=bob&yaw=-0.46");              // reference 18's view yaw (26 deg)
+  for (const back of ["back_bob", "back_long", "back_short_spiky"]) await bench(`bench-library-bangs-${back}`, `sheet=bangs&back=${back}&yaw=-0.45`, 9000);
+  for (const bangs of ["bangs_straight", "bangs_curtain"]) await bench(`bench-library-backs-${bangs}`, `sheet=backs&bangs=${bangs}&yaw=-0.45`, 9000);
+  await bench("bench-hats", "sheet=hats&yaw=-0.5", 9000);
   await bench("bench-expressions", "sheet=expr");
   await bench("bench-blink", "sheet=blink");
   await bench("bench-talk", "sheet=talk");
@@ -100,8 +103,11 @@ if (MODES.includes("creator")) {
 }
 
 if (MODES.includes("village")) {
-  for (const [s, [bangs, back]] of Object.entries(STYLES)) {
-    await open(JSON.stringify(look({ bangs, back, hair: s === "long" ? 6 : s === "short" ? 0 : 2 })), null);   // pixel filter as shipped
+  const VILLAGE_LOOKS = [...Object.entries(STYLES).map(([s, [bangs, back]]) => [s, look({ bangs, back, hair: s === "long" ? 6 : s === "short" ? 0 : 2 })]),
+    ["sunhat", look({ bangs: "bangs_curtain", back: "back_long", hair: 4, acc: { head: "acc_sunhat" } })],
+    ["pony", look({ bangs: "bangs_swept_l", back: "back_high_pony", hair: 8 })]];
+  for (const [s, l] of VILLAGE_LOOKS) {
+    await open(JSON.stringify(l), null);   // pixel filter as shipped
     await page.mouse.click(1000, 780);
     await page.keyboard.down("KeyS");
     await page.waitForTimeout(260);

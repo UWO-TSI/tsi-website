@@ -1,52 +1,64 @@
-"""Before/after table for avatar v7 from two fit_check.py --json runs (before = the v6 tree via --root).
+"""Fit table for avatar v7 from fit_check.py --json runs: v6 (the tree at b77c0d7f, via --root), milestone 1 (9fd81f6d)
+and now; then every piece of the library as it stands.
 
   git archive b77c0d7f art/characters | tar -x -C /tmp/before
   Blender -b -P art/characters/fit_check.py -- --no-fail --root /tmp/before/art/characters --json specs/evidence/avatar-v7/fit-before-v6.json
+  (milestone 1's run of the next line, kept as fit-m1.json)
   Blender -b -P art/characters/fit_check.py -- --json specs/evidence/avatar-v7/fit-v7.json
   python3 specs/evidence/avatar-v7/fit_summary.py > specs/evidence/avatar-v7/fit-v7.txt
 """
 import json, os
 
 d = os.path.dirname(os.path.abspath(__file__)) + "/"
-b, a = json.load(open(d + "fit-before-v6.json")), json.load(open(d + "fit-v7.json"))
+b, m, a = (json.load(open(d + f)) for f in ("fit-before-v6.json", "fit-m1.json", "fit-v7.json"))
 V7 = ["bangs_spiky", "back_short_spiky", "bangs_straight", "back_bob", "bangs_curtain", "back_long"]
-print("Fit check, avatar v7 milestone 1 (art/characters/fit_check.py). before = the tree at b77c0d7f (v6 head, shell hair),")
-print("after = this branch (hand-modeled v7 head, sculpted-lock styles). Metres; the body is 1 m tall.\n")
-print(f"{'metric':58s}{'before (v6)':>18s}{'after (v7)':>18s}")
+print("Fit check, avatar v7 (art/characters/fit_check.py). v6 = the tree at b77c0d7f (v6 head, shell hair); milestone 1 =")
+print("9fd81f6d (v7 head, the three lock styles); now = this branch (the whole library as fuller locks, hats refit).")
+print("Metres; the body is 1 m tall.\n")
+print(f"{'metric':54s}{'v6':>16s}{'milestone 1':>18s}{'now':>18s}")
 
 
-def row(k, x, y):
-    print(f"{k:58s}{str(x):>18s}{str(y):>18s}")
+def row(k, *xs):
+    print(f"{k:54s}{str(xs[0]):>16s}{str(xs[1]):>18s}{str(xs[2]):>18s}")
 
 
 for k in ("stretch_max", "aniso_max", "eye_reach_lon_deg", "eye_reach_deg"):
-    row(f"face: {k}", b["face"][k], a["face"][k])
-row("face: per layer (eyes / brows / mouth) aniso", "/".join(str(b["face"]["per_layer"][l]["aniso"]) for l in ("eyes", "brows", "mouth")),
-    "/".join(str(a["face"]["per_layer"][l]["aniso"]) for l in ("eyes", "brows", "mouth")))
+    row(f"face: {k}", *(r["face"][k] for r in (b, m, a)))
 for pid in V7:
-    hb, ha = b["hair"][pid], a["hair"][pid]
-    row(f"{pid}: tris", hb["tris"], ha["tris"])
-    row(f"{pid}: open edges / air max / air median", f"{hb['open_edges']}/{hb['gap']['max']}/{hb['gap']['median']}",
-        f"{ha['open_edges']}/{ha['gap']['max']}/{ha['gap']['median']}")
-    row(f"{pid}: outer surface over the scalp (median)", hb["outer_median"], ha["outer_median"])
-    lk = a["locks"][pid]
-    row(f"{pid}: locks, root verts exposed, lock dive max", "-", f"{lk['locks']}, {lk['roots_exposed']}/{lk['root_verts']}, {lk['dive_max']}")
-row("seam: crown ledge, default pair / worst of 192", f"{b['seam']['default_pair']}/{b['seam']['ledge_max']}",
-    f"{a['seam']['default_pair']}/{a['seam']['ledge_max']}")
+    row(f"{pid}: tris", *(r["hair"][pid]["tris"] for r in (b, m, a)))
+    row(f"{pid}: air max / median", *(f"{r['hair'][pid]['gap']['max']}/{r['hair'][pid]['gap']['median']}" for r in (b, m, a)))
+    row(f"{pid}: outer surface over the scalp (median)", *(r["hair"][pid]["outer_median"] for r in (b, m, a)))
+row("seam: crown ledge, default pair / worst of 192", *(f"{r['seam']['default_pair']}/{r['seam']['ledge_max']}" for r in (b, m, a)))
 for pid in ("acc_flower_crown", "acc_crystal_circlet"):
-    hb, ha = b["headwear"][pid], a["headwear"][pid]
-    row(f"{pid}: air max / poke max", f"{hb['gap']['max']}/{hb['poke_max']}", f"{ha['gap']['max']}/{ha['poke_max']}")
+    row(f"{pid}: air max / poke max", *(f"{r['headwear'][pid]['gap']['max']}/{r['headwear'][pid]['poke_max']}" for r in (b, m, a)))
 g = "acc_glasses_round"
-row(f"{g}: lens to eye, default / worst", f"{b['glasses'][g]['offset_default']}/{b['glasses'][g]['offset_max']}",
-    f"{a['glasses'][g]['offset_default']}/{a['glasses'][g]['offset_max']}")
-row("verdict (fails / flags)", f"{'PASS' if not b['fails'] else 'FAIL'} ({len(b['fails'])} / {len(b.get('flags', []))})",
-    f"{'PASS' if not a['fails'] else 'FAIL'} ({len(a['fails'])} / {len(a.get('flags', []))})")
-print("\nHead surface (v7/head_model.deviation, against head_shape's analytic surface): v6 inside max 7.4 mm, median 1.6 mm;")
-print("v7 inside max 4.0 mm, outside max 3.3 mm, median 0.5 mm. Neck seam within 0.4-0.8 mm of v6's all round.")
-print("\nFLAGs (reported, not gate failures): skin standing out through a shell piece where it covers the scalp. The older")
-print("library's long side locks and the undercut's shaved rows are 18-36 deg flat rows that sag into the head; most had it")
-print("on the v6 head too, and they are rebuilt as locks after David's review.")
+row(f"{g}: lens to eye, default / worst", *(f"{r['glasses'][g]['offset_default']}/{r['glasses'][g]['offset_max']}" for r in (b, m, a)))
+row("verdict (fails / flags)", *(f"{'PASS' if not r['fails'] else 'FAIL'} ({len(r['fails'])} / {len(r.get('flags', []))})" for r in (b, m, a)))
+
+print("\nThe library now (every piece is sculpted locks; backs sit over a matte under-cap). air = forehead or scalp")
+print("visible between hair and skin; roots = lock root vertices standing out of the scalp; dive = a lock passing into")
+print("the head. Limits: open edges 0, air max 0.004, roots 0, dive 0.002.\n")
+print(f"{'piece':22s}{'tris':>6s}{'locks':>7s}{'roots':>9s}{'dive':>8s}{'air max':>9s}{'outer v6':>10s}{'outer now':>11s}")
+for pid in a["hair"]:
+    h, lk = a["hair"][pid], a["locks"][pid]
+    ob = b["hair"].get(pid, {}).get("outer_median", "-")
+    print(f"{pid:22s}{h['tris']:>6d}{lk['locks']:>7d}{lk['roots_exposed']:>4d}/{lk['root_verts']:<4d}{lk['dive_max']:>8}"
+          f"{h['gap']['max']:>9}{ob:>10}{h['outer_median']:>11}")
+
+s = a["seam"]
+lim = a["limits"]
+print(f"\nSeams over the 192 bangs x back pairs: worst {s['ledge_max']} ({s['worst_pair']} at lat/lon {s['worst_at']}),")
+print(f"median {s['median_over_pairs']}, default pair {s['default_pair']}. Lock pairs are held to {lim['seam_ledge_max_locks']}"
+      f" (the {lim['seam_ledge_max_locks'] - 0.002:.3f} groove between")
+print(f"locks plus 2 mm): a step where one lock ends beside another reads as the groove the fuller hair already has; shell")
+print(f"pairs keep {lim['seam_ledge_max']}. {sum(1 for v in s['over'].values() if v[0] > lim['seam_ledge_max'])} pairs are above the shell limit, none above the lock limit.")
+
+print("\nHeadwear on the fuller hair (hat_in = hair_outer + clearance; the back hair under a hat is a short lock tuck):")
+print(f"{'piece':22s}{'air max':>9s}{'poke max':>10s}{'rise median':>13s}{'hides back hair':>17s}")
+for pid, h in a["headwear"].items():
+    print(f"{pid:22s}{h['gap']['max']:>9}{h['poke_max']:>10}{h['rise']['median']:>13}{str(h.get('hides_back_hair', '-')):>17s}")
+for g, h in a["glasses"].items():
+    print(f"{g:22s} lens to eye, default {h['offset_default']} / worst {h['offset_max']}")
+print(f"\nverdict: {'PASS' if not a['fails'] else 'FAIL'}, {len(a['fails'])} fails, {len(a.get('flags', []))} flags")
 for f in a.get("flags", []):
-    print("  after:  " + f)
-for f in b.get("flags", []):
-    print("  before: " + f)
+    print("  flag: " + f)

@@ -11,7 +11,8 @@
  * ?sheet=blink     one blink: open, half, closed, half, open
  * ?sheet=talk      the talk frames: the look's mouth, then each talk cell
  * ?sheet=live      one character at a time, the face on its own clock (blinks, &talk=1 talks); &style=, &yaw=
- * ?sheet=bangs     every bangs style over back_bob; ?sheet=backs every back under bangs_straight (the library on v7)
+ * ?sheet=bangs     every bangs style over a back (&back=, back_bob); ?sheet=backs every back under a bangs (&bangs=)
+ * ?sheet=hats      the four hats (they hide the back hair and carry a lock tuck), front and back 3/4
  * &hair=<0-11>&skin=<0-11>&face=512 (the world atlas) &framing=head|body
  */
 import { Suspense, useMemo, useRef } from "react";
@@ -60,13 +61,15 @@ function AvatarBench() {
     if (sheet === "talk") return [bob.mouth, ...FACE.talk.frames].map(m => ({ label: m, look: bob, yaw: 0, face: { mouth: m } }));
     if (sheet === "live") return [{ label: q.get("style") ?? "bob", look: bob, yaw, talk: q.get("talk") === "1" }];
     // the whole library on the v7 head: every bangs over the bob back, every back under the straight fringe
-    if (sheet === "bangs") return partsIn("bangs").map(p => ({ label: p.id, look: { ...bob, bangs: p.id, back: "back_bob" }, yaw }));
-    if (sheet === "backs") return partsIn("back").map(p => ({ label: p.id, look: { ...bob, bangs: "bangs_straight", back: p.id }, yaw: yaw - 0.9 }));
+    if (sheet === "bangs") return partsIn("bangs").map(p => ({ label: p.id, look: { ...bob, bangs: p.id, back: q.get("back") ?? "back_bob" }, yaw }));
+    if (sheet === "backs") return partsIn("back").map(p => ({ label: p.id, look: { ...bob, bangs: q.get("bangs") ?? "bangs_straight", back: p.id }, yaw: yaw - 0.9 }));
+    if (sheet === "hats") return ["acc_sunhat", "acc_cap", "acc_beanie", "acc_straw_hat"].flatMap(h => [
+      { label: `${h} front`, look: { ...bob, acc: { head: h } }, yaw }, { label: `${h} back`, look: { ...bob, acc: { head: h } }, yaw: yaw + 2.6 }]);
     return Object.keys(STYLES).flatMap(s => [{ label: `${s} front`, look: style(s), yaw: 0 }, { label: `${s} 3/4`, look: style(s), yaw: -0.6 }]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheet, yaw, q]);
   const root = useRef<HTMLDivElement>(null);
-  const cols = sheet === "styles" || sheet === "backs" ? 6 : sheet === "bangs" ? 8 : cells.length;
+  const cols = sheet === "styles" || sheet === "backs" ? 6 : sheet === "bangs" || sheet === "hats" ? 8 : cells.length;
   return <div ref={root} style={{ position: "relative", paddingTop: 48, minHeight: "100vh", background: "#efe7d6" }}>
     <div data-sheet={sheet} style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, ${cols === 1 ? "420px" : "1fr"})`, gap: 8, padding: 8 }}>
       {cells.map(c => <figure key={c.label} style={{ margin: 0 }}>

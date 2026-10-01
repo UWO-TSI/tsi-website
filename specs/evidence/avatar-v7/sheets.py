@@ -1,26 +1,31 @@
 """Tile the avatar v7 evidence (shots.mjs PNGs, Blender viewport captures, uv_dump.py) into the review sheets (Pillow).
 
-  python3 specs/evidence/avatar-v7/sheets.py <shots_dir>
+  python3 specs/evidence/avatar-v7/sheets.py <shots_dir> [<before_dir>]
 <shots_dir> holds shots.mjs's PNGs, blender/head-wire-{front,34}.png (live-session viewport captures) and
-face_uv.json (uv_dump.py). Writes next to this script:
+face_uv.json (uv_dump.py); <before_dir> holds the milestone-1 bench shots for 09-before-after. Writes next to this script:
   01-styles.webp            the three styles in the engine: front and 3/4 close-ups (faces at 1024), full body, and
                             the real character creator's stage turned both ways
   02-vs-hair-3d-set.webp    each style (black hair) beside the hair-3d-set / bangs-sheet cells it follows
   03-vs-ref18.webp          reference 18's head beside the v7 bob at its measured view yaw (26 deg)
-  04-expressions.webp       the six expressions
+  04-expressions.webp       the six expressions, and the talk cells beside the resting mouth
   05-blink-talk.webp        a blink (open, half, closed, half, open), the talk cells, and 12 frames of the face on its
                             own clock while talking (90 ms apart)
-  06-village.webp           the game camera at village distance (pixel filter as shipped), one per style
+  06-village.webp           the game camera at village distance (pixel filter as shipped): the three styles, a sunhat
+                            and a high pony
   07-head-and-face.webp     the hand-modeled head's topology (Blender), its face UV layout over the default painted
                             face, and the face atlas
   08-world-512.webp         the world atlas (512 px per face canvas) beside the creator's 1024
-  09-library.webp           the rest of the hair library on the v7 head: every bangs over the bob, every back under
-                            the straight fringe (older shell styles and the new lock styles mix)
+  09-before-after.webp      David's three tweaks on the milestone styles: fuller hair, the glossy sheen band, bigger
+                            talk mouths (milestone 1 left, now right)
+  10-library-bangs.webp     every bangs over three backs (bob, long, short spiky), 3/4 view
+  11-library-backs.webp     every back under two bangs (straight, curtain), side view
+  12-hats.webp              hats on the fuller hair, front and back (lock tucks under the brim)
 """
 import json, os, sys
 from PIL import Image, ImageDraw, ImageFont
 
 S = sys.argv[1]
+BEFORE = sys.argv[2] if len(sys.argv) > 2 else None
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
 REF = os.path.join(ROOT, "specs", "references", "characters", "david")
@@ -41,11 +46,14 @@ def load(name, box=None, h=None, d=S):
     return im
 
 
-def cells(name, n, h=None):
-    """The n cells of a bench grid sheet (padding 8, gap 8 css px at 2x; square head cells)."""
-    im = Image.open(os.path.join(S, name)).convert("RGB")
+def cells(name, n, h=None, d=S, crop=None):
+    """The n cells of a bench grid sheet (padding 8, gap 8 css px at 2x; square head cells); crop: a sub-box of each
+    cell in cell fractions (x0, y0, x1, y1)."""
+    im = Image.open(os.path.join(d, name)).convert("RGB")
     w = (im.width - 32 - 16 * (n - 1)) / n
     out = [im.crop((round(16 + i * (w + 16)), 16, round(16 + i * (w + 16) + w), round(16 + w))) for i in range(n)]
+    if crop:
+        out = [c.crop(tuple(round(f * c.width) for f in crop)) for c in out]
     return [c.resize((round(c.width * h / c.height), h), Image.LANCZOS) for c in out] if h else out
 
 
@@ -87,7 +95,7 @@ creator = [load(f"creator-{s}-{v}.png", h=560) for s in STYLES for v in ("34", "
 save(grid([head[0:2] + [body[0]] + creator[0:2], head[2:4] + [body[1]] + creator[2:4], head[4:6] + [body[2]] + creator[4:6]],
           ["short (bangs_spiky + back_short_spiky): bench front, 3/4, body; creator stage turned left / right",
            "bob (bangs_straight + back_bob)", "long (bangs_curtain + back_long)"],
-          "Avatar v7 milestone 1: sculpted-lock hair on the hand-modeled head, in the engine (runtime Character, creator lights)"),
+          "Avatar v7: fuller sculpted-lock hair with the glossy sheen on the hand-modeled head, in the engine (runtime Character, creator lights)"),
      "01-styles.webp")
 
 # 02 beside hair-3d-set
@@ -117,23 +125,27 @@ v7 = single("bench-ref18-angle.png", 1.0, 640)
 save(grid([[ref18, v7]], ["reference 18 (hooded) | v7 bob, hair 2, at reference 18's measured view yaw (26 deg)"],
           "Beside reference 18: head shape, face placement, eye size"), "03-vs-ref18.webp")
 
-# 04 expressions
-save(grid([cells("bench-expressions.png", 6, 420)], ["neutral | happy (E8.1, M2.1) | surprised (M6.1) | sad (half lid, M4.3) | angry (M2.2) | sleepy (E1.6, M3.1)"],
-          "The six expressions (row 144): eye and mouth cells from David's picks, brows moved and tilted by the shader"),
+# 04 expressions, with the talk cells
+save(grid([cells("bench-expressions.png", 6, 420), cells("bench-talk.png", 5, 420)],
+          ["neutral | happy (E8.1, M2.1) | surprised (M6.1) | sad (half lid, M4.3) | angry (M2.2) | sleepy (E1.6, M3.1)",
+           "talking: the resting mouth (M1.1, stays small) and the four bigger talk cells T1-T4 (open oval, oval with teeth, open smile, half open)"],
+          "The six expressions (row 144) and the bigger talk mouths: eye and mouth cells from David's picks, brows moved and tilted by the shader"),
      "04-expressions.webp")
 
 # 05 blink + talk
 live = [single(f"live-talk-{i:02d}.png", 1.0, 300) for i in range(12)]
 save(grid([cells("bench-blink.png", 5, 420), cells("bench-talk.png", 5, 420), live[:6], live[6:]],
           ["blink: open, half, closed, half, open (0.04 + 0.07 + 0.04 s, every 2-6 s at random)",
-           "talk cells: the look's mouth (M1.1), G5.2, M3.1, G5.1, G1.3 (about 9 a second, random order)",
+           "talk cells: the look's mouth (M1.1), T1, T2, T3, T4 (about 9 a second, random order)",
            "the face on its own clock while talking: 12 frames, 90 ms apart", ""],
           "Blinking and talking without redrawing a canvas: the face shader switches atlas cells by uniform"), "05-blink-talk.webp")
 
 # 06 village
-vill = [load(f"village-{s}.png", box=(1040, 540, 1840, 1300), h=560) for s in STYLES]
-full = load("village-bob.png", h=560)
-save(grid([vill + [full]], ["short (hair 0) | bob (hair 2) | long (hair 6), crops round the player | the full bob frame"],
+VILL = ["short", "bob", "long", "sunhat", "pony"]
+vill = [load(f"village-{s}.png", box=(1040, 540, 1840, 1300), h=520) for s in VILL]
+full = load("village-bob.png", h=700)
+save(grid([vill, [full]], ["short (hair 0) | bob (hair 2) | long (hair 6) | curtain + long + sunhat (hair 4) | swept_l + high pony (hair 8), crops round the player",
+                           "the full bob frame"],
           "The game camera at village distance (untouched, pixel filter as shipped)"), "06-village.webp")
 
 # 07 head topology, UV layout, atlas
@@ -155,7 +167,7 @@ atl = check.convert("RGB")
 atl = atl.resize((round(atl.width * 600 / atl.height), 600), Image.LANCZOS)
 save(grid([wire + [face], [atl]],
           ["V7_Head in Blender (head.blend): 12-vertex loops round the eyes, 8 round the mouth, quads | face UVs over the default face",
-           "the face atlas (v7_face_atlas.png, 1024 px per face canvas): one side of each eye with blink frames, brows, 76 mouths, extras"],
+           "the face atlas (v7_face_atlas.png, 1024 px per face canvas): one side of each eye with blink frames, brows, 76 mouths, 4 talk cells, extras"],
           "The hand-modeled head and the painted-face system"), "07-head-and-face.webp")
 
 # 08 world atlas
@@ -163,8 +175,37 @@ save(grid([cells("bench-styles.png", 6, 360), cells("bench-styles-world512.png",
           ["creator: face atlas at 1024 px per face canvas", "world: the 512 copy (what village characters load)"],
           "Face density: creator vs world atlas"), "08-world-512.webp")
 
-# 09 the rest of the library on the v7 head
-lib = [load(f"bench-library-{k}.png") for k in ("bangs", "backs")]
-lib = [im.resize((1800, round(im.height * 1800 / im.width)), Image.LANCZOS) for im in lib]
-save(grid([[lib[0]], [lib[1]]], ["every bangs style over back_bob", "every back style under bangs_straight"],
-          "The existing library on the v7 head (fit_check: all 28 pieces pass; FLAGs listed in fit-v7.txt)"), "09-library.webp")
+# 09 before / after the tweaks (milestone 1 shots in BEFORE)
+if BEFORE:
+    pre, now = cells("bench-styles.png", 6, 420, d=BEFORE), cells("bench-styles.png", 6, 420)
+    top = (0.12, 0.02, 0.88, 0.62)            # the hair, for the sheen
+    pre_t, now_t = cells("bench-styles.png", 6, 420, d=BEFORE, crop=top), cells("bench-styles.png", 6, 420, crop=top)
+    mouth = (0.25, 0.45, 0.75, 0.95)
+    pre_m, now_m = cells("bench-talk.png", 5, 300, d=BEFORE, crop=mouth), cells("bench-talk.png", 5, 300, crop=mouth)
+    save(grid([pre[2 * i:2 * i + 2] + now[2 * i:2 * i + 2] for i in range(3)] + [[pre_t[2], now_t[2], pre_t[5], now_t[5]], pre_m, now_m],
+              [f"{s}: milestone 1 (front, 3/4) | now: fuller, deeper grooves between locks, glossy band" for s in STYLES] +
+              ["sheen close-up: bob front then | now | long 3/4 then | now (the band follows the key light along each lock)",
+               "talk cells, milestone 1: M1.1 (rest), G5.2, M3.1, G5.1, G1.3",
+               "talk cells now: M1.1 (rest, unchanged), T1, T2, T3, T4 (drawn taller: the mouth sits where the face turns under)"],
+              "David's tweaks (\"Fuller, like the sheet\", \"Stronger glossy band\", \"Bigger talk shapes\"): milestone 1 beside now, same bench"),
+         "09-before-after.webp")
+
+
+def wide(name, width=1800):
+    im = load(name)
+    return im.resize((width, round(im.height * width / im.width)), Image.LANCZOS)
+
+
+# 10, 11 the whole library as locks
+BACKS3 = ["back_bob", "back_long", "back_short_spiky"]
+save(grid([[wide(f"bench-library-bangs-{b}.png")] for b in BACKS3], [f"every bangs over {b}" for b in BACKS3],
+          "The 16 bangs, rebuilt as sculpted locks (catalogue ids unchanged), over three backs"), "10-library-bangs.webp")
+BANGS2 = ["bangs_straight", "bangs_curtain"]
+save(grid([[wide(f"bench-library-backs-{b}.png")] for b in BANGS2], [f"every back under {b} (side view)" for b in BANGS2],
+          "The 12 backs, rebuilt as sculpted locks over a matte under-cap (catalogue ids unchanged)"), "11-library-backs.webp")
+
+# 12 hats
+hats = cells("bench-hats.png", 8, 420)
+save(grid([hats[0:4], hats[4:8]], ["sunhat front, back | cap front, back", "beanie front, back | straw hat front, back"],
+          "Hats refit on the fuller hair (bob): the brim sits on the hair, the back hair tucks under as short locks"),
+     "12-hats.webp")
