@@ -7,9 +7,9 @@
  * write. Mipmapped atlas with bled gutters: sharp at 1024 px per face canvas in the creator, 512 in the world.
  *
  * Hair: the merged body geometry carries a `hairSheen` attribute (rig.ts: 1 and the lock UVs on sculpted-lock hair,
- * 0 elsewhere). The body material lightens a band along each lock where its surface faces up toward the viewer (a
- * stylized "angel ring", as on David's hair-3d-set sheet), strongest on the lock's ridge and fading toward its root
- * and tip, before lighting, so it takes the hair's palette colour and the scene's light.
+ * 0 elsewhere). The body material draws a glossy band down each lock that follows the key light (Kajiya-Kay on the
+ * lock's tangent, taken from the lock UVs, thresholded into crisp near-white bands like David's hair-3d-set sheet),
+ * strongest on the lock's ridge and fading at its root and tip, plus a soft view band in the albedo for the shade.
  */
 import * as THREE from "three";
 import { FACE_SLOT_COUNT, type FaceSlot } from "./face";
@@ -123,19 +123,54 @@ varying vec3 vSheen;
 const SHEEN_FRAG_PARS = /* glsl */ `
 varying vec3 vSheen;
 `;
-/** After the normal is known, before lighting: a band where the lock's surface faces up toward the viewer. */
+/**
+ * After the normal is known, before lighting: the lock's direction (its tangent along v, from screen-space
+ * derivatives of the lock UVs), the ridge/length mask, and a soft view band baked into the albedo so hair keeps a
+ * little gloss in the shade.
+ */
 const SHEEN_FRAG = /* glsl */ `
+vec3 hairT = vec3(0.0, 1.0, 0.0);
+float hairMask = 0.0;
 if (vSheen.x > 0.5) {
-  float ny = normal.y, nz = normal.z;
-  float ring = smoothstep(0.12, 0.3, ny) * (1.0 - smoothstep(0.5, 0.72, ny)) * smoothstep(0.1, 0.4, nz);
-  float ridge = smoothstep(0.35, 0.8, 1.0 - abs(vSheen.y - 0.5) * 2.0);     // a streak down the lock's ridge
-  float along = smoothstep(0.0, 0.06, vSheen.z) * (1.0 - smoothstep(0.82, 1.0, vSheen.z));
-  float k = clamp(ring * ridge * along, 0.0, 1.0);
-  diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 1.8 + vec3(0.12), k * 0.7);
+  vec3 dp1 = dFdx(-vViewPosition), dp2 = dFdy(-vViewPosition);
+  vec2 duv1 = dFdx(vSheen.yz), duv2 = dFdy(vSheen.yz);
+  vec3 alongV = cross(dp2, normal) * duv1.y + cross(normal, dp1) * duv2.y;
+  float lenV = length(alongV);
+  if (lenV > 1e-9) hairT = alongV / lenV;
+  float ridge = smoothstep(0.3, 0.75, 1.0 - abs(vSheen.y - 0.5) * 2.0);      // strongest down the lock's ridge
+  float along = smoothstep(0.0, 0.05, vSheen.z) * (1.0 - smoothstep(0.85, 1.0, vSheen.z));
+  hairMask = ridge * along;
+  float ring = smoothstep(0.12, 0.3, normal.y) * (1.0 - smoothstep(0.5, 0.72, normal.y)) * smoothstep(0.1, 0.4, normal.z);
+  diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 1.5 + vec3(0.06), clamp(ring * hairMask, 0.0, 1.0) * 0.35);
 }
 `;
+/**
+ * After the lights: a glossy band per directional light (Kajiya-Kay on the lock tangent, shifted along the normal):
+ * a sharp near-white primary lobe and a softer hair-tinted secondary one, on the lit side only. Stylized: the
+ * lobes are thresholded into bands, as on David's hair-3d-set sheet, and they follow the sun.
+ */
+const SHEEN_SPEC = /* glsl */ `
+#if NUM_DIR_LIGHTS > 0
+if (hairMask > 0.0) {
+  vec3 V = normalize(vViewPosition);
+  vec3 gloss = vec3(0.0);
+  for (int i = 0; i < NUM_DIR_LIGHTS; i++) {
+    vec3 L = directionalLights[i].direction;
+    vec3 H = normalize(L + V);
+    vec3 T1 = normalize(hairT + normal * 0.18);
+    vec3 T2 = normalize(hairT - normal * 0.12);
+    float d1 = dot(T1, H), d2 = dot(T2, H);
+    float s1 = smoothstep(0.955, 0.985, sqrt(max(0.0, 1.0 - d1 * d1)));
+    float s2 = smoothstep(0.86, 0.96, sqrt(max(0.0, 1.0 - d2 * d2)));
+    float lit = smoothstep(-0.05, 0.35, dot(normal, L));
+    gloss += directionalLights[i].color * lit * (s1 * 0.75 + s2 * 0.3 * (0.35 + diffuseColor.rgb));
+  }
+  reflectedLight.directSpecular += gloss * hairMask;
+}
+#endif
+`;
 
-/** Add the sheen band to the shared body material (once). */
+/** Add the sheen band and the glossy highlight to the shared body material (once). */
 export function patchHairSheen(material: THREE.MeshStandardMaterial) {
   const base = material.onBeforeCompile;
   material.onBeforeCompile = (shader, renderer) => {
@@ -145,8 +180,9 @@ export function patchHairSheen(material: THREE.MeshStandardMaterial) {
       .replace("#include <begin_vertex>", "#include <begin_vertex>\nvSheen = hairSheen;");
     shader.fragmentShader = shader.fragmentShader
       .replace("#include <common>", `#include <common>\n${SHEEN_FRAG_PARS}`)
-      .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>\n${SHEEN_FRAG}`);
+      .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>\n${SHEEN_FRAG}`)
+      .replace("#include <lights_fragment_end>", `#include <lights_fragment_end>\n${SHEEN_SPEC}`);
   };
-  material.customProgramCacheKey = () => "character-body-sheen-v7";
+  material.customProgramCacheKey = () => "character-body-sheen-v7b";
   return material;
 }

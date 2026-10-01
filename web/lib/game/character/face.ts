@@ -45,8 +45,8 @@ export function blinkFrame(t: number): EyeFrame | null {
 }
 
 /**
- * The face's clock: blinks at random 2-6 s intervals (FACE.blink), a talking mouth that steps through the talk
- * cells about 9 times a second in a random order that never shows the same cell twice running, emote mouths
+ * The face's clock: blinks at random 2-6 s intervals (FACE.blink), a talking mouth that steps through the larger
+ * talk cells and the resting mouth about 9 times a second in a random order that never shows the same cell twice running, emote mouths
  * (Laugh, Cheer, Dance) that alternate their cells, and the clip's expression. One per character.
  */
 export class FaceAnimator {
@@ -100,7 +100,7 @@ export class FaceAnimator {
       }
       pose.mouth = this.mouthNow!;
     }
-    if (override?.mouth && override.mouth in FACE.layers.mouth.items) pose.mouth = override.mouth;
+    if (override?.mouth && (override.mouth in FACE.layers.mouth.items || override.mouth in FACE.layers.talk.items)) pose.mouth = override.mouth;
     return pose;
   }
 }
@@ -132,7 +132,7 @@ export function faceSlots(look: CharacterLook, pose: FacePose): FaceSlot[] {
     slot(brows.items[look.brows] ?? brows.items[brows.default], A.brow, 1, PALETTE.hair[look.hair], pose.brow),
     slot(eyeCell, A.eye, 0),
     slot(eyeCell, A.eye, 2),
-    slot(mouth.items[pose.mouth] ?? mouth.items[mouth.default], A.mouth, 0),
+    slot(mouth.items[pose.mouth] ?? FACE.layers.talk.items[pose.mouth] ?? mouth.items[mouth.default], A.mouth, 0),
   ];
 }
 

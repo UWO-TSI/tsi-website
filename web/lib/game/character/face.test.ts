@@ -71,6 +71,13 @@ describe("face animation", () => {
     expect(changes.length).toBeGreaterThan(20);  // about 9 a second
     expect(changes.length).toBeLessThan(40);
     expect(new Set(frames)).toEqual(new Set(["M1.1", ...FACE.talk.frames]));
+    // talking opens the mouth wider than the small resting mouth (David: "Bigger talk shapes")
+    const rest = FACE.layers.mouth.items["M1.1"];
+    const area = (c: number[]) => c[2] * c[3];
+    for (const t of FACE.talk.frames) expect(FACE.layers.talk.items[t][3], t).toBeGreaterThanOrEqual(rest[3]);   // open, not a line
+    expect(Math.max(...FACE.talk.frames.map(t => area(FACE.layers.talk.items[t])))).toBeGreaterThan(area(rest) * 1.8);
+    const talking = faceSlots(DEFAULT_LOOK, { ...restPose(DEFAULT_LOOK, "neutral"), mouth: FACE.talk.frames[2] })[6];
+    expect(talking.src![0]).toBeCloseTo(FACE.layers.talk.items[FACE.talk.frames[2]][0] / FACE.atlas_size[0]);
     expect(run(anim, 0.2, DEFAULT_LOOK).every(f => f.mouth === "M1.1")).toBe(true);
   });
   it("laughs with the emote's mouths and the clip's expression", () => {

@@ -51,6 +51,8 @@ export const FACE = faceV7 as unknown as {
     brows: { default: string; anchor: "brow"; mirror: true; tint: "hair"; items: Record<string, FaceCell> };
     eyes: { default: string; anchor: "eye"; mirror: true; tint: null; items: Record<string, Partial<Record<EyeFrame, FaceCell>> & { open: FaceCell }> };
     mouth: { default: string; anchor: "mouth"; mirror: false; tint: null; items: Record<string, FaceCell> };
+    /** Larger open mouths shown only while talking (not creator options). */
+    talk: { default: null; anchor: "mouth"; mirror: false; tint: null; items: Record<string, FaceCell> };
   };
   expressions: Record<string, { eyes: string | null; eyeFrame: EyeFrame; mouth: string | null; brow: [number, number] }>;
   blink: { interval: [number, number]; frames: [EyeFrame, number][] };

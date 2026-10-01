@@ -440,6 +440,17 @@ for r in range(1, 10):
         MOUTHS[f"G{r}.{c + 1}"] = _G[r](c)
 
 
+# talk frames (David, 2026-09-30: "Bigger talk shapes"): larger open mouths while talking, in the picks' own style
+# (M3.1's open oval, M6.1's oval with teeth, M2.1's open smile) at 1.3-1.5x; the resting mouth stays the look's own
+TALK_CELLS = {
+    "T1": lambda L: m_oval(L, 0.024, 0.03),                                           # M3.1 x ~1.35
+    "T2": lambda L: (m_oval(L, 0.034, 0.038),
+                     L.paint(L.ellipse(*P0(0, 0), 0.029, 0.033) & (L.V < MY - 0.016), C_WHITE)),   # M6.1 x ~1.4
+    "T3": lambda L: m_open(L, 0.064, 0.056, 0.006),                                   # M2.1 x ~1.3
+    "T4": lambda L: m_open(L, 0.052, 0.034, 0.003, teeth=False),                      # a half-open M2.1
+}
+
+
 # ================================================================ brows (white, tinted with hair) and extras
 def brow_soft(L):
     c = bez([(EYE_L + 0.05, BROW_Y + 0.006), (EYE_L, BROW_Y - 0.01), (EYE_L - 0.05, BROW_Y + 0.002)])
@@ -471,9 +482,10 @@ EXPRESSIONS = {
     "sleepy": {"eyes": "E1.6", "eyeFrame": "open", "mouth": "M3.1", "brow": [0.008, 4.0]},
 }
 BLINK = {"interval": [2.0, 6.0], "frames": [["half", 0.04], ["closed", 0.07], ["half", 0.04]]}
-TALK = {"frames": ["G5.2", "M3.1", "G5.1", "G1.3"], "rate": 9.0,
-        "note": "while talking the mouth steps through these cells (and the look's own mouth) about 9 times a second, "
-                "picked at random so it never loops visibly; chat bubbles and resident dialogue drive it"}
+TALK = {"frames": list(TALK_CELLS), "rate": 9.0,
+        "note": "while talking the mouth steps through these cells (layers.talk, larger open mouths) and the look's own "
+                "resting mouth about 9 times a second, picked at random so it never loops visibly; chat bubbles and "
+                "resident dialogue drive it"}
 EMOTE_MOUTH = {"Laugh": {"frames": ["M2.1", "G1.1"], "rate": 7.0}, "Cheer": {"frames": ["M2.1", "G2.1"], "rate": 4.0},
                "Dance": {"frames": ["M2.1", "G1.3"], "rate": 3.0}}
 
@@ -502,6 +514,8 @@ for bid, fn in BROWS.items():
     cells[("brows", bid, None)] = render("brow", fn)
 for mid, fn in MOUTHS.items():
     cells[("mouth", mid, None)] = render("mouth", fn)
+for tid, fn in TALK_CELLS.items():
+    cells[("talk", tid, None)] = render("mouth", fn)
 for xid, (kind, _, fn) in EXTRAS.items():
     cells[("extras", xid, None)] = render(kind, fn)
 
@@ -591,6 +605,8 @@ face = {
                            for eid in EYE_ORDER}},
         "mouth": {"default": "M1.1", "anchor": "mouth", "mirror": False, "tint": None,
                   "items": {mid: rect(("mouth", mid, None)) for mid in MOUTHS}},
+        "talk": {"default": None, "anchor": "mouth", "mirror": False, "tint": None,
+                 "items": {tid: rect(("talk", tid, None)) for tid in TALK_CELLS}},
     },
     "expressions": EXPRESSIONS, "blink": BLINK, "talk": TALK, "emoteMouth": EMOTE_MOUTH,
 }
@@ -639,7 +655,7 @@ def compose(eyes="F1.1", eye_frame="open", mouth="M1.1", brows="brow_soft", brow
     key = ("eyes", eyes, eye_frame) if ("eyes", eyes, eye_frame) in cells else ("eyes", eyes, "open")
     img, a_px = cells[key]
     place(img, ANCHOR["eye"], a_px, True)
-    img, a_px = cells[("mouth", mouth, None)]
+    img, a_px = cells[("mouth", mouth, None)] if ("mouth", mouth, None) in cells else cells[("talk", mouth, None)]
     place(img, ANCHOR["mouth"], a_px, False)
     return out
 
