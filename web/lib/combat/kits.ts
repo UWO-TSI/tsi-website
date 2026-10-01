@@ -195,8 +195,8 @@ export const SUBCLASSES: Subclass[] = [
   // ── Vanguard / SP ──────────────────────────────────────────────────────────
   k({
     key: "guardian", name: "Guardian", family: "Vanguard", weapon_affinity: ["shield", "sword"],
-    signature: a("guardian.counter", "Shield Counter", "Raise your guard against frontal hits; the first blocked hit is answered with a bash.", 12, 20,
-      [buff("block", 0.4, 1.2)], { gear: { type: "shield", without: 0.5 }, on_block: [hit(1.8, 2.4, "self", { arc: 1.8, knock: 5 })] }),
+    signature: a("guardian.counter", "Shield Counter", "Raise your guard against frontal hits; the first blocked hit is answered with a bash.", 15, 20,
+      [buff("block", 0.4, 1)], { gear: { type: "shield", without: 0.5 }, on_block: [hit(1.8, 2.4, "self", { arc: 1.8, knock: 5 })] }),
     abilities: [
       a("guardian.bash", "Shield Bash", "A bash in front that staggers.", 6, 20, [hit(1.3, 2.2, "self", { arc: 1.6, status: { hold: 0.8 } })]),
       a("guardian.stalwart", "Stalwart", "Plant your feet: take less damage and hold a ward.", 14, 20, [buff("guard", 0.3, 6), { kind: "shield", amount: 0.12, duration: 6 }]),
@@ -226,7 +226,7 @@ export const SUBCLASSES: Subclass[] = [
   }),
   k({
     key: "assassin", name: "Assassin", family: "Vanguard", weapon_affinity: ["sword", "fists"],
-    signature: a("assassin.lunge", "Blood Lunge", "Dash through a target with a quick strike.", 6, 20, [dash(5, { power: 1.7, iframes: true })]),
+    signature: a("assassin.lunge", "Blood Lunge", "Dash through a target with a quick strike, then slip its answer for a moment.", 6, 20, [dash(5, { power: 1.7, iframes: true }), buff("guard", 0.3, 2.5)]),
     abilities: [
       a("assassin.shadow-step", "Shadow Step", "Vanish toward your aim; your next strikes find weak spots.", 9, 15, [dash(6, { iframes: true }), buff("crit", 0.3, 3)]),
       a("assassin.knives", "Fan of Knives", "Knives in every direction around you.", 7, 20, [hit(1.2, 2.6)]),

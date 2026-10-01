@@ -70,7 +70,7 @@ describe("balance pass (Part B 3, G2): scripted solo survive runs, 20 seeds per 
       "- Weapons: driftwood sword 0.42 → 0.45 s, oak staff 0.75 → 0.5 s with a faster bolt (11 → 15 u/s), cloth wraps 0.32 → 0.42 s.",
       "- The temple: books 2.6 → 4.4 u/s with a 3 u lunge at ×1.3 damage (17); golems 1.6 → 2.8 u/s, the slam ×0.41 (9) with a 1.6 s recover. The pressure that only melee stood in now reaches the back line.",
       "- The guardian: 1800 → 1700 HP, armor 9 → 7.",
-      "- Vanguard: Iron Body guard 0.35 for 4 s → 0.45 for 6 s; War Cry guard 0.15 for 6 s → 0.45 for 8 s; Shield Counter blocks 0.4 (0.2 without a buckler) for 1.2 s every 12 s (was 0.8 for 1.5 s every 8 s); Bulwark 6% → 1%.",
+      "- Vanguard: Iron Body guard 0.35 for 4 s → 0.45 for 6 s; War Cry guard 0.15 for 6 s → 0.45 for 8 s; Shield Counter blocks 0.4 (0.2 without a buckler) for 1 s every 15 s (was 0.8 for 1.5 s every 8 s); Bulwark 6% → 1%; Blood Lunge leaves a 0.3 guard for 2.5 s.",
       "- Arcane: Firebolt 1.3 → 1.6 every 2.5 s (was 3); Frost Nova holds 2 s (was 1.5); Mirror Bolts 0.8 → 1.05 every 3 s (was 4); Mass Confusion 4 → 2 s; Decoy Step slips back 2.5 u (was 4) and its phantom lasts 3 s (was 5); Monster Aspect +40% damage (was +20%); Fox Stride 1.3 → 1.7.",
       "- Ranger: Smoke Step distracts 0.5 s (was 2) and slips back 2 u (was 5).",
       "- Warden: +25% max health on all four; Holy Beam 2.2 → 2.9; Thorn Lash 1.1 → 1.5; Radiant Shield 0.45 every 10 s (was 0.35 every 14).",
