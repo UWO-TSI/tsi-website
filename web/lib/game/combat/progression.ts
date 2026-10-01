@@ -40,7 +40,8 @@ export const chooseSubclassRemote = (subclass: string) => call<{ subclass: strin
 export const setLoadoutRemote = (loadout: string[]) => call<string[]>("/api/combat/loadout", "loadout", { loadout });
 export const allocateRemote = (stats: StatBlock) => call<StatBlock>("/api/combat/allocate", "stats", stats);
 export const resetStatsRemote = () => call<{ fee: number; replayed: boolean }>("/api/combat/reset-stats", "reset", { idempotency_key: key("reset") });
-export const postWear = (weapon: string, hits: number, defeated: boolean) => call<{ durability: number }>("/api/combat/wear", "weapon", { weapon, hits: Math.min(500, hits), defeated, idempotency_key: key("wear") });
+/** A run's wear: `hits` is undefined when no hit landed with this weapon (a defeat before the first hit still costs its 10%). */
+export const postWear = (weapon: string, hits: number | undefined, defeated: boolean) => call<{ durability: number }>("/api/combat/wear", "weapon", { weapon, hits: Math.min(500, hits ?? 0), defeated, idempotency_key: key("wear") });
 export const startMissionRemote = (mission: string) => call<{ progress_id: string; resumed: boolean }>("/api/combat/missions/start", "mission", { mission, start_key: key("start") });
 export const postMissionEvents = (progressId: string, events: MissionEvent[]) => call<{ state: string; counter: number }>("/api/combat/missions/progress", "mission", { progress_id: progressId, events });
 export const completeMissionRemote = (progressId: string) => call<{ xp_awarded: number; coins_awarded: number; materials_awarded: Record<string, number> }>("/api/combat/missions/complete", "rewards", { progress_id: progressId });
