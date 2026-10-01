@@ -79,6 +79,8 @@ import { ShowcaseSheet, TrophySheet } from "./peaceful/ShowcaseSheets";
 import type { MuseumWing } from "@/lib/collections/logic";
 import FishingOverlay from "./FishingOverlay";
 import ToastHub, { toast } from "./ToastHub";
+import IslandLoading from "./IslandLoading";
+import { WarmupProbe } from "./LoadGate";
 import TopCluster, { hudButton } from "./TopCluster";
 import { setHudCoins, setHudXp } from "@/lib/game/hudStore";
 import CollectionBook from "./CollectionBook";
@@ -417,11 +419,15 @@ function Clubhouse({ phase, player, frozen, onNear }: { phase: IslandPhase; play
   </>;
 }
 
-function LoadingStatus() {
+/** The cream loading screen until the first warm-up (`ready`), then a fade; an asset that fails to load gets a reload card. */
+function LoadingStatus({ ready }: { ready: boolean }) {
   const { active, progress, errors } = useProgress();
-  if (errors.length) return <div className={styles.loading} role="alert">An island asset could not load.<button className={styles.return} onClick={() => window.location.reload()}>Reload island</button></div>;
-  if (!active) return null;
-  return <div className={styles.loading} role="status">Preparing the island · {Math.round(progress)}%</div>;
+  const [gone, setGone] = useState(false);
+  useEffect(() => { if (!ready) return; const t = window.setTimeout(() => setGone(true), 700); return () => window.clearTimeout(t); }, [ready]);
+  return <>
+    {!gone && <IslandLoading progress={active ? Math.min(progress, 99) : progress >= 100 ? 100 : null} leaving={ready} />}
+    {errors.length > 0 && <div className={styles.loading} role="alert">An island asset could not load.<button className={styles.return} onClick={() => window.location.reload()}>Reload island</button></div>}
+  </>;
 }
 
 /** `preset` (default: the game look, CURRENT) and `children` (mounted inside the Canvas) are for /lab/look only. */
@@ -470,6 +476,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const loadMuseumRef = useRef(false);
   const loadMuseum = useCallback(() => { apiCall<MuseumWing[]>("/api/collections/museum", "wings").then(setMuseumWings, () => {}); }, []);
   const [fading, setFading] = useState(false);
+  // The world is revealed (and a door fade lifts) once WarmupProbe says the scene has loaded and compiled (hud-first-login §5).
+  const [ready, setReady] = useState(false);
+  const [sceneShown, setSceneShown] = useState(0);
+  const onSceneReady = useCallback(() => { setReady(true); setFading(false); }, []);
   const [near, setNear] = useState<Near>(null);
   // Dev (screenshots): `?sheet=path` opens the Oracle path sheet once progression loads.
   const [sheet, setSheet] = useState<Sheet>(() => (devHome.get("sheet") === "path" ? "path" : null));
@@ -608,8 +618,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     }
     if (fading || !action || !["enter", "exit", "house", "home", "village", "museum_enter", "cafe_enter", "oracle_enter", "ruins", "ruins_exit"].includes(action)) return;
     setFading(true); setNear(null);
-    // The café's door sounds as you go in and out (the café bell, row 125, replaces enter.ogg when it lands).
-    if (action === "cafe_enter" || (action === "exit" && inside === "cafe")) AudioManager.playSFX(action === "exit" ? "exit" : "enter");
+    // Doors sound as you go in and out (the café bell, row 125, replaces enter.ogg there when it lands); the boat has its own (arrival-wharf).
+    if (action !== "home" && action !== "village") AudioManager.playSFX(action === "exit" || action === "ruins_exit" ? "exit" : "enter");
     window.setTimeout(() => {
       if (action === "enter") setInside("hq");
       if (action === "house") setInside("house");
@@ -626,8 +636,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       if (action === "exit") { setInside(null); setReturned(true); }
       if (action === "home" || action === "village") { setSite(action === "home" ? "home" : "village"); setInside(null); setReturned(false); setFromBoat(action === "village"); }
       if (action === "exit" || action === "enter") setFromBoat(false);
+      // A fresh warm-up probe for the next scene: the fade lifts when it has loaded and compiled.
+      setSceneShown(n => n + 1);
     }, 320);
-    window.setTimeout(() => setFading(false), 900);
   }, [fading, chapterActions, homeActions, inside, gate, layout, atHome]);
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
@@ -674,13 +685,14 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           <SunShadows />
           <Performance player={player} output={perfOutput} />
           <QualityProbe onTier={onTier} />
+          <WarmupProbe key={sceneShown} onReady={onSceneReady} />
           {children}
           {!inside && !atHome && site !== "ruins" && near !== "enter" && hqDoor && <Html position={[hqDoor[0], 2.9, hqDoor[1]]} center distanceFactor={10} zIndexRange={[3, 0]}>
             <div className={styles.cue}>Clubhouse</div>
           </Html>}
         </Suspense>
       </Canvas>
-      <header className={styles.heading}>
+      <header className={styles.heading} data-fading={fading || !ready}>
         <h1>{site === "ruins" ? "The ruins" : inside === "oracle" ? "Oracle temple" : inside === "museum" ? "Museum" : inside === "cafe" ? "Café" : inside === "hq" ? "Clubhouse" : inside === "house" ? "Your house" : atHome ? "Your island" : "Tethos Island"}</h1>
         <p>{inside === "cafe" ? "Warm drinks and quiet tables. Find a seat to study." : !inside && !atHome && site === "village" && islandEvent ? `${islandEvent.goal.title} is on.` : "A little space to make our own."}</p>
       </header>
@@ -765,7 +777,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {touch && (!inside || inside === "cafe") && <TouchControls left={212} bottom={64} walkOnly={inside === "cafe"} />}
       <p className={styles.touchControls}>Tap the ground to move</p>
       <div className={styles.fade} data-active={fading} aria-hidden="true" />
-      <LoadingStatus />
+      <LoadingStatus ready={ready} />
     </main>
   );
 }
