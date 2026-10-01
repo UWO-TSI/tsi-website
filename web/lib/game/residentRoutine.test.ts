@@ -111,10 +111,11 @@ describe("resident routines", () => {
         expect(pose.inside || pose.seat > 0, `${plan.slug} at ${h} past midnight: ${pose.stop?.id}`).toBe(true);
       }
     }
-    // The night owl is out on the lamp bench while the rest sleep.
-    const wren = days.find(d => d.plan.slug === "wren")!, pose = newPose();
-    new ResidentDay(wren.plan, nav).at(span.t1 - 1.5 * 3600, null, pose);
-    expect(pose.seat > 0 || pose.stop?.id.startsWith("anchor:beach")).toBe(true);
+    // The night owl is out (the lamp bench, the beach) while the rest sleep.
+    const owl = days.find(d => d.plan.slug === "nell")!, pose = newPose();
+    new ResidentDay(owl.plan, nav).at(span.t1 - 1.5 * 3600, null, pose);
+    expect(pose.inside).toBe(false);
+    expect(owl.plan.phases.night.map(s => s.kind)).toEqual(["sit", "stand", "sit"]);
   });
 
   it("is the same on every client: a function of world time only", () => {

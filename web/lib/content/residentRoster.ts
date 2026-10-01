@@ -1,7 +1,8 @@
 /**
  * The proposed resident roster (specs/polish/living-village.md deliverable 7;
- * rows 85, 92, 122, 217). Seven service posts and three flavour villagers,
- * as data: each is an npc_personas row (name, post, bio, tone, dialogue, and
+ * rows 85, 92, 122, 217): six service residents (the café owner, Rosa, is
+ * the seventh, in the café: lib/game/cafe.ts) and four flavour villagers, the
+ * seeded mayor among them, as data: each is an npc_personas row (name, post, bio, tone, dialogue, and
  * a schedule of routines and a home) plus a look on the character rig.
  *
  * Names and traits are placeholders until David's list arrives (row 217); the
@@ -22,7 +23,10 @@ const look = (l: { skin: number; hair: number; eyes?: string; mouth?: string; br
 
 /** Authored looks by slug (character catalogue part ids, palette indices). */
 export const RESIDENT_LOOKS: Record<string, Look> = {
-  // The HQ lead: the club's warm historian. Grey bun, round glasses, a lavender cardigan and a long brown skirt.
+  // The HQ lead, as the first-login greeting proposes her (lib/game/welcome.ts HQ_LEAD on main): the club crew tee, a high ponytail.
+  wren: look({ skin: 3, hair: 2, eyes: "E1.4", mouth: "M2.1", extras: ["freckles"], bangs: "bangs_curtain", back: "back_high_pony", top: "top_tsi_crew", bottom: "bottom_trousers", shoes: "shoes_boots",
+    acc: { bag: "acc_shoulder_bag" }, colors: { bottom_trousers: 4, shoes_boots: 5, acc_shoulder_bag: 3 } }),
+  // The mayor: the club's warm historian. Grey bun, round glasses, a lavender cardigan and a long brown skirt.
   mayor: look({ skin: 2, hair: 9, eyes: "F1.2", bangs: "bangs_swept_back", back: "back_bun", top: "top_cardigan", bottom: "bottom_long_skirt", shoes: "shoes_loafers",
     acc: { face: "acc_glasses_round", neck: "acc_scarf" }, colors: { top_cardigan: 13, bottom_long_skirt: 5, shoes_loafers: 5, acc_scarf: 4 } }),
   // Shopkeeper: deadpan, tidy. Square glasses, a sage sweater vest, charcoal trousers, work boots.
@@ -47,7 +51,7 @@ export const RESIDENT_LOOKS: Record<string, Look> = {
   marlo: look({ skin: 5, hair: 1, eyes: "F2.1", bangs: "bangs_bowl", back: "back_bowl", top: "top_hoodie", bottom: "bottom_shorts", shoes: "shoes_slipon",
     acc: { head: "acc_straw_hat", bag: "acc_shoulder_bag" }, colors: { top_hoodie: 9, bottom_shorts: 2 } }),
   // Flavour: the night owl who watches the stars from the lamp bench. Navy cardigan, a yellow scarf.
-  wren: look({ skin: 1, hair: 4, extras: ["freckles"], bangs: "bangs_centre_split", back: "back_wavy_long", top: "top_cardigan", bottom: "bottom_long_skirt", shoes: "shoes_boots",
+  nell: look({ skin: 1, hair: 4, extras: ["freckles"], bangs: "bangs_centre_split", back: "back_wavy_long", top: "top_cardigan", bottom: "bottom_long_skirt", shoes: "shoes_boots",
     acc: { neck: "acc_scarf" }, colors: { top_cardigan: 12, bottom_long_skirt: 13, acc_scarf: 6 } }),
 };
 
@@ -61,9 +65,17 @@ const row = (r: Pick<NPCPersona, "slug" | "display_name" | "post" | "bio" | "ton
  * the rest are new. Schedules use the map's anchors (plaza, path, hq, shop, cafe, oracle, museum, pond, beach, wharf).
  */
 export const PROPOSED_RESIDENTS: NPCPersona[] = [
-  row({ slug: "mayor", display_name: "Mayor Eliza", post: "hq_lead", tone: "warm",
-    bio: "Runs the clubhouse and remembers everyone's first week. Keeps the club's history in her head and will tell it to anyone who sits still.",
-    schedule: { home: "hq", dawn: ["hq"], day: ["hq", "plaza", "path", "pond"], evening: ["plaza", "bench"], night: ["bench", "home"] },
+  row({ slug: "wren", display_name: "Wren", post: "hq_lead", tone: "warm",
+    bio: "Keeps the clubhouse running, more or less: club goals, the notice board, everyone's first day. Meets every new member on the wharf.",
+    schedule: { home: "hq", dawn: ["hq"], day: ["hq", "plaza", "path", "hq", "pond"], evening: ["plaza", "bench"], night: ["bench", "home"] },
+    canned_dialogue: [
+      "Morning! The notice board has something new, I think. Probably.",
+      "Club goals are coming along. Every bit helps.",
+      "If you need anything, I'm usually at the clubhouse. Or near it. Or looking for it.",
+    ] }),
+  row({ slug: "mayor", display_name: "Mayor Eliza", post: "villager", tone: "warm",
+    bio: "The island's first resident and its historian. Remembers everyone's first week and will tell the club's story to anyone who sits still.",
+    schedule: { home: "hq", dawn: ["home"], day: ["path", "plaza", "bench", "pond"], evening: ["plaza", "pond"], night: ["home"] },
     canned_dialogue: [
       "Welcome back. The light here changes with the season, have you noticed?",
       "Every board on that clubhouse was put up by someone who believed in this place.",
@@ -97,7 +109,7 @@ export const PROPOSED_RESIDENTS: NPCPersona[] = [
     bio: "Sketches the island from the benches, a page a day. Has drawn the clubhouse forty times and isn't happy with any of them.",
     schedule: { home: "hq", day: ["bench", "pond", "museum"], evening: ["beach", "bench"], night: ["home"] },
     canned_dialogue: ["Hold still, you're in the shot. Kidding. Mostly.", "The pond looks different every hour.", "I'm out of the green pencil again."] }),
-  row({ slug: "wren", display_name: "Wren", post: "villager", tone: "warm",
+  row({ slug: "nell", display_name: "Nell", post: "villager", tone: "warm",
     bio: "A night owl who sleeps in, then watches the stars from the bench under the lamp. Names the constellations after club members.",
     schedule: { home: "hq", dawn: ["home"], day: ["home", "plaza", "oracle"], evening: ["beach", "bench"], night: ["bench", "beach", "bench"] },
     canned_dialogue: ["See that one? I named it after the founders.", "The fireflies came out early tonight.", "Mornings are a rumour."] }),
