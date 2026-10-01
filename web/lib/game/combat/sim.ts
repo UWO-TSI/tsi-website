@@ -8,8 +8,12 @@ import type { AttackShape, EnemyAttack, EnemyType } from "./contract";
 
 export interface Vec { x: number; z: number }
 
-/** Dodge roll: a short dash; invulnerable for most of it (row 50). */
-export const DODGE = { duration: 0.34, speed: 14, iframeStart: 0.02, iframeEnd: 0.3, cooldown: 0.55 } as const;
+/**
+ * The dodge (row 50, combat polish 9) is the village dash (the movement kit's burst: MOVE_TUNING dashSpeed, dashEase,
+ * dashExit over dashTime) with i-frames through it; `duration` is the dodge's clock (no attacks), and a press waits
+ * duration + cooldown = 0.6 s for the next. Air dashes give no i-frames (actions.ts dashDodge).
+ */
+export const DODGE = { duration: 0.22, iframeStart: 0.02, iframeEnd: 0.2, cooldown: 0.38 } as const;
 
 export const facingTo = (from: Vec, to: Vec) => Math.atan2(to.x - from.x, to.z - from.z);
 export function angleDiff(a: number, b: number): number {

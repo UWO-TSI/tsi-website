@@ -19,7 +19,8 @@ import { attack, spawnWave, startDodge } from "./actions";
 import { PLAYER_BASE, WEAPONS } from "./data";
 import { stepCombat } from "./encounter";
 import { createRuntime, type CombatRuntime } from "./runtime";
-import { DODGE, strikeLands, type Enemy, type Vec } from "./sim";
+import { strikeLands, type Enemy, type Vec } from "./sim";
+import { MOVE_TUNING } from "@/lib/game/movement/sim";
 import { WAVES } from "./spawns";
 
 const FALLBACK: Record<string, string> = { Arcane: "staff-oak", Ranger: "bow-willow", Vanguard: "sword-driftwood", Warden: "tome-spirits" };
@@ -121,8 +122,9 @@ export function runSurvive(subclassKey: string, missionId: "survive-circle" | "s
       mx = ux * push - uz * strafe * 0.35; mz = uz * push + ux * strafe * 0.35;
       const l = Math.hypot(mx, mz) || 1; mx /= l; mz /= l;
     }
-    // The bot's dodge roll: 14 u/s easing to 40% over its time, as the kit's dash in the ruins (combatTuning).
-    const v = PLAYER_BASE.speed * p.speed, roll = p.dodgeAge === null ? 0 : DODGE.speed * (1 - (p.dodgeAge / DODGE.duration) * 0.6);
+    // The bot's dodge: the kit's dash (combatTuning), its burst easing to dashExit over dashTime.
+    const v = PLAYER_BASE.speed * p.speed, k = p.dodgeAge === null ? 1 : Math.min(1, p.dodgeAge / MOVE_TUNING.dashTime);
+    const roll = p.dodgeAge === null ? 0 : MOVE_TUNING.dashSpeed * (MOVE_TUNING.dashExit + (1 - MOVE_TUNING.dashExit) * (1 - k) ** MOVE_TUNING.dashEase);
     me = { x: me.x + (mx * v + p.impulse.x + p.dodgeDir.x * roll) * dt, z: me.z + (mz * v + p.impulse.z + p.dodgeDir.z * roll) * dt };
   }
   return { cleared: false, seconds: t, dealt, taken, minHp: minHp / p.maxHp, died: false };

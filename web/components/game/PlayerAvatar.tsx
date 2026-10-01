@@ -274,7 +274,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
         f.stuck = Math.hypot(s.state.vx, s.state.vz) < 0.3 ? f.stuck + dt : 0;
         if (f.stuck > STUCK_TIME) target.current = null;
       }
-      if (inCombat && events.some(e => e.kind === "dash")) dashDodge(combat.rt, { x: s.state.dashX, z: s.state.dashZ });
+      if (inCombat && events.some(e => e.kind === "dash")) dashDodge(combat.rt, { x: s.state.dashX, z: s.state.dashZ }, s.state.airDashes > 0); // an air dash: no i-frames
     }
     const state = s.state, speed = sitting ? 0 : Math.hypot(state.vx, state.vz);
     const [x, y, z] = sitting ? [sitting.x, groundHeight(sitting.x, sitting.z), sitting.z] : interpolated(s);

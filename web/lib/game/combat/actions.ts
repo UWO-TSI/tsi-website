@@ -82,19 +82,23 @@ export function startDodge(rt: CombatRuntime, dir: Vec): boolean {
 }
 
 /**
- * The ruins on the movement kit (specs/movement.md): Q's dash is the dodge (its speed and time, easing to 0.4 of the
- * burst as the roll did, its cooldown), and walking and sprint scale with the combat speed stat.
+ * The ruins on the movement kit (specs/movement.md): Q's dash is the dodge, the village dash's own burst with the
+ * dodge's cooldown (combat polish 9: one dash), and walking and sprint scale with the combat speed stat.
  */
 let tuned: { speed: number; t: MoveTuning } | null = null;
 export function combatTuning(speed: number): MoveTuning {
   if (tuned?.speed === speed) return tuned.t; // the avatar asks every frame; the speed stat changes rarely
   const t = MOVE_TUNING;
   tuned = { speed, t: { ...t, walkSpeed: t.walkSpeed * speed, sneakSpeed: t.sneakSpeed * speed, sprintSpeed: t.sprintSpeed * speed,
-    dashSpeed: DODGE.speed, dashTime: DODGE.duration, dashExit: 0.4, dashEase: 1, dashCooldown: DODGE.duration + DODGE.cooldown } };
+    dashCooldown: DODGE.duration + DODGE.cooldown } };
   return tuned.t;
 }
-/** The kit's dash in the ruins: the sim moves you and its cooldown (the same DODGE timings) gates it; this gives it the dodge's i-frames and cancels a cast. */
-export function dashDodge(rt: CombatRuntime, dir: Vec): boolean {
+/**
+ * The kit's dash in the ruins: the sim moves you and its cooldown (the same DODGE timings) gates it. On the ground this
+ * gives it the dodge's i-frames and cancels a cast; an air dash only cancels the cast (no i-frames off a jump).
+ */
+export function dashDodge(rt: CombatRuntime, dir: Vec, aloft = false): boolean {
+  if (aloft) { cancelCast(rt); return false; }
   rt.player.dodgeCd = 0;
   return startDodge(rt, dir);
 }

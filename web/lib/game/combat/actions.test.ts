@@ -6,7 +6,7 @@ import { FLOATERS, floater, hitAmount, resolveCast } from "./abilities";
 /** One hit from the equipped weapon (systems damage formula), as `attack` lands it. */
 const weaponDamage = (rt: Parameters<typeof hitAmount>[0], e: Parameters<typeof hitAmount>[1], random: () => number) => hitAmount(rt, e, { power: 1, from: e }, random);
 import { stepCombat } from "./encounter";
-import { NO_INPUT, STEP, createMoveState, stepMove, type MoveWorld } from "@/lib/game/movement/sim";
+import { MOVE_TUNING, NO_INPUT, STEP, createMoveState, stepMove, type MoveWorld } from "@/lib/game/movement/sim";
 import { startMission } from "./missions";
 import { createRuntime, ENERGY } from "./runtime";
 import { DODGE, STUN, damageEnemy, spawnEnemy, stepEnemy } from "./sim";
@@ -117,17 +117,29 @@ describe("the ruins dodge on the movement kit (specs/movement.md)", () => {
     }
     return { rt, s, dashes };
   };
-  it("is Q's dash with the roll's reach and time, invulnerable through today's i-frame window", () => {
+  it("is the village dash (one dash, combat polish 9): the same burst and reach, invulnerable through it", () => {
+    const t = combatTuning(1);
+    expect([t.dashSpeed, t.dashTime, t.dashExit, t.dashEase]).toEqual([MOVE_TUNING.dashSpeed, MOVE_TUNING.dashTime, MOVE_TUNING.dashExit, MOVE_TUNING.dashEase]);
+    expect(t.dashCooldown).toBeCloseTo(0.6);
     const hits: [number, number][] = [];
     let atEnd = 0;
     run(0.6, [0], (time, rt, z) => {
-      if (Math.abs(time - DODGE.duration) < STEP / 2) atEnd = z;
-      if ([0.1, 0.25, 0.45].some(t => Math.abs(time - t) < STEP / 2)) hits.push([time, hurtPlayer(rt, 10, { x: 0, z: 5 }, { x: 0, z })]);
+      if (Math.abs(time - MOVE_TUNING.dashTime) < STEP / 2) atEnd = z;
+      if ([0.05, 0.15, 0.3].some(t => Math.abs(time - t) < STEP / 2)) hits.push([time, hurtPlayer(rt, 10, { x: 0, z: 5 }, { x: 0, z })]);
     });
-    // The roll moved 14 u/s easing to 40% over its 0.34 s: 3.33u, plus the walk it started from.
-    expect(atEnd).toBeGreaterThan(3.2);
-    expect(atEnd).toBeLessThan(4);
+    // 18 u/s easing to 0.55 of it over 0.2 s: the village dash's 2.5u.
+    expect(atEnd).toBeGreaterThan(2.4);
+    expect(atEnd).toBeLessThan(2.8);
     expect(hits.map(([, lost]) => lost > 0)).toEqual([false, false, true]);
+  });
+  it("an air dash gives no i-frames (it still breaks a cast)", () => {
+    const rt = caster();
+    rt.player.safe = false;
+    triggerAbility(rt, "slot1");
+    expect(dashDodge(rt, { x: 1, z: 0 }, true)).toBe(false);
+    expect(rt.casting).toBeNull();
+    expect(rt.player.dodgeAge).toBeNull();
+    expect(hurtPlayer(rt, 10, { x: 1, z: 0 }, { x: 0, z: 0 })).toBe(10);
   });
   it("waits out the dodge's cooldown, and the roll's own impulse never moves you twice", () => {
     const { dashes } = run(2, [0, 0.5, DODGE.duration + DODGE.cooldown + 0.02]);
