@@ -13,7 +13,7 @@
  * forage and bug spots; a fishable sea.
  */
 import {
-  CLIFF_LEVELS, ORTHOGONAL, cliffPieceFor, inBounds, isGroundAtWorld, isLandCell, isRamp, isVoid, levelAt,
+  CLIFF_LEVELS, DIR_OFFSETS, ORTHOGONAL, cliffPieceFor, inBounds, isGroundAtWorld, isLandCell, isRamp, isVoid, levelAt,
   needsCliff, rampDir, rampRun, surfaceAt, worldToCellX, worldToCellZ, type IslandMap,
 } from "./grid";
 import { LANDMARK_IDS, PROBE, TREE_TRUNK, bridgeDecks, inRect, islandOf, landmarks, objectFootprint, turn, wharfDeck } from "./defaultIsland";
@@ -35,8 +35,10 @@ export interface TerrainHealth {
   tooTall: number;
   /** Land cells per level (water excluded). */
   levels: Record<number, number>;
-  /** Land cells with an orthogonal neighbour exactly one level away: the blended half steps (at most 8% of land). */
-  halfSteps: number;
+  /** Land cells with an orthogonal neighbour exactly one level away: natural slope, blended by the height field. */
+  slopeCells: number;
+  /** Land cells whose eight neighbours all stand at their level: flat ground to build on, at any level. */
+  flatCells: number;
   /** Reachable cells from the seed, as a mask (1 = reachable). */
   reach: Uint8Array;
 }
@@ -45,7 +47,7 @@ export interface TerrainHealth {
 /** Terrain checks on any map. `seed` is the cell reachability starts from (default: the first level-0 land cell). */
 export function terrainHealth(map: IslandMap, seed?: [number, number] | null): TerrainHealth {
   const W = map.width, D = map.depth;
-  let walkable = 0, cliffCells = 0, missingPiece = 0, thinWalls = 0, orphanRamps = 0, tooTall = 0, halfSteps = 0;
+  let walkable = 0, cliffCells = 0, missingPiece = 0, thinWalls = 0, orphanRamps = 0, tooTall = 0, slopeCells = 0, flatCells = 0;
   const levels: Record<number, number> = {};
   let first: [number, number] | null = null;
   for (let z = 0; z < D; z++) {
@@ -69,7 +71,8 @@ export function terrainHealth(map: IslandMap, seed?: [number, number] | null): T
         if (Math.abs(l - nl) > CLIFF_LEVELS) tooTall++;
         if (isLandCell(map, x + dx, z + dz) && Math.abs(l - nl) === 1) half = true;
       }
-      if (half) halfSteps++;
+      if (half) slopeCells++;
+      if (DIR_OFFSETS.every(([dx, dz]) => !isLandCell(map, x + dx, z + dz) || levelAt(map, x + dx, z + dz) === l)) flatCells++;
       // A cell a full cliff above the ground on both sides of an axis is a wall you cannot stand on.
       // (A one-cell half-step ridge is a walkable bump the blur rounds off.)
       const lower = (dx: number, dz: number) => isLandCell(map, x + dx, z + dz) && levelAt(map, x + dx, z + dz) <= l - CLIFF_LEVELS;
@@ -99,19 +102,19 @@ export function terrainHealth(map: IslandMap, seed?: [number, number] | null): T
       }
     }
   }
-  return { reachable, walkable, stranded: walkable - reachable, cliffCells, missingPiece, thinWalls, orphanRamps, tooTall, levels, halfSteps, reach };
+  return { reachable, walkable, stranded: walkable - reachable, cliffCells, missingPiece, thinWalls, orphanRamps, tooTall, levels, slopeCells, flatCells, reach };
 }
 
 /** Terrain problems as named counts; empty = healthy terrain. */
 export function terrainProblems(t: TerrainHealth): Record<string, number> {
-  const land = Math.max(1, t.walkable), max = Math.max(0, ...Object.keys(t.levels).map(Number));
+  const land = Math.max(1, t.walkable);
   const out: Record<string, number> = {
     "stranded cells": t.stranded, "cliffs with no kit piece": t.missingPiece, "orphan ramps": t.orphanRamps,
     "1-cell walls": t.thinWalls, "faces too tall": t.tooTall,
-    // Flat share (CLAUDE.md 1b): mostly flat, half steps rare, at most two cliffs up.
-    "flat ground under 70%": (t.levels[0] ?? 0) / land < 0.7 ? 1 : 0,
-    "half steps over 8% of land": t.halfSteps / land > 0.08 ? t.halfSteps : 0,
-    "levels above 4": max > CLIFF_LEVELS * 2 ? max : 0,
+    // Flat share (CLAUDE.md 1b): mostly flat ground to build on, at any level. Hills and mountains are
+    // slopes (one level between neighbours, walkable, any height up to MAX_LEVEL), so they cost flat
+    // share and nothing else; cliffs keep their kit rules above.
+    "flat ground under 60%": t.flatCells / land < 0.6 ? 1 : 0,
   };
   return Object.fromEntries(Object.entries(out).filter(([, n]) => n > 0));
 }
@@ -191,8 +194,10 @@ export function villageHealth(v: Village): VillageHealth {
 
   // Everything that stands on the ground.
   const grounded = new Set<string>(OBJECT_KINDS.filter(k => k !== "landmark" && k !== "bridge"));
-  const landCell = (x: number, z: number) => isLandCell(map, worldToCellX(map, x), worldToCellZ(map, z));
-  for (const o of v.objects) if (grounded.has(o.kind) && !landCell(o.x, o.z) && !onDeck(o.x, o.z)) add("objects off land", `${o.kind}:${o.id}`);
+  // On the organic coast the game draws, not on the painted cell: a shell on a cell's sea corner is in the water.
+  // An object standing on the lip (within a body's reach, PROBE) still counts as ashore.
+  const ashore = (x: number, z: number) => PROBE.some(([dx, dz]) => isGroundAtWorld(map, x + dx, z + dz));
+  for (const o of v.objects) if (grounded.has(o.kind) && !ashore(o.x, o.z) && !onDeck(o.x, o.z)) add("objects off land", `${o.kind}:${o.id}`);
 
   // Resident anchors: open ground for three residents side by side.
   for (const key of Object.keys(RESIDENT_ANCHORS) as ResidentAnchor[]) {

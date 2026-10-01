@@ -1,0 +1,3 @@
+slope stroke on 256x256: frame median 32.7 ms, p90 33.9 ms, max 45.8 ms
+land stroke on 256x256: frame median 19.5 ms, p90 20.7 ms, max 25.0 ms
+smooth stroke on 256x256: frame median 16.8 ms, p90 17.9 ms, max 24.8 ms

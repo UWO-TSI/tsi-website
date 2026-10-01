@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
-import { type IslandMap, WATER_DROP, LEVEL_STEP, cellToWorldX, cellToWorldZ, isRiver, levelAt, surfaceAt } from "@/lib/game/grid";
+import { type IslandMap, WATER_DROP, LEVEL_STEP, cellToWorldX, cellToWorldZ, isGroundAtWorld, isRiver, levelAt, surfaceAt } from "@/lib/game/grid";
 import { WATER_CHOP, WATER_CLOUDS, WATER_OPTICS, WATER_RIPPLE, WATER_SWELL, facetTilt } from "@/lib/game/waterShader";
 import { terrainMaterial, waterSurfaceUniforms } from "./terrainMaterials";
 
@@ -52,6 +52,8 @@ export function glintPoints(map: IslandMap, skip?: (x: number, z: number) => boo
       for (let k = 0; k < 2; k++) if (keep === 1 || rnd() < keep) pts.push([cellToWorldX(map, cx) + (rnd() - 0.5) * 0.8, levelAt(map, cx, cz) * LEVEL_STEP - WATER_DROP, cellToWorldZ(map, cz) + (rnd() - 0.5) * 0.8]);
     }
   }
+  // Only over water: the organic coast reaches into some water cells.
+  pts = pts.filter(([x, , z]) => !isGroundAtWorld(map, x, z));
   const minX = map.originX - 0.5, minZ = map.originZ - 0.5, maxX = minX + map.width, maxZ = minZ + map.depth;
   const cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
   for (let i = Math.round(Math.PI * radius * radius / 5); i > 0; i--) {

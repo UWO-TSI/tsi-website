@@ -35,6 +35,10 @@ import {
   needsCliff,
   cellToWorldX,
   cellToWorldZ,
+  isGroundAtWorld,
+  overlayAt,
+  DIR_OFFSETS,
+  NATURAL_SURFACES,
 } from "@/lib/game/grid";
 import { useTuning } from "@/lib/game/tuning";
 import { worldTime } from "@/lib/game/worldClock";
@@ -44,6 +48,9 @@ const PACK_URL = "/assets/nature/grass-tufts.glb";
 useGLTF.preload(PACK_URL);
 /** Tufts are the Small shadow class: no sun shadow, they receive. */
 const TUFT_SHADOW = meshShadow(shadowClassFor(PACK_URL), "tuft");
+
+/** How much likelier a tuft is on grass beside a soil path or the beach. */
+const EDGE_TUFTS = 3;
 
 /** Deterministic per-cell hash in [0, 1). Same cell, same tuft, every load. */
 function hash01(cx: number, cz: number, salt: number): number {
@@ -164,9 +171,14 @@ export default function GrassTufts({ map, windScale = 1 }: { map: IslandMap; win
         const s = surfaceAt(map, cx, cz);
         if (isVoid(s) || s !== Surface.Grass) continue;
         if (needsCliff(map, cx, cz)) continue;
-        if (hash01(cx, cz, 1) > chance) continue;
+        // Thicker along a worn path or beach edge, where grass grows back into the trodden ground.
+        const edge = DIR_OFFSETS.some(([dx, dz]) => NATURAL_SURFACES.has(surfaceAt(map, cx + dx, cz + dz)));
+        if (hash01(cx, cz, 1) > chance * (edge ? EDGE_TUFTS : 1)) continue;
         const x = cellToWorldX(map, cx) + (hash01(cx, cz, 2) - 0.5) * TILE;
         const z = cellToWorldZ(map, cz) + (hash01(cx, cz, 3) - 0.5) * TILE;
+        if (!isGroundAtWorld(map, x, z)) continue; // the organic coast can take a cell's corner
+        // On the grass side of a worn edge, not out on the path.
+        if ([...NATURAL_SURFACES].some((o) => overlayAt(map, o, x, z) > 0.4)) continue;
         out.push({
           x, y: sampleGroundHeight(map, groundField, x, z), z,
           rot: hash01(cx, cz, 4) * Math.PI * 2,

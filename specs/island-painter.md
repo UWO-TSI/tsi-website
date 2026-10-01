@@ -27,3 +27,14 @@ David (2026-09-28): "the island is poorly designed and i will design the island 
 Painter screenshots of each new tool and the object layer; frame diff of today's island loaded from the file vs the code-built one (≈0); walk-the-draft shown with today's island or a tiny synthetic fixture (no designed layout); budget numbers for 64/96/128.
 
 Row 156 ("the old 256×256 draft and /lab/map drawing are not the target") is superseded by rows 241 and 246.
+
+## Natural terrain (rows 262, 263; specs/terrain-blending.md)
+What the painter draws and what its brushes make, since 2026-09-30. Cells and levels are still all it writes; the game derives everything natural from them, and the painter shows that same derivation.
+
+- **The preview is the game's terrain.** The map is drawn from `terrainOf` (lib/game/grid.ts): the organic coast, sand and soil fading into grass over worn edges, stone/wood/brick with crisp rounded borders, the wet band on the beach, stony ground where it is steep, and hill shading off the height field (the orange half-step lines are gone; slopes show as shading). Cliff edges stay as dark lines, missing kit pieces as red cells. One pixel per lattice sample (4 per cell). Edits mark the cells they touched and a repaint re-derives and redraws only those (`refreshTerrain`); a 256×256 map paints at 16–33 ms a frame (specs/evidence/terrain/painter-timing.txt).
+- **grow / shrink** threshold a Gaussian blur of the stroke's snapshot, so an edge moves by its curvature: a straight coast or plateau edge a cell per stroke, a corner less, a notch more. Repeated strokes round off (no diamonds). Small islets grow too (the threshold is relative to the local peak).
+- **smooth** keeps what half the blur has: notches fill, spikes and stray cells go, straight and 45° coasts stay where they are.
+- **slope** builds a hill: the brush rises a level per stroke and the ground around it follows at a level per 2.5 cells, down to sea level at the coast; every step is one level, so it is walkable and never a kit cliff. Alt digs instead. Drag for a ridge.
+- **cliff** stands the brush one kit cliff (2 levels) above where the stroke began, flat on top. Alt cuts one down. Cross it with ramps; "faces too tall" in health and the legalise button cover a tier painted over lower ground.
+- **land / sea** with a round brush are soft: the dab adds a soft disc to the land around it, so it melts into a nearby coast instead of leaving a seam. Rect, line, fill and lasso still paint exact cells.
+- `/lab/map?fixture=terrain` opens the synthetic test island (lib/game/fixtures/terrainFixture.ts: a cliff ring with a ramp, a steep mountain and a gentle hill, a beach, paths, a bay and a point) for trying the brushes; `/lab/island?fixture=terrain` walks it. Neither is ever the shipped island.

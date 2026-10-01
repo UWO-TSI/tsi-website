@@ -1,0 +1,1 @@
+plaza: median 144 FPS · 6.9 ms/frame | 299 draws · 204,329 triangles | Position 0.0, -1.0 (range 144-144 FPS)

@@ -66,7 +66,7 @@ const _s = new THREE.Vector3(KIT_SCALE, KIT_SCALE, KIT_SCALE);
 const _euler = new THREE.Euler();
 
 /** One kit file, instanced across every cell that asked for it. */
-function CliffPiece({ file, placements }: { file: string; placements: Placement[] }) {
+function CliffPiece({ file, placements, grass, drape }: { file: string; placements: Placement[]; grass?: THREE.Material; drape?: THREE.Material }) {
   const { scene } = useGLTF(CLIFF_DIR + file);
 
   // Pull geometry+material per sub-mesh. Safe to read straight off the source
@@ -82,11 +82,14 @@ function CliffPiece({ file, placements }: { file: string; placements: Placement[
       // shared FldUnit asset) and baseColorFactor [0,0,0,0], which renders
       // every cliff face as a black slab. Swap to the shared terrain set,
       // matched by ACNH material name. See terrainMaterials.ts.
-      const shared = terrainMaterial(own?.name ?? mesh.name ?? "");
+      const name = own?.name ?? mesh.name ?? "";
+      // The kit's grass top and drape wear the island's own grass, so a plateau is the same lawn as the ground.
+      const island = name.includes("mGrassCliffXlu") ? drape : name.includes("mGrass") ? grass : undefined;
+      const shared = island ?? terrainMaterial(name);
       out.push({ geometry: mesh.geometry, material: shared ?? own });
     });
     return out;
-  }, [scene]);
+  }, [scene, grass, drape]);
 
   return (
     <group>
@@ -116,12 +119,13 @@ function CliffPiece({ file, placements }: { file: string; placements: Placement[
   );
 }
 
-export default function GridCliffs({ map }: { map: IslandMap }) {
+/** `grass`, `drape`: the island's grass and its drape (GridTerrain's materials), for the kit's grass top and lip. */
+export default function GridCliffs({ map, grass, drape }: { map: IslandMap; grass?: THREE.Material; drape?: THREE.Material }) {
   const byFile = useCliffPlacements(map);
   return (
     <group>
       {[...byFile.entries()].map(([file, placements]) => (
-        <CliffPiece key={file} file={file} placements={placements} />
+        <CliffPiece key={file} file={file} placements={placements} grass={grass} drape={drape} />
       ))}
     </group>
   );
