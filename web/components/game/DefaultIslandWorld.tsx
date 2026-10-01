@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type React
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, useProgress, useTexture } from "@react-three/drei";
 import * as THREE from "three";
-import { Map as MapIcon } from "lucide-react";
+import { Map as MapIcon, Settings, Wrench } from "lucide-react";
 import GridWorld from "./grid/GridWorld";
 import GridOcean from "./grid/GridOcean";
 import PlayerAvatar from "./PlayerAvatar";
@@ -114,6 +114,7 @@ import styles from "./DefaultIslandWorld.module.css";
 
 type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | null;
 type Sheet = "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | null;
+const DEV = process.env.NODE_ENV !== "production";
 const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight", evening: "Evening", night: "Night" };
 const CLUBHOUSE_STATIONS: InteriorStation[] = [
   { id: "board", name: "Notice board", pos: HQ_BOARD_APPROACH, action: "board", range: 2.3 },
@@ -536,13 +537,6 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     setDetectedTier(tier);
     actions.detect({ liteMode: tier === "light" });
   }, [actions]);
-  const quality = actions.isExplicit("liteMode") ? (graphics.liteMode ? "light" : "high") : "auto";
-  const [, rerender] = useState(0);
-  const setQuality = (value: string) => {
-    rerender(n => n + 1);
-    if (value === "auto") actions.unset("liteMode");
-    else { actions.setLiteMode(value === "light"); if (value === "high") actions.setShadows(true); }
-  };
   const liteMode = graphics.liteMode;
   const castShadows = graphics.shadows && !liteMode;
   const seasonRows = useSeasonPalettes();
@@ -693,9 +687,11 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {/* Top right (hud-first-login §1, §2): coins, level, clock and mail, then sound and the view options; panels open below it. */}
       <TopCluster weather={weather} phase={phase} unread={progression.unreadLetters} mailKey={keyName(identity.settings.key_bindings.openMail)} onMail={() => setSheet("letters")}>
         <AudioController phase={ambientPhase} weather={weather} season={season.season} className={hudButton} />
-        <button ref={optionsToggleRef} className={styles.panelToggle} aria-expanded={optionsOpen} aria-controls="island-options" onClick={() => setOptionsOpen((open) => !open)}>View options</button>
+        <button className={hudButton} onClick={() => setSheet(value => (value === "settings" ? null : "settings"))} aria-label="Settings" title="Settings: text, sound, keys, look"><Settings size={18} aria-hidden /></button>
+        {/* Development only: camera, time of day, the clearing reset and frame timing (hud-first-login §4). */}
+        {DEV && <button ref={optionsToggleRef} className={hudButton} aria-expanded={optionsOpen} aria-controls="island-options" onClick={() => setOptionsOpen((open) => !open)} aria-label="Developer view options" title="Developer view options"><Wrench size={17} aria-hidden /></button>}
       </TopCluster>
-      <section id="island-options" className={styles.panel} data-open={optionsOpen} aria-label="Island view and graphics" onKeyDown={(event) => {
+      {DEV && <section id="island-options" className={styles.panel} data-open={optionsOpen} aria-label="Developer view options" onKeyDown={(event) => {
         if (optionsOpen && event.key === "Escape" && optionsToggleRef.current?.getClientRects().length) {
           event.preventDefault();
           event.stopPropagation();
@@ -707,11 +703,6 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           <button aria-pressed={!overview} onClick={() => setOverview(false)}>Walk</button>
           <button aria-pressed={overview} onClick={() => setOverview(true)}>Overview</button>
         </div>
-        <label className={styles.toggle}>
-          <span>Pixel filter</span>
-          <input type="checkbox" checked={graphics.pixelated} onChange={(e) => actions.setPixelated(e.target.checked)} />
-        </label>
-        <p className={styles.hint}>The world stays the same. Choose its finish.</p>
         <label className={styles.preset}>
           <span>Time</span>
           <select value={forced ?? "live"} onChange={(e) => setForced(e.target.value === "live" ? null : e.target.value as IslandPhase)}>
@@ -720,23 +711,12 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           </select>
         </label>
         <p className={styles.hint} data-testid="island-conditions">{conditionsLabel}{conditions.sunSource === "fallback" ? " · sun table" : ""}</p>
-        <button className={styles.return} onClick={() => { setSheet("settings"); setOptionsOpen(false); }}>Settings · text, contrast, keys</button>
         <button className={styles.return} onClick={() => { setInside(null); setSite("village"); setReturned(false); setReset((n) => n + 1); setOverview(false); }}>Return to clearing</button>
-        <details className={styles.performance}>
-          <summary>Performance</summary>
+        <details className={styles.performance} open>
+          <summary>Frame timing</summary>
           <output ref={perfOutput}>Measuring…</output>
-          <label className={styles.preset}>
-            <span>Quality</span>
-            <select value={quality} onChange={(e) => setQuality(e.target.value)} data-testid="quality">
-              <option value="auto">Auto · {detectedTier ? (detectedTier === "light" ? "Light" : "High") : "measuring"}</option>
-              <option value="light">Light</option>
-              <option value="high">High</option>
-            </select>
-          </label>
-          <label className={styles.toggle}><span>Shadows</span><input type="checkbox" checked={graphics.shadows} onChange={(e) => actions.setShadows(e.target.checked)} /></label>
-          <small>Local frame timing; includes development overhead.</small>
         </details>
-      </section>
+      </section>}
       {near && !sheet && !(reveal && inside === "oracle") && (CLOSED.includes(near)
         ? <p className={styles.interact} data-closed="true" role="status">{NEAR_LABELS[near]}</p>
         : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>E</kbd>{(near === "forage" || near === "net") ? getPeacefulTarget()?.label ?? NEAR_LABELS[near] : NEAR_LABELS[near]}</button>)}
@@ -768,7 +748,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <JournalSheet open={sheet === "journal"} onClose={() => setSheet(null)} />
       <OracleQuizSheet open={sheet === "oracle"} onClose={() => setSheet(null)} onResult={onOracleResult} onPath={pathView?.family ? () => { setPathTick(n => n + 1); setSheet("path"); } : undefined} />
       {sheet === "path" && pathView && <PathSheet view={pathView} onClose={() => setSheet(null)} onChanged={() => setPathTick(n => n + 1)} />}
-      <SettingsSheet open={sheet === "settings"} onClose={() => setSheet(null)} />
+      <SettingsSheet open={sheet === "settings"} onClose={() => setSheet(null)} detectedTier={detectedTier} />
       {reveal && inside === "oracle" && <FamilyReveal family={reveal.family} type={reveal.type} onContinue={() => setReveal(null)} />}
       <TrophySheet open={sheet === "trophies"} onClose={() => setSheet(null)} />
       <ShowcaseSheet open={sheet === "showcase"} onClose={() => setSheet(null)} />

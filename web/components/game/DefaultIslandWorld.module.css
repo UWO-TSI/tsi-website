@@ -22,13 +22,10 @@
 .controls span { display: flex; align-items: center; gap: 5px; }
 .controls kbd { font: inherit; background: #e0e6d8; border: 1px solid #a7b59e; border-bottom-width: 2px; border-radius: 3px; padding: 2px 4px; }
 .loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #f8f7e9; padding: 18px 24px; border-radius: 8px; font-size: 12px; }
-@media (max-width: 700px) { .heading { top: 20px; left: 18px; } .heading p { display: none; } .panel { right: 12px; top: 68px; width: 208px; padding: 12px; } .controls { gap: 10px; padding: 10px; font-size: 10px; } }
+@media (max-width: 700px) { .heading { top: 20px; left: 18px; } .heading p { display: none; } .panel { right: 12px; top: 112px; width: 208px; padding: 12px; } .controls { gap: 10px; padding: 10px; font-size: 10px; } }
 
 .touchControls { display: none; }
 .performance .toggle { margin-top: 10px; font-size: 10px; font-weight: 400; }
-.panelToggle { height: 44px; padding: 0 14px; border: 1px solid #5c746c40; border-radius: 999px; background: #f8f7e9f2; color: #293e3b; font: inherit; font-size: 12px; font-weight: 600; box-shadow: 0 3px 0 #47625218, 0 6px 18px #29464118; cursor: pointer; }
-.panelToggle:hover { background: #fffdf3; }
-.panelToggle:focus-visible { outline: 3px solid #bb813f; outline-offset: 3px; }
 .panel[data-open="false"] { display: none; }
 @media (pointer: coarse), (pointer: none) {
   .controls { display: none; }
