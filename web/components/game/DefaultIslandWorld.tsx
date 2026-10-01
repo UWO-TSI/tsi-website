@@ -71,7 +71,7 @@ import { useCoarsePointer } from "@/lib/game/useMediaQuery";
 import TouchControls from "./movement/TouchControls";
 import MuseumInterior from "./peaceful/MuseumInterior";
 import AudioController from "./AudioController";
-import type { AmbientPhase } from "@/lib/game/audio";
+import { AudioManager, type AmbientPhase } from "@/lib/game/audio";
 import { useMusicDirector } from "@/lib/game/useAudio";
 import DonateSheet from "./peaceful/DonateSheet";
 import { ShowcaseSheet, TrophySheet } from "./peaceful/ShowcaseSheets";
@@ -611,6 +611,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     }
     if (fading || !action || !["enter", "exit", "house", "home", "village", "museum_enter", "cafe_enter", "oracle_enter", "ruins", "ruins_exit"].includes(action)) return;
     setFading(true); setNear(null);
+    // The café's door sounds as you go in and out (the café bell, row 125, replaces enter.ogg when it lands).
+    if (action === "cafe_enter" || (action === "exit" && inside === "cafe")) AudioManager.playSFX(action === "exit" ? "exit" : "enter");
     window.setTimeout(() => {
       if (action === "enter") setInside("hq");
       if (action === "house") setInside("house");
