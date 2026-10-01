@@ -13,21 +13,33 @@
  * ?sheet=live      one character at a time, the face on its own clock (blinks, &talk=1 talks); &style=, &yaw=
  * ?sheet=bangs     every bangs style over a back (&back=, back_bob); ?sheet=backs every back under a bangs (&bangs=)
  * ?sheet=hats      the four hats (they hide the back hair and carry a lock tuck), front and back 3/4
- * &hair=<0-11>&skin=<0-11>&face=512 (the world atlas) &framing=head|body
+ * avatar v8 (specs/avatar-v8.md):
+ * ?sheet=turn      the milestone styles (&styles=bob,long,short or afro,braids) front, 3/4 and back
+ * ?sheet=hacc      the hair accessories on several styles, each turned to show it
+ * ?sheet=beanie    the beanie on short, long and curly hair, front and back; ?sheet=backpack the backpack (body, back 3/4)
+ * &hair=<0-11>&skin=<0-11>&face=512 (the world atlas) &framing=head|body; cells whose parts the catalogue lacks are
+ * dropped (the before shots run on the previous catalogue)
  */
 import { Suspense, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Canvas } from "@react-three/fiber";
 import { PerspectiveCamera, View } from "@react-three/drei";
 import Character, { type CharacterMotion } from "@/components/game/character/Character";
-import { DEFAULT_LOOK, FACE, partsIn, type CharacterLook, type EyeFrame } from "@/lib/game/character/look";
+import { DEFAULT_LOOK, FACE, PART_BY_ID, partsIn, type CharacterLook, type EyeFrame } from "@/lib/game/character/look";
 import { EXPRESSIONS, type FaceOverride } from "@/lib/game/character/face";
 
 const STYLES: Record<string, Pick<CharacterLook, "bangs" | "back">> = {
   short: { bangs: "bangs_spiky", back: "back_short_spiky" },
   bob: { bangs: "bangs_straight", back: "back_bob" },
   long: { bangs: "bangs_curtain", back: "back_long" },
+  afro: { bangs: "bangs_curls", back: "back_afro" },
+  braids: { bangs: "bangs_braids", back: "back_box_braids" },
+  pony: { bangs: "bangs_swept_l", back: "back_high_pony" },
+  pigtails: { bangs: "bangs_straight", back: "back_pigtails" },
+  buns: { bangs: "bangs_curtain", back: "back_twin_buns" },
+  bun: { bangs: "bangs_straight", back: "back_bun" },
 };
+const known = (c: Cell) => [c.look.bangs, c.look.back, ...Object.values(c.look.acc)].every(id => !id || PART_BY_ID.has(id));
 interface Cell { label: string; look: CharacterLook; yaw: number; face?: FaceOverride | null; talk?: boolean }
 
 function Stage({ cell, framing, faceSize }: { cell: Cell; framing: "head" | "body"; faceSize: number }) {
@@ -65,11 +77,22 @@ function AvatarBench() {
     if (sheet === "backs") return partsIn("back").map(p => ({ label: p.id, look: { ...bob, bangs: q.get("bangs") ?? "bangs_straight", back: p.id }, yaw: yaw - 0.9 }));
     if (sheet === "hats") return ["acc_sunhat", "acc_cap", "acc_beanie", "acc_straw_hat"].flatMap(h => [
       { label: `${h} front`, look: { ...bob, acc: { head: h } }, yaw }, { label: `${h} back`, look: { ...bob, acc: { head: h } }, yaw: yaw + 2.6 }]);
+    if (sheet === "turn") return (q.get("styles") ?? "bob,long,short").split(",").flatMap(st => [
+      { label: `${st} front`, look: style(st), yaw: 0 }, { label: `${st} 3/4`, look: style(st), yaw: -0.6 }, { label: `${st} back`, look: style(st), yaw: 2.7 }]).filter(known);
+    if (sheet === "hacc") return ([["hacc_claw_clip", "bob", 2.7], ["hacc_claw_clip", "long", 2.5], ["hacc_claw_clip", "pony", 2.3], ["hacc_claw_clip", "bun", 2.6],
+      ["hacc_bow", "bob", -0.9], ["hacc_bow", "pigtails", -0.4], ["hacc_bow", "afro", -0.9], ["hacc_bow", "braids", -1.0],
+      ["hacc_scrunchie", "pony", 2.4], ["hacc_scrunchie", "pigtails", -0.4], ["hacc_scrunchie", "buns", -0.3], ["hacc_scrunchie", "bun", 2.6]] as const)
+      .map(([acc, st, y]) => ({ label: `${acc.slice(5)} on ${st}`, look: { ...style(st), acc: { hair: acc } } as CharacterLook, yaw: y })).filter(known);
+    if (sheet === "beanie") return ["short", "long", "afro"].flatMap(st => [
+      { label: `${st} front`, look: { ...style(st), acc: { head: "acc_beanie" } }, yaw: -0.5 }, { label: `${st} back`, look: { ...style(st), acc: { head: "acc_beanie" } }, yaw: 2.6 }]).filter(known);
+    if (sheet === "backpack") return ["short", "long", "afro"].flatMap(st => [
+      { label: `${st} back 3/4`, look: { ...style(st), acc: { bag: "acc_backpack" } }, yaw: 2.5 }, { label: `${st} side`, look: { ...style(st), acc: { bag: "acc_backpack" } }, yaw: 1.6 }]).filter(known);
     return Object.keys(STYLES).flatMap(s => [{ label: `${s} front`, look: style(s), yaw: 0 }, { label: `${s} 3/4`, look: style(s), yaw: -0.6 }]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheet, yaw, q]);
   const root = useRef<HTMLDivElement>(null);
-  const cols = sheet === "styles" || sheet === "backs" ? 6 : sheet === "bangs" || sheet === "hats" ? 8 : cells.length;
+  const cols = sheet === "styles" || sheet === "backs" || sheet === "beanie" || sheet === "backpack" ? 6 : sheet === "turn" ? 9
+    : sheet === "bangs" || sheet === "hats" ? 8 : sheet === "hacc" ? 4 : cells.length;
   return <div ref={root} style={{ position: "relative", paddingTop: 48, minHeight: "100vh", background: "#efe7d6" }}>
     <div data-sheet={sheet} style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, ${cols === 1 ? "420px" : "1fr"})`, gap: 8, padding: 8 }}>
       {cells.map(c => <figure key={c.label} style={{ margin: 0 }}>

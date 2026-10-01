@@ -13,11 +13,11 @@ import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { BASE_URL, FACE_ATLAS_URLS, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, bodyKey, resolveParts, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
+import { BASE_URL, FACE_ATLAS_URLS, HAIR_STRANDS_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, bodyKey, resolveParts, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
 import { FaceAnimator, faceSlots, poseKey } from "@/lib/game/character/face";
-import { createFaceMaterial, MATTE, prepareFaceAtlas, type FaceMaterial } from "@/lib/game/character/faceMaterial";
+import { createFaceMaterial, hairStrands, MATTE, prepareFaceAtlas, prepareHairStrands, type FaceMaterial } from "@/lib/game/character/faceMaterial";
 import { SNAPPY_CLIPS, WEAPON_HAND, isLoop, resolveClip, tempo, type CharacterMotion, type ClipName } from "@/lib/game/character/clips";
-import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } from "@/lib/game/character/rig";
+import { adoptPrimitive, anchorMatrices, materialName, mergeLook, refCache, skinnedPrimitives } from "@/lib/game/character/rig";
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
 import { addContact } from "../ContactShadows";
@@ -32,7 +32,8 @@ const CONTACT = { cx: 0, cz: 0, rx: 0.4, rz: 0.34, height: CHARACTER_HEIGHT, str
 type Gltf = { scene: THREE.Object3D; animations: THREE.AnimationClip[] };
 // Double-sided: clothes, hoods and capes are open shells whose insides show (hair and hats are closed solids, whose
 // tucked undersides stay behind the head). The shadow pass keeps back faces only, as for a front-sided material.
-const BODY_MATERIAL = new THREE.MeshPhysicalMaterial({ name: "CharacterBody", vertexColors: true, ...MATTE, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
+// avatar v8: the painted strand texture is laid along every hair lock (hairStrands, faceMaterial.ts).
+const BODY_MATERIAL = hairStrands(new THREE.MeshPhysicalMaterial({ name: "CharacterBody", vertexColors: true, ...MATTE, side: THREE.DoubleSide, shadowSide: THREE.BackSide }));
 let decalMaterial: THREE.MeshPhysicalMaterial | null = null;
 const bodies = refCache<THREE.BufferGeometry>();
 const decals = new Map<string, THREE.BufferGeometry>();
@@ -92,7 +93,7 @@ class Puppet {
     const key = bodyKey(look);
     if (key !== this.bodyKey) {
       const pieces = [{ root: this.base.scene, tints: { M_Skin: PALETTE.skin[look.skin] }, keep: (m: string) => m === "M_Skin" },
-        ...parts.map((p, i) => ({ root: scenes[i], tints: p.tints, keep: (m: string) => m !== "M_Decal" }))];
+        ...parts.map((p, i) => ({ root: scenes[i], tints: p.tints, keep: (m: string) => m !== "M_Decal", place: p.place && anchorMatrices(p.place.at, p.place.wrap) }))];
       this.body.geometry = bodies.acquire(key, () => mergeLook(pieces, this.bones));
       if (this.bodyKey) bodies.release(this.bodyKey);
       this.bodyKey = key;
@@ -252,6 +253,8 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
   const loaded = useGLTF([BASE_URL, ...parts.map(p => p.url)]) as unknown as Gltf[];
   const atlas = useLoader(THREE.TextureLoader, faceSize >= 1024 ? FACE_ATLAS_URLS.creator : FACE_ATLAS_URLS.world);
   const decalMap = useLoader(THREE.TextureLoader, TSI_DECAL_URL);
+  const strands = useLoader(THREE.TextureLoader, HAIR_STRANDS_URL);
+  useEffect(() => { prepareHairStrands(strands); }, [strands]);
   const base = loaded[0];
   const puppet = useMemo(() => new Puppet(base), [base]);
   useEffect(() => () => puppet.dispose(), [puppet]);

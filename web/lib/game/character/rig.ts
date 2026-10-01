@@ -20,24 +20,25 @@ export const materialName = (mesh: THREE.Mesh) => (Array.isArray(mesh.material) 
 /**
  * A primitive's geometry re-expressed for the target skeleton: joint indices
  * remapped by bone name, colour = COLOR_0 (linear) x tint, a uv channel and a
- * `hairSheen` and `hairTangent` channel so every piece merges with the same attribute set.
- * hairSheen = (1, lock u, lock v) on sculpted-lock hair (avatar v7: M_Hair
- * with lock UVs, u across the lock, v root to tip), 0 elsewhere; the body
- * material draws its sheen band from it (faceMaterial.ts).
+ * `hairUv` channel so every piece merges with the same attribute set.
+ * hairUv = (1, lock u, lock v) on lock hair (M_Hair with lock UVs: u across
+ * the lock, v root to tip), 0 elsewhere; the body material lays the painted
+ * strand texture along each lock from it (avatar v8). `place` moves the
+ * primitive first (a hair accessory onto its anchor, rest pose, rig space).
  */
-export function adoptPrimitive(mesh: THREE.SkinnedMesh, boneIndex: ReadonlyMap<string, number>, tint: THREE.Color | null, sheen = false): THREE.BufferGeometry {
+export function adoptPrimitive(mesh: THREE.SkinnedMesh, boneIndex: ReadonlyMap<string, number>, tint: THREE.Color | null, hair = false, place?: THREE.Matrix4): THREE.BufferGeometry {
   const src = mesh.geometry, n = src.getAttribute("position").count;
   const g = new THREE.BufferGeometry();
   if (src.index) g.setIndex(Array.from(src.index.array as ArrayLike<number>));
-  g.setAttribute("position", src.getAttribute("position"));
-  g.setAttribute("normal", src.getAttribute("normal"));
+  // the GLB's own attributes are shared with every look; a placed copy gets its own
+  g.setAttribute("position", place ? src.getAttribute("position").clone().applyMatrix4(place) : src.getAttribute("position"));
+  g.setAttribute("normal", place ? src.getAttribute("normal").clone().applyNormalMatrix(new THREE.Matrix3().getNormalMatrix(place)) : src.getAttribute("normal"));
   const uv = src.getAttribute("uv");
   g.setAttribute("uv", uv ?? new THREE.BufferAttribute(new Float32Array(n * 2), 2));
   const lock = new Float32Array(n * 3);
   // glTF stores v flipped (1 - Blender's v): flip back so v = 0 is the lock's root, as authored in Blender
-  if (sheen && uv) for (let i = 0; i < n; i++) { lock[i * 3] = 1; lock[i * 3 + 1] = uv.getX(i); lock[i * 3 + 2] = 1 - uv.getY(i); }
-  g.setAttribute("hairSheen", new THREE.BufferAttribute(lock, 3));
-  g.setAttribute("hairTangent", new THREE.BufferAttribute(sheen && uv ? lockTangents(src, lock) : new Float32Array(n * 3), 3));
+  if (hair && uv) for (let i = 0; i < n; i++) { lock[i * 3] = 1; lock[i * 3 + 1] = uv.getX(i); lock[i * 3 + 2] = 1 - uv.getY(i); }
+  g.setAttribute("hairUv", new THREE.BufferAttribute(lock, 3));
   const base = src.getAttribute("color"), color = new Float32Array(n * 3), t = tint ?? new THREE.Color(1, 1, 1);
   for (let i = 0; i < n; i++) {
     color[i * 3] = (base ? base.getX(i) : 1) * t.r;
@@ -62,38 +63,24 @@ export function adoptPrimitive(mesh: THREE.SkinnedMesh, boneIndex: ReadonlyMap<s
 }
 
 /**
- * Per-vertex direction of each lock (root to tip, dP/dv from the lock UVs), averaged over the faces that share the
- * vertex: the glossy band follows it smoothly across the low-poly faces instead of switching per face.
+ * Where a hair accessory goes (avatar v8): one matrix per anchor placement [px, py, pz, qx, qy, qz, qw, r]. A piece
+ * that wraps the gathered hair (`wrap`, its authored inner radius) is scaled to r; any other sits on the gathered
+ * hair's surface, r out along the anchor's outward axis (local +y after the glTF export).
  */
-export function lockTangents(src: THREE.BufferGeometry, lock: Float32Array): Float32Array {
-  const pos = src.getAttribute("position"), n = pos.count, out = new Float32Array(n * 3);
-  const idx = src.index ? (src.index.array as ArrayLike<number>) : Array.from({ length: n }, (_, i) => i);
-  const P = (i: number) => [pos.getX(i), pos.getY(i), pos.getZ(i)];
-  for (let t = 0; t + 2 < idx.length; t += 3) {
-    const [a, b, c] = [idx[t], idx[t + 1], idx[t + 2]];
-    const pa = P(a), pb = P(b), pc = P(c);
-    const du1 = lock[b * 3 + 1] - lock[a * 3 + 1], dv1 = lock[b * 3 + 2] - lock[a * 3 + 2];
-    const du2 = lock[c * 3 + 1] - lock[a * 3 + 1], dv2 = lock[c * 3 + 2] - lock[a * 3 + 2];
-    const det = du1 * dv2 - du2 * dv1;
-    if (Math.abs(det) < 1e-9) continue;
-    for (let k = 0; k < 3; k++) {
-      const d = ((pc[k] - pa[k]) * du1 - (pb[k] - pa[k]) * du2) / det;   // dP/dv
-      out[a * 3 + k] += d; out[b * 3 + k] += d; out[c * 3 + k] += d;
-    }
-  }
-  for (let i = 0; i < n; i++) {
-    const l = Math.hypot(out[i * 3], out[i * 3 + 1], out[i * 3 + 2]);
-    if (l > 1e-9) { out[i * 3] /= l; out[i * 3 + 1] /= l; out[i * 3 + 2] /= l; }
-  }
-  return out;
+export function anchorMatrices(at: readonly (readonly number[])[], wrap?: number): THREE.Matrix4[] {
+  return at.map(([px, py, pz, qx, qy, qz, qw, r]) => {
+    const m = new THREE.Matrix4().compose(new THREE.Vector3(px, py, pz), new THREE.Quaternion(qx, qy, qz, qw), new THREE.Vector3(1, 1, 1));
+    return m.multiply(wrap ? new THREE.Matrix4().makeScale(r / wrap, r / wrap, r / wrap) : new THREE.Matrix4().makeTranslation(0, r, 0));
+  });
 }
 
-export interface PieceSource { root: THREE.Object3D; tints: Record<string, string>; keep?: (materialName: string) => boolean }
+export interface PieceSource { root: THREE.Object3D; tints: Record<string, string>; keep?: (materialName: string) => boolean; place?: THREE.Matrix4[] }
 /**
  * Merge the untextured primitives of every piece into one geometry for
  * `bones`. A primitive is tinted by its material name when the piece lists a
  * tint for it, otherwise it keeps its GLB colour. Pieces' `keep` filters
- * primitives (the base body contributes only its skin).
+ * primitives (the base body contributes only its skin); a piece with `place`
+ * (a hair accessory) goes in once per matrix.
  */
 export function mergeLook(pieces: PieceSource[], bones: readonly THREE.Bone[]): THREE.BufferGeometry {
   const boneIndex = new Map(bones.map((b, i) => [b.name, i]));
@@ -103,7 +90,9 @@ export function mergeLook(pieces: PieceSource[], bones: readonly THREE.Bone[]): 
     if (piece.keep && !piece.keep(name)) continue;
     const hex = piece.tints[name];
     const own = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as THREE.MeshStandardMaterial;
-    parts.push(adoptPrimitive(mesh, boneIndex, hex ? new THREE.Color(hex) : own.color ?? null, name === "M_Hair"));
+    const tint = hex ? new THREE.Color(hex) : own.color ?? null;
+    if (piece.place) for (const m of piece.place) parts.push(adoptPrimitive(mesh, boneIndex, tint, false, m));
+    else parts.push(adoptPrimitive(mesh, boneIndex, tint, name === "M_Hair"));
   }
   // The intermediate pieces share attributes with the loaded GLBs and were never uploaded: no dispose, the GC takes them.
   const merged = mergeGeometries(parts, false);

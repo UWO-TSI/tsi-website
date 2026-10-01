@@ -113,3 +113,50 @@ export function prepareFaceAtlas(tex: THREE.Texture) {
   tex.needsUpdate = true;
   return tex;
 }
+
+// ── avatar v8: the hair's painted strands ───────────────────────────────────
+const HAIR_PARS_VERTEX = /* glsl */ `
+attribute vec3 hairUv;
+varying vec3 vHairUv;
+`;
+const HAIR_PARS_FRAGMENT = /* glsl */ `
+uniform sampler2D uHairStrands;
+varying vec3 vHairUv;
+`;
+const WHITE = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
+WHITE.needsUpdate = true;
+const strandUniform = { value: WHITE as THREE.Texture };
+
+/**
+ * The body material with the painted strand texture laid along every hair lock: rig.ts gives lock hair
+ * hairUv = (1, u across the lock, v root to tip), everything else 0. A grey multiplier on the albedo (fine strands,
+ * the lock's sides and roots a little darker), matte like the rest; until the texture loads the hair is untextured.
+ */
+export function hairStrands<M extends THREE.MeshPhysicalMaterial>(material: M): M {
+  material.onBeforeCompile = shader => {
+    shader.uniforms.uHairStrands = strandUniform;
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", `#include <common>\n${HAIR_PARS_VERTEX}`)
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvHairUv = hairUv;");
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>", `#include <common>\n${HAIR_PARS_FRAGMENT}`)
+      .replace("#include <map_fragment>", "#include <map_fragment>\nif (vHairUv.x > 0.5) diffuseColor.rgb *= texture2D(uHairStrands, vHairUv.yz).r;");
+  };
+  material.customProgramCacheKey = () => "character-body-v8-strands";
+  return material;
+}
+
+/** Strand texture settings: raw values (a multiplier), root on the top row, u wraps round curl clumps, mipmapped. */
+export function prepareHairStrands(tex: THREE.Texture) {
+  if (strandUniform.value !== tex) {
+    tex.flipY = false;
+    tex.colorSpace = THREE.NoColorSpace;
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    tex.generateMipmaps = true;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.anisotropy = 4;
+    tex.needsUpdate = true;
+    strandUniform.value = tex;
+  }
+}

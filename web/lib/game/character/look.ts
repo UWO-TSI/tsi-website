@@ -15,18 +15,26 @@ export const CHARACTER_ROOT = "/assets/characters/v6/";
 export const BASE_URL = `${CHARACTER_ROOT}${catalog.base.clips_glb}`;
 /** The face layer atlas: 1024 px per face canvas in the creator, the 512 copy in the world (same layout). */
 export const FACE_ATLAS_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas}`, world: `${CHARACTER_ROOT}base/${faceV7.atlas_world}` };
+/** avatar v8: the painted strand texture laid along every hair lock (art/characters/v8/strands.py). */
+export const HAIR_STRANDS_URL = `${CHARACTER_ROOT}hair_strands.png`;
 /** Ruling 24: the crewneck carries the site's own TSI mark (public/logo.svg, rasterised by the sync script). */
 export const TSI_DECAL_URL = `${CHARACTER_ROOT}decal_tsi_mark.png`;
 
 export type PartSlot = "bangs" | "back" | "top" | "bottom" | "onepiece" | "shoes" | "accessory";
-/** Accessory sub-slots, one item each (ruling 21). */
-export type AccGroup = "face" | "head" | "bag" | "neck";
+/** Accessory sub-slots, one item each (ruling 21; avatar v8: hair accessories). */
+export type AccGroup = "face" | "head" | "bag" | "neck" | "hair";
 export interface PartMaterial { name: string; tint?: "outfit" | "hair" | null; default?: number | string | null; decal?: boolean; color?: string }
+/** An anchor placement on a hair piece (art/characters/v8/anchors.py): [px, py, pz, qx, qy, qz, qw, radius], glTF space. */
+export type AnchorPlacement = number[];
 export interface CatalogPart {
   id: string; slot: PartSlot; name: string; glb: string; tris: number; materials: PartMaterial[];
   hidesBackHair: boolean; hides: string[]; variantOf?: string; group?: AccGroup;
   /** The economy item (crafted) that unlocks this part; its catalogue_ref is this part's id. Such parts are never sold. */
   item?: string;
+  /** Hair pieces (avatar v8): named anchors (pony, bun, braid_end, crown, side, fringe) where hair accessories sit. */
+  anchors?: Record<string, AnchorPlacement[]>;
+  /** Hair accessories: the anchors they sit on, tried in order; `wrap` = authored inner radius of a piece that wraps the hair. */
+  sits?: string[]; wrap?: number;
 }
 export interface ClipInfo { name: string; length: number; loop: boolean; endsNeutral?: boolean; endsOn?: string; seatHeight?: number; deskHeight?: number; hand?: "L" | "R" }
 
@@ -145,15 +153,33 @@ export function wear(look: CharacterLook, slot: PartSlot, id: string | null): Ch
   return next;
 }
 
+/**
+ * Where a hair accessory sits on a look (avatar v8): the placements of the first of its `sits` anchors that the worn
+ * back piece declares, else the worn bangs. None (the accessory hides) when neither declares any of them, or while a
+ * hat or a hood is worn (they cover the hair it would sit on).
+ */
+export function hairAnchors(look: CharacterLook, part: CatalogPart): AnchorPlacement[] {
+  const covered = [look.onepiece, ...Object.values(look.acc)].some(id => id && PART_BY_ID.get(id)?.hidesBackHair);
+  if (covered || !part.sits) return [];
+  const back = PART_BY_ID.get(look.back)?.anchors, bangs = PART_BY_ID.get(look.bangs)?.anchors;
+  for (const name of part.sits) { const at = back?.[name] ?? bangs?.[name]; if (at?.length) return at; }
+  return [];
+}
+
 /** Every part a look wears, in draw order. */
 export function wornParts(look: CharacterLook): CatalogPart[] {
   const ids = [look.bangs, look.back, look.onepiece ?? look.top, look.onepiece ? null : look.bottom, look.shoes, ...Object.values(look.acc)];
-  const parts = ids.filter((id): id is string => !!id).map(id => PART_BY_ID.get(id)!).filter(Boolean);
+  const parts = ids.filter((id): id is string => !!id).map(id => PART_BY_ID.get(id)!).filter(Boolean)
+    .filter(p => p.group !== "hair" || hairAnchors(look, p).length > 0);
   // Hats and hoods hide the back hair (they carry their own tuck, ruling 20).
   return parts.some(p => p.hidesBackHair) ? parts.filter(p => p.slot !== "back") : parts;
 }
 
-export interface ResolvedPart { id: string; url: string; tints: Record<string, string>; decal: string | null }
+export interface ResolvedPart {
+  id: string; url: string; tints: Record<string, string>; decal: string | null;
+  /** A hair accessory's anchor placements on this look (and its wrap radius), for rig.anchorMatrices. */
+  place?: { at: AnchorPlacement[]; wrap?: number };
+}
 /** Parts with their GLB URL and one sRGB hex per tinted material; decal materials without art are dropped. */
 export function resolveParts(look: CharacterLook): ResolvedPart[] {
   return wornParts(look).map(part => {
@@ -168,7 +194,7 @@ export function resolveParts(look: CharacterLook): ResolvedPart[] {
         first = false;
       } else if (m.color) tints[m.name] = m.color;
     }
-    return { id: part.id, url: CHARACTER_ROOT + part.glb, tints, decal };
+    return { id: part.id, url: CHARACTER_ROOT + part.glb, tints, decal, ...(part.group === "hair" ? { place: { at: hairAnchors(look, part), wrap: part.wrap } } : {}) };
   });
 }
 
@@ -179,7 +205,7 @@ export function partColor(look: CharacterLook, id: string): number | null {
 }
 
 /** Cache key for the merged body mesh (face and pose excluded). */
-export const bodyKey = (look: CharacterLook) => JSON.stringify([look.skin, look.hair, resolveParts(look).map(p => [p.id, p.tints, p.decal])]);
+export const bodyKey = (look: CharacterLook) => JSON.stringify([look.skin, look.hair, resolveParts(look).map(p => [p.id, p.tints, p.decal, p.place?.at.length ?? 0])]);
 
 /** Small seeded PRNG (mulberry32) so residents get the same random look every visit. */
 export function seeded(seed: number): () => number {

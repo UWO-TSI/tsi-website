@@ -1107,7 +1107,7 @@
    "hidesBackHair": false,
    "hides": [],
    "group": "hair",
-   "anchors": [
+   "sits": [
     "pony",
     "bun",
     "crown"
@@ -1130,7 +1130,7 @@
    "hidesBackHair": false,
    "hides": [],
    "group": "hair",
-   "anchors": [
+   "sits": [
     "pony",
     "bun",
     "braid_end",
@@ -1154,7 +1154,7 @@
    "hidesBackHair": false,
    "hides": [],
    "group": "hair",
-   "anchors": [
+   "sits": [
     "pony",
     "bun",
     "braid_end"

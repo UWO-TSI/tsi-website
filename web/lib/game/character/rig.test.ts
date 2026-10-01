@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { adoptPrimitive, mergeLook, refCache, skinnedPrimitives } from "./rig";
+import { adoptPrimitive, anchorMatrices, mergeLook, refCache, skinnedPrimitives } from "./rig";
 import { PART_BY_ID } from "./look";
 
 function skinned(boneNames: string[], joints: number[], color?: number[]) {
@@ -48,26 +48,33 @@ describe("character rig assembly", () => {
     const head = bones.findIndex(b => b.name === "mixamorigHead");
     const idx = merged.getAttribute("skinIndex"), w = merged.getAttribute("skinWeight");
     for (let i = 0; i < idx.count; i++) if (w.getX(i) > 0.99) expect(idx.getX(i)).toBe(head); // hair is skinned 100% to the head
-    // sculpted-lock hair (avatar v7) carries its lock UVs to the sheen band: across 0..1, root (v 0) to tip (v 1)
-    const sheen = merged.getAttribute("hairSheen");
+    // lock hair carries its lock UVs to the strand texture (avatar v8): across 0..1, root (v 0) to tip (v 1)
+    const lock = merged.getAttribute("hairUv");
     let on = 0, rootish = 0;
-    for (let i = 0; i < sheen.count; i++) if (sheen.getX(i) === 1) { on++; if (sheen.getZ(i) < 0.05) rootish++; expect(sheen.getY(i)).toBeGreaterThanOrEqual(0); expect(sheen.getY(i)).toBeLessThanOrEqual(1); }
-    expect(on).toBeGreaterThan(sheen.count * 0.5);
+    for (let i = 0; i < lock.count; i++) if (lock.getX(i) === 1) { on++; if (lock.getZ(i) < 0.05) rootish++; expect(lock.getY(i)).toBeGreaterThanOrEqual(0); expect(lock.getY(i)).toBeLessThanOrEqual(1); }
+    expect(on).toBeGreaterThan(lock.count * 0.5);
     expect(rootish).toBeGreaterThan(0);
-    // each lock vertex carries a unit direction along its lock (the glossy band follows it smoothly across faces)
-    const tan = merged.getAttribute("hairTangent");
-    let unit = 0, body = 0;   // lock-surface vertices: off the matte under-cap (u 0) and off the root and tip fans
-    for (let i = 0; i < tan.count; i++) if (sheen.getX(i) === 1 && sheen.getY(i) > 0.01 && sheen.getZ(i) > 0.02 && sheen.getZ(i) < 0.98) {
-      body++;
-      if (Math.abs(Math.hypot(tan.getX(i), tan.getY(i), tan.getZ(i)) - 1) < 1e-3) unit++;
-    }
-    expect(unit).toBeGreaterThan(body * 0.95);
   });
-  it("gives no sheen to parts without lock UVs (outfits, older hair, hat tucks)", () => {
+  it("gives no strands to parts without lock UVs (outfits, accessories)", () => {
     const part = skinned(["mixamorigHead"], [0, 0, 0]);
     const g = adoptPrimitive(part, new Map([["mixamorigHead", 0]]), null, true);   // M_Hair, but no uv channel
-    expect(Array.from(g.getAttribute("hairSheen").array)).toEqual(new Array(9).fill(0));
-    expect(Array.from(g.getAttribute("hairTangent").array)).toEqual(new Array(9).fill(0));
+    expect(Array.from(g.getAttribute("hairUv").array)).toEqual(new Array(9).fill(0));
+  });
+  it("places a hair accessory on its anchor without touching the shared GLB data (avatar v8)", () => {
+    const part = skinned(["mixamorigHead"], [0, 0, 0]);
+    const before = Array.from(part.geometry.getAttribute("position").array);
+    // a quarter turn about y and a move; a wrapping piece scaled to the anchor's radius, any other lifted by it
+    const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+    const at = [[0.1, 0.9, -0.1, q.x, q.y, q.z, q.w, 0.06]];
+    const [wrap] = anchorMatrices(at, 0.03), [sit] = anchorMatrices(at);
+    const g = adoptPrimitive(part, new Map([["mixamorigHead", 0]]), null, false, wrap);
+    const p = new THREE.Vector3().fromBufferAttribute(g.getAttribute("position"), 1);   // (1, 0, 0) -> scaled 2, turned to -z
+    expect([p.x, p.y, p.z].map(v => +v.toFixed(4))).toEqual([0.1, 0.9, -2.1]);
+    const n = new THREE.Vector3().fromBufferAttribute(g.getAttribute("normal"), 0);     // (0, 0, 1) -> (1, 0, 0), unit
+    expect([n.x, n.y, n.z].map(v => +v.toFixed(4))).toEqual([1, 0, 0]);
+    const s = new THREE.Vector3().fromBufferAttribute(adoptPrimitive(part, new Map([["mixamorigHead", 0]]), null, false, sit).getAttribute("position"), 0);
+    expect([s.x, s.y, s.z].map(v => +v.toFixed(4))).toEqual([0.1, 0.96, -0.1]);
+    expect(Array.from(part.geometry.getAttribute("position").array)).toEqual(before);
   });
   it("shares identical looks and disposes after the last user", () => {
     const cache = refCache<{ dispose(): void; n: number }>();

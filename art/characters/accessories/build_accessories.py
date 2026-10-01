@@ -385,21 +385,21 @@ def shell_necklace(pc):
 
 # ================================================================ hair accessories (avatar v8 deliverable 3)
 # group "hair": one per look, each in one colour, placed by the engine on the worn style's anchors (v8/anchors.py),
-# tried in the order of `anchors`; it hides when the style has none of them or a hat or hood is worn.
+# tried in the order of `sits`; it hides when the style has none of them or a hat or hood is worn.
 @part("hacc_claw_clip", "accessory", "Claw clip", {"M_Main": ("outfit", 13)}, sharp=50, group="hair",
-      anchors=["pony", "bun", "crown"], organic=True)
+      sits=["pony", "bun", "crown"], organic=True)
 def claw_clip(pc):
     hair_acc.claw_clip(pc)
 
 
 @part("hacc_bow", "accessory", "Bow", {"M_Main": ("outfit", 7)}, sharp=50, group="hair",
-      anchors=["pony", "bun", "braid_end", "side"], organic=True)
+      sits=["pony", "bun", "braid_end", "side"], organic=True)
 def bow(pc):
     hair_acc.bow(pc)
 
 
 @part("hacc_scrunchie", "accessory", "Scrunchie", {"M_Main": ("outfit", 9)}, sharp=50, group="hair",
-      anchors=["pony", "bun", "braid_end"], wrap=hair_acc.RING, organic=True)
+      sits=["pony", "bun", "braid_end"], wrap=hair_acc.RING, organic=True)
 def scrunchie(pc):
     hair_acc.scrunchie(pc)
 
