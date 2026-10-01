@@ -1,160 +1,418 @@
-"""v7 milestone-1 hairstyles as lock seeds (specs/avatar-v7.md item 2): the first curves of each style, head-relative.
+"""v7 hair library as lock seeds (specs/avatar-v7.md item 2; David 2026-09-30: approved, "Fuller, like the sheet").
 
-Three styles, each a bangs piece and a back piece (row 191), with the catalogue ids they replace:
-  short   bangs_spiky + back_short_spiky   B6.2 / B1.3 / B3.4: short layered pointed locks, volume at the crown
-  bob     bangs_straight + back_bob        B2.1 / B6.4, N4.2: blunt fringe with small gaps, chin-length bob
-  long    bangs_curtain + back_long        B3.1 / B5.3, N3.2: centre-parted curtain bangs, long straight back
+Every catalogue id is a set of locks (and, for back pieces, an under-cap). These seeds made the first curves of each
+piece in the live Blender session; the .blend files (hair_bangs.blend, hair_backs.blend) hold the curves as edited
+there and export_hair.py reads those, not this file.
 
-Coordinates: ("s", lat, lon, off) on the scalp pushed out by off metres, ("d", out, side, down) a move from the
-previous point (locks.spine). w = half widths per control point. The curves these make were then adjusted in the
-live Blender session (the .blend files hold the adjusted curves; export_hair.py reads the .blend, not this file).
+Volume (head_shape.hair_outer): lock tops reach ~3.2 cm over the scalp at the hairline and ~4.3 cm at the crown.
+Back pieces lie on an under-cap GROOVE under that, so the grooves between locks read deep. Every bangs piece owns
+the front crown: its locks root (buried) at the crown whorl and run forward at full volume, over the hairline, down to
+the fringe, so bangs and back meet in buried roots with no ledge on any pair.
+
+Coordinates: ("s", lat, lon, off) on the scalp pushed out by off metres (off 0 = a root; the sweep buries it),
+("d", out, side, down) a move from the previous point (locks.spine). w = half widths per control point.
+Keys per lock: flat, segs, sides (4 diamond, 5 flat-bottomed), blunt (0 point .. 0.9 cut), hug (rest on the head).
 """
 import math
-from head_shape import hair_vol, hairline
+from head_shape import hair_vol, hair_outer, hairline, _ss
 
-SEAM = lambda lat: 0.8 * hair_vol(lat)          # kit.seam_off: the height every back cap's front edge runs under
-
-
-RELIEF = 0.006     # over the crown, lock tops stand this far above the library's hair volume (hair_vol): with the
-                   # under-cap at 0.9 of it, ~7 mm of relief between locks, and bands still rest on the ridges
+GROOVE = 0.012          # the back pieces' under-cap sits this far under the lock tops: the separation between locks
+CAP_FLOOR = 0.010       # and never nearer the scalp than this: its 20 deg quads sag ~4 mm and the v7 head stands up to
+                        # 3.3 mm proud of the analytic surface, so a thinner cap lets skin show through in flecks
 
 
-def over(lat, lon, r, flat, relief=RELIEF):
-    """A spine point whose section top is `relief` above the hair volume at lat (the lock's bulk goes under it)."""
-    return ("s", lat, lon, hair_vol(lat) + relief - r * flat)
+def cap_outer(lat, tight=0.0):
+    return max(hair_outer(lat) - GROOVE - tight, CAP_FLOOR)
 
 
-def sym(lons):
-    return sorted({s * l for l in lons for s in (1, -1)})
+def top(lat, lon, r, flat, dz=0.0):
+    """A spine point whose lock's top reaches the hair's outer surface (+ dz) at lat."""
+    return ("s", lat, lon, hair_outer(lat) + dz - r * flat)
 
 
-# ================================================================ bob (B2.1): cap + 10 back locks, 7 blunt fringe locks
-# hand-set variation so the locks do not read as even pumpkin segments: lon shift, hem shift, width scale, tip cut
-BOB_VAR = {70: (3, 0, 1.0, 0.6), 96: (-4, -3, 1.08, 0.3), 122: (2, 2, 0.94, 0.6), 150: (-3, -2, 1.06, 0.35), 180: (0, 2, 1.04, 0.5),
-           -70: (-2, 1, 1.02, 0.55), -96: (3, -2, 0.95, 0.35), -122: (-4, 3, 1.06, 0.6), -150: (2, -3, 0.98, 0.3)}
+def root(lat, lon):
+    return ("s", lat, lon, 0.0)
 
 
-def bob_back():
+def mirror(locks):
+    """The same locks on the other side (lon -> -lon, swept moves flipped)."""
+    out = []
+    for lk in locks:
+        pts = [(p[0], p[1], -p[2], p[3]) if p[0] == "s" else (p[0], p[1], -p[2], p[3]) for p in lk["pts"]]
+        out.append(dict(lk, pts=pts))
+    return out
+
+
+# ================================================================ bangs
+def fringe(lon, tip_lat, tip_lon=None, w=0.033, w_tip=None, flat=0.42, blunt=0.0, segs=7, crown=0.25, lift=0.0,
+           sides=5, hug=1, mid_off=0.014):
+    """One fringe lock: buried root at the crown whorl, over the front crown at full volume, rolling over the
+    hairline, down the forehead to its tip. tip_lon swings the lower part (sweeps); lift raises the roll (bowl, lift)."""
+    tl = lon if tip_lon is None else tip_lon
+    hl = hairline(lon)
+    pts = [root(84, lon * crown), top(70, lon * 0.55, w * 0.8, flat, -0.002), top(hl + 10, lon * 0.85 + (tl - lon) * 0.05, w, flat, lift - 0.002),
+           ("s", hl - 4, lon + (tl - lon) * 0.25, hair_outer(hl) - w * flat * 0.8 - 0.006 + lift),
+           ("s", (hl - 4 + tip_lat) / 2, lon + (tl - lon) * 0.65, mid_off), ("s", tip_lat, tl, 0.007)]
+    wt = w if w_tip is None else w_tip
+    return dict(pts=pts, w=[w * 0.55, w * 0.85, w, w, w * 0.98, wt], flat=flat, segs=segs, sides=sides, blunt=blunt, hug=hug,
+                hug_from=0.06)            # a fringe rests on the skin all along: its roll over the hairline is solid, no air under it
+
+
+def side_lock(s, tip_lat, lon=62, w=0.026, flat=0.42, blunt=0.0, segs=6, out=0.016):
+    """A face-framing lock from the crown side down past the temple."""
+    L = s * lon
+    return dict(pts=[root(80, s * 30), top(62, s * (lon - 18), w * 0.9, flat), top(30, L, w, flat, -0.004),
+                     ("s", (30 + tip_lat) / 2 + 2, L * 1.02, out + 0.004), ("s", tip_lat, L * 1.03, out)],
+                w=[w * 0.6, w * 0.9, w, w * 0.9, w * 0.25 if not blunt else w * 0.85], flat=flat, segs=segs, sides=4, blunt=blunt, hug=1)
+
+
+def crown_only(lons, w=0.034, flat=0.42):
+    """Crown locks that stop at the hairline (bangs whose fringe is see-through or absent still carry the volume)."""
+    return [dict(pts=[root(84, lon * 0.25), top(70, lon * 0.55, w * 0.8, flat), top(hairline(lon) + 8, lon * 0.9, w, flat),
+                      ("s", hairline(lon) - 1, lon, 0.006)], w=[w * 0.55, w * 0.85, w, w * 0.5], flat=flat, segs=5, sides=5, hug=1)
+            for lon in lons]
+
+
+def straight(tip=10, side=-10, extra=0.0):
+    locks = [fringe(lon, tip - 3 * (abs(lon) / 48) ** 2, w=0.033 * (1.22 if abs(lon) == 48 else 1.0), blunt=0.85)
+             for lon in (-48, -32, -16, 0, 16, 32, 48)]
+    return locks + [side_lock(s, side, 61, blunt=0.0) for s in (1, -1)]
+
+
+def bowl():
+    lons = (-56, -42, -28, -14, 0, 14, 28, 42, 56)
+    return [fringe(lon, 16 - 12 * (abs(lon) / 56) ** 2, w=0.03, blunt=0.7, lift=0.006, flat=0.48) for lon in lons]
+
+
+def wispy():
+    strands = [dict(pts=[("s", 54, c * 0.8, 0.0), ("s", 40, c, 0.012), ("s", 24, c + (2 if c < 0 else -2 if c > 0 else 0), 0.01),
+                         ("s", 8, c + (4 if c < 0 else -4 if c > 0 else 1), 0.007)],
+                    w=[0.008, 0.014, 0.012, 0.003], flat=0.45, segs=5, sides=4, hug=1) for c in (-44, -22, 0, 22, 44)]
+    return crown_only((-56, -36, -16, 4, 24, 44, 60)) + strands + [side_lock(s, -6, 62, w=0.02) for s in (1, -1)]
+
+
+def swept(s):
+    """Side-swept toward the character's left (s = 1) or right (s = -1): high on the far side, low on the near."""
     locks = []
-    for lon0, (dl, dh, ws, cut) in sorted(BOB_VAR.items()):
-        lon = lon0 + dl
-        a = abs(lon0)
-        side = 1 - min(1.0, (a - 70) / 60)                       # 1 at the face-framing locks, 0 from 130 back
-        hem = -44 + 6 * side + dh                                 # the hem rises a little toward the face
-        w = [0.03 * ws, 0.046 * ws, 0.052 * ws, 0.055 * ws, 0.05 * ws, 0.04 * ws, 0.024 * ws]
-        locks.append(dict(
-            pts=[("s", 76, lon * 0.95, SEAM(76) - 0.007), over(48, lon, w[1], 0.42), over(20, lon, w[2], 0.42),
-                 ("s", -12, lon, 0.03 - 0.008 * side), ("s", hem + 7, lon, 0.036 - 0.01 * side), ("s", hem, lon, 0.027 - 0.008 * side),
-                 ("s", hem - 4, lon * 0.99, 0.019 - 0.006 * side)],
-            w=w, flat=0.42, segs=8, sides=4, blunt=cut, hug=1 if a < 80 else 0))
+    for k in range(7):
+        lon = s * (-54 + 18 * k)
+        t = k / 6
+        locks.append(fringe(lon, 30 - 26 * t, tip_lon=lon + s * 20, w=0.034, crown=0.15))
+    return locks + [side_lock(-s, 12, 62, w=0.022), side_lock(s, -14, 64)]
+
+
+def curtain(long=False):
+    locks = []
+    for sd in (1, -1):
+        n = 3 if long else 4
+        for k in range(n):
+            tip_lat = (2 - 9 * k) if not long else (0 - 21 * k)
+            tip_lon = sd * (37 + 14 * k) if not long else sd * (38 + 15 * k)
+            locks.append(fringe(sd * (6 + 12 * k), tip_lat, tip_lon=tip_lon, w=0.03, crown=0.1))
     return locks
 
 
-def bob_cap():
-    return dict(bottom=lambda lon: -30, vol=0.9)
-
-
-def straight_bangs():
+def centre_split():
     locks = []
-    for lon in (-48, -32, -16, 0, 16, 32, 48):
-        tip = 10 - 3 * (abs(lon) / 48) ** 2          # just above the brows (lat 2-3.4 on the face chart), as v6's fringe
-        locks.append(dict(
-            pts=[("s", 62, lon * 0.4, SEAM(62) - 0.008), ("s", 46, lon * 0.75, SEAM(46) - 0.001), ("s", 30, lon * 0.95, 0.013),
-                 ("s", tip + 6, lon, 0.009), ("s", tip, lon, 0.007)],
-            w=[x * (1.22 if abs(lon) == 48 else 1.0) for x in (0.02, 0.028, 0.033, 0.034, 0.033)],   # the outer ones
-            flat=0.34, segs=5, sides=5, blunt=0.85))                                                    # meet the side locks
-    for s in (1, -1):        # side locks framing the face down to the cheek, pointed
-        lon = 61 * s
-        locks.append(dict(
-            pts=[("s", 50, lon * 0.8, SEAM(50) - 0.008), ("s", 30, lon, 0.014), ("s", 8, lon * 1.02, 0.013),
-                 ("s", -10, lon * 1.02, 0.011)],
-            w=[0.02, 0.026, 0.022, 0.006], flat=0.4, segs=5, sides=5, blunt=0.0))
+    for sd in (1, -1):
+        for k, (lon, tl, tlon) in enumerate(((6, 6, 22), (22, 2, 38), (38, -6, 54))):
+            locks.append(fringe(sd * lon, tl, tip_lon=sd * tlon, w=0.032, crown=0.1, blunt=0.3))
+    return locks + [side_lock(s, -12, 64) for s in (1, -1)]
+
+
+def spiky():
+    locks = [fringe(lon, tip, tip_lon=lon + 7, w=0.034, crown=0.3) for lon, tip in ((-46, 14), (-28, 4), (-10, -1), (8, 6), (25, 10), (42, 16))]
+    return locks + [side_lock(s, -2, 64, w=0.026) for s in (1, -1)]
+
+
+def hime():
+    locks = [fringe(lon, 12 - 2 * (abs(lon) / 42) ** 2, w=0.034, blunt=0.85) for lon in (-42, -28, -14, 0, 14, 28, 42)]
+    return locks + [side_lock(s, -50, 66, w=0.03, blunt=0.85, segs=9, out=0.017) for s in (1, -1)]
+
+
+def choppy():
+    lons = (-52, -38, -24, -10, 4, 18, 32, 46)
+    tips = (30, 24, 32, 26, 34, 27, 31, 25)
+    return [fringe(lon, tip, tip_lon=lon + (4 if k % 3 else -4), w=0.03, crown=0.3, segs=6) for k, (lon, tip) in enumerate(zip(lons, tips))] + \
+        [side_lock(s, 14, 62, w=0.022) for s in (1, -1)]
+
+
+def swept_back():
+    """No fringe: locks rise from the hairline, roll up and run back over the crown (a soft pompadour lift)."""
+    locks = []
+    for lon in (-52, -34, -17, 0, 17, 34, 52):
+        hl = hairline(lon)
+        locks.append(dict(pts=[root(hl - 2, lon), ("s", hl + 2, lon, hair_outer(hl) * 0.9), top(hl + 14, lon * 0.92, 0.034, 0.45, 0.004),
+                               top(66, lon * 0.6, 0.032, 0.45), ("s", 82, lon * 0.3, hair_outer(82) - 0.012)],
+                          w=[0.028, 0.034, 0.034, 0.03, 0.012], flat=0.45, segs=7, sides=5, hug=1, hug_from=0.06))
     return locks
 
 
-# ================================================================ short (B6.2 / B1.3 / B3.4): layered pointed locks
-SHORT_VAR = {68: (2, 0, 1.0), 92: (-3, 3, 1.06), 116: (3, -2, 0.95), 140: (-2, 2, 1.04), 164: (3, -3, 0.97),
-             -68: (-3, 2, 1.03), -92: (2, -2, 0.96), -116: (-3, 3, 1.05), -140: (3, -2, 0.98), -164: (-2, 1, 1.02)}
+def single_strand():
+    locks = [fringe(lon, tip, w=0.03, crown=0.3, segs=6) for lon, tip in ((-44, 30), (-28, 26), (-12, 28), (4, 25), (20, 29), (36, 26), (50, 30))]
+    long = fringe(-18, -20, tip_lon=-10, w=0.024, w_tip=0.004, crown=0.2)
+    return locks + [long] + [side_lock(s, 12, 62, w=0.022) for s in (1, -1)]
 
 
-def short_back():
+def wavy():
     locks = []
-    for lon0, (dl, dh, ws) in sorted(SHORT_VAR.items()):
-        lon = lon0 + dl
-        back = min(1.0, max(0.0, (abs(lon0) - 68) / 80))        # 0 at the temples, 1 at the nape
-        hem = -6 - 20 * back + dh
-        flick = 8 if lon > 0 else -8                                # tips sweep a little round the head
-        w = [0.03 * ws, 0.05 * ws, 0.056 * ws, 0.04 * ws, 0.012]
-        locks.append(dict(
-            pts=[("s", 80, lon * 0.9, SEAM(80) - 0.007), over(52, lon, w[1], 0.5, RELIEF + 0.004), over(20, lon, w[2], 0.5, RELIEF + 0.006),
-                 ("s", hem + 10, lon + flick * 0.5, 0.022), ("s", hem, lon + flick, 0.014)],
-            w=w, flat=0.5, segs=7, sides=4, blunt=0.0, hug=1 if abs(lon0) < 80 else 0))
-    for lon, lat0, dz in ((150, 70, 0.05), (-172, 66, 0.042)):     # two crown tufts standing out of the mass
-        locks.append(dict(
-            pts=[("s", lat0 + 8, lon - 20, SEAM(lat0) - 0.006), ("s", lat0 + 2, lon - 6, hair_vol(lat0) + 0.012),
-                 ("s", lat0 - 4, lon + 6, hair_vol(lat0) + dz)],
-            w=[0.024, 0.026, 0.004], flat=0.5, segs=4, sides=4))
-    return locks
+    for k, lon in enumerate((-50, -33, -16, 1, 18, 35, 52)):
+        lk = fringe(lon, 22 - 18 * (lon + 50) / 102, tip_lon=lon + 10, w=0.033, crown=0.2)
+        # an S along the forehead: the mid point swings back, the tip swings forward
+        p = lk["pts"]
+        p[4] = (p[4][0], p[4][1], p[4][2] - 7, p[4][3])
+        lk["tilt"] = [0, 0, 0.15, -0.25, 0.3, 0]
+        locks.append(lk)
+    return locks + [side_lock(-1, 4, 62, w=0.024), side_lock(1, -12, 64)]
 
 
-def short_cap():
-    return dict(bottom=lambda lon: -8 if abs(lon) < 100 else -22, vol=0.95)
+def asym_block():
+    locks = [fringe(lon, 8 if lon < 0 else 28, w=0.034, blunt=0.8) for lon in (-50, -34, -18, -2, 14, 30, 46)]
+    return locks + [side_lock(-1, -30, 66, w=0.03, blunt=0.6), side_lock(1, 6, 62, w=0.022)]
 
 
-def spiky_bangs():
-    locks = []
-    for lon, tip in ((-46, 14), (-28, 4), (-10, -1), (8, 6), (25, 10), (42, 16)):
-        sw = 7                                                       # swept toward the character's left (+lon)
-        locks.append(dict(
-            pts=[("s", 62, lon * 0.4, SEAM(62) - 0.008), ("s", 46, lon * 0.8, SEAM(46) - 0.001), ("s", 30, lon + sw * 0.3, 0.016),
-                 ("s", tip + 10, lon + sw * 0.7, 0.012), ("s", tip, lon + sw, 0.008)],
-            w=[0.022, 0.03, 0.034, 0.026, 0.004], flat=0.42, segs=5, sides=5, blunt=0.0))
-    for s in (1, -1):
-        lon = 64 * s
-        locks.append(dict(
-            pts=[("s", 50, lon * 0.8, SEAM(50) - 0.008), ("s", 30, lon, 0.016), ("s", 10, lon * 1.02, 0.014),
-                 ("s", -2, lon * 1.03, 0.012)],
-            w=[0.02, 0.028, 0.02, 0.004], flat=0.45, segs=4, sides=5))
-    return locks
-
-
-# ================================================================ long (B3.1 / B5.3, N3.2): long straight back, curtain bangs
-LONG_VAR = {72: (2, 1.0, 0.0), 98: (-3, 1.05, 0.02), 124: (3, 0.97, -0.015), 152: (-2, 1.05, 0.01), 180: (0, 1.03, 0.015),
-            -72: (-2, 1.02, 0.01), -98: (3, 0.96, -0.02), -124: (-3, 1.05, 0.015), -152: (2, 0.99, -0.01)}
-
-
-def long_back():
-    locks = []
-    for lon0, (dl, ws, dz) in sorted(LONG_VAR.items()):
-        lon = lon0 + dl
-        side = 1 - min(1.0, (abs(lon0) - 72) / 50)                 # the face-framing locks hang a little shorter
-        drop = 0.26 - 0.06 * side + dz
-        w = [0.03 * ws, 0.046 * ws, 0.054 * ws, 0.058 * ws, 0.056 * ws, 0.048 * ws, 0.014]
-        locks.append(dict(
-            pts=[("s", 76, lon * 0.95, SEAM(76) - 0.007), over(46, lon, w[1], 0.36), over(10, lon, w[2], 0.36, RELIEF + 0.004),
-                 ("s", -26, lon, 0.026), ("d", 0.006, 0, drop * 0.45), ("d", 0.0, 0, drop * 0.45), ("d", -0.004, 0, drop * 0.1)],
-            w=w, flat=0.36, segs=9, sides=4, blunt=0.0, hug=1 if abs(lon0) < 80 else 0))
-    return locks
-
-
-def long_cap():
-    return dict(bottom=lambda lon: -36, vol=0.9)
-
-
-def curtain_bangs():
-    locks = []
-    for s in (1, -1):
-        for k in range(4):
-            locks.append(dict(
-                pts=[("s", 64, s * (2 + 3 * k), SEAM(64) - 0.008), ("s", 48, s * (5 + 7 * k), SEAM(48) - 0.001),
-                     ("s", 32, s * (12 + 12 * k), 0.015), ("s", 16 - 5 * k, s * (26 + 14 * k), 0.012),
-                     ("s", 2 - 9 * k, s * (37 + 14 * k), 0.009)],
-                w=[0.02, 0.028, 0.032, 0.028, 0.005], flat=0.4, segs=6, sides=5))
-    return locks
-
-
-STYLES = {
-    "short": dict(bangs=("bangs_spiky", spiky_bangs), back=("back_short_spiky", short_back), cap=short_cap),
-    "bob": dict(bangs=("bangs_straight", straight_bangs), back=("back_bob", bob_back), cap=bob_cap),
-    "long": dict(bangs=("bangs_curtain", curtain_bangs), back=("back_long", long_back), cap=long_cap),
+BANGS = {  # id: (name, nearest cell, seeds)
+    "bangs_straight": ("Straight cut", "N4.2", lambda: straight()),
+    "bangs_straight_long": ("Straight cut, long", "N3.3", lambda: [fringe(lon, 3 - 3 * (abs(lon) / 48) ** 2, w=0.033 * (1.22 if abs(lon) == 48 else 1.0), blunt=0.85)
+                                                                  for lon in (-48, -32, -16, 0, 16, 32, 48)] + [side_lock(s, -22, 62) for s in (1, -1)]),
+    "bangs_bowl": ("Rounded bowl", "N4.1", bowl),
+    "bangs_wispy": ("See-through wispy", "N6.1", wispy),
+    "bangs_swept_l": ("Side-swept left", "N2.2", lambda: swept(1)),
+    "bangs_swept_r": ("Side-swept right", "N6.4", lambda: swept(-1)),
+    "bangs_curtain": ("Curtain", "N3.2", lambda: curtain()),
+    "bangs_curtain_long": ("Curtain, long", "N6.2", lambda: curtain(True)),
+    "bangs_centre_split": ("Centre split", "N1.4", centre_split),
+    "bangs_spiky": ("Spiky tufts", "B6.2", spiky),
+    "bangs_hime": ("Hime side-locks", "N6.3", hime),
+    "bangs_choppy": ("Short choppy", "N1.5", choppy),
+    "bangs_swept_back": ("Swept back", "N5.4", swept_back),
+    "bangs_single_strand": ("Short with one long strand", "N5.3", single_strand),
+    "bangs_wavy": ("Wavy swept", "N3.1", wavy),
+    "bangs_asym_block": ("Asymmetric block", "N6.5", asym_block),
 }
+
+
+# ================================================================ backs (an under-cap + locks)
+def back_lock(lon, hem, w=0.05, flat=0.45, segs=8, bulge=0.034, curl=0.01, blunt=0.5, hug=None, sides=5):
+    """A back lock from the crown whorl down the back/side to a hem latitude, bulging out below the ears."""
+    side = 1 - min(1.0, (abs(lon) - 70) / 60)
+    return dict(pts=[root(84, lon * 0.95), top(56, lon, w * 0.9, flat), top(20, lon, w, flat, 0.002),
+                     ("s", -12, lon, bulge - 0.008 * side), ("s", hem + 7, lon, bulge + 0.002 - 0.01 * side),
+                     ("s", hem, lon, bulge - 0.008 - 0.008 * side), ("s", hem - 4, lon * 0.99, bulge - 0.016 - curl - 0.006 * side)],
+                w=[w * 0.55, w * 0.9, w, w * 1.04, w * 0.95, w * 0.78, w * 0.45], flat=flat, segs=segs, sides=sides, blunt=blunt,
+                hug=(1 if abs(lon) < 80 else 0) if hug is None else hug)
+
+
+VAR = {72: (2, 0, 1.0, 0.6), 98: (-4, -3, 1.08, 0.3), 124: (3, 2, 0.95, 0.6), 152: (-3, -2, 1.06, 0.35), 180: (0, 2, 1.04, 0.5),
+       -72: (-2, 1, 1.02, 0.55), -98: (3, -2, 0.96, 0.35), -124: (-4, 3, 1.05, 0.6), -152: (2, -3, 0.98, 0.3)}
+
+
+def bob():
+    out = []
+    for lon0, (dl, dh, ws, cut) in sorted(VAR.items()):
+        side = 1 - min(1.0, (abs(lon0) - 72) / 60)
+        out.append(back_lock(lon0 + dl, -44 + 6 * side + dh, w=0.052 * ws, blunt=cut))
+    return out
+
+
+def bowl_back():
+    out = []
+    for lon0, (dl, dh, ws, cut) in sorted(VAR.items()):
+        hem = -10 - 22 * min(1.0, max(0.0, (abs(lon0) - 80) / 70)) + dh * 0.5
+        out.append(back_lock(lon0 + dl, hem, w=0.054 * ws, blunt=0.85, bulge=0.03, curl=0.004))
+    return out
+
+
+def short_layered():
+    out = []
+    for lon0, (dl, dh, ws, cut) in sorted(VAR.items()):
+        lon = lon0 + dl
+        back = min(1.0, max(0.0, (abs(lon0) - 68) / 80))
+        hem = -6 - 20 * back + dh
+        flick = 8 if lon > 0 else -8
+        w = 0.052 * ws
+        out.append(dict(pts=[root(84, lon * 0.9), top(52, lon, w, 0.5, 0.004), top(20, lon, w, 0.5, 0.002),
+                             ("s", hem + 10, lon + flick * 0.5, 0.024), ("s", hem, lon + flick, 0.014)],
+                        w=[w * 0.6, w, w * 1.05, w * 0.75, 0.012], flat=0.5, segs=7, sides=5, hug=1 if abs(lon0) < 80 else 0))
+    for lon, lat0, dz in ((150, 70, 0.05), (-172, 66, 0.042)):     # two crown tufts standing out of the mass
+        out.append(dict(pts=[root(lat0 + 8, lon - 20), ("s", lat0 + 2, lon - 6, hair_outer(lat0) - 0.004),
+                             ("s", lat0 - 4, lon + 6, hair_outer(lat0) + dz - 0.02)], w=[0.024, 0.026, 0.004], flat=0.5, segs=4, sides=4))
+    return out
+
+
+def long_locks(drop=0.26, wave=0.0, flare=0.0, n_extra=0):
+    out = []
+    for lon0, (dl, ws, dz) in sorted({72: (2, 1.0, 0.0), 98: (-3, 1.05, 0.02), 124: (3, 0.97, -0.015), 152: (-2, 1.05, 0.01),
+                                      180: (0, 1.03, 0.015), -72: (-2, 1.02, 0.01), -98: (3, 0.96, -0.02), -124: (-3, 1.05, 0.015),
+                                      -152: (2, 0.99, -0.01)}.items()):
+        lon = lon0 + dl
+        side = 1 - min(1.0, (abs(lon0) - 72) / 50)
+        d = drop - 0.06 * side + dz
+        w = 0.054 * ws
+        sw = (1 if (lon0 // 26) % 2 else -1) * wave
+        out.append(dict(pts=[root(84, lon * 0.95), top(46, lon, w, 0.4), top(8, lon, w * 1.04, 0.4, 0.004), ("s", -26, lon, 0.03),
+                             ("d", 0.008 + flare * 0.5, sw, d * 0.45), ("d", flare, -sw, d * 0.45), ("d", -0.004, sw * 0.5, d * 0.1)],
+                        w=[w * 0.55, w * 0.9, w, w * 1.06, w * 1.02, w * 0.88, 0.014], flat=0.4, segs=9, sides=4, hug=1 if abs(lon0) < 80 else 0))
+    return out
+
+
+def wolf():
+    out = []
+    for lon0, (dl, dh, ws, cut) in sorted(VAR.items()):       # long shaggy layer, flicking out at the neck
+        lon = lon0 + dl
+        w = 0.05 * ws
+        out.append(dict(pts=[root(84, lon * 0.95), top(54, lon, w, 0.45, 0.004), top(18, lon, w, 0.45), ("s", -18, lon, 0.034),
+                             ("s", -40 + dh, lon * 1.02, 0.046), ("s", -50 + dh, lon * 1.05, 0.07)],
+                        w=[w * 0.55, w * 0.9, w, w, w * 0.7, 0.008], flat=0.45, segs=8, sides=4, hug=1 if abs(lon0) < 80 else 0))
+    for lon in (-160, -120, -84, 84, 120, 160):                  # a short upper layer of pointed tufts
+        out.append(dict(pts=[root(70, lon * 0.95), top(40, lon + 6, 0.036, 0.45, 0.006), ("s", 6, lon + 10, 0.034), ("s", -4, lon + 14, 0.04)],
+                        w=[0.02, 0.036, 0.03, 0.006], flat=0.45, segs=5, sides=4, hug=0))
+    return out
+
+
+def gather(tie, n, lons, lat_from=40, w=0.05):
+    """Pulled-back hair: locks combed to a tie point (lat, lon). A tie above the ears (ponytail, buns) gathers locks
+    from the hairline and the nape upward; a low tie (pigtails) gathers them from the crown downward, so no lock
+    folds back on itself."""
+    tlat, tlon = tie
+    out = []
+    for lon in lons:
+        dl = ((tlon - lon + 180) % 360) - 180               # the short way round to the tie
+        if tlat >= 30:
+            rl = hairline(lon) - 2 if abs(lon) < 62 else 0
+            r = root(rl, lon)
+            m0 = max(lat_from, rl + 8)                        # always rising toward a high tie (no fold)
+            mid = top(m0, lon, w, 0.35, -0.006)
+            m1 = (m0 + tlat) / 2
+        else:
+            r = root(84, lon * 0.9)
+            mid = top(56, lon, w, 0.35, -0.006)
+            m1 = (56 + tlat) / 2
+        out.append(dict(pts=[r, mid, top(m1, lon + dl / 2, w * 0.9, 0.35, -0.006), ("s", tlat, lon + dl, hair_outer(tlat) - 0.012)],
+                        w=[w * 0.8, w, w * 0.85, w * 0.4], flat=0.35, segs=6, sides=4, hug=1))
+    return out
+
+
+def tail(p0, path, n=5, w=0.03, spread=0.012, seed=0):
+    """A bundle of n locks from a tie point along a path of moves (a ponytail, a pigtail)."""
+    out = []
+    for k in range(n):
+        a = 2 * math.pi * k / n + seed
+        dx, dy = math.cos(a) * spread, math.sin(a) * spread
+        r0 = (p0[0], p0[1] + 3 * math.cos(a), p0[2] + 3 * math.sin(a), p0[3])     # roots fanned round the tie point
+        pts = [r0] + [("d", m[0] + dx * (i + 1) * 0.3, m[1] + dy * (i + 1) * 0.3, m[2]) for i, m in enumerate(path)]
+        out.append(dict(pts=pts, w=[w * 0.8, w, w * 0.95, w * 0.7, w * 0.15][:len(pts)], flat=0.6, segs=5, sides=4, hug=0))
+    return out
+
+
+def high_pony():
+    out = gather((54, 180), 9, (-150, -120, -90, 90, 120, 150), 30, 0.05)            # the bangs own the front crown
+    out += [dict(pts=[root(84, lon * 0.3), top(70, lon, 0.04, 0.35, -0.012), ("s", 56, 180 if lon > 0 else -180, hair_outer(56) - 0.014)],
+                 w=[0.02, 0.04, 0.02], flat=0.35, segs=4, sides=4) for lon in (-150, -90, 90, 150)]
+    out += tail(("s", 52, 180, hair_outer(52) - 0.004), [(0.05, 0, -0.02), (0.03, 0, 0.08), (0.0, 0, 0.11), (-0.01, 0, 0.06)], n=5, w=0.032)
+    return out
+
+
+def pigtails():
+    out = gather((-6, 108), 5, (60, 80, 100, 130, 160), 30, 0.05) + gather((-6, -108), 5, (-60, -80, -100, -130, -160), 30, 0.05)
+    for s in (1, -1):
+        out += tail(("s", -8, s * 108, hair_outer(-8) - 0.004), [(0.03, 0, 0.05), (0.01, 0, 0.1), (0.0, 0, 0.1), (-0.005, 0, 0.05)],
+                    n=4, w=0.03, seed=s)
+    return out
+
+
+def bun_coil(lat, lon, r, height):
+    """A bun: four short locks coiled round a knot (a closed blob made in hair_build) on top of the gathered hair."""
+    out = []
+    for k in range(4):
+        a = k * 90
+        out.append(dict(pts=[("s", lat - 6, lon + a * 0.1 - 15, hair_outer(lat) - 0.01),
+                             ("s", lat, lon + 12 * math.cos(math.radians(a)), hair_outer(lat) + height * 0.6),
+                             ("s", lat + 4, lon - 10 * math.sin(math.radians(a)), hair_outer(lat) + height * 0.9)],
+                        w=[0.02, r * 0.55, r * 0.2], flat=0.6, segs=4, sides=4, hug=0))
+    return out
+
+
+def twin_buns():
+    out = []
+    for s in (1, -1):
+        out += gather((56, s * 62), 3, [s * l for l in (76, 110, 150)], 34, 0.05)
+    return out
+
+
+def single_bun():
+    return gather((66, 180), 7, (-150, -110, -76, 76, 110, 150, 180), 34, 0.05)
+
+
+def braid_crown():
+    """A plait ringing the head behind the bangs' roots: a chain of short leaf-shaped locks, alternating sides."""
+    out = []
+    n = 14
+    for k in range(n):
+        lo0 = -180 + 360 * k / n
+        lo1 = lo0 + 360 / n * 1.35
+        lat = lambda lo: (hairline(lo) + 18) if abs(((lo + 180) % 360) - 180) < 75 else 34
+        tilt = 0.6 if k % 2 else -0.6
+        out.append(dict(pts=[("s", lat(lo0), lo0, hair_outer(lat(lo0)) - 0.002), ("s", lat((lo0 + lo1) / 2) + (2 if k % 2 else -2), (lo0 + lo1) / 2, hair_outer(lat(lo0)) + 0.012),
+                             ("s", lat(lo1), lo1, hair_outer(lat(lo1)) - 0.002)], w=[0.008, 0.02, 0.006], tilt=[tilt] * 3,
+                        flat=0.6, segs=3, sides=4, hug=0))
+    return bob_short_back() + out
+
+
+def bob_short_back():
+    return [back_lock(lon, -34 + 4 * math.cos(math.radians(lon)), w=0.052, blunt=0.4, bulge=0.026, sides=4, segs=7)
+            for lon in (-152, -124, -98, -72, 72, 98, 124, 152, 180)]
+
+
+def undercut():
+    """Shaved sides and nape (the under-cap itself, a smooth 1 cm layer: OUTER below), a full top swept to one side."""
+    out = []
+    for lon in (-150, -118, -86, 86, 118, 150, 180):   # the top round the sides and back, swept back (the bangs own the front)
+        out.append(dict(pts=[root(82, lon * 0.6), top(58, lon, 0.05, 0.45, 0.004), top(38, lon + 10, 0.048, 0.45, 0.002),
+                             ("s", 26, lon + 14, hair_outer(26) - 0.016)], w=[0.03, 0.05, 0.048, 0.02], flat=0.45, segs=6, sides=5, hug=0))
+    return out
+
+
+BACKS = {  # id: (name, nearest cell, seeds, under-cap bottom(lon) or None, extras)
+    "back_bob": ("Bob", "B2.1", bob, lambda lon: -30),
+    "back_wolf": ("Wolf cut", "B4.4", wolf, lambda lon: -28),
+    "back_long": ("Long straight", "B3.1", lambda: long_locks(), lambda lon: -36),
+    "back_wavy_long": ("Wavy long", "B4.5", lambda: long_locks(0.3, wave=0.018, flare=0.012), lambda lon: -36),
+    "back_high_pony": ("High ponytail", "B6.5", high_pony, lambda lon: -22),
+    "back_pigtails": ("Low pigtails", "B3.2", pigtails, lambda lon: -26),
+    "back_twin_buns": ("Twin buns", "B2.5", twin_buns, lambda lon: -30),
+    "back_bun": ("Single top bun", "B1.1", single_bun, lambda lon: -34),
+    "back_braid_crown": ("Braided crown", "B7.2", braid_crown, lambda lon: -34),
+    "back_short_spiky": ("Short layered", "B6.2", short_layered, lambda lon: -8 if abs(lon) < 100 else -22),
+    "back_undercut": ("Undercut", "B3.5", undercut, lambda lon: -8 - 32 * _ss(90, 130, abs(lon))),
+    "back_bowl": ("Bowl", "B1.5", bowl_back, lambda lon: -8 if abs(lon) < 95 else -26),
+}
+# knots for the bun styles (closed blobs under the coiled locks): back id -> [(lat, lon, radius, height)]
+KNOTS = {"back_twin_buns": [(56, 62, 0.05, 0.05), (56, -62, 0.05, 0.05)], "back_bun": [(66, 180, 0.07, 0.06)]}
+for _bid, _knots in KNOTS.items():
+    _fn = BACKS[_bid][2]
+    BACKS[_bid] = BACKS[_bid][:2] + ((lambda f, ks: (lambda: f() + [lk for k in ks for lk in bun_coil(*k)]))(_fn, _knots),) + BACKS[_bid][3:]
+# pulled-back styles sit closer to the head: their under-cap is lower still
+TIGHT = {"back_high_pony", "back_pigtails", "back_twin_buns", "back_bun"}
+# under-caps that are not cap_outer: the undercut's shaved sides (the floor) under its full top
+OUTER = {"back_undercut": lambda lat: CAP_FLOOR + (cap_outer(lat) - CAP_FLOOR) * _ss(16, 30, lat)}
+
+
+TUCK_VAR = {76: (0, 0, 1.15, 0.6), 112: (-3, -3, 1.2, 0.35), 148: (3, 2, 1.15, 0.55), 180: (0, -2, 1.2, 0.4),
+            -76: (0, 1, 1.15, 0.5), -112: (3, -2, 1.2, 0.6), -148: (-2, 3, 1.15, 0.35)}
+
+
+def tuck(edge):
+    """The hair under a hat (avatar v7: locks, like every hair piece): bob-length locks from just under the hat's
+    edge(lon) lat, round the sides and back; the hat's own crown covers the rest. Seeds for build_accessories."""
+    out = []
+    for lon0, (dl, dh, ws, cut) in sorted(TUCK_VAR.items()):
+        lon = lon0 + dl
+        e = edge(lon)
+        side = 1 - min(1.0, (abs(lon0) - 72) / 60)
+        hem = -44 + 6 * side + dh
+        w = 0.05 * ws
+        out.append(dict(pts=[root(e + 14, lon), ("s", e + 2, lon, hair_outer(e) - 0.004), ("s", -12, lon, 0.032 - 0.008 * side),
+                             ("s", hem + 7, lon, 0.034 - 0.01 * side), ("s", hem, lon, 0.026 - 0.008 * side)],
+                        w=[w * 0.7, w, w * 1.04, w * 0.9, w * 0.6], flat=0.45, segs=3, sides=4, blunt=cut, hug=1 if abs(lon0) < 80 else 0))
+    return out

@@ -25,6 +25,13 @@ Checked by art/characters/fit_check.py.
 import bpy, json, math, os, sys
 from mathutils import Vector
 
+# Retired (avatar v7, 2026-09-30): every bangs and back id is now a sculpted-lock piece modeled in
+# art/characters/v7/hair_bangs.blend and hair_backs.blend and exported by v7/export_hair.py. Kept for history: the
+# parametric shells it built are in git before this date.
+if "--force-legacy" not in sys.argv:
+    print("build_hair.py is retired: run art/characters/v7/export_hair.py (the lock library)")
+    sys.exit(0)
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 import kit  # noqa: E402  (shared Piece, rig loader, export, render helpers)

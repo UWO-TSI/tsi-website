@@ -1,17 +1,19 @@
-"""Split the live working file into the review .blend files (avatar v7 item 5).
+"""Split the live working file into the review .blend files (avatar v7).
 
   /Applications/Blender.app/Contents/MacOS/Blender -b <work.blend> -P art/characters/v7/split_blends.py
 
-The live session models everything in one file (head, rig, body for context, one collection per hairstyle:
-hair_<style> with the lock curves in <style>_bangs / <style>_back and the generated meshes). This writes
-  art/characters/v7/head.blend          the head (V7_Head), the rig and the v6 body for context
-  art/characters/v7/hair_<style>.blend  the same plus that style's lock curves (the editable source) and meshes
+The live session models everything in one file: the head, the rig and the v6 body for context, and the hair library
+as one curve collection per catalogue id under the collections `bangs` and `backs` (plus a review `gallery`). This
+writes
+  art/characters/v7/head.blend         the head (V7_Head), the rig and the v6 references
+  art/characters/v7/hair_bangs.blend   the same plus every bangs piece's lock curves (the editable source)
+  art/characters/v7/hair_backs.blend   the same plus every back piece's lock curves
 """
 import bpy, os
 
 V7 = os.path.dirname(os.path.abspath(__file__))
 WORK = bpy.data.filepath
-STYLES = ("short", "bob", "long")
+DROP_ALWAYS = ("gallery",)
 
 
 def drop(coll):
@@ -22,20 +24,18 @@ def drop(coll):
     bpy.data.collections.remove(coll)
 
 
-for keep in STYLES + (None,):
+for name, keep in (("head.blend", ()), ("hair_bangs.blend", ("bangs",)), ("hair_backs.blend", ("backs",))):
     bpy.ops.wm.open_mainfile(filepath=WORK)
-    for st in STYLES:
-        if st != keep and f"hair_{st}" in bpy.data.collections:
-            drop(bpy.data.collections[f"hair_{st}"])
-    for c in list(bpy.data.collections):
-        if c.users == 0 or (not c.objects and not c.children and c.name == "Collection"):
-            bpy.data.collections.remove(c)
-    if keep:
-        top = bpy.data.collections[f"hair_{keep}"]
-        top.hide_viewport = False
-        for sub in top.children:
-            sub.hide_viewport = True            # curves hidden, meshes shown; unhide the sub-collections to edit
+    for cn in ("bangs", "backs") + DROP_ALWAYS:
+        if cn not in keep and cn in bpy.data.collections:
+            drop(bpy.data.collections[cn])
+    for o in list(bpy.data.objects):          # any loose preview meshes
+        if o.name.startswith("g_"):
+            bpy.data.objects.remove(o, do_unlink=True)
+    for cn in keep:
+        for ch in bpy.data.collections[cn].children:
+            ch.hide_viewport = True           # curves hidden; unhide a piece's collection to edit its locks
     bpy.data.orphans_purge(do_local_ids=True, do_linked_ids=True, do_recursive=True)
-    path = os.path.join(V7, f"hair_{keep}.blend" if keep else "head.blend")
+    path = os.path.join(V7, name)
     bpy.ops.wm.save_as_mainfile(filepath=path, copy=True, relative_remap=True, compress=True)
-    print("WROTE", path, len(bpy.data.objects), len(bpy.data.curves), [c.name for c in bpy.data.collections])
+    print("WROTE", path, len(bpy.data.objects), len(bpy.data.curves))

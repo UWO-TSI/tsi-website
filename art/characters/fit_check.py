@@ -9,7 +9,8 @@ GLB (base/v7_clips.glb: the hand-modeled v7 head; v6_clips.glb before avatar v7)
             standing out through a shell piece where it covers the scalp (skin_through);
             brow_cover = share of the default brows hidden behind the piece from the front (bangs only)
   seam      the crown ledge over every bangs x back pair: how far the bangs' root edge stands out of the cap, or the
-            cap's front edge out of the bangs (0 when each edge is buried in the other piece)
+            cap's front edge out of the bangs (0 when each edge is buried in the other piece); for lock pairs the limit is
+            the designed groove (a lock's side over the under-cap), since their roots are buried
   headwear  hats and bands: air between the piece and the hair it rests on (worn hair, or for hats the hair volume
             hair_vol they are fitted to), how far its outside rises over that hair, hair poking out through it,
             open edges
@@ -36,7 +37,7 @@ from mathutils.bvhtree import BVHTree
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "base"))
-from head_shape import head_point, HC, CHIN, HRZT, hair_vol, hairline  # noqa: E402
+from head_shape import head_point, HC, CHIN, HRZT, hair_vol, hair_outer, hairline  # noqa: E402
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 if "--root" in ARGS:                  # measure another checkout's art/characters (e.g. the before state)
@@ -50,7 +51,10 @@ LIMITS = {
     "hair_gap_median": 0.001,
     "hair_skin_through_max": 0.0,  # m the head's skin stands out of a covering shell piece (neighbour-confirmed);
                                    # reported as a FLAG: the older library's long side locks had it on v6 already
-    "seam_ledge_max": 0.003,       # step where bangs and back cap meet over the crown
+    "seam_ledge_max": 0.003,       # step where bangs and back cap meet over the crown (shell pieces)
+    "seam_ledge_max_locks": 0.014,  # lock pairs (avatar v7): a lock's side over the back's under-cap is a groove, GROOVE
+                                    # (12 mm) deep by design ("deeper separation"); root edges are buried and checked
+                                    # lock by lock, so only the groove remains
     "brow_cover_default": 0.05,    # default brows hidden by the default bangs, front view
     "hat_open_edges": 0,
     "hat_gap_max": 0.010,          # spec: hats sit on the hair, under 1 cm of air
@@ -407,8 +411,8 @@ for part in CAT["hair"]:
     tables[part["id"]] = (inn, out)
     if part["slot"] == "bangs":         # the forehead: above the hairline every back cap covers the scalp under them
         region = (LAT >= -60) & (LAT <= HAIRLINE + 2)
-    else:
-        region = LAT >= part.get("capFrom", -24)
+    else:   # over the under-cap: from its hem up, outside the face window (no cap there by design: hair frames the face)
+        region = (LAT >= part.get("capFrom", -24)) & ~((np.abs(LON) < 61) & (LAT < HAIRLINE))
     on = region & ~np.isnan(inn) & (inn - R_SCALP <= 0.12) & (out - R_SCALP >= -0.005)   # (not a ray grazing a hidden fan)
     air = np.array([air_above(every[i], R_SCALP[i], open_e == 0) if on[i] else np.nan for i in range(len(RAYS))])
     gap = erode(air)
@@ -613,9 +617,11 @@ def seam_step(ob, ok):
 
 
 ledges, ledge_at = {}, {}
+# a piece's surface under the scalp (buried lock roots, the hidden closing fan at the head centre) is no seam edge
+OUTER = {pid: np.where(o < R_SCALP - 0.006, np.nan, o) for pid, (_, o) in tables.items()}
 for b in (p["id"] for p in CAT["hair"] if p["slot"] == "bangs"):
     for k in (p["id"] for p in CAT["hair"] if p["slot"] == "back"):
-        ledges[f"{b}+{k}"], ledge_at[f"{b}+{k}"] = seam_step(tables[b][1], tables[k][1])
+        ledges[f"{b}+{k}"], ledge_at[f"{b}+{k}"] = seam_step(OUTER[b], OUTER[k])
 worst_pair = max(ledges, key=ledges.get)
 seam = {"ledge_max": ledges[worst_pair], "worst_pair": worst_pair, "worst_at": ledge_at.get(worst_pair),
         "default_pair": ledges[f"{DEFAULT_BANGS}+{DEFAULT_BACK}"],
@@ -659,7 +665,8 @@ for part in CAT["accessories"]:
     gap, rise, poke = (np.full(len(RAYS), np.nan) for _ in range(3))
     for i in np.nonzero(on)[0]:
         # the hair the piece rests on: worn hair where there is some, else (hats) the hair volume they are fitted to
-        top = max([R_SCALP[i] + (hair_vol(LAT[i]) if hat else 0.0)] + [o[i] for _, o in under if not np.isnan(o[i])])
+        # (avatar v7: the fuller lock hair's outer surface, hair_outer)
+        top = max([R_SCALP[i] + (hair_outer(LAT[i]) if hat else 0.0)] + [o[i] for _, o in under if not np.isnan(o[i])])
         gap[i] = air_above(h_every[i], top, open_e == 0)
         rise[i] = h_out[i] - top
         poke[i] = max(0.0, top - h_out[i])
@@ -687,7 +694,10 @@ for pid, r in hair.items():
     check("gap_median", r["gap"]["median"], LIMITS["hair_gap_median"], pid)
     if r.get("skin_through") is not None and r["skin_through"] > LIMITS["hair_skin_through_max"]:
         flags.append(f"{pid}: skin_through {r['skin_through']} (a shell piece of the older library; rebuilt as locks next)")
-check("ledge_max", seam["ledge_max"], LIMITS["seam_ledge_max"], seam["worst_pair"])
+V7_IDS = {h["id"] for h in CAT["hair"] if h.get("v7")}
+for pair, v in ledges.items():
+    b, k = pair.split("+")
+    check("ledge_max", v, LIMITS["seam_ledge_max_locks"] if b in V7_IDS and k in V7_IDS else LIMITS["seam_ledge_max"], pair)
 check("brow_cover", hair[DEFAULT_BANGS].get("brow_cover"), LIMITS["brow_cover_default"], DEFAULT_BANGS)
 for pid, r in headwear.items():
     check("open_edges", r["open_edges"], LIMITS["hat_open_edges"], pid)
