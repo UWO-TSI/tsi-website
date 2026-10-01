@@ -366,10 +366,11 @@ function resonance(rt: CombatRuntime, at: Vec): number {
 }
 
 /** Summons chase and fight, totems pulse each second, traps spring, decoys hold aggro; the player-relative leash keeps them close. */
+const foe = (e: Enemy) => e.state !== "dead" && e.state !== "return";
 export function stepUnits(rt: CombatRuntime, me: Vec, dt: number, random: () => number = Math.random) {
-  const p = rt.player;
-  const foes = rt.enemies.filter(e => e.state !== "dead" && e.state !== "return");
-  for (const u of [...rt.units]) {
+  const p = rt.player, foes = rt.enemies, units = rt.units; // a unit that leaves makes a new list: this frame keeps the old
+  for (let ui = 0; ui < units.length; ui++) {
+    const u = units[ui];
     if (u.life !== null) u.life -= dt;
     if ((u.life !== null && u.life <= 0) || u.hp <= 0) { rt.units = rt.units.filter(x => x !== u); continue; }
     u.cd -= dt;
@@ -378,7 +379,7 @@ export function stepUnits(rt: CombatRuntime, me: Vec, dt: number, random: () => 
       if (u.cd > 0) continue;
       u.cd = 1;
       const pl = d.pulse!;
-      for (const e of foes) if (dist(u, e) <= d.radius! + e.type.radius) {
+      for (const e of foes) if (foe(e) && dist(u, e) <= d.radius! + e.type.radius) {
         if (pl.damage) strike(rt, e, { power: pl.damage * resonance(rt, e), from: u, stat: u.stat, unit: true, knock: 0 }, random);
         if (pl.slow) applyStatus(e, { slow: [pl.slow, 1.3] });
       }
@@ -390,7 +391,7 @@ export function stepUnits(rt: CombatRuntime, me: Vec, dt: number, random: () => 
       continue;
     }
     if (d.kind === "trap") {
-      const e = foes.find(f => dist(u, f) <= d.radius! + f.type.radius);
+      const e = foes.find(f => foe(f) && dist(u, f) <= d.radius! + f.type.radius);
       if (e) {
         strike(rt, e, { power: u.power, from: u, stat: u.stat, unit: true, knock: 0, status: { hold: 3 } }, random);
         rt.blasts.push({ id: rt.seq++, x: u.x, z: u.z, radius: 1.4, color: "#ffe08a", age: 0, life: 0.5 });
@@ -400,7 +401,8 @@ export function stepUnits(rt: CombatRuntime, me: Vec, dt: number, random: () => 
     }
     if (d.kind === "decoy") continue;
     // Minions: the nearest foe within reach of both it and you, else back to your side.
-    const target = foes.filter(e => dist(e, u) < 9 && dist(e, me) < 12).sort((a, b) => dist(a, u) - dist(b, u))[0];
+    let target: Enemy | undefined, near = 9;
+    for (const e of foes) { const de = foe(e) && dist(e, me) < 12 ? dist(e, u) : Infinity; if (de < near) { near = de; target = e; } }
     const range = d.range ?? 1.5, gap = target ? dist(target, u) : dist(me, u);
     const goal = dist(me, u) > 12 || !target ? me : target;
     const stop = target && goal === target ? range * 0.8 : 1.4;
@@ -426,9 +428,12 @@ export function stepUnits(rt: CombatRuntime, me: Vec, dt: number, random: () => 
 export function hurtUnits(rt: CombatRuntime, lands: (u: Unit) => boolean, amount: number) {
   for (const u of rt.units) if (u.def.kind !== "trap" && lands(u)) { u.hp -= amount; floater(rt, u, 1.4, `-${amount}`, "hurt"); }
 }
-/** Where an enemy goes: a phantom or a bulwark crab near it draws it; a distracted one wanders home. */
+/** Where an enemy goes: a phantom or a bulwark crab near it draws it; a distracted one wanders home. (One scratch target: read it before the next call.) */
+const TARGET = { x: 0, z: 0, safe: false, alive: true };
 export function enemyTarget(rt: CombatRuntime, e: Enemy, player: Vec & { safe: boolean; alive: boolean }): Vec & { safe: boolean; alive: boolean } {
-  if (e.status.distract > 0) return { x: e.spawnX, z: e.spawnZ, safe: player.safe, alive: player.alive };
-  const t = rt.units.filter(u => u.def.taunt && dist(u, e) < e.type.aggroRadius + 3).sort((a, b) => dist(a, e) - dist(b, e))[0];
-  return t ? { x: t.x, z: t.z, safe: player.safe, alive: player.alive } : player;
+  let t: Vec | null = e.status.distract > 0 ? { x: e.spawnX, z: e.spawnZ } : null, best = e.type.aggroRadius + 3;
+  if (!t) for (const u of rt.units) { const d = u.def.taunt ? dist(u, e) : Infinity; if (d < best) { best = d; t = u; } }
+  if (!t) return player;
+  TARGET.x = t.x; TARGET.z = t.z; TARGET.safe = player.safe; TARGET.alive = player.alive;
+  return TARGET;
 }

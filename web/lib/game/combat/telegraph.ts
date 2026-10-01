@@ -15,31 +15,41 @@ import { staggered, type Enemy, type Vec } from "./sim";
 /** Offsets in the part's local space (radians / model units); scale is on local Y. */
 export interface PartPose { rx: number; ry: number; rz: number; dy: number; dz: number; sy: number }
 
-/** Windup progress k, active progress a, recover progress r (each 0..1, 0 outside its state). */
+/** Windup progress k, active progress a, recover progress r (each 0..1, 0 outside its state). One scratch result: read it before the next call. */
+const PROGRESS = { k: 0, a: 0, r: 0 };
 export function progress(e: Pick<Enemy, "state" | "t" | "move">) {
   const m = e.move;
-  return {
-    k: e.state === "windup" ? Math.min(1, e.t / m.windup) : e.state === "active" ? 1 : 0,
-    a: e.state === "active" ? Math.min(1, e.t / (m.active ?? 1)) : 0,
-    r: e.state === "recover" ? Math.min(1, e.t / m.recover) : 0,
-  };
+  PROGRESS.k = e.state === "windup" ? Math.min(1, e.t / m.windup) : e.state === "active" ? 1 : 0;
+  PROGRESS.a = e.state === "active" ? Math.min(1, e.t / (m.active ?? 1)) : 0;
+  PROGRESS.r = e.state === "recover" ? Math.min(1, e.t / m.recover) : 0;
+  return PROGRESS;
 }
 
 const ease = (x: number) => x * x * (3 - 2 * x);
 /** Just after the hit: 1 → 0 over the first quarter of the recover. */
 const impact = (e: Pick<Enemy, "state">, r: number) => (e.state === "recover" ? Math.max(0, 1 - r * 4) : 0);
 
+/** A node name parsed once: its kind without the side suffix, the side (arm_l 1, arm_r -1) and whether it is a front leg. */
+const ROLES = new Map<string, { kind: string; side: number; front: number }>();
+const roleOf = (role: string) => {
+  let r = ROLES.get(role);
+  if (!r) ROLES.set(role, r = { kind: role.replace(/_[fb]?[lr]$/, ""), side: /_[fb]?l$/.test(role) ? 1 : /_[fb]?r$/.test(role) ? -1 : 0, front: /_f/.test(role) ? 1 : -1 });
+  return r;
+};
+
 /**
  * Pose for one named part. `role` is the GLB node name; `side` mirrors the
- * left/right parts; `seed` staggers idle motion between instances.
+ * left/right parts; `seed` staggers idle motion between instances. `out` is
+ * filled instead of a new object (the renderer poses every part every frame).
  */
-export function partPose(role: string, e: Pick<Enemy, "state" | "t" | "move"> & Partial<Pick<Enemy, "wander">>, time: number, seed = 0): PartPose | null {
+export function partPose(role: string, e: Pick<Enemy, "state" | "t" | "move"> & Partial<Pick<Enemy, "wander">>, time: number, seed = 0, out?: PartPose): PartPose | null {
   const shape: AttackShape = e.move.shape, { k, r } = progress(e), hit = impact(e, r);
-  const side = /_[fb]?l$/.test(role) ? 1 : /_[fb]?r$/.test(role) ? -1 : 0; // arm_l, leg_fl, leg_br…
+  const { kind, side, front } = roleOf(role); // arm_l, leg_fl, leg_br…
   const moving = e.state === "chase" || e.state === "return" || (e.state === "idle" && !!e.wander && e.wander.wait <= 0); // strolling near its spawn too
-  const p: PartPose = { rx: 0, ry: 0, rz: 0, dy: 0, dz: 0, sy: 1 };
+  const p: PartPose = out ?? { rx: 0, ry: 0, rz: 0, dy: 0, dz: 0, sy: 1 };
+  p.rx = p.ry = p.rz = p.dy = p.dz = 0; p.sy = 1;
   const w = ease(k);
-  switch (role.replace(/_[fb]?[lr]$/, "")) {
+  switch (kind) {
     case "body":
       if (moving) p.dy = Math.abs(Math.sin(time * 12 + seed)) * 0.02;
       else if (e.state === "idle") p.dy = Math.sin(time * 2 + seed) * 0.006;
@@ -81,7 +91,6 @@ export function partPose(role: string, e: Pick<Enemy, "state" | "t" | "move"> & 
       return p;
     case "leg": case "legs": case "foot": {
       if (!moving) return null;
-      const front = /_f/.test(role) ? 1 : -1;
       p.rx = Math.sin(time * 14 + seed + (side * front > 0 ? 0 : Math.PI)) * 0.5;
       return p;
     }

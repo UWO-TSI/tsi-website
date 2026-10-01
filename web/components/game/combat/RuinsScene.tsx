@@ -10,7 +10,7 @@
  * runtime. Shadows follow the islands' logic (look spec §9): sun shadows on
  * High, contact shadows on both tiers.
  */
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -145,6 +145,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
   const { camera, gl } = useThree();
   const input = useRef({ ndc: new THREE.Vector2(0, 0), hasPointer: false, presses: createInputs() });
   const near = useRef<RuinsNear>(null);
+  const [respawn, setRespawn] = useState(0);
   const zones = useRef({ circle: false, gate: true });
   const syncAt = useRef(0);
   const publishAt = useRef(0);
@@ -204,7 +205,8 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     // Defeat: wake at the gate (row 229).
     if (!p.alive) {
       p.downFor += dt;
-      if (p.downFor > 1.8) { missionEvent(rt, { type: "defeat" }); onDefeat(); }
+      // The scene resets in place: the encounter, and the avatar back at the gate (no remount, no reload).
+      if (p.downFor > 1.8) { missionEvent(rt, { type: "defeat" }); onDefeat(); resetEncounter(); pl.set(...spawn); zones.current = { circle: false, gate: true }; setRespawn(n => n + 1); publishCombat(); }
     }
     // Inputs.
     if (runInputs(rt, inp.presses, me, Math.min(rawDelta, 0.05))) publishCombat(); // a refused key pulses its slot now
@@ -300,7 +302,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     <primitive object={dust.group} />
     <Html position={[EXIT_SPOT.x, 2.2, EXIT_SPOT.z]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Gate · safe zone</div></Html>
     <PlayerAvatar spawnPosition={spawn} playerName="You" playerLevel={level} player={player}
-      world={ruins.world} groundHeight={ruins.ground} camTarget={focus} combat />
+      world={ruins.world} groundHeight={ruins.ground} camTarget={focus} combat respawn={respawn} />
   </>;
 }
 

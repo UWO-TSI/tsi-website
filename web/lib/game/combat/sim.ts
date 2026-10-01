@@ -107,6 +107,17 @@ export const staggered = (e: Pick<Enemy, "state" | "move">) => e.state === "reco
 
 /** Idle enemies stroll (combat polish 5): to a spot within `radius` of the spawn at `speed` × their pace, then wait 1.5–4 s. */
 export const WANDER = { radius: 1.6, speed: 0.3, pause: 1.5, pauseMore: 2.5 } as const;
+/** Step toward (tx, tz), sliding along walls; returns the distance left. (Module scope: the tick allocates nothing per enemy.) */
+function walk(e: Enemy, tx: number, tz: number, speed: number, dt: number, free: (x: number, z: number) => boolean): number {
+  const d = Math.sqrt((tx - e.x) ** 2 + (tz - e.z) ** 2);
+  if (d < 1e-4) return d;
+  const step = Math.min(d, speed * dt);
+  const nx = e.x + ((tx - e.x) / d) * step, nz = e.z + ((tz - e.z) / d) * step;
+  if (free(nx, nz)) { e.x = nx; e.z = nz; } else if (free(nx, e.z)) e.x = nx; else if (free(e.x, nz)) e.z = nz;
+  e.facing = Math.atan2(tx - e.x, tz - e.z);
+  return d - step;
+}
+
 /** Packs keep apart: bodies closer than their radii plus `gap` push off each other at up to `speed` u/s. */
 export const SEPARATION = { gap: 0.3, speed: 4 } as const;
 
@@ -145,31 +156,22 @@ export function stepEnemy(e: Enemy, player: Vec & { safe: boolean; alive: boolea
   st.distract = Math.max(0, st.distract - dt);
   if (st.hold > 0 && e.state !== "return") { st.hold = Math.max(0, st.hold - dt); return null; }
   const a = e.move;
-  const home = Math.hypot(e.x - e.spawnX, e.z - e.spawnZ);
-  const dist = Math.hypot(player.x - e.x, player.z - e.z);
+  const home = Math.sqrt((e.x - e.spawnX) ** 2 + (e.z - e.spawnZ) ** 2);
+  const dist = Math.sqrt((player.x - e.x) ** 2 + (player.z - e.z) ** 2);
   if (e.state !== "return" && e.state !== "idle" && (home > e.type.leashRadius || player.safe || !player.alive)) { e.state = "return"; e.t = 0; }
-  const move = (tx: number, tz: number, speed: number) => {
-    const d = Math.hypot(tx - e.x, tz - e.z);
-    if (d < 1e-4) return d;
-    const step = Math.min(d, speed * dt);
-    const nx = e.x + ((tx - e.x) / d) * step, nz = e.z + ((tz - e.z) / d) * step;
-    if (free(nx, nz)) { e.x = nx; e.z = nz; } else if (free(nx, e.z)) e.x = nx; else if (free(e.x, nz)) e.z = nz;
-    e.facing = Math.atan2(tx - e.x, tz - e.z);
-    return d - step;
-  };
   switch (e.state) {
     case "idle": {
       if (player.alive && !player.safe && dist < e.type.aggroRadius) { e.state = "chase"; e.t = 0; e.move = nextMove(e); return null; }
       const w = e.wander;
       if (e.type.kind === "boss" || (w.wait -= dt) > 0) return null;
-      if (move(w.x, w.z, e.type.speed * WANDER.speed) < 0.05) {
+      if (walk(e, w.x, w.z, e.type.speed * WANDER.speed, dt, free) < 0.05) {
         const a = random() * Math.PI * 2, r = Math.sqrt(random()) * WANDER.radius;
         w.x = e.spawnX + Math.sin(a) * r; w.z = e.spawnZ + Math.cos(a) * r; w.wait = WANDER.pause + random() * WANDER.pauseMore;
       }
       return null;
     }
     case "return":
-      if (move(e.spawnX, e.spawnZ, e.type.speed * 1.5) < 0.05) {
+      if (walk(e, e.spawnX, e.spawnZ, e.type.speed * 1.5, dt, free) < 0.05) {
         e.state = "idle"; e.hp = e.type.hp; e.facing = Math.PI; e.phase = 1; e.cycle = 0; e.move = e.type.attacks[0];
         e.wander.x = e.spawnX; e.wander.z = e.spawnZ; e.wander.wait = WANDER.pause;
         return { kind: "reset", enemy: e };
@@ -177,7 +179,7 @@ export function stepEnemy(e: Enemy, player: Vec & { safe: boolean; alive: boolea
       return null;
     case "chase": {
       if (e.stun > 0) return null;
-      if (dist > (a.reach ?? a.range * 0.8)) { move(player.x, player.z, e.type.speed * (1 - st.slow)); return null; }
+      if (dist > (a.reach ?? a.range * 0.8)) { walk(e, player.x, player.z, e.type.speed * (1 - st.slow), dt, free); return null; }
       e.state = "windup"; e.t = 0; e.facing = facingTo(e, player); e.aim = { x: player.x, z: player.z }; e.landed = false;
       return null;
     }
@@ -209,10 +211,10 @@ export function separate(list: Enemy[], dt: number, free: (x: number, z: number,
     for (let j = i + 1; j < list.length; j++) {
       const b = list[j];
       if (b.state === "dead") continue;
-      let dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
-      const min = a.type.radius + b.type.radius + SEPARATION.gap;
-      if (d >= min) continue;
-      if (d < 1e-4) { dx = Math.sin(i + j); dz = Math.cos(i + j); d = 1; } // exactly stacked: any way apart
+      const min = a.type.radius + b.type.radius + SEPARATION.gap, d2 = (b.x - a.x) ** 2 + (b.z - a.z) ** 2;
+      if (d2 >= min * min) continue; // most pairs: no square root, nothing allocated
+      const stacked = d2 < 1e-8, d = stacked ? 1 : Math.sqrt(d2);
+      const dx = stacked ? Math.sin(i + j) : b.x - a.x, dz = stacked ? Math.cos(i + j) : b.z - a.z; // exactly stacked: any way apart
       const fixedA = a.type.kind === "boss", fixedB = b.type.kind === "boss";
       if (fixedA && fixedB) continue;
       const push = Math.min(min - d, step), ux = dx / d, uz = dz / d, ka = fixedA ? 0 : fixedB ? 1 : 0.5, kb = 1 - ka;

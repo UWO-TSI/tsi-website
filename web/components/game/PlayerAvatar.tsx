@@ -16,7 +16,7 @@ import type { CharacterLook } from "@/lib/game/character/look";
 import { useMyLook } from "@/lib/game/character/lookStore";
 import { combatClip, seatLift, type CombatView } from "@/lib/game/character/clips";
 import { useWorldClips } from "./character/useWorldClips";
-import { combat, useCombatVersion } from "@/lib/game/combat/runtime";
+import { combat, useCombatValue } from "@/lib/game/combat/runtime";
 import { combatFacing, combatPush, combatTuning, dashDodge } from "@/lib/game/combat/actions";
 import { WEAPONS } from "@/lib/game/combat/data";
 import { STUCK_TIME, advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, topSpeed, towards, MOVE_TUNING, NO_INPUT, type MoveEvent, type MoveInput, type MoveSim, type MoveState, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
@@ -63,6 +63,8 @@ interface PlayerAvatarProps {
   member?: boolean;
   /** Encounter: the ruins' kit (Q dodges); clips and facing follow the combat runtime; the weapon is in hand. */
   combat?: boolean;
+  /** A change puts you back at the spawn (the ruins' defeat wakes you at the gate without remounting the scene). */
+  respawn?: number;
   /** The leaf glider: owned, and this area allows it (the village and the home island; never the ruins). */
   glider?: boolean;
   frozen?: boolean;
@@ -95,14 +97,14 @@ const GRIP_Y = 0.58 * CHARACTER_SCALE;
 const SEAT_CLIPS = new Set<ClipName>(["Sit", "Study", "Stretch", "Sleep"]);
 type Seat = { x: number; z: number; clip: ClipName; lift: number; yaw: number };
 
-export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, glider = false, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, respawn = 0, glider = false, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed }: PlayerAvatarProps) {
   const anchor = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null), head = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null });
   const { look } = useMyLook();
   const { camera, gl } = useThree();
   const bindings = useMoveKeys();
   const [x0, , z0] = spawnPosition;
-  const sim = useRef<MoveSim | null>(null), simAt = useRef<[number, number] | null>(null);
+  const sim = useRef<MoveSim | null>(null), simAt = useRef<[number, number, number] | null>(null);
   const keys = useRef<Record<string, boolean>>({});
   const presses = useRef({ jump: false, dash: false });
   const target = useRef<{ x: number; z: number } | null>(null);
@@ -227,9 +229,9 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     if (!g || !bd || !hd) return;
     const p = combat.rt.player, d = dev.current, f = fx.current, m = motion.current, j = juice ?? MOVE_JUICE, st = touchStick, k = keys.current, b = bindings;
     const t = inCombat ? combatTuning(p.speed) : kit;
-    if (!sim.current || simAt.current?.[0] !== x0 || simAt.current[1] !== z0) {
+    if (!sim.current || simAt.current?.[0] !== x0 || simAt.current[1] !== z0 || simAt.current[2] !== respawn) {
       sim.current = createMoveSim(createMoveState(x0, z0, world));
-      simAt.current = [x0, z0];
+      simAt.current = [x0, z0, respawn];
     }
     // Spawned or built into something (an exit painted inside a prop, furniture placed where you stand): step out to the nearest open spot.
     const at = sim.current.state;
@@ -458,9 +460,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
 
 /** The player's character, with the equipped weapon: in hand in an encounter, across the back once the ruins gate is open (row 140). */
 function PlayerCharacter({ look, motion, inCombat, walkSpeed, leaf }: { look: CharacterLook; motion: React.RefObject<CharacterMotion>; inCombat: boolean; walkSpeed: number; leaf: boolean }) {
-  useCombatVersion();
-  const p = combat.rt.player, key = p.weapon, shown = inCombat ? p.alive : p.armed;
-  // The same object until the weapon, or whether it shows, changes (the runtime publishes ~10×/s).
+  // Only the weapon, and whether it shows, re-render the character (the runtime publishes ~10×/s).
+  const key = useCombatValue(() => combat.rt.player.weapon), shown = useCombatValue(() => (inCombat ? combat.rt.player.alive : combat.rt.player.armed));
   const weapon = useMemo(() => {
     const w = WEAPONS[key];
     return w?.model && shown ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat, grip: w.grip } : null;

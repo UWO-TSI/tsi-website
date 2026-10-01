@@ -445,8 +445,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     const p = combat.rt.player, w = p.weapon, max = WEAPONS[w].maxDurability;
     void postWear(w, p.hits[w], true);
     p.durability[w] = Math.max(0, p.durability[w] - Math.ceil(max * 0.1));
-    p.hits[w] = 0;
-    setRuinsRun(n => n + 1);
+    p.hits[w] = 0; // the ruins scene resets itself (wakes you at the gate) without remounting
   }, []);
   const [gate, setGate] = useState<{ open: boolean; reason: string | null }>({ open: false, reason: "Checking the gate…" });
   // Dev: ?at=x,z starts the village walk at that spot (screenshots of shore/shop details); ?at=HH:MM is the clock (useIslandConditions).

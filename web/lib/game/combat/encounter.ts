@@ -14,6 +14,10 @@ const ABILITY_IDS: readonly AbilityId[] = [...SLOT_IDS, "swap"];
 
 /** A hit's push: `knock` × this u/s at the hit, easing to nothing over the flinch's first 0.15 s (0.225 u per point of knockback). */
 const KNOCK_SPEED = 3;
+/** Scratch the tick reuses every frame (combat polish 12: nothing allocated per frame in a fight). */
+const YOU = { x: 0, z: 0, safe: false, alive: true }, FROM = { x: 0, z: 0 }, TO = { x: 0, z: 0 };
+let freeFor: (x: number, z: number, r: number) => boolean = () => true, bodyR = 0;
+const freeBody = (x: number, z: number) => freeFor(x, z, bodyR);
 
 export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: number, z: number, r: number) => boolean = () => true, random: () => number = Math.random) {
   const p = rt.player;
@@ -44,10 +48,13 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
     push.x = p.dodgeDir.x * k; push.z = p.dodgeDir.z * k;
   }
   // Enemies.
-  const you = { x: me.x, z: me.z, safe: p.safe, alive: p.alive };
-  for (const e of [...rt.enemies]) {
-    const was = e.state;
-    const ev = stepEnemy(e, enemyTarget(rt, e, you), dt, (x, z) => free(x, z, e.type.radius * 0.6), random);
+  const you = YOU, list = rt.enemies;
+  you.x = me.x; you.z = me.z; you.safe = p.safe; you.alive = p.alive; // a boss reset or summon makes a new list: this frame keeps the old
+  freeFor = free;
+  for (let i = 0; i < list.length; i++) {
+    const e = list[i], was = e.state;
+    bodyR = e.type.radius * 0.6;
+    const ev = stepEnemy(e, enemyTarget(rt, e, you), dt, freeBody, random);
     if (was !== "windup" && e.state === "windup") cue(rt, "windup", e);
     else if (was === "active" && e.state === "recover" && e.move.stagger) cue(rt, "stagger", e);
     if (!ev) continue;
@@ -70,15 +77,18 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
   separate(rt.enemies, dt, free);
   // Projectiles: yours hit enemies (pierce keeps going), theirs hit you or a unit.
   for (let i = rt.projectiles.length - 1; i >= 0; i--) {
-    const sh = rt.projectiles[i], from = { x: sh.x, z: sh.z };
+    const sh = rt.projectiles[i], from = FROM, to = TO;
+    from.x = sh.x; from.z = sh.z;
     sh.x += sh.vx * dt; sh.z += sh.vz * dt; sh.life -= dt;
-    const to = { x: sh.x, z: sh.z };
+    to.x = sh.x; to.z = sh.z;
     let gone = sh.life <= 0 || !free(sh.x, sh.z, 0.05);
     if (!gone && sh.from === "player") gone = resolvePlayerShot(rt, i, from, to, random);
     else if (!gone && sh.from === "enemy") {
-      const unit = rt.units.find(u => u.def.kind !== "trap" && sweptHit(from, to, u, 0.4 + sh.radius));
       if (sweptHit(from, to, me, 0.35 + sh.radius)) { hurtPlayer(rt, sh.damage, from, me, sh.knock, random); gone = true; }
-      else if (unit) { hurtUnits(rt, u => u === unit, sh.damage); gone = true; }
+      else {
+        const unit = rt.units.find(u => u.def.kind !== "trap" && sweptHit(from, to, u, 0.4 + sh.radius));
+        if (unit) { hurtUnits(rt, u => u === unit, sh.damage); gone = true; }
+      }
     }
     if (gone) rt.projectiles.splice(i, 1);
   }

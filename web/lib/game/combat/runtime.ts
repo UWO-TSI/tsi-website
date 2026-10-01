@@ -124,8 +124,13 @@ const listeners = new Set<() => void>();
 export function publishCombat() { version++; for (const l of listeners) l(); }
 // Dev (screenshots): the runtime and a publish, in the village as well as the ruins.
 if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") Object.assign(window, { __combat: combat, __publishCombat: publishCombat });
+const subscribe = (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; };
 export function useCombatVersion(): number {
-  return useSyncExternalStore(l => { listeners.add(l); return () => { listeners.delete(l); }; }, () => version, () => 0);
+  return useSyncExternalStore(subscribe, () => version, () => 0);
+}
+/** Re-render only when `pick` (a primitive read from the runtime) changes, not on every ~10/s publish. */
+export function useCombatValue<T extends string | number | boolean>(pick: () => T): T {
+  return useSyncExternalStore(subscribe, pick, pick);
 }
 
 // ── Mission board mutations (kept here so components never write the runtime directly) ──

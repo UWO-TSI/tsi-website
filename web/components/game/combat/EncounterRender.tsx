@@ -15,7 +15,8 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { combat, type Projectile } from "@/lib/game/combat/runtime";
 import { ENEMIES, WEAPONS } from "@/lib/game/combat/data";
-import { glow, marker, partPose, type MarkerFamily } from "@/lib/game/combat/telegraph";
+import { glow, marker, partPose, type MarkerFamily, type PartPose } from "@/lib/game/combat/telegraph";
+import type { Enemy } from "@/lib/game/combat/sim";
 import { CAPS } from "@/lib/combat/kits";
 
 type Ground = (x: number, z: number) => number;
@@ -46,12 +47,22 @@ function useRig(url: string) {
       o.children.forEach(c => walk(c, node));
     };
     walk(scene, -1);
-    return { nodes, parts, top: box.max.y };
+    // The model's reach from its origin: with the pop and the hover, it bounds every pose (the instanced mesh's culling sphere).
+    const reach = Math.max(box.min.length(), box.max.length()) * 1.25;
+    return { nodes, parts, top: box.max.y, reach };
   }, [scene]);
 }
 
 const ALLY_TINT = new THREE.Color(0.9, 2.2, 1.1), SHADE_TINT = new THREE.Color(1.5, 1.2, 2.6);
 const poseM = new THREE.Matrix4(), poseQ = new THREE.Quaternion(), poseE = new THREE.Euler(), poseP = new THREE.Vector3(), poseS = new THREE.Vector3();
+const POSE: PartPose = { rx: 0, ry: 0, rz: 0, dy: 0, dz: 0, sy: 1 }, BOX = new THREE.Box3();
+/** This frame's enemies of one type (or allies borrowing its model), into a reused list. */
+function collect(out: Enemy[], typeId: string, allies: boolean, capacity: number) {
+  out.length = 0;
+  if (allies) { for (const u of combat.rt.units) if (u.body?.type.id === typeId && out.length < capacity) out.push(u.body); }
+  else for (const e of combat.rt.enemies) if (e.type.id === typeId && !(e.state === "dead" && e.deadFor > POP) && out.length < capacity) out.push(e);
+  return out;
+}
 
 /**
  * Every enemy of one type in one draw call per model part. Each part is posed
@@ -66,15 +77,18 @@ export function EnemyInstances({ typeId, capacity, ground, allies = false }: { t
   /** Your summons that borrow this model (kits.ts UNITS `model`, a Necromancer's shades): tinted spirit-green or shade-violet, a little smaller. */
   allies?: boolean }) {
   const type = ENEMIES[typeId];
-  const { nodes, parts, top } = useRig(type.model);
+  const { nodes, parts, top, reach } = useRig(type.model);
   useEffect(() => { BAR_TOP[typeId] = top * type.modelScale; }, [typeId, top, type.modelScale]);
   const world = useMemo(() => nodes.map(() => new THREE.Matrix4()), [nodes]);
   const refs = useRef<(THREE.InstancedMesh | null)[]>([]);
+  // One culling sphere for every part of this model, from the instances' spread and the model's fixed reach (no per-part recompute).
+  const scratch = useRef({ list: [] as Enemy[], sphere: new THREE.Sphere() });
   useFrame(({ clock }) => {
-    const t = clock.elapsedTime;
-    const list = (allies ? combat.rt.units.flatMap(u => u.body?.type.id === typeId ? [u.body] : [])
-      : combat.rt.enemies.filter(e => e.type.id === typeId && !(e.state === "dead" && e.deadFor > POP))).slice(0, capacity);
+    const t = clock.elapsedTime, { sphere } = scratch.current;
+    const list = collect(scratch.current.list, typeId, allies, capacity);
+    BOX.makeEmpty();
     list.forEach((e, i) => {
+      BOX.expandByPoint(tmpP.set(e.x, ground(e.x, e.z) + type.hover, e.z));
       // A hit swells it a little with the flash; a defeat pops it a size up and it's gone in a puff (RuinsScene).
       const dying = e.state === "dead" ? 1 + 0.18 * Math.sin((e.deadFor / POP) * Math.PI * 0.5) : 1 + e.flash * 0.45;
       const bob = type.hover ? Math.sin(t * 6 + i) * 0.12 : 0;
@@ -84,7 +98,7 @@ export function EnemyInstances({ typeId, capacity, ground, allies = false }: { t
       tmpM.compose(tmpP, tmpQ, tmpS);
       nodes.forEach((n, ni) => {
         const m = world[ni].copy(n.rest);
-        const pose = n.role && partPose(n.role, e, t, i * 1.7);
+        const pose = n.role && partPose(n.role, e, t, i * 1.7, POSE);
         if (pose) m.multiply(poseM.compose(poseP.set(0, pose.dy, pose.dz), poseQ.setFromEuler(poseE.set(pose.rx, pose.ry, pose.rz)), poseS.set(1, pose.sy, 1)));
         m.premultiply(n.parent < 0 ? tmpM : world[n.parent]);
       });
@@ -103,12 +117,13 @@ export function EnemyInstances({ typeId, capacity, ground, allies = false }: { t
         mesh.setColorAt(i, tmpC);
       });
     });
+    if (list.length) { BOX.getBoundingSphere(sphere); sphere.radius += reach * type.modelScale; }
     for (const mesh of refs.current) {
       if (!mesh) continue;
       mesh.count = list.length;
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-      mesh.computeBoundingSphere();
+      mesh.boundingSphere = sphere;
     }
   });
   // Solids that move: they cast the sun shadow every frame (SunShadows) and receive.
