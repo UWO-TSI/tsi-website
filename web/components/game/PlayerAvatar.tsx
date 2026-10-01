@@ -287,14 +287,14 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     };
     events.forEach((e, i) => {
       const clip = EVENT_CLIP[e.kind];
-      if (clip) m.play = clip;
+      if (clip && !(e.kind === "dash" && state.mode === "glide")) m.play = clip; // the gust keeps the Glide pose: the leaf stays overhead
       switch (e.kind) {
         case "hop":
           // Touch down and straight back up: a quick squash that springs into the stretch.
           f.sq = Math.min(f.sq, -0.12 * j.squash); f.sqv = 6 * j.squash; puff(e, 0.6 + e.speed * 0.04); playSFX("jump"); break;
         case "jump": case "long": case "dashjump":
           f.sqv += 4.5 * j.squash; puff(e, 0.5 + e.speed * 0.04); playSFX("jump"); break;
-        case "glide": f.leafV += 9; dust.spawn(e.x, e.y + GRIP_Y + 0.9, e.z, 1.1, true, 0.35); playSFX("blip2"); break;
+        case "glide": m.stop = true; f.leafV += 9; dust.spawn(e.x, e.y + GRIP_Y + 0.9, e.z, 1.1, true, 0.35); playSFX("blip2"); break;
         case "land":
           // A landing that launches the next hop (same step) leaves its thump to the hop; any other ends a short hop's Jump clip (no sliding feet).
           if (events[i + 1] && TAKEOFF.has(events[i + 1].kind)) break;
