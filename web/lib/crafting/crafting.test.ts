@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ROSTER } from "@/lib/collections/roster";
 import { WEAPONS } from "@/lib/combat/weapons";
 import { bestOwnedRod, canHook } from "@/lib/game/rods";
+import { ownsGlider } from "@/lib/game/glider";
 import { CATALOGUE } from "@/lib/wallet/catalogue";
 import { buy, getInventory } from "@/lib/wallet/service";
 import { memoryCraftingStore } from "./memoryStore";
@@ -110,6 +111,25 @@ describe("crafting", () => {
     m.fill(rod5);
     await craft(m.store, A, { recipe_id: rod5.id, idempotency_key: "craft-0008" });
     expect((await rodOf()).tier).toBe(5);
+  });
+
+  it("turns gliding on only by crafting the leaf glider: never sold, learned like rods 4-5 (row 245)", async () => {
+    const m = setup();
+    const glider = RECIPES.find(r => r.id === "glider-leaf")!;
+    expect(glider.sources).toEqual(ROD4.sources);
+    expect(CATALOGUE.some(c => c.catalogue_ref === "glider_leaf")).toBe(false);
+    const glides = async () => ownsGlider((await data(getInventory(m.eco.store, A))).groups.tools?.flatMap(r => r.item.catalogue_ref ?? []) ?? []);
+    expect(await glides()).toBe(false);
+    m.eco.fund(A, 100_000);
+    const id = m.eco.items.find(i => i.slug === "glider-leaf")!.id;
+    expect(await buy(m.eco.store, A, { item_id: id, qty: 1, idempotency_key: "buy-glider" }, noon)).toMatchObject({ ok: false, code: "not_for_sale" });
+    m.fill(glider);
+    expect(await craft(m.store, A, { recipe_id: glider.id, idempotency_key: "craft-glider-1" })).toMatchObject({ ok: false, code: "not_learned" });
+    await learnFromQuest(m.store, A, glider.id);
+    expect(await craft(m.store, A, { recipe_id: glider.id, idempotency_key: "craft-glider-1" })).toMatchObject({ ok: true, data: { name: "Leaf glider" } });
+    expect(await glides()).toBe(true);
+    m.fill(glider);
+    expect(await craft(m.store, A, { recipe_id: glider.id, idempotency_key: "craft-glider-2" })).toMatchObject({ ok: false, code: "already_owned" });
   });
 
   it("gives combat gear as a weapon, once", async () => {

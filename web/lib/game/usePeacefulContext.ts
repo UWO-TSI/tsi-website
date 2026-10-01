@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { momentAt, type WorldMoment } from "@/lib/collections/logic";
 import type { IslandWeather } from "./islandWeather";
 import { bestOwnedRod, type RodTier } from "./rods";
+import { ownsGlider } from "./glider";
 import { httpEconomyTransport } from "@/lib/wallet/transport";
 import { installCollectionsDemo } from "./collectionsDemo";
 import { createClient } from "@/lib/supabase/client";
@@ -14,9 +15,10 @@ installCollectionsDemo();
  * Member seed for personal node rolls (hourly respawn is per member): the
  * account id, as the server rolls them (lib/collections/rolls.ts), else a
  * local per-device id. The rod is the best one in the server inventory: shop
- * tiers 2-3, crafted tiers 4-5 (lib/crafting).
+ * tiers 2-3, crafted tiers 4-5 (lib/crafting). The same inventory says whether
+ * the member owns the leaf glider (crafted only; lib/game/glider.ts).
  */
-export function usePeacefulContext(weather: IslandWeather, now: number): { moment: WorldMoment; member: string; rod: RodTier } {
+export function usePeacefulContext(weather: IslandWeather, now: number): { moment: WorldMoment; member: string; rod: RodTier; glider: boolean } {
   const [member, setMember] = useState(() => {
     try {
       const saved = localStorage.getItem("tsi.member.local.v1");
@@ -39,9 +41,9 @@ export function usePeacefulContext(weather: IslandWeather, now: number): { momen
     window.addEventListener("tsi:crafted", load);
     return () => window.removeEventListener("tsi:crafted", load);
   }, []);
-  const rod = bestOwnedRod(owned);
+  const rod = bestOwnedRod(owned), glider = ownsGlider(owned);
   // The same object for the whole hour (Toronto hours start on the UTC hour).
   const hourStart = Math.floor(now / 3_600_000) * 3_600_000;
   const moment = useMemo(() => momentAt(new Date(hourStart), weather), [hourStart, weather]);
-  return { moment, member, rod };
+  return { moment, member, rod, glider };
 }
