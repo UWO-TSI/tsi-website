@@ -9,7 +9,7 @@ import { stepCombat } from "./encounter";
 import { NO_INPUT, STEP, createMoveState, stepMove, type MoveWorld } from "@/lib/game/movement/sim";
 import { startMission } from "./missions";
 import { createRuntime, ENERGY } from "./runtime";
-import { DODGE, spawnEnemy } from "./sim";
+import { DODGE, STUN, damageEnemy, spawnEnemy, stepEnemy } from "./sim";
 import { equipKit } from "./abilities";
 import { subclassByKey } from "@/lib/combat/kits";
 
@@ -218,5 +218,33 @@ describe("combat cues (combat polish 3): the encounter says what happened, the s
     for (let t = 0; t < 3.5; t += 1 / 60) { stepCombat(rt, { x: 0, z: 5 }, 1 / 60); kinds.push(...rt.cues.map(c => c.kind)); rt.cues.length = 0; }
     expect(kinds.filter(k => k === "windup")).toHaveLength(1);
     expect(kinds.filter(k => k === "stagger")).toHaveLength(1);
+  });
+});
+
+describe("impact (combat polish 4)", () => {
+  /** How far a hit with this knockback pushes you over its flinch (the encounter's impulse, integrated). */
+  const pushed = (knock: number) => {
+    const rt = createRuntime(), me = { x: 0, z: 0 };
+    rt.player.safe = false;
+    hurtPlayer(rt, 5, { x: 0, z: -1 }, me, knock);
+    let z = 0;
+    for (let t = 0; t < 0.4; t += 1 / 120) { stepCombat(rt, me, 1 / 120); z += rt.player.impulse.z / 120; }
+    return z;
+  };
+  it("pushes you by the attack's own knockback: a golem's slam further than a spit", () => {
+    const golem = ENEMIES["stone-golem"].attacks[0].knockback, spit = ENEMIES["mushroom-beast"].attacks[0].knockback;
+    expect(pushed(golem) / golem).toBeGreaterThan(0.2); // about 0.225 u per point
+    expect(pushed(golem) / golem).toBeLessThan(0.24);
+    expect(pushed(golem)).toBeGreaterThan(pushed(spit) * 2);
+  });
+  it("a hit staggers an enemy's chase for a beat (elites half), the boss not at all", () => {
+    const fox = spawnEnemy("f", ENEMIES["shadow-fox"], 0, 0), boss = spawnEnemy("b", ENEMIES["guardian-statue"], 0, 0), golem = spawnEnemy("g", ENEMIES["stone-golem"], 0, 0);
+    fox.state = "chase";
+    damageEnemy(fox, 1, { x: 0, z: -1 }, 0); damageEnemy(boss, 1, { x: 0, z: -1 }, 0); damageEnemy(golem, 1, { x: 0, z: -1 }, 0);
+    expect([fox.stun, golem.stun, boss.stun]).toEqual([STUN, STUN / 2, 0]);
+    stepEnemy(fox, { x: 0, z: 5, safe: false, alive: true }, 0.1);
+    expect(fox.z).toBe(0); // held
+    stepEnemy(fox, { x: 0, z: 5, safe: false, alive: true }, 0.1);
+    expect(fox.z).toBeGreaterThan(0); // chasing again
   });
 });

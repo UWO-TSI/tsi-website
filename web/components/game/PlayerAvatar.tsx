@@ -240,6 +240,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     if (!reported.current) f.level = sim.current.state.y;
     let dt = Math.min(rawDelta, 0.1) * (timeScale ?? 1);
     if (d.paused) { dt = Math.min(dt, d.budget); d.budget -= dt; }
+    if (inCombat && combat.hitstop > 0) dt = 0; // a beat of hitstop: the swing's pose holds too (m.rate)
 
     // Intent: keys give a unit direction, the stick keeps its tilt; either drops a tap target, and any move gets you up from a seat.
     let ix = (k[b.right] ? 1 : 0) - (k[b.left] ? 1 : 0), iz = (k[b.forward] ? 1 : 0) - (k[b.back] ? 1 : 0);

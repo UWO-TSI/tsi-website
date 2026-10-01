@@ -24,6 +24,7 @@ import { TERRAIN_SNOW } from "./grid/GridTerrain";
 import { WORLD_BEND } from "@/lib/game/curvedWorld";
 import { worldTime } from "@/lib/game/worldClock";
 import { sheddingTrees, worldWind } from "@/lib/game/worldFx";
+import { juiceShake } from "@/lib/game/cameraJuice";
 import { treeParts } from "./NatureModels";
 
 /** Screen-space vertical sky gradient (a plain 2D background texture): `top` at the top, `horizon` from mid-screen down. */
@@ -108,7 +109,7 @@ type Overview = { focus: [number, number, number]; offset: [number, number, numb
 /**
  * The follow camera (specs/movement.md, rows 250, 251): the shipped framing, focus + (0, 7.4, −10.8) × zoom looking
  * 0.7 up and 1.5 ahead, set rigidly on the focus the player's avatar writes (a lead along its velocity, the level it
- * stands on), so it neither lags at top speed nor bobs on hops. Fixed yaw (rows 5, 154). Zoom and the overview
+ * stands on), so it neither lags at top speed nor bobs on hops, plus any shake (cameraJuice). Fixed yaw (rows 5, 154). Zoom and the overview
  * (`far`: its far plane, for a big island) ease in and out.
  */
 export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: number, overview: Overview | null) {
@@ -117,6 +118,7 @@ export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: num
   const blend = useRef({ zoom, overview: overview ? 1 : 0, last: overview });
   const look = useMemo(() => new THREE.Vector3(), []);
   const far = useMemo(() => ({ at: new THREE.Vector3(), look: new THREE.Vector3() }), []);
+  const shake = useMemo(() => ({ x: 0, y: 0 }), []);
   useFrame((_, delta) => {
     const b = blend.current, dt = Math.min(delta, 0.1), f = focus.current;
     b.last = overview ?? b.last;
@@ -129,7 +131,8 @@ export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: num
       const plane = Math.max(baseFar.current, b.overview > 0 ? b.last?.far ?? 0 : 0);
       if (camera.far !== plane) { camera.far = plane; camera.updateProjectionMatrix(); }
     }
-    look.set(f.x, f.y + 0.7, f.z + 1.5);
+    juiceShake(dt, shake);
+    look.set(f.x + shake.x, f.y + 0.7 + shake.y, f.z + 1.5);
     camera.position.set(look.x, look.y + 7.4 * b.zoom, look.z - 10.8 * b.zoom);
     const o = b.last;
     if (b.overview > 0 && o) {

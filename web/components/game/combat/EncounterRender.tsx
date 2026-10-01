@@ -56,6 +56,8 @@ const poseM = new THREE.Matrix4(), poseQ = new THREE.Quaternion(), poseE = new T
  * mesh is culled when none of its instances is on screen.
  */
 const DYNAMIC = { sunCaster: "dynamic" };
+/** A defeated enemy's pop: seconds it swells before it vanishes. */
+const POP = 0.12;
 
 export function EnemyInstances({ typeId, capacity, ground, allies = false }: { typeId: string; capacity: number; ground: Ground;
   /** Your summons that borrow this model (kits.ts UNITS `model`, a Necromancer's shades): tinted spirit-green or shade-violet, a little smaller. */
@@ -67,9 +69,10 @@ export function EnemyInstances({ typeId, capacity, ground, allies = false }: { t
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
     const list = (allies ? combat.rt.units.flatMap(u => u.body?.type.id === typeId ? [u.body] : [])
-      : combat.rt.enemies.filter(e => e.type.id === typeId && !(e.state === "dead" && e.deadFor > 0.6))).slice(0, capacity);
+      : combat.rt.enemies.filter(e => e.type.id === typeId && !(e.state === "dead" && e.deadFor > POP))).slice(0, capacity);
     list.forEach((e, i) => {
-      const dying = e.state === "dead" ? 1 - e.deadFor / 0.6 : 1;
+      // A hit swells it a little with the flash; a defeat pops it a size up and it's gone in a puff (RuinsScene).
+      const dying = e.state === "dead" ? 1 + 0.18 * Math.sin((e.deadFor / POP) * Math.PI * 0.5) : 1 + e.flash * 0.45;
       const bob = type.hover ? Math.sin(t * 6 + i) * 0.12 : 0;
       tmpQ.setFromAxisAngle(UP, (e.state === "active" ? e.beam : e.facing) + type.modelYaw);
       tmpS.setScalar(type.modelScale * dying * (allies ? 0.85 : 1));

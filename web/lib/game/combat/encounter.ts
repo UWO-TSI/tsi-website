@@ -12,6 +12,9 @@ import { beamLands, DODGE, stepEnemy, strikeLands, sweptHit, type Vec } from "./
 
 const ABILITY_IDS: readonly AbilityId[] = [...SLOT_IDS, "swap"];
 
+/** A hit's push: `knock` × this u/s at the hit, easing to nothing over the flinch's first 0.15 s (0.225 u per point of knockback). */
+const KNOCK_SPEED = 3;
+
 export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: number, z: number, r: number) => boolean = () => true, random: () => number = Math.random) {
   const p = rt.player;
   // Timers, buffs, shield, passive stacks, the transformation.
@@ -27,14 +30,18 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
   p.speed = moveSpeed(rt);
   regenEnergy(rt, dt);
   // The dodge's clock (the movement kit's dash moves you), ability dash (what follows it lands where it ends), knockback.
+  const push = p.impulse;
+  push.x = push.z = 0;
   if (p.dodgeAge !== null) {
     p.dodgeAge += dt;
     if (p.dodgeAge >= DODGE.duration) p.dodgeAge = null;
-    p.impulse = { x: 0, z: 0 };
   } else if (p.dash) {
-    p.impulse = { x: p.dash.x * p.dash.speed, z: p.dash.z * p.dash.speed };
-    if ((p.dash.left -= dt) <= 0) { const then = p.dash.then; p.dash = null; p.impulse = { x: 0, z: 0 }; then?.(me); }
-  } else p.impulse = p.hurt > 0.2 ? { x: p.dodgeDir.x * 5, z: p.dodgeDir.z * 5 } : { x: 0, z: 0 };
+    push.x = p.dash.x * p.dash.speed; push.z = p.dash.z * p.dash.speed;
+    if ((p.dash.left -= dt) <= 0) { const then = p.dash.then; p.dash = null; push.x = push.z = 0; then?.(me); }
+  } else if (p.hurt > 0.2) {
+    const k = p.knock * KNOCK_SPEED * Math.min(1, (p.hurt - 0.2) / 0.15);
+    push.x = p.dodgeDir.x * k; push.z = p.dodgeDir.z * k;
+  }
   // Enemies.
   const you = { x: me.x, z: me.z, safe: p.safe, alive: p.alive };
   for (const e of [...rt.enemies]) {
@@ -45,16 +52,16 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
     if (!ev) continue;
     const dmg = e.move.damage;
     if (ev.kind === "strike") {
-      if (strikeLands(e, me)) hurtPlayer(rt, dmg, e.move.shape === "smash" ? e.aim : e, me);
+      if (strikeLands(e, me)) hurtPlayer(rt, dmg, e.move.shape === "smash" ? e.aim : e, me, e.move.knockback);
       hurtUnits(rt, u => strikeLands(e, u, 0.4), dmg);
       if (rt.escort && strikeLands(e, rt.escort, 0.4)) { rt.escort.hp -= dmg; floater(rt, rt.escort, 1.8, `-${dmg}`, "hurt"); }
       if (rt.escort && Math.hypot(rt.escort.x - e.x, rt.escort.z - e.z) < Math.hypot(me.x - e.x, me.z - e.z)) e.aim = { x: rt.escort.x, z: rt.escort.z };
       if (e.move.shape === "smash") rt.blasts.push({ id: rt.seq++, x: e.aim.x, z: e.aim.z, radius: e.move.range, color: "#ffd9a0", age: 0, life: 0.45 });
     } else if (ev.kind === "spit") {
       const d = Math.hypot(ev.to.x - e.x, ev.to.z - e.z) || 1, sp = 9;
-      rt.projectiles.push({ id: rt.seq++, x: e.x, z: e.z, vx: ((ev.to.x - e.x) / d) * sp, vz: ((ev.to.z - e.z) / d) * sp, life: (e.move.range + 2) / sp, from: "enemy", damage: dmg, kind: "spit", radius: 0.3 });
+      rt.projectiles.push({ id: rt.seq++, x: e.x, z: e.z, vx: ((ev.to.x - e.x) / d) * sp, vz: ((ev.to.z - e.z) / d) * sp, life: (e.move.range + 2) / sp, from: "enemy", damage: dmg, kind: "spit", radius: 0.3, knock: e.move.knockback });
     } else if (ev.kind === "beam") {
-      if (beamLands(e, me)) hurtPlayer(rt, dmg, e, me);
+      if (beamLands(e, me)) hurtPlayer(rt, dmg, e, me, e.move.knockback);
     } else if (ev.kind === "summon") summonWisps(rt, e);
     else if (ev.kind === "phase") floater(rt, e, 3.4, e.phase === 3 ? "Enraged" : "The guardian calls for help", "info");
     else if (ev.kind === "reset" && e.type.kind === "boss") rt.enemies = rt.enemies.filter(x => !x.summoned);
@@ -68,7 +75,7 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
     if (!gone && sh.from === "player") gone = resolvePlayerShot(rt, i, from, to, random);
     else if (!gone && sh.from === "enemy") {
       const unit = rt.units.find(u => u.def.kind !== "trap" && sweptHit(from, to, u, 0.4 + sh.radius));
-      if (sweptHit(from, to, me, 0.35 + sh.radius)) { hurtPlayer(rt, sh.damage, from, me); gone = true; }
+      if (sweptHit(from, to, me, 0.35 + sh.radius)) { hurtPlayer(rt, sh.damage, from, me, sh.knock); gone = true; }
       else if (unit) { hurtUnits(rt, u => u === unit, sh.damage); gone = true; }
     }
     if (gone) rt.projectiles.splice(i, 1);

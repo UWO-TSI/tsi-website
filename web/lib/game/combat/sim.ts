@@ -65,6 +65,8 @@ export type EnemyState = "idle" | "chase" | "windup" | "active" | "recover" | "r
 export interface Enemy {
   id: string; type: EnemyType; x: number; z: number; spawnX: number; spawnZ: number;
   hp: number; state: EnemyState; t: number; facing: number;
+  /** Seconds a hit holds its chase (the stagger push); a windup already under way carries on. */
+  stun: number;
   /** Where the attack was aimed when the windup began (the telegraph). */
   aim: Vec; flash: number; kx: number; kz: number; deadFor: number;
   /** The attack being telegraphed or thrown (the boss rotates through several). */
@@ -81,7 +83,7 @@ export interface Enemy {
   raised: boolean;
 }
 export function spawnEnemy(id: string, type: EnemyType, x: number, z: number): Enemy {
-  return { id, type, x, z, spawnX: x, spawnZ: z, hp: type.hp, state: "idle", t: 0, facing: Math.PI, aim: { x, z }, flash: 0, kx: 0, kz: 0, deadFor: 0,
+  return { id, type, x, z, spawnX: x, spawnZ: z, hp: type.hp, state: "idle", t: 0, facing: Math.PI, stun: 0, aim: { x, z }, flash: 0, kx: 0, kz: 0, deadFor: 0,
     move: type.attacks[0], phase: 1, cycle: 0, beam: Math.PI, landed: false, summoned: false,
     status: { hold: 0, slow: 0, slowFor: 0, mark: 0, markFor: 0, distract: 0 }, raised: false };
 }
@@ -112,6 +114,7 @@ export type EnemyEvent =
  */
 export function stepEnemy(e: Enemy, player: Vec & { safe: boolean; alive: boolean }, dt: number, free: (x: number, z: number) => boolean = () => true): EnemyEvent | null {
   e.flash = Math.max(0, e.flash - dt);
+  e.stun = Math.max(0, e.stun - dt);
   if (e.state === "dead") { e.deadFor += dt; return null; }
   // Knockback slides first, blocked by walls.
   if (e.kx || e.kz) {
@@ -154,6 +157,7 @@ export function stepEnemy(e: Enemy, player: Vec & { safe: boolean; alive: boolea
       }
       return null;
     case "chase": {
+      if (e.stun > 0) return null;
       if (dist > (a.reach ?? a.range * 0.8)) { move(player.x, player.z, e.type.speed * (1 - st.slow)); return null; }
       e.state = "windup"; e.t = 0; e.facing = facingTo(e, player); e.aim = { x: player.x, z: player.z }; e.landed = false;
       return null;
@@ -195,7 +199,9 @@ export function beamLands(e: Enemy, player: Vec, playerRadius = 0.35): boolean {
   return true;
 }
 
-/** Apply damage + knockback; returns true when this hit kills. Enemies walking home take no damage. */
+/** A hit's stagger: the enemy's chase holds this long (elites half, the boss not at all), so the push reads. */
+export const STUN = 0.15;
+/** Apply damage + knockback and the stagger; returns true when this hit kills. Enemies walking home take no damage. */
 export function damageEnemy(e: Enemy, amount: number, from: Vec, knock: number): boolean {
   if (e.state === "dead" || e.state === "return") return false;
   e.hp = Math.max(0, e.hp - amount);
@@ -203,6 +209,7 @@ export function damageEnemy(e: Enemy, amount: number, from: Vec, knock: number):
   const d = Math.hypot(e.x - from.x, e.z - from.z) || 1;
   const k = e.type.kind === "boss" ? knock * 0.1 : e.type.kind === "construct" ? knock * 0.5 : knock;
   e.kx = ((e.x - from.x) / d) * k; e.kz = ((e.z - from.z) / d) * k;
+  e.stun = e.type.kind === "boss" ? 0 : e.type.elite ? STUN * 0.5 : STUN;
   if (e.state === "idle") { e.state = "chase"; e.t = 0; e.move = nextMove(e); }
   if (e.hp === 0) { e.state = "dead"; e.deadFor = 0; return true; }
   return false;

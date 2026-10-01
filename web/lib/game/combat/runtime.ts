@@ -13,7 +13,8 @@ import type { Ability, BuffStat, Element, Status, Subclass, UnitDef } from "@/li
 
 /** A shot. Weapon shots carry nothing; ability and unit shots carry what they do on impact. */
 export interface ShotHit { power: number; stat?: Stat; tier?: number; pierce?: boolean; splash?: number; status?: Status; unit?: boolean; hitIds?: string[] }
-export interface Projectile { id: number; x: number; z: number; vx: number; vz: number; life: number; from: "player" | "enemy"; damage: number; kind: "arrow" | "bolt" | "spit"; radius: number; hit?: ShotHit }
+/** `knock`: an enemy shot's push on you (its attack's knockback). */
+export interface Projectile { id: number; x: number; z: number; vx: number; vz: number; life: number; from: "player" | "enemy"; damage: number; kind: "arrow" | "bolt" | "spit"; radius: number; hit?: ShotHit; knock?: number }
 /** Summons, totems, traps and decoys (kits.ts UNITS): `source` is the ability that made it ("weapon" for the summoning charm's wisps). */
 export interface Unit {
   id: number; def: UnitDef; source: string; x: number; z: number; hp: number; maxHp: number;
@@ -48,7 +49,8 @@ export interface CombatRuntime {
     energy: number; sinceSpend: number;
     /** Equipped weapon id and the owned ones the swap key cycles (starters until progression loads). */
     weapon: string; owned: string[]; durability: Record<string, number>; hits: Record<string, number>;
-    attackCd: number; swing: number; dodgeAge: number | null; dodgeCd: number; dodgeDir: Vec;
+    /** `dodgeDir` is also the way the last hit pushes you, `knock` how hard (that attack's knockback). */
+    attackCd: number; swing: number; dodgeAge: number | null; dodgeCd: number; dodgeDir: Vec; knock: number;
     aim: Vec; facing: number; hurt: number; downFor: number;
     /** Weapons granted (the ruins gate is open): the equipped one shows on the character's back in the village (row 140). */
     armed: boolean;
@@ -92,7 +94,7 @@ export function createRuntime(): CombatRuntime {
       energy: ENERGY.max, sinceSpend: 99, weapon: "sword-driftwood", owned: [...STARTER_WEAPONS],
       durability: Object.fromEntries(Object.values(WEAPONS).map(w => [w.id, w.maxDurability])),
       hits: {},
-      attackCd: 0, swing: 0, dodgeAge: null, dodgeCd: 0, dodgeDir: { x: 0, z: 1 },
+      attackCd: 0, swing: 0, dodgeAge: null, dodgeCd: 0, dodgeDir: { x: 0, z: 1 }, knock: 0,
       aim: { x: 0, z: 0 }, facing: 0, hurt: 0, downFor: 0, armed: false,
       shield: 0, shieldFor: 0, dash: null, impulse: { x: 0, z: 0 }, speed: 1, still: 0, last: null },
     cooldowns: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, swap: 0 }, denied: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, swap: 0 },
@@ -111,8 +113,11 @@ export function setOwnedWeapons(rt: CombatRuntime, owned: { weapon_key: string; 
 }
 
 // ── HUD subscription ────────────────────────────────────────────
-/** `freeze` (dev, via window.__combat): the encounter clock stops so a telegraph can be held for a screenshot. */
-export const combat = { rt: createRuntime(), freeze: false };
+/**
+ * `freeze` (dev, via window.__combat): the encounter clock stops so a telegraph can be held for a screenshot.
+ * `hitstop`: seconds the encounter and your avatar hold still after a melee hit, a crit or a hit taken (the ruins scene sets it).
+ */
+export const combat = { rt: createRuntime(), freeze: false, hitstop: 0 };
 let version = 0;
 const listeners = new Set<() => void>();
 export function publishCombat() { version++; for (const l of listeners) l(); }

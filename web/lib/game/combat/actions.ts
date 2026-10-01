@@ -103,8 +103,11 @@ export function combatPush(p: CombatRuntime["player"]): Vec | undefined {
   return p.alive && (p.impulse.x || p.impulse.z) ? p.impulse : undefined;
 }
 
-/** Damage the player unless safe or in i-frames (dodge, or a dash that grants them); guard, a frontal block and the shield soak first. Returns health lost. */
-export function hurtPlayer(rt: CombatRuntime, amount: number, from: Vec, player: Vec): number {
+/**
+ * Damage the player unless safe or in i-frames (dodge, or a dash that grants them); guard, a frontal block and the shield
+ * soak first. `knock` is the attack's knockback (data.ts): how hard it pushes you away. Returns health lost.
+ */
+export function hurtPlayer(rt: CombatRuntime, amount: number, from: Vec, player: Vec, knock = 3): number {
   const p = rt.player;
   if (!p.alive || p.safe) return 0;
   if (invulnerable(p.dodgeAge) || p.dash?.iframes) { floater(rt, player, 1.7, "Dodged", "info"); return 0; }
@@ -113,6 +116,7 @@ export function hurtPlayer(rt: CombatRuntime, amount: number, from: Vec, player:
   if (rt.kit?.subclass.passive.kind !== "poise") {
     const d = Math.hypot(player.x - from.x, player.z - from.z) || 1;
     p.dodgeDir = { x: (player.x - from.x) / d, z: (player.z - from.z) / d };
+    p.knock = knock;
   } else p.hurt = 0.19; // Unstoppable: the flinch shows, no knockback
   if (damage <= 0) return 0;
   p.hp = Math.max(0, p.hp - damage);

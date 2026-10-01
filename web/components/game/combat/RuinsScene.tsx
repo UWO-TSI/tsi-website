@@ -24,7 +24,8 @@ import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BR
 import { combat, publishCombat, takeMissionQueue, type AbilityId, type CombatRuntime, type CueKind } from "@/lib/game/combat/runtime";
 import { AudioManager, type SFXName } from "@/lib/game/audio";
 import { useAbilityKeys } from "@/lib/game/movement/keys";
-import { screenOf } from "../movement/moveFx";
+import { DustPool, screenOf } from "../movement/moveFx";
+import { shakeCamera } from "@/lib/game/cameraJuice";
 import { BUFFER, createInputs, runInputs, spawnWave } from "@/lib/game/combat/actions";
 import { missionEvent } from "@/lib/game/combat/abilities";
 import { stepCombat } from "@/lib/game/combat/encounter";
@@ -108,6 +109,23 @@ const CUE_SOUND: Record<Exclude<CueKind, "swing">, Sound[]> = {
   bossDefeat: [["enter", 0.6, 1], ["confirm", 0.6, 0.9]],
 };
 const SWING_SOUND: Record<WeaponKind, Sound> = { melee: ["footstep", 1.5, 0.7], bow: ["click", 0.7, 0.7], staff: ["blip2", 0.8, 0.5], summon: ["blip1", 1.2, 0.5] };
+/** Impact (combat polish 4): a beat of hitstop on melee hits, crits and hits taken; a small shake (world units) per cue. */
+const HITSTOP = 0.06;
+const SHAKE: Partial<Record<CueKind, number>> = { crit: 0.07, hurt: 0.12, stagger: 0.1, bossDefeat: 0.25 };
+function impact(rt: CombatRuntime, dust: DustPool, ground: (x: number, z: number) => number) {
+  for (const c of rt.cues) {
+    if ((c.kind === "hit" && c.melee) || c.kind === "crit" || c.kind === "hurt") combat.hitstop = Math.max(combat.hitstop, HITSTOP);
+    const shake = c.kind === "hit" && c.melee ? 0.035 : SHAKE[c.kind];
+    if (shake) shakeCamera(shake);
+    // An enemy falls: it pops (EncounterRender) and leaves a puff.
+    if (c.kind === "defeat" || c.kind === "bossDefeat") {
+      const y = ground(c.x, c.z), big = c.kind === "bossDefeat" ? 2.4 : 1;
+      dust.spawn(c.x, y, c.z, 1.6 * big, false, 0.5);
+      dust.spawn(c.x + 0.35, y, c.z + 0.2, 0.9 * big, false, 0.4);
+      dust.spawn(c.x - 0.3, y, c.z - 0.25, 0.8 * big, false, 0.45);
+    }
+  }
+}
 const heard = new Set<CueKind>();
 /** This frame's cues as sounds: one of each kind (a crit over a hit), windups only within earshot. */
 function playCues(rt: CombatRuntime, me: Vec) {
@@ -136,6 +154,8 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
   const ray = useMemo(() => new THREE.Raycaster(), []);
   const plane = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
   const hit = useMemo(() => new THREE.Vector3(), []);
+  const dust = useMemo(() => new DustPool(), []);
+  useEffect(() => () => dust.dispose(), [dust]);
   useEffect(() => {
     player.current.set(...spawn); resetEncounter(); publishCombat();
     // Dev (screenshots): hold a telegraph with __combat.freeze, stage mission steps with __combatDev.
@@ -173,7 +193,9 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
   }, [gl, keys]);
 
   useFrame(({ clock }, rawDelta) => {
-    const dt = combat.freeze ? 0 : Math.min(rawDelta, 0.05);
+    // Hitstop holds the encounter (and the avatar, PlayerAvatar) for a beat after a melee hit, a crit or a hit taken.
+    const dt = combat.freeze || combat.hitstop > 0 ? 0 : Math.min(rawDelta, 0.05);
+    combat.hitstop = Math.max(0, combat.hitstop - rawDelta);
     const rt = combat.rt, p = rt.player, pl = player.current, inp = input.current;
     const me = { x: pl.x, z: pl.z };
     // Aim: pointer ray onto the floor plane; facing follows the aim.
@@ -193,7 +215,9 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     // Timers, energy, enemies, projectiles, summons and totems (lib/game/combat/encounter.ts); ability dashes and knockback push PlayerAvatar.
     stepCombat(rt, me, dt, ruins.free);
     playCues(rt, me);
+    impact(rt, dust, ruins.ground);
     rt.cues.length = 0;
+    dust.update(Math.min(rawDelta, 0.05));
     // Respawn (spawn-table enemies only) once dead long enough and you're away from the spot.
     for (const [i, e] of rt.enemies.entries()) {
       const after = e.state === "dead" && !e.summoned ? respawnAfter(e.id) : 0;
@@ -276,6 +300,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     <PlayerAuras player={player} ground={ruins.ground} />
     <AimReticle player={player} ground={ruins.ground} />
     <FloaterProjector />
+    <primitive object={dust.group} />
     <Html position={[EXIT_SPOT.x, 2.2, EXIT_SPOT.z]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Gate · safe zone</div></Html>
     <PlayerAvatar spawnPosition={spawn} playerName="You" playerLevel={level} player={player}
       world={ruins.world} groundHeight={ruins.ground} camTarget={focus} combat />
