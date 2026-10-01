@@ -8,13 +8,12 @@ import { Map as MapIcon, Settings, Wrench } from "lucide-react";
 import GridWorld from "./grid/GridWorld";
 import GridOcean from "./grid/GridOcean";
 import PlayerAvatar from "./PlayerAvatar";
-import NPC from "./NPC";
-import { residentSpots } from "@/lib/content/residents";
+import Residents from "./NPC";
 import GameSceneBoundary from "./GameSceneBoundary";
 import PostFX from "./PostFX";
 import HQInterior from "./HQInterior";
 import SunShadows from "./SunShadows";
-import { Lantern } from "./AmbientProps";
+import { FadeLight, Lantern } from "./AmbientProps";
 import { GLBProp, sceneryOf } from "./NatureModels";
 import { InstancedModels } from "./InstancedNature";
 import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "./ACNHBuilding";
@@ -33,7 +32,7 @@ import { villageIsland, villageSpawn, villageScale, landmarks, landmarkPoint, wh
 import { village, objectsOf, type Village } from "@/lib/game/villageMap";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
-import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLight, withWeather, withSeason, type IslandLight } from "@/lib/game/islandLighting";
+import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLightAt, windowLit, withWeather, withSeason, type IslandLight } from "@/lib/game/islandLighting";
 import { paletteBySeason, seasonLook, type SeasonLook } from "@/lib/game/seasonalLook";
 import { useNPCPersonas, useSeasonPalettes } from "@/lib/content/loader";
 import type { IslandWeather } from "@/lib/game/islandWeather";
@@ -84,6 +83,8 @@ import HQLead from "./HQLead";
 import DailyGift from "./DailyGift";
 import { NPCDialogue } from "@/components/recruit/ui";
 import { HQ_LEAD, LEAD_OFFSET, markWelcomed, readWelcomed, welcomeStep } from "@/lib/game/welcome";
+/** The roster's HQ lead (residentRoster.ts) is the first-login greeter (HQ_LEAD). */
+const HQ_LEAD_SLUG = "wren";
 import { useMyLook } from "@/lib/game/character/lookStore";
 import { useProgression } from "@/lib/progression/useProgression";
 import { anchorAt } from "@/lib/content/residents";
@@ -94,6 +95,7 @@ import CollectionBook from "./CollectionBook";
 import { usePeacefulContext } from "@/lib/game/usePeacefulContext";
 import { villageNodes } from "@/lib/game/islandNodes";
 import { villageWater, type FishingSpot } from "@/lib/game/fishingSpots";
+import { gullAnchors } from "@/lib/game/ambientFauna";
 import { getPeacefulTarget, peacefulLabel, subscribePeacefulLabel } from "@/lib/game/peacefulNear";
 import type { WorldMoment } from "@/lib/collections/logic";
 import HomeIslandScene, { type HomeNear } from "./home/HomeIslandScene";
@@ -186,6 +188,8 @@ function villageLayout(v: Village) {
     nodes: villageNodes(v),
     water: villageWater(v).classify,
     scale: villageScale(v),
+    /** Ambient life (AmbientFauna): flowers for the butterflies, the water's kinds, gulls off the shores in view. */
+    fauna: { site: { map: v.map, flowers: objectsOf("flower", v).map(xz), water: villageWater(v).classify }, gulls: gullAnchors(v.bounds) },
     /** No water glints under the wharf deck: it sits a few centimetres above the water and they would show through. */
     underWharf: (x: number, z: number) => !!deck && x > deck.x0 - 0.4 && x < deck.x1 + 0.4 && z > deck.z0 - 0.4 && z < deck.z1 + 0.4,
   };
@@ -243,12 +247,12 @@ function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fis
   const layout = useMemo(() => villageLayout(v), [v]);
   const { island, spawns, doors } = layout;
   const { data: personas } = useNPCPersonas({ permanentOnly: true });
-  const residents = useMemo(() => residentSpots(personas, phase, v), [personas, phase, v]);
   const exitSpot = exitFrom === "museum" ? spawns.museum : exitFrom === "cafe" ? spawns.cafe : exitFrom === "oracle" ? spawns.oracle : exitFrom === "ruins" ? spawns.ruins : null;
   const spawn = (devAt && !returned && !fromBoat && !exitFrom ? devAt : fromBoat ? spawns.boat : exitSpot ?? (returned ? spawns.returned : null)) ?? spawns.start;
   const terrain = useMemo(() => ({ ...ISLAND_TERRAIN, grass: look.grass }), [look.grass]);
   const scenery = useMemo(() => sceneryOf(v, island.ground, look.season), [v, island, look.season]);
   const near = useRef<Near>(null);
+  const fauna = useMemo(() => ({ ...layout.fauna, ground: island.ground, standable: island.standable, surface: island.surface, top: island.top, player }), [layout, island, player]);
   const leadAt = useMemo((): [number, number] | null => (spawns.boat ? [spawns.boat[0] + LEAD_OFFSET[0], spawns.boat[2] + LEAD_OFFSET[1]] : anchorAt("wharf", v)), [v, spawns.boat]);
   const spots = useMemo(() => eventSpots(event?.decor ?? null), [event]);
   useEffect(() => { player.current.set(...spawn); }, [reset, spawn, player]);
@@ -288,7 +292,7 @@ function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fis
   return (
     <>
       <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} overview={overview} overviewFog={layout.scale.overviewFog}
-        ground={island.ground} puddles={layout.puddles} cloudSize={layout.scale.cloudSize} shadowExtent={layout.scale.shadowExtent} fireflyAnchors={layout.fireflies} trees={layout.trees} />
+        ground={island.ground} puddles={layout.puddles} cloudSize={layout.scale.cloudSize} shadowExtent={layout.scale.shadowExtent} fireflyAnchors={layout.fireflies} trees={layout.trees} fauna={fauna} />
       <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} />
       <GridOcean map={island.map} lite={liteMode} skip={layout.underWharf} radius={layout.scale.glintRadius} />
       <PeacefulLayer map={island.map} nodes={layout.nodes} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} />
@@ -300,10 +304,9 @@ function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fis
       {layout.lamps.map(l => <Lantern key={l.id} position={[l.x, island.ground(l.x, l.z), l.z]} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />)}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
       <InstancedModels items={scenery} />
-      {/* Residents stand where their schedule puts them this phase; during a ceremony they stroll to the monument and cheer. */}
-      {residents.map(({ persona, home, plaza }) => <NPC key={`npc-${persona.id}-${home.join()}-${reset}`} persona={persona} position={ceremony ? plaza : home} playerPositionRef={player}
-        groundHeight={island.ground} constrainMove={island.move}
-        onClick={() => window.dispatchEvent(new CustomEvent("tsi:npc-greet", { detail: { id: persona.id } }))} />)}
+      {/* Residents walk their routines on the world clock (residentRoutine.ts); during a ceremony they gather at the monument and cheer.
+          While the HQ lead greets a first login on the wharf, her walking self stays out of sight: one Wren. */}
+      <Residents personas={personas} phase={phase} ceremony={ceremony} player={player} island={island} v={v} away={lead ? HQ_LEAD_SLUG : null} />
       <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={fishing || !!lead?.hold}
         world={island} groundHeight={island.ground} groundSurface={island.surface} camTarget={focus} glider={peaceful.glider} />
       <CharacterCrowd player={player} ground={island.ground} />
@@ -379,14 +382,14 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {hq && <>
       {/* The clubhouse model's origin is 2.35 in front of its footprint centre; porch lamps flank the door. */}
       <group position={[hq.x, ground(hq.x, hq.z), hq.z - 2.35]}><ACNHBuilding id="hq" windowColor="#ffc95a" windowGlow={light.windowGlow} /></group>
-      {[-2, 2].map(x => <pointLight key={x} position={[hq.x + x, ground(hq.x, hq.z) + 1.25, hq.z - 3.65]} color="#ffd17a" intensity={light.lampsOn ? light.lamp * 0.85 : 0} distance={4} decay={2} />)}
-      <pointLight position={[hq.x, ground(hq.x, hq.z) + 1.6, hq.z - 3.75]} color="#ffd68b" intensity={light.lamp * 1.5} distance={5.5} />
+      {[-2, 2].map(x => <FadeLight key={x} position={[hq.x + x, ground(hq.x, hq.z) + 1.25, hq.z - 3.65]} color="#ffd17a" intensity={light.lampsOn ? light.lamp * 0.85 : 0} distance={4} decay={2} />)}
+      <FadeLight position={[hq.x, ground(hq.x, hq.z) + 1.6, hq.z - 3.75]} color="#ffd68b" intensity={light.lamp * 1.5} distance={5.5} />
     </>}
-    {shop && <group position={at(shop)}><ACNHBuilding id="shop" /></group>}
+    {shop && <group position={at(shop)}><ACNHBuilding id="shop" lit={windowLit(light)} /></group>}
     {fitting && <GLBProp url="/assets/acnh/furniture/fitting-room.glb" position={[fitting[0], ground(...fitting), fitting[1] + 0.45]} scale={0.1} rotation={[0, Math.PI, 0]} />}
-    {oracle && <group position={at(oracle)}><ACNHBuilding id="oracle" /></group>}
+    {oracle && <group position={at(oracle)}><ACNHBuilding id="oracle" lit={windowLit(light)} /></group>}
     {cafe && <group position={at(cafe)}><CafeBuilding open={opened.includes("cafe")} light={light} /></group>}
-    {museum && <group position={at(museum)}><ACNHParts parts={CHALET_VARIANTS.red} /></group>}
+    {museum && <group position={at(museum)}><ACNHParts parts={CHALET_VARIANTS.red} lit={windowLit(light)} /></group>}
     {/* Boarded doors: the existing log fence across the museum's entrance (the café boards its own, CafeBuilding). */}
     {[museum].filter(l => l && !opened.includes(l.id as WorldGoalId)).map(l => [-0.6, 0.6].map(dx => <NatureFence key={`${l!.id}${dx}`} position={[l!.x + dx, ground(l!.x, l!.z), front(l!) - 0.35]} variant={1} />))}
     {ruins && [-1.2, 0, 1.2].map(dz => <group key={dz} position={[ruins.x, ground(ruins.x, ruins.z + dz), ruins.z + dz]} rotation={[0, Math.PI / 2, 0]}><NatureFence position={[0, 0, 0]} variant={1} /></group>)}
@@ -578,7 +581,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const lookPreset = preset ?? CURRENT;
   // The key light follows the real sun (row 239); /lab/look's edited preset keeps its own sun sliders.
   const sun = preset ? null : conditions.sun;
-  const light = useMemo(() => withWeather(withSeason(islandLight(lookPreset, phase, sun), look), weather), [phase, look, weather, lookPreset, sun]);
+  // Across a phase boundary the light blends continuously from one phase's look to the next (living-village §5).
+  const blend = conditions.blend;
+  const light = useMemo(() => withWeather(withSeason(islandLightAt(lookPreset, blend, sun), look), weather), [blend, look, weather, lookPreset, sun]);
   const conditionsLabel = `${season.season[0].toUpperCase()}${season.season.slice(1)}${Object.values(season.weights).some(w => w > 0 && w < 1) ? " (changing)" : ""} · ${weather[0].toUpperCase()}${weather.slice(1)}`;
   const grade = inside === "cafe" ? { ...CLUBHOUSE_LIGHTING[phase].grade, ...CAFE_GRADE } : inside ? CLUBHOUSE_LIGHTING[phase].grade : light.grade;
   const atHome = site === "home";

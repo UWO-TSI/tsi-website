@@ -12,7 +12,9 @@ import type { FaceOverride } from "./face";
 export type ClipName = "Idle" | "Walk" | "Run" | "Sit" | "Study" | "Sleep" | "Fish" | "FishHold" | "Forage" | "Dig" | "Net"
   | "Wave" | "Cheer" | "Laugh" | "Sad" | "Dance" | "AttackMelee" | "AttackBow" | "AttackCast" | "DodgeRoll" | "Hit" | "Defeat" | "Trace" | "Stretch"
   | "Jump" | "Air" | "Fall" | "Land" | "LandHeavy" | "Roll" | "Mantle" | "Dash" | "Skid" | "Glide"
-  | "CrouchIdle" | "CrouchWalk" | "Slide" | "SlideIn" | "SlideInDash" | "SlideUp" | "SlideJump" | "SlideStand" | "SlideBonk";
+  | "CrouchIdle" | "CrouchWalk" | "Slide" | "SlideIn" | "SlideInDash" | "SlideUp" | "SlideJump" | "SlideStand" | "SlideBonk"
+  // Residents' idles (specs/polish/living-village.md): a look round, a standing stretch, talking with someone.
+  | "LookAround" | "StretchUp" | "Chat";
 /** Movement clips (lib/game/movement): quick crossfades so hops and landings read on time. */
 export const SNAPPY_CLIPS = new Set<ClipName>(["DodgeRoll", "Hit", "Jump", "Air", "Fall", "Land", "LandHeavy", "Roll", "Mantle", "Dash", "Skid", "Glide",
   "Slide", "SlideIn", "SlideInDash", "SlideUp", "SlideJump", "SlideStand", "SlideBonk"]);
