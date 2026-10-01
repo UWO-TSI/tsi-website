@@ -16,7 +16,7 @@ import { phaseInstant } from "@/lib/game/sunPath";
 import { landmark, type VillageIsland } from "@/lib/game/defaultIsland";
 import { objectsOf, type Village } from "@/lib/game/villageMap";
 import type { IslandPhase } from "@/lib/game/islandTime";
-import { RESIDENT_STRIDE, RESIDENT_WALK, ResidentDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResident, type DaySpan, type NavGrid, type ResidentPose } from "@/lib/game/residentRoutine";
+import { RESIDENT_STRIDE, RESIDENT_WALK, ResidentDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResident, type DaySpan, type IdleClip, type NavGrid, type ResidentPose } from "@/lib/game/residentRoutine";
 import { hash01 } from "@/lib/game/worldFx";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import { dropWalker, setWalker } from "@/lib/game/footprintWalkers";
@@ -82,7 +82,7 @@ interface Runtime {
   detour: [number, number][] | null; detourAt: number; detourGoal: [number, number];
   /** The way they'd face before you or a chat turn them. */
   want: number;
-  noticed: boolean; bubbleUntil: number; bubbleNext: number; shown: string;
+  noticed: boolean; bubbleUntil: number; bubbleNext: number; shown: number;
   idleKey: number; idleVisit: number; laughBeat: number; chat: Runtime | null; hopT: number; hopNext: number; greetAt: number; hovered: boolean;
   timers: number[];
 }
@@ -104,6 +104,7 @@ function stepDetour(r: Runtime, speed: number, dt: number): number {
   return moved;
 }
 
+const _idle: { clip: IdleClip; key: number } = { clip: null, key: -1 };
 interface Clock { span: DaySpan | null; forced: IslandPhase | null; base: number; since: number }
 /**
  * The residents' frame, at module scope (the react compiler forbids writing through hook values): where each one is,
@@ -218,10 +219,10 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
       if (!talking && hash01(r.seed, beat) < 0.22 && r.laughBeat !== beat) { m.play = "Laugh"; r.laughBeat = beat; }
     } else if (stopped && !sitting && pose.stop && d >= FACE_RANGE && !ceremony) {
       // Idling at a stop: a look round, a stretch, gazing out, on the routine's own beat.
-      const { clip, key } = idleAt(pose.stop, pose.visit, r.seed, pose.stayed);
-      if (key !== r.idleKey || pose.visit !== r.idleVisit) {
-        if (clip && key >= 0) m.play = clip;
-        r.idleKey = key; r.idleVisit = pose.visit;
+      const idle = idleAt(pose.stop, pose.visit, r.seed, pose.stayed, _idle);
+      if (idle.key !== r.idleKey || pose.visit !== r.idleVisit) {
+        if (idle.clip && idle.key >= 0) m.play = idle.clip;
+        r.idleKey = idle.key; r.idleVisit = pose.visit;
       }
     }
     // Greeted (a click, the ceremony's cheer): a wave (a cheer at the ceremony) and a hop.
@@ -247,7 +248,7 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
       const line = r.lines[Math.floor(hash01(r.seed, Math.floor(now / 30)) * r.lines.length) % r.lines.length];
       r.bubbleUntil = now + BUBBLE_S; r.bubbleNext = now + BUBBLE_COOLDOWN_S;
       if (r.ui.text.current) r.ui.text.current.textContent = line;
-      r.shown = "";
+      r.shown = -1;
       m.talk = Math.min(3.2, 0.8 + line.length * 0.045);
       if (stopped && !sitting && !r.chat) m.play = "Wave";
       AudioManager.playBlip();
@@ -255,10 +256,11 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
       r.timers = [140, 300].map(ms => window.setTimeout(() => AudioManager.playBlip(), ms));
     }
     r.noticed = noticed;
-    const bubble = r.bubbleUntil > now && !r.hidden, state = `${bubble ? "b" : ""}${noticed && !bubble ? "n" : ""}${(noticed || r.hovered) && !r.hidden ? "p" : ""}`;
+    // Which overhead pieces show, as bits (bubble, "!", nameplate): the DOM is touched only when they change.
+    const bubble = r.bubbleUntil > now && !r.hidden, state = (bubble ? 1 : 0) | (noticed && !bubble ? 2 : 0) | ((noticed || r.hovered) && !r.hidden ? 4 : 0);
     if (state !== r.shown && r.ui.plate.current) {
       r.shown = state;
-      show(r.ui.bubble.current, bubble); show(r.ui.notice.current, state.includes("n")); show(r.ui.plate.current, state.includes("p"));
+      show(r.ui.bubble.current, bubble); show(r.ui.notice.current, (state & 2) > 0); show(r.ui.plate.current, (state & 4) > 0);
     }
   }
 }
@@ -323,7 +325,7 @@ function Figure({ persona, day, look, gather, home, seed, registry }: {
       id: persona.id, seed, lines: persona.canned_dialogue?.length ? persona.canned_dialogue : FILLER_LINES, day, gather, home,
       pose: newPose(), motion, group, visual, ui: { bubble, text, notice, plate },
       ready: false, x: 0, z: 0, speed: 0, ox: 0, oz: 0, hidden: false, lift: 0, lag: 0, detour: null, detourAt: 0, detourGoal: [0, 0],
-      want: 0, noticed: false, bubbleUntil: 0, bubbleNext: 0, shown: "-", idleKey: -1, idleVisit: -1, laughBeat: -1, chat: null, hopT: -1, hopNext: 0, greetAt: 0, hovered: false, timers: [],
+      want: 0, noticed: false, bubbleUntil: 0, bubbleNext: 0, shown: -1, idleKey: -1, idleVisit: -1, laughBeat: -1, chat: null, hopT: -1, hopNext: 0, greetAt: 0, hovered: false, timers: [],
     };
     runtime.current = r;
     const reg = registry.current;

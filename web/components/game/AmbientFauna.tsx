@@ -121,23 +121,26 @@ function FlyerSwarm({ species, flyers, ground, presence }: { species: FlyerSpeci
 }
 
 // ── Crabs ──────────────────────────────────────────────────────────────
+/** Module scope, as tickFlyers: step every crab and place its model; a scuttle judders, digging in sinks it under the sand. */
+function tickCrabs(crabs: readonly Crab[], states: CrabState[], groups: (THREE.Group | null)[], dt: number, p: THREE.Vector3, ground: Ground, standable: (x: number, z: number) => boolean) {
+  const t = worldNow() / 1000;
+  for (let i = 0; i < states.length; i++) {
+    const s = states[i];
+    crabStep(crabs[i], s, t, dt, p.x, p.z, standable);
+    const g = groups[i];
+    if (!g) continue;
+    const jig = s.fleeT >= 0 ? Math.abs(Math.sin(s.fleeT * 40)) * 0.025 : 0;
+    g.position.set(s.x, ground(s.x, s.z) - s.sink * 0.16 + jig, s.z);
+    g.rotation.y = s.yaw + (s.fleeT >= 0 ? Math.sin(s.fleeT * 31) * 0.12 : 0);
+    g.visible = s.sink < 0.98;
+  }
+}
+
 function Crabs({ crabs, ground, standable, player }: { crabs: readonly Crab[]; ground: Ground; standable: (x: number, z: number) => boolean; player: React.RefObject<THREE.Vector3> }) {
   const groups = useRef<(THREE.Group | null)[]>([]);
   const states = useRef<CrabState[]>([]);
   useEffect(() => { states.current = crabs.map(newCrabState); }, [crabs]);
-  useFrame((_, raw) => {
-    const dt = Math.min(raw, 0.1), t = worldNow() / 1000, p = player.current;
-    states.current.forEach((s, i) => {
-      crabStep(crabs[i], s, t, dt, p.x, p.z, standable);
-      const g = groups.current[i];
-      if (!g) return;
-      // A scuttle judders; digging in sinks it under the sand.
-      const jig = s.fleeT >= 0 ? Math.abs(Math.sin(s.fleeT * 40)) * 0.025 : 0;
-      g.position.set(s.x, ground(s.x, s.z) - s.sink * 0.16 + jig, s.z);
-      g.rotation.y = s.yaw + (s.fleeT >= 0 ? Math.sin(s.fleeT * 31) * 0.12 : 0);
-      g.visible = s.sink < 0.98;
-    });
-  });
+  useFrame((_, raw) => tickCrabs(crabs, states.current, groups.current, Math.min(raw, 0.1), player.current, ground, standable));
   return <>{crabs.map((c, i) => (
     <group key={c.seed} ref={g => { groups.current[i] = g; }}>
       {/* Small: a contact shadow only (the Small class). */}

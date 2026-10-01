@@ -563,17 +563,19 @@ export function poseAt(legs: readonly Leg[], t: number, out: ResidentPose): Resi
  * visit, so every client sees the same gesture.
  */
 export type IdleClip = "LookAround" | "StretchUp" | null;
-export function idleAt(stop: Stop, visit: number, seed: number, stayed: number): { clip: IdleClip; key: number } {
-  if (stop.kind !== "stand") return { clip: null, key: -1 };
+export function idleAt(stop: Stop, visit: number, seed: number, stayed: number, out: { clip: IdleClip; key: number } = { clip: null, key: -1 }): { clip: IdleClip; key: number } {
+  out.clip = null; out.key = -1;
+  if (stop.kind !== "stand") return out;
   // A gesture every 14-26 s, the first 2-5 s after arriving.
   const first = 2 + hash01(seed, visit * 5 + 1) * 3;
-  if (stayed < first) return { clip: null, key: -1 };
+  if (stayed < first) return out;
   const n = Math.floor((stayed - first) / (14 + hash01(seed, visit) * 12));
   const pick = hash01(seed + n * 7919, visit * 11 + 2);
   const kinds = stop.idles;
   const kind = kinds[Math.floor(pick * kinds.length) % kinds.length];
-  const clip: IdleClip = kind === "look" || kind === "gaze" ? (pick < 0.75 ? "LookAround" : null) : kind === "stretch" ? "StretchUp" : null;
-  return { clip, key: n };
+  out.clip = kind === "look" || kind === "gaze" ? (pick < 0.75 ? "LookAround" : null) : kind === "stretch" ? "StretchUp" : null;
+  out.key = n;
+  return out;
 }
 
 /**
