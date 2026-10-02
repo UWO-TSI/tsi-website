@@ -40,7 +40,7 @@ export function StudyCompanionBody({ study }: { study: StudyHook }) {
           <h2>Study with the club</h2>
           <p className={s.muted}>Sit at a cafe table, run your own Pomodoro timer next to other people, and earn coins for every focus minute.</p>
           <div className={s.row} style={{ marginTop: 12 }}>
-            <a className={s.btn} href="/student/login?next=/student/companion/study" style={{ display: "grid", placeItems: "center", textDecoration: "none" }}>Sign in to study</a>
+            <a className={s.btn} href="/student?next=/student/companion/study" style={{ display: "grid", placeItems: "center", textDecoration: "none" }}>Sign in to study</a>
           </div>
         </section>
       ) : null}
