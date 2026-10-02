@@ -6,6 +6,9 @@ Writes
   web/public/assets/fx/move-pack.webp        the atlas: one row per sprite, 8 frames of 128 px, lossless
   web/lib/game/fx/pack.ts                    its layout for the engine (generated: edit the SPRITES list here)
   specs/evidence/movement-feel/pack-sheet.webp  every row tinted as the game tints it, on the grounds it is used over
+  web/public/assets/fx/combat-pack.webp      the combat pack (specs/classes/design-sheet.md §1.7): heat in RGB, coverage in A
+  web/lib/game/fx/combatPack.ts              its layout (generated: edit the COMBAT_SPRITES list here)
+  specs/evidence/classes/K0-combat-atlas.webp   every combat row through three sample ramps, as the engine maps heat
 
 Painted procedurally, no downloads and no references: each frame is brushwork in numpy. A puff is a few lobes of
 paint (a metaball field) cut at a rising threshold through two kinds of noise, so it grows, thins and breaks up the way
@@ -624,5 +627,532 @@ def write_sheet(atlas):
     print("wrote", OUT_SHEET)
 
 
+# ================================================================ the combat pack (specs/classes/design-sheet.md §1.7)
+# Anime-style flipbooks: hard-edged cel shapes in two or three tone bands, bold silhouettes that read through the pixel
+# filter. Each frame stores HEAT in RGB (1 the white-hot core, about 0.55 the coloured mid band, about 0.15 the darker
+# edge; smoke, ink and cracks sit low) and coverage in A. The engine maps heat through the effect's 3-stop ramp
+# [core, mid, edge], so one atlas serves every colour.
+OUT_COMBAT = os.path.join(ROOT, "web", "public", "assets", "fx", "combat-pack.webp")
+OUT_COMBAT_TS = os.path.join(ROOT, "web", "lib", "game", "fx", "combatPack.ts")
+OUT_COMBAT_SHEET = os.path.join(ROOT, "specs", "evidence", "classes", "K0-combat-atlas.webp")
+
+RAD, ANG = np.hypot(U, V), np.arctan2(V, U)
+LO, MID, HI = 0.15, 0.55, 1.0
+
+
+def hard(d, soft=1.1):
+    """Coverage of the region d < 0 with a hard edge (a pixel or so of soft, no airbrush)."""
+    return ss(PX * soft, -PX * soft, d)
+
+
+def cel(f, t1=0.33, t2=0.7, soft=0.02, lo=LO, mid=MID, hi=HI):
+    """A field in [0, 1] (0 at the shape's edge) cut into three flat tone bands: edge, mid, core."""
+    return lo + (mid - lo) * ss(t1 - soft, t1 + soft, f) + (hi - mid) * ss(t2 - soft, t2 + soft, f)
+
+
+def seg(ax, ay, bx, by, x=None, y=None):
+    """Distance to the segment a-b and the parameter of the closest point (0 at a, 1 at b)."""
+    x = U if x is None else x
+    y = V if y is None else y
+    dx, dy = bx - ax, by - ay
+    l2 = dx * dx + dy * dy or 1e-9
+    k = np.clip(((x - ax) * dx + (y - ay) * dy) / l2, 0, 1)
+    return np.hypot(x - ax - dx * k, y - ay - dy * k), k
+
+
+def lay(A, H, a, h):
+    """Paint a shape over the layer: the higher coverage wins its heat."""
+    upd = a > A
+    return np.maximum(A, a), np.where(upd, h, H)
+
+
+def periodic_noise(ang, k, seed, octaves=2):
+    """Noise round a circle (no seam at ±π)."""
+    return fbm(np.cos(ang) * k + 7.3, np.sin(ang) * k + 3.1, seed, octaves)
+
+
+def impact_star(t):
+    """A spiky anime impact star: it pops open, the hot centre cools, then it hollows out and only the long spikes are left."""
+    rng = np.random.default_rng(2101)
+    n = 10
+    tips = rng.uniform(0.82, 1.0, n) * np.where(np.arange(n) % 2 == 0, 1.0, 0.6)
+    off = rng.uniform(-0.13, 0.13, n)
+    pop = 1 - (1 - min(1.0, t / 0.25)) ** 2
+    R = 0.36 + 0.52 * pop + 0.05 * t
+    a = np.concatenate([2 * math.pi * np.arange(n) / n + off, 2 * math.pi * (np.arange(n) + 0.5) / n])
+    r = np.concatenate([tips * R, np.full(n, R * (0.34 + 0.08 * pop))])
+    o = np.argsort(a)
+    rb = np.interp(np.mod(ANG, 2 * math.pi), a[o] % (2 * math.pi), r[o], period=2 * math.pi)
+    rb = rb * (1 - 0.22 * ss(0.5, 1.0, t) * periodic_noise(ANG, 2.5, 2102))
+    hole = R * 0.86 * ss(0.38, 1.1, t)
+    alpha = hard(RAD - rb) * ss(hole - PX, hole + PX, RAD)
+    f = np.clip((rb - RAD) / np.maximum(rb - hole, 1e-3), 0, 1)
+    heat = cel(f, t1=0.16 + 0.14 * t, t2=0.42 + 0.3 * ss(0.15, 0.7, t))
+    return alpha, heat
+
+
+def slash(t):
+    """A crescent slash arc: it sweeps on left to right, thick behind its leading tip and thin to a point at the tail, its
+    outer edge white-hot; a thinner echo arc rides inside it; then the tail eats it and it thins away."""
+    A, H = np.zeros_like(U), np.zeros_like(U)
+    head = 0.3 + 0.7 * ss(0.0, 0.32, t)
+    tail = 0.93 * ss(0.36, 1.0, t)
+    thin = 1 - 0.55 * ss(0.4, 1.0, t)
+    for (cx, cy, R, W, peak, seed) in [(0.0, -0.4, 0.95, 0.21, 0.62, 2201), (0.02, -0.4, 0.7, 0.075, 0.55, 2202)]:
+        r = np.hypot(U - cx, V - cy)
+        ang = np.arctan2(V - cy, U - cx)
+        a0, a1 = math.radians(160), math.radians(18)
+        s = (a0 - ang) / (a0 - a1)
+        k = np.clip((s - tail) / max(head - tail, 1e-3), 0, 1)
+        prof = np.sin(math.pi * k) ** 0.65 * (0.3 + 0.7 * k)       # pointed ends, fullest toward the head
+        w = W * thin * prof / 0.92
+        inner, outer = R - 0.32 * w, R + 0.68 * w
+        inside = (s > tail) & (s < head) & (w > PX * 0.4)
+        a = hard(np.maximum(inner - r, r - outer)) * inside
+        e = np.clip((r - inner) / np.maximum(outer - inner, 1e-4), 0, 1)
+        h = cel(e, t1=0.3, t2=peak + 0.12 * ss(0.4, 1, t)) * (1.0 if W > 0.1 else 0.85)
+        A, H = lay(A, H, a, h)
+    return A, H
+
+
+def spark_burst(t):
+    """Spark streaks flying out from a hit: thin tails, fat hot heads, a flash at the centre for the first frames."""
+    rng = np.random.default_rng(2303)
+    A, H = np.zeros_like(U), np.zeros_like(U)
+    n = 14
+    for i in range(n):
+        a = 2 * math.pi * i / n + rng.uniform(-0.2, 0.2)
+        sp = rng.uniform(0.55, 1.0)
+        L = rng.uniform(0.2, 0.42) * (1 - 0.5 * t)
+        hd = 0.16 + sp * 0.78 * (1 - (1 - t) ** 1.7)
+        tl = max(0.03, hd - L)
+        w0 = rng.uniform(0.026, 0.048) * (1 - 0.55 * t)
+        ca, sa = math.cos(a), math.sin(a)
+        d, k = seg(ca * tl, sa * tl, ca * hd, sa * hd)
+        width = w0 * (0.12 + 0.88 * k)
+        a_ = hard(d - width) * (1 - ss(0.78, 1.0, t + rng.uniform(-0.1, 0.1)) * 0.9)
+        h = cel((1 - d / np.maximum(width, 1e-4)) * (0.35 + 0.65 * k), t1=0.22, t2=0.5)
+        A, H = lay(A, H, a_, h)
+    fl = 0.24 * (1 - ss(0.0, 0.45, t))
+    if fl > PX:
+        A, H = lay(A, H, hard(RAD - fl), cel(1 - RAD / fl, t1=0.2, t2=0.45))
+    return A, H
+
+
+def shock_ring(t):
+    """A ring that bursts outward and thins, its leading edge hot; past the middle its trailing edge breaks into gaps."""
+    R = 0.22 + 0.7 * (1 - (1 - t) ** 2)
+    w = 0.05 + 0.14 * (1 - t) ** 1.4
+    n = periodic_noise(ANG, 3.0, 2401)
+    inner = R - 0.5 * w + w * 0.7 * ss(0.25, 1.0, t) * n
+    outer = R + 0.5 * w
+    a = hard(np.maximum(inner - RAD, RAD - outer))
+    gaps = periodic_noise(ANG, 5.0, 2402)
+    a *= ss(0.62 * ss(0.4, 1.0, t) - 0.02, 0.62 * ss(0.4, 1.0, t) + 0.02, gaps + 0.08)
+    e = np.clip((RAD - inner) / np.maximum(outer - inner, 1e-4), 0, 1)
+    return a, cel(e, t1=0.28, t2=0.66 + 0.2 * t)
+
+
+def smoke(t):
+    """Dark cel smoke: round lobes that pop out, drift apart and rise, each lit like a ball in two flat bands (a shade
+    side and a lit side); past the middle it tears into holes, hard-edged."""
+    rng = np.random.default_rng(2505)
+    pop = 1 - (1 - min(1.0, t / 0.25)) ** 2
+    H = np.full_like(U, -1.0)
+    NX, NY, NZ = np.zeros_like(U), np.zeros_like(U), np.ones_like(U)
+    SD = np.full_like(U, 9.0)
+    for i in range(6):
+        a = rng.uniform(0, math.tau) if i else 0.0
+        d = rng.uniform(0.4, 1.0) if i else 0.0
+        r = 0.27 * (rng.uniform(0.6, 0.95) if i else 1.1) * (0.5 + 0.5 * pop) * (1 + 0.45 * t)
+        cx = math.cos(a) * 0.3 * d * (1 + 0.6 * t)
+        cy = -0.1 + math.sin(a) * 0.22 * d * (1 + 0.6 * t) + 0.18 * t * rng.uniform(0.6, 1.2)
+        du, dv = (U - cx) / r, (V - cy) / r
+        q = du * du + dv * dv
+        h = np.where(q < 1, np.sqrt(np.clip(1 - q, 0, 1)), -1.0)
+        win = h > H
+        H = np.where(win, h, H)
+        NX, NY, NZ = np.where(win, du, NX), np.where(win, dv, NY), np.where(win, h, NZ)
+        SD = np.minimum(SD, (np.sqrt(q) - 1) * r)
+    wob = (fbm(U * 4 + 1, V * 4, 2506, 2) - 0.5) * (0.04 + 0.06 * t)
+    alpha = hard(SD + wob)
+    holes = fbm(U * 5 + 3, V * 5, 2507, 3)
+    dry = ss(0.3, 1.1, t)
+    alpha *= ss(dry * 0.95 - 0.02, dry * 0.95 + 0.02, holes * 0.8 + np.clip(H, 0, 1) * 0.25)
+    inv = 1 / np.sqrt(NX * NX + NY * NY + NZ * NZ + 1e-9)
+    shade = (NX * LIGHT[0] + NY * LIGHT[1] + NZ * LIGHT[2]) * inv
+    heat = 0.05 + 0.11 * ss(0.56, 0.6, shade) + 0.1 * ss(0.86, 0.9, shade)
+    return alpha, heat
+
+
+def swirl(t):
+    """Energy gathering: three spiral arms wind in toward a hot core that swells as they arrive."""
+    Rmax = 0.95 * (1 - 0.6 * t)
+    arms = 0.5 + 0.5 * np.cos(3 * (ANG + 5.5 * RAD) - t * 7.0)
+    taper = ss(Rmax + 0.02, Rmax - 0.25, RAD) * ss(0.02, 0.12, RAD)
+    f = arms * taper
+    th = 0.52
+    a = ss(th - 0.025, th + 0.025, f)
+    A, H = a, cel(np.clip((f - th) / (1 - th), 0, 1) * (1 - 0.5 * RAD / max(Rmax, 1e-3)) + 0.25 * (RAD < 0.3), t1=0.22, t2=0.62)
+    rc = 0.06 + 0.17 * ss(0.1, 0.9, t)
+    A, H = lay(A, H, hard(RAD - rc), cel(1 - RAD / rc, t1=0.15, t2=0.45))
+    return A, H
+
+
+def halo(t):
+    """A glow halo: a hard white-hot disc in a flat mid band, in a soft glow that breathes."""
+    pulse = 1 + 0.09 * math.sin(2 * math.pi * t)
+    rc, rm = 0.12 * pulse, 0.22 * pulse
+    glow = np.exp(-(RAD / (0.56 * pulse)) ** 2 * 2.4)
+    alpha = np.maximum(hard(RAD - rm), glow * 0.8) * ss(0.98, 0.9, RAD)
+    heat = LO + (MID - LO) * hard(RAD - rm, 1.4) + (HI - MID) * hard(RAD - rc, 1.4)
+    return alpha, heat
+
+
+def speed_line(t):
+    """One anime speed line along +u: it shoots out to its full length, a hot core in a tapered body, then the tail
+    catches up and it thins away."""
+    xh = 0.93 - 0.05 * t
+    L = 1.78 * (0.32 + 0.68 * ss(0.0, 0.3, t)) - 1.25 * ss(0.5, 1.0, t)
+    xt = xh - max(L, 0.12)
+    d, k = seg(xt, 0.0, xh, 0.0)
+    width = 0.058 * (1 - 0.6 * ss(0.45, 1.0, t)) * (0.05 + 0.95 * k ** 1.2)
+    a = hard(d - width)
+    return a, cel(1 - d / np.maximum(width, 1e-4), t1=0.3, t2=0.6)
+
+
+def poly_sdf(pts, x, y):
+    """Signed distance (negative inside) to a convex polygon, as the farthest edge's half-plane distance."""
+    d = np.full_like(x, -9.0)
+    n = len(pts)
+    for i in range(n):
+        (ax, ay), (bx, by) = pts[i], pts[(i + 1) % n]
+        ex, ey = bx - ax, by - ay
+        l = math.hypot(ex, ey) or 1e-9
+        nx, ny = ey / l, -ex / l                                 # outward for counter-clockwise points
+        d = np.maximum(d, (x - ax) * nx + (y - ay) * ny)
+    return d
+
+
+def debris(t):
+    """Rock chunks thrown up and out: faceted, a lit face and a shade face, tumbling as they fall."""
+    rng = np.random.default_rng(2909)
+    A, H = np.zeros_like(U), np.zeros_like(U)
+    for i in range(6):
+        nv = int(rng.integers(5, 7))
+        angs = np.sort(rng.uniform(0, 2 * math.pi, nv))
+        size = rng.uniform(0.1, 0.19) * (1 - 0.2 * t)
+        rad = size * rng.uniform(0.75, 1.0, nv)
+        a = rng.uniform(0.18, 0.82) * math.pi
+        sp = rng.uniform(0.55, 1.0)
+        cx = math.cos(a) * sp * (0.15 + 0.95 * t)
+        cy = -0.42 + math.sin(a) * sp * (0.22 + 1.15 * t) - 1.2 * t * t
+        rot = rng.uniform(0, 2 * math.pi) + rng.uniform(2, 5) * (1 if i % 2 else -1) * t
+        pts = [(math.cos(g + rot) * r, math.sin(g + rot) * r) for g, r in zip(angs, rad)]
+        x, y = U - cx, V - cy
+        a_ = hard(poly_sdf(pts, x, y)) * (1 - ss(0.82, 1.05, t + rng.uniform(-0.08, 0.08)))
+        split = math.radians(135) + rot * 0.35                   # the facet edge turns as it tumbles
+        lit = (x * math.cos(split) + y * math.sin(split)) > -0.2 * size
+        h = np.where(lit, 0.42, 0.18)
+        A, H = lay(A, H, a_, h)
+    return A, H
+
+
+def rune(t):
+    """A circular rune that draws itself in clockwise from the top, flares as it completes, then dissolves."""
+    draw = 0.12 + 0.88 * ss(0.0, 0.42, t)
+    glow = ss(0.36, 0.55, t) * (1 - ss(0.62, 0.86, t))
+    fade = ss(0.62, 1.0, t)
+    frac = np.mod(math.pi / 2 - ANG, 2 * math.pi) / (2 * math.pi)
+    shown = ss(draw + 0.006, draw - 0.006, frac)
+    D = np.full_like(U, 9.0)
+    W = np.full_like(U, 0.01)
+
+    def add(d, w):
+        nonlocal D, W
+        better = d - w < D - W
+        D, W = np.where(better, d, D), np.where(better, w, W)
+
+    add(np.abs(RAD - 0.8), 0.03)
+    add(np.abs(RAD - 0.57), 0.02)
+    for i in range(12):                                        # ticks between the rings
+        g = math.pi / 2 - 2 * math.pi * i / 12
+        long_ = i % 3 == 0
+        d, _ = seg(math.cos(g) * 0.6, math.sin(g) * 0.6, math.cos(g) * (0.77 if long_ else 0.7), math.sin(g) * (0.77 if long_ else 0.7))
+        add(d, 0.018 if long_ else 0.012)
+    for flip in (0, 1):                                        # a six-pointed star inside
+        pts = [(math.cos(math.pi / 2 + flip * math.pi + 2 * math.pi * k / 3) * 0.53, math.sin(math.pi / 2 + flip * math.pi + 2 * math.pi * k / 3) * 0.53) for k in range(3)]
+        for k in range(3):
+            d, _ = seg(*pts[k], *pts[(k + 1) % 3])
+            add(d, 0.016)
+    add(np.abs(RAD - 0.16), 0.022)
+    for i in range(6):                                         # beads on the outer ring
+        g = math.pi / 2 - 2 * math.pi * (i + 0.5) / 6
+        add(np.hypot(U - math.cos(g) * 0.8, V - math.sin(g) * 0.8), 0.05)
+    line = hard(D - W) * shown
+    f = np.clip(1 - D / np.maximum(W, 1e-4), 0, 1)
+    heat = np.where(f > 0.5, MID + (HI - MID) * glow, 0.32 + 0.2 * glow)
+    bloom = np.clip(np.exp(-np.maximum(D - W, 0) / 0.035) * glow * 0.55, 0, 1) * shown * (1 - line)
+    A, H = lay(line, heat, bloom, np.full_like(U, LO))
+    keep = fbm(U * 6 + 2, V * 6 + 9, 2911, 3)
+    A = A * ss(fade * 0.95 - 0.03, fade * 0.95 + 0.03, keep)
+    return A, H
+
+
+def mote(t):
+    """A small light mote for auras: a 6 px white-hot core, a flat mid ring, a soft glow and four short flickering rays."""
+    tw = 0.5 + 0.5 * math.sin(2 * math.pi * t)
+    rc = PX * (2.6 + 0.4 * tw)
+    rm = PX * (5.5 + 1.0 * tw)
+    glow = np.exp(-(RAD / (PX * (16 + 4 * tw))) ** 2 * 2)
+    rays = np.zeros_like(U)
+    for ax, ay in [(1, 0), (0, 1)]:
+        along, across = np.abs(U * ax + V * ay), np.abs(-U * ay + V * ax)
+        L = PX * (20 + 10 * tw)
+        w = PX * 1.6 * np.clip(1 - along / L, 0, 1)
+        rays = np.maximum(rays, hard(across - w, 0.7) * (along < L))
+    A = np.maximum(np.maximum(hard(RAD - rm, 0.8), glow * 0.75), rays * 0.9)
+    H = LO + (MID - LO) * np.maximum(hard(RAD - rm, 0.8), rays) + (HI - MID) * hard(RAD - rc, 0.8)
+    return A, H
+
+
+def crack_paths():
+    """The crack's branches: (points, widths, start length) polylines, seeded once."""
+    rng = np.random.default_rng(3131)
+    paths = []
+    for i in range(6):
+        a = 2 * math.pi * i / 6 + rng.uniform(-0.3, 0.3)
+        L = rng.uniform(0.55, 0.86)
+        pts, ws, x, y = [(0.0, 0.0)], [0.04], 0.0, 0.0
+        steps = 9
+        for s in range(1, steps + 1):
+            a += rng.uniform(-0.45, 0.45)
+            x, y = x + math.cos(a) * L / steps, y + math.sin(a) * L / steps
+            pts.append((x, y))
+            ws.append(0.04 * (1 - s / steps) ** 0.9 + 0.006)
+            if s in (3, 6) and rng.random() < 0.8:
+                b = a + rng.choice([-1, 1]) * rng.uniform(0.5, 0.9)
+                bl = rng.uniform(0.16, 0.3)
+                bp, bw, bx, by = [(x, y)], [ws[-1] * 0.8], x, y
+                for q in range(1, 5):
+                    b += rng.uniform(-0.35, 0.35)
+                    bx, by = bx + math.cos(b) * bl / 4, by + math.sin(b) * bl / 4
+                    bp.append((bx, by))
+                    bw.append(ws[-1] * 0.8 * (1 - q / 4) + 0.005)
+                paths.append((bp, bw, L * s / steps))
+        paths.append((pts, ws, 0.0))
+    return paths
+
+
+CRACK = None
+
+
+def crack(t):
+    """A ground crack decal spreading out from an impact: a dark split with a lighter broken lip, a dent at the centre."""
+    global CRACK
+    CRACK = CRACK or crack_paths()
+    grow = 0.25 + 0.75 * ss(0.0, 0.45, t)
+    reach = grow * 1.0
+    D = np.full_like(U, 9.0)
+    W = np.full_like(U, 0.01)
+    for pts, ws, start in CRACK:
+        cum = start
+        for (p, q), (wa, wb) in zip(zip(pts[:-1], pts[1:]), zip(ws[:-1], ws[1:])):
+            sl = math.hypot(q[0] - p[0], q[1] - p[1])
+            d, k = seg(p[0], p[1], q[0], q[1])
+            w = (wa + (wb - wa) * k) * (0.6 + 0.4 * grow)
+            ok = (cum + k * sl) <= reach
+            better = ok & (d - w < D - W)
+            D, W = np.where(better, d, D), np.where(better, w, W)
+            cum += sl
+    lip = 1.7
+    a = hard(D - W * lip)
+    f = 1 - D / np.maximum(W * lip, 1e-4)
+    heat = np.where(f > 1 - 1 / lip, 0.04, 0.24)
+    dent = 0.1 * (0.5 + 0.5 * ss(0.0, 0.2, t))
+    A, H = lay(a, heat, hard(RAD - dent * 1.4), np.where(RAD < dent, 0.04, 0.24))
+    A *= 1 - 0.75 * ss(0.6, 1.0, t)
+    return A, H
+
+
+def beam(t):
+    """A beam segment along +u: a white-hot core line in a flat mid band and a darker wavy edge; every wave is a whole
+    number of periods across the cell, so it tiles along u, and each frame scrolls them."""
+    ph = 2 * math.pi * t
+    vc = 0.016 * np.sin(math.pi * 2 * U + ph)
+    hw = 0.2 + 0.035 * np.sin(math.pi * 2 * U + ph) + 0.022 * np.sin(math.pi * 5 * U - 2 * ph) + 0.013 * np.sin(math.pi * 9 * U + 3 * ph)
+    hm = 0.13 + 0.014 * np.sin(math.pi * 3 * U - ph) + 0.01 * np.sin(math.pi * 7 * U + 2 * ph)
+    hc = 0.055 + 0.01 * np.sin(math.pi * 4 * U + 2 * ph)
+    dv = np.abs(V - vc)
+    a = hard(dv - hw)
+    heat = LO + (MID - LO) * hard(dv - hm) + (HI - MID) * hard(dv - hc)
+    return a, heat
+
+
+def ink(t):
+    """A splat of black ink: a blot with spiky tendrils that bursts open, drops and brush flicks thrown out along them, a
+    glossy crescent on the blot; then it dries and breaks up. Mostly low heat (the ramp's dark edge)."""
+    rng = np.random.default_rng(3337)
+    pop = 1 - (1 - min(1.0, t / 0.3)) ** 2
+    base = 0.12 + 0.12 * pop
+    rb = base * (1 + 0.28 * (periodic_noise(ANG, 2.2, 3338) - 0.5) * 2)
+    spikes = rng.uniform(0, math.tau, 9)
+    for g in spikes:
+        L = rng.uniform(0.08, 0.26) * pop
+        rb = rb + L * np.maximum(0, np.cos(ANG - g)) ** 60
+    A = hard(RAD - rb)
+    gloss = (RAD < rb * 0.7) & (RAD > rb * 0.42) & ((U * LIGHT[0] + V * LIGHT[1]) / (np.maximum(RAD, 1e-3) * math.hypot(LIGHT[0], LIGHT[1])) > 0.5)
+    H = np.where(gloss, 0.16, 0.03)
+    for i in range(12):                                       # drops thrown out, stretched while fast
+        g = spikes[i % 9] + rng.uniform(-0.25, 0.25)
+        sp = rng.uniform(0.5, 1.0)
+        dist_ = base + 0.15 + sp * 0.55 * (1 - (1 - t) ** 1.5)
+        r = rng.uniform(0.02, 0.05) * (1 - 0.35 * t)
+        ca, sa = math.cos(g), math.sin(g)
+        tail = dist_ - r * (1 + 3.0 * (1 - t))
+        d, _ = seg(ca * tail, sa * tail, ca * dist_, sa * dist_)
+        A, H = lay(A, H, hard(d - r), np.full_like(U, 0.03))
+    for i in range(3):                                        # brush flicks
+        g = rng.uniform(0, math.tau)
+        hd = 0.3 + 0.48 * pop
+        d, k = seg(math.cos(g) * 0.15, math.sin(g) * 0.15, math.cos(g) * hd, math.sin(g) * hd)
+        w = 0.045 * (1 - k) ** 0.8 + 0.004
+        A, H = lay(A, H, hard(d - w), np.full_like(U, 0.03))
+    dry = fbm(U * 5 + 4, V * 5 + 1, 3339, 3)
+    A = A * ss(0.85 * ss(0.5, 1.0, t) - 0.03, 0.85 * ss(0.5, 1.0, t) + 0.03, dry)
+    return A, H
+
+
+def flare(t):
+    """A four-point flare for hits and pickups: long thin rays on the axes, short ones on the diagonals, a hot core; it
+    pops open, turns a little and shrinks away."""
+    pop = 0.35 + 0.65 * ss(0.0, 0.2, t)
+    k = pop * (1 - 0.6 * ss(0.35, 1.0, t))
+    rot = 0.2 * t
+    cr, sr = math.cos(rot), math.sin(rot)
+    x, y = U * cr + V * sr, -U * sr + V * cr
+    A, H = np.zeros_like(U), np.zeros_like(U)
+    for (ax, ay, L, w0) in [(1, 0, 0.9, 0.05), (0, 1, 0.9, 0.05), (0.7071, 0.7071, 0.4, 0.03), (0.7071, -0.7071, 0.4, 0.03)]:
+        along, across = np.abs(x * ax + y * ay), np.abs(-x * ay + y * ax)
+        Lk, wk = L * k, w0 * (0.6 + 0.4 * k)
+        w = wk * np.clip(1 - along / max(Lk, 1e-3), 0, 1) ** 1.2
+        a = hard(across - w) * (along < Lk)
+        f = (1 - across / np.maximum(w, 1e-4)) * (1 - along / max(Lk, 1e-3)) ** 0.5
+        A, H = lay(A, H, a, cel(f, t1=0.15, t2=0.42))
+    rc = 0.03 + 0.1 * k
+    A, H = lay(A, H, hard(RAD - rc), cel(1 - RAD / rc, t1=0.2, t2=0.4))
+    return A, H
+
+
+# name, painter, what it is, how the sheet shows it (glow: additive; else straight alpha). Append only: rows are indices.
+COMBAT_SPRITES = [
+    ("impactStar", impact_star, "spiky impact star: pops open, hollows out", True),
+    ("slash", slash, "crescent slash arc: sweeps on, thins away", True),
+    ("sparkBurst", spark_burst, "spark streaks flying out of a hit", True),
+    ("shockRing", shock_ring, "shock ring: bursts out, breaks up", True),
+    ("smoke", smoke, "dark cel smoke puff (two bands)", False),
+    ("swirl", swirl, "energy swirl gathering into a core", True),
+    ("halo", halo, "glow halo: hard core, soft breathing glow", True),
+    ("speedLine", speed_line, "tapered speed line along +u", True),
+    ("debris", debris, "rock chunks tumbling", False),
+    ("rune", rune, "rune circle: draws in, flares, dissolves", True),
+    ("mote", mote, "aura light mote (6 px core)", True),
+    ("crack", crack, "ground crack decal (lies on the ground)", False),
+    ("beam", beam, "beam segment along +u (tiles along u)", True),
+    ("ink", ink, "black ink splash and flicks", False),
+    ("flare", flare, "four-point flare star", True),
+]
+SHEET_RAMPS = [("arcane", "#fff6ff", "#b48cff", "#3a2466"), ("fire", "#fff4d6", "#ff8a3d", "#5a1a08"), ("holy", "#ffffff", "#ffe08a", "#8a6a20")]
+DARK, GRASS = "#1b1f27", "#8fa16c"
+
+
+def build_combat():
+    rows = len(COMBAT_SPRITES)
+    if rows > 32:
+        raise SystemExit("the combat pack holds 32 rows at most")
+    atlas = np.zeros((rows * CELL, FRAMES * CELL, 4))
+    for r, (name, fn, _, _) in enumerate(COMBAT_SPRITES):
+        for i in range(FRAMES):
+            a, heat = fn(i / FRAMES)
+            a, heat = np.clip(a, 0, 1), np.clip(heat, 0, 1)
+            a[:2, :] = a[-2:, :] = 0
+            a[:, :2] = a[:, -2:] = 0
+            if a.max() < 0.05:
+                raise SystemExit(f"empty frame: {name} {i}")
+            atlas[r * CELL:(r + 1) * CELL, i * CELL:(i + 1) * CELL, :3] = heat[..., None]
+            atlas[r * CELL:(r + 1) * CELL, i * CELL:(i + 1) * CELL, 3] = a
+        print(f"  {name:10s} row {r}")
+    img = Image.fromarray((atlas * 255 + 0.5).astype(np.uint8), "RGBA")
+    os.makedirs(os.path.dirname(OUT_COMBAT), exist_ok=True)
+    img.save(OUT_COMBAT, "WEBP", lossless=True, quality=100, method=6, exact=True)
+    print("wrote", OUT_COMBAT, os.path.getsize(OUT_COMBAT) // 1024, "KB")
+    names = ",\n".join(f'  {n}: {{ row: {r}, frames: {FRAMES} }} /* {d} */' for r, (n, _, d, _) in enumerate(COMBAT_SPRITES))
+    ts = f'''// Generated by art/fx/build_pack.py: do not edit (change the COMBAT_SPRITES list there and rebuild).
+/** The combat pack (specs/classes/design-sheet.md §1.7): heat in RGB, coverage in A; the shader maps heat through the effect's ramp. */
+export const COMBAT_PACK_URL = "/assets/fx/combat-pack.webp";
+export const COMBAT_PACK_COLS = {FRAMES};
+export const COMBAT_PACK_ROWS = {rows};
+export const COMBAT_PACK = {{
+{names},
+}} as const;
+export type CombatSprite = keyof typeof COMBAT_PACK;
+'''
+    open(OUT_COMBAT_TS, "w").write(ts)
+    print("wrote", OUT_COMBAT_TS)
+    write_combat_sheet(atlas)
+
+
+def ramp(heat, core, mid, edge):
+    """Heat to colour as the engine maps it: edge to mid over [0, 0.5], mid to core over [0.5, 1]."""
+    h = heat[..., None]
+    lo = edge + (mid - edge) * np.clip(h / 0.5, 0, 1)
+    hi = mid + (core - mid) * np.clip((h - 0.5) / 0.5, 0, 1)
+    return np.where(h < 0.5, lo, hi)
+
+
+def write_combat_sheet(atlas):
+    """Every row, all 8 frames, through three sample ramps over a dark ground (smoke and crack also over grass)."""
+    label_w, pad, gap = 200, 4, 18
+    strips = [(r, DARK) for r in range(len(COMBAT_SPRITES))]
+    for name in ("smoke", "crack"):
+        r = [n for n, *_ in COMBAT_SPRITES].index(name)
+        strips.insert(strips.index((r, DARK)) + 1, (r, GRASS))
+    group = FRAMES * (CELL + pad)
+    W = label_w + len(SHEET_RAMPS) * (group + gap)
+    H = 58 + len(strips) * (CELL + pad) + pad
+    sheet = Image.new("RGB", (W, H), (11, 14, 20))
+    draw = ImageDraw.Draw(sheet)
+    try:
+        font = ImageFont.truetype("/System/Library/Fonts/Monaco.ttf", 13)
+        small = ImageFont.truetype("/System/Library/Fonts/Monaco.ttf", 11)
+    except OSError:
+        font = small = ImageFont.load_default()
+    draw.text((pad, 8), "Combat pack (K0): painted by art/fx/build_pack.py, heat mapped through each ramp as in game, 8 frames per row", fill=(241, 255, 255), font=font)
+    for g, (rname, *stops) in enumerate(SHEET_RAMPS):
+        x0 = label_w + g * (group + gap)
+        draw.text((x0, 34), f"{rname} ramp  core {stops[0]}  mid {stops[1]}  edge {stops[2]}", fill=(255, 209, 102), font=small)
+    for s, (r, ground) in enumerate(strips):
+        name, _, desc, glow = COMBAT_SPRITES[r]
+        y = 58 + s * (CELL + pad)
+        draw.text((pad, y + 36), name + ("" if ground == DARK else " (grass)"), fill=(255, 209, 102), font=font)
+        draw.text((pad, y + 56), desc[:27], fill=(201, 209, 214), font=small)
+        if len(desc) > 27:
+            draw.text((pad, y + 70), desc[27:54], fill=(201, 209, 214), font=small)
+        draw.text((pad, y + 90), "additive" if glow else "alpha", fill=(140, 150, 160), font=small)
+        bg = hexrgb(ground)
+        for g, (_, core, mid, edge) in enumerate(SHEET_RAMPS):
+            stops = [hexrgb(c) for c in (core, mid, edge)]
+            x0 = label_w + g * (group + gap)
+            for i in range(FRAMES):
+                cell = atlas[r * CELL:(r + 1) * CELL, i * CELL:(i + 1) * CELL]
+                a, rgb = cell[..., 3:4], ramp(cell[..., 0], *stops)
+                out = np.clip(bg + rgb * a, 0, 1) if glow else bg * (1 - a) + rgb * a
+                sheet.paste(Image.fromarray((out * 255 + 0.5).astype(np.uint8)), (x0 + i * (CELL + pad), y))
+    os.makedirs(os.path.dirname(OUT_COMBAT_SHEET), exist_ok=True)
+    sheet.save(OUT_COMBAT_SHEET, "WEBP", quality=90, method=6)
+    print("wrote", OUT_COMBAT_SHEET, sheet.size)
+
+
 if __name__ == "__main__":
     build()
+    build_combat()
