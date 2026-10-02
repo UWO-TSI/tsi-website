@@ -59,6 +59,8 @@ export interface IslandLight {
   rim?: { color: string; intensity: number };
   /** Screen-space sky gradient from this colour down to `sky`; absent = flat `sky`. */
   skyTop?: string;
+  /** The fill carries the backlit lift for today's heading (lookPreset fillForHeading moves it with the orbit camera). */
+  fillLift?: boolean;
 }
 
 /** Per phase: the water palette and the lamps (look values come from the preset). */

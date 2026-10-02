@@ -249,6 +249,14 @@ export const MIN_SUN_ELEVATION = 12;
  * Nothing changes with the sun behind or beside the camera, or for the fixed night moon.
  */
 export const BACKLIT_FILL = 0.35;
+/** How backlit a view heading `yaw` is (0 with the sun behind or beside, 1 straight ahead): the sun's horizontal share along the camera's forward (sin yaw, cos yaw). */
+export const backlitShare = (sun: readonly number[], yaw: number) => Math.max(0, (sun[0] * Math.sin(yaw) + sun[2] * Math.cos(yaw)) / (Math.hypot(sun[0], sun[2]) || 1));
+/**
+ * The fill's scale for an orbit camera at heading `yaw` (specs/camera-orbit.md): lookToLight lifts the fill for today's
+ * west-facing view; this moves the lift to the way the camera looks now (exactly 1 at yaw 0, and without the lift).
+ */
+export const fillForHeading = (light: { sunPosition: readonly number[]; fillLift?: boolean }, yaw: number) =>
+  light.fillLift ? (1 + BACKLIT_FILL * backlitShare(light.sunPosition, yaw)) / (1 + BACKLIT_FILL * backlitShare(light.sunPosition, 0)) : 1;
 /** Tallest caster the key light's shadow box holds (world units; the clubhouse and its flag are 4.8). */
 const CASTER_HEIGHT = 6;
 
@@ -299,8 +307,9 @@ export function lookToLight(p: LookPreset, base: PhaseBase, phase: IslandPhase =
   const sun = tint(light.sunColor, m.sun), top = tint(sky.top, m.skyTop), horizon = tint(sky.horizon, m.skyHorizon);
   const fill = tint(light.fillSky, m.fill), bounce = tint(light.fillGround, m.bounce);
   const rim = light.rimIntensity + m.rim;
-  // Camera forward is +z (west): the sun's share of its horizontal direction along +z is how backlit the view is.
-  const ahead = solar ? Math.max(0, sunPosition[2] / (Math.hypot(sunPosition[0], sunPosition[2]) || 1)) : 0;
+  // Today's view looks +z (west): the sun's share of its horizontal direction along +z is how backlit it is. The orbit
+  // camera moves the lift to its own heading each frame (fillForHeading).
+  const ahead = solar ? backlitShare(sunPosition, 0) : 0;
   const fillIntensity = m.fillIntensity * (1 + BACKLIT_FILL * ahead);
   return {
     ...base,
@@ -313,6 +322,7 @@ export function lookToLight(p: LookPreset, base: PhaseBase, phase: IslandPhase =
     shadow: { radius: p.shadows.radius * m.shadowRadius, intensity: p.shadows.intensity * m.shadowIntensity, tint: p.shadows.tint },
     ...(rim > 0 ? { rim: { color: tint(light.rimColor, m.sun), intensity: rim } } : {}),
     ...(sky.gradient ? { skyTop: top } : {}),
+    ...(solar ? { fillLift: true } : {}),
   };
 }
 

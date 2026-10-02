@@ -15,7 +15,7 @@ import { Fireflies } from "./AmbientLife";
 import RainFX from "./RainFX";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
 import { fireflyNight, type IslandLight } from "@/lib/game/islandLighting";
-import { RIM_POSITION, shadowHalfHeight } from "@/lib/game/lookPreset";
+import { RIM_POSITION, fillForHeading, shadowHalfHeight } from "@/lib/game/lookPreset";
 import { SEASON_TREES, type SeasonLook } from "@/lib/game/seasonalLook";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import type { IslandPhase } from "@/lib/game/islandTime";
@@ -28,8 +28,8 @@ import { juiceShake } from "@/lib/game/cameraJuice";
 import { treeParts } from "./NatureModels";
 import AmbientFauna, { type FaunaProps } from "./AmbientFauna";
 import WeatherGround from "./WeatherGround";
-import { capture, ORBIT_DISTANCE, orbitOffset, stepOrbit, turnOffset } from "@/lib/game/orbitCamera";
-import { CUT_RADIUS, CUTOUT, CUTOUT_VIEW, lineBlocked, type Occluder } from "@/lib/game/occluders";
+import { autoFollow, capture, orbit, ORBIT_DISTANCE, orbitOffset, stepOrbit, turnOffset } from "@/lib/game/orbitCamera";
+import { CUT_FLOOR, CUT_RADIUS, CUTOUT, CUTOUT_VIEW, groundBlocks, lineBlocked, type Occluder } from "@/lib/game/occluders";
 import { bendViewPoint } from "@/lib/game/worldProjection";
 import { orbitKeys, useOrbitInput } from "./useOrbitInput";
 
@@ -59,6 +59,18 @@ function TreeWind({ strength }: { strength: number }) {
   return null;
 }
 
+/**
+ * The backlit fill follows the camera (row 253, specs/camera-orbit.md): looking toward the sun the fronts you see are
+ * lit by fill alone, so it rises; turned away it settles. Module scope: the react compiler forbids writing through
+ * hook values.
+ */
+function turnFill(light: IslandLight, scene: THREE.Scene, ambient: THREE.AmbientLight | null, hemisphere: THREE.HemisphereLight | null) {
+  const k = fillForHeading(light, orbit.view.yaw);
+  if (ambient) ambient.intensity = light.ambient * k;
+  if (hemisphere) hemisphere.intensity = light.hemisphere * k;
+  if (scene.environment) scene.environmentIntensity = light.environment.intensity * k;
+}
+
 /** A tree on the map as the scene draws it (NatureTree): its spot and seed. */
 export interface TreeSpot { x: number; z: number; seed: number }
 const NO_TREES: readonly TreeSpot[] = [];
@@ -82,6 +94,8 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
     applyEnvironment(gl, scene, light.environment);
     return () => disposeEnvironment(scene);
   }, [gl, scene, light]);
+  const ambient = useRef<THREE.AmbientLight>(null), hemisphere = useRef<THREE.HemisphereLight>(null);
+  useFrame(() => turnFill(light, scene, ambient.current, hemisphere.current));
   const { shadow } = light, shadowHalf = shadowHalfHeight(light.sunPosition, shadowExtent);
   // One world wind from the shared weather: rain slant, leaves and mist agree.
   const wind = useMemo(() => worldWind(weather), [weather]);
@@ -94,8 +108,8 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
   return <>
     {light.skyTop ? <SkyGradient top={light.skyTop} horizon={light.sky} /> : <color attach="background" args={[light.sky]} />}
     <fog attach="fog" args={[light.fogColor, overview ? light.fogNear + 28 + overviewFog : light.fogNear, overview ? light.fogFar + 15 + overviewFog : light.fogFar]} />
-    <ambientLight intensity={light.ambient} color={light.fill} />
-    <hemisphereLight args={[light.fill, light.bounce, light.hemisphere]} />
+    <ambientLight ref={ambient} intensity={light.ambient} color={light.fill} />
+    <hemisphereLight ref={hemisphere} args={[light.fill, light.bounce, light.hemisphere]} />
     <directionalLight name="sun" position={light.sunPosition} color={light.sun} intensity={light.sunIntensity} castShadow={castShadows}
       shadow-mapSize={[2048, 2048]} shadow-camera-left={-shadowExtent} shadow-camera-right={shadowExtent}
       shadow-camera-top={shadowHalf} shadow-camera-bottom={-shadowHalf} shadow-camera-near={1} shadow-camera-far={75 + Math.max(0, shadowExtent - 26) * 2}
@@ -140,7 +154,7 @@ const CLEARANCE = 0.8;
 export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: number, overview: Overview | null, scene?: FollowScene) {
   const { camera } = useThree();
   useOrbitInput();
-  const rig = useMemo(() => ({ ahead: LOOK_AHEAD, cut: 0, chest: new THREE.Vector3() }), []);
+  const rig = useMemo(() => ({ ahead: LOOK_AHEAD, cut: 0, chest: new THREE.Vector3(), last: new THREE.Vector3(NaN, 0, 0), vx: 0, vz: 0 }), []);
   useEffect(() => () => { CUTOUT.value.w = 0; }, []);
   const baseFar = useRef<number | null>(null);
   const blend = useRef({ zoom, overview: overview ? 1 : 0, last: overview });
@@ -160,6 +174,15 @@ export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: num
       if (camera.far !== plane) { camera.far = plane; camera.updateProjectionMatrix(); }
     }
     juiceShake(dt, shake);
+    // Gentle auto-follow (row 282): the player's travel, from where they are drawn (a jump of a teleport or a respawn is no run).
+    const p = scene?.player.current;
+    if (p && dt > 0) {
+      const mx = (p.x - rig.last.x) / dt, mz = (p.z - rig.last.z) / dt, ok = Number.isFinite(mx) && Math.hypot(mx, mz) < 40;
+      rig.vx = THREE.MathUtils.damp(rig.vx, ok ? mx : 0, 10, dt); rig.vz = THREE.MathUtils.damp(rig.vz, ok ? mz : 0, 10, dt);
+      rig.last.copy(p);
+    }
+    const free = capture.state !== "cursor" && capture.state !== "menu" && !(scene?.aim && capture.state === "captured");
+    autoFollow(dt, rig.vx, rig.vz, free && b.overview === 0);
     const v = stepOrbit(dt, orbitKeys), sy = Math.sin(v.yaw), cy = Math.cos(v.yaw);
     rig.ahead = THREE.MathUtils.damp(rig.ahead, scene?.aim && capture.state === "captured" ? AIM_AHEAD : LOOK_AHEAD, 6, dt);
     // The shake is across the screen and up; at yaw 0 that is world x, as before.
@@ -178,15 +201,15 @@ export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: num
     }
     camera.lookAt(look);
     camera.updateMatrixWorld();
-    // A building or tree on the line of sight to the player's chest eases the cut in; the circle sits where they are drawn.
-    const p = scene?.player.current;
+    // A building, tree or cliff on the line of sight to the player's chest eases the cut in; the circle sits where they are drawn.
     if (!p || !(camera instanceof THREE.PerspectiveCamera)) return;
     const c = rig.chest.set(p.x, p.y + 1, p.z);
-    rig.cut = THREE.MathUtils.damp(rig.cut, b.overview === 0 && lineBlocked(camera.position, c, scene!.occluders) ? 1 : 0, 8, dt);
+    const blocked = b.overview === 0 && (lineBlocked(camera.position, c, scene!.occluders) || groundBlocks(camera.position, c, scene!.ground));
+    rig.cut = THREE.MathUtils.damp(rig.cut, blocked ? 1 : 0, 8, dt);
     c.applyMatrix4(camera.matrixWorldInverse);
     const depth = -c.z;
     bendViewPoint(c).applyMatrix4(camera.projectionMatrix);
     CUTOUT.value.set(c.x, c.y, CUT_RADIUS / (depth * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))), rig.cut < 0.01 ? 0 : rig.cut);
-    CUTOUT_VIEW.value.set(camera.aspect, depth);
+    CUTOUT_VIEW.value.set(camera.aspect, depth, p.y + CUT_FLOOR);
   }, -3);
 }

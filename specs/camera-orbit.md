@@ -67,3 +67,18 @@ David changed the controls on 2026-10-01 (this replaces the first draft's right-
 - the horizon at each time of day;
 - the back-side audit before and after;
 - FPS per direction.
+
+## Built (branch `game/camera-orbit`, 2026-10-02)
+- **Rig** `useFollowCamera` (`IslandAtmosphere.tsx`) on the orbit store `lib/game/orbitCamera.ts`. Yaw 0 at 34.4° is today's framing exactly. The tilt band is 20°–47°, zoom 0.6–1.6 (close third person, never first). It eases in about 60 ms and stays rigid on the player. It keeps 0.8 over the ground behind you, and the overview circles the island with the yaw. Angle, zoom and preferences are remembered per device (`tsi.camera.v1`).
+- **Input** `components/game/useOrbitInput.ts`:
+  - Mouse-look under pointer lock, with the capture state machine (`nextCapture`).
+  - The right-click cursor hold.
+  - Sheets, dialogs, text fields, decorating, the greeting and the dev panel release capture.
+  - The arrows, the wheel and Z, V to snap back, and two fingers on touch.
+  - The "Click to look around" hint and the ruins crosshair (`crosshairAim`; the view looks 2.2 ahead while it shows).
+- **Settings › Camera:** mouse look, sensitivity, invert up and down, follow behind when you run.
+- **Auto-follow** (row 282) `autoFollow`: after a second without camera input while running, gently, never round to face you.
+- **Controls** `cameraRelative` (`lib/game/cameraBasis.ts`): W is away from the camera at any heading. The sim is untouched.
+- **Things in the way** `lib/game/occluders.ts`: buildings, canopies and the ground on the line of sight ease in a dithered see-through circle through models and terrain above your feet.
+- **Minimap** turns with the camera and the N rides round it. **Lighting:** the backlit fill follows the heading (`fillForHeading`). **Back sides:** the chalet's back wears its outside wall, and rain and snow turn to the heading. **Painter:** `/lab/island?draft=1` steps a quarter turn round.
+- **Evidence** `specs/evidence/camera-orbit/` (00–10, shot by `shoot.mjs`). Questions and art needs: `specs/camera-orbit-questions.md`.
