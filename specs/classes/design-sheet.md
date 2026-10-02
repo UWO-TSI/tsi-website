@@ -882,40 +882,36 @@ All waves merge to `main` behind a `classes_v2` flag that stays off in productio
   - A skull-and-tome icon on the nameplate.
   - Shop: tome bindings and soul-fire colours.
 
-## Transmuter (DRAFT: David wants to talk about the mobs first, 2026-10-02)
+## Transmuter (LOCKED, David 2026-10-02, after the mobs talk)
 - **Family:** Arcane (purple).
 - **Role:** form-shifting bruiser.
-- **MBTI:** mapped at the end.
-- **Weapon:** a monster-tooth charm (a necklace of claws and teeth that glows with each known form). Fists fight bare in human form.
+- **Style:** skills (form switching).
+- **Weapon:** a monster-tooth charm that glows with each learned form; fists fight bare in human form.
+- **Forms on keys 1–5.** Shifting in plays the form's move, which is its skill. Click is the form's attack.
 
-| Key | Skill | Effect |
-|---|---|---|
-| 1 | Fox Form | Shift in with a lunging bite. Fast and light; click = bite combo. |
-| 2 | Crab Form | Shift in with a shell block. Armoured; click = pinch; blocks. |
-| 3 | Golem Form | Shift in with a ground slam. Heavy and slow; click = big punches. |
-| 4 | Wisp Form | Shift in by floating up. Ranged; click = spirit bolts. |
-| 5 | Form Skill | The current form's move. Fox Pounce is movement: it chains off dash, slide and jump and keeps momentum. Crab Shell Spin spins and deflects. Golem throws a boulder. Wisp fires a spirit barrage. |
+| Key | Form | Role | Click attack | Shift-in move |
+|---|---|---|---|---|
+| 1 | Fox | Basic attack | Fast bite combo | Lunge |
+| 2 | Crab | Shield | Pinch; blocks from the front | Block |
+| 3 | Wisp | Ranged | Rune bolts | Blink-hover |
+| 4 | Pollen | Movement | Sting the target | Burst into a sprite swarm: flit fast, briefly untargetable, keeps momentum |
+| 5 | Golem | AoE | Ground slams and shockwaves | Slam |
 
-- **Shifting:**
-  - Quick, about 0.15 s, with the shift-in move as you change.
-  - Costs less mana than other classes' skills.
-  - One short shared form cooldown: 3 s at mastery 1.
-  - Forms carry your momentum (row 292).
-- **Skill when attacked, Perfect Shift:** shift within 0.25 s before a hit lands and the form counters it.
+- **Shifting:** quick, about 0.15 s. Costs less mana than other classes' skills. One short shared form cooldown, 3 s at mastery 1. Forms carry your momentum (row 292).
+- **Perfect Shift:** shift within 0.25 s before a hit lands and the form counters it.
   - Crab blocks it and pinches back.
-  - Fox slips it (a dodge).
-  - Golem takes it without flinching and counter-slams.
-  - Wisp phases through it.
-  - Picking the right form for the incoming attack is the skill.
-- **Learning forms:** Fox is known from the start. Your first kill of a crab, golem or wisp teaches that form, so there's a reason to hunt.
+  - Fox slips it.
+  - Wisp blinks away.
+  - Pollen scatters.
+  - Golem takes it without flinching and slams back.
+- **Learning forms:** learn a form by defeating that mob. Fox is known at the start. Crab, Wisp and Pollen come from zone 1; Golem comes from the inner temple.
 - **Passive, Shed Skin:** each shift gives a small barrier.
-- **Ultimate, Chimera (F, meter):** a timed transformation (10 s). Circles flare on the ground and your body warps into a chimera three times your size: fox legs, crab claws, golem body, wisp wings. Stats are hugely buffed, and skills 1–5 have no cooldown, so you spam them freely. It ends in a giant pounce: flash frame.
-- **Stat direction: cooldown reduction.** The Transmuter is built to want shorter cooldowns: the form cooldown (3 s down to about 0.75 s at 20) and skill cooldowns, so you change forms faster. Form skills upgrade alongside; cosmetics.
-- **Perfect Shift and the forms** wait for the mobs discussion.
+- **Ultimate, Chimera:** all five forms fuse into a chimera three times your size for 10 s, with huge stat buffs and no cooldowns. It ends in a giant pounce: flash frame.
+- **Stat direction:** cooldown reduction (the form cooldown goes from 3 s down to about 0.75 s at mastery 20).
 - **Identity:**
   - A purple aura with flickering monster silhouettes.
   - A fang icon on the nameplate.
-  - Shop: charm skins and form-colour variants.
+  - Shop: charm skins.
 
 ## Stat direction per class (David, 2026-10-02)
 "like in the game megabonk each character has a direction to go towards." Every class has one base stat it is built to stack, which mastery raises and its kit rewards:
@@ -1222,3 +1218,29 @@ At level 10 the Oracle suggests this subclass; you can still pick another in you
 | | ENFJ | Priest | Lifts everyone up |
 
 Priest drawing shapes approved as proposed.
+
+## Mobs, zone 1 (David, 2026-10-02)
+- **Roster size:** about 12 types across 3 zones, 2 mini-bosses and a final boss. **Build zone 1 only for now**; zones 2–3 come later.
+- **Tone:** cozy-mystic: enchanted ruins creatures, cute but dangerous.
+- **Roles that must exist:** rushers and swarms, ranged casters, tanks and shielders. Every mob family is also a Transmuter form.
+
+**Zone 1, Overgrown Outskirts (the ruins' outer wild area today):**
+
+| Mob | Role | Behaviour |
+|---|---|---|
+| Shadow Fox | Rusher | Packs of 3; crouch-flare tell, then pounce |
+| Thorn Crab | Shielder | Shell front blocks; flank it or backstab it |
+| Mushroom Beast | Caster | Lobs spores |
+| Rune Wisp | Caster | Rune bolts and blinks |
+| Pollen Sprites | Swarm (new) | Tiny, many, burst in pollen puffs |
+
+**Mini-boss:** the Elder Thorn Crab, reworked with shell phases and claw sweeps.
+
+The inner temple (Animated Book, Stone Golem) and the Guardian Statue stay as they are until zones 2–3 are designed.
+
+## Build overrides (read before §1)
+§1 was written before the classes were designed. Where it disagrees, the locked class sections win:
+- **No pick-4 loadout:** every class has its keys 1–5 (Elementalist uses 1–4 plus combos), all equipped (row 291).
+- **Mastery unlocks are per class** (usually one skill at about mastery 3), not the 2/4/6/8 template.
+- **Each class has a stat direction** (the table above) that mastery raises.
+- **Class movement passives and skills are ruins-only** and extend the movement combo (row 292).
