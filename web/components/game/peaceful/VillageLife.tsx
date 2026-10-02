@@ -60,8 +60,9 @@ function NodeVisual({ sp, x, y, z, canopy }: { sp: Species; x: number; y: number
   if (buried(sp)) return <mesh position={[x, y + 0.012, z]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.17, 10]} /><meshStandardMaterial color="#6e5a3e" roughness={1} /></mesh>;
   if (sp.model) return <GLBProp url={sp.model} position={[x, y + 0.02, z]} scale={1} />;
   if (sp.category === "mineral") return <mesh position={[x, y + 0.12, z]}><dodecahedronGeometry args={[0.16, 0]} /><meshStandardMaterial color={sp.key.includes("gold") ? "#e2b640" : sp.key.includes("crystal") ? "#b9e3f2" : "#8d8a84"} roughness={0.5} metalness={sp.key.includes("gold") ? 0.6 : 0} /></mesh>;
-  // Flowers and anything without a model: a small bright tuft.
-  return <mesh position={[x, y + 0.12, z]}><icosahedronGeometry args={[0.12, 0]} /><meshStandardMaterial color="#e9a3c3" roughness={0.7} /></mesh>;
+  // A flower to pick: one bloom of its own kind (the cluster's ACNH models), a little smaller than a cluster's.
+  if (sp.sub === "flower") return <GLBProp url={`/assets/acnh/plants/flower-${sp.key.replace(/^flower_/, "")}.glb`} position={[x, y, z]} rotation={[0, sp.position * 1.7, 0]} scale={0.42} />;
+  return null;
 }
 
 interface LiveBug {
