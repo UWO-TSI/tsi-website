@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { APPLICANT_PORTAL, memberWorldIsAvailable, OPENING_SOON, recruitmentReturnPath, recruitmentRouteRedirect } from "./recruitment-access";
+import { APPLICANT_PORTAL, memberWorldIsAvailable, OPENING_SOON, recruitmentReturnPath, recruitmentRouteRedirect, sameOriginPath } from "./recruitment-access";
 
 describe("applicant and member-world routing", () => {
   it("opens the member world only on the launch flag, defaulting to local development", () => {
@@ -28,5 +28,14 @@ describe("applicant and member-world routing", () => {
   });
   it.each(["/student/apply/director-external", "/student/apply/developer?source=email", "/student/apply/dashboard", "/admin/recruit", "/admin/preview/application-id", "/student/reset-password", "/student/go"])("preserves explicit recruitment/recovery destination %s", path => {
     expect(recruitmentReturnPath(path)).toBe(path);
+  });
+});
+
+describe("sameOriginPath", () => {
+  it.each([null, "", "student", "//other.example/", "https://other.example/", "/\\other.example/", "/student\n"])("rejects %s", (input) => {
+    expect(sameOriginPath(input)).toBeNull();
+  });
+  it.each([["/student/companion/study", "/student/companion/study"], ["/student/dashboard?x=1#y", "/student/dashboard?x=1#y"], ["/student/apply/../dashboard", "/student/dashboard"]])("keeps %s as %s", (input, out) => {
+    expect(sameOriginPath(input)).toBe(out);
   });
 });

@@ -5,7 +5,7 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth: { g
 const { GET } = await import("./route");
 afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); });
 
-const land = async () => (await GET(new Request("https://tethos.ca/student/go"))).headers.get("location");
+const land = async (query = "") => (await GET(new Request(`https://tethos.ca/student/go${query}`))).headers.get("location");
 
 describe("/student/go account landing", () => {
   it("sends everyone to the applicant village while the member world is closed, without asking auth", async () => {
@@ -22,5 +22,22 @@ describe("/student/go account landing", () => {
     expect(await land()).toBe("https://tethos.ca/student/apply/dashboard");
     getUser.mockRejectedValueOnce(new Error("auth down"));
     expect(await land()).toBe("https://tethos.ca/student/apply/dashboard");
+  });
+  it("returns signed-in members to a safe ?next= page once open", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_MEMBER_WORLD", "open");
+    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    expect(await land("?next=%2Fstudent%2Fcompanion%2Fstudy")).toBe("https://tethos.ca/student/companion/study");
+    expect(await land("?next=/student/dashboard/bounty%3Ftab%3Dopen")).toBe("https://tethos.ca/student/dashboard/bounty?tab=open");
+    for (const bad of ["//evil.example/", "https://evil.example/", "/\\evil.example", "/student", "/student/", "/student/go", "/student/login", "/student/signup"]) {
+      expect(await land(`?next=${encodeURIComponent(bad)}`)).toBe("https://tethos.ca/student/dashboard");
+    }
+  });
+  it("ignores ?next= while the member world is closed and for signed-out visitors", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    expect(await land("?next=/student/companion")).toBe("https://tethos.ca/student/apply/portal");
+    vi.stubEnv("NEXT_PUBLIC_MEMBER_WORLD", "open");
+    getUser.mockResolvedValueOnce({ data: { user: null } });
+    expect(await land("?next=/student/companion")).toBe("https://tethos.ca/student/apply/dashboard");
   });
 });

@@ -19,16 +19,24 @@ export function recruitmentRouteRedirect(pathname: string, open = memberWorldIsA
   return null;
 }
 
+const ORIGIN = "https://tethos.invalid";
+
+/** An untrusted return path (`?next=`) normalised to a same-origin path, or null. */
+export function sameOriginPath(input: string | null | undefined): string | null {
+  if (!input || !input.startsWith("/") || input.startsWith("//") || /[\\\u0000-\u001f]/.test(input)) return null;
+  let url: URL;
+  try { url = new URL(input, ORIGIN); } catch { return null; }
+  return url.origin === ORIGIN ? `${url.pathname}${url.search}${url.hash}` : null;
+}
+
 /** Only recruitment destinations, the account landing and password recovery can override ordinary account entry. */
 export function recruitmentReturnPath(input: string | null | undefined) {
-  if (!input || !input.startsWith("/") || input.startsWith("//") || /[\\\u0000-\u001f]/.test(input)) return APPLICANT_PORTAL;
-  let url: URL;
-  try { url = new URL(input, "https://tethos.invalid"); } catch { return APPLICANT_PORTAL; }
-  if (url.origin !== "https://tethos.invalid") return APPLICANT_PORTAL;
-  const path = url.pathname.replace(/\/+$/, "");
+  const safe = sameOriginPath(input);
+  if (!safe) return APPLICANT_PORTAL;
+  const path = new URL(safe, ORIGIN).pathname.replace(/\/+$/, "");
   if (path === "/student/dashboard/admin/recruitment") return RECRUITMENT_ADMIN;
   if (path === RECRUITMENT_ADMIN || path === "/student/go" || path.startsWith("/admin/preview/") || path === "/student/reset-password" || path.startsWith("/student/apply/")) {
-    return `${url.pathname}${url.search}${url.hash}`;
+    return safe;
   }
   return APPLICANT_PORTAL;
 }
