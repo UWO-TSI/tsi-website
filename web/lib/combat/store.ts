@@ -6,7 +6,7 @@ import { DomainError } from "@/lib/result";
 
 export type CombatErrorCode =
   | "unavailable" | "insufficient" | "not_found" | "not_owned" | "needs_reset" | "not_enough_points" | "level_too_low" | "wrong_family"
-  | "no_family" | "cooldown" | "not_ready" | "kill_xp_cap" | "unknown_enemy" | "unknown_mission" | "bad_hits" | "boss_cooldown" | "gate_closed" | "bad_loadout" | "no_subclass" | "failed";
+  | "no_family" | "cooldown" | "not_ready" | "kill_xp_cap" | "unknown_enemy" | "unknown_mission" | "bad_hits" | "boss_cooldown" | "gate_closed" | "bad_loadout" | "no_subclass" | "locked" | "bad_cosmetic" | "failed";
 export class CombatError extends DomainError<CombatErrorCode> {}
 
 export interface ProgressionRow {
@@ -18,7 +18,12 @@ export interface ProgressionRow {
   loadout: string[];
   /** Transmuter monster traits: trait key → qualifying defeats (rows 40, 41). */
   traits: Record<string, number>;
+  /** Classes v2 (§1.11): the repick token, from a paid Oracle reading or the launch gift; null when none. */
+  repick_source: "oracle" | "launch" | null;
 }
+/** Classes v2 mastery, one row per subclass played (member_subclass_mastery). */
+export interface MasteryRow { subclass: string; xp: number; mastery: number; cosmetics: Partial<Record<CosmeticKind, string>> }
+export type CosmeticKind = "weapon_skin" | "aura" | "frame";
 export interface OwnedWeapon {
   weapon_key: string;
   durability: number;
@@ -51,6 +56,12 @@ export interface CombatStore {
   startMission(memberId: string, missionKey: string, startKey: string): Promise<{ progress_id: string; resumed: boolean }>;
   saveMission(memberId: string, id: string, state: MissionState, progress: MissionProgress): Promise<boolean>;
   completeMission(memberId: string, id: string): Promise<{ xp_awarded: number; coins_awarded: number; materials_awarded: Record<string, number>; replayed: boolean }>;
+  /** An economy_settings value (the classes_v2 flag: 1 on), null when unset. */
+  setting(key: string): Promise<number | null>;
+  /** Classes v2: every subclass's mastery row for a member. */
+  mastery(memberId: string): Promise<MasteryRow[]>;
+  /** Classes v2: equip (or, with null, take off) a cosmetic on one subclass's row; returns the row's cosmetics. */
+  equipCosmetic(memberId: string, subclass: string, kind: CosmeticKind, value: string | null): Promise<MasteryRow["cosmetics"]>;
   /** Pay a rolled boss reward once per recorded boss kill, at most once per cooldown; a replay returns the first reward. */
   bossReward(memberId: string, eventKey: string, reward: BossReward): Promise<{ reward: BossReward; replayed: boolean }>;
 }
