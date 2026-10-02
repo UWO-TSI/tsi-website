@@ -13,8 +13,11 @@ import type { Ability, BuffStat, Element, Status, Subclass, UnitDef } from "@/li
 
 /** A shot. Weapon shots carry nothing; ability and unit shots carry what they do on impact. */
 export interface ShotHit { power: number; stat?: Stat; tier?: number; pierce?: boolean; splash?: number; status?: Status; unit?: boolean; hitIds?: string[] }
-/** `knock`: an enemy shot's push on you (its attack's knockback). */
-export interface Projectile { id: number; x: number; z: number; vx: number; vz: number; life: number; from: "player" | "enemy"; damage: number; kind: "arrow" | "bolt" | "spit"; radius: number; hit?: ShotHit; knock?: number }
+/**
+ * `knock`: an enemy shot's push on you (its attack's knockback). `arc`: a lobbed shot's flight time (s): it flies over
+ * everything and bursts where it lands (`radius` then is the burst's), the height following the arc (mobs.ts).
+ */
+export interface Projectile { id: number; x: number; z: number; vx: number; vz: number; life: number; from: "player" | "enemy"; damage: number; kind: "arrow" | "bolt" | "rune" | "spore"; radius: number; hit?: ShotHit; knock?: number; arc?: number; source?: string }
 /** Summons, totems, traps and decoys (kits.ts UNITS): `source` is the ability that made it ("weapon" for the summoning charm's wisps). */
 export interface Unit {
   id: number; def: UnitDef; source: string; x: number; z: number; hp: number; maxHp: number;
@@ -30,6 +33,18 @@ export interface Floater { id: number; x: number; y: number; z: number; text: st
 export type CueKind = "swing" | "hit" | "crit" | "hurt" | "defeat" | "windup" | "stagger" | "bossDefeat";
 export interface Cue { kind: CueKind; x: number; z: number; melee: boolean }
 export interface Blast { id: number; x: number; z: number; radius: number; color: string; age: number; life: number; arc?: number; rot?: number; length?: number }
+/**
+ * What the zone-1 mobs leave on the ground (mobs.ts stepHazards): a poison puddle that ticks, a pollen puff that slows,
+ * a slam's shockwave running out from `r0` to `r` over its life and hitting once where its front passes.
+ */
+export interface Hazard { id: number; kind: "poison" | "pollen" | "wave"; x: number; z: number; r: number; r0: number; age: number; life: number; damage: number; every: number; tick: number; slow: number; knock: number; hit: boolean }
+/**
+ * An enemy effect for the scene to paint (EnemyFx in components/game/combat/MobFx.tsx drains them each frame): a claw
+ * slash, a spore burst, a pollen burst, rune sparks (a bolt landing, a blink out and in), a shell's glancing sparks, a
+ * crack, a slam. `rot` faces it; `size` scales it.
+ */
+export type MobFxKind = "slash" | "spores" | "pollen" | "runes" | "blink" | "glance" | "crack" | "slam" | "pounce";
+export interface MobFx { kind: MobFxKind; x: number; z: number; rot: number; size: number }
 /** Four equipped ability slots (row 50) plus the weapon swap. */
 export type AbilityId = "slot1" | "slot2" | "slot3" | "slot4" | "swap";
 export const SLOT_IDS = ["slot1", "slot2", "slot3", "slot4"] as const;
@@ -69,6 +84,8 @@ export interface CombatRuntime {
   denied: Record<AbilityId, number>;
   enemies: Enemy[];
   projectiles: Projectile[]; units: Unit[]; buffs: Buff[]; floaters: Floater[]; blasts: Blast[]; cues: Cue[];
+  /** Zone-1 hazards on the ground, and the enemy effects waiting to be painted (mobs.ts). */
+  hazards: Hazard[]; fx: MobFx[];
   casting: { id: number; rune: "spark" | "binding"; aim: Vec; slot: number; ability: Ability } | null;
   /** The subclass kit from /api/combat/progression: equipped abilities, capacity for summons, owned monster traits. */
   kit: { subclass: Subclass; capacity: number; traits: Record<string, number> } | null;
@@ -99,7 +116,7 @@ export function createRuntime(): CombatRuntime {
       aim: { x: 0, z: 0 }, facing: 0, aimHold: 0, hurt: 0, downFor: 0, armed: false,
       shield: 0, shieldFor: 0, dash: null, impulse: { x: 0, z: 0 }, speed: 1, still: 0, last: null },
     cooldowns: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, swap: 0 }, denied: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, swap: 0 },
-    enemies: [], projectiles: [], units: [], buffs: [], floaters: [], blasts: [], cues: [],
+    enemies: [], projectiles: [], units: [], buffs: [], floaters: [], blasts: [], cues: [], hazards: [], fx: [],
     casting: null, kit: null, slots: [null, null, null, null],
     passive: { element: null, target: null, stacks: 0, momentum: 0, momentumT: 0, procs: 0 }, transform: null,
     killQueue: [], mission: null, idol: "temple", escort: null, wave: null, bossEngaged: false, banner: null, seq: 1,

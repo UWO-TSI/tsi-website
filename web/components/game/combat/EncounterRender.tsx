@@ -15,10 +15,11 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { combat, type Projectile } from "@/lib/game/combat/runtime";
 import { ENEMIES, WEAPONS } from "@/lib/game/combat/data";
-import { glow, marker, partPose, type MarkerFamily, type PartPose } from "@/lib/game/combat/telegraph";
+import { airborne, glow, lobMarker, marker, partPose, type MarkerFamily, type PartPose } from "@/lib/game/combat/telegraph";
 import type { Enemy } from "@/lib/game/combat/sim";
 import { CAPS } from "@/lib/combat/kits";
 import { packMap, spriteQuad } from "../movement/moveFx";
+import { lobHeight } from "@/lib/game/combat/mobs";
 
 type Ground = (x: number, z: number) => number;
 const tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpS = new THREE.Vector3(), tmpP = new THREE.Vector3(), tmpC = new THREE.Color(), UP = new THREE.Vector3(0, 1, 0);
@@ -56,7 +57,7 @@ function useRig(url: string) {
 
 const ALLY_TINT = new THREE.Color(0.9, 2.2, 1.1), SHADE_TINT = new THREE.Color(1.5, 1.2, 2.6);
 const poseM = new THREE.Matrix4(), poseQ = new THREE.Quaternion(), poseE = new THREE.Euler(), poseP = new THREE.Vector3(), poseS = new THREE.Vector3();
-const POSE: PartPose = { rx: 0, ry: 0, rz: 0, dy: 0, dz: 0, sy: 1 }, BOX = new THREE.Box3();
+const POSE: PartPose = { rx: 0, ry: 0, rz: 0, dy: 0, dz: 0, sy: 1, s: 1 }, BOX = new THREE.Box3();
 /** This frame's enemies of one type (or allies borrowing its model), into a reused list. */
 function collect(out: Enemy[], typeId: string, allies: boolean, capacity: number) {
   out.length = 0;
@@ -95,12 +96,12 @@ export function EnemyInstances({ typeId, capacity, ground, allies = false }: { t
       const bob = type.hover ? Math.sin(t * 6 + i) * 0.12 : 0;
       tmpQ.setFromAxisAngle(UP, (e.state === "active" ? e.beam : e.facing) + type.modelYaw);
       tmpS.setScalar(type.modelScale * dying * (allies ? 0.85 : 1));
-      tmpP.set(e.x, ground(e.x, e.z) + type.hover + bob, e.z);
+      tmpP.set(e.x, ground(e.x, e.z) + type.hover + bob + airborne(e), e.z);
       tmpM.compose(tmpP, tmpQ, tmpS);
       nodes.forEach((n, ni) => {
         const m = world[ni].copy(n.rest);
         const pose = n.role && partPose(n.role, e, t, i * 1.7, POSE);
-        if (pose) m.multiply(poseM.compose(poseP.set(0, pose.dy, pose.dz), poseQ.setFromEuler(poseE.set(pose.rx, pose.ry, pose.rz)), poseS.set(1, pose.sy, 1)));
+        if (pose) m.multiply(poseM.compose(poseP.set(0, pose.dy, pose.dz), poseQ.setFromEuler(poseE.set(pose.rx, pose.ry, pose.rz)), poseS.set(pose.s, pose.sy * pose.s, pose.s)));
         m.premultiply(n.parent < 0 ? tmpM : world[n.parent]);
       });
       const lit = glow(e, t);
@@ -168,8 +169,11 @@ export function Telegraphs({ ground, max = 24 }: { ground: Ground; max?: number 
   useFrame(() => {
     let n = 0;
     const [bodies, fills, rims, lines, lineFills] = parts.current;
-    for (const e of combat.rt.enemies) {
-      const mk = n < max ? marker(e) : null;
+    const rt = combat.rt, enemies = rt.enemies.length;
+    // The enemies' windups, then the landing rings of spore balls still in the air.
+    for (let i = 0; i < enemies + rt.projectiles.length; i++) {
+      const sh = i < enemies ? null : rt.projectiles[i - enemies];
+      const mk = n >= max ? null : sh ? (sh.arc ? lobMarker(sh) : null) : marker(rt.enemies[i]);
       if (!mk) continue;
       const body = bodies[n], fill = fills[n], rim = rims[n], line = lines[n], lineFill = lineFills[n];
       if (!body || !fill || !rim || !line || !lineFill) continue;
@@ -248,7 +252,9 @@ const P = "/assets/game/props/";
 const SHOT: Record<Projectile["kind"], { model: string; scale: number; trail: THREE.Color; width: number; lit: boolean }> = {
   arrow: { model: `${P}projectile-arrow.glb`, scale: 1.3, trail: new THREE.Color("#fff1cf"), width: 0.07, lit: true },
   bolt: { model: `${P}projectile-bolt.glb`, scale: 1.5, trail: new THREE.Color("#a77bff"), width: 0.24, lit: false },
-  spit: { model: `${P}projectile-spit.glb`, scale: 2, trail: new THREE.Color("#8fd14f"), width: 0.22, lit: false },
+  // Zone 1: the wisps' rune bolt (the rune shard, cyan), the mushroom's lobbed spore ball (the glob, on its arc).
+  rune: { model: `${P}projectile-bolt.glb`, scale: 1.4, trail: new THREE.Color("#7fe8ff"), width: 0.2, lit: false },
+  spore: { model: `${P}projectile-spit.glb`, scale: 2.4, trail: new THREE.Color("#b6e06a"), width: 0.2, lit: false },
 };
 const KINDS = Object.keys(SHOT) as Projectile["kind"][];
 /** A flat sliver behind the shot (local -Z), white at its head and black at its tail. */
@@ -273,7 +279,7 @@ function ShotPool({ kind, ground, max }: { kind: Projectile["kind"]; ground: Gro
       if (s.kind !== kind || n >= max) continue;
       const speed = Math.hypot(s.vx, s.vz);
       tmpQ.setFromAxisAngle(UP, Math.atan2(s.vx, s.vz));
-      tmpP.set(s.x, ground(s.x, s.z) + 0.9, s.z);
+      tmpP.set(s.x, ground(s.x, s.z) + 0.9 + (s.arc ? lobHeight(s.life, s.arc) : 0), s.z);
       b.setMatrixAt(n, tmpM.compose(tmpP, tmpQ, tmpS.setScalar(look.scale)));
       t.setMatrixAt(n, tmpM.compose(tmpP, tmpQ, tmpS.set(look.width, 1, Math.min(1.4, speed * 0.06))));
       n++;

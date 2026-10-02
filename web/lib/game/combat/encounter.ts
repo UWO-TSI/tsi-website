@@ -1,14 +1,15 @@
 /**
  * One encounter tick, shared by the ruins scene and the scripted balance run
  * (balance.ts): timers, statuses and buffs, energy, the dodge's clock,
- * dash/knockback impulse, enemies (aimed at you or at a phantom/crab that draws them),
- * projectiles, summons and totems, effects. Inputs (aim, attack, dodge, keys),
+ * dash/knockback impulse, enemies (aimed at you or at a phantom/crab that draws them; zone 1's
+ * packs, pounces, lobs, blinks, bursts and hazards in mobs.ts), projectiles, summons and totems, effects. Inputs (aim, attack, dodge, keys),
  * missions, respawns and server sync stay with the caller.
  */
 import { cue, enemyTarget, floater, hurtUnits, moveSpeed, stepUnits } from "./abilities";
 import { hurtPlayer, regenEnergy, resolvePlayerShot, summonWisps } from "./actions";
 import { SLOT_IDS, type AbilityId, type CombatRuntime } from "./runtime";
 import { beamLands, DODGE, separate, stepEnemy, strikeLands, sweptHit, type Vec } from "./sim";
+import { landLob, mobEvent, rally, stepHazards } from "./mobs";
 
 const ABILITY_IDS: readonly AbilityId[] = [...SLOT_IDS, "swap"];
 
@@ -57,7 +58,7 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
     const ev = stepEnemy(e, enemyTarget(rt, e, you), dt, freeBody, random);
     if (was !== "windup" && e.state === "windup") cue(rt, "windup", e);
     else if (was === "active" && e.state === "recover" && e.move.stagger) cue(rt, "stagger", e);
-    if (!ev) continue;
+    if (!ev || mobEvent(rt, ev, me, random)) continue;
     const dmg = e.move.damage;
     if (ev.kind === "strike") {
       if (strikeLands(e, me)) hurtPlayer(rt, dmg, e.move.shape === "smash" ? e.aim : e, me, e.move.knockback, random);
@@ -66,18 +67,25 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
       if (rt.escort && Math.hypot(rt.escort.x - e.x, rt.escort.z - e.z) < Math.hypot(me.x - e.x, me.z - e.z)) e.aim = { x: rt.escort.x, z: rt.escort.z };
       if (e.move.shape === "smash") rt.blasts.push({ id: rt.seq++, x: e.aim.x, z: e.aim.z, radius: e.move.range, color: "#ffd9a0", age: 0, life: 0.45 });
     } else if (ev.kind === "spit") {
-      const d = Math.hypot(ev.to.x - e.x, ev.to.z - e.z) || 1, sp = 9;
-      rt.projectiles.push({ id: rt.seq++, x: e.x, z: e.z, vx: ((ev.to.x - e.x) / d) * sp, vz: ((ev.to.z - e.z) / d) * sp, life: (e.move.range + 2) / sp, from: "enemy", damage: dmg, kind: "spit", radius: 0.3, knock: e.move.knockback });
+      // A rune bolt (the wisps, and the guardian's): straight down the line its telegraph drew.
+      const d = Math.hypot(ev.to.x - e.x, ev.to.z - e.z) || 1, sp = 11;
+      rt.projectiles.push({ id: rt.seq++, x: e.x, z: e.z, vx: ((ev.to.x - e.x) / d) * sp, vz: ((ev.to.z - e.z) / d) * sp, life: (e.move.range + 2) / sp, from: "enemy", damage: dmg, kind: "rune", radius: 0.3, knock: e.move.knockback });
     } else if (ev.kind === "beam") {
       if (beamLands(e, me)) hurtPlayer(rt, dmg, e, me, e.move.knockback, random);
     } else if (ev.kind === "summon") summonWisps(rt, e);
-    else if (ev.kind === "phase") floater(rt, e, 3.4, e.phase === 3 ? "Enraged" : "The guardian calls for help", "info");
     else if (ev.kind === "reset" && e.type.kind === "boss") rt.enemies = rt.enemies.filter(x => !x.summoned);
   }
+  rally(rt.enemies);
   separate(rt.enemies, dt, free);
   // Projectiles: yours hit enemies (pierce keeps going), theirs hit you or a unit.
   for (let i = rt.projectiles.length - 1; i >= 0; i--) {
     const sh = rt.projectiles[i], from = FROM, to = TO;
+    // A lobbed spore flies over everything and bursts where it lands.
+    if (sh.arc) {
+      sh.x += sh.vx * dt; sh.z += sh.vz * dt;
+      if ((sh.life -= dt) <= 0) { landLob(rt, sh, me, random); rt.projectiles.splice(i, 1); }
+      continue;
+    }
     from.x = sh.x; from.z = sh.z;
     sh.x += sh.vx * dt; sh.z += sh.vz * dt; sh.life -= dt;
     to.x = sh.x; to.z = sh.z;
@@ -92,6 +100,7 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
     }
     if (gone) rt.projectiles.splice(i, 1);
   }
+  stepHazards(rt, me, dt, random);
   stepUnits(rt, me, dt, random);
   for (let i = rt.blasts.length - 1; i >= 0; i--) { rt.blasts[i].age += dt; if (rt.blasts[i].age > rt.blasts[i].life) rt.blasts.splice(i, 1); }
   for (let i = rt.floaters.length - 1; i >= 0; i--) { rt.floaters[i].age += dt; if (rt.floaters[i].age > 1.1) rt.floaters.splice(i, 1); }

@@ -57,8 +57,8 @@ const ALLY_TYPES = TYPES.filter(t => t !== "guardian-statue");
 
 export function resetEncounter() {
   const rt = combat.rt;
-  rt.enemies = SPAWNS.map(s => spawnEnemy(s.id, ENEMIES[s.type], s.x, s.z));
-  rt.projectiles = []; rt.units = []; rt.buffs = []; rt.blasts = []; rt.floaters = []; rt.casting = null; rt.wave = null; rt.bossEngaged = false; rt.banner = null;
+  rt.enemies = SPAWNS.map(s => spawnEnemy(s.id, ENEMIES[s.type], s.x, s.z, s.pack));
+  rt.projectiles = []; rt.units = []; rt.buffs = []; rt.blasts = []; rt.floaters = []; rt.hazards = []; rt.fx = []; rt.casting = null; rt.wave = null; rt.bossEngaged = false; rt.banner = null;
   rt.player = { ...rt.player, hp: rt.player.maxHp, alive: true, safe: true, dodgeAge: null, dodgeCd: 0, attackCd: 0, hurt: 0, downFor: 0, shield: 0, shieldFor: 0, dash: null, impulse: { x: 0, z: 0 } };
   rt.transform = null;
   rt.idol = rt.idol === "carried" ? "temple" : rt.idol;
@@ -232,7 +232,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     // Respawn (spawn-table enemies only) once dead long enough and you're away from the spot.
     for (const [i, e] of rt.enemies.entries()) {
       const after = e.state === "dead" && !e.summoned ? respawnAfter(e.id) : 0;
-      if (after && e.deadFor > after && Math.hypot(pl.x - e.spawnX, pl.z - e.spawnZ) > 12) rt.enemies[i] = spawnEnemy(e.id, e.type, e.spawnX, e.spawnZ);
+      if (after && e.deadFor > after && Math.hypot(pl.x - e.spawnX, pl.z - e.spawnZ) > 12) rt.enemies[i] = spawnEnemy(e.id, e.type, e.spawnX, e.spawnZ, e.pack);
     }
     rt.bossEngaged = rt.enemies.some(e => e.type.kind === "boss" && ENGAGED.has(e.state));
     if (rt.banner && clock.elapsedTime > rt.banner.until) rt.banner = null;

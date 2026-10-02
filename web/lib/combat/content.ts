@@ -32,13 +32,16 @@ const e = (key: string, name: string, kind: EnemyKind, zone: Zone, hp: number, d
 });
 
 export const ENEMIES: EnemyType[] = [
-  e("shadow-fox", "Shadow fox", "normal", "outer", 60, 8, 0, 7, 1.5, 30, "Crouches, eyes flare, then pounces; dodge sideways."),
-  e("thorn-crab", "Thorn crab", "normal", "outer", 90, 10, 0.3, 4, 1.2, 35, "Raises both claws, then sweeps a wide arc in front."),
-  e("mushroom-beast", "Mushroom beast", "normal", "outer", 110, 9, 0.1, 5, 4, 40, "Cap swells, then it spits spores at where you stood."),
-  e("rune-wisp", "Rune wisp", "normal", "outer", 70, 9, 0, 8, 7, 40, "Ring spins up and glows, then a rune bolt flies at your spot."),
+  // Zone 1, the Overgrown Outskirts (design sheet "Mobs, zone 1"): what each one's telegraph teaches.
+  e("shadow-fox", "Shadow fox", "normal", "outer", 60, 8, 0, 7, 1.5, 30, "Hunts in packs of three that circle to your sides. Each crouches, its mane and eyes flare, then it pounces down a line: step out of it."),
+  e("thorn-crab", "Thorn crab", "normal", "outer", 90, 10, 0.3, 4, 1.2, 35, "Its front shell turns most hits aside and it turns slowly: circle to its flank or back. Raises both claws, then sweeps in front."),
+  e("mushroom-beast", "Mushroom beast", "normal", "outer", 110, 9, 0.1, 6, 6.5, 40, "Its cap swells, then it lobs a spore ball onto the marked ring; the burst leaves a poison puddle for a few seconds."),
+  e("rune-wisp", "Rune wisp", "normal", "outer", 70, 9, 0, 8, 7, 40, "Its runes spin up, then a bolt flies down the marked line. Close in and it shimmers and blinks away."),
+  e("pollen-sprite", "Pollen sprite", "normal", "outer", 14, 4, 0, 7, 0.6, 6, "Drifts in clouds of 8 to 15 that circle you. One by one they flash, dart in and burst into pollen that slows you: swat them first."),
   e("animated-book", "Animated book", "normal", "inner", 120, 13, 0.2, 6, 2, 65, "Pages flutter open, then it snaps shut on a short charge."),
   e("stone-golem", "Stone golem", "elite", "inner", 420, 22, 0.45, 6, 2.5, 220, "Raises both fists, core glows, then slams the ground around it.", 2),
-  e("elder-thorn-crab", "Elder thorn crab", "elite", "outer", 300, 16, 0.4, 5, 1.8, 160, "A slower, wider claw sweep; hit it from behind."),
+  // The zone's mini-boss (lib/game/combat/sim.ts PLANS); a reward roll on defeat (DROPS).
+  e("elder-thorn-crab", "Elder thorn crab", "elite", "outer", 300, 16, 0.4, 5, 1.8, 160, "Mini-boss. Shell closed: armoured, slow claw sweeps, hit it from behind. Cracked at 60%: faster, and it charges down a marked lane. Enraged at 25%: claw slams with shockwaves to dodge through."),
   // Wakes when you step into its chamber and never leaves it (leash 11 from its plinth).
   // Combat polish 11: 1800 HP and armor 9 → 1700 and 7: about 4–6 minutes with a starter weapon, 2 with tier 2+ (boss.test.ts).
   e("guardian-statue", "Guardian statue", "boss", "boss", 1700, 28, 0.35, 9, 3, 1200,

@@ -3,7 +3,7 @@
  * every subclass through the real encounter tick (encounter.ts) and ability
  * system. The bot plays like an average member: the starter weapon its kit
  * suggests, the family stat preset at level 10, the default loadout; it keeps
- * its weapon's range without kiting, dodges 60% of telegraphed attacks aimed at it, uses an
+ * its weapon's range without kiting (but circles a crab's shell and steps out of puddles), dodges 60% of telegraphed attacks aimed at it, uses an
  * ability when it helps (heal when hurt, guard when a hit is coming, damage
  * when in reach, summons when there's room) and draws runes at ~80% (one in
  * ten fizzles, one in ten is empowered). No collision (open ground).
@@ -19,7 +19,7 @@ import { DODGE_SHAPE, attack, spawnWave, startDodge } from "./actions";
 import { ENEMIES, PLAYER_BASE, WEAPONS } from "./data";
 import { stepCombat } from "./encounter";
 import { createRuntime, type CombatRuntime } from "./runtime";
-import { strikeLands, type Enemy, type Vec } from "./sim";
+import { shellFactor, strikeLands, type Enemy, type Vec } from "./sim";
 import { MOVE_TUNING } from "@/lib/game/movement/sim";
 import { WAVES } from "./spawns";
 
@@ -113,15 +113,20 @@ export function runSurvive(subclassKey: string, missionId: "survive-circle" | "s
     taken += Math.max(0, hpBefore - p.hp);
     minHp = Math.min(minHp, p.hp);
     if (!p.alive) return { cleared: false, seconds: t, dealt, taken, minHp: 0, died: true };
-    // Walk: hold the weapon's range, circle a little; stand still while drawing.
+    // Walk: hold the weapon's range, circle a little; stand still while drawing. A shelled crab facing you: close to
+    // 2.6 u and circle to its flank (its telegraph teaches that). Standing in a puddle or pollen: step out of it.
     let mx = 0, mz = 0;
     if (target && !rt.casting && !p.dash && p.dodgeAge === null) {
-      const want = RANGE[WEAPONS[p.weapon].kind], dist = d2(target, me), ux = (target.x - me.x) / (dist || 1), uz = (target.z - me.z) / (dist || 1);
+      const shelled = !!target.type.shell && shellFactor(target, me) < 1;
+      const want = shelled ? Math.min(2.6, RANGE[WEAPONS[p.weapon].kind]) : RANGE[WEAPONS[p.weapon].kind], dist = d2(target, me), ux = (target.x - me.x) / (dist || 1), uz = (target.z - me.z) / (dist || 1);
       const push = dist > want + 0.3 ? 1 : 0; // an average player closes to range and holds; no kiting backpedal
       if (random() < 0.01) strafe = -strafe;
-      mx = ux * push - uz * strafe * 0.35; mz = uz * push + ux * strafe * 0.35;
+      const circle = shelled ? 1 : 0.35;
+      mx = ux * push - uz * strafe * circle; mz = uz * push + ux * strafe * circle;
       const l = Math.hypot(mx, mz) || 1; mx /= l; mz /= l;
     }
+    const puddle = rt.hazards.find(h => h.kind !== "wave" && d2(h, me) < h.r + 0.3);
+    if (puddle && !rt.casting && p.dodgeAge === null) { const d = d2(puddle, me) || 1; mx = (me.x - puddle.x) / d; mz = (me.z - puddle.z) / d; }
     // The bot's dodge: the kit's dash (combatTuning), its burst easing to the dodge's exit over dashTime.
     const v = PLAYER_BASE.speed * p.speed, k = p.dodgeAge === null ? 1 : Math.min(1, p.dodgeAge / MOVE_TUNING.dashTime);
     const roll = p.dodgeAge === null ? 0 : MOVE_TUNING.dashSpeed * (DODGE_SHAPE.dashExit + (1 - DODGE_SHAPE.dashExit) * (1 - k) ** MOVE_TUNING.dashEase);
