@@ -66,7 +66,7 @@ const tile = (files, labels, name, cols, geometry) => {
 const pick = (frames, max) => (frames.length <= max ? frames : Array.from({ length: max }, (_, i) => frames[Math.round((i * (frames.length - 1)) / (max - 1))]));
 const label = s => `${Math.hypot(s.vx, s.vz).toFixed(1)} u/s  ${s.dashT > 0 ? "dash" : s.mode}${s.events.length ? "  " + s.events.join(",") : ""}`;
 
-async function strip(name, { url = LAB, at, facing, route, from, until, after = 2, max = 8, step = 0.04, limit = 8, cols = 4, w = 420, h = 320, geometry = "280x213+3+3", warm = 1.5, fixed = null }) {
+async function strip(name, { url = LAB, at, facing, route, from, until, after = 2, max = 8, step = 0.04, limit = 8, cols = 4, w = 420, h = 320, geometry = "280x213+3+3", warm = 1.5, fixed = null, count = false }) {
   await open(url);
   await page.evaluate(([x, z, f]) => { window.__move.teleport(x, z, f); window.__move.pause(); }, [at[0], at[1], facing]);
   await page.waitForTimeout(1500);
@@ -88,7 +88,9 @@ async function strip(name, { url = LAB, at, facing, route, from, until, after = 
     const file = `${TMP}/${name}-${TAG}-${String(frames.length).padStart(3, "0")}.png`;
     await page.screenshot({ path: file, clip });
     const ground = await page.evaluate(() => window.__move.ground?.() ?? "");
-    frames.push({ file, label: `${(t - since).toFixed(2)}s  ${label(s)}${ground ? `  ${ground}` : ""}` });
+    // With the player standing still, the scene's live particles are other walkers' steps (the residents' dust).
+    const fx = count ? await page.evaluate(() => `  particles ${window.__move.particles()}`) : "";
+    frames.push({ file, label: `${(t - since).toFixed(2)}s  ${label(s)}${ground ? `  ${ground}` : ""}${fx}` });
   }
   await page.evaluate(() => window.__move.resume());
   const chosen = pick(frames, max);
@@ -113,8 +115,8 @@ const MOVES = {
   "roll": { at: [5.5, -21], facing: -S, route: [{ to: [-4, -21], sprint: true, r: 0.8 }, { to: [-6, -21], r: 0.3 }], from: s => s.mode === "air" && s.y < 1.6, until: s => s.mode === "ground" && s.modeT > 0.2 && s.y < 0.1, after: 1, step: 0.03, max: 12 },
   // Q up the sprint lane, away from the camera, close: the afterimages left behind must not film over the character.
   "dash-away": { url: "/lab/move?panel=0&zoom=0.45", at: [-15.5, -13], facing: 0, route: [{ to: [-15.5, -11], r: 0.4 }, { to: [-15.5, -2], move: "dash", r: 20 }, { to: [-15.5, -1] }], from: s => s.dashT > 0, until: s => s.dashT <= 0, after: 3, step: 0.025, max: 8, w: 460, h: 420, geometry: "300x274+3+3" },
-  // The dev crowd strolling round the player in the village, close: residents' footstep dust (before: none).
-  "residents": { url: "/lab/island?time=day&weather=clear&season=summer&crowd=6&stroll=1&zoom=0.45", at: [-6, -13], facing: 0, route: null, from: () => true, until: () => false, after: 0, step: 0.1, limit: 0.65, max: 6, cols: 2, fixed: { x: 280, y: 160, width: 600, height: 380 }, geometry: "560x355+3+3", warm: 6 },
+  // The dev crowd (?crowd=4&stroll=1) strolling on the village beach ahead of the camera: residents' footstep dust and prints in the sand (before: none).
+  "residents": { url: "/lab/island?time=day&weather=clear&season=summer&crowd=4&stroll=1&zoom=0.55&at=0,-14.5", at: [0, -20], facing: 0, route: null, from: () => true, until: () => false, after: 0, step: 0.3, limit: 1.85, max: 6, cols: 2, fixed: { x: 280, y: 110, width: 800, height: 320 }, geometry: "600x240+3+3", warm: 6, count: true },
 };
 const AFTER = {
   // Walking down the lab's sand strip toward the camera: the prints trail behind, up the screen.

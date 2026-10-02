@@ -344,7 +344,7 @@ export function mantleStep(pool: ParticlePool, g: GroundKind, x: number, y: numb
   if (amount > 0 && g !== "water") pool.burst(MOTES, x, y, z, y, 0, 0, amount * 0.8, GROUND[g].dust, seedAt(x, z, SALT.mantle + 2), HARD.has(g) ? 0.45 : 1);
 }
 
-const GLIDE_AIR: Recipe = { ...AIR_PUFF, count: [4, 4], spread: Math.PI, up: [-0.6, -0.2], speed: [0.6, 1.1], alpha: 0.45 };
+const GLIDE_AIR: Recipe = { ...AIR_PUFF, count: [3, 3], spread: Math.PI, up: [-0.8, -0.4], speed: [0.9, 1.4], size: [0.36, 0.46], alpha: 0.28, jitter: 0.55 }; // round the leaf's rim, not over the head
 const RIBBON: Recipe = { ...STREAK, life: [0.22, 0.28], size: [0.7, 0.9], aspect: 0.22, alpha: 0.4 };
 const FEW_LEAVES: Recipe = { ...LEAF_BITS, count: [2, 3], speed: [0.3, 0.7], up: [0.1, 0.4] };
 /** The leaf opens over the grip (`x, y, z`): leaf bits shaken loose and a puff of air pushed down under it. */
