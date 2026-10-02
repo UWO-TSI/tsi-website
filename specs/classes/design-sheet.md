@@ -932,6 +932,10 @@ All waves merge to `main` behind a `classes_v2` flag that stays off in productio
 | Guardian | Armor |
 | Juggernaut | Max HP |
 | Martial Artist (was Monk) | Attack speed |
+| Summoner | Summon power |
+| Shaman | Area size |
+| Druid | Max HP (heals scale off max HP) |
+| Priest | Healing power |
 | Assassin | Crit chance |
 
 Class movement passives and skills (Air Step, Bone Surf, Fox Pounce) work in the ruins only; the village movement kit stays the same for everyone.
@@ -1094,3 +1098,88 @@ Play style (David, 2026-10-02): "some character should be skill based and some s
 
 - **Ultimate, Death Lotus:** time stops and the world turns to black-and-white ink. You blink between every enemy in range; time resumes and every cut lands at once: red flash frame.
 - **Stat direction:** crit chance.
+
+## Summoner (LOCKED, David 2026-10-02)
+- **Family:** Warden (green).
+- **Role:** shadow tamer (Megumi from JJK: between the Necromancer and the Transmuter).
+- **Style:** skills.
+- **Weapon:** ink-black seal gloves; every summon is a hand sign.
+- **Taming:** each beast must be tamed before use, by beating its untamed form in a ritual fight. Wolves are known at the start.
+- **Basic:** a shadow lash from your hand.
+- **Beasts are toggles.** Press a key to summon, press again to dismiss. Every beast enters with its signature move, then stays: it fights, or keeps doing its job, until dismissed or killed. A killed beast has a cooldown before you can summon it again.
+- **Out at once:** 2 at mastery 1, 3 at 10, 4 at 20.
+
+| Key | Beast | On entering | Then |
+|---|---|---|---|
+| 1 | Wolves | Pounce the target | Hunt as a pair |
+| 2 | Owl | Swoop, grab you and glide you forward with momentum (movement) | Circle above and dive at enemies |
+| 3 | Toad | Tongue-pull the target to you | Guard you, pulling in anything that rushes you |
+| 4 | Serpent | Burst from the ground under the target and **stun** it | Coil and bite |
+| 5 | Escape Rabbits | A flood of rabbits pours out; you turn translucent, gain move speed and run (escape) | The rabbits don't stay; they scurry away and fade |
+
+- **Rabbit performance:** the flood is one lightweight instanced effect, not single rabbit entities.
+- **Shadow Bond (passive):** a killed beast's strength passes to the others until it returns.
+- **Ultimate, Shadow Garden:** shadow floods the ground in a wide circle and every beast rises at once. You warp between any shadows while enemies sink; the shadows close over them: flash frame.
+- **Stat direction:** summon power.
+
+## Shaman (LOCKED, David 2026-10-02)
+- **Family:** Warden (green).
+- **Role:** setup damage. Like the Hunter, you set the map up, then deal big damage. Gameplay should be skillful and fun.
+- **Style:** skills.
+- **Weapon:** a carved totem staff.
+- **Basic:** a spirit bolt.
+- **Totems:**
+  - You throw them like grenades; they plant where they land, and landing on an enemy staggers it.
+  - They fire on their own.
+  - Linked totems draw lightning beams between them, and enemies crossing a beam take damage. Placing totems so packs are enclosed inside the links is the skill.
+  - Hunter traps trigger on contact; totems are turrets and beams.
+
+| Key | Skill | Effect |
+|---|---|---|
+| 1 | Storm Totem | Zaps enemies nearby |
+| 2 | Fire Totem | Flame bursts |
+| 3 | Earthbind Totem | Slows and roots, holding enemies inside the kill zone |
+| 4 | Overcharge | Every linked totem unloads at once. The burst grows with each enemy inside your link shapes (the payoff) |
+| 5 | Spirit Hop | Mid-jump, plant a totem under you and jump off it (movement) |
+
+- **Resonance (passive):** each linked totem raises the others' damage.
+- **Ultimate, Spirit Awakening:** the totems' actual spirits manifest. The storm totem's thunderbird, the fire totem's salamander and the earth totem's bear rise and rampage across the area: flash frame.
+- **Stat direction:** area size.
+
+## Druid (LOCKED, David 2026-10-02)
+- **Family:** Warden (green).
+- **Role:** sustain. The gameplay is maxing out your HP, and every heal is a % of max HP.
+- **Style:** skills.
+- **Weapon:** a living staff that sprouts leaves.
+- **Basic:** thorn seeds.
+- **Overgrowth (passive):** regen doubles while you stand in your own growth.
+
+| Key | Skill | Effect |
+|---|---|---|
+| 1 | Vine Snare | Vines root an area |
+| 2 | Thorn Wall | A wall of thorns that blocks and cuts (terrain) |
+| 3 | Healing Bloom | A flower that heals 4% of max HP per second while you stand in it |
+| 4 | Vine Swing | Shoot a vine to a point, swing on it keeping momentum, release to fly (movement) |
+| 5 | Wild Ground | The floor erupts in grass and roots: enemies slow, you regen |
+
+- **Ultimate, World Tree:** a giant tree grows around you and roots you in place. Health regen becomes very fast (a large % of max HP per second), and you deal lifesteal damage to everyone hostile around you. Very hard to kill; only a one-shot works. Ends in a bloom: flash frame.
+- **Stat direction:** max HP.
+
+## Priest (LOCKED, David 2026-10-02)
+- **Family:** Warden (green).
+- **Role:** healer who is fully playable solo ("make priest very playable"). Heals and supports others, but every fight is also healing yourself.
+- **Style:** skills.
+- **Weapon:** a sunstone staff.
+- **Basic, Lightbolt:** on an enemy, it deals damage and heals you. On an ally, it heals them.
+- **Blessed (passive):** strong health regen; healing past full health becomes a shield.
+
+| Key | Skill | Effect |
+|---|---|---|
+| 1 | Mend | A big heal on you or the ally under the crosshair |
+| 2 | Radiant Shield | A shield on you or an ally |
+| 3 | Holy Beam | Channelled: burns enemies, heals you and the allies it passes |
+| 4 | Sanctify | A holy circle that heals allies and burns enemies |
+| 5 | Light Step | A holy dash that leaves a healing trail and keeps momentum (movement) |
+
+- **Ultimate, Divine Descent:** wings of light, and a pillar slams down. Allies are fully healed, the downed revived, enemies burned: flash frame.
+- **Stat direction:** healing power.
