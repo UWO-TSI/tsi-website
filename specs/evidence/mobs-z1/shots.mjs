@@ -100,6 +100,7 @@ if (wanted("fox")) {
   frames.push(await shot("fox-2", box)); labels.push("the pounce down the lane");
   await freeze(false);
   await holdWhen(() => window.__combat.rt.player.hurt > 0.25);
+  await freeze(false); await page.waitForTimeout(70); await freeze(true); await page.waitForTimeout(60);
   frames.push(await shot("fox-3", box)); labels.push("it lands: an impact star");
   await freeze(false);
   await page.waitForTimeout(300);
@@ -131,6 +132,15 @@ if (wanted("crab")) {
   await page.evaluate(([cx, cz]) => { const e = window.__combat.rt.enemies.find(x => x.type.id === "thorn-crab" && Math.hypot(x.spawnX - cx, x.spawnZ - cz) < 0.5); Object.assign(e, { x: cx, z: cz, facing: Math.PI, state: "chase", t: 0 }); }, [C.x, C.z]);
   await page.waitForTimeout(350); await freeze(true);
   frames.push(await shot("crab-turn", await around(C.x, C.z, 420, 320, 0.62))); labels.push("at its flank: it turns slowly to face you");
+  // In front of it: the claws rise (its sector), then the sweep's three crescents.
+  await stage(C.x, C.z + 1.1, Math.PI, ["thorn-crab"]);
+  await page.evaluate(([cx, cz]) => { const e = window.__combat.rt.enemies.find(x => x.type.id === "thorn-crab" && Math.hypot(x.spawnX - cx, x.spawnZ - cz) < 0.5); Object.assign(e, { x: cx, z: cz, facing: 0, state: "chase", t: 0 }); }, [C.x, C.z]);
+  await holdWhen(() => window.__combat.rt.enemies.some(e => e.state === "windup" && e.move.shape === "sweep" && e.t > e.move.windup * 0.8));
+  frames.push(await shot("crab-windup", await around(C.x, C.z, 420, 320, 0.62))); labels.push("in front: claws up, the sweep's sector");
+  await freeze(false);
+  await holdWhen(() => window.__combat.rt.enemies.some(e => e.state === "recover" && e.move.shape === "sweep"));
+  await freeze(false); await page.waitForTimeout(90); await freeze(true); await page.waitForTimeout(60);
+  frames.push(await shot("crab-sweep", await around(C.x, C.z, 420, 320, 0.62))); labels.push("the sweep: three claw crescents");
   tile(frames, labels, "02-crab-front-vs-flank", 3, "400x305+3+3");
 }
 
