@@ -758,9 +758,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     events.forEach(e => window.addEventListener(e, load));
     return () => events.forEach(e => window.removeEventListener(e, load));
   }, []);
-  // The wheel changed (a pin ran out, the ruins' weapons only): let go of what left it; in the ruins a weapon is always in hand.
+  // In the ruins a weapon is always in hand: what you held outside isn't on its wheel. Elsewhere a held item that isn't
+  // on the wheel just isn't shown (your inventory and stock load after the island), never dropped.
   useEffect(() => {
-    settleHeld(wheelItems, site === "ruins" ? `weapon:${combat.rt.player.weapon}` : null);
+    if (site === "ruins") settleHeld(wheelItems, `weapon:${combat.rt.player.weapon}`);
     if (site === "ruins" && !readHeld().held) holdItem(`weapon:${combat.rt.player.weapon}`);
   }, [wheelItems, site]);
   // A weapon from the wheel goes in hand (and, picked outside a fight's quick swap, becomes your default on the server);
@@ -804,6 +805,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     const key = held.key;
     void eatItem(key).then(r => {
       if (!r.ok) toast(r.error); else window.dispatchEvent(new CustomEvent("tsi:eaten", { detail: { key, count: r.count } }));
+      if (r.ok && r.count === 0) holdItem(null); // the last one: empty hands
       window.setTimeout(() => setEating(false), 820);
     });
   }, [site, inside, fishing, sheet, bagOpen, decor.decorating, welcoming, fading, eating, held, toolAction, atHome, player]);

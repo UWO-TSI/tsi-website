@@ -1,7 +1,9 @@
 "use client";
 
 /**
- * The tool wheel (row 279, specs/game-ui.md §1; David's direction, row 283: an ACNH flower in the cream kit).
+ * The tool wheel (row 279, specs/game-ui.md §1; David's direction, row 283: an ACNH flower in the cream kit, drawn in
+ * the language of the Animal Crossing UI kit he supplied: cream circles for petals, the chosen one grows and turns
+ * butter yellow, a teal check marks what's in hand, the name in a teal pill under the choice, round keycaps).
  * Hold the wheel key (Tab): after a beat the flower opens round the screen's centre, the world dims a little and
  * slows, and a flick of the mouse (added up under pointer lock, the cursor's direction otherwise) grows the petal it
  * points at, its name below; letting go takes it out, the centre puts things away. A quick tap swaps back to the
@@ -9,7 +11,7 @@
  * Under pointer lock the wheel keeps the mouse (the camera holds still while it's open).
  */
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { Hand } from "lucide-react";
+import { Check, Hand } from "lucide-react";
 import { AudioManager } from "@/lib/game/audio";
 import { flick, slotAt, slotPosition, type WheelItem } from "@/lib/game/toolWheel";
 import { keyName } from "@/lib/game/movement/keys";
@@ -19,7 +21,7 @@ import styles from "./ToolWheel.module.css";
 /** A press shorter than this (with no flick) is the quick tap; the flower opens after it. */
 const TAP_MS = 170;
 /** The petals' ring and the flick's reach (px); within DEAD of the centre is the centre. */
-const RING = 118, REACH = 120, DEAD = 34;
+const RING = 104, REACH = 120, DEAD = 34;
 type Choice = number | null | "keep";
 
 const sfx = (name: Parameters<typeof AudioManager.playSFX>[0], rate: number, gain: number) => AudioManager.playSFX(name, { rate, gain });
@@ -110,28 +112,31 @@ export default function ToolWheel({ items, held, wheelKey, enabled, touch, onEqu
   const n = items.length, picked = choice === "keep" ? items.findIndex(i => i.id === held) : choice;
   const label = picked === null ? "Put away" : picked >= 0 ? items[picked].name : held ? "" : "Empty hands";
   const sub = picked !== null && picked >= 0 && items[picked].kind !== "pin" && items[picked].tier ? `Tier ${items[picked].tier}` : null;
+  // The name sits under the choice (the centre's under the centre), its tail pointing up at it.
+  const [lx, ly] = picked !== null && picked >= 0 ? slotPosition(picked, n, RING) : [0, RING + 24]; // the centre's goes under the flower
   return <>
     {touch && !open && enabled && n > 0 && <button className={styles.touchButton} onClick={() => begin("touch")} aria-label="Open the tool wheel">
       {held ? <ItemIcon item={items.find(i => i.id === held) ?? null} /> : <Hand size={22} aria-hidden />}
     </button>}
     {open && <div className={styles.wheel} data-shown={shown || undefined} role="menu" aria-label="Tool wheel" onClick={open === "touch" ? () => close(false) : undefined}>
       <div className={styles.flower} style={{ "--n": n } as CSSProperties}>
-        <span className={styles.base} aria-hidden />
         {items.map((item, i) => {
           const [x, y] = slotPosition(i, n, RING);
-          return <button key={item.id} role="menuitem" className={styles.petal} data-chosen={choice === i || undefined} data-held={item.id === held || undefined}
-            style={{ "--x": `${x}px`, "--y": `${y}px`, "--a": `${(i / n) * 360}deg`, "--i": i } as CSSProperties}
+          return <button key={item.id} role="menuitem" className={styles.petal} data-chosen={picked === i || undefined} data-held={item.id === held || undefined}
+            style={{ "--x": `${x}px`, "--y": `${y}px`, "--i": i } as CSSProperties}
             onMouseEnter={() => open === "key" && !document.pointerLockElement && choose(i)}
             onClick={e => { e.stopPropagation(); live.current.choice = i; close(true); }} aria-label={item.name}>
-            <span className={styles.petalFace}><ItemIcon item={item} />{item.tier && item.kind !== "pin" ? <span className={styles.pips} aria-hidden>{Array.from({ length: item.tier }, (_, k) => <i key={k} />)}</span> : null}</span>
+            <ItemIcon item={item} />
+            {item.id === held && <span className={styles.check} aria-hidden><Check size={13} strokeWidth={3.4} /></span>}
+            {item.tier && item.kind !== "pin" ? <span className={styles.pips} aria-hidden>{Array.from({ length: item.tier }, (_, k) => <i key={k} />)}</span> : null}
           </button>;
         })}
-        <button role="menuitem" className={styles.centre} data-chosen={choice === null || undefined} aria-label="Put away"
+        <button role="menuitem" className={styles.centre} data-chosen={picked === null || undefined} aria-label="Put away"
           onMouseEnter={() => open === "key" && !document.pointerLockElement && choose(null)}
-          onClick={e => { e.stopPropagation(); live.current.choice = null; close(true); }}><Hand size={24} aria-hidden /></button>
+          onClick={e => { e.stopPropagation(); live.current.choice = null; close(true); }}><Hand size={22} aria-hidden /></button>
+        {label && <p className={styles.name} aria-live="polite" style={{ "--lx": `${lx}px`, "--ly": `${ly}px` } as CSSProperties}><b>{label}</b>{sub && <small>{sub}</small>}</p>}
       </div>
-      <p className={styles.name} aria-live="polite">{label && <b>{label}</b>}{sub && <small>{sub}</small>}</p>
-      {open === "key" && <p className={styles.hint}>Let go of <kbd>{keyName(wheelKey)}</kbd> to {choice === null ? "put it away" : "take it out"} · <kbd>Esc</kbd> keeps what you have</p>}
+      {open === "key" && <p className={styles.hint}><span><kbd>{keyName(wheelKey)}</kbd>{choice === null ? "Put away" : "Hold"}</span><span><kbd>Esc</kbd>Cancel</span></p>}
     </div>}
   </>;
 }

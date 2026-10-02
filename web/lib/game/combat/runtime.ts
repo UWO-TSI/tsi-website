@@ -38,7 +38,7 @@ export const ABILITIES: { id: AbilityId; name: string }[] = [
   { id: "slot2", name: "Ability 2" },
   { id: "slot3", name: "Ability 3" },
   { id: "slot4", name: "Ability 4" },
-  { id: "swap", name: "Swap weapon" },
+  { id: "swap", name: "Previous weapon" },
 ];
 /** Energy ruling (2026-09-26): 100 max, regenerates 12/s after 1 s without spending, never while tracing. */
 export const ENERGY = { max: 100, regen: 12, delay: 1 } as const;

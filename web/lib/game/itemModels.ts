@@ -11,7 +11,7 @@ const OWN = new Set([...ROSTER.filter(s => s.category === "fruit" || s.category 
 const SHELLS = new Map(ROSTER.filter(s => s.sub === "shell" && s.model).map(s => [s.key, s.model!]));
 
 export function itemModel(key: string): ItemModel | null {
-  if (OWN.has(key)) return { url: `${ITEMS}${key}.glb`, fit: key === "fruit_coconut" ? 0.13 : 0.1 };
+  if (OWN.has(key)) return { url: `${ITEMS}${key}.glb`, fit: key === "fruit_coconut" ? 0.19 : 0.16 };
   const shell = SHELLS.get(key);
   if (shell) return { url: shell, fit: 0.1 };
   if (key === "wood_branch") return { url: "/assets/game/props/branch.glb", fit: 0.2 };
