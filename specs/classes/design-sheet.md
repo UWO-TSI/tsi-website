@@ -789,16 +789,39 @@ All waves merge to `main` behind a `classes_v2` flag that stays off in productio
 2. **The flash frame's look.** Wave 0 shows three variants in the encounter: ink silhouettes on the ult's colour (default), inverted monochrome, and a white flash. You pick one for every ult.
 3. **Start wave 0 early?** Wave 0 depends only on §1, §3 and §4. It can start as soon as you approve those, while the 16 kits are designed, or wait for the whole sheet (the brief's "one build"). *Default:* start on approval of §1, §3 and §4.
 
-## Elementalist: decisions so far (David, 2026-10-02, in progress)
+## Elementalist (LOCKED, David 2026-10-02)
+- **Family:** Arcane (purple).
 - **Role:** ranged AoE damage.
-- **Weapon:** a staff whose crystal shifts to your last element, carried on the back.
-- **Elements on keys 1–4:** Fire, Water, Earth, Wind (David's pick).
-- **Combos:**
-  - Two quick presses (≤0.4 s) cast a combo; a single tap casts the element's basic spell after a short beat.
-  - Order matters: 16 combos (4 doubles plus 12 ordered pairs), plus the 4 basics.
-  - Grid rule: the first key sets the spell's shape, the second its element.
-  - The drafted grid used Fire, Water, Frost and Lightning, which David approved as a structure. **It must be redrafted for Fire, Water, Earth and Wind** (e.g. Earth = boulder/wall shape, Wind = cyclone/gust shape; reactions: steam, magma, firestorm, mud, storm wave, sandstorm) and shown to him next.
-- **No cooldowns:** energy only; spam what you can afford.
-- **Mastery 1:** the 4 basics and the 4 empowered doubles; the 12 combos unlock across mastery 2–18, reaction upgrades at 19–20.
-- **Passive, Elemental Reactions:** separate casts mark enemies; a reacting element triggers the reaction. Redraft the reactions for the new four.
-- **Ultimate, Cataclysm:** sky darkens and time slows, a meteor impact with an impact frame, a shockwave, then a finishing element chain. Redraft beats 3–4 for Earth and Wind (e.g. an earth shockwave lifts survivors, a cyclone gathers and slams them).
+- **MBTI:** mapped at the end.
+- **Weapon:** a staff whose crystal shifts to your last element; carried on the back.
+- **Input:** keys 1–4 are elements. A single press casts that element's solo spell. Two quick presses (≤0.4 s, either order) cast that pair's combo.
+- **Costs:** no cooldowns, energy only. Combos cost more than solos, and the pool and regen are tuned so you rotate instead of spamming the biggest spell.
+- **Skills: 10, all on the keys.** No loadout for this class.
+
+| Input | Spell | Type | Effect |
+|---|---|---|---|
+| 1 Fire | Fireball | AoE | Explodes at the aim; burns |
+| 2 Water | Tidal Wave | Control | A wave that pushes back and soaks |
+| 3 Earth | Stone Javelin | Single target | A heavy thrown boulder; big hit and stagger |
+| 4 Wind | Gale Step | Movement | A wind dash that launches you and keeps momentum |
+| Fire + Water | Steam Veil | Defense | A steam cloud around you; enemies inside miss |
+| Fire + Earth | Molten Pillars | AoE / terrain | Lava pillars erupt in a line and leave lava behind |
+| Fire + Wind | Fire Tornado | AoE | A burning tornado that wanders through the pack |
+| Water + Earth | Spring Grove | Heal | A ring of flowers that heals you while you stand in it |
+| Water + Wind | Riptide | Single target / movement | Pull one enemy to you, or hold to pull yourself to it |
+| Earth + Wind | Rampart | Terrain | A stone wall that blocks shots; climbable, usable as a jump ramp |
+
+- **Passive, Attunement:** alternating elements builds the ult meter faster. There are no reaction marks; the combos are the reactions.
+- **Ultimate, Cataclysm (F, meter):**
+  - **Charge:** 5 s, rooted, taking 50% less damage. A pop-up mash shows 3 numbers (1–4) at a time; press the front one fast, and the next slides in. Hits pulse that element into the sky; misses crack it.
+  - **Telegraph:** while it charges, black storm clouds gather overhead and the area of effect glows on the terrain, warning the enemies.
+  - **Release:** the sky darkens and time slows. A meteor impact with a flash frame, radial lines and a heavy shake. An earth shockwave launches the survivors, then a fire cyclone gathers them and slams them down.
+  - **Damage:** scales with accuracy, from 50% with no hits to 150% for a perfect run.
+- **Mastery:**
+  - At 1: the 4 solos and 2 combos (Steam Veil, Fire Tornado).
+  - The other 4 combos unlock at 3, 5, 7 and 9.
+  - Upgrades from 10 to 20: bigger areas, cheaper combos, more mash notes and a higher ceiling.
+- **Identity:**
+  - A purple aura with motes of the four elements.
+  - A staff icon on the nameplate.
+  - Shop: staff skins and element-colour auras.
