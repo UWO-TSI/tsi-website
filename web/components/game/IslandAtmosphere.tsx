@@ -15,7 +15,7 @@ import { Fireflies } from "./AmbientLife";
 import RainFX from "./RainFX";
 import { applyEnvironment, disposeEnvironment } from "@/lib/game/envLight";
 import { fireflyNight, type IslandLight } from "@/lib/game/islandLighting";
-import { RIM_POSITION, shadowHalfHeight } from "@/lib/game/lookPreset";
+import { RIM_POSITION, fillForHeading, shadowHalfHeight } from "@/lib/game/lookPreset";
 import { SEASON_TREES, type SeasonLook } from "@/lib/game/seasonalLook";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import type { IslandPhase } from "@/lib/game/islandTime";
@@ -28,7 +28,7 @@ import { juiceShake } from "@/lib/game/cameraJuice";
 import { treeParts } from "./NatureModels";
 import AmbientFauna, { type FaunaProps } from "./AmbientFauna";
 import WeatherGround from "./WeatherGround";
-import { autoFollow, capture, ORBIT_DISTANCE, orbitOffset, stepOrbit, turnOffset } from "@/lib/game/orbitCamera";
+import { autoFollow, capture, orbit, ORBIT_DISTANCE, orbitOffset, stepOrbit, turnOffset } from "@/lib/game/orbitCamera";
 import { CUT_FLOOR, CUT_RADIUS, CUTOUT, CUTOUT_VIEW, groundBlocks, lineBlocked, type Occluder } from "@/lib/game/occluders";
 import { bendViewPoint } from "@/lib/game/worldProjection";
 import { orbitKeys, useOrbitInput } from "./useOrbitInput";
@@ -59,6 +59,18 @@ function TreeWind({ strength }: { strength: number }) {
   return null;
 }
 
+/**
+ * The backlit fill follows the camera (row 253, specs/camera-orbit.md): looking toward the sun the fronts you see are
+ * lit by fill alone, so it rises; turned away it settles. Module scope: the react compiler forbids writing through
+ * hook values.
+ */
+function turnFill(light: IslandLight, scene: THREE.Scene, ambient: THREE.AmbientLight | null, hemisphere: THREE.HemisphereLight | null) {
+  const k = fillForHeading(light, orbit.view.yaw);
+  if (ambient) ambient.intensity = light.ambient * k;
+  if (hemisphere) hemisphere.intensity = light.hemisphere * k;
+  if (scene.environment) scene.environmentIntensity = light.environment.intensity * k;
+}
+
 /** A tree on the map as the scene draws it (NatureTree): its spot and seed. */
 export interface TreeSpot { x: number; z: number; seed: number }
 const NO_TREES: readonly TreeSpot[] = [];
@@ -82,6 +94,8 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
     applyEnvironment(gl, scene, light.environment);
     return () => disposeEnvironment(scene);
   }, [gl, scene, light]);
+  const ambient = useRef<THREE.AmbientLight>(null), hemisphere = useRef<THREE.HemisphereLight>(null);
+  useFrame(() => turnFill(light, scene, ambient.current, hemisphere.current));
   const { shadow } = light, shadowHalf = shadowHalfHeight(light.sunPosition, shadowExtent);
   // One world wind from the shared weather: rain slant, leaves and mist agree.
   const wind = useMemo(() => worldWind(weather), [weather]);
@@ -94,8 +108,8 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
   return <>
     {light.skyTop ? <SkyGradient top={light.skyTop} horizon={light.sky} /> : <color attach="background" args={[light.sky]} />}
     <fog attach="fog" args={[light.fogColor, overview ? light.fogNear + 28 + overviewFog : light.fogNear, overview ? light.fogFar + 15 + overviewFog : light.fogFar]} />
-    <ambientLight intensity={light.ambient} color={light.fill} />
-    <hemisphereLight args={[light.fill, light.bounce, light.hemisphere]} />
+    <ambientLight ref={ambient} intensity={light.ambient} color={light.fill} />
+    <hemisphereLight ref={hemisphere} args={[light.fill, light.bounce, light.hemisphere]} />
     <directionalLight name="sun" position={light.sunPosition} color={light.sun} intensity={light.sunIntensity} castShadow={castShadows}
       shadow-mapSize={[2048, 2048]} shadow-camera-left={-shadowExtent} shadow-camera-right={shadowExtent}
       shadow-camera-top={shadowHalf} shadow-camera-bottom={-shadowHalf} shadow-camera-near={1} shadow-camera-far={75 + Math.max(0, shadowExtent - 26) * 2}

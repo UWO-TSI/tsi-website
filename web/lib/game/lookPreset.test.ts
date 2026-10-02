@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Color, ShaderChunk, ShaderLib, Vector3 } from "three";
 import { ISLAND_LIGHTING, islandLight, withSeason, withWeather, type IslandLight } from "./islandLighting";
-import { BACKLIT_FILL, CURRENT, LOOK_LIGHTS_CHUNK, LOOK_PRESETS, LOOK_REFLECT_EDITS, MATERIAL_CLASSES, MIN_SUN_ELEVATION, PHASE_LOOK, keyFill, shadowHalfHeight, kelvinHex, lookFx, lookRoughness, parseLook, sunAngles, sunFromAngles } from "./lookPreset";
+import { BACKLIT_FILL, backlitShare, fillForHeading, CURRENT, LOOK_LIGHTS_CHUNK, LOOK_PRESETS, LOOK_REFLECT_EDITS, MATERIAL_CLASSES, MIN_SUN_ELEVATION, PHASE_LOOK, keyFill, shadowHalfHeight, kelvinHex, lookFx, lookRoughness, parseLook, sunAngles, sunFromAngles } from "./lookPreset";
 import { solarPosition } from "./sunPath";
 import { seasonLook } from "./seasonalLook";
 import { parseSeasonOverride } from "./season";
@@ -268,5 +268,22 @@ describe("glints and reflections (row 237, §6)", () => {
   });
   it("tells the environment where the sun is, per phase", () => {
     for (const phase of ISLAND_PHASES) expect(ISLAND_LIGHTING[phase].environment.sunAzimuth).toBeCloseTo(sunAngles(ISLAND_LIGHTING[phase].sunPosition).azimuth);
+  });
+});
+
+describe("the backlit fill follows the orbit camera (specs/camera-orbit.md)", () => {
+  const sun = [20, 22, -11]; // the picked key light: south-east of today's view, behind it
+  it("is today's fill at heading 0 and without the lift", () => {
+    expect(fillForHeading({ sunPosition: sun, fillLift: true }, 0)).toBeCloseTo(1, 12);
+    expect(fillForHeading({ sunPosition: sun }, 2)).toBe(1);
+  });
+  it("rises looking toward the sun and settles looking away", () => {
+    const toward = Math.atan2(sun[0], sun[2]); // the heading straight at the sun
+    expect(backlitShare(sun, toward)).toBeCloseTo(1, 12);
+    expect(fillForHeading({ sunPosition: sun, fillLift: true }, toward)).toBeCloseTo(1 + BACKLIT_FILL, 12);
+    expect(fillForHeading({ sunPosition: sun, fillLift: true }, toward + Math.PI)).toBeCloseTo(1, 12);
+    // A sun ahead of today's view: turning away drops the lift lookToLight baked in.
+    const west = [0, 10, 24];
+    expect(fillForHeading({ sunPosition: west, fillLift: true }, Math.PI)).toBeCloseTo(1 / (1 + BACKLIT_FILL), 12);
   });
 });
