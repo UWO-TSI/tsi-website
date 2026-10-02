@@ -98,6 +98,19 @@ if (typeof window !== "undefined") {
     depthShader.vertexShader = `#define ${SHADOW_PASS_DEFINE}\n${depthShader.vertexShader}`;
   }
 
+  // Sprites (glows: the rare-bug sparkle, fireflies, mist banks) build their own clip position and never include
+  // project_vertex, so they floated off their owners by the bend (about 0.55 at the follow distance, more further
+  // out). Bend the sprite's centre the same way; the quad itself stays square to the camera.
+  const sprite = THREE.ShaderLib.sprite;
+  if (sprite && !sprite.vertexShader.includes(MARKER)) {
+    sprite.vertexShader = sprite.vertexShader.replace(
+      "mvPosition.xy += rotatedPosition;",
+      `${MARKER}
+mvPosition.y -= mvPosition.z * mvPosition.z * ${bend.toFixed(6)} + mvPosition.x * mvPosition.x * ${bendSide.toFixed(6)};
+mvPosition.xy += rotatedPosition;`
+    );
+  }
+
   const chunk = THREE.ShaderChunk.project_vertex;
   if (!chunk.includes(MARKER)) {
     THREE.ShaderChunk.project_vertex = chunk.replace(

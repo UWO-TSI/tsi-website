@@ -21,10 +21,10 @@ import { worldNow, worldTime } from "@/lib/game/worldClock";
 import { torontoHour } from "@/lib/game/islandTime";
 import type { Season } from "@/lib/game/season";
 import type { IslandWeather } from "@/lib/game/islandWeather";
-import { lookClassFor } from "@/lib/game/modelMaterials";
+import { keepOutOfBloom, lookClassFor } from "@/lib/game/modelMaterials";
 import { FACE, seedAt, type Recipe } from "@/lib/game/fx/particles";
 import {
-  FISH_MODELS, seaAt, butterflyAt, crabStep, crabsFor, dragonflyAt, flyersFor, flyingWeather, leapPose, leapsAt, newCrabState, newFlyerPose, outWeight,
+  FISH_MODELS, gullPerches, seaAt, butterflyAt, crabStep, crabsFor, dragonflyAt, flyerPresence, flyersFor, flyingWeather, leapPose, leapsAt, newCrabState, newFlyerPose, outWeight,
   type Crab, type CrabState, type FaunaSite, type Flyer, type FlyerSpecies, type Leap,
 } from "@/lib/game/ambientFauna";
 
@@ -79,6 +79,7 @@ function flyerParts(scene: THREE.Object3D, species: FlyerSpecies, count: number)
     material.onBeforeCompile = shader => {
       shader.uniforms.uHinge = { value: new THREE.Vector2(hinge[0], hinge[1]) };
       shader.vertexShader = FLAP_PARS + shader.vertexShader.replace("#include <beginnormal_vertex>", FLAP_NORMAL).replace("#include <begin_vertex>", FLAP_VERTEX);
+      keepOutOfBloom(shader);
     };
     material.customProgramCacheKey = () => `flyer-flap-${hinge[0].toFixed(3)}-${hinge[1].toFixed(3)}`;
     parts.push({ geometry, material, flap });
@@ -93,7 +94,7 @@ const _pose = newFlyerPose();
 function tickFlyers(flyers: readonly Flyer[], parts: readonly FlyerPart[], meshes: readonly (THREE.InstancedMesh | null)[], ground: Ground, weather: number) {
   const t = worldTime(), hour = hourNow(worldNow());
   for (let i = 0; i < flyers.length; i++) {
-    const f = flyers[i], w = outWeight(hour, f.species.hours, f.jitter) * weather;
+    const f = flyers[i], w = outWeight(hour, f.species.hours, f.jitter) * flyerPresence(weather, f.seed);
     const pose = f.species.kind === "butterfly" ? butterflyAt(f, t, w, ground, _pose) : dragonflyAt(f, t, w, ground, _pose);
     _m.compose(_p.set(pose.x, pose.y, pose.z), _q.setFromEuler(_e.set(0, pose.yaw, 0)), _s.setScalar(pose.scale));
     for (let k = 0; k < parts.length; k++) {
@@ -153,8 +154,11 @@ function Crabs({ crabs, ground, standable, player }: { crabs: readonly Crab[]; g
 const LEAP_SPLASH: Recipe = { sprite: "droplets", count: [4, 5], life: [0.45, 0.6], size: [0.26, 0.34], grow: 1, speed: [0.5, 1.1], spread: Math.PI, up: [1.8, 2.8], gravity: 9.8, drag: 0.8, wind: 0.1, alpha: 0.9, face: FACE.billboard };
 const LEAP_RIPPLE: Recipe = { sprite: "ripple", count: [1, 1], life: [0.9, 1.2], size: [0.7, 0.9], grow: 2, speed: [0, 0], spread: 0, up: [0, 0], gravity: 0, drag: 0, wind: 0, alpha: 0.65, face: FACE.ground };
 const WATER_Y = -0.078;
-/** Gulls ride low over the water here: the follow camera looks down at 34°, so a gull much above 4 units leaves the top of the frame. */
-const GULL_ALTITUDE = 3.4;
+/**
+ * Gulls circle far out (GULL_OFFSHORE) a little higher than before: from 20-50 units away the follow camera's 34° look
+ * still holds a gull at about 4.6 near the top of the frame over the sea; they come in close only to land.
+ */
+const GULL_ALTITUDE = 4.6;
 /** How far round the view focus fish leap (the sea that's on screen). */
 const LEAP_RADIUS = 30;
 
@@ -230,13 +234,15 @@ export interface FaunaProps {
   standable: (x: number, z: number) => boolean;
   /** Gull orbits over the sea round the island. */
   gulls: readonly (readonly [number, number])[];
+  /** Spots on the island a gull lands on now and then ([x, surface y, z]: lamp tops, roofs); the water off the shore is added. */
+  perches?: readonly (readonly [number, number, number])[];
   player: React.RefObject<THREE.Vector3>;
   /** The drawn surface and the tallest thing at a point (WeatherGround: where rain lands and prints are left). */
   surface?: (x: number, z: number) => number;
   top?: (x: number, z: number) => number;
 }
 
-export default function AmbientFauna({ site, ground, standable, gulls, player, season, weather, liteMode }: FaunaProps & { season: Season; weather: IslandWeather; liteMode: boolean }) {
+export default function AmbientFauna({ site, ground, standable, gulls, perches, player, season, weather, liteMode }: FaunaProps & { season: Season; weather: IslandWeather; liteMode: boolean }) {
   const flyers = useMemo(() => flyersFor(site, season, liteMode ? { butterflies: 6, dragonflies: 3 } : undefined), [site, season, liteMode]);
   const bySpecies = useMemo(() => {
     const groups = new Map<FlyerSpecies, Flyer[]>();
@@ -249,8 +255,13 @@ export default function AmbientFauna({ site, ground, standable, gulls, player, s
   const presence = useRef(flyingWeather(weather) ? 1 : 0);
   useFrame((_, raw) => { presence.current = THREE.MathUtils.damp(presence.current, flyingWeather(weather) ? 1 : 0, 0.6, Math.min(raw, 0.1)); });
   const anchors = useMemo(() => gulls.map(([x, z]) => [x, z] as [number, number]), [gulls]);
+  const landings = useMemo(() => {
+    // The anchors ring the island: their middle is the island's.
+    const centre: [number, number] = [anchors.reduce((a, [x]) => a + x, 0) / Math.max(1, anchors.length), anchors.reduce((a, [, z]) => a + z, 0) / Math.max(1, anchors.length)];
+    return gullPerches(site, anchors, centre, perches);
+  }, [site, anchors, perches]);
   return <>
-    <Seagulls anchors={anchors} altitude={GULL_ALTITUDE} />
+    <Seagulls anchors={anchors} altitude={GULL_ALTITUDE} perches={landings} />
     {bySpecies.map(([species, list]) => <Suspense key={species.key} fallback={null}><FlyerSwarm species={species} flyers={list} ground={ground} presence={presence} /></Suspense>)}
     <Crabs crabs={crabs} ground={ground} standable={standable} player={player} />
     <Suspense fallback={null}><LeapingFish isSea={isSea} max={liteMode ? 1 : 2} /></Suspense>

@@ -25,7 +25,7 @@ import { setPeacefulTarget, type PeacefulTarget } from "@/lib/game/peacefulNear"
 import type { Biome, Species } from "@/lib/collections/roster";
 import type { WorldMoment } from "@/lib/collections/logic";
 import { worldTime } from "@/lib/game/worldClock";
-import { FLEE_TIME, WARY_HOP, fleeAt, waryHop, type FleePose } from "@/lib/game/bugFlee";
+import { FLEE_TIME, WARY_HOP, carryBugs, fleeAt, waryHop, type FleePose } from "@/lib/game/bugFlee";
 import { DROP_TIME, FRUIT_MODEL, fruitTree, type TreeSpot } from "@/lib/game/treeFruit";
 import TreeFruit, { type HangingFruit } from "./TreeFruit";
 
@@ -42,12 +42,17 @@ function Sparkle({ position, strong }: { position: [number, number, number]; str
   const glow = useTexture("/assets/sky/sun.png");
   const ref = useRef<THREE.SpriteMaterial>(null);
   useFrame(({ clock }) => { if (ref.current) ref.current.opacity = (strong ? 0.55 : 0.3) + Math.sin(clock.elapsedTime * 5 + position[0]) * 0.25; });
-  return <sprite position={position} scale={strong ? [0.7, 0.7, 1] : [0.45, 0.45, 1]}>
+  return <sprite position={position} scale={strong ? [0.5, 0.5, 1] : [0.34, 0.34, 1]}>
     <spriteMaterial ref={ref} map={glow} color="#fff4b0" transparent depthWrite={false} toneMapped={false} blending={THREE.AdditiveBlending} />
   </sprite>;
 }
 
 const buried = (sp: Species) => sp.tool === "shovel" && sp.category !== "mineral";
+/** Just over a tree's crown (where a rare tree's sparkle shows): its highest fruit, sized with the tree. */
+function crownTop(n: NodeSpec, models?: readonly string[]): number {
+  const tree = n.tree && fruitTree(n.tree, 0, models);
+  return tree ? Math.max(...tree.hang.map(h => h[1])) * tree.scale + 0.5 : 2.6;
+}
 
 function NodeVisual({ sp, x, y, z, canopy }: { sp: Species; x: number; y: number; z: number; canopy?: boolean }) {
   if (sp.category === "fruit") {
@@ -81,9 +86,13 @@ interface LiveBug {
 const CRAWL = new Set(["crawl"]);
 const _flee: FleePose = { x: 0, y: 0, z: 0, yaw: 0, opacity: 1 };
 
-/** Module scope (the react compiler forbids writing through hook values): fade a bug's own materials. */
-function fade(group: THREE.Group, opacity: number) {
+/**
+ * Module scope (the react compiler forbids writing through hook values): fade a bug's own materials. Its rare
+ * sparkle is not faded but dropped the moment it flees: a glow trailing off with the bug read as a lit orb flying away.
+ */
+function fade(group: THREE.Group, opacity: number, sparkle = opacity >= 1) {
   group.traverse(o => {
+    if ((o as THREE.Sprite).isSprite) { o.visible = sparkle; return; }
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
     for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
@@ -115,7 +124,8 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
       target: { id: n.id, kind: "bug" as const, label: `Swing the net (${sp.name})`, distance: 0 } }];
   }), [bugNodes, harvested, now, member, hour, moment]);
   const bugState = useRef<Map<string, LiveBug>>(new Map());
-  useEffect(() => { bugState.current = new Map(bugs.map(b => [b.id, { ...b, target: { ...b.target } }])); }, [bugs]);
+  // Carried by slot and species, so a harvest anywhere never resets a bug that fled (lib/game/bugFlee carryBugs).
+  useEffect(() => { bugState.current = carryBugs(bugState.current, bugs.map(b => ({ ...b, target: { ...b.target } }))); }, [bugs]);
   // Each forage node's prompt, built once per roll and reused every frame (no allocation in the frame loop).
   const forageTargets = useMemo(() => new Map(forage.map(({ n, sp }) => [n.id, {
     id: n.id, kind: sp!.tool === "shovel" ? "dig" : "forage", distance: 0, at: [n.x, n.z],
@@ -196,7 +206,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
         fleeAt(bug.fx, bug.fy, bug.fz, bug.dir, bug.side, CRAWL.has(model.motion), bug.fleeT, _flee);
         g.position.set(_flee.x, _flee.y, _flee.z);
         g.rotation.y = _flee.yaw;
-        fade(g, _flee.opacity);
+        fade(g, _flee.opacity, false);
         bug.faded = true;
         continue;
       }
@@ -230,7 +240,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
       const y = ground(n.x, n.z);
       return <Suspense key={n.id} fallback={null}>
         <NodeVisual sp={sp!} x={n.x} y={y} z={n.z} canopy={n.canopy} />
-        {hasClue(sp) && <Sparkle position={[n.x, y + (n.canopy ? 2.6 : 0.5), n.z]} strong={highTier} />}
+        {hasClue(sp) && <Sparkle position={[n.x, y + (n.canopy ? crownTop(n, treeModels) : 0.5), n.z]} strong={highTier} />}
       </Suspense>;
     })}
     {bugs.map(b => {

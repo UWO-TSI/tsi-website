@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { ORBIT_DISTANCE, ZOOM_OUT } from "./orbitCamera";
 import { village, objectsOf } from "./villageMap";
 import { villageIsland } from "./defaultIsland";
 import { villageWater } from "./fishingSpots";
 import {
-  FLYERS, butterflyAt, crabStep, crabsFor, dragonflyAt, flyersFor, flyingWeather, gullAnchors, leapsAt, newCrabState, newFlyerPose, outWeight, seaAt,
+  FLYERS, GULL_REACH, SEA_LEVEL, butterflyAt, crabStep, crabsFor, dragonflyAt, flyerPresence, flyersFor, flyingWeather, gullAnchors, gullPerches, leapsAt, newCrabState, newFlyerPose, outWeight, seaAt,
   type FaunaSite, type Leap,
 } from "./ambientFauna";
 import { isWater, surfaceAt, worldToCellX, worldToCellZ } from "./grid";
@@ -52,9 +53,27 @@ describe("ambient fauna", () => {
       if (!Number.isNaN(px)) expect(Math.hypot(a.x - px, a.z - pz)).toBeLessThan(0.12);
       px = a.x; pz = a.z;
     }
+    // Away: shrunk to nothing, drifted off its own way a couple of units and a little up, not lifted off as a flock.
+    const here = butterflyAt(f, 1000, 1, island.ground, newFlyerPose());
     butterflyAt(f, 1000, 0, island.ground, b);
     expect(b.scale).toBe(0);
-    expect(b.y).toBeGreaterThan(a.y + 3);
+    expect(b.y - here.y).toBeGreaterThan(0.5);
+    expect(b.y - here.y).toBeLessThan(1.5);
+    expect(Math.hypot(b.x - here.x, b.z - here.z)).toBeGreaterThan(1.5);
+    const dirs = flyersFor(site, "summer").slice(0, 4).map(g => {
+      const on = butterflyAt(g, 1000, 1, island.ground, newFlyerPose()), off = butterflyAt(g, 1000, 0, island.ground, newFlyerPose());
+      return Math.atan2(off.z - on.z, off.x - on.x).toFixed(2);
+    });
+    expect(new Set(dirs).size).toBeGreaterThan(1);
+  });
+
+  it("sends flyers in from the weather one by one, not together", () => {
+    const fs = flyersFor(site, "summer");
+    // Halfway through the weather's turn some are still out and some already gone.
+    const mid = fs.map(f => flyerPresence(0.5, f.seed));
+    expect(mid.some(w => w > 0.5)).toBe(true);
+    expect(mid.some(w => w < 0.5)).toBe(true);
+    for (const f of fs) { expect(flyerPresence(1, f.seed)).toBe(1); expect(flyerPresence(0, f.seed)).toBe(0); }
   });
 
   it("darts a dragonfly between hovers along the water", () => {
@@ -116,10 +135,33 @@ describe("ambient fauna", () => {
     expect(buf.slice(0, n1)).toEqual(first);
   });
 
-  it("circles gulls over the sea off the sides and the far shore, never the near shore the camera stands over", () => {
+  it("circles gulls far enough off every side that no camera reaches a circle", () => {
     const g = gullAnchors(v.bounds, [[-24, 12]]);
     expect(g).toHaveLength(5);
     for (const [x, z] of g) expect(seaAt(site, x, z)).toBe(true);
-    for (const [, z] of g) expect(z).toBeGreaterThan(v.bounds.minZ);
+    const b = v.bounds;
+    // The nearest a circle comes to land, against how far the camera can stand off a spot you can reach (zoomed out with Z).
+    for (const [x, z] of g.slice(0, 4)) {
+      const fromLand = Math.hypot(Math.max(b.minX - x, 0, x - b.maxX), Math.max(b.minZ - z, 0, z - b.maxZ));
+      expect(fromLand - GULL_REACH).toBeGreaterThan(ORBIT_DISTANCE * ZOOM_OUT);
+    }
+    // One on each side of the island.
+    const sides = new Set(g.slice(0, 4).map(([x, z]) => Math.round(Math.atan2(x - b.cx, z - b.cz) / (Math.PI / 2))));
+    expect(sides.size).toBe(4);
+  });
+
+  it("lands gulls on the water just off the shore below their circles, and on the island's own perches", () => {
+    const anchors = gullAnchors(v.bounds), lamp: [number, number, number] = [4.6, 2.7, 2.4];
+    const perches = gullPerches(site, anchors, [v.bounds.cx, v.bounds.cz], [lamp]);
+    const water = perches.slice(0, -1);
+    expect(water.length).toBeGreaterThanOrEqual(3);
+    for (const [x, y, z] of water) {
+      expect(seaAt(site, x, z)).toBe(true);
+      expect(y).toBe(SEA_LEVEL);
+      // A few units out: land within about 6.5 of it.
+      const near = Array.from({ length: 32 }, (_, i) => (i / 32) * Math.PI * 2).some(a => !seaAt(site, x + Math.cos(a) * 6.5, z + Math.sin(a) * 6.5));
+      expect(near).toBe(true);
+    }
+    expect(perches.at(-1)).toEqual(lamp);
   });
 });

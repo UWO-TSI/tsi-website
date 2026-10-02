@@ -33,6 +33,8 @@
  * instead of along the parametric angle it would have had on a clean circle.
  */
 
+import { hash01 } from "./worldFx";
+
 export interface GullParams {
   /** Orbit centre. */
   anchorX: number;
@@ -116,4 +118,43 @@ export function gullPose(t: number, p: GullParams, bankGain: number, maxBank: nu
   const roll = Math.max(-maxBank, Math.min(maxBank, -turnRate * bankGain));
 
   return { x: _here.x, y: _here.y, z: _here.z, yaw, roll };
+}
+
+// ── Perching (row 284) ──────────────────────────────────────────────────
+/**
+ * Now and then a gull leaves its circle for a perch (a lamp, a roof, the water off the beach), sits a while and goes
+ * back up: a glide down, a sit with its wings folded, a rise. World state: which perch and when come from the gull's
+ * seed and the world clock, so every client sees the same gull on the same roof. Seconds.
+ */
+export const PERCH_GLIDE = 5, PERCH_SIT = 18, PERCH_RISE = 4;
+const PERCH_SPAN = PERCH_GLIDE + PERCH_SIT + PERCH_RISE;
+
+export interface PerchState {
+  /** The perch (an index into the island's list), or -1 while circling. */
+  index: number;
+  /** Seconds into this visit (0 at the start of the glide down). */
+  u: number;
+  /** 0 on its circle, 1 on the perch, eased both ways. */
+  w: number;
+  /** How folded its wings are: in over the touchdown, out again as it lifts off. */
+  fold: number;
+  /** When this visit's glide began (world seconds): where it left its circle from. */
+  t0: number;
+}
+export const newPerchState = (): PerchState => ({ index: -1, u: 0, w: 0, fold: 0, t0: 0 });
+
+const ease = (x: number) => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 - 2 * t); };
+
+/** Gull `seed`'s perch visit at world time `t` among `count` perches: one visit every 80-150 s (seeded), none without perches. */
+export function perchAt(t: number, seed: number, count: number, out: PerchState): PerchState {
+  out.index = -1; out.u = 0; out.w = 0; out.fold = 0; out.t0 = 0;
+  if (count <= 0) return out;
+  const period = 80 + 70 * hash01(seed, 41), shift = hash01(seed, 42) * period;
+  const k = Math.floor((t + shift) / period), u = t + shift - k * period - (period - PERCH_SPAN);
+  if (u < 0) return out;
+  out.index = Math.floor(hash01(seed * 7 + 3, k) * count) % count;
+  out.u = u; out.t0 = t - u;
+  out.w = u < PERCH_GLIDE ? ease(u / PERCH_GLIDE) : u < PERCH_GLIDE + PERCH_SIT ? 1 : 1 - ease((u - PERCH_GLIDE - PERCH_SIT) / PERCH_RISE);
+  out.fold = u < PERCH_GLIDE + PERCH_SIT ? ease((u - PERCH_GLIDE + 0.6) / 0.8) : 1 - ease((u - PERCH_GLIDE - PERCH_SIT) / 0.5);
+  return out;
 }

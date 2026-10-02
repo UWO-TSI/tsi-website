@@ -28,7 +28,7 @@ import JournalSheet from "@/components/progression/JournalSheet";
 import { useProgressionWorld, useCeremony, useChapterActions, type WorldGoalId } from "@/lib/game/progressionBridge";
 import confetti from "canvas-confetti";
 import type { InteriorStation } from "./interiorShared";
-import { villageIsland, villageSpawn, villageScale, landmarks, landmarkPoint, wharfDeck, benchSeat, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
+import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmarkPoint, wharfDeck, benchSeat, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
 import { village, objectsOf, type Village } from "@/lib/game/villageMap";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
@@ -163,6 +163,20 @@ const spot = (p: [number, number] | null): Spot | null => p && [p[0], 0, p[1]];
 const xz = (o: { x: number; z: number }): [number, number] => [o.x, o.z];
 
 /**
+ * Where a gull lands now and then on the island (AmbientFauna adds the water off the shore): each lamp's top and the
+ * tops of the HQ's roof and the shop's sign, measured from their GLBs (streetlamp 2.67; hq-office 4.76 at 2.03 behind
+ * its middle, shop-market 3.93 at 1.86, both at ACNH_SCALE and turned a half turn as ACNHBuilding places them).
+ */
+function gullPerchSpots(v: Village, ground: (x: number, z: number) => number): [number, number, number][] {
+  const hq = landmark("hq", v), shop = landmark("shop", v);
+  return [
+    ...objectsOf("lamp", v).map((l): [number, number, number] => [l.x, ground(l.x, l.z) + 2.67, l.z]),
+    ...(hq ? [[hq.x, ground(hq.x, hq.z) + 4.76, hq.z - 2.35 + 2.03] as [number, number, number]] : []),
+    ...(shop ? [[shop.x, ground(shop.x, shop.z) + 3.93, shop.z + 1.86] as [number, number, number]] : []),
+  ];
+}
+
+/**
  * The village as this scene uses it, all from the map file (specs/island-painter.md):
  * walking, objects, doors, spawns, nodes, water and the size-dependent settings.
  * Built once per loaded map; nothing here is placed relative to the local player.
@@ -196,7 +210,7 @@ function villageLayout(v: Village) {
     water: villageWater(v).classify,
     scale: villageScale(v),
     /** Ambient life (AmbientFauna): flowers for the butterflies, the water's kinds, gulls off the shores in view. */
-    fauna: { site: { map: v.map, flowers: objectsOf("flower", v).map(xz), water: villageWater(v).classify }, gulls: gullAnchors(v.bounds) },
+    fauna: { site: { map: v.map, flowers: objectsOf("flower", v).map(xz), water: villageWater(v).classify }, gulls: gullAnchors(v.bounds), perches: gullPerchSpots(v, island.ground) },
     /** No water glints under the wharf deck: it sits a few centimetres above the water and they would show through. */
     underWharf: (x: number, z: number) => !!deck && x > deck.x0 - 0.4 && x < deck.x1 + 0.4 && z > deck.z0 - 0.4 && z < deck.z1 + 0.4,
   };

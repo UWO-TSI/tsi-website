@@ -27,20 +27,37 @@ export interface FlyerSpecies {
   /** Toronto hours it's out, [from, to) (wrapping past midnight when from > to). */
   hours: readonly [number, number];
 }
-/** The ACNH critter models (Critters.SPECIES) as scenery: seasons and hours after ACNH's northern calendar; scales give every wingspan about half a unit. */
+/**
+ * The ACNH critter models (Critters.SPECIES) as scenery: seasons and hours after ACNH's northern calendar; scales give
+ * every wingspan about a quarter of a unit (half a unit read as birds from the follow camera, row 284).
+ */
 export const FLYERS: readonly FlyerSpecies[] = [
-  { key: "common", model: "/assets/acnh/critters/common-butterfly.glb", kind: "butterfly", scale: 0.13, seasons: ["spring", "summer", "autumn"], hours: [7, 17.5] },
-  { key: "tiger", model: "/assets/acnh/critters/tiger-butterfly.glb", kind: "butterfly", scale: 0.075, seasons: ["spring", "summer"], hours: [7.5, 17] },
-  { key: "agrias", model: "/assets/acnh/critters/agrias-butterfly.glb", kind: "butterfly", scale: 0.075, seasons: ["summer"], hours: [8, 17] },
-  { key: "monarch", model: "/assets/acnh/critters/monarch-butterfly.glb", kind: "butterfly", scale: 0.075, seasons: ["summer", "autumn"], hours: [8, 17] },
-  { key: "peacock", model: "/assets/acnh/critters/peacock-butterfly.glb", kind: "butterfly", scale: 0.075, seasons: ["spring", "summer", "autumn"], hours: [5, 19] },
-  { key: "emperor", model: "/assets/acnh/critters/emperor-butterfly.glb", kind: "butterfly", scale: 0.07, seasons: ["summer", "autumn"], hours: [17, 21] },
-  { key: "darner", model: "/assets/acnh/critters/darner-dragonfly.glb", kind: "dragonfly", scale: 0.075, seasons: ["spring", "summer"], hours: [8, 17] },
-  { key: "red", model: "/assets/acnh/critters/red-dragonfly.glb", kind: "dragonfly", scale: 0.1, seasons: ["summer", "autumn"], hours: [8, 18.5] },
+  { key: "common", model: "/assets/acnh/critters/common-butterfly.glb", kind: "butterfly", scale: 0.065, seasons: ["spring", "summer", "autumn"], hours: [7, 17.5] },
+  { key: "tiger", model: "/assets/acnh/critters/tiger-butterfly.glb", kind: "butterfly", scale: 0.0375, seasons: ["spring", "summer"], hours: [7.5, 17] },
+  { key: "agrias", model: "/assets/acnh/critters/agrias-butterfly.glb", kind: "butterfly", scale: 0.0375, seasons: ["summer"], hours: [8, 17] },
+  { key: "monarch", model: "/assets/acnh/critters/monarch-butterfly.glb", kind: "butterfly", scale: 0.0375, seasons: ["summer", "autumn"], hours: [8, 17] },
+  { key: "peacock", model: "/assets/acnh/critters/peacock-butterfly.glb", kind: "butterfly", scale: 0.0375, seasons: ["spring", "summer", "autumn"], hours: [5, 19] },
+  { key: "emperor", model: "/assets/acnh/critters/emperor-butterfly.glb", kind: "butterfly", scale: 0.035, seasons: ["summer", "autumn"], hours: [17, 21] },
+  { key: "darner", model: "/assets/acnh/critters/darner-dragonfly.glb", kind: "dragonfly", scale: 0.0375, seasons: ["spring", "summer"], hours: [8, 17] },
+  { key: "red", model: "/assets/acnh/critters/red-dragonfly.glb", kind: "dragonfly", scale: 0.05, seasons: ["summer", "autumn"], hours: [8, 18.5] },
 ];
 
 /** Flyers hide from rain and snow, and from a gale. */
 export const flyingWeather = (w: IslandWeather) => w === "clear" || w === "fog";
+
+/**
+ * How out one flyer is as the weather turns (`presence` eases 1 to 0 over a few seconds): each takes cover at its own
+ * moment, seeded, so they slip away one by one instead of lifting off as a flock.
+ */
+export function flyerPresence(presence: number, seed: number): number {
+  return smooth((presence - 0.55 * hash01(seed, 14)) / 0.45);
+}
+
+/** A flyer that is leaving drifts off its own way, a little up, shrinking away (written into x, y, z by `away`, 0..1). */
+function scatter(seed: number, away: number, out: { x: number; y: number; z: number }) {
+  const a = hash01(seed, 15) * TAU;
+  out.x += away * Math.cos(a) * 2.2; out.z += away * Math.sin(a) * 2.2; out.y += away * 1.3;
+}
 
 /** How far into its hours a flyer is (1 out, 0 away), easing over `ramp` hours at both ends (each critter its own few minutes off). */
 export function outWeight(hour: number, hours: readonly [number, number], jitter: number, ramp = 0.25): number {
@@ -142,8 +159,8 @@ export const newFlyerPose = (): FlyerPose => ({ x: 0, y: 0, z: 0, yaw: 0, flap: 
 const VISIT = 9, FLIGHT = 2.6;
 
 /**
- * A butterfly at world time `t` (seconds), out by `weight` (0 away, 1 here; it comes down from and leaves up into
- * the sky). It drifts from flower to flower in its patch on a seeded schedule, bobbing in flight, then settles over the
+ * A butterfly at world time `t` (seconds), out by `weight` (0 away, 1 here; it drifts in and away on its own line,
+ * shrinking). It drifts from flower to flower in its patch on a seeded schedule, bobbing in flight, then settles over the
  * flower with slow wingbeats. `ground` gives the flower's height.
  */
 export function butterflyAt(f: Flyer, t: number, weight: number, ground: (x: number, z: number) => number, out: FlyerPose): FlyerPose {
@@ -163,11 +180,9 @@ export function butterflyAt(f: Flyer, t: number, weight: number, ground: (x: num
   // A slow drift and hover all the time (so landing and taking off never jump), a bob and a rise in flight.
   const hover = 0.08 * Math.sin(t * 1.7 + s) + arc * (0.25 + 0.06 * Math.sin(t * 9 + s));
   x += 0.12 * Math.sin(t * 0.7 + s); z += 0.1 * Math.cos(t * 0.6 + s);
-  let y = ground(x, z) + 0.42 + hover + hash01(s, 5) * 0.2;
-  // Away: lifted and blown off downwind.
-  const away = 1 - smooth(weight);
-  x += away * 4; z += away * 2; y += away * 6;
+  const y = ground(x, z) + 0.42 + hover + hash01(s, 5) * 0.2;
   out.x = x; out.y = y; out.z = z;
+  scatter(s, 1 - smooth(weight), out);
   out.yaw = settle ? Math.atan2(bx - ax, bz - az) + 0.6 * Math.sin(t * 0.3 + s) : Math.atan2(bx - ax, bz - az);
   // Wings: quick beats in flight, slow open-and-close settled (radians up from flat).
   out.flap = settle ? 0.55 + 0.45 * Math.sin(t * 2.2 + s) : 0.6 + 0.6 * Math.sin(t * 34 + s);
@@ -187,10 +202,9 @@ export function dragonflyAt(f: Flyer, t: number, weight: number, ground: (x: num
   const d = smooth((u - HOVER) / DART);
   let x = ax + (bx - ax) * d, z = az + (bz - az) * d;
   x += 0.04 * Math.sin(t * 7 + s); z += 0.04 * Math.cos(t * 6 + s);
-  let y = Math.max(ground(x, z), 0) + 0.55 + 0.12 * Math.sin(t * 1.3 + s) + (hash01(s, 6) - 0.5) * 0.2;
-  const away = 1 - smooth(weight);
-  x += away * 5; y += away * 6;
+  const y = Math.max(ground(x, z), 0) + 0.55 + 0.12 * Math.sin(t * 1.3 + s) + (hash01(s, 6) - 0.5) * 0.2;
   out.x = x; out.y = y; out.z = z;
+  scatter(s, 1 - smooth(weight), out);
   // Facing where it's going; while hovering it turns slowly to the next spot.
   out.yaw = Math.atan2(bx - ax, bz - az);
   out.flap = 0.25 + 0.25 * Math.sin(t * 60 + s);
@@ -248,12 +262,41 @@ export function crabStep(c: Crab, s: CrabState, t: number, dt: number, ax: numbe
 
 // ── Gulls ──────────────────────────────────────────────────────────────
 /**
- * Where the gulls circle: just off the island's side shores and twice off its far shore, where the follow camera
- * looks out over the sea, and over any `extra` spots. Never off the near shore (−z): flying that low there, a gull's
- * orbit runs through the camera.
+ * How far off the island's land the gulls circle. The orbit camera can stand ORBIT_DISTANCE (13.1) from any spot you
+ * can reach, 18.3 zoomed out with Z, on any side; a gull's circle reaches about 16 from its anchor (radius 6.5 plus
+ * its own up to 3.5, the wobble, and 3.5 of drift). 35 keeps every circle clear of the camera; the gulls come in to
+ * land instead (gullPerches, lib/game/gullPath perchAt).
  */
+export const GULL_OFFSHORE = 35;
+/** The gull circle's furthest reach from its anchor (TUNING_DEFAULTS.gull: radius 6.5 + 3.5 jitter, x1.26 wobble, 3.5 drift). */
+export const GULL_REACH = (6.5 + 3.5) * 1.26 + 3.5;
+
+/** Where the gulls circle: one far off each side of the island, and over any `extra` spots. */
 export function gullAnchors(b: { minX: number; maxX: number; minZ: number; maxZ: number; cx: number; cz: number }, extra: readonly (readonly [number, number])[] = []): [number, number][] {
-  return [[b.maxX + 4, b.cz + 3], [b.minX - 4, b.cz - 2], [b.cx - 5, b.maxZ + 4], [b.cx + 8, b.maxZ + 3], ...extra.map(([x, z]): [number, number] => [x, z])];
+  const d = GULL_OFFSHORE;
+  return [[b.maxX + d, b.cz + 3], [b.minX - d, b.cz - 2], [b.cx - 5, b.maxZ + d], [b.cx + 6, b.minZ - d], ...extra.map(([x, z]): [number, number] => [x, z])];
+}
+
+/** Sea level, where a gull sits on the water. */
+export const SEA_LEVEL = -0.078;
+/**
+ * Where gulls land now and then: the water a few units off the shore below each anchor (from the anchor in toward
+ * the island until the sea ends, then back out), and `extra` spots on land (lamp tops, roof ridges), [x, y, z].
+ */
+export function gullPerches(site: FaunaSite, anchors: readonly (readonly [number, number])[], centre: readonly [number, number], extra: readonly (readonly [number, number, number])[] = []): [number, number, number][] {
+  const out: [number, number, number][] = [];
+  for (const [ax, az] of anchors) {
+    const dx = centre[0] - ax, dz = centre[1] - az, len = Math.hypot(dx, dz);
+    if (len < 1e-6) continue;
+    for (let s = 0; s < len; s += 0.5) {
+      const x = ax + (dx / len) * s, z = az + (dz / len) * s;
+      if (seaAt(site, x, z)) continue;
+      const back = s - 6, px = ax + (dx / len) * back, pz = az + (dz / len) * back;
+      if (back > 0 && seaAt(site, px, pz)) out.push([px, SEA_LEVEL, pz]);
+      break;
+    }
+  }
+  return [...out, ...extra.map(([x, y, z]): [number, number, number] => [x, y, z])];
 }
 
 // ── Fish jumping at sea ────────────────────────────────────────────────
