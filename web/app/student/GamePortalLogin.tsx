@@ -5,11 +5,10 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import s from "./GamePortalLogin.module.css";
 
-// After any sign-in, /student/go decides the destination (the island, or the applicant
-// village while the member world is closed). Same callback paths as the recruit AuthModal.
-const LANDING = "/student/go";
-
-export default function GamePortalLogin() {
+// After any sign-in, /student/go decides the destination (`landing` carries a safe `?next=`;
+// the island, or the applicant village while the member world is closed). Same callback paths
+// as the recruit AuthModal.
+export default function GamePortalLogin({ landing }: { landing: string }) {
   const [mode, setMode] = useState<"signin" | "forgot">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,7 +27,7 @@ export default function GamePortalLogin() {
     setError(null);
     const { error } = await createClient().auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(LANDING)}` },
+      options: { redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(landing)}` },
     });
     if (error) {
       setError(error.message);
@@ -58,7 +57,7 @@ export default function GamePortalLogin() {
       setLoading(false);
       return;
     }
-    window.location.href = LANDING;
+    window.location.href = landing;
   };
 
   return (
