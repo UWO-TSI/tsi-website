@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as THREE from "three";
+import { cameraRelative, getCameraForwardXZ } from "./cameraBasis";
 import { bendViewPoint } from "./worldProjection";
 import {
   DEFAULT_PITCH, ORBIT_DISTANCE, PITCH_MAX, PITCH_MIN, ZOOM_MAX, ZOOM_MIN, ZOOM_OUT,
@@ -43,6 +44,29 @@ describe("the rig", () => {
     const [x, z] = turnOffset(0, -10, Math.PI / 2);
     expect(x).toBeCloseTo(-10, 10); expect(z).toBeCloseTo(0, 10);
     expect(Math.hypot(...turnOffset(6, -16, 1.1))).toBeCloseTo(Math.hypot(6, -16), 10);
+  });
+});
+
+describe("camera-relative input", () => {
+  it("W is away from the camera and D is the screen's right at every yaw", () => {
+    for (const yaw of YAWS) {
+      const { camera } = rig(yaw);
+      const { fx, fz } = getCameraForwardXZ(camera);
+      expect(fx).toBeCloseTo(Math.sin(yaw), 6); expect(fz).toBeCloseTo(Math.cos(yaw), 6);
+      const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+      const w = cameraRelative(0, 1, fx, fz), d = cameraRelative(1, 0, fx, fz), a = cameraRelative(-1, 0, fx, fz), s = cameraRelative(0, -1, fx, fz);
+      expect(w.x).toBeCloseTo(fx, 10); expect(w.z).toBeCloseTo(fz, 10);
+      expect(s.x).toBeCloseTo(-fx, 10); expect(s.z).toBeCloseTo(-fz, 10);
+      expect(d.x).toBeCloseTo(right.x, 6); expect(d.z).toBeCloseTo(right.z, 6);
+      expect(a.x).toBeCloseTo(-right.x, 6); expect(a.z).toBeCloseTo(-right.z, 6);
+      // A diagonal stays a unit vector (the sim's speed is the input's length).
+      const wd = cameraRelative(Math.SQRT1_2, Math.SQRT1_2, fx, fz);
+      expect(Math.hypot(wd.x, wd.z)).toBeCloseTo(1, 10);
+    }
+  });
+  it("is today's mapping at yaw 0 (+x is screen left)", () => {
+    expect(cameraRelative(1, 0, 0, 1)).toEqual({ x: -1, z: 0 });
+    expect(cameraRelative(0, 1, 0, 1)).toEqual({ x: 0, z: 1 });
   });
 });
 
