@@ -112,7 +112,8 @@ export default function ToolWheel({ items, held, wheelKey, enabled, touch, onEqu
   const n = items.length, picked = choice === "keep" ? items.findIndex(i => i.id === held) : choice;
   const label = picked === null ? "Put away" : picked >= 0 ? items[picked].name : held ? "" : "Empty hands";
   const sub = picked !== null && picked >= 0 && items[picked].kind !== "pin" && items[picked].tier ? `Tier ${items[picked].tier}` : null;
-  // The name sits under the choice (the centre's under the centre), its tail pointing up at it.
+  // The name sits beside the choice on the outside (above a petal in the top half, below one in the bottom half, under
+  // the flower for the centre), its tail pointing at it: never over the centre.
   const [lx, ly] = picked !== null && picked >= 0 ? slotPosition(picked, n, RING) : [0, RING + 24]; // the centre's goes under the flower
   return <>
     {touch && !open && enabled && n > 0 && <button className={styles.touchButton} onClick={() => begin("touch")} aria-label="Open the tool wheel">
@@ -134,7 +135,7 @@ export default function ToolWheel({ items, held, wheelKey, enabled, touch, onEqu
         <button role="menuitem" className={styles.centre} data-chosen={picked === null || undefined} aria-label="Put away"
           onMouseEnter={() => open === "key" && !document.pointerLockElement && choose(null)}
           onClick={e => { e.stopPropagation(); live.current.choice = null; close(true); }}><Hand size={22} aria-hidden /></button>
-        {label && <p className={styles.name} aria-live="polite" style={{ "--lx": `${lx}px`, "--ly": `${ly}px` } as CSSProperties}><b>{label}</b>{sub && <small>{sub}</small>}</p>}
+        {label && <p className={styles.name} aria-live="polite" data-above={ly < -1 || undefined} style={{ "--lx": `${lx}px`, "--ly": `${ly}px` } as CSSProperties}><b>{label}</b>{sub && <small>{sub}</small>}</p>}
       </div>
       {open === "key" && <p className={styles.hint}><span><kbd>{keyName(wheelKey)}</kbd>{choice === null ? "Put away" : "Hold"}</span><span><kbd>Esc</kbd>Cancel</span></p>}
     </div>}

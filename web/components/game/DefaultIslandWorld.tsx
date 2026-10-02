@@ -820,7 +820,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     return () => el.removeEventListener("pointerdown", down);
   }, [applyTool]);
   const toolNear = near === "fish" || near === "net" || near === "dig";
-  const full = isFullHud({ always: alwaysFullHud, keyHeld: hudKey, touch, capture: captured });
+  // Dev (screenshots without pointer lock): ?hud=clean shows the HUD as it is while exploring in mouse-look.
+  const full = isFullHud({ always: alwaysFullHud, keyHeld: hudKey, touch, capture: devHome.get("hud") === "clean" ? "captured" : captured });
   // Hold the HUD key (H) for the full HUD.
   useEffect(() => {
     const key = wheelKeys.hud;

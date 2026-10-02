@@ -26,6 +26,8 @@
 .name { position: absolute; left: var(--lx); top: calc(var(--ly) + 60px); transform: translateX(-50%); margin: 0; display: flex; flex-direction: column; align-items: center; min-width: 96px; padding: 7px 20px 8px;
   border-radius: 44% 48% 42% 46% / 52% 50% 48% 50%; background: var(--pill); color: var(--paper); white-space: nowrap; pointer-events: none; z-index: 3; transition: left 0.12s ease, top 0.12s ease; }
 .name::before { content: ""; position: absolute; left: 50%; top: -8px; width: 16px; height: 10px; transform: translateX(-50%); background: var(--pill); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.name[data-above] { top: calc(var(--ly) - 60px); transform: translate(-50%, -100%); }
+.name[data-above]::before { top: auto; bottom: -8px; clip-path: polygon(0 0, 100% 0, 50% 100%); }
 .name b { font-size: 17px; font-weight: 800; letter-spacing: 0.2px; }
 .name small { font-size: 12px; font-weight: 700; opacity: 0.85; }
 /* Round keycaps, bottom right (the kit's button hints). */
