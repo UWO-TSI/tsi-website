@@ -16,7 +16,9 @@ import { seedSql } from "./collections/seed";
 import { craftingSeedSql, recipeDropsSql } from "./crafting/seed";
 import { combatSeedSql } from "./combat/seed";
 import { seasonalGoalsSql } from "./progression/seed";
-import { economySeedSql, eventItemsSeedSql, ownershipSeedSql } from "./wallet/seed";
+import { economySeedSql, eventItemsSeedSql, ownershipSeedSql, shopIconsSql } from "./wallet/seed";
+import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS } from "./wallet/catalogue";
+import { CRAFTED_ITEMS, RECIPE_CARDS } from "./crafting/recipes";
 import { studyTablesSeedSql } from "./study/seed";
 
 export const MIGRATIONS = join(__dirname, "../supabase/migrations");
@@ -34,6 +36,8 @@ export const SEEDS: readonly Seed[] = [
   { name: "recipe-drops", file: "20260930100000_recipe_drops.sql", sql: recipeDropsSql },
   // The study migration's hand-written seed has no markers: the first generated block (the café tables, cafe-polish §7) upserts every row.
   { name: "study-tables", file: "20260926150500_study.sql", sql: studyTablesSeedSql },
+  // Row 281: every shop row's icon (lib/icons), set by update so the rows' other columns keep any admin edit.
+  { name: "shop-icons", file: "20261002052225_catalogue_seed.sql", sql: () => shopIconsSql([...CATALOGUE, ...OWNERSHIP_ITEMS, ...EVENT_ITEMS, ...CRAFTED_ITEMS, ...RECIPE_CARDS]) },
 ];
 
 /** A generated block's first and last lines: its BEGIN and END markers. */

@@ -59,3 +59,20 @@ export function eventItemsSeedSql(): string {
     EVENT_END,
   ].join("\n");
 }
+
+export const ICONS_BEGIN = "-- BEGIN GENERATED SHOP ICONS (web/scripts/gen-seeds.mjs)";
+export const ICONS_END = "-- END GENERATED SHOP ICONS";
+
+/**
+ * Every shop row's sprite_url is its rendered icon (row 281, lib/icons): set where it is empty or still one of ours,
+ * so an icon an admin set by hand stays. An update, not an insert: the rows' other columns are left alone.
+ */
+export function shopIconsSql(rows: readonly CatalogueEntry[]): string {
+  return [
+    ICONS_BEGIN,
+    "UPDATE shop_items s SET sprite_url = v.url FROM (VALUES",
+    rows.map((c) => `  (${q(c.slug)}, ${q(c.sprite_url)})`).join(",\n"),
+    ") AS v (slug, url) WHERE s.slug = v.slug AND s.sprite_url IS DISTINCT FROM v.url AND (s.sprite_url IS NULL OR s.sprite_url LIKE '/assets/icons/%');",
+    ICONS_END,
+  ].join("\n");
+}

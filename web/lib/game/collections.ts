@@ -83,11 +83,24 @@ async function catchRequest(body: Record<string, unknown>): Promise<CatchAnswer 
     return null;
   }
 }
-/** A forage node or bug spot, from where the player stands. */
-export const harvestNode = (node: string, at: [number, number]) => catchRequest({ action: "harvest", node, at });
-/** Roll the fish that will bite, from where the player stands; landed with landCatch when the reel is won. */
-export const castLine = (site: "village" | "home", at: [number, number], power: number) => catchRequest({ action: "cast", site, at, power });
+/** A forage node or bug spot, from where the player stands, with the held tool's key (a net for a bug, a shovel to dig; none by hand). */
+export const harvestNode = (node: string, at: [number, number], tool?: string) => catchRequest({ action: "harvest", node, at, ...(tool ? { tool } : {}) });
+/** Roll the fish that will bite on the held rod (`tool`), from where the player stands; landed with landCatch when the reel is won. */
+export const castLine = (site: "village" | "home", at: [number, number], power: number, tool: string) => catchRequest({ action: "cast", site, at, power, tool });
 export const landCatch = (roll: string) => catchRequest({ action: "land", roll });
+
+export type EatAnswer = { ok: true; count: number } | { ok: false; error: string };
+/** Eat one held fruit (POST /api/collections/eat, specs/game-ui.md §2). Signed out or without a server, from this browser's record. */
+export async function eatItem(itemKey: string): Promise<EatAnswer> {
+  try {
+    const res = await fetch("/api/collections/eat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ item: itemKey }) });
+    const json = await res.json().catch(() => null);
+    if (res.ok && json?.eaten) { spendCollected(itemKey, 1); return { ok: true, count: json.eaten.count }; }
+    if (res.status !== 401 && res.status !== 503) return { ok: false, error: json?.error ?? "Something went wrong. Try again." };
+  } catch { /* the local record */ }
+  const have = localCollections()[itemKey] ?? 0;
+  return have > 0 ? { ok: true, count: spendCollected(itemKey, 1) } : { ok: false, error: "You don't have any of those left." };
+}
 
 /**
  * Spend/remove n of an item from the LOCAL record (Wharf Shack sales, E3).

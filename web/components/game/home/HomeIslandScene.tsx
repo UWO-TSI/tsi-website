@@ -13,6 +13,7 @@ import * as THREE from "three";
 import GridWorld from "../grid/GridWorld";
 import GridOcean from "../grid/GridOcean";
 import PlayerAvatar from "../PlayerAvatar";
+import type { WheelItem } from "@/lib/game/toolWheel";
 import { ACNHParts, CHALET_VARIANTS } from "../ACNHBuilding";
 import { GLBProp, NatureTree, NatureBush, NatureFlowerCluster } from "../NatureModels";
 import { IslandAtmosphere, useFollowCamera, type TreeSpot } from "../IslandAtmosphere";
@@ -36,14 +37,14 @@ import styles from "../DefaultIslandWorld.module.css";
 const HOME_NODES = homeNodes();
 const SEA = () => "sea" as const;
 
-export type HomeNear = "house" | "village" | "mailbox" | "fish" | "forage" | "net" | null;
+export type HomeNear = "house" | "village" | "mailbox" | "fish" | "forage" | "net" | "dig" | null;
 const TREE_SEEDS = [0, 1, 3, 2];
 const TREES: TreeSpot[] = HOME_TREES.map(([x, z], i) => ({ x, z, seed: TREE_SEEDS[i] }));
 const DOOR_SPAWN: [number, number, number] = [HOUSE.door[0], 0, HOUSE.door[1] - 0.6];
 /** The islet's sea is all one: gulls off its shores in view, butterflies on its flowers, crabs on its sand ring. */
 const HOME_GULLS = gullAnchors({ minX: -HOME_RADII.x, maxX: HOME_RADII.x, minZ: -HOME_RADII.z, maxZ: HOME_RADII.z, cx: 0, cz: 0 });
 
-export default function HomeIslandScene({ identity, level, peaceful, fishSpot, fishing, phase, light, look, weather, liteMode, castShadows, zoom, overview, returned, player, onNear, outdoor, decorating, selected, onPlace, onPickUp }: {
+export default function HomeIslandScene({ held = null, identity, level, peaceful, fishSpot, fishing, phase, light, look, weather, liteMode, castShadows, zoom, overview, returned, player, onNear, outdoor, decorating, selected, onPlace, onPickUp }: {
   phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; liteMode: boolean; castShadows: boolean; zoom: number; overview: boolean;
   /** Came out of the house (spawn at the door) rather than off the boat. */
   returned: boolean;
@@ -51,6 +52,8 @@ export default function HomeIslandScene({ identity, level, peaceful, fishSpot, f
   outdoor: readonly PlacedItem[]; decorating: boolean; selected: { piece: string; rot: Rotation; uid?: string } | null;
   onPlace: (item: PlacedItem) => void; onPickUp: (item: PlacedItem) => void;
   identity?: { display_name: string; member: boolean }; level?: number;
+  /** What the player holds from the tool wheel (specs/game-ui.md), drawn in the hand. */
+  held?: WheelItem | null;
   peaceful: { moment: WorldMoment; member: string; glider: boolean }; fishSpot: { current: FishingSpot | null }; fishing: boolean;
 }) {
   const home = useMemo(() => createHomeIsland(), []);
@@ -107,6 +110,6 @@ export default function HomeIslandScene({ identity, level, peaceful, fishSpot, f
     <PlacementLayer items={outdoor} mapping={mapping} context={{ inside: home.placeable }} active={decorating} selected={selected}
       onPlace={onPlace} onPickUp={onPickUp} plane={{ center: [0, 0.02, 0], size: [HOME_RADII.x * 2, HOME_RADII.z * 2] }} />
     <PlayerAvatar key={`home-${returned}`} spawnPosition={spawn} playerName={identity?.display_name ?? "You"} playerLevel={level} member={identity?.member} player={player} frozen={fishing || (decorating && !!selected)}
-      world={world} groundHeight={home.ground} groundSurface={home.surface} camTarget={focus} glider={peaceful.glider} />
+      world={world} groundHeight={home.ground} groundSurface={home.surface} camTarget={focus} glider={peaceful.glider} held={held} />
   </>;
 }

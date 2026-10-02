@@ -110,6 +110,14 @@ class Puppet {
   private readonly ghostParent: THREE.Object3D;
   private readonly ghosts: Ghost[] = [];
   private ghostNext = 0;
+  /** The arm hold laid over locomotion (specs/game-ui.md §2): its clip (kept while it eases out) and weight. */
+  private holdClip: ClipName | null = null;
+  private holdShown: ClipName | null = null;
+  private holdW = 0;
+  private holdT = 0;
+  private readonly holdArms = new Map<ClipName, { bone: THREE.Bone; at: THREE.Interpolant }[]>();
+  /** Held items put away: they shrink into the hand before they go (never a pop). */
+  private readonly retiring: { model: THREE.Object3D; t: number; from: number }[] = [];
 
   constructor(private readonly base: Gltf) {
     this.root = cloneSkinned(base.scene);
@@ -187,6 +195,60 @@ class Puppet {
   }
 
   get attacking() { return !!this.clip?.startsWith("Attack"); }
+  /** The clip showing now (a held item picks its grip and whether it shows from it). */
+  get current() { return this.clip; }
+
+  /** The hold clip's arm tracks, sampled live: the right arm for a tool, both for something held in front. */
+  private arms(name: ClipName) {
+    let arms = this.holdArms.get(name);
+    if (arms) return arms;
+    const both = name === "HoldFront", side = both ? /^mixamorig(Right|Left)(Shoulder|Arm|ForeArm|Hand)\.quaternion$/ : /^mixamorigRight(Shoulder|Arm|ForeArm|Hand)\.quaternion$/;
+    const clip = this.clips.get(name);
+    arms = (clip?.tracks ?? []).filter(t => side.test(t.name)).flatMap(t => {
+      const bone = this.bones.find(b => b.name === t.name.slice(0, t.name.indexOf(".")));
+      return bone ? [{ bone, at: new THREE.QuaternionLinearInterpolant(t.times, t.values, 4, new Float32Array(4)) }] : [];
+    });
+    this.holdArms.set(name, arms);
+    return arms;
+  }
+
+  /** Lay the hold over the arms (after the mixer): on while walking, running, idling or in the air; off in an action, a seat or a slide. */
+  private hold(delta: number, want: ClipName) {
+    if (this.holdClip) this.holdShown = this.holdClip;
+    const on = !!this.holdClip && HOLD_OVER.has(want) && !this.oneShot;
+    this.holdW += ((on ? 1 : 0) - this.holdW) * (1 - Math.exp(-14 * delta));
+    if (this.holdW < 0.002 || !this.holdShown) return;
+    const clip = this.clips.get(this.holdShown);
+    if (!clip) return;
+    this.holdT = (this.holdT + delta) % clip.duration;
+    for (const { bone, at } of this.arms(this.holdShown)) bone.quaternion.slerp(holdQ.fromArray(at.evaluate(this.holdT)), this.holdW);
+  }
+
+  /** Take out a held item: its grip's arm hold, until it is put away (`release` with the same clip). */
+  takeOut(model: THREE.Object3D, grip: Grip) {
+    const leaving = this.retiring.findIndex(r => r.model === model); // Strict Mode's second mount: the same model back
+    if (leaving >= 0) this.retiring.splice(leaving, 1);
+    model.position.set(...(grip.offset ?? [0, 0, 0]));
+    model.rotation.set(...grip.rotation);
+    model.scale.setScalar(0);
+    this.sockets.R.add(model);
+    this.holdClip = grip.clip;
+  }
+  putAway(model: THREE.Object3D, grip: Grip) {
+    if (this.holdClip === grip.clip) this.holdClip = null;
+    this.retire(model);
+  }
+  /** A held item put away: it shrinks into the hand over a moment, then leaves. */
+  retire(model: THREE.Object3D) { this.retiring.push({ model, t: 0, from: model.scale.x }); }
+  private retireStep(delta: number) {
+    for (let i = this.retiring.length - 1; i >= 0; i--) {
+      const r = this.retiring[i];
+      r.t += delta;
+      const k = Math.max(0, 1 - r.t / HELD_OUT);
+      r.model.scale.setScalar(r.from * k * k);
+      if (k === 0) { r.model.removeFromParent(); this.retiring.splice(i, 1); }
+    }
+  }
 
   private play(name: ClipName) {
     const clip = this.clips.get(name) ?? this.clips.get("Idle")!;
@@ -242,6 +304,8 @@ class Puppet {
     // Walk and Run count each foot's contact as the playhead passes it (footsteps come from the feet, not a timer).
     const contacts = changed ? undefined : CLIP_BY_NAME.get(want)?.contacts, before = action.time / length;
     this.mixer.update(delta);
+    this.hold(delta, want);
+    this.retireStep(delta);
     const foot = contactCrossed(contacts, before, action.time / length);
     if (foot >= 0) { motion.steps = (motion.steps ?? 0) + 1; motion.foot = foot; }
   }
@@ -250,6 +314,8 @@ class Puppet {
   dispose() {
     for (const g of this.ghosts) g.dispose();
     this.ghosts.length = 0;
+    for (const r of this.retiring) r.model.removeFromParent();
+    this.retiring.length = 0;
     this.mixer.stopAllAction();
     this.mixer.uncacheRoot(this.root);
     this.action = null; this.clip = null; this.oneShot = null;
@@ -322,12 +388,83 @@ function placeLeaf(model: THREE.Object3D, hand: THREE.Object3D, open: number, sc
   model.scale.setScalar(scale * Math.min(open, 1.15));
 }
 
+/**
+ * Held items (row 279, specs/game-ui.md §2): what the tool wheel put in the right hand. Each hold has a grip in the
+ * hand socket and an arm pose laid over walking (build_clips.py HoldRod, HoldTool, HoldFront); rotations and offsets
+ * are three.js Euler XYZ in socket space, solved from those poses by art/props-enemies/render_held.py. While the tool's
+ * own clip plays (the cast, the swing, the dig) it eases to that clip's grip. It shows in its hold and its use, and
+ * hides in a seat, a glide, a slide, a roll or a climb. A new item pops out of the hand; one put away shrinks back in.
+ */
+export type HoldKind = "rod" | "net" | "shovel" | "glider" | "front";
+export interface HeldView { url: string; hold: HoldKind; /** Something held in front: fitted to this size (rig units) about its centre. */ fit?: number }
+type Grip = { clip: ClipName; rotation: [number, number, number]; offset?: [number, number, number]; scale?: number };
+const HELD_GRIPS: Record<HoldKind, Grip> = {
+  rod: { clip: "HoldRod", rotation: [3.046, 1.018, -1.469] },
+  net: { clip: "HoldTool", rotation: [0.134, -1.029, -0.635] },
+  shovel: { clip: "HoldTool", rotation: [-0.461, 0.175, -1.611] },
+  glider: { clip: "HoldTool", rotation: [-0.572, -0.643, -0.883], scale: 0.45 },
+  front: { clip: "HoldFront", rotation: [-2.049, -1.105, -2.508], offset: [-0.0306, 0.0195, 0.0249] },
+};
+/** The grip while a tool's own clip plays (render_held.py: the cast forward, the net's swing out, the blade into the ground). */
+const USE_GRIPS: Partial<Record<ClipName, Partial<Record<HoldKind, [number, number, number]>>>> = {
+  Fish: { rod: [1.611, -0.292, 2.157] }, FishHold: { rod: [1.611, -0.292, 2.157] }, Net: { net: [2.472, -0.623, 2.401] }, Dig: { shovel: [-1.087, -0.652, -1.79] },
+};
+/** Clips a hold lays over (the arms carry the item); in any other the item's own clip poses them. */
+const HOLD_OVER = new Set<ClipName>(["Idle", "Walk", "Run", "CrouchIdle", "CrouchWalk", "Jump", "Air", "Fall", "Land", "LandHeavy", "Skid", "Dash", "LookAround"]);
+/** Clips the item is put away for: seats, the glide (the leaf takes the hand), slides, rolls and climbs, defeat. */
+const HELD_HIDDEN = new Set<ClipName>(["Sit", "Study", "Stretch", "Sleep", "Glide", "Slide", "SlideIn", "SlideInDash", "SlideUp", "SlideJump", "SlideStand", "SlideBonk",
+  "Mantle", "Roll", "DodgeRoll", "Defeat"]);
+/** Seconds to pop out (with a little overshoot) and to shrink back into the hand. */
+const HELD_IN = 0.22, HELD_OUT = 0.12;
+const holdQ = new THREE.Quaternion(), heldQ = new THREE.Quaternion(), heldE = new THREE.Euler();
+
+/** Fit a model to `size` about its centre (something held in front: a fruit, a shell). */
+function fitted(scene: THREE.Object3D, url: string, size: number) {
+  const inner = tagLookClasses(scene.clone(true), url), box = new THREE.Box3().setFromObject(inner), dim = new THREE.Vector3(), mid = new THREE.Vector3();
+  box.getSize(dim); box.getCenter(mid);
+  const k = size / Math.max(dim.x, dim.y, dim.z, 1e-3);
+  inner.position.copy(mid).multiplyScalar(-k);
+  inner.scale.setScalar(k);
+  const outer = new THREE.Group();
+  outer.add(inner);
+  return outer;
+}
+
+function HeldItem({ puppet, view: { url, hold, fit } }: { puppet: Puppet; view: HeldView }) {
+  const { scene } = useGLTF(url);
+  const model = useMemo(() => {
+    const m = hold === "front" ? fitted(scene, url, fit ?? 0.1) : tagLookClasses(scene.clone(true), url);
+    m.traverse(o => { o.castShadow = true; o.userData.sunCaster = "dynamic"; });
+    return m;
+  }, [scene, url, hold, fit]);
+  const grip = HELD_GRIPS[hold];
+  const age = useRef(0);
+  useEffect(() => {
+    age.current = 0;
+    puppet.takeOut(model, grip);
+    return () => puppet.putAway(model, grip);
+  }, [model, puppet, grip]);
+  useFrame((_, delta) => { age.current += delta; poseHeld(model, puppet.current, grip, hold, age.current, delta); });
+  return null;
+}
+/** Module scope (the react compiler forbids writing through hook values): pop out, hide where put away, ease to the use grip. */
+function poseHeld(model: THREE.Object3D, clip: ClipName | null, grip: Grip, hold: HoldKind, age: number, delta: number) {
+  const u = Math.min(1, age / HELD_IN), pop = u < 1 ? Math.sin(u * Math.PI * 0.5) * (1 + 0.14 * Math.sin(u * Math.PI)) : 1;
+  const target = (grip.scale ?? 1) * pop * (clip && HELD_HIDDEN.has(clip) ? 0 : 1);
+  model.scale.setScalar(u < 1 ? target : THREE.MathUtils.damp(model.scale.x, target, 18, delta));
+  model.visible = model.scale.x > 1e-3;
+  const use = clip ? USE_GRIPS[clip]?.[hold] : undefined;
+  model.quaternion.slerp(heldQ.setFromEuler(heldE.set(...(use ?? grip.rotation))), 1 - Math.exp(-delta * 20));
+}
+
 export interface CharacterProps {
   look: CharacterLook;
   motion: RefObject<CharacterMotion>;
   /** Normal walking pace for this controller (Walk plays at 1x there). */
   walkSpeed?: number;
   weapon?: WeaponView | null;
+  /** What the tool wheel put in the hand (a tool, the furled leaf, a snack); weapons in hand are `weapon`. */
+  held?: HeldView | null;
   /** Owns the leaf glider: the leaf shows while `motion.leaf` is open. */
   leaf?: boolean;
   /** Face atlas density: 512 px per face canvas in the world (sharp at village distance), 1024 in the creator. */
@@ -335,7 +472,7 @@ export interface CharacterProps {
   scale?: number;
 }
 
-export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, leaf = false, faceSize = 512, scale = CHARACTER_SCALE }: CharacterProps) {
+export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, held = null, leaf = false, faceSize = 512, scale = CHARACTER_SCALE }: CharacterProps) {
   // While a newly chosen part loads, keep showing the previous look instead of suspending.
   const shown = useDeferredValue(look);
   const parts = useMemo(() => resolveParts(shown), [shown]);
@@ -365,6 +502,8 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
   return <group ref={group}>
     <primitive object={puppet.root} scale={scale} dispose={null} />
     {weapon && <HeldWeapon puppet={puppet} weapon={weapon} />}
+    {/* Its own boundary: taking out a tool never suspends the scene while its model loads. */}
+    {held && <Suspense fallback={null}><HeldItem key={`${held.hold}:${held.url}`} puppet={puppet} view={held} /></Suspense>}
     {/* Its own boundary: crafting the glider mid-session must not suspend the scene while the leaf loads. */}
     {leaf && <Suspense fallback={null}><HeldLeaf puppet={puppet} motion={motion} scale={scale} /></Suspense>}
   </group>;

@@ -430,7 +430,7 @@ export default function FishReveal({
             whiteSpace: "nowrap",
           }}
         >
-          ⚡ {meta.label.toUpperCase()} CATCH — {fish.name}{sizeCm !== null ? `, ${sizeCm} cm` : ""}
+          {meta.label.toUpperCase()} CATCH: {fish.name}{sizeCm !== null ? `, ${sizeCm} cm` : ""}
         </div>
       )}
 

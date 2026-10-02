@@ -14,7 +14,7 @@ import { announceWrite } from "@/lib/apiClient";
 
 /** GET /api/combat/progression's `progression`: level, stats and points, derived numbers, family/subclass and choices, kit and loadout, traits, fees, weapons. */
 export type ProgressionView = Extract<Awaited<ReturnType<typeof getProgression>>, { ok: true }>["data"];
-export interface IslandProgression extends CombatProgression { stats: StatBlock | null; maxHp: number | null; weapons: { weapon_key: string; durability: number }[]; view: ProgressionView | null }
+export interface IslandProgression extends CombatProgression { stats: StatBlock | null; maxHp: number | null; weapons: { weapon_key: string; durability: number; equipped?: boolean }[]; view: ProgressionView | null }
 
 async function call<T>(path: string, key: string, body?: unknown): Promise<{ ok: true; data: T; raw: Record<string, unknown> } | { ok: false; status: number; error: string }> {
   installCombatDemo();

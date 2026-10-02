@@ -12,7 +12,11 @@ import { bindGameKeys } from "@/lib/game/keyboardInput";
 import { WATER_DROP } from "@/lib/game/grid";
 import { calculateCurvedHtmlPosition, pickCurvedSurface } from "@/lib/game/worldProjection";
 import MoveTargetIndicator from "./MoveTargetIndicator";
-import Character, { CHARACTER_HEIGHT, CHARACTER_SCALE, type CharacterMotion, type ClipName } from "./character/Character";
+import Character, { CHARACTER_HEIGHT, CHARACTER_SCALE, LEAF_URL, type CharacterMotion, type ClipName, type HeldView } from "./character/Character";
+import { toolByKey } from "@/lib/game/tools";
+import { itemModel } from "@/lib/game/itemModels";
+import { timeScale as worldSpeed } from "@/lib/game/slowMotion";
+import type { WheelItem } from "@/lib/game/toolWheel";
 import type { CharacterLook } from "@/lib/game/character/look";
 import { useMyLook } from "@/lib/game/character/lookStore";
 import { airPhase, combatClip, seatLift, type CombatView } from "@/lib/game/character/clips";
@@ -82,6 +86,8 @@ interface PlayerAvatarProps {
   walkSpeed?: number;
   /** Walk only (the café, cafe-polish §4): no running, jumping or dashing. */
   walkOnly?: boolean;
+  /** What this player holds from the tool wheel (specs/game-ui.md): drawn in the hand. In an encounter the weapon is the runtime's. */
+  held?: WheelItem | null;
 }
 
 const playSFX = (name: SFXName, rate = 1, gain = 1) => AudioManager.playSFX(name, { rate, gain });
@@ -116,7 +122,7 @@ const GRIP_Y = 0.58 * CHARACTER_SCALE;
 const SEAT_CLIPS = new Set<ClipName>(["Sit", "Study", "Stretch", "Sleep"]);
 type Seat = { x: number; z: number; clip: ClipName; lift: number; yaw: number };
 
-export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, respawn = 0, glider = false, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed, walkOnly = false }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, respawn = 0, glider = false, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed, walkOnly = false, held = null }: PlayerAvatarProps) {
   const anchor = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null), head = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null, afterimages: true });
   const { look } = useMyLook();
@@ -266,7 +272,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       sim.current = createMoveSim(createMoveState(x, z, world, at.facing));
     }
     if (!reported.current) f.level = sim.current.state.y;
-    let dt = Math.min(rawDelta, 0.1) * (timeScale ?? 1);
+    // The tool wheel's slow motion (specs/game-ui.md §1) and /lab/move's.
+    let dt = Math.min(rawDelta, 0.1) * (timeScale ?? 1) * worldSpeed();
     if (d.paused) { dt = Math.min(dt, d.budget); d.budget -= dt; }
     if (inCombat && combat.hitstop > 0) dt = 0; // a beat of hitstop: the swing's pose holds too (m.rate)
 
@@ -559,7 +566,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
           onComplete={() => setIndicators((prev) => prev.filter((i) => i.id !== ind.id))} />
       ))}
       <group ref={anchor} position={spawnPosition}>
-        <group ref={body}><PlayerCharacter look={look} motion={motion} inCombat={inCombat} walkSpeed={walkSpeed} leaf={leafOwned} /></group>
+        <group ref={body}><PlayerCharacter look={look} motion={motion} inCombat={inCombat} walkSpeed={walkSpeed} leaf={leafOwned} held={held} /></group>
       </group>
       <group ref={head} position={spawnPosition}>
         {showNameplate && <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}
@@ -605,13 +612,28 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   );
 }
 
-/** The player's character, with the equipped weapon: in hand in an encounter, across the back once the ruins gate is open (row 140). */
-function PlayerCharacter({ look, motion, inCombat, walkSpeed, leaf }: { look: CharacterLook; motion: React.RefObject<CharacterMotion>; inCombat: boolean; walkSpeed: number; leaf: boolean }) {
+/** What a wheel item looks like in the hand (weapons aside: they are the character's `weapon`). */
+function heldView(item: WheelItem | null): HeldView | null {
+  if (!item) return null;
+  if (item.kind === "glider") return { url: LEAF_URL, hold: "glider" };
+  if (item.kind === "pin") { const m = itemModel(item.key); return m && { url: m.url, hold: "front", fit: m.fit }; }
+  const tool = item.kind === "rod" || item.kind === "net" || item.kind === "shovel" ? toolByKey(item.key) : null;
+  return tool && { url: tool.model, hold: tool.kind };
+}
+
+/**
+ * The player's character with what they hold (specs/game-ui.md §2): the wheel's tool, leaf or snack in the hand, or
+ * a weapon in hand (an encounter's is the runtime's); otherwise the default weapon across the back once the ruins
+ * gate is open (row 140).
+ */
+function PlayerCharacter({ look, motion, inCombat, walkSpeed, leaf, held }: { look: CharacterLook; motion: React.RefObject<CharacterMotion>; inCombat: boolean; walkSpeed: number; leaf: boolean; held: WheelItem | null }) {
   // Only the weapon, and whether it shows, re-render the character (the runtime publishes ~10×/s).
   const key = useCombatValue(() => combat.rt.player.weapon), shown = useCombatValue(() => (inCombat ? combat.rt.player.alive : combat.rt.player.armed));
+  const heldWeapon = !inCombat && held?.kind === "weapon" ? held.key : null;
   const weapon = useMemo(() => {
-    const w = WEAPONS[key];
-    return w?.model && shown ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat, grip: w.grip } : null;
-  }, [key, shown, inCombat]);
-  return <Character look={look} motion={motion} walkSpeed={walkSpeed} weapon={weapon} leaf={leaf} />;
+    const w = WEAPONS[heldWeapon ?? key];
+    return w?.model && (shown || heldWeapon) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat || !!heldWeapon, grip: w.grip } : null;
+  }, [key, heldWeapon, shown, inCombat]);
+  const item = useMemo(() => (inCombat ? null : heldView(held)), [inCombat, held]);
+  return <Character look={look} motion={motion} walkSpeed={walkSpeed} weapon={weapon} held={item} leaf={leaf} />;
 }

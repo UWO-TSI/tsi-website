@@ -1,10 +1,13 @@
 /**
  * Device key maps (rows 49, 220; specs/movement.md "Controls"): the movement
- * keys (Space jump, Q dash, Shift sprint, crouch/slide and WASD) and the ruins'
- * ability keys (slots 1–4 and the weapon swap R). The menu keys are the
- * account's (lib/identity/settings). Taking another key of the same map swaps
- * the two; the fixed keys (FIXED_KEYS) and the other maps' keys are refused.
- * A remap announces itself so the avatar, the HUD and the hints follow.
+ * keys (Space jump, Q dash, Shift sprint, crouch/slide and WASD), the ruins'
+ * ability keys (slots 1–4 and the weapon swap R, or the Z X C V preset) and the
+ * tool wheel (hold Tab, specs/game-ui.md). The menu keys are the account's
+ * (lib/identity/settings). Taking another key of the same map swaps the two; the
+ * fixed keys (FIXED_KEYS) and the other maps' keys are refused, except where a
+ * map is allowed one (the wheel takes Tab; the ability slots take Z, X and V,
+ * which in the ruins win over zoom and the camera reset). A remap announces
+ * itself so the avatar, the HUD and the hints follow.
  *
  * Crouch/slide (row 274, specs/movement-slide.md) is Ctrl on macOS and C
  * elsewhere: there Ctrl+W closes the tab and a page cannot stop it, so Ctrl
@@ -27,9 +30,9 @@ type Remap<A extends string> = { ok: true; keys: Record<A, string> } | { ok: fal
  * (refusing the fixed keys, `taken()` and `extra`) and `use` (follows remaps).
  * `readTaken` are keys a stored value may not hold (set before a key moved).
  */
-function keyStore<A extends string>(storageKey: string, defaults: Record<A, string>, opts: { valid: (k: string, id: A) => boolean; taken: () => readonly string[]; readTaken?: () => readonly string[] }) {
+function keyStore<A extends string>(storageKey: string, defaults: Record<A, string>, opts: { valid: (k: string, id: A) => boolean; taken: () => readonly string[]; readTaken?: () => readonly string[]; allow?: readonly string[] }) {
   const event = `tsi:keys:${storageKey}`;
-  const usable = (k: string, id: A, taken: readonly string[]) => opts.valid(k, id) && !FIXED_KEYS.includes(k) && !taken.includes(k);
+  const usable = (k: string, id: A, taken: readonly string[]) => opts.valid(k, id) && (!FIXED_KEYS.includes(k) || !!opts.allow?.includes(k)) && !taken.includes(k);
   const read = (): Record<A, string> => {
     try {
       const raw = JSON.parse(localStorage.getItem(storageKey) ?? "null");
@@ -53,6 +56,16 @@ function keyStore<A extends string>(storageKey: string, defaults: Record<A, stri
     if (typeof window !== "undefined") window.dispatchEvent(new Event(event));
     return { ok: true, keys: next };
   };
+  /** Several at once (a preset): every key usable and none twice, or nothing changes. */
+  const assign = (next: Record<A, string>, extra: readonly string[] = []): Remap<A> => {
+    const taken = [...opts.taken(), ...extra], ids = Object.keys(next) as A[];
+    const bad = ids.find(id => !usable(next[id], id, taken));
+    if (bad) return { ok: false, error: `${keyName(next[bad])} is already used.` };
+    if (new Set(ids.map(id => next[id])).size !== ids.length) return { ok: false, error: "Each key can only do one thing." };
+    try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* session only */ }
+    if (typeof window !== "undefined") window.dispatchEvent(new Event(event));
+    return { ok: true, keys: { ...next } };
+  };
   const use = (): Record<A, string> => {
     const [keys, setKeys] = useState(read);
     useEffect(() => {
@@ -62,7 +75,7 @@ function keyStore<A extends string>(storageKey: string, defaults: Record<A, stri
     }, []);
     return keys;
   };
-  return { read, remap, use };
+  return { read, remap, assign, use };
 }
 
 export type MoveAction = "forward" | "left" | "back" | "right" | "jump" | "dash" | "sprint" | "crouch";
@@ -76,18 +89,42 @@ export const DEFAULT_MOVE_KEYS = moveDefaults(IS_MAC);
 // Q is the dash, and the dodge in the ruins (specs/movement.md), so the swap moved from Q to R.
 export const DEFAULT_ABILITY_KEYS: Record<AbilityId, string> = { slot1: "1", slot2: "2", slot3: "3", slot4: "4", swap: "r" };
 
+/** The ability slots' presets (row 279): the number row, or Z X C V under the left hand. */
+export const ABILITY_PRESETS = { numbers: ["1", "2", "3", "4"], zxcv: ["z", "x", "c", "v"] } as const;
+export type AbilityPreset = keyof typeof ABILITY_PRESETS;
+/** The tool wheel (specs/game-ui.md): hold to open, tap to swap back to the last item; and the full HUD, shown while held (row 283). */
+export type WheelAction = "wheel" | "hud";
+export const DEFAULT_WHEEL_KEYS: Record<WheelAction, string> = { wheel: "tab", hud: "h" };
+
 const move = keyStore<MoveAction>("tsi.moveKeys.v1", DEFAULT_MOVE_KEYS, {
   // The arrows turn the camera (specs/camera-orbit.md), so no movement key may take one.
   valid: (k, id) => !/^(meta|alt|capslock|dead|unidentified|arrow(up|down|left|right))$/.test(k) && (k !== "control" || id === "crouch"),
-  taken: (): string[] => [...Object.values(readAbilityKeys()), ...menuKeys()],
+  taken: (): string[] => [...Object.values(readAbilityKeys()), ...menuKeys(), readWheelKeys().wheel],
 });
 const ability = keyStore<AbilityId>("tsi.combatKeys.v2", DEFAULT_ABILITY_KEYS, { // v1 bound the prototype runes, not slots
   valid: k => k.length === 1,
-  taken: (): string[] => [...Object.values(readMoveKeys()), ...menuKeys()],
+  // Z (zoom), X (put away, at home) and V (the camera reset) are fixed elsewhere; only the ruins read ability keys, where they win.
+  allow: ["z", "x", "v"],
+  taken: (): string[] => [...Object.values(readMoveKeys()), ...menuKeys(), readWheelKeys().wheel],
   readTaken: (): string[] => Object.values(readMoveKeys()),
 });
+const wheel = keyStore<WheelAction>("tsi.wheelKey.v1", DEFAULT_WHEEL_KEYS, {
+  valid: k => k.length === 1 || k === "tab",
+  allow: ["tab"],
+  taken: (): string[] => [...Object.values(readMoveKeys()), ...Object.values(readAbilityKeys()), ...menuKeys()],
+  readTaken: (): string[] => [...Object.values(readMoveKeys()), ...Object.values(readAbilityKeys())],
+});
 export const { read: readMoveKeys, remap: remapMove, use: useMoveKeys } = move;
-export const { read: readAbilityKeys, remap: remapAbility, use: useAbilityKeys } = ability;
+export const { read: readAbilityKeys, remap: remapAbility, assign: assignAbilities, use: useAbilityKeys } = ability;
+export const { read: readWheelKeys, remap: remapWheel, use: useWheelKeys } = wheel;
+/** The slots on a preset (the swap key stays): refused when one of its keys does something else here (C crouches outside macOS). */
+export const presetAbilities = (keys: Record<AbilityId, string>, preset: AbilityPreset) => {
+  const [slot1, slot2, slot3, slot4] = ABILITY_PRESETS[preset];
+  return assignAbilities({ ...keys, slot1, slot2, slot3, slot4 });
+};
+/** Which preset the slots are on, if either. */
+export const abilityPreset = (keys: Record<AbilityId, string>): AbilityPreset | null =>
+  (Object.keys(ABILITY_PRESETS) as AbilityPreset[]).find(p => ABILITY_PRESETS[p].every((k, i) => keys[`slot${i + 1}` as AbilityId] === k)) ?? null;
 
 // ── Ctrl outside macOS: fullscreen with the keyboard locked ──────────
 type KeyboardLock = { lock?: (codes?: string[]) => Promise<void>; unlock?: () => void };

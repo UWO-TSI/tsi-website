@@ -227,7 +227,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     changePhase("casting");
     // Member island: the server rolls what will bite now; a refusal (too soon, no water here) ends the cast.
     const from = collectionScope ? null : castFromRef.current;
-    rollRef.current = from && castLine(from.site, from.from, power);
+    rollRef.current = from && castLine(from.site, from.from, power, rod.key);
     void rollRef.current?.then(answer => {
       if (answer && !answer.ok && (phaseRef.current === "casting" || phaseRef.current === "waiting")) miss(answer.error);
     });
@@ -411,7 +411,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
       }}
     >
       {phase === "charging" ? (
-        <CastMeter onRelease={castNow} releaseRequestedRef={releaseRequestedRef} />
+        <CastMeter onRelease={castNow} releaseRequestedRef={releaseRequestedRef} byKey={!!collectionScope} />
       ) : phase === "reeling" && fish ? (
         <ReelMinigame fish={fish} known={ownedRef.current.has(fish.key)} onDone={onReelDone} initialInput={reelInputRef.current} tensionMul={rod.tensionMul} />
       ) : (
@@ -540,7 +540,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
             textShadow: "0 1px 3px rgba(0,0,0,0.5)",
           }}
         >
-          release E at the tip for MAX CAST
+          {collectionScope ? "release E at the tip for MAX CAST" : "Let go at the tip for a max cast"}
         </div>
       )}
       {(phase === "waiting" || phase === "bite" || phase === "casting") && (
@@ -782,7 +782,7 @@ export function ReelMinigame({
             color: (fish.zone ?? "river") === "sea" ? "#2A6B84" : "#4A7A44",
           }}
         >
-          {(fish.zone ?? "river") === "sea" ? "🌊 sea" : "🏞 river"}
+          {(fish.zone ?? "river") === "sea" ? "sea" : "river"}
         </span>
         <span style={{ marginLeft: "auto", fontSize: 10, color: "var(--app-muted, #8a7f6a)" }}>
           keep the fish inside the green bar
@@ -888,7 +888,8 @@ export function ReelMinigame({
 // wider hook window — see CAST in lib/game/fishing.ts). rAF + refs, zero
 // re-renders per frame; ESC cancels via the parent's key handler.
 
-function CastMeter({ onRelease, releaseRequestedRef }: { onRelease: (power: number) => void; releaseRequestedRef: React.RefObject<boolean> }) {
+/** `byKey`: the applicant island casts with E; the member island with the held rod's click (specs/game-ui.md). */
+function CastMeter({ onRelease, releaseRequestedRef, byKey }: { onRelease: (power: number) => void; releaseRequestedRef: React.RefObject<boolean>; byKey: boolean }) {
   const fillRef = useRef<HTMLDivElement>(null);
   const readoutRef = useRef<HTMLDivElement>(null);
   const pRef = useRef(0);
@@ -1012,7 +1013,7 @@ function CastMeter({ onRelease, releaseRequestedRef }: { onRelease: (power: numb
           0%
         </div>
         <div style={{ fontFamily: "var(--font-highlight, sans-serif)", fontSize: 11, color: "var(--app-muted, #8a7f6a)", maxWidth: 120 }}>
-          hold E — release at the gold tip
+          {byKey ? "hold E, release at the gold tip" : "Hold, then let go at the gold tip"}
         </div>
       </div>
     </div>

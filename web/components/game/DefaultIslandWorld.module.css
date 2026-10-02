@@ -313,3 +313,9 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .lookHint { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 14px; border-radius: 999px; background: #f8f7e9e8; color: #293e3b; border: 1px solid #fff8; font-size: 11px; font-weight: 600; box-shadow: 0 4px 14px #132e3620; pointer-events: none; white-space: nowrap; zoom: var(--tsi-text-scale, 1); }
 .crosshair { position: absolute; top: 50%; left: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; fill: none; stroke: #f8f3df; stroke-width: 1.4; filter: drop-shadow(0 0 1.2px #1b2a2acc); opacity: 0.85; }
 .crosshair circle + circle { fill: #f8f3df; stroke: none; }
+/* The clean HUD (row 283): the objective slides in when it changes and fades after; the place name fades after a scene comes in. */
+.objective[data-flash] { animation: objectiveIn 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.objective[data-flash="out"] { animation: hudFade 0.32s ease-in forwards; }
+@keyframes hudFade { to { opacity: 0; transform: translateY(6px); } }
+.interact[data-use] kbd { background: #bb813f; }
+@media (prefers-reduced-motion: reduce) { .objective[data-flash], .objective[data-flash="out"] { animation-duration: 0.01s; } }

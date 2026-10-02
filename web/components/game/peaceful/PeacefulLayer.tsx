@@ -15,12 +15,12 @@ import { getPeacefulTarget } from "@/lib/game/peacefulNear";
 import type { IslandMap } from "@/lib/game/grid";
 import type { WorldMoment } from "@/lib/collections/logic";
 
-export type PeacefulNear = "forage" | "net" | "fish" | null;
+export type PeacefulNear = "forage" | "net" | "dig" | "fish" | null;
 
-/** Lowest-priority prompt: a forage node or catchable bug in reach, else water in casting reach. */
+/** Lowest-priority prompt: a forage node (by hand), a catchable bug (the net's) or a dig (the shovel's) in reach, else water in casting reach (the rod's). */
 export function peacefulNear(map: IslandMap, classify: (x: number, z: number) => WaterType, x: number, z: number, spotOut: { current: FishingSpot | null }): PeacefulNear {
   const target = getPeacefulTarget();
-  if (target) return target.kind === "bug" ? "net" : "forage";
+  if (target) return target.kind === "bug" ? "net" : target.kind === "dig" ? "dig" : "forage";
   spotOut.current = fishingSpot(map, classify, x, z);
   return spotOut.current ? "fish" : null;
 }

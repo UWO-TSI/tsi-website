@@ -7,6 +7,8 @@
  * pop out, and the coin chip counts the gift in. "Later" puts it off until
  * tomorrow's visit on this device.
  */
+import { Gift } from "lucide-react";
+import { CurrencyIcon } from "@/components/economy/Amount";
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/apiClient";
 import { COINS } from "@/lib/economy";
@@ -56,13 +58,13 @@ export default function DailyGift({ ready }: { ready: boolean }) {
   return <section className={styles.card} role="dialog" aria-modal="false" aria-labelledby="daily-gift-title" data-phase={phase.at}
     onKeyDown={e => { if (e.key === "Escape") { e.stopPropagation(); if (phase.at === "offer") later(); else setPhase({ at: "done" }); } }}>
     <div className={styles.box} aria-hidden="true">
-      <span className={styles.gift}>🎁</span>
+      <span className={styles.gift}><Gift size={44} strokeWidth={1.6} /></span>
       {phase.at === "opened" && <>
-        {[0, 1, 2, 3, 4, 5].map(i => <span key={i} className={styles.coin} style={{ "--i": i } as React.CSSProperties}>{COINS.symbol}</span>)}
-        <span className={styles.prize}>{COINS.symbol}</span>
+        {[0, 1, 2, 3, 4, 5].map(i => <span key={i} className={styles.coin} style={{ "--i": i } as React.CSSProperties}><CurrencyIcon size={22} /></span>)}
+        <span className={styles.prize}><CurrencyIcon size={40} /></span>
       </>}
     </div>
-    <h2 id="daily-gift-title">{phase.at === "opened" ? `+${phase.coins.toLocaleString()} ${COINS.symbol}` : "A little something for today"}</h2>
+    <h2 id="daily-gift-title">{phase.at === "opened" ? <>+{phase.coins.toLocaleString()} <CurrencyIcon size={22} /> <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>{COINS.name}</span></> : "A little something for today"}</h2>
     <p>{phase.at === "opened" ? "Added to your coins. See you tomorrow!" : phase.at === "error" ? phase.text : "Everyone on the island gets a small gift each day."}</p>
     <div className={styles.actions}>
       {(phase.at === "offer" || phase.at === "opening") && <>

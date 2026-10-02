@@ -19,8 +19,10 @@ describe("ability keys", () => {
     expect(remapAbility(DEFAULT_ABILITY_KEYS, "slot1", " ")).toMatchObject({ ok: false });
     expect(remapAbility(DEFAULT_ABILITY_KEYS, "slot1", "w")).toMatchObject({ ok: false });
     expect(remapAbility(DEFAULT_ABILITY_KEYS, "slot1", "b")).toMatchObject({ ok: false });
-    // The mailbox (L) and wallet (K) menu keys, and the fixed decorate, emote and put-away keys.
-    for (const key of ["l", "k", "f", "g", "x"]) expect(remapAbility(DEFAULT_ABILITY_KEYS, "slot1", key)).toMatchObject({ ok: false });
+    // The mailbox (L) and wallet (K) menu keys, and the fixed decorate and emote keys.
+    for (const key of ["l", "k", "f", "g"]) expect(remapAbility(DEFAULT_ABILITY_KEYS, "slot1", key)).toMatchObject({ ok: false });
+    // Z, X and V are fixed elsewhere, but the slots may take them (the Z X C V preset, row 279): in the ruins they win.
+    for (const key of ["z", "x", "v"]) expect(remapAbility(DEFAULT_ABILITY_KEYS, "slot1", key)).toMatchObject({ ok: true });
     expect(remapAbility(DEFAULT_ABILITY_KEYS, "slot4", "r")).toMatchObject({ ok: true, keys: { slot4: "r", swap: "4" } });
   });
 });

@@ -1092,6 +1092,67 @@ def chat(p):
     return plant(P)
 
 
+# ================================================================ holding things (specs/game-ui.md §2: the tool wheel)
+# The engine lays a hold over walking, running and idling: the arms only (Character.tsx HOLD_BONES), so the legs and
+# body keep their own clip. The tool's grip in the hand comes from these poses (art/props-enemies/render_held.py).
+def hold_rod(b=0.0):
+    """The rod over the right shoulder: the fist in front of the shoulder, the elbow down and out."""
+    P = body()
+    hand(P, "Right", V(-0.11, -0.085, 0.43 + b), V(-1, 0.1, -0.8))
+    P.rot("RightHand", rx(-20))
+    return P
+
+
+def hold_tool(b=0.0):
+    """A net or shovel in the right hand at the side: the forearm forward, the elbow back and out."""
+    P = body()
+    hand(P, "Right", V(-0.15, -0.085, 0.34 + b), V(-1, 0.7, -0.3))
+    return P
+
+
+def hold_front(b=0.0):
+    """Something held out in front in both hands (a fruit, a snack, a catch)."""
+    P = body(lean=2)
+    two_hands(P, (-0.042, -0.165, 0.41 + b), (0.042, -0.165, 0.41 + b))
+    return P
+
+
+@clip("HoldRod", 2.0, True)
+def hold_rod_clip(p):
+    return plant(hold_rod(0.004 * math.sin(TAU * p)))
+
+
+@clip("HoldTool", 2.0, True)
+def hold_tool_clip(p):
+    return plant(hold_tool(0.004 * math.sin(TAU * p)))
+
+
+@clip("HoldFront", 2.0, True)
+def hold_front_clip(p):
+    return plant(hold_front(0.004 * math.sin(TAU * p)))
+
+
+def eat_keys():
+    """Up under the chin, two bites with the head dipping down to meet them (the arms can't reach the big head's
+    mouth), a happy chew looking up, and the hands back down."""
+    up = body(nod=16, lean=8)
+    two_hands(up, (-0.034, -0.17, 0.5), (0.034, -0.17, 0.5))
+    bite = body(nod=28, lean=13, crouch=0.006)
+    two_hands(bite, (-0.034, -0.172, 0.505), (0.034, -0.172, 0.505))
+    chew = body(nod=-8, tilt=7)
+    two_hands(chew, (-0.04, -0.16, 0.44), (0.04, -0.16, 0.44))
+    return [(0, hold_front(), "lin"), (0.22, up, "io"), (0.34, bite, "in"), (0.44, up, "out"), (0.56, bite, "in"), (0.68, up, "out"),
+            (0.82, chew, "back"), (1.0, N, "io")]
+
+
+EAT = eat_keys()
+
+
+@clip("Eat", 1.6, False)
+def eat(p):
+    return plant(keys(p, EAT))
+
+
 # ================================================================ bake, ground, check
 MESHES = [bpy.data.objects[n] for n in ("V6_Body", HEAD_OB)]
 

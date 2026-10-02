@@ -3,18 +3,23 @@
 /**
  * CollectionBook (cozy marathon G6) — the ACNH-style critterpedia/collection
  * viewer. A DOM overlay that fetches GET /api/collections and shows what the
- * member has shaken, picked, and caught, grouped by kind with emoji icons and
- * counts. Collectibles carry no TC/XP — this is the reward: a filling book.
+ * member has shaken, picked, and caught, grouped by kind with their rendered
+ * icons and counts. Collectibles carry no TC/XP — this is the reward: a filling book.
  *
- * Undiscovered items render greyed with a "?" so there's a completion pull.
+ * Undiscovered items show as a soft silhouette of their icon, a completion pull.
  */
 
 import { useEffect, useRef, useState } from "react";
-import { FISH, RARITY_META, iconFor, type FishDef } from "@/lib/game/fishing";
+import { FISH, RARITY_META, type FishDef } from "@/lib/game/fishing";
+import { iconUrl } from "@/lib/icons/keys";
+import { ROSTER } from "@/lib/collections/roster";
 import { AudioManager } from "@/lib/game/audio";
 import { localCollections, mergeWithLocal } from "@/lib/game/collections";
-import { X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import JournalPages, { fetchJournalPage } from "./JournalPages";
+import { MAX_PINS, pinItem } from "@/lib/game/toolWheel";
+import { pinnable } from "@/lib/game/itemModels";
+import { togglePin, useHeld } from "@/lib/game/heldStore";
 
 interface Row {
   item_key: string;
@@ -26,74 +31,17 @@ interface Row {
 // carry FishDef data; other groups' tiles stay non-interactive.
 const FISH_BY_KEY = new Map<string, FishDef>(FISH.map((f) => [f.key, f]));
 
-// img: rendered ACNH icon (assets/acnh/icons, 2026-07-13); emoji stays the fallback.
-const CATALOG: { group: string; items: { key: string; icon: string; img?: string; name: string }[] }[] = [
-  {
-    group: "Fruit",
-    items: [
-      { key: "apple", img: "/assets/acnh/icons/apple.png", icon: "🍎", name: "Apple" },
-      { key: "peach", img: "/assets/acnh/icons/peach.png", icon: "🍑", name: "Peach" },
-      { key: "acorn", img: "/assets/acnh/icons/acorn.png", icon: "🌰", name: "Acorn" },
-      { key: "petal", img: "/assets/acnh/icons/petal.png", icon: "🌸", name: "Cherry petal" },
-    ],
-  },
-  {
-    // ACNH revamp 2026-07: species-true entries matching FLOWER_MODELS.
-    // Legacy generic keys retired pre-launch (no real member data).
-    group: "Flowers",
-    items: [
-      { key: "flower_cosmos", img: "/assets/acnh/icons/flower_cosmos.png", icon: "🌸", name: "Pink cosmos" },
-      { key: "flower_lily", img: "/assets/acnh/icons/flower_lily.png", icon: "🌺", name: "White lily" },
-      { key: "flower_hyacinth", img: "/assets/acnh/icons/flower_hyacinth.png", icon: "🪻", name: "Blue hyacinth" },
-      { key: "flower_mum", img: "/assets/acnh/icons/flower_mum.png", icon: "🌼", name: "Yellow mum" },
-      { key: "flower_rose", img: "/assets/acnh/icons/flower_rose.png", icon: "🌹", name: "Red rose" },
-      { key: "flower_tulip", img: "/assets/acnh/icons/flower_tulip.png", icon: "🌷", name: "Orange tulip" },
-      { key: "flower_pansy", img: "/assets/acnh/icons/flower_pansy.png", icon: "💮", name: "Purple pansy" },
-      { key: "flower_windflower", img: "/assets/acnh/icons/flower_windflower.png", icon: "🏵️", name: "Windflower" },
-    ],
-  },
-  {
-    // ACNH revamp 2026-07: species-true entries matching FishingOverlay.
-    // Legacy generic keys retired pre-launch (no real member data).
-    group: "Fish",
-    items: [
-      ...FISH.filter((f) => !f.creature).map((f) => ({ key: f.key, img: iconFor(f), icon: f.rarity === "seaking" ? "👑" : f.rarity === "legendary" ? "✨" : "🐟", name: f.name, zone: f.zone ?? "river" })),
-    ],
-  },
-  {
-    // Sea-floor creatures (2026-07-24): pulled up at the deck + cove spots.
-    group: "Sea Floor",
-    items: [
-      ...FISH.filter((f) => f.creature).map((f) => ({ key: f.key, img: iconFor(f), icon: "🦪", name: f.name })),
-    ],
-  },
-  {
-    // Critters pillar 2026-07: mirrors Critters.tsx SPECIES keys.
-    group: "Bugs",
-    items: [
-      { key: "bug_common_butterfly", img: "/assets/acnh/icons/bug_common_butterfly.png", icon: "🦋", name: "Common Butterfly" },
-      { key: "bug_agrias_butterfly", img: "/assets/acnh/icons/bug_agrias_butterfly.png", icon: "🦋", name: "Agrias Butterfly" },
-      { key: "bug_emperor_butterfly", img: "/assets/acnh/icons/bug_emperor_butterfly.png", icon: "🦋", name: "Emperor Butterfly" },
-      { key: "bug_monarch_butterfly", img: "/assets/acnh/icons/bug_monarch_butterfly.png", icon: "🦋", name: "Monarch Butterfly" },
-      { key: "bug_tiger_butterfly", img: "/assets/acnh/icons/bug_tiger_butterfly.png", icon: "🦋", name: "Tiger Butterfly" },
-      { key: "bug_peacock_butterfly", img: "/assets/acnh/icons/bug_peacock_butterfly.png", icon: "🦋", name: "Peacock Butterfly" },
-      { key: "bug_darner_dragonfly", img: "/assets/acnh/icons/bug_darner_dragonfly.png", icon: "🪰", name: "Darner Dragonfly" },
-      { key: "bug_red_dragonfly", img: "/assets/acnh/icons/bug_red_dragonfly.png", icon: "🪰", name: "Red Dragonfly" },
-      { key: "bug_ladybug", img: "/assets/acnh/icons/bug_ladybug.png", icon: "🐞", name: "Ladybug" },
-      { key: "bug_brown_cicada", img: "/assets/acnh/icons/bug_brown_cicada.png", icon: "🦗", name: "Brown Cicada" },
-      { key: "bug_grasshopper", img: "/assets/acnh/icons/bug_grasshopper.png", icon: "🦗", name: "Grasshopper" },
-      { key: "bug_mantis", img: "/assets/acnh/icons/bug_mantis.png", icon: "🦗", name: "Mantis" },
-      { key: "bug_firefly", img: "/assets/acnh/icons/bug_firefly.png", icon: "✨", name: "Firefly" },
-    ],
-  },
-  {
-    // Shore critters v1 (2026-07-15): beach-band catchables.
-    group: "Shore",
-    items: [
-      { key: "shore_gazami_crab", img: "/assets/acnh/icons/shore_gazami_crab.png", icon: "🦀", name: "Gazami Crab" },
-      { key: "shore_hermit_crab", img: "/assets/acnh/icons/shore_hermit_crab.png", icon: "🐚", name: "Hermit Crab" },
-    ],
-  },
+// Every entry's icon is rendered from its model (row 281, lib/icons); one not found yet shows as its silhouette.
+const CATALOG: { group: string; items: { key: string; name: string; zone?: string }[] }[] = [
+  // The roster's groups (lib/collections/roster.ts); fish and the sea floor are the reel's own (FISH, with their zones).
+  { group: "Fruit", items: ROSTER.filter((sp) => sp.category === "fruit") },
+  { group: "Flowers", items: ROSTER.filter((sp) => sp.sub === "flower") },
+  { group: "Shells and mushrooms", items: ROSTER.filter((sp) => sp.sub === "shell" || sp.sub === "mushroom") },
+  { group: "Rocks and ore", items: ROSTER.filter((sp) => sp.category === "mineral") },
+  { group: "Fish", items: FISH.filter((f) => !f.creature).map((f) => ({ key: f.key, name: f.name, zone: f.zone ?? "river" })) },
+  { group: "Sea Floor", items: FISH.filter((f) => f.creature).map((f) => ({ key: f.key, name: f.name })) },
+  { group: "Bugs", items: ROSTER.filter((sp) => sp.category === "bug") },
+  { group: "Shore", items: ROSTER.filter((sp) => sp.key.startsWith("shore_")) },
 ];
 
 export default function CollectionBook({ open, onClose, collectionScope }: { open: boolean; onClose: () => void; collectionScope?: string }) {
@@ -227,7 +175,7 @@ function OpenCollectionBook({ onClose, collectionScope }: { onClose: () => void;
       >
         <header style={{ position: "sticky", top: -20, zIndex: 2, background: "var(--app-surface, #FFFDF5)", margin: "-20px -20px 16px", padding: "16px 20px 12px", borderBottom: "1px solid var(--app-line, #E0D2B0)" }}>
           <div className="flex items-center justify-between" style={{ marginBottom: 4 }}>
-            <h2 id="collection-book-title" style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>🧺 Collection</h2>
+            <h2 id="collection-book-title" style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Collection</h2>
             <button
               type="button"
               onClick={onClose}
@@ -245,9 +193,11 @@ function OpenCollectionBook({ onClose, collectionScope }: { onClose: () => void;
           </p>
         </header>
 
+        {!collectionScope && <WheelPins counts={counts} />}
+
         {journal ? <JournalPages initial={journal} /> : CATALOG.map((g) => {
           // Loop wake 27: per-group completion count — the Critterpedia
-          // "how far along am I" read; gold ✓ once the group is complete.
+          // "how far along am I" read; a gold check once the group is complete.
           const got = g.items.filter((it) => Object.hasOwn(counts, it.key)).length;
           const done = got === g.items.length;
           const isFish = g.group === "Fish";
@@ -277,12 +227,12 @@ function OpenCollectionBook({ onClose, collectionScope }: { onClose: () => void;
             >
               <span>{g.group}</span>
               <span style={{ color: done ? "var(--app-link, #C9962E)" : "var(--app-muted, #B0A17C)", fontVariantNumeric: "tabular-nums" }}>
-                {done ? "✓ " : ""}{got}/{g.items.length}
+                {done ? <Check size={11} strokeWidth={3} aria-label="Complete" style={{ verticalAlign: -1, marginRight: 3 }} /> : null}{got}/{g.items.length}
               </span>
             </div>
             {isFish && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-                {([["all", "All"], ["river", "🏞 River"], ["sea", "🌊 Sea"], ["caught", "✓ Discovered"]] as const).map(([k, label]) => (
+                {([["all", "All"], ["river", "River"], ["sea", "Sea"], ["caught", "Discovered"]] as const).map(([k, label]) => (
                   <button
                     key={k}
                     type="button"
@@ -339,14 +289,8 @@ function OpenCollectionBook({ onClose, collectionScope }: { onClose: () => void;
                       cursor: almanac ? "pointer" : "default",
                     }}
                   >
-                    {have && it.img ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={it.img} alt="" width={34} height={34} style={{ imageRendering: "auto" }} />
-                    ) : (
-                      <span style={{ fontSize: 26, filter: have ? "none" : "grayscale(1)" }}>
-                        {have ? it.icon : "❔"}
-                      </span>
-                    )}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={iconUrl(it.key)} alt="" width={40} height={40} style={have ? undefined : { filter: "brightness(0)", opacity: 0.16 }} />
                     <span style={{ fontSize: 11, textAlign: "center", lineHeight: 1.2 }}>
                       {have ? it.name : "???"}
                     </span>
@@ -392,7 +336,7 @@ function OpenCollectionBook({ onClose, collectionScope }: { onClose: () => void;
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={iconFor(detail)} alt="" width={40} height={40} />
+            <img src={iconUrl(detail.key)} alt="" width={40} height={40} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700 }}>
                 {detail.name}
@@ -410,7 +354,7 @@ function OpenCollectionBook({ onClose, collectionScope }: { onClose: () => void;
                   {RARITY_META[detail.rarity].label}
                 </span>
                 <span style={{ fontSize: 10, fontWeight: 400, color: "var(--app-muted, #8A7B5E)" }}>
-                  {(detail.zone ?? "river") === "sea" ? "🌊 sea" : "🏞 river"}
+                  {(detail.zone ?? "river") === "sea" ? "sea" : "river"}
                 </span>
               </div>
               <div style={{ fontSize: 11, color: "var(--app-muted, #8A7B5E)", marginTop: 2 }}>
@@ -423,4 +367,32 @@ function OpenCollectionBook({ onClose, collectionScope }: { onClose: () => void;
       </div>
     </div>
   );
+}
+
+/**
+ * Pins for the tool wheel (specs/game-ui.md §1): up to two things you have and can hold (a fruit to eat, a shell, a
+ * stone) sit on the wheel. The bag's details panel takes this over in milestone 2.
+ */
+function WheelPins({ counts }: { counts: Record<string, number> }) {
+  const { pins } = useHeld();
+  const keys = Object.keys(counts).filter(k => counts[k] > 0 && pinnable(k));
+  if (!keys.length) return null;
+  return <section aria-label="Pins on the tool wheel" style={{ margin: "0 0 14px", padding: "10px 12px", borderRadius: 14, background: "#f3f1e2", border: "1px solid #dfe3cf" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 12, fontWeight: 700, color: "#426b5b", marginBottom: 8 }}>
+      <span>On your tool wheel</span><span style={{ fontWeight: 500, color: "#6f7d72" }}>{pins.filter(k => keys.includes(k)).length}/{MAX_PINS} pinned</span>
+    </div>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+      {keys.map(k => {
+        const item = pinItem(k), on = pins.includes(k);
+        return <button key={k} type="button" aria-pressed={on} onClick={() => { togglePin(k); AudioManager.playSFX(on ? "exit" : "confirm", { rate: 1.2, gain: 0.4 }); }}
+          title={on ? `Unpin ${item.name}` : `Pin ${item.name} to the wheel`}
+          style={{ display: "flex", alignItems: "center", gap: 6, minHeight: 40, padding: "4px 10px 4px 4px", borderRadius: 999, cursor: "pointer", font: "inherit", fontSize: 12,
+            border: `1.5px solid ${on ? "#426b5b" : "#d9dcc8"}`, background: on ? "#fffdf3" : "#fbfaf2", color: "#293e3b" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={item.icon} alt="" width={30} height={30} />
+          {item.name} <span style={{ color: "#6f7d72", fontWeight: 600 }}>×{counts[k]}</span>
+        </button>;
+      })}
+    </div>
+  </section>;
 }

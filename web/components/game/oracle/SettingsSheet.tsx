@@ -17,10 +17,11 @@ import type { QualityTier } from "@/lib/game/qualityTier";
 import { ACTION_LABEL, MENU_ACTIONS, TEXT_SIZES, normalizeKey, type MenuAction, type TextSize } from "@/lib/identity/settings";
 import { saveSettings, setAuraVisible, useWorldIdentity } from "@/lib/game/identity";
 import { ABILITIES, type AbilityId } from "@/lib/game/combat/runtime";
-import { IS_MAC, MOVE_ACTIONS, canLockKeyboard, crouchKey, keyName, playFullscreenWithCtrl, remapAbility, remapMove, useAbilityKeys, useKeyboardLocked, useMoveKeys, useNextKey, type MoveAction } from "@/lib/game/movement/keys";
+import { IS_MAC, MOVE_ACTIONS, abilityPreset, canLockKeyboard, crouchKey, keyName, playFullscreenWithCtrl, presetAbilities, remapAbility, remapMove, remapWheel, useAbilityKeys, useKeyboardLocked, useMoveKeys, useNextKey, useWheelKeys, type MoveAction } from "@/lib/game/movement/keys";
 import { AudioManager, type AudioVolumes } from "@/lib/game/audio";
 import { useAudioState } from "@/lib/game/useAudio";
 import { orbit, readOrbitPrefs, setOrbitPrefs, subscribeOrbitPrefs, SENSITIVITY_MAX, SENSITIVITY_MIN } from "@/lib/game/orbitCamera";
+import { setAlwaysFullHud, useAlwaysFullHud } from "@/lib/game/hudPrefs";
 import IslandSheet from "../IslandSheet";
 import styles from "../DefaultIslandWorld.module.css";
 
@@ -55,6 +56,14 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
   const moveKeys = useMoveKeys(), keyLock = useKeyboardLocked();
   const [moveListen, setMoveListen] = useState<MoveAction | null>(null);
   const [moveNote, setMoveNote] = useState<string | null>(null);
+  const wheelKeys = useWheelKeys();
+  const alwaysFullHud = useAlwaysFullHud();
+  const [wheelListen, setWheelListen] = useState<"wheel" | "hud" | null>(null);
+  useNextKey(wheelListen !== null, key => {
+    const r = remapWheel(wheelKeys, wheelListen!, key);
+    setMoveNote(r.ok ? null : r.error);
+    if (r.ok) setWheelListen(null);
+  }, () => { setWheelListen(null); setMoveNote(null); });
   useNextKey(moveListen !== null, key => {
     const r = remapMove(moveKeys, moveListen!, key);
     setMoveNote(r.ok ? null : r.error);
@@ -99,6 +108,9 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
         </select>
       </label>
       <label className={styles.toggle}><span>Shadows</span><input type="checkbox" checked={graphics.shadows} disabled={graphics.liteMode} onChange={e => graphicsActions.setShadows(e.target.checked)} /></label>
+      {/* Row 283: the HUD stays out of the way while you explore; this keeps it on. */}
+      <label className={styles.toggle}><span>Show full HUD</span><input type="checkbox" checked={alwaysFullHud} onChange={e => setAlwaysFullHud(e.target.checked)} /></label>
+      <p className={styles.hint}>Otherwise coins, XP, the clock and mail show when they change. Hold <kbd>{keyName(wheelKeys.hud)}</kbd>, or let go of the mouse, to see everything.</p>
     </fieldset>
     <fieldset>
       <legend>Camera</legend>
@@ -146,7 +158,14 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
         <button aria-pressed={moveListen === a.id} onClick={() => { setMoveListen(a.id); setMoveNote("Press a key (Esc to cancel)."); }}>
           {moveListen === a.id ? "Press a key…" : <kbd>{keyName(moveKeys[a.id])}</kbd>}
         </button>
-      </li>)}</ul>
+      </li>)}
+        {/* The tool wheel (specs/game-ui.md): hold to open, tap to swap back; the full HUD while held (row 283). */}
+        {(["wheel", "hud"] as const).map(a => <li key={a}>
+          <span>{a === "wheel" ? "Tool wheel (hold)" : "Full HUD (hold)"}</span>
+          <button aria-pressed={wheelListen === a} onClick={() => { setWheelListen(a); setMoveNote("Press a key (Esc to cancel)."); }}>
+            {wheelListen === a ? "Press a key…" : <kbd>{keyName(wheelKeys[a])}</kbd>}
+          </button>
+        </li>)}</ul>
       {/* Outside macOS Ctrl+W closes the tab and a page can't stop it: Ctrl crouches only in fullscreen with the keyboard locked. */}
       {!IS_MAC && canLockKeyboard() && (moveKeys.crouch !== "control" || !keyLock) && <p className={styles.hint}>
         {moveKeys.crouch === "control" ? `Ctrl crouches in fullscreen; until then ${crouchKey(moveKeys, false) ? keyName(crouchKey(moveKeys, false)) : "nothing"} does.` : "Ctrl can crouch and slide in fullscreen, where the keyboard is locked (hold Esc to leave)."}{" "}
@@ -156,6 +175,12 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
     </fieldset>
     <fieldset>
       <legend>Ability keys (ruins)</legend>
+      {/* Row 279: the slots on the number row or under the left hand; in the ruins they win over zoom (Z) and the camera reset (V). */}
+      <div className={styles.segmented} role="group" aria-label="Ability key preset">
+        {(["numbers", "zxcv"] as const).map(p => <button key={p} aria-pressed={abilityPreset(abilityKeys) === p} onClick={() => { const r = presetAbilities(abilityKeys, p); setAbilityNote(r.ok ? null : `${r.error} ${p === "zxcv" && !IS_MAC ? "C crouches here: move Crouch / slide first." : ""}`.trim()); }}>
+          {p === "numbers" ? "1 2 3 4" : "Z X C V"}
+        </button>)}
+      </div>
       <ul className={styles.keyList}>{ABILITIES.map(a => <li key={a.id}>
         <span>{a.name}</span>
         <button aria-pressed={abilityListen === a.id} onClick={() => { setAbilityListen(a.id); setAbilityNote("Press a key (Esc to cancel)."); }}>

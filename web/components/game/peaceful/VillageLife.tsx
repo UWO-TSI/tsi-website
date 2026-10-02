@@ -22,6 +22,7 @@ import { ROSTER } from "@/lib/collections/roster";
 import { forageSize } from "@/lib/collections/rolls";
 import { bugReaction, hasClue, hourKey, nodeAvailable, rollNode } from "@/lib/game/peaceful";
 import { setPeacefulTarget, type PeacefulTarget } from "@/lib/game/peacefulNear";
+import { iconUrl } from "@/lib/icons/keys";
 import type { Biome, Species } from "@/lib/collections/roster";
 import type { WorldMoment } from "@/lib/collections/logic";
 import { worldTime } from "@/lib/game/worldClock";
@@ -107,7 +108,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     const sp = rollNode(member, n.id, hour, n.biomes, moment, ["bug"]);
     if (!sp || !MODEL_OF.has(sp.key)) return [];
     return [{ id: n.id, sp, x: n.x, z: n.z, baseY: MODEL_OF.get(sp.key)!.baseY, fled: false, fleeT: 0, fx: 0, fy: 0, fz: 0, dir: 0, side: 1, hopT: -1, wary: false, faded: false,
-      target: { id: n.id, kind: "bug" as const, label: `Swing the net (${sp.name})`, distance: 0 } }];
+      target: { id: n.id, kind: "bug" as const, label: sp.name, distance: 0 } }];
   }), [bugNodes, harvested, now, member, hour, moment]);
   const bugState = useRef<Map<string, LiveBug>>(new Map());
   useEffect(() => { bugState.current = new Map(bugs.map(b => [b.id, { ...b, target: { ...b.target } }])); }, [bugs]);
@@ -128,13 +129,13 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
 
   useEffect(() => {
     const onAct = (e: Event) => {
-      const { id } = (e as CustomEvent<{ id: string }>).detail;
+      const { id, tool } = (e as CustomEvent<{ id: string; tool?: string }>).detail;
       const node = forage.find(f => f.n.id === id);
       const bug = bugState.current.get(id);
       const sp = node?.sp ?? (bug && !bug.fled ? bug.sp : null);
       if (!sp) return;
       markHarvested(id);
-      void harvestNode(id, [player.current.x, player.current.z]).then(answer => {
+      void harvestNode(id, [player.current.x, player.current.z], tool).then(answer => {
         if (answer && !answer.ok) { window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: answer.error } })); return; }
         // The server's roll is the catch (normally the same species this node showed).
         const got = answer ? ROSTER.find(s => s.key === answer.catch.item_key) ?? sp : sp;
@@ -143,7 +144,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
         collect(got.key);
         localRecord(got.key, size);
         AudioManager.playSFX(bug ? "confirm" : "click");
-        window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `${isNew ? "NEW! " : ""}${bug ? "Caught" : "Got"} ${got.name}${size ? `, ${size} cm` : ""}!` } }));
+        window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `${isNew ? "NEW! " : ""}${bug ? "Caught" : "Got"} ${got.name}${size ? `, ${size} cm` : ""}!`, icon: iconUrl(got.key) } }));
         if (answer?.catch.recipe) window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `You learned a recipe: ${answer.catch.recipe.name}` } }));
         window.dispatchEvent(new CustomEvent("tsi:peaceful-got", { detail: { key: got.key, name: got.name, rarity: got.rarity, one_liner: got.oneLiner, size, isNew, bug: !!bug } }));
       });

@@ -15,6 +15,7 @@ import { memoryCraftingStore } from "@/lib/crafting/memoryStore";
 import { RECIPE_DROPS, RECIPE_DROP_CHANCE } from "@/lib/crafting/recipes";
 import { seededRandom } from "@/lib/game/weatherSystem";
 import { ROSTER } from "@/lib/collections/roster";
+import { fishRoll } from "@/lib/collections/rolls";
 
 const mock = vi.hoisted(() => ({ ctx: null as unknown, weather: "clear", goals: [] as unknown[] }));
 vi.mock("@/lib/server/memberContext", async (original) => ({
@@ -22,6 +23,11 @@ vi.mock("@/lib/server/memberContext", async (original) => ({
   withStore: async () => mock.ctx,
 }));
 vi.mock("@/lib/server/weather", () => ({ islandWeatherNow: async () => mock.weather }));
+// The roll itself, watched: which rod tier the server rolls a cast with (the held one, specs/game-ui.md).
+vi.mock("@/lib/collections/rolls", async (original) => {
+  const real = await original<typeof import("@/lib/collections/rolls")>();
+  return { ...real, fishRoll: vi.fn(real.fishRoll) };
+});
 // The club goals carry the seasonal events (20260929120000); none unless a test sets them.
 vi.mock("@/lib/progression/supabaseStore", () => ({ supabaseProgressionStore: () => ({ listGoals: async () => mock.goals }) }));
 
@@ -45,6 +51,8 @@ const classify = villageWater(v).classify;
 const cells = Array.from({ length: v.map.width * v.map.depth }, (_, i) => [v.map.originX + (i % v.map.width) + 0.5, v.map.originZ + Math.floor(i / v.map.width) + 0.5] as [number, number]);
 const SHORE = cells.find(([x, z]) => fishingSpot(v.map, classify, x, z))!;
 const INLAND = cells.find(([x, z]) => isGroundAtWorld(v.map, x, z) && !fishingSpot(v.map, classify, x, z))!;
+/** Everyone's tier-1 tools (lib/game/tools.ts), held for a cast, a bug or a dig. */
+const ROD = "rod_flimsy", NET = "net-basic", SHOVEL = "shovel-basic";
 const node = (prefix: string) => [...villageNodes().forage, ...villageNodes().bugs].find((n) => n.id.startsWith(prefix))!;
 
 beforeEach(() => {
@@ -67,7 +75,7 @@ describe("POST /api/collections: the server rolls every catch", () => {
   });
 
   it("records what it rolled at the cast, not what the client says it landed", async () => {
-    const cast = await post({ action: "cast", site: "village", at: SHORE, power: 1, item_key: "fish_golden_koi", size_cm: 999 });
+    const cast = await post({ action: "cast", site: "village", at: SHORE, power: 1, tool: ROD, item_key: "fish_golden_koi", size_cm: 999 });
     expect(cast.status).toBe(200);
     const { roll, item_key, size_cm } = cast.body.catch;
     expect(typeof roll).toBe("string");
@@ -82,9 +90,9 @@ describe("POST /api/collections: the server rolls every catch", () => {
   });
 
   it("lands a roll once, only its own member's, only the latest cast", async () => {
-    const first = (await post({ action: "cast", site: "village", at: SHORE, power: 0.5 })).body.catch.roll;
+    const first = (await post({ action: "cast", site: "village", at: SHORE, power: 0.5, tool: ROD })).body.catch.roll;
     later(5000);
-    const second = (await post({ action: "cast", site: "village", at: SHORE, power: 0.5 })).body.catch.roll;
+    const second = (await post({ action: "cast", site: "village", at: SHORE, power: 0.5, tool: ROD })).body.catch.roll;
     later(4000);
     expect((await post({ action: "land", roll: first })).status).toBe(410);
     as(B);
@@ -95,11 +103,11 @@ describe("POST /api/collections: the server rolls every catch", () => {
   });
 
   it("refuses the wrong place", async () => {
-    expect((await post({ action: "cast", site: "village", at: INLAND, power: 1 })).status).toBe(422);
+    expect((await post({ action: "cast", site: "village", at: INLAND, power: 1, tool: ROD })).status).toBe(422);
     expect((await post({ action: "harvest", node: "no-such-node", at: [0, 0] })).status).toBe(422);
     const rock = node("rock-");
-    expect((await post({ action: "harvest", node: rock.id, at: [rock.x + 20, rock.z] })).status).toBe(422);
-    expect((await post({ action: "harvest", node: rock.id, at: [rock.x + 1, rock.z] })).status).toBe(200);
+    expect((await post({ action: "harvest", node: rock.id, at: [rock.x + 20, rock.z], tool: SHOVEL })).status).toBe(422);
+    expect((await post({ action: "harvest", node: rock.id, at: [rock.x + 1, rock.z], tool: SHOVEL })).status).toBe(200);
   });
 
   it("refuses the wrong season or time", async () => {
@@ -108,22 +116,22 @@ describe("POST /api/collections: the server rolls every catch", () => {
     expect((await post({ action: "harvest", node: mush.id, at: [mush.x, mush.z] })).status).toBe(409);
     const bug = node("bug-flower-");
     clock = new Date("2026-01-15T17:00:00Z"); // January noon: no flower bugs out
-    expect((await post({ action: "harvest", node: bug.id, at: [bug.x, bug.z] })).status).toBe(409);
+    expect((await post({ action: "harvest", node: bug.id, at: [bug.x, bug.z], tool: NET })).status).toBe(409);
     clock = new Date("2026-01-16T03:00:00Z"); // 22:00: the night butterflies are
-    expect((await post({ action: "harvest", node: bug.id, at: [bug.x, bug.z] })).status).toBe(200);
+    expect((await post({ action: "harvest", node: bug.id, at: [bug.x, bug.z], tool: NET })).status).toBe(200);
   });
 
   it("refuses too fast: casts 4 s apart, a reel of at least 3 s, one harvest per node per hour", async () => {
-    const roll = (await post({ action: "cast", site: "village", at: SHORE, power: 1 })).body.catch.roll;
+    const roll = (await post({ action: "cast", site: "village", at: SHORE, power: 1, tool: ROD })).body.catch.roll;
     later(1000);
     expect((await post({ action: "land", roll })).status).toBe(429);
-    expect((await post({ action: "cast", site: "village", at: SHORE, power: 1 })).status).toBe(429);
+    expect((await post({ action: "cast", site: "village", at: SHORE, power: 1, tool: ROD })).status).toBe(429);
     const rock = node("rock-");
     const at = [rock.x, rock.z];
-    expect((await post({ action: "harvest", node: rock.id, at })).status).toBe(200);
-    expect((await post({ action: "harvest", node: rock.id, at })).status).toBe(409);
+    expect((await post({ action: "harvest", node: rock.id, at, tool: SHOVEL })).status).toBe(200);
+    expect((await post({ action: "harvest", node: rock.id, at, tool: SHOVEL })).status).toBe(409);
     later(3_600_000);
-    expect((await post({ action: "harvest", node: rock.id, at })).status).toBe(200);
+    expect((await post({ action: "harvest", node: rock.id, at, tool: SHOVEL })).status).toBe(200);
   });
 
   it("keeps the hourly caps (legendary: 3 per species per hour)", async () => {
@@ -140,7 +148,7 @@ describe("POST /api/collections: the server rolls every catch", () => {
     const random = seededRandom(7);
     vi.spyOn(Math, "random").mockImplementation(random);
     for (let i = 0; i < 40; i++) {
-      const { item_key, size_cm } = (await post({ action: "cast", site: "village", at: SHORE, power: 0.5 })).body.catch;
+      const { item_key, size_cm } = (await post({ action: "cast", site: "village", at: SHORE, power: 0.5, tool: ROD })).body.catch;
       const sp = ROSTER.find((r) => r.key === item_key);
       expect(sp?.size, item_key).toBeTruthy();
       expect(size_cm).toBeGreaterThanOrEqual(sp!.size![0]);
@@ -183,7 +191,7 @@ describe("POST /api/collections: seasonal events on the server's catches", () =>
 
   it("enters exactly one tourney entry for a landed catch in the window, from the server's roll", async () => {
     vi.spyOn(Math, "random").mockReturnValue(0.02); // first species in the pool, near its smallest size
-    const cast = await post({ action: "cast", site: "village", at: SHORE, power: 0.4, item_key: "fish_sturgeon", size_cm: 200 });
+    const cast = await post({ action: "cast", site: "village", at: SHORE, power: 0.4, tool: ROD, item_key: "fish_sturgeon", size_cm: 200 });
     expect(cast.status).toBe(200);
     const { roll, item_key } = cast.body.catch;
     later(4000);
@@ -230,7 +238,7 @@ describe("POST /api/collections: rare catches can teach a recipe (rows 199, 258)
     const forged = { recipe_id: "rod-tidewarden", recipe: { id: "rod-tidewarden" }, learn: "rod-tidewarden" };
     expect((await post({ action: "learn", ...forged })).status).toBe(400);
     const rock = node("rock-");
-    const harvest = await post({ action: "harvest", node: rock.id, at: [rock.x, rock.z], ...forged });
+    const harvest = await post({ action: "harvest", node: rock.id, at: [rock.x, rock.z], tool: SHOVEL, ...forged });
     expect(harvest.status).toBe(200);
     const land = await fish("fish_black_bass");
     const landed = await post({ action: "land", roll: crypto.randomUUID(), ...forged });
@@ -311,4 +319,59 @@ describe("POST /api/collections: rare catches can teach a recipe (rows 199, 258)
       expect(Array.from({ length: 2000 }, (_, i) => c.catchDrop(`plain-${i}`, key)).filter(Boolean)).toEqual([]);
     }
   }, 30_000); // 38k seeded rolls: ~3 s alone, past the 5 s default when other agents load the machine
+});
+
+describe("POST /api/collections: the held tool (row 279, specs/game-ui.md)", () => {
+  const rolledTier = () => vi.mocked(fishRoll).mock.calls.at(-1)![2].tier;
+  const cast = (tool?: unknown) => post({ action: "cast", site: "village", at: SHORE, power: 0.5, ...(tool === undefined ? {} : { tool }) });
+
+  it("casts only with a rod in hand", async () => {
+    expect(await cast()).toMatchObject({ status: 422, body: { code: "no_tool" } });
+    expect(await cast(NET)).toMatchObject({ status: 422, body: { code: "wrong_tool" } });
+    expect(await cast("rod_made_up")).toMatchObject({ status: 422, body: { code: "wrong_tool" } });
+    expect((await cast(ROD)).status).toBe(200);
+  });
+
+  it("refuses a rod the member doesn't own", async () => {
+    expect(await cast("rod_tidewarden")).toMatchObject({ status: 403, body: { code: "tool_not_owned" } });
+    m.own(A, ["rod_tidewarden"]);
+    expect((await cast("rod_tidewarden")).status).toBe(200);
+  });
+
+  it("rolls with the held rod's tier, not the best one owned", async () => {
+    m.own(A, ["rod_glass", "rod_tidewarden"]);
+    expect((await cast("rod_glass")).status).toBe(200);
+    expect(rolledTier()).toBe(3);
+    later(5000);
+    expect((await cast(ROD)).status).toBe(200);
+    expect(rolledTier()).toBe(1);
+    later(5000);
+    expect((await cast("rod_tidewarden")).status).toBe(200);
+    expect(rolledTier()).toBe(5);
+  });
+
+  it("nets a bug only with a net the member owns", async () => {
+    const bug = node("bug-flower-"), at = [bug.x, bug.z];
+    clock = new Date("2026-01-16T03:00:00Z"); // 22:00: the night butterflies are out
+    expect(await post({ action: "harvest", node: bug.id, at })).toMatchObject({ status: 422, body: { code: "no_tool" } });
+    expect(await post({ action: "harvest", node: bug.id, at, tool: SHOVEL })).toMatchObject({ status: 422, body: { code: "wrong_tool" } });
+    expect(await post({ action: "harvest", node: bug.id, at, tool: "net-emperor" })).toMatchObject({ status: 403, body: { code: "tool_not_owned" } });
+    expect(await m.store.memberItems(A)).toEqual([]);
+    m.own(A, ["net-emperor"]);
+    expect((await post({ action: "harvest", node: bug.id, at, tool: "net-emperor" })).status).toBe(200);
+  });
+
+  it("digs and strikes rocks only with a shovel; picking by hand needs none", async () => {
+    const rock = node("rock-"), at = [rock.x, rock.z];
+    expect(await post({ action: "harvest", node: rock.id, at })).toMatchObject({ status: 422, body: { code: "no_tool" } });
+    expect(await post({ action: "harvest", node: rock.id, at, tool: ROD })).toMatchObject({ status: 422, body: { code: "wrong_tool" } });
+    expect(await post({ action: "harvest", node: rock.id, at, tool: "shovel-gold" })).toMatchObject({ status: 403, body: { code: "tool_not_owned" } });
+    expect((await post({ action: "harvest", node: rock.id, at, tool: SHOVEL })).status).toBe(200);
+    // A mushroom is picked by hand: whatever is held (or nothing), the tool never refuses it.
+    const mush = node("mush-");
+    for (const tool of [undefined, ROD, "shovel-gold"]) {
+      const res = await post({ action: "harvest", node: mush.id, at: [mush.x, mush.z], ...(tool ? { tool } : {}) });
+      expect(["no_tool", "wrong_tool", "tool_not_owned"]).not.toContain(res.body.code);
+    }
+  });
 });

@@ -29,6 +29,7 @@ import { screenOf, useMoveParticles } from "../movement/moveFx";
 import { defeatPuff } from "@/lib/game/movement/juice";
 import type { ParticlePool } from "@/lib/game/fx/particles";
 import { shakeCamera } from "@/lib/game/cameraJuice";
+import { timeScale as worldSpeed } from "@/lib/game/slowMotion";
 import { capture, crosshairAim } from "@/lib/game/orbitCamera";
 import { boxOccluder } from "@/lib/game/occluders";
 import { BUFFER, createInputs, runInputs, spawnWave } from "@/lib/game/combat/actions";
@@ -183,22 +184,26 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     const move = (e: PointerEvent) => { const r = el.getBoundingClientRect(); input.current.ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); input.current.hasPointer = true; };
     const down = (e: PointerEvent) => { if (e.button === 0) { move(e); input.current.presses.held = true; input.current.presses.attack = BUFFER; } };
     const up = () => { input.current.presses.held = false; };
+    // First (the capture phase): an ability key wins over a fixed key it shares here (V's camera reset, the Z X C V preset).
     const kd = (e: KeyboardEvent) => {
-      if (e.repeat || (e.target instanceof HTMLElement && e.target.closest("input, textarea, select"))) return;
+      if (e.target instanceof HTMLElement && e.target.closest("input, textarea, select")) return;
       const k = e.key.toLowerCase(), ability = (Object.keys(keys) as AbilityId[]).find(a => keys[a] === k);
-      if (ability) input.current.presses.keys.push({ id: ability, left: BUFFER });
+      if (!ability) return;
+      e.preventDefault();
+      if (!e.repeat) input.current.presses.keys.push({ id: ability, left: BUFFER });
     };
     el.addEventListener("pointermove", move); el.addEventListener("pointerdown", down); window.addEventListener("pointerup", up);
-    window.addEventListener("keydown", kd);
+    window.addEventListener("keydown", kd, true);
     return () => {
       el.removeEventListener("pointermove", move); el.removeEventListener("pointerdown", down); window.removeEventListener("pointerup", up);
-      window.removeEventListener("keydown", kd);
+      window.removeEventListener("keydown", kd, true);
     };
   }, [gl, keys]);
 
   useFrame(({ clock }, rawDelta) => {
     // Hitstop holds the encounter (and the avatar, PlayerAvatar) for a beat after a melee hit, a crit or a hit taken.
-    const dt = combat.freeze || combat.hitstop > 0 ? 0 : Math.min(rawDelta, 0.05);
+    // The tool wheel slows the encounter while it's open (specs/game-ui.md §1).
+    const dt = combat.freeze || combat.hitstop > 0 ? 0 : Math.min(rawDelta, 0.05) * worldSpeed();
     combat.hitstop = Math.max(0, combat.hitstop - rawDelta);
     const rt = combat.rt, p = rt.player, pl = player.current, inp = input.current;
     const me = { x: pl.x, z: pl.z };
