@@ -44,9 +44,9 @@ export const MOVE_TUNING = {
   skidSpeed: 6,
   skidAngle: 120, // degrees between travel and input that start a skid
   skidDecel: 40,
-  jumpHeight: 0.95,
-  jumpApexTime: 0.22,
-  fallGravity: 1.5, // gravity multiplier after the apex
+  jumpHeight: 1.28, // David 2026-10-01: +35% (was 0.95)
+  jumpApexTime: 0.27, // with the higher jump, gravity about 10% lighter (was 0.22)
+  fallGravity: 1.35, // gravity multiplier after the apex (was 1.5)
   jumpCutGravity: 2.4, // multiplier while rising with the button released
   apexHangSpeed: 1.4, // |vy| under which gravity eases while the button is held
   apexHangGravity: 0.5,
@@ -58,7 +58,7 @@ export const MOVE_TUNING = {
   hopChainMax: 3, // hops that add speed; 0 turns the bunny-hop off
   longJumpAt: 0.92, // fraction of sprint speed where a jump becomes a long jump
   longJumpHeight: 0.5,
-  longJumpApexTime: 0.18,
+  longJumpApexTime: 0.19, // gravity about 10% lighter (was 0.18)
   longJumpBoost: 1.06,
   dashSpeed: 18, // at the press: the burst
   dashTime: 0.2,
@@ -81,7 +81,7 @@ export const MOVE_TUNING = {
   glider: 0,
   glideSpeed: 8, // the speed a held stick eases toward
   glideEase: 4, // how fast the speed you opened with eases to it (1/s)
-  glideSink: 2.1, // u/s down, never up: a jump off a 1.5u cliff glides about 12 tiles
+  glideSink: 2.35, // u/s down, never up: a jump off a 1.5u cliff glides about 12 tiles (raised with the higher jump)
   glideOpen: 8, // how fast the fall brakes to the sink as the leaf opens (1/s)
   glideTurn: 2.5, // heading ease toward the stick (1/s)
   // Momentum (David, 2026-10-01): kept in the air and through every tech link; plain ground bleeds it after a grace.
@@ -93,11 +93,11 @@ export const MOVE_TUNING = {
   // The slide (row 274): the crouch key at speed.
   slideEnterAt: 1.12, // × walk: crouch at this speed or faster drops into a slide (8.3 u/s)
   slideEndAt: 1, // × walk: a slide slowing to this stands up (into the crouch while held)
-  slideFriction: 3.5, // u/s² on flat ground: a slide from a sprint lasts about 1.3 s
-  slideSlope: 20, // u/s² along the slope × its sine: faster downhill, slower uphill
+  slideFriction: 4.2, // u/s² on flat ground (David: +20% loss, was 3.5): a slide from a sprint lasts about 1.1 s
+  slideSlope: 24, // u/s² along the slope × its sine: faster downhill, slower uphill (raised with the friction so ramps still win)
   slideTurn: 2.2, // heading ease toward the stick (1/s): gentle
   slideJumpHeight: 0.55, // a slide-jump: lower and longer than a jump
-  slideJumpApexTime: 0.26,
+  slideJumpApexTime: 0.27, // gravity about 10% lighter (was 0.26)
 };
 export type MoveTuning = typeof MOVE_TUNING;
 /** The bunny-hop's cap: a long jump plus a full chain of held hops. Past it only tech carries speed, up to `momentumCeiling`. */

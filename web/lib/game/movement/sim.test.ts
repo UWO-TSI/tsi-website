@@ -43,7 +43,7 @@ describe("the jump", () => {
     };
     expect(peak(true)).toBeCloseTo(T.jumpHeight, 1);
     expect(peak(false)).toBeGreaterThan(0.3);
-    expect(peak(false)).toBeLessThan(0.5);
+    expect(peak(false)).toBeLessThan(T.jumpHeight * 0.5);
   });
 
   // A 1.5u cliff: level 2 from z >= 2, the face at z = 1.5.
@@ -157,7 +157,7 @@ describe("the long jump", () => {
     const walk = hop(false), long = hop(true);
     expect(long.distance).toBeGreaterThan(3.9);
     expect(long.distance).toBeLessThan(4.6);
-    expect(long.distance).toBeGreaterThan(walk.distance + 0.5);
+    expect(long.distance).toBeGreaterThan(walk.distance + 0.4); // the walking jump flies further since the higher, lighter jump (row 276)
     expect(long.top).toBeLessThan(walk.top * 0.7);
   });
 
@@ -564,11 +564,11 @@ describe("the leaf glider (row 245)", () => {
     }
   });
 
-  it("clears about 10 to 12 tiles off a 1.5u cliff (14 from a sprinting long jump), a river and a short sea gap, not the island", () => {
+  it("clears about 10 to 12 tiles off a 1.5u cliff (a sprinting long jump about as far), a river and a short sea gap, not the island", () => {
     const walk = landing(glide(cliff, GT)), sprint = landing(glide(cliff, GT, { sprint: true }));
     expect(walk.z - 0.5).toBeGreaterThan(10);
     expect(walk.z - 0.5).toBeLessThan(12.5);
-    expect(sprint.z - 0.5).toBeGreaterThan(walk.z - 0.5);
+    expect(sprint.z - 0.5).toBeGreaterThan(10); // the long jump opens lower than the higher jump, so it glides about as far (row 276)
     expect(sprint.z - 0.5).toBeLessThan(14.5);
   });
 
@@ -882,7 +882,7 @@ describe("the slide (row 274)", () => {
 
   it("speeds up downhill and slows uphill, against the same slide on the flat", () => {
     // From a sprint on the high ground, a slide down toward -z: past the bottom it is faster than the same slide on flat ground.
-    const down = (w: MoveWorld) => slideOn(w, drive(createMoveState(0, 22, w, Math.PI), w, 1.2, () => ({ z: -1, sprint: true })), 2.5, () => ({ z: -1, sneak: true }));
+    const down = (w: MoveWorld) => slideOn(w, drive(createMoveState(0, 22, w, Math.PI), w, 1.6, () => ({ z: -1, sprint: true })), 2.5, () => ({ z: -1, sneak: true })); // slides start about 5 tiles above the steep ramp's lip
     const speedAt = (steps: MoveState[], z: number) => speedOf(steps.find(q => q.z <= z)!);
     for (const w of [long, steep, banks]) expect(speedAt(down(w), -1.5)).toBeGreaterThan(speedAt(down(flat), -1.5) + 1);
     // On the way down it gains, more than its friction takes: the steep ramp most, the long ramp and the banks less.
@@ -998,7 +998,7 @@ describe("the slide (row 274)", () => {
       drive(createMoveState(0, -12, cliff), cliff, 4, (_t, q) => {
         const press = !pressed && q.mode === "air" && q.coyote <= 0 && q.y < 5.6; // past coyote time (a press there is a slide-jump)
         pressed ||= press;
-        return { z: 1, sprint, sneak: sneak && q.z > -3, jump: pressed, jumpPressed: press };
+        return { z: 1, sprint, sneak: sneak && q.z > -2, jump: pressed, jumpPressed: press };
       }, q => steps.push(q), GT);
       return steps;
     };
@@ -1039,11 +1039,11 @@ describe("the slide (row 274)", () => {
     expect(landed.z).toBeGreaterThan(43);
     expect(landed.speed).toBeGreaterThan(15);
     expect(launch.k).toContain("landslide");
-    // The long ramp and the banks: a slide down either goes on much further than the same slide on flat ground (13 u).
+    // The long ramp and the banks: a slide down either goes on much further than the same slide on flat ground (about 10.6 u at slideFriction 4.2).
     for (const x of [3, -3.5]) {
       const r = fly([{ to: [x, 35.5], sprint: true }, { to: [x, 58], crouch: true }], [x, 27.5]);
       const start = r.out.find(e => e.kind === "slide")!, stand = r.out.find(e => e.kind === "stand")!;
-      expect(stand.z - start.z, `x ${x}`).toBeGreaterThan(15);
+      expect(stand.z - start.z, `x ${x}`).toBeGreaterThan(12.5);
     }
   });
 
