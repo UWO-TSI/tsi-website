@@ -33,7 +33,7 @@ import { village, objectsOf, type Village } from "@/lib/game/villageMap";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLightAt, windowLit, withWeather, withSeason, type IslandLight } from "@/lib/game/islandLighting";
-import { paletteBySeason, seasonLook, type SeasonLook } from "@/lib/game/seasonalLook";
+import { SEASON_TREES, paletteBySeason, seasonLook, type SeasonLook } from "@/lib/game/seasonalLook";
 import { useNPCPersonas, useSeasonPalettes } from "@/lib/content/loader";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import { useIslandConditions } from "@/lib/game/useIslandConditions";
@@ -303,7 +303,7 @@ function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fis
         ground={island.ground} puddles={layout.puddles} cloudSize={layout.scale.cloudSize} shadowExtent={layout.scale.shadowExtent} fireflyAnchors={layout.fireflies} trees={layout.trees} fauna={fauna} />
       <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} />
       <GridOcean map={island.map} lite={liteMode} skip={layout.underWharf} radius={layout.scale.glintRadius} />
-      <PeacefulLayer map={island.map} nodes={layout.nodes} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} />
+      <PeacefulLayer map={island.map} nodes={layout.nodes} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} treeModels={SEASON_TREES[look.season]} />
       <BeachBottle player={player} ground={island.ground} />
       <StudySeats area="village" player={player} ground={island.ground} />
       <VillageLandmarks layout={layout} ground={island.ground} opened={progression.opened} stage={progression.stage} ceremony={ceremony} light={light} />

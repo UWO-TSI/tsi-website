@@ -18,6 +18,8 @@ export const HOME_MAILBOX: [number, number] = [2.3, 1.3];
 /** Dock sign: return to the village. */
 export const HOME_DOCK: [number, number] = [0, -8.4];
 export const HOME_TREES: [number, number][] = [[-7, 3], [7.5, 2], [-5, -5], [6, -5.5]];
+/** Each home tree's seed (its model slot, turn and size; the third is a cedar). */
+export const HOME_TREE_SEEDS = [0, 1, 3, 2];
 export const HOME_BUSHES: [number, number][] = [[-3.6, 1.2], [4.2, 3.5], [-8.5, -1], [8.5, -2]];
 export const HOME_FLOWERS: [number, number][] = [[-2.2, -2.5], [2.6, -2], [-6, 0], [5, 0.5]];
 

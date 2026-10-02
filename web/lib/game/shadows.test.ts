@@ -13,7 +13,7 @@ describe("shadow classification (look spec §9.2)", () => {
       foliage: ["tree-hardwood-a", "tree-hardwood-b", "tree-blossom", "tree-hardwood-snow", "tree-cedar", "tree-cedar-snow", "bush-holly", "bush-azalea", "bush-holly-snow"]
         .map(p => `${A}plants/${p}.glb`),
       small: [`${A}plants/flower-rose.glb`, `${A}props/shell-scallop.glb`, `${A}furniture/lounge-book.glb`, "/assets/nature/grass-tufts.glb",
-        "/assets/nature/rock_smallA.glb", "/assets/nature/mushroom_red.glb", "/assets/game/props/branch.glb", "/assets/game/props/message-bottle.glb"],
+        "/assets/nature/rock_smallA.glb", "/assets/nature/mushroom_red.glb", "/assets/game/props/branch.glb", "/assets/game/props/message-bottle.glb", `${A}fruit/coconut.glb`],
       none: [`${A}critters/firefly.glb`, `${A}critters/common-butterfly.glb`, `${A}furniture/lounge-rug.glb`, `${A}furniture/yellow-message-mat.glb`, `${A}props/distant-view-01.glb`],
     };
     for (const [cls, urls] of Object.entries(table)) for (const url of urls) expect(shadowClassFor(url), url).toBe(cls);

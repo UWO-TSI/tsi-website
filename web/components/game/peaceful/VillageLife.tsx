@@ -26,14 +26,15 @@ import type { Biome, Species } from "@/lib/collections/roster";
 import type { WorldMoment } from "@/lib/collections/logic";
 import { worldTime } from "@/lib/game/worldClock";
 import { FLEE_TIME, WARY_HOP, fleeAt, waryHop, type FleePose } from "@/lib/game/bugFlee";
+import { DROP_TIME, FRUIT_MODEL, fruitTree, type TreeSpot } from "@/lib/game/treeFruit";
+import TreeFruit, { type HangingFruit } from "./TreeFruit";
 
-export interface NodeSpec { id: string; x: number; z: number; biomes: Biome[]; categories: Species["category"][]; /** Tree canopy (fruit hangs up here). */ canopy?: boolean; /** Always this species (a tree's branch) instead of a roster roll. */ drop?: Species }
+export interface NodeSpec { id: string; x: number; z: number; biomes: Biome[]; categories: Species["category"][]; /** Tree canopy (fruit hangs up here). */ canopy?: boolean; /** Always this species (a tree's branch) instead of a roster roll. */ drop?: Species; /** The tree a canopy node belongs to: its fruit hangs in this tree's crown. */ tree?: TreeSpot }
 
 const HARVEST_KEY = "tsi.forage.harvested.v1";
 function readHarvested(): Record<string, string> {
   try { return JSON.parse(localStorage.getItem(HARVEST_KEY) ?? "{}") as Record<string, string>; } catch { return {}; }
 }
-const FRUIT_COLOR: Record<string, string> = { apple: "#d8433b", peach: "#f4a38b", fruit_pear: "#b9c956", fruit_orange: "#f08a24", fruit_cherry: "#9c1f2e", fruit_coconut: "#7a5534", fruit_blackberry: "#3d2848", fruit_blueberry: "#3f5fb0" };
 const MODEL_OF = new Map(CRITTERS.map(c => [c.key, c]));
 const REACH = 1.7;
 
@@ -50,9 +51,10 @@ const buried = (sp: Species) => sp.tool === "shovel" && sp.category !== "mineral
 
 function NodeVisual({ sp, x, y, z, canopy }: { sp: Species; x: number; y: number; z: number; canopy?: boolean }) {
   if (sp.category === "fruit") {
-    const color = FRUIT_COLOR[sp.key] ?? "#d8433b";
-    const at: [number, number, number][] = canopy ? [[0.5, 2.1, -0.3], [-0.45, 2.3, -0.2], [0.1, 2.5, -0.55]] : [[0, 0.35, 0], [0.18, 0.28, 0.1]];
-    return <group position={[x, y, z]}>{at.map((p, i) => <mesh key={i} position={p}><sphereGeometry args={[canopy ? 0.16 : 0.09, 10, 8]} /><meshStandardMaterial color={color} roughness={0.55} /></mesh>)}</group>;
+    // Up in a crown it is TreeFruit's; on the ground (a coconut on the sand) it lies there, a little tipped over.
+    // Fruit with no model (the berries) grows on no node yet.
+    const url = FRUIT_MODEL[sp.key];
+    return canopy || !url ? null : <GLBProp url={url} position={[x, y - 0.02, z]} rotation={[0.35, sp.position * 2.1, 0.2]} scale={0.55} />;
   }
   if (sp.sub === "wood") return null; // still up in the tree until it's shaken
   if (sp.sub === "mushroom") return <NatureMushroom position={[x, y, z]} seed={sp.position} />;
@@ -94,9 +96,11 @@ function fade(group: THREE.Group, opacity: number) {
   group.visible = opacity > 0.01;
 }
 
-export default function VillageLife({ nodes, bugNodes, moment, member, player, ground, highTier, active }: {
+export default function VillageLife({ nodes, bugNodes, moment, member, player, ground, highTier, active, treeModels }: {
   nodes: readonly NodeSpec[]; bugNodes: readonly NodeSpec[]; moment: WorldMoment; member: string;
   player: React.RefObject<THREE.Vector3>; ground: (x: number, z: number) => number; highTier: boolean; active: boolean;
+  /** The tree models this season draws (SEASON_TREES): the fruit hangs in the crown the tree shows. */
+  treeModels?: readonly string[];
 }) {
   const [hour, setHour] = useState(() => hourKey(new Date()));
   const [harvested, setHarvested] = useState<Record<string, string>>(readHarvested);
@@ -117,6 +121,12 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     id: n.id, kind: sp!.tool === "shovel" ? "dig" : "forage", distance: 0, at: [n.x, n.z],
     label: n.canopy ? "Shake the tree" : sp!.category === "mineral" ? "Strike the rock" : buried(sp!) ? "Dig it up" : sp!.sub === "shell" ? "Pick up the shell" : "Pick it",
   } satisfies PeacefulTarget])), [forage]);
+  // The fruit hanging in the trees, and a shaken tree's fruit while it falls (DROP_TIME, then the node is gone).
+  const [drops, setDrops] = useState<HangingFruit[]>([]);
+  const hanging = useMemo<HangingFruit[]>(() => [...forage.flatMap(({ n, sp }) => {
+    const tree = n.canopy && n.tree && sp!.category === "fruit" ? fruitTree(n.tree, ground(n.tree.x, n.tree.z), treeModels) : null;
+    return tree ? [{ id: n.id, key: sp!.key, tree, shaken: null }] : [];
+  }), ...drops], [forage, drops, ground, treeModels]);
   const groups = useRef(new Map<string, THREE.Group>());
   const last = useRef(new THREE.Vector3());
   const chimed = useRef(new Set<string>());
@@ -125,6 +135,8 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     const next = { ...readHarvested(), [id]: hourKey(new Date()) };
     try { localStorage.setItem(HARVEST_KEY, JSON.stringify(next)); } catch { /* session only */ }
     setHarvested(next);
+    // A harvest in the first seconds of a new hour is that hour's (before the 30 s tick would catch up).
+    setHour(next[id]);
   };
 
   useEffect(() => {
@@ -134,6 +146,12 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
       const bug = bugState.current.get(id);
       const sp = node?.sp ?? (bug && !bug.fled ? bug.sp : null);
       if (!sp) return;
+      const shaken = hanging.find(f => f.id === id && f.shaken === null);
+      if (shaken) {
+        const drop = { ...shaken, shaken: performance.now() };
+        setDrops(d => [...d, drop]);
+        window.setTimeout(() => setDrops(d => d.filter(f => f !== drop)), DROP_TIME * 1000);
+      }
       markHarvested(id);
       void harvestNode(id, [player.current.x, player.current.z]).then(answer => {
         if (answer && !answer.ok) { window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: answer.error } })); return; }
@@ -207,6 +225,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
   useEffect(() => () => setPeacefulTarget(null), []);
 
   return <>
+    <TreeFruit fruit={hanging} ground={ground} />
     {forage.map(({ n, sp }) => {
       const y = ground(n.x, n.z);
       return <Suspense key={n.id} fallback={null}>

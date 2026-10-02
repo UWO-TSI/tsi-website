@@ -290,15 +290,15 @@ def bounds(objs):
 
 
 def hang_points(crown, joints, lobes, turn_deg, ring):
-    """Where fruit hangs: ACNH's joints carried out to the crown's surface along the view from the front, nestled a
-    little into the leaves and hanging a little below, then the same spot on the back half of the joint's lobe, and on
-    the ringed low lobes; any two closer than 0.4 kept once."""
+    """Where fruit hangs: ACNH's joints carried out to the crown's surface along the view from the front, sitting on
+    the outer leaves (its middle just in front of them) and a little below, then the same spot on the back half of the
+    joint's lobe, and on the ringed low lobes; any two closer than 0.4 kept once."""
     bvh = BVHTree.FromObject(crown, bpy.context.evaluated_depsgraph_get())
     front = []
     for j in joints:
         p = gltf_to_blender(j)
         hit = bvh.ray_cast(Vector((p.x, -4, p.z)), Vector((0, 1, 0)))
-        front.append((hit[0] if hit[0] is not None else p) + Vector((0, 0.07, -0.06)))
+        front.append((hit[0] if hit[0] is not None else p) + Vector((0, -0.07, -0.05)))
     lobes = lobes[:3]
     pts = front + [nearest(lobes, p).half_turn(turn_deg) @ p for p in front]
     if ring:
