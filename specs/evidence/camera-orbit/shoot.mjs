@@ -6,7 +6,7 @@
 //   key=k1+k2:ms           hold keys                                               rdown / rup     right button
 //   esc                    press Escape                                            shot=name       a PNG of the frame
 //   perf=name              log the Performance readout                             state           log the capture state and angles
-//   eval=js                run in the page
+//   eval=js                run in the page                                         nohud           hide the DOM overlays (canvas only)
 //   node specs/evidence/camera-orbit/shoot.mjs <out_dir> 'village-n|time=day~cam=90,34.4~wait=6000~shot=n' (steps split on ~)
 import { createRequire } from "node:module";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
@@ -58,6 +58,7 @@ for (const run of RUNS) {
     else if (k === "rdown") await page.mouse.down({ button: "right" });
     else if (k === "rup") await page.mouse.up({ button: "right" });
     else if (k === "esc") await page.keyboard.press("Escape");
+    else if (k === "nohud") await page.addStyleTag({ content: "main > :not(:has(canvas)), nav { visibility: hidden !important; }" });
     else if (k === "shot") await page.screenshot({ path: `${OUT}/${v}.png`, clip: { x: 0, y: 40, width: 1440, height: 860 } });
     else if (k === "full") await page.screenshot({ path: `${OUT}/${v}.png` });
     else if (k === "perf") console.log("perf", v, (await page.evaluate(() => document.querySelector("#island-options output")?.textContent ?? "")).replace(/\n/g, " | "));

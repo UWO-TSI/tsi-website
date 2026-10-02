@@ -60,6 +60,7 @@ const _p = new THREE.Vector3();
 const _v = new THREE.Vector3();
 const _dir = new THREE.Vector3();
 const _up = new THREE.Vector3(0, 1, 0);
+const _turn = new THREE.Quaternion();
 const _pt = { x: 0, y: 0, z: 0 };
 const _focus = { x: 0, z: 0 };
 
@@ -72,8 +73,9 @@ export default function RainFX({ wind, groundHeight = sampleTerrainHeightFast, k
     if (!mesh) return;
     viewFocus(camera.position, camera.getWorldDirection(_dir), _focus);
     const t = worldTime();
-    // Streaks lie along their velocity: the fall plus the wind.
-    _q.setFromUnitVectors(_up, _v.set(-wind.x, look.fall, -wind.z).normalize());
+    // Streaks lie along their velocity (the fall plus the wind), their flat side turned to the camera's heading so
+    // they never go edge-on as the orbit camera turns (specs/camera-orbit.md; at heading 0 this is the old pose).
+    _q.setFromUnitVectors(_up, _v.set(-wind.x, look.fall, -wind.z).normalize()).multiply(_turn.setFromAxisAngle(_up, Math.atan2(_dir.x, _dir.z)));
     for (let i = 0; i < COUNT; i++) {
       rainStreak(i, t, wind, look, _focus.x, _focus.z, _pt);
       // Below the ground it has landed: not drawn until its next fall.

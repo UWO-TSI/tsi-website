@@ -64,6 +64,16 @@ function matteACNH(root: THREE.Object3D) {
   });
 }
 
+/**
+ * The chalet's back wall is ACNH's interior panel (plaster, dark beams in the gable), drawn for a camera that never
+ * goes round; the orbit camera does (specs/camera-orbit.md), so it wears the house's own outside wall instead.
+ */
+function dressBack(root: THREE.Object3D) {
+  let outside: THREE.Material | undefined;
+  root.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && !Array.isArray(m.material) && m.material.name === "mWallA") outside ??= m.material; });
+  if (outside) root.traverse((o) => { if ((o as THREE.Mesh).isMesh && o.name.startsWith("BrickBack")) (o as THREE.Mesh).material = outside!; });
+}
+
 /** Warm window light at night (living-village §5): a lit room seen through the glass. */
 const WINDOW_LIGHT = "#ffcf7a";
 /** Plain glass panes (no emissive map of their own) that glow from inside once it's dark. */
@@ -107,6 +117,7 @@ export function ACNHParts({
   const group = useMemo(() => {
     const g = new THREE.Group();
     gltfs.forEach(({ scene }, index) => g.add(prepareModel(scene, parts[index])));
+    dressBack(g);
     g.scale.setScalar(ACNH_SCALE);
     g.rotation.y = Math.PI;
     matteACNH(g);
