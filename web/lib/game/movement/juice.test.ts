@@ -112,26 +112,25 @@ describe("the slide's juice (specs/movement-slide.md)", () => {
 });
 
 describe("footprints (movement feel milestone 2)", () => {
-  it("press a print into sand, wet sand and snow, toe along the facing, there at once; nothing on other ground", () => {
-    for (const g of ["sand", "wetSand", "snow"] as const) {
+  it("press a print into sand and wet sand, toe along the facing, there at once; nothing on other ground (snow is WeatherGround's)", () => {
+    for (const g of ["sand", "wetSand"] as const) {
       const p = new ParticlePool(8);
       footprint(p, g, 1, 0, 2, Math.PI / 2);
       p.update(1 / 60, 0, 0); // one frame
-      expect(thrown(p), g).toEqual(["footprint"]);
+      expect(thrown(p), g).toEqual(["sandPrint"]);
       expect(p.c[3], `${g} visible at once`).toBeGreaterThan(0.5); // no fade-in
       expect(p.d[3]).toBe(1); // lies on the ground
       expect(Math.cos(p.b[2])).toBeCloseTo(1, 5); // facing +x: the toe (the sprite's +u) along +x
     }
-    for (const g of ["grass", "soil", "stone", "wood", "water"] as const) {
+    for (const g of ["grass", "soil", "stone", "wood", "water", "snow"] as const) {
       const p = new ParticlePool(8);
       footprint(p, g, 1, 0, 2, 0);
       expect(p.alive, g).toBe(0);
     }
   });
-  it("last longest in wet sand and snow, then fade; the Juice panel's 0 turns them off", () => {
-    const life = (g: "sand" | "wetSand" | "snow") => { const p = new ParticlePool(8); footprint(p, g, 0, 0, 0, 0); let t = 0; while (p.alive && t < 30) { p.update(0.1, 0, 0); t += 0.1; } return t; };
+  it("last longer in wet sand, then fade; the Juice panel's 0 turns them off", () => {
+    const life = (g: "sand" | "wetSand") => { const p = new ParticlePool(8); footprint(p, g, 0, 0, 0, 0); let t = 0; while (p.alive && t < 30) { p.update(0.1, 0, 0); t += 0.1; } return t; };
     expect(life("wetSand")).toBeGreaterThan(life("sand"));
-    expect(life("snow")).toBeGreaterThan(life("sand"));
     const off = new ParticlePool(8);
     footprint(off, "sand", 0, 0, 0, 0, 0);
     expect(off.alive).toBe(0);

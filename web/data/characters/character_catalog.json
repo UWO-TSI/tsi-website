@@ -1413,6 +1413,26 @@
    "loop": false,
    "frames": 15,
    "endsNeutral": true
+  },
+  {
+   "name": "LookAround",
+   "length": 3.2,
+   "loop": false,
+   "frames": 96,
+   "endsNeutral": true
+  },
+  {
+   "name": "StretchUp",
+   "length": 2.6,
+   "loop": false,
+   "frames": 78,
+   "endsNeutral": true
+  },
+  {
+   "name": "Chat",
+   "length": 3.0,
+   "loop": true,
+   "frames": 90
   }
  ],
  "hair": [

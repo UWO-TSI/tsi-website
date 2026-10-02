@@ -285,19 +285,21 @@ export function slidePop(pool: ParticlePool, g: GroundKind, x: number, y: number
 }
 
 // ── Footprints (specs/movement-feel.md, milestone 2) ─────────────────
-/** A shoe's print: pressed in at once, the edge crumbling in and the floor filling as it goes (the sprite's frames), then fading. */
-const PRINT: Recipe = { sprite: "footprint", count: [1, 1], life: [7, 7], size: [0.44, 0.44], grow: 1, speed: [0, 0], spread: 0, up: [0, 0], gravity: 0, drag: 0, wind: 0, alpha: 0.85, face: FACE.ground, fadeIn: 2000 };
-/** Which grounds take a print, its tint (darker than the ground: the dent) and how long it lasts (seconds). */
+/** A shoe's print in sand: pressed in at once, the edge crumbling in and the floor filling as it goes (the sprite's frames), then fading. */
+const PRINT: Recipe = { sprite: "sandPrint", count: [1, 1], life: [7, 7], size: [0.44, 0.44], grow: 1, speed: [0, 0], spread: 0, up: [0, 0], gravity: 0, drag: 0, wind: 0, alpha: 0.85, face: FACE.ground, fadeIn: 2000 };
+/**
+ * Which grounds take a print, its tint (darker than the ground: the dent) and how long it lasts (seconds). Snow is the
+ * living village's (WeatherGround: prints behind every walker whenever the ground is snowed over), so not here.
+ */
 const PRINTS: Partial<Record<GroundKind, { tint: number; life: number; alpha: number }>> = {
   sand: { tint: 0xb39563, life: 7, alpha: 0.85 },
   wetSand: { tint: 0x7d6847, life: 11, alpha: 0.92 },
-  snow: { tint: 0x9fb0c8, life: 12, alpha: 0.9 },
 };
 export const takesPrints = (g: GroundKind) => !!PRINTS[g];
 /**
- * A footprint on sand, wet sand or snow where a foot came down at (x, z), its toe the way the body faces: crisp at
- * first, crumbling and filling in, gone after a few seconds (longest in wet sand and snow). Into the scene's print
- * pool (its own decal layer); nothing on any other ground.
+ * A footprint on sand or wet sand where a foot came down at (x, z), its toe the way the body faces: crisp at first,
+ * crumbling and filling in, gone after a few seconds (longer in wet sand). Into the scene's print pool (its own decal
+ * layer); nothing on any other ground (snow prints are WeatherGround's).
  */
 export function footprint(prints: ParticlePool, g: GroundKind, x: number, y: number, z: number, facing: number, amount = 1) {
   const p = PRINTS[g];

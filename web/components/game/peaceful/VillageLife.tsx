@@ -25,6 +25,7 @@ import { setPeacefulTarget, type PeacefulTarget } from "@/lib/game/peacefulNear"
 import type { Biome, Species } from "@/lib/collections/roster";
 import type { WorldMoment } from "@/lib/collections/logic";
 import { worldTime } from "@/lib/game/worldClock";
+import { FLEE_TIME, WARY_HOP, fleeAt, waryHop, type FleePose } from "@/lib/game/bugFlee";
 
 export interface NodeSpec { id: string; x: number; z: number; biomes: Biome[]; categories: Species["category"][]; /** Tree canopy (fruit hangs up here). */ canopy?: boolean; /** Always this species (a tree's branch) instead of a roster roll. */ drop?: Species }
 
@@ -63,7 +64,34 @@ function NodeVisual({ sp, x, y, z, canopy }: { sp: Species; x: number; y: number
   return <mesh position={[x, y + 0.12, z]}><icosahedronGeometry args={[0.12, 0]} /><meshStandardMaterial color="#e9a3c3" roughness={0.7} /></mesh>;
 }
 
-interface LiveBug { id: string; sp: Species; x: number; z: number; baseY: number; fled: boolean; fleeT: number }
+interface LiveBug {
+  id: string; sp: Species; x: number; z: number; baseY: number; fled: boolean; fleeT: number;
+  /** The escape: where it took off, which way (away from you) and which way it curves. */
+  fx: number; fy: number; fz: number; dir: number; side: number;
+  /** The wary tell: seconds into its hop (-1 none), and whether it's wary now (the hop fires on the edge). */
+  hopT: number; wary: boolean;
+  /** Its materials were faded (an escape): restore them when the slot respawns. */
+  faded: boolean;
+  /** Its "net it" prompt, reused every frame. */
+  target: PeacefulTarget;
+}
+const CRAWL = new Set(["crawl"]);
+const _flee: FleePose = { x: 0, y: 0, z: 0, yaw: 0, opacity: 1 };
+
+/** Module scope (the react compiler forbids writing through hook values): fade a bug's own materials. */
+function fade(group: THREE.Group, opacity: number) {
+  group.traverse(o => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+      // The critter models are opaque: blend only while fading.
+      const blend = opacity < 1;
+      if (m.transparent !== blend) { m.transparent = blend; m.depthWrite = !blend; m.needsUpdate = true; }
+      m.opacity = opacity;
+    }
+  });
+  group.visible = opacity > 0.01;
+}
 
 export default function VillageLife({ nodes, bugNodes, moment, member, player, ground, highTier, active }: {
   nodes: readonly NodeSpec[]; bugNodes: readonly NodeSpec[]; moment: WorldMoment; member: string;
@@ -78,10 +106,16 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     if (!nodeAvailable(harvested[n.id], now)) return [];
     const sp = rollNode(member, n.id, hour, n.biomes, moment, ["bug"]);
     if (!sp || !MODEL_OF.has(sp.key)) return [];
-    return [{ id: n.id, sp, x: n.x, z: n.z, baseY: MODEL_OF.get(sp.key)!.baseY, fled: false, fleeT: 0 }];
+    return [{ id: n.id, sp, x: n.x, z: n.z, baseY: MODEL_OF.get(sp.key)!.baseY, fled: false, fleeT: 0, fx: 0, fy: 0, fz: 0, dir: 0, side: 1, hopT: -1, wary: false, faded: false,
+      target: { id: n.id, kind: "bug" as const, label: `Swing the net (${sp.name})`, distance: 0 } }];
   }), [bugNodes, harvested, now, member, hour, moment]);
   const bugState = useRef<Map<string, LiveBug>>(new Map());
-  useEffect(() => { bugState.current = new Map(bugs.map(b => [b.id, { ...b }])); }, [bugs]);
+  useEffect(() => { bugState.current = new Map(bugs.map(b => [b.id, { ...b, target: { ...b.target } }])); }, [bugs]);
+  // Each forage node's prompt, built once per roll and reused every frame (no allocation in the frame loop).
+  const forageTargets = useMemo(() => new Map(forage.map(({ n, sp }) => [n.id, {
+    id: n.id, kind: sp!.tool === "shovel" ? "dig" : "forage", distance: 0, at: [n.x, n.z],
+    label: n.canopy ? "Shake the tree" : sp!.category === "mineral" ? "Strike the rock" : buried(sp!) ? "Dig it up" : sp!.sub === "shell" ? "Pick up the shell" : "Pick it",
+  } satisfies PeacefulTarget])), [forage]);
   const groups = useRef(new Map<string, THREE.Group>());
   const last = useRef(new THREE.Vector3());
   const chimed = useRef(new Set<string>());
@@ -128,7 +162,8 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     for (const { n, sp } of forage) {
       const d = Math.hypot(n.x - p.x, n.z - p.z);
       if (hasClue(sp) && d < 5 && !chimed.current.has(n.id)) { chimed.current.add(n.id); AudioManager.playSFX("blip3"); }
-      if (d < REACH && (!best || d < best.distance)) best = { id: n.id, kind: sp!.tool === "shovel" ? "dig" : "forage", label: n.canopy ? "Shake the tree" : sp!.category === "mineral" ? "Strike the rock" : buried(sp!) ? "Dig it up" : sp!.sub === "shell" ? "Pick up the shell" : "Pick it", distance: d, at: [n.x, n.z] };
+      const target = forageTargets.get(n.id);
+      if (target && d < REACH && (!best || d < best.distance)) { target.distance = d; best = target; }
     }
     const t = worldTime();
     for (const bug of bugState.current.values()) {
@@ -136,18 +171,35 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
       if (!g) continue;
       const model = MODEL_OF.get(bug.sp.key)!;
       if (bug.fled) {
+        // Away along its curve, fading out (never a pop).
         bug.fleeT += delta;
-        g.position.y += delta * 3; g.position.x += delta * 2.2;
-        g.visible = bug.fleeT < 1.4;
+        if (bug.fleeT > FLEE_TIME + 0.1) continue;
+        fleeAt(bug.fx, bug.fy, bug.fz, bug.dir, bug.side, CRAWL.has(model.motion), bug.fleeT, _flee);
+        g.position.set(_flee.x, _flee.y, _flee.z);
+        g.rotation.y = _flee.yaw;
+        fade(g, _flee.opacity);
+        bug.faded = true;
         continue;
       }
+      if (!g.visible || bug.faded) { fade(g, 1); bug.faded = false; }
       const flutter = model.motion === "flutter" || model.motion === "drift" || model.motion === "dart";
       const bx = bug.x + (flutter ? Math.sin(t * 0.9 + bug.x) * 0.5 : 0), bz = bug.z + (flutter ? Math.cos(t * 0.7 + bug.z) * 0.4 : 0);
-      g.position.set(bx, ground(bug.x, bug.z) + bug.baseY + (flutter ? Math.sin(t * 3 + bug.z) * 0.08 : 0), bz);
+      // The wary tell: a quick hop when it first notices you creeping up.
+      if (bug.hopT >= 0) { bug.hopT += delta; if (bug.hopT > WARY_HOP) bug.hopT = -1; }
+      g.position.set(bx, ground(bug.x, bug.z) + bug.baseY + (flutter ? Math.sin(t * 3 + bug.z) * 0.08 : 0) + waryHop(bug.hopT), bz);
       const d = Math.hypot(bx - p.x, bz - p.z);
       const reaction = active ? bugReaction(d, speed, bug.sp.rarity) : "idle";
-      if (reaction === "flee") { bug.fled = true; bug.fleeT = 0; AudioManager.playSFX("exit"); continue; }
-      if (reaction === "catchable" && (!best || d < best.distance)) best = { id: bug.id, kind: "bug", label: `Swing the net (${bug.sp.name})`, distance: d };
+      if (reaction === "flee") {
+        // Away from you, curving off to a side seeded by the bug, from where it was.
+        bug.fled = true; bug.fleeT = 0; bug.fx = g.position.x; bug.fy = g.position.y; bug.fz = g.position.z;
+        bug.dir = Math.atan2(bx - p.x, bz - p.z); bug.side = bug.x * 7.3 + bug.z * 3.1 - Math.floor(bug.x * 7.3 + bug.z * 3.1) < 0.5 ? 1 : -1;
+        AudioManager.playSFX("exit");
+        continue;
+      }
+      const wary = reaction === "wary" || reaction === "catchable";
+      if (wary && !bug.wary && bug.hopT < 0) bug.hopT = 0;
+      bug.wary = wary;
+      if (reaction === "catchable" && (!best || d < best.distance)) { bug.target.distance = d; best = bug.target; }
     }
     setPeacefulTarget(best);
   });

@@ -40,7 +40,8 @@ export interface NPCPersona {
   post?: string | null;
   bio?: string;
   tone?: string | null;
-  schedule?: Record<string, string>;
+  /** Phase → an anchor or a routine of stops (anchors, "bench", "home"); `home` → the building they live in (lib/game/residentRoutine.ts). */
+  schedule?: Record<string, string | string[]>;
 }
 
 export interface ShopItem {

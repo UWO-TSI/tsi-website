@@ -424,6 +424,33 @@ def ripple(t):
     return A, colour(np.clip(val, 0, 1), 0.2)
 
 
+def footprint(t):
+    """A footprint pressed into snow (or wet sand), seen from above, toes up the cell: a rounded sole and a heel as
+    shallow dents, darker in their floors, with a bright lip of packed snow on the side away from the light. Each of
+    the 8 frames is a slightly different print (the engine picks one per step and mirrors it for the other foot)."""
+    rng = np.random.default_rng(1515 + int(round(t * FRAMES)))
+    A = np.zeros((CELL, CELL))
+    val = np.ones((CELL, CELL))
+    lean = rng.uniform(-0.06, 0.06)
+    for cx, cy, rx, ry in [(0.04 + lean, 0.2, 0.3, 0.46), (-0.02 + lean * 0.4, -0.52, 0.22, 0.26)]:
+        cx += rng.uniform(-0.02, 0.02)
+        cy += rng.uniform(-0.03, 0.03)
+        wob = (fbm(U * 4 + cx * 9, V * 4 + cy * 9, 1516 + int(t * 99), 2) - 0.5) * 0.18
+        d = np.hypot((U - cx) / rx, (V - cy) / ry) + wob
+        floor = ss(1.0, 0.82, d)
+        # The dent's walls: the side facing the light is in shade, the far side catches it; a packed lip just outside.
+        gx, gy = (U - cx) / rx, (V - cy) / ry
+        facing = np.clip(-(gx * LIGHT[0] + gy * LIGHT[1]) / np.maximum(np.hypot(gx, gy), 1e-3), -1, 1)
+        wall = ss(0.62, 0.95, d) * ss(1.05, 0.92, d)
+        lip = ss(0.98, 1.06, d) * ss(1.22, 1.08, d)
+        a = np.maximum(floor * 0.8, lip * 0.55)
+        v = np.where(lip > floor, 0.98, 0.64 + 0.18 * wall * (0.5 + 0.5 * facing))
+        upd = a > A
+        A = np.maximum(A, a)
+        val = np.where(upd, v, val)
+    return A, colour(np.clip(val, 0, 1), 0.25)
+
+
 def sparkle(t):
     """A tiny twinkle: a soft core and four tapered rays, popping open and closing with a little turn."""
     s = math.sin(math.pi * min(1.0, t * 1.15)) ** 0.8
@@ -464,8 +491,8 @@ def marker(t):
     return A, colour(np.clip(val, 0, 1), 0.5)
 
 
-def footprint(t):
-    """A shoe pressed into sand or snow, seen from above, the toe along +u: a toe pad and a heel joined by a narrow waist,
+def sand_print(t):
+    """A shoe pressed into sand, seen from above, the toe along +u: a toe pad and a heel joined by a narrow waist,
     its floor darker than the ground with faint tread lines across it, a crumbly lip of pushed-up ground round it. Over
     its life the edge crumbles in, the floor fills and the tread goes, until it is a soft dent."""
     toe = ((U - 0.34) / 0.36) ** 2 + (V / 0.27) ** 2
@@ -499,7 +526,8 @@ SPRITES = [
     ("scuff", scuff, "skid scuff (lies on the ground)"),
     ("sparkle", sparkle, "tiny sparkle"),
     ("marker", marker, "ground marker (target)"),
-    ("footprint", footprint, "footprint (lies on sand, snow)"),
+    ("footprint", footprint, "footprint in snow (lies on the ground)"),
+    ("sandPrint", sand_print, "shoe print in sand (lies on the ground)"),
 ]
 
 # How the sheet shows each row: the tint the engine gives it and the ground behind it.
@@ -509,7 +537,8 @@ SHEET = {
     "snow": ("#f4f8fc", "#b8c4d0"), "leaf": ("#c98a4b", "#8fa16c"), "streak": ("#ffffff", "#8fa16c"),
     "swirl": ("#f6fbff", "#8fa16c"), "scuff": ("#ba9664", "#ba9664"), "sparkle": ("#fff6dc", "#5f7a55"),
     "marker": ("#fff4c8", "#8c8577"),
-    "footprint": ("#c9ad78", "#e2cb93"),
+    "footprint": ("#c9d6e6", "#eef3f8"),
+    "sandPrint": ("#c9ad78", "#e2cb93"),
 }
 
 

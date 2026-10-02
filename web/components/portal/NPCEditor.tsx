@@ -6,7 +6,9 @@ import { ArrowLeft, Plus, Trash2, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { NPCPersona, SpawnZone } from "@/lib/content/types";
 import ImageUploadButton from "@/components/portal/ImageUploadButton";
-import { RESIDENT_ANCHORS, RESIDENT_POSTS, validateResidentDraft, type ResidentPost, type ResidentSchedule } from "@/lib/content/residents";
+import { MAX_STOPS, RESIDENT_ANCHORS, RESIDENT_POSTS, validateResidentDraft, type ResidentPost, type ResidentSchedule, type ResidentStop } from "@/lib/content/residents";
+import { HOME_LANDMARKS, ROUTINE_SPECIAL } from "@/lib/game/residentRoutine";
+import { LANDMARK_INFO, type LandmarkId } from "@/lib/game/defaultIsland";
 import { ISLAND_PHASES } from "@/lib/game/islandTime";
 import { DraftBar, Field, inputCls, Toggle, useDraftFlow } from "./ProgressionAdminShared";
 
@@ -25,6 +27,9 @@ const POST_LABELS: Record<ResidentPost, string> = {
   hq_lead: "HQ lead", shopkeeper: "Shopkeeper", cafe_owner: "Café owner", museum_curator: "Museum curator",
   wharf_keeper: "Wharf keeper", oracle_keeper: "Oracle keeper", workshop_crafter: "Workshop crafter", villager: "Villager",
 };
+
+/** Routine stops: the map's anchors, then a bench and home. */
+const STOP_OPTIONS = [...Object.entries(RESIDENT_ANCHORS), ...Object.entries(ROUTINE_SPECIAL)].map(([key, a]) => [key, a.label] as const);
 
 interface FormState {
   slug: string;
@@ -235,28 +240,52 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
           <textarea rows={3} value={form.bio} onChange={(e) => update("bio", e.target.value)} className={`${inputCls} resize-y`} maxLength={1000} />
         </Field>
 
-        <Field label="Schedule" hint="Where they stand on the island in each part of the day. Empty = their day spot (or the plaza).">
-          <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-            {ISLAND_PHASES.map((phase) => (
-              <label key={phase} className="block">
-                <span className="block text-[0.6rem] font-mono uppercase text-[var(--color-text-muted)] mb-1">{phase}</span>
-                <select
-                  value={form.schedule[phase] ?? ""}
-                  onChange={(e) => {
-                    const next = { ...form.schedule };
-                    if (e.target.value) next[phase] = e.target.value as keyof typeof RESIDENT_ANCHORS;
-                    else delete next[phase];
-                    update("schedule", next);
-                  }}
-                  className={inputCls}
-                >
-                  <option value="">{phase === "day" ? "(plaza)" : "(day spot)"}</option>
-                  {Object.entries(RESIDENT_ANCHORS).map(([key, a]) => (
-                    <option key={key} value={key}>{a.label}</option>
+        <Field label="Home" hint="The building they go into at night (their door). Empty = by post (the shop for the shopkeeper; the clubhouse otherwise).">
+          <select
+            value={form.schedule.home ?? ""}
+            onChange={(e) => {
+              const next = { ...form.schedule };
+              if (e.target.value) next.home = e.target.value as LandmarkId;
+              else delete next.home;
+              update("schedule", next);
+            }}
+            className={inputCls}
+          >
+            <option value="">(by post)</option>
+            {HOME_LANDMARKS.map((id) => <option key={id} value={id}>{LANDMARK_INFO[id].label}</option>)}
+          </select>
+        </Field>
+
+        <Field label="Routine" hint="Per part of the day, the places they walk between in turn, stopping a while at each. One place = they mill about it. Empty = the day's routine (night: home).">
+          <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
+            {ISLAND_PHASES.map((phase) => {
+              const raw = form.schedule[phase];
+              const stops: ResidentStop[] = raw === undefined ? [] : Array.isArray(raw) ? raw : [raw];
+              const set = (list: ResidentStop[]) => {
+                const next = { ...form.schedule };
+                if (list.length) next[phase] = list;
+                else delete next[phase];
+                update("schedule", next);
+              };
+              return (
+                <div key={phase} className="block">
+                  <span className="block text-[0.6rem] font-mono uppercase text-[var(--color-text-muted)] mb-1">{phase}</span>
+                  {stops.map((stop, i) => (
+                    <div key={i} className="flex gap-1 mb-1">
+                      <select value={stop} onChange={(e) => set(stops.map((s, j) => (j === i ? (e.target.value as ResidentStop) : s)))} className={inputCls} aria-label={`${phase} stop ${i + 1}`}>
+                        {STOP_OPTIONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                      </select>
+                      <button type="button" onClick={() => set(stops.filter((_, j) => j !== i))} className="px-2 text-[var(--color-text-muted)]" aria-label={`Remove ${phase} stop ${i + 1}`}><Trash2 size={14} /></button>
+                    </div>
                   ))}
-                </select>
-              </label>
-            ))}
+                  {stops.length < MAX_STOPS && (
+                    <button type="button" onClick={() => set([...stops, phase === "night" ? "home" : "plaza"])} className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
+                      <Plus size={12} /> {stops.length ? "Add a stop" : phase === "night" ? "(home) Add a stop" : "(day routine) Add a stop"}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </Field>
 

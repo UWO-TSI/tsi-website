@@ -55,7 +55,7 @@ describe("ruins zone", () => {
     }
     expect(seen).toContain("jump");
     expect(seen).not.toContain("mantle");
-    expect(s.y).toBeLessThan(1);
+    expect(s.y).toBeLessThan(1.5); // never on the 1.5u cliff top (mid-jump peaks reach 1.28 since row 276)
     expect(zoneAt(s.x, s.z)).toBe("plaza");
   });
 });

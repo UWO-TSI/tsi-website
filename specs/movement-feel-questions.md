@@ -49,7 +49,7 @@ Measured on the rig: at normal speed a planted foot moves 0.64 u/s in the Walk c
 **Options:** keep it (assumed: the island's quick walk is the feel you tuned); slow the walk toward 4 to 5 u/s; or new walk and run clips with longer strides (the chibi's legs limit how long).
 
 ## 10. Footprints
-**Built:** on sand, wet sand and snow, for you and the residents, from each step; 7 s on sand, 11 in wet sand, 12 in snow. Not from landings or slides (slides leave scuffs). Should landings print too?
+**Built:** on sand and wet sand, for you and the residents, from each step; 7 s on sand, 11 in wet sand. Snow prints are the living village's (every walker, 14 s). Not from landings or slides (slides leave scuffs). Should landings print too?
 
 ## 11. Residents' dust
 **Built:** residents' steps throw the ground's dust at 0.6 of yours, with no sound (a crowd of them would clatter).

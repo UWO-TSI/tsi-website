@@ -26,6 +26,8 @@ import { worldTime } from "@/lib/game/worldClock";
 import { sheddingTrees, worldWind } from "@/lib/game/worldFx";
 import { juiceShake } from "@/lib/game/cameraJuice";
 import { treeParts } from "./NatureModels";
+import AmbientFauna, { type FaunaProps } from "./AmbientFauna";
+import WeatherGround from "./WeatherGround";
 
 /** Screen-space vertical sky gradient (a plain 2D background texture): `top` at the top, `horizon` from mid-screen down. */
 export function SkyGradient({ top, horizon }: { top: string; horizon: string }) {
@@ -57,7 +59,7 @@ function TreeWind({ strength }: { strength: number }) {
 export interface TreeSpot { x: number; z: number; seed: number }
 const NO_TREES: readonly TreeSpot[] = [];
 
-export function IslandAtmosphere({ phase, light, look, weather, liteMode, castShadows, overview = false, overviewFog = 0, ground, puddles = [], cloudSize, shadowExtent = 26, fireflyAnchors, trees = NO_TREES }: {
+export function IslandAtmosphere({ phase, light, look, weather, liteMode, castShadows, overview = false, overviewFog = 0, ground, puddles = [], cloudSize, shadowExtent = 26, fireflyAnchors, trees = NO_TREES, fauna }: {
   phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; liteMode: boolean; castShadows: boolean; overview?: boolean;
   /** Extra overview fog distance: a bigger island puts the overview camera further out. */
   overviewFog?: number;
@@ -66,6 +68,8 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
   fireflyAnchors: readonly (readonly [number, number])[];
   /** The scene's trees: the ones that shed this season drop leaves or petals. */
   trees?: readonly TreeSpot[];
+  /** The island's ambient life (gulls, butterflies, dragonflies, crabs, leaping fish: AmbientFauna) and its ground for the weather (WeatherGround). */
+  fauna?: FaunaProps;
 }) {
   const { gl, scene } = useThree();
   useEffect(() => { TERRAIN_SNOW.value = look.snow; WORLD_SNOW.value = look.snow; setLeafTint(look.leaf); }, [look.snow, look.leaf]);
@@ -81,6 +85,7 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
     const models = SEASON_TREES[look.season];
     return sheddingTrees(trees.map(t => { const [tree] = treeParts(t.seed, models); return { x: t.x, y: ground(t.x, t.z), z: t.z, model: tree.url, scale: tree.scale }; }), look.season);
   }, [trees, ground, look.season]);
+  const groundSite = useMemo(() => fauna && { map: fauna.site.map, ground, surface: fauna.surface, top: fauna.top, player: fauna.player }, [fauna, ground]);
   const puddleBlobs = useMemo(() => puddles.map(([x, z], i) => ({ x, z, y: ground(x, z) + 0.01, rx: 0.5 + (i % 3) * 0.18, rz: 0.32 + (i % 2) * 0.12, yaw: 0 })), [puddles, ground]);
   return <>
     {light.skyTop ? <SkyGradient top={light.skyTop} horizon={light.sky} /> : <color attach="background" args={[light.sky]} />}
@@ -101,6 +106,8 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
     {!liteMode && weather !== "rain" && weather !== "snow" && (look.season === "spring" || look.season === "autumn") &&
       <TreeLeaves trees={leafTrees} mode={look.season === "spring" ? "petals" : "leaves"} wind={wind} ground={ground} />}
     <TreeWind strength={liteMode ? 0 : weather === "wind" ? 0.14 : 0.035} />
+    {fauna && <AmbientFauna {...fauna} season={look.season} weather={weather} liteMode={liteMode} />}
+    {fauna && <WeatherGround site={groundSite!} rain={weather === "rain"} snow={look.snow >= 0.5} puddles={puddleBlobs} />}
     {fireflyNight(light, weather) && <Fireflies anchors={fireflyAnchors} count={liteMode ? 8 : fireflyAnchors.length * 2} groundHeight={ground} />}
   </>;
 }

@@ -184,6 +184,8 @@ export class MoveParticles {
   // Over the terrain's painted sand and soil layers (transparent, render orders 2 and 3), under ambience sprites (4).
   private readonly layers = [new PoolMesh(this.prints, "MovePrints", 3.5), new PoolMesh(this.pool, "MoveParticles", 3.6)];
   readonly meshes = this.layers.map(l => l.mesh);
+  /** The effects layer alone, for a system of its own that never throws prints (the rain's splashes, WeatherGround). */
+  readonly mesh = this.meshes[1];
   private stamp = -1;
   /** Step and draw, once per frame: the first caller's `dt` wins (the avatar's slow motion and pauses), the rest are skipped. */
   tick(stamp: number, dt: number, camera: THREE.Camera, wind: { x: number; z: number }) {

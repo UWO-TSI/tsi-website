@@ -6,6 +6,8 @@
 import { ISLAND_PHASES, type IslandPhase } from "@/lib/game/islandTime";
 import type { NPCPersona } from "./types";
 import { objectById, objectsOf, village, villageSpawnPoint, type Village } from "@/lib/game/villageMap";
+import { HOME_LANDMARKS, ROUTINE_SPECIAL } from "@/lib/game/residentRoutine";
+import type { LandmarkId } from "@/lib/game/defaultIsland";
 
 export const RESIDENT_POSTS = ["hq_lead", "shopkeeper", "cafe_owner", "museum_curator", "wharf_keeper", "oracle_keeper", "workshop_crafter", "villager"] as const;
 export type ResidentPost = (typeof RESIDENT_POSTS)[number];
@@ -28,7 +30,11 @@ export const RESIDENT_ANCHORS = {
   wharf: { label: "Wharf" },
 } as const satisfies Record<string, { label: string }>;
 export type ResidentAnchor = keyof typeof RESIDENT_ANCHORS;
-export type ResidentSchedule = Partial<Record<IslandPhase, ResidentAnchor>>;
+/** A stop in a routine: a map anchor, a bench (under a lamp at night) or home (in through their door). */
+export type ResidentStop = ResidentAnchor | keyof typeof ROUTINE_SPECIAL;
+/** Per phase, one stop or a routine of up to MAX_STOPS walked in turn; `home` is the building they live in. */
+export type ResidentSchedule = Partial<Record<IslandPhase, ResidentStop | ResidentStop[]>> & { home?: LandmarkId };
+export const MAX_STOPS = 6;
 /** An anchor's spot on the village map, or null when it is not placed. */
 export function anchorAt(key: ResidentAnchor, v: Village = village()): [number, number] | null {
   const o = objectById("anchor", key, v);
@@ -38,6 +44,9 @@ export function anchorAt(key: ResidentAnchor, v: Village = village()): [number, 
 export const SHARED_SPACING = 1.4;
 
 const isAnchor = (v: unknown): v is ResidentAnchor => typeof v === "string" && Object.hasOwn(RESIDENT_ANCHORS, v);
+const isStop = (v: unknown): v is ResidentStop => isAnchor(v) || (typeof v === "string" && Object.hasOwn(ROUTINE_SPECIAL, v));
+/** A phase's value: one stop, or a routine of 1–MAX_STOPS stops. */
+const isRoutine = (v: unknown) => isStop(v) || (Array.isArray(v) && v.length > 0 && v.length <= MAX_STOPS && v.every(isStop));
 
 /** Server-side check before an npc_personas draft is saved (fields the editor sends; unknown keys pass). */
 export function validateResidentDraft(d: Record<string, unknown>): string[] {
@@ -51,7 +60,7 @@ export function validateResidentDraft(d: Record<string, unknown>): string[] {
   const lines = d.canned_dialogue;
   if (lines !== undefined && (!Array.isArray(lines) || lines.length > 30 || lines.some((l) => typeof l !== "string" || !l.trim() || l.length > 200))) errors.push("dialogue: up to 30 lines of 1-200 characters");
   const s = d.schedule;
-  if (s !== undefined && (!s || typeof s !== "object" || Array.isArray(s) || Object.entries(s).some(([k, v]) => !(ISLAND_PHASES as readonly string[]).includes(k) || !isAnchor(v)))) errors.push("schedule: phase → anchor");
+  if (s !== undefined && (!s || typeof s !== "object" || Array.isArray(s) || Object.entries(s).some(([k, v]) => k === "home" ? !(HOME_LANDMARKS as readonly unknown[]).includes(v) : !(ISLAND_PHASES as readonly string[]).includes(k) || !isRoutine(v)))) errors.push("schedule: phase → stop or routine of stops; home → a building");
   return errors;
 }
 
