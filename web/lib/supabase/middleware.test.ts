@@ -29,6 +29,7 @@ describe("first-login routing to the island", () => {
     expect(await go("/student")).toBeNull();
     auth.user = { id: "back" }; auth.profile = { onboarding_completed: true };
     expect(await go("/student")).toBe("https://tethos.ca/student/go");
+    expect(await go("/student?next=/student/companion")).toBe("https://tethos.ca/student/go?next=/student/companion");
   });
   it("lets a new member straight onto the island (the creator asks the name), past the portal wizard", async () => {
     auth.user = { id: "new" }; auth.profile = { onboarding_completed: false };
