@@ -28,6 +28,32 @@ His picks:
   - weapons and the leaf have only GLBs.
 - **Mouse-look camera** (row 278, on main): left click does nothing outside combat; the ruins show a crosshair; Tab is free.
 
+## Status (2026-10-02)
+Milestone 1 is built on `game/game-ui`, waiting for David to play it. Questions and assumptions are in `specs/game-ui-questions.md`; the evidence is in `specs/evidence/game-ui/` (01–08).
+
+The UI follows David's later direction (row 283):
+- The wheel is an ACNH flower in his Animal Crossing UI kit.
+- The HUD is clean while exploring: changes slide in, and H or the pause view shows everything.
+
+Where it lives:
+
+| Part | Files |
+|---|---|
+| Wheel model and tests | `lib/game/toolWheel.ts` |
+| Held state (this device) | `lib/game/heldStore.ts` |
+| Tools in five tiers | `lib/game/tools.ts` |
+| The flower | `components/game/ToolWheel.tsx` |
+| Held items and the arm holds | `character/Character.tsx` |
+| Hold and eat clips | `build_clips.py` (HoldRod, HoldTool, HoldFront, Eat) |
+| Tool models | `art/props-enemies/build_tools.py` |
+| Item models | `art/props-enemies/build_items.py` |
+| Grip solver | `art/props-enemies/render_held.py` |
+| Server check | `lib/collections/service.ts` (`checkHeld`) |
+| Eating | `/api/collections/eat` (migration 20261002050000) |
+| Icons | `lib/icons/*`, `/lab/icons`, `scripts/render-icons.mjs`, `public/assets/icons/` (283) |
+| Icon seed | migration 20261002052225 |
+| Clean HUD | `lib/game/hudPrefs.ts` |
+
 ## Deliverable
 
 ### Milestone 1: the wheel and the hand
