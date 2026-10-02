@@ -110,6 +110,7 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
         <span>{Math.round(camera.sensitivity * 100)}</span>
       </div>
       <label className={styles.toggle}><span>Invert up and down</span><input type="checkbox" checked={camera.invertY} onChange={e => setOrbitPrefs({ invertY: e.target.checked })} /></label>
+      <label className={styles.toggle}><span>Follow behind when you run</span><input type="checkbox" checked={camera.autoFollow} onChange={e => setOrbitPrefs({ autoFollow: e.target.checked })} /></label>
       <p className={styles.hint}>{camera.mouseLook ? "Click the island to look around with the mouse. Hold right click for a cursor; Esc lets the mouse go." : "The cursor stays free."} Arrow keys turn and tilt, the wheel and Z zoom, V puts the camera back. Kept on this device.</p>
     </fieldset>
     <label className={styles.toggle}><span>Show my family aura</span><input type="checkbox" checked={aura} onChange={e => setAuraVisible(e.target.checked)} /></label>

@@ -27,11 +27,12 @@ export const LOOK_RATE = 0.0035, KEY_YAW_RATE = 2.2, KEY_PITCH_RATE = 1.1;
 export const EASE = 16;
 
 export interface OrbitAngles { yaw: number; pitch: number; zoom: number }
-export interface OrbitPrefs { sensitivity: number; invertY: boolean; mouseLook: boolean }
+export interface OrbitPrefs { sensitivity: number; invertY: boolean; mouseLook: boolean; autoFollow: boolean }
 const DEFAULT: OrbitAngles = { yaw: 0, pitch: DEFAULT_PITCH, zoom: 1 };
-const DEFAULT_PREFS: OrbitPrefs = { sensitivity: 1, invertY: false, mouseLook: true };
+const DEFAULT_PREFS: OrbitPrefs = { sensitivity: 1, invertY: false, mouseLook: true, autoFollow: true };
 
-export const orbit = { target: { ...DEFAULT }, view: { ...DEFAULT }, prefs: { ...DEFAULT_PREFS } };
+/** `idle`: seconds since the mouse, the arrows or two fingers last turned the camera (auto-follow waits for it). */
+export const orbit = { target: { ...DEFAULT }, view: { ...DEFAULT }, prefs: { ...DEFAULT_PREFS }, idle: 0 };
 type Orbit = typeof orbit;
 
 export const clampPitch = (p: number) => Math.min(PITCH_MAX, Math.max(PITCH_MIN, p));
@@ -42,6 +43,7 @@ export const wrapAngle = (a: number) => a - 2 * Math.PI * Math.ceil((a - Math.PI
 /** Mouse-look by (dx, dy) pixels: right turns the view right, down tilts it down (inverted with `invertY`). */
 export function lookOrbit(dx: number, dy: number, o: Orbit = orbit) {
   const k = LOOK_RATE * o.prefs.sensitivity;
+  o.idle = 0;
   o.target.yaw -= dx * k;
   o.target.pitch = clampPitch(o.target.pitch + (o.prefs.invertY ? -dy : dy) * k);
 }
@@ -58,6 +60,7 @@ export function toggleZoom(o: Orbit = orbit) {
 
 /** Back to today's view: the nearest whole turn (the short way round), the default tilt and zoom. */
 export function snapBack(o: Orbit = orbit) {
+  o.idle = 0;
   o.target.yaw = 2 * Math.PI * Math.round(o.target.yaw / (2 * Math.PI));
   o.target.pitch = DEFAULT_PITCH;
   o.target.zoom = 1;
@@ -69,11 +72,30 @@ export function stepOrbit(dt: number, keys: Readonly<Record<string, boolean>>, o
   const turn = (keys.arrowleft ? 1 : 0) - (keys.arrowright ? 1 : 0), tilt = (keys.arrowdown ? 1 : 0) - (keys.arrowup ? 1 : 0);
   if (turn) t.yaw += turn * KEY_YAW_RATE * s * dt;
   if (tilt) t.pitch = clampPitch(t.pitch + tilt * KEY_PITCH_RATE * s * dt);
+  o.idle = turn || tilt ? 0 : o.idle + dt;
   const k = 1 - Math.exp(-EASE * dt);
   v.yaw += (t.yaw - v.yaw) * k;
   v.pitch += (t.pitch - v.pitch) * k;
   v.zoom += (t.zoom - v.zoom) * k;
   return v;
+}
+
+/**
+ * Gentle auto-follow (David, row 282; Zelda or Mario feel): running (at least FOLLOW_SPEED) with the camera left alone
+ * for FOLLOW_IDLE s, the heading eases in behind the way you travel, ramping up over FOLLOW_RAMP s and never turning
+ * faster than FOLLOW_TURN (a held strafe circles you slowly round, it does not spin the view). Any camera input
+ * takes over at once (it zeroes `idle`). It never swings round to face you: running at the camera (more than
+ * FOLLOW_MAX off the heading) holds it. The caller passes `allowed` false while standing in the cursor hold, a sheet
+ * or the crosshair; the setting turns it off.
+ */
+export const FOLLOW_IDLE = 1, FOLLOW_RAMP = 0.6, FOLLOW_SPEED = 2.5, FOLLOW_RATE = 0.7, FOLLOW_TURN = 0.6, FOLLOW_MAX = (110 * Math.PI) / 180;
+export function autoFollow(dt: number, vx: number, vz: number, allowed: boolean, o: Orbit = orbit) {
+  if (!allowed || !o.prefs.autoFollow || o.idle < FOLLOW_IDLE || Math.hypot(vx, vz) < FOLLOW_SPEED) return;
+  const off = wrapAngle(Math.atan2(vx, vz) - o.target.yaw);
+  if (Math.abs(off) > FOLLOW_MAX) return;
+  const ramp = Math.min(1, (o.idle - FOLLOW_IDLE) / FOLLOW_RAMP);
+  const step = off * (1 - Math.exp(-FOLLOW_RATE * ramp * dt)), most = FOLLOW_TURN * ramp * dt;
+  o.target.yaw += Math.max(-most, Math.min(most, step));
 }
 
 /** The camera's offset from the point it looks at: behind along the heading, up by the tilt. */
@@ -171,6 +193,7 @@ export function loadOrbit(o: Orbit = orbit) {
     o.prefs.sensitivity = Math.min(SENSITIVITY_MAX, Math.max(SENSITIVITY_MIN, num(raw.sensitivity, 1)));
     o.prefs.invertY = raw.invertY === true;
     o.prefs.mouseLook = raw.mouseLook !== false;
+    o.prefs.autoFollow = raw.autoFollow !== false;
   } catch { /* defaults */ }
 }
 
@@ -185,6 +208,7 @@ export function setOrbitPrefs(patch: Partial<OrbitPrefs>) {
   if (patch.sensitivity !== undefined) p.sensitivity = Math.min(SENSITIVITY_MAX, Math.max(SENSITIVITY_MIN, patch.sensitivity));
   if (patch.invertY !== undefined) p.invertY = patch.invertY;
   if (patch.mouseLook !== undefined) p.mouseLook = patch.mouseLook;
+  if (patch.autoFollow !== undefined) p.autoFollow = patch.autoFollow;
   orbit.prefs = { ...p }; // a new snapshot for useSyncExternalStore
   saveOrbit();
   prefListeners.forEach(l => l());

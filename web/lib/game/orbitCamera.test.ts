@@ -3,14 +3,14 @@ import * as THREE from "three";
 import { cameraRelative, getCameraForwardXZ } from "./cameraBasis";
 import { bendViewPoint } from "./worldProjection";
 import {
-  DEFAULT_PITCH, ORBIT_DISTANCE, PITCH_MAX, PITCH_MIN, ZOOM_MAX, ZOOM_MIN, ZOOM_OUT,
-  crosshairAim, lookOrbit, loadOrbit, nextCapture, orbitOffset, saveOrbit, snapBack, stepOrbit, toggleZoom, turnOffset, wrapAngle, zoomOrbit,
+  DEFAULT_PITCH, FOLLOW_IDLE, FOLLOW_TURN, ORBIT_DISTANCE, PITCH_MAX, PITCH_MIN, ZOOM_MAX, ZOOM_MIN, ZOOM_OUT,
+  autoFollow, crosshairAim, lookOrbit, loadOrbit, nextCapture, orbitOffset, saveOrbit, snapBack, stepOrbit, toggleZoom, turnOffset, wrapAngle, zoomOrbit,
   type CaptureEvent, type CaptureState, type OrbitAngles,
 } from "./orbitCamera";
 
 const fresh = (target: Partial<OrbitAngles> = {}) => ({
   target: { yaw: 0, pitch: DEFAULT_PITCH, zoom: 1, ...target }, view: { yaw: 0, pitch: DEFAULT_PITCH, zoom: 1, ...target },
-  prefs: { sensitivity: 1, invertY: false, mouseLook: true },
+  prefs: { sensitivity: 1, invertY: false, mouseLook: true, autoFollow: true }, idle: 0,
 });
 const YAWS = Array.from({ length: 24 }, (_, i) => (i * Math.PI) / 12 - Math.PI);
 
@@ -122,6 +122,50 @@ describe("turning, tilting and zooming", () => {
   });
 });
 
+describe("gentle auto-follow", () => {
+  /** Run `seconds` at 60 fps with the velocity (vx, vz), the camera input left alone (stepOrbit counts the idle time). */
+  const run = (o: ReturnType<typeof fresh>, seconds: number, vx: number, vz: number, allowed = true) => {
+    for (let i = 0; i < seconds * 60; i++) { autoFollow(1 / 60, vx, vz, allowed, o); stepOrbit(1 / 60, {}, o); }
+  };
+  it("swings in behind a running player once the camera has been left alone a moment", () => {
+    const o = fresh();
+    run(o, FOLLOW_IDLE * 0.9, 9, 0); // running +x (heading π/2): not yet
+    expect(o.target.yaw).toBe(0);
+    run(o, 3, 9, 0);
+    expect(o.target.yaw).toBeGreaterThan(0.8); // well on its way round
+    expect(o.target.yaw).toBeLessThan(3 * FOLLOW_TURN); // gently: never faster than its turn rate
+    run(o, 10, 9, 0);
+    expect(o.target.yaw).toBeCloseTo(Math.PI / 2, 2); // behind the way they run
+  });
+  it("eases in, never jumps", () => {
+    const o = fresh({}); o.idle = FOLLOW_IDLE;
+    let last = 0;
+    for (let i = 0; i < 240; i++) { autoFollow(1 / 60, 0.2 * 9, -9, true, o); stepOrbit(1 / 60, {}, o); expect(Math.abs(o.target.yaw - last)).toBeLessThan(0.03); last = o.target.yaw; }
+  });
+  it("yields to any camera input at once, and waits again before swinging", () => {
+    const o = fresh(); o.idle = 5;
+    autoFollow(1 / 60, 9, 0, true, o);
+    lookOrbit(-30, 0, o); // the mouse turns the other way
+    const held = o.target.yaw;
+    run(o, FOLLOW_IDLE * 0.9, 9, 0);
+    expect(o.target.yaw).toBe(held);
+    stepOrbit(1 / 60, { arrowleft: true }, o);
+    expect(o.idle).toBe(0);
+  });
+  it("leaves the camera be while standing, running at it, when not allowed or switched off", () => {
+    const o = fresh(); o.idle = 5;
+    run(o, 3, 0.5, 0); // a shuffle, not a run
+    expect(o.target.yaw).toBe(0);
+    run(o, 3, 0, -9); // straight at the camera: no swing round to face them
+    expect(o.target.yaw).toBe(0);
+    run(o, 3, 9, 0, false); // the cursor hold, a sheet, the crosshair
+    expect(o.target.yaw).toBe(0);
+    o.prefs.autoFollow = false;
+    run(o, 3, 9, 0);
+    expect(o.target.yaw).toBe(0);
+  });
+});
+
 describe("mouse capture", () => {
   const run = (from: CaptureState, events: CaptureEvent[]) => events.reduce<{ state: CaptureState; requests: number; exits: number }>((acc, e) => {
     const step = nextCapture(acc.state, e);
@@ -196,6 +240,6 @@ describe("this device", () => {
     expect(o.view.yaw).toBe(o.target.yaw); // no swing on load
     expect(o.target.pitch).toBe(PITCH_MAX);
     expect(o.target.zoom).toBe(1.2);
-    expect(o.prefs).toEqual({ sensitivity: 2, invertY: true, mouseLook: true });
+    expect(o.prefs).toEqual({ sensitivity: 2, invertY: true, mouseLook: true, autoFollow: true });
   });
 });

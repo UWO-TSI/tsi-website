@@ -28,7 +28,7 @@ import { juiceShake } from "@/lib/game/cameraJuice";
 import { treeParts } from "./NatureModels";
 import AmbientFauna, { type FaunaProps } from "./AmbientFauna";
 import WeatherGround from "./WeatherGround";
-import { capture, ORBIT_DISTANCE, orbitOffset, stepOrbit, turnOffset } from "@/lib/game/orbitCamera";
+import { autoFollow, capture, ORBIT_DISTANCE, orbitOffset, stepOrbit, turnOffset } from "@/lib/game/orbitCamera";
 import { CUT_FLOOR, CUT_RADIUS, CUTOUT, CUTOUT_VIEW, groundBlocks, lineBlocked, type Occluder } from "@/lib/game/occluders";
 import { bendViewPoint } from "@/lib/game/worldProjection";
 import { orbitKeys, useOrbitInput } from "./useOrbitInput";
@@ -140,7 +140,7 @@ const CLEARANCE = 0.8;
 export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: number, overview: Overview | null, scene?: FollowScene) {
   const { camera } = useThree();
   useOrbitInput();
-  const rig = useMemo(() => ({ ahead: LOOK_AHEAD, cut: 0, chest: new THREE.Vector3() }), []);
+  const rig = useMemo(() => ({ ahead: LOOK_AHEAD, cut: 0, chest: new THREE.Vector3(), last: new THREE.Vector3(NaN, 0, 0), vx: 0, vz: 0 }), []);
   useEffect(() => () => { CUTOUT.value.w = 0; }, []);
   const baseFar = useRef<number | null>(null);
   const blend = useRef({ zoom, overview: overview ? 1 : 0, last: overview });
@@ -160,6 +160,15 @@ export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: num
       if (camera.far !== plane) { camera.far = plane; camera.updateProjectionMatrix(); }
     }
     juiceShake(dt, shake);
+    // Gentle auto-follow (row 282): the player's travel, from where they are drawn (a jump of a teleport or a respawn is no run).
+    const p = scene?.player.current;
+    if (p && dt > 0) {
+      const mx = (p.x - rig.last.x) / dt, mz = (p.z - rig.last.z) / dt, ok = Number.isFinite(mx) && Math.hypot(mx, mz) < 40;
+      rig.vx = THREE.MathUtils.damp(rig.vx, ok ? mx : 0, 10, dt); rig.vz = THREE.MathUtils.damp(rig.vz, ok ? mz : 0, 10, dt);
+      rig.last.copy(p);
+    }
+    const free = capture.state !== "cursor" && capture.state !== "menu" && !(scene?.aim && capture.state === "captured");
+    autoFollow(dt, rig.vx, rig.vz, free && b.overview === 0);
     const v = stepOrbit(dt, orbitKeys), sy = Math.sin(v.yaw), cy = Math.cos(v.yaw);
     rig.ahead = THREE.MathUtils.damp(rig.ahead, scene?.aim && capture.state === "captured" ? AIM_AHEAD : LOOK_AHEAD, 6, dt);
     // The shake is across the screen and up; at yaw 0 that is world x, as before.
@@ -179,7 +188,6 @@ export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: num
     camera.lookAt(look);
     camera.updateMatrixWorld();
     // A building, tree or cliff on the line of sight to the player's chest eases the cut in; the circle sits where they are drawn.
-    const p = scene?.player.current;
     if (!p || !(camera instanceof THREE.PerspectiveCamera)) return;
     const c = rig.chest.set(p.x, p.y + 1, p.z);
     const blocked = b.overview === 0 && (lineBlocked(camera.position, c, scene!.occluders) || groundBlocks(camera.position, c, scene!.ground));
