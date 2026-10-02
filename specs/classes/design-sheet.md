@@ -931,7 +931,7 @@ All waves merge to `main` behind a `classes_v2` flag that stays off in productio
 | Gunslinger | Reload speed |
 | Guardian | Armor |
 | Juggernaut | Max HP |
-| Monk | Attack speed |
+| Martial Artist (was Monk) | Attack speed |
 | Assassin | Crit chance |
 
 Class movement passives and skills (Air Step, Bone Surf, Fox Pounce) work in the ruins only; the village movement kit stays the same for everyone.
@@ -1052,3 +1052,45 @@ Play style (David, 2026-10-02): "some character should be skill based and some s
 
 - **Ultimate, Titan:** grow to 2.5× size for 10 s. Every step shakes the ground and swings send shockwaves. It ends with the hammer splitting the earth: flash frame.
 - **Stat direction:** max HP.
+
+## Martial Artist (was Monk; LOCKED, David 2026-10-02)
+- **Family:** Vanguard (yellow).
+- **Role:** close-combat damage.
+- **Style:** basic attacks with skills woven in. Muay Thai: realistic, human strikes and impressive chained animation.
+- **Rename:** "Monk" → "Martial Artist" (key `monk` can stay in data; the display name changes).
+- **Weapon:** Muay Thai hand wraps.
+- **Basic chain:** jab → cross → hook → body kick, looping.
+- **Rhythm (passive):** each hit in a chain adds attack speed (up to +40%); a 1 s gap resets it.
+- **Skills are combo techniques.** Press one right after a hit and it slots into the chain without breaking it. It's stronger mid-chain than as an opener; nothing is a standalone skill.
+
+| Key | Technique | Effect |
+|---|---|---|
+| 1 | Teep | Push kick: knockback, makes space |
+| 2 | Elbow | Slashing elbow: a big hit and a cut |
+| 3 | Clinch Knees | Grab and knee up to 3×. The target is stunned and can't move for the whole technique |
+| 4 | Roundhouse | A shin kick across an arc |
+| 5 | Flying Knee | From a run, slide or dash: a leaping knee that keeps momentum and starts a chain (movement) |
+
+- **Ultimate, Art of Eight Limbs:** lock onto one target for a cinematic 8-strike sequence (fists, elbows, knees, shins), each strike a mini impact frame. The final roundhouse: flash frame and a shockwave.
+- **Stat direction:** attack speed.
+
+## Assassin (LOCKED, David 2026-10-02)
+- **Family:** Vanguard (yellow).
+- **Role:** burst damage, squishy (−15% HP).
+- **Style:** skills. The most fun movement class: "the whole point of assassin is to get to your back or get up towards you."
+- **Look:** Asian-inspired, with black ink and red for every effect.
+- **Weapon:** twin tanto and throwing kunai. Basic: slash up close, throw kunai at range (the crosshair decides).
+- **Backstab (passive):** attacks from behind always crit and deal +50% damage.
+- **Vault (movement passive):** dash into an enemy to flip over it and land at its back, momentum kept.
+- **PvP and PvE:** in PvP the class lives on backstabs; in PvE mob fights, Ink Lotus and the kunai handle crowds.
+
+| Key | Skill | Effect |
+|---|---|---|
+| 1 | Shadow Step | Blink behind the target under the crosshair; 2 charges; a backstab kill refunds one |
+| 2 | Kunai Blink | Throw a kunai anywhere; press again to blink to it (keeps momentum). If it stuck in an enemy, you land at its back |
+| 3 | Ink Lotus | Spin through the crowd in a red-ink whirl, cutting everything around you (for mob fights) |
+| 4 | Smoke Bomb | Ink smoke: you're invisible inside and enemies lose you (escape) |
+| 5 | Execute | From behind, under 30% HP: instant kill (bosses take a huge hit) |
+
+- **Ultimate, Death Lotus:** time stops and the world turns to black-and-white ink. You blink between every enemy in range; time resumes and every cut lands at once: red flash frame.
+- **Stat direction:** crit chance.

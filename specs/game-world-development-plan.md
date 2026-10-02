@@ -333,6 +333,8 @@ Historical decision ledger, extended as the interview continues. Earlier consequ
 | 290 | **Class cosmetics (David, 2026-10-02):** weapon skins, aura colours and nameplate frames in the shop for coins and some for Gems. | Gem prices never reveal the Gem ≈ CAD rate. |
 | 291 | **Kit size (David, 2026-10-02):** about 5 skills on keys 1–5 plus the ult, all equipped, no pick-4 loadout ("too many skills"). | Supersedes row 288's 8-pick-4. Elementalist keeps its combo grid (10). Mastery unlocks one skill at about mastery 3; later levels upgrade and add cosmetics. |
 | 292 | **Class movement extends the movement combo (David, 2026-10-02):** "I want movement to be tied with the base movement we have going on, like the skill adds on the movement combo". | Every class's movement skill is used mid-chain (during a dash, slide, jump or glide), carries or adds momentum, and opens new links in the combo, instead of being a standalone teleport. |
+| 293 | **Stat direction per class (David, 2026-10-02):** "like in the game megabonk each character has a direction to go towards"; some classes are basic-attack based, some skill based. | Each class has one base stat it stacks (table in `specs/classes/design-sheet.md`). |
+| 294 | **Monk renamed Martial Artist (David, 2026-10-02):** a realistic Muay Thai fighter whose skills are techniques woven into the combo. | Display name changes; the data key can stay. |
 
 Currency names, earning ratios and unlock pacing remain undecided. Decision 48 establishes the legacy-data policy; identifying protected balances and the exact reset procedure still requires a data audit. No economy migration or reward implementation is authorized by this planning document alone.
 
