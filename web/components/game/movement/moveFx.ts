@@ -181,7 +181,8 @@ class PoolMesh {
 export class MoveParticles {
   readonly pool = new ParticlePool(FX_CAPACITY);
   readonly prints = new ParticlePool(PRINT_CAPACITY);
-  private readonly layers = [new PoolMesh(this.prints, "MovePrints", 2), new PoolMesh(this.pool, "MoveParticles", 3)];
+  // Over the terrain's painted sand and soil layers (transparent, render orders 2 and 3), under ambience sprites (4).
+  private readonly layers = [new PoolMesh(this.prints, "MovePrints", 3.5), new PoolMesh(this.pool, "MoveParticles", 3.6)];
   readonly meshes = this.layers.map(l => l.mesh);
   private stamp = -1;
   /** Step and draw, once per frame: the first caller's `dt` wins (the avatar's slow motion and pauses), the rest are skipped. */

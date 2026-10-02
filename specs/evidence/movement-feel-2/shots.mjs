@@ -66,7 +66,7 @@ const tile = (files, labels, name, cols, geometry) => {
 const pick = (frames, max) => (frames.length <= max ? frames : Array.from({ length: max }, (_, i) => frames[Math.round((i * (frames.length - 1)) / (max - 1))]));
 const label = s => `${Math.hypot(s.vx, s.vz).toFixed(1)} u/s  ${s.dashT > 0 ? "dash" : s.mode}${s.events.length ? "  " + s.events.join(",") : ""}`;
 
-async function strip(name, { url = LAB, at, facing, route, from, until, after = 2, max = 8, step = 0.04, limit = 8, cols = 4, w = 420, h = 320, geometry = "280x213+3+3", warm = 1.5 }) {
+async function strip(name, { url = LAB, at, facing, route, from, until, after = 2, max = 8, step = 0.04, limit = 8, cols = 4, w = 420, h = 320, geometry = "280x213+3+3", warm = 1.5, fixed = null }) {
   await open(url);
   await page.evaluate(([x, z, f]) => { window.__move.teleport(x, z, f); window.__move.pause(); }, [at[0], at[1], facing]);
   await page.waitForTimeout(1500);
@@ -84,7 +84,7 @@ async function strip(name, { url = LAB, at, facing, route, from, until, after = 
     if (left === null && until(s)) left = after + 1;
     if (left !== null) left--;
     const p = await page.evaluate(() => window.__move.screen());
-    const clip = { x: Math.max(0, Math.min(W - w, Math.round(p.x - w / 2))), y: Math.max(40, Math.min(H - h, Math.round(p.y - h * 0.62))), width: w, height: h };
+    const clip = fixed ?? { x: Math.max(0, Math.min(W - w, Math.round(p.x - w / 2))), y: Math.max(40, Math.min(H - h, Math.round(p.y - h * 0.62))), width: w, height: h };
     const file = `${TMP}/${name}-${TAG}-${String(frames.length).padStart(3, "0")}.png`;
     await page.screenshot({ path: file, clip });
     const ground = await page.evaluate(() => window.__move.ground?.() ?? "");
@@ -106,22 +106,23 @@ const MOVES = {
   "glide-ribbons": { url: "/lab/move?panel=0&zoom=0.8", at: [-18, 26], facing: 0, route: [{ to: [-18, 28.15], move: "glide-gust", r: 0.2 }, { to: [-18, 42], r: 0.5 }], from: s => s.mode === "glide" && s.modeT > 0.45, until: s => s.mode === "glide" && s.modeT > 1.1, after: 0, step: 0.06, max: 8, w: 460, h: 380, geometry: "300x248+3+3" },
   "glide-set-down": { url: "/lab/move?panel=0&zoom=0.8", at: [-18, 26], facing: 0, route: [{ to: [-18, 28.15], move: "glide", r: 0.2 }, { to: [-18, 42], r: 0.5 }], from: s => s.mode === "glide" && s.y < 0.6, until: s => s.mode === "ground" && s.modeT > 0.3, after: 2, step: 0.04, max: 8, w: 460, h: 380, geometry: "300x248+3+3" },
   // A walking jump into the 4-tile river (side on): a small splash; then a sprint's slide-jump short of the slide lane's gap, off 1.5u: a big one.
-  "splash-small": { at: [5.5, 21], facing: S, route: [{ to: [7.25, 21], move: "jump", r: 0.3 }, { to: [12, 21] }], from: s => s.mode === "air" && s.vy < 0, until: s => s.events.includes("respawn"), after: 0, step: 0.04, max: 10 },
+  "splash-small": { at: [5.5, 21], facing: S, route: [{ to: [7.25, 21], move: "jump", r: 0.3 }, { to: [12, 21] }], from: s => s.mode === "air" && s.vy < 0, until: s => s.mode === "ground", after: 0, step: 0.04, max: 10 },
   "splash-big": { url: "/lab/move?panel=0&zoom=0.8", at: [17.5, 25.5], facing: 0, route: [{ to: [17.5, 27.5], sprint: true }, { to: [17.5, 38], sprint: true }, { to: [17.5, 44.2], sprint: true, crouch: true, move: "jump", r: 0.35 }, { to: [17.5, 56] }],
-    from: s => s.mode === "air" && s.z > 47.5, until: s => s.events.includes("respawn"), after: 0, step: 0.04, max: 10, w: 460, h: 380, geometry: "300x248+3+3" },
+    from: s => s.mode === "air" && s.z > 47.5, until: s => s.mode === "ground", after: 0, step: 0.04, max: 10, w: 460, h: 380, geometry: "300x248+3+3" },
   // Sprinting off the lap's second level (3u down): the land, the roll's tumbles and trail, popping up.
   "roll": { at: [5.5, -21], facing: -S, route: [{ to: [-4, -21], sprint: true, r: 0.8 }, { to: [-6, -21], r: 0.3 }], from: s => s.mode === "air" && s.y < 1.6, until: s => s.mode === "ground" && s.modeT > 0.2 && s.y < 0.1, after: 1, step: 0.03, max: 12 },
   // Q up the sprint lane, away from the camera, close: the afterimages left behind must not film over the character.
   "dash-away": { url: "/lab/move?panel=0&zoom=0.45", at: [-15.5, -13], facing: 0, route: [{ to: [-15.5, -11], r: 0.4 }, { to: [-15.5, -2], move: "dash", r: 20 }, { to: [-15.5, -1] }], from: s => s.dashT > 0, until: s => s.dashT <= 0, after: 3, step: 0.025, max: 8, w: 460, h: 420, geometry: "300x274+3+3" },
-  // The dev crowd strolling round the player in the village: residents' footstep dust (before: none).
-  "residents": { url: "/lab/island?time=day&weather=clear&season=summer&crowd=6&stroll=1", at: [-6, -10], facing: 0, route: null, from: () => true, until: () => false, after: 0, step: 0.12, limit: 1.45, max: 6, cols: 3, w: 640, h: 440, geometry: "420x289+3+3", warm: 4 },
+  // The dev crowd strolling round the player in the village, close: residents' footstep dust (before: none).
+  "residents": { url: "/lab/island?time=day&weather=clear&season=summer&crowd=6&stroll=1&zoom=0.45", at: [-6, -13], facing: 0, route: null, from: () => true, until: () => false, after: 0, step: 0.1, limit: 0.65, max: 6, cols: 2, fixed: { x: 280, y: 160, width: 600, height: 380 }, geometry: "560x355+3+3", warm: 6 },
 };
 const AFTER = {
-  "footprints-sand": { at: [-18.5, -9], facing: 0, route: [{ to: [-18.5, 4] }], from: s => s.z > -7, until: s => s.z > 1.5, after: 3, step: 0.18, max: 8, w: 460, h: 400, geometry: "300x261+3+3" },
-  "footprints-wet-sand": { url: VILLAGE, at: [-6.5, -19.2], facing: S, route: [{ to: [6.5, -19.2] }], from: s => s.x > -4.5, until: s => s.x > 2.5, after: 3, step: 0.18, max: 8, w: 460, h: 360, geometry: "300x235+3+3" },
-  "footprints-snow": { url: "/lab/island?time=day&weather=clear&season=winter&zoom=0.6", at: [-18, -10], facing: S, route: [{ to: [-4, -10] }], from: s => s.x > -15.5, until: s => s.x > -9, after: 3, step: 0.18, max: 8, w: 460, h: 360, geometry: "300x235+3+3" },
-  // Walk to a run to a crouch-walk on the apron, side on: each loop picks up the step where the last one left it.
-  "walk-run-handover": { at: [-7, 25.5], facing: S, route: [{ to: [-3, 25.5], r: 0.3 }, { to: [5, 25.5], sprint: true, r: 0.3 }, { to: [9, 25.5], crouch: true }], from: s => s.x > -4.2, until: s => s.x > 7.5, after: 0, step: 0.05, max: 16, cols: 4 },
+  // Walking down the lab's sand strip toward the camera: the prints trail behind, up the screen.
+  "footprints-sand": { at: [-18.5, 8], facing: Math.PI, route: [{ to: [-18.5, -1] }], from: s => s.z < 6, until: s => s.mode === "ground" && Math.hypot(s.vx, s.vz) < 0.05, after: 5, step: 0.25, limit: 6, max: 8, w: 420, h: 460, geometry: "280x307+3+3" },
+  "footprints-wet-sand": { url: VILLAGE, at: [-6.5, -19.2], facing: S, route: [{ to: [2.5, -19.2] }], from: s => s.x > -4.5, until: s => s.mode === "ground" && Math.hypot(s.vx, s.vz) < 0.05, after: 5, step: 0.25, limit: 6, max: 8, w: 560, h: 360, geometry: "350x225+3+3" },
+  "footprints-snow": { url: "/lab/island?time=day&weather=clear&season=winter&zoom=0.6", at: [-6, -13], facing: S, route: [{ to: [3, -13] }], from: s => s.x > -3.5, until: s => s.mode === "ground" && Math.hypot(s.vx, s.vz) < 0.05, after: 5, step: 0.25, limit: 6, max: 8, w: 560, h: 360, geometry: "350x225+3+3" },
+  // A walk building into a run on the apron, side on: the run picks up the step where the walk left it.
+  "walk-run-handover": { at: [-7, 25.5], facing: S, route: [{ to: [-3, 25.5], r: 0.3 }, { to: [12, 25.5], sprint: true }], from: s => s.x > -4.2, until: s => s.x > 4.5, after: 0, step: 0.05, max: 16, cols: 4 },
 };
 for (const [name, move] of Object.entries(MOVES)) if (!ONLY || ONLY.has(name)) await strip(name, move);
 if (TAG === "after") for (const [name, move] of Object.entries(AFTER)) if (!ONLY || ONLY.has(name)) await strip(name, move);

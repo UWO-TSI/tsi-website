@@ -245,6 +245,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       camera: () => camera.position.toArray(),
       /** Particles alive in the scene's movement system, and the ground under the avatar (evidence labels). */
       particles: () => particles.pool.alive,
+      prints: () => particles.prints.alive,
       ground: () => { const s = sim.current?.state; return s ? groundAt(groundSurface, world, s.x, s.z) : null; },
     } });
   }, [world, camera, gl, particles, groundSurface]);
