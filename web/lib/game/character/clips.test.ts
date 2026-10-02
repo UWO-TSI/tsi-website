@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { airPhase, combatClip, contactCrossed, crossfade, locomotion, matchPhase, resolveClip, seatLift, tempo, type ClipName, type CombatView } from "./clips";
-import { CLIPS, CLIP_BY_NAME } from "./look";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { GRIPS, GRIP_HAND, VERBS, airPhase, combatClip, contactCrossed, crossfade, gripFor, holdIdle, holdLayer, isLoop, layerTrack, layerWeight, locomotion, matchPhase, resolveClip, seatLift, tempo, verbClip, verbInfo, type ClipName, type CombatView } from "./clips";
+import { CLIPS, CLIP_BY_NAME, VERBS_URL, VERB_CLIPS } from "./look";
 
 describe("character state machine", () => {
   it("picks locomotion from speed", () => {
@@ -123,5 +125,59 @@ describe("the transition table and stride matching (movement feel milestone 2)",
     expect(locomotion(8.9, 7.4, "Run")).toBe("Run");
     expect(locomotion(8.4, 7.4, "Run")).toBe("Walk");
     expect(tempo("Walk", 1.5, 7.4)).toBeCloseTo(1.5 / 7.4, 6); // cadence follows a slow amble too
+  });
+});
+
+describe("the verb library (classes v2, design sheet §1.8)", () => {
+  it("names a clip per verb and grip, and finds the grip from the weapon type", () => {
+    expect(verbClip("Slam", "OneHand")).toBe("Slam_OneHand");
+    expect(holdIdle("Book")).toBe("HoldIdle_Book");
+    expect(["sword", "shield", "bow", "revolver", "staff", "tome", "fists", "totem", "kunai"].map(gripFor))
+      .toEqual(["OneHand", "OneHand", "Bow", "Pistol", "Staff", "Book", "Fists", "Staff", "OneHand"]);
+    expect(GRIP_HAND.Bow).toBe("L");
+    expect(GRIP_HAND.Book).toBe("L");
+  });
+  it("the catalogue carries every verb for every grip (one-shots with an impact key) and a looping hold idle per grip; the GLB ships", () => {
+    expect(VERB_CLIPS).toHaveLength(VERBS.length * GRIPS.length + GRIPS.length);
+    for (const g of GRIPS) {
+      for (const v of VERBS) {
+        const info = verbInfo(verbClip(v, g))!;
+        expect(info, `${v}_${g}`).toMatchObject({ verb: v, grip: g, loop: false });
+        expect(info.impact).toBeGreaterThan(0);
+        expect(info.impact).toBeLessThan(1);
+        expect(isLoop(verbClip(v, g))).toBe(false);
+      }
+      expect(verbInfo(holdIdle(g))).toMatchObject({ loop: true, upper: true });
+    }
+    expect(verbInfo("Channel_Staff")?.hold).toEqual([0.2, 0.8]);
+    expect(verbInfo("Slam_OneHand")?.upper).toBe(false);
+    expect(verbInfo("CastForward_Staff")?.upper).toBe(true);
+    expect(verbInfo("Walk")).toBeNull();
+    expect(existsSync(join(__dirname, "../../../public", VERBS_URL))).toBe(true);
+    expect(CLIP_BY_NAME.has("Slam_OneHand")).toBe(false); // the village set stays the village set
+  });
+  it("crosses into a verb in 0.05 s and back to locomotion in 0.1 s; a hit stays instant; the legacy attack fades are unchanged", () => {
+    expect(crossfade("Run", "Slam_OneHand")).toBe(0.05);
+    expect(crossfade("Slide", "CastForward_Staff")).toBe(0.05);
+    expect(crossfade("Slam_OneHand", "Run")).toBe(0.1);
+    expect(crossfade("Slam_OneHand", "Idle")).toBe(0.1);
+    expect(crossfade("Slam_OneHand", "Hit")).toBe(0.04);
+    expect(crossfade("Idle", "AttackMelee")).toBe(0.08);
+    expect(crossfade("AttackMelee", "Idle")).toBe(0.14);
+  });
+  it("overlay layers drive only their bones, and an upper one-shot eases in and out", () => {
+    const upper = (t: string) => layerTrack("upper", `mixamorig${t}.quaternion`);
+    expect(["Spine", "Spine1", "Spine2", "Neck", "Head", "LeftShoulder", "RightArm", "LeftForeArm", "RightHand"].every(upper)).toBe(true);
+    expect(["Hips", "LeftUpLeg", "RightLeg", "LeftFoot", "RightToeBase"].some(upper)).toBe(false);
+    expect(layerTrack("upper", "mixamorigHips.position")).toBe(false);
+    expect(layerTrack("arms", "mixamorigSpine.quaternion")).toBe(false);
+    expect(layerTrack("arms", "mixamorigLeftHand.quaternion")).toBe(true);
+    expect(layerTrack("rightArm", "mixamorigLeftHand.quaternion")).toBe(false);
+    expect([holdLayer("HoldRod"), holdLayer("HoldFront"), holdLayer("HoldIdle_Fists")]).toEqual(["rightArm", "arms", "arms"]);
+    expect(layerWeight(-0.01, 0.7)).toBe(0);
+    expect(layerWeight(0.025, 0.7)).toBeCloseTo(0.5);
+    expect(layerWeight(0.35, 0.7)).toBe(1);
+    expect(layerWeight(0.65, 0.7)).toBeCloseTo(0.5);
+    expect(layerWeight(0.7, 0.7)).toBe(0);
   });
 });

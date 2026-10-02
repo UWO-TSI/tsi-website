@@ -13,10 +13,10 @@ import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { BASE_URL, FACE_ATLAS_URLS, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, bodyKey, resolveParts, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
+import { BASE_URL, FACE_ATLAS_URLS, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
 import { FaceAnimator, faceSlots, poseKey } from "@/lib/game/character/face";
 import { createFaceMaterial, MATTE, prepareFaceAtlas, type FaceMaterial } from "@/lib/game/character/faceMaterial";
-import { WEAPON_HAND, contactCrossed, crossfade, isLoop, matchPhase, resolveClip, tempo, type CharacterMotion, type ClipName } from "@/lib/game/character/clips";
+import { ATTACK_CLIP, WEAPON_HAND, contactCrossed, crossfade, holdLayer, isLoop, layerTrack, layerWeight, matchPhase, resolveClip, tempo, verbInfo, type CharacterMotion, type ClipName, type Layer } from "@/lib/game/character/clips";
 import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } from "@/lib/game/character/rig";
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
@@ -93,6 +93,8 @@ class Puppet {
   readonly sockets: Record<"R" | "L" | "Back", THREE.Object3D>;
   private readonly mixer: THREE.AnimationMixer;
   private readonly clips: Map<string, THREE.AnimationClip>;
+  /** What a verb clip plays until the verb library has loaded (the legacy attack clip for the weapon in hand). */
+  fallback: ClipName = "AttackMelee";
   private readonly bones: THREE.Bone[];
   private readonly body: THREE.SkinnedMesh;
   private readonly face: THREE.SkinnedMesh;
@@ -106,6 +108,11 @@ class Puppet {
   private action: THREE.AnimationAction | null = null;
   private clip: ClipName | null = null;
   private oneShot: ClipName | null = null;
+  private oneShotRate = 1;
+  /** The upper-body one-shot (`motion.upper`): its clip, clock and timing scale; laid over the spine up after the mixer. */
+  private upperClip: ClipName | null = null;
+  private upperT = 0;
+  private upperRate = 1;
   private readonly skeleton: THREE.Skeleton;
   private readonly ghostParent: THREE.Object3D;
   private readonly ghosts: Ghost[] = [];
@@ -115,7 +122,8 @@ class Puppet {
   private holdShown: ClipName | null = null;
   private holdW = 0;
   private holdT = 0;
-  private readonly holdArms = new Map<ClipName, { bone: THREE.Bone; at: THREE.Interpolant }[]>();
+  /** A clip's tracks on one overlay layer's bones, sampled live (the arm holds, the upper-body one-shot). */
+  private readonly layerTracks = new Map<string, { bone: THREE.Bone; at: THREE.Interpolant }[]>();
   /** Held items put away: they shrink into the hand before they go (never a pop). */
   private readonly retiring: { model: THREE.Object3D; t: number; from: number }[] = [];
 
@@ -194,34 +202,53 @@ class Puppet {
     this.faceMat.set(PALETTE.skin[this.look.skin], faceSlots(this.look, pose));
   }
 
-  get attacking() { return !!this.clip?.startsWith("Attack"); }
+  /** The weapon takes its attack grip while an attack clip or a verb plays, on the body or the upper body. */
+  get attacking() { return !!this.clip?.startsWith("Attack") || !!(this.clip && verbInfo(this.clip)) || !!this.upperClip; }
+
+  /** The verb library's clips (Character `verbs`), merged in when its GLB arrives. */
+  addClips(list: THREE.AnimationClip[]) { for (const c of list) this.clips.set(c.name, c); }
+  /** A clip, or for a verb not loaded yet the fallback attack clip. */
+  private clipFor(name: ClipName) { return this.clips.get(name) ?? (verbInfo(name) && !name.startsWith("HoldIdle_") ? this.clips.get(this.fallback) : undefined); }
   /** The clip showing now (a held item picks its grip and whether it shows from it). */
   get current() { return this.clip; }
 
-  /** The hold clip's arm tracks, sampled live: the right arm for a tool, both for something held in front. */
-  private arms(name: ClipName) {
-    let arms = this.holdArms.get(name);
-    if (arms) return arms;
-    const both = name === "HoldFront", side = both ? /^mixamorig(Right|Left)(Shoulder|Arm|ForeArm|Hand)\.quaternion$/ : /^mixamorigRight(Shoulder|Arm|ForeArm|Hand)\.quaternion$/;
-    const clip = this.clips.get(name);
-    arms = (clip?.tracks ?? []).filter(t => side.test(t.name)).flatMap(t => {
+  /** A clip's tracks on a layer's bones (clips.ts LAYER_BONES), sampled live: a tool's hold the right arm, two-handed holds both, the upper body the spine up. */
+  private tracks(clip: THREE.AnimationClip, layer: Layer) {
+    const key = `${clip.name}|${layer}`;
+    let list = this.layerTracks.get(key);
+    if (list) return list;
+    list = clip.tracks.filter(t => layerTrack(layer, t.name)).flatMap(t => {
       const bone = this.bones.find(b => b.name === t.name.slice(0, t.name.indexOf(".")));
       return bone ? [{ bone, at: new THREE.QuaternionLinearInterpolant(t.times, t.values, 4, new Float32Array(4)) }] : [];
     });
-    this.holdArms.set(name, arms);
-    return arms;
+    this.layerTracks.set(key, list);
+    return list;
   }
 
-  /** Lay the hold over the arms (after the mixer): on while walking, running, idling or in the air; off in an action, a seat or a slide. */
-  private hold(delta: number, want: ClipName) {
-    if (this.holdClip) this.holdShown = this.holdClip;
-    const on = !!this.holdClip && HOLD_OVER.has(want) && !this.oneShot;
+  /**
+   * Lay the hold over the arms (after the mixer): on while walking, running, idling or in the air; off in an action, a
+   * seat or a slide. A held tool's hold wins over the one asked for (`motion.hold`, a grip's HoldIdle in the ruins).
+   */
+  private hold(delta: number, want: ClipName, asked: ClipName | null) {
+    const name = this.holdClip ?? asked;
+    if (name && this.clips.has(name)) this.holdShown = name;
+    const on = !!name && HOLD_OVER.has(want) && !this.oneShot && !this.upperClip;
     this.holdW += ((on ? 1 : 0) - this.holdW) * (1 - Math.exp(-14 * delta));
     if (this.holdW < 0.002 || !this.holdShown) return;
     const clip = this.clips.get(this.holdShown);
     if (!clip) return;
     this.holdT = (this.holdT + delta) % clip.duration;
-    for (const { bone, at } of this.arms(this.holdShown)) bone.quaternion.slerp(holdQ.fromArray(at.evaluate(this.holdT)), this.holdW);
+    for (const { bone, at } of this.tracks(clip, holdLayer(this.holdShown))) bone.quaternion.slerp(holdQ.fromArray(at.evaluate(this.holdT)), this.holdW);
+  }
+
+  /** The upper-body one-shot (after the mixer and the hold): the spine up eases into it over 0.05 s and back out over its last 0.1 s. */
+  private upper(delta: number) {
+    if (!this.upperClip) return;
+    const clip = this.clipFor(this.upperClip);
+    this.upperT += delta * this.upperRate;
+    if (!clip || this.upperT >= clip.duration) { this.upperClip = null; return; }
+    const w = layerWeight(this.upperT, clip.duration);
+    for (const { bone, at } of this.tracks(clip, "upper")) bone.quaternion.slerp(holdQ.fromArray(at.evaluate(this.upperT)), w);
   }
 
   /** Take out a held item: its grip's arm hold, until it is put away (`release` with the same clip). */
@@ -251,7 +278,7 @@ class Puppet {
   }
 
   private play(name: ClipName) {
-    const clip = this.clips.get(name) ?? this.clips.get("Idle")!;
+    const clip = this.clipFor(name) ?? this.clips.get("Idle")!;
     const next = this.mixer.clipAction(clip);
     const loop = isLoop(name);
     // Walk, run and crouch-walk hand over in step: the next loop starts with the same foot where this one had it.
@@ -288,7 +315,9 @@ class Puppet {
     // A looping clip asked for as a one-shot (Dance) holds as a pose; moving ends any pose.
     if (motion.stop) { this.oneShot = null; motion.stop = false; }
     if (motion.play && isLoop(motion.play)) { motion.pose = motion.play; motion.play = null; }
-    if (motion.play) { this.oneShot = motion.play; motion.play = null; restart = true; }
+    if (motion.play) { this.oneShot = motion.play; this.oneShotRate = motion.playRate ?? 1; motion.play = null; restart = true; }
+    if (motion.upper) { this.upperClip = motion.upper; this.upperT = 0; this.upperRate = motion.playRate ?? 1; motion.upper = null; }
+    motion.playRate = undefined;
     if (motion.speed >= 0.08) motion.pose = null;
     if (this.oneShot && this.clip === this.oneShot && !restart && this.action && this.action.time >= this.action.getClip().duration - 1e-3) this.oneShot = null;
     const want = resolveClip({ speed: motion.speed, walkSpeed, pose: motion.pose ?? null, oneShot: this.oneShot, move: motion.move, current: this.clip });
@@ -299,12 +328,13 @@ class Puppet {
       // Posed by its phase (Air by vertical speed), not by the clock.
       action.setEffectiveTimeScale(0);
       action.time = Math.min(1, Math.max(0, motion.air ?? 0)) * length * 0.999;
-    } else action.setEffectiveTimeScale(tempo(want, motion.speed, walkSpeed));
+    } else action.setEffectiveTimeScale(want === this.oneShot ? this.oneShotRate : tempo(want, motion.speed, walkSpeed));
     this.animateFace(delta, want, motion);
     // Walk and Run count each foot's contact as the playhead passes it (footsteps come from the feet, not a timer).
     const contacts = changed ? undefined : CLIP_BY_NAME.get(want)?.contacts, before = action.time / length;
     this.mixer.update(delta);
-    this.hold(delta, want);
+    this.hold(delta, want, motion.hold ?? null);
+    this.upper(delta);
     this.retireStep(delta);
     const foot = contactCrossed(contacts, before, action.time / length);
     if (foot >= 0) { motion.steps = (motion.steps ?? 0) + 1; motion.foot = foot; }
@@ -318,7 +348,7 @@ class Puppet {
     this.retiring.length = 0;
     this.mixer.stopAllAction();
     this.mixer.uncacheRoot(this.root);
-    this.action = null; this.clip = null; this.oneShot = null;
+    this.action = null; this.clip = null; this.oneShot = null; this.upperClip = null;
     if (this.bodyKey) bodies.release(this.bodyKey);
     this.faceMat?.dispose();
     this.faceMat = null;
@@ -326,7 +356,9 @@ class Puppet {
   }
 }
 
-export interface WeaponView { kind: WeaponKind; model: string; modelScale: number; inHand: boolean; grip?: WeaponGrip }
+export interface WeaponView { kind: WeaponKind; model: string; modelScale: number; inHand: boolean; grip?: WeaponGrip;
+  /** The hand that holds it, over the kind's (clips.ts GRIP_HAND: the verb library's Book grip holds the tome in the left). */
+  hand?: "L" | "R" }
 /**
  * Weapon placement per kind in socket space (row 140): in hand in the ruins, across the back elsewhere.
  * Weapons are authored grip-at-origin, tip up +Y. `rest` is the in-hand pose outside attack clips: the
@@ -341,13 +373,14 @@ const GRIP: Record<WeaponKind, WeaponGrip> = {
 };
 const gripQ = new THREE.Quaternion(), gripE = new THREE.Euler();
 
-function HeldWeapon({ puppet, weapon: { kind, model: url, modelScale, inHand, grip } }: { puppet: Puppet; weapon: WeaponView }) {
+function HeldWeapon({ puppet, motion, weapon: { kind, model: url, modelScale, inHand, grip, hand } }: { puppet: Puppet; motion: RefObject<CharacterMotion>; weapon: WeaponView }) {
   const { scene } = useGLTF(url);
   const model = useMemo(() => tagLookClasses(scene.clone(true), url), [scene, url]);
   useEffect(() => {
-    placeWeapon(model, { kind, model: url, modelScale, inHand, grip }, inHand ? puppet.sockets[WEAPON_HAND[kind]] : puppet.sockets.Back);
-    return () => { model.removeFromParent(); };
-  }, [model, puppet, kind, url, modelScale, inHand, grip]);
+    placeWeapon(model, { kind, model: url, modelScale, inHand, grip }, inHand ? puppet.sockets[hand ?? WEAPON_HAND[kind]] : puppet.sockets.Back);
+    const shown = showWeapon(motion.current, inHand ? model : null);
+    return () => { model.removeFromParent(); shown(); };
+  }, [model, puppet, motion, kind, url, modelScale, inHand, grip, hand]);
   // Upright at rest, the attack grip while an attack clip plays (eased so the swap doesn't pop).
   useFrame((_, delta) => {
     const g = grip ?? GRIP[kind];
@@ -355,6 +388,11 @@ function HeldWeapon({ puppet, weapon: { kind, model: url, modelScale, inHand, gr
     model.quaternion.slerp(gripQ.setFromEuler(gripE.set(...(puppet.attacking ? g.hand : g.rest))), 1 - Math.exp(-delta * 24));
   });
   return null;
+}
+/** Ribbon trails sample the weapon in hand (CharacterMotion.weaponModel); returns the cleanup. Module scope: hook values are never written in a component. */
+function showWeapon(m: CharacterMotion | null, model: THREE.Object3D | null) {
+  if (m) m.weaponModel = model;
+  return () => { if (m && model && m.weaponModel === model) m.weaponModel = null; };
 }
 function placeWeapon(model: THREE.Object3D, weapon: WeaponView, socket: THREE.Object3D) {
   const g = weapon.grip ?? GRIP[weapon.kind];
@@ -467,12 +505,14 @@ export interface CharacterProps {
   held?: HeldView | null;
   /** Owns the leaf glider: the leaf shows while `motion.leaf` is open. */
   leaf?: boolean;
+  /** Loads the verb library (the ruins' player): its clips join this character's, never suspending the scene. */
+  verbs?: boolean;
   /** Face atlas density: 512 px per face canvas in the world (sharp at village distance), 1024 in the creator. */
   faceSize?: number;
   scale?: number;
 }
 
-export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, held = null, leaf = false, faceSize = 512, scale = CHARACTER_SCALE }: CharacterProps) {
+export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, held = null, leaf = false, verbs = false, faceSize = 512, scale = CHARACTER_SCALE }: CharacterProps) {
   // While a newly chosen part loads, keep showing the previous look instead of suspending.
   const shown = useDeferredValue(look);
   const parts = useMemo(() => resolveParts(shown), [shown]);
@@ -482,6 +522,8 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
   const base = loaded[0];
   const puppet = useMemo(() => new Puppet(base), [base]);
   useEffect(() => () => puppet.dispose(), [puppet]);
+  // A verb asked for before the library loads plays the weapon's own attack clip.
+  useEffect(() => setFallback(puppet, weapon?.kind), [puppet, weapon?.kind]);
   useEffect(() => {
     dressPuppet(puppet, shown, parts, loaded.slice(1).map(g => g.scene), atlas, decalMap);
   }, [puppet, shown, parts, loaded, atlas, decalMap]);
@@ -501,13 +543,22 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
   });
   return <group ref={group}>
     <primitive object={puppet.root} scale={scale} dispose={null} />
-    {weapon && <HeldWeapon puppet={puppet} weapon={weapon} />}
+    {weapon && <HeldWeapon puppet={puppet} motion={motion} weapon={weapon} />}
+    {/* Its own boundary: the ruins never wait for the verb library; a verb asked for meanwhile plays the attack clip. */}
+    {verbs && <Suspense fallback={null}><VerbClips puppet={puppet} /></Suspense>}
     {/* Its own boundary: taking out a tool never suspends the scene while its model loads. */}
     {held && <Suspense fallback={null}><HeldItem key={`${held.hold}:${held.url}`} puppet={puppet} view={held} /></Suspense>}
     {/* Its own boundary: crafting the glider mid-session must not suspend the scene while the leaf loads. */}
     {leaf && <Suspense fallback={null}><HeldLeaf puppet={puppet} motion={motion} scale={scale} /></Suspense>}
   </group>;
 }
+/** The verb library's actions (build_clips.py `-- verbs`): the same rig's tracks, merged into the puppet's clips. */
+function VerbClips({ puppet }: { puppet: Puppet }) {
+  const { animations } = useGLTF(VERBS_URL) as unknown as Gltf;
+  useEffect(() => puppet.addClips(animations), [puppet, animations]);
+  return null;
+}
+function setFallback(puppet: Puppet, kind: WeaponKind | undefined) { puppet.fallback = ATTACK_CLIP[kind ?? "melee"]; }
 function dressPuppet(puppet: Puppet, look: CharacterLook, parts: ResolvedPart[], scenes: THREE.Object3D[], atlas: THREE.Texture, decalMap: THREE.Texture) {
   decalMap.flipY = false;
   decalMap.colorSpace = THREE.SRGBColorSpace;

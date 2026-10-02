@@ -38,6 +38,15 @@ export const PARTS = [...catalog.outfits, ...catalog.accessories, ...catalog.hai
 export const PART_BY_ID = new Map(PARTS.map(p => [p.id, p]));
 export const CLIPS = catalog.clips as ClipInfo[];
 export const CLIP_BY_NAME = new Map(CLIPS.map(c => [c.name, c]));
+/**
+ * The verb library (classes v2, design sheet §1.8; build_clips.py `-- verbs`): `${Verb}_${Grip}` one-shots and a hold
+ * idle per grip, in their own GLB that only the ruins load. `impact`: phase of the hit key (hitstop, an ult's freeze);
+ * `upper`: it can play on the upper body over locomotion and slides; `hold`: the phase span a held verb loops.
+ */
+export interface VerbInfo { name: string; verb: string; grip: string; length: number; loop: boolean; frames: number; hand: "L" | "R" | "both"; upper: boolean; impact: number; hold?: [number, number] }
+export const VERBS_URL = `${CHARACTER_ROOT}${catalog.verbs.glb}`;
+export const VERB_CLIPS = catalog.verbs.clips as VerbInfo[];
+export const VERB_BY_NAME = new Map(VERB_CLIPS.map(c => [c.name, c]));
 export const PALETTE = { skin: palette.skin, hair: palette.hair, outfit: palette.outfit };
 /** An atlas cell: rect [x, y, w, h] (px, top-left origin) and the point (ax, ay) in it that sits on its anchor. */
 export type FaceCell = [number, number, number, number, number, number];

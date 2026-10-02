@@ -2005,5 +2005,1182 @@
    "v7": true,
    "capFrom": -6
   }
- ]
+ ],
+ "verbs": {
+  "glb": "base/v7_verbs.glb",
+  "fps": 30,
+  "note": "The verb library (classes v2, design sheet 1.8): the rig and its actions only, loaded in the ruins. impact = phase of the hit key; upper = can play on the upper body; hold = the phase span a held verb loops.",
+  "clips": [
+   {
+    "name": "CastForward_OneHand",
+    "verb": "CastForward",
+    "grip": "OneHand",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.36
+   },
+   {
+    "name": "CastUp_OneHand",
+    "verb": "CastUp",
+    "grip": "OneHand",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.42
+   },
+   {
+    "name": "Slam_OneHand",
+    "verb": "Slam",
+    "grip": "OneHand",
+    "length": 0.9,
+    "loop": false,
+    "frames": 27,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.44
+   },
+   {
+    "name": "Thrust_OneHand",
+    "verb": "Thrust",
+    "grip": "OneHand",
+    "length": 0.6,
+    "loop": false,
+    "frames": 18,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.34
+   },
+   {
+    "name": "Spin_OneHand",
+    "verb": "Spin",
+    "grip": "OneHand",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.3
+   },
+   {
+    "name": "LeapStrike_OneHand",
+    "verb": "LeapStrike",
+    "grip": "OneHand",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.56
+   },
+   {
+    "name": "Throw_OneHand",
+    "verb": "Throw",
+    "grip": "OneHand",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.4
+   },
+   {
+    "name": "Summon_OneHand",
+    "verb": "Summon",
+    "grip": "OneHand",
+    "length": 0.9,
+    "loop": false,
+    "frames": 27,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.46
+   },
+   {
+    "name": "Channel_OneHand",
+    "verb": "Channel",
+    "grip": "OneHand",
+    "length": 1.2,
+    "loop": false,
+    "frames": 36,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.2,
+    "hold": [
+     0.2,
+     0.8
+    ]
+   },
+   {
+    "name": "Guard_OneHand",
+    "verb": "Guard",
+    "grip": "OneHand",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.2,
+    "hold": [
+     0.2,
+     0.8
+    ]
+   },
+   {
+    "name": "Kick_OneHand",
+    "verb": "Kick",
+    "grip": "OneHand",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.36
+   },
+   {
+    "name": "Sweep_OneHand",
+    "verb": "Sweep",
+    "grip": "OneHand",
+    "length": 0.733,
+    "loop": false,
+    "frames": 22,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.42
+   },
+   {
+    "name": "Plant_OneHand",
+    "verb": "Plant",
+    "grip": "OneHand",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.42
+   },
+   {
+    "name": "DrawShot_OneHand",
+    "verb": "DrawShot",
+    "grip": "OneHand",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.66
+   },
+   {
+    "name": "QuickShot_OneHand",
+    "verb": "QuickShot",
+    "grip": "OneHand",
+    "length": 0.467,
+    "loop": false,
+    "frames": 14,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.16
+   },
+   {
+    "name": "Backstep_OneHand",
+    "verb": "Backstep",
+    "grip": "OneHand",
+    "length": 0.533,
+    "loop": false,
+    "frames": 16,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.3
+   },
+   {
+    "name": "HoldIdle_OneHand",
+    "verb": "HoldIdle",
+    "grip": "OneHand",
+    "length": 2.0,
+    "loop": true,
+    "frames": 60,
+    "hand": "R",
+    "upper": true,
+    "impact": 0
+   },
+   {
+    "name": "CastForward_Staff",
+    "verb": "CastForward",
+    "grip": "Staff",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.36
+   },
+   {
+    "name": "CastUp_Staff",
+    "verb": "CastUp",
+    "grip": "Staff",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.42
+   },
+   {
+    "name": "Slam_Staff",
+    "verb": "Slam",
+    "grip": "Staff",
+    "length": 0.9,
+    "loop": false,
+    "frames": 27,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.44
+   },
+   {
+    "name": "Thrust_Staff",
+    "verb": "Thrust",
+    "grip": "Staff",
+    "length": 0.6,
+    "loop": false,
+    "frames": 18,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.34
+   },
+   {
+    "name": "Spin_Staff",
+    "verb": "Spin",
+    "grip": "Staff",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.3
+   },
+   {
+    "name": "LeapStrike_Staff",
+    "verb": "LeapStrike",
+    "grip": "Staff",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.56
+   },
+   {
+    "name": "Throw_Staff",
+    "verb": "Throw",
+    "grip": "Staff",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.4
+   },
+   {
+    "name": "Summon_Staff",
+    "verb": "Summon",
+    "grip": "Staff",
+    "length": 0.9,
+    "loop": false,
+    "frames": 27,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.46
+   },
+   {
+    "name": "Channel_Staff",
+    "verb": "Channel",
+    "grip": "Staff",
+    "length": 1.2,
+    "loop": false,
+    "frames": 36,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.2,
+    "hold": [
+     0.2,
+     0.8
+    ]
+   },
+   {
+    "name": "Guard_Staff",
+    "verb": "Guard",
+    "grip": "Staff",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.2,
+    "hold": [
+     0.2,
+     0.8
+    ]
+   },
+   {
+    "name": "Kick_Staff",
+    "verb": "Kick",
+    "grip": "Staff",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.36
+   },
+   {
+    "name": "Sweep_Staff",
+    "verb": "Sweep",
+    "grip": "Staff",
+    "length": 0.733,
+    "loop": false,
+    "frames": 22,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.42
+   },
+   {
+    "name": "Plant_Staff",
+    "verb": "Plant",
+    "grip": "Staff",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.42
+   },
+   {
+    "name": "DrawShot_Staff",
+    "verb": "DrawShot",
+    "grip": "Staff",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.66
+   },
+   {
+    "name": "QuickShot_Staff",
+    "verb": "QuickShot",
+    "grip": "Staff",
+    "length": 0.467,
+    "loop": false,
+    "frames": 14,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.16
+   },
+   {
+    "name": "Backstep_Staff",
+    "verb": "Backstep",
+    "grip": "Staff",
+    "length": 0.533,
+    "loop": false,
+    "frames": 16,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.3
+   },
+   {
+    "name": "HoldIdle_Staff",
+    "verb": "HoldIdle",
+    "grip": "Staff",
+    "length": 2.0,
+    "loop": true,
+    "frames": 60,
+    "hand": "R",
+    "upper": true,
+    "impact": 0
+   },
+   {
+    "name": "CastForward_Bow",
+    "verb": "CastForward",
+    "grip": "Bow",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.36
+   },
+   {
+    "name": "CastUp_Bow",
+    "verb": "CastUp",
+    "grip": "Bow",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.42
+   },
+   {
+    "name": "Slam_Bow",
+    "verb": "Slam",
+    "grip": "Bow",
+    "length": 0.9,
+    "loop": false,
+    "frames": 27,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.44
+   },
+   {
+    "name": "Thrust_Bow",
+    "verb": "Thrust",
+    "grip": "Bow",
+    "length": 0.6,
+    "loop": false,
+    "frames": 18,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.34
+   },
+   {
+    "name": "Spin_Bow",
+    "verb": "Spin",
+    "grip": "Bow",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.3
+   },
+   {
+    "name": "LeapStrike_Bow",
+    "verb": "LeapStrike",
+    "grip": "Bow",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.56
+   },
+   {
+    "name": "Throw_Bow",
+    "verb": "Throw",
+    "grip": "Bow",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.4
+   },
+   {
+    "name": "Summon_Bow",
+    "verb": "Summon",
+    "grip": "Bow",
+    "length": 0.9,
+    "loop": false,
+    "frames": 27,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.46
+   },
+   {
+    "name": "Channel_Bow",
+    "verb": "Channel",
+    "grip": "Bow",
+    "length": 1.2,
+    "loop": false,
+    "frames": 36,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.2,
+    "hold": [
+     0.2,
+     0.8
+    ]
+   },
+   {
+    "name": "Guard_Bow",
+    "verb": "Guard",
+    "grip": "Bow",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.2,
+    "hold": [
+     0.2,
+     0.8
+    ]
+   },
+   {
+    "name": "Kick_Bow",
+    "verb": "Kick",
+    "grip": "Bow",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.36
+   },
+   {
+    "name": "Sweep_Bow",
+    "verb": "Sweep",
+    "grip": "Bow",
+    "length": 0.733,
+    "loop": false,
+    "frames": 22,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.42
+   },
+   {
+    "name": "Plant_Bow",
+    "verb": "Plant",
+    "grip": "Bow",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.42
+   },
+   {
+    "name": "DrawShot_Bow",
+    "verb": "DrawShot",
+    "grip": "Bow",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.66
+   },
+   {
+    "name": "QuickShot_Bow",
+    "verb": "QuickShot",
+    "grip": "Bow",
+    "length": 0.467,
+    "loop": false,
+    "frames": 14,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.16
+   },
+   {
+    "name": "Backstep_Bow",
+    "verb": "Backstep",
+    "grip": "Bow",
+    "length": 0.533,
+    "loop": false,
+    "frames": 16,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.3
+   },
+   {
+    "name": "HoldIdle_Bow",
+    "verb": "HoldIdle",
+    "grip": "Bow",
+    "length": 2.0,
+    "loop": true,
+    "frames": 60,
+    "hand": "L",
+    "upper": true,
+    "impact": 0
+   },
+   {
+    "name": "CastForward_Pistol",
+    "verb": "CastForward",
+    "grip": "Pistol",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.36
+   },
+   {
+    "name": "CastUp_Pistol",
+    "verb": "CastUp",
+    "grip": "Pistol",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.42
+   },
+   {
+    "name": "Slam_Pistol",
+    "verb": "Slam",
+    "grip": "Pistol",
+    "length": 0.9,
+    "loop": false,
+    "frames": 27,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.44
+   },
+   {
+    "name": "Thrust_Pistol",
+    "verb": "Thrust",
+    "grip": "Pistol",
+    "length": 0.6,
+    "loop": false,
+    "frames": 18,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.34
+   },
+   {
+    "name": "Spin_Pistol",
+    "verb": "Spin",
+    "grip": "Pistol",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.3
+   },
+   {
+    "name": "LeapStrike_Pistol",
+    "verb": "LeapStrike",
+    "grip": "Pistol",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.56
+   },
+   {
+    "name": "Throw_Pistol",
+    "verb": "Throw",
+    "grip": "Pistol",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.4
+   },
+   {
+    "name": "Summon_Pistol",
+    "verb": "Summon",
+    "grip": "Pistol",
+    "length": 0.9,
+    "loop": false,
+    "frames": 27,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.46
+   },
+   {
+    "name": "Channel_Pistol",
+    "verb": "Channel",
+    "grip": "Pistol",
+    "length": 1.2,
+    "loop": false,
+    "frames": 36,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.2,
+    "hold": [
+     0.2,
+     0.8
+    ]
+   },
+   {
+    "name": "Guard_Pistol",
+    "verb": "Guard",
+    "grip": "Pistol",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.2,
+    "hold": [
+     0.2,
+     0.8
+    ]
+   },
+   {
+    "name": "Kick_Pistol",
+    "verb": "Kick",
+    "grip": "Pistol",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.36
+   },
+   {
+    "name": "Sweep_Pistol",
+    "verb": "Sweep",
+    "grip": "Pistol",
+    "length": 0.733,
+    "loop": false,
+    "frames": 22,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.42
+   },
+   {
+    "name": "Plant_Pistol",
+    "verb": "Plant",
+    "grip": "Pistol",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.42
+   },
+   {
+    "name": "DrawShot_Pistol",
+    "verb": "DrawShot",
+    "grip": "Pistol",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.66
+   },
+   {
+    "name": "QuickShot_Pistol",
+    "verb": "QuickShot",
+    "grip": "Pistol",
+    "length": 0.467,
+    "loop": false,
+    "frames": 14,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.16
+   },
+   {
+    "name": "Backstep_Pistol",
+    "verb": "Backstep",
+    "grip": "Pistol",
+    "length": 0.533,
+    "loop": false,
+    "frames": 16,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.3
+   },
+   {
+    "name": "HoldIdle_Pistol",
+    "verb": "HoldIdle",
+    "grip": "Pistol",
+    "length": 2.0,
+    "loop": true,
+    "frames": 60,
+    "hand": "L",
+    "upper": true,
+    "impact": 0
+   },
+   {
+    "name": "CastForward_Fists",
+    "verb": "CastForward",
+    "grip": "Fists",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "both",
+    "upper": true,
+    "impact": 0.36
+   },
+   {
+    "name": "CastUp_Fists",
+    "verb": "CastUp",
+    "grip": "Fists",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "both",
+    "upper": true,
+    "impact": 0.42
+   },
+   {
+    "name": "Slam_Fists",
+    "verb": "Slam",
+    "grip": "Fists",
+    "length": 0.9,
+    "loop": false,
+    "frames": 27,
+    "hand": "both",
+    "upper": false,
+    "impact": 0.44
+   },
+   {
+    "name": "Thrust_Fists",
+    "verb": "Thrust",
+    "grip": "Fists",
+    "length": 0.6,
+    "loop": false,
+    "frames": 18,
+    "hand": "both",
+    "upper": true,
+    "impact": 0.34
+   },
+   {
+    "name": "Spin_Fists",
+    "verb": "Spin",
+    "grip": "Fists",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "both",
+    "upper": false,
+    "impact": 0.3
+   },
+   {
+    "name": "LeapStrike_Fists",
+    "verb": "LeapStrike",
+    "grip": "Fists",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "both",
+    "upper": false,
+    "impact": 0.56
+   },
+   {
+    "name": "Throw_Fists",
+    "verb": "Throw",
+    "grip": "Fists",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "both",
+    "upper": true,
+    "impact": 0.4
+   },
+   {
+    "name": "Summon_Fists",
+    "verb": "Summon",
+    "grip": "Fists",
+    "length": 0.9,
+    "loop": false,
+    "frames": 27,
+    "hand": "both",
+    "upper": true,
+    "impact": 0.46
+   },
+   {
+    "name": "Channel_Fists",
+    "verb": "Channel",
+    "grip": "Fists",
+    "length": 1.2,
+    "loop": false,
+    "frames": 36,
+    "hand": "both",
+    "upper": true,
+    "impact": 0.2,
+    "hold": [
+     0.2,
+     0.8
+    ]
+   },
+   {
+    "name": "Guard_Fists",
+    "verb": "Guard",
+    "grip": "Fists",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "both",
+    "upper": true,
+    "impact": 0.2,
+    "hold": [
+     0.2,
+     0.8
+    ]
+   },
+   {
+    "name": "Kick_Fists",
+    "verb": "Kick",
+    "grip": "Fists",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "both",
+    "upper": false,
+    "impact": 0.36
+   },
+   {
+    "name": "Sweep_Fists",
+    "verb": "Sweep",
+    "grip": "Fists",
+    "length": 0.733,
+    "loop": false,
+    "frames": 22,
+    "hand": "both",
+    "upper": false,
+    "impact": 0.42
+   },
+   {
+    "name": "Plant_Fists",
+    "verb": "Plant",
+    "grip": "Fists",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "both",
+    "upper": false,
+    "impact": 0.42
+   },
+   {
+    "name": "DrawShot_Fists",
+    "verb": "DrawShot",
+    "grip": "Fists",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "both",
+    "upper": true,
+    "impact": 0.66
+   },
+   {
+    "name": "QuickShot_Fists",
+    "verb": "QuickShot",
+    "grip": "Fists",
+    "length": 0.467,
+    "loop": false,
+    "frames": 14,
+    "hand": "both",
+    "upper": true,
+    "impact": 0.16
+   },
+   {
+    "name": "Backstep_Fists",
+    "verb": "Backstep",
+    "grip": "Fists",
+    "length": 0.533,
+    "loop": false,
+    "frames": 16,
+    "hand": "both",
+    "upper": false,
+    "impact": 0.3
+   },
+   {
+    "name": "HoldIdle_Fists",
+    "verb": "HoldIdle",
+    "grip": "Fists",
+    "length": 2.0,
+    "loop": true,
+    "frames": 60,
+    "hand": "both",
+    "upper": true,
+    "impact": 0
+   },
+   {
+    "name": "CastForward_Book",
+    "verb": "CastForward",
+    "grip": "Book",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.36
+   },
+   {
+    "name": "CastUp_Book",
+    "verb": "CastUp",
+    "grip": "Book",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.42
+   },
+   {
+    "name": "Slam_Book",
+    "verb": "Slam",
+    "grip": "Book",
+    "length": 0.9,
+    "loop": false,
+    "frames": 27,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.44
+   },
+   {
+    "name": "Thrust_Book",
+    "verb": "Thrust",
+    "grip": "Book",
+    "length": 0.6,
+    "loop": false,
+    "frames": 18,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.34
+   },
+   {
+    "name": "Spin_Book",
+    "verb": "Spin",
+    "grip": "Book",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.3
+   },
+   {
+    "name": "LeapStrike_Book",
+    "verb": "LeapStrike",
+    "grip": "Book",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.56
+   },
+   {
+    "name": "Throw_Book",
+    "verb": "Throw",
+    "grip": "Book",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.4
+   },
+   {
+    "name": "Summon_Book",
+    "verb": "Summon",
+    "grip": "Book",
+    "length": 0.9,
+    "loop": false,
+    "frames": 27,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.46
+   },
+   {
+    "name": "Channel_Book",
+    "verb": "Channel",
+    "grip": "Book",
+    "length": 1.2,
+    "loop": false,
+    "frames": 36,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.2,
+    "hold": [
+     0.2,
+     0.8
+    ]
+   },
+   {
+    "name": "Guard_Book",
+    "verb": "Guard",
+    "grip": "Book",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.2,
+    "hold": [
+     0.2,
+     0.8
+    ]
+   },
+   {
+    "name": "Kick_Book",
+    "verb": "Kick",
+    "grip": "Book",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.36
+   },
+   {
+    "name": "Sweep_Book",
+    "verb": "Sweep",
+    "grip": "Book",
+    "length": 0.733,
+    "loop": false,
+    "frames": 22,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.42
+   },
+   {
+    "name": "Plant_Book",
+    "verb": "Plant",
+    "grip": "Book",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.42
+   },
+   {
+    "name": "DrawShot_Book",
+    "verb": "DrawShot",
+    "grip": "Book",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.66
+   },
+   {
+    "name": "QuickShot_Book",
+    "verb": "QuickShot",
+    "grip": "Book",
+    "length": 0.467,
+    "loop": false,
+    "frames": 14,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.16
+   },
+   {
+    "name": "Backstep_Book",
+    "verb": "Backstep",
+    "grip": "Book",
+    "length": 0.533,
+    "loop": false,
+    "frames": 16,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.3
+   },
+   {
+    "name": "HoldIdle_Book",
+    "verb": "HoldIdle",
+    "grip": "Book",
+    "length": 2.0,
+    "loop": true,
+    "frames": 60,
+    "hand": "L",
+    "upper": true,
+    "impact": 0
+   }
+  ]
+ }
 }
