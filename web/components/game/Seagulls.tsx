@@ -125,8 +125,9 @@ function Gull({ anchor, seed, idx, swoopRef, altitude, perches }: { anchor: [num
     // (on the water it bobs), a turn toward where its circle has got to and a rise back into it.
     if (visit.index >= 0 && !(swoopRef.current && swoopRef.current.idx === idx)) {
       const [px, py, pz] = perches[visit.index];
-      const k = visit.w, feet = g.scale, water = py < 0.05;
-      const sitY = py + feet * (water ? 0.35 : 1) + (water ? Math.sin(t * 1.3 + seed) * 0.03 : 0);
+      // The model's feet are 0.74 of its own units over its origin; on the water it sits low, feet under.
+      const k = visit.w, water = py < 0.05;
+      const sitY = py - g.scale * (water ? 1.1 : 0.74) + (water ? Math.sin(t * 1.3 + seed) * 0.03 : 0);
       gullPosition(visit.t0, p, at.current.start);
       gullPosition(visit.t0 + PERCH_GLIDE + PERCH_SIT + 4, p, at.current.end);
       const down = Math.atan2(px - at.current.start.x, pz - at.current.start.z), up = Math.atan2(at.current.end.x - px, at.current.end.z - pz);
