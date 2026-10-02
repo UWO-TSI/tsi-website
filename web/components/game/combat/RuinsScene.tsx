@@ -30,8 +30,11 @@ import { useAbilityKeys } from "@/lib/game/movement/keys";
 import { screenOf, useMoveParticles } from "../movement/moveFx";
 import { defeatPuff } from "@/lib/game/movement/juice";
 import type { ParticlePool } from "@/lib/game/fx/particles";
-import { shakeCamera } from "@/lib/game/cameraJuice";
-import { timeScale as worldSpeed } from "@/lib/game/slowMotion";
+import { holdFov, shakeCamera, widenFov } from "@/lib/game/cameraJuice";
+import { timeScale as worldSpeed, ultSlowMotion } from "@/lib/game/slowMotion";
+import { FlashLimiter, hitImpact, HitstopBudget, impactView, ultBeats } from "@/lib/game/combat/impact";
+import { readComfort } from "@/lib/game/comfortSettings";
+import { ULT } from "@/lib/combat/ult";
 import { capture, crosshairAim } from "@/lib/game/orbitCamera";
 import { boxOccluder } from "@/lib/game/occluders";
 import { BUFFER, createInputs, runInputs, spawnWave } from "@/lib/game/combat/actions";
@@ -128,7 +131,9 @@ const SWING_SOUND: Record<WeaponKind, Sound> = { melee: ["footstep", 1.5, 0.7], 
 /** Impact (combat polish 4): a beat of hitstop on melee hits, crits and hits taken; a small shake (world units) per cue. */
 const HITSTOP = 0.06;
 const SHAKE: Partial<Record<CueKind, number>> = { crit: 0.07, hurt: 0.12, stagger: 0.1, bossDefeat: 0.25 };
+const budget = new HitstopBudget(), flashes = new FlashLimiter();
 function impact(rt: CombatRuntime, pool: ParticlePool, ground: (x: number, z: number) => number) {
+  if (rt.v2) return impactV2(rt, pool, ground);
   for (const c of rt.cues) {
     if ((c.kind === "hit" && c.melee) || c.kind === "crit" || c.kind === "hurt") combat.hitstop = Math.max(combat.hitstop, HITSTOP);
     const shake = c.kind === "hit" && c.melee ? 0.035 : SHAKE[c.kind];
@@ -137,6 +142,70 @@ function impact(rt: CombatRuntime, pool: ParticlePool, ground: (x: number, z: nu
     if (c.kind === "defeat" || c.kind === "bossDefeat") defeatPuff(pool, c.x, ground(c.x, c.z), c.z, c.kind === "bossDefeat" ? 2.2 : 1);
   }
 }
+/**
+ * Classes v2 (design sheet §1.6): each hit by its tier through the hitstop budget (the longest wins, at most 200 ms a
+ * second), the Screen shake setting, the heavy tier's FOV kick; the world draws a hit's sparks, the heavy tier's
+ * speed lines and shock ring, from FX events in the kit's ramp (lib/game/fx/combat.ts).
+ */
+function impactV2(rt: CombatRuntime, pool: ParticlePool, ground: (x: number, z: number) => number) {
+  const now = performance.now() / 1000, reduce = readComfort().reduceFlashing;
+  for (const c of rt.cues) {
+    const tier = c.kind === "defeat" && c.tier === "heavy" ? "heavy" : c.kind === "hit" || c.kind === "crit" ? c.tier ?? "light" : null;
+    if (tier) {
+      const h = hitImpact(tier, c.melee, !!c.first, reduce);
+      combat.hitstop = budget.take(Math.max(h.hitstop, c.kind === "crit" ? HITSTOP : 0), combat.hitstop, now);
+      if (h.shake) shakeCamera(h.shake);
+      if (h.fov) widenFov(h.fov);
+      if (rt.v2 && tier !== "ult") rt.fx.push({ caster: "me", key: `hit.${tier}`, phase: "impact", x: c.x, z: c.z, aim: { x: c.x, z: c.z }, seed: (Math.round(c.x * 97) ^ Math.round(c.z * 89) ^ rt.seq++) >>> 0, tier, ramp: rt.v2.kit.look.ramp });
+    }
+    if (c.kind === "hurt") combat.hitstop = budget.take(HITSTOP, combat.hitstop, now);
+    if (c.kind === "bossDefeat") bossBeat = { t: 0, aim: { x: c.x, z: c.z } }; // the boss defeat lands at the ult tier (§1.6)
+    const shake = SHAKE[c.kind];
+    if (shake && c.kind !== "crit") shakeCamera(shake);
+    if (c.kind === "defeat" || c.kind === "bossDefeat") defeatPuff(pool, c.x, ground(c.x, c.z), c.z, c.kind === "bossDefeat" ? 2.2 : 1);
+  }
+}
+
+/**
+ * The ult's beats each frame (impact.ts ultBeats): the freeze as hitstop, the FOV hold, slow motion, the heavy shake
+ * once, the flash frame through the limiter (the canvas cut to two tones, or darkened with Reduce flashing), and the
+ * overlay pass's screen spots. The meter filling plays the ready chime and the bottom-edge glow.
+ */
+const ultScratch = new THREE.Vector3();
+let ultPrevT = -1, wasReady = false, bossBeat: { t: number; aim: Vec } | null = null;
+/** The boss defeat's sequence: no wind-up (it's already down), the rest of the ult's beats. */
+const BOSS_A = 0.05;
+function ultPresentation(rt: CombatRuntime, camera: THREE.Camera, canvas: HTMLCanvasElement, me: Vec, ground: (x: number, z: number) => number, real: number) {
+  const v = rt.v2, reduce = readComfort().reduceFlashing, view = impactView;
+  if (bossBeat && (bossBeat.t += real) > BOSS_A + 3) bossBeat = null;
+  const cast = v?.cast ?? (v ? bossBeat : null), A = v?.cast ? v.ult.anticipation_ms / 1000 : BOSS_A;
+  view.reduceFlashing = reduce;
+  if (v) {
+    view.color = v.kit.look.ramp[1];
+    const ready = v.meter >= ULT.max;
+    if (ready && !wasReady) { view.readyAt = performance.now() / 1000; AudioManager.playSFX("confirm", { rate: 1.25, gain: 0.7 }); }
+    wasReady = ready;
+  }
+  if (!v || !cast) {
+    if (view.beats) { view.beats = null; holdFov(0); ultSlowMotion(1); canvas.style.filter = ""; }
+    ultPrevT = -1;
+    return;
+  }
+  const b = ultBeats(cast.t, A, reduce, ultPrevT);
+  if (b.freeze) combat.hitstop = Math.max(combat.hitstop, A + 0.12 - cast.t);
+  if (b.flash && !view.beats?.flash) view.flashOk = b.flash === "full" && flashes.allow(performance.now() / 1000);
+  if (b.shake) shakeCamera(0.35, 9, (cast.aim.x - me.x) * 0.15 / (Math.hypot(cast.aim.x - me.x, cast.aim.z - me.z) || 1));
+  holdFov(b.fov);
+  ultSlowMotion(b.slow);
+  canvas.style.filter = b.flash === "full" && view.flashOk ? "grayscale(1) brightness(1.25) contrast(12)" : b.flash === "reduced" ? "saturate(0.35) brightness(0.75)" : "";
+  const toScreen = (x: number, z: number, lift: number) => { ultScratch.set(x, ground(x, z) + lift, z).project(camera); const r = canvas.getBoundingClientRect(); return { x: r.left + ((ultScratch.x + 1) / 2) * r.width, y: r.top + ((1 - ultScratch.y) / 2) * r.height }; };
+  const c = toScreen(me.x, me.z, 0.7), edge = toScreen(me.x + 3, me.z, 0.7);
+  view.caster = { x: c.x, y: c.y, r: Math.max(60, Math.hypot(edge.x - c.x, edge.y - c.y)) };
+  view.hit = toScreen(cast.aim.x, cast.aim.z, 0.4);
+  view.beats = b;
+  ultPrevT = cast.t;
+}
+
 const heard = new Set<CueKind>();
 /** This frame's cues as sounds: one of each kind (a crit over a hit), windups only within earshot. */
 function playCues(rt: CombatRuntime, me: Vec) {
@@ -254,6 +323,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     playCues(rt, me);
     impact(rt, particles.pool, ruins.ground);
     rt.cues.length = 0;
+    ultPresentation(rt, camera, gl.domElement, me, ruins.ground, Math.min(rawDelta, 0.05));
     // Respawn (spawn-table enemies only) once dead long enough and you're away from the spot.
     for (const [i, e] of rt.enemies.entries()) {
       const after = e.state === "dead" && !e.summoned ? respawnAfter(e.id) : 0;

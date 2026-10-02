@@ -476,7 +476,7 @@ export function FloaterProjector() {
       const f = list[i], info = f.kind === "info", node = info ? noteNodes[note++] : floaterNodes[hit++];
       if (!node) continue;
       v.set(f.x, f.y + f.age * 0.9, f.z).project(camera);
-      node.style.transform = `translate(${((v.x + 1) / 2) * size.width}px, ${((1 - v.y) / 2) * size.height}px) translate(-50%, -50%) scale(${f.kind === "crit" ? 1.35 : 1})`;
+      node.style.transform = `translate(${((v.x + 1) / 2) * size.width}px, ${((1 - v.y) / 2) * size.height}px) translate(-50%, -50%) scale(${f.kind === "ult" ? 1.9 : f.kind === "crit" ? 1.35 : 1})`;
       node.style.opacity = String(Math.max(0, Math.min(1, 1.6 - f.age / 0.7)));
       node.dataset.kind = f.kind;
       if (node.textContent !== f.text) node.textContent = f.text;

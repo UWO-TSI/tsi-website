@@ -31,7 +31,8 @@ export interface Unit {
 export interface Buff { stat: BuffStat; value: number; t: number; onBlock?: Ability; answered?: boolean;
   /** The ability that gave it (a v2 hold's buffs end on the release). */
   source?: string }
-export interface Floater { id: number; x: number; y: number; z: number; text: string; kind: "hit" | "crit" | "hurt" | "info"; age: number }
+/** `ult`: an ult hit's number, in the large style (§1.6 follow-through). */
+export interface Floater { id: number; x: number; y: number; z: number; text: string; kind: "hit" | "crit" | "hurt" | "info" | "ult"; age: number }
 /** Something the scene plays (sound, hitstop, camera shake, a puff): pushed by the pure combat code, drained every frame. */
 export type CueKind = "swing" | "hit" | "crit" | "hurt" | "defeat" | "windup" | "stagger" | "bossDefeat";
 /** Impact tiers (design sheet §1.6): weapon hits, ability hits, heavy abilities (and elite kills), the ult. */

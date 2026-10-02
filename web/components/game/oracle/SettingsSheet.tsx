@@ -22,6 +22,7 @@ import { AudioManager, type AudioVolumes } from "@/lib/game/audio";
 import { useAudioState } from "@/lib/game/useAudio";
 import { orbit, readOrbitPrefs, setOrbitPrefs, subscribeOrbitPrefs, SENSITIVITY_MAX, SENSITIVITY_MIN } from "@/lib/game/orbitCamera";
 import { setAlwaysFullHud, useAlwaysFullHud } from "@/lib/game/hudPrefs";
+import { setComfort, useComfort, type ShakeLevel } from "@/lib/game/comfortSettings";
 import IslandSheet from "../IslandSheet";
 import styles from "../DefaultIslandWorld.module.css";
 
@@ -58,6 +59,7 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
   const [moveNote, setMoveNote] = useState<string | null>(null);
   const wheelKeys = useWheelKeys();
   const alwaysFullHud = useAlwaysFullHud();
+  const comfort = useComfort();
   const [wheelListen, setWheelListen] = useState<"wheel" | "hud" | null>(null);
   useNextKey(wheelListen !== null, key => {
     const r = remapWheel(wheelKeys, wheelListen!, key);
@@ -127,6 +129,19 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
     </fieldset>
     <label className={styles.toggle}><span>Show my family aura</span><input type="checkbox" checked={aura} onChange={e => setAuraVisible(e.target.checked)} /></label>
     <label className={styles.toggle}><span>High contrast</span><input type="checkbox" checked={settings.high_contrast} onChange={e => void save({ high_contrast: e.target.checked })} /></label>
+    {/* Design sheet §1.6: the ult's flash frame and every flash obey these; both start calm when the device asks for reduced motion. */}
+    <fieldset data-testid="accessibility">
+      <legend>Accessibility</legend>
+      <label className={styles.toggle}><span>Reduce flashing</span><input type="checkbox" checked={comfort.reduceFlashing} onChange={e => setComfort({ reduceFlashing: e.target.checked })} /></label>
+      <p className={styles.hint}>Big hits darken the screen instead of flashing it, and their lines and glows are softer.</p>
+      <div className={styles.preset}>
+        <span>Screen shake</span>
+        <div className={styles.segmented} role="group" aria-label="Screen shake">
+          {(["full", "low", "off"] as ShakeLevel[]).map(l => <button key={l} aria-pressed={comfort.screenShake === l} onClick={() => setComfort({ screenShake: l })}>{l === "full" ? "Full" : l === "low" ? "Low" : "Off"}</button>)}
+        </div>
+      </div>
+      <p className={styles.hint}>Kept on this device.</p>
+    </fieldset>
     <fieldset>
       <legend>Sound</legend>
       {!audio.enabled && <button onClick={() => AudioManager.enable()}>Turn on sound</button>}

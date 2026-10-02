@@ -301,6 +301,7 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .floater { position: absolute; left: 0; top: 0; opacity: 0; font: 800 20px "IBM Plex Mono", monospace; color: #fff6d8; text-shadow: 0 2px 0 #3a2400, 0 0 6px #000a; white-space: nowrap; will-change: transform; }
 .floater[data-kind="crit"] { color: #ffd34d; font-size: 26px; }
 .floater[data-kind="hurt"] { color: #ff6a6a; }
+.floater[data-kind="ult"] { color: #fff; font-size: 30px; -webkit-text-stroke: 1.5px #1d1a24; text-shadow: 0 3px 0 #1d1a24, 0 0 12px #fff8; }
 .floater[data-kind="info"] { padding: 2px 9px; border-radius: 999px; background: #f8f7e9e8; color: #293e3b; font-size: 12px; font-weight: 700; text-shadow: none; box-shadow: 0 2px 6px #29464130; }
 /* Incantation */
 .incantation { position: absolute; right: 24px; top: 50%; transform: translateY(-50%); display: grid; gap: 8px; justify-items: center; padding: 14px 16px; border-radius: 18px; background: #1b1626e0; color: #f4eefc; z-index: 25; }

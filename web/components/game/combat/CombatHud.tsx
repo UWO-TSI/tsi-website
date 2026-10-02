@@ -15,6 +15,7 @@ import { staggered } from "@/lib/game/combat/sim";
 import type { IncantationScore } from "@/lib/game/combat/contract";
 import { floaterNodes, noteNodes } from "./EncounterRender";
 import IncantationOverlay from "./IncantationOverlay";
+import ImpactOverlay from "./ImpactOverlay";
 import styles from "../DefaultIslandWorld.module.css";
 
 export default function CombatHud({ player }: { player: React.RefObject<{ x: number; z: number }> }) {
@@ -29,6 +30,7 @@ export default function CombatHud({ player }: { player: React.RefObject<{ x: num
   const usesTotems = kit && rt.slots.some(a => a?.effects.some(e => e.kind === "summon" && e.unit.startsWith("totem")));
   return <>
     <div className={styles.hurt} data-on={p.hurt > 0 || undefined} aria-hidden="true" />
+    {rt.v2 && <ImpactOverlay />}
     <div className={styles.floaters} aria-hidden="true">
       {Array.from({ length: FLOATERS.damage }, (_, i) => <div key={i} ref={el => { floaterNodes[i] = el; }} className={styles.floater} />)}
       {Array.from({ length: FLOATERS.info }, (_, i) => <div key={`n${i}`} ref={el => { noteNodes[i] = el; }} className={styles.floater} />)}

@@ -31,7 +31,7 @@ const dist = (a: Vec, b: Vec) => Math.hypot(a.x - b.x, a.z - b.z);
 
 /** Damage numbers and status words ("Dodged", "Not enough energy") keep separate pools, so a flurry of hits never pushes a status out. */
 export const FLOATERS = { damage: 12, info: 4 } as const;
-export function floater(rt: CombatRuntime, at: Vec, y: number, text: string, kind: "hit" | "crit" | "hurt" | "info") {
+export function floater(rt: CombatRuntime, at: Vec, y: number, text: string, kind: "hit" | "crit" | "hurt" | "info" | "ult") {
   rt.floaters.push({ id: rt.seq++, x: at.x, y, z: at.z, text, kind, age: 0 });
   const info = kind === "info";
   let n = 0;
@@ -124,7 +124,7 @@ export function strike(rt: CombatRuntime, e: Enemy, src: HitSrc, random: () => n
   const { amount, crit, raw, base } = hitAmount(rt, e, src, random);
   const held = e.status.hold > 0;
   const killed = damageEnemy(e, amount, src.from, src.knock ?? 0);
-  if (e.flash === 0.18) floater(rt, e, 1.4 + e.type.hover, String(amount), crit ? "crit" : "hit");
+  if (e.flash === 0.18) floater(rt, e, 1.4 + e.type.hover, String(amount), src.ult ? "ult" : crit ? "crit" : "hit");
   if (src.status && !killed) applyStatus(e, src.status);
   if (!src.ult) chargeUlt(rt, dealtCharge(raw, base)); // you and your units; ult hits charge nothing
   if (!src.unit) { onPlayerHit(rt, e, amount, crit, held); cue(rt, crit ? "crit" : "hit", e, !!src.melee, src.impact, src.first); }
@@ -146,7 +146,7 @@ function onPlayerHit(rt: CombatRuntime, e: Enemy, amount: number, crit: boolean,
 
 function onKill(rt: CombatRuntime, e: Enemy) {
   rt.killQueue.push({ enemy: e.type.id, key: `kill:${e.id}:${rt.seq++}:${Date.now().toString(36)}` });
-  cue(rt, e.type.kind === "boss" ? "bossDefeat" : "defeat", e);
+  cue(rt, e.type.kind === "boss" ? "bossDefeat" : "defeat", e, false, e.type.elite ? "heavy" : undefined); // an elite kill lands heavy (§1.6)
   missionEvent(rt, { type: "kill", enemy: e.type.id });
   const pv = passiveOf(rt), me = rt.player.last;
   if (pv?.kind === "kill_heal" && me && dist(me, e) <= (pv.cap ?? 9)) heal(rt, rt.player.maxHp * pv.value);
