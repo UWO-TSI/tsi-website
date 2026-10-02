@@ -851,3 +851,28 @@ All waves merge to `main` behind a `classes_v2` flag that stays off in productio
   - A purple aura of floating cards.
   - A card icon on the nameplate.
   - Shop: card-deck skins and mirror-shard aura colours.
+
+## Necromancer (LOCKED, David 2026-10-02)
+- **Family:** Arcane (purple).
+- **Role:** summoner damage (army raiser).
+- **MBTI:** mapped at the end.
+- **Weapon:** a bone tome. Basic attack (left click): bone shards from the tome.
+
+| Key | Skill | Effect |
+|---|---|---|
+| 1 | Raise Dead | Corpses near the aim rise as skeleton warriors: weak, many, 20 s each, cap 4 (more with mastery). With no corpse, a bone wisp answers. |
+| 2 | Command | Tap: all minions charge the enemy under the crosshair. Tap again: they recall to guard you. |
+| 3 | Corpse Explosion | Detonate a minion or corpse at the aim: AoE damage that chains through nearby corpses. |
+| 4 | Dark Pact | Consume a minion: heal and a bone shield for you. |
+| 5 | Bone Surf | Movement (row 292). Mid-slide, press it: skeletal hands rise under you and carry the slide for 1.5 s with no friction loss, steerable, plowing enemies aside. You slide and surf on the bones. Jump out for a slide-jump with extra momentum; minions follow. Unlocks at mastery 3. |
+
+- **Passive, Grave Tithe:** kills near you heal you and leave a corpse that lasts longer, so there's more to raise.
+- **Ultimate, Army of the Dead (F, meter):** the ground cracks with green light. Every corpse and about 30 skeletons claw up, march on the pack and explode together: flash frame, bone rain.
+- **Mastery:**
+  - At 1: Raise, Command, Explosion and Dark Pact.
+  - Bone Surf at 3.
+  - Up to 20: the minion cap rises, explosions chain further, surfing lasts longer, and cosmetics.
+- **Identity:**
+  - A purple-green aura of drifting bone dust.
+  - A skull-and-tome icon on the nameplate.
+  - Shop: tome bindings and soul-fire colours.
