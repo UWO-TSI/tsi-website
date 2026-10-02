@@ -53,7 +53,7 @@ export function mobEvent(rt: CombatRuntime, ev: EnemyEvent, me: Vec, random: () 
       if (contactLands(e, me)) {
         hurtPlayer(rt, m.damage, e, me, m.knockback, random);
         if (m.shape === "dart") burst(rt, e);
-        else mobFx(rt, "pounce", me.x, me.z, e.facing, m.shape === "charge" ? 1.6 : 1);
+        else mobFx(rt, "pounce", (me.x + e.x) / 2, (me.z + e.z) / 2, e.facing, m.shape === "charge" ? 1.6 : 1); // where they meet, in front of you
       }
       return true;
     case "burst": burst(rt, e); return true;

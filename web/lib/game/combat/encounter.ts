@@ -9,7 +9,7 @@ import { cue, enemyTarget, floater, hurtUnits, moveSpeed, stepUnits } from "./ab
 import { hurtPlayer, regenEnergy, resolvePlayerShot, summonWisps } from "./actions";
 import { SLOT_IDS, type AbilityId, type CombatRuntime } from "./runtime";
 import { beamLands, DODGE, separate, stepEnemy, strikeLands, sweptHit, type Vec } from "./sim";
-import { landLob, mobEvent, rally, stepHazards } from "./mobs";
+import { landLob, mobEvent, mobFx, rally, stepHazards } from "./mobs";
 
 const ABILITY_IDS: readonly AbilityId[] = [...SLOT_IDS, "swap"];
 
@@ -98,6 +98,7 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
         if (unit) { hurtUnits(rt, u => u === unit, sh.damage); gone = true; }
       }
     }
+    if (gone && sh.kind === "rune") mobFx(rt, "runes", sh.x, sh.z); // a rune bolt bursts in a glyph wherever it ends
     if (gone) rt.projectiles.splice(i, 1);
   }
   stepHazards(rt, me, dt, random);

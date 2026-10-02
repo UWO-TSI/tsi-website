@@ -253,7 +253,7 @@ const SHOT: Record<Projectile["kind"], { model: string; scale: number; trail: TH
   arrow: { model: `${P}projectile-arrow.glb`, scale: 1.3, trail: new THREE.Color("#fff1cf"), width: 0.07, lit: true },
   bolt: { model: `${P}projectile-bolt.glb`, scale: 1.5, trail: new THREE.Color("#a77bff"), width: 0.24, lit: false },
   // Zone 1: the wisps' rune bolt (the rune shard, cyan), the mushroom's lobbed spore ball (the glob, on its arc).
-  rune: { model: `${P}projectile-bolt.glb`, scale: 1.4, trail: new THREE.Color("#7fe8ff"), width: 0.2, lit: false },
+  rune: { model: `${P}projectile-bolt.glb`, scale: 2.2, trail: new THREE.Color("#7fe8ff"), width: 0.32, lit: false },
   spore: { model: `${P}projectile-spit.glb`, scale: 2.4, trail: new THREE.Color("#b6e06a"), width: 0.2, lit: false },
 };
 const KINDS = Object.keys(SHOT) as Projectile["kind"][];

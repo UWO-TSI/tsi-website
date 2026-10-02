@@ -20,6 +20,7 @@ import Character, { type CharacterMotion } from "../character/Character";
 import { hashSeed, randomLook, seeded } from "@/lib/game/character/look";
 import { GLBProp } from "../NatureModels";
 import { IslandAtmosphere, useFollowCamera } from "../IslandAtmosphere";
+import MobFx from "./MobFx";
 import { AimReticle, Blasts, EnemyBars, EnemyInstances, FloaterProjector, PlayerAuras, Projectiles, Telegraphs, Totems, Wisps } from "./EncounterRender";
 import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BROKEN_ARCHES, RUINS_MOAI, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, RUINS_TORCHES, SURVIVE_CIRCLES, createRuins } from "@/lib/game/ruins";
 import { combat, publishCombat, takeMissionQueue, type AbilityId, type CombatRuntime, type CueKind } from "@/lib/game/combat/runtime";
@@ -164,7 +165,9 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     // Dev (screenshots): hold a telegraph with __combat.freeze, stage mission steps with __combatDev.
     if (process.env.NODE_ENV !== "production") Object.assign(window, { __combatDev: { player: player.current, missionEvent: (ev: Parameters<typeof missionEvent>[1]) => missionEvent(combat.rt, ev), spawnWave: (id: string, i: number) => spawnWave(combat.rt, WAVES[id][i]),
       /** One enemy of a type at (x, z), hunting you (evidence). */
-      spawn: (type: string, x: number, z: number, id: string) => spawnWave(combat.rt, [{ id, type, x, z }]) } });
+      spawn: (type: string, x: number, z: number, id: string) => spawnWave(combat.rt, [{ id, type, x, z }]),
+      /** The whole spawn table back at its spots, dens and clouds as packs (evidence). */
+      reset: () => resetEncounter() } });
   }, [player, spawn]);
   // Dev (screenshots): where a ground point is on the page, to aim the mouse at an enemy.
   useEffect(() => {
@@ -320,6 +323,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
       <Totems ground={ruins.ground} />
     </Suspense>
     <Telegraphs ground={ruins.ground} />
+    <MobFx ground={ruins.ground} />
     <Blasts ground={ruins.ground} />
     <PlayerAuras player={player} ground={ruins.ground} />
     <AimReticle player={player} ground={ruins.ground} />
