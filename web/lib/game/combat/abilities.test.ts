@@ -19,7 +19,7 @@ function setup(sub: string, loadout: string[] = [], hp = 5000): { rt: CombatRunt
   rt.player.stats = presetAllocation(s.family, 10); rt.player.safe = false; rt.player.aim = { x: 0, z: 1.8 }; rt.player.facing = 0;
   rt.player.maxHp = rt.player.hp = 300;
   equipKit(rt, s, loadout);
-  const dummy = { ...spawnEnemy("dummy", { ...ENEMIES["thorn-crab"], hp, defense: 0, speed: 0 }, 0, 1.8), state: "chase" as const };
+  const dummy = { ...spawnEnemy("dummy", { ...ENEMIES["thorn-crab"], hp, defense: 0, speed: 0, shell: undefined }, 0, 1.8), state: "chase" as const };
   rt.enemies = [dummy];
   return { rt, dummy };
 }
@@ -174,7 +174,7 @@ describe("starters and missing gear (plan edge cases)", () => {
     expect(rt.transform).not.toBeNull();
     expect(rt.player.shield).toBeGreaterThan(0); // Shed Skin
     const golemHit = (kills: number) => { const r = createRuntime(); r.player.stats = presetAllocation("Arcane", 10); equipKit(r, subclassByKey("transmuter"), ["trait.golem-fist"], { "golem-fist": kills });
-      const d = { ...spawnEnemy("d", { ...ENEMIES["thorn-crab"], hp: 5000, defense: 0 }, 0, 3), state: "chase" as const }; r.enemies = [d]; r.player.aim = { x: 0, z: 3 }; press(r, 0); return 5000 - d.hp; };
+      const d = { ...spawnEnemy("d", { ...ENEMIES["thorn-crab"], hp: 5000, defense: 0, shell: undefined }, 0, 3), state: "chase" as const }; r.enemies = [d]; r.player.aim = { x: 0, z: 3 }; press(r, 0); return 5000 - d.hp; };
     expect(golemHit(30)).toBeGreaterThan(golemHit(1));
     expect(TRAITS.find(t => t.key === "golem-fist")!.from).toEqual(["stone-golem"]);
   });
@@ -269,7 +269,7 @@ describe("passives (one modifier each on the shared hooks)", () => {
 describe("dashes", () => {
   it("i-frames make hits miss; what follows a dash lands where it ends", () => {
     const { rt } = setup("juggernaut", ["vanguard.leap"]);
-    rt.enemies = [{ ...spawnEnemy("far", { ...ENEMIES["thorn-crab"], hp: 5000, defense: 0, speed: 0 }, 0, 5), state: "chase" }];
+    rt.enemies = [{ ...spawnEnemy("far", { ...ENEMIES["thorn-crab"], hp: 5000, defense: 0, speed: 0, shell: undefined }, 0, 5), state: "chase" }];
     rt.player.aim = { x: 0, z: 5 };
     press(rt, 0);
     expect(rt.enemies[0].hp).toBe(5000); // not yet: the strike lands on arrival

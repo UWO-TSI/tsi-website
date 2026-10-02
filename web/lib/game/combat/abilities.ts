@@ -14,9 +14,10 @@ import { damage as ruleDamage, WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/we
 import type { IncantationScore } from "./contract";
 import { ENEMIES } from "./data";
 import { advanceMission, type MissionEvent } from "./missions";
-import { angleDiff, BOSS, damageEnemy, facingTo, inArc, segDist, spawnEnemy, staggered, type Enemy, type Vec } from "./sim";
+import { angleDiff, BOSS, damageEnemy, facingTo, inArc, segDist, shellFactor, spawnEnemy, staggered, type Enemy, type Vec } from "./sim";
 import { SLOT_IDS, type Buff, type CombatRuntime, type CueKind, type FxEvent, type ImpactTier, type ShotHit, type Unit } from "./runtime";
 import { addKick } from "./moveHooks";
+import { shellNote } from "./mobs";
 import { addCharge, dealtCharge, healedCharge } from "@/lib/combat/ult";
 
 /** Plan §Combat and incantation defaults: starting a drawing spends 25% of its energy, a fizzle or cancel costs a short recovery instead of the cooldown. */
@@ -111,7 +112,8 @@ export function hitAmount(rt: CombatRuntime, e: Enemy, src: HitSrc, random: () =
   const p = rt.player, def = SYSTEM_WEAPONS.find(w => w.key === p.weapon)!;
   const weapon = src.stat || src.tier ? { ...def, scaling: src.stat ? [src.stat] : def.scaling, tier: (src.tier ?? def.tier) as typeof def.tier } : def;
   const crit = random() < critChance(rt), critMult = rt.v2?.mods.critMult;
-  const mult = src.power * (staggered(e) ? BOSS.staggerBonus : 1) * (1 + buffSum(rt, "damage") + passiveBonus(rt, e, src) + e.status.mark);
+  // A front shell (zone-1 crabs) turns most of a hit aside: shellFactor in sim.ts.
+  const mult = src.power * shellFactor(e, src.from) * (staggered(e) ? BOSS.staggerBonus : 1) * (1 + buffSum(rt, "damage") + passiveBonus(rt, e, src) + e.status.mark);
   const hit = { weapon, durability: src.tier ? 1 : p.durability[p.weapon], stats: p.stats, level: p.level, enemyDefense: e.type.defense, enemyArmor: e.type.armor, crit, critMult, potency: mult };
   // Classes v2 meter (§1.2): the hit before defense and armour, over your own base hit (the weapon at potency 1).
   const raw = rt.v2 ? ruleDamage({ ...hit, enemyDefense: 0, enemyArmor: 0 }) : 0, base = rt.v2 ? ruleDamage({ ...hit, enemyDefense: 0, enemyArmor: 0, crit: false, potency: 1 }) : 0;
@@ -122,8 +124,9 @@ export function hitAmount(rt: CombatRuntime, e: Enemy, src: HitSrc, random: () =
 export function strike(rt: CombatRuntime, e: Enemy, src: HitSrc, random: () => number = Math.random): number {
   if (e.state === "dead" || e.state === "return") return 0;
   const { amount, crit, raw, base } = hitAmount(rt, e, src, random);
-  const held = e.status.hold > 0;
+  const held = e.status.hold > 0, shell = shellFactor(e, src.from) < 1;
   const killed = damageEnemy(e, amount, src.from, src.knock ?? 0);
+  if (shell) shellNote(rt, e, src.from);
   if (e.flash === 0.18) floater(rt, e, 1.4 + e.type.hover, String(amount), src.ult ? "ult" : crit ? "crit" : "hit");
   if (src.status && !killed) applyStatus(e, src.status);
   if (!src.ult) chargeUlt(rt, dealtCharge(raw, base)); // you and your units; ult hits charge nothing

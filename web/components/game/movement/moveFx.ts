@@ -84,7 +84,8 @@ export function packMap(): THREE.Texture {
 
 /** Ground fade (world units): a puff standing on the ground fades out into it instead of being cut by it. */
 const SOFT = 0.14;
-const VERTEX_PARS = `attribute vec4 iA;
+/** The particle quad's shader chunks, shared with zone 1's mob effects (components/game/combat/MobFx.tsx). */
+export const VERTEX_PARS = `attribute vec4 iA;
 attribute vec4 iB;
 attribute vec4 iC;
 attribute vec4 iD;
@@ -96,7 +97,7 @@ varying float vAbove;
  * (centred, or standing on its bottom edge), flat on the ground, or a streak along its axis turned to the camera.
  * Its normal leans up and toward the eye, so the sun and the sky light it like the world round it.
  */
-const PLACE_NORMAL = `vec3 pCentre = iA.xyz;
+export const PLACE_NORMAL = `vec3 pCentre = iA.xyz;
 vec3 toCam = normalize(cameraPosition - pCentre);
 vec3 axX = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
 vec3 axY = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
@@ -106,7 +107,7 @@ bool onGround = face > 0.5 && face < 1.5;
 if (onGround) { axX = vec3(1.0, 0.0, 0.0); axY = vec3(0.0, 0.0, -1.0); objectNormal = vec3(0.0, 1.0, 0.0); }
 else if (face > 1.5 && face < 2.5) { axX = normalize(iD.xyz); axY = normalize(cross(toCam, axX)); }
 `;
-const PLACE_VERTEX = `float pc = cos(iB.z), ps = sin(iB.z);
+export const PLACE_VERTEX = `float pc = cos(iB.z), ps = sin(iB.z);
 vec2 lp = position.xy * iB.xy;
 if (face > 2.5) lp.y += 0.3 * iB.y; // standing: the painted ground line (0.2 up the cell) on the point
 vec3 transformed = pCentre + axX * (lp.x * pc - lp.y * ps) + axY * (lp.x * ps + lp.y * pc);

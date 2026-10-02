@@ -20,6 +20,7 @@ import Character, { type CharacterMotion } from "../character/Character";
 import { hashSeed, randomLook, seeded } from "@/lib/game/character/look";
 import { GLBProp } from "../NatureModels";
 import { IslandAtmosphere, useFollowCamera } from "../IslandAtmosphere";
+import MobFx from "./MobFx";
 import CombatFx from "./CombatFx";
 import { AimReticle, Blasts, EnemyBars, EnemyInstances, FloaterProjector, PlayerAuras, Projectiles, Telegraphs, Totems, Wisps } from "./EncounterRender";
 import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BROKEN_ARCHES, RUINS_MOAI, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, RUINS_TORCHES, SURVIVE_CIRCLES, createRuins } from "@/lib/game/ruins";
@@ -41,12 +42,12 @@ import { boxOccluder } from "@/lib/game/occluders";
 import { BUFFER, createInputs, runInputs, spawnWave } from "@/lib/game/combat/actions";
 import { missionEvent } from "@/lib/game/combat/abilities";
 import { stepCombat } from "@/lib/game/combat/encounter";
-import { claimBossReward, postKill, postMissionEvents } from "@/lib/game/combat/progression";
+import { claimBossReward, claimMinibossReward, postKill, postMissionEvents } from "@/lib/game/combat/progression";
 import { materialsLabel } from "@/lib/game/combat/missions";
 import { ENEMIES, WEAPONS } from "@/lib/game/combat/data";
 import { inRect, spawnEnemy, type Vec } from "@/lib/game/combat/sim";
 import { capacity, respawnAfter, SPAWN_TABLE, SPAWNS, WAVES } from "@/lib/game/combat/spawns";
-import { BOSS_DROPS } from "@/lib/combat/content";
+import { BOSS_DROPS, ELDER_DROPS, MINIBOSS_DROPS } from "@/lib/combat/content";
 import { TRAITS } from "@/lib/combat/kits";
 import { ISLAND_TERRAIN, type IslandLight } from "@/lib/game/islandLighting";
 import type { SeasonLook } from "@/lib/game/seasonalLook";
@@ -63,8 +64,8 @@ const ALLY_TYPES = TYPES.filter(t => t !== "guardian-statue");
 
 export function resetEncounter() {
   const rt = combat.rt;
-  rt.enemies = SPAWNS.map(s => spawnEnemy(s.id, ENEMIES[s.type], s.x, s.z));
-  rt.projectiles = []; rt.units = []; rt.buffs = []; rt.blasts = []; rt.floaters = []; rt.casting = null; rt.wave = null; rt.bossEngaged = false; rt.banner = null;
+  rt.enemies = SPAWNS.map(s => spawnEnemy(s.id, ENEMIES[s.type], s.x, s.z, s.pack));
+  rt.projectiles = []; rt.units = []; rt.buffs = []; rt.blasts = []; rt.floaters = []; rt.hazards = []; rt.mobFx = []; rt.casting = null; rt.wave = null; rt.bossEngaged = false; rt.banner = null;
   rt.player = { ...rt.player, hp: rt.player.maxHp, alive: true, safe: true, dodgeAge: null, dodgeCd: 0, attackCd: 0, hurt: 0, downFor: 0, shield: 0, shieldFor: 0, dash: null, impulse: { x: 0, z: 0 } };
   rt.transform = null;
   rt.idol = rt.idol === "carried" ? "temple" : rt.idol;
@@ -87,27 +88,32 @@ function masteryUp(m: { mastery: number; into: number; needed: number; levelled_
   publishCombat();
 }
 
-/** A Transmuter's first defeat of a species (row 40): the server taught a trait; it joins the kit, equipped at the Oracle. */
-function traitLearned(key: string, now: number) {
+/** A Transmuter's first defeat of a species (row 40): the server taught a trait; it joins the kit, equipped at the Oracle. Returns its name. */
+function traitLearned(key: string, now: number, card = true): string | null {
   const rt = combat.rt, t = TRAITS.find(x => x.key === key);
-  if (!t || !rt.kit) return;
+  if (!t || !rt.kit) return null;
   rt.kit.traits = { ...rt.kit.traits, [key]: Math.max(1, rt.kit.traits[key] ?? 0) };
-  rt.banner = { kind: "trait", title: `New trait: ${t.ability.name}`, text: `From its ${t.part}. Equip it at the Oracle.`, until: now + 6 };
+  if (card) rt.banner = { kind: "trait", title: `New trait: ${t.ability.name}`, text: `From its ${t.part}. Equip it at the Oracle.`, until: now + 6 };
   publishCombat();
+  return t.ability.name;
 }
 
-/** Boss down: a card now, the server's roll when it answers (the kill must post first). */
-function bossVictory(eventKey: string, now: number) {
-  const rt = combat.rt;
-  rt.banner = { kind: "victory", title: "The guardian falls", text: "Counting the spoils…", until: now + 8 };
-  void postKill(BOSS_DROPS.enemy, eventKey).then(k => {
+/** The fights with spoils: the guardian (boss-reward) and the mini-bosses (miniboss-reward, the elder thorn crab). */
+const VICTORY: Record<string, string> = { [BOSS_DROPS.enemy]: "The guardian falls", [ELDER_DROPS.enemy]: "The elder thorn crab yields" };
+const RARITY = { legendary: "Legendary", epic: "Epic", rare: "Rare" } as const;
+/** Down: a card now, the server's roll when it answers (the kill must post first). */
+function victory(enemy: string, eventKey: string, now: number) {
+  const rt = combat.rt, mini = enemy !== BOSS_DROPS.enemy;
+  rt.banner = { kind: "victory", title: VICTORY[enemy] ?? "Victory", text: "Counting the spoils…", until: now + 8 };
+  void postKill(enemy, eventKey).then(k => {
     if (!k.ok) return;
-    void claimBossReward(eventKey).then(r => {
+    const trait = k.data.trait_unlocked ? traitLearned(k.data.trait_unlocked, now, false) : null; // the elder can teach the Crab Shell
+    void (mini ? claimMinibossReward(enemy, eventKey) : claimBossReward(eventKey)).then(r => {
       const b = combat.rt.banner;
       if (!b) return;
       if (!r.ok) { b.text = r.error; publishCombat(); return; }
       const { coins, materials, weapon, rarity } = r.data.reward, w = weapon ? WEAPONS[weapon] : null;
-      b.text = `+${coins} coins · ${materialsLabel(materials)}${w ? ` · ${rarity === "legendary" ? "Legendary" : "Epic"}: ${w.name}` : ""}`;
+      b.text = `+${coins} coins · ${materialsLabel(materials)}${w && rarity ? ` · ${RARITY[rarity]}: ${w.name}` : ""}${trait ? ` · New trait: ${trait}` : ""}`;
       if (w && !combat.rt.player.owned.includes(w.id)) { combat.rt.player.owned.push(w.id); combat.rt.player.durability[w.id] = w.maxDurability; }
       publishCombat();
     });
@@ -235,6 +241,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
   const near = useRef<RuinsNear>(null);
   const [respawn, setRespawn] = useState(0);
   const zones = useRef({ circle: false, gate: true });
+  const named = useRef(new Set<string>());
   const syncAt = useRef(0);
   const publishAt = useRef(0);
   const ray = useMemo(() => new THREE.Raycaster(), []);
@@ -246,7 +253,9 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     // Dev (screenshots): hold a telegraph with __combat.freeze, stage mission steps with __combatDev.
     if (process.env.NODE_ENV !== "production") Object.assign(window, { __combatDev: { player: player.current, missionEvent: (ev: Parameters<typeof missionEvent>[1]) => missionEvent(combat.rt, ev), spawnWave: (id: string, i: number) => spawnWave(combat.rt, WAVES[id][i]),
       /** One enemy of a type at (x, z), hunting you (evidence). */
-      spawn: (type: string, x: number, z: number, id: string) => spawnWave(combat.rt, [{ id, type, x, z }]) } });
+      spawn: (type: string, x: number, z: number, id: string) => spawnWave(combat.rt, [{ id, type, x, z }]),
+      /** The whole spawn table back at its spots, dens and clouds as packs (evidence). */
+      reset: () => resetEncounter() } });
   }, [player, spawn]);
   // Dev (screenshots): where a ground point is on the page, to aim the mouse at an enemy.
   useEffect(() => {
@@ -332,9 +341,16 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     // Respawn (spawn-table enemies only) once dead long enough and you're away from the spot.
     for (const [i, e] of rt.enemies.entries()) {
       const after = e.state === "dead" && !e.summoned ? respawnAfter(e.id) : 0;
-      if (after && e.deadFor > after && Math.hypot(pl.x - e.spawnX, pl.z - e.spawnZ) > 12) rt.enemies[i] = spawnEnemy(e.id, e.type, e.spawnX, e.spawnZ);
+      if (after && e.deadFor > after && Math.hypot(pl.x - e.spawnX, pl.z - e.spawnZ) > 12) rt.enemies[i] = spawnEnemy(e.id, e.type, e.spawnX, e.spawnZ, e.pack);
     }
     rt.bossEngaged = rt.enemies.some(e => e.type.kind === "boss" && ENGAGED.has(e.state));
+    // A mini-boss joining the fight: its name card, once per fight (again after it has walked home).
+    for (const e of rt.enemies) {
+      if (!e.type.miniboss) continue;
+      const fighting = ENGAGED.has(e.state);
+      if (fighting && !named.current.has(e.id)) { named.current.add(e.id); if (!rt.banner) rt.banner = { kind: "foe", title: e.type.name, text: e.type.miniboss.title, until: clock.elapsedTime + 2.6 }; }
+      else if (!fighting) named.current.delete(e.id);
+    }
     if (rt.banner && clock.elapsedTime > rt.banner.until) rt.banner = null;
     // Places → mission events.
     const mission = rt.mission?.status === "active" ? rt.mission : null;
@@ -374,7 +390,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     if (clock.elapsedTime - syncAt.current > 1) {
       syncAt.current = clock.elapsedTime;
       for (const k of rt.killQueue.splice(0)) {
-        if (k.enemy === BOSS_DROPS.enemy) bossVictory(k.key, clock.elapsedTime);
+        if (k.enemy === BOSS_DROPS.enemy || MINIBOSS_DROPS[k.enemy]) victory(k.enemy, k.key, clock.elapsedTime);
         else void postKill(k.enemy, k.key).then(r => {
           if (r.ok && r.data.trait_unlocked) traitLearned(r.data.trait_unlocked, clock.elapsedTime);
           if (r.ok && r.data.mastery) masteryUp(r.data.mastery, clock.elapsedTime);
@@ -410,6 +426,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
       <Totems ground={ruins.ground} />
     </Suspense>
     <Telegraphs ground={ruins.ground} />
+    <MobFx ground={ruins.ground} />
     <Blasts ground={ruins.ground} />
     <CombatFx ground={ruins.ground} lite={liteMode} />
     <PlayerAuras player={player} ground={ruins.ground} />

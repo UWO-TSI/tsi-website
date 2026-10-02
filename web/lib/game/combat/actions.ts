@@ -7,7 +7,7 @@
  */
 import { ENEMIES, WEAPONS } from "./data";
 import type { Vec } from "./sim";
-import { BOSS, DODGE, inArc, invulnerable, spawnEnemy, sweptHit, type Enemy } from "./sim";
+import { BOSS, DODGE, engage, inArc, invulnerable, spawnEnemy, sweptHit, type Enemy } from "./sim";
 import { ENERGY, SLOT_IDS, energyMax, energyRegen, setWeapon, type AbilityId, type CombatRuntime } from "./runtime";
 import { cancelCast, chargeUlt, cue, floater, fx, mitigate, strike, summon, fireSlot } from "./abilities";
 import { takenCharge } from "@/lib/combat/ult";
@@ -202,7 +202,7 @@ export function triggerAbility(rt: CombatRuntime, id: AbilityId, player: Vec = {
 }
 
 export function spawnWave(rt: CombatRuntime, wave: SpawnPoint[]) {
-  for (const s of wave) rt.enemies.push({ ...spawnEnemy(s.id, ENEMIES[s.type], s.x, s.z), state: "chase" });
+  for (const s of wave) rt.enemies.push(engage(spawnEnemy(s.id, ENEMIES[s.type], s.x, s.z, s.pack)));
 }
 
 /** The boss calls rune wisps at its sides, topping up to BOSS.summons alive. */

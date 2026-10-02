@@ -15,7 +15,7 @@ os.makedirs(FR, exist_ok=True)
 CAT = json.load(open(os.path.join(HERE, "catalog.json")))[MODE]
 KIND = {"sword-driftwood": "melee", "sword-iron": "melee", "bow-willow": "bow", "bow-yew": "bow",
         "revolver-brass": "bow", "staff-oak": "staff", "staff-rune": "staff", "tome-spirits": "summon"}
-LIFT = {"rune-wisp": 1.1 / 1.3, "message-bottle": 0.14 / 1.3}   # engine offsets (wisp hover, bottle on the sand), world units
+LIFT = {"rune-wisp": 1.1 / 1.3, "pollen-sprite": 0.75 / 1.3, "message-bottle": 0.14 / 1.3}   # engine offsets (wisp hover, bottle on the sand), world units
 ATTACK = {"melee": ("AttackMelee", 0.3), "bow": ("AttackBow", 0.5), "staff": ("AttackCast", 0.3), "summon": ("AttackCast", 0.3)}
 
 pe.reset()
@@ -79,8 +79,10 @@ for mid, entry in CAT.items():
         show_char(False)
         tt.rotation_euler = (0, 0, math.radians(-35))
         st.shot(f(mid, "c"), parts, elev=24, res=(380, 380))
+        tt.rotation_euler = (0, 0, math.radians(160))                    # its back, from above (the follow camera's view of a flank)
+        st.shot(f(mid, "d"), parts, elev=40, res=(380, 380))
         show_char(True)
-        cells.append((f"{label}  parts: {', '.join(entry['parts'])}", [f(mid, x) for x in "abc"]))
+        cells.append((f"{label}  parts: {', '.join(entry['parts'])}", [f(mid, x) for x in "abcd"]))
         for o in parts + [tt]:
             bpy.data.objects.remove(o, do_unlink=True)
         root.rotation_euler = (0, 0, 0)

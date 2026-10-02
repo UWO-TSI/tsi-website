@@ -103,14 +103,16 @@ describe("telegraph helper (one for every enemy)", () => {
     expect(partPose("arm_l", at("stone-golem", "windup", 1), 0)!.rx).toBeLessThan(-2);
     expect(partPose("lid", at("animated-book", "windup", 0.6), 0)!.rx).toBeLessThan(-0.8);
     expect(partPose("cap", at("mushroom-beast", "windup", 0.9), 0)!.sy).toBeGreaterThan(1.2);
-    expect(partPose("body", at("shadow-fox", "recover", 0.01), 0)!.dz).toBeGreaterThan(0.08); // the lunge
+    expect(partPose("body", at("animated-book", "recover", 0.01), 0)!.dz).toBeGreaterThan(0.08); // the lunge
+    expect(partPose("body", at("shadow-fox", "windup", 0.55), 0)!.dy).toBeLessThan(-0.03); // the fox's crouch before its pounce
     expect(partPose("glow_eyes", crab, 0)).toBeNull(); // glow parts ride their parent and only change brightness
     const running = at("shadow-fox", "chase", 0);
     expect(partPose("leg_fl", running, 0.1)!.rx).toBeCloseTo(-partPose("leg_fr", running, 0.1)!.rx); // a trot: pairs opposite
   });
   it("draws a marker for every attack shape while it winds up, and the beam line while it sweeps", () => {
     for (const id of Object.keys(ENEMIES)) for (const move of ENEMIES[id].attacks) {
-      expect(marker({ ...at(id, "windup", move.windup / 2), move })).not.toBeNull();
+      if (move.shape === "blink") expect(marker({ ...at(id, "windup", move.windup / 2), move })).toBeNull(); // a wisp's hop: no attack to mark
+      else expect(marker({ ...at(id, "windup", move.windup / 2), move })).not.toBeNull();
     }
     const b = { ...at("guardian-statue", "active", 0.5), move: BOSS_TYPE.attacks.find(m => m.shape === "beam")! };
     expect(marker(b)).toMatchObject({ r: b.move.range, fill: 1 });
@@ -122,7 +124,10 @@ describe("telegraph helper (one for every enemy)", () => {
     expect(fam("thorn-crab")).toEqual(["melee"]);
     expect(fam("stone-golem")).toEqual(["area"]);
     expect(fam("guardian-statue")).toEqual(["boss", "boss", "boss"]);
-    const spit = { ...at("mushroom-beast", "windup", 0.4), aim: { x: 0, z: 4 } };
-    expect(marker(spit)).toMatchObject({ family: "ranged", x: 0, z: 4, from: { x: 0, z: 0 } });
+    expect(fam("elder-thorn-crab")).toEqual(["melee", "melee", "area"]); // sweep, charge lane, slam: the mini-boss reads by family too
+    for (const id of ["mushroom-beast", "rune-wisp"]) {
+      const shot = { ...at(id, "windup", 0.4), aim: { x: 0, z: 4 } };
+      expect(marker(shot)).toMatchObject({ family: "ranged", x: 0, z: 4, from: { x: 0, z: 0 } });
+    }
   });
 });

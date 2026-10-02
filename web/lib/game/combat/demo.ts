@@ -13,7 +13,7 @@
  * makes that dichotomy 8% clear); `?frame=bronze|silver|gold` wears that mastery frame.
  */
 import { memoryCombatStore } from "@/lib/combat/memoryStore";
-import { allocateStats, claimBossReward, completeMission, getProgression, listMissions, missionProgress, recordKill, reportWear, resetStats, setLoadout, startMission, chooseSubclass } from "@/lib/combat/service";
+import { allocateStats, claimBossReward, claimMinibossReward, completeMission, getProgression, listMissions, missionProgress, recordKill, reportWear, resetStats, setLoadout, startMission, chooseSubclass } from "@/lib/combat/service";
 import { islandProgression } from "@/lib/combat/islandAdapter";
 import { subclassByKey, subclassesFor } from "@/lib/combat/kits";
 import { equipCosmetic } from "@/lib/combat/service";
@@ -60,6 +60,7 @@ export function installCombatDemo(): void {
         case "/api/combat/missions/progress": return reply(await missionProgress(m.store, ME, body.progress_id, body.events), "mission");
         case "/api/combat/missions/complete": return reply(await completeMission(m.store, ME, body.progress_id), "rewards");
         case "/api/combat/boss-reward": return reply(await claimBossReward(m.store, ME, body.event_key), "boss");
+        case "/api/combat/miniboss-reward": return reply(await claimMinibossReward(m.store, ME, body.enemy, body.event_key), "boss");
         case "/api/combat/subclass": return reply(await chooseSubclass(m.store, ME, body.subclass, body.idempotency_key), "subclass");
         case "/api/combat/loadout": return reply(await setLoadout(m.store, ME, body.loadout), "loadout");
         case "/api/combat/cosmetic": return reply(await equipCosmetic(m.store, ME, body.subclass, body.kind, body.value), "cosmetics");

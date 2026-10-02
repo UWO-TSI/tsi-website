@@ -70,7 +70,9 @@ describe("spawn table (combat-content A1)", () => {
       for (const [x, z] of row.at) expect(zoneAt(x, z)).toBe(MAP_ZONE[row.zone]);
     }
     const zoneOf = (t: string) => SPAWN_TABLE.find(r => r.type === t)!.zone;
-    for (const t of ["shadow-fox", "thorn-crab", "mushroom-beast", "rune-wisp", "elder-thorn-crab"]) expect(zoneOf(t)).toBe("outer");
+    for (const t of ["shadow-fox", "thorn-crab", "mushroom-beast", "rune-wisp", "pollen-sprite", "elder-thorn-crab"]) expect(zoneOf(t)).toBe("outer");
+    // Packs: every member of a den or cloud is in the zone too.
+    for (const s of SPAWNS.filter(x => x.pack)) expect(zoneAt(s.x, s.z)).toBe("outer");
     for (const t of ["animated-book", "stone-golem"]) expect(zoneOf(t)).toBe("inner");
     expect(zoneOf("guardian-statue")).toBe("boss");
   });
@@ -81,7 +83,8 @@ describe("spawn table (combat-content A1)", () => {
   });
   it("gives each spawn a stable id, respawns the wild but not the boss, and sizes instancing for waves and summons", () => {
     expect(new Set(SPAWNS.map(s => s.id)).size).toBe(SPAWNS.length);
-    expect(respawnAfter("shadow-fox-1")).toBeGreaterThan(0);
+    expect(respawnAfter("shadow-fox-1-1")).toBeGreaterThan(0); // a den's first fox
+    expect(respawnAfter("thorn-crab-1")).toBeGreaterThan(0);
     expect(respawnAfter("guardian-statue-1")).toBe(0);
     expect(respawnAfter("wv1-0")).toBe(0);
     expect(capacity("rune-wisp")).toBe(SPAWNS.filter(s => s.type === "rune-wisp").length + 1 + 2); // one in a wave, two summons

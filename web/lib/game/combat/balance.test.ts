@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { balanceTable, bossMinutes, familyAverages, type BalanceRow } from "./balance";
+import { balanceTable, bossMinutes, elderTable, familyAverages, type BalanceRow } from "./balance";
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 const table = (rows: BalanceRow[]) => [
@@ -46,6 +46,13 @@ describe("balance pass (Part B 3, G2): scripted solo survive runs, 20 seeds per 
     expect(warden.medianClear).toBeLessThan(fastest * 1.6); // strong solo fighters, not just survivors
     expect(warden.medianClear).toBeGreaterThan(fastest * 0.7); // …and not a steamroller
   });
+  const elder = elderTable();
+  it("zone 1's mini-boss takes 1.5–2.5 minutes for the median subclass with its starter weapon, and every subclass can beat it", () => {
+    expect(median(elder.map(r => r.medianMinutes))).toBeGreaterThanOrEqual(1.5);
+    expect(median(elder.map(r => r.medianMinutes))).toBeLessThanOrEqual(2.5);
+    for (const r of elder) expect(r.clearRate, r.subclass).toBeGreaterThanOrEqual(0.7);
+    for (const k of STARTERS) { expect(bossMinutes(k, "elder-thorn-crab"), k).toBeGreaterThanOrEqual(1.5); expect(bossMinutes(k, "elder-thorn-crab"), k).toBeLessThanOrEqual(2.5); }
+  });
   it("writes specs/evidence/combat-b/balance.md when asked (WRITE_BALANCE=1)", () => {
     if (!process.env.WRITE_BALANCE) return;
     const b = band(normal, hard), x = (n: number) => `${n.toFixed(2)}×`;
@@ -75,6 +82,18 @@ describe("balance pass (Part B 3, G2): scripted solo survive runs, 20 seeds per 
       "- Ranger: Smoke Step distracts 0.5 s (was 2) and slips back 2 u (was 5).",
       "- Warden: +25% max health on all four; Holy Beam 2.2 → 2.9; Thorn Lash 1.1 → 1.5; Radiant Shield 0.45 every 10 s (was 0.35 every 14).",
       "- Summons: spirit wisp 0.55 → 0.38, fox 0.6 → 0.4, shade 0.8 → 0.55, bone wisp 0.55 → 0.45, the tome's wisp 0.6 → 0.85, the bulwark crab 180 → 400 health.",
+      "",
+      "## Zone 1 mobs (2026-10-02, specs/classes/design-sheet.md \"Mobs, zone 1\")",
+      "",
+      "The outskirts' mobs got their behaviours (fox dens flank and pounce in turn, crabs turn a front shell to you, mushrooms lob spores that leave poison, wisps bolt and blink, pollen sprites swarm and burst into slowing pollen) and the rune circle's waves now bring a fox den of three, a mushroom, a crab and a pollen cloud of eight, then a crab, a fox and a wisp. The bot circles a crab's shell to its flank and steps out of puddles and pollen. With today's kits the band above still holds; nothing in the kits changed.",
+      "",
+      "The elder thorn crab, zone 1's mini-boss (shell closed, cracked at 60%, enraged at 25%), is tuned to 1450 HP, 20 damage, leash 24 (was 300 HP, 16 damage: a 20-second fight). By the content pass's measure (level 10, all 27 points in the weapon's stat, landing on its flank half the time, one hit in ten a crit): " + STARTERS.map(k => `${WEAPONS_NAME[k]} ${bossMinutes(k, "elder-thorn-crab").toFixed(1)}`).join(", ") + " min; tier 2+ " + GEARED.map(k => `${WEAPONS_NAME[k]} ${bossMinutes(k, "elder-thorn-crab").toFixed(1)}`).join(", ") + " min. Against the bot, every subclass alone (20 seeds, 400 s limit):",
+      "",
+      "| Subclass | Family | Starter weapon | Beaten | Median time | Deaths | Lowest HP (avg) |",
+      "|---|---|---|---|---|---|---|",
+      ...elder.map(r => `| ${r.subclass} | ${r.family} | ${r.weapon} | ${pct(r.clearRate)} | ${Number.isNaN(r.medianMinutes) ? "–" : `${r.medianMinutes.toFixed(1)} min`} | ${r.deaths} | ${pct(r.minHp)} |`),
+      "",
+      `Median of the subclasses: ${median(elder.map(r => r.medianMinutes)).toFixed(1)} min. The Summoner's quick fight is its bulwark crab: it draws the elder's front, so its back is open the whole time.`,
       "",
       "## Normal mission: Hold the rune circle (outer wild, 3 waves, level 5 enemies)",
       "",
