@@ -20,7 +20,7 @@ export const WHEEL_SLOTS = 8;
 export const MAX_PINS = 2;
 export type WheelSite = "village" | "home" | "ruins";
 
-export const itemIcon = (key: string) => `/assets/icons/${key}.png`;
+export const itemIcon = (key: string) => `/assets/icons/${key}.webp`;
 const SPECIES = new Map([...ROSTER, ...MATERIALS].map(s => [s.key, s]));
 const WEAPON = new Map(WEAPONS.map(w => [w.key, w]));
 /** The order weapon types sit on the wheel. */

@@ -9,7 +9,8 @@
  */
 import type { Species } from "@/lib/collections/roster";
 import { WEAPONS } from "@/lib/combat/weapons";
-import { CATALOGUE, type CatalogueEntry } from "@/lib/wallet/catalogue";
+import { CATALOGUE, withIcon, type CatalogueEntry } from "@/lib/wallet/catalogue";
+import { iconUrl } from "@/lib/icons/keys";
 
 /** Where a recipe can be learned. `starter` recipes are known by everyone. */
 export type RecipeSource = "starter" | "shop" | "bottle" | "quest";
@@ -26,11 +27,11 @@ export interface Recipe {
 export const MATERIALS: Species[] = [{
   key: "wood_branch", category: "mineral", sub: "wood", name: "Tree branch", biome: "trees", tool: "hand", rarity: "common",
   size: null, hours: null, rainAnyHour: false, weather: [], months: [], oneLiner: "Shake a tree and one usually falls out.",
-  icon: null, model: null, assetReady: false, donatable: false, wing: null, position: 101,
+  icon: iconUrl("wood_branch"), model: null, assetReady: false, donatable: false, wing: null, position: 101,
 }];
 
 let pos = 100;
-const item = (slug: string, display_name: string, category: CatalogueEntry["category"], value: number, x: Partial<CatalogueEntry> = {}): CatalogueEntry => ({
+const item = (slug: string, display_name: string, category: CatalogueEntry["category"], value: number, x: Partial<CatalogueEntry> = {}): CatalogueEntry => withIcon({
   slug, display_name, category, description: "", price_coins: value, price_gems: null, tier: null, slot: null,
   special_pool: false, stackable: false, stock: null, catalogue_ref: null, sprite_url: null, position: ++pos, ...x,
 });
@@ -60,8 +61,8 @@ export const CRAFTED_ITEMS: CatalogueEntry[] = [
   item("outfit-koi-kimono", "Koi kimono", "outfit", 4000, { slot: "outfit", catalogue_ref: "outfit_koi_kimono", description: "Rare. Woven around a golden koi scale." }),
   // The first movement unlock (row 245, specs/glider.md): owning it turns gliding on (lib/game/glider.ts). Written out
   // rather than item(), whose running position would renumber the recipe cards seeded after these (115-118).
-  { slug: "glider-leaf", display_name: "Leaf glider", category: "tool", description: "Jump, then press jump again while falling and hold it to glide. Crafted at a workbench.",
-    price_coins: 3000, price_gems: null, tier: "premium", slot: null, special_pool: false, stackable: false, stock: null, catalogue_ref: "glider_leaf", sprite_url: null, position: 119 },
+  withIcon({ slug: "glider-leaf", display_name: "Leaf glider", category: "tool", description: "Jump, then press jump again while falling and hold it to glide. Crafted at a workbench.",
+    price_coins: 3000, price_gems: null, tier: "premium", slot: null, special_pool: false, stackable: false, stock: null, catalogue_ref: "glider_leaf", sprite_url: null, position: 119 }),
 ];
 
 const r = (id: string, ingredients: Record<string, number>, sources: RecipeSource[], kind: "item" | "weapon" = "item", qty = 1): Recipe =>

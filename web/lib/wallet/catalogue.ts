@@ -7,6 +7,7 @@
  */
 import { dyeRef, FREE_HAIR_COLOURS, PARTS, STARTER_PARTS } from "@/lib/game/character/look";
 import { CATALOGUE as PIECES, EVENT_PIECE_IDS } from "@/lib/homes/catalogue";
+import { shopIcon } from "@/lib/icons/keys";
 
 export type ShopCategory ="tool" | "outfit" | "hair" | "accessory" | "furniture" | "wallpaper" | "flooring" | "merch";
 export type Tier = "basic" | "mid" | "premium";
@@ -30,11 +31,13 @@ export interface CatalogueEntry {
 }
 
 let pos = 0;
-const e = (slug: string, display_name: string, category: ShopCategory, price: number, x: Partial<CatalogueEntry> = {}): CatalogueEntry => ({
+/** Every row's sprite_url is its rendered icon (row 281, lib/icons). */
+export const withIcon = (c: CatalogueEntry): CatalogueEntry => ({ ...c, sprite_url: shopIcon(c) });
+const e = (slug: string, display_name: string, category: ShopCategory, price: number, x: Partial<CatalogueEntry> = {}): CatalogueEntry => withIcon({
   slug, display_name, category, description: "", price_coins: price, price_gems: null, tier: null, slot: null,
   special_pool: false, stackable: false, stock: null, catalogue_ref: null, sprite_url: null, position: ++pos, ...x,
 });
-const furniture = (ref: string, name: string, price: number) => e(`furn-${ref}`, name, "furniture", price, { catalogue_ref: ref, stackable: true, special_pool: true, sprite_url: null });
+const furniture = (ref: string, name: string, price: number) => e(`furn-${ref}`, name, "furniture", price, { catalogue_ref: ref, stackable: true, special_pool: true });
 
 export const CATALOGUE: CatalogueEntry[] = [
   // Tools (row 127: basic rod ~100, mid ~400)

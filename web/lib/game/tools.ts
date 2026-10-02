@@ -12,7 +12,7 @@ export type ToolTier = 1 | 2 | 3 | 4 | 5;
 export interface Tool { kind: ToolKind; tier: ToolTier; key: string; name: string; source: "starter" | "shop" | "crafted"; model: string; icon: string }
 
 const tool = (kind: ToolKind, tier: ToolTier, key: string, name: string, source: Tool["source"]): Tool =>
-  ({ kind, tier, key, name, source, model: `/assets/game/tools/${kind}-${tier}.glb`, icon: `/assets/icons/${key}.png` });
+  ({ kind, tier, key, name, source, model: `/assets/game/tools/${kind}-${tier}.glb`, icon: `/assets/icons/${key}.webp` });
 
 export const TOOLS: readonly Tool[] = [
   ...RODS.map(r => tool("rod", r.tier, r.key, r.name, r.source)),

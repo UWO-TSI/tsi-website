@@ -52,7 +52,8 @@ const SPRING_AUTUMN = [3, 4, 5, 6, 9, 10, 11];
 
 type Row = [key: string, name: string, biome: Biome, rarity: Rarity, size: [number, number] | null, hours: [number, number] | null, extra?: Partial<Species>];
 let pos = 0;
-const icon = (key: string) => `/assets/acnh/icons/${key}.png`;
+/** Every species' icon, rendered from its model (row 281, lib/icons/manifest.ts). */
+const icon = (key: string) => `/assets/icons/${key}.webp`;
 
 function make(category: Category, tool: Tool, wing: Wing | null, rows: Row[], defaults: Partial<Species> = {}): Species[] {
   return rows.map(([key, name, biome, rarity, size, hours, extra]) => ({
@@ -173,13 +174,13 @@ const NATURE_ROWS: Row[] = [
   ["flower_tulip", "Orange Tulip", "flowers", "common", null, null, { sub: "flower", months: [4, 5] }],
   ["flower_pansy", "Purple Pansy", "flowers", "common", null, null, { sub: "flower", months: [3, 4, 5, 9, 10] }],
   ["flower_windflower", "Windflower", "flowers", "rare", null, null, { sub: "flower", months: [3, 4, 10, 11] }],
-  ["shell_asari", "Asari Clam", "beach", "common", [3, 6], null, { sub: "shell", tool: "shovel", icon: null, model: "/assets/acnh/props/shell-asari.glb" }],
-  ["shell_scallop", "Scallop Shell", "beach", "common", [6, 12], null, { sub: "shell", icon: null, model: "/assets/acnh/props/shell-scallop.glb" }],
-  ["shell_turban", "Turban Shell", "beach", "uncommon", [5, 10], null, { sub: "shell", icon: null, model: "/assets/acnh/props/shell-turban.glb" }],
-  ["shell_whelk", "Whelk Shell", "beach", "rare", [8, 16], null, { sub: "shell", icon: null, model: "/assets/acnh/props/shell-whelk.glb" }],
-  ["mushroom_round", "Round Mushroom", "woods", "common", null, null, { sub: "mushroom", months: AUTUMN, icon: null, assetReady: false }],
-  ["mushroom_flat", "Flat Mushroom", "woods", "uncommon", null, null, { sub: "mushroom", months: AUTUMN, icon: null, assetReady: false }],
-  ["mushroom_skinny", "Skinny Mushroom", "woods", "rare", null, null, { sub: "mushroom", months: [11], icon: null, assetReady: false }],
+  ["shell_asari", "Asari Clam", "beach", "common", [3, 6], null, { sub: "shell", tool: "shovel", model: "/assets/acnh/props/shell-asari.glb" }],
+  ["shell_scallop", "Scallop Shell", "beach", "common", [6, 12], null, { sub: "shell", model: "/assets/acnh/props/shell-scallop.glb" }],
+  ["shell_turban", "Turban Shell", "beach", "uncommon", [5, 10], null, { sub: "shell", model: "/assets/acnh/props/shell-turban.glb" }],
+  ["shell_whelk", "Whelk Shell", "beach", "rare", [8, 16], null, { sub: "shell", model: "/assets/acnh/props/shell-whelk.glb" }],
+  ["mushroom_round", "Round Mushroom", "woods", "common", null, null, { sub: "mushroom", months: AUTUMN, assetReady: false }],
+  ["mushroom_flat", "Flat Mushroom", "woods", "uncommon", null, null, { sub: "mushroom", months: AUTUMN, assetReady: false }],
+  ["mushroom_skinny", "Skinny Mushroom", "woods", "rare", null, null, { sub: "mushroom", months: [11], assetReady: false }],
 ];
 
 // ── Rocks and ore (5): crafting materials, struck with a tool; not donatable ──
@@ -195,10 +196,10 @@ const MINERAL_ROWS: Row[] = [
 export const LAUNCH_ROSTER: Species[] = [
   ...make("fish", "rod", "aquarium", FISH_ROWS, { model: null }),
   ...make("sea", "rod", "aquarium", SEA_ROWS),
-  ...make("bug", "net", "insect_hall", BUG_ROWS).map((s) => (BUG_MODELLED.has(s.key) ? s : { ...s, icon: null, assetReady: false })),
-  ...make("fruit", "hand", null, FRUIT_ROWS).map((s) => (s.key === "apple" || s.key === "peach" ? s : { ...s, icon: null, assetReady: false })),
+  ...make("bug", "net", "insect_hall", BUG_ROWS).map((s) => (BUG_MODELLED.has(s.key) ? s : { ...s, assetReady: false })),
+  ...make("fruit", "hand", null, FRUIT_ROWS).map((s) => (s.key === "apple" || s.key === "peach" ? s : { ...s, assetReady: false })),
   ...make("nature", "hand", "nature_room", NATURE_ROWS),
-  ...make("mineral", "shovel", null, MINERAL_ROWS, { icon: null, assetReady: false }),
+  ...make("mineral", "shovel", null, MINERAL_ROWS, { assetReady: false }),
 ];
 
 /**

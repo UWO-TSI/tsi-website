@@ -40,7 +40,7 @@ describe("the tool wheel's contents (specs/game-ui.md §1)", () => {
     const full = ids({ owned: ["glider_leaf"], armed: true, weapons: [...STARTER_WEAPONS, "revolver-brass"], pins: ["apple", "peach"], stock: { apple: 1, peach: 1 } });
     expect(full).toHaveLength(WHEEL_SLOTS);
     expect(full.slice(-2)).toEqual(["pin:apple", "pin:peach"]);
-    expect(pinItem("apple")).toMatchObject({ name: "Apple", icon: "/assets/icons/apple.png" });
+    expect(pinItem("apple")).toMatchObject({ name: "Apple", icon: "/assets/icons/apple.webp" });
   });
 
   it("is weapons only in the ruins: the default, the best of each type, then the rest you own", () => {
