@@ -49,7 +49,7 @@ import OracleTemple from "./oracle/OracleTemple";
 import RuinsScene from "./combat/RuinsScene";
 import CombatHud from "./combat/CombatHud";
 import MissionBoardSheet from "./combat/MissionBoardSheet";
-import { SLOT_IDS, attachProgressId, combat, publishCombat, setMission, setOwnedWeapons, setWeapon, useCombatValue } from "@/lib/game/combat/runtime";
+import { SLOT_IDS, V2_SLOT_IDS, attachProgressId, combat, publishCombat, setMission, setOwnedWeapons, setWeapon, useCombatValue } from "@/lib/game/combat/runtime";
 import { missionEvent } from "@/lib/game/combat/abilities";
 import { combatProgression, postWear, startMissionRemote, type ProgressionView } from "@/lib/game/combat/progression";
 import { equipKit } from "@/lib/game/combat/abilities";
@@ -63,6 +63,7 @@ import OracleQuizSheet from "./oracle/OracleQuizSheet";
 import { FamilyReveal } from "./oracle/OracleSheetEmbed";
 import SettingsSheet from "./oracle/SettingsSheet";
 import FamilyAura from "./oracle/FamilyAura";
+import SubclassAura from "./oracle/SubclassAura";
 import { FAMILIES } from "@/lib/game/oracle/family";
 import type { Family } from "@/lib/oracle/engine";
 import type { ResultView } from "@/lib/oracle/service";
@@ -103,7 +104,7 @@ import { rodByTier } from "@/lib/game/rods";
 import { eatItem, localCollections, mergeWithLocal } from "@/lib/game/collections";
 import { capture } from "@/lib/game/orbitCamera";
 import { iconUrl } from "@/lib/icons/keys";
-import { FLASH_MS, fullHud as isFullHud, useAlwaysFullHud } from "@/lib/game/hudPrefs";
+import { FLASH_MS, fullHud as isFullHud, setClassTag, useAlwaysFullHud } from "@/lib/game/hudPrefs";
 import { useFlash } from "./useFlash";
 
 import { villageNodes } from "@/lib/game/islandNodes";
@@ -576,6 +577,26 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // Bumped by the Oracle's path sheet after a subclass, loadout or stat change so the encounter re-reads them.
   const [pathTick, setPathTick] = useState(0);
   const [pathView, setPathView] = useState<ProgressionView | null>(null);
+  // Classes v2 (§1.9): the subclass aura (its kit at its mastery, the equipped colour).
+  const classAura = useMemo(() => {
+    const c = pathView?.classes, kit = c?.kit ? classKit(c.kit) : null;
+    return kit && c ? { kit, mastery: c.mastery.mastery, colour: c.cosmetics.aura === "mastery:colour" ? kit.look.ramp[0] : null } : null;
+  }, [pathView]);
+  useEffect(() => {
+    const c = pathView?.classes, kit = classAura?.kit, f = c?.cosmetics.frame;
+    setClassTag(kit && c ? { icon: kit.look.icon, title: c.title ?? kit.name, color: kit.look.ramp[1], frame: f === "mastery:bronze" ? "bronze" : f === "mastery:silver" ? "silver" : f === "mastery:gold" ? "gold" : null } : null);
+  }, [pathView, classAura]);
+  // Classes v2 (§1.13): P opens the Path sheet anywhere (the subclass, its kit and mastery, stats).
+  const classesOn = !!pathView?.classes && !!pathView.family;
+  useEffect(() => {
+    if (!classesOn) return;
+    const on = (e: KeyboardEvent) => {
+      if (e.repeat || e.key.toLowerCase() !== "p" || (e.target instanceof HTMLElement && e.target.closest("input, textarea, select"))) return;
+      setPathTick(n => n + 1); setSheet(s => (s === "path" ? null : s === null ? "path" : s));
+    };
+    window.addEventListener("keydown", on);
+    return () => window.removeEventListener("keydown", on);
+  }, [classesOn]);
   // The tool wheel (specs/game-ui.md): what it holds, what you hold (this device's), your stock for the pins.
   const heldState = useHeld();
   const wheelKeys = useWheelKeys();
@@ -600,7 +621,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     // Classes v2 (the flag on and the subclass's family wave landed): its kit at its mastery; otherwise today's kit and loadout.
     const v2 = g.view?.classes?.kit ? classKit(g.view.classes.kit) : null;
     combat.rt.v2 = null;
-    if (v2) equipClassKit(combat.rt, v2, g.view!.classes!.mastery.mastery);
+    if (v2) equipClassKit(combat.rt, v2, g.view!.classes!.mastery.mastery, g.view!.classes!.mastery);
     else equipKit(combat.rt, subclassByKey(g.subclass), g.view?.loadout ?? [], g.view?.traits ?? {});
     setOwnedWeapons(combat.rt, g.weapons);
     setDefaultWeapon(g.weapons.find(w => w.equipped)?.weapon_key ?? null);
@@ -907,7 +928,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
               decorating={decor.decorating} selected={decor.selected} onPlace={item => decor.place("outdoor", item)} onPickUp={item => decor.pickUp("outdoor", item)} />
             : <IslandScene held={eating ? null : held} identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent}
               lead={welcoming || welcome === "done" ? { line: greeting, hold: welcoming } : null} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={welcoming ? 0.7 : devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} />}
-          {identity.family && identity.aura && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>}
+          {/* Classes v2: the subclass's aura replaces the family's once its kit exists (§1.9). */}
+          {identity.family && identity.aura && (classAura ? <SubclassAura player={player} kit={classAura.kit} mastery={classAura.mastery} colour={classAura.colour} />
+            : <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>)}
           <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={grade} fx={lookFx(lookPreset, !liteMode)} />
           <LookMaterials preset={lookPreset} />
           <SunShadows />
@@ -1011,7 +1034,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <PostersSheet open={sheet === "posters"} onClose={() => setSheet(null)} event={islandEvent} />
       <CafeGoalSheet open={sheet === "cafe"} onClose={() => setSheet(null)} />
       {site === "ruins" && <CombatHud player={player} />}
-      {welcoming || !full ? null : site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>{mouseLook ? "Mouse Look and aim" : "Mouse Aim"}</span><span>Click Attack</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>←</kbd><kbd>→</kbd> Turn</span><span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Slide</span>}<span>{SLOT_IDS.map(s => <kbd key={s}>{keyName(abilityKeys[s])}</kbd>)} Abilities</span><span><kbd>{keyName(wheelKeys.wheel)}</kbd> Weapons</span><span><kbd>{keyName(abilityKeys.swap)}</kbd> Previous weapon</span><span><kbd>E</kbd> Interact</span></div>
+      {welcoming || !full ? null : site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>{mouseLook ? "Mouse Look and aim" : "Mouse Aim"}</span><span>Click Attack</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>←</kbd><kbd>→</kbd> Turn</span><span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Slide</span>}<span>{(combat.rt.v2 ? V2_SLOT_IDS : SLOT_IDS).map(s => <kbd key={s}>{keyName(abilityKeys[s])}</kbd>)} Abilities</span>{combat.rt.v2 && <span><kbd>{keyName(abilityKeys.ult)}</kbd> Ultimate</span>}<span><kbd>{keyName(wheelKeys.wheel)}</kbd> Weapons</span><span><kbd>{keyName(abilityKeys.swap)}</kbd> Previous weapon</span><span><kbd>E</kbd> Interact</span></div>
       // Indoors you walk (cafe-polish §4): no run, jump, dash, zoom or map.
       : inside ? <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>E</kbd> Interact</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span></div>
       : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span>{peaceful.glider && <span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air Glide</span>}<span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span><kbd>{keyName(wheelKeys.wheel)}</kbd> Tools</span><span>Click Use</span><span>{mouseLook ? "Mouse or " : ""}<kbd>←</kbd><kbd>→</kbd> Look</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Crouch, at speed slide</span>}</div>}

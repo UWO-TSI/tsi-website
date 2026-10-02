@@ -21,7 +21,7 @@ import { IS_MAC, MOVE_ACTIONS, abilityPreset, canLockKeyboard, crouchKey, keyNam
 import { AudioManager, type AudioVolumes } from "@/lib/game/audio";
 import { useAudioState } from "@/lib/game/useAudio";
 import { orbit, readOrbitPrefs, setOrbitPrefs, subscribeOrbitPrefs, SENSITIVITY_MAX, SENSITIVITY_MIN } from "@/lib/game/orbitCamera";
-import { setAlwaysFullHud, useAlwaysFullHud } from "@/lib/game/hudPrefs";
+import { setAlwaysFullHud, setShowClass, useAlwaysFullHud, useShowClass } from "@/lib/game/hudPrefs";
 import { setComfort, useComfort, type ShakeLevel } from "@/lib/game/comfortSettings";
 import IslandSheet from "../IslandSheet";
 import styles from "../DefaultIslandWorld.module.css";
@@ -59,7 +59,7 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
   const [moveNote, setMoveNote] = useState<string | null>(null);
   const wheelKeys = useWheelKeys();
   const alwaysFullHud = useAlwaysFullHud();
-  const comfort = useComfort();
+  const comfort = useComfort(), showClass = useShowClass();
   const [wheelListen, setWheelListen] = useState<"wheel" | "hud" | null>(null);
   useNextKey(wheelListen !== null, key => {
     const r = remapWheel(wheelKeys, wheelListen!, key);
@@ -127,7 +127,8 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
       <label className={styles.toggle}><span>Follow behind when you run</span><input type="checkbox" checked={camera.autoFollow} onChange={e => setOrbitPrefs({ autoFollow: e.target.checked })} /></label>
       <p className={styles.hint}>{camera.mouseLook ? "Click the island to look around with the mouse. Hold right click for a cursor; Esc lets the mouse go." : "The cursor stays free."} Arrow keys turn and tilt, the wheel and Z zoom, V puts the camera back. Kept on this device.</p>
     </fieldset>
-    <label className={styles.toggle}><span>Show my family aura</span><input type="checkbox" checked={aura} onChange={e => setAuraVisible(e.target.checked)} /></label>
+    <label className={styles.toggle}><span>Show class on my nameplate</span><input type="checkbox" checked={showClass} onChange={e => setShowClass(e.target.checked)} /></label>
+    <label className={styles.toggle}><span>Show my aura</span><input type="checkbox" checked={aura} onChange={e => setAuraVisible(e.target.checked)} /></label>
     <label className={styles.toggle}><span>High contrast</span><input type="checkbox" checked={settings.high_contrast} onChange={e => void save({ high_contrast: e.target.checked })} /></label>
     {/* Design sheet §1.6: the ult's flash frame and every flash obey these; both start calm when the device asks for reduced motion. */}
     <fieldset data-testid="accessibility">
@@ -193,7 +194,7 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
       {/* Row 279: the slots on the number row or under the left hand; in the ruins they win over zoom (Z) and the camera reset (V). */}
       <div className={styles.segmented} role="group" aria-label="Ability key preset">
         {(["numbers", "zxcv"] as const).map(p => <button key={p} aria-pressed={abilityPreset(abilityKeys) === p} onClick={() => { const r = presetAbilities(abilityKeys, p); setAbilityNote(r.ok ? null : `${r.error} ${p === "zxcv" && !IS_MAC ? "C crouches here: move Crouch / slide first." : ""}`.trim()); }}>
-          {p === "numbers" ? "1 2 3 4" : "Z X C V"}
+          {p === "numbers" ? "1 2 3 4 5" : "Z X C V T"}
         </button>)}
       </div>
       <ul className={styles.keyList}>{ABILITIES.map(a => <li key={a.id}>

@@ -25,6 +25,8 @@ import { combat, useCombatValue } from "@/lib/game/combat/runtime";
 import { combatFacing, combatPush, combatTuning, dashDodge } from "@/lib/game/combat/actions";
 import { classMove } from "@/lib/game/combat/classRuntime";
 import { applyKick } from "@/lib/game/combat/moveHooks";
+import { weaponTrail } from "@/lib/game/fx/trail";
+import { useClassTag, useShowClass } from "@/lib/game/hudPrefs";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { WEAPONS } from "@/lib/game/combat/data";
 import { STUCK_TIME, advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, topSpeed, towards, MOVE_TUNING, NO_INPUT, type MoveEvent, type MoveInput, type MoveSim, type MoveState, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
@@ -149,6 +151,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   const leafOwned = !inCombat && kit.glider > 0;
   const particles = useMoveParticles();
   const combatPrev = useRef<CombatView | null>(null);
+  // Classes v2 (§1.9): the class icon and mastery title under the name, the mastery or shop frame round the plate.
+  const classTag = useClassTag(), showClass = useShowClass(), tag = showClass ? classTag : null;
   const indicatorId = useRef(0);
   const [indicators, setIndicators] = useState<Array<{ id: number; position: [number, number, number] }>>([]);
   // Micro-anim loop iter 1 (2026-07-24): cozy sit beat, a settle puff and a brief contented ♪ over the head.
@@ -533,6 +537,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     bankAbout(bd, state.facing, f.bank, gliding ? y - groundY + GRIP_Y : 0.05, f.pitch);
     m.rate = rawDelta > 0 ? dt / Math.min(rawDelta, 0.1) : 1;
     if (inCombat) {
+      weaponTrail.model = m.weaponModel ?? null; // the ribbon trail samples the weapon in hand (CombatFx)
       // Movement hooks: what the sim is doing, for riders and the movement passive (moveHooks.ts).
       f.sinceDash = state.dashT > 0 ? 0 : f.sinceDash + dt;
       p.move.mode = sitting ? "ground" : state.mode; p.move.speed = speed; p.move.sinceDash = f.sinceDash; p.move.vx = state.vx; p.move.vz = state.vz;
@@ -607,14 +612,20 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
               background: "rgba(15, 15, 16, 0.6)",
               padding: "2px 8px",
               borderRadius: "4px",
-              boxShadow: member ? "0 0 0 1px rgba(96, 165, 250, 0.55), 0 0 10px rgba(96, 165, 250, 0.45)" : undefined,
+              boxShadow: [member ? "0 0 0 1px rgba(96, 165, 250, 0.55), 0 0 10px rgba(96, 165, 250, 0.45)" : "", tag?.frame ? `0 0 0 2px ${FRAME_COLOR[tag.frame]}` : ""].filter(Boolean).join(", ") || undefined,
             }}
+            data-frame={tag?.frame ?? undefined}
             data-member={member || undefined}
           >
             <div style={{ fontSize: "11px", fontWeight: 700, color: "#f1ffff", lineHeight: 1.2, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
               {member && <span aria-label="TSI member" title="TSI member" style={{ width: 6, height: 6, borderRadius: "50%", background: "#60A5FA", boxShadow: "0 0 4px #60A5FA", flex: "none" }} />}
               {playerName}
             </div>
+            {tag && <div data-testid="nameplate-class" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 1, fontSize: "10px", fontWeight: 600, color: "#f6efdc", lineHeight: 1.2 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- a 24 px class emblem */}
+              <img src={tag.icon} alt="" width={24} height={24} style={{ width: 24, height: 24, borderRadius: "50%", background: "#f6efdc", boxShadow: `0 0 0 1px ${tag.color}` }} />
+              {tag.title}
+            </div>}
             {playerLevel !== undefined && <div style={{ fontSize: "9px", color: "#b8c3c3", fontFamily: "'IBM Plex Mono', monospace", lineHeight: 1.2 }}>
               Lv. {playerLevel}
             </div>}
@@ -638,6 +649,9 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     </>
   );
 }
+
+/** Mastery frames round the nameplate (§1.4: bronze at 5, silver at 15, gold at 20). */
+const FRAME_COLOR = { bronze: "#c08a4a", silver: "#c9d3da", gold: "#f0c24a" } as const;
 
 /** What a wheel item looks like in the hand (weapons aside: they are the character's `weapon`). */
 function heldView(item: WheelItem | null): HeldView | null {
