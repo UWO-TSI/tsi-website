@@ -14,7 +14,9 @@ export type ClipName = "Idle" | "Walk" | "Run" | "Sit" | "Study" | "Sleep" | "Fi
   | "Jump" | "Air" | "Fall" | "Land" | "LandHeavy" | "Roll" | "Mantle" | "Dash" | "Skid" | "Glide"
   | "CrouchIdle" | "CrouchWalk" | "Slide" | "SlideIn" | "SlideInDash" | "SlideUp" | "SlideJump" | "SlideStand" | "SlideBonk"
   // Residents' idles (specs/polish/living-village.md): a look round, a standing stretch, talking with someone.
-  | "LookAround" | "StretchUp" | "Chat";
+  | "LookAround" | "StretchUp" | "Chat"
+  // Holding things (specs/game-ui.md §2): arm poses laid over locomotion (Character.tsx), and eating a held snack.
+  | "HoldRod" | "HoldTool" | "HoldFront" | "Eat";
 /** Movement clips (lib/game/movement): quick crossfades so hops and landings read on time. */
 export const SNAPPY_CLIPS = new Set<ClipName>(["DodgeRoll", "Hit", "Jump", "Air", "Fall", "Land", "LandHeavy", "Roll", "Mantle", "Dash", "Skid", "Glide",
   "Slide", "SlideIn", "SlideInDash", "SlideUp", "SlideJump", "SlideStand", "SlideBonk"]);
@@ -33,7 +35,8 @@ const FAMILY: Record<ClipName, Family> = {
   Dash: "move", Skid: "move", DodgeRoll: "move", Slide: "move", SlideIn: "move", SlideInDash: "move", SlideUp: "move", SlideStand: "move", SlideBonk: "move",
   Sit: "seat", Study: "seat", Stretch: "seat", Sleep: "seat",
   Fish: "act", FishHold: "act", Forage: "act", Dig: "act", Net: "act", Wave: "act", Cheer: "act", Laugh: "act", Sad: "act", Dance: "act", Trace: "act",
-  LookAround: "act", StretchUp: "act", Chat: "act",
+  LookAround: "act", StretchUp: "act", Chat: "act", Eat: "act",
+  HoldRod: "loco", HoldTool: "loco", HoldFront: "loco",
   AttackMelee: "combat", AttackBow: "combat", AttackCast: "combat", Hit: "combat", Defeat: "combat",
 };
 /** From a family (row) into a family (column). */

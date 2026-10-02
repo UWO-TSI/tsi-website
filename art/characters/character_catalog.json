@@ -1433,6 +1433,31 @@
    "length": 3.0,
    "loop": true,
    "frames": 90
+  },
+  {
+   "name": "HoldRod",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
+  },
+  {
+   "name": "HoldTool",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
+  },
+  {
+   "name": "HoldFront",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
+  },
+  {
+   "name": "Eat",
+   "length": 1.6,
+   "loop": false,
+   "frames": 48,
+   "endsNeutral": true
   }
  ],
  "hair": [
