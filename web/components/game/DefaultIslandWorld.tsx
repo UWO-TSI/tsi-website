@@ -100,6 +100,7 @@ import { useWheelKeys } from "@/lib/game/movement/keys";
 import { rodByTier } from "@/lib/game/rods";
 import { eatItem, localCollections, mergeWithLocal } from "@/lib/game/collections";
 import { capture } from "@/lib/game/orbitCamera";
+import { iconUrl } from "@/lib/icons/keys";
 import { FLASH_MS, fullHud as isFullHud, useAlwaysFullHud } from "@/lib/game/hudPrefs";
 import { useFlash } from "./useFlash";
 
@@ -644,14 +645,14 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (action === "trophy" || action === "posters") { setSheet(action === "trophy" ? "tourney" : "posters"); return; }
     // Winter lights and the spring picnic: a moment, not a reward (principle 3: no rewards for online activity).
     if (action === "cocoa" || action === "picnic") {
-      toast(action === "cocoa" ? "A hot cocoa, extra marshmallows. The windows fog up a little." : "Petals keep landing in the teacups. Somebody brought far too many sandwiches.", action === "cocoa" ? "☕" : "🧺");
+      toast(action === "cocoa" ? "A hot cocoa, extra marshmallows. The windows fog up a little." : "Petals keep landing in the teacups. Somebody brought far too many sandwiches.", iconUrl(action === "cocoa" ? "lounge-tea" : "beach-towel"));
       return;
     }
     if (action === "lantern") { combat.rt.idol = "carried"; missionEvent(combat.rt, { type: "pickup", item: combat.rt.mission?.def.params.item ?? "old-lantern" }); publishCombat(); return; }
-    if (action === "ruins" && !gate.open) { if (gate.reason) toast(gate.reason, "🔒"); return; }
+    if (action === "ruins" && !gate.open) { if (gate.reason) toast(gate.reason); return; }
     if (action === "buy") {
       void homeActions.buyRoom(homeActions.roomPrice() ?? ROOM_PRICE.coins).then(result => {
-        if (result.ok) { setHudCoins(result.coins); toast(`A new room is ready. ${result.coins} coins left.`, "🏠"); }
+        if (result.ok) { setHudCoins(result.coins); toast(`A new room is ready. ${result.coins} coins left.`, iconUrl("home-bed")); }
         else toast(/unauthori[sz]ed/i.test(result.error) ? "Sign in to add a room." : result.error);
       });
       return;
@@ -674,9 +675,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       const step = action === "claim" ? "claim_plot" : action === "donate" ? "donate_catch" : "report_hq";
       void chapterActions.run(step).then(error => {
         if (error) toast(error);
-        else if (action === "claim") toast("Plot claimed. Your island is waiting at the end of the pier.", "🏡");
-        else if (action === "donate") toast("Donated. The museum shell has its first exhibit.", "🏛️");
-        else toast("Chapter complete: welcome to the island.", "🎉");
+        else if (action === "claim") toast("Plot claimed. Your island is waiting at the end of the pier.");
+        else if (action === "donate") toast("Donated. The museum shell has its first exhibit.");
+        else toast("Chapter complete: welcome to the island.");
       });
       return;
     }

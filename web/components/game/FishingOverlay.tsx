@@ -782,7 +782,7 @@ export function ReelMinigame({
             color: (fish.zone ?? "river") === "sea" ? "#2A6B84" : "#4A7A44",
           }}
         >
-          {(fish.zone ?? "river") === "sea" ? "🌊 sea" : "🏞 river"}
+          {(fish.zone ?? "river") === "sea" ? "sea" : "river"}
         </span>
         <span style={{ marginLeft: "auto", fontSize: 10, color: "var(--app-muted, #8a7f6a)" }}>
           keep the fish inside the green bar

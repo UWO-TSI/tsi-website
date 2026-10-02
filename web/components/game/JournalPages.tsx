@@ -7,6 +7,7 @@
  * only a silhouette and habitat/time/weather clues (never the name).
  */
 import { useEffect, useState } from "react";
+import { Landmark } from "lucide-react";
 import type { Category } from "@/lib/collections/roster";
 import type { JournalEntryKnown, JournalEntryUnknown, JournalPage } from "@/lib/collections/logic";
 import { useMenuTab } from "@/lib/game/useMenuTab";
@@ -50,7 +51,7 @@ export default function JournalPages({ initial }: { initial: Page }) {
           // eslint-disable-next-line @next/next/no-img-element
           : <img src={(e as JournalEntryUnknown).silhouette} alt="" style={{ width: "80%", height: "80%", objectFit: "contain", filter: "brightness(0) opacity(0.35)" }} onError={ev => { ev.currentTarget.style.display = "none"; }} />}
         {e.available_now && <span title="Out right now" style={{ position: "absolute", top: 3, right: 3, width: 7, height: 7, borderRadius: 99, background: "#3D8F52" }} />}
-        {e.discovered && (e as JournalEntryKnown).museum.donated && <span title="On display at the museum" style={{ position: "absolute", bottom: 2, right: 4, fontSize: 9 }}>🏛</span>}
+        {e.discovered && (e as JournalEntryKnown).museum.donated && <span title="On display at the museum" style={{ position: "absolute", bottom: 3, right: 4, display: "flex", color: "#7a6a4e" }}><Landmark size={11} aria-label="On display at the museum" /></span>}
       </button>)}
     </div>
     {detail && <section style={{ marginTop: 12, padding: 12, borderRadius: 12, background: "#FFF8E7", border: "1px solid #E8DCBC", fontSize: 12 }} aria-live="polite">

@@ -21,6 +21,7 @@ import { AudioManager } from "@/lib/game/audio";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import { FLASH_MS } from "@/lib/game/hudPrefs";
+import { CurrencyIcon } from "@/components/economy/Amount";
 import { useFlash } from "./useFlash";
 import styles from "./TopCluster.module.css";
 
@@ -109,7 +110,7 @@ export default function TopCluster({ weather, phase, unread, mailKey, onMail, fu
     <div className={styles.cluster} data-clean={full ? undefined : ""}>
       <div className={styles.chips}>
         {hud.coins !== null && coins.show && <span className={styles.chip} data-flash={coins.at} data-ping={coinGain ? "" : undefined} aria-label={`${hud.coins.toLocaleString()} ${COINS.name}`} title="Play coins">
-          <span className={styles.coin} aria-hidden="true">{COINS.symbol}</span><b aria-hidden="true"><CountUp value={hud.coins} /></b><small aria-hidden="true">{COINS.name}</small>
+          <span className={styles.coin} aria-hidden="true"><CurrencyIcon size={22} /></span><b aria-hidden="true"><CountUp value={hud.coins} /></b><small aria-hidden="true">{COINS.name}</small>
           {coinGain && <em key={coinGain.id} className={styles.gain} aria-hidden="true">+{coinGain.amount.toLocaleString()}</em>}
         </span>}
         {progress && xp.show && <span className={styles.chip} data-flash={xp.at} data-ping={xpGain ? "" : undefined} data-levelup={levelUp ? "" : undefined}

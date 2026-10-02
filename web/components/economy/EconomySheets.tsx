@@ -3,12 +3,13 @@
 /**
  * Shop / Sell / Inventory / Wallet sheets (specs/economy.md deliverable 4),
  * in the same overlay pattern as the progression sheets. Amounts are shown
- * as play coins 🪙 or Gems 💎 only; nothing is ever expressed as money.
+ * as play coins or Gems only (their icons, components/economy/Amount); nothing is ever expressed as money.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { fmtCoins, fmtGems } from "@/lib/economy";
+import { COINS } from "@/lib/economy";
+import { shopIcon } from "@/lib/icons/keys";
+import { Amount } from "./Amount";
 import { ownedCounts } from "@/lib/wallet/rules";
-import { PALETTE } from "@/lib/game/character/look";
 import type { InventoryView, SellEntry, ShopEntry, ShopView, WalletView } from "@/lib/wallet/service";
 import { ApiError, newKey } from "@/lib/apiClient";
 import { httpEconomyTransport, type EconomyTransport, type MerchView } from "@/lib/wallet/transport";
@@ -16,8 +17,7 @@ import ProgressionPanel, { type ProgressionSheetProps } from "@/components/progr
 import p from "@/components/progression/progression.module.css";
 import s from "./economy.module.css";
 
-const fmt = (n: number, c: string) => (c === "gems" ? fmtGems(n) : fmtCoins(n));
-const ART: Record<string, string> = { tool: "🎣", outfit: "👕", hair: "💇", accessory: "🎩", furniture: "🛋️", wallpaper: "🖼️", flooring: "🟫", merch: "🛍️" };
+const fmt = (n: number, c: string) => <Amount n={n} currency={c} />;
 const errText = (err: unknown) => (err instanceof ApiError ? err.message : "Couldn't reach the shop. Try again.");
 
 function useLoad<T>(load: () => Promise<T>) {
@@ -111,7 +111,9 @@ export function ShopBody({ transport = httpEconomyTransport, initialTab = "tools
         {list.map((e) => (
           <article key={e.id} className={s.tile} aria-label={e.name}>
             {e.special ? <span className={s.sale}>−20%</span> : null}
-            <div className={s.art} aria-hidden>{e.catalogue_ref?.startsWith("hair:") ? <span className={s.dye} style={{ background: PALETTE.hair[Number(e.catalogue_ref.slice(5))] }} /> : ART[e.category] ?? "✨"}</div>
+            {/* Every item's rendered icon (row 281): its sprite_url, or the same icon worked out here. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <div className={s.art} aria-hidden><img src={e.sprite_url ?? shopIcon({ slug: e.slug, catalogue_ref: e.catalogue_ref, category: e.category })} alt="" width={56} height={56} /></div>
             <h4>{e.name}</h4>
             {e.tier ? <span className={s.chip}>{e.tier}</span> : <span className={s.chip}>{e.category}</span>}
             <span className={s.price}>
@@ -258,7 +260,7 @@ export function WalletBody({ transport = httpEconomyTransport }: { transport?: E
   const claim = async () => {
     try {
       const r = await transport.dailyGift();
-      setGift(r.claimed ? `+${fmt(r.coins, "coins")} daily gift` : "Already claimed today. Back tomorrow.");
+      setGift(r.claimed ? `+${r.coins.toLocaleString()} ${COINS.name} daily gift` : "Already claimed today. Back tomorrow.");
       await reload();
     } catch (err) {
       setError(errText(err));

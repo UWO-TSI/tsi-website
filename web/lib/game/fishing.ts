@@ -81,7 +81,7 @@ export interface FishDef {
 
 /** Resolve a species' reel/book icon. */
 export function iconFor(f: FishDef): string {
-  return f.icon ?? `/assets/acnh/icons/${f.key}.png`;
+  return f.icon ?? `/assets/icons/${f.key}.webp`; // rendered from its model (row 281, lib/icons)
 }
 
 // ACNH revamp 2026-07: species-true river catches (models shown in-world by

@@ -22,6 +22,7 @@ import { ROSTER } from "@/lib/collections/roster";
 import { forageSize } from "@/lib/collections/rolls";
 import { bugReaction, hasClue, hourKey, nodeAvailable, rollNode } from "@/lib/game/peaceful";
 import { setPeacefulTarget, type PeacefulTarget } from "@/lib/game/peacefulNear";
+import { iconUrl } from "@/lib/icons/keys";
 import type { Biome, Species } from "@/lib/collections/roster";
 import type { WorldMoment } from "@/lib/collections/logic";
 import { worldTime } from "@/lib/game/worldClock";
@@ -143,7 +144,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
         collect(got.key);
         localRecord(got.key, size);
         AudioManager.playSFX(bug ? "confirm" : "click");
-        window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `${isNew ? "NEW! " : ""}${bug ? "Caught" : "Got"} ${got.name}${size ? `, ${size} cm` : ""}!` } }));
+        window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `${isNew ? "NEW! " : ""}${bug ? "Caught" : "Got"} ${got.name}${size ? `, ${size} cm` : ""}!`, icon: iconUrl(got.key) } }));
         if (answer?.catch.recipe) window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `You learned a recipe: ${answer.catch.recipe.name}` } }));
         window.dispatchEvent(new CustomEvent("tsi:peaceful-got", { detail: { key: got.key, name: got.name, rarity: got.rarity, one_liner: got.oneLiner, size, isNew, bug: !!bug } }));
       });
