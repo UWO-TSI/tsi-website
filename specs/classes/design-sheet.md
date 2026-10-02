@@ -851,7 +851,7 @@ All waves merge to `main` behind a `classes_v2` flag that stays off in productio
   - At 1: Clone, Swap, Mirror Ward and Vanish; 2 clones, 10 s, basic AI. Trick Card at 3.
   - At 10: 3 clones, 14 s; clones also use skill 1.
   - At 20: 4 clones, 18 s; clones use skills 1–3; Swap heals 10% (from 5%).
-- **Stat direction:** still to decide (a base stat the class wants to stack, Megabonk style).
+- **Stat direction: duration.** Clones, Vanish and the Joker's trap last longer.
 - **Identity:**
   - A purple aura of floating cards.
   - A card icon on the nameplate.
@@ -924,6 +924,90 @@ All waves merge to `main` behind a `classes_v2` flag that stays off in productio
 |---|---|
 | Elementalist | Max mana (pool and regen) |
 | Transmuter | Cooldown reduction |
-| Illusionist | to decide |
+| Illusionist | Duration |
+| Marksman | Attack speed |
+| Sniper | Crit damage |
+| Hunter | Duration |
+| Gunslinger | Reload speed |
 
 Class movement passives and skills (Air Step, Bone Surf, Fox Pounce) work in the ruins only; the village movement kit stays the same for everyone.
+
+Play style (David, 2026-10-02): "some character should be skill based and some should be basic attack based." Each class is tagged basic-attack or skill.
+
+## Marksman (LOCKED, David 2026-10-02)
+- **Family:** Ranger (blue).
+- **Role:** mobile ranged damage.
+- **Style:** basic attacks. You hold the mouse button and move around without breaking Focus; the skills are movement or buffs.
+- **Weapon:** a recurve bow, slung on the back. Arrows drop with distance.
+- **Focus (passive):** hold fire. Shooting starts at 1.5 shots/s and ramps to 8/s over about 4 s while you keep shooting and moving. Stopping fire for 0.5 s, or taking a hit, drops Focus by half.
+
+| Key | Skill | Effect |
+|---|---|---|
+| 1 | Homing Arrows | 6 s: arrows curve to the nearest enemy |
+| 2 | Flame Arrows | 6 s: arrows ignite and leave burning ground |
+| 3 | Swift Arrows | 6 s: ×2 arrow speed, flat flight, pierce 1 |
+| 4 | Back Hop | Leap back while still firing; keeps Focus and momentum and lands into a slide (movement, row 292) |
+
+- **Ultimate, Thousand Arrows:** instant max Focus with all three buffs on, 20 shots/s for 6 s, ending in a final volley: flash frame, shake.
+- **Stat direction:** attack speed.
+
+## Sniper (LOCKED, David 2026-10-02)
+- **Family:** Ranger (blue).
+- **Role:** long-range burst damage, a glass cannon. Weak in groups, so it carries an AoE round and piercing.
+- **Style:** skills.
+- **Weapon:** a long brass-and-wood rifle with a scope, slung on the back.
+- **Basic:** a slow, heavy shot (1/s). Weak points (heads, cores) always crit.
+- **Killstreak (passive):** each kill adds +15% damage (max 5). Lost when you take a hit or go 8 s without a kill.
+
+| Key | Skill | Effect |
+|---|---|---|
+| 1 | Scope | Zoom in, +40% crit chance, steadier aim |
+| 2 | Piercing Round | Goes through the whole line |
+| 3 | Cluster Round | Explodes on impact and splits into 4 bomblets (for groups) |
+| 4 | Smoke Roll | Roll back in smoke; keeps momentum, enemies lose you (movement) |
+| 5 | Tripwire | A mine that blasts what comes close |
+
+- **Ultimate, Final Shot:** time freezes and the scope locks. One rail round pierces the whole field, and every hit is a crit: flash frame, heavy shake.
+- **Stat direction:** crit damage.
+
+## Hunter (LOCKED, David 2026-10-02)
+- **Family:** Ranger (blue).
+- **Role:** trapper / control. The field fills with traps.
+- **Style:** skills.
+- **Weapon:** a harpoon crossbow that fires harpoons on a chain; it's both the weapon and the movement.
+- **Prey (passive):** marked enemies take +30% from traps.
+- **Traps:** cap 3 at the start; more of them, lasting longer, as duration grows.
+
+| Key | Skill | Effect |
+|---|---|---|
+| 1 | Camouflage | Blend in: standing still you're invisible, a slow walk stays hidden, and the first shot out deals bonus damage |
+| 2 | Snare Trap | Roots for 2 s |
+| 3 | Spike Trap | Burst damage plus bleed |
+| 4 | Mark Prey | The mark shows through walls; your traps lunge toward it |
+| 5 | Harpoon | Hit an enemy: drag it into your traps. Hit terrain: zip there, keeping momentum (movement) |
+
+- **Ultimate, The Great Hunt:** every trap on the field arms and chains at once, and spectral hounds run down each mark: flash frame.
+- **Stat direction:** duration.
+
+## Gunslinger (LOCKED, David 2026-10-02)
+- **Family:** Ranger (blue).
+- **Role:** rhythm damage.
+- **Style:** basic attacks, with a reload skill check.
+- **Weapon:** a revolver: 6 bullets, then a reload animation.
+- **Reload:** automatic when empty, or R (Gunslingers move "previous weapon" off R). It takes 1.2 s. Press R in the gold zone of the reload bar for an instant reload and +25% damage on the next 6 shots; a miss makes the reload slower.
+- **Last Round (passive):** the 6th bullet always crits.
+
+| Key | Skill | Effect |
+|---|---|---|
+| 1 | Fan the Hammer | Empty the cylinder in a fast cone |
+| 2 | Trick Shot | Ricochets between up to 4 enemies |
+| 3 | Special Rounds | Load 3 explosive bullets into the next chambers |
+| 4 | Roll Reload | A dash or slide that reloads 2 bullets (movement) |
+| 5 | Quickdraw | Right after a reload, the first shot deals ×2 and staggers |
+
+- **Ultimate, Russian Roulette (David's design):**
+  - A warhead is loaded into the cylinder and spun. The six chambers hold 1 Warhead and 5 golden rounds, and you can't see which is where.
+  - Every shot needs the hammer cocked (about 0.6 s), so each one is deliberate, and any one might be the Warhead. You have to aim every shot instead of spamming all six.
+  - Golden rounds hit hard. The Warhead hits like a nuke: the biggest flash frame in the game, a mushroom cloud, and a huge blast.
+  - You get 10 s to fire all six.
+- **Stat direction:** reload speed.
