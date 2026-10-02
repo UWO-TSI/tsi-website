@@ -28,7 +28,8 @@ let opened = null;
 async function open(query) {
   if (opened === query) return;
   opened = query;
-  await page.goto(`http://localhost:${PORT}/lab/island?time=day&weather=clear&season=summer&ruins=1&combat=demo&${query}`, { waitUntil: "domcontentloaded" });
+  // V2=1: the classes v2 flag on (wave 0's kits, ult meter and impact tiers).
+  await page.goto(`http://localhost:${PORT}/lab/island?time=day&weather=clear&season=summer&ruins=1&combat=demo&${query}${process.env.V2 ? "&classes=v2" : ""}`, { waitUntil: "domcontentloaded" });
   await page.waitForSelector("canvas", { timeout: 180000 });
   for (let quiet = 0; quiet < 3;) { await page.waitForTimeout(1000); quiet = await page.evaluate(() => !!window.__move?.sim?.current && !!window.__combatDev?.screenOf && !!window.__combat?.rt?.kit && !document.querySelector('[role="status"]')?.textContent?.includes("Preparing")) ? quiet + 1 : 0; }
   await page.waitForTimeout(3000);

@@ -160,6 +160,8 @@ function useSectors(segments: number) {
  * landing circle, an area ring, the boss's violet (its beam a thin sweep). Each has a faint body, a growing fill and a rim.
  */
 const MARK = ["body", "fill", "rim", "line", "lineFill"] as const;
+/** Telegraph draw order: bodies and lines, the filling, then the rims (and the line's fill) on top. */
+export const TELEGRAPH_ORDER = { body: 3.8, fill: 3.85, rim: 3.9 } as const;
 export function Telegraphs({ ground, max = 24 }: { ground: Ground; max?: number }) {
   const parts = useRef(MARK.map(() => [] as (THREE.Mesh | null)[]));
   // The sector opens toward -Z, so yaw + π points it along the enemy's facing (sin, cos). The line runs along +Z from its source.
@@ -207,12 +209,14 @@ export function Telegraphs({ ground, max = 24 }: { ground: Ground; max?: number 
     }
     for (const list of parts.current) for (let i = n; i < max; i++) if (list[i]) list[i]!.visible = false;
   });
+  // Draw order: over the terrain's painted sand and soil (2, 3), every player effect, aura and the movement particles
+  // (3.4–3.7) and the hazard decals (3.75): the enemy's marker is never hidden under your own effects.
   return <>{Array.from({ length: max }, (_, i) => <group key={i}>
-    <mesh ref={el => { parts.current[0][i] = el; }} visible={false} renderOrder={2}><meshBasicMaterial transparent opacity={0.2} depthWrite={false} toneMapped={false} /></mesh>
-    <mesh ref={el => { parts.current[1][i] = el; }} visible={false} renderOrder={3}><meshBasicMaterial transparent opacity={0.32} depthWrite={false} toneMapped={false} /></mesh>
-    <mesh ref={el => { parts.current[2][i] = el; }} visible={false} renderOrder={4}><meshBasicMaterial transparent opacity={0.8} depthWrite={false} toneMapped={false} /></mesh>
-    <mesh ref={el => { parts.current[3][i] = el; }} geometry={strip} visible={false} renderOrder={2}><meshBasicMaterial transparent opacity={0.3} depthWrite={false} toneMapped={false} /></mesh>
-    <mesh ref={el => { parts.current[4][i] = el; }} geometry={strip} visible={false} renderOrder={4}><meshBasicMaterial transparent opacity={0.85} depthWrite={false} toneMapped={false} /></mesh>
+    <mesh ref={el => { parts.current[0][i] = el; }} visible={false} renderOrder={TELEGRAPH_ORDER.body}><meshBasicMaterial transparent opacity={0.2} depthWrite={false} toneMapped={false} /></mesh>
+    <mesh ref={el => { parts.current[1][i] = el; }} visible={false} renderOrder={TELEGRAPH_ORDER.fill}><meshBasicMaterial transparent opacity={0.32} depthWrite={false} toneMapped={false} /></mesh>
+    <mesh ref={el => { parts.current[2][i] = el; }} visible={false} renderOrder={TELEGRAPH_ORDER.rim}><meshBasicMaterial transparent opacity={0.8} depthWrite={false} toneMapped={false} /></mesh>
+    <mesh ref={el => { parts.current[3][i] = el; }} geometry={strip} visible={false} renderOrder={TELEGRAPH_ORDER.body}><meshBasicMaterial transparent opacity={0.3} depthWrite={false} toneMapped={false} /></mesh>
+    <mesh ref={el => { parts.current[4][i] = el; }} geometry={strip} visible={false} renderOrder={TELEGRAPH_ORDER.rim}><meshBasicMaterial transparent opacity={0.85} depthWrite={false} toneMapped={false} /></mesh>
   </group>)}</>;
 }
 
@@ -370,7 +374,7 @@ export function Totems({ ground, max = 16 }: { ground: Ground; max?: number }) {
   return <>
     <instancedMesh ref={post} args={[postGeo, undefined, CAPS.totems]} frustumCulled={false} castShadow userData={DYNAMIC}><meshStandardMaterial vertexColors roughness={1} metalness={0} /></instancedMesh>
     <instancedMesh ref={eyes} args={[glowGeo, undefined, CAPS.totems]} frustumCulled={false}><meshBasicMaterial vertexColors toneMapped={false} /></instancedMesh>
-    {Array.from({ length: max }, (_, i) => <mesh key={i} ref={el => { rings.current[i] = el; }} geometry={disc} visible={false} renderOrder={2}>
+    {Array.from({ length: max }, (_, i) => <mesh key={i} ref={el => { rings.current[i] = el; }} geometry={disc} visible={false} renderOrder={3.45}>
       <meshBasicMaterial transparent depthWrite={false} toneMapped={false} />
     </mesh>)}
   </>;
@@ -403,9 +407,9 @@ export function PlayerAuras({ player, ground }: { player: React.RefObject<THREE.
   return <>
     <mesh ref={bubble} visible={false} renderOrder={6}><sphereGeometry args={[0.95, 24, 16]} />
       <meshBasicMaterial color="#bfe3ff" transparent opacity={0.2} depthWrite={false} toneMapped={false} blending={THREE.AdditiveBlending} /></mesh>
-    <mesh ref={guard} geometry={arc} visible={false} renderOrder={5}>
+    <mesh ref={guard} geometry={arc} visible={false} renderOrder={3.65}>
       <meshBasicMaterial color="#ffd27a" transparent opacity={0.45} depthWrite={false} toneMapped={false} /></mesh>
-    <mesh ref={body} rotation={[-Math.PI / 2, 0, 0]} visible={false} renderOrder={5}><ringGeometry args={[0.7, 0.85, 6]} />
+    <mesh ref={body} rotation={[-Math.PI / 2, 0, 0]} visible={false} renderOrder={3.65}><ringGeometry args={[0.7, 0.85, 6]} />
       <meshBasicMaterial color="#c9a7ff" transparent opacity={0.7} depthWrite={false} toneMapped={false} side={THREE.DoubleSide} /></mesh>
   </>;
 }
@@ -432,7 +436,8 @@ export function Blasts({ ground, max = 12 }: { ground: Ground; max?: number }) {
       mat.color.set(b.color); mat.opacity = (b.length || b.arc ? 0.6 : 0.85) * (1 - k);
     }
   });
-  return <>{Array.from({ length: max }, (_, i) => <mesh key={i} ref={el => { refs.current[i] = el; }} geometry={ring} visible={false} renderOrder={4}>
+  // Your abilities' rings and cones stay under the enemies' markers (TELEGRAPH_ORDER).
+  return <>{Array.from({ length: max }, (_, i) => <mesh key={i} ref={el => { refs.current[i] = el; }} geometry={ring} visible={false} renderOrder={3.65}>
     <meshBasicMaterial transparent depthWrite={false} toneMapped={false} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} />
   </mesh>)}</>;
 }

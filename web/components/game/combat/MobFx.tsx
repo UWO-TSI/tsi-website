@@ -17,6 +17,8 @@ import { MOB_PACK, MOB_PACK_COLS, MOB_PACK_ROWS, MOB_PACK_URL, type MobSprite } 
 import type { MobFxKind, Hazard } from "@/lib/game/combat/runtime";
 import { liveWind, PLACE_NORMAL, PLACE_VERTEX, useMoveParticles, VERTEX_PARS } from "../movement/moveFx";
 import { defeatPuff } from "@/lib/game/movement/juice";
+import { hitImpact } from "@/lib/game/combat/impact";
+import { shakeCamera, widenFov } from "@/lib/game/cameraJuice";
 
 type Ground = (x: number, z: number) => number;
 type R = Recipe<MobSprite>;
@@ -161,6 +163,17 @@ function writeDecals(a: Float32Array, b: Float32Array, c: Float32Array, d: Float
   return n;
 }
 
+/**
+ * The elder's slam and its shell cracking land at the heavy impact tier (lib/game/combat/impact.ts), as an elite kill
+ * does: its shake and FOV kick, fading out by 12 u from you. A hit it lands on you is a hurt cue like every other.
+ */
+const HEAVY = hitImpact("heavy", false, true);
+function heavyNear(x: number, z: number) {
+  const me = combat.rt.player.last, near = me ? Math.max(0, Math.min(1, 1 - (Math.hypot(me.x - x, me.z - z) - 4) / 8)) : 0;
+  if (near <= 0) return;
+  shakeCamera(HEAVY.shake * near);
+  widenFov(HEAVY.fov * near);
+}
 const camPos = new THREE.Vector3(), camDir = new THREE.Vector3();
 /** The mob effects of the ruins: two particle layers (painted, glowing) and the hazard decals. */
 export default function MobFx({ ground }: { ground: Ground }) {
@@ -170,7 +183,9 @@ export default function MobFx({ ground }: { ground: Ground }) {
   const fx = useMemo(() => {
     const paint = new ParticlePool(160, MOB_PACK), glow = new ParticlePool(200, MOB_PACK);
     const decals = [0, 1, 2, 3].map(() => new Float32Array(DECALS * 4));
-    return { paint, glow, decals, layers: [layer(decals, false, 1.6, "MobDecals"), layer([paint.a, paint.b, paint.c, paint.d], false, 3.7, "MobFx"), layer([glow.a, glow.b, glow.c, glow.d], true, 3.8, "MobGlow")] };
+    // Draw order: the hazard decals over the terrain's painted layers (2, 3) and your effects (3.4–3.7), under the
+    // telegraphs (3.8–3.9, EncounterRender TELEGRAPH_ORDER); the enemies' hit effects over everything on the ground.
+    return { paint, glow, decals, layers: [layer(decals, false, 3.75, "MobDecals"), layer([paint.a, paint.b, paint.c, paint.d], false, 4.2, "MobFx"), layer([glow.a, glow.b, glow.c, glow.d], true, 4.25, "MobGlow")] };
   }, []);
   useEffect(() => {
     const meshes = fx.layers.map(l => l.mesh);
@@ -181,7 +196,10 @@ export default function MobFx({ ground }: { ground: Ground }) {
     const rt = combat.rt, dt = combat.freeze ? 0 : Math.min(delta, 0.1); // effects keep the encounter's clock (held for a screenshot too)
     camera.getWorldPosition(camPos); camera.getWorldDirection(camDir);
     const toCam = -0.45 / (Math.hypot(camDir.x, camDir.z) || 1);
-    for (const e of rt.mobFx) play(e.kind, e.x, e.z, e.rot, e.size, ground(e.x, e.z), fx.paint, fx.glow, dust.pool, camDir.x * toCam, camDir.z * toCam);
+    for (const e of rt.mobFx) {
+      play(e.kind, e.x, e.z, e.rot, e.size, ground(e.x, e.z), fx.paint, fx.glow, dust.pool, camDir.x * toCam, camDir.z * toCam);
+      if (e.kind === "slam" || e.kind === "crack") heavyNear(e.x, e.z);
+    }
     rt.mobFx.length = 0;
     const wind = liveWind(), [decals, paint, glow] = fx.layers;
     for (const [pool, l] of [[fx.paint, paint], [fx.glow, glow]] as const) {
