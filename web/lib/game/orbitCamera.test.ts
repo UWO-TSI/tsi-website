@@ -4,7 +4,7 @@ import { cameraRelative, getCameraForwardXZ } from "./cameraBasis";
 import { bendViewPoint } from "./worldProjection";
 import {
   DEFAULT_PITCH, FOLLOW_IDLE, FOLLOW_TURN, ORBIT_DISTANCE, PITCH_MAX, PITCH_MIN, ZOOM_MAX, ZOOM_MIN, ZOOM_OUT,
-  autoFollow, crosshairAim, lookOrbit, loadOrbit, nextCapture, orbitOffset, saveOrbit, snapBack, stepOrbit, toggleZoom, turnOffset, wrapAngle, zoomOrbit,
+  autoFollow, crosshairAim, lookOrbit, loadOrbit, nextCapture, orbitOffset, saveOrbit, snapBack, stepOrbit, toggleZoom, turnOffset, turnQuarter, wrapAngle, zoomOrbit,
   type CaptureEvent, type CaptureState, type OrbitAngles,
 } from "./orbitCamera";
 
@@ -114,6 +114,13 @@ describe("turning, tilting and zooming", () => {
       expect(o.target.pitch).toBe(DEFAULT_PITCH); expect(o.target.zoom).toBe(1);
       expect(wrapAngle(o.target.yaw)).toBeCloseTo(0, 10);
     }
+  });
+  it("steps a quarter turn from the nearest quarter (the painter's draft walk)", () => {
+    const o = fresh({ yaw: 0.2 });
+    turnQuarter(1, o); expect(o.target.yaw).toBeCloseTo(Math.PI / 2, 12);
+    turnQuarter(1, o); turnQuarter(1, o); expect(o.target.yaw).toBeCloseTo(1.5 * Math.PI, 12);
+    turnQuarter(-1, o); expect(o.target.yaw).toBeCloseTo(Math.PI, 12);
+    snapBack(o); expect(wrapAngle(o.target.yaw)).toBeCloseTo(0, 12); // half a turn away either way: a whole turn
   });
   it("wraps angles into (−π, π]", () => {
     expect(wrapAngle(3 * Math.PI)).toBeCloseTo(Math.PI, 10);

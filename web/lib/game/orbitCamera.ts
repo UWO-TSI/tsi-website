@@ -58,6 +58,12 @@ export function toggleZoom(o: Orbit = orbit) {
   o.target.zoom = o.target.zoom < (1 + ZOOM_OUT) / 2 ? ZOOM_OUT : 1;
 }
 
+/** A quarter turn (+1 left, −1 right) from the nearest quarter: the painter's draft walk steps round the island (/lab/island?draft=1). */
+export function turnQuarter(dir: 1 | -1, o: Orbit = orbit) {
+  o.idle = 0;
+  o.target.yaw = (Math.round(o.target.yaw / (Math.PI / 2)) + dir) * (Math.PI / 2);
+}
+
 /** Back to today's view: the nearest whole turn (the short way round), the default tilt and zoom. */
 export function snapBack(o: Orbit = orbit) {
   o.idle = 0;
