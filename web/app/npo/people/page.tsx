@@ -337,7 +337,7 @@ export default function PeoplePage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a
-                href="/student"
+                href="/student/apply"
                 className="rounded-full px-8 py-4 text-sm font-medium text-white transition-opacity hover:opacity-80 inline-block"
                 style={{ backgroundColor: "#002FA7" }}
               >

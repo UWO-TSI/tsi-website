@@ -58,7 +58,7 @@ export async function updateSession(request: NextRequest) {
     // Election enabled — require auth
     if (!user) {
       const url = request.nextUrl.clone();
-      url.pathname = "/student/login";
+      url.pathname = "/student";
       return NextResponse.redirect(url);
     }
 
@@ -84,7 +84,7 @@ export async function updateSession(request: NextRequest) {
   if (pathname.startsWith("/student/dashboard/admin")) {
     if (!user) {
       const url = request.nextUrl.clone();
-      url.pathname = "/student/login";
+      url.pathname = "/student";
       return NextResponse.redirect(url);
     }
 
@@ -107,7 +107,7 @@ export async function updateSession(request: NextRequest) {
   if (pathname.startsWith("/student/dashboard")) {
     if (!user) {
       const url = request.nextUrl.clone();
-      url.pathname = "/student/login";
+      url.pathname = "/student";
       return NextResponse.redirect(url);
     }
 
@@ -134,7 +134,7 @@ export async function updateSession(request: NextRequest) {
   if (pathname.startsWith("/student/onboarding")) {
     if (!user) {
       const url = request.nextUrl.clone();
-      url.pathname = "/student/login";
+      url.pathname = "/student";
       return NextResponse.redirect(url);
     }
 
@@ -153,9 +153,9 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // ─── Already logged in — redirect away from login/signup ──────────────
+  // ─── Already logged in — redirect away from login (/student) and signup ─
   if (
-    (pathname === "/student/login" || pathname === "/student/signup") &&
+    (pathname.replace(/\/+$/, "") === "/student" || pathname === "/student/signup") &&
     user
   ) {
     const url = request.nextUrl.clone();

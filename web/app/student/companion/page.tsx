@@ -89,7 +89,7 @@ function SignInGate() {
       <h2>Sign in to open the club</h2>
       <p className={s.muted}>Study with the table, check bounties and events, and see your profile from your phone.</p>
       <div className={s.row} style={{ marginTop: 12 }}>
-        <a className={s.btn} href="/student/login?next=/student/companion" style={{ display: "grid", placeItems: "center", textDecoration: "none" }}>
+        <a className={s.btn} href="/student" style={{ display: "grid", placeItems: "center", textDecoration: "none" }}>
           Sign in
         </a>
       </div>

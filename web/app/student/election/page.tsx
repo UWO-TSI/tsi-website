@@ -93,7 +93,7 @@ export default function ElectionPage() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        window.location.href = "/student/login";
+        window.location.href = "/student";
         return;
       }
 

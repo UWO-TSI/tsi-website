@@ -88,7 +88,7 @@ function Hud({ transport }: { transport?: StudyTransport }) {
 
   return <>
     {near && !boardOpen && (study.signedOut && near !== "board"
-      ? <a className={world.interact} href="/student/login">Sign in to study here</a>
+      ? <a className={world.interact} href="/student">Sign in to study here</a>
       : <button className={world.interact} onClick={act} disabled={study.busy}><kbd>E</kbd>{near === "board" ? "Read the study board" : session ? "Sit back down" : `Sit · ${table?.label ?? "Table"}`}</button>)}
     {session?.phase === "seated" && <div className={s.startSheet} role="dialog" aria-label="Start studying"><Setup study={study} /></div>}
     {session && session.phase !== "seated" && <div className={s.panel}>

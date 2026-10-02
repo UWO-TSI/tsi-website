@@ -64,7 +64,7 @@ export default function DashboardTopbar({ profile }: { profile: Profile }) {
   async function handleLogout() {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/student/login");
+    router.push("/student");
     router.refresh();
   }
 

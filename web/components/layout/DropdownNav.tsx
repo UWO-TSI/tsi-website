@@ -10,17 +10,14 @@ import { memberWorldIsAvailable } from "@/lib/recruitment-access";
 const NAV_ITEMS = [
   { label: "Home", href: "/" },
   { label: "Nonprofits", href: "/npo" },
-  { label: "Companies", href: "/company" },
-  { label: "Sponsors", href: "/sponsor" },
-  { label: "Students", href: "/student" },
   { label: "Apply", href: "/student/apply" },
   { label: "Genesis", href: "/genesis" },
 ];
 
 const CONTACT = { label: "Contact", href: "mailto:team@tethos.ca" };
-// "Log in" goes through /student/go. Signed in: the game portal once the member world
-// opens (NEXT_PUBLIC_MEMBER_WORLD), the applicant village until then.
-const LOGIN = { label: "Log in", href: "/student/go" };
+// "Log in" is the game portal login (/student); signed-in accounts skip it to /student/go:
+// the game portal once the member world opens (NEXT_PUBLIC_MEMBER_WORLD), the applicant village until then.
+const LOGIN = { label: "Log in", href: "/student" };
 const ACCOUNT = memberWorldIsAvailable()
   ? { label: "Game portal", href: "/student/dashboard" }
   : { label: "Applicant portal", href: "/student/apply/portal" };
