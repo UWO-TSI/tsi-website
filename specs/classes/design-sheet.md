@@ -1198,3 +1198,27 @@ Play style (David, 2026-10-02): "some character should be skill based and some s
     | Sanctify | A triangle |
     | Light Step | A chevron, pointing where you dash |
     | Divine Descent | A winged sigil (harder, so its payoff scales most) |
+
+## Oracle MBTI → subclass suggestions (LOCKED, David 2026-10-02; settles row 19)
+At level 10 the Oracle suggests this subclass; you can still pick another in your family, and you're locked in until the paid redo (row 287).
+
+| Family | Type | Subclass | Why |
+|---|---|---|---|
+| Arcane (NT) | INTP | Elementalist | Theory and combos |
+| | ENTP | Illusionist | Trickster wit |
+| | ENTJ | Necromancer | Commands an army |
+| | INTJ | Transmuter | Studies the enemy, plans the counter |
+| Ranger (SJ) | ESTJ | Marksman | Relentless rhythm |
+| | ISTJ | Sniper | Disciplined and precise |
+| | ISFJ | Hunter | Patient; prepares |
+| | ESFJ | Gunslinger | The showman |
+| Vanguard (SP) | ISFP | Guardian | Quiet protector |
+| | ESFP | Martial Artist | In the moment; flow |
+| | ESTP | Juggernaut | Bold and physical |
+| | ISTP | Assassin | Cool, precise operator |
+| Warden (NF) | ENFP | Summoner | Many companions |
+| | INFJ | Shaman | Spirits and ancestors |
+| | INFP | Druid | Nature and the inner world |
+| | ENFJ | Priest | Lifts everyone up |
+
+Priest drawing shapes approved as proposed.
