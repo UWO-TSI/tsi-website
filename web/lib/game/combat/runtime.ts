@@ -16,7 +16,9 @@ import type { Kick, MoveView } from "./moveHooks";
 /** A shot. Weapon shots carry nothing; ability and unit shots carry what they do on impact. */
 export interface ShotHit { power: number; stat?: Stat; tier?: number; pierce?: boolean; splash?: number; status?: Status; unit?: boolean; hitIds?: string[];
   /** Classes v2: the impact tier, an ult's own shot, the FX registry key its hit plays. */
-  impact?: ImpactTier; ult?: boolean; fx?: string }
+  impact?: ImpactTier; ult?: boolean; fx?: string;
+  /** Classes v2: the FX recipe thrown along the shot as it flies, in this ramp. */
+  travel?: string; ramp?: readonly [string, string, string] }
 /** `knock`: an enemy shot's push on you (its attack's knockback). */
 export interface Projectile { id: number; x: number; z: number; vx: number; vz: number; life: number; from: "player" | "enemy"; damage: number; kind: "arrow" | "bolt" | "spit"; radius: number; hit?: ShotHit; knock?: number }
 /** Summons, totems, traps and decoys (kits.ts UNITS): `source` is the ability that made it ("weapon" for the summoning charm's wisps). */
@@ -99,6 +101,8 @@ export interface CombatRuntime {
   v2: ClassState | null;
   /** FX events for the renderer, oldest first, at most 64 (nobody drains them in the balance runs). */
   fx: FxEvent[];
+  /** Damage dealt this run, and by ult hits (the balance harness's ult share). */
+  tally: { dealt: number; ult: number };
   /** Presses refused because the slot can't be ready in time (actions.ts runInputs): the HUD pulses the slot on each. */
   denied: Record<AbilityId, number>;
   enemies: Enemy[];
@@ -135,7 +139,7 @@ export function createRuntime(): CombatRuntime {
       shield: 0, shieldFor: 0, dash: null, impulse: { x: 0, z: 0 }, speed: 1, still: 0, last: null,
       move: { mode: "ground", speed: 0, sinceDash: 99, vx: 0, vz: 0 }, kick: null, clip: null, ultIframes: 0 },
     cooldowns: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, slot5: 0, ult: 0, swap: 0 }, denied: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, slot5: 0, ult: 0, swap: 0 },
-    v2: null, fx: [],
+    v2: null, fx: [], tally: { dealt: 0, ult: 0 },
     enemies: [], projectiles: [], units: [], buffs: [], floaters: [], blasts: [], cues: [],
     casting: null, kit: null, slots: [null, null, null, null],
     passive: { element: null, target: null, stacks: 0, momentum: 0, momentumT: 0, procs: 0 }, transform: null,

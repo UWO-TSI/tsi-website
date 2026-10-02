@@ -127,6 +127,7 @@ export function strike(rt: CombatRuntime, e: Enemy, src: HitSrc, random: () => n
   if (e.flash === 0.18) floater(rt, e, 1.4 + e.type.hover, String(amount), src.ult ? "ult" : crit ? "crit" : "hit");
   if (src.status && !killed) applyStatus(e, src.status);
   if (!src.ult) chargeUlt(rt, dealtCharge(raw, base)); // you and your units; ult hits charge nothing
+  rt.tally.dealt += amount; if (src.ult) rt.tally.ult += amount;
   if (!src.unit) { onPlayerHit(rt, e, amount, crit, held); cue(rt, crit ? "crit" : "hit", e, !!src.melee, src.impact, src.first); }
   if (killed) onKill(rt, e);
   return amount;
@@ -298,7 +299,7 @@ export function runEffects(rt: CombatRuntime, effects: Effect[], ctx: Ctx, rando
         for (let k = 0; k < n; k++) {
           const a = base + (n > 1 ? (k / (n - 1) - 0.5) * (ef.spread ?? 0) : 0), vx = Math.sin(a), vz = Math.cos(a);
           const hit: ShotHit = { power: ef.power * ctx.dmg, stat: ctx.stat, tier: ctx.tier, pierce: ef.pierce, splash: ef.splash, status: scaled(ef.status, ctx.ctl), hitIds: [],
-            impact: ctx.impact, ult: ctx.ult, fx: ctx.fx?.impact };
+            impact: ctx.impact, ult: ctx.ult, fx: ctx.fx?.impact, travel: ctx.fx?.travel, ramp: rt.v2?.kit.look.ramp };
           rt.projectiles.push({ id: rt.seq++, x: ctx.pos.x + vx * 0.5, z: ctx.pos.z + vz * 0.5, vx: vx * speed, vz: vz * speed, life: (ef.range ?? 10) / speed,
             from: "player", damage: 0, kind: ctx.stat === "finesse" ? "arrow" : "bolt", radius: 0.25, hit });
         }
