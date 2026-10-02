@@ -923,6 +923,7 @@ All waves merge to `main` behind a `classes_v2` flag that stays off in productio
 | Class | Stat direction |
 |---|---|
 | Elementalist | Max mana (pool and regen) |
+| Necromancer | Summon count |
 | Transmuter | Cooldown reduction |
 | Illusionist | Duration |
 | Marksman | Attack speed |
@@ -1183,3 +1184,17 @@ Play style (David, 2026-10-02): "some character should be skill based and some s
 
 - **Ultimate, Divine Descent:** wings of light, and a pillar slams down. Allies are fully healed, the downed revived, enemies burned: flash frame.
 - **Stat direction:** healing power.
+- **Drawn casting (David, 2026-10-02):** every Priest skill is cast by drawing its shape with the cursor.
+  - An overlay shows the shape and the stroke direction. The closer your drawing is to it, the more effective the spell: 60% for a rough sketch, up to 150% for a clean one.
+  - Built on the existing incantation overlay (`IncantationOverlay.tsx`). Under mouse-look the stroke traces from mouse movement on a centred overlay, while WASD keeps moving you.
+  - The Lightbolt basic is a plain click.
+  - Proposed shapes:
+
+    | Skill | Shape |
+    |---|---|
+    | Mend | A cross |
+    | Radiant Shield | A circle |
+    | Holy Beam | A straight line, drawn in the beam's direction |
+    | Sanctify | A triangle |
+    | Light Step | A chevron, pointing where you dash |
+    | Divine Descent | A winged sigil (harder, so its payoff scales most) |
