@@ -8,7 +8,9 @@ afterEach(() => { vi.unstubAllGlobals(); });
 describe("movement keys", () => {
   it("default to WASD, Space jump, Q dash, Shift sprint, crouch/slide; remap with swaps, refuse menu and ability keys, and persist", () => {
     expect(readMoveKeys()).toEqual({ forward: "w", left: "a", back: "s", right: "d", jump: " ", dash: "q", sprint: "shift", crouch: DEFAULT_MOVE_KEYS.crouch });
-    expect(remapMove(DEFAULT_MOVE_KEYS, "forward", "ArrowUp")).toMatchObject({ ok: true, keys: { forward: "arrowup" } });
+    expect(remapMove(DEFAULT_MOVE_KEYS, "forward", "y")).toMatchObject({ ok: true, keys: { forward: "y" } });
+    // The arrows turn the camera and V snaps it back (specs/camera-orbit.md): no movement key takes them.
+    for (const key of ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "v"]) expect(remapMove(DEFAULT_MOVE_KEYS, "forward", key)).toMatchObject({ ok: false });
     expect(remapMove(DEFAULT_MOVE_KEYS, "dash", " ")).toMatchObject({ ok: true, keys: { dash: " ", jump: "q" } });
     expect(readMoveKeys()).toMatchObject({ dash: " ", jump: "q" });
     expect(remapMove(DEFAULT_MOVE_KEYS, "dash", "e")).toMatchObject({ ok: false });
@@ -28,7 +30,7 @@ describe("movement keys", () => {
     expect(remapMove(other, "jump", "Control")).toMatchObject({ ok: false });
     expect(remapMove(mac, "jump", "Control")).toMatchObject({ ok: false }); // a swap would put Ctrl on jump
     expect(remapMove(mac, "crouch", " ")).toMatchObject({ ok: false });
-    expect(remapMove(mac, "crouch", "v")).toMatchObject({ ok: true, keys: { crouch: "v" } });
+    expect(remapMove(mac, "crouch", "t")).toMatchObject({ ok: true, keys: { crouch: "t" } });
     saved.set("tsi.moveKeys.v1", JSON.stringify({ ...other, dash: "control" })); // never stored by a remap: refused on read
     expect(readMoveKeys().dash).toBe("q");
     // Ctrl bound outside macOS: C crouches until the keyboard is locked in fullscreen (none if C is taken).

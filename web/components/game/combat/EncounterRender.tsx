@@ -322,14 +322,18 @@ export function Wisps({ ground, max = 10 }: { ground: Ground; max?: number }) {
  */
 const TOTEM_COLOR = colors({ "totem-ember": "#ff8a3d", "totem-mending": "#7dff9e", "totem-warding": "#8fd0ff", tripwire: "#ffe08a", shade: "#c9a7ff", decoy: "#d9b8ff" }), TOTEM_DEFAULT = TOTEM_COLOR["totem-mending"];
 const glowing = (m: THREE.Material) => m.name === "M_Glow", solid = (m: THREE.Material) => m.name !== "M_Glow";
+const camDir = new THREE.Vector3();
 export function Totems({ ground, max = 16 }: { ground: Ground; max?: number }) {
   const rings = useRef<(THREE.Mesh | null)[]>([]), post = useRef<THREE.InstancedMesh>(null), eyes = useRef<THREE.InstancedMesh>(null);
   const postGeo = useBaked(`${P}totem.glb`, solid), glowGeo = useBaked(`${P}totem.glb`, glowing);
   const ring = useMemo(() => new THREE.RingGeometry(0.94, 1, 64).rotateX(-Math.PI / 2), []);
   const disc = useMemo(() => new THREE.CircleGeometry(1, 48).rotateX(-Math.PI / 2), []);
   useEffect(() => () => { ring.dispose(); disc.dispose(); }, [ring, disc]);
-  useFrame(({ clock }) => {
+  useFrame(({ clock, camera }) => {
     const list = combat.rt.units.filter(u => u.source !== "weapon"), p = post.current, e = eyes.current;
+    // Carved faces turn to the camera, wherever it orbits (specs/camera-orbit.md): yaw + π from its heading.
+    camera.getWorldDirection(camDir);
+    const facing = Math.atan2(camDir.x, camDir.z) + Math.PI;
     let posts = 0;
     for (let i = 0; i < max; i++) {
       const r = rings.current[i], u = list[i];
@@ -339,8 +343,8 @@ export function Totems({ ground, max = 16 }: { ground: Ground; max?: number }) {
       const g = ground(u.x, u.z), c = TOTEM_COLOR[u.def.key] ?? TOTEM_DEFAULT, totem = u.def.kind === "totem", area = totem || u.def.kind === "trap";
       r.geometry = area ? disc : ring;
       if (totem && p && e) {
-        // Face the camera (it looks along +z); the eyes and rings pulse softly with the totem's beat.
-        tmpQ.setFromAxisAngle(UP, Math.PI);
+        // Face the camera; the eyes and rings pulse softly with the totem's beat.
+        tmpQ.setFromAxisAngle(UP, facing);
         tmpM.compose(tmpP.set(u.x, g, u.z), tmpQ, tmpS.setScalar(1.3));
         p.setMatrixAt(posts, tmpM); e.setMatrixAt(posts, tmpM);
         e.setColorAt(posts, tmpC.copy(c).multiplyScalar(1.3 + 0.3 * Math.sin(clock.elapsedTime * 3 + i)));

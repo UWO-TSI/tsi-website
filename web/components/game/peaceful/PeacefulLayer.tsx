@@ -33,7 +33,8 @@ export default function PeacefulLayer({ map, nodes, moment, member, player, grou
   const playerRef = player as React.MutableRefObject<THREE.Vector3>;
   return <>
     <VillageLife nodes={nodes.forage} bugNodes={nodes.bugs} moment={moment} member={member} player={player} ground={ground} highTier={highTier} active={active} />
-    <FishingBobber playerPosRef={playerRef} waterHeight={waterHeight} />
+    {/* The throw runs from you to the spot, not along the camera: it turns now (specs/camera-orbit.md). */}
+    <FishingBobber towardWater playerPosRef={playerRef} waterHeight={waterHeight} />
     <FishCatchFX playerPosRef={playerRef} />
   </>;
 }

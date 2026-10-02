@@ -16,8 +16,9 @@ const FILL: Partial<Record<number, string>> = {
  * Minimap plot for the default island, drawn from the same grid the world
  * renders (row runs per surface; the open sea is left as the panel's water)
  * plus the landmark table, framed by the map's bounds. World x is mirrored so
- * the map matches the follow camera (+x on screen left). The camera faces
- * west, so north (−x) is on the right edge (row 239).
+ * the map matches the follow camera (+x on screen left). In the default view
+ * the camera faces west, so north (−x) is on the right edge (row 239); the
+ * minimap turns the plot with the camera from there (specs/camera-orbit.md).
  */
 export function useDefaultIslandPlot(opened: readonly string[] = []): MiniMapPlot {
   const openedKey = opened.join();
@@ -45,6 +46,6 @@ export function useDefaultIslandPlot(opened: readonly string[] = []): MiniMapPlo
         <title>{l.open ? l.label : `${l.label} (closed)`}</title></rect>)}
     </g>;
     return { viewBox: `${-x1} ${-z1} ${x1 - x0} ${z1 - z0}`, content, north: [-x0 - 2.5, (-z1 - z0) / 2 + 1.5], mirrorX: true,
-      label: "Village map. The yellow marker shows your position; north is to the right. Dashed buildings are closed." };
+      label: "Village map, turned to the way the camera looks. The yellow marker shows your position and N marks north. Dashed buildings are closed." };
   }, [openedKey]);
 }

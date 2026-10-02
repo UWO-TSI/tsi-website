@@ -17,3 +17,12 @@ export function getCameraForwardXZ(camera: THREE.Camera): { fx: number; fz: numb
   _out.fx = _dir.x; _out.fz = _dir.z;
   return _out;
 }
+
+/**
+ * Stick or keys (`ix` right, `iz` forward) to a world direction for a camera whose ground-plane forward is
+ * (fx, fz): forward is away from the camera and right is the screen's right (forward × up), at any heading the
+ * orbit camera turns to. The sim gets the same vector it always did; only the frame it is read in turns.
+ */
+export function cameraRelative(ix: number, iz: number, fx: number, fz: number): { x: number; z: number } {
+  return { x: fx * iz - fz * ix, z: fz * iz + fx * ix };
+}

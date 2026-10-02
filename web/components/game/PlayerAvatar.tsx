@@ -7,7 +7,7 @@ import * as THREE from "three";
 import { liveIslandWeather } from "@/lib/game/islandWeather";
 import { AudioManager, type SFXName } from "@/lib/game/audio";
 import { WORLD_SNOW } from "@/lib/game/modelMaterials";
-import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
+import { cameraRelative, getCameraForwardXZ } from "@/lib/game/cameraBasis";
 import { bindGameKeys } from "@/lib/game/keyboardInput";
 import { WATER_DROP } from "@/lib/game/grid";
 import { calculateCurvedHtmlPosition, pickCurvedSurface } from "@/lib/game/worldProjection";
@@ -291,8 +291,9 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       const down = inCombat && !p.alive, live = !frozen && !down && !(inCombat && combat.rt.casting);
       const piloted = d.pilot && dt > 0 ? d.pilot(s.state, dt) : null;
       if (d.pilot && dt > 0 && !piloted) d.pilot = null;
+      const steer = goal ?? cameraRelative(ix, iz, fwdX, fwdZ);
       const input: MoveInput = piloted ?? (live ? {
-        x: goal ? goal.x : fwdX * iz - fwdZ * ix, z: goal ? goal.z : fwdZ * iz + fwdX * ix,
+        x: steer.x, z: steer.z,
         sprint: !walkOnly && (!!k[b.sprint] || (!keyed && tilt > 0.92)), sneak: (!!crouch && !!k[crouch]) || st.crouch,
         jump: !walkOnly && (!!k[b.jump] || st.jump), jumpPressed, dashPressed,
       } : { ...NO_INPUT, dashPressed: !frozen && !down && dashPressed });

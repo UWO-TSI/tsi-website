@@ -72,8 +72,8 @@ export default function FishingBobber({ playerPosRef, waterHeight, towardWater =
       setRings([]);
       nibbleAtRef.current = Number.NEGATIVE_INFINITY;
       activeRef.current = true;
-      // Free shoreline casting aims toward the validated water target.
-      // The member game retains its fixed-spot camera-forward behavior.
+      // Casting aims from you toward the validated water target (both islands); without
+      // `towardWater` the throw would run along the camera's forward, which turns now.
       const fwd = getCameraForwardXZ(camera);
       const dir = towardWater ? new THREE.Vector3(d.x - p.x, 0, d.z - p.z) : new THREE.Vector3(fwd.fx, 0, fwd.fz);
       if (dir.lengthSq() < 0.01) dir.set(0, 0, 1);

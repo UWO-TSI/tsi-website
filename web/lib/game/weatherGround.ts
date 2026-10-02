@@ -11,8 +11,8 @@ import { hash01 } from "./worldFx";
 // ── Rain landing ──────────────────────────────────────────────────────
 /** World squares (units) and how often a drop lands in each (seconds): 0.4 splashes per square unit a second. Frames must be shorter than the period. */
 export const SPLASH_CELL = 1, SPLASH_PERIOD = 2.5;
-/** The drawn window round the view focus: wider than deep, reaching further up-screen (the camera looks +z). */
-export const SPLASH_WINDOW = { x: 15, back: 8, ahead: 15 };
+/** The drawn window round the view focus: the same reach every way, since the camera turns (specs/camera-orbit.md). */
+export const SPLASH_WINDOW = { x: 15, back: 15, ahead: 15 };
 
 /**
  * Every drop that lands in the window round (fx, fz) during (t0, t1]: calls `land(x, z, seed)` for each. Each square

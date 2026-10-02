@@ -1,5 +1,6 @@
 import { Color, DoubleSide, FrontSide, Material, Mesh, MeshBasicMaterial, MeshDepthMaterial, MeshStandardMaterial, Object3D, SRGBColorSpace, Texture, TextureLoader, Vector2, type WebGLProgramParametersWithUniforms } from "three";
 import { CASTER_MATERIAL, meshShadow, shadowClassFor, type ShadowClass } from "./shadows";
+import { addCutout } from "./occluders";
 
 let flagTexture: Texture | null = null;
 let shopSignTexture: Texture | null = null;
@@ -210,6 +211,13 @@ export function prepareModel(source: Object3D, url: string, emissiveIntensity?: 
         };
         material.customProgramCacheKey = () => `tree-sway:${material.name}`;
       }
+      // Every model can fade round the player when it stands in the way of the orbit camera (lib/game/occluders.ts).
+      const before = material.onBeforeCompile, key = material.customProgramCacheKey();
+      material.onBeforeCompile = (shader, renderer) => {
+        before.call(material, shader, renderer);
+        addCutout(shader);
+      };
+      material.customProgramCacheKey = () => `${key}|cut`;
       materials.set(original, material);
       return material;
     };
