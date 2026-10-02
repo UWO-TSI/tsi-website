@@ -29,7 +29,7 @@ import { treeParts } from "./NatureModels";
 import AmbientFauna, { type FaunaProps } from "./AmbientFauna";
 import WeatherGround from "./WeatherGround";
 import { capture, ORBIT_DISTANCE, orbitOffset, stepOrbit, turnOffset } from "@/lib/game/orbitCamera";
-import { CUT_RADIUS, CUTOUT, CUTOUT_VIEW, lineBlocked, type Occluder } from "@/lib/game/occluders";
+import { CUT_FLOOR, CUT_RADIUS, CUTOUT, CUTOUT_VIEW, groundBlocks, lineBlocked, type Occluder } from "@/lib/game/occluders";
 import { bendViewPoint } from "@/lib/game/worldProjection";
 import { orbitKeys, useOrbitInput } from "./useOrbitInput";
 
@@ -178,15 +178,16 @@ export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: num
     }
     camera.lookAt(look);
     camera.updateMatrixWorld();
-    // A building or tree on the line of sight to the player's chest eases the cut in; the circle sits where they are drawn.
+    // A building, tree or cliff on the line of sight to the player's chest eases the cut in; the circle sits where they are drawn.
     const p = scene?.player.current;
     if (!p || !(camera instanceof THREE.PerspectiveCamera)) return;
     const c = rig.chest.set(p.x, p.y + 1, p.z);
-    rig.cut = THREE.MathUtils.damp(rig.cut, b.overview === 0 && lineBlocked(camera.position, c, scene!.occluders) ? 1 : 0, 8, dt);
+    const blocked = b.overview === 0 && (lineBlocked(camera.position, c, scene!.occluders) || groundBlocks(camera.position, c, scene!.ground));
+    rig.cut = THREE.MathUtils.damp(rig.cut, blocked ? 1 : 0, 8, dt);
     c.applyMatrix4(camera.matrixWorldInverse);
     const depth = -c.z;
     bendViewPoint(c).applyMatrix4(camera.projectionMatrix);
     CUTOUT.value.set(c.x, c.y, CUT_RADIUS / (depth * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))), rig.cut < 0.01 ? 0 : rig.cut);
-    CUTOUT_VIEW.value.set(camera.aspect, depth);
+    CUTOUT_VIEW.value.set(camera.aspect, depth, p.y + CUT_FLOOR);
   }, -3);
 }

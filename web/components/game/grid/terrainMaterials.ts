@@ -24,6 +24,7 @@
  */
 
 import * as THREE from "three";
+import { addCutout } from "@/lib/game/occluders";
 import { getGrassTexture } from "@/lib/game/grassTexture";
 import { GRASS_COLOR } from "@/lib/game/grid";
 import { waterMaterial, waterUniforms, writeWaterUniforms, type WaterParams } from "@/lib/game/waterShader";
@@ -211,7 +212,7 @@ export function terrainMaterial(name: string): THREE.Material | null {
     };
     mat.customProgramCacheKey = () => "terrain-grass-normal-rg-v1";
     mat.name = `terrain:${procKey}`;
-    cache.set(procKey, mat);
+    cache.set(procKey, withCutout(mat));
     return mat;
   }
 
@@ -255,7 +256,18 @@ export function terrainMaterial(name: string): THREE.Material | null {
     mat.customProgramCacheKey = () => "terrain-fringe-alpha-v1";
   }
   mat.name = `terrain:${key}`;
-  cache.set(key, mat);
+  cache.set(key, withCutout(mat));
+  return mat;
+}
+
+/**
+ * The terrain fades round the player where a hill or a cliff stands between them and the orbit camera
+ * (lib/game/occluders.ts): the shared material and everything that calls its onBeforeCompile draw the cut.
+ */
+function withCutout(mat: THREE.Material): THREE.Material {
+  const before = mat.onBeforeCompile, key = mat.customProgramCacheKey();
+  mat.onBeforeCompile = (shader, renderer) => { before.call(mat, shader, renderer); addCutout(shader); };
+  mat.customProgramCacheKey = () => `${key}|cut`;
   return mat;
 }
 

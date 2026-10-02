@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boxOccluder, lineBlocked, segmentHitsBox, treeOccluder } from "./occluders";
+import { boxOccluder, groundBlocks, lineBlocked, segmentHitsBox, treeOccluder } from "./occluders";
 import { DEFAULT_PITCH, ORBIT_DISTANCE, PITCH_MIN, orbitOffset } from "./orbitCamera";
 
 const v = (x: number, y: number, z: number) => ({ x, y, z });
@@ -46,5 +46,22 @@ describe("occluder selection", () => {
     const list = [hq, boxOccluder(10, -6, 3.25, 1.8, 0, 5), treeOccluder(0, 11.5, 0), treeOccluder(-12, 0, 0)];
     const s = sight(0, 14.5, 0);
     expect(list.flatMap((o, i) => (segmentHitsBox(s.eye, s.chest, o) ? [i] : []))).toEqual([0, 2]);
+  });
+});
+
+describe("the ground in the way", () => {
+  /** A canyon floor at 0 with walls 3 high beyond |x| > 6. */
+  const canyon = (x: number) => (Math.abs(x) > 6 ? 3 : 0);
+  it("a canyon wall between a low camera and the player blocks; looking along the canyon does not", () => {
+    let s = sight(5, 0, -Math.PI / 2, PITCH_MIN); // the camera out over the east wall (+x), looking west at them
+    expect(s.eye.x).toBeGreaterThan(6);
+    expect(groundBlocks(s.eye, s.chest, canyon)).toBe(true);
+    s = sight(5, 0, 0, PITCH_MIN); // along the canyon
+    expect(groundBlocks(s.eye, s.chest, canyon)).toBe(false);
+  });
+  it("flat ground and the slope they stand on never block", () => {
+    const s = sight(0, 0, 1.2, PITCH_MIN);
+    expect(groundBlocks(s.eye, s.chest, () => 0)).toBe(false);
+    expect(groundBlocks(s.eye, s.chest, (x, z) => (Math.hypot(x, z) < 0.9 ? 0.9 : 0))).toBe(false);
   });
 });
