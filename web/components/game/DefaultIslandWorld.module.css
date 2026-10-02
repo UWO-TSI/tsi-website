@@ -1,4 +1,24 @@
-.world { --game-toast-bottom: 132px; position: relative; width: 100%; height: calc(100dvh - var(--island-top, 40px)); min-height: 480px; overflow: hidden; background: #b7dce0; color: #293e3b; font-family: "IBM Plex Mono", monospace; }
+/*
+ * The bottom stack (row 284): one layout for everything along the foot of the screen, bottom up. The key bar sits on
+ * the floor (one row); the lane above it holds the E prompt, or the fishing meter while you fish, or the combat HUD in
+ * the ruins; the toasts stack above the lane; the minimap (left) and the decorate panel (right) start above the bar.
+ * Corners keep clear of the phone's safe areas. Other HUD pieces read these instead of their own numbers.
+ */
+.world {
+  --hud-edge: max(16px, env(safe-area-inset-left), env(safe-area-inset-right));
+  --hud-floor: max(16px, env(safe-area-inset-bottom));
+  --hud-gap: 10px;
+  --hud-bar: 44px;
+  --hud-lane: 48px;
+  --hud-bar-bottom: var(--hud-floor);
+  --hud-lane-bottom: calc(var(--hud-bar-bottom) + var(--hud-bar) + var(--hud-gap));
+  --hud-side-bottom: var(--hud-lane-bottom);
+  --game-toast-bottom: calc(var(--hud-lane-bottom) + var(--hud-lane) + var(--hud-gap));
+  /* The touch stick: beside the minimap, over the touch hint. */
+  --hud-stick-left: calc(var(--hud-edge) + 196px);
+  --hud-stick-bottom: calc(var(--hud-floor) + 40px);
+}
+.world { position: relative; width: 100%; height: calc(100dvh - var(--island-top, 40px)); min-height: 480px; overflow: hidden; background: #b7dce0; color: #293e3b; font-family: "IBM Plex Mono", monospace; }
 .heading { position: absolute; top: 32px; left: 36px; pointer-events: none; text-shadow: 0 1px 10px #ffffff70; transition: opacity 0.6s ease 0.15s, transform 0.6s ease 0.15s; }
 /* The scene title fades out with a door fade and back in, renamed, once the next scene shows. */
 .heading[data-fading="true"] { opacity: 0; transform: translateY(-4px); transition-duration: 0.25s; transition-delay: 0s; }
@@ -20,8 +40,14 @@
 .performance summary { min-height: 44px; align-content: center; cursor: pointer; font-size: 10px; }
 .performance output { display: block; white-space: pre-line; font-size: 10px; line-height: 1.7; margin-top: 9px; }
 .performance small { display: block; font-size: 9px; line-height: 1.5; margin-top: 7px; }
-.controls { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; width: max-content; max-width: calc(100% - 24px); box-sizing: border-box; gap: 20px; padding: 12px 20px; border: 1px solid #fff8; border-radius: 8px; background: #f8f7e9e8; white-space: nowrap; font-size: 11px; box-shadow: 0 4px 15px #29464115; }
+.controls { position: absolute; bottom: var(--hud-bar-bottom); left: 50%; transform: translateX(-50%); display: flex; flex-wrap: nowrap; align-items: center; justify-content: center; width: max-content; max-width: calc(100% - 24px); height: var(--hud-bar); box-sizing: border-box; gap: 18px; padding: 0 18px; border: 1px solid #fff8; border-radius: 8px; background: #f8f7e9e8; white-space: nowrap; font-size: 11px; box-shadow: 0 4px 15px #29464115; }
 .controls span { display: flex; align-items: center; gap: 5px; }
+/* One row: the first six keys; a "?" says there are more, and pointing at the bar (or tabbing into it) shows them all. */
+.controls > span:nth-of-type(n+7) { display: none; }
+.controls:has(> span:nth-of-type(7))::after { content: "?"; display: grid; place-items: center; flex: none; width: 20px; height: 20px; border: 1px solid #a7b59e; border-radius: 50%; background: #e0e6d8; font-weight: 700; }
+.controls:hover, .controls:focus-within { height: auto; min-height: var(--hud-bar); flex-wrap: wrap; padding: 10px 18px; row-gap: 8px; z-index: 30; }
+.controls:hover > span, .controls:focus-within > span { display: flex; }
+.controls:hover::after, .controls:focus-within::after { display: none; }
 .controls kbd { font: inherit; background: #e0e6d8; border: 1px solid #a7b59e; border-bottom-width: 2px; border-radius: 3px; padding: 2px 4px; }
 .loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #f8f7e9; padding: 18px 24px; border-radius: 8px; font-size: 12px; }
 @media (max-width: 700px) { .heading { top: 20px; left: 18px; } .heading p { display: none; } .panel { right: 12px; top: 112px; width: 208px; padding: 12px; } .controls { gap: 10px; padding: 10px; font-size: 10px; } }
@@ -30,15 +56,17 @@
 .performance .toggle { margin-top: 10px; font-size: 10px; font-weight: 400; }
 .panel[data-open="false"] { display: none; }
 @media (pointer: coarse), (pointer: none) {
+  /* Touch: the hint line is the floor; the lane and the toasts go up over the stick, the minimap stands beside it. */
+  .world { --hud-bar: 32px; --hud-lane-bottom: calc(var(--hud-stick-bottom) + 132px + var(--hud-gap)); --hud-side-bottom: var(--hud-stick-bottom); }
   .controls { display: none; }
-  .touchControls { display: block; position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); margin: 0; padding: 10px 14px; border-radius: 6px; background: #f8f7e9e8; white-space: nowrap; font-size: 11px; }
+  .touchControls { display: block; position: absolute; bottom: var(--hud-floor); left: 50%; transform: translateX(-50%); margin: 0; padding: 10px 14px; border-radius: 6px; background: #f8f7e9e8; white-space: nowrap; font-size: 11px; }
 }
 
 .world[data-light="night"] .heading { color: #fff4da; text-shadow: 0 2px 12px #11152a; }
 .world[data-light="evening"] .heading { color: #3a3431; }
 
 /* Interaction prompt and room fade, as on the applicant island. */
-.interact { position: absolute; bottom: 78px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); box-sizing: border-box; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 9px 16px; border: 1px solid #fff8; border-radius: 999px; background: #f8f7e9f2; color: #293e3b; font: inherit; font-size: 12px; font-weight: 600; box-shadow: 0 4px 15px #29464120; cursor: pointer; }
+.interact { position: absolute; bottom: var(--hud-lane-bottom); left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); box-sizing: border-box; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 9px 16px; border: 1px solid #fff8; border-radius: 999px; background: #f8f7e9f2; color: #293e3b; font: inherit; font-size: 12px; font-weight: 600; box-shadow: 0 4px 15px #29464120; cursor: pointer; }
 .interact kbd { font: inherit; background: #426b5b; color: #fffdf0; border-radius: 4px; padding: 1px 6px; }
 .interact:focus-visible { outline: 3px solid #bb813f; outline-offset: 3px; }
 .fade { position: absolute; inset: 0; z-index: 40; background: #14100c; opacity: 0; pointer-events: none; transition: opacity 0.5s ease; }
@@ -56,7 +84,7 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 
 .objective { margin: 6px 0 0; padding: 7px 10px; border-radius: 10px; background: #f8f7e9f2; color: #293e3b; border: 1px solid #a8bdba; font-size: 11px; line-height: 1.35; box-shadow: 0 4px 14px #132e3625; }
 .objective span { color: #e8704a; }
-.minimap { position: absolute; left: 16px; bottom: 84px; width: 180px; }
+.minimap { position: absolute; left: var(--hud-edge); bottom: var(--hud-side-bottom); width: 180px; }
 .minimap > section { position: static; width: 100%; max-width: none; }
 /* The map closed: a pill in its place to bring it back (the objective stays under it). */
 .mapButton { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 14px; border: 1px solid #5c746c40; border-radius: 999px; background: #f8f7e9f2; color: #293e3b; font: inherit; font-size: 12px; font-weight: 600; box-shadow: 0 3px 0 #47625218, 0 6px 18px #29464118; cursor: pointer; }
@@ -79,10 +107,10 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 @media (prefers-reduced-motion: reduce) { .objectiveMarker { animation: none; } }
 .confetti { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
 /* Narrow windows: the map goes up under the Journal, so the prompt and the toast lane own the bottom; the key hints keep to one scrolling line. */
-@media (max-width: 700px) { .minimap { width: 130px; top: 198px; bottom: auto; } .controls { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; } }
+@media (max-width: 700px) { .world { --hud-stick-left: var(--hud-edge); } .minimap { width: 130px; top: 198px; bottom: auto; } .controls { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; } }
 
 /* Decorate panel (homes) */
-.decorate { position: absolute; right: 16px; bottom: 84px; width: 280px; max-height: calc(100% - 180px); overflow-y: auto; padding: 14px; border-radius: 16px; background: #f8f7e9f5; color: #293e3b; border: 1px solid #5c746c40; box-shadow: 0 6px 0 #47625218, 0 12px 36px #29464125; font-size: 12px; z-index: 12; }
+.decorate { position: absolute; right: var(--hud-edge); bottom: var(--hud-side-bottom); width: 280px; max-height: calc(100% - 180px); overflow-y: auto; padding: 14px; border-radius: 16px; background: #f8f7e9f5; color: #293e3b; border: 1px solid #5c746c40; box-shadow: 0 6px 0 #47625218, 0 12px 36px #29464125; font-size: 12px; z-index: 12; }
 .decorate header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .decorate h2 { margin: 0; font-size: 14px; }
 .decorate button { min-height: 36px; border: 1px solid #a1af9b; border-radius: 8px; background: #fffdf3; color: #293e3b; font: inherit; cursor: pointer; padding: 4px 8px; }
@@ -98,7 +126,7 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .finishes { margin-top: 10px; display: grid; gap: 6px; }
 .decorate .shopLink { width: 100%; margin-top: 8px; background: #a07850; border-color: #6e4e35; color: #fffbed; font-weight: 700; }
 @media (max-width: 700px) { .decorate { width: calc(100% - 32px); max-height: 45%; } }
-.decorateToggle { position: absolute; right: 16px; bottom: 84px; min-height: 44px; padding: 8px 14px; border: 1px solid #a1af9b; border-radius: 999px; background: #f8f7e9f2; color: #293e3b; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px #29464120; z-index: 11; }
+.decorateToggle { position: absolute; right: var(--hud-edge); bottom: var(--hud-side-bottom); min-height: 44px; padding: 8px 14px; border: 1px solid #a1af9b; border-radius: 999px; background: #f8f7e9f2; color: #293e3b; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px #29464120; z-index: 11; }
 .decorateToggle kbd { font: inherit; background: #426b5b; color: #fffdf0; border-radius: 4px; padding: 1px 6px; margin-right: 4px; }
 .decorateToggle:focus-visible { outline: 3px solid #bb813f; outline-offset: 3px; }
 .world[data-inside] .heading { color: #fff4da; text-shadow: 0 2px 12px #11152a; }
@@ -220,7 +248,7 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 :global(html[data-contrast="high"]) .world :global([data-progression-sheet]), :global(html[data-contrast="high"]) .world :global(.collection-book) { background: #ffffff !important; color: #000000 !important; border: 2px solid #000000 !important; }
 /* Combat HUD (ruins) */
 /* Combat HUD (ruins), in the cream UI kit (row 124). */
-.combatHud { position: absolute; left: 50%; bottom: 76px; transform: translateX(-50%); display: grid; gap: 7px; width: min(660px, calc(100% - 32px)); box-sizing: border-box; padding: 11px 14px 12px; border: 1px solid #5c746c40; border-radius: 14px 14px 5px 14px; background: #f8f7e9f2; color: #293e3b; box-shadow: 0 6px 0 #47625218, 0 12px 36px #29464118; font-size: 12px; z-index: 12; }
+.combatHud { position: absolute; left: 50%; bottom: var(--hud-lane-bottom); transform: translateX(-50%); display: grid; gap: 7px; width: min(660px, calc(100% - 32px)); box-sizing: border-box; padding: 11px 14px 12px; border: 1px solid #5c746c40; border-radius: 14px 14px 5px 14px; background: #f8f7e9f2; color: #293e3b; box-shadow: 0 6px 0 #47625218, 0 12px 36px #29464118; font-size: 12px; z-index: 12; }
 .hpBar { position: relative; height: 18px; border-radius: 9px; background: #e0e6d8; box-shadow: inset 0 1px 2px #29464126; overflow: hidden; }
 .hpBar span { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #ee8d6e, #f4b27e); transition: width 0.15s; }
 .hpBar b { position: relative; display: block; text-align: center; font: 700 11px/18px "IBM Plex Mono", monospace; color: #293e3b; }
@@ -297,10 +325,13 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .missionTemplate { justify-self: start; padding: 1px 8px; border-radius: 999px; background: #efe3cf; font: 600 10px "IBM Plex Mono", monospace; color: #6a4b2f; }
 .missionState { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
 .missionList h3 { margin: 0 0 4px; font: 600 11px "IBM Plex Mono", monospace; letter-spacing: 0.06em; text-transform: uppercase; color: #607069; }
-/* The ruins: the prompt and the toast lane stack above the combat HUD (bottom 76px, about 140px tall). */
-.world[data-site="ruins"] { --game-toast-bottom: 284px; }
-.world[data-site="ruins"] .interact { bottom: 228px; }
-@media (max-width: 640px) { .world[data-site="ruins"] { --game-toast-bottom: 340px; } .world[data-site="ruins"] .interact { bottom: 284px; } }
+/* Fishing: its card takes the lane (the power gauge, the reel and a catch stand about 260 tall; a line of text about 120), so the toasts go up over it. */
+.world:has([data-fishing-overlay]) { --game-toast-bottom: calc(var(--hud-lane-bottom) + 270px); }
+.world:has([data-fishing-overlay="casting"], [data-fishing-overlay="waiting"], [data-fishing-overlay="bite"], [data-fishing-overlay="missed"]) { --game-toast-bottom: calc(var(--hud-lane-bottom) + 130px); }
+/* The ruins: the combat HUD is the lane (about 140 tall, two rows of abilities on a narrow screen, scaled with the text); the prompt and the toasts stack above it. */
+.world[data-site="ruins"] { --hud-combat: calc(150px * var(--tsi-text-scale, 1)); --game-toast-bottom: calc(var(--hud-lane-bottom) + var(--hud-combat) + var(--hud-lane) + 2 * var(--hud-gap)); }
+.world[data-site="ruins"] .interact { bottom: calc(var(--hud-lane-bottom) + var(--hud-combat) + var(--hud-gap)); }
+@media (max-width: 640px) { .world[data-site="ruins"] { --hud-combat: calc(206px * var(--tsi-text-scale, 1)); } }
 .world .combatHud, .world .missionTracker, .world .incantation, .world .bossBar, .world .safeBadge, .world .banner, .world .defeat { zoom: var(--tsi-text-scale, 1); }
 .energyBar { height: 15px; }
 .energyBar span { background: linear-gradient(90deg, #9cc3f2, #bfaaf2); }
@@ -310,7 +341,8 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .runeTimer { width: 320px; height: 5px; border-radius: 3px; background: #3b2f45; overflow: hidden; }
 .runeTimer span { display: block; height: 100%; background: #ffe08a; transition: width 0.1s linear; }
 /* Mouse-look (specs/camera-orbit.md): the hint while the mouse is free, and the ruins' crosshair while it looks. */
-.lookHint { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 14px; border-radius: 999px; background: #f8f7e9e8; color: #293e3b; border: 1px solid #fff8; font-size: 11px; font-weight: 600; box-shadow: 0 4px 14px #132e3620; pointer-events: none; white-space: nowrap; zoom: var(--tsi-text-scale, 1); }
+/* On the canvas, over the scene's middle: clear of the title, the top cluster and the bottom stack at every size. */
+.lookHint { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 14px; border-radius: 999px; background: #f8f7e9e8; color: #293e3b; border: 1px solid #fff8; font-size: 11px; font-weight: 600; box-shadow: 0 4px 14px #132e3620; pointer-events: none; white-space: nowrap; zoom: var(--tsi-text-scale, 1); }
 .crosshair { position: absolute; top: 50%; left: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; fill: none; stroke: #f8f3df; stroke-width: 1.4; filter: drop-shadow(0 0 1.2px #1b2a2acc); opacity: 0.85; }
 .crosshair circle + circle { fill: #f8f3df; stroke: none; }
 /* The clean HUD (row 283): the objective slides in when it changes and fades after; the place name fades after a scene comes in. */

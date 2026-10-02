@@ -5,7 +5,8 @@ import { useGLTF } from "@react-three/drei";
 import { prepareModel, disposeModelMaterials, applyModelTextures } from "@/lib/game/modelMaterials";
 import { shadowClassFor, type ShadowClass } from "@/lib/game/shadows";
 import { modelContact, useContactShadow } from "./ContactShadows";
-import { isCedar, propsOf } from "@/lib/game/defaultIsland";
+import { propsOf } from "@/lib/game/defaultIsland";
+import { BUSH_MODELS, FLOWER_MODELS, TREE_MODELS, bushParts, flowerParts, treeParts, type NaturePart } from "@/lib/game/natureParts";
 import { SEASON_BUSHES, SEASON_FLOWERS, SEASON_TREES } from "@/lib/game/seasonalLook";
 import type { Season } from "@/lib/game/season";
 import { objectsOf, type Village } from "@/lib/game/villageMap";
@@ -46,29 +47,7 @@ export function GLBProp({ url, scale = 1, position, rotation, shadow, emissiveIn
   return <primitive object={clone} scale={scale} position={position} rotation={rotation} />;
 }
 
-// ─── Trees (ACNH revamp 2026-07 — models ship world-scale) ──────
-const TREE_MODELS = [
-  "/assets/acnh/plants/tree-hardwood-a.glb",
-  "/assets/acnh/plants/tree-hardwood-b.glb",
-  "/assets/acnh/plants/tree-blossom.glb",
-  "/assets/acnh/plants/tree-cedar.glb",
-];
-
-/** A tree's size from its seed (also where its crown sheds leaves, IslandAtmosphere). */
-export const treeScale = (seed: number) => 0.85 + (seed % 5) * 0.08;
-
-/**
- * The model(s) a nature spot places, relative to the spot: url, offset, yaw
- * and scale by seed. NatureTree/Bush/FlowerCluster and the village's
- * instanced nature (InstancedModels) both read these, so they match exactly.
- */
-export interface NaturePart { url: string; offset: [number, number, number]; yaw: number; scale: number }
-export const treeParts = (seed: number, models: readonly string[] = TREE_MODELS): NaturePart[] =>
-  [{ url: models[seed % models.length], offset: [0, 0, 0], yaw: treeYaw(seed), scale: treeScale(seed) }];
-export const bushParts = (seed: number, models: readonly string[] = BUSH_MODELS): NaturePart[] =>
-  [{ url: models[seed % models.length], offset: [0, 0, 0], yaw: seed * 1.3, scale: 0.9 + (seed % 3) * 0.15 }];
-export const flowerParts = (seed: number, models: readonly string[] = FLOWER_MODELS): NaturePart[] =>
-  [0, 1, 2].map(j => ({ url: models[(seed + j) % models.length], offset: [(j - 1) * 0.4, 0, ((j * 7 + seed) % 3 - 1) * 0.3], yaw: j * 2.1, scale: 0.8 }));
+export { treeParts, treeScale, treeYaw, type NaturePart } from "@/lib/game/natureParts";
 
 /** A map's trees, bushes, flowers and props as instanced placements, dressed for the season (the village and the movement lab). */
 export function sceneryOf(v: Village, ground: (x: number, z: number) => number, season: Season): ModelPlacement[] {
@@ -98,36 +77,12 @@ export function NatureTree({ position, seed, models = TREE_MODELS }: { position:
   return <Parts position={position} parts={treeParts(seed, models)} />;
 }
 
-export function treeYaw(seed: number): number {
-  // Broadleaf canopies are authored wider than they are deep; a side-on
-  // quarter turn makes the leaf cards look like a thin sheet.
-  const yaw = isCedar(seed) ? seed * 137.5 : 180 + ((seed % 5) - 2) * 8;
-  return (yaw * Math.PI) / 180;
-}
-
 // ─── Bushes ─────────────────────────────────────────────────────
-const BUSH_MODELS = [
-  "/assets/acnh/plants/bush-azalea.glb",
-  "/assets/acnh/plants/bush-hydrangea.glb",
-  "/assets/acnh/plants/bush-holly.glb",
-];
-
 export function NatureBush({ position, seed, models = BUSH_MODELS }: { position: [number, number, number]; seed: number; models?: readonly string[] }) {
   return <Parts position={position} parts={bushParts(seed, models)} />;
 }
 
 // ─── Flowers ────────────────────────────────────────────────────
-const FLOWER_MODELS = [
-  "/assets/acnh/plants/flower-cosmos.glb",
-  "/assets/acnh/plants/flower-lily.glb",
-  "/assets/acnh/plants/flower-hyacinth.glb",
-  "/assets/acnh/plants/flower-mum.glb",
-  "/assets/acnh/plants/flower-rose.glb",
-  "/assets/acnh/plants/flower-tulip.glb",
-  "/assets/acnh/plants/flower-pansy.glb",
-  "/assets/acnh/plants/flower-windflower.glb",
-];
-
 export function NatureFlowerCluster({ position, seed, models = FLOWER_MODELS }: { position: [number, number, number]; seed: number; models?: readonly string[] }) {
   return <Parts position={position} parts={flowerParts(seed, models)} />;
 }

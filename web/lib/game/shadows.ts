@@ -16,7 +16,7 @@ export type ShadowClass = "solid" | "foliage" | "small" | "none";
 /** Flat or airborne: rugs and mats lie on the floor, critters fly or perch, background pieces are scenery. */
 const NONE = /\/(critters|fish)\/|\/props\/(distant-view|waterfall|balloon)|\/furniture\/[\w-]*(rug|mat)\.glb$/;
 /** Below what a sun shadow reads at the follow camera: flowers, shells, pebbles, tufts, pickups. */
-const SMALL = /\/plants\/flower-|\/props\/(shell-|grass-tuft-|crab-)|\/nature\/(grass-tufts|rock_small|mushroom_)|\/furniture\/lounge-(book|tea)\.glb$|\/game\/props\/(branch|message-bottle)\.glb$/;
+const SMALL = /\/plants\/flower-|\/acnh\/fruit\/|\/props\/(shell-|grass-tuft-|crab-)|\/nature\/(grass-tufts|rock_small|mushroom_)|\/furniture\/lounge-(book|tea)\.glb$|\/game\/props\/(branch|message-bottle)\.glb$/;
 /** Solid, but spanning water or floating: nothing under it is ground. */
 const NO_CONTACT = /\/props\/(bridge-|boat|buoy)/;
 

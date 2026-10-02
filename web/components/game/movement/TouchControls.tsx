@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { touchStick as stick } from "./moveFx";
 
 /** Touch (specs/movement.md "Controls"): a joystick (push to the rim to sprint) and jump, dash and slide buttons, into the avatar's touch stick; `left`/`bottom` clear a HUD. Slide is held: crouch at a walk, slide at speed (specs/movement-slide.md). */
-export default function TouchControls({ left = 24, bottom = 28, walkOnly = false }: { left?: number; bottom?: number; walkOnly?: boolean }) {
+export default function TouchControls({ left = 24, bottom = 28, walkOnly = false }: { left?: number | string; bottom?: number | string; walkOnly?: boolean }) {
   const base = useRef<HTMLDivElement>(null), knob = useRef<HTMLDivElement>(null);
   // The knob moves through its style, not state: pointermove fires far more often than a render is worth.
   const setKnob = (x: number, y: number) => { if (knob.current) knob.current.style.transform = `translate(${x}px, ${y}px)`; };

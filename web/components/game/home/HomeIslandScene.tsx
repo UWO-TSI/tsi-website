@@ -18,7 +18,7 @@ import { ACNHParts, CHALET_VARIANTS } from "../ACNHBuilding";
 import { GLBProp, NatureTree, NatureBush, NatureFlowerCluster } from "../NatureModels";
 import { IslandAtmosphere, useFollowCamera, type TreeSpot } from "../IslandAtmosphere";
 import { PlacementLayer, type GridMapping } from "./PlacementLayer";
-import { createHomeIsland, HOME_SPAWN, HOUSE, HOME_MAILBOX, HOME_DOCK, HOME_TREES, HOME_BUSHES, HOME_FLOWERS, HOME_RADII } from "@/lib/game/homeIsland";
+import { createHomeIsland, HOME_SPAWN, HOUSE, HOME_MAILBOX, HOME_DOCK, HOME_TREES, HOME_TREE_SEEDS, HOME_BUSHES, HOME_FLOWERS, HOME_RADII } from "@/lib/game/homeIsland";
 import { ISLAND_TERRAIN, windowLit, type IslandLight } from "@/lib/game/islandLighting";
 import { FadeLight } from "../AmbientProps";
 import { SEASON_TREES, SEASON_BUSHES, SEASON_FLOWERS, type SeasonLook } from "@/lib/game/seasonalLook";
@@ -38,8 +38,7 @@ const HOME_NODES = homeNodes();
 const SEA = () => "sea" as const;
 
 export type HomeNear = "house" | "village" | "mailbox" | "fish" | "forage" | "net" | "dig" | null;
-const TREE_SEEDS = [0, 1, 3, 2];
-const TREES: TreeSpot[] = HOME_TREES.map(([x, z], i) => ({ x, z, seed: TREE_SEEDS[i] }));
+const TREES: TreeSpot[] = HOME_TREES.map(([x, z], i) => ({ x, z, seed: HOME_TREE_SEEDS[i] }));
 const DOOR_SPAWN: [number, number, number] = [HOUSE.door[0], 0, HOUSE.door[1] - 0.6];
 /** The islet's sea is all one: gulls off its shores in view, butterflies on its flowers, crabs on its sand ring. */
 const HOME_GULLS = gullAnchors({ minX: -HOME_RADII.x, maxX: HOME_RADII.x, minZ: -HOME_RADII.z, maxZ: HOME_RADII.z, cx: 0, cz: 0 });
@@ -96,7 +95,7 @@ export default function HomeIslandScene({ held = null, identity, level, peaceful
       ground={home.ground} cloudSize={[HOME_RADII.x * 2 + 4, HOME_RADII.z * 2 + 4]} shadowExtent={16} fireflyAnchors={HOME_BUSHES} trees={TREES} fauna={fauna} />
     <GridWorld map={home.map} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} />
     <GridOcean map={home.map} lite={liteMode} />
-    <PeacefulLayer map={home.map} nodes={HOME_NODES} moment={peaceful.moment} member={peaceful.member} player={player} ground={home.ground} highTier={!liteMode} active={!fishing && !decorating} />
+    <PeacefulLayer map={home.map} nodes={HOME_NODES} moment={peaceful.moment} member={peaceful.member} player={player} ground={home.ground} highTier={!liteMode} active={!fishing && !decorating} treeModels={SEASON_TREES[look.season]} />
     {/* The dump's chalet house (5 × 4.2 cells, same model family as the village café/museum). */}
     <group position={[HOUSE.x, 0, HOUSE.z]}><ACNHParts parts={CHALET_VARIANTS.brown} lit={windowLit(light)} /></group>
     <FadeLight position={[HOUSE.door[0], 1.4, HOUSE.door[1] - 0.2]} color="#ffd68b" intensity={light.lampsOn ? light.lamp * 1.2 : 0} distance={4} />

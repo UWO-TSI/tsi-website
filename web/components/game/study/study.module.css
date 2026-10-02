@@ -31,7 +31,8 @@
 .board { margin: 10px 0 4px; padding: 0; list-style: none; display: grid; gap: 4px; }
 .board li { display: flex; justify-content: space-between; padding: 6px 10px; border-radius: 10px; background: #fffdf3; border: 1px solid #e3d8ba; }
 
-@media (max-width: 700px) { .startSheet { left: 16px; top: auto; bottom: 70px; transform: none; } .panel { top: auto; bottom: 70px; left: 12px; width: calc(100% - 24px); max-height: 45%; } }
+/* Narrow: over the bottom stack (the prompt, and room for two toasts above it; DefaultIslandWorld.module.css), never on it. */
+@media (max-width: 700px) { .startSheet { left: 16px; top: auto; bottom: calc(var(--game-toast-bottom, 132px) + 84px); transform: none; } .panel { top: auto; bottom: calc(var(--game-toast-bottom, 132px) + 84px); left: 12px; width: calc(100% - 24px); max-height: 45%; } }
 @media (prefers-reduced-motion: reduce) { .overhead[data-phase="break"] { animation: none; } }
 
 /* The café owner's greeting bubble and nameplate (cafe-polish §6): the residents' cream bubble with a tail. */

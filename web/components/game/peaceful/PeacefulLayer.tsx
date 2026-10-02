@@ -25,14 +25,16 @@ export function peacefulNear(map: IslandMap, classify: (x: number, z: number) =>
   return spotOut.current ? "fish" : null;
 }
 
-export default function PeacefulLayer({ map, nodes, moment, member, player, ground, highTier, active }: {
+export default function PeacefulLayer({ map, nodes, moment, member, player, ground, highTier, active, treeModels }: {
   map: IslandMap; nodes: { forage: NodeSpec[]; bugs: NodeSpec[] }; moment: WorldMoment; member: string;
   player: React.RefObject<THREE.Vector3>; ground: (x: number, z: number) => number; highTier: boolean; active: boolean;
+  /** The tree models this season draws (SEASON_TREES): the fruit hangs in the crown the tree shows. */
+  treeModels?: readonly string[];
 }) {
   const waterHeight = useMemo(() => (x: number, z: number) => gridFishingWaterHeight(map, x, z), [map]);
   const playerRef = player as React.MutableRefObject<THREE.Vector3>;
   return <>
-    <VillageLife nodes={nodes.forage} bugNodes={nodes.bugs} moment={moment} member={member} player={player} ground={ground} highTier={highTier} active={active} />
+    <VillageLife nodes={nodes.forage} bugNodes={nodes.bugs} moment={moment} member={member} player={player} ground={ground} highTier={highTier} active={active} treeModels={treeModels} />
     {/* The throw runs from you to the spot, not along the camera: it turns now (specs/camera-orbit.md). */}
     <FishingBobber towardWater playerPosRef={playerRef} waterHeight={waterHeight} />
     <FishCatchFX playerPosRef={playerRef} />

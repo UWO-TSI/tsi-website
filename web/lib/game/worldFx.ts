@@ -105,11 +105,11 @@ export function mistBank(k: number, t: number, wind: WorldWind, cx: number, cz: 
 }
 
 // ─── Leaves and petals shed by the trees ─────────────────────────────────
-/** Crown of each shedding tree model at scale 1, from its GLB bounds (2026-09-27): top, half-widths. */
+/** Crown of each shedding tree model at scale 1, from its GLB bounds (the closed crowns, 2026-10-02): top, half-widths. */
 const CANOPIES: Record<string, { season: Season; top: number; rx: number; rz: number }> = {
-  "tree-blossom": { season: "spring", top: 3.2, rx: 1.4, rz: 0.8 },
-  "tree-hardwood-a": { season: "autumn", top: 2.5, rx: 1.05, rz: 0.7 },
-  "tree-hardwood-b": { season: "autumn", top: 3.15, rx: 1.3, rz: 0.8 },
+  "tree-blossom": { season: "spring", top: 3.2, rx: 1.55, rz: 1.35 },
+  "tree-hardwood-a": { season: "autumn", top: 2.55, rx: 1.2, rz: 1.05 },
+  "tree-hardwood-b": { season: "autumn", top: 3.2, rx: 1.5, rz: 1.25 },
 };
 export interface LeafTree { id: number; x: number; y: number; z: number; top: number; rx: number; rz: number }
 
@@ -127,6 +127,8 @@ export function sheddingTrees(trees: readonly { x: number; y: number; z: number;
 
 export const LEAF_SLOTS = 12;
 const LEAF_GROW = 0.4, LEAF_REST = 2.5, LEAF_FADE = 1;
+/** A fallen leaf lies this far over the ground. */
+const LEAF_LIE = 0.02;
 /** Leaves ride most, not all, of the wind. */
 const LEAF_DRAG = 0.8;
 export interface LeafLook { fall: number; flutter: number; spin: number }
@@ -158,10 +160,10 @@ export function leafAt(tree: LeafTree, slot: number, t: number, wind: WorldWind,
   const spin = hash01(key, c + 4) * Math.PI * 2, rate = 1.4 + hash01(key, c + 5);
   const size = 0.7 + 0.6 * hash01(key, c + 6);
   const flutter = look.flutter;
-  // Landing: two passes, so a leaf blown off a rise falls on to the ground below it.
-  let land = Math.max(0, (y0 - tree.y) / fall);
+  // Landing: two passes, so a leaf blown off a rise falls on to the ground below it; it lands at its resting height.
+  let land = Math.max(0, (y0 - tree.y - LEAF_LIE) / fall);
   drift(land, x0, z0, wind, flutter, rate, spin, out);
-  land = Math.max(0, (y0 - ground(out.x, out.z)) / fall);
+  land = Math.max(0, (y0 - ground(out.x, out.z) - LEAF_LIE) / fall);
   let scale = size * Math.min(1, (period - age) / LEAF_FADE);
   if (age < land) {
     drift(age, x0, z0, wind, flutter, rate, spin, out);
@@ -170,7 +172,7 @@ export function leafAt(tree: LeafTree, slot: number, t: number, wind: WorldWind,
     scale *= Math.min(1, age / LEAF_GROW);
   } else {
     drift(land, x0, z0, wind, flutter, rate, spin, out);
-    out.y = ground(out.x, out.z) + 0.02;
+    out.y = ground(out.x, out.z) + LEAF_LIE;
     out.rx = -Math.PI / 2; out.ry = 0; out.rz = spin;
     scale *= Math.min(1, Math.max(0, 1 - (age - land - LEAF_REST) / LEAF_FADE));
   }

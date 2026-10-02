@@ -6,7 +6,7 @@ import { useGLTF } from "@react-three/drei";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import * as THREE from "three";
 import { tune } from "@/lib/game/tuning";
-import { gullPose, type GullParams } from "@/lib/game/gullPath";
+import { PERCH_GLIDE, PERCH_SIT, gullPose, gullPosition, newPerchState, perchAt, type GullParams } from "@/lib/game/gullPath";
 import { worldTime } from "@/lib/game/worldClock";
 
 /**
@@ -59,9 +59,24 @@ interface GullSwoop {
   at: number; // performance.now ms
 }
 const SWOOP_MS = 4200;
+const NO_PERCHES: readonly (readonly [number, number, number])[] = [];
 
-function Gull({ anchor, seed, idx, swoopRef, altitude }: { anchor: [number, number]; seed: number; idx: number; swoopRef: React.MutableRefObject<GullSwoop | null>; altitude?: number }) {
+/** Turn from angle a toward b by k (0..1), the short way round. */
+function turnToward(a: number, b: number, k: number) {
+  let d = b - a;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return a + d * k;
+}
+const smooth01 = (x: number) => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 - 2 * t); };
+/** Shared per gull between its flight and its body: how folded its wings are, and how much it is gliding. */
+interface Wings { fold: number; glide: number }
+
+function Gull({ anchor, seed, idx, swoopRef, altitude, perches }: { anchor: [number, number]; seed: number; idx: number; swoopRef: React.MutableRefObject<GullSwoop | null>; altitude?: number; perches: readonly (readonly [number, number, number])[] }) {
   const ref = useRef<THREE.Group>(null);
+  const wings = useRef<Wings>({ fold: 0, glide: 0 });
+  const perch = useRef(newPerchState());
+  const at = useRef({ start: { x: 0, y: 0, z: 0 }, end: { x: 0, y: 0, z: 0 } });
   // Per-bird jitter only. Every BASE below is on the bench (`tuning.gull`) and
   // read per frame, so a slider move is immediate.
   const { phase, jSpeed, jRadius, jAlt } = useMemo(() => {
@@ -103,6 +118,29 @@ function Gull({ anchor, seed, idx, swoopRef, altitude }: { anchor: [number, numb
     p.phase = phase;
 
     const pose = gullPose(t, p, g.bankGain, g.bank);
+    const w = wings.current, visit = perchAt(t, seed, perches.length, perch.current);
+    w.fold = 0; w.glide = 0;
+
+    // Now and then down to a perch: from wherever it left its circle, a glide down, a sit with its wings folded
+    // (on the water it bobs), a turn toward where its circle has got to and a rise back into it.
+    if (visit.index >= 0 && !(swoopRef.current && swoopRef.current.idx === idx)) {
+      const [px, py, pz] = perches[visit.index];
+      // The model's feet are 0.74 of its own units over its origin; on the water it sits low, feet under.
+      const k = visit.w, water = py < 0.05;
+      const sitY = py - g.scale * (water ? 1.1 : 0.74) + (water ? Math.sin(t * 1.3 + seed) * 0.03 : 0);
+      gullPosition(visit.t0, p, at.current.start);
+      gullPosition(visit.t0 + PERCH_GLIDE + PERCH_SIT + 4, p, at.current.end);
+      const down = Math.atan2(px - at.current.start.x, pz - at.current.start.z), up = Math.atan2(at.current.end.x - px, at.current.end.z - pz);
+      const rising = visit.u > PERCH_GLIDE + PERCH_SIT;
+      ref.current.position.set(pose.x + (px - pose.x) * k, pose.y + (sitY - pose.y) * k, pose.z + (pz - pose.z) * k);
+      ref.current.rotation.y = rising
+        ? turnToward(turnToward(down, up, smooth01((visit.u - PERCH_GLIDE - PERCH_SIT) / 1.2)), pose.yaw, 1 - k)
+        : turnToward(pose.yaw, down, smooth01(visit.u / 1.2));
+      ref.current.rotation.z = pose.roll * (1 - k);
+      w.fold = visit.fold;
+      w.glide = k;
+      return;
+    }
 
     const sw = swoopRef.current;
     if (sw && sw.idx === idx) {
@@ -124,8 +162,10 @@ function Gull({ anchor, seed, idx, swoopRef, altitude }: { anchor: [number, numb
         );
         // Tight turn, so it leans harder — but still about the FORWARD axis,
         // and DEEPENING the existing lean rather than fighting it, which a
-        // fixed sign here would do half the time.
-        ref.current.rotation.y = w > 0.5 ? sa + Math.PI : pose.yaw;
+        // fixed sign here would do half the time. Heading: along the circle,
+        // whose velocity (−sin sa, cos sa) is yaw −sa, eased in from the patrol
+        // heading (it used to snap to sa + π, flying sideways).
+        ref.current.rotation.y = turnToward(pose.yaw, -sa, w);
         const deepen = Math.sign(pose.roll || 1) * w * g.bank * 0.5;
         ref.current.rotation.z = Math.max(-g.bank, Math.min(g.bank, pose.roll + deepen));
         return;
@@ -144,7 +184,7 @@ function Gull({ anchor, seed, idx, swoopRef, altitude }: { anchor: [number, numb
     // its nose up instead of banking.
     <group ref={ref} rotation={[0, 0, 0, "YXZ"]} position={[anchor[0], 7, anchor[1]]}>
       <Suspense fallback={null}>
-        <SeagullModel seed={seed} />
+        <SeagullModel seed={seed} wings={wings} />
       </Suspense>
     </group>
   );
@@ -165,7 +205,27 @@ function Gull({ anchor, seed, idx, swoopRef, altitude }: { anchor: [number, numb
 // faced +X; it turned forward into -X in the parent frame, and roll about the
 // parent's Z then pitched the nose up. David: "it banks upwards."
 
-function SeagullModel({ seed }: { seed: number }) {
+/**
+ * Each wing's pivot turned so the wing lies back along the body (the model's forward is +Z): its rest direction
+ * (pivot to tip) swung round to point back, a little out and down, in the body's frame. Measured on the clone, so it
+ * holds whatever axes the bones were authored with.
+ */
+function foldedWings(body: THREE.Object3D) {
+  body.updateMatrixWorld(true);
+  const bodyQ = body.getWorldQuaternion(new THREE.Quaternion()).invert();
+  const inBody = (o: THREE.Object3D) => bodyQ.clone().multiply(o.getWorldQuaternion(new THREE.Quaternion()));
+  const toBody = (o: THREE.Object3D) => body.worldToLocal(o.getWorldPosition(new THREE.Vector3()));
+  return ([["Bird_LeftWing_Pivot_01", "Bird_LeftWing_Tip_02", 1], ["Bird_RightWing_Pivot_03", "Bird_RightWing_Tip_04", -1]] as const).flatMap(([p, tip, side]) => {
+    const pivot = body.getObjectByName(p), end = body.getObjectByName(tip);
+    if (!pivot || !end || !pivot.parent) return [];
+    const along = toBody(end).sub(toBody(pivot)).normalize();
+    const swing = new THREE.Quaternion().setFromUnitVectors(along, new THREE.Vector3(side * 0.22, -0.3, -1).normalize());
+    const folded = inBody(pivot.parent).invert().multiply(swing).multiply(inBody(pivot));
+    return [{ pivot, folded }];
+  });
+}
+
+function SeagullModel({ seed, wings }: { seed: number; wings: React.RefObject<Wings> }) {
   const { scene, animations } = useGLTF(SEAGULL_URL);
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
 
@@ -183,6 +243,7 @@ function SeagullModel({ seed }: { seed: number }) {
     });
     return c;
   }, [scene]);
+  const folds = useMemo(() => foldedWings(body), [body]);
 
   useEffect(() => {
     if (!animations.length) return;
@@ -207,15 +268,21 @@ function SeagullModel({ seed }: { seed: number }) {
     if (!m) return;
     const g = tune().gull;
     // Spread keeps the flock out of lockstep; the seed picks a fixed slot in it.
-    m.timeScale = g.flap + ((seed * 13) % 7) * (g.flapSpread / 7);
+    const w = wings.current;
+    // Gliding in to land it beats slower; sitting, its wings fold along its back.
+    m.timeScale = (g.flap + ((seed * 13) % 7) * (g.flapSpread / 7)) * (1 - 0.6 * w.glide);
     m.update(delta);
+    if (w.fold > 0) for (const { pivot, folded } of folds) pivot.quaternion.slerp(folded, w.fold);
   });
 
   return <primitive object={body} />;
 }
 
-/** `altitude`: the flock's height over the water (the tuning bench's when unset); the member island's follow camera sees gulls lower. */
-export default function Seagulls({ anchors = GULL_ANCHORS, altitude }: { anchors?: [number, number][]; altitude?: number }) {
+/**
+ * `altitude`: the flock's height over the water (the tuning bench's when unset); the member island's follow camera
+ * sees gulls lower. `perches`: where they land now and then ([x, surface y, z]: the water, lamp tops, roofs).
+ */
+export default function Seagulls({ anchors = GULL_ANCHORS, altitude, perches = NO_PERCHES }: { anchors?: [number, number][]; altitude?: number; perches?: readonly (readonly [number, number, number])[] }) {
   const swoopRef = useRef<GullSwoop | null>(null);
   useEffect(() => {
     const onCatch = (e: Event) => {
@@ -239,7 +306,7 @@ export default function Seagulls({ anchors = GULL_ANCHORS, altitude }: { anchors
   return (
     <group>
       {anchors.map((a, i) => (
-        <Gull key={i} anchor={a} seed={i + 3} idx={i} swoopRef={swoopRef} altitude={altitude} />
+        <Gull key={i} anchor={a} seed={i + 3} idx={i} swoopRef={swoopRef} altitude={altitude} perches={perches} />
       ))}
     </group>
   );

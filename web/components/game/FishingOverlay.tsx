@@ -397,10 +397,12 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
 
   return (
     <div
+      data-fishing-overlay={phase}
       style={{
         position: "fixed",
         left: "50%",
-        bottom: 120,
+        // The bottom stack's lane (the prompt steps aside while you fish), under the toasts; 120 where no stack is set.
+        bottom: "var(--hud-lane-bottom, 120px)",
         transform: "translateX(-50%)",
         zIndex: 60,
         pointerEvents: "none",

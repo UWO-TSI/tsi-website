@@ -96,3 +96,17 @@ The minimal-HUD direction (row 283) is being built in `game/game-ui`. Coordinate
 - the HUD stack at each size.
 
 Report FPS and triangle counts.
+
+## Built (2026-10-02, `game/world-refine`)
+- **Trees:** `art/trees/build_trees.py` (headless Blender), sources in `art/trees/source/`, and `web/scripts/finish-trees.mjs` (cut-out masks, brightness). Each of ACNH's three lobes is closed into a sphere of cards, the two low lobes ring the trunk, and backing balls sit inside. There are new sway-hull and trunk casters. The snow cedar gets ACNH's winter snow layer back. Fruit hang points go to `web/lib/game/treeHang.ts`. Placement lives in `web/lib/game/natureParts.ts`, with no camera-facing turn.
+- **Fruit:** `web/lib/game/treeFruit.ts` (tree space, sway, drop) and `components/game/peaceful/TreeFruit.tsx` (instanced per kind). ACNH fruit is in `public/assets/acnh/fruit/`. Tree nodes stand at the trunk.
+- **Flowers:** `flowerParts` at 0.5, spread 0.22. The pickable bloom is a flower model.
+- **Birds and glows:**
+  - flyers are 0.25 and leave one by one (`lib/game/ambientFauna.ts`);
+  - the flee is calmer and bug state carries (`lib/game/bugFlee.ts`);
+  - the sparkle drops when its bug flees;
+  - sprites take the bend (`lib/game/curvedWorld.ts`);
+  - critters stay out of bloom (`keepOutOfBloom`);
+  - gulls sit 35 off every side and perch (`lib/game/gullPath.ts` `perchAt`, `gullPerches`, `components/game/Seagulls.tsx`), and the swoop heading is fixed.
+- **HUD:** the bottom-stack variables in `DefaultIslandWorld.module.css`, the six-key bar with a "?", and the look hint on the canvas.
+- **Evidence:** `specs/evidence/world-refinement/01`-`09` and `shoot.mjs`. Questions: `world-refinement-questions.md`.

@@ -1,0 +1,10 @@
+# FPS after the world refinement, village, 1440x900, dev server (Supabase blanked), headed Chromium, Mac mini M4.
+# Same cameras as specs/evidence/camera-orbit/09-fps.txt (128-144 FPS, 312k triangles at y0 before this pass); the display caps at 144.
+perf p34.4-z1-y0 144 FPS · 6.9 ms/frame | 412 draws · 366,282 triangles | Position 0.0, -10.0
+perf p34.4-z1-y45 142 FPS · 7.0 ms/frame | 395 draws · 347,992 triangles | Position 0.0, -10.0
+perf p34.4-z1-y90 144 FPS · 6.9 ms/frame | 383 draws · 322,753 triangles | Position 0.0, -10.0
+perf p34.4-z1-y135 144 FPS · 6.9 ms/frame | 354 draws · 304,354 triangles | Position 0.0, -10.0
+perf p34.4-z1-y180 144 FPS · 6.9 ms/frame | 357 draws · 305,793 triangles | Position 0.0, -10.0
+perf p34.4-z1-y225 144 FPS · 6.9 ms/frame | 338 draws · 307,399 triangles | Position 0.0, -10.0
+perf p34.4-z1-y270 144 FPS · 6.9 ms/frame | 377 draws · 330,097 triangles | Position 0.0, -10.0
+perf p34.4-z1-y315 143 FPS · 7.0 ms/frame | 415 draws · 359,607 triangles | Position 0.0, -10.0

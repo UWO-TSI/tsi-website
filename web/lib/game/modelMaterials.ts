@@ -95,6 +95,20 @@ function addSnowCap(shader: WebGLProgramParametersWithUniforms) {
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.93, 0.97), uWorldSnow * smoothstep(0.45, 0.8, vSnowUp));`);
 }
 
+/**
+ * Small creatures stay out of bloom: a butterfly's white wings in full sun passed the bloom threshold (0.65 in the
+ * approved look, the lowest of the presets) and haloed into a glowing orb. Their light is scaled to keep its colour
+ * under this luminance; everything else keeps the approved bloom.
+ */
+export const FAUNA_MAX_LUMA = 0.6;
+export function keepOutOfBloom(shader: WebGLProgramParametersWithUniforms) {
+  shader.fragmentShader = shader.fragmentShader.replace("#include <tonemapping_fragment>", `{
+    float faunaLuma = dot(gl_FragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+    gl_FragColor.rgb *= min(1.0, ${FAUNA_MAX_LUMA.toFixed(2)} / max(faunaLuma, 1e-4));
+  }
+  #include <tonemapping_fragment>`);
+}
+
 const GLASS = /^(m(Window\w*|SideWindow|RoofWindow|Glass\w*|Mirror)|M_Glass)$/;
 const METAL = /^M_(Blade|Brass|Steel|Iron|Drum)$/;
 /** Painted-metal atlases: the whole body is metal (LookMaterials keeps light paint, e.g. a clock face, dielectric). */
@@ -210,6 +224,14 @@ export function prepareModel(source: Object3D, url: string, emissiveIntensity?: 
           addTreeSway(shader);
         };
         material.customProgramCacheKey = () => `tree-sway:${material.name}`;
+      }
+      if (url.includes("/critters/")) {
+        const base = material.onBeforeCompile, key = material.customProgramCacheKey();
+        material.onBeforeCompile = (shader, renderer) => {
+          base.call(material, shader, renderer);
+          keepOutOfBloom(shader);
+        };
+        material.customProgramCacheKey = () => `${key}|fauna`;
       }
       // Every model can fade round the player when it stands in the way of the orbit camera (lib/game/occluders.ts).
       const before = material.onBeforeCompile, key = material.customProgramCacheKey();
