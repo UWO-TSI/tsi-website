@@ -107,7 +107,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     const sp = rollNode(member, n.id, hour, n.biomes, moment, ["bug"]);
     if (!sp || !MODEL_OF.has(sp.key)) return [];
     return [{ id: n.id, sp, x: n.x, z: n.z, baseY: MODEL_OF.get(sp.key)!.baseY, fled: false, fleeT: 0, fx: 0, fy: 0, fz: 0, dir: 0, side: 1, hopT: -1, wary: false, faded: false,
-      target: { id: n.id, kind: "bug" as const, label: `Swing the net (${sp.name})`, distance: 0 } }];
+      target: { id: n.id, kind: "bug" as const, label: sp.name, distance: 0 } }];
   }), [bugNodes, harvested, now, member, hour, moment]);
   const bugState = useRef<Map<string, LiveBug>>(new Map());
   useEffect(() => { bugState.current = new Map(bugs.map(b => [b.id, { ...b, target: { ...b.target } }])); }, [bugs]);

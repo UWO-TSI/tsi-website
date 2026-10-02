@@ -1,0 +1,33 @@
+/* The tool wheel (specs/game-ui.md §1, row 283): an ACNH flower in the cream kit. Petals round a centre, the chosen
+   one grows, its name below; the world dims a little behind it. Matte, soft shadows, sage accents. */
+.wheel { position: absolute; inset: 0; z-index: 35; display: grid; place-items: center; pointer-events: none; }
+.wheel::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, #1c2a2a1f 0, #1c2a2a40 70%); opacity: 0; transition: opacity 0.16s ease; }
+.wheel[data-shown]::before { opacity: 1; }
+.flower { position: relative; width: 0; height: 0; opacity: 0; transform: scale(0.7); transition: opacity 0.14s ease, transform 0.22s cubic-bezier(0.2, 1.4, 0.4, 1); zoom: var(--tsi-text-scale, 1); }
+.wheel[data-shown] .flower { opacity: 1; transform: scale(1); pointer-events: auto; }
+.base { position: absolute; left: -168px; top: -168px; width: 336px; height: 336px; border-radius: 50%; background: radial-gradient(circle, #fbf8ec 0 30%, #f3efdc 31% 64%, #efead3d9 65% 100%); box-shadow: 0 10px 0 #47625214, 0 18px 46px #29464133; }
+.petal { position: absolute; left: 0; top: 0; width: 82px; height: 92px; padding: 0; border: 0; background: none; cursor: pointer;
+  transform: translate(-50%, -50%) translate(var(--x), var(--y)) rotate(var(--a)) scale(var(--s, 1)); transition: transform 0.16s cubic-bezier(0.2, 1.5, 0.4, 1); }
+.petal::before { content: ""; position: absolute; inset: 0; border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%; background: #fdfbf2; border: 2px solid #fff; box-shadow: 0 3px 0 #4762521f, 0 6px 14px #2946411f; transition: background 0.12s, box-shadow 0.12s; }
+.petal[data-held]::before { background: #eef1e3; }
+.petal[data-chosen] { --s: 1.2; z-index: 2; }
+.petal[data-chosen]::before { background: #fffdf3; box-shadow: 0 0 0 3px #426b5b, 0 4px 0 #4762522e, 0 10px 22px #29464130; }
+.petal:focus-visible::before { box-shadow: 0 0 0 3px #bb813f; }
+.petalFace { position: absolute; inset: 0; display: grid; place-items: center; transform: rotate(calc(-1 * var(--a))); }
+.icon { width: 58px; height: 58px; object-fit: contain; pointer-events: none; user-select: none; filter: drop-shadow(0 2px 1px #2946411c); }
+.pips { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; }
+.pips i { width: 5px; height: 5px; border-radius: 50%; background: #9db08f; }
+.centre { position: absolute; left: -32px; top: -32px; width: 64px; height: 64px; display: grid; place-items: center; border: 2px solid #fff; border-radius: 50%; background: #f1eedd; color: #5d7266; cursor: pointer; box-shadow: inset 0 -3px 0 #47625214, 0 3px 10px #29464118; transition: transform 0.16s cubic-bezier(0.2, 1.5, 0.4, 1), background 0.12s; }
+.centre[data-chosen] { transform: scale(1.14); background: #fffdf3; color: #426b5b; box-shadow: 0 0 0 3px #426b5b, 0 6px 14px #2946412e; }
+.name { position: absolute; left: 50%; top: calc(50% + 196px); transform: translateX(-50%); margin: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 44px; min-width: 120px; padding: 8px 18px; border-radius: 999px; background: #f8f7e9f2; border: 1px solid #fff8; color: #293e3b; font-size: 14px; box-shadow: 0 4px 15px #29464120; opacity: 0; transition: opacity 0.14s; zoom: var(--tsi-text-scale, 1); }
+.name:empty { visibility: hidden; }
+.name small { font-size: 12px; color: #607069; font-weight: 500; }
+.wheel[data-shown] .name { opacity: 1; }
+.hint { position: absolute; left: 50%; top: calc(50% + 258px); transform: translateX(-50%); margin: 0; font-size: 12px; color: #fdfbf2; text-shadow: 0 1px 4px #1c2a2acc; white-space: nowrap; opacity: 0; transition: opacity 0.14s; zoom: var(--tsi-text-scale, 1); }
+.wheel[data-shown] .hint { opacity: 0.95; }
+.hint kbd { font: inherit; background: #f8f7e9; color: #293e3b; border-radius: 4px; padding: 0 5px; }
+/* Touch: the wheel button, bottom right above the stick's corner. */
+.touchButton { position: absolute; right: 18px; bottom: 150px; z-index: 12; width: 60px; height: 60px; display: grid; place-items: center; border: 2px solid #fff; border-radius: 50%; background: #f8f7e9f2; color: #426b5b; box-shadow: 0 3px 0 #47625218, 0 6px 18px #29464120; }
+.touchButton .icon { width: 42px; height: 42px; }
+@media (max-height: 640px) { .flower, .name, .hint { zoom: 0.8; } }
+@media (prefers-reduced-motion: reduce) { .flower, .petal, .centre, .wheel::before { transition: none; } }

@@ -49,7 +49,7 @@ import OracleTemple from "./oracle/OracleTemple";
 import RuinsScene from "./combat/RuinsScene";
 import CombatHud from "./combat/CombatHud";
 import MissionBoardSheet from "./combat/MissionBoardSheet";
-import { SLOT_IDS, attachProgressId, combat, publishCombat, setMission, setOwnedWeapons } from "@/lib/game/combat/runtime";
+import { SLOT_IDS, attachProgressId, combat, publishCombat, setMission, setOwnedWeapons, setWeapon, useCombatValue } from "@/lib/game/combat/runtime";
 import { missionEvent } from "@/lib/game/combat/abilities";
 import { combatProgression, postWear, startMissionRemote, type ProgressionView } from "@/lib/game/combat/progression";
 import { equipKit } from "@/lib/game/combat/abilities";
@@ -93,7 +93,14 @@ import TopCluster, { hudButton } from "./TopCluster";
 import { setHudCoins, setHudXp } from "@/lib/game/hudStore";
 import CollectionBook from "./CollectionBook";
 import { usePeacefulContext } from "@/lib/game/usePeacefulContext";
-import { bestTool } from "@/lib/game/tools";
+import ToolWheel from "./ToolWheel";
+import { clickAction, heldItem, toolNeeded, wheelContents, type Reach, type WheelItem, type WheelSite } from "@/lib/game/toolWheel";
+import { holdItem, readHeld, settleHeld, swapHeld, useHeld } from "@/lib/game/heldStore";
+import { useWheelKeys } from "@/lib/game/movement/keys";
+import { rodByTier } from "@/lib/game/rods";
+import { eatItem, localCollections, mergeWithLocal } from "@/lib/game/collections";
+import { capture } from "@/lib/game/orbitCamera";
+
 import { villageNodes } from "@/lib/game/islandNodes";
 import { villageWater, type FishingSpot } from "@/lib/game/fishingSpots";
 import { gullAnchors } from "@/lib/game/ambientFauna";
@@ -127,7 +134,7 @@ import { RESET_VIEW_KEY } from "./useOrbitInput";
 import { boxOccluder, treeOccluder } from "@/lib/game/occluders";
 import styles from "./DefaultIslandWorld.module.css";
 
-type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | null;
+type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | null;
 type Sheet = "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | null;
 const DEV = process.env.NODE_ENV !== "production";
 const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight", evening: "Evening", night: "Night" };
@@ -144,7 +151,7 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   display: "Look at the trophy case", desk: "Front desk · profile showcase", shelf: "Browse the bookshelf", clock: "Check the clock",
   notice: "Read the notice board", catch: "Check the catch board", mailbox: "Check the mailbox", monument: "Club monument",
   museum_enter: "Enter the museum", cafe_enter: "Enter the café", curator: "Talk to the curator", closet: "Open the closet", fitting: "Try on outfits", oracle_enter: "Enter the Oracle temple", altar: "Consult the crystal",
-  home: "Take the boat home", fish: "Cast your line", forage: "Gather", net: "Swing the net", claim: "Claim your plot", donate: "Donate your first catch to the museum", report: "Report to HQ", house: "Enter your house", village: "Take the boat to the village",
+  home: "Take the boat home", fish: "Cast your line", forage: "Gather", net: "Swing the net", dig: "Dig", claim: "Claim your plot", donate: "Donate your first catch to the museum", report: "Report to HQ", house: "Enter your house", village: "Take the boat to the village",
   buy: `Add a room · ${ROOM_PRICE.coins} coins + ${ROOM_PRICE.materials}`,
   cafe: "Boarded up · help reopen it at the monument", museum: "Museum · Closed for now", ruins: "Enter the ruins", missions: "Read the mission board", ruins_exit: "Back to the village", lantern: "Pick it up",
   bench: "Sit on the bench", bed: "Sleep in your bed",
@@ -242,7 +249,9 @@ function Performance({ player, output }: { player: React.RefObject<THREE.Vector3
   return null;
 }
 
-function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fishing, chapter, phase, light, look, weather, overview, zoom, reset, returned, fromBoat, liteMode, castShadows, player, onNear, progression, ceremony, event, lead }: {
+function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpot, fishing, chapter, phase, light, look, weather, overview, zoom, reset, returned, fromBoat, liteMode, castShadows, player, onNear, progression, ceremony, event, lead }: {
+  /** What the player holds from the tool wheel (specs/game-ui.md), drawn in the hand. */
+  held: WheelItem | null;
   progression: { stage: number; opened: readonly WorldGoalId[] }; ceremony: boolean; fromBoat: boolean; event: IslandEvent | null;
   /** The HQ lead on the wharf for a first login (`line`: the one she is saying; the player holds still while she talks). */
   lead: { line: number | null; hold: boolean } | null;
@@ -317,7 +326,7 @@ function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fis
           While the HQ lead greets a first login on the wharf, her walking self stays out of sight: one Wren. */}
       <Residents personas={personas} phase={phase} ceremony={ceremony} player={player} island={island} v={v} away={lead ? HQ_LEAD_SLUG : null} />
       <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={fishing || !!lead?.hold}
-        world={island} groundHeight={island.ground} groundSurface={island.surface} camTarget={focus} glider={peaceful.glider} />
+        world={island} groundHeight={island.ground} groundSurface={island.surface} camTarget={focus} glider={peaceful.glider} held={held} />
       <CharacterCrowd player={player} ground={island.ground} stepWorld={island} />
       {lead && leadAt && <HQLead at={leadAt} ground={island.ground} player={player} line={lead.line} />}
     </>
@@ -544,6 +553,14 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // Bumped by the Oracle's path sheet after a subclass, loadout or stat change so the encounter re-reads them.
   const [pathTick, setPathTick] = useState(0);
   const [pathView, setPathView] = useState<ProgressionView | null>(null);
+  // The tool wheel (specs/game-ui.md): what it holds, what you hold (this device's), your stock for the pins.
+  const heldState = useHeld();
+  const wheelKeys = useWheelKeys();
+  const armed = useCombatValue(() => combat.rt.player.armed);
+  const weaponList = useCombatValue(() => combat.rt.player.owned.join(","));
+  const runtimeWeapon = useCombatValue(() => combat.rt.player.weapon);
+  const [defaultWeapon, setDefaultWeapon] = useState<string | null>(null);
+  const [stock, setStock] = useState<Record<string, number>>({});
   const [level, setLevel] = useState<number>();
   useEffect(() => { let alive = true; void combatProgression().then(g => {
     if (!alive) return;
@@ -559,6 +576,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (g.maxHp) { p.maxHp = g.maxHp; p.hp = Math.min(p.hp, g.maxHp); }
     equipKit(combat.rt, subclassByKey(g.subclass), g.view?.loadout ?? [], g.view?.traits ?? {});
     setOwnedWeapons(combat.rt, g.weapons);
+    setDefaultWeapon(g.weapons.find(w => w.equipped)?.weapon_key ?? null);
     publishCombat();
   }); return () => { alive = false; }; }, [identity.family, pathTick]);
   const onOracleResult = useCallback((result: ResultView) => {
@@ -598,6 +616,12 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const conditionsLabel = `${season.season[0].toUpperCase()}${season.season.slice(1)}${Object.values(season.weights).some(w => w > 0 && w < 1) ? " (changing)" : ""} · ${weather[0].toUpperCase()}${weather.slice(1)}`;
   const grade = inside === "cafe" ? { ...CLUBHOUSE_LIGHTING[phase].grade, ...CAFE_GRADE } : inside ? CLUBHOUSE_LIGHTING[phase].grade : light.grade;
   const atHome = site === "home";
+  const wheelSite: WheelSite = site === "ruins" ? "ruins" : atHome ? "home" : "village";
+  const wheelItems = useMemo(() => wheelContents({ site: wheelSite, owned: peaceful.owned, chosen: heldState.chosen, weapons: weaponList.split(","), defaultWeapon, armed, pins: heldState.pins, stock }),
+    [wheelSite, peaceful.owned, heldState.chosen, weaponList, defaultWeapon, armed, heldState.pins, stock]);
+  // Indoors you walk with empty hands (the wheel is outdoors and in the ruins).
+  const held = inside ? null : heldItem(heldState, wheelItems);
+  const [eating, setEating] = useState(false);
   const act = useCallback((action: Near) => {
     if (action === "notice") { setSheet("notice"); return; }
     if (action === "cafe") { setSheet("cafe"); return; }
@@ -626,17 +650,11 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       });
       return;
     }
-    if (action === "fish") {
-      const spot = fishSpot.current;
-      // site + where the player stands: the server rolls the catch from there (FishingOverlay).
-      if (spot) window.dispatchEvent(new CustomEvent("tsi:fish-start", { detail: { x: spot.target[0], z: spot.target[1], water: spot.water, site: atHome ? "home" : "village", from: [player.current.x, player.current.z] } }));
-      return;
-    }
-    if (action === "forage" || action === "net") {
+    // The rod, the net and the shovel are the held tool's left click (specs/game-ui.md §2); E picks things up by hand.
+    if (action === "fish" || action === "net" || action === "dig") return;
+    if (action === "forage") {
       const target = getPeacefulTarget();
-      // The server takes the tool in hand (specs/game-ui.md): a net for a bug, a shovel to dig, none by hand.
-      const tool = target?.kind === "bug" ? bestTool("net", peaceful.owned).key : target?.kind === "dig" ? bestTool("shovel", peaceful.owned).key : undefined;
-      if (target) window.dispatchEvent(new CustomEvent("tsi:peaceful-act", { detail: { id: target.id, tool } }));
+      if (target) window.dispatchEvent(new CustomEvent("tsi:peaceful-act", { detail: { id: target.id } }));
       return;
     }
     // E again at the same bench or bed stands you up (tsi:sit toggles there).
@@ -679,7 +697,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       // A fresh warm-up probe for the next scene: the fade lifts when it has loaded and compiled.
       setSceneShown(n => n + 1);
     }, 320);
-  }, [fading, chapterActions, homeActions, inside, gate, layout, atHome, peaceful.owned]);
+  }, [fading, chapterActions, homeActions, inside, gate, layout]);
   // Arrive at the wharf: under the loading screen while it is up, otherwise through a short dock fade.
   useEffect(() => {
     if (step !== "welcome" || welcome !== "idle" || inside || site !== "village") return;
@@ -722,6 +740,78 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   }, [greeting, finishWelcome]);
   // The forage/net prompt names the nearest node, re-read when it changes (it used to keep the first node's name).
   const targetLabel = useSyncExternalStore(subscribePeacefulLabel, peacefulLabel, () => null);
+  // ── The tool wheel (specs/game-ui.md) ──
+  // Your stock (the pins show while you have some): the server's rows with this browser's record, re-read after a catch or a snack.
+  useEffect(() => {
+    const load = () => {
+      fetch("/api/collections").then(r => (r.ok ? r.json() : null)).then((d: { collections?: { item_key: string; count: number }[] } | null) =>
+        setStock(mergeWithLocal(Object.fromEntries((d?.collections ?? []).map(r => [r.item_key, r.count]))))).catch(() => setStock(localCollections()));
+    };
+    load();
+    const events = ["tsi:peaceful-got", "tsi:fish-caught", "tsi:eaten", "tsi:crafted"];
+    events.forEach(e => window.addEventListener(e, load));
+    return () => events.forEach(e => window.removeEventListener(e, load));
+  }, []);
+  // The wheel changed (a pin ran out, the ruins' weapons only): let go of what left it; in the ruins a weapon is always in hand.
+  useEffect(() => {
+    settleHeld(wheelItems, site === "ruins" ? `weapon:${combat.rt.player.weapon}` : null);
+    if (site === "ruins" && !readHeld().held) holdItem(`weapon:${combat.rt.player.weapon}`);
+  }, [wheelItems, site]);
+  // A weapon from the wheel goes in hand (and, picked outside a fight's quick swap, becomes your default on the server);
+  // R's swap back in the ruins moves the wheel with it.
+  useEffect(() => {
+    if (held?.kind !== "weapon" || !setWeapon(combat.rt, held.key)) return;
+    publishCombat();
+    void apiCall("/api/combat/equip", "equip", { weapon: held.key }).catch(() => {});
+  }, [held]);
+  useEffect(() => { if (site === "ruins" && readHeld().held !== `weapon:${runtimeWeapon}`) holdItem(`weapon:${runtimeWeapon}`); }, [site, runtimeWeapon]);
+  // What's in reach for the held tool, and what left click does with it.
+  const reach: Reach = useMemo(() => ({ water: near === "fish", bug: near === "net" ? targetLabel : null, dig: near === "dig" ? targetLabel : null }), [near, targetLabel]);
+  const toolAction = clickAction(held, reach, wheelSite);
+  const applyTool = useCallback(() => {
+    if (site === "ruins" || inside || fishing || sheet || bagOpen || decor.decorating || welcoming || fading || eating || !held || !toolAction) return;
+    const at: [number, number] = [player.current.x, player.current.z];
+    const clip = (name: string) => window.dispatchEvent(new CustomEvent("tsi:emote", { detail: { clip: name } }));
+    if (toolAction.verb === "cast") {
+      const spot = fishSpot.current;
+      // Hold to charge, let go to cast (FishingOverlay); the server rolls on the held rod (its tier) from where you stand.
+      if (spot) window.dispatchEvent(new CustomEvent("tsi:fish-start", { detail: { x: spot.target[0], z: spot.target[1], water: spot.water, site: atHome ? "home" : "village", from: at } }));
+      return;
+    }
+    if ((toolAction.verb === "swing" || toolAction.verb === "dig") && toolAction.target) {
+      const target = getPeacefulTarget();
+      if (target) window.dispatchEvent(new CustomEvent("tsi:peaceful-act", { detail: { id: target.id, tool: held.key } }));
+      return;
+    }
+    if (toolAction.verb === "swing") { clip("Net"); AudioManager.playSFX("blip4", { rate: 0.8, gain: 0.45 }); return; }
+    if (toolAction.verb === "dig") { clip("Dig"); window.setTimeout(() => AudioManager.playSFX("footstep", { rate: 0.6, gain: 0.7 }), 540); return; }
+    if (toolAction.verb === "attack") {
+      const kind = WEAPONS[held.key]?.kind;
+      clip(kind === "bow" ? "AttackBow" : kind === "staff" || kind === "summon" ? "AttackCast" : "AttackMelee");
+      AudioManager.playSFX("blip4", { rate: 1.1, gain: 0.5 });
+      return;
+    }
+    // Eat: up to the mouth, two bites (the snack goes on the second), a chew; the next one comes out if you have more.
+    setEating(true);
+    clip("Eat");
+    [480, 840].forEach(ms => window.setTimeout(() => AudioManager.playSFX("blip1", { rate: 1.35, gain: 0.4 }), ms));
+    const key = held.key;
+    void eatItem(key).then(r => {
+      if (!r.ok) toast(r.error); else window.dispatchEvent(new CustomEvent("tsi:eaten", { detail: { key, count: r.count } }));
+      window.setTimeout(() => setEating(false), 820);
+    });
+  }, [site, inside, fishing, sheet, bagOpen, decor.decorating, welcoming, fading, eating, held, toolAction, atHome, player]);
+  // Left click uses what you hold: in mouse-look, or with the mouse-look setting off (a touch screen uses the prompt).
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const down = (e: PointerEvent) => { if (e.button === 0 && e.pointerType === "mouse" && (capture.state === "captured" || capture.state === "off")) applyTool(); };
+    el.addEventListener("pointerdown", down);
+    return () => el.removeEventListener("pointerdown", down);
+  }, [applyTool]);
+  const toolNear = near === "fish" || near === "net" || near === "dig";
+  const needTool = toolNear ? toolNeeded(held, reach) : null;
   // Decorating, the dev panel and the greeting work with the cursor: mouse-look lets go while they are up.
   useEffect(() => { holdCursor("decorate", decor.decorating); holdCursor("greeting", welcoming); holdCursor("options", optionsOpen); }, [decor.decorating, welcoming, optionsOpen]);
   useEffect(() => () => { holdCursor("decorate", false); holdCursor("greeting", false); holdCursor("options", false); }, []);
@@ -737,7 +827,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       }
       if (event.repeat || (event.target instanceof HTMLElement && event.target.closest("input, select, textarea, button"))) return;
       if (event.key.toLowerCase() === "e") act(near);
-      if (event.key.toLowerCase() === "z" && !inside) { toggleZoom(); saveOrbit(); }
+      if (event.key.toLowerCase() === "z" && !inside && !(site === "ruins" && Object.values(abilityKeys).includes("z"))) { toggleZoom(); saveOrbit(); }
       // Menus follow the account's key bindings (row 220); Escape is fixed.
       const menu = actionForKey(identity.settings, event.key);
       if (menu === "openMap") setMapOpen(value => !value);
@@ -754,10 +844,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [act, near, inside, atHome, decor, identity.settings, greeting, nextLine, finishWelcome]);
+  }, [act, near, inside, atHome, decor, identity.settings, greeting, nextLine, finishWelcome, site, abilityKeys]);
   return (
     <main className={styles.world} data-light={phase} data-inside={inside ?? undefined} data-site={site}>
-      <Canvas tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
+      <Canvas ref={canvasRef} tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
         camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
         <Suspense fallback={null}>
@@ -769,10 +859,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
             : inside === "hq" ? <Clubhouse phase={phase} player={player} frozen={fading} onNear={setNear} />
             : inside === "house" ? <HomeInterior layout={layout} phase={phase} frozen={fading} player={player} onNear={(n: HouseNear) => setNear(n)}
               decorating={decor.decorating} selected={decor.selected} onPlace={decor.place} onPickUp={decor.pickUp} />
-            : atHome ? <HomeIslandScene identity={identity} level={level} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={devZoom}
+            : atHome ? <HomeIslandScene held={eating ? null : held} identity={identity} level={level} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={devZoom}
               overview={overview} returned={returned} player={player} onNear={(n: HomeNear) => setNear(n)} outdoor={layout.outdoor}
               decorating={decor.decorating} selected={decor.selected} onPlace={item => decor.place("outdoor", item)} onPickUp={item => decor.pickUp("outdoor", item)} />
-            : <IslandScene identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent}
+            : <IslandScene held={eating ? null : held} identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent}
               lead={welcoming || welcome === "done" ? { line: greeting, hold: welcoming } : null} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={welcoming ? 0.7 : devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} />}
           {identity.family && identity.aura && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>}
           <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={grade} fx={lookFx(lookPreset, !liteMode)} />
@@ -824,10 +914,16 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           <output ref={perfOutput}>Measuring…</output>
         </details>
       </section>}
-      {near && !sheet && !welcoming && !(reveal && inside === "oracle") && (CLOSED.includes(near)
+      {near && !toolNear && !sheet && !welcoming && !(reveal && inside === "oracle") && (CLOSED.includes(near)
         ? <p className={styles.interact} data-closed="true" role="status">{NEAR_LABELS[near]}</p>
-        : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>E</kbd>{(near === "forage" || near === "net") ? targetLabel ?? NEAR_LABELS[near] : NEAR_LABELS[near]}</button>)}
-      <FishingOverlay rod={peaceful.rod} onActiveChange={setFishing} />
+        : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>E</kbd>{near === "forage" ? targetLabel ?? NEAR_LABELS[near] : NEAR_LABELS[near]}</button>)}
+      {/* The held item's use (specs/game-ui.md §2): what left click does with it here, or the tool something in reach wants. Touch presses the prompt. */}
+      {!sheet && !welcoming && !fishing && !inside && site !== "ruins" && (toolAction && (toolAction.target && (toolNear || toolAction.verb === "eat"))
+        ? <button className={styles.interact} data-use onPointerDown={e => { if (e.pointerType !== "mouse" || capture.state !== "captured") applyTool(); }}><kbd>{touch ? "Tap" : "Click"}</kbd>{toolAction.label}</button>
+        : needTool && <p className={styles.interact} data-closed="true" role="status"><kbd>{touch ? "Wheel" : keyName(wheelKeys.wheel)}</kbd>Take out your {needTool === "rod" ? "fishing rod" : needTool}</p>)}
+      <FishingOverlay rod={held?.kind === "rod" && held.tier ? rodByTier(held.tier) : peaceful.rod} onActiveChange={setFishing} />
+      <ToolWheel items={wheelItems} held={heldState.held} wheelKey={wheelKeys.wheel} touch={touch} onEquip={holdItem} onSwap={() => swapHeld(wheelItems)}
+        enabled={ready && !inside && !fishing && !sheet && !bagOpen && !welcoming && !fading && !decor.decorating && !shopTab} />
       <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} onDonated={loadMuseum} />
       <ToastHub />
       {/* Today's gift once the island is showing and nothing else holds the player (first login, a fade, a sheet, a fight). */}
@@ -872,10 +968,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <PostersSheet open={sheet === "posters"} onClose={() => setSheet(null)} event={islandEvent} />
       <CafeGoalSheet open={sheet === "cafe"} onClose={() => setSheet(null)} />
       {site === "ruins" && <CombatHud player={player} />}
-      {welcoming ? null : site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>{mouseLook ? "Mouse Look and aim" : "Mouse Aim"}</span><span>Click Attack</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>←</kbd><kbd>→</kbd> Turn</span><span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Slide</span>}<span>{SLOT_IDS.map(s => <kbd key={s}>{keyName(abilityKeys[s])}</kbd>)} Abilities</span><span><kbd>{keyName(abilityKeys.swap)}</kbd> Swap</span><span><kbd>E</kbd> Interact</span></div>
+      {welcoming ? null : site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>{mouseLook ? "Mouse Look and aim" : "Mouse Aim"}</span><span>Click Attack</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>←</kbd><kbd>→</kbd> Turn</span><span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Slide</span>}<span>{SLOT_IDS.map(s => <kbd key={s}>{keyName(abilityKeys[s])}</kbd>)} Abilities</span><span><kbd>{keyName(wheelKeys.wheel)}</kbd> Weapons</span><span><kbd>{keyName(abilityKeys.swap)}</kbd> Previous weapon</span><span><kbd>E</kbd> Interact</span></div>
       // Indoors you walk (cafe-polish §4): no run, jump, dash, zoom or map.
       : inside ? <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>E</kbd> Interact</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span></div>
-      : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span>{peaceful.glider && <span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air Glide</span>}<span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span>{mouseLook ? "Mouse or " : ""}<kbd>←</kbd><kbd>→</kbd> Look</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Crouch, at speed slide</span>}</div>}
+      : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span>{peaceful.glider && <span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air Glide</span>}<span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span><kbd>{keyName(wheelKeys.wheel)}</kbd> Tools</span><span>Click Use</span><span>{mouseLook ? "Mouse or " : ""}<kbd>←</kbd><kbd>→</kbd> Look</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Crouch, at speed slide</span>}</div>}
       {/* Clear of the minimap (left) and the audio widget (bottom right). */}
       {touch && (!inside || inside === "cafe") && <TouchControls left={212} bottom={64} walkOnly={inside === "cafe"} />}
       <p className={styles.touchControls}>Tap the ground to move · two fingers turn the camera</p>
