@@ -15,7 +15,10 @@ export function slowMotion(on: boolean, now = performance.now()) {
   to = next;
   at = now;
 }
-/** The world's speed now: 1 normal, SLOW with the wheel open. */
+let ult = 1;
+/** The ult's slow motion (impact.ts ultBeats: 0.3, easing back): multiplies the wheel's. */
+export function ultSlowMotion(k: number) { ult = k; }
+/** The world's speed now: 1 normal, SLOW with the wheel open, slower in an ult's slow motion. */
 export function timeScale(now = performance.now()): number {
-  return to + (from - to) * Math.exp(-EASE * Math.max(0, now - at) / 1000);
+  return (to + (from - to) * Math.exp(-EASE * Math.max(0, now - at) / 1000)) * ult;
 }

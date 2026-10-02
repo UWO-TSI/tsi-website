@@ -5,7 +5,8 @@
  */
 import type { Stat, StatBlock } from "./progression";
 
-export type WeaponType = "sword" | "shield" | "bow" | "revolver" | "staff" | "tome" | "fists" | "totem";
+/** Today's types; classes v2 opens the list (one signature type per subclass, design sheet §1.5). */
+export type WeaponType = "sword" | "shield" | "bow" | "revolver" | "staff" | "tome" | "fists" | "totem" | (string & {});
 export interface WeaponDef {
   key: string;
   name: string;
@@ -14,6 +15,10 @@ export interface WeaponDef {
   scaling: Stat[]; // primary first
   max_durability: number;
   repair_per_point: number; // coins per durability point
+  /** Classes v2: the subclass whose signature weapon this is (one type per subclass, tiers 1–5; weapons.subclass). */
+  subclass?: string;
+  /** A signature type's basic attack kind (§1.5: melee arc, arrow, bolt, summon); today's types map by type. */
+  basic?: "melee" | "bow" | "staff" | "summon";
 }
 
 export const TIER_BASE: Record<number, number> = { 1: 10, 2: 14, 3: 19, 4: 25, 5: 32 };
@@ -44,6 +49,12 @@ export const WEAPONS: WeaponDef[] = [
 /** Everyone starts with a sword and wraps; ruling 2026-09-26: the rest of one-per-archetype arrives when the ruins gate opens (subclass choice). */
 export const FIRST_WEAPONS = ["sword-driftwood", "wraps-cloth"];
 export const STARTER_WEAPONS = ["sword-driftwood", "bow-willow", "staff-oak", "tome-spirits", "wraps-cloth"];
+
+/** The best tier of any signature weapon owned (1 with none): a repick's new weapon comes at it (§1.5). */
+export const signatureTier = (owned: string[]) => Math.max(1, ...WEAPONS.filter(w => w.subclass && owned.includes(w.key)).map(w => w.tier));
+/** The signature weapon a choice grants: the subclass's highest tier up to `tier` (combat_choose_subclass), or none before its wave seeds it. */
+export const signatureGrant = (subclass: string, tier: number) =>
+  WEAPONS.filter(w => w.subclass === subclass && w.tier <= tier).sort((a, b) => b.tier - a.tier)[0] ?? null;
 
 /** Durability ≤ 0: the weapon still works at half damage until repaired (defeat never deletes gear). */
 export const BROKEN_DAMAGE_MULT = 0.5;

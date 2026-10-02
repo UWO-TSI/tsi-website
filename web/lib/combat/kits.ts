@@ -37,7 +37,10 @@ export type Effect =
   | { kind: "summon"; unit: string; count?: number }
   | { kind: "buff"; stat: BuffStat; value: number; duration: number }
   /** A body-part change (row 34): shown on the character, triggers the Transmuter passive. */
-  | { kind: "transform"; duration: number };
+  | { kind: "transform"; duration: number }
+  /** Classes v2 movement hooks (design sheet §1.1): carried speed added along the aim (≤ 4 u/s a cast, never past the 18 u/s ceiling), and a small hop. */
+  | { kind: "momentum"; speed: number }
+  | { kind: "launch"; height: number };
 
 export interface Ability {
   key: string;

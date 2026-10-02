@@ -1,14 +1,20 @@
-/** In-memory CombatStore mirroring 20260926150800_combat.sql, 190000_combat_content and 210000_combat_kits (tests, dev harness). */
+/** In-memory CombatStore mirroring 20260926150800_combat.sql, 190000_combat_content, 210000_combat_kits and 20261002181044_classes_v2 (tests, dev harness). */
 import type { Family } from "@/lib/oracle/engine";
 import { BOSS_DROPS, ENEMIES, MISSIONS, type BossReward } from "./content";
 import { initialProgress, type MissionProgress, type MissionState } from "./missions";
 import { KILL_XP_PER_HOUR_CAP, levelForXp, pointsEarned, pointsSpent, STATS, ZERO_STATS, STAT_RESET_FEE, SUBCLASS_RESPEC_FEE, type StatBlock } from "./progression";
-import { CombatError, type CombatStore, type OwnedWeapon, type ProgressRow } from "./store";
-import { FIRST_WEAPONS, STARTER_WEAPONS, wear as wearRule, WEAPONS } from "./weapons";
+import { CombatError, type CombatStore, type CosmeticKind, type MasteryRow, type OwnedWeapon, type ProgressRow } from "./store";
+import { FIRST_WEAPONS, signatureGrant, signatureTier, STARTER_WEAPONS, wear as wearRule, WEAPONS } from "./weapons";
+import { MASTERY_EQUIP, masteryForXp } from "./mastery";
 import { traitFor } from "./kits";
 
 export function memoryCombatStore(clock: () => Date = () => new Date()) {
-  const prog = new Map<string, { xp: number; stats: StatBlock; subclass: string | null; loadout: string[]; traits: Record<string, number> }>();
+  const prog = new Map<string, { xp: number; stats: StatBlock; subclass: string | null; loadout: string[]; traits: Record<string, number>; repick: "oracle" | "launch" | null }>();
+  const settings = new Map<string, number>([["classes_v2", 0]]);
+  const v2 = () => settings.get("classes_v2") === 1;
+  const masteryRows = new Map<string, { xp: number; cosmetics: MasteryRow["cosmetics"] }>(); // `${m}:${subclass}`
+  const shopOwned = new Map<string, { kind: CosmeticKind; subclass?: string }>(); // `${m}:${item}`: owned cosmetic items (member_inventory)
+  const readings = new Map<string, { type: string; scores: { dichotomy: "EI" | "SN" | "TF" | "JP"; clarity: number }[] }>(); // member_identity.mbti_type + the latest scores
   const xpKeys = new Set<string>();
   const kills = new Map<string, number>(); // `${m}:${event}` → xp
   const killEnemy = new Map<string, string>(); // `${m}:${event}` → enemy key
@@ -33,7 +39,7 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
   };
   const ensure = (m: string) => {
     if (!prog.has(m)) {
-      prog.set(m, { xp: 0, stats: { ...ZERO_STATS }, subclass: null, loadout: [], traits: {} });
+      prog.set(m, { xp: 0, stats: { ...ZERO_STATS }, subclass: null, loadout: [], traits: {}, repick: null });
       weapons.set(m, FIRST_WEAPONS.map((k) => ({ weapon_key: k, durability: WEAPONS.find((w) => w.key === k)!.max_durability, equipped: k === "sword-driftwood" })));
     }
     return prog.get(m)!;
@@ -41,16 +47,20 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
   const store: CombatStore = {
     async progression(m) {
       const p = ensure(m);
-      return { xp: p.xp, level: levelForXp(p.xp), stats: { ...p.stats }, subclass: p.subclass, loadout: [...p.loadout], traits: { ...p.traits } };
+      return { xp: p.xp, level: levelForXp(p.xp), stats: { ...p.stats }, subclass: p.subclass, loadout: [...p.loadout], traits: { ...p.traits }, repick_source: p.repick };
     },
     async family(m) {
       return families.get(m) ?? null;
     },
-    async grantXp(m, amount, _s, _r, key) {
+    async grantXp(m, amount, source, _r, key) {
       const p = ensure(m);
       const before = levelForXp(p.xp);
       if (xpKeys.has(`${m}:${key}`)) return { xp: p.xp, level: before, levelled_up: false, replayed: true };
       xpKeys.add(`${m}:${key}`);
+      if ((source === "kill" || source === "mission") && v2() && p.subclass) { // ruins XP trains the active subclass (classes_v2)
+        const row = masteryRows.get(`${m}:${p.subclass}`) ?? { xp: 0, cosmetics: {} };
+        masteryRows.set(`${m}:${p.subclass}`, { ...row, xp: row.xp + amount });
+      }
       p.xp += amount;
       return { xp: p.xp, level: levelForXp(p.xp), levelled_up: levelForXp(p.xp) > before, replayed: false };
     },
@@ -91,12 +101,23 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
       const own = families.get(m);
       if (!own) throw new CombatError("no_family");
       if (own !== family) throw new CombatError("wrong_family");
+      const list = weapons.get(m)!;
+      const give = (k: string) => { if (!list.some((w) => w.weapon_key === k)) list.push({ weapon_key: k, durability: WEAPONS.find((w) => w.key === k)!.max_durability, equipped: false }); };
+      if (v2()) { // §1.11: locked after the first choice; a change spends the repick token, no fee; the signature weapon at the best signature tier owned
+        if (p.subclass && !p.repick) throw new CombatError("locked");
+        if (!masteryRows.has(`${m}:${subclass}`)) masteryRows.set(`${m}:${subclass}`, { xp: 0, cosmetics: {} });
+        const grant = signatureGrant(subclass, signatureTier(list.map((w) => w.weapon_key)));
+        if (grant) give(grant.key);
+        if (p.subclass) p.repick = null;
+        subclassKeys.set(`${m}:${key}`, { subclass, fee: 0 });
+        p.subclass = subclass;
+        return { subclass, fee: 0, replayed: false };
+      }
       const fee = p.subclass ? SUBCLASS_RESPEC_FEE : 0;
       if (fee) pay(m, -fee, `subclass:${key}`);
       subclassKeys.set(`${m}:${key}`, { subclass, fee });
       p.subclass = subclass;
-      const list = weapons.get(m)!; // the gate opens: one starter per archetype
-      for (const k of STARTER_WEAPONS) if (!list.some((w) => w.weapon_key === k)) list.push({ weapon_key: k, durability: WEAPONS.find((w) => w.key === k)!.max_durability, equipped: false });
+      for (const k of STARTER_WEAPONS) give(k); // the gate opens: one starter per archetype
       return { subclass, fee, replayed: false };
     },
     async setLoadout(m, loadout) {
@@ -167,6 +188,31 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
       give(m, def.rewards.materials);
       return { xp_awarded: def.rewards.xp, coins_awarded: def.rewards.coins, materials_awarded: def.rewards.materials, replayed: false };
     },
+    async oracleReading(m) {
+      return readings.get(m) ?? null;
+    },
+    async setting(k) {
+      return settings.get(k) ?? null;
+    },
+    async mastery(m) {
+      return [...masteryRows.entries()].filter(([k]) => k.startsWith(`${m}:`)).map(([k, r]) => ({ subclass: k.slice(m.length + 1), xp: r.xp, mastery: masteryForXp(r.xp), cosmetics: { ...r.cosmetics } }));
+    },
+    async equipCosmetic(m, subclass, kind, value) {
+      const row = masteryRows.get(`${m}:${subclass}`);
+      if (!row) throw new CombatError("not_found");
+      if (value !== null) {
+        const mastery = MASTERY_EQUIP[value], owned = shopOwned.get(`${m}:${value}`);
+        if (value.startsWith("mastery:")) {
+          if (!mastery || mastery.kind !== kind) throw new CombatError("bad_cosmetic");
+          if (masteryForXp(row.xp) < mastery.at) throw new CombatError("locked");
+        } else if (!owned) throw new CombatError("not_owned");
+        else if (owned.kind !== kind || (kind === "weapon_skin" && owned.subclass !== subclass)) throw new CombatError("bad_cosmetic");
+      }
+      const cosmetics = { ...row.cosmetics };
+      if (value === null) delete cosmetics[kind]; else cosmetics[kind] = value;
+      row.cosmetics = cosmetics;
+      return { ...cosmetics };
+    },
     async bossReward(m, ev, reward) {
       const done = bossRewards.get(`${m}:${ev}`);
       if (done) return { reward: done.reward, replayed: true };
@@ -181,5 +227,17 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
       return { reward, replayed: false };
     },
   };
-  return { store, setFamily: (m: string, f: Family | null) => (f ? families.set(m, f) : families.delete(m)), fund: (m: string, n: number) => coins.set(m, n), coinsOf: (m: string) => coins.get(m) ?? 0, materialOf: (m: string, item: string) => materials.get(`${m}:${item}`) ?? 0 };
+  return { store, setFamily: (m: string, f: Family | null) => (f ? families.set(m, f) : families.delete(m)), fund: (m: string, n: number) => coins.set(m, n), coinsOf: (m: string) => coins.get(m) ?? 0, materialOf: (m: string, item: string) => materials.get(`${m}:${item}`) ?? 0,
+    /** economy_settings (classes_v2: 1 on). */
+    setSetting: (k: string, v: number) => settings.set(k, v),
+    /** A completed paid Oracle reading (oracle_complete) or the launch gift: one repick for a member with a subclass. */
+    grantRepick: (m: string, source: "oracle" | "launch") => { const p = ensure(m); if (p.subclass) p.repick = source; },
+    /** A cosmetic bought in the shop (member_inventory). */
+    own: (m: string, item: string, kind: CosmeticKind, subclass?: string) => shopOwned.set(`${m}:${item}`, { kind, subclass }),
+    /** The member's Oracle reading (type and clarities). */
+    setReading: (m: string, type: string, scores: { dichotomy: "EI" | "SN" | "TF" | "JP"; clarity: number }[] = []) => readings.set(m, { type, scores }),
+    /** A weapon handed over (the dev kit's signature type before any wave seeds signature rows). */
+    giveWeapon: (m: string, key: string) => { const list = weapons.get(m) ?? []; if (!list.some((w) => w.weapon_key === key)) list.push({ weapon_key: key, durability: WEAPONS.find((w) => w.key === key)!.max_durability, equipped: false }); },
+    /** Mastery XP straight onto a row (evidence and tests). */
+    setMasteryXp: (m: string, subclass: string, xp: number) => masteryRows.set(`${m}:${subclass}`, { cosmetics: {}, ...masteryRows.get(`${m}:${subclass}`), xp }) };
 }

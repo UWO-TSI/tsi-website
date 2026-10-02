@@ -16,11 +16,11 @@ import { scoreTrace, type Rune } from "./incantation";
 import { SUBCLASS_LEVEL } from "./progression";
 import { WEAPONS, type WeaponType } from "./weapons";
 
-const KIND: Record<WeaponType, WeaponKind> = { sword: "melee", shield: "melee", fists: "melee", bow: "bow", revolver: "bow", staff: "staff", tome: "summon", totem: "summon" };
+const KIND: Partial<Record<WeaponType, WeaponKind>> = { sword: "melee", shield: "melee", fists: "melee", bow: "bow", revolver: "bow", staff: "staff", tome: "summon", totem: "summon" };
 
 /** Gameplay fields; the island adds cooldown, range, arc, speed, model… */
 export function islandWeapons(): Pick<Weapon, "id" | "name" | "kind" | "maxDurability">[] {
-  return WEAPONS.map((w) => ({ id: w.key, name: w.name, kind: KIND[w.type], maxDurability: w.max_durability }));
+  return WEAPONS.map((w) => ({ id: w.key, name: w.name, kind: w.basic ?? KIND[w.type] ?? "melee", maxDurability: w.max_durability }));
 }
 
 export function islandEnemies(): (Pick<EnemyType, "id" | "name" | "kind" | "level" | "hp" | "aggroRadius" | "leashRadius" | "defense" | "armor" | "xp" | "elite"> & { damage: number; range: number })[] {

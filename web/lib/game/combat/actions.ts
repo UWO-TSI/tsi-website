@@ -8,8 +8,9 @@
 import { ENEMIES, WEAPONS } from "./data";
 import type { Vec } from "./sim";
 import { BOSS, DODGE, inArc, invulnerable, spawnEnemy, sweptHit, type Enemy } from "./sim";
-import { ENERGY, SLOT_IDS, setWeapon, type AbilityId, type CombatRuntime } from "./runtime";
-import { cancelCast, cue, floater, mitigate, strike, summon, fireSlot } from "./abilities";
+import { ENERGY, SLOT_IDS, energyMax, energyRegen, setWeapon, type AbilityId, type CombatRuntime } from "./runtime";
+import { cancelCast, chargeUlt, cue, floater, fx, mitigate, strike, summon, fireSlot } from "./abilities";
+import { takenCharge } from "@/lib/combat/ult";
 import type { SpawnPoint } from "./spawns";
 import { FAMILY_STAT } from "@/lib/combat/kits";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
@@ -19,7 +20,7 @@ import { MOVE_TUNING, type MoveTuning } from "@/lib/game/movement/sim";
 export function regenEnergy(rt: CombatRuntime, dt: number) {
   const p = rt.player;
   p.sinceSpend += dt;
-  if (!rt.casting && p.sinceSpend >= ENERGY.delay) p.energy = Math.min(ENERGY.max, p.energy + ENERGY.regen * dt);
+  if ((!rt.casting || rt.casting.free) && p.sinceSpend >= ENERGY.delay) p.energy = Math.min(energyMax(rt), p.energy + energyRegen(rt) * dt);
 }
 
 const wearHit = (rt: CombatRuntime) => { const p = rt.player; p.hits[p.weapon] = (p.hits[p.weapon] ?? 0) + 1; p.durability[p.weapon] = Math.max(0, p.durability[p.weapon] - 1); };
@@ -49,7 +50,7 @@ export function attack(rt: CombatRuntime, player: Vec, random = Math.random): bo
   const p = rt.player;
   if (!p.alive || p.attackCd > 0 || rt.casting || p.dash || (p.dodgeAge !== null && p.dodgeAge < DODGE.duration)) return false;
   const w = WEAPONS[p.weapon];
-  p.attackCd = w.cooldown;
+  p.attackCd = w.cooldown / (rt.v2?.mods.attackSpeed ?? 1);
   faceAim(p, player);
   cue(rt, "swing", player);
   const dir = { x: Math.sin(p.facing), z: Math.cos(p.facing) };
@@ -81,7 +82,8 @@ export function resolvePlayerShot(rt: CombatRuntime, shotIdx: number, from: Vec,
     if (s.kind === "bolt") splash(rt, to, 1.3, target, { power: 0.5, from: to, knock: 2 }, random);
     return true;
   }
-  strike(rt, target, { power: h.power, from, knock: h.unit ? 1 : knock, stat: h.stat, tier: h.tier, unit: h.unit, status: h.status }, random);
+  strike(rt, target, { power: h.power, from, knock: h.unit ? 1 : knock, stat: h.stat, tier: h.tier, unit: h.unit, status: h.status, impact: h.impact, ult: h.ult, first: !h.hitIds?.length }, random);
+  fx(rt, h.fx, "impact", to, to, h.impact ?? "ability");
   if (h.splash) splash(rt, to, h.splash, target, { power: h.power * 0.5, from: to, knock: 2, stat: h.stat, tier: h.tier }, random);
   if (!h.pierce) return true;
   h.hitIds!.push(target.id);
@@ -139,8 +141,9 @@ export function combatPush(p: CombatRuntime["player"]): Vec | undefined {
  */
 export function hurtPlayer(rt: CombatRuntime, amount: number, from: Vec, player: Vec, knock = 3, random: () => number = Math.random): number {
   const p = rt.player;
-  if (!p.alive || p.safe) return 0;
+  if (!p.alive || p.safe || p.ultIframes > 0) return 0; // an ult's wind-up and freeze: nothing lands unseen
   if (invulnerable(p.dodgeAge) || p.dash?.iframes) { floater(rt, player, 1.7, "Dodged", "info"); return 0; }
+  chargeUlt(rt, takenCharge(amount, p.maxHp)); // aimed at you, before guard, block and shield (§1.2)
   const { damage } = mitigate(rt, amount, from, player, random); // the seeded roll in the balance runs (a block's counter can crit)
   p.hurt = 0.35;
   if (rt.kit?.subclass.passive.kind !== "poise") {
@@ -152,7 +155,7 @@ export function hurtPlayer(rt: CombatRuntime, amount: number, from: Vec, player:
   p.hp = Math.max(0, p.hp - damage);
   floater(rt, player, 1.7, `-${damage}`, "hurt");
   cue(rt, "hurt", player);
-  if (p.hp === 0) { p.alive = false; p.downFor = 0; rt.casting = null; }
+  if (p.hp === 0) { p.alive = false; p.downFor = 0; rt.casting = null; if (rt.v2) { rt.v2.meter = 0; rt.v2.cast = null; } } // the meter empties on defeat
   return damage;
 }
 
@@ -191,7 +194,9 @@ export function triggerAbility(rt: CombatRuntime, id: AbilityId, player: Vec = {
     rt.cooldowns.swap = 0.4;
     return true;
   }
-  const fired = fireSlot(rt, SLOT_IDS.indexOf(id), player, random);
+  const slot = SLOT_IDS.indexOf(id as (typeof SLOT_IDS)[number]);
+  if (slot < 0) return false; // key 5 and the ult are classes v2's (classRuntime.ts)
+  const fired = fireSlot(rt, slot, player, random);
   if (fired) faceAim(p, player);
   return fired;
 }

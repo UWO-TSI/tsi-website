@@ -1153,6 +1153,379 @@ def eat(p):
     return plant(keys(p, EAT))
 
 
+# ================================================================ verb library (classes v2, design sheet §1.8)
+# Sixteen shared verbs, each authored once right-handed (the lead hand is the right) as key poses, and six grip
+# adapters: where the off hand sits, and a mirror for the grips held in the left hand (the bow, the pistol), so the
+# 96 clips `${Verb}_${Grip}` come from the programs below. A clip runs anticipation, the impact key (its phase is the
+# catalogue's `impact`, where the engine lands hitstop and an ult's freeze), follow-through and back to Idle frame 0.
+# `-- verbs` bakes only these, plus a hold idle per grip, into base/v7_verbs.glb: the rig and its actions, no mesh,
+# which the ruins load beside the village set. `upper`: it can play on the upper body over locomotion and slides.
+VERBS_MODE = "verbs" in ARGS
+VERB_DEFS = []
+
+
+def verb(name, seconds, impact, upper, post=None, hold=None):
+    def deco(fn):
+        VERB_DEFS.append(dict(verb=name, seconds=seconds, impact=impact, upper=upper, fn=fn, post=post, hold=hold))
+        return fn
+    return deco
+
+
+class Grip:
+    def __init__(self, name, mirror, remap, hand_):
+        self.name, self.mirror, self.remap, self.hand = name, mirror, remap, hand_
+
+    def mode(self, want):
+        return self.remap if isinstance(self.remap, str) else self.remap.get(want, want)
+
+
+# Off-hand wants a verb can ask for: free (a counterbalance arm along `d`), two (on the shaft beside the lead hand),
+# support (cupped under the lead wrist), gather (mirroring the lead hand), spread (an arm along `d` the grip may keep
+# busy), draw (a bowstring hand at `at`); the grip remaps what it can't do.
+GRIPS_V = [Grip("OneHand", False, {"two": "free"}, "R"), Grip("Staff", False, {}, "R"), Grip("Bow", True, {"two": "free"}, "L"),
+           Grip("Pistol", True, {"two": "support"}, "L"), Grip("Fists", False, {"free": "guard", "two": "guard", "support": "guard", "gather": "guard"}, "both"),
+           Grip("Book", False, "book", "L")]
+FREE = V(0.6, -0.6, -0.5)
+# Chest-relative spots (offsets in the chest's rest frame from Spine2's head): they lean and turn with the body, so a
+# lean or a nod never brings the big head down onto them. Fists up in front of the chin; the book held open at the chest.
+GUARD_R, GUARD_L, BOOK = V(-0.07, -0.16, 0.06), V(0.065, -0.15, 0.05), V(0.075, -0.17, -0.03)
+
+
+def chest(P, v):
+    return P.head("Spine2") + P.acc("Spine2") @ v
+
+
+def off(P, g, want, d=FREE, fore=None, at=None):
+    mode, w = g.mode(want), P.head("RightHand")
+    high = w.z > 0.55                                    # overhead: the off hand slides down the shaft, clear of the face
+    if mode in ("free", "spread"):
+        arm(P, "Left", d, fore)
+    elif mode == "two":
+        hand(P, "Left", w + (V(0.02, 0.0, -0.11) if high else V(0.05, 0.02, -0.05)))
+    elif mode == "support":
+        hand(P, "Left", w + (V(0.02, 0.0, -0.1) if high else V(0.035, 0.025, -0.03)))
+    elif mode == "gather":
+        hand(P, "Left", V(-w.x, w.y, w.z))
+    elif mode == "guard":
+        hand(P, "Left", chest(P, GUARD_L), V(0.6, 0.5, -1))
+    elif mode == "book":
+        hand(P, "Left", chest(P, BOOK))
+    elif mode == "draw":
+        hand(P, "Left", at)
+    return P
+
+
+def mirror_name(n):
+    return n.replace("Left", "#").replace("Right", "Left").replace("#", "Right")
+
+
+def mirror_pose(P):
+    """The pose reflected through the body's midplane (armature x -> -x): a reflected rotation is (w, x, -y, -z)."""
+    return Pose({mirror_name(n): Quaternion((q.w, q.x, -q.y, -q.z)) for n, q in P.R.items()}, V(-P.loc.x, P.loc.y, P.loc.z))
+
+
+def lift_of(P, k):
+    return max(0.0, P.loc.z - N.loc.z) * k
+
+
+def plant_one(P, s, knees_out=0.25):
+    sx = dict(SIDES)[s]
+    P.ik(f"{s}UpLeg", f"{s}Leg", ANKLE[s], V(sx * knees_out, -1, 0))
+    P.world(f"{s}Foot", Quaternion())
+    P.R[f"{s}ToeBase"] = Quaternion()
+    return P
+
+
+@verb("CastForward", 0.7, 0.36, True)
+def v_cast_forward(g):
+    gather = body(crouch=0.02, lean=-4, twist=-18, nod=6)
+    off(hand(gather, "Right", V(-0.12, 0.03, 0.36)), g, "free", V(0.55, -0.55, -0.6))
+    cast = body(lean=10, twist=16, crouch=0.012, shift=(0, -0.02), nod=-3)
+    off(arm(cast, "Right", V(-0.06, -1, 0.1)), g, "support", V(0.6, 0.45, -0.65))
+    follow = body(lean=6, twist=12, crouch=0.01, shift=(0, -0.015))
+    off(arm(follow, "Right", V(-0.06, -1, 0.02)), g, "support", V(0.6, 0.45, -0.65))
+    return [(0, N, "lin"), (0.22, gather, "io"), (0.36, cast, "back"), (0.62, follow, "lin"), (1.0, N, "io")]
+
+
+@verb("CastUp", 0.8, 0.42, True)
+def v_cast_up(g):
+    gather = body(crouch=0.035, lean=12, nod=10)
+    off(hand(gather, "Right", V(-0.06, -0.12, 0.32)), g, "gather")
+    up = body(lean=-10, nod=-16, crouch=-0.01)
+    off(arm(up, "Right", V(-0.45, -0.45, 0.77), V(-0.3, -0.4, 0.86)), g, "free", V(0.7, 0.2, -0.68))
+    follow = body(lean=-6, nod=-10)
+    off(arm(follow, "Right", V(-0.5, -0.4, 0.75), V(-0.38, -0.36, 0.85)), g, "free", V(0.7, 0.2, -0.68))
+    return [(0, N, "lin"), (0.26, gather, "io"), (0.42, up, "back"), (0.7, follow, "lin"), (1.0, N, "io")]
+
+
+OVERHEAD = (V(-0.6, 0.15, 0.78), V(-0.55, 0.1, 0.83))               # the lead arm raised up and out, clear of the head
+LOW = (V(-0.12, -0.75, -0.65), V(-0.05, -0.85, -0.5))                # down and forward: where a slam lands
+
+
+@verb("Slam", 0.9, 0.44, False)
+def v_slam(g):
+    wind = body(crouch=-0.01, lean=-12, nod=-10, twist=-8)
+    off(arm(wind, "Right", *OVERHEAD), g, "two", V(0.6, 0.3, -0.75))
+    slam = body(crouch=0.06, lean=26, nod=12, twist=6, shift=(0, -0.02))
+    off(arm(slam, "Right", *LOW), g, "two", V(0.55, 0.4, -0.73))
+    hold_ = body(crouch=0.055, lean=24, nod=10, twist=5, shift=(0, -0.02))
+    off(arm(hold_, "Right", *LOW), g, "two", V(0.55, 0.4, -0.73))
+    return [(0, N, "lin"), (0.3, wind, "back"), (0.44, slam, "in"), (0.64, hold_, "lin"), (1.0, N, "io")]
+
+
+@verb("Thrust", 0.6, 0.34, True)
+def v_thrust(g):
+    cock = body(twist=-26, lean=-4, crouch=0.02)
+    off(hand(cock, "Right", V(-0.14, 0.07, 0.40)), g, "two", V(0.55, -0.6, -0.55))
+    lunge = body(twist=22, lean=14, crouch=0.035, shift=(0, -0.035))
+    off(arm(lunge, "Right", V(-0.04, -1, 0.04)), g, "two", V(0.6, 0.5, -0.6))
+    lunge2 = body(twist=18, lean=12, crouch=0.03, shift=(0, -0.03))
+    off(arm(lunge2, "Right", V(-0.04, -1, 0.0)), g, "two", V(0.6, 0.5, -0.6))
+    return [(0, N, "lin"), (0.2, cock, "io"), (0.34, lunge, "back"), (0.55, lunge2, "lin"), (1.0, N, "io")]
+
+
+def spin_pose(g, yaw, crouch, arm_in=0.0):
+    P = body(hips=rz(yaw), crouch=crouch)
+    out = rz(yaw) @ V(-0.95, -0.25 - arm_in, 0.05 - 0.6 * arm_in)
+    arm(P, "Right", out)
+    return off(P, g, "two", rz(yaw) @ V(0.45, -0.5, -0.75))
+
+
+def yaw_of(P):
+    f = P.q("Hips") @ V(0, -1, 0)
+    return math.degrees(math.atan2(f.x, -f.y))
+
+
+def spin_post(P, p, flip):
+    """The feet turn with the body (planted at the ankles' rest points turned by the hips' yaw)."""
+    Q = rz(yaw_of(P))
+    for s, sx in SIDES:
+        P.ik(f"{s}UpLeg", f"{s}Leg", Q @ ANKLE[s], Q @ V(sx * 0.25, -1, 0))
+        P.world(f"{s}Foot", Q.copy())
+        P.R[f"{s}ToeBase"] = Quaternion()
+    return P
+
+
+@verb("Spin", 0.8, 0.3, False, post=spin_post)
+def v_spin(g):
+    """One full turn, the lead arm out: it crosses the front at a quarter turn (the impact) and sweeps all round."""
+    wind = body(twist=-30, crouch=0.03, lean=6)
+    off(arm(wind, "Right", V(-0.7, 0.55, -0.45)), g, "two", V(0.5, -0.7, -0.5))
+    turn = [(t, spin_pose(g, 90 * k, 0.045), "in" if k == 1 else "lin") for k, t in zip(range(1, 5), (0.3, 0.4, 0.5, 0.6))]
+    settle = spin_pose(g, 360, 0.04, arm_in=0.5)
+    return [(0, N, "lin"), (0.16, wind, "io"), *turn, (0.76, settle, "out"), (1.0, N, "io")]
+
+
+def leap_post(P, p, flip):
+    return plant(P, lift=lift_of(P, 1.4))
+
+
+@verb("LeapStrike", 1.0, 0.56, False, post=leap_post)
+def v_leap_strike(g):
+    crouch = body(crouch=0.07, lean=22, nod=10)
+    off(arm(crouch, "Right", V(-0.5, 0.55, -0.67)), g, "free", V(0.5, 0.55, -0.67))
+    rise = body(crouch=-0.12, lean=-8, nod=-10)
+    off(arm(rise, "Right", *OVERHEAD), g, "two", V(0.85, -0.1, 0.2))
+    apex = body(crouch=-0.14, lean=-4, nod=-6)
+    off(arm(apex, "Right", *OVERHEAD), g, "two", V(0.85, -0.1, 0.2))
+    strike = body(crouch=0.075, lean=28, nod=14, shift=(0, -0.02))
+    off(arm(strike, "Right", *LOW), g, "two", V(0.55, 0.4, -0.73))
+    hold_ = body(crouch=0.065, lean=26, nod=12, shift=(0, -0.02))
+    off(arm(hold_, "Right", *LOW), g, "two", V(0.55, 0.4, -0.73))
+    return [(0, N, "lin"), (0.2, crouch, "io"), (0.36, rise, "out"), (0.46, apex, "io"), (0.56, strike, "in"), (0.72, hold_, "lin"), (1.0, N, "io")]
+
+
+@verb("Throw", 0.7, 0.4, True)
+def v_throw(g):
+    cock = body(twist=-30, lean=-8, side=4, nod=-4)
+    off(arm(cock, "Right", V(-0.55, 0.6, 0.55), V(-0.3, 0.2, 0.93)), g, "free", V(0.3, -0.9, 0.3))
+    release = body(twist=26, lean=16, crouch=0.025, shift=(0, -0.025))
+    off(arm(release, "Right", V(-0.1, -0.95, -0.15)), g, "free", V(0.55, 0.5, -0.65))
+    follow = body(twist=30, lean=18, crouch=0.03, shift=(0, -0.025))
+    off(arm(follow, "Right", V(0.25, -0.85, -0.45)), g, "free", V(0.55, 0.5, -0.65))
+    return [(0, N, "lin"), (0.24, cock, "io"), (0.4, release, "back"), (0.6, follow, "lin"), (1.0, N, "io")]
+
+
+@verb("Summon", 0.9, 0.46, True)
+def v_summon(g):
+    gather = body(crouch=0.03, lean=10, nod=10)
+    off(hand(gather, "Right", V(-0.04, -0.13, 0.34)), g, "gather")
+    spread = body(lean=-8, nod=-14, crouch=-0.01)
+    off(arm(spread, "Right", V(-0.75, -0.35, 0.55), V(-0.6, -0.45, 0.65)), g, "spread", V(0.75, -0.35, 0.55), V(0.6, -0.45, 0.65))
+    hold_ = body(lean=-6, nod=-10)
+    off(arm(hold_, "Right", V(-0.75, -0.35, 0.5), V(-0.62, -0.45, 0.6)), g, "spread", V(0.75, -0.35, 0.5), V(0.62, -0.45, 0.6))
+    return [(0, N, "lin"), (0.26, gather, "io"), (0.46, spread, "back"), (0.72, hold_, "lin"), (1.0, N, "io")]
+
+
+HOLD_SPAN = (0.2, 0.8)                                               # a hold verb loops seamlessly between these phases
+
+
+def tremble(P, p, k=3, amount=1.5):
+    if HOLD_SPAN[0] < p < HOLD_SPAN[1]:
+        s = math.sin(TAU * k * (p - HOLD_SPAN[0]) / (HOLD_SPAN[1] - HOLD_SPAN[0]))
+        P.rot("Spine2", rz(amount * s))
+        P.loc.z += 0.003 * abs(s)
+    return P
+
+
+@verb("Channel", 1.2, 0.2, True, post=lambda P, p, flip: plant(tremble(P, p)), hold=HOLD_SPAN)
+def v_channel(g):
+    ch = body(crouch=0.02, lean=8, nod=4)
+    off(arm(ch, "Right", V(-0.08, -1, 0.14), V(-0.04, -1, 0.18)), g, "support", V(0.55, -0.5, -0.65))
+    return [(0, N, "lin"), (0.2, ch, "back"), (0.8, ch, "lin"), (1.0, N, "io")]
+
+
+@verb("Guard", 1.0, 0.2, True, post=lambda P, p, flip: plant(tremble(P, p, k=2, amount=0.8)), hold=HOLD_SPAN)
+def v_guard(g):
+    P = body(crouch=0.03, lean=6, nod=6, twist=-6)
+    if g.name == "Fists":
+        hand(P, "Right", chest(P, GUARD_R), V(-0.6, 0.5, -1))
+        off(P, g, "guard")
+    elif g.name == "OneHand":                                      # sword and board: the shield arm up in front, the blade back
+        arm(P, "Right", V(-0.5, 0.3, -0.8), V(-0.3, -0.7, -0.2))
+        arm(P, "Left", V(0.4, -0.7, -0.35), V(-0.55, -0.55, 0.55))
+    else:
+        arm(P, "Right", V(-0.4, -0.7, -0.35), V(0.55, -0.55, 0.55))   # the weapon held across the chest
+        off(P, g, "two", V(0.55, -0.5, -0.67))
+    return [(0, N, "lin"), (0.2, P, "back"), (0.8, P, "lin"), (1.0, N, "io")]
+
+
+def kick_post(P, p, flip):
+    return plant_one(P, "Left" if flip > 0 else "Right")
+
+
+@verb("Kick", 0.7, 0.36, False, post=kick_post)
+def v_kick(g):
+    chamber = body(lean=-6, crouch=0.01, shift=(0.02, 0), side=-4)
+    chamber.ik("RightUpLeg", "RightLeg", V(-0.06, -0.06, 0.15), V(0, -1, 0.3)).aim("RightFoot", V(0, -0.5, -0.85))
+    off(arm(chamber, "Right", V(-0.6, 0.3, -0.75)), g, "free", V(0.6, -0.5, -0.6))
+    kick = body(lean=-14, crouch=0.012, shift=(0.025, 0.02), side=-5)
+    kick.ik("RightUpLeg", "RightLeg", V(-0.06, -0.225, 0.21), V(0, -0.3, 1)).aim("RightFoot", V(0, -0.35, 0.94))
+    off(arm(kick, "Right", V(-0.65, 0.45, -0.6)), g, "free", V(0.65, -0.3, -0.7))
+    retract = chamber.copy()
+    return [(0, N, "lin"), (0.18, chamber, "io"), (0.36, kick, "back"), (0.55, retract, "io"), (1.0, N, "io")]
+
+
+@verb("Sweep", 0.75, 0.42, False)
+def v_sweep(g):
+    wind = body(twist=-36, crouch=0.04, lean=10, side=-4)
+    off(arm(wind, "Right", V(-0.75, 0.5, -0.45)), g, "two", V(0.5, -0.7, -0.5))
+    sweep = body(twist=10, crouch=0.07, lean=24, shift=(0, -0.02))
+    off(arm(sweep, "Right", V(-0.2, -0.95, -0.25)), g, "two", V(0.6, 0.45, -0.65))
+    follow = body(twist=36, crouch=0.06, lean=20, shift=(0, -0.015))
+    off(arm(follow, "Right", V(0.55, -0.75, -0.35)), g, "two", V(0.6, 0.5, -0.6))
+    return [(0, N, "lin"), (0.24, wind, "io"), (0.42, sweep, "in"), (0.56, follow, "out"), (1.0, N, "io")]
+
+
+@verb("Plant", 0.8, 0.42, False)
+def v_plant(g):
+    raise_ = body(crouch=-0.005, lean=-6, nod=-6)
+    off(arm(raise_, "Right", V(-0.3, -0.55, 0.78), V(-0.25, -0.6, 0.76)), g, "two", V(0.6, -0.3, -0.75))
+    plant_ = body(crouch=0.075, lean=30, nod=14)
+    off(arm(plant_, "Right", V(-0.15, -0.45, -0.88), V(-0.1, -0.35, -0.93)), g, "two", V(0.45, -0.6, -0.66))
+    hold_ = body(crouch=0.07, lean=28, nod=12)
+    off(arm(hold_, "Right", V(-0.15, -0.45, -0.88), V(-0.1, -0.35, -0.93)), g, "two", V(0.45, -0.6, -0.66))
+    return [(0, N, "lin"), (0.26, raise_, "io"), (0.42, plant_, "in"), (0.66, hold_, "lin"), (1.0, N, "io")]
+
+
+def aim_draw(g, draw, lean=0.0, recoil=0.0):
+    """The bow stance (AttackBow's, right-handed): the lead arm out to the target, the off hand drawing to the chin."""
+    P = body(hips=rz(-35), twist=-10, turn=42, lean=lean)
+    arm(P, "Right", V(-0.1, -1, 0.1 + recoil))
+    w = P.head("RightHand")
+    return off(P, g, "draw", at=w.lerp(V(0.11, 0.05, 0.46), draw) + V(0.03, 0.02, 0.02) * (1 - draw))
+
+
+@verb("DrawShot", 1.0, 0.66, True)
+def v_draw_shot(g):
+    rel = aim_draw(g, 1.0, lean=-4, recoil=0.1)
+    if g.mode("draw") == "draw":
+        hand(rel, "Left", V(0.18, 0.09, 0.47))
+    return [(0, N, "lin"), (0.22, aim_draw(g, 0.0), "back"), (0.34, aim_draw(g, 0.5, lean=-1.5), "io"), (0.45, aim_draw(g, 1.0, lean=-3), "io"),
+            (0.62, aim_draw(g, 1.0, lean=-3), "lin"), (0.68, rel, "out"), (1.0, N, "io")]
+
+
+@verb("QuickShot", 0.45, 0.16, True)
+def v_quick_shot(g):
+    aim_ = body(twist=12, lean=4)
+    off(arm(aim_, "Right", V(-0.05, -1, 0.12)), g, "support", V(0.55, -0.5, -0.65))
+    recoil = body(twist=12, lean=-2, nod=-3)
+    off(arm(recoil, "Right", V(-0.05, -0.88, 0.45)), g, "support", V(0.55, -0.5, -0.65))
+    return [(0, N, "lin"), (0.16, aim_, "out"), (0.26, recoil, "out"), (0.42, aim_, "io"), (1.0, N, "io")]
+
+
+@verb("Backstep", 0.55, 0.3, False, post=lambda P, p, flip: plant(P, lift=lift_of(P, 1.5)))
+def v_backstep(g):
+    crouch = body(crouch=0.05, lean=14, nod=8)
+    off(arm(crouch, "Right", V(-0.25, -0.85, -0.45)), g, "free", V(0.6, 0.3, -0.75))
+    air = body(crouch=-0.06, lean=10, nod=4, shift=(0, 0.03))
+    off(arm(air, "Right", V(-0.4, -0.7, 0.1)), g, "free", V(0.8, 0.2, 0.1))
+    land = body(crouch=0.06, lean=16, nod=10)
+    off(arm(land, "Right", V(-0.25, -0.85, -0.45)), g, "free", V(0.6, 0.3, -0.75))
+    land2 = body(crouch=0.045, lean=12, nod=8)
+    off(arm(land2, "Right", V(-0.25, -0.85, -0.45)), g, "free", V(0.6, 0.3, -0.75))
+    return [(0, N, "lin"), (0.16, crouch, "io"), (0.3, air, "out"), (0.5, land, "in"), (0.68, land2, "io"), (1.0, N, "io")]
+
+
+def hold_idle(g, b):
+    """The weapon held over locomotion (the engine lays the arms only, like HoldTool), authored right-handed."""
+    P = body()
+    if g.name == "Fists":
+        hand(P, "Right", chest(P, GUARD_R) + V(0, 0, b), V(-0.6, 0.5, -1))
+        hand(P, "Left", chest(P, GUARD_L) + V(0, 0, b), V(0.6, 0.5, -1))
+    elif g.name == "Book":
+        hand(P, "Left", chest(P, BOOK) + V(0, 0, b))
+    else:
+        target, pole = {"OneHand": (V(-0.15, -0.085, 0.34), V(-1, 0.7, -0.3)), "Staff": (V(-0.135, -0.075, 0.37), V(-1, 0.6, -0.3)),
+                        "Bow": (V(-0.15, -0.06, 0.33), V(-1, 0.6, -0.3)), "Pistol": (V(-0.12, -0.12, 0.36), V(-1, 0.5, -0.4))}[g.name]
+        hand(P, "Right", target + V(0, 0, b), pole)
+    return mirror_pose(P) if g.mirror else P
+
+
+# Per-subclass unique clips (the family waves): the ult clip `Ult_<Subclass>` and up to 3 `Unique_<Name>` ability
+# clips, each authored once for its subclass's grip with the same key programs (and `impact` at the ult's impact key,
+# where the engine holds the freeze), baked into the same GLB and catalogue.
+UNIQUE_DEFS = []
+
+
+def unique(name, grip, seconds, impact, upper=False, post=None):
+    def deco(fn):
+        UNIQUE_DEFS.append(dict(verb=name, grip=grip, seconds=seconds, impact=impact, upper=upper, fn=fn, post=post, hold=None))
+        return fn
+    return deco
+
+
+def verb_clips():
+    """Every verb for every grip, the hold idles, then the subclasses' unique clips, as bake() dicts."""
+    out = []
+    grip_by = {g.name: g for g in GRIPS_V}
+    for v in UNIQUE_DEFS:
+        g = grip_by[v["grip"]]
+        out.append(one_clip(v["verb"], v, g))
+    return [*grip_clips(), *out]
+
+
+def one_clip(name, v, g):
+    K = v["fn"](g)
+    if g.mirror:
+        K = [(t, P if P is N else mirror_pose(P), e) for t, P, e in K]
+    post = v["post"] or (lambda P, p, flip: plant(P))
+    return dict(name=name, frames=round(v["seconds"] * FPS), loop=False, ground=None,
+                fn=(lambda K, post, flip: lambda p: post(keys(p, K), p, flip))(K, post, -1 if g.mirror else 1),
+                meta=dict(verb=v["verb"], grip=g.name, hand=g.hand, upper=v["upper"], impact=v["impact"], **({"hold": list(v["hold"])} if v["hold"] else {})))
+
+
+def grip_clips():
+    out = []
+    for g in GRIPS_V:
+        for v in VERB_DEFS:
+            out.append(one_clip(f"{v['verb']}_{g.name}", v, g))
+        out.append(dict(name=f"HoldIdle_{g.name}", frames=60, loop=True, ground=None,
+                        fn=(lambda g: lambda p: plant(hold_idle(g, 0.004 * math.sin(TAU * p))))(g),
+                        meta=dict(verb="HoldIdle", grip=g.name, hand=g.hand, upper=True, impact=0)))
+    return out
+
+
 # ================================================================ bake, ground, check
 MESHES = [bpy.data.objects[n] for n in ("V6_Body", HEAD_OB)]
 
@@ -1272,34 +1645,117 @@ def contacts(action, frames):
     return out
 
 
-catalog = [{"name": "Idle", "length": 2.0, "loop": True, "frames": 60, "source": "v6"},
-           {"name": "Walk", "length": 1.0, "loop": True, "frames": 30, "source": "v6", "contacts": contacts(bpy.data.actions["Walk"], 30)}]
-for c in CLIPS:
-    act = bake(c)
-    worst, lowest = check(c["name"], c["frames"])
-    meta = {k: v for k, v in c["meta"].items() if k != "ground_w"}
-    catalog.append({"name": c["name"], "length": round(c["frames"] / FPS, 3), "loop": c["loop"], "frames": c["frames"],
-                    **({} if c["loop"] else {"endsNeutral": meta.pop("endsNeutral", "endsOn" not in meta)}), **meta,
-                    **({"contacts": contacts(act, c["frames"])} if c["name"] in ("Run", "CrouchWalk") else {})})
-    print(f"CLIP {c['name']:12s} {c['frames'] / FPS:4.2f}s loop={c['loop']!s:5s} head_intrusion={worst:5.3f} min_z={lowest:+.3f}")
+EVIDENCE = os.path.join(HERE, "..", "..", "..", "specs", "evidence", "classes", "K0-verbs.webp")
+CAM = (-1.35, -2.1, 0.62)                                # the lead (right) side, three-quarter front
+if "side" in ARGS:                                       # a review angle: from the right, straight on (not the evidence)
+    CAM, EVIDENCE = (-2.5, 0.0, 0.5), "/tmp/K0-verbs-side.webp"
 
-rig.animation_data.action = bpy.data.actions["Idle"]
-sc.frame_set(0)
-for o in sc.objects:
-    if o.type == "MESH" and o.data.color_attributes:
-        o.data.color_attributes.render_color_index = o.data.color_attributes.active_color_index   # export COLOR_0
-bpy.ops.object.select_all(action="SELECT")
-bpy.context.view_layer.objects.active = rig
-bpy.ops.export_scene.gltf(
-    filepath=os.path.join(HERE, OUT_GLB), export_format="GLB", use_selection=True, export_yup=True,
-    export_normals=True, export_texcoords=True, export_vertex_color="ACTIVE", export_all_vertex_colors=False,
-    export_skins=True, export_animations=True, export_animation_mode="ACTIONS", export_force_sampling=True,
-    export_leaf_bone=False, export_optimize_animation_size=True)
-kit.update_catalog("base", {"glb": "base/v6.glb", "clips_glb": f"base/{OUT_GLB}", "fps": FPS,
-                            **({"head": "v7/head.blend"} if HEAD == "v7" else {}),
-                            "note": f"{OUT_GLB} = the v6 base body (tee + shorts + default hair) with every clip"
-                                    + (", and the hand-modeled v7 head (avatar v7)" if HEAD == "v7" else "") + ". Sit/Study "
-                                    "sit on a seat at seatHeight; Sleep/Defeat lie on the back with the head toward the "
-                                    "character's back (+Y Blender, -Z glTF). hand = the socket that holds the weapon."})
-kit.update_catalog("clips", catalog)
-print("CLIPS_OK", len(catalog))
+
+def render_verb_evidence(cat):
+    """K0-verbs.webp: the 16 verbs for OneHand and Staff at their impact frame, and Slam_OneHand's anticipation,
+    impact and follow-through. Rendered here from the baked actions on the body this build loaded."""
+    import subprocess, tempfile
+    tmp = tempfile.mkdtemp(prefix="verbs_ev_")
+    try:
+        sc.render.engine = "BLENDER_EEVEE"
+    except TypeError:
+        pass
+    sc.view_settings.view_transform = "Standard"
+    sc.render.resolution_x = sc.render.resolution_y = 256
+    sc.render.film_transparent = False
+    w = bpy.data.worlds.new("W")
+    sc.world = w
+    w.use_nodes = True
+    bg = next(n for n in w.node_tree.nodes if n.type == "BACKGROUND")
+    bg.inputs[0].default_value, bg.inputs[1].default_value = (0.78, 0.86, 0.86, 1), 0.9
+    sun = bpy.data.objects.new("Sun", bpy.data.lights.new("Sun", "SUN"))
+    sun.data.energy = 3.2
+    sun.rotation_euler = (math.radians(50), 0, math.radians(30))
+    sc.collection.objects.link(sun)
+    cam = bpy.data.objects.new("Cam", bpy.data.cameras.new("Cam"))
+    cam.data.type, cam.data.ortho_scale = "ORTHO", 1.55
+    cam.location = Vector(CAM)
+    cam.rotation_euler = (Vector((0, 0, 0.47)) - cam.location).to_track_quat("-Z", "Y").to_euler()
+    sc.collection.objects.link(cam)
+    sc.camera = cam
+    kit.show_vertex_colors(sc)
+    by = {c["name"]: c for c in cat}
+    shots = [(f"{v['verb']}_{g}", by[f"{v['verb']}_{g}"]["impact"], v["verb"]) for g in ("OneHand", "Staff") for v in VERB_DEFS]
+    shots += [("Slam_OneHand", t, f"Slam {k}") for t, k in ((0.3, "anticipation"), (0.44, "impact"), (0.64, "follow"))]
+    files = []
+    for i, (name, phase, label) in enumerate(shots):
+        rig.animation_data.action = bpy.data.actions[name]
+        sc.frame_set(round(phase * by[name]["frames"]))
+        sc.render.filepath = os.path.join(tmp, f"{i:03d}.png")
+        bpy.ops.render.render(write_still=True)
+        files += ["-label", f"{name.split('_')[1]} {label}" if i < 32 else label, sc.render.filepath]
+    os.makedirs(os.path.dirname(EVIDENCE), exist_ok=True)
+    sheet = os.path.join(tmp, "sheet.png")
+    subprocess.run(["magick", "montage", *files, "-tile", "8x", "-geometry", "+4+4", "-background", "#1b1f27", "-fill", "#f1ffff",
+                    "-pointsize", "13", "-font", "/System/Library/Fonts/Supplemental/Arial.ttf", sheet], check=True)
+    subprocess.run(["magick", sheet, "-quality", "88", EVIDENCE], check=True)
+    print("wrote", EVIDENCE)
+
+
+if VERBS_MODE:
+    verbs = verb_clips()
+    cat = []
+    for c in verbs:
+        bake(c)
+        worst, lowest = check(c["name"], c["frames"])
+        m = c["meta"]
+        cat.append({"name": c["name"], "verb": m["verb"], "grip": m["grip"], "length": round(c["frames"] / FPS, 3), "loop": c["loop"],
+                    "frames": c["frames"], "hand": m["hand"], "upper": m["upper"], "impact": m["impact"], **({"hold": m["hold"]} if "hold" in m else {})})
+        print(f"VERB {c['name']:20s} {c['frames'] / FPS:4.2f}s head_intrusion={worst:5.3f} min_z={lowest:+.3f}")
+    keep = {c["name"] for c in verbs}
+    for a in list(bpy.data.actions):                     # Idle and Walk ship in the village set, not here
+        if a.name not in keep:
+            bpy.data.actions.remove(a)
+    rig.animation_data.action = bpy.data.actions[verbs[0]["name"]]
+    sc.frame_set(0)
+    bpy.ops.object.select_all(action="DESELECT")
+    rig.select_set(True)
+    bpy.context.view_layer.objects.active = rig
+    bpy.ops.export_scene.gltf(
+        filepath=os.path.join(HERE, "v7_verbs.glb"), export_format="GLB", use_selection=True, export_yup=True,
+        export_skins=True, export_animations=True, export_animation_mode="ACTIONS", export_force_sampling=True,
+        export_leaf_bone=False, export_optimize_animation_size=True)
+    kit.update_catalog("verbs", {"glb": "base/v7_verbs.glb", "fps": FPS,
+                                 "note": "The verb library (classes v2, design sheet 1.8): the rig and its actions only, loaded in the ruins. "
+                                         "impact = phase of the hit key; upper = can play on the upper body; hold = the phase span a held verb loops.",
+                                 "clips": cat})
+    print("VERBS_OK", len(cat))
+    if "evidence" in ARGS:
+        render_verb_evidence(cat)
+else:
+    catalog = [{"name": "Idle", "length": 2.0, "loop": True, "frames": 60, "source": "v6"},
+               {"name": "Walk", "length": 1.0, "loop": True, "frames": 30, "source": "v6", "contacts": contacts(bpy.data.actions["Walk"], 30)}]
+    for c in CLIPS:
+        act = bake(c)
+        worst, lowest = check(c["name"], c["frames"])
+        meta = {k: v for k, v in c["meta"].items() if k != "ground_w"}
+        catalog.append({"name": c["name"], "length": round(c["frames"] / FPS, 3), "loop": c["loop"], "frames": c["frames"],
+                        **({} if c["loop"] else {"endsNeutral": meta.pop("endsNeutral", "endsOn" not in meta)}), **meta,
+                        **({"contacts": contacts(act, c["frames"])} if c["name"] in ("Run", "CrouchWalk") else {})})
+        print(f"CLIP {c['name']:12s} {c['frames'] / FPS:4.2f}s loop={c['loop']!s:5s} head_intrusion={worst:5.3f} min_z={lowest:+.3f}")
+
+    rig.animation_data.action = bpy.data.actions["Idle"]
+    sc.frame_set(0)
+    for o in sc.objects:
+        if o.type == "MESH" and o.data.color_attributes:
+            o.data.color_attributes.render_color_index = o.data.color_attributes.active_color_index   # export COLOR_0
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.context.view_layer.objects.active = rig
+    bpy.ops.export_scene.gltf(
+        filepath=os.path.join(HERE, OUT_GLB), export_format="GLB", use_selection=True, export_yup=True,
+        export_normals=True, export_texcoords=True, export_vertex_color="ACTIVE", export_all_vertex_colors=False,
+        export_skins=True, export_animations=True, export_animation_mode="ACTIONS", export_force_sampling=True,
+        export_leaf_bone=False, export_optimize_animation_size=True)
+    kit.update_catalog("base", {"glb": "base/v6.glb", "clips_glb": f"base/{OUT_GLB}", "fps": FPS,
+                                **({"head": "v7/head.blend"} if HEAD == "v7" else {}),
+                                "note": f"{OUT_GLB} = the v6 base body (tee + shorts + default hair) with every clip"
+                                        + (", and the hand-modeled v7 head (avatar v7)" if HEAD == "v7" else "") + ". Sit/Study "
+                                        "sit on a seat at seatHeight; Sleep/Defeat lie on the back with the head toward the "
+                                        "character's back (+Y Blender, -Z glTF). hand = the socket that holds the weapon."})
+    kit.update_catalog("clips", catalog)
+    print("CLIPS_OK", len(catalog))

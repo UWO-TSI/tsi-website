@@ -58,8 +58,8 @@ describe("movement keys", () => {
     const other = moveDefaults(false);
     saved.set("tsi.moveKeys.v1", JSON.stringify(other));
     expect(presetAbilities(DEFAULT_ABILITY_KEYS, "zxcv")).toMatchObject({ ok: false });
-    expect(remapMove(other, "crouch", "t")).toMatchObject({ ok: true });
-    expect(presetAbilities(DEFAULT_ABILITY_KEYS, "zxcv")).toMatchObject({ ok: true, keys: { slot1: "z", slot2: "x", slot3: "c", slot4: "v", swap: "r" } });
+    expect(remapMove(other, "crouch", "y")).toMatchObject({ ok: true }); // T is the preset's key 5 (classes v2)
+    expect(presetAbilities(DEFAULT_ABILITY_KEYS, "zxcv")).toMatchObject({ ok: true, keys: { slot1: "z", slot2: "x", slot3: "c", slot4: "v", slot5: "t", ult: "f", swap: "r" } });
     expect(abilityPreset(readAbilityKeys())).toBe("zxcv");
     expect(presetAbilities(readAbilityKeys(), "numbers")).toMatchObject({ ok: true, keys: { slot1: "1", slot4: "4" } });
     expect(abilityPreset({ ...DEFAULT_ABILITY_KEYS, slot2: "y" })).toBeNull();
