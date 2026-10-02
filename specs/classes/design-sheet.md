@@ -825,3 +825,29 @@ All waves merge to `main` behind a `classes_v2` flag that stays off in productio
   - A purple aura with motes of the four elements.
   - A staff icon on the nameplate.
   - Shop: staff skins and element-colour auras.
+
+## Illusionist (LOCKED, David 2026-10-02)
+- **Family:** Arcane (purple).
+- **Role:** control / support trickster.
+- **MBTI:** mapped at the end.
+- **Weapon:** enchanted cards that float and fan around the hand. Basic attack (left click): thrown cards, a plain long-range mage attack. Most of the appeal is the tricking and swapping.
+- **Skills:** 5 on keys 1–5, all equipped. David: "too many skills", so no pick-4 loadout.
+
+| Key | Skill | Effect |
+|---|---|---|
+| 1 | Mirror Clone | A clone with real AI: it dashes around, strafes, throws cards, copies your animations and uses skills too. Max 2 (3 with mastery). Each has 30% of your HP, deals 40% damage and lasts 10 s. Enemies can't tell which is real. |
+| 2 | Swap | Teleport into the clone under the crosshair; it takes your spot. Heals you 5% per swap. For coordinated attacks. |
+| 3 | Mirror Ward | A 0.4 s timed parry against long-range attacks (anti-mage and anti-ranger). It reflects the shot back to its shooter. Look at a clone while parrying and the shot bounces through the clone, which amplifies it (×2 damage, faster, bigger) and sends it at the caster as a sure hit and crit. Missing the timing wastes the cooldown. |
+| 4 | Trick Card | Throw a card; press again to teleport to it. Unlocks at mastery 3. |
+| 5 | Vanish | Throw cards into the air and disappear. Getting close to an enemy, or attacking, reveals you. The first hit out of Vanish gets bonus damage. |
+
+- **Passive, "Who's Real?":** while clones are alive, 30% of enemy attacks go after a clone instead of you.
+- **Ultimate, The Joker (F, meter):** pull out a Joker card and throw it. It becomes a huge mirror that sweeps across the field. Its path turns inverted colour, every entity in the path is scooped into the glass as a flat 2D image, and then the mirror shatters: flash frame, glass burst, heavy damage.
+- **Mastery:**
+  - At 1: Clone, Swap, Mirror Ward and Vanish.
+  - Trick Card at 3.
+  - Up to 20: a third clone, a longer reflect window, faster swaps, and cosmetics.
+- **Identity:**
+  - A purple aura of floating cards.
+  - A card icon on the nameplate.
+  - Shop: card-deck skins and mirror-shard aura colours.
