@@ -128,13 +128,13 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
 
   useEffect(() => {
     const onAct = (e: Event) => {
-      const { id } = (e as CustomEvent<{ id: string }>).detail;
+      const { id, tool } = (e as CustomEvent<{ id: string; tool?: string }>).detail;
       const node = forage.find(f => f.n.id === id);
       const bug = bugState.current.get(id);
       const sp = node?.sp ?? (bug && !bug.fled ? bug.sp : null);
       if (!sp) return;
       markHarvested(id);
-      void harvestNode(id, [player.current.x, player.current.z]).then(answer => {
+      void harvestNode(id, [player.current.x, player.current.z], tool).then(answer => {
         if (answer && !answer.ok) { window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: answer.error } })); return; }
         // The server's roll is the catch (normally the same species this node showed).
         const got = answer ? ROSTER.find(s => s.key === answer.catch.item_key) ?? sp : sp;

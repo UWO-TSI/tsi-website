@@ -51,7 +51,7 @@ export interface CollectionsStore {
   land(memberId: string, rollId: string, seasonal?: LandSeason): Promise<CatchResult & { item_key: string; size_cm: number | null }>;
   /** Atomic: one harvest per node per hour, recorded with collections_record_catch's caps (a capped one leaves the node unharvested); a rare one may teach a recipe. */
   harvest(memberId: string, nodeId: string, hourKey: string, itemKey: string, sizeCm: number | null, trophyEligible: boolean): Promise<CatchResult>;
-  /** Catalogue refs of the member's owned gear (rods). */
+  /** The member's owned gear keys: catalogue refs and shop slugs (lib/game/tools.ts: rods by ref, nets and shovels by slug). */
   ownedGear(memberId: string): Promise<string[]>;
   /** Every entry of one tourney cycle, with names (service role: the route applies the board's privacy). */
   tourneyEntries(goalId: string, cycle: number): Promise<TourneyEntry[]>;

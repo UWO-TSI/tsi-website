@@ -227,7 +227,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     changePhase("casting");
     // Member island: the server rolls what will bite now; a refusal (too soon, no water here) ends the cast.
     const from = collectionScope ? null : castFromRef.current;
-    rollRef.current = from && castLine(from.site, from.from, power);
+    rollRef.current = from && castLine(from.site, from.from, power, rod.key);
     void rollRef.current?.then(answer => {
       if (answer && !answer.ok && (phaseRef.current === "casting" || phaseRef.current === "waiting")) miss(answer.error);
     });

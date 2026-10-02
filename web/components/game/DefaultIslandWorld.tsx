@@ -93,6 +93,7 @@ import TopCluster, { hudButton } from "./TopCluster";
 import { setHudCoins, setHudXp } from "@/lib/game/hudStore";
 import CollectionBook from "./CollectionBook";
 import { usePeacefulContext } from "@/lib/game/usePeacefulContext";
+import { bestTool } from "@/lib/game/tools";
 import { villageNodes } from "@/lib/game/islandNodes";
 import { villageWater, type FishingSpot } from "@/lib/game/fishingSpots";
 import { gullAnchors } from "@/lib/game/ambientFauna";
@@ -633,7 +634,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     }
     if (action === "forage" || action === "net") {
       const target = getPeacefulTarget();
-      if (target) window.dispatchEvent(new CustomEvent("tsi:peaceful-act", { detail: { id: target.id } }));
+      // The server takes the tool in hand (specs/game-ui.md): a net for a bug, a shovel to dig, none by hand.
+      const tool = target?.kind === "bug" ? bestTool("net", peaceful.owned).key : target?.kind === "dig" ? bestTool("shovel", peaceful.owned).key : undefined;
+      if (target) window.dispatchEvent(new CustomEvent("tsi:peaceful-act", { detail: { id: target.id, tool } }));
       return;
     }
     // E again at the same bench or bed stands you up (tsi:sit toggles there).
@@ -676,7 +679,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       // A fresh warm-up probe for the next scene: the fade lifts when it has loaded and compiled.
       setSceneShown(n => n + 1);
     }, 320);
-  }, [fading, chapterActions, homeActions, inside, gate, layout, atHome]);
+  }, [fading, chapterActions, homeActions, inside, gate, layout, atHome, peaceful.owned]);
   // Arrive at the wharf: under the loading screen while it is up, otherwise through a short dock fade.
   useEffect(() => {
     if (step !== "welcome" || welcome !== "idle" || inside || site !== "village") return;

@@ -100,9 +100,10 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
     },
     async ownedGear(memberId) {
       // A failed read fails the request: a transient error must not roll a tier-4/5 rod owner with the starter rod.
-      const { data, error } = await db.from("member_inventory").select("shop_items(catalogue_ref)").eq("member_id", memberId);
+      // Rods are known by their catalogue_ref, nets and shovels by their slug (lib/game/tools.ts).
+      const { data, error } = await db.from("member_inventory").select("shop_items(slug, catalogue_ref)").eq("member_id", memberId);
       if (error) raise(error);
-      return ((data ?? []) as Row[]).flatMap((r) => ((r.shop_items as Row | null)?.catalogue_ref as string | null) ?? []);
+      return ((data ?? []) as Row[]).flatMap((r) => { const item = r.shop_items as Row | null; return [item?.slug, item?.catalogue_ref].filter((k): k is string => typeof k === "string"); });
     },
     async tourneyEntries(goalId, cycle) {
       const { data, error } = await db.from("tourney_entries").select("member_id, category, item_key, size_cm, caught_at").eq("goal_id", goalId).eq("cycle", cycle);

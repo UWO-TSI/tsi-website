@@ -7,7 +7,8 @@ import { castWater, fishRoll, forageSize, nodeAt, nodeRoll } from "./rolls";
 import { CATEGORIES, ROSTER, type Category } from "./roster";
 import { toFailure, type Result } from "@/lib/result";
 import { hourKey } from "@/lib/game/peaceful";
-import { bestOwnedRod } from "@/lib/game/rods";
+import { rodByTier } from "@/lib/game/rods";
+import { checkHeld } from "@/lib/game/tools";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import type { CatchResult, CollectionsStore } from "./store";
 import { eventCatches, landSeason, latestTourney, tourneyBoards, type TourneyBoard } from "@/lib/progression/seasonal";
@@ -31,8 +32,8 @@ const fail = <T>(err: unknown): Result<T> => toFailure(ERRORS, err);
 
 const XZ = z.tuple([z.number().finite(), z.number().finite()]);
 const CatchRequest = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("harvest"), node: z.string().max(64), at: XZ }),
-  z.object({ action: z.literal("cast"), site: z.enum(["village", "home"]), at: XZ, power: z.number().min(0).max(1) }),
+  z.object({ action: z.literal("harvest"), node: z.string().max(64), at: XZ, tool: z.string().max(64).optional() }),
+  z.object({ action: z.literal("cast"), site: z.enum(["village", "home"]), at: XZ, power: z.number().min(0).max(1), tool: z.string().max(64).optional() }),
   z.object({ action: z.literal("land"), roll: z.string().uuid() }),
 ]);
 /** A recorded catch (harvest, land: its counts, record and any recipe taught), or a cast's `roll` waiting to be landed. */
@@ -42,8 +43,8 @@ export type CatchReply = { item_key: string; size_cm: number | null; roll?: stri
  * A catch from the world (roadmap "Server-authoritative catch rolls"). The
  * client names an action and where it stands; the server checks the place,
  * rolls on its own clock and weather, and records only its roll:
- *   harvest { node, at }        a forage node or bug spot: one per node per hour
- *   cast    { site, at, power } rolls the fish that will bite (roll id; recorded on land)
+ *   harvest { node, at, tool }        a forage node or bug spot: one per node per hour
+ *   cast    { site, at, power, tool } rolls the fish that will bite (roll id; recorded on land)
  *   land    { roll }            the reel was won: records that roll once
  * Seasonal events (`goals`, the active club goals): limited-time fish are in
  * the roll only while their event runs and never land outside it; a fish
@@ -51,6 +52,8 @@ export type CatchReply = { item_key: string; size_cm: number | null; roll?: stri
  * `weather` and `goals` are read only by the actions that use them (a land
  * needs no weather, a harvest no goals). Sizes clamp to the code roster the
  * roll uses (the collection_species rows are generated from it).
+ * `tool` is the held tool's key (specs/game-ui.md): a cast rolls with the held rod's tier, a bug needs a net and a
+ * dig or a rock a shovel, each one the member owns (lib/game/tools.ts checkHeld); picking by hand needs none.
  * A landed or harvested rare catch may teach a recipe (`recipe` in the reply,
  * 20260930100000 crafting_catch_drop), also in that transaction.
  */
@@ -68,13 +71,19 @@ export async function catchAction(
       if (!node) return { ok: false, status: 422, code: "wrong_place", error: "Nothing to gather from here." };
       const sp = nodeRoll(memberId, node, now, await weather());
       if (!sp) return { ok: false, status: 409, code: "nothing_here", error: "Nothing's out here right now." };
+      if (sp.tool === "net" || sp.tool === "shovel") {
+        const held = checkHeld(req.tool, sp.tool, await store.ownedGear(memberId));
+        if (!held.ok) return held;
+      }
       const size = clampSize(ROSTER.find((s) => s.key === sp.key), forageSize(sp, random));
       return { ok: true, data: { item_key: sp.key, size_cm: size, ...(await store.harvest(memberId, node.id, hourKey(now), sp.key, size, trophyFor(sp, size))) } };
     }
     const water = castWater(req.site, req.at);
     if (!water) return { ok: false, status: 422, code: "wrong_place", error: "No water in reach." };
-    const [sky, active, gear] = await Promise.all([weather(), goals(), store.ownedGear(memberId)]);
-    const { fish, size } = fishRoll(water, req.power, bestOwnedRod(gear), now, sky, random, eventCatches(active, now));
+    const held = checkHeld(req.tool, "rod", await store.ownedGear(memberId));
+    if (!held.ok) return held;
+    const [sky, active] = await Promise.all([weather(), goals()]);
+    const { fish, size } = fishRoll(water, req.power, rodByTier(held.tool.tier), now, sky, random, eventCatches(active, now));
     const sp = ROSTER.find((s) => s.key === fish.key);
     const kept = clampSize(sp, size);
     const roll = await store.cast(memberId, fish.key, kept, trophyFor(sp, kept));

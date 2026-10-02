@@ -74,9 +74,11 @@ describe("collection discovery and stock", () => {
     expect(await harvestNode("fruit-1", [1, 2])).toEqual({ ok: true, catch: { item_key: "apple", size_cm: null } });
     expect(fetch).toHaveBeenCalledWith("/api/collections", expect.objectContaining({ method: "POST", body: '{"action":"harvest","node":"fruit-1","at":[1,2]}' }));
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 429, json: async () => ({ ok: false, error: "Too quick.", code: "too_fast" }) }));
-    expect(await castLine("village", [0, 0], 1)).toEqual({ ok: false, error: "Too quick.", code: "too_fast" });
+    expect(await castLine("village", [0, 0], 1, "rod_glass")).toEqual({ ok: false, error: "Too quick.", code: "too_fast" });
+    // The held tool rides along (the server checks it against what the member owns).
+    expect(fetch).toHaveBeenCalledWith("/api/collections", expect.objectContaining({ body: '{"action":"cast","site":"village","at":[0,0],"power":1,"tool":"rod_glass"}' }));
     // Signed out: no server record, the world keeps it local.
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({}) }));
-    expect(await castLine("village", [0, 0], 1)).toBeNull();
+    expect(await castLine("village", [0, 0], 1, "rod_flimsy")).toBeNull();
   });
 });

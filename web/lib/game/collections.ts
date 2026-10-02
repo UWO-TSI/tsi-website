@@ -83,10 +83,10 @@ async function catchRequest(body: Record<string, unknown>): Promise<CatchAnswer 
     return null;
   }
 }
-/** A forage node or bug spot, from where the player stands. */
-export const harvestNode = (node: string, at: [number, number]) => catchRequest({ action: "harvest", node, at });
-/** Roll the fish that will bite, from where the player stands; landed with landCatch when the reel is won. */
-export const castLine = (site: "village" | "home", at: [number, number], power: number) => catchRequest({ action: "cast", site, at, power });
+/** A forage node or bug spot, from where the player stands, with the held tool's key (a net for a bug, a shovel to dig; none by hand). */
+export const harvestNode = (node: string, at: [number, number], tool?: string) => catchRequest({ action: "harvest", node, at, ...(tool ? { tool } : {}) });
+/** Roll the fish that will bite on the held rod (`tool`), from where the player stands; landed with landCatch when the reel is won. */
+export const castLine = (site: "village" | "home", at: [number, number], power: number, tool: string) => catchRequest({ action: "cast", site, at, power, tool });
 export const landCatch = (roll: string) => catchRequest({ action: "land", roll });
 
 /**
