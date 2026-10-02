@@ -99,9 +99,9 @@ export function NatureTree({ position, seed, models = TREE_MODELS }: { position:
 }
 
 export function treeYaw(seed: number): number {
-  // Broadleaf canopies are authored wider than they are deep; a side-on
-  // quarter turn makes the leaf cards look like a thin sheet.
-  const yaw = isCedar(seed) ? seed * 137.5 : 180 + ((seed % 5) - 2) * 8;
+  // Every crown is closed now (art/trees/build_trees.py), so no tree has to face the camera: a small turn by seed for
+  // variety (the oaks keep ACNH's clover toward +z, its back half and ringed lobes elsewhere).
+  const yaw = isCedar(seed) ? seed * 137.5 : ((seed % 5) - 2) * 8;
   return (yaw * Math.PI) / 180;
 }
 
