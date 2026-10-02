@@ -374,7 +374,7 @@ function descend(s: MoveState, w: MoveWorld, t: MoveTuning, input: MoveInput, y:
   if (wet && y <= floor) {
     s.y = y; s.vx = s.vy = s.vz = 0; s.dashT = 0;
     setMode(s, "splash");
-    emit(s, "splash");
+    emit(s, "splash", s.topY - y); // the drop: how big a splash
     return;
   }
   s.y = y;

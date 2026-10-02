@@ -4,10 +4,12 @@
  * the touch stick. PlayerAvatar throws particles from each sim step's events
  * and foot contacts, on the avatar that moved (lib/game/movement/juice.ts).
  */
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import type { ClipName } from "@/lib/game/character/clips";
+import type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
+import { footprint, footstep, groundUnder } from "@/lib/game/movement/juice";
+import { WORLD_SNOW } from "@/lib/game/modelMaterials";
 import { juiceFovOffset } from "@/lib/game/cameraJuice";
 import { PACK, PACK_COLS, PACK_ROWS, PACK_URL, type SpriteName } from "@/lib/game/fx/pack";
 import { ParticlePool } from "@/lib/game/fx/particles";
@@ -37,6 +39,13 @@ export const MOVE_JUICE = {
   slideBurst: 1, // the spray of a dash- or land-slide, the pop of a slide-jump
   slideKick: 1.5, // degrees the FOV punches out as a slide starts
   slideDrop: 0.18, // how far the camera's focus drops while sliding (world units)
+  // Milestone 2 (specs/movement-feel.md)
+  prints: 1, // footprints on sand, wet sand and snow
+  skid: 1, // the skid's kick, scuffs, trail and push-off
+  mantle: 1, // the puffs under the hands, grains off the lip, the step up
+  glide: 1, // leaf bits and the air push on opening, wind ribbons at speed, the set-down
+  splash: 1, // droplets and ripples, sized by the drop
+  roll: 1, // the roll's tumbles, trail and pop-up
 };
 export type MoveJuice = typeof MOVE_JUICE;
 /** The follow camera's field of view at a walk (the Canvases' camera); speed and dashes widen it from here. */
@@ -58,8 +67,8 @@ export function momentumOf(s: { mode: string; dashT: number; keep: number; bleed
   return (tech && speed > walkSpeed + 0.05) || speed > sprintSpeed + 0.05 ? "kept" : "";
 }
 export const TAKEOFF = new Set<MoveEvent["kind"]>(["jump", "hop", "long", "dashjump"]);
-/** Particles a scene's system holds at once (all avatars and the ruins' puffs together). */
-const FX_CAPACITY = 384;
+/** Particles a scene's system holds at once (all avatars and the ruins' puffs together), and footprints apart from them. */
+const FX_CAPACITY = 384, PRINT_CAPACITY = 160;
 
 // ── The movement particles: our painted pack, one instanced draw per scene ──
 let packTexture: THREE.Texture | null = null;
@@ -130,19 +139,14 @@ function moveParticleMaterial(): THREE.MeshStandardMaterial {
 }
 
 const camPos = new THREE.Vector3(), camDir = new THREE.Vector3();
-/**
- * The movement particle system (specs/movement-feel.md deliverable 2): a ParticlePool drawn as one instanced quad
- * mesh, sorted back to front, in our pack. Shared by everything in a scene that throws particles (useMoveParticles).
- */
-export class MoveParticles {
-  readonly pool = new ParticlePool(FX_CAPACITY);
+/** One pool drawn as one instanced quad mesh in our pack, sorted back to front. */
+class PoolMesh {
   readonly mesh: THREE.Mesh;
   private readonly geometry = new THREE.InstancedBufferGeometry();
   private readonly attrs: THREE.InstancedBufferAttribute[];
-  private stamp = -1;
   /** Drawn once (empty) with the scene, so its shader compiles at load, not as the first puff hitches a frame. */
   private warm = false;
-  constructor() {
+  constructor(readonly pool: ParticlePool, label: string, renderOrder: number) {
     const quad = new THREE.PlaneGeometry(1, 1);
     this.geometry.index = quad.index;
     for (const name of ["position", "normal", "uv"]) this.geometry.setAttribute(name, quad.getAttribute(name));
@@ -153,19 +157,14 @@ export class MoveParticles {
     });
     this.geometry.instanceCount = 0;
     this.mesh = new THREE.Mesh(this.geometry, moveParticleMaterial());
-    this.mesh.name = "MoveParticles";
+    this.mesh.name = label;
     this.mesh.frustumCulled = false; // placed in the shader; the pool is small
     this.mesh.receiveShadow = true;
-    this.mesh.renderOrder = 3;
+    this.mesh.renderOrder = renderOrder;
     this.mesh.onAfterRender = () => { this.warm = true; };
   }
-  /** Step and draw, once per frame: the first caller's `dt` wins (the avatar's slow motion and pauses), the rest are skipped. */
-  tick(stamp: number, dt: number, camera: THREE.Camera, wind: { x: number; z: number }) {
-    if (stamp === this.stamp) return;
-    this.stamp = stamp;
+  step(dt: number, wind: { x: number; z: number }) {
     this.pool.update(dt, wind.x, wind.z);
-    camera.getWorldPosition(camPos);
-    camera.getWorldDirection(camDir);
     const n = this.pool.write(camPos.x, camPos.y, camPos.z, camDir.x, camDir.y, camDir.z);
     this.geometry.instanceCount = n;
     this.mesh.visible = n > 0 || !this.warm;
@@ -173,6 +172,31 @@ export class MoveParticles {
     for (const a of this.attrs) { a.clearUpdateRanges(); a.addUpdateRange(0, n * 4); a.needsUpdate = true; }
   }
   dispose() { this.geometry.dispose(); }
+}
+/**
+ * The movement particle system (specs/movement-feel.md deliverable 2): a ParticlePool drawn as one instanced quad
+ * mesh, sorted back to front, in our pack, and a second for the footprints (a decal pool, drawn under the effects),
+ * so a burst of dust never pushes out a print. Shared by everything in a scene that throws particles (useMoveParticles).
+ */
+export class MoveParticles {
+  readonly pool = new ParticlePool(FX_CAPACITY);
+  readonly prints = new ParticlePool(PRINT_CAPACITY);
+  // Over the terrain's painted sand and soil layers (transparent, render orders 2 and 3), under ambience sprites (4).
+  private readonly layers = [new PoolMesh(this.prints, "MovePrints", 3.5), new PoolMesh(this.pool, "MoveParticles", 3.6)];
+  readonly meshes = this.layers.map(l => l.mesh);
+  /** The effects layer alone, for a system of its own that never throws prints (the rain's splashes, WeatherGround). */
+  readonly mesh = this.meshes[1];
+  private stamp = -1;
+  /** Step and draw, once per frame: the first caller's `dt` wins (the avatar's slow motion and pauses), the rest are skipped. */
+  tick(stamp: number, dt: number, camera: THREE.Camera, wind: { x: number; z: number }) {
+    if (stamp === this.stamp) return;
+    this.stamp = stamp;
+    camera.getWorldPosition(camPos);
+    camera.getWorldDirection(camDir);
+    for (const l of this.layers) l.step(dt, wind);
+  }
+  clear() { this.pool.clear(); this.prints.clear(); }
+  dispose() { for (const l of this.layers) l.dispose(); }
 }
 
 let windOf: IslandWeather | null = null, wind: WorldWind = worldWind("clear");
@@ -194,12 +218,39 @@ export function useMoveParticles(): MoveParticles {
   }, [scene]);
   useEffect(() => {
     const e = SHARED.get(scene)!;
-    if (e.users++ === 0) scene.add(e.fx.mesh);
-    return () => { if (--e.users === 0) { scene.remove(e.fx.mesh); e.fx.pool.clear(); e.fx.dispose(); } };
+    if (e.users++ === 0) scene.add(...e.fx.meshes);
+    return () => { if (--e.users === 0) { scene.remove(...e.fx.meshes); e.fx.clear(); e.fx.dispose(); } };
   }, [scene]);
   // Steps at real time unless an avatar already stepped it this frame (its slow motion and dev pauses win).
   useFrame((state, delta) => fx.tick(state.clock.elapsedTime, Math.min(delta, 0.1), state.camera, liveWind()));
   return fx;
+}
+
+/** How much of the player's footstep dust a resident's steps throw (no sound: a crowd of them would clatter). */
+export const RESIDENT_STEPS = 0.6;
+/** The ground a resident walks: the drawn surface and the water (for wet sand). */
+export interface StepWorld { surface: (x: number, z: number) => number; wet: (x: number, z: number) => boolean }
+const stepAt = new THREE.Vector3();
+/**
+ * Footstep dust for a character the player doesn't drive (residents, the dev crowd; look spec §7.1: effects draw on
+ * every avatar that moves): each foot contact its Character counts throws the ground's puff, flecks or grains from
+ * that foot, quieter than the player's and silent, a ripple on a rain day, and a print on sand and snow.
+ */
+export function useStepDust(motion: RefObject<CharacterMotion>, anchor: RefObject<THREE.Object3D | null>, world?: StepWorld, amount = RESIDENT_STEPS) {
+  const particles = useMoveParticles();
+  const seen = useRef<number | null>(null);
+  useFrame(() => {
+    const m = motion.current, a = anchor.current;
+    if (!m || !a || m.steps === undefined || m.steps === seen.current) return;
+    const first = seen.current === null;
+    seen.current = m.steps;
+    if (first || m.speed < 0.3 || amount <= 0) return;
+    a.getWorldPosition(stepAt);
+    const side = m.foot === 0 ? 0.1 : -0.1, yaw = m.yaw, px = stepAt.x + Math.cos(yaw) * side + Math.sin(yaw) * 0.05, pz = stepAt.z - Math.sin(yaw) * side + Math.cos(yaw) * 0.05;
+    const g = groundUnder(world?.surface(px, pz), WORLD_SNOW.value, world?.wet ?? (() => false), px, pz);
+    footstep(particles.pool, g, px, stepAt.y, pz, Math.sin(yaw) * m.speed, Math.cos(yaw) * m.speed, liveIslandWeather() === "rain", amount);
+    footprint(particles.prints, g, px, stepAt.y, pz, yaw, amount);
+  });
 }
 
 /** A flat quad showing one frame of a pack sprite (the combat target marker): its UVs pick the cell. */

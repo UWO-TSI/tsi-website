@@ -20,6 +20,7 @@ import { RESIDENT_STRIDE, RESIDENT_WALK, ResidentDay, daySpan, idleAt, navGrid, 
 import { hash01 } from "@/lib/game/worldFx";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import { dropWalker, setWalker } from "@/lib/game/footprintWalkers";
+import { useStepDust } from "./movement/moveFx";
 import type { NPCPersona } from "@/lib/content/types";
 import s from "./residents.module.css";
 
@@ -324,16 +325,18 @@ export default function Residents({ personas, phase, ceremony, player, island, v
   useFrame((_, raw) => tick(registry.current.list, clock.current, Math.min(raw, 0.1), player.current, phase, ceremony, nav, island, monument, away), -3);
 
   return <>{residents.map(({ persona, day, look, gather, plan }) => (
-    <Figure key={persona.id} persona={persona} day={day} look={look} gather={gather} home={plan.home?.door ?? null} seed={plan.seed} registry={registry} />
+    <Figure key={persona.id} persona={persona} day={day} look={look} gather={gather} home={plan.home?.door ?? null} seed={plan.seed} registry={registry} island={island} />
   ))}</>;
 }
 
-function Figure({ persona, day, look, gather, home, seed, registry }: {
+function Figure({ persona, day, look, gather, home, seed, registry, island }: {
   persona: NPCPersona; day: ResidentDay; look: CharacterLook; gather: readonly [number, number]; home: readonly [number, number] | null; seed: number;
-  registry: RefObject<Registry>;
+  registry: RefObject<Registry>; island: VillageIsland;
 }) {
   const group = useRef<THREE.Group>(null), visual = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null });
+  // Their steps kick up the ground's dust (specs/movement-feel.md milestone 2), quieter than yours.
+  useStepDust(motion, group, island);
   const bubble = useRef<HTMLDivElement>(null), text = useRef<HTMLSpanElement>(null), notice = useRef<HTMLDivElement>(null), plate = useRef<HTMLDivElement>(null);
   const runtime = useRef<Runtime | null>(null);
   useEffect(() => {
