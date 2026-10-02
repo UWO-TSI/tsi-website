@@ -812,6 +812,9 @@ All waves merge to `main` behind a `classes_v2` flag that stays off in productio
 | Earth + Wind | Rampart | Terrain | A stone wall that blocks shots; climbable, usable as a jump ramp |
 
 - **Passive, Attunement:** alternating elements builds the ult meter faster. There are no reaction marks; the combos are the reactions.
+- **Movement passive, Air Step (David, 2026-10-02):** in the air, press jump to blast wind beneath you and jump again. It costs mana and keeps your momentum, so it links into dash, slide-jump and glide chains (row 292). How it shares Space with the glider is still open.
+- **Resource:** every Elementalist attack costs mana, shown as Mana (the combat energy pool), so you have to save up.
+- **Mastery focus:** raising max mana and mana regen, the "storage" for bigger rotations. Areas and combo costs improve alongside.
 - **Ultimate, Cataclysm (F, meter):**
   - **Charge:** 5 s, rooted, taking 50% less damage. A pop-up mash shows 3 numbers (1–4) at a time; press the front one fast, and the next slides in. Hits pulse that element into the sky; misses crack it.
   - **Telegraph:** while it charges, black storm clouds gather overhead and the area of effect glows on the terrain, warning the enemies.
@@ -841,6 +844,7 @@ All waves merge to `main` behind a `classes_v2` flag that stays off in productio
 | 4 | Trick Card | Throw a card; press again to teleport to it. Unlocks at mastery 3. |
 | 5 | Vanish | Throw cards into the air and disappear. Getting close to an enemy, or attacking, reveals you. The first hit out of Vanish gets bonus damage. |
 
+- **Momentum (row 292):** Swap and Trick Card keep your speed and direction, so you come out of a clone still sliding and a mid-air Trick Card keeps your arc.
 - **Passive, "Who's Real?":** while clones are alive, 30% of enemy attacks go after a clone instead of you.
 - **Ultimate, The Joker (F, meter):** pull out a Joker card and throw it. It becomes a huge mirror that sweeps across the field. Its path turns inverted colour, every entity in the path is scooped into the glass as a flat 2D image, and then the mirror shatters: flash frame, glass burst, heavy damage.
 - **Mastery:**
@@ -876,3 +880,37 @@ All waves merge to `main` behind a `classes_v2` flag that stays off in productio
   - A purple-green aura of drifting bone dust.
   - A skull-and-tome icon on the nameplate.
   - Shop: tome bindings and soul-fire colours.
+
+## Transmuter (LOCKED, David 2026-10-02)
+- **Family:** Arcane (purple).
+- **Role:** form-shifting bruiser.
+- **MBTI:** mapped at the end.
+- **Weapon:** a monster-tooth charm (a necklace of claws and teeth that glows with each known form). Fists fight bare in human form.
+
+| Key | Skill | Effect |
+|---|---|---|
+| 1 | Fox Form | Shift in with a lunging bite. Fast and light; click = bite combo. |
+| 2 | Crab Form | Shift in with a shell block. Armoured; click = pinch; blocks. |
+| 3 | Golem Form | Shift in with a ground slam. Heavy and slow; click = big punches. |
+| 4 | Wisp Form | Shift in by floating up. Ranged; click = spirit bolts. |
+| 5 | Form Skill | The current form's move. Fox Pounce is movement: it chains off dash, slide and jump and keeps momentum. Crab Shell Spin spins and deflects. Golem throws a boulder. Wisp fires a spirit barrage. |
+
+- **Shifting:**
+  - Quick, about 0.15 s, with the shift-in move as you change.
+  - Costs less mana than other classes' skills.
+  - One short shared form cooldown: 3 s at mastery 1.
+  - Forms carry your momentum (row 292).
+- **Skill when attacked, Perfect Shift:** shift within 0.25 s before a hit lands and the form counters it.
+  - Crab blocks it and pinches back.
+  - Fox slips it (a dodge).
+  - Golem takes it without flinching and counter-slams.
+  - Wisp phases through it.
+  - Picking the right form for the incoming attack is the skill.
+- **Learning forms:** Fox is known from the start. Your first kill of a crab, golem or wisp teaches that form, so there's a reason to hunt.
+- **Passive, Shed Skin:** each shift gives a small barrier.
+- **Ultimate, Chimera (F, meter):** a timed transformation (10 s). Circles flare on the ground and your body warps into a chimera three times your size: fox legs, crab claws, golem body, wisp wings. Stats are hugely buffed, and skills 1–5 have no cooldown, so you spam them freely. It ends in a giant pounce: flash frame.
+- **Mastery focus:** shortening the form cooldown (3 s down to about 0.75 s at 20) and the shift cost, so you change forms faster. Form skills upgrade alongside; cosmetics.
+- **Identity:**
+  - A purple aura with flickering monster silhouettes.
+  - A fang icon on the nameplate.
+  - Shop: charm skins and form-colour variants.
