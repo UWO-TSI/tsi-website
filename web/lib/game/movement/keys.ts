@@ -92,9 +92,9 @@ export const DEFAULT_ABILITY_KEYS: Record<AbilityId, string> = { slot1: "1", slo
 /** The ability slots' presets (row 279): the number row, or Z X C V under the left hand. */
 export const ABILITY_PRESETS = { numbers: ["1", "2", "3", "4"], zxcv: ["z", "x", "c", "v"] } as const;
 export type AbilityPreset = keyof typeof ABILITY_PRESETS;
-/** The tool wheel (specs/game-ui.md): hold to open, tap to swap back to the last item. */
-export type WheelAction = "wheel";
-export const DEFAULT_WHEEL_KEYS: Record<WheelAction, string> = { wheel: "tab" };
+/** The tool wheel (specs/game-ui.md): hold to open, tap to swap back to the last item; and the full HUD, shown while held (row 283). */
+export type WheelAction = "wheel" | "hud";
+export const DEFAULT_WHEEL_KEYS: Record<WheelAction, string> = { wheel: "tab", hud: "h" };
 
 const move = keyStore<MoveAction>("tsi.moveKeys.v1", DEFAULT_MOVE_KEYS, {
   // The arrows turn the camera (specs/camera-orbit.md), so no movement key may take one.

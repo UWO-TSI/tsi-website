@@ -36,3 +36,9 @@
 :global(html[data-contrast="high"]) .chip, :global(html[data-contrast="high"]) .button { background: #ffffff; color: #000000; border: 2px solid #000000; }
 :global(html[data-contrast="high"]) .chip small { color: #000000; }
 @media (prefers-reduced-motion: reduce) { .chip[data-ping], .button[data-sound="off"], .badge { animation: none; } .gain { animation-duration: 0.01s; animation-delay: 1.5s; } .xpBar i { transition: none; } }
+/* The clean HUD (row 283): a change slides in from the top, holds, then fades back up. */
+.cluster[data-clean] [data-flash] { animation: hudIn 0.3s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+.cluster[data-clean] [data-flash="out"] { animation: hudOut 0.32s ease-in forwards; }
+@keyframes hudIn { from { opacity: 0; transform: translateY(-14px) scale(0.96); } }
+@keyframes hudOut { to { opacity: 0; transform: translateY(-10px); } }
+@media (prefers-reduced-motion: reduce) { .cluster[data-clean] [data-flash], .cluster[data-clean] [data-flash="out"] { animation-duration: 0.01s; } }

@@ -42,13 +42,15 @@ describe("movement keys", () => {
     expect(crouchKey(other, false, false)).toBe("c");
   });
   it("holds the tool wheel on Tab (row 279): remappable, and Tab stays the wheel's alone", () => {
-    expect(readWheelKeys()).toEqual({ wheel: "tab" });
+    expect(readWheelKeys()).toEqual({ wheel: "tab", hud: "h" });
     expect(remapMove(DEFAULT_MOVE_KEYS, "sprint", "Tab")).toMatchObject({ ok: false });
-    expect(remapWheel({ wheel: "tab" }, "wheel", "y")).toMatchObject({ ok: true, keys: { wheel: "y" } });
+    expect(remapWheel({ wheel: "tab", hud: "h" }, "wheel", "y")).toMatchObject({ ok: true, keys: { wheel: "y" } });
     expect(readWheelKeys().wheel).toBe("y");
     expect(remapMove(DEFAULT_MOVE_KEYS, "sprint", "y")).toMatchObject({ ok: false }); // the wheel has it now
-    expect(remapWheel({ wheel: "y" }, "wheel", "Tab")).toMatchObject({ ok: true, keys: { wheel: "tab" } });
-    for (const key of ["w", "1", "e", "b"]) expect(remapWheel({ wheel: "tab" }, "wheel", key)).toMatchObject({ ok: false });
+    expect(remapWheel({ wheel: "y", hud: "h" }, "wheel", "Tab")).toMatchObject({ ok: true, keys: { wheel: "tab" } });
+    for (const key of ["w", "1", "e", "b"]) expect(remapWheel({ wheel: "tab", hud: "h" }, "wheel", key)).toMatchObject({ ok: false });
+    // The full HUD's key sits in the same map: taking it swaps the two.
+    expect(remapWheel({ wheel: "tab", hud: "h" }, "hud", "Tab")).toMatchObject({ ok: true, keys: { hud: "tab", wheel: "h" } });
   });
   it("puts the ability slots on Z X C V as a preset, where C isn't the crouch", () => {
     expect(abilityPreset(readAbilityKeys())).toBe("numbers");

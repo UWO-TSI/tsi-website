@@ -100,6 +100,8 @@ import { useWheelKeys } from "@/lib/game/movement/keys";
 import { rodByTier } from "@/lib/game/rods";
 import { eatItem, localCollections, mergeWithLocal } from "@/lib/game/collections";
 import { capture } from "@/lib/game/orbitCamera";
+import { FLASH_MS, fullHud as isFullHud, useAlwaysFullHud } from "@/lib/game/hudPrefs";
+import { useFlash } from "./useFlash";
 
 import { villageNodes } from "@/lib/game/islandNodes";
 import { villageWater, type FishingSpot } from "@/lib/game/fishingSpots";
@@ -515,7 +517,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // Dev (screenshots): `?sheet=path` opens the Oracle path sheet once progression loads.
   const [sheet, setSheet] = useState<Sheet>(() => (devHome.get("sheet") === "path" ? "path" : null));
   const [shopTab, setShopTab] = useState<"outfits" | "furniture" | null>(null);
-  const [mapOpen, setMapOpen] = useState(true);
+  // The clean HUD (row 283): the minimap opens on M.
+  const [mapOpen, setMapOpen] = useState(false);
   const progression = useProgressionWorld();
   const plot = useDefaultIslandPlot(progression.completedGoals);
   const ceremony = useCeremony(progression.ceremonyGoal, progression.forceCeremony);
@@ -549,6 +552,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // Mouse-look (specs/camera-orbit.md): the hint while the mouse is free, the crosshair while it looks in the ruins.
   const captured = useSyncExternalStore(subscribeCapture, readCapture, () => "off" as const);
   const { mouseLook } = useSyncExternalStore(subscribeOrbitPrefs, readOrbitPrefs, () => orbit.prefs);
+  // The clean HUD (row 283): the full one while its key is held, in the pause view, on touch, or always by the setting.
+  const alwaysFullHud = useAlwaysFullHud();
+  const [hudKey, setHudKey] = useState(false);
   const [reveal, setReveal] = useState<{ family: Family; type: string; startedAt: number } | null>(null);
   // Bumped by the Oracle's path sheet after a subclass, loadout or stat change so the encounter re-reads them.
   const [pathTick, setPathTick] = useState(0);
@@ -811,6 +817,19 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     return () => el.removeEventListener("pointerdown", down);
   }, [applyTool]);
   const toolNear = near === "fish" || near === "net" || near === "dig";
+  const full = isFullHud({ always: alwaysFullHud, keyHeld: hudKey, touch, capture: captured });
+  // Hold the HUD key (H) for the full HUD.
+  useEffect(() => {
+    const key = wheelKeys.hud;
+    const down = (e: KeyboardEvent) => { if (e.key.toLowerCase() === key && !e.repeat && !(e.target instanceof HTMLElement && e.target.closest("input, textarea, select"))) setHudKey(true); };
+    const up = (e: KeyboardEvent) => { if (e.key.toLowerCase() === key) setHudKey(false); };
+    const blur = () => setHudKey(false);
+    window.addEventListener("keydown", down); window.addEventListener("keyup", up); window.addEventListener("blur", blur);
+    return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); window.removeEventListener("blur", blur); };
+  }, [wheelKeys.hud]);
+  // In the clean HUD the place name shows as a scene comes in, the objective when it changes.
+  const headingFlash = useFlash(ready ? sceneShown + 1 : 0, FLASH_MS.heading);
+  const objectiveFlash = useFlash(progression.objective.text ?? null, FLASH_MS.objective);
   const needTool = toolNear ? toolNeeded(held, reach) : null;
   // Decorating, the dev panel and the greeting work with the cursor: mouse-look lets go while they are up.
   useEffect(() => { holdCursor("decorate", decor.decorating); holdCursor("greeting", welcoming); holdCursor("options", optionsOpen); }, [decor.decorating, welcoming, optionsOpen]);
@@ -877,12 +896,12 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           </Html>}
         </Suspense>
       </Canvas>
-      <header className={styles.heading} data-fading={fading || !ready}>
+      <header className={styles.heading} data-fading={fading || !ready || (!full && headingFlash === null)} data-clean={full ? undefined : ""}>
         <h1>{site === "ruins" ? "The ruins" : inside === "oracle" ? "Oracle temple" : inside === "museum" ? "Museum" : inside === "cafe" ? "Café" : inside === "hq" ? "Clubhouse" : inside === "house" ? "Your house" : atHome ? "Your island" : "Tethos Island"}</h1>
         <p>{inside === "cafe" ? "Warm drinks and quiet tables. Find a seat to study." : !inside && !atHome && site === "village" && islandEvent ? `${islandEvent.goal.title} is on.` : "A little space to make our own."}</p>
       </header>
       {/* Top right (hud-first-login §1, §2): coins, level, clock and mail, then sound and the view options; panels open below it. */}
-      <TopCluster weather={weather} phase={phase} unread={progression.unreadLetters} mailKey={keyName(identity.settings.key_bindings.openMail)} onMail={() => setSheet("letters")}>
+      <TopCluster full={full} weather={weather} phase={phase} unread={progression.unreadLetters} mailKey={keyName(identity.settings.key_bindings.openMail)} onMail={() => setSheet("letters")}>
         <AudioController phase={ambientPhase} weather={weather} season={season.season} className={hudButton} />
         <button className={hudButton} onClick={() => setSheet(value => (value === "settings" ? null : "settings"))} aria-label="Settings" title="Settings: text, sound, keys, look"><Settings size={18} aria-hidden /></button>
         {/* Development only: camera, time of day, the clearing reset and frame timing (hud-first-login §4). */}
@@ -938,14 +957,14 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {(inside === "cafe" || (!inside && site === "village")) && <StudyHud />}
       <CraftingSheet />
       <CollectionBook open={bagOpen} onClose={() => setBagOpen(false)} />
-      {!bagOpen && <button className={styles.bagButton} onClick={() => setBagOpen(true)} aria-label="Open your collection journal"><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Journal</button>}
+      {!bagOpen && full && <button className={styles.bagButton} onClick={() => setBagOpen(true)} aria-label="Open your collection journal"><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Journal</button>}
       {!inside && !atHome && site !== "ruins" && !holdObjective && <div className={styles.minimap} data-minimap data-new={objectiveNew || undefined}>
         {mapOpen ? <MiniMap playerPosRef={player} plot={objectivePlot} toggleKey={identity.settings.key_bindings.openMap} onClose={() => setMapOpen(false)} />
-          : <button className={styles.mapButton} onClick={() => setMapOpen(true)} aria-label="Show the island map"><MapIcon size={17} aria-hidden /><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</button>}
-        {progression.objective.text && <p className={styles.objective} data-testid="objective"><span aria-hidden="true">◆</span> {progression.objective.text}</p>}
+          : full && <button className={styles.mapButton} onClick={() => setMapOpen(true)} aria-label="Show the island map"><MapIcon size={17} aria-hidden /><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</button>}
+        {progression.objective.text && (full || mapOpen || objectiveNew || objectiveFlash) && <p className={styles.objective} data-testid="objective" data-flash={full ? undefined : objectiveFlash ?? undefined}><span aria-hidden="true">◆</span> {progression.objective.text}</p>}
       </div>}
       <CeremonyConfetti active={ceremony && !inside && !atHome} />
-      {atHome && !decor.decorating && <button className={styles.decorateToggle} onClick={decor.toggle}><kbd>F</kbd> Decorate</button>}
+      {atHome && !decor.decorating && full && <button className={styles.decorateToggle} onClick={decor.toggle}><kbd>F</kbd> Decorate</button>}
       {atHome && decor.decorating && !shopTab && <DecorateSheet indoor={inside === "house"} selected={decor.selected} layout={layout}
         room={inside === "house" ? layout.rooms[roomAt(player.current.x, layout.rooms.length)] ?? null : null}
         onChoose={decor.choose} onRotate={decor.rotateSelected} onPutAway={decor.putAway} onDone={decor.toggle}
@@ -968,7 +987,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <PostersSheet open={sheet === "posters"} onClose={() => setSheet(null)} event={islandEvent} />
       <CafeGoalSheet open={sheet === "cafe"} onClose={() => setSheet(null)} />
       {site === "ruins" && <CombatHud player={player} />}
-      {welcoming ? null : site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>{mouseLook ? "Mouse Look and aim" : "Mouse Aim"}</span><span>Click Attack</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>←</kbd><kbd>→</kbd> Turn</span><span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Slide</span>}<span>{SLOT_IDS.map(s => <kbd key={s}>{keyName(abilityKeys[s])}</kbd>)} Abilities</span><span><kbd>{keyName(wheelKeys.wheel)}</kbd> Weapons</span><span><kbd>{keyName(abilityKeys.swap)}</kbd> Previous weapon</span><span><kbd>E</kbd> Interact</span></div>
+      {welcoming || !full ? null : site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>{mouseLook ? "Mouse Look and aim" : "Mouse Aim"}</span><span>Click Attack</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>←</kbd><kbd>→</kbd> Turn</span><span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Slide</span>}<span>{SLOT_IDS.map(s => <kbd key={s}>{keyName(abilityKeys[s])}</kbd>)} Abilities</span><span><kbd>{keyName(wheelKeys.wheel)}</kbd> Weapons</span><span><kbd>{keyName(abilityKeys.swap)}</kbd> Previous weapon</span><span><kbd>E</kbd> Interact</span></div>
       // Indoors you walk (cafe-polish §4): no run, jump, dash, zoom or map.
       : inside ? <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>E</kbd> Interact</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span></div>
       : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span>{peaceful.glider && <span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air Glide</span>}<span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span><kbd>{keyName(wheelKeys.wheel)}</kbd> Tools</span><span>Click Use</span><span>{mouseLook ? "Mouse or " : ""}<kbd>←</kbd><kbd>→</kbd> Look</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Crouch, at speed slide</span>}</div>}
