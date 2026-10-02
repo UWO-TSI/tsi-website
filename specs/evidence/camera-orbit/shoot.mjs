@@ -2,8 +2,8 @@
 // :3126 with the Supabase env blanked. Each arg is a shot list: name='query|steps', the query appended to the path
 // (default /lab/island), the steps run in order after the island settles:
 //   cam=yaw,pitch[,zoom]  the camera's saved angle (degrees) before the load     wait=ms
-//   click                  click the canvas (captures the mouse)                    look=dx,dy[,n]  mouse moves (n steps)
-//   key=k1+k2:ms           hold keys                                               rdown / rup     right button
+//   click                  click the canvas (captures the mouse; pointer lock needs this window focused, and a focused headed window also takes the keyboard of whoever is at the machine)                    look=dx,dy[,n]  mouse moves (n steps)
+//   key=k1+k2:ms           hold keys (down=k / up=k to hold across steps)                                               rdown / rup     right button
 //   esc                    press Escape                                            shot=name       a PNG of the frame
 //   perf=name              log the Performance readout                             state           log the capture state and angles
 //   eval=js                run in the page                                         nohud           hide the DOM overlays (canvas only)
@@ -37,7 +37,6 @@ for (const run of RUNS) {
   }, [JSON.stringify(LOOK), cam && [rad(cam[0]), rad(cam[1]), cam[2]], px === "1" ? "true" : "false"]);
   await page.goto(`${HOST}${path}?${q.toString().replace(/%2C/g, ",")}`, { waitUntil: "domcontentloaded" });
   await page.waitForSelector("canvas", { timeout: 240000 });
-  await page.bringToFront(); // pointer lock needs the view focused
   await page.waitForFunction(() => !document.querySelector("[role=\"status\"]")?.textContent?.includes("Preparing"), null, { timeout: 240000 }).catch(() => {});
   await page.addStyleTag({ content: "#island-options, [aria-controls='island-options'] { display: none !important; } nextjs-portal { display: none !important; }" }).catch(() => {});
   const box = await page.locator("canvas").first().boundingBox();
@@ -55,6 +54,8 @@ for (const run of RUNS) {
     }
     else if (k === "move") { [mx, my] = v.split(",").map(Number); await page.mouse.move(mx, my); }
     else if (k === "key") { const [keys, ms] = v.split(":"); for (const key of keys.split("+")) await page.keyboard.down(key); await page.waitForTimeout(Number(ms)); for (const key of keys.split("+")) await page.keyboard.up(key); }
+    else if (k === "down") await page.keyboard.down(v);
+    else if (k === "up") await page.keyboard.up(v);
     else if (k === "rdown") await page.mouse.down({ button: "right" });
     else if (k === "rup") await page.mouse.up({ button: "right" });
     else if (k === "esc") await page.keyboard.press("Escape");

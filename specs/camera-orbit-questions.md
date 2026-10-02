@@ -1,0 +1,22 @@
+# Orbit camera: questions for David (row 277)
+
+Each was decided so the build could go on; say the word and it changes.
+
+1. **Tilt band: 20° to 47°.** Today is 34.4° and stays the default. 47° is a little steeper. At 20° the bent sea's rim still frames the island with a band of sky above (evidence 01, 05), so it still reads as the cozy diorama (row 282). The floor can go up to 25° or 28° if 20° feels too much like an adventure camera.
+2. **Mouse sensitivity.** At 100%, 300 px of mouse turns the view 60° (0.2° per pixel). Arrows turn 126° a second and tilt 63° a second. Settings goes from 25% to 250%. ↑ looks up toward the horizon and ↓ looks down (the mouse's way); "Invert up and down" flips both.
+3. **Snap-back is V, a fixed key** (like Z for zoom). Remap refuses V and the arrows for movement. Fixed keys reset an account's whole menu-key settings if one of them is already bound there; V was free in every default, so nobody should hit this. On touch, the snap-back is a double tap with two fingers, because one finger is tap-to-walk.
+4. **Touch turns with two fingers** (the spec). Roblox mobile turns with one finger dragged anywhere outside the joystick. A one-finger drag doesn't conflict with tap-to-walk (a drag is never a tap), so it could be added.
+5. **Ruins aim.** In mouse-look the crosshair aims at the ground drawn at screen centre, so the aim direction is the camera's heading. Because the camera looks at a point just ahead of you, the view looks 2.2 units ahead while the crosshair shows. That keeps it off your head and keeps you above the combat HUD (3 units put you behind it). Abilities placed "at the aim" (totems, traps, blasts) land 2.5 to 4 units ahead, more as you tilt up; with the cursor they could go anywhere. The fixes would be a crosshair above centre, or a combat camera that looks further ahead with a smaller HUD. With the cursor (right-click held, or mouse look off), the aim follows the cursor as before.
+6. **The minimap doesn't release the mouse.** It's open by default and has no clickable content besides its close button, so releasing for it would mean mouse-look never captures while the map shows. M toggles it; hold right click to reach the ×.
+7. **No click-to-walk on desktop.** Holding right click gives you a cursor for the HUD, residents and objects. Left click on the ground still doesn't walk in the member world: desktop walks with WASD (the 2026-07-22 refinement). The applicant island keeps its own click-to-walk.
+8. **The daily gift card releases the mouse** while it shows at load, like any dialog. The hint returns once it's answered.
+9. **Esc** is the browser's release of the pointer lock, so automation can't press it. Please check by hand that the first Esc only frees the mouse. A guard also keeps that Esc from closing sheets or conceding a catch, in case the browser passes it on.
+10. **Sky.** The existing gradient (per phase and weather) already reads as a finished sky above the rim at every tilt, time and weather (evidence 05). A world-anchored dome would also repaint the thin deep-blue band at today's default view, which you approved in the look pass. Say if you want the dome anyway.
+11. **The rim light stays fixed** on the west, the evening sun's side. Turned with the camera it would light against the sun when you look east. The backlit fill now follows the camera (step 7).
+12. **Auto-follow** (row 282) eases in behind you after a second without camera input, at most 0.6 rad/s (34°/s). A held strafe (A or D alone) therefore circles you slowly round instead of spinning the view. Running straight at the camera never swings it round. It's on by default under Settings › Camera › "Follow behind when you run".
+13. **The applicant island** keeps the fixed camera and a normal cursor (evidence 10: no capture, no turn, no zoom; the frame is unchanged).
+
+## Needs art
+- **The chalet's back** (the museum and your home house). ACNH ships it as an interior panel. It now wears the house's own plaster (step 6), but it has none of the front's timber framing, and the thatch's underside shows in the gable. It needs a back wall in the chalet's timber and plaster, or a painted texture for that panel.
+- **The oracle temple's back and sides** are plain grey walls under the roof: closed, but bare next to its columned front.
+- **The clubhouse and shop backs** are plain walls in their own colours: finished, just quiet.
