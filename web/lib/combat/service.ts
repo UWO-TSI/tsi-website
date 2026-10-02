@@ -13,6 +13,7 @@ import { CombatError, type CombatStore } from "./store";
 import { repairCost, WEAPONS } from "./weapons";
 import { CLASS_KITS, memberKit, nextUnlock } from "./classes";
 import { masteryProgress, masteryTitle } from "./mastery";
+import { suggestSubclass } from "@/lib/oracle/subclass";
 import type { CosmeticKind } from "./store";
 
 const ERR: Record<string, [number, string]> = {
@@ -52,6 +53,8 @@ async function classesV2(store: CombatStore, m: string) {
   const on = (await store.setting("classes_v2")) === 1;
   return { on, rows: on ? await store.mastery(m) : [] };
 }
+/** The Oracle's suggestion for this member's reading (§1.11): the type's subclass, the keeper's line, the runner-up when unclear. */
+const suggestion = async (store: CombatStore, m: string) => { const r = await store.oracleReading(m); return r ? suggestSubclass(r.type, r.scores) : null; };
 
 export const getProgression = (store: CombatStore, m: string) =>
   run(async () => {
@@ -80,6 +83,7 @@ export const getProgression = (store: CombatStore, m: string) =>
         kit: kit?.key ?? null, mastery, title: kit ? masteryTitle(kit.name, mastery.mastery) : null, cosmetics: row?.cosmetics ?? {},
         next: kit ? nextUnlock(kit, mastery.mastery) : null, rows: v2.rows, repick: p.repick_source,
         kits: family ? CLASS_KITS.filter((k) => k.family === family && memberKit(k.key)).map((k) => k.key) : [],
+        suggestion: family && p.level >= SUBCLASS_LEVEL ? await suggestion(store, m) : null,
       } : null,
       weapons: owned.map((w) => {
         const def = WEAPONS.find((x) => x.key === w.weapon_key)!;

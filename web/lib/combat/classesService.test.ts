@@ -70,6 +70,14 @@ describe("classes v2 on the server, mirrored by the memory store (20261002181044
     expect(await equipCosmetic(c.store, M, "demo", "weapon_skin", null)).toMatchObject({ ok: true, data: { frame: "mastery:bronze" } });
     expect(await equipCosmetic(c.store, M, "illusionist", "frame", null)).toMatchObject({ ok: false, code: "not_found" });
   });
+  it("suggests the Oracle's subclass for the member's reading, with the runner-up when a deciding letter is unclear", async () => {
+    const c = await member(true);
+    let p = await getProgression(c.store, M);
+    expect(p.ok && p.data.classes?.suggestion).toBeNull(); // no reading on file
+    c.setReading(M, "ENTJ", [{ dichotomy: "EI", clarity: 60 }, { dichotomy: "JP", clarity: 10 }]);
+    p = await getProgression(c.store, M);
+    expect(p.ok && p.data.classes?.suggestion).toMatchObject({ subclass: "necromancer", pair: "illusionist", reason: expect.stringContaining("army") });
+  });
   it("signature weapons: tier 1 with none owned; nothing to grant before a wave seeds the type", () => {
     expect(signatureTier([])).toBe(1);
     expect(signatureTier(["sword-iron", "staff-sigil"])).toBe(1); // today's weapons aren't signature weapons

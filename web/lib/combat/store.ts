@@ -56,6 +56,8 @@ export interface CombatStore {
   startMission(memberId: string, missionKey: string, startKey: string): Promise<{ progress_id: string; resumed: boolean }>;
   saveMission(memberId: string, id: string, state: MissionState, progress: MissionProgress): Promise<boolean>;
   completeMission(memberId: string, id: string): Promise<{ xp_awarded: number; coins_awarded: number; materials_awarded: Record<string, number>; replayed: boolean }>;
+  /** The member's Oracle type and its latest reading's dichotomy clarities (the subclass suggestion), null before a reading. */
+  oracleReading(memberId: string): Promise<{ type: string; scores: { dichotomy: "EI" | "SN" | "TF" | "JP"; clarity: number }[] } | null>;
   /** An economy_settings value (the classes_v2 flag: 1 on), null when unset. */
   setting(key: string): Promise<number | null>;
   /** Classes v2: every subclass's mastery row for a member. */

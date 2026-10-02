@@ -87,6 +87,16 @@ export function supabaseCombatStore(db: SupabaseClient): CombatStore {
       const r = first(await rpc("combat_mission_complete", { p_progress_id: id, p_member_id: m }));
       return { xp_awarded: Number(r.xp_awarded), coins_awarded: Number(r.coins_awarded), materials_awarded: (r.materials_awarded as Record<string, number>) ?? {}, replayed: r.replayed === true };
     },
+    async oracleReading(m) {
+      const [id, at] = await Promise.all([
+        db.from("member_identity").select("mbti_type").eq("member_id", m).maybeSingle(),
+        db.from("oracle_attempts").select("scores").eq("member_id", m).eq("status", "completed").order("completed_at", { ascending: false }).limit(1).maybeSingle(),
+      ]);
+      const type = (id.data as Row | null)?.mbti_type as string | undefined;
+      if (!type) return null;
+      const scores = (((at.data as Row | null)?.scores as { dichotomy: string; clarity: number }[] | null) ?? []).filter(s => typeof s?.clarity === "number");
+      return { type, scores: scores as { dichotomy: "EI" | "SN" | "TF" | "JP"; clarity: number }[] };
+    },
     async setting(k) {
       const { data } = await db.from("economy_settings").select("value").eq("key", k).maybeSingle();
       return data ? Number((data as Row).value) : null;
