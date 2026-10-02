@@ -9,7 +9,7 @@ import { cue, enemyTarget, floater, hurtUnits, moveSpeed, stepUnits } from "./ab
 import { hurtPlayer, regenEnergy, resolvePlayerShot, summonWisps } from "./actions";
 import { SLOT_IDS, type AbilityId, type CombatRuntime } from "./runtime";
 import { beamLands, DODGE, separate, stepEnemy, strikeLands, sweptHit, type Vec } from "./sim";
-import { landLob, mobEvent, mobFx, rally, stepHazards } from "./mobs";
+import { landLob, mobEvent, mobFx, rally, RUNE_BOLT_SPEED, stepHazards } from "./mobs";
 
 const ABILITY_IDS: readonly AbilityId[] = [...SLOT_IDS, "swap"];
 
@@ -68,7 +68,7 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
       if (e.move.shape === "smash") rt.blasts.push({ id: rt.seq++, x: e.aim.x, z: e.aim.z, radius: e.move.range, color: "#ffd9a0", age: 0, life: 0.45 });
     } else if (ev.kind === "spit") {
       // A rune bolt (the wisps, and the guardian's): straight down the line its telegraph drew.
-      const d = Math.hypot(ev.to.x - e.x, ev.to.z - e.z) || 1, sp = 11;
+      const d = Math.hypot(ev.to.x - e.x, ev.to.z - e.z) || 1, sp = RUNE_BOLT_SPEED;
       rt.projectiles.push({ id: rt.seq++, x: e.x, z: e.z, vx: ((ev.to.x - e.x) / d) * sp, vz: ((ev.to.z - e.z) / d) * sp, life: (e.move.range + 2) / sp, from: "enemy", damage: dmg, kind: "rune", radius: 0.3, knock: e.move.knockback });
     } else if (ev.kind === "beam") {
       if (beamLands(e, me)) hurtPlayer(rt, dmg, e, me, e.move.knockback, random);

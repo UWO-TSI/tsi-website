@@ -11,6 +11,8 @@ import type { HazardDef } from "./contract";
 import type { CombatRuntime, MobFxKind, Projectile } from "./runtime";
 import { contactLands, engage, facingTo, invulnerable, PLANS, staggered, type Enemy, type EnemyEvent, type Vec } from "./sim";
 
+/** A rune bolt's speed (u/s): the wisps' and the guardian's summoned wisps'. */
+export const RUNE_BOLT_SPEED = 11;
 /** Effects waiting to be painted, at most (the balance harness never drains them). */
 const FX_MAX = 48;
 export function mobFx(rt: CombatRuntime, kind: MobFxKind, x: number, z: number, rot = 0, size = 1) {
