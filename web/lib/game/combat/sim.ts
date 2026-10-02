@@ -306,9 +306,9 @@ export function stepEnemy(e: Enemy, player: Vec & { safe: boolean; alive: boolea
         if (e.t >= a.active!) { e.state = "recover"; e.t = 0; return null; }
         return { kind: "beam", enemy: e };
       }
-      // Pounce, dart, charge: along its facing at leap / active u/s; a wall stops it short.
+      // Pounce, dart, charge: along its facing at leap / active u/s; a wall, or the edge of its leash, stops it short.
       const step = ((a.leap ?? 0) / a.active!) * dt, nx = e.x + Math.sin(e.facing) * step, nz = e.z + Math.cos(e.facing) * step;
-      const blocked = !free(nx, nz);
+      const blocked = !free(nx, nz) || Math.hypot(nx - e.spawnX, nz - e.spawnZ) > type.leashRadius * 0.95;
       if (!blocked) { e.x = nx; e.z = nz; }
       if (blocked || e.t >= a.active!) { e.state = "recover"; e.t = 0; return a.shape === "dart" ? { kind: "burst", enemy: e } : null; }
       return { kind: "contact", enemy: e };
@@ -393,7 +393,7 @@ export function damageEnemy(e: Enemy, amount: number, from: Vec, knock: number):
   e.flash = 0.18;
   const d = Math.hypot(e.x - from.x, e.z - from.z) || 1, shell = shellFactor(e, from) < 1;
   // A hit on the shell barely budges it and never staggers it; a travelling attack carries on through a push.
-  const k = (e.type.kind === "boss" ? knock * 0.1 : e.type.kind === "construct" ? knock * 0.5 : knock) * (shell ? 0.3 : 1) * (e.state === "active" ? 0 : 1);
+  const k = (e.type.kind === "boss" || e.type.miniboss ? knock * 0.1 : e.type.kind === "construct" ? knock * 0.5 : knock) * (shell ? 0.3 : 1) * (e.state === "active" ? 0 : 1);
   e.kx = ((e.x - from.x) / d) * k; e.kz = ((e.z - from.z) / d) * k;
   e.stun = e.type.kind === "boss" || shell ? 0 : e.type.elite ? STUN * 0.5 : STUN;
   if (e.state === "idle") engage(e);

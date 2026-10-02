@@ -33,7 +33,7 @@ INSERT INTO enemy_types (key, name, kind, zone, level, hp, damage, defense, armo
   ('pollen-sprite', 'Pollen sprite', 'normal', 'outer', 5, 14, 4, 0, 0, 7, 0.6, 21, 6, 'Drifts in clouds of 8 to 15 that circle you. One by one they flash, dart in and burst into pollen that slows you: swat them first.'),
   ('animated-book', 'Animated book', 'normal', 'inner', 10, 120, 13, 0.2, 0, 6, 2, 18, 65, 'Pages flutter open, then it snaps shut on a short charge.'),
   ('stone-golem', 'Stone golem', 'elite', 'inner', 12, 420, 22, 0.45, 2, 6, 2.5, 18, 220, 'Raises both fists, core glows, then slams the ground around it.'),
-  ('elder-thorn-crab', 'Elder thorn crab', 'elite', 'outer', 7, 300, 16, 0.4, 0, 5, 1.8, 15, 160, 'Mini-boss. Shell closed: armoured, slow claw sweeps, hit it from behind. Cracked at 60%: faster, and it charges down a marked lane. Enraged at 25%: claw slams with shockwaves to dodge through.'),
+  ('elder-thorn-crab', 'Elder thorn crab', 'elite', 'outer', 7, 1450, 20, 0.4, 0, 5, 1.8, 24, 450, 'Mini-boss. Shell closed: armoured, slow claw sweeps, hit it from behind. Cracked at 60%: faster, and it charges down a marked lane. Enraged at 25%: claw slams with shockwaves to dodge through.'),
   ('guardian-statue', 'Guardian statue', 'boss', 'boss', 15, 1700, 28, 0.35, 7, 9, 3, 11, 1200, 'Overhead slam on a ring marker, a sigil beam sweep with a stagger after it, two rune wisps below half health, enraged at a fifth.')
 ON CONFLICT (key) DO UPDATE SET name = EXCLUDED.name, kind = EXCLUDED.kind, zone = EXCLUDED.zone, level = EXCLUDED.level, hp = EXCLUDED.hp, damage = EXCLUDED.damage, defense = EXCLUDED.defense, armor = EXCLUDED.armor, aggro_radius = EXCLUDED.aggro_radius, attack_range = EXCLUDED.attack_range, leash_radius = EXCLUDED.leash_radius, xp = EXCLUDED.xp, behaviour = EXCLUDED.behaviour;
 INSERT INTO missions (key, title, template, zone, difficulty, params, rewards, cooldown_hours) VALUES
@@ -49,3 +49,56 @@ INSERT INTO missions (key, title, template, zone, difficulty, params, rewards, c
   ('escort-scholar', 'Scholar to the shrine', 'escort', 'inner', 3, '{"resident":"scholar","checkpoints":4}'::jsonb, '{"xp":750,"coins":150,"materials":{"rock_gold_nugget":1,"rock_crystal":1}}'::jsonb, 20)
 ON CONFLICT (key) DO UPDATE SET title = EXCLUDED.title, template = EXCLUDED.template, zone = EXCLUDED.zone, difficulty = EXCLUDED.difficulty, params = EXCLUDED.params, rewards = EXCLUDED.rewards, cooldown_hours = EXCLUDED.cooldown_hours;
 -- END GENERATED COMBAT SEED
+
+-- ─── The elder thorn crab's spoils (mini-boss) ──────────────────────────────
+-- The route rolls MINIBOSS_DROPS (web/lib/combat/content.ts) and passes the result;
+-- this pays it once per recorded kill of that elite and at most once per 20 hours
+-- per mini-boss (kills are client-reported, ruling 3), and refuses anything off the
+-- table: coins 0-200, materials as combat_give_materials allows, a tier 2-3 weapon.
+-- Test: web/supabase/tests/zone1_mobs_smoke.sql.
+CREATE TABLE IF NOT EXISTS combat_miniboss_rewards (
+  member_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  event_key TEXT NOT NULL,
+  enemy_key TEXT NOT NULL REFERENCES enemy_types(key),
+  reward JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (member_id, event_key)
+);
+CREATE INDEX IF NOT EXISTS idx_combat_miniboss_rewards_recent ON combat_miniboss_rewards (member_id, enemy_key, created_at DESC);
+ALTER TABLE combat_miniboss_rewards ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Mini-boss rewards readable by owner" ON combat_miniboss_rewards;
+CREATE POLICY "Mini-boss rewards readable by owner" ON combat_miniboss_rewards FOR SELECT USING (member_id = (select auth.uid()));
+
+CREATE OR REPLACE FUNCTION public.combat_miniboss_reward(p_member_id UUID, p_enemy_key TEXT, p_event_key TEXT, p_reward JSONB)
+RETURNS TABLE (reward JSONB, replayed BOOLEAN) LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+#variable_conflict use_column
+DECLARE v_prior JSONB; v_coins INTEGER := COALESCE((p_reward->>'coins')::INT, 0); v_weapon TEXT := p_reward->>'weapon';
+BEGIN
+  PERFORM public.combat_ensure(p_member_id);
+  PERFORM 1 FROM member_progression WHERE member_id = p_member_id FOR UPDATE;  -- serialise claims
+  SELECT b.reward INTO v_prior FROM combat_miniboss_rewards b WHERE b.member_id = p_member_id AND b.event_key = p_event_key;
+  IF FOUND THEN RETURN QUERY SELECT v_prior, TRUE; RETURN; END IF;
+  IF NOT EXISTS (SELECT 1 FROM combat_kills k JOIN enemy_types e ON e.key = k.enemy_key
+                  WHERE k.member_id = p_member_id AND k.event_key = p_event_key AND k.enemy_key = p_enemy_key AND e.kind = 'elite') THEN
+    RAISE EXCEPTION 'not_found';
+  END IF;
+  IF EXISTS (SELECT 1 FROM combat_miniboss_rewards b WHERE b.member_id = p_member_id AND b.enemy_key = p_enemy_key
+              AND b.created_at > NOW() - make_interval(hours => 20)) THEN
+    RAISE EXCEPTION 'miniboss_cooldown';
+  END IF;
+  IF v_coins < 0 OR v_coins > 200 OR (v_weapon IS NOT NULL AND NOT EXISTS (SELECT 1 FROM weapons w WHERE w.key = v_weapon AND w.tier BETWEEN 2 AND 3)) THEN
+    RAISE EXCEPTION 'bad_reward';
+  END IF;
+  INSERT INTO combat_miniboss_rewards (member_id, event_key, enemy_key, reward) VALUES (p_member_id, p_event_key, p_enemy_key, p_reward);
+  IF v_coins > 0 THEN PERFORM public.wallet_apply(p_member_id, 'coins', v_coins, 'mission', p_enemy_key, 'miniboss:' || p_event_key); END IF;
+  PERFORM public.combat_give_materials(p_member_id, p_reward->'materials');
+  IF v_weapon IS NOT NULL THEN
+    INSERT INTO member_weapons (member_id, weapon_key, durability)
+    SELECT p_member_id, w.key, w.max_durability FROM weapons w WHERE w.key = v_weapon
+    ON CONFLICT DO NOTHING;
+  END IF;
+  RETURN QUERY SELECT p_reward, FALSE;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.combat_miniboss_reward(uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.combat_miniboss_reward(uuid, text, text, jsonb) TO service_role;

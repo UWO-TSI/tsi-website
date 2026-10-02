@@ -285,6 +285,12 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .bossBar small { font-size: 11px; color: #4f625b; }
 .bossBar span { height: 10px; border-radius: 5px; background: #e0e6d8; box-shadow: inset 0 1px 2px #29464126; overflow: hidden; }
 .bossBar i { display: block; height: 100%; background: linear-gradient(90deg, #8a6cff, #b9a3f2); transition: width 0.15s; }
+/* A mini-boss (the elder thorn crab): amber like the elites' bars, its title beside its name, a tick where each phase turns. */
+.bossBar[data-mini] { border-color: #c98f2a66; animation: bannerIn 0.3s ease-out; }
+.bossBar[data-mini] em { font-style: normal; font-weight: 500; color: #8a5a12; }
+.bossBar[data-mini] span { position: relative; }
+.bossBar[data-mini] i { background: linear-gradient(90deg, #d9862f, #e8bd5c); }
+.bossBar u { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #29464166; z-index: 1; }
 .defeat, .banner { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%); display: grid; gap: 4px; margin: 0; padding: 14px 22px; border: 1px solid #5c746c40; border-radius: 14px; background: #f8f7e9f5; color: #293e3b; text-align: center; box-shadow: 0 6px 0 #47625218, 0 16px 40px #29464130; font-size: 15px; z-index: 30; }
 .defeat { border-left: 5px solid #c0463c; }
 .banner b { font-size: 17px; }
@@ -293,6 +299,9 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .banner[data-kind="victory"] b { color: #8a5a12; }
 .banner[data-kind="trait"] { border: 2px solid #9f86e0; animation: bannerIn 0.35s ease-out; }
 .banner[data-kind="trait"] b { color: #5b3fa8; }
+/* A mini-boss joins the fight: its name card, higher up so the fight underneath stays clear. */
+.banner[data-kind="foe"] { top: 24%; padding: 10px 26px; border: 2px solid #d9a13a; animation: bannerIn 0.35s ease-out; }
+.banner[data-kind="foe"] b { font-size: 20px; color: #8a5a12; letter-spacing: 0.02em; }
 @keyframes bannerIn { from { opacity: 0; transform: translate(-50%, -40%) scale(0.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 @media (prefers-reduced-motion: reduce) { .banner { animation: none !important; } }
 .hurt { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 0 #e8505b00; transition: box-shadow 0.25s; z-index: 11; }

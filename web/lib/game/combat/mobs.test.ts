@@ -7,6 +7,7 @@ import { createRuntime, type CombatRuntime } from "./runtime";
 import { ELDER, angleDiff, contactLands, damageEnemy, nextMove, spawnEnemy, stepEnemy, strikeLands, type Enemy } from "./sim";
 import { packAt, SPAWN_TABLE } from "./spawns";
 import { glow, lobMarker, marker, partPose } from "./telegraph";
+import { bossMinutes } from "./balance";
 
 const DT = 1 / 60, ME = { x: 0, z: 0 };
 const lcg = (seed: number) => () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
@@ -228,9 +229,27 @@ describe("elder thorn crab (mini-boss): shell phases and claw sweeps", () => {
   const ELDER_T = ENEMIES["elder-thorn-crab"];
   const elder = () => ({ ...spawnEnemy("e", ELDER_T, 0, 0), state: "chase" as const, facing: 0 });
   const shapes = (e: Enemy, n: number) => Array.from({ length: n }, () => nextMove(e).shape);
-  it("is a mini-boss with its own bar and title", () => {
+  it("is a mini-boss with its own bar and title, heavy to push around", () => {
     expect(ELDER_T.miniboss?.title).toBeTruthy();
     expect(ELDER_T.elite).toBe(true);
+    const e = elder();
+    damageEnemy(e, 1, { x: 0, z: -1 }, 4);
+    expect(Math.hypot(e.kx, e.kz)).toBeLessThan(0.5);
+  });
+  it("takes about 1.5–2.5 minutes with a starter weapon and less with tier 2+ (landing on its flank half the time)", () => {
+    for (const w of ["sword-driftwood", "wraps-cloth", "bow-willow", "staff-oak"]) {
+      expect(bossMinutes(w, "elder-thorn-crab"), w).toBeGreaterThanOrEqual(1.5);
+      expect(bossMinutes(w, "elder-thorn-crab"), w).toBeLessThanOrEqual(2.5);
+    }
+    for (const w of ["sword-iron", "revolver-brass", "staff-rune"]) expect(bossMinutes(w, "elder-thorn-crab"), w).toBeLessThan(1.6);
+  });
+  it("stops a charge at the edge of its leash instead of running home to heal", () => {
+    const c = { ...spawnEnemy("c", ELDER_T, 0, 0), state: "chase" as const, phase: 2 as const, move: ELDER_T.attacks.find(m => m.shape === "charge")! };
+    c.x = 0; c.z = ELDER_T.leashRadius - 3;
+    const rt = arena(); rt.enemies = [c];
+    play(rt, 2, { x: 0, z: ELDER_T.leashRadius + 2 });
+    expect(Math.hypot(c.x - c.spawnX, c.z - c.spawnZ)).toBeLessThanOrEqual(ELDER_T.leashRadius);
+    expect(c.state).not.toBe("return");
   });
   it("shell closed above 60%: sweeps only, its front all but closed to you", () => {
     const e = elder();

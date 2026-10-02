@@ -6,7 +6,7 @@ import { DomainError } from "@/lib/result";
 
 export type CombatErrorCode =
   | "unavailable" | "insufficient" | "not_found" | "not_owned" | "needs_reset" | "not_enough_points" | "level_too_low" | "wrong_family"
-  | "no_family" | "cooldown" | "not_ready" | "kill_xp_cap" | "unknown_enemy" | "unknown_mission" | "bad_hits" | "boss_cooldown" | "gate_closed" | "bad_loadout" | "no_subclass" | "failed";
+  | "no_family" | "cooldown" | "not_ready" | "kill_xp_cap" | "unknown_enemy" | "unknown_mission" | "bad_hits" | "boss_cooldown" | "miniboss_cooldown" | "gate_closed" | "bad_loadout" | "no_subclass" | "failed";
 export class CombatError extends DomainError<CombatErrorCode> {}
 
 export interface ProgressionRow {
@@ -53,4 +53,6 @@ export interface CombatStore {
   completeMission(memberId: string, id: string): Promise<{ xp_awarded: number; coins_awarded: number; materials_awarded: Record<string, number>; replayed: boolean }>;
   /** Pay a rolled boss reward once per recorded boss kill, at most once per cooldown; a replay returns the first reward. */
   bossReward(memberId: string, eventKey: string, reward: BossReward): Promise<{ reward: BossReward; replayed: boolean }>;
+  /** The same for a mini-boss (content.ts MINIBOSS_DROPS): once per recorded kill of that enemy, at most once per cooldown each. */
+  minibossReward(memberId: string, enemyKey: string, eventKey: string, reward: BossReward): Promise<{ reward: BossReward; replayed: boolean }>;
 }

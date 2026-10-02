@@ -9,7 +9,7 @@ import { hurtPlayer } from "./actions";
 import { ENEMIES } from "./data";
 import type { HazardDef } from "./contract";
 import type { CombatRuntime, MobFxKind, Projectile } from "./runtime";
-import { contactLands, engage, facingTo, invulnerable, PLANS, type Enemy, type EnemyEvent, type Vec } from "./sim";
+import { contactLands, engage, facingTo, invulnerable, PLANS, staggered, type Enemy, type EnemyEvent, type Vec } from "./sim";
 
 /** Effects waiting to be painted, at most (the balance harness never drains them). */
 const FX_MAX = 48;
@@ -150,4 +150,17 @@ export function shellNote(rt: CombatRuntime, e: Enemy, from: Vec) {
   const a = facingTo(e, from);
   mobFx(rt, "glance", e.x + Math.sin(a) * e.type.radius, e.z + Math.cos(a) * e.type.radius, a);
   if (!rt.floaters.some(f => f.text === SHELL_NOTE)) floater(rt, e, 2 + e.type.hover, SHELL_NOTE, "info");
+}
+
+/** The fight that gets the bar at the top: a mini-boss in the fight (the elder crab), or the guardian once engaged. */
+export function bigFoe(rt: Pick<CombatRuntime, "enemies" | "bossEngaged">): Enemy | undefined {
+  return rt.enemies.find(e => e.type.miniboss && ENGAGED.has(e.state)) ?? (rt.bossEngaged ? rt.enemies.find(e => e.type.kind === "boss") : undefined);
+}
+/** The health fractions where its phases turn, for ticks on a mini-boss's bar. */
+export const phaseMarks = (e: Enemy): readonly number[] => (e.type.miniboss ? PLANS[e.type.id]?.at ?? [] : []);
+/** The line under the bar: what to do now. */
+export function foeHint(e: Enemy): string {
+  if (e.type.kind === "boss") return staggered(e) ? "Staggered: strike now" : e.phase === 3 ? "Enraged" : e.phase === 2 ? "Calling rune wisps" : "Watch the ring and the beam";
+  if (staggered(e)) return "Stunned after its charge: strike now";
+  return e.phase === 3 ? "Enraged: dodge through the shockwaves" : e.phase === 2 ? "Shell cracked: watch the lane, it charges" : "Shell closed: strike its back";
 }

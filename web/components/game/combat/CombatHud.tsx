@@ -11,7 +11,7 @@ import { keyName, useAbilityKeys, useMoveKeys } from "@/lib/game/movement/keys";
 import { WEAPONS } from "@/lib/game/combat/data";
 import { CAST, cancelCast, FLOATERS, resolveCast } from "@/lib/game/combat/abilities";
 import { CAPS } from "@/lib/combat/kits";
-import { staggered } from "@/lib/game/combat/sim";
+import { bigFoe, foeHint, phaseMarks } from "@/lib/game/combat/mobs";
 import type { IncantationScore } from "@/lib/game/combat/contract";
 import { floaterNodes, noteNodes } from "./EncounterRender";
 import IncantationOverlay from "./IncantationOverlay";
@@ -21,7 +21,7 @@ export default function CombatHud({ player }: { player: React.RefObject<{ x: num
   useCombatVersion();
   const rt = combat.rt, p = rt.player, w = WEAPONS[p.weapon];
   const keys = useAbilityKeys(), dash = useMoveKeys().dash;
-  const boss = rt.enemies.find(e => e.type.kind === "boss");
+  const boss = bigFoe(rt); // the guardian, or a mini-boss in the fight (the elder crab)
   const onDone = (score: IncantationScore) => { const at = player.current; resolveCast(combat.rt, { x: at.x, z: at.z }, score); publishCombat(); };
   const onCancel = () => { cancelCast(combat.rt); publishCombat(); };
   const kit = rt.kit, minions = rt.units.filter(u => u.def.kind === "minion" && u.source !== "weapon"), totems = rt.units.filter(u => u.def.kind === "totem");
@@ -64,9 +64,10 @@ export default function CombatHud({ player }: { player: React.RefObject<{ x: num
       <b>{rt.mission.def.title}</b><span>{rt.mission.status === "complete" ? "Complete" : rt.mission.status === "failed" ? "Failed" : ""} {rt.mission.note}</span>
       {rt.escort && <small>{(rt.mission.def.params.escortee ?? "escort").replace(/^./, c => c.toUpperCase())} {Math.max(0, Math.ceil(rt.escort.hp))} / 60</small>}
     </aside>}
-    {boss && rt.bossEngaged && <div className={styles.bossBar} role="meter" aria-label={boss.type.name} aria-valuenow={boss.hp} aria-valuemax={boss.type.hp}>
-      <b>{boss.type.name} · Lv {boss.type.level}</b><span><i style={{ width: `${(boss.hp / boss.type.hp) * 100}%` }} /></span>
-      <small>{staggered(boss) ? "Staggered: strike now" : boss.phase === 3 ? "Enraged" : boss.phase === 2 ? "Calling rune wisps" : "Watch the ring and the beam"}</small>
+    {boss && <div className={styles.bossBar} data-mini={boss.type.miniboss ? true : undefined} role="meter" aria-label={boss.type.name} aria-valuenow={boss.hp} aria-valuemax={boss.type.hp}>
+      <b>{boss.type.name} · Lv {boss.type.level}{boss.type.miniboss && <em> · {boss.type.miniboss.title}</em>}</b>
+      <span>{phaseMarks(boss).map(f => <u key={f} style={{ left: `${f * 100}%` }} />)}<i style={{ width: `${(boss.hp / boss.type.hp) * 100}%` }} /></span>
+      <small>{foeHint(boss)}</small>
     </div>}
     {!p.alive && <p className={styles.defeat} role="alert">You&apos;re down. Waking at the gate…</p>}
     {p.alive && rt.banner && <p className={styles.banner} data-kind={rt.banner.kind} role="status"><b>{rt.banner.title}</b><span>{rt.banner.text}</span></p>}

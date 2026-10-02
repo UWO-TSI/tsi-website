@@ -21,7 +21,7 @@ import { stepCombat } from "./encounter";
 import { createRuntime, type CombatRuntime } from "./runtime";
 import { shellFactor, strikeLands, type Enemy, type Vec } from "./sim";
 import { MOVE_TUNING } from "@/lib/game/movement/sim";
-import { WAVES } from "./spawns";
+import { WAVES, type SpawnPoint } from "./spawns";
 
 const FALLBACK: Record<string, string> = { Arcane: "staff-oak", Ranger: "bow-willow", Vanguard: "sword-driftwood", Warden: "tome-spirits" };
 /** What a sensible member carries: the first starter the kit suggests that scales with the family's stat (row 31), else the family's own. */
@@ -70,12 +70,19 @@ function useful(rt: CombatRuntime, a: Ability, me: Vec, target: Enemy | null, th
 
 /** One solo run of a survive mission's waves (the mission's own spawns and circle). */
 export function runSurvive(subclassKey: string, missionId: "survive-circle" | "survive-sanctum", seed: number, limit = 240): RunResult {
+  return runFight(subclassKey, SURVIVE_CIRCLES[missionId], WAVES[missionId], seed, limit);
+}
+/** Zone 1's mini-boss alone: the elder thorn crab 5 u away, until it falls (or the limit). */
+export const runElder = (subclassKey: string, seed: number, limit = 400) =>
+  runFight(subclassKey, { x: 0, z: 0 }, [[{ id: "elder", type: "elder-thorn-crab", x: 0, z: 5 }]], seed, limit);
+
+/** One solo fight through `waves` in turn, from `center`: the bot below against the real encounter tick. */
+export function runFight(subclassKey: string, center: Vec, waves: SpawnPoint[][], seed: number, limit = 240): RunResult {
   const s = subclassByKey(subclassKey)!, random = lcg(seed), rt = createRuntime(), p = rt.player;
   p.stats = presetAllocation(s.family, 10); p.level = 10; p.safe = false;
   p.maxHp = p.hp = derived(p.stats, 10, s.mods).max_hp;
   p.weapon = starterWeapon(s);
   equipKit(rt, s);
-  const center = SURVIVE_CIRCLES[missionId], waves = WAVES[missionId];
   let me: Vec = { x: center.x, z: center.z }, wave = 0, castLeft = 0, strafe = 1, t = 0, dealt = 0, taken = 0, minHp = p.hp;
   const judged = new Set<string>();
   spawnWave(rt, waves[0]);
@@ -151,10 +158,11 @@ export function balanceTable(missionId: "survive-circle" | "survive-sanctum", se
 }
 /**
  * Minutes to bring the guardian down with one weapon at level 10, all 27 points in its stat, landing half the time,
- * one hit in ten a crit (the content pass's measure; boss.test.ts holds it to 4–6 minutes for the starters).
+ * one hit in ten a crit (the content pass's measure; boss.test.ts holds it to 4–6 minutes for the starters). The same
+ * measure for the elder thorn crab (`enemy`) counts every landed hit at full: you're hitting its flank or back.
  */
-export function bossMinutes(weaponKey: string): number {
-  const w = SYSTEM_WEAPONS.find(x => x.key === weaponKey)!, stats = { ...ZERO_STATS, [w.scaling[0]]: 27 }, boss = ENEMIES["guardian-statue"];
+export function bossMinutes(weaponKey: string, enemy = "guardian-statue"): number {
+  const w = SYSTEM_WEAPONS.find(x => x.key === weaponKey)!, stats = { ...ZERO_STATS, [w.scaling[0]]: 27 }, boss = ENEMIES[enemy];
   const hit = (crit: boolean) => damage({ weapon: w, durability: 99, stats, level: 10, enemyDefense: boss.defense, enemyArmor: boss.armor, crit });
   return boss.hp / ((0.9 * hit(false) + 0.1 * hit(true)) / WEAPONS[weaponKey].cooldown) / 0.5 / 60;
 }

@@ -494,7 +494,7 @@ export function FloaterProjector() {
 }
 
 /**
- * Small health bars over damaged ordinary enemies and elites (the guardian has its own at the top): billboards above
+ * Small health bars over damaged ordinary enemies and elites (the guardian and the mini-boss have their own at the top): billboards above
  * each model (its height from EnemyInstances), coral for ordinary enemies, amber for elites.
  */
 export const BAR_TOP: Record<string, number> = {};
@@ -509,7 +509,7 @@ export function EnemyBars({ ground, max = 24 }: { ground: Ground; max?: number }
     right.set(1, 0, 0).applyQuaternion(camera.quaternion);
     let n = 0;
     for (const e of combat.rt.enemies) {
-      if (n >= max || e.type.kind === "boss" || e.state === "dead" || e.state === "return" || e.hp >= e.type.hp) continue;
+      if (n >= max || e.type.kind === "boss" || e.type.miniboss || e.state === "dead" || e.state === "return" || e.hp >= e.type.hp) continue;
       const w = e.type.elite ? BAR.elite : BAR.width, k = e.hp / e.type.hp, y = ground(e.x, e.z) + e.type.hover + (BAR_TOP[e.type.id] ?? 1) + 0.25;
       tmpP.set(e.x, y, e.z).addScaledVector(right, -w / 2);
       b.setMatrixAt(n, tmpM.compose(tmpP, camera.quaternion, tmpS.set(w, BAR.height, 1)));

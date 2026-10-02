@@ -1,6 +1,6 @@
 /** In-memory CombatStore mirroring 20260926150800_combat.sql, 190000_combat_content and 210000_combat_kits (tests, dev harness). */
 import type { Family } from "@/lib/oracle/engine";
-import { BOSS_DROPS, ENEMIES, MISSIONS, type BossReward } from "./content";
+import { BOSS_DROPS, ENEMIES, MINIBOSS_DROPS, MISSIONS, type BossReward } from "./content";
 import { initialProgress, type MissionProgress, type MissionState } from "./missions";
 import { KILL_XP_PER_HOUR_CAP, levelForXp, pointsEarned, pointsSpent, STATS, ZERO_STATS, STAT_RESET_FEE, SUBCLASS_RESPEC_FEE, type StatBlock } from "./progression";
 import { CombatError, type CombatStore, type OwnedWeapon, type ProgressRow } from "./store";
@@ -23,6 +23,7 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
   const subclassKeys = new Map<string, { subclass: string; fee: number }>(); // as combat_respec_log: a replay answers with the first result
   const materials = new Map<string, number>(); // `${m}:${item}` → count (member_collections)
   const bossRewards = new Map<string, { reward: BossReward; at: number }>(); // `${m}:${event}`
+  const minibossRewards = new Map<string, { enemy: string; reward: BossReward; at: number }>(); // `${m}:${event}`
   const give = (m: string, items: Record<string, number>) => { for (const [k, n] of Object.entries(items)) materials.set(`${m}:${k}`, (materials.get(`${m}:${k}`) ?? 0) + n); };
   let seq = 0;
   const pay = (m: string, amount: number, key: string) => {
@@ -175,6 +176,19 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
       if (last && clock().getTime() - last < BOSS_DROPS.cooldown_hours * 3_600_000) throw new CombatError("boss_cooldown");
       bossRewards.set(`${m}:${ev}`, { reward, at: clock().getTime() });
       pay(m, reward.coins, `boss:${ev}`);
+      give(m, reward.materials);
+      const list = weapons.get(m)!;
+      if (reward.weapon && !list.some((w) => w.weapon_key === reward.weapon)) list.push({ weapon_key: reward.weapon, durability: WEAPONS.find((w) => w.key === reward.weapon)!.max_durability, equipped: false });
+      return { reward, replayed: false };
+    },
+    async minibossReward(m, enemy, ev, reward) {
+      const done = minibossRewards.get(`${m}:${ev}`);
+      if (done) return { reward: done.reward, replayed: true };
+      if (!kills.has(`${m}:${ev}`) || killEnemy.get(`${m}:${ev}`) !== enemy || ENEMIES.find((e) => e.key === enemy)?.kind !== "elite") throw new CombatError("not_found");
+      const last = Math.max(0, ...[...minibossRewards.entries()].filter(([k, v]) => k.startsWith(`${m}:`) && v.enemy === enemy).map(([, v]) => v.at));
+      if (last && clock().getTime() - last < (MINIBOSS_DROPS[enemy]?.cooldown_hours ?? 20) * 3_600_000) throw new CombatError("miniboss_cooldown");
+      minibossRewards.set(`${m}:${ev}`, { enemy, reward, at: clock().getTime() });
+      pay(m, reward.coins, `miniboss:${ev}`);
       give(m, reward.materials);
       const list = weapons.get(m)!;
       if (reward.weapon && !list.some((w) => w.weapon_key === reward.weapon)) list.push({ weapon_key: reward.weapon, durability: WEAPONS.find((w) => w.key === reward.weapon)!.max_durability, equipped: false });
