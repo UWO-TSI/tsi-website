@@ -22,6 +22,12 @@ import { createRuntime, type CombatRuntime } from "./runtime";
 import { shellFactor, strikeLands, type Enemy, type Vec } from "./sim";
 import { MOVE_TUNING } from "@/lib/game/movement/sim";
 import { WAVES, type SpawnPoint } from "./spawns";
+import { classKit, type ClassAbility } from "@/lib/combat/classes";
+import { signatureGrant } from "@/lib/combat/weapons";
+import { classKey, equipClassKit, pressUlt, stepClass } from "./classRuntime";
+import { shapePotency } from "./abilities";
+import { BOSS_CENTER } from "@/lib/game/ruins";
+import { ULT } from "@/lib/combat/ult";
 
 const FALLBACK: Record<string, string> = { Arcane: "staff-oak", Ranger: "bow-willow", Vanguard: "sword-driftwood", Warden: "tome-spirits" };
 /** What a sensible member carries: the first starter the kit suggests that scales with the family's stat (row 31), else the family's own. */
@@ -111,7 +117,7 @@ export function runFight(subclassKey: string, center: Vec, waves: SpawnPoint[][]
         if (!a || rt.cooldowns[`slot${i + 1}` as "slot1"] > 0 || p.energy < a.energy || !useful(rt, a, me, target, !!threat)) continue;
         const totem = a.effects.some(e => e.kind === "summon" && (UNITS[e.unit]?.kind === "totem"));
         if (totem && target) p.aim = { x: me.x + (target.x - me.x) * 0.3, z: me.z + (target.z - me.z) * 0.3 };
-        if (fireSlot(rt, i, me, random)) { const c = rt.casting as CombatRuntime["casting"]; if (c) castLeft = RUNE_TIME[c.rune]; break; }
+        if (fireSlot(rt, i, me, random)) { const c = rt.casting as CombatRuntime["casting"]; if (c) castLeft = RUNE_TIME[c.rune as keyof typeof RUNE_TIME] ?? RUNE_TIME.spark; break; }
       }
       if (target && !rt.casting && d2(target, me) <= WEAPONS[p.weapon].range + target.type.radius) attack(rt, me, random);
     }
@@ -183,4 +189,129 @@ export function familyAverages(rows: BalanceRow[]) {
     const r = rows.filter(x => x.family === f), avg = (k: keyof BalanceRow) => r.reduce((n, x) => n + (x[k] as number), 0) / r.length;
     return { family: f, clearRate: avg("clearRate"), medianClear: avg("medianClear"), dps: avg("dps"), takenPerMin: avg("takenPerMin"), minHp: avg("minHp") };
   });
+}
+
+// ── Classes v2 (design sheet §3 "How the harness changes") ──────────────────
+/**
+ * The bot on a v2 kit: it holds the tier-1 signature weapon, plays at a mastery (1: the starters; 20: everything,
+ * ranks and the stat direction), meets movement riders on 30% of its casts (a typical player's share of slide, dash
+ * and air casts), presses keys through the input layer as a player would (taps, double taps for combos, holds held
+ * 1 s, charges held to full, toggles on when nothing's out, shapes drawn at about 80%), and fires the ult at a full
+ * meter when two or more enemies are inside its area, or at the boss. Same tick, seeds and limits as today's runs.
+ */
+
+export interface RunV2 extends RunResult { ultDealt: number; fills: number[]; ults: number }
+/** The weapon a member holds for this kit: its tier-1 signature weapon (the dev kit: today's weapon of its type). */
+export function signatureWeapon(kitKey: string): string {
+  const kit = classKit(kitKey)!, sig = signatureGrant(kitKey, 1);
+  return sig?.key ?? SYSTEM_WEAPONS.find(w => w.type === kit.signature.type && STARTER_WEAPONS.includes(w.key))?.key ?? SYSTEM_WEAPONS.find(w => w.type === kit.signature.type)!.key;
+}
+const ULT_REACH = (a: ClassAbility) => Math.max(...a.effects.map(e => (e.kind === "area" ? e.radius : e.kind === "projectile" ? 1.5 : 0)), 2);
+
+/** One v2 run: a survive mission's waves, or the guardian (`"boss"`: the scripted fight, bot rules plus the stagger window). */
+export function runV2(kitKey: string, missionId: "survive-circle" | "survive-sanctum" | "boss", seed: number, mastery = 1, limit = 240): RunV2 {
+  const kit = classKit(kitKey)!, random = lcg(seed), rt = createRuntime(), p = rt.player;
+  p.stats = presetAllocation(kit.family, 10); p.level = 10; p.safe = false;
+  p.weapon = signatureWeapon(kitKey);
+  equipClassKit(rt, kit, mastery);
+  p.hp = p.maxHp; p.energy = 100;
+  const v = rt.v2!, boss = missionId === "boss";
+  const center = boss ? { x: BOSS_CENTER.x, z: BOSS_CENTER.z - 6 } : SURVIVE_CIRCLES[missionId], waves = boss ? [[{ id: "boss", type: "guardian-statue", x: 0, z: 25.5 }]] : WAVES[missionId];
+  let me: Vec = { x: center.x, z: center.z }, wave = 0, strafe = 1, t = 0, taken = 0, minHp = p.hp, fillFrom = 0, ults = 0, drawLeft = 0;
+  const fills: number[] = [], judged = new Set<string>(), held: { slot: number; at: number }[] = [];
+  spawnWave(rt, waves[0]);
+  const dt = 1 / 30;
+  const done = (cleared: boolean, died = false): RunV2 => ({ cleared, seconds: t, dealt: rt.tally.dealt, taken, minHp: died ? 0 : minHp / p.maxHp, died, ultDealt: rt.tally.ult, fills, ults });
+  for (; t < limit; t += dt) {
+    const alive = rt.enemies.filter(e => e.state !== "dead");
+    if (!alive.length) { if (++wave >= waves.length) return done(true); spawnWave(rt, waves[wave]); }
+    const target = alive.filter(e => e.type.kind === "boss")[0] ?? alive.sort((a, b) => d2(a, me) - d2(b, me))[0] ?? null;
+    const hpBefore = p.hp;
+    if (target) { p.aim = { x: target.x, z: target.z }; p.facing = Math.atan2(target.x - me.x, target.z - me.z); }
+    const threat = rt.enemies.find(e => e.state === "windup" && e.t > e.move.windup * 0.5 && strikeLands(e, me, 0.6)) ?? null;
+    if (threat && !judged.has(`${threat.id}:${threat.cycle}:${Math.floor(t / 2)}`)) {
+      judged.add(`${threat.id}:${threat.cycle}:${Math.floor(t / 2)}`);
+      if (random() < DODGE_SKILL && p.dodgeCd <= 0) { const a = Math.atan2(me.x - threat.x, me.z - threat.z) + strafe * 1.2; startDodge(rt, { x: Math.sin(a), z: Math.cos(a) }); }
+    }
+    // Riders: 30% of the time the bot is sliding, in the air, just off a dash and fast.
+    const rider = random() < 0.3;
+    p.move = rider ? { mode: random() < 0.5 ? "slide" : "air", speed: 16, sinceDash: 0.1, vx: 0, vz: 16 } : { mode: "ground", speed: 7.4, sinceDash: 9, vx: 0, vz: 7.4 };
+    if (rt.casting && (drawLeft -= dt) <= 0) {
+      const acc = random() < 0.1 ? 40 : random() < 0.2 ? 96 : 80;
+      resolveCast(rt, me, { accuracy: acc, coverage: 1, deviation: 0, order: 1, scribble: false, outcome: acc < 50 ? "fail" : acc >= 95 ? "enhanced" : "normal", power: shapePotency(acc) }, random);
+    }
+    for (let i = held.length - 1; i >= 0; i--) if (t >= held[i].at) { classKey(rt, held[i].slot, false); held.splice(i, 1); }
+    const staggered = target?.type.kind === "boss" && target.state === "recover" && !!target.move.stagger;
+    // The ult: full, with two or more enemies inside its area (or the boss).
+    if (v.meter >= ULT.max && target && (target.type.kind === "boss" || alive.filter(e => d2(e, target) <= ULT_REACH(v.ult)).length >= 2)) pressUlt(rt);
+    else if (!rt.casting && !p.dash && p.dodgeAge === null && v.queue.length === 0 && !held.length) {
+      for (let i = 0; i < v.keys.length; i++) {
+        const a = v.keys[i];
+        if (!a || (v.cd[a.key] ?? 0) > 0 || p.energy < a.energy || (a.when && !rider)) continue;
+        const kind = a.input?.kind ?? "tap";
+        if (kind === "toggle" && v.toggled[i]) continue;
+        if (!(staggered || useful(rt, a, me, target, !!threat))) continue;
+        const combo = v.combos.find(c => c.keys[0] === i && c.keys[1] === i && p.energy >= c.ability.energy && random() < 0.5);
+        classKey(rt, i, true);
+        if (kind === "hold" || kind === "charge") held.push({ slot: i, at: t + (kind === "hold" ? 1 : (a.input as { max_s: number }).max_s) }); // let go later
+        else { classKey(rt, i, false); if (combo) { classKey(rt, i, true); classKey(rt, i, false); } }
+        if (kind === "drawn") drawLeft = RUNE_TIME.spark;
+        break;
+      }
+      if (target && !rt.casting && d2(target, me) <= WEAPONS[p.weapon].range + target.type.radius) attack(rt, me, random);
+    }
+    const before = v.meter;
+    stepClass(rt, me, dt, dt, random);
+    stepCombat(rt, me, dt, () => true, random);
+    if (before < ULT.max && v.meter >= ULT.max) fills.push(t - fillFrom);
+    if (v.cast && v.cast.t <= dt) { ults++; fillFrom = t; }
+    taken += Math.max(0, hpBefore - p.hp);
+    minHp = Math.min(minHp, p.hp);
+    if (!p.alive) return done(false, true);
+    let mx = 0, mz = 0;
+    if (target && !p.dash && p.dodgeAge === null) {
+      const want = RANGE[WEAPONS[p.weapon].kind], dist = d2(target, me), ux = (target.x - me.x) / (dist || 1), uz = (target.z - me.z) / (dist || 1);
+      const push = dist > want + 0.3 ? 1 : 0;
+      if (random() < 0.01) strafe = -strafe;
+      mx = ux * push - uz * strafe * 0.35; mz = uz * push + ux * strafe * 0.35;
+      const l = Math.hypot(mx, mz) || 1; mx /= l; mz /= l;
+    }
+    const vv = PLAYER_BASE.speed * p.speed, k = p.dodgeAge === null ? 1 : Math.min(1, p.dodgeAge / MOVE_TUNING.dashTime);
+    const roll = p.dodgeAge === null ? 0 : MOVE_TUNING.dashSpeed * (DODGE_SHAPE.dashExit + (1 - DODGE_SHAPE.dashExit) * (1 - k) ** MOVE_TUNING.dashEase);
+    me = { x: me.x + (mx * vv + p.impulse.x + p.dodgeDir.x * roll) * dt, z: me.z + (mz * vv + p.impulse.z + p.dodgeDir.z * roll) * dt };
+    p.kick = null; // open ground: the bot doesn't simulate jumps; riders are sampled above
+  }
+  return done(false);
+}
+
+export interface BalanceRowV2 extends BalanceRow { role: string; mastery: number; ultFill: number; ultShare: number }
+/** A kit's row at a mastery: the band's columns plus the median ult fill time, the ult's share of the damage and the role. */
+export function balanceRowV2(kitKey: string, missionId: "survive-circle" | "survive-sanctum", mastery = 1, seeds = 20): BalanceRowV2 {
+  const kit = classKit(kitKey)!, runs = Array.from({ length: seeds }, (_, i) => runV2(kitKey, missionId, i + 1, mastery));
+  const won = runs.filter(r => r.cleared).map(r => r.seconds).sort((a, b) => a - b), time = runs.reduce((n, r) => n + r.seconds, 0);
+  const fills = runs.flatMap(r => r.fills).sort((a, b) => a - b), dealt = runs.reduce((n, r) => n + r.dealt, 0);
+  return { subclass: kit.name, family: kit.family, weapon: WEAPONS[signatureWeapon(kitKey)].name, loadout: kit.keys.map(a => a.name).join(", "), role: kit.role, mastery,
+    clearRate: won.length / seeds, medianClear: won.length ? won[Math.floor(won.length / 2)] : NaN, dps: dealt / time, takenPerMin: (runs.reduce((n, r) => n + r.taken, 0) / time) * 60,
+    minHp: runs.reduce((n, r) => n + r.minHp, 0) / seeds, deaths: runs.filter(r => r.died).length,
+    ultFill: fills.length ? fills[Math.floor(fills.length / 2)] : NaN, ultShare: dealt ? runs.reduce((n, r) => n + r.ultDealt, 0) / dealt : 0 };
+}
+/** The scripted guardian fight's minutes (median of the seeds; the limit when it never falls). */
+export function bossMinutesV2(kitKey: string, mastery = 1, seeds = 8): number {
+  const t = Array.from({ length: seeds }, (_, i) => runV2(kitKey, "boss", i + 1, mastery, 600)).map(r => (r.cleared ? r.seconds : 600) / 60).sort((a, b) => a - b);
+  return t[Math.floor(t.length / 2)];
+}
+/** §3 targets the band test pins for v2 kits (waves 1–4 fill the kits; wave 5 checks all 16). */
+export const V2_TARGETS = { dpsBand: [0.75, 1.25], takenSpread: 3, clearFloor: 0.7, ultFillSanctum: [60, 90], ultFillNormal: [45, 90], ultShare: [0.08, 0.15], guardian: [4, 6], guardian20: [3.5, 5], mastery20Ratio: 1.2,
+  roles: { damage: [1.0, 1.2], support: [0.9, 1.05], tank: [0.8, 0.95], healer: [0.8, 0.95] } } as const;
+/** Where a set of v2 rows sits against the §3 band (normal-run DPS vs the median, sanctum damage-taken spread, the lowest clear, ult fill and share, per-role DPS). */
+export function bandV2(normal: BalanceRowV2[], hard: BalanceRowV2[]) {
+  const med = (v: number[]) => { const s = v.filter(Number.isFinite).sort((a, b) => a - b); return s.length ? (s[(s.length - 1) >> 1] + s[s.length >> 1]) / 2 : NaN; };
+  const dps = med(normal.map(r => r.dps)), taken = hard.map(r => r.takenPerMin);
+  return {
+    dpsLow: Math.min(...normal.map(r => r.dps)) / dps, dpsHigh: Math.max(...normal.map(r => r.dps)) / dps,
+    spread: Math.max(...taken) / Math.max(1e-6, Math.min(...taken)),
+    clearNormal: Math.min(...normal.map(r => r.medianClear)) / med(normal.map(r => r.medianClear)), clearHard: Math.min(...hard.map(r => r.medianClear)) / med(hard.map(r => r.medianClear)),
+    ultFillHard: hard.map(r => r.ultFill), ultShare: hard.map(r => r.ultShare),
+    roles: normal.map(r => ({ subclass: r.subclass, role: r.role, ratio: r.dps / dps })),
+  };
 }

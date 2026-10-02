@@ -78,7 +78,7 @@ describe("thorn crab: a front shell, a slow turn", () => {
     expect(from(2, 0)).toBe(from(0, -2));
     // The shell's spark and its hint; a frontal hit never staggers it.
     strike(rt, e, { power: 1, from: { x: 0, z: 2 }, knock: 4, melee: true }, noCrit);
-    expect(rt.fx.some(f => f.kind === "glance")).toBe(true);
+    expect(rt.mobFx.some(f => f.kind === "glance")).toBe(true);
     expect(rt.floaters.some(f => f.text === SHELL_NOTE)).toBe(true);
     expect(e.stun).toBe(0);
     strike(rt, e, { power: 1, from: { x: 0, z: -2 }, knock: 4, melee: true }, noCrit);
@@ -114,7 +114,7 @@ describe("mushroom beast: lobbed spores, a landing ring, poison puddles", () => 
     const burst = hurtBy(rt, () => play(rt, 0.6, spot));
     expect(burst).toBeGreaterThanOrEqual(ENEMIES["mushroom-beast"].attacks[0].damage);
     expect(rt.hazards).toMatchObject([{ kind: "poison", x: 0 }]);
-    expect(rt.fx.some(f => f.kind === "spores")).toBe(true);
+    expect(rt.mobFx.some(f => f.kind === "spores")).toBe(true);
     rt.enemies = [];
     expect(hurtBy(rt, () => play(rt, 1.5, spot))).toBeGreaterThanOrEqual(2 * 3);
     expect(hurtBy(rt, () => play(rt, 1, { x: 4, z: 5 }))).toBe(0); // out of it
@@ -148,11 +148,11 @@ describe("rune wisp: rune bolts down a marked line, short blinks to keep its ran
     expect(partPose("body", { ...e, t: e.move.windup * 0.9 }, 0)!.s).toBeLessThan(0.4);
     play(rt, 0.3, near);
     expect(Math.hypot(e.x - near.x, e.z - near.z)).toBeGreaterThan(3.2);
-    expect(rt.fx.filter(f => f.kind === "blink")).toHaveLength(2); // out and in
+    expect(rt.mobFx.filter(f => f.kind === "blink")).toHaveLength(2); // out and in
     // Chase it down again at once: it fights instead of blinking.
     e.x = 0; e.z = 0.2;
     play(rt, 1.2, near);
-    expect(rt.fx.filter(f => f.kind === "blink")).toHaveLength(2);
+    expect(rt.mobFx.filter(f => f.kind === "blink")).toHaveLength(2);
   });
   it("won't blink out of its leash or into a wall", () => {
     const e = { ...spawnEnemy("w", ENEMIES["rune-wisp"], 0, 0), state: "chase" as const };
@@ -196,7 +196,7 @@ describe("pollen sprites: a swarm that orbits, darts in one by one and bursts in
     expect(s.state).toBe("dead");
     expect(before - rt.player.hp).toBe(ENEMIES["pollen-sprite"].attacks[0].damage);
     expect(rt.hazards).toMatchObject([{ kind: "pollen", slow: 0.35 }]);
-    expect(rt.fx.some(f => f.kind === "pollen")).toBe(true);
+    expect(rt.mobFx.some(f => f.kind === "pollen")).toBe(true);
     expect(rt.player.speed).toBeLessThan(0.75); // slowed while in the puff
     expect(rt.killQueue).toHaveLength(0);
     const swatted = { ...spawnEnemy("t", ENEMIES["pollen-sprite"], 0, 1), state: "chase" as const };
@@ -265,7 +265,7 @@ describe("elder thorn crab (mini-boss): shell phases and claw sweeps", () => {
     expect(partPose("glow_crack", e, 0)!.s).toBe(0);
     play(rt, DT, { x: 0, z: 5 });
     expect(e.phase).toBe(2);
-    expect(rt.fx.some(f => f.kind === "crack")).toBe(true);
+    expect(rt.mobFx.some(f => f.kind === "crack")).toBe(true);
     expect(rt.floaters.some(f => f.text === "Its shell cracks")).toBe(true);
     expect(partPose("glow_crack", e, 0)!.s).toBe(1);
     const moves = Array.from({ length: 6 }, () => nextMove(e));

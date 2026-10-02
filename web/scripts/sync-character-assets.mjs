@@ -2,7 +2,7 @@
 /**
  * Copies the character art the engine ships from art/characters into the web
  * app: every catalogue GLB plus the clip-bearing base body (the catalogue's
- * base.clips_glb: v7_clips.glb, the hand-modeled v7 head) to
+ * base.clips_glb: v7_clips.glb, the hand-modeled v7 head) and the verb library (verbs.glb) to
  * public/assets/characters/v6/, the v7 face layer atlases next to it, the
  * catalogue/palette/face JSON to data/characters/, and the official TSI mark
  * (public/logo.svg, ruling 24) as the crewneck decal PNG.
@@ -27,6 +27,8 @@ const catalog = JSON.parse(readFileSync(join(art, "character_catalog.json"), "ut
 const parts = [...catalog.outfits, ...catalog.accessories, ...catalog.hair];
 for (const part of parts) copy(join(art, part.glb), join(out, part.glb));
 copy(join(art, catalog.base.clips_glb), join(out, catalog.base.clips_glb));
+// The verb library (classes v2): the rig's combat actions only, loaded by the ruins beside the clip base.
+if (catalog.verbs) copy(join(art, catalog.verbs.glb), join(out, catalog.verbs.glb));
 // avatar v7 face: the layer atlas at 1024 px per face canvas (creator) and 512 (world), animated by uniforms
 const face = JSON.parse(readFileSync(join(art, "v7/face/face_v7.json"), "utf8"));
 for (const f of [face.atlas, face.atlas_world]) copy(join(art, "v7/face", f), join(out, "base", f));

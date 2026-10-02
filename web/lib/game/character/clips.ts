@@ -4,12 +4,13 @@
  * (sit, study, sleep, fish hold, trace, defeat) > locomotion from speed.
  * Pure so it can be tested; Character.tsx drives the mixer with it.
  */
-import { CLIP_BY_NAME } from "./look";
+import type { Object3D } from "three";
+import { CLIP_BY_NAME, VERB_BY_NAME } from "./look";
 import { MOVE_TUNING } from "@/lib/game/movement/sim";
 import type { WeaponKind } from "@/lib/game/combat/contract";
 import type { FaceOverride } from "./face";
 
-export type ClipName = "Idle" | "Walk" | "Run" | "Sit" | "Study" | "Sleep" | "Fish" | "FishHold" | "Forage" | "Dig" | "Net"
+type VillageClip = "Idle" | "Walk" | "Run" | "Sit" | "Study" | "Sleep" | "Fish" | "FishHold" | "Forage" | "Dig" | "Net"
   | "Wave" | "Cheer" | "Laugh" | "Sad" | "Dance" | "AttackMelee" | "AttackBow" | "AttackCast" | "DodgeRoll" | "Hit" | "Defeat" | "Trace" | "Stretch"
   | "Jump" | "Air" | "Fall" | "Land" | "LandHeavy" | "Roll" | "Mantle" | "Dash" | "Skid" | "Glide"
   | "CrouchIdle" | "CrouchWalk" | "Slide" | "SlideIn" | "SlideInDash" | "SlideUp" | "SlideJump" | "SlideStand" | "SlideBonk"
@@ -17,6 +18,53 @@ export type ClipName = "Idle" | "Walk" | "Run" | "Sit" | "Study" | "Sleep" | "Fi
   | "LookAround" | "StretchUp" | "Chat"
   // Holding things (specs/game-ui.md §2): arm poses laid over locomotion (Character.tsx), and eating a held snack.
   | "HoldRod" | "HoldTool" | "HoldFront" | "Eat";
+
+/**
+ * The verb library (classes v2, design sheet §1.8): sixteen shared verbs, each authored once per grip family in
+ * build_clips.py (`-- verbs`), shipped in their own GLB (look.ts VERBS_URL) that only the ruins load. An ability names
+ * a verb; the grip comes from the weapon in hand (`gripFor`), so `verbClip(verb, gripFor(type))` is the clip to play.
+ */
+export const VERBS = ["CastForward", "CastUp", "Slam", "Thrust", "Spin", "LeapStrike", "Throw", "Summon", "Channel", "Guard", "Kick", "Sweep",
+  "Plant", "DrawShot", "QuickShot", "Backstep"] as const;
+export const GRIPS = ["OneHand", "Staff", "Bow", "Pistol", "Fists", "Book"] as const;
+export type Verb = (typeof VERBS)[number];
+export type Grip = (typeof GRIPS)[number];
+export type VerbClip = `${Verb}_${Grip}`;
+/** Each grip's weapon held over locomotion (arms only, like HoldTool): `motion.hold`. */
+export type HoldIdleClip = `HoldIdle_${Grip}`;
+/** Per-subclass clips the family waves add (build_clips.py `@unique`): the ult and up to 3 unique ability clips. */
+export type UniqueClip = `Ult_${string}` | `Unique_${string}`;
+export type ClipName = VillageClip | VerbClip | HoldIdleClip | UniqueClip;
+
+/** The grip family of a weapon type (lib/combat/weapons.ts WeaponType; signature types fall back to one hand). */
+const GRIP_OF: Record<string, Grip> = { sword: "OneHand", shield: "OneHand", bow: "Bow", revolver: "Pistol", staff: "Staff", tome: "Book", fists: "Fists", totem: "Staff" };
+export const gripFor = (weaponType: string): Grip => GRIP_OF[weaponType] ?? "OneHand";
+export const verbClip = (verb: Verb, grip: Grip): VerbClip => `${verb}_${grip}`;
+export const holdIdle = (grip: Grip): HoldIdleClip => `HoldIdle_${grip}`;
+/** The verb library's entry for a clip (length, impact phase, upper-body, hand), or null for a village clip. */
+export const verbInfo = (name: string) => VERB_BY_NAME.get(name) ?? null;
+/** The socket a grip holds its weapon in: the bow and the pistol sit in the left hand, the book is held in the left while the right casts. */
+export const GRIP_HAND: Record<Grip, "L" | "R"> = { OneHand: "R", Staff: "R", Bow: "L", Pistol: "L", Fists: "R", Book: "L" };
+const isVerb = (name: string): name is VerbClip => VERB_BY_NAME.has(name) && !name.startsWith("HoldIdle_");
+
+/**
+ * Overlay layers (Character.tsx): which bone tracks a layer drives. "upper": the spine up (spine, neck, head, both
+ * arms), a cast or shot over a run or a slide; "arms": both arms (a two-handed hold); "rightArm": a tool's hold.
+ */
+export type Layer = "upper" | "arms" | "rightArm";
+const LAYER_BONES: Record<Layer, RegExp> = {
+  upper: /^mixamorig(Spine|Spine1|Spine2|Neck|Head|(Left|Right)(Shoulder|Arm|ForeArm|Hand))\.quaternion$/,
+  arms: /^mixamorig(Left|Right)(Shoulder|Arm|ForeArm|Hand)\.quaternion$/,
+  rightArm: /^mixamorigRight(Shoulder|Arm|ForeArm|Hand)\.quaternion$/,
+};
+export const layerTrack = (layer: Layer, track: string) => LAYER_BONES[layer].test(track);
+/** The arm hold a clip lays: a tool's is the right arm; holding in front and the grips' hold idles take both. */
+export const holdLayer = (clip: ClipName): Layer => (clip === "HoldFront" || clip.startsWith("HoldIdle_") ? "arms" : "rightArm");
+/** An upper-body one-shot's weight at `t` of `length` s: in over `fadeIn`, out over the last `fadeOut`. */
+export function layerWeight(t: number, length: number, fadeIn = 0.05, fadeOut = 0.1): number {
+  if (t < 0 || t >= length) return 0;
+  return Math.min(1, t / fadeIn, (length - t) / fadeOut);
+}
 /** Movement clips (lib/game/movement): quick crossfades so hops and landings read on time. */
 export const SNAPPY_CLIPS = new Set<ClipName>(["DodgeRoll", "Hit", "Jump", "Air", "Fall", "Land", "LandHeavy", "Roll", "Mantle", "Dash", "Skid", "Glide",
   "Slide", "SlideIn", "SlideInDash", "SlideUp", "SlideJump", "SlideStand", "SlideBonk"]);
@@ -27,8 +75,8 @@ export const SNAPPY_CLIPS = new Set<ClipName>(["DodgeRoll", "Hit", "Jump", "Air"
  * landing cuts into a fall in a few hundredths (it interrupts it cleanly); run, slide, slide-jump, air and land-slide
  * hand over as fast; sitting down, lying down and getting up ease; a hit is immediate.
  */
-type Family = "loco" | "air" | "land" | "move" | "seat" | "act" | "combat";
-const FAMILY: Record<ClipName, Family> = {
+type Family = "loco" | "air" | "land" | "move" | "seat" | "act" | "combat" | "ability";
+const FAMILY: Record<VillageClip, Family> = {
   Idle: "loco", Walk: "loco", Run: "loco", CrouchIdle: "loco", CrouchWalk: "loco",
   Jump: "air", Air: "air", Fall: "air", Glide: "air", SlideJump: "air",
   Land: "land", LandHeavy: "land", Roll: "land", Mantle: "land",
@@ -39,16 +87,22 @@ const FAMILY: Record<ClipName, Family> = {
   HoldRod: "loco", HoldTool: "loco", HoldFront: "loco",
   AttackMelee: "combat", AttackBow: "combat", AttackCast: "combat", Hit: "combat", Defeat: "combat",
 };
-/** From a family (row) into a family (column). */
+/**
+ * From a family (row) into a family (column). The verbs are "ability" (design sheet §1.8's combat row): into one from
+ * anything in 0.05 s, out of one to locomotion in 0.1 s; a hit stays immediate (`crossfade`). The legacy attack clips
+ * keep their "combat" numbers.
+ */
 const FAMILY_FADE: Readonly<Record<Family, Readonly<Record<Family, number>>>> = {
-  loco: { loco: 0.16, air: 0.05, land: 0.05, move: 0.05, seat: 0.25, act: 0.15, combat: 0.08 },
-  air: { loco: 0.1, air: 0.06, land: 0.04, move: 0.05, seat: 0.25, act: 0.15, combat: 0.08 },
-  land: { loco: 0.12, air: 0.05, land: 0.06, move: 0.05, seat: 0.25, act: 0.15, combat: 0.08 },
-  move: { loco: 0.1, air: 0.04, land: 0.05, move: 0.05, seat: 0.25, act: 0.15, combat: 0.08 },
-  seat: { loco: 0.22, air: 0.1, land: 0.1, move: 0.08, seat: 0.3, act: 0.2, combat: 0.1 },
-  act: { loco: 0.18, air: 0.08, land: 0.08, move: 0.06, seat: 0.25, act: 0.16, combat: 0.08 },
-  combat: { loco: 0.14, air: 0.06, land: 0.06, move: 0.05, seat: 0.25, act: 0.15, combat: 0.06 },
+  loco: { loco: 0.16, air: 0.05, land: 0.05, move: 0.05, seat: 0.25, act: 0.15, combat: 0.08, ability: 0.05 },
+  air: { loco: 0.1, air: 0.06, land: 0.04, move: 0.05, seat: 0.25, act: 0.15, combat: 0.08, ability: 0.05 },
+  land: { loco: 0.12, air: 0.05, land: 0.06, move: 0.05, seat: 0.25, act: 0.15, combat: 0.08, ability: 0.05 },
+  move: { loco: 0.1, air: 0.04, land: 0.05, move: 0.05, seat: 0.25, act: 0.15, combat: 0.08, ability: 0.05 },
+  seat: { loco: 0.22, air: 0.1, land: 0.1, move: 0.08, seat: 0.3, act: 0.2, combat: 0.1, ability: 0.05 },
+  act: { loco: 0.18, air: 0.08, land: 0.08, move: 0.06, seat: 0.25, act: 0.16, combat: 0.08, ability: 0.05 },
+  combat: { loco: 0.14, air: 0.06, land: 0.06, move: 0.05, seat: 0.25, act: 0.15, combat: 0.06, ability: 0.05 },
+  ability: { loco: 0.1, air: 0.06, land: 0.06, move: 0.05, seat: 0.25, act: 0.15, combat: 0.06, ability: 0.05 },
 };
+const familyOf = (clip: ClipName): Family => (isVerb(clip) ? "ability" : clip.startsWith("HoldIdle_") ? "loco" : FAMILY[clip as VillageClip]);
 const FADES: Readonly<Record<string, number>> = {
   // Locomotion among itself: the walk and the run cross in step (`matchPhase`), the crouch eases.
   "Idle>Walk": 0.2, "Walk>Idle": 0.2, "Walk>Run": 0.15, "Run>Walk": 0.15, "Idle>Run": 0.12, "Run>Idle": 0.16,
@@ -68,7 +122,7 @@ const FADES: Readonly<Record<string, number>> = {
 export function crossfade(from: ClipName | null, to: ClipName): number {
   if (!from) return 0.16;
   if (to === "Hit") return 0.04; // a hit lands now
-  return FADES[`${from}>${to}`] ?? FAMILY_FADE[FAMILY[from]][FAMILY[to]];
+  return FADES[`${from}>${to}`] ?? FAMILY_FADE[familyOf(from)][familyOf(to)];
 }
 
 /** Locomotion loops that cross into each other in step: the next one starts with the same foot coming down. */
@@ -105,12 +159,20 @@ export interface CharacterMotion { speed: number; yaw: number; lift: number; pos
   air?: number;
   /** Foot contacts so far (the character counts them up as Walk or Run passes each foot's contact) and the last foot, 0 left 1 right. */
   steps?: number; foot?: number;
+  /** An upper-body one-shot (a cast or a shot over a run, a slide or a jump): the spine up plays it over whatever the body plays; consumed like `play`. */
+  upper?: ClipName | null;
+  /** Timing scale for the next one-shot (`play` or `upper`), consumed with it: an ability speeds a verb up or slows it down. */
+  playRate?: number;
+  /** An arm hold laid over locomotion (a grip's HoldIdle_*), while set; a held tool's own hold wins. */
+  hold?: ClipName | null;
+  /** The weapon in hand, written by the character (null when none): its grip at the model origin, its tip along +Y (ribbon trails). */
+  weaponModel?: Object3D | null;
   /** Ask for an afterimage of this frame's pose (a dash); the character clears it. */
   ghost?: boolean;
   /** This character leaves afterimages (the player): they are made and compiled up front, so the first dash never hitches. */
   afterimages?: boolean }
 
-export const isLoop = (clip: ClipName) => CLIP_BY_NAME.get(clip)?.loop ?? true;
+export const isLoop = (clip: ClipName) => (CLIP_BY_NAME.get(clip) ?? VERB_BY_NAME.get(clip))?.loop ?? true;
 
 /**
  * Idle below a crawl, Run above 1.25x walking pace (sprint is 1.85x). Already running, it keeps the run down to 1.15x,

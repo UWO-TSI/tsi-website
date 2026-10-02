@@ -55,7 +55,7 @@ async function stage(x, z, facing = 0, keep = []) {
     window.__combatDev.reset();
     const rt = window.__combat.rt;
     rt.enemies = rt.enemies.filter(e => keep.includes(e.type.id));
-    rt.projectiles = []; rt.units = []; rt.floaters = []; rt.blasts = []; rt.hazards = []; rt.fx = []; rt.banner = null; rt.buffs = [];
+    rt.projectiles = []; rt.units = []; rt.floaters = []; rt.blasts = []; rt.hazards = []; rt.mobFx = []; rt.fx = []; rt.banner = null; rt.buffs = [];
     Object.assign(rt.player, { maxHp: 99999, hp: 99999, alive: true, energy: 100 });
     for (const k of Object.keys(rt.cooldowns)) rt.cooldowns[k] = 0;
     window.__move.teleport(x, z, f);
@@ -234,7 +234,7 @@ if (wanted("elder")) {
   frames.push(await shot("e-1", wide)); labels.push("shell closed: a claw sweep's sector");
   await freeze(false);
   await page.evaluate(() => { const e = window.__combat.rt.enemies[0]; e.hp = Math.round(e.type.hp * 0.59); });
-  await holdWhen(() => window.__combat.rt.enemies[0].phase === 2 && window.__combat.rt.fx.length === 0);
+  await holdWhen(() => window.__combat.rt.enemies[0].phase === 2 && window.__combat.rt.mobFx.length === 0);
   await freeze(false); await page.waitForTimeout(90); await freeze(true);
   frames.push(await shot("e-2", wide)); labels.push("60%: the shell cracks (chips, glow)");
   await freeze(false);

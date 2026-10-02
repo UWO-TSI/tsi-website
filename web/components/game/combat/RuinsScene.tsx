@@ -21,16 +21,22 @@ import { hashSeed, randomLook, seeded } from "@/lib/game/character/look";
 import { GLBProp } from "../NatureModels";
 import { IslandAtmosphere, useFollowCamera } from "../IslandAtmosphere";
 import MobFx from "./MobFx";
+import CombatFx from "./CombatFx";
 import { AimReticle, Blasts, EnemyBars, EnemyInstances, FloaterProjector, PlayerAuras, Projectiles, Telegraphs, Totems, Wisps } from "./EncounterRender";
 import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BROKEN_ARCHES, RUINS_MOAI, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, RUINS_TORCHES, SURVIVE_CIRCLES, createRuins } from "@/lib/game/ruins";
-import { combat, publishCombat, takeMissionQueue, type AbilityId, type CombatRuntime, type CueKind } from "@/lib/game/combat/runtime";
+import { combat, publishCombat, takeMissionQueue, V2_SLOT_IDS, type AbilityId, type CombatRuntime, type CueKind } from "@/lib/game/combat/runtime";
+import { classKey, equipClassKit, pressUlt, stepClass } from "@/lib/game/combat/classRuntime";
+import { unlocksAt } from "@/lib/combat/classes";
 import { AudioManager, type SFXName } from "@/lib/game/audio";
 import { useAbilityKeys } from "@/lib/game/movement/keys";
 import { screenOf, useMoveParticles } from "../movement/moveFx";
 import { defeatPuff } from "@/lib/game/movement/juice";
 import type { ParticlePool } from "@/lib/game/fx/particles";
-import { shakeCamera } from "@/lib/game/cameraJuice";
-import { timeScale as worldSpeed } from "@/lib/game/slowMotion";
+import { holdFov, shakeCamera, widenFov } from "@/lib/game/cameraJuice";
+import { timeScale as worldSpeed, ultSlowMotion } from "@/lib/game/slowMotion";
+import { FlashLimiter, hitImpact, HitstopBudget, impactView, ultBeats } from "@/lib/game/combat/impact";
+import { readComfort } from "@/lib/game/comfortSettings";
+import { ULT } from "@/lib/combat/ult";
 import { capture, crosshairAim } from "@/lib/game/orbitCamera";
 import { boxOccluder } from "@/lib/game/occluders";
 import { BUFFER, createInputs, runInputs, spawnWave } from "@/lib/game/combat/actions";
@@ -59,13 +65,27 @@ const ALLY_TYPES = TYPES.filter(t => t !== "guardian-statue");
 export function resetEncounter() {
   const rt = combat.rt;
   rt.enemies = SPAWNS.map(s => spawnEnemy(s.id, ENEMIES[s.type], s.x, s.z, s.pack));
-  rt.projectiles = []; rt.units = []; rt.buffs = []; rt.blasts = []; rt.floaters = []; rt.hazards = []; rt.fx = []; rt.casting = null; rt.wave = null; rt.bossEngaged = false; rt.banner = null;
+  rt.projectiles = []; rt.units = []; rt.buffs = []; rt.blasts = []; rt.floaters = []; rt.hazards = []; rt.mobFx = []; rt.casting = null; rt.wave = null; rt.bossEngaged = false; rt.banner = null;
   rt.player = { ...rt.player, hp: rt.player.maxHp, alive: true, safe: true, dodgeAge: null, dodgeCd: 0, attackCd: 0, hurt: 0, downFor: 0, shield: 0, shieldFor: 0, dash: null, impulse: { x: 0, z: 0 } };
   rt.transform = null;
   rt.idol = rt.idol === "carried" ? "temple" : rt.idol;
   const path = rt.mission?.def.template === "escort" && rt.mission.status === "active" ? ESCORT_PATHS[rt.mission.def.id] : null;
   rt.escort = path ? { x: path[0].x, z: path[0].z, hp: 60, waypoint: 1 } : null;
   rt.player.energy = Math.max(rt.player.energy, 0);
+  // Classes v2: the meter starts empty on entry and empties on defeat (§1.2); nothing held, toggled or queued carries over.
+  if (rt.v2) Object.assign(rt.v2, { meter: 0, cast: null, queue: [], holding: rt.v2.holding.map(() => null), toggled: rt.v2.toggled.map(() => false), recast: rt.v2.recast.map(() => 0), combatT: 0 });
+  rt.player.ultIframes = 0; rt.player.kick = null; rt.player.clip = null; rt.fx = [];
+}
+
+/** Classes v2: a kill trained the active subclass; a new level's unlocks apply now (the meter and cooldowns carry). */
+function masteryUp(m: { mastery: number; into: number; needed: number; levelled_up: boolean }, now: number) {
+  const rt = combat.rt, v = rt.v2, level = m.mastery;
+  if (!v) return;
+  v.progress = { into: m.into, needed: m.needed };
+  if (!m.levelled_up || level <= v.mastery) return;
+  equipClassKit(rt, v.kit, level, v.progress);
+  rt.banner = { kind: "mastery", title: `${v.kit.name} mastery ${level}`, text: unlocksAt(v.kit, level).join(" · ") || "Your path grows stronger.", until: now + 6 };
+  publishCombat();
 }
 
 /** A Transmuter's first defeat of a species (row 40): the server taught a trait; it joins the kit, equipped at the Oracle. Returns its name. */
@@ -120,7 +140,9 @@ const SWING_SOUND: Record<WeaponKind, Sound> = { melee: ["footstep", 1.5, 0.7], 
 /** Impact (combat polish 4): a beat of hitstop on melee hits, crits and hits taken; a small shake (world units) per cue. */
 const HITSTOP = 0.06;
 const SHAKE: Partial<Record<CueKind, number>> = { crit: 0.07, hurt: 0.12, stagger: 0.1, bossDefeat: 0.25 };
+const budget = new HitstopBudget(), flashes = new FlashLimiter();
 function impact(rt: CombatRuntime, pool: ParticlePool, ground: (x: number, z: number) => number) {
+  if (rt.v2) return impactV2(rt, pool, ground);
   for (const c of rt.cues) {
     if ((c.kind === "hit" && c.melee) || c.kind === "crit" || c.kind === "hurt") combat.hitstop = Math.max(combat.hitstop, HITSTOP);
     const shake = c.kind === "hit" && c.melee ? 0.035 : SHAKE[c.kind];
@@ -129,6 +151,72 @@ function impact(rt: CombatRuntime, pool: ParticlePool, ground: (x: number, z: nu
     if (c.kind === "defeat" || c.kind === "bossDefeat") defeatPuff(pool, c.x, ground(c.x, c.z), c.z, c.kind === "bossDefeat" ? 2.2 : 1);
   }
 }
+/**
+ * Classes v2 (design sheet §1.6): each hit by its tier through the hitstop budget (the longest wins, at most 200 ms a
+ * second), the Screen shake setting, the heavy tier's FOV kick; the world draws a hit's sparks, the heavy tier's
+ * speed lines and shock ring, from FX events in the kit's ramp (lib/game/fx/combat.ts).
+ */
+function impactV2(rt: CombatRuntime, pool: ParticlePool, ground: (x: number, z: number) => number) {
+  const now = performance.now() / 1000, reduce = readComfort().reduceFlashing;
+  for (const c of rt.cues) {
+    const tier = c.kind === "defeat" && c.tier === "heavy" ? "heavy" : c.kind === "hit" || c.kind === "crit" ? c.tier ?? "light" : null;
+    if (tier) {
+      const h = hitImpact(tier, c.melee, !!c.first, reduce);
+      combat.hitstop = budget.take(Math.max(h.hitstop, c.kind === "crit" ? HITSTOP : 0), combat.hitstop, now);
+      if (h.shake) shakeCamera(h.shake);
+      if (h.fov) widenFov(h.fov);
+      if (rt.v2 && tier !== "ult") rt.fx.push({ caster: "me", key: `hit.${tier}`, phase: "impact", x: c.x, z: c.z, aim: { x: c.x, z: c.z }, seed: (Math.round(c.x * 97) ^ Math.round(c.z * 89) ^ rt.seq++) >>> 0, tier, ramp: rt.v2.kit.look.ramp });
+    }
+    if (c.kind === "hurt") combat.hitstop = budget.take(HITSTOP, combat.hitstop, now);
+    if (c.kind === "bossDefeat") bossBeat = { t: 0, aim: { x: c.x, z: c.z } }; // the boss defeat lands at the ult tier (§1.6)
+    const shake = SHAKE[c.kind];
+    if (shake && c.kind !== "crit") shakeCamera(shake);
+    if (c.kind === "defeat" || c.kind === "bossDefeat") defeatPuff(pool, c.x, ground(c.x, c.z), c.z, c.kind === "bossDefeat" ? 2.2 : 1);
+  }
+}
+
+/**
+ * The ult's beats each frame (impact.ts ultBeats): the freeze as hitstop, the FOV hold, slow motion, the heavy shake
+ * once, the flash frame through the limiter (the canvas cut to two tones, or darkened with Reduce flashing), and the
+ * overlay pass's screen spots. The meter filling plays the ready chime and the bottom-edge glow.
+ */
+const ultScratch = new THREE.Vector3();
+let ultPrevT = -1, wasReady = false, bossBeat: { t: number; aim: Vec } | null = null;
+/** The boss defeat's sequence: no wind-up (it's already down), the rest of the ult's beats. */
+const BOSS_A = 0.05;
+function ultPresentation(rt: CombatRuntime, camera: THREE.Camera, canvas: HTMLCanvasElement, me: Vec, ground: (x: number, z: number) => number, real: number) {
+  const v = rt.v2, reduce = readComfort().reduceFlashing, view = impactView;
+  if (bossBeat && (bossBeat.t += real) > BOSS_A + 3) bossBeat = null;
+  const cast = v?.cast ?? (v ? bossBeat : null), A = v?.cast ? v.ult.anticipation_ms / 1000 : BOSS_A;
+  view.reduceFlashing = reduce;
+  if (v) {
+    view.color = v.kit.look.ramp[1];
+    const ready = v.meter >= ULT.max;
+    if (ready && !wasReady) { view.readyAt = performance.now() / 1000; AudioManager.playSFX("confirm", { rate: 1.25, gain: 0.7 }); }
+    wasReady = ready;
+  }
+  if (!v || !cast) {
+    if (view.beats) { view.beats = null; holdFov(0); ultSlowMotion(1); canvas.style.filter = ""; }
+    ultPrevT = -1;
+    return;
+  }
+  // A first-last ult (§1.6): past its window the finisher's beats run on the same clock again.
+  const span = v?.cast && v.ult.impacts === "first-last" ? v.ult.duration ?? 0 : 0, shift = span && cast.t >= A + span ? span : 0;
+  const b = ultBeats(cast.t - shift, A, reduce, ultPrevT - shift);
+  if (b.freeze) combat.hitstop = Math.max(combat.hitstop, A + 0.12 - cast.t);
+  if (b.flash && !view.beats?.flash) view.flashOk = b.flash === "full" && flashes.allow(performance.now() / 1000);
+  if (b.shake) shakeCamera(0.35, 9, (cast.aim.x - me.x) * 0.15 / (Math.hypot(cast.aim.x - me.x, cast.aim.z - me.z) || 1));
+  holdFov(b.fov);
+  ultSlowMotion(b.slow);
+  canvas.style.filter = b.flash === "full" && view.flashOk ? "grayscale(1) brightness(1.02) contrast(10)" : b.flash === "reduced" ? "saturate(0.35) brightness(0.75)" : "";
+  const toScreen = (x: number, z: number, lift: number) => { ultScratch.set(x, ground(x, z) + lift, z).project(camera); const r = canvas.getBoundingClientRect(); return { x: r.left + ((ultScratch.x + 1) / 2) * r.width, y: r.top + ((1 - ultScratch.y) / 2) * r.height }; };
+  const c = toScreen(me.x, me.z, 0.7), edge = toScreen(me.x + 3, me.z, 0.7);
+  view.caster = { x: c.x, y: c.y, r: Math.max(60, Math.hypot(edge.x - c.x, edge.y - c.y)) };
+  view.hit = toScreen(cast.aim.x, cast.aim.z, 0.4);
+  view.beats = b;
+  ultPrevT = cast.t;
+}
+
 const heard = new Set<CueKind>();
 /** This frame's cues as sounds: one of each kind (a crit over a hit), windups only within earshot. */
 function playCues(rt: CombatRuntime, me: Vec) {
@@ -199,13 +287,22 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
       const k = e.key.toLowerCase(), ability = (Object.keys(keys) as AbilityId[]).find(a => keys[a] === k);
       if (!ability) return;
       e.preventDefault();
-      if (!e.repeat) input.current.presses.keys.push({ id: ability, left: BUFFER });
+      if (e.repeat) return;
+      // Classes v2: keys 1–5 go through the input layer (holds and charges need the release too), F is the ult.
+      const rt = combat.rt, slot = (V2_SLOT_IDS as readonly string[]).indexOf(ability);
+      if (rt.v2 && slot >= 0) classKey(rt, slot, true);
+      else if (rt.v2 && ability === "ult") pressUlt(rt);
+      else if (ability !== "slot5" && ability !== "ult") input.current.presses.keys.push({ id: ability, left: BUFFER });
+    };
+    const ku = (e: KeyboardEvent) => {
+      const k = e.key.toLowerCase(), slot = V2_SLOT_IDS.findIndex(a => keys[a] === k);
+      if (combat.rt.v2 && slot >= 0) classKey(combat.rt, slot, false);
     };
     el.addEventListener("pointermove", move); el.addEventListener("pointerdown", down); window.addEventListener("pointerup", up);
-    window.addEventListener("keydown", kd, true);
+    window.addEventListener("keydown", kd, true); window.addEventListener("keyup", ku, true);
     return () => {
       el.removeEventListener("pointermove", move); el.removeEventListener("pointerdown", down); window.removeEventListener("pointerup", up);
-      window.removeEventListener("keydown", kd, true);
+      window.removeEventListener("keydown", kd, true); window.removeEventListener("keyup", ku, true);
     };
   }, [gl, keys]);
 
@@ -233,11 +330,14 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     }
     // Inputs.
     if (runInputs(rt, inp.presses, me, Math.min(rawDelta, 0.05))) publishCombat(); // a refused key pulses its slot now
+    // Classes v2: the input layer's intents, cooldowns, holds and toggles on the encounter clock; the ult's beats on the wall clock.
+    stepClass(rt, me, dt, Math.min(rawDelta, 0.05));
     // Timers, energy, enemies, projectiles, summons and totems (lib/game/combat/encounter.ts); ability dashes and knockback push PlayerAvatar.
     stepCombat(rt, me, dt, ruins.free);
     playCues(rt, me);
     impact(rt, particles.pool, ruins.ground);
     rt.cues.length = 0;
+    ultPresentation(rt, camera, gl.domElement, me, ruins.ground, Math.min(rawDelta, 0.05));
     // Respawn (spawn-table enemies only) once dead long enough and you're away from the spot.
     for (const [i, e] of rt.enemies.entries()) {
       const after = e.state === "dead" && !e.summoned ? respawnAfter(e.id) : 0;
@@ -291,7 +391,10 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
       syncAt.current = clock.elapsedTime;
       for (const k of rt.killQueue.splice(0)) {
         if (k.enemy === BOSS_DROPS.enemy || MINIBOSS_DROPS[k.enemy]) victory(k.enemy, k.key, clock.elapsedTime);
-        else void postKill(k.enemy, k.key).then(r => { if (r.ok && r.data.trait_unlocked) traitLearned(r.data.trait_unlocked, clock.elapsedTime); });
+        else void postKill(k.enemy, k.key).then(r => {
+          if (r.ok && r.data.trait_unlocked) traitLearned(r.data.trait_unlocked, clock.elapsedTime);
+          if (r.ok && r.data.mastery) masteryUp(r.data.mastery, clock.elapsedTime);
+        });
       }
       const pid = rt.mission?.progressId;
       if (pid && rt.mission?.queue.length) void postMissionEvents(pid, takeMissionQueue());
@@ -325,6 +428,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     <Telegraphs ground={ruins.ground} />
     <MobFx ground={ruins.ground} />
     <Blasts ground={ruins.ground} />
+    <CombatFx ground={ruins.ground} lite={liteMode} />
     <PlayerAuras player={player} ground={ruins.ground} />
     <AimReticle player={player} ground={ruins.ground} />
     <FloaterProjector />

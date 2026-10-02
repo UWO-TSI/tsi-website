@@ -9,7 +9,7 @@
 import { useEffect } from "react";
 import { useThree } from "@react-three/fiber";
 import { bindGameKeys } from "@/lib/game/keyboardInput";
-import { capture, cursorHolds, loadOrbit, lookOrbit, nextCapture, orbit, saveOrbit, setCaptureState, snapBack, subscribeOrbitPrefs, zoomOrbit, type CaptureEvent } from "@/lib/game/orbitCamera";
+import { capture, cursorHolds, loadOrbit, lookOrbit, nextCapture, orbit, pen, saveOrbit, setCaptureState, snapBack, subscribeOrbitPrefs, zoomOrbit, type CaptureEvent } from "@/lib/game/orbitCamera";
 
 /** The camera keys held now (the arrows), read by the rig each frame. */
 export const orbitKeys: Record<string, boolean> = {};
@@ -67,6 +67,7 @@ export function useOrbitInput() {
       if (doc.pointerLockElement !== el || capture.state !== "captured") return;
       const dx = e.movementX, dy = e.movementY;
       if (Math.abs(dx) > MAX_STEP || Math.abs(dy) > MAX_STEP) return;
+      if (pen.move) { pen.move(dx, dy); return; } // tracing a shape: the mouse is the pen
       lookOrbit(dx, dy);
     };
     // A canvas click captures, a beat later: a click that opened a dialog (a resident's chat) keeps the cursor.

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Zone 1's attack effects (design sheet "Mobs, zone 1"): every effect the mobs push (`rt.fx`, lib/game/combat/mobs.ts)
+ * Zone 1's attack effects (design sheet "Mobs, zone 1"): every effect the mobs push (`rt.mobFx`, lib/game/combat/mobs.ts)
  * as a burst from our painted mob pack (art/fx/build_mob_pack.py: claw slashes, impact stars, spores, pollen, rune
  * sparks and circles, shell chips), and every hazard on the ground (`rt.hazards`) as a painted decal sized to exactly
  * the area it hurts or slows: the poison puddle (bubbling), the pollen's dusting, the elder's shockwave ring running out
@@ -181,8 +181,8 @@ export default function MobFx({ ground }: { ground: Ground }) {
     const rt = combat.rt, dt = combat.freeze ? 0 : Math.min(delta, 0.1); // effects keep the encounter's clock (held for a screenshot too)
     camera.getWorldPosition(camPos); camera.getWorldDirection(camDir);
     const toCam = -0.45 / (Math.hypot(camDir.x, camDir.z) || 1);
-    for (const e of rt.fx) play(e.kind, e.x, e.z, e.rot, e.size, ground(e.x, e.z), fx.paint, fx.glow, dust.pool, camDir.x * toCam, camDir.z * toCam);
-    rt.fx.length = 0;
+    for (const e of rt.mobFx) play(e.kind, e.x, e.z, e.rot, e.size, ground(e.x, e.z), fx.paint, fx.glow, dust.pool, camDir.x * toCam, camDir.z * toCam);
+    rt.mobFx.length = 0;
     const wind = liveWind(), [decals, paint, glow] = fx.layers;
     for (const [pool, l] of [[fx.paint, paint], [fx.glow, glow]] as const) {
       pool.update(dt, wind.x, wind.z);

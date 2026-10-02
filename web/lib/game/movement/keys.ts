@@ -30,12 +30,14 @@ type Remap<A extends string> = { ok: true; keys: Record<A, string> } | { ok: fal
  * (refusing the fixed keys, `taken()` and `extra`) and `use` (follows remaps).
  * `readTaken` are keys a stored value may not hold (set before a key moved).
  */
-function keyStore<A extends string>(storageKey: string, defaults: Record<A, string>, opts: { valid: (k: string, id: A) => boolean; taken: () => readonly string[]; readTaken?: () => readonly string[]; allow?: readonly string[] }) {
+function keyStore<A extends string>(storageKey: string, defaults: Record<A, string>, opts: { valid: (k: string, id: A) => boolean; taken: () => readonly string[]; readTaken?: () => readonly string[]; allow?: readonly string[];
+  /** A previous version's storage key: read when this one is empty, so a bump keeps the member's keys (new actions take their defaults). */
+  legacy?: string }) {
   const event = `tsi:keys:${storageKey}`;
   const usable = (k: string, id: A, taken: readonly string[]) => opts.valid(k, id) && (!FIXED_KEYS.includes(k) || !!opts.allow?.includes(k)) && !taken.includes(k);
   const read = (): Record<A, string> => {
     try {
-      const raw = JSON.parse(localStorage.getItem(storageKey) ?? "null");
+      const raw = JSON.parse(localStorage.getItem(storageKey) ?? (opts.legacy && localStorage.getItem(opts.legacy)) ?? "null");
       if (raw && typeof raw === "object") {
         const out = { ...defaults }, taken = opts.readTaken?.() ?? [];
         for (const a of Object.keys(out) as A[]) if (typeof raw[a] === "string" && raw[a] && usable(raw[a], a, taken)) out[a] = raw[a];
@@ -87,10 +89,11 @@ export const MOVE_ACTIONS: { id: MoveAction; name: string }[] = [
 export const moveDefaults = (mac: boolean): Record<MoveAction, string> => ({ forward: "w", left: "a", back: "s", right: "d", jump: " ", dash: "q", sprint: "shift", crouch: mac ? "control" : "c" });
 export const DEFAULT_MOVE_KEYS = moveDefaults(IS_MAC);
 // Q is the dash, and the dodge in the ruins (specs/movement.md), so the swap moved from Q to R.
-export const DEFAULT_ABILITY_KEYS: Record<AbilityId, string> = { slot1: "1", slot2: "2", slot3: "3", slot4: "4", swap: "r" };
+// Classes v2 (design sheet §1.13): key 5 and the ult on F (F decorates at home; the two never share a scene).
+export const DEFAULT_ABILITY_KEYS: Record<AbilityId, string> = { slot1: "1", slot2: "2", slot3: "3", slot4: "4", slot5: "5", ult: "f", swap: "r" };
 
-/** The ability slots' presets (row 279): the number row, or Z X C V under the left hand. */
-export const ABILITY_PRESETS = { numbers: ["1", "2", "3", "4"], zxcv: ["z", "x", "c", "v"] } as const;
+/** The ability slots' presets (row 279): the number row, or Z X C V under the left hand (key 5 on T, the free key beside R and F). */
+export const ABILITY_PRESETS = { numbers: ["1", "2", "3", "4", "5"], zxcv: ["z", "x", "c", "v", "t"] } as const;
 export type AbilityPreset = keyof typeof ABILITY_PRESETS;
 /** The tool wheel (specs/game-ui.md): hold to open, tap to swap back to the last item; and the full HUD, shown while held (row 283). */
 export type WheelAction = "wheel" | "hud";
@@ -101,10 +104,11 @@ const move = keyStore<MoveAction>("tsi.moveKeys.v1", DEFAULT_MOVE_KEYS, {
   valid: (k, id) => !/^(meta|alt|capslock|dead|unidentified|arrow(up|down|left|right))$/.test(k) && (k !== "control" || id === "crouch"),
   taken: (): string[] => [...Object.values(readAbilityKeys()), ...menuKeys(), readWheelKeys().wheel],
 });
-const ability = keyStore<AbilityId>("tsi.combatKeys.v2", DEFAULT_ABILITY_KEYS, { // v1 bound the prototype runes, not slots
-  valid: k => k.length === 1,
-  // Z (zoom), X (put away, at home) and V (the camera reset) are fixed elsewhere; only the ruins read ability keys, where they win.
-  allow: ["z", "x", "v"],
+const ability = keyStore<AbilityId>("tsi.combatKeys.v3", DEFAULT_ABILITY_KEYS, { // v1 bound the prototype runes, not slots; v3 adds key 5 and the ult
+  legacy: "tsi.combatKeys.v2",
+  valid: (k, id) => k.length === 1 && (k !== "f" || id === "ult"), // F is the ult's alone (it decorates at home)
+  // Z (zoom), X (put away, at home), V (the camera reset) and F (decorate, at home) are fixed elsewhere; only the ruins read ability keys, where they win.
+  allow: ["z", "x", "v", "f"],
   taken: (): string[] => [...Object.values(readMoveKeys()), ...menuKeys(), readWheelKeys().wheel],
   readTaken: (): string[] => Object.values(readMoveKeys()),
 });
@@ -119,8 +123,8 @@ export const { read: readAbilityKeys, remap: remapAbility, assign: assignAbiliti
 export const { read: readWheelKeys, remap: remapWheel, use: useWheelKeys } = wheel;
 /** The slots on a preset (the swap key stays): refused when one of its keys does something else here (C crouches outside macOS). */
 export const presetAbilities = (keys: Record<AbilityId, string>, preset: AbilityPreset) => {
-  const [slot1, slot2, slot3, slot4] = ABILITY_PRESETS[preset];
-  return assignAbilities({ ...keys, slot1, slot2, slot3, slot4 });
+  const [slot1, slot2, slot3, slot4, slot5] = ABILITY_PRESETS[preset];
+  return assignAbilities({ ...keys, slot1, slot2, slot3, slot4, slot5 });
 };
 /** Which preset the slots are on, if either. */
 export const abilityPreset = (keys: Record<AbilityId, string>): AbilityPreset | null =>

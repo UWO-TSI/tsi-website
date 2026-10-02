@@ -33,6 +33,8 @@ export interface Rune {
 }
 
 export const TOLERANCE = 0.08;
+/** The circle shape's guide: clockwise from the top. */
+const CIRCLE: Pt[] = [{ x: 0.5, y: 0.12 }, { x: 0.598, y: 0.133 }, { x: 0.69, y: 0.171 }, { x: 0.769, y: 0.231 }, { x: 0.829, y: 0.31 }, { x: 0.867, y: 0.402 }, { x: 0.88, y: 0.5 }, { x: 0.867, y: 0.598 }, { x: 0.829, y: 0.69 }, { x: 0.769, y: 0.769 }, { x: 0.69, y: 0.829 }, { x: 0.598, y: 0.867 }, { x: 0.5, y: 0.88 }, { x: 0.402, y: 0.867 }, { x: 0.31, y: 0.829 }, { x: 0.231, y: 0.769 }, { x: 0.171, y: 0.69 }, { x: 0.133, y: 0.598 }, { x: 0.12, y: 0.5 }, { x: 0.133, y: 0.402 }, { x: 0.171, y: 0.31 }, { x: 0.231, y: 0.231 }, { x: 0.31, y: 0.171 }, { x: 0.402, y: 0.133 }, { x: 0.5, y: 0.12 }];
 const SPACING = 0.01;
 
 export const RUNES: Rune[] = [
@@ -54,6 +56,23 @@ export const RUNES: Rune[] = [
       [{ x: 0.3, y: 0.6 }, { x: 0.7, y: 0.6 }],
     ],
   },
+];
+
+/**
+ * Classes v2 drawn shapes (the Priest, David 2026-10-02; the design sheet's proposed shapes, approved): a cross, a
+ * circle, a line (drawn in the beam's direction), a triangle, a chevron (pointing where you dash) and the winged
+ * sigil (harder, so its payoff scales most). Scored like the runes; the v2 runtime scales them 0.6–1.5.
+ */
+export const SHAPES: Rune[] = [
+  { key: "cross", name: "Cross", difficulty: "easy", time_limit_ms: 4000, strokes: [[{ x: 0.5, y: 0.1 }, { x: 0.5, y: 0.9 }], [{ x: 0.18, y: 0.38 }, { x: 0.82, y: 0.38 }]] },
+  { key: "circle", name: "Circle", difficulty: "easy", time_limit_ms: 6000, strokes: [CIRCLE] },
+  { key: "line", name: "Line", difficulty: "easy", time_limit_ms: 3000, strokes: [[{ x: 0.1, y: 0.5 }, { x: 0.9, y: 0.5 }]] },
+  { key: "triangle", name: "Triangle", difficulty: "easy", time_limit_ms: 4500, strokes: [[{ x: 0.5, y: 0.1 }, { x: 0.9, y: 0.85 }, { x: 0.1, y: 0.85 }, { x: 0.5, y: 0.1 }]] },
+  { key: "chevron", name: "Chevron", difficulty: "easy", time_limit_ms: 3000, strokes: [[{ x: 0.22, y: 0.18 }, { x: 0.8, y: 0.5 }, { x: 0.22, y: 0.82 }]] },
+  { key: "wings", name: "Winged Sigil", difficulty: "hard", time_limit_ms: 7000, strokes: [
+    [{ x: 0.5, y: 0.3 }, { x: 0.35, y: 0.18 }, { x: 0.15, y: 0.16 }, { x: 0.08, y: 0.32 }, { x: 0.22, y: 0.5 }, { x: 0.5, y: 0.55 }],
+    [{ x: 0.5, y: 0.3 }, { x: 0.65, y: 0.18 }, { x: 0.85, y: 0.16 }, { x: 0.92, y: 0.32 }, { x: 0.78, y: 0.5 }, { x: 0.5, y: 0.55 }],
+    [{ x: 0.5, y: 0.12 }, { x: 0.5, y: 0.9 }]] },
 ];
 
 const d = (a: Pt, b: Pt) => Math.hypot(a.x - b.x, a.y - b.y);

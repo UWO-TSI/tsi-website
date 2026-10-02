@@ -32,3 +32,24 @@ export function setAlwaysFullHud(on: boolean) {
 }
 const subscribe = (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; };
 export const useAlwaysFullHud = () => useSyncExternalStore(subscribe, read, () => false);
+
+// ── Classes v2 (design sheet §1.9): the class on your nameplate ──
+const CLASS_KEY = "tsi.nameplate.class.v1";
+let showClass: boolean | null = null;
+const readShowClass = () => {
+  if (showClass === null) { try { showClass = localStorage.getItem(CLASS_KEY) !== "false"; } catch { showClass = true; } }
+  return showClass;
+};
+/** "Show class on my nameplate" (default on). ponytail: kept on this device; it hides it for everyone once other players see nameplates (multiplayer). */
+export function setShowClass(on: boolean) {
+  showClass = on;
+  try { localStorage.setItem(CLASS_KEY, String(on)); } catch { /* this session only */ }
+  listeners.forEach(l => l());
+}
+export const useShowClass = () => useSyncExternalStore(subscribe, readShowClass, () => true);
+
+/** The player's class on the nameplate: the class icon, the mastery title and the equipped frame (set from progression). */
+export interface ClassTag { icon: string; title: string; frame: "bronze" | "silver" | "gold" | null; color: string }
+let tag: ClassTag | null = null;
+export function setClassTag(next: ClassTag | null) { tag = next; listeners.forEach(l => l()); }
+export const useClassTag = () => useSyncExternalStore(subscribe, () => tag, () => null);

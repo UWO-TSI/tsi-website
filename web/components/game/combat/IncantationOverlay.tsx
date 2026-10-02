@@ -5,11 +5,16 @@
  * running; the caster stands still. Each stroke shows its start point and an
  * arrow for direction; trace with mouse or trackpad (drag). Accuracy reads out
  * live; under 50% fizzles, 95%+ is empowered. The dash key (the dodge) cancels.
+ *
+ * Under mouse-look (classes v2, the Priest's shapes) the pointer stays locked: the overlay sits in the middle of the
+ * screen, the mouse's movement moves a pen dot instead of the camera (orbitCamera `pen`), the button draws, and the
+ * pen waits on each stroke's numbered dot; WASD keeps moving you.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { runeById, scoreTrace, strokeGuides, type Pt, type TracePt } from "@/lib/game/combat/runes";
 import type { IncantationScore } from "@/lib/game/combat/contract";
 import { keyName, useMoveKeys } from "@/lib/game/movement/keys";
+import { capture, pen } from "@/lib/game/orbitCamera";
 import styles from "../DefaultIslandWorld.module.css";
 
 const SIZE = 320;
@@ -30,6 +35,9 @@ export default function IncantationOverlay({ runeId, title, effect, onDone, onCa
   const handlers = useRef({ onDone, onCancel });
   useEffect(() => { handlers.current = { onDone, onCancel }; });
   const guides = useMemo(() => strokeGuides(rune), [rune]);
+  // Mouse-look: the locked mouse is a pen on this overlay (no cursor to drag), parked on the next stroke's dot.
+  const [locked] = useState(() => capture.state === "captured");
+  const [penAt, setPenAt] = useState<[number, number]>(() => guides[0]?.start ?? [0.5, 0.5]);
   // Scored when a stroke ends (pointer-up), not on every move or HUD render.
   const live = useMemo(() => (strokes.length ? scoreTrace({ ...rune, strokes: rune.strokes.slice(0, strokes.length) }, strokes) : null), [rune, strokes]);
   const at = (e: React.PointerEvent): TracePt => { const r = box.current!.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height, performance.now() - started]; };
@@ -59,11 +67,27 @@ export default function IncantationOverlay({ runeId, title, effect, onDone, onCa
     if (!stroke || stroke.length < 2) return;
     const next = [...strokes, stroke];
     setStrokes(next);
+    if (locked && guides[next.length]) setPenAt(guides[next.length].start); // the pen waits on the next numbered dot
     if (next.length >= rune.strokes.length) setResult(scoreTrace(rune, next));
   };
   const nextStroke = Math.min(strokes.length, rune.strokes.length - 1);
+  useEffect(() => {
+    if (!locked || result) return;
+    let at = penAt, drawing: TracePt[] | null = null;
+    const stamp = (): TracePt => [at[0], at[1], performance.now() - started];
+    pen.move = (dx, dy) => {
+      at = [Math.min(1.05, Math.max(-0.05, at[0] + dx / SIZE)), Math.min(1.05, Math.max(-0.05, at[1] + dy / SIZE))];
+      setPenAt(at);
+      if (drawing) { drawing.push(stamp()); setCurrent({ pts: drawing }); }
+    };
+    const down = (e: MouseEvent) => { if (e.button === 0) { drawing = [stamp()]; setCurrent({ pts: drawing }); } };
+    const up = (e: MouseEvent) => { if (e.button === 0 && drawing) { drawing = null; finishStroke(); } };
+    document.addEventListener("mousedown", down); document.addEventListener("mouseup", up);
+    return () => { pen.move = null; document.removeEventListener("mousedown", down); document.removeEventListener("mouseup", up); };
+  });
   const shown = result ?? live;
-  return <section className={styles.incantation} role="dialog" aria-label={`Incantation: ${rune.name}`} data-testid="incantation" data-outcome={result?.outcome}>
+  // Not a dialog under mouse-look: a dialog takes the cursor back (useOrbitInput), and the pen needs the lock.
+  return <section className={styles.incantation} role={locked ? "group" : "dialog"} aria-label={`Incantation: ${rune.name}`} data-testid="incantation" data-outcome={result?.outcome} data-pen={locked || undefined}>
     <header><b>{title ? `${title} · ` : ""}{rune.name} · {rune.difficulty === "easy" ? "easy rune" : "hard rune"}</b><small>{effect}</small></header>
     <svg ref={box} viewBox={`0 0 ${SIZE} ${SIZE}`} width={SIZE} height={SIZE} style={{ touchAction: "none" }}
       onPointerDown={e => { if (result) return; e.currentTarget.setPointerCapture(e.pointerId); setCurrent({ pts: [at(e)] }); }}
@@ -77,12 +101,13 @@ export default function IncantationOverlay({ runeId, title, effect, onDone, onCa
         <text x={g.start[0] * SIZE} y={g.start[1] * SIZE + 4} textAnchor="middle" fontSize={12} fontWeight={700} fill="#2b1d3d">{i + 1}</text>
       </g>)}
       {[...strokes, ...(current ? [current.pts] : [])].map((s, i) => <path key={`t${i}`} d={toPath(s)} className={styles.runeTrace} />)}
+      {locked && !result && <circle cx={penAt[0] * SIZE} cy={penAt[1] * SIZE} r={6} fill="#fff6dc" stroke="#2b1d3d" strokeWidth={2} />}
     </svg>
     <div className={styles.runeTimer} aria-label="Time left"><span style={{ width: `${(left / rune.timeLimitMs) * 100}%` }} /></div>
     <p className={styles.runeReadout} role="status">
       {result ? (result.outcome === "fail" ? (left <= 0 && result.accuracy === 0 ? "Out of time · fizzled" : `Fizzled · ${Math.round(result.accuracy)}%`) : `${result.outcome === "enhanced" ? "Empowered" : "Cast"} · ${Math.round(result.accuracy)}%`)
         : shown ? `Accuracy ${Math.round(shown.accuracy)}% · stroke ${strokes.length + 1} of ${rune.strokes.length}` : `Trace from the numbered dot, following the arrow · ${rune.strokes.length} stroke${rune.strokes.length > 1 ? "s" : ""}`}
     </p>
-    <small className={styles.hint}>Under 50% fizzles · 95% and up is empowered · {dash} dodges and cancels</small>
+    <small className={styles.hint}>{locked ? "Hold the mouse button and move the mouse to draw · " : ""}Under 50% fizzles · 95% and up is empowered · {dash} dodges and cancels</small>
   </section>;
 }

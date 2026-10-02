@@ -15,8 +15,10 @@ import type { IncantationScore } from "./contract";
 import { ENEMIES } from "./data";
 import { advanceMission, type MissionEvent } from "./missions";
 import { angleDiff, BOSS, damageEnemy, facingTo, inArc, segDist, shellFactor, spawnEnemy, staggered, type Enemy, type Vec } from "./sim";
+import { SLOT_IDS, type Buff, type CombatRuntime, type CueKind, type FxEvent, type ImpactTier, type ShotHit, type Unit } from "./runtime";
+import { addKick } from "./moveHooks";
 import { shellNote } from "./mobs";
-import { SLOT_IDS, type Buff, type CombatRuntime, type CueKind, type ShotHit, type Unit } from "./runtime";
+import { addCharge, dealtCharge, healedCharge } from "@/lib/combat/ult";
 
 /** Plan §Combat and incantation defaults: starting a drawing spends 25% of its energy, a fizzle or cancel costs a short recovery instead of the cooldown. */
 export const CAST = { start: 0.25, recovery: 1.5 } as const;
@@ -30,7 +32,7 @@ const dist = (a: Vec, b: Vec) => Math.hypot(a.x - b.x, a.z - b.z);
 
 /** Damage numbers and status words ("Dodged", "Not enough energy") keep separate pools, so a flurry of hits never pushes a status out. */
 export const FLOATERS = { damage: 12, info: 4 } as const;
-export function floater(rt: CombatRuntime, at: Vec, y: number, text: string, kind: "hit" | "crit" | "hurt" | "info") {
+export function floater(rt: CombatRuntime, at: Vec, y: number, text: string, kind: "hit" | "crit" | "hurt" | "info" | "ult") {
   rt.floaters.push({ id: rt.seq++, x: at.x, y, z: at.z, text, kind, age: 0 });
   const info = kind === "info";
   let n = 0;
@@ -38,9 +40,20 @@ export function floater(rt: CombatRuntime, at: Vec, y: number, text: string, kin
   if (n > (info ? FLOATERS.info : FLOATERS.damage)) rt.floaters.splice(rt.floaters.findIndex(f => (f.kind === "info") === info), 1);
 }
 /** A cue for the scene (sound, hitstop, shake, puff); at most 32 wait, for runs nobody drains (the balance harness). */
-export function cue(rt: CombatRuntime, kind: CueKind, at: Vec, melee = false) {
-  rt.cues.push({ kind, x: at.x, z: at.z, melee });
+export function cue(rt: CombatRuntime, kind: CueKind, at: Vec, melee = false, tier?: ImpactTier, first?: boolean) {
+  rt.cues.push({ kind, x: at.x, z: at.z, melee, tier, first });
   if (rt.cues.length > 32) rt.cues.shift();
+}
+/** An FX event for the renderer (classes v2): seeded from the place and the runtime's sequence, so every client draws the same; at most 64 wait. */
+export function fx(rt: CombatRuntime, key: string | undefined, phase: FxEvent["phase"], at: Vec, aim: Vec, tier: ImpactTier, radius?: number) {
+  if (!key || !rt.v2) return;
+  rt.fx.push({ caster: "me", key, phase, x: at.x, z: at.z, aim: { x: aim.x, z: aim.z }, seed: (rt.seq++ * 2654435761) >>> 0, tier, ramp: rt.v2.kit.look.ramp, radius });
+  if (rt.fx.length > 64) rt.fx.shift();
+}
+/** Classes v2: points on the ult meter (§1.2), never while an ult is under way for its own hits (the caller says). */
+export function chargeUlt(rt: CombatRuntime, points: number) {
+  const v = rt.v2;
+  if (v && points > 0) v.meter = addCharge(v.meter, points * v.ult.charge);
 }
 export function missionEvent(rt: CombatRuntime, ev: MissionEvent) {
   if (rt.mission) rt.mission = advanceMission(rt.mission, ev);
@@ -61,9 +74,11 @@ export function equipKit(rt: CombatRuntime, subclass: Subclass | null, loadout: 
   const kept = new Set(abilities.map(a => a.key));
   rt.units = rt.units.filter(u => u.source === "weapon" || kept.has(u.source));
 }
-const passiveOf = (rt: CombatRuntime) => rt.kit?.subclass.passive ?? null;
+const passiveOf = (rt: CombatRuntime) => rt.kit?.subclass.passive ?? rt.v2?.passive ?? null;
+/** Summon capacity: today's kit's, or a v2 class's (its stat direction may add). */
+const capacityOf = (rt: CombatRuntime) => rt.kit?.capacity ?? rt.v2?.capacity ?? 2;
 export const buffSum = (rt: CombatRuntime, stat: Buff["stat"]) => rt.buffs.reduce((n, b) => n + (b.stat === stat && b.t > 0 ? b.value : 0), 0);
-export const critChance = (rt: CombatRuntime) => derived(rt.player.stats, rt.player.level).crit_chance + buffSum(rt, "crit");
+export const critChance = (rt: CombatRuntime) => derived(rt.player.stats, rt.player.level).crit_chance + buffSum(rt, "crit") + (rt.v2?.mods.critChance ?? 0);
 /** Speed multiplier: stats and kit (the Assassin), buffs, Monk momentum. */
 /** derived()'s move speed for the last stats, level and kit mods seen (the encounter asks every frame; they change rarely). */
 let base: { stats: object; level: number; mods: object | undefined; speed: number } | null = null;
@@ -75,8 +90,8 @@ export function moveSpeed(rt: CombatRuntime): number {
 export const distracted = (rt: CombatRuntime, e: Enemy) => e.status.distract > 0 || e.status.hold > 0 || rt.units.some(u => u.def.kind === "decoy" && dist(u, e) < e.type.aggroRadius + 3);
 
 // ── Hits ────────────────────────────────────────────────────────
-/** `melee`: a weapon swing (its hits stop time for a beat). */
-export interface HitSrc { power: number; from: Vec; stat?: Stat; tier?: number; unit?: boolean; knock?: number; status?: Status; melee?: boolean }
+/** `melee`: a weapon swing (its hits stop time for a beat). `impact`: its impact tier (§1.6); `ult`: an ult hit (charges no meter). */
+export interface HitSrc { power: number; from: Vec; stat?: Stat; tier?: number; unit?: boolean; knock?: number; status?: Status; melee?: boolean; impact?: ImpactTier; ult?: boolean; first?: boolean }
 
 /** The passive's damage bonus for this hit (a fraction). */
 function passiveBonus(rt: CombatRuntime, e: Enemy, src: HitSrc): number {
@@ -93,25 +108,30 @@ function passiveBonus(rt: CombatRuntime, e: Enemy, src: HitSrc): number {
 }
 
 /** What a hit would deal: the systems damage rule on the equipped weapon (or a trait's tier), scaled by the ability's stat, buffs, passive, mark and stagger. */
-export function hitAmount(rt: CombatRuntime, e: Enemy, src: HitSrc, random: () => number = Math.random): { amount: number; crit: boolean } {
+export function hitAmount(rt: CombatRuntime, e: Enemy, src: HitSrc, random: () => number = Math.random): { amount: number; crit: boolean; raw: number; base: number } {
   const p = rt.player, def = SYSTEM_WEAPONS.find(w => w.key === p.weapon)!;
   const weapon = src.stat || src.tier ? { ...def, scaling: src.stat ? [src.stat] : def.scaling, tier: (src.tier ?? def.tier) as typeof def.tier } : def;
-  const crit = random() < critChance(rt);
+  const crit = random() < critChance(rt), critMult = rt.v2?.mods.critMult;
   // A front shell (zone-1 crabs) turns most of a hit aside: shellFactor in sim.ts.
   const mult = src.power * shellFactor(e, src.from) * (staggered(e) ? BOSS.staggerBonus : 1) * (1 + buffSum(rt, "damage") + passiveBonus(rt, e, src) + e.status.mark);
-  return { amount: ruleDamage({ weapon, durability: src.tier ? 1 : p.durability[p.weapon], stats: p.stats, level: p.level, enemyDefense: e.type.defense, enemyArmor: e.type.armor, crit, potency: mult }), crit };
+  const hit = { weapon, durability: src.tier ? 1 : p.durability[p.weapon], stats: p.stats, level: p.level, enemyDefense: e.type.defense, enemyArmor: e.type.armor, crit, critMult, potency: mult };
+  // Classes v2 meter (§1.2): the hit before defense and armour, over your own base hit (the weapon at potency 1).
+  const raw = rt.v2 ? ruleDamage({ ...hit, enemyDefense: 0, enemyArmor: 0 }) : 0, base = rt.v2 ? ruleDamage({ ...hit, enemyDefense: 0, enemyArmor: 0, crit: false, potency: 1 }) : 0;
+  return { amount: ruleDamage(hit), crit, raw, base };
 }
 
 /** One hit on an enemy from anything the player owns: damage, statuses, passives, kill bookkeeping. Returns the damage dealt. */
 export function strike(rt: CombatRuntime, e: Enemy, src: HitSrc, random: () => number = Math.random): number {
   if (e.state === "dead" || e.state === "return") return 0;
-  const { amount, crit } = hitAmount(rt, e, src, random);
+  const { amount, crit, raw, base } = hitAmount(rt, e, src, random);
   const held = e.status.hold > 0, shell = shellFactor(e, src.from) < 1;
   const killed = damageEnemy(e, amount, src.from, src.knock ?? 0);
   if (shell) shellNote(rt, e, src.from);
-  if (e.flash === 0.18) floater(rt, e, 1.4 + e.type.hover, String(amount), crit ? "crit" : "hit");
+  if (e.flash === 0.18) floater(rt, e, 1.4 + e.type.hover, String(amount), src.ult ? "ult" : crit ? "crit" : "hit");
   if (src.status && !killed) applyStatus(e, src.status);
-  if (!src.unit) { onPlayerHit(rt, e, amount, crit, held); cue(rt, crit ? "crit" : "hit", e, !!src.melee); }
+  if (!src.ult) chargeUlt(rt, dealtCharge(raw, base)); // you and your units; ult hits charge nothing
+  rt.tally.dealt += amount; if (src.ult) rt.tally.ult += amount;
+  if (!src.unit) { onPlayerHit(rt, e, amount, crit, held); cue(rt, crit ? "crit" : "hit", e, !!src.melee, src.impact, src.first); }
   if (killed) onKill(rt, e);
   return amount;
 }
@@ -130,7 +150,7 @@ function onPlayerHit(rt: CombatRuntime, e: Enemy, amount: number, crit: boolean,
 
 function onKill(rt: CombatRuntime, e: Enemy) {
   rt.killQueue.push({ enemy: e.type.id, key: `kill:${e.id}:${rt.seq++}:${Date.now().toString(36)}` });
-  cue(rt, e.type.kind === "boss" ? "bossDefeat" : "defeat", e);
+  cue(rt, e.type.kind === "boss" ? "bossDefeat" : "defeat", e, false, e.type.elite ? "heavy" : undefined); // an elite kill lands heavy (§1.6)
   missionEvent(rt, { type: "kill", enemy: e.type.id });
   const pv = passiveOf(rt), me = rt.player.last;
   if (pv?.kind === "kill_heal" && me && dist(me, e) <= (pv.cap ?? 9)) heal(rt, rt.player.maxHp * pv.value);
@@ -153,6 +173,7 @@ export function heal(rt: CombatRuntime, amount: number): number {
   if (!p.alive || amount <= 0) return 0;
   const gained = Math.min(amount, p.maxHp - p.hp);
   p.hp += gained;
+  chargeUlt(rt, healedCharge(gained, p.maxHp)); // health actually restored (overheal charges nothing)
   const pv = passiveOf(rt);
   if (pv?.kind === "overheal_shield" && amount > gained) addShield(rt, Math.min((amount - gained) * pv.value, p.maxHp * (pv.cap ?? 0.3) - p.shield), 6);
   return gained;
@@ -163,7 +184,7 @@ export function addShield(rt: CombatRuntime, amount: number, duration: number) {
   p.shield = Math.min(p.maxHp * SHIELD_CAP, p.shield + amount);
   p.shieldFor = Math.max(p.shieldFor, duration);
 }
-function addBuff(rt: CombatRuntime, b: Buff) {
+export function addBuff(rt: CombatRuntime, b: Buff) {
   rt.buffs = rt.buffs.filter(x => !(x.stat === b.stat && x.onBlock === b.onBlock && b.onBlock)); // re-raising a guard refreshes it
   rt.buffs.push(b);
 }
@@ -171,7 +192,7 @@ function addBuff(rt: CombatRuntime, b: Buff) {
 /** Damage to the player after guard, a frontal block and the shield. Returns what's left for health; triggers block passives/answers. */
 export function mitigate(rt: CombatRuntime, amount: number, from: Vec, me: Vec, random: () => number = Math.random): { damage: number; blocked: boolean } {
   const p = rt.player;
-  let dmg = amount * (1 - Math.min(GUARD_CAP, buffSum(rt, "guard")));
+  let dmg = amount * (1 - Math.min(GUARD_CAP, buffSum(rt, "guard") + (rt.v2?.mods.guard ?? 0)));
   const block = rt.buffs.find(b => b.stat === "block" && b.t > 0);
   const frontal = angleDiff(facingTo(me, from), p.facing) < 1.1;
   let blocked = false;
@@ -185,14 +206,17 @@ export function mitigate(rt: CombatRuntime, amount: number, from: Vec, me: Vec, 
   }
   const soak = Math.min(p.shield, dmg);
   p.shield -= soak;
+  chargeUlt(rt, healedCharge(soak, p.maxHp)); // shield that actually absorbed
   return { damage: Math.round(dmg - soak), blocked };
 }
 
 // ── Using a slot ────────────────────────────────────────────────
-interface Ctx { ability: Ability; pos: Vec; aim: Vec; dir: Vec; dmg: number; sup: number; ctl: number; gear: number; stat: Stat; tier?: number; color: string }
+/** `impact`: the tier its hits land with; `ult`: the ult's own hits (no meter); `fx`: the ability's FX registry keys (classes v2). */
+export interface Ctx { ability: Ability; pos: Vec; aim: Vec; dir: Vec; dmg: number; sup: number; ctl: number; gear: number; stat: Stat; tier?: number; color: string;
+  impact?: ImpactTier; ult?: boolean; fx?: { cast?: string; travel?: string; impact?: string; zone?: string } }
 
-function context(rt: CombatRuntime, ability: Ability, me: Vec, potency: number, aimAt: Vec): Ctx {
-  const p = rt.player, sub = rt.kit?.subclass, family = sub?.family ?? "Vanguard";
+export function context(rt: CombatRuntime, ability: Ability, me: Vec, potency: number, aimAt: Vec): Ctx {
+  const p = rt.player, sub = rt.kit?.subclass, family = sub?.family ?? rt.v2?.kit.family ?? "Vanguard";
   const d = Math.hypot(aimAt.x - me.x, aimAt.z - me.z);
   const dir = d > 0.05 ? { x: (aimAt.x - me.x) / d, z: (aimAt.z - me.z) / d } : { x: Math.sin(p.facing), z: Math.cos(p.facing) };
   const aim = d > AIM_RANGE ? { x: me.x + dir.x * AIM_RANGE, z: me.z + dir.z * AIM_RANGE } : { ...aimAt };
@@ -211,7 +235,7 @@ function context(rt: CombatRuntime, ability: Ability, me: Vec, potency: number, 
     ability, pos: { ...me }, aim, dir, gear,
     dmg: potency * gear * (1 + elementBonus), sup: Math.min(potency, SUPPORT_CAP), ctl: Math.min(potency, CONTROL_CAP),
     stat: ability.stat ?? FAMILY_STAT[family], tier: trait ? traitTier(rt.kit?.traits[trait.key] ?? 0) : undefined,
-    color: ability.element ? COLOR[rt.passive.element ?? "fire"] : COLOR[family],
+    color: ability.element ? COLOR[rt.passive.element ?? "fire"] : rt.v2 ? rt.v2.kit.look.ramp[1] : COLOR[family],
   };
 }
 
@@ -239,21 +263,27 @@ export function resolveCast(rt: CombatRuntime, me: Vec, score: IncantationScore,
   const c = rt.casting;
   if (!c) return;
   rt.casting = null;
-  const id = SLOT_IDS[c.slot], pct = Math.round(score.accuracy);
-  if (score.outcome === "fail") { rt.cooldowns[id] = CAST.recovery; floater(rt, me, 1.9, `Fizzled · ${pct}%`, "info"); return; }
+  const id = SLOT_IDS[c.slot], pct = Math.round(score.accuracy), v2 = rt.v2;
+  const setCd = (s: number) => { if (v2) v2.cd[c.ability.key] = s; else rt.cooldowns[id] = s; };
+  if (score.outcome === "fail") { setCd(CAST.recovery); floater(rt, me, 1.9, `Fizzled · ${pct}%`, "info"); return; }
   const p = rt.player;
   p.energy = Math.max(0, p.energy - (c.ability.energy - Math.ceil(c.ability.energy * CAST.start))); p.sinceSpend = 0;
-  rt.cooldowns[id] = c.ability.cooldown_s;
+  setCd(c.ability.cooldown_s);
   floater(rt, me, 1.9, `${score.outcome === "enhanced" ? "Empowered" : "Cast"} · ${c.ability.name} · ${pct}%`, "info");
   p.attackCd = Math.max(p.attackCd, 0.25);
-  runEffects(rt, c.ability.effects, context(rt, c.ability, me, score.power, c.aim), random);
+  // A v2 shape scales 0.6 (a rough sketch) to 1.5 (a clean one) (the Priest, David 2026-10-02); today's runes 0.5–1.5.
+  const potency = v2 ? shapePotency(score.accuracy) : score.power, ctx = context(rt, c.ability, me, potency, c.aim);
+  if (v2) { const a = c.ability as Ability & { heavy?: boolean; vfx?: Ctx["fx"] }; ctx.impact = a.heavy ? "heavy" : "ability"; ctx.fx = a.vfx; fx(rt, a.vfx?.cast, "cast", me, c.aim, ctx.impact); }
+  runEffects(rt, c.ability.effects, ctx, random);
 }
 /** Dodge or Escape while drawing: the start cost is gone, the slot recovers briefly (row C3). */
 export function cancelCast(rt: CombatRuntime) {
   if (!rt.casting) return;
-  rt.cooldowns[SLOT_IDS[rt.casting.slot]] = CAST.recovery;
+  if (rt.v2) rt.v2.cd[rt.casting.ability.key] = CAST.recovery; else rt.cooldowns[SLOT_IDS[rt.casting.slot]] = CAST.recovery;
   rt.casting = null;
 }
+/** A v2 drawn shape's potency from its accuracy: under 50 fizzles (0), 50 → 0.6 up to 95+ → 1.5. */
+export const shapePotency = (accuracy: number) => (accuracy < 50 ? 0 : accuracy >= 95 ? 1.5 : 0.6 + (0.9 * (accuracy - 50)) / 45);
 
 // ── Effects ─────────────────────────────────────────────────────
 const scaled = (st: Status | undefined, ctl: number): Status | undefined => st && {
@@ -265,13 +295,14 @@ export function runEffects(rt: CombatRuntime, effects: Effect[], ctx: Ctx, rando
   const p = rt.player, alive = () => rt.enemies.filter(e => e.state !== "dead" && e.state !== "return");
   for (let i = 0; i < effects.length; i++) {
     const ef = effects[i];
-    const src = (power: number, from: Vec, more: Partial<HitSrc> = {}): HitSrc => ({ power: power * ctx.dmg, from, stat: ctx.stat, tier: ctx.tier, ...more });
+    const src = (power: number, from: Vec, more: Partial<HitSrc> = {}): HitSrc => ({ power: power * ctx.dmg, from, stat: ctx.stat, tier: ctx.tier, impact: ctx.impact, ult: ctx.ult, ...more });
     switch (ef.kind) {
       case "projectile": {
         const n = ef.count ?? 1, speed = ef.speed ?? 16, base = Math.atan2(ctx.dir.x, ctx.dir.z);
         for (let k = 0; k < n; k++) {
           const a = base + (n > 1 ? (k / (n - 1) - 0.5) * (ef.spread ?? 0) : 0), vx = Math.sin(a), vz = Math.cos(a);
-          const hit: ShotHit = { power: ef.power * ctx.dmg, stat: ctx.stat, tier: ctx.tier, pierce: ef.pierce, splash: ef.splash, status: scaled(ef.status, ctx.ctl), hitIds: [] };
+          const hit: ShotHit = { power: ef.power * ctx.dmg, stat: ctx.stat, tier: ctx.tier, pierce: ef.pierce, splash: ef.splash, status: scaled(ef.status, ctx.ctl), hitIds: [],
+            impact: ctx.impact, ult: ctx.ult, fx: ctx.fx?.impact, travel: ctx.fx?.travel, ramp: rt.v2?.kit.look.ramp };
           rt.projectiles.push({ id: rt.seq++, x: ctx.pos.x + vx * 0.5, z: ctx.pos.z + vz * 0.5, vx: vx * speed, vz: vz * speed, life: (ef.range ?? 10) / speed,
             from: "player", damage: 0, kind: ctx.stat === "finesse" ? "arrow" : "bolt", radius: 0.25, hit });
         }
@@ -280,14 +311,17 @@ export function runEffects(rt: CombatRuntime, effects: Effect[], ctx: Ctx, rando
       case "area": {
         const center = ef.at === "aim" ? ctx.aim : ctx.pos, face = Math.atan2(ctx.dir.x, ctx.dir.z);
         const end = ef.length ? { x: ctx.pos.x + ctx.dir.x * ef.length, z: ctx.pos.z + ctx.dir.z * ef.length } : null;
+        let first = true;
         for (const e of alive()) {
           const inside = end ? segDist(e, ctx.pos, end) <= ef.radius + e.type.radius
             : ef.arc ? inArc(center, face, ef.radius, ef.arc, e, e.type.radius)
             : dist(center, e) <= ef.radius + e.type.radius;
-          if (inside && ef.power > 0) strike(rt, e, src(ef.power, center, { knock: ef.knock ?? 3, status: scaled(ef.status, ctx.ctl) }), random);
+          if (inside && ef.power > 0) { strike(rt, e, src(ef.power, center, { knock: ef.knock ?? 3, status: scaled(ef.status, ctx.ctl), first }), random); first = false; }
           else if (inside && ef.status) applyStatus(e, ef.status, ctx.ctl);
         }
-        rt.blasts.push({ id: rt.seq++, x: center.x, z: center.z, radius: ef.radius, color: ctx.color, age: 0, life: 0.5, arc: ef.arc, rot: face, length: ef.length });
+        // Classes v2 draws its own effects from FX events (lib/game/fx/combat.ts); today's kits keep the flat blast.
+        if (rt.v2) { fx(rt, ctx.fx?.impact, "impact", center, ctx.aim, ctx.impact ?? "ability", ef.radius); fx(rt, ctx.fx?.zone, "zone", center, ctx.aim, ctx.impact ?? "ability", ef.radius); }
+        else rt.blasts.push({ id: rt.seq++, x: center.x, z: center.z, radius: ef.radius, color: ctx.color, age: 0, life: 0.5, arc: ef.arc, rot: face, length: ef.length });
         break;
       }
       case "dash": {
@@ -303,13 +337,16 @@ export function runEffects(rt: CombatRuntime, effects: Effect[], ctx: Ctx, rando
       case "shield": addShield(rt, ef.amount * ctx.sup * p.maxHp, ef.duration); floater(rt, ctx.pos, 2.1, "Shield", "info"); break;
       case "heal": { const got = heal(rt, ef.amount * ctx.sup * p.maxHp); floater(rt, ctx.pos, 2.1, `+${Math.round(got)}`, "info"); break; }
       case "summon": summon(rt, ef.unit, ef.count ?? 1, ctx, ctx.ability.key); break;
-      case "buff": addBuff(rt, { stat: ef.stat, value: ef.stat === "block" ? ef.value * ctx.gear : ef.value, t: ef.duration, onBlock: ef.stat === "block" ? ctx.ability : undefined }); break;
+      case "buff": addBuff(rt, { stat: ef.stat, value: ef.stat === "block" ? ef.value * ctx.gear : ef.value, t: ef.duration, onBlock: ef.stat === "block" ? ctx.ability : undefined, source: ctx.ability.key }); break;
       case "transform": {
         rt.transform = { name: ctx.ability.name, t: Math.max(ef.duration, rt.transform?.t ?? 0) };
         const pv = passiveOf(rt);
         if (pv?.kind === "transform_shield") addShield(rt, p.maxHp * pv.value, 4);
         break;
       }
+      // Movement hooks (classes v2): carried speed along the aim, a hop; the avatar applies them on its next step.
+      case "momentum": p.kick = addKick(p.kick, ctx.dir.x, ctx.dir.z, ef.speed, 0); break;
+      case "launch": p.kick = addKick(p.kick, 0, 0, 0, ef.height); break;
     }
   }
 }
@@ -328,7 +365,7 @@ function enforceCaps(rt: CombatRuntime, added: Unit) {
   else if (k === "decoy") drop(u => u.def.kind === "decoy", CAPS.decoys);
   else if (added.source === "weapon") drop(u => u.source === "weapon", CAPS.weaponWisps);
   else {
-    const cap = rt.kit?.capacity ?? 2;
+    const cap = capacityOf(rt);
     while (rt.units.reduce((n, u) => n + minionCost(u), 0) > cap) {
       const old = rt.units.find(u => minionCost(u) > 0 && u !== added);
       if (!old) break;
@@ -354,7 +391,8 @@ export function summon(rt: CombatRuntime, key: string, count: number, ctx: Pick<
     if (!body && def.model) body = spawnEnemy(`ally-${rt.seq}`, ENEMIES[def.model], at.x, at.z);
     if (body) body.state = "chase";
     const hp = body && unit === "shade" ? Math.min(140, Math.round(body.type.hp * 0.6)) : def.hp;
-    const u: Unit = { id: rt.seq++, def, source, x: at.x, z: at.z, hp, maxHp: hp, life: def.life ?? null, cd: 0.3, power: (def.power ?? 0) * ctx.sup, stat: ctx.stat, body };
+    const u: Unit = { id: rt.seq++, def, source, x: at.x, z: at.z, hp, maxHp: hp, life: def.life === undefined ? null : def.life * (rt.v2?.mods.duration ?? 1), cd: 0.3,
+      power: (def.power ?? 0) * ctx.sup * (rt.v2?.mods.summonPower ?? 1), stat: ctx.stat, body };
     rt.units.push(u);
     enforceCaps(rt, u);
   }

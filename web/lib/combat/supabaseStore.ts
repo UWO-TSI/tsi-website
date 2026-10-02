@@ -4,10 +4,10 @@ import type { BossReward } from "./content";
 import type { MissionProgress } from "./missions";
 import { ZERO_STATS, type StatBlock } from "./progression";
 import { raisePg } from "@/lib/result";
-import { CombatError, type CombatErrorCode, type CombatStore, type ProgressRow } from "./store";
+import { CombatError, type CombatErrorCode, type CombatStore, type MasteryRow, type ProgressRow } from "./store";
 
 type Row = Record<string, unknown>;
-const CODES: CombatErrorCode[] = ["bad_loadout", "no_subclass", "insufficient", "not_found", "not_owned", "needs_reset", "not_enough_points", "level_too_low", "wrong_family", "no_family", "cooldown", "not_ready", "kill_xp_cap", "unknown_enemy", "unknown_mission", "bad_hits", "boss_cooldown", "miniboss_cooldown"];
+const CODES: CombatErrorCode[] = ["bad_loadout", "no_subclass", "locked", "bad_cosmetic", "insufficient", "not_found", "not_owned", "needs_reset", "not_enough_points", "level_too_low", "wrong_family", "no_family", "cooldown", "not_ready", "kill_xp_cap", "unknown_enemy", "unknown_mission", "bad_hits", "boss_cooldown", "miniboss_cooldown"];
 const raise = (error: { code?: string; message?: string } | null): never => raisePg(error, CODES);
 const first = (d: unknown) => ((Array.isArray(d) ? d[0] : d) ?? {}) as Row;
 const xpRes = (r: Row) => ({ xp: Number(r.xp), level: Number(r.level), levelled_up: r.levelled_up === true, replayed: r.replayed === true });
@@ -21,11 +21,11 @@ export function supabaseCombatStore(db: SupabaseClient): CombatStore {
   return {
     async progression(m) {
       await rpc("combat_ensure", { p_member_id: m });
-      const { data, error } = await db.from("member_progression").select("xp, level, stats, subclass, loadout, traits").eq("member_id", m).single();
+      const { data, error } = await db.from("member_progression").select("xp, level, stats, subclass, loadout, traits, repick_source").eq("member_id", m).single();
       if (error) raise(error);
       const r = data as Row;
       return { xp: Number(r.xp), level: Number(r.level), stats: { ...ZERO_STATS, ...(r.stats as StatBlock) }, subclass: (r.subclass as string) ?? null,
-        loadout: (r.loadout as string[]) ?? [], traits: (r.traits as Record<string, number>) ?? {} };
+        loadout: (r.loadout as string[]) ?? [], traits: (r.traits as Record<string, number>) ?? {}, repick_source: (r.repick_source as "oracle" | "launch" | null) ?? null };
     },
     async family(m) {
       const { data } = await db.from("member_identity").select("family").eq("member_id", m).maybeSingle();
@@ -87,6 +87,27 @@ export function supabaseCombatStore(db: SupabaseClient): CombatStore {
       const r = first(await rpc("combat_mission_complete", { p_progress_id: id, p_member_id: m }));
       return { xp_awarded: Number(r.xp_awarded), coins_awarded: Number(r.coins_awarded), materials_awarded: (r.materials_awarded as Record<string, number>) ?? {}, replayed: r.replayed === true };
     },
+    async oracleReading(m) {
+      const [id, at] = await Promise.all([
+        db.from("member_identity").select("mbti_type").eq("member_id", m).maybeSingle(),
+        db.from("oracle_attempts").select("scores").eq("member_id", m).eq("status", "completed").order("completed_at", { ascending: false }).limit(1).maybeSingle(),
+      ]);
+      const type = (id.data as Row | null)?.mbti_type as string | undefined;
+      if (!type) return null;
+      const scores = (((at.data as Row | null)?.scores as { dichotomy: string; clarity: number }[] | null) ?? []).filter(s => typeof s?.clarity === "number");
+      return { type, scores: scores as { dichotomy: "EI" | "SN" | "TF" | "JP"; clarity: number }[] };
+    },
+    async setting(k) {
+      const { data } = await db.from("economy_settings").select("value").eq("key", k).maybeSingle();
+      return data ? Number((data as Row).value) : null;
+    },
+    async mastery(m) {
+      const { data, error } = await db.from("member_subclass_mastery").select("subclass, xp, mastery, cosmetics").eq("member_id", m);
+      if (error) raise(error);
+      return ((data ?? []) as Row[]).map((r): MasteryRow => ({ subclass: String(r.subclass), xp: Number(r.xp), mastery: Number(r.mastery), cosmetics: (r.cosmetics as MasteryRow["cosmetics"]) ?? {} }));
+    },
+    equipCosmetic: async (m, subclass, kind, value) =>
+      ((await rpc("combat_equip_cosmetic", { p_member_id: m, p_subclass: subclass, p_kind: kind, p_value: value })) as MasteryRow["cosmetics"]) ?? {},
     async bossReward(m, ev, reward) {
       const r = first(await rpc("combat_boss_reward", { p_member_id: m, p_event_key: ev, p_reward: reward }));
       return { reward: r.reward as BossReward, replayed: r.replayed === true };

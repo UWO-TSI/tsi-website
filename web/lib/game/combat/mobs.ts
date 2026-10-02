@@ -2,7 +2,7 @@
  * Zone-1 mob mechanics the encounter tick runs (design sheet "Mobs, zone 1"; sim.ts moves and times them): a den or
  * cloud waking together, pounces, darts and charges touching you, a pollen sprite bursting, lobbed spores landing and
  * their poison puddles, the elder crab's shockwaves, a shell turning a hit aside, and the effects the scene paints
- * (`rt.fx`, drained by components/game/combat/MobFx.tsx). Pure over the runtime, no three.js.
+ * (`rt.mobFx`, drained by components/game/combat/MobFx.tsx). Pure over the runtime, no three.js.
  */
 import { floater, hurtUnits, mitigate } from "./abilities";
 import { hurtPlayer } from "./actions";
@@ -16,8 +16,8 @@ export const RUNE_BOLT_SPEED = 11;
 /** Effects waiting to be painted, at most (the balance harness never drains them). */
 const FX_MAX = 48;
 export function mobFx(rt: CombatRuntime, kind: MobFxKind, x: number, z: number, rot = 0, size = 1) {
-  rt.fx.push({ kind, x, z, rot, size });
-  if (rt.fx.length > FX_MAX) rt.fx.shift();
+  rt.mobFx.push({ kind, x, z, rot, size });
+  if (rt.mobFx.length > FX_MAX) rt.mobFx.shift();
 }
 
 const ENGAGED = new Set<Enemy["state"]>(["chase", "windup", "active", "recover"]);
