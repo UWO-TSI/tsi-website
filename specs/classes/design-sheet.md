@@ -812,9 +812,9 @@ All waves merge to `main` behind a `classes_v2` flag that stays off in productio
 | Earth + Wind | Rampart | Terrain | A stone wall that blocks shots; climbable, usable as a jump ramp |
 
 - **Passive, Attunement:** alternating elements builds the ult meter faster. There are no reaction marks; the combos are the reactions.
-- **Movement passive, Air Step (David, 2026-10-02):** in the air, press jump to blast wind beneath you and jump again. It costs mana and keeps your momentum, so it links into dash, slide-jump and glide chains (row 292). How it shares Space with the glider is still open.
+- **Movement passive, Air Step (David, 2026-10-02):** in the air, press jump to blast wind beneath you and jump again. It costs mana and keeps your momentum, so it links into dash, slide-jump and glide chains (row 292). Tap Space in the air for Air Step; hold Space for the glider. Ruins only (class movement needs mana, which exists only in combat).
 - **Resource:** every Elementalist attack costs mana, shown as Mana (the combat energy pool), so you have to save up.
-- **Mastery focus:** raising max mana and mana regen, the "storage" for bigger rotations. Areas and combo costs improve alongside.
+- **Stat direction: max mana.** Like a Megabonk character, the Elementalist is built to want a bigger mana pool (and its regen), the "storage" for bigger rotations. Mastery raises it; areas and combo costs improve alongside.
 - **Ultimate, Cataclysm (F, meter):**
   - **Charge:** 5 s, rooted, taking 50% less damage. A pop-up mash shows 3 numbers (1–4) at a time; press the front one fast, and the next slides in. Hits pulse that element into the sky; misses crack it.
   - **Telegraph:** while it charges, black storm clouds gather overhead and the area of effect glows on the terrain, warning the enemies.
@@ -847,10 +847,11 @@ All waves merge to `main` behind a `classes_v2` flag that stays off in productio
 - **Momentum (row 292):** Swap and Trick Card keep your speed and direction, so you come out of a clone still sliding and a mid-air Trick Card keeps your arc.
 - **Passive, "Who's Real?":** while clones are alive, 30% of enemy attacks go after a clone instead of you.
 - **Ultimate, The Joker (F, meter):** pull out a Joker card and throw it. It becomes a huge mirror that sweeps across the field. Its path turns inverted colour, every entity in the path is scooped into the glass as a flat 2D image, and then the mirror shatters: flash frame, glass burst, heavy damage.
-- **Mastery:**
-  - At 1: Clone, Swap, Mirror Ward and Vanish.
-  - Trick Card at 3.
-  - Up to 20: a third clone, a longer reflect window, faster swaps, and cosmetics.
+- **Mastery (clone mastery):**
+  - At 1: Clone, Swap, Mirror Ward and Vanish; 2 clones, 10 s, basic AI. Trick Card at 3.
+  - At 10: 3 clones, 14 s; clones also use skill 1.
+  - At 20: 4 clones, 18 s; clones use skills 1–3; Swap heals 10% (from 5%).
+- **Stat direction:** still to decide (a base stat the class wants to stack, Megabonk style).
 - **Identity:**
   - A purple aura of floating cards.
   - A card icon on the nameplate.
@@ -881,7 +882,7 @@ All waves merge to `main` behind a `classes_v2` flag that stays off in productio
   - A skull-and-tome icon on the nameplate.
   - Shop: tome bindings and soul-fire colours.
 
-## Transmuter (LOCKED, David 2026-10-02)
+## Transmuter (DRAFT: David wants to talk about the mobs first, 2026-10-02)
 - **Family:** Arcane (purple).
 - **Role:** form-shifting bruiser.
 - **MBTI:** mapped at the end.
@@ -909,8 +910,20 @@ All waves merge to `main` behind a `classes_v2` flag that stays off in productio
 - **Learning forms:** Fox is known from the start. Your first kill of a crab, golem or wisp teaches that form, so there's a reason to hunt.
 - **Passive, Shed Skin:** each shift gives a small barrier.
 - **Ultimate, Chimera (F, meter):** a timed transformation (10 s). Circles flare on the ground and your body warps into a chimera three times your size: fox legs, crab claws, golem body, wisp wings. Stats are hugely buffed, and skills 1–5 have no cooldown, so you spam them freely. It ends in a giant pounce: flash frame.
-- **Mastery focus:** shortening the form cooldown (3 s down to about 0.75 s at 20) and the shift cost, so you change forms faster. Form skills upgrade alongside; cosmetics.
+- **Stat direction: cooldown reduction.** The Transmuter is built to want shorter cooldowns: the form cooldown (3 s down to about 0.75 s at 20) and skill cooldowns, so you change forms faster. Form skills upgrade alongside; cosmetics.
+- **Perfect Shift and the forms** wait for the mobs discussion.
 - **Identity:**
   - A purple aura with flickering monster silhouettes.
   - A fang icon on the nameplate.
   - Shop: charm skins and form-colour variants.
+
+## Stat direction per class (David, 2026-10-02)
+"like in the game megabonk each character has a direction to go towards." Every class has one base stat it is built to stack, which mastery raises and its kit rewards:
+
+| Class | Stat direction |
+|---|---|
+| Elementalist | Max mana (pool and regen) |
+| Transmuter | Cooldown reduction |
+| Illusionist | to decide |
+
+Class movement passives and skills (Air Step, Bone Surf, Fox Pounce) work in the ruins only; the village movement kit stays the same for everyone.
