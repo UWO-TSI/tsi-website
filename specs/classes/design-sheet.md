@@ -929,6 +929,10 @@ All waves merge to `main` behind a `classes_v2` flag that stays off in productio
 | Sniper | Crit damage |
 | Hunter | Duration |
 | Gunslinger | Reload speed |
+| Guardian | Armor |
+| Juggernaut | Max HP |
+| Monk | Attack speed |
+| Assassin | Crit chance |
 
 Class movement passives and skills (Air Step, Bone Surf, Fox Pounce) work in the ruins only; the village movement kit stays the same for everyone.
 
@@ -1011,3 +1015,40 @@ Play style (David, 2026-10-02): "some character should be skill based and some s
   - Golden rounds hit hard. The Warhead hits like a nuke: the biggest flash frame in the game, a mushroom cloud, and a huge blast.
   - You get 10 s to fire all six.
 - **Stat direction:** reload speed.
+
+## Guardian (LOCKED, David 2026-10-02)
+- **Family:** Vanguard (yellow).
+- **Role:** parry tank.
+- **Style:** skills.
+- **Weapon:** a shield and sword; the shield is worn on the arm.
+- **Basic:** a 3-hit sword combo.
+- **Bulwark (passive):** a perfect parry restores energy and grants armor for 3 s.
+
+| Key | Skill | Effect |
+|---|---|---|
+| 1 | Block / Parry | Hold to block attacks from the front (−70% damage). Tap as a hit lands (0.25 s window) to parry: negate it, counter-slash, stagger |
+| 2 | Challenge | Enemies around you target you for 4 s; armor rises while it lasts |
+| 3 | Shield Rush | A shield-first dash that chains off a slide, keeps momentum and knocks enemies down (movement) |
+| 4 | Aegis Dome | Plant the shield: a dome that blocks projectiles for 5 s |
+| 5 | Shield Throw | Bounces between up to 3 enemies and returns |
+
+- **Ultimate, Unbreakable:** for 6 s you take no damage. Everything absorbed is stored, then you slam the shield down and release it ×2 as a shockwave: flash frame, heavy shake.
+- **Stat direction:** armor.
+
+## Juggernaut (LOCKED, David 2026-10-02)
+- **Family:** Vanguard (yellow).
+- **Role:** unstoppable bruiser.
+- **Style:** basic attacks.
+- **Weapon:** a huge war hammer, carried on the back.
+- **Basic:** slow, heavy swings; each hit adds 2% of your max HP as damage.
+- **Unstoppable (passive):** can't be knocked back or interrupted while attacking.
+
+| Key | Skill | Effect |
+|---|---|---|
+| 1 | Charge | A bull rush that plows through enemies; slide into it to go further (movement) |
+| 2 | Ground Slam | Cracks the ground; AoE stun |
+| 3 | War Cry | Enemies target you; gain +20% temporary HP |
+| 4 | Seismic Drop | In the air, crash down; damage grows with the fall height (a combo extender off any jump) |
+
+- **Ultimate, Titan:** grow to 2.5× size for 10 s. Every step shakes the ground and swings send shockwaves. It ends with the hammer splitting the earth: flash frame.
+- **Stat direction:** max HP.
