@@ -5,7 +5,7 @@ import { DomainError } from "@/lib/result";
 
 export type CollectionsErrorCode =
   | "unavailable" | "already_donated" | "not_owned" | "not_donatable" | "rate_limited" | "failed"
-  | "too_fast" | "no_roll" | "roll_expired" | "already_landed" | "already_harvested" | "out_of_season";
+  | "too_fast" | "no_roll" | "roll_expired" | "already_landed" | "already_harvested" | "out_of_season" | "none_left";
 export class CollectionsError extends DomainError<CollectionsErrorCode> {}
 
 export interface TourneyRef {
@@ -51,6 +51,8 @@ export interface CollectionsStore {
   land(memberId: string, rollId: string, seasonal?: LandSeason): Promise<CatchResult & { item_key: string; size_cm: number | null }>;
   /** Atomic: one harvest per node per hour, recorded with collections_record_catch's caps (a capped one leaves the node unharvested); a rare one may teach a recipe. */
   harvest(memberId: string, nodeId: string, hourKey: string, itemKey: string, sizeCm: number | null, trophyEligible: boolean): Promise<CatchResult>;
+  /** Atomic: eat one of a fruit the member has (collections_eat); none_left when they have none. Returns how many are left. */
+  eat(memberId: string, itemKey: string): Promise<{ count: number }>;
   /** The member's owned gear keys: catalogue refs and shop slugs (lib/game/tools.ts: rods by ref, nets and shovels by slug). */
   ownedGear(memberId: string): Promise<string[]>;
   /** Every entry of one tourney cycle, with names (service role: the route applies the board's privacy). */

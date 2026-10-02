@@ -89,6 +89,19 @@ export const harvestNode = (node: string, at: [number, number], tool?: string) =
 export const castLine = (site: "village" | "home", at: [number, number], power: number, tool: string) => catchRequest({ action: "cast", site, at, power, tool });
 export const landCatch = (roll: string) => catchRequest({ action: "land", roll });
 
+export type EatAnswer = { ok: true; count: number } | { ok: false; error: string };
+/** Eat one held fruit (POST /api/collections/eat, specs/game-ui.md §2). Signed out or without a server, from this browser's record. */
+export async function eatItem(itemKey: string): Promise<EatAnswer> {
+  try {
+    const res = await fetch("/api/collections/eat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ item: itemKey }) });
+    const json = await res.json().catch(() => null);
+    if (res.ok && json?.eaten) { spendCollected(itemKey, 1); return { ok: true, count: json.eaten.count }; }
+    if (res.status !== 401 && res.status !== 503) return { ok: false, error: json?.error ?? "Something went wrong. Try again." };
+  } catch { /* the local record */ }
+  const have = localCollections()[itemKey] ?? 0;
+  return have > 0 ? { ok: true, count: spendCollected(itemKey, 1) } : { ok: false, error: "You don't have any of those left." };
+}
+
 /**
  * Spend/remove n of an item from the LOCAL record (Wharf Shack sales, E3).
  * v1 is local-first: the server collection row is NOT decremented yet — a

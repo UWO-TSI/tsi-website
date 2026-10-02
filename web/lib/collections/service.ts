@@ -26,6 +26,7 @@ const ERRORS: Record<string, [number, string]> = {
   already_landed: [409, "Already landed."],
   already_harvested: [409, "You've already gathered here this hour."],
   out_of_season: [409, "That one only bites during its seasonal event."],
+  none_left: [409, "You don't have any of those left."],
   failed: [500, "Something went wrong. Try again."],
 };
 const fail = <T>(err: unknown): Result<T> => toFailure(ERRORS, err);
@@ -89,6 +90,20 @@ export async function catchAction(
     const roll = await store.cast(memberId, fish.key, kept, trophyFor(sp, kept));
     // Not caught yet: the reel and the card show what the land records (no size for a fish off the roster).
     return { ok: true, data: { roll, item_key: fish.key, size_cm: kept } };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+const EatRequest = z.object({ item: z.string().max(64) });
+/** Eat a held snack (specs/game-ui.md §2): fruit only, one from the member's own stock (collections_eat). A moment, no reward (principle 3). */
+export async function eat(store: CollectionsStore, memberId: string, body: unknown): Promise<Result<{ item_key: string; count: number }>> {
+  const parsed = EatRequest.safeParse(body);
+  if (!parsed.success) return { ok: false, status: 400, code: "invalid", error: "Invalid request" };
+  const sp = ROSTER.find((s) => s.key === parsed.data.item);
+  if (sp?.category !== "fruit") return { ok: false, status: 422, code: "not_edible", error: "That isn't something to eat." };
+  try {
+    return { ok: true, data: { item_key: sp.key, ...(await store.eat(memberId, sp.key)) } };
   } catch (err) {
     return fail(err);
   }

@@ -79,6 +79,12 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
       donations.push({ species_key: sk, donor_id: m, donor_name: null, donated_at: now().toISOString(), size_cm: size, key });
       return { replayed: false };
     },
+    async eat(m, key) {
+      const row = items.get(`${m}:${key}`);
+      if (!row || row.count < 1) throw new CollectionsError("none_left");
+      row.count -= 1;
+      return { count: row.count };
+    },
     async weeklyBests(week) {
       return [...bests.values()].filter((b) => b.week === week).map(({ week: _w, ...b }) => (void _w, { ...b, member_name: names.get(b.user_id) ?? "Member" }));
     },

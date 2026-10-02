@@ -74,6 +74,11 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       const r = (Array.isArray(data) ? data[0] : data) as Row;
       return { replayed: r?.replayed === true };
     },
+    async eat(memberId, key) {
+      const { data, error } = await db.rpc("collections_eat", { p_member_id: memberId, p_item_key: key });
+      if (error) raise(error);
+      return { count: Number(data) };
+    },
     async weeklyBests(week) {
       const { data, error } = await db.from("weekly_catch_bests").select("user_id, item_key, size_cm, caught_at").eq("week_start", week);
       if (error) raise(error);
