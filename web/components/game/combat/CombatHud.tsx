@@ -6,7 +6,11 @@
  * and totem caps, mission tracker, boss bar, safe-zone badge, hurt vignette, the defeat card and the victory
  * and trait banners, pooled damage numbers and a separate pool for status words, and the incantation overlay.
  */
-import { ENERGY, SLOT_IDS, combat, publishCombat, useCombatVersion } from "@/lib/game/combat/runtime";
+import { SLOT_IDS, V2_SLOT_IDS, combat, energyMax, publishCombat, useCombatVersion, type CombatRuntime } from "@/lib/game/combat/runtime";
+import { ULT } from "@/lib/combat/ult";
+import { masteryTitle } from "@/lib/combat/mastery";
+import { holdsSignature } from "@/lib/combat/classes";
+import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { keyName, useAbilityKeys, useMoveKeys } from "@/lib/game/movement/keys";
 import { WEAPONS } from "@/lib/game/combat/data";
 import { CAST, cancelCast, FLOATERS, resolveCast } from "@/lib/game/combat/abilities";
@@ -40,9 +44,10 @@ export default function CombatHud({ player }: { player: React.RefObject<{ x: num
         <span style={{ width: `${(p.hp / p.maxHp) * 100}%` }} />{p.shield > 0.5 && <i style={{ width: `${Math.min(100, (p.shield / p.maxHp) * 100)}%` }} />}
         <b>{Math.ceil(p.hp)} / {p.maxHp}{p.shield > 0.5 ? ` · shield ${Math.ceil(p.shield)}` : ""}</b>
       </div>
-      <div className={`${styles.hpBar} ${styles.energyBar}`} role="meter" aria-label="Energy" aria-valuenow={Math.round(p.energy)} aria-valuemin={0} aria-valuemax={ENERGY.max}>
-        <span style={{ width: `${(p.energy / ENERGY.max) * 100}%` }} /><b>Energy {Math.floor(p.energy)} / {ENERGY.max}</b>
-      </div>
+      {/* A max-mana class (the Elementalist) calls its energy Mana; its stat direction raises the pool. */}
+      {(() => { const max = energyMax(rt), word = rt.v2?.kit.stat.kind === "max_mana" ? "Mana" : "Energy"; return <div className={`${styles.hpBar} ${styles.energyBar}`} role="meter" aria-label={word} aria-valuenow={Math.round(p.energy)} aria-valuemin={0} aria-valuemax={max}>
+        <span style={{ width: `${(p.energy / max) * 100}%` }} /><b>{word} {Math.floor(p.energy)} / {Math.round(max)}</b>
+      </div>; })()}
       <div className={styles.weaponLine}>
         <span>{w.name}</span>
         <small data-broken={p.durability[p.weapon] <= 0 || undefined}>Durability {p.durability[p.weapon]}/{w.maxDurability}{p.durability[p.weapon] <= 0 ? " · broken, half damage" : ""}</small>
@@ -50,7 +55,7 @@ export default function CombatHud({ player }: { player: React.RefObject<{ x: num
       </div>
       {kit && <small className={styles.kitLine}>{kit.subclass.name} · {kit.subclass.passive.name}{rt.transform ? ` · ${rt.transform.name}` : ""}
         {summons ? ` · Summons ${minions.reduce((n, u) => n + (u.def.cost ?? 1), 0)}/${kit.capacity}` : ""}{usesTotems ? ` · Totems ${totems.length}/${CAPS.totems}` : ""}</small>}
-      <ol className={styles.abilityBar}>{SLOT_IDS.map((id, i) => {
+      {rt.v2 ? <ClassBar rt={rt} keys={keys} /> : <ol className={styles.abilityBar}>{SLOT_IDS.map((id, i) => {
         const a = rt.slots[i], cd = rt.cooldowns[id], left = a && cd > 0 ? Math.min(1, cd / Math.max(a.cooldown_s, CAST.recovery)) : 0;
         return <li key={`${id}-${rt.denied[id]}`} data-denied={rt.denied[id] > 0 || undefined} data-cooling={cd > 0 || undefined} data-rune={a?.incantation || undefined}
           title={a ? `${a.name}${a.incantation ? " (drawn rune)" : ""}: ${a.description}` : undefined}>
@@ -59,7 +64,7 @@ export default function CombatHud({ player }: { player: React.RefObject<{ x: num
           <span className={styles.slotName}>{a?.name ?? (kit ? "Empty" : "Choose a subclass")}</span>
           {a && <small>{cd > 0 ? `${cd.toFixed(cd < 1 ? 1 : 0)}s` : `${a.incantation ? "Rune · " : ""}${a.energy}`}</small>}
         </li>;
-      })}</ol>
+      })}</ol>}
     </section>
     {p.safe && <p className={styles.safeBadge} role="status">Safe zone · enemies can&apos;t follow you here</p>}
     {rt.mission && <aside className={styles.missionTracker} data-status={rt.mission.status}>
@@ -73,5 +78,45 @@ export default function CombatHud({ player }: { player: React.RefObject<{ x: num
     {!p.alive && <p className={styles.defeat} role="alert">You&apos;re down. Waking at the gate…</p>}
     {p.alive && rt.banner && <p className={styles.banner} data-kind={rt.banner.kind} role="status"><b>{rt.banner.title}</b><span>{rt.banner.text}</span></p>}
     {rt.casting && <IncantationOverlay key={rt.casting.id} runeId={rt.casting.rune} title={rt.casting.ability.name} effect={rt.casting.ability.description} onDone={onDone} onCancel={onCancel} />}
+  </>;
+}
+
+const INPUT_WORD: Record<string, string> = { hold: "Hold", charge: "Charge", toggle: "Toggle", recast: "Recast", drawn: "Draw" };
+/**
+ * Classes v2's bar (design sheet §1.2 HUD, the LOCKED kits): keys 1–5 with the class's own abilities (a locked key
+ * shows the mastery it opens at; holds and charges fill as they're held; a toggle shows on), the round ult slot at
+ * 1.4× with its clockwise meter ring in the class colour (the icon greyed until full; full, it glows and pulses), the
+ * combos, the class line (title, passive, movement passive) and the thin mastery bar.
+ */
+function ClassBar({ rt, keys }: { rt: CombatRuntime; keys: Record<string, string> }) {
+  const v = rt.v2!, kit = v.kit, color = kit.look.ramp[1], meter = v.meter / ULT.max, ready = v.meter >= ULT.max;
+  const armed = holdsSignature(kit, SYSTEM_WEAPONS.find(w => w.key === rt.player.weapon)?.type);
+  return <>
+    <small className={styles.kitLine}><b>{masteryTitle(kit.name, v.mastery)}</b> · mastery {v.mastery} · {v.passive.name}{kit.movement ? ` · ${kit.movement.name}` : ""}{armed ? "" : ` · hold your ${kit.signature.name} for your skills`}</small>
+    <div className={styles.classBar} style={{ ["--class" as string]: color }}>
+      <ol className={styles.abilityBar} style={{ gridTemplateColumns: `repeat(${v.keys.length}, 1fr)` }}>{v.keys.map((a, i) => {
+        const id = V2_SLOT_IDS[i], base = kit.keys[i], cd = a ? v.cd[a.key] ?? 0 : 0, held = v.holding[i];
+        const max = a?.input?.kind === "hold" ? a.input.max_s : a?.input?.kind === "charge" ? a.input.max_s : 1;
+        const left = held !== null ? 1 - Math.min(1, held / max) : a && cd > 0 ? Math.min(1, cd / Math.max(a.cooldown_s, 0.1)) : 0;
+        return <li key={`${id}-${rt.denied[id]}`} data-denied={rt.denied[id] > 0 || undefined} data-cooling={cd > 0 || undefined} data-locked={!a || undefined}
+          data-held={held !== null || undefined} data-on={v.toggled[i] || undefined} data-unarmed={!armed || undefined}
+          title={a ? `${a.name}${a.input && a.input.kind !== "tap" ? ` (${INPUT_WORD[a.input.kind]})` : ""}: ${a.description} · ${a.cooldown_s ? `${a.cooldown_s.toFixed(1)} s · ` : ""}${a.energy} energy` : `${base.name}: opens at mastery ${base.unlock}`}>
+          <span className={styles.sweep} style={{ "--sweep": `${left * 360}deg` } as React.CSSProperties}><kbd>{keyName(keys[id])}</kbd></span>
+          <span className={styles.slotName}>{a?.name ?? base.name}</span>
+          <small>{!a ? `Mastery ${base.unlock}` : held !== null ? `${INPUT_WORD[a.input!.kind]}…` : cd > 0 ? `${cd.toFixed(cd < 1 ? 1 : 0)}s` : `${a.input && a.input.kind !== "tap" ? `${INPUT_WORD[a.input.kind]} · ` : ""}${a.energy}`}</small>
+        </li>;
+      })}</ol>
+      <div className={styles.ultSlot} data-ready={ready || undefined} data-denied={rt.denied.ult || undefined} key={`ult-${rt.denied.ult}`}
+        role="meter" aria-label={`${v.ult.name} charge`} aria-valuenow={Math.floor(v.meter)} aria-valuemin={0} aria-valuemax={ULT.max}
+        title={`${v.ult.name}: ${v.ult.description}${ready ? " · ready" : ` · ${Math.floor(v.meter)}%`}`} style={{ "--meter": `${meter * 360}deg` } as React.CSSProperties}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- a tiny static class emblem */}
+        <img src={kit.look.icon} alt="" />
+        <kbd>{keyName(keys.ult)}</kbd>
+      </div>
+    </div>
+    {v.combos.length > 0 && <small className={styles.kitLine}>{v.combos.map(c => `${c.keys.map(i => keyName(keys[V2_SLOT_IDS[i]])).join(c.keys[0] === c.keys[1] ? " twice" : " + ")}: ${c.ability.name}`).join(" · ")}</small>}
+    <div className={styles.masteryBar} role="meter" aria-label="Mastery" aria-valuenow={v.progress.into} aria-valuemin={0} aria-valuemax={v.progress.needed || 1}>
+      <span style={{ width: `${v.progress.needed ? (v.progress.into / v.progress.needed) * 100 : 100}%` }} />
+    </div>
   </>;
 }

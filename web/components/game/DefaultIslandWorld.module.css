@@ -191,6 +191,16 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .pathConfirm { grid-column: 1 / -1; padding: 12px; border-radius: 12px; background: #fff6e6; border: 1px solid #e0b660; }
 .pathConfirm p { margin: 0 0 4px; }
 .pathConfirm button { margin-right: 8px; }
+.pathCards article[data-suggested] { box-shadow: 0 0 0 2px #e0b660; }
+.pathLoadout li[data-locked] { opacity: 0.5; }
+/* Classes v2: the choice ceremony (§1.11): the class emblem over the family's light, the keeper's line, the weapon forming. */
+.ceremony { display: grid; justify-items: center; gap: 6px; margin: 4px 0 12px; padding: 18px 14px; border-radius: 14px; text-align: center;
+  background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--class) 45%, #fff) 0, #fff 70%); border: 2px solid var(--family); animation: bannerIn 0.4s ease-out; }
+.ceremony img { width: 72px; height: 72px; border-radius: 50%; box-shadow: 0 0 0 6px color-mix(in srgb, var(--family) 35%, transparent), 0 0 30px var(--class); animation: ceremonyForm 1.2s ease-out both; }
+.ceremony b { font-size: 18px; }
+.ceremony small { color: #5b5068; }
+@keyframes ceremonyForm { 0% { transform: scale(0.2) rotate(-40deg); opacity: 0; filter: brightness(3); } 60% { transform: scale(1.15) rotate(6deg); opacity: 1; filter: brightness(1.6); } 100% { transform: none; filter: none; } }
+@media (prefers-reduced-motion: reduce) { .ceremony, .ceremony img { animation: none; } }
 .pathLoadout { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .pathLoadout button { width: 100%; display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid #d8cce6; border-radius: 10px; background: #fffdfb; font: inherit; font-size: 12px; text-align: left; color: #2e2640; cursor: pointer; }
 .pathLoadout button[aria-pressed="true"] { border-color: #5a4a7e; background: #efe7f8; }
@@ -275,6 +285,26 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 @media (prefers-reduced-motion: reduce) { .abilityBar li[data-denied] { animation-name: slotDeniedStill; } }
 .hpBar i { position: absolute; inset: 0 auto 0 0; background: #8fc3e8a0; }
 .kitLine { color: #4f625b; }
+/* Classes v2 bar: keys 1–5 and the round ult slot (1.4× a key), the meter a clockwise ring in the class colour. */
+.classBar { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.abilityBar li[data-locked] { opacity: 0.5; }
+.abilityBar li[data-unarmed] { filter: grayscale(0.8); }
+.abilityBar li[data-held] { border-color: var(--class, #b39ce6); box-shadow: inset 0 0 0 2px var(--class, #b39ce6); }
+.abilityBar li[data-on] { background: color-mix(in srgb, var(--class, #b39ce6) 18%, #fffdf3); }
+.ultSlot { position: relative; display: grid; place-items: center; width: 62px; height: 62px; border-radius: 50%;
+  background: conic-gradient(var(--class, #b39ce6) var(--meter), #e0e6d8 0); box-shadow: 0 2px 0 #47625218; }
+.ultSlot::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: #fffdf3; border: 1px solid #d8cbaa; }
+.ultSlot img { position: relative; width: 38px; height: 38px; filter: grayscale(1) opacity(0.55); transition: filter 0.2s; }
+.ultSlot[data-ready] img { filter: none; }
+.ultSlot[data-ready] { box-shadow: 0 0 0 2px var(--class, #b39ce6), 0 0 14px var(--class, #b39ce6); animation: ultPulse 2s ease-in-out infinite; }
+.ultSlot kbd { position: absolute; right: -4px; bottom: -4px; font: 700 10px "IBM Plex Mono", monospace; background: #fffdf3; color: #293e3b; border: 1px solid #a7b59e; border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; }
+.ultSlot[data-denied] { animation: slotDenied 0.3s ease-out; }
+@keyframes ultPulse { 0%, 100% { box-shadow: 0 0 0 2px var(--class, #b39ce6), 0 0 8px var(--class, #b39ce6); } 50% { box-shadow: 0 0 0 3px var(--class, #b39ce6), 0 0 22px var(--class, #b39ce6); } }
+@media (prefers-reduced-motion: reduce) { .ultSlot[data-ready] { animation: none; } }
+.masteryBar { height: 4px; border-radius: 2px; background: #e0e6d8; overflow: hidden; }
+.masteryBar span { display: block; height: 100%; background: linear-gradient(90deg, #c9a24a, #e6c66e); transition: width 0.3s; }
+.banner[data-kind="mastery"] { border: 2px solid #c9a24a; animation: bannerIn 0.35s ease-out; }
+.banner[data-kind="mastery"] b { color: #7a5a14; }
 @media (max-width: 640px) { .abilityBar { grid-template-columns: repeat(2, 1fr); } }
 .safeBadge { position: absolute; top: 150px; left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 12px; border-radius: 999px; background: #e7f5ea; color: #245c36; font-size: 12px; font-weight: 600; z-index: 12; }
 .missionTracker { position: absolute; left: 16px; top: 196px; display: grid; gap: 2px; max-width: 260px; padding: 10px 12px; border-radius: 10px; background: #f8f7e9f0; color: #293e3b; font-size: 12px; z-index: 12; }

@@ -20,6 +20,7 @@ import Character, { type CharacterMotion } from "../character/Character";
 import { hashSeed, randomLook, seeded } from "@/lib/game/character/look";
 import { GLBProp } from "../NatureModels";
 import { IslandAtmosphere, useFollowCamera } from "../IslandAtmosphere";
+import CombatFx from "./CombatFx";
 import { AimReticle, Blasts, EnemyBars, EnemyInstances, FloaterProjector, PlayerAuras, Projectiles, Telegraphs, Totems, Wisps } from "./EncounterRender";
 import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BROKEN_ARCHES, RUINS_MOAI, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, RUINS_TORCHES, SURVIVE_CIRCLES, createRuins } from "@/lib/game/ruins";
 import { combat, publishCombat, takeMissionQueue, V2_SLOT_IDS, type AbilityId, type CombatRuntime, type CueKind } from "@/lib/game/combat/runtime";
@@ -75,11 +76,13 @@ export function resetEncounter() {
   rt.player.ultIframes = 0; rt.player.kick = null; rt.player.clip = null; rt.fx = [];
 }
 
-/** Classes v2: a kill took the active subclass up a mastery level; its unlocks apply now (the meter and cooldowns carry). */
-function masteryUp(level: number, now: number) {
-  const rt = combat.rt, v = rt.v2;
-  if (!v || level <= v.mastery) return;
-  equipClassKit(rt, v.kit, level);
+/** Classes v2: a kill trained the active subclass; a new level's unlocks apply now (the meter and cooldowns carry). */
+function masteryUp(m: { mastery: number; into: number; needed: number; levelled_up: boolean }, now: number) {
+  const rt = combat.rt, v = rt.v2, level = m.mastery;
+  if (!v) return;
+  v.progress = { into: m.into, needed: m.needed };
+  if (!m.levelled_up || level <= v.mastery) return;
+  equipClassKit(rt, v.kit, level, v.progress);
   rt.banner = { kind: "mastery", title: `${v.kit.name} mastery ${level}`, text: unlocksAt(v.kit, level).join(" · ") || "Your path grows stronger.", until: now + 6 };
   publishCombat();
 }
@@ -372,7 +375,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
         if (k.enemy === BOSS_DROPS.enemy) bossVictory(k.key, clock.elapsedTime);
         else void postKill(k.enemy, k.key).then(r => {
           if (r.ok && r.data.trait_unlocked) traitLearned(r.data.trait_unlocked, clock.elapsedTime);
-          if (r.ok && r.data.mastery?.levelled_up) masteryUp(r.data.mastery.mastery, clock.elapsedTime);
+          if (r.ok && r.data.mastery) masteryUp(r.data.mastery, clock.elapsedTime);
         });
       }
       const pid = rt.mission?.progressId;
@@ -406,6 +409,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     </Suspense>
     <Telegraphs ground={ruins.ground} />
     <Blasts ground={ruins.ground} />
+    <CombatFx ground={ruins.ground} lite={liteMode} />
     <PlayerAuras player={player} ground={ruins.ground} />
     <AimReticle player={player} ground={ruins.ground} />
     <FloaterProjector />

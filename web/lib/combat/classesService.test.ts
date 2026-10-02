@@ -43,6 +43,15 @@ describe("classes v2 on the server, mirrored by the memory store (20261002181044
     await c.store.grantXp(M, 2000, "event", "x", "v2-event");
     expect((await c.store.mastery(M))[0].xp).toBe(800); // club events raise the character, not mastery
   });
+  it("gives the profile its class fields: icon, subclass, mastery and title, frame, the others past mastery 1", async () => {
+    const c = await member(true);
+    await chooseSubclass(c.store, M, "demo", "v2-sub-1");
+    c.setMasteryXp(M, "demo", 18_000); c.setMasteryXp(M, "elementalist", 900); c.setMasteryXp(M, "illusionist", 10);
+    await equipCosmetic(c.store, M, "demo", "frame", "mastery:bronze");
+    const p = await getProgression(c.store, M);
+    expect(p.ok && p.data.classes?.profile).toEqual({ icon: "/assets/game/classes/demo.svg", subclass: "demo", name: "Demo Adept", mastery: 10, title: "Adept Demo Adept",
+      frame: "mastery:bronze", mastered: false, others: [{ subclass: "elementalist", mastery: 2, icon: null }] });
+  });
   it("locks the choice; a repick token (a paid reading, the launch gift) pays for one change and is spent", async () => {
     const c = await member(true);
     await chooseSubclass(c.store, M, "demo", "v2-sub-1");

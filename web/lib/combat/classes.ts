@@ -103,6 +103,8 @@ export const MAX_KEYS = 5;
 
 /** Every v2 kit. Family waves append theirs. */
 export const CLASS_KITS: ClassKit[] = [DEMO_KIT];
+/** Display names that changed with the class designs (the key stays; David 2026-10-02: Monk → Martial Artist). */
+export const CLASS_RENAMES: Record<string, string> = { monk: "Martial Artist" };
 export const classKit = (key: string | null | undefined) => CLASS_KITS.find(k => k.key === key) ?? null;
 /** Kits members may choose: the dev kit only outside production. */
 export const memberKit = (key: string | null | undefined) => { const k = classKit(key); return k && (!k.dev || process.env.NODE_ENV !== "production") ? k : null; };

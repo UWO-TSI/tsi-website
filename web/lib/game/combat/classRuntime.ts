@@ -46,13 +46,15 @@ export interface ClassState {
   combatT: number;
   /** The input layer's clock (real seconds). */
   clock: number;
+  /** Mastery XP into this level and what the next needs (the HUD's thin bar; 0 needed at 20). */
+  progress: { into: number; needed: number };
 }
 
 const weaponType = (rt: CombatRuntime) => SYSTEM_WEAPONS.find(w => w.key === rt.player.weapon)?.type;
 const slotId = (slot: number) => V2_SLOT_IDS[slot];
 
 /** Put a v2 kit on at a mastery level (progression load, a level-up): today's slots go, the meter starts empty. */
-export function equipClassKit(rt: CombatRuntime, kit: ClassKit, mastery: number) {
+export function equipClassKit(rt: CombatRuntime, kit: ClassKit, mastery: number, progress?: { into: number; needed: number }) {
   const mods = classMods(kit, mastery), at = kitAt(kit, mastery), p = rt.player, d = derived(p.stats, p.level, kit.mods);
   const keys = at.keys.map(a => a && withMods(a, mods)), combos = at.combos.map(c => ({ keys: c.keys, ability: withMods(c.ability, mods) }));
   rt.kit = null; rt.slots = [null, null, null, null];
@@ -60,7 +62,8 @@ export function equipClassKit(rt: CombatRuntime, kit: ClassKit, mastery: number)
   rt.v2 = { kit, mastery, mods, keys, combos, ult: withMods(at.ult, mods), passive: at.passive, capacity: d.summon_capacity + mods.capacity,
     input: same?.input ?? createInputState(), inputKit: { inputs: keys.map(a => (a ? a.input ?? { kind: "tap" } : null)), combos: combos.map(c => c.keys) },
     cd: same?.cd ?? {}, queue: same?.queue ?? [], holding: same?.holding ?? keys.map(() => null), toggled: same?.toggled ?? keys.map(() => false), recast: same?.recast ?? keys.map(() => 0),
-    meter: same?.meter ?? 0, cast: same?.cast ?? null, moveCd: same?.moveCd ?? 0, combatT: same?.combatT ?? 0, clock: same?.clock ?? 0 };
+    meter: same?.meter ?? 0, cast: same?.cast ?? null, moveCd: same?.moveCd ?? 0, combatT: same?.combatT ?? 0, clock: same?.clock ?? 0,
+    progress: progress ?? same?.progress ?? { into: 0, needed: 0 } };
   p.maxHp = Math.round(d.max_hp * mods.maxHp); p.hp = Math.min(p.hp, p.maxHp);
   p.energy = Math.min(p.energy, energyMax(rt));
 }

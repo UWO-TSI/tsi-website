@@ -38,7 +38,7 @@ export async function combatProgression(): Promise<IslandProgression> {
 /** A kill; a Transmuter's first defeat of a species names the trait it just learned (row 40). */
 export const postKill = (enemy: string, eventKey: string) => call<{ xp: number; level: number; levelled_up: boolean; trait_unlocked?: string | null;
   /** Classes v2: the active subclass's mastery after the kill. */
-  mastery?: { mastery: number; xp: number; levelled_up: boolean } | null }>("/api/combat/kill", "xp", { enemy, event_key: eventKey });
+  mastery?: { mastery: number; xp: number; into: number; needed: number; levelled_up: boolean } | null }>("/api/combat/kill", "xp", { enemy, event_key: eventKey });
 /** Classes v2: equip (or take off, null) a weapon skin, aura colours or a frame on one subclass. */
 export const equipCosmeticRemote = (subclass: string, kind: "weapon_skin" | "aura" | "frame", value: string | null) =>
   call<Record<string, string>>("/api/combat/cosmetic", "cosmetics", { subclass, kind, value });

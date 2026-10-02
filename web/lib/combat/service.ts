@@ -11,7 +11,7 @@ import { allocate, derived, FAMILY_PRESETS, levelProgress, pointsEarned, pointsS
 import { toFailure, type Result } from "@/lib/result";
 import { CombatError, type CombatStore } from "./store";
 import { repairCost, WEAPONS } from "./weapons";
-import { CLASS_KITS, memberKit, nextUnlock } from "./classes";
+import { CLASS_KITS, CLASS_RENAMES, classKit, memberKit, nextUnlock } from "./classes";
 import { masteryProgress, masteryTitle } from "./mastery";
 import { suggestSubclass } from "@/lib/oracle/subclass";
 import type { CosmeticKind } from "./store";
@@ -68,6 +68,8 @@ export const getProgression = (store: CombatStore, m: string) =>
       derived: derived(p.stats, p.level, subclass?.mods),
       family,
       subclass,
+      /** The chosen subclass's key (also when it has only a v2 kit, the dev kit). */
+      subclass_key: p.subclass,
       /** Four equipped ability keys (row 50), the whole kit to choose from, and the Transmuter's traits with their defeats. */
       loadout: subclass ? resolveLoadout(subclass, p.loadout, p.traits).map((a) => a.key) : [],
       kit: subclass ? kitOptions(subclass, p.traits).map((a) => a.key) : [],
@@ -84,6 +86,13 @@ export const getProgression = (store: CombatStore, m: string) =>
         next: kit ? nextUnlock(kit, mastery.mastery) : null, rows: v2.rows, repick: p.repick_source,
         kits: family ? CLASS_KITS.filter((k) => k.family === family && memberKit(k.key)).map((k) => k.key) : [],
         suggestion: family && p.level >= SUBCLASS_LEVEL ? await suggestion(store, m) : null,
+        /** The profile's class fields (§1.9: portal profile and phone companion, no 3D): icon, subclass, mastery and title, frame, and the other subclasses past mastery 1. */
+        profile: p.subclass ? {
+          icon: classKit(p.subclass)?.look.icon ?? null, subclass: p.subclass, name: classKit(p.subclass)?.name ?? CLASS_RENAMES[p.subclass] ?? subclass?.name ?? p.subclass,
+          mastery: mastery.mastery, title: masteryTitle(classKit(p.subclass)?.name ?? CLASS_RENAMES[p.subclass] ?? subclass?.name ?? p.subclass, mastery.mastery),
+          frame: row?.cosmetics.frame ?? null, mastered: mastery.mastery >= 20,
+          others: v2.rows.filter((r) => r.subclass !== p.subclass && r.mastery > 1).map((r) => ({ subclass: r.subclass, mastery: r.mastery, icon: classKit(r.subclass)?.look.icon ?? null })),
+        } : null,
       } : null,
       weapons: owned.map((w) => {
         const def = WEAPONS.find((x) => x.key === w.weapon_key)!;
