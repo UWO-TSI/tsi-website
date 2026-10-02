@@ -55,7 +55,7 @@ def rod(tier):
         lathe(pc, (0, 0, 0), [(0, -0.12), (0.016, -0.118), (0.019, -0.09), (0.019, 0.04), (0.015, 0.07)], n=7)
         pc.mat = "Blank"
         zs = [0.06 + (L - 0.06) * k / 6 for k in range(7)]
-        pc.tube([bend(z) for z in zs], [0.011 - 0.0065 * k / 6 for k in range(7)], sides=6, tip=True)
+        pc.tube([bend(z) for z in zs], [0.0135 - 0.0075 * k / 6 for k in range(7)], sides=6, tip=True)
         pc.mat = "Band"
         # bands: the bamboo's knots, the lighthouse's red stripes, the warden's gold rings
         rings = [0.2, 0.36, 0.52] if s.get("bamboo") else [0.14, 0.26, 0.38, 0.5, 0.62, 0.74] if s.get("stripes") else [0.075, 0.3, 0.55]
@@ -63,7 +63,7 @@ def rod(tier):
             if z > L - 0.04:
                 continue
             c = bend(z)
-            r = 0.011 - 0.0065 * (z - 0.06) / (L - 0.06)
+            r = 0.0135 - 0.0075 * (z - 0.06) / (L - 0.06)
             pc.tube([c - Vector((0, 0, 0.012 if s.get("stripes") else 0.006)), c + Vector((0, 0, 0.012 if s.get("stripes") else 0.006))], [r * 1.25, r * 1.25], sides=6, tip=False)
         if s["reel"]:
             pc.mat = "Reel"
@@ -79,7 +79,7 @@ def rod(tier):
         pc.tube(pts, [0.0022] * len(pts), sides=3, tip=False)
         if s.get("bamboo"):             # line wound round the stick where a reel would be
             pc.mat = "Line"
-            lathe(pc, (0, 0, 0.09), [(0.0125, -0.02), (0.0135, -0.01), (0.0135, 0.01), (0.0125, 0.02)], n=7)
+            lathe(pc, (0, 0, 0.09), [(0.0145, -0.02), (0.016, -0.01), (0.016, 0.01), (0.0145, 0.02)], n=7)
     mats = {"Grip": s["grip"], "Blank": s["blank"], "Band": s["band"], "Line": s["line"]}
     if s["reel"]:
         mats["Reel"] = s["reel"]
