@@ -788,3 +788,17 @@ All waves merge to `main` behind a `classes_v2` flag that stays off in productio
 1. **Sound source.** The list is in §4. Options: the CC0 set re-pitched (today), Higgsfield Seed Audio (available), ElevenLabs (needs the Pro plan). *Until you pick:* re-pitched CC0 and a to-generate list.
 2. **The flash frame's look.** Wave 0 shows three variants in the encounter: ink silhouettes on the ult's colour (default), inverted monochrome, and a white flash. You pick one for every ult.
 3. **Start wave 0 early?** Wave 0 depends only on §1, §3 and §4. It can start as soon as you approve those, while the 16 kits are designed, or wait for the whole sheet (the brief's "one build"). *Default:* start on approval of §1, §3 and §4.
+
+## Elementalist: decisions so far (David, 2026-10-02, in progress)
+- **Role:** ranged AoE damage.
+- **Weapon:** a staff whose crystal shifts to your last element, carried on the back.
+- **Elements on keys 1–4:** Fire, Water, Earth, Wind (David's pick).
+- **Combos:**
+  - Two quick presses (≤0.4 s) cast a combo; a single tap casts the element's basic spell after a short beat.
+  - Order matters: 16 combos (4 doubles plus 12 ordered pairs), plus the 4 basics.
+  - Grid rule: the first key sets the spell's shape, the second its element.
+  - The drafted grid used Fire, Water, Frost and Lightning, which David approved as a structure. **It must be redrafted for Fire, Water, Earth and Wind** (e.g. Earth = boulder/wall shape, Wind = cyclone/gust shape; reactions: steam, magma, firestorm, mud, storm wave, sandstorm) and shown to him next.
+- **No cooldowns:** energy only; spam what you can afford.
+- **Mastery 1:** the 4 basics and the 4 empowered doubles; the 12 combos unlock across mastery 2–18, reaction upgrades at 19–20.
+- **Passive, Elemental Reactions:** separate casts mark enemies; a reacting element triggers the reaction. Redraft the reactions for the new four.
+- **Ultimate, Cataclysm:** sky darkens and time slows, a meteor impact with an impact frame, a shockwave, then a finishing element chain. Redraft beats 3–4 for Earth and Wind (e.g. an earth shockwave lifts survivors, a cyclone gathers and slams them).
