@@ -5,8 +5,7 @@ import TsiLogo from "@/components/ui/TsiLogo";
 
 const pathways = [
   { label: "Nonprofits", href: "/npo" },
-  { label: "Companies", href: "/company" },
-  { label: "Sponsors", href: "/sponsor" },
+  { label: "Sponsors", href: "/genesis#sponsor" },
   { label: "Students", href: "/student" },
 ];
 

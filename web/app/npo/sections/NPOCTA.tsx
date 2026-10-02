@@ -75,7 +75,7 @@ export default function NPOCTA() {
               Apply Now
             </a>
             <a
-              href="/sponsor"
+              href="/genesis"
               className="rounded-full border border-white/10 px-8 py-4 text-sm font-medium text-[#9CA3AF] transition-all hover:border-white/20 hover:text-white inline-flex items-center justify-center"
             >
               Attend Genesis

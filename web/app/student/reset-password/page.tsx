@@ -65,7 +65,7 @@ export default function ResetPasswordPage() {
             Request a new recovery link from the login screen.
           </p>
           <Link
-            href="/student/login"
+            href="/student"
             className="inline-block bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/80 text-white font-mono text-sm py-3 px-8 rounded-md transition-all uppercase tracking-wider"
           >
             Back to Login
