@@ -142,9 +142,10 @@ export function runFight(subclassKey: string, center: Vec, waves: SpawnPoint[][]
   return { cleared: false, seconds: t, dealt, taken, minHp: minHp / p.maxHp, died: false };
 }
 
+const SUBCLASSES = ["elementalist", "illusionist", "necromancer", "transmuter", "marksman", "hunter", "sniper", "gunslinger", "guardian", "monk", "juggernaut", "assassin", "summoner", "shaman", "druid", "priest"];
 export interface BalanceRow { subclass: string; family: string; weapon: string; loadout: string; clearRate: number; medianClear: number; dps: number; takenPerMin: number; minHp: number; deaths: number }
 export function balanceTable(missionId: "survive-circle" | "survive-sanctum", seeds = 20): BalanceRow[] {
-  return ["elementalist", "illusionist", "necromancer", "transmuter", "marksman", "hunter", "sniper", "gunslinger", "guardian", "monk", "juggernaut", "assassin", "summoner", "shaman", "druid", "priest"].map(key => {
+  return SUBCLASSES.map(key => {
     const s = subclassByKey(key)!, runs = Array.from({ length: seeds }, (_, i) => runSurvive(key, missionId, i + 1));
     const won = runs.filter(r => r.cleared).map(r => r.seconds).sort((a, b) => a - b);
     const time = runs.reduce((n, r) => n + r.seconds, 0);
@@ -154,6 +155,16 @@ export function balanceTable(missionId: "survive-circle" | "survive-sanctum", se
       dps: runs.reduce((n, r) => n + r.dealt, 0) / time, takenPerMin: (runs.reduce((n, r) => n + r.taken, 0) / time) * 60,
       minHp: runs.reduce((n, r) => n + r.minHp, 0) / seeds, deaths: runs.filter(r => r.died).length,
     };
+  });
+}
+/** Zone 1's mini-boss against every subclass's bot (starter weapon, level 10): its clear rate, median minutes, deaths, lowest health. */
+export interface ElderRow { subclass: string; family: string; weapon: string; clearRate: number; medianMinutes: number; deaths: number; minHp: number }
+export function elderTable(seeds = 20): ElderRow[] {
+  return SUBCLASSES.map(key => {
+    const s = subclassByKey(key)!, runs = Array.from({ length: seeds }, (_, i) => runElder(key, i + 1));
+    const won = runs.filter(r => r.cleared).map(r => r.seconds).sort((a, b) => a - b);
+    return { subclass: s.name, family: s.family, weapon: WEAPONS[starterWeapon(s)].name, clearRate: won.length / seeds, medianMinutes: won.length ? won[Math.floor(won.length / 2)] / 60 : NaN,
+      deaths: runs.filter(r => r.died).length, minHp: runs.reduce((n, r) => n + r.minHp, 0) / seeds };
   });
 }
 /**
