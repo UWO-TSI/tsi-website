@@ -95,7 +95,7 @@ export default function SettingsPage() {
     try {
       const supabase = createClient();
       await supabase.auth.signOut();
-      router.push("/student/login");
+      router.push("/student");
       router.refresh();
     } catch {
       setSigningOut(false);

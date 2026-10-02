@@ -23,18 +23,13 @@ const cards: PathwayCard[] = [
     href: "/npo",
   },
   {
-    title: "Companies",
-    subtitle: "Hire for scoped project and consulting",
-    href: "/company",
-  },
-  {
     title: "Sponsors",
-    subtitle: "Fund tech that drives social impact",
-    href: "/sponsor",
+    subtitle: "Sponsor GENESIS, our flagship showcase",
+    href: "/genesis#sponsor",
   },
   {
     title: "Students",
-    subtitle: "Build for the cause",
+    subtitle: "Log in to the game portal",
     href: "/student",
   },
 ];

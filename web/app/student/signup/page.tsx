@@ -154,7 +154,7 @@ export default function SignupPage() {
             Click the link in your email to activate your account, then return here to log in.
           </p>
           <Link
-            href="/student/login"
+            href="/student"
             className="inline-block bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/80 text-white font-mono text-sm py-3 px-8 rounded-md transition-all hover:shadow-[0_0_20px_rgba(0,47,167,0.4)] uppercase tracking-wider"
           >
             Go to Login
@@ -320,17 +320,17 @@ export default function SignupPage() {
           <p className="text-[var(--color-text-muted)] text-sm font-mono">
             Already an agent?{" "}
             <Link
-              href="/student/login"
+              href="/student"
               className="text-[var(--color-accent-cyan)] hover:text-[var(--color-brand-blue)] transition-colors"
             >
               Login
             </Link>
           </p>
           <Link
-            href="/student"
+            href="/"
             className="inline-block mt-3 text-[var(--color-text-muted)] text-xs font-mono hover:text-[var(--color-text-secondary)] transition-colors"
           >
-            ← Back to Student Home
+            ← Back to Home
           </Link>
         </div>
       </div>

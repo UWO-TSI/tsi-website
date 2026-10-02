@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { motion } from "framer-motion";
-import Link from "next/link";
 import GradientText from "@/components/ui/GradientText";
 import DecryptedText from "@/components/ui/DecryptedText";
 import ProjectBooks from "@/components/ui/ProjectBooks";
@@ -12,6 +11,7 @@ import type { Project } from "@/components/ui/ProjectBooks";
 import LogoLoop from "@/components/ui/LogoLoop";
 import { SPONSOR_LOGOS } from "@/components/ui/PartnerLogos";
 import DotNav from "@/components/ui/DotNav";
+import SponsorSection from "./SponsorSection";
 import type { DotNavSection } from "@/components/ui/DotNav";
 
 if (typeof window !== "undefined") {
@@ -100,6 +100,9 @@ const SECTIONS: DotNavSection[] = [
   { id: "genesis-projects", label: "Projects" },
   { id: "genesis-recap", label: "Recap" },
   { id: "genesis-next", label: "2027" },
+  { id: "sponsor", label: "Sponsor" },
+  { id: "sponsor-benefits", label: "Benefits" },
+  { id: "sponsor-contact", label: "Contact" },
 ];
 
 const EASE_OUT: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -246,13 +249,13 @@ export default function GenesisPage() {
             >
               Watch Recap
             </a>
-            <Link
-              href="/sponsor"
+            <a
+              href="#sponsor"
               className="inline-flex items-center px-7 py-3.5 rounded-lg text-sm font-medium transition-all duration-300"
               style={{ color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}
             >
               Sponsor 2027
-            </Link>
+            </a>
           </motion.div>
         </div>
       </section>
@@ -382,15 +385,15 @@ export default function GenesisPage() {
           </p>
 
           <div className="flex flex-wrap justify-center gap-4 mb-16">
-            <Link
-              href="/sponsor"
+            <a
+              href="#sponsor"
               className="inline-flex items-center px-7 py-3.5 rounded-lg text-sm font-semibold transition-all duration-300"
               style={{ background: "#f59e0b", color: "#0F0F10" }}
               onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 0 30px rgba(245,158,11,0.3)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "none"; }}
             >
               Sponsor Genesis 2027
-            </Link>
+            </a>
             <a
               href="mailto:team@tethos.ca?subject=Genesis%202027"
               className="inline-flex items-center px-7 py-3.5 rounded-lg text-sm font-medium transition-all duration-300"
@@ -414,6 +417,8 @@ export default function GenesisPage() {
           />
         </div>
       </section>
+
+      <SponsorSection />
     </main>
   );
 }

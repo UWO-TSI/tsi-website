@@ -23,7 +23,12 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("first-login routing to the island", () => {
   it("sends signed-out visitors to sign in", async () => {
-    expect(await go("/student/dashboard")).toBe("https://tethos.ca/student/login");
+    expect(await go("/student/dashboard")).toBe("https://tethos.ca/student");
+  });
+  it("sends signed-in visitors past the /student login into the portal", async () => {
+    expect(await go("/student")).toBeNull();
+    auth.user = { id: "back" }; auth.profile = { onboarding_completed: true };
+    expect(await go("/student")).toBe("https://tethos.ca/student/go");
   });
   it("lets a new member straight onto the island (the creator asks the name), past the portal wizard", async () => {
     auth.user = { id: "new" }; auth.profile = { onboarding_completed: false };
