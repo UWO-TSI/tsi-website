@@ -236,6 +236,8 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
     own: (m: string, item: string, kind: CosmeticKind, subclass?: string) => shopOwned.set(`${m}:${item}`, { kind, subclass }),
     /** The member's Oracle reading (type and clarities). */
     setReading: (m: string, type: string, scores: { dichotomy: "EI" | "SN" | "TF" | "JP"; clarity: number }[] = []) => readings.set(m, { type, scores }),
+    /** A weapon handed over (the dev kit's signature type before any wave seeds signature rows). */
+    giveWeapon: (m: string, key: string) => { const list = weapons.get(m) ?? []; if (!list.some((w) => w.weapon_key === key)) list.push({ weapon_key: key, durability: WEAPONS.find((w) => w.key === key)!.max_durability, equipped: false }); },
     /** Mastery XP straight onto a row (evidence and tests). */
     setMasteryXp: (m: string, subclass: string, xp: number) => masteryRows.set(`${m}:${subclass}`, { cosmetics: {}, ...masteryRows.get(`${m}:${subclass}`), xp }) };
 }

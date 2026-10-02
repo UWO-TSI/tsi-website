@@ -288,6 +288,9 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 /* Classes v2 bar: keys 1–5 and the round ult slot (1.4× a key), the meter a clockwise ring in the class colour. */
 .classBar { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
 .abilityBar li[data-locked] { opacity: 0.5; }
+.classBar .slotName { font-size: 10px; overflow-wrap: normal; word-break: keep-all; }
+.classBar .abilityBar li { column-gap: 5px; padding-left: 5px; padding-right: 6px; }
+.classBar .sweep { width: 28px; height: 28px; }
 .abilityBar li[data-unarmed] { filter: grayscale(0.8); }
 .abilityBar li[data-held] { border-color: var(--class, #b39ce6); box-shadow: inset 0 0 0 2px var(--class, #b39ce6); }
 .abilityBar li[data-on] { background: color-mix(in srgb, var(--class, #b39ce6) 18%, #fffdf3); }

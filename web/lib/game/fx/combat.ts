@@ -111,6 +111,8 @@ export const DEFAULT_RAMP: Ramp = ["#fff6ff", "#b48cff", "#3a2466"];
 
 /** The ramp table the shaders sample: one row per ramp seen, 64 steps of heat each (a family wave's kits add rows as they appear). */
 export const RAMP_STEPS = 64, RAMP_ROWS = 32;
+/** The scene's one ramp table (the combat effects and the aura share it, and its one texture). */
+export const sharedRamps = { table: null as RampTable | null };
 export class RampTable {
   readonly data = new Uint8Array(RAMP_STEPS * RAMP_ROWS * 4);
   private readonly rows = new Map<string, number>();

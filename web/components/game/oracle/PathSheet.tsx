@@ -140,8 +140,9 @@ export default function PathSheet({ view, onClose, onChanged }: { view: Progress
       </p>}
       {order2.map(key => { const k = classKit(key), legacy = subclassByKey(key), mine = chosen === key, canPick = unlocked && (!chosen || !!v2.repick);
         return <article key={key} data-current={mine || undefined} data-suggested={suggestion?.subclass === key || undefined} style={{ ["--family" as string]: color }}>
-          <header><b>{nameOf(key)}</b><small>{suggestion?.subclass === key ? "The Oracle suggests" : k ? k.role : legacy?.weapon_affinity.join(" · ")}</small></header>
-          {k ? <><p><small>Signature</small> <b>{k.signature.name}</b> · <small>Ult</small> <b>{k.ult.name}</b></p>
+          <header><b>{nameOf(key)}</b><small>{k ? k.role : legacy?.weapon_affinity.join(" · ")}</small></header>
+          {suggestion?.subclass === key && <span className={styles.pathNote}>The Oracle suggests</span>}
+          {k ? <><p><small>Signature</small> <b>{k.signature.name}</b></p><p><small>Ult</small> <b>{k.ult.name}</b></p>
             <p><small>Keys</small> {k.keys.map(a => a.name).join(", ")}</p>
             <p><small>Builds toward</small> {STAT_DIRECTION_LABEL[k.stat.kind]}</p></>
             : <small className={styles.pathNote}>Its new kit arrives with its family&apos;s wave.</small>}

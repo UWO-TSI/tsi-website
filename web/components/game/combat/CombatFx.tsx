@@ -6,7 +6,7 @@
  * and ink: nothing allocated per frame), ground decals (16, at most 4 s, half saturated), FxMaterial meshes (24
  * pooled rings, pillars, domes, beams, spikes), two pooled point lights for ults, and the weapon's ribbon trail from
  * its grip to its tip while it swings. Everything is seeded from the event and anchored where it happened, so every
- * client draws the same; it all draws under the enemies' telegraphs (render order below 2). Lite graphics: half the
+ * client draws the same; it draws over the terrain's painted layers and under the telegraphs' rims (render order 3.4–3.5). Lite graphics: half the
  * particles, no lights. Holds still in the ult's freeze and the hitstop, slows with its slow motion.
  */
 import { useEffect, useMemo, useRef } from "react";
@@ -16,14 +16,14 @@ import { combat } from "@/lib/game/combat/runtime";
 import { timeScale as worldSpeed } from "@/lib/game/slowMotion";
 import { ParticlePool, FACE } from "@/lib/game/fx/particles";
 import { COMBAT_PACK, COMBAT_PACK_URL } from "@/lib/game/fx/combatPack";
-import { DEFAULT_RAMP, FX, FX_POOLS, RampTable, type MeshLayer } from "@/lib/game/fx/combat";
+import { DEFAULT_RAMP, FX, FX_POOLS, RampTable, sharedRamps, type MeshLayer } from "@/lib/game/fx/combat";
 import { createCombatParticleMaterial, createFxMaterial, createTrailMaterial, rampMap } from "@/lib/game/fx/fxMaterial";
 import { weaponTrail } from "@/lib/game/fx/trail";
 
 type Ground = (x: number, z: number) => number;
 /** An area's effects scale with its radius against this one (the demo slam's). */
 const REF_RADIUS = 2.8;
-const ramps = new RampTable();
+const ramps = (sharedRamps.table ??= new RampTable());
 let packTexture: THREE.Texture | null = null;
 function combatPackMap() {
   if (!packTexture) { packTexture = new THREE.TextureLoader().load(COMBAT_PACK_URL); packTexture.colorSpace = THREE.NoColorSpace; packTexture.anisotropy = 4; } // heat is data, not colour
@@ -71,11 +71,12 @@ export default function CombatFx({ ground, lite = false }: { ground: Ground; lit
   const sys = useMemo(() => {
     const map = combatPackMap(), ramp = rampMap(ramps);
     const glow = new ParticlePool(FX_POOLS.glow, COMBAT_PACK), ink = new ParticlePool(FX_POOLS.ink, COMBAT_PACK), decals = new ParticlePool(FX_POOLS.decals, COMBAT_PACK);
-    const layers = [poolMesh(decals, createCombatParticleMaterial(map, ramp, false, 0.5), 1.5), poolMesh(ink, createCombatParticleMaterial(map, ramp, false), 1.7), poolMesh(glow, createCombatParticleMaterial(map, ramp, true), 1.8)];
+    // Above the terrain's painted sand and soil layers (render orders 2, 3, transparent), under the telegraphs' rims (4).
+    const layers = [poolMesh(decals, createCombatParticleMaterial(map, ramp, false, 0.5), 3.4), poolMesh(ink, createCombatParticleMaterial(map, ramp, false), 3.45), poolMesh(glow, createCombatParticleMaterial(map, ramp, true), 3.5)];
     const geos = Object.fromEntries(Object.entries(SHAPES).map(([k, f]) => [k, f()])) as Record<MeshLayer["shape"], THREE.BufferGeometry>;
     const meshes = Array.from({ length: FX_POOLS.meshes }, () => {
       const m = new THREE.Mesh(geos.ring, createFxMaterial(ramp, { profile: "across" }));
-      m.visible = false; m.frustumCulled = false; m.renderOrder = 1.8;
+      m.visible = false; m.frustumCulled = false; m.renderOrder = 3.5;
       return m;
     });
     const lights = Array.from({ length: FX_POOLS.lights }, () => { const l = new THREE.PointLight("#ffffff", 0, 10, 2); l.visible = false; return l; });
@@ -189,7 +190,7 @@ function WeaponTrail({ ramp }: { ramp: RampTable }) {
     g.setAttribute("aTrail", new THREE.BufferAttribute(trail, 2).setUsage(THREE.DynamicDrawUsage));
     g.setIndex(idx);
     const mesh = new THREE.Mesh(g, createTrailMaterial(rampMap(ramp)));
-    mesh.frustumCulled = false; mesh.renderOrder = 1.8; mesh.visible = false;
+    mesh.frustumCulled = false; mesh.renderOrder = 3.5; mesh.visible = false;
     return { mesh, g, pos, trail, ages: new Float32Array(n).fill(1), head: 0, base: new THREE.Vector3(), tip: new THREE.Vector3() };
   }, [ramp]);
   useEffect(() => { scene.add(t.mesh); return () => { scene.remove(t.mesh); t.g.dispose(); (t.mesh.material as THREE.Material).dispose(); }; }, [scene, t]);

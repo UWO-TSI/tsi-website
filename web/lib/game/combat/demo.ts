@@ -9,7 +9,8 @@
  *
  * Classes v2 (wave 0): `?subclass=demo` is the dev-only test kit (lib/combat/demoKit.ts) with the classes_v2 flag
  * on; `?classes=v2` turns the flag on for any subclass whose family wave has landed; `?mastery=N` starts its mastery
- * at level N; `?repick=oracle|launch` hands over a repick token.
+ * at level N; `?repick=oracle|launch` hands over a repick token; `?type=INTP` is the Oracle reading (`&unclear=JP`
+ * makes that dichotomy 8% clear); `?frame=bronze|silver|gold` wears that mastery frame.
  */
 import { memoryCombatStore } from "@/lib/combat/memoryStore";
 import { allocateStats, claimBossReward, completeMission, getProgression, listMissions, missionProgress, recordKill, reportWear, resetStats, setLoadout, startMission, chooseSubclass } from "@/lib/combat/service";
@@ -37,9 +38,12 @@ export function installCombatDemo(): void {
       if (q.get("subclass") !== "none") await chooseSubclass(m.store, ME, (picked ?? subclassesFor(family)[0]).key, "demo-subclass-1");
       if (q.get("loadout")) await setLoadout(m.store, ME, q.get("loadout")!.split(","));
       const sub = (await m.store.progression(ME)).subclass;
+      if (sub === "demo") m.giveWeapon(ME, "staff-oak"); // the dev kit's signature type, on the wheel (Tab); members pick theirs there too
       if (sub && q.get("mastery")) m.setMasteryXp(ME, sub, xpForMastery(Number(q.get("mastery"))));
       const token = q.get("repick");
       if (token === "oracle" || token === "launch") m.grantRepick(ME, token);
+      if (q.get("type")) m.setReading(ME, q.get("type")!.toUpperCase(), (["EI", "SN", "TF", "JP"] as const).map(d => ({ dichotomy: d, clarity: q.get("unclear") === d ? 8 : 60 })));
+      if (sub && q.get("frame")) await equipCosmetic(m.store, ME, sub, "frame", `mastery:${q.get("frame")}`);
     })();
     return async (path, body) => {
       await ready;
