@@ -30,6 +30,7 @@ import { homeNodes } from "@/lib/game/islandNodes";
 import type { FishingSpot } from "@/lib/game/fishingSpots";
 import type { WorldMoment } from "@/lib/collections/logic";
 import { gullAnchors } from "@/lib/game/ambientFauna";
+import { boxOccluder, treeOccluder } from "@/lib/game/occluders";
 import styles from "../DefaultIslandWorld.module.css";
 
 const HOME_NODES = homeNodes();
@@ -60,7 +61,7 @@ export default function HomeIslandScene({ identity, level, peaceful, fishSpot, f
   const fauna = useMemo(() => ({ site: { map: home.map, flowers: HOME_FLOWERS, water: SEA }, ground: home.ground, standable: home.fixedFree, surface: home.surface, gulls: HOME_GULLS, player }), [home, player]);
   useEffect(() => { player.current.set(...spawn); }, [spawn, player]);
   const focus = useRef(new THREE.Vector3(...spawn));
-  const follow = useMemo(() => ({ ground: home.ground }), [home]);
+  const follow = useMemo(() => ({ ground: home.ground, player, occluders: [boxOccluder(HOUSE.x, HOUSE.z, HOUSE.halfW, HOUSE.halfD, 0, 5), ...TREES.map(t => treeOccluder(t.x, t.z, home.ground(t.x, t.z)))] }), [home, player]);
   useFollowCamera(focus, zoom, overview ? { focus: [0, 0, 0], offset: [6, 13, -16] } : null, follow);
   useFrame(() => {
     const p = player.current;

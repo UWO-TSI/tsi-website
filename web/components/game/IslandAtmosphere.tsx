@@ -29,6 +29,8 @@ import { treeParts } from "./NatureModels";
 import AmbientFauna, { type FaunaProps } from "./AmbientFauna";
 import WeatherGround from "./WeatherGround";
 import { capture, ORBIT_DISTANCE, orbitOffset, stepOrbit, turnOffset } from "@/lib/game/orbitCamera";
+import { CUT_RADIUS, CUTOUT, CUTOUT_VIEW, lineBlocked, type Occluder } from "@/lib/game/occluders";
+import { bendViewPoint } from "@/lib/game/worldProjection";
 import { orbitKeys, useOrbitInput } from "./useOrbitInput";
 
 /** Screen-space vertical sky gradient (a plain 2D background texture): `top` at the top, `horizon` from mid-screen down. */
@@ -115,9 +117,9 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
 }
 
 type Overview = { focus: [number, number, number]; offset: [number, number, number]; far?: number };
-/** What the rig knows of the scene: the ground (it keeps above it). */
+/** What the rig knows of the scene: the ground (it keeps above it), the player and what can stand in the way of them. */
 export interface FollowScene {
-  ground: (x: number, z: number) => number;
+  ground: (x: number, z: number) => number; player: React.RefObject<THREE.Vector3>; occluders: readonly Occluder[];
   /** A weapon is out (the ruins): while mouse-look holds the crosshair, the view looks further ahead so it sits past you. */
   aim?: boolean;
 }
@@ -132,12 +134,14 @@ const CLEARANCE = 0.8;
  * (cameraJuice). It turns with the orbit (mouse-look, the arrows, two fingers; useOrbitInput): yaw 0 at the default
  * tilt is today's west-facing view, exactly. The zoom prop (a welcome close-up, ?zoom=) times the orbit's own
  * (wheel, Z), and the overview (`far`: its far plane, for a big island; its eye circles the island with the yaw)
- * ease in and out. `scene` keeps the camera above the terrain behind you.
+ * ease in and out. `scene` keeps the camera above the terrain behind you and fades what stands between it and the
+ * player (lib/game/occluders.ts).
  */
 export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: number, overview: Overview | null, scene?: FollowScene) {
   const { camera } = useThree();
   useOrbitInput();
-  const rig = useMemo(() => ({ ahead: LOOK_AHEAD }), []);
+  const rig = useMemo(() => ({ ahead: LOOK_AHEAD, cut: 0, chest: new THREE.Vector3() }), []);
+  useEffect(() => () => { CUTOUT.value.w = 0; }, []);
   const baseFar = useRef<number | null>(null);
   const blend = useRef({ zoom, overview: overview ? 1 : 0, last: overview });
   const look = useMemo(() => new THREE.Vector3(), []);
@@ -174,5 +178,15 @@ export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: num
     }
     camera.lookAt(look);
     camera.updateMatrixWorld();
+    // A building or tree on the line of sight to the player's chest eases the cut in; the circle sits where they are drawn.
+    const p = scene?.player.current;
+    if (!p || !(camera instanceof THREE.PerspectiveCamera)) return;
+    const c = rig.chest.set(p.x, p.y + 1, p.z);
+    rig.cut = THREE.MathUtils.damp(rig.cut, b.overview === 0 && lineBlocked(camera.position, c, scene!.occluders) ? 1 : 0, 8, dt);
+    c.applyMatrix4(camera.matrixWorldInverse);
+    const depth = -c.z;
+    bendViewPoint(c).applyMatrix4(camera.projectionMatrix);
+    CUTOUT.value.set(c.x, c.y, CUT_RADIUS / (depth * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))), rig.cut < 0.01 ? 0 : rig.cut);
+    CUTOUT_VIEW.value.set(camera.aspect, depth);
   }, -3);
 }

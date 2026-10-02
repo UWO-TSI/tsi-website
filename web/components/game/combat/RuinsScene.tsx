@@ -30,6 +30,7 @@ import { defeatPuff } from "@/lib/game/movement/juice";
 import type { ParticlePool } from "@/lib/game/fx/particles";
 import { shakeCamera } from "@/lib/game/cameraJuice";
 import { capture, crosshairAim } from "@/lib/game/orbitCamera";
+import { boxOccluder } from "@/lib/game/occluders";
 import { BUFFER, createInputs, runInputs, spawnWave } from "@/lib/game/combat/actions";
 import { missionEvent } from "@/lib/game/combat/abilities";
 import { stepCombat } from "@/lib/game/combat/encounter";
@@ -166,7 +167,12 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     w.__combatDev = { ...w.__combatDev, screenOf: (x: number, z: number) => screenOf([x, ruins.ground(x, z) - 0.2, z], camera, gl.domElement) };
   }, [camera, gl, ruins, spawn]);
   const focus = useRef(new THREE.Vector3(...spawn));
-  const follow = useMemo(() => ({ ground: ruins.ground, aim: true }), [ruins]);
+  // The arches, pillars, statues and broken arches stand in the way of the orbit camera; the canyon walls are terrain.
+  const follow = useMemo(() => {
+    const at = (p: Vec, hx: number, hz: number, h: number) => boxOccluder(p.x, p.z, hx, hz, ruins.ground(p.x, p.z), h);
+    return { ground: ruins.ground, player, aim: true, occluders: [at({ x: 0, z: -24.4 }, 2.2, 0.6, 4.5), at({ x: 0, z: 1.2 }, 2.2, 0.6, 4.5), ...RUINS_PILLARS.map(p => at(p, 0.7, 0.7, 4)),
+      ...RUINS_MOAI.map(p => at(p, 0.9, 0.9, 3.5)), ...RUINS_BROKEN_ARCHES.map(p => at(p, 1.6, 1.6, 3.5))] };
+  }, [ruins, player]);
   useFollowCamera(focus, zoom, null, follow);
 
   // Mouse aim + click attack on the canvas; ability keys (remappable). A click or key waits BUFFER s for its cooldown (runInputs).

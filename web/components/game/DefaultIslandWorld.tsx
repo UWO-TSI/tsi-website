@@ -123,6 +123,7 @@ import { EventDecor, eventSpots, PostersSheet, TourneySheet } from "./SeasonalEv
 import { useIslandEvent, type IslandEvent } from "@/lib/game/seasonalEvents";
 import { escapeEndedCapture, holdCursor, orbit, readCapture, readOrbitPrefs, saveOrbit, subscribeCapture, subscribeOrbitPrefs, toggleZoom } from "@/lib/game/orbitCamera";
 import { RESET_VIEW_KEY } from "./useOrbitInput";
+import { boxOccluder, treeOccluder } from "@/lib/game/occluders";
 import styles from "./DefaultIslandWorld.module.css";
 
 type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | null;
@@ -169,10 +170,14 @@ const xz = (o: { x: number; z: number }): [number, number] => [o.x, o.z];
 function villageLayout(v: Village) {
   const deck = wharfDeck(v);
   const fitting = objectsOf("fitting", v)[0], missions = objectsOf("missions", v)[0], marks = landmarks(v);
+  const island = villageIsland(v), trees = objectsOf("tree", v).map((o): TreeSpot => ({ x: o.x, z: o.z, seed: o.seed ?? 0 }));
   return {
-    island: villageIsland(v),
+    island,
     landmarks: marks,
-    trees: objectsOf("tree", v).map((o): TreeSpot => ({ x: o.x, z: o.z, seed: o.seed ?? 0 })),
+    trees,
+    /** What can stand between the orbit camera and you: the buildings and the trees' canopies (lib/game/occluders.ts). */
+    occluders: [...marks.filter(l => l.half && Math.max(...l.half) >= 1).map(l => boxOccluder(l.x, l.z, l.half![0], l.half![1], island.ground(l.x, l.z), 5)),
+      ...trees.map(t => treeOccluder(t.x, t.z, island.ground(t.x, t.z)))],
     fireflies: objectsOf("bush", v).map(xz),
     puddles: objectsOf("puddle", v).map(xz),
     benches: objectsOf("bench", v),
@@ -259,7 +264,7 @@ function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fis
   const spots = useMemo(() => eventSpots(event?.decor ?? null), [event]);
   useEffect(() => { player.current.set(...spawn); }, [reset, spawn, player]);
   const focus = useRef(new THREE.Vector3(...spawn));
-  const follow = useMemo(() => ({ ground: island.ground }), [island]);
+  const follow = useMemo(() => ({ ground: island.ground, player, occluders: layout.occluders }), [island, player, layout]);
   useFollowCamera(focus, zoom, overview ? layout.scale.overview : null, follow);
   useFrame(() => {
     const within = (p: [number, number] | null, r: number) => !!p && Math.hypot(player.current.x - p[0], player.current.z - p[1]) < r;
