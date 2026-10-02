@@ -8,7 +8,7 @@
  * your own screen.
  */
 import { useEffect, useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useLoader } from "@react-three/fiber";
 import * as THREE from "three";
 import { fireflyOffset } from "@/lib/game/fireflyPath";
 import { COMBAT_PACK, COMBAT_PACK_COLS, COMBAT_PACK_ROWS, COMBAT_PACK_URL, type CombatSprite } from "@/lib/game/fx/combatPack";
@@ -18,10 +18,8 @@ import { combat } from "@/lib/game/combat/runtime";
 import { inCombat } from "@/lib/game/combat/classRuntime";
 
 const MOTES = 8, SECOND = 2;
-let atlas: THREE.Texture | null = null;
-/** One frame of the combat pack as its own texture (shares the image). */
-function frameOf(sprite: CombatSprite, frame = 2) {
-  atlas ??= new THREE.TextureLoader().load(COMBAT_PACK_URL);
+/** One frame of the combat pack as its own texture (shares the loaded image). */
+function frameOf(atlas: THREE.Texture, sprite: CombatSprite, frame = 2) {
   const t = atlas.clone();
   t.colorSpace = THREE.NoColorSpace;
   t.repeat.set(1 / COMBAT_PACK_COLS, 1 / COMBAT_PACK_ROWS);
@@ -33,10 +31,10 @@ function frameOf(sprite: CombatSprite, frame = 2) {
 export default function SubclassAura({ player, kit, mastery, colour }: { player: React.RefObject<THREE.Vector3>; kit: ClassKit; mastery: number;
   /** The equipped aura colour (a shop ramp's mid, or the mastery colour), else the kit's. */
   colour?: string | null }) {
-  const tier = masteryCosmetics(mastery).aura;
+  const tier = masteryCosmetics(mastery).aura, atlas = useLoader(THREE.TextureLoader, COMBAT_PACK_URL); // suspends until the pack is in
   const look = useMemo(() => ({
-    mote: frameOf((kit.look.mote in COMBAT_PACK ? kit.look.mote : "mote") as CombatSprite), second: frameOf("flare", 1), ring: frameOf("halo", 3),
-  }), [kit.look.mote]);
+    mote: frameOf(atlas, (kit.look.mote in COMBAT_PACK ? kit.look.mote : "mote") as CombatSprite), second: frameOf(atlas, "flare", 1), ring: frameOf(atlas, "halo", 3),
+  }), [atlas, kit.look.mote]);
   useEffect(() => () => { look.mote.dispose(); look.second.dispose(); look.ring.dispose(); }, [look]);
   const color = colour ?? kit.look.ramp[1];
   const refs = useRef<(THREE.Sprite | null)[]>([]), ring = useRef<THREE.Mesh>(null);

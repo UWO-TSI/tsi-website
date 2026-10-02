@@ -194,7 +194,9 @@ function ultPresentation(rt: CombatRuntime, camera: THREE.Camera, canvas: HTMLCa
     ultPrevT = -1;
     return;
   }
-  const b = ultBeats(cast.t, A, reduce, ultPrevT);
+  // A first-last ult (§1.6): past its window the finisher's beats run on the same clock again.
+  const span = v?.cast && v.ult.impacts === "first-last" ? v.ult.duration ?? 0 : 0, shift = span && cast.t >= A + span ? span : 0;
+  const b = ultBeats(cast.t - shift, A, reduce, ultPrevT - shift);
   if (b.freeze) combat.hitstop = Math.max(combat.hitstop, A + 0.12 - cast.t);
   if (b.flash && !view.beats?.flash) view.flashOk = b.flash === "full" && flashes.allow(performance.now() / 1000);
   if (b.shake) shakeCamera(0.35, 9, (cast.aim.x - me.x) * 0.15 / (Math.hypot(cast.aim.x - me.x, cast.aim.z - me.z) || 1));

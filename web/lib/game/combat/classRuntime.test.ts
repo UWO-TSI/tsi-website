@@ -156,6 +156,20 @@ describe("classes v2 runtime: the ult meter and the ult", () => {
     for (let t = 0; t < ULT_BEATS.freeze + ULT_BEATS.iframesAfter + 0.05; t += 1 / 30) frame(rt);
     expect(p.ultIframes).toBe(0);
   });
+  it("a first-last ult lands its finisher at the end of its window, untouchable through that freeze too", () => {
+    const kit: ClassKit = { ...DEMO_KIT, ult: { ...DEMO_KIT.ult, impacts: "first-last", duration: 1, effects: [{ kind: "buff", stat: "damage", value: 0.5, duration: 1 }],
+      release: [{ kind: "area", power: 9, radius: 4.5, at: "aim" }] } };
+    const { rt, p, foe } = setup(kit);
+    rt.v2!.meter = ULT.max;
+    pressUlt(rt); frame(rt);
+    for (let i = 0; i < 40; i++) frame(rt); // 1.37 s: past A but not A + 1
+    const hp = foe.hp;
+    expect(rt.v2!.cast?.last).toBeFalsy();
+    for (let i = 0; i < 4; i++) frame(rt);
+    expect(rt.v2!.cast?.last).toBe(true);
+    expect(foe.hp).toBeLessThan(hp);
+    expect(p.ultIframes).toBeGreaterThan(0.2);
+  });
   it("knows when you're in combat: a threat near, and 5 s after", () => {
     const { rt, foe } = setup();
     frame(rt);

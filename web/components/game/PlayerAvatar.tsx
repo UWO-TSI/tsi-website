@@ -542,12 +542,13 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       f.sinceDash = state.dashT > 0 ? 0 : f.sinceDash + dt;
       p.move.mode = sitting ? "ground" : state.mode; p.move.speed = speed; p.move.sinceDash = f.sinceDash; p.move.vx = state.vx; p.move.vz = state.vz;
       // Classes v2: an ability's verb on the held weapon's grip (over locomotion when the verb allows), at its timing scale.
+      let verbAsked = false;
       if (p.clip) {
         const grip = gripFor(SYSTEM_WEAPONS.find(w => w.key === p.weapon)?.type ?? "sword");
         if ((VERBS as readonly string[]).includes(p.clip.verb)) {
           const clip = verbClip(p.clip.verb as Verb, grip);
           if (p.clip.upper && verbInfo(clip)?.upper) m.upper = clip; else m.play = clip;
-          m.playRate = p.clip.scale;
+          m.playRate = p.clip.scale; verbAsked = true;
         }
         p.clip = null;
       }
@@ -559,7 +560,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       if (p.alive && dt > 0) p.facing = combatFacing(p, { x, z }, state.facing, state.mode === "ground" || state.mode === "slide" ? speed : 0, dt);
       m.yaw = p.facing;
       m.pose = combat.rt.casting?.free ? null : next.pose; // a v2 shape is traced on the move (no Trace pose)
-      if (next.play && !(combat.rt.v2 && next.play.startsWith("Attack") && (m.play || m.upper))) m.play = m.play ?? next.play;
+      if (next.play && !(verbAsked && next.play.startsWith("Attack"))) m.play = next.play; // the verb is the cast's clip, not the weapon's attack
     }
 
     // Camera focus: the avatar, a lead along its velocity, and the level it stands on. A hop never lifts the level;

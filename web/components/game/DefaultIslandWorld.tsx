@@ -929,7 +929,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
             : <IslandScene held={eating ? null : held} identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent}
               lead={welcoming || welcome === "done" ? { line: greeting, hold: welcoming } : null} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={welcoming ? 0.7 : devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} />}
           {/* Classes v2: the subclass's aura replaces the family's once its kit exists (§1.9). */}
-          {identity.family && identity.aura && (classAura ? <SubclassAura player={player} kit={classAura.kit} mastery={classAura.mastery} colour={classAura.colour} />
+          {identity.family && identity.aura && (classAura ? <Suspense fallback={null}><SubclassAura player={player} kit={classAura.kit} mastery={classAura.mastery} colour={classAura.colour} /></Suspense>
             : <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>)}
           <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={grade} fx={lookFx(lookPreset, !liteMode)} />
           <LookMaterials preset={lookPreset} />

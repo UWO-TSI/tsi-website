@@ -18,7 +18,7 @@ import { addKick, MOVE_NEEDS, moveOk, speedBonus } from "./moveHooks";
 import { energyMax, V2_SLOT_IDS, type CombatRuntime } from "./runtime";
 import type { Vec } from "./sim";
 
-/** The ult's beats in seconds after its anticipation (§1.6): the freeze, then 200 ms more of i-frames; the sequence's presentation lasts this long. */
+/** The ult's beats in seconds after its anticipation (§1.6): the freeze, then 200 ms more of i-frames; the sequence's presentation lasts this long (after a sustained ult's finisher). */
 export const ULT_BEATS = { freeze: 0.12, iframesAfter: ULT.iframesAfterFreeze, end: 3 } as const;
 /** Seconds after the last threat that you still count as in combat (§1.3). */
 export const IN_COMBAT = 5;
@@ -40,8 +40,8 @@ export interface ClassState {
   /** Seconds a recast key's second press stays open. */
   recast: number[];
   meter: number;
-  /** The ult under way: seconds since the press (real time), where it aims, its seed, and whether its hits landed. */
-  cast: { t: number; aim: Vec; seed: number; fired: boolean } | null;
+  /** The ult under way: seconds since the press (real time), where it aims, its seed, whether its hits landed (and a first-last ult's finisher). */
+  cast: { t: number; aim: Vec; seed: number; fired: boolean; last?: boolean } | null;
   moveCd: number;
   combatT: number;
   /** The input layer's clock (real seconds). */
@@ -214,6 +214,9 @@ export function classMove(rt: CombatRuntime, me: Vec, on: MovementPassive["on"],
 }
 
 export const inCombat = (rt: CombatRuntime) => (rt.v2?.combatT ?? 0) > 0;
+/** Dev (evidence): hold the ult's clock where a script puts it, to film its beats one at a time. */
+export const classDev = { holdUlt: false };
+if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") Object.assign(window, { __classDev: classDev });
 const THREAT = new Set(["chase", "windup", "active", "recover"]);
 
 /**
@@ -241,7 +244,7 @@ export function stepClass(rt: CombatRuntime, me: Vec, dt: number, real: number, 
   p.ultIframes = Math.max(0, p.ultIframes - real);
   // The ult: its hits at the anticipation's end (A), its presentation (impact.ts) until the end.
   if (v.cast) {
-    v.cast.t += real;
+    if (!classDev.holdUlt) v.cast.t += real;
     const A = v.ult.anticipation_ms / 1000;
     if (!v.cast.fired && v.cast.t >= A && p.alive) {
       v.cast.fired = true;
@@ -249,7 +252,15 @@ export function stepClass(rt: CombatRuntime, me: Vec, dt: number, real: number, 
       ctx.impact = "ult"; ctx.ult = true; ctx.fx = v.ult.vfx;
       runEffects(rt, v.ult.effects, ctx, random);
     }
-    if (v.cast.t >= A + ULT_BEATS.end) v.cast = null;
+    const span = v.ult.impacts === "first-last" ? v.ult.duration ?? 0 : 0;
+    if (span > 0 && !v.cast.last && v.cast.t >= A + span && p.alive) { // the finisher: its hits, and the sequence plays again (ultView)
+      v.cast.last = true;
+      p.ultIframes = ULT_BEATS.freeze + ULT_BEATS.iframesAfter; // nothing lands unseen in this freeze either
+      const ctx = context(rt, v.ult, me, 1, p.aim);
+      ctx.impact = "ult"; ctx.ult = true; ctx.fx = v.ult.vfx;
+      runEffects(rt, v.ult.release ?? v.ult.effects, ctx, random);
+    }
+    if (v.cast.t >= A + span + ULT_BEATS.end) v.cast = null;
   }
   // In combat (§1.3): something hunting or hitting you, a wave running or the boss engaged, and for 5 s after.
   const threat = rt.wave?.active || rt.bossEngaged || rt.enemies.some(e => THREAT.has(e.state) && e.status.distract <= 0 && Math.hypot(e.x - me.x, e.z - me.z) < e.type.aggroRadius + 4);

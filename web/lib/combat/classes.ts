@@ -70,6 +70,8 @@ export interface ClassUlt extends ClassAbility {
   /** Press to impact (250–600 ms): the anticipation the freeze lands on. */
   anticipation_ms: number;
   impacts: "first" | "first-last";
+  /** A sustained ult's window in seconds (Titan, Thousand Arrows, World Tree): with impacts "first-last" its finisher (`release`) lands at the end with the full sequence again. */
+  duration?: number;
 }
 
 /** A ruins-only movement passive that extends the movement combo (row 292): Air Step, Bone Surf, Vault. */
