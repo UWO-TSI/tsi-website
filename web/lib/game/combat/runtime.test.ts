@@ -8,7 +8,7 @@ afterEach(() => { vi.unstubAllGlobals(); });
 describe("ability keys", () => {
   it("default to 1–4 for the slots and R for the swap, remap with swaps, refuse movement/dodge/menu keys, and persist", () => {
     expect(readAbilityKeys()).toEqual(DEFAULT_ABILITY_KEYS);
-    expect(DEFAULT_ABILITY_KEYS).toEqual({ slot1: "1", slot2: "2", slot3: "3", slot4: "4", swap: "r" });
+    expect(DEFAULT_ABILITY_KEYS).toEqual({ slot1: "1", slot2: "2", slot3: "3", slot4: "4", slot5: "5", ult: "f", swap: "r" }); // classes v2: key 5 and the ult on F
     expect(remapAbility(DEFAULT_ABILITY_KEYS, "swap", "q")).toMatchObject({ ok: false }); // Q is the dash
     saved.set("tsi.combatKeys.v2", JSON.stringify({ ...DEFAULT_ABILITY_KEYS, swap: "q" })); // saved before the move
     expect(readAbilityKeys().swap).toBe("r");

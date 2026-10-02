@@ -4,16 +4,17 @@
  * islandAdapter.islandScore. Island adds the effect wording and the guide
  * arrows. Points are [x, y] in a unit box, y down; traces carry ms times.
  */
-import { RUNES as SYSTEM_RUNES } from "@/lib/combat/incantation";
+import { RUNES as SYSTEM_RUNES, SHAPES } from "@/lib/combat/incantation";
 import { islandScore } from "@/lib/combat/islandAdapter";
 import type { IncantationScore } from "./contract";
 
 export type Pt = [number, number];
 export type TracePt = [number, number, number];
-export interface Rune { id: "spark" | "binding"; name: string; difficulty: "easy" | "hard"; strokes: Pt[][]; timeLimitMs: number }
+/** Today's runes (spark, binding) and the classes v2 shapes (cross, circle, line, triangle, chevron, wings). */
+export interface Rune { id: string; name: string; difficulty: "easy" | "hard"; strokes: Pt[][]; timeLimitMs: number }
 
-export const RUNES: Rune[] = SYSTEM_RUNES.map(r => ({
-  id: r.key as Rune["id"], name: r.name, difficulty: r.difficulty, timeLimitMs: r.time_limit_ms,
+export const RUNES: Rune[] = [...SYSTEM_RUNES, ...SHAPES].map(r => ({
+  id: r.key, name: r.name, difficulty: r.difficulty, timeLimitMs: r.time_limit_ms,
   strokes: r.strokes.map(s => s.map(p => [p.x, p.y] as Pt)),
 }));
 export const runeById = (id: string) => RUNES.find(r => r.id === id)!;

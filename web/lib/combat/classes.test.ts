@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { abilityAt, CLASS_KITS, classKit, classMods, holdsSignature, kitAt, memberKit, nextUnlock, NEUTRAL_MODS, passiveAt, rankOf, signatureHint, statAt, unlocksAt, upgraded, type ClassAbility } from "./classes";
 import { DEMO_KIT } from "./demoKit";
 import { UNITS } from "./kits";
+import { SHAPES } from "./incantation";
 
 const all = (k: (typeof CLASS_KITS)[number]): ClassAbility[] => [...k.keys, ...(k.combos ?? []).map(c => c.ability), k.ult];
 
@@ -11,7 +12,7 @@ describe("v2 kit invariants (every kit in CLASS_KITS)", () => {
     for (const k of CLASS_KITS) {
       expect(k.keys.length, k.key).toBeGreaterThanOrEqual(1);
       expect(k.keys.length, k.key).toBeLessThanOrEqual(5);
-      for (const c of k.combos ?? []) for (const i of c.keys) expect(k.keys[i], `${k.key} combo`).toBeDefined();
+      for (const c of k.combos ?? []) for (const i of c.keys) expect(k.keys[i]?.input?.kind ?? "tap", `${k.key} combo keys are taps`).toBe("tap");
     }
   });
   it("ability keys are unique across every kit (none shared, row 286)", () => {
@@ -58,6 +59,7 @@ describe("v2 kit invariants (every kit in CLASS_KITS)", () => {
   it("inputs are well formed; summons name real units", () => {
     for (const k of CLASS_KITS) for (const a of all(k)) {
       if (a.input?.kind === "charge") expect(a.input.min_s).toBeLessThan(a.input.max_s);
+      if (a.input?.kind === "drawn") expect(SHAPES.map(x => x.key), a.key).toContain(a.input.shape);
       for (const e of [...a.effects, ...(a.release ?? [])]) if (e.kind === "summon") expect(UNITS[e.unit] ?? ["weapon", "corpse"].includes(e.unit)).toBeTruthy();
     }
   });

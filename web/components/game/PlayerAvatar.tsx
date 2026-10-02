@@ -19,10 +19,13 @@ import { timeScale as worldSpeed } from "@/lib/game/slowMotion";
 import type { WheelItem } from "@/lib/game/toolWheel";
 import type { CharacterLook } from "@/lib/game/character/look";
 import { useMyLook } from "@/lib/game/character/lookStore";
-import { airPhase, combatClip, seatLift, type CombatView } from "@/lib/game/character/clips";
+import { airPhase, combatClip, gripFor, GRIP_HAND, seatLift, VERBS, verbClip, verbInfo, type CombatView, type Verb } from "@/lib/game/character/clips";
 import { useWorldClips } from "./character/useWorldClips";
 import { combat, useCombatValue } from "@/lib/game/combat/runtime";
 import { combatFacing, combatPush, combatTuning, dashDodge } from "@/lib/game/combat/actions";
+import { classMove } from "@/lib/game/combat/classRuntime";
+import { applyKick } from "@/lib/game/combat/moveHooks";
+import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { WEAPONS } from "@/lib/game/combat/data";
 import { STUCK_TIME, advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, topSpeed, towards, MOVE_TUNING, NO_INPUT, type MoveEvent, type MoveInput, type MoveSim, type MoveState, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
 import { crouchKey, useKeyboardLocked, useMoveKeys } from "@/lib/game/movement/keys";
@@ -140,7 +143,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   const fx = useRef({ sq: 0, sqv: 0, steps: 0, trail: 0, stuck: 0, level: 0, punch: 0, leaf: 0, leafV: 0, bank: 0, pitch: 0, sliding: false, slideT: 0, slideBeat: 0, drop: 0, heading: 0,
     mode: "ground", tumbled: false, ribbonT: 0, ribbonK: 0, lead: new THREE.Vector2(), pan: new THREE.Vector2(), rise: new THREE.Vector2(), focus: new THREE.Vector3(x0, 0, z0),
     // Juice timers (specs/movement-feel.md): anticipation, the Air pose, the camera dip, streaks, afterimages, the cooldown wind.
-    antic: 0, anticY: 0, jumped: false, vy0: 6, fallT: 0, dip: 0, dipV: 0, streakT: 0, streakK: 0, ghostT: 0, dashT: 0, cdT: 0, wispT: 0, ready: true });
+    antic: 0, anticY: 0, jumped: false, vy0: 6, fallT: 0, dip: 0, dipV: 0, streakT: 0, streakK: 0, ghostT: 0, dashT: 0, cdT: 0, wispT: 0, ready: true, sinceDash: 99 });
   // The glider is a flag on the sim (never in an encounter); the lab's tuning can carry it too.
   const kit = useMemo(() => (glider ? { ...(tuning ?? MOVE_TUNING), glider: 1 } : tuning ?? MOVE_TUNING), [tuning, glider]);
   const leafOwned = !inCombat && kit.glider > 0;
@@ -294,15 +297,22 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       const { fx: fwdX, fz: fwdZ } = getCameraForwardXZ(camera);
       const goal = target.current && towards(s.state, target.current.x, target.current.z, t);
       if (!goal) target.current = null;
-      // In the ruins defeat stops you and a cast roots you; the dodge still goes, and breaks the cast (row C3).
-      const down = inCombat && !p.alive, live = !frozen && !down && !(inCombat && combat.rt.casting);
+      // In the ruins defeat stops you and a cast roots you (a v2 drawn shape doesn't: WASD keeps moving you); the dodge still goes, and breaks the cast (row C3).
+      const down = inCombat && !p.alive, live = !frozen && !down && !(inCombat && combat.rt.casting && !combat.rt.casting.free);
+      // Classes v2 movement hooks: an air jump is the movement passive's (Air Step), never a buffered jump; what abilities asked moves the sim now.
+      const aloftNow = s.state.mode === "air" || s.state.mode === "glide";
+      let airJump = false;
+      if (inCombat && combat.rt.v2) {
+        if (jumpPressed && aloftNow && classMove(combat.rt, { x: s.state.x, z: s.state.z }, "airJump")) airJump = true;
+        if (p.kick) { applyKick(s.state, p.kick, t); p.kick = null; }
+      }
       const piloted = d.pilot && dt > 0 ? d.pilot(s.state, dt) : null;
       if (d.pilot && dt > 0 && !piloted) d.pilot = null;
       const steer = goal ?? cameraRelative(ix, iz, fwdX, fwdZ);
       const input: MoveInput = piloted ?? (live ? {
         x: steer.x, z: steer.z,
         sprint: !walkOnly && (!!k[b.sprint] || (!keyed && tilt > 0.92)), sneak: (!!crouch && !!k[crouch]) || st.crouch,
-        jump: !walkOnly && (!!k[b.jump] || st.jump), jumpPressed, dashPressed,
+        jump: !walkOnly && (!!k[b.jump] || st.jump) && !airJump, jumpPressed: jumpPressed && !airJump, dashPressed,
       } : { ...NO_INPUT, dashPressed: !frozen && !down && dashPressed });
       if (inCombat) { input.push = push; if (p.aimHold > 0 || Math.hypot(s.state.vx, s.state.vz) < 0.6) s.state.facing = p.facing; } // attacking or standing: the kit turns from your facing (a dash with no stick goes that way)
       events = advanceMove(s, input, dt, world, t);
@@ -311,6 +321,10 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
         if (f.stuck > STUCK_TIME) target.current = null;
       }
       if (inCombat && events.some(e => e.kind === "dash")) dashDodge(combat.rt, { x: s.state.dashX, z: s.state.dashZ }, s.state.airDashes > 0); // an air dash: no i-frames
+      if (inCombat && combat.rt.v2) for (const e of events) {
+        const on = e.kind === "dash" ? "dash" : e.kind === "slide" || e.kind === "dashslide" || e.kind === "landslide" ? "slide" : e.kind === "land" ? "land" : null;
+        if (on) classMove(combat.rt, { x: s.state.x, z: s.state.z }, on);
+      }
     }
     const state = s.state, speed = sitting ? 0 : Math.hypot(state.vx, state.vz);
     const [x, y, z] = sitting ? [sitting.x, groundHeight(sitting.x, sitting.z), sitting.z] : interpolated(s);
@@ -519,6 +533,19 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     bankAbout(bd, state.facing, f.bank, gliding ? y - groundY + GRIP_Y : 0.05, f.pitch);
     m.rate = rawDelta > 0 ? dt / Math.min(rawDelta, 0.1) : 1;
     if (inCombat) {
+      // Movement hooks: what the sim is doing, for riders and the movement passive (moveHooks.ts).
+      f.sinceDash = state.dashT > 0 ? 0 : f.sinceDash + dt;
+      p.move.mode = sitting ? "ground" : state.mode; p.move.speed = speed; p.move.sinceDash = f.sinceDash; p.move.vx = state.vx; p.move.vz = state.vz;
+      // Classes v2: an ability's verb on the held weapon's grip (over locomotion when the verb allows), at its timing scale.
+      if (p.clip) {
+        const grip = gripFor(SYSTEM_WEAPONS.find(w => w.key === p.weapon)?.type ?? "sword");
+        if ((VERBS as readonly string[]).includes(p.clip.verb)) {
+          const clip = verbClip(p.clip.verb as Verb, grip);
+          if (p.clip.upper && verbInfo(clip)?.upper) m.upper = clip; else m.play = clip;
+          m.playRate = p.clip.scale;
+        }
+        p.clip = null;
+      }
       // Encounter: face the way you move, the aim when standing or attacking (combatFacing); attacks, dodges, hits, casting and defeat drive the clips.
       const view: CombatView = { alive: p.alive, dodgeAge: p.dodgeAge, hurt: p.hurt, attackCd: p.attackCd };
       const next = combatClip(view, combatPrev.current ?? view, !!combat.rt.casting, WEAPONS[p.weapon].kind);
@@ -526,8 +553,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       // A slide faces the way it goes like a run (its legs lead), not the aim.
       if (p.alive && dt > 0) p.facing = combatFacing(p, { x, z }, state.facing, state.mode === "ground" || state.mode === "slide" ? speed : 0, dt);
       m.yaw = p.facing;
-      m.pose = next.pose;
-      if (next.play) m.play = next.play;
+      m.pose = combat.rt.casting?.free ? null : next.pose; // a v2 shape is traced on the move (no Trace pose)
+      if (next.play && !(combat.rt.v2 && next.play.startsWith("Attack") && (m.play || m.upper))) m.play = m.play ?? next.play;
     }
 
     // Camera focus: the avatar, a lead along its velocity, and the level it stands on. A hop never lifts the level;
@@ -630,10 +657,13 @@ function PlayerCharacter({ look, motion, inCombat, walkSpeed, leaf, held }: { lo
   // Only the weapon, and whether it shows, re-render the character (the runtime publishes ~10×/s).
   const key = useCombatValue(() => combat.rt.player.weapon), shown = useCombatValue(() => (inCombat ? combat.rt.player.alive : combat.rt.player.armed));
   const heldWeapon = !inCombat && held?.kind === "weapon" ? held.key : null;
+  const v2 = useCombatValue(() => !!combat.rt.v2);
   const weapon = useMemo(() => {
     const w = WEAPONS[heldWeapon ?? key];
-    return w?.model && (shown || heldWeapon) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat || !!heldWeapon, grip: w.grip } : null;
-  }, [key, heldWeapon, shown, inCombat]);
+    // Classes v2: the verb library's grip decides the hand (the Book grip holds the tome in the left).
+    const hand = v2 && inCombat ? GRIP_HAND[gripFor(SYSTEM_WEAPONS.find(x => x.key === (heldWeapon ?? key))?.type ?? "sword")] : undefined;
+    return w?.model && (shown || heldWeapon) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat || !!heldWeapon, grip: w.grip, hand } : null;
+  }, [key, heldWeapon, shown, inCombat, v2]);
   const item = useMemo(() => (inCombat ? null : heldView(held)), [inCombat, held]);
-  return <Character look={look} motion={motion} walkSpeed={walkSpeed} weapon={weapon} held={item} leaf={leaf} />;
+  return <Character look={look} motion={motion} walkSpeed={walkSpeed} weapon={weapon} held={item} leaf={leaf} verbs={inCombat && v2} />;
 }

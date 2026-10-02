@@ -104,7 +104,7 @@ export function runSurvive(subclassKey: string, missionId: "survive-circle" | "s
         if (!a || rt.cooldowns[`slot${i + 1}` as "slot1"] > 0 || p.energy < a.energy || !useful(rt, a, me, target, !!threat)) continue;
         const totem = a.effects.some(e => e.kind === "summon" && (UNITS[e.unit]?.kind === "totem"));
         if (totem && target) p.aim = { x: me.x + (target.x - me.x) * 0.3, z: me.z + (target.z - me.z) * 0.3 };
-        if (fireSlot(rt, i, me, random)) { const c = rt.casting as CombatRuntime["casting"]; if (c) castLeft = RUNE_TIME[c.rune]; break; }
+        if (fireSlot(rt, i, me, random)) { const c = rt.casting as CombatRuntime["casting"]; if (c) castLeft = RUNE_TIME[c.rune as keyof typeof RUNE_TIME] ?? RUNE_TIME.spark; break; }
       }
       if (target && !rt.casting && d2(target, me) <= WEAPONS[p.weapon].range + target.type.radius) attack(rt, me, random);
     }

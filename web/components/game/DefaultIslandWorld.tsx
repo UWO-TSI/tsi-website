@@ -53,6 +53,8 @@ import { SLOT_IDS, attachProgressId, combat, publishCombat, setMission, setOwned
 import { missionEvent } from "@/lib/game/combat/abilities";
 import { combatProgression, postWear, startMissionRemote, type ProgressionView } from "@/lib/game/combat/progression";
 import { equipKit } from "@/lib/game/combat/abilities";
+import { equipClassKit } from "@/lib/game/combat/classRuntime";
+import { classKit } from "@/lib/combat/classes";
 import { subclassByKey } from "@/lib/combat/kits";
 import PathSheet from "./oracle/PathSheet";
 import { MISSIONS, WEAPONS } from "@/lib/game/combat/data";
@@ -595,7 +597,11 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (g.stats) p.stats = g.stats;
     p.level = g.level;
     if (g.maxHp) { p.maxHp = g.maxHp; p.hp = Math.min(p.hp, g.maxHp); }
-    equipKit(combat.rt, subclassByKey(g.subclass), g.view?.loadout ?? [], g.view?.traits ?? {});
+    // Classes v2 (the flag on and the subclass's family wave landed): its kit at its mastery; otherwise today's kit and loadout.
+    const v2 = g.view?.classes?.kit ? classKit(g.view.classes.kit) : null;
+    combat.rt.v2 = null;
+    if (v2) equipClassKit(combat.rt, v2, g.view!.classes!.mastery.mastery);
+    else equipKit(combat.rt, subclassByKey(g.subclass), g.view?.loadout ?? [], g.view?.traits ?? {});
     setOwnedWeapons(combat.rt, g.weapons);
     setDefaultWeapon(g.weapons.find(w => w.equipped)?.weapon_key ?? null);
     publishCombat();

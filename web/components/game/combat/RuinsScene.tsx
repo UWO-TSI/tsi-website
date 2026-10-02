@@ -22,7 +22,9 @@ import { GLBProp } from "../NatureModels";
 import { IslandAtmosphere, useFollowCamera } from "../IslandAtmosphere";
 import { AimReticle, Blasts, EnemyBars, EnemyInstances, FloaterProjector, PlayerAuras, Projectiles, Telegraphs, Totems, Wisps } from "./EncounterRender";
 import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BROKEN_ARCHES, RUINS_MOAI, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, RUINS_TORCHES, SURVIVE_CIRCLES, createRuins } from "@/lib/game/ruins";
-import { combat, publishCombat, takeMissionQueue, type AbilityId, type CombatRuntime, type CueKind } from "@/lib/game/combat/runtime";
+import { combat, publishCombat, takeMissionQueue, V2_SLOT_IDS, type AbilityId, type CombatRuntime, type CueKind } from "@/lib/game/combat/runtime";
+import { classKey, equipClassKit, pressUlt, stepClass } from "@/lib/game/combat/classRuntime";
+import { unlocksAt } from "@/lib/combat/classes";
 import { AudioManager, type SFXName } from "@/lib/game/audio";
 import { useAbilityKeys } from "@/lib/game/movement/keys";
 import { screenOf, useMoveParticles } from "../movement/moveFx";
@@ -65,6 +67,18 @@ export function resetEncounter() {
   const path = rt.mission?.def.template === "escort" && rt.mission.status === "active" ? ESCORT_PATHS[rt.mission.def.id] : null;
   rt.escort = path ? { x: path[0].x, z: path[0].z, hp: 60, waypoint: 1 } : null;
   rt.player.energy = Math.max(rt.player.energy, 0);
+  // Classes v2: the meter starts empty on entry and empties on defeat (§1.2); nothing held, toggled or queued carries over.
+  if (rt.v2) Object.assign(rt.v2, { meter: 0, cast: null, queue: [], holding: rt.v2.holding.map(() => null), toggled: rt.v2.toggled.map(() => false), recast: rt.v2.recast.map(() => 0), combatT: 0 });
+  rt.player.ultIframes = 0; rt.player.kick = null; rt.player.clip = null; rt.fx = [];
+}
+
+/** Classes v2: a kill took the active subclass up a mastery level; its unlocks apply now (the meter and cooldowns carry). */
+function masteryUp(level: number, now: number) {
+  const rt = combat.rt, v = rt.v2;
+  if (!v || level <= v.mastery) return;
+  equipClassKit(rt, v.kit, level);
+  rt.banner = { kind: "mastery", title: `${v.kit.name} mastery ${level}`, text: unlocksAt(v.kit, level).join(" · ") || "Your path grows stronger.", until: now + 6 };
+  publishCombat();
 }
 
 /** A Transmuter's first defeat of a species (row 40): the server taught a trait; it joins the kit, equipped at the Oracle. */
@@ -190,13 +204,22 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
       const k = e.key.toLowerCase(), ability = (Object.keys(keys) as AbilityId[]).find(a => keys[a] === k);
       if (!ability) return;
       e.preventDefault();
-      if (!e.repeat) input.current.presses.keys.push({ id: ability, left: BUFFER });
+      if (e.repeat) return;
+      // Classes v2: keys 1–5 go through the input layer (holds and charges need the release too), F is the ult.
+      const rt = combat.rt, slot = (V2_SLOT_IDS as readonly string[]).indexOf(ability);
+      if (rt.v2 && slot >= 0) classKey(rt, slot, true);
+      else if (rt.v2 && ability === "ult") pressUlt(rt);
+      else if (ability !== "slot5" && ability !== "ult") input.current.presses.keys.push({ id: ability, left: BUFFER });
+    };
+    const ku = (e: KeyboardEvent) => {
+      const k = e.key.toLowerCase(), slot = V2_SLOT_IDS.findIndex(a => keys[a] === k);
+      if (combat.rt.v2 && slot >= 0) classKey(combat.rt, slot, false);
     };
     el.addEventListener("pointermove", move); el.addEventListener("pointerdown", down); window.addEventListener("pointerup", up);
-    window.addEventListener("keydown", kd, true);
+    window.addEventListener("keydown", kd, true); window.addEventListener("keyup", ku, true);
     return () => {
       el.removeEventListener("pointermove", move); el.removeEventListener("pointerdown", down); window.removeEventListener("pointerup", up);
-      window.removeEventListener("keydown", kd, true);
+      window.removeEventListener("keydown", kd, true); window.removeEventListener("keyup", ku, true);
     };
   }, [gl, keys]);
 
@@ -224,6 +247,8 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     }
     // Inputs.
     if (runInputs(rt, inp.presses, me, Math.min(rawDelta, 0.05))) publishCombat(); // a refused key pulses its slot now
+    // Classes v2: the input layer's intents, cooldowns, holds and toggles on the encounter clock; the ult's beats on the wall clock.
+    stepClass(rt, me, dt, Math.min(rawDelta, 0.05));
     // Timers, energy, enemies, projectiles, summons and totems (lib/game/combat/encounter.ts); ability dashes and knockback push PlayerAvatar.
     stepCombat(rt, me, dt, ruins.free);
     playCues(rt, me);
@@ -275,7 +300,10 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
       syncAt.current = clock.elapsedTime;
       for (const k of rt.killQueue.splice(0)) {
         if (k.enemy === BOSS_DROPS.enemy) bossVictory(k.key, clock.elapsedTime);
-        else void postKill(k.enemy, k.key).then(r => { if (r.ok && r.data.trait_unlocked) traitLearned(r.data.trait_unlocked, clock.elapsedTime); });
+        else void postKill(k.enemy, k.key).then(r => {
+          if (r.ok && r.data.trait_unlocked) traitLearned(r.data.trait_unlocked, clock.elapsedTime);
+          if (r.ok && r.data.mastery?.levelled_up) masteryUp(r.data.mastery.mastery, clock.elapsedTime);
+        });
       }
       const pid = rt.mission?.progressId;
       if (pid && rt.mission?.queue.length) void postMissionEvents(pid, takeMissionQueue());

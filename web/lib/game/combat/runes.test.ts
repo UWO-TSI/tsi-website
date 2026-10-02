@@ -9,8 +9,9 @@ const timed = (strokes: Pt[][], msPerPoint = 20): TracePt[][] => {
 };
 
 describe("incantation runes (systems data + scorer)", () => {
-  it("uses the canonical spark (easy) and binding (hard) runes", () => {
-    expect(RUNES.map(r => [r.id, r.difficulty])).toEqual([["spark", "easy"], ["binding", "hard"]]);
+  it("uses the canonical spark (easy) and binding (hard) runes, then the classes v2 shapes", () => {
+    expect(RUNES.map(r => [r.id, r.difficulty])).toEqual([["spark", "easy"], ["binding", "hard"],
+      ["cross", "easy"], ["circle", "easy"], ["line", "easy"], ["triangle", "easy"], ["chevron", "easy"], ["wings", "hard"]]);
     expect(strokeGuides(runeById("binding"))).toHaveLength(3);
   });
   it("a faithful trace is enhanced; a scribble or a timeout fails", () => {

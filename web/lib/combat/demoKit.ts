@@ -1,7 +1,7 @@
 /**
  * The wave-0 test kit (design sheet §4, wave 0): placeholder abilities from today's primitives that exercise every
  * shared system, under `?combat=demo&subclass=demo` only (dev; never offered to members, `dev: true`). One key per
- * input kind (tap, hold, charge, toggle, drawn shape), a pair combo, a heavy ability, a speed rider, the movement
+ * input kind (tap, hold, charge, toggle, drawn shape), a double-tap combo, a heavy ability, a speed rider, the movement
  * hooks (momentum, launch, the movement passive on an air jump), a mastery unlock at 3, ranks, the stat direction
  * and an ult. Numbers follow the §3 authoring budgets loosely; it is not balanced.
  */
@@ -28,7 +28,7 @@ export const DEMO_KIT: ClassKit = {
       clip: { verb: "Channel" }, vfx: { cast: "demo.sigil" } },
   ],
   combos: [
-    { keys: [0, 2], ability: { key: "demo.nova", name: "Surge Nova", description: "Bolt and slam together: a burst around you that throws you forward.", cooldown_s: 0, energy: 30,
+    { keys: [0, 0], ability: { key: "demo.nova", name: "Surge Nova", description: "Double-tap Arc Bolt: a burst around you that throws you forward.", cooldown_s: 0, energy: 30,
       effects: [{ kind: "area", power: 1.8, radius: 3.5, at: "self", knock: 5 }, { kind: "momentum", speed: 4 }, { kind: "launch", height: 0.6 }],
       clip: { verb: "Spin" }, vfx: { cast: "demo.nova", impact: "demo.burst" } } },
   ],

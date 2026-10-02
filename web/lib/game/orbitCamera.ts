@@ -160,6 +160,9 @@ export const readCapture = () => capture.state;
 /** The Esc that ended the lock is the browser's; it closes nothing in the game (a later Esc does). */
 export const escapeEndedCapture = (now = performance.now()) => capture.state === "captured" || now - capture.unlockedAt < 250;
 
+/** A drawn shape under mouse-look (classes v2): while set, the locked mouse's movement traces the shape instead of turning the camera. */
+export const pen: { move: ((dx: number, dy: number) => void) | null } = { move: null };
+
 /** Reasons the game wants the cursor right now besides the dialogs the input sees (decorating, a greeting). */
 export const cursorHolds = new Set<string>();
 export function holdCursor(reason: string, on: boolean) { if (on) cursorHolds.add(reason); else cursorHolds.delete(reason); }

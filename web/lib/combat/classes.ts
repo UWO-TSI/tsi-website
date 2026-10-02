@@ -166,6 +166,26 @@ export function nextUnlock(kit: ClassKit, mastery: number): { at: number; what: 
   return null;
 }
 
+/**
+ * An ability with the class's stat direction baked in: cooldowns (cooldown reduction), radii (area), buff, shield
+ * and form durations (duration), heals and shields (healing power). The rest (mana, attack speed, crits, armour,
+ * max HP, summons) the runtime reads from ClassMods directly.
+ */
+export function withMods<A extends ClassAbility>(a: A, m: ClassMods): A {
+  const fx = (e: Effect): Effect => {
+    switch (e.kind) {
+      case "area": return { ...e, radius: e.radius * m.area };
+      case "projectile": return e.splash ? { ...e, splash: e.splash * m.area } : e;
+      case "buff": return { ...e, duration: e.duration * m.duration };
+      case "transform": return { ...e, duration: e.duration * m.duration };
+      case "shield": return { ...e, amount: e.amount * m.healing, duration: e.duration * m.duration };
+      case "heal": return { ...e, amount: e.amount * m.healing };
+      default: return e;
+    }
+  };
+  return { ...a, cooldown_s: a.cooldown_s * m.cooldown, effects: a.effects.map(fx), ...(a.release ? { release: a.release.map(fx) } : {}) };
+}
+
 // ── The stat direction (mastery raises it) ──────────────────────
 export const statAt = (kit: ClassKit, mastery: number) => kit.stat.at1 + ((kit.stat.at20 - kit.stat.at1) * (Math.min(20, Math.max(1, mastery)) - 1)) / 19;
 
