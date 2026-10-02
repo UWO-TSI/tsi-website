@@ -29,6 +29,7 @@ import { screenOf, useMoveParticles } from "../movement/moveFx";
 import { defeatPuff } from "@/lib/game/movement/juice";
 import type { ParticlePool } from "@/lib/game/fx/particles";
 import { shakeCamera } from "@/lib/game/cameraJuice";
+import { timeScale as worldSpeed } from "@/lib/game/slowMotion";
 import { capture, crosshairAim } from "@/lib/game/orbitCamera";
 import { boxOccluder } from "@/lib/game/occluders";
 import { BUFFER, createInputs, runInputs, spawnWave } from "@/lib/game/combat/actions";
@@ -198,7 +199,8 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
 
   useFrame(({ clock }, rawDelta) => {
     // Hitstop holds the encounter (and the avatar, PlayerAvatar) for a beat after a melee hit, a crit or a hit taken.
-    const dt = combat.freeze || combat.hitstop > 0 ? 0 : Math.min(rawDelta, 0.05);
+    // The tool wheel slows the encounter while it's open (specs/game-ui.md §1).
+    const dt = combat.freeze || combat.hitstop > 0 ? 0 : Math.min(rawDelta, 0.05) * worldSpeed();
     combat.hitstop = Math.max(0, combat.hitstop - rawDelta);
     const rt = combat.rt, p = rt.player, pl = player.current, inp = input.current;
     const me = { x: pl.x, z: pl.z };
