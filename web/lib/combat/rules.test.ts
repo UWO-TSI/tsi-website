@@ -132,8 +132,8 @@ describe("content", () => {
     expect(SUBCLASSES.find((s) => s.key === "necromancer")!.starter_note).toBeTruthy();
     expect(SUBCLASSES.find((s) => s.key === "transmuter")!.starter_note).toBeTruthy();
   });
-  it("has 5 enemy types, 2 elites, 1 boss and 10 missions over the four templates (rows 213, 231)", () => {
-    expect(ENEMIES.filter((e) => e.kind === "normal")).toHaveLength(5);
+  it("has 6 enemy types (zone 1's five with the pollen sprites, the temple's book), 2 elites, 1 boss and 10 missions over the four templates (rows 213, 231)", () => {
+    expect(ENEMIES.filter((e) => e.kind === "normal")).toHaveLength(6);
     expect(ENEMIES.filter((e) => e.kind === "elite")).toHaveLength(2);
     expect(ENEMIES.filter((e) => e.kind === "boss")).toHaveLength(1);
     expect(MISSIONS).toHaveLength(10);

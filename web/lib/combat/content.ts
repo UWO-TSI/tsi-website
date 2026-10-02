@@ -32,13 +32,17 @@ const e = (key: string, name: string, kind: EnemyKind, zone: Zone, hp: number, d
 });
 
 export const ENEMIES: EnemyType[] = [
-  e("shadow-fox", "Shadow fox", "normal", "outer", 60, 8, 0, 7, 1.5, 30, "Crouches, eyes flare, then pounces; dodge sideways."),
-  e("thorn-crab", "Thorn crab", "normal", "outer", 90, 10, 0.3, 4, 1.2, 35, "Raises both claws, then sweeps a wide arc in front."),
-  e("mushroom-beast", "Mushroom beast", "normal", "outer", 110, 9, 0.1, 5, 4, 40, "Cap swells, then it spits spores at where you stood."),
-  e("rune-wisp", "Rune wisp", "normal", "outer", 70, 9, 0, 8, 7, 40, "Ring spins up and glows, then a rune bolt flies at your spot."),
+  // Zone 1, the Overgrown Outskirts (design sheet "Mobs, zone 1"): what each one's telegraph teaches.
+  e("shadow-fox", "Shadow fox", "normal", "outer", 60, 8, 0, 7, 1.5, 30, "Hunts in packs of three that circle to your sides. Each crouches, its mane and eyes flare, then it pounces down a line: step out of it."),
+  e("thorn-crab", "Thorn crab", "normal", "outer", 90, 10, 0.3, 4, 1.2, 35, "Its front shell turns most hits aside and it turns slowly: circle to its flank or back. Raises both claws, then sweeps in front."),
+  e("mushroom-beast", "Mushroom beast", "normal", "outer", 110, 9, 0.1, 6, 6.5, 40, "Its cap swells, then it lobs a spore ball onto the marked ring; the burst leaves a poison puddle for a few seconds."),
+  e("rune-wisp", "Rune wisp", "normal", "outer", 70, 9, 0, 8, 7, 40, "Its runes spin up, then a bolt flies down the marked line. Close in and it shimmers and blinks away."),
+  e("pollen-sprite", "Pollen sprite", "normal", "outer", 14, 4, 0, 7, 0.6, 6, "Drifts in clouds of 8 to 15 that circle you. One by one they flash, dart in and burst into pollen that slows you: swat them first."),
   e("animated-book", "Animated book", "normal", "inner", 120, 13, 0.2, 6, 2, 65, "Pages flutter open, then it snaps shut on a short charge."),
   e("stone-golem", "Stone golem", "elite", "inner", 420, 22, 0.45, 6, 2.5, 220, "Raises both fists, core glows, then slams the ground around it.", 2),
-  e("elder-thorn-crab", "Elder thorn crab", "elite", "outer", 300, 16, 0.4, 5, 1.8, 160, "A slower, wider claw sweep; hit it from behind."),
+  // The zone's mini-boss (lib/game/combat/sim.ts PLANS): a two-minute fight with starter weapons, a leash wide enough
+  // for its charges, and a reward roll on defeat (ELDER_DROPS).
+  e("elder-thorn-crab", "Elder thorn crab", "elite", "outer", 1450, 20, 0.4, 5, 1.8, 450, "Mini-boss. Shell closed: armoured, slow claw sweeps, hit it from behind. Cracked at 60%: faster, and it charges down a marked lane. Enraged at 25%: claw slams with shockwaves to dodge through.", 0, 24),
   // Wakes when you step into its chamber and never leaves it (leash 11 from its plinth).
   // Combat polish 11: 1800 HP and armor 9 → 1700 and 7: about 4–6 minutes with a starter weapon, 2 with tier 2+ (boss.test.ts).
   e("guardian-statue", "Guardian statue", "boss", "boss", 1700, 28, 0.35, 9, 3, 1200,
@@ -74,34 +78,56 @@ export const MISSIONS: MissionDef[] = [
   m("escort-scholar", "Scholar to the shrine", "escort", "inner", 3, { resident: "scholar", checkpoints: 4 }, 750, 150, { rock_gold_nugget: 1, rock_crystal: 1 }),
 ];
 
+/** A drop table: coins and materials every time, then a roll down `gear` (chances in order) for a weapon not owned yet. */
+export interface DropTable {
+  enemy: string;
+  cooldown_hours: number;
+  coins: number;
+  materials: Record<string, number>;
+  gear: { rarity: "legendary" | "epic" | "rare"; chance: number; weapons: string[] }[];
+}
+
 /**
  * Guardian statue victory (row 21): coins and materials every time, and a
  * rare Epic or Legendary weapon the member doesn't own yet. Rolled on the
  * server (lib/combat/service.ts), paid once per boss kill and at most once
  * per cooldown, since kills are client-reported (ruling 3).
  */
-export const BOSS_DROPS = {
+export const BOSS_DROPS: DropTable = {
   enemy: "guardian-statue",
   cooldown_hours: 20,
   coins: 150,
-  materials: { rock_crystal: 2, rock_gold_nugget: 1 } as Record<string, number>,
+  materials: { rock_crystal: 2, rock_gold_nugget: 1 },
   gear: [
     { rarity: "legendary", chance: 0.04, weapons: ["staff-heartstone"] },
     { rarity: "epic", chance: 0.2, weapons: ["sword-guardian", "bow-sentinel", "staff-sigil", "tome-warden"] },
   ],
 };
-export interface BossReward { coins: number; materials: Record<string, number>; weapon: string | null; rarity: "legendary" | "epic" | null }
+/**
+ * Zone 1's mini-boss, the elder thorn crab (design sheet "Mobs, zone 1"): stone and a crystal every time, and a rare
+ * chance at a crafted (tier 2) weapon the member doesn't own yet. Same rules as the guardian: rolled on the server,
+ * paid once per recorded kill, at most once per 20 h (20261002182708_zone1_mobs combat_miniboss_reward).
+ */
+export const ELDER_DROPS: DropTable = {
+  enemy: "elder-thorn-crab",
+  cooldown_hours: 20,
+  coins: 60,
+  materials: { rock_stone: 3, rock_crystal: 1 },
+  gear: [{ rarity: "rare", chance: 0.08, weapons: ["sword-iron", "bow-yew", "revolver-brass"] }],
+};
+export const MINIBOSS_DROPS: Record<string, DropTable> = { [ELDER_DROPS.enemy]: ELDER_DROPS };
+export interface BossReward { coins: number; materials: Record<string, number>; weapon: string | null; rarity: "legendary" | "epic" | "rare" | null }
 
-/** One roll of the drop table: gear only from weapons not owned yet; a spent tier pays its chance as nothing extra. */
-export function rollBossReward(owned: string[], random: () => number): BossReward {
+/** One roll of a drop table (the guardian's unless given): gear only from weapons not owned yet; a spent tier pays its chance as nothing extra. */
+export function rollBossReward(owned: string[], random: () => number, table: DropTable = BOSS_DROPS): BossReward {
   let r = random();
-  for (const g of BOSS_DROPS.gear) {
+  for (const g of table.gear) {
     if (r < g.chance) {
       const open = g.weapons.filter((w) => !owned.includes(w));
       const weapon = open.length ? open[Math.floor(random() * open.length)] : null;
-      return { coins: BOSS_DROPS.coins, materials: BOSS_DROPS.materials, weapon, rarity: weapon ? (g.rarity as BossReward["rarity"]) : null };
+      return { coins: table.coins, materials: table.materials, weapon, rarity: weapon ? g.rarity : null };
     }
     r -= g.chance;
   }
-  return { coins: BOSS_DROPS.coins, materials: BOSS_DROPS.materials, weapon: null, rarity: null };
+  return { coins: table.coins, materials: table.materials, weapon: null, rarity: null };
 }

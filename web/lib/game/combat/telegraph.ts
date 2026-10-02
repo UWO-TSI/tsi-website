@@ -10,10 +10,11 @@
  *     a ranged line from the source to where it lands, an area ring, and the boss's own.
  */
 import type { AttackShape } from "./contract";
-import { staggered, type Enemy, type Vec } from "./sim";
+import type { Projectile } from "./runtime";
+import { leapEnd, staggered, type Enemy, type Vec } from "./sim";
 
-/** Offsets in the part's local space (radians / model units); scale is on local Y. */
-export interface PartPose { rx: number; ry: number; rz: number; dy: number; dz: number; sy: number }
+/** Offsets in the part's local space (radians / model units); `sy` scales local Y, `s` the whole part (0 hides it). */
+export interface PartPose { rx: number; ry: number; rz: number; dy: number; dz: number; sy: number; s: number }
 
 /** Windup progress k, active progress a, recover progress r (each 0..1, 0 outside its state). One scratch result: read it before the next call. */
 const PROGRESS = { k: 0, a: 0, r: 0 };
@@ -42,33 +43,53 @@ const roleOf = (role: string) => {
  * left/right parts; `seed` staggers idle motion between instances. `out` is
  * filled instead of a new object (the renderer poses every part every frame).
  */
-export function partPose(role: string, e: Pick<Enemy, "state" | "t" | "move"> & Partial<Pick<Enemy, "wander">>, time: number, seed = 0, out?: PartPose): PartPose | null {
-  const shape: AttackShape = e.move.shape, { k, r } = progress(e), hit = impact(e, r);
+export function partPose(role: string, e: Pick<Enemy, "state" | "t" | "move"> & Partial<Pick<Enemy, "wander" | "phase">>, time: number, seed = 0, out?: PartPose): PartPose | null {
+  const shape: AttackShape = e.move.shape, { k, a, r } = progress(e), hit = impact(e, r);
   const { kind, side, front } = roleOf(role); // arm_l, leg_fl, leg_br…
   const moving = e.state === "chase" || e.state === "return" || (e.state === "idle" && !!e.wander && e.wander.wait <= 0); // strolling near its spawn too
-  const p: PartPose = out ?? { rx: 0, ry: 0, rz: 0, dy: 0, dz: 0, sy: 1 };
-  p.rx = p.ry = p.rz = p.dy = p.dz = 0; p.sy = 1;
-  const w = ease(k);
+  const p: PartPose = out ?? { rx: 0, ry: 0, rz: 0, dy: 0, dz: 0, sy: 1, s: 1 };
+  p.rx = p.ry = p.rz = p.dy = p.dz = 0; p.sy = p.s = 1;
+  const w = ease(k), going = e.state === "active";
   switch (kind) {
     case "body":
       if (moving) p.dy = Math.abs(Math.sin(time * 12 + seed)) * 0.02;
       else if (e.state === "idle") p.dy = Math.sin(time * 2 + seed) * 0.006;
       if (shape === "lunge") { p.rx = -0.3 * w + 0.25 * hit; p.dy -= 0.025 * w; p.dz = -0.03 * w + 0.12 * hit; }
       else if (shape === "slam" || shape === "smash") { p.dy += 0.05 * w - 0.05 * hit; p.rx = -0.15 * w + 0.2 * hit; }
-      else if (shape === "spit") p.rx = -0.12 * w + 0.15 * hit;
+      else if (shape === "spit" || shape === "lob") p.rx = -0.12 * w + 0.15 * hit;
       else if (shape === "sweep") p.ry = 0.25 * w * Math.sin(time * 18) - 0.4 * hit;
+      // The fox's crouch: low and drawn back, quivering; then stretched out through the leap (airborne() lifts it).
+      else if (shape === "pounce") { p.dy -= 0.045 * w; p.dz = -0.04 * w; p.rx = 0.12 * w + (going ? -0.3 + 0.45 * a : 0); p.ry = 0.04 * w * Math.sin(time * 40); }
+      // A pollen sprite shivers and draws back, then dives.
+      else if (shape === "dart") { p.dz = -0.05 * w; p.ry = 0.3 * w * Math.sin(time * 45); p.rx = going ? 0.5 : 0; p.s = 1 + 0.18 * w; }
+      // The elder rears and digs in, then charges head-down.
+      else if (shape === "charge") { p.rx = -0.28 * w + (going ? 0.14 : 0); p.dy = 0.03 * w + (going ? Math.abs(Math.sin(time * 22)) * 0.03 : 0); p.ry = 0.05 * w * Math.sin(time * 30); }
+      // A wisp shrinks into its shimmer, then pops back in where it lands.
+      else if (shape === "blink") p.s = e.state === "windup" ? 1 - 0.85 * w : e.state === "recover" ? Math.min(1, 0.3 + r * 2.5) : 1;
       if (staggered(e)) { p.rx = 0.18; p.dy = -0.04; }
       return p;
     case "head": case "eyes":
-      if (shape === "spit") p.rx = -0.45 * w + 0.35 * hit;
+      if (shape === "spit" || shape === "lob") p.rx = -0.45 * w + 0.35 * hit;
       else if (shape === "lunge") p.rx = 0.2 * w;
+      else if (shape === "pounce") p.rx = 0.28 * w - (going ? 0.25 : 0);
       else p.rx = Math.sin(time * 1.5 + seed) * 0.05;
       if (staggered(e)) p.rx = 0.4;
       return p;
-    case "claw": // sweep: raise and open outward, then snap across
-      p.rz = side * (0.55 * w - 0.2 * hit);
-      p.ry = side * (0.7 * w - 0.9 * hit);
-      if (moving) p.rx = Math.sin(time * 10 + side) * 0.15;
+    case "claw": // sweep: raise and open outward, then snap across; slam: both up, then down; charge: together, forward
+      if (shape === "slam") { p.rx = -1.15 * w + 0.7 * hit; p.rz = side * 0.3 * w; }
+      else if (shape === "charge") { p.ry = -side * 0.4 * Math.max(w, going ? 1 : 0); p.rx = -0.2 * w; }
+      else { p.rz = side * (0.55 * w - 0.2 * hit); p.ry = side * (0.7 * w - 0.9 * hit); }
+      if (moving) p.rx += Math.sin(time * 10 + side) * 0.15;
+      return p;
+    case "mane": // the fox's ruff bristles up and flares with its eyes (its tell)
+      p.s = 1 + 0.22 * w; p.rx = -0.25 * w;
+      return p;
+    case "wing": // pollen wings: a flutter, faster in the tell, folded back in the dive
+      p.rz = going ? side * 0.9 : side * (0.35 + 0.45 * Math.sin(time * (e.state === "windup" ? 70 : 38) + seed));
+      p.ry = going ? side * 0.4 : 0;
+      return p;
+    case "glow_crack": // the elder's shell cracks at 60%: hidden until then
+      p.s = (e.phase ?? 1) >= 2 ? 1 : 0;
       return p;
     case "arm":
       if (shape === "slam" || shape === "smash") p.rx = -2.5 * w + (e.state === "recover" ? -0.35 * hit : 0);
@@ -90,6 +111,7 @@ export function partPose(role: string, e: Pick<Enemy, "state" | "t" | "move"> & 
       p.rx = -0.4 * w;
       return p;
     case "leg": case "legs": case "foot": {
+      if (going && shape === "pounce") { p.rx = front * -0.8; return p; } // stretched fore and aft through the leap
       if (!moving) return null;
       p.rx = Math.sin(time * 14 + seed + (side * front > 0 ? 0 : Math.PI)) * 0.5;
       return p;
@@ -101,6 +123,13 @@ export function partPose(role: string, e: Pick<Enemy, "state" | "t" | "move"> & 
     default:
       return null;
   }
+}
+
+/** How high a pouncing fox is off the ground (u): a 0.45 u hop over its leap. */
+export function airborne(e: Pick<Enemy, "state" | "t" | "move">): number {
+  if (e.state !== "active" || e.move.shape !== "pounce") return 0;
+  const a = Math.min(1, e.t / (e.move.active ?? 1));
+  return 4 * a * (1 - a) * 0.45;
 }
 
 /**
@@ -130,10 +159,22 @@ export function marker(e: Enemy): Marker | null {
   if (e.state === "active" && m.shape === "beam") return { x: e.x, z: e.z, r: m.range, arc: 0.22, rot: e.beam, fill: 1, family: "boss" };
   if (e.state !== "windup") return null;
   switch (m.shape) {
+    case "blink": return null; // no attack: the shimmer is its tell
+    // A travelling attack's lane, from where it crouches to where it lands.
+    case "pounce": case "dart": case "charge": {
+      const end = leapEnd(e);
+      return { x: end.x, z: end.z, r: e.type.radius + 0.35, arc: Math.PI * 2, rot: 0, fill: k, family: boss ? "boss" : "melee", from: { x: e.x, z: e.z } };
+    }
+    case "lob": return { x: e.aim.x, z: e.aim.z, r: m.splash ?? 1, arc: Math.PI * 2, rot: 0, fill: k, family: "ranged", from: { x: e.x, z: e.z } };
     case "spit": return { x: e.aim.x, z: e.aim.z, r: 0.9, arc: Math.PI * 2, rot: 0, fill: k, family: boss ? "boss" : "ranged", from: { x: e.x, z: e.z } };
     case "smash": return { x: e.aim.x, z: e.aim.z, r: m.range, arc: Math.PI * 2, rot: 0, fill: k, family: boss ? "boss" : "area" };
     case "slam": return { x: e.x, z: e.z, r: m.range, arc: Math.PI * 2, rot: 0, fill: k, family: boss ? "boss" : "area" };
     case "summon": return { x: e.x, z: e.z, r: 2.6, arc: Math.PI * 2, rot: 0, fill: k, family: "boss" };
     default: return { x: e.x, z: e.z, r: m.range, arc: m.arc, rot: e.facing, fill: k, family: boss ? "boss" : "melee" };
   }
+}
+
+/** A lobbed spore ball in flight keeps its landing ring on the ground, filling as it falls. */
+export function lobMarker(sh: Pick<Projectile, "x" | "z" | "vx" | "vz" | "life" | "arc" | "radius">): Marker {
+  return { x: sh.x + sh.vx * sh.life, z: sh.z + sh.vz * sh.life, r: sh.radius, arc: Math.PI * 2, rot: 0, fill: 1 - sh.life / (sh.arc ?? 1), family: "ranged" };
 }

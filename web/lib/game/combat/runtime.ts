@@ -19,8 +19,11 @@ export interface ShotHit { power: number; stat?: Stat; tier?: number; pierce?: b
   impact?: ImpactTier; ult?: boolean; fx?: string;
   /** Classes v2: the FX recipe thrown along the shot as it flies, in this ramp. */
   travel?: string; ramp?: readonly [string, string, string] }
-/** `knock`: an enemy shot's push on you (its attack's knockback). */
-export interface Projectile { id: number; x: number; z: number; vx: number; vz: number; life: number; from: "player" | "enemy"; damage: number; kind: "arrow" | "bolt" | "spit"; radius: number; hit?: ShotHit; knock?: number }
+/**
+ * `knock`: an enemy shot's push on you (its attack's knockback). `arc`: a lobbed shot's flight time (s): it flies over
+ * everything and bursts where it lands (`radius` then is the burst's), the height following the arc (mobs.ts).
+ */
+export interface Projectile { id: number; x: number; z: number; vx: number; vz: number; life: number; from: "player" | "enemy"; damage: number; kind: "arrow" | "bolt" | "rune" | "spore"; radius: number; hit?: ShotHit; knock?: number; arc?: number; source?: string }
 /** Summons, totems, traps and decoys (kits.ts UNITS): `source` is the ability that made it ("weapon" for the summoning charm's wisps). */
 export interface Unit {
   id: number; def: UnitDef; source: string; x: number; z: number; hp: number; maxHp: number;
@@ -49,6 +52,18 @@ export interface Cue { kind: CueKind; x: number; z: number; melee: boolean;
  */
 export interface FxEvent { caster: string; key: string; phase: "cast" | "travel" | "impact" | "zone"; x: number; z: number; aim: Vec; seed: number; tier: ImpactTier; ramp: readonly [string, string, string] | null; radius?: number }
 export interface Blast { id: number; x: number; z: number; radius: number; color: string; age: number; life: number; arc?: number; rot?: number; length?: number }
+/**
+ * What the zone-1 mobs leave on the ground (mobs.ts stepHazards): a poison puddle that ticks, a pollen puff that slows,
+ * a slam's shockwave running out from `r0` to `r` over its life and hitting once where its front passes.
+ */
+export interface Hazard { id: number; kind: "poison" | "pollen" | "wave"; x: number; z: number; r: number; r0: number; age: number; life: number; damage: number; every: number; tick: number; slow: number; knock: number; hit: boolean }
+/**
+ * An enemy effect for the scene to paint (components/game/combat/MobFx.tsx drains them each frame): a claw slash, a
+ * spore burst, a pollen burst, rune sparks (a bolt landing, a blink out and in), a shell's glancing sparks, a crack, a
+ * slam, a pounce landing. `rot` faces it; `size` scales it.
+ */
+export type MobFxKind = "slash" | "spores" | "pollen" | "runes" | "blink" | "glance" | "crack" | "slam" | "pounce";
+export interface MobFx { kind: MobFxKind; x: number; z: number; rot: number; size: number }
 /** Four equipped ability slots (row 50) plus the weapon swap; classes v2 adds key 5 and the ult (F). */
 export type AbilityId = "slot1" | "slot2" | "slot3" | "slot4" | "slot5" | "ult" | "swap";
 export const SLOT_IDS = ["slot1", "slot2", "slot3", "slot4"] as const;
@@ -107,6 +122,8 @@ export interface CombatRuntime {
   denied: Record<AbilityId, number>;
   enemies: Enemy[];
   projectiles: Projectile[]; units: Unit[]; buffs: Buff[]; floaters: Floater[]; blasts: Blast[]; cues: Cue[];
+  /** Zone-1 hazards on the ground, and the enemy effects waiting to be painted (mobs.ts, MobFx.tsx). */
+  hazards: Hazard[]; mobFx: MobFx[];
   /** A drawn ability being traced: today's runes root you; a v2 shape (`free`) lets you keep moving. */
   casting: { id: number; rune: string; aim: Vec; slot: number; ability: Ability; free?: boolean } | null;
   /** The subclass kit from /api/combat/progression: equipped abilities, capacity for summons, owned monster traits. */
@@ -123,8 +140,8 @@ export interface CombatRuntime {
   escort: { x: number; z: number; hp: number; waypoint: number } | null;
   wave: { index: number; active: boolean } | null;
   bossEngaged: boolean;
-  /** A card in the middle of the screen (the boss's victory and reward, a learned trait), until `until` seconds of encounter time. */
-  banner: { kind: "victory" | "trait" | "mastery"; title: string; text: string; until: number } | null;
+  /** A card in the middle of the screen (a victory and its reward, a learned trait, mastery, a mini-boss's name as it joins the fight), until `until` seconds of encounter time. */
+  banner: { kind: "victory" | "trait" | "mastery" | "foe"; title: string; text: string; until: number } | null;
   seq: number;
 }
 
@@ -140,7 +157,7 @@ export function createRuntime(): CombatRuntime {
       move: { mode: "ground", speed: 0, sinceDash: 99, vx: 0, vz: 0 }, kick: null, clip: null, ultIframes: 0 },
     cooldowns: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, slot5: 0, ult: 0, swap: 0 }, denied: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, slot5: 0, ult: 0, swap: 0 },
     v2: null, fx: [], tally: { dealt: 0, ult: 0 },
-    enemies: [], projectiles: [], units: [], buffs: [], floaters: [], blasts: [], cues: [],
+    enemies: [], projectiles: [], units: [], buffs: [], floaters: [], blasts: [], cues: [], hazards: [], mobFx: [],
     casting: null, kit: null, slots: [null, null, null, null],
     passive: { element: null, target: null, stacks: 0, momentum: 0, momentumT: 0, procs: 0 }, transform: null,
     killQueue: [], mission: null, idol: "temple", escort: null, wave: null, bossEngaged: false, banner: null, seq: 1,

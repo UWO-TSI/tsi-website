@@ -3,7 +3,7 @@
  * kills, missions and gear. Rules from this folder decide; the store (035
  * functions) applies atomically and idempotently.
  */
-import { ENEMIES, MISSIONS, rollBossReward } from "./content";
+import { ENEMIES, MINIBOSS_DROPS, MISSIONS, rollBossReward } from "./content";
 import { islandProgression } from "./islandAdapter";
 import { checkLoadout, kitOptions, resolveLoadout, subclassByKey, subclassesFor, traitFor } from "./kits";
 import { applyEvents, canStart, type MissionEvent, type MissionState } from "./missions";
@@ -34,6 +34,7 @@ const ERR: Record<string, [number, string]> = {
   bad_hits: [400, "Invalid hit count."],
   gate_closed: [403, "The ruins gate is sealed: it opens after the Oracle, level 10 and your subclass choice."],
   boss_cooldown: [409, "The guardian's hoard is spent for now. It refills 20 hours after your last win."],
+  miniboss_cooldown: [409, "Its hoard is spent for now. It refills 20 hours after your last win over it."],
   bad_loadout: [400, "That loadout isn't in your kit."],
   no_subclass: [409, "Choose your subclass at the Oracle first."],
   locked: [409, "Your path is locked. Redo the Oracle to choose again."],
@@ -217,6 +218,14 @@ export const claimBossReward = (store: CombatStore, m: string, eventKey: string,
   run(async () => {
     await requireGate(store, m);
     return store.bossReward(m, eventKey, rollBossReward((await store.weapons(m)).map((w) => w.weapon_key), random));
+  });
+/** A mini-boss's victory (the elder thorn crab): its own table, rolled here, paid by the store once per kill. */
+export const claimMinibossReward = (store: CombatStore, m: string, enemyKey: string, eventKey: string, random: () => number = Math.random) =>
+  run(async () => {
+    const table = MINIBOSS_DROPS[enemyKey];
+    if (!table) throw new CombatError("unknown_enemy");
+    await requireGate(store, m);
+    return store.minibossReward(m, enemyKey, eventKey, rollBossReward((await store.weapons(m)).map((w) => w.weapon_key), random, table));
   });
 export const reportWear = (store: CombatStore, m: string, weaponKey: string, hits: number, defeated: boolean, key: string) => run(() => store.wear(m, weaponKey, hits, defeated, key));
 export const repairWeapon = (store: CombatStore, m: string, weaponKey: string, key: string) => run(() => store.repair(m, weaponKey, key));

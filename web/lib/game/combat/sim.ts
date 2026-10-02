@@ -50,7 +50,7 @@ export function invulnerable(dodgeAge: number | null): boolean {
 export interface Rect { x0: number; x1: number; z0: number; z1: number }
 export const inRect = (p: Vec, r: Rect) => p.x >= r.x0 && p.x <= r.x1 && p.z >= r.z0 && p.z <= r.z1;
 
-// ── The guardian statue ─────────────────────────────────────────
+// ── Phased fights: the guardian statue and the elder thorn crab ─────────
 /**
  * Three readable patterns in a fixed rotation per phase: above half health
  * slam, slam, beam; below half it opens with two rune wisps and repeats the
@@ -63,7 +63,23 @@ export const BOSS_PLAN: Record<1 | 2 | 3, AttackShape[]> = {
   2: ["summon", "smash", "beam", "smash", "smash", "beam"],
   3: ["summon", "smash", "beam", "smash", "smash", "beam"],
 };
-export const bossPhase = (hpFraction: number): 1 | 2 | 3 => (hpFraction <= BOSS.enrage ? 3 : hpFraction <= BOSS.half ? 2 : 1);
+/**
+ * A fight in phases: health fractions where phases 2 and 3 begin, the rotation per phase, windup (and recover) speed and
+ * damage per phase, and the line each new phase announces.
+ */
+export interface PhasePlan { at: [number, number]; plan: Record<1 | 2 | 3, AttackShape[]>; speed: [number, number, number]; damage: [number, number, number]; notes: [string, string] }
+/**
+ * The elder thorn crab (mini-boss, design sheet "Mobs, zone 1"): shell closed above 60% (armoured, slow claw sweeps), the
+ * shell cracks at 60% (faster sweeps and a charge down a lane), enraged at 25% (claw slams with shockwaves).
+ */
+export const ELDER = { cracked: 0.6, enraged: 0.25 } as const;
+export const PLANS: Record<string, PhasePlan> = {
+  "guardian-statue": { at: [BOSS.half, BOSS.enrage], plan: BOSS_PLAN, speed: [1, 1, BOSS.enrageSpeed], damage: [1, 1, BOSS.enrageDamage], notes: ["The guardian calls for help", "Enraged"] },
+  "elder-thorn-crab": { at: [ELDER.cracked, ELDER.enraged], plan: { 1: ["sweep"], 2: ["sweep", "sweep", "charge"], 3: ["slam", "sweep", "charge", "slam", "sweep"] },
+    speed: [1, 0.72, 0.62], damage: [1, 1.1, 1.25], notes: ["Its shell cracks", "Enraged: claw slams"] },
+};
+export const phaseOf = (plan: PhasePlan, hpFraction: number): 1 | 2 | 3 => (hpFraction <= plan.at[1] ? 3 : hpFraction <= plan.at[0] ? 2 : 1);
+export const bossPhase = (hpFraction: number) => phaseOf(PLANS["guardian-statue"], hpFraction);
 
 export type EnemyState = "idle" | "chase" | "windup" | "active" | "recover" | "return" | "dead";
 export interface Enemy {
@@ -87,36 +103,98 @@ export interface Enemy {
   status: { hold: number; slow: number; slowFor: number; mark: number; markFor: number; distract: number };
   /** A Necromancer already raised this body. */
   raised: boolean;
+  /** Its den or cloud (spawns.ts): the pack's id and centre, its slot in it and the pack's size. */
+  pack: Pack | null;
+  /** Seconds until its special move is ready: a pack member's next pounce or dart, a wisp's next blink. */
+  cd: number;
+  /** A swarm's turn round you (radians), shared by the cloud because they all turn at one rate. */
+  orbit: number;
 }
-export function spawnEnemy(id: string, type: EnemyType, x: number, z: number): Enemy {
+export interface Pack { id: string; slot: number; size: number; cx: number; cz: number }
+export function spawnEnemy(id: string, type: EnemyType, x: number, z: number, pack: Pack | null = null): Enemy {
   return { id, type, x, z, spawnX: x, spawnZ: z, hp: type.hp, state: "idle", t: 0, facing: Math.PI, stun: 0, wander: { x, z, wait: 1 }, aim: { x, z }, flash: 0, kx: 0, kz: 0, deadFor: 0,
     move: type.attacks[0], phase: 1, cycle: 0, beam: Math.PI, landed: false, summoned: false,
-    status: { hold: 0, slow: 0, slowFor: 0, mark: 0, markFor: 0, distract: 0 }, raised: false };
+    status: { hold: 0, slow: 0, slowFor: 0, mark: 0, markFor: 0, distract: 0 }, raised: false, pack, cd: 0, orbit: 0 };
 }
 
-/** The next attack: ordinary enemies have one; the boss follows its plan, enraged in phase 3. */
+/** The next attack: ordinary enemies have one (a wisp's blink comes apart); a phased fight follows its plan, faster and harder as it goes. */
 export function nextMove(e: Enemy): EnemyAttack {
-  const moves = e.type.attacks;
-  if (moves.length === 1) return moves[0];
-  const plan = BOSS_PLAN[e.phase];
-  const m = moves.find(x => x.shape === plan[e.cycle % plan.length]) ?? moves[0];
+  const moves = e.type.attacks, plan = PLANS[e.type.id];
+  if (!plan) return moves[0];
+  const shapes = plan.plan[e.phase];
+  const m = moves.find(x => x.shape === shapes[e.cycle % shapes.length]) ?? moves[0];
   e.cycle++;
-  return e.phase === 3 ? { ...m, windup: m.windup * BOSS.enrageSpeed, recover: m.stagger ? m.recover : m.recover * BOSS.enrageSpeed, damage: Math.round(m.damage * BOSS.enrageDamage) } : m;
+  const speed = plan.speed[e.phase - 1], damage = plan.damage[e.phase - 1];
+  return speed === 1 && damage === 1 ? m : { ...m, windup: m.windup * speed, recover: m.stagger ? m.recover : m.recover * speed, damage: Math.round(m.damage * damage) };
+}
+
+/**
+ * How long a pack member waits after it joins the fight before its first pounce or dart: a fox pack goes in turn, a
+ * swarm's darts trickle in over a few seconds (the golden-ratio spread keeps neighbours apart). Others: nothing to wait for.
+ */
+export const PACK_TIMING = { flank: 0.45, swarmFirst: 0.6, swarmSpread: 5, flankAgain: 0.5 } as const;
+const packDelay = (e: Enemy) => !e.pack ? 0 : e.type.pack === "flank" ? e.pack.slot * PACK_TIMING.flank
+  : PACK_TIMING.swarmFirst + ((e.pack.slot * 0.618034) % 1) * PACK_TIMING.swarmSpread;
+/** Into the fight: chase with its first move; a pack member takes its turn's wait. Returns it. */
+export function engage(e: Enemy): Enemy {
+  e.state = "chase"; e.t = 0; e.move = nextMove(e); e.cd = Math.max(e.cd, packDelay(e));
+  return e;
 }
 export const staggered = (e: Pick<Enemy, "state" | "move">) => e.state === "recover" && !!e.move.stagger;
 
 /** Idle enemies stroll (combat polish 5): to a spot within `radius` of the spawn at `speed` × their pace, then wait 1.5–4 s. */
 export const WANDER = { radius: 1.6, speed: 0.3, pause: 1.5, pauseMore: 2.5 } as const;
 /** Step toward (tx, tz), sliding along walls; returns the distance left. (Module scope: the tick allocates nothing per enemy.) */
-function walk(e: Enemy, tx: number, tz: number, speed: number, dt: number, free: (x: number, z: number) => boolean): number {
+function walk(e: Enemy, tx: number, tz: number, speed: number, dt: number, free: (x: number, z: number) => boolean, face = true): number {
   const d = Math.sqrt((tx - e.x) ** 2 + (tz - e.z) ** 2);
   if (d < 1e-4) return d;
   const step = Math.min(d, speed * dt);
   const nx = e.x + ((tx - e.x) / d) * step, nz = e.z + ((tz - e.z) / d) * step;
   if (free(nx, nz)) { e.x = nx; e.z = nz; } else if (free(nx, e.z)) e.x = nx; else if (free(e.x, nz)) e.z = nz;
-  e.facing = Math.atan2(tx - e.x, tz - e.z);
+  if (face) e.facing = Math.atan2(tx - e.x, tz - e.z);
   return d - step;
 }
+/** Turn toward `to` by at most `rate` × dt (a crab's slow turn). */
+function turnToward(e: Enemy, to: number, rate: number, dt: number) {
+  const d = Math.atan2(Math.sin(to - e.facing), Math.cos(to - e.facing)), step = rate * dt;
+  e.facing += Math.abs(d) <= step ? d : Math.sign(d) * step;
+}
+
+/**
+ * Where a pack member heads in the chase (one scratch result: read it before the next call). Flank: a slot round you,
+ * the first between you and the den, the others to your sides and back. Swarm: a ring round you that the cloud turns
+ * along. Past you it goes round, not through you.
+ */
+const FLANK = [0, 2.1, -2.1, 1.05, -1.05] as const, SWARM = { radius: 2.3, spread: 0.45, turn: 1.1 } as const;
+const GOAL = { x: 0, z: 0 };
+export function packGoal(e: Enemy, player: Vec, standoff: number): Vec {
+  const p = e.pack!, bearing = Math.atan2(p.cx - player.x, p.cz - player.z);
+  const swarm = e.type.pack === "swarm", now = Math.atan2(e.x - player.x, e.z - player.z);
+  // A fox takes its slot on whichever side it is (after a pounce it lands across you): mirrored, never back through the den.
+  const slot = FLANK[p.slot % FLANK.length], mirror = p.slot === 0 ? Math.PI : -slot;
+  const want = bearing + (swarm ? (p.slot / p.size) * Math.PI * 2 + e.orbit : angleDiff(now, bearing + slot) <= angleDiff(now, bearing + mirror) ? slot : mirror);
+  const r = swarm ? SWARM.radius + (p.slot % 3) * SWARM.spread : standoff;
+  const gap = Math.atan2(Math.sin(want - now), Math.cos(want - now));
+  // Far round the circle: step along it (a quarter-radian at a time) at your distance or the standoff, whichever is wider.
+  const a = Math.abs(gap) > 0.6 ? now + Math.sign(gap) * 0.6 : want, rr = Math.abs(gap) > 0.6 ? Math.max(r, Math.min(Math.hypot(e.x - player.x, e.z - player.z), r * 1.6)) : r;
+  GOAL.x = player.x + Math.sin(a) * rr; GOAL.z = player.z + Math.cos(a) * rr;
+  return GOAL;
+}
+
+/** A shell's share of a hit from `from`: `front` (or `cracked` from phase 2) inside its front arc, else all of it. */
+export function shellFactor(e: Pick<Enemy, "x" | "z" | "facing" | "phase" | "type">, from: Vec): number {
+  const s = e.type.shell;
+  if (!s || Math.hypot(from.x - e.x, from.z - e.z) < 1e-3 || angleDiff(facingTo(e, from), e.facing) > s.arc / 2) return 1;
+  return e.phase > 1 && s.cracked !== undefined ? s.cracked : s.front;
+}
+/** Where a travelling attack (pounce, dart, charge) ends if nothing stops it: `leap` along its facing. */
+export function leapEnd(e: Pick<Enemy, "x" | "z" | "facing" | "move">, out: Vec = { x: 0, z: 0 }): Vec {
+  const l = e.move.leap ?? 0;
+  out.x = e.x + Math.sin(e.facing) * l; out.z = e.z + Math.cos(e.facing) * l;
+  return out;
+}
+const TRAVEL = new Set<AttackShape>(["pounce", "dart", "charge"]);
+export const travels = (shape: AttackShape) => TRAVEL.has(shape);
 
 /** Packs keep apart: bodies closer than their radii plus `gap` push off each other at up to `speed` u/s. */
 export const SEPARATION = { gap: 0.3, speed: 4 } as const;
@@ -124,9 +202,13 @@ export const SEPARATION = { gap: 0.3, speed: 4 } as const;
 export type EnemyEvent =
   | { kind: "strike"; enemy: Enemy }           // melee shapes resolved now
   | { kind: "spit"; enemy: Enemy; to: Vec }    // ranged: caller spawns the projectile
+  | { kind: "lob"; enemy: Enemy; to: Vec }     // arcing: caller spawns a shot that lands at `to` after `move.active` s
   | { kind: "beam"; enemy: Enemy }             // every tick the beam sweeps: caller checks beamLands
+  | { kind: "contact"; enemy: Enemy }          // every tick a pounce, dart or charge travels: caller checks contactLands
+  | { kind: "burst"; enemy: Enemy }            // a swarm sprite's dart ran out: it pops where it is (no kill credit)
+  | { kind: "blink"; enemy: Enemy; from: Vec } // it hopped away to keep its range
   | { kind: "summon"; enemy: Enemy }           // caller calls up to BOSS.summons rune wisps
-  | { kind: "phase"; enemy: Enemy }            // the boss crossed a phase threshold
+  | { kind: "phase"; enemy: Enemy }            // a phased fight crossed a threshold
   | { kind: "reset"; enemy: Enemy };
 
 /**
@@ -137,6 +219,7 @@ export type EnemyEvent =
 export function stepEnemy(e: Enemy, player: Vec & { safe: boolean; alive: boolean }, dt: number, free: (x: number, z: number) => boolean = () => true, random: () => number = Math.random): EnemyEvent | null {
   e.flash = Math.max(0, e.flash - dt);
   e.stun = Math.max(0, e.stun - dt);
+  e.cd = Math.max(0, e.cd - dt);
   if (e.state === "dead") { e.deadFor += dt; return null; }
   // Knockback slides first, blocked by walls.
   if (e.kx || e.kz) {
@@ -145,9 +228,15 @@ export function stepEnemy(e: Enemy, player: Vec & { safe: boolean; alive: boolea
     const decay = Math.exp(-8 * dt); e.kx *= decay; e.kz *= decay;
     if (Math.hypot(e.kx, e.kz) < 0.05) { e.kx = 0; e.kz = 0; }
   }
-  if (e.type.kind === "boss" && e.state !== "return") {
-    const phase = bossPhase(e.hp / e.type.hp);
-    if (phase > e.phase) { e.phase = phase; e.cycle = 0; if (e.state === "chase") e.move = nextMove(e); return { kind: "phase", enemy: e }; }
+  const plan = PLANS[e.type.id];
+  if (plan && e.state !== "return") {
+    const phase = phaseOf(plan, e.hp / e.type.hp);
+    if (phase > e.phase) {
+      e.phase = phase; e.cycle = 0;
+      if (e.state === "chase") e.move = nextMove(e);
+      if (e.type.kind !== "boss") e.stun = Math.max(e.stun, 0.8); // the elder reels as its shell cracks
+      return { kind: "phase", enemy: e };
+    }
   }
   // Statuses wear off; a held enemy does nothing (its windup waits too).
   const st = e.status;
@@ -155,51 +244,95 @@ export function stepEnemy(e: Enemy, player: Vec & { safe: boolean; alive: boolea
   st.markFor = Math.max(0, st.markFor - dt); if (!st.markFor) st.mark = 0;
   st.distract = Math.max(0, st.distract - dt);
   if (st.hold > 0 && e.state !== "return") { st.hold = Math.max(0, st.hold - dt); return null; }
-  const a = e.move;
+  const a = e.move, type = e.type;
   const home = Math.sqrt((e.x - e.spawnX) ** 2 + (e.z - e.spawnZ) ** 2);
   const dist = Math.sqrt((player.x - e.x) ** 2 + (player.z - e.z) ** 2);
-  if (e.state !== "return" && e.state !== "idle" && (home > e.type.leashRadius || player.safe || !player.alive)) { e.state = "return"; e.t = 0; }
+  if (e.state !== "return" && e.state !== "idle" && e.state !== "active" && (home > type.leashRadius || player.safe || !player.alive)) { e.state = "return"; e.t = 0; }
   switch (e.state) {
     case "idle": {
-      if (player.alive && !player.safe && dist < e.type.aggroRadius) { e.state = "chase"; e.t = 0; e.move = nextMove(e); return null; }
+      if (player.alive && !player.safe && dist < type.aggroRadius) { engage(e); return null; }
       const w = e.wander;
-      if (e.type.kind === "boss" || (w.wait -= dt) > 0) return null;
-      if (walk(e, w.x, w.z, e.type.speed * WANDER.speed, dt, free) < 0.05) {
+      if (type.kind === "boss" || (w.wait -= dt) > 0) return null;
+      if (walk(e, w.x, w.z, type.speed * WANDER.speed, dt, free) < 0.05) {
         const a = random() * Math.PI * 2, r = Math.sqrt(random()) * WANDER.radius;
         w.x = e.spawnX + Math.sin(a) * r; w.z = e.spawnZ + Math.cos(a) * r; w.wait = WANDER.pause + random() * WANDER.pauseMore;
       }
       return null;
     }
     case "return":
-      if (walk(e, e.spawnX, e.spawnZ, e.type.speed * 1.5, dt, free) < 0.05) {
-        e.state = "idle"; e.hp = e.type.hp; e.facing = Math.PI; e.phase = 1; e.cycle = 0; e.move = e.type.attacks[0];
+      if (walk(e, e.spawnX, e.spawnZ, type.speed * 1.5, dt, free) < 0.05) {
+        e.state = "idle"; e.hp = type.hp; e.facing = Math.PI; e.phase = 1; e.cycle = 0; e.move = type.attacks[0]; e.cd = 0; e.orbit = 0;
         e.wander.x = e.spawnX; e.wander.z = e.spawnZ; e.wander.wait = WANDER.pause;
         return { kind: "reset", enemy: e };
       }
       return null;
     case "chase": {
       if (e.stun > 0) return null;
-      if (dist > (a.reach ?? a.range * 0.8)) { walk(e, player.x, player.z, e.type.speed * (1 - st.slow), dt, free); return null; }
-      e.state = "windup"; e.t = 0; e.facing = facingTo(e, player); e.aim = { x: player.x, z: player.z }; e.landed = false;
+      const speed = type.speed * (1 - st.slow), reach = a.reach ?? a.range * 0.8;
+      // A wisp too close for comfort blinks away (its tell: a short shimmer).
+      const blink = type.kite && e.cd <= 0 && dist < type.kite.keep ? type.attacks.find(m => m.shape === "blink") : undefined;
+      if (blink) { e.move = blink; e.state = "windup"; e.t = 0; return null; }
+      // Packs: to a slot round you (flank) or round the ring (swarm), and only in turn.
+      if (e.pack && type.pack) {
+        e.t += dt;
+        if (type.pack === "swarm") e.orbit += SWARM.turn * dt;
+        const g = packGoal(e, player, reach * 0.9), there = Math.hypot(g.x - e.x, g.z - e.z) < 0.8;
+        const ready = e.cd <= 0 && dist <= reach + 0.5 && (there || dist < 1.4 || e.t > 3);
+        if (!ready) { walk(e, g.x, g.z, speed, dt, free); if (!there) return null; e.facing = facingTo(e, player); return null; }
+      } else if (type.turn) {
+        // A crab scuttles toward you (sideways if it must) while its body turns slowly; it swings only once you're in front.
+        turnToward(e, facingTo(e, player), type.turn, dt);
+        const front = angleDiff(facingTo(e, player), e.facing) < Math.max(0.35, a.arc / 2 * 0.8);
+        if (dist > reach || !(front || a.arc >= Math.PI * 2 || travels(a.shape))) { if (dist > reach * 0.7) walk(e, player.x, player.z, speed, dt, free, false); return null; }
+      } else if (dist > reach) { walk(e, player.x, player.z, speed, dt, free); return null; }
+      e.state = "windup"; e.t = 0; e.aim = { x: player.x, z: player.z }; e.landed = false;
+      // The windup commits the way it will go: at you, except a turning crab's sweep, which goes where it faces.
+      if (!type.turn || travels(a.shape)) e.facing = facingTo(e, player);
       return null;
     }
     case "windup":
       e.t += dt;
       if (e.t < a.windup) return null;
       e.t = 0;
-      if (a.active) { e.state = "active"; e.beam = e.facing - a.arc / 2; return { kind: "beam", enemy: e }; }
+      if (a.shape === "blink") return hop(e, player, free);
+      if (a.shape === "lob") { e.state = "recover"; return { kind: "lob", enemy: e, to: { ...e.aim } }; }
+      if (a.active) { e.state = "active"; e.beam = e.facing - a.arc / 2; return a.shape === "beam" ? { kind: "beam", enemy: e } : { kind: "contact", enemy: e }; }
       e.state = "recover";
       return a.shape === "spit" ? { kind: "spit", enemy: e, to: { ...e.aim } } : a.shape === "summon" ? { kind: "summon", enemy: e } : { kind: "strike", enemy: e };
-    case "active":
+    case "active": {
       e.t += dt;
-      e.beam = e.facing - a.arc / 2 + a.arc * Math.min(1, e.t / a.active!);
-      if (e.t >= a.active!) { e.state = "recover"; e.t = 0; return null; }
-      return { kind: "beam", enemy: e };
+      if (a.shape === "beam") {
+        e.beam = e.facing - a.arc / 2 + a.arc * Math.min(1, e.t / a.active!);
+        if (e.t >= a.active!) { e.state = "recover"; e.t = 0; return null; }
+        return { kind: "beam", enemy: e };
+      }
+      // Pounce, dart, charge: along its facing at leap / active u/s; a wall, or the edge of its leash, stops it short.
+      const step = ((a.leap ?? 0) / a.active!) * dt, nx = e.x + Math.sin(e.facing) * step, nz = e.z + Math.cos(e.facing) * step;
+      const blocked = !free(nx, nz) || Math.hypot(nx - e.spawnX, nz - e.spawnZ) > type.leashRadius * 0.95;
+      if (!blocked) { e.x = nx; e.z = nz; }
+      if (blocked || e.t >= a.active!) { e.state = "recover"; e.t = 0; return a.shape === "dart" ? { kind: "burst", enemy: e } : null; }
+      return { kind: "contact", enemy: e };
+    }
     case "recover":
       e.t += dt;
-      if (e.t >= a.recover) { e.state = "chase"; e.t = 0; e.move = nextMove(e); }
+      if (e.t >= a.recover) {
+        e.state = "chase"; e.t = 0; e.move = nextMove(e);
+        if (type.pack === "flank" && e.pack) e.cd = Math.max(e.cd, PACK_TIMING.flankAgain + e.pack.slot * 0.2);
+      }
       return null;
   }
+}
+
+/** The blink: `leap` u away from you, the first free spot fanning out from straight away; then a short recover. */
+const HOP = [0, 0.7, -0.7, 1.4, -1.4, 2.1, -2.1];
+function hop(e: Enemy, player: Vec, free: (x: number, z: number) => boolean): EnemyEvent {
+  const from = { x: e.x, z: e.z }, away = Math.atan2(e.x - player.x, e.z - player.z), l = e.move.leap ?? 4;
+  e.state = "recover"; e.cd = e.type.kite?.every ?? 4;
+  for (const o of HOP) {
+    const x = e.x + Math.sin(away + o) * l, z = e.z + Math.cos(away + o) * l;
+    if (free(x, z) && Math.hypot(x - e.spawnX, z - e.spawnZ) < e.type.leashRadius * 0.9) { e.x = x; e.z = z; e.facing = facingTo(e, player); break; }
+  }
+  return { kind: "blink", enemy: e, from };
 }
 
 /** Packs keep apart: each overlapping pair of live enemies eases off along the line between them (the boss stands its ground). */
@@ -227,9 +360,18 @@ export function separate(list: Enemy[], dt: number, free: (x: number, z: number,
 /** Does a strike land on the player? Arcs and slams from the enemy, smashes on the ring marker they aimed. */
 export function strikeLands(e: Enemy, player: Vec, playerRadius = 0.35): boolean {
   const a = e.move;
-  if (a.shape === "summon") return false;
+  if (a.shape === "summon" || a.shape === "blink") return false;
   if (a.shape === "smash") return inArc(e.aim, 0, a.range, Math.PI * 2, player, playerRadius);
+  if (a.shape === "lob") return Math.hypot(player.x - e.aim.x, player.z - e.aim.z) <= (a.splash ?? 1) + playerRadius;
+  if (travels(a.shape)) return segDist(player, e, leapEnd(e, END)) <= e.type.radius + playerRadius;
   return inArc(e, e.facing, a.range, a.shape === "slam" ? Math.PI * 2 : a.arc, player, playerRadius);
+}
+const END = { x: 0, z: 0 };
+/** A pounce, dart or charge touching you as it travels: once per attack. */
+export function contactLands(e: Enemy, player: Vec, playerRadius = 0.35): boolean {
+  if (e.state !== "active" || e.landed || Math.hypot(player.x - e.x, player.z - e.z) > e.type.radius + playerRadius + 0.15) return false;
+  e.landed = true;
+  return true;
 }
 
 /** The beam hits once per sweep, when it passes over the player within its length. */
@@ -249,11 +391,12 @@ export function damageEnemy(e: Enemy, amount: number, from: Vec, knock: number):
   if (e.state === "dead" || e.state === "return") return false;
   e.hp = Math.max(0, e.hp - amount);
   e.flash = 0.18;
-  const d = Math.hypot(e.x - from.x, e.z - from.z) || 1;
-  const k = e.type.kind === "boss" ? knock * 0.1 : e.type.kind === "construct" ? knock * 0.5 : knock;
+  const d = Math.hypot(e.x - from.x, e.z - from.z) || 1, shell = shellFactor(e, from) < 1;
+  // A hit on the shell barely budges it and never staggers it; a travelling attack carries on through a push.
+  const k = (e.type.kind === "boss" || e.type.miniboss ? knock * 0.1 : e.type.kind === "construct" ? knock * 0.5 : knock) * (shell ? 0.3 : 1) * (e.state === "active" ? 0 : 1);
   e.kx = ((e.x - from.x) / d) * k; e.kz = ((e.z - from.z) / d) * k;
-  e.stun = e.type.kind === "boss" ? 0 : e.type.elite ? STUN * 0.5 : STUN;
-  if (e.state === "idle") { e.state = "chase"; e.t = 0; e.move = nextMove(e); }
+  e.stun = e.type.kind === "boss" || shell ? 0 : e.type.elite ? STUN * 0.5 : STUN;
+  if (e.state === "idle") engage(e);
   if (e.hp === 0) { e.state = "dead"; e.deadFor = 0; return true; }
   return false;
 }

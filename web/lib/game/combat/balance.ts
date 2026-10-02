@@ -3,7 +3,7 @@
  * every subclass through the real encounter tick (encounter.ts) and ability
  * system. The bot plays like an average member: the starter weapon its kit
  * suggests, the family stat preset at level 10, the default loadout; it keeps
- * its weapon's range without kiting, dodges 60% of telegraphed attacks aimed at it, uses an
+ * its weapon's range without kiting (but circles a crab's shell and steps out of puddles), dodges 60% of telegraphed attacks aimed at it, uses an
  * ability when it helps (heal when hurt, guard when a hit is coming, damage
  * when in reach, summons when there's room) and draws runes at ~80% (one in
  * ten fizzles, one in ten is empowered). No collision (open ground).
@@ -19,9 +19,9 @@ import { DODGE_SHAPE, attack, spawnWave, startDodge } from "./actions";
 import { ENEMIES, PLAYER_BASE, WEAPONS } from "./data";
 import { stepCombat } from "./encounter";
 import { createRuntime, type CombatRuntime } from "./runtime";
-import { strikeLands, type Enemy, type Vec } from "./sim";
+import { shellFactor, strikeLands, type Enemy, type Vec } from "./sim";
 import { MOVE_TUNING } from "@/lib/game/movement/sim";
-import { WAVES } from "./spawns";
+import { WAVES, type SpawnPoint } from "./spawns";
 import { classKit, type ClassAbility } from "@/lib/combat/classes";
 import { signatureGrant } from "@/lib/combat/weapons";
 import { classKey, equipClassKit, pressUlt, stepClass } from "./classRuntime";
@@ -76,12 +76,19 @@ function useful(rt: CombatRuntime, a: Ability, me: Vec, target: Enemy | null, th
 
 /** One solo run of a survive mission's waves (the mission's own spawns and circle). */
 export function runSurvive(subclassKey: string, missionId: "survive-circle" | "survive-sanctum", seed: number, limit = 240): RunResult {
+  return runFight(subclassKey, SURVIVE_CIRCLES[missionId], WAVES[missionId], seed, limit);
+}
+/** Zone 1's mini-boss alone: the elder thorn crab 5 u away, until it falls (or the limit). */
+export const runElder = (subclassKey: string, seed: number, limit = 400) =>
+  runFight(subclassKey, { x: 0, z: 0 }, [[{ id: "elder", type: "elder-thorn-crab", x: 0, z: 5 }]], seed, limit);
+
+/** One solo fight through `waves` in turn, from `center`: the bot below against the real encounter tick. */
+export function runFight(subclassKey: string, center: Vec, waves: SpawnPoint[][], seed: number, limit = 240): RunResult {
   const s = subclassByKey(subclassKey)!, random = lcg(seed), rt = createRuntime(), p = rt.player;
   p.stats = presetAllocation(s.family, 10); p.level = 10; p.safe = false;
   p.maxHp = p.hp = derived(p.stats, 10, s.mods).max_hp;
   p.weapon = starterWeapon(s);
   equipKit(rt, s);
-  const center = SURVIVE_CIRCLES[missionId], waves = WAVES[missionId];
   let me: Vec = { x: center.x, z: center.z }, wave = 0, castLeft = 0, strafe = 1, t = 0, dealt = 0, taken = 0, minHp = p.hp;
   const judged = new Set<string>();
   spawnWave(rt, waves[0]);
@@ -119,15 +126,20 @@ export function runSurvive(subclassKey: string, missionId: "survive-circle" | "s
     taken += Math.max(0, hpBefore - p.hp);
     minHp = Math.min(minHp, p.hp);
     if (!p.alive) return { cleared: false, seconds: t, dealt, taken, minHp: 0, died: true };
-    // Walk: hold the weapon's range, circle a little; stand still while drawing.
+    // Walk: hold the weapon's range, circle a little; stand still while drawing. A shelled crab facing you: close to
+    // 2.6 u and circle to its flank (its telegraph teaches that). Standing in a puddle or pollen: step out of it.
     let mx = 0, mz = 0;
     if (target && !rt.casting && !p.dash && p.dodgeAge === null) {
-      const want = RANGE[WEAPONS[p.weapon].kind], dist = d2(target, me), ux = (target.x - me.x) / (dist || 1), uz = (target.z - me.z) / (dist || 1);
+      const shelled = !!target.type.shell && shellFactor(target, me) < 1;
+      const want = shelled ? Math.min(2.6, RANGE[WEAPONS[p.weapon].kind]) : RANGE[WEAPONS[p.weapon].kind], dist = d2(target, me), ux = (target.x - me.x) / (dist || 1), uz = (target.z - me.z) / (dist || 1);
       const push = dist > want + 0.3 ? 1 : 0; // an average player closes to range and holds; no kiting backpedal
       if (random() < 0.01) strafe = -strafe;
-      mx = ux * push - uz * strafe * 0.35; mz = uz * push + ux * strafe * 0.35;
+      const circle = shelled ? 1 : 0.35;
+      mx = ux * push - uz * strafe * circle; mz = uz * push + ux * strafe * circle;
       const l = Math.hypot(mx, mz) || 1; mx /= l; mz /= l;
     }
+    const puddle = rt.hazards.find(h => h.kind !== "wave" && d2(h, me) < h.r + 0.3);
+    if (puddle && !rt.casting && p.dodgeAge === null) { const d = d2(puddle, me) || 1; mx = (me.x - puddle.x) / d; mz = (me.z - puddle.z) / d; }
     // The bot's dodge: the kit's dash (combatTuning), its burst easing to the dodge's exit over dashTime.
     const v = PLAYER_BASE.speed * p.speed, k = p.dodgeAge === null ? 1 : Math.min(1, p.dodgeAge / MOVE_TUNING.dashTime);
     const roll = p.dodgeAge === null ? 0 : MOVE_TUNING.dashSpeed * (DODGE_SHAPE.dashExit + (1 - DODGE_SHAPE.dashExit) * (1 - k) ** MOVE_TUNING.dashEase);
@@ -136,9 +148,10 @@ export function runSurvive(subclassKey: string, missionId: "survive-circle" | "s
   return { cleared: false, seconds: t, dealt, taken, minHp: minHp / p.maxHp, died: false };
 }
 
+const SUBCLASSES = ["elementalist", "illusionist", "necromancer", "transmuter", "marksman", "hunter", "sniper", "gunslinger", "guardian", "monk", "juggernaut", "assassin", "summoner", "shaman", "druid", "priest"];
 export interface BalanceRow { subclass: string; family: string; weapon: string; loadout: string; clearRate: number; medianClear: number; dps: number; takenPerMin: number; minHp: number; deaths: number }
 export function balanceTable(missionId: "survive-circle" | "survive-sanctum", seeds = 20): BalanceRow[] {
-  return ["elementalist", "illusionist", "necromancer", "transmuter", "marksman", "hunter", "sniper", "gunslinger", "guardian", "monk", "juggernaut", "assassin", "summoner", "shaman", "druid", "priest"].map(key => {
+  return SUBCLASSES.map(key => {
     const s = subclassByKey(key)!, runs = Array.from({ length: seeds }, (_, i) => runSurvive(key, missionId, i + 1));
     const won = runs.filter(r => r.cleared).map(r => r.seconds).sort((a, b) => a - b);
     const time = runs.reduce((n, r) => n + r.seconds, 0);
@@ -150,12 +163,23 @@ export function balanceTable(missionId: "survive-circle" | "survive-sanctum", se
     };
   });
 }
+/** Zone 1's mini-boss against every subclass's bot (starter weapon, level 10): its clear rate, median minutes, deaths, lowest health. */
+export interface ElderRow { subclass: string; family: string; weapon: string; clearRate: number; medianMinutes: number; deaths: number; minHp: number }
+export function elderTable(seeds = 20): ElderRow[] {
+  return SUBCLASSES.map(key => {
+    const s = subclassByKey(key)!, runs = Array.from({ length: seeds }, (_, i) => runElder(key, i + 1));
+    const won = runs.filter(r => r.cleared).map(r => r.seconds).sort((a, b) => a - b);
+    return { subclass: s.name, family: s.family, weapon: WEAPONS[starterWeapon(s)].name, clearRate: won.length / seeds, medianMinutes: won.length ? won[Math.floor(won.length / 2)] / 60 : NaN,
+      deaths: runs.filter(r => r.died).length, minHp: runs.reduce((n, r) => n + r.minHp, 0) / seeds };
+  });
+}
 /**
  * Minutes to bring the guardian down with one weapon at level 10, all 27 points in its stat, landing half the time,
- * one hit in ten a crit (the content pass's measure; boss.test.ts holds it to 4–6 minutes for the starters).
+ * one hit in ten a crit (the content pass's measure; boss.test.ts holds it to 4–6 minutes for the starters). The same
+ * measure for the elder thorn crab (`enemy`) counts every landed hit at full: you're hitting its flank or back.
  */
-export function bossMinutes(weaponKey: string): number {
-  const w = SYSTEM_WEAPONS.find(x => x.key === weaponKey)!, stats = { ...ZERO_STATS, [w.scaling[0]]: 27 }, boss = ENEMIES["guardian-statue"];
+export function bossMinutes(weaponKey: string, enemy = "guardian-statue"): number {
+  const w = SYSTEM_WEAPONS.find(x => x.key === weaponKey)!, stats = { ...ZERO_STATS, [w.scaling[0]]: 27 }, boss = ENEMIES[enemy];
   const hit = (crit: boolean) => damage({ weapon: w, durability: 99, stats, level: 10, enemyDefense: boss.defense, enemyArmor: boss.armor, crit });
   return boss.hp / ((0.9 * hit(false) + 0.1 * hit(true)) / WEAPONS[weaponKey].cooldown) / 0.5 / 60;
 }

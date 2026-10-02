@@ -2,12 +2,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { islandMissions, islandProgression, islandScore, islandWeapons } from "./islandAdapter";
-import { BOSS_DROPS, rollBossReward } from "./content";
+import { BOSS_DROPS, ELDER_DROPS, rollBossReward } from "./content";
 import { RUNES, resample } from "./incantation";
 import { memoryCombatStore } from "./memoryStore";
 import { EVENT_XP, STAT_RESET_FEE, SUBCLASS_RESPEC_FEE, levelForXp, xpForLevel } from "./progression";
 import { STARTER_WEAPONS, WEAPONS } from "./weapons";
-import { allocateStats, chooseSubclass, claimBossReward, completeMission, getProgression, listMissions, missionProgress, recordKill, repairWeapon, reportWear, resetStats, setLoadout, startMission } from "./service";
+import { allocateStats, chooseSubclass, claimBossReward, claimMinibossReward, completeMission, getProgression, listMissions, missionProgress, recordKill, repairWeapon, reportWear, resetStats, setLoadout, startMission } from "./service";
 import { TRAITS } from "./kits";
 
 const M = "00000000-0000-4000-8000-0000000000aa";
@@ -190,6 +190,51 @@ describe("guardian statue reward (row 21)", () => {
     expect(w && epics.includes(w)).toBe(true);
     const p = await getProgression(c.store, M);
     expect(p.ok && p.data.weapons.some((x) => x.weapon_key === w && x.tier === 4)).toBe(true);
+  });
+});
+
+describe("elder thorn crab reward (zone 1's mini-boss)", () => {
+  const ELDER = ELDER_DROPS.enemy;
+  it("pays its own table once per recorded kill, on a cooldown of its own (the guardian's is separate)", async () => {
+    let t = now.getTime();
+    const c = memoryCombatStore(() => new Date(t));
+    expect(await claimMinibossReward(c.store, M, ELDER, "elder-0001", () => 0.9)).toMatchObject({ ok: false, code: "gate_closed" });
+    await openGate(c);
+    expect(await claimMinibossReward(c.store, M, ELDER, "elder-0001", () => 0.9)).toMatchObject({ ok: false, code: "not_found" }); // no kill yet
+    expect(await claimMinibossReward(c.store, M, "thorn-crab", "elder-0001", () => 0.9)).toMatchObject({ ok: false, code: "unknown_enemy" }); // no table
+    await recordKill(c.store, M, "stone-golem", "golem-0001");
+    expect(await claimMinibossReward(c.store, M, ELDER, "golem-0001", () => 0.9)).toMatchObject({ ok: false, code: "not_found" }); // another elite's kill
+    await recordKill(c.store, M, ELDER, "elder-0002");
+    expect(await claimMinibossReward(c.store, M, ELDER, "elder-0002", () => 0.9)).toMatchObject({ ok: true, data: { replayed: false, reward: { coins: ELDER_DROPS.coins, weapon: null } } });
+    expect(await claimMinibossReward(c.store, M, ELDER, "elder-0002", () => 0.01)).toMatchObject({ ok: true, data: { replayed: true, reward: { weapon: null } } });
+    expect(c.coinsOf(M)).toBe(ELDER_DROPS.coins);
+    expect(c.materialOf(M, "rock_stone")).toBe(3);
+    await recordKill(c.store, M, ELDER, "elder-0003");
+    expect(await claimMinibossReward(c.store, M, ELDER, "elder-0003", () => 0.9)).toMatchObject({ ok: false, code: "miniboss_cooldown" });
+    await recordKill(c.store, M, "guardian-statue", "boss-0001");
+    expect(await claimBossReward(c.store, M, "boss-0001", () => 0.9)).toMatchObject({ ok: true }); // not on the elder's cooldown
+    t += 20 * 3_600_000;
+    expect(await claimMinibossReward(c.store, M, ELDER, "elder-0003", () => 0.9)).toMatchObject({ ok: true, data: { replayed: false } });
+  });
+  it("rolls a rare crafted (tier 2) weapon the member doesn't own, into their weapons", async () => {
+    for (const w of ELDER_DROPS.gear[0].weapons) expect(WEAPONS.find((x) => x.key === w)!.tier).toBe(2);
+    expect(rollBossReward([], () => 0.01, ELDER_DROPS)).toMatchObject({ rarity: "rare" });
+    expect(rollBossReward(ELDER_DROPS.gear[0].weapons, () => 0.01, ELDER_DROPS)).toMatchObject({ weapon: null, rarity: null });
+    expect(rollBossReward([], () => 0.5, ELDER_DROPS)).toMatchObject({ weapon: null, coins: ELDER_DROPS.coins });
+    const c = memoryCombatStore(() => now);
+    await openGate(c);
+    await recordKill(c.store, M, ELDER, "elder-0100");
+    const r = await claimMinibossReward(c.store, M, ELDER, "elder-0100", () => 0.01);
+    const w = r.ok ? r.data.reward.weapon : null;
+    expect(w && ELDER_DROPS.gear[0].weapons.includes(w)).toBe(true);
+    const p = await getProgression(c.store, M);
+    expect(p.ok && p.data.weapons.some((x) => x.weapon_key === w && x.tier === 2)).toBe(true);
+  });
+  it("20261002182708_zone1_mobs.sql pays it at the same cooldown and bounds", () => {
+    const sql = readFileSync(join(__dirname, "../../supabase/migrations/20261002182708_zone1_mobs.sql"), "utf8");
+    expect(sql).toContain(`make_interval(hours => ${ELDER_DROPS.cooldown_hours})`);
+    expect(sql).toContain("w.tier BETWEEN 2 AND 3");
+    expect(ELDER_DROPS.coins).toBeLessThanOrEqual(200);
   });
 });
 

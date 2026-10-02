@@ -56,3 +56,5 @@ export const completeMissionRemote = (progressId: string) => call<{ xp_awarded: 
 export const missionBoard = () => call<{ key: string; can_start: boolean; cooldown_until: string | null }[]>("/api/combat/missions", "missions");
 /** After the boss kill posts: the server rolls the guardian's drop table once per kill. */
 export const claimBossReward = (eventKey: string) => call<{ reward: BossReward; replayed: boolean }>("/api/combat/boss-reward", "boss", { event_key: eventKey });
+/** After a mini-boss kill posts (the elder thorn crab): the server rolls its own table once per kill. */
+export const claimMinibossReward = (enemy: string, eventKey: string) => call<{ reward: BossReward; replayed: boolean }>("/api/combat/miniboss-reward", "boss", { enemy, event_key: eventKey });

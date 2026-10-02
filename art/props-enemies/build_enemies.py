@@ -16,6 +16,19 @@ from pe import TAU, lathe, rbox, on_blob, parent  # noqa: E402
 
 pe.reset()
 ONLY = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else None
+# The enemies' named colours. palette_ext.json was never committed (the repo ignores *.json) and is lost; these were read
+# back from the shipped GLBs' material colours (linear base colour to sRGB, 2026-10-02), plus zone 1's new ones.
+pe.EXT.update({
+    "fox_fur": "#3f3a5c", "fox_tip": "#d8cff0", "fox_dark": "#2a2640", "glow_violet": "#a66bff",
+    "crab_shell": "#6f8f5c", "crab_body": "#d0764f", "thorn": "#e6d6a8", "glow_amber": "#ffb347", "moss_dark": "#6e8a5e", "moss": "#9caf88",
+    "shroom_stem": "#ebddc0", "shroom_cap": "#b8466a", "shroom_spot": "#f6eedb", "sandstone": "#d8c4a0", "glow_green": "#b6f26a",
+    "wisp_body": "#a6e6f2", "stone": "#9a9ca3", "glow_cyan": "#7ff0ff",
+    "book_cover": "#8e3a4a", "paper": "#f6eedb", "book_corner": "#d9ae55", "glow_gold": "#ffd76a",
+    "stone_dark": "#6f727c", "sandstone_dark": "#b39f7e", "glow_teal": "#5ff2d0",
+    # Zone 1 (design sheet "Mobs, zone 1"): the crab's front plate and soft back, the wisp's moonstone runes, the pollen sprite.
+    "shell_plate": "#7a5b45", "crab_soft": "#f0b49c", "runestone": "#c6cff0",
+    "pollen": "#f2cf5b", "pollen_tip": "#fff0b3", "sprout": "#86b85a", "petal": "#fff6e6", "blush": "#f4a7a0", "glow_pollen": "#ff8fc0",
+})
 TEL = "telegraph"
 SOFT = 70                      # organic parts read smooth; thorns, boxes and rock keep hard planes
 
@@ -68,6 +81,19 @@ def shadow_fox():
         pc.tube([(0, 0.15, 0.22), (0, 0.24, 0.25), (0, 0.31, 0.33), (0, 0.33, 0.42)], [0.035, 0.075, 0.085, 0.07], sides=7, tip=False)
         pc.mat = "M_Light"
         pc.blob((0, 0.335, 0.47), (0.068, 0.065, 0.07), segs=7, rings=4)
+        pc.mat = TEL                                          # a shadow-flame wisp curling off the tip: it flares with the eyes
+        pc.tube([(0, 0.34, 0.52), (0.012, 0.325, 0.565), (0, 0.3, 0.6)], [0.03, 0.02, 0.008], sides=5, tip=True)
+
+    def mane(pc):
+        """The ruff behind the head: a collar of cream tufts round the neck with violet tips that bristle and glow in the crouch."""
+        for k in range(9):
+            a = math.radians(-25 + k * 230 / 8)
+            out = Vector((math.cos(a), 0.7, math.sin(a))).normalized()
+            base = Vector((math.cos(a) * 0.075, -0.07, 0.28 + math.sin(a) * 0.065))
+            pc.mat = "M_Light"
+            lathe(pc, base, [(0.042, 0), (0.032, 0.05), (0, 0.085)], n=5, axis=out, sy=0.62)
+            pc.mat = TEL
+            lathe(pc, base + out * 0.068, [(0.016, 0), (0, 0.05)], n=4, axis=out, sy=0.62)
 
     def leg(x, y):
         def b(pc):
@@ -80,18 +106,20 @@ def shadow_fox():
     h = pe.part("head", M, head, pivot=(0, -0.1, 0.27), sharp=SOFT)
     g = pe.part("glow_eyes", M, glow, pivot=HC_)
     t = pe.part("tail", M, tail, pivot=(0, 0.15, 0.22), sharp=SOFT)
+    mn = pe.part("mane", M, mane, pivot=(0, -0.085, 0.29), sharp=SOFT)
     legs = [pe.part(n, M, leg(x, y), pivot=(x, y, 0.16), sharp=SOFT) for n, x, y in
             (("leg_fl", 0.062, -0.07), ("leg_fr", -0.062, -0.07), ("leg_bl", 0.064, 0.12), ("leg_br", -0.064, 0.12))]
     parent(g, h)
-    for o in (h, t, *legs):
+    for o in (h, t, mn, *legs):
         parent(o, b)
-    return finish([b, h, g, t, *legs])
+    return finish([b, h, g, t, mn, *legs])
 
 
 # ================================================================ thorn crab + elder (outer wild, sweeps)
 def crab(elder=False):
     S = 1.4 if elder else 1.0
     M = pe.materials({"M_Shell": "moss_dark" if elder else "crab_shell", "M_Body": "crab_body", "M_Thorn": "thorn",
+                      "M_Plate": "shell_plate", "M_Soft": "crab_soft",
                       TEL: ("glow_amber", 1.0), **({"M_Moss": "moss", "M_Flower": "outfit:9"} if elder else {})})
     P = lambda x, y, z: (x * S, y * S, z * S)
 
@@ -111,6 +139,19 @@ def crab(elder=False):
             a = math.radians(az)
             base = Vector(P(rad(h) * math.cos(a), -0.015 + rad(h) * 0.9 * math.sin(a), h))
             lathe(pc, base, [(0.035 * S, -0.01 * S), (0, 0.075 * S)], n=4, axis=(math.cos(a) * rad(h) * 3, math.sin(a) * rad(h) * 3, 1))
+        # The front shell (zone 1: hits there glance off): three heavy scutes across the face, thorn studs on their rim.
+        for az, w, hgt in ((-90, 0.135, 0.185), (-132, 0.1, 0.16), (-48, 0.1, 0.16)):
+            a = math.radians(az)
+            n = Vector((math.cos(a), math.sin(a) * 1.1, 0.35)).normalized()
+            c = Vector(P(rad(hgt) * math.cos(a) * 1.04, -0.015 + rad(hgt) * 0.95 * math.sin(a), hgt))
+            pc.mat = "M_Plate"
+            lathe(pc, c - n * 0.01, [(0, -0.012 * S), (1, 0), (0.84, 0.028 * S), (0, 0.04 * S)], n=8, axis=n, sx=w * S, sy=0.095 * S, tilt=0)
+            pc.mat = "M_Thorn"
+            lathe(pc, c + Vector((0, 0, 0.07 * S)) + n * 0.012, [(0.016 * S, 0), (0, 0.04 * S)], n=4, axis=(n + Vector((0, 0, 1.2))).normalized())
+        # The soft back (strike here): a pale membrane between the rear thorns, with a little moss.
+        pc.mat = "M_Soft"
+        nb = Vector((0, 1, 0.55)).normalized()
+        lathe(pc, Vector(P(0, -0.015 + rad(0.2) * 0.96, 0.2)) - nb * 0.012, [(0, -0.01), (1, 0), (0.8, 0.016 * S), (0, 0.022 * S)], n=8, axis=nb, sx=0.1 * S, sy=0.075 * S)
         if elder:                                          # a mossy crown with one flower
             pc.mat = "M_Moss"
             pc.blob(P(0, 0.02, 0.29), (0.13 * S, 0.11 * S, 0.035 * S), segs=8, rings=3)
@@ -151,6 +192,21 @@ def crab(elder=False):
                         sides=4, tip=True)
         return b
 
+    def crack(pc):
+        """The elder's shell splitting at 60% (shown from phase 2): glowing seams branching over the dome from its crown."""
+        pc.mat = TEL
+        top = 0.302 * S
+        for az0, turns in ((-60, (15, -20, 25)), (100, (-25, 20, -10)), (200, (20, -15))):
+            pts, az = [], math.radians(az0)
+            for i, h in enumerate([0.29, 0.26, 0.22, 0.18][:len(turns) + 1]):
+                if i:
+                    az += math.radians(turns[i - 1])
+                r = rad(h) * S * 1.03
+                pts.append(Vector((r * math.cos(az), -0.015 * S + r * 0.9 * math.sin(az), h * S + 0.006)))
+            pc.tube([Vector((0, -0.015 * S, top)), *pts], [0.011 * S] * (len(pts) + 1), sides=4, tip=False)
+
+    prof = [(0.2, 0.1), (0.245, 0.165), (0.2, 0.245), (0.11, 0.29), (0.0, 0.302)]
+    rad = lambda h: next(r0 + (r1 - r0) * (h - h0) / (h1 - h0) for (r0, h0), (r1, h1) in zip(prof, prof[1:]) if h <= h1)
     b = pe.part("body", M, body, pivot=P(0, 0, 0.12), sharp=SOFT)
     e = pe.part("eyes", M, eyes, pivot=P(0, -0.17, 0.18), sharp=SOFT)
     g = pe.part("glow_eyes", M, glow, pivot=P(0, -0.205, 0.33))
@@ -159,7 +215,12 @@ def crab(elder=False):
     parent(g, e)
     for o in (e, cl, cr, ll, lr):
         parent(o, b)
-    return finish([b, e, g, cl, cr, ll, lr])
+    objs = [b, e, g, cl, cr, ll, lr]
+    if elder:
+        k = pe.part("glow_crack", M, crack, pivot=P(0, -0.015, 0.302))
+        parent(k, b)
+        objs.append(k)
+    return finish(objs)
 
 
 
@@ -212,9 +273,10 @@ def mushroom_beast():
     return finish([b, c, g, fl, fr])
 
 
-# ================================================================ rune wisp (inner temple, floats, rune bolts)
+# ================================================================ rune wisp (outer wild, rune bolts, blinks to keep range)
 def rune_wisp():
-    M = pe.materials({"M_Wisp": ("wisp_body", 0.35), "M_Eye": "outfit:12", "M_Stone": "stone", TEL: ("glow_cyan", 1.0)})
+    """A flame-drop spirit with four moonstone rune shards orbiting it; the glyphs cut into the shards are its telegraph."""
+    M = pe.materials({"M_Wisp": ("wisp_body", 0.35), "M_Eye": "outfit:12", "M_Rune": "runestone", TEL: ("glow_cyan", 1.0)})
     K = 1.45
 
     def body(pc):
@@ -222,23 +284,79 @@ def rune_wisp():
         lathe(pc, (0, 0, 0), [(0, -0.13 * K), (0.08 * K, -0.105 * K), (0.115 * K, -0.03 * K), (0.105 * K, 0.05 * K), (0.07 * K, 0.12 * K),
                               (0.03 * K, 0.18 * K), (0, 0.215 * K)], n=10)
         pc.tube([(0, 0.0, 0.19 * K), (0, 0.035 * K, 0.24 * K), (0, 0.08 * K, 0.25 * K)], [0.022 * K, 0.015 * K, 0.008 * K], sides=5, tip=True, cap=False)
+        for s_ in (1, -1):                                  # two little flame wisps trailing below
+            pc.tube([(s_ * 0.05 * K, 0.02, -0.1 * K), (s_ * 0.07 * K, 0.05, -0.17 * K), (s_ * 0.05 * K, 0.07, -0.22 * K)], [0.022 * K, 0.014 * K, 0.006 * K], sides=5, tip=True)
         pc.mat = "M_Eye"
         eyes_on(pc, (0, 0, 0.0), (0.112 * K, 0.112 * K, 0.2 * K), 0.042 * K, 0.02 * K, 0.019 * K, 0.03 * K, 0.0)
 
     def ring(pc):
-        for k in range(4):                                  # four rune tablets orbiting the flame
+        for k in range(4):                                  # four moonstone shards, each with a rune cut into its outer face
             a = TAU * k / 4 + math.pi / 4
             out = Vector((math.cos(a), math.sin(a), 0))
-            c = out * 0.3 + Vector((0, 0, -0.02))
-            pc.mat = "M_Stone"
-            rbox(pc, c, (0.1, 0.036, 0.13), ch=0.3, rot=Matrix.Rotation(a + math.pi / 2, 3, "Z"))
+            c = out * 0.32 + Vector((0, 0, -0.02))
+            up = (Vector((0, 0, 1)) + out * 0.18).normalized()
+            pc.mat = "M_Rune"
+            lathe(pc, c, [(0, -0.13), (0.065, -0.02), (0.056, 0.05), (0, 0.145)], n=4, axis=up, phase=a, sx=1.0, sy=0.55)
             pc.mat = TEL
-            lathe(pc, c + out * 0.02, [(0, -0.004), (1, 0.0), (0, 0.007)], n=4, axis=out, sx=0.04, sy=0.06, phase=math.pi / 4)
+            face = c + out * 0.037
+            side = Vector((-math.sin(a), math.cos(a), 0))
+            for p0, p1 in (((0, -0.07), (0, 0.08)), ((0, 0.015), (0.034, 0.06)), ((0, -0.025), (-0.034, -0.065))):
+                q0, q1 = face + side * p0[0] + up * p0[1], face + side * p1[0] + up * p1[1]
+                pc.tube([q0, q1], [0.01, 0.01], sides=4, tip=False)
 
     b = pe.part("body", M, body, sharp=SOFT)
-    r = pe.part("ring", M, ring, first="M_Stone")
+    r = pe.part("ring", M, ring, first="M_Rune")
     parent(r, b)
     return finish([b, r], (0.8, 1.0))
+
+
+# ================================================================ pollen sprite (outer wild, a swarm that darts and bursts)
+def pollen_sprite():
+    """A dandelion-puff of pollen with a sprout on its head, two pairs of petal wings and big eyes that flash before it
+    darts (its telegraph). Tiny and many: kept under 450 triangles. Centred on its origin; the engine hovers it."""
+    M = pe.materials({"M_Pollen": "pollen", "M_Tip": "pollen_tip", "M_Sprout": "sprout", "M_Petal": "petal", "M_Blush": "blush",
+                      TEL: ("glow_pollen", 1.0)})
+    BC, BR = (0, 0, 0), (0.12, 0.112, 0.112)
+
+    def body(pc):
+        pc.mat = "M_Pollen"
+        pc.blob(BC, BR, segs=9, rings=6)
+        pc.mat = "M_Tip"
+        for k in range(16):                                 # the fluff: soft spikes all round, fewer in front of the face
+            z = 1 - 2 * (k + 0.5) / 16
+            a = k * 2.39996
+            d = Vector((math.sqrt(1 - z * z) * math.cos(a), math.sqrt(1 - z * z) * math.sin(a), z))
+            if d.y < -0.55 and abs(d.z) < 0.6:
+                continue
+            lathe(pc, Vector(BC) + Vector((d.x * BR[0], d.y * BR[1], d.z * BR[2])) * 0.92, [(0.022, 0), (0, 0.045)], n=4, axis=d)
+        pc.mat = "M_Sprout"                                 # a sprout with two leaves
+        pc.tube([(0, 0.01, 0.085), (0.005, 0.02, 0.13), (0.0, 0.03, 0.15)], [0.011, 0.009, 0.007], sides=5, tip=False)
+        for s_ in (1, -1):
+            lathe(pc, (s_ * 0.025, 0.03, 0.152), [(0, -0.004), (1, 0), (0, 0.006)], n=6, axis=(s_ * 0.5, 0.1, 1), sx=0.032, sy=0.016, tilt=s_ * 0.5)
+        pc.mat = "M_Blush"
+        for s_ in (1, -1):
+            p, n = on_blob(BC, BR, s_ * 0.055, -0.012)
+            lathe(pc, p - n * 0.002, [(0, -0.002), (1, 0), (0, 0.004)], n=6, axis=n, sx=0.016, sy=0.01)
+
+    def glow(pc):
+        pc.mat = TEL                                        # rose eyes and a bud on the sprout: dim at rest, a bright flash before the dart
+        eyes_on(pc, BC, BR, 0.04, 0.018, 0.03, 0.036, math.radians(10))
+        pc.blob((0.0, 0.03, 0.162), (0.02, 0.02, 0.026), segs=6, rings=4)
+
+    def wing(s_):
+        def b(pc):
+            pc.mat = "M_Petal"                              # an upper and a lower petal, flat and turned up-back
+            for (ox, oz, sx, sy, tilt) in ((0.085, 0.05, 0.075, 0.042, 0.5), (0.07, 0.0, 0.05, 0.03, -0.2)):
+                lathe(pc, (s_ * ox, 0.04, oz), [(0, -0.004), (1, 0), (0.85, 0.006), (0, 0.008)], n=8, axis=(s_ * 0.15, 0.55, 0.8),
+                      sx=sx, sy=sy, tilt=s_ * tilt)
+        return b
+
+    b = pe.part("body", M, body, sharp=SOFT)
+    g = pe.part("glow_eyes", M, glow, pivot=(0, -0.09, 0.018))
+    wl, wr = (pe.part(n, M, wing(s_), pivot=(s_ * 0.05, 0.04, 0.03), sharp=SOFT) for n, s_ in (("wing_l", 1), ("wing_r", -1)))
+    for o in (g, wl, wr):
+        parent(o, b)
+    return finish([b, g, wl, wr], (0.8, 1.0))
 
 
 # ================================================================ animated book (inner temple, snapping charge)
@@ -437,8 +555,8 @@ def guardian_statue():
     return finish([b, h, ge, gs, gh, al, ar, gl, gr])
 
 
-MODELS = [("shadow-fox", shadow_fox, 800), ("thorn-crab", crab, 800), ("mushroom-beast", mushroom_beast, 800),
-          ("rune-wisp", rune_wisp, 800), ("animated-book", animated_book, 800), ("stone-golem", stone_golem, 1200),
+MODELS = [("shadow-fox", shadow_fox, 900), ("thorn-crab", crab, 800), ("mushroom-beast", mushroom_beast, 800),
+          ("rune-wisp", rune_wisp, 800), ("pollen-sprite", pollen_sprite, 500), ("animated-book", animated_book, 800), ("stone-golem", stone_golem, 1200),
           ("elder-thorn-crab", lambda: crab(elder=True), 1200), ("guardian-statue", guardian_statue, 2500)]
 
 if __name__ == "__main__":

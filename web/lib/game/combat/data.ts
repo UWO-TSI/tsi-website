@@ -40,18 +40,41 @@ export const WEAPONS: Record<string, Weapon> = Object.fromEntries(islandWeapons(
   .map(w => [w.id, { ...w, ...WEAPON_LOOK[w.id] }]));
 
 type Move = Omit<EnemyAttack, "damage" | "range"> & { range?: number; power?: number };
-interface EnemyLook { speed: number; radius: number; attacks: Move[]; model: string; modelScale: number; modelYaw: number; hover: number }
-const look = (speed: number, radius: number, attacks: Move[], model: string, hover = 0): EnemyLook => ({ speed, radius, attacks, model: `${E}${model}.glb`, modelScale: 1.3, modelYaw: 0, hover });
+type Behaviour = Pick<EnemyType, "turn" | "shell" | "pack" | "kite" | "hazard" | "miniboss">;
+interface EnemyLook extends Behaviour { speed: number; radius: number; attacks: Move[]; model: string; modelScale: number; modelYaw: number; hover: number }
+const look = (speed: number, radius: number, attacks: Move[], model: string, hover = 0, behaviour: Behaviour = {}): EnemyLook => ({ speed, radius, attacks, model: `${E}${model}.glb`, modelScale: 1.3, modelYaw: 0, hover, ...behaviour });
+/**
+ * Zone 1, the Overgrown Outskirts (design sheet "Mobs, zone 1"; sim.ts runs the behaviours): fox packs flank and pounce,
+ * crabs turn a front shell to you, mushrooms lob spores that leave poison, wisps bolt and blink, pollen sprites swarm and
+ * burst into slowing pollen, and the elder thorn crab fights in three phases.
+ */
 const ENEMY_LOOK: Record<string, EnemyLook> = {
-  "shadow-fox": look(3.2, 0.5, [{ shape: "lunge", windup: 0.55, recover: 0.6, arc: 1.2, knockback: 3 }], "shadow-fox"),
-  "thorn-crab": look(1.8, 0.6, [{ shape: "sweep", windup: 0.8, recover: 0.8, arc: 2, knockback: 4 }], "thorn-crab"),
-  "mushroom-beast": look(1.4, 0.55, [{ shape: "spit", windup: 0.9, recover: 1.1, arc: 0, knockback: 1.5 }], "mushroom-beast"),
-  "rune-wisp": look(3.4, 0.4, [{ shape: "spit", windup: 0.7, recover: 0.9, arc: 0, knockback: 1.5 }], "rune-wisp", 1.1),
+  // Packs of three circle to slots round you and pounce in turn: a 0.6 s crouch (mane and eyes flare), then 3.6 u along a lane.
+  "shadow-fox": look(3.4, 0.5, [{ shape: "pounce", windup: 0.6, active: 0.28, leap: 3.6, recover: 0.7, range: 1.5, reach: 3.2, arc: 0, knockback: 3 }], "shadow-fox", 0, { pack: "flank" }),
+  // The front shell turns 80% of a hit aside; it turns at 2 rad/s, so circling or a dodge past it opens its flank.
+  "thorn-crab": look(1.8, 0.6, [{ shape: "sweep", windup: 0.8, recover: 0.8, arc: 2, knockback: 4 }], "thorn-crab", 0, { turn: 2, shell: { arc: 2.2, front: 0.2 } }),
+  // A spore ball arcs 0.85 s onto the marked ring (1.1 u burst), and the burst leaves a poison puddle for 4 s.
+  "mushroom-beast": look(1.4, 0.55, [{ shape: "lob", windup: 0.9, active: 0.85, recover: 1.1, range: 6.5, reach: 5.5, arc: 0, splash: 1.1, knockback: 1.5 }], "mushroom-beast", 0,
+    { hazard: { kind: "poison", radius: 1.2, life: 4, damage: 3, every: 0.5 } }),
+  // A rune bolt down the marked line; closer than 3.2 u it shimmers 0.3 s and blinks 4 u away (every 3.5 s at most).
+  "rune-wisp": look(3.4, 0.4, [
+    { shape: "spit", windup: 0.7, recover: 0.9, arc: 0, knockback: 1.5 },
+    { shape: "blink", windup: 0.3, recover: 0.35, leap: 4, range: 0, arc: 0, knockback: 0, power: 0 },
+  ], "rune-wisp", 1.1, { kite: { keep: 3.2, every: 3.5 } }),
+  // Clouds of 8–15 orbit you; one by one each flashes 0.4 s and darts 3.2 u, bursting into pollen that slows you 35%.
+  "pollen-sprite": look(4.2, 0.22, [{ shape: "dart", windup: 0.4, active: 0.32, leap: 3.2, recover: 0.2, reach: 2.9, arc: 0, knockback: 1 }], "pollen-sprite", 0.75,
+    { pack: "swarm", hazard: { kind: "pollen", radius: 1.3, life: 2.5, damage: 0, every: 0.5, slow: 0.35 } }),
   // Combat polish 11: the temple's pressure moved from the golem's slam (which only melee stood in) to the books' charge,
   // which reaches the back line too: books 2.6 → 4.4 u/s with a 3 u lunge at ×1.3; golems 1.6 → 2.8 u/s, the slam ×0.41 with a longer recover.
   "animated-book": look(4.4, 0.5, [{ shape: "lunge", windup: 0.6, recover: 0.7, range: 3, reach: 2.6, arc: 1.3, knockback: 3, power: 1.3 }], "animated-book"),
   "stone-golem": look(2.8, 0.75, [{ shape: "slam", windup: 1.0, recover: 1.6, range: 2.4, arc: Math.PI * 2, knockback: 5, power: 0.41 }], "stone-golem"),
-  "elder-thorn-crab": look(1.6, 0.8, [{ shape: "sweep", windup: 0.9, recover: 0.9, arc: 2.4, knockback: 5 }], "elder-thorn-crab"),
+  // The mini-boss (sim.ts PLANS): sweeps with the shell closed; cracked at 60%, faster and a charge down a lane that ends
+  // in a stagger; enraged at 25%, claw slams whose shockwave runs out to 6 u (dodge through it).
+  "elder-thorn-crab": look(1.7, 0.8, [
+    { shape: "sweep", windup: 0.9, recover: 0.9, arc: 2.4, knockback: 5 },
+    { shape: "charge", windup: 1.0, active: 0.6, leap: 7, recover: 1.4, stagger: true, reach: 7, range: 1.8, arc: 0, knockback: 6, power: 1.2 },
+    { shape: "slam", windup: 1.1, recover: 1.0, range: 2.2, reach: 1.9, arc: Math.PI * 2, splash: 6, knockback: 5, power: 1.1 },
+  ], "elder-thorn-crab", 0, { turn: 1.4, shell: { arc: 2.4, front: 0.15, cracked: 0.5 }, hazard: { kind: "wave", radius: 6, life: 0.7, damage: 0, every: 0 }, miniboss: { title: "Old shell of the Outskirts" } }),
   // Three readable patterns (sim.ts BOSS_PLAN): the smash lands on a ring where you stood, the beam
   // sweeps 140° in front and leaves it staggered, the summon calls two rune wisps.
   "guardian-statue": look(1.1, 1.6, [
@@ -65,9 +88,8 @@ export const ENEMIES: Record<string, EnemyType> = Object.fromEntries(islandEnemi
   const { attacks, ...l } = ENEMY_LOOK[e.id];
   const type: EnemyType = {
     id: e.id, name: e.name, kind: e.kind, level: e.level, hp: e.hp, defense: e.defense, armor: e.armor, xp: e.xp, elite: e.elite,
-    aggroRadius: e.aggroRadius, leashRadius: e.leashRadius, speed: l.speed, radius: l.radius,
+    aggroRadius: e.aggroRadius, leashRadius: e.leashRadius, ...l,
     attacks: attacks.map(({ power = 1, range, ...m }) => ({ ...m, range: range ?? e.range, damage: Math.round(e.damage * power) })),
-    model: l.model, modelScale: l.modelScale, modelYaw: l.modelYaw, hover: l.hover,
   };
   return [e.id, type];
 }));

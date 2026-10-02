@@ -23,8 +23,12 @@ export interface Weapon {
 export interface WeaponGrip { hand: [number, number, number]; back: [number, number, number]; rest?: [number, number, number] }
 
 export type EnemyKind = "wildlife" | "construct" | "boss";
-/** smash: a slam on a ring marker where you stood; beam: a sweep over `arc` during `active`; summon: calls rune wisps. */
-export type AttackShape = "lunge" | "slam" | "spit" | "sweep" | "smash" | "beam" | "summon";
+/**
+ * smash: a slam on a ring marker where you stood; beam: a sweep over `arc` during `active`; summon: calls rune wisps.
+ * Zone 1 (specs/classes/design-sheet.md "Mobs, zone 1"): pounce, dart and charge travel `leap` u through `active` and hit
+ * what they touch; lob arcs over everything and bursts where it lands; blink is no attack, a short hop away to keep range.
+ */
+export type AttackShape = "lunge" | "slam" | "spit" | "sweep" | "smash" | "beam" | "summon" | "pounce" | "dart" | "charge" | "lob" | "blink";
 export interface EnemyAttack {
   shape: AttackShape; windup: number; recover: number; damage: number; range: number; arc: number; knockback: number;
   /** Distance at which the windup starts (default 0.8 × range). */
@@ -33,16 +37,34 @@ export interface EnemyAttack {
   active?: number;
   /** The recover is a stagger window: hits land for more. */
   stagger?: boolean;
+  /** pounce, dart, charge: how far it travels during `active`; blink: how far it hops. */
+  leap?: number;
+  /** lob: the burst's radius where it lands; a slam with one: its shockwave runs out to this radius. */
+  splash?: number;
 }
+/** What a mob leaves on the ground: a poison puddle, a pollen puff that slows, a slam's shockwave. Damage per tick (`every` s). */
+export interface HazardDef { kind: "poison" | "pollen" | "wave"; radius: number; life: number; damage: number; every: number; slow?: number }
 export interface EnemyType {
   id: string; name: string; kind: EnemyKind; level: number;
   hp: number; speed: number; radius: number;
   /** Damage reduction 0..0.8, flat armor after it, and kill XP (systems data). */
   defense: number; armor: number; xp: number; elite: boolean;
   aggroRadius: number; leashRadius: number;
-  /** One for ordinary enemies; the boss rotates through several (sim.ts BOSS_PLAN). */
+  /** One for ordinary enemies; the boss and the elder crab rotate through several (sim.ts PLANS); the wisp's blink is extra. */
   attacks: EnemyAttack[];
   model: string; modelScale: number; modelYaw: number; hover: number;
+  /** Turn rate in rad/s (a crab turns to face you slowly and scuttles sideways); unset turns at once. */
+  turn?: number;
+  /** A front shell: hits from within `arc`/2 of its facing deal `front` × damage, `cracked` × once it cracks (phase 2+). */
+  shell?: { arc: number; front: number; cracked?: number };
+  /** flank: a pack circles to slots around you and pounces in turn; swarm: a cloud orbits you and darts in one by one. */
+  pack?: "flank" | "swarm";
+  /** Keeps its range: closer than `keep` it blinks away (its `blink` attack), at most every `every` s. */
+  kite?: { keep: number; every: number };
+  /** What its lobs (or, for a swarm, its burst) leave on the ground. */
+  hazard?: HazardDef;
+  /** A mini-boss: its own health bar and name banner, and a reward roll on defeat (lib/combat/content.ts DROPS). */
+  miniboss?: { title: string };
 }
 
 export type MissionTemplate = "hunt" | "fetch" | "survive" | "escort";
