@@ -16,9 +16,9 @@ export const ACTION_LABEL: Record<MenuAction, string> = {
 export const DEFAULT_KEYS: Record<MenuAction, string> = {
   openJournal: "b", openBag: "i", openMap: "m", openWallet: "k", openMail: "l", nextTab: "]", prevTab: "[", confirm: "enter",
 };
-/** Keys no remap can take: interact E, Escape, Tab, zoom Z, quests J, decorate F, emotes G, put away X. */
-export const FIXED_KEYS: readonly string[] = ["e", "escape", "tab", "z", "j", "f", "g", "x"];
-/** Fixed keys, and the movement defaults (Space jump, Q dash, Shift, C sneak, WASD, arrows), which belong to the game remap (rows 49, 244). */
+/** Keys no remap can take: interact E, Escape, Tab, zoom Z, quests J, decorate F, emotes G, put away X, the camera back to its default view V. */
+export const FIXED_KEYS: readonly string[] = ["e", "escape", "tab", "z", "j", "f", "g", "x", "v"];
+/** Fixed keys, the movement defaults (Space jump, Q dash, Shift, C sneak, WASD), which belong to the game remap (rows 49, 244), and the arrows, which turn the camera. */
 export const RESERVED_KEYS = [...FIXED_KEYS, "w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", " ", "shift", "q", "c"];
 const ALLOWED = /^(?:[a-z0-9]|f(?:[1-9]|1[0-2])|enter|backspace|\[|\]|;|'|,|\.|\/|-|=|`|\\)$/;
 

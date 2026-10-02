@@ -60,7 +60,8 @@ export default function HomeIslandScene({ identity, level, peaceful, fishSpot, f
   const fauna = useMemo(() => ({ site: { map: home.map, flowers: HOME_FLOWERS, water: SEA }, ground: home.ground, standable: home.fixedFree, surface: home.surface, gulls: HOME_GULLS, player }), [home, player]);
   useEffect(() => { player.current.set(...spawn); }, [spawn, player]);
   const focus = useRef(new THREE.Vector3(...spawn));
-  useFollowCamera(focus, zoom, overview ? { focus: [0, 0, 0], offset: [6, 13, -16] } : null);
+  const follow = useMemo(() => ({ ground: home.ground }), [home]);
+  useFollowCamera(focus, zoom, overview ? { focus: [0, 0, 0], offset: [6, 13, -16] } : null, follow);
   useFrame(() => {
     const p = player.current;
     const next: HomeNear = Math.hypot(p.x - HOUSE.door[0], p.z - HOUSE.door[1]) < 1.3 ? "house"

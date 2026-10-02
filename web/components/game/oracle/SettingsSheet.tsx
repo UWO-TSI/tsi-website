@@ -11,7 +11,7 @@
  * crouch/slide) and the ruins' ability keys are remapped on this device.
  * Outside macOS, Ctrl crouches only in fullscreen with the keyboard locked.
  */
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import type { QualityTier } from "@/lib/game/qualityTier";
 import { ACTION_LABEL, MENU_ACTIONS, TEXT_SIZES, normalizeKey, type MenuAction, type TextSize } from "@/lib/identity/settings";
@@ -20,6 +20,7 @@ import { ABILITIES, type AbilityId } from "@/lib/game/combat/runtime";
 import { IS_MAC, MOVE_ACTIONS, canLockKeyboard, crouchKey, keyName, playFullscreenWithCtrl, remapAbility, remapMove, useAbilityKeys, useKeyboardLocked, useMoveKeys, useNextKey, type MoveAction } from "@/lib/game/movement/keys";
 import { AudioManager, type AudioVolumes } from "@/lib/game/audio";
 import { useAudioState } from "@/lib/game/useAudio";
+import { orbit, readOrbitPrefs, setOrbitPrefs, subscribeOrbitPrefs, SENSITIVITY_MAX, SENSITIVITY_MIN } from "@/lib/game/orbitCamera";
 import IslandSheet from "../IslandSheet";
 import styles from "../DefaultIslandWorld.module.css";
 
@@ -45,6 +46,7 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
     else { graphicsActions.setLiteMode(value === "light"); if (value === "high") graphicsActions.setShadows(true); }
   };
   const audio = useAudioState();
+  const camera = useSyncExternalStore(subscribeOrbitPrefs, readOrbitPrefs, () => orbit.prefs);
   const [listening, setListening] = useState<MenuAction | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const abilityKeys = useAbilityKeys();
@@ -97,6 +99,18 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
         </select>
       </label>
       <label className={styles.toggle}><span>Shadows</span><input type="checkbox" checked={graphics.shadows} disabled={graphics.liteMode} onChange={e => graphicsActions.setShadows(e.target.checked)} /></label>
+    </fieldset>
+    <fieldset>
+      <legend>Camera</legend>
+      <label className={styles.toggle}><span>Mouse look</span><input type="checkbox" checked={camera.mouseLook} onChange={e => setOrbitPrefs({ mouseLook: e.target.checked })} /></label>
+      <div className={styles.sliderRow}>
+        <label htmlFor="camera-sensitivity">Sensitivity</label>
+        <input id="camera-sensitivity" type="range" min={SENSITIVITY_MIN * 100} max={SENSITIVITY_MAX * 100} step={5} value={Math.round(camera.sensitivity * 100)}
+          aria-valuetext={`${Math.round(camera.sensitivity * 100)}%`} onChange={e => setOrbitPrefs({ sensitivity: Number(e.target.value) / 100 })} />
+        <span>{Math.round(camera.sensitivity * 100)}</span>
+      </div>
+      <label className={styles.toggle}><span>Invert up and down</span><input type="checkbox" checked={camera.invertY} onChange={e => setOrbitPrefs({ invertY: e.target.checked })} /></label>
+      <p className={styles.hint}>{camera.mouseLook ? "Click the island to look around with the mouse. Hold right click for a cursor; Esc lets the mouse go." : "The cursor stays free."} Arrow keys turn and tilt, the wheel and Z zoom, V puts the camera back. Kept on this device.</p>
     </fieldset>
     <label className={styles.toggle}><span>Show my family aura</span><input type="checkbox" checked={aura} onChange={e => setAuraVisible(e.target.checked)} /></label>
     <label className={styles.toggle}><span>High contrast</span><input type="checkbox" checked={settings.high_contrast} onChange={e => void save({ high_contrast: e.target.checked })} /></label>

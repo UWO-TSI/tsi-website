@@ -121,6 +121,8 @@ import { CURRENT, lookFx, type LookPreset } from "@/lib/game/lookPreset";
 import LookMaterials from "./LookMaterials";
 import { EventDecor, eventSpots, PostersSheet, TourneySheet } from "./SeasonalEvents";
 import { useIslandEvent, type IslandEvent } from "@/lib/game/seasonalEvents";
+import { escapeEndedCapture, holdCursor, orbit, readCapture, readOrbitPrefs, saveOrbit, subscribeCapture, subscribeOrbitPrefs, toggleZoom } from "@/lib/game/orbitCamera";
+import { RESET_VIEW_KEY } from "./useOrbitInput";
 import styles from "./DefaultIslandWorld.module.css";
 
 type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | null;
@@ -257,7 +259,8 @@ function IslandScene({ identity, level, devAt, exitFrom, peaceful, fishSpot, fis
   const spots = useMemo(() => eventSpots(event?.decor ?? null), [event]);
   useEffect(() => { player.current.set(...spawn); }, [reset, spawn, player]);
   const focus = useRef(new THREE.Vector3(...spawn));
-  useFollowCamera(focus, zoom, overview ? layout.scale.overview : null);
+  const follow = useMemo(() => ({ ground: island.ground }), [island]);
+  useFollowCamera(focus, zoom, overview ? layout.scale.overview : null, follow);
   useFrame(() => {
     const within = (p: [number, number] | null, r: number) => !!p && Math.hypot(player.current.x - p[0], player.current.z - p[1]) < r;
     // Chapter 1 at the clubhouse door: claim the plot first, report back when ready, otherwise enter.
@@ -457,7 +460,6 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [optionsOpen, setOptionsOpen] = useState(false);
   const optionsToggleRef = useRef<HTMLButtonElement>(null);
   const [overview, setOverview] = useState(false);
-  const [zoomed, setZoomed] = useState(false);
   const [reset, setReset] = useState(0);
   // Dev: ?home=1 starts on the home island, ?home=inside in the house; ?decorate=1&place=<piece> opens decorating.
   const [devHome] = useState(() => (process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams()));
@@ -529,6 +531,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const welcoming = welcome === "arriving" || greeting !== null;
   const moveKeys = useMoveKeys(), abilityKeys = useAbilityKeys(), crouch = crouchKey(moveKeys, useKeyboardLocked());
   const touch = useCoarsePointer() || devHome.get("touch") === "1";
+  // Mouse-look (specs/camera-orbit.md): the hint while the mouse is free, the crosshair while it looks in the ruins.
+  const captured = useSyncExternalStore(subscribeCapture, readCapture, () => "off" as const);
+  const { mouseLook } = useSyncExternalStore(subscribeOrbitPrefs, readOrbitPrefs, () => orbit.prefs);
   const [reveal, setReveal] = useState<{ family: Family; type: string; startedAt: number } | null>(null);
   // Bumped by the Oracle's path sheet after a subclass, loadout or stat change so the encounter re-reads them.
   const [pathTick, setPathTick] = useState(0);
@@ -709,6 +714,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   }, [greeting, finishWelcome]);
   // The forage/net prompt names the nearest node, re-read when it changes (it used to keep the first node's name).
   const targetLabel = useSyncExternalStore(subscribePeacefulLabel, peacefulLabel, () => null);
+  // Decorating, the dev panel and the greeting work with the cursor: mouse-look lets go while they are up.
+  useEffect(() => { holdCursor("decorate", decor.decorating); holdCursor("greeting", welcoming); holdCursor("options", optionsOpen); }, [decor.decorating, welcoming, optionsOpen]);
+  useEffect(() => () => { holdCursor("decorate", false); holdCursor("greeting", false); holdCursor("options", false); }, []);
   const greetingName = identity.display_name !== "You" ? identity.display_name : null;
   const holdObjective = step === "creator" || step === "welcome" || welcome === "arriving" || greeting !== null;
   useEffect(() => {
@@ -721,7 +729,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       }
       if (event.repeat || (event.target instanceof HTMLElement && event.target.closest("input, select, textarea, button"))) return;
       if (event.key.toLowerCase() === "e") act(near);
-      if (event.key.toLowerCase() === "z" && !inside) setZoomed(value => !value);
+      if (event.key.toLowerCase() === "z" && !inside) { toggleZoom(); saveOrbit(); }
       // Menus follow the account's key bindings (row 220); Escape is fixed.
       const menu = actionForKey(identity.settings, event.key);
       if (menu === "openMap") setMapOpen(value => !value);
@@ -730,7 +738,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       if (!menu && event.key.toLowerCase() === "j") setSheet(value => (value === "journal" ? null : "journal"));
       if (menu === "openMail") setSheet(value => (value === "letters" ? null : "letters"));
       if (menu === "nextTab" || menu === "prevTab") window.dispatchEvent(new CustomEvent("tsi:menu-tab", { detail: { step: menu === "nextTab" ? 1 : -1 } }));
-      if (event.key === "Escape") { setSheet(null); if (decor.selected) decor.cancel(); }
+      // The Esc that ended mouse-look capture is the browser's; a later one closes things (specs/camera-orbit.md).
+      if (event.key === "Escape" && !escapeEndedCapture()) { setSheet(null); if (decor.selected) decor.cancel(); }
       if (atHome && event.key.toLowerCase() === "f") decor.toggle();
       if (decor.decorating && event.key.toLowerCase() === "r") decor.rotateSelected();
       if (decor.decorating && event.key.toLowerCase() === "x") decor.putAway();
@@ -744,7 +753,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
         <Suspense fallback={null}>
-          {site === "ruins" ? <RuinsScene key={`ruins-${ruinsRun}`} level={level} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={zoomed ? 1.4 : devZoom} player={player}
+          {site === "ruins" ? <RuinsScene key={`ruins-${ruinsRun}`} level={level} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={devZoom} player={player}
               onNear={n => setNear(n === "exit" ? "ruins_exit" : n)} onDefeat={onRuinsDefeat} start={ruinsRun <= 1 ? devAt : null} />
             : inside === "oracle" ? <OracleTemple frozen={fading || sheet === "oracle"} player={player} onNear={n => setNear(n)} ceremony={reveal} />
             : inside === "cafe" ? <CafeInterior phase={phase} player={player} frozen={fading || !!sheet} identity={identity} level={level} onNear={setNear} />
@@ -752,11 +761,11 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
             : inside === "hq" ? <Clubhouse phase={phase} player={player} frozen={fading} onNear={setNear} />
             : inside === "house" ? <HomeInterior layout={layout} phase={phase} frozen={fading} player={player} onNear={(n: HouseNear) => setNear(n)}
               decorating={decor.decorating} selected={decor.selected} onPlace={decor.place} onPickUp={decor.pickUp} />
-            : atHome ? <HomeIslandScene identity={identity} level={level} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={zoomed ? 1.4 : devZoom}
+            : atHome ? <HomeIslandScene identity={identity} level={level} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={devZoom}
               overview={overview} returned={returned} player={player} onNear={(n: HomeNear) => setNear(n)} outdoor={layout.outdoor}
               decorating={decor.decorating} selected={decor.selected} onPlace={item => decor.place("outdoor", item)} onPickUp={item => decor.pickUp("outdoor", item)} />
             : <IslandScene identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent}
-              lead={welcoming || welcome === "done" ? { line: greeting, hold: welcoming } : null} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={welcoming ? 0.7 : zoomed ? 1.4 : devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} />}
+              lead={welcoming || welcome === "done" ? { line: greeting, hold: welcoming } : null} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={welcoming ? 0.7 : devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} />}
           {identity.family && identity.aura && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>}
           <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={grade} fx={lookFx(lookPreset, !liteMode)} />
           <LookMaterials preset={lookPreset} />
@@ -855,13 +864,15 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <PostersSheet open={sheet === "posters"} onClose={() => setSheet(null)} event={islandEvent} />
       <CafeGoalSheet open={sheet === "cafe"} onClose={() => setSheet(null)} />
       {site === "ruins" && <CombatHud player={player} />}
-      {welcoming ? null : site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>Mouse Aim</span><span>Click Attack</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Slide</span>}<span>{SLOT_IDS.map(s => <kbd key={s}>{keyName(abilityKeys[s])}</kbd>)} Abilities</span><span><kbd>{keyName(abilityKeys.swap)}</kbd> Swap</span><span><kbd>E</kbd> Interact</span></div>
+      {welcoming ? null : site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>{mouseLook ? "Mouse Look and aim" : "Mouse Aim"}</span><span>Click Attack</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>←</kbd><kbd>→</kbd> Turn</span><span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Slide</span>}<span>{SLOT_IDS.map(s => <kbd key={s}>{keyName(abilityKeys[s])}</kbd>)} Abilities</span><span><kbd>{keyName(abilityKeys.swap)}</kbd> Swap</span><span><kbd>E</kbd> Interact</span></div>
       // Indoors you walk (cafe-polish §4): no run, jump, dash, zoom or map.
       : inside ? <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>E</kbd> Interact</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span></div>
-      : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span>{peaceful.glider && <span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air Glide</span>}<span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Crouch, at speed slide</span>}</div>}
+      : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span>{peaceful.glider && <span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air Glide</span>}<span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span>{mouseLook ? "Mouse or " : ""}<kbd>←</kbd><kbd>→</kbd> Look</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Crouch, at speed slide</span>}</div>}
       {/* Clear of the minimap (left) and the audio widget (bottom right). */}
       {touch && (!inside || inside === "cafe") && <TouchControls left={212} bottom={64} walkOnly={inside === "cafe"} />}
-      <p className={styles.touchControls}>Tap the ground to move</p>
+      <p className={styles.touchControls}>Tap the ground to move · two fingers turn the camera</p>
+      {captured === "free" && !touch && <p className={styles.lookHint} role="status">Click to look around</p>}
+      {captured === "captured" && site === "ruins" && <svg className={styles.crosshair} viewBox="-10 -10 20 20" aria-hidden="true"><circle r="5.5" /><circle r="1.2" /></svg>}
       <div className={styles.fade} data-active={fading} aria-hidden="true" />
       <LoadingStatus ready={ready} />
     </main>

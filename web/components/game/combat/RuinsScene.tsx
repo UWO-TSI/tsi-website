@@ -29,6 +29,7 @@ import { screenOf, useMoveParticles } from "../movement/moveFx";
 import { defeatPuff } from "@/lib/game/movement/juice";
 import type { ParticlePool } from "@/lib/game/fx/particles";
 import { shakeCamera } from "@/lib/game/cameraJuice";
+import { capture, crosshairAim } from "@/lib/game/orbitCamera";
 import { BUFFER, createInputs, runInputs, spawnWave } from "@/lib/game/combat/actions";
 import { missionEvent } from "@/lib/game/combat/abilities";
 import { stepCombat } from "@/lib/game/combat/encounter";
@@ -165,7 +166,8 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     w.__combatDev = { ...w.__combatDev, screenOf: (x: number, z: number) => screenOf([x, ruins.ground(x, z) - 0.2, z], camera, gl.domElement) };
   }, [camera, gl, ruins, spawn]);
   const focus = useRef(new THREE.Vector3(...spawn));
-  useFollowCamera(focus, zoom, null);
+  const follow = useMemo(() => ({ ground: ruins.ground, aim: true }), [ruins]);
+  useFollowCamera(focus, zoom, null, follow);
 
   // Mouse aim + click attack on the canvas; ability keys (remappable). A click or key waits BUFFER s for its cooldown (runInputs).
   // Movement, Space's jump and Q's dash-dodge are PlayerAvatar's (the kit).
@@ -194,8 +196,11 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     combat.hitstop = Math.max(0, combat.hitstop - rawDelta);
     const rt = combat.rt, p = rt.player, pl = player.current, inp = input.current;
     const me = { x: pl.x, z: pl.z };
-    // Aim: pointer ray onto the floor plane (until the mouse moves, ahead of you). Facing is PlayerAvatar's (combatFacing).
-    if (inp.hasPointer) {
+    // Aim: in mouse-look the crosshair (the screen centre onto the ground drawn there), otherwise the pointer ray onto
+    // the floor plane (until the mouse moves, ahead of you). Facing is PlayerAvatar's (combatFacing).
+    if (capture.state === "captured") {
+      if (crosshairAim(camera, ruins.ground, ruins.ground(pl.x, pl.z), hit)) { p.aim.x = hit.x; p.aim.z = hit.z; }
+    } else if (inp.hasPointer) {
       ray.setFromCamera(inp.ndc, camera); plane.current.constant = -ruins.ground(pl.x, pl.z);
       if (ray.ray.intersectPlane(plane.current, hit)) { p.aim.x = hit.x; p.aim.z = hit.z; }
     } else { p.aim.x = pl.x + Math.sin(p.facing) * 3; p.aim.z = pl.z + Math.cos(p.facing) * 3; }

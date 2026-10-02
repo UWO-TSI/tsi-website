@@ -77,7 +77,8 @@ export const DEFAULT_MOVE_KEYS = moveDefaults(IS_MAC);
 export const DEFAULT_ABILITY_KEYS: Record<AbilityId, string> = { slot1: "1", slot2: "2", slot3: "3", slot4: "4", swap: "r" };
 
 const move = keyStore<MoveAction>("tsi.moveKeys.v1", DEFAULT_MOVE_KEYS, {
-  valid: (k, id) => !/^(meta|alt|capslock|dead|unidentified)$/.test(k) && (k !== "control" || id === "crouch"),
+  // The arrows turn the camera (specs/camera-orbit.md), so no movement key may take one.
+  valid: (k, id) => !/^(meta|alt|capslock|dead|unidentified|arrow(up|down|left|right))$/.test(k) && (k !== "control" || id === "crouch"),
   taken: (): string[] => [...Object.values(readAbilityKeys()), ...menuKeys()],
 });
 const ability = keyStore<AbilityId>("tsi.combatKeys.v2", DEFAULT_ABILITY_KEYS, { // v1 bound the prototype runes, not slots

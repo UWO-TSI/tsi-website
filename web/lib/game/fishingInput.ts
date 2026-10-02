@@ -1,3 +1,4 @@
+import { escapeEndedCapture } from "./orbitCamera";
 import { isGameControlTarget } from "./keyboardInput";
 
 export interface FishingHeldInput {
@@ -38,7 +39,7 @@ export function bindFishingInput({ onHold, onCancel, onPause, onPointerFocus, in
     if (key !== "e" && key !== " " && key !== "escape") return;
     e.preventDefault();
     e.stopPropagation();
-    if (key === "escape") { reset(); onCancel(); }
+    if (key === "escape") { if (escapeEndedCapture()) return; reset(); onCancel(); } // the Esc that ends mouse-look is only that
     else { keys.add(key); publish(); }
   };
   const keyUp = (event: Event) => { keys.delete((event as KeyboardEvent).key.toLowerCase()); publish(); };
@@ -110,7 +111,7 @@ export function bindFishingCastLifecycle({ getPhase, onStart, onRelease, onCance
   };
   const keyDown = (event: Event) => {
     const e = event as KeyboardEvent;
-    if (e.key !== "Escape" || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key !== "Escape" || e.metaKey || e.ctrlKey || e.altKey || escapeEndedCapture()) return;
     if (!pending() && getPhase() !== "caught" && getPhase() !== "missed") return;
     e.preventDefault(); e.stopPropagation(); onCancel();
   };

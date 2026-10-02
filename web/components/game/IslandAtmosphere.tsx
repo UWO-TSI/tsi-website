@@ -28,6 +28,8 @@ import { juiceShake } from "@/lib/game/cameraJuice";
 import { treeParts } from "./NatureModels";
 import AmbientFauna, { type FaunaProps } from "./AmbientFauna";
 import WeatherGround from "./WeatherGround";
+import { capture, ORBIT_DISTANCE, orbitOffset, stepOrbit, turnOffset } from "@/lib/game/orbitCamera";
+import { orbitKeys, useOrbitInput } from "./useOrbitInput";
 
 /** Screen-space vertical sky gradient (a plain 2D background texture): `top` at the top, `horizon` from mid-screen down. */
 export function SkyGradient({ top, horizon }: { top: string; horizon: string }) {
@@ -113,14 +115,29 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
 }
 
 type Overview = { focus: [number, number, number]; offset: [number, number, number]; far?: number };
+/** What the rig knows of the scene: the ground (it keeps above it). */
+export interface FollowScene {
+  ground: (x: number, z: number) => number;
+  /** A weapon is out (the ruins): while mouse-look holds the crosshair, the view looks further ahead so it sits past you. */
+  aim?: boolean;
+}
+/** How far ahead of the focus the camera looks: walking, and aiming with the crosshair (the crosshair clears your head and its ground point lands about 3 ahead; further, you would sink behind the combat HUD). */
+const LOOK_AHEAD = 1.5, AIM_AHEAD = 2.2;
+/** The least height the camera keeps over the ground under it (a hill or cliff behind you lifts it, never through). */
+const CLEARANCE = 0.8;
 /**
- * The follow camera (specs/movement.md, rows 250, 251): the shipped framing, focus + (0, 7.4, −10.8) × zoom looking
- * 0.7 up and 1.5 ahead, set rigidly on the focus the player's avatar writes (a lead along its velocity, the level it
- * stands on), so it neither lags at top speed nor bobs on hops, plus any shake (cameraJuice). Fixed yaw (rows 5, 154). Zoom and the overview
- * (`far`: its far plane, for a big island) ease in and out.
+ * The follow camera (specs/movement.md, rows 250, 251; specs/camera-orbit.md): the shipped framing, ORBIT_DISTANCE ×
+ * zoom from a point 0.7 up and 1.5 ahead of the focus the player's avatar writes (a lead along its velocity, the
+ * level it stands on), set rigidly on it so it neither lags at top speed nor bobs on hops, plus any shake
+ * (cameraJuice). It turns with the orbit (mouse-look, the arrows, two fingers; useOrbitInput): yaw 0 at the default
+ * tilt is today's west-facing view, exactly. The zoom prop (a welcome close-up, ?zoom=) times the orbit's own
+ * (wheel, Z), and the overview (`far`: its far plane, for a big island; its eye circles the island with the yaw)
+ * ease in and out. `scene` keeps the camera above the terrain behind you.
  */
-export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: number, overview: Overview | null) {
+export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: number, overview: Overview | null, scene?: FollowScene) {
   const { camera } = useThree();
+  useOrbitInput();
+  const rig = useMemo(() => ({ ahead: LOOK_AHEAD }), []);
   const baseFar = useRef<number | null>(null);
   const blend = useRef({ zoom, overview: overview ? 1 : 0, last: overview });
   const look = useMemo(() => new THREE.Vector3(), []);
@@ -139,11 +156,17 @@ export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: num
       if (camera.far !== plane) { camera.far = plane; camera.updateProjectionMatrix(); }
     }
     juiceShake(dt, shake);
-    look.set(f.x + shake.x, f.y + 0.7 + shake.y, f.z + 1.5);
-    camera.position.set(look.x, look.y + 7.4 * b.zoom, look.z - 10.8 * b.zoom);
+    const v = stepOrbit(dt, orbitKeys), sy = Math.sin(v.yaw), cy = Math.cos(v.yaw);
+    rig.ahead = THREE.MathUtils.damp(rig.ahead, scene?.aim && capture.state === "captured" ? AIM_AHEAD : LOOK_AHEAD, 6, dt);
+    // The shake is across the screen and up; at yaw 0 that is world x, as before.
+    look.set(f.x + sy * rig.ahead + cy * shake.x, f.y + 0.7 + shake.y, f.z + cy * rig.ahead - sy * shake.x);
+    const [ox, oy, oz] = orbitOffset(v.yaw, v.pitch, ORBIT_DISTANCE * b.zoom * v.zoom);
+    camera.position.set(look.x + ox, look.y + oy, look.z + oz);
+    if (scene) camera.position.y = Math.max(camera.position.y, scene.ground(camera.position.x, camera.position.z) + CLEARANCE);
     const o = b.last;
     if (b.overview > 0 && o) {
-      far.at.set(o.offset[0] + o.focus[0], o.offset[1], o.offset[2] + o.focus[2]);
+      const [tx, tz] = turnOffset(o.offset[0], o.offset[2], v.yaw);
+      far.at.set(tx + o.focus[0], o.offset[1], tz + o.focus[2]);
       far.look.set(...o.focus);
       far.look.y -= far.at.distanceToSquared(far.look) * WORLD_BEND;
       camera.position.lerp(far.at, b.overview);
