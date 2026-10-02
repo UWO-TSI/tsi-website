@@ -8,7 +8,7 @@
 import { ENEMIES, WEAPONS } from "./data";
 import type { Vec } from "./sim";
 import { BOSS, DODGE, inArc, invulnerable, spawnEnemy, sweptHit, type Enemy } from "./sim";
-import { ENERGY, SLOT_IDS, type AbilityId, type CombatRuntime } from "./runtime";
+import { ENERGY, SLOT_IDS, setWeapon, type AbilityId, type CombatRuntime } from "./runtime";
 import { cancelCast, cue, floater, mitigate, strike, summon, fireSlot } from "./abilities";
 import type { SpawnPoint } from "./spawns";
 import { FAMILY_STAT } from "@/lib/combat/kits";
@@ -181,12 +181,14 @@ export function runInputs(rt: CombatRuntime, q: InputQueue, me: Vec, dt: number,
   return denied;
 }
 
-/** Keys: slots 1–4 run the equipped kit abilities; R swaps weapons. */
+/** Keys: slots 1–4 run the equipped kit abilities; R swaps back to the previous weapon (the tool wheel picks the rest), or to the next with none. */
 export function triggerAbility(rt: CombatRuntime, id: AbilityId, player: Vec = { x: 0, z: 0 }, random = Math.random): boolean {
   const p = rt.player;
   if (id === "swap") {
     if (!p.alive || rt.cooldowns.swap > 0 || rt.casting) return false;
-    p.weapon = p.owned[(p.owned.indexOf(p.weapon) + 1) % p.owned.length]; p.attackCd = 0.2; rt.cooldowns.swap = 0.4;
+    const back = p.prev && p.prev !== p.weapon && p.owned.includes(p.prev) ? p.prev : p.owned[(p.owned.indexOf(p.weapon) + 1) % p.owned.length];
+    if (!setWeapon(rt, back)) return false;
+    rt.cooldowns.swap = 0.4;
     return true;
   }
   const fired = fireSlot(rt, SLOT_IDS.indexOf(id), player, random);

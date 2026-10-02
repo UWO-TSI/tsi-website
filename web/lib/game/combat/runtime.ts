@@ -47,8 +47,8 @@ export interface CombatRuntime {
   player: {
     hp: number; maxHp: number; alive: boolean; safe: boolean; level: number; stats: StatBlock;
     energy: number; sinceSpend: number;
-    /** Equipped weapon id and the owned ones the swap key cycles (starters until progression loads). */
-    weapon: string; owned: string[]; durability: Record<string, number>; hits: Record<string, number>;
+    /** Equipped weapon id and the owned ones the swap key cycles (starters until progression loads); `prev` the one before (R goes back to it). */
+    weapon: string; prev: string | null; owned: string[]; durability: Record<string, number>; hits: Record<string, number>;
     /** `dodgeDir` is also the way the last hit pushes you, `knock` how hard (that attack's knockback). */
     attackCd: number; swing: number; dodgeAge: number | null; dodgeCd: number; dodgeDir: Vec; knock: number;
     /** `aimHold`: seconds an attack or ability keeps you facing the aim (combat polish 10, actions.ts combatFacing). */
@@ -92,7 +92,7 @@ export interface CombatRuntime {
 export function createRuntime(): CombatRuntime {
   return {
     player: { hp: PLAYER_BASE.maxHp, maxHp: PLAYER_BASE.maxHp, alive: true, safe: true, level: 10, stats: { ...ZERO_STATS },
-      energy: ENERGY.max, sinceSpend: 99, weapon: "sword-driftwood", owned: [...STARTER_WEAPONS],
+      energy: ENERGY.max, sinceSpend: 99, weapon: "sword-driftwood", prev: null, owned: [...STARTER_WEAPONS],
       durability: Object.fromEntries(Object.values(WEAPONS).map(w => [w.id, w.maxDurability])),
       hits: {},
       attackCd: 0, swing: 0, dodgeAge: null, dodgeCd: 0, dodgeDir: { x: 0, z: 1 }, knock: 0,
@@ -106,11 +106,23 @@ export function createRuntime(): CombatRuntime {
   };
 }
 
-/** The member's weapons from /api/combat/progression: every owned one with a look joins the swap cycle, with its durability. */
-export function setOwnedWeapons(rt: CombatRuntime, owned: { weapon_key: string; durability: number }[]) {
+/**
+ * The member's weapons from /api/combat/progression: every owned one with a look joins the swap cycle (and the tool
+ * wheel), with its durability; the one equipped in the database is the default in hand (specs/game-ui.md §3).
+ */
+export function setOwnedWeapons(rt: CombatRuntime, owned: { weapon_key: string; durability: number; equipped?: boolean }[]) {
   const usable = owned.filter(w => WEAPONS[w.weapon_key]);
   for (const w of usable) rt.player.durability[w.weapon_key] = w.durability;
   rt.player.owned = [...new Set([...STARTER_WEAPONS, ...usable.map(w => w.weapon_key)])];
+  const equipped = usable.find(w => w.equipped)?.weapon_key;
+  if (equipped) rt.player.weapon = equipped;
+}
+/** Take a weapon in hand (the tool wheel, R): the one held before becomes `prev`. False when it's unknown, not yours or already in hand. */
+export function setWeapon(rt: CombatRuntime, key: string): boolean {
+  const p = rt.player;
+  if (!WEAPONS[key] || !p.owned.includes(key) || key === p.weapon) return false;
+  p.prev = p.weapon; p.weapon = key; p.attackCd = Math.max(p.attackCd, 0.2);
+  return true;
 }
 
 // ── HUD subscription ────────────────────────────────────────────

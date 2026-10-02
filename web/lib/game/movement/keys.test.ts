@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_MOVE_KEYS, crouchKey, moveDefaults, readMoveKeys, remapMove } from "./keys";
+import { DEFAULT_ABILITY_KEYS, DEFAULT_MOVE_KEYS, abilityPreset, crouchKey, moveDefaults, presetAbilities, readAbilityKeys, readMoveKeys, readWheelKeys, remapMove, remapWheel } from "./keys";
 
 const saved = new Map<string, string>();
 beforeEach(() => { saved.clear(); vi.stubGlobal("localStorage", { getItem: (k: string) => saved.get(k) ?? null, setItem: (k: string, v: string) => { saved.set(k, v); } }); });
@@ -40,5 +40,26 @@ describe("movement keys", () => {
     expect(crouchKey(ctrl, false, true)).toBe("control");
     expect(crouchKey({ ...ctrl, dash: "c" }, false, false)).toBe("");
     expect(crouchKey(other, false, false)).toBe("c");
+  });
+  it("holds the tool wheel on Tab (row 279): remappable, and Tab stays the wheel's alone", () => {
+    expect(readWheelKeys()).toEqual({ wheel: "tab" });
+    expect(remapMove(DEFAULT_MOVE_KEYS, "sprint", "Tab")).toMatchObject({ ok: false });
+    expect(remapWheel({ wheel: "tab" }, "wheel", "y")).toMatchObject({ ok: true, keys: { wheel: "y" } });
+    expect(readWheelKeys().wheel).toBe("y");
+    expect(remapMove(DEFAULT_MOVE_KEYS, "sprint", "y")).toMatchObject({ ok: false }); // the wheel has it now
+    expect(remapWheel({ wheel: "y" }, "wheel", "Tab")).toMatchObject({ ok: true, keys: { wheel: "tab" } });
+    for (const key of ["w", "1", "e", "b"]) expect(remapWheel({ wheel: "tab" }, "wheel", key)).toMatchObject({ ok: false });
+  });
+  it("puts the ability slots on Z X C V as a preset, where C isn't the crouch", () => {
+    expect(abilityPreset(readAbilityKeys())).toBe("numbers");
+    // Outside macOS C crouches by default: the preset is refused until crouch moves.
+    const other = moveDefaults(false);
+    saved.set("tsi.moveKeys.v1", JSON.stringify(other));
+    expect(presetAbilities(DEFAULT_ABILITY_KEYS, "zxcv")).toMatchObject({ ok: false });
+    expect(remapMove(other, "crouch", "t")).toMatchObject({ ok: true });
+    expect(presetAbilities(DEFAULT_ABILITY_KEYS, "zxcv")).toMatchObject({ ok: true, keys: { slot1: "z", slot2: "x", slot3: "c", slot4: "v", swap: "r" } });
+    expect(abilityPreset(readAbilityKeys())).toBe("zxcv");
+    expect(presetAbilities(readAbilityKeys(), "numbers")).toMatchObject({ ok: true, keys: { slot1: "1", slot4: "4" } });
+    expect(abilityPreset({ ...DEFAULT_ABILITY_KEYS, slot2: "y" })).toBeNull();
   });
 });
