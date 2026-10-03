@@ -26,7 +26,12 @@ export const INTERIOR_KIT_URL = "/assets/game/interiors/kit.glb";
 /** World units one repeat of the outside covers (build_interiors.py VIEW_TILE): y 0 to 6 bottom to top. */
 const VIEW_TILE = 6;
 /** How far behind the glass the outside seems to be: it slides past the window frames as you walk. */
-const VIEW_DEPTH = 2.6;
+const VIEW_DEPTH = 1.6;
+/**
+ * The game camera looks down into the room, so a true parallax would show every window only the lawn under it. The
+ * view keeps a person's eye line instead: it slides sideways as you pass, and up and down only a touch.
+ */
+const VIEW_LIFT = 0.12;
 
 // ── The outside, as the windows see it ────────────────────────────────────────────────────────────────────────────
 const ca = new THREE.Color(), cb = new THREE.Color();
@@ -60,20 +65,20 @@ class OutsideView {
     this.key = key;
     const g = this.canvas.getContext("2d")!, S = 512, Y = (y: number) => S - (y / VIEW_TILE) * S;
     const horizon = mixHex(light.sky, light.fogColor, 0.35), top = light.skyTop ?? light.sky;
-    const sky = g.createLinearGradient(0, Y(6), 0, Y(1.6));
+    const sky = g.createLinearGradient(0, Y(5), 0, Y(1.3));
     sky.addColorStop(0, top); sky.addColorStop(0.75, mixHex(top, horizon, 0.7)); sky.addColorStop(1, horizon);
     g.fillStyle = sky; g.fillRect(0, 0, S, S);
     // The low sun's glow along the horizon at dawn and dusk.
     const glow = Math.max(0, 1 - Math.abs(day - 0.5) * 2.2);
     if (glow > 0.02) {
-      const sun = g.createLinearGradient(0, Y(3.6), 0, Y(1.7));
+      const sun = g.createLinearGradient(0, Y(3.2), 0, Y(1.4));
       sun.addColorStop(0, "rgba(0,0,0,0)"); sun.addColorStop(1, mixHex(light.sun, "#ffd9a8", 0.4));
-      g.globalAlpha = 0.55 * glow; g.fillStyle = sun; g.fillRect(0, Y(3.6), S, Y(1.7) - Y(3.6)); g.globalAlpha = 1;
+      g.globalAlpha = 0.55 * glow; g.fillStyle = sun; g.fillRect(0, Y(3.2), S, Y(1.4) - Y(3.2)); g.globalAlpha = 1;
     }
     if (day < 0.5) {             // stars
       g.fillStyle = "#fff6dc";
       for (let i = 0; i < 70; i++) {
-        const x = (i * 197.3) % S, y = Y(2.6 + ((i * 0.618) % 1) * 3.3);
+        const x = (i * 197.3) % S, y = Y(2.3 + ((i * 0.618) % 1) * 3.6);
         g.globalAlpha = (1 - day * 2) * (0.35 + ((i * 7) % 5) / 8);
         g.fillRect(x, y, i % 9 === 0 ? 2 : 1, i % 9 === 0 ? 2 : 1);
       }
@@ -85,24 +90,24 @@ class OutsideView {
     const hedge = shade(snowCover > 0.5 ? "#b8c4c8" : "#557a4c", night * 0.95), ground = shade(mixHex(lawn, light.fogColor, 0.15), night);
     g.filter = "blur(3px)";
     g.fillStyle = far;
-    for (let i = 0; i < 14; i++) { const x = (i * 41 + (i % 3) * 13) % (S + 40) - 20, r = 26 + ((i * 29) % 30); g.beginPath(); g.arc(x, Y(2.2 + ((i * 0.37) % 1) * 0.9), r, 0, Math.PI * 2); g.fill(); }
-    g.fillRect(0, Y(2.3), S, Y(1.3) - Y(2.3));
+    for (let i = 0; i < 14; i++) { const x = (i * 41 + (i % 3) * 13) % (S + 40) - 20, r = 20 + ((i * 29) % 24); g.beginPath(); g.arc(x, Y(1.75 + ((i * 0.37) % 1) * 0.55), r, 0, Math.PI * 2); g.fill(); }
+    g.fillRect(0, Y(1.85), S, Y(1.1) - Y(1.85));
     // Two far roofs between the trees.
     g.fillStyle = shade(mixHex("#a46a52", light.fogColor, 0.5), night);
-    for (const x of [96, 352]) { g.beginPath(); g.moveTo(x - 34, Y(2.25)); g.lineTo(x, Y(2.75)); g.lineTo(x + 34, Y(2.25)); g.fill(); }
+    for (const x of [96, 352]) { g.beginPath(); g.moveTo(x - 30, Y(1.85)); g.lineTo(x, Y(2.25)); g.lineTo(x + 30, Y(1.85)); g.fill(); }
     g.fillStyle = shade(mixHex("#efe6d3", light.fogColor, 0.5), night);
-    for (const x of [96, 352]) g.fillRect(x - 26, Y(2.25), 52, Y(1.8) - Y(2.25));
+    for (const x of [96, 352]) g.fillRect(x - 23, Y(1.85), 46, Y(1.45) - Y(1.85));
     g.filter = "blur(1.5px)";
     g.fillStyle = hedge;
-    for (let i = 0; i < 22; i++) { const x = (i * 24.3) % S, r = 16 + ((i * 13) % 12); g.beginPath(); g.arc(x, Y(1.45 + ((i * 0.53) % 1) * 0.25), r, 0, Math.PI * 2); g.fill(); }
-    g.fillRect(0, Y(1.4), S, Y(0.95) - Y(1.4));
+    for (let i = 0; i < 22; i++) { const x = (i * 24.3) % S, r = 14 + ((i * 13) % 10); g.beginPath(); g.arc(x, Y(1.22 + ((i * 0.53) % 1) * 0.18), r, 0, Math.PI * 2); g.fill(); }
+    g.fillRect(0, Y(1.2), S, Y(0.85) - Y(1.2));
     g.filter = "none";
-    const lawnFill = g.createLinearGradient(0, Y(1.0), 0, S);
+    const lawnFill = g.createLinearGradient(0, Y(0.9), 0, S);
     lawnFill.addColorStop(0, shade(ground, 0.92)); lawnFill.addColorStop(1, ground);
-    g.fillStyle = lawnFill; g.fillRect(0, Y(1.0), S, S - Y(1.0));
+    g.fillStyle = lawnFill; g.fillRect(0, Y(0.9), S, S - Y(0.9));
     if (day < 0.6) {             // lit windows in the far houses and a lamp or two
       g.fillStyle = "#ffcf7a";
-      for (const [x, y] of [[88, 2.0], [104, 2.0], [344, 1.98], [360, 2.04], [212, 1.7], [470, 1.75]] as const) {
+      for (const [x, y] of [[88, 1.68], [104, 1.68], [344, 1.66], [360, 1.7], [212, 1.4], [470, 1.45]] as const) {
         g.globalAlpha = 1 - day / 0.6; g.shadowColor = "#ffb84d"; g.shadowBlur = 8;
         g.fillRect(x, Y(y), 5, 5);
       }
@@ -137,6 +142,7 @@ function windowViewMaterial(): THREE.MeshBasicMaterial {
     vec3 n = normalize(vPaneNormal);
     float facing = max(abs(dot(rd, n)), 0.12);
     vec3 hit = vPaneWorld + rd * (${VIEW_DEPTH.toFixed(2)} / facing);
+    hit.y = vPaneWorld.y + (hit.y - vPaneWorld.y) * ${VIEW_LIFT.toFixed(2)};
     vec2 uvView = (abs(n.x) > abs(n.z) ? vec2(hit.z, hit.y) : vec2(hit.x, hit.y)) / ${VIEW_TILE.toFixed(1)};
     vec4 sampledDiffuseColor = texture2D(map, uvView);
     // A faint sheen of the glass itself, stronger as you look along it.
