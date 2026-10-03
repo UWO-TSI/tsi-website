@@ -11,6 +11,8 @@
 import type { Family } from "@/lib/oracle/engine";
 import type { Ability, Effect, Passive } from "./kits";
 import { DEMO_KIT } from "./demoKit";
+import { WARDEN_KITS } from "./wardenKits";
+import { fieldMods, scaleField } from "./wardenData";
 
 export type Role = "tank" | "healer" | "damage" | "support";
 /** Future co-op threat per role (§1.12): a tank's hits draw 2.5×. Kit data now so groups need no rewrite. */
@@ -62,6 +64,10 @@ export interface ClassAbility extends Ability {
   scale?: { by: "speed"; max: number };
   /** Support radius for heals, shields and buffs: solo only the caster; allies inside it in a future group. */
   allies?: number;
+  /** The beast this key calls must be tamed first (the Summoner's ritual, lib/game/combat/beasts.ts); locked until then. */
+  tame?: string;
+  /** Its icon (the HUD slot, the Path sheet). */
+  icon?: string;
 }
 
 export interface ClassUlt extends ClassAbility {
@@ -94,17 +100,19 @@ export interface ClassKit {
   ult: ClassUlt;
   /** The class's own mastery track (build overrides): at a level, an ability key, "ult" or "passive" gets `change`. */
   ranks?: { at: number; target: string; change: AbilityUpgrade }[];
-  look: { ramp: [core: string, mid: string, edge: string]; mote: string; drift: "orbit" | "rise" | "fall"; icon: string };
+  look: { ramp: [core: string, mid: string, edge: string]; mote: string; drift: "orbit" | "rise" | "fall"; icon: string; /** The passive's icon. */ passive?: string };
   mods?: { max_hp?: number; speed?: number; capacity?: number };
   /** Dev-only (the `?combat=demo` kit): never offered to members. */
   dev?: true;
+  /** Its basic attack's hits heal you this share of your max HP (× healing power): the Priest's Lightbolt. */
+  basicHeal?: number;
 }
 
 export const COMBO_WINDOW = 0.4;
 export const MAX_KEYS = 5;
 
 /** Every v2 kit. Family waves append theirs. */
-export const CLASS_KITS: ClassKit[] = [DEMO_KIT];
+export const CLASS_KITS: ClassKit[] = [DEMO_KIT, ...WARDEN_KITS];
 /** Display names that changed with the class designs (the key stays; David 2026-10-02: Monk → Martial Artist). */
 export const CLASS_RENAMES: Record<string, string> = { monk: "Martial Artist" };
 export const classKit = (key: string | null | undefined) => CLASS_KITS.find(k => k.key === key) ?? null;
@@ -126,7 +134,7 @@ function scaleEffect(e: Effect, c: AbilityUpgrade): Effect {
     case "heal": return { ...e, amount: e.amount * p };
     case "buff": return { ...e, value: e.value * p, duration: e.duration * d };
     case "transform": return { ...e, duration: e.duration * d };
-    default: return e;
+    default: return scaleField(e, c, x => scaleEffect(x, c));
   }
 }
 /** An ability with one upgrade applied. */
@@ -184,7 +192,7 @@ export function withMods<A extends ClassAbility>(a: A, m: ClassMods): A {
       case "transform": return { ...e, duration: e.duration * m.duration };
       case "shield": return { ...e, amount: e.amount * m.healing, duration: e.duration * m.duration };
       case "heal": return { ...e, amount: e.amount * m.healing };
-      default: return e;
+      default: return fieldMods(e, m, fx);
     }
   };
   return { ...a, cooldown_s: a.cooldown_s * m.cooldown, effects: a.effects.map(fx), ...(a.release ? { release: a.release.map(fx) } : {}) };

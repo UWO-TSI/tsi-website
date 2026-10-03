@@ -11,7 +11,10 @@ import type { Passive } from "@/lib/combat/kits";
 import { derived } from "@/lib/combat/progression";
 import { ultBlock, ULT } from "@/lib/combat/ult";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
-import { CAST, context, floater, fx, runEffects, spend } from "./abilities";
+import { CAST, context, floater, fx, runEffects, shapePotency, spend } from "./abilities";
+import type { IncantationScore } from "./contract";
+import { stepField } from "./field";
+import { gardenWarp } from "./beasts";
 import { BUFFER, faceAim } from "./actions";
 import { chargePotency, createInputState, press, release, tick, type InputKit, type InputState, type Intent } from "./input";
 import { addKick, MOVE_NEEDS, moveOk, speedBonus } from "./moveHooks";
@@ -40,8 +43,8 @@ export interface ClassState {
   /** Seconds a recast key's second press stays open. */
   recast: number[];
   meter: number;
-  /** The ult under way: seconds since the press (real time), where it aims, its seed, whether its hits landed (and a first-last ult's finisher). */
-  cast: { t: number; aim: Vec; seed: number; fired: boolean; last?: boolean } | null;
+  /** The ult under way: seconds since the press (real time), where it aims, its seed, whether its hits landed (and a first-last ult's finisher); a drawn ult's potency. */
+  cast: { t: number; aim: Vec; seed: number; fired: boolean; last?: boolean; potency?: number } | null;
   moveCd: number;
   combatT: number;
   /** The input layer's clock (real seconds). */
@@ -103,6 +106,11 @@ function run(rt: CombatRuntime, q: Queued, me: Vec, random: () => number): "done
       const why = ultBlock({ meter: v.meter, alive: p.alive, safe: p.safe, drawing: !!rt.casting, signature: holdsSignature(v.kit, weaponType(rt)), active: !!v.cast });
       if (why === "charging") return "wait";
       if (why) { if (why === "weapon") floater(rt, me, 1.9, signatureHint(v.kit), "info"); return deny(null); }
+      // A drawn ult (the Priest's winged sigil): the shape first; the meter empties only on a good release (§1.1).
+      if (v.ult.input?.kind === "drawn") {
+        rt.casting = { id: rt.seq++, rune: v.ult.input.shape, aim: { ...p.aim }, slot: -1, ability: v.ult, free: true, ult: true };
+        return "done";
+      }
       startUlt(rt, me);
       return "done";
     }
@@ -191,18 +199,35 @@ export function classKey(rt: CombatRuntime, slot: number, down: boolean) {
 export const pressUlt = (rt: CombatRuntime) => { rt.v2?.queue.push({ intent: { kind: "ult" }, left: ULT.buffer }); };
 
 /** The ult's press: the meter drains, the caster is untouchable through the freeze, the wind-up plays; its hits land at the anticipation's end. */
-function startUlt(rt: CombatRuntime, me: Vec) {
+function startUlt(rt: CombatRuntime, me: Vec, potency = 1) {
   const v = rt.v2!, p = rt.player, A = v.ult.anticipation_ms / 1000;
   v.meter = 0;
-  v.cast = { t: 0, aim: { ...p.aim }, seed: (rt.seq++ * 2246822519) >>> 0, fired: false };
+  v.cast = { t: 0, aim: { ...p.aim }, seed: (rt.seq++ * 2246822519) >>> 0, fired: false, potency };
   p.ultIframes = A + ULT_BEATS.freeze + ULT_BEATS.iframesAfter;
   faceAim(p, me);
   if (v.ult.clip && "verb" in v.ult.clip) p.clip = { verb: v.ult.clip.verb, scale: v.ult.clip.scale ?? 1, upper: false };
   fx(rt, v.ult.vfx?.cast, "cast", me, p.aim, "ult");
 }
 
-/** The movement passive (ruins only): an air jump, a slide, a dash or a landing the avatar reports. */
+/**
+ * A drawn ult's release (abilities.ts resolveCast and cancelCast): a good shape starts it at the shape's potency
+ * (60–150%); a fizzle or a cancel keeps 75% of the meter (design sheet §1.1).
+ */
+export function ultDrawn(rt: CombatRuntime, me: Vec, score: IncantationScore | null) {
+  const v = rt.v2;
+  if (!v) return;
+  if (score && score.outcome !== "fail") {
+    startUlt(rt, me, shapePotency(score.accuracy));
+    floater(rt, me, 1.9, `${score.outcome === "enhanced" ? "Empowered" : "Cast"} · ${v.ult.name} · ${Math.round(score.accuracy)}%`, "info");
+  } else {
+    v.meter = ULT.max * 0.75;
+    floater(rt, me, 1.9, score ? `Fizzled · ${Math.round(score.accuracy)}% · the meter keeps 75%` : "The meter keeps 75%", "info");
+  }
+}
+
+/** The movement passive (ruins only): an air jump, a slide, a dash or a landing the avatar reports. Inside Shadow Garden your dash is a warp. */
 export function classMove(rt: CombatRuntime, me: Vec, on: MovementPassive["on"], random = Math.random): boolean {
+  if (on === "dash" && gardenWarp(rt, me, random)) return true;
   const v = rt.v2, p = rt.player, m = v?.kit.movement;
   if (!v || !m || m.on !== on || !p.alive || v.moveCd > 0 || p.energy < m.energy) return false;
   spend(rt, m.energy);
@@ -248,7 +273,8 @@ export function stepClass(rt: CombatRuntime, me: Vec, dt: number, real: number, 
     const A = v.ult.anticipation_ms / 1000;
     if (!v.cast.fired && v.cast.t >= A && p.alive) {
       v.cast.fired = true;
-      const ctx = context(rt, v.ult, me, 1, v.cast.aim);
+      const ctx = context(rt, v.ult, me, v.cast.potency ?? 1, v.cast.aim);
+      if (v.cast.potency !== undefined) ctx.sup = v.cast.potency; // a drawn ult heals at its shape's potency too
       ctx.impact = "ult"; ctx.ult = true; ctx.fx = v.ult.vfx;
       runEffects(rt, v.ult.effects, ctx, random);
     }
@@ -256,7 +282,7 @@ export function stepClass(rt: CombatRuntime, me: Vec, dt: number, real: number, 
     if (span > 0 && !v.cast.last && v.cast.t >= A + span && p.alive) { // the finisher: its hits, and the sequence plays again (ultView)
       v.cast.last = true;
       p.ultIframes = ULT_BEATS.freeze + ULT_BEATS.iframesAfter; // nothing lands unseen in this freeze either
-      const ctx = context(rt, v.ult, me, 1, p.aim);
+      const ctx = context(rt, v.ult, me, v.cast.potency ?? 1, p.aim);
       ctx.impact = "ult"; ctx.ult = true; ctx.fx = v.ult.vfx;
       runEffects(rt, v.ult.release ?? v.ult.effects, ctx, random);
     }
@@ -265,4 +291,6 @@ export function stepClass(rt: CombatRuntime, me: Vec, dt: number, real: number, 
   // In combat (§1.3): something hunting or hitting you, a wave running or the boss engaged, and for 5 s after.
   const threat = rt.wave?.active || rt.bossEngaged || rt.enemies.some(e => THREAT.has(e.state) && e.status.distract <= 0 && Math.hypot(e.x - me.x, e.z - me.z) < e.type.aggroRadius + 4);
   v.combatT = threat ? IN_COMBAT : Math.max(0, v.combatT - dt);
+  // What stays after a cast (zones, walls, channels, thrown units, tethers), the totems and the beasts: field.ts.
+  stepField(rt, me, dt, random);
 }

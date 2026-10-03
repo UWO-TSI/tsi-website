@@ -17,6 +17,7 @@
 import type { Family } from "@/lib/oracle/engine";
 import type { Stat } from "./progression";
 import type { WeaponType } from "./weapons";
+import { WARDEN_UNITS, type FieldEffect } from "./wardenData";
 
 export type Element = "fire" | "frost" | "lightning";
 /** Enemy statuses: hold (seconds, rooted and not acting), slow [fraction, seconds], mark [+damage taken, seconds], distract (seconds, wanders off). */
@@ -40,7 +41,9 @@ export type Effect =
   | { kind: "transform"; duration: number }
   /** Classes v2 movement hooks (design sheet §1.1): carried speed added along the aim (≤ 4 u/s a cast, never past the 18 u/s ceiling), and a small hop. */
   | { kind: "momentum"; speed: number }
-  | { kind: "launch"; height: number };
+  | { kind: "launch"; height: number }
+  /** Classes v2 field primitives (wardenData.ts, lib/game/combat/field.ts): zones, pulls, thrown units, channels, walls, roots, tethers, fades, totem bursts, risings. */
+  | FieldEffect;
 
 export interface Ability {
   key: string;
@@ -63,7 +66,13 @@ export interface Ability {
 
 export type PassiveKind =
   | "element_switch" | "distracted" | "kill_heal" | "transform_shield" | "still" | "same_target" | "distance" | "crit_cdr"
-  | "block_shield" | "momentum" | "poise" | "lifesteal" | "pack_bond" | "resonance" | "overheal_shield";
+  | "block_shield" | "momentum" | "poise" | "lifesteal" | "pack_bond" | "resonance" | "overheal_shield"
+  /**
+   * Classes v2 (the Warden kits, lib/game/combat/field.ts): a fallen beast's strength passes to the others, `value` each
+   * (Shadow Bond); each link a totem holds adds `value` to its damage (Resonance); regen `value` of max HP a second,
+   * doubled in your own growth (Overgrowth); regen `value` a second and healing past full becomes a shield (Blessed).
+   */
+  | "shadow_bond" | "links" | "overgrowth" | "blessed";
 export interface Passive {
   name: string;
   description: string;
@@ -299,6 +308,10 @@ export interface UnitDef {
   radius?: number; model?: string;
   /** Totems: what a pulse does each second, per role. */
   pulse?: { damage?: number; heal?: number; slow?: number; shield?: number };
+  /** Classes v2: its kit's module moves and fights it (the Warden's totems and spirits, lib/game/combat/totems.ts); the shared AI only ages it. */
+  driven?: boolean;
+  /** Classes v2: a totem outside the three-totem cap (the Shaman's spirit post). */
+  uncapped?: boolean;
 }
 export const UNITS: Record<string, UnitDef> = {
   wisp: { key: "wisp", name: "Spirit wisp", kind: "minion", hp: 40, cost: 1, speed: 5, range: 6, power: 0.38, rate: 0.9, ranged: true },
@@ -312,6 +325,7 @@ export const UNITS: Record<string, UnitDef> = {
   "totem-warding": { key: "totem-warding", name: "Warding totem", kind: "totem", hp: 90, radius: 3.4, pulse: { slow: 0.35, shield: 0.015 } },
   tripwire: { key: "tripwire", name: "Tripwire", kind: "trap", hp: 1, life: 25, radius: 1.2, power: 0.8 },
   decoy: { key: "decoy", name: "Phantom", kind: "decoy", hp: 50, life: 3, taunt: true },
+  ...WARDEN_UNITS,
 };
 /** Caps (row 50): minions share the capacity stat; one totem per role and three at most; two traps; one decoy; two weapon wisps. */
 export const CAPS = { totems: 3, traps: 2, decoys: 1, weaponWisps: 2 } as const;

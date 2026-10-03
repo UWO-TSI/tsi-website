@@ -10,6 +10,7 @@ import { hurtPlayer, regenEnergy, resolvePlayerShot, summonWisps } from "./actio
 import { SLOT_IDS, type AbilityId, type CombatRuntime } from "./runtime";
 import { beamLands, DODGE, separate, stepEnemy, strikeLands, sweptHit, type Vec } from "./sim";
 import { landLob, mobEvent, mobFx, rally, RUNE_BOLT_SPEED, stepHazards } from "./mobs";
+import { walled, wallStops } from "./field";
 
 const ABILITY_IDS: readonly AbilityId[] = [...SLOT_IDS, "swap"];
 
@@ -17,8 +18,9 @@ const ABILITY_IDS: readonly AbilityId[] = [...SLOT_IDS, "swap"];
 const KNOCK_SPEED = 3;
 /** Scratch the tick reuses every frame (combat polish 12: nothing allocated per frame in a fight). */
 const YOU = { x: 0, z: 0, safe: false, alive: true }, FROM = { x: 0, z: 0 }, TO = { x: 0, z: 0 };
-let freeFor: (x: number, z: number, r: number) => boolean = () => true, bodyR = 0;
-const freeBody = (x: number, z: number) => freeFor(x, z, bodyR);
+let freeFor: (x: number, z: number, r: number) => boolean = () => true, bodyR = 0, wallRt: CombatRuntime | null = null;
+/** An enemy's body may step there: the ground's free, and no thorn wall (field.ts) in the way. */
+const freeBody = (x: number, z: number) => freeFor(x, z, bodyR) && !walled(wallRt!, x, z, bodyR);
 
 export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: number, z: number, r: number) => boolean = () => true, random: () => number = Math.random) {
   const p = rt.player;
@@ -51,7 +53,7 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
   // Enemies.
   const you = YOU, list = rt.enemies;
   you.x = me.x; you.z = me.z; you.safe = p.safe; you.alive = p.alive; // a boss reset or summon makes a new list: this frame keeps the old
-  freeFor = free;
+  freeFor = free; wallRt = rt;
   for (let i = 0; i < list.length; i++) {
     const e = list[i], was = e.state;
     bodyR = e.type.radius * 0.6;
@@ -92,7 +94,8 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
     let gone = sh.life <= 0 || !free(sh.x, sh.z, 0.05);
     if (!gone && sh.from === "player") gone = resolvePlayerShot(rt, i, from, to, random);
     else if (!gone && sh.from === "enemy") {
-      if (sweptHit(from, to, me, 0.35 + sh.radius)) { hurtPlayer(rt, sh.damage, from, me, sh.knock, random); gone = true; }
+      if (wallStops(rt, from, to)) gone = true; // a thorn wall stops it
+      else if (sweptHit(from, to, me, 0.35 + sh.radius)) { hurtPlayer(rt, sh.damage, from, me, sh.knock, random); gone = true; }
       else {
         const unit = rt.units.find(u => u.def.kind !== "trap" && sweptHit(from, to, u, 0.4 + sh.radius));
         if (unit) { hurtUnits(rt, u => u === unit, sh.damage); gone = true; }

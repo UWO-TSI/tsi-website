@@ -19,6 +19,8 @@ import { SLOT_IDS, type Buff, type CombatRuntime, type CueKind, type FxEvent, ty
 import { addKick } from "./moveHooks";
 import { shellNote } from "./mobs";
 import { addCharge, dealtCharge, healedCharge } from "@/lib/combat/ult";
+import { runField } from "./field";
+import { ultDrawn } from "./classRuntime";
 
 /** Plan §Combat and incantation defaults: starting a drawing spends 25% of its energy, a fizzle or cancel costs a short recovery instead of the cooldown. */
 export const CAST = { start: 0.25, recovery: 1.5 } as const;
@@ -149,7 +151,7 @@ function onPlayerHit(rt: CombatRuntime, e: Enemy, amount: number, crit: boolean,
 }
 
 function onKill(rt: CombatRuntime, e: Enemy) {
-  rt.killQueue.push({ enemy: e.type.id, key: `kill:${e.id}:${rt.seq++}:${Date.now().toString(36)}` });
+  if (!e.type.local) rt.killQueue.push({ enemy: e.type.id, key: `kill:${e.id}:${rt.seq++}:${Date.now().toString(36)}` }); // a ritual form is no server kill
   cue(rt, e.type.kind === "boss" ? "bossDefeat" : "defeat", e, false, e.type.elite ? "heavy" : undefined); // an elite kill lands heavy (§1.6)
   missionEvent(rt, { type: "kill", enemy: e.type.id });
   const pv = passiveOf(rt), me = rt.player.last;
@@ -175,7 +177,7 @@ export function heal(rt: CombatRuntime, amount: number): number {
   p.hp += gained;
   chargeUlt(rt, healedCharge(gained, p.maxHp)); // health actually restored (overheal charges nothing)
   const pv = passiveOf(rt);
-  if (pv?.kind === "overheal_shield" && amount > gained) addShield(rt, Math.min((amount - gained) * pv.value, p.maxHp * (pv.cap ?? 0.3) - p.shield), 6);
+  if ((pv?.kind === "overheal_shield" || pv?.kind === "blessed") && amount > gained) addShield(rt, Math.min((amount - gained) * pv.value, p.maxHp * (pv.cap ?? 0.3) - p.shield), 6);
   return gained;
 }
 export function addShield(rt: CombatRuntime, amount: number, duration: number) {
@@ -263,6 +265,7 @@ export function resolveCast(rt: CombatRuntime, me: Vec, score: IncantationScore,
   const c = rt.casting;
   if (!c) return;
   rt.casting = null;
+  if (c.ult) { ultDrawn(rt, me, score); return; } // a drawn ult (the Priest's): the class layer starts it, or keeps 75% of the meter
   const id = SLOT_IDS[c.slot], pct = Math.round(score.accuracy), v2 = rt.v2;
   const setCd = (s: number) => { if (v2) v2.cd[c.ability.key] = s; else rt.cooldowns[id] = s; };
   if (score.outcome === "fail") { setCd(CAST.recovery); floater(rt, me, 1.9, `Fizzled · ${pct}%`, "info"); return; }
@@ -273,12 +276,14 @@ export function resolveCast(rt: CombatRuntime, me: Vec, score: IncantationScore,
   p.attackCd = Math.max(p.attackCd, 0.25);
   // A v2 shape scales 0.6 (a rough sketch) to 1.5 (a clean one) (the Priest, David 2026-10-02); today's runes 0.5–1.5.
   const potency = v2 ? shapePotency(score.accuracy) : score.power, ctx = context(rt, c.ability, me, potency, c.aim);
+  if (v2) ctx.sup = potency; // a v2 shape scales its heals and shields the whole 60–150% (the Priest)
   if (v2) { const a = c.ability as Ability & { heavy?: boolean; vfx?: Ctx["fx"] }; ctx.impact = a.heavy ? "heavy" : "ability"; ctx.fx = a.vfx; fx(rt, a.vfx?.cast, "cast", me, c.aim, ctx.impact); }
   runEffects(rt, c.ability.effects, ctx, random);
 }
 /** Dodge or Escape while drawing: the start cost is gone, the slot recovers briefly (row C3). */
 export function cancelCast(rt: CombatRuntime) {
   if (!rt.casting) return;
+  if (rt.casting.ult) { ultDrawn(rt, rt.player.last ?? { x: 0, z: 0 }, null); rt.casting = null; return; } // a drawn ult cancelled keeps 75% of the meter
   if (rt.v2) rt.v2.cd[rt.casting.ability.key] = CAST.recovery; else rt.cooldowns[SLOT_IDS[rt.casting.slot]] = CAST.recovery;
   rt.casting = null;
 }
@@ -347,6 +352,8 @@ export function runEffects(rt: CombatRuntime, effects: Effect[], ctx: Ctx, rando
       // Movement hooks (classes v2): carried speed along the aim, a hop; the avatar applies them on its next step.
       case "momentum": p.kick = addKick(p.kick, ctx.dir.x, ctx.dir.z, ef.speed, 0); break;
       case "launch": p.kick = addKick(p.kick, 0, 0, 0, ef.height); break;
+      // Classes v2 field primitives (zones, pulls, thrown units, channels, walls, roots, tethers, fades, totems, risings): field.ts.
+      default: runField(rt, ef, ctx, random);
     }
   }
 }
@@ -360,7 +367,7 @@ function enforceCaps(rt: CombatRuntime, added: Unit) {
     while (list.length > max) { const old = list[0]; rt.units = rt.units.filter(u => u !== old); list = list.slice(1); }
   };
   const k = added.def.kind;
-  if (k === "totem") { rt.units = rt.units.filter(u => u === added || u.def.key !== added.def.key); drop(u => u.def.kind === "totem", CAPS.totems); }
+  if (k === "totem") { rt.units = rt.units.filter(u => u === added || u.def.key !== added.def.key); drop(u => u.def.kind === "totem" && !u.def.uncapped, CAPS.totems); }
   else if (k === "trap") drop(u => u.def.kind === "trap", CAPS.traps);
   else if (k === "decoy") drop(u => u.def.kind === "decoy", CAPS.decoys);
   else if (added.source === "weapon") drop(u => u.source === "weapon", CAPS.weaponWisps);
@@ -416,6 +423,7 @@ export function stepUnits(rt: CombatRuntime, me: Vec, dt: number, random: () => 
     if ((u.life !== null && u.life <= 0) || u.hp <= 0) { rt.units = rt.units.filter(x => x !== u); continue; }
     u.cd -= dt;
     const d = u.def;
+    if (d.driven) continue; // its kit's module moves and fights it (totems.ts)
     if (d.kind === "totem") {
       if (u.cd > 0) continue;
       u.cd = 1;

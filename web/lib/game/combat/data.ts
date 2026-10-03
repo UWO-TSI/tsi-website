@@ -6,7 +6,9 @@
  * so modelScale 1.3 = CHARACTER_SCALE keeps them in proportion to the player.
  */
 import { islandEnemies, islandMissions, islandWeapons } from "@/lib/combat/islandAdapter";
+import { WARDEN_WEAPONS } from "@/lib/combat/wardenData";
 import type { EnemyAttack, EnemyType, MissionDef, Weapon } from "./contract";
+import { WARDEN_BODIES } from "./wardenBodies";
 
 const W = "/assets/game/weapons/", E = "/assets/game/enemies/";
 
@@ -35,6 +37,15 @@ const WEAPON_LOOK: Record<string, Look> = {
   "tome-warden": { cooldown: 5, range: 8, arc: 0, model: `${W}tome-spirits.glb`, modelScale: 1.5 },
   "staff-heartstone": { cooldown: 0.6, range: 11, arc: 0, speed: 15, model: `${W}staff-rune.glb`, modelScale: 1.6 },
 };
+// Classes v2, the Warden wave's signature weapons (art/props-enemies/build_warden.py, a model per tier): the seal gloves'
+// shadow lash reaches 2.6 u in a narrow arc; the three staffs throw their bolts (the spirit bolt, thorn seeds, the Lightbolt).
+const WARDEN_LOOK: Record<string, Omit<Look, "model">> = {
+  "seal-gloves": { cooldown: 0.55, range: 2.6, arc: 1.3, modelScale: 1.3 },
+  "totem-staff": { cooldown: 0.5, range: 9, arc: 0, speed: 16, modelScale: 1.3 },
+  "living-staff": { cooldown: 0.55, range: 8, arc: 0, speed: 15, modelScale: 1.3 },
+  "sunstone-staff": { cooldown: 0.55, range: 9, arc: 0, speed: 17, modelScale: 1.3 },
+};
+for (const w of WARDEN_WEAPONS) WEAPON_LOOK[w.key] = { ...WARDEN_LOOK[w.type], model: `${W}${w.key}.glb` };
 export const WEAPONS: Record<string, Weapon> = Object.fromEntries(islandWeapons()
   .filter(w => WEAPON_LOOK[w.id])
   .map(w => [w.id, { ...w, ...WEAPON_LOOK[w.id] }]));
@@ -84,7 +95,7 @@ const ENEMY_LOOK: Record<string, EnemyLook> = {
   ], "guardian-statue"),
 };
 
-export const ENEMIES: Record<string, EnemyType> = Object.fromEntries(islandEnemies().filter(e => ENEMY_LOOK[e.id]).map(e => {
+export const ENEMIES: Record<string, EnemyType> = { ...WARDEN_BODIES, ...Object.fromEntries(islandEnemies().filter(e => ENEMY_LOOK[e.id]).map(e => {
   const { attacks, ...l } = ENEMY_LOOK[e.id];
   const type: EnemyType = {
     id: e.id, name: e.name, kind: e.kind, level: e.level, hp: e.hp, defense: e.defense, armor: e.armor, xp: e.xp, elite: e.elite,
@@ -92,7 +103,7 @@ export const ENEMIES: Record<string, EnemyType> = Object.fromEntries(islandEnemi
     attacks: attacks.map(({ power = 1, range, ...m }) => ({ ...m, range: range ?? e.range, damage: Math.round(e.damage * power) })),
   };
   return [e.id, type];
-}));
+})) };
 
 /** Island wording for the board (systems titles, island blurbs). */
 const BLURB: Record<string, string> = {
