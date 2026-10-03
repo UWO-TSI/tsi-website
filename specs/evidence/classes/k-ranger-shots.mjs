@@ -207,7 +207,7 @@ if (wanted("ult")) for (const key of Object.keys(KITS)) {
 if (wanted("hud")) {
   const files = [], labels = [];
   for (const [key, label, setup] of [
-    ["marksman", "Marksman: Focus at 6.8/s, Swift on", l => { l.focus = 0.8; l.since = 0; l.idle = 0; }],
+    ["marksman", "Marksman: Focus at 6.7/s, Swift on", l => { l.focus = 0.8; l.since = 0; l.idle = 0; }],
     ["sniper", "Sniper: Killstreak 3, Scope held", l => { l.streak = 3; l.streakT = 6; }],
     ["hunter", "Hunter: traps 2/3, unseen", null],
     ["gunslinger", "Gunslinger: reloading, the gold span on the bar", l => { l.ammo = 0; l.reload = 0.5; l.reloadLen = 1.2; }],
