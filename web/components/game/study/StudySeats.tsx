@@ -22,6 +22,7 @@ import { FURNITURE, studyLayout, nearestSeat, seatAt, walkedAway, type SeatArea,
 import { STUDY_CLIP, getWorldStudy, poseOf, seatAvatar, setWorldStudy, sitDetail, useWorldStudy } from "@/lib/study/worldStore";
 import type { Mate } from "@/lib/study/service";
 import { formatClock, liveRemaining, useSecond } from "@/lib/study/useStudySession";
+import { useRemoteUids } from "../net/active";
 import s from "./study.module.css";
 
 const F = "/assets/acnh/furniture/", P = "/assets/acnh/props/";
@@ -73,8 +74,11 @@ function MateOverhead({ name, phase, remaining, asOf }: { name?: string; phase: 
   return <Overhead name={name} phase={phase} remaining={liveRemaining(remaining, asOf, now)} />;
 }
 
-/** Seat-mate (no multiplayer yet): the shared rig in their stored look, or a steady default per member, studying/stretching/sitting by phase. */
-export function MateFigure({ mate, seat, floor = 0, remaining = null, asOf = 0, overhead = true }: { mate: Mate; seat: WorldSeat; floor?: number; remaining?: number | null; asOf?: number; overhead?: boolean }) {
+/**
+ * Seat-mate: the shared rig in their stored look, or a steady default per member, studying/stretching/sitting by phase.
+ * `body` false: they're in your room as a live player already (multiplayer draws them), so only their timer shows here.
+ */
+export function MateFigure({ mate, seat, floor = 0, remaining = null, asOf = 0, overhead = true, body = true }: { mate: Mate; seat: WorldSeat; floor?: number; remaining?: number | null; asOf?: number; overhead?: boolean; body?: boolean }) {
   const stored = JSON.stringify(mate.look ?? null);
   const look = useMemo(() => (stored !== "null" ? parseLook(JSON.parse(stored)) : randomLook(seeded(hashSeed(mate.member_id)))), [stored, mate.member_id]);
   const clip = STUDY_CLIP[poseOf(mate.phase)];
@@ -82,7 +86,7 @@ export function MateFigure({ mate, seat, floor = 0, remaining = null, asOf = 0, 
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: seat.facing, lift, pose: clip, play: null });
   useEffect(() => { Object.assign(motion.current, { yaw: seat.facing, lift, pose: clip }); }, [seat.facing, lift, clip]);
   return <group position={[seat.x, floor, seat.z]}>
-    <Character look={look} motion={motion} />
+    {body && <Character look={look} motion={motion} />}
     {overhead && <Html calculatePosition={calculateCurvedHtmlPosition} position={[0, seat.y - floor + 1.25, 0]} center zIndexRange={[35, 0]} style={{ pointerEvents: "none" }}>
       <MateOverhead name={mate.name.split(" ")[0]} phase={mate.phase} remaining={remaining} asOf={asOf} />
     </Html>}
@@ -111,6 +115,8 @@ export default function StudySeats({ area, player, ground = flat, board }: {
   const tables = useWorldStudy(w => w.study?.tables);
   const asOf = useWorldStudy(w => w.study?.asOf ?? 0);
   const session = useWorldStudy(w => w.study?.session ?? null);
+  // Members in your room as live players (multiplayer): their avatar is theirs; the table keeps only their timer.
+  const inRoom = useRemoteUids();
   const placed = useRef<string | null>(null);
   // Walk-away only counts once the avatar has actually been in the seat.
   const arrived = useRef(false);
@@ -187,7 +193,7 @@ export default function StudySeats({ area, player, ground = flat, board }: {
         {v.mates.filter(m => !m.me).map(m => {
           const seat = seatAt(v.anchor, m.seat, ground);
           return seat && <Suspense key={m.member_id} fallback={null}>
-            <MateFigure mate={m} seat={seat} floor={ground(seat.x, seat.z)} remaining={m.remaining_s} asOf={asOf} />
+            <MateFigure mate={m} seat={seat} floor={ground(seat.x, seat.z)} remaining={m.remaining_s} asOf={asOf} body={!inRoom.has(m.member_id)} />
           </Suspense>;
         })}
         {v.is_private && !v.can_join && <Html position={[layout.at[0], ground(...layout.at) + 1.6, layout.at[1]]} center zIndexRange={[30, 0]} style={{ pointerEvents: "none" }}>

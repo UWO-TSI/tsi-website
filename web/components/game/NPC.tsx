@@ -26,6 +26,8 @@ import { fillName, pickConversation, talkFor, type Conversation } from "@/lib/co
 import type { FaceOverride } from "@/lib/game/character/face";
 import { useStepDust } from "./movement/moveFx";
 import type { NPCPersona } from "@/lib/content/types";
+import { useOthersIn } from "./net/active";
+import { residentsHome } from "./net/thinning";
 import s from "./residents.module.css";
 
 /**
@@ -149,7 +151,8 @@ function startRequested(list: readonly Runtime[], c: Clock, p: THREE.Vector3, no
  * The residents' frame, at module scope (the react compiler forbids writing through hook values): where each one is,
  * the chats, then each one's clip, facing, talk and overhead UI.
  */
-function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, phase: IslandPhase, ceremony: boolean, nav: NavGrid, island: VillageIsland, monument: { x: number; z: number } | null, away: string | null, playerName: string | null) {
+function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, phase: IslandPhase, ceremony: boolean, nav: NavGrid, island: VillageIsland, monument: { x: number; z: number } | null, away: string | null, playerName: string | null,
+  home: ReadonlySet<string>) {
   const now = worldNow() / 1000, days = liveSunDays();
   if (talkStore.request) startRequested(list, c, p, now, playerName, ceremony);
   // The club's ceremony calls everyone to the monument: a talk going on says goodbye.
@@ -168,13 +171,16 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
   for (const r of list) {
     const talking = r.id === talkingId;
     const pose = r.day.at(t - r.lag, days, r.pose), m = r.motion.current;
-    // Where to make for when off the routine: the ceremony spot, or the routine's door or seat step, or where it is.
-    const door = !ceremony && (pose.inside || pose.seat > 0) ? pose.stop?.door : null;
+    // Players filling the village send this flavour villager home (multiplayer §5.8): in through their own door, out
+    // again as it empties. A talk goes on first; the ceremony calls everyone out; already in by their routine, they stay.
+    const homeward = home.has(r.slug) && !talking && !ceremony && !(r.hidden && pose.inside);
+    // Where to make for when off the routine: the ceremony spot, home, or the routine's door or seat step, or where it is.
+    const door = homeward ? r.home : !ceremony && (pose.inside || pose.seat > 0) ? pose.stop?.door : null;
     const gx = ceremony ? r.gather[0] : door ? door[0] : pose.x, gz = ceremony ? r.gather[1] : door ? door[1] : pose.z;
-    if (!r.ready) { r.ready = true; r.x = pose.x; r.z = pose.z; r.hidden = pose.inside; m.yaw = pose.yaw; }
-    // Coming out of hiding somewhere else (a forced phase while indoors): out through their own door.
+    if (!r.ready) { r.ready = true; r.x = pose.x; r.z = pose.z; r.hidden = pose.inside; m.yaw = pose.yaw; if (homeward && r.home) { r.x = r.home[0]; r.z = r.home[1]; r.hidden = true; } }
+    // Coming out of hiding somewhere else (a forced phase while indoors, the village emptying): out through their own door.
     if (r.hidden && !pose.inside && dist(r.x, r.z, pose.x, pose.z) > 0.6 && r.home) { r.x = r.home[0]; r.z = r.home[1]; }
-    const onRoutine = !ceremony && !r.detour && dist(r.x, r.z, pose.x + r.ox, pose.z + r.oz) < 0.08 + (pose.speed + 1) * dt * 1.5;
+    const onRoutine = !homeward && !ceremony && !r.detour && dist(r.x, r.z, pose.x + r.ox, pose.z + r.oz) < 0.08 + (pose.speed + 1) * dt * 1.5;
     let speed = 0, yaw = pose.yaw, blocked = false;
     // Talking with you: they stand where they stopped (the routine and any walk of their own hold) until you part.
     if (talking) speed = 0;
@@ -202,9 +208,10 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
       }
       r.hidden = pose.inside;
     } else if (dist(r.x, r.z, gx, gz) < 0.03) {
-      // There (the ceremony spot, or a door or seat the routine is behind): step onto the routine.
+      // There (the ceremony spot, home, or a door or seat the routine is behind): in, or step onto the routine.
       r.detour = null;
-      if (!ceremony) { r.x = pose.x; r.z = pose.z; r.hidden = pose.inside; }
+      if (homeward) r.hidden = true;
+      else if (!ceremony) { r.x = pose.x; r.z = pose.z; r.hidden = pose.inside; }
     } else {
       // Off the routine: walk (a path round every solid) to where it is now, or to the ceremony.
       if (!r.detour || (dist(gx, gz, r.detourGoal[0], r.detourGoal[1]) > 1 && now - r.detourAt > 0.5)) {
@@ -217,8 +224,9 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
       r.hidden = false;
       if (!r.detour.length) {
         r.detour = null;
-        // Arrived where the routine is: step back onto it (at a door or a seat, straight into it).
-        if (!ceremony && dist(r.x, r.z, gx, gz) < 0.05) { r.x = pose.x; r.z = pose.z; r.hidden = pose.inside; }
+        // Arrived where the routine is: step back onto it (at a door or a seat, straight into it); home: in.
+        if (homeward && dist(r.x, r.z, gx, gz) < 0.05) r.hidden = true;
+        else if (!ceremony && dist(r.x, r.z, gx, gz) < 0.05) { r.x = pose.x; r.z = pose.z; r.hidden = pose.inside; }
       }
     }
     // Waiting for you, talking with you, or saying hello where they stand: the routine holds; after, it catches up.
@@ -382,6 +390,9 @@ export default function Residents({ personas, phase, ceremony, player, island, v
   const registry = useRef<Registry>({ map: new Map(), list: [] });
   const monument = useMemo(() => landmark("monument", v), [v]);
   const clock = useRef<Clock>({ span: null, forced: null, base: 0, since: 0 });
+  // The other players in the village (room state, 0 offline or alone): flavour villagers walk home as it fills.
+  const others = useOthersIn("village");
+  const home = useMemo(() => residentsHome(personas, others), [personas, others]);
 
   // A click (and the ceremony's cheer) greets: a wave and a hop.
   useEffect(() => {
@@ -393,7 +404,7 @@ export default function Residents({ personas, phase, ceremony, player, island, v
     return () => window.removeEventListener("tsi:npc-greet", onGreet);
   }, []);
 
-  useFrame((_, raw) => tick(registry.current.list, clock.current, Math.min(raw, 0.1), player.current, phase, ceremony, nav, island, monument, away, playerName), -3);
+  useFrame((_, raw) => tick(registry.current.list, clock.current, Math.min(raw, 0.1), player.current, phase, ceremony, nav, island, monument, away, playerName, home), -3);
   // Leaving the village (a door, the boat) ends any talk and the prompt with it.
   useEffect(() => () => { if (talkStore.active) endTalk(); setTalkNear(null, "", Infinity); }, []);
   // Dev (evidence scripts): where everyone is, to walk up to one.

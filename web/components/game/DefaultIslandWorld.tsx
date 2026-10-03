@@ -150,6 +150,10 @@ import { useIslandEvent, type IslandEvent } from "@/lib/game/seasonalEvents";
 import { escapeEndedCapture, holdCursor, orbit, readCapture, readOrbitPrefs, saveOrbit, subscribeCapture, subscribeOrbitPrefs, toggleZoom } from "@/lib/game/orbitCamera";
 import { RESET_VIEW_KEY } from "./useOrbitInput";
 import { boxOccluder, treeOccluder } from "@/lib/game/occluders";
+import type { Area } from "@/lib/net/protocol";
+import NetWorld from "./net/NetWorld";
+import NetHud from "./net/NetHud";
+import { remoteSeatTaken } from "./net/active";
 import styles from "./DefaultIslandWorld.module.css";
 
 type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | null;
@@ -331,7 +335,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       : within(doors.cafe, CAFE_DOOR_RANGE) ? [progression.opened.includes("cafe") ? "cafe_enter" : "cafe", doors.cafe]
       : within(layout.missions?.at ?? null, 1.5) ? ["missions", layout.missions!.at] : [null, null];
     let next: Near = door[0], nextD = gap(door[1]);
-    const b = benchSeat(px, pz, 1.3, v, layout.benches);
+    const b = benchSeat(px, pz, 1.3, v, layout.benches, remoteSeatTaken);
     benchSpot.current = b && { ...b, seatY: island.ground(b.x, b.z) + BENCH_SEAT_TOP };
     // An event spot and a bench both in reach: the nearer one takes E.
     const ev = spots.find(s => within([s.x, s.z], s.range)), seat = benchSpot.current;
@@ -540,6 +544,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [devHome] = useState(() => (process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams()));
   const [site, setSite] = useState<"village" | "home" | "ruins">(devHome.get("home") ? "home" : devHome.get("ruins") ? "ruins" : "village");
   const [inside, setInside] = useState<"hq" | "house" | "museum" | "oracle" | "cafe" | null>(devHome.get("home") === "inside" ? "house" : devHome.get("cafe") === "inside" ? "cafe" : devHome.get("museum") === "inside" ? "museum" : devHome.get("hq") === "inside" ? "hq" : devHome.get("temple") === "inside" ? "oracle" : null);
+  const area: Area = site === "ruins" ? "ruins" : site === "home" ? (inside === "house" ? "house" : "home") : inside ?? "village";
   const [layout, setLayout, , homeActions] = useHomeLayout();
   const decor = useDecorate(layout, setLayout, { on: devHome.get("decorate") === "1", piece: devHome.get("place") && catalogueItem(devHome.get("place")!) ? devHome.get("place") : null });
   const [returned, setReturned] = useState(false);
@@ -991,6 +996,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           <QualityProbe onTier={onTier} />
           <WarmupProbe key={sceneShown} onReady={onSceneReady} />
           {children}
+          <NetWorld area={area} player={player} ready={ready && !fading} />
           {!inside && !atHome && site !== "ruins" && near !== "enter" && hqDoor && <Html position={[hqDoor[0], 2.9, hqDoor[1]]} center distanceFactor={10} zIndexRange={[3, 0]}>
             <div className={styles.cue}>HQ</div>
           </Html>}
@@ -1110,6 +1116,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {captured === "free" && !touch && <p className={styles.lookHint} role="status">Click to look around</p>}
       {captured === "captured" && site === "ruins" && <svg className={styles.crosshair} viewBox="-10 -10 20 20" aria-hidden="true"><circle r="5.5" /><circle r="1.2" /></svg>}
       <div className={styles.fade} data-active={fading} aria-hidden="true" />
+      <NetHud area={area} />
       <LoadingStatus ready={ready} />
     </main>
   );
