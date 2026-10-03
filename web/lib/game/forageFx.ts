@@ -42,3 +42,16 @@ export const GLINT: Recipe = { sprite: "sparkle", count: [1, 1], life: [0.55, 0.
 export const GLINT_TINT = 0xfff1b8;
 /** Seconds between a rare find's twinkles (each node at its own phase). */
 export const GLINT_EVERY = 0.45;
+
+// ── A find dug up ────────────────────────────────────────────────────
+/** The spade's throw: a spray of sand standing up off the hole, away from the digger. */
+export const SAND_BURST: Recipe = { sprite: "sandBurst", count: [1, 1], life: [0.55, 0.7], size: [1.05, 1.25], grow: 1.15, speed: [0.2, 0.5], spread: 0.5, up: [0.2, 0.4],
+  gravity: 1.5, drag: 3, wind: 0.2, alpha: 1, face: FACE.standing };
+/** Loose grains thrown with it. */
+export const SAND_GRAINS: Recipe = { sprite: "sand", count: [2, 3], life: [0.45, 0.6], size: [0.55, 0.7], grow: 1.2, speed: [1, 1.8], spread: 0.7, up: [1.2, 2],
+  gravity: 6, drag: 1.5, wind: 0.2, alpha: 0.95, face: B, rise: [0.05, 0.12] };
+export const SAND_TINT = 0xd8bd85;
+/** The hole decal's colour (multiplied by the painted pit and rim): the sand's own, darker. */
+export const HOLE_TINT = "#a48a63";
+/** How far a dug-up find rises out of its hole before it goes to the hand, and how long that takes (ms). */
+export const DIG_RISE = { by: 0.4, ms: 320 } as const;

@@ -50,4 +50,43 @@ export function setFallen(nodeId: string, hour: string, k: number) {
 }
 
 /** Test seam: forget everything. */
-export function resetForageWorld() { drops.clear(); publish(); }
+export function resetForageWorld() { drops.clear(); holes.length = 0; publish(); }
+
+// ── Dug holes, filling back in ──────────────────────────────────────────────
+/** A hole dug at a find: where, and the world second the spade went in. It fills back in over HOLE_FILL seconds. */
+export interface Hole { id: string; x: number; y: number; z: number; t0: number }
+/** Seconds a dug hole takes to fill back in (its decal steps through the pack's 8 frames: fresh, then filling). */
+export const HOLE_FILL = 90;
+/** Its last share fades out, so the patch never pops away. */
+const HOLE_FADE = 0.18;
+const holes: Hole[] = [];
+/** At most this many at once (the oldest fills first). */
+export const MAX_HOLES = 12;
+
+/** The hole decal's frame `age` seconds after digging: 0 fresh, rising to 7 as it fills; -1 once it's gone. */
+export function holeFrame(age: number): number {
+  if (age < 0 || age >= HOLE_FILL) return -1;
+  return Math.min(7, Math.floor((age / HOLE_FILL) * 8));
+}
+/** Its opacity: full, then easing out over the last HOLE_FADE of the fill. */
+export function holeOpacity(age: number): number {
+  if (age < 0 || age >= HOLE_FILL) return 0;
+  const u = (age / HOLE_FILL - (1 - HOLE_FADE)) / HOLE_FADE;
+  return u <= 0 ? 1 : 1 - u * u * (3 - 2 * u);
+}
+/** Dig a hole (the spade's contact). */
+export function addHole(h: Hole) {
+  const i = holes.findIndex(o => o.id === h.id);
+  if (i >= 0) holes.splice(i, 1);
+  holes.push(h);
+  if (holes.length > MAX_HOLES) holes.shift();
+  publish();
+}
+/** The holes dug and not yet forgotten (a filled one draws nothing: holeFrame -1). */
+export const holesNow = (): readonly Hole[] => holes;
+/** Forget the holes filled by world second `t` (from a timer, never the frame loop: it tells the store's readers). */
+export function pruneHoles(t: number) {
+  let gone = false;
+  for (let i = holes.length - 1; i >= 0; i--) if (holeFrame(t - holes[i].t0) < 0) { holes.splice(i, 1); gone = true; }
+  if (gone) publish();
+}

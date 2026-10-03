@@ -38,10 +38,10 @@ import { FLEE_TIME, WARY_HOP, carryBugs, fleeAt, waryHop, type FleePose } from "
 import { FRUIT_MODEL, fruitTree, hangAt, nearestHang, type Point, type TreeSpot } from "@/lib/game/treeFruit";
 import { SHAKE, WORLD_SHAKES, fallAt, restPoint, type Fall } from "@/lib/game/treeShake";
 import { contactDelay, hitDelays, landAt } from "@/lib/game/actTiming";
-import { addDrop, dropsFor, dropsVersion, fallenOf, removeDrop, setFallen, subscribeDrops, type Drop } from "@/lib/game/forageWorld";
+import { addDrop, addHole, dropsFor, dropsVersion, fallenOf, holeFrame, holeOpacity, holesNow, pruneHoles, removeDrop, setFallen, subscribeDrops, type Drop, type Hole } from "@/lib/game/forageWorld";
 import { LIFT, handOf, liftPose, type Lift } from "@/lib/game/forageLift";
 import { FACE, seedAt, type Recipe } from "@/lib/game/fx/particles";
-import { CHIPS, CHIP_TINT, FLOWER_TINT, GLINT, GLINT_EVERY, GLINT_TINT, LIFT_PUFF, PETALS, ROCK_DUST, STRIKE_PUFF } from "@/lib/game/forageFx";
+import { CHIPS, CHIP_TINT, DIG_RISE, FLOWER_TINT, GLINT, GLINT_EVERY, GLINT_TINT, HOLE_TINT, LIFT_PUFF, PETALS, ROCK_DUST, SAND_BURST, SAND_GRAINS, SAND_TINT, STRIKE_PUFF } from "@/lib/game/forageFx";
 import { hash01 } from "@/lib/game/worldFx";
 import { TREE_WIND, WORLD_SNOW, leafTintHex, prepareModel } from "@/lib/game/modelMaterials";
 import TreeFruit, { FRUIT_REST_RADIUS, type HangingFruit } from "./TreeFruit";
@@ -93,6 +93,32 @@ const crackLook = () => (crackMaterial ??= new THREE.MeshStandardMaterial({ name
 const CRACKS = Array.from({ length: 8 }, (_, f) => spriteQuad("crack", f, 0.62).rotateX(-Math.PI / 2));
 function DigSpot({ at, seed }: { at: [number, number, number]; seed: number }) {
   return <mesh geometry={CRACKS[Math.floor(hash01(seed, 7) * 8) % 8]} material={crackLook()} position={[at[0], at[1] + 0.015, at[2]]} rotation={[0, seed * 1.3, 0]} renderOrder={2} receiveShadow />;
+}
+
+/** A dug hole (our pack's hole, its 8 frames from fresh to filled), filling back in on the world clock (lib/game/forageWorld.ts). */
+const HOLES = Array.from({ length: 8 }, (_, f) => spriteQuad("hole", f, 1.0).rotateX(-Math.PI / 2));
+function fillHole(mesh: THREE.Mesh | null, material: THREE.MeshStandardMaterial, hole: Hole) {
+  if (!mesh) return;
+  const age = worldTime() - hole.t0, f = holeFrame(age);
+  mesh.visible = f >= 0;
+  if (f < 0) return;
+  if (mesh.geometry !== HOLES[f]) mesh.geometry = HOLES[f];
+  material.opacity = holeOpacity(age);
+}
+function HoleDecal({ hole }: { hole: Hole }) {
+  const material = useMemo(() => new THREE.MeshStandardMaterial({ name: "DugHole", map: packMap(), color: HOLE_TINT, roughness: 1, metalness: 0, transparent: true,
+    depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }), []);
+  useEffect(() => () => material.dispose(), [material]);
+  const mesh = useRef<THREE.Mesh>(null);
+  useFrame(() => fillHole(mesh.current, material, hole));
+  return <mesh ref={mesh} geometry={HOLES[0]} material={material} position={[hole.x, hole.y + 0.018, hole.z]} rotation={[0, hole.x * 3.1 + hole.z * 1.7, 0]} renderOrder={2} receiveShadow />;
+}
+/** Every hole still filling; the filled ones are let go from a timer, never the frame loop. */
+function Holes() {
+  const v = useSyncExternalStore(subscribeDrops, dropsVersion, () => 0);
+  const list = useMemo(() => [...holesNow()], [v]); // eslint-disable-line react-hooks/exhaustive-deps -- v is the store's version
+  useEffect(() => { const t = window.setInterval(() => pruneHoles(worldTime()), 5000); return () => window.clearInterval(t); }, []);
+  return <>{list.map(h => <HoleDecal key={`${h.id}:${h.t0}`} hole={h} />)}</>;
 }
 
 /** Something leaving the world for a hand that isn't its node's own model (a rock's material, a dug-up shell). */
@@ -297,6 +323,8 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
   // Rocks being struck (their flinch, their material out), and what's flying from a rock or a hole to a hand.
   const struck = useMemo(() => new Map<string, Struck>(), []);
   const [pieces, setPieces] = useState<Piece[]>([]);
+  // Dig spots opened by the spade (their crack gives way to the hole).
+  const [dug, setDug] = useState<ReadonlySet<string>>(() => new Set());
   const glow = useGlowParticles();
   // The rocks already struck this hour: the bare outcrop stays where it was.
   const spentRocks = useMemo(() => rolled.filter(e => !e.out && e.sp?.category === "mineral" && !e.n.canopy), [rolled]);
@@ -355,6 +383,16 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     /** Take it: at the contact, once the server has said yes, it lifts into the hand; then the card, the Bag and the mark. */
     /** The contact frame: the world reacts to the hit whatever the server says (a rock is struck, a net swings). */
     const contact = (act: Act) => {
+      if (act.kind === "dig") {
+        // The spade goes in: a throw of sand away from the digger, the crack opens into a hole that fills back in.
+        const { x, y, z } = act.at, dx = x - act.actor.x, dz = z - act.actor.z, l = Math.hypot(dx, dz) || 1;
+        fx.pool.burst(SAND_BURST, x + (dx / l) * 0.12, y, z + (dz / l) * 0.12, y, dx / l, dz / l, 1, SAND_TINT, seedAt(x, z, 65));
+        fx.pool.burst(SAND_GRAINS, x, y, z, y, dx / l, dz / l, 1, SAND_TINT, seedAt(x, z, 66));
+        addHole({ id: act.nodeId, x, y, z, t0: worldTime() });
+        setDug(d => new Set(d).add(act.nodeId));
+        AudioManager.playSFX("footstep", { rate: 0.6, gain: 0.8 });
+        return;
+      }
       if (act.kind !== "strike") return;
       const { x, y, z } = act.at, dx = act.actor.x - x, dz = act.actor.z - z, l = Math.hypot(dx, dz) || 1;
       // Off the face toward the striker: a puff of rock dust and chips in the colour of what it holds; it flinches.
@@ -378,11 +416,12 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
           // The rock keeps standing (bare now) and the ground stays: what comes out of them flies to the hand.
           const key = `piece:${act.nodeId}`, dx = act.actor.x - x, dz = act.actor.z - z, l = Math.hypot(dx, dz) || 1;
           const from = act.kind === "strike" ? { x: x + (dx / l) * 0.3, y: y + 0.3, z: z + (dz / l) * 0.3 } : { x, y: y + 0.05, z };
-          setLift(lifts, key, { t0, from, to: hand, ms: LIFT.ms + 140 });
+          const dig = act.kind === "dig";
+          setLift(lifts, key, { t0, from, to: hand, ms: LIFT.ms + 140, ...(dig ? { rise: DIG_RISE.ms, riseBy: DIG_RISE.by } : {}) });
           if (act.kind === "strike") takeOre(struck, act.nodeId);
           setPieces(list => [...list, { key, url: act.sp.category === "mineral" ? `/assets/game/items/${act.sp.key}.glb` : act.sp.model ?? `/assets/game/items/${act.sp.key}.glb`,
             scale: act.sp.category === "mineral" ? 2.4 : 1.1 }]);
-          later(LIFT.ms + 140, () => finish(act));
+          later(LIFT.ms + 140 + (dig ? DIG_RISE.ms : 0), () => finish(act));
         } else {
           setLift(lifts, act.nodeId, { t0, from: { ...act.at }, to: hand, ms: LIFT.ms });
           // A flower comes away in a puff of its own petals; a shell or a fruit off the ground in a little sand.
@@ -444,6 +483,8 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
         if (answer && !answer.ok) {
           act.answer = { ok: false, at: t };
           acts.current.delete(id);
+          // Turned down after the spade went in: the find is still down there (its spot shows again; the hole fills).
+          if (kind === "dig") setDug(d => { const n = new Set(d); n.delete(id); return n; });
           if (answer.code === "bag_full") { window.dispatchEvent(new CustomEvent("tsi:bag-full", { detail: { x: at.x, z: at.z } })); return; }
           // Gathered here already this hour (another device): it's gone.
           if (answer.code === "already_harvested") { removeDrop(id); markHarvested(id); }
@@ -552,7 +593,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
       const y = ground(n.x, n.z);
       // A rock is its outcrop (struck where it stands); a buried find its crack in the ground.
       if (sp!.category === "mineral" && !n.canopy) return <Suspense key={n.id} fallback={null}><Outcrop sp={sp!} at={[n.x, y, n.z]} nodeId={n.id} struck={struck} /></Suspense>;
-      if (buried(sp!)) return <DigSpot key={n.id} at={[n.x, y, n.z]} seed={n.x * 13.1 + n.z * 7.7} />;
+      if (buried(sp!)) return dug.has(n.id) ? null : <DigSpot key={n.id} at={[n.x, y, n.z]} seed={n.x * 13.1 + n.z * 7.7} />;
       return <Suspense key={n.id} fallback={null}>
         <group position={[n.x, y, n.z]} ref={g => { if (g) nodeGroups.current.set(n.id, g); else nodeGroups.current.delete(n.id); }}>
           <NodeVisual sp={sp!} canopy={n.canopy} />
@@ -561,6 +602,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     })}
     {spentRocks.map(({ n, sp }) => <Suspense key={n.id} fallback={null}><Outcrop sp={sp!} at={[n.x, ground(n.x, n.z), n.z]} nodeId={n.id} struck={struck} spent /></Suspense>)}
     {pieces.map(p => <Suspense key={p.key} fallback={null}><LiftedPiece piece={p} lifts={lifts} /></Suspense>)}
+    <Holes />
     {bugs.map(b => {
       const model = MODEL_OF.get(b.sp.key)!;
       return <group key={b.id} ref={g => { if (g) { g.userData.base = 1; groups.current.set(b.id, g); } else groups.current.delete(b.id); }}>
