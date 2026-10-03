@@ -205,5 +205,9 @@ describe("the demo's class switch (the panel's dev-class)", () => {
     expect((await view()).weapons.find((w: { equipped?: boolean }) => w.equipped)?.weapon_key).toBe(sig); // a re-read keeps it in hand
     expect((await post("/api/combat/dev-class", { subclass: "transmuter", mastery: 1 })).ok).toBe(true);
     expect(await view()).toMatchObject({ subclass_key: "transmuter", traits: { "crab-shell": 1, "wisp-core": 1, "pollen-swarm": 1, "golem-fist": 1 } }); // every form learned
+    if (classRows().find(r => r.key === "summoner")?.kit) {
+      expect((await post("/api/combat/dev-class", { subclass: "summoner", mastery: 20 })).ok).toBe(true);
+      expect((await view()).classes.tamed).toEqual(expect.arrayContaining(["owl", "toad", "serpent", "rabbits"])); // every beast tamed
+    }
   });
 });

@@ -193,7 +193,7 @@ function KeyCard({ rt }: { rt: CombatRuntime }) {
       {kit.keys.map((base, i) => {
         const a = v.keys[i], how = a ? inputWord(a) : "";
         return <Fragment key={base.key}><dt><kbd>{key(i)}</kbd></dt>
-          <dd data-locked={!a || undefined}><b>{base.name}</b>{how && <em> · {how}</em>}{!a && <em> · {base.learn ? "learn it by defeating its creature" : `mastery ${base.unlock}`}</em>}{line(base.description)}</dd></Fragment>;
+          <dd data-locked={!a || undefined}><b>{base.name}</b>{how && <em> · {how}</em>}{!a && <em> · {base.learn ? "learn it by defeating its creature" : base.tame ? "tame it at the ritual circle" : base.unlock && base.unlock > v.mastery ? `mastery ${base.unlock}` : "locked"}</em>}{line(base.description)}</dd></Fragment>;
       })}
       {v.combos.length > 0 && <><dt>Combos</dt><dd data-short><b>Two keys within {COMBO_WINDOW} s, either order</b>
         <span className={css.combos}>{v.combos.map(c => <i key={c.ability.key}>{key(c.keys[0])}+{key(c.keys[1])} {c.ability.name}</i>)}

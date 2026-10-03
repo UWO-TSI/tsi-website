@@ -94,7 +94,7 @@ export function installCombatDemo(): void {
         case "/api/combat/reset-stats": return reply(await resetStats(m.store, ME, body.idempotency_key), "reset");
         case "/api/combat/equip": return reply(await equipWeapon(m.store, ME, body.weapon), "equip");
         // The playtest panel: another subclass or mastery in place, set up as a fresh demo would start it (its family's
-        // stat preset, the subclass and its signature weapon, every form learned). Answers what you own now.
+        // stat preset, the subclass and its signature weapon, every form learned, every beast tamed). Answers what you own now.
         case "/api/combat/dev-class": {
           const kit = memberKit(body.subclass), p = await m.store.progression(ME);
           if (!kit) return new Response(JSON.stringify({ ok: false, error: "That kit hasn't landed yet" }), { status: 404 });
@@ -109,6 +109,7 @@ export function installCombatDemo(): void {
             if (!r.ok) return reply(r, "subclass");
           }
           await learnForms(m, kit.key);
+          m.setTamed(ME, [...TAME_ORDER]); // every beast tamed (the Summoner's keys all open, as with ?tamed=all)
           m.setMasteryXp(ME, kit.key, xpForMastery(Math.min(20, Math.max(1, Math.round(Number(body.mastery)) || 1))));
           return new Response(JSON.stringify({ ok: true, owned: (await m.store.weapons(ME)).map(w => w.weapon_key) }));
         }

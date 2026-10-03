@@ -14,7 +14,7 @@ const MASTERY = [1, 10, 20] as const;
 /**
  * /lab/classes (specs/classes/playtest.md), dev-only like every lab page: the 16 subclasses by family, each kit as its
  * family wave lands (CLASS_KITS; the rest say "coming"), a mastery, and "Play in the ruins" (the island's combat demo
- * with classes v2 on, every form learned, the signature weapon in hand). Below, the notes jotted in the ruins (N).
+ * with classes v2 on, every form learned and beast tamed, the signature weapon in hand). Below, the notes jotted in the ruins (N).
  */
 export default function ClassPlaytest() {
   const [rows] = useState(classRows);
@@ -26,7 +26,7 @@ export default function ClassPlaytest() {
   useEffect(() => { setNotes(readNotes().reverse()); }, []);
   const choice = rows.find(r => r.key === picked) ?? null;
   // A full page load: the combat demo builds its in-memory member from the query once per page.
-  const play = () => { if (choice?.kit) window.location.assign(`/lab/island?combat=demo&classes=v2&subclass=${choice.key}&mastery=${mastery}&traits=all&ruins=1&playtest=1`); };
+  const play = () => { if (choice?.kit) window.location.assign(`/lab/island?combat=demo&classes=v2&subclass=${choice.key}&mastery=${mastery}&traits=all&tamed=all&ruins=1&playtest=1`); };
   const copy = async () => {
     try { await navigator.clipboard.writeText([...notes].reverse().map(noteLine).join("\n")); setCopied(true); window.setTimeout(() => setCopied(false), 1600); } catch { /* no clipboard: the list stays selectable */ }
   };
