@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { DONATE_FADE_MS, donatedAt, fadeInto, markDonated } from "./museumMoment";
+import * as THREE from "three";
+import { DONATE_FADE_MS, SETTLE_WAIT_MS, donatedAt, fadeInto, markDonated, newSettle, settleStep } from "./museumMoment";
 
 describe("a donation settling into its case", () => {
   it("fades the specimen in from nothing, growing into place with a little settle, never popping", () => {
@@ -18,5 +19,47 @@ describe("a donation settling into its case", () => {
     expect(donatedAt("fish_dace")).toBeNull();
     markDonated("fish_dace", 1234);
     expect(donatedAt("fish_dace")).toBe(1234);
+  });
+});
+
+describe("the specimen's settle in the room (settleStep)", () => {
+  const mesh = () => new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), new THREE.MeshStandardMaterial());
+  it("waits, hidden, for its model to load, then fades it in on its own materials with its moment once", () => {
+    const g = new THREE.Group(), s = newSettle();
+    let moments = 0;
+    settleStep(g, 1000, s, 1100, () => moments++);
+    expect(moments).toBe(0);
+    expect(g.scale.x).toBeLessThan(0.01);
+    const m = mesh(), shared = m.material;
+    g.add(m);
+    settleStep(g, 1000, s, 1600, () => moments++);
+    expect(moments).toBe(1);
+    expect(m.material).not.toBe(shared);
+    expect((m.material as THREE.Material).opacity).toBe(0);
+    settleStep(g, 1000, s, 1600 + DONATE_FADE_MS / 2, () => moments++);
+    expect((m.material as THREE.Material).opacity).toBeGreaterThan(0);
+    settleStep(g, 1000, s, 1600 + DONATE_FADE_MS, () => moments++);
+    expect((m.material as THREE.Material).opacity).toBe(1);
+    expect(g.scale.x).toBe(1);
+    settleStep(g, 1000, s, 1600 + DONATE_FADE_MS * 3, () => moments++);
+    expect(moments).toBe(1);
+  });
+
+  it("shows one donated earlier as it is, with no moment, when you come back to the room", () => {
+    const g = new THREE.Group(), s = newSettle();
+    g.add(mesh());
+    let moments = 0;
+    settleStep(g, 1000, s, 1000 + SETTLE_WAIT_MS + 60_000, () => moments++);
+    expect(moments).toBe(0);
+    expect(g.scale.x).toBe(1);
+  });
+
+  it("leaves a specimen that was always there alone", () => {
+    const g = new THREE.Group(), s = newSettle();
+    g.add(mesh());
+    let moments = 0;
+    settleStep(g, null, s, 5000, () => moments++);
+    expect(moments).toBe(0);
+    expect(g.scale.x).toBe(1);
   });
 });
