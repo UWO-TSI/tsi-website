@@ -19,7 +19,7 @@ import { InstancedModels } from "./InstancedNature";
 import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "./ACNHBuilding";
 import { NatureFence } from "./NatureModels";
 import WharfPier from "./WharfPier";
-import FittingRoom from "./FittingRoom";
+import FittingRoom, { FITTING_STEP_MS } from "./FittingRoom";
 import { BASE_FOV } from "./movement/moveFx";
 import MiniMap from "./MiniMap";
 import { useDefaultIslandPlot } from "./DefaultIslandMap";
@@ -687,7 +687,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (action === "curator") { setDonateOpen(true); return; }
     if (action === "display") { setSheet("trophies"); return; }
     if (action === "desk") { setSheet("showcase"); return; }
-    if (action === "closet" || action === "fitting") { if (action === "fitting") window.dispatchEvent(new CustomEvent("tsi:fitting")); setSheet(action); return; }
+    // Stepping into the fitting room: its curtain sweeps across (FittingRoom), then the wardrobe opens.
+    if (action === "fitting") { window.dispatchEvent(new CustomEvent("tsi:fitting")); window.setTimeout(() => setSheet("fitting"), FITTING_STEP_MS); return; }
+    if (action === "closet") { setSheet(action); return; }
     if (action === "altar") { setReveal(null); setSheet("oracle"); return; }
     if (action === "missions") { setSheet("missions"); return; }
     if (action === "trophy" || action === "posters") { setSheet(action === "trophy" ? "tourney" : "posters"); return; }
@@ -1043,7 +1045,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <LettersSheet open={sheet === "letters"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openMail} />
       <InventorySheet open={sheet === "bag"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openBag} />
       <WalletSheet open={sheet === "wallet"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openWallet} />
-      {(sheet === "closet" || sheet === "fitting") && <WardrobeSheet open place={sheet === "closet" ? "closet" : "fitting"} onClose={() => setSheet(null)} onShop={() => { setSheet(null); setShopTab("outfits"); }} />}
+      {(sheet === "closet" || sheet === "fitting") && <WardrobeSheet open place={sheet === "closet" ? "closet" : "fitting"} onClose={() => { if (sheet === "fitting") window.dispatchEvent(new CustomEvent("tsi:fitting")); setSheet(null); }} onShop={() => { setSheet(null); setShopTab("outfits"); }} />}
       <PlayerCharacterUI />
       <JournalSheet open={sheet === "journal"} onClose={() => setSheet(null)} keys="j" />
       <OracleQuizSheet open={sheet === "oracle"} onClose={() => setSheet(null)} onResult={onOracleResult} onPath={pathView?.family ? () => { setPathTick(n => n + 1); setSheet("path"); } : undefined} />

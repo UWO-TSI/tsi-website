@@ -2,9 +2,9 @@
 
 /**
  * The fitting room beside the shop (specs/polish/interiors.md deliverable 4): its curtain moves. It stirs in the shared
- * wind, swishes as you brush past it walking up, and sweeps across when you step in to try outfits on (E, which opens
- * the wardrobe: `tsi:fitting`). The sway is a vertex wave on the curtain alone, pinned at the rail and freest at the
- * hem; nothing is allocated per frame.
+ * wind, swishes as you brush past it walking up, and sweeps across when you step in to try outfits on (E: the wardrobe
+ * opens FITTING_STEP_MS later, behind it) and again as you step out (`tsi:fitting` both times). The sway is a vertex
+ * wave on the curtain alone, pinned at the rail and freest at the hem; nothing is allocated per frame.
  */
 import { useEffect, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
@@ -21,6 +21,8 @@ const URL = "/assets/acnh/furniture/fitting-room.glb";
 const RAIL = 17.13, HEM = 2.27, SWING = 2.4;
 /** Within this of the booth's front you brush the curtain. */
 const BRUSH = 1.3;
+/** Stepping in (E): the wardrobe opens this long after the curtain starts across, so you see it sweep. */
+export const FITTING_STEP_MS = 600;
 
 type Sway = { value: number };
 /** Curtain material: the model's own, with the sway added (rail pinned, the hem free). */
