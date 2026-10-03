@@ -30,7 +30,7 @@ let pack: THREE.Texture | null = null;
 const frameOf = (s: CombatSprite, f: number) => COMBAT_PACK[s].row * COMBAT_PACK_COLS + (f % 8);
 // The streaks add light, so the ritual's rune and ward and the vine glow pale (dark inks and greens added nothing on the
 // grass and couldn't be seen).
-const RUNE: Ramp = ["#ffffff", "#a8ffe0", "#2a9a74"], TONGUE: Ramp = ["#ffe6ee", "#d86a8a", "#3a1020"], VINE: Ramp = ["#ffffff", "#e2ffb8", "#7cc04a"];
+const RUNE: Ramp = ["#ffffff", "#a8ffe0", "#2a9a74"], TONGUE: Ramp = ["#ffe6ee", "#d86a8a", "#3a1020"], VINE: Ramp = ["#ffffff", "#f4ffd8", "#b8f080"];
 const ease = (u: number) => u * u * (3 - 2 * u);
 
 /** Streaks: up to 48 quads in the combat particle layout, written each frame (links, zaps, tongues, the vine, the ritual's rune). */
@@ -141,7 +141,7 @@ void main() { float r = length(vP), a = atan(vP.y, vP.x); float edge = 0.82 + 0.
     for (const z of st.zaps) streak(z.from.x, z.from.z, z.to.x, z.to.z, 0.9, 0.5, "bolt", 1 - z.t / 0.18);
     for (const g of bs.tongues) streak(g.from.x, g.from.z, g.to.x, g.to.z, 0.45, 0.22, "beam", 1 - g.t / 0.25, ramps.row(TONGUE));
     const te = f.tether, me = player.current;
-    if (te && me) streak(me.x, me.z, te.x, te.z, 1.3, 0.28, "beam", 0.95, ramps.row(VINE));
+    if (te && me) streak(me.x, me.z, te.x, te.z, 1.3, 0.42, "beam", 1, ramps.row(VINE));
     // The ritual circle (a Summoner with a beast still to tame): its rune turning on the ground, the ward during a ritual.
     const tamed = v && beastKit(v.kit) ? tamedList(rt) : null, offer = tamed ? nextToTame(tamed) : null;
     if (offer) {
