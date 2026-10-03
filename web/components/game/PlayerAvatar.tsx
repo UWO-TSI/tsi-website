@@ -637,6 +637,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
           <div
             className="whitespace-nowrap text-center"
             style={{
+              width: "max-content", // the Html anchor is 0 px wide, so the plate shrank to min-content and a long class title spilled out
               background: "rgba(15, 15, 16, 0.6)",
               padding: "2px 8px",
               borderRadius: "4px",

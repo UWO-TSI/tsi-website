@@ -119,7 +119,7 @@ function ClassBar({ rt, keys }: { rt: CombatRuntime; keys: Record<string, string
         <kbd>{keyName(keys.ult)}</kbd>
       </div>
     </div>
-    {v.combos.length > 0 && <small className={styles.kitLine}>{v.combos.map(c => { const [a, b] = c.keys.map(i => keyName(keys[V2_SLOT_IDS[i]])); return `${a === b ? `${a} ${a}` : `${a} + ${b}`}: ${c.ability.name}`; }).join(" · ")}</small>}
+    {v.combos.length > 0 && <small className={styles.kitLine}>{v.combos.map(c => { const [a, b] = c.keys.map(i => keyName(keys[V2_SLOT_IDS[i]])); return `${a === b ? `${a}\u00a0${a}` : `${a}\u00a0+\u00a0${b}`}:\u00a0${c.ability.name}`; }).join(" · ")}</small>}
     <div className={styles.masteryBar} role="meter" aria-label="Mastery" aria-valuenow={v.progress.into} aria-valuemin={0} aria-valuemax={v.progress.needed || 1}>
       <span style={{ width: `${v.progress.needed ? (v.progress.into / v.progress.needed) * 100 : 100}%` }} />
     </div>
