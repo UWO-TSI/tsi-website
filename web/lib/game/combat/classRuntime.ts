@@ -244,6 +244,7 @@ export function classMove(rt: CombatRuntime, me: Vec, on: MovementPassive["on"],
   spend(rt, m.energy);
   v.moveCd = m.cooldown_s ?? 0;
   if (foe) { ctx.lock = foe; if (m.needs!.status) applyStatus(foe, m.needs!.status); p.aim = { x: foe.x, z: foe.z }; p.aimHold = 0.6; }
+  p.clip = clipOf(m.clip, false) ?? p.clip;
   runEffects(rt, m.effects, ctx, random);
   return true;
 }

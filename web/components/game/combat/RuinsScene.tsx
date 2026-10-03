@@ -34,7 +34,7 @@ import { defeatPuff } from "@/lib/game/movement/juice";
 import type { ParticlePool } from "@/lib/game/fx/particles";
 import { holdFov, shakeCamera, widenFov } from "@/lib/game/cameraJuice";
 import { timeScale as worldSpeed, ultSlowMotion } from "@/lib/game/slowMotion";
-import { FlashLimiter, hitImpact, HitstopBudget, impactView, ultBeats } from "@/lib/game/combat/impact";
+import { FlashLimiter, hitImpact, HitstopBudget, impactView, ultBeats, ULT_SEQ } from "@/lib/game/combat/impact";
 import { readComfort } from "@/lib/game/comfortSettings";
 import { ULT } from "@/lib/combat/ult";
 import { capture, crosshairAim } from "@/lib/game/orbitCamera";
@@ -208,7 +208,9 @@ function ultPresentation(rt: CombatRuntime, camera: THREE.Camera, canvas: HTMLCa
   if (b.shake) shakeCamera(0.35, 9, (cast.aim.x - me.x) * 0.15 / (Math.hypot(cast.aim.x - me.x, cast.aim.z - me.z) || 1));
   holdFov(b.fov);
   ultSlowMotion(b.slow);
-  canvas.style.filter = b.flash === "full" && view.flashOk ? "grayscale(1) brightness(1.02) contrast(10)" : b.flash === "reduced" ? "saturate(0.35) brightness(0.75)" : "";
+  // Death Lotus (`world: "ink"`): time stops and the world turns to black-and-white ink until the cuts land.
+  const ink = v?.cast && v.ult.world === "ink" && cast.t < A + ULT_SEQ.freeze;
+  canvas.style.filter = b.flash === "full" && view.flashOk ? "grayscale(1) brightness(1.02) contrast(10)" : b.flash === "reduced" ? "saturate(0.35) brightness(0.75)" : ink ? "grayscale(1) contrast(1.7) brightness(1.08)" : "";
   const toScreen = (x: number, z: number, lift: number) => { ultScratch.set(x, ground(x, z) + lift, z).project(camera); const r = canvas.getBoundingClientRect(); return { x: r.left + ((ultScratch.x + 1) / 2) * r.width, y: r.top + ((1 - ultScratch.y) / 2) * r.height }; };
   const c = toScreen(me.x, me.z, 0.7), edge = toScreen(me.x + 3, me.z, 0.7);
   view.caster = { x: c.x, y: c.y, r: Math.max(60, Math.hypot(edge.x - c.x, edge.y - c.y)) };

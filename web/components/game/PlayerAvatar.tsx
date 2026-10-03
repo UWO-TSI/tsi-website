@@ -29,6 +29,7 @@ import { weaponTrail } from "@/lib/game/fx/trail";
 import { useClassTag, useShowClass } from "@/lib/game/hudPrefs";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { WEAPONS } from "@/lib/game/combat/data";
+import { shakeCamera } from "@/lib/game/cameraJuice";
 import { STUCK_TIME, advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, topSpeed, towards, MOVE_TUNING, NO_INPUT, type MoveEvent, type MoveInput, type MoveSim, type MoveState, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
 import { crouchKey, useKeyboardLocked, useMoveKeys } from "@/lib/game/movement/keys";
 import { routePilot, type RouteStep } from "@/lib/game/movement/course";
@@ -145,7 +146,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   const fx = useRef({ sq: 0, sqv: 0, steps: 0, trail: 0, stuck: 0, level: 0, punch: 0, leaf: 0, leafV: 0, bank: 0, pitch: 0, sliding: false, slideT: 0, slideBeat: 0, drop: 0, heading: 0,
     mode: "ground", tumbled: false, ribbonT: 0, ribbonK: 0, lead: new THREE.Vector2(), pan: new THREE.Vector2(), rise: new THREE.Vector2(), focus: new THREE.Vector3(x0, 0, z0),
     // Juice timers (specs/movement-feel.md): anticipation, the Air pose, the camera dip, streaks, afterimages, the cooldown wind.
-    antic: 0, anticY: 0, jumped: false, vy0: 6, fallT: 0, dip: 0, dipV: 0, streakT: 0, streakK: 0, ghostT: 0, dashT: 0, cdT: 0, wispT: 0, ready: true, sinceDash: 99 });
+    antic: 0, anticY: 0, jumped: false, vy0: 6, fallT: 0, dip: 0, dipV: 0, streakT: 0, streakK: 0, ghostT: 0, dashT: 0, cdT: 0, wispT: 0, ready: true, sinceDash: 99, grow: 1 });
   // The glider is a flag on the sim (never in an encounter); the lab's tuning can carry it too.
   const kit = useMemo(() => (glider ? { ...(tuning ?? MOVE_TUNING), glider: 1 } : tuning ?? MOVE_TUNING), [tuning, glider]);
   const leafOwned = !inCombat && kit.glider > 0;
@@ -308,6 +309,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       let airJump = false;
       if (inCombat && combat.rt.v2) {
         if (jumpPressed && aloftNow && classMove(combat.rt, { x: s.state.x, z: s.state.z }, "airJump")) airJump = true;
+        // A blink lands only on ground near your level (never inside a cliff or up a wall); the rest of the kick still applies.
+        if (p.kick?.to && Math.abs(world.top(p.kick.to.x, p.kick.to.z) - s.state.y) > 1.2) p.kick.to = undefined;
         if (p.kick) { applyKick(s.state, p.kick, t); p.kick = null; }
       }
       const piloted = d.pilot && dt > 0 ? d.pilot(s.state, dt) : null;
@@ -437,6 +440,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
         const g = groundAt(groundSurface, world, px, pz), soft = state.crouch ? 0.5 : 1, sound = footstep(pool, g, px, groundY, pz, state.vx, state.vz, rain, j.footsteps * soft);
         footprint(particles.prints, g, px, groundY, pz, state.facing, j.prints);
         playSFX(sound.name, sound.rate, sound.gain * soft);
+        if (inCombat && f.grow > 1.5) { shakeCamera(0.06 * f.grow); puffRing(pool, g, px, groundY, pz, 0.6 * f.grow); } // Titan: every step shakes the ground
       }
     }
     // Dust along the ground while skidding (and its scuff), rolling or dashing.
@@ -508,7 +512,9 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     f.rise.multiplyScalar(Math.exp(-18 * dt));
     const sy = 1 + f.sq, sxz = 1 / Math.sqrt(sy), rx = x + f.rise.x, rz = z + f.rise.y;
     g.position.set(rx, groundY, rz);
-    bd.scale.set(sxz, sy, sxz);
+    // Classes v2 size (Titan): the body grows to it over a moment and shrinks back the same way.
+    f.grow = THREE.MathUtils.damp(f.grow, inCombat ? 1 + combat.rt.buffs.reduce((n, b) => n + (b.stat === "size" && b.t > 0 ? b.value : 0), 0) : 1, 6, rawDelta);
+    bd.scale.set(sxz * f.grow, sy * f.grow, sxz * f.grow);
     hd.position.set(rx, sitting ? groundY : y + Math.min(1, f.leaf) * 0.45, rz); // the nameplate clears an open leaf
 
     // Character: yaw, lift above the ground under it, the movement state clip; a seat holds its clip.
@@ -540,13 +546,14 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       weaponTrail.model = m.weaponModel ?? null; // the ribbon trail samples the weapon in hand (CombatFx)
       // Movement hooks: what the sim is doing, for riders and the movement passive (moveHooks.ts).
       f.sinceDash = state.dashT > 0 ? 0 : f.sinceDash + dt;
-      p.move.mode = sitting ? "ground" : state.mode; p.move.speed = speed; p.move.sinceDash = f.sinceDash; p.move.vx = state.vx; p.move.vz = state.vz;
+      p.move.mode = sitting ? "ground" : state.mode; p.move.speed = speed; p.move.sinceDash = f.sinceDash; p.move.vx = state.vx; p.move.vz = state.vz; p.move.height = Math.max(0, y - floor);
       // Classes v2: an ability's verb on the held weapon's grip (over locomotion when the verb allows), at its timing scale.
       let verbAsked = false;
       if (p.clip) {
         const grip = gripFor(SYSTEM_WEAPONS.find(w => w.key === p.weapon)?.type ?? "sword");
-        if ((VERBS as readonly string[]).includes(p.clip.verb)) {
-          const clip = verbClip(p.clip.verb as Verb, grip);
+        // A verb on the grip in hand, or a kit's own clip (Unique_*, Ult_*: authored for its grip, in the verbs catalogue).
+        const clip = (VERBS as readonly string[]).includes(p.clip.verb) ? verbClip(p.clip.verb as Verb, grip) : verbInfo(p.clip.verb) ? p.clip.verb as ClipName : null;
+        if (clip) {
           if (p.clip.upper && verbInfo(clip)?.upper) m.upper = clip; else m.play = clip;
           m.playRate = p.clip.scale; verbAsked = true;
         }

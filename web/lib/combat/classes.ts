@@ -103,7 +103,7 @@ export interface BasicAttack {
  * with an enemy that close ahead (it takes `needs.status`: the Assassin's Vault leaves it turning to find you).
  */
 export interface MovementPassive { name: string; description: string; on: "airJump" | "slide" | "dash" | "land"; energy: number; effects: Effect[]; cooldown_s?: number;
-  needs?: { enemy: number; status?: Status } }
+  needs?: { enemy: number; status?: Status }; clip?: ClassAbility["clip"] }
 
 export interface ClassKit {
   key: string; name: string; family: Family; role: Role;

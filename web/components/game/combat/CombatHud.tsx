@@ -102,9 +102,12 @@ function ClassBar({ rt, keys }: { rt: CombatRuntime; keys: Record<string, string
         return <li key={`${id}-${rt.denied[id]}`} data-denied={rt.denied[id] > 0 || undefined} data-cooling={cd > 0 || undefined} data-locked={!a || undefined}
           data-held={held !== null || undefined} data-on={v.toggled[i] || undefined} data-unarmed={!armed || undefined}
           title={a ? `${a.name}${a.input && a.input.kind !== "tap" ? ` (${INPUT_WORD[a.input.kind]})` : ""}: ${a.description} · ${a.cooldown_s ? `${a.cooldown_s.toFixed(1)} s · ` : ""}${a.energy} energy` : `${base.name}: opens at mastery ${base.unlock}`}>
-          <span className={styles.sweep} style={{ "--sweep": `${left * 360}deg` } as React.CSSProperties}><kbd>{keyName(keys[id])}</kbd></span>
+          <span className={styles.sweep} data-icon={base.icon ? true : undefined} style={{ "--sweep": `${left * 360}deg` } as React.CSSProperties}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- a tiny static ability icon */}
+            {base.icon && <img src={base.icon} alt="" />}<kbd>{keyName(keys[id])}</kbd></span>
           <span className={styles.slotName}>{a?.name ?? base.name}</span>
-          <small>{!a ? `Mastery ${base.unlock}` : held !== null ? `${INPUT_WORD[a.input!.kind]}…` : cd > 0 ? `${cd.toFixed(cd < 1 ? 1 : 0)}s` : `${a.input && a.input.kind !== "tap" ? `${INPUT_WORD[a.input.kind]} · ` : ""}${a.energy}`}</small>
+          <small>{!a ? `Mastery ${base.unlock}` : held !== null ? `${INPUT_WORD[a.input!.kind]}…` : a.charges && (v.stock[a.key] ?? a.charges) > 0 ? `×${v.stock[a.key] ?? a.charges} · ${a.energy}`
+            : cd > 0 ? `${cd.toFixed(cd < 1 ? 1 : 0)}s` : `${a.input && a.input.kind !== "tap" ? `${INPUT_WORD[a.input.kind]} · ` : ""}${a.energy}`}</small>
         </li>;
       })}</ol>
       <div className={styles.ultSlot} data-ready={ready || undefined} data-denied={rt.denied.ult || undefined} key={`ult-${rt.denied.ult}`}
