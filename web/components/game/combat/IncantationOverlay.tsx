@@ -35,8 +35,11 @@ export default function IncantationOverlay({ runeId, title, effect, onDone, onCa
   const [turn] = useState(() => (angle !== undefined && DIRECTIONAL.has(runeId) ? angle : 0)); // fixed when the drawing opens
   const rune = useMemo(() => turnRune(runeById(runeId), turn), [runeId, turn]), dash = keyName(useMoveKeys().dash);
   const [strokes, setStrokes] = useState<TracePt[][]>([]);
-  // The stroke being drawn grows in place (no copy per pointer move); a new wrapper re-renders it.
+  // The stroke being drawn grows in place (no copy per pointer move); a new wrapper re-renders it. Its points live in a
+  // ref: pointer and pen events come faster than React renders (a quick flick of a line or a chevron ended before the
+  // first point had rendered, and was lost), and the pen's listeners are bound again on every render.
   const [current, setCurrent] = useState<{ pts: TracePt[] } | null>(null);
+  const drawing = useRef<TracePt[] | null>(null);
   const [started] = useState(() => performance.now());
   const [left, setLeft] = useState(rune.timeLimitMs);
   const [result, setResult] = useState<IncantationScore | null>(null);
@@ -72,7 +75,8 @@ export default function IncantationOverlay({ runeId, title, effect, onDone, onCa
     return () => window.clearTimeout(t);
   }, [result]);
   const finishStroke = () => {
-    const stroke = current?.pts;
+    const stroke = drawing.current;
+    drawing.current = null;
     setCurrent(null);
     if (!stroke || stroke.length < 2) return;
     const next = [...strokes, stroke];
@@ -83,15 +87,15 @@ export default function IncantationOverlay({ runeId, title, effect, onDone, onCa
   const nextStroke = Math.min(strokes.length, rune.strokes.length - 1);
   useEffect(() => {
     if (!locked || result) return;
-    let at = penAt, drawing: TracePt[] | null = null;
+    let at = penAt;
     const stamp = (): TracePt => [at[0], at[1], performance.now() - started];
     pen.move = (dx, dy) => {
       at = [Math.min(1.05, Math.max(-0.05, at[0] + dx / SIZE)), Math.min(1.05, Math.max(-0.05, at[1] + dy / SIZE))];
       setPenAt(at);
-      if (drawing) { drawing.push(stamp()); setCurrent({ pts: drawing }); }
+      if (drawing.current) { drawing.current.push(stamp()); setCurrent({ pts: drawing.current }); }
     };
-    const down = (e: MouseEvent) => { if (e.button === 0) { drawing = [stamp()]; setCurrent({ pts: drawing }); } };
-    const up = (e: MouseEvent) => { if (e.button === 0 && drawing) { drawing = null; finishStroke(); } };
+    const down = (e: MouseEvent) => { if (e.button === 0) { drawing.current = [stamp()]; setCurrent({ pts: drawing.current }); } };
+    const up = (e: MouseEvent) => { if (e.button === 0 && drawing.current) finishStroke(); };
     document.addEventListener("mousedown", down); document.addEventListener("mouseup", up);
     return () => { pen.move = null; document.removeEventListener("mousedown", down); document.removeEventListener("mouseup", up); };
   });
@@ -100,8 +104,8 @@ export default function IncantationOverlay({ runeId, title, effect, onDone, onCa
   return <section className={styles.incantation} role={locked ? "group" : "dialog"} aria-label={`Incantation: ${rune.name}`} data-testid="incantation" data-outcome={result?.outcome} data-pen={locked || undefined}>
     <header><b>{title ? `${title} · ` : ""}{rune.name} · {rune.difficulty === "easy" ? "easy rune" : "hard rune"}</b><small>{effect}</small></header>
     <svg ref={box} viewBox={`0 0 ${SIZE} ${SIZE}`} width={SIZE} height={SIZE} style={{ touchAction: "none" }}
-      onPointerDown={e => { if (result) return; e.currentTarget.setPointerCapture(e.pointerId); setCurrent({ pts: [at(e)] }); }}
-      onPointerMove={e => { if (current) { current.pts.push(at(e)); setCurrent({ pts: current.pts }); } }}
+      onPointerDown={e => { if (result) return; e.currentTarget.setPointerCapture(e.pointerId); drawing.current = [at(e)]; setCurrent({ pts: drawing.current }); }}
+      onPointerMove={e => { if (drawing.current) { drawing.current.push(at(e)); setCurrent({ pts: drawing.current }); } }}
       onPointerUp={finishStroke} onPointerCancel={finishStroke}>
       <defs><marker id="rune-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#ffe08a" /></marker></defs>
       {rune.strokes.map((s, i) => <path key={i} d={toPath(s)} className={styles.runeGuide} data-done={i < strokes.length || undefined} data-next={i === nextStroke && !result || undefined} />)}
