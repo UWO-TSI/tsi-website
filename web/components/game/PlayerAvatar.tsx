@@ -12,6 +12,7 @@ import { bindGameKeys } from "@/lib/game/keyboardInput";
 import { WATER_DROP } from "@/lib/game/grid";
 import { calculateCurvedHtmlPosition, pickCurvedSurface } from "@/lib/game/worldProjection";
 import MoveTargetIndicator from "./MoveTargetIndicator";
+import { newMoveMark, placeMark, settleMark } from "@/lib/game/moveMark";
 import Character, { CHARACTER_HEIGHT, CHARACTER_SCALE, LEAF_URL, type CharacterMotion, type ClipName, type HeldView } from "./character/Character";
 import { toolByKey } from "@/lib/game/tools";
 import { itemModel } from "@/lib/game/itemModels";
@@ -195,8 +196,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   const combatPrev = useRef<CombatView | null>(null);
   // Classes v2 (§1.9): the class icon and mastery title under the name, the mastery or shop frame round the plate.
   const classTag = useClassTag(), showClass = useShowClass(), tag = showClass ? classTag : null;
-  const indicatorId = useRef(0);
-  const [indicators, setIndicators] = useState<Array<{ id: number; position: [number, number, number] }>>([]);
+  /** Where a tap is walking you (the move target, arrival-wharf.md §4): placed on a tap, settled when the walk ends. */
+  const moveMark = useRef(newMoveMark());
   // Micro-anim loop iter 1 (2026-07-24): cozy sit beat, a settle puff and a brief contented ♪ over the head.
   const [sitNote, setSitNote] = useState(false);
   const sitNoteTimer = useRef<number | null>(null);
@@ -238,8 +239,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     target.current = { x: hit.x, z: hit.z };
     fx.current.stuck = 0;
     playSFX("click");
-    const id = indicatorId.current++;
-    setIndicators(prev => [...prev, { id, position: [hit.x, groundHeight(hit.x, hit.z), hit.z] }]);
+    placeMark(moveMark.current, hit.x, hit.z, groundHeight);
   }, [camera, gl, groundHeight, frozen, desktopClickToMove]);
   useEffect(() => {
     gl.domElement.addEventListener("click", handleClick);
@@ -296,6 +296,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       sim,
       teleport: (x: number, z: number, facing = 0) => { seat.current = null; sim.current = createMoveSim(createMoveState(x, z, world, facing)); },
       autopilot: (route?: RouteStep[]) => { dev.current.pilot = routePilot(route); },
+      /** Walk to a world point as a tap would, with its marker (the move target's evidence). */
+      tapTo: (x: number, z: number) => { target.current = { x, z }; fx.current.stuck = 0; placeMark(moveMark.current, x, z, groundHeight); },
       pause: () => { dev.current.paused = true; dev.current.budget = 0; },
       run: (seconds: number) => { dev.current.paused = true; dev.current.budget += seconds; },
       resume: () => { dev.current.paused = false; },
@@ -307,7 +309,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       prints: () => particles.prints.alive,
       ground: () => { const s = sim.current?.state; return s ? groundAt(groundSurface, world, s.x, s.z) : null; },
     } });
-  }, [world, camera, gl, particles, groundSurface]);
+  }, [world, camera, gl, particles, groundSurface, groundHeight]);
 
   useFrame((_state, rawDelta) => {
     const g = anchor.current, bd = body.current, hd = head.current;
@@ -425,6 +427,9 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     }
     const state = s.state, speed = sitting ? 0 : Math.hypot(state.vx, state.vz);
     const [x, y, z] = sitting ? [sitting.x, groundHeight(sitting.x, sitting.z), sitting.z] : interpolated(s);
+    // The walk to a tapped spot is over: the marker presses down if you got there, or shrinks away.
+    const mk = moveMark.current;
+    if (!target.current && (mk.phase === "appear" || mk.phase === "hold")) settleMark(mk, Math.hypot(x - mk.x, z - mk.z) < 0.45);
     const wet = world.wet(x, z), floor = wet ? world.top(x, z) - WATER_DROP : world.top(x, z), groundY = Math.min(y, floor);
     const aloft = state.mode === "air" || state.mode === "glide", grounded = !!sitting || (!aloft && state.mode !== "mantle" && state.mode !== "splash");
 
@@ -701,11 +706,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
 
   return (
     <>
-      {/* Sprint A8: tap-to-walk target rings in world space */}
-      {indicators.map((ind) => (
-        <MoveTargetIndicator key={ind.id} position={ind.position}
-          onComplete={() => setIndicators((prev) => prev.filter((i) => i.id !== ind.id))} />
-      ))}
+      {/* Tap-to-walk's target: one painted marker on the ground (arrival-wharf.md §4). */}
+      <MoveTargetIndicator mark={moveMark} />
       <group ref={anchor} position={spawnPosition}>
         <group ref={body}><PlayerCharacter look={look} motion={motion} inCombat={inCombat} walkSpeed={walkSpeed} leaf={leafOwned} held={held} /></group>
       </group>
