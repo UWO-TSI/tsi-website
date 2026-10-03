@@ -162,6 +162,8 @@ export interface FireSpec {
   /** The verb each shot plays on the upper body, at its timing scale, and the FX per phase (zone: the burning ground a flame buff leaves). */
   clip?: { verb: string; scale?: number };
   vfx?: { cast?: string; travel?: string; impact?: string; zone?: string };
+  /** The burning ground's colours (fire reads as fire whatever the kit's ramp). */
+  burn?: readonly [string, string, string];
 }
 /**
  * A special round: its power (× base hit); a splash at half power round its hit, or a `blast` at full power instead of a

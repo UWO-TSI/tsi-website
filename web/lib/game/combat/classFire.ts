@@ -125,7 +125,7 @@ export function fireBasic(rt: CombatRuntime, me: Vec, auto = false): boolean {
     fx: round?.vfx ?? f.vfx?.impact, travel: round?.travel ?? f.vfx?.travel, ramp: v.kit.look.ramp, splash: round?.splash, round: key,
     blast: round?.blast ? { power: round.power * bonus, radius: round.blast } : undefined,
     steady: f.steady, crit: round?.crit || last || undefined, weak: f.weak ? f.weak * (scope ? 1.5 : 1) : undefined, pierces: swift ? 1 : undefined,
-    status: flame > 0 ? { dot: [flame, 3] } : undefined, zone: flame > 0 ? { radius: 1.1, life: 2, power: flame, fx: f.vfx?.zone } : undefined,
+    status: flame > 0 ? { dot: [flame, 3] } : undefined, zone: flame > 0 ? { radius: 1.1, life: 2, power: flame, fx: f.vfx?.zone, ramp: f.burn } : undefined,
   };
   const shot: Projectile = { id: rt.seq++, x: me.x + dir.x * 0.5, z: me.z + dir.z * 0.5, vx: dir.x * speed, vz: dir.z * speed, life: f.range / speed,
     from: "player", damage: 0, kind: f.look ?? "arrow", radius: 0.18, hit };
@@ -194,11 +194,12 @@ const GROUND: Ability = { key: "fire.ground", name: "Burning ground", descriptio
  * Burning ground where a shot lands (a flame arrow): a shared zone (primitives.ts) of `power` a second. One already
  * burning at this spot (inside its radius) is refreshed instead of a second one, so a hail of arrows never stacks them.
  */
-export function addZone(rt: CombatRuntime, at: Vec, z: { radius: number; life: number; power?: number; fx?: string }) {
+export function addZone(rt: CombatRuntime, at: Vec, z: { radius: number; life: number; power?: number; fx?: string; ramp?: readonly [string, string, string] }) {
   if (!rt.v2) return;
   const zones = rt.field.zones, old = zones.find(o => o.source === GROUND.key && Math.hypot(o.x - at.x, o.z - at.z) < o.r);
   if (old) { old.life = Math.max(old.life, z.life); old.power = Math.max(old.power, z.power ?? 0); return; }
   const ctx = context(rt, GROUND, at, 1, at);
+  if (z.ramp) ctx.ramp = z.ramp;
   zones.push({ id: rt.seq++, source: GROUND.key, x: at.x, z: at.z, dx: 0, dz: 1, r: z.radius, length: 0, life: z.life, every: FIRE.tick, tick: 0,
     power: z.power ?? 0, heal: 0, slow: 0, pull: 0, blind: 0, follow: false, seek: 0, fx: z.fx, ctx, steady: true });
   if (zones.filter(o => o.source === GROUND.key).length > 12) zones.splice(zones.findIndex(o => o.source === GROUND.key), 1);
