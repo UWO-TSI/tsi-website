@@ -266,6 +266,7 @@ Player (in players: { map: Player, view: true }), keyed by sessionId
   x,y,z int16 (cm)   vx,vy,vz int16 (cm/s, clamp ±40 u/s)   yaw uint16 (2π/65536)
   move uint8 (MOVE_CLIPS: 0 none, Air, Fall, Glide, Skid, Slide, CrouchWalk, CrouchIdle; append-only)
   air uint8, leaf uint8 (0..1.3 → 0..255), lift int16 (mm, seats)
+  tp uint8 (wrapping teleport counter: the server bumps it with each flagged sample, in the same patch as the new position; receivers snap when it changes)
 IslandState: epoch float64 (server Date.now() at create), shard uint8,
   players (view), roster: { map: RosterEntry {uid,name,badge,area,flags} }  // whole shard, presence list
 ```
@@ -376,7 +377,7 @@ Server to client:
 - Position uses cubic Hermite with the sent velocities, so 10 Hz still draws smooth jump arcs. Yaw uses the shortest arc.
 - Discrete fields (`move`, `pose`, `air`, `leaf`, `lift`) step at their sample's time.
 - Events wait in a 16-slot queue and fire when render time passes their `t`, in step with the position.
-- If the buffer underruns, extrapolate with velocity for up to 250 ms, then hold. Snap when the error exceeds 3 u or the teleport flag is set.
+- If the buffer underruns, extrapolate with velocity for up to 250 ms, then hold. Snap when the error exceeds 3 u or `tp` changes (a set-then-clear flag bit would be lost inside one 50 ms patch).
 - `sample(renderT, out)` writes into a caller-owned object.
 
 **5.4 `RemoteAvatar`** (`web/components/game/net/RemoteAvatar.tsx`), using the same rig and clips.
