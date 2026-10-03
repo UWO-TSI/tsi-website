@@ -184,6 +184,9 @@ describe("letters", () => {
     expect(await sendNote(m.store, A, { to: B, body: "   " }, now)).toMatchObject({ ok: false, status: 400 });
     expect(await sendNote(m.store, A, { to: B, body: "x".repeat(501) }, now)).toMatchObject({ ok: false, status: 400 });
     expect(await sendNote(m.store, A, { to: A, body: "hi me" }, now)).toMatchObject({ ok: false, status: 400 });
+    // The shared filter, normalized: leetspeak and masks refuse, ordinary words that hold a bad one don't.
+    expect(await sendNote(m.store, A, { to: B, body: "you're a b!tch" }, now)).toMatchObject({ ok: false, status: 400, error: "Please keep notes respectful." });
+    expect(await sendNote(m.store, A, { to: B, subject: "sh*t", body: "ok" }, now)).toMatchObject({ ok: false, status: 400 });
     for (let i = 0; i < 3; i++) expect(await sendNote(m.store, A, { to: B, body: `hi ${i}` }, now)).toMatchObject({ ok: true });
     expect(await sendNote(m.store, A, { to: B, body: "again" }, now)).toMatchObject({ ok: false, status: 429 });
     expect(await sendNote(m.store, A, { to: ADMIN, body: "hello" }, now)).toMatchObject({ ok: true });

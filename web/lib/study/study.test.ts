@@ -211,6 +211,8 @@ describe("table chat (row 77)", () => {
     expect(await postChat(m.store, A, "   ", at(0))).toMatchObject({ ok: false, code: "empty" });
     expect(await postChat(m.store, A, "x".repeat(201), at(0))).toMatchObject({ ok: false, code: "too_long" });
     expect(await postChat(m.store, A, "what the fuck", at(0))).toMatchObject({ ok: false, code: "profanity" });
+    expect(await postChat(m.store, A, "wh@t the f*ck", at(0))).toMatchObject({ ok: false, code: "profanity" });
+    expect(await postChat(m.store, A, "f u c k", at(0))).toMatchObject({ ok: false, code: "profanity" });
     const r = await postChat(m.store, B, "  break at :25?  ", at(0));
     expect(r.ok && r.data).toEqual([expect.objectContaining({ name: "Jordan", body: "break at :25?", mine: true })]);
     expect((await readChat(m.store, C, at(0))).ok && (await readChat(m.store, C, at(0)))).toMatchObject({ ok: true, data: [] }); // other table
