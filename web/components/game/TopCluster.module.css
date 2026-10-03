@@ -3,6 +3,10 @@
 .chips, .buttons { display: flex; align-items: center; gap: 8px; }
 .chip { position: relative; display: flex; align-items: center; gap: 7px; height: 44px; box-sizing: border-box; padding: 0 15px; border: 0; border-radius: 999px; background: rgb(255 251 231 / 0.96); box-shadow: var(--gui-shadow-md); font-size: var(--gui-text-md); font-weight: 700; white-space: nowrap; }
 .chip b { font-weight: 900; font-variant-numeric: tabular-nums; }
+/* The coins open the wallet: the chip is a button that lifts a touch under the pointer. */
+.chip[data-wallet] { font: inherit; font-size: var(--gui-text-md); font-weight: 700; color: inherit; cursor: pointer; transition: transform 0.12s ease-out, background-color 0.12s; }
+.chip[data-wallet]:hover { background: var(--gui-paper-hi); transform: translateY(-1px); }
+.chip[data-wallet]:active { transform: translateY(1px); }
 .chip small { font-size: var(--gui-text-xs); font-weight: 800; color: var(--gui-muted); }
 .coin { font-size: 17px; line-height: 1; }
 .level { font-size: var(--gui-text-sm); }

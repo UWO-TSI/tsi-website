@@ -6,11 +6,15 @@
  * as play coins or Gems only (their icons, components/economy/Amount); nothing is ever expressed as money.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Backpack, Lock, ReceiptText, ShoppingBasket, Store } from "lucide-react";
-import { COINS } from "@/lib/economy";
+import { ArrowRightLeft, Backpack, BookOpen, Briefcase, CalendarCheck, Check, Coins, Fish, Flag, Gift, Hammer, HandHeart, House, Lock, ReceiptText, ScrollText, Shirt, ShoppingBag,
+  ShoppingBasket, Sparkles, Store, Swords, Target, Undo2, type LucideIcon } from "lucide-react";
+import { COINS, GEMS } from "@/lib/economy";
 import { iconUrl, shopIcon } from "@/lib/icons/keys";
-import { Badge, Button, Empty, ErrorNote, Loading, Tabs } from "@/components/gui";
-import { Amount } from "./Amount";
+import { Badge, Button, Empty, ErrorNote, List, ListRow, Loading, Tabs } from "@/components/gui";
+import { AudioManager } from "@/lib/game/audio";
+import { markGiftClaimed } from "@/lib/game/hudStore";
+import { walletSheet, type WalletKind } from "@/lib/wallet/walletSheet";
+import { Amount, CurrencyIcon } from "./Amount";
 import { ownedCounts } from "@/lib/wallet/rules";
 import type { InventoryView, SellEntry, ShopEntry, ShopView, WalletView } from "@/lib/wallet/service";
 import { ApiError, newKey } from "@/lib/apiClient";
@@ -252,53 +256,93 @@ export function InventoryBody({ transport = httpEconomyTransport }: { transport?
 
 // ── Wallet ───────────────────────────────────────────────────────────────────
 
-const SOURCE: Record<string, string> = {
-  study: "Study session", sell: "Sold at the shop", chapter: "Chapter reward", quest: "Quest reward", daily_gift: "Daily gift", event: "Club event check-in",
-  admin: "Club grant", shop: "Shop purchase", room: "New room", goal: "Club goal delivery", refund: "Refund", migration: "Carried over",
-  merch: "Merch reservation",
-  spend_merch: "Merch reservation", refund_merch: "Merch refund", spend_shop: "Shop purchase", earn_bounty: "Bounty", earn_event: "Club event", earn_admin: "Club grant", earn_quest: "Quest",
+const KIND_ICON: Record<WalletKind, LucideIcon> = {
+  sell: Fish, shop: ShoppingBag, gift: Gift, study: BookOpen, chapter: Flag, quest: ScrollText, event: CalendarCheck, grant: HandHeart, room: House,
+  goal: Target, refund: Undo2, carry: ArrowRightLeft, merch: Shirt, path: Sparkles, mission: Swords, repair: Hammer, bounty: Briefcase, other: Coins,
 };
+/** The time, re-read twice a minute while the wallet is open (the gift's countdown). */
+function useMinute(): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(t);
+  }, []);
+  return now;
+}
 
+/**
+ * The wallet (specs/polish/reachability.md deliverable 2; K in the game, the portal's Wallet page): the TC balance on
+ * its own card, Gems beside it, today's gift (open it here, or when the next one comes), and what you've earned and
+ * spent lately, by day, each move said plainly with its own icon (lib/wallet/walletSheet.ts). TC and Gems only: never
+ * money, never a rate between them.
+ */
 export function WalletBody({ transport = httpEconomyTransport }: { transport?: EconomyTransport }) {
   const load = useCallback(() => transport.wallet(), [transport]);
   const { data, error, reload, setError } = useLoad<WalletView>(load);
-  const [gift, setGift] = useState<string | null>(null);
+  const [tab, setTab] = useState<"earned" | "spent">("earned");
+  const [gift, setGift] = useState<{ busy: boolean; got: number | null }>({ busy: false, got: null });
+  const now = useMinute();
+  const model = useMemo(() => (data ? walletSheet(data, now) : null), [data, now]);
   const claim = async () => {
+    setGift({ busy: true, got: null });
+    AudioManager.playSFX("click");
     try {
       const r = await transport.dailyGift();
-      setGift(r.claimed ? `+${r.coins.toLocaleString()} ${COINS.name}, today's gift` : "Already opened today. Back tomorrow.");
+      // The HUD's coins count it in and today's pop-up stands down.
+      markGiftClaimed(r.balance, r.day);
+      setGift({ busy: false, got: r.claimed ? r.coins : null });
+      if (r.claimed) { AudioManager.playSFX("confirm"); window.setTimeout(() => AudioManager.playSFX("blip2", { rate: 1.5, gain: 0.6 }), 260); }
       await reload();
     } catch (err) {
+      setGift({ busy: false, got: null });
       setError(errText(err));
     }
   };
-  if (!data) return error ? <ErrorNote onRetry={() => void reload()}>{error}</ErrorNote> : <Loading label="Opening your wallet…" />;
+  if (!model) return error ? <ErrorNote onRetry={() => void reload()}>{signedOut(error) ? "Sign in to see your wallet." : error}</ErrorNote> : <Loading label="Opening your wallet…" />;
+  const days = tab === "earned" ? model.earned : model.spent;
   return (
-    <div>
-      <div className={s.big}>
-        <div className={s.bigCard}><span className={p.eyebrow}>{COINS.name}</span><b>{fmt(data.coins, "coins")}</b><span className={p.muted}>Shop, rooms, club goals</span></div>
-        <div className={s.bigCard}><span className={p.eyebrow}>Gems</span><b>{fmt(data.gems, "gems")}</b><span className={p.muted}>From club contributions · merch corner</span></div>
+    <div className={s.wallet}>
+      <div className={s.purse} aria-label={`${model.coins.toLocaleString()} ${COINS.name}`}>
+        <span className={s.purseCoin} aria-hidden><CurrencyIcon size={46} /></span>
+        <div className={s.purseText} aria-hidden>
+          <span className={p.eyebrow}>{COINS.name}</span>
+          <b>{model.coins.toLocaleString()}</b>
+          <span className={p.muted}>Earned on the island. Spent at the shop, on rooms and on club goals.</span>
+        </div>
       </div>
-      <div className={p.actions} style={{ marginTop: 0, marginBottom: 12 }}>
-        <Button size="sm" variant={data.daily_claimed ? "quiet" : "secondary"} onClick={claim} disabled={data.daily_claimed}>{data.daily_claimed ? "Today’s gift is opened" : "Open today’s gift"}</Button>
+      <div className={s.gems}>
+        <CurrencyIcon currency="gems" size={24} />
+        <b>{model.gems.toLocaleString()}</b> {GEMS.name}
+        <span className={p.muted}>From club contributions, for the merch corner</span>
       </div>
-      {gift ? <p role="status" className={`${p.note} ${p.ok}`}>{gift}</p> : null}
-      {error ? <ErrorNote>{error}</ErrorNote> : null}
-      <div className={p.eyebrow}>Recent</div>
-      {data.recent.length === 0 ? <Empty icon={<ReceiptText size={32} />} title="No activity yet">What you earn and spend shows up here.</Empty> : null}
-      <ul className={s.list}>
-        {data.recent.map((e, i) => (
-          <li key={i} className={s.row}>
-            <span>{SOURCE[e.source] ?? e.source}<span className={p.muted} style={{ display: "block" }}>{new Date(e.created_at).toLocaleDateString("en-CA", { month: "short", day: "numeric", timeZone: "America/Toronto" })}</span></span>
-            <span className={e.amount > 0 ? s.plus : s.minus}>{e.amount > 0 ? "+" : ""}{fmt(e.amount, e.currency)}</span>
-            <span className={p.muted}>{fmt(e.balance_after, e.currency)}</span>
-          </li>
-        ))}
-      </ul>
-      <p className={p.muted} style={{ marginTop: 10 }}>{COINS.name} and Gems can&apos;t be traded between members or bought.</p>
+      {model.gift.opened
+        ? <div className={s.gift} data-opened="">
+          <span className={s.giftIcon} aria-hidden><Check size={20} strokeWidth={3} /></span>
+          <span><b>{gift.got ? `+${gift.got.toLocaleString()} ${COINS.name}, today's gift` : "Today's gift is opened"}</b><span className={p.muted}>The next one comes in {model.gift.next}.</span></span>
+        </div>
+        : <div className={s.gift}>
+          <span className={s.giftIcon} aria-hidden><Gift size={22} /></span>
+          <span><b>Today&apos;s gift is waiting</b><span className={p.muted}>Everyone on the island gets a little something each day.</span></span>
+          <Button size="sm" onClick={() => void claim()} disabled={gift.busy}>{gift.busy ? "Opening…" : "Open it"}</Button>
+        </div>}
+      {error ? <ErrorNote>{signedOut(error) ? "Sign in to open your gift." : error}</ErrorNote> : null}
+      <Tabs label="Recent moves" value={tab} onChange={setTab} className={s.walletTabs}
+        tabs={[{ id: "earned", label: <>Earned <span className={s.tabTotal}>+{model.totals.earned.toLocaleString()}</span></> }, { id: "spent", label: <>Spent <span className={s.tabTotal}>−{model.totals.spent.toLocaleString()}</span></> }]} />
+      {days.length === 0 ? <Empty icon={<ReceiptText size={32} />} title={tab === "earned" ? "Nothing earned yet" : "Nothing spent yet"}>
+        {tab === "earned" ? "Sell a catch at the shop, study at the café or check in at a club event." : "The shop, a new room and the club goals take TC."}
+      </Empty> : days.map(d => <section key={d.label} className={s.day} aria-label={d.label}>
+        <h3>{d.label}</h3>
+        <List label={d.label}>{d.lines.map(l => {
+          const Icon = KIND_ICON[l.kind];
+          return <ListRow key={l.key} icon={l.icon ?? <Icon size={22} />} title={l.title} detail={l.detail} leader
+            value={<span className={l.amount > 0 ? s.plus : s.minus}>{l.amount > 0 ? "+" : "−"}{fmt(Math.abs(l.amount), l.currency)}</span>} />;
+        })}</List>
+      </section>)}
+      <p className={p.muted} style={{ marginTop: 12 }}>{COINS.name} and Gems can&apos;t be traded between members or bought.</p>
     </div>
   );
 }
+const signedOut = (message: string) => /unauthori[sz]ed|sign in/i.test(message);
 
 type SheetProps = ProgressionSheetProps & { transport?: EconomyTransport; keys?: string };
 export const SellSheet = ({ open, onClose, transport }: SheetProps) => <ProgressionPanel open={open} onClose={onClose} title="Sell"><SellBody transport={transport} /></ProgressionPanel>;
