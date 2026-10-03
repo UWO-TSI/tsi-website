@@ -25,6 +25,7 @@ import { combat, useCombatValue } from "@/lib/game/combat/runtime";
 import { combatFacing, combatPush, combatTuning, dashDodge } from "@/lib/game/combat/actions";
 import { classMove } from "@/lib/game/combat/classRuntime";
 import { applyKick } from "@/lib/game/combat/moveHooks";
+import { fadeOf, rooted } from "@/lib/game/combat/field";
 import { weaponTrail } from "@/lib/game/fx/trail";
 import { useClassTag, useShowClass } from "@/lib/game/hudPrefs";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
@@ -145,7 +146,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   const fx = useRef({ sq: 0, sqv: 0, steps: 0, trail: 0, stuck: 0, level: 0, punch: 0, leaf: 0, leafV: 0, bank: 0, pitch: 0, sliding: false, slideT: 0, slideBeat: 0, drop: 0, heading: 0,
     mode: "ground", tumbled: false, ribbonT: 0, ribbonK: 0, lead: new THREE.Vector2(), pan: new THREE.Vector2(), rise: new THREE.Vector2(), focus: new THREE.Vector3(x0, 0, z0),
     // Juice timers (specs/movement-feel.md): anticipation, the Air pose, the camera dip, streaks, afterimages, the cooldown wind.
-    antic: 0, anticY: 0, jumped: false, vy0: 6, fallT: 0, dip: 0, dipV: 0, streakT: 0, streakK: 0, ghostT: 0, dashT: 0, cdT: 0, wispT: 0, ready: true, sinceDash: 99 });
+    antic: 0, anticY: 0, jumped: false, vy0: 6, fallT: 0, dip: 0, dipV: 0, streakT: 0, streakK: 0, ghostT: 0, dashT: 0, cdT: 0, wispT: 0, ready: true, sinceDash: 99, fadeGhost: 0 });
   // The glider is a flag on the sim (never in an encounter); the lab's tuning can carry it too.
   const kit = useMemo(() => (glider ? { ...(tuning ?? MOVE_TUNING), glider: 1 } : tuning ?? MOVE_TUNING), [tuning, glider]);
   const leafOwned = !inCombat && kit.glider > 0;
@@ -302,7 +303,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       const goal = target.current && towards(s.state, target.current.x, target.current.z, t);
       if (!goal) target.current = null;
       // In the ruins defeat stops you and a cast roots you (a v2 drawn shape doesn't: WASD keeps moving you); the dodge still goes, and breaks the cast (row C3).
-      const down = inCombat && !p.alive, live = !frozen && !down && !(inCombat && combat.rt.casting && !combat.rt.casting.free);
+      // Rooted (the World Tree) you stay put and can't dash out.
+      const down = inCombat && !p.alive, root = inCombat && rooted(combat.rt), live = !frozen && !down && !root && !(inCombat && combat.rt.casting && !combat.rt.casting.free);
       // Classes v2 movement hooks: an air jump is the movement passive's (Air Step), never a buffered jump; what abilities asked moves the sim now.
       const aloftNow = s.state.mode === "air" || s.state.mode === "glide";
       let airJump = false;
@@ -317,7 +319,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
         x: steer.x, z: steer.z,
         sprint: !walkOnly && (!!k[b.sprint] || (!keyed && tilt > 0.92)), sneak: (!!crouch && !!k[crouch]) || st.crouch,
         jump: !walkOnly && (!!k[b.jump] || st.jump) && !airJump, jumpPressed: jumpPressed && !airJump, dashPressed,
-      } : { ...NO_INPUT, dashPressed: !frozen && !down && dashPressed });
+      } : { ...NO_INPUT, dashPressed: !frozen && !down && !root && dashPressed });
       if (inCombat) { input.push = push; if (p.aimHold > 0 || Math.hypot(s.state.vx, s.state.vz) < 0.6) s.state.facing = p.facing; } // attacking or standing: the kit turns from your facing (a dash with no stick goes that way)
       events = advanceMove(s, input, dt, world, t);
       if (target.current) {
@@ -538,6 +540,9 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     m.rate = rawDelta > 0 ? dt / Math.min(rawDelta, 0.1) : 1;
     if (inCombat) {
       weaponTrail.model = m.weaponModel ?? null; // the ribbon trail samples the weapon in hand (CombatFx)
+      // Escape Rabbits (classes v2): translucent, trailing afterimages while it lasts.
+      m.fade = fadeOf(combat.rt);
+      if (m.fade < 1 && (f.fadeGhost -= dt) <= 0) { m.ghost = true; f.fadeGhost = 0.09; }
       // Movement hooks: what the sim is doing, for riders and the movement passive (moveHooks.ts).
       f.sinceDash = state.dashT > 0 ? 0 : f.sinceDash + dt;
       p.move.mode = sitting ? "ground" : state.mode; p.move.speed = speed; p.move.sinceDash = f.sinceDash; p.move.vx = state.vx; p.move.vz = state.vz;

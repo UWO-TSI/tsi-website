@@ -172,7 +172,9 @@ export interface CharacterMotion { speed: number; yaw: number; lift: number; pos
   /** Ask for an afterimage of this frame's pose (a dash); the character clears it. */
   ghost?: boolean;
   /** This character leaves afterimages (the player): they are made and compiled up front, so the first dash never hitches. */
-  afterimages?: boolean }
+  afterimages?: boolean;
+  /** How solid it draws (1 solid; classes v2: Escape Rabbits turns you translucent). */
+  fade?: number }
 
 export const isLoop = (clip: ClipName) => (CLIP_BY_NAME.get(clip) ?? VERB_BY_NAME.get(clip))?.loop ?? true;
 

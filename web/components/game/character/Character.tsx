@@ -117,6 +117,8 @@ class Puppet {
   private readonly ghostParent: THREE.Object3D;
   private readonly ghosts: Ghost[] = [];
   private ghostNext = 0;
+  /** While faded (motion.fade < 1): the body's and print's own translucent copies of the shared materials, and the materials they replaced. */
+  private faded: { body: THREE.MeshPhysicalMaterial; decal: THREE.MeshPhysicalMaterial | null; was: { body: THREE.Material; decal: THREE.Material } } | null = null;
   /** The arm hold laid over locomotion (specs/game-ui.md §2): its clip (kept while it eases out) and weight. */
   private holdClip: ClipName | null = null;
   private holdShown: ClipName | null = null;
@@ -307,8 +309,30 @@ class Puppet {
     this.body.renderOrder = this.face.renderOrder = this.decal.renderOrder = GHOST_ORDER + 1;
   }
 
+  /** Translucent while `f` < 1 (classes v2: Escape Rabbits): the body and print draw from their own copies, the face's own material fades with them. */
+  private fade(f: number) {
+    const face = this.face.material as THREE.Material;
+    if (f >= 0.999) {
+      if (!this.faded) return;
+      this.body.material = this.faded.was.body; this.decal.material = this.faded.was.decal;
+      this.faded.body.dispose(); this.faded.decal?.dispose(); this.faded = null;
+      face.transparent = false; face.opacity = 1; face.depthWrite = true; face.needsUpdate = true;
+      return;
+    }
+    if (!this.faded) {
+      const glass = <M extends THREE.Material>(m: M) => Object.assign(m.clone(), { transparent: true, depthWrite: false }) as M;
+      this.faded = { body: glass(this.body.material as THREE.MeshPhysicalMaterial), decal: this.decal.visible ? glass(this.decal.material as THREE.MeshPhysicalMaterial) : null,
+        was: { body: this.body.material as THREE.Material, decal: this.decal.material as THREE.Material } };
+      this.body.material = this.faded.body;
+      if (this.faded.decal) this.decal.material = this.faded.decal;
+      face.transparent = true; face.depthWrite = false; face.needsUpdate = true;
+    }
+    this.faded.body.opacity = f; if (this.faded.decal) this.faded.decal.opacity = f; face.opacity = f;
+  }
+
   update(delta: number, motion: CharacterMotion, walkSpeed: number) {
     let restart = false;
+    this.fade(motion.fade ?? 1);
     if (motion.afterimages && this.body.visible) this.prepareGhosts();
     if (motion.ghost) { motion.ghost = false; if (this.body.visible) this.ghost(); }
     for (const g of this.ghosts) g.update(delta);
