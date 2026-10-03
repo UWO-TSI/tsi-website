@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import GridWorld from "@/components/game/grid/GridWorld";
@@ -17,6 +17,7 @@ import { ISLAND_TERRAIN, islandLightAt, withSeason, withWeather } from "@/lib/ga
 import { seasonLook } from "@/lib/game/seasonalLook";
 import { CURRENT, lookFx } from "@/lib/game/lookPreset";
 import { useIslandConditions } from "@/lib/game/useIslandConditions";
+import { parseTimeOverride } from "@/lib/game/islandTime";
 
 /**
  * The title screen's backdrop: the real island, live, from eye level (David, 2026-10-03: "cinematic shot of game
@@ -24,7 +25,8 @@ import { useIslandConditions } from "@/lib/game/useIslandConditions";
  * The game's own parts, read-only: terrain with its wind-blown grass, the sea, the trees and props from the shipped map,
  * the atmosphere (real sun, sky, clouds, weather and falling leaves on the world clock) and the grade, rendered at half
  * resolution with crisp pixels like the game's pixel finish. No player, no HUD, no buildings: a quiet nature shot.
- * The camera drifts slowly along a short path. `?shot=x,z,yawDeg,eye,pitchDeg` frames another shot (for tuning).
+ * The camera drifts slowly along a short path. Tuning (works on previews too): `?shot=x,z,yawDeg,eye,pitchDeg` frames
+ * another shot, `?time=dawn|day|evening|night` holds a phase, `?px=0.5` sets the pixel scale.
  */
 
 export type Shot = { x: number; z: number; yaw: number; eye: number; pitch: number };
@@ -74,7 +76,8 @@ function Scene() {
   const island = villageIsland(v);
   const scale = useMemo(() => villageScale(v), [v]);
   const conditions = useIslandConditions();
-  const { phase, weather, season, blend, sun } = conditions;
+  const { phase, weather, season, blend, sun, setForcedPhase } = conditions;
+  useEffect(() => { setForcedPhase(parseTimeOverride(new URLSearchParams(window.location.search).get("time"))); }, [setForcedPhase]);
   const seasonKey = JSON.stringify(season.weights);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by value: the blend object is rebuilt every render.
   const look = useMemo(() => seasonLook(season, {}), [seasonKey]);
@@ -104,9 +107,15 @@ function Scene() {
 }
 
 /** The live backdrop. `onReady` fires after the first frames have drawn, so the page can fade it in. */
+const PIXEL_SCALE = 0.4;
+
 export default function TitleScene({ onReady }: { onReady?: () => void }) {
+  const [px] = useState(() => {
+    const v = Number(new URLSearchParams(window.location.search).get("px"));
+    return v >= 0.2 && v <= 1 ? v : PIXEL_SCALE;
+  });
   return (
-    <Canvas aria-hidden tabIndex={-1} style={{ imageRendering: "pixelated" }} dpr={0.5} gl={{ antialias: false, powerPreference: "high-performance" }}
+    <Canvas aria-hidden tabIndex={-1} style={{ imageRendering: "pixelated" }} dpr={px} gl={{ antialias: false, powerPreference: "high-performance" }}
       camera={{ fov: 52, near: 0.05, far: 140 }} shadows="percentage"
       onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
       <Suspense fallback={null}>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { islandPhase } from "@/lib/game/islandTime";
+import { islandPhase, parseTimeOverride } from "@/lib/game/islandTime";
 import { siteHomeFor } from "@/lib/hosts";
 import { memberWorldIsAvailable, sameOriginPath } from "@/lib/recruitment-access";
 import { createClient } from "@/lib/supabase/server";
@@ -13,8 +13,8 @@ const PHASE_WORD = { dawn: "dawn", day: "afternoon", evening: "evening", night: 
 
 // The portal's title screen (play.tethos.ca/). A safe `?next=` rides through /student/go after sign-in;
 // a member who is already signed in and has somewhere to go skips straight there.
-export default async function StudentPortal({ searchParams }: { searchParams: Promise<{ next?: string | string[]; view?: string | string[] }> }) {
-  const { next, view } = await searchParams;
+export default async function StudentPortal({ searchParams }: { searchParams: Promise<{ next?: string | string[]; view?: string | string[]; time?: string | string[] }> }) {
+  const { next, view, time } = await searchParams;
   const back = sameOriginPath(typeof next === "string" ? next : null);
   const landing = back ? `/student/go?next=${encodeURIComponent(back)}` : "/student/go";
   const user = await createClient().then(s => s.auth.getUser()).then(r => r.data.user, () => null);
@@ -30,7 +30,7 @@ export default async function StudentPortal({ searchParams }: { searchParams: Pr
       account={name ? { name } : null}
       open={memberWorldIsAvailable()}
       initialView={initialView}
-      when={`${weekday} ${PHASE_WORD[islandPhase(now)]} · London, ON`}
+      when={`${weekday} ${PHASE_WORD[parseTimeOverride(typeof time === "string" ? time : null) ?? islandPhase(now)]} · London, ON`}
       siteHome={siteHomeFor((await headers()).get("host"))}
     />
   );
