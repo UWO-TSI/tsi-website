@@ -2,7 +2,7 @@
 /** The combat pack (specs/classes/design-sheet.md §1.7): heat in RGB, coverage in A; the shader maps heat through the effect's ramp. */
 export const COMBAT_PACK_URL = "/assets/fx/combat-pack.webp";
 export const COMBAT_PACK_COLS = 8;
-export const COMBAT_PACK_ROWS = 28;
+export const COMBAT_PACK_ROWS = 31;
 export const COMBAT_PACK = {
   impactStar: { row: 0, frames: 8 } /* spiky impact star: pops open, hollows out */,
   slash: { row: 1, frames: 8 } /* crescent slash arc: sweeps on, thins away */,
@@ -29,8 +29,11 @@ export const COMBAT_PACK = {
   bone: { row: 22, frames: 8 } /* bone fragment tumbling */,
   skull: { row: 23, frames: 8 } /* skull glyph aura mote: pops in, fades */,
   beast: { row: 24, frames: 8 } /* fox, crab, wisp, pollen, golem glyphs (loops) */,
-  inkSlash: { row: 25, frames: 8 } /* ink brush slash with a mid rim */,
-  lotusPetal: { row: 26, frames: 8 } /* lotus petal: tumbles, fades from the tip */,
-  aegisShard: { row: 27, frames: 8 } /* shield shard: faceted plate, glint sweep */,
+  muzzle: { row: 25, frames: 8 } /* muzzle blast along +u */,
+  chain: { row: 26, frames: 8 } /* chain links along +u (tiles) */,
+  mushroom: { row: 27, frames: 8 } /* mushroom cloud: fireball, cap, skirt */,
+  inkSlash: { row: 28, frames: 8 } /* ink brush slash with a mid rim */,
+  lotusPetal: { row: 29, frames: 8 } /* lotus petal: tumbles, fades from the tip */,
+  aegisShard: { row: 30, frames: 8 } /* shield shard: faceted plate, glint sweep */,
 } as const;
 export type CombatSprite = keyof typeof COMBAT_PACK;

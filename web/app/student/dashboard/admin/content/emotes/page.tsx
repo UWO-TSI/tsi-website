@@ -2,10 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Plus, Pencil } from "lucide-react";
-import { AdminGate } from "@/components/portal/ProgressionAdminShared";
+import { ArrowLeft, Plus, Pencil, Smile } from "lucide-react";
+import { AdminGate, buttonLinkCls } from "@/components/portal/ProgressionAdminShared";
 import { createClient } from "@/lib/supabase/client";
 import type { EmoteType } from "@/lib/content/types";
+import { Badge, Card, Empty, Loading } from "@/components/gui";
+
+const PAGE = "mx-auto w-full max-w-6xl px-5 pt-6 pb-16 sm:px-8";
+const BACK = "mb-2 inline-flex items-center gap-1.5 text-sm font-bold text-[var(--gui-ink-2)] hover:text-[var(--gui-ink-strong)]";
+/** A link in the kit's small sage button. */
+const BUTTON_LINK = buttonLinkCls;
+const TH = "px-4 py-3 text-left text-xs font-extrabold whitespace-nowrap text-[var(--gui-ink-2)]";
+const day = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Toronto" });
 
 export default function AdminContentEmotesPage() {
   const [emotes, setEmotes] = useState<EmoteType[]>([]);
@@ -38,69 +46,48 @@ export default function AdminContentEmotesPage() {
 
   return (
     <AdminGate>
-      <div>
-        <div className="mb-2">
-          <Link
-            href="/student/dashboard/admin"
-            className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-          >
-            <ArrowLeft size={12} />
-            Back to Admin
-          </Link>
-        </div>
+      <div className={PAGE}>
+        <Link href="/student/dashboard/admin" className={BACK}>
+          <ArrowLeft size={16} aria-hidden />
+          Back to admin
+        </Link>
 
-        <div className="mb-6 flex items-start justify-between gap-4">
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
+            <h1 className="text-2xl font-extrabold text-[var(--gui-ink-strong)]">
               Emotes
             </h1>
-            <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
-              {emotes.length} total · content_pipeline.emote_types
+            <p className="mt-1 text-sm text-[var(--gui-muted)]">
+              {emotes.length} emotes, inactive ones included
             </p>
           </div>
           <Link
             href="/student/dashboard/admin/content/emotes/new"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 transition-opacity"
+            className={BUTTON_LINK}
+            data-size="sm"
           >
-            <Plus size={14} /> New Emote
+            <Plus size={16} aria-hidden /> New emote
           </Link>
         </div>
 
         {isLoading ? (
-          <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
-            Loading emotes...
-          </p>
+          <Loading label="Getting the emotes…" />
         ) : emotes.length === 0 ? (
-          <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)]">
-            No emotes defined yet.
-          </p>
+          <Empty icon={<Smile size={32} />} title="No emotes yet">
+            Add one and members can use it on the island.
+          </Empty>
         ) : (
-          <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-x-auto">
+          <Card style={{ padding: 0 }} className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[var(--glass-border)]">
-                  <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
-                    Slug
-                  </th>
-                  <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
-                    Display Name
-                  </th>
-                  <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
-                    Animation
-                  </th>
-                  <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
-                    Unlock
-                  </th>
-                  <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
-                    Active
-                  </th>
-                  <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
-                    Icon
-                  </th>
-                  <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
-                    Created
-                  </th>
-                  <th className="px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+                <tr className="bg-[var(--gui-paper-warm)]">
+                  <th className={TH}>Emote</th>
+                  <th className={TH}>Animation</th>
+                  <th className={TH}>Unlocks</th>
+                  <th className={TH}>Status</th>
+                  <th className={TH}>Icon</th>
+                  <th className={TH}>Added</th>
+                  <th className={TH}>
                     <span className="sr-only">Actions</span>
                   </th>
                 </tr>
@@ -109,62 +96,48 @@ export default function AdminContentEmotesPage() {
                 {emotes.map((emote) => (
                   <tr
                     key={emote.id}
-                    className="border-b border-[var(--glass-border)]/40 last:border-b-0"
+                    className="border-t-2 border-dashed border-[var(--gui-paper-edge)]"
                   >
-                    <td className="px-4 py-3 font-mono text-xs text-[var(--color-accent-cyan)]">
-                      {emote.slug}
+                    <td className="px-4 py-3">
+                      <span className="font-extrabold text-[var(--gui-ink-strong)]">
+                        {emote.display_name}
+                      </span>
+                      <div className="text-xs text-[var(--gui-muted)]">
+                        {emote.slug}
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-[var(--color-text-primary)]">
-                      {emote.display_name}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">
+                    <td className="px-4 py-3 text-[var(--gui-ink-2)]">
                       {emote.animation_key}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">
-                      {emote.unlock_condition ?? (
-                        <span className="text-[var(--color-text-muted)]/50">
-                          — always —
-                        </span>
-                      )}
+                    <td className="px-4 py-3 text-[var(--gui-ink-2)]">
+                      {emote.unlock_condition ?? "Always"}
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`text-[0.6rem] font-mono uppercase px-2 py-0.5 rounded ${
-                          emote.active
-                            ? "text-green-400 bg-green-400/10"
-                            : "text-[var(--color-text-muted)] bg-[var(--color-text-muted)]/10"
-                        }`}
-                      >
-                        {emote.active ? "active" : "inactive"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">
-                      {emote.icon_url ? (
-                        <span className="text-[var(--color-text-soft)]">
-                          {emote.icon_url.split("/").pop()}
-                        </span>
+                      {emote.active ? (
+                        <Badge tone="success">Active</Badge>
                       ) : (
-                        <span className="text-[var(--color-text-muted)]/50">
-                          — none —
-                        </span>
+                        <Badge>Inactive</Badge>
                       )}
                     </td>
-                    <td className="px-4 py-3 font-mono text-[0.65rem] text-[var(--color-text-muted)]">
-                      {new Date(emote.created_at).toLocaleDateString()}
+                    <td className="px-4 py-3 text-[var(--gui-ink-2)]">
+                      {emote.icon_url ? emote.icon_url.split("/").pop() : "None"}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-[var(--gui-ink-2)]">
+                      {day(emote.created_at)}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link
                         href={`/student/dashboard/admin/content/emotes/${emote.id}/edit`}
-                        className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-accent-cyan)] hover:underline"
+                        className="inline-flex items-center gap-1 font-bold text-[var(--gui-sage)] hover:underline"
                       >
-                        <Pencil size={12} /> Edit
+                        <Pencil size={14} aria-hidden /> Edit
                       </Link>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </Card>
         )}
       </div>
     </AdminGate>

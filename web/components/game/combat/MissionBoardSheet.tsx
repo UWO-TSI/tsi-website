@@ -12,22 +12,27 @@ import { MISSIONS } from "@/lib/game/combat/data";
 import { materialsLabel, startMission } from "@/lib/game/combat/missions";
 import { completeMissionRemote, missionBoard, postMissionEvents, startMissionRemote } from "@/lib/game/combat/progression";
 import { attachProgressId, combat, setMission, takeMissionQueue, useCombatVersion } from "@/lib/game/combat/runtime";
+import IslandSheet from "../IslandSheet";
 import styles from "../DefaultIslandWorld.module.css";
 
 const TEMPLATE: Record<string, string> = { hunt: "Hunt", fetch: "Fetch", survive: "Survive waves", escort: "Escort" };
 const ZONE: Record<string, string> = { outer: "Outer wild", inner: "Inner temple", boss: "Guardian's chamber" };
 const hoursLeft = (iso: string) => Math.ceil((Date.parse(iso) - Date.now()) / 3_600_000);
 
+/** E at the board opens it and E closes it. The board's body subscribes to the combat runtime only while it shows. */
 export default function MissionBoardSheet({ open, onClose, gateNote }: { open: boolean; onClose: () => void; gateNote: string | null }) {
+  return <IslandSheet open={open} title="Ruins mission board" onClose={onClose} testId="mission-board" keys="e"><MissionBoard gateNote={gateNote} /></IslandSheet>;
+}
+
+function MissionBoard({ gateNote }: { gateNote: string | null }) {
+  // Mounted only while the sheet shows (it re-rendered ~10×/s, closed, all through a ruins run).
   useCombatVersion();
   const [note, setNote] = useState<string | null>(null);
   /** Hours left on each mission's cooldown, as of opening the board. */
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
   useEffect(() => {
-    if (!open) return;
     void missionBoard().then(r => { if (r.ok) setCooldowns(Object.fromEntries(r.data.filter(m => m.cooldown_until).map(m => [m.key, hoursLeft(m.cooldown_until!)]))); });
-  }, [open]);
-  if (!open) return null;
+  }, []);
   const active = combat.rt.mission;
   const accept = async (id: string) => {
     const def = MISSIONS.find(m => m.id === id)!;
@@ -42,11 +47,10 @@ export default function MissionBoardSheet({ open, onClose, gateNote }: { open: b
     const queued = takeMissionQueue();
     if (queued.length) await postMissionEvents(m.progressId, queued);
     const r = await completeMissionRemote(m.progressId);
-    setNote(r.ok ? `+${r.data.xp_awarded} XP · +${r.data.coins_awarded} coins · ${materialsLabel(r.data.materials_awarded)}` : r.error);
+    setNote(r.ok ? `+${r.data.xp_awarded} XP · +${r.data.coins_awarded} TC · ${materialsLabel(r.data.materials_awarded)}` : r.error);
     if (r.ok) { setMission(null); setCooldowns(c => ({ ...c, [m.def.id]: 20 })); }
   };
-  return <section className={`${styles.sheet} ${styles.missionSheet}`} role="dialog" aria-modal="false" aria-labelledby="missions-title" data-testid="mission-board">
-    <header><h2 id="missions-title">Ruins mission board</h2><button onClick={onClose} aria-label="Close">×</button></header>
+  return <>
     {gateNote && <p className={styles.hint}>{gateNote}</p>}
     {note && <p className={styles.hint} role="status">{note}</p>}
     <ul className={styles.missionList}>{MISSIONS.map((m, i) => {
@@ -56,7 +60,7 @@ export default function MissionBoardSheet({ open, onClose, gateNote }: { open: b
         <span className={styles.missionTemplate}>{TEMPLATE[m.template]} · <span aria-label={`Difficulty ${m.difficulty} of 5`}>{"★".repeat(m.difficulty)}{"☆".repeat(5 - m.difficulty)}</span></span>
         <b>{m.title}</b>
         <p>{m.blurb}</p>
-        <small>{m.reward.coins} coins · {m.reward.xp} XP · {materialsLabel(m.reward.materials)}</small>
+        <small>{m.reward.coins} TC · {m.reward.xp} XP · {materialsLabel(m.reward.materials)}</small>
         {mine ? <div className={styles.missionState}>
           <span>{active.note}</span>
           {active.status === "complete" ? <button onClick={() => void claim()}>Claim</button>
@@ -65,5 +69,5 @@ export default function MissionBoardSheet({ open, onClose, gateNote }: { open: b
           : <button disabled={active?.status === "active"} onClick={() => void accept(m.id)}>Accept</button>}
       </li>;
     })}</ul>
-  </section>;
+  </>;
 }

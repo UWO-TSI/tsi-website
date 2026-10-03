@@ -52,7 +52,7 @@ export const ELEMENTALIST: ClassKit = {
   ult: {
     key: "elementalist.cataclysm", name: "Cataclysm", icon: icon("elementalist", "cataclysm"), cooldown_s: 0, energy: 0, charge: 0.8, anticipation_ms: 450, impacts: "first",
     description: "Charge for 5 s, rooted and taking half damage, while storm clouds gather over your aim: press the numbers as they come. Then a meteor, a shockwave and a fire cyclone. Your accuracy scales it (50–150%).",
-    channel: { seconds: 5, guard: 0.5, notes: 12 },
+    channel: { seconds: 5, guard: 0.5, notes: 12, ramp: ["#d9d2ff", "#3a3550", "#0e0c16"] }, // black storm clouds, pale lightning
     effects: [
       area(5.5, 4.2, "aim", { knock: 6, status: { hold: 0.6 } }),
       { kind: "delay", seconds: 0.55, effects: [area(1.6, 6, "aim", { knock: 8, status: { hold: 1 }, fx: "elementalist.shockwave" })] },

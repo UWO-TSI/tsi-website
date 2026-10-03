@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { Amount } from "@/components/economy/Amount";
+import { Card, Loading, Progress } from "@/components/gui";
 
 interface AnalyticsData {
   totalMembers: number;
@@ -19,6 +21,16 @@ interface AnalyticsData {
   fulfilledOrders: number;
   tierDistribution: Record<number, number>;
 }
+
+const PAGE = "mx-auto w-full max-w-6xl px-5 pt-6 pb-16 sm:px-8";
+
+/** "3 of 10": the part in ink, the whole in a caption. */
+const outOf = (part: number, whole: number) => (
+  <>
+    {part}
+    <span className="ml-1.5 text-sm font-bold text-[var(--gui-muted)]">of {whole}</span>
+  </>
+);
 
 export default function AdminAnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
@@ -74,104 +86,73 @@ export default function AdminAnalyticsPage() {
 
   if (loading) {
     return (
-      <p className="text-center py-12 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
-        Loading analytics...
-      </p>
+      <div className={PAGE}>
+        <Loading label="Adding up the numbers…" />
+      </div>
     );
   }
 
   if (!data) return null;
 
-  const statCards = [
-    { label: "Total Members", value: data.totalMembers, color: "var(--color-brand-blue)" },
-    { label: "Active", value: data.activeMembers, color: "#34d399" },
-    { label: "Alumni", value: data.alumni, color: "var(--color-brand-yellow)" },
-    { label: "Pending Onboarding", value: data.pendingOnboarding, color: "var(--color-accent-cyan)" },
-    { label: "Total XP Earned", value: data.totalXP.toLocaleString(), color: "var(--color-brand-blue)" },
-    { label: "₮ In Circulation", value: `₮${data.tcInCirculation.toLocaleString()}`, color: "var(--color-brand-yellow)" },
-    { label: "Bounties Completed", value: `${data.completedBounties}/${data.totalBounties}`, color: "#f87171" },
-    { label: "Quests Completed", value: `${data.completedQuestEntries}/${data.totalQuests}`, color: "var(--color-accent-cyan)" },
-    { label: "Orders Fulfilled", value: `${data.fulfilledOrders}/${data.totalOrders}`, color: "#a78bfa" },
+  const statCards: { label: string; value: ReactNode }[] = [
+    { label: "Members", value: data.totalMembers },
+    { label: "Active", value: data.activeMembers },
+    { label: "Alumni", value: data.alumni },
+    { label: "Still onboarding", value: data.pendingOnboarding },
+    { label: "XP earned", value: data.totalXP.toLocaleString() },
+    { label: "Gems held by members", value: <Amount n={data.tcInCirculation} currency="gems" size={22} /> },
+    { label: "Bounties completed", value: outOf(data.completedBounties, data.totalBounties) },
+    { label: "Quests completed", value: outOf(data.completedQuestEntries, data.totalQuests) },
+    { label: "Orders picked up", value: outOf(data.fulfilledOrders, data.totalOrders) },
   ];
 
+  const labels: Record<string, string> = {
+    "1": "T1 · President",
+    "2": "T2 · Executives",
+    "3": "T3 · Members",
+    "4": "T4 · General",
+    "5": "T5 · Public",
+  };
+
   return (
-    <div>
+    <div className={PAGE}>
       <div className="mb-8">
-        <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
-          Analytics
-        </h1>
-        <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
-          System overview
-        </p>
+        <h1 className="text-2xl font-extrabold text-[var(--gui-ink-strong)]">Analytics</h1>
+        <p className="mt-1 text-sm text-[var(--gui-muted)]">The club at a glance.</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
+      <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-3">
         {statCards.map((stat) => (
-          <div
-            key={stat.label}
-            className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4"
-          >
-            <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
-              {stat.label}
-            </p>
-            <p
-              className="text-2xl font-mono font-bold"
-              style={{ color: stat.color }}
-            >
-              {stat.value}
-            </p>
-          </div>
+          <Card key={stat.label}>
+            <p className="text-sm font-bold text-[var(--gui-ink-2)]">{stat.label}</p>
+            <p className="mt-1 text-2xl font-extrabold text-[var(--gui-ink-strong)]">{stat.value}</p>
+          </Card>
         ))}
       </div>
 
       {/* Tier Distribution */}
-      <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-5">
-        <h3 className="text-xs font-mono text-[var(--color-text-muted)] uppercase tracking-wider mb-4">
-          Tier Distribution
-        </h3>
-        <div className="space-y-3">
+      <Card>
+        <h2 className="mb-4 text-base font-extrabold text-[var(--gui-ink-strong)]">Members by tier</h2>
+        <div className="space-y-4">
           {Object.entries(data.tierDistribution).map(([tier, count]) => {
-            const labels: Record<string, string> = {
-              "1": "T1 · President",
-              "2": "T2 · Executives",
-              "3": "T3 · Members",
-              "4": "T4 · General",
-            };
-            const colors: Record<string, string> = {
-              "1": "#f87171",
-              "2": "var(--color-brand-yellow)",
-              "3": "var(--color-brand-blue)",
-              "4": "var(--color-text-muted)",
-            };
             const pct =
               data.totalMembers > 0
                 ? (count / data.totalMembers) * 100
                 : 0;
 
             return (
-              <div key={tier}>
-                <div className="flex justify-between text-xs font-mono mb-1">
-                  <span style={{ color: colors[tier] }}>
-                    {labels[tier]}
-                  </span>
-                  <span className="text-[var(--color-text-muted)]">
-                    {count} ({pct.toFixed(0)}%)
-                  </span>
-                </div>
-                <div className="w-full h-2 bg-white/[0.05] rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width: `${pct}%`,
-                      backgroundColor: colors[tier],
-                    }}
-                  />
-                </div>
-              </div>
+              <Progress
+                key={tier}
+                value={count}
+                max={data.totalMembers}
+                label={labels[tier] ?? `T${tier}`}
+                showLabel
+                valueText={`${count} (${pct.toFixed(0)}%)`}
+              />
             );
           })}
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

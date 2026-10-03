@@ -9,11 +9,12 @@
  * Family waves add their kits to CLASS_KITS; today's kits (kits.ts) stay live until wave 5.
  */
 import type { Family } from "@/lib/oracle/engine";
-import type { Ability, Effect, Passive, Status } from "./kits";
+import type { Ability, Effect, Passive, ShotLook, Status } from "./kits";
 import { DEMO_KIT } from "./demoKit";
 import { VANGUARD_KITS, VANGUARD_SKINS } from "./vanguardKits";
 import { ARCANE_KITS } from "./arcaneKits";
 import { ARCANE_SKINS } from "./arcaneSeed";
+import { RANGER_KITS, RANGER_SKINS } from "./rangerKits";
 
 export type Role = "tank" | "healer" | "damage" | "support";
 /** Future co-op threat per role (§1.12): a tank's hits draw 2.5×. Kit data now so groups need no rewrite. */
@@ -74,6 +75,10 @@ export interface ClassAbility extends Ability {
   chain?: { bonus: number };
   /** Charges (each recharges over `cooldown_s`); `refund`: a backstab kill gives one back (Shadow Step). */
   charges?: number; refund?: "backstab";
+  /** Classes v2: the key works only just after a reload (the Gunslinger's Quickdraw, within FIRE.reloaded s). */
+  needs?: "reloaded";
+  /** Classes v2: it fires rounds from the cylinder (all: what's left; its projectiles fire one per round, the last chamber's crit with Last Round). */
+  ammo?: number | "all";
   /** The elements it calls (the Elementalist): the staff's crystal takes the last, and alternating them feeds an `attunement` passive. */
   elements?: string[];
   /** Its effects' 3-stop colours when not the kit's (an element's fire or water). */
@@ -107,11 +112,15 @@ export interface ClassUlt extends ClassAbility {
   impacts: "first" | "first-last" | "last";
   /** A sustained ult's window in seconds (Titan, Thousand Arrows, World Tree): with impacts "first-last" its finisher (`release`) lands at the end with the full sequence again. */
   duration?: number;
+  /** "trigger": after the wind-up the sequence (freeze, flash, lines) waits for a hit that asks for it (the Russian Roulette's warhead), not the anticipation's end. */
+  sequence?: "trigger";
+  /** The ult's area for the balance bot when it isn't an area effect (a line, the traps, a cylinder of rounds): the reach round the target it counts enemies in. */
+  reach?: number;
   /**
    * A charge before the sequence (Cataclysm): `seconds` rooted with `guard` damage cut, a mash of `notes` keys 1–4
    * shown three at a time; the hits it lands set the potency 0.5 (none) to 1.5 (all). It releases early when all are played.
    */
-  channel?: { seconds: number; guard: number; notes: number };
+  channel?: { seconds: number; guard: number; notes: number; ramp?: [core: string, mid: string, edge: string] };
   /** The world turns to black-and-white ink through the anticipation (Death Lotus: time stops). */
   world?: "ink";
   /** A first-last ult's finisher clip (its `release`), when it isn't the press's. */
@@ -128,6 +137,36 @@ export interface BasicAttack {
   chain?: ChainStep[]; reset?: number; hp?: number;
   throw?: { beyond: number; power: number; speed: number; range: number; fx?: string };
 }
+
+/**
+ * A v2 basic attack (left click; lib/game/combat/classFire.ts): `rate` shots a second (× the attack-speed stat; a Focus
+ * passive ramps it), each a shot of `power` at `speed` for `range`. `drop`: arrows fall under that gravity (u/s²) from
+ * chest height and are spent where they meet the ground. `weak`: a shot through the inner `weak` of a body's radius (its
+ * head or core) always crits. `ammo`: a cylinder of `size`, reloaded in `reload_s` (automatic when empty, or R); a second
+ * R inside the `gold` span of the bar (fractions) reloads at once and adds `bonus` damage to the next `size` shots, a
+ * miss adds `miss_s`. `rounds`: the special rounds an Effect "load" puts in the cylinder.
+ */
+export interface FireSpec {
+  rate: number; power: number; speed: number; range: number;
+  look?: ShotLook; drop?: number; weak?: number;
+  /** Its shots don't hold an enemy's chase (rapid fire would keep everything flinching). */
+  steady?: boolean;
+  ammo?: { size: number; reload_s: number; gold: [number, number]; bonus: number; miss_s: number;
+    /** The reload's clip (upper body), played at the reload stat's pace; the active reload's FX. */
+    clip?: string; perfect?: string };
+  rounds?: Record<string, RoundDef>;
+  /** The verb each shot plays on the upper body, at its timing scale, and the FX per phase (zone: the burning ground a flame buff leaves). */
+  clip?: { verb: string; scale?: number };
+  vfx?: { cast?: string; travel?: string; impact?: string; zone?: string };
+}
+/**
+ * A special round: its power (× base hit); a splash at half power round its hit, or a `blast` at full power instead of a
+ * hit (it bursts on the first enemy or where it ends); its impact tier and FX; an ult round charges nothing; `big`
+ * replays the ult's sequence there, larger (the warhead).
+ */
+export interface RoundDef { power: number; splash?: number; blast?: number; tier?: "light" | "ability" | "heavy" | "ult"; vfx?: string; travel?: string; cast?: string; ult?: boolean; big?: boolean; crit?: boolean;
+  /** Its chamber's colour on the HUD (a round you mustn't tell apart shares its neighbours'). */
+  tint?: string }
 
 /**
  * A ruins-only movement passive that extends the movement combo (row 292): Air Step, Bone Surf, Vault. `needs.enemy`: only
@@ -165,6 +204,10 @@ export interface ClassKit {
   mods?: { max_hp?: number; speed?: number; capacity?: number };
   /** Dev-only (the `?combat=demo` kit): never offered to members. */
   dev?: true;
+  /** Classes v2: the basic attack (left click), when the kit has its own (FireSpec). */
+  fire?: FireSpec;
+  /** Traps out at once, before the duration stat (it raises the cap: floor(traps × duration)). Else the shared cap. */
+  traps?: number;
 }
 
 export const COMBO_WINDOW = 0.4;
@@ -173,9 +216,9 @@ export const CHAIN_WINDOW = 0.7;
 export const MAX_KEYS = 5;
 
 /** Every v2 kit. Family waves append theirs. */
-export const CLASS_KITS: ClassKit[] = [DEMO_KIT, ...ARCANE_KITS, ...VANGUARD_KITS];
+export const CLASS_KITS: ClassKit[] = [DEMO_KIT, ...ARCANE_KITS, ...RANGER_KITS, ...VANGUARD_KITS];
 /** Every family's weapon skins (shop cosmetics) as material sets, by `${subclass}:${skin}`: the held weapon wears it. */
-export const WEAPON_SKINS: Record<string, Record<string, string>> = { ...ARCANE_SKINS, ...VANGUARD_SKINS };
+export const WEAPON_SKINS: Record<string, Record<string, string>> = { ...ARCANE_SKINS, ...RANGER_SKINS, ...VANGUARD_SKINS };
 /** Display names that changed with the class designs (the key stays; David 2026-10-02: Monk → Martial Artist). */
 export const CLASS_RENAMES: Record<string, string> = { monk: "Martial Artist" };
 export const classKit = (key: string | null | undefined) => CLASS_KITS.find(k => k.key === key) ?? null;
@@ -212,6 +255,7 @@ function scaleEffect(e: Effect, c: AbilityUpgrade): Effect {
     case "delay": return { ...e, effects: all(e.effects) };
     case "raise": return { ...e, radius: e.radius * r };
     case "teleport": return e.heal ? { ...e, heal: e.heal * p } : e;
+    case "trigger": return { ...e, power: e.power * p, chain: e.chain * p };
     default: return e;
   }
 }
@@ -305,7 +349,7 @@ export function classMods(kit: ClassKit, mastery: number): ClassMods {
   const v = statAt(kit, mastery), m = { ...NEUTRAL_MODS };
   switch (kit.stat.kind) {
     case "max_mana": m.energyMax = v; m.energyRegen = NEUTRAL_MODS.energyRegen * (v / NEUTRAL_MODS.energyMax); break;
-    case "summon_count": m.capacity = v; break;
+    case "summon_count": m.capacity = Math.floor(v); break;
     case "cooldown": m.cooldown = v; break;
     case "duration": m.duration = v; break;
     case "attack_speed": m.attackSpeed = v; break;

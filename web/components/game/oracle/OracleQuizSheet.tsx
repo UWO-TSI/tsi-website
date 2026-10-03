@@ -13,6 +13,7 @@ import { OracleError, answerBatch, finishReading, oracleStatus, startReading } f
 import type { AttemptView, OracleStatus, ResultView } from "@/lib/oracle/service";
 import type { TieBreaker } from "@/lib/oracle/items";
 import IslandSheet from "../IslandSheet";
+import { Amount } from "@/components/economy/Amount";
 import styles from "../DefaultIslandWorld.module.css";
 
 const BATCH = 10;
@@ -96,12 +97,12 @@ export default function OracleQuizSheet({ open, onClose, onResult, onPath, embed
     return () => window.removeEventListener("keydown", onKey);
   }, [open, reading, ties]);
 
-  if (!open) return null;
   const count = Object.keys(answered).length;
   const item = reading?.items.find(i => !(i.id in answered));
   const lastUnsent = reading ? Object.keys(answered).filter(id => !sent.has(id)).pop() : undefined;
   const next = status?.next_reading;
-  return <IslandSheet title="The Oracle" onClose={onClose} embedded={embedded} className={`${styles.oracleSheet} ${embedded ? styles.oracleEmbedded : ""}`} testId="oracle-quiz">
+  // E at the altar opens it and E closes it; the Oracle keeps its lavender (tone) in the kit's paper.
+  return <IslandSheet open={open} title="The Oracle" onClose={onClose} embedded={embedded} className={embedded ? styles.oracleEmbedded : undefined} testId="oracle-quiz" keys="e" tone="oracle">
     <div className={styles.keeperLine}><span className={styles.keeperFace} aria-hidden="true" /><p role="status">{note ?? (!reading && status?.family ? `You're ${status.family}. The light remembers.` : keeper)}</p></div>
     {ties && reading ? <>
       {ties.map(t => <fieldset key={t.id} className={styles.tieBreaker}><legend>{t.prompt}</legend>
@@ -119,8 +120,8 @@ export default function OracleQuizSheet({ open, onClose, onResult, onPath, embed
     </> : status?.family ? <>
       <p className={styles.oracleResult} style={{ ["--family" as string]: FAMILIES[status.family].color }}><b>{status.family}</b> · {status.type}<br /><small>{FAMILIES[status.family].blurb}</small></p>
       {next?.kind === "cooldown"
-        ? <small className={styles.hint}>The crystal needs rest. You can ask again {next.available_at ? new Date(next.available_at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "soon"}.</small>
-        : <><button className={styles.oracleBegin} onClick={() => void begin()} disabled={busy}>{next?.kind === "resume" ? "Continue your reading" : `Ask again · ${next?.fee ?? 0} coins`}</button>
+        ? <small className={styles.hint}>The crystal needs rest. You can ask again {next.available_at ? new Date(next.available_at).toLocaleDateString("en-CA", { month: "short", day: "numeric", timeZone: "America/Toronto" }) : "soon"}.</small>
+        : <><button className={styles.oracleBegin} onClick={() => void begin()} disabled={busy}>{next?.kind === "resume" ? "Continue your reading" : <>Ask again · <Amount n={next?.fee ?? 0} /></>}</button>
           <small className={styles.hint}>A new reading replaces your family. Auras you&apos;ve unlocked stay.</small></>}
       {onPath && <button className={styles.oracleBegin} data-testid="oracle-path" onClick={onPath}>Your path · subclass, abilities, stats</button>}
     </> : <>

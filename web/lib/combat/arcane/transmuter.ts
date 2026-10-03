@@ -13,7 +13,7 @@ const FORMS: Record<string, FormDef> = {
   wisp: { name: "Wisp", trait: "wisp-core", body: "rune-wisp", scale: 1.1, basic: { kind: "staff", cooldown: 0.42, range: 9.5, arc: 0, speed: 16, power: 0.64 } },
   pollen: { name: "Pollen", trait: "pollen-swarm", body: "pollen-sprite", scale: 2.6, speed: 0.3, basic: { kind: "bow", cooldown: 0.28, range: 7, arc: 0, speed: 22, power: 0.41, status: { slow: [0.2, 1] } } },
   golem: { name: "Golem", trait: "golem-fist", body: "stone-golem", scale: 0.8, guard: 0.4, speed: -0.15, basic: { kind: "melee", cooldown: 1.05, range: 2.6, arc: Math.PI * 2, power: 0.95, knock: 1 } },
-  chimera: { name: "Chimera", body: "stone-golem", scale: 1.5, guard: 0.3, speed: 0.25, basic: { kind: "melee", cooldown: 0.5, range: 2.4, arc: 1.6, power: 0.85, knock: 2.5 } },
+  chimera: { name: "Chimera", body: "stone-golem", scale: 2.6, guard: 0.3, speed: 0.25, basic: { kind: "melee", cooldown: 0.5, range: 2.4, arc: 1.6, power: 0.85, knock: 2.5 } },
 };
 const form = (key: string, name: string, description: string, learn: string | undefined, effects: Effect[], more: Partial<ClassAbility> = {}): ClassAbility =>
   ({ key: `transmuter.${key}`, name, description, cooldown_s: 3, energy: 12, group: "form", learn, icon: icon("transmuter", key), effects: [{ kind: "form", form: key }, { kind: "transform", duration: 0.2 }, ...effects],

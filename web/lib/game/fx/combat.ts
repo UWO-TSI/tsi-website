@@ -11,6 +11,7 @@ import { FACE, type Recipe } from "./particles";
 import type { CombatSprite } from "./combatPack";
 import type { ImpactTier } from "@/lib/game/combat/runtime";
 import { ARCANE_FX } from "./arcaneFx";
+import { RANGER_FX } from "./rangerFx";
 
 export type Ramp = readonly [core: string, mid: string, edge: string];
 /** Flipbooks: `glow` adds (sparks, stars, halos, lines), `ink` lays over (smoke, debris, ink). `at` where it starts: the event's spot or the caster's hands. */
@@ -162,8 +163,9 @@ export const FX: Record<string, FxRecipe> = {
     ink(P("smoke", [10, 12], [1.2, 1.6], [1.6, 2.4], { speed: [2, 4], up: [0.4, 1.2], drag: 2.2, grow: 2, alpha: 0.8, jitter: 1.6 }), { byRadius: true }),
     { kind: "light", intensity: 40, distance: 12, life: 0.5 }] },
   "demo.ultDecal": { tier: "ult", layers: [{ kind: "decal", sprite: "crack", size: 2.2, life: 4, byRadius: true }, { kind: "decal", sprite: "rune", size: 1.6, life: 2, byRadius: true, spin: 0.4 }] },
-  // ── Family waves ──
+  // ── The family waves' recipes ──
   ...ARCANE_FX,
+  ...RANGER_FX,
   ...VANGUARD_FX,
 };
 

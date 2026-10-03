@@ -40,7 +40,7 @@ interface LandmarkInfo extends Omit<Landmark, "id" | "x" | "z" | "yaw"> {
 
 /** What each landmark is. Order is the minimap and prompt order. */
 export const LANDMARK_INFO: Record<LandmarkId, LandmarkInfo> = {
-  hq: { label: "Clubhouse", open: true, half: [3.5, 2.65], color: "#5B4B9E", door: [0, -3.05], exit: [0, -3.95] },
+  hq: { label: "HQ", open: true, half: [3.5, 2.65], color: "#5B4B9E", door: [0, -3.05], exit: [0, -3.95] },
   plaza: { label: "Plaza", open: true, color: "#C98F73" },
   monument: { label: "Club monument", open: true, half: [1.1, 1.0], color: "#B79A5B" },
   mailbox: { label: "Mailbox", open: true, half: [0.3, 0.3], color: "#C0463C" },

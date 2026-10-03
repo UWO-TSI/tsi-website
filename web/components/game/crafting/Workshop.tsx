@@ -18,6 +18,9 @@ import { villageBottleSpot } from "@/lib/game/islandNodes";
 import { setPeacefulTarget } from "@/lib/game/peacefulNear";
 import { worldTime } from "@/lib/game/worldClock";
 import { installCraftingDemo } from "@/lib/crafting/demo";
+import { ErrorNote, Loading } from "@/components/gui";
+import { isTyping, worldKeysBlocked } from "@/lib/game/useWorldDialog";
+import IslandSheet from "../IslandSheet";
 import type { RecipeBook, RecipeView } from "@/lib/crafting/service";
 import { torontoDay } from "@/lib/wallet/rules";
 import { ApiError, apiCall, newKey } from "@/lib/apiClient";
@@ -109,16 +112,17 @@ export default function CraftingSheet() {
 
   useEffect(() => {
     const onNear = (e: Event) => setNear((e as CustomEvent<boolean>).detail);
-    const onLearned = (e: Event) => setCard({ title: "Recipe learned", name: (e as CustomEvent<{ name: string }>).detail.name, note: "The tide brought you a new recipe. Craft it at the workbench in the clubhouse." });
+    const onLearned = (e: Event) => setCard({ title: "Recipe learned", name: (e as CustomEvent<{ name: string }>).detail.name, note: "The tide brought you a new recipe. Craft it at the workbench in HQ." });
     window.addEventListener("tsi:workbench-near", onNear);
     window.addEventListener("tsi:recipe-learned", onLearned);
     return () => { window.removeEventListener("tsi:workbench-near", onNear); window.removeEventListener("tsi:recipe-learned", onLearned); };
   }, []);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (e.repeat || (e.target instanceof HTMLElement && e.target.closest("input, select, textarea, button"))) return;
+      // The open sheet takes E and Escape itself (lib/game/useWorldDialog); under any other dialog the bench waits.
+      if (e.repeat || worldKeysBlocked() || isTyping(e.target as Element)) return;
       if (e.key.toLowerCase() === "e" && near && !open) show();
-      if (e.key === "Escape") { setOpen(false); setCard(null); }
+      if (e.key === "Escape") setCard(null);
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
@@ -151,14 +155,12 @@ export default function CraftingSheet() {
     <button onClick={() => setCard(null)}>Nice</button>
   </div>;
 
-  if (!open) return <>
-    {near && !card && <button className={world.interact} onClick={show}><kbd>E</kbd>Use the workbench</button>}
-    {resultCard}
-  </>;
-  return <section className={`${world.sheet} ${styles.sheet}`} role="dialog" aria-modal="false" aria-labelledby="crafting-title" data-testid="crafting-sheet">
-    <header><h2 id="crafting-title">Workbench</h2><button onClick={() => setOpen(false)} aria-label="Close">×</button></header>
-    {error && <p className={styles.error} role="alert">{error}</p>}
-    {!book ? <p>{error ? "" : "Laying out your recipes…"}</p> : <>
+  return <>
+    {!open && near && !card && <button className={world.interact} onClick={show}><kbd>E</kbd>Use the workbench</button>}
+    {!open && resultCard}
+    <IslandSheet open={open} title="Workbench" onClose={() => setOpen(false)} testId="crafting-sheet" keys="e" size="lg">
+    {error && <ErrorNote onRetry={() => void load()}>{error}</ErrorNote>}
+    {!book ? (error ? null : <Loading label="Laying out your recipes…" />) : <>
       <p className={styles.count}>{book.recipes.length} of {book.total} recipes known</p>
       <div className={styles.body}>
         <ul className={styles.list} aria-label="Recipes">{book.recipes.map(r => <li key={r.id}>
@@ -183,5 +185,6 @@ export default function CraftingSheet() {
       </div>
     </>}
     {resultCard}
-  </section>;
+    </IslandSheet>
+  </>;
 }

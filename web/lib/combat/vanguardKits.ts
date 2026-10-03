@@ -44,7 +44,7 @@ export const GUARDIAN: ClassKit = {
       cooldown_s: 16, energy: 30, effects: [{ kind: "summon", unit: "aegis" }], allies: 2.6,
       clip: { verb: "Plant" }, vfx: { cast: "guardian.domeCast", zone: "guardian.dome" } },
     { key: "guardian.throw", name: "Shield Throw", icon: I("throw"), description: "The shield bounces between up to 3 enemies and comes back.", unlock: 3,
-      cooldown_s: 6, energy: 20, effects: [{ kind: "projectile", power: 0.8, speed: 18, range: 9, bounce: 2 }],
+      cooldown_s: 6, energy: 20, effects: [{ kind: "projectile", power: 0.8, speed: 18, range: 9, bounce: 2, home: true }],
       clip: { verb: "Throw" }, vfx: { cast: "guardian.throwCast", travel: "guardian.shieldSpin", impact: "guardian.shieldHit" } },
   ],
   passive: { name: "Bulwark", description: "A perfect parry restores 20 energy and grants 30% armour for 3 s.", kind: "parry", value: 0.3, cap: 20, icon: I("bulwark") },

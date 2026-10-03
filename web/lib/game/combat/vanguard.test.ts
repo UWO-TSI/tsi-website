@@ -78,13 +78,15 @@ describe("Guardian: the 0.25 s parry window, the block, Bulwark, the dome, the b
     expect(rt.projectiles.length).toBe(0);
     expect(p.hp).toBe(p.maxHp);
   });
-  it("Shield Throw (mastery 3) bounces between three enemies", () => {
+  it("Shield Throw (mastery 3) bounces between three enemies and comes back", () => {
     const { rt, foe } = setup(GUARDIAN, 3, "stone-golem", { x: 0, z: 3 });
     const b = add(rt, "stone-golem", 2.5, 4.5), c = add(rt, "stone-golem", -2.5, 5);
     rt.player.aim = { x: 0, z: 3 };
     tap(rt, 4);
-    for (let i = 0; i < 120; i++) stepCombat(rt, ME, DT, () => true, never);
+    let home = false;
+    for (let i = 0; i < 120; i++) { stepCombat(rt, ME, DT, () => true, never); home ||= rt.projectiles.some(s => s.hit?.spent); }
     expect([foe, b, c].every(e => lost(e) > 0)).toBe(true);
+    expect(home).toBe(true);
   });
   it("Challenge: enemies within 7 u come for you over a decoy", () => {
     const { rt, foe } = setup(GUARDIAN);

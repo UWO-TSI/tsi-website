@@ -1,8 +1,8 @@
 /* The tool wheel (specs/game-ui.md §1, row 283), in the language of David's Animal Crossing UI kit: cream circles for
    petals round a small centre (a flower, never a thin ring), the chosen one grows and turns butter yellow, a teal
    check on what's in hand, the name in a teal pill under the choice, round brown keycaps. Matte, restrained shadows. */
-.wheel { --cream: #fffae6; --butter: #ffeea0; --teal: #04afa6; --pill: #73c7ba; --ink: #725c4e; --paper: #eee9ca;
-  position: absolute; inset: 0; z-index: 35; display: grid; place-items: center; pointer-events: none; font-family: "Tethos Nunito", "Nunito", system-ui, sans-serif; }
+.wheel { --cream: #fffae6; --butter: var(--gui-butter); --teal: var(--gui-teal); --pill: var(--gui-teal-pill); --ink: var(--gui-bark); --paper: var(--gui-paper-deep);
+  position: absolute; inset: 0; z-index: 35; display: grid; place-items: center; pointer-events: none; font-family: var(--gui-font); }
 .wheel::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, #1c2a2a14 0, #1c2a2a38 75%); opacity: 0; transition: opacity 0.16s ease; }
 .wheel[data-shown]::before { opacity: 1; }
 .flower { position: relative; width: 0; height: 0; opacity: 0; transform: scale(0.72); transition: opacity 0.14s ease, transform 0.24s cubic-bezier(0.2, 1.4, 0.4, 1); zoom: var(--tsi-text-scale, 1); }
@@ -24,17 +24,17 @@
 .centre[data-chosen] { transform: scale(1.16); background: var(--butter); color: var(--ink); }
 /* The name: a teal pill under the choice, a little irregular like the kit's, its tail up at the petal. */
 .name { position: absolute; left: var(--lx); top: calc(var(--ly) + 60px); transform: translateX(-50%); margin: 0; display: flex; flex-direction: column; align-items: center; min-width: 96px; padding: 7px 20px 8px;
-  border-radius: 44% 48% 42% 46% / 52% 50% 48% 50%; background: var(--pill); color: var(--paper); white-space: nowrap; pointer-events: none; z-index: 3; transition: left 0.12s ease, top 0.12s ease; }
+  border-radius: 44% 48% 42% 46% / 52% 50% 48% 50%; background: var(--pill); color: var(--gui-ink-strong); white-space: nowrap; pointer-events: none; z-index: 3; transition: left 0.12s ease, top 0.12s ease; }
 .name::before { content: ""; position: absolute; left: 50%; top: -8px; width: 16px; height: 10px; transform: translateX(-50%); background: var(--pill); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
 .name[data-above] { top: calc(var(--ly) - 60px); transform: translate(-50%, -100%); }
 .name[data-above]::before { top: auto; bottom: -8px; clip-path: polygon(0 0, 100% 0, 50% 100%); }
 .name b { font-size: 17px; font-weight: 800; letter-spacing: 0.2px; }
-.name small { font-size: 12px; font-weight: 700; opacity: 0.85; }
+.name small { font-size: var(--gui-text-xs); font-weight: 800; }
 /* Round keycaps, bottom right (the kit's button hints). */
 .hint { position: absolute; right: 22px; bottom: 22px; margin: 0; display: flex; gap: 10px; opacity: 0; transition: opacity 0.14s; zoom: var(--tsi-text-scale, 1); }
 .wheel[data-shown] .hint { opacity: 1; }
-.hint span { display: flex; align-items: center; gap: 7px; padding: 5px 14px 5px 5px; border-radius: 999px; background: var(--cream); color: var(--ink); font-size: 14px; font-weight: 700; box-shadow: 0 2px 0 #725c4e1f; }
-.hint kbd { min-width: 28px; height: 28px; padding: 0 8px; box-sizing: border-box; display: grid; place-items: center; border-radius: 999px; background: var(--ink); color: var(--cream); font: inherit; font-size: 12px; }
+.hint span { display: flex; align-items: center; gap: 7px; padding: 5px 14px 5px 5px; border-radius: 999px; background: var(--cream); color: var(--gui-ink-strong); font-size: var(--gui-text-sm); font-weight: 800; box-shadow: 0 2px 0 #725c4e1f; }
+.hint kbd { min-width: 28px; height: 28px; padding: 0 8px; box-sizing: border-box; display: grid; place-items: center; border-radius: 999px; background: var(--ink); color: var(--cream); font: inherit; font-size: var(--gui-text-xs); }
 /* Touch: the wheel button, bottom right above the stick's corner. */
 .touchButton { position: absolute; right: 18px; bottom: 150px; z-index: 12; width: 62px; height: 62px; display: grid; place-items: center; border: 0; border-radius: 50%; background: #fffae6; color: #725c4e; box-shadow: 0 3px 0 #725c4e26, 0 6px 16px #2946411f; }
 .touchButton .icon { width: 44px; height: 44px; }

@@ -8,6 +8,8 @@
  */
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { BookOpen, Flag, Smile, type LucideIcon } from "lucide-react";
+import { Loading } from "@/components/gui";
 import { ApiError, apiCall } from "@/lib/apiClient";
 import { useCoarsePointer, useSearch } from "@/lib/game/useMediaQuery";
 import StudyTab from "@/components/companion/StudyTab";
@@ -16,10 +18,11 @@ import MeTab from "@/components/companion/MeTab";
 import s from "@/components/study/companion.module.css";
 
 type Tab = "study" | "club" | "me";
-const TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: "study", label: "Study", icon: "📚" },
-  { key: "club", label: "Club", icon: "🏳" },
-  { key: "me", label: "Me", icon: "🙂" },
+/** Each section a rounded tile in its colour, like the phone apps in David's kit (they were emoji). */
+const TABS: { key: Tab; label: string; icon: LucideIcon; tile: string }[] = [
+  { key: "study", label: "Study", icon: BookOpen, tile: "#82d5bb" },
+  { key: "club", label: "Club", icon: Flag, tile: "#889df0" },
+  { key: "me", label: "Me", icon: Smile, tile: "#f8a6b2" },
 ];
 
 type Gate = "checking" | "signed_out" | "ok";
@@ -54,12 +57,12 @@ export default function CompanionPage() {
   if (!coarse) return <DesktopNotice />;
 
   return (
-    <div className={s.shell}>
-      <div className={s.wrap} style={{ paddingBottom: 84 }}>
+    <div className={`${s.shell} gui`}>
+      <div className={s.wrap} style={{ paddingBottom: 96 }}>
         <header className={s.top}>
           <h1>Tethos</h1>
         </header>
-        {gate === "checking" ? <p className={s.muted}>Loading…</p> : null}
+        {gate === "checking" ? <Loading label="Opening the club…" /> : null}
         {gate === "signed_out" ? <SignInGate /> : null}
         {gate === "ok" ? (
           <>
@@ -73,7 +76,7 @@ export default function CompanionPage() {
         <nav className={s.tabbar} aria-label="Companion sections">
           {TABS.map((t) => (
             <button key={t.key} className={s.tabbtn} aria-current={tab === t.key} onClick={() => setTab(t.key)}>
-              <span aria-hidden>{t.icon}</span>
+              <span className={s.appTile} style={{ "--tile": t.tile } as React.CSSProperties} aria-hidden><t.icon size={20} strokeWidth={2.4} /></span>
               {t.label}
             </button>
           ))}
@@ -99,7 +102,7 @@ function SignInGate() {
 
 function DesktopNotice() {
   return (
-    <div className={s.shell}>
+    <div className={`${s.shell} gui`}>
       <div className={s.wrap}>
         <section className={s.card}>
           <h2>This is the phone companion</h2>

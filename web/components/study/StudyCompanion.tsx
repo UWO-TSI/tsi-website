@@ -5,7 +5,8 @@
  * cafe, through the shared useStudySession hook. Mobile-first, no canvas.
  */
 import { useState } from "react";
-import { COINS } from "@/lib/economy";
+import { Amount } from "@/components/economy/Amount";
+import { Toggle } from "@/components/gui";
 import { useSoundUnlock } from "@/lib/game/useAudio";
 import { LIMITS, PRESETS, type Settings } from "@/lib/study/rules";
 import type { TableView } from "@/lib/study/service";
@@ -32,7 +33,7 @@ export function StudyCompanionBody({ study }: { study: StudyHook }) {
     <>
       <header className={s.top}>
         <h1>Study</h1>
-        <span className={s.coins} aria-label="Coins earned this visit">+{study.coinsEarned} {COINS.symbol}</span>
+        <span className={s.coins} title="TC earned this visit">+<Amount n={study.coinsEarned} /></span>
       </header>
       {study.error ? <p className={`${s.note} ${s.err}`} role="alert">{study.error}</p> : null}
       {study.signedOut ? (
@@ -58,7 +59,7 @@ export function StudyCompanionBody({ study }: { study: StudyHook }) {
 
 export default function StudyCompanion({ study }: { study: StudyHook }) {
   return (
-    <div className={s.shell}>
+    <div className={`${s.shell} gui`}>
       <div className={s.wrap}>
         <StudyCompanionBody study={study} />
       </div>
@@ -126,7 +127,7 @@ export function Setup({ study }: { study: StudyHook }) {
           <button onClick={() => step(k, d)} aria-label={`More ${label}`}>+</button>
         </div>
       ))}
-      <p className={s.muted}>Full session: up to {coins} {COINS.symbol}. Leaving early keeps your minutes.</p>
+      <p className={s.muted}>Full session: up to <Amount n={coins} />. Leaving early keeps your minutes.</p>
       <div className={s.row} style={{ marginTop: 10 }}>
         <button className={s.ghost} onClick={study.end} disabled={study.busy}>Leave seat</button>
         <button className={s.btn} onClick={() => study.start(settings)} disabled={study.busy}>Start</button>
@@ -141,33 +142,25 @@ function Timer({ study }: { study: StudyHook }) {
   const frac = study.remaining === null ? 0 : study.remaining / total;
   const R = 90;
   const C = 2 * Math.PI * R;
-  const color = x.phase === "focus" ? "#bb813f" : "#6c9a6f";
+  const color = x.phase === "focus" ? "var(--gui-wood-light, #bb813f)" : "var(--gui-success, #6c9a6f)";
   const isHost = study.mates.some((m) => m.me && m.is_host);
   return (
     <section className={s.card}>
       <div className={s.ringWrap}>
         <svg className={s.ring} viewBox="0 0 200 200" role="timer" aria-label={`${x.phase} ${formatClock(study.remaining)} remaining`}>
-          <circle cx="100" cy="100" r={R} fill="none" stroke="#e4e8dc" strokeWidth="12" />
+          <circle cx="100" cy="100" r={R} fill="none" stroke="var(--gui-paper-deep, #e4e8dc)" strokeWidth="12" />
           <circle cx="100" cy="100" r={R} fill="none" stroke={color} strokeWidth="12" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} transform="rotate(-90 100 100)" style={{ transition: "stroke-dashoffset 1s linear" }} />
           <text x="100" y="92" textAnchor="middle" className={s.phase} fill={color}>{x.phase === "focus" ? "Focus" : "Break"}</text>
-          <text x="100" y="130" textAnchor="middle" className={s.clock} fill="#293e3b">{formatClock(study.remaining)}</text>
+          <text x="100" y="130" textAnchor="middle" className={s.clock} fill="var(--gui-ink-strong, #293e3b)">{formatClock(study.remaining)}</text>
         </svg>
-        <p className={s.muted}>Cycle {x.cycle} of {x.settings!.cycles} · {x.minutes_completed} min banked · {x.coins_pending} {COINS.symbol} so far</p>
+        <p className={s.muted}>Cycle {x.cycle} of {x.settings!.cycles} · {x.minutes_completed} min banked · <Amount n={x.coins_pending} /> so far</p>
       </div>
       <div className={s.row}>
         {x.phase === "focus" ? <button className={s.ghost} onClick={study.takeBreak} disabled={study.busy}>Break now</button> : <button className={s.ghost} onClick={study.resume} disabled={study.busy}>Skip break</button>}
         <button className={s.btn} onClick={study.end} disabled={study.busy}>Leave seat</button>
       </div>
-      <label className={s.toggle}>
-        <input type="checkbox" checked={!study.chatMuted} disabled={x.phase === "break"} onChange={(e) => study.setChatOpen(e.target.checked)} />
-        Table chat {study.chatMuted ? "muted while you focus" : "on"}
-      </label>
-      {isHost ? (
-        <label className={s.toggle}>
-          <input type="checkbox" checked={!!study.table?.is_private} onChange={(e) => study.lock(e.target.checked)} />
-          Private table (only people already here)
-        </label>
-      ) : null}
+      <Toggle checked={!study.chatMuted} disabled={x.phase === "break"} onChange={(on) => study.setChatOpen(on)}>Table chat {study.chatMuted ? "muted while you focus" : "on"}</Toggle>
+      {isHost ? <Toggle checked={!!study.table?.is_private} onChange={(on) => study.lock(on)} hint="Only people already here">Private table</Toggle> : null}
     </section>
   );
 }
@@ -197,7 +190,7 @@ function Ended({ study }: { study: StudyHook }) {
   return (
     <section className={`${s.card}`}>
       <h2>{why}</h2>
-      <p className={`${s.note} ${s.ok}`}>+{e.coins_paid ?? e.coins_pending} {COINS.symbol} · {e.minutes_completed} focus minutes · {e.blocks_completed} full block{e.blocks_completed === 1 ? "" : "s"}</p>
+      <p className={`${s.note} ${s.ok}`}>+<Amount n={e.coins_paid ?? e.coins_pending} /> · {e.minutes_completed} focus minutes · {e.blocks_completed} full block{e.blocks_completed === 1 ? "" : "s"}</p>
     </section>
   );
 }
@@ -213,10 +206,7 @@ function Stats({ study }: { study: StudyHook }) {
         <div><b>{st.longest_block}</b><span>longest block</span></div>
         <div><b>{st.sessions}</b><span>sessions</span></div>
       </div>
-      <label className={s.toggle}>
-        <input type="checkbox" checked={st.on_board} onChange={(e) => study.setBoardOptIn(e.target.checked)} />
-        Show me on the cafe board
-      </label>
+      <Toggle checked={st.on_board} onChange={(on) => study.setBoardOptIn(on)}>Show me on the café board</Toggle>
     </section>
   );
 }

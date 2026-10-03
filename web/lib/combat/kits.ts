@@ -20,21 +20,30 @@ import type { WeaponType } from "./weapons";
 
 export type Element = "fire" | "frost" | "lightning";
 /** Enemy statuses: hold (seconds, rooted and not acting), slow [fraction, seconds], mark [+damage taken, seconds], distract (seconds, wanders off). */
-export interface Status { hold?: number; slow?: [number, number]; mark?: [number, number]; distract?: number }
-/** Classes v2 adds: a parry window (its ability's `on_parry` answers a frontal hit inside it), absorbing (hits are stored,
- * not taken: an area's `stored` releases them), and size (the body grows by the value: Titan). */
-export type BuffStat = "damage" | "speed" | "guard" | "block" | "crit" | "parry" | "absorb" | "size";
+export interface Status { hold?: number; slow?: [number, number]; mark?: [number, number]; distract?: number;
+  /** Classes v2: damage over time, [power per second, seconds] (a burn, a bleed); a new one refreshes the old. */
+  dot?: [number, number] }
+/**
+ * Classes v2 adds shot modifiers a v2 basic attack reads (lib/game/combat/classFire.ts): homing, flame (ignite and
+ * burning ground), swift (×2 speed, flat flight, pierce 1), scope (zoom, steadier: weak points ×1.5), surge (a fire
+ * rate the ult sets, shots per second); and a parry window (its ability's `on_parry` answers a frontal hit inside it),
+ * absorbing (hits are stored, not taken: an area's `stored` releases them), size (the body grows by the value: Titan).
+ */
+export type BuffStat = "damage" | "speed" | "guard" | "block" | "crit" | "homing" | "flame" | "swift" | "scope" | "surge" | "parry" | "absorb" | "size";
+/** Classes v2: what a shot looks like in flight (EncounterRender's projectile kinds). */
+export type ShotLook = "arrow" | "bolt" | "card" | "bone" | "bullet" | "harpoon";
 
 export type Effect =
   /** Shots from the caster toward the aim; `count` fan out over `spread` radians. */
   | { kind: "projectile"; power: number; count?: number; spread?: number; speed?: number; range?: number; pierce?: boolean; splash?: number; status?: Status;
-      /** Classes v2: hops on to the nearest unhit enemy this many times, then flies home (Shield Throw). */
-      bounce?: number;
-      /** Classes v2: flies to the aim and stays where it lands or in what it hits: the blink anchor (Kunai Blink). */
-      stick?: boolean;
-      /** Classes v2: the shot's look (a card, a bone shard), its size, and whether it carries the ability's mark (a card to teleport to);
-       * `burst`: effects where it ends (it flies to the aim at most, and bursts there or on the first enemy in its way). */
-      shot?: "arrow" | "bolt" | "card" | "bone"; size?: number; mark?: boolean; burst?: Effect[] }
+      /** Classes v2: the shot's look (a card, a bone shard, a bullet, a harpoon), its size, and whether it carries the ability's mark (a card to teleport to);
+       * `burst`: effects where it ends (it flies to the aim at most, and bursts there or on the first enemy in its way). Always a crit; ricochets to
+       * `bounce` more enemies within 6 u; pulls what it hits `pull` u toward you; zips you to terrain it hits (`grapple`: the zip's FX); bursts
+       * into `cluster.count` bomblets round its impact. `home`: after its last hit it flies back to your hand (Shield Throw); `stick`: it flies to
+       * the aim and stays where it lands or in what it hits, the blink anchor (Kunai Blink). */
+      shot?: ShotLook; size?: number; mark?: boolean; burst?: Effect[];
+      crit?: boolean; bounce?: number; pull?: number; grapple?: string; cluster?: { count: number; power: number; radius: number; fx?: string };
+      home?: boolean; stick?: boolean }
   /** A circle at the caster (or where a dash ended) or the aim; `arc` makes a cone toward the aim, `length` a beam of width 2·radius. */
   | { kind: "area"; power: number; radius: number; at: "self" | "aim"; arc?: number; length?: number; knock?: number; status?: Status;
       /** Classes v2: adds what an absorb stored × this to each hit, and empties the store (Unbreakable's release). */
@@ -57,7 +66,7 @@ export type Effect =
   /** A body-part change (row 34): shown on the character, triggers the Transmuter passive. */
   | { kind: "transform"; duration: number }
   /** Classes v2 movement hooks (design sheet §1.1): carried speed added along the aim (≤ 4 u/s a cast, never past the 18 u/s ceiling), and a small hop. */
-  | { kind: "momentum"; speed: number }
+  | { kind: "momentum"; speed: number; back?: boolean }
   | { kind: "launch"; height: number }
   // ── Classes v2 shared primitives (lib/game/combat/primitives.ts) ──
   /**
@@ -77,8 +86,11 @@ export type Effect =
    * answer toward the attacker. `vs: "shot"` only enemy shots, which it sends back at their shooter for `reflect` power.
    */
   | { kind: "counter"; window: number; negate: number; vs?: "shot" | "any"; reflect?: number; effects?: Effect[] }
-  /** Unseen for `duration` s: enemies lose you unless within `reveal` u; attacking or casting ends it; the first hit after deals `bonus` more. */
-  | { kind: "stealth"; duration: number; reveal: number; bonus: number }
+  /**
+   * Unseen for `duration` s: enemies lose you unless within `reveal` u; attacking or casting ends it; the first hit after
+   * deals `bonus` more. `walk`: moving faster than this (u/s) gives you away too (a slow walk stays hidden).
+   */
+  | { kind: "stealth"; duration: number; reveal: number; bonus: number; walk?: number }
   /** Your minions charge the enemy nearest the aim; again: they come back to guard you. */
   | { kind: "command" }
   /** Blow up your minion or a corpse nearest the aim (within `range`): an area, and every corpse within `chain` u goes too, up to `links`. */
@@ -110,7 +122,13 @@ export type Effect =
   | { kind: "after"; delay: number; effects: Effect[]; fx?: string; tier?: "light" | "ability" | "heavy" | "ult" }
   | { kind: "blink"; to: "behind" | "anchor"; range?: number; status?: Status }
   | { kind: "taunt"; radius: number; duration: number }
-  | { kind: "drop" };
+  | { kind: "drop" }
+  /** Classes v2: every trap of yours springs at once at `power` × its own, and enemies on the lines between them take `chain` power and the status (the Hunter's ult). */
+  | { kind: "trigger"; power: number; chain: number; status?: Status }
+  /** Classes v2: rounds into the cylinder, next up (keys of the kit's fire.rounds); `shuffle` spins them, `cock` s between shots, `window` s to fire them. */
+  | { kind: "load"; rounds: string[]; shuffle?: boolean; cock?: number; window?: number;
+      /** Plain rounds added to the cylinder instead (a roll that reloads two), never past its size. */
+      add?: number };
 
 export interface Ability {
   key: string;
@@ -144,16 +162,19 @@ export type PassiveKind =
    * knockback while attacking (Unstoppable); each chain hit adds `value` attack speed up to `cap` stacks, gone after a
    * 1 s gap (Rhythm); hits from behind always crit and deal `value` more (Backstab).
    */
-  | "parry" | "unstoppable" | "rhythm" | "backstab";
+  | "parry" | "unstoppable" | "rhythm" | "backstab"
+  // Classes v2 (the Rangers): Focus (value: the top fire rate, cap: seconds to reach it), Killstreak (value per kill, cap kills),
+  // Prey (traps deal value more to marked enemies), Last Round (the cylinder's last chamber always crits).
+  | "focus" | "killstreak" | "prey" | "last_round";
 export interface Passive {
   name: string;
   description: string;
   kind: PassiveKind;
   value: number;
+  /** Classes v2: its icon (an SVG under /assets/game/classes/; the HUD's class line). */
+  icon?: string;
   /** Stacks cap, a distance, or the proc limit (per kind). */
   cap?: number;
-  /** Classes v2: its icon (the HUD's class line). */
-  icon?: string;
 }
 export interface Subclass {
   key: string;
@@ -388,6 +409,10 @@ export interface UnitDef {
   radius?: number; model?: string;
   /** Totems: what a pulse does each second, per role. */
   pulse?: { damage?: number; heal?: number; slow?: number; shield?: number };
+  /** Classes v2 traps: springs on everything within `blast` u (else the first enemy only), with this status (else a 3 s hold); reaches `lunge` u for a marked enemy. */
+  blast?: number; status?: Status; lunge?: number;
+  /** Classes v2 minions: runs down marked enemies first. */
+  prey?: boolean;
 }
 export const UNITS: Record<string, UnitDef> = {
   wisp: { key: "wisp", name: "Spirit wisp", kind: "minion", hp: 40, cost: 1, speed: 5, range: 6, power: 0.38, rate: 0.9, ranged: true },
@@ -400,6 +425,11 @@ export const UNITS: Record<string, UnitDef> = {
   "totem-mending": { key: "totem-mending", name: "Mending totem", kind: "totem", hp: 90, radius: 3.4, pulse: { heal: 0.025 } },
   "totem-warding": { key: "totem-warding", name: "Warding totem", kind: "totem", hp: 90, radius: 3.4, pulse: { slow: 0.35, shield: 0.015 } },
   tripwire: { key: "tripwire", name: "Tripwire", kind: "trap", hp: 1, life: 25, radius: 1.2, power: 0.8 },
+  // Classes v2, the Rangers (lib/combat/kits/ranger.ts): the Sniper's mine, the Hunter's snare and spike traps, the Great Hunt's hounds.
+  "sniper-mine": { key: "sniper-mine", name: "Tripwire mine", kind: "trap", hp: 1, life: 20, radius: 1.3, power: 1.6, blast: 2.2, status: { slow: [0.3, 1.5] } },
+  "snare-trap": { key: "snare-trap", name: "Snare trap", kind: "trap", hp: 1, life: 18, radius: 1.1, power: 0.4, status: { hold: 2 }, lunge: 3 },
+  "spike-trap": { key: "spike-trap", name: "Spike trap", kind: "trap", hp: 1, life: 18, radius: 1.1, power: 1.2, blast: 1.5, status: { dot: [0.35, 4] }, lunge: 3 },
+  "spectral-hound": { key: "spectral-hound", name: "Spectral hound", kind: "minion", hp: 60, cost: 0, life: 7, speed: 11, range: 1.5, power: 1, rate: 0.5, model: "shadow-fox", prey: true },
   decoy: { key: "decoy", name: "Phantom", kind: "decoy", hp: 50, life: 3, taunt: true },
   // Classes v2, Arcane: the Illusionist's doubles, the Necromancer's dead (a skeleton body, lib/game/combat/primitives.ts ALLY_BODIES).
   "mirror-clone": { key: "mirror-clone", name: "Mirror clone", kind: "clone", hp: 30, hpShare: 0.3, life: 10, speed: 7.4, range: 9, power: 0.4, rate: 1.15 },

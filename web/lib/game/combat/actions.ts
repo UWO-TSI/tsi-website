@@ -17,6 +17,7 @@ import type { SpawnPoint } from "./spawns";
 import { FAMILY_STAT } from "@/lib/combat/kits";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { MOVE_TUNING, type MoveTuning } from "@/lib/game/movement/sim";
+import { addZone, blastAt, FIRE, fireBasic, onHurt, ricochet, scatter } from "./classFire";
 
 /** Energy regen: after ENERGY.delay seconds without spending, never while tracing. */
 export function regenEnergy(rt: CombatRuntime, dt: number) {
@@ -63,6 +64,9 @@ export function chainHit(rt: CombatRuntime, landed: boolean) {
 export function attack(rt: CombatRuntime, player: Vec, random = Math.random): boolean {
   const p = rt.player;
   if (!p.alive || p.attackCd > 0 || rt.casting || p.dash || rt.v2?.channel || (p.dodgeAge !== null && p.dodgeAge < DODGE.duration)) return false; // a channel takes your hands
+  // Classes v2: a kit with its own basic attack fires it from its signature weapon (classFire.ts); any other weapon swings its own.
+  const kit = rt.v2?.kit;
+  if (kit?.fire && holdsSignature(kit, SYSTEM_WEAPONS.find(x => x.key === p.weapon)?.type)) { faceAim(p, player); return fireBasic(rt, player); }
   // Classes v2: a form brings its own click attack (primitives.ts formBasic); attacking ends stealth.
   const form = formBasic(rt), w = form ? { ...WEAPONS[p.weapon], ...form } : WEAPONS[p.weapon], tier = form ? formTier(rt, rt.v2?.form) : undefined, v = rt.v2;
   // Classes v2: the kit's own basic on its signature weapon (a chain, HP-scaled hits, a throw past reach).
@@ -120,28 +124,41 @@ export function resolvePlayerShot(rt: CombatRuntime, shotIdx: number, from: Vec,
     if (s.kind === "bolt") splash(rt, to, 1.3, target, { power: 0.5, from: to, knock: 2 }, random);
     return true;
   }
-  strike(rt, target, { power: h.power, from, knock: h.unit ? 1 : knock, stat: h.stat, tier: h.tier, unit: h.unit, status: h.status, impact: h.impact, ult: h.ult, first: !h.hitIds?.length }, random);
-  fx(rt, h.fx, "impact", to, to, h.impact ?? "ability");
+  if (h.blast) { blastAt(rt, to, h.blast.power, h.blast.radius, h, random); return true; } // a bomblet or a blast round bursts on contact
+  // Classes v2: a weak point (the shot through the inner part of the body) always crits; a harpoon pulls toward you.
+  const crit = h.crit || (!!h.weak && lineDist(target, from, to) <= Math.min(h.weak * target.type.radius, FIRE.weakMax)), me = rt.player.last;
+  const pull = h.pull && me ? { from: me, knock: -h.pull * 8 } : null;
+  strike(rt, target, { power: h.power, from: pull?.from ?? from, knock: pull?.knock ?? (h.unit ? 1 : h.steady ? 0 : knock), stat: h.stat, tier: h.tier, unit: h.unit, status: h.status, impact: h.impact, ult: h.ult, first: !h.hitIds?.length, crit: crit || undefined, steady: h.steady }, random);
+  fx(rt, h.fx, "impact", to, to, h.impact ?? "ability", undefined, h.ramp); // in the shot's own colours (an element's)
   if (h.stick && rt.v2) rt.v2.anchor = { x: target.x, z: target.z, enemy: target.id }; // stuck in it: the blink lands at its back
-  if (h.bounce !== undefined) return bounce(rt, s, target);
-  if (h.splash) splash(rt, to, h.splash, target, { power: h.power * 0.5, from: to, knock: 2, stat: h.stat, tier: h.tier }, random);
+  if (h.splash) {
+    if (rt.v2) blastAt(rt, to, h.power * 0.5, h.splash, h, random, target, false); // its FX is the hit's, above
+    else splash(rt, to, h.splash, target, { power: h.power * 0.5, from: to, knock: 2, stat: h.stat, tier: h.tier }, random);
+  }
+  if (h.cluster) scatter(rt, to, h.cluster, h, random, target);
+  if (h.zone) addZone(rt, to, h.zone);
+  if (h.bounce || h.home) { // on to the next enemy (a ricochet; Shield Throw's hops), and a thrown shield back to your hand
+    (h.hitIds ??= []).push(target.id);
+    if (h.bounce && ricochet(rt, s, target)) return false;
+    return h.home ? !homeward(rt, s) : true;
+  }
+  if (h.pierces) { h.pierces--; (h.hitIds ??= []).push(target.id); return false; }
   if (!h.pierce) return true;
   h.hitIds!.push(target.id);
   return false;
 }
-/** Classes v2: a bouncing shot hops to the nearest enemy it hasn't hit (within 7 u) while it has hops, then flies home. False: it flies on. */
-export const BOUNCE = { reach: 7 } as const;
-function bounce(rt: CombatRuntime, s: CombatRuntime["projectiles"][number], hit: Enemy): boolean {
-  const h = s.hit!, speed = Math.hypot(s.vx, s.vz) || 16;
-  h.hitIds!.push(hit.id);
-  let next: Enemy | null = null, best: number = BOUNCE.reach;
-  if (h.bounce! > 0) for (const e of rt.enemies) { const d = e.state !== "dead" && e.state !== "return" && !h.hitIds!.includes(e.id) ? Math.hypot(e.x - hit.x, e.z - hit.z) : Infinity; if (d < best) { best = d; next = e; } }
-  const to = next ?? rt.player.last;
-  if (!to) return true;
-  if (next) h.bounce!--; else h.spent = true;
-  const d = Math.hypot(to.x - s.x, to.z - s.z) || 1;
-  s.vx = ((to.x - s.x) / d) * speed; s.vz = ((to.z - s.z) / d) * speed; s.life = d / speed + 0.4;
-  return false;
+/** Classes v2: a thrown shield turns for your hand (caught within 0.7 u). False: nobody there to catch it. */
+function homeward(rt: CombatRuntime, s: CombatRuntime["projectiles"][number]): boolean {
+  const me = rt.player.last;
+  if (!me) return false;
+  const h = s.hit!, speed = Math.hypot(s.vx, s.vz) || 16, d = Math.hypot(me.x - s.x, me.z - s.z) || 1;
+  h.spent = true; s.vx = ((me.x - s.x) / d) * speed; s.vz = ((me.z - s.z) / d) * speed; s.life = d / speed + 0.4;
+  return true;
+}
+/** How far `p` is off the shot's line through a→b (its path, not just this frame's step): a weak point's test. */
+function lineDist(p: Vec, a: Vec, b: Vec): number {
+  const dx = b.x - a.x, dz = b.z - a.z, l = Math.hypot(dx, dz);
+  return l > 1e-6 ? Math.abs(dx * (p.z - a.z) - dz * (p.x - a.x)) / l : Math.hypot(p.x - a.x, p.z - a.z);
 }
 function splash(rt: CombatRuntime, at: Vec, r: number, skip: Enemy, src: Parameters<typeof strike>[2], random: () => number) {
   rt.blasts.push({ id: rt.seq++, x: at.x, z: at.z, radius: r, color: "#b48cff", age: 0, life: 0.35 });
@@ -204,6 +221,7 @@ export function hurtPlayer(rt: CombatRuntime, amount: number, from: Vec, player:
   // Classes v2: a counter window (a Perfect Shift) cuts and answers it; a blinding zone makes it miss (primitives.ts).
   const c = rt.field.counter || rt.field.zones.length ? counterHit(rt, amount, from, player, random, shot) : { amount, flinch: true };
   if (c.amount <= 0) return 0;
+  onHurt(rt); // classes v2: Focus halves, a Killstreak ends
   const { damage, parried } = mitigate(rt, c.amount, from, player, random); // the seeded roll in the balance runs (a block's counter can crit)
   if (parried) return 0; // negated: no flinch, no push
   // Unstoppable (classes v2): no knockback while attacking (a swing, an ability's dash, the ult).
