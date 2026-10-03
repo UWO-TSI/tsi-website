@@ -69,6 +69,17 @@ export function fadeOf(rt: CombatRuntime): number {
 }
 
 /**
+ * A unit's share of the ranks on the key that called it (the kit's mastery track): a beast's or a totem's own hits and
+ * reach grow with that key's "+power" and "+radius" ranks (the key's effects carry them for the call itself).
+ */
+export function rankScale(rt: CombatRuntime, key: string, prop: "power" | "radius"): number {
+  const v = rt.v2;
+  let n = 1;
+  if (v?.kit.ranks) for (const r of v.kit.ranks) if (r.target === key && r.at <= v.mastery) n *= r.change[prop] ?? 1;
+  return n;
+}
+
+/**
  * The enemy a pull or an entry goes for: the live one nearest the aim within `near` of it (and `range` of you), else the
  * nearest within `range` in front of you.
  */

@@ -50,8 +50,8 @@ export const FIELD_KINDS = new Set<string>(["ground", "throw", "channel", "barri
 export const WARDEN_UNITS: Record<string, UnitDef> = {
   "beast-wolf": { key: "beast-wolf", name: "Shadow wolf", kind: "minion", hp: 110, cost: 0.5, speed: 7, range: 1.4, power: 0.14, rate: 0.75, model: "beast-wolf" },
   "beast-owl": { key: "beast-owl", name: "Shadow owl", kind: "minion", hp: 70, cost: 1, speed: 9, range: 1.5, power: 0.26, rate: 1.1, model: "beast-owl" },
-  "beast-toad": { key: "beast-toad", name: "Shadow toad", kind: "minion", hp: 280, cost: 1, speed: 3.4, range: 1.7, power: 0.26, rate: 1.2, taunt: true, model: "beast-toad" },
-  "beast-serpent": { key: "beast-serpent", name: "Shadow serpent", kind: "minion", hp: 150, cost: 1, speed: 6, range: 1.9, power: 0.4, rate: 1.0, model: "beast-serpent" },
+  "beast-toad": { key: "beast-toad", name: "Shadow toad", kind: "minion", hp: 280, cost: 1, speed: 3.4, range: 1.7, power: 0.2, rate: 1.2, taunt: true, model: "beast-toad" },
+  "beast-serpent": { key: "beast-serpent", name: "Shadow serpent", kind: "minion", hp: 150, cost: 1, speed: 6, range: 1.9, power: 0.3, rate: 1.0, model: "beast-serpent" },
   "totem-storm": { key: "totem-storm", name: "Storm totem", kind: "totem", hp: 120, life: 24, radius: 5.5, model: "totem-storm", driven: true },
   "totem-fire": { key: "totem-fire", name: "Fire totem", kind: "totem", hp: 120, life: 24, radius: 2.5, model: "totem-fire", driven: true },
   "totem-earth": { key: "totem-earth", name: "Earthbind totem", kind: "totem", hp: 160, life: 24, radius: 3.4, model: "totem-earth", driven: true },

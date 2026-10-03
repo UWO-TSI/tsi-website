@@ -13,6 +13,7 @@ import type { FieldEffect } from "@/lib/combat/wardenData";
 import { applyStatus, floater, fx, strike, summon, type Ctx } from "./abilities";
 import type { CombatRuntime, Unit } from "./runtime";
 import { segDist, type Enemy, type Vec } from "./sim";
+import { rankScale } from "./field";
 
 export const TOTEM = {
   /** Link range (× area): two totems closer than this draw lightning between them. */
@@ -165,7 +166,7 @@ export function stepTotems(rt: CombatRuntime, me: Vec, dt: number, random: () =>
     }
   }
   for (const u of totems) {
-    const key = u.def.key, r = (u.def.radius ?? 0) * A, res = resonance(rt, st, u);
+    const key = u.def.key, r = (u.def.radius ?? 0) * A * rankScale(rt, u.source, "radius"), res = resonance(rt, st, u) * rankScale(rt, u.source, "power"); // its key's ranks
     if (u.body) { u.body.x = u.x; u.body.z = u.z; u.body.t += dt; }
     if (key === "totem-earth") {
       for (const e of rt.enemies) if (live(e) && dist(e, u) <= r + e.type.radius) applyStatus(e, { slow: [TOTEM.earth.slow, 0.7] });

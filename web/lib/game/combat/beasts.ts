@@ -22,7 +22,7 @@ import { ENEMIES } from "./data";
 import { addKick } from "./moveHooks";
 import type { CombatRuntime, Unit } from "./runtime";
 import { engage, spawnEnemy, type Enemy, type Vec } from "./sim";
-import { pullEnemy, targetNear } from "./field";
+import { pullEnemy, rankScale, targetNear } from "./field";
 import { equipClassKit } from "./classRuntime";
 
 export const BEAST = {
@@ -31,7 +31,7 @@ export const BEAST = {
   wolves: { power: 0.7, range: 9 },
   owl: { push: 4, lift: 0.9 },
   toad: { range: 9, hold: 0.8, power: 0.6 },
-  serpent: { range: 10, radius: 1.6, power: 1.4, hold: 1.6 },
+  serpent: { range: 10, radius: 1.6, power: 1, hold: 1.6 },
   guard: { every: 3.5, reach: 4.5, hold: 0.8, power: 0.4 },
   warp: { power: 0.8, radius: 2 },
 } as const;
@@ -124,7 +124,7 @@ export function gardenWarp(rt: CombatRuntime, me: Vec, random: () => number = Ma
 
 /** A beast's entry move, the frame after it's called (toward your aim). */
 function enter(rt: CombatRuntime, u: Unit, me: Vec, index: number, random: () => number) {
-  const p = rt.player, sp = rt.v2?.mods.summonPower ?? 1, b = u.body;
+  const p = rt.player, sp = (rt.v2?.mods.summonPower ?? 1) * rankScale(rt, u.source, "power"), b = u.body;
   const hit = (e: Enemy, power: number, knock: number, impact: "ability" | "heavy", first = true) =>
     strike(rt, e, { power: power * sp, from: u, stat: u.stat, impact, knock, first, ult: u.ult }, random);
   switch (u.def.key) {
@@ -189,6 +189,7 @@ export function stepBeasts(rt: CombatRuntime, me: Vec, dt: number, random: () =>
   for (const u of rt.units) {
     if (!isBeast(u) || st.tracked.has(u)) continue;
     u.hp = u.maxHp = Math.round((UNITS[u.def.key]?.hp ?? u.maxHp) * v.mods.summonPower);
+    u.power *= rankScale(rt, u.source, "power"); // its key's ranks
     st.tracked.set(u, { base: u.power, key: u.source, entry: 0.35 });
     enter(rt, u, me, n++, random);
   }
@@ -220,7 +221,7 @@ export function stepBeasts(rt: CombatRuntime, me: Vec, dt: number, random: () =>
     st.guard.set(u, BEAST.guard.every);
     st.tongues.push({ from: { x: u.x, z: u.z }, to: { x: e.x, z: e.z }, t: 0 });
     const d = dist(e, u) || 1;
-    pullEnemy(rt, e, { x: u.x + ((e.x - u.x) / d) * 1.2, z: u.z + ((e.z - u.z) / d) * 1.2 }, BEAST.guard.hold, BEAST.guard.power * v.mods.summonPower, ctxOf(rt, u), random);
+    pullEnemy(rt, e, { x: u.x + ((e.x - u.x) / d) * 1.2, z: u.z + ((e.z - u.z) / d) * 1.2 }, BEAST.guard.hold, BEAST.guard.power * v.mods.summonPower * rankScale(rt, u.source, "power"), ctxOf(rt, u), random);
   }
   for (let i = st.tongues.length - 1; i >= 0; i--) if ((st.tongues[i].t += dt) > 0.25) st.tongues.splice(i, 1);
   // The garden: when it closes, the beasts it raised go back unless you called them since.
