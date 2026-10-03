@@ -2,6 +2,14 @@ import { APPLICANT_PORTAL } from "@/lib/recruitment-access";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+/** Signed out: the sign-in entry, back to this page after (/student/go honours `next`). */
+function toSignIn(request: NextRequest) {
+  const url = request.nextUrl.clone();
+  url.pathname = "/student";
+  url.search = `?next=${encodeURIComponent(request.nextUrl.pathname + request.nextUrl.search)}`;
+  return NextResponse.redirect(url);
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -56,11 +64,7 @@ export async function updateSession(request: NextRequest) {
     }
 
     // Election enabled — require auth
-    if (!user) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/student";
-      return NextResponse.redirect(url);
-    }
+    if (!user) return toSignIn(request);
 
     // Admin election results — T1/T2 only
     if (pathname.startsWith("/student/dashboard/admin/election")) {
@@ -82,11 +86,7 @@ export async function updateSession(request: NextRequest) {
 
   // ─── Dashboard admin routes — require T1-T3 ──────────────────────────
   if (pathname.startsWith("/student/dashboard/admin")) {
-    if (!user) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/student";
-      return NextResponse.redirect(url);
-    }
+    if (!user) return toSignIn(request);
 
     const { data: profile } = await supabase
       .from("profiles")
@@ -105,11 +105,7 @@ export async function updateSession(request: NextRequest) {
 
   // ─── Dashboard routes — require auth; portal pages require onboarding ─
   if (pathname.startsWith("/student/dashboard")) {
-    if (!user) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/student";
-      return NextResponse.redirect(url);
-    }
+    if (!user) return toSignIn(request);
 
     // The island itself skips the portal profile wizard: game players name
     // themselves in the character creator (hud-first-login §6, row 211).
@@ -132,11 +128,7 @@ export async function updateSession(request: NextRequest) {
 
   // ─── Onboarding — require auth, skip if already completed ─────────────
   if (pathname.startsWith("/student/onboarding")) {
-    if (!user) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/student";
-      return NextResponse.redirect(url);
-    }
+    if (!user) return toSignIn(request);
 
     const { data: profile } = await supabase
       .from("profiles")
