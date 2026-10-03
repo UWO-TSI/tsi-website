@@ -37,7 +37,10 @@ const SOUND_SLIDERS: { key: keyof AudioVolumes; label: string }[] = [
   { key: "sfx", label: "Sound effects" },
 ];
 
-export default function SettingsSheet({ open, onClose, detectedTier = null }: { open: boolean; onClose: () => void; detectedTier?: QualityTier | null }) {
+export default function SettingsSheet({ open, onClose, detectedTier = null, place = "island" }: { open: boolean; onClose: () => void; detectedTier?: QualityTier | null;
+  /** The phone companion (reachability §4): what a phone can use, text size, contrast and sound; no graphics, camera or keys. */
+  place?: "island" | "phone" }) {
+  const island = place === "island";
   const { settings, signedIn, aura } = useWorldIdentity();
   const [graphics, graphicsActions] = useGraphicsSettings();
   // isExplicit isn't part of the store snapshot: re-render on a change so Auto shows as chosen.
@@ -97,7 +100,7 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
       <legend>Text size</legend>
       <div className={styles.segmented}>{TEXT_SIZES.map(s => <button key={s} aria-pressed={settings.text_size === s} onClick={() => void save({ text_size: s })}>{SIZE_NAMES[s]}</button>)}</div>
     </fieldset>
-    <fieldset>
+    {island && <fieldset>
       <legend>Look and performance</legend>
       <Toggle checked={graphics.pixelated} onChange={on => graphicsActions.setPixelated(on)} hint="The world stays the same. Choose its finish.">Pixel finish</Toggle>
       <Select label="Quality" value={quality} onChange={e => setQuality(e.target.value)} data-testid="quality">
@@ -109,8 +112,8 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
       {/* Row 283: the HUD stays out of the way while you explore; this keeps it on. */}
       <Toggle checked={alwaysFullHud} onChange={setAlwaysFullHud}>Show full HUD</Toggle>
       <p className={styles.hint}>Otherwise TC, XP, the clock and mail show when they change. Hold <kbd>{keyName(wheelKeys.hud)}</kbd>, or let go of the mouse, to see everything.</p>
-    </fieldset>
-    <fieldset>
+    </fieldset>}
+    {island && <fieldset>
       <legend>Camera</legend>
       <Toggle checked={camera.mouseLook} onChange={on => setOrbitPrefs({ mouseLook: on })}>Mouse look</Toggle>
       <Slider label="Sensitivity" min={SENSITIVITY_MIN * 100} max={SENSITIVITY_MAX * 100} step={5} value={Math.round(camera.sensitivity * 100)}
@@ -118,16 +121,17 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
       <Toggle checked={camera.invertY} onChange={on => setOrbitPrefs({ invertY: on })}>Invert up and down</Toggle>
       <Toggle checked={camera.autoFollow} onChange={on => setOrbitPrefs({ autoFollow: on })}>Follow behind when you run</Toggle>
       <p className={styles.hint}>{camera.mouseLook ? "Click the island to look around with the mouse. Hold right click for a cursor; Esc lets the mouse go." : "The cursor stays free."} Arrow keys turn and tilt, the wheel and Z zoom, V puts the camera back. Kept on this device.</p>
-    </fieldset>
-    <fieldset>
+    </fieldset>}
+    {island && <fieldset>
       <legend>You on the island</legend>
       <Toggle checked={showClass} onChange={setShowClass}>Show class on my nameplate</Toggle>
       <Toggle checked={aura} onChange={setAuraVisible}>Show my aura</Toggle>
-    </fieldset>
+    </fieldset>}
     {/* Design sheet §1.6: the ult's flash frame and every flash obey these; both start calm when the device asks for reduced motion. */}
     <fieldset data-testid="accessibility">
       <legend>Accessibility</legend>
       <Toggle checked={settings.high_contrast} onChange={on => void save({ high_contrast: on })}>High contrast</Toggle>
+      {island && <>
       <Toggle checked={comfort.reduceFlashing} onChange={on => setComfort({ reduceFlashing: on })} hint="Big hits darken the screen instead of flashing it, and their lines and glows are softer.">Reduce flashing</Toggle>
       <div className={styles.preset}>
         <span>Screen shake</span>
@@ -136,6 +140,7 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
         </div>
       </div>
       <p className={styles.hint}>Kept on this device.</p>
+      </>}
     </fieldset>
     <fieldset>
       <legend>Sound</legend>
@@ -146,6 +151,7 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
           onChange={v => AudioManager.setVolumes({ [key]: v / 100 })} />
       ))}
     </fieldset>
+    {island && <>
     <fieldset>
       <legend>Menu keys</legend>
       <ul className={styles.keyList}>{REMAPPABLE_ACTIONS.map(a => <li key={a}>
@@ -194,6 +200,7 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
       </li>)}</ul>
       {abilityNote && <p className={styles.hint} role="status">{abilityNote}</p>}
     </fieldset>
+    </>}
     <small className={styles.hint}>{signedIn ? "Saved to your account." : <SignInText text="Saved on this device. Sign in to keep them everywhere." />}</small>
   </IslandSheet>;
 }

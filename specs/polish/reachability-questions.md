@@ -104,6 +104,25 @@ The builder is `lib/game/signIn.ts`. It never points `next` at a sign-in page or
    If members are in that list, tell them to use "Continue with Google" with the same address. Supabase links identities with the same verified email.
 3. **The redirect allow-list.** The Google button's `redirectTo` now carries a nested `next` more often. Check that the production Supabase Auth redirect URLs allow `https://www.tethos.ca/api/auth/callback**` with query strings.
 
+## 4. The phone companion
+
+**Checked against the spec.** The GUI sheet pass had already done four of the items:
+- real icons, as rounded app tiles instead of emoji;
+- the kit's font;
+- embedded portal pages readable on cream (no hard-coded white text left);
+- the showcase as a bottom sheet capped at 92% of the screen.
+
+**Built here.**
+- A coin chip in the top bar that opens your wallet.
+- The Me tab under the game's names, six tiles: Bag (items), Collection (catches), Journal (quests, new), Mailbox, Wallet (new) and Settings (new). The Collection tile used to open as "Journal" in the code; now it's Collection everywhere.
+- Settings on the phone keeps only what a phone uses: text size, high contrast and sound. They're saved to your account, and the text size you pick now applies to the companion's pages too, not only its sheets.
+- Every tab row (the bounty board's filters, the calendar's views) scrolls sideways when it doesn't fit. Its edges fade where more is hidden and the chosen tab slides into view. "Completed" used to be cut off at "Complet" with no hint that the row scrolls.
+- The sign-in link keeps its destination (§3).
+
+**Questions.**
+- An unread count on the Mailbox tile, as on the island's mail button?
+- The daily gift pop-up stays on the island. On the phone the gift waits in the Wallet. Do you want it to pop up on the phone as well?
+
 ## Migration to apply (flagged)
 
 `web/supabase/migrations/20261003161600_resident_talk.sql`:

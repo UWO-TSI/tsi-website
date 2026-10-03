@@ -15,6 +15,7 @@ import { useCoarsePointer, useSearch } from "@/lib/game/useMediaQuery";
 import StudyTab from "@/components/companion/StudyTab";
 import ClubTab from "@/components/companion/ClubTab";
 import MeTab from "@/components/companion/MeTab";
+import CompanionHeader from "@/components/companion/CompanionHeader";
 import s from "@/components/study/companion.module.css";
 
 type Tab = "study" | "club" | "me";
@@ -59,9 +60,7 @@ export default function CompanionPage() {
   return (
     <div className={`${s.shell} gui`}>
       <div className={s.wrap} style={{ paddingBottom: 96 }}>
-        <header className={s.top}>
-          <h1>Tethos</h1>
-        </header>
+        <CompanionHeader signedIn={gate === "ok"} />
         {gate === "checking" ? <Loading label="Opening the club…" /> : null}
         {gate === "signed_out" ? <SignInGate /> : null}
         {gate === "ok" ? (

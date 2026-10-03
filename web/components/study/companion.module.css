@@ -77,3 +77,9 @@
 .grid2 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .tile { min-height: 96px; border: 0; border-radius: var(--gui-r-card); background: var(--gui-paper); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge); display: grid; place-items: center; align-content: center; gap: 6px; color: var(--gui-ink-strong); font-weight: 800; font-size: var(--gui-text-sm); }
 .tile .appTile { width: 44px; height: 44px; border-radius: 14px; }
+/* The coins in the top bar open the wallet (reachability §4): the chip is a button. The account's text size reaches
+   the phone's pages too, not only its sheets. */
+.coinsButton { gap: 5px; min-height: 40px; border: 0; font: inherit; font-weight: 900; color: var(--gui-ink-strong); }
+.coinsButton small { color: var(--gui-muted); font-size: var(--gui-text-xs); font-weight: 800; }
+.coinsButton:active { transform: translateY(1px); }
+.wrap, .tabbar { zoom: var(--tsi-text-scale, 1); }
