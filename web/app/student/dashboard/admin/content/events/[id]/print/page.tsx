@@ -6,6 +6,7 @@ import QRCode from "qrcode";
 import { useUser } from "@/components/portal/UserContext";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Empty, ErrorNote, Loading } from "@/components/gui";
+import { checkInUrl as eventCheckInUrl } from "@/lib/portal/checkIn";
 
 interface EventRow {
   id: string;
@@ -41,16 +42,20 @@ export default function PrintEventPage({
     (async () => {
       try {
         const supabase = createClient();
-        const { data, error } = await supabase
-          .from("events")
-          .select("id, title, start_time, end_time, location, qr_check_in_code")
-          .eq("id", id)
-          .single();
+        // The check-in code isn't readable with a member's key; the T1/T2 route hands it over.
+        const [{ data, error }, code] = await Promise.all([
+          supabase
+            .from("events")
+            .select("id, title, start_time, end_time, location")
+            .eq("id", id)
+            .single(),
+          fetch(`/api/events/${id}/check-in`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        ]);
         if (cancelled) return;
         if (error || !data) {
           setError(error?.message ?? "Event not found");
         } else {
-          setRow(data as EventRow);
+          setRow({ ...data, qr_check_in_code: code?.code ?? null } as EventRow);
         }
       } catch (err) {
         if (!cancelled) {
@@ -67,7 +72,7 @@ export default function PrintEventPage({
 
   useEffect(() => {
     if (!row?.qr_check_in_code) return;
-    const checkInUrl = `https://tethos.org/student/check-in?code=${row.qr_check_in_code}`;
+    const checkInUrl = eventCheckInUrl(row.id, row.qr_check_in_code);
     let cancelled = false;
     QRCode.toDataURL(checkInUrl, { width: 400, margin: 1 })
       .then((url) => {
@@ -79,7 +84,7 @@ export default function PrintEventPage({
     return () => {
       cancelled = true;
     };
-  }, [row?.qr_check_in_code]);
+  }, [row?.id, row?.qr_check_in_code]);
 
   if (loading || rowLoading) {
     return (
@@ -108,9 +113,7 @@ export default function PrintEventPage({
     );
   }
 
-  const checkInUrl = row.qr_check_in_code
-    ? `https://tethos.org/student/check-in?code=${row.qr_check_in_code}`
-    : "";
+  const checkInUrl = row.qr_check_in_code ? eventCheckInUrl(row.id, row.qr_check_in_code) : "";
 
   const start = new Date(row.start_time);
   const end = row.end_time ? new Date(row.end_time) : null;
