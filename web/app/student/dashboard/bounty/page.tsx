@@ -1,22 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Scroll, Clock, Coins, ChevronLeft, X, SearchX, Send } from "lucide-react";
+import { Scroll, Clock, SearchX, Send } from "lucide-react";
 import type { Bounty } from "@/lib/supabase/types";
 import BountySubmitModal from "@/components/portal/BountySubmitModal";
+import { Amount } from "@/components/economy/Amount";
+import { Badge, Banner, Button, Card, Empty, Loading, Sheet, Tabs, type BadgeTone } from "@/components/gui";
 
 type Tab = "all" | "available" | "my_claims" | "completed";
 
-const DIFFICULTY_COLORS: Record<string, { color: string; label: string }> = {
-  easy: { color: "#22c55e", label: "!" },
-  medium: { color: "#facc15", label: "!!" },
-  hard: { color: "#ef4444", label: "!!!" },
+/** Difficulty 1-3 (the bounties table), as a tag. */
+const DIFFICULTY: Record<number, { tone: BadgeTone; label: string }> = {
+  1: { tone: "success", label: "Easy" },
+  2: { tone: "warn", label: "Medium" },
+  3: { tone: "danger", label: "Hard" },
 };
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "all", label: "All" },
   { key: "available", label: "Available" },
-  { key: "my_claims", label: "My Claims" },
+  { key: "my_claims", label: "My claims" },
   { key: "completed", label: "Completed" },
 ];
 
@@ -67,160 +70,44 @@ export default function BountyPage() {
     return true;
   });
 
+  const detail = selected;
   return (
-    <div className="flex-1 overflow-y-auto" style={{ padding: 24 }}>
-      <div style={{ maxWidth: 800, margin: "0 auto" }}>
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(255, 209, 102, 0.1)" }}>
-            <Scroll className="w-5 h-5" style={{ color: "#ffd166" }} />
-          </div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--color-text-main)" }}>Bounty Board</h1>
-        </div>
+    <div className="flex-1 overflow-y-auto" style={{ padding: "24px 20px 48px" }}>
+      <div style={{ maxWidth: 820, margin: "0 auto" }}>
+        <Banner title="Bounty board" icon={<Scroll size={26} />} tone="butter">Real projects for our partners. Claim one, deliver it, get paid in Gems.</Banner>
 
-        {/* Filter Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className="shrink-0 text-sm font-medium rounded-full transition-colors"
-              style={{
-                height: 36,
-                padding: "0 16px",
-                background: tab === t.key ? "rgba(0, 47, 167, 0.15)" : "transparent",
-                color: tab === t.key ? "var(--color-text-main)" : "var(--color-text-muted)",
-                border: tab === t.key ? "1px solid #002fa7" : "1px solid var(--glass-border-soft)",
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        <Tabs label="Bounties" value={tab} onChange={setTab} tabs={TABS.map(t => ({ id: t.key, label: t.label }))} className="mb-6" />
 
-        {/* Content */}
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-2xl animate-pulse" style={{ background: "var(--color-surface)", height: 200 }} />
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <SearchX className="w-8 h-8 mb-3" style={{ color: "var(--color-text-subtle)" }} />
-            <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-              {tab === "my_claims" ? "You haven't claimed any bounties yet." : tab === "completed" ? "No completed bounties yet." : "No bounties available right now. Check back soon!"}
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {filtered.map((b) => (
-              <BountyCard
-                key={b.id}
-                bounty={b}
-                mine={myClaims.has(b.id)}
-                onClick={() => setSelected(b)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Detail Modal */}
-      {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => setSelected(null)}>
-          <div
-            className="w-full rounded-2xl overflow-y-auto"
-            style={{ maxWidth: 800, maxHeight: "80vh", background: "var(--color-bg-navy)", border: "1px solid rgba(0, 47, 167, 0.3)", padding: 24 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <button onClick={() => setSelected(null)} className="flex items-center gap-1 text-sm" style={{ color: "var(--color-text-muted)" }}>
-                <ChevronLeft className="w-4 h-4" /> Back
-              </button>
-              <button onClick={() => setSelected(null)} style={{ color: "var(--color-text-muted)" }}>
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <h2 className="text-xl font-bold mb-2" style={{ color: "var(--color-text-main)" }}>{selected.title}</h2>
-
-            <div className="flex flex-wrap gap-2 mb-4">
-              {selected.difficulty && (
-                <span className="text-xs px-2 py-1 rounded" style={{ color: DIFFICULTY_COLORS[selected.difficulty]?.color ?? "#9ca3af", background: "var(--surface-chip)" }}>
-                  {DIFFICULTY_COLORS[selected.difficulty]?.label ?? "?"} {selected.difficulty}
-                </span>
-              )}
-              {selected.tech_stack?.map((t) => (
-                <span key={t} className="text-xs px-2 py-1 rounded" style={{ color: "var(--color-text-muted)", background: "rgba(0, 47, 167, 0.1)" }}>{t}</span>
+        {loading ? <Loading label="Pinning up the bounties…" />
+          : filtered.length === 0 ? (
+            <Empty icon={<SearchX size={32} />} title={tab === "my_claims" ? "No claims yet" : tab === "completed" ? "Nothing finished yet" : "No bounties open right now"}>
+              {tab === "my_claims" ? "Claim an open bounty and it shows up here." : tab === "completed" ? "Delivered bounties land here once they’re approved." : "New ones go up as partners send them. Check back soon."}
+            </Empty>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {filtered.map((b, i) => (
+                <BountyCard key={b.id} bounty={b} mine={myClaims.has(b.id)} tilt={[-0.8, 0.6, -0.4, 0.9][i % 4]} onClick={() => setSelected(b)} />
               ))}
             </div>
+          )}
+      </div>
 
-            <div className="space-y-3 mb-6 text-sm" style={{ color: "var(--color-text-soft)" }}>
-              <div className="flex items-center gap-2">
-                <Coins className="w-4 h-4" style={{ color: "#ffd166" }} />
-                <span className="" style={{ color: "#ffd166" }}>{selected.pay_tc ?? 0} TSI coins</span>
-              </div>
-              {selected.deadline && (
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  <span>Deadline: {new Date(selected.deadline).toLocaleDateString()}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="mb-6">
-              <h3 className="text-xs uppercase tracking-wider mb-2" style={{ color: "var(--color-text-subtle)" }}>Description</h3>
-              <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-soft)" }}>{selected.description}</p>
-            </div>
-
-            {selected.status === "open" && (
-              <button
-                onClick={() => handleClaim(selected.id)}
-                disabled={claiming}
-                className="w-full rounded-xl text-sm font-semibold transition-all"
-                style={{ height: 44, background: "#002fa7", color: "#f1ffff", opacity: claiming ? 0.6 : 1 }}
-              >
-                {claiming ? "Claiming..." : "Claim This Bounty"}
-              </button>
-            )}
-            {myClaims.has(selected.id) && (selected.status === "claimed" || selected.status === "in_progress") && (
-              <button
-                onClick={() => setSubmitting(selected)}
-                className="w-full rounded-xl text-sm font-semibold transition-all inline-flex items-center justify-center gap-2"
-                style={{ height: 44, background: "#002fa7", color: "#f1ffff" }}
-              >
-                <Send className="w-4 h-4" />
-                Submit Deliverables
-              </button>
-            )}
-            {myClaims.has(selected.id) && selected.status === "review" && (
-              <button
-                onClick={() => setSubmitting(selected)}
-                className="w-full rounded-xl text-sm font-medium inline-flex items-center justify-center gap-2"
-                style={{ height: 44, background: "rgba(255, 209, 102, 0.08)", border: "1px solid rgba(255, 209, 102, 0.3)", color: "#ffd166" }}
-              >
-                View Submission Status
-              </button>
-            )}
-            {!myClaims.has(selected.id) && selected.status === "claimed" && (
-              <div className="text-center text-sm font-medium py-3 rounded-xl" style={{ background: "var(--surface-hover)", color: "var(--color-text-muted)" }}>
-                Claimed
-              </div>
-            )}
-            {!myClaims.has(selected.id) && (selected.status === "in_progress" || selected.status === "review") && (
-              <div className="text-center text-sm font-medium py-3 rounded-xl" style={{ background: "var(--surface-hover)", color: "var(--color-text-muted)" }}>
-                In progress
-              </div>
-            )}
-            {selected.status === "completed" && (
-              <div className="text-center text-sm font-medium py-3 rounded-xl" style={{ background: "rgba(34, 197, 94, 0.1)", color: "#22c55e" }}>
-                Completed
-              </div>
-            )}
+      {/* Detail sheet */}
+      <Sheet open={selected !== null} onClose={() => setSelected(null)} title={detail?.title ?? ""} eyebrow={detail?.client_name ?? "Bounty"} icon={<Scroll size={22} />} size="lg"
+        footer={detail && <BountyActions bounty={detail} mine={myClaims.has(detail.id)} claiming={claiming} onClaim={() => handleClaim(detail.id)} onSubmit={() => setSubmitting(detail)} />}>
+        {detail && <>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {DIFFICULTY[detail.difficulty] && <Badge tone={DIFFICULTY[detail.difficulty].tone}>{DIFFICULTY[detail.difficulty].label}</Badge>}
+            {detail.tech_stack?.map((t) => <Badge key={t}>{t}</Badge>)}
           </div>
-        </div>
-      )}
+          <div className="space-y-2 mb-5 text-sm" style={{ color: "var(--gui-ink)" }}>
+            <div className="flex items-center gap-2"><b>Pays</b> <Amount n={detail.pay_tc ?? 0} currency="gems" /></div>
+            {detail.deadline && <div className="flex items-center gap-2"><Clock className="w-4 h-4" aria-hidden /> Due {formatDate(detail.deadline)}</div>}
+          </div>
+          <h3 className="text-sm mb-1" style={{ color: "var(--gui-ink-strong)", fontWeight: 800 }}>What to do</h3>
+          <p className="text-sm leading-relaxed" style={{ color: "var(--gui-ink)" }}>{detail.description}</p>
+        </>}
+      </Sheet>
 
       {/* Submission modal */}
       {submitting && (
@@ -237,72 +124,42 @@ export default function BountyPage() {
   );
 }
 
-function BountyCard({ bounty, mine, onClick }: { bounty: Bounty; mine?: boolean; onClick: () => void }) {
-  const diff = DIFFICULTY_COLORS[bounty.difficulty ?? ""] ?? null;
+const formatDate = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Toronto" });
+
+/** What you can do with a bounty, in the sheet's footer. */
+function BountyActions({ bounty, mine, claiming, onClaim, onSubmit }: { bounty: Bounty; mine: boolean; claiming: boolean; onClaim: () => void; onSubmit: () => void }) {
+  if (bounty.status === "open") return <Button size="sm" onClick={onClaim} disabled={claiming}>{claiming ? "Claiming…" : "Claim this bounty"}</Button>;
+  if (mine && (bounty.status === "claimed" || bounty.status === "in_progress")) return <Button size="sm" onClick={onSubmit}><Send className="w-4 h-4" aria-hidden /> Submit deliverables</Button>;
+  if (mine && bounty.status === "review") return <Button size="sm" variant="secondary" onClick={onSubmit}>See your submission</Button>;
+  if (bounty.status === "completed") return <Badge tone="success">Completed</Badge>;
+  return <Badge>{bounty.status === "claimed" ? "Claimed" : "In progress"}</Badge>;
+}
+
+function BountyCard({ bounty, mine, tilt, onClick }: { bounty: Bounty; mine?: boolean; tilt: number; onClick: () => void }) {
+  const diff = DIFFICULTY[bounty.difficulty];
   const isPastDeadline = bounty.deadline && new Date(bounty.deadline) < new Date();
-
+  const status = bounty.status === "open" ? { tone: "sage" as const, label: "Open: claim it" }
+    : mine && (bounty.status === "claimed" || bounty.status === "in_progress") ? { tone: "info" as const, label: "Yours: deliver it" }
+    : bounty.status === "review" ? { tone: "warn" as const, label: "Under review" }
+    : bounty.status === "completed" ? { tone: "success" as const, label: "Completed" }
+    : { tone: "neutral" as const, label: bounty.status === "claimed" ? "Claimed" : "In progress" };
   return (
-    <button
-      onClick={onClick}
-      className="text-left rounded-2xl transition-all hover:border-[rgba(0,47,167,0.3)]"
-      style={{ background: "var(--color-surface)", border: "1px solid var(--glass-border-soft)", padding: 16 }}
-    >
-      {/* Title + difficulty */}
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <h3 className="text-base font-semibold line-clamp-2" style={{ color: "var(--color-text-main)" }}>{bounty.title}</h3>
-        {diff && (
-          <span className="shrink-0 text-xs font-bold" style={{ color: diff.color }}>{diff.label}</span>
-        )}
-      </div>
-
-      {/* Tags */}
-      <div className="flex flex-wrap gap-1.5 mb-3">
-        {bounty.tech_stack?.slice(0, 3).map((t) => (
-          <span key={t} className="text-xs px-2 py-0.5 rounded-full" style={{ color: "var(--color-text-muted)", background: "rgba(0, 47, 167, 0.1)" }}>{t}</span>
-        ))}
-      </div>
-
-      {/* Reward */}
-      <div className="flex items-center gap-1.5 mb-2">
-        <Coins className="w-4 h-4" style={{ color: "#ffd166" }} />
-        <span className="text-sm" style={{ color: "#ffd166" }}>{bounty.pay_tc ?? 0} TSI coins</span>
-      </div>
-
-      {/* Deadline */}
-      {bounty.deadline && (
-        <p className="text-sm" style={{ color: isPastDeadline ? "#ef4444" : "var(--color-text-muted)" }}>
-          {isPastDeadline ? "Overdue" : `Due ${new Date(bounty.deadline).toLocaleDateString()}`}
-        </p>
-      )}
-
-      {/* Status button */}
-      {(() => {
-        const isOpen = bounty.status === "open";
-        const isCompleted = bounty.status === "completed";
-        const isReview = bounty.status === "review";
-        const myActive = mine && (bounty.status === "claimed" || bounty.status === "in_progress");
-        const myReview = mine && isReview;
-
-        let bg = "var(--surface-hover)";
-        let color = "var(--color-text-muted)";
-        let label: string = bounty.status;
-
-        if (isOpen) { bg = "#002fa7"; color = "#f1ffff"; label = "Claim Bounty"; }
-        else if (myActive) { bg = "#002fa7"; color = "#f1ffff"; label = "Submit Deliverables"; }
-        else if (myReview) { bg = "rgba(255, 209, 102, 0.1)"; color = "#ffd166"; label = "Under Review"; }
-        else if (isCompleted) { bg = "rgba(34, 197, 94, 0.1)"; color = "#22c55e"; label = "Completed"; }
-        else if (bounty.status === "claimed") { label = "Claimed"; }
-        else if (isReview) { label = "Under Review"; }
-
-        return (
-          <div
-            className="mt-3 w-full text-center text-sm font-medium py-2 rounded-lg"
-            style={{ background: bg, color }}
-          >
-            {label}
-          </div>
-        );
-      })()}
+    <button type="button" onClick={onClick} className="text-left block w-full rounded-[18px] transition-transform hover:-translate-y-1" aria-label={`${bounty.title}, ${status.label}`}>
+      <Card pinned tilt={tilt} className="h-full">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <h3 className="text-base line-clamp-2" style={{ color: "var(--gui-ink-strong)", fontWeight: 800 }}>{bounty.title}</h3>
+          {diff && <Badge tone={diff.tone}>{diff.label}</Badge>}
+        </div>
+        {bounty.client_name && <p className="text-sm mb-2" style={{ color: "var(--gui-muted)" }}>For {bounty.client_name}</p>}
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {bounty.tech_stack?.slice(0, 3).map((t) => <Badge key={t}>{t}</Badge>)}
+        </div>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <span className="text-sm" style={{ color: "var(--gui-ink)" }}><Amount n={bounty.pay_tc ?? 0} currency="gems" /></span>
+          {bounty.deadline && <span className="text-sm" style={{ color: isPastDeadline ? "var(--gui-danger)" : "var(--gui-muted)", fontWeight: 700 }}>{isPastDeadline ? "Overdue" : `Due ${formatDate(bounty.deadline)}`}</span>}
+        </div>
+        <div className="mt-3"><Badge tone={status.tone}>{status.label}</Badge></div>
+      </Card>
     </button>
   );
 }
