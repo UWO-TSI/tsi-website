@@ -267,6 +267,8 @@ export interface RunV2 extends RunResult {
   windowDealt: number; windowTime: number; directDealt: number; charged: number; potencies: number[]; bossDealt: number;
   /** What reached you past a dodge, before your guard, block and shield: `taken` over it is what your kit let through. */
   aimed: number;
+  /** Pair combos cast (the Elementalist's two elements: the crystal's element turns to a pair); a combo cast twice running counts once. */
+  combos: number;
 }
 /** The weapon a member holds for this kit: its tier-1 signature weapon (the dev kit: today's weapon of its type). */
 export function signatureWeapon(kitKey: string): string {
@@ -331,14 +333,14 @@ export function runV2(kitKey: string, missionId: MissionV2, seed: number, master
   const loop = missionId === "sanctum-loop", center = boss ? { x: BOSS_CENTER.x, z: BOSS_CENTER.z - 6 } : SURVIVE_CIRCLES[loop ? "survive-sanctum" : missionId];
   const waves = boss ? [[{ id: "boss", type: "guardian-statue", x: 0, z: 25.5 }]] : loop ? SANCTUM_LOOP : WAVES[missionId];
   let me: Vec = { x: center.x, z: center.z }, wave = 0, strafe = 1, t = 0, taken = 0, minHp = p.hp, fillFrom = 0, ults = 0, drawLeft = 0, mashAt = 0, react = "", reactAt = 0, reloadAt = 0;
-  let windowTime = 0, seenCast: ClassState["cast"] = null;
+  let windowTime = 0, seenCast: ClassState["cast"] = null, combos = 0, element: string | null = null;
   const fills: number[] = [], potencies: number[] = [], judged = new Set<string>(), held: { slot: number; at: number }[] = [], jitter = { x: 0, z: 0, t: 0 };
   spawnWave(rt, waves[0]);
   const guardian = boss ? rt.enemies[0] : null;
   const dt = 1 / 30;
   const done = (cleared: boolean, died = false): RunV2 => ({ cleared, seconds: t, dealt: rt.tally.dealt, taken, minHp: died ? 0 : minHp / p.maxHp, died, ultDealt: rt.tally.ult, fills, ults,
     windowDealt: rt.tally.window, windowTime, directDealt: rt.tally.direct, charged: rt.tally.charged, potencies, bossDealt: guardian ? guardian.type.hp - Math.max(0, guardian.hp) : 0,
-    aimed: rt.tally.aimed });
+    aimed: rt.tally.aimed, combos });
   for (; t < limit; t += dt) {
     const alive = rt.enemies.filter(e => e.state !== "dead");
     if (!alive.length) { if (++wave >= waves.length) return done(true); spawnWave(rt, waves[wave]); }
@@ -408,10 +410,14 @@ export function runV2(kitKey: string, missionId: MissionV2, seed: number, master
         } else if (!(staggered || useful(rt, a, me, target, reacting))) continue;
         if (target?.type.kind === "boss" && glances(a)) continue; // the guardian's armour eats small hits: save the energy
         const combo = v.combos.find(c => c.keys[0] === i && c.keys[1] === i && p.energy >= c.ability.energy && random() < 0.5);
+        // Wave 5: a pair combo (the Elementalist's two elements within COMBO_WINDOW): half the time, the partner key of a pair
+        // that would help now. The bot only ever double-tapped one key, so it played the Elementalist's four solos alone.
+        const pairs = combo ? [] : v.combos.filter(c => c.keys[0] !== c.keys[1] && c.keys.includes(i) && p.energy >= c.ability.energy && useful(rt, c.ability, me, target, reacting));
+        const pair = pairs.length && random() < 0.5 ? pairs[Math.floor(random() * pairs.length)] : null, partner = pair ? (pair.keys[0] === i ? pair.keys[1] : pair.keys[0]) : -1;
         if (target && a.effects.some(e => e.kind === "barrier")) p.aim = { x: me.x + (target.x - me.x) * 0.55, z: me.z + (target.z - me.z) * 0.55 }; // a wall goes between you
         classKey(rt, i, true);
         if (kind === "hold" || kind === "charge") held.push({ slot: i, at: t + (kind === "hold" ? 1 : (a.input as { max_s: number }).max_s) }); // let go later
-        else { classKey(rt, i, false); if (combo) { classKey(rt, i, true); classKey(rt, i, false); } }
+        else { classKey(rt, i, false); if (combo) { classKey(rt, i, true); classKey(rt, i, false); } else if (partner >= 0) { classKey(rt, partner, true); classKey(rt, partner, false); } }
         if (kind === "drawn") drawLeft = RUNE_TIME.spark;
         break;
       }
@@ -425,6 +431,7 @@ export function runV2(kitKey: string, missionId: MissionV2, seed: number, master
     if (before >= ULT.max && v.meter < ULT.max / 2) fillFrom = t;
     if (v.cast && v.cast !== seenCast) { seenCast = v.cast; ults++; potencies.push(v.cast.potency ?? 1); }
     if (sustainedUlt(rt)) windowTime += dt;
+    if (v.element !== element) { if (v.element?.includes("+")) combos++; element = v.element; }
     taken += Math.max(0, hpBefore - p.hp);
     minHp = Math.min(minHp, p.hp);
     if (!p.alive) return done(false, true);

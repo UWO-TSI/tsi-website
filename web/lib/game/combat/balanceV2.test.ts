@@ -128,3 +128,9 @@ describe("the v2 harness, wave 5: what an ult adds over a long pack fight", () =
     expect(adds).toBeLessThan(0.4);
   });
 });
+
+describe("the v2 harness, wave 5: pair combos", () => {
+  it("casts the Elementalist's pair combos (two elements within 0.4 s), not only its four solos", () => {
+    for (const m of ["survive-circle", "survive-sanctum"] as const) expect([1, 2, 3].reduce((n, s) => n + runV2("elementalist", m, s, 1).combos, 0), m).toBeGreaterThan(3);
+  });
+});
