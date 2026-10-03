@@ -1,8 +1,12 @@
 #!/bin/zsh
 # Throwaway Postgres 16 smoke chain, every migration through the launch fixes (never Supabase).
-# Run: zsh specs/evidence/launch-fixes/sql-smoke.sh [cutoff]   (Homebrew postgresql@16)
+# Run: zsh specs/evidence/launch-fixes/sql-smoke.sh [--drafts] [cutoff]   (Homebrew postgresql@16)
 # cutoff (e.g. 20260926200000) skips migrations from that version on: the fail-first run.
+# --drafts: after the game smokes, also run the drafts in web/supabase/drafts/ (not migrations) through their smokes,
+# in the same database: classes_v2_launch_smoke.sql applies drafts/classes_v2_launch.sql twice. Without it, unchanged.
 set -u
+DRAFTS=0
+[[ ${1:-} == --drafts ]] && { DRAFTS=1; shift; }
 CUT=${1:-99999999999999}
 PG=/opt/homebrew/opt/postgresql@16/bin
 W=${0:A:h}/../../../web/supabase
@@ -33,6 +37,7 @@ chain() { # db, with_seeds
 smoke() { $PS -d $1 -f $W/tests/$2 2>&1 | grep -E "NOTICE|ERROR|FAIL|smoke ok" | sed 's/^psql:[^ ]* //'; }
 
 chain game 1 && for s in 029-031_smoke.sql 032_smoke.sql 033_smoke.sql 034_smoke.sql 034_legacy_smoke.sql 035_smoke.sql game_security_smoke.sql crafting_smoke.sql ownership_smoke.sql combat_content_smoke.sql combat_kits_smoke.sql admin_pass_smoke.sql phase1_regressions.sql launch_fixes_smoke.sql catch_rolls_smoke.sql moderation_log_smoke.sql chapter4_copy_smoke.sql seasonal_events_smoke.sql recipe_drops_smoke.sql catalogue_seed_smoke.sql leaf_glider_smoke.sql guardian_balance_smoke.sql cafe_tables_smoke.sql collections_eat_smoke.sql item_icons_smoke.sql classes_v2_smoke.sql zone1_mobs_smoke.sql classes_v2_arcane_smoke.sql classes_v2_ranger_smoke.sql classes_v2_warden_smoke.sql classes_v2_vanguard_smoke.sql backpack_smoke.sql event_check_in_smoke.sql resident_talk_smoke.sql realtime_card_smoke.sql; do echo "── $s"; smoke game $s; done
+(( DRAFTS )) && for s in classes_v2_launch_smoke.sql; do echo "── draft: $s"; smoke game $s; done
 chain guard 0 && smoke guard profiles_guard_smoke.sql | tail -3
 chain rls 0 && { $PS -d rls -f $W/tests/portal_rls_smoke.sql >/dev/null 2>$D.rls.err && echo "portal_rls_smoke exit 0" || { echo FAIL rls; tail -5 $D.rls.err; }; }
 chain look 0 && smoke look avatar_config_smoke.sql

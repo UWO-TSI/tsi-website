@@ -67,7 +67,7 @@ export function sustainedUlt(rt: CombatRuntime): boolean {
 /** Classes v2: points on the ult meter (§1.2), never while an ult is under way for its own hits (the caller says). */
 export function chargeUlt(rt: CombatRuntime, points: number) {
   const v = rt.v2;
-  if (v && points > 0) v.meter = addCharge(v.meter, points * v.ult.charge);
+  if (v && points > 0) { v.meter = addCharge(v.meter, points * v.ult.charge); rt.tally.charged += points * v.ult.charge; }
 }
 export function missionEvent(rt: CombatRuntime, ev: MissionEvent) {
   if (rt.mission) rt.mission = advanceMission(rt.mission, ev);
@@ -159,7 +159,8 @@ export function strike(rt: CombatRuntime, e: Enemy, src: HitSrc, random: () => n
   if (e.state === "dead" || e.state === "return") return 0;
   const ambush = src.unit ? 0 : takeAmbush(rt); // the first hit out of stealth (primitives.ts)
   if (ambush) src = { ...src, power: src.power * (1 + ambush) };
-  if (!src.ult && sustainedUlt(rt)) src = { ...src, ult: true }; // a sustained ult's window (the Chimera, the army's march): its hits are the ult's
+  const inWindow = sustainedUlt(rt), own = !!src.ult;
+  if (!src.ult && inWindow) src = { ...src, ult: true }; // a sustained ult's window (the Chimera, the army's march): its hits are the ult's
   const { amount, crit, raw, base, backstab } = hitAmount(rt, e, src, random);
   const held = e.status.hold > 0, shell = shellFactor(e, src.from) < 1, stun = e.stun;
   const killed = damageEnemy(e, amount, src.from, src.knock ?? 0);
@@ -169,6 +170,7 @@ export function strike(rt: CombatRuntime, e: Enemy, src: HitSrc, random: () => n
   if (src.status && !killed) { applyStatus(e, src.status); if (src.status.dot) addDot(rt, e, src.status.dot); }
   if (!src.ult) chargeUlt(rt, dealtCharge(raw, base)); // you and your units; ult hits charge nothing
   rt.tally.dealt += amount; if (src.ult) rt.tally.ult += amount;
+  if (inWindow) rt.tally.window += amount; else if (own) rt.tally.direct += amount;
   if (!src.unit) { onPlayerHit(rt, e, amount, crit, held); cue(rt, crit ? "crit" : "hit", e, !!src.melee, src.impact, src.first); }
   if (killed) onKill(rt, e);
   if (killed && backstab && rt.v2) refundCharge(rt);
