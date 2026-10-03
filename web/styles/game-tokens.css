@@ -1,120 +1,213 @@
-/* ===========================
-   GAME & PORTAL — Design Tokens
-   Extends base tokens.css
-   Loaded within dashboard layout only
-   =========================== */
+/* ===========================================================================================================
+   The GUI sheet: our cream kit for the member game, portal and phone companion (specs/polish/gui-sheet.md),
+   drawn from the Animal Crossing UI kit David supplied (warm paper, sage, wood, Tethos accents). Imported once,
+   by the root layout. `:root` holds the tokens (inert until used); the `.gui` scope, set on the member world, the
+   portal shell and the companion, puts them to work and maps the legacy portal tokens onto them. Recruitment never
+   sets `.gui`, so the applicant flow keeps its own look. Every text pair here is AA (lib/gui/contrast.test.ts).
+   =========================================================================================================== */
 
-:root {
-  /* ========= SIDEBAR ========= */
-  --sidebar-width: 240px;
-  --sidebar-bg: var(--color-surface);
-  --sidebar-border: var(--glass-border-soft);
-  --sidebar-z: 40;
-
-  --nav-item-height: 40px;
-  --nav-item-gap: 4px;
-  --nav-item-radius: 8px;
-  --nav-item-icon-size: 18px;
-  --nav-active-accent-color: var(--color-brand-blue);
-  --nav-active-bg: rgba(255, 255, 255, 0.06);
-  --nav-hover-bg: rgba(255, 255, 255, 0.04);
-  --sidebar-avatar-size: 32px;
-
-  /* ========= RESPONSIVE ========= */
-  --hamburger-size: 40px;
-  --hamburger-z: 50;
-  --sidebar-backdrop-bg: rgba(0, 0, 0, 0.5);
-
-  /* ========= GAME WORLD ========= */
-  --game-camera-fov: 35;
-  --game-camera-distance: 20;
-  --game-fog-color: var(--color-bg-main);
-  --game-fog-near: 60;
-  --game-fog-far: 120;
-  --game-map-size: 80;
-  --game-player-speed: 5;
-  --game-interact-range: 3;
-  --game-interact-range-interior: 2;
-
-  /* Lighting */
-  --game-ambient-intensity: 0.4;
-  --game-sun-color: #ffeedd;
-  --game-sun-intensity: 0.8;
-  --game-lamp-color: #ffcc88;
-  --game-lamp-intensity: 0.6;
-  --game-lamp-range: 8;
-
-  /* ========= TRANSITIONS ========= */
-  --transition-fade-in: 0.3s;
-  --transition-fade-out: 0.3s;
-  --transition-overlay-color: #000000;
-  --transition-overlay-z: 100;
-  --overlay-panel-enter: 0.25s;
-  --overlay-panel-exit: 0.15s;
-  --overlay-backdrop-bg: rgba(0, 0, 0, 0.6);
-  --overlay-backdrop-blur: 4px;
-
-  /* ========= OVERLAY PANEL ========= */
-  --panel-bg: var(--color-bg-navy);
-  --panel-radius: 16px;
-  --panel-shadow: var(--shadow-strong);
-  --panel-max-width: 800px;
-  --panel-max-height: 80vh;
-  --panel-padding: 24px;
-  --panel-z: 60;
-
-  /* ========= DIRECTORY ========= */
-  --directory-max-width: 960px;
-  --directory-padding: 24px;
-  --search-height: 40px;
-  --search-bg: var(--color-surface);
-  --search-radius: 8px;
-  --row-height: 64px;
-  --row-border: 1px solid rgba(255, 255, 255, 0.06);
-  --row-hover-bg: rgba(255, 255, 255, 0.04);
-  --row-radius: 8px;
-  --avatar-size-sm: 32px;
-  --avatar-size-md: 40px;
-  --avatar-size-lg: 96px;
-  --xp-bar-width: 80px;
-  --xp-bar-height: 6px;
-  --xp-bar-track: var(--gray-800);
-  --xp-bar-fill: var(--color-brand-blue);
-
-  /* ========= TIER COLORS ========= */
-  --tier-1-color: var(--color-brand-yellow);
-  --tier-1-bg: rgba(255, 209, 102, 0.2);
-  --tier-1-border: var(--color-brand-yellow);
-  --tier-2-color: #4A7AFF;
-  --tier-2-bg: rgba(0, 47, 167, 0.2);
-  --tier-2-border: var(--color-brand-blue);
-  --tier-3-color: var(--color-accent-cyan);
-  --tier-3-bg: rgba(34, 211, 238, 0.2);
-  --tier-3-border: var(--color-accent-cyan);
-  --tier-4-color: var(--color-success);
-  --tier-4-bg: rgba(34, 197, 94, 0.2);
-  --tier-4-border: var(--color-success);
-  --tier-5-color: var(--gray-400);
-  --tier-5-bg: rgba(161, 161, 170, 0.15);
-  --tier-5-border: var(--gray-600);
-
-  /* ========= INTERACTION PROMPTS ========= */
-  --prompt-bg: var(--color-surface);
-  --prompt-border: var(--glass-border-soft);
-  --prompt-radius: 8px;
-  --label-bg: rgba(15, 15, 16, 0.7);
-  --nameplate-bg: rgba(15, 15, 16, 0.6);
-
-  /* ========= Z-INDEX SCALE ========= */
-  --z-sidebar: 40;
-  --z-sidebar-backdrop: 45;
-  --z-sidebar-mobile: 50;
-  --z-hamburger: 50;
-  --z-overlay-backdrop: 55;
-  --z-overlay-panel: 60;
-  --z-transition-overlay: 100;
+@font-face {
+  font-family: "Tethos Nunito";
+  src: url("/fonts/nunito/Nunito-Variable.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 200 1000;
+  font-display: swap;
 }
 
-/* LIGHT THEME OVERRIDES (R3-2) moved to styles/tokens.css — this file is not
-   imported anywhere, so overrides here never load. tokens.css is what the
-   root layout imports. */
+:root {
+  /* ── Paper: the kit's creams ── */
+  --gui-page: #f7f1da;          /* page background behind panels */
+  --gui-paper: #fffbe7;         /* dialogue, sheets */
+  --gui-paper-hi: #fffff7;      /* cards and fields on paper */
+  --gui-paper-warm: #f8f4e8;    /* panel bodies, chips */
+  --gui-paper-deep: #eee9ca;    /* wells, tracks, list stripes */
+  --gui-paper-edge: #e3d9b8;    /* rules and hairlines */
+  --gui-paper-line: #d3c39c;    /* stronger outlines (fields, tiles) */
+  --gui-butter: #ffeea0;        /* selection, the menu box */
+  --gui-highlight: #ffcc00;     /* the highlighter swipe under a choice */
+  --gui-stripe-a: #f6d32d;      /* the chosen row's stripes */
+  --gui-stripe-b: #f7e43f;
+
+  /* ── Ink ── */
+  --gui-ink-strong: #3a2e22;    /* titles, text on coloured tags */
+  --gui-ink: #4f3f31;           /* body */
+  --gui-ink-2: #6b5843;         /* secondary */
+  --gui-muted: #726450;         /* captions (AA on every cream, the deep well too) */
+  --gui-taupe: #8a7b66;         /* the kit's dialogue ink: large text, keycaps and icons only */
+
+  /* ── Accents ── */
+  --gui-sage: #426b5b;          /* the primary action */
+  --gui-sage-deep: #2f5143;
+  --gui-sage-soft: #dfe9d9;
+  --gui-teal: #04afa6;          /* checks and pips (no text on it) */
+  --gui-teal-ink: #1b766c;      /* teal text, teal buttons */
+  --gui-teal-pill: #73c7ba;     /* the name pill (ink text) */
+  --gui-wood: #946429;          /* the wood button */
+  --gui-wood-light: #bb813f;
+  --gui-bark: #725c4e;          /* keycaps */
+  --gui-coral: #e2826a;         /* the name tag (ink text) */
+  --gui-coral-ink: #b4513a;
+  --gui-amber: #ffb400;         /* the continue chevron */
+  --gui-orange: #f39801;        /* the deadline ribbon (ink text) */
+  --gui-gold: #d6bd52;          /* coin and category tags (ink text) */
+  --gui-grey: #80807c;          /* an empty or locked slot */
+  --gui-night: #2e4359;         /* the kit's night panel, for night-only text on the world */
+  --gui-tethos-blue: #1d9bf0;   /* Tethos accents, sparingly */
+  --gui-tethos-gold: #ffd166;
+
+  /* ── Status ── */
+  --gui-success: #356b41;  --gui-success-soft: #e3efdc;
+  --gui-danger: #b23a2e;   --gui-danger-soft: #f8e0d6;
+  --gui-warn: #8a5a12;     --gui-warn-soft: #fbedc9;
+  --gui-info: #2f6d8a;     --gui-info-soft: #e1eff3;
+
+  /* ── Rarity edges (item tiles) ── */
+  --gui-rarity-common: #c9bd9f;
+  --gui-rarity-uncommon: #8ac68a;
+  --gui-rarity-rare: #889df0;
+  --gui-rarity-epic: #b77dee;
+  --gui-rarity-legendary: #f7cd67;
+
+  --gui-scrim: rgb(64 52 36 / 0.3);
+
+  /* ── Type: one rounded face, 12 px at the smallest ── */
+  --gui-font: "Tethos Nunito", "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --gui-text-xs: 12px;
+  --gui-text-sm: 13px;
+  --gui-text-md: 15px;
+  --gui-text-lg: 18px;
+  --gui-text-xl: 22px;
+  --gui-text-2xl: 28px;
+  --gui-text-3xl: 36px;
+  --gui-weight: 600;
+  --gui-weight-strong: 800;
+  --gui-leading: 1.45;
+
+  /* ── Radii: round, and a little irregular, like cut paper ── */
+  --gui-r-sm: 10px;
+  --gui-r-md: 16px;
+  --gui-r-lg: 24px;
+  --gui-r-pill: 999px;
+  --gui-r-paper: 30px 36px 28px 34px / 32px 28px 36px 30px;
+  --gui-r-card: 18px 22px 17px 21px / 20px 17px 22px 18px;
+  --gui-r-blob: 46% 50% 44% 48% / 54% 50% 46% 52%;
+  --gui-r-tag: 40% 43% 38% 40% / 45% 42% 45% 43%;
+
+  /* ── Shadows: flat and offset, restrained ── */
+  --gui-shadow-sm: 0 2px 0 rgb(114 92 78 / 0.14);
+  --gui-shadow-md: 0 4px 0 rgb(114 92 78 / 0.16), 0 10px 24px rgb(79 63 49 / 0.1);
+  --gui-shadow-lg: 0 6px 0 rgb(114 92 78 / 0.18), 0 22px 48px rgb(79 63 49 / 0.18);
+  --gui-shadow-press: 0 1px 0 rgb(114 92 78 / 0.2);
+  --gui-shadow-inset: inset 0 2px 0 rgb(114 92 78 / 0.08);
+
+  /* ── Motion ── */
+  --gui-ease: cubic-bezier(0.2, 0.9, 0.3, 1);
+  --gui-spring: cubic-bezier(0.2, 1.4, 0.4, 1);
+  --gui-t-fast: 120ms;
+  --gui-t: 200ms;
+  --gui-t-slow: 320ms;
+
+  /* ── Focus: a honey ring, 3:1 against every cream ── */
+  --gui-focus: #a8722f;
+
+  /* ── Painted paper ── */
+  /* paper:start */
+  /* Painted by scripts/gui-paper.mjs (seeded; rerun to regenerate). Masks: the shape is where the mask is opaque. */
+  --gui-grain: url("data:image/svg+xml,%3Csvg xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 width%3D%27160%27 height%3D%27160%27%3E%3Cfilter id%3D%27g%27 x%3D%270%27 y%3D%270%27%3E%3CfeTurbulence type%3D%27fractalNoise%27 baseFrequency%3D%270.85%27 numOctaves%3D%273%27 seed%3D%277%27 stitchTiles%3D%27stitch%27%2F%3E %3CfeColorMatrix values%3D%270 0 0 0 0.36 0 0 0 0 0.29 0 0 0 0 0.21 0 0 0 0.55 -0.2%27%2F%3E%3C%2Ffilter%3E%3Crect width%3D%27160%27 height%3D%27160%27 filter%3D%27url(%23g)%27%2F%3E%3C%2Fsvg%3E");
+  --gui-confetti: url("data:image/svg+xml,%3Csvg xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 width%3D%27220%27 height%3D%27220%27%3E%3Crect x%3D%2715.3%27 y%3D%2715.8%27 width%3D%2714%27 height%3D%2714%27 rx%3D%274%27 fill%3D%27%23fbe98c%27 transform%3D%27rotate(53.1 22.3 22.8)%27%2F%3E%3Crect x%3D%2716.2%27 y%3D%2748.1%27 width%3D%2713.7%27 height%3D%2713.7%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(54.7 23 54.9)%27%2F%3E%3Crect x%3D%2714.9%27 y%3D%27112.5%27 width%3D%2713.1%27 height%3D%2713.1%27 rx%3D%274%27 fill%3D%27%23fbe98c%27 transform%3D%27rotate(60.3 21.5 119.1)%27%2F%3E%3Crect x%3D%276.9%27 y%3D%27139.3%27 width%3D%2712.4%27 height%3D%2712.4%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(35.6 13 145.5)%27%2F%3E%3Crect x%3D%2717.2%27 y%3D%27181.2%27 width%3D%2714%27 height%3D%2714%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(51.9 24.2 188.2)%27%2F%3E%3Crect x%3D%2767.7%27 y%3D%2744.6%27 width%3D%2714.8%27 height%3D%2714.8%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(28.6 75.1 52.1)%27%2F%3E%3Crect x%3D%2752.1%27 y%3D%2768.9%27 width%3D%2714.7%27 height%3D%2714.7%27 rx%3D%274%27 fill%3D%27%23fff3b0%27 transform%3D%27rotate(88 59.4 76.3)%27%2F%3E%3Crect x%3D%2750.3%27 y%3D%27132.1%27 width%3D%2712.7%27 height%3D%2712.7%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(49.8 56.7 138.4)%27%2F%3E%3Crect x%3D%2767.5%27 y%3D%27159%27 width%3D%2715.2%27 height%3D%2715.2%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(73.8 75.1 166.6)%27%2F%3E%3Crect x%3D%2745.9%27 y%3D%27201.2%27 width%3D%2715.2%27 height%3D%2715.2%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(44.8 53.5 208.8)%27%2F%3E%3Crect x%3D%2745.9%27 y%3D%27-18.8%27 width%3D%2715.2%27 height%3D%2715.2%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(44.8 53.5 -11.2)%27%2F%3E%3Crect x%3D%2796.6%27 y%3D%2714.7%27 width%3D%2714.7%27 height%3D%2714.7%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(8 103.9 22.1)%27%2F%3E%3Crect x%3D%2790.9%27 y%3D%2757.4%27 width%3D%2714.2%27 height%3D%2714.2%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(88.6 98 64.5)%27%2F%3E%3Crect x%3D%27103.5%27 y%3D%27100.5%27 width%3D%2711.2%27 height%3D%2711.2%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(66 109.1 106.1)%27%2F%3E%3Crect x%3D%27110%27 y%3D%27141.8%27 width%3D%2713.8%27 height%3D%2713.8%27 rx%3D%274%27 fill%3D%27%23fbe98c%27 transform%3D%27rotate(31.3 116.8 148.7)%27%2F%3E%3Crect x%3D%2794%27 y%3D%27180.9%27 width%3D%2714.2%27 height%3D%2714.2%27 rx%3D%274%27 fill%3D%27%23fff3b0%27 transform%3D%27rotate(56.1 101 187.9)%27%2F%3E%3Crect x%3D%27142.7%27 y%3D%2732.9%27 width%3D%2715.7%27 height%3D%2715.7%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(76.8 150.5 40.8)%27%2F%3E%3Crect x%3D%27144.7%27 y%3D%2792.1%27 width%3D%2713.9%27 height%3D%2713.9%27 rx%3D%274%27 fill%3D%27%23fff3b0%27 transform%3D%27rotate(39.1 151.6 99.1)%27%2F%3E%3Crect x%3D%27146.7%27 y%3D%27111.3%27 width%3D%2715.4%27 height%3D%2715.4%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(27.1 154.4 119)%27%2F%3E%3Crect x%3D%27136.7%27 y%3D%27157.5%27 width%3D%2714.7%27 height%3D%2714.7%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(49 144.1 164.9)%27%2F%3E%3Crect x%3D%27136.5%27 y%3D%27-5.5%27 width%3D%2714.1%27 height%3D%2714.1%27 rx%3D%274%27 fill%3D%27%23fbe98c%27 transform%3D%27rotate(79.6 143.5 1.6)%27%2F%3E%3Crect x%3D%27136.5%27 y%3D%27214.5%27 width%3D%2714.1%27 height%3D%2714.1%27 rx%3D%274%27 fill%3D%27%23fbe98c%27 transform%3D%27rotate(79.6 143.5 221.6)%27%2F%3E%3Crect x%3D%27193.7%27 y%3D%2717.8%27 width%3D%2713.9%27 height%3D%2713.9%27 rx%3D%274%27 fill%3D%27%23fff3b0%27 transform%3D%27rotate(43.8 200.6 24.7)%27%2F%3E%3Crect x%3D%27194%27 y%3D%2762%27 width%3D%2716%27 height%3D%2716%27 rx%3D%274%27 fill%3D%27%23fff3b0%27 transform%3D%27rotate(63.9 202 70)%27%2F%3E%3Crect x%3D%27180.5%27 y%3D%27105.9%27 width%3D%2715.9%27 height%3D%2715.9%27 rx%3D%274%27 fill%3D%27%23fbe98c%27 transform%3D%27rotate(30.9 188.4 113.9)%27%2F%3E%3Crect x%3D%27187.6%27 y%3D%27153.7%27 width%3D%2714.3%27 height%3D%2714.3%27 rx%3D%274%27 fill%3D%27%23fff3b0%27 transform%3D%27rotate(6.4 194.7 160.9)%27%2F%3E%3Crect x%3D%27195.3%27 y%3D%27190.7%27 width%3D%2714.1%27 height%3D%2714.1%27 rx%3D%274%27 fill%3D%27%23fbe98c%27 transform%3D%27rotate(20.3 202.3 197.8)%27%2F%3E%3C%2Fsvg%3E");
+  --gui-edge-wave: url("data:image/svg+xml,%3Csvg xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 width%3D%27400%27 height%3D%2724%27 viewBox%3D%270 0 400 24%27%3E%3Cpath d%3D%27M0 0H400V7.3L400 7.3L390 7.9L380 8.6L370 9.4L360 10.2L350 10.8L340 11.2L330 11.5L320 11.6L310 11.7L300 11.8L290 11.9L280 12.1L270 12.4L260 12.9L250 13.4L240 13.9L230 14.3L220 14.6L210 14.9L200 15L190 15L180 15L170 15L160 15L150 15L140 15L130 14.9L120 14.8L110 14.5L100 14L90 13.2L80 12.3L70 11.2L60 10L50 8.9L40 7.9L30 7.3L20 6.9L10 6.9L0 7.3Z%27%2F%3E%3C%2Fsvg%3E");
+  --gui-edge-deckle: url("data:image/svg+xml,%3Csvg xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 width%3D%27240%27 height%3D%2710%27 viewBox%3D%270 0 240 10%27%3E%3Cpath d%3D%27M0 0H240L240 5L236 7.3L232 7.7L228 5.3L224 6.4L220 6.4L216 4.9L212 6.3L208 7.1L204 6.8L200 5.8L196 5.5L192 5.3L188 5.1L184 7.1L180 5.6L176 4.9L172 3.5L168 5.9L164 5.9L160 6.8L156 6.3L152 6L148 7.2L144 5.4L140 3.2L136 3.2L132 6.5L128 4.9L124 3.9L120 6.5L116 5.1L112 6.7L108 7.5L104 4.6L100 7.2L96 3.3L92 5.7L88 7L84 5.6L80 6.3L76 4.5L72 6.4L68 4.7L64 7.2L60 6.9L56 5.4L52 6.5L48 3.6L44 4.1L40 5.7L36 4.4L32 3.9L28 5.4L24 5.4L20 6.7L16 3.5L12 5.3L8 3.4L4 6.5L0 5Z%27%2F%3E%3C%2Fsvg%3E");
+  --gui-blob-dialogue: url("data:image/svg+xml,%3Csvg xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 viewBox%3D%27-1 -1 102 102%27 preserveAspectRatio%3D%27none%27%3E%3Cpath d%3D%27M49.9 -0.1C59.1 -0.1 70.6 0 77.7 0.9C84.9 1.7 89.3 2.1 93 5C96.7 7.8 99 12.9 100 17.8C101.1 22.7 99.7 29.7 99.2 34.3C98.7 39 97.6 42.2 97 45.8C96.5 49.4 96.3 52 95.9 55.8C95.6 59.6 95 64.1 94.9 68.5C94.8 72.9 95.8 77.7 95.2 82.1C94.7 86.5 95.3 92.1 91.4 95C87.5 97.8 78.9 98.4 72 99.3C65.1 100.1 57.5 99.9 50.1 100C42.6 100 34.3 100.5 27.5 99.8C20.7 99.1 13.2 98.9 9.4 96C5.5 93 5.4 86.8 4.6 82.1C3.7 77.4 4.3 72.2 4.2 67.8C4.1 63.4 4.3 59.4 4.1 55.8C3.8 52.1 3.3 49.5 2.8 45.9C2.2 42.4 0.9 39.1 0.6 34.5C0.2 29.9 -0.5 23.2 0.5 18.3C1.5 13.4 3.1 7.8 6.8 4.9C10.4 2.1 15.3 2.2 22.5 1.4C29.7 0.5 40.7 0 49.9 -0.1Z%27%2F%3E%3C%2Fsvg%3E");
+  --gui-blob-menu: url("data:image/svg+xml,%3Csvg xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 viewBox%3D%27-1 -1 102 102%27 preserveAspectRatio%3D%27none%27%3E%3Cpath d%3D%27M50.2 0.5C60.6 0.6 73.7 -0.5 81.4 1.8C89.1 4.1 93.3 6.3 96.4 14.4C99.5 22.5 99.9 38.5 99.9 50.4C99.9 62.3 99.4 77.8 96.5 85.7C93.7 93.6 90.7 95.4 82.8 97.7C74.9 100 60.2 99.4 49.2 99.4C38.3 99.5 24.8 100.3 17.2 98C9.6 95.8 6.6 94 3.7 85.9C0.7 77.8 -0.2 61.6 -0.4 49.5C-0.6 37.4 -0.6 21.4 2.6 13.4C5.8 5.3 10.8 3.4 18.7 1.2C26.6 -0.9 39.7 0.4 50.2 0.5Z%27%2F%3E%3C%2Fsvg%3E");
+  --gui-blob-bag: url("data:image/svg+xml,%3Csvg xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 viewBox%3D%27-1 -1 102 102%27 preserveAspectRatio%3D%27none%27%3E%3Cpath d%3D%27M49.7 0.7C59.7 0.7 72.1 -0.5 79.8 0.2C87.5 0.9 92.7 0.7 96.1 4.9C99.5 9.2 99.7 18.3 100.1 25.7C100.6 33.2 98.9 41.6 98.8 49.6C98.8 57.5 100.3 66 99.8 73.6C99.4 81.1 99.4 90.2 96.1 94.7C92.7 99.2 87.3 99.7 79.7 100.5C72 101.2 60.2 99.1 50.2 99C40.2 98.8 27.3 100.2 19.6 99.5C11.9 98.9 7.3 99.2 4.1 94.9C0.9 90.7 1 81.8 0.5 74.3C-0.1 66.8 0.8 58 0.7 50C0.7 41.9 -0.5 33.5 0.1 26C0.6 18.5 0.6 9.3 3.8 5C7.1 0.7 12 1.1 19.6 0.4C27.3 -0.4 39.6 0.8 49.7 0.7Z%27%2F%3E%3C%2Fsvg%3E");
+  /* paper:end */
+}
+
+/* ── The scope: the member world, the portal shell, the companion ── */
+.gui {
+  font-family: var(--gui-font);
+  font-weight: var(--gui-weight);
+  line-height: var(--gui-leading);
+  color: var(--gui-ink);
+  -webkit-font-smoothing: antialiased;
+
+  /* The recruit kit's hooks (components/recruit/ui), so its pieces wear this sheet here and only here. */
+  --app-surface: var(--gui-paper);
+  --app-raised: var(--gui-paper-hi);
+  --app-soft: var(--gui-paper-warm);
+  --app-ink: var(--gui-ink);
+  --app-muted: var(--gui-muted);
+  --app-line: var(--gui-paper-line);
+  --app-link: var(--gui-sage);
+  --app-focus: var(--gui-focus);
+  --app-error: var(--gui-danger);
+  --app-error-bg: var(--gui-danger-soft);
+  --app-success: var(--gui-success);
+  --app-accent-ink: var(--gui-ink-strong);
+  --gui-kit-primary: var(--gui-sage);
+  --gui-kit-primary-ink: var(--gui-paper);
+  --gui-kit-primary-hover: #4b7a68;
+  --gui-kit-butter: var(--gui-butter);
+  --gui-kit-tag: var(--gui-coral);
+  --gui-kit-tag-ink: var(--gui-ink-strong);
+  --gui-kit-keycap: var(--gui-bark);
+  --gui-kit-chevron: var(--gui-amber);
+  --gui-kit-blob: block;
+  --gui-kit-dialogue-fill: transparent;
+  --gui-kit-dialogue-shadow: none;
+
+  /* The portal's legacy tokens (styles/tokens.css): the navy terminal look, mapped onto paper. */
+  --color-bg-main: var(--gui-page);
+  --color-bg-alt: var(--gui-paper-warm);
+  --color-bg-navy: var(--gui-paper);
+  --color-bg: var(--gui-paper);
+  --color-surface: var(--gui-paper-hi);
+  --color-surface-soft: var(--gui-paper-warm);
+  --color-brand-blue: var(--gui-sage);
+  --color-accent-blue: var(--gui-sage);
+  --color-accent-cyan: var(--gui-teal-ink);
+  --color-brand-yellow: var(--gui-warn);
+  --color-brand-light: var(--gui-paper);
+  --color-text-main: var(--gui-ink);
+  --color-text-primary: var(--gui-ink);
+  --color-text-soft: var(--gui-ink-2);
+  --color-text-secondary: var(--gui-ink-2);
+  --color-text-muted: var(--gui-muted);
+  --color-text-subtle: var(--gui-muted);
+  --color-success: var(--gui-success);
+  --color-error: var(--gui-danger);
+  --color-warning: var(--gui-warn);
+  --glass-bg-hero: var(--gui-paper);
+  --glass-bg-pill: var(--gui-paper);
+  --glass-border-soft: var(--gui-paper-edge);
+  --glass-border-strong: var(--gui-paper-line);
+  --glass-border: var(--gui-paper-edge);
+  --surface-hover: rgb(114 92 78 / 0.07);
+  --surface-chip: rgb(114 92 78 / 0.1);
+  --glow-blue: rgb(66 107 91 / 0.18);
+  --glow-cyan: rgb(31 127 116 / 0.18);
+  --glow-gold: rgb(255 204 0 / 0.25);
+  --shadow-soft: var(--gui-shadow-md);
+  --shadow-strong: var(--gui-shadow-lg);
+  --shadow-glass: var(--gui-shadow-md);
+  --gray-300: var(--gui-paper-line);
+  --gray-400: var(--gui-muted);
+  --gray-500: var(--gui-muted);
+  --gray-600: var(--gui-paper-line);
+  --gray-700: rgb(114 92 78 / 0.22);
+  --gray-800: rgb(114 92 78 / 0.12);
+  --gray-900: var(--gui-paper-warm);
+  --font-heading: var(--gui-font);
+  --font-highlight: var(--gui-font);
+  --font-mono: var(--gui-font);
+  --font-body: var(--gui-font);
+}
+.gui :focus-visible { outline: 3px solid var(--gui-focus); outline-offset: 3px; }
+.gui ::selection { background: var(--gui-butter); color: var(--gui-ink-strong); }
+
+/* The text-size setting (row 220) reaches every overlay: anything marked as one scales with it. */
+.gui [data-gui-overlay] { zoom: var(--tsi-text-scale, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .gui *, .gui *::before, .gui *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
