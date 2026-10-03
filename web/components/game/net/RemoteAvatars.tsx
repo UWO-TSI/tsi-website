@@ -133,6 +133,16 @@ export default function RemoteAvatars({ source, area, player }: { source: NetSou
   const caps = graphics.liteMode ? LOD_CAPS.light : LOD_CAPS.high;
   const dusty = DUSTY.has(area), island = area === "village" ? villageIsland(village()) : undefined;
   const juice = useMemo(() => juiceFor(driver.particles, island ?? DRY), [driver, island]);
+  // Development (evidence scripts): who is drawn at which tier, and where.
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    Object.assign(window, { __net: { remotes: () => driver.store.list.map(r => ({
+      sid: r.sid, name: r.entry.player.name, x: r.sample.x, y: r.sample.y, z: r.sample.z, tier: (["full", "reduced", "hidden"] as const)[r.lod.tier],
+      dist: r.lod.dist, inView: r.lod.inView, plate: r.lod.plate, aura: r.lod.aura, seated: r.seated, pose: r.motion.pose ?? null, move: r.motion.move ?? null,
+      mobile: r.entry.player.mobile, held: r.entry.player.held,
+    })) } });
+    return () => { delete (window as { __net?: unknown }).__net; };
+  }, [driver]);
   useFrame(({ camera }, delta) => driveAll(driver, source, world, juice, player.current, camera, caps, delta), -3);
   const walk = INDOORS.has(area) ? INDOOR_WALK : WALK;
   return <>

@@ -103,13 +103,18 @@ function fill(s: Slot, p: RemotePlayer) {
 
 const point: ScreenPoint = { x: 0, y: 0, depth: 0 }, eye = new THREE.Vector3(), head = new THREE.Vector3();
 
+const TIER_TAG = ["Full", "Reduced", "Hidden"] as const;
+
 /** The pool: made once, filled on assignment, moved after each frame. */
 export class PlatePool {
   readonly shows: (RemoteRig | null)[] = Array.from({ length: LOD.plates }, () => null);
   private slots: Slot[] = [];
+  /** Development (`?lod=1`): each plate names its player's render tier. */
+  private debug = false;
 
   /** Into the canvas's own box (where drei puts its labels); returns the removal. */
-  mount(container: HTMLElement): () => void {
+  mount(container: HTMLElement, debug = false): () => void {
+    this.debug = debug;
     this.slots = this.shows.map(() => makeSlot());
     for (const s of this.slots) container.appendChild(s.root);
     return () => { for (const s of this.slots) s.root.remove(); this.slots = []; };
@@ -128,6 +133,7 @@ export class PlatePool {
       const s = this.slots[i], r = this.shows[i];
       const on = !!r && here(r) && r.anchor.current?.visible === true;
       if (on && s.player !== r.entry.player) fill(s, r.entry.player);
+      if (on && this.debug && s.plate.dataset.tier !== TIER_TAG[r.lod.tier]) s.plate.dataset.tier = TIER_TAG[r.lod.tier];
       if (on) head.set(r.feet.current.x, plateY(r), r.feet.current.z);
       const seen = on && projectCurved(head.x, head.y, head.z, camera, width, height, point);
       if (seen !== s.shown) { s.shown = seen; s.root.style.display = seen ? "" : "none"; }
@@ -148,7 +154,7 @@ export default function Nameplates({ pool, here }: { pool: PlatePool; here: (r: 
   useEffect(() => {
     const box = gl.domElement.parentElement;
     if (!box) return;
-    const unmount = pool.mount(box);
+    const unmount = pool.mount(box, process.env.NODE_ENV !== "production" && new URLSearchParams(window.location.search).has("lod"));
     const off = addAfterEffect(() => { const { camera, size } = get(); pool.place(camera, size.width, size.height, here); });
     return () => { off(); unmount(); };
   }, [gl, get, pool, here]);
