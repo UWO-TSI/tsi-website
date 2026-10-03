@@ -71,10 +71,11 @@ const firstUnknown = (table: string, keys: string[]) => {
 };
 
 /**
- * A client over `tables`. `userId` null: signed out; `down` tables answer every query with an error (an outage).
- * Every insert gets an id; `writes` records each write in order.
+ * A client over `tables`. `userId` null: signed out; `down` tables answer every query with an error (an outage);
+ * `unique` refuses an insert that repeats those columns of a row (23505). Every insert gets an id; `writes` records
+ * each write in order.
  */
-export function fakeDb(tables: Record<string, Row[]>, { userId = "00000000-0000-4000-8000-0000000000aa", down = [] }: { userId?: string | null; down?: string[] } = {}) {
+export function fakeDb(tables: Record<string, Row[]>, { userId = "00000000-0000-4000-8000-0000000000aa", down = [], unique = {} }: { userId?: string | null; down?: string[]; unique?: Record<string, string[]> } = {}) {
   const writes: { table: string; op: "insert" | "update" | "delete"; row: Row }[] = [];
   let n = 0;
   const from = (table: string) => {
@@ -90,6 +91,10 @@ export function fakeDb(tables: Record<string, Row[]>, { userId = "00000000-0000-
       const rows = (tables[table] ??= []);
       let data: Row[];
       if (op === "insert") {
+        const key = unique[table];
+        if (key && payload.some((p) => rows.some((r) => key.every((c) => r[c] === p[c])))) {
+          return { data: null, error: { message: `duplicate key value violates unique constraint on ${table}`, code: "23505" }, count: null };
+        }
         data = payload.map((r) => ({ id: `row-${++n}`, ...r }));
         rows.push(...data);
         data.forEach((row) => writes.push({ table, op: "insert", row }));
