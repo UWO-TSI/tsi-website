@@ -73,8 +73,8 @@ export const JUGGERNAUT: ClassKit = {
   signature: { type: "warhammer", name: "war hammer" },
   stat: { kind: "max_hp", at1: 1.2, at20: 1.35 },
   basic: { hp: 0.02, reset: 1.6, chain: [
-    { power: 0.75, clip: "Unique_HammerSwing", knock: 5 },
-    { power: 0.85, clip: "Unique_HammerOverhead", time: 1.15, arc: 1.4, range: 2.4, knock: 7 },
+    { power: 0.72, clip: "Unique_HammerSwing", knock: 5 },
+    { power: 0.82, clip: "Unique_HammerOverhead", time: 1.15, arc: 1.4, range: 2.4, knock: 7 },
   ] },
   keys: [
     { key: "juggernaut.charge", name: "Charge", icon: I("charge"), description: "A bull rush that plows through everything in its path. Slide into it to go further.",
@@ -96,9 +96,9 @@ export const JUGGERNAUT: ClassKit = {
   ult: { key: "juggernaut.ult", name: "Titan", icon: I("titan"),
     description: "Grow to 2.5× for 10 s: your reach grows, every swing sends a shockwave, and the ground shakes as you walk. It ends with the hammer splitting the earth.",
     cooldown_s: 0, energy: 0, charge: 1, anticipation_ms: 500, impacts: "first-last", duration: 10,
-    effects: [{ kind: "buff", stat: "size", value: 1.5, duration: 10, swing: [{ kind: "area", power: 1, radius: 4, at: "self", arc: 2.2, knock: 5 }] },
-      { kind: "buff", stat: "guard", value: 0.3, duration: 10 }, { kind: "area", power: 3.2, radius: 4, at: "self", knock: 6 }],
-    release: [{ kind: "area", power: 9.6, radius: 1.5, at: "self", length: 9, knock: 9, status: { hold: 1 } }],
+    effects: [{ kind: "buff", stat: "size", value: 1.5, duration: 10, swing: [{ kind: "area", power: 0.35, radius: 4, at: "self", arc: 2.2, knock: 5 }] },
+      { kind: "buff", stat: "guard", value: 0.3, duration: 10 }, { kind: "area", power: 1.1, radius: 4, at: "self", knock: 6 }],
+    release: [{ kind: "area", power: 3.4, radius: 1.5, at: "self", length: 9, knock: 9, status: { hold: 1 } }],
     clip: { verb: "CastUp", scale: 0.8 }, finish: { unique: "Ult_Juggernaut" },
     vfx: { cast: "juggernaut.ultCast", impact: "juggernaut.ultImpact", zone: "juggernaut.ultShock" } },
   ranks: RANKS([

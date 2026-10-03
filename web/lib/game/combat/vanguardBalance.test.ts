@@ -72,5 +72,5 @@ describe("the Vanguard family inside the §3 band", () => {
       `| The guardian 4–6 min | scripted fight, median of 4 (10 = the bot died first every time); minutes at the fight's damage rate | ${boss.map(x => `${x.k} ${x.scripted.toFixed(1)} (${x.rate.toFixed(1)} at its rate, ${x.died}/4 died)`).join(", ")} |`,
       `| The guardian, formula measure (27 points in the stat, half the hits land) | the weapons' plain swings | ${["aegis-oak", "warhammer-timber", "handwraps-cotton", "tanto-plain"].map(w => `${w} ${bossMinutes(w).toFixed(1)}`).join(", ")} min |`, "",
     ].join("\n"));
-  });
+  }, 60_000); // twenty seeds of three tables: slower than the default 5 s
 });
