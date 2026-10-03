@@ -13,8 +13,8 @@
  */
 import { PACK, PACK_COLS, type SpriteName } from "./pack";
 
-/** How a particle faces: the camera (centred, or standing on its bottom edge), flat on the ground, or a streak along its axis. */
-export const FACE = { billboard: 0, ground: 1, streak: 2, standing: 3 } as const;
+/** How a particle faces: the camera (centred, or standing on its bottom edge), flat on the ground, a streak along its axis, or flat on the water riding the shared swell (a boat's wake). */
+export const FACE = { billboard: 0, ground: 1, streak: 2, standing: 3, water: 4 } as const;
 export type Face = (typeof FACE)[keyof typeof FACE];
 
 /**
@@ -54,6 +54,8 @@ export interface Recipe<S extends string = SpriteName> {
 }
 
 const FRAMES = PACK_COLS;
+/** Lies flat: on the ground, or on the water. */
+const flat = (face: number) => face === FACE.ground || face === FACE.water;
 
 // Seeded randomness for bursts (mulberry32): one module-level state, reseeded per burst.
 let rs = 0;
@@ -133,7 +135,7 @@ export class ParticlePool {
       this.vx[i] = sx * sp; this.vz[i] = sz * sp; this.vy[i] = range(r.up) * Math.sqrt(scale);
       this.age[i] = 0; this.life[i] = range(r.life);
       this.size[i] = range(r.size) * scale; this.grow[i] = r.grow; this.aspect[i] = r.aspect ?? 1;
-      this.rot[i] = r.face === FACE.streak ? 0 : (rnd() - 0.5) * (r.face === FACE.ground ? Math.PI * 2 : 0.6);
+      this.rot[i] = r.face === FACE.streak ? 0 : (rnd() - 0.5) * (flat(r.face) ? Math.PI * 2 : 0.6);
       this.spin[i] = (rnd() - 0.5) * 2 * (r.spin ?? 0);
       this.row[i] = sprite; this.fps[i] = r.fps ?? 0; this.frame0[i] = Math.floor(rnd() * FRAMES);
       this.cr[i] = tr; this.cg[i] = tg; this.cb[i] = tb; this.alpha[i] = r.alpha * alpha;
@@ -141,7 +143,7 @@ export class ParticlePool {
       this.face[i] = r.face; this.fadeIn[i] = r.fadeIn ?? 10; this.ramp[i] = ramp;
       // A streak lies along its direction (or its velocity); a ground decal turns to it.
       this.ax[i] = round ? sx : dirX / dl; this.az[i] = round ? sz : dirZ / dl;
-      if (r.face === FACE.ground && !round) this.rot[i] = Math.atan2(-this.az[i], this.ax[i]);
+      if (flat(r.face) && !round) this.rot[i] = Math.atan2(-this.az[i], this.ax[i]);
     }
     return n;
   }
@@ -169,7 +171,7 @@ export class ParticlePool {
       this.px[i] += this.vx[i] * dt; this.py[i] += this.vy[i] * dt; this.pz[i] += this.vz[i] * dt;
       this.rot[i] += this.spin[i] * dt;
       // Grains, flecks and drops come to rest on the ground they were thrown from; nothing sinks into it.
-      const floor = this.ground[i] + (this.face[i] === FACE.ground ? 0.02 : this.gravity[i] > 0 ? this.size[i] * 0.3 : 0);
+      const floor = this.ground[i] + (flat(this.face[i]) ? 0.02 : this.gravity[i] > 0 ? this.size[i] * 0.3 : 0);
       if (this.py[i] < floor) {
         this.py[i] = floor;
         if (this.vy[i] < 0) { this.vy[i] = 0; this.vx[i] *= 0.4; this.vz[i] *= 0.4; this.spin[i] *= 0.3; }

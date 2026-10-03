@@ -7,14 +7,17 @@
  * moored alongside the tip on its lines, and two buoys marking its lane, everything riding the shared swell. Placed
  * on a dock (the wharf landmark's spot and yaw, or the home island's HOME_PIER), in that dock's frame.
  */
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import type { IslandLight } from "@/lib/game/islandLighting";
-import { BUOYS, PIER_URL, floatBuoy, mooredPose, newFloat, type BoatPose, type Dock } from "@/lib/game/wharf";
+import { BUOYS, PIER_URL, floatBuoy, newFloat, type Dock } from "@/lib/game/wharf";
+import { berthTaken, type TripPlace } from "@/lib/game/boatTrip";
+import { myTrip, readMyTrip, subscribeMyTrip } from "@/lib/game/myTrip";
 import Boat, { readSwell } from "./Boat";
+import { useTripBoat } from "./useTripBoat";
 
 const BUOY_URL = "/assets/acnh/props/buoy.glb";
 /** The buoy at the dump's scale, a touch smaller than ACNH's swimming line (a channel marker); its float meets the water this far up its model (its weighted stem hangs below). */
@@ -40,10 +43,15 @@ function Buoy({ dock, x, z }: { dock: Dock; x: number; z: number }) {
   return <group ref={group}><primitive object={model} scale={BUOY_SCALE} /></group>;
 }
 
-/** The boat lies moored alongside the tip. */
-const moored = (_now: number, out: BoatPose) => { mooredPose(out); };
-
-export default function Wharf({ dock, light, children }: { dock: Dock; light: IslandLight; children?: ReactNode }) {
+/**
+ * `place`: which island's wharf this is. While this player's trip leaves from it or comes in to it, its boat is the
+ * trip's (useTripBoat), carrying their avatar; otherwise it lies moored. Others' trips (multiplayer) will be drawn the
+ * same way, each on its own boat.
+ */
+export default function Wharf({ dock, light, place, children }: { dock: Dock; light: IslandLight; place: TripPlace; children?: ReactNode }) {
+  const tripKey = useSyncExternalStore(subscribeMyTrip, readMyTrip, () => "");
+  const trip = tripKey && berthTaken(myTrip.current, place) ? myTrip.current : null;
+  const boat = useTripBoat(trip, dock, light, myTrip.ride);
   const { scene } = useGLTF(PIER_URL);
   const pier = useMemo(() => prepareModel(scene, PIER_URL, undefined, "solid"), [scene]);
   useEffect(() => () => disposeModelMaterials(pier), [pier]);
@@ -56,7 +64,7 @@ export default function Wharf({ dock, light, children }: { dock: Dock; light: Is
   return <group position={[dock.x, 0, dock.z]} rotation={[0, dock.yaw, 0]}>
     <primitive object={pier} />
     {BUOYS.map(([x, z], i) => <Buoy key={i} dock={dock} x={x} z={z} />)}
-    <Boat dock={dock} light={light} rope={rope} poseAt={moored} />
+    <Boat dock={dock} light={light} rope={rope} poseAt={boat.poseAt} onPlaced={boat.onPlaced} />
     {children}
   </group>;
 }

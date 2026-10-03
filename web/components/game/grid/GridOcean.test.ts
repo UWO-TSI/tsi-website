@@ -5,8 +5,8 @@ import { ISLAND_LIGHTING, withWeather } from "@/lib/game/islandLighting";
 import { sunFromAngles } from "@/lib/game/lookPreset";
 import { buildVillage, type VillageDoc } from "@/lib/game/villageMap";
 import frozen from "@/lib/game/fixtures/village-2026-09-28.json";
-import { WATER_DROP, isRiver, surfaceAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
-import { glintPoints } from "./GridOcean";
+import { WATER_DROP, createCenteredMap, isRiver, surfaceAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
+import { glintPoints, oceanGeometry } from "./GridOcean";
 
 // Water optics on a frozen copy of the 2026-09-28 village (camera spots and the deck below are its geometry).
 const { map } = buildVillage(frozen as VillageDoc);
@@ -166,4 +166,38 @@ describe("glint sprites (row 237)", () => {
     expect(near / (n / 2)).toBeGreaterThan(0.15);
     expect(near / (n / 2)).toBeLessThan(0.6);
   });
+});
+
+describe("the open sea meets the island's water without a seam (arrival-wharf.md: the boat sails past the map's edge)", () => {
+  // The map's water is a quad per cell, so its edge has a vertex every unit (cell corners at half units); the swell is
+  // evaluated per vertex, so the sea's edge must have the same vertices or the two surfaces part where the swell runs.
+  const edgeVerts = (g: ReturnType<typeof oceanGeometry>, test: (x: number, z: number) => boolean) => {
+    const p = g.getAttribute("position"), out: [number, number][] = [];
+    for (let i = 0; i < p.count; i++) if (test(p.getX(i), p.getZ(i))) out.push([p.getX(i), p.getZ(i)]);
+    return out;
+  };
+  for (const [label, m] of [["the village", map], ["a small islet", createCenteredMap(32, 32)]] as const) {
+    it(`has a vertex at every cell corner along ${label}'s edge, and covers the sea out to the horizon`, () => {
+      const g = oceanGeometry(m), minX = m.originX - 0.5, minZ = m.originZ - 0.5, maxX = minX + m.width, maxZ = minZ + m.depth;
+      const on = (v: number, e: number) => Math.abs(v - e) < 1e-4;
+      for (let x = minX; x <= maxX + 1e-6; x += 1) {
+        for (const z of [minZ, maxZ]) expect(edgeVerts(g, (vx, vz) => on(vx, x) && on(vz, z)).length, `(${x}, ${z})`).toBeGreaterThan(0);
+      }
+      for (let z = minZ; z <= maxZ + 1e-6; z += 1) {
+        for (const x of [minX, maxX]) expect(edgeVerts(g, (vx, vz) => on(vx, x) && on(vz, z)).length, `(${x}, ${z})`).toBeGreaterThan(0);
+      }
+      // Nothing inside the map (the map draws its own water) and out to 300 every way.
+      expect(edgeVerts(g, (x, z) => x > minX + 1e-4 && x < maxX - 1e-4 && z > minZ + 1e-4 && z < maxZ - 1e-4)).toEqual([]);
+      g.computeBoundingBox();
+      expect([g.boundingBox!.min.x, g.boundingBox!.max.x, g.boundingBox!.min.z, g.boundingBox!.max.z]).toEqual([-300, 300, -300, 300]);
+      // Faces up, and still a light mesh.
+      const idx = g.getIndex()!, p = g.getAttribute("position");
+      for (let t = 0; t < idx.count; t += 3) {
+        const [a, b, c] = [idx.getX(t), idx.getX(t + 1), idx.getX(t + 2)];
+        const ux = p.getX(b) - p.getX(a), uz = p.getZ(b) - p.getZ(a), vx = p.getX(c) - p.getX(a), vz = p.getZ(c) - p.getZ(a);
+        expect(uz * vx - ux * vz, `triangle ${t / 3}`).toBeGreaterThan(0); // the cross product's y
+      }
+      expect(idx.count / 3).toBeLessThan(10000);
+    });
+  }
 });

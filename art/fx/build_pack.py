@@ -513,6 +513,85 @@ def sand_print(t):
     return np.clip(A, 0, 1), colour(np.clip(val, 0, 1.05), 0.3)
 
 
+def foam(t):
+    """Wake foam lying on the water, seen from above (specs/polish/arrival-wharf.md): churned white water that opens
+    into lace, the walls left between bubbles as they burst, and thins to wisps. The patch is a few soft lobes round
+    its middle, drawn out a little along u (the way the boat went), with a brushed edge; inside it two beds of bubbles
+    (big and small, each a jittered lattice) grow, so the walls between them thin, and the early churn fills them.
+    Each wall is lit on the side toward the light."""
+    rng = np.random.default_rng(1717)
+    field = np.exp(-((U / 0.5) ** 2 + (V / 0.34) ** 2) * 2.0) * 1.2
+    for k in range(6):
+        a = k / 6 * math.tau + rng.uniform(-0.4, 0.4)
+        cx, cy = math.cos(a) * rng.uniform(0.22, 0.42), math.sin(a) * rng.uniform(0.12, 0.26)
+        rx, ry = rng.uniform(0.24, 0.4), rng.uniform(0.16, 0.28)
+        field += np.exp(-(((U - cx) / rx) ** 2 + ((V - cy) / ry) ** 2) * 2.0) * 0.8
+    edge = (fbm(U * 3.2 + 5, V * 3.2 + 7, 1718, 3) - 0.5) * (0.5 + 0.5 * t)
+    shape = ss(0.28 + 0.4 * t, 0.6 + 0.45 * t, field + edge)
+
+    def bed(n, seed, grow):
+        r_ = np.random.default_rng(seed)
+        spacing = 2 / n
+        best = np.full_like(U, 9.0)
+        lit = np.zeros_like(U)
+        for i in range(n):
+            for j in range(n):
+                px_ = (i + 0.5) * spacing - 1 + r_.uniform(-0.42, 0.42) * spacing
+                py_ = (j + 0.5) * spacing - 1 + r_.uniform(-0.42, 0.42) * spacing
+                k = r_.uniform(0.55, 1.3)
+                dd = np.hypot(U - px_, V - py_)
+                d = dd / k
+                closer = d < best
+                best = np.where(closer, d, best)
+                lit = np.where(closer, ((U - px_) * -LIGHT[0] + (V - py_) * -LIGHT[1]) / np.maximum(dd, 1e-4), lit)
+        r = spacing * (0.14 + grow * t)
+        walls = ss(r * 0.8, r * 0.8 + spacing * (0.2 - 0.1 * t), best)
+        return walls, lit
+
+    big, lit_big = bed(7, 1721, 0.3)
+    small, lit_small = bed(17, 1722, 0.42)
+    walls = big * small
+    lit = np.where(big < small, lit_big, lit_small)
+    churn = (1 - ss(0.0, 0.42, t)) * (0.5 + 0.5 * fbm(U * 7, V * 7, 1719, 2))
+    lace = np.maximum(walls, churn)
+    wisps = 1 - ss(0.5, 1.0, t) * (0.55 + 0.45 * ss(0.35, 0.7, fbm(U * 4.5 + 2, V * 4.5, 1720, 3)))
+    A = np.clip(shape * lace * wisps, 0, 1)
+    val = 0.84 + 0.13 * np.clip(lit, 0, 1) * walls + 0.05 * churn
+    return A, colour(np.clip(val, 0, 1), 0.25)
+
+
+def spray(t):
+    """Bow spray, side on: a fan of drops thrown up and out from a point at the foot of the cell, a brushed mist sheet
+    behind them, rising, opening and falling back as the mist thins. The engine throws it off the bow and tints it."""
+    rng = np.random.default_rng(1818)
+    A, C = stamp_layer()
+    base = -0.88
+    rad, ang = np.hypot(U, V - base), np.arctan2(U, V - base)
+    reach = 0.35 + 1.25 * (1 - (1 - t) ** 2)
+    fan = ss(1.0, 0.5, np.abs(ang)) * ss(0.04, 0.2, rad) * ss(reach, reach * 0.5, rad)
+    streaks = vnoise((ang + 2) * 9, rad * 3 - t * 4, 1820)
+    mist = fan * (0.45 + 0.35 * fbm(U * 5 + 3, V * 5 - t * 3, 1819, 3) + 0.25 * streaks) * ss(0.0, 0.1, t) * (1 - ss(0.3, 1.0, t))
+    A, C = over(A, C, np.clip(mist * 0.75, 0, 1), colour(np.full_like(U, 0.96), 0.25))
+    for i in range(40):
+        a = rng.uniform(-0.85, 0.85)
+        sp = rng.uniform(0.5, 1.25)
+        vx, vy = math.sin(a) * sp, math.cos(a) * sp * 1.8
+        x = vx * (0.08 + 0.9 * t)
+        y = base + vy * (0.1 + 1.0 * t) - 1.6 * t * t
+        r = rng.uniform(0.022, 0.06) * (1 - 0.35 * t)
+        vyy = vy - 3.2 * t
+        speed = math.hypot(vx, vyy)
+        stretch = 1 + 1.2 * speed * (1 - t)
+        dx, dy = vx / max(speed, 1e-3), vyy / max(speed, 1e-3)
+        du, dv = U - x, V - y
+        d = np.hypot((du * dx + dv * dy) / stretch, -du * dy + dv * dx)
+        m = ss(r, r - PX * 1.2, d) * (1 - ss(0.68, 1.0, t + rng.uniform(-0.1, 0.1)))
+        hi = ss(r * 0.5, 0, np.hypot(U - (x - r * 0.3), V - (y + r * 0.3)))
+        v = 0.8 - 0.14 * ss(r * 0.5, r, d) + 0.28 * hi
+        A, C = over(A, C, m, colour(np.clip(v + 0 * U, 0, 1), 0.2))
+    return A, C
+
+
 # ---------------------------------------------------------------- the pack
 # name, painter, what it is (one row each, FRAMES frames). Append only: rows are indices in the engine.
 SPRITES = [
@@ -531,6 +610,8 @@ SPRITES = [
     ("marker", marker, "ground marker (target)"),
     ("footprint", footprint, "footprint in snow (lies on the ground)"),
     ("sandPrint", sand_print, "shoe print in sand (lies on the ground)"),
+    ("foam", foam, "wake foam (lies on the water)"),
+    ("spray", spray, "bow spray (thrown drops and mist)"),
 ]
 
 # How the sheet shows each row: the tint the engine gives it and the ground behind it.
@@ -542,6 +623,7 @@ SHEET = {
     "marker": ("#fff4c8", "#8c8577"),
     "footprint": ("#c9d6e6", "#eef3f8"),
     "sandPrint": ("#c9ad78", "#e2cb93"),
+    "foam": ("#f2f8f8", "#3f8fa6"), "spray": ("#e6f3f7", "#4f97ad"),
 }
 
 

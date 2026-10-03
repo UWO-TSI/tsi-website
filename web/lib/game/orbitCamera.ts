@@ -104,6 +104,28 @@ export function autoFollow(dt: number, vx: number, vz: number, allowed: boolean,
   o.target.yaw += Math.max(-most, Math.min(most, step));
 }
 
+/**
+ * A shot steered gently, like the auto-follow (the boat trip, specs/polish/arrival-wharf.md): with the camera left
+ * alone for STEER_IDLE s, the target eases toward this heading (the short way round), tilt and zoom (null keeps the
+ * player's); any look round takes over at once. `cut` puts the view there now, under a veil. Nothing is saved: the
+ * player's own angles stay theirs.
+ */
+export const STEER_IDLE = 0.6, STEER_RATE = 1.6;
+export function steerOrbit(dt: number, yaw: number, pitch: number | null, zoom: number | null, cut = false, o: Orbit = orbit) {
+  if (cut) {
+    o.target.yaw += wrapAngle(yaw - o.target.yaw);
+    if (pitch !== null) o.target.pitch = clampPitch(pitch);
+    if (zoom !== null) o.target.zoom = clampZoom(zoom);
+    o.view.yaw = o.target.yaw; o.view.pitch = o.target.pitch; o.view.zoom = o.target.zoom;
+    return;
+  }
+  if (o.idle < STEER_IDLE) return;
+  const k = 1 - Math.exp(-STEER_RATE * dt);
+  o.target.yaw += wrapAngle(yaw - o.target.yaw) * k;
+  if (pitch !== null) o.target.pitch += (clampPitch(pitch) - o.target.pitch) * k;
+  if (zoom !== null) o.target.zoom += (clampZoom(zoom) - o.target.zoom) * k;
+}
+
 /** The camera's offset from the point it looks at: behind along the heading, up by the tilt. */
 export function orbitOffset(yaw: number, pitch: number, distance: number): [number, number, number] {
   const back = Math.cos(pitch) * distance;

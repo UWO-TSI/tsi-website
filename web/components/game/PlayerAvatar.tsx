@@ -35,6 +35,7 @@ import { shakeCamera } from "@/lib/game/cameraJuice";
 import { STUCK_TIME, advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, topSpeed, towards, MOVE_TUNING, NO_INPUT, type MoveEvent, type MoveInput, type MoveSim, type MoveState, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
 import { crouchKey, useKeyboardLocked, useMoveKeys } from "@/lib/game/movement/keys";
 import { routePilot, type RouteStep } from "@/lib/game/movement/course";
+import type { AvatarRide } from "@/lib/game/movement/ride";
 import { BASE_FOV, EVENT_CLIP, MOVE_JUICE, TAKEOFF, applyFov, liveWind, momentumOf, screenOf, touchStick, useMoveParticles, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
 import { SPLASH, cooldownWisp, dashBurst, dashReady as dashBack, footprint, footstep, glideFurl, glideOpen, glideRibbon, glideSetDown, groundUnder, landKind, landing, mantleGrab, mantleStep, puffRing, rollTumble, scuff, settle, skidKick, skidPush, slideBurst, slidePop, slideTrail, splash, streak, takeoff, trail, type GroundKind } from "@/lib/game/movement/juice";
 
@@ -96,6 +97,8 @@ interface PlayerAvatarProps {
   walkOnly?: boolean;
   /** What this player holds from the tool wheel (specs/game-ui.md): drawn in the hand. In an encounter the weapon is the runtime's. */
   held?: WheelItem | null;
+  /** A scripted ride (the boat trip, arrival-wharf.md): while active it places and poses the avatar and the walker waits. */
+  ride?: AvatarRide;
 }
 
 const playSFX = (name: SFXName, rate = 1, gain = 1) => AudioManager.playSFX(name, { rate, gain });
@@ -126,13 +129,45 @@ function bankAbout(group: THREE.Group, yaw: number, roll: number, pivotY: number
 /** The grip's height above the feet in the Glide clip (build_clips.py GLIDE_GRIP, rig units × the character's scale). */
 const GRIP_Y = 0.58 * CHARACTER_SCALE;
 
+/** The body's pivot when tilting with a boat: the hips on the bench, about knee height standing. */
+const RIDE_PIVOT = { seated: 0.3, standing: 0.45 };
+/**
+ * A frame of a scripted ride (module scope, see turnTo): the avatar where the ride puts it, posed as it says, the body
+ * tilting with the boat, footsteps on the boards from the feet; the camera's focus is the ride's.
+ */
+function rideFrame(r: AvatarRide, g: THREE.Group, bd: THREE.Group, hd: THREE.Group, m: CharacterMotion, f: { steps: number; sq: number; sqv: number; focus: THREE.Vector3; level: number; lead: THREE.Vector2; pan: THREE.Vector2; rise: THREE.Vector2 },
+  pool: ReturnType<typeof useMoveParticles>["pool"], amount: number) {
+  g.position.set(r.x, r.y, r.z);
+  f.sq = f.sqv = 0;
+  f.rise.set(0, 0);
+  bd.scale.set(1, 1, 1);
+  bankAbout(bd, r.yaw, r.roll, r.seated ? RIDE_PIVOT.seated : RIDE_PIVOT.standing, r.pitch);
+  hd.position.set(r.x, r.y, r.z);
+  Object.assign(m, { yaw: r.yaw, speed: r.seated ? 0 : r.speed, lift: r.seated ? r.lift : 0, pose: r.seated ? "Sit" : null, move: null, rate: 1 });
+  if (r.hop) { m.play = "Jump"; r.hop = false; }
+  if (r.land) { m.stop = true; r.land = false; }
+  // Footsteps from the feet on the boards: the sound, and what the boards throw (nothing but the sound, as on any wood).
+  if (m.steps !== undefined && m.steps !== f.steps) {
+    f.steps = m.steps;
+    if (r.ground && !r.seated && r.speed > 0.6) {
+      const side = m.foot === 0 ? 0.1 : -0.1, px = r.x + Math.cos(r.yaw) * side, pz = r.z - Math.sin(r.yaw) * side;
+      const sound = footstep(pool, r.ground, px, r.y, pz, Math.sin(r.yaw) * r.speed, Math.cos(r.yaw) * r.speed, false, amount);
+      playSFX(sound.name, sound.rate, sound.gain);
+    }
+  }
+  f.focus.set(r.focus.x, r.focus.y, r.focus.z);
+  f.level = r.focus.y;
+  f.lead.set(0, 0);
+  f.pan.set(0, 0);
+}
+
 /** Clips that hold while seated; the seat branch owns them. */
 const SEAT_CLIPS = new Set<ClipName>(["Sit", "Study", "Stretch", "Sleep"]);
 /** Space let go within this long in the air is a tap (an air-jump class's Air Step); held longer, the glider. */
 const AIR_TAP = 0.18;
 type Seat = { x: number; z: number; clip: ClipName; lift: number; yaw: number };
 
-export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, respawn = 0, glider = false, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed, walkOnly = false, held = null }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, respawn = 0, glider = false, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed, walkOnly = false, held = null, ride }: PlayerAvatarProps) {
   const anchor = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null), head = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null, afterimages: true });
   const { look } = useMyLook();
@@ -165,6 +200,10 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   // Micro-anim loop iter 1 (2026-07-24): cozy sit beat, a settle puff and a brief contented ♪ over the head.
   const [sitNote, setSitNote] = useState(false);
   const sitNoteTimer = useRef<number | null>(null);
+  /** The ride had the avatar last frame (arrival-wharf.md): letting go hands it back to the walker there. */
+  const riding = useRef(false);
+  /** The nameplate: tucked away while a ride has the avatar (the boat trip is a scene, not a walk). */
+  const plate = useRef<HTMLDivElement>(null);
   /** Dev (evidence): a scripted pilot, and pause / run-for-a-moment to shoot frames. */
   const dev = useRef<{ pilot: ReturnType<typeof routePilot> | null; paused: boolean; budget: number }>({ pilot: null, paused: false, budget: 0 });
 
@@ -273,6 +312,32 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   useFrame((_state, rawDelta) => {
     const g = anchor.current, bd = body.current, hd = head.current;
     if (!g || !bd || !hd) return;
+    // A scripted ride (the boat trip): it has the avatar; when it lets go, the walker starts again where it left you,
+    // and the camera pans across from the ride's focus.
+    if (ride?.active) {
+      const f = fx.current;
+      rideFrame(ride, g, bd, hd, motion.current, f, particles.pool, (juice ?? MOVE_JUICE).footsteps);
+      if (!riding.current && plate.current) plate.current.style.visibility = "hidden";
+      riding.current = true;
+      seat.current = null;
+      target.current = null;
+      particles.tick(_state.clock.elapsedTime, Math.min(rawDelta, 0.1), camera, liveWind());
+      camTarget?.current.copy(f.focus);
+      applyFov(camera, BASE_FOV, Math.min(rawDelta, 0.1));
+      player?.current.set(ride.x, ride.y, ride.z);
+      (reported.current ??= new THREE.Vector3()).set(ride.x, ride.y, ride.z);
+      return;
+    }
+    if (riding.current && ride) {
+      riding.current = false;
+      if (plate.current) plate.current.style.visibility = "";
+      sim.current = createMoveSim(createMoveState(ride.x, ride.z, world, ride.yaw));
+      simAt.current = [x0, z0, respawn];
+      const f = fx.current;
+      f.level = ride.y;
+      f.pan.set(f.focus.x - ride.x, f.focus.z - ride.z);
+      bankAbout(bd, 0, 0, 0);
+    }
     const p = combat.rt.player, d = dev.current, f = fx.current, m = motion.current, j = juice ?? MOVE_JUICE, st = touchStick, k = keys.current, b = bindings;
     // The ruins: the combat kit; an air-jump class (the Elementalist's Air Step) keeps the leaf glider on Space held (when owned).
     const t = inCombat ? combatTuning(p.speed, kit.glider > 0 && combat.rt.v2?.kit.movement?.on === "airJump") : kit;
@@ -630,6 +695,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       (reported.current ??= new THREE.Vector3()).set(x, y, z);
       player?.current.set(x, y, z);
     }
+    // Where you are and which way you face, for a ride that starts from here (the boat trip's walk to the boat).
+    if (ride) { ride.x = x; ride.y = y; ride.z = z; ride.yaw = sitting ? sitting.yaw : state.facing; }
   }, -4);
 
   return (
@@ -651,6 +718,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
           {/* The nameplate in the GUI sheet (row 285): a paper tag (it was a dark chip with a blue glow), a Tethos-blue dot
               for a TSI member, the mastery frame as a ring, the level as a small sage tab. */}
           <div
+            ref={plate}
             className="whitespace-nowrap text-center"
             style={{
               width: "max-content", // the Html anchor is 0 px wide, so the plate shrank to min-content and a long class title spilled out

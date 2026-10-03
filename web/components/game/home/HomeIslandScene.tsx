@@ -33,6 +33,7 @@ import type { WorldMoment } from "@/lib/collections/logic";
 import { gullAnchors } from "@/lib/game/ambientFauna";
 import { boxOccluder, treeOccluder } from "@/lib/game/occluders";
 import Wharf from "../wharf/Wharf";
+import { myTrip } from "@/lib/game/myTrip";
 import styles from "../DefaultIslandWorld.module.css";
 
 const HOME_NODES = homeNodes();
@@ -101,14 +102,14 @@ export default function HomeIslandScene({ held = null, identity, level, peaceful
     <group position={[HOUSE.x, 0, HOUSE.z]}><ACNHParts parts={CHALET_VARIANTS.brown} lit={windowLit(light)} /></group>
     <FadeLight position={[HOUSE.door[0], 1.4, HOUSE.door[1] - 0.2]} color="#ffd68b" intensity={light.lampsOn ? light.lamp * 1.2 : 0} distance={4} />
     <GLBProp url="/assets/acnh/furniture/mailbox.glb" position={[HOME_MAILBOX[0], home.ground(...HOME_MAILBOX), HOME_MAILBOX[1]]} scale={0.1} />
-    <Wharf dock={HOME_PIER} light={light} />
+    <Wharf dock={HOME_PIER} light={light} place="home" />
     <Html position={[HOUSE.x, 4.2, HOUSE.z - HOUSE.halfD]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Your house</div></Html>
     {TREES.map(({ x, z, seed }, i) => <NatureTree key={i} position={[x, home.ground(x, z), z]} seed={seed} models={SEASON_TREES[look.season]} />)}
     {HOME_BUSHES.map(([x, z], i) => <NatureBush key={i} position={[x, home.ground(x, z), z]} seed={i} models={SEASON_BUSHES[look.season]} />)}
     {SEASON_FLOWERS[look.season].length > 0 && HOME_FLOWERS.map(([x, z], i) => <NatureFlowerCluster key={i} position={[x, home.ground(x, z), z]} seed={i * 3} models={SEASON_FLOWERS[look.season]} />)}
     <PlacementLayer items={outdoor} mapping={mapping} context={{ inside: home.placeable }} active={decorating} selected={selected}
       onPlace={onPlace} onPickUp={onPickUp} plane={{ center: [0, 0.02, 0], size: [HOME_RADII.x * 2, HOME_RADII.z * 2] }} />
-    <PlayerAvatar key={`home-${returned}`} spawnPosition={spawn} playerName={identity?.display_name ?? "You"} playerLevel={level} member={identity?.member} player={player} frozen={fishing || (decorating && !!selected)}
+    <PlayerAvatar key={`home-${returned}`} spawnPosition={spawn} playerName={identity?.display_name ?? "You"} playerLevel={level} member={identity?.member} player={player} frozen={fishing || (decorating && !!selected)} ride={myTrip.ride}
       world={world} groundHeight={home.ground} groundSurface={home.surface} camTarget={focus} glider={peaceful.glider} held={held} />
   </>;
 }
