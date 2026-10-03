@@ -10,6 +10,7 @@ export function memoryEconomyStore(clock: () => Date = () => new Date()) {
   const ledger: (LedgerEntry & { member: string; key: string })[] = [];
   const inventory = new Map<string, InventoryRow>(); // `${member}:${itemId}`
   const collections = new Map<string, number>(); // `${member}:${key}`
+  const locks = new Set<string>(); // the bag's locked favourites (member_collections.locked)
   const claims = new Set<string>();
   const granted = new Set<string>(); // starter_grants
   const reservations: Reservation[] = [];
@@ -73,7 +74,7 @@ export function memoryEconomyStore(clock: () => Date = () => new Date()) {
       return { balance: r.balance, owned: row.qty, replayed: false };
     },
     async collections(m) {
-      return [...collections.entries()].filter(([k, n]) => k.startsWith(`${m}:`) && n > 0).map(([k, n]) => ({ item_key: k.slice(m.length + 1), count: n }));
+      return [...collections.entries()].filter(([k, n]) => k.startsWith(`${m}:`) && n > 0).map(([k, n]) => ({ item_key: k.slice(m.length + 1), count: n, locked: locks.has(k) }));
     },
     async sell(m, itemKey, qty, key) {
       const k = `sell:${key}`;
@@ -83,6 +84,7 @@ export function memoryEconomyStore(clock: () => Date = () => new Date()) {
       const cls = speciesClass(itemKey);
       const price = cls ? sellPrice(cls.category, cls.rarity) : null;
       if (!price) throw new EconomyError("not_sellable");
+      if (locks.has(`${m}:${itemKey}`)) throw new EconomyError("locked");
       const have = collections.get(`${m}:${itemKey}`) ?? 0;
       if (have < qty) throw new EconomyError("insufficient_items");
       collections.set(`${m}:${itemKey}`, have - qty);
@@ -148,6 +150,7 @@ export function memoryEconomyStore(clock: () => Date = () => new Date()) {
     store, items, ledger, inventory,
     fund: (m: string, c: number, g = 0) => { coins.set(m, c); gems.set(m, g); },
     give: (m: string, key: string, n: number) => collections.set(`${m}:${key}`, (collections.get(`${m}:${key}`) ?? 0) + n),
+    lock: (m: string, key: string, on: boolean) => (on ? locks.add(`${m}:${key}`) : locks.delete(`${m}:${key}`)),
     setTier: (m: string, t: number) => tiers.set(m, t),
     name: (m: string, n: string) => names.set(m, n),
     coinsOf: (m: string) => coins.get(m) ?? 0,

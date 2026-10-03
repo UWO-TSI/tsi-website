@@ -1,5 +1,6 @@
-/** In-memory CollectionsStore mirroring the 031, 036, catch-roll, seasonal-land and recipe-drop SQL functions (tests, dev harness). */
+/** In-memory CollectionsStore mirroring the 031, 036, catch-roll, seasonal-land, recipe-drop and backpack SQL functions (tests, dev harness). */
 import { FISH } from "@/lib/game/fishing";
+import { CHEST_SLOTS, bagCapacity, fits, isMaterial, slotsUsed, type Stock } from "./bag";
 import { clampSize, trophyFor, weekStart, type Donation, type MemberItem, type WeeklyBest } from "./logic";
 import { CAST_GAP_MS, MIN_REEL_MS, ROLL_TTL_MS } from "./rolls";
 import { ROSTER } from "./roster";
@@ -21,6 +22,25 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
   const rolls = new Map<string, { member: string; key: string; size: number | null; trophy: boolean; at: number; landed: boolean }>();
   const harvests = new Set<string>(); // `${member}:${node}:${hourKey}`
   const gear = new Map<string, string[]>();
+  const locks = new Set<string>(); // `${member}:${key}`
+  const chest = new Map<string, number>(); // `${member}:${key}`
+  const moves = new Map<string, { action: string; item: string | null; qty: number }>(); // bag_log: `${member}:${key}`
+  const mine = (map: Map<string, number>, m: string): Record<string, number> =>
+    Object.fromEntries([...map].filter(([k]) => k.startsWith(`${m}:`)).map(([k, n]) => [k.slice(m.length + 1), n]));
+  const stock = (m: string): Stock => Object.fromEntries([...items].filter(([k]) => k.startsWith(`${m}:`)).map(([, r]) => [r.item_key, r.count]));
+  /** bag_check: refuse when `n` more of `key` would leave the bag (or the chest) over its size. */
+  const room = (m: string, key: string, n: number, where: "bag" | "chest" = "bag") => {
+    const [have, size] = where === "bag" ? [stock(m), bagCapacity(gear.get(m) ?? [])] : [mine(chest, m), CHEST_SLOTS];
+    if (!fits(have, size, key, n)) throw new CollectionsError(where === "bag" ? "bag_full" : "storage_full");
+  };
+  /** bag_log: a replayed key returns true; the same key for something else is key_reused. */
+  const once = (m: string, key: string, action: string, item: string | null, qty: number) => {
+    const prior = moves.get(`${m}:${key}`);
+    if (!prior) return false;
+    if (prior.action !== action || prior.item !== item || (action !== "store_materials" && prior.qty !== qty)) throw new CollectionsError("key_reused");
+    return true;
+  };
+  const bagRow = (m: string, key: string) => items.get(`${m}:${key}`) ?? { item_key: key, count: 0, total_collected: 0, best_size_cm: null, first_collected_at: now().toISOString() };
   const capped = (m: string, key: string) => {
     const hour = Math.floor(now().getTime() / 3_600_000);
     const rarity = ROSTER.find((s) => s.key === key)?.rarity ?? FISH.find((f) => f.key === key)?.rarity ?? "common";
@@ -38,6 +58,7 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
   };
   /** collections_record_catch: count+1, lifetime total+1, personal best size, this week's best; capped per species and member per hour. */
   const recordCatch = (m: string, key: string, size: number | null, trophy: boolean) => {
+    room(m, key, 1);
     capped(m, key);
     const k = `${m}:${key}`;
     const row = items.get(k) ?? { item_key: key, count: 0, total_collected: 0, best_size_cm: null, first_collected_at: now().toISOString() };
@@ -91,6 +112,7 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
     async cast(m, key, size, trophy) {
       const at = now().getTime();
       if ([...rolls.values()].some((r) => r.member === m && at - r.at < CAST_GAP_MS)) throw new CollectionsError("too_fast");
+      room(m, key, 1);
       const id = crypto.randomUUID();
       rolls.set(id, { member: m, key, size, trophy, at, landed: false });
       return id;
@@ -127,6 +149,54 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
     async setShowcase(m, keys) {
       showcases.set(m, [...keys]);
     },
+    async bag(m) {
+      return {
+        items: [...items].filter(([k, r]) => k.startsWith(`${m}:`) && r.count > 0)
+          .map(([k, r]) => ({ item_key: r.item_key, count: r.count, locked: locks.has(k), best_size_cm: r.best_size_cm })),
+        chest: Object.entries(mine(chest, m)).filter(([, n]) => n > 0).map(([item_key, count]) => ({ item_key, count })),
+      };
+    },
+    async setLocked(m, key, on) {
+      if (!items.has(`${m}:${key}`)) throw new CollectionsError("not_owned");
+      if (on) locks.add(`${m}:${key}`); else locks.delete(`${m}:${key}`);
+    },
+    async drop(m, key, qty, idem) {
+      if (once(m, idem, "drop", key, qty)) return { count: bagRow(m, key).count, replayed: true };
+      if (qty < 1 || qty > 999) throw new CollectionsError("bad_qty");
+      const row = bagRow(m, key);
+      if (locks.has(`${m}:${key}`)) throw new CollectionsError("locked");
+      if (row.count < qty) throw new CollectionsError("insufficient_items");
+      items.set(`${m}:${key}`, { ...row, count: row.count - qty });
+      moves.set(`${m}:${idem}`, { action: "drop", item: key, qty });
+      return { count: row.count - qty, replayed: false };
+    },
+    async move(m, key, qty, to, idem) {
+      const action = to === "chest" ? "store" : "take";
+      if (once(m, idem, action, key, qty)) return { replayed: true };
+      if (qty < 1 || qty > 999) throw new CollectionsError("bad_qty");
+      const row = bagRow(m, key), stored = chest.get(`${m}:${key}`) ?? 0;
+      if ((to === "chest" ? row.count : stored) < qty) throw new CollectionsError("insufficient_items");
+      room(m, key, qty, to);
+      items.set(`${m}:${key}`, { ...row, count: row.count + (to === "chest" ? -qty : qty) });
+      chest.set(`${m}:${key}`, stored + (to === "chest" ? qty : -qty));
+      moves.set(`${m}:${idem}`, { action, item: key, qty });
+      return { replayed: false };
+    },
+    async storeMaterials(m, idem) {
+      if (once(m, idem, "store_materials", null, 0)) return { moved: moves.get(`${m}:${idem}`)!.qty, replayed: true };
+      const take = Object.entries(stock(m)).filter(([k, n]) => n > 0 && isMaterial(k) && !locks.has(`${m}:${k}`));
+      const after = { ...mine(chest, m) };
+      for (const [k, n] of take) after[k] = (after[k] ?? 0) + n;
+      if (slotsUsed(after) > CHEST_SLOTS) throw new CollectionsError("storage_full");
+      let moved = 0;
+      for (const [k, n] of take) {
+        items.set(`${m}:${k}`, { ...bagRow(m, k), count: 0 });
+        chest.set(`${m}:${k}`, (chest.get(`${m}:${k}`) ?? 0) + n);
+        moved += n;
+      }
+      moves.set(`${m}:${idem}`, { action: "store_materials", item: null, qty: moved });
+      return { moved, replayed: false };
+    },
   };
   return {
     store, name: (id: string, n: string) => names.set(id, n),
@@ -136,6 +206,14 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
       return { item_key: key, ...recordCatch(m, key, size, trophyFor(sp, size)) };
     },
     countOf: (m: string, k: string) => items.get(`${m}:${k}`)?.count ?? 0,
+    /** Stock as it stood before the backpack's cap (tests, the demo): `n` more (or fewer) of an item, no checks. */
+    give: (m: string, key: string, n: number) => {
+      const row = bagRow(m, key);
+      items.set(`${m}:${key}`, { ...row, count: row.count + n, total_collected: row.total_collected + Math.max(0, n) });
+    },
+    /** The same, into the storage chest. */
+    stash: (m: string, key: string, n: number) => chest.set(`${m}:${key}`, (chest.get(`${m}:${key}`) ?? 0) + n),
+    chestOf: (m: string, k: string) => chest.get(`${m}:${k}`) ?? 0,
     own: (m: string, refs: string[]) => gear.set(m, refs),
     /** Demo fixture: a tourney entry as seasonal_land would leave it. */
     enter,

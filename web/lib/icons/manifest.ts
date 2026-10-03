@@ -38,6 +38,11 @@ export interface IconSpec {
 export { iconKey, iconUrl, shopIcon } from "./keys";
 
 const ITEMS = "/assets/game/items/";
+/** The backpack's upgrades (lib/collections/bag.ts): the bag accessories in their own colours. */
+const POCKETS: Record<string, [string, Record<string, string>]> = {
+  "bag:30": ["acc_shoulder_bag", { M_Main: "#7fae86", M_Accent: "#8a6a4a" }],
+  "bag:40": ["acc_backpack", { M_Main: "#e08a5f", M_Accent: "#8a6a4a", M_Trim: "#f3e3b8" }],
+};
 const W = "/assets/game/weapons/";
 const FISH_BY_KEY = new Map(FISH.map(f => [f.key, f]));
 const CRITTER_MODELS: Record<string, string> = {
@@ -103,6 +108,7 @@ export function iconSpecs(shop: readonly Pick<CatalogueEntry, "slug" | "catalogu
     else if (e.category === "flooring") add({ key, view: "tile", url: `/assets/acnh/interior/floor-${ref}.png` });
     else if (e.category === "outfit" || e.category === "accessory") add(partSpec(key));
     else if (e.category === "furniture") { const piece = PIECES.find(p => p.id === ref); add(piece ? { key, view: "three-quarter", url: piece.url, ...(/hha-trophy$/.test(ref) ? { rotX: Math.PI / 2 } : {}) } : null); }
+    else if (POCKETS[ref]) { const [part, tints] = POCKETS[ref]; const spec = partSpec(part); add(spec && { ...spec, key, tints }); }
   }
   // Finishes and parts the shop doesn't list yet still get one (the free plaster and parquet, starter clothes).
   for (const w of WALLPAPERS) add({ key: `wall-${w}`, view: "roll", url: `/assets/acnh/interior/wall-${w}.png` });

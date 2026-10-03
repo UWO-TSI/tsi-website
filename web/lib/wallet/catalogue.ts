@@ -83,6 +83,8 @@ export const CATALOGUE: CatalogueEntry[] = [
   // TSI merch corner (Gems; campus pickup)
   e("merch-sticker-pack", "TSI sticker pack", "merch", 0, { price_coins: null, price_gems: 150, stock: 100, description: "Five die-cut stickers. Pick up at HQ on campus." }),
   e("merch-tote", "TSI tote bag", "merch", 0, { price_coins: null, price_gems: 600, stock: 30, description: "Canvas tote. Pick up at HQ on campus." }),
+  // The backpack's first upgrade (specs/game-ui-questions.md 23): bought here or crafted (starter recipe). The next is crafted only (lib/crafting/recipes.ts).
+  e("bag-30", "Roomier pocket", "tool", 1500, { catalogue_ref: "bag:30", description: "Your backpack holds 30 things instead of 20." }),
 ];
 
 // ── Ownership (coordinator ruling on audit item 22; 20260926180000_ownership.sql) ──
