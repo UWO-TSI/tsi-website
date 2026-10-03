@@ -103,6 +103,8 @@ export interface Passive {
   value: number;
   /** Stacks cap, a distance, or the proc limit (per kind). */
   cap?: number;
+  /** Classes v2: its icon (the HUD's class line). */
+  icon?: string;
 }
 export interface Subclass {
   key: string;

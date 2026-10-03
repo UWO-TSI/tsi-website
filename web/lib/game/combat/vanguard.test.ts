@@ -100,7 +100,7 @@ describe("Guardian: the 0.25 s parry window, the block, Bulwark, the dome, the b
     rt.v2!.meter = 100; pressUlt(rt);
     const A = GUARDIAN.ult.anticipation_ms / 1000;
     let asked = -1, t = 0;
-    for (; t < A + 6.2; t += DT) { p.clip = null; frame(rt); if (p.clip?.verb === "Unique_AegisSlam" && asked < 0) asked = t; }
+    for (; t < A + 6.2; t += DT) { p.clip = null; frame(rt); if (rt.player.clip?.verb === "Unique_AegisSlam" && asked < 0) asked = t; }
     expect(asked).toBeGreaterThan(A + 6 - 0.3 - 0.05);
     expect(asked).toBeLessThan(A + 6 - 0.3 + 0.05);
   });

@@ -71,6 +71,8 @@ describe("the Vanguard kits (LOCKED sections and the build overrides)", () => {
         expect(existsSync(join(PUBLIC, a.icon!)), a.icon).toBe(true);
       }
       expect(existsSync(join(PUBLIC, k.look.icon)), k.look.icon).toBe(true);
+      for (const icon of [k.passive.icon, k.movement?.icon]) if (icon) expect(existsSync(join(PUBLIC, icon)), icon).toBe(true);
+      expect(k.passive.icon).toBeDefined();
       if (k.basic?.throw?.fx) expect(FX[k.basic.throw.fx]).toBeDefined();
     }
   });

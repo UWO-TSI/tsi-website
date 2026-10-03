@@ -93,7 +93,10 @@ function ClassBar({ rt, keys }: { rt: CombatRuntime; keys: Record<string, string
   const v = rt.v2!, kit = v.kit, color = kit.look.ramp[1], meter = v.meter / ULT.max, ready = v.meter >= ULT.max;
   const armed = holdsSignature(kit, SYSTEM_WEAPONS.find(w => w.key === rt.player.weapon)?.type);
   return <>
-    <small className={styles.kitLine}><b>{masteryTitle(kit.name, v.mastery)}</b> · mastery {v.mastery} · {v.passive.name}{kit.movement ? ` · ${kit.movement.name}` : ""}{armed ? "" : ` · hold your ${kit.signature.name} for your skills`}</small>
+    {/* eslint-disable @next/next/no-img-element -- tiny static passive icons */}
+    <small className={styles.kitLine}><b>{masteryTitle(kit.name, v.mastery)}</b> · mastery {v.mastery} · {v.passive.icon && <img src={v.passive.icon} alt="" width={14} height={14} style={{ verticalAlign: "-3px" }} />} {v.passive.name}
+      {kit.movement ? <> · {kit.movement.icon && <img src={kit.movement.icon} alt="" width={14} height={14} style={{ verticalAlign: "-3px" }} />} {kit.movement.name}</> : null}{armed ? "" : ` · hold your ${kit.signature.name} for your skills`}</small>
+    {/* eslint-enable @next/next/no-img-element */}
     <div className={styles.classBar} style={{ ["--class" as string]: color }}>
       <ol className={styles.abilityBar} style={{ gridTemplateColumns: `repeat(${v.keys.length}, 1fr)` }}>{v.keys.map((a, i) => {
         const id = V2_SLOT_IDS[i], base = kit.keys[i], cd = a ? v.cd[a.key] ?? 0 : 0, held = v.holding[i];
