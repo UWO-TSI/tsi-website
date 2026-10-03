@@ -11,6 +11,11 @@ import type { EnemyAttack, EnemyType, MissionDef, Weapon } from "./contract";
 const W = "/assets/game/weapons/", E = "/assets/game/enemies/";
 
 type Look = Pick<Weapon, "cooldown" | "range" | "arc" | "speed" | "model" | "modelScale" | "grip">;
+/**
+ * The Rangers' grips in socket space (three.js Euler XYZ, solved from the clips' frames by art/props-enemies/render_held.py
+ * `ranger`): in the hand while shooting, at rest in the hand, across the back.
+ */
+const RANGER_GRIPS: Record<string, Look["grip"]> = {};
 const WEAPON_LOOK: Record<string, Look> = {
   // Combat polish 11 (specs/evidence/combat-b/balance.md): the driftwood sword 0.42 → 0.45, the oak staff 0.75 → 0.5 with a
   // faster bolt (11 → 15), the wraps 0.32 → 0.42, so every subclass's normal-mission DPS sits within ±25% of the median.
@@ -34,7 +39,16 @@ const WEAPON_LOOK: Record<string, Look> = {
   "staff-sigil": { cooldown: 0.65, range: 10, arc: 0, speed: 14, model: `${W}staff-rune.glb`, modelScale: 1.45 },
   "tome-warden": { cooldown: 5, range: 8, arc: 0, model: `${W}tome-spirits.glb`, modelScale: 1.5 },
   "staff-heartstone": { cooldown: 0.6, range: 11, arc: 0, speed: 15, model: `${W}staff-rune.glb`, modelScale: 1.6 },
+  // Classes v2, the Rangers' signature weapons (art/props-enemies/build_weapons.py, one model per tier). The kit's own fire
+  // (lib/combat/rangerKits.ts) sets their pace in the ruins; these are the range the bot holds and the hand grips.
+  ...signatureLooks("recurve", { cooldown: 0.67, range: 11, arc: 0, speed: 24 }, RANGER_GRIPS.recurve),
+  ...signatureLooks("rifle", { cooldown: 1, range: 16, arc: 0, speed: 70 }, RANGER_GRIPS.rifle),
+  ...signatureLooks("harpoon", { cooldown: 0.83, range: 11, arc: 0, speed: 30 }, RANGER_GRIPS.harpoon),
+  ...signatureLooks("sixgun", { cooldown: 0.31, range: 10, arc: 0, speed: 55 }, RANGER_GRIPS.sixgun),
 };
+function signatureLooks(type: string, feel: Pick<Look, "cooldown" | "range" | "arc" | "speed">, grip?: Look["grip"]): Record<string, Look> {
+  return Object.fromEntries([1, 2, 3, 4, 5].map(t => [`${type}-${t}`, { ...feel, model: `${W}${type}-${t}.glb`, modelScale: 1.3, ...(grip ? { grip } : {}) }]));
+}
 export const WEAPONS: Record<string, Weapon> = Object.fromEntries(islandWeapons()
   .filter(w => WEAPON_LOOK[w.id])
   .map(w => [w.id, { ...w, ...WEAPON_LOOK[w.id] }]));
