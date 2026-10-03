@@ -335,6 +335,7 @@ Historical decision ledger, extended as the interview continues. Earlier consequ
 | 292 | **Class movement extends the movement combo (David, 2026-10-02):** "I want movement to be tied with the base movement we have going on, like the skill adds on the movement combo". | Every class's movement skill is used mid-chain (during a dash, slide, jump or glide), carries or adds momentum, and opens new links in the combo, instead of being a standalone teleport. |
 | 293 | **Stat direction per class (David, 2026-10-02):** "like in the game megabonk each character has a direction to go towards"; some classes are basic-attack based, some skill based. | Each class has one base stat it stacks (table in `specs/classes/design-sheet.md`). |
 | 294 | **Monk renamed Martial Artist (David, 2026-10-02):** a realistic Muay Thai fighter whose skills are techniques woven into the combo. | Display name changes; the data key can stay. |
+| 295 | **More parallel work (David, 2026-10-02):** "we got that 20x subscription so go crazy and start working on it". | Supersedes "two agents at a time": up to about five code agents at once; still one dev server and one browser at a time (16 GB Mac mini), tests run with `--maxWorkers=2`. |
 
 Currency names, earning ratios and unlock pacing remain undecided. Decision 48 establishes the legacy-data policy; identifying protected balances and the exact reset procedure still requires a data audit. No economy migration or reward implementation is authorized by this planning document alone.
 
