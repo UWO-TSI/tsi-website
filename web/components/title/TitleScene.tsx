@@ -25,11 +25,11 @@ import { parseTimeOverride } from "@/lib/game/islandTime";
  * The game's own parts, read-only: terrain with its wind-blown grass, the sea, the trees and props from the shipped map,
  * the atmosphere (real sun, sky, clouds, weather and falling leaves on the world clock) and the grade, rendered at half
  * resolution with crisp pixels like the game's pixel finish. No player, no HUD, no buildings: a quiet nature shot.
- * The camera drifts slowly along a short path. Tuning (works on previews too): `?shot=x,z,yawDeg,eye,pitchDeg` frames
+ * The camera drifts slowly along a short path. Tuning (works on previews too): `?shot=x,z,yawDeg,eye,pitchDeg,fov` frames
  * another shot, `?time=dawn|day|evening|night` holds a phase, `?px=0.5` sets the pixel scale.
  */
 
-export type Shot = { x: number; z: number; yaw: number; eye: number; pitch: number };
+export type Shot = { x: number; z: number; yaw: number; eye: number; pitch: number; fov: number };
 
 const DRIFT_SECONDS = 48;
 const DRIFT_DISTANCE = 1.6;
@@ -41,13 +41,14 @@ export function defaultShot(v: Village, island: VillageIsland): Shot {
   for (let z = maxZ; z > cz; z -= 0.25) {
     if (!island.wet(cx, z) && island.standable(cx, z)) { shore = z; break; }
   }
-  return { x: cx, z: shore - 6, yaw: 0, eye: 1.35, pitch: -3 };
+  return { x: cx, z: shore - 6, yaw: 0, eye: 1.35, pitch: -3, fov: 52 };
 }
 
 function parseShot(value: string | null): Partial<Shot> {
   const n = (value ?? "").split(",").map(Number);
-  const [x, z, yaw, eye, pitch] = n;
-  return n.length >= 2 && n.every(Number.isFinite) ? { x, z, ...(yaw !== undefined && { yaw }), ...(eye !== undefined && { eye }), ...(pitch !== undefined && { pitch }) } : {};
+  const [x, z, yaw, eye, pitch, fov] = n;
+  return n.length >= 2 && n.every(Number.isFinite)
+    ? { x, z, ...(yaw !== undefined && { yaw }), ...(eye !== undefined && { eye }), ...(pitch !== undefined && { pitch }), ...(fov !== undefined && { fov }) } : {};
 }
 
 function CinematicCamera({ shot, ground }: { shot: Shot; ground: (x: number, z: number) => number }) {
@@ -67,6 +68,7 @@ function CinematicCamera({ shot, ground }: { shot: Shot; ground: (x: number, z: 
     look.current.set(x + Math.sin(yaw) * 10, at.current.y + Math.tan(pitch) * 10, z + Math.cos(yaw) * 10);
     camera.position.copy(at.current);
     camera.lookAt(look.current);
+    if (camera instanceof THREE.PerspectiveCamera && camera.fov !== shot.fov) { camera.fov = shot.fov; camera.updateProjectionMatrix(); }
   });
   return null;
 }
