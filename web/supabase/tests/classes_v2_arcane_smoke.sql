@@ -33,7 +33,7 @@ BEGIN
   ASSERT NOT ((SELECT traits FROM member_progression WHERE member_id = B) ? 'pollen-swarm'), 'arcane: only a transmuter learns forms';
   -- Twelve cosmetics: skins keyed to their subclass's weapon, aura colour sets of three; three in Gems.
   ASSERT (SELECT count(*) FROM shop_items WHERE slug LIKE 'skin-%' AND category = 'weapon_skin' AND cosmetic->>'subclass' IN ('elementalist', 'illusionist', 'necromancer', 'transmuter')) = 6, 'arcane: six skins';
-  ASSERT (SELECT count(*) FROM shop_items WHERE slug LIKE 'aura-%' AND category = 'aura' AND jsonb_array_length(cosmetic->'ramp') = 3) = 6, 'arcane: six aura sets';
+  ASSERT (SELECT count(*) FROM shop_items WHERE slug LIKE 'aura-%' AND category = 'aura' AND jsonb_array_length(cosmetic->'ramp') = 3 AND cosmetic->>'subclass' IN ('elementalist', 'illusionist', 'necromancer', 'transmuter')) = 6, 'arcane: six aura sets';
   ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 900 AND 911 AND tc_price IS NOT NULL AND price_coins IS NULL) = 3, 'arcane: three Gem items';
   skin := (SELECT id FROM shop_items WHERE slug = 'skin-prism-ember');
   INSERT INTO member_inventory (member_id, item_id, qty) VALUES (B, skin, 1);

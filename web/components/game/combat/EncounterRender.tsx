@@ -263,6 +263,9 @@ const SHOT: Record<Projectile["kind"], { model: string; scale: number; trail: TH
   // Zone 1: the wisps' rune bolt (the rune shard, cyan), the mushroom's lobbed spore ball (the glob, on its arc).
   rune: { model: `${P}projectile-bolt.glb`, scale: 2.2, trail: new THREE.Color("#7fe8ff"), width: 0.32, lit: false },
   spore: { model: `${P}projectile-spit.glb`, scale: 2.4, trail: new THREE.Color("#b6e06a"), width: 0.2, lit: false },
+  // Classes v2 (the Rangers): a bullet (the shard, small and hot, a long gold tracer), a harpoon (the arrow, heavy, a chain-grey wake).
+  bullet: { model: `${P}projectile-bolt.glb`, scale: 0.55, trail: new THREE.Color("#ffd27a"), width: 0.09, lit: false },
+  harpoon: { model: `${P}projectile-arrow.glb`, scale: 2.1, trail: new THREE.Color("#c8d3dc"), width: 0.12, lit: true },
   // Classes v2, Arcane: the Illusionist's thrown cards (and reflected shots), the Necromancer's bone shards.
   card: { model: `${P}projectile-card.glb`, scale: 1.6, trail: new THREE.Color("#d79cff"), width: 0.12, lit: true },
   bone: { model: `${P}projectile-bone.glb`, scale: 1.6, trail: new THREE.Color("#c9f5d2"), width: 0.1, lit: true },
@@ -290,7 +293,7 @@ function ShotPool({ kind, ground, max }: { kind: Projectile["kind"]; ground: Gro
       if (s.kind !== kind || n >= max) continue;
       const speed = Math.hypot(s.vx, s.vz);
       tmpQ.setFromAxisAngle(UP, Math.atan2(s.vx, s.vz));
-      tmpP.set(s.x, ground(s.x, s.z) + 0.9 + (s.arc ? lobHeight(s.life, s.arc) : 0), s.z);
+      tmpP.set(s.x, ground(s.x, s.z) + 0.9 + (s.arc ? lobHeight(s.life, s.arc) : 0) + (s.fall?.y ?? 0), s.z);
       b.setMatrixAt(n, tmpM.compose(tmpP, tmpQ, tmpS.setScalar(look.scale)));
       t.setMatrixAt(n, tmpM.compose(tmpP, tmpQ, tmpS.set(look.width, 1, Math.min(1.4, speed * 0.06))));
       n++;
@@ -337,7 +340,9 @@ export function Wisps({ ground, max = 10 }: { ground: Ground; max?: number }) {
  * Totems (the carved post from art/props-enemies, its eyes and rings in the kind's colour, and the circle it covers, so
  * overlaps read), tripwires (a small disc), and a ring under each of your summons: green, violet for a shade.
  */
-const TOTEM_COLOR = colors({ "totem-ember": "#ff8a3d", "totem-mending": "#7dff9e", "totem-warding": "#8fd0ff", tripwire: "#ffe08a", shade: "#c9a7ff", decoy: "#d9b8ff" }), TOTEM_DEFAULT = TOTEM_COLOR["totem-mending"];
+const TOTEM_COLOR = colors({ "totem-ember": "#ff8a3d", "totem-mending": "#7dff9e", "totem-warding": "#8fd0ff", tripwire: "#ffe08a", shade: "#c9a7ff", decoy: "#d9b8ff",
+  // Classes v2, the Rangers' traps and the Great Hunt's hounds (in their kits' ramps).
+  "sniper-mine": "#a9c8ff", "snare-trap": "#5fd1b0", "spike-trap": "#d8f0a0", "spectral-hound": "#5fd1b0" }), TOTEM_DEFAULT = TOTEM_COLOR["totem-mending"];
 const glowing = (m: THREE.Material) => m.name === "M_Glow", solid = (m: THREE.Material) => m.name !== "M_Glow";
 const camDir = new THREE.Vector3();
 export function Totems({ ground, max = 16 }: { ground: Ground; max?: number }) {
