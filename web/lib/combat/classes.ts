@@ -130,8 +130,9 @@ export interface ClassKit {
   ult: ClassUlt;
   /** The class's own mastery track (build overrides): at a level, an ability key, "ult" or "passive" gets `change`. */
   ranks?: { at: number; target: string; change: AbilityUpgrade }[];
-  /** `trim`: the mastery trim (mastery 13; its glow at 19), colours by the weapon's material names (M_Trim, M_Accent). */
-  look: { ramp: [core: string, mid: string, edge: string]; mote: string; drift: "orbit" | "rise" | "fall"; icon: string; trim?: Record<string, string> };
+  /** `trim`: the mastery trim (mastery 13; its glow at 19), colours by the weapon's material names (M_Trim, M_Accent).
+   * `flicker`: the motes cycle through the sprite's first frames (the Transmuter's monster silhouettes). */
+  look: { ramp: [core: string, mid: string, edge: string]; mote: string; drift: "orbit" | "rise" | "fall"; icon: string; trim?: Record<string, string>; flicker?: number };
   mods?: { max_hp?: number; speed?: number; capacity?: number };
   /** Dev-only (the `?combat=demo` kit): never offered to members. */
   dev?: true;

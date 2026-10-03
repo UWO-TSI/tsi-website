@@ -57,5 +57,5 @@ export const TRANSMUTER: ClassKit = {
     { at: 16, target: "passive", change: { label: "+25%", power: 1.25 } },
     { at: 18, target: "ult", change: { label: "+10% power", power: 1.1 } },
   ],
-  look: { ramp: ["#fff8ee", "#b48cff", "#33204f"], mote: "beast", drift: "rise", icon: "/assets/game/classes/transmuter.svg", trim: { M_Trim: "#b48cff", M_Accent: "#ffb347" } },
+  look: { ramp: ["#fff8ee", "#b48cff", "#33204f"], mote: "beast", flicker: 5, drift: "rise", icon: "/assets/game/classes/transmuter.svg", trim: { M_Trim: "#b48cff", M_Accent: "#ffb347" } },
 };
