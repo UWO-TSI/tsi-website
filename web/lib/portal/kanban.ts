@@ -1,5 +1,6 @@
 /** The team board's data (kanban_* tables, 001_initial_schema): checklists live in kanban_card_checklist, comments in body. */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { must } from "./load";
 
 export interface ChecklistItem { id: string; text: string; done: boolean }
 export interface KanbanCard {
@@ -24,11 +25,6 @@ type CardRow = Omit<KanbanCard, "checklist" | "assignees"> & {
 const CARD_COLUMNS = "id, title, description, priority, due_date, position, column_id, "
   + "checklist:kanban_card_checklist(id, title, is_completed, position), assignees:kanban_card_assignees(id:user_id, user:profiles(display_name))";
 const COMMENT_COLUMNS = "id, user_id, body, created_at, user:profiles(display_name)";
-
-const must = <T>(r: { data: T; error: { message: string } | null }): T => {
-  if (r.error) throw new Error(r.error.message);
-  return r.data;
-};
 
 /** Your team's first board with its columns and cards; `board` null without a team or a board; null signed out. */
 export async function loadBoard(db: SupabaseClient): Promise<{ board: { id: string; name: string } | null; columns: KanbanColumn[] } | null> {

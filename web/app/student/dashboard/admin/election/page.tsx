@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Lock, Vote } from "lucide-react";
-import { Badge, Card, Empty, Loading, Progress } from "@/components/gui";
+import { Badge, Card, Empty, ErrorNote, Loading, Progress } from "@/components/gui";
+import { must, settle } from "@/lib/portal/load";
 
 interface ElectionResult {
   candidate: string;
@@ -17,7 +18,8 @@ export default function AdminElectionPage() {
   const [totalProfiles, setTotalProfiles] = useState(0);
   const [totalVotes, setTotalVotes] = useState(0);
   const [userTier, setUserTier] = useState<number>(4);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<"loading" | "ready" | "signed-out" | "error">("loading");
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     async function fetchData() {
@@ -26,13 +28,13 @@ export default function AdminElectionPage() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) return null;
 
-      const { data: profile } = await supabase
+      const profile = must(await supabase
         .from("profiles")
         .select("tier")
         .eq("id", user.id)
-        .single();
+        .maybeSingle());
 
       if (profile) setUserTier(profile.tier);
 
@@ -42,26 +44,27 @@ export default function AdminElectionPage() {
           supabase.from("profiles").select("id", { count: "exact", head: true }),
         ]);
 
-        const data: ElectionResult[] = electionRes.data ?? [];
+        const data: ElectionResult[] = must(electionRes) ?? [];
+        must(profileCount);
         setResults(data);
         setTotalVotes(data.reduce((sum, r) => sum + r.vote_count, 0));
         setTotalProfiles(profileCount.count ?? 0);
       }
-
-      setLoading(false);
+      return true;
     }
-    fetchData();
-  }, []);
+    void settle(fetchData).then(setState);
+  }, [reload]);
 
-  if (loading) {
+  if (state === "loading" || state === "error") {
     return (
       <div className={`${PAGE} flex min-h-[60vh] items-center justify-center`}>
-        <Loading label="Counting the votes…" />
+        {state === "loading" ? <Loading label="Counting the votes…" />
+          : <ErrorNote onRetry={() => { setState("loading"); setReload((n) => n + 1); }}>The results didn’t load.</ErrorNote>}
       </div>
     );
   }
 
-  if (userTier > 2) {
+  if (state === "signed-out" || userTier > 2) {
     return (
       <div className={`${PAGE} flex min-h-[60vh] items-center justify-center`}>
         <Empty icon={<Lock size={32} />} title="Admins only">
