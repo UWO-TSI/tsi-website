@@ -15,9 +15,7 @@
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useProgress } from "@react-three/drei";
-
-const WARMUP_FRAMES = 14;
-const TIMEOUT_MS = 15000;
+import { WARMUP_TIMEOUT_MS, warmedUp, warmupFrame } from "@/lib/game/sceneGate";
 
 export function WarmupProbe({ onReady }: { onReady: () => void }) {
   const framesRef = useRef(0);
@@ -27,16 +25,15 @@ export function WarmupProbe({ onReady }: { onReady: () => void }) {
   useFrame(() => {
     if (firedRef.current) return;
     if (startRef.current === null) startRef.current = performance.now();
-    const timedOut = performance.now() - startRef.current > TIMEOUT_MS;
+    const timedOut = performance.now() - startRef.current > WARMUP_TIMEOUT_MS;
     // Imperative store read: subscribing via the useProgress() hook made
     // React update this component while a suspended GLB was mid-render
     // (the loading manager fires inside that resolution) — the classic
     // "cannot update while rendering" warning. getState() has no such tie.
     const { active, progress } = useProgress.getState();
     const loaded = !active && progress >= 100;
-    if (loaded || timedOut) framesRef.current += 1;
-    else framesRef.current = 0; // a late loader kicked in — keep holding
-    if (framesRef.current >= WARMUP_FRAMES) {
+    framesRef.current = warmupFrame(framesRef.current, loaded, timedOut); // a late loader sends it back to 0
+    if (warmedUp(framesRef.current)) {
       firedRef.current = true;
       // Defer out of the R3F frame loop: firing setState synchronously here
       // can land mid-render of a just-resolved suspended GLB component

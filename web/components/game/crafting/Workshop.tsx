@@ -39,9 +39,10 @@ const BENCH_APPROACH: [number, number] = [BENCH.x + 1.25, BENCH.z];
 
 /** The clubhouse's furniture collision plus the bench (member HQ only; the applicant HQ has no bench). */
 export function constrainWorkshop(x: number, z: number, nx: number, nz: number): [number, number] {
-  const [cx, cz] = constrainClubhouse(x, z, nx, nz);
-  const blocked = Math.abs(cx - BENCH.x) < BENCH.halfX + 0.25 && Math.abs(cz - BENCH.z) < BENCH.halfZ + 0.25;
-  return blocked ? [x, z] : [cx, cz];
+  const c = constrainClubhouse(x, z, nx, nz);
+  const blocked = Math.abs(c[0] - BENCH.x) < BENCH.halfX + 0.25 && Math.abs(c[1] - BENCH.z) < BENCH.halfZ + 0.25;
+  if (blocked) { c[0] = x; c[1] = z; }
+  return c;
 }
 
 export function Workbench({ player }: { player: React.RefObject<THREE.Vector3> }) {
