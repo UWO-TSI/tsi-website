@@ -1,7 +1,29 @@
 # STATE.md — where things actually are
 
 > Read this before `AGENT_LOG.md`. It answers "which branch, what's live, what's next"
-> in one page. Update it whenever direction changes. Last updated **2026-09-17**.
+> in one page. Update it whenever direction changes. Last updated **2026-10-03**.
+
+## Game polish and classes v2 (2026-10-03)
+
+- **Where:** `main` == `feat/game-default-island` (coordinator worktree `.claude/worktrees/restart-art-cohesion`). Every verified merge goes to `main` right away (row 248); Vercel deploys it. The member world is still closed in production (opening-soon gate).
+- **Production schema:** every game migration through `20261003054110_backpack` is applied (log and pre-apply dumps in `~/tethos-launch-2026-09-29/`). The next migration takes a timestamp after `20261003054110`.
+- **Classes v2:** all 16 subclasses (`specs/classes/design-sheet.md`) are on `main` behind `economy_settings.classes_v2`, which is 0 in production. The 80 signature weapons are seeded, and the 40 class cosmetics stay inactive while the flag is off. David playtests at `/lab/classes` (dev only). Wave 5 (backfill, cosmetics on sale, balance pass, flag on) waits for his notes.
+- **Merged polish:**
+  - combat;
+  - café;
+  - movement feel milestone 1 and slide milestone 2;
+  - HUD and first login;
+  - living village;
+  - world refinement;
+  - game UI milestone 1 (tool wheel) and milestone 2 (backpack);
+  - the GUI sheet (cream components, one dialog system);
+  - zone 1 mobs.
+- **Running:** interiors, portal data bugs, fishing, arrival and wharf.
+- **Queued:**
+  - after interiors: foraging/crafting/museum/shop and reachability;
+  - waiting for David's source: sound;
+  - waiting for David's references: the avatar v8 hair.
+- **Another Claude session** owns play.tethos.ca (the title scene): `next.config.ts`, `middleware.ts`, `web/lib/supabase/{client,server,middleware}.ts`, the top-level `web/app/student/*` pages, the nav and the footer.
 
 ## Game on main and schema launched (2026-09-29)
 

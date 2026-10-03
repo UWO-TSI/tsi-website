@@ -11,6 +11,7 @@
 import type { Family } from "@/lib/oracle/engine";
 import type { Ability, Effect, Passive, ShotLook, Status } from "./kits";
 import { DEMO_KIT } from "./demoKit";
+import { VANGUARD_KITS, VANGUARD_SKINS } from "./vanguardKits";
 import { ARCANE_KITS } from "./arcaneKits";
 import { ARCANE_SKINS } from "./arcaneSeed";
 import { WARDEN_KITS } from "./wardenKits";
@@ -44,8 +45,8 @@ export type InputSpec =
   | { kind: "recast"; window_s: number }
   | { kind: "drawn"; shape: string };
 
-/** Movement riders (§1.1): the cast needs this state of the movement sim. */
-export type MoveCondition = "sliding" | "airborne" | "afterDash" | "fast";
+/** Movement riders (§1.1): the cast needs this state of the movement sim ("moving": a run, a slide or just off a dash). */
+export type MoveCondition = "sliding" | "airborne" | "afterDash" | "fast" | "moving";
 
 /**
  * A rank or mastery upgrade (§1.4 menu): multipliers on power (heal, shield, buff value), cooldown, energy, radius,
@@ -66,10 +67,16 @@ export interface ClassAbility extends Ability {
   /** Keys into the FX registry (lib/game/fx/combat.ts) per phase. */
   vfx?: { cast?: string; travel?: string; impact?: string; zone?: string };
   when?: MoveCondition;
-  /** Power grows with carried speed: +0 at a walk (7.4 u/s) up to +max at 16 u/s. */
-  scale?: { by: "speed"; max: number };
+  /** Power grows with carried speed (+0 at a walk, 7.4 u/s, up to +max at 16 u/s), or with the height it's cast from (+max at 3 u). */
+  scale?: { by: "speed" | "height"; max: number };
   /** Support radius for heals, shields and buffs: solo only the caster; allies inside it in a future group. */
   allies?: number;
+  /** Cast in this movement state, its dashes go `distance` × further and it hits `power` × harder (a Charge slid into). */
+  boost?: { when: MoveCondition; distance?: number; power?: number };
+  /** A combo technique (the Martial Artist): pressed within CHAIN_WINDOW of a basic chain hit it slots into the chain, `bonus` stronger. */
+  chain?: { bonus: number };
+  /** Charges (each recharges over `cooldown_s`); `refund`: a backstab kill gives one back (Shadow Step). */
+  charges?: number; refund?: "backstab";
   /** The beast this key calls must be tamed first (the Summoner's ritual, lib/game/combat/beasts.ts); locked until then. */
   tame?: string;
   /** Classes v2: the key works only just after a reload (the Gunslinger's Quickdraw, within FIRE.reloaded s). */
@@ -118,6 +125,21 @@ export interface ClassUlt extends ClassAbility {
    * shown three at a time; the hits it lands set the potency 0.5 (none) to 1.5 (all). It releases early when all are played.
    */
   channel?: { seconds: number; guard: number; notes: number; ramp?: [core: string, mid: string, edge: string] };
+  /** The world turns to black-and-white ink through the anticipation (Death Lotus: time stops). */
+  world?: "ink";
+  /** A first-last ult's finisher clip (its `release`), when it isn't the press's. */
+  finish?: ClassAbility["clip"];
+}
+
+/**
+ * A kit's own basic attack on its signature weapon (§1.5 "Basic attack per type"; the LOCKED kits): a chain of steps
+ * that loops (each its own power, clip and pace; a gap of `reset` s starts it over), `hp`: each hit adds that share of
+ * your max HP as damage (the Juggernaut), `throw`: past `beyond` u to the aim it throws a projectile instead (the Assassin's kunai).
+ */
+export interface ChainStep { power: number; clip: string; time?: number; arc?: number; range?: number; knock?: number }
+export interface BasicAttack {
+  chain?: ChainStep[]; reset?: number; hp?: number;
+  throw?: { beyond: number; power: number; speed: number; range: number; fx?: string };
 }
 
 /**
@@ -140,6 +162,8 @@ export interface FireSpec {
   /** The verb each shot plays on the upper body, at its timing scale, and the FX per phase (zone: the burning ground a flame buff leaves). */
   clip?: { verb: string; scale?: number };
   vfx?: { cast?: string; travel?: string; impact?: string; zone?: string };
+  /** The burning ground's colours (fire reads as fire whatever the kit's ramp). */
+  burn?: readonly [string, string, string];
 }
 /**
  * A special round: its power (× base hit); a splash at half power round its hit, or a `blast` at full power instead of a
@@ -150,8 +174,12 @@ export interface RoundDef { power: number; splash?: number; blast?: number; tier
   /** Its chamber's colour on the HUD (a round you mustn't tell apart shares its neighbours'). */
   tint?: string }
 
-/** A ruins-only movement passive that extends the movement combo (row 292): Air Step, Bone Surf, Vault. */
+/**
+ * A ruins-only movement passive that extends the movement combo (row 292): Air Step, Bone Surf, Vault. `needs.enemy`: only
+ * with an enemy that close ahead (it takes `needs.status`: the Assassin's Vault leaves it turning to find you).
+ */
 export interface MovementPassive { name: string; description: string; on: "airJump" | "slide" | "dash" | "land"; energy: number; effects: Effect[]; cooldown_s?: number;
+  needs?: { enemy: number; status?: Status }; clip?: ClassAbility["clip"]; icon?: string;
   /** Its FX key (a burst of wind under you). */
   vfx?: string }
 
@@ -165,6 +193,8 @@ export interface ClassKit {
   stat: { kind: StatDirection; at1: number; at20: number };
   /** Keys 1–5, all equipped (row 291). */
   keys: ClassAbility[];
+  /** Its basic attack's own rules (a chain, HP-scaled hits, a thrown ranged attack); absent: the weapon's plain swing or shot. */
+  basic?: BasicAttack;
   /** Two presses within COMBO_WINDOW (either order; the same index twice is a double tap) cast `ability` instead of the solos; `hold`: the pair held past HOLD_AFTER casts that instead. */
   combos?: { keys: [number, number]; ability: ClassAbility; hold?: ClassAbility }[];
   /** The forms its `form` effects take (the Transmuter). */
@@ -189,12 +219,14 @@ export interface ClassKit {
 }
 
 export const COMBO_WINDOW = 0.4;
+/** A technique pressed this long after a chain hit slots into the chain (the Martial Artist; "right after a hit"). */
+export const CHAIN_WINDOW = 0.7;
 export const MAX_KEYS = 5;
 
 /** Every v2 kit. Family waves append theirs. */
-export const CLASS_KITS: ClassKit[] = [DEMO_KIT, ...ARCANE_KITS, ...RANGER_KITS, ...WARDEN_KITS];
+export const CLASS_KITS: ClassKit[] = [DEMO_KIT, ...ARCANE_KITS, ...RANGER_KITS, ...WARDEN_KITS, ...VANGUARD_KITS];
 /** Every family's weapon skins (shop cosmetics) as material sets, by `${subclass}:${skin}`: the held weapon wears it. */
-export const WEAPON_SKINS: Record<string, Record<string, string>> = { ...ARCANE_SKINS, ...RANGER_SKINS, ...WARDEN_SKINS };
+export const WEAPON_SKINS: Record<string, Record<string, string>> = { ...ARCANE_SKINS, ...RANGER_SKINS, ...WARDEN_SKINS, ...VANGUARD_SKINS };
 /** Display names that changed with the class designs (the key stays; David 2026-10-02: Monk → Martial Artist). */
 export const CLASS_RENAMES: Record<string, string> = { monk: "Martial Artist" };
 export const classKit = (key: string | null | undefined) => CLASS_KITS.find(k => k.key === key) ?? null;
@@ -216,6 +248,8 @@ function scaleEffect(e: Effect, c: AbilityUpgrade): Effect {
     case "heal": return { ...e, amount: e.amount * p };
     case "buff": return { ...e, value: e.value * p, duration: e.duration * d };
     case "transform": return { ...e, duration: e.duration * d };
+    case "strike": return { ...e, power: e.power * p };
+    case "after": return { ...e, effects: e.effects.map(x => scaleEffect(x, c)) };
     case "summon": return c.cap && e.cap ? { ...e, cap: e.cap + c.cap } : e;
     case "zone": return { ...e, radius: e.radius * r, duration: e.duration * d, ...(e.power ? { power: e.power * p } : {}), ...(e.heal ? { heal: e.heal * p } : {}) };
     case "pull": return e.power ? { ...e, power: e.power * p } : e;
@@ -238,6 +272,7 @@ export function upgraded<A extends ClassAbility>(a: A, c: AbilityUpgrade): A {
   const ch = (a as Partial<ClassUlt>).channel;
   return { ...a, cooldown_s: a.cooldown_s * (c.cooldown ?? 1), energy: Math.round(a.energy * (c.energy ?? 1)),
     effects: [...a.effects.map(e => scaleEffect(e, c)), ...(c.add ?? [])], ...(a.release ? { release: a.release.map(e => scaleEffect(e, c)) } : {}),
+    ...(a.on_parry ? { on_parry: a.on_parry.map(e => scaleEffect(e, c)) } : {}),
     ...(ch && c.notes ? { channel: { ...ch, notes: ch.notes + c.notes } } : {}) };
 }
 const reached = (kit: ClassKit, target: string, mastery: number) => (kit.ranks ?? []).filter(r => r.target === target && r.at <= mastery);
@@ -292,6 +327,7 @@ export function withMods<A extends ClassAbility>(a: A, m: ClassMods): A {
       case "transform": return { ...e, duration: e.duration * m.duration };
       case "shield": return { ...e, amount: e.amount * m.healing, duration: e.duration * m.duration };
       case "heal": return { ...e, amount: e.amount * m.healing };
+      case "after": return { ...e, effects: e.effects.map(fx) };
       case "zone": return { ...e, radius: e.radius * m.area, duration: e.duration * m.duration, ...(e.heal ? { heal: e.heal * m.healing } : {}) };
       case "stealth": return { ...e, duration: e.duration * m.duration };
       case "detonate": return { ...e, radius: e.radius * m.area };

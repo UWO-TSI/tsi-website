@@ -3,7 +3,7 @@ import { DomainError } from "@/lib/result";
 
 export type EconomyErrorCode =
   | "unavailable" | "insufficient" | "not_found" | "not_for_sale" | "already_owned" | "bad_qty" | "bad_price" | "sold_out"
-  | "not_sellable" | "insufficient_items" | "too_many_open" | "already_resolved" | "forbidden" | "not_owned" | "no_slot" | "failed";
+  | "not_sellable" | "insufficient_items" | "too_many_open" | "already_resolved" | "forbidden" | "not_owned" | "no_slot" | "locked" | "failed";
 export class EconomyError extends DomainError<EconomyErrorCode> {}
 
 export interface LedgerEntry {
@@ -36,6 +36,8 @@ export interface Reservation {
 export interface Sellable {
   item_key: string;
   count: number;
+  /** Locked in the bag: selling skips it (specs/game-ui.md §7). */
+  locked?: boolean;
 }
 
 export interface EconomyStore {

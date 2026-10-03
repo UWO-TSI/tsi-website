@@ -27,9 +27,10 @@ export interface Status { hold?: number; slow?: [number, number]; mark?: [number
 /**
  * Classes v2 adds shot modifiers a v2 basic attack reads (lib/game/combat/classFire.ts): homing, flame (ignite and
  * burning ground), swift (×2 speed, flat flight, pierce 1), scope (zoom, steadier: weak points ×1.5), surge (a fire
- * rate the ult sets, shots per second).
+ * rate the ult sets, shots per second); and a parry window (its ability's `on_parry` answers a frontal hit inside it),
+ * absorbing (hits are stored, not taken: an area's `stored` releases them), size (the body grows by the value: Titan).
  */
-export type BuffStat = "damage" | "speed" | "guard" | "block" | "crit" | "homing" | "flame" | "swift" | "scope" | "surge";
+export type BuffStat = "damage" | "speed" | "guard" | "block" | "crit" | "homing" | "flame" | "swift" | "scope" | "surge" | "parry" | "absorb" | "size";
 /** Classes v2: what a shot looks like in flight (EncounterRender's projectile kinds). */
 export type ShotLook = "arrow" | "bolt" | "card" | "bone" | "bullet" | "harpoon";
 
@@ -39,11 +40,17 @@ export type Effect =
       /** Classes v2: the shot's look (a card, a bone shard, a bullet, a harpoon), its size, and whether it carries the ability's mark (a card to teleport to);
        * `burst`: effects where it ends (it flies to the aim at most, and bursts there or on the first enemy in its way). Always a crit; ricochets to
        * `bounce` more enemies within 6 u; pulls what it hits `pull` u toward you; zips you to terrain it hits (`grapple`: the zip's FX); bursts
-       * into `cluster.count` bomblets round its impact. */
+       * into `cluster.count` bomblets round its impact. `home`: after its last hit it flies back to your hand (Shield Throw); `stick`: it flies to
+       * the aim and stays where it lands or in what it hits, the blink anchor (Kunai Blink). */
       shot?: ShotLook; size?: number; mark?: boolean; burst?: Effect[];
-      crit?: boolean; bounce?: number; pull?: number; grapple?: string; cluster?: { count: number; power: number; radius: number; fx?: string } }
+      crit?: boolean; bounce?: number; pull?: number; grapple?: string; cluster?: { count: number; power: number; radius: number; fx?: string };
+      home?: boolean; stick?: boolean }
   /** A circle at the caster (or where a dash ended) or the aim; `arc` makes a cone toward the aim, `length` a beam of width 2·radius. */
   | { kind: "area"; power: number; radius: number; at: "self" | "aim"; arc?: number; length?: number; knock?: number; status?: Status;
+      /** Classes v2: adds what an absorb stored × this to each hit, and empties the store (Unbreakable's release). */
+      stored?: number;
+      /** Classes v2: its impact effect plays on every enemy it hits, not once at its centre. */
+      fxEach?: boolean;
       /** Classes v2: its own FX key over the ability's impact (an ult's stages). */
       fx?: string }
   /** Move toward the aim (or away from it), hitting what's on the path if `power`; i-frames like a dodge if `iframes`. */
@@ -54,7 +61,9 @@ export type Effect =
   /** Units from UNITS; "weapon" = the minion the equipped summoning weapon selects (row 43); "corpse" = raised from a fallen enemy.
    * `cap`: at most this many of this unit at once (the oldest goes). A unit costing 0 sits outside the summon capacity (an ult's army). */
   | { kind: "summon"; unit: string; count?: number; cap?: number }
-  | { kind: "buff"; stat: BuffStat; value: number; duration: number }
+  | { kind: "buff"; stat: BuffStat; value: number; duration: number;
+      /** Classes v2: run on every basic attack while the buff lasts (Titan's shockwaves). */
+      swing?: Effect[] }
   /** A body-part change (row 34): shown on the character, triggers the Transmuter passive. */
   | { kind: "transform"; duration: number }
   /** Classes v2 movement hooks (design sheet §1.1): carried speed added along the aim (≤ 4 u/s a cast, never past the 18 u/s ceiling), and a small hop. */
@@ -103,6 +112,18 @@ export type Effect =
   | { kind: "raise"; radius: number; unit: string; max: number; fallback?: string }
   /** Every unit this ability called bursts now: an area of its UnitDef `burst`. */
   | { kind: "burst" }
+  /**
+   * Classes v2 primitives (the Vanguard kits): one hit on one enemy (the nearest the aim inside `range` and the front
+   * `arc`, then locked for the rest of the cast), optionally an execute (under `below` of its health and hit from behind:
+   * it falls; a boss or mini-boss takes `boss` × power instead); effects that land `delay` s later where the caster is
+   * then (a combo's strikes, a cut's bleed); a blink behind the target under the crosshair or to the thrown anchor
+   * (holding the target `status`); a taunt (enemies within `radius` come for you for `duration` s); a slam down out of the air.
+   */
+  | { kind: "strike"; power: number; range: number; arc?: number; knock?: number; status?: Status; execute?: { below: number; boss: number } }
+  | { kind: "after"; delay: number; effects: Effect[]; fx?: string; tier?: "light" | "ability" | "heavy" | "ult" }
+  | { kind: "blink"; to: "behind" | "anchor"; range?: number; status?: Status }
+  | { kind: "taunt"; radius: number; duration: number }
+  | { kind: "drop" }
   /** Classes v2: every trap of yours springs at once at `power` × its own, and enemies on the lines between them take `chain` power and the status (the Hunter's ult). */
   | { kind: "trigger"; power: number; chain: number; status?: Status }
   /** Classes v2: rounds into the cylinder, next up (keys of the kit's fire.rounds); `shuffle` spins them, `cock` s between shots, `window` s to fire them. */
@@ -127,6 +148,8 @@ export interface Ability {
   gear?: { type: WeaponType; without: number };
   /** Guardian: what a successful block (buff "block") does back. */
   on_block?: Effect[];
+  /** Classes v2 Guardian: what a parry (a frontal hit inside the buff "parry" window) does back. */
+  on_parry?: Effect[];
   /** Elementalist: the element it applies; "cycle" = the one after the last used. */
   element?: Element | "cycle";
 }
@@ -137,6 +160,12 @@ export type PassiveKind =
   // Classes v2 (Arcane): alternating elements adds `value` ult points a cast; clones draw `value` of enemy attacks;
   // kills within `cap` u heal `value` max HP and their corpses last twice as long.
   | "attunement" | "decoy_share" | "grave_tithe"
+  /**
+   * Classes v2 (the Vanguard kits): a parry restores `cap` energy and grants `value` armour for 3 s (Bulwark); no
+   * knockback while attacking (Unstoppable); each chain hit adds `value` attack speed up to `cap` stacks, gone after a
+   * 1 s gap (Rhythm); hits from behind always crit and deal `value` more (Backstab).
+   */
+  | "parry" | "unstoppable" | "rhythm" | "backstab"
   // Classes v2 (the Rangers): Focus (value: the top fire rate, cap: seconds to reach it), Killstreak (value per kill, cap kills),
   // Prey (traps deal value more to marked enemies), Last Round (the cylinder's last chamber always crits).
   | "focus" | "killstreak" | "prey" | "last_round"
@@ -151,7 +180,7 @@ export interface Passive {
   description: string;
   kind: PassiveKind;
   value: number;
-  /** Classes v2: its icon (an SVG under /assets/game/classes/). */
+  /** Classes v2: its icon (an SVG under /assets/game/classes/; the HUD's class line). */
   icon?: string;
   /** Stacks cap, a distance, or the proc limit (per kind). */
   cap?: number;
@@ -292,7 +321,7 @@ export const SUBCLASSES: Subclass[] = [
     starter_note: "Without a shield the guard blocks half as much.",
   }),
   k({
-    key: "monk", name: "Monk", family: "Vanguard", weapon_affinity: ["fists"],
+    key: "monk", name: "Martial Artist", family: "Vanguard", weapon_affinity: ["fists"],
     signature: a("monk.flow", "Flowing Strikes", "Advance through a short martial-arts combo.", 6, 25, [dash(2.5, { power: 0.8 }), hit(1.4, 2.2, "self", { arc: 2 })], { gear: { type: "fists", without: 0.85 } }),
     abilities: [
       a("monk.palm", "Palm Wave", "A wave of force from an open palm.", 4, 15, [shot(1.1, { speed: 16, range: 7, pierce: true })], { gear: { type: "fists", without: 0.85 } }),
@@ -371,8 +400,9 @@ export const subclassByKey = (key: string | null | undefined) => SUBCLASSES.find
 export interface UnitDef {
   key: string;
   name: string;
-  /** clone: your double (lib/game/combat/primitives.ts stepClone): it moves, throws your basic attack and draws enemies. */
-  kind: "minion" | "totem" | "trap" | "decoy" | "clone";
+  /** clone: your double (lib/game/combat/primitives.ts stepClone): it moves, throws your basic attack and draws enemies.
+   * Classes v2 (Vanguard): a dome stops enemy shots crossing its radius (Aegis Dome); a veil hides you inside it (Smoke Bomb). */
+  kind: "minion" | "totem" | "trap" | "decoy" | "clone" | "dome" | "veil";
   hp: number;
   /** Its health as a share of your max HP instead of `hp` (a clone). */
   hpShare?: number;
@@ -418,10 +448,12 @@ export const UNITS: Record<string, UnitDef> = {
   "mirror-clone": { key: "mirror-clone", name: "Mirror clone", kind: "clone", hp: 30, hpShare: 0.3, life: 10, speed: 7.4, range: 9, power: 0.4, rate: 1.15 },
   skeleton: { key: "skeleton", name: "Skeleton", kind: "minion", hp: 30, cost: 1, life: 20, speed: 5.6, range: 1.4, power: 0.22, rate: 0.8, model: "skeleton-warrior" },
   "army-skeleton": { key: "army-skeleton", name: "Risen dead", kind: "minion", hp: 24, cost: 0, life: 8, speed: 6.6, range: 1.4, power: 0.25, rate: 0.8, model: "skeleton-warrior", burst: { radius: 1.7, power: 1 } },
+  aegis: { key: "aegis", name: "Aegis dome", kind: "dome", hp: 1, life: 5, radius: 2.6 },
+  "ink-smoke": { key: "ink-smoke", name: "Ink smoke", kind: "veil", hp: 1, life: 4, radius: 2.8 },
   ...WARDEN_UNITS,
 };
 /** Caps (row 50): minions share the capacity stat; one totem per role and three at most; two traps; one decoy; two weapon wisps. */
-export const CAPS = { totems: 3, traps: 2, decoys: 1, weaponWisps: 2 } as const;
+export const CAPS = { totems: 3, traps: 2, decoys: 1, weaponWisps: 2, domes: 1, veils: 1 } as const;
 /** Row 43: the summoning weapon selects the Summoner's companions. */
 export const WEAPON_MINION: Record<string, string> = { "tome-spirits": "wisp", "tome-warden": "fox" };
 export const minionFor = (weaponKey: string) => WEAPON_MINION[weaponKey] ?? "wisp";

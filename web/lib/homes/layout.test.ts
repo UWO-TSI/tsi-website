@@ -91,9 +91,9 @@ describe("layout document", () => {
     expect(parseLayout(null)).toEqual(defaultLayout());
     expect(parseLayout({ version: 2 })).toEqual(defaultLayout());
   });
-  it("starts with the starter room (bed, lamp, shelf, closet) and caps room count", () => {
+  it("starts with the starter room (bed, lamp, shelf, closet, the storage chest) and caps room count", () => {
     const pieces = defaultLayout().rooms[0].items.map(i => i.piece).sort();
-    expect(pieces).toEqual(["bookshelf", "closet", "floor-lamp", "home-bed"]);
+    expect(pieces).toEqual(["bookshelf", "closet", "floor-lamp", "home-bed", "wooden-chest"]);
     for (const item of defaultLayout().rooms[0].items) expect(canPlace(item, room(defaultLayout().rooms[0].items))).toBe(true);
     expect(withRooms(defaultLayout(), 9).rooms).toHaveLength(MAX_ROOMS);
     expect(catalogueItem("home-bed")?.mount).toBe("floor");

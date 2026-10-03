@@ -66,6 +66,7 @@ describe("Marksman: Focus, arrow drop, the three arrows, Back Hop, Thousand Arro
     holdFire(rt, 0.4);
     expect(rt.v2!.live.dots.length).toBe(1);
     expect(rt.field.zones.length).toBeGreaterThan(0);
+    expect(rt.field.zones[0].ctx.ramp).toEqual(MARKSMAN.fire!.burn); // fire reads as fire over the kit's cyan
     const after = dealt(e);
     frame(rt, 30); // a second without shooting: the burn and the ground keep going
     expect(dealt(e)).toBeGreaterThan(after);

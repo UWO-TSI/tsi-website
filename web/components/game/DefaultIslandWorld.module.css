@@ -122,7 +122,8 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 @media (max-width: 700px) { .decorate { width: calc(100% - 32px); max-height: 45%; } }
 .decorateToggle { position: absolute; right: var(--hud-edge); bottom: var(--hud-side-bottom); min-height: 44px; padding: 0 16px 0 10px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper); color: var(--gui-ink-strong); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; cursor: pointer; box-shadow: var(--gui-shadow-md); z-index: 11; display: inline-flex; align-items: center; gap: 7px; }
 .world[data-inside] .heading { color: var(--gui-paper); text-shadow: 0 2px 12px #11152a; }
-.bagButton { position: absolute; left: 16px; top: 150px; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 16px 0 10px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper); color: var(--gui-ink-strong); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; cursor: pointer; box-shadow: var(--gui-shadow-md); z-index: 11; }
+.bagButtons { position: absolute; left: 16px; top: 150px; z-index: 11; display: flex; align-items: center; gap: 8px; }
+.bagButton { position: relative; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 16px 0 10px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper); color: var(--gui-ink-strong); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; cursor: pointer; box-shadow: var(--gui-shadow-md); z-index: 11; }
 .curatorLine { margin: 0 0 12px; padding: 10px 14px; border-radius: var(--gui-r-card); background: var(--gui-paper-warm); color: var(--gui-ink); font-style: italic; }
 .trophyRank { flex: none; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 99px; background: var(--gui-gold); color: var(--gui-ink-strong); font-weight: 900; font-size: var(--gui-text-xs); }
 /* Seasonal events: the tourney board (your row highlighted, unnamed neighbours muted), GENESIS posters, the trophy cue's leaders */
@@ -272,6 +273,7 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .classBar .abilityBar li { column-gap: 5px; padding-left: 5px; padding-right: 6px; }
 .classBar .sweep { width: 28px; height: 28px; }
 .slotIcon { width: 16px; height: 16px; margin-right: 3px; vertical-align: -3px; }
+.kitLine .slotIcon { display: inline-block; } /* the class line's passive and movement icons sit in the text */
 .classBar .abilityBar li[data-form] { box-shadow: inset 0 -3px 0 var(--class, #b39ce6); }
 /* A channelled ult's mash (Cataclysm): three keycaps, the front one big. */
 .mash { position: fixed; left: 50%; top: 30%; transform: translateX(-50%); display: grid; justify-items: center; gap: 8px; padding: 10px 16px 12px; border-radius: 18px;

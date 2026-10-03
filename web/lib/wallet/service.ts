@@ -26,6 +26,7 @@ const ERR: Record<string, [number, string]> = {
   forbidden: [403, "T1/T2 only."],
   not_owned: [409, "You don't own that."],
   no_slot: [422, "That isn't something you wear or hold."],
+  locked: [409, "That's locked in your bag. Unlock it to sell it."],
   failed: [500, "Something went wrong. Try again."],
 };
 const fail = <T>(err: unknown): Result<T> => toFailure(ERR, err);
@@ -123,6 +124,8 @@ export interface SellEntry {
   rarity: string;
   count: number;
   price_each: number;
+  /** Locked in the bag: shown, never sold (unlock it in the bag first). */
+  locked: boolean;
 }
 const FISH_NAME = new Map(FISH.map((f) => [f.key, f.name]));
 export const sellList = (store: EconomyStore, m: string) =>
@@ -134,7 +137,7 @@ export const sellList = (store: EconomyStore, m: string) =>
         const price = cls ? sellPrice(cls.category, cls.rarity) : null;
         if (!cls || !price) return [];
         const name = ROSTER.find((s) => s.key === r.item_key)?.name ?? FISH_NAME.get(r.item_key) ?? r.item_key;
-        return [{ item_key: r.item_key, name, category: cls.category, rarity: cls.rarity, count: r.count, price_each: price }];
+        return [{ item_key: r.item_key, name, category: cls.category, rarity: cls.rarity, count: r.count, price_each: price, locked: r.locked === true }];
       })
       .sort((a, b) => b.price_each - a.price_each || a.name.localeCompare(b.name));
   });

@@ -21,8 +21,8 @@ describe("generated catalogue seeds", () => {
     try {
       cpSync(MIGRATIONS, dir, { recursive: true });
       expect(seedMigration(dir)).toBeNull();
-      // As if the economy migration had shipped an older price for the basic rod.
-      const economy = SEEDS.find((s) => s.name === "economy")!, applied = join(dir, economy.file);
+      // As if the migration carrying the economy seed's newest block had shipped an older price for the basic rod.
+      const economy = SEEDS.find((s) => s.name === "economy")!, applied = join(dir, currentSeed(economy, dir).file);
       const row = economy.sql().split("\n").find((l) => l.startsWith("  ('rod-basic'"))!;
       writeFileSync(applied, readFileSync(applied, "utf8").replace(row, row.replace(", 100, ", ", 90, ")));
       const before = readFileSync(applied, "utf8");

@@ -25,6 +25,9 @@ let freeFor: (x: number, z: number, r: number) => boolean = () => true, bodyR = 
 const freeAll = (x: number, z: number, r: number) => freeFor(x, z, r) && !(walled && inWall(walled, x, z, r)) && !(thorns && thornWalled(thorns, x, z, r));
 const freeBody = (x: number, z: number) => freeAll(x, z, bodyR);
 
+/** Inside a dome (a lobbed spore bursts on its shell instead of landing). */
+const inDome = (rt: CombatRuntime, at: Vec) => rt.units.some(u => u.def.kind === "dome" && Math.hypot(u.x - at.x, u.z - at.z) <= u.def.radius!);
+
 export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: number, z: number, r: number) => boolean = () => true, random: () => number = Math.random) {
   const p = rt.player;
   // Timers, buffs, shield, passive stacks, the transformation.
@@ -88,7 +91,7 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
     // A lobbed spore flies over everything and bursts where it lands.
     if (sh.arc) {
       sh.x += sh.vx * dt; sh.z += sh.vz * dt;
-      if ((sh.life -= dt) <= 0) { landLob(rt, sh, me, random); rt.projectiles.splice(i, 1); }
+      if ((sh.life -= dt) <= 0) { if (!inDome(rt, sh)) landLob(rt, sh, me, random); rt.projectiles.splice(i, 1); }
       continue;
     }
     from.x = sh.x; from.z = sh.z;
@@ -104,7 +107,8 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
       if (wallStops(rt, from, to)) gone = true;
       else if (sweptHit(from, to, me, 0.35 + sh.radius)) { if (!parryShot(rt, sh, me)) hurtPlayer(rt, sh.damage, from, me, sh.knock, random, true); gone = true; }
       else {
-        const unit = rt.units.find(u => u.def.kind !== "trap" && sweptHit(from, to, u, 0.4 + sh.radius));
+        // A dome (Aegis Dome) stops a shot where it crosses its edge; a clone's ward turns it; a minion or totem takes it.
+        const unit = rt.units.find(u => u.def.kind !== "trap" && u.def.kind !== "veil" && sweptHit(from, to, u, (u.def.kind === "dome" ? u.def.radius! : 0.4) + sh.radius));
         if (unit) { if (!cloneWard(rt, unit)) hurtUnits(rt, u => u === unit, sh.damage); gone = true; }
       }
     }

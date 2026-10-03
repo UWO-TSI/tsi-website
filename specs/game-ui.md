@@ -54,6 +54,21 @@ Where it lives:
 | Icon seed | migration 20261002052225 |
 | Clean HUD | `lib/game/hudPrefs.ts` |
 
+### Milestone 2 (built on `game/backpack`, 2026-10-03)
+Proposals 23 and 24 are the defaults. The questions are 25–38 in `specs/game-ui-questions.md`, and the evidence is `specs/evidence/game-ui/M2-*`.
+
+| Part | Files |
+|---|---|
+| Stacks, slots, sizes and the grid (pure) | `lib/collections/bag.ts` |
+| Capacity, locks, drops and the chest on the server | migration `20261003054110_backpack`, `supabase/tests/backpack_smoke.sql` |
+| Bag service and route | `lib/collections/service.ts` (`bagView`, `bagAction`), `/api/collections/bag` |
+| The bag on this device | `lib/game/bagStore.ts` |
+| The Bag sheet (I) and the companion's Bag | `components/game/Bag.tsx` |
+| The storage chest | `components/game/ChestSheet.tsx`; any wooden chest in the house (`home/HomeInterior.tsx`) |
+| The Bag button and the fly-in | `components/game/BagButton.tsx` |
+| "Your backpack is full" in the world | `components/game/peaceful/BagFullNote.tsx` |
+| The pockets (30, 40) | `lib/wallet/catalogue.ts`, `lib/crafting/recipes.ts`, `lib/icons/manifest.ts` |
+
 ## Deliverable
 
 ### Milestone 1: the wheel and the hand

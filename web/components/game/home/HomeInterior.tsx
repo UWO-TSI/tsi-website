@@ -30,7 +30,7 @@ const WALL_H = 3.2;
 const I = "/assets/acnh/interior/";
 [...WALLPAPERS.map(w => `${I}wall-${w}.png`), ...FLOORINGS.map(f => `${I}floor-${f}.png`)].forEach(url => useTexture.preload(url));
 
-export type HouseNear = "exit" | "buy" | "closet" | "bed" | null;
+export type HouseNear = "exit" | "buy" | "closet" | "bed" | "chest" | null;
 /** World x of room i's screen-left edge (rooms centred on x = 0). */
 export const roomLeft = (i: number, n: number) => (RW * n) / 2 - RW * i;
 /** World x/z of a placed floor item's centre in room i of n. */
@@ -138,6 +138,9 @@ export default function HomeInterior({ layout, phase, light: islandLight, frozen
     // Every closet is a wardrobe (decision 210): stand at it and press E.
     ...layout.rooms.flatMap((room, i) => room.items.filter(item => item.piece === "closet")
       .map(item => ({ id: "closet", name: "Closet", pos: itemCentre(i, n, item), action: "closet", range: 1.6 }))),
+    // Every wooden chest is the home storage chest (specs/game-ui.md §6): one store per member, whichever chest you open.
+    ...layout.rooms.flatMap((room, i) => room.items.filter(item => item.piece === "wooden-chest")
+      .map(item => ({ id: "chest", name: "Storage chest", pos: itemCentre(i, n, item), action: "chest", range: 1.6 }))),
     // From the bed's middle: a 2-cell bed needs the longer reach to be usable from its pillow or foot end.
     ...beds(layout).map(b => ({ id: "bed", name: "Bed", pos: [b.x, b.z] as [number, number], action: "bed", range: 2 })),
     ...(n < MAX_ROOMS ? [{ id: "buy", name: "Add a room", pos: [roomLeft(n - 1, n) - RW + 1.2, 0] as [number, number], action: "buy", range: 1.4 }] : []),

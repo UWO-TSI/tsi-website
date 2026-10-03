@@ -6,6 +6,7 @@
  * so modelScale 1.3 = CHARACTER_SCALE keeps them in proportion to the player.
  */
 import { islandEnemies, islandMissions, islandWeapons } from "@/lib/combat/islandAdapter";
+import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { WARDEN_WEAPONS } from "@/lib/combat/wardenData";
 import type { EnemyAttack, EnemyType, MissionDef, Weapon } from "./contract";
 import { WARDEN_BODIES } from "./wardenBodies";
@@ -30,7 +31,7 @@ const WEAPON_LOOK: Record<string, Look> = {
   "bow-willow": { cooldown: 0.6, range: 11, arc: 0, speed: 18, model: `${W}bow-willow.glb`, modelScale: 1.3 },
   "staff-oak": { cooldown: 0.5, range: 8, arc: 0, speed: 15, model: `${W}staff-oak.glb`, modelScale: 1.3 },
   "tome-spirits": { cooldown: 6, range: 7, arc: 0, model: `${W}tome-spirits.glb`, modelScale: 1.3 },
-  // Bare hands with wraps (the Monk's full combo): quick, short, nothing held.
+  // Bare hands with wraps (the Martial Artist's full combo): quick, short, nothing held.
   "wraps-cloth": { cooldown: 0.42, range: 1.35, arc: 1.7, model: "", modelScale: 1 },
   // Crafted (lib/crafting/recipes.ts): damage comes from the tier in the weapons table; these are the feel.
   "sword-iron": { cooldown: 0.45, range: 1.9, arc: 2.0, model: `${W}sword-iron.glb`, modelScale: 1.3 },
@@ -53,6 +54,18 @@ const WEAPON_LOOK: Record<string, Look> = {
   ...signatureLooks("harpoon", { cooldown: 0.83, range: 11, arc: 0, speed: 30 }, RANGER_GRIPS.harpoon),
   ...signatureLooks("sixgun", { cooldown: 0.31, range: 10, arc: 0, speed: 55 }, RANGER_GRIPS.sixgun),
 };
+// Classes v2 signature weapons (the Vanguard wave): one look per type, a model per tier (art/props-enemies/build_vanguard_weapons.py).
+// Grips from art/props-enemies/solve_vanguard_grips.py (vanguard_grips.json): the melee hold in the right hand, the OffHand
+// part's rotation in the left (the shield facing forward on the forearm; the second tanto and the left wrap mirrored), the
+// hammer upright at rest like a staff.
+const MELEE_HAND: [number, number, number] = [Math.PI / 2, 0, 0], BACK: [number, number, number] = [0, 0, 0.5], MIRRORED: [number, number, number] = [1.942, -0.255, -0.15];
+const SIGNATURE_LOOK: Record<string, Omit<Look, "model">> = {
+  aegis: { cooldown: 0.5, range: 1.8, arc: 2.0, modelScale: 1.3, grip: { hand: MELEE_HAND, back: BACK, off: [0.029, 0.238, 1.146] } },
+  warhammer: { cooldown: 0.85, range: 2.2, arc: 2.4, modelScale: 1.3, grip: { hand: [2.27, 0, 0], back: BACK, rest: [0.03, -0.24, -1.15] } }, // swinging, the head tilted down to meet the ground
+  handwraps: { cooldown: 0.36, range: 1.45, arc: 1.6, modelScale: 1.3, grip: { hand: MELEE_HAND, back: BACK, off: MIRRORED } },
+  tanto: { cooldown: 0.4, range: 1.5, arc: 1.9, modelScale: 1.3, grip: { hand: MELEE_HAND, back: BACK, off: MIRRORED } },
+};
+for (const w of SYSTEM_WEAPONS) if (w.subclass && SIGNATURE_LOOK[w.type]) WEAPON_LOOK[w.key] = { ...SIGNATURE_LOOK[w.type], model: `${W}${w.key}.glb`, ...(w.tier === 5 ? { pulse: true } : {}) }; // tier 5's runes breathe
 function signatureLooks(type: string, feel: Pick<Look, "cooldown" | "range" | "arc" | "speed">, grip?: Look["grip"]): Record<string, Look> {
   return Object.fromEntries([1, 2, 3, 4, 5].map(t => [`${type}-${t}`, { ...feel, model: `${W}${type}-${t}.glb`, modelScale: 1.3, ...(grip ? { grip } : {}), ...(t === 5 ? { pulse: true } : {}) }]));
 }
