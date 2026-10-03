@@ -15,7 +15,8 @@
  * 2. `ev` is the packet's 15th element, omitted when there are no events. `value` is a clip name for play and upper,
  *    otherwise a length (the drop for land, roll and splash, the rise for mantle, else 0) in cm on the wire. `dtMs`
  *    is how long before the packet's `t` the event happened; the server relays it at `t − dtMs`.
- * 3. The pose packet's flags carry only TELEPORT (bit 7). Presence bits travel in `s` and the server sets them.
+ * 3. The pose packet's flags carry only TELEPORT (bit 7); receivers see a teleport as a change of Player.tp. Presence
+ *    bits travel in `s` and the server sets them.
  * 4. `studyEnds` is on the room timeline like `t` (ms since IslandState.epoch; 0: none): epoch milliseconds don't fit
  *    32 bits. That timeline wraps at TIME_MAX (49.7 days), so a shard should be drained before it gets that old.
  * 5. Area bounds: the spec gives the village (|x|, |z| ≤ 40, y −3..25) and interiors (≤ 20). The ruins (a 40×66 map)
@@ -46,7 +47,7 @@ export const DEV_TOKEN_PREFIX = "dev:";
 export const MAX_PAYLOAD_BYTES = 4096;
 
 export interface JoinOptions {
-  /** PROTOCOL. Check it before parsing: a different `v` closes with CLOSE.version whatever else is sent. */
+  /** PROTOCOL. A different `v`, or options that don't parse, close with CLOSE.version: the page is out of date ("Reload"). */
   v: number;
   /** AREAS index of the scene you're in. */
   area: number;
@@ -54,7 +55,7 @@ export interface JoinOptions {
   mobile: boolean;
   showClass: boolean;
 }
-/** The join's options, or null; `mobile` defaults to false and `showClass` to true. */
+/** The join's options, or null (CLOSE.version); `mobile` defaults to false and `showClass` to true. Any `v` parses: compare it. */
 export function parseJoinOptions(x: unknown): JoinOptions | null {
   if (!isRecord(x)) return null;
   const { v, area, mobile = false, showClass = true } = x;
@@ -65,21 +66,30 @@ export function parseJoinOptions(x: unknown): JoinOptions | null {
 // ── Close codes and join refusals ─────────────────────────────────
 
 /**
- * Close codes (§3). A join refusal reaches the client in one of two forms:
+ * Our close codes (§3). They sit at 41xx to stay clear of Colyseus' own (COLYSEUS_CLOSE), except `restart`, which is
+ * Colyseus' MAY_TRY_RECONNECT: the SDK tries to reconnect on it by itself, then the client rejoins after jitter.
+ * A join refusal reaches the client in one of two forms:
  * - an HTTP status on the matchmake POST, thrown in the room's static onAuth: 401 auth, 403 origin (HTTP_REFUSAL);
- * - a 4xxx WebSocket close, thrown in onJoin: 4001 auth, 4002 removed, 4006 version, 4007 busy (the card RPC timed
- *   out or the database is down).
- * Once joined, the server may close with 4002 (removed, M2), 4003 (kicked for movement), 4004 (replaced by a newer
- * tab) or 4010 (restart). `joinRefusal` turns any of these into what the client does.
+ * - a WebSocket close thrown in onJoin: 4101 auth (or no profile), 4102 removed, 4106 version, 4107 busy (the card
+ *   RPC timed out or the database is down).
+ * Once joined, the server may close with 4102 (removed, M2), 4103 (kicked for movement), 4104 (replaced by a newer
+ * tab) or 4010 (restart). `joinRefusal` turns any of these, and Colyseus' own, into what the client does.
  */
-export const CLOSE = { auth: 4001, removed: 4002, kicked: 4003, replaced: 4004, version: 4006, busy: 4007, restart: 4010 } as const;
+export const CLOSE = { auth: 4101, removed: 4102, kicked: 4103, replaced: 4104, version: 4106, busy: 4107, restart: 4010 } as const;
 export const HTTP_REFUSAL = { auth: 401, origin: 403 } as const;
-export type RefusalKind = keyof typeof CLOSE | "origin" | "unknown";
+/**
+ * Colyseus 0.18's own closes: CONSENTED (a leave), SERVER_SHUTDOWN, WITH_ERROR (a failed join, a message flood),
+ * FAILED_TO_RECONNECT (a failed reconnect, a stale duplicate) and MAY_TRY_RECONNECT. Bare, the first four mean a
+ * dropped connection; CONSENTED after our own leave() means stay off.
+ */
+export const COLYSEUS_CLOSE = { consented: 4000, serverShutdown: 4001, withError: 4002, failedToReconnect: 4003, mayTryReconnect: 4010 } as const;
+/** `left`: the close that followed our own leave(). `unknown`: a dropped connection (abnormal, Colyseus' 4000–4003, a 5xx). */
+export type RefusalKind = keyof typeof CLOSE | "origin" | "left" | "unknown";
 /**
  * - `token-once`: refresh the token and retry once, then stay offline;
- * - `backoff`: rejoin after REJOIN_BACKOFF_S;
+ * - `backoff`: rejoin after REJOIN_BACKOFF_S (inside the grace window the SDK reconnects first by itself);
  * - `jitter`: rejoin after a random 0..RESTART_JITTER_MS;
- * - `never`: stay offline and say why ("Play here" for replaced, "Reload" for version).
+ * - `never`: stay offline and say why ("Play here" for replaced, "Reload" for version), or nothing after our own leave.
  */
 export type RetryPolicy = "token-once" | "backoff" | "jitter" | "never";
 export interface JoinRefusal { readonly kind: RefusalKind; readonly retry: RetryPolicy }
@@ -90,10 +100,12 @@ const REFUSALS = new Map<number, JoinRefusal>([
   [CLOSE.removed, refusal("removed", "never")], [CLOSE.kicked, refusal("kicked", "never")], [CLOSE.replaced, refusal("replaced", "never")],
   [CLOSE.version, refusal("version", "never")], [CLOSE.busy, refusal("busy", "backoff")], [CLOSE.restart, refusal("restart", "jitter")],
 ]);
-/** Anything else (an abnormal close, a 5xx): the SDK's own reconnect inside the grace window, then this. */
-const DROPPED = refusal("unknown", "backoff");
-/** What the client does about an HTTP status or a WebSocket close code. */
-export const joinRefusal = (code: number): JoinRefusal => REFUSALS.get(code) ?? DROPPED;
+const LEFT = refusal("left", "never"), DROPPED = refusal("unknown", "backoff");
+/**
+ * What the client does about an HTTP status or a WebSocket close code. `ownLeave`: the close followed our own
+ * room.leave() (Colyseus answers it with CONSENTED), so we stay off whatever the code says.
+ */
+export const joinRefusal = (code: number, ownLeave = false): JoinRefusal => (ownLeave ? LEFT : (REFUSALS.get(code) ?? DROPPED));
 /** Rejoin delays in seconds; the last repeats. */
 export const REJOIN_BACKOFF_S = [2, 4, 8, 16, 30] as const;
 /** A restart (4010): everyone rejoins after a random 0..3 s, not all at once. */
@@ -137,10 +149,14 @@ export function moveIndex(clip: string | null | undefined): number {
  * mobile (the join), showClass (the join, then `s.showClass`), typing (M2 chat), armed (`s.weapon` isn't empty).
  */
 export const FLAG = { away: 1, afk: 2, mobile: 4, showClass: 8, typing: 16, armed: 32 } as const;
-/** The pose packet's flags: TELEPORT snaps rather than interpolates (doors, seats, respawns, scene changes). */
+/** The pose packet's flags: TELEPORT snaps rather than interpolates (when the sender sets it: POSE_FIELDS). */
 export const PACKET_FLAG = { teleport: 128 } as const;
 const PACKET_FLAGS_KNOWN = PACKET_FLAG.teleport;
 export const hasFlag = (flags: number, bit: number) => (flags & bit) !== 0;
+/** Player.tp after one more teleport (uint8, wraps). */
+export const nextTp = (tp: number) => (tp + 1) & 0xff;
+/** A teleport happened between two observations of a player's `tp`: any change counts, the wrap from 255 to 0 too. */
+export const tpChanged = (seen: number, tp: number) => seen !== tp;
 
 /** `study` (§3): the study table phase, for remote overhead timers. Append-only. */
 export const STUDY_STATES = ["none", "seated", "focus", "break"] as const;
@@ -261,6 +277,10 @@ export const seqAfter = (a: number, b: number) => a !== b && ((a - b) & 0xffff) 
 /**
  * §4.2's array, in order: `[seq, t, x, y, z, vx, vy, vz, yaw, move, air, leaf, lift, flags, ev?]`. The motion fields
  * share their names with Player's, so after a decode the server can copy the packet's own integers into the schema.
+ *
+ * PACKET_FLAG.teleport: the sender sets it on the sample that lands a respawn (the `respawn` event, a splash's
+ * respawn included) and a seat snap (`tsi:sit`) themselves, as well as on a jump over 2.5 u in one frame and a new
+ * tap registration (§5.2). A 1–2 u respawn 30–100 ms after the last sample otherwise reads as 15–60 u/s and is struck.
  */
 export const POSE_FIELDS = ["seq", "t", "x", "y", "z", "vx", "vy", "vz", "yaw", "move", "air", "leaf", "lift", "flags"] as const;
 export const POSE_LEN = 14;
@@ -366,6 +386,7 @@ export const NET_PLAYER_FIELDS = [
   ["studyEnds", "uint32"],
   ["t", "uint32"], ["x", "int16"], ["y", "int16"], ["z", "int16"], ["vx", "int16"], ["vy", "int16"], ["vz", "int16"], ["yaw", "uint16"],
   ["move", "uint8"], ["air", "uint8"], ["leaf", "uint8"], ["lift", "int16"],
+  ["tp", "uint8"],
 ] as const satisfies readonly (readonly [string, WireType])[];
 /** One player in `players` (keyed by sessionId; each client sees only its view): wire values, as reflection decodes them. */
 export interface NetPlayer {
@@ -410,6 +431,13 @@ export interface NetPlayer {
   // Motion (client-authoritative, server-checked, about 10 Hz): pose packet wire values.
   t: number; x: number; y: number; z: number; vx: number; vy: number; vz: number; yaw: number;
   move: number; air: number; leaf: number; lift: number;
+  /**
+   * Teleports applied, a wrapping counter (nextTp): the server bumps it with each PACKET_FLAG.teleport sample it
+   * applies, in the same patch as the new position. A receiver snaps that sample whenever `tp` differs from the last
+   * it saw (tpChanged), besides its own snap on a large error. A flag in `flags` couldn't do this: set and cleared
+   * within one patch, it would never arrive.
+   */
+  tp: number;
 }
 /** The whole shard's presence list, keyed by sessionId. */
 export const NET_ROSTER_FIELDS = [
@@ -519,8 +547,8 @@ export function decodeEvent(x: unknown, out?: NetEvent): NetEvent | null {
 
 /**
  * Pose packets (§4.3): 10 Hz on the ground while moving, 15 Hz while `move` is set, at once on an event (but at least
- * eventGapMs after the last send), one on stopping, then nothing while still. The next timed send comes a full interval
- * after the last send of any kind, so only events space samples closer; the sanity caps assume it.
+ * eventGapMs after the last send), one on stopping, then nothing while still. A timed send comes a full interval after
+ * the last send of any kind.
  */
 export const SEND = { groundHz: 10, moveHz: 15, eventGapMs: 30 } as const;
 /** The room's patchRate: state goes out at 20 Hz. */
@@ -531,24 +559,31 @@ export const PATCH_RATE_MS = 50;
  * MAX_GRADE, the steepest ground that still counts as a slope. Copied, since this file imports nothing;
  * protocol.test.ts pins them.
  */
-export const NET_MOVE = { dashSpeed: 18, momentumCeiling: 18, downhillCeiling: 10, maxGrade: 1.6, jumpHeight: 1.28, jumpApexTime: 0.27, maxFallSpeed: 18 } as const;
-/** The kit's fastest: the momentum ceiling downhill on the steepest slope (26.5 u/s), a jump's take-off (9.5 u/s). */
+export const NET_MOVE = { dashSpeed: 18, momentumCeiling: 18, downhillCeiling: 10, maxGrade: 1.6, maxFallSpeed: 18 } as const;
+/** The kit's fastest: the momentum ceiling going down the steepest slope (26.5 u/s). */
 const KIT_SPEED = Math.max(NET_MOVE.dashSpeed, NET_MOVE.momentumCeiling + NET_MOVE.downhillCeiling * (NET_MOVE.maxGrade / Math.hypot(1, NET_MOVE.maxGrade)));
-const KIT_RISE = (2 * NET_MOVE.jumpHeight) / NET_MOVE.jumpApexTime;
 /** Head-room over the kit for sampling and quantization. */
 const SLACK = 1.2;
 /**
+ * A climb may rise this much per unit of horizontal speed: the gentle ramp (a full cliff over two tiles, 0.75 a unit)
+ * with SLACK. A dash up one reads about 12 u/s, momentum into one 14.
+ */
+export const CLIMB_RATIO = 0.9;
+/**
  * Server sanity checks (§4.5). Rates come from consecutive samples' positions, not the velocities they carry; a gap
- * outside dtMinMs..dtMaxMs resets the baseline. Caps are the kit's limits with SLACK, rounded up to whole u/s; the
- * 1 s average has none, since a slope steep enough for the full ceiling never lasts a second (the grid drops one 0.75
- * level a cell at most). A move of more than teleportDist within teleportWindowMs needs PACKET_FLAG.teleport, which
- * may come once per teleportGapMs and teleportPerMinute times a minute. A violation isn't applied or relayed and earns
- * a strike; strikes decay one per strikeDecayMs, and strikeKick of them closes with CLOSE.kicked (in dev, log only).
+ * outside dtMinMs..dtMaxMs resets the baseline. Horizontal: at most `speed`, and `speedAvg` over speedAvgWindowMs.
+ * Rising: at most max(rise, climbRatio × the horizontal speed over the same samples), so 15 u/s straight up (a jump
+ * takes off at 9.5, a full-height mantle's fastest 20 ms is 14.6) and more on a climb. Falling: at most `fall`.
+ * `speed` and `fall` are the kit's limits with SLACK, rounded up to whole u/s; `speedAvg` has none, since a slope steep
+ * enough for the full ceiling never lasts a second (the grid drops one 0.75 level a cell at most). A move of more than
+ * teleportDist within teleportWindowMs needs PACKET_FLAG.teleport, which may come once per teleportGapMs and
+ * teleportPerMinute times a minute. A violation isn't applied or relayed and earns a strike; strikes decay one per
+ * strikeDecayMs, and strikeKick of them closes with CLOSE.kicked (in dev, log only).
  */
 export const SANITY = {
   dtMinMs: 20, dtMaxMs: 2000,
   speed: Math.ceil(KIT_SPEED * SLACK), speedAvg: Math.floor(KIT_SPEED), speedAvgWindowMs: 1000,
-  rise: Math.ceil(KIT_RISE * SLACK), fall: Math.ceil(NET_MOVE.maxFallSpeed * SLACK),
+  rise: 15, climbRatio: CLIMB_RATIO, fall: Math.ceil(NET_MOVE.maxFallSpeed * SLACK),
   teleportDist: 6, teleportWindowMs: 300, teleportGapMs: 2000, teleportPerMinute: 15,
   strikeDecayMs: 10_000, strikeKick: 10,
 } as const;

@@ -6,7 +6,10 @@
 import { AREAS, CARD_FAMILIES, CARD_FRAMES, FLAG, STUDY_STATES, hasFlag } from "./protocol";
 import type { Area, CardFamily, CardFrame, EvKind, MoveClip, NetPlayer, PosePacket, RefusalKind, RosterEntry, SlowState, StudyState } from "./protocol";
 
-/** A remote player's card and slow state, dequantized. Rebuilt when they change, never per frame. */
+/**
+ * A remote player's card and slow state, dequantized. Rebuilt when they change, never per frame. Motion (`t` to `lift`,
+ * and `tp`) isn't here: it feeds the interpolation buffer, where a changed `tp` (tpChanged) snaps that sample.
+ */
 export interface RemotePlayer {
   sid: number;
   uid: string;
@@ -80,7 +83,10 @@ export interface RemoteSample {
   weapon: string;
   /** FLAG bits. */
   flags: number;
-  /** The position jumped this frame (a teleport, or a correction past the snap distance): no smoothing, trail or dust across it. */
+  /**
+   * The position jumped this frame: a teleport (Player.tp changed with this sample) or a correction past the snap
+   * distance. No smoothing, trail or dust across it.
+   */
   snapped: boolean;
   /** The first `eventCount` slots hold this frame's one-shots, in order; the objects are reused. */
   events: RemoteEvent[];
@@ -117,8 +123,8 @@ export interface RemoteRegistry {
   subscribe(listener: (change: RemoteChange, entry: RemoteEntry) => void): () => void;
 }
 
-/** Why the connection stays down (joinRefusal's never cases, and auth once the token retry failed). */
-export type KickReason = Exclude<RefusalKind, "busy" | "restart" | "unknown">;
+/** Why the connection stays down (joinRefusal's never cases but our own leave, and auth once the token retry failed). */
+export type KickReason = Exclude<RefusalKind, "busy" | "restart" | "left" | "unknown">;
 export type NetStatus =
   | { kind: "off" }
   | { kind: "connecting" }

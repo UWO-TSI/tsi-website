@@ -4,19 +4,20 @@ import { EMOTE_CLIPS, type ClipName } from "@/lib/game/character/clips";
 import { CLIP_BY_NAME } from "@/lib/game/character/look";
 import { FAMILIES } from "@/lib/game/oracle/family";
 import { village } from "@/lib/game/villageMap";
+import { CLIFF_LEVELS, LEVEL_STEP, Surface, TILE, createCenteredMap, heightField, rampRun, sampleGroundHeight, setCell } from "@/lib/game/grid";
 import { createRuins } from "@/lib/game/ruins";
 import type { Family } from "@/lib/oracle/engine";
 import type { Frame } from "@/lib/combat/mastery";
 import type { Phase } from "@/lib/study/rules";
 import type { WheelKind } from "@/lib/game/toolWheel";
 import {
-  AREAS, AREA_BOUNDS, CARD_BADGES, CARD_FAMILIES, CARD_FRAMES, CHAT, CLOCK, CLOSE, EMOTE_CLIP_NAMES, EV, EV_DT_MAX_MS, EV_KINDS, EV_MAX, FLAG,
+  AREAS, AREA_BOUNDS, CARD_BADGES, CARD_FAMILIES, CARD_FRAMES, CHAT, CLIMB_RATIO, CLOCK, CLOSE, COLYSEUS_CLOSE, EMOTE_CLIP_NAMES, EV, EV_DT_MAX_MS, EV_KINDS, EV_MAX, FLAG,
   HELD_KINDS, HTTP_REFUSAL, INTEREST, INTERP_DELAY_MS, MOVE_CLIPS, NET_MOVE, NET_PLAYER_FIELDS, NET_ROSTER_FIELDS, PACKET_FLAG, PATCH_RATE_MS, POSE_FIELDS,
   POSE_LEN, PRIVATE_AREAS, PROTOCOL, RATE_LIMITS, RECONNECT_GRACE_S, REJOIN_BACKOFF_S, RESTART_JITTER_MS, SANITY, SEND, SHARD, STUDY_STATES, SYS_TEXT_MAX,
   TIME_MAX, cardBadge, cardFamily, cardFrame, createPose, decodeEvent, decodePose, dequantAir, dequantLeaf, dequantLift, dequantPos, dequantVel,
   dequantYaw, encodeEvent, encodePose, estimateClockOffset, hasFlag, heldOf, inAreaBounds, isClipEv, isEmoteClip, isHeld, isPrivateArea, joinRefusal,
   moveIndex, parseHeld, parseJoinOptions, parsePing, parsePong, parseSlowState, parseSys, pushEv, quantAir, quantLeaf, quantLift, quantPos, quantTime,
-  quantVel, quantYaw, roomTime, seqAfter, studyIndex,
+  nextTp, quantVel, quantYaw, roomTime, seqAfter, studyIndex, tpChanged,
   type CardFamily, type CardFrame, type ClockSample, type EvKind, type HeldKind, type MoveClip, type NetPlayer, type Pose, type PosePacket,
   type RosterEntry, type StudyState,
 } from "./protocol";
@@ -344,19 +345,25 @@ describe("other messages", () => {
 });
 
 describe("join refusals and close codes", () => {
-  it("codes", () => {
-    expect(CLOSE).toEqual({ auth: 4001, removed: 4002, kicked: 4003, replaced: 4004, version: 4006, busy: 4007, restart: 4010 });
+  it("codes: ours at 41xx, clear of Colyseus' own 4000–4003; restart is Colyseus' MAY_TRY_RECONNECT", () => {
+    expect(CLOSE).toEqual({ auth: 4101, removed: 4102, kicked: 4103, replaced: 4104, version: 4106, busy: 4107, restart: 4010 });
     expect(HTTP_REFUSAL).toEqual({ auth: 401, origin: 403 });
+    expect(COLYSEUS_CLOSE).toEqual({ consented: 4000, serverShutdown: 4001, withError: 4002, failedToReconnect: 4003, mayTryReconnect: 4010 });
+    const theirs = new Set<number>(Object.values(COLYSEUS_CLOSE));
+    for (const c of Object.values(CLOSE)) expect(theirs.has(c), `${c}`).toBe(c === COLYSEUS_CLOSE.mayTryReconnect);
   });
   it("one table for the HTTP and WebSocket refusals and the in-game closes", () => {
-    const table = [401, 403, 4001, 4002, 4003, 4004, 4006, 4007, 4010].map(c => [c, joinRefusal(c).kind, joinRefusal(c).retry]);
+    const table = [401, 403, 4101, 4102, 4103, 4104, 4106, 4107, 4010].map(c => [c, joinRefusal(c).kind, joinRefusal(c).retry]);
     expect(table).toEqual([
-      [401, "auth", "token-once"], [403, "origin", "never"], [4001, "auth", "token-once"], [4002, "removed", "never"], [4003, "kicked", "never"],
-      [4004, "replaced", "never"], [4006, "version", "never"], [4007, "busy", "backoff"], [4010, "restart", "jitter"],
+      [401, "auth", "token-once"], [403, "origin", "never"], [4101, "auth", "token-once"], [4102, "removed", "never"], [4103, "kicked", "never"],
+      [4104, "replaced", "never"], [4106, "version", "never"], [4107, "busy", "backoff"], [4010, "restart", "jitter"],
     ]);
   });
-  it("anything else is a dropped connection: back off and rejoin", () => {
-    for (const c of [1000, 1001, 1006, 4005, 4999, 500, 503, 0, NaN]) expect(joinRefusal(c)).toEqual({ kind: "unknown", retry: "backoff" });
+  it("Colyseus' own 4000–4003 and anything else are a dropped connection: back off and rejoin", () => {
+    for (const c of [4000, 4001, 4002, 4003, 1000, 1001, 1006, 4005, 4007, 4999, 500, 503, 0, NaN]) expect(joinRefusal(c), `${c}`).toEqual({ kind: "unknown", retry: "backoff" });
+  });
+  it("after our own leave() we stay off, whatever the code", () => {
+    for (const c of [4000, 1000, 1006, 4103, 4010]) expect(joinRefusal(c, true), `${c}`).toEqual({ kind: "left", retry: "never" });
   });
   it("backoff and jitter", () => {
     expect(REJOIN_BACKOFF_S).toEqual([2, 4, 8, 16, 30]);
@@ -365,15 +372,25 @@ describe("join refusals and close codes", () => {
 });
 
 describe("schema", () => {
-  it("NET_PLAYER_FIELDS: §4.1 in order (the server's schema test matches it exactly), with `seat`", () => {
+  it("NET_PLAYER_FIELDS: §4.1 in order (the server's schema test matches it exactly), with `seat` and the `tp` counter", () => {
     expect(NET_PLAYER_FIELDS.map(([n, t]) => `${n}:${t}`).join(" ")).toBe(
       "sid:uint16 uid:string name:string badge:uint8 look:string level:uint8 family:uint8 kit:string mastery:uint8 aura:string frame:uint8 "
       + "area:uint8 flags:uint8 held:string weapon:string pose:string seat:string study:uint8 studyEnds:uint32 "
-      + "t:uint32 x:int16 y:int16 z:int16 vx:int16 vy:int16 vz:int16 yaw:uint16 move:uint8 air:uint8 leaf:uint8 lift:int16");
+      + "t:uint32 x:int16 y:int16 z:int16 vx:int16 vy:int16 vz:int16 yaw:uint16 move:uint8 air:uint8 leaf:uint8 lift:int16 tp:uint8");
     expect(NET_ROSTER_FIELDS.map(([n, t]) => `${n}:${t}`).join(" ")).toBe("uid:string name:string badge:uint8 area:uint8 flags:uint8");
     // The motion fields carry the pose packet's names, so the server copies a decoded packet's integers straight in.
     const names = NET_PLAYER_FIELDS.map(([n]) => n as string);
     for (const f of POSE_FIELDS.slice(1, 13)) expect(names).toContain(f);
+  });
+  it("tp: a wrapping teleport counter, and any change is a teleport (255 to 0 too)", () => {
+    expect([nextTp(0), nextTp(41), nextTp(254), nextTp(255)]).toEqual([1, 42, 255, 0]);
+    expect(tpChanged(255, nextTp(255))).toBe(true);
+    expect(tpChanged(255, 0)).toBe(true);
+    expect(tpChanged(0, 255)).toBe(true);
+    expect(tpChanged(7, 7)).toBe(false);
+    let tp = 250, seen = 250, snaps = 0;
+    for (let i = 0; i < 10; i++) { tp = nextTp(tp); if (tpChanged(seen, tp)) snaps++; seen = tp; }
+    expect([tp, snaps]).toEqual([4, 10]);
   });
   it("the plain interfaces have exactly those fields and types", () => {
     type Fields<L extends readonly (readonly [string, string])[]> = { [E in L[number] as E[0]]: E[1] extends "string" ? string : number };
@@ -396,7 +413,7 @@ describe("limits", () => {
     expect(CLOCK).toEqual({ burst: 5, burstGapMs: 200, everyMs: 15_000, window: 16, best: 5, applyOverMs: 100 });
   });
   it("sanity numbers (§4.5)", () => {
-    expect(SANITY).toEqual({ dtMinMs: 20, dtMaxMs: 2000, speed: 32, speedAvg: 26, speedAvgWindowMs: 1000, rise: 12, fall: 22,
+    expect(SANITY).toEqual({ dtMinMs: 20, dtMaxMs: 2000, speed: 32, speedAvg: 26, speedAvgWindowMs: 1000, rise: 15, climbRatio: CLIMB_RATIO, fall: 22,
       teleportDist: 6, teleportWindowMs: 300, teleportGapMs: 2000, teleportPerMinute: 15, strikeDecayMs: 10_000, strikeKick: 10 });
     expect(AREA_BOUNDS.village).toEqual({ half: 40, yMin: -3, yMax: 25 });
     for (const a of ["cafe", "hq", "museum", "oracle", "house"] as const) expect(AREA_BOUNDS[a]).toEqual({ half: 20, yMin: -3, yMax: 25 });
@@ -415,9 +432,17 @@ describe("limits", () => {
   });
 });
 
+/** A strip of grass with a two-cell ramp run (cells at x 0 and 1) up to a full cliff, walked through the grid's own ground. */
+function rampWorld() {
+  const map = createCenteredMap(24, 9);
+  for (let cz = 0; cz < 9; cz++) for (let cx = 0; cx < 24; cx++) setCell(map, cx, cz, cx >= 14 ? CLIFF_LEVELS : 0, cx === 12 || cx === 13 ? Surface.Ramp : Surface.Grass);
+  const field = heightField(map), w: MoveWorld = { top: (x, z) => sampleGroundHeight(map, field, x, z), wet: () => false };
+  return { map, w };
+}
+
 describe("the sanity caps follow the movement kit", () => {
   it("NET_MOVE is MOVE_TUNING's (and sim.ts's steepest slope, 1.6)", () => {
-    for (const k of ["dashSpeed", "momentumCeiling", "downhillCeiling", "jumpHeight", "jumpApexTime", "maxFallSpeed"] as const) expect(NET_MOVE[k], k).toBe(MOVE_TUNING[k]);
+    for (const k of ["dashSpeed", "momentumCeiling", "downhillCeiling", "maxFallSpeed"] as const) expect(NET_MOVE[k], k).toBe(MOVE_TUNING[k]);
     const plane = (g: number): MoveWorld => ({ top: x => g * x, wet: () => false });
     expect(slopeAt(plane(1.59), 0, 0)[0]).toBeCloseTo(1.59, 9);
     expect(slopeAt(plane(1.61), 0, 0)[0]).toBe(0);
@@ -425,59 +450,75 @@ describe("the sanity caps follow the movement kit", () => {
   });
   it("the caps are the kit's limits with 20% slack, rounded up; the 1 s average has none", () => {
     const t = MOVE_TUNING, sine = 1.6 / Math.hypot(1, 1.6);
-    const top = Math.max(t.dashSpeed, t.momentumCeiling + t.downhillCeiling * sine), rise = (2 * t.jumpHeight) / t.jumpApexTime;
+    const top = Math.max(t.dashSpeed, t.momentumCeiling + t.downhillCeiling * sine);
     expect(SANITY.speed).toBe(Math.ceil(top * 1.2));
     expect(SANITY.speedAvg).toBe(Math.floor(top));
-    expect(SANITY.rise).toBe(Math.ceil(rise * 1.2));
     expect(SANITY.fall).toBe(Math.ceil(t.maxFallSpeed * 1.2));
+    // Straight up, the jump's take-off with the same slack is well inside; the mantle is checked against stepMove below.
+    for (const [h, apex] of [[t.jumpHeight, t.jumpApexTime], [t.longJumpHeight, t.longJumpApexTime], [t.slideJumpHeight, t.slideJumpApexTime]])
+      expect(((2 * h) / apex) * 1.2).toBeLessThan(SANITY.rise);
     for (const s of [t.walkSpeed, t.sprintSpeed, t.dashSpeed, t.momentumCeiling, t.glideSpeed]) expect(s).toBeLessThan(SANITY.speedAvg);
     // No speed a sample can carry is beyond the wire's ±40 u/s.
     expect(SANITY.speed).toBeLessThan(40);
   });
-  it("stepMove at its extremes stays inside them, sampled as the sender may (events 30 ms apart, the ground rate after a mantle)", () => {
+  it("CLIMB_RATIO is the gentle ramp's slope with the same 20% slack", () => {
+    // A run of two ramp cells up to a full cliff, as the painter makes it (grid.ts rampRun: 1.5 u over two tiles).
+    const { w, map } = rampWorld();
+    expect(rampRun(map, 12, 4)).toMatchObject({ length: 2, rise: CLIFF_LEVELS });
+    const foot = -0.5, top = 1.5; // the run's cells sit at x 0 and 1 in this map
+    const slope = (w.top(top - 0.01, 0) - w.top(foot + 0.01, 0)) / (top - foot - 0.02);
+    expect(slope).toBeCloseTo((CLIFF_LEVELS * LEVEL_STEP) / (2 * TILE), 6);
+    expect(CLIMB_RATIO).toBeGreaterThanOrEqual(slope * 1.2 - 1e-9);
+    expect(SANITY.climbRatio).toBe(CLIMB_RATIO);
+  });
+  it("stepMove at its extremes stays inside them, sampled as close as the server allows", () => {
     const run = (w: MoveWorld, s0: MoveState, input: (i: number, s: MoveState) => MoveInput, steps: number) => {
       const trace = [s0];
       for (let i = 0; i < steps; i++) trace.push(stepMove(trace[i], input(i, trace[i]), STEP, w));
       return trace;
     };
-    const rates = (trace: MoveState[], ms: number) => {
+    // Every pair of states n steps apart, n the fewest steps that make a gap of at least `ms`: the shortest gap the server checks.
+    const within = (trace: MoveState[], ms = SANITY.dtMinMs) => {
       const n = Math.ceil(ms / 1000 / STEP), dt = n * STEP, avgN = Math.round(1 / STEP);
-      let speed = 0, rise = 0, fall = 0, avg = 0;
+      let worst = { speed: 0, climbOver: -Infinity, fall: 0, avg: 0 };
       for (let i = n; i < trace.length; i++) {
-        const a = trace[i - n], b = trace[i];
-        speed = Math.max(speed, Math.hypot(b.x - a.x, b.z - a.z) / dt);
-        rise = Math.max(rise, (b.y - a.y) / dt);
-        fall = Math.max(fall, (a.y - b.y) / dt);
+        const a = trace[i - n], b = trace[i], speed = Math.hypot(b.x - a.x, b.z - a.z) / dt, rise = (b.y - a.y) / dt;
+        worst = { ...worst, speed: Math.max(worst.speed, speed), fall: Math.max(worst.fall, -rise),
+          climbOver: Math.max(worst.climbOver, rise - Math.max(SANITY.rise, SANITY.climbRatio * speed)) };
       }
-      for (let i = avgN; i < trace.length; i++) avg = Math.max(avg, Math.hypot(trace[i].x - trace[i - avgN].x, trace[i].z - trace[i - avgN].z));
-      return { speed, rise, fall, avg };
-    };
-    const within = (r: ReturnType<typeof rates>) => {
-      expect(r.speed).toBeLessThanOrEqual(SANITY.speed);
-      expect(r.avg).toBeLessThanOrEqual(SANITY.speedAvg);
-      expect(r.rise).toBeLessThanOrEqual(SANITY.rise);
-      expect(r.fall).toBeLessThanOrEqual(SANITY.fall);
+      for (let i = avgN; i < trace.length; i++) worst.avg = Math.max(worst.avg, Math.hypot(trace[i].x - trace[i - avgN].x, trace[i].z - trace[i - avgN].z));
+      expect(worst.speed).toBeLessThanOrEqual(SANITY.speed);
+      expect(worst.avg).toBeLessThanOrEqual(SANITY.speedAvg);
+      expect(worst.climbOver).toBeLessThanOrEqual(0);
+      expect(worst.fall).toBeLessThanOrEqual(SANITY.fall);
+      return worst;
     };
     const go = (o: Partial<MoveInput>): MoveInput => ({ ...NO_INPUT, ...o });
     const flat: MoveWorld = { top: () => 0, wet: () => false };
     // Tech on flat ground: sprint, dash every half second, slides, held hops.
-    within(rates(run(flat, createMoveState(0, 0, flat), i => go({ x: 1, sprint: true, dashPressed: i % 60 === 0, sneak: i % 120 > 60, jump: i % 90 > 80, jumpPressed: i % 90 === 81 }), 1200), SEND.eventGapMs));
+    within(run(flat, createMoveState(0, 0, flat), i => go({ x: 1, sprint: true, dashPressed: i % 60 === 0, sneak: i % 120 > 60, jump: i % 90 > 80, jumpPressed: i % 90 === 81 }), 1200));
     // A slide down the steepest ground the grid sustains (one 0.75 level per cell): 24 u/s along, 18 u/s down.
     const hill: MoveWorld = { top: x => 200 - 0.75 * x, wet: () => false };
-    const slide = rates(run(hill, createMoveState(0, 0, hill), i => go({ x: 1, sprint: true, sneak: i > 60, dashPressed: i === 50 }), 900), SEND.eventGapMs);
-    within(slide);
-    expect(slide.avg).toBeGreaterThan(20); // the case really is the fast one
+    expect(within(run(hill, createMoveState(0, 0, hill), i => go({ x: 1, sprint: true, sneak: i > 60, dashPressed: i === 50 }), 900)).avg).toBeGreaterThan(20);
     // A fall from 20 u, and a jump.
     const ledge: MoveWorld = { top: x => (x < 1 ? 20 : 0), wet: () => false };
-    within(rates(run(ledge, createMoveState(0, 0, ledge), () => go({ x: 1 }), 600), SEND.eventGapMs));
-    within(rates(run(flat, createMoveState(0, 0, flat), i => go({ jump: true, jumpPressed: i === 0 }), 120), SEND.eventGapMs));
-    // A full-height mantle: a jump beside a 2.4 u wall catches the lip near the apex and climbs ~1.15 u. Its event sends the
-    // grab, and the next sample comes a ground interval later (a mantle sets no move clip).
+    within(run(ledge, createMoveState(0, 0, ledge), () => go({ x: 1 }), 600));
+    within(run(flat, createMoveState(0, 0, flat), i => go({ jump: true, jumpPressed: i === 0 }), 120));
+    // Up the gentle ramp: a sprint, a dash, a dash into a slide, a hop chain with dashes.
+    const { w: ramp } = rampWorld();
+    for (const input of [() => go({ x: 1, sprint: true }), (i: number) => go({ x: 1, sprint: true, dashPressed: i % 60 === 30 }),
+      (i: number) => go({ x: 1, sprint: true, sneak: i > 40, dashPressed: i === 30 }),
+      (i: number) => go({ x: 1, sprint: true, jump: true, jumpPressed: i % 30 === 0, dashPressed: i % 61 === 20 })]) {
+      const trace = run(ramp, createMoveState(-8, 0, ramp), input, 300);
+      within(trace);
+      expect(trace[trace.length - 1].y).toBeGreaterThan(1.4); // it really climbed
+    }
+    // A full-height mantle: a jump beside a 2.4 u wall catches the lip near the apex and climbs ~1.15 u, straight up.
     const wall: MoveWorld = { top: x => (x > 0.5 ? 2.4 : 0), wet: () => false };
     const mantle = run(wall, createMoveState(0.25, 0, wall), i => go({ x: 1, jump: i < 60, jumpPressed: i === 0 }), 240);
     const grab = mantle.find(s => s.mode === "mantle");
     expect(grab && grab.to[1] - grab.from[1]).toBeGreaterThan(1);
-    within(rates(mantle, 1000 / SEND.groundHz));
+    within(mantle);
   });
 });
 

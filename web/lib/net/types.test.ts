@@ -5,7 +5,7 @@ import { REMOTE_EVENTS, areaHeadcount, createRemoteSample, toRemotePlayer } from
 const player = (over: Partial<NetPlayer> = {}): NetPlayer => ({
   sid: 4, uid: "u-1", name: "Alex", badge: 1, look: "{}", level: 12, family: 2, kit: "marksman", mastery: 6, aura: "mastery:colour", frame: 3,
   area: 1, flags: FLAG.mobile | FLAG.showClass, held: "rod:rod-2", weapon: "", pose: "", seat: "", study: 2, studyEnds: 5000,
-  t: 100, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, yaw: 0, move: 0, air: 0, leaf: 0, lift: 0, ...over,
+  t: 100, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, yaw: 0, move: 0, air: 0, leaf: 0, lift: 0, tp: 0, ...over,
 });
 
 describe("toRemotePlayer", () => {
@@ -25,7 +25,7 @@ describe("toRemotePlayer", () => {
     expect(toRemotePlayer(player({ area: 99, family: 99, frame: 99, study: 99, badge: 99 }), 0)).toMatchObject({ area: "village", family: null, frame: null, study: "none", member: false });
   });
   it("covers every schema field but the motion ones", () => {
-    const motion = new Set(["t", "x", "y", "z", "vx", "vy", "vz", "yaw", "move", "air", "leaf", "lift", "flags", "badge"]);
+    const motion = new Set(["t", "x", "y", "z", "vx", "vy", "vz", "yaw", "move", "air", "leaf", "lift", "tp", "flags", "badge"]);
     const keys = Object.keys(toRemotePlayer(player(), 0));
     for (const [f] of NET_PLAYER_FIELDS) if (!motion.has(f)) expect(keys).toContain(f);
   });
