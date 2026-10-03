@@ -27,3 +27,10 @@ export const hostRedirects: Redirect[] = [
 
 /** The title screen is `/` on the play host (it renders /student). */
 export const hostRewrites: Rewrite[] = [{ source: "/", has: [{ type: "host", value: "play\\..+" }], destination: "/student" }];
+
+/** Where "Back to tethos.ca" goes from the portal: across to the site from play hosts, `/` elsewhere. */
+export function siteHomeFor(host: string | null | undefined): string {
+  const h = (host ?? "").toLowerCase();
+  if (!h.startsWith("play.")) return "/";
+  return /(^|\.)tethos\.ca(:\d+)?$/.test(h) ? `${SITE_ORIGIN}/` : `http://${h.slice("play.".length)}/`;
+}

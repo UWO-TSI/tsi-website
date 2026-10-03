@@ -3,6 +3,7 @@ import { getPathMatch } from "next/dist/shared/lib/router/utils/path-match";
 import { matchHas, prepareDestination } from "next/dist/shared/lib/router/utils/prepare-destination";
 import type { IncomingMessage } from "http";
 import nextConfig from "@/next.config";
+import { siteHomeFor } from "./hosts";
 
 // Runs next.config's redirects and beforeFiles rewrites through Next's own matcher, the way the router
 // does: first matching redirect wins; otherwise the first matching rewrite; otherwise the page itself.
@@ -23,7 +24,7 @@ async function route(href: string): Promise<string> {
     if (to) return `redirect ${to}`;
   }
   const rewrites = await nextConfig.rewrites!();
-  for (const r of Array.isArray(rewrites) ? rewrites : rewrites.beforeFiles) {
+  for (const r of Array.isArray(rewrites) ? rewrites : rewrites.beforeFiles ?? []) {
     const to = resolve(r.source, r.destination, r.has);
     if (to) return `page ${new URL(to).pathname}`;
   }
@@ -70,5 +71,17 @@ describe("www.tethos.ca and play.tethos.ca", () => {
     ["http://localhost:3000/student/dashboard", "page /student/dashboard"],
   ])("%s → %s", async (href, expected) => {
     expect(await route(href)).toBe(expected);
+  });
+});
+
+describe("siteHomeFor", () => {
+  it.each([
+    ["play.tethos.ca", "https://www.tethos.ca/"],
+    ["play.localhost:3000", "http://localhost:3000/"],
+    ["www.tethos.ca", "/"],
+    ["uwotsi-abc.vercel.app", "/"],
+    [null, "/"],
+  ])("%s → %s", (host, home) => {
+    expect(siteHomeFor(host)).toBe(home);
   });
 });

@@ -15,11 +15,11 @@ const NAV_ITEMS = [
 ];
 
 const CONTACT = { label: "Contact", href: "mailto:team@tethos.ca" };
-// "Log in" is the game portal login (/student); signed-in accounts skip it to /student/go:
-// the game portal once the member world opens (NEXT_PUBLIC_MEMBER_WORLD), the applicant village until then.
-const LOGIN = { label: "Log in", href: "/student" };
+// "Student portal" is the portal's title screen (/student, play.tethos.ca in production). Signed in, the link stays
+// there once the member world opens (NEXT_PUBLIC_MEMBER_WORLD); until then it is the applicant village.
+const LOGIN = { label: "Student portal", href: "/student" };
 const ACCOUNT = memberWorldIsAvailable()
-  ? { label: "Game portal", href: "/student/dashboard" }
+  ? { label: "Student portal", href: "/student" }
   : { label: "Applicant portal", href: "/student/apply/portal" };
 const ADMIN = { label: "Admin dashboard", href: "/admin/recruit" };
 
