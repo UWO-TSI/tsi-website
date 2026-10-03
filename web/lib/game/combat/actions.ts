@@ -86,7 +86,7 @@ export function attack(rt: CombatRuntime, player: Vec, random = Math.random): bo
     const power = (step?.power ?? 1) + (basic?.hp ? (basic.hp * p.maxHp) / Math.max(1, baseHit(rt)) : 0);
     for (const e of rt.enemies) if (e.state !== "dead" && inArc(player, p.facing, range, arc, e, e.type.radius)) { strike(rt, e, { power, from: player, knock: step?.knock ?? 4, melee: true }, random); landed = true; }
     if (landed) wearHit(rt);
-    if (step) { chainHit(rt, landed); p.clip = { verb: step.clip, scale: speed, upper: false }; }
+    if (step) { chainHit(rt, landed); p.clip = { verb: step.clip, scale: speed, upper: true }; } // punches and cuts over a run (the catalogue says which)
     for (const b of rt.buffs) if (b.swing && b.t > 0) {
       const ctx = context(rt, { key: b.source ?? "swing", name: "", description: "", cooldown_s: 0, energy: 0, effects: b.swing }, player, 1, p.aim);
       ctx.fx = { impact: b.swingFx }; ctx.impact = "ability";

@@ -67,6 +67,7 @@ for t, grip in GRIP.items():
         entry["off"] = [round(v, 3) for v in three_euler(local.to_3x3())]
     if t == "warhammer":
         entry["rest"] = [0.03, -0.24, -1.15]                          # upright at rest, as the staff (Character.tsx GRIP.staff.rest)
+        entry["hand"] = [2.27, 0.0, 0.0]                               # swinging: the haft tilted 40 degrees head-down, so a slam meets the ground
     if t == "handwraps":
         for side, sock, wm in (("R", sr, main), ("L", sl, Matrix.Translation(sl.translation) @ want.to_3x3().to_4x4())):
             bone = rig.pose.bones[f"mixamorig:{'Right' if side == 'R' else 'Left'}Hand"]

@@ -10,6 +10,7 @@ import { SUBCLASS_FOR_TYPE } from "@/lib/oracle/subclass";
 import { FX } from "@/lib/game/fx/combat";
 import { WEAPONS as ISLAND_WEAPONS } from "@/lib/game/combat/data";
 import { gripFor } from "@/lib/game/character/clips";
+import { VERB_BY_NAME } from "@/lib/game/character/look";
 
 const PUBLIC = join(__dirname, "../../public");
 const all = (k: (typeof VANGUARD_KITS)[number]): ClassAbility[] => [...k.keys, k.ult];
@@ -72,6 +73,31 @@ describe("the Vanguard kits (LOCKED sections and the build overrides)", () => {
       expect(existsSync(join(PUBLIC, k.look.icon)), k.look.icon).toBe(true);
       if (k.basic?.throw?.fx) expect(FX[k.basic.throw.fx]).toBeDefined();
     }
+  });
+});
+
+describe("the Vanguard clips (build_clips.py: the kits' own, in the verbs catalogue)", () => {
+  it("every clip a kit names is baked, for its weapon's grip; the ult clips are Ult_<Subclass>", () => {
+    for (const k of VANGUARD_KITS) {
+      const named = [...k.keys.map(a => a.clip), k.ult.clip, k.ult.finish, k.movement?.clip].flatMap(c => (c && "unique" in c ? [c.unique] : []));
+      for (const n of [...named, ...(k.basic?.chain ?? []).map(s => s.clip)]) {
+        const c = VERB_BY_NAME.get(n);
+        expect(c, n).toBeDefined();
+        expect(c!.grip, n).toBe(gripFor(k.signature.type));
+        expect(c!.impact, n).toBeGreaterThan(0);
+        expect(c!.impact, n).toBeLessThan(1);
+      }
+    }
+    expect(["Ult_Guardian", "Ult_Juggernaut", "Ult_MartialArtist", "Ult_Assassin"].every(n => VERB_BY_NAME.has(n))).toBe(true);
+  });
+  it("the Martial Artist's chain: four strikes, the punches over a run, the kick full-body; the eight strikes' clip lands its first at the anticipation", () => {
+    const [jab, cross, hook, kick] = MARTIAL_ARTIST.basic!.chain!.map(s => VERB_BY_NAME.get(s.clip)!);
+    expect([jab.upper, cross.upper, hook.upper, kick.upper]).toEqual([true, true, true, false]);
+    for (const c of [jab, cross, hook]) expect(c.impact * c.length).toBeLessThan(0.16); // the hit lands early: the chain stays quick
+    const ult = VERB_BY_NAME.get("Ult_MartialArtist")!;
+    expect(ult.impact * ult.length).toBeCloseTo(MARTIAL_ARTIST.ult.anticipation_ms / 1000, 2);
+    const clinch = VERB_BY_NAME.get("Unique_ClinchKnees")!;
+    expect(clinch.length).toBeCloseTo(1.4, 1); // the whole technique: three knees at 0.3, 0.7 and 1.1 s
   });
 });
 

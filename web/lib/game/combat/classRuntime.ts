@@ -20,6 +20,8 @@ import type { Vec } from "./sim";
 
 /** The ult's beats in seconds after its anticipation (§1.6): the freeze, then 200 ms more of i-frames; the sequence's presentation lasts this long (after a sustained ult's finisher). */
 export const ULT_BEATS = { freeze: 0.12, iframesAfter: ULT.iframesAfterFreeze, end: 3 } as const;
+/** A first-last ult's finisher clip starts this long before its hit, so the clip's impact key (authored at 0.3 s) lands on it. */
+export const FINISH_LEAD = 0.3;
 /** Seconds after the last threat that you still count as in combat (§1.3). */
 export const IN_COMBAT = 5;
 
@@ -41,7 +43,7 @@ export interface ClassState {
   recast: number[];
   meter: number;
   /** The ult under way: seconds since the press (real time), where it aims, its seed, whether its hits landed (and a first-last ult's finisher). */
-  cast: { t: number; aim: Vec; seed: number; fired: boolean; last?: boolean } | null;
+  cast: { t: number; aim: Vec; seed: number; fired: boolean; last?: boolean; finishing?: boolean } | null;
   moveCd: number;
   combatT: number;
   /** The input layer's clock (real seconds). */
@@ -310,10 +312,10 @@ export function stepClass(rt: CombatRuntime, me: Vec, dt: number, real: number, 
       runEffects(rt, v.ult.effects, ctx, random);
     }
     const span = v.ult.impacts === "first-last" ? v.ult.duration ?? 0 : 0;
+    if (span > 0 && !v.cast.finishing && v.cast.t >= A + span - FINISH_LEAD && p.alive) { v.cast.finishing = true; p.clip = clipOf(v.ult.finish, false) ?? p.clip; }
     if (span > 0 && !v.cast.last && v.cast.t >= A + span && p.alive) { // the finisher: its hits, and the sequence plays again (ultView)
       v.cast.last = true;
       p.ultIframes = ULT_BEATS.freeze + ULT_BEATS.iframesAfter; // nothing lands unseen in this freeze either
-      p.clip = clipOf(v.ult.finish, false) ?? p.clip;
       const ctx = context(rt, v.ult, me, 1, p.aim);
       ctx.impact = "ult"; ctx.ult = true; ctx.fx = v.ult.vfx;
       runEffects(rt, v.ult.release ?? v.ult.effects, ctx, random);

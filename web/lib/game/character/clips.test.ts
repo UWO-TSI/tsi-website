@@ -138,7 +138,7 @@ describe("the verb library (classes v2, design sheet §1.8)", () => {
     expect(GRIP_HAND.Book).toBe("L");
   });
   it("the catalogue carries every verb for every grip (one-shots with an impact key) and a looping hold idle per grip; the GLB ships", () => {
-    expect(VERB_CLIPS).toHaveLength(VERBS.length * GRIPS.length + GRIPS.length);
+    expect(VERB_CLIPS.filter(c => !/^(Unique|Ult)_/.test(c.name))).toHaveLength(VERBS.length * GRIPS.length + GRIPS.length); // and the family waves' own clips
     for (const g of GRIPS) {
       for (const v of VERBS) {
         const info = verbInfo(verbClip(v, g))!;

@@ -43,7 +43,7 @@ const WEAPON_LOOK: Record<string, Look> = {
 const MELEE_HAND: [number, number, number] = [Math.PI / 2, 0, 0], BACK: [number, number, number] = [0, 0, 0.5], MIRRORED: [number, number, number] = [1.942, -0.255, -0.15];
 const SIGNATURE_LOOK: Record<string, Omit<Look, "model">> = {
   aegis: { cooldown: 0.5, range: 1.8, arc: 2.0, modelScale: 1.3, grip: { hand: MELEE_HAND, back: BACK, off: [0.029, 0.238, 1.146] } },
-  warhammer: { cooldown: 0.85, range: 2.2, arc: 2.4, modelScale: 1.3, grip: { hand: MELEE_HAND, back: BACK, rest: [0.03, -0.24, -1.15] } },
+  warhammer: { cooldown: 0.85, range: 2.2, arc: 2.4, modelScale: 1.3, grip: { hand: [2.27, 0, 0], back: BACK, rest: [0.03, -0.24, -1.15] } }, // swinging, the head tilted down to meet the ground
   handwraps: { cooldown: 0.36, range: 1.45, arc: 1.6, modelScale: 1.3, grip: { hand: MELEE_HAND, back: BACK, off: MIRRORED } },
   tanto: { cooldown: 0.4, range: 1.5, arc: 1.9, modelScale: 1.3, grip: { hand: MELEE_HAND, back: BACK, off: MIRRORED } },
 };
