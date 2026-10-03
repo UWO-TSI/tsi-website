@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { VillageButton } from "@/components/recruit/ui";
+import { Badge, Button } from "@/components/gui";
 import { STAT_DIRECTION_LABEL } from "@/lib/combat/classes";
 import { FAMILIES } from "@/lib/game/oracle/family";
 import { classRows, noteClass, noteLine, noteTime, readNotes, type PlaytestNote } from "@/lib/game/combat/playtest";
@@ -30,7 +30,7 @@ export default function ClassPlaytest() {
   const copy = async () => {
     try { await navigator.clipboard.writeText([...notes].reverse().map(noteLine).join("\n")); setCopied(true); window.setTimeout(() => setCopied(false), 1600); } catch { /* no clipboard: the list stays selectable */ }
   };
-  return <main className={css.page}>
+  return <main className={`${css.page} gui`}>
     <h1>Class playtest</h1>
     <p className={css.lead}>Pick a class and a mastery, then play it in the ruins. In there: the wrench (top right) switches class and mastery, fills the ult, turns on god mode and the spawner; the card on the left lists your keys (<b>H</b> hides it); <b>N</b> jots a note that lands at the bottom of this page.</p>
     {ORDER.map(family => <section key={family} className={css.family} style={{ ["--family" as string]: FAMILIES[family].color }} aria-label={family}>
@@ -43,8 +43,8 @@ export default function ClassPlaytest() {
             <span className={css.name}><b>{r.name}</b><small>{r.style === "basic" ? "Basic-attack" : "Skill"} class</small></span>
           </span>
           <span className={css.fantasy}>{r.fantasy}</span>
-          <span className={css.meta}><span className={css.tag}>Builds {STAT_DIRECTION_LABEL[r.stat].toLowerCase()}</span>
-            <span className={css.tag} data-state={r.kit ? "ready" : "coming"}>{r.kit ? "Ready" : "Coming"}</span></span>
+          <span className={css.meta}><Badge tone="gold">Builds {STAT_DIRECTION_LABEL[r.stat].toLowerCase()}</Badge>
+            <Badge tone={r.kit ? "success" : "neutral"}>{r.kit ? "Ready" : "Coming"}</Badge></span>
         </>;
         return r.kit
           ? <button key={r.key} type="button" className={css.card} aria-pressed={picked === r.key} onClick={() => setPicked(r.key)}>{body}</button>
@@ -54,10 +54,10 @@ export default function ClassPlaytest() {
     <div className={css.bar}>
       <span className={css.seg} role="group" aria-label="Mastery">{MASTERY.map(m => <button key={m} type="button" aria-pressed={mastery === m} onClick={() => setMastery(m)}>{m}</button>)}</span>
       <p>{choice?.kit ? <><b>{choice.name}</b> at mastery {mastery}{mastery === 20 ? ", every skill open" : ""}</> : "Pick a class that's ready."}</p>
-      <VillageButton onClick={play} disabled={!choice?.kit}>Play in the ruins</VillageButton>
+      <Button onClick={play} disabled={!choice?.kit}>Play in the ruins</Button>
     </div>
     <section className={css.notes} aria-label="Notes">
-      <header><h2>Notes</h2>{notes.length > 0 && <VillageButton variant="quiet" onClick={copy}>{copied ? "Copied" : "Copy all"}</VillageButton>}</header>
+      <header><h2>Notes</h2>{notes.length > 0 && <Button variant="quiet" onClick={copy}>{copied ? "Copied" : "Copy all"}</Button>}</header>
       {notes.length ? <ol>{notes.map((n, i) => <li key={`${n.at}-${i}`}><small>{noteTime(n)} · {noteClass(n)}</small>{n.text}</li>)}</ol>
         : <p className={css.empty}>No notes yet. In the ruins, press N (or the Note button under the meter), type, and press Enter.</p>}
     </section>
