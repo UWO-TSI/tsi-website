@@ -74,7 +74,7 @@ export default function AdminAnalyticsPage() {
 
   if (loading) {
     return (
-      <p className="text-center py-12 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+      <p className="text-center py-12 text-sm text-[var(--color-text-muted)] animate-pulse">
         Loading analytics...
       </p>
     );
@@ -100,7 +100,7 @@ export default function AdminAnalyticsPage() {
         <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
           Analytics
         </h1>
-        <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+        <p className="text-sm text-[var(--color-text-muted)] mt-1">
           System overview
         </p>
       </div>
@@ -111,11 +111,11 @@ export default function AdminAnalyticsPage() {
             key={stat.label}
             className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4"
           >
-            <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
+            <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
               {stat.label}
             </p>
             <p
-              className="text-2xl font-mono font-bold"
+              className="text-2xl font-bold"
               style={{ color: stat.color }}
             >
               {stat.value}
@@ -126,7 +126,7 @@ export default function AdminAnalyticsPage() {
 
       {/* Tier Distribution */}
       <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-5">
-        <h3 className="text-xs font-mono text-[var(--color-text-muted)] uppercase tracking-wider mb-4">
+        <h3 className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-4">
           Tier Distribution
         </h3>
         <div className="space-y-3">
@@ -150,7 +150,7 @@ export default function AdminAnalyticsPage() {
 
             return (
               <div key={tier}>
-                <div className="flex justify-between text-xs font-mono mb-1">
+                <div className="flex justify-between text-xs mb-1">
                   <span style={{ color: colors[tier] }}>
                     {labels[tier]}
                   </span>

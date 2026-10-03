@@ -66,11 +66,11 @@ export default function RecipeEditor({ mode, initial }: { mode: "new" | "edit"; 
 
   return (
     <div>
-      <Link href={BACK} className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] mb-2">
+      <Link href={BACK} className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] mb-2">
         <ArrowLeft size={12} /> Back to Recipes
       </Link>
       <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">{mode === "new" ? "New recipe" : `Edit: ${initial?.id ?? "Recipe"}`}</h1>
-      <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1 mb-6">Crafted at the HQ workbench from collection items. The output must already exist in the shop catalogue or the weapons list.</p>
+      <p className="text-sm text-[var(--color-text-muted)] mt-1 mb-6">Crafted at the HQ workbench from collection items. The output must already exist in the shop catalogue or the weapons list.</p>
 
       <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6 space-y-5">
         <div className="grid gap-5 md:grid-cols-[1fr_120px]">
@@ -99,17 +99,17 @@ export default function RecipeEditor({ mode, initial }: { mode: "new" | "edit"; 
               <div key={i} className="grid grid-cols-[1fr_96px_auto] gap-2">
                 <input className={inputCls} list="recipe-ingredients" aria-label="Ingredient" value={key} onChange={(e) => setIngredient(i, e.target.value, n)} spellCheck={false} />
                 <input className={inputCls} aria-label="Count" type="number" min={1} max={99} value={n} onChange={(e) => setIngredient(i, key, Number(e.target.value))} />
-                <button type="button" aria-label="Remove ingredient" onClick={() => set("ingredients", form.ingredients.filter((_, j) => j !== i))} className="px-2 text-[var(--color-text-muted)] hover:text-red-400"><Trash2 size={14} /></button>
+                <button type="button" aria-label="Remove ingredient" onClick={() => set("ingredients", form.ingredients.filter((_, j) => j !== i))} className="px-2 text-[var(--color-text-muted)] hover:text-[var(--gui-danger)]"><Trash2 size={14} /></button>
               </div>
             ))}
             <datalist id="recipe-ingredients">{INGREDIENT_KEYS.map((k) => <option key={k} value={k} />)}</datalist>
-            <button type="button" onClick={() => set("ingredients", [...form.ingredients, ["", 1]])} className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-accent-cyan)] hover:underline"><Plus size={12} /> Add ingredient</button>
+            <button type="button" onClick={() => set("ingredients", [...form.ingredients, ["", 1]])} className="inline-flex items-center gap-1 text-xs text-[var(--color-accent-cyan)] hover:underline"><Plus size={12} /> Add ingredient</button>
           </div>
         </Field>
         <Field label="Learned from" hint="Shop recipes also need a recipe card in the shop catalogue (catalogue_ref recipe:<id>)">
           <div className="flex flex-wrap gap-4">
             {RECIPE_SOURCES.map((s) => (
-              <label key={s} className="flex items-center gap-2 text-xs font-mono text-[var(--color-text-primary)]">
+              <label key={s} className="flex items-center gap-2 text-xs text-[var(--color-text-primary)]">
                 <input type="checkbox" checked={form.sources.includes(s)} onChange={(e) => set("sources", e.target.checked ? [...form.sources, s] : form.sources.filter((x) => x !== s))} />
                 {s} <span className="text-[var(--color-text-muted)]">({SOURCE_HINT[s]})</span>
               </label>
@@ -123,7 +123,7 @@ export default function RecipeEditor({ mode, initial }: { mode: "new" | "edit"; 
           </select>
         </Field>
         <Toggle label="Active" hint="Inactive recipes leave every recipe book and can't be crafted." checked={form.active} onChange={(v) => set("active", v)} />
-        {errors.length ? <ul className="text-[0.65rem] font-mono text-red-400 list-disc pl-4">{errors.map((e) => <li key={e}>{e}</li>)}</ul> : null}
+        {errors.length ? <ul className="text-xs text-[var(--gui-danger)] list-disc pl-4">{errors.map((e) => <li key={e}>{e}</li>)}</ul> : null}
       </div>
       <DraftBar flow={flow} canSave={errors.length === 0} onSave={() => flow.save(draft)} />
     </div>

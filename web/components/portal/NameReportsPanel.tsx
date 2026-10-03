@@ -31,16 +31,16 @@ export default function NameReportsPanel({ showEmpty = false }: { showEmpty?: bo
   return (
     <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4 mb-4">
       <h2 className="font-heading font-bold text-[var(--color-text-primary)] mb-2">Name reports ({rows.length} open)</h2>
-      {msg ? <p className="text-xs font-mono text-[var(--color-text-soft)] mb-2">{msg}</p> : null}
+      {msg ? <p className="text-xs text-[var(--color-text-soft)] mb-2">{msg}</p> : null}
       <ul className="space-y-2">
         {rows.map((r) => (
           r.target && <li key={r.id} className="flex flex-wrap items-center gap-3 text-sm">
-            <span className="font-mono text-[var(--color-accent-cyan)]">{r.target.world_name ?? "(no world name)"}</span>
-            <span className="text-[var(--color-text-muted)] font-mono text-xs">{r.target.name} · reported by {r.reporter?.name ?? "A former member"} · {new Date(r.created_at).toLocaleDateString()}{r.reason ? ` · “${r.reason}”` : ""}</span>
+            <span className="text-[var(--color-accent-cyan)]">{r.target.world_name ?? "(no world name)"}</span>
+            <span className="text-[var(--color-text-muted)] text-xs">{r.target.name} · reported by {r.reporter?.name ?? "A former member"} · {new Date(r.created_at).toLocaleDateString()}{r.reason ? ` · “${r.reason}”` : ""}</span>
             <span className="ml-auto flex gap-2">
-              <button onClick={() => act(r.target!.id, "reset_name")} className="px-2 py-1 border border-red-500/40 text-red-400 font-mono text-xs rounded">Reset name</button>
-              <button onClick={() => act(r.target!.id, "mute")} className="px-2 py-1 border border-[var(--glass-border)] font-mono text-xs rounded text-[var(--color-text-primary)]">Mute 7d</button>
-              <button onClick={() => act(r.target!.id, "dismiss")} className="px-2 py-1 border border-[var(--glass-border)] font-mono text-xs rounded text-[var(--color-text-muted)]">Dismiss</button>
+              <button onClick={() => act(r.target!.id, "reset_name")} className="px-2 py-1 border border-[var(--gui-danger)]/30 text-[var(--gui-danger)] text-xs rounded">Reset name</button>
+              <button onClick={() => act(r.target!.id, "mute")} className="px-2 py-1 border border-[var(--glass-border)] text-xs rounded text-[var(--color-text-primary)]">Mute 7d</button>
+              <button onClick={() => act(r.target!.id, "dismiss")} className="px-2 py-1 border border-[var(--glass-border)] text-xs rounded text-[var(--color-text-muted)]">Dismiss</button>
             </span>
           </li>
         ))}

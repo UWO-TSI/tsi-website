@@ -100,11 +100,11 @@ export default function ClubGoalEditor({ mode, initial, seasonal = false }: { mo
 
   return (
     <div>
-      <Link href={BACK} className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] mb-2">
+      <Link href={BACK} className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] mb-2">
         <ArrowLeft size={12} /> Back to {seasonal ? "Seasonal Events" : "Club Goals"}
       </Link>
       <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">{mode === "new" ? `New ${noun}` : `Edit: ${initial?.title ?? noun}`}</h1>
-      <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1 mb-6">Default size: about two weeks for 20–30 active members (~30 check-ins or ~15,000 coins).</p>
+      <p className="text-sm text-[var(--color-text-muted)] mt-1 mb-6">Default size: about two weeks for 20–30 active members (~30 check-ins or ~15,000 coins).</p>
 
       <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6 space-y-5">
         <div className="grid gap-5 md:grid-cols-[1fr_1fr_120px]">
@@ -123,7 +123,7 @@ export default function ClubGoalEditor({ mode, initial, seasonal = false }: { mo
           <input className={inputCls} type="number" min={1} value={form.target_points} onChange={(e) => set("target_points", Number(e.target.value))} />
         </Field>
         <fieldset>
-          <legend className="block text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">Weights (points per unit)</legend>
+          <legend className="block text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">Weights (points per unit)</legend>
           <div className="grid gap-3 md:grid-cols-3">
             {(Object.keys(WEIGHT_LABELS) as WeightKey[]).map((k) => (
               <Field key={k} label={WEIGHT_LABELS[k]}>
@@ -143,7 +143,7 @@ export default function ClubGoalEditor({ mode, initial, seasonal = false }: { mo
         <Field label="Accepts deliveries of">
           <div className="flex gap-4">
             {DELIVERY_KINDS.map((k) => (
-              <label key={k} className="flex items-center gap-2 text-xs font-mono text-[var(--color-text-primary)]">
+              <label key={k} className="flex items-center gap-2 text-xs text-[var(--color-text-primary)]">
                 <input type="checkbox" checked={form.accepts.includes(k)} onChange={(e) => set("accepts", e.target.checked ? [...form.accepts, k] : form.accepts.filter((x) => x !== k))} />
                 {k}
               </label>
@@ -170,7 +170,7 @@ export default function ClubGoalEditor({ mode, initial, seasonal = false }: { mo
         </Field>
         {form.goal_type === "seasonal" ? (
           <fieldset className="space-y-4 border-t border-[var(--glass-border)] pt-5">
-            <legend className="block text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">Event (while the window is open)</legend>
+            <legend className="block text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">Event (while the window is open)</legend>
             <div className="grid gap-5 md:grid-cols-2">
               <Field label="Decorations" hint="What goes up around the plaza for the window">
                 <select className={inputCls} value={form.decor} onChange={(e) => set("decor", e.target.value)}>
@@ -192,7 +192,7 @@ export default function ClubGoalEditor({ mode, initial, seasonal = false }: { mo
           </fieldset>
         ) : null}
         <Toggle label="Active" hint="Inactive goals are hidden and take no contributions." checked={form.active} onChange={(v) => set("active", v)} />
-        {errors.length ? <ul className="text-[0.65rem] font-mono text-red-400 list-disc pl-4">{errors.map((e) => <li key={e}>{e}</li>)}</ul> : null}
+        {errors.length ? <ul className="text-xs text-[var(--gui-danger)] list-disc pl-4">{errors.map((e) => <li key={e}>{e}</li>)}</ul> : null}
       </div>
       <DraftBar flow={flow} canSave={errors.length === 0} onSave={() => flow.save(draft)} />
     </div>

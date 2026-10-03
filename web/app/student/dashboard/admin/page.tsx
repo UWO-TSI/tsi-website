@@ -141,7 +141,7 @@ export default function AdminPage() {
           <h2 className="text-lg font-heading font-bold text-[var(--color-text-primary)] mb-2">
             Access Denied
           </h2>
-          <p className="text-sm font-mono text-[var(--color-text-muted)]">
+          <p className="text-sm text-[var(--color-text-muted)]">
             T1/T2 clearance required for admin access.
           </p>
         </div>
@@ -155,7 +155,7 @@ export default function AdminPage() {
         <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
           Admin Panel
         </h1>
-        <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+        <p className="text-sm text-[var(--color-text-muted)] mt-1">
           System management · T{userTier} access
         </p>
       </div>
@@ -180,10 +180,10 @@ export default function AdminPage() {
               key={stat.label}
               className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4"
             >
-              <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
+              <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
                 {stat.label}
               </p>
-              <p className="text-2xl font-mono font-bold text-[var(--color-text-primary)]">
+              <p className="text-2xl font-bold text-[var(--color-text-primary)]">
                 {stat.value}
                 {stat.total !== undefined && (
                   <span className="text-sm text-[var(--color-text-muted)] font-normal">

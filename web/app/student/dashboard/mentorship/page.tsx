@@ -255,7 +255,7 @@ export default function MentorshipPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <p className="font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+        <p className="text-sm text-[var(--color-text-muted)] animate-pulse">
           Loading mentorship data...
         </p>
       </div>
@@ -269,7 +269,7 @@ export default function MentorshipPage() {
         <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
           Mentorship
         </h1>
-        <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+        <p className="text-sm text-[var(--color-text-muted)] mt-1">
           Learn from experienced members or guide the next generation
         </p>
       </div>
@@ -278,7 +278,7 @@ export default function MentorshipPage() {
       <div className="flex items-center gap-1 bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md p-1 w-fit">
         <button
           onClick={() => setTab("find")}
-          className={`px-4 py-2 rounded text-sm font-mono transition-all ${
+          className={`px-4 py-2 rounded text-sm transition-all ${
             tab === "find"
               ? "bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)]"
               : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
@@ -288,7 +288,7 @@ export default function MentorshipPage() {
         </button>
         <button
           onClick={() => setTab("my")}
-          className={`px-4 py-2 rounded text-sm font-mono transition-all ${
+          className={`px-4 py-2 rounded text-sm transition-all ${
             tab === "my"
               ? "bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)]"
               : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
@@ -310,7 +310,7 @@ export default function MentorshipPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md pl-9 pr-4 py-2.5 font-mono text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)] transition-all"
+              className="w-full bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md pl-9 pr-4 py-2.5 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)] transition-all"
               placeholder="Search by name, skill, or class..."
             />
           </div>
@@ -319,7 +319,7 @@ export default function MentorshipPage() {
           {filteredMentors.length === 0 ? (
             <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-8 text-center">
               <Users size={32} className="text-[var(--color-text-muted)] mx-auto mb-3" />
-              <p className="text-sm text-[var(--color-text-muted)] font-mono">
+              <p className="text-sm text-[var(--color-text-muted)]">
                 No mentors found. Check back later or become one yourself.
               </p>
             </div>
@@ -336,7 +336,7 @@ export default function MentorshipPage() {
                   >
                     <div className="flex items-start gap-3 mb-3">
                       <div className="w-10 h-10 rounded-full bg-[var(--color-brand-blue)]/10 border border-[var(--color-brand-blue)]/20 flex items-center justify-center shrink-0">
-                        <span className="text-sm font-mono text-[var(--color-brand-blue)]">
+                        <span className="text-sm text-[var(--color-brand-blue)]">
                           {mentor.profile.display_name?.[0]?.toUpperCase()}
                         </span>
                       </div>
@@ -344,7 +344,7 @@ export default function MentorshipPage() {
                         <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
                           {mentor.profile.display_name}
                         </h3>
-                        <div className="flex items-center gap-2 text-[0.6rem] font-mono">
+                        <div className="flex items-center gap-2 text-xs">
                           <span className="text-[var(--color-brand-blue)]">
                             {mentor.profile.class}
                           </span>
@@ -355,10 +355,10 @@ export default function MentorshipPage() {
                         </div>
                       </div>
                       <div
-                        className={`px-2 py-0.5 rounded text-[0.6rem] font-mono ${
+                        className={`px-2 py-0.5 rounded text-xs ${
                           isFull
-                            ? "bg-red-500/10 text-red-400"
-                            : "bg-green-500/10 text-green-400"
+                            ? "bg-[var(--gui-danger-soft)] text-[var(--gui-danger)]"
+                            : "bg-[var(--gui-success-soft)] text-[var(--gui-success)]"
                         }`}
                       >
                         {isFull ? "Full" : "Open"}
@@ -370,7 +370,7 @@ export default function MentorshipPage() {
                       {mentor.skills.map((skill) => (
                         <span
                           key={skill}
-                          className="text-[0.6rem] font-mono px-1.5 py-0.5 rounded bg-[var(--color-accent-cyan)]/10 text-[var(--color-accent-cyan)] border border-[var(--color-accent-cyan)]/20"
+                          className="text-xs px-1.5 py-0.5 rounded bg-[var(--color-accent-cyan)]/10 text-[var(--color-accent-cyan)] border border-[var(--color-accent-cyan)]/20"
                         >
                           {skill}
                         </span>
@@ -379,7 +379,7 @@ export default function MentorshipPage() {
 
                     {/* Meta */}
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 text-[0.6rem] font-mono text-[var(--color-text-muted)]">
+                      <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
                         <span className="flex items-center gap-1">
                           <Users size={10} />
                           {mentor.mentee_count}/{mentor.max_mentees} mentees
@@ -392,7 +392,7 @@ export default function MentorshipPage() {
                       <button
                         onClick={() => requestMentorship(mentor.user_id)}
                         disabled={isFull || alreadyRequested}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold transition-all ${
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
                           alreadyRequested
                             ? "border border-[var(--color-brand-yellow)]/30 text-[var(--color-brand-yellow)] bg-[var(--color-brand-yellow)]/10"
                             : isFull
@@ -427,7 +427,7 @@ export default function MentorshipPage() {
           {/* My Mentor */}
           <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-hidden">
             <div className="px-4 py-3 border-b border-[var(--glass-border)]">
-              <h2 className="text-xs font-mono text-[var(--color-text-muted)] uppercase tracking-wider">
+              <h2 className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
                 // My Mentor
               </h2>
             </div>
@@ -435,7 +435,7 @@ export default function MentorshipPage() {
               {myMentor ? (
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-[var(--color-brand-blue)]/10 border border-[var(--color-brand-blue)]/20 flex items-center justify-center">
-                    <span className="text-lg font-mono text-[var(--color-brand-blue)]">
+                    <span className="text-lg text-[var(--color-brand-blue)]">
                       {myMentor.mentor_profile?.display_name?.[0]?.toUpperCase()}
                     </span>
                   </div>
@@ -443,7 +443,7 @@ export default function MentorshipPage() {
                     <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
                       {myMentor.mentor_profile?.display_name}
                     </h3>
-                    <div className="flex items-center gap-2 text-xs font-mono">
+                    <div className="flex items-center gap-2 text-xs">
                       <span className="text-[var(--color-brand-blue)]">
                         {myMentor.mentor_profile?.class}
                       </span>
@@ -453,10 +453,10 @@ export default function MentorshipPage() {
                       </span>
                     </div>
                     <span
-                      className={`text-[0.6rem] font-mono mt-1 inline-block px-2 py-0.5 rounded ${
+                      className={`text-xs mt-1 inline-block px-2 py-0.5 rounded ${
                         myMentor.status === "active"
-                          ? "bg-green-500/10 text-green-400"
-                          : "bg-yellow-500/10 text-yellow-400"
+                          ? "bg-[var(--gui-success-soft)] text-[var(--gui-success)]"
+                          : "bg-yellow-500/10 text-[var(--gui-warn)]"
                       }`}
                     >
                       {myMentor.status === "active" ? "Active" : "Pending"}
@@ -464,7 +464,7 @@ export default function MentorshipPage() {
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-[var(--color-text-muted)] italic font-mono">
+                <p className="text-sm text-[var(--color-text-muted)] italic">
                   You don&apos;t have a mentor yet. Browse the &quot;Find a Mentor&quot; tab to request one.
                 </p>
               )}
@@ -474,7 +474,7 @@ export default function MentorshipPage() {
           {/* Become a Mentor / Mentor Settings */}
           <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-hidden">
             <div className="px-4 py-3 border-b border-[var(--glass-border)] flex items-center justify-between">
-              <h2 className="text-xs font-mono text-[var(--color-text-muted)] uppercase tracking-wider flex items-center gap-2">
+              <h2 className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider flex items-center gap-2">
                 <Shield size={14} />
                 Mentor Mode
               </h2>
@@ -497,26 +497,26 @@ export default function MentorshipPage() {
             {(showMentorForm || myMentorProfile?.is_mentor) && (
               <div className="p-4 space-y-4">
                 <div>
-                  <label className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider">
+                  <label className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
                     Skills (comma-separated)
                   </label>
                   <input
                     value={mentorSkills}
                     onChange={(e) => setMentorSkills(e.target.value)}
-                    className="mt-1 w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)]"
+                    className="mt-1 w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)]"
                     placeholder="React, TypeScript, System Design, Leadership"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider">
+                    <label className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
                       Availability
                     </label>
                     <select
                       value={mentorAvailability}
                       onChange={(e) => setMentorAvailability(e.target.value)}
-                      className="mt-1 w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand-blue)]"
+                      className="mt-1 w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand-blue)]"
                     >
                       <option value="weekly">Weekly</option>
                       <option value="biweekly">Bi-weekly</option>
@@ -525,7 +525,7 @@ export default function MentorshipPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider">
+                    <label className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
                       Max Mentees
                     </label>
                     <div className="mt-1 flex items-center gap-2">
@@ -535,7 +535,7 @@ export default function MentorshipPage() {
                       >
                         <Minus size={14} />
                       </button>
-                      <span className="text-sm font-mono text-[var(--color-text-primary)] w-8 text-center">
+                      <span className="text-sm text-[var(--color-text-primary)] w-8 text-center">
                         {mentorMaxMentees}
                       </span>
                       <button
@@ -549,14 +549,14 @@ export default function MentorshipPage() {
                 </div>
 
                 <div>
-                  <label className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider">
+                  <label className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
                     Mentor Bio
                   </label>
                   <textarea
                     value={mentorBio}
                     onChange={(e) => setMentorBio(e.target.value)}
                     rows={3}
-                    className="mt-1 w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)] resize-none"
+                    className="mt-1 w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)] resize-none"
                     placeholder="What can you help mentees with?"
                   />
                 </div>
@@ -564,7 +564,7 @@ export default function MentorshipPage() {
                 <button
                   onClick={saveMentorProfile}
                   disabled={savingMentor}
-                  className="px-4 py-2 rounded-md bg-[var(--color-brand-blue)] text-white text-sm font-mono font-bold hover:brightness-110 transition-all disabled:opacity-50"
+                  className="px-4 py-2 rounded-md bg-[var(--color-brand-blue)] text-white text-sm font-bold hover:brightness-110 transition-all disabled:opacity-50"
                 >
                   {savingMentor ? "Saving..." : "Save Mentor Profile"}
                 </button>
@@ -573,7 +573,7 @@ export default function MentorshipPage() {
 
             {!showMentorForm && !myMentorProfile?.is_mentor && (
               <div className="p-4">
-                <p className="text-sm text-[var(--color-text-muted)] italic font-mono">
+                <p className="text-sm text-[var(--color-text-muted)] italic">
                   Enable Mentor Mode to start mentoring other members.
                 </p>
               </div>
@@ -584,7 +584,7 @@ export default function MentorshipPage() {
           {myMentorProfile?.is_mentor && pendingRequests.length > 0 && (
             <div className="bg-[var(--color-bg-alt)] border border-[var(--color-brand-yellow)]/20 rounded-lg overflow-hidden">
               <div className="px-4 py-3 border-b border-[var(--glass-border)]">
-                <h2 className="text-xs font-mono text-[var(--color-brand-yellow)] uppercase tracking-wider flex items-center gap-2">
+                <h2 className="text-xs text-[var(--color-brand-yellow)] uppercase tracking-wider flex items-center gap-2">
                   <Sparkles size={14} />
                   Pending Requests ({pendingRequests.length})
                 </h2>
@@ -597,7 +597,7 @@ export default function MentorshipPage() {
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-[var(--color-brand-blue)]/10 border border-[var(--color-brand-blue)]/20 flex items-center justify-center">
-                        <span className="text-xs font-mono text-[var(--color-brand-blue)]">
+                        <span className="text-xs text-[var(--color-brand-blue)]">
                           {req.mentee_profile?.display_name?.[0]?.toUpperCase()}
                         </span>
                       </div>
@@ -605,7 +605,7 @@ export default function MentorshipPage() {
                         <p className="text-sm font-bold text-[var(--color-text-primary)]">
                           {req.mentee_profile?.display_name}
                         </p>
-                        <p className="text-[0.6rem] font-mono text-[var(--color-text-muted)]">
+                        <p className="text-xs text-[var(--color-text-muted)]">
                           {req.mentee_profile?.class} · LV{req.mentee_profile?.level}
                         </p>
                       </div>
@@ -613,13 +613,13 @@ export default function MentorshipPage() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleRequest(req.id, true)}
-                        className="p-1.5 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"
+                        className="p-1.5 rounded bg-[var(--gui-success-soft)] text-[var(--gui-success)] hover:bg-[var(--gui-success-soft)] transition-colors"
                       >
                         <Check size={14} />
                       </button>
                       <button
                         onClick={() => handleRequest(req.id, false)}
-                        className="p-1.5 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                        className="p-1.5 rounded bg-[var(--gui-danger-soft)] text-[var(--gui-danger)] hover:bg-[var(--gui-danger-soft)] transition-colors"
                       >
                         <X size={14} />
                       </button>
@@ -634,14 +634,14 @@ export default function MentorshipPage() {
           {myMentorProfile?.is_mentor && (
             <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-hidden">
               <div className="px-4 py-3 border-b border-[var(--glass-border)]">
-                <h2 className="text-xs font-mono text-[var(--color-text-muted)] uppercase tracking-wider flex items-center gap-2">
+                <h2 className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider flex items-center gap-2">
                   <Users size={14} />
                   My Mentees ({myMentees.length})
                 </h2>
               </div>
               <div className="p-4">
                 {myMentees.length === 0 ? (
-                  <p className="text-sm text-[var(--color-text-muted)] italic font-mono">
+                  <p className="text-sm text-[var(--color-text-muted)] italic">
                     No active mentees yet.
                   </p>
                 ) : (
@@ -652,7 +652,7 @@ export default function MentorshipPage() {
                         className="flex items-center gap-3 bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-lg p-3"
                       >
                         <div className="w-8 h-8 rounded-full bg-[var(--color-accent-cyan)]/10 border border-[var(--color-accent-cyan)]/20 flex items-center justify-center">
-                          <span className="text-xs font-mono text-[var(--color-accent-cyan)]">
+                          <span className="text-xs text-[var(--color-accent-cyan)]">
                             {mentee.mentee_profile?.display_name?.[0]?.toUpperCase()}
                           </span>
                         </div>
@@ -660,7 +660,7 @@ export default function MentorshipPage() {
                           <p className="text-sm font-bold text-[var(--color-text-primary)]">
                             {mentee.mentee_profile?.display_name}
                           </p>
-                          <p className="text-[0.6rem] font-mono text-[var(--color-text-muted)]">
+                          <p className="text-xs text-[var(--color-text-muted)]">
                             {mentee.mentee_profile?.class} · LV{mentee.mentee_profile?.level}{" "}
                             {mentee.mentee_profile?.rank}
                           </p>

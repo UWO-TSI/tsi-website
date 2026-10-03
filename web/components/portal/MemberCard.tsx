@@ -61,13 +61,13 @@ export default function MemberCard({ member }: MemberCardProps) {
       </div>
 
       {/* Tier Badge */}
-      <span className="shrink-0 font-mono" style={{ height: "22px", padding: "0 8px", fontSize: "12px", fontWeight: 600, lineHeight: "22px", borderRadius: "9999px", background: tc.bg, color: tc.color }}
+      <span className="shrink-0 " style={{ height: "22px", padding: "0 8px", fontSize: "12px", fontWeight: 600, lineHeight: "22px", borderRadius: "9999px", background: tc.bg, color: tc.color }}
         aria-label={`Tier ${member.tier}`}>
         T{member.tier}
       </span>
 
       {/* Level */}
-      <span className="shrink-0 font-mono text-right" style={{ width: "48px", fontSize: "14px", fontWeight: 500, color: "var(--color-text-soft)" }}>
+      <span className="shrink-0 text-right" style={{ width: "48px", fontSize: "14px", fontWeight: 500, color: "var(--color-text-soft)" }}>
         Lv.{member.level}
       </span>
 

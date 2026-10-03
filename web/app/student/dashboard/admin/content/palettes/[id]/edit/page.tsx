@@ -10,8 +10,8 @@ export default function EditPalettePage({ params }: { params: Promise<{ id: stri
   const { row, loading, error } = useContentRow<SeasonalPalette>("seasonal_palettes", id);
   return (
     <AdminGate>
-      {loading ? <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">Loading...</p> : null}
-      {!loading && (error || !row) ? <p className="text-center py-8 font-mono text-sm text-red-400">{error ?? "Palette not found"}</p> : null}
+      {loading ? <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">Loading...</p> : null}
+      {!loading && (error || !row) ? <p className="text-center py-8 text-sm text-[var(--gui-danger)]">{error ?? "Palette not found"}</p> : null}
       {row ? <PaletteEditor mode="edit" rowId={id} initial={row} /> : null}
     </AdminGate>
   );

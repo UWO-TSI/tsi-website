@@ -89,7 +89,7 @@ export default function ShopView({ transport = shopReadTransport }: { transport?
             </div>
             <h1 className="text-2xl font-bold" style={{ color: "var(--color-text-main)" }}>Shop</h1>
           </div>
-          <div className="font-mono text-sm" role="status" style={{ color: "#ffd166" }}>
+          <div className="text-sm" role="status" style={{ color: "#ffd166" }}>
             <span className="flex items-center gap-1.5"><Coins className="w-4 h-4" aria-hidden />
               {balanceState === "ready" && balance !== null ? `${balance.toLocaleString()} TSI` : balanceState === "loading" ? "Loading balance…" : balanceState === "signed-out" ? "Sign in to view your balance" : "Balance unavailable"}
             </span>
@@ -161,7 +161,7 @@ export default function ShopView({ transport = shopReadTransport }: { transport?
                   <h3 className="text-base font-semibold mb-1 line-clamp-2" style={{ color: "#f1ffff" }}>{p.name}</h3>
                   <div className="flex items-center gap-2">
                     {p.price_tc != null ? (
-                      <span className="font-mono text-sm" style={{ color: "#ffd166" }}>{p.price_tc} 💎</span>
+                      <span className="text-sm" style={{ color: "#ffd166" }}>{p.price_tc} 💎</span>
                     ) : p.price_cad != null && <span className="text-base font-bold" style={{ color: "#f1ffff" }}>${p.price_cad.toFixed(2)}</span>}
                   </div>
                 </div>
@@ -201,7 +201,7 @@ export default function ShopView({ transport = shopReadTransport }: { transport?
             <h2 id={detailTitleId} className="text-2xl font-bold mb-2" style={{ color: "var(--color-text-main)" }}>{selected.name}</h2>
             <div className="flex items-center gap-3 mb-4">
               {selected.price_tc != null ? (
-                <span className="font-mono text-base" style={{ color: "#ffd166" }}>{selected.price_tc} 💎</span>
+                <span className="text-base" style={{ color: "#ffd166" }}>{selected.price_tc} 💎</span>
               ) : selected.price_cad != null && <span className="text-2xl font-bold" style={{ color: "var(--color-text-main)" }}>${selected.price_cad.toFixed(2)}</span>}
             </div>
             {selected.description && <p className="text-sm mb-6" style={{ color: "var(--color-text-soft)" }}>{selected.description}</p>}

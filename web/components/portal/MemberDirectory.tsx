@@ -112,17 +112,17 @@ export default function MemberDirectory() {
       {filterOpen && (
         <div className="mb-4 p-3" style={{ background: "var(--color-surface)", border: "1px solid var(--glass-border-soft)", borderRadius: "8px", boxShadow: "var(--shadow-soft)" }}>
           <div className="mb-3">
-            <label className="block mb-2 font-mono uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Tier</label>
+            <label className="block mb-2 uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Tier</label>
             <div className="flex gap-2 flex-wrap">
               {([1, 2, 3, 4, 5] as Tier[]).map((tier) => {
                 const selected = tierFilter.has(tier); const tc = TIER_COLORS[tier];
-                return (<button key={tier} onClick={() => toggleTier(tier)} className="font-mono transition-colors"
+                return (<button key={tier} onClick={() => toggleTier(tier)} className="transition-colors"
                   style={{ height: "28px", padding: "0 12px", fontSize: "12px", borderRadius: "9999px", background: selected ? tc.bg : "transparent", border: selected ? `1px solid ${tc.color}` : "1px solid var(--gray-700)", color: selected ? tc.color : "var(--color-text-muted)" }}>T{tier}</button>);
               })}
             </div>
           </div>
           <div className="mb-3">
-            <label htmlFor="dir-class-filter" className="block mb-2 font-mono uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Class</label>
+            <label htmlFor="dir-class-filter" className="block mb-2 uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Class</label>
             <select
               id="dir-class-filter"
               value={classFilter}
@@ -134,7 +134,7 @@ export default function MemberDirectory() {
             </select>
           </div>
           <div className="mb-3">
-            <label htmlFor="dir-year-filter" className="block mb-2 font-mono uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Year</label>
+            <label htmlFor="dir-year-filter" className="block mb-2 uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Year</label>
             <select
               id="dir-year-filter"
               value={yearFilter}
@@ -150,7 +150,7 @@ export default function MemberDirectory() {
             </select>
           </div>
           <div>
-            <label className="block mb-2 font-mono uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Status</label>
+            <label className="block mb-2 uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Status</label>
             <div className="flex gap-2">
               {(["active", "all"] as const).map((s) => (
                 <button key={s} onClick={() => setStatusFilter(s)} className="transition-colors capitalize"

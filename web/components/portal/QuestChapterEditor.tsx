@@ -63,11 +63,11 @@ export default function QuestChapterEditor({ mode, initial, goalSlugs }: { mode:
 
   return (
     <div>
-      <Link href={BACK} className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] mb-2">
+      <Link href={BACK} className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] mb-2">
         <ArrowLeft size={12} /> Back to Main Quest
       </Link>
       <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">{mode === "new" ? "New Chapter" : `Edit: ${initial?.title ?? "Chapter"}`}</h1>
-      <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1 mb-6">Drafts stay invisible to members until published. Every publish is versioned.</p>
+      <p className="text-sm text-[var(--color-text-muted)] mt-1 mb-6">Drafts stay invisible to members until published. Every publish is versioned.</p>
 
       <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6 space-y-5">
         <div className="grid gap-5 md:grid-cols-[1fr_120px]">
@@ -98,7 +98,7 @@ export default function QuestChapterEditor({ mode, initial, goalSlugs }: { mode:
           </Field>
         ) : null}
         <fieldset className="space-y-3">
-          <legend className="block text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">Step copy</legend>
+          <legend className="block text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">Step copy</legend>
           {STEP_KEYS[form.requirement].map((k) => (
             <div key={k} className="grid gap-2 md:grid-cols-[140px_1fr_1fr] items-center">
               <code className="text-xs text-[var(--color-accent-cyan)]">{k}</code>
@@ -127,7 +127,7 @@ export default function QuestChapterEditor({ mode, initial, goalSlugs }: { mode:
           <input className={inputCls} type="number" min={0} max={5000} value={form.reward_coins} onChange={(e) => set("reward_coins", Number(e.target.value))} />
         </Field>
         <Toggle label="Active" hint="Inactive chapters are hidden from the journal." checked={form.active} onChange={(v) => set("active", v)} />
-        {errors.length ? <ul className="text-[0.65rem] font-mono text-red-400 list-disc pl-4">{errors.map((e) => <li key={e}>{e}</li>)}</ul> : null}
+        {errors.length ? <ul className="text-xs text-[var(--gui-danger)] list-disc pl-4">{errors.map((e) => <li key={e}>{e}</li>)}</ul> : null}
       </div>
       <DraftBar flow={flow} canSave={errors.length === 0} onSave={() => flow.save(draft)} />
     </div>

@@ -65,7 +65,7 @@ export default function RAGPage() {
       <div className="mb-4 shrink-0">
         <Link
           href="/student/dashboard/tools"
-          className="inline-flex items-center gap-1.5 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-brand-blue)] transition-colors mb-3"
+          className="inline-flex items-center gap-1.5 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-brand-blue)] transition-colors mb-3"
         >
           <ArrowLeft size={12} />
           Back to Tools
@@ -78,13 +78,13 @@ export default function RAGPage() {
             <h1 className="text-lg font-heading font-bold text-[var(--color-text-primary)]">
               TETHOS RAG
             </h1>
-            <p className="text-[0.6rem] font-mono text-[var(--color-text-muted)]">
+            <p className="text-xs text-[var(--color-text-muted)]">
               AI Assistant &middot; TSI Knowledge Base
             </p>
           </div>
           <div className="ml-auto flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-[var(--color-brand-yellow)] animate-pulse" />
-            <span className="text-[0.6rem] font-mono text-[var(--color-brand-yellow)]">
+            <span className="text-xs text-[var(--color-brand-yellow)]">
               STANDBY
             </span>
           </div>
@@ -100,7 +100,7 @@ export default function RAGPage() {
             <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
             <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
           </div>
-          <span className="text-[0.6rem] font-mono text-[var(--color-text-muted)] ml-2">
+          <span className="text-xs text-[var(--color-text-muted)] ml-2">
             tethos-rag@tsi ~ /knowledge-base
           </span>
         </div>
@@ -140,7 +140,7 @@ export default function RAGPage() {
                     }`}
                   >
                     <p
-                      className={`text-sm font-mono leading-relaxed ${
+                      className={`text-sm leading-relaxed ${
                         msg.role === "assistant"
                           ? "text-[var(--color-accent-cyan)]"
                           : "text-[var(--color-text-primary)]"
@@ -152,7 +152,7 @@ export default function RAGPage() {
                       {msg.content}
                     </p>
                   </div>
-                  <span className="text-[0.55rem] font-mono text-[var(--color-text-muted)] mt-1 block px-1">
+                  <span className="text-xs text-[var(--color-text-muted)] mt-1 block px-1">
                     {msg.timestamp.toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -170,7 +170,7 @@ export default function RAGPage() {
                   <Bot size={12} className="text-[var(--color-accent-cyan)]" />
                 </div>
                 <div className="bg-[var(--color-bg-main)] border border-[var(--color-accent-cyan)]/10 rounded-lg px-3.5 py-2.5">
-                  <span className="text-sm font-mono text-[var(--color-accent-cyan)] animate-pulse">
+                  <span className="text-sm text-[var(--color-accent-cyan)] animate-pulse">
                     &gt; processing query...
                   </span>
                 </div>
@@ -184,7 +184,7 @@ export default function RAGPage() {
         {/* Input */}
         <div className="border-t border-[var(--glass-border)] p-3 bg-[var(--color-bg-main)]">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-mono text-[var(--color-accent-cyan)] shrink-0">$</span>
+            <span className="text-sm text-[var(--color-accent-cyan)] shrink-0">$</span>
             <input
               type="text"
               value={input}
@@ -192,7 +192,7 @@ export default function RAGPage() {
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder="Enter query..."
               disabled={isTyping}
-              className="flex-1 bg-transparent font-mono text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none caret-[var(--color-accent-cyan)] disabled:opacity-50"
+              className="flex-1 bg-transparent text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none caret-[var(--color-accent-cyan)] disabled:opacity-50"
             />
             <button
               onClick={handleSend}

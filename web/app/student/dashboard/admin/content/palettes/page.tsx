@@ -59,7 +59,7 @@ export default function AdminContentPalettesPage() {
         <div className="mb-2">
           <Link
             href="/student/dashboard/admin"
-            className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+            className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
           >
             <ArrowLeft size={12} />
             Back to Admin
@@ -71,30 +71,30 @@ export default function AdminContentPalettesPage() {
             <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
               Seasonal Palettes
             </h1>
-            <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+            <p className="text-sm text-[var(--color-text-muted)] mt-1">
               {palettes?.length ?? 0} total
             </p>
           </div>
           <Link
             href="/student/dashboard/admin/content/palettes/new"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 transition-opacity"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] text-xs uppercase tracking-wider rounded-md hover:opacity-90 transition-opacity"
           >
             <Plus size={14} /> New Palette
           </Link>
         </div>
 
         {fetchError && (
-          <p className="mb-4 text-xs font-mono text-[var(--color-text-muted)]">
+          <p className="mb-4 text-xs text-[var(--color-text-muted)]">
             Supabase read failed ({fetchError}) — showing bundled defaults.
           </p>
         )}
 
         {palettes === null ? (
-          <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+          <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
             Loading palettes...
           </p>
         ) : palettes.length === 0 ? (
-          <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)]">
+          <p className="text-center py-8 text-sm text-[var(--color-text-muted)]">
             No palettes defined yet.
           </p>
         ) : (
@@ -114,12 +114,12 @@ export default function AdminContentPalettesPage() {
                     <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
                       {p.display_name}
                     </h3>
-                    <p className="text-[0.65rem] font-mono text-[var(--color-accent-cyan)]">
+                    <p className="text-xs text-[var(--color-accent-cyan)]">
                       {p.slug}
                     </p>
                   </div>
                   <span
-                    className={`text-[0.6rem] font-mono uppercase px-2 py-0.5 rounded ${
+                    className={`text-xs uppercase px-2 py-0.5 rounded ${
                       p.active
                         ? "text-[var(--color-brand-blue)] bg-[var(--color-brand-blue)]/10"
                         : "text-[var(--color-text-muted)] bg-[var(--color-text-muted)]/10"
@@ -146,7 +146,7 @@ export default function AdminContentPalettesPage() {
                           className="w-8 h-8 rounded border border-[var(--glass-border)]"
                           style={{ backgroundColor: color }}
                         />
-                        <span className="text-[0.55rem] font-mono text-[var(--color-text-muted)]">
+                        <span className="text-xs text-[var(--color-text-muted)]">
                           {key}
                         </span>
                       </div>
@@ -154,7 +154,7 @@ export default function AdminContentPalettesPage() {
                   })}
                 </div>
 
-                <div className="text-[0.65rem] font-mono text-[var(--color-text-muted)] space-y-0.5 mb-3">
+                <div className="text-xs text-[var(--color-text-muted)] space-y-0.5 mb-3">
                   <p>
                     Start:{" "}
                     {p.scheduled_start
@@ -172,13 +172,13 @@ export default function AdminContentPalettesPage() {
                 <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-[var(--glass-border)]/40">
                   <Link
                     href={`/student/dashboard/admin/content/palettes/${p.id}/edit`}
-                    className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-accent-cyan)] hover:underline"
+                    className="inline-flex items-center gap-1 text-xs text-[var(--color-accent-cyan)] hover:underline"
                   >
                     <Pencil size={12} /> Edit
                   </Link>
                   <Link
                     href={`/student/dashboard/admin/content/palettes/${p.id}/history`}
-                    className="text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-accent-cyan)] transition-colors"
+                    className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-accent-cyan)] transition-colors"
                   >
                     History
                   </Link>

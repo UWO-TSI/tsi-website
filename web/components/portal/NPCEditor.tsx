@@ -178,7 +178,7 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
       <div className="mb-2">
         <Link
           href={BACK}
-          className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+          className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
         >
           <ArrowLeft size={12} />
           Back to Residents
@@ -189,7 +189,7 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
         <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
           {mode === "new" ? "New resident" : `Edit: ${initial?.display_name ?? "Resident"}`}
         </h1>
-        <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+        <p className="text-sm text-[var(--color-text-muted)] mt-1">
           Drafts stay invisible to members until published.
         </p>
       </div>
@@ -269,7 +269,7 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
               };
               return (
                 <div key={phase} className="block">
-                  <span className="block text-[0.6rem] font-mono uppercase text-[var(--color-text-muted)] mb-1">{phase}</span>
+                  <span className="block text-xs uppercase text-[var(--color-text-muted)] mb-1">{phase}</span>
                   {stops.map((stop, i) => (
                     <div key={i} className="flex gap-1 mb-1">
                       <select value={stop} onChange={(e) => set(stops.map((s, j) => (j === i ? (e.target.value as ResidentStop) : s)))} className={inputCls} aria-label={`${phase} stop ${i + 1}`}>
@@ -322,9 +322,9 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
             placeholder="You are Marigold, the cheerful merchant of the courtyard..."
           />
           <p
-            className={`mt-1 text-[0.65rem] font-mono ${
+            className={`mt-1 text-xs ${
               promptOver
-                ? "text-red-400"
+                ? "text-[var(--gui-danger)]"
                 : promptWarn
                   ? "text-[var(--color-brand-yellow)]"
                   : "text-[var(--color-text-muted)]"
@@ -351,7 +351,7 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
                 <button
                   type="button"
                   onClick={() => handleRemoveLine(idx)}
-                  className="px-2 py-2 text-[var(--color-text-muted)] hover:text-red-400 transition-colors"
+                  className="px-2 py-2 text-[var(--color-text-muted)] hover:text-[var(--gui-danger)] transition-colors"
                   aria-label="Remove line"
                 >
                   <Trash2 size={14} />
@@ -361,7 +361,7 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
             <button
               type="button"
               onClick={handleAddLine}
-              className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-accent-cyan)] hover:underline"
+              className="inline-flex items-center gap-1 text-xs text-[var(--color-accent-cyan)] hover:underline"
             >
               <Plus size={12} /> Add line
             </button>
@@ -388,14 +388,14 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
         />
       </div>
 
-      {errors.length ? <ul className="mt-4 text-[0.65rem] font-mono text-red-400 list-disc pl-4">{errors.map((e) => <li key={e}>{e}</li>)}</ul> : null}
+      {errors.length ? <ul className="mt-4 text-xs text-[var(--gui-danger)] list-disc pl-4">{errors.map((e) => <li key={e}>{e}</li>)}</ul> : null}
       <DraftBar flow={flow} canSave={errors.length === 0} onSave={() => flow.save(draft)} />
       {flow.draftId ? (
         <a
           href={`/student/dashboard?preview=draft-${flow.draftId}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 inline-flex items-center gap-2 px-4 py-2 border border-[var(--glass-border)] text-[var(--color-text-primary)] font-mono text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] transition-colors"
+          className="mt-3 inline-flex items-center gap-2 px-4 py-2 border border-[var(--glass-border)] text-[var(--color-text-primary)] text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] transition-colors"
         >
           <ExternalLink size={12} /> Preview
         </a>

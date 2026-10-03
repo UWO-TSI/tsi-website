@@ -9,7 +9,7 @@ export default function NewEventPage() {
 
   if (loading) {
     return (
-      <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+      <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
         Loading...
       </p>
     );
@@ -27,7 +27,7 @@ export default function NewEventPage() {
           <h2 className="text-lg font-heading font-bold text-[var(--color-text-primary)] mb-2">
             Access Denied
           </h2>
-          <p className="text-sm font-mono text-[var(--color-text-muted)]">
+          <p className="text-sm text-[var(--color-text-muted)]">
             T1/T2 clearance required for content admin.
           </p>
         </div>

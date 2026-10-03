@@ -74,7 +74,7 @@ export default function PrintEventPage({
 
   if (loading || rowLoading) {
     return (
-      <p className="text-center py-8 font-mono text-sm text-gray-500 animate-pulse">
+      <p className="text-center py-8 text-sm text-gray-500 animate-pulse">
         Loading...
       </p>
     );
@@ -96,7 +96,7 @@ export default function PrintEventPage({
   if (error || !row) {
     return (
       <div className="min-h-screen bg-white text-black text-center py-8">
-        <p className="font-mono text-sm text-red-600">
+        <p className="text-sm text-[var(--gui-danger)]">
           {error ?? "Event not found"}
         </p>
       </div>

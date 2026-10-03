@@ -118,7 +118,7 @@ export default function QuestsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+        <p className="text-sm text-[var(--color-text-muted)] animate-pulse">
           Loading quests...
         </p>
       </div>
@@ -134,20 +134,20 @@ export default function QuestsPage() {
             <Sword size={24} className="text-[var(--color-brand-blue)]" />
             Quest Board
           </h1>
-          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+          <p className="text-sm text-[var(--color-text-muted)] mt-1">
             Complete quests to earn XP and Tethos Coins
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5 text-sm font-mono">
+          <div className="flex items-center gap-1.5 text-sm">
             <Zap size={14} className="text-[var(--color-brand-blue)]" />
             <span className="text-[var(--color-text-muted)]">Active:</span>
             <span className="text-[var(--color-brand-blue)] font-bold">{activeCount}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-sm font-mono">
-            <Check size={14} className="text-green-400" />
+          <div className="flex items-center gap-1.5 text-sm">
+            <Check size={14} className="text-[var(--gui-success)]" />
             <span className="text-[var(--color-text-muted)]">Done:</span>
-            <span className="text-green-400 font-bold">{completedCount}</span>
+            <span className="text-[var(--gui-success)] font-bold">{completedCount}</span>
           </div>
         </div>
       </div>
@@ -160,7 +160,7 @@ export default function QuestsPage() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded text-xs font-mono transition-all capitalize ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded text-xs transition-all capitalize ${
                 tab === t
                   ? "bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)]"
                   : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
@@ -195,7 +195,7 @@ export default function QuestsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     {isCompleted && (
-                      <Check size={16} className="text-green-400 shrink-0" />
+                      <Check size={16} className="text-[var(--gui-success)] shrink-0" />
                     )}
                     <h3
                       className={`text-sm font-heading font-bold ${
@@ -207,7 +207,7 @@ export default function QuestsPage() {
                       {quest.title}
                     </h3>
                     {isAccepted && (
-                      <span className="text-[0.55rem] font-mono px-1.5 py-0.5 rounded bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)] uppercase">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)] uppercase">
                         Active
                       </span>
                     )}
@@ -228,13 +228,13 @@ export default function QuestsPage() {
                   {/* Rewards */}
                   <div className="flex items-center gap-3 mt-2.5">
                     {quest.xp_reward > 0 && (
-                      <span className="flex items-center gap-1 text-[0.65rem] font-mono text-[var(--color-brand-blue)]">
+                      <span className="flex items-center gap-1 text-xs text-[var(--color-brand-blue)]">
                         <Star size={12} />
                         {quest.xp_reward} XP
                       </span>
                     )}
                     {quest.tc_reward > 0 && (
-                      <span className="flex items-center gap-1 text-[0.65rem] font-mono text-[var(--color-brand-yellow)]">
+                      <span className="flex items-center gap-1 text-xs text-[var(--color-brand-yellow)]">
                         <Coins size={12} />
                         {quest.tc_reward} &#x20AE;
                       </span>
@@ -245,20 +245,20 @@ export default function QuestsPage() {
                 {/* Action Button */}
                 <div className="shrink-0">
                   {isCompleted ? (
-                    <span className="text-[0.65rem] font-mono text-green-400 px-3 py-1.5 rounded border border-green-500/20 bg-green-500/5">
+                    <span className="text-xs text-[var(--gui-success)] px-3 py-1.5 rounded border border-[var(--gui-success)]/30 bg-[var(--gui-success-soft)]">
                       Completed
                     </span>
                   ) : isAccepted ? (
                     <button
                       onClick={() => completeQuest(quest.id)}
-                      className="text-xs font-mono px-3 py-1.5 rounded bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20 transition-colors"
+                      className="text-xs px-3 py-1.5 rounded bg-[var(--gui-success-soft)] text-[var(--gui-success)] border border-[var(--gui-success)]/30 hover:bg-[var(--gui-success-soft)] transition-colors"
                     >
                       Complete
                     </button>
                   ) : (
                     <button
                       onClick={() => acceptQuest(quest.id)}
-                      className="text-xs font-mono px-3 py-1.5 rounded bg-[var(--color-brand-blue)] text-white hover:bg-[var(--color-brand-blue)]/80 transition-colors"
+                      className="text-xs px-3 py-1.5 rounded bg-[var(--color-brand-blue)] text-white hover:bg-[var(--color-brand-blue)]/80 transition-colors"
                     >
                       Accept Quest
                     </button>
@@ -272,7 +272,7 @@ export default function QuestsPage() {
         {filteredQuests.length === 0 && (
           <div className="text-center py-12">
             <Sword size={32} className="text-[var(--color-text-muted)] mx-auto mb-2" />
-            <p className="font-mono text-sm text-[var(--color-text-muted)]">
+            <p className="text-sm text-[var(--color-text-muted)]">
               No {tab} quests available right now.
             </p>
           </div>

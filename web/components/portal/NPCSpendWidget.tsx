@@ -68,7 +68,7 @@ export default function NPCSpendWidget() {
             <h3 className="text-sm font-heading font-bold text-[var(--color-text-primary)]">
               NPC Spend
             </h3>
-            <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)]">
+            <p className="text-xs text-[var(--color-text-muted)]">
               {data?.month ?? "this month"} · T1 only
             </p>
           </div>
@@ -84,21 +84,21 @@ export default function NPCSpendWidget() {
       </div>
 
       {error ? (
-        <p className="text-xs font-mono text-red-400">
+        <p className="text-xs text-[var(--gui-danger)]">
           Failed to load spend data.
         </p>
       ) : !data ? (
-        <p className="text-xs font-mono text-[var(--color-text-muted)] animate-pulse">
+        <p className="text-xs text-[var(--color-text-muted)] animate-pulse">
           Loading spend...
         </p>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div>
-              <p className="text-[0.6rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1">
+              <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1">
                 Tokens (in / out)
               </p>
-              <p className="text-xl font-mono font-bold text-[var(--color-text-primary)]">
+              <p className="text-xl font-bold text-[var(--color-text-primary)]">
                 {formatTokens(data.tokens_in)}
                 <span className="text-sm text-[var(--color-text-muted)] font-normal">
                   {" "}
@@ -107,10 +107,10 @@ export default function NPCSpendWidget() {
               </p>
             </div>
             <div>
-              <p className="text-[0.6rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1">
+              <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1">
                 Estimated cost
               </p>
-              <p className="text-xl font-mono font-bold text-[var(--color-text-primary)]">
+              <p className="text-xl font-bold text-[var(--color-text-primary)]">
                 ${data.estimated_cost_usd.toFixed(4)}
               </p>
             </div>
@@ -118,11 +118,11 @@ export default function NPCSpendWidget() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
             <div>
-              <p className="text-[0.6rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
+              <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
                 Top chattiest users
               </p>
               {data.top_users.length === 0 ? (
-                <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)]">
+                <p className="text-xs text-[var(--color-text-muted)]">
                   —
                 </p>
               ) : (
@@ -135,7 +135,7 @@ export default function NPCSpendWidget() {
                       <span className="text-[var(--color-text-soft)] truncate">
                         {u.name}
                       </span>
-                      <span className="font-mono text-[0.65rem] text-[var(--color-text-muted)]">
+                      <span className="text-xs text-[var(--color-text-muted)]">
                         {u.interactions}
                       </span>
                     </li>
@@ -144,11 +144,11 @@ export default function NPCSpendWidget() {
               )}
             </div>
             <div>
-              <p className="text-[0.6rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
+              <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
                 Top NPCs
               </p>
               {data.top_npcs.length === 0 ? (
-                <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)]">
+                <p className="text-xs text-[var(--color-text-muted)]">
                   —
                 </p>
               ) : (
@@ -161,7 +161,7 @@ export default function NPCSpendWidget() {
                       <span className="text-[var(--color-text-soft)] truncate">
                         {n.name}
                       </span>
-                      <span className="font-mono text-[0.65rem] text-[var(--color-text-muted)]">
+                      <span className="text-xs text-[var(--color-text-muted)]">
                         {n.interactions}
                       </span>
                     </li>

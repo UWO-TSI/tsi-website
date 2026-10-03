@@ -63,7 +63,7 @@ export default function ImageUploadButton({
 
   const btnCls =
     className ??
-    "inline-flex items-center gap-2 px-3 py-2 border border-[var(--glass-border)] text-[var(--color-text-primary)] font-mono text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
+    "inline-flex items-center gap-2 px-3 py-2 border border-[var(--glass-border)] text-[var(--color-text-primary)] text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
 
   return (
     <div className="mt-2">
@@ -93,7 +93,7 @@ export default function ImageUploadButton({
         )}
       </button>
       {error ? (
-        <p className="mt-1 text-xs font-mono text-[var(--color-accent-red,#ff6b6b)]">
+        <p className="mt-1 text-xs text-[var(--color-accent-red,#ff6b6b)]">
           {error}
         </p>
       ) : null}

@@ -11,22 +11,22 @@ import { useUser } from "@/components/portal/UserContext";
 import { createClient } from "@/lib/supabase/client";
 
 export const inputCls =
-  "w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--glass-border)] rounded-md text-sm text-[var(--color-text-primary)] font-mono focus:outline-none focus:border-[var(--color-accent-cyan)] transition-colors";
+  "w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--glass-border)] rounded-md text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-cyan)] transition-colors";
 export const primaryBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
+  "inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
 export const publishBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
+  "inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
 export const dangerBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 border border-red-500/40 text-red-400 font-mono text-xs uppercase tracking-wider rounded-md hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
-export const thCls = "text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]";
+  "inline-flex items-center gap-2 px-4 py-2 border border-[var(--gui-danger)]/30 text-[var(--gui-danger)] text-xs uppercase tracking-wider rounded-md hover:bg-[var(--gui-danger-soft)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
+export const thCls = "text-left px-4 py-3 text-xs  uppercase tracking-wider text-[var(--color-text-muted)]";
 
 export function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: ReactNode }) {
   return (
     <div>
-      <label className="block text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">{label}</label>
+      <label className="block text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">{label}</label>
       {children}
-      {hint && !error ? <p className="mt-1 text-[0.65rem] font-mono text-[var(--color-text-muted)]/70">{hint}</p> : null}
-      {error ? <p className="mt-1 text-[0.65rem] font-mono text-red-400">{error}</p> : null}
+      {hint && !error ? <p className="mt-1 text-xs text-[var(--color-text-muted)]/70">{hint}</p> : null}
+      {error ? <p className="mt-1 text-xs text-[var(--gui-danger)]">{error}</p> : null}
     </div>
   );
 }
@@ -44,8 +44,8 @@ export function Toggle({ label, hint, checked, onChange }: { label: string; hint
         <span className={`inline-block h-4 w-4 mt-0.5 transform rounded-full bg-white transition-transform ${checked ? "translate-x-6" : "translate-x-1"}`} />
       </button>
       <div className="flex-1">
-        <span className="block text-xs font-mono text-[var(--color-text-primary)]">{label}</span>
-        {hint ? <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)]/70 mt-0.5">{hint}</p> : null}
+        <span className="block text-xs text-[var(--color-text-primary)]">{label}</span>
+        {hint ? <p className="text-xs text-[var(--color-text-muted)]/70 mt-0.5">{hint}</p> : null}
       </div>
     </div>
   );
@@ -53,14 +53,14 @@ export function Toggle({ label, hint, checked, onChange }: { label: string; hint
 
 export function AdminGate({ children }: { children: ReactNode }) {
   const { profile, loading } = useUser();
-  if (loading) return <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">Loading...</p>;
+  if (loading) return <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">Loading...</p>;
   if ((profile?.tier ?? 5) > 2) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <Shield size={48} className="mx-auto text-[var(--color-text-muted)]/20 mb-4" />
           <h2 className="text-lg font-heading font-bold text-[var(--color-text-primary)] mb-2">Access Denied</h2>
-          <p className="text-sm font-mono text-[var(--color-text-muted)]">T1/T2 clearance required for content admin.</p>
+          <p className="text-sm text-[var(--color-text-muted)]">T1/T2 clearance required for content admin.</p>
         </div>
       </div>
     );
@@ -145,7 +145,7 @@ export function DraftBar({ flow, canSave, onSave }: { flow: ReturnType<typeof us
   return (
     <>
       {flow.message ? (
-        <div className={`mt-4 p-3 rounded-md text-xs font-mono border ${flow.message.kind === "ok" ? "bg-green-400/10 border-green-400/30 text-green-400" : "bg-red-400/10 border-red-400/30 text-red-400"}`}>
+        <div className={`mt-4 p-3 rounded-md text-xs border ${flow.message.kind === "ok" ? "bg-[var(--gui-success-soft)] border-[var(--gui-success)]/30 text-[var(--gui-success)]" : "bg-[var(--gui-danger-soft)] border-[var(--gui-danger)]/30 text-[var(--gui-danger)]"}`}>
           {flow.message.text}
         </div>
       ) : null}

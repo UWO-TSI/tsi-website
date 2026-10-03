@@ -328,7 +328,7 @@ export default function SettingsPage() {
               }}
             >
               <h2
-                className="font-mono uppercase tracking-wider mb-4"
+                className="uppercase tracking-wider mb-4"
                 style={{ fontSize: 12, color: "var(--color-error, #ef4444)" }}
               >
                 Danger Zone
@@ -390,7 +390,7 @@ function TabPanel({ id, children }: { id: TabKey; children: React.ReactNode }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-8">
-      <h2 className="text-sm font-mono uppercase tracking-wider mb-4" style={{ color: "var(--color-text-subtle)" }}>{title}</h2>
+      <h2 className="text-sm uppercase tracking-wider mb-4" style={{ color: "var(--color-text-subtle)" }}>{title}</h2>
       <div className="rounded-2xl space-y-4" style={{ background: "var(--color-surface)", border: "1px solid var(--glass-border-soft)", padding: 20 }}>
         {children}
       </div>

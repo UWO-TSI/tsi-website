@@ -217,7 +217,7 @@ export default function AdminNPCConversationsPage() {
 
   if (loading) {
     return (
-      <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+      <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
         Loading...
       </p>
     );
@@ -234,7 +234,7 @@ export default function AdminNPCConversationsPage() {
           <h2 className="text-lg font-heading font-bold text-[var(--color-text-primary)] mb-2">
             Access Denied
           </h2>
-          <p className="text-sm font-mono text-[var(--color-text-muted)]">
+          <p className="text-sm text-[var(--color-text-muted)]">
             T1/T2 clearance required for moderation.
           </p>
         </div>
@@ -247,7 +247,7 @@ export default function AdminNPCConversationsPage() {
       <div className="mb-2">
         <Link
           href="/student/dashboard/admin"
-          className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+          className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
         >
           <ArrowLeft size={12} />
           Back to Admin
@@ -258,7 +258,7 @@ export default function AdminNPCConversationsPage() {
         <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
           NPC Conversation Moderation
         </h1>
-        <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+        <p className="text-sm text-[var(--color-text-muted)] mt-1">
           Review flagged NPC conversations; resolve, wipe memory, or delete.
         </p>
       </div>
@@ -327,7 +327,7 @@ export default function AdminNPCConversationsPage() {
                 }}
                 className="w-4 h-4"
               />
-              <span className="text-xs font-mono text-[var(--color-text-soft)]">
+              <span className="text-xs text-[var(--color-text-soft)]">
                 Show flagged only
               </span>
             </label>
@@ -345,7 +345,7 @@ export default function AdminNPCConversationsPage() {
                 setFlaggedOnly(true);
                 setPage(0);
               }}
-              className="text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-accent-cyan)] transition-colors"
+              className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-accent-cyan)] transition-colors"
             >
               Reset filters
             </button>
@@ -354,17 +354,17 @@ export default function AdminNPCConversationsPage() {
       </div>
 
       {fetchError ? (
-        <p className="mb-4 p-3 rounded-md text-xs font-mono border bg-red-400/10 border-red-400/30 text-red-400">
+        <p className="mb-4 p-3 rounded-md text-xs border bg-[var(--gui-danger-soft)] border-[var(--gui-danger)]/30 text-[var(--gui-danger)]">
           {fetchError}
         </p>
       ) : null}
 
       {rows === null ? (
-        <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+        <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
           Loading conversations...
         </p>
       ) : rows.length === 0 ? (
-        <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)]">
+        <p className="text-center py-8 text-sm text-[var(--color-text-muted)]">
           No conversations match the current filters.
         </p>
       ) : (
@@ -399,10 +399,10 @@ export default function AdminNPCConversationsPage() {
                   <tr
                     key={r.id}
                     className={`border-b border-[var(--glass-border)]/40 last:border-b-0 ${
-                      r.flagged ? "bg-red-400/5" : ""
+                      r.flagged ? "bg-[var(--gui-danger-soft)]" : ""
                     }`}
                   >
-                    <td className="px-3 py-3 font-mono text-[0.7rem] text-[var(--color-text-soft)] whitespace-nowrap">
+                    <td className="px-3 py-3 text-xs text-[var(--color-text-soft)] whitespace-nowrap">
                       {formatDateTime(r.created_at)}
                     </td>
                     <td className="px-3 py-3 text-[var(--color-text-primary)] text-xs">
@@ -422,7 +422,7 @@ export default function AdminNPCConversationsPage() {
                               [userKey]: !p[userKey],
                             }))
                           }
-                          className="ml-2 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--color-accent-cyan)] hover:underline"
+                          className="ml-2 text-xs uppercase tracking-wider text-[var(--color-accent-cyan)] hover:underline"
                         >
                           {showUserFull ? "less" : "more"}
                         </button>
@@ -439,7 +439,7 @@ export default function AdminNPCConversationsPage() {
                               [npcKey]: !p[npcKey],
                             }))
                           }
-                          className="ml-2 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--color-accent-cyan)] hover:underline"
+                          className="ml-2 text-xs uppercase tracking-wider text-[var(--color-accent-cyan)] hover:underline"
                         >
                           {showNpcFull ? "less" : "more"}
                         </button>
@@ -447,11 +447,11 @@ export default function AdminNPCConversationsPage() {
                     </td>
                     <td className="px-3 py-3">
                       {r.flagged ? (
-                        <span className="inline-flex items-center gap-1 text-[0.6rem] font-mono uppercase px-2 py-0.5 rounded text-red-400 bg-red-400/10">
+                        <span className="inline-flex items-center gap-1 text-xs uppercase px-2 py-0.5 rounded text-[var(--gui-danger)] bg-[var(--gui-danger-soft)]">
                           <Flag size={10} /> Flagged
                         </span>
                       ) : (
-                        <span className="text-[0.6rem] font-mono uppercase text-[var(--color-text-muted)]">
+                        <span className="text-xs uppercase text-[var(--color-text-muted)]">
                           —
                         </span>
                       )}
@@ -463,7 +463,7 @@ export default function AdminNPCConversationsPage() {
                             type="button"
                             disabled={busyId === r.id}
                             onClick={() => resolveRow(r.id)}
-                            className="text-[0.6rem] font-mono uppercase tracking-wider text-green-400 hover:underline disabled:opacity-40"
+                            className="text-xs uppercase tracking-wider text-[var(--gui-success)] hover:underline disabled:opacity-40"
                           >
                             Mark Resolved
                           </button>
@@ -476,7 +476,7 @@ export default function AdminNPCConversationsPage() {
                             !r.user_id
                           }
                           onClick={() => wipeMemory(r.npc_id, r.user_id)}
-                          className="text-[0.6rem] font-mono uppercase tracking-wider text-[var(--color-accent-cyan)] hover:underline disabled:opacity-40"
+                          className="text-xs uppercase tracking-wider text-[var(--color-accent-cyan)] hover:underline disabled:opacity-40"
                         >
                           Wipe Memory
                         </button>
@@ -491,7 +491,7 @@ export default function AdminNPCConversationsPage() {
       )}
 
       <div className="mt-4 flex items-center justify-between gap-3">
-        <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)]">
+        <p className="text-xs text-[var(--color-text-muted)]">
           Page {page + 1}
         </p>
         <div className="flex gap-2">
@@ -499,7 +499,7 @@ export default function AdminNPCConversationsPage() {
             type="button"
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
-            className="px-3 py-1.5 border border-[var(--glass-border)] text-[var(--color-text-primary)] font-mono text-[0.65rem] uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="px-3 py-1.5 border border-[var(--glass-border)] text-[var(--color-text-primary)] text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             Prev
           </button>
@@ -507,7 +507,7 @@ export default function AdminNPCConversationsPage() {
             type="button"
             onClick={() => setPage((p) => p + 1)}
             disabled={!hasMore}
-            className="px-3 py-1.5 border border-[var(--glass-border)] text-[var(--color-text-primary)] font-mono text-[0.65rem] uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="px-3 py-1.5 border border-[var(--glass-border)] text-[var(--color-text-primary)] text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             Next
           </button>
@@ -520,11 +520,11 @@ export default function AdminNPCConversationsPage() {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const inputCls =
-  "w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--glass-border)] rounded-md text-sm text-[var(--color-text-primary)] font-mono focus:outline-none focus:border-[var(--color-accent-cyan)] transition-colors";
+  "w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--glass-border)] rounded-md text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-cyan)] transition-colors";
 
 function Th({ children }: { children: React.ReactNode }) {
   return (
-    <th className="text-left px-3 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+    <th className="text-left px-3 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
       {children}
     </th>
   );
@@ -539,7 +539,7 @@ function FilterField({
 }) {
   return (
     <div>
-      <label className="block text-[0.6rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
+      <label className="block text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
         {label}
       </label>
       {children}

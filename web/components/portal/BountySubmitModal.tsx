@@ -222,7 +222,7 @@ export default function BountySubmitModal({
         >
           <div className="min-w-0">
             <p
-              className="text-[11px] font-mono uppercase tracking-wider"
+              className="text-xs uppercase tracking-wider"
               style={{ color: "var(--color-text-subtle)" }}
             >
               Submit deliverables
@@ -238,7 +238,7 @@ export default function BountySubmitModal({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="shrink-0 ml-3 rounded-lg p-1.5 hover:bg-white/5"
+            className="shrink-0 ml-3 rounded-lg p-1.5 hover:bg-[var(--surface-hover)]"
             style={{ color: "var(--color-text-muted)" }}
           >
             <X className="w-5 h-5" />
@@ -310,7 +310,7 @@ export default function BountySubmitModal({
           {canSubmit && !loadingHistory && (
             <>
               <label
-                className="block text-[11px] font-mono uppercase tracking-wider mb-2"
+                className="block text-xs uppercase tracking-wider mb-2"
                 style={{ color: "var(--color-text-subtle)" }}
               >
                 Describe your work
@@ -332,7 +332,7 @@ export default function BountySubmitModal({
                 }}
               />
               <div
-                className="text-[11px] font-mono mt-1"
+                className="text-xs mt-1"
                 style={{ color: "var(--color-text-subtle)" }}
               >
                 {text.length} / {MAX_TEXT}
@@ -340,7 +340,7 @@ export default function BountySubmitModal({
 
               {/* Link attachments */}
               <label
-                className="block text-[11px] font-mono uppercase tracking-wider mt-5 mb-2"
+                className="block text-xs uppercase tracking-wider mt-5 mb-2"
                 style={{ color: "var(--color-text-subtle)" }}
               >
                 Link to deliverables (repo, doc, demo...)
@@ -464,7 +464,7 @@ export default function BountySubmitModal({
           {!loadingHistory && submissions.length > 0 && (
             <div className="mt-6">
               <p
-                className="text-[11px] font-mono uppercase tracking-wider mb-2"
+                className="text-xs uppercase tracking-wider mb-2"
                 style={{ color: "var(--color-text-subtle)" }}
               >
                 {submissions.length === 1
@@ -602,7 +602,7 @@ function AttachmentRow({
         type="button"
         onClick={onRemove}
         aria-label="Remove attachment"
-        className="rounded p-1 hover:bg-white/5"
+        className="rounded p-1 hover:bg-[var(--surface-hover)]"
         style={{ color: "var(--color-text-muted)" }}
       >
         <X className="w-3 h-3" />
@@ -649,7 +649,7 @@ function PastSubmissionRow({ submission }: { submission: BountySubmission }) {
     >
       <div className="flex items-center justify-between mb-1">
         <span
-          className="font-mono uppercase tracking-wider px-2 py-0.5 rounded"
+          className="uppercase tracking-wider px-2 py-0.5 rounded"
           style={{
             background: meta.bg,
             color: meta.color,

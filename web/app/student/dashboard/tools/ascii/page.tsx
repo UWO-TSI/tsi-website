@@ -46,7 +46,7 @@ export default function AsciiConverterPage() {
               <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
               <div className="w-3 h-3 rounded-full bg-green-500/60" />
             </div>
-            <span className="text-[0.65rem] font-mono text-[var(--color-text-muted)] ml-2 flex items-center gap-1.5">
+            <span className="text-xs font-mono text-[var(--color-text-muted)] ml-2 flex items-center gap-1.5">
               <Terminal size={12} />
               ascii-converter v0.1
             </span>
@@ -54,7 +54,7 @@ export default function AsciiConverterPage() {
 
           {/* Terminal Body */}
           <div className="p-6">
-            <pre className="font-mono text-[0.55rem] leading-tight text-[var(--color-accent-cyan)] mb-6 overflow-x-auto">
+            <pre className="font-mono text-xs leading-tight text-[var(--color-accent-cyan)] mb-6 overflow-x-auto">
               {asciiArt}
             </pre>
 
@@ -69,22 +69,22 @@ export default function AsciiConverterPage() {
             </div>
 
             <div className="mt-6 space-y-1">
-              <p className="font-mono text-[0.65rem] text-[var(--color-text-muted)]">
+              <p className="font-mono text-xs text-[var(--color-text-muted)]">
                 <span className="text-[var(--color-accent-cyan)]">$</span> ascii-convert --help
               </p>
-              <p className="font-mono text-[0.65rem] text-[var(--color-text-muted)]">
+              <p className="font-mono text-xs text-[var(--color-text-muted)]">
                 Usage: ascii-convert [OPTIONS] &lt;input&gt;
               </p>
-              <p className="font-mono text-[0.65rem] text-[var(--color-text-muted)]">
+              <p className="font-mono text-xs text-[var(--color-text-muted)]">
                 &nbsp;&nbsp;--width &lt;cols&gt;&nbsp;&nbsp;&nbsp;Output width (default: 80)
               </p>
-              <p className="font-mono text-[0.65rem] text-[var(--color-text-muted)]">
+              <p className="font-mono text-xs text-[var(--color-text-muted)]">
                 &nbsp;&nbsp;--charset &lt;set&gt;&nbsp;&nbsp;Character set: standard, blocks, braille
               </p>
-              <p className="font-mono text-[0.65rem] text-[var(--color-text-muted)]">
+              <p className="font-mono text-xs text-[var(--color-text-muted)]">
                 &nbsp;&nbsp;--invert&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Invert brightness
               </p>
-              <p className="font-mono text-[0.65rem] text-[var(--color-brand-yellow)] mt-2">
+              <p className="font-mono text-xs text-[var(--color-brand-yellow)] mt-2">
                 <span className="text-[var(--color-accent-cyan)]">$</span> _<span className="animate-pulse">|</span>
               </p>
             </div>

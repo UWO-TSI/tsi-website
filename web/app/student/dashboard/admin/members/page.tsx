@@ -94,7 +94,7 @@ export default function AdminMembersPage() {
   };
 
   const tierColors: Record<number, string> = {
-    1: "text-red-400",
+    1: "text-[var(--gui-danger)]",
     2: "text-[var(--color-brand-yellow)]",
     3: "text-[var(--color-brand-blue)]",
     4: "text-[var(--color-text-muted)]",
@@ -108,7 +108,7 @@ export default function AdminMembersPage() {
           <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
             Member Management
           </h1>
-          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+          <p className="text-sm text-[var(--color-text-muted)] mt-1">
             {members.length} total accounts · {members.filter((m) => m.membership === "member").length} members
           </p>
         </div>
@@ -123,13 +123,13 @@ export default function AdminMembersPage() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md pl-9 pr-4 py-2.5 font-mono text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)] transition-all"
+          className="w-full bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md pl-9 pr-4 py-2.5 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)] transition-all"
           placeholder="Search by name or email..."
         />
       </div>
 
       {loading ? (
-        <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+        <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
           Loading members...
         </p>
       ) : (
@@ -137,25 +137,25 @@ export default function AdminMembersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--glass-border)]">
-                <th className="text-left px-4 py-3 font-mono text-[0.65rem] text-[var(--color-text-muted)] uppercase tracking-wider">
+                <th className="text-left px-4 py-3 text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
                   Member
                 </th>
-                <th className="text-left px-4 py-3 font-mono text-[0.65rem] text-[var(--color-text-muted)] uppercase tracking-wider">
+                <th className="text-left px-4 py-3 text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
                   Tier
                 </th>
-                <th className="text-left px-4 py-3 font-mono text-[0.65rem] text-[var(--color-text-muted)] uppercase tracking-wider">
+                <th className="text-left px-4 py-3 text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
                   Membership
                 </th>
-                <th className="text-left px-4 py-3 font-mono text-[0.65rem] text-[var(--color-text-muted)] uppercase tracking-wider">
+                <th className="text-left px-4 py-3 text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
                   Level
                 </th>
-                <th className="text-left px-4 py-3 font-mono text-[0.65rem] text-[var(--color-text-muted)] uppercase tracking-wider">
+                <th className="text-left px-4 py-3 text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
                   ₮ Balance
                 </th>
-                <th className="text-left px-4 py-3 font-mono text-[0.65rem] text-[var(--color-text-muted)] uppercase tracking-wider">
+                <th className="text-left px-4 py-3 text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
                   Status
                 </th>
-                <th className="text-right px-4 py-3 font-mono text-[0.65rem] text-[var(--color-text-muted)] uppercase tracking-wider">
+                <th className="text-right px-4 py-3 text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -171,7 +171,7 @@ export default function AdminMembersPage() {
                       <p className="font-bold text-[var(--color-text-primary)]">
                         {member.display_name}
                       </p>
-                      <p className="text-xs font-mono text-[var(--color-text-muted)]">
+                      <p className="text-xs text-[var(--color-text-muted)]">
                         {member.email}
                       </p>
                     </div>
@@ -179,7 +179,7 @@ export default function AdminMembersPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
                       <span
-                        className={`font-mono text-xs ${tierColors[member.tier]}`}
+                        className={` text-xs ${tierColors[member.tier]}`}
                       >
                         {tierLabels[member.tier]}
                       </span>
@@ -216,11 +216,11 @@ export default function AdminMembersPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       {member.membership === "member" ? (
-                        <span className="text-[0.6rem] font-mono text-[var(--color-brand-blue)] bg-[var(--color-brand-blue)]/10 px-2 py-0.5 rounded">
+                        <span className="text-xs text-[var(--color-brand-blue)] bg-[var(--color-brand-blue)]/10 px-2 py-0.5 rounded">
                           Member
                         </span>
                       ) : (
-                        <span className="text-[0.6rem] font-mono text-[var(--color-text-muted)] bg-white/5 px-2 py-0.5 rounded">
+                        <span className="text-xs text-[var(--color-text-muted)] bg-[var(--surface-hover)] px-2 py-0.5 rounded">
                           Public
                         </span>
                       )}
@@ -228,7 +228,7 @@ export default function AdminMembersPage() {
                         <button
                           onClick={() => setMembership(member, member.membership === "member" ? "public" : "member")}
                           disabled={updating === member.id}
-                          className="text-[0.65rem] font-mono text-[var(--color-accent-cyan)] hover:underline disabled:opacity-50"
+                          className="text-xs text-[var(--color-accent-cyan)] hover:underline disabled:opacity-50"
                         >
                           {member.membership === "member" ? "Make public" : "Mark member"}
                         </button>
@@ -236,36 +236,36 @@ export default function AdminMembersPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="font-mono text-xs text-[var(--color-text-secondary)]">
+                    <span className="text-xs text-[var(--color-text-secondary)]">
                       LV{member.level}
                     </span>
-                    <span className="font-mono text-[0.6rem] text-[var(--color-text-muted)] ml-1">
+                    <span className="text-xs text-[var(--color-text-muted)] ml-1">
                       ({member.xp.toLocaleString()} XP)
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="font-mono text-xs text-[var(--color-brand-yellow)]">
+                    <span className="text-xs text-[var(--color-brand-yellow)]">
                       ₮{member.tethos_coins.toLocaleString()}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       {member.is_active ? (
-                        <span className="text-[0.6rem] font-mono text-green-400 bg-green-400/10 px-2 py-0.5 rounded">
+                        <span className="text-xs text-[var(--gui-success)] bg-[var(--gui-success-soft)] px-2 py-0.5 rounded">
                           Active
                         </span>
                       ) : (
-                        <span className="text-[0.6rem] font-mono text-red-400 bg-red-400/10 px-2 py-0.5 rounded">
+                        <span className="text-xs text-[var(--gui-danger)] bg-[var(--gui-danger-soft)] px-2 py-0.5 rounded">
                           Inactive
                         </span>
                       )}
                       {member.is_alumni && (
-                        <span className="text-[0.6rem] font-mono text-[var(--color-brand-yellow)] bg-[var(--color-brand-yellow)]/10 px-2 py-0.5 rounded">
+                        <span className="text-xs text-[var(--color-brand-yellow)] bg-[var(--color-brand-yellow)]/10 px-2 py-0.5 rounded">
                           Alumni
                         </span>
                       )}
                       {!member.onboarding_completed && (
-                        <span className="text-[0.6rem] font-mono text-[var(--color-accent-cyan)] bg-[var(--color-accent-cyan)]/10 px-2 py-0.5 rounded">
+                        <span className="text-xs text-[var(--color-accent-cyan)] bg-[var(--color-accent-cyan)]/10 px-2 py-0.5 rounded">
                           Onboarding
                         </span>
                       )}
@@ -278,7 +278,7 @@ export default function AdminMembersPage() {
                           toggleActive(member.id, member.is_active)
                         }
                         disabled={updating === member.id}
-                        className="text-[0.65rem] font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors disabled:opacity-50"
+                        className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors disabled:opacity-50"
                       >
                         {member.is_active ? "Deactivate" : "Activate"}
                       </button>
@@ -287,7 +287,7 @@ export default function AdminMembersPage() {
                           toggleAlumni(member.id, member.is_alumni)
                         }
                         disabled={updating === member.id}
-                        className="text-[0.65rem] font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors disabled:opacity-50"
+                        className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors disabled:opacity-50"
                       >
                         {member.is_alumni ? "Unmark Alumni" : "Mark Alumni"}
                       </button>

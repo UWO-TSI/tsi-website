@@ -147,7 +147,7 @@ export default function BountyPage() {
 
             <div className="flex flex-wrap gap-2 mb-4">
               {selected.difficulty && (
-                <span className="text-xs font-mono px-2 py-1 rounded" style={{ color: DIFFICULTY_COLORS[selected.difficulty]?.color ?? "#9ca3af", background: "var(--surface-chip)" }}>
+                <span className="text-xs px-2 py-1 rounded" style={{ color: DIFFICULTY_COLORS[selected.difficulty]?.color ?? "#9ca3af", background: "var(--surface-chip)" }}>
                   {DIFFICULTY_COLORS[selected.difficulty]?.label ?? "?"} {selected.difficulty}
                 </span>
               )}
@@ -159,7 +159,7 @@ export default function BountyPage() {
             <div className="space-y-3 mb-6 text-sm" style={{ color: "var(--color-text-soft)" }}>
               <div className="flex items-center gap-2">
                 <Coins className="w-4 h-4" style={{ color: "#ffd166" }} />
-                <span className="font-mono" style={{ color: "#ffd166" }}>{selected.pay_tc ?? 0} TSI coins</span>
+                <span className="" style={{ color: "#ffd166" }}>{selected.pay_tc ?? 0} TSI coins</span>
               </div>
               {selected.deadline && (
                 <div className="flex items-center gap-2">
@@ -170,7 +170,7 @@ export default function BountyPage() {
             </div>
 
             <div className="mb-6">
-              <h3 className="text-xs font-mono uppercase tracking-wider mb-2" style={{ color: "var(--color-text-subtle)" }}>Description</h3>
+              <h3 className="text-xs uppercase tracking-wider mb-2" style={{ color: "var(--color-text-subtle)" }}>Description</h3>
               <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-soft)" }}>{selected.description}</p>
             </div>
 
@@ -251,7 +251,7 @@ function BountyCard({ bounty, mine, onClick }: { bounty: Bounty; mine?: boolean;
       <div className="flex items-start justify-between gap-2 mb-2">
         <h3 className="text-base font-semibold line-clamp-2" style={{ color: "var(--color-text-main)" }}>{bounty.title}</h3>
         {diff && (
-          <span className="shrink-0 font-mono text-xs font-bold" style={{ color: diff.color }}>{diff.label}</span>
+          <span className="shrink-0 text-xs font-bold" style={{ color: diff.color }}>{diff.label}</span>
         )}
       </div>
 
@@ -265,7 +265,7 @@ function BountyCard({ bounty, mine, onClick }: { bounty: Bounty; mine?: boolean;
       {/* Reward */}
       <div className="flex items-center gap-1.5 mb-2">
         <Coins className="w-4 h-4" style={{ color: "#ffd166" }} />
-        <span className="font-mono text-sm" style={{ color: "#ffd166" }}>{bounty.pay_tc ?? 0} TSI coins</span>
+        <span className="text-sm" style={{ color: "#ffd166" }}>{bounty.pay_tc ?? 0} TSI coins</span>
       </div>
 
       {/* Deadline */}

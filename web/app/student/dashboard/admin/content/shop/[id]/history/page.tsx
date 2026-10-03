@@ -9,7 +9,7 @@ export default function ShopItemHistoryPage({ params }: { params: Promise<{ id: 
   const { row, loading } = useContentRow<{ display_name?: string }>("shop_items", id);
   return (
     <AdminGate>
-      {loading ? <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">Loading...</p> : <VersionHistory tableName="shop_items" rowId={id} displayName={row?.display_name ?? "Shop Item"} />}
+      {loading ? <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">Loading...</p> : <VersionHistory tableName="shop_items" rowId={id} displayName={row?.display_name ?? "Shop Item"} />}
     </AdminGate>
   );
 }

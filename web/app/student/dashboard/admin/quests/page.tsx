@@ -100,7 +100,7 @@ export default function AdminQuestsPage() {
   };
 
   const inputClass =
-    "w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]/50 focus:outline-none focus:border-[var(--color-brand-blue)] transition-all";
+    "w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]/50 focus:outline-none focus:border-[var(--color-brand-blue)] transition-all";
 
   return (
     <div>
@@ -109,13 +109,13 @@ export default function AdminQuestsPage() {
           <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
             Quest Management
           </h1>
-          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+          <p className="text-sm text-[var(--color-text-muted)] mt-1">
             {quests.filter((q) => q.is_active).length} active quests
           </p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-4 py-2 bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/80 text-white font-mono text-sm rounded-md transition-all"
+          className="flex items-center gap-2 px-4 py-2 bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/80 text-white text-sm rounded-md transition-all"
         >
           <Plus size={16} />
           New Quest
@@ -161,7 +161,7 @@ export default function AdminQuestsPage() {
               <option value="seasonal">Seasonal</option>
             </select>
             <div className="flex items-center gap-1">
-              <span className="text-xs font-mono text-[var(--color-text-muted)]">
+              <span className="text-xs text-[var(--color-text-muted)]">
                 XP:
               </span>
               <input
@@ -177,7 +177,7 @@ export default function AdminQuestsPage() {
               />
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-xs font-mono text-[var(--color-text-muted)]">
+              <span className="text-xs text-[var(--color-text-muted)]">
                 ₮:
               </span>
               <input
@@ -196,14 +196,14 @@ export default function AdminQuestsPage() {
           <div className="flex gap-2">
             <button
               type="submit"
-              className="px-4 py-2 bg-[var(--color-brand-blue)] text-white font-mono text-sm rounded-md transition-all"
+              className="px-4 py-2 bg-[var(--color-brand-blue)] text-white text-sm rounded-md transition-all"
             >
               Create Quest
             </button>
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="px-4 py-2 text-[var(--color-text-muted)] font-mono text-sm"
+              className="px-4 py-2 text-[var(--color-text-muted)] text-sm"
             >
               Cancel
             </button>
@@ -212,7 +212,7 @@ export default function AdminQuestsPage() {
       )}
 
       {loading ? (
-        <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+        <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
           Loading...
         </p>
       ) : (
@@ -227,12 +227,12 @@ export default function AdminQuestsPage() {
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <span
-                    className={`text-[0.6rem] font-mono uppercase px-2 py-0.5 rounded ${typeColors[quest.quest_type]}`}
+                    className={`text-xs uppercase px-2 py-0.5 rounded ${typeColors[quest.quest_type]}`}
                   >
                     {quest.quest_type}
                   </span>
                   {!quest.is_active && (
-                    <span className="text-[0.6rem] font-mono text-[var(--color-text-muted)] bg-white/[0.05] px-2 py-0.5 rounded">
+                    <span className="text-xs text-[var(--color-text-muted)] bg-white/[0.05] px-2 py-0.5 rounded">
                       Inactive
                     </span>
                   )}
@@ -243,20 +243,20 @@ export default function AdminQuestsPage() {
                 <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
                   {quest.description}
                 </p>
-                <p className="text-[0.6rem] font-mono text-[var(--color-text-muted)] mt-1">
+                <p className="text-xs text-[var(--color-text-muted)] mt-1">
                   +{quest.xp_reward} XP · +{quest.tc_reward} ₮
                 </p>
               </div>
               <div className="flex items-center gap-1 ml-4">
                 <button
                   onClick={() => toggleActive(quest.id, quest.is_active)}
-                  className="px-3 py-1.5 text-[0.65rem] font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] border border-[var(--glass-border)] rounded transition-colors"
+                  className="px-3 py-1.5 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] border border-[var(--glass-border)] rounded transition-colors"
                 >
                   {quest.is_active ? "Disable" : "Enable"}
                 </button>
                 <button
                   onClick={() => deleteQuest(quest.id)}
-                  className="p-1.5 text-[var(--color-text-muted)] hover:text-red-400 transition-colors"
+                  className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--gui-danger)] transition-colors"
                 >
                   <Trash2 size={14} />
                 </button>

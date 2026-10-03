@@ -38,7 +38,7 @@ export function ClassBadge({
   const Icon = meta.icon;
   return (
     <span
-      className="inline-flex items-center gap-1 font-mono"
+      className="inline-flex items-center gap-1 "
       style={{ color: meta.color, fontSize }}
     >
       <Icon aria-hidden style={{ width: iconSize, height: iconSize }} />

@@ -101,7 +101,7 @@ export default function AdminMarketplacePage() {
   }
 
   const inputClass =
-    "w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]/50 focus:outline-none focus:border-[var(--color-brand-blue)] transition-all";
+    "w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]/50 focus:outline-none focus:border-[var(--color-brand-blue)] transition-all";
 
   return (
     <div>
@@ -117,7 +117,7 @@ export default function AdminMarketplacePage() {
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-3 py-1.5 rounded text-xs font-mono transition-all ${
+                className={`px-3 py-1.5 rounded text-xs transition-all ${
                   tab === t
                     ? "bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)]"
                     : "text-[var(--color-text-muted)]"
@@ -130,7 +130,7 @@ export default function AdminMarketplacePage() {
           {tab === "items" && (
             <button
               onClick={() => setShowForm(!showForm)}
-              className="flex items-center gap-2 px-4 py-2 bg-[var(--color-brand-blue)] text-white font-mono text-sm rounded-md"
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--color-brand-blue)] text-white text-sm rounded-md"
             >
               <Plus size={16} />
               Add Item
@@ -163,7 +163,7 @@ export default function AdminMarketplacePage() {
           />
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1">
-              <span className="text-xs font-mono text-[var(--color-text-muted)]">
+              <span className="text-xs text-[var(--color-text-muted)]">
                 ₮ Price:
               </span>
               <input
@@ -179,7 +179,7 @@ export default function AdminMarketplacePage() {
               />
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-xs font-mono text-[var(--color-text-muted)]">
+              <span className="text-xs text-[var(--color-text-muted)]">
                 Stock:
               </span>
               <input
@@ -210,14 +210,14 @@ export default function AdminMarketplacePage() {
           <div className="flex gap-2">
             <button
               type="submit"
-              className="px-4 py-2 bg-[var(--color-brand-blue)] text-white font-mono text-sm rounded-md"
+              className="px-4 py-2 bg-[var(--color-brand-blue)] text-white text-sm rounded-md"
             >
               Add Item
             </button>
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="px-4 py-2 text-[var(--color-text-muted)] font-mono text-sm"
+              className="px-4 py-2 text-[var(--color-text-muted)] text-sm"
             >
               Cancel
             </button>
@@ -226,7 +226,7 @@ export default function AdminMarketplacePage() {
       )}
 
       {loading ? (
-        <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+        <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
           Loading...
         </p>
       ) : tab === "items" ? (
@@ -242,7 +242,7 @@ export default function AdminMarketplacePage() {
                 </h3>
                 <button
                   onClick={() => deleteItem(item.id)}
-                  className="p-1 text-[var(--color-text-muted)] hover:text-red-400 transition-colors"
+                  className="p-1 text-[var(--color-text-muted)] hover:text-[var(--gui-danger)] transition-colors"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -250,7 +250,7 @@ export default function AdminMarketplacePage() {
               <p className="text-xs text-[var(--color-text-muted)] mb-2">
                 {item.description}
               </p>
-              <div className="flex items-center gap-3 text-xs font-mono">
+              <div className="flex items-center gap-3 text-xs">
                 <span className="text-[var(--color-brand-yellow)]">
                   ₮{item.price_tc}
                 </span>
@@ -276,16 +276,16 @@ export default function AdminMarketplacePage() {
                   {order.user?.display_name ?? "Unknown"} →{" "}
                   {order.item?.name ?? "Unknown item"}
                 </p>
-                <p className="text-xs font-mono text-[var(--color-text-muted)]">
+                <p className="text-xs text-[var(--color-text-muted)]">
                   ₮{order.total_tc} ·{" "}
                   {new Date(order.created_at).toLocaleDateString()}
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <span
-                  className={`text-[0.6rem] font-mono uppercase px-2 py-0.5 rounded ${
+                  className={`text-xs uppercase px-2 py-0.5 rounded ${
                     order.status === "fulfilled"
-                      ? "text-green-400 bg-green-400/10"
+                      ? "text-[var(--gui-success)] bg-[var(--gui-success-soft)]"
                       : "text-[var(--color-brand-yellow)] bg-[var(--color-brand-yellow)]/10"
                   }`}
                 >
@@ -294,7 +294,7 @@ export default function AdminMarketplacePage() {
                 {order.status === "pending_pickup" && (
                   <button
                     onClick={() => fulfillOrder(order.id)}
-                    className="px-3 py-1 text-[0.65rem] font-mono text-[var(--color-accent-cyan)] border border-[var(--color-accent-cyan)]/30 rounded hover:bg-[var(--color-accent-cyan)]/10 transition-all"
+                    className="px-3 py-1 text-xs text-[var(--color-accent-cyan)] border border-[var(--color-accent-cyan)]/30 rounded hover:bg-[var(--color-accent-cyan)]/10 transition-all"
                   >
                     Mark Fulfilled
                   </button>

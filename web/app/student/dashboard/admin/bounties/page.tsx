@@ -94,7 +94,7 @@ export default function AdminBountiesPage() {
           <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
             {view === "postings" ? "Bounty Approval" : "Submission Review"}
           </h1>
-          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+          <p className="text-sm text-[var(--color-text-muted)] mt-1">
             {view === "postings"
               ? `${bounties.filter((b) => b.status === "pending").length} pending review`
               : "Deliverables awaiting Gem payout decisions"}
@@ -106,7 +106,7 @@ export default function AdminBountiesPage() {
               <button
                 key={v}
                 onClick={() => setView(v)}
-                className={`px-3 py-1.5 rounded text-xs font-mono transition-all ${
+                className={`px-3 py-1.5 rounded text-xs transition-all ${
                   view === v
                     ? "bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)]"
                     : "text-[var(--color-text-muted)]"
@@ -122,7 +122,7 @@ export default function AdminBountiesPage() {
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`px-3 py-1.5 rounded text-xs font-mono transition-all ${
+                  className={`px-3 py-1.5 rounded text-xs transition-all ${
                     filter === f
                       ? "bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)]"
                       : "text-[var(--color-text-muted)]"
@@ -139,12 +139,12 @@ export default function AdminBountiesPage() {
       {view === "submissions" ? (
         <SubmissionsReview />
       ) : loading ? (
-        <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+        <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
           Loading...
         </p>
       ) : bounties.length === 0 ? (
         <div className="text-center py-12">
-          <p className="font-mono text-sm text-[var(--color-text-muted)]">
+          <p className="text-sm text-[var(--color-text-muted)]">
             {filter === "pending"
               ? "No bounties pending approval"
               : "No bounties yet"}
@@ -173,11 +173,11 @@ export default function AdminBountiesPage() {
                   </p>
                 </div>
                 <span
-                  className={`text-[0.6rem] font-mono uppercase px-2 py-0.5 rounded ${
+                  className={`text-xs uppercase px-2 py-0.5 rounded ${
                     bounty.status === "pending"
                       ? "text-[var(--color-brand-yellow)] bg-[var(--color-brand-yellow)]/10"
                       : bounty.status === "open"
-                      ? "text-green-400 bg-green-400/10"
+                      ? "text-[var(--gui-success)] bg-[var(--gui-success-soft)]"
                       : "text-[var(--color-text-muted)] bg-white/[0.05]"
                   }`}
                 >
@@ -189,7 +189,7 @@ export default function AdminBountiesPage() {
                 {bounty.description}
               </p>
 
-              <div className="flex items-center gap-4 text-xs font-mono text-[var(--color-text-muted)] mb-3">
+              <div className="flex items-center gap-4 text-xs text-[var(--color-text-muted)] mb-3">
                 {bounty.pay_cad && <span>${bounty.pay_cad} CAD</span>}
                 {bounty.pay_tc && <span>₮{bounty.pay_tc}</span>}
                 {bounty.deadline && (
@@ -204,7 +204,7 @@ export default function AdminBountiesPage() {
                   {bounty.tech_stack.map((tech) => (
                     <span
                       key={tech}
-                      className="text-[0.6rem] font-mono text-[var(--color-accent-cyan)] bg-[var(--color-accent-cyan)]/10 px-2 py-0.5 rounded"
+                      className="text-xs text-[var(--color-accent-cyan)] bg-[var(--color-accent-cyan)]/10 px-2 py-0.5 rounded"
                     >
                       {tech}
                     </span>
@@ -214,18 +214,18 @@ export default function AdminBountiesPage() {
 
               {bounty.status === "pending" && (
                 <div className="flex items-center gap-2 pt-3 border-t border-[var(--glass-border)]">
-                  <span className="text-xs font-mono text-[var(--color-text-muted)] mr-2">
+                  <span className="text-xs text-[var(--color-text-muted)] mr-2">
                     Set difficulty:
                   </span>
                   {[1, 2, 3, 4, 5].map((d) => (
                     <button
                       key={d}
                       onClick={() => approveBounty(bounty.id, d)}
-                      className="flex items-center gap-0.5 px-2 py-1 border border-[var(--glass-border)] rounded text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-brand-yellow)] hover:border-[var(--color-brand-yellow)]/30 transition-all"
+                      className="flex items-center gap-0.5 px-2 py-1 border border-[var(--glass-border)] rounded text-xs text-[var(--color-text-muted)] hover:text-[var(--color-brand-yellow)] hover:border-[var(--color-brand-yellow)]/30 transition-all"
                       title={`Approve with ${d} skull difficulty`}
                     >
                       {Array.from({ length: d }).map((_, i) => (
-                        <span key={i} className="text-[0.6rem]">
+                        <span key={i} className="text-xs">
                           ☠
                         </span>
                       ))}
@@ -233,7 +233,7 @@ export default function AdminBountiesPage() {
                   ))}
                   <button
                     onClick={() => rejectBounty(bounty.id)}
-                    className="ml-auto p-1.5 text-[var(--color-text-muted)] hover:text-red-400 transition-colors"
+                    className="ml-auto p-1.5 text-[var(--color-text-muted)] hover:text-[var(--gui-danger)] transition-colors"
                     title="Reject"
                   >
                     <X size={16} />
@@ -257,8 +257,8 @@ export default function AdminBountiesPage() {
 
 const SUB_STATUS_STYLE: Record<SubmissionRow["status"], string> = {
   pending: "text-[var(--color-brand-yellow)] bg-[var(--color-brand-yellow)]/10",
-  approved: "text-green-400 bg-green-400/10",
-  rejected: "text-red-400 bg-red-400/10",
+  approved: "text-[var(--gui-success)] bg-[var(--gui-success-soft)]",
+  rejected: "text-[var(--gui-danger)] bg-[var(--gui-danger-soft)]",
   revision_requested: "text-[var(--color-accent-cyan)] bg-[var(--color-accent-cyan)]/10",
 };
 
@@ -337,7 +337,7 @@ function SubmissionsReview() {
             <button
               key={f}
               onClick={() => setSubFilter(f)}
-              className={`px-3 py-1.5 rounded text-xs font-mono transition-all ${
+              className={`px-3 py-1.5 rounded text-xs transition-all ${
                 subFilter === f
                   ? "bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)]"
                   : "text-[var(--color-text-muted)]"
@@ -348,17 +348,17 @@ function SubmissionsReview() {
           ))}
         </div>
         {error && (
-          <p className="text-xs font-mono text-red-400">{error}</p>
+          <p className="text-xs text-[var(--gui-danger)]">{error}</p>
         )}
       </div>
 
       {loading ? (
-        <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+        <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
           Loading...
         </p>
       ) : subs.length === 0 ? (
         <div className="text-center py-12">
-          <p className="font-mono text-sm text-[var(--color-text-muted)]">
+          <p className="text-sm text-[var(--color-text-muted)]">
             {subFilter === "pending"
               ? "No submissions awaiting review"
               : "No submissions yet"}
@@ -383,7 +383,7 @@ function SubmissionsReview() {
                   </p>
                 </div>
                 <span
-                  className={`text-[0.6rem] font-mono uppercase px-2 py-0.5 rounded ${SUB_STATUS_STYLE[sub.status]}`}
+                  className={`text-xs uppercase px-2 py-0.5 rounded ${SUB_STATUS_STYLE[sub.status]}`}
                 >
                   {sub.status.replace("_", " ")}
                 </span>
@@ -401,7 +401,7 @@ function SubmissionsReview() {
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs font-mono text-[var(--color-accent-cyan)] hover:underline truncate"
+                      className="text-xs text-[var(--color-accent-cyan)] hover:underline truncate"
                     >
                       {url}
                     </a>
@@ -410,7 +410,7 @@ function SubmissionsReview() {
               )}
 
               {sub.reviewer_notes && sub.status !== "pending" && (
-                <p className="text-xs font-mono text-[var(--color-text-muted)] mb-3">
+                <p className="text-xs text-[var(--color-text-muted)] mb-3">
                   Notes: {sub.reviewer_notes}
                 </p>
               )}
@@ -431,21 +431,21 @@ function SubmissionsReview() {
                     <button
                       onClick={() => review(sub, "approved")}
                       disabled={busy === sub.id}
-                      className="px-3 py-1.5 rounded text-xs font-mono text-green-400 bg-green-400/10 hover:bg-green-400/20 transition-all disabled:opacity-50"
+                      className="px-3 py-1.5 rounded text-xs text-[var(--gui-success)] bg-[var(--gui-success-soft)] hover:bg-[var(--gui-success-soft)] transition-all disabled:opacity-50"
                     >
                       Approve + pay Gems
                     </button>
                     <button
                       onClick={() => review(sub, "revision_requested")}
                       disabled={busy === sub.id}
-                      className="px-3 py-1.5 rounded text-xs font-mono text-[var(--color-accent-cyan)] bg-[var(--color-accent-cyan)]/10 hover:bg-[var(--color-accent-cyan)]/20 transition-all disabled:opacity-50"
+                      className="px-3 py-1.5 rounded text-xs text-[var(--color-accent-cyan)] bg-[var(--color-accent-cyan)]/10 hover:bg-[var(--color-accent-cyan)]/20 transition-all disabled:opacity-50"
                     >
                       Request revision
                     </button>
                     <button
                       onClick={() => review(sub, "rejected")}
                       disabled={busy === sub.id}
-                      className="ml-auto px-3 py-1.5 rounded text-xs font-mono text-red-400 hover:bg-red-400/10 transition-all disabled:opacity-50"
+                      className="ml-auto px-3 py-1.5 rounded text-xs text-[var(--gui-danger)] hover:bg-[var(--gui-danger-soft)] transition-all disabled:opacity-50"
                     >
                       Reject
                     </button>

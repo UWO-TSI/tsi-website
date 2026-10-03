@@ -42,7 +42,7 @@ export default function AdminContentEmotesPage() {
         <div className="mb-2">
           <Link
             href="/student/dashboard/admin"
-            className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+            className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
           >
             <ArrowLeft size={12} />
             Back to Admin
@@ -54,24 +54,24 @@ export default function AdminContentEmotesPage() {
             <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
               Emotes
             </h1>
-            <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+            <p className="text-sm text-[var(--color-text-muted)] mt-1">
               {emotes.length} total · content_pipeline.emote_types
             </p>
           </div>
           <Link
             href="/student/dashboard/admin/content/emotes/new"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 transition-opacity"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] text-xs uppercase tracking-wider rounded-md hover:opacity-90 transition-opacity"
           >
             <Plus size={14} /> New Emote
           </Link>
         </div>
 
         {isLoading ? (
-          <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+          <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
             Loading emotes...
           </p>
         ) : emotes.length === 0 ? (
-          <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)]">
+          <p className="text-center py-8 text-sm text-[var(--color-text-muted)]">
             No emotes defined yet.
           </p>
         ) : (
@@ -79,28 +79,28 @@ export default function AdminContentEmotesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--glass-border)]">
-                  <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+                  <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
                     Slug
                   </th>
-                  <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+                  <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
                     Display Name
                   </th>
-                  <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+                  <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
                     Animation
                   </th>
-                  <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+                  <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
                     Unlock
                   </th>
-                  <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+                  <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
                     Active
                   </th>
-                  <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+                  <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
                     Icon
                   </th>
-                  <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+                  <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
                     Created
                   </th>
-                  <th className="px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+                  <th className="px-4 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
                     <span className="sr-only">Actions</span>
                   </th>
                 </tr>
@@ -111,16 +111,16 @@ export default function AdminContentEmotesPage() {
                     key={emote.id}
                     className="border-b border-[var(--glass-border)]/40 last:border-b-0"
                   >
-                    <td className="px-4 py-3 font-mono text-xs text-[var(--color-accent-cyan)]">
+                    <td className="px-4 py-3 text-xs text-[var(--color-accent-cyan)]">
                       {emote.slug}
                     </td>
                     <td className="px-4 py-3 text-[var(--color-text-primary)]">
                       {emote.display_name}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">
+                    <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">
                       {emote.animation_key}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">
+                    <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">
                       {emote.unlock_condition ?? (
                         <span className="text-[var(--color-text-muted)]/50">
                           — always —
@@ -129,16 +129,16 @@ export default function AdminContentEmotesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`text-[0.6rem] font-mono uppercase px-2 py-0.5 rounded ${
+                        className={`text-xs uppercase px-2 py-0.5 rounded ${
                           emote.active
-                            ? "text-green-400 bg-green-400/10"
+                            ? "text-[var(--gui-success)] bg-[var(--gui-success-soft)]"
                             : "text-[var(--color-text-muted)] bg-[var(--color-text-muted)]/10"
                         }`}
                       >
                         {emote.active ? "active" : "inactive"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">
+                    <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">
                       {emote.icon_url ? (
                         <span className="text-[var(--color-text-soft)]">
                           {emote.icon_url.split("/").pop()}
@@ -149,13 +149,13 @@ export default function AdminContentEmotesPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 font-mono text-[0.65rem] text-[var(--color-text-muted)]">
+                    <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">
                       {new Date(emote.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link
                         href={`/student/dashboard/admin/content/emotes/${emote.id}/edit`}
-                        className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-accent-cyan)] hover:underline"
+                        className="inline-flex items-center gap-1 text-xs text-[var(--color-accent-cyan)] hover:underline"
                       >
                         <Pencil size={12} /> Edit
                       </Link>

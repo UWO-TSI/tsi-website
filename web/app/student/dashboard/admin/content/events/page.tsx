@@ -23,8 +23,8 @@ interface EventRow {
 const typeColors: Record<string, string> = {
   club: "text-[var(--color-brand-blue)] bg-[var(--color-brand-blue)]/10",
   team: "text-[var(--color-accent-cyan)] bg-[var(--color-accent-cyan)]/10",
-  bounty: "text-red-400 bg-red-400/10",
-  volunteer: "text-green-400 bg-green-400/10",
+  bounty: "text-[var(--gui-danger)] bg-[var(--gui-danger-soft)]",
+  volunteer: "text-[var(--gui-success)] bg-[var(--gui-success-soft)]",
   social: "text-[#a78bfa] bg-[#a78bfa]/10",
   workshop: "text-[var(--color-brand-yellow)] bg-[var(--color-brand-yellow)]/10",
   meeting: "text-[var(--color-text-muted)] bg-[var(--color-text-muted)]/10",
@@ -64,7 +64,7 @@ export default function AdminContentEventsPage() {
 
   if (loading) {
     return (
-      <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+      <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
         Loading...
       </p>
     );
@@ -82,7 +82,7 @@ export default function AdminContentEventsPage() {
           <h2 className="text-lg font-heading font-bold text-[var(--color-text-primary)] mb-2">
             Access Denied
           </h2>
-          <p className="text-sm font-mono text-[var(--color-text-muted)]">
+          <p className="text-sm text-[var(--color-text-muted)]">
             T1/T2 clearance required for content admin.
           </p>
         </div>
@@ -95,7 +95,7 @@ export default function AdminContentEventsPage() {
       <div className="mb-2">
         <Link
           href="/student/dashboard/admin"
-          className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+          className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
         >
           <ArrowLeft size={12} />
           Back to Admin
@@ -107,31 +107,31 @@ export default function AdminContentEventsPage() {
           <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
             Events
           </h1>
-          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+          <p className="text-sm text-[var(--color-text-muted)] mt-1">
             {events?.length ?? 0} approved events · click an event to edit or
             print its QR check-in code.
           </p>
         </div>
         <Link
           href="/student/dashboard/admin/content/events/new"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 transition-opacity"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] text-xs uppercase tracking-wider rounded-md hover:opacity-90 transition-opacity"
         >
           <Plus size={12} /> New Event
         </Link>
       </div>
 
       {fetchError && (
-        <p className="mb-4 text-xs font-mono text-[var(--color-text-muted)]">
+        <p className="mb-4 text-xs text-[var(--color-text-muted)]">
           Events fetch failed ({fetchError}).
         </p>
       )}
 
       {events === null ? (
-        <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+        <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
           Loading events...
         </p>
       ) : events.length === 0 ? (
-        <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)]">
+        <p className="text-center py-8 text-sm text-[var(--color-text-muted)]">
           No events to show.
         </p>
       ) : (
@@ -139,28 +139,28 @@ export default function AdminContentEventsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--glass-border)]">
-                <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+                <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
                   Title
                 </th>
-                <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+                <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
                   Type
                 </th>
-                <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+                <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
                   Start
                 </th>
-                <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+                <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
                   Location
                 </th>
-                <th className="text-right px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+                <th className="text-right px-4 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
                   XP / TC
                 </th>
-                <th className="text-right px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+                <th className="text-right px-4 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
                   RSVPs
                 </th>
-                <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+                <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
                   Status
                 </th>
-                <th className="text-right px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+                <th className="text-right px-4 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
                   Actions
                 </th>
               </tr>
@@ -176,20 +176,20 @@ export default function AdminContentEventsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`text-[0.6rem] font-mono uppercase px-2 py-0.5 rounded ${
+                      className={`text-xs uppercase px-2 py-0.5 rounded ${
                         typeColors[ev.event_type] ?? typeColors.meeting
                       }`}
                     >
                       {ev.event_type}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-mono text-[0.65rem] text-[var(--color-text-muted)]">
+                  <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">
                     {new Date(ev.start_time).toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">
                     {ev.location ?? "—"}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-xs">
+                  <td className="px-4 py-3 text-right text-xs">
                     <span className="text-[var(--color-accent-cyan)]">
                       {ev.xp_reward ?? 0} XP
                     </span>
@@ -198,14 +198,14 @@ export default function AdminContentEventsPage() {
                       ₮{ev.tc_reward ?? 0}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-xs text-[var(--color-text-muted)]">
+                  <td className="px-4 py-3 text-right text-xs text-[var(--color-text-muted)]">
                     {ev.attendee_count ?? 0}
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`text-[0.6rem] font-mono uppercase px-2 py-0.5 rounded ${
+                      className={`text-xs uppercase px-2 py-0.5 rounded ${
                         ev.status === "approved"
-                          ? "text-green-400 bg-green-400/10"
+                          ? "text-[var(--gui-success)] bg-[var(--gui-success-soft)]"
                           : "text-[var(--color-text-muted)] bg-[var(--color-text-muted)]/10"
                       }`}
                     >
@@ -216,14 +216,14 @@ export default function AdminContentEventsPage() {
                     <div className="inline-flex items-center gap-3">
                       <Link
                         href={`/student/dashboard/admin/content/events/${ev.id}/edit`}
-                        className="inline-flex items-center gap-1 text-[0.65rem] font-mono text-[var(--color-accent-cyan)] hover:underline"
+                        className="inline-flex items-center gap-1 text-xs text-[var(--color-accent-cyan)] hover:underline"
                       >
                         <Pencil size={11} /> Edit
                       </Link>
                       <Link
                         href={`/student/dashboard/admin/content/events/${ev.id}/print`}
                         target="_blank"
-                        className="inline-flex items-center gap-1 text-[0.65rem] font-mono text-[var(--color-brand-yellow)] hover:underline"
+                        className="inline-flex items-center gap-1 text-xs text-[var(--color-brand-yellow)] hover:underline"
                       >
                         <Printer size={11} /> Print QR
                       </Link>

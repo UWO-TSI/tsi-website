@@ -27,7 +27,7 @@ export default function ToolsPage() {
         <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
           Tools
         </h1>
-        <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+        <p className="text-sm text-[var(--color-text-muted)] mt-1">
           Internal utilities and integrations
         </p>
       </div>
@@ -58,7 +58,7 @@ export default function ToolsPage() {
                 {tool.description}
               </p>
 
-              <span className="inline-flex items-center gap-1.5 text-xs font-mono text-[var(--color-brand-blue)] group-hover:gap-2.5 transition-all">
+              <span className="inline-flex items-center gap-1.5 text-xs text-[var(--color-brand-blue)] group-hover:gap-2.5 transition-all">
                 Launch
                 <ArrowRight size={12} />
               </span>

@@ -180,7 +180,7 @@ export default function LeaderboardPage() {
         >
           {/* Header Row */}
           <div
-            className="grid items-center font-mono text-xs uppercase tracking-wider"
+            className="grid items-center text-xs uppercase tracking-wider"
             style={{
               gridTemplateColumns: GRID_COLS,
               height: 36,
@@ -319,7 +319,7 @@ function Row({ entry, rank, isOwn, anonymized, pinned, rowRef }: RowProps) {
       }}
     >
       <span
-        className="text-right pr-2 font-mono font-bold"
+        className="text-right pr-2 font-bold"
         style={{ fontSize: 16, color: RANK_COLORS[rank] ?? "#9ca3af" }}
       >
         {rank}
@@ -347,19 +347,19 @@ function Row({ entry, rank, isOwn, anonymized, pinned, rowRef }: RowProps) {
         ) : null}
       </span>
       <span
-        className="hidden sm:block font-mono text-sm"
+        className="hidden sm:block text-sm"
         style={{ color: anonymized ? "transparent" : "var(--color-text-soft)" }}
       >
         {anonymized ? "—" : `Lv.${entry.level ?? 1}`}
       </span>
       <span
-        className="text-right font-mono text-sm font-medium"
+        className="text-right text-sm font-medium"
         style={{ color: anonymized ? "var(--color-text-subtle)" : "var(--color-text-main)" }}
       >
         {anonymized ? "—" : (entry.xp ?? 0).toLocaleString()}
       </span>
       <span
-        className="hidden md:block text-right text-xs font-mono font-bold"
+        className="hidden md:block text-right text-xs font-bold"
         style={{ color: tierLabelColor }}
       >
         {anonymized ? "—" : `T${tier}`}

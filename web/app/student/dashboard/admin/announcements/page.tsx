@@ -88,11 +88,11 @@ export default function AdminAnnouncementsPage() {
     info: "text-[var(--color-brand-blue)] bg-[var(--color-brand-blue)]/10",
     warning:
       "text-[var(--color-brand-yellow)] bg-[var(--color-brand-yellow)]/10",
-    critical: "text-red-400 bg-red-400/10",
+    critical: "text-[var(--gui-danger)] bg-[var(--gui-danger-soft)]",
   };
 
   const inputClass =
-    "w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]/50 focus:outline-none focus:border-[var(--color-brand-blue)] transition-all";
+    "w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]/50 focus:outline-none focus:border-[var(--color-brand-blue)] transition-all";
 
   return (
     <div>
@@ -101,13 +101,13 @@ export default function AdminAnnouncementsPage() {
           <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
             Announcements
           </h1>
-          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+          <p className="text-sm text-[var(--color-text-muted)] mt-1">
             {announcements.length} total
           </p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-4 py-2 bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/80 text-white font-mono text-sm rounded-md transition-all"
+          className="flex items-center gap-2 px-4 py-2 bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/80 text-white text-sm rounded-md transition-all"
         >
           <Plus size={16} />
           New Announcement
@@ -153,7 +153,7 @@ export default function AdminAnnouncementsPage() {
               <option value="warning">Warning</option>
               <option value="critical">Critical</option>
             </select>
-            <label className="flex items-center gap-2 text-sm font-mono text-[var(--color-text-muted)] cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-[var(--color-text-muted)] cursor-pointer">
               <input
                 type="checkbox"
                 checked={formData.is_banner}
@@ -177,14 +177,14 @@ export default function AdminAnnouncementsPage() {
           <div className="flex gap-2">
             <button
               type="submit"
-              className="px-4 py-2 bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/80 text-white font-mono text-sm rounded-md transition-all"
+              className="px-4 py-2 bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/80 text-white text-sm rounded-md transition-all"
             >
               Publish
             </button>
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="px-4 py-2 text-[var(--color-text-muted)] font-mono text-sm hover:text-[var(--color-text-primary)] transition-colors"
+              className="px-4 py-2 text-[var(--color-text-muted)] text-sm hover:text-[var(--color-text-primary)] transition-colors"
             >
               Cancel
             </button>
@@ -194,7 +194,7 @@ export default function AdminAnnouncementsPage() {
 
       {/* Announcements List */}
       {loading ? (
-        <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+        <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
           Loading...
         </p>
       ) : (
@@ -208,17 +208,17 @@ export default function AdminAnnouncementsPage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <span
-                      className={`text-[0.6rem] font-mono uppercase px-2 py-0.5 rounded ${urgencyColors[ann.urgency]}`}
+                      className={`text-xs uppercase px-2 py-0.5 rounded ${urgencyColors[ann.urgency]}`}
                     >
                       {ann.urgency}
                     </span>
                     {ann.is_banner && (
-                      <span className="text-[0.6rem] font-mono text-[var(--color-accent-cyan)] bg-[var(--color-accent-cyan)]/10 px-2 py-0.5 rounded uppercase">
+                      <span className="text-xs text-[var(--color-accent-cyan)] bg-[var(--color-accent-cyan)]/10 px-2 py-0.5 rounded uppercase">
                         Banner
                       </span>
                     )}
                     {ann.is_pinned && (
-                      <span className="text-[0.6rem] font-mono text-[var(--color-brand-yellow)]">
+                      <span className="text-xs text-[var(--color-brand-yellow)]">
                         📌 Pinned
                       </span>
                     )}
@@ -229,7 +229,7 @@ export default function AdminAnnouncementsPage() {
                   <p className="text-xs text-[var(--color-text-muted)] mt-1 line-clamp-2">
                     {ann.body}
                   </p>
-                  <p className="text-[0.55rem] font-mono text-[var(--color-text-muted)]/50 mt-2">
+                  <p className="text-xs text-[var(--color-text-muted)]/50 mt-2">
                     {new Date(ann.created_at).toLocaleString()}
                     {ann.expires_at &&
                       ` · Expires: ${new Date(ann.expires_at).toLocaleDateString()}`}
@@ -245,7 +245,7 @@ export default function AdminAnnouncementsPage() {
                   </button>
                   <button
                     onClick={() => deleteAnnouncement(ann.id)}
-                    className="p-1.5 text-[var(--color-text-muted)] hover:text-red-400 transition-colors"
+                    className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--gui-danger)] transition-colors"
                     title="Delete"
                   >
                     <Trash2 size={14} />

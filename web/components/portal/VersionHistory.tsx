@@ -146,7 +146,7 @@ export default function VersionHistory({
       <div className="mb-2">
         <Link
           href={`${CONTENT_ROUTES[tableName]}/${rowId}/edit`}
-          className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+          className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
         >
           <ArrowLeft size={12} />
           Back to editor
@@ -157,7 +157,7 @@ export default function VersionHistory({
         <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
           Version History — {displayName}
         </h1>
-        <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+        <p className="text-sm text-[var(--color-text-muted)] mt-1">
           Last 10 published versions. Restore to create a new draft from any
           snapshot.
         </p>
@@ -165,10 +165,10 @@ export default function VersionHistory({
 
       {message ? (
         <div
-          className={`mb-4 p-3 rounded-md text-xs font-mono border ${
+          className={`mb-4 p-3 rounded-md text-xs border ${
             message.kind === "ok"
-              ? "bg-green-400/10 border-green-400/30 text-green-400"
-              : "bg-red-400/10 border-red-400/30 text-red-400"
+              ? "bg-[var(--gui-success-soft)] border-[var(--gui-success)]/30 text-[var(--gui-success)]"
+              : "bg-[var(--gui-danger-soft)] border-[var(--gui-danger)]/30 text-[var(--gui-danger)]"
           }`}
         >
           {message.text}
@@ -176,15 +176,15 @@ export default function VersionHistory({
       ) : null}
 
       {error ? (
-        <p className="font-mono text-sm text-red-400 mb-4">{error}</p>
+        <p className="text-sm text-[var(--gui-danger)] mb-4">{error}</p>
       ) : null}
 
       {versions === null ? (
-        <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+        <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
           Loading versions...
         </p>
       ) : versions.length === 0 ? (
-        <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)]">
+        <p className="text-center py-8 text-sm text-[var(--color-text-muted)]">
           No version history yet. Snapshots are created when a draft is
           published over this row.
         </p>
@@ -202,10 +202,10 @@ export default function VersionHistory({
               >
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div>
-                    <p className="text-sm font-mono text-[var(--color-text-primary)]">
+                    <p className="text-sm text-[var(--color-text-primary)]">
                       {formatRelative(v.published_at)}
                     </p>
-                    <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)] mt-0.5">
+                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
                       {new Date(v.published_at).toLocaleString()} · by{" "}
                       <span className="text-[var(--color-text-soft)]">
                         {author}
@@ -216,7 +216,7 @@ export default function VersionHistory({
                     <button
                       type="button"
                       onClick={() => toggleExpand(v.id)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 border border-[var(--glass-border)] text-[var(--color-text-primary)] font-mono text-[0.65rem] uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] transition-colors"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 border border-[var(--glass-border)] text-[var(--color-text-primary)] text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] transition-colors"
                     >
                       {isOpen ? (
                         <ChevronDown size={12} />
@@ -229,7 +229,7 @@ export default function VersionHistory({
                       type="button"
                       onClick={() => setConfirmingId(v.id)}
                       disabled={restoring}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] font-mono text-[0.65rem] uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
                     >
                       <RotateCcw size={12} /> Restore this version
                     </button>
@@ -292,7 +292,7 @@ function SnapshotView({
         <KV label="display_name" value={String(data.display_name ?? "—")} />
         <KV label="slug" value={String(data.slug ?? "—")} />
         <div>
-          <p className="text-[0.6rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
+          <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
             palette
           </p>
           <div className="flex flex-wrap gap-2">
@@ -302,7 +302,7 @@ function SnapshotView({
                   className="inline-block w-6 h-6 rounded border border-[var(--glass-border)]"
                   style={{ backgroundColor: palette[k] ?? "#000" }}
                 />
-                <span className="text-[0.65rem] font-mono text-[var(--color-text-muted)]">
+                <span className="text-xs text-[var(--color-text-muted)]">
                   {k}: {palette[k] ?? "—"}
                 </span>
               </div>
@@ -347,11 +347,11 @@ function SnapshotView({
           multiline
         />
         <div>
-          <p className="text-[0.6rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1">
+          <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1">
             canned_dialogue ({dialogue.length})
           </p>
           {dialogue.length === 0 ? (
-            <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)]/60">
+            <p className="text-xs text-[var(--color-text-muted)]/60">
               —
             </p>
           ) : (
@@ -359,7 +359,7 @@ function SnapshotView({
               {dialogue.map((line, i) => (
                 <li
                   key={i}
-                  className="text-[0.7rem] font-mono text-[var(--color-text-soft)] pl-2 border-l border-[var(--glass-border)]"
+                  className="text-xs text-[var(--color-text-soft)] pl-2 border-l border-[var(--glass-border)]"
                 >
                   {line}
                 </li>
@@ -407,7 +407,7 @@ function SnapshotView({
 
   // Fallback: raw JSON
   return (
-    <pre className="text-[0.65rem] font-mono text-[var(--color-text-soft)] whitespace-pre-wrap break-all">
+    <pre className="text-xs text-[var(--color-text-soft)] whitespace-pre-wrap break-all">
       {JSON.stringify(data, null, 2)}
     </pre>
   );
@@ -425,14 +425,14 @@ function KV({
   return (
     <div className={multiline ? "" : "flex items-start gap-3"}>
       <p
-        className={`text-[0.6rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] ${
+        className={`text-xs uppercase tracking-wider text-[var(--color-text-muted)] ${
           multiline ? "mb-1" : "min-w-[8rem] pt-0.5"
         }`}
       >
         {label}
       </p>
       <p
-        className={`text-[0.7rem] font-mono text-[var(--color-text-soft)] ${
+        className={`text-xs text-[var(--color-text-soft)] ${
           multiline ? "whitespace-pre-wrap" : "flex-1 break-all"
         }`}
       >
@@ -457,7 +457,7 @@ function ConfirmModal({
 }) {
   return (
     <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-[var(--gui-scrim)] flex items-center justify-center z-50 p-4"
       onClick={busy ? undefined : onCancel}
     >
       <div
@@ -467,7 +467,7 @@ function ConfirmModal({
         <h2 className="text-lg font-heading font-bold text-[var(--color-text-primary)] mb-2">
           Restore this version?
         </h2>
-        <p className="text-sm font-mono text-[var(--color-text-muted)] mb-5">
+        <p className="text-sm text-[var(--color-text-muted)] mb-5">
           Restore to version published {formatRelative(versionPublishedAt)}?
           This will create a new draft you can review before publishing.
         </p>
@@ -476,7 +476,7 @@ function ConfirmModal({
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="px-4 py-2 border border-[var(--glass-border)] text-[var(--color-text-primary)] font-mono text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] disabled:opacity-40 transition-colors"
+            className="px-4 py-2 border border-[var(--glass-border)] text-[var(--color-text-primary)] text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] disabled:opacity-40 transition-colors"
           >
             Cancel
           </button>
@@ -484,7 +484,7 @@ function ConfirmModal({
             type="button"
             onClick={onConfirm}
             disabled={busy}
-            className="px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+            className="px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
           >
             {busy ? "Restoring..." : "Restore"}
           </button>

@@ -196,7 +196,7 @@ export default function AdminContentLogPage() {
         <div className="mb-2">
           <Link
             href="/student/dashboard/admin"
-            className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+            className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
           >
             <ArrowLeft size={12} />
             Back to Admin
@@ -207,7 +207,7 @@ export default function AdminContentLogPage() {
           <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
             Content Activity Log
           </h1>
-          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+          <p className="text-sm text-[var(--color-text-muted)] mt-1">
             All admin publish events across NPCs, shop, and palettes.
           </p>
         </div>
@@ -277,7 +277,7 @@ export default function AdminContentLogPage() {
               <button
                 type="button"
                 onClick={resetFilters}
-                className="text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-accent-cyan)] transition-colors"
+                className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-accent-cyan)] transition-colors"
               >
                 Reset filters
               </button>
@@ -286,17 +286,17 @@ export default function AdminContentLogPage() {
         </div>
 
         {fetchError ? (
-          <p className="mb-4 p-3 rounded-md text-xs font-mono border bg-red-400/10 border-red-400/30 text-red-400">
+          <p className="mb-4 p-3 rounded-md text-xs border bg-[var(--gui-danger-soft)] border-[var(--gui-danger)]/30 text-[var(--gui-danger)]">
             {fetchError}
           </p>
         ) : null}
 
         {versions === null ? (
-          <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+          <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
             Loading activity...
           </p>
         ) : versions.length === 0 ? (
-          <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)]">
+          <p className="text-center py-8 text-sm text-[var(--color-text-muted)]">
             No activity matches the current filters.
           </p>
         ) : (
@@ -321,7 +321,7 @@ export default function AdminContentLogPage() {
                       key={v.id}
                       className="border-b border-[var(--glass-border)]/40 last:border-b-0"
                     >
-                      <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-soft)]">
+                      <td className="px-4 py-3 text-xs text-[var(--color-text-soft)]">
                         {formatDateTime(v.published_at)}
                       </td>
                       <td className="px-4 py-3 text-[var(--color-text-primary)]">
@@ -330,14 +330,14 @@ export default function AdminContentLogPage() {
                           : "—"}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-[0.6rem] font-mono uppercase px-2 py-0.5 rounded text-green-400 bg-green-400/10">
+                        <span className="text-xs uppercase px-2 py-0.5 rounded text-[var(--gui-success)] bg-[var(--gui-success-soft)]">
                           Published
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">
+                      <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">
                         {v.table_name}
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs">
+                      <td className="px-4 py-3 text-xs">
                         {historyHref ? (
                           <Link
                             href={historyHref}
@@ -360,7 +360,7 @@ export default function AdminContentLogPage() {
         )}
 
         <div className="mt-4 flex items-center justify-between gap-3">
-          <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)]">
+          <p className="text-xs text-[var(--color-text-muted)]">
             Page {page + 1}
           </p>
           <div className="flex gap-2">
@@ -368,7 +368,7 @@ export default function AdminContentLogPage() {
               type="button"
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="px-3 py-1.5 border border-[var(--glass-border)] text-[var(--color-text-primary)] font-mono text-[0.65rem] uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="px-3 py-1.5 border border-[var(--glass-border)] text-[var(--color-text-primary)] text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               Prev
             </button>
@@ -376,7 +376,7 @@ export default function AdminContentLogPage() {
               type="button"
               onClick={() => setPage((p) => p + 1)}
               disabled={!hasMore}
-              className="px-3 py-1.5 border border-[var(--glass-border)] text-[var(--color-text-primary)] font-mono text-[0.65rem] uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="px-3 py-1.5 border border-[var(--glass-border)] text-[var(--color-text-primary)] text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               Next
             </button>
@@ -390,11 +390,11 @@ export default function AdminContentLogPage() {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const inputCls =
-  "w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--glass-border)] rounded-md text-sm text-[var(--color-text-primary)] font-mono focus:outline-none focus:border-[var(--color-accent-cyan)] transition-colors";
+  "w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--glass-border)] rounded-md text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-cyan)] transition-colors";
 
 function Th({ children }: { children: React.ReactNode }) {
   return (
-    <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+    <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
       {children}
     </th>
   );
@@ -409,7 +409,7 @@ function FilterField({
 }) {
   return (
     <div>
-      <label className="block text-[0.6rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
+      <label className="block text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
         {label}
       </label>
       {children}

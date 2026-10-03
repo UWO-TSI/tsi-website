@@ -73,7 +73,7 @@ export default function GameContentIndex() {
               <tr key={a.title} className="border-b border-[var(--glass-border)]/40 last:border-b-0">
                 <td className="px-4 py-3"><Link href={a.href} className="text-[var(--color-accent-cyan)] hover:underline">{a.title}</Link></td>
                 <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">{a.what}</td>
-                <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-primary)]">{published(a)}</td>
+                <td className="px-4 py-3 text-xs text-[var(--color-text-primary)]">{published(a)}</td>
               </tr>
             ))}
           </tbody>
@@ -84,7 +84,7 @@ export default function GameContentIndex() {
           <Link key={t.title} href={t.href} className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4 hover:shadow-[0_0_12px_rgba(0,47,167,0.1)] transition-all">
             <h3 className="text-sm font-heading font-bold text-[var(--color-text-primary)] mb-1">
               {t.title}
-              {t.title === "Moderation queue" && openReports ? <span className="ml-2 text-[0.65rem] font-mono text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded">{openReports} open</span> : null}
+              {t.title === "Moderation queue" && openReports ? <span className="ml-2 text-xs text-[var(--gui-danger)] bg-[var(--gui-danger-soft)] px-1.5 py-0.5 rounded">{openReports} open</span> : null}
             </h3>
             <p className="text-xs text-[var(--color-text-muted)]">{t.what}</p>
           </Link>

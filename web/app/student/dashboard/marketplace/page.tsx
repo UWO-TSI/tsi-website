@@ -126,7 +126,7 @@ export default function MarketplacePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+        <p className="text-sm text-[var(--color-text-muted)] animate-pulse">
           Loading marketplace...
         </p>
       </div>
@@ -141,7 +141,7 @@ export default function MarketplacePage() {
           <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
             Marketplace
           </h1>
-          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+          <p className="text-sm text-[var(--color-text-muted)] mt-1">
             Spend your hard-earned Tethos Coins
           </p>
         </div>
@@ -159,7 +159,7 @@ export default function MarketplacePage() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-4 py-1.5 rounded text-xs font-mono transition-all ${
+              className={`px-4 py-1.5 rounded text-xs transition-all ${
                 tab === t
                   ? "bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)]"
                   : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
@@ -177,7 +177,7 @@ export default function MarketplacePage() {
               <button
                 key={c}
                 onClick={() => setCategory(c)}
-                className={`px-3 py-1.5 rounded text-xs font-mono transition-all capitalize ${
+                className={`px-3 py-1.5 rounded text-xs transition-all capitalize ${
                   category === c
                     ? "bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)]"
                     : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
@@ -215,7 +215,7 @@ export default function MarketplacePage() {
                   <h3 className="text-sm font-heading font-bold text-[var(--color-text-primary)]">
                     {item.name}
                   </h3>
-                  <span className="text-[0.6rem] font-mono text-[var(--color-text-muted)] uppercase bg-[var(--color-bg-main)] px-1.5 py-0.5 rounded shrink-0">
+                  <span className="text-xs text-[var(--color-text-muted)] uppercase bg-[var(--color-bg-main)] px-1.5 py-0.5 rounded shrink-0">
                     {item.category}
                   </span>
                 </div>
@@ -231,7 +231,7 @@ export default function MarketplacePage() {
                     <span className="text-base font-heading font-bold text-[var(--color-brand-yellow)]">
                       {item.price} &#x20AE;
                     </span>
-                    <span className="text-[0.6rem] font-mono text-[var(--color-text-muted)] ml-2">
+                    <span className="text-xs text-[var(--color-text-muted)] ml-2">
                       {item.stock} left
                     </span>
                   </div>
@@ -241,7 +241,7 @@ export default function MarketplacePage() {
                       setBuyResult(null);
                     }}
                     disabled={item.stock <= 0}
-                    className="px-3 py-1.5 text-xs font-mono bg-[var(--color-brand-blue)] text-white rounded hover:bg-[var(--color-brand-blue)]/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="px-3 py-1.5 text-xs bg-[var(--color-brand-blue)] text-white rounded hover:bg-[var(--color-brand-blue)]/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {item.stock <= 0 ? "Sold Out" : "Buy"}
                   </button>
@@ -253,7 +253,7 @@ export default function MarketplacePage() {
           {filteredItems.length === 0 && (
             <div className="col-span-full text-center py-12">
               <Package size={32} className="text-[var(--color-text-muted)] mx-auto mb-2" />
-              <p className="font-mono text-sm text-[var(--color-text-muted)]">
+              <p className="text-sm text-[var(--color-text-muted)]">
                 No items in this category.
               </p>
             </div>
@@ -267,7 +267,7 @@ export default function MarketplacePage() {
           {orders.length === 0 ? (
             <div className="text-center py-12">
               <Package size={32} className="text-[var(--color-text-muted)] mx-auto mb-2" />
-              <p className="font-mono text-sm text-[var(--color-text-muted)]">
+              <p className="text-sm text-[var(--color-text-muted)]">
                 No orders yet. Start shopping!
               </p>
             </div>
@@ -281,7 +281,7 @@ export default function MarketplacePage() {
                   <p className="text-sm font-heading font-bold text-[var(--color-text-primary)]">
                     {order.item?.name ?? "Unknown Item"}
                   </p>
-                  <p className="text-[0.6rem] font-mono text-[var(--color-text-muted)] mt-0.5">
+                  <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
                     {new Date(order.created_at).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
@@ -295,9 +295,9 @@ export default function MarketplacePage() {
                     {order.total_price} &#x20AE;
                   </span>
                   <span
-                    className={`text-[0.6rem] font-mono px-2 py-0.5 rounded uppercase ${
+                    className={`text-xs px-2 py-0.5 rounded uppercase ${
                       order.status === "fulfilled"
-                        ? "bg-green-500/10 text-green-400"
+                        ? "bg-[var(--gui-success-soft)] text-[var(--gui-success)]"
                         : order.status === "pending"
                         ? "bg-[var(--color-brand-yellow)]/10 text-[var(--color-brand-yellow)]"
                         : "bg-[var(--color-text-muted)]/10 text-[var(--color-text-muted)]"
@@ -315,7 +315,7 @@ export default function MarketplacePage() {
       {/* Buy Confirmation Modal */}
       {buyItem && (
         <div
-          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-[var(--gui-scrim)] z-50 flex items-center justify-center p-4"
           onClick={() => setBuyItem(null)}
         >
           <div
@@ -338,20 +338,20 @@ export default function MarketplacePage() {
               {buyResult ? (
                 <div className="text-center py-4">
                   {buyResult.success ? (
-                    <Check size={32} className="text-green-400 mx-auto mb-2" />
+                    <Check size={32} className="text-[var(--gui-success)] mx-auto mb-2" />
                   ) : (
-                    <AlertTriangle size={32} className="text-red-400 mx-auto mb-2" />
+                    <AlertTriangle size={32} className="text-[var(--gui-danger)] mx-auto mb-2" />
                   )}
                   <p
-                    className={`font-mono text-sm ${
-                      buyResult.success ? "text-green-400" : "text-red-400"
+                    className={` text-sm ${
+                      buyResult.success ? "text-[var(--gui-success)]" : "text-[var(--gui-danger)]"
                     }`}
                   >
                     {buyResult.message}
                   </p>
                   <button
                     onClick={() => setBuyItem(null)}
-                    className="mt-4 px-4 py-2 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                    className="mt-4 px-4 py-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
                   >
                     Close
                   </button>
@@ -368,7 +368,7 @@ export default function MarketplacePage() {
                       </p>
                     )}
                     <div className="flex items-center justify-between mt-3">
-                      <span className="text-[0.6rem] font-mono text-[var(--color-text-muted)] uppercase">
+                      <span className="text-xs text-[var(--color-text-muted)] uppercase">
                         {buyItem.category}
                       </span>
                       <span className="text-lg font-heading font-bold text-[var(--color-brand-yellow)]">
@@ -377,13 +377,13 @@ export default function MarketplacePage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-sm font-mono mb-4">
+                  <div className="flex items-center justify-between text-sm mb-4">
                     <span className="text-[var(--color-text-muted)]">Your Balance</span>
                     <span
                       className={
                         balance >= buyItem.price
                           ? "text-[var(--color-text-primary)]"
-                          : "text-red-400"
+                          : "text-[var(--gui-danger)]"
                       }
                     >
                       {balance} &#x20AE;
@@ -393,14 +393,14 @@ export default function MarketplacePage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setBuyItem(null)}
-                      className="flex-1 py-2 text-sm font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] border border-[var(--glass-border)] rounded-md transition-colors"
+                      className="flex-1 py-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] border border-[var(--glass-border)] rounded-md transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleBuy}
                       disabled={buying || balance < buyItem.price}
-                      className="flex-1 py-2 text-sm font-mono bg-[var(--color-brand-blue)] text-white rounded-md hover:bg-[var(--color-brand-blue)]/80 transition-colors disabled:opacity-40"
+                      className="flex-1 py-2 text-sm bg-[var(--color-brand-blue)] text-white rounded-md hover:bg-[var(--color-brand-blue)]/80 transition-colors disabled:opacity-40"
                     >
                       {buying ? "Processing..." : "Confirm"}
                     </button>

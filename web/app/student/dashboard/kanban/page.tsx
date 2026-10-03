@@ -42,7 +42,7 @@ const priorityColors: Record<string, string> = {
   low: "text-[var(--color-text-muted)] border-[var(--color-text-muted)]",
   medium: "text-[var(--color-brand-yellow)] border-[var(--color-brand-yellow)]",
   high: "text-orange-400 border-orange-400",
-  urgent: "text-red-400 border-red-400",
+  urgent: "text-[var(--gui-danger)] border-red-400",
 };
 
 export default function KanbanPage() {
@@ -250,7 +250,7 @@ export default function KanbanPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+        <p className="text-sm text-[var(--color-text-muted)] animate-pulse">
           Loading kanban board...
         </p>
       </div>
@@ -261,7 +261,7 @@ export default function KanbanPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <AlertCircle size={32} className="text-[var(--color-text-muted)]" />
-        <p className="font-mono text-sm text-[var(--color-text-muted)]">
+        <p className="text-sm text-[var(--color-text-muted)]">
           No kanban board found. You may not be assigned to a team yet.
         </p>
       </div>
@@ -274,7 +274,7 @@ export default function KanbanPage() {
         <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
           {board.name}
         </h1>
-        <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+        <p className="text-sm text-[var(--color-text-muted)] mt-1">
           Kanban Board
         </p>
       </div>
@@ -293,7 +293,7 @@ export default function KanbanPage() {
                 <h2 className="text-sm font-heading font-bold text-[var(--color-text-primary)] uppercase tracking-wider">
                   {col.name}
                 </h2>
-                <span className="text-[0.6rem] font-mono bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)] px-1.5 py-0.5 rounded">
+                <span className="text-xs bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)] px-1.5 py-0.5 rounded">
                   {col.cards.length}
                 </span>
               </div>
@@ -327,13 +327,13 @@ export default function KanbanPage() {
 
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <span
-                      className={`text-[0.6rem] font-mono px-1.5 py-0.5 rounded border ${priorityColors[card.priority]}`}
+                      className={`text-xs px-1.5 py-0.5 rounded border ${priorityColors[card.priority]}`}
                     >
                       {card.priority.toUpperCase()}
                     </span>
 
                     {card.due_date && (
-                      <span className="flex items-center gap-1 text-[0.6rem] font-mono text-[var(--color-text-muted)]">
+                      <span className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
                         <Calendar size={10} />
                         {new Date(card.due_date).toLocaleDateString("en-US", {
                           month: "short",
@@ -351,13 +351,13 @@ export default function KanbanPage() {
                           className="w-5 h-5 rounded-full bg-[var(--color-brand-blue)]/10 border border-[var(--color-brand-blue)]/20 flex items-center justify-center"
                           title={a.display_name}
                         >
-                          <span className="text-[0.5rem] font-mono text-[var(--color-brand-blue)]">
+                          <span className="text-xs text-[var(--color-brand-blue)]">
                             {a.display_name?.[0]?.toUpperCase()}
                           </span>
                         </div>
                       ))}
                       {card.assignees.length > 3 && (
-                        <span className="text-[0.5rem] font-mono text-[var(--color-text-muted)]">
+                        <span className="text-xs text-[var(--color-text-muted)]">
                           +{card.assignees.length - 3}
                         </span>
                       )}
@@ -376,12 +376,12 @@ export default function KanbanPage() {
                     onKeyDown={(e) => e.key === "Enter" && addCard(col.id)}
                     placeholder="Card title..."
                     autoFocus
-                    className="w-full bg-transparent text-sm text-[var(--color-text-primary)] font-mono placeholder:text-[var(--color-text-muted)] focus:outline-none"
+                    className="w-full bg-transparent text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
                   />
                   <div className="flex items-center gap-2 mt-2">
                     <button
                       onClick={() => addCard(col.id)}
-                      className="px-3 py-1 text-xs font-mono bg-[var(--color-brand-blue)] text-white rounded hover:bg-[var(--color-brand-blue)]/80 transition-colors"
+                      className="px-3 py-1 text-xs bg-[var(--color-brand-blue)] text-white rounded hover:bg-[var(--color-brand-blue)]/80 transition-colors"
                     >
                       Add
                     </button>
@@ -390,7 +390,7 @@ export default function KanbanPage() {
                         setAddingToColumn(null);
                         setNewCardTitle("");
                       }}
-                      className="px-3 py-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                      className="px-3 py-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
                     >
                       Cancel
                     </button>
@@ -405,7 +405,7 @@ export default function KanbanPage() {
       {/* Card Detail Modal */}
       {selectedCard && (
         <div
-          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-[var(--gui-scrim)] z-50 flex items-center justify-center p-4"
           onClick={() => setSelectedCard(null)}
         >
           <div
@@ -419,7 +419,7 @@ export default function KanbanPage() {
                   {selectedCard.title}
                 </h2>
                 <span
-                  className={`inline-block mt-1 text-[0.6rem] font-mono px-1.5 py-0.5 rounded border ${priorityColors[selectedCard.priority]}`}
+                  className={`inline-block mt-1 text-xs px-1.5 py-0.5 rounded border ${priorityColors[selectedCard.priority]}`}
                 >
                   {selectedCard.priority.toUpperCase()}
                 </span>
@@ -436,7 +436,7 @@ export default function KanbanPage() {
               {/* Description */}
               {selectedCard.description && (
                 <div>
-                  <h3 className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
+                  <h3 className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
                     Description
                   </h3>
                   <p className="text-sm text-[var(--color-text-secondary)] whitespace-pre-wrap">
@@ -447,7 +447,7 @@ export default function KanbanPage() {
 
               {/* Due Date */}
               {selectedCard.due_date && (
-                <div className="flex items-center gap-2 text-sm font-mono text-[var(--color-text-muted)]">
+                <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
                   <Calendar size={14} />
                   Due:{" "}
                   {new Date(selectedCard.due_date).toLocaleDateString("en-US", {
@@ -461,7 +461,7 @@ export default function KanbanPage() {
               {/* Assignees */}
               {selectedCard.assignees.length > 0 && (
                 <div>
-                  <h3 className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
+                  <h3 className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
                     Assignees
                   </h3>
                   <div className="flex flex-wrap gap-2">
@@ -471,11 +471,11 @@ export default function KanbanPage() {
                         className="flex items-center gap-1.5 bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-2 py-1"
                       >
                         <div className="w-5 h-5 rounded-full bg-[var(--color-brand-blue)]/10 flex items-center justify-center">
-                          <span className="text-[0.5rem] font-mono text-[var(--color-brand-blue)]">
+                          <span className="text-xs text-[var(--color-brand-blue)]">
                             {a.display_name?.[0]?.toUpperCase()}
                           </span>
                         </div>
-                        <span className="text-xs font-mono text-[var(--color-text-secondary)]">
+                        <span className="text-xs text-[var(--color-text-secondary)]">
                           {a.display_name}
                         </span>
                       </div>
@@ -487,7 +487,7 @@ export default function KanbanPage() {
               {/* Checklist */}
               {selectedCard.checklist && selectedCard.checklist.length > 0 && (
                 <div>
-                  <h3 className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
+                  <h3 className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
                     Checklist
                   </h3>
                   <div className="space-y-1">
@@ -515,7 +515,7 @@ export default function KanbanPage() {
 
               {/* Comments */}
               <div>
-                <h3 className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
+                <h3 className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1">
                   <MessageSquare size={12} />
                   Comments ({selectedCard.comments.length})
                 </h3>
@@ -523,10 +523,10 @@ export default function KanbanPage() {
                   {selectedCard.comments.map((c) => (
                     <div key={c.id} className="bg-[var(--color-bg-main)] rounded-md p-2.5">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-mono font-bold text-[var(--color-brand-blue)]">
+                        <span className="text-xs font-bold text-[var(--color-brand-blue)]">
                           {c.user?.display_name ?? "Unknown"}
                         </span>
-                        <span className="text-[0.6rem] font-mono text-[var(--color-text-muted)]">
+                        <span className="text-xs text-[var(--color-text-muted)]">
                           {new Date(c.created_at).toLocaleDateString()}
                         </span>
                       </div>
@@ -542,11 +542,11 @@ export default function KanbanPage() {
                     onChange={(e) => setNewComment(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && addComment()}
                     placeholder="Add a comment..."
-                    className="flex-1 bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)] transition-all"
+                    className="flex-1 bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)] transition-all"
                   />
                   <button
                     onClick={addComment}
-                    className="px-3 py-2 text-xs font-mono bg-[var(--color-brand-blue)] text-white rounded-md hover:bg-[var(--color-brand-blue)]/80 transition-colors"
+                    className="px-3 py-2 text-xs bg-[var(--color-brand-blue)] text-white rounded-md hover:bg-[var(--color-brand-blue)]/80 transition-colors"
                   >
                     Send
                   </button>

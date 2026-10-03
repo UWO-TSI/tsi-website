@@ -236,7 +236,7 @@ export default function EventEditor({ mode, rowId, initial }: EventEditorProps) 
       <div className="mb-2">
         <Link
           href="/student/dashboard/admin/content/events"
-          className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+          className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
         >
           <ArrowLeft size={12} />
           Back to Events
@@ -247,17 +247,17 @@ export default function EventEditor({ mode, rowId, initial }: EventEditorProps) 
         <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
           {mode === "new" ? "New Event" : `Edit: ${initial?.title ?? "Event"}`}
         </h1>
-        <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+        <p className="text-sm text-[var(--color-text-muted)] mt-1">
           Events save directly. No draft preview — they are public on save.
         </p>
       </div>
 
       {message ? (
         <div
-          className={`mb-4 p-3 rounded-md text-xs font-mono border ${
+          className={`mb-4 p-3 rounded-md text-xs border ${
             message.kind === "ok"
-              ? "bg-green-400/10 border-green-400/30 text-green-400"
-              : "bg-red-400/10 border-red-400/30 text-red-400"
+              ? "bg-[var(--gui-success-soft)] border-[var(--gui-success)]/30 text-[var(--gui-success)]"
+              : "bg-[var(--gui-danger-soft)] border-[var(--gui-danger)]/30 text-[var(--gui-danger)]"
           }`}
         >
           {message.text}
@@ -395,7 +395,7 @@ export default function EventEditor({ mode, rowId, initial }: EventEditorProps) 
 
         {mode === "edit" && qrCheckInCode ? (
           <div className="border-t border-[var(--glass-border)] pt-5">
-            <label className="block text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
+            <label className="block text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
               QR Check-in Code
             </label>
             <div className="flex flex-wrap items-start gap-4">
@@ -407,15 +407,15 @@ export default function EventEditor({ mode, rowId, initial }: EventEditorProps) 
                   className="w-40 h-40 rounded-md bg-white p-2"
                 />
               ) : (
-                <div className="w-40 h-40 rounded-md bg-[var(--color-bg)] border border-[var(--glass-border)] flex items-center justify-center text-[0.65rem] font-mono text-[var(--color-text-muted)]">
+                <div className="w-40 h-40 rounded-md bg-[var(--color-bg)] border border-[var(--glass-border)] flex items-center justify-center text-xs text-[var(--color-text-muted)]">
                   rendering...
                 </div>
               )}
               <div className="flex-1 min-w-0 space-y-2">
-                <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)] break-all">
+                <p className="text-xs text-[var(--color-text-muted)] break-all">
                   {qrCheckInCode}
                 </p>
-                <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)]/70 break-all">
+                <p className="text-xs text-[var(--color-text-muted)]/70 break-all">
                   {checkInUrl}
                 </p>
                 {rowId ? (
@@ -519,13 +519,13 @@ function validate(form: FormState): Partial<Record<keyof FormState, string>> {
 // ─── Sub-components / classes ───────────────────────────────────────────────
 
 const inputCls =
-  "w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--glass-border)] rounded-md text-sm text-[var(--color-text-primary)] font-mono focus:outline-none focus:border-[var(--color-accent-cyan)] transition-colors";
+  "w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--glass-border)] rounded-md text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-cyan)] transition-colors";
 
 const primaryBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
+  "inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
 
 const secondaryBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 border border-[var(--glass-border)] text-[var(--color-text-primary)] font-mono text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] transition-colors";
+  "inline-flex items-center gap-2 px-4 py-2 border border-[var(--glass-border)] text-[var(--color-text-primary)] text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] transition-colors";
 
 function Field({
   label,
@@ -540,17 +540,17 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
+      <label className="block text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
         {label}
       </label>
       {children}
       {hint && !error ? (
-        <p className="mt-1 text-[0.65rem] font-mono text-[var(--color-text-muted)]/70">
+        <p className="mt-1 text-xs text-[var(--color-text-muted)]/70">
           {hint}
         </p>
       ) : null}
       {error ? (
-        <p className="mt-1 text-[0.65rem] font-mono text-red-400">{error}</p>
+        <p className="mt-1 text-xs text-[var(--gui-danger)]">{error}</p>
       ) : null}
     </div>
   );
@@ -585,11 +585,11 @@ function Toggle({
         />
       </button>
       <div className="flex-1">
-        <label className="block text-xs font-mono text-[var(--color-text-primary)]">
+        <label className="block text-xs text-[var(--color-text-primary)]">
           {label}
         </label>
         {hint ? (
-          <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)]/70 mt-0.5">
+          <p className="text-xs text-[var(--color-text-muted)]/70 mt-0.5">
             {hint}
           </p>
         ) : null}

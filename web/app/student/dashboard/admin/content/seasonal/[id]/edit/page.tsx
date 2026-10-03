@@ -10,8 +10,8 @@ export default function EditSeasonalEventPage({ params }: { params: Promise<{ id
   const { row, loading, error } = useContentRow<Record<string, unknown>>("club_goals", id);
   return (
     <AdminGate>
-      {loading ? <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">Loading...</p> : null}
-      {!loading && (error || !row) ? <p className="text-center py-8 font-mono text-sm text-red-400">{error ?? "Event not found"}</p> : null}
+      {loading ? <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">Loading...</p> : null}
+      {!loading && (error || !row) ? <p className="text-center py-8 text-sm text-[var(--gui-danger)]">{error ?? "Event not found"}</p> : null}
       {row ? <ClubGoalEditor mode="edit" initial={normalizeGoal(row)} seasonal /> : null}
     </AdminGate>
   );

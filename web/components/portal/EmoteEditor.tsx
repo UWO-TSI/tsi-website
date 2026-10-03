@@ -202,7 +202,7 @@ export default function EmoteEditor({ mode, rowId, initial }: EmoteEditorProps) 
       <div className="mb-2">
         <Link
           href="/student/dashboard/admin/content/emotes"
-          className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+          className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
         >
           <ArrowLeft size={12} />
           Back to Emotes
@@ -213,17 +213,17 @@ export default function EmoteEditor({ mode, rowId, initial }: EmoteEditorProps) 
         <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
           {mode === "new" ? "New Emote" : `Edit: ${initial?.display_name ?? "Emote"}`}
         </h1>
-        <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+        <p className="text-sm text-[var(--color-text-muted)] mt-1">
           Drafts stay invisible to members until published.
         </p>
       </div>
 
       {message ? (
         <div
-          className={`mb-4 p-3 rounded-md text-xs font-mono border ${
+          className={`mb-4 p-3 rounded-md text-xs border ${
             message.kind === "ok"
-              ? "bg-green-400/10 border-green-400/30 text-green-400"
-              : "bg-red-400/10 border-red-400/30 text-red-400"
+              ? "bg-[var(--gui-success-soft)] border-[var(--gui-success)]/30 text-[var(--gui-success)]"
+              : "bg-[var(--gui-danger-soft)] border-[var(--gui-danger)]/30 text-[var(--gui-danger)]"
           }`}
         >
           {message.text}
@@ -376,16 +376,16 @@ function validate(
 // ─── Sub-components / classes ───────────────────────────────────────────────
 
 const inputCls =
-  "w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--glass-border)] rounded-md text-sm text-[var(--color-text-primary)] font-mono focus:outline-none focus:border-[var(--color-accent-cyan)] transition-colors";
+  "w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--glass-border)] rounded-md text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-cyan)] transition-colors";
 
 const primaryBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
+  "inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
 
 const publishBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
+  "inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
 
 const dangerBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 border border-red-500/40 text-red-400 font-mono text-xs uppercase tracking-wider rounded-md hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
+  "inline-flex items-center gap-2 px-4 py-2 border border-[var(--gui-danger)]/30 text-[var(--gui-danger)] text-xs uppercase tracking-wider rounded-md hover:bg-[var(--gui-danger-soft)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
 
 function Field({
   label,
@@ -400,17 +400,17 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
+      <label className="block text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
         {label}
       </label>
       {children}
       {hint && !error ? (
-        <p className="mt-1 text-[0.65rem] font-mono text-[var(--color-text-muted)]/70">
+        <p className="mt-1 text-xs text-[var(--color-text-muted)]/70">
           {hint}
         </p>
       ) : null}
       {error ? (
-        <p className="mt-1 text-[0.65rem] font-mono text-red-400">{error}</p>
+        <p className="mt-1 text-xs text-[var(--gui-danger)]">{error}</p>
       ) : null}
     </div>
   );
@@ -447,11 +447,11 @@ function Toggle({
         />
       </button>
       <div className="flex-1">
-        <label className="block text-xs font-mono text-[var(--color-text-primary)]">
+        <label className="block text-xs text-[var(--color-text-primary)]">
           {label}
         </label>
         {hint ? (
-          <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)]/70 mt-0.5">
+          <p className="text-xs text-[var(--color-text-muted)]/70 mt-0.5">
             {hint}
           </p>
         ) : null}

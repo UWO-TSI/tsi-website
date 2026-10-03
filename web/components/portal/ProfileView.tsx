@@ -170,16 +170,16 @@ export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProp
       {/* Stats */}
       <div className="flex gap-6 py-6" style={{ borderTop: "1px solid var(--glass-border-soft)" }}>
         <div>
-          <p className="font-mono uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em", marginBottom: "4px" }}>Level</p>
+          <p className="uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em", marginBottom: "4px" }}>Level</p>
           <p style={{ fontSize: "24px", fontWeight: 700, color: "var(--color-text-main)" }}>{p.level}</p>
         </div>
         <div>
-          <p className="font-mono uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em", marginBottom: "4px" }}>XP</p>
+          <p className="uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em", marginBottom: "4px" }}>XP</p>
           <p style={{ fontSize: "24px", fontWeight: 700, color: "var(--color-text-main)" }}>{p.xp.toLocaleString()}</p>
         </div>
         {isOwnProfile && (
           <div>
-            <p className="font-mono uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em", marginBottom: "4px" }}>Coins</p>
+            <p className="uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em", marginBottom: "4px" }}>Coins</p>
             <p style={{ fontSize: "24px", fontWeight: 700, color: "#ffd166" }}>{coins.toLocaleString()}</p>
           </div>
         )}
@@ -197,7 +197,7 @@ export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProp
 
       {/* Skills */}
       <div className="py-4" style={{ borderTop: "1px solid var(--glass-border-soft)" }}>
-        <h3 className="font-mono uppercase mb-3" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Skills</h3>
+        <h3 className="uppercase mb-3" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Skills</h3>
         {editing ? (
           <input value={editSkills} onChange={(e) => setEditSkills(e.target.value)} placeholder="Comma-separated skills..." className="w-full outline-none"
             style={{ fontSize: "14px", color: "var(--color-text-main)", background: "var(--color-surface)", border: "1px solid var(--glass-border-soft)", borderRadius: "8px", padding: "8px 12px" }} />
@@ -214,7 +214,7 @@ export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProp
       {/* Social Links — editable inline in edit mode per ux-directory.md §7.5 */}
       {editing ? (
         <div className="py-4" style={{ borderTop: "1px solid var(--glass-border-soft)" }}>
-          <h3 className="font-mono uppercase mb-3" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Social Links</h3>
+          <h3 className="uppercase mb-3" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Social Links</h3>
           <div className="flex flex-col gap-2" style={{ maxWidth: "480px" }}>
             {(["github", "linkedin", "instagram", "discord", "website"] as const).map((key) => {
               const Icon = SOCIAL_ICONS[key] || Globe;
@@ -236,7 +236,7 @@ export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProp
         </div>
       ) : Object.keys(socialLinks).length > 0 && (
         <div className="py-4" style={{ borderTop: "1px solid var(--glass-border-soft)" }}>
-          <h3 className="font-mono uppercase mb-3" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Social Links</h3>
+          <h3 className="uppercase mb-3" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Social Links</h3>
           <div className="flex gap-3 flex-wrap">
             {Object.entries(socialLinks).filter(([, url]) => url).map(([key, url]) => {
               const Icon = SOCIAL_ICONS[key] || Globe;
@@ -255,7 +255,7 @@ export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProp
 
       {/* About */}
       <div className="py-4" style={{ borderTop: "1px solid var(--glass-border-soft)" }}>
-        <h3 className="font-mono uppercase mb-3" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>About</h3>
+        <h3 className="uppercase mb-3" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>About</h3>
         <p style={{ fontSize: "16px", color: "var(--color-text-soft)" }}>
           Joined {new Date(p.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}.
         </p>

@@ -53,7 +53,7 @@ export default function AdminElectionPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+        <p className="text-sm text-[var(--color-text-muted)] animate-pulse">
           Loading results...
         </p>
       </div>
@@ -71,7 +71,7 @@ export default function AdminElectionPage() {
           <h2 className="text-lg font-heading font-bold text-[var(--color-text-primary)] mb-2">
             Access Denied
           </h2>
-          <p className="text-sm font-mono text-[var(--color-text-muted)]">
+          <p className="text-sm text-[var(--color-text-muted)]">
             T1/T2 clearance required for election results.
           </p>
         </div>
@@ -89,7 +89,7 @@ export default function AdminElectionPage() {
         <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
           Election Results
         </h1>
-        <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+        <p className="text-sm text-[var(--color-text-muted)] mt-1">
           Presidential Election · Live tallies
         </p>
       </div>
@@ -97,26 +97,26 @@ export default function AdminElectionPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
         <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4">
-          <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
+          <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
             Total Votes
           </p>
-          <p className="text-2xl font-mono font-bold text-[var(--color-text-primary)]">
+          <p className="text-2xl font-bold text-[var(--color-text-primary)]">
             {totalVotes}
           </p>
         </div>
         <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4">
-          <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
+          <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
             Total Members
           </p>
-          <p className="text-2xl font-mono font-bold text-[var(--color-text-primary)]">
+          <p className="text-2xl font-bold text-[var(--color-text-primary)]">
             {totalProfiles}
           </p>
         </div>
         <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4">
-          <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
+          <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
             Participation
           </p>
-          <p className="text-2xl font-mono font-bold text-[var(--color-accent-cyan)]">
+          <p className="text-2xl font-bold text-[var(--color-accent-cyan)]">
             {participationRate}%
           </p>
         </div>
@@ -125,14 +125,14 @@ export default function AdminElectionPage() {
       {/* Results Table */}
       <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-hidden">
         <div className="px-5 py-3 border-b border-[var(--glass-border)]">
-          <p className="text-xs font-mono text-[var(--color-text-muted)] uppercase tracking-wider">
+          <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
             Candidates
           </p>
         </div>
         <div className="divide-y divide-[var(--glass-border)]">
           {results.length === 0 ? (
             <div className="px-5 py-8 text-center">
-              <p className="text-sm font-mono text-[var(--color-text-muted)]">
+              <p className="text-sm text-[var(--color-text-muted)]">
                 No votes cast yet.
               </p>
             </div>
@@ -151,7 +151,7 @@ export default function AdminElectionPage() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span
-                        className={`text-sm font-mono font-bold ${
+                        className={`text-sm font-bold ${
                           isLeader
                             ? "text-[var(--color-brand-yellow)]"
                             : "text-[var(--color-text-primary)]"
@@ -161,7 +161,7 @@ export default function AdminElectionPage() {
                         {r.candidate}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 text-xs font-mono">
+                    <div className="flex items-center gap-3 text-xs">
                       <span className="text-[var(--color-text-muted)]">
                         {pct}%
                       </span>

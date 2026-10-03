@@ -107,7 +107,7 @@ export default function NPCMemoriesPage() {
         <div className="mb-2">
           <Link
             href="/student/dashboard/settings"
-            className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+            className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
           >
             <ArrowLeft size={12} />
             Back to Settings
@@ -131,7 +131,7 @@ export default function NPCMemoriesPage() {
             >
               NPC Memories
             </h1>
-            <p className="text-sm font-mono text-[var(--color-text-muted)] mt-0.5">
+            <p className="text-sm text-[var(--color-text-muted)] mt-0.5">
               NPCs you&apos;ve spoken with. Wipe a memory and they&apos;ll greet
               you as a stranger.
             </p>
@@ -139,13 +139,13 @@ export default function NPCMemoriesPage() {
         </div>
 
         {error ? (
-          <p className="mb-4 p-3 rounded-md text-xs font-mono border bg-red-400/10 border-red-400/30 text-red-400">
+          <p className="mb-4 p-3 rounded-md text-xs border bg-[var(--gui-danger-soft)] border-[var(--gui-danger)]/30 text-[var(--gui-danger)]">
             {error}
           </p>
         ) : null}
 
         {rows === null ? (
-          <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+          <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
             Loading...
           </p>
         ) : rows.length === 0 ? (
@@ -156,7 +156,7 @@ export default function NPCMemoriesPage() {
               border: "1px solid var(--glass-border-soft)",
             }}
           >
-            <p className="text-sm font-mono text-[var(--color-text-muted)]">
+            <p className="text-sm text-[var(--color-text-muted)]">
               No NPCs remember you yet. Go say hi to someone in the world.
             </p>
           </div>
@@ -187,10 +187,10 @@ export default function NPCMemoriesPage() {
                     <td className="px-4 py-3 text-[var(--color-text-main)]">
                       {r.npc_name}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-soft)]">
+                    <td className="px-4 py-3 text-xs text-[var(--color-text-soft)]">
                       {r.interaction_count}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-soft)]">
+                    <td className="px-4 py-3 text-xs text-[var(--color-text-soft)]">
                       {relativeTime(r.last_interaction_at)}
                     </td>
                     <td className="px-4 py-3">
@@ -198,7 +198,7 @@ export default function NPCMemoriesPage() {
                         type="button"
                         disabled={busyNPC === r.npc_id}
                         onClick={() => setConfirmNPC(r)}
-                        className="inline-flex items-center gap-1 text-[0.65rem] font-mono uppercase tracking-wider text-red-400 hover:underline disabled:opacity-40"
+                        className="inline-flex items-center gap-1 text-xs uppercase tracking-wider text-[var(--gui-danger)] hover:underline disabled:opacity-40"
                       >
                         <Trash2 size={12} />
                         Wipe Memory
@@ -244,7 +244,7 @@ export default function NPCMemoriesPage() {
               <button
                 type="button"
                 onClick={() => setConfirmNPC(null)}
-                className="px-3 py-1.5 border border-[var(--glass-border)] text-[var(--color-text-primary)] font-mono text-[0.65rem] uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] transition-colors"
+                className="px-3 py-1.5 border border-[var(--glass-border)] text-[var(--color-text-primary)] text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] transition-colors"
               >
                 Cancel
               </button>
@@ -252,7 +252,7 @@ export default function NPCMemoriesPage() {
                 type="button"
                 disabled={busyNPC !== null}
                 onClick={confirmAndWipe}
-                className="px-3 py-1.5 font-mono text-[0.65rem] uppercase tracking-wider rounded-md transition-colors disabled:opacity-40"
+                className="px-3 py-1.5 text-xs uppercase tracking-wider rounded-md transition-colors disabled:opacity-40"
                 style={{ background: "#ef4444", color: "#fff" }}
               >
                 {busyNPC ? "Wiping..." : "Wipe Memory"}
@@ -267,7 +267,7 @@ export default function NPCMemoriesPage() {
 
 function Th({ children }: { children: React.ReactNode }) {
   return (
-    <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+    <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
       {children}
     </th>
   );

@@ -62,23 +62,23 @@ export default function AdminGoalsPage() {
 
   return (
     <AdminGate>
-      <Link href="/student/dashboard/admin" className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] mb-2">
+      <Link href="/student/dashboard/admin" className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] mb-2">
         <ArrowLeft size={12} /> Back to Admin
       </Link>
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">Club Goals</h1>
-          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">Server-wide goals · club_goals · real activity credits automatically</p>
+          <p className="text-sm text-[var(--color-text-muted)] mt-1">Server-wide goals · club_goals · real activity credits automatically</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={sync} className="inline-flex items-center gap-2 px-4 py-2 border border-[var(--glass-border)] text-[var(--color-text-primary)] font-mono text-xs uppercase tracking-wider rounded-md"><RefreshCw size={14} /> Sync check-ins</button>
-          <Link href="/student/dashboard/admin/content/goals/new" className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] font-mono text-xs uppercase tracking-wider rounded-md"><Plus size={14} /> New Goal</Link>
+          <button onClick={sync} className="inline-flex items-center gap-2 px-4 py-2 border border-[var(--glass-border)] text-[var(--color-text-primary)] text-xs uppercase tracking-wider rounded-md"><RefreshCw size={14} /> Sync check-ins</button>
+          <Link href="/student/dashboard/admin/content/goals/new" className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] text-xs uppercase tracking-wider rounded-md"><Plus size={14} /> New Goal</Link>
         </div>
       </div>
-      {error ? <p className="mb-4 text-xs font-mono text-red-400">{error}</p> : null}
-      {message ? <p className="mb-4 text-xs font-mono text-[var(--color-text-soft)]">{message}</p> : null}
+      {error ? <p className="mb-4 text-xs text-[var(--gui-danger)]">{error}</p> : null}
+      {message ? <p className="mb-4 text-xs text-[var(--color-text-soft)]">{message}</p> : null}
       {rows === null ? (
-        <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">Loading goals...</p>
+        <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">Loading goals...</p>
       ) : (
         <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-x-auto mb-8">
           <table className="w-full text-sm">
@@ -90,15 +90,15 @@ export default function AdminGoalsPage() {
                 const p = progress[g.slug];
                 return (
                   <tr key={g.id} className="border-b border-[var(--glass-border)]/40 last:border-b-0">
-                    <td className="px-4 py-3 font-mono text-xs">{g.position}</td>
-                    <td className="px-4 py-3 text-[var(--color-text-primary)]">{g.title}<div className="font-mono text-[0.65rem] text-[var(--color-accent-cyan)]">{g.slug}</div></td>
-                    <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">{g.goal_type}</td>
-                    <td className="px-4 py-3 font-mono text-xs">{p ? `${p.points.toLocaleString()} / ${g.target_points.toLocaleString()} (${p.percent}%)${p.completed ? " ✓" : p.locked_by ? " · up next" : ""}` : `— / ${g.target_points.toLocaleString()}`}</td>
-                    <td className="px-4 py-3 font-mono text-xs">{p?.contributors ?? "—"}</td>
-                    <td className="px-4 py-3 font-mono text-xs">{g.active ? "active" : "inactive"}</td>
+                    <td className="px-4 py-3 text-xs">{g.position}</td>
+                    <td className="px-4 py-3 text-[var(--color-text-primary)]">{g.title}<div className="text-xs text-[var(--color-accent-cyan)]">{g.slug}</div></td>
+                    <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">{g.goal_type}</td>
+                    <td className="px-4 py-3 text-xs">{p ? `${p.points.toLocaleString()} / ${g.target_points.toLocaleString()} (${p.percent}%)${p.completed ? " ✓" : p.locked_by ? " · up next" : ""}` : `— / ${g.target_points.toLocaleString()}`}</td>
+                    <td className="px-4 py-3 text-xs">{p?.contributors ?? "—"}</td>
+                    <td className="px-4 py-3 text-xs">{g.active ? "active" : "inactive"}</td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <Link href={`/student/dashboard/admin/content/goals/${g.id}/edit`} className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-accent-cyan)] hover:underline mr-3"><Pencil size={12} /> Edit</Link>
-                      <Link href={`/student/dashboard/admin/content/goals/${g.id}/history`} className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:underline"><History size={12} /> History</Link>
+                      <Link href={`/student/dashboard/admin/content/goals/${g.id}/edit`} className="inline-flex items-center gap-1 text-xs text-[var(--color-accent-cyan)] hover:underline mr-3"><Pencil size={12} /> Edit</Link>
+                      <Link href={`/student/dashboard/admin/content/goals/${g.id}/history`} className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:underline"><History size={12} /> History</Link>
                     </td>
                   </tr>
                 );
@@ -109,7 +109,7 @@ export default function AdminGoalsPage() {
       )}
       <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6 space-y-4 max-w-xl">
         <h2 className="font-heading font-bold text-[var(--color-text-primary)]">Log a contribution</h2>
-        <p className="text-xs font-mono text-[var(--color-text-muted)]">For real club work that is not a QR check-in or bounty. Weighted by the goal&apos;s admin weight; not capped.</p>
+        <p className="text-xs text-[var(--color-text-muted)]">For real club work that is not a QR check-in or bounty. Weighted by the goal&apos;s admin weight; not capped.</p>
         <Field label="Goal">
           <select className={inputCls} value={credit.goal} onChange={(e) => { setCredit({ ...credit, goal: e.target.value }); setCreditKey(null); }}>
             <option value="">Pick a goal…</option>

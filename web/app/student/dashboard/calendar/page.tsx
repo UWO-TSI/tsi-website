@@ -240,7 +240,7 @@ export default function CalendarPage() {
           <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
             Calendar
           </h1>
-          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+          <p className="text-sm text-[var(--color-text-muted)] mt-1">
             {events.length} event{events.length !== 1 ? "s" : ""} this month
           </p>
         </div>
@@ -256,7 +256,7 @@ export default function CalendarPage() {
               <button
                 key={mode}
                 onClick={() => setView(mode)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs transition-all ${
                   view === mode
                     ? "bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)]"
                     : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
@@ -273,13 +273,13 @@ export default function CalendarPage() {
             <button
               onClick={() => setExportTooltip((v) => !v)}
               onBlur={() => setTimeout(() => setExportTooltip(false), 150)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-brand-blue)]/30 transition-all"
+              className="flex items-center gap-1.5 px-3 py-2 bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-brand-blue)]/30 transition-all"
             >
               <Download size={13} />
               Export .ics
             </button>
             {exportTooltip && (
-              <div className="absolute top-full mt-2 right-0 bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md px-3 py-2 text-xs font-mono text-[var(--color-brand-yellow)] whitespace-nowrap z-10 shadow-lg">
+              <div className="absolute top-full mt-2 right-0 bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md px-3 py-2 text-xs text-[var(--color-brand-yellow)] whitespace-nowrap z-10 shadow-lg">
                 Coming soon
               </div>
             )}
@@ -296,7 +296,7 @@ export default function CalendarPage() {
                 className="w-2 h-2 rounded-full"
                 style={{ background: EVENT_COLORS[type] }}
               />
-              <span className="text-[0.65rem] font-mono text-[var(--color-text-muted)]">
+              <span className="text-xs text-[var(--color-text-muted)]">
                 {label}
               </span>
             </div>
@@ -330,7 +330,7 @@ export default function CalendarPage() {
             </div>
             <button
               onClick={goToday}
-              className="px-3 py-1 rounded text-xs font-mono text-[var(--color-accent-cyan)] border border-[var(--color-accent-cyan)]/20 hover:bg-[var(--color-accent-cyan)]/5 transition-all"
+              className="px-3 py-1 rounded text-xs text-[var(--color-accent-cyan)] border border-[var(--color-accent-cyan)]/20 hover:bg-[var(--color-accent-cyan)]/5 transition-all"
             >
               Today
             </button>
@@ -338,7 +338,7 @@ export default function CalendarPage() {
 
           {loading ? (
             <div className="text-center py-20">
-              <p className="font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+              <p className="text-sm text-[var(--color-text-muted)] animate-pulse">
                 Loading events...
               </p>
             </div>
@@ -350,7 +350,7 @@ export default function CalendarPage() {
                 {DAYS.map((d) => (
                   <div
                     key={d}
-                    className="text-center text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider py-2"
+                    className="text-center text-xs text-[var(--color-text-muted)] uppercase tracking-wider py-2"
                   >
                     {d}
                   </div>
@@ -391,7 +391,7 @@ export default function CalendarPage() {
                       }`}
                     >
                       <span
-                        className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-mono ${
+                        className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs ${
                           isToday
                             ? "bg-[var(--color-brand-blue)] text-white shadow-[0_0_12px_var(--glow-blue)]"
                             : "text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)]"
@@ -412,7 +412,7 @@ export default function CalendarPage() {
                             />
                           ))}
                           {dayEvents.length > 4 && (
-                            <span className="text-[0.55rem] font-mono text-[var(--color-text-muted)]">
+                            <span className="text-xs text-[var(--color-text-muted)]">
                               +{dayEvents.length - 4}
                             </span>
                           )}
@@ -443,11 +443,11 @@ export default function CalendarPage() {
                       }`}
                     >
                       <div className="text-center mb-2">
-                        <div className="text-[0.6rem] font-mono text-[var(--color-text-muted)] uppercase">
+                        <div className="text-xs text-[var(--color-text-muted)] uppercase">
                           {DAYS[date.getDay()]}
                         </div>
                         <span
-                          className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-mono mt-1 ${
+                          className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-sm mt-1 ${
                             isToday
                               ? "bg-[var(--color-brand-blue)] text-white shadow-[0_0_12px_var(--glow-blue)]"
                               : "text-[var(--color-text-primary)]"
@@ -460,7 +460,7 @@ export default function CalendarPage() {
                         {dayEvents.map((ev) => (
                           <div
                             key={ev.id}
-                            className="rounded px-1.5 py-1 text-[0.6rem] font-mono leading-tight truncate"
+                            className="rounded px-1.5 py-1 text-xs leading-tight truncate"
                             style={{
                               background: `color-mix(in srgb, ${EVENT_COLORS[ev.type]} 15%, transparent)`,
                               color: EVENT_COLORS[ev.type],
@@ -469,7 +469,7 @@ export default function CalendarPage() {
                           >
                             {formatTime(ev.start_time)}
                             <br />
-                            <span className="text-[var(--color-text-primary)] text-[0.6rem]">
+                            <span className="text-[var(--color-text-primary)] text-xs">
                               {ev.title}
                             </span>
                           </div>
@@ -489,7 +489,7 @@ export default function CalendarPage() {
                     size={32}
                     className="mx-auto mb-3 text-[var(--color-text-muted)]"
                   />
-                  <p className="font-mono text-sm text-[var(--color-text-muted)]">
+                  <p className="text-sm text-[var(--color-text-muted)]">
                     No events this month
                   </p>
                 </div>
@@ -502,7 +502,7 @@ export default function CalendarPage() {
                   >
                     {/* Date badge */}
                     <div className="flex flex-col items-center justify-center w-12 shrink-0">
-                      <span className="text-[0.6rem] font-mono text-[var(--color-text-muted)] uppercase">
+                      <span className="text-xs text-[var(--color-text-muted)] uppercase">
                         {new Date(ev.start_time).toLocaleDateString(undefined, {
                           month: "short",
                         })}
@@ -523,7 +523,7 @@ export default function CalendarPage() {
                       <p className="text-sm font-bold text-[var(--color-text-primary)] truncate">
                         {ev.title}
                       </p>
-                      <div className="flex items-center gap-3 mt-1 text-[0.65rem] font-mono text-[var(--color-text-muted)]">
+                      <div className="flex items-center gap-3 mt-1 text-xs text-[var(--color-text-muted)]">
                         <span style={{ color: EVENT_COLORS[ev.type] }}>
                           {EVENT_LABELS[ev.type]}
                         </span>
@@ -545,13 +545,13 @@ export default function CalendarPage() {
                     {(ev.tc_reward || ev.xp_reward) && (
                       <div className="flex items-center gap-2 shrink-0">
                         {ev.tc_reward && (
-                          <span className="flex items-center gap-0.5 text-[0.65rem] font-mono text-[var(--color-brand-yellow)]">
+                          <span className="flex items-center gap-0.5 text-xs text-[var(--color-brand-yellow)]">
                             <Zap size={10} />
                             {ev.tc_reward} 💎
                           </span>
                         )}
                         {ev.xp_reward && (
-                          <span className="flex items-center gap-0.5 text-[0.65rem] font-mono text-[var(--color-accent-cyan)]">
+                          <span className="flex items-center gap-0.5 text-xs text-[var(--color-accent-cyan)]">
                             <Star size={10} />
                             {ev.xp_reward} XP
                           </span>
@@ -579,7 +579,7 @@ export default function CalendarPage() {
                       day: "numeric",
                     })}
                   </h3>
-                  <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)] mt-0.5">
+                  <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
                     {selectedEvents.length} event
                     {selectedEvents.length !== 1 ? "s" : ""}
                   </p>
@@ -600,7 +600,7 @@ export default function CalendarPage() {
                       size={24}
                       className="mx-auto mb-2 text-[var(--color-text-muted)]"
                     />
-                    <p className="text-xs font-mono text-[var(--color-text-muted)]">
+                    <p className="text-xs text-[var(--color-text-muted)]">
                       No events scheduled
                     </p>
                   </div>
@@ -619,7 +619,7 @@ export default function CalendarPage() {
                               {ev.title}
                             </p>
                             <span
-                              className="text-[0.6rem] font-mono uppercase tracking-wider"
+                              className="text-xs uppercase tracking-wider"
                               style={{ color: EVENT_COLORS[ev.type] }}
                             >
                               {EVENT_LABELS[ev.type]}
@@ -628,7 +628,7 @@ export default function CalendarPage() {
                         </div>
 
                         {/* Time */}
-                        <div className="flex items-center gap-1.5 text-xs font-mono text-[var(--color-text-muted)]">
+                        <div className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
                           <Clock size={11} />
                           {formatTime(ev.start_time)}
                           {ev.end_time ? ` – ${formatTime(ev.end_time)}` : ""}
@@ -636,7 +636,7 @@ export default function CalendarPage() {
 
                         {/* Location */}
                         {ev.location && (
-                          <div className="flex items-center gap-1.5 text-xs font-mono text-[var(--color-text-muted)]">
+                          <div className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
                             <MapPin size={11} />
                             {ev.location}
                           </div>
@@ -653,13 +653,13 @@ export default function CalendarPage() {
                         {(ev.tc_reward || ev.xp_reward) && (
                           <div className="flex items-center gap-3 pt-1">
                             {ev.tc_reward && (
-                              <span className="flex items-center gap-1 text-[0.65rem] font-mono text-[var(--color-brand-yellow)]">
+                              <span className="flex items-center gap-1 text-xs text-[var(--color-brand-yellow)]">
                                 <Zap size={11} />
                                 +{ev.tc_reward} 💎
                               </span>
                             )}
                             {ev.xp_reward && (
-                              <span className="flex items-center gap-1 text-[0.65rem] font-mono text-[var(--color-accent-cyan)]">
+                              <span className="flex items-center gap-1 text-xs text-[var(--color-accent-cyan)]">
                                 <Star size={11} />
                                 +{ev.xp_reward} XP
                               </span>

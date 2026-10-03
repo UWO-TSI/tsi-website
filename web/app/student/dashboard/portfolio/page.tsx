@@ -90,7 +90,7 @@ function AddItemForm({
       className="bg-[var(--color-bg-main)] border border-[var(--color-brand-blue)]/30 rounded-lg p-4 space-y-3"
     >
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-mono font-bold text-[var(--color-text-primary)]">
+        <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
           New Item
         </h3>
         <button type="button" onClick={onCancel} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
@@ -99,7 +99,7 @@ function AddItemForm({
       </div>
 
       <div>
-        <label className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider">
+        <label className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
           Type
         </label>
         <div className="flex gap-2 mt-1">
@@ -108,7 +108,7 @@ function AddItemForm({
               key={t}
               type="button"
               onClick={() => setType(t)}
-              className={`px-3 py-1.5 rounded text-xs font-mono border transition-all ${
+              className={`px-3 py-1.5 rounded text-xs border transition-all ${
                 type === t
                   ? "border-[var(--color-brand-blue)] text-[var(--color-brand-blue)] bg-[var(--color-brand-blue)]/10"
                   : "border-[var(--glass-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
@@ -121,64 +121,64 @@ function AddItemForm({
       </div>
 
       <div>
-        <label className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider">
+        <label className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
           Title *
         </label>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
-          className="mt-1 w-full bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)]"
+          className="mt-1 w-full bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)]"
           placeholder="Project title"
         />
       </div>
 
       <div>
-        <label className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider">
+        <label className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
           Description
         </label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
-          className="mt-1 w-full bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)] resize-none"
+          className="mt-1 w-full bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)] resize-none"
           placeholder="Brief description..."
         />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider">
+          <label className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
             Link
           </label>
           <input
             value={link}
             onChange={(e) => setLink(e.target.value)}
-            className="mt-1 w-full bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)]"
+            className="mt-1 w-full bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)]"
             placeholder="https://..."
           />
         </div>
         <div>
-          <label className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider">
+          <label className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
             Image URL
           </label>
           <input
             value={imageUrl}
             onChange={(e) => setImageUrl(e.target.value)}
-            className="mt-1 w-full bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)]"
+            className="mt-1 w-full bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)]"
             placeholder="https://..."
           />
         </div>
       </div>
 
       <div>
-        <label className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider">
+        <label className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
           Tech Stack (comma-separated)
         </label>
         <input
           value={techStack}
           onChange={(e) => setTechStack(e.target.value)}
-          className="mt-1 w-full bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)]"
+          className="mt-1 w-full bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)]"
           placeholder="React, TypeScript, Supabase"
         />
       </div>
@@ -187,13 +187,13 @@ function AddItemForm({
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 rounded-md text-sm font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+          className="px-4 py-2 rounded-md text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="px-4 py-2 rounded-md bg-[var(--color-brand-blue)] text-white text-sm font-mono font-bold hover:brightness-110 transition-all"
+          className="px-4 py-2 rounded-md bg-[var(--color-brand-blue)] text-white text-sm font-bold hover:brightness-110 transition-all"
         >
           Add Item
         </button>
@@ -366,7 +366,7 @@ export default function PortfolioPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <p className="font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
+        <p className="text-sm text-[var(--color-text-muted)] animate-pulse">
           Loading portfolio...
         </p>
       </div>
@@ -381,7 +381,7 @@ export default function PortfolioPage() {
             <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
               Portfolio Builder
             </h1>
-            <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+            <p className="text-sm text-[var(--color-text-muted)] mt-1">
               Showcase your work to the world
             </p>
           </div>
@@ -392,13 +392,13 @@ export default function PortfolioPage() {
           <h2 className="text-lg font-heading font-bold text-[var(--color-text-primary)] mb-2">
             No portfolio yet
           </h2>
-          <p className="text-sm text-[var(--color-text-muted)] font-mono mb-6 max-w-md mx-auto">
+          <p className="text-sm text-[var(--color-text-muted)] mb-6 max-w-md mx-auto">
             Create your portfolio to showcase bounties, projects, and case studies. Share it with
             recruiters and collaborators.
           </p>
           <button
             onClick={createPortfolio}
-            className="px-6 py-3 rounded-lg bg-[var(--color-brand-blue)] text-white font-mono text-sm font-bold hover:brightness-110 transition-all"
+            className="px-6 py-3 rounded-lg bg-[var(--color-brand-blue)] text-white text-sm font-bold hover:brightness-110 transition-all"
           >
             Create Portfolio
           </button>
@@ -415,17 +415,17 @@ export default function PortfolioPage() {
           <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
             Portfolio Builder
           </h1>
-          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
+          <p className="text-sm text-[var(--color-text-muted)] mt-1">
             {items.length} item{items.length !== 1 ? "s" : ""} in your portfolio
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs font-mono text-[var(--color-text-muted)]">
+          <span className="text-xs text-[var(--color-text-muted)]">
             /portfolio/{portfolio?.slug}
           </span>
           <button
             onClick={togglePublic}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-mono transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs transition-all ${
               portfolio?.is_public
                 ? "border-[var(--color-brand-blue)]/30 text-[var(--color-brand-blue)] bg-[var(--color-brand-blue)]/10"
                 : "border-[var(--glass-border)] text-[var(--color-text-muted)]"
@@ -440,7 +440,7 @@ export default function PortfolioPage() {
       {/* Bio */}
       <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-hidden">
         <div className="px-4 py-3 border-b border-[var(--glass-border)]">
-          <h2 className="text-xs font-mono text-[var(--color-text-muted)] uppercase tracking-wider">
+          <h2 className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
             // Bio
           </h2>
         </div>
@@ -449,13 +449,13 @@ export default function PortfolioPage() {
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             rows={4}
-            className="w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)] resize-none"
+            className="w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)] resize-none"
             placeholder="Write a short bio for your portfolio..."
           />
           <button
             onClick={saveBio}
             disabled={saving}
-            className="px-4 py-1.5 rounded-md bg-[var(--color-brand-blue)] text-white text-xs font-mono font-bold hover:brightness-110 transition-all disabled:opacity-50"
+            className="px-4 py-1.5 rounded-md bg-[var(--color-brand-blue)] text-white text-xs font-bold hover:brightness-110 transition-all disabled:opacity-50"
           >
             {saving ? "Saving..." : "Save Bio"}
           </button>
@@ -465,7 +465,7 @@ export default function PortfolioPage() {
       {/* Accent Color */}
       <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-hidden">
         <div className="px-4 py-3 border-b border-[var(--glass-border)]">
-          <h2 className="text-xs font-mono text-[var(--color-text-muted)] uppercase tracking-wider flex items-center gap-2">
+          <h2 className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider flex items-center gap-2">
             <Palette size={14} />
             Accent Color
           </h2>
@@ -492,12 +492,12 @@ export default function PortfolioPage() {
       {/* Portfolio Items */}
       <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-hidden">
         <div className="px-4 py-3 border-b border-[var(--glass-border)] flex items-center justify-between">
-          <h2 className="text-xs font-mono text-[var(--color-text-muted)] uppercase tracking-wider">
+          <h2 className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
             // Items
           </h2>
           <button
             onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-md border border-[var(--color-brand-blue)]/30 text-[var(--color-brand-blue)] text-xs font-mono hover:bg-[var(--color-brand-blue)]/10 transition-all"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-md border border-[var(--color-brand-blue)]/30 text-[var(--color-brand-blue)] text-xs hover:bg-[var(--color-brand-blue)]/10 transition-all"
           >
             <Plus size={12} />
             Add Item
@@ -510,7 +510,7 @@ export default function PortfolioPage() {
           )}
 
           {items.length === 0 && !showAddForm ? (
-            <p className="text-sm text-[var(--color-text-muted)] italic font-mono text-center py-6">
+            <p className="text-sm text-[var(--color-text-muted)] italic text-center py-6">
               No items yet. Add your first portfolio piece.
             </p>
           ) : (
@@ -527,7 +527,7 @@ export default function PortfolioPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span
-                        className="text-[0.6rem] font-mono font-bold uppercase px-1.5 py-0.5 rounded"
+                        className="text-xs font-bold uppercase px-1.5 py-0.5 rounded"
                         style={{
                           color: TYPE_COLORS[item.type],
                           backgroundColor: `${TYPE_COLORS[item.type]}15`,
@@ -549,7 +549,7 @@ export default function PortfolioPage() {
                         {item.tech_stack.map((tech) => (
                           <span
                             key={tech}
-                            className="text-[0.6rem] font-mono px-1.5 py-0.5 rounded bg-[var(--color-bg-alt)] text-[var(--color-text-muted)] border border-[var(--glass-border)]"
+                            className="text-xs px-1.5 py-0.5 rounded bg-[var(--color-bg-alt)] text-[var(--color-text-muted)] border border-[var(--glass-border)]"
                           >
                             {tech}
                           </span>
@@ -592,7 +592,7 @@ export default function PortfolioPage() {
                     )}
                     <button
                       onClick={() => deleteItem(item.id)}
-                      className="p-1 text-[var(--color-text-muted)] hover:text-red-400 transition-colors"
+                      className="p-1 text-[var(--color-text-muted)] hover:text-[var(--gui-danger)] transition-colors"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -607,7 +607,7 @@ export default function PortfolioPage() {
       {/* Preview Link */}
       {portfolio && (
         <div className="text-center">
-          <p className="text-xs font-mono text-[var(--color-text-muted)]">
+          <p className="text-xs text-[var(--color-text-muted)]">
             Portfolio URL:{" "}
             <span className="text-[var(--color-accent-cyan)]">
               /portfolio/{portfolio.slug}
