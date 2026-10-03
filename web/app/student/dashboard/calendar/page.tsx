@@ -16,33 +16,9 @@ import {
   X,
 } from "lucide-react";
 import { Amount } from "@/components/economy/Amount";
-import { Banner, Button, Empty, IconButton, Loading, Sheet, Tabs, type TabItem } from "@/components/gui";
+import { Banner, Button, Empty, ErrorNote, IconButton, Loading, Sheet, Tabs, type TabItem } from "@/components/gui";
 import { useMediaQuery } from "@/lib/game/useMediaQuery";
-
-/* ───────── types ───────── */
-
-type EventType =
-  | "club"
-  | "team"
-  | "bounty"
-  | "volunteer"
-  | "social"
-  | "workshop"
-  | "meeting";
-
-interface CalendarEvent {
-  id: string;
-  title: string;
-  type: EventType;
-  start_time: string;
-  end_time: string | null;
-  location: string | null;
-  description: string | null;
-  tc_reward: number | null;
-  xp_reward: number | null;
-}
-
-type ViewMode = "month" | "week" | "list";
+import { fetchEvents, visibleRange, type CalendarEvent, type CalendarView as ViewMode, type EventType } from "@/lib/portal/calendar";
 
 /* ───────── constants ───────── */
 
@@ -254,35 +230,18 @@ export default function CalendarPage() {
   // The chosen day opens beside the calendar from lg up; narrower (a phone, the companion's Club tab) it's a bottom sheet.
   const wide = useMediaQuery("(min-width: 1024px)");
 
-  /* fetch events for visible range */
-   
-  /* 2026-07-22 fix: goes through /api/events instead of a direct browser
-     supabase query — (a) the page no longer crashes when Supabase env vars
-     are absent (createClient threw in useEffect), (b) the old query selected
-     a `type` column that doesn't exist (schema column is `event_type`), so
-     it silently returned zero events in prod. The API returns full rows;
-     map event_type → type for the local CalendarEvent shape. */
+  /* fetch the events on screen: the month, or in the week view the week (which can run into the next month) */
+  const range = visibleRange(view, currentYear, currentMonth, weekAnchor);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reload, setReload] = useState(0);
   useEffect(() => {
     let cancelled = false;
-    const rangeStart = new Date(currentYear, currentMonth, 1).toISOString();
-    const rangeEnd = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59).toISOString();
-
-    fetch(`/api/events?from=${encodeURIComponent(rangeStart)}&to=${encodeURIComponent(rangeEnd)}&limit=200`)
-      .then((r) => (r.ok ? r.json() : { events: [] }))
-      .then((d) => {
-        if (cancelled) return;
-        const rows = (d?.events ?? []) as (CalendarEvent & { event_type?: EventType })[];
-        setEvents(rows.map((e) => ({ ...e, type: e.event_type ?? e.type })));
-        setLoading(false);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setEvents([]);
-          setLoading(false);
-        }
-      });
+    fetchEvents({ from: range.from, to: range.to })
+      .then((rows) => { if (!cancelled) { setEvents(rows); setLoadFailed(false); } })
+      .catch(() => { if (!cancelled) setLoadFailed(true); })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [currentMonth, currentYear]);
+  }, [range.from, range.to, reload]);
 
   /* events for a specific date */
   const eventsForDate = useCallback(
@@ -349,7 +308,9 @@ export default function CalendarPage() {
         <Banner title="Calendar" icon={<CalendarDays size={26} />} tone="coral">
           {loading
             ? "Looking up what’s on…"
-            : `${events.length} event${events.length !== 1 ? "s" : ""} in ${MONTHS[currentMonth]}`}
+            : loadFailed
+              ? "The events didn’t load."
+              : `${events.length} event${events.length !== 1 ? "s" : ""} ${view === "week" ? `in the week of ${weekDates[0].toLocaleDateString("en-CA", { month: "long", day: "numeric" })}` : `in ${MONTHS[currentMonth]}`}`}
         </Banner>
 
         {/* View + export */}
@@ -436,7 +397,11 @@ export default function CalendarPage() {
             </div>
 
             {loading ? (
-              <Loading label="Loading this month’s events…" />
+              <Loading label="Loading the events…" />
+            ) : loadFailed ? (
+              <ErrorNote onRetry={() => { setLoading(true); setReload((n) => n + 1); }}>
+                The events didn’t load.
+              </ErrorNote>
             ) : view === "month" ? (
               /* ─── Month Grid ─── */
               <div>

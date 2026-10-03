@@ -11,6 +11,7 @@
 
 import { useEffect, useState } from "react";
 import { FISH, RARITY_META, type FishDef } from "@/lib/game/fishing";
+import { RarityBadge } from "@/components/gui";
 import { iconUrl } from "@/lib/icons/keys";
 import { ROSTER } from "@/lib/collections/roster";
 import { AudioManager } from "@/lib/game/audio";
@@ -313,19 +314,8 @@ function OpenCollectionBook({ onClose, collectionScope, keys }: { onClose: () =>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700 }}>
                 {detail.name}
-                <span
-                  style={{
-                    fontSize: "max(9px, var(--gui-min-text, 0px))",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    padding: "1px 7px",
-                    borderRadius: 999,
-                    color: "var(--app-surface, #FFFDF5)",
-                    background: RARITY_META[detail.rarity].color,
-                  }}
-                >
-                  {RARITY_META[detail.rarity].label}
-                </span>
+                {/* The one rarity palette (the catch card's and the journal's too). */}
+                <RarityBadge rarity={detail.rarity}>{RARITY_META[detail.rarity].label}</RarityBadge>
                 <span style={{ fontSize: "max(10px, var(--gui-min-text, 0px))", fontWeight: 400, color: "var(--app-muted, #8A7B5E)" }}>
                   {(detail.zone ?? "river") === "sea" ? "sea" : "river"}
                 </span>

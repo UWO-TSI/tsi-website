@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { must, settle } from "@/lib/portal/load";
 import {
   Sword,
   Clock,
@@ -12,7 +13,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Amount } from "@/components/economy/Amount";
-import { Badge, Banner, Button, Card, Empty, Loading, Tabs } from "@/components/gui";
+import { Badge, Banner, Button, Card, Empty, ErrorNote, Loading, Tabs } from "@/components/gui";
 
 interface Quest {
   id: string;
@@ -51,17 +52,17 @@ const tabLabels: Record<(typeof questTabs)[number], string> = {
 export default function QuestsPage() {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [progress, setProgress] = useState<QuestProgress[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<"loading" | "ready" | "signed-out" | "error">("loading");
   const [tab, setTab] = useState<(typeof questTabs)[number]>("daily");
   const [userId, setUserId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) return null;
     setUserId(user.id);
 
-    const [{ data: questsData }, { data: progressData }] = await Promise.all([
+    const [questsData, progressData] = await Promise.all([
       supabase.from("quests").select("*").eq("is_active", true).order("quest_type"),
       supabase
         .from("quest_progress")
@@ -69,14 +70,13 @@ export default function QuestsPage() {
         .eq("user_id", user.id),
     ]);
 
-    setQuests((questsData as Quest[]) ?? []);
-    setProgress((progressData as QuestProgress[]) ?? []);
-    setLoading(false);
+    setQuests((must(questsData) as Quest[]) ?? []);
+    setProgress((must(progressData) as QuestProgress[]) ?? []);
+    return true;
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch, setState is after await
-    fetchData();
+    void settle(fetchData).then(setState);
   }, [fetchData]);
 
   const getQuestStatus = (questId: string) => {
@@ -122,10 +122,14 @@ export default function QuestsPage() {
   const activeCount = progress.filter((p) => p.status === "accepted").length;
   const completedCount = progress.filter((p) => p.status === "completed").length;
 
-  if (loading) {
+  if (state !== "ready") {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loading label="Pinning up the quests…" />
+      <div className="flex-1 overflow-y-auto" style={{ padding: "24px 20px 48px" }}>
+        <div style={{ maxWidth: 820, margin: "0 auto" }}>
+          {state === "loading" ? <Loading label="Pinning up the quests…" />
+            : state === "signed-out" ? <Empty icon={<Sword size={32} />} title="Sign in to see the quests">The quest board opens once you’re signed in.</Empty>
+            : <ErrorNote onRetry={() => { setState("loading"); void settle(fetchData).then(setState); }}>The quest board didn’t load.</ErrorNote>}
+        </div>
       </div>
     );
   }

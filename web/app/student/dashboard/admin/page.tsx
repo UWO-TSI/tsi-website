@@ -2,7 +2,6 @@
 
 import { useState, useEffect, type CSSProperties } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useUser } from "@/components/portal/UserContext";
 import Link from "next/link";
 import {
   Users,
@@ -11,13 +10,13 @@ import {
   Swords,
   ShoppingBag,
   BarChart3,
-  Lock,
   Vote,
   MessageSquareWarning,
 } from "lucide-react";
 import NPCSpendWidget from "@/components/portal/NPCSpendWidget";
 import GameContentIndex from "@/components/portal/GameContentIndex";
-import { Card, Empty } from "@/components/gui";
+import { AdminGate } from "@/components/portal/ProgressionAdminShared";
+import { Card } from "@/components/gui";
 
 interface Stats {
   totalMembers: number;
@@ -99,10 +98,13 @@ const adminSections = [
 
 const PAGE = "mx-auto w-full max-w-6xl px-5 pt-6 pb-16 sm:px-8";
 
+// The gate waits for the profile (it said "Admins only" until it loaded), then shows T1/T2 the hub.
 export default function AdminPage() {
+  return <AdminGate><AdminHub /></AdminGate>;
+}
+
+function AdminHub() {
   const [stats, setStats] = useState<Stats | null>(null);
-  const { profile } = useUser();
-  const userTier = profile?.tier ?? 4;
 
   useEffect(() => {
     async function fetchStats() {
@@ -142,16 +144,6 @@ export default function AdminPage() {
 
     fetchStats();
   }, []);
-
-  if (userTier > 2) {
-    return (
-      <div className={`${PAGE} flex min-h-[60vh] items-center justify-center`}>
-        <Empty icon={<Lock size={32} />} title="Admins only">
-          The admin tools are for the club’s admins. If something here needs changing, ask one of them.
-        </Empty>
-      </div>
-    );
-  }
 
   return (
     <div className={PAGE}>

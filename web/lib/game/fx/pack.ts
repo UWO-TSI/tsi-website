@@ -2,7 +2,7 @@
 /** Our particle pack (specs/movement-feel.md deliverable 1): one row of 8 frames per sprite, 128 px cells. */
 export const PACK_URL = "/assets/fx/move-pack.webp";
 export const PACK_COLS = 8;
-export const PACK_ROWS = 24;
+export const PACK_ROWS = 25;
 export const PACK = {
   dust: { row: 0, frames: 8 } /* dust puff */,
   dustLow: { row: 1, frames: 8 } /* low dust burst (hugs the ground) */,
@@ -19,14 +19,15 @@ export const PACK = {
   marker: { row: 12, frames: 8 } /* ground marker (target) */,
   footprint: { row: 13, frames: 8 } /* footprint in snow (lies on the ground) */,
   sandPrint: { row: 14, frames: 8 } /* shoe print in sand (lies on the ground) */,
-  petal: { row: 15, frames: 8 } /* flower petal (tumbling) */,
-  chip: { row: 16, frames: 8 } /* rock chips (tumbling) */,
-  crack: { row: 17, frames: 8 } /* dig spot crack (lies on the ground) */,
-  hole: { row: 18, frames: 8 } /* dug hole filling in (lies on the ground) */,
-  sandBurst: { row: 19, frames: 8 } /* spade's throw of sand */,
-  hammerPuff: { row: 20, frames: 8 } /* hammer blow puff and shavings */,
-  glint: { row: 21, frames: 8 } /* finishing sparkle */,
-  leafBits: { row: 22, frames: 8 } /* leaves shaken loose */,
-  glow: { row: 23, frames: 8 } /* firefly glow (additive) */,
+  splash: { row: 15, frames: 8 } /* splash crown (stands on the water) */,
+  petal: { row: 16, frames: 8 } /* flower petal (tumbling) */,
+  chip: { row: 17, frames: 8 } /* rock chips (tumbling) */,
+  crack: { row: 18, frames: 8 } /* dig spot crack (lies on the ground) */,
+  hole: { row: 19, frames: 8 } /* dug hole filling in (lies on the ground) */,
+  sandBurst: { row: 20, frames: 8 } /* spade's throw of sand */,
+  hammerPuff: { row: 21, frames: 8 } /* hammer blow puff and shavings */,
+  glint: { row: 22, frames: 8 } /* finishing sparkle */,
+  leafBits: { row: 23, frames: 8 } /* leaves shaken loose */,
+  glow: { row: 24, frames: 8 } /* firefly glow (additive) */,
 } as const;
 export type SpriteName = keyof typeof PACK;

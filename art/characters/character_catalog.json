@@ -1469,6 +1469,44 @@
    "endsNeutral": true
   },
   {
+   "name": "CastWindup",
+   "length": 1.0,
+   "loop": false,
+   "frames": 30,
+   "endsNeutral": false,
+   "scrub": true
+  },
+  {
+   "name": "CastSwing",
+   "length": 0.8,
+   "loop": false,
+   "frames": 24,
+   "endsNeutral": false,
+   "endsOn": "FishHold",
+   "release": 0.32
+  },
+  {
+   "name": "Reel",
+   "length": 0.9,
+   "loop": true,
+   "frames": 27
+  },
+  {
+   "name": "HookYank",
+   "length": 0.5,
+   "loop": false,
+   "frames": 15,
+   "endsNeutral": false,
+   "endsOn": "Reel",
+   "impact": 0.28
+  },
+  {
+   "name": "HoldUp",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
+  },
+  {
    "name": "Pickup",
    "length": 1.1,
    "loop": false,

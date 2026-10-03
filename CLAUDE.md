@@ -10,6 +10,7 @@ UWO-TSI (Tethos) website + student portal. Two product surfaces:
 2. **Recruitment system** (`web/app/student/apply/`, `web/components/recruit/`, `web/components/admin/`) — 2026-27 exec hiring portal. Live in production. **Current focus** (fall round + gamified apply); otherwise do not touch unless tasked.
 3. **Student game portal** (`web/app/student/dashboard/`, `web/components/game/`, `web/components/portal/`) — a 2.5D MMO RPG game world for active TSI members. **Pushed back as of 2026-09-02**; tip parked on `feat/acnh-tile-grid`. Single-player MVP, multiplayer (Colyseus) deferred.
    **Superseded 2026-09-26:** the member game is active again on `feat/game-default-island` (draft PR, not merged). Its decisions live in `specs/game-world-development-plan.md` (ledger rows 1–231) and its sequence in `specs/development-roadmap.md`; both override this file where they differ. The applicant island is live on `main` and shares its rendering code with the member island. See `STATE.md` → "Game branch".
+   **2026-10-03:** the game is on `main` (closed in production until the world opens). Multiplayer is active again: live presence plus chat on Colyseus, hosted on Fly.io (ledger rows 296–299, `specs/multiplayer.md`).
 
 ## Your role
 
@@ -40,7 +41,7 @@ Background on why the world model changed: `specs/investigation-2026-07-26-found
 - **MBTI class system:** 4 main classes (as implemented: Warrior/Mage/Healer/Rogue, colors in `specs/ux-classes.md`) + 16 subclasses, assigned via the Oracle Temple quiz. The gamified apply flow reuses the same mapping.
 - **Economy:** TSI Coins, never reveal conversion rate.
 - **Phase 1 (current):** single-player game world, directory, all feature pages as overlays. Close Tier-1 punch list to merge to main.
-- **Phase 2 (deferred):** multiplayer (Colyseus), Avatar creator (Nano Banana sprites), building interiors, Oracle v2 card-game, mobile.
+- **Phase 2 (deferred):** multiplayer (Colyseus; **active since 2026-10-03**, see `specs/multiplayer.md`), Avatar creator (Nano Banana sprites), building interiors, Oracle v2 card-game, mobile.
 
 ## World model — ACNH grid law (David ruling, 2026-07-26)
 

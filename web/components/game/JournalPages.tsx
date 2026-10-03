@@ -11,11 +11,9 @@ import { Landmark } from "lucide-react";
 import type { Category } from "@/lib/collections/roster";
 import type { JournalEntryKnown, JournalEntryUnknown, JournalPage } from "@/lib/collections/logic";
 import { apiCall } from "@/lib/apiClient";
-import { Badge, Tabs, type BadgeTone } from "@/components/gui";
+import { RarityBadge, Tabs, type BadgeRarity } from "@/components/gui";
 
 const LABEL: Record<Category, string> = { fish: "Fish", sea: "Sea floor", bug: "Bugs", fruit: "Fruit", nature: "Nature", mineral: "Rocks & ore" };
-/** Rarity as the GUI sheet's tags (AA; the old white-on-colour chips weren't) and the tile's edge. */
-const RARITY_TONE: Record<string, BadgeTone> = { common: "neutral", uncommon: "success", rare: "info", epic: "sage", legendary: "gold" };
 type Page = JournalPage & { categories: { category: Category; total: number; discovered: number }[] };
 
 export function fetchJournalPage(category: Category): Promise<Page | null> {
@@ -55,7 +53,8 @@ export default function JournalPages({ initial }: { initial: Page }) {
       {detail.discovered ? <>
         <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: "var(--gui-text-md)", color: "var(--gui-ink-strong)" }}>
           {(detail as JournalEntryKnown).name}
-          <Badge tone={RARITY_TONE[(detail as JournalEntryKnown).rarity] ?? "neutral"} style={{ textTransform: "capitalize" }}>{(detail as JournalEntryKnown).rarity}</Badge>
+          {/* The one rarity palette (the catch card's and the book's too): ink on the rarity's colour, AA. */}
+          <RarityBadge rarity={(detail as JournalEntryKnown).rarity as BadgeRarity}>{(detail as JournalEntryKnown).rarity}</RarityBadge>
         </div>
         {(detail as JournalEntryKnown).one_liner && <p style={{ margin: "6px 0", fontStyle: "italic" }}>“{(detail as JournalEntryKnown).one_liner}”</p>}
         <p style={{ margin: "4px 0", color: "var(--gui-ink-2)" }}>
