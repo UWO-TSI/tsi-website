@@ -138,7 +138,8 @@ function ClassBar({ rt, keys }: { rt: CombatRuntime; keys: Record<string, string
 /** What the class has out or on right now (classes v2 primitives): clones, minions and their order, the form, unseen, an open counter. */
 function classStatus(rt: CombatRuntime): string {
   const v = rt.v2!, f = rt.field, out: string[] = [];
-  const clones = rt.units.filter(u => u.def.kind === "clone").length, minions = rt.units.filter(u => u.def.kind === "minion" && u.source !== "weapon" && (u.def.cost ?? 1) > 0).length;
+  // The Summoner's beasts are minions too; its own line counts them (beasts out), so they aren't "Skeletons" here.
+  const clones = rt.units.filter(u => u.def.kind === "clone").length, minions = rt.units.filter(u => u.def.kind === "minion" && u.source !== "weapon" && (u.def.cost ?? 1) > 0 && !u.def.key.startsWith("beast-")).length;
   if (v.form) out.push(`${v.kit.forms?.[v.form]?.name ?? v.form} form`);
   if (clones) out.push(`Clones ${clones}`);
   if (minions || v.kit.stat.kind === "summon_count") out.push(`Skeletons ${minions}/${v.capacity}${f.order.mode === "charge" ? " · charging" : f.order.mode === "guard" ? " · guarding" : ""}`);
