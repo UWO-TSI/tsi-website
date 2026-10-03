@@ -35,7 +35,8 @@ function tickFruit(mesh: THREE.InstancedMesh | null, fruit: readonly HangingFrui
   if (!mesh) return;
   const time = TREE_WIND.value.x, amp = TREE_WIND.value.y, now = performance.now();
   let i = 0;
-  for (const f of fruit) {
+  for (let j = 0; j < fruit.length; j++) {
+    const f = fruit[j];
     for (let k = 0; k < f.tree.hang.length; k++) {
       let size = FRUIT_SCALE;
       // A little turn and lean of its own, fixed per fruit.

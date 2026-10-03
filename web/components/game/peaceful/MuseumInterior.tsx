@@ -144,7 +144,8 @@ function settle(g: THREE.Group | null, key: string | null, state: Settle, x: num
     glow.pool.burst(FINISH_GLINT, x, y + 0.2, z, 0, 0, 0, 0.9, GLINT_TINT, seedAt(x, z, 98));
     AudioManager.playSFX("confirm", { rate: 1.25, gain: 0.55 });
   }
-  for (const m of state.mats ?? []) { m.transparent = f.opacity < 1; m.opacity = f.opacity; m.depthWrite = f.opacity >= 1; }
+  const mats = state.mats;
+  if (mats) for (let i = 0; i < mats.length; i++) { const m = mats[i]; m.transparent = f.opacity < 1; m.opacity = f.opacity; m.depthWrite = f.opacity >= 1; }
   g.scale.setScalar(f.scale);
   g.position.y = f.rise;
 }

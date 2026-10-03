@@ -28,6 +28,10 @@ const edgeLook = () => (edgeMat ??= new THREE.MeshStandardMaterial({ name: "Glid
 const ringLook = () => (ringMat ??= new THREE.MeshBasicMaterial({ name: "GlideRing", map: packMap(), color: "#ffd77a", transparent: true, depthWrite: false, toneMapped: false,
   blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }));
 
+/** Module scope (no object a frame): where you are for the guide's step, written in place. */
+const _me = { x: 0, z: 0, aloft: false };
+function meAt(p: THREE.Vector3, ground: (x: number, z: number) => number) { _me.x = p.x; _me.z = p.z; _me.aloft = p.y - ground(p.x, p.z) > 0.45; return _me; }
+
 /** Module scope (the react compiler forbids writing through hook values): the ring breathes through the marker's frames. */
 function breathe(ring: THREE.Mesh | null, t: number) {
   if (!ring) return;
@@ -69,7 +73,7 @@ export default function GlideGuide({ map, ground, player, owned, active }: {
       glow.pool.burst(GLINT, spot.land[0] + Math.cos(a) * RING_RADIUS * 0.8, heights.land + 0.2, spot.land[1] + Math.sin(a) * RING_RADIUS * 0.8, heights.land, 0, 0, 1, GLINT_TINT, b);
     }
     if (!active || !guide.current) return;
-    const p = player.current, next = guideStep(guide.current, { x: p.x, z: p.z, aloft: p.y - ground(p.x, p.z) > 0.45 }, performance.now());
+    const p = player.current, next = guideStep(guide.current, meAt(p, ground), performance.now());
     if (next === guide.current) return;
     guide.current = next;
     // Said outside the frame loop: the HUD's note and the world's cheer.

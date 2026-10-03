@@ -15,7 +15,7 @@
  * lifting it into the picker's hand (lib/game/forageLift.ts) for the Bag's fly-in and the reward card. A full bag
  * leaves it where it is, with the note over it.
  */
-import { Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
@@ -209,18 +209,25 @@ const _flee: FleePose = { x: 0, y: 0, z: 0, yaw: 0, opacity: 1 };
  * sparkle is not faded but dropped the moment it flees: a glow trailing off with the bug read as a lit orb flying away.
  */
 function fade(group: THREE.Group, opacity: number, sparkle = opacity >= 1) {
-  group.traverse(o => {
-    if ((o as THREE.Sprite).isSprite) { o.visible = sparkle; return; }
-    const mesh = o as THREE.Mesh;
-    if (!mesh.isMesh) return;
-    for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
-      // The critter models are opaque: blend only while fading.
-      const blend = opacity < 1;
-      if (m.transparent !== blend) { m.transparent = blend; m.depthWrite = !blend; m.needsUpdate = true; }
-      m.opacity = opacity;
-    }
-  });
+  // Every frame of an escape: one traverse callback and no material arrays (no allocation in the frame loop).
+  _fadeTo.opacity = opacity; _fadeTo.sparkle = sparkle;
+  group.traverse(fadeOne);
   group.visible = opacity > 0.01;
+}
+const _fadeTo = { opacity: 1, sparkle: true };
+function fadeOne(o: THREE.Object3D) {
+  if ((o as THREE.Sprite).isSprite) { o.visible = _fadeTo.sparkle; return; }
+  const mesh = o as THREE.Mesh;
+  if (!mesh.isMesh) return;
+  const m = mesh.material;
+  if (Array.isArray(m)) for (let i = 0; i < m.length; i++) fadeMaterial(m[i], _fadeTo.opacity);
+  else fadeMaterial(m, _fadeTo.opacity);
+}
+function fadeMaterial(m: THREE.Material, opacity: number) {
+  // The critter models are opaque: blend only while fading.
+  const blend = opacity < 1;
+  if (m.transparent !== blend) { m.transparent = blend; m.depthWrite = !blend; m.needsUpdate = true; }
+  m.opacity = opacity;
 }
 /** Module scope (the react compiler forbids writing through hook values): start and end a thing's lift into a hand. */
 const setLift = (lifts: Map<string, Lift>, id: string, lift: Lift) => { lifts.set(id, lift); };
@@ -234,6 +241,16 @@ function liftGroup(g: THREE.Group, lift: Lift, now: number, base: number): boole
   g.scale.setScalar(base * _liftOut.scale);
   g.visible = on;
   return on;
+}
+/** Module scope: every lift's group posed, through Map.forEach and one callback (no iterator or entry arrays a frame). */
+const _lifting = { nodes: null as ReadonlyMap<string, THREE.Group> | null, bugs: null as ReadonlyMap<string, THREE.Group> | null, now: 0 };
+function liftOne(lift: Lift, id: string) {
+  const g = _lifting.nodes!.get(id) ?? _lifting.bugs!.get(id);
+  if (g) liftGroup(g, lift, _lifting.now, g.userData.base ?? 1);
+}
+function liftAll(lifts: ReadonlyMap<string, Lift>, nodes: ReadonlyMap<string, THREE.Group>, bugs: ReadonlyMap<string, THREE.Group>, now: number) {
+  _lifting.nodes = nodes; _lifting.bugs = bugs; _lifting.now = now;
+  lifts.forEach(liftOne);
 }
 
 /** What a gathering act is: shake a tree, pick up what's lying there, pick by hand, strike a rock, dig, net a bug. */
@@ -311,10 +328,10 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
   }), [rolled, ground, treeModels, lyingByNode, hour]);
   const branches = useMemo(() => lying.filter(d => d.kind === "branch"), [lying]);
   // Where a rare find twinkles: round a bloom or a shell, over a rock's face, up in a tree's crown (its own phase each).
-  const glints = useMemo(() => new Map(forage.filter(({ sp }) => hasClue(sp)).map(({ n }) => {
+  const glints = useMemo(() => forage.filter(({ sp }) => hasClue(sp)).map(({ n }) => {
     const y = ground(n.x, n.z), up = n.canopy ? crownTop(n, treeModels) - 0.6 : 0.25;
-    return [n.id, { x: n.x, y: y + up, z: n.z, ground: y, spread: n.canopy ? 1.1 : 0.45, phase: hash01(Math.round(n.x * 31 + n.z * 17), 3) }];
-  })), [forage, ground, treeModels]);
+    return { id: n.id, x: n.x, y: y + up, z: n.z, ground: y, spread: n.canopy ? 1.1 : 0.45, phase: hash01(Math.round(n.x * 31 + n.z * 17), 3) };
+  }), [forage, ground, treeModels]);
   const glintBeat = useRef(new Map<string, number>());
   const groups = useRef(new Map<string, THREE.Group>());
   const nodeGroups = useRef(new Map<string, THREE.Group>());
@@ -333,14 +350,16 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
   const chimed = useRef(new Set<string>());
   const fx = useMoveParticles();
 
-  const markHarvested = (id: string) => {
+  const markHarvested = useCallback((id: string) => {
     const next = { ...readHarvested(), [id]: hourKey(new Date()) };
     try { localStorage.setItem(HARVEST_KEY, JSON.stringify(next)); } catch { /* session only */ }
     setHarvested(next);
     // A harvest in the first seconds of a new hour is that hour's (before the 30 s tick would catch up).
     setHour(next[id]);
-  };
+  }, []);
 
+  // The act listener: subscribed again only when what it reads changes (a harvest, a drop, the hour), not every render.
+  // Acts already in flight keep their own timers and state (acts, lifts, struck), so a re-subscribe never drops one.
   useEffect(() => {
     const later = (ms: number, fn: () => void) => window.setTimeout(fn, Math.max(0, ms));
     /** Shake: the wobble and the leaves on each push; on the first, what it lets go of starts to fall. */
@@ -501,7 +520,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     };
     window.addEventListener("tsi:peaceful-act", onAct);
     return () => window.removeEventListener("tsi:peaceful-act", onAct);
-  });
+  }, [forage, lyingByNode, forageTargets, ground, treeModels, hour, fx, struck, lifts, player, markHarvested]);
 
   useFrame((_, delta) => {
     const p = player.current, nowMs = performance.now();
@@ -510,7 +529,8 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     const speed = delta > 0 && step < 1 ? step / Math.min(delta, 0.1) : 0;
     last.current.copy(p);
     let best: PeacefulTarget | null = null;
-    for (const { n, sp } of forage) {
+    for (let i = 0; i < forage.length; i++) {
+      const { n, sp } = forage[i];
       const target = forageTargets.get(n.id);
       if (!target || acts.current.has(n.id)) continue;
       const [tx, tz] = target.at!;
@@ -524,20 +544,23 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
       if (d < reach && (!best || d < best.distance)) { target.distance = d; best = target; }
     }
     // Things on their way into a hand.
-    for (const [id, lift] of lifts) { const g = nodeGroups.current.get(id) ?? groups.current.get(id); if (g) liftGroup(g, lift, nowMs, g.userData.base ?? 1); }
+    liftAll(lifts, nodeGroups.current, groups.current, nowMs);
     const t = worldTime();
     // A rare find's tell: a twinkle from the glow layer near it now and then, on the world clock (stronger on High).
-    for (const [id, gl] of glints) {
-      if (lyingByNode.has(id) || acts.current.has(id) || Math.hypot(gl.x - p.x, gl.z - p.z) > 18) continue;
+    for (let i = 0; i < glints.length; i++) {
+      const gl = glints[i];
+      if (lyingByNode.has(gl.id) || acts.current.has(gl.id) || Math.hypot(gl.x - p.x, gl.z - p.z) > 18) continue;
       const beat = Math.floor(t / GLINT_EVERY + gl.phase);
-      if (glintBeat.current.get(id) === beat) continue;
-      glintBeat.current.set(id, beat);
+      if (glintBeat.current.get(gl.id) === beat) continue;
+      glintBeat.current.set(gl.id, beat);
       const a = hash01(beat, gl.phase * 1000) * Math.PI * 2, r = hash01(beat + 7, gl.phase * 1000) * gl.spread, h = hash01(beat + 13, gl.phase * 1000);
       glow.pool.burst(GLINT, gl.x + Math.cos(a) * r, gl.y + h * (gl.spread * 0.6 + 0.25), gl.z + Math.sin(a) * r, gl.ground, 0, 0, highTier ? 1.15 : 0.85, GLINT_TINT, beat);
     }
-    for (const bug of bugState.current.values()) {
-      const g = groups.current.get(bug.id);
-      if (!g || lifts.has(bug.id)) continue;
+    // Each bug by its slot (the live state carried in bugState): an index loop, no Map iterator a frame.
+    const live = bugState.current;
+    for (let i = 0; i < bugs.length; i++) {
+      const bug = live.get(bugs[i].id), g = bug && groups.current.get(bug.id);
+      if (!bug || !g || lifts.has(bug.id)) continue;
       const model = MODEL_OF.get(bug.sp.key)!;
       if (bug.fled) {
         // Away along its curve, fading out (never a pop).

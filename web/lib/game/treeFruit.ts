@@ -40,7 +40,7 @@ const _shake = { x: 0, z: 0 };
  * lib/game/treeShake.ts: the shader's own wobble), then turned and sized with the tree.
  */
 export function hangAt(t: FruitTree, i: number, time: number, amp: number, out: Point, shakes: Shakes = WORLD_SHAKES): Point {
-  const [hx, hy, hz] = t.hang[i];
+  const hang = t.hang[i], hx = hang[0], hy = hang[1], hz = hang[2];
   const h = Math.min(1, Math.max(0, hy / 3)) ** 2;
   const phase = time * 1.7 + t.x * 0.37 + t.z * 0.23;
   shakes.at(t.x, t.z, time, _shake);
