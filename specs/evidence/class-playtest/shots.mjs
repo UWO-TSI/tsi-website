@@ -41,12 +41,11 @@ const panel = () => page.locator('section[aria-label="Class playtest"]');
 // ONLY=cards (CARDS=a,b): straight into those kits for their key cards, then a note and the picker (a shorter run).
 if (process.env.ONLY === "cards") {
   for (const kit of (process.env.CARDS ?? "elementalist,transmuter").split(",")) {
-    await page.goto(`http://localhost:${PORT}/lab/island?combat=demo&classes=v2&subclass=${kit}&mastery=20&traits=all&ruins=1&playtest=1`, { waitUntil: "domcontentloaded" });
+    await page.goto(`http://localhost:${PORT}/lab/island?combat=demo&classes=v2&subclass=${kit}&mastery=20&traits=all&tamed=all&ruins=1&playtest=1`, { waitUntil: "domcontentloaded" });
     await ready();
     const s = await rt();
-    const type = await page.evaluate(() => window.__combat.rt.v2.kit.signature.type);
-    check(s.kit === kit && s.weapon === `${type}-1`, `${kit} holds ${s.weapon}`);
-    check(await page.locator('[data-testid="playtest-keycard"]').getByText("learn it by defeating").count() === 0, "every skill is open");
+    check(s.kit === kit && s.weapon !== "sword-driftwood" && await page.locator("li[data-unarmed]").count() === 0, `${kit} holds ${s.weapon}, its skills armed`);
+    check(await page.locator('[data-testid="playtest-keycard"] dd[data-locked]').count() === 0, "every skill is open");
     const b = await page.locator('[data-testid="playtest-keycard"]').boundingBox(), m = await page.locator('section[aria-label="Damage meter"]').boundingBox();
     webp(await shot({ x: 0, y: Math.max(0, b.y - 12), width: Math.ceil(b.width + 40), height: Math.ceil(m.y + m.height - b.y + 24) }), `keycard-${kit}`);
   }
