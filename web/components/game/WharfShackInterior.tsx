@@ -12,9 +12,10 @@ import { Suspense, useEffect } from "react";
 import { useThree, type ThreeEvent } from "@react-three/fiber";
 import { AudioManager } from "@/lib/game/audio";
 import {
-  InteriorKeeper, InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
+  InteriorPlayer, Piece, applyInteriorBackdrop, preloadPieces, useNearestStation,
   type InteriorStation, type RoomBounds,
 } from "./interiorShared";
+import Keeper from "./Keeper";
 
 const BOUNDS: RoomBounds = { halfW: 4, halfD: 4, spawn: [0, -2.8] };
 
@@ -36,6 +37,7 @@ export default function WharfShackInterior({
 }) {
   const { scene } = useThree();
   useEffect(() => applyInteriorBackdrop(scene, "#152028"), [scene]);
+  const onMove = useNearestStation(WHARF_STATIONS, onNearestStation);
 
   const onFloorClick = (e: ThreeEvent<MouseEvent>) => {
     window.dispatchEvent(new CustomEvent("tsi:interior-move", { detail: { x: e.point.x, z: e.point.z } }));
@@ -68,7 +70,7 @@ export default function WharfShackInterior({
         </mesh>
       ))}
 
-      <InteriorKeeper position={[0, 0, 3.35]} watch={[0, 2.2]} colors={{ apron: "#3E5C7A", shirt: "#C97E5A" }} hat="straw" playerPosRef={playerPosRef} />
+      <Keeper room="wharf" player={playerPosRef} frozen={frozen} />
 
       <Suspense fallback={null}>
         {/* the counter — selling happens here */}
@@ -77,14 +79,14 @@ export default function WharfShackInterior({
         <Piece name="barrel" position={[-3, 0, 2.9]} scale={0.1} />
         <Piece name="barrel" position={[-2.2, 0, 3.1]} rotY={0.7} scale={0.09} />
         <Piece name="cardboard-pile" position={[3, 0, 2.8]} rotY={-0.4} scale={0.1} />
-        <Piece name="yellow-message-mat" position={[0, 0.015, -3.4]} scale={0.11} />
+        <Piece name="yellow-message-mat" rotX={Math.PI} rotY={Math.PI} position={[0, 0.015, -3.4]} scale={0.11} />
       </Suspense>
 
       <InteriorPlayer
         frozen={frozen}
         bounds={BOUNDS}
         playerPosRef={playerPosRef}
-        onMove={(x, z) => onNearestStation(nearestStation(WHARF_STATIONS, x, z))}
+        onMove={onMove}
       />
     </group>
   );

@@ -21,6 +21,9 @@ export const HQ_LAYOUT = {
   monstera: hqPiece([-7.2, 0, 3.2], 0.1, 0, [0.55, 0.5]),
   yucca: hqPiece([7.25, 0, -4], 0.1, 0, [0.55, 0.5]),
 };
+/** The front desk at HQ_LAYOUT.desk (art/interiors/build_interiors.py hq_front_desk; its scale and turn are the model's own):
+ * half its width and depth, and its counter's ledge, at the visitor's side; the work surface behind is at 0.76. */
+export const HQ_FRONT_DESK = { halfW: 0.95, halfD: 0.36, ledge: 1.04, ledgeBack: -0.04 };
 export const HQ_CLOCK = HQ_LAYOUT.clock.position;
 export const HQ_BOARD_APPROACH: [number, number] = [HQ_LAYOUT.board.position[0], 4.3];
 export const HQ_PENDANTS = [
@@ -30,6 +33,8 @@ export const HQ_PENDANTS = [
 
 const HQ_FURNITURE = Object.values(HQ_LAYOUT).flatMap(piece => piece.footprint
   ? [[piece.position[0], piece.position[2], ...piece.footprint]] : []);
+/** The walker reads the answer at once: one tuple reused, nothing allocated per step. */
+const OUT: [number, number] = [0, 0];
 export function constrainClubhouse(x: number, z: number, nx: number, nz: number): [number, number] {
   const fits = (px: number, pz: number) => !HQ_FURNITURE.some(([cx, cz, w, d]) => Math.abs(px - cx) < w + 0.2 && Math.abs(pz - cz) < d + 0.2);
   const steps = Math.max(1, Math.ceil(Math.hypot(nx - x, nz - z) / 0.15));
@@ -40,5 +45,6 @@ export function constrainClubhouse(x: number, z: number, nx: number, nz: number)
     else if (fits(x, z + dz)) z += dz;
     else break;
   }
-  return [x, z];
+  OUT[0] = x; OUT[1] = z;
+  return OUT;
 }

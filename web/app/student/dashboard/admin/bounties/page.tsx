@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Inbox, Skull } from "lucide-react";
 import { Amount } from "@/components/economy/Amount";
-import { Badge, Button, Card, Empty, ErrorNote, Field, Loading, Tabs, type BadgeTone } from "@/components/gui";
+import { Badge, Button, Card, ConfirmDialog, Empty, ErrorNote, Field, Loading, Tabs, type BadgeTone } from "@/components/gui";
 
 interface PendingBounty {
   id: string;
@@ -49,6 +49,8 @@ export default function AdminBountiesPage() {
   const [bounties, setBounties] = useState<PendingBounty[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"pending" | "all">("pending");
+  const [confirmReject, setConfirmReject] = useState<PendingBounty | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function fetchBounties() {
     const supabase = createClient();
@@ -96,7 +98,9 @@ export default function AdminBountiesPage() {
 
   async function rejectBounty(id: string) {
     const supabase = createClient();
-    await supabase.from("bounties").delete().eq("id", id);
+    const { error: deleteError } = await supabase.from("bounties").delete().eq("id", id);
+    if (deleteError) return setError("That posting wasn’t rejected. Try again.");
+    setError(null);
     setBounties((prev) => prev.filter((b) => b.id !== id));
   }
 
@@ -134,6 +138,8 @@ export default function AdminBountiesPage() {
           />
         )}
       </div>
+
+      {error && view === "postings" && <ErrorNote className="mb-4">{error}</ErrorNote>}
 
       {view === "submissions" ? (
         <SubmissionsReview />
@@ -214,7 +220,7 @@ export default function AdminBountiesPage() {
                       size="sm"
                       variant="danger"
                       className="ml-auto"
-                      onClick={() => rejectBounty(bounty.id)}
+                      onClick={() => setConfirmReject(bounty)}
                     >
                       Reject
                     </Button>
@@ -225,6 +231,21 @@ export default function AdminBountiesPage() {
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmReject !== null}
+        danger
+        title="Reject this posting?"
+        confirmLabel="Reject and delete"
+        cancelLabel="Keep it"
+        onCancel={() => setConfirmReject(null)}
+        onConfirm={() => {
+          if (confirmReject) void rejectBounty(confirmReject.id);
+          setConfirmReject(null);
+        }}
+      >
+        “{confirmReject?.title}” is deleted and never goes up on the board.
+      </ConfirmDialog>
     </div>
   );
 }
@@ -250,6 +271,7 @@ function SubmissionsReview() {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmReject, setConfirmReject] = useState<SubmissionRow | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -411,7 +433,7 @@ function SubmissionsReview() {
                       size="sm"
                       variant="danger"
                       className="ml-auto"
-                      onClick={() => review(sub, "rejected")}
+                      onClick={() => setConfirmReject(sub)}
                       disabled={busy === sub.id}
                     >
                       Reject
@@ -423,6 +445,21 @@ function SubmissionsReview() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmReject !== null}
+        danger
+        title="Reject this submission?"
+        confirmLabel="Reject"
+        cancelLabel="Not now"
+        onCancel={() => setConfirmReject(null)}
+        onConfirm={() => {
+          if (confirmReject) void review(confirmReject, "rejected");
+          setConfirmReject(null);
+        }}
+      >
+        {confirmReject?.author?.display_name ?? "The member"} gets no Gems for “{confirmReject?.bounty?.title ?? "this bounty"}”. To let them fix it, ask for a revision instead.
+      </ConfirmDialog>
     </div>
   );
 }

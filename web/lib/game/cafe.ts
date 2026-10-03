@@ -66,25 +66,38 @@ export const OWNER_WALK = 1.15;
 /** Where the player stands to talk to her across the order counter, and how close. */
 export const OWNER_TALK: { at: [number, number]; range: number } = { at: [-0.4, 3.15], range: 1.5 };
 
-/** The owner's routine at `t` seconds of the shared world clock: a loop of stations joined by walks. */
-export function ownerAt(t: number, stations: OwnerStation[] = OWNER_STATIONS) {
-  const legs = stations.map((s, i) => {
-    const next = stations[(i + 1) % stations.length];
-    return { s, next, walk: Math.hypot(next.at[0] - s.at[0], next.at[1] - s.at[1]) / OWNER_WALK };
-  });
-  const loop = legs.reduce((n, l) => n + l.s.stay + l.walk, 0);
+/** Where a station routine has someone: the spot, the facing, the clip, and the station they're at or leaving. */
+export interface OwnerPose { x: number; z: number; yaw: number; clip: OwnerClip; moving: boolean; station: number }
+function pose(out: OwnerPose, x: number, z: number, yaw: number, clip: OwnerClip, moving: boolean, station: number): OwnerPose {
+  out.x = x; out.z = z; out.yaw = yaw; out.clip = clip; out.moving = moving; out.station = station;
+  return out;
+}
+/** Seconds from station i to the next, at the owner's pace. */
+function walkOf(stations: readonly OwnerStation[], i: number): number {
+  const a = stations[i].at, b = stations[(i + 1) % stations.length].at;
+  return Math.hypot(b[0] - a[0], b[1] - a[1]) / OWNER_WALK;
+}
+/**
+ * The owner's routine at `t` seconds of the shared world clock: a loop of stations joined by walks. Pass `out` to
+ * reuse one pose (a frame loop allocates nothing); the indoor keepers walk their own stations (lib/game/keepers.ts).
+ */
+export function ownerAt(t: number, stations: readonly OwnerStation[] = OWNER_STATIONS, out: OwnerPose = { x: 0, z: 0, yaw: 0, clip: "Idle", moving: false, station: 0 }): OwnerPose {
+  const n = stations.length;
+  let loop = 0;
+  for (let i = 0; i < n; i++) loop += stations[i].stay + walkOf(stations, i);
   let u = ((t % loop) + loop) % loop;
-  for (const { s, next, walk } of legs) {
-    if (u < s.stay) return { x: s.at[0], z: s.at[1], yaw: s.yaw, clip: s.clip, moving: false };
+  for (let i = 0; i < n; i++) {
+    const s = stations[i];
+    if (u < s.stay) return pose(out, s.at[0], s.at[1], s.yaw, s.clip, false, i);
     u -= s.stay;
+    const walk = walkOf(stations, i);
     if (u < walk) {
-      const k = u / walk, dx = next.at[0] - s.at[0], dz = next.at[1] - s.at[1];
-      return { x: s.at[0] + dx * k, z: s.at[1] + dz * k, yaw: Math.atan2(dx, dz), clip: "Walk" as OwnerClip, moving: true };
+      const next = stations[(i + 1) % n], k = u / walk, dx = next.at[0] - s.at[0], dz = next.at[1] - s.at[1];
+      return pose(out, s.at[0] + dx * k, s.at[1] + dz * k, Math.atan2(dx, dz), "Walk", true, i);
     }
     u -= walk;
   }
-  const s = stations[0];
-  return { x: s.at[0], z: s.at[1], yaw: s.yaw, clip: s.clip, moving: false };
+  return pose(out, stations[0].at[0], stations[0].at[1], stations[0].yaw, stations[0].clip, false, 0);
 }
 
 /** Where you can stand in the café: inside the walls, clear of the room's furniture and the study tables. */

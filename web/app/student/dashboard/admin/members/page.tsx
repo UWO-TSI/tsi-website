@@ -41,15 +41,19 @@ export default function AdminMembersPage() {
 
   async function fetchMembers() {
     // Emails are server-only; /api/admin/members reads them after a tier check.
-    const res = await fetch("/api/admin/members");
-    const body = res.ok ? await res.json() : null;
-    setMembers((body?.members as AdminMember[]) ?? []);
-    setLoadFailed(!res.ok);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/admin/members");
+      const body = res.ok ? await res.json() : null;
+      setMembers((body?.members as AdminMember[]) ?? []);
+      setLoadFailed(!body?.members);
+    } catch {
+      setLoadFailed(true);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch, setState is after await
     fetchMembers();
   }, []);
 
@@ -57,36 +61,46 @@ export default function AdminMembersPage() {
   async function updateMember(memberId: string, patch: Partial<Pick<AdminMember, "tier" | "is_active" | "is_alumni">>) {
     setUpdating(memberId);
     setSaveError(null);
-    const res = await fetch(`/api/admin/members/${memberId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
-    });
-    if (res.ok) {
-      setMembers((prev) => prev.map((m) => (m.id === memberId ? { ...m, ...patch } : m)));
-    } else {
-      const body = await res.json().catch(() => null);
-      setSaveError(body?.error ?? "Couldn’t save the change.");
+    try {
+      const res = await fetch(`/api/admin/members/${memberId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      if (res.ok) {
+        setMembers((prev) => prev.map((m) => (m.id === memberId ? { ...m, ...patch } : m)));
+      } else {
+        const body = await res.json().catch(() => null);
+        setSaveError(body?.error ?? "Couldn’t save the change.");
+      }
+    } catch {
+      setSaveError("Couldn’t reach the server. Try again.");
+    } finally {
+      setUpdating(null);
     }
-    setUpdating(null);
   }
 
   // Ruling 1: T1/T2 mark who is a TSI member. The route moves the tier with it (public = T5, marked = T4).
   async function setMembership(member: AdminMember, membership: AdminMember["membership"]) {
     setUpdating(member.id);
     setSaveError(null);
-    const res = await fetch(`/api/admin/members/${member.id}/membership`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ membership }),
-    });
-    const body = await res.json().catch(() => null);
-    if (res.ok && body?.ok) {
-      setMembers((prev) => prev.map((m) => (m.id === member.id ? { ...m, membership: body.member.membership, tier: body.member.tier } : m)));
-    } else {
-      setSaveError(body?.error ?? "Couldn’t save the change.");
+    try {
+      const res = await fetch(`/api/admin/members/${member.id}/membership`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ membership }),
+      });
+      const body = await res.json().catch(() => null);
+      if (res.ok && body?.ok) {
+        setMembers((prev) => prev.map((m) => (m.id === member.id ? { ...m, membership: body.member.membership, tier: body.member.tier } : m)));
+      } else {
+        setSaveError(body?.error ?? "Couldn’t save the change.");
+      }
+    } catch {
+      setSaveError("Couldn’t reach the server. Try again.");
+    } finally {
+      setUpdating(null);
     }
-    setUpdating(null);
   }
 
   const updateTier = (memberId: string, tier: Tier) => updateMember(memberId, { tier });

@@ -26,7 +26,8 @@ import { TIER_LOOK } from "@/components/portal/classIdentity";
 import { createClient } from "@/lib/supabase/client";
 import { useGhostReplaySetting } from "@/lib/game/useGhostReplaySetting";
 import { useQuestsMuted } from "@/components/portal/QuestChecklist";
-import { Badge, Banner, Button, Card, Field, Loading, Tabs, TextArea, Toggle } from "@/components/gui";
+import { Badge, Banner, Button, Card, ErrorNote, Field, Loading, Tabs, TextArea, Toggle } from "@/components/gui";
+import { saveProfile } from "@/lib/portal/load";
 
 type TabKey = "profile" | "social" | "world" | "account";
 
@@ -43,6 +44,9 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reload, setReload] = useState(0);
   const [activeTab, setActiveTab] = useState<TabKey>("profile");
   const [signingOut, setSigningOut] = useState(false);
 
@@ -55,36 +59,34 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetch("/api/profile")
-      .then((r) => r.ok ? r.json() : { profile: null })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((d) => {
-        const p = d.profile ?? d;
+        const p = d.profile;
         setProfile(p);
         setDisplayName(p?.display_name ?? "");
         setBio(p?.bio ?? "");
         setSkills((p?.skills ?? []).join(", "));
         setSocial(p?.social_links ?? {});
+        setLoadFailed(false);
       })
-      .catch(() => {})
+      // Without your saved profile the fields would be blank, and saving them would wipe it: say so, and don't offer Save.
+      .catch(() => setLoadFailed(true))
       .finally(() => setLoading(false));
-  }, []);
+  }, [reload]);
 
   const handleSave = async () => {
     setSaving(true);
     setSaved(false);
-    try {
-      const res = await fetch("/api/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          display_name: displayName,
-          bio,
-          skills: skills.split(",").map((s) => s.trim()).filter(Boolean),
-          social_links: social,
-        }),
-      });
-      if (res.ok) setSaved(true);
-    } catch { /* ignore */ }
+    setSaveError(null);
+    const r = await saveProfile({
+      display_name: displayName,
+      bio,
+      skills: skills.split(",").map((s) => s.trim()).filter(Boolean),
+      social_links: social,
+    });
     setSaving(false);
+    if (!r.ok) return setSaveError(r.error);
+    setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
 
@@ -113,6 +115,13 @@ export default function SettingsPage() {
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
         <Banner title="Settings" icon={<Settings size={26} />} tone="sage">Your profile, your links, and how the world behaves for you.</Banner>
 
+        {loadFailed && (
+          <ErrorNote className="mb-6" onRetry={() => { setLoading(true); setReload((n) => n + 1); }}>
+            Your profile didn’t load, so it can’t be edited right now.
+          </ErrorNote>
+        )}
+        {saveError && <ErrorNote className="mb-6">{saveError}</ErrorNote>}
+
         {/* Tabs: they scroll sideways on narrow screens (spec §10) */}
         <Tabs
           label="Settings sections"
@@ -130,7 +139,7 @@ export default function SettingsPage() {
               <TextArea label="Bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell us about yourself…" rows={3} style={{ minHeight: 96 }} />
               <Field label="Skills" hint="Separate them with commas." value={skills} onChange={(e) => setSkills(e.target.value)} placeholder="React, TypeScript, Figma…" />
             </Section>
-            <SaveBar saving={saving} saved={saved} onClick={handleSave} />
+            <SaveBar saving={saving} saved={saved} disabled={loadFailed} onClick={handleSave} />
           </TabPanel>
         )}
 
@@ -146,7 +155,7 @@ export default function SettingsPage() {
               <SocialField icon={MessageCircle} label="Discord" value={social.discord ?? ""} onChange={(v) => setSocial((s) => ({ ...s, discord: v }))} placeholder="username#1234" />
               <SocialField icon={Globe} label="Website" value={social.website ?? ""} onChange={(v) => setSocial((s) => ({ ...s, website: v }))} placeholder="https://…" />
             </Section>
-            <SaveBar saving={saving} saved={saved} onClick={handleSave} />
+            <SaveBar saving={saving} saved={saved} disabled={loadFailed} onClick={handleSave} />
           </TabPanel>
         )}
 
@@ -278,10 +287,10 @@ function TierField({ tier }: { tier: number | undefined }) {
   );
 }
 
-function SaveBar({ saving, saved, onClick }: { saving: boolean; saved: boolean; onClick: () => void }) {
+function SaveBar({ saving, saved, disabled, onClick }: { saving: boolean; saved: boolean; disabled?: boolean; onClick: () => void }) {
   return (
     <div className="flex justify-end mb-8">
-      <Button size="sm" variant={saved ? "secondary" : "primary"} onClick={onClick} disabled={saving}>
+      <Button size="sm" variant={saved ? "secondary" : "primary"} onClick={onClick} disabled={saving || disabled}>
         {saved ? <><Check size={16} aria-hidden /> Saved</> : <><Save size={16} aria-hidden /> {saving ? "Saving…" : "Save changes"}</>}
       </Button>
     </div>

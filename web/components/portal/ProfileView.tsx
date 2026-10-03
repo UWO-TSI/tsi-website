@@ -8,6 +8,7 @@ import { CLASS_META, ClassBadge, TIER_LOOK } from "./classIdentity";
 import { Amount } from "@/components/economy/Amount";
 import { Badge, Button, Card, Empty, ErrorNote, Field, Loading, Progress, TextArea } from "@/components/gui";
 import type { Profile, PublicProfile, SocialLinks } from "@/lib/supabase/types";
+import { saveProfile } from "@/lib/portal/load";
 
 const SOCIAL_ICONS: Record<string, typeof Github> = {
   github: Github, linkedin: Linkedin, website: Globe,
@@ -33,6 +34,8 @@ export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProp
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Editable fields
   const [editName, setEditName] = useState("");
@@ -68,24 +71,18 @@ export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProp
 
   const handleSave = async () => {
     if (!profile) return;
-    try {
-      const res = await fetch("/api/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          display_name: editName,
-          bio: editBio,
-          skills: editSkills.split(",").map((s) => s.trim()).filter(Boolean),
-          social_links: editSocial,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to save");
-      const data = await res.json();
-      setProfile(data.profile);
-      setEditing(false);
-    } catch {
-      // TODO: show error toast
-    }
+    setSaving(true);
+    setSaveError(null);
+    const r = await saveProfile({
+      display_name: editName,
+      bio: editBio,
+      skills: editSkills.split(",").map((s) => s.trim()).filter(Boolean),
+      social_links: editSocial,
+    });
+    setSaving(false);
+    if (!r.ok) return setSaveError(r.error);
+    setProfile(r.profile as unknown as Profile);
+    setEditing(false);
   };
 
   if (loading) {
@@ -130,6 +127,7 @@ export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProp
         )}
 
         <Card as="section" style={{ padding: "24px 24px 8px" }}>
+          {saveError && <ErrorNote className="mb-4">{saveError}</ErrorNote>}
           {/* Header */}
           <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
             <div className="flex items-start gap-5 flex-1 min-w-0">
@@ -165,8 +163,8 @@ export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProp
               <div className="flex gap-2 shrink-0">
                 {editing ? (
                   <>
-                    <Button size="sm" variant="quiet" onClick={() => setEditing(false)}>Cancel</Button>
-                    <Button size="sm" onClick={handleSave}>Save</Button>
+                    <Button size="sm" variant="quiet" onClick={() => { setEditing(false); setSaveError(null); }}>Cancel</Button>
+                    <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
                   </>
                 ) : (
                   <Button size="sm" onClick={() => setEditing(true)}>

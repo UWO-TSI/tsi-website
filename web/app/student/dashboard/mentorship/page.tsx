@@ -2,6 +2,7 @@
 
 import { useState, useEffect, type CSSProperties } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { must, settle } from "@/lib/portal/load";
 import {
   Users,
   Search,
@@ -13,7 +14,7 @@ import {
   Plus,
 } from "lucide-react";
 import { CLASS_META, ClassBadge } from "@/components/portal/classIdentity";
-import { Badge, Banner, Button, Card, Empty, Field, IconButton, Loading, Select, Tabs, TextArea, Toggle } from "@/components/gui";
+import { Badge, Banner, Button, Card, Empty, ErrorNote, Field, IconButton, Loading, Select, Tabs, TextArea, Toggle } from "@/components/gui";
 
 interface MentorProfile {
   id: string;
@@ -36,7 +37,7 @@ interface MentorshipMatch {
   id: string;
   mentor_id: string;
   mentee_id: string;
-  status: "pending" | "active" | "completed" | "rejected";
+  status: "pending" | "active" | "completed" | "declined";
   created_at: string;
   mentor_profile?: {
     display_name: string;
@@ -87,7 +88,8 @@ export default function MentorshipPage() {
   const [tab, setTab] = useState<"find" | "my">("find");
   const [mentors, setMentors] = useState<MentorProfile[]>([]);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<"loading" | "ready" | "signed-out" | "error">("loading");
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [userId, setUserId] = useState("");
 
   // My Mentorship state
@@ -105,25 +107,25 @@ export default function MentorshipPage() {
   const [mentorBio, setMentorBio] = useState("");
   const [savingMentor, setSavingMentor] = useState(false);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch, setState is after await
-    loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  /** A write's result: true when it saved, else the failure is shown and nothing on screen changes. */
+  const saved = (r: { error: unknown }) => {
+    setSaveError(r.error ? "That didn’t save. Try again." : null);
+    return !r.error;
+  };
 
   async function loadData() {
     const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) return null;
     setUserId(user.id);
 
     // Fetch mentors
-    const { data: mentorProfiles } = await supabase
+    const mentorProfiles = must(await supabase
       .from("mentorship_profiles")
       .select("*, profile:profiles(display_name, class, level, rank)")
-      .eq("is_mentor", true);
+      .eq("is_mentor", true));
 
     // Get mentee counts for each mentor
     if (mentorProfiles) {
@@ -141,11 +143,11 @@ export default function MentorshipPage() {
     }
 
     // Fetch my mentor profile
-    const { data: myMP } = await supabase
+    const myMP = must(await supabase
       .from("mentorship_profiles")
       .select("*, profile:profiles(display_name, class, level, rank)")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle());
 
     if (myMP) {
       setMyMentorProfile(myMP as unknown as MentorProfile);
@@ -158,13 +160,13 @@ export default function MentorshipPage() {
     }
 
     // Fetch my mentor (where I'm the mentee)
-    const { data: mentorMatch } = await supabase
+    const mentorMatch = must(await supabase
       .from("mentorship_matches")
       .select("*, mentor_profile:profiles!mentorship_matches_mentor_id_fkey(display_name, class, level, rank)")
       .eq("mentee_id", user.id)
       .in("status", ["active", "pending"])
       .limit(1)
-      .maybeSingle();
+      .maybeSingle());
 
     if (mentorMatch) {
       setMyMentor(mentorMatch as unknown as MentorshipMatch);
@@ -172,51 +174,55 @@ export default function MentorshipPage() {
 
     // If I'm a mentor, fetch my mentees
     if (myMP?.is_mentor) {
-      const { data: menteeMatches } = await supabase
+      const menteeMatches = must(await supabase
         .from("mentorship_matches")
         .select("*, mentee_profile:profiles!mentorship_matches_mentee_id_fkey(display_name, class, level, rank)")
         .eq("mentor_id", user.id)
-        .eq("status", "active");
+        .eq("status", "active"));
 
       setMyMentees((menteeMatches as unknown as MentorshipMatch[]) ?? []);
 
-      const { data: pending } = await supabase
+      const pending = must(await supabase
         .from("mentorship_matches")
         .select("*, mentee_profile:profiles!mentorship_matches_mentee_id_fkey(display_name, class, level, rank)")
         .eq("mentor_id", user.id)
-        .eq("status", "pending");
+        .eq("status", "pending"));
 
       setPendingRequests((pending as unknown as MentorshipMatch[]) ?? []);
     }
 
     // Track which mentors the user already sent requests to
-    const { data: sentRequests } = await supabase
+    const sentRequests = must(await supabase
       .from("mentorship_matches")
       .select("mentor_id")
       .eq("mentee_id", user.id)
-      .in("status", ["pending", "active"]);
+      .in("status", ["pending", "active"]));
 
     setRequestsSent((sentRequests ?? []).map((r) => r.mentor_id));
-
-    setLoading(false);
+    return true;
   }
+
+  useEffect(() => {
+    void settle(loadData).then(setState);
+  }, []);
 
   async function requestMentorship(mentorUserId: string) {
     const supabase = createClient();
-    await supabase.from("mentorship_matches").insert({
+    const r = await supabase.from("mentorship_matches").insert({
       mentor_id: mentorUserId,
       mentee_id: userId,
       status: "pending",
     });
-    setRequestsSent([...requestsSent, mentorUserId]);
+    if (saved(r)) setRequestsSent([...requestsSent, mentorUserId]);
   }
 
   async function handleRequest(matchId: string, accept: boolean) {
     const supabase = createClient();
-    await supabase
+    const r = await supabase
       .from("mentorship_matches")
-      .update({ status: accept ? "active" : "rejected" })
+      .update({ status: accept ? "active" : "declined" })
       .eq("id", matchId);
+    if (!saved(r)) return;
 
     setPendingRequests(pendingRequests.filter((r) => r.id !== matchId));
     if (accept) {
@@ -229,11 +235,11 @@ export default function MentorshipPage() {
     if (myMentorProfile?.is_mentor) {
       // Disable mentorship
       const supabase = createClient();
-      await supabase
+      const r = await supabase
         .from("mentorship_profiles")
         .update({ is_mentor: false })
         .eq("user_id", userId);
-      setMyMentorProfile({ ...myMentorProfile, is_mentor: false });
+      if (saved(r)) setMyMentorProfile({ ...myMentorProfile, is_mentor: false });
     } else {
       setShowMentorForm(true);
     }
@@ -257,18 +263,20 @@ export default function MentorshipPage() {
     };
 
     if (myMentorProfile) {
-      await supabase
+      const r = await supabase
         .from("mentorship_profiles")
         .update(payload)
         .eq("user_id", userId);
-      setMyMentorProfile({ ...myMentorProfile, ...payload });
+      if (saved(r)) setMyMentorProfile({ ...myMentorProfile, ...payload });
+      else return setSavingMentor(false);
     } else {
-      const { data } = await supabase
+      const r = await supabase
         .from("mentorship_profiles")
         .insert(payload)
         .select("*, profile:profiles(display_name, class, level, rank)")
         .single();
-      if (data) setMyMentorProfile(data as unknown as MentorProfile);
+      if (saved(r) && r.data) setMyMentorProfile(r.data as unknown as MentorProfile);
+      else return setSavingMentor(false);
     }
 
     setShowMentorForm(false);
@@ -282,10 +290,14 @@ export default function MentorshipPage() {
       m.profile.class?.toLowerCase().includes(search.toLowerCase())
   );
 
-  if (loading) {
+  if (state !== "ready") {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loading label="Finding mentors…" />
+      <div className="flex-1 overflow-y-auto" style={{ padding: "24px 20px 48px" }}>
+        <div className="max-w-4xl mx-auto">
+          {state === "loading" ? <Loading label="Finding mentors…" />
+            : state === "signed-out" ? <Empty icon={<Users size={32} />} title="Sign in to find a mentor">Mentorship opens once you’re signed in.</Empty>
+            : <ErrorNote onRetry={() => { setState("loading"); void settle(loadData).then(setState); }}>Mentorship didn’t load.</ErrorNote>}
+        </div>
       </div>
     );
   }
@@ -296,6 +308,8 @@ export default function MentorshipPage() {
         <Banner title="Mentorship" icon={<Users size={26} />} tone="sage">
           Learn from experienced members, or guide the next ones.
         </Banner>
+
+        {saveError && <ErrorNote className="sticky top-4 z-10 shadow-[var(--gui-shadow-md)]">{saveError}</ErrorNote>}
 
         <Tabs
           label="Mentorship"
