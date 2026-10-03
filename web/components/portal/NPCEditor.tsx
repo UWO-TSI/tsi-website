@@ -6,7 +6,9 @@ import { ArrowLeft, Plus, Trash2, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { NPCPersona, SpawnZone } from "@/lib/content/types";
 import ImageUploadButton from "@/components/portal/ImageUploadButton";
-import { MAX_STOPS, RESIDENT_ANCHORS, RESIDENT_POSTS, validateResidentDraft, type ResidentPost, type ResidentSchedule, type ResidentStop } from "@/lib/content/residents";
+import { MAX_STOPS, POST_TITLES, RESIDENT_ANCHORS, RESIDENT_POSTS, validateResidentDraft, type ResidentSchedule, type ResidentStop } from "@/lib/content/residents";
+import { TALK_LIMITS } from "@/lib/content/talk";
+import { EXPRESSIONS } from "@/lib/game/character/face";
 import { HOME_LANDMARKS, ROUTINE_SPECIAL } from "@/lib/game/residentRoutine";
 import { LANDMARK_INFO, type LandmarkId } from "@/lib/game/defaultIsland";
 import { ISLAND_PHASES } from "@/lib/game/islandTime";
@@ -24,10 +26,6 @@ import { backLinkCls, buttonLinkCls, DraftBar, Field, FixList, inputCls, Toggle,
 //                   uniqueness skips the current slug.
 
 const SPAWN_ZONES: SpawnZone[] = ["courtyard", "shop", "temple", "roaming"];
-const POST_LABELS: Record<ResidentPost, string> = {
-  hq_lead: "HQ lead", shopkeeper: "Shopkeeper", cafe_owner: "Café owner", museum_curator: "Museum curator",
-  wharf_keeper: "Wharf keeper", oracle_keeper: "Oracle keeper", workshop_crafter: "Workshop crafter", villager: "Villager",
-};
 
 /** Routine stops: the map's anchors, then a bench and home. */
 const STOP_OPTIONS = [...Object.entries(RESIDENT_ANCHORS), ...Object.entries(ROUTINE_SPECIAL)].map(([key, a]) => [key, a.label] as const);
@@ -45,6 +43,8 @@ interface FormState {
   bio: string;
   tone: string;
   schedule: ResidentSchedule;
+  /** Conversations, each as the text in its box: one line per row. */
+  talk: string[];
 }
 
 interface NPCEditorProps {
@@ -66,6 +66,7 @@ const EMPTY_FORM: FormState = {
   bio: "",
   tone: "",
   schedule: {},
+  talk: [],
 };
 
 function toFormState(row: Partial<NPCPersona> | null | undefined): FormState {
@@ -85,6 +86,7 @@ function toFormState(row: Partial<NPCPersona> | null | undefined): FormState {
     bio: row.bio ?? "",
     tone: row.tone ?? "",
     schedule: (row.schedule ?? {}) as ResidentSchedule,
+    talk: Array.isArray(row.talk) ? row.talk.map((c) => (Array.isArray(c) ? c.join("\n") : "")) : [],
   };
 }
 
@@ -146,6 +148,7 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
       bio: form.bio.trim(),
       tone: form.tone.trim() || null,
       schedule: form.schedule,
+      talk: form.talk.map((c) => c.split("\n").map((l) => l.trim()).filter((l) => l.length > 0)).filter((c) => c.length > 0),
     }),
     [form],
   );
@@ -220,7 +223,7 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
             <Select value={form.post} onChange={(e) => update("post", e.target.value)} className="w-full">
               <option value="">None</option>
               {RESIDENT_POSTS.map((p) => (
-                <option key={p} value={p}>{POST_LABELS[p]}</option>
+                <option key={p} value={p}>{POST_TITLES[p]}</option>
               ))}
             </Select>
           </Field>
@@ -336,7 +339,7 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
 
         <Field
           label="Dialogue lines"
-          hint="What they say in their speech bubble when you pass by. Up to 200 characters a line."
+          hint="What they say in their speech bubble as you pass by. Up to 200 characters a line. Talking to them uses the conversations below."
         >
           <div className="space-y-2">
             {form.canned_dialogue.map((line, idx) => (
@@ -357,6 +360,34 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
             <Button size="sm" variant="quiet" onClick={handleAddLine}>
               <Plus size={16} aria-hidden /> Add a line
             </Button>
+          </div>
+        </Field>
+
+        <Field
+          label="Conversations"
+          hint={`What they say when a member walks up and talks to them: each box is one conversation, each line its own text box (up to ${TALK_LIMITS.lines}, ${TALK_LIMITS.chars} characters each). Start a line with ${EXPRESSIONS.filter((e) => e !== "neutral").map((e) => `[${e}]`).join(", ")} for the face they make. {name} is the member's island name. Each talk picks the next conversation.`}
+        >
+          <div className="space-y-2">
+            {form.talk.map((conversation, idx) => (
+              <div key={idx} className="flex gap-2 items-start">
+                <textarea
+                  rows={Math.max(2, Math.min(TALK_LIMITS.lines, conversation.split("\n").length))}
+                  value={conversation}
+                  onChange={(e) => update("talk", form.talk.map((c, i) => (i === idx ? e.target.value : c)))}
+                  className={`${inputCls} flex-1 resize-y`}
+                  aria-label={`Conversation ${idx + 1}`}
+                  placeholder={"[happy] Oh! Hi there, {name}.\nThe notice board has something new."}
+                />
+                <IconButton label={`Remove conversation ${idx + 1}`} size="sm" onClick={() => update("talk", form.talk.filter((_, i) => i !== idx))}>
+                  <Trash2 size={16} aria-hidden />
+                </IconButton>
+              </div>
+            ))}
+            {form.talk.length < TALK_LIMITS.conversations && (
+              <Button size="sm" variant="quiet" onClick={() => update("talk", [...form.talk, ""])}>
+                <Plus size={16} aria-hidden /> Add a conversation
+              </Button>
+            )}
           </div>
         </Field>
 

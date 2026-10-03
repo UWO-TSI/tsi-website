@@ -20,6 +20,10 @@ import { RESIDENT_STRIDE, RESIDENT_WALK, ResidentDay, daySpan, idleAt, navGrid, 
 import { hash01 } from "@/lib/game/worldFx";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import { dropWalker, setWalker } from "@/lib/game/footprintWalkers";
+import { orbit } from "@/lib/game/orbitCamera";
+import { TALK_CLICK_RANGE, TALK_RANGE, beginTalk, endTalk, leaveTalk, nearestTalker, requestTalk, routineLag, setTalkNear, startTalk, talkCameraYaw, talkChanged, talkStore, talkTyping } from "@/lib/game/residentTalk";
+import { fillName, pickConversation, talkFor, type Conversation } from "@/lib/content/talk";
+import type { FaceOverride } from "@/lib/game/character/face";
 import { useStepDust } from "./movement/moveFx";
 import type { NPCPersona } from "@/lib/content/types";
 import s from "./residents.module.css";
@@ -34,6 +38,11 @@ import s from "./residents.module.css";
  * Only what one viewer sees is local: turning to you, the greeting bubble, waiting while you stand in their way (they
  * catch up after, a little brisker). One frame loop drives them all; the overhead UI is plain DOM toggled by refs, so
  * nothing calls setState per frame.
+ *
+ * Talking (specs/polish/reachability.md deliverable 1; lib/game/residentTalk.ts): walk up and press E, or click or tap
+ * them, and they stop where they are, turn to you with a "!" and talk in the dialogue box (TalkBox): the Chat clip and
+ * their painted mouth while a line types out, the line's expression on their face, a wave goodbye. Their routine holds
+ * while you talk and catches up after, from the spot they stopped.
  */
 
 /** How close before they notice you: the nameplate and the "!" show, and a greeting the first time. */
@@ -48,8 +57,6 @@ const BUBBLE_S = 4.2, BUBBLE_COOLDOWN_S = 22;
 const BLOCK_RANGE = 0.95;
 /** How far off their path a resident steps to pass you. */
 const CLEAR_SIDE = 0.95;
-/** How fast a resident who fell behind (waited for you, talked) catches up: the routine runs this much faster. */
-const CATCH_UP = 0.35;
 /** The bubble stack never sits lower than this above the bottom edge: the prompt lives there. */
 const PROMPT_CLEAR = 132;
 
@@ -75,6 +82,10 @@ interface Ui { bubble: RefObject<HTMLDivElement | null>; text: RefObject<HTMLSpa
 /** One resident's live state, owned by its figure and driven by the residents' frame loop. */
 interface Runtime {
   id: string; slug: string; seed: number; lines: readonly string[]; day: ResidentDay; gather: readonly [number, number];
+  /** Who they are in the dialogue box, and what they say there (lib/content/talk.ts). */
+  name: string; post: string | null; talk: readonly Conversation[];
+  /** In a talk with you last frame, the phase and line it was at (their wave and face follow it), and the face they make. */
+  talking: boolean; talkAt: string; face: FaceOverride;
   home: readonly [number, number] | null;
   pose: ResidentPose; motion: RefObject<CharacterMotion>; group: RefObject<THREE.Group | null>; visual: RefObject<THREE.Group | null>; ui: Ui;
   ready: boolean; x: number; z: number; speed: number;
@@ -110,12 +121,40 @@ function stepDetour(r: Runtime, speed: number, dt: number): number {
 
 const _idle: { clip: IdleClip; key: number } = { clip: null, key: -1 };
 interface Clock { span: DaySpan | null; forced: IslandPhase | null; base: number; since: number }
+/** Talks so far this visit by resident (slug): each one after the first is their next conversation (row 92: nothing is counted on the server). */
+const talksBySlug = new Map<string, number>();
+/** Over the shoulder while you talk, and back the way it was after. */
+const face = (detail: { x: number; z: number } | null) => window.dispatchEvent(new CustomEvent("tsi:face", { detail }));
+
+/** A talk asked for (E, a click or tap) starts here, where their position and lines are: E's is in reach; a click from farther away gets a wave. */
+function startRequested(list: readonly Runtime[], c: Clock, p: THREE.Vector3, now: number, playerName: string | null, ceremony: boolean) {
+  const req = talkStore.request;
+  talkStore.request = null;
+  if (!req || talkStore.active) return;
+  let r: Runtime | null = null;
+  for (const x of list) if (x.id === req.id) r = x;
+  if (!r || r.hidden || ceremony) return;
+  const d = dist(p.x, p.z, r.x, r.z);
+  if (d > (req.click ? TALK_CLICK_RANGE : TALK_RANGE + 0.6)) { if (req.click) r.greetAt = now; return; }
+  const n = talksBySlug.get(r.slug) ?? 0;
+  talksBySlug.set(r.slug, n + 1);
+  const conv = r.talk[pickConversation(r.talk.length, r.slug, c.span?.key ?? "", n)] ?? [];
+  startTalk(beginTalk({ id: r.id, slug: r.slug, name: r.name, post: r.post, seed: r.seed }, conv.map(l => ({ text: fillName(l.text, playerName), face: l.face })), performance.now() / 1000));
+  talkStore.cameraYaw = orbit.target.yaw;
+  orbit.target.yaw = talkCameraYaw(p.x, p.z, r.x, r.z, orbit.target.yaw);
+  face({ x: r.x, z: r.z });
+}
 /**
  * The residents' frame, at module scope (the react compiler forbids writing through hook values): where each one is,
  * the chats, then each one's clip, facing, talk and overhead UI.
  */
-function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, phase: IslandPhase, ceremony: boolean, nav: NavGrid, island: VillageIsland, monument: { x: number; z: number } | null, away: string | null) {
+function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, phase: IslandPhase, ceremony: boolean, nav: NavGrid, island: VillageIsland, monument: { x: number; z: number } | null, away: string | null, playerName: string | null) {
   const now = worldNow() / 1000, days = liveSunDays();
+  if (talkStore.request) startRequested(list, c, p, now, playerName, ceremony);
+  // The club's ceremony calls everyone to the monument: a talk going on says goodbye.
+  const talk = talkStore.active;
+  if (talk && ceremony && talk.phase !== "closing" && talk.phase !== "ended") { leaveTalk(talk, performance.now() / 1000); talkChanged(); }
+  const talkingId = talk && talk.phase !== "ended" ? talk.id : null, typing = talkTyping(talk);
   if (!c.span || now < c.span.t0 || now >= c.span.t1) c.span = daySpan(now * 1000, days);
   // A forced phase (?time=, the options menu) runs the routine from that phase's preview time on.
   let t = now;
@@ -126,6 +165,7 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
 
   // 1. Where everyone is.
   for (const r of list) {
+    const talking = r.id === talkingId;
     const pose = r.day.at(t - r.lag, days, r.pose), m = r.motion.current;
     // Where to make for when off the routine: the ceremony spot, or the routine's door or seat step, or where it is.
     const door = !ceremony && (pose.inside || pose.seat > 0) ? pose.stop?.door : null;
@@ -135,7 +175,9 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
     if (r.hidden && !pose.inside && dist(r.x, r.z, pose.x, pose.z) > 0.6 && r.home) { r.x = r.home[0]; r.z = r.home[1]; }
     const onRoutine = !ceremony && !r.detour && dist(r.x, r.z, pose.x + r.ox, pose.z + r.oz) < 0.08 + (pose.speed + 1) * dt * 1.5;
     let speed = 0, yaw = pose.yaw, blocked = false;
-    if (onRoutine) {
+    // Talking with you: they stand where they stopped (the routine and any walk of their own hold) until you part.
+    if (talking) speed = 0;
+    else if (onRoutine) {
       // Someone in the way of a walking resident: they step round you off the path, or wait if there's no room.
       let tx = 0, tz = 0;
       if (pose.moving) {
@@ -150,8 +192,7 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
         }
       }
       r.ox = THREE.MathUtils.damp(r.ox, tx, 5, dt); r.oz = THREE.MathUtils.damp(r.oz, tz, 5, dt);
-      if (blocked) r.lag += dt;
-      else {
+      if (!blocked) {
         const px = r.x, pz = r.z;
         r.x = pose.x + r.ox; r.z = pose.z + r.oz;
         const moved = dist(r.x, r.z, px, pz);
@@ -179,8 +220,8 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
         if (!ceremony && dist(r.x, r.z, gx, gz) < 0.05) { r.x = pose.x; r.z = pose.z; r.hidden = pose.inside; }
       }
     }
-    if (!blocked && r.lag > 0 && !(r.bubbleUntil > now && !pose.moving)) r.lag = Math.max(0, r.lag - CATCH_UP * dt);
-    if (r.bubbleUntil > now && !pose.moving) r.lag += dt; // still talking: the routine holds
+    // Waiting for you, talking with you, or saying hello where they stand: the routine holds; after, it catches up.
+    r.lag = routineLag(r.lag, blocked || talking || (r.bubbleUntil > now && !pose.moving), dt);
     r.speed = speed;
     m.speed = speed;
     // Face the way they walk; stopped, the seat's way or the place's view (chat and you come next).
@@ -191,37 +232,60 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
 
   // 2. Chats: two stopped standing residents near each other face each other and talk, taking turns.
   for (const r of list) {
-    if (r.speed > 0.05 || r.hidden || r.pose.seat > 0 || ceremony || r.detour) continue;
+    if (r.speed > 0.05 || r.hidden || r.pose.seat > 0 || ceremony || r.detour || r.id === talkingId) continue;
     let best: Runtime | null = null, bestD = CHAT_RANGE;
     for (const o of list) {
-      if (o === r || o.speed > 0.05 || o.hidden || o.pose.seat > 0 || o.detour) continue;
+      if (o === r || o.speed > 0.05 || o.hidden || o.pose.seat > 0 || o.detour || o.id === talkingId) continue;
       const d = dist(r.x, r.z, o.x, o.z);
       if (d < bestD) { bestD = d; best = o; }
     }
     r.chat = best;
   }
 
+  // Who E would talk to: the nearest one you can see in reach (none while you're talking, or at the ceremony).
+  const near = talkingId || ceremony ? -1 : nearestTalker(list, p.x, p.z);
+  if (near < 0) setTalkNear(null, "", Infinity);
+  else setTalkNear(list[near].id, list[near].name, dist(p.x, p.z, list[near].x, list[near].z));
+
   // 3. Each one's clip, facing, talk and overhead UI. One greeting at a time: walking into a group, the first to
-  // notice you speaks and the rest just look up.
+  // notice you speaks and the rest just look up; nobody starts one while you're talking with someone.
   // Only the nearest resident who notices you shows the "!" and their name (a bench of three would stack them).
-  let speaking = false, sx = 0, sz = 0, nearest: Runtime | null = null, nearestD = NOTICE_RANGE;
+  let speaking = !!talkingId, sx = 0, sz = 0, nearest: Runtime | null = null, nearestD = NOTICE_RANGE;
   for (const r of list) {
     if (r.bubbleUntil > now && !r.hidden) { speaking = true; sx = r.x; sz = r.z; }
     const d = dist(p.x, p.z, r.x, r.z);
     if (!r.hidden && d < nearestD) { nearestD = d; nearest = r; }
   }
   for (const r of list) {
-    const m = r.motion.current, pose = r.pose, g = r.group.current;
-    const d = dist(p.x, p.z, r.x, r.z), stopped = r.speed < 0.05 && !r.detour, sitting = stopped && pose.seat > 0 && dist(r.x, r.z, pose.x, pose.z) < 0.05;
+    const m = r.motion.current, pose = r.pose, g = r.group.current, talking = r.id === talkingId;
+    const d = dist(p.x, p.z, r.x, r.z), stopped = r.speed < 0.05 && !r.detour, sitting = (stopped || talking) && pose.seat > 0 && dist(r.x, r.z, pose.x, pose.z) < 0.05;
     let want = r.want;
-    if (stopped && !sitting && !r.hidden) {
-      if (d < FACE_RANGE) want = Math.atan2(p.x - r.x, p.z - r.z);
+    if ((stopped || talking) && !sitting && !r.hidden) {
+      if (d < FACE_RANGE || talking) want = Math.atan2(p.x - r.x, p.z - r.z);
       else if (r.chat) want = Math.atan2(r.chat.x - r.x, r.chat.z - r.z);
     }
-    m.yaw = easeFacing(m.yaw, want, r.speed > 0.05 ? 7 : 4, dt);
+    m.yaw = easeFacing(m.yaw, want, talking ? 8 : r.speed > 0.05 ? 7 : 4, dt);
     m.pose = sitting ? "Sit" : null;
-    // Chatting: one talks (the Chat clip, the mouth) while the other listens, swapping every few seconds; now and then a laugh.
-    if (r.chat && d >= FACE_RANGE) {
+    if (talking) {
+      // Talking with you: the Chat clip and the mouth while a line types out, the line's face; a wave goodbye. Seated, they stay seated.
+      const at = `${talk!.phase}:${talk!.index}`;
+      if (at !== r.talkAt) {
+        if (!r.talking) { r.bubbleUntil = 0; m.play = null; m.stop = true; }
+        if (talk!.phase === "closing" && !sitting) m.play = "Wave";
+        r.talkAt = at;
+      }
+      r.talking = true;
+      if (typing && !sitting) m.pose = "Chat";
+      if (typing) m.talk = Math.max(m.talk ?? 0, 0.15);
+      r.face.expression = talk!.phase === "closing" ? "happy" : talk!.phase === "speaking" ? talk!.lines[talk!.index].face ?? "neutral" : "neutral";
+      m.face = r.face;
+    } else if (r.talking) {
+      // Parted: their own face again, a quiet spell before they greet you, and the camera back where it was.
+      r.talking = false; r.talkAt = ""; m.face = null; m.talk = 0;
+      r.bubbleNext = Math.max(r.bubbleNext, now + BUBBLE_COOLDOWN_S);
+      if (talkStore.cameraYaw !== null) { orbit.target.yaw = talkStore.cameraYaw; talkStore.cameraYaw = null; }
+      face(null);
+    } else if (r.chat && d >= FACE_RANGE) {
       const pair = r.seed ^ r.chat.seed, turn = Math.floor(now / 3.4 + hash01(pair, 1) * 4) % 2;
       const talking = (r.seed < r.chat.seed) === (turn === 0);
       if (talking) { m.pose = "Chat"; m.talk = Math.max(m.talk ?? 0, 0.25); }
@@ -237,8 +301,8 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
     }
     // Greeted (a click, the ceremony's cheer): a wave (a cheer at the ceremony) and a hop.
     if (now - r.greetAt < 0.15 && r.hopT < 0) { r.hopT = 0; r.hopNext = now + 2; m.play = ceremony ? "Cheer" : sitting ? null : "Wave"; }
-    // Startle when you barge right in.
-    if (d < 1.05 && r.hopT < 0 && now > r.hopNext && !sitting && !r.hidden) { r.hopT = 0; r.hopNext = now + 3; }
+    // Startle when you barge right in (not while you're talking with them).
+    if (d < 1.05 && r.hopT < 0 && now > r.hopNext && !sitting && !r.hidden && !talking) { r.hopT = 0; r.hopNext = now + 3; }
     let hop = 0;
     if (r.hopT >= 0) { r.hopT += dt; if (r.hopT > 0.35) r.hopT = -1; else hop = Math.sin((r.hopT / 0.35) * Math.PI) * 0.38; }
     r.lift = THREE.MathUtils.damp(r.lift, sitting ? seatLift("Sit", pose.seat, CHARACTER_SCALE) : 0, 7, dt);
@@ -268,9 +332,11 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
     r.noticed = noticed;
     // Which overhead pieces show, as bits (bubble, "!", nameplate): the DOM is touched only when they change.
     // Right beside someone who's speaking, a resident's own "!" and nameplate step aside so they never cover the bubble.
+    // In a talk the box carries the name: the one you talk to shows only a "!" as they turn to you, the rest nothing new.
     const bubble = r.bubbleUntil > now && !r.hidden, crowded = speaking && !bubble && dist(r.x, r.z, sx, sz) < 2.5;
     const first = r === nearest;
-    const state = (bubble ? 1 : 0) | (noticed && first && !bubble && !crowded ? 2 : 0) | (((noticed && first) || r.hovered) && !r.hidden && !crowded ? 4 : 0);
+    const state = talking ? (talk!.phase === "turning" ? 2 : 0) : talkingId ? (bubble ? 1 : 0)
+      : (bubble ? 1 : 0) | (noticed && first && !bubble && !crowded ? 2 : 0) | (((noticed && first) || r.hovered) && !r.hidden && !crowded ? 4 : 0);
     if (state !== r.shown && r.ui.plate.current) {
       r.shown = state;
       if (bubble && r.ui.text.current && r.ui.text.current.textContent !== r.line) r.ui.text.current.textContent = r.line;
@@ -286,10 +352,12 @@ function show(el: HTMLElement | null, on: boolean) {
   if (el && el.hidden === on) el.hidden = !on;
 }
 
-export default function Residents({ personas, phase, ceremony, player, island, v, away = null }: {
+export default function Residents({ personas, phase, ceremony, player, island, v, away = null, playerName = null }: {
   personas: readonly NPCPersona[]; phase: IslandPhase; ceremony: boolean; player: RefObject<THREE.Vector3>; island: VillageIsland; v: Village;
   /** A resident (slug) who is somewhere else for now (the HQ lead greeting a first login on the wharf): out of sight, routine running. */
   away?: string | null;
+  /** The member's island name, for the `{name}` in what residents say to them. */
+  playerName?: string | null;
 }) {
   const nav = useMemo(() => navGrid(island, v), [island, v]);
   // Dev only: `?residents=N` keeps the first N (by slug), for performance checks like CharacterCrowd's `?crowd=N`.
@@ -322,7 +390,14 @@ export default function Residents({ personas, phase, ceremony, player, island, v
     return () => window.removeEventListener("tsi:npc-greet", onGreet);
   }, []);
 
-  useFrame((_, raw) => tick(registry.current.list, clock.current, Math.min(raw, 0.1), player.current, phase, ceremony, nav, island, monument, away), -3);
+  useFrame((_, raw) => tick(registry.current.list, clock.current, Math.min(raw, 0.1), player.current, phase, ceremony, nav, island, monument, away, playerName), -3);
+  // Leaving the village (a door, the boat) ends any talk and the prompt with it.
+  useEffect(() => () => { if (talkStore.active) endTalk(); setTalkNear(null, "", Infinity); }, []);
+  // Dev (evidence scripts): where everyone is, to walk up to one.
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    Object.assign(window, { __residents: () => registry.current.list.map(r => ({ id: r.id, slug: r.slug, name: r.name, x: r.x, z: r.z, hidden: r.hidden, speed: r.speed, lag: r.lag })) });
+  }, []);
 
   return <>{residents.map(({ persona, day, look, gather, plan }) => (
     <Figure key={persona.id} persona={persona} day={day} look={look} gather={gather} home={plan.home?.door ?? null} seed={plan.seed} registry={registry} island={island} />
@@ -342,6 +417,7 @@ function Figure({ persona, day, look, gather, home, seed, registry, island }: {
   useEffect(() => {
     const r: Runtime = {
       id: persona.id, slug: persona.slug, seed, lines: persona.canned_dialogue?.length ? persona.canned_dialogue : FILLER_LINES, day, gather, home,
+      name: persona.display_name, post: persona.post ?? null, talk: talkFor(persona), talking: false, talkAt: "", face: { expression: "neutral" },
       pose: newPose(), motion, group, visual, ui: { bubble, text, notice, plate },
       ready: false, x: 0, z: 0, speed: 0, ox: 0, oz: 0, hidden: false, lift: 0, lag: 0, detour: null, detourAt: 0, detourGoal: [0, 0],
       want: 0, line: "", noticed: false, bubbleUntil: 0, bubbleNext: 0, shown: -1, idleKey: -1, idleVisit: -1, laughBeat: -1, chat: null, hopT: -1, hopNext: 0, greetAt: 0, hovered: false, timers: [],
@@ -357,10 +433,11 @@ function Figure({ persona, day, look, gather, home, seed, registry, island }: {
     if (runtime.current) runtime.current.hovered = on;
     document.body.style.cursor = on ? "pointer" : "auto";
   };
+  // A click or tap talks to them when you're near enough (the residents' frame decides: from farther they wave back).
   const click = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     e.nativeEvent.preventDefault();
-    window.dispatchEvent(new CustomEvent("tsi:npc-greet", { detail: { id: persona.id } }));
+    requestTalk(persona.id, true);
   };
   return <group ref={group}>
     <group ref={visual} onClick={click} onPointerOver={hover(true)} onPointerOut={hover(false)}>
