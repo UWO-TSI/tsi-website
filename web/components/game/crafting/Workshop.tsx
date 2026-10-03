@@ -112,7 +112,7 @@ export default function CraftingSheet() {
 
   useEffect(() => {
     const onNear = (e: Event) => setNear((e as CustomEvent<boolean>).detail);
-    const onLearned = (e: Event) => setCard({ title: "Recipe learned", name: (e as CustomEvent<{ name: string }>).detail.name, note: "The tide brought you a new recipe. Craft it at the workbench in the clubhouse." });
+    const onLearned = (e: Event) => setCard({ title: "Recipe learned", name: (e as CustomEvent<{ name: string }>).detail.name, note: "The tide brought you a new recipe. Craft it at the workbench in HQ." });
     window.addEventListener("tsi:workbench-near", onNear);
     window.addEventListener("tsi:recipe-learned", onLearned);
     return () => { window.removeEventListener("tsi:workbench-near", onNear); window.removeEventListener("tsi:recipe-learned", onLearned); };

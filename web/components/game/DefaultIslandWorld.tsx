@@ -981,7 +981,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         <label className={styles.preset}>
           <span>Time</span>
           <select value={forced ?? "live"} onChange={(e) => setForced(e.target.value === "live" ? null : e.target.value as IslandPhase)}>
-            <option value="live">Toronto now · {PHASE_NAMES[conditions.livePhase]}</option>
+            <option value="live">Live, as in Toronto · {PHASE_NAMES[conditions.livePhase]}</option>
             {ISLAND_PHASES.map((key) => <option key={key} value={key}>{PHASE_NAMES[key]}</option>)}
           </select>
         </label>

@@ -35,7 +35,7 @@ async function demo(): Promise<LettersTransport> {
   for (const g of SEASONAL_GOALS) for (const [i, f] of FRIENDS.entries()) await contribute(m.store, f.id, { goal_slug: g.slug, kind: "coins", amount: 1200 + i * 200, item_key: null, idempotency_key: `delivery:demo-${g.slug}-${i}` }, now);
   for (let i = 0; i < 9; i++) m.activity.push({ source: "event", ref_id: `00000000-0000-4000-8000-0000000e00${String(i).padStart(2, "0")}`, member_id: FRIENDS[i % FRIENDS.length].id });
   await syncRealActivity(m.store, m.goals[0], now);
-  await m.store.sendSystemLetter(ME, "welcome", "Welcome to the island", "The Village Hall is glad you're here. Your journal lists what to do next; the plaza monument shows how the club is doing on the cafe.");
+  await m.store.sendSystemLetter(ME, "welcome", "Welcome to the island", "HQ is glad you're here. Your journal lists what to do next; the plaza monument shows how the club is doing on the cafe.");
   await sendNote(m.store, FRIENDS[0].id, { to: ME, subject: "Fishing Friday?", body: "Heading to the pier after the workshop on Friday. The dace have been biting near the rocks. Come along!" }, now);
   await sendNote(m.store, FRIENDS[1].id, { to: ME, body: "Thanks for helping set up the event yesterday. The cafe fund jumped!" }, now);
   const state = await loadState(m.store, ME, now);
@@ -49,7 +49,7 @@ async function demo(): Promise<LettersTransport> {
   }
   const names = new Map(FRIENDS.map((f) => [f.id, f.display_name]));
   return {
-    list: async () => (await m.store.listLetters(ME, 50)).map((l) => ({ ...l, sender_name: l.sender_id ? (names.get(l.sender_id) ?? "Member") : "Village Hall", recipient_name: names.get(l.recipient_id) ?? "you" })),
+    list: async () => (await m.store.listLetters(ME, 50)).map((l) => ({ ...l, sender_name: l.sender_id ? (names.get(l.sender_id) ?? "Member") : "HQ", recipient_name: names.get(l.recipient_id) ?? "you" })),
     send: async (to, subject, body) => sendNote(m.store, ME, { to, subject, body }, new Date()),
     markRead: (id) => m.store.markLetterRead(ME, id, new Date().toISOString()),
     report: (id, reason) => m.store.reportLetter(ME, id, reason, new Date().toISOString()),

@@ -66,7 +66,7 @@ export function JournalBody({ initialTab = "quests" }: { initialTab?: Tab }) {
 
   return (
     <div>
-      <Tabs label="Journal sections" value={tab} onChange={setTab} className={s.tabs}
+      <Tabs label="Journal sections" value={tab} onChange={setTab} className={s.tabsRow}
         tabs={[{ id: "quests", label: "Quests" }, { id: "goals", label: "Club goals" }, { id: "letters", label: "Letters", badge: state.unread_letters }]} />
       {preview ? <p className={`${s.note} ${s.info}`}>Preview: sign in to save quest progress.</p> : null}
       {message ? <p role="status" className={`${s.note} ${message.kind === "ok" ? s.ok : s.err}`}>{message.text}</p> : null}

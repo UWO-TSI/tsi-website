@@ -220,6 +220,8 @@
   --font-body: var(--gui-font);
 }
 .gui :focus-visible { outline: 3px solid var(--gui-focus); outline-offset: 3px; }
+/* A dialog's own panel takes focus by script (tabindex -1, never a Tab stop): no ring round the whole sheet. */
+.gui [tabindex="-1"]:focus-visible { outline: none; }
 .gui ::selection { background: var(--gui-butter); color: var(--gui-ink-strong); }
 
 /* The text-size setting (row 220) reaches every overlay: anything marked as one scales with it. */
