@@ -55,3 +55,17 @@ export const SAND_TINT = 0xd8bd85;
 export const HOLE_TINT = "#a48a63";
 /** How far a dug-up find rises out of its hole before it goes to the hand, and how long that takes (ms). */
 export const DIG_RISE = { by: 0.4, ms: 320 } as const;
+
+// ── Crafting at the workbench ────────────────────────────────────────
+/** A hammer blow: a quick puff of sawdust with shavings jumping off it, low over the bench top. */
+export const HAMMER_PUFF: Recipe = { sprite: "hammerPuff", count: [1, 1], life: [0.42, 0.52], size: [0.55, 0.68], grow: 1.3, speed: [0.2, 0.5], spread: Math.PI, up: [0.25, 0.5],
+  gravity: 0, drag: 4, wind: 0.15, lift: 0.2, alpha: 1, face: B, rise: [0.04, 0.08] };
+/** A few motes of sawdust with it. */
+export const SAWDUST: Recipe = { sprite: "dust", count: [2, 3], life: [0.35, 0.5], size: [0.2, 0.28], grow: 1.4, speed: [0.5, 1.1], spread: Math.PI, up: [0.4, 0.9],
+  gravity: 0.4, drag: 3.5, wind: 0.2, lift: 0.1, alpha: 0.8, face: B, rise: [0.03, 0.06] };
+export const SAWDUST_TINT = 0xe3d2b4;
+/** The finishing sparkle round the made thing (glow layer): one big glint and a few small ones thrown out round it. */
+export const FINISH_GLINT: Recipe = { sprite: "glint", count: [1, 1], life: [0.8, 0.95], size: [0.95, 1.1], grow: 1.08, speed: [0, 0], spread: 0, up: [0.08, 0.14],
+  gravity: 0, drag: 0, wind: 0, alpha: 1, face: B };
+export const FINISH_SPARKS: Recipe = { sprite: "sparkle", count: [5, 6], life: [0.55, 0.85], size: [0.22, 0.3], grow: 1, speed: [0.7, 1.3], spread: Math.PI, up: [0.4, 1.1],
+  gravity: 0.8, drag: 2.2, wind: 0.2, alpha: 1, face: B };

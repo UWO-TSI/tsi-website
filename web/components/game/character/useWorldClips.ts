@@ -12,6 +12,7 @@ import type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
  *   tsi:peaceful-act → the target's own clip (a tree's Shake, a Pickup off the ground, a rock's Strike), else Net at a
  *     bug, Dig at a shovel find, otherwise Forage;
  *   tsi:flower-pick → Forage; tsi:critter-catch → Net
+ *   tsi:act {clip, at?} → that clip, turned to face `at` (the workbench's Craft, the bottle's Pickup)
  *   tsi:emote {clip} → any catalogue clip as a one-shot (emote menu, study, admin tools)
  */
 const ACT_CLIP = { bug: "Net", dig: "Dig", forage: "Forage" } as const;
@@ -27,6 +28,12 @@ export function useWorldClips(motion: RefObject<CharacterMotion>, face: (x: numb
         set({ play: t?.clip ?? ACT_CLIP[t?.kind ?? "forage"] });
       },
       "tsi:flower-pick": () => set({ play: "Forage" }),
+      "tsi:act": e => {
+        const d = (e as CustomEvent<{ clip: ClipName; at?: [number, number] }>).detail;
+        if (!d?.clip || !CLIP_BY_NAME.has(d.clip)) return;
+        if (d.at) face(d.at[0], d.at[1]);
+        set({ play: d.clip });
+      },
       "tsi:critter-catch": () => set({ play: "Net" }),
       "tsi:emote": e => { const clip = (e as CustomEvent<{ clip: ClipName }>).detail?.clip; if (clip && CLIP_BY_NAME.has(clip)) set({ play: clip }); },
     };

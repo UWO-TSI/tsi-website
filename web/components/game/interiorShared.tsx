@@ -7,13 +7,13 @@
  * station type the central E-handler consumes.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import { bindGameKeys } from "@/lib/game/keyboardInput";
 import { PIECE_TINTS, type Tint } from "@/lib/game/furniturePalettes";
 import * as THREE from "three";
-import Character, { CHARACTER_SCALE, type CharacterMotion, type ClipName } from "./character/Character";
+import Character, { CHARACTER_SCALE, type CharacterMotion, type ClipName, type HeldView } from "./character/Character";
 import { useWorldClips } from "./character/useWorldClips";
 import { useMyLook } from "@/lib/game/character/lookStore";
 import { seatLift } from "@/lib/game/character/clips";
@@ -100,6 +100,19 @@ export function InteriorPlayer({
   const { camera } = useThree();
   const face = useCallback((x: number, z: number) => { motion.current.yaw = Math.atan2(x - posRef.current.x, z - posRef.current.z); }, []);
   useWorldClips(motion, face);
+  // A tool an act puts in your hand for its length (the workbench's hammer: `tsi:act-hold` {url, hold, ms}).
+  const [actHeld, setActHeld] = useState<HeldView | null>(null);
+  useEffect(() => {
+    let timer = 0;
+    const on = (e: Event) => {
+      const d = (e as CustomEvent<HeldView & { ms: number }>).detail;
+      window.clearTimeout(timer);
+      setActHeld({ url: d.url, hold: d.hold });
+      timer = window.setTimeout(() => setActHeld(null), d.ms);
+    };
+    window.addEventListener("tsi:act-hold", on);
+    return () => { window.removeEventListener("tsi:act-hold", on); window.clearTimeout(timer); };
+  }, []);
   // Arriving: the camera is already where it follows you from (every room, the temple's included). Once, on arrival.
   const arrival = useRef(bounds.spawn);
   useEffect(() => { snapInteriorCamera(camera, arrival.current[0], arrival.current[1]); }, [camera]);
@@ -186,7 +199,7 @@ export function InteriorPlayer({
 
   return (
     <group ref={groupRef} position={[bounds.spawn[0], 0, bounds.spawn[1]]}>
-      <Character look={look} motion={motion} walkSpeed={PLAYER_SPEED} />
+      <Character look={look} motion={motion} walkSpeed={PLAYER_SPEED} held={actHeld} />
       <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.42, 20]} />
         <meshBasicMaterial color="#000000" transparent opacity={0.18} depthWrite={false} />

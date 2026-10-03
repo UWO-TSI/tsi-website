@@ -15,8 +15,31 @@ import styles from "./RewardCard.module.css";
 /** The out animation's length, and how long a card shows at least when the next one is waiting (ms). */
 const OUT_MS = 260, MIN_MS = 1400;
 
+/** A bottle's note: a paper scroll between two wooden rollers that unrolls to show the recipe, what it makes on top. */
+function Scroll({ reward, leaving, onClose }: { reward: Reward; leaving: boolean; onClose: () => void }) {
+  const { name, icon, title, note, ingredients } = reward;
+  return <article className={styles.scroll} data-leaving={leaving || undefined} onClick={onClose} data-testid="reward-card" data-kind="bottle">
+    <span className={styles.roller} aria-hidden="true" />
+    <div className={styles.paper}>
+      <p className={styles.title}>{title}</p>
+      <div className={styles.scrollArt} aria-hidden="true">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={icon} alt="" width={72} height={72} />
+      </div>
+      <h3 className={styles.name}>{name}</h3>
+      {ingredients && ingredients.length > 0 && <ul className={styles.ingredients} aria-label="What it takes">{ingredients.map(i => <li key={i.key}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={i.icon} alt="" width={24} height={24} /><span>{i.name}</span><b>×{i.count}</b>
+      </li>)}</ul>}
+      {note && <p className={styles.note}>{note}</p>}
+    </div>
+    <span className={styles.roller} data-bottom aria-hidden="true" />
+  </article>;
+}
+
 function Card({ reward, leaving, onClose }: { reward: Reward; leaving: boolean; onClose: () => void }) {
   const { kind, name, icon, rarity, size, title, note, isNew, ingredients } = reward;
+  if (kind === "bottle") return <Scroll reward={reward} leaving={leaving} onClose={onClose} />;
   const style = (rarity ? { "--rarity": `var(--gui-rarity-${rarity})` } : {}) as CSSProperties;
   return <article className={styles.card} data-kind={kind} data-rarity={rarity ?? undefined} data-new={isNew || undefined} data-leaving={leaving || undefined}
     style={style} onClick={onClose} data-testid="reward-card">
