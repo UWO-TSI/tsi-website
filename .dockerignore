@@ -1,0 +1,12 @@
+# Docker build context for realtime/Dockerfile (specs/multiplayer.md §1.3): the repo root,
+# trimmed to the server package and the shared code it bundles. Nothing else is sent.
+*
+!realtime/**
+!web/lib/net/**
+!web/lib/moderation/**
+realtime/node_modules
+realtime/dist
+realtime/.env*
+!realtime/.env.example
+**/.DS_Store
+**/* 2.*
