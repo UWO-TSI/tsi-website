@@ -3,8 +3,8 @@
 /**
  * Personal home island (specs/homes.md §1): same terrain, lighting, time,
  * season and weather as the village via IslandAtmosphere. Small dump house,
- * mailbox, dock sign back to the village, and outdoor decorating with the
- * shared placement code.
+ * mailbox, the pier with the boat back to the village (the wharf's, arrival-wharf.md §2),
+ * and outdoor decorating with the shared placement code.
  */
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
@@ -18,7 +18,7 @@ import { ACNHParts, CHALET_VARIANTS } from "../ACNHBuilding";
 import { GLBProp, NatureTree, NatureBush, NatureFlowerCluster } from "../NatureModels";
 import { IslandAtmosphere, useFollowCamera, type TreeSpot } from "../IslandAtmosphere";
 import { PlacementLayer, type GridMapping } from "./PlacementLayer";
-import { createHomeIsland, HOME_SPAWN, HOUSE, HOME_MAILBOX, HOME_DOCK, HOME_TREES, HOME_TREE_SEEDS, HOME_BUSHES, HOME_FLOWERS, HOME_RADII } from "@/lib/game/homeIsland";
+import { createHomeIsland, homeBoatPrompt, underHomePier, HOME_SPAWN, HOUSE, HOME_MAILBOX, HOME_PIER, HOME_TREES, HOME_TREE_SEEDS, HOME_BUSHES, HOME_FLOWERS, HOME_RADII } from "@/lib/game/homeIsland";
 import { ISLAND_TERRAIN, windowLit, type IslandLight } from "@/lib/game/islandLighting";
 import { FadeLight } from "../AmbientProps";
 import { SEASON_TREES, SEASON_BUSHES, SEASON_FLOWERS, type SeasonLook } from "@/lib/game/seasonalLook";
@@ -32,6 +32,8 @@ import type { FishingSpot } from "@/lib/game/fishingSpots";
 import type { WorldMoment } from "@/lib/collections/logic";
 import { gullAnchors } from "@/lib/game/ambientFauna";
 import { boxOccluder, treeOccluder } from "@/lib/game/occluders";
+import Wharf from "../wharf/Wharf";
+import { myTrip } from "@/lib/game/myTrip";
 import styles from "../DefaultIslandWorld.module.css";
 
 const HOME_NODES = homeNodes();
@@ -68,7 +70,7 @@ export default function HomeIslandScene({ held = null, identity, level, peaceful
   useFrame(() => {
     const p = player.current;
     const next: HomeNear = Math.hypot(p.x - HOUSE.door[0], p.z - HOUSE.door[1]) < 1.3 ? "house"
-      : Math.hypot(p.x - HOME_DOCK[0], p.z - HOME_DOCK[1]) < 1.8 ? "village"
+      : homeBoatPrompt(p.x, p.z) ? "village"
       : Math.hypot(p.x - HOME_MAILBOX[0], p.z - HOME_MAILBOX[1]) < 1.3 ? "mailbox"
       : decorating || fishing ? null : peacefulNear(home.map, SEA, p.x, p.z, fishSpot);
     if (near.current !== next) { near.current = next; onNear(next); }
@@ -94,21 +96,20 @@ export default function HomeIslandScene({ held = null, identity, level, peaceful
     <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} overview={overview}
       ground={home.ground} cloudSize={[HOME_RADII.x * 2 + 4, HOME_RADII.z * 2 + 4]} shadowExtent={16} fireflyAnchors={HOME_BUSHES} trees={TREES} fauna={fauna} />
     <GridWorld map={home.map} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} />
-    <GridOcean map={home.map} lite={liteMode} />
+    <GridOcean map={home.map} lite={liteMode} skip={underHomePier} />
     <PeacefulLayer map={home.map} nodes={HOME_NODES} moment={peaceful.moment} member={peaceful.member} player={player} ground={home.ground} highTier={!liteMode} active={!fishing && !decorating} treeModels={SEASON_TREES[look.season]} />
     {/* The dump's chalet house (5 × 4.2 cells, same model family as the village café/museum). */}
     <group position={[HOUSE.x, 0, HOUSE.z]}><ACNHParts parts={CHALET_VARIANTS.brown} lit={windowLit(light)} /></group>
     <FadeLight position={[HOUSE.door[0], 1.4, HOUSE.door[1] - 0.2]} color="#ffd68b" intensity={light.lampsOn ? light.lamp * 1.2 : 0} distance={4} />
     <GLBProp url="/assets/acnh/furniture/mailbox.glb" position={[HOME_MAILBOX[0], home.ground(...HOME_MAILBOX), HOME_MAILBOX[1]]} scale={0.1} />
-    <GLBProp url="/assets/acnh/furniture/monument-sign.glb" position={[HOME_DOCK[0] + 1.3, home.ground(...HOME_DOCK), HOME_DOCK[1] + 0.4]} scale={0.08} rotation={[0, -0.4, 0]} />
-    <Html position={[HOME_DOCK[0], 2.4, HOME_DOCK[1]]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Boat to the village</div></Html>
+    <Wharf dock={HOME_PIER} light={light} place="home" />
     <Html position={[HOUSE.x, 4.2, HOUSE.z - HOUSE.halfD]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Your house</div></Html>
     {TREES.map(({ x, z, seed }, i) => <NatureTree key={i} position={[x, home.ground(x, z), z]} seed={seed} models={SEASON_TREES[look.season]} />)}
     {HOME_BUSHES.map(([x, z], i) => <NatureBush key={i} position={[x, home.ground(x, z), z]} seed={i} models={SEASON_BUSHES[look.season]} />)}
     {SEASON_FLOWERS[look.season].length > 0 && HOME_FLOWERS.map(([x, z], i) => <NatureFlowerCluster key={i} position={[x, home.ground(x, z), z]} seed={i * 3} models={SEASON_FLOWERS[look.season]} />)}
     <PlacementLayer items={outdoor} mapping={mapping} context={{ inside: home.placeable }} active={decorating} selected={selected}
       onPlace={onPlace} onPickUp={onPickUp} plane={{ center: [0, 0.02, 0], size: [HOME_RADII.x * 2, HOME_RADII.z * 2] }} />
-    <PlayerAvatar key={`home-${returned}`} spawnPosition={spawn} playerName={identity?.display_name ?? "You"} playerLevel={level} member={identity?.member} player={player} frozen={fishing || (decorating && !!selected)}
+    <PlayerAvatar key={`home-${returned}`} spawnPosition={spawn} playerName={identity?.display_name ?? "You"} playerLevel={level} member={identity?.member} player={player} frozen={fishing || (decorating && !!selected)} ride={myTrip.ride}
       world={world} groundHeight={home.ground} groundSurface={home.surface} camTarget={focus} glider={peaceful.glider} held={held} />
   </>;
 }

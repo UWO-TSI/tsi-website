@@ -18,7 +18,12 @@ import { GLBProp, sceneryOf } from "./NatureModels";
 import { InstancedModels } from "./InstancedNature";
 import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "./ACNHBuilding";
 import { NatureFence } from "./NatureModels";
-import WharfPier from "./WharfPier";
+import Wharf from "./wharf/Wharf";
+import TripVeil from "./wharf/TripVeil";
+import { tripSceneReady, useTripControl } from "./wharf/useTripControl";
+import { myTrip } from "@/lib/game/myTrip";
+import type { TripPlace } from "@/lib/game/boatTrip";
+import { HOME_PIER } from "@/lib/game/homeIsland";
 import FittingRoom, { FITTING_STEP_MS } from "./FittingRoom";
 import { BASE_FOV } from "./movement/moveFx";
 import MiniMap from "./MiniMap";
@@ -385,7 +390,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <Residents personas={personas} phase={phase} ceremony={ceremony} player={player} island={island} v={v} away={lead ? HQ_LEAD_SLUG : null}
         playerName={identity.display_name !== "You" ? identity.display_name : null} />
       <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={fishing || !!lead?.hold || talking}
-        showNameplate={!talking}
+        showNameplate={!talking} ride={myTrip.ride}
         world={island} groundHeight={island.ground} groundSurface={island.surface} camTarget={focus} glider={peaceful.glider} held={held} />
       <CharacterCrowd player={player} ground={island.ground} stepWorld={island} />
       {lead && leadAt && <HQLead at={leadAt} ground={island.ground} player={player} line={lead.line} />}
@@ -476,7 +481,7 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {notice && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(notice)} />}
     {board && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(board)} />}
     {missions && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
-    {wharf && <group position={[wharf.x, 0, wharf.z]} rotation={[0, wharf.yaw ?? 0, 0]}><WharfPier /></group>}
+    {wharf && <Wharf dock={{ x: wharf.x, z: wharf.z, yaw: wharf.yaw ?? 0 }} light={light} place="village" />}
     {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <Html key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} center distanceFactor={10} zIndexRange={[3, 0]}>
       <div className={styles.cue} data-closed={!l.open}>{SIGNS[l.id]}</div>
     </Html>)}
@@ -570,7 +575,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // The world is revealed (and a door fade lifts) once WarmupProbe says the scene has loaded and compiled (hud-first-login §5).
   const [ready, setReady] = useState(false);
   const [sceneShown, setSceneShown] = useState(0);
-  const onSceneReady = useCallback(() => { setReady(true); setFading(false); }, []);
+  const onSceneReady = useCallback(() => { setReady(true); setFading(false); tripSceneReady(); }, []);
   const [near, setNear] = useState<Near>(null);
   // Dev (screenshots): `?sheet=<name>` opens that sheet (the Oracle path sheet once progression loads; donate, shop and bag too).
   const [sheet, setSheet] = useState<Sheet>(() => (DEV_SHEETS.includes(devHome.get("sheet") as Sheet) ? devHome.get("sheet") as Sheet : null));
@@ -608,6 +613,18 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // Talking with a resident (lib/game/residentTalk.ts): this viewer's own, like the greeting; who's in reach names the prompt.
   const talkNow = useSyncExternalStore(subscribeTalk, talkView, emptyTalkView);
   const talking = talkNow.activeId !== null;
+  // The boat between the village and your island, and a first login's arrival by it (arrival-wharf.md §3).
+  const wharfDock = useMemo(() => { const w = landmark("wharf"); return w ? { x: w.x, z: w.z, yaw: w.yaw ?? 0 } : null; }, []);
+  const dockOf = useCallback((place: TripPlace) => (place === "home" ? HOME_PIER : wharfDock), [wharfDock]);
+  const goTo = useCallback((place: TripPlace) => {
+    setSite(place); setInside(null); setReturned(false); setExitFrom(null); setFromBoat(place === "village");
+    setSceneShown(n => n + 1); // a fresh scene gate: the boat comes in once the island has loaded and warmed up
+  }, []);
+  const onTripDone = useCallback((t: { from: string }) => { if (t.from === "sea") setWelcome(w => (w === "arriving" ? 0 : w)); }, []);
+  const trip = useTripControl({ dockOf, goTo, site, ready, onDone: onTripDone });
+  const { start: startTrip, arrive: arriveByBoat } = trip;
+  // A trip or the greeting: the world's prompts, tools and hints stand back.
+  const cinematic = welcoming || trip.active;
   const moveKeys = useMoveKeys(), abilityKeys = useAbilityKeys(), crouch = crouchKey(moveKeys, useKeyboardLocked());
   const touch = useCoarsePointer() || devHome.get("touch") === "1";
   // Mouse-look (specs/camera-orbit.md): the hint while the mouse is free, the crosshair while it looks in the ruins.
@@ -769,10 +786,11 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       });
       return;
     }
-    if (fading || !action || !["enter", "exit", "house", "home", "village", "museum_enter", "cafe_enter", "oracle_enter", "ruins", "ruins_exit"].includes(action)) return;
+    if (action === "home" || action === "village") { if (!fading) { setNear(null); startTrip(atHome ? "home" : "village", action); } return; }
+    if (fading || !action || !["enter", "exit", "house", "museum_enter", "cafe_enter", "oracle_enter", "ruins", "ruins_exit"].includes(action)) return;
     setFading(true); setNear(null);
-    // Doors sound as you go in and out (the café bell, row 125, replaces enter.ogg there when it lands); the boat has its own (arrival-wharf).
-    if (action !== "home" && action !== "village") AudioManager.playSFX(action === "exit" || action === "ruins_exit" ? "exit" : "enter");
+    // Doors sound as you go in and out (the café bell, row 125, replaces enter.ogg there when it lands).
+    AudioManager.playSFX(action === "exit" || action === "ruins_exit" ? "exit" : "enter");
     window.setTimeout(() => {
       if (action === "enter") setInside("hq");
       if (action === "house") setInside("house");
@@ -787,27 +805,18 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         for (const w of Object.keys(p.hits) as (keyof typeof p.hits)[]) if (p.hits[w]) { void postWear(w, p.hits[w], false); p.hits[w] = 0; }
       }
       if (action === "exit") { setInside(null); setReturned(true); }
-      if (action === "home" || action === "village") { setSite(action === "home" ? "home" : "village"); setInside(null); setReturned(false); setFromBoat(action === "village"); }
       if (action === "exit" || action === "enter") setFromBoat(false);
       // A fresh warm-up probe for the next scene: the fade lifts when it has loaded and compiled.
       setSceneShown(n => n + 1);
     }, 320);
-  }, [fading, chapterActions, homeActions, inside, gate, layout]);
-  // Arrive at the wharf: under the loading screen while it is up, otherwise through a short dock fade.
+  }, [fading, chapterActions, homeActions, inside, gate, layout, startTrip, atHome]);
+  // Arrive by boat at the wharf (row 211): under the loading screen while it is up, otherwise through the trip's veil.
+  // The HQ lead waits on the wharf and starts talking once you are ashore (onTripDone).
   useEffect(() => {
     if (step !== "welcome" || welcome !== "idle" || inside || site !== "village") return;
-    const arrive = () => { setFromBoat(true); setReturned(false); setExitFrom(null); };
     setWelcome("arriving");
-    if (!ready) { arrive(); return; }
-    setFading(true);
-    window.setTimeout(() => { arrive(); setSceneShown(n => n + 1); }, 320);
-  }, [step, welcome, inside, site, ready]);
-  // On the wharf with the fade lifted, the HQ lead starts talking.
-  useEffect(() => {
-    if (welcome !== "arriving" || !ready || fading) return;
-    const t = window.setTimeout(() => setWelcome(0), 650);
-    return () => window.clearTimeout(t);
-  }, [welcome, ready, fading]);
+    arriveByBoat("village", ready);
+  }, [step, welcome, inside, site, ready, arriveByBoat]);
   // Her voice on each line: three dialogue blips, as the café owner talks.
   useEffect(() => {
     if (greeting === null) return;
@@ -854,7 +863,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const reach: Reach = useMemo(() => ({ water: near === "fish", bug: near === "net" ? targetLabel : null, dig: near === "dig" ? targetLabel : null }), [near, targetLabel]);
   const toolAction = clickAction(held, reach, wheelSite);
   const applyTool = useCallback(() => {
-    if (site === "ruins" || inside || fishing || sheet || bagOpen || decor.decorating || welcoming || talking || fading || eating || !held || !toolAction) return;
+    if (site === "ruins" || inside || fishing || sheet || bagOpen || decor.decorating || cinematic || talking || fading || eating || !held || !toolAction) return;
     const at: [number, number] = [player.current.x, player.current.z];
     const clip = (name: string) => window.dispatchEvent(new CustomEvent("tsi:emote", { detail: { clip: name } }));
     if (toolAction.verb === "cast") {
@@ -888,7 +897,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       if (r.ok && r.count === 0) holdItem(null); // the last one: empty hands
       window.setTimeout(() => setEating(false), 820);
     });
-  }, [site, inside, fishing, sheet, bagOpen, decor.decorating, welcoming, talking, fading, eating, held, toolAction, atHome, player]);
+  }, [site, inside, fishing, sheet, bagOpen, decor.decorating, cinematic, talking, fading, eating, held, toolAction, atHome, player]);
   // Left click uses what you hold: in mouse-look, or with the mouse-look setting off (a touch screen uses the prompt).
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -918,7 +927,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   useEffect(() => { holdCursor("decorate", decor.decorating); holdCursor("greeting", welcoming); holdCursor("talk", talking); holdCursor("options", optionsOpen); }, [decor.decorating, welcoming, talking, optionsOpen]);
   useEffect(() => () => { holdCursor("decorate", false); holdCursor("greeting", false); holdCursor("talk", false); holdCursor("options", false); }, []);
   const greetingName = identity.display_name !== "You" ? identity.display_name : null;
-  const holdObjective = step === "creator" || step === "welcome" || welcome === "arriving" || greeting !== null;
+  const holdObjective = step === "creator" || step === "welcome" || welcome === "arriving" || greeting !== null || trip.active;
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
       // The greeting box takes E, Enter and Space to go on, Escape to skip (principle 7: skippable in one press).
@@ -927,6 +936,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         else if (event.key === "Escape") finishWelcome();
         return;
       }
+      // On a boat trip the keys are the trip's (a press skips it: useTripControl); nothing opens over it.
+      if (myTrip.current) return;
       // Menus follow the account's key bindings (row 220); Escape is fixed.
       const menu = actionForKey(identity.settings, event.key);
       // A dialog is open (lib/game/useWorldDialog): it takes Escape and its own key; the world holds still, and only
@@ -963,7 +974,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     return () => window.removeEventListener("keydown", key);
   }, [act, near, inside, atHome, decor, identity.settings, greeting, nextLine, finishWelcome, site, abilityKeys, sheet, bagOpen, donateOpen, shopTab, reveal, fading]);
   return (
-    <main className={`${styles.world} gui`} data-light={phase} data-inside={inside ?? undefined} data-site={site}>
+    <main className={`${styles.world} gui`} data-light={phase} data-inside={inside ?? undefined} data-site={site} data-trip={trip.active || undefined}>
       <Canvas ref={canvasRef} tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
         camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
@@ -976,11 +987,11 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
             : inside === "hq" ? <Clubhouse phase={phase} light={light} player={player} frozen={fading} talking={sheet === "showcase"} onNear={setNear} />
             : inside === "house" ? <HomeInterior layout={layout} phase={phase} light={light} frozen={fading} player={player} onNear={(n: HouseNear) => setNear(n)}
               decorating={decor.decorating} selected={decor.selected} onPlace={decor.place} onPickUp={decor.pickUp} />
-            : atHome ? <HomeIslandScene held={eating ? null : held} identity={identity} level={level} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={devZoom}
+            : atHome ? <HomeIslandScene held={eating || trip.active ? null : held} identity={identity} level={level} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={devZoom}
               overview={overview} returned={returned} player={player} onNear={(n: HomeNear) => setNear(n)} outdoor={layout.outdoor}
               decorating={decor.decorating} selected={decor.selected} onPlace={item => decor.place("outdoor", item)} onPickUp={item => decor.pickUp("outdoor", item)} />
-            : <IslandScene held={eating ? null : held} identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent}
-              lead={welcoming || welcome === "done" ? { line: greeting, hold: welcoming } : null} talking={talking} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={welcoming ? 0.7 : talking ? 0.64 : devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} />}
+            : <IslandScene held={eating || trip.active ? null : held} identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent}
+              lead={welcoming || welcome === "done" ? { line: greeting, hold: welcoming } : null} talking={talking} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={greeting !== null ? 0.7 : talking ? 0.64 : devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} />}
           {/* Classes v2: the subclass's aura replaces the family's once its kit exists (§1.9). */}
           {identity.aura && (classAura ? <Suspense fallback={null}><SubclassAura player={player} kit={classAura.kit} mastery={classAura.mastery} colour={classAura.colour} /></Suspense>
             : identity.family && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>)}
@@ -1036,16 +1047,16 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           <output ref={perfOutput}>Measuring…</output>
         </details>
       </section>}
-      {near && !toolNear && !sheet && !welcoming && !talking && !(reveal && inside === "oracle") && (CLOSED.includes(near)
+      {near && !toolNear && !sheet && !cinematic && !talking && !(reveal && inside === "oracle") && (CLOSED.includes(near)
         ? <p className={styles.interact} data-closed="true" role="status">{NEAR_LABELS[near]}</p>
         : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>{touch ? "Tap" : "E"}</kbd>{near === "forage" ? targetLabel ?? NEAR_LABELS[near] : near === "talk" && talkNow.nearName ? `Talk to ${talkNow.nearName}` : NEAR_LABELS[near]}</button>)}
       {/* The held item's use (specs/game-ui.md §2): what left click does with it here, or the tool something in reach wants. Touch presses the prompt. */}
-      {!sheet && !welcoming && !talking && !fishing && !inside && site !== "ruins" && (toolAction && (toolAction.target && (toolNear || toolAction.verb === "eat"))
+      {!sheet && !cinematic && !talking && !fishing && !inside && site !== "ruins" && (toolAction && (toolAction.target && (toolNear || toolAction.verb === "eat"))
         ? <button className={styles.interact} data-use onPointerDown={e => { if (e.pointerType !== "mouse" || capture.state !== "captured") applyTool(); }}><kbd>{touch ? "Tap" : "Click"}</kbd>{toolAction.label}</button>
         : needTool && <p className={styles.interact} data-closed="true" role="status"><kbd>{touch ? "Wheel" : keyName(wheelKeys.wheel)}</kbd>Take out your {needTool === "rod" ? "fishing rod" : needTool}</p>)}
       <FishingOverlay rod={held?.kind === "rod" && held.tier ? rodByTier(held.tier) : peaceful.rod} onActiveChange={setFishing} />
       <ToolWheel items={wheelItems} held={heldState.held} wheelKey={wheelKeys.wheel} touch={touch} onEquip={holdItem} onSwap={() => swapHeld(wheelItems)}
-        enabled={ready && !inside && !fishing && !sheet && !bagOpen && !welcoming && !talking && !fading && !decor.decorating && !shopTab} />
+        enabled={ready && !inside && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !shopTab} />
       <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} onDonated={loadMuseum} />
       <ToastHub />
       {/* Today's gift once the island is showing and nothing else holds the player (first login, a fade, a sheet, a fight). */}
@@ -1100,16 +1111,17 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <CafeGoalSheet open={sheet === "cafe"} onClose={() => setSheet(null)} />
       {site === "ruins" && <CombatHud player={player} />}
       {DEV && site === "ruins" && <PlaytestHud />}
-      {welcoming || talking || !full ? null : site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>{mouseLook ? "Mouse Look and aim" : "Mouse Aim"}</span><span>Click Attack</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>←</kbd><kbd>→</kbd> Turn</span><span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Slide</span>}<span>{(combat.rt.v2 ? V2_SLOT_IDS : SLOT_IDS).map(s => <kbd key={s}>{keyName(abilityKeys[s])}</kbd>)} Abilities</span>{combat.rt.v2 && <span><kbd>{keyName(abilityKeys.ult)}</kbd> Ultimate</span>}<span><kbd>{keyName(wheelKeys.wheel)}</kbd> Weapons</span><span><kbd>{keyName(abilityKeys.swap)}</kbd> Previous weapon</span><span><kbd>E</kbd> Interact</span></div>
+      {cinematic || talking || !full ? null : site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>{mouseLook ? "Mouse Look and aim" : "Mouse Aim"}</span><span>Click Attack</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>←</kbd><kbd>→</kbd> Turn</span><span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Slide</span>}<span>{(combat.rt.v2 ? V2_SLOT_IDS : SLOT_IDS).map(s => <kbd key={s}>{keyName(abilityKeys[s])}</kbd>)} Abilities</span>{combat.rt.v2 && <span><kbd>{keyName(abilityKeys.ult)}</kbd> Ultimate</span>}<span><kbd>{keyName(wheelKeys.wheel)}</kbd> Weapons</span><span><kbd>{keyName(abilityKeys.swap)}</kbd> Previous weapon</span><span><kbd>E</kbd> Interact</span></div>
       // Indoors you walk (cafe-polish §4): no run, jump, dash, zoom or map.
       : inside ? <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>E</kbd> Interact</span><span><kbd>J</kbd> Journal</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>{keyName(identity.settings.key_bindings.openBag)}</kbd> Bag</span></div>
       : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span>{peaceful.glider && <span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air Glide</span>}<span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span><kbd>{keyName(wheelKeys.wheel)}</kbd> Tools</span><span>Click Use</span><span>{mouseLook ? "Mouse or " : ""}<kbd>←</kbd><kbd>→</kbd> Look</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Journal</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>{keyName(identity.settings.key_bindings.openBag)}</kbd> Bag</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Crouch, at speed slide</span>}</div>}
       {/* Clear of the minimap (left) and the audio widget (bottom right). */}
-      {touch && !talking && (!inside || inside === "cafe") && <TouchControls left="var(--hud-stick-left)" bottom="var(--hud-stick-bottom)" walkOnly={inside === "cafe"} />}
+      {touch && !talking && !trip.active && (!inside || inside === "cafe") && <TouchControls left="var(--hud-stick-left)" bottom="var(--hud-stick-bottom)" walkOnly={inside === "cafe"} />}
       <p className={styles.touchControls}>Tap the ground to move · two fingers turn the camera</p>
       {captured === "free" && !touch && <p className={styles.lookHint} role="status">Click to look around</p>}
       {captured === "captured" && site === "ruins" && <svg className={styles.crosshair} viewBox="-10 -10 20 20" aria-hidden="true"><circle r="5.5" /><circle r="1.2" /></svg>}
       <div className={styles.fade} data-active={fading} aria-hidden="true" />
+      {trip.active && <TripVeil phase={trip.phase} to={trip.to} firstLogin={trip.firstLogin} quick={trip.quick} haze={light.fogColor} touch={touch} onSkip={trip.skip} />}
       <LoadingStatus ready={ready} />
     </main>
   );

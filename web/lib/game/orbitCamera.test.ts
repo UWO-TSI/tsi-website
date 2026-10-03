@@ -4,7 +4,7 @@ import { cameraRelative, getCameraForwardXZ } from "./cameraBasis";
 import { bendViewPoint } from "./worldProjection";
 import {
   DEFAULT_PITCH, FOLLOW_IDLE, FOLLOW_TURN, ORBIT_DISTANCE, PITCH_MAX, PITCH_MIN, ZOOM_MAX, ZOOM_MIN, ZOOM_OUT,
-  autoFollow, crosshairAim, lookOrbit, loadOrbit, nextCapture, orbitOffset, saveOrbit, snapBack, stepOrbit, toggleZoom, turnOffset, turnQuarter, wrapAngle, zoomOrbit,
+  STEER_IDLE, autoFollow, crosshairAim, lookOrbit, loadOrbit, nextCapture, orbitOffset, saveOrbit, snapBack, steerOrbit, stepOrbit, toggleZoom, turnOffset, turnQuarter, wrapAngle, zoomOrbit,
   type CaptureEvent, type CaptureState, type OrbitAngles,
 } from "./orbitCamera";
 
@@ -170,6 +170,35 @@ describe("gentle auto-follow", () => {
     o.prefs.autoFollow = false;
     run(o, 3, 9, 0);
     expect(o.target.yaw).toBe(0);
+  });
+});
+
+describe("a trip's shots (arrival-wharf.md): steered like the auto-follow, the player's look round first", () => {
+  it("eases the view toward the shot the short way round, with its tilt and zoom, and keeps the player's where it says none", () => {
+    const o = fresh({ yaw: 4 * Math.PI + 3 }); o.idle = 5;
+    for (let i = 0; i < 600; i++) { steerOrbit(1 / 60, -3, 0.4, 1.3, false, o); stepOrbit(1 / 60, {}, o); }
+    expect(wrapAngle(o.view.yaw - -3)).toBeCloseTo(0, 3);
+    expect(Math.abs(o.target.yaw - (4 * Math.PI + 3))).toBeLessThan(1); // round through π, not back the long way
+    expect(o.view.pitch).toBeCloseTo(0.4, 3);
+    expect(o.view.zoom).toBeCloseTo(1.3, 3);
+    const keep = fresh({ pitch: 0.7, zoom: 0.8 }); keep.idle = 5;
+    steerOrbit(1, 0.5, null, null, false, keep);
+    expect([keep.target.pitch, keep.target.zoom]).toEqual([0.7, 0.8]);
+  });
+  it("gives way at once while the player looks round, and picks up again once they stop", () => {
+    const o = fresh(); o.idle = 0;
+    steerOrbit(0.5, 1, 0.4, 1.3, false, o);
+    expect(o.target.yaw).toBe(0);
+    o.idle = STEER_IDLE + 0.01;
+    steerOrbit(0.5, 1, 0.4, 1.3, false, o);
+    expect(o.target.yaw).toBeGreaterThan(0);
+  });
+  it("cuts straight to the shot under a veil, whatever the player was doing", () => {
+    const o = fresh({ yaw: 2 * Math.PI + 0.2 }); o.idle = 0;
+    steerOrbit(1 / 60, 0.9, 0.42, 1.25, true, o);
+    expect(o.view).toEqual(o.target);
+    expect(wrapAngle(o.view.yaw - 0.9)).toBeCloseTo(0, 9);
+    expect([o.view.pitch, o.view.zoom]).toEqual([0.42, 1.25]);
   });
 });
 
