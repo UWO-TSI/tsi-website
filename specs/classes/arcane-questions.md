@@ -39,7 +39,7 @@ Nothing here blocked the build. Each item says what the wave does now; a one-wor
 
 ## Art and identity
 25. **Icons are hand-drawn SVG,** not Higgsfield. The sheet planned Higgsfield icons, with you approving the style on the first family's set. Treat this set as the style proposal (`K-arcane-icons.webp`).
-26. **Shop weapon skins.** The material sets exist (`arcaneSeed.ts`) and the mastery trim renders on the weapon. A bought skin can't render yet: the progression view carries the equipped item's id, not its skin key. *Assumed:* the GUI pass or wave 5 adds that lookup.
+26. **Shop weapon skins are material sets** (`arcaneSeed.ts`): a bought skin re-colours the weapon's named materials on every tier (the progression view now carries the worn skin's key), and the mastery trim does the same in the subclass's colours, its glow brighter at 19. The amber charm's "pulses with your forms" is its gems' glow, not an extra animation.
 27. **Iron and gold trims read matte.** The look classes treat only M_Blade/Brass/Steel/Iron/Drum as metal, so M_Trim gets the matte class.
 
 ## For the coordinator (merging)

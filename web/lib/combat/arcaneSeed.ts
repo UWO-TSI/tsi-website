@@ -26,6 +26,8 @@ const skin = (slug: string, name: string, subclass: string, description: string,
 const aura = (slug: string, name: string, subclass: string, description: string, ramp: [string, string, string], price: { coins?: number; gems?: number }): Cosmetic =>
   ({ slug, name, description, kind: "aura", subclass, ramp, ...price });
 
+/** The skin key a weapon_skin row carries (its slug's last word: skin-prism-ember → ember), as shop_items.cosmetic.skin. */
+export const skinKey = (c: Cosmetic) => c.slug.replace(/^skin-[a-z]+-/, "");
 export const ARCANE_COSMETICS: Cosmetic[] = [
   skin("skin-prism-ember", "Ember prism staff", "elementalist", "Charred wood and copper bands for the Elementalist's staff. Looks only: your tier still shows.", { M_Body: "#4a2a20", M_Trim: "#c8742e", M_Accent: "#ffb35c" }, { coins: 800 }),
   skin("skin-prism-glacier", "Glacier prism staff", "elementalist", "Pale birch and frosted silver for the Elementalist's staff. Looks only.", { M_Body: "#e6ecef", M_Trim: "#9fc4d8", M_Accent: "#5a86a8" }, { coins: 800 }),
@@ -40,3 +42,6 @@ export const ARCANE_COSMETICS: Cosmetic[] = [
   skin("skin-charm-obsidian", "Obsidian tooth charm", "transmuter", "A black glass fang on a violet cord. Looks only.", { M_Body: "#1e1a24", M_Trim: "#6a5a8a", M_Accent: "#b48cff" }, { coins: 800 }),
   skin("skin-charm-amber", "Amber tooth charm", "transmuter", "A fang set in glowing amber that pulses with your forms.", { M_Body: "#c88a2e", M_Trim: "#7a4a1a", M_Accent: "#ffd27a" }, { gems: 200 }, true),
 ];
+
+/** The family's weapon skins as material sets, by `${subclass}:${skin}` (classes.ts WEAPON_SKINS). */
+export const ARCANE_SKINS: Record<string, Record<string, string>> = Object.fromEntries(ARCANE_COSMETICS.filter(c => c.kind === "weapon_skin").map(c => [`${c.subclass}:${skinKey(c)}`, c.skin!]));

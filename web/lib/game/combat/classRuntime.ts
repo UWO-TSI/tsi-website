@@ -54,8 +54,8 @@ export interface ClassState {
   element: string | null;
   /** Traits learned (member_progression.traits): forms unlock with their mob's first defeat. */
   traits: Record<string, number>;
-  /** The equipped cosmetics of this subclass's row (the weapon's mastery trim), from the progression view. */
-  cosmetics?: Partial<Record<"weapon_skin" | "aura" | "frame", string>>;
+  /** The equipped cosmetics of this subclass's row, and the weapon skin they put on (the mastery trim, a bought skin's key), from the progression view. */
+  cosmetics?: Partial<Record<"weapon_skin" | "aura" | "frame", string>>; skin?: string | null;
   moveCd: number;
   combatT: number;
   /** The input layer's clock (real seconds). */
@@ -79,7 +79,7 @@ export function equipClassKit(rt: CombatRuntime, kit: ClassKit, mastery: number,
     cd: same?.cd ?? {}, queue: same?.queue ?? [], holding: same?.holding ?? keys.map(() => null), toggled: same?.toggled ?? keys.map(() => false), recast: same?.recast ?? keys.map(() => 0),
     meter: same?.meter ?? 0, cast: same?.cast ?? null, moveCd: same?.moveCd ?? 0, combatT: same?.combatT ?? 0, clock: same?.clock ?? 0,
     progress: progress ?? same?.progress ?? { into: 0, needed: 0 },
-    channel: same?.channel ?? null, form: same?.form ?? null, formBefore: same?.formBefore ?? null, element: same?.element ?? null, traits: learnt, cosmetics: same?.cosmetics };
+    channel: same?.channel ?? null, form: same?.form ?? null, formBefore: same?.formBefore ?? null, element: same?.element ?? null, traits: learnt, cosmetics: same?.cosmetics, skin: same?.skin };
   p.maxHp = Math.round(d.max_hp * mods.maxHp); p.hp = Math.min(p.hp, p.maxHp);
   p.energy = Math.min(p.energy, energyMax(rt));
 }

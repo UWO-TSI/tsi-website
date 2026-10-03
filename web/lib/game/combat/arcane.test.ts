@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ELEMENTALIST, ILLUSIONIST, NECROMANCER, TRANSMUTER } from "@/lib/combat/arcaneKits";
 import { classMods, type ClassKit } from "@/lib/combat/classes";
-import { presetAllocation } from "@/lib/combat/progression";
+import { presetAllocation, xpForLevel } from "@/lib/combat/progression";
 import { UNITS, traitFor } from "@/lib/combat/kits";
 import { ULT } from "@/lib/combat/ult";
 import { enemyTarget, strike, summon } from "./abilities";
@@ -10,9 +10,11 @@ import { cdKey, classKey, equipClassKit, mashNotes, mashPotency, pressUlt, stepC
 import { ENEMIES } from "./data";
 import { stepCombat } from "./encounter";
 import { HOLD_AFTER, createInputState, press, release, tick } from "./input";
-import { corpse, corpseLife, inWall, wallHeight } from "./primitives";
+import { corpse, corpseLife, inWall, signaturePaint, wallHeight } from "./primitives";
+import { memoryCombatStore } from "@/lib/combat/memoryStore";
+import { chooseSubclass, equipCosmetic, getProgression } from "@/lib/combat/service";
 import { gripFor, verbClip, verbInfo, type Verb } from "@/lib/game/character/clips";
-import { createRuntime, energyMax, type CombatRuntime } from "./runtime";
+import { combat, createRuntime, energyMax, type CombatRuntime } from "./runtime";
 import { spawnEnemy, type Enemy } from "./sim";
 
 const ME = { x: 0, z: 0 };
@@ -326,5 +328,33 @@ describe("the Arcane clips and grips", () => {
       }
     }
     expect([ELEMENTALIST, ILLUSIONIST, NECROMANCER, TRANSMUTER].map(k => gripFor(k.signature.type))).toEqual(["Staff", "OneHand", "Book", "Fists"]);
+  });
+});
+
+describe("the signature weapon's look in hand (signaturePaint)", () => {
+  it("the prism crystal takes the last element; the charm lights learned forms; the mastery trim and a bought skin re-colour it", async () => {
+    const e = setup(ELEMENTALIST, 1, []).rt;
+    combat.rt = e;
+    tap(e, 1); frames(e, 14);
+    expect(signaturePaint()!.M_Crystal.emissive).toBe("#4fb8ff"); // water
+    const t = setup(TRANSMUTER, 20, [], { "crab-shell": 1 }).rt;
+    combat.rt = t;
+    tap(t, 1); frame(t);
+    const gems = signaturePaint()!;
+    expect(gems.M_Form2.intensity).toBeGreaterThan(gems.M_Form1.intensity!); // the crab, in form, brightest
+    expect(gems.M_Form3.intensity).toBeLessThan(0.1); // the wisp, not learned
+    t.v2!.skin = "mastery:trim";
+    expect(signaturePaint()!.M_Trim.color).toBe(TRANSMUTER.look.trim!.M_Trim);
+    t.v2!.skin = "obsidian";
+    expect(signaturePaint()!.M_Body.color).toBe("#1e1a24");
+    // The progression view carries the worn skin's key from the shop item.
+    const m = memoryCombatStore(), ME = "00000000-0000-4000-8000-0000000a7c01";
+    m.setFamily(ME, "Arcane"); await m.store.grantXp(ME, xpForLevel(10), "admin", "x", "x-10"); m.setSetting("classes_v2", 1);
+    await chooseSubclass(m.store, ME, "transmuter", "x-sub");
+    m.own(ME, "item-obsidian", "weapon_skin", "transmuter", "obsidian");
+    await equipCosmetic(m.store, ME, "transmuter", "weapon_skin", "item-obsidian");
+    const p = await getProgression(m.store, ME);
+    expect(p.ok && p.data.classes?.skin).toBe("obsidian");
+    combat.rt = createRuntime();
   });
 });

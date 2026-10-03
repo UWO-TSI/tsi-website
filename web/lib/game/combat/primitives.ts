@@ -6,7 +6,7 @@
  * abilities.ts (which dispatches the effects here); `stepField` runs once a tick at the end of the encounter tick.
  */
 import { traitTier, type Effect } from "@/lib/combat/kits";
-import type { FormDef } from "@/lib/combat/classes";
+import { WEAPON_SKINS, type FormDef } from "@/lib/combat/classes";
 import type { EnemyType } from "./contract";
 import { addShield, applyStatus, chargeUlt, floater, fx, heal, runEffects, strike, summon, type Ctx } from "./abilities";
 import { addKick } from "./moveHooks";
@@ -484,10 +484,12 @@ export function signaturePaint(): WeaponPaint | null {
     const form = a.key.split(".").pop(), learnt = v.keys[i] !== null;
     PAINT[GEMS[i]] = { intensity: !learnt ? 0.03 : v.form === form || v.form === "chimera" ? 2.2 : 0.7 };
   });
-  if (v.kit.look.trim && v.cosmetics?.weapon_skin === "mastery:trim") {
+  if (v.kit.look.trim && v.skin === "mastery:trim") {
     for (const [name, color] of Object.entries(v.kit.look.trim)) PAINT[name] = { color };
     if (v.mastery >= 19) for (const name of ["M_Glow", "M_Rune", "M_Crystal"]) PAINT[name] = { ...PAINT[name], intensity: Math.max(PAINT[name]?.intensity ?? 0, 2) };
   }
+  const bought = v.skin ? WEAPON_SKINS[`${v.kit.key}:${v.skin}`] : undefined; // a shop skin: its material set, every tier
+  if (bought) for (const [name, color] of Object.entries(bought)) PAINT[name] = { ...PAINT[name], color };
   return PAINT;
 }
 
