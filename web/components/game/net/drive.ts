@@ -8,13 +8,16 @@
  * - Speed, yaw, the movement state, the Air pose and the leaf come from the sample; one-shots come from its events and
  *   only as clips this rig has (an unknown one-shot would stick as Idle in Puppet.update). Seated, a one-shot plays on
  *   the upper body so they don't float off the seat.
+ * - The mixer's rate trick (Character.tsx: its frame returns early while `motion.current` is null and steps by
+ *   `rate`): Reduced remotes step at 15 Hz by the time saved up, Hidden ones not at all, without touching Character.
+ * - Sun shadows go through `userData.sunCaster` (SunShadows reads it before `castShadow`), off below Full.
  */
 import * as THREE from "three";
 import { WATER_DROP } from "@/lib/game/grid";
 import { CLIP_BY_NAME, VERB_BY_NAME } from "@/lib/game/character/look";
 import type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
 import { createRemoteSample, type RemoteEntry, type RemoteEvent, type RemoteSample } from "@/lib/net/types";
-import { FULL, HIDDEN, createLodEntry, type LodEntry } from "./lod";
+import { FULL, HIDDEN, LOD, createLodEntry, type LodEntry } from "./lod";
 
 /** What remotes stand on: the scene's walk world (movement's `top` and `wet`). Interiors are flat. */
 export interface GroundWorld { top(x: number, z: number): number; wet(x: number, z: number): boolean }
@@ -35,7 +38,7 @@ export interface RemoteRig {
   readonly sample: RemoteSample;
   /** Written every frame; Character reads it through `live`. */
   readonly motion: CharacterMotion;
-  /** What Character reads: `motion` on a frame its mixer steps, null to skip it. */
+  /** What Character reads: `motion` on a frame its mixer steps, null to skip it (Reduced between ticks, Hidden). */
   readonly live: { current: CharacterMotion | null };
   /** The group at the floor under them (Character's parent: its contact shadow sits under it), while mounted. */
   readonly anchor: { current: THREE.Group | null };
@@ -52,14 +55,18 @@ export interface RemoteRig {
   /** The held clip last asserted from the sample: let go of only on its falling edge (see driveRig). */
   heldPose: ClipName | null;
   readonly lod: LodEntry;
+  /** Reduced: time saved up for the next mixer step. */
+  mixerT: number;
+  /** Sun shadows as last applied (null: not yet). */
+  casting: boolean | null;
 }
 
 export function createRig(entry: RemoteEntry): RemoteRig {
   const motion: CharacterMotion = { speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null };
   return {
-    sid: entry.sid, entry, sample: createRemoteSample(), motion, live: { current: motion }, anchor: { current: null },
+    sid: entry.sid, entry, sample: createRemoteSample(), motion, live: { current: null }, anchor: { current: null },
     feet: { current: new THREE.Vector3() }, groundY: 0, waterY: 0, floorX: NaN, floorZ: NaN, floorY: 0, floorWorld: null, seated: false, heldPose: null,
-    lod: createLodEntry(),
+    lod: createLodEntry(), mixerT: 0, casting: null,
   };
 }
 
@@ -112,4 +119,49 @@ export function driveRig(r: RemoteRig, now: number, world: GroundWorld, juice: J
     }
   }
   return s;
+}
+
+/**
+ * Whether Character steps this rig's mixer this frame, and by how much; the anchor shows on every drawn tier. `dt` is
+ * the frame's delta as Character takes it (min(delta, 0.1)): its step is dt × rate, so a rate of saved-up / dt steps
+ * the saved-up time at once.
+ */
+export function gateMixer(r: RemoteRig, dt: number): void {
+  const tier = r.lod.tier, m = r.motion, a = r.anchor.current, shown = tier !== HIDDEN;
+  if (a && a.visible !== shown) a.visible = shown;
+  if (!shown) { r.live.current = null; r.mixerT = 0; return; }
+  // Full, and anyone with the leaf open: HeldLeaf places the leaf from the motion every frame (null hides it).
+  if (tier === FULL || (m.leaf ?? 0) > 0.01) { m.rate = 1; r.live.current = m; r.mixerT = 0; return; }
+  r.mixerT += dt;
+  if (r.mixerT < 1 / LOD.reducedHz) { r.live.current = null; return; }
+  m.rate = dt > 0 ? Math.min(r.mixerT, 0.2) / dt : 1;
+  r.live.current = m;
+  r.mixerT = 0;
+}
+
+let castOn = false;
+function castVisit(o: THREE.Object3D) {
+  const mesh = o as THREE.Mesh;
+  if (!mesh.isMesh) return;
+  const u = mesh.userData;
+  if (castOn) {
+    if (!u.netCaster) return;
+    delete u.netCaster;
+    u.sunCaster = "dynamic";
+    mesh.castShadow = true;
+  } else if (u.sunCaster === "dynamic") {
+    // Remembered, so only what cast before casts again at Full.
+    u.netCaster = true;
+    u.sunCaster = "off";
+    mesh.castShadow = false;
+  }
+}
+/**
+ * The sun shadow on or off for everything a remote draws (its body, what it holds, the leaf). SunShadows takes
+ * `userData.sunCaster` before `castShadow`, and "off" is neither of its sets, so both are written; things mounted
+ * later (a tool coming out) are caught by the next call.
+ */
+export function castSunShadows(root: THREE.Object3D, on: boolean): void {
+  castOn = on;
+  root.traverse(castVisit);
 }

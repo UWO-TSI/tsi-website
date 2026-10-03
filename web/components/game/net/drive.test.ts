@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import * as THREE from "three";
 import { WATER_DROP } from "@/lib/game/grid";
 import type { RemoteEntry, RemotePlayer, RemoteSample } from "@/lib/net/types";
-import { createRig, driveRig, knownClip, type GroundWorld } from "./drive";
-import { FULL, HIDDEN, REDUCED } from "./lod";
+import { castSunShadows, createRig, driveRig, gateMixer, knownClip, type GroundWorld } from "./drive";
+import { FULL, HIDDEN, LOD, REDUCED } from "./lod";
 
 /** A test double for one remote (the client core's interpolation is its own concern): `script` writes the sample. */
 const player = (p: Partial<RemotePlayer> = {}): RemotePlayer => ({
@@ -75,6 +75,7 @@ describe("a remote's frame", () => {
 
   it("sits at the seat's lift, still, and plays a one-shot on the upper body so it doesn't float off the seat", () => {
     const rig = createRig(entry((now, out) => { at({ x: 5, y: 0.75, z: 4.5, pose: "Sit", lift: 0.12, vx: 0.3 })(now, out); events(out, [["play", "Wave"]]); }));
+    rig.lod.tier = REDUCED;
     driveRig(rig, 0, flat(0.75), null);
     expect(rig.seated).toBe(true);
     expect(rig.motion).toMatchObject({ pose: "Sit", speed: 0, lift: 0.12, move: null, upper: "Wave" });
@@ -137,5 +138,58 @@ describe("a remote's frame", () => {
     expect(driveRig(rig, 0, flat(), null)).toBe(s);
     expect(driveRig(rig, 1, flat(), null)).toBe(s);
     expect(e.calls).toBe(2);
+  });
+});
+
+describe("the tiers' costs", () => {
+  const rigAt = (tier: 0 | 1 | 2, leaf = 0) => {
+    const r = createRig(entry(at({})));
+    r.lod.tier = tier;
+    r.anchor.current = new THREE.Group();
+    r.motion.leaf = leaf;
+    return r;
+  };
+  it("steps a Full mixer every frame, shows the anchor, and draws nothing and steps nothing when Hidden", () => {
+    const full = rigAt(FULL);
+    gateMixer(full, 1 / 60);
+    expect(full.live.current).toBe(full.motion);
+    expect(full.motion.rate).toBe(1);
+    expect(full.anchor.current!.visible).toBe(true);
+    const hidden = rigAt(HIDDEN);
+    gateMixer(hidden, 1 / 60);
+    expect(hidden.live.current).toBeNull();
+    expect(hidden.anchor.current!.visible).toBe(false);
+  });
+
+  it("steps a Reduced mixer at 15 Hz by the time saved up (Character's step is dt × rate)", () => {
+    const r = rigAt(REDUCED), dt = 1 / 60;
+    let steps = 0, stepped = 0;
+    for (let f = 0; f < 60; f++) {
+      gateMixer(r, dt);
+      if (r.live.current) { steps++; stepped += dt * r.motion.rate!; }
+    }
+    expect(steps).toBeGreaterThanOrEqual(LOD.reducedHz - 1);
+    expect(steps).toBeLessThanOrEqual(LOD.reducedHz);
+    expect(stepped).toBeGreaterThan(0.9); // the clips keep real time
+    expect(stepped).toBeLessThanOrEqual(1 + 1e-9);
+  });
+
+  it("keeps a Reduced mixer stepping every frame while the leaf is open (HeldLeaf places it from the motion)", () => {
+    const r = rigAt(REDUCED, 0.8);
+    for (let f = 0; f < 4; f++) { gateMixer(r, 1 / 60); expect(r.live.current).toBe(r.motion); }
+  });
+
+  it("turns the sun shadow off below Full and back on for what cast before (SunShadows reads userData.sunCaster)", () => {
+    const root = new THREE.Group(), body = new THREE.Mesh(), decal = new THREE.Mesh(), tool = new THREE.Mesh();
+    body.castShadow = true; body.userData.sunCaster = "dynamic";
+    tool.castShadow = true; tool.userData.sunCaster = "dynamic";
+    root.add(body, decal);
+    body.add(tool);
+    castSunShadows(root, false);
+    expect([body.userData.sunCaster, body.castShadow, tool.userData.sunCaster, tool.castShadow]).toEqual(["off", false, "off", false]);
+    expect(decal.userData.sunCaster).toBeUndefined();
+    castSunShadows(root, true);
+    expect([body.userData.sunCaster, body.castShadow, tool.castShadow]).toEqual(["dynamic", true, true]);
+    expect([decal.castShadow, decal.userData.sunCaster]).toEqual([false, undefined]);
   });
 });
