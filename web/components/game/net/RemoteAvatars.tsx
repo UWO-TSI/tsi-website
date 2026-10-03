@@ -15,7 +15,7 @@
  * (Nameplates.tsx), handed out at each re-tier.
  */
 import { useEffect, useMemo, useSyncExternalStore, type RefObject } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { villageIsland } from "@/lib/game/defaultIsland";
 import { village } from "@/lib/game/villageMap";
@@ -30,6 +30,7 @@ import { RemoteAvatar } from "./RemoteAvatar";
 import { LIVE_MAX, liveRemotes } from "./active";
 import RemoteAuras, { AuraStore, showsAura } from "./RemoteAuras";
 import Nameplates, { PlatePool } from "./Nameplates";
+import { projectCurved } from "./projection";
 import { RigStore } from "./rigs";
 
 /** Indoors (interiorShared's walker, PLAYER_SPEED) people walk at 4.6: the Walk clip keeps their pace there. */
@@ -133,16 +134,27 @@ export default function RemoteAvatars({ source, area, player }: { source: NetSou
   const caps = graphics.liteMode ? LOD_CAPS.light : LOD_CAPS.high;
   const dusty = DUSTY.has(area), island = area === "village" ? villageIsland(village()) : undefined;
   const juice = useMemo(() => juiceFor(driver.particles, island ?? DRY), [driver, island]);
-  // Development (evidence scripts): who is drawn at which tier, and where.
+  // Development (evidence scripts): who is drawn at which tier, and where (on the page too).
+  const get = useThree(s => s.get);
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
-    Object.assign(window, { __net: { remotes: () => driver.store.list.map(r => ({
-      sid: r.sid, name: r.entry.player.name, x: r.sample.x, y: r.sample.y, z: r.sample.z, tier: (["full", "reduced", "hidden"] as const)[r.lod.tier],
-      dist: r.lod.dist, inView: r.lod.inView, plate: r.lod.plate, aura: r.lod.aura, seated: r.seated, pose: r.motion.pose ?? null, move: r.motion.move ?? null,
-      mobile: r.entry.player.mobile, held: r.entry.player.held,
-    })) } });
+    const at = { x: 0, y: 0, depth: 0 };
+    Object.assign(window, { __net: {
+      remotes: () => driver.store.list.map(r => ({
+        sid: r.sid, name: r.entry.player.name, x: r.sample.x, y: r.sample.y, z: r.sample.z, tier: (["full", "reduced", "hidden"] as const)[r.lod.tier],
+        dist: r.lod.dist, inView: r.lod.inView, plate: r.lod.plate, aura: r.lod.aura, seated: r.seated, pose: r.motion.pose ?? null, move: r.motion.move ?? null,
+        speed: r.motion.speed, mobile: r.entry.player.mobile, held: r.entry.player.held, weapon: r.entry.player.weapon,
+      })),
+      /** Where a remote's middle is on the page (CSS px), or null off screen. */
+      screen: (sid: number) => {
+        const r = driver.store.map.get(sid), { camera, size, gl } = get();
+        if (!r || !projectCurved(r.feet.current.x, r.groundY + 0.8, r.feet.current.z, camera, size.width, size.height, at)) return null;
+        const box = gl.domElement.getBoundingClientRect();
+        return { x: box.left + at.x, y: box.top + at.y };
+      },
+    } });
     return () => { delete (window as { __net?: unknown }).__net; };
-  }, [driver]);
+  }, [driver, get]);
   useFrame(({ camera }, delta) => driveAll(driver, source, world, juice, player.current, camera, caps, delta), -3);
   const walk = INDOORS.has(area) ? INDOOR_WALK : WALK;
   return <>

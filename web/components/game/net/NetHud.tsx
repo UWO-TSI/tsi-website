@@ -17,6 +17,7 @@ import { isTyping } from "@/lib/game/useWorldDialog";
 import { useWheelKeys } from "@/lib/game/movement/keys";
 import type { Area } from "@/lib/net/protocol";
 import type { NetStatus } from "@/lib/net/types";
+import * as netStore from "@/lib/net/netStore";
 import { useNetStatus, useRoster } from "@/lib/net/netStore";
 import { useFlash } from "../useFlash";
 import PresenceList from "./PresenceList";
@@ -40,6 +41,15 @@ export function statusLine(status: NetStatus | null): { text: string; tone: "inf
       return null;
     default: return null;
   }
+}
+
+/**
+ * "Play here" (another window took the island over, 4104): take it back in this one through the store's rejoin; a
+ * store without one yet (it lands with the island room's store) reloads, which rejoins too. Stale pages (4106) reload.
+ */
+function act(action: "play" | "reload") {
+  const rejoin = action === "play" ? (Reflect.get(netStore, "rejoin") as (() => void) | undefined) : undefined;
+  if (rejoin) rejoin(); else window.location.reload();
 }
 
 /** The full HUD or the clean one, read as DefaultIslandWorld reads it (the setting, the HUD key, touch, the mouse). */
@@ -67,7 +77,7 @@ function Hud({ area, status }: { area: Area; status: NetStatus }) {
     <div className={s.hud} data-clean={full ? undefined : ""}>
       {line && <div className={s.status} role="status" data-busy={line.busy || undefined}>
         <Badge tone={line.tone}>{line.busy && <span className={s.beads} aria-hidden="true"><i /><i /><i /></span>}{line.text}</Badge>
-        {line.action && <Button size="sm" variant="secondary" onClick={() => window.location.reload()}>{line.action === "play" ? "Play here" : "Reload"}</Button>}
+        {line.action && <Button size="sm" variant="secondary" onClick={() => act(line.action!)}>{line.action === "play" ? "Play here" : "Reload"}</Button>}
       </div>}
       {(full || flash || open) && n > 0 && <IconButton label={`People on the island: ${n}`} className={s.people} data-flash={full ? undefined : flash ?? undefined}
         aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(o => !o)}>
