@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, History, Plus, Pencil, Store } from "lucide-react";
 import { AdminGate, buttonLinkCls } from "@/components/portal/ProgressionAdminShared";
-import { useShopItems } from "@/lib/content/loader";
+import { createClient } from "@/lib/supabase/client";
+import { loadAdminShopItems, shopPrice, type AdminShopItem } from "@/lib/content/adminShop";
 import { Amount } from "@/components/economy/Amount";
-import { Badge, Card, Empty, Loading } from "@/components/gui";
+import { Badge, Card, Empty, ErrorNote, Loading } from "@/components/gui";
 
 const PAGE = "mx-auto w-full max-w-6xl px-5 pt-6 pb-16 sm:px-8";
 const BACK = "mb-2 inline-flex items-center gap-1.5 text-sm font-bold text-[var(--gui-ink-2)] hover:text-[var(--gui-ink-strong)]";
@@ -15,7 +17,19 @@ const TH = "px-4 py-3 text-xs font-extrabold whitespace-nowrap text-[var(--gui-i
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Toronto" });
 
 export default function AdminContentShopPage() {
-  const { data: items, isLoading } = useShopItems();
+  // The admin loader, not the member shop's: retired items too, and coin prices.
+  const [items, setItems] = useState<AdminShopItem[]>([]);
+  const [isLoading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [reload, setReload] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    loadAdminShopItems(createClient())
+      .then((rows) => { if (!cancelled) { setItems(rows); setFailed(false); } })
+      .catch(() => { if (!cancelled) setFailed(true); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [reload]);
 
   return (
     <AdminGate>
@@ -31,7 +45,7 @@ export default function AdminContentShopPage() {
               Shop items
             </h1>
             <p className="mt-1 text-sm text-[var(--gui-muted)]">
-              {items.length} items
+              {items.length} items{items.some((i) => !i.active) ? `, ${items.filter((i) => !i.active).length} retired` : ""}
             </p>
           </div>
           <Link
@@ -45,6 +59,8 @@ export default function AdminContentShopPage() {
 
         {isLoading ? (
           <Loading label="Getting the shop items…" />
+        ) : failed ? (
+          <ErrorNote onRetry={() => { setLoading(true); setReload((n) => n + 1); }}>The shop items didn’t load.</ErrorNote>
         ) : items.length === 0 ? (
           <Empty icon={<Store size={32} />} title="No shop items yet">
             Add one and it goes on sale in the shop.
@@ -67,7 +83,9 @@ export default function AdminContentShopPage() {
                 </tr>
               </thead>
               <tbody>
-                {items.map((item) => (
+                {items.map((item) => {
+                  const price = shopPrice(item);
+                  return (
                   <tr
                     key={item.id}
                     className="border-t-2 border-dashed border-[var(--gui-paper-edge)]"
@@ -84,11 +102,7 @@ export default function AdminContentShopPage() {
                       {item.category}
                     </td>
                     <td className="px-4 py-3 text-right font-bold text-[var(--gui-ink)]">
-                      {typeof item.tc_price === "number" ? (
-                        <Amount n={item.tc_price} currency="gems" />
-                      ) : (
-                        "—"
-                      )}
+                      {price ? <Amount n={price.n} currency={price.currency} /> : "—"}
                     </td>
                     <td className="px-4 py-3">
                       {item.rarity ? (
@@ -134,7 +148,8 @@ export default function AdminContentShopPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </Card>
