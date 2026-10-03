@@ -9,7 +9,9 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import ContactShadows, { SoftDiscs } from "./ContactShadows";
+import ContactShadows from "./ContactShadows";
+import Puddles from "./Puddles";
+import { setPuddles } from "@/lib/game/puddles";
 import { CloudShadows, MistBanks, TreeLeaves } from "./AmbienceFX";
 import { Fireflies } from "./AmbientLife";
 import RainFX from "./RainFX";
@@ -105,6 +107,8 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
   }, [trees, ground, look.season]);
   const groundSite = useMemo(() => fauna && { map: fauna.site.map, ground, surface: fauna.surface, top: fauna.top, player: fauna.player }, [fauna, ground]);
   const puddleBlobs = useMemo(() => puddles.map(([x, z], i) => ({ x, z, y: ground(x, z) + 0.01, rx: 0.5 + (i % 3) * 0.18, rz: 0.32 + (i % 2) * 0.12, yaw: 0 })), [puddles, ground]);
+  // Footsteps splash in them while it rains (lib/game/puddles.ts), whoever steps.
+  useEffect(() => { setPuddles(weather === "rain" ? puddleBlobs : []); return () => setPuddles([]); }, [weather, puddleBlobs]);
   return <>
     {light.skyTop ? <SkyGradient top={light.skyTop} horizon={light.sky} /> : <color attach="background" args={[light.sky]} />}
     <fog attach="fog" args={[light.fogColor, overview ? light.fogNear + 28 + overviewFog : light.fogNear, overview ? light.fogFar + 15 + overviewFog : light.fogFar]} />
@@ -119,7 +123,7 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
     {!liteMode && <CloudShadows phase={phase} size={cloudSize} bounded />}
     {(weather === "rain" || weather === "snow") && <RainFX kind={weather} wind={wind} groundHeight={ground} />}
     <ContactShadows tint={shadow.tint} intensity={shadow.intensity} sunMap={castShadows} />
-    {weather === "rain" && puddleBlobs.length > 0 && <SoftDiscs spots={puddleBlobs} opacity={0.5} color="#8ea7b8" />}
+    {weather === "rain" && puddleBlobs.length > 0 && <Puddles spots={puddleBlobs} />}
     {weather === "fog" && <MistBanks color={light.sky} opacity={liteMode ? 0.22 : 0.34} wind={wind} ground={ground} />}
     {!liteMode && weather !== "rain" && weather !== "snow" && (look.season === "spring" || look.season === "autumn") &&
       <TreeLeaves trees={leafTrees} mode={look.season === "spring" ? "petals" : "leaves"} wind={wind} ground={ground} />}
