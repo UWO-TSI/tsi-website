@@ -95,6 +95,15 @@ describe("Guardian: the 0.25 s parry window, the block, Bulwark, the dome, the b
     for (let t = 0; t < 4.1; t += DT) frame(rt);
     expect(rt.player.taunt).toBeNull();
   });
+  it("the finisher's clip starts 0.3 s before its hit, so the slam lands on it", () => {
+    const { rt, p } = setup(GUARDIAN);
+    rt.v2!.meter = 100; pressUlt(rt);
+    const A = GUARDIAN.ult.anticipation_ms / 1000;
+    let asked = -1, t = 0;
+    for (; t < A + 6.2; t += DT) { p.clip = null; frame(rt); if (p.clip?.verb === "Unique_AegisSlam" && asked < 0) asked = t; }
+    expect(asked).toBeGreaterThan(A + 6 - 0.3 - 0.05);
+    expect(asked).toBeLessThan(A + 6 - 0.3 + 0.05);
+  });
   it("Unbreakable stores every hit for 6 s, then releases it twice over in the shockwave", () => {
     const { rt, p, foe } = setup(GUARDIAN);
     rt.v2!.meter = 100;
@@ -307,6 +316,18 @@ describe("Assassin: Backstab, Vault, Shadow Step's charges, Kunai Blink, Execute
     expect(far.status.distract).toBe(0);
     expect(enemyTarget(rt, far, { ...ME, safe: false, alive: true })).toMatchObject({ x: far.spawnX, z: far.spawnZ }); // you're inside
     expect(enemyTarget(rt, far, { x: 5, z: 5, safe: false, alive: true })).toMatchObject({ x: 5, z: 5 }); // stepped out
+  });
+  it("the basic: tanto cuts up close, a thrown kunai past 3.2 u to the aim", () => {
+    const { rt, p, foe } = setup(ASSASSIN);
+    attack(rt, ME, never);
+    expect(lost(foe)).toBeGreaterThan(0);
+    expect(rt.projectiles.length).toBe(0);
+    expect(p.clip?.verb).toBe("Unique_TantoCut");
+    p.attackCd = 0; p.aim = { x: 0, z: 6 };
+    attack(rt, ME, never);
+    expect(rt.projectiles).toHaveLength(1);
+    expect(rt.projectiles[0]).toMatchObject({ from: "player", kind: "arrow" });
+    expect(p.clip?.verb).toBe("Throw");
   });
   it("Death Lotus: every enemy in range cut at once when time resumes; the world goes to ink", () => {
     const { rt, foe } = setup(ASSASSIN);
