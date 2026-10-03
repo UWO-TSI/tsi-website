@@ -18,6 +18,7 @@ import { useWorldClips } from "./character/useWorldClips";
 import { useMyLook } from "@/lib/game/character/lookStore";
 import { seatLift } from "@/lib/game/character/clips";
 import { easeFacing } from "@/lib/game/locomotion";
+import { BASE_FOV } from "./movement/moveFx";
 
 export interface InteriorStation {
   id: string;
@@ -50,6 +51,16 @@ export function applyInteriorBackdrop(scene: THREE.Scene, color = "#14100C"): ()
     if (scene.background === backdrop) scene.background = prevBg;
     if (scene.fog === null) scene.fog = prevFog;
   };
+}
+
+/**
+ * Put the camera straight onto a room's follow pose (as a door's fade lifts): where it would settle over you, at the
+ * walking lens, so nothing swoops in from wherever the last scene left it.
+ */
+export function snapInteriorCamera(camera: THREE.Camera, px: number, pz: number) {
+  camera.position.set(px, 8.4, pz - 7.2);
+  camera.lookAt(px, 0.7, pz + 1.2);
+  if (camera instanceof THREE.PerspectiveCamera && camera.fov !== BASE_FOV) { camera.fov = BASE_FOV; camera.updateProjectionMatrix(); }
 }
 
 export function followInteriorCamera(camera: THREE.Camera, px: number, pz: number, delta: number) {
@@ -85,6 +96,9 @@ export function InteriorPlayer({
   const { camera } = useThree();
   const face = useCallback((x: number, z: number) => { motion.current.yaw = Math.atan2(x - posRef.current.x, z - posRef.current.z); }, []);
   useWorldClips(motion, face);
+  // Arriving: the camera is already where it follows you from (every room, the temple's included). Once, on arrival.
+  const arrival = useRef(bounds.spawn);
+  useEffect(() => { snapInteriorCamera(camera, arrival.current[0], arrival.current[1]); }, [camera]);
   useEffect(() => {
     const onSit = (e: Event) => {
       const { x, z, clip = "Sit", seatY = 0, yaw = 0 } = (e as CustomEvent<{ x: number; z: number; clip?: ClipName; seatY?: number; yaw?: number }>).detail;

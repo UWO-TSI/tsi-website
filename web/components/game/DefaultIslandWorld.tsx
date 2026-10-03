@@ -93,6 +93,7 @@ import { useMyLook } from "@/lib/game/character/lookStore";
 import { useProgression } from "@/lib/progression/useProgression";
 import { anchorAt } from "@/lib/content/residents";
 import { WarmupProbe } from "./LoadGate";
+import { escapeAction } from "@/lib/game/sceneGate";
 import TopCluster, { hudButton } from "./TopCluster";
 import { setHudCoins, setHudXp } from "@/lib/game/hudStore";
 import CollectionBook from "./CollectionBook";
@@ -901,15 +902,21 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       if (!menu && event.key.toLowerCase() === "j") setSheet(value => (value === "journal" ? null : "journal"));
       if (menu === "openMail") setSheet(value => (value === "letters" ? null : "letters"));
       if (menu === "nextTab" || menu === "prevTab") window.dispatchEvent(new CustomEvent("tsi:menu-tab", { detail: { step: menu === "nextTab" ? 1 : -1 } }));
-      // The Esc that ended mouse-look capture is the browser's; a later one closes things (specs/camera-orbit.md).
-      if (event.key === "Escape" && !escapeEndedCapture()) { setSheet(null); if (decor.selected) decor.cancel(); }
+      // The Esc that ended mouse-look capture is the browser's; a later one closes things (specs/camera-orbit.md), and in a
+      // room with nothing open it leaves by the door (interiors §5; lib/game/sceneGate.ts).
+      if (event.key === "Escape") {
+        const open = !!sheet || bagOpen || donateOpen || !!shopTab || decor.decorating || !!(reveal && inside === "oracle") || studyHoldsPrompt() || !!document.querySelector('[role="dialog"]');
+        const esc = escapeAction({ captureEnded: escapeEndedCapture(), fading, open, inside: !!inside });
+        if (esc === "close") { setSheet(null); if (decor.selected) decor.cancel(); }
+        if (esc === "exit") act("exit");
+      }
       if (atHome && event.key.toLowerCase() === "f") decor.toggle();
       if (decor.decorating && event.key.toLowerCase() === "r") decor.rotateSelected();
       if (decor.decorating && event.key.toLowerCase() === "x") decor.putAway();
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [act, near, inside, atHome, decor, identity.settings, greeting, nextLine, finishWelcome, site, abilityKeys]);
+  }, [act, near, inside, atHome, decor, identity.settings, greeting, nextLine, finishWelcome, site, abilityKeys, sheet, bagOpen, donateOpen, shopTab, reveal, fading]);
   return (
     <main className={styles.world} data-light={phase} data-inside={inside ?? undefined} data-site={site}>
       <Canvas ref={canvasRef} tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
