@@ -144,6 +144,10 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     window.dispatchEvent(new CustomEvent("tsi:fish-end"));
   }, [changePhase]);
 
+  /** A full bag (specs/game-ui.md §5): the note over the water, besides the card's own words. */
+  const bagFull = (answer: { code?: string }) => {
+    if (answer.code === "bag_full") window.dispatchEvent(new CustomEvent("tsi:bag-full", { detail: { x: spotRef.current?.x, z: spotRef.current?.z } }));
+  };
   const miss = (note: string | null = null) => {
     clearTimers();
     setMissNote(note);
@@ -229,7 +233,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     const from = collectionScope ? null : castFromRef.current;
     rollRef.current = from && castLine(from.site, from.from, power, rod.key);
     void rollRef.current?.then(answer => {
-      if (answer && !answer.ok && (phaseRef.current === "casting" || phaseRef.current === "waiting")) miss(answer.error);
+      if (answer && !answer.ok && (phaseRef.current === "casting" || phaseRef.current === "waiting")) { bagFull(answer); miss(answer.error); }
     });
     hookedRef.current = false;
     landRef.current = null;
@@ -256,7 +260,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     };
     void (rollRef.current ?? Promise.resolve(null)).then(answer => {
       if (phaseRef.current !== "bite") return;
-      if (answer && !answer.ok) { miss(answer.error); return; }
+      if (answer && !answer.ok) { bagFull(answer); miss(answer.error); return; }
       const rolled = answer && FISH.find(f => f.key === answer.catch.item_key);
       landRef.current = rolled && answer.catch.roll ? { roll: answer.catch.roll, size: answer.catch.size_cm } : null;
       setFish(rolled || local());
@@ -289,15 +293,17 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         if (collectionScope) collect(fish.key, { scope: collectionScope });
         else if (landing) {
           void landCatch(landing.roll).then(answer => {
-            // Refused (the hourly cap): the card stands, the catch isn't kept.
-            if (answer && !answer.ok) { window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: answer.error } })); return; }
+            // Refused (the hourly cap, the bag filled since the cast): the card stands, the catch isn't kept.
+            if (answer && !answer.ok) { bagFull(answer); window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: answer.error } })); return; }
             collect(fish.key);
+            window.dispatchEvent(new CustomEvent("tsi:bag-got", { detail: { key: fish.key } }));
             setLearned(answer?.catch.recipe?.name ?? null);
             const beat = localRecord(fish.key, size);
             setNewRecord(!isNew && (answer ? answer.catch.new_record === true && answer.catch.total_collected !== 1 : beat));
           });
         } else {
           collect(fish.key);
+          window.dispatchEvent(new CustomEvent("tsi:bag-got", { detail: { key: fish.key } }));
           setNewRecord(!isNew && localRecord(fish.key, size));
         }
         if (isNew) {

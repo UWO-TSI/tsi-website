@@ -1,0 +1,27 @@
+/* The HUD's Bag button, the pickup's fly-in and the full note (BagButton.tsx, peaceful/BagFullNote.tsx), in the GUI sheet's tokens. */
+
+.bagButton { position: relative; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 16px 0 10px; border: 0; border-radius: var(--gui-r-pill);
+  background: var(--gui-paper); color: var(--gui-ink-strong); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; cursor: pointer; box-shadow: var(--gui-shadow-md);
+  zoom: var(--tsi-text-scale, 1); transition: opacity 240ms ease, transform 240ms var(--gui-spring); }
+.bagButton:not([data-shown]) { opacity: 0; transform: translateY(-8px); pointer-events: none; }
+.bagButton kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; border-radius: var(--gui-r-pill); background: var(--gui-bark); color: var(--gui-paper); font: 800 var(--gui-text-xs)/1 var(--gui-font); }
+.badge { position: absolute; top: -6px; right: -6px; }
+.bagButton[data-bump="bounce"] { animation: bagBounce 460ms var(--gui-spring); }
+.bagButton[data-bump="shake"] { animation: bagShake 420ms ease; }
+@keyframes bagBounce { 0% { transform: scale(1); } 35% { transform: scale(1.16) translateY(-3px); } 65% { transform: scale(0.95); } 100% { transform: scale(1); } }
+@keyframes bagShake { 20% { transform: translateX(-5px) rotate(-2deg); } 40% { transform: translateX(5px) rotate(2deg); } 60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } }
+/* The picked-up item: out of your hands with a pop, then into the bag (an x move and a y move make the curve). */
+.flight { position: fixed; z-index: 80; width: 0; height: 0; pointer-events: none; animation: flightX 680ms cubic-bezier(0.45, 0, 0.75, 1) forwards; }
+/* A cream token round the icon, so it reads over sand, grass or water; sized here (the 0-wide flight would squeeze it). */
+.flightArc { position: absolute; left: -29px; top: -29px; display: grid; place-items: center; width: 58px; height: 58px; border-radius: 50%; background: var(--gui-paper-hi);
+  box-shadow: var(--gui-shadow-md), inset 0 0 0 2.5px var(--gui-highlight); animation: flightY 680ms cubic-bezier(0.3, 0, 0.6, 1) forwards; }
+.flightArc img { display: block; width: 44px; height: 44px; max-width: none; }
+@keyframes flightX { 0%, 18% { transform: translateX(0); } 100% { transform: translateX(var(--dx)); } }
+@keyframes flightY { 0% { transform: translateY(10px) scale(0.6); opacity: 0.4; } 18% { transform: translateY(-30px) scale(1.35); opacity: 1; } 100% { transform: translateY(var(--dy)) scale(0.42); opacity: 0.9; } }
+.fullNote { display: flex; align-items: center; gap: 7px; margin: 0; padding: 8px 14px; border-radius: var(--gui-r-blob); background: var(--gui-paper); color: var(--gui-warn); font: 800 var(--gui-text-sm)/1.2 var(--gui-font);
+  white-space: nowrap; box-shadow: var(--gui-shadow-md), inset 0 0 0 2px var(--gui-warn-soft); pointer-events: none; animation: noteIn 300ms var(--gui-spring) both; zoom: var(--tsi-text-scale, 1); }
+@keyframes noteIn { from { opacity: 0; transform: translateY(8px) scale(0.9); } }
+@media (prefers-reduced-motion: reduce) {
+  .bagButton, .bagButton[data-bump], .fullNote { animation: none; transition: none; }
+}
+:global(html[data-contrast="high"]) .bagButton, :global(html[data-contrast="high"]) .fullNote { background: #000000; color: #ffffff; box-shadow: 0 0 0 2px #ffffff; }

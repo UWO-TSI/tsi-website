@@ -17,9 +17,6 @@ import { AudioManager } from "@/lib/game/audio";
 import { localCollections, mergeWithLocal } from "@/lib/game/collections";
 import { Check, X } from "lucide-react";
 import JournalPages, { fetchJournalPage } from "./JournalPages";
-import { MAX_PINS, pinItem } from "@/lib/game/toolWheel";
-import { pinnable } from "@/lib/game/itemModels";
-import { togglePin, useHeld } from "@/lib/game/heldStore";
 import { useWorldDialog } from "@/lib/game/useWorldDialog";
 
 interface Row {
@@ -170,7 +167,6 @@ function OpenCollectionBook({ onClose, collectionScope, keys }: { onClose: () =>
           </p>
         </header>
 
-        {!collectionScope && <WheelPins counts={counts} />}
 
         {journal ? <JournalPages initial={journal} /> : CATALOG.map((g) => {
           // Loop wake 27: per-group completion count — the Critterpedia
@@ -344,32 +340,4 @@ function OpenCollectionBook({ onClose, collectionScope, keys }: { onClose: () =>
       </div>
     </div>
   );
-}
-
-/**
- * Pins for the tool wheel (specs/game-ui.md §1): up to two things you have and can hold (a fruit to eat, a shell, a
- * stone) sit on the wheel. The bag's details panel takes this over in milestone 2.
- */
-function WheelPins({ counts }: { counts: Record<string, number> }) {
-  const { pins } = useHeld();
-  const keys = Object.keys(counts).filter(k => counts[k] > 0 && pinnable(k));
-  if (!keys.length) return null;
-  return <section aria-label="Pins on the tool wheel" style={{ margin: "0 0 14px", padding: "10px 12px", borderRadius: 18, background: "var(--gui-paper-warm)", boxShadow: "inset 0 0 0 1.5px var(--gui-paper-edge)" }}>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: "var(--gui-text-sm)", fontWeight: 800, color: "var(--gui-sage-deep)", marginBottom: 8 }}>
-      <span>On your tool wheel</span><span style={{ fontWeight: 700, color: "var(--gui-muted)" }}>{pins.filter(k => keys.includes(k)).length}/{MAX_PINS} pinned</span>
-    </div>
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-      {keys.map(k => {
-        const item = pinItem(k), on = pins.includes(k);
-        return <button key={k} type="button" aria-pressed={on} onClick={() => { togglePin(k); AudioManager.playSFX(on ? "exit" : "confirm", { rate: 1.2, gain: 0.4 }); }}
-          title={on ? `Unpin ${item.name}` : `Pin ${item.name} to the wheel`}
-          style={{ display: "flex", alignItems: "center", gap: 6, minHeight: 40, padding: "4px 12px 4px 4px", borderRadius: 999, cursor: "pointer", font: "inherit", fontSize: "var(--gui-text-xs)", fontWeight: 800,
-            border: 0, boxShadow: on ? "inset 0 0 0 2px var(--gui-highlight)" : "inset 0 0 0 1.5px var(--gui-paper-edge)", background: on ? "var(--gui-butter)" : "var(--gui-paper-hi)", color: "var(--gui-ink-strong)" }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={item.icon} alt="" width={30} height={30} />
-          {item.name} <span style={{ color: "var(--gui-muted)", fontWeight: 700 }}>×{counts[k]}</span>
-        </button>;
-      })}
-    </div>
-  </section>;
 }

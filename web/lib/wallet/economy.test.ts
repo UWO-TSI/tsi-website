@@ -95,6 +95,19 @@ describe("selling by rarity (row 91)", () => {
     expect(await sell(m.store, A, { item_key: "acorn", qty: 1, idempotency_key: "sell-0003" })).toMatchObject({ ok: false, code: "not_sellable" });
     expect(m.coinsOf(A)).toBe(24);
   });
+
+  it("skips a favourite locked in the bag (specs/game-ui.md §7): it lists as locked and won't sell until unlocked", async () => {
+    const m = memoryEconomyStore();
+    m.give(A, "fish_golden_koi", 1);
+    m.give(A, "fish_dace", 2);
+    m.lock(A, "fish_golden_koi", true);
+    const list = await sellList(m.store, A);
+    expect(list.ok && list.data.map((x) => [x.item_key, x.locked])).toEqual([["fish_golden_koi", true], ["fish_dace", false]]);
+    expect(await sell(m.store, A, { item_key: "fish_golden_koi", qty: 1, idempotency_key: "sell-0101" })).toMatchObject({ ok: false, code: "locked" });
+    expect(await sell(m.store, A, { item_key: "fish_dace", qty: 2, idempotency_key: "sell-0102" })).toMatchObject({ ok: true, data: { paid: 16 } });
+    m.lock(A, "fish_golden_koi", false);
+    expect(await sell(m.store, A, { item_key: "fish_golden_koi", qty: 1, idempotency_key: "sell-0103" })).toMatchObject({ ok: true, data: { paid: 600 } });
+  });
 });
 
 describe("daily gift", () => {

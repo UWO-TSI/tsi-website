@@ -137,7 +137,7 @@ export default function CraftingSheet() {
       pending.current = null;
       AudioManager.playSFX("confirm");
       window.dispatchEvent(new CustomEvent("tsi:crafted", { detail: { id: r.id } }));
-      setCard({ title: "Crafted", name: done.name, note: r.kind === "weapon" ? "It's in your gear rack for the ruins." : "It's in your pockets." });
+      setCard({ title: "Crafted", name: done.name, note: r.kind === "weapon" ? "It's in your gear rack for the ruins." : r.id.startsWith("bag-") ? "Your backpack has more room now." : "It takes no room in your pockets: find it in your Bag, under tools, clothes and furniture." });
       void load();
     } catch (e) {
       if (e instanceof ApiError) pending.current = null; // answered: the next press is a new craft

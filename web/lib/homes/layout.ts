@@ -51,6 +51,8 @@ export function starterRoom(id = "room-1"): RoomDoc {
       { uid: "starter-lamp", piece: "floor-lamp", cell: [2, 5], rot: 0 },
       { uid: "starter-shelf", piece: "bookshelf", cell: [4, 5], rot: 0 },
       { uid: "starter-closet", piece: "closet", cell: [0, 2], rot: 0 },
+      // The home storage chest (specs/game-ui.md §6): the starter pack's wooden chest, beside the bed.
+      { uid: "starter-chest", piece: "wooden-chest", cell: [2, 4], rot: 0 },
     ],
   };
 }

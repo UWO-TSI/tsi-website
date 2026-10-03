@@ -375,3 +375,60 @@ describe("POST /api/collections: the held tool (row 279, specs/game-ui.md)", () 
     }
   });
 });
+
+describe("POST /api/collections: a full backpack refuses the pickup (rows 279–283, specs/game-ui.md §5)", () => {
+  // Exactly twenty slots: nineteen fish (a slot each) and a partial stack of 29 branches.
+  const FISH19 = ROSTER.filter((s) => s.category === "fish").slice(0, 19).map((s) => s.key);
+  const fill = (member = A) => { m.give(member, "wood_branch", 29); FISH19.forEach((k) => m.give(member, k, 1)); };
+  const harvest = (prefix: string, tool?: string) => { const n = node(prefix); return post({ action: "harvest", node: n.id, at: [n.x, n.z], ...(tool ? { tool } : {}) }); };
+  const cast = () => post({ action: "cast", site: "village", at: SHORE, power: 0.5, tool: ROD });
+
+  it("refuses a harvest that needs a new slot, and leaves it in the world for later", async () => {
+    fill();
+    expect(await harvest("rock-", SHOVEL)).toMatchObject({ status: 409, body: { code: "bag_full", error: "Your backpack is full." } });
+    expect(m.countOf(A, "wood_branch")).toBe(29);
+    expect((await m.store.memberItems(A)).length).toBe(20);
+    // Room again (one fish fewer): the same rock, the same hour, is still there to strike.
+    m.give(A, FISH19[0], -1);
+    expect((await harvest("rock-", SHOVEL)).status).toBe(200);
+  });
+
+  it("still tops up a partial stack at a full bag, but not past it", async () => {
+    fill();
+    expect((await harvest("branch-")).status).toBe(200); // the 30th branch fills its stack
+    expect(m.countOf(A, "wood_branch")).toBe(30);
+    later(3_600_000);
+    expect(await harvest("branch-")).toMatchObject({ status: 409, body: { code: "bag_full" } }); // the 31st needs a slot
+    expect(m.countOf(A, "wood_branch")).toBe(30);
+  });
+
+  it("refuses a cast with no slot for a fish, and a land if the bag filled since the cast; the roll waits for room", async () => {
+    fill();
+    expect(await cast()).toMatchObject({ status: 409, body: { code: "bag_full" } });
+    m.give(A, FISH19[0], -1);
+    const roll = (await cast()).body.catch.roll;
+    m.give(A, "apple", 1); // something else took the last slot while the line was out
+    later(4000);
+    expect(await post({ action: "land", roll })).toMatchObject({ status: 409, body: { code: "bag_full" } });
+    m.give(A, "apple", -1);
+    expect((await post({ action: "land", roll })).status).toBe(200);
+  });
+
+  it("keeps everything a member already over capacity has, and they pick nothing up until they're back under", async () => {
+    fill();
+    m.give(A, "apple", 4); m.give(A, "bug_mantis", 1); m.give(A, "bug_firefly", 1); // 23 slots in a 20-slot bag
+    const before = await m.store.memberItems(A);
+    expect(await harvest("branch-")).toMatchObject({ status: 409, body: { code: "bag_full" } }); // not even the branches' partial stack
+    await expect(m.store.harvest(A, "n1", "h1", "apple", null, false)).rejects.toMatchObject({ code: "bag_full" });
+    expect(await m.store.memberItems(A)).toEqual(before);
+    m.give(A, "bug_mantis", -1); m.give(A, "bug_firefly", -1); m.give(A, "apple", -4); // full again, not over
+    expect((await harvest("branch-")).status).toBe(200);
+  });
+
+  it("takes more once the member owns a bigger pocket", async () => {
+    fill();
+    m.own(A, ["bag:30"]);
+    expect((await harvest("rock-", SHOVEL)).status).toBe(200);
+    expect((await cast()).status).toBe(200);
+  });
+});

@@ -63,6 +63,9 @@ export const CRAFTED_ITEMS: CatalogueEntry[] = [
   // rather than item(), whose running position would renumber the recipe cards seeded after these (115-118).
   withIcon({ slug: "glider-leaf", display_name: "Leaf glider", category: "tool", description: "Jump, then press jump again while falling and hold it to glide. Crafted at a workbench.",
     price_coins: 3000, price_gems: null, tier: "premium", slot: null, special_pool: false, stackable: false, stock: null, catalogue_ref: "glider_leaf", sprite_url: null, position: 119 }),
+  // The backpack's second upgrade (specs/game-ui-questions.md 23): crafted only. Owning it is the bag's size (lib/collections/bag.ts).
+  withIcon({ slug: "bag-40", display_name: "Roomiest pocket", category: "tool", description: "Your backpack holds 40 things. Crafted at a workbench.",
+    price_coins: 3000, price_gems: null, tier: null, slot: null, special_pool: false, stackable: false, stock: null, catalogue_ref: "bag:40", sprite_url: null, position: 120 }),
 ];
 
 const r = (id: string, ingredients: Record<string, number>, sources: RecipeSource[], kind: "item" | "weapon" = "item", qty = 1): Recipe =>
@@ -106,6 +109,9 @@ export const RECIPES: Recipe[] = [
   r("staff-rune", { wood_branch: 4, rock_crystal: 2, fish_football_fish: 1 }, ["quest", "bottle"], "weapon"),
   // The leaf glider (row 245), learned the way rods 4-5 are: a resident's quest or the message bottle. Last, so the seeded recipes keep their positions.
   r("glider-leaf", { wood_branch: 6, flower_windflower: 2, bug_red_dragonfly: 1 }, ["quest", "bottle"]),
+  // The backpack's upgrades (specs/game-ui-questions.md 23): 30 slots, known by everyone (or bought, 1,500 coins); 40, from the bottle.
+  r("bag-30", { bug_bagworm: 4, wood_branch: 6 }, ["starter"]),
+  r("bag-40", { bug_bagworm: 6, rock_gold_nugget: 1, flower_windflower: 2 }, ["bottle"]),
 ];
 
 /**
@@ -123,7 +129,7 @@ export const RECIPE_DROPS: Record<string, DropRarity> = {
   "rod-glass": "rare", "net-silk": "rare", "acc-shell-necklace": "rare", "outfit-silk-sweater": "rare",
   "furn-study-desk": "rare", "furn-bench-park": "rare", "furn-streetlamp": "rare", "furn-plant-monstera": "rare",
   "furn-wall-clock": "rare", "furn-wall-frame": "rare", "furn-lounge-rug": "rare", "sword-iron": "rare", "bow-yew": "rare",
-  "net-dragonfly": "epic", "shovel-crystal": "epic", "outfit-monarch-cape": "epic",
+  "net-dragonfly": "epic", "shovel-crystal": "epic", "outfit-monarch-cape": "epic", "bag-40": "epic",
 };
 export const RECIPE_DROP_CHANCE: Record<DropRarity, number> = { rare: 0.02, epic: 0.05, legendary: 0.15 };
 export const DROP_RARITIES = Object.keys(RECIPE_DROP_CHANCE) as DropRarity[];

@@ -88,3 +88,40 @@ Milestone 1 is built on `game/game-ui`. Each question has the assumption I took,
     - Flowers, shells and mushrooms stack to 10.
     - Each fish, sea creature and bug takes its own slot (ACNH).
     - A pinned item is just bag stock.
+
+## Milestone 2 (built)
+Built on `game/backpack` with proposals 23 and 24 as the defaults. Each question has the assumption I took.
+
+25. **Crafting with a full bag.** Crafted things never take a slot (gear, wearables and furniture, row 280), and a craft only takes ingredients out of the bag.
+    - *Assumed:* crafting is never refused for a full bag, so the craft route has nothing to refuse.
+    - A crafted snack would need the same check as a catch. None exists yet.
+26. **A full bag and fishing.** Every fish takes its own slot, so a full bag has no room for any fish.
+    - *Assumed:* the cast is refused (nothing bites) and the note shows over the water. The land checks again in case the bag filled up during the reel; the roll then waits up to three minutes for room.
+    - The alternative is ACNH's: let the fish bite, then let it swim away.
+27. **Over capacity.** A member who had more than 20 slots before the cap keeps everything.
+    - *Assumed:* they can't pick anything up, not even onto a partial stack, until they're back at the size or under. The bag shows it as "over by 3".
+28. **The pockets.**
+    - *Roomier pocket* (30 slots): 1,500 coins at the shop, or crafted from bagworm ×4 and branch ×6. The recipe is a starter, so everyone knows it.
+    - *Roomiest pocket* (40 slots): crafted only, from bagworm ×6, a gold nugget and windflower ×2. The bottle teaches it; like every bottle-only recipe, an epic catch can teach it too.
+    - The bigger pocket counts; nothing forces 30 before 40.
+    - Their icons are the shoulder bag and the backpack accessories in their own colours.
+29. **The storage chest.** It has 200 slots with the same stacks. Every wooden chest in your house opens the one chest.
+    - Every member got a wooden chest in the starter pack. The starter room now has it beside the bed; members who already saved a room place theirs from Decorate.
+    - *Assumed:* not at HQ (the spec said "maybe").
+30. **Locks.** Selling and dropping skip a locked item, and "Store all materials" leaves it in the bag. Moving it by hand still works.
+    - The lock is the server's, so it holds on every device. The shop's sell list shows it as "Locked in your bag".
+31. **Drop.** A dropped item is gone for good: nothing lies on the ground afterwards, because the island has no layer for dropped items.
+    - It asks first. Should fish and bugs say "Release" instead?
+32. **Selling anywhere.** The bag's details sell at the shop's prices wherever you are (the spec's "sell and drop from the details panel"). ACNH only sells at the shop.
+    - *Assumed:* keep it.
+33. **Combat rewards.** Mission and boss materials still land in the bag when it's full, and can push it over.
+    - *Assumed:* left as they are (the combat agents' code). Should they go to the chest when the bag is full?
+34. **This device's.** The grid's arrangement (drag, sort) and the New marks are kept on the device, like the wheel's pins. Ownership and the locks are the server's.
+    - Sort goes by type (fish, sea creatures, bugs, fruit, flowers, shells and mushrooms, materials), then rarity (rarest first), then name.
+    - The New marks clear when you close the bag.
+35. **Pickup feel.** The icon flies from the middle of the screen (you) into the Bag button.
+    - In the clean HUD the button slides in for the flight and the bounce, then slides away. Its count stays until you look.
+    - Sounds come from the existing set: a soft blip as it lands, the low "exit" when it doesn't fit.
+36. **Signed out.** The bag shows this browser's record at 20 slots, read-only. With no server there's no cap.
+37. **The Collection book's pin strip moved to the bag**, which now holds the wheel's pins (drag an item onto one) and Pin to wheel in an item's details.
+38. **"Size" in the details** is your biggest one for species with sizes. For the rest it's how many share a slot.

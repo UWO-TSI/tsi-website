@@ -9,6 +9,7 @@ import * as THREE from "three";
 import FishingBobber from "../FishingBobber";
 import FishCatchFX from "../FishCatchFX";
 import VillageLife, { type NodeSpec } from "./VillageLife";
+import BagFullNote from "./BagFullNote";
 import { gridFishingWaterHeight } from "@/lib/game/fishingWater";
 import { fishingSpot, type FishingSpot, type WaterType } from "@/lib/game/fishingSpots";
 import { getPeacefulTarget } from "@/lib/game/peacefulNear";
@@ -38,5 +39,6 @@ export default function PeacefulLayer({ map, nodes, moment, member, player, grou
     {/* The throw runs from you to the spot, not along the camera: it turns now (specs/camera-orbit.md). */}
     <FishingBobber towardWater playerPosRef={playerRef} waterHeight={waterHeight} />
     <FishCatchFX playerPosRef={playerRef} />
+    <BagFullNote ground={ground} />
   </>;
 }
