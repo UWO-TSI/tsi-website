@@ -10,7 +10,7 @@ import type { EnemyAttack, EnemyType, MissionDef, Weapon } from "./contract";
 
 const W = "/assets/game/weapons/", E = "/assets/game/enemies/";
 
-type Look = Pick<Weapon, "cooldown" | "range" | "arc" | "speed" | "model" | "modelScale" | "grip">;
+type Look = Pick<Weapon, "cooldown" | "range" | "arc" | "speed" | "model" | "modelScale" | "grip" | "shot">;
 const WEAPON_LOOK: Record<string, Look> = {
   // Combat polish 11 (specs/evidence/combat-b/balance.md): the driftwood sword 0.42 → 0.45, the oak staff 0.75 → 0.5 with a
   // faster bolt (11 → 15), the wraps 0.32 → 0.42, so every subclass's normal-mission DPS sits within ±25% of the median.
@@ -35,6 +35,16 @@ const WEAPON_LOOK: Record<string, Look> = {
   "tome-warden": { cooldown: 5, range: 8, arc: 0, model: `${W}tome-spirits.glb`, modelScale: 1.5 },
   "staff-heartstone": { cooldown: 0.6, range: 11, arc: 0, speed: 15, model: `${W}staff-rune.glb`, modelScale: 1.6 },
 };
+// Classes v2, Arcane signature weapons (lib/combat/arcaneSeed.ts): one feel per type, every tier its own model.
+// The deck throws cards and the tome bone shards (their shot looks); the charm fights with bare fists.
+const ARCANE_LOOK: Record<string, Omit<Look, "model">> = {
+  "prism-staff": { cooldown: 0.5, range: 8.5, arc: 0, speed: 15, modelScale: 1.3 },
+  "trick-deck": { cooldown: 0.42, range: 9, arc: 0, speed: 18, modelScale: 1.3 },
+  "bone-tome": { cooldown: 0.48, range: 8, arc: 0, speed: 16, modelScale: 1.3 },
+  "tooth-charm": { cooldown: 0.42, range: 1.4, arc: 1.7, modelScale: 1.3 },
+};
+const SHOT: Record<string, Weapon["shot"]> = { "trick-deck": "card", "bone-tome": "bone" };
+for (const [type, look] of Object.entries(ARCANE_LOOK)) for (let t = 1; t <= 5; t++) WEAPON_LOOK[`${type}-${t}`] = { ...look, model: `${W}${type}-${t}.glb`, ...(SHOT[type] ? { shot: SHOT[type] } : {}) } as Look;
 export const WEAPONS: Record<string, Weapon> = Object.fromEntries(islandWeapons()
   .filter(w => WEAPON_LOOK[w.id])
   .map(w => [w.id, { ...w, ...WEAPON_LOOK[w.id] }]));

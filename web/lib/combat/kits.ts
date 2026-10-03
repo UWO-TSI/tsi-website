@@ -25,22 +25,68 @@ export type BuffStat = "damage" | "speed" | "guard" | "block" | "crit";
 
 export type Effect =
   /** Shots from the caster toward the aim; `count` fan out over `spread` radians. */
-  | { kind: "projectile"; power: number; count?: number; spread?: number; speed?: number; range?: number; pierce?: boolean; splash?: number; status?: Status }
+  | { kind: "projectile"; power: number; count?: number; spread?: number; speed?: number; range?: number; pierce?: boolean; splash?: number; status?: Status;
+      /** Classes v2: the shot's look (a card, a bone shard), its size, and whether it carries the ability's mark (a card to teleport to);
+       * `burst`: effects where it ends (it flies to the aim at most, and bursts there or on the first enemy in its way). */
+      shot?: "arrow" | "bolt" | "card" | "bone"; size?: number; mark?: boolean; burst?: Effect[] }
   /** A circle at the caster (or where a dash ended) or the aim; `arc` makes a cone toward the aim, `length` a beam of width 2·radius. */
-  | { kind: "area"; power: number; radius: number; at: "self" | "aim"; arc?: number; length?: number; knock?: number; status?: Status }
+  | { kind: "area"; power: number; radius: number; at: "self" | "aim"; arc?: number; length?: number; knock?: number; status?: Status;
+      /** Classes v2: its own FX key over the ability's impact (an ult's stages). */
+      fx?: string }
   /** Move toward the aim (or away from it), hitting what's on the path if `power`; i-frames like a dodge if `iframes`. */
   | { kind: "dash"; distance: number; back?: boolean; power?: number; iframes?: boolean }
   /** Fractions of max HP. */
   | { kind: "shield"; amount: number; duration: number }
   | { kind: "heal"; amount: number }
-  /** Units from UNITS; "weapon" = the minion the equipped summoning weapon selects (row 43); "corpse" = raised from a fallen enemy. */
-  | { kind: "summon"; unit: string; count?: number }
+  /** Units from UNITS; "weapon" = the minion the equipped summoning weapon selects (row 43); "corpse" = raised from a fallen enemy.
+   * `cap`: at most this many of this unit at once (the oldest goes). A unit costing 0 sits outside the summon capacity (an ult's army). */
+  | { kind: "summon"; unit: string; count?: number; cap?: number }
   | { kind: "buff"; stat: BuffStat; value: number; duration: number }
   /** A body-part change (row 34): shown on the character, triggers the Transmuter passive. */
   | { kind: "transform"; duration: number }
   /** Classes v2 movement hooks (design sheet §1.1): carried speed added along the aim (≤ 4 u/s a cast, never past the 18 u/s ceiling), and a small hop. */
   | { kind: "momentum"; speed: number }
-  | { kind: "launch"; height: number };
+  | { kind: "launch"; height: number }
+  // ── Classes v2 shared primitives (lib/game/combat/primitives.ts) ──
+  /**
+   * A lasting area: at the caster (`follow` keeps it on them), the aim, or a capsule `length` long toward the aim. Each
+   * `every` s it deals `power` (per second) to enemies inside, heals you `heal` (max HP per second) while you stand in it,
+   * slows (`slow`), draws enemies to its centre (`pull` u/s); enemies inside miss you `blind` of the time. `seek`: it
+   * wanders to the nearest enemy at that speed. `fx`: the FX key it shows each tick.
+   */
+  | { kind: "zone"; radius: number; duration: number; at: "self" | "aim"; length?: number; follow?: boolean; seek?: number; every?: number;
+      power?: number; heal?: number; slow?: number; pull?: number; blind?: number; fx?: string }
+  /** Pull the enemy nearest the aim (within `range` of you) to you. (Pulling yourself to it is a dash with momentum.) */
+  | { kind: "pull"; range: number; power?: number; status?: Status }
+  /** Move to a place keeping your speed and arc: your unit (of this ability) nearest the aim, swapping with it; or the ability's mark. */
+  | { kind: "teleport"; to: "unit" | "mark"; unit?: string; heal?: number }
+  /**
+   * A counter window (a parry, a Perfect Shift): a hit landing in the next `window` s is cut by `negate`, and `effects`
+   * answer toward the attacker. `vs: "shot"` only enemy shots, which it sends back at their shooter for `reflect` power.
+   */
+  | { kind: "counter"; window: number; negate: number; vs?: "shot" | "any"; reflect?: number; effects?: Effect[] }
+  /** Unseen for `duration` s: enemies lose you unless within `reveal` u; attacking or casting ends it; the first hit after deals `bonus` more. */
+  | { kind: "stealth"; duration: number; reveal: number; bonus: number }
+  /** Your minions charge the enemy nearest the aim; again: they come back to guard you. */
+  | { kind: "command" }
+  /** Blow up your minion or a corpse nearest the aim (within `range`): an area, and every corpse within `chain` u goes too, up to `links`. */
+  | { kind: "detonate"; range: number; radius: number; power: number; chain: number; links: number }
+  /** Consume your oldest minion: a heal and a shield (fractions of max HP). */
+  | { kind: "consume"; heal: number; shield: number; duration: number }
+  /** Hold a slide's speed for `duration` s (no friction loss), knocking aside and hitting (`power`) what you plough through. */
+  | { kind: "surf"; duration: number; power: number }
+  /** A wedge of stone `width` across the aim, `depth` deep, rising to `height` on the far side: blocks shots and enemies; climb it or jump off it. */
+  | { kind: "wall"; width: number; depth: number; height: number; duration: number }
+  /** A wall of `width` sweeping from you along the aim at `speed` for `distance`: what it crosses is trapped in it, then `effects` land at the end and it lets them go held `hold` s more. */
+  | { kind: "sweep"; width: number; speed: number; distance: number; hold: number; effects: Effect[] }
+  /** These effects again after `seconds`, from the same place and aim (an ult's stages). */
+  | { kind: "delay"; seconds: number; effects: Effect[] }
+  /** Take a form (a v2 kit's FORMS): its click attack and its standing guard, until another form. */
+  | { kind: "form"; form: string }
+  /** Every corpse within `radius` of the aim rises as `unit` (up to `max`); with none, `fallback` answers. */
+  | { kind: "raise"; radius: number; unit: string; max: number; fallback?: string }
+  /** Every unit this ability called bursts now: an area of its UnitDef `burst`. */
+  | { kind: "burst" };
 
 export interface Ability {
   key: string;
@@ -63,7 +109,10 @@ export interface Ability {
 
 export type PassiveKind =
   | "element_switch" | "distracted" | "kill_heal" | "transform_shield" | "still" | "same_target" | "distance" | "crit_cdr"
-  | "block_shield" | "momentum" | "poise" | "lifesteal" | "pack_bond" | "resonance" | "overheal_shield";
+  | "block_shield" | "momentum" | "poise" | "lifesteal" | "pack_bond" | "resonance" | "overheal_shield"
+  // Classes v2 (Arcane): alternating elements adds `value` ult points a cast; clones draw `value` of enemy attacks;
+  // kills within `cap` u heal `value` max HP and their corpses last twice as long.
+  | "attunement" | "decoy_share" | "grave_tithe";
 export interface Passive {
   name: string;
   description: string;
@@ -287,8 +336,13 @@ export const subclassByKey = (key: string | null | undefined) => SUBCLASSES.find
 export interface UnitDef {
   key: string;
   name: string;
-  kind: "minion" | "totem" | "trap" | "decoy";
+  /** clone: your double (lib/game/combat/primitives.ts stepClone): it moves, throws your basic attack and draws enemies. */
+  kind: "minion" | "totem" | "trap" | "decoy" | "clone";
   hp: number;
+  /** Its health as a share of your max HP instead of `hp` (a clone). */
+  hpShare?: number;
+  /** It bursts (the `burst` effect, or its life running out): an area of this radius and power at it. */
+  burst?: { radius: number; power: number };
   /** Seconds it lasts; absent = persists until destroyed, dismissed or the loadout drops its ability (row 50). */
   life?: number;
   /** Minions: capacity cost (row 43), move speed, reach, damage power, seconds between attacks; ranged fire bolts. */
@@ -312,6 +366,10 @@ export const UNITS: Record<string, UnitDef> = {
   "totem-warding": { key: "totem-warding", name: "Warding totem", kind: "totem", hp: 90, radius: 3.4, pulse: { slow: 0.35, shield: 0.015 } },
   tripwire: { key: "tripwire", name: "Tripwire", kind: "trap", hp: 1, life: 25, radius: 1.2, power: 0.8 },
   decoy: { key: "decoy", name: "Phantom", kind: "decoy", hp: 50, life: 3, taunt: true },
+  // Classes v2, Arcane: the Illusionist's doubles, the Necromancer's dead (a skeleton body, lib/game/combat/primitives.ts ALLY_BODIES).
+  "mirror-clone": { key: "mirror-clone", name: "Mirror clone", kind: "clone", hp: 30, hpShare: 0.3, life: 10, speed: 7.4, range: 9, power: 0.4, rate: 0.7 },
+  skeleton: { key: "skeleton", name: "Skeleton", kind: "minion", hp: 30, cost: 1, life: 20, speed: 5.6, range: 1.4, power: 0.3, rate: 0.8, model: "skeleton-warrior" },
+  "army-skeleton": { key: "army-skeleton", name: "Risen dead", kind: "minion", hp: 24, cost: 0, life: 8, speed: 6.6, range: 1.4, power: 0.25, rate: 0.8, model: "skeleton-warrior", burst: { radius: 1.7, power: 0.55 } },
 };
 /** Caps (row 50): minions share the capacity stat; one totem per role and three at most; two traps; one decoy; two weapon wisps. */
 export const CAPS = { totems: 3, traps: 2, decoys: 1, weaponWisps: 2 } as const;
