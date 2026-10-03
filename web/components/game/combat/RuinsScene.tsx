@@ -42,12 +42,12 @@ import { defeatPuff } from "@/lib/game/movement/juice";
 import type { ParticlePool } from "@/lib/game/fx/particles";
 import { holdFov, setAimZoom, shakeCamera, widenFov } from "@/lib/game/cameraJuice";
 import { timeScale as worldSpeed, ultSlowMotion } from "@/lib/game/slowMotion";
-import { FlashLimiter, hitImpact, HitstopBudget, impactView, ultBeats } from "@/lib/game/combat/impact";
+import { FlashLimiter, hitImpact, HitstopBudget, impactView, ultBeats, ULT_SEQ } from "@/lib/game/combat/impact";
 import { readComfort } from "@/lib/game/comfortSettings";
 import { ULT } from "@/lib/combat/ult";
 import { capture, crosshairAim } from "@/lib/game/orbitCamera";
 import { boxOccluder } from "@/lib/game/occluders";
-import { BUFFER, createInputs, runInputs, spawnWave } from "@/lib/game/combat/actions";
+import { BUFFER, createInputs, hurtPlayer, runInputs, spawnWave } from "@/lib/game/combat/actions";
 import { buffSum, missionEvent } from "@/lib/game/combat/abilities";
 import { stepCombat } from "@/lib/game/combat/encounter";
 import { playtestFrame } from "@/lib/game/combat/playtest";
@@ -237,7 +237,9 @@ function ultPresentation(rt: CombatRuntime, camera: THREE.Camera, canvas: HTMLCa
   if (b.shake) shakeCamera(big ? 0.6 : 0.35, 9, (cast.aim.x - me.x) * (big ? 0.3 : 0.15) / (Math.hypot(cast.aim.x - me.x, cast.aim.z - me.z) || 1));
   holdFov(b.fov * (big ? 1.6 : 1));
   ultSlowMotion(b.slow);
-  canvas.style.filter = b.flash === "full" && view.flashOk ? "grayscale(1) brightness(1.02) contrast(10)" : b.flash === "reduced" ? "saturate(0.35) brightness(0.75)" : "";
+  // Death Lotus (`world: "ink"`): time stops and the world turns to black-and-white ink until the cuts land.
+  const ink = v?.cast && v.ult.world === "ink" && cast.t < A + ULT_SEQ.freeze;
+  canvas.style.filter = b.flash === "full" && view.flashOk ? "grayscale(1) brightness(1.02) contrast(10)" : b.flash === "reduced" ? "saturate(0.35) brightness(0.75)" : ink ? "grayscale(1) contrast(1.7) brightness(1.08)" : "";
   const toScreen = (x: number, z: number, lift: number) => { ultScratch.set(x, ground(x, z) + lift, z).project(camera); const r = canvas.getBoundingClientRect(); return { x: r.left + ((ultScratch.x + 1) / 2) * r.width, y: r.top + ((1 - ultScratch.y) / 2) * r.height }; };
   const c = toScreen(me.x, me.z, 0.7), edge = toScreen(me.x + 3, me.z, 0.7);
   view.caster = { x: c.x, y: c.y, r: Math.max(60, Math.hypot(edge.x - c.x, edge.y - c.y)) };
@@ -286,7 +288,9 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
       /** One enemy of a type at (x, z), hunting you (evidence). */
       spawn: (type: string, x: number, z: number, id: string) => spawnWave(combat.rt, [{ id, type, x, z }]),
       /** The whole spawn table back at its spots, dens and clouds as packs (evidence). */
-      reset: () => resetEncounter() } });
+      reset: () => resetEncounter(),
+      /** A hit of `amount` on you from (x, z), through guard, block, parry and shield (evidence: the Guardian's parry). */
+      hit: (amount: number, x: number, z: number) => hurtPlayer(combat.rt, amount, { x, z }, { x: player.current.x, z: player.current.z }) } });
   }, [player, spawn]);
   useEffect(() => () => setAimZoom(0), []); // a scope left up doesn't follow you out of the ruins
   // Dev (screenshots): where a ground point is on the page, to aim the mouse at an enemy.

@@ -24,7 +24,8 @@ export interface Weapon {
   /** A shot weapon's projectile look over its kind's (classes v2: thrown cards, bone shards). */
   shot?: "arrow" | "bolt" | "card" | "bone";
 }
-export interface WeaponGrip { hand: [number, number, number]; back: [number, number, number]; rest?: [number, number, number] }
+/** In-hand, on-the-back and at-rest rotations in socket space; `off`: the off-hand part's in the other hand (classes v2 weapons with an OffHand node). */
+export interface WeaponGrip { hand: [number, number, number]; back: [number, number, number]; rest?: [number, number, number]; off?: [number, number, number] }
 
 export type EnemyKind = "wildlife" | "construct" | "boss";
 /**

@@ -26,6 +26,8 @@
 !art/characters/character_catalog.json
 !art/characters/palette.json
 !web/public/assets/sky/layers/manifest.json
+# The Vanguard weapons' solved grips (art/props-enemies/solve_vanguard_grips.py): the wraps are built from them.
+!art/props-enemies/vanguard_grips.json
 .vercel
 *.jpeg
 .playwright-mcp/
