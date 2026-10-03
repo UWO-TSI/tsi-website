@@ -33,7 +33,7 @@ export const HQ_STATIONS: InteriorStation[] = [
   { id: "trophy", name: "Trophy Case", pos: [4.2, 5.1], action: "sheet:leaderboard" },
   { id: "desk", name: "Front Desk", pos: [-5.2, -3.6], action: "sheet:profile" },
   { id: "shelf", name: "Bookshelf", pos: [5.6, -2.8], action: "sheet:quests" },
-  { id: "exit", name: "Exit", pos: [0, -5.5], action: "exit", range: 2.4 },
+  { id: "exit", name: "Exit", pos: [0, -5.5], action: "exit", range: 1.1 },
 ];
 
 // ── real ACNH furniture (P2 dump extraction 2026-07-13) ──

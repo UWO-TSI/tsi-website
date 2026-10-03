@@ -114,8 +114,9 @@ export default function HomeInterior({ layout, phase, light: islandLight, frozen
   const { scene, camera } = useThree();
   useEffect(() => applyInteriorBackdrop(scene), [scene]);
   const spawnX = roomLeft(0, n) - RW / 2;
-  const bounds: RoomBounds = useMemo(() => ({ halfW: (RW * n) / 2, halfD: RD / 2, spawn: [spawnX, -1.6] }), [n, spawnX]);
-  useEffect(() => { player.current.set(spawnX, 0, -1.6); camera.position.set(spawnX, 8.4, -8.8); }, [camera, player, spawnX]);
+  // You arrive a step inside the front door, clear of its prompt (interiors §5).
+  const bounds: RoomBounds = useMemo(() => ({ halfW: (RW * n) / 2, halfD: RD / 2, spawn: [spawnX, -1.1] }), [n, spawnX]);
+  useEffect(() => { player.current.set(spawnX, 0, -1.1); camera.position.set(spawnX, 8.4, -8.3); }, [camera, player, spawnX]);
   // Solid furniture plus the walls between rooms (door gap |z| < 1).
   const blocked = useMemo(() => layout.rooms.flatMap((room, i) => room.items
     .filter(item => catalogueItem(item.piece)?.mount === "floor")
@@ -133,7 +134,7 @@ export default function HomeInterior({ layout, phase, light: islandLight, frozen
     };
   }, [blocked, n]);
   const stations: InteriorStation[] = useMemo(() => [
-    { id: "exit", name: "Outside", pos: [spawnX, -2.2], action: "exit", range: 1.3 },
+    { id: "exit", name: "Outside", pos: [spawnX, -2.2], action: "exit", range: 0.9 },
     // Every closet is a wardrobe (decision 210): stand at it and press E.
     ...layout.rooms.flatMap((room, i) => room.items.filter(item => item.piece === "closet")
       .map(item => ({ id: "closet", name: "Closet", pos: itemCentre(i, n, item), action: "closet", range: 1.6 }))),

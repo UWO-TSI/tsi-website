@@ -156,7 +156,7 @@ const CLUBHOUSE_STATIONS: InteriorStation[] = [
   { id: "desk", name: "Front desk", pos: [HQ_LAYOUT.desk.position[0], HQ_LAYOUT.desk.position[2] - 1.2], action: "desk", range: 1.8 },
   { id: "shelf", name: "Bookshelf", pos: [6.6, HQ_LAYOUT.shelf.position[2]], action: "shelf", range: 1.6 },
   { id: "clock", name: "Clock", pos: [HQ_CLOCK[0], HQ_CLOCK[2] - 0.8], action: "clock", range: 1.8 },
-  { id: "exit", name: "Island", pos: [0, -5.5], action: "exit", range: 1.6 },
+  { id: "exit", name: "Island", pos: [0, -5.5], action: "exit", range: 1.1 },
 ];
 const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   enter: "Enter HQ", exit: "Return to the island", board: "Read the notice board",
@@ -468,7 +468,8 @@ function Clubhouse({ phase, light, player, frozen, talking, onNear }: { phase: I
   }, [wood]);
   useEffect(() => () => floor.dispose(), [floor]);
   const { camera } = useThree();
-  useEffect(() => { player.current.set(0, 0, -4.2); camera.position.set(0, 8.4, -11.4); onNear("exit"); }, [camera, onNear, player]);
+  // You arrive a step inside the door, clear of its prompt (interiors §5): it shows when you walk back to it.
+  useEffect(() => { player.current.set(0, 0, -4.2); camera.position.set(0, 8.4, -11.4); onNear(null); }, [camera, onNear, player]);
   const station = useCallback((s: InteriorStation | null) => onNear((s?.id as Near) ?? null), [onNear]);
   return <>
     <HQInterior clubhouse phase={phase} light={light} floorTexture={floor} frozen={frozen} talking={talking} playerPosRef={player} onNearestStation={station} stations={CLUBHOUSE_STATIONS} constrainMove={constrainWorkshop} />

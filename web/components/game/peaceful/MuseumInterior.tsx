@@ -26,7 +26,7 @@ import InteriorDaylight from "../InteriorDaylight";
 
 preloadPieces(["museum-tank", "museum-case", "museum-stand"]);
 preloadShells(["museum"]);
-const BOUNDS: RoomBounds = { halfW: 9, halfD: 5, spawn: [0, -3.4] };
+const BOUNDS: RoomBounds = { halfW: 9, halfD: 5, spawn: [0, -3.0] };
 const CASES_PER_WING = 6;
 /** The wings in the shell's order (build_interiors.py WINGS): a label column each. */
 const WINGS: Wing[] = ["aquarium", "insect_hall", "nature_room"];
@@ -34,7 +34,7 @@ const WING_X: Record<Wing, number> = { aquarium: 6, insect_hall: 0, nature_room:
 const WING_TITLE: Record<Wing, string> = { aquarium: "Aquarium", insect_hall: "Insect hall", nature_room: "Nature room" };
 export const MUSEUM_STATIONS: InteriorStation[] = [
   { id: "curator", name: "Curator", pos: [-2.2, -2.2], action: "donate", range: 1.8 },
-  { id: "exit", name: "Outside", pos: [0, -4.2], action: "exit", range: 1.4 },
+  { id: "exit", name: "Outside", pos: [0, -4.2], action: "exit", range: 1.0 },
 ];
 const TANK_GLASS = ["mGlass", "mGlassBack"], CASE_GLASS = ["mGlass", "mGlassR"];
 const MODEL = new Map(ROSTER.map(s => [s.key, s.model]));
@@ -142,9 +142,10 @@ export default function MuseumInterior({ wings, frozen, talking = false, player,
   /** The island's light now: the windows follow the time of day. */
   light?: IslandLight;
 }) {
-  const { scene, camera } = useThree();
+  const { scene } = useThree();
   useEffect(() => applyInteriorBackdrop(scene), [scene]);
-  useEffect(() => { player.current.set(0, 0, -3.4); camera.position.set(0, 8.4, -10.6); }, [camera, player]);
+  // The walker snaps the camera onto its arrival (interiorShared); the shared position starts there too.
+  useEffect(() => { player.current.set(BOUNDS.spawn[0], 0, BOUNDS.spawn[1]); }, [player]);
   const byWing = useMemo(() => new Map((wings ?? []).map(w => [w.wing, w])), [wings]);
   const lamps = interiorLight(light).lamps;
   useEffect(() => {

@@ -21,11 +21,11 @@ import {
 import Keeper from "./Keeper";
 import { RoomShell, preloadShells } from "./RoomShell";
 
-const BOUNDS: RoomBounds = { halfW: 5, halfD: 5, spawn: [0, -3.4] };
+const BOUNDS: RoomBounds = { halfW: 5, halfD: 5, spawn: [0, -3.2] };
 
 export const SHOP_STATIONS: InteriorStation[] = [
   { id: "counter", name: "Counter", pos: [0, 2.6], action: "sheet:shop", range: 2.4 },
-  { id: "exit", name: "Exit", pos: [0, -4.4], action: "exit", range: 2.2 },
+  { id: "exit", name: "Exit", pos: [0, -4.4], action: "exit", range: 1.1 },
 ];
 
 preloadPieces(["counter-register", "color-box-shelf", "barrel", "cardboard-pile", "shopping-cart", "yellow-message-mat"]);

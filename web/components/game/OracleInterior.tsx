@@ -33,7 +33,7 @@ const BOUNDS: RoomBounds = { halfW: 6, halfD: 6, spawn: [0, -4.2] };
 
 export const ORACLE_STATIONS: InteriorStation[] = [
   { id: "altar", name: "Crystal Altar", pos: [0, 2.6], action: "sheet:oracle", range: 2.6 },
-  { id: "exit", name: "Exit", pos: [0, -5.4], action: "exit", range: 2.2 },
+  { id: "exit", name: "Exit", pos: [0, -5.4], action: "exit", range: 1.1 },
 ];
 
 preloadPieces(["altar", "remains-pillar", "magic-circle-rug", "candle"]);
