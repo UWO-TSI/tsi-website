@@ -21,19 +21,19 @@ Combat, café, movement feel and the avatar have their own specs in `specs/`.
 - No `setState` inside `useFrame`, no per-frame allocations, FPS unchanged.
 - Evidence is checked before reporting: no broken or empty tiles in a sheet.
 
-## Order (two code agents at a time)
+## Order (as many agents as memory allows, row 295)
 | # | Spec | Depends on | State |
 |---|---|---|---|
 | — | Combat polish (`specs/combat-polish.md`) | — | on main |
 | — | Café polish (`specs/cafe-polish.md`) | — | on main |
 | 1 | Movement feel (`specs/movement-feel.md`): our particle pack and particle system | combat merged (shared dash and avatar files) | milestone 1 on main; milestone 2 after David plays it |
-| 2 | HUD frame and first login (`hud-first-login.md`) | café merged (shared HUD files) | running |
-| 3 | Living village (`living-village.md`) | 1 (particles for rain splashes, leaf bits) | running |
-| 4 | Interiors (`interiors.md`) | café merged (keeper → character pattern) | queued |
-| 5 | Menus and sheets (`menus.md`) | 2 | queued |
-| 6 | Fishing (`fishing.md`) | 1 | queued |
+| 2 | HUD frame and first login (`hud-first-login.md`) | café merged (shared HUD files) | on main |
+| 3 | Living village (`living-village.md`) | 1 (particles for rain splashes, leaf bits) | on main |
+| 4 | Interiors (`interiors.md`) | café merged (keeper → character pattern) | running |
+| 5 | Menus and sheets (`menus.md`) | 2 | on main (folded into the GUI sheet) |
+| 6 | Fishing (`fishing.md`) | 1 | running |
 | 7 | Foraging, crafting, museum, shop (`forage-craft-museum.md`) | 1, 4 | queued |
-| 8 | Arrival, wharf, home island (`arrival-wharf.md`) | 1, 2 | queued |
+| 8 | Arrival, wharf, home island (`arrival-wharf.md`) | 1, 2 | running |
 | 9 | Resident talk, wallet, sign-in, companion (`reachability.md`) | 3 (resident routines) | queued |
 | 10 | Sound pass (`sound.md`) | David's sound source | waits |
 | — | Avatar v8 hair rework (`specs/avatar-v8.md`) | David's game references | waits |
