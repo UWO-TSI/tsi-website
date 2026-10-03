@@ -1,10 +1,10 @@
--- Local smoke test for 20261002191742_classes_v2_vanguard_seed (the Vanguard wave: four signature types × five tiers,
+-- Local smoke test for 20261003024419_classes_v2_vanguard_seed (the Vanguard wave: four signature types × five tiers,
 -- the family's shop cosmetics). Throwaway local Postgres after every migration, never Supabase. Fails before the
 -- migration (no aegis, no vg- cosmetics). Leaves the classes_v2 flag off as it found it.
 \set ON_ERROR_STOP 1
-INSERT INTO auth.users (id, email) VALUES ('00000000-0000-4000-8000-0000000003a1', 'vg-a@x'), ('00000000-0000-4000-8000-0000000003a2', 'vg-b@x') ON CONFLICT DO NOTHING;
+INSERT INTO auth.users (id, email) VALUES ('00000000-0000-4000-8000-0000000076a1', 'vg-a@x'), ('00000000-0000-4000-8000-0000000076a2', 'vg-b@x') ON CONFLICT DO NOTHING;
 DO $$
-DECLARE r record; A uuid := '00000000-0000-4000-8000-0000000003a1'; B uuid := '00000000-0000-4000-8000-0000000003a2'; skin uuid; out jsonb;
+DECLARE r record; A uuid := '00000000-0000-4000-8000-0000000076a1'; B uuid := '00000000-0000-4000-8000-0000000076a2'; skin uuid; out jsonb;
 BEGIN
   -- The four types, five tiers each, every one the Vanguard's and its own (one type per subclass, §1.5).
   ASSERT (SELECT count(*) FROM weapons WHERE subclass IN ('guardian', 'juggernaut', 'monk', 'assassin')) = 20, 'vg 20 signature rows';
@@ -21,6 +21,7 @@ BEGIN
   ASSERT (SELECT count(*) FROM shop_items WHERE slug LIKE 'vg-%' AND tc_price IS NOT NULL) = 2, 'vg two in Gems';
   ASSERT (SELECT bool_and(category IN ('weapon_skin', 'aura', 'frame')) FROM shop_items WHERE slug LIKE 'vg-%'), 'vg cosmetic categories';
   ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE slug LIKE 'vg-%' AND (description ~* 'CAD|\$|dollar|rate')), 'vg no money talk';
+  ASSERT (SELECT bool_and(NOT active) FROM shop_items WHERE slug LIKE 'vg-%'), 'vg cosmetics off sale until classes v2 is on';
 
   -- With the flag on, a Vanguard choice grants its tier-1 signature weapon; a repick carries the best tier owned.
   UPDATE economy_settings SET value = 1 WHERE key = 'classes_v2';

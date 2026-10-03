@@ -19,6 +19,8 @@ export interface Weapon {
   model: string; modelScale: number;
   /** Socket-space Euler overrides for a model that doesn't follow its kind's grip (the revolver's barrel is +Z). */
   grip?: WeaponGrip;
+  /** A shot weapon's projectile look over its kind's (classes v2: thrown cards, bone shards). */
+  shot?: "arrow" | "bolt" | "card" | "bone";
 }
 /** In-hand, on-the-back and at-rest rotations in socket space; `off`: the off-hand part's in the other hand (classes v2 weapons with an OffHand node). */
 export interface WeaponGrip { hand: [number, number, number]; back: [number, number, number]; rest?: [number, number, number]; off?: [number, number, number] }

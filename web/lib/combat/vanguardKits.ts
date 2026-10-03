@@ -5,7 +5,7 @@
  * direction raised by mastery, ranks from the §1.4 menu, class movement in the ruins only. Numbers follow the §3
  * authoring budgets and are tuned by the harness (specs/evidence/classes/K-vanguard-balance.md).
  *
- * Their signature weapons (§1.5): one type each, tiers 1–5 (the seed migration 20261002191742_classes_v2_vanguard_seed.sql).
+ * Their signature weapons (§1.5): one type each, tiers 1–5 (the seed migration 20261003024419_classes_v2_vanguard_seed.sql).
  */
 import type { ClassAbility, ClassKit } from "./classes";
 import type { WeaponDef } from "./weapons";
@@ -64,7 +64,7 @@ export const GUARDIAN: ClassKit = {
     { at: 16, target: "passive", change: { label: "+25% armour from a parry", power: 1.25 } },
     { at: 18, target: "ult", change: { label: "+10% power", power: 1.1 } },
   ]),
-  look: { ramp: ["#fffbea", "#f0c23c", "#4a3208"], mote: "shard", drift: "orbit", icon: "/assets/game/classes/guardian.svg" },
+  look: { ramp: ["#fffbea", "#f0c23c", "#4a3208"], mote: "aegisShard", drift: "orbit", icon: "/assets/game/classes/guardian.svg" },
 };
 
 // ── Juggernaut: max HP, basic attacks, the unstoppable war hammer, Titan ───────────────────────────────────
@@ -215,7 +215,7 @@ export const ASSASSIN: ClassKit = {
     { at: 16, target: "passive", change: { label: "+25% backstab damage", power: 1.25 } },
     { at: 18, target: "ult", change: { label: "+10% power", power: 1.1 } },
   ]),
-  look: { ramp: ["#fff1ee", "#e0303c", "#120709"], mote: "petal", drift: "fall", icon: "/assets/game/classes/assassin.svg" },
+  look: { ramp: ["#fff1ee", "#e0303c", "#120709"], mote: "lotusPetal", drift: "fall", icon: "/assets/game/classes/assassin.svg" },
 };
 
 export const VANGUARD_KITS: ClassKit[] = [GUARDIAN, JUGGERNAUT, MARTIAL_ARTIST, ASSASSIN];

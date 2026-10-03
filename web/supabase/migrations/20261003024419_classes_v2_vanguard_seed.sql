@@ -1,8 +1,9 @@
 -- Classes v2, the Vanguard wave (specs/classes/design-sheet.md §4 "Waves 1–4"; the LOCKED Guardian, Juggernaut,
 -- Martial Artist and Assassin): the four signature weapon types × tiers 1–5 (§1.5: aegis, warhammer, handwraps, tanto),
 -- and the family's shop cosmetics (§1.10: weapon skins, aura colours, nameplate frames; mostly coins, two in Gems, no
--- rate shown anywhere). Apply after 20261002182708_zone1_mobs. Idempotent. Everything stays behind classes_v2: the
--- weapons are only granted by combat_choose_subclass with the flag on, and the cosmetics equip only on a mastery row.
+-- rate shown anywhere). Apply after 20261003015109_classes_v2_arcane_seed. Idempotent. Everything stays behind
+-- classes_v2: the weapons are only granted by combat_choose_subclass with the flag on, and the cosmetics land off sale
+-- (inactive) until the flag turns on (wave 5 activates them with it), as the Arcane seed's do.
 -- The weapon rows are web/lib/combat/seed.ts signatureSeedSql(["guardian", "juggernaut", "monk", "assassin"]) (a test
 -- holds them equal). Test: web/supabase/tests/classes_v2_vanguard_smoke.sql.
 
@@ -43,3 +44,8 @@ INSERT INTO shop_items (slug, display_name, category, description, price_coins, 
   ('vg-frame-hammered', 'Hammered iron frame', 'frame', 'A nameplate frame of hammered iron with rivets.', 250, NULL, '{"image":"/assets/game/frames/vanguard-hammered.svg"}', '/assets/game/classes/vanguard/shop/vg-frame-hammered.svg'),
   ('vg-frame-brush', 'Ink brush frame', 'frame', 'A nameplate frame drawn in one stroke of black ink with a red seal.', 250, NULL, '{"image":"/assets/game/frames/vanguard-brush.svg"}', '/assets/game/classes/vanguard/shop/vg-frame-brush.svg')
 ON CONFLICT (slug) DO NOTHING;
+
+-- ─── Off sale until launch ──────────────────────────────────────────────────
+-- Class cosmetics stay inactive while classes_v2 is off (wave 5 turns them on with the flag), so none of the rows
+-- above can be bought, Gem-priced ones included, before members can use classes v2.
+UPDATE shop_items SET active = FALSE WHERE category IN ('weapon_skin', 'aura', 'frame') AND NOT public.classes_v2_on();

@@ -116,7 +116,7 @@ describe("the Vanguard signature weapons (§1.5)", () => {
     expect([GUARDIAN, JUGGERNAUT, MARTIAL_ARTIST, ASSASSIN].map(k => gripFor(k.signature.type))).toEqual(["OneHand", "Staff", "Fists", "Fists"]);
   });
   it("the seed migration carries exactly these rows", () => {
-    const sql = readFileSync(join(__dirname, "../../supabase/migrations/20261002191742_classes_v2_vanguard_seed.sql"), "utf8");
+    const sql = readFileSync(join(__dirname, "../../supabase/migrations/20261003024419_classes_v2_vanguard_seed.sql"), "utf8");
     expect(sql).toContain(signatureSeedSql(["guardian", "juggernaut", "monk", "assassin"]));
   });
 });

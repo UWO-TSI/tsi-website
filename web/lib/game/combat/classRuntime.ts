@@ -15,6 +15,7 @@ import { applyStatus, CAST, context, floater, fx, pickTarget, runEffects, spend,
 import { BUFFER, chainHit, faceAim } from "./actions";
 import { chargePotency, createInputState, press, release, tick, type InputKit, type InputState, type Intent } from "./input";
 import { addKick, heightBonus, MOVE_NEEDS, moveOk, speedBonus } from "./moveHooks";
+import { attune, formTier, mimic, refusal, reveal } from "./primitives";
 import { energyMax, V2_SLOT_IDS, type CombatRuntime } from "./runtime";
 import type { Vec } from "./sim";
 
@@ -22,6 +23,9 @@ import type { Vec } from "./sim";
 export const ULT_BEATS = { freeze: 0.12, iframesAfter: ULT.iframesAfterFreeze, end: 3 } as const;
 /** A first-last ult's finisher clip starts this long before its hit, so the clip's impact key (authored at 0.3 s) lands on it. */
 export const FINISH_LEAD = 0.3;
+/** How far an ult reaches (its widest area): the bot's trigger, the channel's warning glow. */
+const reach = (e: Effect): number => (e.kind === "area" || e.kind === "zone" ? e.radius : e.kind === "sweep" ? e.width / 2 : e.kind === "delay" ? Math.max(0, ...e.effects.map(reach)) : e.kind === "projectile" ? 1.5 : 0);
+export const ULT_REACH = (a: ClassAbility) => Math.max(2, ...a.effects.map(reach));
 /** Seconds after the last threat that you still count as in combat (§1.3). */
 export const IN_COMBAT = 5;
 
@@ -29,7 +33,7 @@ type Queued = { intent: Intent | { kind: "ult" }; left: number };
 export interface ClassState {
   kit: ClassKit; mastery: number; mods: ClassMods;
   /** At this mastery, ranks and the stat direction applied; null where a key is still locked. */
-  keys: (ClassAbility | null)[]; combos: { keys: [number, number]; ability: ClassAbility }[]; ult: ClassUlt; passive: Passive;
+  keys: (ClassAbility | null)[]; combos: { keys: [number, number]; ability: ClassAbility; hold?: ClassAbility }[]; ult: ClassUlt; passive: Passive;
   capacity: number;
   input: InputState; inputKit: InputKit;
   /** Seconds left per ability key (keys, combos). */
@@ -42,8 +46,18 @@ export interface ClassState {
   /** Seconds a recast key's second press stays open. */
   recast: number[];
   meter: number;
-  /** The ult under way: seconds since the press (real time), where it aims, its seed, whether its hits landed (and a first-last ult's finisher). */
-  cast: { t: number; aim: Vec; seed: number; fired: boolean; last?: boolean; finishing?: boolean } | null;
+  /** The ult under way: seconds since the press (real time), where it aims, its seed, whether its hits landed (and a first-last ult's finisher), its potency (a channel's mash). */
+  cast: { t: number; aim: Vec; seed: number; fired: boolean; last?: boolean; finishing?: boolean; potency?: number } | null;
+  /** A channelled ult's charge (Cataclysm): seconds in, where it will land, the mash's notes (key indices), the next note, hits and misses. */
+  channel: { t: number; aim: Vec; notes: number[]; at: number; hits: number; misses: number; pulse: number } | null;
+  /** The form taken (the Transmuter's FORMS key; null: your own body) and the one before the Chimera. */
+  form: string | null; formBefore: string | null;
+  /** The last element(s) cast ("fire", "fire+water"): the staff's crystal and the attunement passive read it. */
+  element: string | null;
+  /** Traits learned (member_progression.traits): forms unlock with their mob's first defeat. */
+  traits: Record<string, number>;
+  /** The equipped cosmetics of this subclass's row, and the weapon skin they put on (the mastery trim, a bought skin's key), from the progression view. */
+  cosmetics?: Partial<Record<"weapon_skin" | "aura" | "frame", string>>; skin?: string | null;
   moveCd: number;
   combatT: number;
   /** The input layer's clock (real seconds). */
@@ -63,29 +77,40 @@ export interface ClassState {
 const weaponType = (rt: CombatRuntime) => SYSTEM_WEAPONS.find(w => w.key === rt.player.weapon)?.type;
 const slotId = (slot: number) => V2_SLOT_IDS[slot];
 
-/** Put a v2 kit on at a mastery level (progression load, a level-up): today's slots go, the meter starts empty. */
-export function equipClassKit(rt: CombatRuntime, kit: ClassKit, mastery: number, progress?: { into: number; needed: number }) {
-  const mods = classMods(kit, mastery), at = kitAt(kit, mastery), p = rt.player, d = derived(p.stats, p.level, kit.mods);
-  const keys = at.keys.map(a => a && withMods(a, mods)), combos = at.combos.map(c => ({ keys: c.keys, ability: withMods(c.ability, mods) }));
+/** Put a v2 kit on at a mastery level (progression load, a level-up, a form learned): today's slots go, the meter starts empty. */
+export function equipClassKit(rt: CombatRuntime, kit: ClassKit, mastery: number, progress?: { into: number; needed: number }, traits?: Record<string, number>) {
+  const same = rt.v2?.kit === kit ? rt.v2 : null; // a level-up mid-run: the meter, cooldowns, form and what's held carry over
+  const learnt = traits ?? same?.traits ?? {};
+  const mods = classMods(kit, mastery), at = kitAt(kit, mastery, learnt), p = rt.player, d = derived(p.stats, p.level, kit.mods);
+  const keys = at.keys.map(a => a && withMods(a, mods)), combos = at.combos.map(c => ({ keys: c.keys, ability: withMods(c.ability, mods), ...(c.hold ? { hold: withMods(c.hold, mods) } : {}) }));
   rt.kit = null; rt.slots = [null, null, null, null];
-  const same = rt.v2?.kit === kit ? rt.v2 : null; // a level-up mid-run: the meter, cooldowns and what's held carry over
   rt.v2 = { kit, mastery, mods, keys, combos, ult: withMods(at.ult, mods), passive: at.passive, capacity: d.summon_capacity + mods.capacity,
-    input: same?.input ?? createInputState(), inputKit: { inputs: keys.map(a => (a ? a.input ?? { kind: "tap" } : null)), combos: combos.map(c => c.keys) },
+    input: same?.input ?? createInputState(), inputKit: { inputs: keys.map(a => (a ? a.input ?? { kind: "tap" } : null)), combos: combos.map(c => c.keys), holds: combos.map(c => !!c.hold) },
     cd: same?.cd ?? {}, queue: same?.queue ?? [], holding: same?.holding ?? keys.map(() => null), toggled: same?.toggled ?? keys.map(() => false), recast: same?.recast ?? keys.map(() => 0),
     meter: same?.meter ?? 0, cast: same?.cast ?? null, moveCd: same?.moveCd ?? 0, combatT: same?.combatT ?? 0, clock: same?.clock ?? 0,
     progress: progress ?? same?.progress ?? { into: 0, needed: 0 },
-    chain: same?.chain ?? { i: 0, gap: 99, stacks: 0 }, pending: same?.pending ?? [], stock: same?.stock ?? {}, anchor: same?.anchor ?? null };
+    chain: same?.chain ?? { i: 0, gap: 99, stacks: 0 }, pending: same?.pending ?? [], stock: same?.stock ?? {}, anchor: same?.anchor ?? null,
+    channel: same?.channel ?? null, form: same?.form ?? null, formBefore: same?.formBefore ?? null, element: same?.element ?? null, traits: learnt, cosmetics: same?.cosmetics, skin: same?.skin };
   p.maxHp = Math.round(d.max_hp * mods.maxHp); p.hp = Math.min(p.hp, p.maxHp);
   p.energy = Math.min(p.energy, energyMax(rt));
 }
 
+/** The cooldown an ability runs on: its own, or its group's (the Transmuter's forms share one). */
+export const cdKey = (a: ClassAbility) => a.group ?? a.key;
+/** The Chimera (a form "chimera"): the forms' moves without their cooldown or energy (a beat between them), and the body stays the Chimera. */
+const unbound = (v: ClassState, a: ClassAbility) => v.form === "chimera" && !!a.group;
+/** The beat between two moves in the Chimera (no form cooldown, but not every frame). */
+export const UNBOUND_BEAT = 0.5;
+
 /** Can `a` start now? (Cooldown aside: the queue waits on that.) Says why not with a floater. */
 function usable(rt: CombatRuntime, a: ClassAbility, me: Vec, energy = a.energy): boolean {
   const p = rt.player, v = rt.v2!;
-  if (!p.alive || p.dash || rt.casting || (v.cast && v.cast.t < v.ult.anticipation_ms / 1000 + ULT_BEATS.freeze)) return false;
+  if (!p.alive || p.dash || rt.casting || v.channel || (v.cast && v.cast.t < v.ult.anticipation_ms / 1000 + ULT_BEATS.freeze)) return false;
   if (!holdsSignature(v.kit, weaponType(rt))) { floater(rt, me, 1.9, signatureHint(v.kit), "info"); return false; }
   if (a.when && !moveOk(a.when, p.move)) { floater(rt, me, 1.9, MOVE_NEEDS[a.when], "info"); return false; }
-  if (p.energy < energy) { floater(rt, me, 1.9, "Not enough energy", "info"); return false; }
+  if (p.energy < energy && !unbound(v, a)) { floater(rt, me, 1.9, "Not enough energy", "info"); return false; }
+  const why = refusal(rt, a.effects, p.aim, a.key);
+  if (why) { floater(rt, me, 1.9, why, "info"); return false; }
   return true;
 }
 
@@ -94,14 +119,16 @@ export const clipOf = (c: ClassAbility["clip"], upper: boolean) => (c ? "verb" i
 /** Mid-chain: a technique pressed within CHAIN_WINDOW of a chain press (and the chain under way). */
 export const midChain = (v: ClassState) => v.chain.i > 0 && v.chain.gap <= CHAIN_WINDOW;
 
-/** Run an ability's effects now (energy and cooldown paid unless told), with its tier, FX and clip. */
+/** Run an ability's effects now (energy and cooldown paid unless told), with its tier, FX, colours and clip; your clones copy the cast. */
 function fire(rt: CombatRuntime, a: ClassAbility, me: Vec, potency = 1, opts: { cooldown?: boolean; effects?: ClassAbility["effects"]; energy?: boolean } = {}, random = Math.random) {
-  const p = rt.player, v = rt.v2!;
-  if (opts.energy !== false) spend(rt, a.energy);
-  if (opts.cooldown !== false) v.cd[a.key] = a.cooldown_s;
+  const p = rt.player, v = rt.v2!, free = unbound(v, a);
+  if (opts.energy !== false && !free) spend(rt, a.energy);
+  if (opts.cooldown !== false) v.cd[cdKey(a)] = free ? UNBOUND_BEAT : a.cooldown_s;
   p.attackCd = Math.max(p.attackCd, 0.25); p.swing = 0.22;
   faceAim(p, me);
-  p.clip = clipOf(a.clip, true) ?? p.clip;
+  if (!a.effects.some(e => e.kind === "stealth")) reveal(rt); // casting gives you away (Vanish itself aside)
+  const req = clipOf(a.clip, true);
+  if (req) { p.clip = req; mimic(rt, req.verb); }
   // A technique slotted into the chain hits harder and keeps the chain going (an opener doesn't); a boost rider (a slide into a Charge) goes further and harder.
   const chained = !!a.chain && midChain(v), boosted = !!a.boost && moveOk(a.boost.when, p.move);
   if (chained) { potency *= 1 + a.chain!.bonus; floater(rt, me, 2.1, "Combo", "info"); }
@@ -111,29 +138,33 @@ function fire(rt: CombatRuntime, a: ClassAbility, me: Vec, potency = 1, opts: { 
   if (effects) opts = { ...opts, effects };
   const rider = !a.scale ? 0 : a.scale.by === "speed" ? speedBonus(p.move.speed, a.scale.max) : heightBonus(p.move.height ?? 0, a.scale.max);
   const ctx = context(rt, a, me, potency * (1 + rider), p.aim);
-  ctx.impact = a.heavy ? "heavy" : "ability"; ctx.fx = a.vfx;
-  fx(rt, a.vfx?.cast, "cast", me, ctx.aim, ctx.impact);
+  ctx.impact = a.heavy ? "heavy" : "ability"; ctx.fx = a.vfx; ctx.ramp = a.ramp;
+  const shift = a.effects.find(e => e.kind === "form");
+  if (shift?.kind === "form") ctx.tier = formTier(rt, free ? "chimera" : shift.form); // a form's move hits at its trait's tier
+  fx(rt, a.vfx?.cast, "cast", me, ctx.aim, ctx.impact, undefined, a.ramp);
   if (a.when === "airborne") p.kick = addKick(p.kick, 0, 0, 0, 0, true); // a short hang at an air cast
-  runEffects(rt, opts.effects ?? a.effects, ctx, random);
+  if (a.elements) attune(rt, a.elements);
+  runEffects(rt, (opts.effects ?? a.effects).filter(e => !(free && e.kind === "form")), ctx, random);
 }
 
 /** One intent: "done" (fired, or refused for good), "wait" (on cooldown, still inside its buffer). */
 function run(rt: CombatRuntime, q: Queued, me: Vec, random: () => number): "done" | "wait" {
   const v = rt.v2!, p = rt.player, it = q.intent;
   const deny = (slot: number | null) => { if (slot !== null) rt.denied[slotId(slot)]++; else rt.denied.ult++; return "done" as const; };
-  const cooling = (a: ClassAbility, slot: number | null) => { const cd = v.cd[a.key] ?? 0; return cd <= 0 ? null : cd > q.left ? deny(slot) : "wait" as const; };
+  const cooling = (a: ClassAbility, slot: number | null) => { const cd = Math.min(v.cd[cdKey(a)] ?? 0, unbound(v, a) ? UNBOUND_BEAT : Infinity); return cd <= 0 ? null : cd > q.left ? deny(slot) : "wait" as const; };
   switch (it.kind) {
     case "ult": {
       const why = ultBlock({ meter: v.meter, alive: p.alive, safe: p.safe, drawing: !!rt.casting, signature: holdsSignature(v.kit, weaponType(rt)), active: !!v.cast });
       if (why === "charging") return "wait";
       if (why) { if (why === "weapon") floater(rt, me, 1.9, signatureHint(v.kit), "info"); return deny(null); }
-      startUlt(rt, me);
+      if (v.channel) return deny(null);
+      if (v.ult.channel) startChannel(rt, me, random); else startUlt(rt, me);
       return "done";
     }
-    case "combo": {
+    case "combo": case "comboHold": {
       const combo = v.combos[it.combo];
       if (!combo) return "done";
-      const a = combo.ability, c = cooling(a, combo.keys[0]); if (c) return c;
+      const a = it.kind === "comboHold" ? combo.hold ?? combo.ability : combo.ability, c = cooling(a, combo.keys[0]); if (c) return c;
       if (usable(rt, a, me)) fire(rt, a, me, 1, {}, random);
       return "done";
     }
@@ -175,7 +206,7 @@ function run(rt: CombatRuntime, q: Queued, me: Vec, random: () => number): "done
       if (!a || v.holding[it.slot] === null) return "done";
       v.holding[it.slot] = null;
       rt.buffs = rt.buffs.filter(b => b.source !== a.key);
-      v.cd[a.key] = a.cooldown_s;
+      v.cd[cdKey(a)] = a.cooldown_s;
       if (a.release) fire(rt, a, me, 1, { cooldown: false, energy: false, effects: a.release }, random);
       return "done";
     }
@@ -214,24 +245,59 @@ function run(rt: CombatRuntime, q: Queued, me: Vec, random: () => number): "done
   }
 }
 
-/** A key went down or up (slot 0–4). Presses become intents now; they run in stepClass, waiting up to BUFFER for a cooldown. */
+/** A key went down or up (slot 0–4). Presses become intents now; they run in stepClass, waiting up to BUFFER for a cooldown. A channel's mash takes keys 1–4. */
 export function classKey(rt: CombatRuntime, slot: number, down: boolean) {
   const v = rt.v2;
   if (!v) return;
+  if (v.channel) { if (down && slot < 4) mash(rt, slot); return; }
   for (const intent of (down ? press : release)(v.input, v.inputKit, slot, v.clock)) v.queue.push({ intent, left: BUFFER });
+}
+
+// ── A channelled ult (Cataclysm): rooted, guarded, a mash of keys 1–4 three at a time; its hits set the potency ──
+/** The next notes the mash shows (the front one first). */
+export const mashNotes = (v: ClassState, n = 3) => (v.channel ? v.channel.notes.slice(v.channel.at, v.channel.at + n) : []);
+/** A channel's potency from its mash: 0.5 with no hits to 1.5 with every note. */
+export const mashPotency = (hits: number, notes: number) => 0.5 + Math.min(1, hits / Math.max(1, notes));
+function startChannel(rt: CombatRuntime, me: Vec, random: () => number) {
+  const v = rt.v2!, p = rt.player, ch = v.ult.channel!;
+  v.meter = 0;
+  let seed = (rt.seq++ * 2246822519) >>> 0, last = -1;
+  const notes = Array.from({ length: ch.notes }, () => { seed = (seed * 1664525 + 1013904223) >>> 0; let k = seed % 4; if (k === last) k = (k + 1 + (seed >> 8) % 3) % 4; last = k; return k; });
+  v.channel = { t: 0, aim: { ...p.aim }, notes, at: 0, hits: 0, misses: 0, pulse: 0 };
+  rt.buffs.push({ stat: "guard", value: ch.guard, t: ch.seconds + 0.5, source: "channel" });
+  faceAim(p, me);
+  p.clip = { verb: "Channel", scale: 1, upper: false };
+  fx(rt, v.ult.vfx?.cast, "cast", me, v.channel.aim, "heavy");
+  void random;
+}
+function mash(rt: CombatRuntime, slot: number) {
+  const c = rt.v2!.channel!, note = c.notes[c.at];
+  if (note === undefined) return;
+  c.at++;
+  if (slot === note) c.hits++; else c.misses++;
+  const v = rt.v2!, me = rt.player.last ?? c.aim, kit = v.kit, element = kit.keys[note];
+  // A hit pulses that element into the sky over the aim; a miss cracks it.
+  fx(rt, slot === note ? "mash.hit" : "mash.miss", "impact", c.aim, me, "ability", 1, element?.ramp);
+}
+function endChannel(rt: CombatRuntime, me: Vec) {
+  const v = rt.v2!, c = v.channel!;
+  v.channel = null;
+  rt.buffs = rt.buffs.filter(b => b.source !== "channel");
+  floater(rt, me, 2.2, `Cataclysm · ${c.hits}/${c.notes.length}`, "info");
+  startUlt(rt, me, mashPotency(c.hits, c.notes.length), c.aim);
 }
 /** F (buffered like the slots). */
 export const pressUlt = (rt: CombatRuntime) => { rt.v2?.queue.push({ intent: { kind: "ult" }, left: ULT.buffer }); };
 
-/** The ult's press: the meter drains, the caster is untouchable through the freeze, the wind-up plays; its hits land at the anticipation's end. */
-function startUlt(rt: CombatRuntime, me: Vec) {
+/** The ult's press (or a channel's release): the meter drains, the caster is untouchable through the freeze, the wind-up plays; its hits land at the anticipation's end. */
+function startUlt(rt: CombatRuntime, me: Vec, potency = 1, aim = rt.player.aim) {
   const v = rt.v2!, p = rt.player, A = v.ult.anticipation_ms / 1000;
   v.meter = 0;
-  v.cast = { t: 0, aim: { ...p.aim }, seed: (rt.seq++ * 2246822519) >>> 0, fired: false };
+  v.cast = { t: 0, aim: { ...aim }, seed: (rt.seq++ * 2246822519) >>> 0, fired: false, potency };
   p.ultIframes = A + ULT_BEATS.freeze + ULT_BEATS.iframesAfter;
   faceAim(p, me);
   p.clip = clipOf(v.ult.clip, false) ?? p.clip;
-  fx(rt, v.ult.vfx?.cast, "cast", me, p.aim, "ult");
+  if (!v.ult.channel) fx(rt, v.ult.vfx?.cast, "cast", me, aim, "ult");
 }
 
 /** The movement passive (ruins only): an air jump, a slide, a dash or a landing the avatar reports. */
@@ -247,6 +313,7 @@ export function classMove(rt: CombatRuntime, me: Vec, on: MovementPassive["on"],
   v.moveCd = m.cooldown_s ?? 0;
   if (foe) { ctx.lock = foe; if (m.needs!.status) applyStatus(foe, m.needs!.status); p.aim = { x: foe.x, z: foe.z }; p.aimHold = 0.6; }
   p.clip = clipOf(m.clip, false) ?? p.clip;
+  fx(rt, m.vfx, "cast", me, ahead, "ability");
   runEffects(rt, m.effects, ctx, random);
   return true;
 }
@@ -301,23 +368,33 @@ export function stepClass(rt: CombatRuntime, me: Vec, dt: number, real: number, 
   }
   v.moveCd = Math.max(0, v.moveCd - dt);
   p.ultIframes = Math.max(0, p.ultIframes - real);
+  // A channel (Cataclysm): rooted, the storm gathering over its aim; it releases at its end or with the last note.
+  if (v.channel) {
+    const c = v.channel, ch = v.ult.channel!;
+    if (!p.alive) { v.channel = null; rt.buffs = rt.buffs.filter(b => b.source !== "channel"); }
+    else {
+      c.t += real; c.aim = { ...p.aim }; // the storm follows your aim while it gathers
+      if ((c.pulse -= real) <= 0) { c.pulse = 0.35; fx(rt, v.ult.vfx?.zone, "zone", c.aim, me, "heavy", ULT_REACH(v.ult)); p.clip = { verb: "Channel", scale: 1, upper: false }; }
+      if (c.t >= ch.seconds || c.at >= c.notes.length) endChannel(rt, me);
+    }
+  }
   // The ult: its hits at the anticipation's end (A), its presentation (impact.ts) until the end.
   if (v.cast) {
     if (!classDev.holdUlt) v.cast.t += real;
-    const A = v.ult.anticipation_ms / 1000;
+    const A = v.ult.anticipation_ms / 1000, finisherOnly = v.ult.impacts === "last";
     if (!v.cast.fired && v.cast.t >= A && p.alive) {
       v.cast.fired = true;
-      const ctx = context(rt, v.ult, me, 1, v.cast.aim);
-      ctx.impact = "ult"; ctx.ult = true; ctx.fx = v.ult.vfx;
+      const ctx = context(rt, v.ult, me, v.cast.potency ?? 1, v.cast.aim);
+      ctx.impact = finisherOnly ? "heavy" : "ult"; ctx.ult = true; ctx.fx = v.ult.vfx; ctx.ramp = v.ult.ramp;
       runEffects(rt, v.ult.effects, ctx, random);
     }
-    const span = v.ult.impacts === "first-last" ? v.ult.duration ?? 0 : 0;
+    const span = v.ult.impacts !== "first" ? v.ult.duration ?? 0 : 0;
     if (span > 0 && !v.cast.finishing && v.cast.t >= A + span - FINISH_LEAD && p.alive) { v.cast.finishing = true; p.clip = clipOf(v.ult.finish, false) ?? p.clip; }
     if (span > 0 && !v.cast.last && v.cast.t >= A + span && p.alive) { // the finisher: its hits, and the sequence plays again (ultView)
       v.cast.last = true;
       p.ultIframes = ULT_BEATS.freeze + ULT_BEATS.iframesAfter; // nothing lands unseen in this freeze either
-      const ctx = context(rt, v.ult, me, 1, p.aim);
-      ctx.impact = "ult"; ctx.ult = true; ctx.fx = v.ult.vfx;
+      const ctx = context(rt, v.ult, me, v.cast.potency ?? 1, p.aim);
+      ctx.impact = "ult"; ctx.ult = true; ctx.fx = v.ult.vfx; ctx.ramp = v.ult.ramp;
       runEffects(rt, v.ult.release ?? v.ult.effects, ctx, random);
     }
     if (v.cast.t >= A + span + ULT_BEATS.end) v.cast = null;

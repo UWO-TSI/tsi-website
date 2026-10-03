@@ -5,7 +5,7 @@ INSERT INTO auth.users (id, email) VALUES ('00000000-0000-4000-8000-0000000000d1
 DO $$
 DECLARE r record; T uuid := '00000000-0000-4000-8000-0000000000d1'; D uuid := '00000000-0000-4000-8000-0000000000d2'; v int; lo text[];
 BEGIN
-  ASSERT (SELECT count(*) FROM enemy_types WHERE trait IS NOT NULL) = 7 AND (SELECT trait FROM enemy_types WHERE key = 'guardian-statue') IS NULL, 'kits traits seeded';
+  ASSERT (SELECT count(*) FROM enemy_types WHERE trait IS NOT NULL AND key <> 'pollen-sprite') = 7 AND (SELECT trait FROM enemy_types WHERE key = 'guardian-statue') IS NULL, 'kits traits seeded'; -- the pollen sprite's is the Arcane wave's
   -- Loadout: needs a subclass; one to four distinct keys; a set, so repeating it is harmless.
   PERFORM combat_ensure(T);
   BEGIN PERFORM combat_set_loadout(T, ARRAY['transmuter.aspect']); RAISE EXCEPTION 'x';

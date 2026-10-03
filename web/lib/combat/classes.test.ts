@@ -123,6 +123,6 @@ describe("the signature gate (§1.5) and the dev kit", () => {
   it("the demo kit is found but never offered in production", () => {
     expect(classKit("demo")).toBe(DEMO_KIT);
     expect(memberKit("demo")).toBe(DEMO_KIT); // tests run outside production
-    expect(classKit("elementalist")).toBeNull(); // wave 1 adds it
+    expect(memberKit("elementalist")?.dev).toBeUndefined(); // a family's kits are offered (the Arcane wave)
   });
 });
