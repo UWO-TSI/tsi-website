@@ -32,7 +32,7 @@ describe("classes v2 on the server, mirrored by the memory store (20261002181044
     const c = await member(true);
     expect(await chooseSubclass(c.store, M, "demo", "v2-sub-1")).toMatchObject({ ok: true, data: { subclass: "demo", fee: 0 } });
     const p = await getProgression(c.store, M);
-    expect(p.ok && p.data.classes).toMatchObject({ kit: "demo", mastery: { mastery: 1, xp: 0, needed: 800 }, title: "Demo Adept", repick: null, kits: ["demo"],
+    expect(p.ok && p.data.classes).toMatchObject({ kit: "demo", mastery: { mastery: 1, xp: 0, needed: 800 }, title: "Demo Adept", repick: null, kits: ["demo", "elementalist", "illusionist", "necromancer", "transmuter"],
       next: { at: 3, what: ["New ability: Mending Sigil"] } });
     expect(p.ok && p.data.fees.subclass_change).toBe(0);
     c.setMasteryXp(M, "demo", 800 - fox);
@@ -50,7 +50,7 @@ describe("classes v2 on the server, mirrored by the memory store (20261002181044
     await equipCosmetic(c.store, M, "demo", "frame", "mastery:bronze");
     const p = await getProgression(c.store, M);
     expect(p.ok && p.data.classes?.profile).toEqual({ icon: "/assets/game/classes/demo.svg", subclass: "demo", name: "Demo Adept", mastery: 10, title: "Adept Demo Adept",
-      frame: "mastery:bronze", mastered: false, others: [{ subclass: "elementalist", mastery: 2, icon: null }] });
+      frame: "mastery:bronze", mastered: false, others: [{ subclass: "elementalist", mastery: 2, icon: "/assets/game/classes/elementalist.svg" }] });
   });
   it("locks the choice; a repick token (a paid reading, the launch gift) pays for one change and is spent", async () => {
     const c = await member(true);
@@ -90,6 +90,8 @@ describe("classes v2 on the server, mirrored by the memory store (20261002181044
   it("signature weapons: tier 1 with none owned; nothing to grant before a wave seeds the type", () => {
     expect(signatureTier([])).toBe(1);
     expect(signatureTier(["sword-iron", "staff-sigil"])).toBe(1); // today's weapons aren't signature weapons
-    expect(signatureGrant("elementalist", 3)).toBeNull();
+    expect(signatureTier(["prism-staff-1", "bone-tome-4"])).toBe(4); // a family wave's are
+    expect(signatureGrant("elementalist", 3)?.key).toBe("prism-staff-3");
+    expect(signatureGrant("priest", 3)).toBeNull(); // its wave hasn't seeded it here
   });
 });

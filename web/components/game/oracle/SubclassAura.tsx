@@ -42,7 +42,7 @@ export default function SubclassAura({ player, kit, mastery, colour }: { player:
   }, []);
   useEffect(() => () => { d.g.dispose(); (d.mesh.material as THREE.Material).dispose(); }, [d]);
   const ramp = useMemo(() => d.ramps.row(colour ? [kit.look.ramp[0], colour, kit.look.ramp[2]] : kit.look.ramp), [d, kit, colour]);
-  const mote = frame((kit.look.mote in COMBAT_PACK ? kit.look.mote : "mote") as CombatSprite, 2);
+  const sprite = (kit.look.mote in COMBAT_PACK ? kit.look.mote : "mote") as CombatSprite, mote = frame(sprite, 2);
   useFrame(({ clock }) => {
     const t = clock.elapsedTime, p = player.current, dim = inCombat(combat.rt) ? 0.4 : 1, [A, B, C, D] = d.arr;
     rampMap(d.ramps);
@@ -60,7 +60,7 @@ export default function SubclassAura({ player, kit, mastery, colour }: { player:
         alpha = Math.min(0.8, 0.55 + Math.sin(t * 2 + i * 1.7) * 0.25) * dim;
       }
       A[q] = p.x + x; A[q + 1] = p.y + y; A[q + 2] = p.z + z; A[q + 3] = p.y - 10; // never faded into the ground
-      B[q] = B[q + 1] = size; B[q + 2] = ring ? t * 0.3 : 0; B[q + 3] = ring ? frame("halo", 3) : second ? frame("flare", 1) : mote;
+      B[q] = B[q + 1] = size; B[q + 2] = ring ? t * 0.3 : 0; B[q + 3] = ring ? frame("halo", 3) : second ? frame("flare", 1) : kit.look.flicker ? frame(sprite, (i + Math.floor(t * 1.5)) % kit.look.flicker) : mote;
       C[q] = C[q + 1] = C[q + 2] = 1; C[q + 3] = on ? alpha : 0;
       D[q] = 1; D[q + 1] = ramp; D[q + 2] = 0; D[q + 3] = ring ? 1 : 0; // flat on the ground, or facing you
     }

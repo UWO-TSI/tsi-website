@@ -9,7 +9,7 @@
  * ten fizzles, one in ten is empowered). No collision (open ground).
  * specs/evidence/combat-b/balance.md is this table.
  */
-import { FAMILY_STAT, resolveLoadout, subclassByKey, UNITS, type Ability, type Subclass } from "@/lib/combat/kits";
+import { FAMILY_STAT, resolveLoadout, subclassByKey, UNITS, type Ability, type Effect, type Subclass } from "@/lib/combat/kits";
 import { damage, STARTER_WEAPONS, WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { derived, presetAllocation, ZERO_STATS } from "@/lib/combat/progression";
 import { potencyFor } from "@/lib/combat/incantation";
@@ -24,7 +24,8 @@ import { MOVE_TUNING } from "@/lib/game/movement/sim";
 import { WAVES, type SpawnPoint } from "./spawns";
 import { classKit, type ClassAbility } from "@/lib/combat/classes";
 import { signatureGrant } from "@/lib/combat/weapons";
-import { classKey, equipClassKit, pressUlt, stepClass } from "./classRuntime";
+import { classKey, equipClassKit, pressUlt, stepClass, ULT_REACH } from "./classRuntime";
+import { formBasic } from "./primitives";
 import { shapePotency } from "./abilities";
 import { BOSS_CENTER } from "@/lib/game/ruins";
 import { ULT } from "@/lib/combat/ult";
@@ -41,6 +42,8 @@ export function starterWeapon(s: Subclass): string {
 const RANGE: Record<string, number> = { melee: 1.2, bow: 7, staff: 6, summon: 5 };
 const RUNE_TIME = { spark: 1.6, binding: 3.2 };
 const DODGE_SKILL = 0.6;
+/** A telegraph it didn't dodge: how often the v2 bot answers it with a timed skill instead (a guard, a parry, a swap, a Perfect Shift). */
+const REACT_SKILL = 0.3;
 
 export interface RunResult { cleared: boolean; seconds: number; dealt: number; taken: number; minHp: number; died: boolean }
 
@@ -56,15 +59,35 @@ function useful(rt: CombatRuntime, a: Ability, me: Vec, target: Enemy | null, th
     if (e.kind === "shield" && dist < 5 && (hurt < 0.85 || threat)) return true;
     if (e.kind === "buff" && (e.stat === "guard" || e.stat === "block") && (threat || (dist < 3 && hurt < 0.9))) return true;
     if (e.kind === "buff" && e.stat !== "guard" && e.stat !== "block" && dist < RANGE[WEAPONS[p.weapon].kind] + 2) return true;
-    if (e.kind === "transform" && dist < 6) return true;
+    if (e.kind === "transform" && dist < 6 && !a.effects.some(x => x.kind === "form")) return true;
     if (e.kind === "summon") {
       const def = UNITS[e.unit === "weapon" ? "wisp" : e.unit === "corpse" ? "shade" : e.unit];
       if (def.kind === "totem") return dist < 7 && !rt.units.some(u => u.def.key === def.key && d2(u, me) < 2.5);
       if (def.kind === "trap") return dist > 2.5 && dist < 9;
       if (def.kind === "decoy") return dist < 3;
+      if (def.kind === "clone") return dist < 12 && rt.units.filter(u => u.def.key === def.key).length < (e.cap ?? 2);
       const used = rt.units.reduce((n, u) => n + (u.def.kind === "minion" && u.source !== "weapon" ? u.def.cost ?? 1 : 0), 0);
-      return e.unit === "corpse" || used + (def.cost ?? 1) * (e.count ?? 1) <= (rt.kit?.capacity ?? 2);
+      return e.unit === "corpse" || used + (def.cost ?? 1) * (e.count ?? 1) <= (rt.kit?.capacity ?? rt.v2?.capacity ?? 2);
     }
+    // Classes v2's shared primitives (primitives.ts): each when it helps.
+    const minions = rt.units.filter(u => u.def.kind === "minion" && u.source !== "weapon" && (u.def.cost ?? 1) > 0).length;
+    if (e.kind === "zone") {
+      if (e.heal && hurt < 0.75) return true;
+      if (e.blind && (threat || dist < 4)) return true;
+      if (e.power && target && (e.at === "aim" ? dist < 10 : dist < e.radius + (e.length ?? 0) + 0.5)) return true;
+      continue;
+    }
+    if (e.kind === "raise") return !!target && (minions < (rt.v2?.capacity ?? 2) || rt.enemies.some(x => x.state === "dead" && !x.raised && d2(x, target) < e.radius));
+    if (e.kind === "command") return !!target && minions >= 2 && rt.field.order.mode !== "charge" && dist < 10;
+    if (e.kind === "detonate") return !!target && dist < 11;
+    if (e.kind === "consume") return minions > 0 && hurt < 0.6;
+    if (e.kind === "teleport") return e.to === "unit" && (hurt < 0.6 || threat) && rt.units.some(u => u.def.key === e.unit);
+    if (e.kind === "counter" && e.vs === "shot") return rt.projectiles.some(sh => sh.from === "enemy" && !sh.arc && d2(sh, me) < 3.2);
+    if (e.kind === "stealth" && e.duration >= 1) return hurt < 0.55 && (threat || dist < 3);
+    if (e.kind === "wall") return !!target && (threat || rt.projectiles.some(sh => sh.from === "enemy")) && dist < 8;
+    if (e.kind === "surf") return !!target && dist < 6;
+    if (e.kind === "pull") return !!target && dist > 3 && dist < e.range;
+    if (e.kind === "form") return formWanted(rt, e.form, me, target, threat);
     if (!target) continue;
     if (e.kind === "projectile" && dist < (e.range ?? 10) - 0.5) return true;
     if (e.kind === "area" && e.power > 0 && (e.at === "aim" ? dist < 11 : dist < (e.length ?? e.radius) + 0.3)) return true;
@@ -72,6 +95,27 @@ function useful(rt: CombatRuntime, a: Ability, me: Vec, target: Enemy | null, th
     if (e.kind === "dash" && e.power && dist < e.distance) return true;
   }
   return false;
+}
+
+/**
+ * The bot's form choice (the Transmuter): the Golem when three crowd in, the Crab when a hit is coming, the Wisp when the
+ * foe is far, the Pollen when hurt, otherwise the Fox; it shifts again into the form it's in to replay its move when that helps.
+ */
+function formWanted(rt: CombatRuntime, form: string, me: Vec, target: Enemy | null, threat: boolean): boolean {
+  if (!target) return false;
+  const v = rt.v2!, has = (k: string) => v.keys.some(a => a?.effects.some(e => e.kind === "form" && e.form === k));
+  const crowd = rt.enemies.filter(e => e.state !== "dead" && d2(e, me) < 3).length, far = d2(target, me) > 5, hurt = rt.player.hp / rt.player.maxHp;
+  const boss = target.type.kind === "boss"; // big slow hits get through its armour
+  const best = (crowd >= 3 || boss) && has("golem") ? "golem" : threat && has("crab") ? "crab" : hurt < 0.45 && has("pollen") ? "pollen" : far && has("wisp") ? "wisp" : "fox";
+  return form === best && (v.form !== best || best === "golem" || (best === "fox" && d2(target, me) < 4.5));
+}
+
+/** Its hits are all small (power under 1.2): against flat armour they glance. Abilities that don't hit aren't. */
+function glances(a: ClassAbility): boolean {
+  const powers = (l: Effect[]): number[] => l.flatMap(e => e.kind === "projectile" ? [e.power, ...powers(e.burst ?? [])] : e.kind === "area" || e.kind === "detonate" ? [e.power] : e.kind === "dash" && e.power ? [e.power]
+    : e.kind === "delay" ? powers(e.effects) : e.kind === "zone" && e.power ? [e.power * (e.every ?? 0.5)] : []);
+  const p = powers(a.effects);
+  return p.length > 0 && Math.max(...p) < 1.2 && !a.effects.some(e => e.kind === "form");
 }
 
 /** One solo run of a survive mission's waves (the mission's own spawns and circle). */
@@ -206,18 +250,19 @@ export function signatureWeapon(kitKey: string): string {
   const kit = classKit(kitKey)!, sig = signatureGrant(kitKey, 1);
   return sig?.key ?? SYSTEM_WEAPONS.find(w => w.type === kit.signature.type && STARTER_WEAPONS.includes(w.key))?.key ?? SYSTEM_WEAPONS.find(w => w.type === kit.signature.type)!.key;
 }
-const ULT_REACH = (a: ClassAbility) => Math.max(...a.effects.map(e => (e.kind === "area" ? e.radius : e.kind === "projectile" ? 1.5 : 0)), 2);
 
 /** One v2 run: a survive mission's waves, or the guardian (`"boss"`: the scripted fight, bot rules plus the stagger window). */
+/** The bot knows every form a Transmuter can learn, each from one defeat (a fresh learner: the forms at tier 2). */
+const ALL_TRAITS = Object.fromEntries(["fox-stride", "crab-shell", "wisp-core", "pollen-swarm", "golem-fist"].map(k => [k, 1]));
 export function runV2(kitKey: string, missionId: "survive-circle" | "survive-sanctum" | "boss", seed: number, mastery = 1, limit = 240): RunV2 {
   const kit = classKit(kitKey)!, random = lcg(seed), rt = createRuntime(), p = rt.player;
   p.stats = presetAllocation(kit.family, 10); p.level = 10; p.safe = false;
   p.weapon = signatureWeapon(kitKey);
-  equipClassKit(rt, kit, mastery);
+  equipClassKit(rt, kit, mastery, undefined, ALL_TRAITS);
   p.hp = p.maxHp; p.energy = 100;
   const v = rt.v2!, boss = missionId === "boss";
   const center = boss ? { x: BOSS_CENTER.x, z: BOSS_CENTER.z - 6 } : SURVIVE_CIRCLES[missionId], waves = boss ? [[{ id: "boss", type: "guardian-statue", x: 0, z: 25.5 }]] : WAVES[missionId];
-  let me: Vec = { x: center.x, z: center.z }, wave = 0, strafe = 1, t = 0, taken = 0, minHp = p.hp, fillFrom = 0, ults = 0, drawLeft = 0;
+  let me: Vec = { x: center.x, z: center.z }, wave = 0, strafe = 1, t = 0, taken = 0, minHp = p.hp, fillFrom = 0, ults = 0, drawLeft = 0, mashAt = 0, react = "", reactAt = 0;
   const fills: number[] = [], judged = new Set<string>(), held: { slot: number; at: number }[] = [];
   spawnWave(rt, waves[0]);
   const dt = 1 / 30;
@@ -232,7 +277,10 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
     if (threat && !judged.has(`${threat.id}:${threat.cycle}:${Math.floor(t / 2)}`)) {
       judged.add(`${threat.id}:${threat.cycle}:${Math.floor(t / 2)}`);
       if (random() < DODGE_SKILL && p.dodgeCd <= 0) { const a = Math.atan2(me.x - threat.x, me.z - threat.z) + strafe * 1.2; startDodge(rt, { x: Math.sin(a), z: Math.cos(a) }); }
+      // Not dodged: a timed skill instead (a parry, a swap, a Perfect Shift) now and then, pressed at a human moment in the rest of the windup.
+      else if (random() < REACT_SKILL) { react = `${threat.id}:${threat.cycle}`; reactAt = threat.move.windup * (0.5 + 0.5 * random()); }
     }
+    const reacting = !!threat && react === `${threat.id}:${threat.cycle}` && threat.t >= reactAt;
     // Riders: 30% of the time the bot is sliding, in the air, just off a dash and fast.
     const rider = random() < 0.3;
     p.move = rider ? { mode: random() < 0.5 ? "slide" : "air", speed: 16, sinceDash: 0.1, vx: 0, vz: 16 } : { mode: "ground", speed: 7.4, sinceDash: 9, vx: 0, vz: 7.4 };
@@ -242,15 +290,18 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
     }
     for (let i = held.length - 1; i >= 0; i--) if (t >= held[i].at) { classKey(rt, held[i].slot, false); held.splice(i, 1); }
     const staggered = target?.type.kind === "boss" && target.state === "recover" && !!target.move.stagger;
+    // A channelled ult's mash: about 3.5 notes a second, four in five right.
+    if (v.channel && t >= mashAt) { mashAt = t + 0.28; const note = v.channel.notes[v.channel.at]; if (note !== undefined) classKey(rt, random() < 0.8 ? note : (note + 1) % 4, true); }
     // The ult: full, with two or more enemies inside its area (or the boss).
-    if (v.meter >= ULT.max && target && (target.type.kind === "boss" || alive.filter(e => d2(e, target) <= ULT_REACH(v.ult)).length >= 2)) pressUlt(rt);
+    if (v.meter >= ULT.max && target && !v.channel && (target.type.kind === "boss" || alive.filter(e => d2(e, target) <= ULT_REACH(v.ult)).length >= 2)) pressUlt(rt);
     else if (!rt.casting && !p.dash && p.dodgeAge === null && v.queue.length === 0 && !held.length) {
       for (let i = 0; i < v.keys.length; i++) {
         const a = v.keys[i];
         if (!a || (v.cd[a.key] ?? 0) > 0 || p.energy < a.energy || (a.when && !rider)) continue;
         const kind = a.input?.kind ?? "tap";
         if (kind === "toggle" && v.toggled[i]) continue;
-        if (!(staggered || useful(rt, a, me, target, !!threat))) continue;
+        if (!(staggered || useful(rt, a, me, target, reacting))) continue;
+        if (target?.type.kind === "boss" && glances(a)) continue; // the guardian's armour eats small hits: save the energy
         const combo = v.combos.find(c => c.keys[0] === i && c.keys[1] === i && p.energy >= c.ability.energy && random() < 0.5);
         classKey(rt, i, true);
         if (kind === "hold" || kind === "charge") held.push({ slot: i, at: t + (kind === "hold" ? 1 : (a.input as { max_s: number }).max_s) }); // let go later
@@ -258,7 +309,7 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
         if (kind === "drawn") drawLeft = RUNE_TIME.spark;
         break;
       }
-      if (target && !rt.casting && d2(target, me) <= WEAPONS[p.weapon].range + target.type.radius) attack(rt, me, random);
+      if (target && !rt.casting && d2(target, me) <= (formBasic(rt)?.range ?? WEAPONS[p.weapon].range) + target.type.radius) attack(rt, me, random);
     }
     const before = v.meter;
     stepClass(rt, me, dt, dt, random);
@@ -269,8 +320,8 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
     minHp = Math.min(minHp, p.hp);
     if (!p.alive) return done(false, true);
     let mx = 0, mz = 0;
-    if (target && !p.dash && p.dodgeAge === null) {
-      const want = RANGE[WEAPONS[p.weapon].kind], dist = d2(target, me), ux = (target.x - me.x) / (dist || 1), uz = (target.z - me.z) / (dist || 1);
+    if (target && !p.dash && p.dodgeAge === null && !v.channel) {
+      const want = RANGE[formBasic(rt)?.kind ?? WEAPONS[p.weapon].kind], dist = d2(target, me), ux = (target.x - me.x) / (dist || 1), uz = (target.z - me.z) / (dist || 1);
       const push = dist > want + 0.3 ? 1 : 0;
       if (random() < 0.01) strafe = -strafe;
       mx = ux * push - uz * strafe * 0.35; mz = uz * push + ux * strafe * 0.35;
@@ -279,6 +330,7 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
     const vv = PLAYER_BASE.speed * p.speed, k = p.dodgeAge === null ? 1 : Math.min(1, p.dodgeAge / MOVE_TUNING.dashTime);
     const roll = p.dodgeAge === null ? 0 : MOVE_TUNING.dashSpeed * (DODGE_SHAPE.dashExit + (1 - DODGE_SHAPE.dashExit) * (1 - k) ** MOVE_TUNING.dashEase);
     me = { x: me.x + (mx * vv + p.impulse.x + p.dodgeDir.x * roll) * dt, z: me.z + (mz * vv + p.impulse.z + p.dodgeDir.z * roll) * dt };
+    if (p.kick?.to) me = { x: p.kick.to.x, z: p.kick.to.z }; // a swap or a thrown card moves you
     p.kick = null; // open ground: the bot doesn't simulate jumps; riders are sampled above
   }
   return done(false);

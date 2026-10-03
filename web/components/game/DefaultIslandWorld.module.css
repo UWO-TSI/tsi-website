@@ -277,6 +277,22 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .classBar .slotName { font-size: 10px; overflow-wrap: normal; word-break: keep-all; }
 .classBar .abilityBar li { column-gap: 5px; padding-left: 5px; padding-right: 6px; }
 .classBar .sweep { width: 28px; height: 28px; }
+.slotIcon { width: 16px; height: 16px; margin-right: 3px; vertical-align: -3px; }
+.classBar .abilityBar li[data-form] { box-shadow: inset 0 -3px 0 var(--class, #b39ce6); }
+/* A channelled ult's mash (Cataclysm): three keycaps, the front one big. */
+.mash { position: fixed; left: 50%; top: 30%; transform: translateX(-50%); display: grid; justify-items: center; gap: 8px; padding: 10px 16px 12px; border-radius: 18px;
+  background: #fffdf3f0; border: 2px solid #293e3b; box-shadow: 0 4px 0 #293e3b33; color: #293e3b; pointer-events: none; z-index: 30; }
+.mash b { font-size: 13px; }
+.mash ol { display: flex; gap: 10px; align-items: center; margin: 0; padding: 0; list-style: none; animation: mashSlide 0.12s ease-out; }
+.mash li { display: grid; justify-items: center; gap: 2px; opacity: 0.6; }
+.mash li[data-front] { opacity: 1; }
+.mash kbd { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #fffdf3; border: 2px solid var(--note); border-bottom-width: 4px; font: 700 15px "IBM Plex Mono", monospace; color: #293e3b; }
+.mash li[data-front] kbd { width: 52px; height: 52px; font-size: 22px; box-shadow: 0 0 0 3px color-mix(in srgb, var(--note) 40%, transparent); }
+.mash small { font-size: 12px; }
+.mash > span { width: 180px; height: 6px; border-radius: 3px; background: #d8cbaa; overflow: hidden; }
+.mash > span i { display: block; height: 100%; background: #293e3b; }
+@keyframes mashSlide { from { transform: translateX(14px); opacity: 0.5; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .mash ol { animation: none; } }
 .abilityBar li[data-unarmed] { filter: grayscale(0.8); }
 .abilityBar li[data-held] { border-color: var(--class, #b39ce6); box-shadow: inset 0 0 0 2px var(--class, #b39ce6); }
 .abilityBar li[data-on] { background: color-mix(in srgb, var(--class, #b39ce6) 18%, #fffdf3); }

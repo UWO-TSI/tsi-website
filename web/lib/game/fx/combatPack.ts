@@ -2,7 +2,7 @@
 /** The combat pack (specs/classes/design-sheet.md §1.7): heat in RGB, coverage in A; the shader maps heat through the effect's ramp. */
 export const COMBAT_PACK_URL = "/assets/fx/combat-pack.webp";
 export const COMBAT_PACK_COLS = 8;
-export const COMBAT_PACK_ROWS = 15;
+export const COMBAT_PACK_ROWS = 25;
 export const COMBAT_PACK = {
   impactStar: { row: 0, frames: 8 } /* spiky impact star: pops open, hollows out */,
   slash: { row: 1, frames: 8 } /* crescent slash arc: sweeps on, thins away */,
@@ -19,5 +19,15 @@ export const COMBAT_PACK = {
   beam: { row: 12, frames: 8 } /* beam segment along +u (tiles along u) */,
   ink: { row: 13, frames: 8 } /* black ink splash and flicks */,
   flare: { row: 14, frames: 8 } /* four-point flare star */,
+  flame: { row: 15, frames: 8 } /* fire tongue licking up, tip tears off (loops) */,
+  droplet: { row: 16, frames: 8 } /* water spray: drops fly out and fall */,
+  wave: { row: 17, frames: 8 } /* wave crest side-on: curls forward, crashes */,
+  petal: { row: 18, frames: 8 } /* blossom opens, its petals fall tumbling */,
+  cloud: { row: 19, frames: 8 } /* dark storm-cloud puff, a few rim lights */,
+  card: { row: 20, frames: 8 } /* playing card flipping as it spins (loops) */,
+  shard: { row: 21, frames: 8 } /* glass shard tumbling, glint edge */,
+  bone: { row: 22, frames: 8 } /* bone fragment tumbling */,
+  skull: { row: 23, frames: 8 } /* skull glyph aura mote: pops in, fades */,
+  beast: { row: 24, frames: 8 } /* fox, crab, wisp, pollen, golem glyphs (loops) */,
 } as const;
 export type CombatSprite = keyof typeof COMBAT_PACK;

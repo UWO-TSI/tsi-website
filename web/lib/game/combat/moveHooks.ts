@@ -9,8 +9,11 @@ import type { MoveState, MoveTuning } from "@/lib/game/movement/sim";
 
 /** What the avatar reports each frame. */
 export interface MoveView { mode: string; speed: number; sinceDash: number; vx: number; vz: number }
-/** What abilities ask of the next step: carried speed along (dx, dz), a hop of `up` world units, a short hang in the air. */
-export interface Kick { dx: number; dz: number; speed: number; up: number; hang: boolean }
+/**
+ * What abilities ask of the next step: carried speed along (dx, dz), a hop of `up` world units, a short hang in the air;
+ * `to`: a teleport that keeps your speed and arc (a swap, a thrown card); `hold`: a slide kept at this speed (a surf).
+ */
+export interface Kick { dx: number; dz: number; speed: number; up: number; hang: boolean; to?: { x: number; z: number }; hold?: number }
 
 export const MOVE_HOOK = {
   /** A walk; "fast" is above a run. */
@@ -52,6 +55,11 @@ export function addKick(k: Kick | null, dx: number, dz: number, speed: number, u
  * a hang lifts a falling body a little. No i-frames (those are the ability's, never the movement's).
  */
 export function applyKick(s: MoveState, k: Kick, t: Pick<MoveTuning, "jumpHeight" | "jumpApexTime" | "momentumCeiling">) {
+  if (k.to) { s.x = k.to.x; s.z = k.to.z; }
+  if (k.hold) {
+    const v = Math.hypot(s.vx, s.vz), want = Math.min(k.hold, t.momentumCeiling);
+    if (v > 0.5 && v < want) { s.vx *= want / v; s.vz *= want / v; }
+  }
   if (k.speed > 0) {
     const before = Math.hypot(s.vx, s.vz), vx = s.vx + k.dx * k.speed, vz = s.vz + k.dz * k.speed, after = Math.hypot(vx, vz);
     const cap = Math.max(before, Math.min(after, t.momentumCeiling));
