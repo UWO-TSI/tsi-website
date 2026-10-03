@@ -1,488 +1,163 @@
 "use client";
 
-import { oneLinerFor } from "@/lib/game/peaceful";
-
 /**
- * FishReveal (David ruling 2026-07-23) — the blind-box first-catch ceremony.
+ * FishReveal — the catch card (specs/polish/fishing.md deliverable 5, the cozy cream direction). Every catch, first
+ * or repeat, gets the same paper card at the foot of the screen while the world shows the fish itself: held up in
+ * your hands, or over your head with the hold-up off (character/FishingRig.tsx). No backdrop, no blur, no rays.
  *
- * Fullscreen takeover in three stages, timings per tier from REVEAL:
+ *   arrive  — `delay` ms after the catch leaves the water (the world's beat first), the card slides up.
+ *   develop — a first catch keeps its silhouette and "???" a beat (longer for the rarer: REVEAL), then fills with
+ *             colour, its name, a chime and soft paper confetti from rare up. A repeat arrives developed.
+ *   stay    — a few seconds by tier (REVEAL.hold), then it goes; Continue (click, E, Space, Enter) sooner, Esc closes.
  *
- *   suspense — world dims/blurs; the fish floats center-screen as a BLACK
- *              silhouette, shaking harder and harder (rAF, amplitude ramps
- *              quadratically) while a tier-colored glow builds behind it —
- *              the telegraph. Sea King leaks the holographic shimmer.
- *              Rotating gacha rays fade in from rare up.
- *   flash    — tier-tinted white flare + confetti burst (celebrate()) +
- *              max shake. The blind box cracks.
- *   landed   — silhouette resolves to the real fish (filter animates to
- *              color, scale pop), name + NEW! + rarity chip + size slide
- *              in. Holds, then dismisses.
- *
- * Any click / E / Space / Enter skips suspense straight to the flash;
- * clicking after landing dismisses immediately. prefers-reduced-motion
- * collapses suspense to a beat. Repeats never see this — FishingOverlay
- * only mounts it for first catches.
+ * Rarity is the one palette (the GUI sheet's --gui-rarity-*: RarityBadge, the same in the journal and the book);
+ * the Sea King's badge is holographic. prefers-reduced-motion develops at once without confetti or pops.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioManager } from "@/lib/game/audio";
-import { punchZoom, shakeCamera } from "@/lib/game/cameraJuice";
-import {
-  HOLO_GRADIENT,
-  RARITY_META,
-  REVEAL,
-  catchShake,
-  celebrate,
-  fishOdds,
-  type FishDef,
-  iconFor,
-} from "@/lib/game/fishing";
+import { HOLO_GRADIENT, REVEAL, celebrate, fishOdds, iconFor, RARITY_META, type FishDef } from "@/lib/game/fishing";
+import { oneLinerFor } from "@/lib/game/peaceful";
+import { Badge, Button, RarityBadge } from "@/components/gui";
 
-type Stage = "suspense" | "freeze" | "flash" | "landed";
-
-export default function FishReveal({
-  fish,
-  sizeCm,
-  recipe,
-  onDone,
-}: {
+export default function FishReveal({ fish, sizeCm, recipe, isNew = true, newRecord = false, delay = 0, onDone }: {
   fish: FishDef;
   /** Null: no size recorded (a fish off the roster). */
   sizeCm: number | null;
   /** A recipe the catch taught (rare catches). */
   recipe?: string | null;
+  /** The first of its kind: it develops from a silhouette, with its odds. */
+  isNew?: boolean;
+  /** A repeat that beat your record for the species. */
+  newRecord?: boolean;
+  /** ms before the card arrives (the world's catch beat plays first). */
+  delay?: number;
   onDone: () => void;
 }) {
   const cfg = REVEAL[fish.rarity];
   const meta = RARITY_META[fish.rarity];
   const holo = fish.rarity === "seaking";
-  // "1 in N" — the Sol's-RNG flex number, computed against the live pool.
-  const odds = fishOdds(fish);
-
-  const [stage, setStage] = useState<Stage>("suspense");
-  const stageRef = useRef<Stage>("suspense");
-  const changeStage = useCallback((next: Stage) => {
-    stageRef.current = next;
-    setStage(next);
-  }, []);
-  const dialogRef = useRef<HTMLDivElement>(null);
-
-  const fishImgRef = useRef<HTMLImageElement>(null);
-  const glowRef = useRef<HTMLDivElement>(null);
-  const timersRef = useRef<number[]>([]);
-  const doneRef = useRef(false);
+  const odds = isNew ? fishOdds(fish) : null;
+  const [developed, setDeveloped] = useState(!isNew);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const timers = useRef<number[]>([]);
+  const done = useRef(false);
 
   const finish = useCallback(() => {
-    if (doneRef.current) return;
-    doneRef.current = true;
-    timersRef.current.forEach((t) => window.clearTimeout(t));
+    if (done.current) return;
+    done.current = true;
+    timers.current.forEach(t => window.clearTimeout(t));
     onDone();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const crack = useCallback(() => {
-    if (doneRef.current || stageRef.current === "flash" || stageRef.current === "landed") return;
-    timersRef.current.forEach((t) => window.clearTimeout(t));
-    timersRef.current = [];
-    changeStage("flash");
+  /** The silhouette fills with colour: the name, a chime, soft confetti from the card (none with reduced motion). */
+  const develop = useCallback(() => {
+    if (done.current) return;
+    setDeveloped(true);
     AudioManager.playSFX("confirm");
-    punchZoom(4); // micro-zoom: the crack
-    shakeCamera(catchShake(fish.rarity));
-    celebrate(fish.rarity, meta.color);
-    timersRef.current.push(
-      window.setTimeout(() => {
-        changeStage("landed");
-        timersRef.current.push(window.setTimeout(finish, cfg.hold));
-      }, cfg.flash)
-    );
+    const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const top = cardRef.current?.getBoundingClientRect().top ?? window.innerHeight * 0.75;
+    if (!calm) celebrate(fish.rarity, meta.color, { x: 0.5, y: Math.min(0.95, top / window.innerHeight) });
+    timers.current.push(window.setTimeout(finish, cfg.hold));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // End of suspense: epic+ gets the dead-stop gasp (shake halts, faint
-  // fake-out flare for legendary+), then the real crack.
-  const toFlash = useCallback(() => {
-    if (doneRef.current || stageRef.current !== "suspense") return;
-    if (cfg.freeze > 0) {
-      timersRef.current.forEach((t) => window.clearTimeout(t));
-      timersRef.current = [];
-      changeStage("freeze");
-      AudioManager.playSFX("click");
-      timersRef.current.push(window.setTimeout(crack, cfg.freeze));
-    } else {
-      crack();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Stage 1 timer (reduced motion collapses the suspense to a beat).
-  useEffect(() => {
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const t = window.setTimeout(toFlash, reduced ? 180 : cfg.suspense);
-    timersRef.current.push(t);
-    return () => {
-      timersRef.current.forEach((id) => window.clearTimeout(id));
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const skip = useCallback(() => {
-    if (doneRef.current) return;
-    if (stageRef.current === "suspense") toFlash();
-    else if (stageRef.current === "freeze") crack();
-    else if (stageRef.current === "landed") finish();
-  }, [toFlash, crack, finish]);
 
   useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    const dialog = dialogRef.current;
-    dialog?.focus({ preventScroll: true });
+    const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // A repeat develops as it arrives; a first catch keeps its silhouette a beat.
+    timers.current.push(window.setTimeout(develop, delay + (isNew && !calm ? cfg.develop : 120)));
+    const list = timers.current;
+    return () => list.forEach(t => window.clearTimeout(t));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** Continue: a developing card shows now, a developed one goes. */
+  const next = useCallback(() => {
+    if (done.current) return;
+    if (developed) finish();
+    else { timers.current.forEach(t => window.clearTimeout(t)); timers.current = []; develop(); }
+  }, [developed, develop, finish]);
+
+  useEffect(() => {
     const onPointer = (e: PointerEvent) => {
       if (e.button !== 0 || (e.target as Element | null)?.closest("button")) return;
-      e.preventDefault(); e.stopPropagation(); skip();
+      e.preventDefault(); e.stopPropagation(); next();
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === "Escape") {
-        e.preventDefault(); e.stopPropagation(); finish();
-        return;
-      }
-      if (e.key === "Tab") {
-        const buttons = Array.from(dialog?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []);
-        const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
-        const next = index < 0 ? (e.shiftKey ? buttons.length - 1 : 0) : (index + (e.shiftKey ? -1 : 1) + buttons.length) % buttons.length;
-        e.preventDefault(); e.stopPropagation(); buttons[next]?.focus();
-        return;
-      }
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); finish(); return; }
       if (["e", "E", " ", "Enter"].includes(e.key)) {
-        // Native buttons own Space/Enter. Held reel keys must not skip the reveal.
-        if ((e.key === " " || e.key === "Enter") && (document.activeElement as Element | null)?.closest("button")) {
-          if (e.repeat) e.preventDefault();
-          return;
-        }
+        // Native buttons own Space and Enter; a key held from the reel never skips the card.
+        if ((e.key === " " || e.key === "Enter") && (document.activeElement as Element | null)?.closest("button")) return;
         e.preventDefault(); e.stopPropagation();
-        if (!e.repeat) skip();
+        if (!e.repeat) next();
       }
     };
     window.addEventListener("pointerdown", onPointer, true);
     window.addEventListener("keydown", onKey, true);
-    return () => {
-      window.removeEventListener("pointerdown", onPointer, true);
-      window.removeEventListener("keydown", onKey, true);
-      if (previous?.isConnected) previous.focus({ preventScroll: true });
-    };
-  }, [skip, finish]);
+    return () => { window.removeEventListener("pointerdown", onPointer, true); window.removeEventListener("keydown", onKey, true); };
+  }, [next, finish]);
 
-  // Suspense rAF: shake amplitude ramps quadratically, glow builds behind.
-  useEffect(() => {
-    if (stage !== "suspense") return;
-    let raf = 0;
-    const t0 = performance.now();
-    const step = (now: number) => {
-      const p = Math.min(1, (now - t0) / cfg.suspense);
-      const amp = cfg.shake * p * p;
-      if (fishImgRef.current) {
-        fishImgRef.current.style.transform = `translate(${(Math.random() * 2 - 1) * amp}px, ${
-          (Math.random() * 2 - 1) * amp
-        }px) scale(${1 + 0.1 * p})`;
-      }
-      if (glowRef.current) {
-        glowRef.current.style.opacity = String(0.2 + 0.8 * p);
-        glowRef.current.style.transform = `translate(-50%, -50%) scale(${0.65 + 0.55 * p})`;
-      }
-      raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [stage, cfg.suspense, cfg.shake]);
-
-  const landed = stage === "landed";
-
+  const line = oneLinerFor(fish.key);
   return (
-    <div
-      ref={dialogRef}
-      role="dialog"
-      aria-modal="true"
-      aria-label="New catch"
-      tabIndex={-1}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 90,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        // The member world (.gui) lays it on warm paper; the applicant island keeps the dark gacha backdrop.
-        background: "var(--gui-reveal-backdrop, rgba(8, 10, 16, 0.82))",
-        backdropFilter: "blur(6px)",
-        WebkitBackdropFilter: "blur(6px)",
-        // Sol's-RNG monochrome moment: the sea-king crack drains the color
-        // out of the whole screen for a beat, then it floods back.
-        filter: holo && stage === "flash" ? "grayscale(1) contrast(1.15)" : "none",
-        transition: "filter 240ms ease-out",
-        animation: "tsi-reveal-in 220ms ease-out",
-        cursor: "pointer",
-        userSelect: "none",
-      }}
-    >
-      {/* Gacha rays (rare+) — rotate behind the fish, tier-tinted */}
-      {cfg.rays && (
-        <div
-          aria-hidden
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: "50%",
-            width: 720,
-            height: 720,
-            marginLeft: -360,
-            marginTop: -360,
-            background: `repeating-conic-gradient(${meta.color}30 0deg 9deg, transparent 9deg 26deg)`,
-            borderRadius: "50%",
-            WebkitMaskImage: "radial-gradient(closest-side, black 20%, transparent 72%)",
-            maskImage: "radial-gradient(closest-side, black 20%, transparent 72%)",
-            animation: "tsi-reveal-spin 16s linear infinite",
-            opacity: landed ? 0.9 : 0.55,
-          }}
-        />
-      )}
-
-      {/* Telegraph glow — ramps to tier color during suspense, snaps bright
-          at the freeze */}
-      <div
-        ref={glowRef}
-        aria-hidden
-        style={{
-          position: "absolute",
-          left: "50%",
-          top: "50%",
-          width: 460,
-          height: 460,
-          transform: "translate(-50%, -50%) scale(0.65)",
-          borderRadius: "50%",
-          background: holo ? HOLO_GRADIENT : `radial-gradient(circle, ${meta.color}66 0%, ${meta.color}22 45%, transparent 70%)`,
-          backgroundSize: holo ? "300% 300%" : undefined,
-          animation: holo ? "tsi-holo-shift 2.2s linear infinite" : undefined,
-          filter: "blur(38px)",
-          opacity: 0.2,
-        }}
-      />
-
-      {/* Freeze fake-out flare (legendary+ gasp beat) */}
-      {stage === "freeze" && cfg.doubleFlash && (
-        <div
-          aria-hidden
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: `radial-gradient(circle at 50% 46%, ${meta.color}66 0%, transparent 60%)`,
-            animation: "tsi-reveal-minipop 380ms ease-out forwards",
-            pointerEvents: "none",
-          }}
-        />
-      )}
-
-      {/* Pulse rings at the crack — count = tier flex */}
-      {(stage === "flash" || stage === "landed") &&
-        Array.from({ length: cfg.rings }).map((_, i) => (
-          <div
-            key={i}
-            aria-hidden
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: "46%",
-              width: 180,
-              height: 180,
-              marginLeft: -90,
-              marginTop: -90,
-              borderRadius: "50%",
-              border: `3px solid ${holo ? "#5EE7F7" : meta.color}`,
-              opacity: 0,
-              animation: `tsi-reveal-ring 900ms ease-out ${i * 150}ms forwards`,
-              pointerEvents: "none",
-            }}
-          />
-        ))}
-
-      {/* Flash flare — mounts at the crack, fades itself out */}
-      {stage !== "suspense" && (
-        <div
-          aria-hidden
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: `radial-gradient(circle at 50% 46%, #FFFFFF 0%, ${meta.color}AA 38%, transparent 75%)`,
-            animation: `tsi-reveal-flash ${Math.max(380, cfg.flash + 240)}ms ease-out forwards`,
-            pointerEvents: "none",
-          }}
-        />
-      )}
-
-      {/* The fish */}
-      <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          ref={fishImgRef}
-          src={iconFor(fish)}
-          alt=""
-          width={150}
-          height={150}
-          draggable={false}
-          style={{
-            filter: landed
-              ? `drop-shadow(0 0 24px ${meta.color}CC)`
-              : "brightness(0) drop-shadow(0 0 14px rgba(0,0,0,0.6))",
-            transition: "filter 320ms ease-out",
-            animation: landed ? "tsi-reveal-land 420ms cubic-bezier(0.34, 1.56, 0.64, 1)" : "tsi-reveal-bob 2.2s ease-in-out infinite",
-          }}
-        />
-
-        {/* Result line — only after the crack */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 10,
-            opacity: landed ? 1 : 0,
-            transform: landed ? "translateY(0)" : "translateY(14px)",
-            transition: "opacity 300ms ease-out 120ms, transform 300ms ease-out 120ms",
-            fontFamily: "var(--font-highlight, sans-serif)",
-          }}
-        >
-          <div style={{ fontSize: 26, fontWeight: 800, color: "var(--gui-reveal-ink, #FFFDF5)", textShadow: "var(--gui-reveal-shadow, 0 2px 12px rgba(0,0,0,0.6))" }}>
-            {fish.name}
+    <div className="tsi-catch-card" style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", zoom: "var(--gui-overlay-zoom, 1)", zIndex: 60,
+      width: "min(520px, 92vw)", pointerEvents: "none" }}>
+      <div ref={cardRef} role="dialog" aria-modal="false" aria-live="polite" aria-label={developed ? `You caught ${fish.label}` : "A catch"} data-catch-card={developed ? "developed" : "developing"}
+        style={{ pointerEvents: "auto", display: "grid", gridTemplateColumns: "92px 1fr", gap: 14, alignItems: "center", padding: "14px 18px 14px 14px",
+          background: "var(--gui-paper-hi, #fffff7)", borderRadius: "var(--gui-r-card, 20px)", color: "var(--gui-ink, #4f3f31)", fontFamily: "var(--gui-font, sans-serif)",
+          boxShadow: "var(--gui-shadow-lg, 0 6px 0 rgb(114 92 78 / 0.18), 0 22px 48px rgb(79 63 49 / 0.18)), inset 0 0 0 2.5px var(--gui-paper-edge, #e3d9b8)",
+          opacity: 0, animation: `tsi-catch-in 420ms var(--gui-spring, cubic-bezier(0.2, 1.4, 0.4, 1)) ${delay}ms forwards` }}>
+        {/* The fish on a round paper plate edged in its rarity. */}
+        <div style={{ position: "relative", width: 92, height: 92, borderRadius: "var(--gui-r-blob, 50%)", display: "grid", placeItems: "center",
+          background: "var(--gui-paper-warm, #f8f4e8)", boxShadow: `inset 0 0 0 3px ${developed ? `var(--gui-rarity-${fish.rarity})` : "var(--gui-paper-edge, #e3d9b8)"}`, transition: "box-shadow 320ms ease-out" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={iconFor(fish)} alt="" width={76} height={76} draggable={false}
+            style={{ filter: developed ? "drop-shadow(0 3px 2px rgb(79 63 49 / 0.22))" : "brightness(0) opacity(0.5)", transition: "filter 380ms ease-out",
+              animation: developed ? (isNew ? "tsi-catch-develop 460ms var(--gui-spring, ease-out)" : undefined) : "tsi-catch-wiggle 1.1s ease-in-out infinite" }} />
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: "var(--gui-text-xl, 22px)", fontWeight: 800, color: "var(--gui-ink-strong, #3a2e22)", lineHeight: 1.15 }}>{developed ? fish.name : "???"}</span>
+            {isNew && <Badge tone="new">New!</Badge>}
+            {!isNew && newRecord && <Badge tone="warn">New record</Badge>}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span
-              style={{
-                fontSize: "max(11px, var(--gui-min-text, 0px))",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: "var(--gui-reveal-chip-ink, #FFFDF5)",
-                borderRadius: 999,
-                padding: "4px 11px",
-                ...(holo
-                  ? {
-                      background: HOLO_GRADIENT,
-                      backgroundSize: "300% 100%",
-                      animation: "tsi-holo-shift 2.2s linear infinite",
-                      textShadow: "0 1px 2px rgba(20, 40, 60, 0.45)",
-                      boxShadow: "0 0 14px rgba(122, 231, 255, 0.8)",
-                    }
-                  : { background: `var(--gui-reveal-chip-bg, ${meta.color})`, boxShadow: `inset 0 0 0 var(--gui-reveal-chip-ring, 0px) ${meta.color}` }),
-              }}
-            >
-              {meta.label}
-            </span>
-            <span
-              style={{
-                fontSize: "max(11px, var(--gui-min-text, 0px))",
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                color: "#1A1410",
-                background: "#FFD166",
-                borderRadius: 999,
-                padding: "4px 11px",
-              }}
-            >
-              NEW!
-            </span>
-            {sizeCm !== null && <span style={{ fontSize: 13, color: "var(--gui-reveal-soft, rgba(255, 253, 245, 0.85))", fontWeight: 600 }}>{sizeCm} cm</span>}
-            <span
-              style={{
-                fontSize: "max(11px, var(--gui-min-text, 0px))",
-                fontFamily: "var(--gui-mono, 'IBM Plex Mono', monospace)",
-                color: "var(--gui-reveal-soft, rgba(255,255,255,0.65))",
-                background: "var(--gui-reveal-odds-bg, rgba(255,255,255,0.1))",
-                borderRadius: 999,
-                padding: "4px 10px",
-              }}
-            >
-              Base odds · 1 in {odds}
-            </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap", opacity: developed ? 1 : 0, transition: "opacity 300ms ease-out 80ms" }}>
+            <RarityBadge rarity={fish.rarity} style={holo ? { background: HOLO_GRADIENT, backgroundSize: "300% 100%", animation: "tsi-holo-shift 2.2s linear infinite" } : undefined}>{meta.label}</RarityBadge>
+            {sizeCm !== null && <span style={{ fontSize: "var(--gui-text-sm, 13px)", fontWeight: 700, color: "var(--gui-ink-2, #6b5843)" }}>{sizeCm} cm</span>}
+            {odds !== null && <span style={{ fontSize: "var(--gui-text-xs, 12px)", color: "var(--gui-muted, #726450)" }}>Base odds · 1 in {odds}</span>}
           </div>
-          {oneLinerFor(fish.key) && <p style={{ margin: "10px 0 0", fontSize: 13, fontStyle: "italic", color: "var(--gui-reveal-soft, rgba(255, 253, 245, 0.85))", textAlign: "center" }}>“{oneLinerFor(fish.key)}”</p>}
-          {recipe && <p style={{ margin: "8px 0 0", fontSize: 13, fontWeight: 700, color: "var(--gui-reveal-ink, #FFFDF5)", textAlign: "center" }} data-testid="reveal-recipe">You learned a recipe: {recipe}</p>}
+          {line && <p style={{ margin: "8px 0 0", fontSize: "var(--gui-text-sm, 13px)", fontStyle: "italic", color: "var(--gui-ink-2, #6b5843)", opacity: developed ? 1 : 0, transition: "opacity 300ms ease-out 160ms" }} data-testid="catch-one-liner">“{line}”</p>}
+          {recipe && <p style={{ margin: "6px 0 0", fontSize: "var(--gui-text-sm, 13px)", fontWeight: 800, color: "var(--gui-sage, #426b5b)" }} data-testid="reveal-recipe">You learned a recipe: {recipe}</p>}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+            <Button size="sm" variant="secondary" onClick={next}>{developed ? "Continue" : "Show me"}</Button>
+          </div>
         </div>
       </div>
-
-      {/* Server-broadcast-style banner (legendary+) — becomes a real
-          global announcement when multiplayer lands */}
-      {landed && cfg.doubleFlash && (
-        <div
-          style={{
-            position: "absolute",
-            top: 64,
-            left: "50%",
-            transform: "translateX(-50%)",
-            padding: "9px 22px",
-            borderRadius: 999,
-            fontFamily: "var(--gui-mono, 'IBM Plex Mono', monospace)",
-            fontSize: 12,
-            fontWeight: 700,
-            letterSpacing: "0.06em",
-            color: "#FFFDF5",
-            textShadow: "0 1px 2px rgba(20, 30, 40, 0.5)",
-            background: holo ? HOLO_GRADIENT : `linear-gradient(90deg, ${meta.color}, ${meta.color}CC)`,
-            backgroundSize: holo ? "300% 100%" : undefined,
-            animation: holo
-              ? "tsi-reveal-banner 420ms cubic-bezier(0.34, 1.56, 0.64, 1), tsi-holo-shift 2.2s linear infinite"
-              : "tsi-reveal-banner 420ms cubic-bezier(0.34, 1.56, 0.64, 1)",
-            boxShadow: `0 4px 24px ${holo ? "#5EE7F7" : meta.color}66`,
-            whiteSpace: "nowrap",
-          }}
-        >
-          {meta.label.toUpperCase()} CATCH: {fish.name}{sizeCm !== null ? `, ${sizeCm} cm` : ""}
-        </div>
-      )}
-
-      <button type="button" onClick={finish} aria-label="Close reveal" style={{ position: "absolute", top: 24, right: 24, background: "#FFFDF5", color: "#4A4034", border: "1px solid #E8DFC8", borderRadius: "var(--gui-reveal-radius, 8px)", padding: "8px 12px", minHeight: "var(--gui-reveal-tap, auto)", fontSize: 12, fontWeight: "var(--gui-reveal-weight, 400)" }}>
-        Close · Esc
-      </button>
-      <button type="button" onClick={skip} disabled={stage === "flash"} style={{ position: "absolute", bottom: 36, left: "50%", transform: "translateX(-50%)", padding: "10px 18px", borderRadius: "var(--gui-reveal-radius, 10px)", border: "1px solid #E8DFC8", background: "#FFFDF5", color: "#4A4034", minHeight: "var(--gui-reveal-tap, auto)", fontSize: 13, fontWeight: 600 }}>
-        {landed ? "Continue" : "Reveal catch"}
-      </button>
-
       <style>{`
-        @keyframes tsi-reveal-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
+        @keyframes tsi-catch-in {
+          0% { opacity: 0; transform: translateY(26px) scale(0.96); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
         }
-        @keyframes tsi-reveal-spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+        @keyframes tsi-catch-develop {
+          0% { transform: scale(0.82) rotate(-6deg); }
+          60% { transform: scale(1.12) rotate(3deg); }
+          100% { transform: scale(1) rotate(0deg); }
         }
-        @keyframes tsi-reveal-flash {
-          0% { opacity: 0; }
-          18% { opacity: 1; }
-          100% { opacity: 0; }
-        }
-        @keyframes tsi-reveal-land {
-          0% { transform: scale(1.35); }
-          100% { transform: scale(1); }
-        }
-        @keyframes tsi-reveal-bob {
-          0%, 100% { translate: 0 0; }
-          50% { translate: 0 -10px; }
+        @keyframes tsi-catch-wiggle {
+          0%, 100% { transform: rotate(-4deg) translateY(0); }
+          50% { transform: rotate(4deg) translateY(-3px); }
         }
         @keyframes tsi-holo-shift {
           0% { background-position: 0% 50%; }
           100% { background-position: 300% 50%; }
         }
-        @keyframes tsi-reveal-minipop {
-          0% { opacity: 0; }
-          30% { opacity: 1; }
-          100% { opacity: 0; }
-        }
-        @keyframes tsi-reveal-ring {
-          0% { opacity: 0.9; transform: scale(0.3); }
-          100% { opacity: 0; transform: scale(2.4); }
-        }
-        @keyframes tsi-reveal-banner {
-          0% { opacity: 0; transform: translateX(-50%) translateY(-18px); }
-          100% { opacity: 1; transform: translateX(-50%) translateY(0); }
+        /* At the foot of the screen under the catch you hold up (Animal Crossing's text box); on touch, the HUD's lane
+           above the stick and buttons. */
+        .tsi-catch-card { bottom: 36px; }
+        @media (pointer: coarse) { .tsi-catch-card { bottom: var(--hud-lane-bottom, 120px); } }
+        @media (prefers-reduced-motion: reduce) {
+          [data-catch-card] { animation-duration: 1ms !important; }
+          [data-catch-card] img { animation: none !important; }
         }
       `}</style>
     </div>

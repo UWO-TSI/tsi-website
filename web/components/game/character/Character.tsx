@@ -570,7 +570,7 @@ function HeldItem({ puppet, motion, view: { url, hold, fit } }: { puppet: Puppet
   }, [model, puppet, grip]);
   useFrame((_, delta) => { age.current += delta; poseHeld(model, puppet.current, grip, hold, age.current, delta); });
   // The rod carries its fishing: the bobber, the line and the catch of this avatar's own cast.
-  return hold === "rod" ? <FishingRig motion={motion} rod={model} /> : null;
+  return hold === "rod" ? <FishingRig motion={motion} rod={model} hands={puppet.sockets} /> : null;
 }
 /** Module scope (the react compiler forbids writing through hook values): pop out, hide where put away, ease to the use grip. */
 function poseHeld(model: THREE.Object3D, clip: ClipName | null, grip: Grip, hold: HoldKind, age: number, delta: number) {

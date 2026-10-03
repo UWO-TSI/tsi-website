@@ -13,8 +13,11 @@
  * Settings can turn it off, fishingPrefs.ts) runs from the tip to the bobber's eye: hanging slack and swaying with the
  * world's wind as it floats, tight and humming while a fish pulls, twanging slack when one gets away; a thin ribbon
  * kept about a pixel wide at any distance. The landing is announced for the local player (tsi:fish-splash, after
- * the frame: the overlay starts the wait on it). When the cast ends the bobber comes home to the tip (the state's
- * owner clears the cast after HOME_S).
+ * the frame: the overlay starts the wait on it). A catch comes out of the water at the bobber in a crown and flies to
+ * the angler: held up in both hands at the chin, side on to the camera (the cast's showOff, Hold up my catch), or
+ * turning over its head; when its card closes it is tucked away into the bag. The species' model loads while the
+ * fish is on the line. When the cast ends the bobber comes home to the tip (the state's owner clears the cast after
+ * HOME_S).
  *
  * Character mounts this inside the rod's held item and steps the puppet first (priority -1), so the tip read here is
  * this frame's. It only reads the cast; refs only in the frame loop, nothing allocated per frame.
@@ -23,6 +26,8 @@ import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Html, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import type { CharacterMotion } from "@/lib/game/character/clips";
 import { HOME_S, bobberOnWater, flightAt, flightTime, releaseAfter, type BobberPose, type FishingState } from "@/lib/game/fishingRig";
 import { LINE_POINTS, lineCurve, lineTarget, type LineLook } from "@/lib/game/fishingLine";
@@ -43,6 +48,15 @@ const EYE = new THREE.Vector3(0, 0.118, 0);
 /** How far the bobber hangs below the tip while you wind up (u), and the line's width on screen (drawing-buffer pixels). */
 const DANGLE = 0.34, LINE_PX = 1.2;
 const UP = new THREE.Vector3(0, 1, 0);
+/** A catch's flight from the water to the angler, and its tuck into the bag when its card closes (s). */
+const CATCH_FLY_S = 0.45, TUCK_S = 0.32;
+/**
+ * Holding a catch up: the pipeline's fish hang along their own +y with the back toward -z (art: the dump's calibration),
+ * so this lays the length across the hands (x), the back up, the flank to the camera.
+ */
+const HOLD = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, -1, 0)));
+/** A catch's length in the world by its size: small fish read small, the giants big, all of them holdable. */
+const catchLength = (cm: number | null) => Math.min(1.1, Math.max(0.5, 0.45 + 0.05 * Math.sqrt(cm ?? 30)));
 
 interface Rig {
   bobber: THREE.Object3D; line: THREE.Mesh; linePos: THREE.BufferAttribute; lineNormal: THREE.BufferAttribute; curve: Float32Array;
@@ -58,6 +72,35 @@ interface Rig {
   /** The line's look now, eased toward the beat's. */
   look: LineLook; want: LineLook;
   axis: THREE.Vector3; lean: THREE.Quaternion; wobble: THREE.Quaternion; euler: THREE.Euler;
+  /** The catch: its holder in the world, the species model loaded for it (its length across), and where it flew from. */
+  fish: THREE.Group; fishUrl: string | null; fishModel: THREE.Object3D | null; fishLength: number; fishFrom: THREE.Vector3; fishTo: THREE.Vector3; fishQ: THREE.Quaternion;
+  /** The catch is out of the water (shown, until it is tucked away). */
+  fishOut: boolean;
+}
+
+const fishLoader = new GLTFLoader();
+const fishScenes = new Map<string, Promise<THREE.Object3D>>();
+/** A species' model, loaded once (the fish GLBs need no decoders). */
+function loadFish(url: string): Promise<THREE.Object3D> {
+  let p = fishScenes.get(url);
+  if (!p) {
+    p = fishLoader.loadAsync(url).then(g => g.scene);
+    fishScenes.set(url, p);
+    p.catch(() => fishScenes.delete(url));
+  }
+  return p;
+}
+/** A catch ready to hold: a clone of the species (a skinned clone for the dump's rigged fish), calibrated, centred. */
+function prepareFish(scene: THREE.Object3D, url: string, raw: boolean): { root: THREE.Object3D; length: number } {
+  const inner = tagLookClasses(cloneSkeleton(scene), url), calib = new THREE.Group(), root = new THREE.Group();
+  calib.add(inner);
+  if (raw) calib.rotation.x = Math.PI / 2; // the dump's raw exports: the game calibration (they come in 10x, z forward)
+  calib.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(calib), size = box.getSize(new THREE.Vector3());
+  calib.position.copy(box.getCenter(new THREE.Vector3())).negate();
+  root.add(calib);
+  inner.traverse(o => { o.castShadow = true; o.userData.sunCaster = "dynamic"; o.frustumCulled = false; });
+  return { root, length: Math.max(size.x, size.y, size.z, 1e-3) };
 }
 
 /**
@@ -98,12 +141,13 @@ function makeLine() {
   return { line, pos, nor };
 }
 
-export default function FishingRig({ motion, rod }: { motion: RefObject<CharacterMotion>; rod: THREE.Object3D }) {
+export default function FishingRig({ motion, rod, hands }: { motion: RefObject<CharacterMotion>; rod: THREE.Object3D; hands: { R: THREE.Object3D; L: THREE.Object3D } }) {
   const scene = useThree(s => s.scene);
   const { scene: model } = useGLTF(BOBBER_URL);
   const particles = useMoveParticles();
   const tipLocal = useMemo(() => rodTip(rod), [rod]);
   const bangRef = useRef<HTMLDivElement>(null);
+  const headRef = useRef<THREE.Group>(null);
   const rig = useMemo<Rig>(() => {
     const bobber = tagLookClasses(model.clone(true), BOBBER_URL);
     bobber.name = "Bobber";
@@ -116,18 +160,24 @@ export default function FishingRig({ motion, rod }: { motion: RefObject<Characte
       dangle: new THREE.Vector3(), danglePrev: new THREE.Vector3(), tip: new THREE.Vector3(), eye: new THREE.Vector3(),
       pose: { x: 0, y: 0, z: 0, under: 0 }, bangShown: false, bobAt: 0, bobs: 0, wakeAt: 0, wakes: 0, wakeFrom: new THREE.Vector3(),
       look: { sag: 0.02, sway: 0, wave: 0, hum: 0 }, want: { sag: 0.02, sway: 0, wave: 0, hum: 0 },
-      axis: new THREE.Vector3(), lean: new THREE.Quaternion(), wobble: new THREE.Quaternion(), euler: new THREE.Euler() };
+      axis: new THREE.Vector3(), lean: new THREE.Quaternion(), wobble: new THREE.Quaternion(), euler: new THREE.Euler(),
+      fish: Object.assign(new THREE.Group(), { name: "Catch", visible: false }), fishUrl: null, fishModel: null, fishLength: 1,
+      fishFrom: new THREE.Vector3(), fishTo: new THREE.Vector3(), fishQ: new THREE.Quaternion(), fishOut: false };
   }, [model]);
   useEffect(() => {
-    scene.add(rig.bobber, rig.line);
+    scene.add(rig.bobber, rig.line, rig.fish);
     return () => {
-      scene.remove(rig.bobber, rig.line);
+      scene.remove(rig.bobber, rig.line, rig.fish);
       rig.line.geometry.dispose();
       (rig.line.material as THREE.Material).dispose();
     };
   }, [scene, rig]);
-  useFrame((state, dt) => step(rig, motion.current, rod, tipLocal, bangRef.current, particles.pool, state.camera, state.gl.domElement.height, Math.min(dt, 0.1), performance.now()));
-  return <group position={[0, BANG_Y, 0]}>
+  useFrame((state, dt) => {
+    const now = performance.now();
+    step(rig, motion.current, rod, tipLocal, bangRef.current, particles.pool, state.camera, state.gl.domElement.height, Math.min(dt, 0.1), now);
+    showCatch(rig, motion.current, hands, headRef.current, now);
+  });
+  return <group ref={headRef} position={[0, BANG_Y, 0]}>
     {/* The bite's "!" over this avatar in the paper kit (components/gui): shown and popped from the frame loop, no React. */}
     <Html center zIndexRange={[30, 0]} style={{ pointerEvents: "none" }}>
       <div ref={bangRef} aria-hidden style={BANG_STYLE}>!</div>
@@ -162,6 +212,7 @@ function step(r: Rig, m: Readonly<CharacterMotion> | null, rod: THREE.Object3D, 
   r.last.copy(r.at);
   const t = (now - f.since) / 1000;
   if (f.phase !== r.phase) {
+    const prev = r.phase;
     r.phase = f.phase;
     if (f.phase === "bite") fishBites(pool, r.at.x, f.waterY, r.at.z);
     if (f.phase === "reel") { r.wakeAt = 0; r.wakeFrom.copy(r.at); }
@@ -170,7 +221,8 @@ function step(r: Rig, m: Readonly<CharacterMotion> | null, rod: THREE.Object3D, 
       if (f.snapped) fishFlees(pool, r.at.x, f.waterY, r.at.z, f.pull >= 0 ? -f.dirZ : f.dirZ, f.pull >= 0 ? f.dirX : -f.dirX);
       else bobberNibbled(pool, r.at.x, f.waterY, r.at.z, 99);
     }
-    if (f.phase === "reelin") r.homeFrom.copy(r.at);
+    // Home from where it was; after a catch it came out with the fish (it is already at the hands).
+    if (f.phase === "reelin") r.homeFrom.copy(prev === "landed" ? r.tip : r.at);
     r.bobAt = BOB_EVERY;
   }
   if (f.nibbleAt !== r.nibble) { r.nibble = f.nibbleAt; if (r.landed) bobberNibbled(pool, r.at.x, f.waterY, r.at.z, ++r.nibbles); }
@@ -260,6 +312,68 @@ const TILT = { lean: 0, wx: 0, wz: 0 };
 function floatTilt(f: FishingState, t: number, now: number) {
   const since = (now - f.nibbleAt) / 1000, tug = since >= 0 && since < 0.42 ? Math.sin((since / 0.42) * Math.PI) : 0;
   TILT.lean = 0.1 + 0.5 * tug; TILT.wx = 0.06 * Math.sin(t * 2.1); TILT.wz = 0.06 * Math.sin(t * 1.7 + 1);
+}
+
+const handR = new THREE.Vector3(), handL = new THREE.Vector3(), facing = new THREE.Quaternion(), head = new THREE.Vector3();
+/**
+ * The catch (module scope, see step): its model loads while it's on the line; once landed it flies from the water to
+ * the angler's hands (held up, side on) or over the head (turning), and when its card closes it is tucked away.
+ */
+function showCatch(r: Rig, m: Readonly<CharacterMotion> | null, hands: { R: THREE.Object3D; L: THREE.Object3D }, headGroup: THREE.Group | null, now: number) {
+  const f = m?.fishing ?? null;
+  const url = f?.catchModel ?? null;
+  if (url !== r.fishUrl) {
+    // A new catch on the line: drop the last one, load this one (off the frame: it joins the holder when ready).
+    r.fishUrl = url;
+    if (r.fishModel) { r.fish.remove(r.fishModel); r.fishModel = null; }
+    if (url) {
+      const raw = !!f?.catchRaw;
+      void loadFish(url).then(sceneOf => {
+        if (r.fishUrl !== url) return;
+        const { root, length } = prepareFish(sceneOf, url, raw);
+        r.fishModel = root; r.fishLength = length;
+        r.fish.add(root);
+      }).catch(() => { /* a model that fails to load: the card still says what it was */ });
+    }
+  }
+  const landed = f?.phase === "landed", tucking = f?.phase === "reelin" && r.fishOut;
+  if (!f || !r.fishModel || !headGroup || (!landed && !tucking)) {
+    r.fish.visible = false;
+    if (f?.phase !== "reelin") r.fishOut = false;
+    return;
+  }
+  const t = (now - f.since) / 1000;
+  if (landed && !r.fishOut) { r.fishOut = true; r.fishFrom.copy(r.at).setY(f.waterY); }
+  headGroup.getWorldQuaternion(facing);
+  headGroup.getWorldPosition(head);
+  const len = catchLength(f.catchCm), scale = len / r.fishLength;
+  if (f.showOff) {
+    // Between the hands at the chin, a little out in front, laid across them with its flank to the camera.
+    hands.R.getWorldPosition(handR); hands.L.getWorldPosition(handL);
+    r.fishTo.addVectors(handR, handL).multiplyScalar(0.5);
+    r.fishTo.x += Math.sin(m!.yaw) * 0.05; r.fishTo.z += Math.cos(m!.yaw) * 0.05;
+    r.fishQ.copy(facing).multiply(HOLD);
+  } else {
+    // Over the head, turning slowly and bobbing (the hold-up off).
+    r.fishTo.copy(head).y -= 0.2;
+    r.fishTo.y += Math.sin(t * 3) * 0.04;
+    r.fishQ.setFromAxisAngle(UP, t * 1.6);
+  }
+  if (landed) {
+    // Out of the water and into the hands (or up over the head) on an arc, growing to its size.
+    const k = Math.min(1, t / CATCH_FLY_S), e = 1 - (1 - k) * (1 - k);
+    r.fish.position.lerpVectors(r.fishFrom, r.fishTo, e);
+    r.fish.position.y += Math.sin(k * Math.PI) * 0.7;
+    r.fish.quaternion.copy(r.fishQ);
+    r.fish.scale.setScalar(scale * (0.55 + 0.45 * e));
+  } else {
+    // Tucked away into the bag as the card closes: in toward the chest, shrinking.
+    const k = Math.min(1, t / TUCK_S);
+    r.fish.position.lerp(head.set(head.x, head.y - 1.3, head.z), k * 0.35);
+    r.fish.scale.setScalar(scale * (1 - k) * (1 - k));
+    if (k >= 1) { r.fishOut = false; r.fish.visible = false; return; }
+  }
+  r.fish.visible = true;
 }
 
 const pull = new THREE.Vector3();

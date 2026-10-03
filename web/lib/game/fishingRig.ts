@@ -41,6 +41,8 @@ export interface FishingState {
   snapped: boolean;
   /** The catch shown once landed (the species' model; `raw` dump exports take the game calibration) and its size. */
   catchModel: string | null; catchRaw: boolean; catchCm: number | null;
+  /** Shown off in both hands while its card is up (the angler's Hold up my catch, fishingPrefs.ts), or over the head. */
+  showOff: boolean;
 }
 
 /** The water the scene fishes in (PeacefulLayer sets its island's): where a throw may land, the surface's height there. */
@@ -58,7 +60,7 @@ export function newCast(local: boolean, fromX: number, fromZ: number, spotX: num
   return {
     local, phase: "charging", since: now, power: 0, fromX, fromZ, spotX, spotZ,
     landX: spotX, landZ: spotZ, waterY: 0, dirX: 0, dirZ: 1, rate: 1, seed: 0, nibbleAt: Number.NEGATIVE_INFINITY,
-    pull: 0, tension: 0, reeling: false, reeled: 0, snapped: false, catchModel: null, catchRaw: false, catchCm: null,
+    pull: 0, tension: 0, reeling: false, reeled: 0, snapped: false, catchModel: null, catchRaw: false, catchCm: null, showOff: true,
   };
 }
 

@@ -116,7 +116,7 @@ async function cast({ hold = 600, win = true, revealMs = 7000 } = {}) {
   await page.waitForTimeout(140);
   await reelBot(win);
   await page.mouse.down(); await page.waitForTimeout(60); await page.mouse.up();
-  await page.waitForFunction(() => /caught|missed|revealing/.test(document.querySelector("[data-fishing-overlay]")?.getAttribute("data-fishing-overlay") ?? "") || !!document.querySelector('[aria-label="New catch"]'), null, { timeout: 30000 }).catch(() => log("no result"));
+  await page.waitForFunction(() => /caught|missed|revealing/.test(document.querySelector("[data-fishing-overlay]")?.getAttribute("data-fishing-overlay") ?? "") || !!document.querySelector('[aria-label="New catch"], [data-catch-card]'), null, { timeout: 30000 }).catch(() => log("no result"));
   await page.waitForTimeout(revealMs);
 }
 
@@ -169,7 +169,8 @@ const SCENES = {
     const keys = (process.env.FISH ?? "fish_dace,fish_carp,fish_black_bass,fish_catfish,fish_golden_koi").split(",");
     const repeat = process.env.REPEAT === "1";
     for (const key of keys) {
-      await world(`at=${BANK}&hud=clean`, { cam: { yaw: 0.75, pitch: 0.48, zoom: 0.66 }, fish: key, sizeCm: 42, owned: repeat ? [key] : [], wait: 8000 });
+      await world(`at=${BANK}&hud=clean`, { cam: { yaw: 0.75, pitch: 0.48, zoom: 0.66 }, fish: key, sizeCm: 42, owned: repeat ? [key] : [], wait: 8000,
+        ...(process.env.EXTRA ? { extra: JSON.parse(process.env.EXTRA) } : {}) });
       await watchBeats();
       const rec = await recorder();
       await cast({ hold: 600, win: true, revealMs: 7500 });

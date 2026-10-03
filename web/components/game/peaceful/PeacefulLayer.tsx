@@ -2,12 +2,11 @@
 
 /**
  * Peaceful loop in one island scene: forage/bug nodes, the scene's water for
- * casts (the bobber and the line are drawn on the angler's rod: character/
- * FishingRig.tsx), the catch FX, and the proximity rule the scene's E prompt uses.
+ * casts (the bobber, the line and the catch are drawn on the angler's rod:
+ * character/FishingRig.tsx), and the proximity rule the scene's E prompt uses.
  */
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
-import FishCatchFX from "../FishCatchFX";
 import VillageLife, { type NodeSpec } from "./VillageLife";
 import BagFullNote from "./BagFullNote";
 import { gridFishingWaterHeight } from "@/lib/game/fishingWater";
@@ -39,10 +38,8 @@ export default function PeacefulLayer({ map, nodes, moment, member, player, grou
   const isWater = useMemo(() => (x: number, z: number) => !isGroundAtWorld(map, x, z), [map]);
   // Every angler's throw here lands on this water, never past the far bank (lib/game/fishingCast.ts).
   useEffect(() => setSceneWater(isWater, waterHeight), [isWater, waterHeight]);
-  const playerRef = player as React.MutableRefObject<THREE.Vector3>;
   return <>
     <VillageLife nodes={nodes.forage} bugNodes={nodes.bugs} moment={moment} member={member} player={player} ground={ground} highTier={highTier} active={active} treeModels={treeModels} />
-    <FishCatchFX playerPosRef={playerRef} />
     <BagFullNote ground={ground} />
   </>;
 }

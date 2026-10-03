@@ -25,6 +25,8 @@ const PAIRS: [string, string, number][] = [
   ["ink-strong", "coral", 4.5], ["ink-strong", "gold", 4.5], ["ink-strong", "orange", 4.5], ["ink", "teal-pill", 4.5], ["ink", "highlight", 4.5], ["ink", "stripe-a", 4.5],
   ["success", "success-soft", 4.5], ["danger", "danger-soft", 4.5], ["warn", "warn-soft", 4.5], ["info", "info-soft", 4.5], ["ink", "sage-soft", 4.5],
   ["paper", "night", 4.5],
+  // Rarity badges: ink on every rarity colour (the catch card, the journal, the book).
+  ...["common", "uncommon", "rare", "epic", "legendary", "seaking"].map(r => ["ink-strong", `rarity-${r}`, 4.5] as [string, string, number]),
   // Large text only: the kit's dialogue ink (18 px bold and up).
   ["taupe", "paper", 3],
   // Non-text: the focus ring against every cream it sits on.
