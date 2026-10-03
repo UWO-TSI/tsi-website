@@ -7,11 +7,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Shield, ArrowLeft, Flag } from "lucide-react";
+import { Lock, ArrowLeft, Flag, MessageSquare } from "lucide-react";
 import { useUser } from "@/components/portal/UserContext";
 import { createClient } from "@/lib/supabase/client";
+import { Badge, Button, Card, ConfirmDialog, Empty, ErrorNote, Loading, Select, Toggle } from "@/components/gui";
 
 const PAGE_SIZE = 25;
+const PAGE = "mx-auto w-full max-w-6xl px-5 pt-6 pb-16 sm:px-8";
 
 interface ConvRow {
   id: string;
@@ -36,6 +38,7 @@ export default function AdminNPCConversationsPage() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [wipeTarget, setWipeTarget] = useState<ConvRow | null>(null);
 
   const [npcOptions, setNpcOptions] = useState<NPCOption[]>([]);
   const [userMap, setUserMap] = useState<Record<string, string>>({});
@@ -163,7 +166,7 @@ export default function AdminNPCConversationsPage() {
   }, [page, npcFilter, userQuery, dateFrom, dateTo, flaggedOnly]);
 
   useEffect(() => {
-     
+
     load();
   }, [load]);
 
@@ -183,14 +186,9 @@ export default function AdminNPCConversationsPage() {
     }
   };
 
+  // Asked first in the confirm dialog below (it can't be undone).
   const wipeMemory = async (npcId: string | null, userId: string | null) => {
     if (!npcId || !userId) return;
-    if (
-      !confirm(
-        "Wipe this user's memory of this NPC? They will greet each other as strangers next time. This cannot be undone.",
-      )
-    )
-      return;
     setBusyId(`${npcId}:${userId}`);
     try {
       await fetch("/api/npc/memories/wipe", {
@@ -217,72 +215,64 @@ export default function AdminNPCConversationsPage() {
 
   if (loading) {
     return (
-      <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
-        Loading...
-      </p>
+      <div className={PAGE}>
+        <Loading label="Opening the chat log…" />
+      </div>
     );
   }
 
   if (tier > 2) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <Shield
-            size={48}
-            className="mx-auto text-[var(--color-text-muted)]/20 mb-4"
-          />
-          <h2 className="text-lg font-heading font-bold text-[var(--color-text-primary)] mb-2">
-            Access Denied
-          </h2>
-          <p className="text-sm text-[var(--color-text-muted)]">
-            T1/T2 clearance required for moderation.
-          </p>
-        </div>
+      <div className={`${PAGE} flex min-h-[60vh] items-center justify-center`}>
+        <Empty icon={<Lock size={32} />} title="Admins only">
+          Resident chats are only open to the club’s admins.
+        </Empty>
       </div>
     );
   }
 
+  const nameOf = (r: ConvRow) => ({
+    npc: (r.npc_id && npcMap[r.npc_id]) || "This resident",
+    user: (r.user_id && userMap[r.user_id]) || "this member",
+  });
+
   return (
-    <div>
-      <div className="mb-2">
-        <Link
-          href="/student/dashboard/admin"
-          className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-        >
-          <ArrowLeft size={12} />
-          Back to Admin
-        </Link>
-      </div>
+    <div className={PAGE}>
+      <Link
+        href="/student/dashboard/admin"
+        className="mb-2 inline-flex items-center gap-1.5 text-sm font-bold text-[var(--gui-ink-2)] hover:text-[var(--gui-ink-strong)]"
+      >
+        <ArrowLeft size={16} aria-hidden />
+        Back to admin
+      </Link>
 
       <div className="mb-6">
-        <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
-          NPC Conversation Moderation
-        </h1>
-        <p className="text-sm text-[var(--color-text-muted)] mt-1">
-          Review flagged NPC conversations; resolve, wipe memory, or delete.
+        <h1 className="text-2xl font-extrabold text-[var(--gui-ink-strong)]">Resident chats</h1>
+        <p className="mt-1 text-sm text-[var(--gui-muted)]">
+          Chats between members and the island’s residents. Mark a flagged one resolved, or wipe what a resident remembers about someone.
         </p>
       </div>
 
-      <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4 mb-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          <FilterField label="NPC">
-            <select
+      <Card className="mb-4">
+        <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <FilterField label="Resident">
+            <Select
+              className="w-full"
               value={npcFilter}
               onChange={(e) => {
                 setNpcFilter(e.target.value);
                 setPage(0);
               }}
-              className={inputCls}
             >
-              <option value="all">All NPCs</option>
+              <option value="all">All residents</option>
               {npcOptions.map((n) => (
                 <option key={n.id} value={n.id}>
                   {n.display_name}
                 </option>
               ))}
-            </select>
+            </Select>
           </FilterField>
-          <FilterField label="User name">
+          <FilterField label="Member">
             <input
               type="text"
               value={userQuery}
@@ -290,7 +280,7 @@ export default function AdminNPCConversationsPage() {
                 setUserQuery(e.target.value);
                 setPage(0);
               }}
-              placeholder="display_name..."
+              placeholder="Part of their name"
               className={inputCls}
             />
           </FilterField>
@@ -316,27 +306,21 @@ export default function AdminNPCConversationsPage() {
               className={inputCls}
             />
           </FilterField>
-          <FilterField label="Flagged only">
-            <label className="inline-flex items-center gap-2 h-[38px]">
-              <input
-                type="checkbox"
-                checked={flaggedOnly}
-                onChange={(e) => {
-                  setFlaggedOnly(e.target.checked);
-                  setPage(0);
-                }}
-                className="w-4 h-4"
-              />
-              <span className="text-xs text-[var(--color-text-soft)]">
-                Show flagged only
-              </span>
-            </label>
-          </FilterField>
+          <Toggle
+            checked={flaggedOnly}
+            onChange={(on) => {
+              setFlaggedOnly(on);
+              setPage(0);
+            }}
+          >
+            Flagged only
+          </Toggle>
         </div>
         {filtersActive ? (
           <div className="mt-3 flex justify-end">
-            <button
-              type="button"
+            <Button
+              size="sm"
+              variant="quiet"
               onClick={() => {
                 setNpcFilter("all");
                 setUserQuery("");
@@ -345,38 +329,37 @@ export default function AdminNPCConversationsPage() {
                 setFlaggedOnly(true);
                 setPage(0);
               }}
-              className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-accent-cyan)] transition-colors"
             >
               Reset filters
-            </button>
+            </Button>
           </div>
         ) : null}
-      </div>
+      </Card>
 
       {fetchError ? (
-        <p className="mb-4 p-3 rounded-md text-xs border bg-[var(--gui-danger-soft)] border-[var(--gui-danger)]/30 text-[var(--gui-danger)]">
-          {fetchError}
-        </p>
+        <ErrorNote className="mb-4" onRetry={() => void load()}>
+          The chats didn’t load ({fetchError}).
+        </ErrorNote>
       ) : null}
 
       {rows === null ? (
-        <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
-          Loading conversations...
-        </p>
+        <Loading label="Getting the chats…" />
       ) : rows.length === 0 ? (
-        <p className="text-center py-8 text-sm text-[var(--color-text-muted)]">
-          No conversations match the current filters.
-        </p>
+        fetchError ? null : (
+          <Empty icon={<MessageSquare size={32} />} title={filtersActive ? "No chats match these filters" : "Nothing flagged right now"}>
+            {filtersActive ? "Try other dates, or reset the filters." : "Flagged chats wait here for a look."}
+          </Empty>
+        )
       ) : (
-        <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-x-auto">
+        <Card style={{ padding: 0 }} className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[var(--glass-border)]">
+              <tr className="bg-[var(--gui-paper-warm)]">
                 <Th>Time</Th>
-                <Th>User</Th>
-                <Th>NPC</Th>
-                <Th>User message</Th>
-                <Th>NPC response</Th>
+                <Th>Member</Th>
+                <Th>Resident</Th>
+                <Th>Member said</Th>
+                <Th>Resident replied</Th>
                 <Th>Status</Th>
                 <Th>Actions</Th>
               </tr>
@@ -391,81 +374,81 @@ export default function AdminNPCConversationsPage() {
                 const showNpcFull = expanded[npcKey];
                 const userText = showUserFull || !userLong
                   ? r.user_message
-                  : `${r.user_message.slice(0, 60)}...`;
+                  : `${r.user_message.slice(0, 60)}…`;
                 const npcText = showNpcFull || !npcLong
                   ? r.npc_response
-                  : `${r.npc_response.slice(0, 60)}...`;
+                  : `${r.npc_response.slice(0, 60)}…`;
                 return (
                   <tr
                     key={r.id}
-                    className={`border-b border-[var(--glass-border)]/40 last:border-b-0 ${
+                    className={`border-t-2 border-dashed border-[var(--gui-paper-edge)] align-top ${
                       r.flagged ? "bg-[var(--gui-danger-soft)]" : ""
                     }`}
                   >
-                    <td className="px-3 py-3 text-xs text-[var(--color-text-soft)] whitespace-nowrap">
+                    <td className="px-3 py-3 whitespace-nowrap text-[var(--gui-ink-2)]">
                       {formatDateTime(r.created_at)}
                     </td>
-                    <td className="px-3 py-3 text-[var(--color-text-primary)] text-xs">
+                    <td className="px-3 py-3 font-bold text-[var(--gui-ink)]">
                       {r.user_id ? (userMap[r.user_id] ?? "—") : "—"}
                     </td>
-                    <td className="px-3 py-3 text-[var(--color-text-primary)] text-xs">
+                    <td className="px-3 py-3 font-bold text-[var(--gui-ink)]">
                       {r.npc_id ? (npcMap[r.npc_id] ?? "—") : "—"}
                     </td>
-                    <td className="px-3 py-3 text-xs text-[var(--color-text-soft)] max-w-[20ch]">
+                    <td className="max-w-[24ch] px-3 py-3 text-[var(--gui-ink)]">
                       <span>{userText}</span>
                       {userLong ? (
                         <button
                           type="button"
+                          aria-expanded={!!showUserFull}
                           onClick={() =>
                             setExpanded((p) => ({
                               ...p,
                               [userKey]: !p[userKey],
                             }))
                           }
-                          className="ml-2 text-xs uppercase tracking-wider text-[var(--color-accent-cyan)] hover:underline"
+                          className="ml-2 font-bold text-[var(--gui-sage)] hover:underline"
                         >
-                          {showUserFull ? "less" : "more"}
+                          {showUserFull ? "Show less" : "Show more"}
                         </button>
                       ) : null}
                     </td>
-                    <td className="px-3 py-3 text-xs text-[var(--color-text-soft)] max-w-[20ch]">
+                    <td className="max-w-[24ch] px-3 py-3 text-[var(--gui-ink)]">
                       <span>{npcText}</span>
                       {npcLong ? (
                         <button
                           type="button"
+                          aria-expanded={!!showNpcFull}
                           onClick={() =>
                             setExpanded((p) => ({
                               ...p,
                               [npcKey]: !p[npcKey],
                             }))
                           }
-                          className="ml-2 text-xs uppercase tracking-wider text-[var(--color-accent-cyan)] hover:underline"
+                          className="ml-2 font-bold text-[var(--gui-sage)] hover:underline"
                         >
-                          {showNpcFull ? "less" : "more"}
+                          {showNpcFull ? "Show less" : "Show more"}
                         </button>
                       ) : null}
                     </td>
                     <td className="px-3 py-3">
                       {r.flagged ? (
-                        <span className="inline-flex items-center gap-1 text-xs uppercase px-2 py-0.5 rounded text-[var(--gui-danger)] bg-[var(--gui-danger-soft)]">
-                          <Flag size={10} /> Flagged
-                        </span>
+                        <Badge tone="danger">
+                          <Flag size={12} aria-hidden /> Flagged
+                        </Badge>
                       ) : (
-                        <span className="text-xs uppercase text-[var(--color-text-muted)]">
-                          —
-                        </span>
+                        <span className="text-[var(--gui-ink-2)]">Not flagged</span>
                       )}
                     </td>
                     <td className="px-3 py-3">
-                      <div className="flex flex-col gap-1.5 items-start">
+                      <div className="flex flex-col items-start gap-1.5">
                         {r.flagged ? (
                           <button
                             type="button"
                             disabled={busyId === r.id}
                             onClick={() => resolveRow(r.id)}
-                            className="text-xs uppercase tracking-wider text-[var(--gui-success)] hover:underline disabled:opacity-40"
+                            className="whitespace-nowrap font-bold text-[var(--gui-success)] hover:underline disabled:opacity-40 disabled:no-underline"
                           >
-                            Mark Resolved
+                            Mark resolved
                           </button>
                         ) : null}
                         <button
@@ -475,10 +458,10 @@ export default function AdminNPCConversationsPage() {
                             !r.npc_id ||
                             !r.user_id
                           }
-                          onClick={() => wipeMemory(r.npc_id, r.user_id)}
-                          className="text-xs uppercase tracking-wider text-[var(--color-accent-cyan)] hover:underline disabled:opacity-40"
+                          onClick={() => setWipeTarget(r)}
+                          className="whitespace-nowrap font-bold text-[var(--gui-danger)] hover:underline disabled:opacity-40 disabled:no-underline"
                         >
-                          Wipe Memory
+                          Wipe memory
                         </button>
                       </div>
                     </td>
@@ -487,32 +470,52 @@ export default function AdminNPCConversationsPage() {
               })}
             </tbody>
           </table>
-        </div>
+        </Card>
       )}
 
       <div className="mt-4 flex items-center justify-between gap-3">
-        <p className="text-xs text-[var(--color-text-muted)]">
+        <p className="text-sm text-[var(--gui-muted)]">
           Page {page + 1}
         </p>
         <div className="flex gap-2">
-          <button
-            type="button"
+          <Button
+            size="sm"
+            variant="quiet"
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
-            className="px-3 py-1.5 border border-[var(--glass-border)] text-[var(--color-text-primary)] text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            Prev
-          </button>
-          <button
-            type="button"
+            Previous
+          </Button>
+          <Button
+            size="sm"
+            variant="quiet"
             onClick={() => setPage((p) => p + 1)}
             disabled={!hasMore}
-            className="px-3 py-1.5 border border-[var(--glass-border)] text-[var(--color-text-primary)] text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             Next
-          </button>
+          </Button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={wipeTarget !== null}
+        title="Wipe this memory?"
+        confirmLabel="Wipe memory"
+        cancelLabel="Keep it"
+        danger
+        onCancel={() => setWipeTarget(null)}
+        onConfirm={() => {
+          const target = wipeTarget;
+          setWipeTarget(null);
+          if (target) void wipeMemory(target.npc_id, target.user_id);
+        }}
+      >
+        {wipeTarget && (
+          <p>
+            {nameOf(wipeTarget).npc} will forget everything about {nameOf(wipeTarget).user}. Next time they meet, they’ll greet each other as strangers. This can’t be undone.
+          </p>
+        )}
+      </ConfirmDialog>
     </div>
   );
 }
@@ -520,11 +523,11 @@ export default function AdminNPCConversationsPage() {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const inputCls =
-  "w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--glass-border)] rounded-md text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-cyan)] transition-colors";
+  "w-full min-h-11 rounded-[14px_12px_14px_13px] border-2 border-[var(--gui-paper-line)] bg-[var(--gui-paper-hi)] px-3 py-2 text-sm text-[var(--gui-ink)] placeholder:text-[var(--gui-muted)] focus:border-[var(--gui-sage)] transition-colors";
 
 function Th({ children }: { children: React.ReactNode }) {
   return (
-    <th className="text-left px-3 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
+    <th className="px-3 py-3 text-left text-xs font-extrabold whitespace-nowrap text-[var(--gui-ink-2)]">
       {children}
     </th>
   );
@@ -538,22 +541,16 @@ function FilterField({
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      <label className="block text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-bold text-[var(--gui-ink-2)]">
         {label}
-      </label>
+      </span>
       {children}
-    </div>
+    </label>
   );
 }
 
 function formatDateTime(iso: string): string {
   if (!iso) return "—";
-  const d = new Date(iso);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mi = String(d.getMinutes()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+  return new Date(iso).toLocaleString("en-CA", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Toronto" });
 }

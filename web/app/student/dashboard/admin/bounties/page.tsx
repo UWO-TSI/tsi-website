@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { X } from "lucide-react";
+import { Inbox, Skull } from "lucide-react";
+import { Amount } from "@/components/economy/Amount";
+import { Badge, Button, Card, Empty, ErrorNote, Field, Loading, Tabs, type BadgeTone } from "@/components/gui";
 
 interface PendingBounty {
   id: string;
@@ -30,6 +32,17 @@ interface SubmissionRow {
   bounty?: { title: string; pay_tc: number | null } | null;
   author?: { display_name: string } | null;
 }
+
+const PAGE = "mx-auto w-full max-w-6xl px-5 pt-6 pb-16 sm:px-8";
+
+const day = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Toronto" });
+
+/** A posting's status as a tag: waiting is honey, open is green, the rest plain. */
+const postingStatus = (status: string): { tone: BadgeTone; label: string } =>
+  status === "pending" ? { tone: "warn", label: "Pending" }
+    : status === "open" ? { tone: "success", label: "Open" }
+    : { tone: "neutral", label: status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ") };
 
 export default function AdminBountiesPage() {
   const [view, setView] = useState<"postings" | "submissions">("postings");
@@ -88,160 +101,128 @@ export default function AdminBountiesPage() {
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
-            {view === "postings" ? "Bounty Approval" : "Submission Review"}
-          </h1>
-          <p className="text-sm text-[var(--color-text-muted)] mt-1">
-            {view === "postings"
-              ? `${bounties.filter((b) => b.status === "pending").length} pending review`
-              : "Deliverables awaiting Gem payout decisions"}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex gap-1 bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md p-1">
-            {(["postings", "submissions"] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className={`px-3 py-1.5 rounded text-xs transition-all ${
-                  view === v
-                    ? "bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)]"
-                    : "text-[var(--color-text-muted)]"
-                }`}
-              >
-                {v.charAt(0).toUpperCase() + v.slice(1)}
-              </button>
-            ))}
-          </div>
-          {view === "postings" && (
-            <div className="flex gap-1 bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md p-1">
-              {(["pending", "all"] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`px-3 py-1.5 rounded text-xs transition-all ${
-                    filter === f
-                      ? "bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)]"
-                      : "text-[var(--color-text-muted)]"
-                  }`}
-                >
-                  {f.charAt(0).toUpperCase() + f.slice(1)}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+    <div className={PAGE}>
+      <div className="mb-4">
+        <h1 className="text-2xl font-extrabold text-[var(--gui-ink-strong)]">
+          {view === "postings" ? "Bounty approval" : "Submission review"}
+        </h1>
+        <p className="mt-1 text-sm text-[var(--gui-muted)]">
+          {view === "postings"
+            ? `${bounties.filter((b) => b.status === "pending").length} waiting for approval`
+            : "Delivered work waiting for a decision on its Gems"}
+        </p>
+      </div>
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <Tabs
+          label="Bounty admin"
+          value={view}
+          onChange={setView}
+          tabs={[
+            { id: "postings", label: "Postings" },
+            { id: "submissions", label: "Submissions" },
+          ]}
+        />
+        {view === "postings" && (
+          <Tabs
+            label="Which postings"
+            value={filter}
+            onChange={setFilter}
+            tabs={[
+              { id: "pending", label: "Pending" },
+              { id: "all", label: "All" },
+            ]}
+          />
+        )}
       </div>
 
       {view === "submissions" ? (
         <SubmissionsReview />
       ) : loading ? (
-        <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
-          Loading...
-        </p>
+        <Loading label="Getting the postings…" />
       ) : bounties.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-sm text-[var(--color-text-muted)]">
-            {filter === "pending"
-              ? "No bounties pending approval"
-              : "No bounties yet"}
-          </p>
-        </div>
+        <Empty icon={<Inbox size={32} />} title={filter === "pending" ? "Nothing waiting for approval" : "No bounties yet"}>
+          {filter === "pending"
+            ? "New postings wait here before they go up on the board."
+            : "Postings from partners and members show up here."}
+        </Empty>
       ) : (
         <div className="space-y-3">
-          {bounties.map((bounty) => (
-            <div
-              key={bounty.id}
-              className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-5"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
-                    {bounty.title}
-                  </h3>
-                  {bounty.client_name && (
-                    <p className="text-xs text-[var(--color-text-muted)]">
-                      Client: {bounty.client_name}
+          {bounties.map((bounty) => {
+            const status = postingStatus(bounty.status);
+            return (
+              <Card key={bounty.id} as="article">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="text-base font-extrabold text-[var(--gui-ink-strong)]">
+                      {bounty.title}
+                    </h3>
+                    {bounty.client_name && (
+                      <p className="text-sm text-[var(--gui-ink-2)]">
+                        For {bounty.client_name}
+                      </p>
+                    )}
+                    <p className="mt-0.5 text-sm text-[var(--gui-muted)]">
+                      Posted by {bounty.submitter?.display_name ?? "an unknown member"}
                     </p>
-                  )}
-                  <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                    Submitted by:{" "}
-                    {bounty.submitter?.display_name ?? "Unknown"}
-                  </p>
+                  </div>
+                  <Badge tone={status.tone}>{status.label}</Badge>
                 </div>
-                <span
-                  className={`text-xs uppercase px-2 py-0.5 rounded ${
-                    bounty.status === "pending"
-                      ? "text-[var(--color-brand-yellow)] bg-[var(--color-brand-yellow)]/10"
-                      : bounty.status === "open"
-                      ? "text-[var(--gui-success)] bg-[var(--gui-success-soft)]"
-                      : "text-[var(--color-text-muted)] bg-white/[0.05]"
-                  }`}
-                >
-                  {bounty.status}
-                </span>
-              </div>
 
-              <p className="text-xs text-[var(--color-text-secondary)] mb-3 line-clamp-3">
-                {bounty.description}
-              </p>
+                <p className="mb-3 line-clamp-3 text-sm text-[var(--gui-ink)]">
+                  {bounty.description}
+                </p>
 
-              <div className="flex items-center gap-4 text-xs text-[var(--color-text-muted)] mb-3">
-                {bounty.pay_cad && <span>${bounty.pay_cad} CAD</span>}
-                {bounty.pay_tc && <span>₮{bounty.pay_tc}</span>}
-                {bounty.deadline && (
-                  <span>
-                    Due: {new Date(bounty.deadline).toLocaleDateString()}
-                  </span>
-                )}
-              </div>
-
-              {bounty.tech_stack && bounty.tech_stack.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {bounty.tech_stack.map((tech) => (
-                    <span
-                      key={tech}
-                      className="text-xs text-[var(--color-accent-cyan)] bg-[var(--color-accent-cyan)]/10 px-2 py-0.5 rounded"
-                    >
-                      {tech}
+                <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--gui-ink-2)]">
+                  {bounty.pay_tc ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      Pays <Amount n={bounty.pay_tc} currency="gems" />
                     </span>
-                  ))}
+                  ) : null}
+                  {bounty.deadline && <span>Due {day(bounty.deadline)}</span>}
                 </div>
-              )}
 
-              {bounty.status === "pending" && (
-                <div className="flex items-center gap-2 pt-3 border-t border-[var(--glass-border)]">
-                  <span className="text-xs text-[var(--color-text-muted)] mr-2">
-                    Set difficulty:
-                  </span>
-                  {[1, 2, 3, 4, 5].map((d) => (
-                    <button
-                      key={d}
-                      onClick={() => approveBounty(bounty.id, d)}
-                      className="flex items-center gap-0.5 px-2 py-1 border border-[var(--glass-border)] rounded text-xs text-[var(--color-text-muted)] hover:text-[var(--color-brand-yellow)] hover:border-[var(--color-brand-yellow)]/30 transition-all"
-                      title={`Approve with ${d} skull difficulty`}
-                    >
-                      {Array.from({ length: d }).map((_, i) => (
-                        <span key={i} className="text-xs">
-                          ☠
+                {bounty.tech_stack && bounty.tech_stack.length > 0 && (
+                  <div className="mb-3 flex flex-wrap gap-1.5">
+                    {bounty.tech_stack.map((tech) => (
+                      <Badge key={tech}>{tech}</Badge>
+                    ))}
+                  </div>
+                )}
+
+                {bounty.status === "pending" && (
+                  <div className="flex flex-wrap items-center gap-2 border-t-2 border-dashed border-[var(--gui-paper-edge)] pt-3">
+                    <span className="mr-1 text-sm font-bold text-[var(--gui-ink-2)]">
+                      Approve at difficulty
+                    </span>
+                    {[1, 2, 3, 4, 5].map((d) => (
+                      <Button
+                        key={d}
+                        size="sm"
+                        variant="quiet"
+                        onClick={() => approveBounty(bounty.id, d)}
+                        aria-label={`Approve at difficulty ${d} of 5`}
+                        title={`Approve at difficulty ${d} of 5`}
+                      >
+                        <span className="inline-flex items-center gap-0.5" aria-hidden>
+                          {Array.from({ length: d }).map((_, i) => (
+                            <Skull key={i} size={14} />
+                          ))}
                         </span>
-                      ))}
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => rejectBounty(bounty.id)}
-                    className="ml-auto p-1.5 text-[var(--color-text-muted)] hover:text-[var(--gui-danger)] transition-colors"
-                    title="Reject"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+                      </Button>
+                    ))}
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      className="ml-auto"
+                      onClick={() => rejectBounty(bounty.id)}
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
@@ -255,11 +236,11 @@ export default function AdminBountiesPage() {
 // the write path is the T1-T3-gated review API, and middleware gates this
 // route to T1-T3 anyway.
 
-const SUB_STATUS_STYLE: Record<SubmissionRow["status"], string> = {
-  pending: "text-[var(--color-brand-yellow)] bg-[var(--color-brand-yellow)]/10",
-  approved: "text-[var(--gui-success)] bg-[var(--gui-success-soft)]",
-  rejected: "text-[var(--gui-danger)] bg-[var(--gui-danger-soft)]",
-  revision_requested: "text-[var(--color-accent-cyan)] bg-[var(--color-accent-cyan)]/10",
+const SUB_STATUS: Record<SubmissionRow["status"], { tone: BadgeTone; label: string }> = {
+  pending: { tone: "warn", label: "Pending" },
+  approved: { tone: "success", label: "Approved" },
+  rejected: { tone: "danger", label: "Rejected" },
+  revision_requested: { tone: "info", label: "Revision requested" },
 };
 
 function SubmissionsReview() {
@@ -312,7 +293,7 @@ function SubmissionsReview() {
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null;
-        setError(body?.error ?? `Review failed (${res.status})`);
+        setError(body?.error ?? `The review didn’t save (error ${res.status}).`);
         return;
       }
       setSubs((prev) =>
@@ -323,7 +304,7 @@ function SubmissionsReview() {
         )
       );
     } catch {
-      setError("Network error — try again.");
+      setError("Couldn’t reach the server. Try again.");
     } finally {
       setBusy(null);
     }
@@ -331,77 +312,61 @@ function SubmissionsReview() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex gap-1 bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md p-1">
-          {(["pending", "all"] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setSubFilter(f)}
-              className={`px-3 py-1.5 rounded text-xs transition-all ${
-                subFilter === f
-                  ? "bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)]"
-                  : "text-[var(--color-text-muted)]"
-              }`}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
-        </div>
-        {error && (
-          <p className="text-xs text-[var(--gui-danger)]">{error}</p>
-        )}
+      <div className="mb-4">
+        <Tabs
+          label="Which submissions"
+          value={subFilter}
+          onChange={setSubFilter}
+          tabs={[
+            { id: "pending", label: "Pending" },
+            { id: "all", label: "All" },
+          ]}
+        />
       </div>
+      {error && <ErrorNote className="sticky top-16 z-10 mb-4 shadow-[var(--gui-shadow-md)]">{error}</ErrorNote>}
 
       {loading ? (
-        <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
-          Loading...
-        </p>
+        <Loading label="Getting the submissions…" />
       ) : subs.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-sm text-[var(--color-text-muted)]">
-            {subFilter === "pending"
-              ? "No submissions awaiting review"
-              : "No submissions yet"}
-          </p>
-        </div>
+        <Empty icon={<Inbox size={32} />} title={subFilter === "pending" ? "Nothing waiting for review" : "No submissions yet"}>
+          {subFilter === "pending"
+            ? "Delivered work lands here for a decision."
+            : "Deliverables show up here once members send them."}
+        </Empty>
       ) : (
         <div className="space-y-3">
           {subs.map((sub) => (
-            <div
-              key={sub.id}
-              className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-5"
-            >
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
+            <Card key={sub.id} as="article">
+              <div className="mb-2 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="text-base font-extrabold text-[var(--gui-ink-strong)]">
                     {sub.bounty?.title ?? "Unknown bounty"}
                   </h3>
-                  <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                    {sub.author?.display_name ?? "Unknown"} ·{" "}
-                    {new Date(sub.created_at).toLocaleDateString()}
-                    {sub.bounty?.pay_tc ? ` · pays ₮${sub.bounty.pay_tc}` : ""}
+                  <p className="mt-0.5 text-sm text-[var(--gui-muted)]">
+                    {sub.author?.display_name ?? "Unknown"} · {day(sub.created_at)}
+                    {sub.bounty?.pay_tc ? (
+                      <> · pays <Amount n={sub.bounty.pay_tc} currency="gems" /></>
+                    ) : null}
                   </p>
                 </div>
-                <span
-                  className={`text-xs uppercase px-2 py-0.5 rounded ${SUB_STATUS_STYLE[sub.status]}`}
-                >
-                  {sub.status.replace("_", " ")}
-                </span>
+                <Badge tone={SUB_STATUS[sub.status]?.tone ?? "neutral"}>
+                  {SUB_STATUS[sub.status]?.label ?? sub.status}
+                </Badge>
               </div>
 
-              <p className="text-xs text-[var(--color-text-secondary)] mb-3 whitespace-pre-wrap">
+              <p className="mb-3 whitespace-pre-wrap text-sm text-[var(--gui-ink)]">
                 {sub.submission_text}
               </p>
 
               {(sub.attachment_urls?.length ?? 0) > 0 && (
-                <div className="flex flex-col gap-1 mb-3">
+                <div className="mb-3 flex flex-col gap-1">
                   {sub.attachment_urls!.map((url) => (
                     <a
                       key={url}
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-[var(--color-accent-cyan)] hover:underline truncate"
+                      className="truncate text-sm font-bold text-[var(--gui-teal-ink)] underline"
                     >
                       {url}
                     </a>
@@ -410,49 +375,51 @@ function SubmissionsReview() {
               )}
 
               {sub.reviewer_notes && sub.status !== "pending" && (
-                <p className="text-xs text-[var(--color-text-muted)] mb-3">
-                  Notes: {sub.reviewer_notes}
+                <p className="mb-3 text-sm text-[var(--gui-ink-2)]">
+                  <b className="font-extrabold">Notes:</b> {sub.reviewer_notes}
                 </p>
               )}
 
               {sub.status === "pending" && (
-                <div className="pt-3 border-t border-[var(--glass-border)]">
-                  <input
-                    type="text"
+                <div className="space-y-3 border-t-2 border-dashed border-[var(--gui-paper-edge)] pt-3">
+                  <Field
+                    label="Notes for the member"
+                    hint="Optional. They see these with your decision."
                     value={notes[sub.id] ?? ""}
                     onChange={(e) =>
                       setNotes((n) => ({ ...n, [sub.id]: e.target.value }))
                     }
-                    placeholder="Reviewer notes (optional, sent to the member)"
                     maxLength={2000}
-                    className="w-full mb-2 px-3 py-2 rounded text-xs bg-[var(--color-surface)] border border-[var(--glass-border)] text-[var(--color-text-primary)] outline-none"
                   />
-                  <div className="flex items-center gap-2">
-                    <button
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      size="sm"
                       onClick={() => review(sub, "approved")}
                       disabled={busy === sub.id}
-                      className="px-3 py-1.5 rounded text-xs text-[var(--gui-success)] bg-[var(--gui-success-soft)] hover:bg-[var(--gui-success-soft)] transition-all disabled:opacity-50"
                     >
-                      Approve + pay Gems
-                    </button>
-                    <button
+                      Approve and pay the Gems
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="quiet"
                       onClick={() => review(sub, "revision_requested")}
                       disabled={busy === sub.id}
-                      className="px-3 py-1.5 rounded text-xs text-[var(--color-accent-cyan)] bg-[var(--color-accent-cyan)]/10 hover:bg-[var(--color-accent-cyan)]/20 transition-all disabled:opacity-50"
                     >
-                      Request revision
-                    </button>
-                    <button
+                      Ask for a revision
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      className="ml-auto"
                       onClick={() => review(sub, "rejected")}
                       disabled={busy === sub.id}
-                      className="ml-auto px-3 py-1.5 rounded text-xs text-[var(--gui-danger)] hover:bg-[var(--gui-danger-soft)] transition-all disabled:opacity-50"
                     >
                       Reject
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
-            </div>
+            </Card>
           ))}
         </div>
       )}

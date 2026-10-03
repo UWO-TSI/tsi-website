@@ -4,6 +4,9 @@ import { use } from "react";
 import { AdminGate, useContentRow, useGoalSlugs } from "@/components/portal/ProgressionAdminShared";
 import QuestChapterEditor from "@/components/portal/QuestChapterEditor";
 import { normalizeChapter } from "@/lib/progression/chapters";
+import { ErrorNote, Loading } from "@/components/gui";
+
+const PAGE = "mx-auto w-full max-w-6xl px-5 pt-6 pb-16 sm:px-8";
 
 export default function EditChapterPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -11,9 +14,11 @@ export default function EditChapterPage({ params }: { params: Promise<{ id: stri
   const goalSlugs = useGoalSlugs();
   return (
     <AdminGate>
-      {loading ? <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">Loading...</p> : null}
-      {!loading && (error || !row) ? <p className="text-center py-8 text-sm text-[var(--gui-danger)]">{error ?? "Chapter not found"}</p> : null}
-      {row ? <QuestChapterEditor mode="edit" initial={normalizeChapter(row)} goalSlugs={goalSlugs} /> : null}
+      <div className={PAGE}>
+        {loading ? <Loading label="Opening the chapter…" /> : null}
+        {!loading && (error || !row) ? <ErrorNote>This chapter didn’t load ({error ?? "Chapter not found"}).</ErrorNote> : null}
+        {row ? <QuestChapterEditor mode="edit" initial={normalizeChapter(row)} goalSlugs={goalSlugs} /> : null}
+      </div>
     </AdminGate>
   );
 }

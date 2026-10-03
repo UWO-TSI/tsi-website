@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type CSSProperties } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/components/portal/UserContext";
 import Link from "next/link";
@@ -11,12 +11,13 @@ import {
   Swords,
   ShoppingBag,
   BarChart3,
-  Shield,
+  Lock,
   Vote,
   MessageSquareWarning,
 } from "lucide-react";
 import NPCSpendWidget from "@/components/portal/NPCSpendWidget";
 import GameContentIndex from "@/components/portal/GameContentIndex";
+import { Card, Empty } from "@/components/gui";
 
 interface Stats {
   totalMembers: number;
@@ -27,64 +28,76 @@ interface Stats {
   activeQuests: number;
 }
 
+/** The icon chip behind each tool: a soft fill with its ink. */
+const TONES: Record<string, CSSProperties> = {
+  sage: { background: "var(--gui-sage-soft)", color: "var(--gui-sage-deep)" },
+  warn: { background: "var(--gui-warn-soft)", color: "var(--gui-warn)" },
+  info: { background: "var(--gui-info-soft)", color: "var(--gui-info)" },
+  danger: { background: "var(--gui-danger-soft)", color: "var(--gui-danger)" },
+  success: { background: "var(--gui-success-soft)", color: "var(--gui-success)" },
+  butter: { background: "var(--gui-butter)", color: "var(--gui-ink-strong)" },
+};
+
 const adminSections = [
   {
     title: "Members",
-    description: "Manage member accounts, tiers, and teams",
-    icon: <Users size={20} />,
+    description: "Accounts, tiers and who’s a member",
+    icon: <Users size={22} aria-hidden />,
     href: "/student/dashboard/admin/members",
-    color: "var(--color-brand-blue)",
+    tone: "sage",
   },
   {
     title: "Announcements",
-    description: "Create and manage announcements and banners",
-    icon: <Megaphone size={20} />,
+    description: "Post news and banners for the club",
+    icon: <Megaphone size={22} aria-hidden />,
     href: "/student/dashboard/admin/announcements",
-    color: "var(--color-brand-yellow)",
+    tone: "warn",
   },
   {
     title: "Quests",
-    description: "Create quests and manage rewards",
-    icon: <Target size={20} />,
+    description: "Make quests and set their rewards",
+    icon: <Target size={22} aria-hidden />,
     href: "/student/dashboard/admin/quests",
-    color: "var(--color-accent-cyan)",
+    tone: "info",
   },
   {
     title: "Bounties",
-    description: "Approve and manage bounty submissions",
-    icon: <Swords size={20} />,
+    description: "Approve postings and review delivered work",
+    icon: <Swords size={22} aria-hidden />,
     href: "/student/dashboard/admin/bounties",
-    color: "#f87171",
+    tone: "butter",
   },
   {
     title: "Marketplace",
-    description: "Manage items, prices, and fulfillment",
-    icon: <ShoppingBag size={20} />,
+    description: "Items, prices and orders to hand over",
+    icon: <ShoppingBag size={22} aria-hidden />,
     href: "/student/dashboard/admin/marketplace",
-    color: "#a78bfa",
+    tone: "butter",
   },
   {
     title: "Analytics",
-    description: "View engagement, economy, and usage data",
-    icon: <BarChart3 size={20} />,
+    description: "Members, rewards and orders at a glance",
+    icon: <BarChart3 size={22} aria-hidden />,
     href: "/student/dashboard/admin/analytics",
-    color: "#34d399",
+    tone: "success",
   },
   {
     title: "Election",
-    description: "View presidential election results",
-    icon: <Vote size={20} />,
+    description: "Presidential election results",
+    icon: <Vote size={22} aria-hidden />,
     href: "/student/dashboard/admin/election",
-    color: "var(--color-accent-cyan)",
+    tone: "info",
   },
   {
-    title: "NPC Conversations",
-    description: "Moderation queue for flagged NPC chats",
-    icon: <MessageSquareWarning size={20} />,
+    title: "Resident chats",
+    description: "Flagged chats with the island’s residents",
+    icon: <MessageSquareWarning size={22} aria-hidden />,
     href: "/student/dashboard/admin/npc-conversations",
-    color: "#ef4444",
+    tone: "danger",
   },
 ];
+
+const PAGE = "mx-auto w-full max-w-6xl px-5 pt-6 pb-16 sm:px-8";
 
 export default function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -132,66 +145,48 @@ export default function AdminPage() {
 
   if (userTier > 2) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <Shield
-            size={48}
-            className="mx-auto text-[var(--color-text-muted)]/20 mb-4"
-          />
-          <h2 className="text-lg font-heading font-bold text-[var(--color-text-primary)] mb-2">
-            Access Denied
-          </h2>
-          <p className="text-sm text-[var(--color-text-muted)]">
-            T1/T2 clearance required for admin access.
-          </p>
-        </div>
+      <div className={`${PAGE} flex min-h-[60vh] items-center justify-center`}>
+        <Empty icon={<Lock size={32} />} title="Admins only">
+          The admin tools are for the club’s admins. If something here needs changing, ask one of them.
+        </Empty>
       </div>
     );
   }
 
   return (
-    <div>
+    <div className={PAGE}>
       <div className="mb-8">
-        <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
-          Admin Panel
-        </h1>
-        <p className="text-sm text-[var(--color-text-muted)] mt-1">
-          System management · T{userTier} access
+        <h1 className="text-2xl font-extrabold text-[var(--gui-ink-strong)]">Admin</h1>
+        <p className="mt-1 text-sm text-[var(--gui-muted)]">
+          Look after the members, the posts, the rewards and the island’s content.
         </p>
       </div>
 
       {/* Stats Overview */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+        <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-3">
           {[
             {
-              label: "Active Members",
+              label: "Active members",
               value: stats.activeMembers,
               total: stats.totalMembers,
             },
             {
-              label: "Open Bounties",
+              label: "Open bounties",
               value: stats.openBounties,
               total: stats.totalBounties,
             },
-            { label: "Active Quests", value: stats.activeQuests },
+            { label: "Active quests", value: stats.activeQuests },
           ].map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4"
-            >
-              <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
-                {stat.label}
-              </p>
-              <p className="text-2xl font-bold text-[var(--color-text-primary)]">
+            <Card key={stat.label}>
+              <p className="text-sm font-bold text-[var(--gui-ink-2)]">{stat.label}</p>
+              <p className="mt-1 text-2xl font-extrabold text-[var(--gui-ink-strong)]">
                 {stat.value}
                 {stat.total !== undefined && (
-                  <span className="text-sm text-[var(--color-text-muted)] font-normal">
-                    /{stat.total}
-                  </span>
+                  <span className="ml-1.5 text-sm font-bold text-[var(--gui-muted)]">of {stat.total}</span>
                 )}
               </p>
-            </div>
+            </Card>
           ))}
         </div>
       )}
@@ -203,30 +198,29 @@ export default function AdminPage() {
 
       <GameContentIndex />
 
-      <h2 className="text-sm font-heading font-bold text-[var(--color-text-primary)] mb-3">Club portal</h2>
+      <h2 className="mb-3 text-base font-extrabold text-[var(--gui-ink-strong)]">Club portal</h2>
       {/* Admin Sections Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {adminSections.map((section) => (
           <Link
             key={section.title}
             href={section.href}
-            className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-5 hover:border-[var(--glass-border)] hover:shadow-[0_0_12px_rgba(0,47,167,0.1)] transition-all group"
+            className="block rounded-[18px] transition-transform hover:-translate-y-0.5"
           >
-            <div
-              className="w-10 h-10 rounded-md flex items-center justify-center mb-3"
-              style={{
-                backgroundColor: `color-mix(in srgb, ${section.color} 15%, transparent)`,
-                color: section.color,
-              }}
-            >
-              {section.icon}
-            </div>
-            <h3 className="text-sm font-heading font-bold text-[var(--color-text-primary)] mb-1">
-              {section.title}
-            </h3>
-            <p className="text-xs text-[var(--color-text-muted)]">
-              {section.description}
-            </p>
+            <Card className="h-full">
+              <span
+                className="mb-3 grid h-11 w-11 place-items-center rounded-[var(--gui-r-blob)]"
+                style={TONES[section.tone]}
+              >
+                {section.icon}
+              </span>
+              <h3 className="text-base font-extrabold text-[var(--gui-ink-strong)]">
+                {section.title}
+              </h3>
+              <p className="mt-1 text-sm text-[var(--gui-ink-2)]">
+                {section.description}
+              </p>
+            </Card>
           </Link>
         ))}
       </div>

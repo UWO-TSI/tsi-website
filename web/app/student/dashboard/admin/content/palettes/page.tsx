@@ -2,11 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Plus, Pencil } from "lucide-react";
-import { AdminGate } from "@/components/portal/ProgressionAdminShared";
+import { ArrowLeft, History, Palette, Plus, Pencil } from "lucide-react";
+import { AdminGate, buttonLinkCls } from "@/components/portal/ProgressionAdminShared";
 import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_PALETTES } from "@/data/content-defaults";
 import type { SeasonalPalette, PaletteColors } from "@/lib/content/types";
+import { Badge, Card, Empty, ErrorNote, Loading } from "@/components/gui";
+
+const PAGE = "mx-auto w-full max-w-6xl px-5 pt-6 pb-16 sm:px-8";
+const BACK = "mb-2 inline-flex items-center gap-1.5 text-sm font-bold text-[var(--gui-ink-2)] hover:text-[var(--gui-ink-strong)]";
+/** A link in the kit's small sage button. */
+const BUTTON_LINK = buttonLinkCls;
+const day = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Toronto" });
 
 function hasSupabaseEnv(): boolean {
   return Boolean(
@@ -55,81 +62,63 @@ export default function AdminContentPalettesPage() {
 
   return (
     <AdminGate>
-      <div>
-        <div className="mb-2">
-          <Link
-            href="/student/dashboard/admin"
-            className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-          >
-            <ArrowLeft size={12} />
-            Back to Admin
-          </Link>
-        </div>
+      <div className={PAGE}>
+        <Link href="/student/dashboard/admin" className={BACK}>
+          <ArrowLeft size={16} aria-hidden />
+          Back to admin
+        </Link>
 
-        <div className="mb-6 flex items-start justify-between gap-4">
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
-              Seasonal Palettes
+            <h1 className="text-2xl font-extrabold text-[var(--gui-ink-strong)]">
+              Seasonal palettes
             </h1>
-            <p className="text-sm text-[var(--color-text-muted)] mt-1">
-              {palettes?.length ?? 0} total
+            <p className="mt-1 text-sm text-[var(--gui-muted)]">
+              {palettes?.length ?? 0} palettes
             </p>
           </div>
           <Link
             href="/student/dashboard/admin/content/palettes/new"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] text-xs uppercase tracking-wider rounded-md hover:opacity-90 transition-opacity"
+            className={BUTTON_LINK}
+            data-size="sm"
           >
-            <Plus size={14} /> New Palette
+            <Plus size={16} aria-hidden /> New palette
           </Link>
         </div>
 
         {fetchError && (
-          <p className="mb-4 text-xs text-[var(--color-text-muted)]">
-            Supabase read failed ({fetchError}) — showing bundled defaults.
-          </p>
+          <ErrorNote className="mb-4">
+            Couldn’t read the palettes ({fetchError}), so these are the built-in defaults.
+          </ErrorNote>
         )}
 
         {palettes === null ? (
-          <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
-            Loading palettes...
-          </p>
+          <Loading label="Getting the palettes…" />
         ) : palettes.length === 0 ? (
-          <p className="text-center py-8 text-sm text-[var(--color-text-muted)]">
-            No palettes defined yet.
-          </p>
+          <Empty icon={<Palette size={32} />} title="No palettes yet">
+            Add one to give the island a new look for a season.
+          </Empty>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {palettes.map((p) => (
-              <div
+              <Card
                 key={p.id}
-                className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4"
-                style={{
-                  borderColor: p.active
-                    ? "var(--color-brand-blue)"
-                    : undefined,
-                }}
+                as="article"
+                style={p.active ? { boxShadow: "var(--gui-shadow-sm), inset 0 0 0 2.5px var(--gui-sage)" } : undefined}
               >
-                <div className="flex items-center justify-between mb-3">
+                <div className="mb-3 flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
+                    <h3 className="text-base font-extrabold text-[var(--gui-ink-strong)]">
                       {p.display_name}
                     </h3>
-                    <p className="text-xs text-[var(--color-accent-cyan)]">
+                    <p className="text-xs text-[var(--gui-muted)]">
                       {p.slug}
                     </p>
                   </div>
-                  <span
-                    className={`text-xs uppercase px-2 py-0.5 rounded ${
-                      p.active
-                        ? "text-[var(--color-brand-blue)] bg-[var(--color-brand-blue)]/10"
-                        : "text-[var(--color-text-muted)] bg-[var(--color-text-muted)]/10"
-                    }`}
-                  >
-                    {p.active ? "active" : "inactive"}
-                  </span>
+                  {p.active ? <Badge tone="sage">Active</Badge> : <Badge>Inactive</Badge>}
                 </div>
 
-                <div className="flex flex-wrap gap-2 mb-3">
+                <div className="mb-3 flex flex-wrap gap-3">
                   {swatchKeys.map((key) => {
                     const color =
                       (p.palette as unknown as Record<string, string> | null)?.[
@@ -139,51 +128,45 @@ export default function AdminContentPalettesPage() {
                     return (
                       <div
                         key={key}
-                        className="flex flex-col items-center gap-1"
+                        className="flex w-16 flex-col items-center gap-1 text-center"
                         title={`${key}: ${color}`}
                       >
                         <div
-                          className="w-8 h-8 rounded border border-[var(--glass-border)]"
+                          className="h-9 w-9 rounded-[10px] shadow-[inset_0_0_0_1.5px_var(--gui-paper-line)]"
                           style={{ backgroundColor: color }}
                         />
-                        <span className="text-xs text-[var(--color-text-muted)]">
-                          {key}
+                        <span className="text-xs leading-tight text-[var(--gui-ink-2)]">
+                          {key.replace(/_/g, " ")}
                         </span>
                       </div>
                     );
                   })}
                 </div>
 
-                <div className="text-xs text-[var(--color-text-muted)] space-y-0.5 mb-3">
+                <div className="mb-3 space-y-0.5 text-sm text-[var(--gui-ink-2)]">
                   <p>
-                    Start:{" "}
-                    {p.scheduled_start
-                      ? new Date(p.scheduled_start).toLocaleDateString()
-                      : "—"}
+                    Starts {p.scheduled_start ? day(p.scheduled_start) : "—"}
                   </p>
                   <p>
-                    End:{" "}
-                    {p.scheduled_end
-                      ? new Date(p.scheduled_end).toLocaleDateString()
-                      : "—"}
+                    Ends {p.scheduled_end ? day(p.scheduled_end) : "—"}
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-[var(--glass-border)]/40">
+                <div className="flex flex-wrap items-center gap-4 border-t-2 border-dashed border-[var(--gui-paper-edge)] pt-3 text-sm">
                   <Link
                     href={`/student/dashboard/admin/content/palettes/${p.id}/edit`}
-                    className="inline-flex items-center gap-1 text-xs text-[var(--color-accent-cyan)] hover:underline"
+                    className="inline-flex items-center gap-1 font-bold text-[var(--gui-sage)] hover:underline"
                   >
-                    <Pencil size={12} /> Edit
+                    <Pencil size={14} aria-hidden /> Edit
                   </Link>
                   <Link
                     href={`/student/dashboard/admin/content/palettes/${p.id}/history`}
-                    className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-accent-cyan)] transition-colors"
+                    className="inline-flex items-center gap-1 font-bold text-[var(--gui-ink-2)] hover:underline"
                   >
-                    History
+                    <History size={14} aria-hidden /> History
                   </Link>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         )}

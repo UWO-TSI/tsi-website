@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Plus, Trash2 } from "lucide-react";
+import { Package, Plus, ShoppingBag, Trash2 } from "lucide-react";
+import { Amount } from "@/components/economy/Amount";
+import { Badge, Button, Card, Empty, Field, IconButton, Loading, Select, Tabs, TextArea } from "@/components/gui";
 
 interface MarketplaceItem {
   id: string;
@@ -25,6 +27,16 @@ interface Order {
   user: { display_name: string } | null;
   item: { name: string } | null;
 }
+
+const PAGE = "mx-auto w-full max-w-6xl px-5 pt-6 pb-16 sm:px-8";
+
+const day = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Toronto" });
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " ");
+const orderStatus = (status: string) =>
+  status === "fulfilled" ? <Badge tone="success">Picked up</Badge>
+    : status === "pending_pickup" ? <Badge tone="warn">Waiting for pickup</Badge>
+    : <Badge>{capitalize(status)}</Badge>;
 
 export default function AdminMarketplacePage() {
   const [items, setItems] = useState<MarketplaceItem[]>([]);
@@ -100,75 +112,56 @@ export default function AdminMarketplacePage() {
     );
   }
 
-  const inputClass =
-    "w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]/50 focus:outline-none focus:border-[var(--color-brand-blue)] transition-all";
-
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className={PAGE}>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
-            Marketplace Admin
-          </h1>
+          <h1 className="text-2xl font-extrabold text-[var(--gui-ink-strong)]">Marketplace</h1>
+          <p className="mt-1 text-sm text-[var(--gui-muted)]">
+            What members can buy with Gems, and the orders to hand over.
+          </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex gap-1 bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md p-1">
-            {(["items", "orders"] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`px-3 py-1.5 rounded text-xs transition-all ${
-                  tab === t
-                    ? "bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)]"
-                    : "text-[var(--color-text-muted)]"
-                }`}
-              >
-                {t.charAt(0).toUpperCase() + t.slice(1)}
-              </button>
-            ))}
-          </div>
-          {tab === "items" && (
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="flex items-center gap-2 px-4 py-2 bg-[var(--color-brand-blue)] text-white text-sm rounded-md"
-            >
-              <Plus size={16} />
-              Add Item
-            </button>
-          )}
-        </div>
+        {tab === "items" && (
+          <Button size="sm" onClick={() => setShowForm(!showForm)} aria-expanded={showForm}>
+            <Plus size={16} aria-hidden />
+            Add an item
+          </Button>
+        )}
       </div>
+      <Tabs
+        label="Marketplace"
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { id: "items", label: "Items" },
+          { id: "orders", label: "Orders" },
+        ]}
+        className="mb-6"
+      />
 
       {showForm && tab === "items" && (
-        <form
-          onSubmit={createItem}
-          className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-5 mb-6 space-y-3"
-        >
-          <input
-            className={inputClass}
-            value={formData.name}
-            onChange={(e) =>
-              setFormData({ ...formData, name: e.target.value })
-            }
-            placeholder="Item name"
-            required
-          />
-          <textarea
-            className={`${inputClass} min-h-[60px]`}
-            value={formData.description}
-            onChange={(e) =>
-              setFormData({ ...formData, description: e.target.value })
-            }
-            placeholder="Description"
-          />
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-[var(--color-text-muted)]">
-                ₮ Price:
-              </span>
-              <input
+        <Card as="section" className="mb-6" aria-label="Add an item">
+          <form onSubmit={createItem} className="space-y-4">
+            <Field
+              label="Item name"
+              value={formData.name}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+              required
+            />
+            <TextArea
+              label="Description"
+              rows={3}
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+            />
+            <div className="grid items-end gap-4 sm:grid-cols-3">
+              <Field
+                label="Price in Gems"
                 type="number"
-                className={inputClass + " w-24"}
                 value={formData.price_tc}
                 onChange={(e) =>
                   setFormData({
@@ -177,14 +170,9 @@ export default function AdminMarketplacePage() {
                   })
                 }
               />
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-[var(--color-text-muted)]">
-                Stock:
-              </span>
-              <input
+              <Field
+                label="Stock"
                 type="number"
-                className={inputClass + " w-20"}
                 value={formData.stock}
                 onChange={(e) =>
                   setFormData({
@@ -193,114 +181,111 @@ export default function AdminMarketplacePage() {
                   })
                 }
               />
+              <label className="grid gap-2 text-base font-bold text-[var(--gui-ink)]">
+                Category
+                <Select
+                  className="w-full"
+                  value={formData.category}
+                  onChange={(e) =>
+                    setFormData({ ...formData, category: e.target.value })
+                  }
+                >
+                  <option value="merch">Merch</option>
+                  <option value="theme">Theme</option>
+                  <option value="accessory">Accessory</option>
+                  <option value="special">Special</option>
+                </Select>
+              </label>
             </div>
-            <select
-              className={inputClass + " w-auto"}
-              value={formData.category}
-              onChange={(e) =>
-                setFormData({ ...formData, category: e.target.value })
-              }
-            >
-              <option value="merch">Merch</option>
-              <option value="theme">Theme</option>
-              <option value="accessory">Accessory</option>
-              <option value="special">Special</option>
-            </select>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              className="px-4 py-2 bg-[var(--color-brand-blue)] text-white text-sm rounded-md"
-            >
-              Add Item
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowForm(false)}
-              className="px-4 py-2 text-[var(--color-text-muted)] text-sm"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" type="submit">
+                Add item
+              </Button>
+              <Button size="sm" variant="quiet" onClick={() => setShowForm(false)}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </Card>
       )}
 
       {loading ? (
-        <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
-          Loading...
-        </p>
+        <Loading label="Getting the marketplace…" />
       ) : tab === "items" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4"
-            >
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
-                  {item.name}
-                </h3>
-                <button
-                  onClick={() => deleteItem(item.id)}
-                  className="p-1 text-[var(--color-text-muted)] hover:text-[var(--gui-danger)] transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-              <p className="text-xs text-[var(--color-text-muted)] mb-2">
-                {item.description}
-              </p>
-              <div className="flex items-center gap-3 text-xs">
-                <span className="text-[var(--color-brand-yellow)]">
-                  ₮{item.price_tc}
-                </span>
-                <span className="text-[var(--color-text-muted)]">
-                  Stock: {item.stock}
-                </span>
-                <span className="text-[var(--color-accent-cyan)]">
-                  {item.category}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+        items.length === 0 ? (
+          <Empty icon={<ShoppingBag size={32} />} title="No items yet">
+            Add one and members can buy it with Gems.
+          </Empty>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {items.map((item) => (
+              <Card key={item.id} as="article">
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <h3 className="text-base font-extrabold text-[var(--gui-ink-strong)]">
+                    {item.name}
+                  </h3>
+                  <IconButton
+                    size="sm"
+                    label={`Delete ${item.name}`}
+                    onClick={() => deleteItem(item.id)}
+                    style={{ color: "var(--gui-danger)" }}
+                  >
+                    <Trash2 size={16} aria-hidden />
+                  </IconButton>
+                </div>
+                {item.description && (
+                  <p className="mb-3 text-sm text-[var(--gui-ink-2)]">
+                    {item.description}
+                  </p>
+                )}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+                  <span className="font-extrabold text-[var(--gui-ink-strong)]">
+                    <Amount n={item.price_tc} currency="gems" />
+                  </span>
+                  <span className="text-[var(--gui-muted)]">
+                    {item.stock} in stock
+                  </span>
+                  <Badge>{capitalize(item.category)}</Badge>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )
+      ) : orders.length === 0 ? (
+        <Empty icon={<Package size={32} />} title="No orders yet">
+          Orders show up here when members buy something.
+        </Empty>
       ) : (
         <div className="space-y-2">
           {orders.map((order) => (
-            <div
+            <Card
               key={order.id}
-              className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4 flex items-center justify-between"
+              className="flex flex-wrap items-center justify-between gap-3"
             >
               <div>
-                <p className="text-sm text-[var(--color-text-primary)]">
-                  {order.user?.display_name ?? "Unknown"} →{" "}
-                  {order.item?.name ?? "Unknown item"}
+                <p className="text-sm text-[var(--gui-ink)]">
+                  <b className="font-extrabold text-[var(--gui-ink-strong)]">
+                    {order.user?.display_name ?? "Unknown"}
+                  </b>{" "}
+                  bought {order.item?.name ?? "an item that’s gone now"}
                 </p>
-                <p className="text-xs text-[var(--color-text-muted)]">
-                  ₮{order.total_tc} ·{" "}
-                  {new Date(order.created_at).toLocaleDateString()}
+                <p className="text-sm text-[var(--gui-muted)]">
+                  <Amount n={order.total_tc} currency="gems" /> · {day(order.created_at)}
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span
-                  className={`text-xs uppercase px-2 py-0.5 rounded ${
-                    order.status === "fulfilled"
-                      ? "text-[var(--gui-success)] bg-[var(--gui-success-soft)]"
-                      : "text-[var(--color-brand-yellow)] bg-[var(--color-brand-yellow)]/10"
-                  }`}
-                >
-                  {order.status}
-                </span>
+                {orderStatus(order.status)}
                 {order.status === "pending_pickup" && (
-                  <button
+                  <Button
+                    size="sm"
+                    variant="secondary"
                     onClick={() => fulfillOrder(order.id)}
-                    className="px-3 py-1 text-xs text-[var(--color-accent-cyan)] border border-[var(--color-accent-cyan)]/30 rounded hover:bg-[var(--color-accent-cyan)]/10 transition-all"
                   >
-                    Mark Fulfilled
-                  </button>
+                    Mark as picked up
+                  </Button>
                 )}
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}
