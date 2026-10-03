@@ -15,7 +15,7 @@ import {
   FolderOpen,
   X,
 } from "lucide-react";
-import { Badge, Banner, Button, Card, Empty, ErrorNote, Field, IconButton, Loading, TextArea, Toggle, type BadgeTone } from "@/components/gui";
+import { Badge, Banner, Button, Card, ConfirmDialog, Empty, ErrorNote, Field, IconButton, Loading, TextArea, Toggle, type BadgeTone } from "@/components/gui";
 
 interface Portfolio {
   id: string;
@@ -143,6 +143,7 @@ export default function PortfolioPage() {
   const [displayName, setDisplayName] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<PortfolioItem | null>(null);
 
   const load = useCallback(async () => {
     const r = await loadPortfolio(createClient());
@@ -430,7 +431,7 @@ export default function PortfolioPage() {
                           <ExternalLink size={18} aria-hidden />
                         </a>
                       )}
-                      <IconButton label="Delete this item" size="sm" onClick={() => deleteItem(item.id)}>
+                      <IconButton label="Delete this item" size="sm" onClick={() => setConfirmDelete(item)}>
                         <Trash2 size={18} aria-hidden style={{ color: "var(--gui-danger)" }} />
                       </IconButton>
                     </div>
@@ -441,6 +442,21 @@ export default function PortfolioPage() {
           </div>
         </Card>
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        danger
+        title="Delete this item?"
+        confirmLabel="Delete"
+        cancelLabel="Keep it"
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => {
+          if (confirmDelete) void deleteItem(confirmDelete.id);
+          setConfirmDelete(null);
+        }}
+      >
+        “{confirmDelete?.title}” comes off your portfolio for good.
+      </ConfirmDialog>
     </div>
   );
 }
