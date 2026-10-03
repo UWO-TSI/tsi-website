@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { AREAS, FLAG, createPose, encodePose, inAreaBounds, type RosterEntry } from "./protocol";
 import { createRemoteSample, type RemoteChange } from "./types";
-import { MAX_BOTS, createLoopback, loopbackFromSearch } from "./loopback";
+import { createLoopback } from "./loopback";
+import { MAX_BOTS, botsFromSearch } from "./netStore";
 import { parseNetsim } from "./interp";
 
 /** A loopback on a hand-driven clock. */
@@ -16,9 +17,9 @@ function manual(bots: number, o: { seed?: number; netsim?: ReturnType<typeof par
 
 describe("?bots=N", () => {
   it("parses the count (and an optional seed)", () => {
-    expect(loopbackFromSearch("?bots=24")).toEqual({ bots: 24, seed: 1 });
-    expect(loopbackFromSearch("?bots=0&seed=9")).toEqual({ bots: 0, seed: 9 });
-    for (const s of ["", "?bots=", "?bots=-1", "?bots=2.5", `?bots=${MAX_BOTS + 1}`, "?bots=x"]) expect(loopbackFromSearch(s), s).toBeNull();
+    expect(botsFromSearch("?bots=24")).toEqual({ bots: 24, seed: 1 });
+    expect(botsFromSearch("?bots=0&seed=9")).toEqual({ bots: 0, seed: 9 });
+    for (const s of ["", "?bots=", "?bots=-1", "?bots=2.5", `?bots=${MAX_BOTS + 1}`, "?bots=x"]) expect(botsFromSearch(s), s).toBeNull();
   });
 });
 
