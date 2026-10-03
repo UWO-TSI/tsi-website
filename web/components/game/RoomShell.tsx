@@ -38,7 +38,9 @@ const ca = new THREE.Color(), cb = new THREE.Color();
 const mixHex = (x: string, y: string, t: number) => `#${ca.set(x).lerp(cb.set(y), Math.min(1, Math.max(0, t))).getHexString()}`;
 const shade = (x: string, k: number) => `#${ca.set(x).multiplyScalar(k).getHexString()}`;
 /** The far tree crowns through the glass, by season (winter's are under snow). */
-const FAR_TREES = { spring: "#86ad70", summer: "#5f8f58", autumn: "#c08548", winter: "#c9d3da" } as const;
+const FAR_TREES = { spring: "#86ad70", summer: "#5f8f58", autumn: "#c97a3e", winter: "#c9d3da" } as const;
+/** The evergreens among the far trees: every third crown keeps its green through autumn. */
+const EVERGREEN = "#6f8f5a";
 
 /**
  * One canvas for whichever room is showing: a lawn and hedge, tree crowns and far roofs softened into the haze, the
@@ -86,11 +88,16 @@ class OutsideView {
     }
     // The far side: tree crowns and roofs in the haze; then the hedge, then the lawn up to the wall.
     const lawn = snowCover > 0.5 ? "#e8eef2" : "#8fb27c", night = 0.25 + 0.75 * day;
-    const far = shade(mixHex(snowCover > 0.5 ? "#c9d3da" : FAR_TREES[season.season], light.fogColor, 0.45), night);
+    const far = shade(mixHex(snowCover > 0.5 ? "#c9d3da" : FAR_TREES[season.season], light.fogColor, 0.3), night);
+    const evergreen = season.season === "autumn" && snowCover <= 0.5 ? shade(mixHex(EVERGREEN, light.fogColor, 0.3), night) : far;
     const hedge = shade(snowCover > 0.5 ? "#b8c4c8" : "#557a4c", night * 0.95), ground = shade(mixHex(lawn, light.fogColor, 0.15), night);
     g.filter = "blur(3px)";
+    for (let i = 0; i < 14; i++) {
+      const x = (i * 41 + (i % 3) * 13) % (S + 40) - 20, r = 20 + ((i * 29) % 24);
+      g.fillStyle = i % 3 === 1 ? evergreen : far;
+      g.beginPath(); g.arc(x, Y(1.75 + ((i * 0.37) % 1) * 0.55), r, 0, Math.PI * 2); g.fill();
+    }
     g.fillStyle = far;
-    for (let i = 0; i < 14; i++) { const x = (i * 41 + (i % 3) * 13) % (S + 40) - 20, r = 20 + ((i * 29) % 24); g.beginPath(); g.arc(x, Y(1.75 + ((i * 0.37) % 1) * 0.55), r, 0, Math.PI * 2); g.fill(); }
     g.fillRect(0, Y(1.85), S, Y(1.1) - Y(1.85));
     // Two far roofs between the trees.
     g.fillStyle = shade(mixHex("#a46a52", light.fogColor, 0.5), night);

@@ -61,6 +61,7 @@ class LabelAtlas {
     this.canvas.width = COL_W * WINGS.length; this.canvas.height = ATLAS_H;
     this.texture = new THREE.CanvasTexture(this.canvas);
     this.texture.colorSpace = THREE.SRGBColorSpace;
+    this.texture.flipY = false; // the shell's UVs are glTF's (v down the image)
     this.texture.anisotropy = 4;
   }
   draw(byWing: Map<Wing, MuseumWing>, force = false) {

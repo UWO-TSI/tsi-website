@@ -79,7 +79,7 @@ export default function WharfShackInterior({
         <Piece name="barrel" position={[-3, 0, 2.9]} scale={0.1} />
         <Piece name="barrel" position={[-2.2, 0, 3.1]} rotY={0.7} scale={0.09} />
         <Piece name="cardboard-pile" position={[3, 0, 2.8]} rotY={-0.4} scale={0.1} />
-        <Piece name="yellow-message-mat" position={[0, 0.015, -3.4]} scale={0.11} />
+        <Piece name="yellow-message-mat" rotX={Math.PI} rotY={Math.PI} position={[0, 0.015, -3.4]} scale={0.11} />
       </Suspense>
 
       <InteriorPlayer

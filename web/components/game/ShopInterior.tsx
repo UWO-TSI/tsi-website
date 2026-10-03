@@ -71,7 +71,7 @@ export default function ShopInterior({
         <Piece name="cardboard-pile" position={[-4.0, 0, -4.0]} rotY={0.5} />
         <Piece name="shopping-cart" position={[3.9, 0, 0.9]} rotY={-0.9} scale={0.09} />
         {/* Exit mat */}
-        <Piece name="yellow-message-mat" position={[0, 0.015, -4.3]} scale={0.12} />
+        <Piece name="yellow-message-mat" rotX={Math.PI} rotY={Math.PI} position={[0, 0.015, -4.3]} scale={0.12} />
       </Suspense>
 
       {/* The shopkeeper behind the counter (lib/game/keepers.ts). */}

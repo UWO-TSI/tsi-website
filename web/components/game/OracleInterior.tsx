@@ -73,6 +73,7 @@ function bannerMaterial(): THREE.Material {
   });
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.flipY = false; // the shell's UVs are glTF's (v down the image)
   tex.anisotropy = 4;
   return new THREE.MeshStandardMaterial({ name: "Banners", map: tex, roughness: 0.95, side: THREE.DoubleSide });
 }
@@ -102,6 +103,7 @@ function roseMaterial(): THREE.Material {
   for (const r of [0.32, 0.5, 0.82]) { g.beginPath(); g.arc(c, c, R * r, 0, Math.PI * 2); g.stroke(); }
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.flipY = false;
   return (rose = new THREE.MeshBasicMaterial({ name: "RoseGlass", map: tex, color: "#c9c0d6" }));
 }
 let rose: THREE.MeshBasicMaterial | null = null;
@@ -198,7 +200,7 @@ export default function OracleInterior({
         {CANDLES.map(c => <Piece key={c.x} name="candle" position={[c.x, 0, c.z]} rotY={c.rotY} rotX={Math.PI} scale={c.scale} />)}
         <CandleFire wicks={WICKS} pools={CANDLE_POOLS} poolIntensity={10} />
         {/* exit mat */}
-        <Piece name="yellow-message-mat" position={[0, 0.015, -5.3]} scale={0.12} />
+        <Piece name="yellow-message-mat" rotX={Math.PI} rotY={Math.PI} position={[0, 0.015, -5.3]} scale={0.12} />
       </Suspense>
 
       {/* The Oracle keeper beside the altar (lib/game/keepers.ts); the quiz's reactions are hers to say. */}
