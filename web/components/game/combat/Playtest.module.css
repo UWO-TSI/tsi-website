@@ -14,7 +14,7 @@
 .seg button[aria-pressed="true"] { background: #426b5b; color: #fffdf0; box-shadow: 0 2px 0 #294b3c; }
 .note { margin: 0; font-size: 10px; line-height: 1.5; color: #607069; }
 
-.hud { position: absolute; left: 16px; bottom: var(--hud-lane-bottom); width: 290px; display: grid; gap: 8px; z-index: 12; pointer-events: none; }
+.hud { position: absolute; left: 16px; bottom: var(--hud-lane-bottom); width: 300px; display: grid; gap: 8px; z-index: 12; pointer-events: none; }
 .card { pointer-events: auto; box-sizing: border-box; padding: 10px 12px; border: 1px solid #5c746c40; border-radius: 14px 14px 5px 14px; background: #f8f7e9f2; color: #293e3b; box-shadow: 0 6px 0 #47625218, 0 12px 36px #29464118; font-size: 11px; line-height: 1.4; }
 .card kbd { display: inline-block; min-width: 1.6em; text-align: center; font: inherit; font-weight: 700; background: #e0e6d8; border: 1px solid #a7b59e; border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; }
 .meter { display: grid; gap: 3px; }
@@ -27,7 +27,7 @@
 .hits span[data-crit] { background: #f6dfb4; color: #6b4a10; }
 .noteRow { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
 .noteRow input { flex: 1; min-width: 0; min-height: 32px; padding: 4px 8px; border: 1px solid #94a796; border-radius: 5px; background: #fffdf3; font: inherit; color: #293e3b; }
-.keyCard { max-height: min(450px, calc(100vh - 330px)); overflow-y: auto; }
+.keyCard { max-height: min(480px, calc(100vh - 330px)); overflow-y: auto; }
 .keyCard header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; color: #4f625b; }
 .keyCard header b { color: #293e3b; }
 .keyCard header small { color: #4f625b; white-space: nowrap; }
@@ -37,6 +37,6 @@
 .keyCard dd > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #4f625b; font-size: 10px; line-height: 1.3; }
 .keyCard dd[data-short] > span:not(.combos) { -webkit-line-clamp: 1; }
 .keyCard .combos { display: flex; flex-wrap: wrap; gap: 3px; margin: 2px 0; -webkit-line-clamp: none; }
-.keyCard .combos i { padding: 0 5px; border-radius: 4px; background: #e9ecdf; font-style: normal; font-size: 10px; color: #293e3b; }
+.keyCard .combos i { padding: 0 4px; border-radius: 4px; background: #e9ecdf; font-style: normal; font-size: 10px; color: #293e3b; white-space: nowrap; }
 .keyCard dd em { font-style: normal; color: #7a5a14; }
 .keyCard dd[data-locked] b { opacity: 0.5; }
