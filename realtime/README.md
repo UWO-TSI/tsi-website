@@ -71,3 +71,43 @@ Outside production, `http://localhost:*`, `http://play.localhost:*` and
   card and never touch a database.
 - Everything is injectable: `createApp({ env, verify, loadCard, origins })`. The tests
   use a local `jose.generateKeyPair` JWKS and in-memory cards.
+
+## Deploy (Fly.io, Toronto)
+
+App `tethos-rt` in `yyz`, served as `wss://tethos-rt.fly.dev` (§1.3: not a `.tethos.ca`
+host, so the shared session cookie never reaches Fly). One `shared-cpu-1x` machine with
+512 MB that never auto-stops. The Docker build context is the repo root, trimmed by the
+root `.dockerignore` to `realtime/` and `web/lib/net/` (plus `web/lib/moderation/` from
+M2). Fly builds remotely; no local Docker is needed.
+
+Prerequisites: a Fly account with a card (row 297) and `fly auth login`; the
+`20261003170000_realtime_card` migration applied to production (the server refuses
+every real join without it).
+
+```sh
+# once
+fly apps create tethos-rt
+fly secrets set --app tethos-rt --stage \
+  SUPABASE_URL=https://rtbkrngsdbptbjhfbcud.supabase.co \
+  SUPABASE_SECRET_KEY="$(pbpaste)" \
+  ALLOWED_ORIGINS="https://play.tethos.ca,https://www.tethos.ca,https://tethos.ca,https://uwotsi.com,https://www.uwotsi.com" \
+  ALLOWED_ORIGIN_PATTERNS='^https://uwotsi[a-z0-9-]*-davids-projects-e31987e3\.vercel\.app$'
+
+# every deploy, from the repo root
+fly deploy . --config realtime/fly.toml --dockerfile realtime/Dockerfile --remote-only
+
+# check
+curl https://tethos-rt.fly.dev/health      # {"ok":true,"uptime":…,"rooms":…,"clients":…}
+fly logs --app tethos-rt
+```
+
+- `SUPABASE_SECRET_KEY` is a dedicated secret key named `realtime` (or the service role
+  key). Copy it to the clipboard first: `"$(pbpaste)"` keeps the value out of shell
+  history. `--stage` stores the secrets without restarting anything (there is no
+  machine before the first deploy).
+- `NODE_ENV=production` and `PORT=2567` come from `fly.toml`. Production refuses
+  `DEV_AUTH` and won't boot without the two Supabase secrets.
+- A deploy restarts the one process: each room broadcasts `sys:restart`, closes with
+  4010 and clients rejoin after a random 0–3 s. Deploy at quiet hours.
+- The web side reads `NEXT_PUBLIC_REALTIME_URL=wss://tethos-rt.fly.dev` (Preview first,
+  with `NEXT_PUBLIC_MEMBER_WORLD=open`, §8 M1 step 6).
