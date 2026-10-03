@@ -1,0 +1,76 @@
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import { balanceRowV2, balanceTable, bandV2, bossMinutes, bossMinutesV2, runV2, V2_TARGETS, type BalanceRowV2 } from "./balance";
+
+/**
+ * The Vanguard rows against the §3 band (design sheet §3; the harness in balance.ts): normal-run DPS by role against
+ * today's sixteen kits' median (the band every v2 kit is written against until wave 5 measures all sixteen v2 kits),
+ * the family inside ±25% of its own median, tanks taking the least on the sanctum, the ult filling in 60–90 s there.
+ */
+const KITS = ["guardian", "juggernaut", "monk", "assassin"] as const;
+const med = (v: number[]) => { const s = [...v].sort((a, b) => a - b); return (s[(s.length - 1) >> 1] + s[s.length >> 1]) / 2; };
+
+describe("the Vanguard family inside the §3 band", () => {
+  const seeds = 20;
+  const normal = KITS.map(k => balanceRowV2(k, "survive-circle", 1, seeds)), hard = KITS.map(k => balanceRowV2(k, "survive-sanctum", 1, seeds));
+  const todayRows = balanceTable("survive-circle", seeds), todayHard = balanceTable("survive-sanctum", seeds), today = med(todayRows.map(r => r.dps));
+  it("every kit clears both missions", () => {
+    for (const r of [...normal, ...hard]) expect(r.clearRate, `${r.subclass} ${r.medianClear}`).toBe(1);
+  });
+  it("each role in its range of today's median (tanks 0.80–0.95, damage 1.00–1.20, a little seed slack)", () => {
+    for (const r of normal) {
+      const x = r.dps / today, [lo, hi] = V2_TARGETS.roles[r.role as keyof typeof V2_TARGETS.roles];
+      expect(x, `${r.subclass} ${x.toFixed(2)}`).toBeGreaterThan(lo - 0.05);
+      expect(x, `${r.subclass} ${x.toFixed(2)}`).toBeLessThan(hi + 0.05);
+    }
+  });
+  it("the family within ±25% of its median DPS; sanctum damage taken within 3× of everyone's, the tanks taking the least; no outlier clears", () => {
+    const b = bandV2(normal, hard);
+    expect(b.dpsLow).toBeGreaterThan(V2_TARGETS.dpsBand[0]);
+    expect(b.dpsHigh).toBeLessThan(V2_TARGETS.dpsBand[1]);
+    const all = [...hard, ...todayHard].map(r => r.takenPerMin);
+    expect(Math.max(...hard.map(r => r.takenPerMin)) / Math.min(...all)).toBeLessThan(V2_TARGETS.takenSpread + 0.15); // seed slack
+    const taken = (k: string) => hard[KITS.indexOf(k as (typeof KITS)[number])].takenPerMin;
+    expect(Math.max(taken("guardian"), taken("juggernaut"))).toBeLessThan(Math.min(taken("monk"), taken("assassin")));
+    expect(Math.min(...normal.map(r => r.medianClear)) / med(todayRows.map(r => r.medianClear))).toBeGreaterThan(V2_TARGETS.clearFloor);
+    expect(Math.min(...hard.map(r => r.medianClear)) / med(todayHard.map(r => r.medianClear))).toBeGreaterThan(V2_TARGETS.clearFloor);
+  });
+  it("the ult fills in about 60–90 s on the sanctum and lands a real share of the damage", () => {
+    for (const r of hard) {
+      expect(r.ultFill, r.subclass).toBeGreaterThan(55);
+      expect(r.ultFill, r.subclass).toBeLessThan(95);
+      expect(r.ultShare, r.subclass).toBeGreaterThan(0.05);
+      expect(r.ultShare, r.subclass).toBeLessThan(0.16);
+    }
+  });
+  it("writes specs/evidence/classes/K-vanguard-balance.md when asked (WRITE_BALANCE=1)", () => {
+    if (!process.env.WRITE_BALANCE) return;
+    const n = 20, N = KITS.map(k => balanceRowV2(k, "survive-circle", 1, n)), H = KITS.map(k => balanceRowV2(k, "survive-sanctum", 1, n)), T = KITS.map(k => balanceRowV2(k, "survive-circle", 20, n));
+    const refRows = balanceTable("survive-circle", n), refHardRows = balanceTable("survive-sanctum", n);
+    const ref = med(refRows.map(r => r.dps)), refHard = refHardRows.map(r => r.takenPerMin), refClear = med(refRows.map(r => r.medianClear)), refClearHard = med(refHardRows.map(r => r.medianClear));
+    const b = bandV2(N, H), m1 = med(N.map(r => r.dps)), m20 = med(T.map(r => r.dps));
+    const boss = KITS.map(k => { const runs = Array.from({ length: 4 }, (_, i) => runV2(k, "boss", i + 1, 1, 600)); return { k, scripted: bossMinutesV2(k, 1, 4), rate: 1700 / (runs.reduce((s, r) => s + r.dealt, 0) / runs.reduce((s, r) => s + r.seconds, 0)) / 60, died: runs.filter(r => r.died).length }; });
+    const f = (r: BalanceRowV2, x: number) => `| ${r.subclass} | ${r.role} | ${r.mastery} | ${r.weapon} | ${Math.round(r.clearRate * 100)}% | ${Math.round(r.medianClear)} s | ${r.dps.toFixed(1)} | ${x.toFixed(2)}× | ${Math.round(r.takenPerMin)} | ${Math.round(r.minHp * 100)}% | ${Number.isFinite(r.ultFill) ? `${Math.round(r.ultFill)} s` : "–"} | ${(r.ultShare * 100).toFixed(1)}% |`;
+    const head = "| Kit | Role | Mastery | Weapon | Cleared | Median clear | DPS | × today's median | Taken / min | Lowest HP | Ult fill (median) | Ult share |\n|---|---|---|---|---|---|---|---|---|---|---|---|";
+    writeFileSync(join(__dirname, "../../../../specs/evidence/classes/K-vanguard-balance.md"), [
+      "# Classes v2, the Vanguard wave: balance", "",
+      `Generated by \`web/lib/game/combat/vanguardBalance.test.ts\` (\`WRITE_BALANCE=1\`), ${n} seeds a row, through the v2 bot (design sheet §3): level 10, the Vanguard preset, the tier-1 signature weapon, keys through the input layer, movement riders on 30% of casts, the Guardian's block timed as a parry by half the bot's tries, the ult at a full meter on two or more enemies or the boss. The band is measured against today's sixteen kits' median (normal ${ref.toFixed(1)} DPS; sanctum damage taken ${Math.round(Math.min(...refHard))}–${Math.round(Math.max(...refHard))} / min) until wave 5 measures all sixteen v2 kits together.`, "",
+      "## Hold the rune circle (normal)", "", head, ...N.map(r => f(r, r.dps / ref)), "",
+      "## Sanctum watch (× today's sanctum median DPS)", "", head, ...H.map(r => f(r, r.dps / med(refHardRows.map(x => x.dps)))), "",
+      "## Mastery 20 (every key, ranks II and III, the stat direction at 20), Hold the rune circle", "", head, ...T.map(r => f(r, r.dps / ref)), "",
+      "## Against the band", "",
+      "| Target | Measure | Vanguard |", "|---|---|---|",
+      `| Normal DPS within ±25% of the median | the family's own median ${m1.toFixed(1)} | ${b.dpsLow.toFixed(2)}–${b.dpsHigh.toFixed(2)}× |`,
+      `| Roles (tank 0.80–0.95×, damage 1.00–1.20× of today's median ${ref.toFixed(1)}) | | ${N.map(r => `${r.subclass} ${(r.dps / ref).toFixed(2)}× (${r.role})`).join(", ")} |`,
+      `| Sanctum damage taken spread at most 3× | family | ${b.spread.toFixed(2)}× (${H.map(r => `${r.subclass} ${Math.round(r.takenPerMin)}`).join(", ")}); against today's lowest ${Math.round(Math.min(...refHard))}: ${(Math.max(...H.map(r => r.takenPerMin)) / Math.min(...refHard)).toFixed(2)}× |`,
+      `| Tanks take the least on the sanctum | | ${H.filter(r => r.role === "tank").map(r => `${r.subclass} ${Math.round(r.takenPerMin)}`).join(", ")} vs damage ${H.filter(r => r.role !== "tank").map(r => `${r.subclass} ${Math.round(r.takenPerMin)}`).join(", ")} |`,
+      `| No clear under 0.7× the median | today's median clear: normal ${Math.round(refClear)} s, sanctum ${Math.round(refClearHard)} s | ${(Math.min(...N.map(r => r.medianClear)) / refClear).toFixed(2)}×, ${(Math.min(...H.map(r => r.medianClear)) / refClearHard).toFixed(2)}× |`,
+      `| Ult fill 60–90 s on the sanctum | median per kit | ${H.map(r => `${r.subclass} ${Math.round(r.ultFill)} s`).join(", ")} |`,
+      `| Ult 8–15% of a run's damage | sanctum | ${H.map(r => `${r.subclass} ${(r.ultShare * 100).toFixed(1)}%`).join(", ")} |`,
+      `| Mastery 20 median at most 1.2× mastery 1 | ${m20.toFixed(1)} / ${m1.toFixed(1)} | ${(m20 / m1).toFixed(2)}× (${KITS.map((_, i) => `${N[i].subclass} ${(T[i].dps / N[i].dps).toFixed(2)}×`).join(", ")}) |`,
+      `| The guardian 4–6 min | scripted fight, median of 4 (10 = the bot died first every time); minutes at the fight's damage rate | ${boss.map(x => `${x.k} ${x.scripted.toFixed(1)} (${x.rate.toFixed(1)} at its rate, ${x.died}/4 died)`).join(", ")} |`,
+      `| The guardian, formula measure (27 points in the stat, half the hits land) | the weapons' plain swings | ${["aegis-oak", "warhammer-timber", "handwraps-cotton", "tanto-plain"].map(w => `${w} ${bossMinutes(w).toFixed(1)}`).join(", ")} min |`, "",
+    ].join("\n"));
+  });
+});
