@@ -46,6 +46,16 @@ describe("world notification queue", () => {
     vi.advanceTimersByTime(9400); expect(entries).toEqual([]);
   });
 
+  it("a note asking you to sign in carries its link and stays up long enough to tap it (reachability §3)", () => {
+    let entries: readonly GameToast[] = [];
+    const queue = createToastQueue((next) => { entries = next; });
+    queue.push({ text: "Sign in to add a room." });
+    queue.push({ text: "Plot claimed." });
+    expect(entries.map((e) => e.signIn)).toEqual([true, false]);
+    expect(entries[0].duration).toBeGreaterThanOrEqual(6000);
+    vi.advanceTimersByTime(2600); expect(entries.map((e) => e.text)).toEqual(["Sign in to add a room."]);
+  });
+
   it("clears all timers on unmount and ignores later events", () => {
     const publish = vi.fn(); const queue = createToastQueue(publish);
     queue.push({ text: "one" }); queue.push({ text: "two" });

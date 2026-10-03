@@ -13,6 +13,7 @@ import { OracleError, answerBatch, finishReading, oracleStatus, startReading } f
 import type { AttemptView, OracleStatus, ResultView } from "@/lib/oracle/service";
 import type { TieBreaker } from "@/lib/oracle/items";
 import IslandSheet from "../IslandSheet";
+import { SignInText } from "@/components/gui";
 import { Amount } from "@/components/economy/Amount";
 import styles from "../DefaultIslandWorld.module.css";
 
@@ -103,7 +104,7 @@ export default function OracleQuizSheet({ open, onClose, onResult, onPath, embed
   const next = status?.next_reading;
   // E at the altar opens it and E closes it; the Oracle keeps its lavender (tone) in the kit's paper.
   return <IslandSheet open={open} title="The Oracle" onClose={onClose} embedded={embedded} className={embedded ? styles.oracleEmbedded : undefined} testId="oracle-quiz" keys="e" tone="oracle">
-    <div className={styles.keeperLine}><span className={styles.keeperFace} aria-hidden="true" /><p role="status">{note ?? (!reading && status?.family ? `You're ${status.family}. The light remembers.` : keeper)}</p></div>
+    <div className={styles.keeperLine}><span className={styles.keeperFace} aria-hidden="true" /><p role="status">{note ? <SignInText text={note} /> : !reading && status?.family ? `You're ${status.family}. The light remembers.` : keeper}</p></div>
     {ties && reading ? <>
       {ties.map(t => <fieldset key={t.id} className={styles.tieBreaker}><legend>{t.prompt}</legend>
         {t.options.map(o => <button key={o.pole} aria-pressed={tieAnswers[t.id] === o.pole} onClick={() => setTieAnswers(a => ({ ...a, [t.id]: o.pole }))}>{o.label}</button>)}

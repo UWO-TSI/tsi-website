@@ -55,9 +55,69 @@ export const RESIDENT_LOOKS: Record<string, Look> = {
     acc: { neck: "acc_scarf" }, colors: { top_cardigan: 12, bottom_long_skirt: 13, acc_scarf: 6 } }),
 };
 
+/**
+ * What each one says when you walk up and talk to them (specs/polish/reachability.md deliverable 1, row 123): two or
+ * three conversations each, a box per line, "[happy]" and the like for the face they make (lib/content/talk.ts). In
+ * their own tone (row 218); proposals for David's review (row 217, specs/polish/reachability-questions.md). The two
+ * seeded residents' are also seeded into npc_personas.talk (20261003161600_resident_talk), where admins edit them.
+ */
+export const RESIDENT_TALK: Record<string, string[][]> = {
+  wren: [
+    ["[happy] {name}! Good timing.", "I just pinned something new on the notice board. Or I meant to. It's in one of these pockets.", "Club goals are coming along, by the way. Everything you chip in shows on the monument."],
+    ["If you ever lose track of what's next, your Journal has it.", "[surprised] Oh! And check the mailbox. Letters from HQ go there. I write most of them. Sorry about the handwriting."],
+    ["[sleepy] I was up early sorting the volunteer sign-ups.", "[happy] Worth it, though. Somebody's always building something here."],
+  ],
+  mayor: [
+    ["[happy] Ah, {name}. Stay a while, if you like.", "This island started as one bench and an argument about where HQ should go.", "We were all wrong, of course. It went exactly where it needed to be."],
+    ["Every club goal you finish, the island remembers.", "[happy] The club monument grows a little each time. I check on it every morning."],
+    ["The light here changes with the seasons. Have you noticed?", "[surprised] Autumn's my favourite. The whole path goes gold."],
+  ],
+  shopkeeper: [
+    ["Welcome. Browse if you must.", "I keep the shelves in order of usefulness. Nobody has ever noticed.", "[sad] I've started to take it personally."],
+    ["Selling your catches? The rarer ones fetch more.", "That isn't me being generous. It's the rules.", "[happy] I'm a little generous."],
+    ["[sleepy] Inventory day. I counted the hoodies twice.", "There are the same number of hoodies. There are always the same number of hoodies."],
+  ],
+  curator: [
+    ["[happy] {name}! Found anything with wings lately?", "The museum's cases are waiting. The first of every find you bring me goes on show.", "With a label. I write very good labels."],
+    ["Did you see the dragonflies by the pond? Odonata. Lovely things.", "[surprised] They can fly backwards, you know. I think about that a lot."],
+    ["If you catch something you've never seen before, bring it to me before you sell it.", "Once it's in a case, it belongs to the whole club."],
+  ],
+  "wharf-keeper": [
+    ["Tide's turning. You can hear it if you listen.", "[happy] And the gulls are flying low. Rain by supper, mark my words."],
+    ["Boat's ready whenever you want to go home.", "Your island's out past the pier. Small, but the sunsets are all yours."],
+    ["[surprised] Caught anything big yet?", "Best fishing's off the end of the wharf at dawn. Don't tell anyone I told you."],
+  ],
+  "oracle-keeper": [
+    ["The crystal is quiet today. It's listening.", "What would you ask it, if you knew it would answer?"],
+    ["Which way will you grow, {name}? The temple can help you see it.", "[happy] Not decide. Only see. The deciding is yours."],
+    ["Stars are just old light. So are good friends.", "[sleepy] I was up late on the temple steps again. Clear skies."],
+  ],
+  crafter: [
+    ["[happy] Found a perfectly good plank on the beach. Perfectly good!", "Bring me some wood and I'll show you a trick at the workbench."],
+    ["Measure twice, glue once. That's the whole secret.", "[surprised] Well. Most of it. The rest is snacks."],
+    ["Bottles wash up on the beach sometimes.", "Some have notes in them. Some have recipes. Keep your eyes open."],
+  ],
+  juniper: [
+    ["[happy] Morning laps! Want to race to the pier?", "Kidding. Mostly. Stretch first, trust me."],
+    ["The sand's firmest right by the water.", "[happy] Best place on the island for a sprint. Try it!"],
+    ["[sleepy] I've been up since dawn. Is it lunch yet?", "No? Then one more lap."],
+  ],
+  marlo: [
+    ["[happy] Hold still, you're in the shot.", "Kidding. Mostly. You do make a good shape for a sketch."],
+    ["I've drawn HQ forty times now.", "[sad] I'm not happy with any of them. That roof has a mind of its own."],
+    ["The pond looks different every hour.", "I'm out of the green pencil again. If you find one, it's mine."],
+  ],
+  nell: [
+    ["I named a star after the founders. The bright one over HQ, once it's dark.", "[happy] The fainter ones are for everyone who joined after. There's room for plenty more."],
+    ["[sleepy] Mornings are a rumour. I'm told they're nice.", "The island's best after dark anyway. The fireflies come out by the water."],
+    ["If you can't sleep, come and find me at the lamp bench.", "I'll show you the constellation that looks like a fishing rod."],
+  ],
+};
+
 const NOW = "2026-10-01T00:00:00.000Z";
 const row = (r: Pick<NPCPersona, "slug" | "display_name" | "post" | "bio" | "tone" | "schedule" | "canned_dialogue">): NPCPersona => ({
-  id: `proposed-${r.slug}`, sprite_url: null, spawn_zone: "courtyard", is_permanent: true, persona_prompt: null, active: true, created_at: NOW, updated_at: NOW, ...r,
+  id: `proposed-${r.slug}`, sprite_url: null, spawn_zone: "courtyard", is_permanent: true, persona_prompt: null, active: true, created_at: NOW, updated_at: NOW,
+  talk: RESIDENT_TALK[r.slug], ...r,
 });
 
 /**

@@ -15,6 +15,7 @@ import { COINS } from "@/lib/economy";
 import { httpEconomyTransport } from "@/lib/wallet/transport";
 import { AudioManager } from "@/lib/game/audio";
 import { giftDue, markGiftClaimed, putOffGift, readGiftPutOff, useHud } from "@/lib/game/hudStore";
+import { SignInText } from "@/components/gui/SignIn";
 import styles from "./DailyGift.module.css";
 
 /** closed: not offered yet this visit; done: offered and finished (it never comes back until the next visit). */
@@ -65,7 +66,7 @@ export default function DailyGift({ ready }: { ready: boolean }) {
       </>}
     </div>
     <h2 id="daily-gift-title">{phase.at === "opened" ? <>+{phase.coins.toLocaleString()} <CurrencyIcon size={22} /> <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>{COINS.name}</span></> : "A little something for today"}</h2>
-    <p>{phase.at === "opened" ? "Added to your coins. See you tomorrow!" : phase.at === "error" ? phase.text : "Everyone on the island gets a small gift each day."}</p>
+    <p>{phase.at === "opened" ? "Added to your coins. See you tomorrow!" : phase.at === "error" ? <SignInText text={phase.text} /> : "Everyone on the island gets a small gift each day."}</p>
     <div className={styles.actions}>
       {(phase.at === "offer" || phase.at === "opening") && <>
         <button ref={open} className={styles.primary} onClick={() => void claim()} disabled={phase.at === "opening"}>{phase.at === "opening" ? "Opening…" : "Open it"}</button>

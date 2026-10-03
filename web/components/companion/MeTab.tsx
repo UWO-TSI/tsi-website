@@ -1,13 +1,12 @@
 "use client";
 
 /**
- * Companion shell, Me tab (specs/companion.md deliverable 4): profile
- * (display name, member dot [row 223], family [row 222/034], showcase),
- * inventory, journal, mailbox — all the existing sheets, just opened from
- * the phone shell instead of the 3D world's HUD.
+ * Companion shell, Me tab (specs/companion.md deliverable 4, reachability §4): profile (display name, member dot
+ * [row 223], family [row 222/034], showcase), then the game's own sheets under the game's names: the Bag (items),
+ * the Collection (catches), the Journal (quests), the Mailbox, the Wallet and Settings (the phone's part of them).
  */
-import { useCallback, useEffect, useState } from "react";
-import { Backpack, BookOpen, Mail } from "lucide-react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { Backpack, BookOpen, Mail, ScrollText, Settings, Wallet, type LucideIcon } from "lucide-react";
 import { Button, ErrorNote } from "@/components/gui";
 import type { Family } from "@/lib/oracle/engine";
 import { apiCall } from "@/lib/apiClient";
@@ -16,6 +15,9 @@ import { BagSheet } from "@/components/game/Bag";
 import CollectionBook from "@/components/game/CollectionBook";
 import { ShowcaseSheet } from "@/components/game/peaceful/ShowcaseSheets";
 import LettersSheet from "@/components/progression/LettersSheet";
+import JournalSheet from "@/components/progression/JournalSheet";
+import { WalletSheet } from "@/components/economy/EconomySheets";
+import SettingsSheet from "@/components/game/oracle/SettingsSheet";
 import s from "@/components/study/companion.module.css";
 
 interface IdentityMe {
@@ -24,7 +26,16 @@ interface IdentityMe {
   family: Family | null;
 }
 
-type SheetName = "bag" | "journal" | "mailbox" | "showcase" | null;
+type SheetName = "bag" | "collection" | "journal" | "mailbox" | "wallet" | "settings" | "showcase" | null;
+/** The six, as phone app tiles in their colours. */
+const TILES: { sheet: Exclude<SheetName, "showcase" | null>; label: string; icon: LucideIcon; tile: string }[] = [
+  { sheet: "bag", label: "Bag", icon: Backpack, tile: "#f7cd67" },
+  { sheet: "collection", label: "Collection", icon: BookOpen, tile: "#82d5bb" },
+  { sheet: "journal", label: "Journal", icon: ScrollText, tile: "#c3a6ee" },
+  { sheet: "mailbox", label: "Mailbox", icon: Mail, tile: "#e59266" },
+  { sheet: "wallet", label: "Wallet", icon: Wallet, tile: "#f6b26b" },
+  { sheet: "settings", label: "Settings", icon: Settings, tile: "#a7bfd6" },
+];
 
 export default function MeTab() {
   const [me, setMe] = useState<IdentityMe | null | "error">(null);
@@ -64,16 +75,19 @@ export default function MeTab() {
         </div>
       </section>
 
-      {/* The naming pass (menus §4): the Bag holds items, the Collection your catches (this said Journal). */}
+      {/* The game's names (menus §4): the Bag holds items, the Collection your catches, the Journal your quests. */}
       <div className={s.grid2}>
-        <button className={s.tile} onClick={() => setSheet("bag")}><span className={s.appTile} style={{ "--tile": "#f7cd67" } as React.CSSProperties} aria-hidden><Backpack size={24} strokeWidth={2.2} /></span>Bag</button>
-        <button className={s.tile} onClick={() => setSheet("journal")}><span className={s.appTile} style={{ "--tile": "#82d5bb" } as React.CSSProperties} aria-hidden><BookOpen size={24} strokeWidth={2.2} /></span>Collection</button>
-        <button className={s.tile} onClick={() => setSheet("mailbox")}><span className={s.appTile} style={{ "--tile": "#e59266" } as React.CSSProperties} aria-hidden><Mail size={24} strokeWidth={2.2} /></span>Mailbox</button>
+        {TILES.map(t => <button key={t.sheet} className={s.tile} onClick={() => setSheet(t.sheet)}>
+          <span className={s.appTile} style={{ "--tile": t.tile } as CSSProperties} aria-hidden><t.icon size={24} strokeWidth={2.2} /></span>{t.label}
+        </button>)}
       </div>
 
       <BagSheet open={sheet === "bag"} onClose={close} />
+      <CollectionBook open={sheet === "collection"} onClose={close} />
+      <JournalSheet open={sheet === "journal"} onClose={close} />
       <LettersSheet open={sheet === "mailbox"} onClose={close} />
-      <CollectionBook open={sheet === "journal"} onClose={close} />
+      <WalletSheet open={sheet === "wallet"} onClose={close} />
+      <SettingsSheet open={sheet === "settings"} onClose={close} place="phone" />
       <ShowcaseSheet open={sheet === "showcase"} onClose={close} />
     </>
   );

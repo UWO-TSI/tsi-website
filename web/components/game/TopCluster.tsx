@@ -89,8 +89,10 @@ const DATE = new Intl.DateTimeFormat("en-US", { timeZone: "America/Toronto", wee
 const up = (a: unknown, b: unknown) => (b as number) > (a as number);
 const onTheHour = (_: unknown, b: unknown) => (b as number) % 60 === 0;
 
-export default function TopCluster({ weather, phase, unread, mailKey, onMail, full = true, children }: {
+export default function TopCluster({ weather, phase, unread, mailKey, onMail, onWallet, walletKey, full = true, children }: {
   weather: IslandWeather; phase: IslandPhase; unread: number; mailKey: string; onMail: () => void; full?: boolean; children?: ReactNode;
+  /** The coins open the wallet (reachability §2), its key shown on the tooltip. */
+  onWallet?: () => void; walletKey?: string;
 }) {
   const hud = useHud();
   const progress = hud.xp === null ? null : levelProgress(hud.xp);
@@ -109,10 +111,16 @@ export default function TopCluster({ weather, phase, unread, mailKey, onMail, fu
   return (
     <div className={styles.cluster} data-clean={full ? undefined : ""}>
       <div className={styles.chips}>
-        {hud.coins !== null && coins.show && <span className={styles.chip} data-flash={coins.at} data-ping={coinGain ? "" : undefined} aria-label={`${hud.coins.toLocaleString()} ${COINS.name}`} title="Play coins">
-          <span className={styles.coin} aria-hidden="true"><CurrencyIcon size={22} /></span><b aria-hidden="true"><CountUp value={hud.coins} /></b><small aria-hidden="true">{COINS.name}</small>
-          {coinGain && <em key={coinGain.id} className={styles.gain} aria-hidden="true">+{coinGain.amount.toLocaleString()}</em>}
-        </span>}
+        {hud.coins !== null && coins.show && (() => {
+          const label = `${hud.coins.toLocaleString()} ${COINS.name}`, face = <>
+            <span className={styles.coin} aria-hidden="true"><CurrencyIcon size={22} /></span><b aria-hidden="true"><CountUp value={hud.coins} /></b><small aria-hidden="true">{COINS.name}</small>
+            {coinGain && <em key={coinGain.id} className={styles.gain} aria-hidden="true">+{coinGain.amount.toLocaleString()}</em>}
+          </>;
+          return onWallet
+            ? <button type="button" className={styles.chip} data-flash={coins.at} data-ping={coinGain ? "" : undefined} data-wallet="" onClick={onWallet}
+              aria-label={`${label}. Open your wallet`} title={walletKey ? `Wallet (${walletKey})` : "Wallet"}>{face}</button>
+            : <span className={styles.chip} data-flash={coins.at} data-ping={coinGain ? "" : undefined} aria-label={label} title="Play coins">{face}</span>;
+        })()}
         {progress && xp.show && <span className={styles.chip} data-flash={xp.at} data-ping={xpGain ? "" : undefined} data-levelup={levelUp ? "" : undefined}
           aria-label={`Level ${progress.level}, ${progress.needed ? `${progress.into.toLocaleString()} of ${progress.needed.toLocaleString()} XP to the next level` : "top level"}`}>
           <b className={styles.level} aria-hidden="true">Lv {progress.level}</b>

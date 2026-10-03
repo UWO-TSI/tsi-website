@@ -62,6 +62,11 @@
 .tabsWrap { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .tabs { display: flex; gap: 4px; min-width: 0; padding: 4px; border-radius: var(--gui-r-pill); background: var(--gui-paper-deep); overflow-x: auto; scrollbar-width: none; }
 .tabs::-webkit-scrollbar { display: none; }
+/* More tabs past an edge: that edge fades, so a cut-off chip reads as "scroll for more". */
+.tabs { position: relative; scroll-padding-inline: 24px; overscroll-behavior-x: contain; }
+.tabs[data-edges="end"] { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
+.tabs[data-edges="start"] { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); }
+.tabs[data-edges="both"] { -webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
 .tab { position: relative; flex: none; display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 16px; border: 0; border-radius: var(--gui-r-pill);
   background: transparent; color: var(--gui-ink-2); font: 800 var(--gui-text-sm)/1 var(--gui-font); white-space: nowrap; cursor: pointer; transition: background var(--gui-t-fast) ease, color var(--gui-t-fast) ease; }
 .tab:hover:not([aria-selected="true"]):not(:disabled) { background: rgb(255 255 247 / 0.7); color: var(--gui-ink); }
@@ -227,3 +232,10 @@ button.tile:hover { transform: translateY(-2px) scale(1.04); }
 :global(html[data-contrast="high"]) .head { --head: #ffffff; border-bottom: 2px solid #000000; }
 :global(html[data-contrast="high"]) .tab[aria-selected="true"], :global(html[data-contrast="high"]) .row[data-selected] { background: #000000; color: #ffffff; }
 :global(html[data-contrast="high"]) .rowDetail, :global(html[data-contrast="high"]) .emptyText, :global(html[data-contrast="high"]) .eyebrow { color: #000000; }
+
+/* Sign in (reachability §3): the words in a sentence underlined with the highlighter, or a sage pill as an empty state's action. */
+.signInLink { color: var(--gui-ink-strong); font-weight: 800; text-decoration: underline; text-decoration-color: var(--gui-highlight); text-decoration-thickness: 3px; text-underline-offset: 3px; pointer-events: auto; }
+.signInLink:hover { text-decoration-color: var(--gui-wood-light); }
+.signInButton { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 22px; border-radius: var(--gui-r-pill); background: var(--gui-sage); color: var(--gui-paper); font-weight: 800; text-decoration: none; box-shadow: 0 3px 0 var(--gui-sage-deep); }
+.signInButton:hover { filter: brightness(1.06); }
+.signInButton:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--gui-sage-deep); }

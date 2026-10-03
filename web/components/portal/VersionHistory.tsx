@@ -302,6 +302,10 @@ function SnapshotView({
     const dialogue = Array.isArray(data.canned_dialogue)
       ? (data.canned_dialogue as unknown[]).map(String)
       : [];
+    // What they say when you talk to them (reachability §1): conversations of a few lines each.
+    const talk = Array.isArray(data.talk)
+      ? (data.talk as unknown[]).filter(Array.isArray).map((c) => (c as unknown[]).map(String))
+      : [];
     return (
       <dl className="space-y-2">
         <KV label="Slug" value={plain(data.slug)} />
@@ -329,6 +333,19 @@ function SnapshotView({
                 </li>
               ))}
             </ul>
+          )}
+        </KV>
+        <KV label={`Conversations (${talk.length})`} multiline>
+          {talk.length === 0 ? (
+            "—"
+          ) : (
+            <ol className="space-y-2">
+              {talk.map((lines, i) => (
+                <li key={i} className="pl-2.5 border-l-2 border-[var(--gui-paper-line)]">
+                  {lines.map((line, j) => <span key={j} className="block">{line}</span>)}
+                </li>
+              ))}
+            </ol>
           )}
         </KV>
       </dl>
