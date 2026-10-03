@@ -13,6 +13,7 @@ import { Suspense, memo, useCallback, useMemo, type RefObject } from "react";
 import type * as THREE from "three";
 import Character, { type CharacterMotion, type HeldView, type WeaponView } from "../character/Character";
 import { heldView } from "../PlayerAvatar";
+import { RESIDENT_STEPS, useStepDust, type StepWorld } from "../movement/moveFx";
 import { DEFAULT_LOOK, parseLook, type CharacterLook } from "@/lib/game/character/look";
 import { WEAPONS } from "@/lib/game/combat/data";
 import { parseHeld } from "@/lib/net/protocol";
@@ -35,10 +36,20 @@ export function remoteWeapon(held: string, back: string): WeaponView | null {
   return w?.model ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: !!inHand, grip: w.grip, pulse: w.pulse } : null;
 }
 
+/** Their footsteps' dust, silent and lighter than yours, like the residents' (the village and the café only). */
+function RemoteDust({ rig, ground }: { rig: RemoteRig; ground?: StepWorld }) {
+  useStepDust(rig.dust as RefObject<CharacterMotion>, rig.anchor, ground, RESIDENT_STEPS);
+  return null;
+}
+
 /** The anchor is the driver's to move (module scope: the react compiler forbids writing through props). */
 function attachAnchor(rig: RemoteRig, group: THREE.Group | null) { rig.anchor.current = group; }
 
-export const RemoteAvatar = memo(function RemoteAvatar({ rig, player, walkSpeed }: { rig: RemoteRig; player: RemotePlayer; walkSpeed: number }) {
+export const RemoteAvatar = memo(function RemoteAvatar({ rig, player, walkSpeed, dust, ground }: {
+  rig: RemoteRig; player: RemotePlayer; walkSpeed: number;
+  /** Step dust here (the village and the café), thrown on `ground` (none: a plain floor's). */
+  dust: boolean; ground?: StepWorld;
+}) {
   const anchor = useCallback((g: THREE.Group | null) => attachAnchor(rig, g), [rig]);
   const look = useMemo(() => remoteLook(player.look), [player.look]);
   const held = useMemo(() => remoteHeld(player.held), [player.held]);
@@ -48,5 +59,6 @@ export const RemoteAvatar = memo(function RemoteAvatar({ rig, player, walkSpeed 
     <Suspense fallback={null}>
       <Character look={look} motion={rig.live as RefObject<CharacterMotion>} walkSpeed={walkSpeed} weapon={weapon} held={held} leaf />
     </Suspense>
+    {dust && <RemoteDust rig={rig} ground={ground} />}
   </group>;
 });

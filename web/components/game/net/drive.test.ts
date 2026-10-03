@@ -161,6 +161,14 @@ describe("the tiers' costs", () => {
     expect(hidden.anchor.current!.visible).toBe(false);
   });
 
+  it("throws step dust at Full only", () => {
+    const full = rigAt(FULL), reduced = rigAt(REDUCED);
+    gateMixer(full, 1 / 60);
+    gateMixer(reduced, 1 / 60);
+    expect(full.dust.current).toBe(full.motion);
+    expect(reduced.dust.current).toBeNull();
+  });
+
   it("steps a Reduced mixer at 15 Hz by the time saved up (Character's step is dt × rate)", () => {
     const r = rigAt(REDUCED), dt = 1 / 60;
     let steps = 0, stepped = 0;

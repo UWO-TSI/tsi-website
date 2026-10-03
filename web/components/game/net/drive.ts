@@ -18,6 +18,7 @@ import { CLIP_BY_NAME, VERB_BY_NAME } from "@/lib/game/character/look";
 import type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
 import { createRemoteSample, type RemoteEntry, type RemoteEvent, type RemoteSample } from "@/lib/net/types";
 import { FULL, HIDDEN, LOD, createLodEntry, type LodEntry } from "./lod";
+import { createFxState, type FxState } from "./fx";
 
 /** What remotes stand on: the scene's walk world (movement's `top` and `wet`). Interiors are flat. */
 export interface GroundWorld { top(x: number, z: number): number; wet(x: number, z: number): boolean }
@@ -40,9 +41,11 @@ export interface RemoteRig {
   readonly motion: CharacterMotion;
   /** What Character reads: `motion` on a frame its mixer steps, null to skip it (Reduced between ticks, Hidden). */
   readonly live: { current: CharacterMotion | null };
+  /** What the step dust reads: `motion` at Full, else null. */
+  readonly dust: { current: CharacterMotion | null };
   /** The group at the floor under them (Character's parent: its contact shadow sits under it), while mounted. */
   readonly anchor: { current: THREE.Group | null };
-  /** Their feet this frame. */
+  /** Their feet this frame: the aura's centre. */
   readonly feet: { current: THREE.Vector3 };
   /** The floor under the feet: the anchor's height. */
   groundY: number;
@@ -59,14 +62,16 @@ export interface RemoteRig {
   mixerT: number;
   /** Sun shadows as last applied (null: not yet). */
   casting: boolean | null;
+  /** The juice in progress (a dash's streaks). */
+  readonly fx: FxState;
 }
 
 export function createRig(entry: RemoteEntry): RemoteRig {
   const motion: CharacterMotion = { speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null };
   return {
-    sid: entry.sid, entry, sample: createRemoteSample(), motion, live: { current: null }, anchor: { current: null },
+    sid: entry.sid, entry, sample: createRemoteSample(), motion, live: { current: null }, dust: { current: null }, anchor: { current: null },
     feet: { current: new THREE.Vector3() }, groundY: 0, waterY: 0, floorX: NaN, floorZ: NaN, floorY: 0, floorWorld: null, seated: false, heldPose: null,
-    lod: createLodEntry(), mixerT: 0, casting: null,
+    lod: createLodEntry(), mixerT: 0, casting: null, fx: createFxState(),
   };
 }
 
@@ -129,6 +134,7 @@ export function driveRig(r: RemoteRig, now: number, world: GroundWorld, juice: J
 export function gateMixer(r: RemoteRig, dt: number): void {
   const tier = r.lod.tier, m = r.motion, a = r.anchor.current, shown = tier !== HIDDEN;
   if (a && a.visible !== shown) a.visible = shown;
+  r.dust.current = tier === FULL ? m : null;
   if (!shown) { r.live.current = null; r.mixerT = 0; return; }
   // Full, and anyone with the leaf open: HeldLeaf places the leaf from the motion every frame (null hides it).
   if (tier === FULL || (m.leaf ?? 0) > 0.01) { m.rate = 1; r.live.current = m; r.mixerT = 0; return; }
