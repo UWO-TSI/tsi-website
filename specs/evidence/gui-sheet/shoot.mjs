@@ -46,8 +46,8 @@ const WALLET = { coins: 1240, gems: 0, daily_claimed: true, day: DAY, recent: [
 const browser = await chromium.launch({ headless: false, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist", "--window-position=2400,0"] });
 
 /** A page answering the member's APIs and Supabase; `look` saved or not, `gift` unclaimed. */
-async function memberPage({ width = 1440, height = 900, look = true, gift = false, mobile = false } = {}) {
-  const ctx = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1, ...(mobile ? { isMobile: true, hasTouch: true, userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" } : {}) });
+async function memberPage({ width = 1440, height = 900, look = true, gift = false, mobile = false, textSize = null, colorScheme = "light" } = {}) {
+  const ctx = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1, colorScheme, ...(mobile ? { isMobile: true, hasTouch: true, userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" } : {}) });
   await ctx.addCookies([SESSION_COOKIE]);
   const page = await ctx.newPage();
   page.on("pageerror", e => console.log("pageerror", e.message.slice(0, 240)));
@@ -55,7 +55,7 @@ async function memberPage({ width = 1440, height = 900, look = true, gift = fals
   const wallet = { ...WALLET, daily_claimed: !gift };
   await page.route("**/api/**", async route => {
     const url = new URL(route.request().url()), p = url.pathname, m = route.request().method();
-    if (p === "/api/identity/me") return json(route, { identity: { world_name: "Juniper", badge: "member", family: "Warden", settings: null } });
+    if (p === "/api/identity/me") return json(route, { identity: { world_name: "Juniper", badge: "member", family: "Warden", settings: textSize ? { text_size: textSize } : null } });
     if (p === "/api/profile") return m === "GET" ? json(route, { profile: look ? PROFILE : { ...PROFILE, avatar_config: {} } }) : json(route, { ok: true });
     if (p === "/api/admin/me") return json(route, { isAdmin: true });
     if (p === "/api/identity/name") return json(route, { ok: true });
@@ -78,7 +78,8 @@ async function prime(page, extra = {}) {
   await page.goto(`${HOST}/student/opening-soon`, { waitUntil: "domcontentloaded" });
   await page.evaluate(e => {
     localStorage.clear();
-    const base = { "tsi.pixelated.v1": "false", "tsi.welcomed.v1": "1", "tsi.look.v1": e.look, "tsi.gift.later": e.day };
+    // tsi.theme "dark": the portal's old default look for the before shots (the cream portal ignores it).
+    const base = { "tsi.pixelated.v1": "false", "tsi.welcomed.v1": "1", "tsi.look.v1": e.look, "tsi.gift.later": e.day, "tsi.theme": "dark" };
     for (const [k, v] of Object.entries({ ...base, ...e.extra })) if (v !== null) localStorage.setItem(k, v); else localStorage.removeItem(k);
   }, { look: JSON.stringify(LOOK), day: DAY, extra });
 }
@@ -89,7 +90,7 @@ async function waitWorld(page) {
 const shot = (page, name, opts = {}) => page.screenshot({ path: `${OUT}/${name}.png`, ...opts }).then(() => console.log("shot", name));
 const toast = (page, text, icon) => page.evaluate(([t, i]) => window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: t, icon: i } })), [text, icon]);
 /** The island at 2 pm beside the notice board, then `fn`. */
-async function island(name, query, fn, { wait = 6000, size = {}, extra = {} } = {}) {
+async function island(name, query, fn, { wait = 6000, size = {}, extra = {} } = {}) { // size: also textSize, colorScheme
   const { ctx, page } = await memberPage(size);
   await prime(page, extra);
   await page.goto(`${HOST}/student/dashboard?at=14:05&at=-2.6,4.3&progression=demo&collections=demo${query ? `&${query}` : ""}`, { waitUntil: "domcontentloaded" });
@@ -198,6 +199,85 @@ const SCENES = {
     } })];
   })),
 };
+
+/** Frames of a dialog opening and closing: `open` and `close` act, the frames land at the given ms. */
+async function strip(page, prefix, open, close, at = [0, 60, 120, 200, 320]) {
+  const grab = async (phase, act) => {
+    const t0 = Date.now();
+    await act();
+    for (const ms of at) { const wait = ms - (Date.now() - t0); if (wait > 0) await page.waitForTimeout(wait); await shot(page, `${prefix}-${phase}-${String(ms).padStart(3, "0")}ms`); }
+  };
+  await grab("open", open);
+  await page.waitForTimeout(500);
+  await grab("close", close);
+}
+
+Object.assign(SCENES, {
+  // ── After only: the showroom, strips, the largest text, keyboard-only, OS dark mode ──
+  "gui-showroom": async () => {
+    const { ctx, page } = await memberPage({ width: 1440, height: 1000 });
+    await page.goto(`${HOST}/lab/gui`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(4000);
+    await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+    for (const id of ["colour", "type", "paper", "buttons", "tabs", "lists", "tiles", "controls", "dialogue", "badges", "progress", "tooltips", "banners", "cards", "sheets", "states", "toasts"]) {
+      if (id === "toasts") { await page.getByRole("button", { name: "Catch toast" }).click(); await page.getByRole("button", { name: "Room toast" }).click(); await page.waitForTimeout(400); }
+      await page.locator(`#${id}`).screenshot({ path: `${OUT}/gui-${id}.png` }).then(() => console.log("shot", `gui-${id}`));
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await strip(page, "strip-sheet", () => page.getByRole("button", { name: "Sheet", exact: true }).click(), () => page.keyboard.press("Escape"));
+    await page.getByRole("button", { name: "Confirm dialog" }).click(); await page.waitForTimeout(500); await shot(page, "gui-confirm");
+    await page.keyboard.press("Escape");
+    await ctx.close();
+  },
+  "gui-phone": async () => {
+    const { ctx, page } = await memberPage({ width: 390, height: 844, mobile: true });
+    await page.goto(`${HOST}/lab/gui`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(3500);
+    await page.getByRole("button", { name: "Sheet", exact: true }).click(); await page.waitForTimeout(600);
+    await shot(page, "gui-phone-sheet");
+    await ctx.close();
+  },
+  "strip-journal": () => island("strip-journal", "", async page => {
+    await page.locator("canvas").first().click({ position: { x: 700, y: 300 } }).catch(() => {});
+    await page.keyboard.press("Escape").catch(() => {});
+    await strip(page, "strip-journal", () => page.keyboard.press("j"), () => page.keyboard.press("j"));
+  }),
+  "text-xl": () => island("text-xl", "sheet=journal", async page => { await page.waitForTimeout(900); await shot(page, "text-xl-journal"); }, { size: { textSize: "xl" } }),
+  "text-xl-settings": () => island("text-xl-settings", "sheet=settings", async page => { await page.waitForTimeout(700); await shot(page, "text-xl-settings"); }, { size: { textSize: "xl" } }),
+  "keyboard": () => island("keyboard", "sheet=settings", async page => {
+    await page.waitForTimeout(700);
+    for (let i = 1; i <= 4; i++) { await page.keyboard.press("Tab"); await page.waitForTimeout(150); }
+    await shot(page, "keyboard-1-settings-tab4");
+    await page.keyboard.press("Escape"); await page.waitForTimeout(400);
+    await page.keyboard.press("j"); await page.waitForTimeout(600);
+    await page.keyboard.press("Tab"); await page.keyboard.press("Tab"); await page.waitForTimeout(150);
+    await shot(page, "keyboard-2-journal-tabs");
+    await page.keyboard.press("ArrowRight"); await page.waitForTimeout(300);
+    await shot(page, "keyboard-3-journal-next-tab");
+  }),
+  "game-creator-dark": () => island("game-creator-dark", "", async page => { await page.waitForTimeout(3000); await shot(page, "game-creator-dark"); }, { extra: { "tsi.look.v1": null }, wait: 4000, size: { colorScheme: "dark" } }),
+  "applicant-island": async () => {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    await page.route("**/api/positions**", route => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+    await page.goto(`${HOST}/student/apply/portal?preview=1`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(30000);
+    await shot(page, "applicant-island");
+    await page.getByRole("button", { name: "That's me" }).click().catch(() => {});
+    await page.waitForTimeout(14000);
+    await shot(page, "applicant-island-2");
+    await ctx.close();
+  },
+  "applicant-apply": async () => {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    await page.route("**/api/positions**", route => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+    await page.goto(`${HOST}/student/apply?view=form`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(6000);
+    await shot(page, "applicant-apply");
+    await ctx.close();
+  },
+});
 
 for (const [name, run] of Object.entries(SCENES)) {
   if (ONLY.length && !ONLY.some(o => name.startsWith(o))) continue;
