@@ -28,7 +28,7 @@
 .hits span[data-crit] { background: var(--gui-butter); color: var(--gui-ink-strong); }
 .noteRow { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
 .noteRow input { flex: 1; min-width: 0; min-height: 34px; padding: 4px 10px; border: 2px solid var(--gui-paper-line); border-radius: 12px; background: var(--gui-paper-hi); color: var(--gui-ink); font: inherit; }
-.keyCard { max-height: min(540px, calc(100vh - 300px)); overflow-y: auto; }
+.keyCard { max-height: min(540px, calc(100vh - 390px)); overflow-y: auto; } /* the column's top stays under the bag button */
 .keyCard header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; color: var(--gui-muted); }
 .keyCard header b { color: var(--gui-ink-strong); font-weight: 800; }
 .keyCard header small { white-space: nowrap; }

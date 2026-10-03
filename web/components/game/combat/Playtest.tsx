@@ -180,13 +180,16 @@ function inputWord(a: ClassAbility): string {
 /** Everything the class's keys do at this mastery, read off its kit (so a family that lands brings its own card). Each line is cut to two; hover shows it whole. */
 function KeyCard({ rt }: { rt: CombatRuntime }) {
   const keys = useAbilityKeys(), v = rt.v2!, kit = v.kit;
-  const drawn = v.keys.some(a => a?.input?.kind === "drawn"), holds = v.combos.filter(c => c.hold);
+  const drawn = v.keys.some(a => a?.input?.kind === "drawn"), holds = v.combos.filter(c => c.hold), fire = kit.fire;
   const key = (i: number) => keyName(keys[V2_SLOT_IDS[i]]);
   const line = (text: string) => <span title={text}>{text}</span>;
   return <section className={`${css.card} ${css.keyCard}`} aria-label={`${kit.name} keys`} data-testid="playtest-keycard">
     <header><span><b>{kit.name}</b> · mastery {v.mastery} · {kit.style === "basic" ? "basic-attack" : "skill"} class, builds {STAT_DIRECTION_LABEL[kit.stat.kind].toLowerCase()}</span><small><kbd>H</kbd> hides</small></header>
     <dl>
-      <dt><kbd>Click</kbd></dt><dd><b>Attack</b><em> · skills need your {kit.signature.name}{kit.forms ? "; a form brings its own attack" : ""}</em></dd>
+      <dt><kbd>Click</kbd></dt><dd><b>Attack</b><em> · skills need your {kit.signature.name}{kit.forms ? "; a form brings its own attack" : ""}</em>
+        {fire && line(`${fire.rate} shots a second${fire.drop ? "; arrows drop with distance" : ""}${fire.weak ? "; weak points always crit" : ""}.`)}</dd>
+      {fire?.ammo && <><dt><kbd>{keyName(keys.swap)}</kbd></dt><dd><b>Reload</b><em> · {fire.ammo.size} rounds</em>
+        {line(`Automatic when empty. Press it again in the gold zone: an instant reload and +${Math.round(fire.ammo.bonus * 100)}% damage on the next ${fire.ammo.size}.`)}</dd></>}
       {kit.keys.map((base, i) => {
         const a = v.keys[i], how = a ? inputWord(a) : "";
         return <Fragment key={base.key}><dt><kbd>{key(i)}</kbd></dt>
