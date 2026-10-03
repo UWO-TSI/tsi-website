@@ -2,20 +2,22 @@
 // movement sim (dash chain, downhill slide at the momentum ceiling, glide off a cliff,
 // the fall cap, and the climbs and stalls around them) never strikes; cheats do.
 import { describe, expect, it } from "vitest";
+import { AREA_BOUNDS } from "@net/protocol";
 import {
   addStrike,
   checkPose,
   decayStrikes,
-  INTERIOR_BOUNDS,
   inBounds,
   newTrack,
   resetBaseline,
   SANITY,
-  VILLAGE_BOUNDS,
   type MotionTrack,
   type PoseSample,
   type Verdict,
 } from "../src/rooms/sanity";
+
+const VILLAGE_BOUNDS = AREA_BOUNDS.village;
+const INTERIOR_BOUNDS = AREA_BOUNDS.cafe;
 import { honestTraces, traceStats, type TraceSample } from "./helpers/traces";
 
 type Run = { accepted: number; drops: number; violations: string[] };
@@ -118,11 +120,19 @@ describe("cheats are refused", () => {
     expect(r.accepted).toBe(Math.floor(1000 / 66) + 1);
   });
 
-  it("a jump of more than 6 u in 0.3 s needs the teleport flag", () => {
-    const base = [S(1000, 0, 0), S(1250, 6.5, 0)];
+  it("a jump of more than 6 u in 0.3 s needs the teleport flag (scaled with the gap at the 1 s average cap)", () => {
+    // 7 u in 250 ms is 28 u/s: under the instant cap, over what the kit sustains.
+    const base = [S(1000, 0, 0), S(1250, 7, 0)];
     expect(feed(base, (i) => base[i].t + 30).violations).toEqual(["1:teleport"]);
+    const short = [S(1000, 0, 0), S(1100, 6.2, 0)];
+    expect(feed(short, (i) => short[i].t + 30).violations).toEqual(["1:speed"]);
     const flagged = [S(1000, 0, 0), S(1250, 30, 0, 0, true)];
     expect(feed(flagged, (i) => flagged[i].t + 30).violations).toEqual([]);
+  });
+
+  it("a 24 u/s slide across a stalled 260 ms gap is not a teleport (protocol agent's case)", () => {
+    const slide = [S(1000, 0, 0), S(1066, 1.584, 0), S(1326, 1.584 + 6.24, 0), S(1392, 1.584 + 6.24 + 1.584, 0)];
+    expect(feed(slide, (i) => slide[i].t + 30)).toEqual({ accepted: 4, drops: 0, violations: [] });
   });
 
   it("honours one teleport flag per 2 s and 15 a minute; the rest are judged as plain samples", () => {

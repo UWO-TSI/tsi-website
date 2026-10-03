@@ -72,6 +72,33 @@ Outside production, `http://localhost:*`, `http://play.localhost:*` and
 - Everything is injectable: `createApp({ env, verify, loadCard, origins })`. The tests
   use a local `jose.generateKeyPair` JWKS and in-memory cards.
 
+## The island room (§3, §4)
+
+One `island` room per shard; `joinOrCreate` fills the fullest open shard, which locks
+at 30 players and unlocks under 26 (hard cap 40). Every number below comes from the
+contract (`web/lib/net/protocol.ts`).
+
+- **Join.** `static onAuth` (the matchmake POST, before any seat exists) checks the page
+  (HTTP 403) and the token (HTTP 401), then the join options and the card. Their
+  refusals travel as closes from `onJoin`: 4101 no profile, 4102 removed, 4106 old
+  version or malformed options, 4107 card RPC slow or down. Deciding them before the
+  seat matters: `UniqueSessionPlugin` (one session per verified `sub`) runs before the
+  room's `onJoin` and skips a join the room will refuse, so a stale tab can't evict
+  the good one. The older tab of the same user gets 4104.
+- **State.** `players` (view-filtered), `roster` (whole shard: uid, name, badge, area,
+  flags), `epoch`, `shard`. Tier never leaves the server.
+- **Views.** Same area, not private (ruins, home, house: hidden and blind), and in the
+  village within 50 u (kept to 60). Rebuilt every 500 ms and at once on a join or a door.
+- **Poses.** `p` is decoded with the contract's codec, checked by `src/rooms/sanity.ts`,
+  then its integers go straight into the schema; its events go to the clients whose
+  view holds the player. A flagged teleport bumps `tp`. A violation isn't applied or
+  relayed and strikes; 10 strikes closes with 4103 in production (logged only in
+  development).
+- **Drops.** 20 s reconnection grace (120 s for phones) with the `away` flag; a new
+  session of the same user ends a pending grace.
+- **Restart.** Before a shutdown each room sends `sys {kind: "restart"}` and closes
+  with 4010.
+
 ## Deploy (Fly.io, Toronto)
 
 App `tethos-rt` in `yyz`, served as `wss://tethos-rt.fly.dev` (§1.3: not a `.tethos.ca`

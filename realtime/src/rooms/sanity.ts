@@ -12,14 +12,15 @@
 // only fails when judged over the credit is a clock running ahead of real time, or
 // packets bunched up after a stall past the banked credit: dropped, no strike.
 //
-// Numbers (honest worst cases measured with the real movement sim through the
-// sender's sampling, realtime/test/helpers/traces.ts): horizontal 24.0 u/s (a
-// slide at the downhill ceiling), 23.3 u/s averaged over 1 s, rising 14.0 u/s
-// (momentum up a ramp), 12.2 u/s (a dash up the grid's 1.5-over-2 ramp), 11.2
-// u/s (a mantle at full reach), falling 18.2 u/s (the fall cap), at most 2.0 u
-// between samples. §4.5's rising limit of 12 u/s would strike the ramp dash, so
-// a climb may also rise at up to `climbGrade` times its horizontal speed (a
-// ramp's grade is 0.75), with 15 u/s straight up; falls get the same grade rule.
+// Numbers: the contract's SANITY and CLIMB_RATIO (web/lib/net/protocol.ts). Honest
+// worst cases measured with the real movement sim through the sender's sampling
+// (realtime/test/helpers/traces.ts): horizontal 24.0 u/s (a slide at the downhill
+// ceiling), 23.3 u/s averaged over 1 s, rising 14.0 u/s (momentum up a ramp), 12.2
+// u/s (a dash up the grid's ramp), 11.2 u/s (a mantle at full reach), falling 18.2
+// u/s (the fall cap), at most 2.0 u between samples. A move of more than 6 u inside
+// 0.3 s needs the teleport flag, scaled with the gap at the 1 s average cap: a 24 u/s
+// slide across a stalled 260 ms gap (6.2 u) isn't a teleport, 28 u/s for 250 ms is.
+import * as N from "@net/protocol";
 
 export type SanityLimits = {
   /** Sender time between samples: under this the sample is dropped (no strike; honest senders keep 30 ms apart). */
@@ -33,9 +34,9 @@ export type SanityLimits = {
   avgWindowMs: number;
   /** Straight up, u/s. */
   maxRise: number;
-  /** Straight down, u/s (the fall cap is 18). */
+  /** Down, u/s (the fall cap is 18). */
   maxFall: number;
-  /** A climb or descent may also go at this many units up or down per unit across (ramps are 0.75). */
+  /** A climb may also rise this many units per unit across (ramps are 0.75). */
   climbGrade: number;
   /** Moving more than this within `teleportWindowMs` needs the teleport flag. */
   teleportDist: number;
@@ -50,31 +51,28 @@ export type SanityLimits = {
   kickStrikes: number;
 };
 
+/** The contract's numbers, plus the time credit this server keeps (not on the wire). */
 export const SANITY: SanityLimits = {
-  minDtMs: 20,
-  maxDtMs: 2000,
-  maxHSpeed: 32,
-  maxHAvg: 26,
-  avgWindowMs: 1000,
-  maxRise: 15,
-  maxFall: 22,
-  climbGrade: 0.9,
-  teleportDist: 6,
-  teleportWindowMs: 300,
-  teleportGapMs: 2000,
-  teleportsPerMinute: 15,
+  minDtMs: N.SANITY.dtMinMs,
+  maxDtMs: N.SANITY.dtMaxMs,
+  maxHSpeed: N.SANITY.speed,
+  maxHAvg: N.SANITY.speedAvg,
+  avgWindowMs: N.SANITY.speedAvgWindowMs,
+  maxRise: N.SANITY.rise,
+  maxFall: N.SANITY.fall,
+  climbGrade: N.SANITY.climbRatio,
+  teleportDist: N.SANITY.teleportDist,
+  teleportWindowMs: N.SANITY.teleportWindowMs,
+  teleportGapMs: N.SANITY.teleportGapMs,
+  teleportsPerMinute: N.SANITY.teleportPerMinute,
   initialCreditMs: 300,
   maxCreditMs: 3000,
-  strikeDecayMs: 10_000,
-  kickStrikes: 10,
+  strikeDecayMs: N.SANITY.strikeDecayMs,
+  kickStrikes: N.SANITY.strikeKick,
 };
 
-/** Where an area's positions may be: |x|, |z| ≤ half, y within [yMin, yMax]. */
-export type Bounds = { half: number; yMin: number; yMax: number };
-export const VILLAGE_BOUNDS: Bounds = { half: 40, yMin: -3, yMax: 25 };
-export const INTERIOR_BOUNDS: Bounds = { half: 20, yMin: -3, yMax: 25 };
-/** Private areas are never relayed; only the int16 centimetre range applies. */
-export const OPEN_BOUNDS: Bounds = { half: 327, yMin: -327, yMax: 327 };
+/** Where an area's positions may be: |x|, |z| ≤ half, y within [yMin, yMax] (the contract's AREA_BOUNDS). */
+export type Bounds = N.AreaBounds;
 
 /** A decoded pose: sender time (ms since the room epoch), position in units, the teleport flag. */
 export type PoseSample = { t: number; x: number; y: number; z: number; teleport: boolean };
@@ -187,8 +185,8 @@ function judge(track: MotionTrack, h: number, dy: number, elapsed: number, dt: n
   const hs = h / sec;
   if (hs > L.maxHSpeed) return "speed";
   if (dy / sec > Math.max(L.maxRise, L.climbGrade * hs)) return "rise";
-  if (-dy / sec > Math.max(L.maxFall, L.climbGrade * hs)) return "fall";
-  if (dt <= L.teleportWindowMs && Math.hypot(h, dy) > L.teleportDist) return "teleport";
+  if (-dy / sec > L.maxFall) return "fall";
+  if (dt <= L.teleportWindowMs && Math.hypot(h, dy) > Math.max(L.teleportDist, (L.maxHAvg * dt) / 1000)) return "teleport";
   // The average from the newest accepted sample at least a window older.
   const last = track.hist[track.hist.length - 1] ?? { T: 0, D: 0 };
   const T = last.T + elapsed, D = last.D + h;
