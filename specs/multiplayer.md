@@ -141,6 +141,7 @@ New top-level package at `realtime/`.
 **How they are enforced.**
 - `matchMaker.controller.getCorsHeaders` echoes only allowed origins, with `Allow-Headers: authorization, content-type` and `Allow-Credentials: false`.
 - `beforeUpgrade` rejects disallowed `Origin`.
+- `@colyseus/sdk` fetches matchmake with `credentials: "include"` by default. The client sets `client.http.options.credentials = "omit"` right after `new Client(...)`, since the server never allows credentials.
 - The WebSocket transport gets `maxPayload: 4096`.
 - There is no CSP today (no `connect-src` in `next.config.ts` or middleware). If one is added later it must include the realtime origin.
 
@@ -223,15 +224,18 @@ New top-level package at `realtime/`.
 - **Drop:** `onDrop` gives `allowReconnection(client, 20)`, or 120 s for phones (iOS suspends sockets). The player is flagged `away` and their nameplate dims.
 - **Reconnect:** `onReconnect` clears `away`.
 - **Leave:** `onLeave` removes the player and frees their seat.
+- **Where refusals come from** (Colyseus 0.18): static `onAuth` runs in the matchmake HTTP POST, so its refusals arrive as HTTP **401** (token: refresh and retry once, like 4001) or **403** (origin). Refusals in `onJoin` arrive as 41xx codes (4101, 4102, 4106, 4107). Our codes stay out of 4000–4003, which Colyseus 0.18 sends itself; 4010 is Colyseus' MAY_TRY_RECONNECT, which the SDK auto-reconnects on. The contract's `joinRefusal(code)` maps both.
 - **Client close codes:**
 
 | Code | Meaning | Client does |
 |---|---|---|
-| 4001 | Auth failed | Refresh token, retry once |
-| 4002 | Removed | Message, stay offline |
-| 4003 | Kicked for movement | Log it, stay offline |
-| 4004 | Replaced by a newer tab | "Play here" button |
-| 4006 | Old version | "Reload to see others" |
+| 4101 | Auth failed / no profile | Refresh token, retry once |
+| 4102 | Removed | Message, stay offline |
+| 4103 | Kicked for movement | Log it, stay offline |
+| 4104 | Replaced by a newer tab | "Play here" button |
+| 4106 | Old version | "Reload to see others" |
+| 4107 | Busy (player card timed out or database down) | Rejoin with backoff 2/4/8/16/30 s |
+| 4000–4003 | Sent by Colyseus itself (consented, shutdown, error incl. message flood, failed reconnect) | Rejoin with backoff, except 4000 after our own `leave()` |
 | 4010 | Server restart | Rejoin after jitter |
 | Abnormal | Dropped connection | SDK auto-reconnect inside the grace window, then rejoin with backoff 2/4/8/16/30 s |
 
@@ -262,6 +266,7 @@ Player (in players: { map: Player, view: true }), keyed by sessionId
   x,y,z int16 (cm)   vx,vy,vz int16 (cm/s, clamp ±40 u/s)   yaw uint16 (2π/65536)
   move uint8 (MOVE_CLIPS: 0 none, Air, Fall, Glide, Skid, Slide, CrouchWalk, CrouchIdle; append-only)
   air uint8, leaf uint8 (0..1.3 → 0..255), lift int16 (mm, seats)
+  tp uint8 (wrapping teleport counter: the server bumps it with each flagged sample, in the same patch as the new position; receivers snap when it changes)
 IslandState: epoch float64 (server Date.now() at create), shard uint8,
   players (view), roster: { map: RosterEntry {uid,name,badge,area,flags} }  // whole shard, presence list
 ```
@@ -308,7 +313,7 @@ Server to client:
 - **Time between samples** must be 20–2000 ms, otherwise the baseline resets.
 - **Speed:**
   - horizontal at most 32 u/s instantly and 26 u/s averaged over a 1 s window;
-  - rising at most 12 u/s, falling at most 22 u/s.
+  - rising at most 15 u/s straight up, or up to 0.9 × the horizontal speed on a climb (`CLIMB_RATIO`; ramps are 0.75, and an honest dash up a ramp reads 12.2 u/s), falling at most 22 u/s.
 - **Teleports.** More than 6 u within 0.3 s needs the teleport flag. Flags are limited to 1 per 2 s and 15 per minute; doors, seats and splash respawns all set it.
 - **On a violation:**
   - the sample is not applied or relayed (others see you stop);
@@ -363,7 +368,7 @@ Server to client:
   - `motion.yaw`, `lift`, `pose`, `move`, `air`, `leaf`, `scrub` and `poseRate` (the last two arrive with the fishing branch);
   - the drained journal.
 - It writes into a preallocated `number[]` and calls `room.send("p", arr)` only on send ticks. msgpack allocates only on those 10–15 Hz sends, never per frame. There are no React state writes.
-- A position jump over 2.5 u in one frame, or a new tap registration (scene remounts and respawns), sets the teleport flag.
+- A position jump over 2.5 u in one frame, or a new tap registration (scene remounts and respawns), sets the teleport flag. The respawn, splash-respawn and seat-snap events set it themselves too: a 1–2 u respawn inside 30–100 ms would otherwise read as 15–60 u/s.
 - `held` comes from the tap; `weapon`/`armed` from `combat.rt.player`; `study` from `getWorldStudy()`; `showClass` from `hudPrefs`. These are sent through `s` on change.
 
 **5.3 Interpolation buffer** (`web/lib/net/interp.ts`, pure and unit-tested).
@@ -372,7 +377,7 @@ Server to client:
 - Position uses cubic Hermite with the sent velocities, so 10 Hz still draws smooth jump arcs. Yaw uses the shortest arc.
 - Discrete fields (`move`, `pose`, `air`, `leaf`, `lift`) step at their sample's time.
 - Events wait in a 16-slot queue and fire when render time passes their `t`, in step with the position.
-- If the buffer underruns, extrapolate with velocity for up to 250 ms, then hold. Snap when the error exceeds 3 u or the teleport flag is set.
+- If the buffer underruns, extrapolate with velocity for up to 250 ms, then hold. Snap when the error exceeds 3 u or `tp` changes (a set-then-clear flag bit would be lost inside one 50 ms patch).
 - `sample(renderT, out)` writes into a caller-owned object.
 
 **5.4 `RemoteAvatar`** (`web/components/game/net/RemoteAvatar.tsx`), using the same rig and clips.

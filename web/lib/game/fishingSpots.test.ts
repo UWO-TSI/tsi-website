@@ -65,3 +65,15 @@ describe("fishing on the live village map", () => {
     expect(spots).toBeGreaterThan(0);
   });
 });
+
+describe("the per-frame spot check allocates nothing", () => {
+  const island = villageIsland(), { classify } = villageWater();
+  it("writes the spot into the object it is given, and gives the same answer as a fresh one", () => {
+    const out = { target: [0, 0] as [number, number], water: "river" as const };
+    const fresh = fishingSpot(island.map, classify, 5, -1.2)!;
+    const reused = fishingSpot(island.map, classify, 5, -1.2, out);
+    expect(reused).toBe(out);
+    expect(reused).toEqual(fresh);
+    expect(fishingSpot(island.map, classify, 0, -10, out)).toBeNull();
+  });
+});

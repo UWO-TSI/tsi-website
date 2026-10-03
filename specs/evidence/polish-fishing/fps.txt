@@ -1,0 +1,12 @@
+Fishing FPS, the village river bank (2.5, -2), High, 1280x800, headed Chromium on the Mac mini with the other agents running.
+Measured back to back on one dev server, the base (b592ee86) and this branch alternating: requestAnimationFrame counts over
+4 s standing, 3 s waiting with the bobber out, 2.5 s reeling (specs/evidence/polish-fishing/shoot.mjs `fps`).
+
+                 standing  waiting  reeling
+before, round 1     106      105      101
+after,  round 1     103      103       98
+before, round 2     101      101      101
+after,  round 2     100      102      100
+
+Within the run-to-run spread (the base itself moved 5 FPS between rounds): unchanged.
+(A first pair taken earlier under heavier machine load read 80/78/75 before and 106/105/101 after; the load, not the code.)
