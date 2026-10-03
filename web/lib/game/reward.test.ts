@@ -28,6 +28,12 @@ describe("the shared reward card's event", () => {
     expect(rewardOf("tsi:crafted", { id: "sword-iron", name: "Iron sword", kind: "weapon" })).toMatchObject({ icon: "/assets/icons/sword-iron.webp", note: expect.stringMatching(/gear/) });
   });
 
+  it("makes the first leaf glider an unlock: its own title, and the guided first glide pointed to", () => {
+    const r = rewardOf("tsi:crafted", { id: "glider-leaf", name: "Leaf glider", kind: "item" })!;
+    expect(r).toMatchObject({ icon: "/assets/icons/glider_leaf.webp", isNew: true, title: "New: you can glide" });
+    expect(r.note).toMatch(/jump again/);
+  });
+
   it("unrolls a bottle's recipe: the thing it makes and what it takes", () => {
     const r = rewardOf("tsi:recipe-learned", { id: "rod-glass", name: "Glass rod" });
     expect(r).toMatchObject({ kind: "bottle", key: "rod-glass", name: "Glass rod", icon: "/assets/icons/rod_glass.webp" });

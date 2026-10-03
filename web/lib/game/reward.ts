@@ -47,7 +47,7 @@ const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : n
 function made(id: string, kind: unknown): string {
   if (kind === "weapon") return "It's in your gear for the ruins.";
   if (id.startsWith("bag-")) return "Your backpack has more room now.";
-  if (id === "glider-leaf") return "Jump, then press jump again while falling and hold it to glide.";
+  if (id === "glider-leaf") return "Run off an edge, press jump again while you fall and hold it. Try it from the ledge marked outside.";
   return "It takes no room in your pockets: find it in your Bag, under tools, clothes and furniture.";
 }
 
@@ -68,7 +68,9 @@ export function rewardOf(type: string, detail: unknown): Reward | null {
   if (type === "tsi:crafted") {
     const id = str(d.id, 64), name = str(d.name);
     if (!id || !name) return null;
-    return { kind: "craft", key: id, name, icon: madeIcon(id), rarity: null, size: null, isNew: false, title: "Crafted", note: made(id, d.kind) };
+    // The leaf glider is the first movement unlock (specs/glider.md): its card says what's new, the guided first glide follows.
+    const unlock = id === "glider-leaf";
+    return { kind: "craft", key: id, name, icon: madeIcon(id), rarity: null, size: null, isNew: unlock, title: unlock ? "New: you can glide" : "Crafted", note: made(id, d.kind) };
   }
   if (type === "tsi:recipe-learned") {
     const id = str(d.id, 64), name = str(d.name);

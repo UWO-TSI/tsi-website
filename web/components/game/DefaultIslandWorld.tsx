@@ -90,6 +90,7 @@ import type { MuseumWing } from "@/lib/collections/logic";
 import FishingOverlay from "./FishingOverlay";
 import ToastHub, { toast } from "./ToastHub";
 import RewardCard from "./RewardCard";
+import GlideGuide, { GlideGuideHint } from "./GlideGuide";
 import IslandLoading from "./IslandLoading";
 import HQLead from "./HQLead";
 import DailyGift from "./DailyGift";
@@ -351,6 +352,8 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <GridOcean map={island.map} lite={liteMode} skip={layout.underWharf} radius={layout.scale.glintRadius} />
       <PeacefulLayer map={island.map} nodes={layout.nodes} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} treeModels={SEASON_TREES[look.season]} />
       <BeachBottle player={player} ground={island.ground} />
+      {/* After the first leaf glider is made: a marked edge and a ring to land in (the guided first glide). */}
+      <GlideGuide map={island.map} ground={island.ground} player={player} owned={peaceful.glider} active={!fishing && !lead?.hold} />
       <StudySeats area="village" player={player} ground={island.ground} />
       <VillageLandmarks layout={layout} ground={island.ground} opened={progression.opened} stage={progression.stage} ceremony={ceremony} light={light} />
       {layout.fitting && <FittingRoom at={layout.fitting} ground={island.ground} player={player} />}
@@ -1021,6 +1024,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <ToastHub />
       {/* What a catch, a find, a craft or a bottle gave you: one card with its art, beside the Bag's fly-in. */}
       <RewardCard />
+      <GlideGuideHint show={ready && !fading && !inside && site === "village" && !sheet && !welcoming} />
       {/* Today's gift once the island is showing and nothing else holds the player (first login, a fade, a sheet, a fight). */}
       <DailyGift ready={ready && !fading && !holdObjective && !sheet && site !== "ruins"} />
       {greeting !== null && <div className={styles.greeting} data-welcome>
