@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { balanceRowV2, bandV2, bossMinutesV2, bossRowV2, runV2, signatureWeapon, ultUplift, ultWanted, V2_TARGETS, type BalanceRowV2 } from "./balance";
+import { balanceRowV2, bandV2, bossMinutesV2, bossRowV2, runV2, signatureWeapon, ultAdds, ultUplift, ultWanted, V2_TARGETS, type BalanceRowV2 } from "./balance";
 import { classKit } from "@/lib/combat/classes";
 import { spawnWave } from "./actions";
 import { equipClassKit } from "./classRuntime";
@@ -103,5 +103,28 @@ describe("the v2 harness, wave 5: measuring the ult and the guardian right", () 
     expect(b.minutes).toBe(10); // the old measure: never fell
     expect(b.rateMinutes).toBeGreaterThan(1);
     expect(b.rateMinutes).toBeLessThan(8);
+  });
+});
+
+describe("the v2 harness, wave 5: a drawn ult's fill", () => {
+  it("times the next fill from a drawn ult's release (the Priest's wings drain the meter as the shape resolves)", () => {
+    const row = balanceRowV2("priest", "sanctum-loop", 1, 3);
+    expect(row.ultFill).toBeGreaterThan(30);
+    expect(row.ultFill).toBeLessThan(120);
+  });
+});
+
+describe("the v2 harness, wave 5: what an ult adds over a long pack fight", () => {
+  it("loops the sanctum's waves for a fight where the ult fires several times", () => {
+    const r = runV2("hunter", "sanctum-loop", 1, 1);
+    expect(r.cleared).toBe(true);
+    expect(r.seconds).toBeGreaterThan(150);
+    expect(r.ults).toBeGreaterThanOrEqual(2);
+  });
+  it("measures the ult by the damage it adds: the bot that never presses F deals less, and the difference is a share", () => {
+    expect(runV2("hunter", "sanctum-loop", 1, 1, 600, { noUlt: true }).ults).toBe(0);
+    const adds = ultAdds("hunter", 1, 4);
+    expect(adds).toBeGreaterThan(0.03);
+    expect(adds).toBeLessThan(0.4);
   });
 });

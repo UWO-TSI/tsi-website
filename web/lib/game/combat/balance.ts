@@ -313,14 +313,23 @@ export function ultUplift(r: Pick<RunV2, "dealt" | "seconds" | "windowDealt" | "
 /** One v2 run: a survive mission's waves, or the guardian (`"boss"`: the scripted fight, bot rules plus the stagger window). */
 /** The bot knows every form a Transmuter can learn, each from one defeat (a fresh learner: the forms at tier 2). */
 const ALL_TRAITS = Object.fromEntries(["fox-stride", "crab-shell", "wisp-core", "pollen-swarm", "golem-fist"].map(k => [k, 1]));
-export function runV2(kitKey: string, missionId: "survive-circle" | "survive-sanctum" | "boss", seed: number, mastery = 1, limit = 240): RunV2 {
+/**
+ * Wave 5: the sanctum's four waves three times over (ids kept apart), about five minutes: a pack fight long enough for the
+ * ult to fire several times mid-fight. On the one sanctum run the meter fills once, near the end (60–75 s into a 70–140 s
+ * run), so whether its one ult finds a pack decides its share more than the ult does.
+ */
+const SANCTUM_LOOP: SpawnPoint[][] = [0, 1, 2].flatMap(n => WAVES["survive-sanctum"].map(w => w.map(s => ({ ...s, id: `${s.id}-l${n}` }))));
+export type MissionV2 = "survive-circle" | "survive-sanctum" | "sanctum-loop" | "boss";
+/** `noUlt`: the bot never presses F (the counterfactual ultAdds measures against). */
+export function runV2(kitKey: string, missionId: MissionV2, seed: number, mastery = 1, limit = missionId === "sanctum-loop" ? 600 : 240, opts: { noUlt?: boolean } = {}): RunV2 {
   const kit = classKit(kitKey)!, random = lcg(seed), rt = createRuntime(), p = rt.player;
   p.stats = presetAllocation(kit.family, 10); p.level = 10; p.safe = false;
   p.weapon = signatureWeapon(kitKey);
   equipClassKit(rt, kit, mastery, undefined, ALL_TRAITS);
   p.hp = p.maxHp; p.energy = 100;
   const v = rt.v2!, boss = missionId === "boss";
-  const center = boss ? { x: BOSS_CENTER.x, z: BOSS_CENTER.z - 6 } : SURVIVE_CIRCLES[missionId], waves = boss ? [[{ id: "boss", type: "guardian-statue", x: 0, z: 25.5 }]] : WAVES[missionId];
+  const loop = missionId === "sanctum-loop", center = boss ? { x: BOSS_CENTER.x, z: BOSS_CENTER.z - 6 } : SURVIVE_CIRCLES[loop ? "survive-sanctum" : missionId];
+  const waves = boss ? [[{ id: "boss", type: "guardian-statue", x: 0, z: 25.5 }]] : loop ? SANCTUM_LOOP : WAVES[missionId];
   let me: Vec = { x: center.x, z: center.z }, wave = 0, strafe = 1, t = 0, taken = 0, minHp = p.hp, fillFrom = 0, ults = 0, drawLeft = 0, mashAt = 0, react = "", reactAt = 0, reloadAt = 0;
   let windowTime = 0, seenCast: ClassState["cast"] = null;
   const fills: number[] = [], potencies: number[] = [], judged = new Set<string>(), held: { slot: number; at: number }[] = [], jitter = { x: 0, z: 0, t: 0 };
@@ -335,6 +344,8 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
     if (!alive.length) { if (++wave >= waves.length) return done(true); spawnWave(rt, waves[wave]); }
     const target = alive.filter(e => e.type.kind === "boss")[0] ?? alive.sort((a, b) => d2(a, me) - d2(b, me))[0] ?? null;
     const hpBefore = p.hp;
+    // The meter before anything this frame (a drawn ult's release below drains it; a basic attack can fill it).
+    const before = v.meter;
     // A member's aim wanders a little round the target (up to 0.45 u, a new spot every 0.4 s): weak points aren't free.
     if ((jitter.t -= dt) <= 0) { const a = random() * Math.PI * 2, r = 0.45 * Math.sqrt(random()); jitter.x = Math.cos(a) * r; jitter.z = Math.sin(a) * r; jitter.t = 0.4; }
     if (target) { p.aim = { x: target.x + jitter.x, z: target.z + jitter.z }; p.facing = Math.atan2(p.aim.x - me.x, p.aim.z - me.z); }
@@ -370,11 +381,10 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
     }
     for (let i = held.length - 1; i >= 0; i--) if (t >= held[i].at) { classKey(rt, held[i].slot, false); held.splice(i, 1); }
     const staggered = target?.type.kind === "boss" && target.state === "recover" && !!target.move.stagger;
-    const before = v.meter; // before this frame's presses and swings: a basic attack can fill it too
     // A channelled ult's mash: about 3.5 notes a second, four in five right.
     if (v.channel && t >= mashAt) { mashAt = t + 0.28; const note = v.channel.notes[v.channel.at]; if (note !== undefined) classKey(rt, random() < 0.8 ? note : (note + 1) % 4, true); }
     // The ult: full, with two or more enemies inside its area (or the boss).
-    if (ultWanted(rt, me, target, alive)) {
+    if (!opts.noUlt && ultWanted(rt, me, target, alive)) {
       pressUlt(rt);
       if (v.ult.input?.kind === "drawn") drawLeft = RUNE_TIME.binding; // a drawn ult (the winged sigil): a hard shape takes longer
     }
@@ -450,7 +460,7 @@ export interface BalanceRowV2 extends BalanceRow { role: string; mastery: number
   /** The share of what reached you (past a dodge) that guard, blocks, parries, shields and absorbs kept off your health. */
   mitigated: number }
 /** A kit's row at a mastery: the band's columns plus the median ult fill time, the ult's share of the damage and the role. */
-export function balanceRowV2(kitKey: string, missionId: "survive-circle" | "survive-sanctum", mastery = 1, seeds = 20): BalanceRowV2 {
+export function balanceRowV2(kitKey: string, missionId: Exclude<MissionV2, "boss">, mastery = 1, seeds = 20): BalanceRowV2 {
   const kit = classKit(kitKey)!, runs = Array.from({ length: seeds }, (_, i) => runV2(kitKey, missionId, i + 1, mastery));
   const won = runs.filter(r => r.cleared).map(r => r.seconds).sort((a, b) => a - b), time = runs.reduce((n, r) => n + r.seconds, 0);
   const fills = runs.flatMap(r => r.fills).sort((a, b) => a - b), dealt = runs.reduce((n, r) => n + r.dealt, 0), charged = runs.reduce((n, r) => n + r.charged, 0);
@@ -466,6 +476,16 @@ export function balanceRowV2(kitKey: string, missionId: "survive-circle" | "surv
 export function bossMinutesV2(kitKey: string, mastery = 1, seeds = 8): number {
   const t = Array.from({ length: seeds }, (_, i) => runV2(kitKey, "boss", i + 1, mastery, 600)).map(r => (r.cleared ? r.seconds : 600) / 60).sort((a, b) => a - b);
   return t[Math.floor(t.length / 2)];
+}
+/**
+ * What a kit's ult adds to its damage (§3 "Ult weight", 8–15%): 1 − its DPS on the looped sanctum with the bot never
+ * pressing F, over its DPS with the ult. No attribution: an ult's own hits, a transformation's bigger swings, an army
+ * that keeps a pack busy and the corpses it leaves all count, and so does what the ult costs (a 5 s channel rooted). The
+ * shares in the rows attribute hits instead, and the one sanctum run fires one ult late (SANCTUM_LOOP).
+ */
+export function ultAdds(kitKey: string, mastery = 1, seeds = 20): number {
+  const dps = (noUlt: boolean) => { const r = Array.from({ length: seeds }, (_, i) => runV2(kitKey, "sanctum-loop", i + 1, mastery, 600, { noUlt })); return r.reduce((n, x) => n + x.dealt, 0) / r.reduce((n, x) => n + x.seconds, 0); };
+  return 1 - dps(true) / dps(false);
 }
 /**
  * The scripted guardian fight, wave 5's columns: `minutes` as bossMinutesV2 (10 when it never fell), the clears and their
