@@ -43,7 +43,8 @@ const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vect
 /** Module scope (the react compiler forbids writing through hook values): every body and glow where the swarm has it. */
 function draw(swarm: FireflySwarm, bodies: (THREE.InstancedMesh | null)[], glow: THREE.InstancedMesh | null, camera: THREE.Camera) {
   const p = swarm.positions;
-  for (const body of bodies) {
+  for (let b = 0; b < bodies.length; b++) {
+    const body = bodies[b];
     if (!body) continue;
     for (let i = 0; i < swarm.count; i++) body.setMatrixAt(i, _m.compose(_p.set(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]), _q.setFromAxisAngle(_up, swarm.yaw[i]), _s.setScalar(1)));
     body.instanceMatrix.needsUpdate = true;

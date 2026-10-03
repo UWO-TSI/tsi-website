@@ -72,19 +72,27 @@ export class GlowParticles {
 }
 
 const SHARED = new WeakMap<THREE.Object3D, { fx: GlowParticles; users: number }>();
+/** The scene's one glow system, made on first use. */
+export function glowOf(scene: THREE.Object3D): GlowParticles {
+  let e = SHARED.get(scene);
+  if (!e) SHARED.set(scene, e = { fx: new GlowParticles(), users: 0 });
+  return e.fx;
+}
+/**
+ * One more thing using it: the first puts it in the scene, and the returned leave takes it out with the last. The
+ * system itself stays with the scene (the WeakMap lets it go with it), as the movement particles' does: a user that
+ * mounts after the last one left (StrictMode's second effect, the next room's first) finds the same one.
+ */
+export function joinGlow(scene: THREE.Object3D): () => void {
+  const fx = glowOf(scene), e = SHARED.get(scene)!;
+  if (e.users++ === 0) scene.add(fx.mesh);
+  return () => { if (--e.users === 0) { scene.remove(fx.mesh); fx.clear(); fx.dispose(); } };
+}
 /** The scene's glow particles: one system however many things throw into it. */
 export function useGlowParticles(): GlowParticles {
   const scene = useThree(s => s.scene);
-  const fx = useMemo(() => {
-    let e = SHARED.get(scene);
-    if (!e) SHARED.set(scene, e = { fx: new GlowParticles(), users: 0 });
-    return e.fx;
-  }, [scene]);
-  useEffect(() => {
-    const e = SHARED.get(scene)!;
-    if (e.users++ === 0) scene.add(e.fx.mesh);
-    return () => { if (--e.users === 0) { scene.remove(e.fx.mesh); e.fx.clear(); e.fx.dispose(); SHARED.delete(scene); } };
-  }, [scene]);
+  const fx = useMemo(() => glowOf(scene), [scene]);
+  useEffect(() => joinGlow(scene), [scene]);
   useFrame((state, delta) => fx.tick(state.clock.elapsedTime, Math.min(delta, 0.1), state.camera, liveWind()));
   return fx;
 }

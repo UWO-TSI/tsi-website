@@ -133,11 +133,18 @@ export function Workbench({ player }: { player: React.RefObject<THREE.Vector3> }
 const BOTTLE = { lift: 320, pop: 560, slide: 520, hold: 700 } as const;
 interface Opening { t0: number; lift: Lift; ok: boolean | null }
 interface BottleParts { cork: THREE.Object3D[]; note: THREE.Object3D[] }
-/** Module scope (the react compiler forbids writing through hook values): the bottle where its opening has it. */
+const NO_PARTS: readonly THREE.Object3D[] = [];
+/** Module scope (the react compiler forbids writing through hook values): the bottle where its opening has it. Index loops: nothing allocated a frame. */
 function openBottle(g: THREE.Group | null, rock: THREE.Group | null, parts: BottleParts | null, o: Opening | null, now: number, rest: [number, number, number]) {
   if (!g) return;
+  const cork = parts ? parts.cork : NO_PARTS, note = parts ? parts.note : NO_PARTS;
   if (rock && !o) rock.rotation.x = Math.sin(worldTime() * 1.3) * 0.08;
-  if (!o) { g.position.set(...rest); g.rotation.set(0, 0.8, 0); g.scale.setScalar(1.3); for (const c of parts?.cork ?? []) { c.position.set(0, 0, 0); c.rotation.set(0, 0, 0); c.visible = true; } for (const n of parts?.note ?? []) n.position.set(0, 0, 0); return; }
+  if (!o) {
+    g.position.set(rest[0], rest[1], rest[2]); g.rotation.set(0, 0.8, 0); g.scale.setScalar(1.3);
+    for (let i = 0; i < cork.length; i++) { cork[i].position.set(0, 0, 0); cork[i].rotation.set(0, 0, 0); cork[i].visible = true; }
+    for (let i = 0; i < note.length; i++) note[i].position.set(0, 0, 0);
+    return;
+  }
   const t = now - o.t0;
   if (rock) rock.rotation.x = 0;
   const out = _bottle;
@@ -149,15 +156,15 @@ function openBottle(g: THREE.Group | null, rock: THREE.Group | null, parts: Bott
   // The answer wasn't yes: back down onto the sand.
   if (o.ok === false) { g.scale.setScalar(1.3); return; }
   const k = t - BOTTLE.lift;
-  for (const c of parts?.cork ?? []) {
-    const e = Math.min(1, Math.max(0, k / BOTTLE.pop));
+  for (let i = 0; i < cork.length; i++) {
+    const c = cork[i], e = Math.min(1, Math.max(0, k / BOTTLE.pop));
     // Pop: out of the neck, a hop up and over, spinning.
     c.position.set(-0.12 * e - 0.25 * e * e, 0.18 * Math.sin(Math.PI * e), 0.06 * e);
     c.rotation.set(0, 0, 7 * e);
     c.visible = e < 0.97;
   }
   const s = Math.min(1, Math.max(0, (k - BOTTLE.pop * 0.6) / BOTTLE.slide));
-  for (const n of parts?.note ?? []) n.position.set(-0.24 * (1 - (1 - s) ** 2), 0, 0);
+  for (let i = 0; i < note.length; i++) note[i].position.set(-0.24 * (1 - (1 - s) ** 2), 0, 0);
   // Then put away: it shrinks into the hands as the scroll unrolls.
   const away = Math.min(1, Math.max(0, (k - BOTTLE.pop * 0.6 - BOTTLE.slide - BOTTLE.hold) / 260));
   g.scale.setScalar(1.3 * (1 - away));
