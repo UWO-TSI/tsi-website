@@ -2,13 +2,15 @@
 
 /**
  * The shared reward card (specs/polish/forage-craft-museum.md deliverable 1): a bug, a forage find, a dig, a craft or a
- * bottle's recipe gets one card in the GUI sheet's paper with the item's own art, its name, rarity and size, a soft
- * pop-in and its chime (lib/game/reward.ts). It sits beside the pickup's fly-in (BagButton): the token flies from the
+ * bottle's recipe gets one card in the GUI sheet's paper with the item's own art, its name, rarity (the kit's
+ * RarityBadge, as on the catch card, the journal and the book) and size, a soft pop-in and its chime (lib/game/reward.ts). It sits beside the pickup's fly-in (BagButton): the token flies from the
  * middle of the screen into the Bag while the card stands to its right and says what it was. One card at a time; one
  * that arrives while another is up waits its turn, cutting the first short (never under MIN_MS). A click puts it away.
  */
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { RarityBadge } from "@/components/gui";
 import { AudioManager } from "@/lib/game/audio";
+import { RARITY_META } from "@/lib/game/fishing";
 import { REWARD_EVENTS, rewardHold, rewardOf, rewardSound, type Reward } from "@/lib/game/reward";
 import styles from "./RewardCard.module.css";
 
@@ -51,7 +53,7 @@ function Card({ reward, leaving, onClose }: { reward: Reward; leaving: boolean; 
       <p className={styles.title}>{title}</p>
       <h3 className={styles.name}>{name}</h3>
       {(rarity || size) && <p className={styles.meta}>
-        {rarity && <span className={styles.rarity}>{rarity}</span>}
+        {rarity && <RarityBadge rarity={rarity}>{RARITY_META[rarity].label}</RarityBadge>}
         {size ? <span className={styles.size}>{size} cm</span> : null}
       </p>}
       {note && <p className={styles.note}>{note}</p>}

@@ -857,7 +857,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       if (target) window.dispatchEvent(new CustomEvent("tsi:peaceful-act", { detail: { id: target.id, tool: held.key } }));
       return;
     }
-    if (toolAction.verb === "swing") { clip("Net"); AudioManager.playSFX("blip4", { rate: 0.8, gain: 0.45 }); return; }
+    // The net through the air: the footstep quickened as the whoosh (the combat swing's stand-in), never a dialogue blip.
+    if (toolAction.verb === "swing") { clip("Net"); AudioManager.playSFX("footstep", { rate: 1.5, gain: 0.45 }); return; }
     if (toolAction.verb === "dig") { clip("Dig"); window.setTimeout(() => AudioManager.playSFX("footstep", { rate: 0.6, gain: 0.7 }), 540); return; }
     if (toolAction.verb === "attack") {
       const kind = WEAPONS[held.key]?.kind;
