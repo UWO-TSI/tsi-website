@@ -27,7 +27,6 @@
 import { combat } from "@/lib/game/combat/runtime";
 import { getWorldStudy } from "@/lib/study/worldStore";
 import { seatKey } from "@/lib/study/patrons";
-import type { ClipName } from "@/lib/game/character/clips";
 import { armJournal, drainJournal, keepArmed, localAvatar, type LocalAvatar } from "./localAvatar";
 import {
   AFK_MS, EV, EV_DT_MAX_MS, EV_MAX, PACKET_FLAG, RATE_LIMITS, SANITY, SEND, encodePose, heldOf, isClipName, isEmoteClip, isItemKey, isSeatKey,
@@ -348,6 +347,3 @@ export function createSender(source: NetSource, deps: Partial<SenderDeps> = {}):
     },
   };
 }
-
-/** Seat clips: a pose that holds a seat (the claim's signal). */
-export const isSeatClip = (clip: ClipName | string | null | undefined) => !!clip && SEAT_CLIPS.has(clip);
