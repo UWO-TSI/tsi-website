@@ -167,7 +167,58 @@ export const MARTIAL_ARTIST: ClassKit = {
   look: { ramp: ["#fff6e8", "#f2913a", "#5a1e08"], mote: "flare", drift: "rise", icon: "/assets/game/classes/martial-artist.svg" },
 };
 
-export const VANGUARD_KITS: ClassKit[] = [GUARDIAN, JUGGERNAUT, MARTIAL_ARTIST];
+// ── Assassin: crit chance, the movement class; twin tanto and kunai, black ink and red ──────────────────────
+export const ASSASSIN: ClassKit = {
+  key: "assassin", name: "Assassin", family: "Vanguard", role: "damage", style: "skill",
+  signature: { type: "tanto", name: "twin tanto" },
+  stat: { kind: "crit_chance", at1: 0.1, at20: 0.3 },
+  mods: { max_hp: -0.15 },
+  basic: { chain: [
+    { power: 0.9, clip: "Unique_TantoCut", knock: 2 },
+    { power: 0.9, clip: "Unique_TantoBackcut", knock: 2 },
+  ], throw: { beyond: 3.2, power: 0.85, speed: 26, range: 12, fx: "assassin.kunaiHit" } },
+  keys: [
+    { key: "assassin.step", name: "Shadow Step", icon: I("shadowstep"), description: "Blink behind the enemy under the crosshair; it loses you for a moment. 2 charges; a backstab kill gives one back.",
+      cooldown_s: 6, energy: 15, charges: 2, refund: "backstab", effects: [{ kind: "blink", to: "behind", range: 9, status: { hold: 0.6 } }],
+      clip: { unique: "Unique_ShadowStep" }, vfx: { cast: "assassin.inkPuff", travel: "assassin.inkArrive" } },
+    { key: "assassin.kunai", name: "Kunai Blink", icon: I("kunai"), description: "Throw a kunai anywhere; press again within 4 s to blink to it, momentum kept. Stuck in an enemy, you land at its back.",
+      cooldown_s: 7, energy: 15, input: { kind: "recast", window_s: 4 },
+      effects: [{ kind: "projectile", power: 0.7, speed: 26, range: 12, stick: true }], release: [{ kind: "blink", to: "anchor", status: { hold: 0.5 } }],
+      clip: { verb: "Throw", scale: 1.4 }, vfx: { cast: "assassin.inkPuff", travel: "assassin.kunaiTrail", impact: "assassin.kunaiHit" } },
+    { key: "assassin.lotus", name: "Ink Lotus", icon: I("inklotus"), description: "Spin through the crowd in a whirl of red ink, cutting everything around you three times.", heavy: true,
+      cooldown_s: 8, energy: 25,
+      effects: [{ kind: "momentum", speed: 2 }, { kind: "area", power: 0.6, radius: 2.8, at: "self", knock: 1, fxEach: true },
+        { kind: "after", delay: 0.2, effects: [{ kind: "area", power: 0.6, radius: 2.8, at: "self", knock: 1, fxEach: true }] },
+        { kind: "after", delay: 0.4, effects: [{ kind: "area", power: 0.8, radius: 2.8, at: "self", knock: 4, fxEach: true }] }],
+      clip: { unique: "Unique_InkLotus" }, vfx: { cast: "assassin.lotusCast", impact: "assassin.inkCut" } },
+    { key: "assassin.smoke", name: "Smoke Bomb", icon: I("smoke"), description: "Ink smoke for 4 s: inside it you're unseen, and enemies nearby lose you.",
+      cooldown_s: 14, energy: 20, effects: [{ kind: "summon", unit: "ink-smoke" }, { kind: "area", power: 0, radius: 3.5, at: "self", status: { distract: 2 } }],
+      clip: { verb: "Plant", scale: 1.5 }, vfx: { cast: "assassin.smokeBurst", zone: "assassin.smoke" } },
+    { key: "assassin.execute", name: "Execute", icon: I("execute"), description: "From behind, an enemy under 30% health falls at once (a boss or mini-boss takes a huge hit instead).",
+      unlock: 3, heavy: true, cooldown_s: 10, energy: 25, effects: [strike(2.4, { range: 2, knock: 3, execute: { below: 0.3, boss: 2.5 } })],
+      clip: { unique: "Unique_Execute" }, vfx: { impact: "assassin.execute" } },
+  ],
+  passive: { name: "Backstab", description: "Attacks from behind always crit and deal 50% more.", kind: "backstab", value: 0.5 },
+  movement: { name: "Vault", description: "Dash into an enemy to flip over it and land at its back, momentum kept; it turns to find you.", on: "dash", energy: 0, cooldown_s: 0.8,
+    needs: { enemy: 2.6, status: { hold: 0.45 } }, effects: [{ kind: "launch", height: 0.8 }, { kind: "momentum", speed: 3 }] },
+  ult: { key: "assassin.ult", name: "Death Lotus", icon: I("deathlotus"),
+    description: "Time stops and the world turns to ink. You blink between every enemy in range; time resumes and every cut lands at once.",
+    cooldown_s: 0, energy: 0, charge: 1, anticipation_ms: 600, impacts: "first", world: "ink",
+    effects: [{ kind: "area", power: 6.5, radius: 9, at: "self", knock: 2, fxEach: true, status: { hold: 0.8 } }],
+    clip: { unique: "Ult_Assassin" }, vfx: { cast: "assassin.ultCast", impact: "assassin.lotusCut", zone: "assassin.ultDecal" } },
+  ranks: RANKS([
+    { at: 5, target: "assassin.lotus", change: { label: "+20% power", power: 1.2 } },
+    { at: 7, target: "assassin.step", change: { label: "−20% recharge", cooldown: 0.8 } },
+    { at: 10, target: "ult", change: { label: "+10% power", power: 1.1 } },
+    { at: 12, target: "assassin.kunai", change: { label: "+20% power", power: 1.2 } },
+    { at: 14, target: "assassin.execute", change: { label: "+20% power", power: 1.2 } },
+    { at: 16, target: "passive", change: { label: "+25% backstab damage", power: 1.25 } },
+    { at: 18, target: "ult", change: { label: "+10% power", power: 1.1 } },
+  ]),
+  look: { ramp: ["#fff1ee", "#e0303c", "#120709"], mote: "petal", drift: "fall", icon: "/assets/game/classes/assassin.svg" },
+};
+
+export const VANGUARD_KITS: ClassKit[] = [GUARDIAN, JUGGERNAUT, MARTIAL_ARTIST, ASSASSIN];
 
 // ── Signature weapons (§1.5): one type per subclass, tiers 1–5 (T1 wood/cloth, T2 iron, T3 rune-etched, T4 gilded with a glow part, T5 animated runes) ──
 const SIG = (subclass: string, type: string, scaling: WeaponDef["scaling"], names: [string, string][]): WeaponDef[] =>
@@ -176,4 +227,5 @@ export const VANGUARD_WEAPONS: WeaponDef[] = [
   ...SIG("guardian", "aegis", ["might", "vitality"], [["aegis-oak", "Oak shield and sword"], ["aegis-iron", "Iron shield and sword"], ["aegis-rune", "Rune-etched aegis"], ["aegis-gilt", "Gilded aegis"], ["aegis-dawn", "Dawnward aegis"]]),
   ...SIG("juggernaut", "warhammer", ["might", "vitality"], [["warhammer-timber", "Timber war hammer"], ["warhammer-iron", "Iron war hammer"], ["warhammer-rune", "Rune-etched war hammer"], ["warhammer-gilt", "Gilded war hammer"], ["warhammer-quake", "Quakeborn war hammer"]]),
   ...SIG("monk", "handwraps", ["might", "finesse"], [["handwraps-cotton", "Cotton fight wraps"], ["handwraps-iron", "Iron-knuckle wraps"], ["handwraps-rune", "Rune-stitched wraps"], ["handwraps-gilt", "Gilded wraps"], ["handwraps-sun", "Sunfire wraps"]]),
+  ...SIG("assassin", "tanto", ["might", "finesse"], [["tanto-plain", "Plain twin tanto"], ["tanto-iron", "Iron twin tanto"], ["tanto-rune", "Rune-etched tanto"], ["tanto-gilt", "Gilded tanto"], ["tanto-lotus", "Crimson lotus tanto"]]),
 ];

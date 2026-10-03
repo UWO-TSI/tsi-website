@@ -108,6 +108,22 @@ const VANGUARD_FX: Record<string, FxRecipe> = {
   "monk.ultImpact": { tier: "ult", layers: [star(4.5, 0.4), sparks(4, 2.6), halo(4, 0.45, 0.9), heavyLines, lines(14, 2.8, 0.4, { lift: 1 }),
     glow(P("slash", [2, 2], [0.3, 0.32], [4, 4.6], { grow: 1.15 }), { lift: 1.1 }), ring(0.5, 5.5, 0.55, { lift: 0.5 }), dust(8, 1.8, { speed: [2.5, 4.5] }), { kind: "light", intensity: 36, distance: 11, life: 0.45 }] },
   "monk.ultShock": { tier: "ult", layers: [ring(0.4, 4, 0.5, { lift: 0.15 }), decal("crack", 2, 3, { byRadius: true })] },
+  // ── Assassin: black ink and red ──
+  "assassin.kunaiHit": { tier: "ability", layers: [splat(1, 0.5), glow(P("flare", [1, 1], [0.16, 0.18], [0.6, 0.7]), { lift: 0.8 })] },
+  "assassin.inkPuff": { tier: "ability", layers: [splat(3, 0.8), ink(P("smoke", [4, 5], [0.45, 0.6], [0.7, 1], { speed: [0.8, 1.8], up: [0.3, 0.8], drag: 3, grow: 1.6, alpha: 0.9, jitter: 0.4 }), { lift: 0.6 }), petals(4, 0.26)] },
+  "assassin.inkArrive": { tier: "ability", layers: [brush(1.6, 0.28, 0.9), splat(2, 0.7), petals(5, 0.26)] },
+  "assassin.kunaiTrail": { tier: "ability", layers: [ink(P("ink", [1, 1], [0.14, 0.18], [0.16, 0.22], { grow: 0.6 }), { lift: 0.9 }), glow(P("speedLine", [1, 1], [0.1, 0.12], [0.5, 0.6], { face: FACE.streak, aspect: 0.12 }), { lift: 0.9 })] },
+  "assassin.lotusCast": { tier: "ability", layers: [petals(12, 0.3, { speed: [2.4, 4], up: [0.2, 0.6] }), splat(3, 0.9), ring(0.4, 2.8, 0.35, { lift: 0.8 })] },
+  "assassin.inkCut": { tier: "ability", layers: [brush(1.5, 0.26), glow(P("flare", [1, 1], [0.14, 0.16], [0.6, 0.7]), { lift: 0.9 }), petals(2, 0.22)] },
+  "assassin.smokeBurst": { tier: "ability", layers: [ink(P("smoke", [9, 11], [0.8, 1.1], [1.2, 1.8], { speed: [1.5, 3], up: [0.3, 0.9], drag: 2.6, grow: 2, alpha: 0.95, jitter: 0.8 })), splat(3, 1.1), petals(4, 0.26)] },
+  /** Re-thrown each second while the veil stands: slow ink smoke filling its circle. */
+  "assassin.smoke": { tier: "ability", layers: [ink(P("smoke", [8, 10], [1.05, 1.15], [1.4, 2], { speed: [0.1, 0.4], up: [0.1, 0.3], drag: 2, grow: 1.4, alpha: 0.9, jitter: 2.4 }), { lift: 0.4 })] },
+  "assassin.execute": { tier: "heavy", layers: [brush(2.4, 0.32, 1), glow(P("slash", [1, 1], [0.24, 0.24], [2.2, 2.2], { grow: 1.1 }), { lift: 1 }), star(2, 0.26), splat(4, 1), heavyLines, petals(6, 0.3)] },
+  "assassin.ultCast": { tier: "ult", layers: [decal("ink", 4.5, 1.2), glow(P("petal", [30, 34], [0.5, 0.6], [0.24, 0.32], { speed: [-5, -3.5], jitter: 4, spin: 4, grow: 0.6, rise: [0.2, 2.2] }), { lift: 0.2 }),
+    ink(P("smoke", [8, 10], [0.6, 0.8], [1.2, 1.8], { speed: [0.5, 1.5], drag: 2, grow: 1.6, alpha: 0.8, jitter: 1.6 }), { lift: 0.5 }), { kind: "light", intensity: 20, distance: 10, life: 0.6 }] },
+  /** Every cut at once (played on each enemy the lotus caught). */
+  "assassin.lotusCut": { tier: "ult", layers: [brush(2.8, 0.36, 1), brush(2.2, 0.32, 1.2), glow(P("slash", [1, 1], [0.3, 0.3], [2.6, 2.6], { grow: 1.15 }), { lift: 1 }), star(2.4, 0.3), splat(3, 1.1), petals(8, 0.32, { speed: [2, 4] }), heavyLines] },
+  "assassin.ultDecal": { tier: "ult", layers: [decal("ink", 6, 4, { spin: 0.1 }), decal("rune", 3, 2, { spin: 0.3 })] },
 };
 
 export const FX: Record<string, FxRecipe> = {

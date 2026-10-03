@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { GUARDIAN, JUGGERNAUT, MARTIAL_ARTIST } from "@/lib/combat/vanguardKits";
+import { ASSASSIN, GUARDIAN, JUGGERNAUT, MARTIAL_ARTIST } from "@/lib/combat/vanguardKits";
 import { CHAIN_WINDOW, type ClassKit } from "@/lib/combat/classes";
 import { signatureGrant } from "@/lib/combat/weapons";
-import { enemyTarget } from "./abilities";
+import { BEHIND, behindOf, enemyTarget, fromBehind, strike } from "./abilities";
 import { attack, attackSpeed, hurtPlayer } from "./actions";
-import { classKey, equipClassKit, pressUlt, stepClass } from "./classRuntime";
+import { classKey, classMove, equipClassKit, pressUlt, stepClass } from "./classRuntime";
 import { ENEMIES } from "./data";
 import { stepCombat } from "./encounter";
 import { createRuntime, energyMax, type CombatRuntime } from "./runtime";
@@ -221,5 +221,103 @@ describe("Martial Artist: the chain, techniques woven in, Rhythm, the clinch", (
     for (let t = 0; t < 3.2; t += DT) { frame(rt); if (lost(foe) > last) { hits++; last = lost(foe); } }
     expect(hits).toBe(8);
     expect(lost(other)).toBeGreaterThan(0); // the final roundhouse's shockwave
+  });
+});
+
+describe("Assassin: Backstab, Vault, Shadow Step's charges, Kunai Blink, Execute, Smoke", () => {
+  it("the back is the 140° behind an enemy; a backstab always crits and deals 50% more", () => {
+    const e = spawnEnemy("x", ENEMIES["thorn-crab"], 0, 0);
+    e.facing = 0; // facing +z
+    expect(fromBehind(e, { x: 0, z: -2 })).toBe(true);
+    expect(fromBehind(e, { x: Math.sin(BEHIND + 0.05) * 2, z: Math.cos(BEHIND + 0.05) * 2 })).toBe(true);
+    expect(fromBehind(e, { x: Math.sin(BEHIND - 0.05) * 2, z: Math.cos(BEHIND - 0.05) * 2 })).toBe(false);
+    expect(fromBehind(e, { x: 2, z: 0 })).toBe(false); // the flank
+    expect(fromBehind(e, { x: 0, z: 2 })).toBe(false);
+    const { rt, foe } = setup(ASSASSIN, 1, "thorn-crab", { x: 0, z: 1.2 });
+    const front = strike(rt, foe, { power: 1, from: ME }, never);
+    foe.facing = 0; // its back to you
+    const back = strike(rt, foe, { power: 1, from: ME }, never);
+    expect(back / front).toBeGreaterThan(1.75 * 1.5 * 4); // crit × 1.5, and the crab's shell turned the front hit aside
+    expect(rt.floaters.some(f => f.kind === "crit")).toBe(true);
+  });
+  it("Vault: a dash into an enemy hops you over it with your speed kept; it turns to find you. No enemy ahead: nothing", () => {
+    const { rt, p, foe } = setup(ASSASSIN, 1, "shadow-fox");
+    p.move = { mode: "ground", speed: 12, sinceDash: 0, vx: 0, vz: 12 };
+    expect(classMove(rt, ME, "dash")).toBe(true);
+    expect(p.kick).toMatchObject({ up: 0.8, speed: 3 });
+    expect(foe.status.hold).toBeGreaterThan(0.4);
+    const away = setup(ASSASSIN);
+    away.p.move = { mode: "ground", speed: 12, sinceDash: 0, vx: 0, vz: -12 };
+    expect(classMove(away.rt, ME, "dash")).toBe(false);
+    expect(away.p.kick).toBeNull();
+  });
+  it("Shadow Step: blinks behind the target, two charges, and a backstab kill gives one back", () => {
+    const { rt, p, foe } = setup(ASSASSIN, 1, "stone-golem", { x: 0, z: 4 });
+    tap(rt, 0);
+    expect(p.kick?.to).toEqual(behindOf(foe));
+    expect(foe.status.hold).toBeGreaterThan(0);
+    p.kick = null; tap(rt, 0);
+    expect(rt.v2!.stock["assassin.step"]).toBe(0);
+    p.kick = null; tap(rt, 0);
+    expect(p.kick).toBeNull(); // no charge left
+    const weak = add(rt, "shadow-fox", 1, 1); weak.hp = 1; weak.facing = Math.atan2(-1, -1) + Math.PI; // its back to you
+    strike(rt, weak, { power: 1, from: ME }, never);
+    expect(weak.state).toBe("dead");
+    expect(rt.v2!.stock["assassin.step"]).toBe(1);
+    for (let t = 0; t < 6.1; t += DT) frame(rt);
+    expect(rt.v2!.stock["assassin.step"]).toBe(2);
+  });
+  it("Kunai Blink: a throw marks where it lands; press again to blink there, or to the back of what it stuck in", () => {
+    const { rt, p, foe } = setup(ASSASSIN, 1, "stone-golem", { x: 0, z: 5 });
+    rt.player.aim = { x: 3, z: 3 }; // miss: it lands at the aim
+    tap(rt, 1);
+    expect(rt.v2!.anchor).toMatchObject({ enemy: null });
+    tap(rt, 1);
+    expect(Math.hypot(p.kick!.to!.x - 3, p.kick!.to!.z - 3)).toBeLessThan(0.8);
+    p.kick = null;
+    for (let t = 0; t < 7.1; t += DT) frame(rt);
+    rt.player.aim = { x: 0, z: 5 };
+    tap(rt, 1);
+    for (let i = 0; i < 30; i++) stepCombat(rt, ME, DT, () => true, never);
+    expect(rt.v2!.anchor?.enemy).toBe(foe.id);
+    tap(rt, 1);
+    expect(rt.player.kick?.to).toEqual(behindOf(foe));
+  });
+  it("Execute: under 30% and from behind it falls; otherwise a strong hit; a boss takes 2.5× instead", () => {
+    const run = (type: string, hpFrac: number, behind: boolean) => {
+      const { rt, foe } = setup(ASSASSIN, 3, type);
+      foe.hp = Math.floor(foe.type.hp * hpFrac);
+      if (behind) foe.facing = 0;
+      const was = foe.hp;
+      tap(rt, 4);
+      return { dead: foe.state === "dead", dealt: was - foe.hp };
+    };
+    expect(run("stone-golem", 0.29, true).dead).toBe(true);
+    expect(run("stone-golem", 0.31, true).dead).toBe(false);
+    expect(run("stone-golem", 0.29, false).dead).toBe(false);
+    const boss = run("guardian-statue", 0.29, true), bossFront = run("guardian-statue", 0.29, false);
+    expect(boss.dead).toBe(false);
+    expect(boss.dealt).toBeGreaterThan(bossFront.dealt * 2.5);
+  });
+  it("Smoke Bomb: enemies near lose you at once, and inside the ink nothing finds you", () => {
+    const { rt, foe } = setup(ASSASSIN);
+    const far = add(rt, "stone-golem", 0, 7); // out of the bomb's 3.5 u
+    tap(rt, 3);
+    expect(foe.status.distract).toBeGreaterThan(0);
+    expect(far.status.distract).toBe(0);
+    expect(enemyTarget(rt, far, { ...ME, safe: false, alive: true })).toMatchObject({ x: far.spawnX, z: far.spawnZ }); // you're inside
+    expect(enemyTarget(rt, far, { x: 5, z: 5, safe: false, alive: true })).toMatchObject({ x: 5, z: 5 }); // stepped out
+  });
+  it("Death Lotus: every enemy in range cut at once when time resumes; the world goes to ink", () => {
+    const { rt, foe } = setup(ASSASSIN);
+    const far = add(rt, "stone-golem", 6, 5), out = add(rt, "stone-golem", 12, 0);
+    rt.v2!.meter = 100; pressUlt(rt);
+    expect(rt.v2!.ult.world).toBe("ink");
+    for (let t = 0; t < 0.55; t += DT) frame(rt);
+    expect(lost(foe)).toBe(0); // time stopped
+    for (let t = 0; t < 0.2; t += DT) frame(rt);
+    expect(lost(foe)).toBeGreaterThan(0);
+    expect(lost(far)).toBeGreaterThan(0);
+    expect(lost(out)).toBe(0);
   });
 });
