@@ -9,7 +9,7 @@ import { ENEMIES, WEAPONS } from "./data";
 import type { Vec } from "./sim";
 import { BOSS, DODGE, engage, inArc, invulnerable, spawnEnemy, sweptHit, type Enemy } from "./sim";
 import { ENERGY, SLOT_IDS, energyMax, energyRegen, setWeapon, type AbilityId, type CombatRuntime } from "./runtime";
-import { baseHit, buffSum, cancelCast, chargeUlt, context, cue, floater, fx, mitigate, passiveOf, runEffects, strike, summon, fireSlot } from "./abilities";
+import { baseHit, buffSum, cancelCast, chargeUlt, context, cue, floater, fx, heal, mitigate, passiveOf, runEffects, strike, summon, fireSlot } from "./abilities";
 import { holdsSignature, type ChainStep } from "@/lib/combat/classes";
 import { takenCharge } from "@/lib/combat/ult";
 import { counterHit, formBasic, formTier, reveal } from "./primitives";
@@ -27,6 +27,8 @@ export function regenEnergy(rt: CombatRuntime, dt: number) {
 }
 
 const wearHit = (rt: CombatRuntime) => { const p = rt.player; p.hits[p.weapon] = (p.hits[p.weapon] ?? 0) + 1; p.durability[p.weapon] = Math.max(0, p.durability[p.weapon] - 1); };
+/** A v2 kit whose basic hits heal you (the Priest's Lightbolt): that share of max HP, × healing power. */
+const basicHeal = (rt: CombatRuntime) => { const v = rt.v2; if (v?.kit.basicHeal) heal(rt, rt.player.maxHp * v.kit.basicHeal * v.mods.healing); };
 
 /**
  * Facing (combat polish 10): an attack or ability snaps you to the aim and holds it AIM_HOLD s; otherwise you face the
@@ -92,7 +94,7 @@ export function attack(rt: CombatRuntime, player: Vec, random = Math.random): bo
     const size = buffSum(rt, "size"), range = (step?.range ?? w.range) * (1 + size * 0.5), arc = step?.arc ?? w.arc;
     const power = (step?.power ?? form?.power ?? 1) + (basic?.hp ? (basic.hp * p.maxHp) / Math.max(1, baseHit(rt)) : 0);
     for (const e of rt.enemies) if (e.state !== "dead" && inArc(player, p.facing, range, arc, e, e.type.radius)) { strike(rt, e, { power, from: player, knock: step?.knock ?? form?.knock ?? 4, melee: true, status: form?.status, tier }, random); landed = true; }
-    if (landed) wearHit(rt);
+    if (landed) { wearHit(rt); basicHeal(rt); }
     if (step) { chainHit(rt, landed); p.clip = { verb: step.clip, scale: speed, upper: true }; } // punches and cuts over a run (the catalogue says which)
     for (const b of rt.buffs) if (b.swing && b.t > 0) {
       const ctx = context(rt, { key: b.source ?? "swing", name: "", description: "", cooldown_s: 0, energy: 0, effects: b.swing }, player, 1, p.aim);
@@ -121,6 +123,7 @@ export function resolvePlayerShot(rt: CombatRuntime, shotIdx: number, from: Vec,
   if (!h) {
     strike(rt, target, { power: 1, from, knock }, random);
     wearHit(rt);
+    basicHeal(rt);
     if (s.kind === "bolt") splash(rt, to, 1.3, target, { power: 0.5, from: to, knock: 2 }, random);
     return true;
   }

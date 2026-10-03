@@ -53,6 +53,8 @@ export interface Unit {
   body: Enemy | null;
   /** Classes v2: the FX registry key a dome or a veil re-throws while it stands. */
   fx?: string;
+  /** An ult's own unit (classes v2: the beasts Shadow Garden raises): its hits are the ult's (they count as its share and charge nothing). */
+  ult?: boolean;
   /** A clone's mind (primitives.ts stepClone): its drift, strafe side, next dash and skill, its ward, facing, and the clip it copies. */
   ai?: { vx: number; vz: number; side: number; dash: number; skill: number; ward: number; facing: number; clip: string | null; mimic: number };
 }
@@ -153,8 +155,8 @@ export interface CombatRuntime {
   projectiles: Projectile[]; units: Unit[]; buffs: Buff[]; floaters: Floater[]; blasts: Blast[]; cues: Cue[];
   /** Zone-1 hazards on the ground, and the enemy effects waiting to be painted (mobs.ts, MobFx.tsx). */
   hazards: Hazard[]; mobFx: MobFx[];
-  /** A drawn ability being traced: today's runes root you; a v2 shape (`free`) lets you keep moving. */
-  casting: { id: number; rune: string; aim: Vec; slot: number; ability: Ability; free?: boolean } | null;
+  /** A drawn ability being traced: today's runes root you; a v2 shape (`free`) lets you keep moving; `ult`: a drawn ult (the Priest's). */
+  casting: { id: number; rune: string; aim: Vec; slot: number; ability: Ability; free?: boolean; ult?: boolean } | null;
   /** The subclass kit from /api/combat/progression: equipped abilities, capacity for summons, owned monster traits. */
   kit: { subclass: Subclass; capacity: number; traits: Record<string, number> } | null;
   slots: (Ability | null)[];

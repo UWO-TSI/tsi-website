@@ -97,7 +97,7 @@ describe("classes v2 runtime: the kit at its mastery, the gate, the inputs", () 
     tap(rt, 4); frame(rt);
     expect(rt.casting).toMatchObject({ rune: "circle", free: true });
     resolveCast(rt, ME, { accuracy: 96, coverage: 1, deviation: 0, order: 1, scribble: false, outcome: "enhanced", power: 1.5 }, never);
-    expect(p.hp).toBeCloseTo(p.maxHp / 2 + p.maxHp * 0.2 * 1.2, 0); // support effects cap at 1.2
+    expect(p.hp).toBeCloseTo(p.maxHp / 2 + p.maxHp * 0.2 * 1.5, 0); // a v2 shape scales heals the whole 60–150% (the Priest's drawn casting, LOCKED)
     expect(rt.v2!.cd["demo.sigil"]).toBe(8);
   });
   it("movement riders: a speed-scaled key hits harder fast; the movement passive needs energy", () => {

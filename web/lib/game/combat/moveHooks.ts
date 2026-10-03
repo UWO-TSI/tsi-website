@@ -11,9 +11,9 @@ import type { MoveState, MoveTuning } from "@/lib/game/movement/sim";
 export interface MoveView { mode: string; speed: number; sinceDash: number; vx: number; vz: number; height?: number }
 /**
  * What abilities ask of the next step: carried speed along (dx, dz), a hop of `up` world units, a short hang in the air;
- * `to`: a teleport that keeps your speed and arc (a swap, a thrown card, a blink); `hold`: a slide kept at this speed (a
- * surf); `down`: a slam straight down out of the air; `blink`: a blink to an enemy's back, refused by the avatar off your
- * level (a cliff, a wall).
+ * `to`: a teleport that keeps your speed and arc (a swap, a thrown card, a warp in Shadow Garden, a blink); `hold`: a slide
+ * kept at this speed (a surf); `down`: a slam straight down out of the air; `blink`: a blink to an enemy's back, refused
+ * by the avatar off your level (a cliff, a wall).
  */
 export interface Kick { dx: number; dz: number; speed: number; up: number; hang: boolean; to?: { x: number; z: number }; hold?: number; down?: boolean; blink?: boolean }
 

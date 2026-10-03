@@ -22,6 +22,10 @@ import { GLBProp } from "../NatureModels";
 import { IslandAtmosphere, useFollowCamera } from "../IslandAtmosphere";
 import MobFx from "./MobFx";
 import CombatFx from "./CombatFx";
+import WardenRender from "./WardenRender";
+import { resetField } from "@/lib/game/combat/field";
+import { beastState } from "@/lib/game/combat/beasts";
+import { WARDEN_ALLY_TYPES, WARDEN_RITUAL_TYPES } from "@/lib/game/combat/wardenBodies";
 import PreyMarks from "./PreyMarks";
 import { AimReticle, Blasts, EnemyBars, EnemyInstances, FloaterProjector, PlayerAuras, Projectiles, Telegraphs, Totems, Wisps } from "./EncounterRender";
 import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BROKEN_ARCHES, RUINS_MOAI, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, RUINS_TORCHES, SURVIVE_CIRCLES, createRuins } from "@/lib/game/ruins";
@@ -46,7 +50,7 @@ import { boxOccluder } from "@/lib/game/occluders";
 import { BUFFER, createInputs, hurtPlayer, runInputs, spawnWave } from "@/lib/game/combat/actions";
 import { buffSum, missionEvent } from "@/lib/game/combat/abilities";
 import { stepCombat } from "@/lib/game/combat/encounter";
-import { claimBossReward, claimMinibossReward, postKill, postMissionEvents } from "@/lib/game/combat/progression";
+import { claimBossReward, claimMinibossReward, postKill, postMissionEvents, postTame } from "@/lib/game/combat/progression";
 import { materialsLabel } from "@/lib/game/combat/missions";
 import { ENEMIES, WEAPONS } from "@/lib/game/combat/data";
 import { inRect, spawnEnemy, type Vec } from "@/lib/game/combat/sim";
@@ -64,8 +68,8 @@ import styles from "../DefaultIslandWorld.module.css";
 export type RuinsNear = "exit" | "lantern" | null;
 const F = "/assets/acnh/furniture/";
 const TYPES = SPAWN_TABLE.map(r => r.type);
-/** Models your summons and shades can borrow (every non-boss enemy). */
-const ALLY_TYPES = TYPES.filter(t => t !== "guardian-statue");
+/** Models your summons and shades can borrow (every non-boss enemy), and the Warden's beasts, totems and spirits. */
+const ALLY_TYPES = [...TYPES.filter(t => t !== "guardian-statue"), ...WARDEN_ALLY_TYPES];
 
 export function resetEncounter() {
   const rt = combat.rt;
@@ -82,6 +86,7 @@ export function resetEncounter() {
     channel: null, form: null, formBefore: null, live: createLive(rt.v2.kit.fire?.ammo?.size) }); // Focus, the cylinder and burns start over too
   rt.field = createField();
   rt.player.ultIframes = 0; rt.player.kick = null; rt.player.clip = null; rt.fx = [];
+  resetField(rt); // zones, walls, channels, totems' links, beasts' cooldowns, a ritual under way (the Warden's field primitives)
 }
 
 /** Classes v2: a kill trained the active subclass; a new level's unlocks apply now (the meter and cooldowns carry). */
@@ -435,6 +440,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
       }
       const pid = rt.mission?.progressId;
       if (pid && rt.mission?.queue.length) void postMissionEvents(pid, takeMissionQueue());
+      for (const t of beastState(rt).events.splice(0)) void postTame(t.beast, t.key); // the ritual tamed a beast (idempotent by key)
     }
   });
 
@@ -454,6 +460,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
       {RUINS_TORCHES.map((t, i) => <GLBProp key={i} url={`${F}ruins-torch.glb`} position={[t.x, ruins.ground(t.x, t.z), t.z]} scale={0.1} />)}
       <pointLight position={[BOSS_CENTER.x, 3, BOSS_CENTER.z]} color="#ffb366" intensity={light.lampsOn ? 18 : 6} distance={12} />
       {TYPES.map(t => <EnemyInstances key={t} typeId={t} capacity={capacity(t)} ground={ruins.ground} />)}
+      {WARDEN_RITUAL_TYPES.map(t => <EnemyInstances key={t} typeId={t} capacity={1} ground={ruins.ground} />)}
       {Object.entries(SURVIVE_CIRCLES).map(([id, c]) => <RuneCircle key={id} id={id} circle={c} ground={ruins.ground} />)}
       {Object.entries(FETCH_SPOTS).map(([item, s]) => <FetchItem key={item} item={item} spot={s} ground={ruins.ground} player={player} />)}
       <Escort ground={ruins.ground} player={player} />
@@ -461,6 +468,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
       {ALLY_TYPES.map(t => <EnemyInstances key={`ally-${t}`} typeId={t} capacity={6} ground={ruins.ground} allies />)}
       <Projectiles ground={ruins.ground} />
       <Totems ground={ruins.ground} />
+      <WardenRender ground={ruins.ground} player={player} />
     </Suspense>
     <Telegraphs ground={ruins.ground} />
     <MobFx ground={ruins.ground} />

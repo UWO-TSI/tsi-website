@@ -64,7 +64,7 @@ export const GUARDIAN: ClassKit = {
     { at: 16, target: "passive", change: { label: "+25% armour from a parry", power: 1.25 } },
     { at: 18, target: "ult", change: { label: "+10% power", power: 1.1 } },
   ]),
-  look: { ramp: ["#fffbea", "#f0c23c", "#4a3208"], mote: "aegisShard", drift: "orbit", icon: "/assets/game/classes/guardian.svg", trim: { M_Brass: "#f0c23c", M_Cloth: "#fffbea" } },
+  look: { ramp: ["#fffbea", "#f0c23c", "#4a3208"], mote: "shard", drift: "orbit", icon: "/assets/game/classes/guardian.svg", trim: { M_Brass: "#f0c23c", M_Cloth: "#fffbea" } },
 };
 
 // ── Juggernaut: max HP, basic attacks, the unstoppable war hammer, Titan ───────────────────────────────────
@@ -215,7 +215,7 @@ export const ASSASSIN: ClassKit = {
     { at: 16, target: "passive", change: { label: "+25% backstab damage", power: 1.25 } },
     { at: 18, target: "ult", change: { label: "+10% power", power: 1.1 } },
   ]),
-  look: { ramp: ["#fff1ee", "#e0303c", "#120709"], mote: "lotusPetal", drift: "fall", icon: "/assets/game/classes/assassin.svg", trim: { M_Wrap: "#e0303c", M_Brass: "#120709" } },
+  look: { ramp: ["#fff1ee", "#e0303c", "#120709"], mote: "leaf", drift: "fall", icon: "/assets/game/classes/assassin.svg", trim: { M_Wrap: "#e0303c", M_Brass: "#120709" } },
 };
 
 export const VANGUARD_KITS: ClassKit[] = [GUARDIAN, JUGGERNAUT, MARTIAL_ARTIST, ASSASSIN];

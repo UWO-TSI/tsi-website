@@ -43,7 +43,9 @@ const GRIP_OF: Record<string, Grip> = { sword: "OneHand", shield: "OneHand", bow
   // the Vanguard's sword and board, the two-handed hammer, wrapped fists, twin blades held like fists.
   "prism-staff": "Staff", "trick-deck": "OneHand", "bone-tome": "Book", "tooth-charm": "Fists",
   recurve: "Bow", rifle: "Rifle", harpoon: "Rifle", sixgun: "Pistol",
-  aegis: "OneHand", warhammer: "Staff", handwraps: "Fists", tanto: "Fists" };
+  aegis: "OneHand", warhammer: "Staff", handwraps: "Fists", tanto: "Fists",
+  // The Warden wave's signature types: the seal gloves leave both hands free for the signs; the three staffs.
+  "seal-gloves": "Fists", "totem-staff": "Staff", "living-staff": "Staff", "sunstone-staff": "Staff" };
 export const gripFor = (weaponType: string): Grip => GRIP_OF[weaponType] ?? "OneHand";
 export const verbClip = (verb: Verb, grip: Grip): VerbClip => `${verb}_${grip}`;
 export const holdIdle = (grip: Grip): HoldIdleClip => `HoldIdle_${grip}`;
@@ -176,7 +178,9 @@ export interface CharacterMotion { speed: number; yaw: number; lift: number; pos
   /** Ask for an afterimage of this frame's pose (a dash); the character clears it. */
   ghost?: boolean;
   /** This character leaves afterimages (the player): they are made and compiled up front, so the first dash never hitches. */
-  afterimages?: boolean }
+  afterimages?: boolean;
+  /** How solid it draws (1 solid; classes v2: Escape Rabbits turns you translucent). */
+  fade?: number }
 
 export const isLoop = (clip: ClipName) => (CLIP_BY_NAME.get(clip) ?? VERB_BY_NAME.get(clip))?.loop ?? true;
 

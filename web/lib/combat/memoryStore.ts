@@ -7,6 +7,7 @@ import { CombatError, type CombatStore, type CosmeticKind, type MasteryRow, type
 import { FIRST_WEAPONS, signatureGrant, signatureTier, STARTER_WEAPONS, wear as wearRule, WEAPONS } from "./weapons";
 import { MASTERY_EQUIP, masteryForXp } from "./mastery";
 import { traitFor } from "./kits";
+import { nextToTame, TAME_ORDER } from "./wardenData";
 
 export function memoryCombatStore(clock: () => Date = () => new Date()) {
   const prog = new Map<string, { xp: number; stats: StatBlock; subclass: string | null; loadout: string[]; traits: Record<string, number>; repick: "oracle" | "launch" | null }>();
@@ -30,6 +31,9 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
   const materials = new Map<string, number>(); // `${m}:${item}` → count (member_collections)
   const bossRewards = new Map<string, { reward: BossReward; at: number }>(); // `${m}:${event}`
   const minibossRewards = new Map<string, { enemy: string; reward: BossReward; at: number }>(); // `${m}:${event}`
+  const tamedBy = new Map<string, Set<string>>(); // member_tamed_beasts
+  const tameKeys = new Set<string>(); // `${m}:${key}`
+  const tamedOf = (m: string) => TAME_ORDER.filter(b => tamedBy.get(m)?.has(b));
   const give = (m: string, items: Record<string, number>) => { for (const [k, n] of Object.entries(items)) materials.set(`${m}:${k}`, (materials.get(`${m}:${k}`) ?? 0) + n); };
   let seq = 0;
   const pay = (m: string, amount: number, key: string) => {
@@ -244,6 +248,19 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
       if (reward.weapon && !list.some((w) => w.weapon_key === reward.weapon)) list.push({ weapon_key: reward.weapon, durability: WEAPONS.find((w) => w.key === reward.weapon)!.max_durability, equipped: false });
       return { reward, replayed: false };
     },
+    async tamed(m) {
+      return tamedOf(m);
+    },
+    async tameBeast(m, beast, key) {
+      if (tameKeys.has(`${m}:${key}`)) return { tamed: tamedOf(m), replayed: true };
+      if (!v2()) throw new CombatError("unavailable");
+      if (ensure(m).subclass !== "summoner") throw new CombatError("bad_beast");
+      const have = tamedBy.get(m) ?? new Set<string>();
+      if (have.has(beast)) return { tamed: tamedOf(m), replayed: true };
+      if (nextToTame([...have]) !== beast) throw new CombatError("bad_beast");
+      have.add(beast); tamedBy.set(m, have); tameKeys.add(`${m}:${key}`);
+      return { tamed: tamedOf(m), replayed: false };
+    },
   };
   return { store, setFamily: (m: string, f: Family | null) => (f ? families.set(m, f) : families.delete(m)), fund: (m: string, n: number) => coins.set(m, n), coinsOf: (m: string) => coins.get(m) ?? 0, materialOf: (m: string, item: string) => materials.get(`${m}:${item}`) ?? 0,
     /** economy_settings (classes_v2: 1 on). */
@@ -256,6 +273,8 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
     setReading: (m: string, type: string, scores: { dichotomy: "EI" | "SN" | "TF" | "JP"; clarity: number }[] = []) => readings.set(m, { type, scores }),
     /** A weapon handed over (the dev kit's signature type before any wave seeds signature rows). */
     giveWeapon: (m: string, key: string) => { const list = weapons.get(m) ?? []; if (!list.some((w) => w.weapon_key === key)) list.push({ weapon_key: key, durability: WEAPONS.find((w) => w.key === key)!.max_durability, equipped: false }); },
+    /** Beasts already tamed (the Summoner's demo: `?tamed=owl,toad`). */
+    setTamed: (m: string, beasts: string[]) => tamedBy.set(m, new Set(beasts.filter(b => (TAME_ORDER as readonly string[]).includes(b)))),
     /** Mastery XP straight onto a row (evidence and tests). */
     setMasteryXp: (m: string, subclass: string, xp: number) => masteryRows.set(`${m}:${subclass}`, { cosmetics: {}, ...masteryRows.get(`${m}:${subclass}`), xp }) };
 }
