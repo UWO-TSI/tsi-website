@@ -7,5 +7,6 @@
 import type { FxRecipe } from "./combat";
 import { ELEMENTALIST_FX } from "./arcane/elementalist";
 import { ILLUSIONIST_FX } from "./arcane/illusionist";
+import { NECROMANCER_FX } from "./arcane/necromancer";
 
-export const ARCANE_FX: Record<string, FxRecipe> = { ...ELEMENTALIST_FX, ...ILLUSIONIST_FX };
+export const ARCANE_FX: Record<string, FxRecipe> = { ...ELEMENTALIST_FX, ...ILLUSIONIST_FX, ...NECROMANCER_FX };
