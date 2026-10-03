@@ -1,3 +1,5 @@
+import { worldKeysBlocked } from "./useWorldDialog";
+
 /** Controls keep their native keyboard behavior while the world listens globally. */
 export function isGameControlTarget(element: Element | null): boolean {
   return !!element && (!!element.closest('input, textarea, select, button, summary, a[href], [role="dialog"]') || (element as HTMLElement).isContentEditable);
@@ -22,7 +24,8 @@ export function bindGameKeys({ keys, accepted, onPress, onReset, windowTarget = 
   };
   const down = (event: Event) => {
     const e = event as KeyboardEvent;
-    if (documentTarget.hidden || isGameControlTarget(documentTarget.activeElement) || e.metaKey || (e.ctrlKey && !ctrlKey) || e.altKey) {
+    // A dialog open (lib/game/useWorldDialog) holds the walk too, wherever focus is.
+    if (documentTarget.hidden || worldKeysBlocked() || isGameControlTarget(documentTarget.activeElement) || e.metaKey || (e.ctrlKey && !ctrlKey) || e.altKey) {
       reset();
       return;
     }

@@ -1,11 +1,12 @@
-.map { position: absolute; top: 60px; right: 16px; z-index: 50; width: 190px; max-width: calc(100% - 32px); border-radius: 12px; overflow: hidden; border: 1px solid #a8bdba; background: #f5f1df; color: #283e3b; box-shadow: 0 5px 18px #132e3640; animation: mapIn 0.22s ease-out; pointer-events: none; font-family: "IBM Plex Mono", monospace; }
-.header { height: 44px; display: flex; align-items: center; justify-content: space-between; padding-left: 12px; font-size: 12px; font-weight: 600; }
-.close { width: 44px; height: 44px; display: grid; place-items: center; pointer-events: auto; border: 0; background: transparent; color: inherit; cursor: pointer; }
-.close:hover { background: #dce5d9; }
-.close:focus-visible { outline: 3px solid #9b6428; outline-offset: -4px; }
+/* The island map in the GUI sheet: a paper frame round the plot. */
+.map { position: absolute; top: 60px; right: 16px; z-index: 50; width: 190px; max-width: calc(100% - 32px); border-radius: var(--gui-r-card); overflow: hidden; border: 0; background: var(--gui-paper); color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-md); animation: mapIn 0.22s ease-out; pointer-events: none; }
+.header { height: 44px; display: flex; align-items: center; justify-content: space-between; padding-left: 14px; font-size: var(--gui-text-sm); font-weight: 800; }
+.close { width: 44px; height: 44px; display: grid; place-items: center; pointer-events: auto; border: 0; background: transparent; color: inherit; cursor: pointer; border-radius: 50%; }
+.close:hover { background: var(--gui-paper-warm); }
+.close:focus-visible { outline: 3px solid var(--gui-focus); outline-offset: -4px; }
 .plot { display: block; width: 100%; aspect-ratio: 1; background: #76b4c6; }
-.legend { height: 26px; display: flex; align-items: center; justify-content: space-between; padding: 0 11px; font-size: 10px; }
+.legend { min-height: 28px; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 12px; font-size: var(--gui-text-xs); font-weight: 700; color: var(--gui-ink-2); }
 .you { display: flex; align-items: center; gap: 5px; }
-.you::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #ffdd57; border: 1px solid #7a5a00; }
+.you::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--gui-highlight); border: 1.5px solid var(--gui-warn); }
 @keyframes mapIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .map { animation: none; } }

@@ -24,7 +24,8 @@ import { MOVE_TUNING } from "@/lib/game/movement/sim";
 import { WAVES, type SpawnPoint } from "./spawns";
 import { classKit, type ClassAbility } from "@/lib/combat/classes";
 import { signatureGrant } from "@/lib/combat/weapons";
-import { classKey, equipClassKit, pressUlt, stepClass, ULT_REACH } from "./classRuntime";
+import { classKey, classReload, equipClassKit, pressUlt, stepClass, ULT_REACH } from "./classRuntime";
+import { justReloaded } from "./classFire";
 import { formBasic } from "./primitives";
 import { shapePotency } from "./abilities";
 import { BOSS_CENTER } from "@/lib/game/ruins";
@@ -262,8 +263,8 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
   p.hp = p.maxHp; p.energy = 100;
   const v = rt.v2!, boss = missionId === "boss";
   const center = boss ? { x: BOSS_CENTER.x, z: BOSS_CENTER.z - 6 } : SURVIVE_CIRCLES[missionId], waves = boss ? [[{ id: "boss", type: "guardian-statue", x: 0, z: 25.5 }]] : WAVES[missionId];
-  let me: Vec = { x: center.x, z: center.z }, wave = 0, strafe = 1, t = 0, taken = 0, minHp = p.hp, fillFrom = 0, ults = 0, drawLeft = 0, mashAt = 0, react = "", reactAt = 0;
-  const fills: number[] = [], judged = new Set<string>(), held: { slot: number; at: number }[] = [];
+  let me: Vec = { x: center.x, z: center.z }, wave = 0, strafe = 1, t = 0, taken = 0, minHp = p.hp, fillFrom = 0, ults = 0, drawLeft = 0, mashAt = 0, react = "", reactAt = 0, reloadAt = 0;
+  const fills: number[] = [], judged = new Set<string>(), held: { slot: number; at: number }[] = [], jitter = { x: 0, z: 0, t: 0 };
   spawnWave(rt, waves[0]);
   const dt = 1 / 30;
   const done = (cleared: boolean, died = false): RunV2 => ({ cleared, seconds: t, dealt: rt.tally.dealt, taken, minHp: died ? 0 : minHp / p.maxHp, died, ultDealt: rt.tally.ult, fills, ults });
@@ -272,7 +273,9 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
     if (!alive.length) { if (++wave >= waves.length) return done(true); spawnWave(rt, waves[wave]); }
     const target = alive.filter(e => e.type.kind === "boss")[0] ?? alive.sort((a, b) => d2(a, me) - d2(b, me))[0] ?? null;
     const hpBefore = p.hp;
-    if (target) { p.aim = { x: target.x, z: target.z }; p.facing = Math.atan2(target.x - me.x, target.z - me.z); }
+    // A member's aim wanders a little round the target (up to 0.45 u, a new spot every 0.4 s): weak points aren't free.
+    if ((jitter.t -= dt) <= 0) { const a = random() * Math.PI * 2, r = 0.45 * Math.sqrt(random()); jitter.x = Math.cos(a) * r; jitter.z = Math.sin(a) * r; jitter.t = 0.4; }
+    if (target) { p.aim = { x: target.x + jitter.x, z: target.z + jitter.z }; p.facing = Math.atan2(p.aim.x - me.x, p.aim.z - me.z); }
     const threat = rt.enemies.find(e => e.state === "windup" && e.t > e.move.windup * 0.5 && strikeLands(e, me, 0.6)) ?? null;
     if (threat && !judged.has(`${threat.id}:${threat.cycle}:${Math.floor(t / 2)}`)) {
       judged.add(`${threat.id}:${threat.cycle}:${Math.floor(t / 2)}`);
@@ -280,6 +283,12 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
       // Not dodged: a timed skill instead (a parry, a swap, a Perfect Shift) now and then, pressed at a human moment in the rest of the windup.
       else if (random() < REACT_SKILL) { react = `${threat.id}:${threat.cycle}`; reactAt = threat.move.windup * (0.5 + 0.5 * random()); }
     }
+    // A cylinder's active reload: half the time the bot hits the gold span, otherwise it waits the reload out.
+    const live = v.live, gold = v.kit.fire?.ammo?.gold;
+    if (gold && live.reload !== null) {
+      if (reloadAt === 0) reloadAt = random() < 0.5 ? (gold[0] + gold[1]) / 2 : 2;
+      if (!live.tried && live.reload / live.reloadLen >= reloadAt) classReload(rt, me);
+    } else reloadAt = 0;
     const reacting = !!threat && react === `${threat.id}:${threat.cycle}` && threat.t >= reactAt;
     // Riders: 30% of the time the bot is sliding, in the air, just off a dash and fast.
     const rider = random() < 0.3;
@@ -298,6 +307,7 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
       for (let i = 0; i < v.keys.length; i++) {
         const a = v.keys[i];
         if (!a || (v.cd[a.key] ?? 0) > 0 || p.energy < a.energy || (a.when && !rider)) continue;
+        if ((a.needs === "reloaded" && !justReloaded(rt)) || (a.ammo && (live.ammo <= 0 || live.reload !== null || live.cockEvery > 0))) continue;
         const kind = a.input?.kind ?? "tap";
         if (kind === "toggle" && v.toggled[i]) continue;
         if (!(staggered || useful(rt, a, me, target, reacting))) continue;

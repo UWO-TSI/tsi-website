@@ -66,12 +66,12 @@ const row = (r: Pick<NPCPersona, "slug" | "display_name" | "post" | "bio" | "ton
  */
 export const PROPOSED_RESIDENTS: NPCPersona[] = [
   row({ slug: "wren", display_name: "Wren", post: "hq_lead", tone: "warm",
-    bio: "Keeps the clubhouse running, more or less: club goals, the notice board, everyone's first day. Meets every new member on the wharf.",
+    bio: "Keeps HQ running, more or less: club goals, the notice board, everyone's first day. Meets every new member on the wharf.",
     schedule: { home: "hq", dawn: ["hq"], day: ["hq", "plaza", "path", "hq", "pond"], evening: ["plaza", "bench"], night: ["bench", "home"] },
     canned_dialogue: [
       "Morning! The notice board has something new, I think. Probably.",
       "Club goals are coming along. Every bit helps.",
-      "If you need anything, I'm usually at the clubhouse. Or near it. Or looking for it.",
+      "If you need anything, I'm usually at HQ. Or near it. Or looking for it.",
     ] }),
   row({ slug: "mayor", display_name: "Mayor Eliza", post: "villager", tone: "warm",
     bio: "The island's first resident and its historian. Remembers everyone's first week and will tell the club's story to anyone who sits still.",
@@ -98,7 +98,7 @@ export const PROPOSED_RESIDENTS: NPCPersona[] = [
     schedule: { home: "oracle", dawn: ["oracle"], day: ["oracle", "pond", "oracle"], evening: ["oracle", "pond"], night: ["oracle", "home"] },
     canned_dialogue: ["The crystal is quiet today. It's listening.", "Which way will you grow? Ask the temple.", "Stars are just old light. So are good friends."] }),
   row({ slug: "crafter", display_name: "Pim", post: "workshop_crafter", tone: "playful",
-    bio: "Tinkers at the clubhouse workbench and combs the beach for driftwood and bottles. Never without a pencil behind one ear.",
+    bio: "Tinkers at the HQ workbench and combs the beach for driftwood and bottles. Never without a pencil behind one ear.",
     schedule: { home: "hq", dawn: ["home"], day: ["hq", "beach", "path", "plaza"], evening: ["plaza", "hq"], night: ["home"] },
     canned_dialogue: ["Found a perfectly good plank on the beach. Perfectly good!", "Bring me wood and I'll show you a trick.", "Measure twice, glue once."] }),
   row({ slug: "juniper", display_name: "Juniper", post: "villager", tone: "playful",
@@ -106,7 +106,7 @@ export const PROPOSED_RESIDENTS: NPCPersona[] = [
     schedule: { home: "hq", dawn: ["beach", "path"], day: ["pond", "plaza", "beach"], evening: ["plaza", "bench"], night: ["home"] },
     canned_dialogue: ["Morning laps! Want to race to the pier?", "Stretch first. Trust me.", "The sand's firmest right by the water."] }),
   row({ slug: "marlo", display_name: "Marlo", post: "villager", tone: "warm",
-    bio: "Sketches the island from the benches, a page a day. Has drawn the clubhouse forty times and isn't happy with any of them.",
+    bio: "Sketches the island from the benches, a page a day. Has drawn HQ forty times and isn't happy with any of them.",
     schedule: { home: "hq", day: ["bench", "pond", "museum"], evening: ["beach", "bench"], night: ["home"] },
     canned_dialogue: ["Hold still, you're in the shot. Kidding. Mostly.", "The pond looks different every hour.", "I'm out of the green pencil again."] }),
   row({ slug: "nell", display_name: "Nell", post: "villager", tone: "warm",

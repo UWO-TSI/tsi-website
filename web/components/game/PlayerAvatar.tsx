@@ -576,6 +576,10 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
         if (clip) {
           if (p.clip.upper && verbInfo(clip)?.upper) m.upper = clip; else m.play = clip;
           m.playRate = p.clip.scale; verbAsked = true;
+        } else if (verbInfo(p.clip.verb)) { // a subclass's own clip (Ult_*, Unique_*: build_clips.py @unique), on its own grip
+          const clip = p.clip.verb as ClipName;
+          if (p.clip.upper && verbInfo(clip)?.upper) m.upper = clip; else m.play = clip;
+          m.playRate = p.clip.scale; verbAsked = true;
         }
         p.clip = null;
       }
@@ -634,28 +638,32 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
           center
           style={{ pointerEvents: "none" }}
         >
+          {/* The nameplate in the GUI sheet (row 285): a paper tag (it was a dark chip with a blue glow), a Tethos-blue dot
+              for a TSI member, the mastery frame as a ring, the level as a small sage tab. */}
           <div
             className="whitespace-nowrap text-center"
             style={{
-              background: "rgba(15, 15, 16, 0.6)",
-              padding: "2px 8px",
-              borderRadius: "4px",
-              boxShadow: [member ? "0 0 0 1px rgba(96, 165, 250, 0.55), 0 0 10px rgba(96, 165, 250, 0.45)" : "", tag?.frame ? `0 0 0 2px ${FRAME_COLOR[tag.frame]}` : ""].filter(Boolean).join(", ") || undefined,
+              width: "max-content", // the Html anchor is 0 px wide, so the plate shrank to min-content and a long class title spilled out
+              background: "rgb(255 251 231 / 0.95)",
+              padding: "3px 11px 4px",
+              borderRadius: "999px",
+              color: "var(--gui-ink-strong)",
+              fontFamily: "var(--gui-font)",
+              zoom: "var(--tsi-text-scale, 1)",
+              boxShadow: [tag?.frame ? `0 0 0 2.5px ${FRAME_COLOR[tag.frame]}` : "", "0 2px 0 rgb(114 92 78 / 0.18)"].filter(Boolean).join(", "),
             }}
             data-frame={tag?.frame ?? undefined}
             data-member={member || undefined}
           >
-            <div style={{ fontSize: "11px", fontWeight: 700, color: "#f1ffff", lineHeight: 1.2, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-              {member && <span aria-label="TSI member" title="TSI member" style={{ width: 6, height: 6, borderRadius: "50%", background: "#60A5FA", boxShadow: "0 0 4px #60A5FA", flex: "none" }} />}
+            <div style={{ fontSize: "13px", fontWeight: 800, lineHeight: 1.2, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+              {member && <span aria-label="TSI member" title="TSI member" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--gui-tethos-blue)", boxShadow: "0 0 0 2px #fffbe7", flex: "none" }} />}
               {playerName}
+              {playerLevel !== undefined && <span style={{ marginLeft: 2, padding: "0 6px", borderRadius: 999, background: "var(--gui-sage)", color: "var(--gui-paper)", fontSize: "12px", fontWeight: 800 }}>Lv {playerLevel}</span>}
             </div>
-            {tag && <div data-testid="nameplate-class" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 1, fontSize: "10px", fontWeight: 600, color: "#f6efdc", lineHeight: 1.2 }}>
+            {tag && <div data-testid="nameplate-class" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 2, fontSize: "12px", fontWeight: 700, color: "var(--gui-ink-2)", lineHeight: 1.2 }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- a 24 px class emblem */}
-              <img src={tag.icon} alt="" width={24} height={24} style={{ width: 24, height: 24, borderRadius: "50%", background: "#f6efdc", boxShadow: `0 0 0 1px ${tag.color}` }} />
+              <img src={tag.icon} alt="" width={22} height={22} style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--gui-paper-hi)", boxShadow: `0 0 0 1.5px ${tag.color}` }} />
               {tag.title}
-            </div>}
-            {playerLevel !== undefined && <div style={{ fontSize: "9px", color: "#b8c3c3", fontFamily: "'IBM Plex Mono', monospace", lineHeight: 1.2 }}>
-              Lv. {playerLevel}
             </div>}
           </div>
         </Html>}
@@ -704,7 +712,7 @@ function PlayerCharacter({ look, motion, inCombat, walkSpeed, leaf, held }: { lo
     const w = WEAPONS[heldWeapon ?? key];
     // Classes v2: the verb library's grip decides the hand (the Book grip holds the tome in the left).
     const hand = v2 && inCombat ? GRIP_HAND[gripFor(SYSTEM_WEAPONS.find(x => x.key === (heldWeapon ?? key))?.type ?? "sword")] : undefined;
-    return w?.model && (shown || heldWeapon) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat || !!heldWeapon, grip: w.grip, hand, paint: v2 && inCombat ? signaturePaint : undefined } : null;
+    return w?.model && (shown || heldWeapon) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat || !!heldWeapon, grip: w.grip, hand, pulse: w.pulse, paint: v2 && inCombat ? signaturePaint : undefined } : null;
   }, [key, heldWeapon, shown, inCombat, v2]);
   const item = useMemo(() => (inCombat ? null : heldView(held)), [inCombat, held]);
   return <Character look={look} motion={motion} walkSpeed={walkSpeed} weapon={weapon} held={item} leaf={leaf} verbs={inCombat && v2} />;

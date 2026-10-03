@@ -14,7 +14,9 @@ import { segDist, type Enemy, type Vec } from "./sim";
 import { combat, type CombatRuntime, type Projectile, type Unit } from "./runtime";
 
 export interface Zone { id: number; source: string; x: number; z: number; dx: number; dz: number; r: number; length: number; life: number; every: number; tick: number;
-  power: number; heal: number; slow: number; pull: number; blind: number; follow: boolean; seek: number; fx?: string; ctx: Ctx }
+  power: number; heal: number; slow: number; pull: number; blind: number; follow: boolean; seek: number; fx?: string; ctx: Ctx;
+  /** Its ticks don't hold an enemy's chase (burning ground under a hail of arrows). */
+  steady?: boolean }
 /** A stone wedge: centre, the way it faces (its high side away from the caster), width across, depth along, height at the far side. */
 export interface Wall { id: number; x: number; z: number; dx: number; dz: number; w: number; d: number; h: number; life: number; t: number }
 /** A sweeping trap: where its line is now, where it set out, the way it goes, its width, what it carries. */
@@ -28,8 +30,8 @@ export interface Field {
   order: { mode: "free" | "charge" | "guard"; target: string | null };
   /** A thrown mark to teleport to (Trick Card), per ability. */
   marks: Record<string, Vec>;
-  /** The open counter window, the stealth left, the bonus the first hit out of it gets, a slide surf. */
-  counter: Counter | null; stealth: number; reveal: number; ambush: number; ambushFor: number;
+  /** The open counter window, the stealth left (and what reveals you: an enemy this near, moving faster than `walk`), the bonus the first hit out of it gets, a slide surf. */
+  counter: Counter | null; stealth: number; reveal: number; walk: number; ambush: number; ambushFor: number;
   surf: { left: number; speed: number; power: number; hit: string[]; ctx: Ctx } | null;
 }
 
@@ -111,7 +113,7 @@ export function runPrimitive(rt: CombatRuntime, ef: Effect, ctx: Ctx, random: ()
       f.counter = { left: ef.window, negate: ef.negate, vs: ef.vs ?? "any", reflect: (ef.reflect ?? 0) * ctx.dmg, effects: ef.effects ?? [], ctx };
       return;
     case "stealth":
-      f.stealth = ef.duration; f.reveal = ef.reveal; f.ambush = ef.bonus; f.ambushFor = 0;
+      f.stealth = ef.duration; f.reveal = ef.reveal; f.walk = ef.walk ?? 0; f.ambush = ef.bonus; f.ambushFor = 0;
       if (ef.duration >= 1) floater(rt, ctx.pos, 2.1, "Vanished", "info");
       return;
     case "command": {
@@ -327,7 +329,7 @@ export function stepField(rt: CombatRuntime, me: Vec, dt: number, random: () => 
     z.tick += z.every;
     let first = true;
     for (const e of rt.enemies) if (alive(e) && inZone(z, e, e.type.radius)) {
-      if (z.power) { strike(rt, e, { power: z.power * z.every, from: z, stat: z.ctx.stat, tier: z.ctx.tier, impact: "light", ult: z.ctx.ult, knock: 0, first }, random); first = false; }
+      if (z.power) { strike(rt, e, { power: z.power * z.every, from: z, stat: z.ctx.stat, tier: z.ctx.tier, impact: "light", ult: z.ctx.ult, knock: 0, first, steady: z.steady }, random); first = false; }
       if (z.slow) applyStatus(e, { slow: [z.slow, z.every + 0.6] });
     }
     if (z.heal && inZone(z, me, 0)) heal(rt, z.heal * z.every * p.maxHp);
@@ -365,7 +367,7 @@ export function stepField(rt: CombatRuntime, me: Vec, dt: number, random: () => 
   if (f.counter && (f.counter.left -= dt) <= 0) f.counter = null;
   if (f.stealth > 0) {
     f.stealth -= dt;
-    if (f.stealth <= 0 || (f.reveal > 0 && rt.enemies.some(e => alive(e) && dist(e, me) < f.reveal + e.type.radius))) reveal(rt);
+    if (f.stealth <= 0 || (f.walk > 0 && p.move.speed > f.walk) || (f.reveal > 0 && rt.enemies.some(e => alive(e) && dist(e, me) < f.reveal + e.type.radius))) reveal(rt);
   } else if (f.ambushFor > 0 && (f.ambushFor -= dt) <= 0) f.ambush = 0;
   if (f.surf) {
     const s = f.surf;

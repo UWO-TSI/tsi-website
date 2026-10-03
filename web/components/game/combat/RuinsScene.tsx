@@ -22,19 +22,21 @@ import { GLBProp } from "../NatureModels";
 import { IslandAtmosphere, useFollowCamera } from "../IslandAtmosphere";
 import MobFx from "./MobFx";
 import CombatFx from "./CombatFx";
+import PreyMarks from "./PreyMarks";
 import { AimReticle, Blasts, EnemyBars, EnemyInstances, FloaterProjector, PlayerAuras, Projectiles, Telegraphs, Totems, Wisps } from "./EncounterRender";
 import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BROKEN_ARCHES, RUINS_MOAI, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, RUINS_TORCHES, SURVIVE_CIRCLES, createRuins } from "@/lib/game/ruins";
 import { combat, createField, publishCombat, takeMissionQueue, V2_SLOT_IDS, type AbilityId, type CombatRuntime, type CueKind } from "@/lib/game/combat/runtime";
 import { wallHeight } from "@/lib/game/combat/primitives";
 import ClassRender from "./ClassRender";
-import { classKey, equipClassKit, pressUlt, stepClass } from "@/lib/game/combat/classRuntime";
+import { classKey, classReload, equipClassKit, pressUlt, stepClass } from "@/lib/game/combat/classRuntime";
+import { createLive } from "@/lib/game/combat/classFire";
 import { unlocksAt } from "@/lib/combat/classes";
 import { AudioManager, type SFXName } from "@/lib/game/audio";
 import { useAbilityKeys } from "@/lib/game/movement/keys";
 import { screenOf, useMoveParticles } from "../movement/moveFx";
 import { defeatPuff } from "@/lib/game/movement/juice";
 import type { ParticlePool } from "@/lib/game/fx/particles";
-import { holdFov, shakeCamera, widenFov } from "@/lib/game/cameraJuice";
+import { holdFov, setAimZoom, shakeCamera, widenFov } from "@/lib/game/cameraJuice";
 import { timeScale as worldSpeed, ultSlowMotion } from "@/lib/game/slowMotion";
 import { FlashLimiter, hitImpact, HitstopBudget, impactView, ultBeats } from "@/lib/game/combat/impact";
 import { readComfort } from "@/lib/game/comfortSettings";
@@ -42,7 +44,7 @@ import { ULT } from "@/lib/combat/ult";
 import { capture, crosshairAim } from "@/lib/game/orbitCamera";
 import { boxOccluder } from "@/lib/game/occluders";
 import { BUFFER, createInputs, runInputs, spawnWave } from "@/lib/game/combat/actions";
-import { missionEvent } from "@/lib/game/combat/abilities";
+import { buffSum, missionEvent } from "@/lib/game/combat/abilities";
 import { stepCombat } from "@/lib/game/combat/encounter";
 import { playtestFrame } from "@/lib/game/combat/playtest";
 import { claimBossReward, claimMinibossReward, postKill, postMissionEvents } from "@/lib/game/combat/progression";
@@ -57,6 +59,7 @@ import type { SeasonLook } from "@/lib/game/seasonalLook";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import type { WeaponKind } from "@/lib/game/combat/contract";
+import { worldKeysBlocked } from "@/lib/game/useWorldDialog";
 import styles from "../DefaultIslandWorld.module.css";
 
 export type RuinsNear = "exit" | "lantern" | null;
@@ -77,7 +80,7 @@ export function resetEncounter() {
   rt.player.energy = Math.max(rt.player.energy, 0);
   // Classes v2: the meter starts empty on entry and empties on defeat (§1.2); nothing held, toggled or queued carries over, you're in your own body.
   if (rt.v2) Object.assign(rt.v2, { meter: 0, cast: null, queue: [], holding: rt.v2.holding.map(() => null), toggled: rt.v2.toggled.map(() => false), recast: rt.v2.recast.map(() => 0), combatT: 0,
-    channel: null, form: null, formBefore: null });
+    channel: null, form: null, formBefore: null, live: createLive(rt.v2.kit.fire?.ammo?.size) }); // Focus, the cylinder and burns start over too
   rt.field = createField();
   rt.player.ultIframes = 0; rt.player.kick = null; rt.player.clip = null; rt.fx = [];
 }
@@ -213,19 +216,21 @@ function ultPresentation(rt: CombatRuntime, camera: THREE.Camera, canvas: HTMLCa
     return;
   }
   // A first-last ult (§1.6): past its window the finisher's beats run on the same clock again; a "last" one plays only those
-  // (the anticipation's dim starts its own A before the finisher).
+  // (the anticipation's dim starts its own A before the finisher). A hit that asks for the sequence (classFire
+  // triggerSequence) replays it from there, `big` larger; a "trigger" ult shows only its wind-up until then.
   const last = !!v?.cast && v.ult.impacts === "last", span = v?.cast && v.ult.impacts !== "first" ? v.ult.duration ?? 0 : 0;
-  const shift = last ? span : span && cast.t >= A + span ? span : 0;
-  if (cast.t - shift < 0) {
+  const shift = v?.cast?.shift ?? (last ? span : span && cast.t >= A + span ? span : 0), big = !!v?.cast?.big;
+  const waiting = !!v?.cast && v.ult.sequence === "trigger" && v.cast.shift === undefined && cast.t >= A;
+  if (waiting || cast.t - shift < 0) {
     if (view.beats) { view.beats = null; holdFov(0); ultSlowMotion(1); canvas.style.filter = ""; }
     ultPrevT = cast.t;
     return;
   }
   const b = ultBeats(cast.t - shift, A, reduce, ultPrevT - shift);
-  if (b.freeze) combat.hitstop = Math.max(combat.hitstop, A + 0.12 - cast.t);
+  if (b.freeze) combat.hitstop = Math.max(combat.hitstop, A + shift + 0.12 - cast.t);
   if (b.flash && !view.beats?.flash) view.flashOk = b.flash === "full" && flashes.allow(performance.now() / 1000);
-  if (b.shake) shakeCamera(0.35, 9, (cast.aim.x - me.x) * 0.15 / (Math.hypot(cast.aim.x - me.x, cast.aim.z - me.z) || 1));
-  holdFov(b.fov);
+  if (b.shake) shakeCamera(big ? 0.6 : 0.35, 9, (cast.aim.x - me.x) * (big ? 0.3 : 0.15) / (Math.hypot(cast.aim.x - me.x, cast.aim.z - me.z) || 1));
+  holdFov(b.fov * (big ? 1.6 : 1));
   ultSlowMotion(b.slow);
   canvas.style.filter = b.flash === "full" && view.flashOk ? "grayscale(1) brightness(1.02) contrast(10)" : b.flash === "reduced" ? "saturate(0.35) brightness(0.75)" : "";
   const toScreen = (x: number, z: number, lift: number) => { ultScratch.set(x, ground(x, z) + lift, z).project(camera); const r = canvas.getBoundingClientRect(); return { x: r.left + ((ultScratch.x + 1) / 2) * r.width, y: r.top + ((1 - ultScratch.y) / 2) * r.height }; };
@@ -278,6 +283,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
       /** The whole spawn table back at its spots, dens and clouds as packs (evidence). */
       reset: () => resetEncounter() } });
   }, [player, spawn]);
+  useEffect(() => () => setAimZoom(0), []); // a scope left up doesn't follow you out of the ruins
   // Dev (screenshots): where a ground point is on the page, to aim the mouse at an enemy.
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
@@ -309,7 +315,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     const up = () => { input.current.presses.held = false; };
     // First (the capture phase): an ability key wins over a fixed key it shares here (V's camera reset, the Z X C V preset).
     const kd = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLElement && e.target.closest("input, textarea, select")) return;
+      if (worldKeysBlocked() || (e.target instanceof HTMLElement && e.target.closest("input, textarea, select"))) return; // a sheet is open (the mission board, the path)
       const k = e.key.toLowerCase(), ability = (Object.keys(keys) as AbilityId[]).find(a => keys[a] === k);
       if (!ability) return;
       e.preventDefault();
@@ -318,6 +324,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
       const rt = combat.rt, slot = (V2_SLOT_IDS as readonly string[]).indexOf(ability);
       if (rt.v2 && slot >= 0) classKey(rt, slot, true);
       else if (rt.v2 && ability === "ult") pressUlt(rt);
+      else if (ability === "swap" && classReload(rt, { x: player.current.x, z: player.current.z })) publishCombat(); // a cylinder's R reloads (the wheel still swaps weapons)
       else if (ability !== "slot5" && ability !== "ult") input.current.presses.keys.push({ id: ability, left: BUFFER });
     };
     const ku = (e: KeyboardEvent) => {
@@ -330,7 +337,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
       el.removeEventListener("pointermove", move); el.removeEventListener("pointerdown", down); window.removeEventListener("pointerup", up);
       window.removeEventListener("keydown", kd, true); window.removeEventListener("keyup", ku, true);
     };
-  }, [gl, keys]);
+  }, [gl, keys, player]);
 
   useFrame(({ clock }, rawDelta) => {
     // Hitstop holds the encounter (and the avatar, PlayerAvatar) for a beat after a melee hit, a crit or a hit taken.
@@ -361,6 +368,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     // Timers, energy, enemies, projectiles, summons and totems (lib/game/combat/encounter.ts); ability dashes and knockback push PlayerAvatar.
     stepCombat(rt, me, dt, ruins.free);
     playtestFrame(rt, me, dt); // dev, ?combat=demo only: the class playtest's god mode, mana, dummies and DPS meter
+    setAimZoom(rt.v2 && buffSum(rt, "scope") > 0 ? 14 : 0); // a scope's zoom while it's up
     playCues(rt, me);
     impact(rt, particles.pool, ruins.ground);
     rt.cues.length = 0;
@@ -456,6 +464,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     <MobFx ground={ruins.ground} />
     <Blasts ground={ruins.ground} />
     <CombatFx ground={ruins.ground} lite={liteMode} />
+    <PreyMarks ground={ruins.ground} />
     <ClassRender ground={ruins.ground} player={player} lite={liteMode} />
     <PlayerAuras player={player} ground={ruins.ground} />
     <AimReticle player={player} ground={ruins.ground} />

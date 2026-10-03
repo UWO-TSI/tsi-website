@@ -22,7 +22,9 @@ import type { IslandEvent } from "@/lib/game/seasonalEvents";
 import type { IslandLight } from "@/lib/game/islandLighting";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import type { TourneyView } from "@/lib/collections/service";
-import { apiCall } from "@/lib/apiClient";
+import { ApiError, apiCall } from "@/lib/apiClient";
+import { Trophy as TrophyIcon } from "lucide-react";
+import { Empty, ErrorNote, List, ListRow, Loading } from "@/components/gui";
 import styles from "./DefaultIslandWorld.module.css";
 
 const P = "/assets/acnh/props/", F = "/assets/acnh/furniture/", PL = "/assets/acnh/plants/", S = "/assets/acnh/seasonal/";
@@ -197,28 +199,32 @@ const CATEGORY_LABEL = { fish: "Biggest fish", sea: "Biggest sea creature" } as 
 
 /** The tourney board (E at the plaza trophy): the top half by name, your own row, unnamed neighbours below the line. */
 export function TourneySheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [data, setData] = useState<TourneyView | null | "error" | "loading">("loading");
+  const [data, setData] = useState<TourneyView | null | "error" | "signed-out" | "loading">("loading");
+  const [tries, setTries] = useState(0);
   useEffect(() => {
     if (!open) return;
     let alive = true;
-    apiCall<TourneyView | null>("/api/collections/tourney", "tourney").then(t => alive && setData(t), () => alive && setData("error"));
+    // A failure is said as one; only a signed-out visit is asked to sign in.
+    apiCall<TourneyView | null>("/api/collections/tourney", "tourney").then(t => alive && setData(t), (err: unknown) => alive && setData(err instanceof ApiError && err.status === 401 ? "signed-out" : "error"));
     return () => { alive = false; };
-  }, [open]);
-  if (!open) return null;
+  }, [open, tries]);
   const until = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-CA", { month: "short", day: "numeric", timeZone: "America/Toronto" }) : "");
-  return <IslandSheet title="Fishing tourney" onClose={onClose} testId="tourney-sheet">
-    {data === "loading" ? <p>Reading the board…</p> : data === "error" ? <p>Sign in to see the tourney board.</p> : data === null ? <p>No tourney has run yet. It comes back every September.</p> : <>
+  const row = (r: { rank: number; mine?: boolean }, title: ReactNode, detail?: string | null, anon?: boolean) =>
+    <ListRow key={r.rank} title={title} detail={detail ?? undefined} selected={r.mine} className={anon ? styles.anonRow : undefined} value={<span className={styles.trophyRank} aria-label={`Rank ${r.rank}`}>{r.rank}</span>} />;
+  return <IslandSheet open={open} title="Fishing tourney" onClose={onClose} testId="tourney-sheet" keys="e">
+    {data === "loading" ? <Loading label="Reading the board…" />
+      : data === "signed-out" ? <Empty icon={<TrophyIcon size={32} />} title="Sign in to see the tourney board">The biggest catches of the week go up here.</Empty>
+      : data === "error" ? <ErrorNote onRetry={() => { setData("loading"); setTries(n => n + 1); }}>The tourney board didn’t load. The connection may have dropped.</ErrorNote>
+      : data === null ? <Empty icon={<TrophyIcon size={32} />} title="No tourney yet">It comes back every September.</Empty> : <>
       <p className={styles.hint}>{data.title} {data.cycle} · {data.open ? `biggest catch wins, until ${until(data.end)}` : "final standings"}. The top half is on the board by name; everyone else sees only their own place.</p>
       {data.boards.map(b => <section key={b.category} className={styles.tourneyBoard}>
         <h3>{CATEGORY_LABEL[b.category]} <small>{b.entrants} {b.entrants === 1 ? "entrant" : "entrants"}</small></h3>
-        {b.entrants === 0 ? <p className={styles.hint}>No entries yet. Any catch during the tourney counts.</p> : <ol className={styles.trophyList}>
-          {b.top.map(r => <li key={r.rank} data-mine={r.mine || undefined}><span className={styles.trophyRank}>{r.rank}</span><span><b>{r.name}</b> · {r.size_cm} cm<small>{r.species}</small></span></li>)}
-          {b.me && !b.top.some(r => r.mine) && <>
-            {b.around.filter(r => r.rank < b.me!.rank).map(r => <li key={r.rank} data-anon><span className={styles.trophyRank}>{r.rank}</span><span>A member · {r.size_cm} cm</span></li>)}
-            <li data-mine><span className={styles.trophyRank}>{b.me.rank}</span><span><b>You</b> · {b.me.size_cm} cm<small>{b.me.species}</small></span></li>
-            {b.around.filter(r => r.rank > b.me!.rank).map(r => <li key={r.rank} data-anon><span className={styles.trophyRank}>{r.rank}</span><span>A member · {r.size_cm} cm</span></li>)}
-          </>}
-        </ol>}
+        {b.entrants === 0 ? <p className={styles.hint}>No entries yet. Any catch during the tourney counts.</p> : <List label={CATEGORY_LABEL[b.category]}>
+          {b.top.map(r => row(r, <>{r.name} · {r.size_cm} cm</>, r.species))}
+          {b.me && !b.top.some(r => r.mine) && b.around.filter(r => r.rank < b.me!.rank).map(r => row(r, `A member · ${r.size_cm} cm`, undefined, true))}
+          {b.me && !b.top.some(r => r.mine) && row({ rank: b.me.rank, mine: true }, <>You · {b.me.size_cm} cm</>, b.me.species)}
+          {b.me && !b.top.some(r => r.mine) && b.around.filter(r => r.rank > b.me!.rank).map(r => row(r, `A member · ${r.size_cm} cm`, undefined, true))}
+        </List>}
         {!b.me && b.entrants > 0 && data.open && <p className={styles.hint}>You haven&apos;t entered yet: catch anything in this category.</p>}
       </section>)}
     </>}
@@ -227,9 +233,8 @@ export function TourneySheet({ open, onClose }: { open: boolean; onClose: () => 
 
 /** GENESIS posters (E at the stage): this year's projects, and why showing up in person counts. */
 export function PostersSheet({ open, onClose, event }: { open: boolean; onClose: () => void; event: IslandEvent | null }) {
-  if (!open || !event) return null;
-  const titles = event.goal.event.posters;
-  return <IslandSheet title="GENESIS week" onClose={onClose} testId="posters-sheet">
+  const titles = event?.goal.event.posters ?? [];
+  return <IslandSheet open={open && !!event} title="GENESIS week" onClose={onClose} testId="posters-sheet" keys="e">
     <p className={styles.hint}>The club&apos;s project showcase, mirrored on the island. Checking in at the real GENESIS counts the most toward this week&apos;s goal.</p>
     {titles.length ? <ul className={styles.posterList}>{titles.map(t => <li key={t}>{t}</li>)}</ul> : <p>This year&apos;s project posters go up here once the showcase lineup is set.</p>}
   </IslandSheet>;

@@ -4,64 +4,76 @@
 // Same draft → preview → publish flow as EmoteEditor/NPCEditor, through
 // /api/content/drafts (versioned in content_versions, listed in the activity log).
 
-import { useEffect, useState, type ReactNode } from "react";
+import { cloneElement, isValidElement, useEffect, useId, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Shield } from "lucide-react";
+import { Lock } from "lucide-react";
 import { useUser } from "@/components/portal/UserContext";
 import { createClient } from "@/lib/supabase/client";
+import { Button, Empty, ErrorNote, Loading, Select, Toggle as KitToggle } from "@/components/gui";
+import kit from "@/components/recruit/ui/village-ui.module.css";
 
+// The admin tools on the GUI sheet (components/gui): fields and buttons in the kit's paper, ink and sage. The class
+// strings are for native controls and older callers; real buttons use <Button>, links use `buttonLinkCls`.
 export const inputCls =
-  "w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--glass-border)] rounded-md text-sm text-[var(--color-text-primary)] font-mono focus:outline-none focus:border-[var(--color-accent-cyan)] transition-colors";
-export const primaryBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
-export const publishBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
-export const dangerBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 border border-red-500/40 text-red-400 font-mono text-xs uppercase tracking-wider rounded-md hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
-export const thCls = "text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]";
+  "w-full min-h-[44px] px-3.5 py-2 rounded-[16px_14px_16px_15px] border-2 border-[var(--gui-paper-line)] bg-[var(--gui-paper-hi)] text-[15px] font-semibold text-[var(--gui-ink)] shadow-[inset_0_2px_0_rgb(114_92_78/0.06)] placeholder:text-[var(--gui-muted)] placeholder:font-normal focus:border-[var(--gui-sage)] disabled:bg-[var(--gui-paper-deep)] disabled:text-[var(--gui-muted)] disabled:cursor-not-allowed transition-colors";
+const btnCls =
+  "inline-flex items-center justify-center gap-2 min-h-[40px] px-[18px] py-1.5 rounded-[50%_48%_45%_47%/48%_51%_45%_49%] text-sm font-extrabold no-underline cursor-pointer transition-[transform,background-color] duration-[120ms] hover:-translate-y-0.5 active:translate-y-0.5 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-[#e9e3d3] disabled:text-[#847c68] disabled:shadow-[0_3px_0_#d0c8b6]";
+export const primaryBtnCls = `${btnCls} bg-[var(--gui-sage)] text-[var(--gui-paper)] shadow-[0_3px_0_var(--gui-sage-deep)] hover:bg-[#4b7a68]`;
+export const publishBtnCls = primaryBtnCls;
+export const dangerBtnCls = `${btnCls} bg-[var(--gui-danger-soft)] text-[var(--gui-danger)] shadow-[0_3px_0_#e2b3a3] hover:bg-[#fbd3c5]`;
+/** A link that wears the kit's button (the recruit kit's own classes); add data-size="sm" and a data-variant. */
+export const buttonLinkCls = `${kit.theme} ${kit.button}`;
+/** "Back to …" above an editor's title. */
+export const backLinkCls = "inline-flex items-center gap-1.5 text-sm font-bold text-[var(--gui-ink-2)] hover:text-[var(--gui-ink-strong)]";
+export const thCls = "text-left px-4 py-3 text-[13px] font-extrabold text-[var(--gui-ink-2)] whitespace-nowrap";
 
+/** A labelled form row. A lone input, select or textarea gets the label's id, so the label names it. */
 export function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: ReactNode }) {
+  const id = useId();
+  const noteId = `${id}-note`;
+  const single = isValidElement<{ id?: string; "aria-describedby"?: string }>(children)
+    && (children.type === "input" || children.type === "select" || children.type === "textarea" || children.type === Select);
+  const controlId = single ? (children.props.id ?? id) : undefined;
   return (
     <div>
-      <label className="block text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">{label}</label>
-      {children}
-      {hint && !error ? <p className="mt-1 text-[0.65rem] font-mono text-[var(--color-text-muted)]/70">{hint}</p> : null}
-      {error ? <p className="mt-1 text-[0.65rem] font-mono text-red-400">{error}</p> : null}
+      <label htmlFor={controlId} className="block mb-1.5 text-[15px] font-extrabold text-[var(--gui-ink-strong)]">{label}</label>
+      {single ? cloneElement(children, { id: controlId, "aria-describedby": children.props["aria-describedby"] ?? (hint || error ? noteId : undefined) }) : children}
+      {hint && !error ? <p id={noteId} className="mt-1.5 text-[13px] text-[var(--gui-muted)]">{hint}</p> : null}
+      {error ? <p id={noteId} className="mt-1.5 text-[13px] font-bold text-[var(--gui-danger)]">{error}</p> : null}
     </div>
   );
 }
 
+/** On or off: the kit's switch with its label and hint (the label at the form's 15 px, which the switch inherits). */
 export function Toggle({ label, hint, checked, onChange }: { label: string; hint?: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return <div className="text-[15px] text-[var(--gui-ink-strong)]"><KitToggle checked={checked} onChange={onChange} hint={hint}>{label}</KitToggle></div>;
+}
+
+/** What still stands between the form and a save, as a short list (nothing once it's ready). */
+export function FixList({ errors, className }: { errors: string[]; className?: string }) {
+  if (!errors.length) return null;
   return (
-    <div className="flex items-start gap-3">
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border border-[var(--glass-border)] transition-colors ${checked ? "bg-[var(--color-accent-cyan)]" : "bg-[var(--color-bg)]"}`}
-      >
-        <span className={`inline-block h-4 w-4 mt-0.5 transform rounded-full bg-white transition-transform ${checked ? "translate-x-6" : "translate-x-1"}`} />
-      </button>
-      <div className="flex-1">
-        <span className="block text-xs font-mono text-[var(--color-text-primary)]">{label}</span>
-        {hint ? <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)]/70 mt-0.5">{hint}</p> : null}
-      </div>
+    <div className={`rounded-2xl px-4 py-3 bg-[var(--gui-warn-soft)] ${className ?? ""}`}>
+      <p className="text-sm font-extrabold text-[var(--gui-ink-strong)]">Before you can save</p>
+      <ul className="mt-1 list-disc pl-5 space-y-0.5 text-[13px] font-semibold text-[var(--gui-ink)]">{errors.map((e) => <li key={e}>{e}</li>)}</ul>
     </div>
   );
+}
+
+/** A save or load result: a soft green line, or an error note. */
+export function AdminMessage({ message, className }: { message: { kind: "ok" | "err"; text: string } | null; className?: string }) {
+  if (!message) return null;
+  if (message.kind === "err") return <ErrorNote className={className}>{message.text}</ErrorNote>;
+  return <p role="status" className={`rounded-2xl px-4 py-2.5 text-sm font-bold bg-[var(--gui-success-soft)] text-[var(--gui-success)] ${className ?? ""}`}>{message.text}</p>;
 }
 
 export function AdminGate({ children }: { children: ReactNode }) {
   const { profile, loading } = useUser();
-  if (loading) return <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">Loading...</p>;
+  if (loading) return <Loading label="Checking your access…" />;
   if ((profile?.tier ?? 5) > 2) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <Shield size={48} className="mx-auto text-[var(--color-text-muted)]/20 mb-4" />
-          <h2 className="text-lg font-heading font-bold text-[var(--color-text-primary)] mb-2">Access Denied</h2>
-          <p className="text-sm font-mono text-[var(--color-text-muted)]">T1/T2 clearance required for content admin.</p>
-        </div>
+        <Empty icon={<Lock size={32} />} title="Admins only">These tools are for T1 and T2 admins.</Empty>
       </div>
     );
   }
@@ -141,27 +153,24 @@ export function useDraftFlow(table: string, rowId: string | undefined, backHref:
   };
 }
 
+/** Save as draft, then Publish (the main action once a draft exists) or Discard. */
 export function DraftBar({ flow, canSave, onSave }: { flow: ReturnType<typeof useDraftFlow>; canSave: boolean; onSave: () => void }) {
   return (
     <>
-      {flow.message ? (
-        <div className={`mt-4 p-3 rounded-md text-xs font-mono border ${flow.message.kind === "ok" ? "bg-green-400/10 border-green-400/30 text-green-400" : "bg-red-400/10 border-red-400/30 text-red-400"}`}>
-          {flow.message.text}
-        </div>
-      ) : null}
+      <AdminMessage message={flow.message} className="mt-4" />
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <button type="button" onClick={onSave} disabled={!canSave || flow.busy !== null} className={primaryBtnCls}>
-          {flow.busy === "save" ? "Saving..." : "Save as draft"}
-        </button>
+        <Button size="sm" variant={flow.draftId ? "quiet" : "primary"} onClick={onSave} disabled={!canSave || flow.busy !== null}>
+          {flow.busy === "save" ? "Saving…" : "Save as draft"}
+        </Button>
         {flow.draftId ? (
-          <button type="button" onClick={flow.publish} disabled={flow.busy !== null} className={publishBtnCls}>
-            {flow.busy === "publish" ? "Publishing..." : "Publish"}
-          </button>
+          <Button size="sm" onClick={flow.publish} disabled={flow.busy !== null}>
+            {flow.busy === "publish" ? "Publishing…" : "Publish"}
+          </Button>
         ) : null}
         {flow.draftId ? (
-          <button type="button" onClick={flow.discard} disabled={flow.busy !== null} className={dangerBtnCls}>
-            {flow.busy === "discard" ? "Discarding..." : "Discard draft"}
-          </button>
+          <Button size="sm" variant="danger" onClick={flow.discard} disabled={flow.busy !== null}>
+            {flow.busy === "discard" ? "Discarding…" : "Discard draft"}
+          </Button>
         ) : null}
       </div>
     </>

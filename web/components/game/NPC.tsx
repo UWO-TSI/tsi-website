@@ -60,7 +60,7 @@ const FILLER_LINES = [
   "The flowers grow back if you're patient.", "Pull up a bench, stay a while.", "Quiet mornings are my favourite kind.",
 ];
 const POST_LABEL: Record<string, string> = {
-  hq_lead: "Clubhouse", shopkeeper: "Shopkeeper", cafe_owner: "Café owner", museum_curator: "Museum curator",
+  hq_lead: "HQ", shopkeeper: "Shopkeeper", cafe_owner: "Café owner", museum_curator: "Museum curator",
   wharf_keeper: "Wharf keeper", oracle_keeper: "Oracle keeper", workshop_crafter: "Workshop", villager: "Villager",
 };
 

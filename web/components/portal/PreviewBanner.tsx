@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { Eye } from "lucide-react";
+import { Button } from "@/components/gui";
 
-// Thin yellow banner that appears when ?preview=draft-<id> is in the URL.
-// Surfaces Publish + Exit Preview controls for admin-flagged preview sessions.
+// Thin butter banner that appears when ?preview=draft-<id> is in the URL.
+// Surfaces Publish + Exit preview controls for admin-flagged preview sessions.
+// It sits above the portal shell's .gui scope, so it carries the scope itself.
 
 function readDraftIdFromUrl(): string | null {
   if (typeof window === "undefined") return null;
@@ -52,62 +55,42 @@ export default function PreviewBanner() {
 
   return (
     <div
+      className="gui"
+      role="region"
+      aria-label="Draft preview"
       style={{
         position: "fixed",
         top: 0,
         left: 0,
         right: 0,
         zIndex: 60,
-        background: "#FFD166",
-        color: "#1a1a1a",
+        background: "var(--gui-confetti) var(--gui-butter)",
+        color: "var(--gui-ink-strong)",
         padding: "8px 16px",
         display: "flex",
+        flexWrap: "wrap",
         alignItems: "center",
         justifyContent: "space-between",
-        gap: "12px",
-        fontSize: "13px",
-        fontFamily: "system-ui, -apple-system, sans-serif",
-        boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
+        gap: "8px 12px",
+        fontSize: "14px",
+        fontWeight: 700,
+        boxShadow: "var(--gui-shadow-sm)",
       }}
     >
-      <span>
-        Previewing draft. Live members see the published version.
-        {message ? `  ${message}` : ""}
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+        <Eye size={18} aria-hidden style={{ flex: "none" }} />
+        <span>
+          You’re previewing a draft. Members still see the published version.
+          {message ? <strong role="alert" style={{ fontWeight: 800 }}> {message}</strong> : null}
+        </span>
       </span>
       <div style={{ display: "flex", gap: "8px" }}>
-        <button
-          onClick={handlePublish}
-          disabled={busy}
-          style={{
-            background: "#1a1a1a",
-            color: "#FFD166",
-            border: "none",
-            borderRadius: "4px",
-            padding: "4px 12px",
-            fontSize: "12px",
-            fontWeight: 600,
-            cursor: busy ? "not-allowed" : "pointer",
-            opacity: busy ? 0.5 : 1,
-          }}
-        >
-          {busy ? "Publishing..." : "Publish"}
-        </button>
-        <button
-          onClick={handleExit}
-          disabled={busy}
-          style={{
-            background: "transparent",
-            color: "#1a1a1a",
-            border: "1px solid #1a1a1a",
-            borderRadius: "4px",
-            padding: "4px 12px",
-            fontSize: "12px",
-            fontWeight: 600,
-            cursor: busy ? "not-allowed" : "pointer",
-          }}
-        >
-          Exit Preview
-        </button>
+        <Button size="sm" onClick={handlePublish} disabled={busy}>
+          {busy ? "Publishing…" : "Publish"}
+        </Button>
+        <Button size="sm" variant="quiet" onClick={handleExit} disabled={busy}>
+          Exit preview
+        </Button>
       </div>
     </div>
   );

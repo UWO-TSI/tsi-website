@@ -1,16 +1,26 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Github, Linkedin, Globe, Twitter, Pencil, Loader2, User } from "lucide-react";
-import { TIER_COLORS, TIER_LABELS, getXpProgress } from "./types";
-import { CLASS_META, ClassBadge } from "./classIdentity";
+import { ArrowLeft, Github, Linkedin, Globe, Twitter, Pencil, User } from "lucide-react";
+import { TIER_LABELS, getXpProgress } from "./types";
+import { CLASS_META, ClassBadge, TIER_LOOK } from "./classIdentity";
+import { Amount } from "@/components/economy/Amount";
+import { Badge, Button, Card, Empty, ErrorNote, Field, Loading, Progress, TextArea } from "@/components/gui";
 import type { Profile, PublicProfile, SocialLinks } from "@/lib/supabase/types";
 
 const SOCIAL_ICONS: Record<string, typeof Github> = {
   github: Github, linkedin: Linkedin, website: Globe,
   twitter: Twitter, instagram: Globe, discord: Globe,
 };
+
+const SOCIAL_NAMES: Record<string, string> = {
+  github: "GitHub", linkedin: "LinkedIn", website: "Website",
+  twitter: "Twitter", instagram: "Instagram", discord: "Discord",
+};
+
+const section: CSSProperties = { borderTop: "2px dashed var(--gui-paper-edge)", padding: "18px 0" };
+const sectionTitle: CSSProperties = { fontSize: "16px", fontWeight: 800, color: "var(--gui-ink-strong)", marginBottom: "12px" };
 
 interface ProfileViewProps {
   profileId?: string;
@@ -81,185 +91,172 @@ export default function ProfileView({ profileId, isOwnProfile }: ProfileViewProp
   if (loading) {
     return (
       <div className="flex justify-center items-center" style={{ minHeight: "60vh" }}>
-        <Loader2 className="animate-spin" style={{ width: "24px", height: "24px", color: "var(--color-text-subtle)" }} />
+        <Loading label={isOwnProfile ? "Opening your profile…" : "Opening their profile…"} />
       </div>
     );
   }
 
   if (error || !profile) {
     return (
-      <div className="flex flex-col items-center justify-center" style={{ minHeight: "60vh", padding: "24px", gap: "8px" }}>
-        <User style={{ width: "32px", height: "32px", color: "var(--color-text-subtle)", marginBottom: "4px" }} />
-        <p style={{ fontSize: "16px", color: "var(--color-text-muted)", fontWeight: 500 }}>
-          {error ? "Unable to load profile" : "Profile not found"}
-        </p>
-        <p style={{ fontSize: "14px", color: "var(--color-text-subtle)" }}>
-          {error ? "The server is not available right now. Please try again later." : "This profile may not exist or you don\u2019t have access."}
-        </p>
-        <button onClick={() => router.back()} className="mt-2 text-sm underline" style={{ color: "var(--color-accent-cyan)" }}>Go back</button>
+      <div className="flex-1 overflow-y-auto" style={{ padding: "24px 20px 48px" }}>
+        <div className="grid justify-items-center gap-4" style={{ maxWidth: "520px", margin: "10vh auto 0" }}>
+          {error ? (
+            <ErrorNote>This profile didn’t load. Check your connection and try again in a moment.</ErrorNote>
+          ) : (
+            <Empty icon={<User size={32} />} title="Profile not found">It may not exist any more, or it isn’t shared with you.</Empty>
+          )}
+          <Button size="sm" variant="quiet" onClick={() => router.back()}>
+            <ArrowLeft size={16} aria-hidden /> Go back
+          </Button>
+        </div>
       </div>
     );
   }
 
   const p = profile;
-  const tc = TIER_COLORS[p.tier];
+  const tier = TIER_LOOK[p.tier];
   const xp = getXpProgress(p.xp, p.level);
   const coins = "tethos_coins" in p ? (p as Profile).tethos_coins : 0;
   const socialLinks: SocialLinks = p.social_links || {};
   const initials = p.display_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
-    <div className="mx-auto" style={{ maxWidth: "960px", padding: "24px" }}>
-      {!isOwnProfile && (
-        <button onClick={() => router.back()} className="flex items-center gap-2 mb-6 transition-colors"
-          style={{ fontSize: "14px", color: "var(--color-text-muted)" }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-text-main)")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-text-muted)")}>
-          <ArrowLeft style={{ width: "16px", height: "16px" }} /> Back to Directory
-        </button>
-      )}
+    <div className="flex-1 overflow-y-auto" style={{ padding: "24px 20px 48px" }}>
+      <div style={{ maxWidth: "880px", margin: "0 auto" }}>
+        {!isOwnProfile && (
+          <Button size="sm" variant="quiet" onClick={() => router.back()} className="mb-5">
+            <ArrowLeft size={16} aria-hidden /> Back to the directory
+          </Button>
+        )}
 
-      {/* Header */}
-      <div className="flex items-start justify-between mb-6">
-        <div className="flex items-start gap-5">
-          <div className="shrink-0 rounded-full flex items-center justify-center"
-            style={{ width: "96px", height: "96px", border: `4px solid ${tc.border}`, background: "var(--color-surface)", fontSize: "28px", fontWeight: 700, color: "var(--color-text-muted)" }}>
-            {p.avatar_url ? <img src={p.avatar_url} alt={p.display_name} className="w-full h-full rounded-full object-cover" /> : initials}
-          </div>
-          <div>
-            {editing ? (
-              <input value={editName} onChange={(e) => setEditName(e.target.value)} className="outline-none mb-1"
-                style={{ fontSize: "30px", fontWeight: 700, color: "var(--color-text-main)", background: "var(--color-surface)", border: "1px solid var(--glass-border-soft)", borderRadius: "8px", padding: "4px 8px" }} />
-            ) : (
-              <h1 style={{ fontSize: "30px", fontWeight: 700, color: "var(--color-text-main)", marginBottom: "2px" }}>{p.display_name}</h1>
+        <Card as="section" style={{ padding: "24px 24px 8px" }}>
+          {/* Header */}
+          <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+            <div className="flex items-start gap-5 flex-1 min-w-0">
+              <div className="shrink-0 rounded-full flex items-center justify-center overflow-hidden"
+                style={{ width: "96px", height: "96px", border: `4px solid ${tier.ring}`, background: "var(--gui-paper-deep)", fontSize: "30px", fontWeight: 800, color: "var(--gui-ink-2)", boxShadow: "var(--gui-shadow-sm)" }}>
+                {p.avatar_url ? <img src={p.avatar_url} alt={p.display_name} className="w-full h-full rounded-full object-cover" /> : initials}
+              </div>
+              <div className="flex-1 min-w-0">
+                {editing ? (
+                  <input value={editName} onChange={(e) => setEditName(e.target.value)} aria-label="Display name" className="w-full mb-2"
+                    style={{ maxWidth: "440px", fontSize: "26px", fontWeight: 800, color: "var(--gui-ink-strong)", background: "var(--gui-paper-hi)", border: "2px solid var(--gui-paper-line)", borderRadius: "16px 14px 16px 15px", padding: "4px 12px" }} />
+                ) : (
+                  <h1 style={{ fontSize: "30px", fontWeight: 800, lineHeight: 1.15, color: "var(--gui-ink-strong)", marginBottom: "6px", overflowWrap: "anywhere" }}>{p.display_name}</h1>
+                )}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2" style={{ fontSize: "15px", fontWeight: 700, color: "var(--gui-ink-2)" }}>
+                  {/* Class flair per ux-classes.md §4.3: the family chip */}
+                  {p.class && CLASS_META[p.class] ? (
+                    <ClassBadge cls={p.class} iconSize={16} fontSize={15} />
+                  ) : (
+                    <span>{p.class || "Unclassed"}</span>
+                  )}
+                  <Badge tone={tier.tone}>Tier {p.tier} · {TIER_LABELS[p.tier]}</Badge>
+                  {"rank" in p && p.rank && <span>{p.rank}</span>}
+                </div>
+                {editing ? (
+                  <TextArea label="Bio" value={editBio} onChange={(e) => setEditBio(e.target.value)} rows={3} className="mt-4" style={{ maxWidth: "600px", minHeight: "96px" }} />
+                ) : (
+                  p.bio && <p className="mt-3" style={{ fontSize: "16px", color: "var(--gui-ink)", maxWidth: "600px" }}>{p.bio}</p>
+                )}
+              </div>
+            </div>
+            {isOwnProfile && (
+              <div className="flex gap-2 shrink-0">
+                {editing ? (
+                  <>
+                    <Button size="sm" variant="quiet" onClick={() => setEditing(false)}>Cancel</Button>
+                    <Button size="sm" onClick={handleSave}>Save</Button>
+                  </>
+                ) : (
+                  <Button size="sm" onClick={() => setEditing(true)}>
+                    <Pencil size={16} aria-hidden /> Edit profile
+                  </Button>
+                )}
+              </div>
             )}
-            <p style={{ fontSize: "16px", color: "var(--color-text-muted)" }}>
-              {/* Class flair per ux-classes.md §4.3 — icon + class accent */}
-              {p.class && CLASS_META[p.class] ? (
-                <ClassBadge cls={p.class} iconSize={16} fontSize={16} />
-              ) : (
-                p.class || "Unclassed"
-              )}
-              {" · "} <span style={{ color: tc.color }}>Tier {p.tier} · {TIER_LABELS[p.tier]}</span>
-              {"rank" in p && p.rank && <> {" · "} {p.rank}</>}
-            </p>
-            {editing ? (
-              <textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} rows={2} className="outline-none mt-2 w-full resize-none"
-                style={{ fontSize: "16px", color: "var(--color-text-soft)", background: "var(--color-surface)", border: "1px solid var(--glass-border-soft)", borderRadius: "8px", padding: "8px", maxWidth: "600px" }} />
-            ) : (
-              p.bio && <p className="mt-2" style={{ fontSize: "16px", color: "var(--color-text-soft)", maxWidth: "600px" }}>{p.bio}</p>
-            )}
           </div>
-        </div>
-        {isOwnProfile && (
-          <div className="flex gap-2 shrink-0">
+
+          {/* Stats */}
+          <div className="flex flex-wrap gap-x-10 gap-y-4" style={section}>
+            <Stat label="Level">{p.level}</Stat>
+            <Stat label="XP">{p.xp.toLocaleString()}</Stat>
+            {isOwnProfile && <Stat label="Gems"><Amount n={coins} currency="gems" size={22} /></Stat>}
+          </div>
+
+          {/* XP toward the next level */}
+          <div style={{ paddingBottom: "20px" }}>
+            <Progress kind="xp" value={xp.current} max={xp.needed} label={`Level ${p.level}`} showLabel
+              valueText={`${xp.current.toLocaleString()} / ${xp.needed.toLocaleString()} XP to level ${p.level + 1}`} />
+          </div>
+
+          {/* Skills */}
+          <div style={section}>
             {editing ? (
+              <Field label="Skills" hint="Separate them with commas." value={editSkills} onChange={(e) => setEditSkills(e.target.value)} placeholder="React, Figma, public speaking" />
+            ) : (
               <>
-                <button onClick={() => setEditing(false)} className="px-4 py-2 rounded-lg text-sm transition-colors" style={{ border: "1px solid var(--gray-700)", color: "var(--color-text-muted)" }}>Cancel</button>
-                <button onClick={handleSave} className="px-4 py-2 rounded-lg text-sm font-medium transition-colors" style={{ background: "var(--color-brand-blue)", color: "var(--color-brand-light)" }}>Save</button>
+                <h2 style={sectionTitle}>Skills</h2>
+                <div className="flex flex-wrap gap-2">
+                  {(p.skills || []).map((skill) => <Badge key={skill} tone="sage">{skill}</Badge>)}
+                  {(!p.skills || p.skills.length === 0) && <span style={{ fontSize: "15px", color: "var(--gui-muted)" }}>No skills listed yet.</span>}
+                </div>
               </>
-            ) : (
-              <button onClick={() => setEditing(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors" style={{ background: "var(--color-brand-blue)", color: "var(--color-brand-light)" }}>
-                <Pencil style={{ width: "14px", height: "14px" }} /> Edit Profile
-              </button>
             )}
           </div>
-        )}
-      </div>
 
-      {/* Stats */}
-      <div className="flex gap-6 py-6" style={{ borderTop: "1px solid var(--glass-border-soft)" }}>
-        <div>
-          <p className="font-mono uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em", marginBottom: "4px" }}>Level</p>
-          <p style={{ fontSize: "24px", fontWeight: 700, color: "var(--color-text-main)" }}>{p.level}</p>
-        </div>
-        <div>
-          <p className="font-mono uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em", marginBottom: "4px" }}>XP</p>
-          <p style={{ fontSize: "24px", fontWeight: 700, color: "var(--color-text-main)" }}>{p.xp.toLocaleString()}</p>
-        </div>
-        {isOwnProfile && (
-          <div>
-            <p className="font-mono uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em", marginBottom: "4px" }}>Coins</p>
-            <p style={{ fontSize: "24px", fontWeight: 700, color: "#ffd166" }}>{coins.toLocaleString()}</p>
-          </div>
-        )}
-      </div>
-
-      {/* XP Bar */}
-      <div className="mb-6">
-        <div className="w-full overflow-hidden rounded" style={{ height: "8px", background: "var(--gray-800)" }}>
-          <div className="h-full rounded" style={{ width: `${xp.percent}%`, background: "var(--color-brand-blue)", transition: "width 0.3s ease" }} />
-        </div>
-        <p className="text-right mt-1" style={{ fontSize: "12px", color: "var(--color-text-muted)" }}>
-          {xp.current.toLocaleString()} / {xp.needed.toLocaleString()} XP to Level {p.level + 1}
-        </p>
-      </div>
-
-      {/* Skills */}
-      <div className="py-4" style={{ borderTop: "1px solid var(--glass-border-soft)" }}>
-        <h3 className="font-mono uppercase mb-3" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Skills</h3>
-        {editing ? (
-          <input value={editSkills} onChange={(e) => setEditSkills(e.target.value)} placeholder="Comma-separated skills..." className="w-full outline-none"
-            style={{ fontSize: "14px", color: "var(--color-text-main)", background: "var(--color-surface)", border: "1px solid var(--glass-border-soft)", borderRadius: "8px", padding: "8px 12px" }} />
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {(p.skills || []).map((skill) => (
-              <span key={skill} style={{ height: "28px", lineHeight: "28px", padding: "0 12px", fontSize: "14px", color: "var(--color-text-soft)", background: "rgba(0, 47, 167, 0.1)", border: "1px solid rgba(0, 47, 167, 0.2)", borderRadius: "9999px" }}>{skill}</span>
-            ))}
-            {(!p.skills || p.skills.length === 0) && <span style={{ fontSize: "14px", color: "var(--color-text-subtle)" }}>No skills listed</span>}
-          </div>
-        )}
-      </div>
-
-      {/* Social Links — editable inline in edit mode per ux-directory.md §7.5 */}
-      {editing ? (
-        <div className="py-4" style={{ borderTop: "1px solid var(--glass-border-soft)" }}>
-          <h3 className="font-mono uppercase mb-3" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Social Links</h3>
-          <div className="flex flex-col gap-2" style={{ maxWidth: "480px" }}>
-            {(["github", "linkedin", "instagram", "discord", "website"] as const).map((key) => {
-              const Icon = SOCIAL_ICONS[key] || Globe;
-              return (
-                <div key={key} className="flex items-center gap-2">
-                  <Icon style={{ width: "16px", height: "16px", color: "var(--color-text-muted)" }} aria-hidden />
-                  <input
+          {/* Social Links: editable inline in edit mode per ux-directory.md §7.5 */}
+          {editing ? (
+            <div style={section}>
+              <h2 style={sectionTitle}>Social links</h2>
+              <div className="grid gap-3" style={{ maxWidth: "480px" }}>
+                {(["github", "linkedin", "instagram", "discord", "website"] as const).map((key) => (
+                  <Field
+                    key={key}
+                    label={SOCIAL_NAMES[key]}
                     value={editSocial[key] ?? ""}
                     onChange={(e) => setEditSocial((s) => ({ ...s, [key]: e.target.value }))}
-                    placeholder={key}
-                    aria-label={key}
-                    className="flex-1 outline-none"
-                    style={{ height: "32px", padding: "0 10px", fontSize: "13px", background: "var(--color-surface)", border: "1px solid var(--glass-border-soft)", borderRadius: "6px", color: "var(--color-text-main)" }}
+                    placeholder={key === "website" ? "https://…" : "Username or link"}
                   />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : Object.keys(socialLinks).length > 0 && (
-        <div className="py-4" style={{ borderTop: "1px solid var(--glass-border-soft)" }}>
-          <h3 className="font-mono uppercase mb-3" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Social Links</h3>
-          <div className="flex gap-3 flex-wrap">
-            {Object.entries(socialLinks).filter(([, url]) => url).map(([key, url]) => {
-              const Icon = SOCIAL_ICONS[key] || Globe;
-              return (
-                <a key={key} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 capitalize transition-colors"
-                  style={{ fontSize: "14px", color: "var(--color-text-muted)" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-accent-cyan)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-text-muted)")}>
-                  <Icon style={{ width: "20px", height: "20px" }} /> {key}
-                </a>
-              );
-            })}
-          </div>
-        </div>
-      )}
+                ))}
+              </div>
+            </div>
+          ) : Object.keys(socialLinks).length > 0 && (
+            <div style={section}>
+              <h2 style={sectionTitle}>Social links</h2>
+              <div className="flex gap-x-5 gap-y-2 flex-wrap">
+                {Object.entries(socialLinks).filter(([, url]) => url).map(([key, url]) => {
+                  const Icon = SOCIAL_ICONS[key] || Globe;
+                  return (
+                    <a key={key} href={url} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 transition-colors text-[var(--gui-ink-2)] hover:text-[var(--gui-sage)] hover:underline"
+                      style={{ fontSize: "15px", fontWeight: 800, minHeight: "32px" }}>
+                      <Icon aria-hidden style={{ width: "20px", height: "20px" }} /> {SOCIAL_NAMES[key] ?? key}
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
-      {/* About */}
-      <div className="py-4" style={{ borderTop: "1px solid var(--glass-border-soft)" }}>
-        <h3 className="font-mono uppercase mb-3" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>About</h3>
-        <p style={{ fontSize: "16px", color: "var(--color-text-soft)" }}>
-          Joined {new Date(p.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}.
-        </p>
+          {/* About */}
+          <div style={section}>
+            <h2 style={sectionTitle}>About</h2>
+            <p style={{ fontSize: "16px", color: "var(--gui-ink)" }}>
+              Joined {new Date(p.created_at).toLocaleDateString("en-CA", { month: "long", year: "numeric", timeZone: "America/Toronto" })}.
+            </p>
+          </div>
+        </Card>
       </div>
+    </div>
+  );
+}
+
+function Stat({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <p style={{ fontSize: "13px", fontWeight: 800, color: "var(--gui-muted)", marginBottom: "2px" }}>{label}</p>
+      <p style={{ fontSize: "24px", fontWeight: 800, color: "var(--gui-ink-strong)", fontVariantNumeric: "tabular-nums" }}>{children}</p>
     </div>
   );
 }

@@ -14,7 +14,8 @@
 import { useState, useSyncExternalStore } from "react";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import type { QualityTier } from "@/lib/game/qualityTier";
-import { ACTION_LABEL, MENU_ACTIONS, TEXT_SIZES, normalizeKey, type MenuAction, type TextSize } from "@/lib/identity/settings";
+import { ACTION_LABEL, MENU_ACTIONS, REMAPPABLE_ACTIONS, TEXT_SIZES, normalizeKey, type MenuAction, type TextSize } from "@/lib/identity/settings";
+import { Button, Select, Slider, Toggle } from "@/components/gui";
 import { saveSettings, setAuraVisible, useWorldIdentity } from "@/lib/game/identity";
 import { ABILITIES, type AbilityId } from "@/lib/game/combat/runtime";
 import { IS_MAC, MOVE_ACTIONS, abilityPreset, canLockKeyboard, crouchKey, keyName, playFullscreenWithCtrl, presetAbilities, remapAbility, remapMove, remapWheel, useAbilityKeys, useKeyboardLocked, useMoveKeys, useNextKey, useWheelKeys, type MoveAction } from "@/lib/game/movement/keys";
@@ -91,50 +92,43 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
       setNote(`${ACTION_LABEL[action]} is now ${keyName(key)}.${other ? ` ${ACTION_LABEL[other]} moved to ${keyName(settings.key_bindings[action])}.` : ""}`);
     });
   }, () => { setListening(null); setNote(null); });
-  if (!open) return null;
-  return <IslandSheet title="Settings" onClose={onClose} className={styles.settingsSheet} testId="settings-sheet">
+  return <IslandSheet open={open} title="Settings" onClose={onClose} className={styles.settingsSheet} testId="settings-sheet">
     <fieldset>
       <legend>Text size</legend>
       <div className={styles.segmented}>{TEXT_SIZES.map(s => <button key={s} aria-pressed={settings.text_size === s} onClick={() => void save({ text_size: s })}>{SIZE_NAMES[s]}</button>)}</div>
     </fieldset>
     <fieldset>
       <legend>Look and performance</legend>
-      <label className={styles.toggle}><span>Pixel finish</span><input type="checkbox" checked={graphics.pixelated} onChange={e => graphicsActions.setPixelated(e.target.checked)} /></label>
-      <p className={styles.hint}>The world stays the same. Choose its finish.</p>
-      <label className={styles.preset}>
-        <span>Quality</span>
-        <select value={quality} onChange={e => setQuality(e.target.value)} data-testid="quality">
-          <option value="auto">Auto · {detectedTier ? (detectedTier === "light" ? "Light" : "High") : "measuring"}</option>
-          <option value="light">Light</option>
-          <option value="high">High</option>
-        </select>
-      </label>
-      <label className={styles.toggle}><span>Shadows</span><input type="checkbox" checked={graphics.shadows} disabled={graphics.liteMode} onChange={e => graphicsActions.setShadows(e.target.checked)} /></label>
+      <Toggle checked={graphics.pixelated} onChange={on => graphicsActions.setPixelated(on)} hint="The world stays the same. Choose its finish.">Pixel finish</Toggle>
+      <Select label="Quality" value={quality} onChange={e => setQuality(e.target.value)} data-testid="quality">
+        <option value="auto">Auto · {detectedTier ? (detectedTier === "light" ? "Light" : "High") : "measuring"}</option>
+        <option value="light">Light</option>
+        <option value="high">High</option>
+      </Select>
+      <Toggle checked={graphics.shadows} disabled={graphics.liteMode} onChange={on => graphicsActions.setShadows(on)}>Shadows</Toggle>
       {/* Row 283: the HUD stays out of the way while you explore; this keeps it on. */}
-      <label className={styles.toggle}><span>Show full HUD</span><input type="checkbox" checked={alwaysFullHud} onChange={e => setAlwaysFullHud(e.target.checked)} /></label>
-      <p className={styles.hint}>Otherwise coins, XP, the clock and mail show when they change. Hold <kbd>{keyName(wheelKeys.hud)}</kbd>, or let go of the mouse, to see everything.</p>
+      <Toggle checked={alwaysFullHud} onChange={setAlwaysFullHud}>Show full HUD</Toggle>
+      <p className={styles.hint}>Otherwise TC, XP, the clock and mail show when they change. Hold <kbd>{keyName(wheelKeys.hud)}</kbd>, or let go of the mouse, to see everything.</p>
     </fieldset>
     <fieldset>
       <legend>Camera</legend>
-      <label className={styles.toggle}><span>Mouse look</span><input type="checkbox" checked={camera.mouseLook} onChange={e => setOrbitPrefs({ mouseLook: e.target.checked })} /></label>
-      <div className={styles.sliderRow}>
-        <label htmlFor="camera-sensitivity">Sensitivity</label>
-        <input id="camera-sensitivity" type="range" min={SENSITIVITY_MIN * 100} max={SENSITIVITY_MAX * 100} step={5} value={Math.round(camera.sensitivity * 100)}
-          aria-valuetext={`${Math.round(camera.sensitivity * 100)}%`} onChange={e => setOrbitPrefs({ sensitivity: Number(e.target.value) / 100 })} />
-        <span>{Math.round(camera.sensitivity * 100)}</span>
-      </div>
-      <label className={styles.toggle}><span>Invert up and down</span><input type="checkbox" checked={camera.invertY} onChange={e => setOrbitPrefs({ invertY: e.target.checked })} /></label>
-      <label className={styles.toggle}><span>Follow behind when you run</span><input type="checkbox" checked={camera.autoFollow} onChange={e => setOrbitPrefs({ autoFollow: e.target.checked })} /></label>
+      <Toggle checked={camera.mouseLook} onChange={on => setOrbitPrefs({ mouseLook: on })}>Mouse look</Toggle>
+      <Slider label="Sensitivity" min={SENSITIVITY_MIN * 100} max={SENSITIVITY_MAX * 100} step={5} value={Math.round(camera.sensitivity * 100)}
+        format={v => `${v}%`} onChange={v => setOrbitPrefs({ sensitivity: v / 100 })} />
+      <Toggle checked={camera.invertY} onChange={on => setOrbitPrefs({ invertY: on })}>Invert up and down</Toggle>
+      <Toggle checked={camera.autoFollow} onChange={on => setOrbitPrefs({ autoFollow: on })}>Follow behind when you run</Toggle>
       <p className={styles.hint}>{camera.mouseLook ? "Click the island to look around with the mouse. Hold right click for a cursor; Esc lets the mouse go." : "The cursor stays free."} Arrow keys turn and tilt, the wheel and Z zoom, V puts the camera back. Kept on this device.</p>
     </fieldset>
-    <label className={styles.toggle}><span>Show class on my nameplate</span><input type="checkbox" checked={showClass} onChange={e => setShowClass(e.target.checked)} /></label>
-    <label className={styles.toggle}><span>Show my aura</span><input type="checkbox" checked={aura} onChange={e => setAuraVisible(e.target.checked)} /></label>
-    <label className={styles.toggle}><span>High contrast</span><input type="checkbox" checked={settings.high_contrast} onChange={e => void save({ high_contrast: e.target.checked })} /></label>
+    <fieldset>
+      <legend>You on the island</legend>
+      <Toggle checked={showClass} onChange={setShowClass}>Show class on my nameplate</Toggle>
+      <Toggle checked={aura} onChange={setAuraVisible}>Show my aura</Toggle>
+    </fieldset>
     {/* Design sheet §1.6: the ult's flash frame and every flash obey these; both start calm when the device asks for reduced motion. */}
     <fieldset data-testid="accessibility">
       <legend>Accessibility</legend>
-      <label className={styles.toggle}><span>Reduce flashing</span><input type="checkbox" checked={comfort.reduceFlashing} onChange={e => setComfort({ reduceFlashing: e.target.checked })} /></label>
-      <p className={styles.hint}>Big hits darken the screen instead of flashing it, and their lines and glows are softer.</p>
+      <Toggle checked={settings.high_contrast} onChange={on => void save({ high_contrast: on })}>High contrast</Toggle>
+      <Toggle checked={comfort.reduceFlashing} onChange={on => setComfort({ reduceFlashing: on })} hint="Big hits darken the screen instead of flashing it, and their lines and glows are softer.">Reduce flashing</Toggle>
       <div className={styles.preset}>
         <span>Screen shake</span>
         <div className={styles.segmented} role="group" aria-label="Screen shake">
@@ -145,21 +139,16 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
     </fieldset>
     <fieldset>
       <legend>Sound</legend>
-      {!audio.enabled && <button onClick={() => AudioManager.enable()}>Turn on sound</button>}
-      <label className={styles.toggle}><span>Mute</span><input type="checkbox" checked={audio.muted} onChange={e => AudioManager.setMuted(e.target.checked)} /></label>
+      {!audio.enabled && <Button size="sm" variant="secondary" onClick={() => AudioManager.enable()}>Turn on sound</Button>}
+      <Toggle checked={audio.muted} onChange={on => AudioManager.setMuted(on)}>Mute</Toggle>
       {SOUND_SLIDERS.map(({ key, label }) => (
-        <div key={key} className={styles.sliderRow}>
-          <label htmlFor={`sound-${key}`}>{label}</label>
-          <input id={`sound-${key}`} type="range" min={0} max={100} value={Math.round(audio.volumes[key] * 100)}
-            aria-valuetext={`${Math.round(audio.volumes[key] * 100)}%`}
-            onChange={e => AudioManager.setVolumes({ [key]: Number(e.target.value) / 100 })} />
-          <span>{Math.round(audio.volumes[key] * 100)}</span>
-        </div>
+        <Slider key={key} label={label} min={0} max={100} value={Math.round(audio.volumes[key] * 100)} format={v => `${v}%`}
+          onChange={v => AudioManager.setVolumes({ [key]: v / 100 })} />
       ))}
     </fieldset>
     <fieldset>
       <legend>Menu keys</legend>
-      <ul className={styles.keyList}>{MENU_ACTIONS.map(a => <li key={a}>
+      <ul className={styles.keyList}>{REMAPPABLE_ACTIONS.map(a => <li key={a}>
         <span>{ACTION_LABEL[a]}</span>
         <button aria-pressed={listening === a} onClick={() => { setListening(a); setNote("Press a key (Esc to cancel)."); }}>
           {listening === a ? "Press a key…" : <kbd>{keyName(settings.key_bindings[a])}</kbd>}
@@ -185,7 +174,7 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
       {/* Outside macOS Ctrl+W closes the tab and a page can't stop it: Ctrl crouches only in fullscreen with the keyboard locked. */}
       {!IS_MAC && canLockKeyboard() && (moveKeys.crouch !== "control" || !keyLock) && <p className={styles.hint}>
         {moveKeys.crouch === "control" ? `Ctrl crouches in fullscreen; until then ${crouchKey(moveKeys, false) ? keyName(crouchKey(moveKeys, false)) : "nothing"} does.` : "Ctrl can crouch and slide in fullscreen, where the keyboard is locked (hold Esc to leave)."}{" "}
-        <button onClick={() => { void playFullscreenWithCtrl(moveKeys).then(e => setMoveNote(e)); }}>Play fullscreen with Ctrl</button>
+        <Button size="sm" variant="quiet" onClick={() => { void playFullscreenWithCtrl(moveKeys).then(e => setMoveNote(e)); }}>Play fullscreen with Ctrl</Button>
       </p>}
       {moveNote && <p className={styles.hint} role="status">{moveNote}</p>}
     </fieldset>

@@ -1,5 +1,6 @@
 import "./globals.css";
 import "../styles/tokens.css";
+import "../styles/game-tokens.css";
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";

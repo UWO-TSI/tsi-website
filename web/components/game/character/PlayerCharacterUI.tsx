@@ -10,12 +10,19 @@ import EmoteMenu from "../EmoteMenu";
 import { saveMyLook, useMyLook } from "@/lib/game/character/lookStore";
 import { EMOTE_CLIPS } from "@/lib/game/character/clips";
 import { refreshIdentity, useWorldIdentity } from "@/lib/game/identity";
+import { worldKeysBlocked, isTyping } from "@/lib/game/useWorldDialog";
+import { toast } from "../ToastHub";
 
+/** Saves the name; a refusal or a dropped connection is said in a toast (it used to be swallowed). */
 async function saveName(name: string) {
   try {
     const res = await fetch("/api/identity/name", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
-    if (res.ok) await refreshIdentity();
-  } catch { /* the name stays as it was; the creator already showed availability */ }
+    if (res.ok) { await refreshIdentity(); return; }
+    const body = await res.json().catch(() => null) as { error?: string } | null;
+    toast(`Your look is saved, but not your name: ${body?.error ?? "the island couldn’t take it just now"}.`);
+  } catch {
+    toast("Your look is saved, but not your name: the connection dropped.");
+  }
 }
 
 export default function PlayerCharacterUI() {
@@ -24,7 +31,8 @@ export default function PlayerCharacterUI() {
   const [emotes, setEmotes] = useState(false);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (e.repeat || e.key.toLowerCase() !== "g" || (e.target instanceof HTMLElement && e.target.closest("input, select, textarea"))) return;
+      // The emote menu's own dialog takes G to close; under any other dialog (the creator too) G does nothing.
+      if (e.repeat || e.key.toLowerCase() !== "g" || worldKeysBlocked() || isTyping(e.target as Element)) return;
       setEmotes(open => !open);
     };
     window.addEventListener("keydown", key);

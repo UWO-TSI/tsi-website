@@ -5,6 +5,7 @@ import { CATALOGUE } from "@/lib/homes/catalogue";
 import { FLOORINGS, FREE_FINISHES, placedCounts, WALLPAPERS, type HomeLayoutDoc, type RoomDoc } from "@/lib/homes/layout";
 import { STARTER_FURNITURE } from "@/lib/wallet/catalogue";
 import type { Selection } from "./useDecorate";
+import { iconUrl } from "@/lib/icons/keys";
 import styles from "../DefaultIslandWorld.module.css";
 
 const TITLE = (id: string) => id.replace(/\d+$/, "").replace(/^simple/, "simple ").replace(/(\w)/, c => c.toUpperCase());
@@ -32,7 +33,9 @@ export default function DecorateSheet({ indoor, selected, layout, room, onChoose
       {pieces.map(item => {
         const left = (owned.get(item.id) ?? 0) - (placed.get(item.id) ?? 0);
         return <li key={item.id}><button aria-pressed={selected?.piece === item.id} onClick={() => onChoose(item.id)} disabled={left < 1} data-piece={item.id}>
-          {item.label}<small>{left} left · {item.size[0]}×{item.size[1]}{item.mount === "wall" ? " · wall" : item.mount === "rug" ? " · rug" : ""}</small>
+          {/* eslint-disable-next-line @next/next/no-img-element -- the piece's rendered icon (row 281) */}
+          <img src={iconUrl(item.id)} alt="" width={34} height={34} />
+          <span>{item.label}<small>{left} left · {item.size[0]}×{item.size[1]}{item.mount === "wall" ? " · wall" : item.mount === "rug" ? " · rug" : ""}</small></span>
         </button></li>;
       })}
     </ul>

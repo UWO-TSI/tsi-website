@@ -5,16 +5,19 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
+  CalendarDays,
   Clock,
   MapPin,
   Download,
-  Zap,
   Star,
   LayoutGrid,
   List,
   Columns,
   X,
 } from "lucide-react";
+import { Amount } from "@/components/economy/Amount";
+import { Banner, Button, Empty, IconButton, Loading, Sheet, Tabs, type TabItem } from "@/components/gui";
+import { useMediaQuery } from "@/lib/game/useMediaQuery";
 
 /* ───────── types ───────── */
 
@@ -43,14 +46,17 @@ type ViewMode = "month" | "week" | "list";
 
 /* ───────── constants ───────── */
 
+/* Each event type's colour from the GUI sheet. Fills only (dots, bars, chip edges): the words beside them stay in ink,
+   so every label is AA on paper. Tokens, not the portal's mapped ones, so the phone companion's Club tab (which
+   embeds this page) draws it the same. */
 const EVENT_COLORS: Record<EventType, string> = {
-  club: "var(--color-brand-blue)",
-  team: "var(--color-accent-cyan)",
-  bounty: "var(--color-brand-yellow)",
-  volunteer: "#22c55e",
-  social: "#a78bfa",
-  workshop: "#f97316",
-  meeting: "#71717a",
+  club: "var(--gui-sage)",
+  team: "var(--gui-teal)",
+  bounty: "var(--gui-gold)",
+  volunteer: "var(--gui-rarity-uncommon)",
+  social: "var(--gui-rarity-epic)",
+  workshop: "var(--gui-orange)",
+  meeting: "var(--gui-grey)",
 };
 
 const EVENT_LABELS: Record<EventType, string> = {
@@ -62,6 +68,12 @@ const EVENT_LABELS: Record<EventType, string> = {
   workshop: "Workshop",
   meeting: "Meeting",
 };
+
+const VIEW_TABS: TabItem<ViewMode>[] = [
+  { id: "month", label: "Month", icon: <LayoutGrid size={14} /> },
+  { id: "week", label: "Week", icon: <Columns size={14} /> },
+  { id: "list", label: "List", icon: <List size={14} /> },
+];
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
@@ -79,6 +91,15 @@ const MONTHS = [
   "December",
 ];
 
+/* The calendar's paper frame: a rounded sheet whose 1px gaps show the rule colour between the days. */
+const GRID_FRAME = {
+  gap: 1,
+  background: "var(--gui-paper-edge)",
+  border: "1.5px solid var(--gui-paper-edge)",
+  borderRadius: "var(--gui-r-card)",
+  boxShadow: "var(--gui-shadow-sm)",
+};
+
 /* ───────── helpers ───────── */
 
 function isSameDay(a: Date, b: Date) {
@@ -94,8 +115,8 @@ function isSameMonth(a: Date, b: Date) {
 }
 
 function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString([], {
-    hour: "2-digit",
+  return new Date(iso).toLocaleTimeString("en-CA", {
+    hour: "numeric",
     minute: "2-digit",
   });
 }
@@ -132,6 +153,92 @@ function getWeekDates(date: Date): Date[] {
   return week;
 }
 
+/** A day's name for screen readers: "Friday, October 2, 3 events". */
+function dayLabel(date: Date, count: number) {
+  const name = date.toLocaleDateString("en-CA", { weekday: "long", month: "long", day: "numeric" });
+  return count ? `${name}, ${count} event${count !== 1 ? "s" : ""}` : name;
+}
+
+/** An event type's dot, with a faint rim so the pale colours keep their edge on cream. */
+function Dot({ color, title, className = "w-2 h-2" }: { color: string; title?: string; className?: string }) {
+  return (
+    <span
+      className={`inline-block rounded-full shrink-0 ${className}`}
+      style={{ background: color, boxShadow: "inset 0 0 0 1px rgb(58 46 34 / 0.2)" }}
+      title={title}
+      aria-hidden
+    />
+  );
+}
+
+/** The chosen day's events: in the side panel on a wide screen (`inset`: padded rows), in a bottom sheet on a phone. */
+function DayEvents({ events, inset }: { events: CalendarEvent[]; inset?: boolean }) {
+  if (events.length === 0) return <Empty icon={<CalendarIcon size={28} />} title="Nothing on this day" />;
+  return (
+    <ul>
+      {events.map((ev, i) => (
+        <li
+          key={ev.id}
+          className={`space-y-2 ${inset ? "p-4" : i === 0 ? "pb-4" : "py-4"}`}
+          style={i > 0 ? { borderTop: "2px dashed var(--gui-paper-edge)" } : undefined}
+        >
+          {/* Type dot + title */}
+          <div className="flex items-start gap-2">
+            <Dot color={EVENT_COLORS[ev.type]} className="w-2 h-2 mt-1.5" />
+            <div className="min-w-0">
+              <p className="text-sm" style={{ color: "var(--gui-ink-strong)", fontWeight: 800 }}>
+                {ev.title}
+              </p>
+              <span className="text-xs" style={{ color: "var(--gui-ink-2)", fontWeight: 700 }}>
+                {EVENT_LABELS[ev.type]}
+              </span>
+            </div>
+          </div>
+
+          {/* Time */}
+          <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--gui-muted)", fontWeight: 700 }}>
+            <Clock size={12} aria-hidden />
+            {formatTime(ev.start_time)}
+            {ev.end_time ? ` – ${formatTime(ev.end_time)}` : ""}
+          </div>
+
+          {/* Location */}
+          {ev.location && (
+            <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--gui-muted)", fontWeight: 700 }}>
+              <MapPin size={12} aria-hidden />
+              {ev.location}
+            </div>
+          )}
+
+          {/* Description */}
+          {ev.description && (
+            <p className="text-sm leading-relaxed" style={{ color: "var(--gui-ink)" }}>
+              {ev.description}
+            </p>
+          )}
+
+          {/* Rewards */}
+          {(!!ev.tc_reward || !!ev.xp_reward) && (
+            <div className="flex items-center gap-3 pt-1 text-xs" style={{ fontWeight: 800 }}>
+              {!!ev.tc_reward && (
+                <span style={{ color: "var(--gui-ink)" }}>
+                  +<Amount n={ev.tc_reward} currency="gems" size={14} />
+                </span>
+              )}
+              {!!ev.xp_reward && (
+                <span className="flex items-center gap-1" style={{ color: "var(--gui-teal-ink)" }}>
+                  <Star size={12} aria-hidden />
+                  +{ev.xp_reward} XP
+                </span>
+              )}
+            </div>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /* ───────── component ───────── */
 
 export default function CalendarPage() {
@@ -144,6 +251,8 @@ export default function CalendarPage() {
   const [view, setView] = useState<ViewMode>("month");
   const [weekAnchor, setWeekAnchor] = useState(today);
   const [exportTooltip, setExportTooltip] = useState(false);
+  // The chosen day opens beside the calendar from lg up; narrower (a phone, the companion's Club tab) it's a bottom sheet.
+  const wide = useMediaQuery("(min-width: 1024px)");
 
   /* fetch events for visible range */
    
@@ -224,6 +333,8 @@ export default function CalendarPage() {
   const weekDates = useMemo(() => getWeekDates(weekAnchor), [weekAnchor]);
 
   const selectedEvents = selectedDate ? eventsForDate(selectedDate) : [];
+  const selectedDayName = selectedDate?.toLocaleDateString("en-CA", { weekday: "long", month: "long", day: "numeric" }) ?? "";
+  const selectedDayCount = selectedDate ? `${selectedEvents.length} event${selectedEvents.length !== 1 ? "s" : ""}` : undefined;
 
   /* sort events by date for list view */
   const sortedEvents = useMemo(
@@ -233,448 +344,389 @@ export default function CalendarPage() {
 
   /* ─── render ─── */
   return (
-    <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6 pl-14">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
-            Calendar
-          </h1>
-          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
-            {events.length} event{events.length !== 1 ? "s" : ""} this month
-          </p>
-        </div>
+    <div className="flex-1 overflow-y-auto" style={{ padding: "24px 20px 48px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <Banner title="Calendar" icon={<CalendarDays size={26} />} tone="coral">
+          {loading
+            ? "Looking up what’s on…"
+            : `${events.length} event${events.length !== 1 ? "s" : ""} in ${MONTHS[currentMonth]}`}
+        </Banner>
 
-        <div className="flex items-center gap-2">
-          {/* View Toggle */}
-          <div className="flex items-center gap-1 bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md p-1">
-            {([
-              { mode: "month" as ViewMode, icon: LayoutGrid, label: "Month" },
-              { mode: "week" as ViewMode, icon: Columns, label: "Week" },
-              { mode: "list" as ViewMode, icon: List, label: "List" },
-            ]).map(({ mode, icon: Icon, label }) => (
-              <button
-                key={mode}
-                onClick={() => setView(mode)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-all ${
-                  view === mode
-                    ? "bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)]"
-                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-                }`}
-              >
-                <Icon size={13} />
-                {label}
-              </button>
-            ))}
-          </div>
+        {/* View + export */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <Tabs label="Calendar view" value={view} onChange={setView} tabs={VIEW_TABS} />
 
-          {/* Export Button */}
           <div className="relative">
-            <button
+            <Button
+              size="sm"
+              variant="quiet"
               onClick={() => setExportTooltip((v) => !v)}
               onBlur={() => setTimeout(() => setExportTooltip(false), 150)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-brand-blue)]/30 transition-all"
             >
-              <Download size={13} />
+              <Download className="w-4 h-4" aria-hidden />
               Export .ics
-            </button>
-            {exportTooltip && (
-              <div className="absolute top-full mt-2 right-0 bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md px-3 py-2 text-xs font-mono text-[var(--color-brand-yellow)] whitespace-nowrap z-10 shadow-lg">
-                Coming soon
-              </div>
-            )}
+            </Button>
+            <div role="status" aria-live="polite">
+              {exportTooltip && (
+                <div
+                  className="absolute top-full mt-3 right-0 z-10 whitespace-nowrap text-sm"
+                  style={{
+                    padding: "6px 16px 7px",
+                    borderRadius: "var(--gui-r-blob)",
+                    background: "var(--gui-teal-pill)",
+                    color: "var(--gui-ink-strong)",
+                    fontWeight: 800,
+                    boxShadow: "var(--gui-shadow-sm)",
+                  }}
+                >
+                  Coming soon
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap items-center gap-3 mb-5">
-        {(Object.entries(EVENT_LABELS) as [EventType, string][]).map(
-          ([type, label]) => (
-            <div key={type} className="flex items-center gap-1.5">
-              <span
-                className="w-2 h-2 rounded-full"
-                style={{ background: EVENT_COLORS[type] }}
-              />
-              <span className="text-[0.65rem] font-mono text-[var(--color-text-muted)]">
-                {label}
-              </span>
-            </div>
-          )
-        )}
-      </div>
+        {/* Legend */}
+        <ul className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-5" aria-label="Event types">
+          {(Object.entries(EVENT_LABELS) as [EventType, string][]).map(
+            ([type, label]) => (
+              <li key={type} className="flex items-center gap-1.5">
+                <Dot color={EVENT_COLORS[type]} />
+                <span className="text-xs" style={{ color: "var(--gui-ink-2)", fontWeight: 700 }}>
+                  {label}
+                </span>
+              </li>
+            )
+          )}
+        </ul>
 
-      <div className="flex gap-5">
-        {/* Calendar */}
-        <div className="flex-1 min-w-0">
-          {/* Month/Week Navigation */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={view === "week" ? prevWeek : prevMonth}
-                className="p-1.5 rounded hover:bg-[var(--color-bg-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <h2 className="text-lg font-heading font-semibold text-[var(--color-text-primary)] min-w-[200px] text-center">
-                {view === "week"
-                  ? `${weekDates[0].toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${weekDates[6].toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`
-                  : `${MONTHS[currentMonth]} ${currentYear}`}
-              </h2>
-              <button
-                onClick={view === "week" ? nextWeek : nextMonth}
-                className="p-1.5 rounded hover:bg-[var(--color-bg-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
-            <button
-              onClick={goToday}
-              className="px-3 py-1 rounded text-xs font-mono text-[var(--color-accent-cyan)] border border-[var(--color-accent-cyan)]/20 hover:bg-[var(--color-accent-cyan)]/5 transition-all"
-            >
-              Today
-            </button>
-          </div>
-
-          {loading ? (
-            <div className="text-center py-20">
-              <p className="font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
-                Loading events...
-              </p>
-            </div>
-          ) : view === "month" ? (
-            /* ─── Month Grid ─── */
-            <div>
-              {/* Day headers */}
-              <div className="grid grid-cols-7 mb-1">
-                {DAYS.map((d) => (
-                  <div
-                    key={d}
-                    className="text-center text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider py-2"
-                  >
-                    {d}
-                  </div>
-                ))}
+        <div className="flex flex-col lg:flex-row gap-5">
+          {/* Calendar */}
+          <div className="flex-1 min-w-0">
+            {/* Month/Week Navigation */}
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <div className="flex items-center gap-1 sm:gap-3 min-w-0">
+                <IconButton
+                  label={view === "week" ? "Previous week" : "Previous month"}
+                  size="sm"
+                  onClick={view === "week" ? prevWeek : prevMonth}
+                >
+                  <ChevronLeft size={18} aria-hidden />
+                </IconButton>
+                <h2
+                  className="min-w-0 text-base sm:text-lg text-center sm:min-w-[200px]"
+                  style={{ color: "var(--gui-ink-strong)", fontWeight: 800, lineHeight: 1.25 }}
+                  aria-live="polite"
+                >
+                  {view === "week"
+                    ? `${weekDates[0].toLocaleDateString("en-CA", { month: "short", day: "numeric" })} – ${weekDates[6].toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" })}`
+                    : `${MONTHS[currentMonth]} ${currentYear}`}
+                </h2>
+                <IconButton
+                  label={view === "week" ? "Next week" : "Next month"}
+                  size="sm"
+                  onClick={view === "week" ? nextWeek : nextMonth}
+                >
+                  <ChevronRight size={18} aria-hidden />
+                </IconButton>
               </div>
+              <Button size="sm" variant="quiet" onClick={goToday}>
+                Today
+              </Button>
+            </div>
 
-              {/* Day cells */}
-              <div className="grid grid-cols-7 border-t border-l border-[var(--glass-border)]">
-                {grid.map((date, i) => {
-                  if (!date) {
-                    return (
-                      <div
-                        key={`empty-${i}`}
-                        className="h-24 border-r border-b border-[var(--glass-border)] bg-[var(--color-bg-main)]"
-                      />
-                    );
-                  }
-                  const dayEvents = eventsForDate(date);
-                  const isToday = isSameDay(date, today);
-                  const isSelected = selectedDate && isSameDay(date, selectedDate);
-                  const isCurrentMonth = isSameMonth(
-                    date,
-                    new Date(currentYear, currentMonth, 1)
-                  );
-
-                  return (
-                    <button
-                      key={date.toISOString()}
-                      onClick={() => setSelectedDate(date)}
-                      className={`h-24 border-r border-b border-[var(--glass-border)] p-1.5 text-left transition-all relative group ${
-                        isCurrentMonth
-                          ? "bg-[var(--color-bg-main)] hover:bg-[var(--color-bg-alt)]"
-                          : "bg-[var(--color-bg-main)]/50 opacity-40"
-                      } ${
-                        isSelected
-                          ? "bg-[var(--color-brand-blue)]/5 border-[var(--color-brand-blue)]/30"
-                          : ""
-                      }`}
+            {loading ? (
+              <Loading label="Loading this month’s events…" />
+            ) : view === "month" ? (
+              /* ─── Month Grid ─── */
+              <div>
+                {/* Day headers */}
+                <div className="grid grid-cols-7 mb-1">
+                  {DAYS.map((d) => (
+                    <div
+                      key={d}
+                      className="text-center text-xs py-2"
+                      style={{ color: "var(--gui-muted)", fontWeight: 800 }}
                     >
-                      <span
-                        className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-mono ${
-                          isToday
-                            ? "bg-[var(--color-brand-blue)] text-white shadow-[0_0_12px_var(--glow-blue)]"
-                            : "text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)]"
+                      {d}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Day cells */}
+                <div className="grid grid-cols-7 overflow-hidden" style={GRID_FRAME}>
+                  {grid.map((date, i) => {
+                    if (!date) {
+                      return (
+                        <div
+                          key={`empty-${i}`}
+                          className="h-16 sm:h-24"
+                          style={{ background: "var(--gui-paper-warm)" }}
+                        />
+                      );
+                    }
+                    const dayEvents = eventsForDate(date);
+                    const isToday = isSameDay(date, today);
+                    const isSelected = selectedDate && isSameDay(date, selectedDate);
+                    const isCurrentMonth = isSameMonth(
+                      date,
+                      new Date(currentYear, currentMonth, 1)
+                    );
+
+                    return (
+                      <button
+                        key={date.toISOString()}
+                        type="button"
+                        onClick={() => setSelectedDate(date)}
+                        aria-label={dayLabel(date, dayEvents.length)}
+                        aria-pressed={!!isSelected}
+                        aria-current={isToday ? "date" : undefined}
+                        className={`h-16 sm:h-24 p-1 sm:p-1.5 flex flex-col items-start justify-start overflow-hidden text-left transition-colors ${
+                          isCurrentMonth ? "" : "opacity-40"
+                        } ${
+                          isSelected
+                            ? "bg-[var(--gui-butter)]"
+                            : "bg-[var(--gui-paper-hi)] hover:bg-[var(--gui-paper-warm)]"
                         }`}
                       >
-                        {date.getDate()}
-                      </span>
+                        <span
+                          className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs shrink-0"
+                          style={
+                            isToday
+                              ? { background: "var(--gui-sage)", color: "var(--gui-paper)", fontWeight: 800 }
+                              : { color: isSelected ? "var(--gui-ink-strong)" : "var(--gui-ink-2)", fontWeight: 700 }
+                          }
+                        >
+                          {date.getDate()}
+                        </span>
 
-                      {/* Event dots */}
-                      {dayEvents.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1 px-0.5">
-                          {dayEvents.slice(0, 4).map((ev) => (
-                            <span
+                        {/* Event dots */}
+                        {dayEvents.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1 mt-1 px-0.5">
+                            {dayEvents.slice(0, 4).map((ev) => (
+                              <Dot
+                                key={ev.id}
+                                color={EVENT_COLORS[ev.type]}
+                                title={ev.title}
+                                className="w-1.5 h-1.5 sm:w-2 sm:h-2"
+                              />
+                            ))}
+                            {dayEvents.length > 4 && (
+                              <span className="text-xs" style={{ color: "var(--gui-muted)", fontWeight: 700 }}>
+                                +{dayEvents.length - 4}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : view === "week" ? (
+              /* ─── Week View ─── (scrolls sideways on a phone rather than squeezing seven days) */
+              <div className="overflow-x-auto pb-1">
+                <div className="grid grid-cols-7 min-w-[560px] overflow-hidden" style={GRID_FRAME}>
+                  {weekDates.map((date) => {
+                    const dayEvents = eventsForDate(date);
+                    const isToday = isSameDay(date, today);
+                    const isSelected = selectedDate && isSameDay(date, selectedDate);
+
+                    return (
+                      <button
+                        key={date.toISOString()}
+                        type="button"
+                        onClick={() => setSelectedDate(date)}
+                        aria-label={dayLabel(date, dayEvents.length)}
+                        aria-pressed={!!isSelected}
+                        aria-current={isToday ? "date" : undefined}
+                        className={`min-h-[280px] p-2 flex flex-col justify-start text-left transition-colors ${
+                          isSelected
+                            ? "bg-[var(--gui-butter)]"
+                            : "bg-[var(--gui-paper-hi)] hover:bg-[var(--gui-paper-warm)]"
+                        }`}
+                      >
+                        <div className="text-center mb-2 w-full">
+                          <div className="text-xs" style={{ color: "var(--gui-muted)", fontWeight: 800 }}>
+                            {DAYS[date.getDay()]}
+                          </div>
+                          <span
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-full text-sm mt-1"
+                            style={
+                              isToday
+                                ? { background: "var(--gui-sage)", color: "var(--gui-paper)", fontWeight: 800 }
+                                : { color: "var(--gui-ink-strong)", fontWeight: 800 }
+                            }
+                          >
+                            {date.getDate()}
+                          </span>
+                        </div>
+                        <div className="space-y-1 w-full">
+                          {dayEvents.map((ev) => (
+                            <div
                               key={ev.id}
-                              className="w-1.5 h-1.5 rounded-full"
-                              style={{ background: EVENT_COLORS[ev.type] }}
-                              title={ev.title}
-                            />
+                              className="rounded-lg px-1.5 py-1 text-xs leading-tight truncate"
+                              style={{
+                                background: `color-mix(in srgb, ${EVENT_COLORS[ev.type]} 18%, var(--gui-paper-hi))`,
+                                borderLeft: `3px solid ${EVENT_COLORS[ev.type]}`,
+                                color: "var(--gui-ink-2)",
+                                fontWeight: 700,
+                              }}
+                            >
+                              {formatTime(ev.start_time)}
+                              <br />
+                              <span className="text-xs" style={{ color: "var(--gui-ink-strong)", fontWeight: 800 }}>
+                                {ev.title}
+                              </span>
+                            </div>
                           ))}
-                          {dayEvents.length > 4 && (
-                            <span className="text-[0.55rem] font-mono text-[var(--color-text-muted)]">
-                              +{dayEvents.length - 4}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              /* ─── List View ─── */
+              <div className="space-y-2.5">
+                {sortedEvents.length === 0 ? (
+                  <Empty icon={<CalendarIcon size={32} />} title={`Nothing on in ${MONTHS[currentMonth]}`}>
+                    New events show up here once they’re planned. Try another month.
+                  </Empty>
+                ) : (
+                  sortedEvents.map((ev) => (
+                    <button
+                      key={ev.id}
+                      type="button"
+                      onClick={() => setSelectedDate(new Date(ev.start_time))}
+                      className="w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 text-left transition-transform hover:-translate-y-0.5"
+                      style={{
+                        background: "var(--gui-paper-hi)",
+                        borderRadius: "var(--gui-r-card)",
+                        boxShadow: "var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge)",
+                      }}
+                    >
+                      {/* Date badge */}
+                      <div className="flex flex-col items-center justify-center w-11 shrink-0">
+                        <span className="text-xs" style={{ color: "var(--gui-muted)", fontWeight: 800 }}>
+                          {new Date(ev.start_time).toLocaleDateString("en-CA", {
+                            month: "short",
+                          })}
+                        </span>
+                        <span className="text-lg" style={{ color: "var(--gui-ink-strong)", fontWeight: 800, lineHeight: 1.1 }}>
+                          {new Date(ev.start_time).getDate()}
+                        </span>
+                      </div>
+
+                      {/* Color bar */}
+                      <div
+                        className="w-1 h-10 rounded-full shrink-0"
+                        style={{ background: EVENT_COLORS[ev.type] }}
+                      />
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm truncate" style={{ color: "var(--gui-ink-strong)", fontWeight: 800 }}>
+                          {ev.title}
+                        </p>
+                        <div
+                          className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs"
+                          style={{ color: "var(--gui-muted)", fontWeight: 700 }}
+                        >
+                          <span style={{ color: "var(--gui-ink-2)" }}>
+                            {EVENT_LABELS[ev.type]}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock size={12} aria-hidden />
+                            {formatTime(ev.start_time)}
+                            {ev.end_time ? ` – ${formatTime(ev.end_time)}` : ""}
+                          </span>
+                          {ev.location && (
+                            <span className="flex items-center gap-1 min-w-0">
+                              <MapPin size={12} className="shrink-0" aria-hidden />
+                              <span className="truncate">{ev.location}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Rewards */}
+                      {(!!ev.tc_reward || !!ev.xp_reward) && (
+                        <div className="flex flex-col items-end gap-1 shrink-0 text-xs" style={{ fontWeight: 800 }}>
+                          {!!ev.tc_reward && (
+                            <span style={{ color: "var(--gui-ink)" }}>
+                              <Amount n={ev.tc_reward} currency="gems" size={14} />
+                            </span>
+                          )}
+                          {!!ev.xp_reward && (
+                            <span className="flex items-center gap-1" style={{ color: "var(--gui-teal-ink)" }}>
+                              <Star size={12} aria-hidden />
+                              {ev.xp_reward} XP
                             </span>
                           )}
                         </div>
                       )}
                     </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : view === "week" ? (
-            /* ─── Week View ─── */
-            <div>
-              <div className="grid grid-cols-7 border-t border-l border-[var(--glass-border)]">
-                {weekDates.map((date) => {
-                  const dayEvents = eventsForDate(date);
-                  const isToday = isSameDay(date, today);
-                  const isSelected = selectedDate && isSameDay(date, selectedDate);
-
-                  return (
-                    <button
-                      key={date.toISOString()}
-                      onClick={() => setSelectedDate(date)}
-                      className={`min-h-[280px] border-r border-b border-[var(--glass-border)] p-2 text-left transition-all ${
-                        isSelected
-                          ? "bg-[var(--color-brand-blue)]/5"
-                          : "bg-[var(--color-bg-main)] hover:bg-[var(--color-bg-alt)]"
-                      }`}
-                    >
-                      <div className="text-center mb-2">
-                        <div className="text-[0.6rem] font-mono text-[var(--color-text-muted)] uppercase">
-                          {DAYS[date.getDay()]}
-                        </div>
-                        <span
-                          className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-mono mt-1 ${
-                            isToday
-                              ? "bg-[var(--color-brand-blue)] text-white shadow-[0_0_12px_var(--glow-blue)]"
-                              : "text-[var(--color-text-primary)]"
-                          }`}
-                        >
-                          {date.getDate()}
-                        </span>
-                      </div>
-                      <div className="space-y-1">
-                        {dayEvents.map((ev) => (
-                          <div
-                            key={ev.id}
-                            className="rounded px-1.5 py-1 text-[0.6rem] font-mono leading-tight truncate"
-                            style={{
-                              background: `color-mix(in srgb, ${EVENT_COLORS[ev.type]} 15%, transparent)`,
-                              color: EVENT_COLORS[ev.type],
-                              borderLeft: `2px solid ${EVENT_COLORS[ev.type]}`,
-                            }}
-                          >
-                            {formatTime(ev.start_time)}
-                            <br />
-                            <span className="text-[var(--color-text-primary)] text-[0.6rem]">
-                              {ev.title}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            /* ─── List View ─── */
-            <div className="space-y-2">
-              {sortedEvents.length === 0 ? (
-                <div className="text-center py-16">
-                  <CalendarIcon
-                    size={32}
-                    className="mx-auto mb-3 text-[var(--color-text-muted)]"
-                  />
-                  <p className="font-mono text-sm text-[var(--color-text-muted)]">
-                    No events this month
-                  </p>
-                </div>
-              ) : (
-                sortedEvents.map((ev) => (
-                  <button
-                    key={ev.id}
-                    onClick={() => setSelectedDate(new Date(ev.start_time))}
-                    className="w-full flex items-center gap-4 bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4 text-left hover:border-[var(--color-brand-blue)]/30 transition-all"
-                  >
-                    {/* Date badge */}
-                    <div className="flex flex-col items-center justify-center w-12 shrink-0">
-                      <span className="text-[0.6rem] font-mono text-[var(--color-text-muted)] uppercase">
-                        {new Date(ev.start_time).toLocaleDateString(undefined, {
-                          month: "short",
-                        })}
-                      </span>
-                      <span className="text-lg font-heading font-bold text-[var(--color-text-primary)]">
-                        {new Date(ev.start_time).getDate()}
-                      </span>
-                    </div>
-
-                    {/* Color bar */}
-                    <div
-                      className="w-1 h-10 rounded-full shrink-0"
-                      style={{ background: EVENT_COLORS[ev.type] }}
-                    />
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-[var(--color-text-primary)] truncate">
-                        {ev.title}
-                      </p>
-                      <div className="flex items-center gap-3 mt-1 text-[0.65rem] font-mono text-[var(--color-text-muted)]">
-                        <span style={{ color: EVENT_COLORS[ev.type] }}>
-                          {EVENT_LABELS[ev.type]}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock size={10} />
-                          {formatTime(ev.start_time)}
-                          {ev.end_time ? ` – ${formatTime(ev.end_time)}` : ""}
-                        </span>
-                        {ev.location && (
-                          <span className="flex items-center gap-1 truncate">
-                            <MapPin size={10} />
-                            {ev.location}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Rewards */}
-                    {(ev.tc_reward || ev.xp_reward) && (
-                      <div className="flex items-center gap-2 shrink-0">
-                        {ev.tc_reward && (
-                          <span className="flex items-center gap-0.5 text-[0.65rem] font-mono text-[var(--color-brand-yellow)]">
-                            <Zap size={10} />
-                            {ev.tc_reward} 💎
-                          </span>
-                        )}
-                        {ev.xp_reward && (
-                          <span className="flex items-center gap-0.5 text-[0.65rem] font-mono text-[var(--color-accent-cyan)]">
-                            <Star size={10} />
-                            {ev.xp_reward} XP
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </button>
-                ))
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* ─── Side Panel: Selected Day ─── */}
-        {selectedDate && (
-          <div className="w-80 shrink-0">
-            <div className="sticky top-6 bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-hidden">
-              {/* Panel header */}
-              <div className="flex items-center justify-between p-4 border-b border-[var(--glass-border)]">
-                <div>
-                  <h3 className="text-sm font-heading font-bold text-[var(--color-text-primary)]">
-                    {selectedDate.toLocaleDateString(undefined, {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </h3>
-                  <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)] mt-0.5">
-                    {selectedEvents.length} event
-                    {selectedEvents.length !== 1 ? "s" : ""}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setSelectedDate(null)}
-                  className="p-1 rounded hover:bg-[var(--color-bg-main)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-
-              {/* Event list */}
-              <div className="max-h-[60vh] overflow-y-auto">
-                {selectedEvents.length === 0 ? (
-                  <div className="p-6 text-center">
-                    <CalendarIcon
-                      size={24}
-                      className="mx-auto mb-2 text-[var(--color-text-muted)]"
-                    />
-                    <p className="text-xs font-mono text-[var(--color-text-muted)]">
-                      No events scheduled
-                    </p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-[var(--glass-border)]">
-                    {selectedEvents.map((ev) => (
-                      <div key={ev.id} className="p-4 space-y-2">
-                        {/* Type badge + title */}
-                        <div className="flex items-start gap-2">
-                          <span
-                            className="mt-0.5 w-2 h-2 rounded-full shrink-0"
-                            style={{ background: EVENT_COLORS[ev.type] }}
-                          />
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-[var(--color-text-primary)]">
-                              {ev.title}
-                            </p>
-                            <span
-                              className="text-[0.6rem] font-mono uppercase tracking-wider"
-                              style={{ color: EVENT_COLORS[ev.type] }}
-                            >
-                              {EVENT_LABELS[ev.type]}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Time */}
-                        <div className="flex items-center gap-1.5 text-xs font-mono text-[var(--color-text-muted)]">
-                          <Clock size={11} />
-                          {formatTime(ev.start_time)}
-                          {ev.end_time ? ` – ${formatTime(ev.end_time)}` : ""}
-                        </div>
-
-                        {/* Location */}
-                        {ev.location && (
-                          <div className="flex items-center gap-1.5 text-xs font-mono text-[var(--color-text-muted)]">
-                            <MapPin size={11} />
-                            {ev.location}
-                          </div>
-                        )}
-
-                        {/* Description */}
-                        {ev.description && (
-                          <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-                            {ev.description}
-                          </p>
-                        )}
-
-                        {/* Rewards */}
-                        {(ev.tc_reward || ev.xp_reward) && (
-                          <div className="flex items-center gap-3 pt-1">
-                            {ev.tc_reward && (
-                              <span className="flex items-center gap-1 text-[0.65rem] font-mono text-[var(--color-brand-yellow)]">
-                                <Zap size={11} />
-                                +{ev.tc_reward} 💎
-                              </span>
-                            )}
-                            {ev.xp_reward && (
-                              <span className="flex items-center gap-1 text-[0.65rem] font-mono text-[var(--color-accent-cyan)]">
-                                <Star size={11} />
-                                +{ev.xp_reward} XP
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                  ))
                 )}
               </div>
-            </div>
+            )}
           </div>
-        )}
+
+          {/* ─── Side Panel: Selected Day ─── (beside the calendar from lg up) */}
+          {selectedDate && wide && (
+            <aside className="w-80 shrink-0" aria-label="Selected day">
+              <div
+                className="sticky top-6 overflow-hidden"
+                style={{
+                  background: "var(--gui-paper-hi)",
+                  borderRadius: "var(--gui-r-card)",
+                  boxShadow: "var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge)",
+                }}
+              >
+                {/* Panel header */}
+                <div
+                  className="flex items-center justify-between gap-2"
+                  style={{
+                    padding: "10px 10px 10px 18px",
+                    background: "var(--gui-paper-warm)",
+                    borderBottom: "2px dashed var(--gui-paper-edge)",
+                  }}
+                >
+                  <div>
+                    <h3 className="text-base" style={{ color: "var(--gui-ink-strong)", fontWeight: 800 }}>
+                      {selectedDayName}
+                    </h3>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--gui-muted)", fontWeight: 700 }}>
+                      {selectedDayCount}
+                    </p>
+                  </div>
+                  <IconButton label="Close this day" size="sm" onClick={() => setSelectedDate(null)}>
+                    <X size={16} aria-hidden />
+                  </IconButton>
+                </div>
+
+                {/* Event list */}
+                <div className="max-h-[60vh] overflow-y-auto">
+                  <DayEvents events={selectedEvents} inset />
+                </div>
+              </div>
+            </aside>
+          )}
+        </div>
       </div>
+
+      {/* ─── Selected Day on a phone ─── (a bottom sheet over the calendar) */}
+      <Sheet
+        open={!wide && selectedDate !== null}
+        onClose={() => setSelectedDate(null)}
+        title={selectedDayName}
+        eyebrow={selectedDayCount}
+        icon={<CalendarDays size={22} />}
+        size="sm"
+      >
+        {selectedDate && <DayEvents events={selectedEvents} />}
+      </Sheet>
     </div>
   );
 }
