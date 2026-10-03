@@ -24,6 +24,7 @@ import { useAudioState } from "@/lib/game/useAudio";
 import { orbit, readOrbitPrefs, setOrbitPrefs, subscribeOrbitPrefs, SENSITIVITY_MAX, SENSITIVITY_MIN } from "@/lib/game/orbitCamera";
 import { setAlwaysFullHud, setShowClass, useAlwaysFullHud, useShowClass } from "@/lib/game/hudPrefs";
 import { setComfort, useComfort, type ShakeLevel } from "@/lib/game/comfortSettings";
+import { setFishingFlag, useFishingLine, useHoldUpCatch } from "@/lib/game/fishingPrefs";
 import IslandSheet from "../IslandSheet";
 import styles from "../DefaultIslandWorld.module.css";
 
@@ -61,6 +62,7 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
   const wheelKeys = useWheelKeys();
   const alwaysFullHud = useAlwaysFullHud();
   const comfort = useComfort(), showClass = useShowClass();
+  const fishingLine = useFishingLine(), holdUpCatch = useHoldUpCatch();
   const [wheelListen, setWheelListen] = useState<"wheel" | "hud" | null>(null);
   useNextKey(wheelListen !== null, key => {
     const r = remapWheel(wheelKeys, wheelListen!, key);
@@ -123,6 +125,9 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
       <legend>You on the island</legend>
       <Toggle checked={showClass} onChange={setShowClass}>Show class on my nameplate</Toggle>
       <Toggle checked={aura} onChange={setAuraVisible}>Show my aura</Toggle>
+      {/* The fishing pass's flags (specs/polish/fishing-questions.md), both on until David decides. */}
+      <Toggle checked={fishingLine} onChange={on => setFishingFlag("line", on)}>Fishing line</Toggle>
+      <Toggle checked={holdUpCatch} onChange={on => setFishingFlag("holdUp", on)} hint="Show off a catch in both hands while its card is up.">Hold up my catch</Toggle>
     </fieldset>
     {/* Design sheet §1.6: the ult's flash frame and every flash obey these; both start calm when the device asks for reduced motion. */}
     <fieldset data-testid="accessibility">
