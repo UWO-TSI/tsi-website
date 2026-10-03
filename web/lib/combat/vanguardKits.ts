@@ -67,11 +67,58 @@ export const GUARDIAN: ClassKit = {
   look: { ramp: ["#fffbea", "#f0c23c", "#4a3208"], mote: "shard", drift: "orbit", icon: "/assets/game/classes/guardian.svg" },
 };
 
-export const VANGUARD_KITS: ClassKit[] = [GUARDIAN];
+// ── Juggernaut: max HP, basic attacks, the unstoppable war hammer, Titan ───────────────────────────────────
+export const JUGGERNAUT: ClassKit = {
+  key: "juggernaut", name: "Juggernaut", family: "Vanguard", role: "tank", style: "basic",
+  signature: { type: "warhammer", name: "war hammer" },
+  stat: { kind: "max_hp", at1: 1.2, at20: 1.5 },
+  basic: { hp: 0.02, reset: 1.6, chain: [
+    { power: 1.25, clip: "Unique_HammerSwing", knock: 5 },
+    { power: 1.45, clip: "Unique_HammerOverhead", time: 1.15, arc: 1.4, range: 2.4, knock: 7 },
+  ] },
+  keys: [
+    { key: "juggernaut.charge", name: "Charge", icon: I("charge"), description: "A bull rush that plows through everything in its path. Slide into it to go further.",
+      cooldown_s: 8, energy: 25, boost: { when: "sliding", distance: 1.5, power: 1.2 },
+      effects: [{ kind: "dash", distance: 6, power: 1.3 }, { kind: "momentum", speed: 3 }],
+      clip: { unique: "Unique_Charge" }, vfx: { cast: "juggernaut.charge", impact: "juggernaut.chargeHit" } },
+    { key: "juggernaut.slam", name: "Ground Slam", icon: I("slam"), description: "Crack the ground: everything around you is stunned.", heavy: true,
+      cooldown_s: 10, energy: 30, effects: [{ kind: "area", power: 1.9, radius: 3.2, at: "self", knock: 4, status: { hold: 1.2 } }],
+      clip: { verb: "Slam", scale: 1.1 }, vfx: { cast: "juggernaut.slamCast", impact: "juggernaut.slam", zone: "juggernaut.crack" } },
+    { key: "juggernaut.warcry", name: "War Cry", icon: I("warcry"), description: "Roar: enemies come for you, and you gain 20% of your max HP as temporary health for 8 s.",
+      cooldown_s: 16, energy: 20, allies: 6, effects: [{ kind: "taunt", radius: 8, duration: 5 }, { kind: "shield", amount: 0.2, duration: 8 }],
+      clip: { unique: "Unique_WarCry" }, vfx: { cast: "juggernaut.warcry" } },
+    { key: "juggernaut.drop", name: "Seismic Drop", icon: I("drop"), description: "In the air: crash down. The higher you fall from, the harder it lands (up to +150% from 3 u).",
+      unlock: 3, heavy: true, when: "airborne", scale: { by: "height", max: 1.5 },
+      cooldown_s: 6, energy: 20, effects: [{ kind: "drop" }, { kind: "after", delay: 0.12, effects: [{ kind: "area", power: 1.6, radius: 2.8, at: "self", knock: 5, status: { hold: 0.6 } }] }],
+      clip: { unique: "Unique_SeismicDrop" }, vfx: { impact: "juggernaut.quake", zone: "juggernaut.crack" } },
+  ],
+  passive: { name: "Unstoppable", description: "Nothing knocks you back or interrupts you while you attack. Every hammer hit adds 2% of your max HP as damage.", kind: "unstoppable", value: 1 },
+  ult: { key: "juggernaut.ult", name: "Titan", icon: I("titan"),
+    description: "Grow to 2.5× for 10 s: your reach grows, every swing sends a shockwave, and the ground shakes as you walk. It ends with the hammer splitting the earth.",
+    cooldown_s: 0, energy: 0, charge: 1, anticipation_ms: 500, impacts: "first-last", duration: 10,
+    effects: [{ kind: "buff", stat: "size", value: 1.5, duration: 10, swing: [{ kind: "area", power: 0.8, radius: 4, at: "self", arc: 2.2, knock: 5 }] },
+      { kind: "buff", stat: "guard", value: 0.3, duration: 10 }, { kind: "area", power: 2, radius: 4, at: "self", knock: 6 }],
+    release: [{ kind: "area", power: 6, radius: 1.5, at: "self", length: 9, knock: 9, status: { hold: 1 } }],
+    clip: { verb: "CastUp", scale: 0.8 }, finish: { unique: "Ult_Juggernaut" },
+    vfx: { cast: "juggernaut.ultCast", impact: "juggernaut.ultImpact", zone: "juggernaut.ultShock" } },
+  ranks: RANKS([
+    { at: 5, target: "juggernaut.slam", change: { label: "+25% radius", radius: 1.25 } },
+    { at: 7, target: "juggernaut.charge", change: { label: "+20% power", power: 1.2 } },
+    { at: 10, target: "ult", change: { label: "+10% power", power: 1.1 } },
+    { at: 12, target: "juggernaut.warcry", change: { label: "+20% temporary health", power: 1.2 } },
+    { at: 14, target: "juggernaut.drop", change: { label: "−20% cooldown", cooldown: 0.8 } },
+    { at: 16, target: "passive", change: { label: "+25%", power: 1.25 } },
+    { at: 18, target: "ult", change: { label: "+10% power", power: 1.1 } },
+  ]),
+  look: { ramp: ["#fff3dc", "#e8a23a", "#4a2408"], mote: "debris", drift: "fall", icon: "/assets/game/classes/juggernaut.svg" },
+};
+
+export const VANGUARD_KITS: ClassKit[] = [GUARDIAN, JUGGERNAUT];
 
 // ── Signature weapons (§1.5): one type per subclass, tiers 1–5 (T1 wood/cloth, T2 iron, T3 rune-etched, T4 gilded with a glow part, T5 animated runes) ──
 const SIG = (subclass: string, type: string, scaling: WeaponDef["scaling"], names: [string, string][]): WeaponDef[] =>
   names.map(([key, name], i) => ({ key, name, type, tier: (i + 1) as WeaponDef["tier"], scaling, max_durability: 60 + (i + 1) * 30, repair_per_point: i + 1, subclass }));
 export const VANGUARD_WEAPONS: WeaponDef[] = [
   ...SIG("guardian", "aegis", ["might", "vitality"], [["aegis-oak", "Oak shield and sword"], ["aegis-iron", "Iron shield and sword"], ["aegis-rune", "Rune-etched aegis"], ["aegis-gilt", "Gilded aegis"], ["aegis-dawn", "Dawnward aegis"]]),
+  ...SIG("juggernaut", "warhammer", ["might", "vitality"], [["warhammer-timber", "Timber war hammer"], ["warhammer-iron", "Iron war hammer"], ["warhammer-rune", "Rune-etched war hammer"], ["warhammer-gilt", "Gilded war hammer"], ["warhammer-quake", "Quakeborn war hammer"]]),
 ];

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { GUARDIAN } from "@/lib/combat/vanguardKits";
+import { GUARDIAN, JUGGERNAUT } from "@/lib/combat/vanguardKits";
 import type { ClassKit } from "@/lib/combat/classes";
 import { signatureGrant } from "@/lib/combat/weapons";
 import { enemyTarget } from "./abilities";
-import { hurtPlayer } from "./actions";
+import { attack, hurtPlayer } from "./actions";
 import { classKey, equipClassKit, pressUlt, stepClass } from "./classRuntime";
 import { ENEMIES } from "./data";
 import { stepCombat } from "./encounter";
@@ -112,5 +112,52 @@ describe("Guardian: the 0.25 s parry window, the block, Bulwark, the dome, the b
     expect(p.absorbed).toBe(0);
     const released = lost(foe) - plant, without = lost(quiet.foe) - plant;
     expect(released - without).toBeGreaterThan(75 * 2 * 0.9 * (1 - foe.type.defense) - 10);
+  });
+});
+
+describe("Juggernaut: the hammer hits harder with max HP, Unstoppable, Seismic Drop, Titan", () => {
+  it("each hammer hit adds 2% of max HP as damage", () => {
+    const a = setup(JUGGERNAUT), b = setup(JUGGERNAUT);
+    b.p.maxHp *= 2;
+    attack(a.rt, ME, never); attack(b.rt, ME, never);
+    const extra = lost(b.foe) - lost(a.foe);
+    expect(extra).toBeGreaterThan(0);
+    expect(extra).toBeCloseTo(0.02 * a.p.maxHp * (1 - a.foe.type.defense), -1);
+  });
+  it("Unstoppable: no knockback while attacking, the usual push otherwise", () => {
+    const { rt, p, foe } = setup(JUGGERNAUT);
+    attack(rt, ME, never);
+    hurtPlayer(rt, 10, foe, ME, 5, never);
+    expect(p.knock).toBe(0);
+    p.attackCd = 0; p.swing = 0;
+    hurtPlayer(rt, 10, foe, ME, 5, never);
+    expect(p.knock).toBe(5);
+  });
+  it("Seismic Drop needs the air, slams you down and hits harder from higher", () => {
+    const hit = (height: number) => {
+      const { rt, p, foe } = setup(JUGGERNAUT, 3);
+      p.move = { mode: "air", speed: 0, sinceDash: 9, vx: 0, vz: 0, height };
+      tap(rt, 3);
+      expect(p.kick?.down).toBe(true);
+      for (let t = 0; t < 0.2; t += DT) frame(rt);
+      return lost(foe);
+    };
+    const low = hit(0.2), high = hit(3);
+    expect(high / low).toBeGreaterThan(2);
+    const ground = setup(JUGGERNAUT, 3);
+    tap(ground.rt, 3);
+    expect(ground.rt.floaters.some(f => f.text === "Jump first")).toBe(true);
+  });
+  it("Titan: 2.5× for 10 s, the reach grows and every swing throws a shockwave", () => {
+    const { rt, p } = setup(JUGGERNAUT);
+    const far = add(rt, "stone-golem", 0, 3.4); // out of a normal swing's 2.2 u, inside Titan's
+    attack(rt, ME, never);
+    expect(lost(far)).toBe(0);
+    rt.v2!.meter = 100; pressUlt(rt);
+    for (let t = 0; t < 0.7; t += DT) frame(rt);
+    expect(1 + rt.buffs.filter(b => b.stat === "size").reduce((n, b) => n + b.value, 0)).toBe(2.5);
+    const before = lost(far);
+    p.attackCd = 0; attack(rt, ME, never);
+    expect(lost(far)).toBeGreaterThan(before);
   });
 });

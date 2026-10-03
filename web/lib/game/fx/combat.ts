@@ -80,6 +80,20 @@ const VANGUARD_FX: Record<string, FxRecipe> = {
     ring(0.6, 6.5, 0.6, { lift: 0.2, byRadius: true }), ring(0.4, 4, 0.45, { lift: 1.2 }), { kind: "mesh", shape: "dome", from: 1, to: 5.2, height: 2, life: 0.75, byRadius: true },
     shards(24, 0.45, { speed: [3, 7], up: [2, 5], gravity: 9 }), debrisOf(12, 0.5), dust(8, 1.8, { speed: [2, 4] }), { kind: "light", intensity: 40, distance: 12, life: 0.5 }] },
   "guardian.ultDecal": { tier: "ult", layers: [decal("crack", 2.2, 4, { byRadius: true }), decal("rune", 1.6, 2.4, { byRadius: true, spin: 0.4 })] },
+  // ── Juggernaut ──
+  "juggernaut.charge": { tier: "ability", layers: [lines(10, 1.4, 0.3, { toward: "aim" }), dust(6, 0.9, { speed: [1, 2.6] }), halo(1.3, 0.25, 0.8)] },
+  "juggernaut.chargeHit": { tier: "ability", layers: [star(1.8), sparks(2, 1.3), debrisOf(6, 0.36)] },
+  "juggernaut.slamCast": { tier: "ability", layers: [dust(3, 0.8)] },
+  "juggernaut.slam": { tier: "heavy", layers: [star(2.6, 0.3), sparks(3, 1.6), halo(2.6, 0.3, 0.5), ring(0.5, 3.2, 0.45, { lift: 0.15, byRadius: true }), debrisOf(10, 0.45), dust(6, 1.3, { speed: [1.5, 3.4] }), heavyLines] },
+  "juggernaut.crack": { tier: "heavy", layers: [decal("crack", 2.2, 3, { byRadius: true })] },
+  "juggernaut.warcry": { tier: "ability", layers: [ring(0.6, 8, 0.5, { lift: 1.1 }), ring(0.4, 5, 0.4, { lift: 0.4 }), lines(12, 1.6, 0.35, { lift: 1.3 }), halo(1.8, 0.4, 1.4)] },
+  "juggernaut.quake": { tier: "heavy", layers: [star(2.4, 0.3), ring(0.5, 2.8, 0.4, { lift: 0.15, byRadius: true }), debrisOf(10, 0.42), dust(6, 1.2, { speed: [1.8, 3.6] }), heavyLines] },
+  "juggernaut.ultCast": { tier: "ult", layers: [glow(P("swirl", [1, 1], [0.6, 0.6], [2.6, 2.6], { grow: 0.6 }), { lift: 1.2 }), ink(P("debris", [10, 12], [0.6, 0.7], [0.3, 0.45], { speed: [0.2, 0.6], up: [2.5, 4], gravity: 3, spin: 3, jitter: 2 })),
+    ring(0.4, 4.5, 0.5, { lift: 0.2 }), { kind: "mesh", shape: "pillar", from: 0.8, to: 1.6, height: 4, life: 0.5 }, { kind: "light", intensity: 26, distance: 10, life: 0.5 }] },
+  "juggernaut.ultImpact": { tier: "ult", layers: [star(5.5, 0.4), sparks(4, 3), halo(5, 0.5, 0.6), heavyLines, lines(14, 3, 0.4, { lift: 1 }), ring(0.6, 7, 0.6, { lift: 0.2 }),
+    { kind: "mesh", shape: "beam", from: 0.5, to: 9, life: 0.7 }, debrisOf(16, 0.6), dust(10, 2.2, { speed: [2.5, 5] }), { kind: "light", intensity: 40, distance: 13, life: 0.5 }] },
+  /** Titan's swings (and its ult areas' zone): a shockwave out in front, chips and dust. */
+  "juggernaut.ultShock": { tier: "ability", layers: [ring(0.6, 4, 0.4, { lift: 0.3 }), debrisOf(5, 0.4), dust(4, 1.2, { speed: [2, 3.5] }), decal("crack", 2.4, 2)] },
 };
 
 export const FX: Record<string, FxRecipe> = {
