@@ -34,8 +34,15 @@ export type Shot = { x: number; z: number; yaw: number; eye: number; pitch: numb
 const DRIFT_SECONDS = 48;
 const DRIFT_DISTANCE = 1.6;
 
-/** Default framing: a meadow a few steps in from the western shore, looking out to sea (the game's camera faces west, +z). */
+/**
+ * The title shot on today's island: low in the north-east meadow on a long lens, looking down the row of trees and
+ * flowers, with open sky on the left for the wordmark. A repainted island that puts this spot in the water falls back
+ * to a meadow a few steps in from the western shore, looking out to sea (the game's camera faces west, +z).
+ */
+const TITLE_SHOT: Shot = { x: 14.5, z: 12.5, yaw: 190, eye: 0.8, pitch: -1, fov: 32 };
+
 export function defaultShot(v: Village, island: VillageIsland): Shot {
+  if (!island.wet(TITLE_SHOT.x, TITLE_SHOT.z) && island.standable(TITLE_SHOT.x, TITLE_SHOT.z)) return TITLE_SHOT;
   const { cx, cz, maxZ } = v.bounds;
   let shore = cz;
   for (let z = maxZ; z > cz; z -= 0.25) {
