@@ -138,7 +138,10 @@ describe("the verb library (classes v2, design sheet §1.8)", () => {
     expect(GRIP_HAND.Book).toBe("L");
   });
   it("the catalogue carries every verb for every grip (one-shots with an impact key) and a looping hold idle per grip; the GLB ships", () => {
-    expect(VERB_CLIPS).toHaveLength(VERBS.length * GRIPS.length + GRIPS.length);
+    // The family waves' own clips (build_clips.py @unique: Ult_<Subclass>, Unique_<Name>) ride in the same catalogue.
+    const unique = VERB_CLIPS.filter(c => /^(Ult|Unique)_/.test(c.name));
+    expect(VERB_CLIPS.length - unique.length).toBe(VERBS.length * GRIPS.length + GRIPS.length);
+    for (const c of unique) { expect((GRIPS as readonly string[]).includes(verbInfo(c.name)!.grip), c.name).toBe(true); expect(c.impact).toBeGreaterThan(0); expect(c.impact).toBeLessThan(1); }
     for (const g of GRIPS) {
       for (const v of VERBS) {
         const info = verbInfo(verbClip(v, g))!;

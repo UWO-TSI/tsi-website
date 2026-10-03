@@ -79,7 +79,7 @@ function startReload(rt: CombatRuntime) {
   const v = v2(rt), a = v.kit.fire?.ammo, live = v.live;
   if (!a || live.reload !== null || live.cockEvery > 0 || live.ammo >= a.size) return false;
   live.reload = 0; live.reloadLen = a.reload_s; live.tried = false; live.loaded = [];
-  rt.player.clip = { verb: "Unique_Reload", scale: 1, upper: true };
+  if (a.clip) rt.player.clip = { verb: a.clip, scale: v.mods.reload, upper: true };
   return true;
 }
 function finishReload(rt: CombatRuntime) {

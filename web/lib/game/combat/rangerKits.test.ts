@@ -6,6 +6,7 @@ import { RANGER_KITS } from "@/lib/combat/rangerKits";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { SUBCLASS_FOR_TYPE } from "@/lib/oracle/subclass";
 import { WEAPONS } from "./data";
+import { gripFor, verbClip, verbInfo, VERBS, type Verb } from "@/lib/game/character/clips";
 
 describe("the Ranger kits: shape and invariants", () => {
   it("each kit on the family's terms: keys 1–5, the movement key at mastery 3, one i-frame key (8 s+), two heavy at most, unique ults", () => {
@@ -39,6 +40,17 @@ describe("the Ranger kits: shape and invariants", () => {
       for (const w of tiers) expect(WEAPONS[w.key]?.model).toBe(`/assets/game/weapons/${w.key}.glb`);
       expect(Object.values(SUBCLASS_FOR_TYPE).filter(s => s.subclass === k.key).length).toBe(1);
       expect(SYSTEM_WEAPONS.filter(w => w.type === k.signature.type).every(w => w.subclass === k.key)).toBe(true); // the type is theirs alone
+    }
+  });
+  it("every clip a kit names is in the verb library on its weapon's grip (verbs, Ult_* and Unique_* clips)", () => {
+    for (const k of RANGER_KITS) {
+      const grip = gripFor(k.signature.type), names: string[] = [];
+      for (const a of [...k.keys, k.ult]) if (a.clip) names.push("verb" in a.clip ? verbClip(a.clip.verb as Verb, grip) : a.clip.unique);
+      if (k.fire?.clip) names.push(verbClip(k.fire.clip.verb as Verb, grip));
+      if (k.fire?.ammo?.clip) names.push(k.fire.ammo.clip);
+      for (const a of k.keys) if (a.clip && "verb" in a.clip) expect((VERBS as readonly string[]).includes(a.clip.verb), a.key).toBe(true);
+      for (const n of names) expect(verbInfo(n), `${k.key}: ${n}`).not.toBeNull();
+      expect(verbInfo(k.ult.clip && "unique" in k.ult.clip ? k.ult.clip.unique : "")?.grip).toBe(grip);
     }
   });
   it("every icon the kits name is on disk", () => {

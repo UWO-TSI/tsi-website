@@ -96,7 +96,9 @@ export interface FireSpec {
   look?: ShotLook; drop?: number; weak?: number;
   /** Its shots don't hold an enemy's chase (rapid fire would keep everything flinching). */
   steady?: boolean;
-  ammo?: { size: number; reload_s: number; gold: [number, number]; bonus: number; miss_s: number };
+  ammo?: { size: number; reload_s: number; gold: [number, number]; bonus: number; miss_s: number;
+    /** The reload's clip (upper body), played at the reload stat's pace. */
+    clip?: string };
   rounds?: Record<string, RoundDef>;
   /** The verb each shot plays on the upper body, at its timing scale, and the FX per phase. */
   clip?: { verb: string; scale?: number };

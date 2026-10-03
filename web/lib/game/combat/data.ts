@@ -15,7 +15,12 @@ type Look = Pick<Weapon, "cooldown" | "range" | "arc" | "speed" | "model" | "mod
  * The Rangers' grips in socket space (three.js Euler XYZ, solved from the clips' frames by art/props-enemies/render_held.py
  * `ranger`): in the hand while shooting, at rest in the hand, across the back.
  */
-const RANGER_GRIPS: Record<string, Look["grip"]> = {};
+const RIFLE_GRIP: NonNullable<Look["grip"]> = { hand: [-2.382, -0.919, 2.97], rest: [-0.729, 0.946, 2.325], back: [-1.571, 0.585, 0] };
+const RANGER_GRIPS: Record<string, Look["grip"]> = {
+  rifle: RIFLE_GRIP, harpoon: RIFLE_GRIP,
+  // The revolver is authored as the brass one (barrel +Z in glTF): its grips.
+  sixgun: { hand: [0.81, 1.41, -0.92], rest: [0.53, 0.92, 0.85], back: [Math.PI / 2, 0, 0] },
+};
 const WEAPON_LOOK: Record<string, Look> = {
   // Combat polish 11 (specs/evidence/combat-b/balance.md): the driftwood sword 0.42 → 0.45, the oak staff 0.75 → 0.5 with a
   // faster bolt (11 → 15), the wraps 0.32 → 0.42, so every subclass's normal-mission DPS sits within ±25% of the median.
