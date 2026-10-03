@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Package, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { Amount } from "@/components/economy/Amount";
-import { Badge, Button, Card, Empty, Field, IconButton, Loading, Select, Tabs, TextArea } from "@/components/gui";
+import { Badge, Button, Card, ConfirmDialog, Empty, ErrorNote, Field, IconButton, Loading, Select, Tabs, TextArea } from "@/components/gui";
 
 interface MarketplaceItem {
   id: string;
@@ -44,6 +44,8 @@ export default function AdminMarketplacePage() {
   const [tab, setTab] = useState<"items" | "orders">("items");
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [confirmDelete, setConfirmDelete] = useState<MarketplaceItem | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -97,7 +99,10 @@ export default function AdminMarketplacePage() {
 
   async function deleteItem(id: string) {
     const supabase = createClient();
-    await supabase.from("marketplace_items").delete().eq("id", id);
+    const { error: deleteError } = await supabase.from("marketplace_items").delete().eq("id", id);
+    // An item with orders can't go (they point at it).
+    if (deleteError) return setError("That item wasn’t deleted. If members have ordered it, it has to stay for their orders.");
+    setError(null);
     setItems((prev) => prev.filter((i) => i.id !== id));
   }
 
@@ -209,6 +214,8 @@ export default function AdminMarketplacePage() {
         </Card>
       )}
 
+      {error && <ErrorNote className="mb-4">{error}</ErrorNote>}
+
       {loading ? (
         <Loading label="Getting the marketplace…" />
       ) : tab === "items" ? (
@@ -227,7 +234,7 @@ export default function AdminMarketplacePage() {
                   <IconButton
                     size="sm"
                     label={`Delete ${item.name}`}
-                    onClick={() => deleteItem(item.id)}
+                    onClick={() => setConfirmDelete(item)}
                     style={{ color: "var(--gui-danger)" }}
                   >
                     <Trash2 size={16} aria-hidden />
@@ -289,6 +296,21 @@ export default function AdminMarketplacePage() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        danger
+        title="Delete this item?"
+        confirmLabel="Delete"
+        cancelLabel="Keep it"
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => {
+          if (confirmDelete) void deleteItem(confirmDelete.id);
+          setConfirmDelete(null);
+        }}
+      >
+        “{confirmDelete?.name}” comes out of the marketplace for good.
+      </ConfirmDialog>
     </div>
   );
 }

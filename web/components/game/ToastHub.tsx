@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type CSSProperties } from "react";
 import { createToastQueue, type GameToast } from "@/lib/game/toastQueue";
+import { SignInText } from "@/components/gui/SignIn";
 import styles from "./ToastHub.module.css";
 
 /** `icon`: an image path, or a single emoji. */
@@ -30,9 +31,10 @@ export default function ToastHub() {
   return (
     <div className={styles.hub} aria-live="polite" aria-relevant="additions" aria-atomic="false">
       {entries.map((entry) => (
-        <div key={entry.id} className={styles.toast} style={{ "--toast-ms": `${entry.duration}ms` } as CSSProperties}>
+        <div key={entry.id} className={styles.toast} data-action={entry.signIn || undefined} style={{ "--toast-ms": `${entry.duration}ms` } as CSSProperties}>
           {entry.icon && <ToastIcon src={entry.icon} />}
-          <span className={styles.text}>{entry.text}</span>
+          {/* A note asking you to sign in links its words back here (reachability §3). */}
+          <span className={styles.text}>{entry.signIn ? <SignInText text={entry.text} /> : entry.text}</span>
         </div>
       ))}
     </div>

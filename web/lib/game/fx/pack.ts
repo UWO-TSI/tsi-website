@@ -2,7 +2,7 @@
 /** Our particle pack (specs/movement-feel.md deliverable 1): one row of 8 frames per sprite, 128 px cells. */
 export const PACK_URL = "/assets/fx/move-pack.webp";
 export const PACK_COLS = 8;
-export const PACK_ROWS = 17;
+export const PACK_ROWS = 18;
 export const PACK = {
   dust: { row: 0, frames: 8 } /* dust puff */,
   dustLow: { row: 1, frames: 8 } /* low dust burst (hugs the ground) */,
@@ -19,7 +19,8 @@ export const PACK = {
   marker: { row: 12, frames: 8 } /* ground marker (target) */,
   footprint: { row: 13, frames: 8 } /* footprint in snow (lies on the ground) */,
   sandPrint: { row: 14, frames: 8 } /* shoe print in sand (lies on the ground) */,
-  foam: { row: 15, frames: 8 } /* wake foam (lies on the water) */,
-  spray: { row: 16, frames: 8 } /* bow spray (thrown drops and mist) */,
+  splash: { row: 15, frames: 8 } /* splash crown (stands on the water) */,
+  foam: { row: 16, frames: 8 } /* wake foam (lies on the water) */,
+  spray: { row: 17, frames: 8 } /* bow spray (thrown drops and mist) */,
 } as const;
 export type SpriteName = keyof typeof PACK;

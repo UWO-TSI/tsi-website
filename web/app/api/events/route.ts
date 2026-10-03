@@ -3,6 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { staffContext } from "@/lib/server/adminContext";
 import { z } from "zod";
 
+/** Every column members may read: never qr_check_in_code (20261003080000; the door QR is the proof you were there). */
+const EVENT_COLUMNS = "id, title, description, event_type, start_time, end_time, location, is_all_day, team_id, bounty_id, status, tc_reward, xp_reward, created_by, approved_by, created_at, is_irl, capacity";
+
 // GET /api/events — list events with optional date range and type filters
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -22,7 +25,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("events")
-    .select("*, event_attendance(user_id, status)")
+    .select(`${EVENT_COLUMNS}, event_attendance(user_id, status)`)
     .eq("status", "approved")
     .order("start_time", { ascending: true })
     .limit(limit);
@@ -102,7 +105,7 @@ export async function POST(request: Request) {
       created_by: user.id,
       approved_by: user.id,
     })
-    .select("*")
+    .select(EVENT_COLUMNS)
     .single();
 
   if (error) {

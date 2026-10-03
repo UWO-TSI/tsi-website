@@ -240,3 +240,42 @@ Already given: the café reference (row 270) and the face, hair and eye sheets (
 - Everything else in the 53 files (about 790 numbered lines) is a built default, a coordinator-accepted detail or a fix, and none needs you.
 
 Sources are under `/Users/DavidLiu/Developer/uwotsi/.claude/worktrees/restart-art-cohesion/specs/`. `avatar-v8-questions.md` is under `/Users/DavidLiu/Developer/uwotsi/.claude/worktrees/avatar-v8/specs/` because that branch is unmerged.
+
+## Added 2026-10-03: from the portal-bugs pass
+
+**38. The event editor's "XP reward" and "Gem reward" fields.** They claim to pay at check-in, but the triggers pay the global settings (2,000 XP and 50 coins for any in-person event). Paying Gems for attendance would also break principle 3.
+A) Drop both fields; every in-person event pays the global amounts. B) Keep XP per event (the triggers read it), drop Gems. C) Keep both.
+**Rec: B.** Bigger events can be worth more XP, and Gems stay contribution-only.
+
+**39. A time window on check-in?** A photographed QR works at any time today.
+A) The event's start minus 30 min to its end plus 2 h. B) No window. C) A window plus a code that rotates every few minutes on the door screen.
+**Rec: A.** It's cheap, and it stops check-ins from home after the event.
+
+**40. Public (T5) accounts at events.** Check-in refuses them, so they earn no XP or coins for attending. This ties into #9 and #20.
+A) Keep members only. B) Public accounts check in for coins only. C) Same rewards for everyone.
+**Rec: B.** It rewards showing up without opening club data.
+
+## Added 2026-10-03: from the classes launch measurement (`specs/evidence/classes/K5-balance.md`, `specs/classes/launch-questions.md`)
+
+**11, measured.** Per-hit wear halves all damage for the 12 swing and shot kits once a tier-1 weapon breaks: about 90 hits, roughly a minute into the sanctum. With no wear, their sanctum DPS rises 11–57%. Both live options (B: wear only on defeat; C: signature weapons never wear) remove per-hit wear, which the numbers say is the urgent part.
+
+**41. The launch letter's copy.** It's drafted in `specs/classes/launch-questions.md`.
+A) Send as drafted. B) Edit it first.
+**Rec: A**, after you read it.
+
+**42. The guardian's pace.** It falls in about 3.1 min at mastery 1, against a 4–6 min target.
+A) Armour 4, health 3000, its hits ×0.75 (about 4.4 min at mastery 1, 3.6 at mastery 20). B) Keep it fast. C) Decide after your own playtest.
+**Rec: A**, with your playtest as the check.
+
+**43. Tanks and the army ults.**
+A) Restate the tank rule as "mitigates the most", since tanks don't take the least damage. Keep the Necromancer's and Summoner's ults adding 20–25% (the band says 8–15%), because their armies are the fantasy. Widen the ult charge range to 0.75 so the Elementalist fills in about 61 s. B) Trim the army ults to the band. C) Leave all of it for the playtest.
+**Rec: A.**
+
+**44. Proposed tuning (waiting on your playtest notes, not merged).**
+- Titan's slam, shockwave and fissure doubled (its ult adds about 12% instead of 6.5%).
+- Guardian armour 10% → 30% at mastery 1 (45% at mastery 20), so it rarely falls.
+- Druid Vine Snare 0.85 → 1.05 and Wild Ground 0.22 → 0.3.
+- Illusionist ult charge 0.8 → 0.82, and the Joker's shatter 8 → 10.
+
+A) Merge after your notes. B) Merge now. C) Drop it.
+**Rec: A.**

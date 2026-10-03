@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { bindFishingCastLifecycle, bindFishingInput } from "./fishingInput";
+import { FISHING_HINTS, bindFishingCastLifecycle, bindFishingInput, castDevice, trackCastDevice } from "./fishingInput";
 
 function harness() {
   const win = new EventTarget();
@@ -159,5 +159,25 @@ describe("hook-to-reel input handoff", () => {
     expect(input.keys.size).toBe(0);
     const second = mount(); expect(hold).toHaveBeenLastCalledWith(false);
     second(); releaseCast();
+  });
+});
+
+describe("the fishing hints follow the device that pressed", () => {
+  const press = (win: EventTarget, type: string, extra: Record<string, unknown>) => win.dispatchEvent(Object.assign(new Event(type, { cancelable: true }), extra));
+  it("names E for a key, the click for a mouse, a tap for a finger or a pen", () => {
+    const win = new EventTarget(), stop = trackCastDevice(win);
+    press(win, "keydown", { key: "e" }); expect(castDevice()).toBe("key");
+    press(win, "pointerdown", { pointerType: "mouse", button: 0 }); expect(castDevice()).toBe("mouse");
+    press(win, "pointerdown", { pointerType: "touch", button: 0 }); expect(castDevice()).toBe("touch");
+    press(win, "pointerdown", { pointerType: "pen", button: 0 }); expect(castDevice()).toBe("touch");
+    stop();
+    press(win, "keydown", { key: "e" }); expect(castDevice()).toBe("touch");
+  });
+  it("never tells a touch or mouse player to hold E", () => {
+    for (const device of ["mouse", "touch"] as const) for (const line of Object.values(FISHING_HINTS[device])) expect(line).not.toMatch(/\bE\b/);
+    expect(FISHING_HINTS.key.charge).toMatch(/\bE\b/);
+    expect(FISHING_HINTS.touch.charge).toMatch(/hold/i);
+    expect(FISHING_HINTS.mouse.hook).toMatch(/click/i);
+    expect(FISHING_HINTS.touch.hook).toMatch(/tap/i);
   });
 });

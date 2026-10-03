@@ -15,6 +15,8 @@ import Character, { type CharacterMotion } from "./Character";
 import { Lock } from "lucide-react";
 import { VillageButton, VillageField } from "@/components/recruit/ui";
 import { useWorldDialog } from "@/lib/game/useWorldDialog";
+import { mentionsSignIn } from "@/lib/game/signIn";
+import { SignInText } from "@/components/gui/SignIn";
 import { dyeRef, FACE, FREE_HAIR_COLOURS, PALETTE, PART_BY_ID, partColor, partRef, partsIn, randomLook, STARTER_PARTS, wear, type CharacterLook, type PartSlot } from "@/lib/game/character/look";
 import styles from "./CharacterCreator.module.css";
 
@@ -114,7 +116,8 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
   useEffect(() => {
     if (!askName || !name.trim() || name.trim() === askName.current) return;
     const timer = window.setTimeout(() => {
-      void fetch(`/api/identity/name?check=${encodeURIComponent(name.trim())}`).then(r => r.json()).then(b => {
+      // Signed out the route says "Unauthorized": said as a sign-in instead, whose words link back here (reachability §3).
+      void fetch(`/api/identity/name?check=${encodeURIComponent(name.trim())}`).then(r => (r.status === 401 ? { ok: false, error: "Sign in to pick a name." } : r.json())).then(b => {
         setNameNote(b?.ok ? { ok: b.data.available, text: b.data.available ? "That name is free." : "Someone already has that name." } : { ok: false, text: b?.error ?? "Sign in to pick a name." });
       }).catch(() => setNameNote({ ok: false, text: "Couldn't check the name right now." }));
     }, 400);
@@ -156,8 +159,9 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
         <button onClick={() => setYaw(y => y + Math.PI / 4)} aria-label="Turn right">⟳</button>
       </div>
       {askName && <VillageField label="Your name on the island" hint="Letters and numbers; everyone in the world sees it." value={name} maxLength={24}
-        onChange={e => { setName(e.target.value); setNameNote(null); }} error={nameNote && !nameNote.ok ? nameNote.text : undefined} className={styles.name} />}
+        onChange={e => { setName(e.target.value); setNameNote(null); }} error={nameNote && !nameNote.ok && !mentionsSignIn(nameNote.text) ? nameNote.text : undefined} className={styles.name} />}
       {askName && nameNote?.ok && <p className={styles.nameOk} role="status">{nameNote.text}</p>}
+      {askName && nameNote && !nameNote.ok && mentionsSignIn(nameNote.text) && <p className={styles.nameOk} role="status"><SignInText text={nameNote.text} /></p>}
     </div>
     <div className={styles.picker}>
       <div role="tablist" aria-label="Categories" className={styles.tabs}>

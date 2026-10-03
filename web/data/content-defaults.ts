@@ -9,6 +9,7 @@ import type {
   SeasonalPalette,
   ShopItem,
 } from "@/lib/content/types";
+import { RESIDENT_TALK } from "@/lib/content/residentRoster";
 
 const NOW = "1970-01-01T00:00:00.000Z";
 
@@ -157,6 +158,7 @@ export const DEFAULT_NPC_PERSONAS: NPCPersona[] = [
       "Every brick in this square was laid by someone who believed in this place. You belong here too.",
       "If you ever want to hear how this all started, you know where to find me.",
     ],
+    talk: RESIDENT_TALK.mayor,
     active: true,
     created_at: NOW,
     updated_at: NOW,
@@ -177,6 +179,7 @@ export const DEFAULT_NPC_PERSONAS: NPCPersona[] = [
       "Everything here is, technically, for sale. Some of it is even worth buying.",
       "The hoodie is a hoodie. It will keep you warm. That is the entire pitch.",
     ],
+    talk: RESIDENT_TALK.shopkeeper,
     active: true,
     created_at: NOW,
     updated_at: NOW,

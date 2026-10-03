@@ -1153,6 +1153,94 @@ def eat(p):
     return plant(keys(p, EAT))
 
 
+# ================================================================ fishing (specs/polish/fishing.md deliverable 2: the rod moment)
+# On the held rod (its grip per clip: Character.tsx USE_GRIPS, art/props-enemies/render_fishing.py). CastWindup is posed
+# by the cast meter's power, not a clock (scrub): 0 the rod in both hands in front, 1 drawn back over the right shoulder,
+# twisted onto the back foot, so the wind-up deepens as the meter fills. CastSwing whips it forward from there (the
+# bobber leaves the rod's tip at `release`) and settles into FishHold. HookYank snaps the rod up on the bite (`impact`,
+# where the line goes taut) into Reel, the braced fight the left hand cranks. HoldUp shows the catch in both hands at
+# the chin (the arms can't reach over the head; the engine turns you to the camera, Animal Crossing's beat).
+def wrist(P, s, Q):
+    """Turn a hand by Q in armature axes about its wrist, whatever the arm is doing (the rod in it turns with it)."""
+    return P.world(f"{s}Hand", Q @ P.acc(f"{s}Hand"))
+
+
+def cast_wound(k=1.0):
+    """Drawn back by `k` (0: the rod in both hands in front, ready; 1: as deep as it goes): twisted right onto the back
+    foot, the hands up by the right shoulder, the wrist cocked so the rod leans back over it, the head turned back
+    toward the water."""
+    P = body(twist=-38 * k, lean=3 - 12 * k, side=-3 * k, crouch=0.012 - 0.004 * k, nod=4 - 9 * k, turn=26 * k, shift=(-0.008 * k, 0.012 * k))
+    two_hands(P, (-0.03 - 0.18 * k, -0.15 + 0.21 * k, 0.36 + 0.14 * k), (0.02 - 0.17 * k, -0.14 + 0.11 * k, 0.335 + 0.135 * k))
+    wrist(P, "Right", rz(28 * k * k) @ rx(-44 * k * k))
+    return P
+
+
+READY, WOUND = cast_wound(0.0), cast_wound(1.0)
+
+
+@clip("CastWindup", 1.0, False, scrub=True, endsNeutral=False)
+def cast_windup(p):
+    return plant(mix(READY, WOUND, EASE["io"](p)))
+
+
+def swing_keys():
+    whip = body(twist=10, lean=14, crouch=0.018, nod=2)
+    two_hands(whip, (-0.022, -0.215, 0.475), (0.01, -0.205, 0.45))
+    wrist(whip, "Right", rz(-30))                          # the rod points where the bobber goes, not across the body
+    follow = body(twist=3, lean=9, crouch=0.015, nod=5)
+    two_hands(follow, (-0.02, -0.2, 0.41), (0.015, -0.19, 0.385))
+    wrist(follow, "Right", rz(-12))
+    return [(0, cast_wound(0.8), "lin"), (0.15, WOUND, "io"), (0.36, whip, "out"), (0.52, follow, "back"), (1.0, HOLD, "io")]
+
+
+SWING = swing_keys()
+
+
+@clip("CastSwing", 0.8, False, endsOn="FishHold", release=0.32)
+def cast_swing(p):
+    return plant(keys(p, SWING))
+
+
+def reel_pose(p):
+    """Braced against the pull, swaying with the fish; the right fist holds the rod up, the left cranks the reel twice a loop."""
+    s, w = math.sin(TAU * p), TAU * 2 * p
+    P = body(lean=-8 + 2.5 * math.sin(2 * TAU * p), side=5 * s, twist=7 * s, crouch=0.024, nod=-3, tilt=-3 * s)
+    hand(P, "Right", V(-0.035, -0.15, 0.42 + 0.006 * math.sin(2 * TAU * p)))
+    hand(P, "Left", V(0.03, -0.135 + 0.02 * math.cos(w), 0.385 + 0.02 * math.sin(w)))
+    return P
+
+
+@clip("Reel", 0.9, True)
+def reel(p):
+    return plant(reel_pose(p))
+
+
+def yank_keys():
+    yank = body(lean=-12, nod=-9, crouch=-0.008)
+    two_hands(yank, (-0.04, -0.12, 0.5), (0.008, -0.118, 0.47))
+    return [(0, HOLD, "lin"), (0.28, yank, "out"), (0.5, yank, "lin"), (1.0, reel_pose(0), "io")]
+
+
+YANK = yank_keys()
+
+
+@clip("HookYank", 0.5, False, endsOn="Reel", impact=0.28)
+def hook_yank(p):
+    return plant(keys(p, YANK))
+
+
+def hold_up(b=0.0):
+    """The catch held up in both hands under the chin, elbows out, leaning back a touch, proud."""
+    P = body(lean=-5, nod=-6, crouch=-0.004 - b * 0.5)
+    two_hands(P, (-0.08, -0.13, 0.54 + b), (0.08, -0.13, 0.54 + b))
+    return P
+
+
+@clip("HoldUp", 2.0, True)
+def hold_up_clip(p):
+    return plant(hold_up(0.006 * math.sin(TAU * p)))
+
+
 # ================================================================ verb library (classes v2, design sheet §1.8)
 # Sixteen shared verbs, each authored once right-handed (the lead hand is the right) as key poses, and six grip
 # adapters: where the off hand sits, and a mirror for the grips held in the left hand (the bow, the pistol), so the

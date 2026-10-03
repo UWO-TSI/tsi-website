@@ -35,6 +35,7 @@ import { WEAPONS } from "@/lib/game/combat/data";
 import { shakeCamera } from "@/lib/game/cameraJuice";
 import { STUCK_TIME, advanceMove, clearSpot, createMoveSim, createMoveState, interpolated, topSpeed, towards, MOVE_TUNING, NO_INPUT, type MoveEvent, type MoveInput, type MoveSim, type MoveState, type MoveTuning, type MoveWorld } from "@/lib/game/movement/sim";
 import { crouchKey, useKeyboardLocked, useMoveKeys } from "@/lib/game/movement/keys";
+import { easeFacing } from "@/lib/game/locomotion";
 import { routePilot, type RouteStep } from "@/lib/game/movement/course";
 import type { AvatarRide } from "@/lib/game/movement/ride";
 import { BASE_FOV, EVENT_CLIP, MOVE_JUICE, TAKEOFF, applyFov, liveWind, momentumOf, screenOf, touchStick, useMoveParticles, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
@@ -114,6 +115,11 @@ const STREAK_EVERY = 0.05, FAST_STREAK_EVERY = 0.12;
 
 /** Face a point (module scope: the react compiler freezes values reached through hooks inside component code). */
 function turnTo(s: MoveState | undefined, x: number, z: number) { if (s) s.facing = Math.atan2(x - s.x, z - s.z); }
+/** Turn toward a point over a moment, standing (`tsi:face`: a resident you talk to). */
+function easeTurn(s: MoveState, goal: { x: number; z: number }, dt: number) {
+  if (s.mode !== "ground" || Math.hypot(s.vx, s.vz) > 0.2 || Math.hypot(goal.x - s.x, goal.z - s.z) < 0.05) return;
+  s.facing = easeFacing(s.facing, Math.atan2(goal.x - s.x, goal.z - s.z), 9, dt);
+}
 
 /**
  * Bank the body about a pivot `pivotY` above the anchor (a glider's grip overhead, a slide's seat on the ground): `roll`
@@ -181,6 +187,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   const keys = useRef<Record<string, boolean>>({});
   const presses = useRef({ jump: false, dash: false });
   const target = useRef<{ x: number; z: number } | null>(null);
+  /** A point to turn and face while standing still (`tsi:face`, null lets go): the resident you're talking to. */
+  const faceGoal = useRef<{ x: number; z: number } | null>(null);
   const seat = useRef<Seat | null>(null);
   const reported = useRef<THREE.Vector3 | null>(null);
   const fx = useRef({ sq: 0, sqv: 0, steps: 0, trail: 0, stuck: 0, level: 0, punch: 0, leaf: 0, leafV: 0, bank: 0, pitch: 0, sliding: false, slideT: 0, slideBeat: 0, drop: 0, heading: 0,
@@ -284,6 +292,13 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       if (sitNoteTimer.current) window.clearTimeout(sitNoteTimer.current);
     };
   }, [groundHeight, groundSurface, world, leaveSeat, particles]);
+
+  // Talking to a resident: turn to face them while you talk (a turn, not a snap), until they let you go.
+  useEffect(() => {
+    const on = (e: Event) => { faceGoal.current = (e as CustomEvent<{ x: number; z: number } | null>).detail ?? null; };
+    window.addEventListener("tsi:face", on);
+    return () => window.removeEventListener("tsi:face", on);
+  }, []);
 
   // World interactions → clips (fish, forage, net, emotes).
   const faceToward = useCallback((x: number, z: number) => turnTo(sim.current?.state, x, z), []);
@@ -414,6 +429,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       } : { ...NO_INPUT, dashPressed: !frozen && !down && !root && dashPressed });
       if (inCombat) { input.push = push; if (p.aimHold > 0 || Math.hypot(s.state.vx, s.state.vz) < 0.6) s.state.facing = p.facing; } // attacking or standing: the kit turns from your facing (a dash with no stick goes that way)
       events = advanceMove(s, input, dt, world, t);
+      if (faceGoal.current && frozen) easeTurn(s.state, faceGoal.current, dt);
       if (target.current) {
         f.stuck = Math.hypot(s.state.vx, s.state.vz) < 0.3 ? f.stuck + dt : 0;
         if (f.stuck > STUCK_TIME) target.current = null;

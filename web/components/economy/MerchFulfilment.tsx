@@ -23,6 +23,8 @@ const EMPTY: Record<Status, { title: string; text: string }> = {
   cancelled: { title: "Nothing cancelled", text: "Cancelled reservations, refunded in Gems, land here." },
 };
 const reservedOn = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Toronto" });
+/** When a handed-over or cancelled reservation was closed (resolved_at); null while it waits. */
+export const closedLabel = (r: Pick<Reservation, "resolved_at">) => (r.resolved_at ? `Closed ${reservedOn(r.resolved_at)}` : null);
 
 export default function MerchFulfilment({ transport = httpEconomyTransport }: { transport?: EconomyTransport }) {
   const [status, setStatus] = useState<Status>("reserved");
@@ -55,7 +57,8 @@ export default function MerchFulfilment({ transport = httpEconomyTransport }: { 
     <div>
       <h1 className="text-2xl font-extrabold text-[var(--gui-ink-strong)]">Merch pickups</h1>
       <p className="text-sm text-[var(--gui-muted)] mt-1 mb-4">Check the member’s pickup code, give them the item, then press Hand over. Cancelling refunds the Gems and returns the stock.</p>
-      <Tabs label="Reservations" value={status} onChange={setStatus} tabs={STATUS_TABS} className="mb-4" />
+      {/* A note belongs to the tab it happened on: switching tabs starts clean. */}
+      <Tabs label="Reservations" value={status} onChange={(s) => { setMessage(null); setRows(null); setStatus(s); }} tabs={STATUS_TABS} className="mb-4" />
       <AdminMessage message={message} className="mb-4" />
       {rows === null ? (
         <Loading label="Loading the reservations…" />
@@ -66,7 +69,7 @@ export default function MerchFulfilment({ transport = httpEconomyTransport }: { 
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-[var(--gui-paper-warm)]">
-                {["Code", "Member", "Item", "Gems", "Reserved", status === "reserved" ? "Note" : "Note / closed"].map((h) => <th key={h} className={thCls}>{h}</th>)}
+                {["Code", "Member", "Item", "Gems", "Reserved", status === "reserved" ? "Note" : "Closed / note"].map((h) => <th key={h} className={thCls}>{h}</th>)}
                 <th className={thCls}><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
@@ -91,7 +94,10 @@ export default function MerchFulfilment({ transport = httpEconomyTransport }: { 
                         onChange={(e) => setNotes({ ...notes, [r.id]: e.target.value })}
                       />
                     ) : (
-                      <span className="text-[13px] text-[var(--gui-ink-2)]">{r.note ?? "—"}</span>
+                      <span className="text-[13px] text-[var(--gui-ink-2)]">
+                        <span className="block whitespace-nowrap font-bold">{closedLabel(r) ?? "—"}</span>
+                        {r.note && <span className="block">{r.note}</span>}
+                      </span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">

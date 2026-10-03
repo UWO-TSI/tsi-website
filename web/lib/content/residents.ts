@@ -8,9 +8,15 @@ import type { NPCPersona } from "./types";
 import { objectById, objectsOf, village, villageSpawnPoint, type Village } from "@/lib/game/villageMap";
 import { HOME_LANDMARKS, ROUTINE_SPECIAL } from "@/lib/game/residentRoutine";
 import type { LandmarkId } from "@/lib/game/defaultIsland";
+import { validateTalk } from "./talk";
 
 export const RESIDENT_POSTS = ["hq_lead", "shopkeeper", "cafe_owner", "museum_curator", "wharf_keeper", "oracle_keeper", "workshop_crafter", "villager"] as const;
 export type ResidentPost = (typeof RESIDENT_POSTS)[number];
+/** Each post's title (the Residents editor, the dialogue box's name tag). */
+export const POST_TITLES: Record<ResidentPost, string> = {
+  hq_lead: "HQ lead", shopkeeper: "Shopkeeper", cafe_owner: "Café owner", museum_curator: "Museum curator",
+  wharf_keeper: "Wharf keeper", oracle_keeper: "Oracle keeper", workshop_crafter: "Workshop crafter", villager: "Villager",
+};
 
 /**
  * Schedule anchors (keys are stable: saved schedules reference them). Where each
@@ -59,6 +65,8 @@ export function validateResidentDraft(d: Record<string, unknown>): string[] {
   if (d.persona_prompt != null && (typeof d.persona_prompt !== "string" || d.persona_prompt.length > 2000)) errors.push("persona_prompt: up to 2000 characters");
   const lines = d.canned_dialogue;
   if (lines !== undefined && (!Array.isArray(lines) || lines.length > 30 || lines.some((l) => typeof l !== "string" || !l.trim() || l.length > 200))) errors.push("dialogue: up to 30 lines of 1-200 characters");
+  const talk = d.talk === undefined ? null : validateTalk(d.talk);
+  if (talk) errors.push(talk);
   const s = d.schedule;
   if (s !== undefined && (!s || typeof s !== "object" || Array.isArray(s) || Object.entries(s).some(([k, v]) => k === "home" ? !(HOME_LANDMARKS as readonly unknown[]).includes(v) : !(ISLAND_PHASES as readonly string[]).includes(k) || !isRoutine(v)))) errors.push("schedule: phase → stop or routine of stops; home → a building");
   return errors;

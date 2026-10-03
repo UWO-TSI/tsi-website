@@ -513,6 +513,72 @@ def sand_print(t):
     return np.clip(A, 0, 1), colour(np.clip(val, 0, 1.05), 0.3)
 
 
+def splash(t):
+    """A crown of water thrown up where something breaks the surface (a fish striking the bobber, a catch pulled out),
+    standing on the water (its painted ground line 0.2 up the cell): a thin sheet flaring up and out from the ring in a
+    few uneven points, the near rim low and the far one high as the ring is seen from above. The sheet is clear and
+    streaked in its middle and catches the light along its crest and where it turns edge-on, brighter on the sun's side.
+    It starts as a low dome, the points let go as drops at its height, and the sheet falls back and thins into the water."""
+    rng = np.random.default_rng(1717)
+    A = np.zeros((CELL, CELL))
+    val = np.ones((CELL, CELL))
+    base = -0.6                                                    # the water line
+    up = min(1.0, t / 0.4)
+    rise = math.sin(0.5 * math.pi * up) if t < 0.4 else max(0.0, 1 - ((t - 0.4) / 0.52) ** 1.5)
+    H = 0.16 + 0.8 * rise                                          # a low dome at first, then the crown
+    w = 0.3 + 0.34 * math.sin(0.5 * math.pi * min(1.0, t / 0.55))  # the ring opens as the crown rises
+    ey = 0.4 * w                                                   # the ring seen at the follow camera's slant
+    hgt = np.clip((V - base) / max(H, 1e-3), 0, 1.4)
+    u = U / (w * (1 + 0.5 * hgt * up))                             # the sheet flares out as it climbs
+    inside = np.clip(1 - u * u, 0, 1)
+    across = np.sqrt(inside)
+    near, far = base - ey * across, base + ey * across             # the ring's near and far rims
+    # The points: uneven in height and spacing, leaning out, sharpening as the crown rises (a dome before).
+    PTS = [(-0.82, 0.72, 0.1), (-0.5, 1.0, 0.09), (-0.2, 0.8, 0.1), (0.1, 0.95, 0.085), (0.42, 0.7, 0.1), (0.74, 0.9, 0.09)]
+    pts = np.zeros_like(U)
+    for c, h, s_ in PTS:
+        pts = np.maximum(pts, h * np.exp(-((u - c * (1 + 0.1 * hgt)) / (s_ + 0.25 * (1 - up))) ** 2))
+    edge = (fbm(U * 6 + 7, np.full_like(U, 3.0), 1718, 2) - 0.5) * 0.1
+    top = far + H * ((0.5 + 0.5 * pts) * up + 0.9 * (1 - up) * np.sqrt(inside)) + edge * H
+    sheet = (V > near) & (V < top) & (inside > 0)
+    # Clear and streaked in the middle, thick at the crest and where the sheet turns edge-on (the crown's sides).
+    streak = vnoise(U * 16 + 3, V * 1.6, 1719)
+    crest = np.exp(-((top - V) / (0.04 + 0.05 * H)) ** 2)
+    sides = ss(0.45, 0.97, np.abs(u)) * 0.55
+    fill = (0.16 + 0.12 * streak) * (1 + 0.6 * (1 - up))
+    a_sheet = np.where(sheet, np.clip(fill + crest * 0.8 + sides, 0, 1), 0.0) * ss(0.0, 0.1, inside)
+    # Where the sheet meets the water, a faint bright lip on the near side.
+    lip = np.exp(-((V - near) / 0.03) ** 2) * (inside > 0) * 0.45 * (1 - ss(0.4, 1.0, t))
+    sun = np.clip(0.55 - 0.45 * np.clip(u, -1, 1), 0.1, 1.0)       # the light from the upper left
+    a = np.maximum(a_sheet, lip) * (1 - ss(0.7, 1.0, t))
+    v = np.where(crest > 0.35, 0.9 + 0.1 * sun, 0.7 + 0.18 * sun + 0.06 * streak)
+    upd = a > A
+    A = np.maximum(A, a)
+    val = np.where(upd, v, val)
+    # The drops the points let go of at the crown's height: thrown up and out a little more, then falling back.
+    if t > 0.28:
+        for k, (c, h, _) in enumerate(PTS):
+            for j in range(2):
+                tt = t - 0.28 - 0.06 * j
+                if tt <= 0:
+                    continue
+                x0 = c * 1.25 * w
+                x = x0 + (0.18 * np.sign(c) + rng.uniform(-0.1, 0.1)) * tt
+                y0 = base + 0.4 * w + 0.96 * (0.5 + 0.5 * h)
+                y = y0 + (0.45 + rng.uniform(0, 0.35)) * tt - 3.4 * tt * tt
+                r = (0.04 - 0.012 * j) * (1 - 0.45 * min(1.0, tt / 0.6))
+                if y < base - 0.05:
+                    continue
+                d = np.hypot(U - x, (V - y) * 0.85)
+                m = ss(r, r - PX * 1.3, d) * (1 - ss(0.8, 1.0, t))
+                hi = ss(r * 0.5, 0, np.hypot(U - (x - r * 0.3), V - (y + r * 0.35)))
+                dv = 0.8 + 0.25 * hi
+                upd = m > A
+                A = np.maximum(A, m)
+                val = np.where(upd, dv, val)
+    return A, colour(np.clip(val, 0, 1), 0.2)
+
+
 def foam(t):
     """Wake foam lying on the water, seen from above (specs/polish/arrival-wharf.md): churned white water that opens
     into lace, the walls left between bubbles as they burst, and thins to wisps. The patch is a few soft lobes round
@@ -610,6 +676,7 @@ SPRITES = [
     ("marker", marker, "ground marker (target)"),
     ("footprint", footprint, "footprint in snow (lies on the ground)"),
     ("sandPrint", sand_print, "shoe print in sand (lies on the ground)"),
+    ("splash", splash, "splash crown (stands on the water)"),
     ("foam", foam, "wake foam (lies on the water)"),
     ("spray", spray, "bow spray (thrown drops and mist)"),
 ]
@@ -623,6 +690,7 @@ SHEET = {
     "marker": ("#fff4c8", "#8c8577"),
     "footprint": ("#c9d6e6", "#eef3f8"),
     "sandPrint": ("#c9ad78", "#e2cb93"),
+    "splash": ("#d4ecf7", "#568cb2"),
     "foam": ("#f2f8f8", "#3f8fa6"), "spray": ("#e6f3f7", "#4f97ad"),
 }
 

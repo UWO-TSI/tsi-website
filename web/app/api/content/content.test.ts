@@ -4,6 +4,7 @@
  * (rollback + activity log) → the live row changes. Text-keyed recipes too.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { NextResponse } from "next/server";
 
 type Row = Record<string, unknown>;
 const mock = vi.hoisted(() => ({ ctx: null as unknown, tables: {} as Record<string, Row[]> }));
@@ -76,3 +77,41 @@ describe("content editors publish through versioning", () => {
     expect(mock.tables.content_versions).toHaveLength(0);
   });
 });
+
+describe("resident conversations (reachability deliverable 1): T1/T2 only, checked on the server", () => {
+  const TALK = { slug: "kit", display_name: "Kit", post: "wharf_keeper", canned_dialogue: ["Tide's in."], talk: [["[happy] Oh! Hello.", "Tide's turning."], ["Boat's ready."]] };
+  const as = (tier: number) => { mock.ctx = { userId: T1, tier, now: new Date(), db: { from } }; };
+
+  it("refuses T3 to T5 and signed-out visitors before anything is stored or published", async () => {
+    mock.tables.content_drafts.push({ id: "d-1", table_name: "npc_personas", row_id: null, draft_data: TALK, status: "draft" });
+    for (const tier of [3, 4, 5]) {
+      as(tier);
+      expect((await post({ table_name: "npc_personas", row_id: null, draft_data: TALK })).status).toBe(403);
+      expect((await publishDraft("d-1")).status).toBe(403);
+    }
+    mock.ctx = NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    expect((await post({ table_name: "npc_personas", row_id: null, draft_data: TALK })).status).toBe(401);
+    expect((await publishDraft("d-1")).status).toBe(401);
+    expect(mock.tables.content_drafts).toHaveLength(1);
+    expect(mock.tables.npc_personas).toHaveLength(0);
+  });
+
+  it("refuses conversations the game can't say (an unknown expression, a fifth box, an empty line)", async () => {
+    as(2);
+    for (const talk of [[["[wizard] Hm."]], [["a", "b", "c", "d", "e"]], [["  "]], "Hello"]) {
+      expect((await post({ table_name: "npc_personas", row_id: null, draft_data: { ...TALK, talk } })).status).toBe(400);
+    }
+    expect(mock.tables.content_drafts).toHaveLength(0);
+  });
+
+  it("a T2's edit publishes: the old conversations kept in the history, the new ones live", async () => {
+    as(2);
+    mock.tables.npc_personas.push({ id: "p-kit", ...TALK, talk: [["Old line."]] });
+    const saved = await post({ table_name: "npc_personas", row_id: "p-kit", draft_data: TALK });
+    expect(saved.status).toBe(201);
+    expect((await publishDraft((await saved.json()).draft.id)).status).toBe(200);
+    expect(mock.tables.npc_personas[0].talk).toEqual(TALK.talk);
+    expect(mock.tables.content_versions[0]).toMatchObject({ table_name: "npc_personas", row_id: "p-kit", snapshot_data: expect.objectContaining({ talk: [["Old line."]] }) });
+  });
+});
+
