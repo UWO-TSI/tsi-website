@@ -19,8 +19,8 @@
 .pocket[data-chest] { max-height: 360px; overflow-y: auto; scrollbar-width: thin; }
 .grid { --cell: 58px; list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, var(--cell)); gap: 10px; }
 .slot { position: relative; display: grid; place-items: center; width: var(--cell); height: var(--cell); border-radius: 22px; }
-/* A slot past the bag's size (a member over capacity): their stacks, on a warning wash. */
-.slot[data-over] { background: rgb(138 90 18 / 0.14); }
+/* A slot past the bag's size (a member over capacity): their stacks, ringed in the warning colour. */
+.slot[data-over] { outline: 2px dashed var(--gui-warn); outline-offset: 2px; }
 .slot > button { cursor: grab; }
 .slot > button:active { cursor: grabbing; }
 .lock { position: absolute; left: -3px; bottom: -3px; padding: 3px; box-sizing: content-box; border-radius: 50%; background: var(--gui-bark); color: var(--gui-paper); pointer-events: none; }

@@ -98,7 +98,7 @@ export function BagSheet({ open, onClose, keys }: { open: boolean; onClose: () =
   // You looked: the New marks go as the bag closes.
   const close = () => { seeBag(); onClose(); };
   return <Sheet open={open} onClose={close} title="Bag" icon={<Backpack size={22} aria-hidden />} size="lg" keys={keys} testId="bag-sheet">
-    <Tabs label="Bag" value={tab} onChange={setTab} keyHints={["[", "]"]} className={s.tabs}
+    <Tabs label="Bag" value={tab} onChange={setTab} className={s.tabs}
       tabs={[{ id: "pockets", label: "Pockets" }, { id: "owned", label: "Tools, clothes and furniture" }]} />
     {tab === "pockets" ? <Pockets /> : <InventoryBody />}
   </Sheet>;
@@ -126,7 +126,7 @@ function Pockets() {
   return <div className={s.pockets}>
     <div className={s.bar}>
       <Readout used={view.used} capacity={view.capacity} label="Pockets" />
-      <Button size="sm" variant="quiet" onClick={() => { sortBag(); setSel(null); AudioManager.playSFX("click", { rate: 1.2, gain: 0.35 }); }} disabled={!view.items.length}>
+      <Button size="sm" variant="quiet" onClick={() => { sortBag(); setSel(null); setNote(null); AudioManager.playSFX("click", { rate: 1.2, gain: 0.35 }); }} disabled={!view.items.length}>
         <ArrowDownWideNarrow size={16} aria-hidden /> Sort
       </Button>
     </div>
