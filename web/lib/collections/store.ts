@@ -5,7 +5,8 @@ import { DomainError } from "@/lib/result";
 
 export type CollectionsErrorCode =
   | "unavailable" | "already_donated" | "not_owned" | "not_donatable" | "rate_limited" | "failed"
-  | "too_fast" | "no_roll" | "roll_expired" | "already_landed" | "already_harvested" | "out_of_season" | "none_left";
+  | "too_fast" | "no_roll" | "roll_expired" | "already_landed" | "already_harvested" | "out_of_season" | "none_left"
+  | "bag_full" | "storage_full" | "locked" | "insufficient_items" | "key_reused" | "bad_qty";
 export class CollectionsError extends DomainError<CollectionsErrorCode> {}
 
 export interface TourneyRef {
@@ -31,6 +32,19 @@ export interface CatchResult {
   new_record: boolean;
   /** Land and harvest: the recipe this catch taught, in the same transaction; null when none. */
   recipe?: LearnedRecipe | null;
+}
+
+/** A backpack stack (member_collections): the stock, its lock (selling and dropping skip it) and the best size caught. */
+export interface BagItem {
+  item_key: string;
+  count: number;
+  locked: boolean;
+  best_size_cm: number | null;
+}
+/** The home storage chest (member_storage). */
+export interface ChestItem {
+  item_key: string;
+  count: number;
 }
 
 export interface CollectionsStore {
@@ -59,4 +73,15 @@ export interface CollectionsStore {
   tourneyEntries(goalId: string, cycle: number): Promise<TourneyEntry[]>;
   showcase(memberId: string): Promise<(string | null)[]>;
   setShowcase(memberId: string, keys: (string | null)[]): Promise<void>;
+  // ── The backpack and the home storage chest (20261003054110_backpack) ──
+  // Every catch above refuses `bag_full` when the item needs a slot the bag doesn't have (cast, land, harvest).
+  /** The bag's stacks with their locks, and the chest's. */
+  bag(memberId: string): Promise<{ items: BagItem[]; chest: ChestItem[] }>;
+  setLocked(memberId: string, itemKey: string, locked: boolean): Promise<void>;
+  /** Atomic, once per key: drop `qty` of an unlocked item (gone for good). Returns how many are left. */
+  drop(memberId: string, itemKey: string, qty: number, key: string): Promise<{ count: number; replayed: boolean }>;
+  /** Atomic, once per key: move `qty` between the bag and the chest (`bag_full` / `storage_full` when it won't fit). */
+  move(memberId: string, itemKey: string, qty: number, to: "chest" | "bag", key: string): Promise<{ replayed: boolean }>;
+  /** Atomic, once per key: every unlocked material in the bag into the chest. Returns how many moved. */
+  storeMaterials(memberId: string, key: string): Promise<{ moved: number; replayed: boolean }>;
 }

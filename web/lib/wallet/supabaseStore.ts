@@ -4,7 +4,7 @@ import { raisePg } from "@/lib/result";
 import { EconomyError, type EconomyErrorCode, type EconomyStore, type LedgerEntry, type Reservation } from "./store";
 
 type Row = Record<string, unknown>;
-const CODES: EconomyErrorCode[] = ["insufficient", "not_found", "not_for_sale", "already_owned", "bad_qty", "bad_price", "sold_out", "not_sellable", "insufficient_items", "too_many_open", "already_resolved", "forbidden"];
+const CODES: EconomyErrorCode[] = ["insufficient", "not_found", "not_for_sale", "already_owned", "bad_qty", "bad_price", "sold_out", "not_sellable", "insufficient_items", "too_many_open", "already_resolved", "forbidden", "locked"];
 const raise = (error: { code?: string; message?: string } | null): never => raisePg(error, CODES);
 const first = (data: unknown) => ((Array.isArray(data) ? data[0] : data) ?? {}) as Row;
 const ITEM_COLS = "id, slug, display_name, category, description, price_coins, tc_price, tier, slot, special_pool, stackable, stock, catalogue_ref, sprite_url, position, active, available_from, available_until, retired_at";
@@ -63,9 +63,9 @@ export function supabaseEconomyStore(db: SupabaseClient): EconomyStore {
       return { balance: Number(r.balance), owned: Number(r.owned), replayed: r.replayed === true };
     },
     async collections(m) {
-      const { data, error } = await db.from("member_collections").select("item_key, count").eq("user_id", m).gt("count", 0);
+      const { data, error } = await db.from("member_collections").select("item_key, count, locked").eq("user_id", m).gt("count", 0);
       if (error) raise(error);
-      return ((data ?? []) as Row[]).map((r) => ({ item_key: String(r.item_key), count: Number(r.count) }));
+      return ((data ?? []) as Row[]).map((r) => ({ item_key: String(r.item_key), count: Number(r.count), locked: r.locked === true }));
     },
     async sell(m, key, qty, idem) {
       const { data, error } = await db.rpc("economy_sell", { p_member_id: m, p_item_key: key, p_qty: qty, p_idempotency_key: idem });

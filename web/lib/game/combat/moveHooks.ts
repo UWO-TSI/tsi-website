@@ -7,13 +7,15 @@
 import type { MoveCondition } from "@/lib/combat/classes";
 import type { MoveState, MoveTuning } from "@/lib/game/movement/sim";
 
-/** What the avatar reports each frame. */
-export interface MoveView { mode: string; speed: number; sinceDash: number; vx: number; vz: number }
+/** What the avatar reports each frame (`height`: above the ground under you). */
+export interface MoveView { mode: string; speed: number; sinceDash: number; vx: number; vz: number; height?: number }
 /**
  * What abilities ask of the next step: carried speed along (dx, dz), a hop of `up` world units, a short hang in the air;
- * `to`: a teleport that keeps your speed and arc (a swap, a thrown card, a warp in Shadow Garden); `hold`: a slide kept at this speed (a surf).
+ * `to`: a teleport that keeps your speed and arc (a swap, a thrown card, a warp in Shadow Garden, a blink); `hold`: a slide
+ * kept at this speed (a surf); `down`: a slam straight down out of the air; `blink`: a blink to an enemy's back, refused
+ * by the avatar off your level (a cliff, a wall).
  */
-export interface Kick { dx: number; dz: number; speed: number; up: number; hang: boolean; to?: { x: number; z: number }; hold?: number }
+export interface Kick { dx: number; dz: number; speed: number; up: number; hang: boolean; to?: { x: number; z: number }; hold?: number; down?: boolean; blink?: boolean }
 
 export const MOVE_HOOK = {
   /** A walk; "fast" is above a run. */
@@ -24,6 +26,8 @@ export const MOVE_HOOK = {
   maxPush: 4, ceiling: 18,
   /** A hang at an air cast: the rise it gives (u/s) instead of pausing gravity. */
   hangLift: 1.2,
+  /** "moving": above this (a jog; a run is 7.4). `fullHeight`: a height rider's full bonus. `slam`: a drop's downward speed. */
+  moving: 4, fullHeight: 3, slam: 26,
 } as const;
 
 export function moveOk(when: MoveCondition | undefined, v: MoveView): boolean {
@@ -33,12 +37,15 @@ export function moveOk(when: MoveCondition | undefined, v: MoveView): boolean {
     case "airborne": return v.mode === "air" || v.mode === "glide";
     case "afterDash": return v.sinceDash <= MOVE_HOOK.afterDash;
     case "fast": return v.speed > MOVE_HOOK.fast;
+    case "moving": return v.speed > MOVE_HOOK.moving || v.mode === "slide" || v.sinceDash <= MOVE_HOOK.afterDash;
   }
 }
-export const MOVE_NEEDS: Record<MoveCondition, string> = { sliding: "Slide first", airborne: "Jump first", afterDash: "Dash first", fast: "Get some speed" };
+export const MOVE_NEEDS: Record<MoveCondition, string> = { sliding: "Slide first", airborne: "Jump first", afterDash: "Dash first", fast: "Get some speed", moving: "Run, slide or dash first" };
 
 /** `scale: speed`: +0 at a walk up to +max at 16 u/s. */
 export const speedBonus = (speed: number, max: number) => max * Math.min(1, Math.max(0, (speed - MOVE_HOOK.walk) / (MOVE_HOOK.speedFull - MOVE_HOOK.walk)));
+/** `scale: height`: +0 on the ground up to +max from 3 u up. */
+export const heightBonus = (height: number, max: number) => max * Math.min(1, Math.max(0, height / MOVE_HOOK.fullHeight));
 
 /** Add one ability's movement to what this frame already asks for. */
 export function addKick(k: Kick | null, dx: number, dz: number, speed: number, up: number, hang = false): Kick {
@@ -56,6 +63,7 @@ export function addKick(k: Kick | null, dx: number, dz: number, speed: number, u
  */
 export function applyKick(s: MoveState, k: Kick, t: Pick<MoveTuning, "jumpHeight" | "jumpApexTime" | "momentumCeiling">) {
   if (k.to) { s.x = k.to.x; s.z = k.to.z; }
+  if (k.down && (s.mode === "air" || s.mode === "glide")) { s.vy = Math.min(s.vy, -MOVE_HOOK.slam); if (s.mode === "glide") { s.mode = "air"; s.modeT = 0; } }
   if (k.hold) {
     const v = Math.hypot(s.vx, s.vz), want = Math.min(k.hold, t.momentumCeiling);
     if (v > 0.5 && v < want) { s.vx *= want / v; s.vz *= want / v; }

@@ -123,8 +123,8 @@ const METAL_BODY = /\/(props\/streetlamp|props\/park-clock|furniture\/mailbox)\.
  */
 export function lookClassFor(url: string, name: string): "foliage" | "props" | "glass" | "metal" {
   if (url.includes("/plants/")) return "foliage";
-  // The café (cafe-polish §7) is the one interior with the look's glass and steel: its counters, cases and machine.
-  const outdoor = /\/(props|buildings|weapons|cafe)\//.test(url) || /\/furniture\/(fitting-room|mailbox)\.glb$/.test(url);
+  // The café (cafe-polish §7) and the modelled rooms (interiors polish) are the interiors with the look's glass and metal.
+  const outdoor = /\/(props|buildings|weapons|cafe|interiors)\//.test(url) || /\/furniture\/(fitting-room|mailbox)\.glb$/.test(url);
   if (!outdoor || url.includes("driftwood")) return "props";
   if (GLASS.test(name)) return "glass";
   return METAL.test(name) || METAL_BODY.test(`${url}:${name}`) ? "metal" : "props";

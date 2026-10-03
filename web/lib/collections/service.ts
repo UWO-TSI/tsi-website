@@ -10,7 +10,8 @@ import { hourKey } from "@/lib/game/peaceful";
 import { rodByTier } from "@/lib/game/rods";
 import { checkHeld } from "@/lib/game/tools";
 import type { IslandWeather } from "@/lib/game/islandWeather";
-import type { CatchResult, CollectionsStore } from "./store";
+import type { BagItem, CatchResult, ChestItem, CollectionsStore } from "./store";
+import { CHEST_SLOTS, bagCapacity, slotsUsed } from "./bag";
 import { eventCatches, landSeason, latestTourney, tourneyBoards, type TourneyBoard } from "@/lib/progression/seasonal";
 import type { ClubGoal } from "@/lib/progression/types";
 
@@ -27,6 +28,12 @@ const ERRORS: Record<string, [number, string]> = {
   already_harvested: [409, "You've already gathered here this hour."],
   out_of_season: [409, "That one only bites during its seasonal event."],
   none_left: [409, "You don't have any of those left."],
+  bag_full: [409, "Your backpack is full."],
+  storage_full: [409, "Your storage chest is full."],
+  locked: [409, "That's locked. Unlock it first."],
+  insufficient_items: [409, "You don't have that many."],
+  key_reused: [409, "That request was already used for something else."],
+  bad_qty: [400, "Pick a sensible amount."],
   failed: [500, "Something went wrong. Try again."],
 };
 const fail = <T>(err: unknown): Result<T> => toFailure(ERRORS, err);
@@ -222,6 +229,72 @@ export async function tourney(store: CollectionsStore, goals: ClubGoal[], member
       ok: true,
       data: { slug: t.goal.slug, title: t.goal.title, cycle: t.cycle, open: t.open, start: t.start?.toISOString() ?? null, end: t.end?.toISOString() ?? null, boards: tourneyBoards(entries, memberId, name) },
     };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+// ── The backpack and the home storage chest (specs/game-ui.md milestone 2) ──
+
+export interface BagView {
+  items: BagItem[];
+  /** Slots: the bag's size (20, or a pocket upgrade's) and how many its stacks fill (more than its size for a member who was over before the cap). */
+  capacity: number;
+  used: number;
+  chest: ChestItem[];
+  chest_capacity: number;
+  chest_used: number;
+  /** Species in the club museum: "you" when your specimen is the one on show. */
+  museum: Record<string, "you" | "club">;
+}
+
+const stockOf = (rows: { item_key: string; count: number }[]) => Object.fromEntries(rows.map(r => [r.item_key, r.count]));
+async function viewOf(store: CollectionsStore, memberId: string): Promise<BagView> {
+  const [{ items, chest }, owned, donations] = await Promise.all([store.bag(memberId), store.ownedGear(memberId), store.donations()]);
+  return {
+    items, capacity: bagCapacity(owned), used: slotsUsed(stockOf(items)),
+    chest, chest_capacity: CHEST_SLOTS, chest_used: slotsUsed(stockOf(chest)),
+    museum: Object.fromEntries(donations.map(d => [d.species_key, d.donor_id === memberId ? "you" : "club"])),
+  };
+}
+export async function bagView(store: CollectionsStore, memberId: string): Promise<Result<BagView>> {
+  try {
+    return { ok: true, data: await viewOf(store, memberId) };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+const Item = z.string().regex(/^[a-z0-9_]{1,64}$/);
+const Qty = z.number().int().min(1).max(999);
+/** The client's idempotency key, as memberContext's IdemKey (kept here: this module also runs in the browser demos). */
+const Key = z.string().regex(/^[A-Za-z0-9_:-]{8,100}$/);
+const BagRequest = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("lock"), item: Item, locked: z.boolean() }),
+  z.object({ action: z.literal("drop"), item: Item, qty: Qty, idempotency_key: Key }),
+  z.object({ action: z.literal("store"), item: Item, qty: Qty, idempotency_key: Key }),
+  z.object({ action: z.literal("take"), item: Item, qty: Qty, idempotency_key: Key }),
+  z.object({ action: z.literal("store_materials"), idempotency_key: Key }),
+]);
+/**
+ * A change to the bag, answered with the bag as it is now (the client never decides what you have):
+ *   lock  { item, locked }            selling and dropping skip a locked item; so does "store all materials"
+ *   drop  { item, qty, key }          gone for good
+ *   store { item, qty, key }          bag → chest   (storage_full when the chest has no room)
+ *   take  { item, qty, key }          chest → bag   (bag_full when the bag has no room)
+ *   store_materials { key }           every unlocked material into the chest
+ * Each write is atomic and happens once per key; a replay changes nothing.
+ */
+export async function bagAction(store: CollectionsStore, memberId: string, body: unknown): Promise<Result<BagView>> {
+  const parsed = BagRequest.safeParse(body);
+  if (!parsed.success) return { ok: false, status: 400, code: "invalid", error: "Invalid request" };
+  const req = parsed.data;
+  try {
+    if (req.action === "lock") await store.setLocked(memberId, req.item, req.locked);
+    else if (req.action === "drop") await store.drop(memberId, req.item, req.qty, req.idempotency_key);
+    else if (req.action === "store_materials") await store.storeMaterials(memberId, req.idempotency_key);
+    else await store.move(memberId, req.item, req.qty, req.action === "store" ? "chest" : "bag", req.idempotency_key);
+    return { ok: true, data: await viewOf(store, memberId) };
   } catch (err) {
     return fail(err);
   }

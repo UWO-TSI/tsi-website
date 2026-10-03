@@ -18,6 +18,7 @@ import { useWorldClips } from "./character/useWorldClips";
 import { useMyLook } from "@/lib/game/character/lookStore";
 import { seatLift } from "@/lib/game/character/clips";
 import { easeFacing } from "@/lib/game/locomotion";
+import { BASE_FOV } from "./movement/moveFx";
 
 export interface InteriorStation {
   id: string;
@@ -26,6 +27,10 @@ export interface InteriorStation {
   action: string; // "sheet:<key>" | "admin" | "exit"
   range?: number;
 }
+
+/** A walk constraint's answer, reused (the walker reads it at once): rooms' constraints return this, never a new array. */
+const STEP: [number, number] = [0, 0];
+export function stepTo(x: number, z: number): [number, number] { STEP[0] = x; STEP[1] = z; return STEP; }
 
 export interface RoomBounds {
   halfW: number;
@@ -50,6 +55,16 @@ export function applyInteriorBackdrop(scene: THREE.Scene, color = "#14100C"): ()
     if (scene.background === backdrop) scene.background = prevBg;
     if (scene.fog === null) scene.fog = prevFog;
   };
+}
+
+/**
+ * Put the camera straight onto a room's follow pose (as a door's fade lifts): where it would settle over you, at the
+ * walking lens, so nothing swoops in from wherever the last scene left it.
+ */
+export function snapInteriorCamera(camera: THREE.Camera, px: number, pz: number) {
+  camera.position.set(px, 8.4, pz - 7.2);
+  camera.lookAt(px, 0.7, pz + 1.2);
+  if (camera instanceof THREE.PerspectiveCamera && camera.fov !== BASE_FOV) { camera.fov = BASE_FOV; camera.updateProjectionMatrix(); }
 }
 
 export function followInteriorCamera(camera: THREE.Camera, px: number, pz: number, delta: number) {
@@ -85,6 +100,9 @@ export function InteriorPlayer({
   const { camera } = useThree();
   const face = useCallback((x: number, z: number) => { motion.current.yaw = Math.atan2(x - posRef.current.x, z - posRef.current.z); }, []);
   useWorldClips(motion, face);
+  // Arriving: the camera is already where it follows you from (every room, the temple's included). Once, on arrival.
+  const arrival = useRef(bounds.spawn);
+  useEffect(() => { snapInteriorCamera(camera, arrival.current[0], arrival.current[1]); }, [camera]);
   useEffect(() => {
     const onSit = (e: Event) => {
       const { x, z, clip = "Sit", seatY = 0, yaw = 0 } = (e as CustomEvent<{ x: number; z: number; clip?: ClipName; seatY?: number; yaw?: number }>).detail;
@@ -126,7 +144,7 @@ export function InteriorPlayer({
       seatRef.current = null; motion.current.pose = null;
     } else if (seat) {
       p.x = seat.x; p.z = seat.z;
-      Object.assign(motion.current, { speed: 0, yaw: seat.yaw, lift: seat.lift });
+      motion.current.speed = 0; motion.current.yaw = seat.yaw; motion.current.lift = seat.lift;
       groupRef.current?.position.set(p.x, 0, p.z);
       playerPosRef.current.set(p.x, 0, p.z);
       followInteriorCamera(camera, p.x, p.z, delta);
@@ -154,7 +172,7 @@ export function InteriorPlayer({
     if (moving) {
       const nx = THREE.MathUtils.clamp(p.x + vx * PLAYER_SPEED * delta, -bounds.halfW + WALK_MARGIN, bounds.halfW - WALK_MARGIN);
       const nz = THREE.MathUtils.clamp(p.z + vz * PLAYER_SPEED * delta, -bounds.halfD + WALK_MARGIN, bounds.halfD - WALK_MARGIN);
-      [p.x, p.z] = constrainMove ? constrainMove(p.x, p.z, nx, nz) : [nx, nz];
+      if (constrainMove) { const c = constrainMove(p.x, p.z, nx, nz); p.x = c[0]; p.z = c[1]; } else { p.x = nx; p.z = nz; }
       onMove(p.x, p.z);
       playerPosRef.current.set(p.x, 0, p.z);
     }
@@ -179,7 +197,7 @@ export function InteriorPlayer({
 
 const FURNITURE_BASE = "/assets/acnh/furniture";
 const RESTORED_PIECES = new Set(["study-desk", "study-chair", "bookshelf", "wooden-chest", "bulletinboard", "antique-clock", "plant-monstera", "plant-yucca", "reading-table"]);
-const pieceUrl = (name: string) => `${FURNITURE_BASE}/${name}.glb${name === "clubhouse-pendant" ? "?v=white-20260917" : RESTORED_PIECES.has(name) ? "?v=hq-textures-20260917" : ""}`;
+export const pieceUrl = (name: string) => `${FURNITURE_BASE}/${name}.glb${name === "clubhouse-pendant" ? "?v=white-20260917" : RESTORED_PIECES.has(name) ? "?v=hq-textures-20260917" : ""}`;
 
 /**
  * Recolor pipeline (2026-07-25): tint the clone's materials by name.
@@ -249,108 +267,14 @@ export function preloadPieces(names: string[]): void {
   names.forEach((n) => useGLTF.preload(pieceUrl(n)));
 }
 
-/**
- * InteriorKeeper (wake 69, generalized from wake 68's WharfKeeper) — the
- * procedural staff figure: idle bob + a damped friendly lean when the
- * player steps into `watch` range. Hat variants give each room its person.
- * Presence only (principle #2); actions stay on the stations.
- */
-export function InteriorKeeper({ position, rotY = Math.PI, watch, colors, hat, playerPosRef }: {
-  position: [number, number, number];
-  rotY?: number;
-  watch: [number, number];
-  colors: { apron: string; shirt: string };
-  hat: "straw" | "cap" | "bun" | "hood" | "none";
-  playerPosRef: React.MutableRefObject<THREE.Vector3>;
-}) {
-  return (
-    <group position={position} rotation={[0, rotY, 0]}>
-      <KeeperBody watch={watch} colors={colors} hat={hat} playerPosRef={playerPosRef} />
-    </group>
-  );
+/** Module scope (the react compiler forbids writing through hook values). */
+function reportIfChanged(last: { current: InteriorStation | null | undefined }, s: InteriorStation | null, report: (s: InteriorStation | null) => void) {
+  if (s !== last.current) { last.current = s; report(s); }
 }
-
-function KeeperBody({ watch, colors, hat, playerPosRef }: {
-  watch: [number, number];
-  colors: { apron: string; shirt: string };
-  hat: "straw" | "cap" | "bun" | "hood" | "none";
-  playerPosRef: React.MutableRefObject<THREE.Vector3>;
-}) {
-  const ref = useRef<THREE.Group>(null);
-  useFrame(({ clock }) => {
-    const g = ref.current;
-    if (!g) return;
-    const t = clock.elapsedTime;
-    g.position.y = Math.sin(t * 1.6) * 0.03;
-    const p = playerPosRef.current;
-    const near = Math.hypot(p.x - watch[0], p.z - watch[1]) < 2.6;
-    g.rotation.x = THREE.MathUtils.damp(g.rotation.x, near ? 0.12 : 0, 3, 0.016);
-    g.rotation.z = Math.sin(t * 0.9) * 0.02;
-  });
-  return (
-    <group ref={ref}>
-      <mesh position={[0, 0.52, 0]}>
-        <capsuleGeometry args={[0.26, 0.5, 4, 10]} />
-        <meshStandardMaterial color={colors.apron} roughness={0.9} />
-      </mesh>
-      <mesh position={[0, 0.62, -0.02]}>
-        <capsuleGeometry args={[0.235, 0.3, 4, 10]} />
-        <meshStandardMaterial color={colors.shirt} roughness={0.9} />
-      </mesh>
-      <mesh position={[0, 1.12, 0]}>
-        <sphereGeometry args={[0.21, 12, 10]} />
-        <meshStandardMaterial color="#F0C8A0" roughness={0.85} />
-      </mesh>
-      <mesh position={[0, 1.09, 0.2]}>
-        <sphereGeometry args={[0.045, 8, 6]} />
-        <meshStandardMaterial color="#E5B48C" roughness={0.85} />
-      </mesh>
-      {hat === "straw" && (
-        <group>
-          <mesh position={[0, 1.3, 0]}>
-            <cylinderGeometry args={[0.34, 0.36, 0.035, 12]} />
-            <meshStandardMaterial color="#C9AE6A" roughness={0.95} flatShading />
-          </mesh>
-          <mesh position={[0, 1.38, 0]}>
-            <cylinderGeometry args={[0.15, 0.19, 0.14, 10]} />
-            <meshStandardMaterial color="#BFA35E" roughness={0.95} flatShading />
-          </mesh>
-        </group>
-      )}
-      {hat === "cap" && (
-        <group>
-          <mesh position={[0, 1.29, 0]}>
-            <sphereGeometry args={[0.2, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2]} />
-            <meshStandardMaterial color="#4E7A52" roughness={0.9} flatShading />
-          </mesh>
-          <mesh position={[0, 1.24, 0.2]} rotation={[0.25, 0, 0]}>
-            <cylinderGeometry args={[0.13, 0.15, 0.02, 10]} />
-            <meshStandardMaterial color="#436A47" roughness={0.9} flatShading />
-          </mesh>
-        </group>
-      )}
-      {hat === "bun" && (
-        <mesh position={[0, 1.31, -0.08]}>
-          <sphereGeometry args={[0.11, 8, 6]} />
-          <meshStandardMaterial color="#5A4632" roughness={0.9} />
-        </mesh>
-      )}
-      {hat === "hood" && (
-        <mesh position={[0, 1.22, -0.03]} rotation={[0.2, 0, 0]}>
-          <sphereGeometry args={[0.26, 10, 8, 0, Math.PI * 2, 0, Math.PI / 1.6]} />
-          <meshStandardMaterial color="#5A4A7E" roughness={0.92} flatShading />
-        </mesh>
-      )}
-      <mesh position={[-0.3, 0.62, 0.1]} rotation={[0.5, 0, 0.35]}>
-        <capsuleGeometry args={[0.07, 0.3, 3, 8]} />
-        <meshStandardMaterial color={colors.shirt} roughness={0.9} />
-      </mesh>
-      <mesh position={[0.3, 0.62, 0.1]} rotation={[0.5, 0, -0.35]}>
-        <capsuleGeometry args={[0.07, 0.3, 3, 8]} />
-        <meshStandardMaterial color={colors.shirt} roughness={0.9} />
-      </mesh>
-    </group>
-  );
+/** A room walker's `onMove`: reports the nearest station only when it changes, never a React update per step. */
+export function useNearestStation(stations: InteriorStation[], report: (s: InteriorStation | null) => void) {
+  const last = useRef<InteriorStation | null | undefined>(undefined);
+  return useCallback((x: number, z: number) => reportIfChanged(last, nearestStation(stations, x, z), report), [stations, report]);
 }
 
 /** Nearest-station helper shared by all rooms. */

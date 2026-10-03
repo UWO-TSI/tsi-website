@@ -45,6 +45,8 @@ export function starterWeapon(s: Subclass): string {
 const RANGE: Record<string, number> = { melee: 1.2, bow: 7, staff: 6, summon: 5 };
 const RUNE_TIME = { spark: 1.6, binding: 3.2 };
 const DODGE_SKILL = 0.6;
+/** Classes v2: how often the bot lands a timed parry when it tries (the Guardian's 0.25 s window). */
+const PARRY_SKILL = 0.5;
 /** A telegraph it didn't dodge: how often the v2 bot answers it with a timed skill instead (a guard, a parry, a swap, a Perfect Shift). */
 const REACT_SKILL = 0.3;
 
@@ -65,6 +67,8 @@ function useful(rt: CombatRuntime, a: Ability, me: Vec, target: Enemy | null, th
     if (e.kind === "transform" && dist < 6 && !a.effects.some(x => x.kind === "form")) return true;
     if (e.kind === "summon") {
       const def = UNITS[e.unit === "weapon" ? "wisp" : e.unit === "corpse" ? "shade" : e.unit];
+      if (def.kind === "dome") return dist < 7 && (threat || rt.projectiles.some(s => s.from === "enemy")); // classes v2: under fire
+      if (def.kind === "veil") return dist < 4 && (hurt < 0.6 || threat); // an escape, or out of a telegraph's way
       if (def.kind === "totem") return dist < 7 && !rt.units.some(u => u.def.key === def.key && d2(u, me) < 2.5);
       if (def.kind === "trap") return dist > 2.5 && dist < 9;
       if (def.kind === "decoy") return dist < 3;
@@ -97,6 +101,11 @@ function useful(rt: CombatRuntime, a: Ability, me: Vec, target: Enemy | null, th
     if (e.kind === "area" && e.power > 0 && (e.at === "aim" ? dist < 11 : dist < (e.length ?? e.radius) + 0.3)) return true;
     if (e.kind === "area" && e.power === 0 && dist < e.radius) return true;
     if (e.kind === "dash" && e.power && dist < e.distance) return true;
+    // Classes v2 primitives: a strike in reach, a delayed hit (its own effects), a blink to a target in range, a taunt with enemies near.
+    if (e.kind === "strike" && dist < e.range + target.type.radius) return true;
+    if (e.kind === "after" && useful(rt, { ...a, effects: e.effects }, me, target, threat)) return true;
+    if (e.kind === "blink" && e.to === "behind" && dist < (e.range ?? 8) && dist > 1.5) return true;
+    if (e.kind === "taunt" && rt.enemies.filter(x => x.state !== "dead" && d2(x, me) < e.radius).length >= 2) return true;
   }
   return false;
 }
@@ -298,13 +307,14 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
     const reacting = !!threat && react === `${threat.id}:${threat.cycle}` && threat.t >= reactAt;
     // Riders: 30% of the time the bot is sliding, in the air, just off a dash and fast.
     const rider = random() < 0.3;
-    p.move = rider ? { mode: random() < 0.5 ? "slide" : "air", speed: 16, sinceDash: 0.1, vx: 0, vz: 16 } : { mode: "ground", speed: 7.4, sinceDash: 9, vx: 0, vz: 7.4 };
+    p.move = rider ? { mode: random() < 0.5 ? "slide" : "air", speed: 16, sinceDash: 0.1, vx: 0, vz: 16, height: 1.5 } : { mode: "ground", speed: 7.4, sinceDash: 9, vx: 0, vz: 7.4 };
     if (rt.casting && (drawLeft -= dt) <= 0) {
       const acc = random() < 0.1 ? 40 : random() < 0.2 ? 96 : 80;
       resolveCast(rt, me, { accuracy: acc, coverage: 1, deviation: 0, order: 1, scribble: false, outcome: acc < 50 ? "fail" : acc >= 95 ? "enhanced" : "normal", power: shapePotency(acc) }, random);
     }
     for (let i = held.length - 1; i >= 0; i--) if (t >= held[i].at) { classKey(rt, held[i].slot, false); held.splice(i, 1); }
     const staggered = target?.type.kind === "boss" && target.state === "recover" && !!target.move.stagger;
+    const before = v.meter; // before this frame's presses and swings: a basic attack can fill it too
     // A channelled ult's mash: about 3.5 notes a second, four in five right.
     if (v.channel && t >= mashAt) { mashAt = t + 0.28; const note = v.channel.notes[v.channel.at]; if (note !== undefined) classKey(rt, random() < 0.8 ? note : (note + 1) % 4, true); }
     // The ult: full, with two or more enemies inside its area (or the boss).
@@ -319,7 +329,16 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
         if ((a.needs === "reloaded" && !justReloaded(rt)) || (a.ammo && (live.ammo <= 0 || live.reload !== null || live.cockEvery > 0))) continue;
         const kind = a.input?.kind ?? "tap";
         if (kind === "toggle" && v.toggled[i]) continue;
-        if (!(staggered || useful(rt, a, me, target, reacting))) continue;
+        // A block that parries (classes v2): for each telegraph aimed at you, about half of members time it into the last
+        // 0.2 s (a parry), the rest raise the block as soon as they see it (70% off, held a second).
+        if (a.effects.some(e => e.kind === "buff" && e.stat === "parry")) {
+          if (!threat) continue;
+          const id = `parry:${threat.id}:${threat.cycle}`;
+          if (!judged.has(id)) { judged.add(id); if (random() < PARRY_SKILL) judged.add(`${id}:late`); }
+          if (judged.has(`${id}:late`) && threat.move.windup - threat.t >= 0.2) continue;
+          if (judged.has(`${id}:done`)) continue;
+          judged.add(`${id}:done`);
+        } else if (!(staggered || useful(rt, a, me, target, reacting))) continue;
         if (target?.type.kind === "boss" && glances(a)) continue; // the guardian's armour eats small hits: save the energy
         const combo = v.combos.find(c => c.keys[0] === i && c.keys[1] === i && p.energy >= c.ability.energy && random() < 0.5);
         if (target && a.effects.some(e => e.kind === "barrier")) p.aim = { x: me.x + (target.x - me.x) * 0.55, z: me.z + (target.z - me.z) * 0.55 }; // a wall goes between you
@@ -331,7 +350,6 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
       }
       if (target && !rt.casting && d2(target, me) <= (formBasic(rt)?.range ?? WEAPONS[p.weapon].range) + target.type.radius) attack(rt, me, random);
     }
-    const before = v.meter;
     stepClass(rt, me, dt, dt, random);
     stepCombat(rt, me, dt, () => true, random);
     if (before < ULT.max && v.meter >= ULT.max) fills.push(t - fillFrom);
@@ -350,7 +368,7 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
     const vv = PLAYER_BASE.speed * p.speed, k = p.dodgeAge === null ? 1 : Math.min(1, p.dodgeAge / MOVE_TUNING.dashTime);
     const roll = p.dodgeAge === null ? 0 : MOVE_TUNING.dashSpeed * (DODGE_SHAPE.dashExit + (1 - DODGE_SHAPE.dashExit) * (1 - k) ** MOVE_TUNING.dashEase);
     me = { x: me.x + (mx * vv + p.impulse.x + p.dodgeDir.x * roll) * dt, z: me.z + (mz * vv + p.impulse.z + p.dodgeDir.z * roll) * dt };
-    if (p.kick?.to) me = { x: p.kick.to.x, z: p.kick.to.z }; // a swap or a thrown card moves you
+    if (p.kick?.to) me = { x: p.kick.to.x, z: p.kick.to.z }; // a blink lands, a swap or a thrown card moves you
     p.kick = null; // open ground: the bot doesn't simulate jumps; riders are sampled above
   }
   return done(false);

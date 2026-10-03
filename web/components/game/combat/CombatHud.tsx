@@ -101,7 +101,10 @@ function ClassBar({ rt, keys }: { rt: CombatRuntime; keys: Record<string, string
   const v = rt.v2!, kit = v.kit, color = kit.look.ramp[1], meter = v.meter / ULT.max, ready = v.meter >= ULT.max;
   const armed = holdsSignature(kit, SYSTEM_WEAPONS.find(w => w.key === rt.player.weapon)?.type), word = kit.stat.kind === "max_mana" ? "mana" : "energy";
   return <>
-    <small className={styles.kitLine}><b>{masteryTitle(kit.name, v.mastery)}</b> · mastery {v.mastery} · {v.passive.name}{kit.movement ? ` · ${kit.movement.name}` : ""}{classStatus(rt)}{armed ? "" : ` · hold your ${kit.signature.name} for your skills`}</small>
+    {/* eslint-disable @next/next/no-img-element -- tiny static passive icons */}
+    <small className={styles.kitLine}><b>{masteryTitle(kit.name, v.mastery)}</b> · mastery {v.mastery} · {v.passive.icon && <img className={styles.slotIcon} src={v.passive.icon} alt="" />}{v.passive.name}
+      {kit.movement ? <> · {kit.movement.icon && <img className={styles.slotIcon} src={kit.movement.icon} alt="" />}{kit.movement.name}</> : null}{classStatus(rt)}{armed ? "" : ` · hold your ${kit.signature.name} for your skills`}</small>
+    {/* eslint-enable @next/next/no-img-element */}
     {v.channel && <Mash rt={rt} keys={keys} />}
     <div className={styles.classBar} style={{ ["--class" as string]: color }}>
       <ol className={styles.abilityBar} style={{ gridTemplateColumns: `repeat(${v.keys.length}, 1fr)` }}>{v.keys.map((a, i) => {
@@ -116,7 +119,8 @@ function ClassBar({ rt, keys }: { rt: CombatRuntime; keys: Record<string, string
           <span className={styles.sweep} style={{ "--sweep": `${left * 360}deg` } as React.CSSProperties}><kbd>{keyName(keys[id])}</kbd></span>
           {/* eslint-disable-next-line @next/next/no-img-element -- a tiny static ability emblem */}
           <span className={styles.slotName}>{icon && <img className={styles.slotIcon} src={icon} alt="" />}{a?.name ?? base.name}</span>
-          <small>{!a ? (untamed ? "Tame it" : ritual ? "Ritual" : base.learn ? "Not learned" : `Mastery ${base.unlock}`) : held !== null ? `${INPUT_WORD[a.input!.kind]}…` : cd > 0 ? `${cd.toFixed(cd < 1 ? 1 : 0)}s` : `${a.input && a.input.kind !== "tap" ? `${INPUT_WORD[a.input.kind]} · ` : ""}${a.energy}`}</small>
+          <small>{!a ? (untamed ? "Tame it" : ritual ? "Ritual" : base.learn ? "Not learned" : `Mastery ${base.unlock}`) : held !== null ? `${INPUT_WORD[a.input!.kind]}…` : a.charges && (v.stock[a.key] ?? a.charges) > 0 ? `×${v.stock[a.key] ?? a.charges} · ${a.energy}`
+            : cd > 0 ? `${cd.toFixed(cd < 1 ? 1 : 0)}s` : `${a.input && a.input.kind !== "tap" ? `${INPUT_WORD[a.input.kind]} · ` : ""}${a.energy}`}</small>
         </li>;
       })}</ol>
       <div className={styles.ultSlot} data-ready={ready || undefined} data-denied={rt.denied.ult || undefined} key={`ult-${rt.denied.ult}`}

@@ -6,7 +6,8 @@ import type { CollectionsStore } from "./store";
 
 type Row = Record<string, unknown>;
 const raise = (error: { code?: string; message?: string } | null): never =>
-  raisePg(error, ["already_donated", "not_owned", "not_donatable", "rate_limited", "too_fast", "no_roll", "roll_expired", "already_landed", "already_harvested", "out_of_season"]);
+  raisePg(error, ["already_donated", "not_owned", "not_donatable", "rate_limited", "too_fast", "no_roll", "roll_expired", "already_landed", "already_harvested", "out_of_season",
+    "bag_full", "storage_full", "locked", "insufficient_items", "key_reused", "bad_qty"]);
 const one = (data: unknown) => (Array.isArray(data) ? data[0] : data) as Row;
 const caught = (r: Row) => ({
   count: Number(r.count), total_collected: Number(r.total_collected), best_size_cm: num(r.best_size_cm), new_record: r.new_record === true,
@@ -132,6 +133,39 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
         const ins = await db.from("member_showcase").insert(rows);
         if (ins.error) raise(ins.error);
       }
+    },
+    async bag(memberId) {
+      const [bag, chest] = await Promise.all([
+        db.from("member_collections").select("item_key, count, locked, best_size_cm").eq("user_id", memberId).gt("count", 0).order("first_collected_at"),
+        db.from("member_storage").select("item_key, count").eq("member_id", memberId).gt("count", 0),
+      ]);
+      if (bag.error) raise(bag.error);
+      if (chest.error) raise(chest.error);
+      return {
+        items: ((bag.data ?? []) as Row[]).map((r) => ({ item_key: String(r.item_key), count: Number(r.count), locked: r.locked === true, best_size_cm: num(r.best_size_cm) })),
+        chest: ((chest.data ?? []) as Row[]).map((r) => ({ item_key: String(r.item_key), count: Number(r.count) })),
+      };
+    },
+    async setLocked(memberId, key, locked) {
+      const { error } = await db.rpc("collections_set_lock", { p_member_id: memberId, p_item_key: key, p_locked: locked });
+      if (error) raise(error);
+    },
+    async drop(memberId, key, qty, idem) {
+      const { data, error } = await db.rpc("collections_drop", { p_member_id: memberId, p_item_key: key, p_qty: qty, p_idempotency_key: idem });
+      if (error) raise(error);
+      const r = one(data);
+      return { count: Number(r.count), replayed: r.replayed === true };
+    },
+    async move(memberId, key, qty, to, idem) {
+      const { data, error } = await db.rpc("storage_move", { p_member_id: memberId, p_item_key: key, p_qty: qty, p_to: to, p_idempotency_key: idem });
+      if (error) raise(error);
+      return { replayed: one(data).replayed === true };
+    },
+    async storeMaterials(memberId, idem) {
+      const { data, error } = await db.rpc("storage_store_materials", { p_member_id: memberId, p_idempotency_key: idem });
+      if (error) raise(error);
+      const r = one(data);
+      return { moved: Number(r.moved), replayed: r.replayed === true };
     },
   };
 }

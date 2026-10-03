@@ -49,6 +49,87 @@ const sparks = (n: number, size: number) => glow(P("sparkBurst", [n, n], [0.22, 
 const star = (size: number, life = 0.25) => glow(P("impactStar", [1, 1], [life, life], [size, size], { grow: 1.3 }), { lift: 0.7 });
 const halo = (size: number, life = 0.3, lift = 0.7) => glow(P("halo", [1, 1], [life, life], [size, size], { grow: 1.2, alpha: 0.8 }), { lift });
 
+/** Dust kicked off the ground (ink pool: laid over). */
+const dust = (n: number, size: number, more: Partial<Recipe<CombatSprite>> = {}) => ink(P("smoke", [n, n], [0.5, 0.7], [size, size * 1.4], { speed: [1, 2.4], up: [0.2, 0.6], drag: 3, grow: 1.8, alpha: 0.7, jitter: 0.4, ...more }));
+const lines = (n: number, size: number, life = 0.25, more: Partial<ParticleLayer> = {}) => glow(P("speedLine", [n, n], [life, life], [size, size * 1.3], { face: FACE.streak, aspect: 0.14, speed: [7, 10], grow: 1.5 }), { lift: 0.8, ...more });
+const shards = (n: number, size: number, more: Partial<Recipe<CombatSprite>> = {}) => glow(P("shard", [n, n], [0.35, 0.5], [size, size * 1.3], { speed: [1.5, 3.2], up: [0.6, 1.6], gravity: 4, drag: 1.5, spin: 4, grow: 0.8, ...more }), { lift: 0.8 });
+const petals = (n: number, size: number, more: Partial<Recipe<CombatSprite>> = {}) => glow(P("leaf", [n, n], [0.6, 0.9], [size, size * 1.3], { speed: [1.2, 2.6], up: [0.4, 1.2], gravity: 1.2, drag: 2, spin: 3, grow: 0.9, alpha: 0.9, ...more }), { lift: 0.9 });
+const brush = (size: number, life = 0.3, lift = 0.8) => ink(P("inkSlash", [1, 1], [life, life], [size, size], { grow: 1.1, face: FACE.billboard }), { lift });
+const splat = (n: number, size: number) => ink(P("ink", [n, n], [0.45, 0.6], [size, size * 1.3], { speed: [0.6, 1.6], up: [0.2, 0.6], drag: 3, grow: 1.3, alpha: 0.95, jitter: 0.3 }), { lift: 0.7 });
+const debrisOf = (n: number, size: number) => ink(P("debris", [n, n], [0.7, 0.9], [size, size * 1.4], { speed: [2.5, 5], up: [3, 6], gravity: 14, drag: 0.4, spin: 6, grow: 1 }));
+const decal = (sprite: CombatSprite, size: number, life: number, more: Partial<DecalLayer> = {}): DecalLayer => ({ kind: "decal", sprite, size, life, ...more });
+
+/**
+ * The Vanguard family's effects (classes v2 wave: specs/classes/design-sheet.md, the LOCKED kits): the Guardian's gold
+ * shield shards, the Juggernaut's dust, debris and cracked ground, the Martial Artist's flame-orange strike flares, and
+ * the Assassin's black ink with red (its ramp's mid band), brush slashes and lotus petals. All in each kit's ramp.
+ */
+const VANGUARD_FX: Record<string, FxRecipe> = {
+  // ── Guardian ──
+  "guardian.block": { tier: "ability", layers: [shards(3, 0.35, { speed: [0.5, 1.2], spread: 0.6, up: [0.2, 0.6], gravity: 0 }), halo(1.4, 0.3, 0.9)] },
+  "guardian.parry": { tier: "heavy", layers: [star(2.1, 0.28), glow(P("slash", [1, 1], [0.26, 0.26], [2.6, 2.6], { grow: 1.15 }), { lift: 0.9 }), shards(10, 0.4), sparks(3, 1.5), ring(0.3, 2.4, 0.3, { lift: 0.5 }), heavyLines] },
+  "guardian.challenge": { tier: "ability", layers: [ring(0.5, 7, 0.5, { lift: 0.25 }), decal("rune", 2.6, 1, { spin: 0.5 }), shards(8, 0.3, { speed: [0.3, 0.8], up: [1.2, 2], gravity: 0 })] },
+  "guardian.rush": { tier: "ability", layers: [lines(8, 1.2, 0.3, { toward: "aim" }), dust(4, 0.7, { speed: [0.8, 1.8] }), halo(1.2, 0.25, 0.8)] },
+  "guardian.rushHit": { tier: "ability", layers: [star(1.6), sparks(2, 1.2), shards(4, 0.32), debrisOf(4, 0.3)] },
+  "guardian.domeCast": { tier: "ability", layers: [decal("rune", 3.2, 1.1, { spin: 0.4 }), shards(10, 0.3, { speed: [0.4, 1], up: [2, 3.2], gravity: 1 }), halo(2, 0.4, 0.6)] },
+  /** Re-thrown each second while the dome stands (an effect lives at most 1.2 s): the shell and a few shards round its rim. */
+  "guardian.dome": { tier: "ability", layers: [{ kind: "mesh", shape: "dome", from: 2.55, to: 2.6, height: 1.5, life: 1.05 },
+    glow(P("shard", [4, 5], [0.8, 1], [0.22, 0.3], { speed: [0.1, 0.3], up: [0.2, 0.5], jitter: 2.4, spin: 1.5, grow: 0.8, alpha: 0.8 }), { lift: 0.6 })] },
+  "guardian.throwCast": { tier: "ability", layers: [sparks(1, 0.9), halo(0.9, 0.2, 1)] },
+  "guardian.shieldSpin": { tier: "ability", layers: [glow(P("shard", [1, 1], [0.16, 0.2], [0.42, 0.5], { spin: 9, grow: 0.6 }), { lift: 0.9 })] },
+  "guardian.shieldHit": { tier: "ability", layers: [star(1.2), shards(4, 0.3), sparks(1, 1)] },
+  "guardian.ultCast": { tier: "ult", layers: [decal("rune", 3.6, 1.2, { spin: 0.3 }), glow(P("shard", [20, 24], [0.45, 0.55], [0.26, 0.34], { speed: [-4.2, -3.2], jitter: 2.6, spin: 5, grow: 0.5, rise: [0.1, 2] }), { lift: 0.2 }),
+    { kind: "mesh", shape: "pillar", from: 0.5, to: 0.35, height: 3, life: 0.5 }, halo(2.2, 0.5, 0.9)] },
+  "guardian.ultImpact": { tier: "ult", layers: [star(5, 0.4), sparks(4, 3), halo(5, 0.5, 0.6), heavyLines, lines(14, 2.8, 0.4, { lift: 1 }),
+    ring(0.6, 6.5, 0.6, { lift: 0.2, byRadius: true }), ring(0.4, 4, 0.45, { lift: 1.2 }), { kind: "mesh", shape: "dome", from: 1, to: 5.2, height: 2, life: 0.75, byRadius: true },
+    shards(24, 0.45, { speed: [3, 7], up: [2, 5], gravity: 9 }), debrisOf(12, 0.5), dust(8, 1.8, { speed: [2, 4] }), { kind: "light", intensity: 40, distance: 12, life: 0.5 }] },
+  "guardian.ultDecal": { tier: "ult", layers: [decal("crack", 2.2, 4, { byRadius: true }), decal("rune", 1.6, 2.4, { byRadius: true, spin: 0.4 })] },
+  // ── Juggernaut ──
+  "juggernaut.charge": { tier: "ability", layers: [lines(10, 1.4, 0.3, { toward: "aim" }), dust(6, 0.9, { speed: [1, 2.6] }), halo(1.3, 0.25, 0.8)] },
+  "juggernaut.chargeHit": { tier: "ability", layers: [star(1.8), sparks(2, 1.3), debrisOf(6, 0.36)] },
+  "juggernaut.slamCast": { tier: "ability", layers: [dust(3, 0.8)] },
+  "juggernaut.slam": { tier: "heavy", layers: [star(2.6, 0.3), sparks(3, 1.6), halo(2.6, 0.3, 0.5), ring(0.5, 3.2, 0.45, { lift: 0.15, byRadius: true }), debrisOf(10, 0.45), dust(6, 1.3, { speed: [1.5, 3.4] }), heavyLines] },
+  "juggernaut.crack": { tier: "heavy", layers: [decal("crack", 2.2, 3, { byRadius: true })] },
+  "juggernaut.warcry": { tier: "ability", layers: [ring(0.6, 8, 0.5, { lift: 1.1 }), ring(0.4, 5, 0.4, { lift: 0.4 }), lines(12, 1.6, 0.35, { lift: 1.3 }), halo(1.8, 0.4, 1.4)] },
+  "juggernaut.quake": { tier: "heavy", layers: [star(2.4, 0.3), ring(0.5, 2.8, 0.4, { lift: 0.15, byRadius: true }), debrisOf(10, 0.42), dust(6, 1.2, { speed: [1.8, 3.6] }), heavyLines] },
+  "juggernaut.ultCast": { tier: "ult", layers: [glow(P("swirl", [1, 1], [0.6, 0.6], [2.6, 2.6], { grow: 0.6 }), { lift: 1.2 }), ink(P("debris", [10, 12], [0.6, 0.7], [0.3, 0.45], { speed: [0.2, 0.6], up: [2.5, 4], gravity: 3, spin: 3, jitter: 2 })),
+    ring(0.4, 4.5, 0.5, { lift: 0.2 }), { kind: "mesh", shape: "pillar", from: 0.8, to: 1.6, height: 4, life: 0.5 }, { kind: "light", intensity: 26, distance: 10, life: 0.5 }] },
+  "juggernaut.ultImpact": { tier: "ult", layers: [star(5.5, 0.4), sparks(4, 3), halo(5, 0.5, 0.6), heavyLines, lines(14, 3, 0.4, { lift: 1 }), ring(0.6, 7, 0.6, { lift: 0.2 }),
+    { kind: "mesh", shape: "beam", from: 0.5, to: 9, life: 0.7 }, debrisOf(16, 0.6), dust(10, 2.2, { speed: [2.5, 5] }), { kind: "light", intensity: 40, distance: 13, life: 0.5 }] },
+  /** Titan's swings (and its ult areas' zone): a shockwave out in front, chips and dust. */
+  "juggernaut.ultShock": { tier: "ability", layers: [ring(0.6, 4, 0.4, { lift: 0.3 }), debrisOf(5, 0.4), dust(4, 1.2, { speed: [2, 3.5] }), decal("crack", 2.4, 2)] },
+  // ── Martial Artist ──
+  "monk.teep": { tier: "ability", layers: [star(1.2, 0.2), lines(6, 1, 0.22, { toward: "aim" }), dust(2, 0.6)] },
+  "monk.elbow": { tier: "heavy", layers: [glow(P("slash", [1, 1], [0.24, 0.24], [2.2, 2.2], { grow: 1.1 }), { lift: 1.1 }), star(1.8, 0.25), sparks(3, 1.4), heavyLines, ring(0.2, 1.6, 0.25, { lift: 1 })] },
+  "monk.cut": { tier: "light", layers: [glow(P("slash", [1, 1], [0.18, 0.18], [0.8, 0.8], { grow: 1.1 }), { lift: 1 }), glow(P("flare", [1, 1], [0.14, 0.16], [0.4, 0.5]), { lift: 1 })] },
+  "monk.knee": { tier: "ability", layers: [star(1.4, 0.22), sparks(2, 1.1), ring(0.2, 1.4, 0.22, { lift: 0.9 })] },
+  "monk.roundhouse": { tier: "ability", layers: [glow(P("slash", [2, 2], [0.24, 0.26], [2.6, 3], { grow: 1.15 }), { lift: 1 }), sparks(2, 1.2), ring(0.4, 2.3, 0.3, { lift: 0.8 })] },
+  "monk.leap": { tier: "ability", layers: [dust(4, 0.8), lines(6, 1.1, 0.25, { toward: "aim" })] },
+  "monk.ultCast": { tier: "ult", layers: [glow(P("swirl", [1, 1], [0.45, 0.45], [1.8, 1.8], { grow: 0.5 }), { lift: 1 }), glow(P("mote", [24, 28], [0.35, 0.45], [0.2, 0.28], { speed: [-4, -3], jitter: 2.2, grow: 0.4, rise: [0.2, 1.8] }), { lift: 0.2 }),
+    decal("rune", 2.6, 1, { spin: 0.6 }), { kind: "light", intensity: 20, distance: 8, life: 0.45 }] },
+  /** Each of the eight strikes between the first and the last: its own small impact frame (heavy tier). */
+  "monk.ultHit": { tier: "heavy", layers: [star(1.9, 0.22), sparks(2, 1.4), heavyLines, ring(0.2, 1.8, 0.22, { lift: 1 })] },
+  "monk.ultImpact": { tier: "ult", layers: [star(4.5, 0.4), sparks(4, 2.6), halo(4, 0.45, 0.9), heavyLines, lines(14, 2.8, 0.4, { lift: 1 }),
+    glow(P("slash", [2, 2], [0.3, 0.32], [4, 4.6], { grow: 1.15 }), { lift: 1.1 }), ring(0.5, 5.5, 0.55, { lift: 0.5 }), dust(8, 1.8, { speed: [2.5, 4.5] }), { kind: "light", intensity: 36, distance: 11, life: 0.45 }] },
+  "monk.ultShock": { tier: "ult", layers: [ring(0.4, 4, 0.5, { lift: 0.15 }), decal("crack", 2, 3, { byRadius: true })] },
+  // ── Assassin: black ink and red ──
+  "assassin.kunaiHit": { tier: "ability", layers: [splat(1, 0.5), glow(P("flare", [1, 1], [0.16, 0.18], [0.6, 0.7]), { lift: 0.8 })] },
+  "assassin.inkPuff": { tier: "ability", layers: [splat(3, 0.8), ink(P("smoke", [4, 5], [0.45, 0.6], [0.7, 1], { speed: [0.8, 1.8], up: [0.3, 0.8], drag: 3, grow: 1.6, alpha: 0.9, jitter: 0.4 }), { lift: 0.6 }), petals(4, 0.26)] },
+  "assassin.inkArrive": { tier: "ability", layers: [brush(1.6, 0.28, 0.9), splat(2, 0.7), petals(5, 0.26)] },
+  "assassin.kunaiTrail": { tier: "ability", layers: [ink(P("ink", [1, 1], [0.14, 0.18], [0.16, 0.22], { grow: 0.6 }), { lift: 0.9 }), glow(P("speedLine", [1, 1], [0.1, 0.12], [0.5, 0.6], { face: FACE.streak, aspect: 0.12 }), { lift: 0.9 })] },
+  "assassin.lotusCast": { tier: "ability", layers: [petals(12, 0.3, { speed: [2.4, 4], up: [0.2, 0.6] }), splat(3, 0.9), ring(0.4, 2.8, 0.35, { lift: 0.8 })] },
+  "assassin.inkCut": { tier: "ability", layers: [brush(1.5, 0.26), glow(P("flare", [1, 1], [0.14, 0.16], [0.6, 0.7]), { lift: 0.9 }), petals(2, 0.22)] },
+  "assassin.smokeBurst": { tier: "ability", layers: [ink(P("smoke", [9, 11], [0.8, 1.1], [1.2, 1.8], { speed: [1.5, 3], up: [0.3, 0.9], drag: 2.6, grow: 2, alpha: 0.95, jitter: 0.8 })), splat(3, 1.1), petals(4, 0.26)] },
+  /** Re-thrown each second while the veil stands: slow ink smoke filling its circle. */
+  "assassin.smoke": { tier: "ability", layers: [ink(P("smoke", [8, 10], [1.05, 1.15], [1.4, 2], { speed: [0.1, 0.4], up: [0.1, 0.3], drag: 2, grow: 1.4, alpha: 0.9, jitter: 2.4 }), { lift: 0.4 })] },
+  "assassin.execute": { tier: "heavy", layers: [brush(2.4, 0.32, 1), glow(P("slash", [1, 1], [0.24, 0.24], [2.2, 2.2], { grow: 1.1 }), { lift: 1 }), star(2, 0.26), splat(4, 1), heavyLines, petals(6, 0.3)] },
+  "assassin.ultCast": { tier: "ult", layers: [decal("ink", 4.5, 1.2), glow(P("leaf", [30, 34], [0.5, 0.6], [0.24, 0.32], { speed: [-5, -3.5], jitter: 4, spin: 4, grow: 0.6, rise: [0.2, 2.2] }), { lift: 0.2 }),
+    ink(P("smoke", [8, 10], [0.6, 0.8], [1.2, 1.8], { speed: [0.5, 1.5], drag: 2, grow: 1.6, alpha: 0.8, jitter: 1.6 }), { lift: 0.5 }), { kind: "light", intensity: 20, distance: 10, life: 0.6 }] },
+  /** Every cut at once (played on each enemy the lotus caught). */
+  "assassin.lotusCut": { tier: "ult", layers: [brush(2.8, 0.36, 1), brush(2.2, 0.32, 1.2), glow(P("slash", [1, 1], [0.3, 0.3], [2.6, 2.6], { grow: 1.15 }), { lift: 1 }), star(2.4, 0.3), splat(3, 1.1), petals(8, 0.32, { speed: [2, 4] }), heavyLines] },
+  "assassin.ultDecal": { tier: "ult", layers: [decal("ink", 6, 4, { spin: 0.1 }), decal("rune", 3, 2, { spin: 0.3 })] },
+};
+
 export const FX: Record<string, FxRecipe> = {
   // ── Hits by tier (impact.ts): a small spark, a spark burst in the ramp, the heavy tier's lines and ring ──
   "hit.light": { tier: "light", layers: [glow(P("flare", [1, 1], [0.14, 0.16], [0.45, 0.55]), { lift: 0.7 })] },
@@ -88,6 +169,7 @@ export const FX: Record<string, FxRecipe> = {
   ...ARCANE_FX,
   ...RANGER_FX,
   ...WARDEN_FX,
+  ...VANGUARD_FX,
 };
 
 /** What a recipe can cost at most (a burst throws up to 1.6× its count at full scale). */

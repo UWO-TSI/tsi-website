@@ -1,49 +1,55 @@
 "use client";
 
 /**
- * HQInterior — the Resident-Services main room (ux-interiors.md §3).
- * Uses the shared interior kit (interiorShared.tsx) since 2026-07-14;
- * see that file for the walker/piece/backdrop implementation.
+ * HQInterior — the Resident-Services main room (ux-interiors.md §3), in its
+ * modelled shell (RoomShell: panelled walls, four windows with drapes, the
+ * framed doorway). Uses the shared interior kit (interiorShared.tsx) for the
+ * walker, pieces and backdrop.
  */
 
 import { Suspense, useEffect } from "react";
 import { useThree, type ThreeEvent } from "@react-three/fiber";
-import * as THREE from "three";
+import type * as THREE from "three";
 import { HQ_LAYOUT, HQ_PENDANTS } from "@/lib/game/clubhouse";
 import { AudioManager } from "@/lib/game/audio";
-import { CLUBHOUSE_LIGHTING } from "@/lib/game/islandLighting";
+import { CLUBHOUSE_LIGHTING, ISLAND_LIGHTING, type IslandLight } from "@/lib/game/islandLighting";
+import { interiorLight } from "@/lib/game/interiorLight";
+import InteriorDaylight from "./InteriorDaylight";
+import TickingClock from "./TickingClock";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import {
-  InteriorKeeper,
-  InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
+  InteriorPlayer, Piece, applyInteriorBackdrop, preloadPieces, useNearestStation,
   type InteriorStation, type RoomBounds,
 } from "./interiorShared";
+import Keeper from "./Keeper";
+import { RoomShell, preloadShells, useKitPiece } from "./RoomShell";
 
 const BOUNDS: RoomBounds = { halfW: 8, halfD: 6, spawn: [0, -4.2] };
-
-// Room bounds (spec §2.6: HQ main 16x12, walls at x ±8, z ±6)
-const HALF_W = 8;
-const HALF_D = 6;
 
 export type { InteriorStation };
 
 export const HQ_STATIONS: InteriorStation[] = [
   { id: "board", name: "Bulletin Board", pos: [-4.5, 5.1], action: "sheet:directory" },
   { id: "trophy", name: "Trophy Case", pos: [4.2, 5.1], action: "sheet:leaderboard" },
-  { id: "desk", name: "Front Desk", pos: [-5.2, -2.4], action: "sheet:profile" },
+  { id: "desk", name: "Front Desk", pos: [-5.2, -3.6], action: "sheet:profile" },
   { id: "shelf", name: "Bookshelf", pos: [5.6, -2.8], action: "sheet:quests" },
-  { id: "admin", name: "Admin Room", pos: [-7.5, 1.2], action: "admin", range: 2.2 },
-  { id: "exit", name: "Exit", pos: [0, -5.5], action: "exit", range: 2.4 },
+  { id: "exit", name: "Exit", pos: [0, -5.5], action: "exit", range: 1.1 },
 ];
 
 // ── real ACNH furniture (P2 dump extraction 2026-07-13) ──
 // Pieces are floor-origin normalized at extraction; ACNH items face -Z.
 preloadPieces([
   "bulletinboard", "gold-hha-trophy", "silver-hha-trophy", "bronze-hha-trophy",
-  "study-desk", "study-chair", "bookshelf", "acorn-rug", "antique-clock",
+  "study-chair", "bookshelf", "acorn-rug", "antique-clock",
   "plant-monstera", "plant-yucca", "yellow-message-mat", "wooden-chest",
   "floor-lamp", "clubhouse-pendant", "lounge-rug", "reading-table", "lounge-sofa", "lounge-table", "lounge-tea", "lounge-book",
 ]);
+preloadShells(["hq"]);
+
+/** The front desk (art/interiors/build_interiors.py hq_front_desk): a reception desk the HQ lead serves from. */
+function FrontDesk() {
+  return <primitive object={useKitPiece("hq_front_desk")} position={HQ_LAYOUT.desk.position} />;
+}
 
 export default function HQInterior({
   frozen,
@@ -54,7 +60,13 @@ export default function HQInterior({
   clubhouse = false,
   floorTexture,
   phase = "day",
+  light: islandLight,
+  talking = false,
 }: {
+  /** The island's light now (blended across the phases); the phase's look when not given (the applicant island). */
+  light?: IslandLight;
+  /** The front desk's sheet is open: the HQ lead serves you. */
+  talking?: boolean;
   clubhouse?: boolean;
   floorTexture?: THREE.Texture;
   phase?: IslandPhase;
@@ -65,11 +77,13 @@ export default function HQInterior({
   onNearestStation: (s: InteriorStation | null) => void;
 }) {
   const { scene } = useThree();
-  const light = CLUBHOUSE_LIGHTING[phase];
+  const outside = islandLight ?? ISLAND_LIGHTING[phase];
+  // Lamps at their night strength, eased down by day (lib/game/interiorLight.ts).
+  const lamp = CLUBHOUSE_LIGHTING.night, lamps = interiorLight(outside).lamps;
 
   useEffect(() => applyInteriorBackdrop(scene), [scene]);
 
-  const handleMove = (x: number, z: number) => onNearestStation(nearestStation(stations, x, z));
+  const handleMove = useNearestStation(stations, onNearestStation);
 
   const onFloorClick = (e: ThreeEvent<MouseEvent>) => {
     window.dispatchEvent(new CustomEvent("tsi:interior-move", { detail: { x: e.point.x, z: e.point.z } }));
@@ -79,32 +93,21 @@ export default function HQInterior({
 
   return (
     <group>
-      {/* Neutral fill preserves atlas colors; warmth comes from local lamp pools. */}
-      <ambientLight color={clubhouse ? "#fff7ed" : "#FFD9A0"} intensity={clubhouse ? light.ambient : 0.34} />
-      {clubhouse && <hemisphereLight args={["#dde8ff", "#b79c80", light.hemisphere]} />}
-      {!clubhouse && <pointLight color="#FFC985" intensity={32} distance={16} position={[0, 3.8, 0.6]} />}
-      <directionalLight color={clubhouse ? light.keyColor : "#fff4df"} intensity={clubhouse ? light.key : 0.18} position={[3, 8, -4]}
-        castShadow={clubhouse} shadow-mapSize={[2048, 2048]} shadow-radius={3}
-        shadow-bias={-0.00015} shadow-normalBias={0.025}
-        shadow-camera-left={-12} shadow-camera-right={12} shadow-camera-top={12} shadow-camera-bottom={-12}
-        shadow-camera-near={0.5} shadow-camera-far={30} />
-      {clubhouse ? <>
-        <Suspense fallback={null}>
-          {HQ_PENDANTS.map(({ position, scale, drop, power }) => <group key={position[0]} position={position}>
-            <Piece name="clubhouse-pendant" position={[0, 0, 0]} scale={scale} />
-            <pointLight color="#ffe3ba" intensity={light.ceiling * power} distance={8} position={[0, -drop, 0]} />
-          </group>)}
-          <Piece name="floor-lamp" {...HQ_LAYOUT.loungeLamp} />
-        </Suspense>
-        <pointLight color="#ffdfae" intensity={light.lamp * 0.48} distance={4.8}
-          position={[HQ_LAYOUT.loungeLamp.position[0], 1.52, HQ_LAYOUT.loungeLamp.position[2]]} />
-        {/* The study desk already contains its own lamp model. */}
-        <pointLight color="#ffe2ae" intensity={light.desk} distance={3.3}
-          position={[HQ_LAYOUT.desk.position[0] + 0.4, 1.6, HQ_LAYOUT.desk.position[2] - 0.1]} />
-      </> : <>
-        <pointLight color="#FFDB98" intensity={11} distance={5.5} position={[-4.5, 2.4, 4.6]} />
-        <pointLight color="#FFDB98" intensity={11} distance={5.5} position={[4.2, 2.4, 4.6]} />
-      </>}
+      {/* The day through the windows (the sun, or the moon's cool sliver at night); warmth comes from the lamp pools. */}
+      <InteriorDaylight light={outside} shadows={clubhouse} scale={{ key: 1.5, ambient: 0.32, hemisphere: 0.36, extent: 12 }} />
+      <Suspense fallback={null}>
+        {HQ_PENDANTS.map(({ position, scale }) => <group key={position[0]} position={position}>
+          <Piece name="clubhouse-pendant" position={[0, 0, 0]} scale={scale} />
+        </group>)}
+        <Piece name="floor-lamp" {...HQ_LAYOUT.loungeLamp} />
+      </Suspense>
+      {HQ_PENDANTS.map(({ position, drop, power }) => <pointLight key={position[0]} color="#ffe3ba" intensity={lamp.ceiling * power * lamps} distance={8}
+        position={[position[0], position[1] - drop, position[2]]} />)}
+      <pointLight color="#ffdfae" intensity={lamp.lamp * 0.48 * lamps} distance={4.8}
+        position={[HQ_LAYOUT.loungeLamp.position[0], 1.52, HQ_LAYOUT.loungeLamp.position[2]]} />
+      {/* The front desk's lamp, at the desk's wall end. */}
+      <pointLight color="#ffe2ae" intensity={lamp.desk * lamps} distance={3.3}
+        position={[HQ_LAYOUT.desk.position[0] - 0.62, 1.0, HQ_LAYOUT.desk.position[2] + 0.14]} />
 
       {/* floor: warm planks + alternating strips */}
       <mesh receiveShadow={clubhouse} rotation={[-Math.PI / 2, 0, 0]} onClick={onFloorClick}>
@@ -127,43 +130,11 @@ export default function HQInterior({
         </> : <Piece name="acorn-rug" position={[0, 0.015, 0.6]} scale={0.18} />}
       </Suspense>
 
-      {/* walls: north full, sides full, south low lip (dollhouse cutaway) */}
-      <mesh position={[0, 2, HALF_D + 0.15]}>
-        <boxGeometry args={[16.6, 4, 0.3]} />
-        <meshStandardMaterial color={clubhouse ? "#d3dbca" : "#FFF8EE"} roughness={0.9} />
-      </mesh>
-      <mesh position={[-HALF_W - 0.15, 2, 0]}>
-        <boxGeometry args={[0.3, 4, 12.6]} />
-        <meshStandardMaterial color={clubhouse ? "#d3dbca" : "#FFF8EE"} roughness={0.9} />
-      </mesh>
-      <mesh position={[HALF_W + 0.15, 2, 0]}>
-        <boxGeometry args={[0.3, 4, 12.6]} />
-        <meshStandardMaterial color={clubhouse ? "#d3dbca" : "#FFF8EE"} roughness={0.9} />
-      </mesh>
-      <mesh position={[0, 0.5, -HALF_D - 0.15]}>
-        <boxGeometry args={[16.6, 1, 0.3]} />
-        <meshStandardMaterial color={clubhouse ? "#d3dbca" : "#FFF8EE"} roughness={0.9} />
-      </mesh>
-      {/* wainscoting on the three tall walls */}
-      <mesh position={[0, 0.6, HALF_D + 0.14 - 0.16]}>
-        <boxGeometry args={[16.6, 1.2, 0.06]} />
-        <meshStandardMaterial color={clubhouse ? "#a1ae91" : "#B8935A"} roughness={0.9} />
-      </mesh>
-      <mesh position={[-HALF_W - 0.15 + 0.16, 0.6, 0]}>
-        <boxGeometry args={[0.06, 1.2, 12.6]} />
-        <meshStandardMaterial color={clubhouse ? "#a1ae91" : "#B8935A"} roughness={0.9} />
-      </mesh>
-      <mesh position={[HALF_W + 0.15 - 0.16, 0.6, 0]}>
-        <boxGeometry args={[0.06, 1.2, 12.6]} />
-        <meshStandardMaterial color={clubhouse ? "#a1ae91" : "#B8935A"} roughness={0.9} />
-      </mesh>
+      {/* walls, windows and the doorway (art/interiors/build_interiors.py) */}
+      <Suspense fallback={null}><RoomShell room="hq" light={outside} /></Suspense>
 
       {/* Bulletin Board (→ Directory) hung on the north wall */}
       <Suspense fallback={null}>
-        {/* (basic-wall window/entrance modules removed 2026-07-13 — they're
-            room-SHELL panels, and inset against painted walls they read as
-            white slabs. Real windows return with the full module-shell
-            room rebuild in Phase 2.) */}
         <Piece name="bulletinboard" {...(clubhouse ? HQ_LAYOUT.board : { position: [-4.5, 1.15, 5.55] as [number, number, number], scale: 0.16 })} />
 
         {/* Trophy display (→ Leaderboard): chest pedestal + the HHA tier set */}
@@ -173,7 +144,7 @@ export default function HQInterior({
         <Piece shadows={clubhouse} name="bronze-hha-trophy" rotX={clubhouse ? Math.PI / 2 : 0} position={[clubhouse ? HQ_LAYOUT.display.position[0] + 0.65 : 4.85, 0.8, 5.35]} rotY={clubhouse ? Math.PI : 0} scale={0.085} />
 
         {/* Front Desk (→ Profile) + chair */}
-        <Piece shadows={clubhouse} name="study-desk" rotX={clubhouse ? Math.PI : 0} position={HQ_LAYOUT.desk.position} rotY={clubhouse ? HQ_LAYOUT.desk.rotY : 0} scale={HQ_LAYOUT.desk.scale} />
+        <FrontDesk />
         <Piece shadows={clubhouse} name="study-chair" {...HQ_LAYOUT.deskChair} />
 
         {/* Bookshelf (→ Quests) */}
@@ -181,41 +152,21 @@ export default function HQInterior({
 
         {clubhouse && <Piece shadows name="study-chair" {...HQ_LAYOUT.loungeChair} />}
 
-        {/* Clock against the north wall, facing into the room. */}
-        <Piece shadows={clubhouse} name="antique-clock" glassMaterial={clubhouse ? "FtrAntiqueClock_mat0" : undefined} position={clubhouse ? HQ_LAYOUT.clock.position : [-7.1, 0, 3.6]} rotY={clubhouse ? Math.PI : -Math.PI / 2} />
+        {/* Clock against the north wall, facing into the room: its pendulum swings and its hands keep the island's time. */}
+        <TickingClock glassMaterial={clubhouse ? "FtrAntiqueClock_mat0" : undefined} position={clubhouse ? HQ_LAYOUT.clock.position : [-7.1, 0, 3.6]} rotY={clubhouse ? Math.PI : -Math.PI / 2} player={playerPosRef} />
 
         {/* Corner plants */}
         <Piece shadows={clubhouse} name="plant-monstera" position={clubhouse ? HQ_LAYOUT.monstera.position : [-7.2, 0, 5.2]} />
         <Piece shadows={clubhouse} name="plant-yucca" position={clubhouse ? HQ_LAYOUT.yucca.position : [7.2, 0, 5.2]} />
       </Suspense>
 
-      {/* Admin door (locked) on the west wall */}
-      {!clubhouse && <group position={[-7.85, 0, 1.2]} rotation={[0, Math.PI / 2, 0]}>
-        <mesh position={[0, 1.25, 0]}>
-          <boxGeometry args={[1.5, 2.5, 0.14]} />
-          <meshStandardMaterial color="#7A5636" roughness={0.85} />
-        </mesh>
-        <mesh position={[0, 2.75, 0]}>
-          <planeGeometry args={[0.4, 0.4]} />
-          <meshBasicMaterial color="#FFD166" side={THREE.DoubleSide} />
-        </mesh>
-      </group>}
-
       {/* Exit: TSI-yellow message mat at the south lip */}
       <Suspense fallback={null}>
         <Piece name="yellow-message-mat" rotX={clubhouse ? Math.PI : 0} rotY={clubhouse ? Math.PI : 0} position={[0, 0.015, -5.2]} scale={0.14} />
       </Suspense>
 
-      {/* framed pictures on the north wall */}
-      {!clubhouse && [[-2, 2.6, "#4C7DD0"], [1.6, 2.8, "#E85050"], [6.8, 2.6, "#5FA850"]].map(([x, y, c], i) => (
-        <mesh key={i} position={[x as number, y as number, 5.7]}>
-          <planeGeometry args={[0.7, 0.55]} />
-          <meshBasicMaterial color={c as string} side={THREE.DoubleSide} />
-        </mesh>
-      ))}
-
-      {/* wake 69: front-desk receptionist (navy blazer, hair bun) */}
-      <InteriorKeeper position={[-6.3, 0, -2.4]} rotY={Math.PI / 2} watch={[-5.2, -2.4]} colors={{ apron: "#2E3E5C", shirt: "#F0E6D2" }} hat="bun" playerPosRef={playerPosRef} />
+      {/* The HQ lead behind the front desk (lib/game/keepers.ts). */}
+      <Keeper room="hq" player={playerPosRef} frozen={frozen} engaged={talking} />
       <InteriorPlayer frozen={frozen} bounds={BOUNDS} playerPosRef={playerPosRef} onMove={handleMove} constrainMove={constrainMove} />
     </group>
   );

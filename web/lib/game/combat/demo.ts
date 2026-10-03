@@ -11,15 +11,20 @@
  * on; `?classes=v2` turns the flag on for any subclass whose family wave has landed; `?mastery=N` starts its mastery
  * at level N; `?repick=oracle|launch` hands over a repick token; `?type=INTP` is the Oracle reading (`&unclear=JP`
  * makes that dichotomy 8% clear); `?frame=bronze|silver|gold` wears that mastery frame.
+ *
  * The Warden wave: a v2 subclass is handed its tier-1 signature weapon in hand; `?tamed=owl,toad` (or `all`) are the
  * Summoner's tamed beasts (none by default, so the ritual circle has something to offer).
+ *
+ * The class playtest (specs/classes/playtest.md): `?traits=all` teaches every form the kit learns from a mob, and the
+ * panel's `/api/combat/dev-class` switches subclass and mastery in place (every form learned, every beast tamed). The
+ * wheel's weapon is kept (`/api/combat/equip`).
  */
 import { memoryCombatStore } from "@/lib/combat/memoryStore";
-import { allocateStats, claimBossReward, claimMinibossReward, completeMission, getProgression, listMissions, missionProgress, recordKill, reportWear, resetStats, setLoadout, startMission, chooseSubclass, tameBeast } from "@/lib/combat/service";
+import { allocateStats, claimBossReward, claimMinibossReward, completeMission, equipWeapon, getProgression, listMissions, missionProgress, recordKill, reportWear, resetStats, setLoadout, startMission, chooseSubclass, tameBeast } from "@/lib/combat/service";
 import { TAME_ORDER } from "@/lib/combat/wardenData";
 import { signatureGrant } from "@/lib/combat/weapons";
 import { islandProgression } from "@/lib/combat/islandAdapter";
-import { subclassByKey, subclassesFor } from "@/lib/combat/kits";
+import { subclassByKey, subclassesFor, TRAITS } from "@/lib/combat/kits";
 import { equipCosmetic } from "@/lib/combat/service";
 import { memberKit } from "@/lib/combat/classes";
 import { xpForMastery } from "@/lib/combat/mastery";
@@ -28,6 +33,17 @@ import type { Family } from "@/lib/oracle/engine";
 import { installDemoFetch, reply } from "../demoFetch";
 
 const ME = "00000000-0000-4000-8000-0000000c0de5";
+/** The playtest's switches, one idempotency key each (two in the same millisecond must not replay the first). */
+let devSeq = 0;
+
+/** Every form the kit learns from a mob, taught by one defeat of it (the playtest opens every skill). */
+async function learnForms(m: ReturnType<typeof memoryCombatStore>, subclass: string) {
+  const known = (await m.store.progression(ME)).traits;
+  for (const a of memberKit(subclass)?.keys ?? []) {
+    const t = a.learn && !known[a.learn] ? TRAITS.find(x => x.key === a.learn) : null;
+    if (t) await recordKill(m.store, ME, t.from[0], `demo-learn-${t.key}`);
+  }
+}
 
 export function installCombatDemo(): void {
   installDemoFetch("combat", "/api/combat/", q => {
@@ -47,6 +63,7 @@ export function installCombatDemo(): void {
       if (sig) { m.giveWeapon(ME, sig.key); await m.store.equip(ME, sig.key); } // a v2 kit's tier-1 signature weapon, in hand
       const tamed = q.get("tamed");
       if (tamed) m.setTamed(ME, tamed === "all" ? [...TAME_ORDER] : tamed.split(","));
+      if (sub && q.get("traits") === "all") await learnForms(m, sub);
       if (sub && q.get("mastery")) m.setMasteryXp(ME, sub, xpForMastery(Number(q.get("mastery"))));
       const token = q.get("repick");
       if (token === "oracle" || token === "launch") m.grantRepick(ME, token);
@@ -75,6 +92,27 @@ export function installCombatDemo(): void {
         case "/api/combat/tame": return reply(await tameBeast(m.store, ME, body.beast, body.event_key), "tamed");
         case "/api/combat/allocate": return reply(await allocateStats(m.store, ME, body), "stats");
         case "/api/combat/reset-stats": return reply(await resetStats(m.store, ME, body.idempotency_key), "reset");
+        case "/api/combat/equip": return reply(await equipWeapon(m.store, ME, body.weapon), "equip");
+        // The playtest panel: another subclass or mastery in place, set up as a fresh demo would start it (its family's
+        // stat preset, the subclass and its signature weapon, every form learned, every beast tamed). Answers what you own now.
+        case "/api/combat/dev-class": {
+          const kit = memberKit(body.subclass), p = await m.store.progression(ME);
+          if (!kit) return new Response(JSON.stringify({ ok: false, error: "That kit hasn't landed yet" }), { status: 404 });
+          m.setSetting("classes_v2", 1);
+          if (p.subclass !== kit.key) {
+            if ((await m.store.family(ME)) !== kit.family) {
+              m.setFamily(ME, kit.family); m.fund(ME, 2000);
+              if (q.get("stats") !== "none") { await resetStats(m.store, ME, `dev-reset-${++devSeq}`); await allocateStats(m.store, ME, presetAllocation(kit.family, p.level)); }
+            }
+            m.grantRepick(ME, "oracle");
+            const r = await chooseSubclass(m.store, ME, kit.key, `dev-class-${++devSeq}`);
+            if (!r.ok) return reply(r, "subclass");
+          }
+          await learnForms(m, kit.key);
+          m.setTamed(ME, [...TAME_ORDER]); // every beast tamed (the Summoner's keys all open, as with ?tamed=all)
+          m.setMasteryXp(ME, kit.key, xpForMastery(Math.min(20, Math.max(1, Math.round(Number(body.mastery)) || 1))));
+          return new Response(JSON.stringify({ ok: true, owned: (await m.store.weapons(ME)).map(w => w.weapon_key) }));
+        }
         default: return new Response(JSON.stringify({ ok: false, error: "Not in the demo" }), { status: 404 });
       }
     };

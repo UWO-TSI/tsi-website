@@ -5,14 +5,19 @@
  * (interiorShared: backdrop, walker, camera). Rooms are 6×6 cells laid side
  * by side toward screen-right (−x), joined by a door gap. Wallpaper and
  * flooring are ACNH dump RoomTex albedos; furniture uses the placement layer.
+ * The modelled near wall (art/interiors kit) closes each room at the front, the
+ * first with the front door; a pendant lamp hangs where each room's light is.
  */
-import { useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useThree } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
-import { InteriorPlayer, applyInteriorBackdrop, nearestStation, type InteriorStation, type RoomBounds } from "../interiorShared";
+import { InteriorPlayer, applyInteriorBackdrop, nearestStation, stepTo, type InteriorStation, type RoomBounds } from "../interiorShared";
+import { useKitPiece } from "../RoomShell";
 import { PlacementLayer, type GridMapping } from "./PlacementLayer";
-import { CLUBHOUSE_LIGHTING } from "@/lib/game/islandLighting";
+import { CLUBHOUSE_LIGHTING, ISLAND_LIGHTING, type IslandLight } from "@/lib/game/islandLighting";
+import { interiorLight } from "@/lib/game/interiorLight";
+import InteriorDaylight from "../InteriorDaylight";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import { catalogueItem } from "@/lib/homes/catalogue";
 import {
@@ -25,7 +30,7 @@ const WALL_H = 3.2;
 const I = "/assets/acnh/interior/";
 [...WALLPAPERS.map(w => `${I}wall-${w}.png`), ...FLOORINGS.map(f => `${I}floor-${f}.png`)].forEach(url => useTexture.preload(url));
 
-export type HouseNear = "exit" | "buy" | "closet" | "bed" | null;
+export type HouseNear = "exit" | "buy" | "closet" | "bed" | "chest" | null;
 /** World x of room i's screen-left edge (rooms centred on x = 0). */
 export const roomLeft = (i: number, n: number) => (RW * n) / 2 - RW * i;
 /** World x/z of a placed floor item's centre in room i of n. */
@@ -83,18 +88,35 @@ function RoomShell({ index, count, wallpaper, flooring }: { index: number; count
   </group>;
 }
 
-export default function HomeInterior({ layout, phase, frozen, player, onNear, decorating, selected, onPlace, onPickUp }: {
+/** The front of room i: the low near wall (the first room's with the front door) and its pendant lamp. */
+function RoomFront({ index, count }: { index: number; count: number }) {
+  const wall = useKitPiece(index === 0 ? "home_lip_door" : "home_lip");
+  const lamp = useKitPiece("pendant_lamp");
+  const cx = roomLeft(index, count) - RW / 2;
+  return <>
+    <primitive object={wall} position={[cx, 0, -RD / 2]} />
+    <primitive object={lamp} position={[cx, WALL_H, LAMP_Z]} />
+  </>;
+}
+/** The pendant's depth into the room, and its bulb's height (the kit's shade hangs 0.8 under its ceiling cup). */
+const LAMP_Z = 0.4, LAMP_Y = WALL_H - 0.7;
+
+export default function HomeInterior({ layout, phase, light: islandLight, frozen, player, onNear, decorating, selected, onPlace, onPickUp }: {
   layout: HomeLayoutDoc; phase: IslandPhase; frozen: boolean; player: React.RefObject<THREE.Vector3>;
+  /** The island's light now (the phase's look when not given). */
+  light?: IslandLight;
   onNear: (near: HouseNear) => void; decorating: boolean; selected: { piece: string; rot: Rotation; uid?: string } | null;
   onPlace: (room: number, item: PlacedItem) => void; onPickUp: (room: number, item: PlacedItem) => void;
 }) {
   const n = layout.rooms.length;
-  const light = CLUBHOUSE_LIGHTING[phase];
+  const outside = islandLight ?? ISLAND_LIGHTING[phase];
+  const lamps = interiorLight(outside).lamps;
   const { scene, camera } = useThree();
   useEffect(() => applyInteriorBackdrop(scene), [scene]);
   const spawnX = roomLeft(0, n) - RW / 2;
-  const bounds: RoomBounds = useMemo(() => ({ halfW: (RW * n) / 2, halfD: RD / 2, spawn: [spawnX, -1.6] }), [n, spawnX]);
-  useEffect(() => { player.current.set(spawnX, 0, -1.6); camera.position.set(spawnX, 8.4, -8.8); }, [camera, player, spawnX]);
+  // You arrive a step inside the front door, clear of its prompt (interiors §5).
+  const bounds: RoomBounds = useMemo(() => ({ halfW: (RW * n) / 2, halfD: RD / 2, spawn: [spawnX, -1.1] }), [n, spawnX]);
+  useEffect(() => { player.current.set(spawnX, 0, -1.1); camera.position.set(spawnX, 8.4, -8.3); }, [camera, player, spawnX]);
   // Solid furniture plus the walls between rooms (door gap |z| < 1).
   const blocked = useMemo(() => layout.rooms.flatMap((room, i) => room.items
     .filter(item => catalogueItem(item.piece)?.mount === "floor")
@@ -105,17 +127,20 @@ export default function HomeInterior({ layout, phase, frozen, player, onNear, de
       && !dividers.some(d => Math.abs(x - d) < 0.4 && Math.abs(z) > 0.75);
     return (x: number, z: number, nx: number, nz: number): [number, number] => {
       // Getting out of bed: from inside furniture any step is allowed.
-      if (free(nx, nz) || !free(x, z)) return [nx, nz];
-      if (free(nx, z)) return [nx, z];
-      if (free(x, nz)) return [x, nz];
-      return [x, z];
+      if (free(nx, nz) || !free(x, z)) return stepTo(nx, nz);
+      if (free(nx, z)) return stepTo(nx, z);
+      if (free(x, nz)) return stepTo(x, nz);
+      return stepTo(x, z);
     };
   }, [blocked, n]);
   const stations: InteriorStation[] = useMemo(() => [
-    { id: "exit", name: "Outside", pos: [spawnX, -2.2], action: "exit", range: 1.3 },
+    { id: "exit", name: "Outside", pos: [spawnX, -2.2], action: "exit", range: 0.9 },
     // Every closet is a wardrobe (decision 210): stand at it and press E.
     ...layout.rooms.flatMap((room, i) => room.items.filter(item => item.piece === "closet")
       .map(item => ({ id: "closet", name: "Closet", pos: itemCentre(i, n, item), action: "closet", range: 1.6 }))),
+    // Every wooden chest is the home storage chest (specs/game-ui.md §6): one store per member, whichever chest you open.
+    ...layout.rooms.flatMap((room, i) => room.items.filter(item => item.piece === "wooden-chest")
+      .map(item => ({ id: "chest", name: "Storage chest", pos: itemCentre(i, n, item), action: "chest", range: 1.6 }))),
     // From the bed's middle: a 2-cell bed needs the longer reach to be usable from its pillow or foot end.
     ...beds(layout).map(b => ({ id: "bed", name: "Bed", pos: [b.x, b.z] as [number, number], action: "bed", range: 2 })),
     ...(n < MAX_ROOMS ? [{ id: "buy", name: "Add a room", pos: [roomLeft(n - 1, n) - RW + 1.2, 0] as [number, number], action: "buy", range: 1.4 }] : []),
@@ -126,12 +151,11 @@ export default function HomeInterior({ layout, phase, frozen, player, onNear, de
     if (nearRef.current !== next) { nearRef.current = next; onNear(next); }
   };
   return <>
-    <ambientLight color="#fff7ed" intensity={light.ambient} />
-    <hemisphereLight args={["#dde8ff", "#b79c80", light.hemisphere]} />
-    <directionalLight color={light.keyColor} intensity={light.key} position={[3, 8, -4]} />
+    <InteriorDaylight light={outside} scale={{ key: 0.9, ambient: 0.32, hemisphere: 0.4, extent: 10 }} />
     {layout.rooms.map((room, i) => <group key={room.id}>
       <RoomShell index={i} count={n} wallpaper={room.wallpaper} flooring={room.flooring} />
-      <pointLight color="#ffe3ba" intensity={light.ceiling * 0.55} distance={9} position={[roomLeft(i, n) - RW / 2, 2.8, 0.4]} />
+      <pointLight color="#ffe3ba" intensity={CLUBHOUSE_LIGHTING.night.ceiling * 0.55 * lamps} distance={9} position={[roomLeft(i, n) - RW / 2, LAMP_Y, LAMP_Z]} />
+      <Suspense fallback={null}><RoomFront index={i} count={n} /></Suspense>
       <RoomPlacement index={i} count={n} items={room.items} decorating={decorating} selected={selected}
         onPlace={item => onPlace(i, item)} onPickUp={item => onPickUp(i, item)} />
     </group>)}

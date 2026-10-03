@@ -2,7 +2,7 @@
 /** The combat pack (specs/classes/design-sheet.md §1.7): heat in RGB, coverage in A; the shader maps heat through the effect's ramp. */
 export const COMBAT_PACK_URL = "/assets/fx/combat-pack.webp";
 export const COMBAT_PACK_COLS = 8;
-export const COMBAT_PACK_ROWS = 32;
+export const COMBAT_PACK_ROWS = 33;
 export const COMBAT_PACK = {
   impactStar: { row: 0, frames: 8 } /* spiky impact star: pops open, hollows out */,
   slash: { row: 1, frames: 8 } /* crescent slash arc: sweeps on, thins away */,
@@ -36,5 +36,6 @@ export const COMBAT_PACK = {
   bolt: { row: 29, frames: 8 } /* lightning along +u (tiles along u) */,
   leaf: { row: 30, frames: 8 } /* cel leaf tumbling */,
   thorn: { row: 31, frames: 8 } /* thorny vine unfurling */,
+  inkSlash: { row: 32, frames: 8 } /* ink brush slash with a mid rim */,
 } as const;
 export type CombatSprite = keyof typeof COMBAT_PACK;

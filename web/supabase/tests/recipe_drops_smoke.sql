@@ -8,11 +8,12 @@ INSERT INTO auth.users (id, email) VALUES
   ('00000000-0000-4000-8000-0000000007d3', 'rd-rate@x');
 UPDATE profiles SET membership = 'member', tier = 4 WHERE id::text LIKE '00000000-0000-4000-8000-0000000007d_';
 
--- ─── 1. Seeds: 16 bottle recipes drop, three chances, 'catch' is a source ────
+-- ─── 1. Seeds: 17 bottle recipes drop, three chances, 'catch' is a source ────
 DO $$ BEGIN
-  ASSERT (SELECT count(*) FROM crafting_recipes WHERE drop_rarity IS NOT NULL) = 16, 'sixteen drop recipes';
+  -- Sixteen, and the backpack's 40-slot pocket (20261003054110_backpack).
+  ASSERT (SELECT count(*) FROM crafting_recipes WHERE drop_rarity IS NOT NULL) = 17, 'seventeen drop recipes';
   ASSERT (SELECT count(*) FROM crafting_recipes WHERE drop_rarity IS NOT NULL AND sources <> ARRAY['bottle']) = 0, 'only bottle-only recipes drop';
-  ASSERT (SELECT string_agg(id, ',' ORDER BY id) FROM crafting_recipes WHERE drop_rarity = 'epic') = 'net-dragonfly,outfit-monarch-cape,shovel-crystal', 'tier-4 tools and the cape need an epic catch';
+  ASSERT (SELECT string_agg(id, ',' ORDER BY id) FROM crafting_recipes WHERE drop_rarity = 'epic') = 'bag-40,net-dragonfly,outfit-monarch-cape,shovel-crystal', 'tier-4 tools, the cape and the 40-slot pocket need an epic catch';
   ASSERT (SELECT string_agg(rarity || ':' || chance, ',' ORDER BY chance) FROM recipe_drop_chances) = 'rare:0.02,epic:0.05,legendary:0.15', 'chances';
   BEGIN UPDATE crafting_recipes SET drop_rarity = 'common' WHERE id = 'net-silk'; RAISE EXCEPTION 'common drop accepted';
   EXCEPTION WHEN check_violation THEN NULL; END;

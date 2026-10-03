@@ -39,9 +39,10 @@ const BENCH_APPROACH: [number, number] = [BENCH.x + 1.25, BENCH.z];
 
 /** The clubhouse's furniture collision plus the bench (member HQ only; the applicant HQ has no bench). */
 export function constrainWorkshop(x: number, z: number, nx: number, nz: number): [number, number] {
-  const [cx, cz] = constrainClubhouse(x, z, nx, nz);
-  const blocked = Math.abs(cx - BENCH.x) < BENCH.halfX + 0.25 && Math.abs(cz - BENCH.z) < BENCH.halfZ + 0.25;
-  return blocked ? [x, z] : [cx, cz];
+  const c = constrainClubhouse(x, z, nx, nz);
+  const blocked = Math.abs(c[0] - BENCH.x) < BENCH.halfX + 0.25 && Math.abs(c[1] - BENCH.z) < BENCH.halfZ + 0.25;
+  if (blocked) { c[0] = x; c[1] = z; }
+  return c;
 }
 
 export function Workbench({ player }: { player: React.RefObject<THREE.Vector3> }) {
@@ -137,7 +138,7 @@ export default function CraftingSheet() {
       pending.current = null;
       AudioManager.playSFX("confirm");
       window.dispatchEvent(new CustomEvent("tsi:crafted", { detail: { id: r.id } }));
-      setCard({ title: "Crafted", name: done.name, note: r.kind === "weapon" ? "It's in your gear rack for the ruins." : "It's in your pockets." });
+      setCard({ title: "Crafted", name: done.name, note: r.kind === "weapon" ? "It's in your gear rack for the ruins." : r.id.startsWith("bag-") ? "Your backpack has more room now." : "It takes no room in your pockets: find it in your Bag, under tools, clothes and furniture." });
       void load();
     } catch (e) {
       if (e instanceof ApiError) pending.current = null; // answered: the next press is a new craft
