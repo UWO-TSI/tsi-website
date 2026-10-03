@@ -8,6 +8,29 @@ export interface FishingHeldInput {
 
 type InputDocument = EventTarget & Pick<Document, "activeElement" | "hidden">;
 
+/** What pressed last: a key, the mouse, or a finger (a pen counts as one). The cast meter and the fishing hints name it. */
+export type CastDevice = "key" | "mouse" | "touch";
+let lastDevice: CastDevice = "mouse";
+export const castDevice = (): CastDevice => lastDevice;
+/** Note the input behind each press, in the capture phase (before the world acts on it), until the returned call. */
+export function trackCastDevice(windowTarget: EventTarget = window): () => void {
+  const capture = { capture: true };
+  const key = () => { lastDevice = "key"; };
+  const pointer = (event: Event) => { lastDevice = (event as PointerEvent).pointerType === "mouse" ? "mouse" : "touch"; };
+  windowTarget.addEventListener("keydown", key, capture);
+  windowTarget.addEventListener("pointerdown", pointer, capture);
+  return () => { windowTarget.removeEventListener("keydown", key, capture); windowTarget.removeEventListener("pointerdown", pointer, capture); };
+}
+/**
+ * The fishing hints for the device that started the cast: charging (hold, let go at the gold tip), the max-cast tip,
+ * hooking the bite and reeling. The member island casts with the held rod's click or a tap, the applicant island with E.
+ */
+export const FISHING_HINTS: Record<CastDevice, { charge: string; tip: string; hook: string; reel: string }> = {
+  key: { charge: "Hold E, let go at the gold tip", tip: "Let go of E at the tip for a max cast", hook: "Press E to hook it", reel: "Hold E or Space to reel →, let go to ease ← · Esc lets it go" },
+  mouse: { charge: "Hold the click, let go at the gold tip", tip: "Let go at the tip for a max cast", hook: "Click to hook it", reel: "Hold the click to reel →, let go to ease ← · Esc lets it go" },
+  touch: { charge: "Keep holding, lift at the gold tip", tip: "Lift your finger at the tip for a max cast", hook: "Tap to hook it", reel: "Hold to reel →, lift to ease ←" },
+};
+
 /** Track each input independently so releasing Space cannot release a held pointer. */
 export function bindFishingInput({ onHold, onCancel, onPause, onPointerFocus, initialInput, windowTarget = window, documentTarget = document }: {
   onHold: (holding: boolean) => void;

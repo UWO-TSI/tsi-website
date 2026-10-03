@@ -12,7 +12,8 @@
  *    species has its OWN movement fields so behavior is parameterized per
  *    fish, not one memorizable pattern.
  *  - Sizes make sense: per-species cm ranges, rolled skew-small on catch.
- *  - Celebration scales with tier (shake px, confetti bursts, card time).
+ *  - The catch card's beats scale with tier (REVEAL: the silhouette's beat, the card's time, soft confetti from rare
+ *    up, the camera's shake); rarity colours are the GUI sheet's one palette.
  */
 
 import confetti from "canvas-confetti";
@@ -38,12 +39,13 @@ export const RARITY_META: Record<
   Rarity,
   { label: string; color: string; weight: number; barW: number }
 > = {
-  common: { label: "Common", color: "#7C9A62", weight: 100, barW: 0.3 },
-  uncommon: { label: "Uncommon", color: "#4A90D9", weight: 48, barW: 0.27 },
-  rare: { label: "Rare", color: "#9B6DD6", weight: 18, barW: 0.24 },
-  epic: { label: "Epic", color: "#D6598F", weight: 7, barW: 0.21 },
-  legendary: { label: "Legendary", color: "#E8A93C", weight: 2.5, barW: 0.19 },
-  seaking: { label: "Sea King", color: "#1FB6CF", weight: 1, barW: 0.17 },
+  // `color` is the GUI sheet's --gui-rarity-* token (styles/game-tokens.css): one palette for the card, the journal and the book.
+  common: { label: "Common", color: "#c9bd9f", weight: 100, barW: 0.3 },
+  uncommon: { label: "Uncommon", color: "#8ac68a", weight: 48, barW: 0.27 },
+  rare: { label: "Rare", color: "#889df0", weight: 18, barW: 0.24 },
+  epic: { label: "Epic", color: "#b77dee", weight: 7, barW: 0.21 },
+  legendary: { label: "Legendary", color: "#f7cd67", weight: 2.5, barW: 0.19 },
+  seaking: { label: "Sea King", color: "#7fd6dc", weight: 1, barW: 0.17 },
 };
 
 /** Per-species reel behavior — track space is 0..1, speeds in track/s. */
@@ -232,34 +234,18 @@ export const FILL_RATE = 0.26; // progress /s while the fish is inside the bar
 export const START_PROGRESS = 0.35;
 
 /**
- * Blind-box reveal staging (David ruling 2026-07-23): FIRST catches get a
- * fullscreen gacha ceremony — black silhouette shakes center-screen while
- * a tier-colored glow ramps (the telegraph), then a flash, then the fish
- * lands in color with name/rarity/size. Cinematic pacing, click-to-skip.
- * Repeats keep the quick bottom card. All times ms, shake in px.
+ * The catch card's beats by tier (the cozy cream direction, specs/polish/fishing.md deliverable 5; FishReveal): how
+ * long a first catch keeps its silhouette before it develops, how long the card stays, how many soft confetti bursts
+ * (from rare up), and the camera's shake as the catch comes out of the water (world units, cameraJuice shakeCamera).
+ * All times ms.
  */
-export const REVEAL: Record<
-  Rarity,
-  {
-    suspense: number;
-    flash: number;
-    hold: number;
-    shake: number;
-    rays: boolean;
-    /** Dead-stop beat before the crack (the gasp) — Sol's RNG pattern. 0 = none. */
-    freeze: number;
-    /** Expanding pulse rings at the crack (count = tier flex). */
-    rings: number;
-    /** Double-flash fake-out (legendary+) + monochrome flick (sea king). */
-    doubleFlash: boolean;
-  }
-> = {
-  common: { suspense: 800, flash: 130, hold: 1100, shake: 3, rays: false, freeze: 0, rings: 0, doubleFlash: false },
-  uncommon: { suspense: 1100, flash: 150, hold: 1250, shake: 4, rays: false, freeze: 0, rings: 0, doubleFlash: false },
-  rare: { suspense: 1700, flash: 170, hold: 1450, shake: 6, rays: true, freeze: 0, rings: 2, doubleFlash: false },
-  epic: { suspense: 2300, flash: 190, hold: 1650, shake: 8, rays: true, freeze: 350, rings: 3, doubleFlash: false },
-  legendary: { suspense: 3000, flash: 230, hold: 2200, shake: 10, rays: true, freeze: 450, rings: 4, doubleFlash: true },
-  seaking: { suspense: 3800, flash: 270, hold: 2600, shake: 13, rays: true, freeze: 600, rings: 5, doubleFlash: true },
+export const REVEAL: Record<Rarity, { develop: number; hold: number; confetti: number; shake: number }> = {
+  common: { develop: 450, hold: 3000, confetti: 0, shake: 0.025 },
+  uncommon: { develop: 550, hold: 3200, confetti: 0, shake: 0.03 },
+  rare: { develop: 700, hold: 3600, confetti: 1, shake: 0.04 },
+  epic: { develop: 850, hold: 4000, confetti: 2, shake: 0.05 },
+  legendary: { develop: 1000, hold: 4600, confetti: 3, shake: 0.06 },
+  seaking: { develop: 1200, hold: 5200, confetti: 4, shake: 0.07 },
 };
 
 /** "1 in N" odds for a species under the current hour/weather pool. */
@@ -274,42 +260,31 @@ export function fishOdds(fish: FishDef): number {
   return Math.max(1, Math.round(total / w));
 }
 
-/** Tier-scaled catch celebration: shake px, confetti bursts, card ms. */
-export const CELEBRATE: Record<Rarity, { shake: number; bursts: number; cardMs: number; glow: boolean }> = {
-  common: { shake: 4, bursts: 0, cardMs: 2600, glow: false },
-  uncommon: { shake: 4, bursts: 0, cardMs: 2600, glow: false },
-  rare: { shake: 6, bursts: 1, cardMs: 3000, glow: false },
-  epic: { shake: 8, bursts: 2, cardMs: 3200, glow: false },
-  legendary: { shake: 10, bursts: 3, cardMs: 3800, glow: true },
-  seaking: { shake: 12, bursts: 4, cardMs: 4200, glow: true },
-};
+/** The catch's camera shake by tier (world units for cameraJuice's shakeCamera; the callers in the world shake it). */
+export const catchShake = (rarity: Rarity) => REVEAL[rarity].shake;
 
-export function celebrate(rarity: Rarity, color: string) {
-  const c = CELEBRATE[rarity];
-  // Screen shake — amplitude by tier (no-op when no canvas is mounted,
-  // e.g. on the lab bench).
-  const a = c.shake;
-  document.querySelector("canvas")?.animate(
-    [
-      { transform: "translate(0,0)" },
-      { transform: `translate(${a}px,${-a / 2}px)` },
-      { transform: `translate(${-a}px,${a / 2}px)` },
-      { transform: `translate(${a / 2}px,${a / 3}px)` },
-      { transform: "translate(0,0)" },
-    ],
-    { duration: 90 + a * 25 }
-  );
-  // Confetti from rare up; tier-tinted for the crown tiers.
-  for (let i = 0; i < c.bursts; i++) {
+/**
+ * Soft paper confetti for a catch from rare up (none below): a few small pastel pieces in the rarity's colour, cream
+ * and butter, drifting down from `origin` (the card), more bursts for the rarer. No-op with reduced motion.
+ */
+export function celebrate(rarity: Rarity, color: string, origin: { x: number; y: number } = { x: 0.5, y: 0.72 }) {
+  const bursts = REVEAL[rarity].confetti;
+  for (let i = 0; i < bursts; i++) {
     window.setTimeout(() => {
       confetti({
-        particleCount: 50 + i * 40,
-        spread: 65 + i * 12,
-        startVelocity: 38,
-        origin: { x: 0.5, y: 0.72 },
-        colors: [color, "#FFD166", "#FFFDF5"],
+        particleCount: 16 + i * 8,
+        spread: 70 + i * 10,
+        startVelocity: 20 + i * 3,
+        gravity: 0.65,
+        drift: (i % 2 ? 1 : -1) * 0.3,
+        decay: 0.92,
+        scalar: 0.72,
+        ticks: 240,
+        shapes: ["circle", "square"],
+        origin,
+        colors: [color, "#fffbe7", "#ffeea0"],
         disableForReducedMotion: true,
       });
-    }, i * 220);
+    }, i * 260);
   }
 }

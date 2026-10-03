@@ -214,6 +214,11 @@ export type BadgeTone = "neutral" | "sage" | "success" | "warn" | "danger" | "in
 export function Badge({ tone = "neutral", children, className, ...rest }: HTMLAttributes<HTMLSpanElement> & { tone?: BadgeTone }) {
   return <span {...rest} className={cx(styles.badge, className)} data-tone={tone}>{children}</span>;
 }
+export type BadgeRarity = Rarity | "seaking";
+/** A rarity tag in the one rarity palette (--gui-rarity-*, ink text): the catch card, the journal, the book. */
+export function RarityBadge({ rarity, children, className, style, ...rest }: HTMLAttributes<HTMLSpanElement> & { rarity: BadgeRarity }) {
+  return <span {...rest} className={cx(styles.badge, className)} data-tone="rarity" data-rarity={rarity} style={{ ...style, "--rarity": `var(--gui-rarity-${rarity})` } as CSSProperties}>{children}</span>;
+}
 /** The red count on a shoulder (unread mail, new items); nothing at zero. */
 export function Counter({ n, max = 9, className }: { n: number; max?: number; className?: string }) {
   if (!n) return null;

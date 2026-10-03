@@ -22,6 +22,7 @@ import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } 
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
 import { addContact } from "../ContactShadows";
+import FishingRig from "./FishingRig";
 
 export type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
 /** v6 is 1.045 m tall; at 1.3 a character stands ~1.36 world units, a little over one tile (ACNH). */
@@ -350,10 +351,10 @@ class Puppet {
     if (changed) this.play(want);
     const action = this.action!, length = action.getClip().duration;
     if (CLIP_BY_NAME.get(want)?.scrub) {
-      // Posed by its phase (Air by vertical speed), not by the clock.
+      // Posed by its phase (Air by vertical speed, CastWindup by the cast's power), not by the clock.
       action.setEffectiveTimeScale(0);
-      action.time = Math.min(1, Math.max(0, motion.air ?? 0)) * length * 0.999;
-    } else action.setEffectiveTimeScale(want === this.oneShot ? this.oneShotRate : tempo(want, motion.speed, walkSpeed));
+      action.time = Math.min(1, Math.max(0, (want === "Air" ? motion.air : motion.scrub) ?? 0)) * length * 0.999;
+    } else action.setEffectiveTimeScale(want === this.oneShot ? this.oneShotRate : want === motion.pose && motion.poseRate ? motion.poseRate : tempo(want, motion.speed, walkSpeed));
     this.animateFace(delta, want, motion);
     // Walk and Run count each foot's contact as the playhead passes it (footsteps come from the feet, not a timer).
     const contacts = changed ? undefined : CLIP_BY_NAME.get(want)?.contacts, before = action.time / length;
@@ -521,15 +522,22 @@ const HELD_GRIPS: Record<HoldKind, Grip> = {
   glider: { clip: "HoldTool", rotation: [-0.572, -0.643, -0.883], scale: 0.45 },
   front: { clip: "HoldFront", rotation: [-2.049, -1.105, -2.508], offset: [-0.0306, 0.0195, 0.0249] },
 };
+/**
+ * The fist round the rod while fishing (art/props-enemies/render_fishing.py solves it from FishHold: 20 degrees up over
+ * the water); the fishing clips' arms and wrists do the rest: back over the shoulder, whipped forward, snapped up.
+ */
+const ROD_FISHING: [number, number, number] = [2.335, -0.59, 2.157];
 /** The grip while a tool's own clip plays (render_held.py: the cast forward, the net's swing out, the blade into the ground). */
 const USE_GRIPS: Partial<Record<ClipName, Partial<Record<HoldKind, [number, number, number]>>>> = {
-  Fish: { rod: [1.611, -0.292, 2.157] }, FishHold: { rod: [1.611, -0.292, 2.157] }, Net: { net: [2.472, -0.623, 2.401] }, Dig: { shovel: [-1.087, -0.652, -1.79] },
+  Fish: { rod: ROD_FISHING }, FishHold: { rod: ROD_FISHING }, CastWindup: { rod: ROD_FISHING }, CastSwing: { rod: ROD_FISHING }, HookYank: { rod: ROD_FISHING },
+  Reel: { rod: ROD_FISHING }, Cheer: { rod: ROD_FISHING }, Sad: { rod: ROD_FISHING },
+  Net: { net: [2.472, -0.623, 2.401] }, Dig: { shovel: [-1.087, -0.652, -1.79] },
 };
 /** Clips a hold lays over (the arms carry the item); in any other the item's own clip poses them. */
 const HOLD_OVER = new Set<ClipName>(["Idle", "Walk", "Run", "CrouchIdle", "CrouchWalk", "Jump", "Air", "Fall", "Land", "LandHeavy", "Skid", "Dash", "LookAround"]);
 /** Clips the item is put away for: seats, the glide (the leaf takes the hand), slides, rolls and climbs, defeat. */
 const HELD_HIDDEN = new Set<ClipName>(["Sit", "Study", "Stretch", "Sleep", "Glide", "Slide", "SlideIn", "SlideInDash", "SlideUp", "SlideJump", "SlideStand", "SlideBonk",
-  "Mantle", "Roll", "DodgeRoll", "Defeat"]);
+  "Mantle", "Roll", "DodgeRoll", "Defeat", "HoldUp"]);
 /** Seconds to pop out (with a little overshoot) and to shrink back into the hand. */
 const HELD_IN = 0.22, HELD_OUT = 0.12;
 const holdQ = new THREE.Quaternion(), heldQ = new THREE.Quaternion(), heldE = new THREE.Euler();
@@ -546,7 +554,7 @@ function fitted(scene: THREE.Object3D, url: string, size: number) {
   return outer;
 }
 
-function HeldItem({ puppet, view: { url, hold, fit } }: { puppet: Puppet; view: HeldView }) {
+function HeldItem({ puppet, motion, view: { url, hold, fit } }: { puppet: Puppet; motion: RefObject<CharacterMotion>; view: HeldView }) {
   const { scene } = useGLTF(url);
   const model = useMemo(() => {
     const m = hold === "front" ? fitted(scene, url, fit ?? 0.1) : tagLookClasses(scene.clone(true), url);
@@ -561,7 +569,8 @@ function HeldItem({ puppet, view: { url, hold, fit } }: { puppet: Puppet; view: 
     return () => puppet.putAway(model, grip);
   }, [model, puppet, grip]);
   useFrame((_, delta) => { age.current += delta; poseHeld(model, puppet.current, grip, hold, age.current, delta); });
-  return null;
+  // The rod carries its fishing: the bobber, the line and the catch of this avatar's own cast.
+  return hold === "rod" ? <FishingRig motion={motion} rod={model} hands={puppet.sockets} /> : null;
 }
 /** Module scope (the react compiler forbids writing through hook values): pop out, hide where put away, ease to the use grip. */
 function poseHeld(model: THREE.Object3D, clip: ClipName | null, grip: Grip, hold: HoldKind, age: number, delta: number) {
@@ -612,20 +621,21 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
     const anchor = group.current?.parent;
     return anchor ? addContact(scene, anchor, CONTACT) : undefined;
   }, [scene]);
+  // Before the default frame work (-1): what reads this frame's pose (the held rod's tip, step dust) sees it.
   useFrame((_, delta) => {
     const m = motion.current, g = group.current;
     if (!m || !g) return;
     g.rotation.y = m.yaw;
     g.position.y = m.lift;
     puppet.update(Math.min(delta, 0.1) * (m.rate ?? 1), m, walkSpeed);
-  });
+  }, -1);
   return <group ref={group}>
     <primitive object={puppet.root} scale={scale} dispose={null} />
     {weapon && <HeldWeapon puppet={puppet} motion={motion} weapon={weapon} />}
     {/* Its own boundary: the ruins never wait for the verb library; a verb asked for meanwhile plays the attack clip. */}
     {verbs && <Suspense fallback={null}><VerbClips puppet={puppet} /></Suspense>}
     {/* Its own boundary: taking out a tool never suspends the scene while its model loads. */}
-    {held && <Suspense fallback={null}><HeldItem key={`${held.hold}:${held.url}`} puppet={puppet} view={held} /></Suspense>}
+    {held && <Suspense fallback={null}><HeldItem key={`${held.hold}:${held.url}`} puppet={puppet} motion={motion} view={held} /></Suspense>}
     {/* Its own boundary: crafting the glider mid-session must not suspend the scene while the leaf loads. */}
     {leaf && <Suspense fallback={null}><HeldLeaf puppet={puppet} motion={motion} scale={scale} /></Suspense>}
   </group>;
