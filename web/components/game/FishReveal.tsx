@@ -26,11 +26,12 @@ import { oneLinerFor } from "@/lib/game/peaceful";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioManager } from "@/lib/game/audio";
-import { punchZoom } from "@/lib/game/cameraJuice";
+import { punchZoom, shakeCamera } from "@/lib/game/cameraJuice";
 import {
   HOLO_GRADIENT,
   RARITY_META,
   REVEAL,
+  catchShake,
   celebrate,
   fishOdds,
   type FishDef,
@@ -86,6 +87,7 @@ export default function FishReveal({
     changeStage("flash");
     AudioManager.playSFX("confirm");
     punchZoom(4); // micro-zoom: the crack
+    shakeCamera(catchShake(fish.rarity));
     celebrate(fish.rarity, meta.color);
     timersRef.current.push(
       window.setTimeout(() => {

@@ -284,21 +284,11 @@ export const CELEBRATE: Record<Rarity, { shake: number; bursts: number; cardMs: 
   seaking: { shake: 12, bursts: 4, cardMs: 4200, glow: true },
 };
 
+/** The catch's camera shake by tier (world units for cameraJuice's shakeCamera; the callers in the world shake it). */
+export const catchShake = (rarity: Rarity) => CELEBRATE[rarity].shake * 0.007;
+
 export function celebrate(rarity: Rarity, color: string) {
   const c = CELEBRATE[rarity];
-  // Screen shake — amplitude by tier (no-op when no canvas is mounted,
-  // e.g. on the lab bench).
-  const a = c.shake;
-  document.querySelector("canvas")?.animate(
-    [
-      { transform: "translate(0,0)" },
-      { transform: `translate(${a}px,${-a / 2}px)` },
-      { transform: `translate(${-a}px,${a / 2}px)` },
-      { transform: `translate(${a / 2}px,${a / 3}px)` },
-      { transform: "translate(0,0)" },
-    ],
-    { duration: 90 + a * 25 }
-  );
   // Confetti from rare up; tier-tinted for the crown tiers.
   for (let i = 0; i < c.bursts; i++) {
     window.setTimeout(() => {

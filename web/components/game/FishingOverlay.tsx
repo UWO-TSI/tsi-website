@@ -35,7 +35,7 @@ import { castLine, collect, landCatch, localCollections, localRecord, mergeWithL
 import { rodByTier, type RodTier } from "@/lib/game/rods";
 import { oneLinerFor, rollFishFor } from "@/lib/game/peaceful";
 import type { WaterType } from "@/lib/game/fishingSpots";
-import { punchZoom, setTensionZoom } from "@/lib/game/cameraJuice";
+import { punchZoom, setTensionZoom, shakeCamera } from "@/lib/game/cameraJuice";
 import {
   CAST,
   CELEBRATE,
@@ -43,6 +43,7 @@ import {
   HOLO_GRADIENT,
   RARITY_META,
   START_PROGRESS,
+  catchShake,
   celebrate,
   currentFishingContext,
   rollFish,
@@ -177,10 +178,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         timersRef.current.push(
           window.setTimeout(() => {
             window.dispatchEvent(new CustomEvent("tsi:fish-nibble"));
-            document.querySelector("canvas")?.animate(
-              [{ transform: "translate(0,0)" }, { transform: "translate(1.5px,1px)" }, { transform: "translate(0,0)" }],
-              { duration: 90 }
-            );
+            shakeCamera(0.012); // the faintest tug
           }, at)
         );
       }
@@ -189,19 +187,9 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
       window.setTimeout(() => {
         changePhase("bite");
         punchZoom(3); // micro-zoom: the strike
-        window.dispatchEvent(new CustomEvent("tsi:fish-bite")); // bobber slam + "!"
-        // G1 hit-confirmation: a 130ms screen nudge sells the bite. The
-        // canvas transform is DOM-only — zero render cost.
-        document.querySelector("canvas")?.animate(
-          [
-            { transform: "translate(0,0)" },
-            { transform: "translate(5px,-3px)" },
-            { transform: "translate(-5px,3px)" },
-            { transform: "translate(3px,2px)" },
-            { transform: "translate(0,0)" },
-          ],
-          { duration: 150 }
-        );
+        window.dispatchEvent(new CustomEvent("tsi:fish-bite")); // the bobber pulled under in a crown of water, the "!"
+        // The bite lands on the camera (the world's shake, the Screen shake setting), never the page.
+        shakeCamera(0.065);
         AudioManager.playSFX("confirm");
         // Cast power widens the hook window (max cast: 1.4s → 2.2s).
         const windowMs = BITE_WINDOW_MS + CAST.biteBonusMs * powerRef.current + rod.biteWindowMs;
@@ -333,6 +321,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
           // Repeats keep the quick card + tier confetti.
           changePhase("caught");
           AudioManager.playSFX("confirm");
+          shakeCamera(catchShake(fish.rarity));
           celebrate(fish.rarity, RARITY_META[fish.rarity].color);
           timersRef.current.push(window.setTimeout(cancel, CELEBRATE[fish.rarity].cardMs));
         }
