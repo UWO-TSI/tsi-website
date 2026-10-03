@@ -4,6 +4,7 @@
  * plus classes v2's shared ones (lib/game/combat/primitives.ts).
  */
 import { ELEMENTALIST } from "./arcane/elementalist";
+import { ILLUSIONIST } from "./arcane/illusionist";
 
-export { ELEMENTALIST };
-export const ARCANE_KITS = [ELEMENTALIST];
+export { ELEMENTALIST, ILLUSIONIST };
+export const ARCANE_KITS = [ELEMENTALIST, ILLUSIONIST];
