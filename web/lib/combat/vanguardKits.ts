@@ -113,7 +113,61 @@ export const JUGGERNAUT: ClassKit = {
   look: { ramp: ["#fff3dc", "#e8a23a", "#4a2408"], mote: "debris", drift: "fall", icon: "/assets/game/classes/juggernaut.svg" },
 };
 
-export const VANGUARD_KITS: ClassKit[] = [GUARDIAN, JUGGERNAUT];
+// ── Martial Artist (key `monk`): attack speed, realistic Muay Thai; skills are techniques woven into the chain ──
+const strike = (power: number, more: Partial<Extract<ClassAbility["effects"][number], { kind: "strike" }>> = {}) => ({ kind: "strike" as const, power, range: 1.7, knock: 1.5, ...more });
+export const MARTIAL_ARTIST: ClassKit = {
+  key: "monk", name: "Martial Artist", family: "Vanguard", role: "damage", style: "basic",
+  signature: { type: "handwraps", name: "hand wraps" },
+  stat: { kind: "attack_speed", at1: 1, at20: 1.3 },
+  basic: { reset: 1, chain: [
+    { power: 0.6, clip: "Unique_Jab", time: 0.8, arc: 1.2, knock: 1 },
+    { power: 0.8, clip: "Unique_Cross", time: 0.9, arc: 1.2, knock: 1.5 },
+    { power: 0.95, clip: "Unique_Hook", arc: 1.8, knock: 2 },
+    { power: 1.35, clip: "Unique_BodyKick", time: 1.3, arc: 2, range: 1.7, knock: 4 },
+  ] },
+  keys: [
+    { key: "monk.teep", name: "Teep", icon: I("teep"), description: "A push kick: shoves the target back and makes space. Stronger slotted into the chain.",
+      cooldown_s: 4, energy: 15, chain: { bonus: 0.4 }, effects: [strike(1.1, { range: 1.9, knock: 9, status: { hold: 0.3 } })],
+      clip: { unique: "Unique_Teep" }, vfx: { impact: "monk.teep" } },
+    { key: "monk.elbow", name: "Elbow", icon: I("elbow"), description: "A slashing elbow: a big hit and a cut that bleeds for 3 s. Stronger slotted into the chain.", heavy: true,
+      cooldown_s: 6, energy: 20, chain: { bonus: 0.5 },
+      effects: [strike(1.9, { range: 1.5, knock: 3 }), ...[1, 2, 3].map(t => ({ kind: "after" as const, delay: t, fx: "monk.cut", tier: "light" as const, effects: [strike(0.25, { knock: 0 })] }))],
+      clip: { unique: "Unique_Elbow" }, vfx: { impact: "monk.elbow" } },
+    { key: "monk.clinch", name: "Clinch Knees", icon: I("clinch"), description: "Grab the target and knee it three times; it's stunned and can't move for the whole technique.",
+      cooldown_s: 9, energy: 25, chain: { bonus: 0.4 },
+      effects: [strike(0.1, { range: 1.6, knock: 0, status: { hold: 1.4 } }),
+        { kind: "after", delay: 0.3, effects: [strike(0.75, { knock: 0.2 })] }, { kind: "after", delay: 0.7, effects: [strike(0.75, { knock: 0.2 })] },
+        { kind: "after", delay: 1.1, tier: "heavy", effects: [strike(0.95, { knock: 5 })] }],
+      clip: { unique: "Unique_ClinchKnees" }, vfx: { impact: "monk.knee" } },
+    { key: "monk.roundhouse", name: "Roundhouse", icon: I("roundhouse"), description: "A shin kick across a wide arc in front. Stronger slotted into the chain.",
+      cooldown_s: 5, energy: 20, chain: { bonus: 0.4 }, effects: [{ kind: "area", power: 1.3, radius: 2.3, at: "self", arc: 3, knock: 5 }],
+      clip: { unique: "Unique_Roundhouse" }, vfx: { impact: "monk.roundhouse" } },
+    { key: "monk.knee", name: "Flying Knee", icon: I("flyingknee"), description: "From a run, a slide or a dash: a leaping knee that keeps your momentum and starts a chain.",
+      unlock: 3, when: "moving", cooldown_s: 7, energy: 20, chain: { bonus: 0.3 },
+      effects: [{ kind: "launch", height: 0.5 }, { kind: "dash", distance: 4, power: 1.6 }, { kind: "momentum", speed: 3 }],
+      clip: { unique: "Unique_FlyingKnee" }, vfx: { cast: "monk.leap", impact: "monk.knee" } },
+  ],
+  passive: { name: "Rhythm", description: "Each hit in a chain adds 8% attack speed, up to +40%; a 1 s gap resets it.", kind: "rhythm", value: 0.08, cap: 5 },
+  ult: { key: "monk.ult", name: "Art of Eight Limbs", icon: I("eightlimbs"),
+    description: "Lock onto one enemy for eight strikes (fists, elbows, knees, shins), each its own impact; the final roundhouse lands with a shockwave.",
+    cooldown_s: 0, energy: 0, charge: 1, anticipation_ms: 400, impacts: "first-last", duration: 2.4,
+    effects: [strike(1.4, { range: 2.6, arc: 3, knock: 0, status: { hold: 3 } }),
+      ...[[0.28, 1.4], [0.56, 1.5], [0.84, 1.5], [1.12, 1.6], [1.4, 1.6], [1.72, 1.8]].map(([t, pw]) => ({ kind: "after" as const, delay: t, tier: "heavy" as const, fx: "monk.ultHit", effects: [strike(pw, { knock: 0.3 })] }))],
+    release: [strike(3.5, { range: 3, knock: 10 }), { kind: "area", power: 1.5, radius: 3.5, at: "self", knock: 6 }],
+    clip: { unique: "Ult_MartialArtist" }, vfx: { cast: "monk.ultCast", impact: "monk.ultImpact", zone: "monk.ultShock" } },
+  ranks: RANKS([
+    { at: 5, target: "monk.teep", change: { label: "+20% power", power: 1.2 } },
+    { at: 7, target: "monk.clinch", change: { label: "−20% cooldown", cooldown: 0.8 } },
+    { at: 10, target: "ult", change: { label: "+10% power", power: 1.1 } },
+    { at: 12, target: "monk.elbow", change: { label: "+20% power and cut", power: 1.2 } },
+    { at: 14, target: "monk.roundhouse", change: { label: "+25% arc reach", radius: 1.25 } },
+    { at: 16, target: "passive", change: { label: "+25% attack speed per hit", power: 1.25 } },
+    { at: 18, target: "ult", change: { label: "+10% power", power: 1.1 } },
+  ]),
+  look: { ramp: ["#fff6e8", "#f2913a", "#5a1e08"], mote: "flare", drift: "rise", icon: "/assets/game/classes/martial-artist.svg" },
+};
+
+export const VANGUARD_KITS: ClassKit[] = [GUARDIAN, JUGGERNAUT, MARTIAL_ARTIST];
 
 // ── Signature weapons (§1.5): one type per subclass, tiers 1–5 (T1 wood/cloth, T2 iron, T3 rune-etched, T4 gilded with a glow part, T5 animated runes) ──
 const SIG = (subclass: string, type: string, scaling: WeaponDef["scaling"], names: [string, string][]): WeaponDef[] =>
@@ -121,4 +175,5 @@ const SIG = (subclass: string, type: string, scaling: WeaponDef["scaling"], name
 export const VANGUARD_WEAPONS: WeaponDef[] = [
   ...SIG("guardian", "aegis", ["might", "vitality"], [["aegis-oak", "Oak shield and sword"], ["aegis-iron", "Iron shield and sword"], ["aegis-rune", "Rune-etched aegis"], ["aegis-gilt", "Gilded aegis"], ["aegis-dawn", "Dawnward aegis"]]),
   ...SIG("juggernaut", "warhammer", ["might", "vitality"], [["warhammer-timber", "Timber war hammer"], ["warhammer-iron", "Iron war hammer"], ["warhammer-rune", "Rune-etched war hammer"], ["warhammer-gilt", "Gilded war hammer"], ["warhammer-quake", "Quakeborn war hammer"]]),
+  ...SIG("monk", "handwraps", ["might", "finesse"], [["handwraps-cotton", "Cotton fight wraps"], ["handwraps-iron", "Iron-knuckle wraps"], ["handwraps-rune", "Rune-stitched wraps"], ["handwraps-gilt", "Gilded wraps"], ["handwraps-sun", "Sunfire wraps"]]),
 ];

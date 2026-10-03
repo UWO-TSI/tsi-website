@@ -94,6 +94,20 @@ const VANGUARD_FX: Record<string, FxRecipe> = {
     { kind: "mesh", shape: "beam", from: 0.5, to: 9, life: 0.7 }, debrisOf(16, 0.6), dust(10, 2.2, { speed: [2.5, 5] }), { kind: "light", intensity: 40, distance: 13, life: 0.5 }] },
   /** Titan's swings (and its ult areas' zone): a shockwave out in front, chips and dust. */
   "juggernaut.ultShock": { tier: "ability", layers: [ring(0.6, 4, 0.4, { lift: 0.3 }), debrisOf(5, 0.4), dust(4, 1.2, { speed: [2, 3.5] }), decal("crack", 2.4, 2)] },
+  // ── Martial Artist ──
+  "monk.teep": { tier: "ability", layers: [star(1.2, 0.2), lines(6, 1, 0.22, { toward: "aim" }), dust(2, 0.6)] },
+  "monk.elbow": { tier: "heavy", layers: [glow(P("slash", [1, 1], [0.24, 0.24], [2.2, 2.2], { grow: 1.1 }), { lift: 1.1 }), star(1.8, 0.25), sparks(3, 1.4), heavyLines, ring(0.2, 1.6, 0.25, { lift: 1 })] },
+  "monk.cut": { tier: "light", layers: [glow(P("slash", [1, 1], [0.18, 0.18], [0.8, 0.8], { grow: 1.1 }), { lift: 1 }), glow(P("flare", [1, 1], [0.14, 0.16], [0.4, 0.5]), { lift: 1 })] },
+  "monk.knee": { tier: "ability", layers: [star(1.4, 0.22), sparks(2, 1.1), ring(0.2, 1.4, 0.22, { lift: 0.9 })] },
+  "monk.roundhouse": { tier: "ability", layers: [glow(P("slash", [2, 2], [0.24, 0.26], [2.6, 3], { grow: 1.15 }), { lift: 1 }), sparks(2, 1.2), ring(0.4, 2.3, 0.3, { lift: 0.8 })] },
+  "monk.leap": { tier: "ability", layers: [dust(4, 0.8), lines(6, 1.1, 0.25, { toward: "aim" })] },
+  "monk.ultCast": { tier: "ult", layers: [glow(P("swirl", [1, 1], [0.45, 0.45], [1.8, 1.8], { grow: 0.5 }), { lift: 1 }), glow(P("mote", [24, 28], [0.35, 0.45], [0.2, 0.28], { speed: [-4, -3], jitter: 2.2, grow: 0.4, rise: [0.2, 1.8] }), { lift: 0.2 }),
+    decal("rune", 2.6, 1, { spin: 0.6 }), { kind: "light", intensity: 20, distance: 8, life: 0.45 }] },
+  /** Each of the eight strikes between the first and the last: its own small impact frame (heavy tier). */
+  "monk.ultHit": { tier: "heavy", layers: [star(1.9, 0.22), sparks(2, 1.4), heavyLines, ring(0.2, 1.8, 0.22, { lift: 1 })] },
+  "monk.ultImpact": { tier: "ult", layers: [star(4.5, 0.4), sparks(4, 2.6), halo(4, 0.45, 0.9), heavyLines, lines(14, 2.8, 0.4, { lift: 1 }),
+    glow(P("slash", [2, 2], [0.3, 0.32], [4, 4.6], { grow: 1.15 }), { lift: 1.1 }), ring(0.5, 5.5, 0.55, { lift: 0.5 }), dust(8, 1.8, { speed: [2.5, 4.5] }), { kind: "light", intensity: 36, distance: 11, life: 0.45 }] },
+  "monk.ultShock": { tier: "ult", layers: [ring(0.4, 4, 0.5, { lift: 0.15 }), decal("crack", 2, 3, { byRadius: true })] },
 };
 
 export const FX: Record<string, FxRecipe> = {

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { GUARDIAN, JUGGERNAUT } from "@/lib/combat/vanguardKits";
-import type { ClassKit } from "@/lib/combat/classes";
+import { GUARDIAN, JUGGERNAUT, MARTIAL_ARTIST } from "@/lib/combat/vanguardKits";
+import { CHAIN_WINDOW, type ClassKit } from "@/lib/combat/classes";
 import { signatureGrant } from "@/lib/combat/weapons";
 import { enemyTarget } from "./abilities";
-import { attack, hurtPlayer } from "./actions";
+import { attack, attackSpeed, hurtPlayer } from "./actions";
 import { classKey, equipClassKit, pressUlt, stepClass } from "./classRuntime";
 import { ENEMIES } from "./data";
 import { stepCombat } from "./encounter";
@@ -159,5 +159,67 @@ describe("Juggernaut: the hammer hits harder with max HP, Unstoppable, Seismic D
     const before = lost(far);
     p.attackCd = 0; attack(rt, ME, never);
     expect(lost(far)).toBeGreaterThan(before);
+  });
+});
+
+describe("Martial Artist: the chain, techniques woven in, Rhythm, the clinch", () => {
+  it("the basic chain loops jab, cross, hook, body kick, each its own clip", () => {
+    const { rt, p } = setup(MARTIAL_ARTIST);
+    const clips: string[] = [];
+    for (let i = 0; i < 5; i++) { p.attackCd = 0; attack(rt, ME, never); clips.push(p.clip!.verb); frame(rt, 0.2); }
+    expect(clips).toEqual(["Unique_Jab", "Unique_Cross", "Unique_Hook", "Unique_BodyKick", "Unique_Jab"]);
+  });
+  it("a technique right after a chain hit slots in, 40% stronger than as an opener; after the window it's an opener", () => {
+    const teep = (afterHit: number | null) => {
+      const { rt, p, foe } = setup(MARTIAL_ARTIST, 1, "shadow-fox"); // no armour: damage scales cleanly
+      if (afterHit !== null) { attack(rt, ME, never); frame(rt, afterHit); }
+      const before = lost(foe);
+      p.attackCd = 0;
+      tap(rt, 0);
+      return { dealt: lost(foe) - before, i: rt.v2!.chain.i };
+    };
+    const opener = teep(null), woven = teep(0.4), late = teep(CHAIN_WINDOW + 0.1);
+    expect(woven.dealt / opener.dealt).toBeCloseTo(1.4, 1);
+    expect(late.dealt).toBe(opener.dealt);
+    expect(woven.i).toBe(2); // the chain carries on: the next press is the cross... after the teep, the hook
+  });
+  it("Rhythm: each chain hit adds 8% attack speed up to +40%, and a 1 s gap resets it", () => {
+    const { rt, p } = setup(MARTIAL_ARTIST);
+    for (let i = 0; i < 7; i++) { p.attackCd = 0; attack(rt, ME, never); frame(rt, 0.1); }
+    expect(attackSpeed(rt)).toBeCloseTo(1.4);
+    frame(rt, 1.05);
+    expect(attackSpeed(rt)).toBe(1);
+    expect(rt.v2!.chain.i).toBe(0);
+  });
+  it("Clinch Knees holds the target for the whole technique while three knees land", () => {
+    const { rt, foe } = setup(MARTIAL_ARTIST, 1, "shadow-fox");
+    foe.hp = 99999;
+    tap(rt, 2);
+    const hits: number[] = [];
+    let last = lost(foe);
+    for (let t = DT; t < 1.3; t += DT) {
+      frame(rt);
+      expect(foe.status.hold, `held at ${t.toFixed(2)} s`).toBeGreaterThan(0);
+      if (lost(foe) > last) { hits.push(Math.round(t * 10) / 10); last = lost(foe); }
+    }
+    expect(hits).toEqual([0.3, 0.7, 1.1]);
+  });
+  it("Flying Knee needs a run, a slide or a dash, and starts a chain", () => {
+    const { rt, p } = setup(MARTIAL_ARTIST, 3);
+    tap(rt, 4);
+    expect(rt.floaters.some(f => f.text === "Run, slide or dash first")).toBe(true);
+    p.move = { mode: "ground", speed: 7.4, sinceDash: 9, vx: 0, vz: 7.4 };
+    tap(rt, 4);
+    expect(p.kick).toMatchObject({ speed: 0, up: 0.5 }); // the hop now; the momentum where the knee lands
+    expect(rt.v2!.chain.i).toBe(1);
+  });
+  it("the Art of Eight Limbs: eight strikes on one locked enemy, heavy impacts between, the last with the full sequence", () => {
+    const { rt, foe } = setup(MARTIAL_ARTIST);
+    const other = add(rt, "stone-golem", 0.6, 1.6);
+    rt.v2!.meter = 100; pressUlt(rt);
+    let hits = 0, last = 0;
+    for (let t = 0; t < 3.2; t += DT) { frame(rt); if (lost(foe) > last) { hits++; last = lost(foe); } }
+    expect(hits).toBe(8);
+    expect(lost(other)).toBeGreaterThan(0); // the final roundhouse's shockwave
   });
 });

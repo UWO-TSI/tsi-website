@@ -240,7 +240,7 @@ export const SUBCLASSES: Subclass[] = [
     starter_note: "Without a shield the guard blocks half as much.",
   }),
   k({
-    key: "monk", name: "Monk", family: "Vanguard", weapon_affinity: ["fists"],
+    key: "monk", name: "Martial Artist", family: "Vanguard", weapon_affinity: ["fists"],
     signature: a("monk.flow", "Flowing Strikes", "Advance through a short martial-arts combo.", 6, 25, [dash(2.5, { power: 0.8 }), hit(1.4, 2.2, "self", { arc: 2 })], { gear: { type: "fists", without: 0.85 } }),
     abilities: [
       a("monk.palm", "Palm Wave", "A wave of force from an open palm.", 4, 15, [shot(1.1, { speed: 16, range: 7, pierce: true })], { gear: { type: "fists", without: 0.85 } }),
