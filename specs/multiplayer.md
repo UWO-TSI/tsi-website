@@ -266,6 +266,7 @@ Player (in players: { map: Player, view: true }), keyed by sessionId
   x,y,z int16 (cm)   vx,vy,vz int16 (cm/s, clamp ±40 u/s)   yaw uint16 (2π/65536)
   move uint8 (MOVE_CLIPS: 0 none, Air, Fall, Glide, Skid, Slide, CrouchWalk, CrouchIdle; append-only)
   air uint8, leaf uint8 (0..1.3 → 0..255), lift int16 (mm, seats)
+  seat string (bench or café seat key the player holds, "" when standing; claimed through `s {seat}`)
   tp uint8 (wrapping teleport counter: the server bumps it with each flagged sample, in the same patch as the new position; receivers snap when it changes)
 IslandState: epoch float64 (server Date.now() at create), shard uint8,
   players (view), roster: { map: RosterEntry {uid,name,badge,area,flags} }  // whole shard, presence list
