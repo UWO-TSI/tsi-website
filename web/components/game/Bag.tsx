@@ -8,7 +8,7 @@
  */
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { ArrowDownWideNarrow, Backpack, Lock, LockOpen, Pin, PinOff } from "lucide-react";
-import { Badge, Button, ConfirmDialog, IconButton, ItemTile, Loading, Progress, Sheet, Tabs, type Rarity } from "@/components/gui";
+import { Badge, Button, ConfirmDialog, IconButton, ItemTile, Loading, Progress, Sheet, SignInText, Tabs, type Rarity } from "@/components/gui";
 import { InventoryBody } from "@/components/economy/EconomySheets";
 import { Amount } from "@/components/economy/Amount";
 import { arrange, itemInfo, slotCounts, stackSize, type Slot } from "@/lib/collections/bag";
@@ -132,7 +132,7 @@ function Pockets() {
     </div>
     {over ? <p className={s.warn} role="status">Over by {view.used - view.capacity}: you keep everything, but you can&apos;t pick anything up until you make room.</p>
       : view.used >= view.capacity && view.items.length > 0 && <p className={s.warn} role="status">Full: only what tops up a stack you have still fits. Sell, drop or store something in the chest at home, or get a bigger pocket at the shop.</p>}
-    {bag.local && <p className={s.hint}>Saved on this device. Sign in to keep a backpack and a storage chest.</p>}
+    {bag.local && <p className={s.hint}><SignInText text="Saved on this device. Sign in to keep a backpack and a storage chest." /></p>}
     <Pins stock={stock} onNote={setNote} />
     <div className={s.layout}>
       <div className={s.pocket}>

@@ -16,6 +16,8 @@ import styles from "./gui.module.css";
 export { Keycap, NPCDialogue as Dialogue, VillageButton as Button, VillageField as Field, VillageTextArea as TextArea, VillagePanel as Panel };
 /** Toasts: the island's one lane (components/game/ToastHub), paper slips inside a .gui scope. `toast(text, icon?)` from anywhere. */
 export { default as ToastHub, toast } from "@/components/game/ToastHub";
+/** "Sign in" links back to where you are (reachability §3). */
+export { SignInLink, SignInText, useSignInHref } from "./SignIn";
 
 const cx = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(" ");
 

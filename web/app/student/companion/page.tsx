@@ -9,7 +9,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BookOpen, Flag, Smile, type LucideIcon } from "lucide-react";
-import { Loading } from "@/components/gui";
+import { Loading, useSignInHref } from "@/components/gui";
 import { ApiError, apiCall } from "@/lib/apiClient";
 import { useCoarsePointer, useSearch } from "@/lib/game/useMediaQuery";
 import StudyTab from "@/components/companion/StudyTab";
@@ -87,12 +87,14 @@ export default function CompanionPage() {
 }
 
 function SignInGate() {
+  // Signing in comes back to the companion (reachability §3; it went to the island before).
+  const href = useSignInHref();
   return (
     <section className={s.card}>
       <h2>Sign in to open the club</h2>
       <p className={s.muted}>Study with the table, check bounties and events, and see your profile from your phone.</p>
       <div className={s.row} style={{ marginTop: 12 }}>
-        <a className={s.btn} href="/student" style={{ display: "grid", placeItems: "center", textDecoration: "none" }}>
+        <a className={s.btn} href={href} style={{ display: "grid", placeItems: "center", textDecoration: "none" }}>
           Sign in
         </a>
       </div>

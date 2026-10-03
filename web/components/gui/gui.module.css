@@ -226,3 +226,10 @@ button.tile:hover { transform: translateY(-2px) scale(1.04); }
 :global(html[data-contrast="high"]) .head { --head: #ffffff; border-bottom: 2px solid #000000; }
 :global(html[data-contrast="high"]) .tab[aria-selected="true"], :global(html[data-contrast="high"]) .row[data-selected] { background: #000000; color: #ffffff; }
 :global(html[data-contrast="high"]) .rowDetail, :global(html[data-contrast="high"]) .emptyText, :global(html[data-contrast="high"]) .eyebrow { color: #000000; }
+
+/* Sign in (reachability §3): the words in a sentence underlined with the highlighter, or a sage pill as an empty state's action. */
+.signInLink { color: var(--gui-ink-strong); font-weight: 800; text-decoration: underline; text-decoration-color: var(--gui-highlight); text-decoration-thickness: 3px; text-underline-offset: 3px; pointer-events: auto; }
+.signInLink:hover { text-decoration-color: var(--gui-wood-light); }
+.signInButton { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 22px; border-radius: var(--gui-r-pill); background: var(--gui-sage); color: var(--gui-paper); font-weight: 800; text-decoration: none; box-shadow: 0 3px 0 var(--gui-sage-deep); }
+.signInButton:hover { filter: brightness(1.06); }
+.signInButton:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--gui-sage-deep); }

@@ -54,6 +54,56 @@ Escape leaves at any point. Seated residents stay seated and talk from the bench
 
 **Question:** is that the rule you want, or should talks stay entirely local (simplest, and everyone sees a resident who never stops)?
 
+## 2. The wallet (K, or click the coins)
+
+**What it shows.**
+- TC on its own card, with Gems beside it.
+- Today's gift: if it's waiting, open it right there and the HUD counts it in; if it's opened, it says when the next one comes (midnight, Toronto time).
+- What you've earned and spent lately, on two tabs, by day, each move in plain words with its own icon: "Sold Dace", "Bought Straw hat", "Today's gift".
+
+It never shows a dollar amount or a rate between TC and Gems. The portal's Wallet page uses the same component. The list is the server's last 20 moves (the existing read), so the tab totals cover those 20, not a whole week.
+
+**Question:** would a "this week" total be useful? It needs the wallet read to return a week of moves instead of the last 20.
+
+The coin's name follows `COINS.name` ("TC" today). Your decision on the currency names (decisions #3) changes it in one place.
+
+## 3. Sign-in links
+
+**Built.**
+- Every in-game "Sign in…" now links to the sign-in entry with the page you're on as `next`, so signing in brings you back. The words "sign in" in the message are the link:
+  - toasts: adding a room, the ruins gate;
+  - the gift card;
+  - the wallet;
+  - the bag and the chest;
+  - the mission board;
+  - the workbench;
+  - the Oracle;
+  - Settings;
+  - the Journal's preview;
+  - the creator's name check, which used to show the raw "Unauthorized".
+- The trophy case, the tourney board and the mailbox offer a "Sign in" button.
+- The study prompt and the phone companion link back to where you were. The companion's sign-in used to go to `/student` with no destination.
+- A toast with a sign-in link stays up 6.5 seconds and can be tapped.
+
+The builder is `lib/game/signIn.ts`. It never points `next` at a sign-in page or off the site.
+
+**What I found at the sign-in entry (`/student`, `GamePortalLogin`; the other session owns it).**
+- Google is already offered first ("Continue with Google"), with email and password under it, plus "Forgot password?" and "Create an account".
+- `?next=` is honoured for both Google and email: through `/api/auth/callback?next=/student/go?next=…` and then `/student/go`. A visitor who is already signed in is sent from `/student` to `/student/go` with the `next` kept. While the member world is closed in production, `/student/go` sends everyone to the applicant portal and ignores `next`, which is fine for now.
+
+**What it needs from the other session (davidliu-37).**
+1. **Keep the page someone was going to.** The middleware sends a signed-out visitor from `/student/dashboard/**`, `/student/onboarding/**` and `/student/election` to `/student` *without* `next` (`lib/supabase/middleware.ts`, each `url.pathname = "/student"`). So a deep link such as `/student/dashboard/economy/wallet` lands on the island after sign-in. Fix: `url.searchParams.set("next", pathname + search)` before each redirect. `/student/go` already validates it.
+2. **Row 224, Google only.** Keep email and password for now. The applicants' sign-up (`components/recruit/AuthModal.tsx`) and `/student/signup` both create password accounts, so some existing accounts may only be able to sign in that way. Before removing the email form, "Forgot password?" and "Create an account", count them (read-only):
+
+   ```sql
+   select p.tier, count(*) from auth.users u left join public.profiles p on p.id = u.id
+   where not exists (select 1 from auth.identities i where i.user_id = u.id and i.provider = 'google')
+   group by p.tier order by p.tier;
+   ```
+
+   If members are in that list, tell them to use "Continue with Google" with the same address. Supabase links identities with the same verified email.
+3. **The redirect allow-list.** The Google button's `redirectTo` now carries a nested `next` more often. Check that the production Supabase Auth redirect URLs allow `https://www.tethos.ca/api/auth/callback**` with query strings.
+
 ## Migration to apply (flagged)
 
 `web/supabase/migrations/20261003161600_resident_talk.sql`:

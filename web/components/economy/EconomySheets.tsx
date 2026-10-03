@@ -10,7 +10,7 @@ import { ArrowRightLeft, Backpack, BookOpen, Briefcase, CalendarCheck, Check, Co
   ShoppingBasket, Sparkles, Store, Swords, Target, Undo2, type LucideIcon } from "lucide-react";
 import { COINS, GEMS } from "@/lib/economy";
 import { iconUrl, shopIcon } from "@/lib/icons/keys";
-import { Badge, Button, Empty, ErrorNote, List, ListRow, Loading, Tabs } from "@/components/gui";
+import { Badge, Button, Empty, ErrorNote, List, ListRow, Loading, SignInText, Tabs } from "@/components/gui";
 import { AudioManager } from "@/lib/game/audio";
 import { markGiftClaimed } from "@/lib/game/hudStore";
 import { walletSheet, type WalletKind } from "@/lib/wallet/walletSheet";
@@ -24,7 +24,8 @@ import p from "@/components/progression/progression.module.css";
 import s from "./economy.module.css";
 
 const fmt = (n: number, c: string) => <Amount n={n} currency={c} />;
-const errText = (err: unknown) => (err instanceof ApiError ? err.message : "Couldn't reach the shop. Try again.");
+// Signed out (the session ran out mid-visit): said as a sign-in, whose words link back here (reachability §3).
+const errText = (err: unknown) => (err instanceof ApiError ? (err.status === 401 ? "Sign in first." : err.message) : "Couldn't reach the shop. Try again.");
 
 function useLoad<T>(load: () => Promise<T>) {
   const [data, setData] = useState<T | null>(null);
@@ -96,7 +97,7 @@ export function ShopBody({ transport = httpEconomyTransport, initialTab = "tools
     }
   };
 
-  if (!data) return error ? <ErrorNote onRetry={() => void reload()}>{error}</ErrorNote> : <Loading label="Opening the shop…" />;
+  if (!data) return error ? <ErrorNote onRetry={() => void reload()}><SignInText text={error} /></ErrorNote> : <Loading label="Opening the shop…" />;
   const list = data.tabs[tab];
   return (
     <div>
@@ -106,7 +107,7 @@ export function ShopBody({ transport = httpEconomyTransport, initialTab = "tools
       {tab === "specials" ? <p className={p.muted} style={{ marginBottom: 8 }}>20% off today. New picks at midnight (Toronto time).</p> : null}
       {tab === "merch" ? <p className={p.muted} style={{ marginBottom: 8 }}>Real TSI merch for Gems. Reserve here, then pick it up at HQ on campus.</p> : null}
       {note ? <p role="status" className={`${p.note} ${p.ok}`}>{note}</p> : null}
-      {error ? <ErrorNote>{error}</ErrorNote> : null}
+      {error ? <ErrorNote><SignInText text={error} /></ErrorNote> : null}
       {list.length === 0 ? <Empty icon={<Store size={32} />} title={tab === "specials" ? "No specials today" : tab === "merch" ? "No merch in stock" : "Nothing on this shelf yet"}>
         {tab === "specials" ? "New picks go up at midnight, Toronto time." : tab === "merch" ? "New club merch arrives with the next order." : "The shopkeeper restocks with each update."}
       </Empty> : null}
@@ -176,12 +177,12 @@ export function SellBody({ transport = httpEconomyTransport }: { transport?: Eco
       setBusy(null);
     }
   };
-  if (!data) return error ? <ErrorNote onRetry={() => void reload()}>{error}</ErrorNote> : <Loading label="Counting your pockets…" />;
+  if (!data) return error ? <ErrorNote onRetry={() => void reload()}><SignInText text={error} /></ErrorNote> : <Loading label="Counting your pockets…" />;
   return (
     <div>
       <p className={p.muted} style={{ marginBottom: 10 }}>Prices go by rarity. Donate your first of each species to the museum before selling it. Things you locked in your bag stay put.</p>
       {earned > 0 ? <p role="status" className={`${p.note} ${p.ok}`}>+{fmt(earned, "coins")} this visit</p> : null}
-      {error ? <ErrorNote>{error}</ErrorNote> : null}
+      {error ? <ErrorNote><SignInText text={error} /></ErrorNote> : null}
       {data.length === 0 ? <Empty icon={<ShoppingBasket size={32} />} title="Nothing to sell yet">Go fishing, bug hunting or foraging, then come back.</Empty> : null}
       <ul className={s.list}>
         {data.map((e) => (
@@ -220,11 +221,11 @@ export function InventoryBody({ transport = httpEconomyTransport }: { transport?
       setError(errText(err));
     }
   };
-  if (!data) return error ? <ErrorNote onRetry={() => void reload()}>{error}</ErrorNote> : <Loading label="Opening your bag…" />;
+  if (!data) return error ? <ErrorNote onRetry={() => void reload()}><SignInText text={error} /></ErrorNote> : <Loading label="Opening your bag…" />;
   const groups = Object.entries(data.groups);
   return (
     <div>
-      {error ? <ErrorNote>{error}</ErrorNote> : null}
+      {error ? <ErrorNote><SignInText text={error} /></ErrorNote> : null}
       {groups.length === 0 ? <Empty icon={<Backpack size={32} />} title="Your bag is empty">The shop is by the plaza.</Empty> : null}
       {groups.map(([g, rows]) => (
         <section key={g} style={{ marginBottom: 12 }}>
@@ -298,7 +299,7 @@ export function WalletBody({ transport = httpEconomyTransport }: { transport?: E
       setError(errText(err));
     }
   };
-  if (!model) return error ? <ErrorNote onRetry={() => void reload()}>{signedOut(error) ? "Sign in to see your wallet." : error}</ErrorNote> : <Loading label="Opening your wallet…" />;
+  if (!model) return error ? <ErrorNote onRetry={() => void reload()}><SignInText text={signedOut(error) ? "Sign in to see your wallet." : error} /></ErrorNote> : <Loading label="Opening your wallet…" />;
   const days = tab === "earned" ? model.earned : model.spent;
   return (
     <div className={s.wallet}>
@@ -325,7 +326,7 @@ export function WalletBody({ transport = httpEconomyTransport }: { transport?: E
           <span><b>Today&apos;s gift is waiting</b><span className={p.muted}>Everyone on the island gets a little something each day.</span></span>
           <Button size="sm" onClick={() => void claim()} disabled={gift.busy}>{gift.busy ? "Opening…" : "Open it"}</Button>
         </div>}
-      {error ? <ErrorNote>{signedOut(error) ? "Sign in to open your gift." : error}</ErrorNote> : null}
+      {error ? <ErrorNote><SignInText text={signedOut(error) ? "Sign in to open your gift." : error} /></ErrorNote> : null}
       <Tabs label="Recent moves" value={tab} onChange={setTab} className={s.walletTabs}
         tabs={[{ id: "earned", label: <>Earned <span className={s.tabTotal}>+{model.totals.earned.toLocaleString()}</span></> }, { id: "spent", label: <>Spent <span className={s.tabTotal}>−{model.totals.spent.toLocaleString()}</span></> }]} />
       {days.length === 0 ? <Empty icon={<ReceiptText size={32} />} title={tab === "earned" ? "Nothing earned yet" : "Nothing spent yet"}>
@@ -342,7 +343,7 @@ export function WalletBody({ transport = httpEconomyTransport }: { transport?: E
     </div>
   );
 }
-const signedOut = (message: string) => /unauthori[sz]ed|sign in/i.test(message);
+const signedOut = (message: string) => message === "Sign in first.";
 
 type SheetProps = ProgressionSheetProps & { transport?: EconomyTransport; keys?: string };
 export const SellSheet = ({ open, onClose, transport }: SheetProps) => <ProgressionPanel open={open} onClose={onClose} title="Sell"><SellBody transport={transport} /></ProgressionPanel>;

@@ -15,7 +15,7 @@ import { useState, useSyncExternalStore } from "react";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import type { QualityTier } from "@/lib/game/qualityTier";
 import { ACTION_LABEL, MENU_ACTIONS, REMAPPABLE_ACTIONS, TEXT_SIZES, normalizeKey, type MenuAction, type TextSize } from "@/lib/identity/settings";
-import { Button, Select, Slider, Toggle } from "@/components/gui";
+import { Button, Select, SignInText, Slider, Toggle } from "@/components/gui";
 import { saveSettings, setAuraVisible, useWorldIdentity } from "@/lib/game/identity";
 import { ABILITIES, type AbilityId } from "@/lib/game/combat/runtime";
 import { IS_MAC, MOVE_ACTIONS, abilityPreset, canLockKeyboard, crouchKey, keyName, playFullscreenWithCtrl, presetAbilities, remapAbility, remapMove, remapWheel, useAbilityKeys, useKeyboardLocked, useMoveKeys, useNextKey, useWheelKeys, type MoveAction } from "@/lib/game/movement/keys";
@@ -194,6 +194,6 @@ export default function SettingsSheet({ open, onClose, detectedTier = null }: { 
       </li>)}</ul>
       {abilityNote && <p className={styles.hint} role="status">{abilityNote}</p>}
     </fieldset>
-    <small className={styles.hint}>{signedIn ? "Saved to your account." : "Saved on this device. Sign in to keep them everywhere."}</small>
+    <small className={styles.hint}>{signedIn ? "Saved to your account." : <SignInText text="Saved on this device. Sign in to keep them everywhere." />}</small>
   </IslandSheet>;
 }

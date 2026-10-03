@@ -1,4 +1,7 @@
-export type GameToast = { id: number; text: string; icon?: string; duration: number };
+import { mentionsSignIn } from "./signIn";
+
+/** `signIn`: the note asks you to sign in, and its words are the link (reachability §3): it stays up long enough to tap. */
+export type GameToast = { id: number; text: string; icon?: string; duration: number; signIn: boolean };
 
 export function createToastQueue(publish: (entries: readonly GameToast[]) => void) {
   let entries: GameToast[] = [];
@@ -13,7 +16,8 @@ export function createToastQueue(publish: (entries: readonly GameToast[]) => voi
       if (!characters.length) return;
       const text = characters.length > 280 ? `${characters.slice(0, 279).join("").trimEnd()}…` : characters.join("");
       const icon = "icon" in detail && typeof detail.icon === "string" && detail.icon.trim() ? detail.icon : undefined;
-      const entry = { id: nextId++, text, icon, duration: Math.max(2600, Math.min(12000, characters.length * 45)) };
+      const signIn = mentionsSignIn(text);
+      const entry = { id: nextId++, text, icon, signIn, duration: Math.max(signIn ? 6500 : 2600, Math.min(12000, characters.length * 45)) };
       entries = [...entries, entry];
       if (entries.length > 3) {
         const removed = entries.shift()!;
