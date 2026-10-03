@@ -33,11 +33,20 @@ describe("/student/go account landing", () => {
       expect(await land(`?next=${encodeURIComponent(bad)}`)).toBe("https://tethos.ca/student/dashboard");
     }
   });
-  it("ignores ?next= while the member world is closed and for signed-out visitors", async () => {
+  it("keeps ?next= out of the closed world while it is closed, and ignores it for signed-out visitors once open", async () => {
     vi.stubEnv("NODE_ENV", "production");
     expect(await land("?next=/student/companion")).toBe("https://tethos.ca/student/apply/portal");
     vi.stubEnv("NEXT_PUBLIC_MEMBER_WORLD", "open");
     getUser.mockResolvedValueOnce({ data: { user: null } });
     expect(await land("?next=/student/companion")).toBe("https://tethos.ca/student/apply/dashboard");
+  });
+  it("returns a closed-world sign-in to an open page (an event check-in), never into the closed world", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    expect(await land(`?next=${encodeURIComponent("/student/check-in?event=e1&code=ABC")}`)).toBe("https://tethos.ca/student/check-in?event=e1&code=ABC");
+    expect(await land("?next=/student/apply/portal")).toBe("https://tethos.ca/student/apply/portal");
+    for (const closed of ["/student/dashboard", "/student/companion/study", "/student/onboarding", "/student", "//evil.example/"]) {
+      expect(await land(`?next=${encodeURIComponent(closed)}`)).toBe("https://tethos.ca/student/apply/portal");
+    }
+    expect(getUser).not.toHaveBeenCalled();
   });
 });
