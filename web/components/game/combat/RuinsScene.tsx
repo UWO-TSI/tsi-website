@@ -27,6 +27,7 @@ import { AimReticle, Blasts, EnemyBars, EnemyInstances, FloaterProjector, Player
 import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BROKEN_ARCHES, RUINS_MOAI, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, RUINS_TORCHES, SURVIVE_CIRCLES, createRuins } from "@/lib/game/ruins";
 import { combat, publishCombat, takeMissionQueue, V2_SLOT_IDS, type AbilityId, type CombatRuntime, type CueKind } from "@/lib/game/combat/runtime";
 import { classKey, classReload, equipClassKit, pressUlt, stepClass } from "@/lib/game/combat/classRuntime";
+import { createLive } from "@/lib/game/combat/classFire";
 import { unlocksAt } from "@/lib/combat/classes";
 import { AudioManager, type SFXName } from "@/lib/game/audio";
 import { useAbilityKeys } from "@/lib/game/movement/keys";
@@ -74,7 +75,8 @@ export function resetEncounter() {
   rt.escort = path ? { x: path[0].x, z: path[0].z, hp: 60, waypoint: 1 } : null;
   rt.player.energy = Math.max(rt.player.energy, 0);
   // Classes v2: the meter starts empty on entry and empties on defeat (§1.2); nothing held, toggled or queued carries over.
-  if (rt.v2) Object.assign(rt.v2, { meter: 0, cast: null, queue: [], holding: rt.v2.holding.map(() => null), toggled: rt.v2.toggled.map(() => false), recast: rt.v2.recast.map(() => 0), combatT: 0 });
+  if (rt.v2) Object.assign(rt.v2, { meter: 0, cast: null, queue: [], holding: rt.v2.holding.map(() => null), toggled: rt.v2.toggled.map(() => false), recast: rt.v2.recast.map(() => 0), combatT: 0,
+    live: createLive(rt.v2.kit.fire?.ammo?.size) }); // Focus, the cylinder, burns and zones start over too
   rt.player.ultIframes = 0; rt.player.kick = null; rt.player.clip = null; rt.fx = [];
 }
 

@@ -231,7 +231,7 @@ export function stepFire(rt: CombatRuntime, me: Vec, dt: number, random: () => n
   } else live.owed = 0;
   for (let i = live.dots.length - 1; i >= 0; i--) {
     const d = live.dots[i];
-    if (d.enemy.state === "dead" || (d.left -= dt) <= 0) { live.dots.splice(i, 1); continue; }
+    if (d.enemy.state === "dead" || (d.left -= dt) <= 0 || !rt.enemies.includes(d.enemy)) { live.dots.splice(i, 1); continue; } // gone with a reset too
     if ((d.tick -= dt) <= 0) { d.tick += FIRE.tick; strike(rt, d.enemy, { power: d.power * FIRE.tick, from: d.enemy, stat: FAMILY_STAT[v.kit.family], unit: true, knock: 0, steady: true }, random); }
   }
   for (let i = live.zones.length - 1; i >= 0; i--) {
