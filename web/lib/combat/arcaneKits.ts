@@ -6,6 +6,7 @@
 import { ELEMENTALIST } from "./arcane/elementalist";
 import { ILLUSIONIST } from "./arcane/illusionist";
 import { NECROMANCER } from "./arcane/necromancer";
+import { TRANSMUTER } from "./arcane/transmuter";
 
-export { ELEMENTALIST, ILLUSIONIST, NECROMANCER };
-export const ARCANE_KITS = [ELEMENTALIST, ILLUSIONIST, NECROMANCER];
+export { ELEMENTALIST, ILLUSIONIST, NECROMANCER, TRANSMUTER };
+export const ARCANE_KITS = [ELEMENTALIST, ILLUSIONIST, NECROMANCER, TRANSMUTER];
