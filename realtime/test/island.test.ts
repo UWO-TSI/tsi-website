@@ -13,6 +13,7 @@ import { honestTraces } from "./helpers/traces";
 const PORT = 2593;
 const URL = `ws://127.0.0.1:${PORT}`;
 const GRACE_S = 1;
+const PHONE_GRACE_S = 5;
 
 const logs: { event: string; fields: Record<string, unknown> }[] = [];
 /** Per dev name: card fields to override, or the error loading it throws. */
@@ -25,7 +26,7 @@ beforeAll(async () => {
     createApp({
       env: parseEnv({ NODE_ENV: "test", DEV_AUTH: "1" }),
       kickForMovement: true,
-      graceS: { desktop: GRACE_S, phone: GRACE_S * 2 },
+      graceS: { desktop: GRACE_S, phone: PHONE_GRACE_S },
       log: (event, fields) => logs.push({ event, fields }),
       loadCard: async (identity) => {
         const o = cards.get(identity.devName ?? "");
@@ -339,6 +340,37 @@ describe("sessions", () => {
     dropSocket(alice);
     await until(() => (flagsAt() & N.FLAG.away) !== 0, "away again");
     await until(() => st(bob).roster.get(alice.sessionId) === undefined, "removed after the grace", GRACE_S * 1000 + 3000);
+  });
+
+  it("rejoining the same shard ends the dropped session's grace at once", async () => {
+    const phone = await join("alice", { mobile: true });
+    const bob = await join("bob");
+    await until(() => st(bob).roster.get(phone.sessionId) !== undefined, "alice listed");
+    phone.reconnection.enabled = false;
+    dropSocket(phone);
+    await until(() => ((st(bob).roster.get(phone.sessionId)?.flags ?? 0) & N.FLAG.away) !== 0, "away in the phone grace");
+    const again = await join("alice");
+    expect(again.roomId).toBe(bob.roomId);
+    const t = Date.now();
+    await until(() => st(bob).roster.get(phone.sessionId) === undefined, "the old session gone", 3000);
+    expect(Date.now() - t).toBeLessThan(PHONE_GRACE_S * 1000 - 1000);
+    expect(st(bob).roster.get(again.sessionId)?.flags ?? 0).toBe(N.FLAG.showClass);
+  });
+
+  it("a newer tab in another shard ends a dropped session's grace at once", async () => {
+    const phone = await join("alice", { mobile: true });
+    const bob = await join("bob");
+    await until(() => st(bob).roster.get(phone.sessionId) !== undefined, "alice listed");
+    phone.reconnection.enabled = false;
+    dropSocket(phone);
+    await until(() => ((st(bob).roster.get(phone.sessionId)?.flags ?? 0) & N.FLAG.away) !== 0, "away in the phone grace");
+    // A fresh shard for the newer tab: the plugin finds the old session in the other room.
+    const tab = await client("dev:alice").create(N.ROOM_NAME, OPTS());
+    rooms.push(tab);
+    expect(tab.roomId).not.toBe(bob.roomId);
+    const t = Date.now();
+    await until(() => st(bob).roster.get(phone.sessionId) === undefined, "the old session gone", 3000);
+    expect(Date.now() - t).toBeLessThan(PHONE_GRACE_S * 1000 - 1000);
   });
 
   it("locks a shard at 30 players, opens a second one, and unlocks under 26", async () => {

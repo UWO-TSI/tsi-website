@@ -149,6 +149,15 @@ export function honestTraces(): Record<string, TraceSample[]> {
         return { z: 1, sprint: true, jumpPressed: press, jump: opened };
       }, { tuning: glider });
     })(),
+    // §7's case: off a 1.5 u cliff, the leaf opened as soon as coyote time is over.
+    "glide off a 1.5 u cliff": (() => {
+      let opened = false;
+      return record({ top: (_x, z) => (z < 2 ? 1.5 : 0), wet: () => false }, { x: 0, z: -2 }, 2, (_time, s) => {
+        const press = !opened && s.mode === "air" && s.vy < -0.5 && s.coyote <= 0;
+        if (press) opened = true;
+        return { z: 1, sprint: true, jumpPressed: press, jump: opened };
+      }, { tuning: glider });
+    })(),
     // Walk off a 20 u pillar: the fall reaches the 18 u/s cap.
     "the fall cap": record(tower(20, 1.5), { x: 0, z: 0 }, 3, () => ({ z: 1 })),
     // Bunny-hop: one press, then Space held at a sprint chains the hops to their cap.

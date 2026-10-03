@@ -56,7 +56,8 @@ const traces = honestTraces();
 
 describe("honest movement from the real sim never strikes", () => {
   it("covers the §7 fixtures and stays inside the village", () => {
-    for (const name of ["dash chain", "downhill slide at the ceiling", "glide off a cliff", "the fall cap"]) expect(traces[name], name).toBeDefined();
+    for (const name of ["dash chain", "downhill slide at the ceiling", "glide off a 1.5 u cliff", "the fall cap"]) expect(traces[name], name).toBeDefined();
+    expect(traces["glide off a 1.5 u cliff"].some((s) => s.events.includes("glide"))).toBe(true);
     expect(traces["glide off a cliff"].some((s) => s.events.includes("glide"))).toBe(true);
     expect(traces["dash chain"].filter((s) => s.events.includes("dash")).length).toBeGreaterThanOrEqual(6);
     expect(traceStats(traces["downhill slide at the ceiling"]).maxHSpeed).toBeGreaterThan(23.5);

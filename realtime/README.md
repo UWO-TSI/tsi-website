@@ -99,6 +99,30 @@ contract (`web/lib/net/protocol.ts`).
 - **Restart.** Before a shutdown each room sends `sys {kind: "restart"}` and closes
   with 4010.
 
+## Bots and the soak (§5.9, §7)
+
+`scripts/bots.ts` runs real `@colyseus/sdk` clients with `dev:bot-NN` tokens against a
+server with `DEV_AUTH=1`. Each drives the real movement sim on flat ground (walk,
+sprint, dash, hop, slide, emote, idle) and sends what the client's sender sends.
+
+```sh
+npm run dev                                                   # one terminal
+npm run bots -- --n 24 --area village --near 4,-6             # another; Ctrl-C leaves cleanly
+# flags: --url ws://localhost:2567 --radius 12 --seconds 0 --prefix bot --quiet
+```
+
+`test/soak.ts` is run by hand, never in `npm test`. It boots the server in-process (port
+2567 by default) and the bots in a child process, cuts 10 random sockets every
+`--kill-every` seconds (each must be back within 25 s, player kept), and prints
+event-loop p99, heap growth, messages in per second, bytes out per client per second,
+strikes and a final state-against-last-pose check as JSON lines:
+
+```sh
+NODE_OPTIONS=--expose-gc npm run soak -- --bots 40 --minutes 30 --kill-every 300
+```
+
+On the shared Mac mini, take the heavy lock first (see the team notes).
+
 ## Deploy (Fly.io, Toronto)
 
 App `tethos-rt` in `yyz`, served as `wss://tethos-rt.fly.dev` (§1.3: not a `.tethos.ca`

@@ -283,6 +283,8 @@ export function createIslandRoom(o: IslandRoomOptions) {
       const s = this.sessions.get(sessionId);
       const code = reason === "replaced" ? N.CLOSE.replaced : (closeCode ?? N.CLOSE.replaced);
       if (s) s.final = code;
+      // Dropped and inside its grace (a newer tab joined another shard): end the grace now.
+      if (s?.grace) s.grace.reject(new Error(reason ?? "kicked"));
       super.kickClient(sessionId, code, reason);
     }
 
