@@ -30,8 +30,9 @@ const PROMPT_CLEAR = 132;
 /** The "!" shows this long as they notice you, then the nameplate stays while you're near. */
 const NOTICE_S = 2.4;
 const labelPoint = (object: THREE.Object3D, camera: THREE.Camera, size: { width: number; height: number }) => {
-  const [x, y] = calculateCurvedHtmlPosition(object, camera, size);
-  return [x, y > size.height ? y : Math.min(y, size.height - PROMPT_CLEAR)];
+  const p = calculateCurvedHtmlPosition(object, camera, size);
+  if (p[1] <= size.height) p[1] = Math.min(p[1], size.height - PROMPT_CLEAR);
+  return p;
 };
 
 interface Ui { bubble: RefObject<HTMLDivElement | null>; text: RefObject<HTMLSpanElement | null>; notice: RefObject<HTMLDivElement | null>; plate: RefObject<HTMLDivElement | null> }
