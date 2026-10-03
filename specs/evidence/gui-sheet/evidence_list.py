@@ -76,10 +76,10 @@ SHEETS = [
     ("Text size, keyboard and the dialog system", "14-access.webp", ACCESS),
 ]
 STRIPS = [
-    ("strip-sheet-open", "A sheet opening: scale and fade with the paper sound", "10-strip-sheet-open.webp"),
-    ("strip-sheet-close", "A sheet closing (Escape)", "11-strip-sheet-close.webp"),
-    ("strip-journal-open", "The journal opening on J", "12-strip-journal-open.webp"),
-    ("strip-journal-close", "The journal closing on J again", "13-strip-journal-close.webp"),
+    ("strip-sheet-open", "A sheet opening: scale and fade with the paper sound (ms after the click)", "10-strip-sheet-open.webp", True),
+    ("strip-sheet-close", "A sheet closing on Escape: it keeps its content while it fades (ms after the key)", "11-strip-sheet-close.webp", True),
+    ("strip-journal-open", "On the island: J opens the journal", "12-strip-journal-open.webp", False),
+    ("strip-journal-close", "On the island: J again closes it (the key that opened a sheet closes it)", "13-strip-journal-close.webp", False),
 ]
 COMPARISON = [
     ("gui-colour", ["palette"], "colour"),

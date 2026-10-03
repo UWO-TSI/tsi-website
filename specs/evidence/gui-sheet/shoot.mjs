@@ -4,7 +4,11 @@
 // middleware sees a signed-in member, the member APIs are answered here, and no database is touched.
 //   node specs/evidence/gui-sheet/shoot.mjs <out_dir> [scene-prefix ...]
 import { createRequire } from "node:module";
-import { mkdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
 const { chromium } = require("playwright");
 
@@ -22,7 +26,7 @@ const LOOK = { skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft"
 const DAY = "2026-10-02";
 const iso = (d, h = 18) => new Date(Date.UTC(2026, 9, d, h)).toISOString();
 
-const PROFILE = { id: "m1", display_name: "Juniper", level: 7, xp: 5500, tier: 2, class: "Warden", onboarding_completed: true, avatar_config: { look: LOOK }, tc_balance: 1240, bio: "Builds things for the club.", position: "developer" };
+const PROFILE = { id: "m1", display_name: "Juniper", level: 7, xp: 3900, tier: 2, class: "Warden", onboarding_completed: true, avatar_config: { look: LOOK }, tc_balance: 1240, bio: "Builds things for the club.", position: "developer", created_at: "2025-09-12T16:00:00Z" };
 const BOUNTIES = [
   { id: "b1", title: "Landing page for the food bank drive", description: "A one-page site for the Thanksgiving drive: hours, drop-off spots, a volunteer form.", client_name: "Growing Chefs", pay_cad: null, pay_tc: 400, xp_reward: 300, difficulty: 1, deadline: iso(18), tech_stack: ["Next.js", "Tailwind"], status: "open", submitted_by: null, approved_by: null, created_at: iso(1), updated_at: iso(1) },
   { id: "b2", title: "Volunteer shift scheduler", description: "Replace the shared spreadsheet with a small scheduler.", client_name: "BGC London", pay_cad: null, pay_tc: 900, xp_reward: 600, difficulty: 2, deadline: iso(28), tech_stack: ["React", "Supabase"], status: "open", submitted_by: null, approved_by: null, created_at: iso(1), updated_at: iso(1) },
@@ -38,10 +42,24 @@ const JOBS = [
   { id: "j2", company_name: "Bank of Montreal", role_title: "Data Analyst Co-op", location: "Toronto", type: "co-op", description: "Analytics team.", application_url: "https://example.com", posted_at: iso(2), status: "open" },
 ];
 const LEADERS = ["Juniper", "Theo", "Maya", "Sam", "Priya", "Ollie", "Ren", "Ava"].map((n, i) => ({ rank_position: i + 1, id: `m${i + 1}`, display_name: n, avatar_url: null, tier: 4, position: null, class: ["Warden", "Arcane", "Ranger", "Vanguard"][i % 4], subclass: null, level: 12 - i, xp: 9000 - i * 700, rank: "Member", is_active: true }));
-const WALLET = { coins: 1240, gems: 0, daily_claimed: true, day: DAY, recent: [
-  { id: "t1", kind: "daily_gift", currency: "coins", amount: 20, balance: 1240, note: "Daily gift", created_at: iso(2) },
-  { id: "t2", kind: "shop_purchase", currency: "coins", amount: -220, balance: 1220, note: "Shop purchase", created_at: iso(1) },
-] };
+
+// The economy (wallet, shop, sell list, bag) from the real service code, seeded like /dev/economy (economy-fixture.ts).
+const HERE = dirname(fileURLToPath(import.meta.url)), ECONOMY_FILE = join(tmpdir(), "gui-sheet-economy.json");
+if (!existsSync(ECONOMY_FILE)) execFileSync("npx", ["vite-node", "-c", "vitest.config.ts", join(HERE, "economy-fixture.ts"), ECONOMY_FILE], { cwd: join(HERE, "../../../web"), stdio: "ignore" });
+const ECONOMY = JSON.parse(readFileSync(ECONOMY_FILE, "utf8"));
+const LETTERS = [
+  { id: "l1", kind: "system", sender_id: null, sender_name: "HQ", recipient_id: USER.id, recipient_name: "Juniper", subject: "Welcome to the island", body: "Your plot is waiting by HQ. Bring your first catch to the museum shell when you have one.", created_at: iso(2, 14), read_at: null, reported: false, outgoing: false },
+  { id: "l2", kind: "note", sender_id: "m3", sender_name: "Maya", recipient_id: USER.id, recipient_name: "Juniper", subject: "Fishing derby", body: "Saturday at the pier? I'll bring the bait.", created_at: iso(1, 20), read_at: iso(1, 21), reported: false, outgoing: false },
+];
+const PRODUCTS = [
+  { id: "p1", name: "Tethos crewneck", description: "Heavyweight cotton, the island crest on the chest.", price_tc: 900, category: "apparel", stock: 12 },
+  { id: "p2", name: "Sticker pack", description: "Six stickers: the HQ clock, a pear, the leaf glider and friends.", price_tc: 120, category: "merch", stock: 40 },
+  { id: "p3", name: "Enamel pin", description: "The crest in gold enamel.", price_tc: 200, category: "accessories", stock: 25 },
+  { id: "p4", name: "Phone wallpaper set", description: "Four island scenes, one per season.", price_tc: 60, category: "digital" },
+];
+const MEMBERS = LEADERS.map((l, i) => ({ id: l.id, display_name: l.display_name, avatar_url: null, tier: [2, 3, 4, 4, 5, 3, 4, 5][i], position: ["developer", "pm", "developer", "director", "volunteer", "vp", "developer", "general"][i], class: l.class, level: l.level, xp: l.xp, skills: [["React", "Supabase"], ["Figma"], ["Python"], ["Events"], [], ["Marketing"], ["Next.js"], []][i], is_active: i < 6 }));
+/** The stand-in Supabase answers "not onboarded yet" while this is on (the profile wizard's shot). */
+const stubFresh = on => fetch(`${SUPA}/__fresh?on=${on ? 1 : 0}`).catch(() => {});
 
 const browser = await chromium.launch({ headless: false, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist", "--window-position=2400,0"] });
 
@@ -52,14 +70,21 @@ async function memberPage({ width = 1440, height = 900, look = true, gift = fals
   const page = await ctx.newPage();
   page.on("pageerror", e => console.log("pageerror", e.message.slice(0, 240)));
   const json = (route, body, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
-  const wallet = { ...WALLET, daily_claimed: !gift };
+  const wallet = { ...ECONOMY.wallet, daily_claimed: !gift, day: DAY };
   await page.route("**/api/**", async route => {
     const url = new URL(route.request().url()), p = url.pathname, m = route.request().method();
-    if (p === "/api/identity/me") return json(route, { identity: { world_name: "Juniper", badge: "member", family: "Warden", settings: textSize ? { text_size: textSize } : null } });
+    if (p === "/api/identity/me") return json(route, { ok: true, identity: { world_name: "Juniper", badge: "member", family: "Warden", settings: textSize ? { text_size: textSize } : null } });
     if (p === "/api/profile") return m === "GET" ? json(route, { profile: look ? PROFILE : { ...PROFILE, avatar_config: {} } }) : json(route, { ok: true });
     if (p === "/api/admin/me") return json(route, { isAdmin: true });
     if (p === "/api/identity/name") return json(route, { ok: true });
     if (p === "/api/economy/wallet") return json(route, { ok: true, wallet });
+    if (p === "/api/economy/shop") return json(route, { ok: true, shop: ECONOMY.shop });
+    if (p === "/api/economy/sell" && m === "GET") return json(route, { ok: true, sellable: ECONOMY.sellable });
+    if (p === "/api/economy/inventory") return json(route, { ok: true, inventory: ECONOMY.inventory });
+    if (p === "/api/progression/letters" && m === "GET") return json(route, { ok: true, letters: LETTERS });
+    if (p === "/api/directory") return json(route, { members: MEMBERS });
+    if (p === "/api/shop") return json(route, { products: PRODUCTS });
+    if (p === "/api/economy") return json(route, { balance: 650 });
     if (p === "/api/economy/daily-gift") { wallet.coins += 20; wallet.daily_claimed = true; return json(route, { ok: true, gift: { coins: 20, balance: wallet.coins, claimed: true, day: DAY } }); }
     if (p === "/api/bounties") return json(route, { bounties: BOUNTIES, myClaimedBountyIds: ["b3"] });
     if (p === "/api/events") return json(route, { events: EVENTS });
@@ -90,10 +115,10 @@ async function waitWorld(page) {
 const shot = (page, name, opts = {}) => page.screenshot({ path: `${OUT}/${name}.png`, ...opts }).then(() => console.log("shot", name));
 const toast = (page, text, icon) => page.evaluate(([t, i]) => window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: t, icon: i } })), [text, icon]);
 /** The island at 2 pm beside the notice board, then `fn`. */
-async function island(name, query, fn, { wait = 6000, size = {}, extra = {} } = {}) { // size: also textSize, colorScheme
+async function island(name, query, fn, { wait = 6000, size = {}, extra = {}, pos = "-2.6,4.3" } = {}) { // size: also look, textSize, colorScheme
   const { ctx, page } = await memberPage(size);
   await prime(page, extra);
-  await page.goto(`${HOST}/student/dashboard?at=14:05&at=-2.6,4.3&progression=demo&collections=demo${query ? `&${query}` : ""}`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${HOST}/student/dashboard?at=14:05${pos ? `&at=${pos}` : ""}&progression=demo&collections=demo${query ? `&${query}` : ""}`, { waitUntil: "domcontentloaded" });
   await waitWorld(page);
   await page.waitForTimeout(wait);
   await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
@@ -135,13 +160,16 @@ const SCENES = {
   "game-donate": () => island("game-donate", "sheet=donate", async page => { await page.waitForTimeout(800); await shot(page, "game-donate"); }),
   "game-shop": () => island("game-shop", "sheet=shop", async page => { await page.waitForTimeout(1500); await shot(page, "game-shop"); }),
   "game-crafting": () => island("game-crafting", "hq=inside&crafting=demo", async page => {
+    // A few steps in from HQ's door (E there would leave), then the workbench's E.
+    await page.locator("canvas").first().focus().catch(() => {});
+    await page.keyboard.down("w"); await page.waitForTimeout(900); await page.keyboard.up("w");
+    await page.waitForTimeout(600);
     await page.evaluate(() => window.dispatchEvent(new CustomEvent("tsi:workbench-near", { detail: true })));
     await page.waitForTimeout(300);
-    await page.locator("canvas").first().focus().catch(() => {});
     await page.keyboard.press("e");
     await page.waitForTimeout(1200);
     await shot(page, "game-crafting");
-  }),
+  }, { pos: null }),
   "game-devpanel": () => island("game-devpanel", "", async page => { await page.getByRole("button", { name: "Developer view options" }).click(); await page.waitForTimeout(400); await shot(page, "game-devpanel"); }),
   "game-minimap": () => island("game-minimap", "", async page => { await page.keyboard.press("m"); await page.waitForTimeout(600); await shot(page, "game-minimap"); }),
   "game-wheel": () => island("game-wheel", "", async page => {
@@ -154,7 +182,7 @@ const SCENES = {
     await page.waitForTimeout(500);
     await shot(page, "game-greeting");
   }, { extra: { "tsi.welcomed.v1": null } }),
-  "game-creator": () => island("game-creator", "", async page => { await page.waitForTimeout(3000); await shot(page, "game-creator"); }, { extra: { "tsi.look.v1": null }, wait: 4000 }),
+  "game-creator": () => island("game-creator", "", async page => { await page.waitForTimeout(3000); await shot(page, "game-creator"); }, { extra: { "tsi.look.v1": null }, wait: 4000, size: { look: false } }),
   "game-gift": async () => {
     const { ctx, page } = await memberPage({ gift: true });
     await prime(page, { "tsi.gift.later": null });
@@ -185,16 +213,19 @@ const SCENES = {
     const name = `portal-${p.replace(/\?.*$/, "").replace(/\//g, "-")}`;
     return [name, () => portal(name, `/student/dashboard/${p}`)];
   })),
-  "portal-menu": () => portal("portal-menu", "/student/dashboard/bounty", { after: async page => { await page.getByRole("button", { name: /menu/i }).first().click().catch(() => {}); await page.waitForTimeout(500); } }),
-  "portal-onboarding": () => portal("portal-onboarding", "/student/onboarding"),
+  "portal-menu": () => portal("portal-menu", "/student/dashboard/bounty", { after: async page => {
+    await page.locator('button[aria-label="Open menu"]:visible').first().click();
+    await page.waitForTimeout(700);
+  } }),
+  "portal-onboarding": async () => { await stubFresh(true); try { await portal("portal-onboarding", "/student/onboarding"); } finally { await stubFresh(false); } },
   "portal-opening-soon": () => portal("portal-opening-soon", "/student/opening-soon"),
   // ── The phone companion (390 x 844) ──
   ...Object.fromEntries([["study", null], ["club", "Club"], ["club-calendar", "Club"], ["me", "Me"], ["me-bag", "Me"], ["me-journal", "Me"], ["me-mailbox", "Me"], ["me-showcase", "Me"]].map(([n, tab]) => {
     const name = `companion-${n}`;
-    return [name, () => portal(name, "/student/companion?mobile=1&collections=demo&progression=demo", { size: { width: 390, height: 844, mobile: true }, after: async page => {
+    return [name, () => portal(name, `/student/companion?mobile=1&collections=demo&progression=demo${n === "study" ? "&demo=focus" : ""}`, { size: { width: 390, height: 844, mobile: true }, after: async page => {
       if (tab) { await page.getByRole("button", { name: tab, exact: true }).click(); await page.waitForTimeout(800); }
       if (n === "club-calendar") { await page.getByRole("tab", { name: /Calendar/ }).click(); await page.waitForTimeout(1200); }
-      const sub = { "me-bag": /Bag/, "me-journal": /Journal/, "me-mailbox": /Mailbox/, "me-showcase": /Showcase/ }[n];
+      const sub = { "me-bag": /Bag/, "me-journal": /Journal|Collection/, "me-mailbox": /Mailbox/, "me-showcase": /showcase/i }[n];
       if (sub) { await page.getByRole("button", { name: sub }).first().click(); await page.waitForTimeout(1200); }
     } })];
   })),
@@ -255,7 +286,7 @@ Object.assign(SCENES, {
     await page.keyboard.press("ArrowRight"); await page.waitForTimeout(300);
     await shot(page, "keyboard-3-journal-next-tab");
   }),
-  "game-creator-dark": () => island("game-creator-dark", "", async page => { await page.waitForTimeout(3000); await shot(page, "game-creator-dark"); }, { extra: { "tsi.look.v1": null }, wait: 4000, size: { colorScheme: "dark" } }),
+  "game-creator-dark": () => island("game-creator-dark", "", async page => { await page.waitForTimeout(3000); await shot(page, "game-creator-dark"); }, { extra: { "tsi.look.v1": null }, wait: 4000, size: { look: false, colorScheme: "dark" } }),
   "applicant-island": async () => {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page = await ctx.newPage();

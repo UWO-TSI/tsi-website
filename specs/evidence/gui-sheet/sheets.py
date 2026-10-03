@@ -7,7 +7,7 @@ and the sheet is not made, so no sheet ships with an empty tile.
 """
 import sys
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont, ImageStat
+from PIL import Image, ImageDraw, ImageFont
 
 BEFORE, AFTER, REF, OUT = (Path(a) for a in sys.argv[1:5])
 OUT.mkdir(parents=True, exist_ok=True)
@@ -25,9 +25,13 @@ def font(size):
 
 
 def blank(img: Image.Image) -> bool:
-    """A capture with almost no variation (a white or single-colour page) is an empty tile."""
-    stat = ImageStat.Stat(img.convert("L").resize((96, 96)))
-    return stat.stddev[0] < 6
+    """An empty tile: almost every pixel is the frame's dominant colour (a page that never drew, a black fade). A sparse
+    page with a line of text on it is not empty."""
+    g = img.convert("L").resize((480, 300))
+    hist = g.histogram()
+    mode = max(range(256), key=hist.__getitem__)
+    near = sum(hist[max(0, mode - 12):min(256, mode + 13)])
+    return 1 - near / (g.width * g.height) < 0.003
 
 
 def fit(img, w, h):
@@ -64,10 +68,12 @@ def pairs(names, title, file, w=760, h=475):
         if bi is not None and blank(bi):
             problems.append(f"blank before: {name}")
             bi = None
-        row = Image.new("RGB", (w * 2 + 12, h + 34), PAGE)
+        # The caption spans the row (a long one never runs under a tag); each tile carries only its tag.
+        row = Image.new("RGB", (w * 2 + 12, h + 34 + 30), PAGE)
+        ImageDraw.Draw(row).text((8, 4), caption, font=font(18), fill=INK)
         if bi is not None:
-            row.paste(labelled(bi, caption, w, h, "Before"), (0, 0))
-        row.paste(labelled(ai, caption if bi is None else "", w, h, "After"), (w + 12, 0))
+            row.paste(labelled(bi, "", w, h, "Before"), (0, 30))
+        row.paste(labelled(ai, "", w, h, "After"), (w + 12, 30))
         rows.append(row)
     if problems:
         print(f"{file}: " + "; ".join(problems))
@@ -83,13 +89,16 @@ def pairs(names, title, file, w=760, h=475):
     print("wrote", file, sheet.size)
 
 
-def strip(prefix, title, file, h=300):
+def strip(prefix, title, file, timed=True, h=300):
+    """`timed`: the frames' names are the ms after the key press they were aimed at. The 3D island captures too slowly
+    for that to hold, so its strips are numbered frames instead (the sheet's own timing shows in the showroom's)."""
     frames = sorted(AFTER.glob(f"{prefix}-*.png"))
     frames = [f for f in frames if not blank(Image.open(f))]
     if not frames:
         print(f"{file}: no frames")
         return
-    tiles = [labelled(Image.open(f), f.stem.split("-")[-1].replace("ms", " ms"), int(h * 1.6), h) for f in frames]
+    label = (lambda i, f: f"{int(f.stem.split('-')[-1].removesuffix('ms'))} ms") if timed else (lambda i, f: f"Frame {i + 1}")
+    tiles = [labelled(Image.open(f), label(i, f), int(h * 1.6), h) for i, f in enumerate(frames)]
     sheet = Image.new("RGB", (sum(t.width + 8 for t in tiles) + 16, h + 34 + 60), PAGE)
     ImageDraw.Draw(sheet).text((12, 12), title, font=font(24), fill=INK)
     x = 12
@@ -135,6 +144,6 @@ if __name__ == "__main__":
     from evidence_list import COMPARISON, SHEETS, STRIPS  # noqa: E402  (beside this script)
     for title, file, names in SHEETS:
         pairs(names, title, file)
-    for prefix, title, file in STRIPS:
-        strip(prefix, title, file)
+    for prefix, title, file, timed in STRIPS:
+        strip(prefix, title, file, timed)
     comparison(COMPARISON, "00-kit-comparison.webp")
