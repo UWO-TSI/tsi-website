@@ -27,6 +27,7 @@ import { FLAT_GROUND, castSunShadows, driveRig, gateMixer, type GroundWorld, typ
 import { remoteDashTrail, remoteJuice, type FxGround } from "./fx";
 import { FULL, LOD, LOD_CAPS, assignLod, createLodScratch, type LodCaps, type LodEntry, type LodScratch } from "./lod";
 import { RemoteAvatar } from "./RemoteAvatar";
+import { LIVE_MAX, liveRemotes } from "./active";
 import RemoteAuras, { AuraStore, showsAura } from "./RemoteAuras";
 import Nameplates, { PlatePool } from "./Nameplates";
 import { RigStore } from "./rigs";
@@ -38,7 +39,7 @@ const INDOORS: ReadonlySet<Area> = new Set<Area>(["hq", "museum", "oracle", "hou
 const DUSTY: ReadonlySet<Area> = new Set<Area>(["village", "cafe"]);
 const DRY: FxGround = { wet: () => false };
 /** More than a shard ever holds (SHARD.max 40). */
-const MAX = 64;
+const MAX = LIVE_MAX;
 
 /** What remotes stand on in an area: the village's walk world; the rooms are flat. */
 export const groundOf = (area: Area): GroundWorld => (area === "village" ? villageIsland(village()) : FLAT_GROUND);
@@ -104,6 +105,7 @@ function reTier(d: Driver, camera: THREE.Camera, caps: LodCaps) {
 /** The frame (module scope: the react compiler forbids writing through hook values). */
 function driveAll(d: Driver, source: NetSource, world: GroundWorld, juice: JuiceSink, you: THREE.Vector3, camera: THREE.Camera, caps: LodCaps, delta: number) {
   const { store } = d, reg = source.remotes, now = source.now(), dt = Math.min(delta, 0.1), pool = d.particles.current?.pool;
+  let n = 0;
   for (let i = 0; i < reg.size; i++) {
     const e = reg.at(i), r = store.map.get(e.sid);
     if (!r) continue;
@@ -111,7 +113,10 @@ function driveAll(d: Driver, source: NetSource, world: GroundWorld, juice: Juice
     const s = driveRig(r, now, world, juice);
     if (pool && r.lod.tier === FULL) remoteDashTrail(pool, r.fx, s, r.groundY, dt);
     r.lod.dist = Math.hypot(s.x - you.x, s.z - you.z);
+    // Where they stand this frame, for what yields to people (the café's patrons).
+    if (n < LIVE_MAX) { liveRemotes.x[n] = s.x; liveRemotes.z[n] = s.z; n++; }
   }
+  liveRemotes.n = n;
   d.left -= dt;
   if (d.left <= 0 || store.arrived) { d.left = LOD.every; store.arrived = false; reTier(d, camera, caps); }
   const list = store.list;
