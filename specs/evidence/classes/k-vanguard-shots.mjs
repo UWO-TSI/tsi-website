@@ -16,7 +16,7 @@ const TMP = "/tmp/classes-vanguard-evidence";
 rmSync(TMP, { recursive: true, force: true });
 mkdirSync(TMP, { recursive: true });
 mkdirSync(OUT, { recursive: true });
-const PORT = process.env.PORT ?? 3132, W = 1280, H = 940;
+const PORT = process.env.PORT ?? 3132, W = 1280, H = 1400; // tall: the action sits clear above the HUD panel
 const browser = await chromium.launch({ headless: false, args: ["--mute-audio", "--window-position=2400,0", "--use-angle=metal", "--ignore-gpu-blocklist"] });
 const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_curtain", back: "back_bob", top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: {} });
 const KITS = {
@@ -55,8 +55,20 @@ const tile = (files, labels, name, cols, geometry) => {
 let n = 0;
 const shot = async clip => { const file = `${TMP}/${n++}.png`; await page.screenshot({ path: file, ...(clip ? { clip } : {}) }); return file; };
 const wanted = name => !ONLY || ONLY.has(name);
-/** Clear the field, stand at (x, z) with the kit's weapon in hand and full energy, and set foes at points. */
-async function stage(x, z, foes, type, weapon) {
+/** Screen-up as a world direction (the fixed camera): foes are set ahead of you on screen, the action above the HUD. */
+let F = { x: 0, z: 1 };
+async function screenUp() {
+  F = await page.evaluate(([x, z]) => {
+    const s = window.__combatDev.screenOf, o = s(x, z), a = s(x + 1, z), b = s(x, z + 1);
+    const ax = a.x - o.x, ay = a.y - o.y, bx = b.x - o.x, by = b.y - o.y, det = ax * by - ay * bx, u = bx / det, v = -ax / det, l = Math.hypot(u, v);
+    return { x: u / l, z: v / l };
+  }, [ME.x, ME.z]);
+}
+/** A point `f` u ahead of you on screen and `s` u to its right. */
+const at = (f, s = 0) => [ME.x + F.x * f + F.z * s, ME.z + F.z * f - F.x * s];
+/** Clear the field, stand at (x, z) with the kit's weapon in hand and full energy, and set foes at points ([ahead, side]). */
+async function stage(x, z, local, type, weapon) {
+  const foes = local.map(([f, s]) => at(f, s));
   await page.evaluate(([x, z, foes, type, weapon]) => {
     const rt = window.__combat.rt;
     rt.enemies = rt.enemies.filter(e => e.type.kind === "boss").map(e => ({ ...e, state: "idle", x: e.spawnX, z: e.spawnZ }));
@@ -69,36 +81,39 @@ async function stage(x, z, foes, type, weapon) {
     window.__publishCombat();
   }, [x, z, foes, type, weapon]);
   await page.waitForTimeout(700);
+  return foes;
 }
 const hold = () => page.evaluate(() => { for (const e of window.__combat.rt.enemies) { e.status.hold = 99; e.hp = 9999; } });
 const aimAt = async (x, z) => { const p = await page.evaluate(([x, z]) => window.__combatDev.screenOf(x, z), [x, z]); await page.mouse.move(p.x, p.y); return p; };
-const around = async (x, z, w = 620, h = 400) => { const p = await page.evaluate(([x, z]) => window.__combatDev.screenOf(x, z), [x, z]); return { x: Math.max(0, Math.min(W - w, Math.round(p.x - w / 2))), y: Math.max(0, Math.min(H - h - 250, Math.round(p.y - h * 0.5))), width: w, height: h }; };
+const around = async (x, z, w = 620, h = 400) => { const p = await page.evaluate(([x, z]) => window.__combatDev.screenOf(x, z), [x, z]); return { x: Math.max(0, Math.min(W - w, Math.round(p.x - w / 2))), y: Math.max(0, Math.min(H - h - 340, Math.round(p.y - h * 0.5))), width: w, height: h }; };
 const click = async () => { await page.mouse.down(); await page.mouse.up(); };
-const ME = { x: 2, z: -16 }, PACK = [[2, -14.4], [3.1, -14.9], [0.9, -14.9]];
+const ME = { x: 2, z: -16 }, PACK = [[1.6, 0], [2.1, 1.1], [2.1, -1.1]]; // [ahead, side] of you
 
 /** Each kit's keys and its chain: `steps` = [label, act, wait, foes?]. */
 async function kit(key, steps) {
   const k = KITS[key];
   await fresh();
   await open(`subclass=${key}&mastery=3`);
+  await screenUp();
   const files = [], labels = [];
-  for (const [label, act, wait, foes = PACK] of steps) {
-    await stage(ME.x, ME.z, foes, k.foe, k.weapon);
+  for (const [label, act, wait, local = PACK] of steps) {
+    const foes = await stage(ME.x, ME.z, local, k.foe, k.weapon);
     await hold();
     await aimAt(foes[0][0], foes[0][1]);
     await act();
     await page.waitForTimeout(wait);
-    files.push(await shot(await around(ME.x, ME.z + 1.6))); labels.push(label);
+    files.push(await shot(await around(...at(1)))); labels.push(label);
   }
   tile(files, labels, `K-vanguard-${key === "monk" ? "martial-artist" : key}-kit`, 3, "620x400+4+4");
 }
 const press = k => async () => { await page.keyboard.press(k); };
-const chain = n => async () => { for (let i = 0; i < n; i++) { await click(); await page.waitForTimeout(330); } };
+// Each click once the last swing is done (a press more than 0.15 s early is dropped, so a fixed beat skipped slow weapons' steps).
+const chain = n => async () => { for (let i = 0; i < n; i++) { await page.waitForFunction(() => window.__combat.rt.player.attackCd <= 0.05, null, { timeout: 3000 }); await click(); await page.waitForTimeout(60); } };
 
 if (wanted("guardian")) await kit("guardian", [
   ["basic: 3-hit sword combo (the third, the thrust)", chain(3), 60],
   ["1 Block / Parry: held, the shield's shards", async () => { await page.keyboard.down("1"); await page.waitForTimeout(150); }, 0],
-  ["1 Parry: a crab's hit inside 0.25 s, negated, the counter-slash", async () => { await page.keyboard.up("1"); await page.keyboard.press("1"); await page.waitForTimeout(90); await page.evaluate(() => { const e = window.__combat.rt.enemies.find(x => x.type.id === "thorn-crab"); window.__combatDev.hit(14, e.x, e.z); }); }, 110],
+  ["1 Parry: a crab's hit inside 0.25 s, negated, the counter-slash", async () => { await page.keyboard.up("1"); await page.evaluate(() => { const v = window.__combat.rt.v2; v.cd = {}; v.holding = v.holding.map(() => null); }); await page.keyboard.down("1"); await page.waitForTimeout(90); await page.evaluate(() => { const e = window.__combat.rt.enemies.find(x => x.type.id === "thorn-crab"); window.__combatDev.hit(14, e.x, e.z); }); }, 110],
   ["2 Challenge: the taunt ring, armour up", press("2"), 220],
   ["3 Shield Rush: shield first through the pack", press("3"), 260],
   ["4 Aegis Dome: the dome stops shots", press("4"), 500],
@@ -110,7 +125,7 @@ if (wanted("juggernaut")) await kit("juggernaut", [
   ["1 Charge: a bull rush through the line", press("1"), 260],
   ["2 Ground Slam: cracked ground, everything stunned", press("2"), 140],
   ["3 War Cry: enemies come, temporary health", press("3"), 260],
-  ["4 Seismic Drop (from a jump): the quake", async () => { await page.keyboard.press(" "); await page.waitForTimeout(260); await page.keyboard.press("4"); }, 300],
+  ["4 Seismic Drop (from a jump): the quake", async () => { await page.keyboard.down(" "); await page.waitForTimeout(120); await page.keyboard.up(" "); await page.waitForTimeout(200); await page.keyboard.press("4"); }, 300],
 ]);
 if (wanted("monk")) await kit("monk", [
   ["basic chain: jab, cross, hook, body kick", chain(4), 80],
@@ -122,9 +137,9 @@ if (wanted("monk")) await kit("monk", [
 ]);
 if (wanted("assassin")) await kit("assassin", [
   ["basic: twin tanto cuts up close", chain(2), 60],
-  ["basic past 3.2 u: a thrown kunai", async () => { await aimAt(2, -11); await click(); }, 160, [[2, -11], [3, -11.5]]],
-  ["1 Shadow Step: behind the crab, its shell turned away", press("1"), 260, [[2, -12.5]]],
-  ["2 Kunai Blink: thrown, stuck, then blink to its back", async () => { await page.keyboard.press("2"); await page.waitForTimeout(450); await page.keyboard.press("2"); }, 260, [[2, -12]]],
+  ["basic past 3.2 u: a thrown kunai", async () => { await aimAt(...at(5)); await click(); }, 160, [[5, 0], [5.5, 1]]],
+  ["1 Shadow Step: behind the crab, its shell turned away", press("1"), 260, [[3.5, 0]]],
+  ["2 Kunai Blink: thrown, stuck, then blink to its back", async () => { await page.keyboard.press("2"); await page.waitForTimeout(450); await page.keyboard.press("2"); }, 260, [[4, 0]]],
   ["3 Ink Lotus: three red-ink cuts round you", press("3"), 340],
   ["4 Smoke Bomb: the ink veil, the pack loses you", press("4"), 600],
 ]);
@@ -134,9 +149,10 @@ async function ultStrip(key) {
   const k = KITS[key];
   await fresh({ "tsi.reduceFlashing.v1": "false", "tsi.screenShake.v1": "full" });
   await open(`subclass=${key}&mastery=3`);
-  await stage(ME.x, ME.z, [[2, -14.2], [3, -14.8], [1, -14.8], [2.8, -13.6], [1.2, -13.6]], k.foe, k.weapon);
+  await screenUp();
+  const foes = await stage(ME.x, ME.z, [[1.8, 0], [1.3, 1], [1.3, -1], [2.5, 0.8], [2.5, -0.8]], k.foe, k.weapon);
   await hold();
-  await aimAt(2, -14.2);
+  await aimAt(foes[0][0], foes[0][1]);
   await page.evaluate(() => { window.__combat.rt.v2.meter = 100; });
   await page.waitForTimeout(300);
   await page.keyboard.press("f");
@@ -149,7 +165,7 @@ async function ultStrip(key) {
   for (const [label, t, wait] of beats) {
     await page.evaluate(t => { window.__combat.rt.v2.cast.t = t; }, t);
     await page.waitForTimeout(wait);
-    files.push(await shot(await around(ME.x, ME.z + 1.8, 760, 440))); labels.push(`${label} ${Math.round(t * 1000)} ms`);
+    files.push(await shot(await around(...at(1.2), 760, 440))); labels.push(`${label} ${Math.round(t * 1000)} ms`);
   }
   await page.evaluate(() => { window.__classDev.holdUlt = false; });
   tile(files, labels, `K-vanguard-ult-${key === "monk" ? "martial-artist" : key}`, 3, "760x440+4+4");
@@ -159,7 +175,7 @@ if (wanted("ult")) for (const key of Object.keys(KITS)) await ultStrip(key);
 // ── The HUD with each kit: the keys with their icons, the ult slot filling, charges, a locked key at mastery 2 ──
 if (wanted("hud")) {
   const files = [], labels = [];
-  const crop = { x: (W - 760) / 2, y: H - 252, width: 760, height: 250 };
+  const crop = { x: (W - 760) / 2, y: H - 342, width: 760, height: 340 };
   for (const [key, k] of Object.entries(KITS)) {
     await fresh();
     await open(`subclass=${key}&mastery=2`);
@@ -167,7 +183,7 @@ if (wanted("hud")) {
     await page.waitForTimeout(600);
     files.push(await shot(crop)); labels.push(`${key === "monk" ? "Martial Artist" : key[0].toUpperCase() + key.slice(1)}: mastery 2 (key at 3 locked), meter 65%`);
   }
-  tile(files, labels, "K-vanguard-hud", 2, "760x250+4+4");
+  tile(files, labels, "K-vanguard-hud", 2, "760x340+4+4");
 }
 await ctx?.close();
 await browser.close();
