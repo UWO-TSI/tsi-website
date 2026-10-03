@@ -84,11 +84,13 @@ export default function KanbanPage() {
     const before = columns;
     setColumns(moved.columns);
     setError(null);
-    const { error: moveError } = await createClient()
+    // A move the board's policy refuses updates no row (no error), so the row must come back.
+    const { data: updated, error: moveError } = await createClient()
       .from("kanban_cards")
       .update({ column_id: to, position: moved.position })
-      .eq("id", String(e.active.id));
-    if (moveError) {
+      .eq("id", String(e.active.id))
+      .select("id");
+    if (moveError || !updated?.length) {
       setColumns(before);
       setError("That card didn’t move. Try again.");
     }
