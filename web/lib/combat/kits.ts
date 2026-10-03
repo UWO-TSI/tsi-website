@@ -344,7 +344,7 @@ export const UNITS: Record<string, UnitDef> = {
   "sniper-mine": { key: "sniper-mine", name: "Tripwire mine", kind: "trap", hp: 1, life: 20, radius: 1.3, power: 1.6, blast: 2.2, status: { slow: [0.3, 1.5] } },
   "snare-trap": { key: "snare-trap", name: "Snare trap", kind: "trap", hp: 1, life: 18, radius: 1.1, power: 0.4, status: { hold: 2 }, lunge: 3 },
   "spike-trap": { key: "spike-trap", name: "Spike trap", kind: "trap", hp: 1, life: 18, radius: 1.1, power: 1.2, blast: 1.5, status: { dot: [0.35, 4] }, lunge: 3 },
-  "spectral-hound": { key: "spectral-hound", name: "Spectral hound", kind: "minion", hp: 60, cost: 0, life: 7, speed: 11, range: 1.5, power: 0.7, rate: 0.5, model: "shadow-fox", prey: true },
+  "spectral-hound": { key: "spectral-hound", name: "Spectral hound", kind: "minion", hp: 60, cost: 0, life: 7, speed: 11, range: 1.5, power: 1, rate: 0.5, model: "shadow-fox", prey: true },
   decoy: { key: "decoy", name: "Phantom", kind: "decoy", hp: 50, life: 3, taunt: true },
 };
 /** Caps (row 50): minions share the capacity stat; one totem per role and three at most; two traps; one decoy; two weapon wisps. */

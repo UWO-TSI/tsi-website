@@ -32,8 +32,8 @@ export const HUNTER: ClassKit = {
   ],
   passive: { name: "Prey", description: "Marked enemies take +30% from your traps.", kind: "prey", value: 0.3, icon: I("hunter-prey") },
   ult: { key: "hunter.ult", name: "The Great Hunt", description: "Every trap on the field springs at once and chains to the next; spectral hounds run down each mark.",
-    cooldown_s: 0, energy: 0, charge: 0.85, anticipation_ms: 450, impacts: "first",
-    effects: [{ kind: "trigger", power: 2.5, chain: 1.8, status: { hold: 1 } }],
+    cooldown_s: 0, energy: 0, charge: 0.92, anticipation_ms: 450, impacts: "first", reach: 14,
+    effects: [{ kind: "trigger", power: 3.5, chain: 2.5, status: { hold: 1 } }],
     clip: { unique: "Ult_Hunter" }, vfx: { cast: "hunter.ultCharge", travel: "hunter.ultChain", impact: "hunter.ultHit", zone: "hunter.ultDecal" }, icon: I("hunter-ult") },
   ranks: [
     { at: 5, target: "hunter.snare", change: { label: "−20% cooldown", cooldown: 0.8 } },

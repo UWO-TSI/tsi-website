@@ -13,7 +13,7 @@ export const MARKSMAN: ClassKit = {
   signature: { type: "recurve", name: "recurve bow" },
   stat: { kind: "attack_speed", at1: 1, at20: 1.15 },
   fire: { rate: 1.5, power: 0.25, speed: 24, range: 13, look: "arrow", drop: 8, steady: true, clip: { verb: "QuickShot", scale: 1.4 },
-    rounds: { surge: { power: 0.09, ult: true, tier: "light", vfx: "marksman.hit", travel: "marksman.surge" } },
+    rounds: { surge: { power: 0.08, ult: true, tier: "light", vfx: "marksman.hit", travel: "marksman.surge" } },
     vfx: { cast: "marksman.loose", travel: "marksman.wake", impact: "marksman.hit" } },
   keys: [
     { key: "marksman.homing", name: "Homing Arrows", description: "For 6 s your arrows curve onto the nearest enemy ahead.", cooldown_s: 14, energy: 20,
@@ -27,10 +27,10 @@ export const MARKSMAN: ClassKit = {
   ],
   passive: { name: "Focus", description: "Hold fire: 1.5 shots a second rising to 8 over 4 s while you keep shooting. A 0.5 s pause or a hit halves it.", kind: "focus", value: 8, cap: 4, icon: I("marksman-focus") },
   ult: { key: "marksman.ult", name: "Thousand Arrows", description: "Full Focus and all three arrows at once: 20 shots a second for 6 s, ending in a falling volley on your aim.",
-    cooldown_s: 0, energy: 0, charge: 0.85, anticipation_ms: 350, impacts: "first-last", duration: 6,
+    cooldown_s: 0, energy: 0, charge: 0.98, anticipation_ms: 350, impacts: "first-last", duration: 6, reach: 8,
     effects: [{ kind: "buff", stat: "homing", value: 1, duration: 6 }, { kind: "buff", stat: "flame", value: 0.18, duration: 6 }, { kind: "buff", stat: "swift", value: 1, duration: 6 },
       { kind: "buff", stat: "surge", value: 20, duration: 6 }],
-    release: [{ kind: "area", power: 5, radius: 3.6, at: "aim", knock: 4 }],
+    release: [{ kind: "area", power: 4.5, radius: 3.6, at: "aim", knock: 4 }],
     clip: { unique: "Ult_Marksman" }, vfx: { cast: "marksman.ultCharge", impact: "marksman.volley", zone: "marksman.ultDecal" }, icon: I("marksman-ult") },
   ranks: [
     { at: 5, target: "marksman.homing", change: { label: "+25% duration", duration: 1.25 } },

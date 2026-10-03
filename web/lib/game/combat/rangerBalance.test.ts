@@ -1,0 +1,71 @@
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import { classKit } from "@/lib/combat/classes";
+import { balanceRowV2, balanceTable, runV2, V2_TARGETS, type BalanceRowV2 } from "./balance";
+
+/**
+ * The Ranger family's rows against the §3 band (design sheet "Balance targets"; specs/evidence/classes/K-ranger-balance.md).
+ * Until the other families land, the reference is today's sixteen kits on the same waves (balanceTable, the old bot):
+ * their median normal-run DPS, their sanctum damage-taken range and their median clears. `WRITE_BALANCE=1` writes the doc.
+ */
+const KITS = ["marksman", "sniper", "hunter", "gunslinger"], SEEDS = 12;
+const med = (v: number[]) => { const s = [...v].sort((a, b) => a - b); return (s[(s.length - 1) >> 1] + s[s.length >> 1]) / 2; };
+const legacyNormal = balanceTable("survive-circle", 20), legacyHard = balanceTable("survive-sanctum", 20);
+const ref = { dps: med(legacyNormal.map(r => r.dps)), clear: med(legacyNormal.map(r => r.medianClear)), clearHard: med(legacyHard.map(r => r.medianClear)),
+  taken: legacyHard.map(r => r.takenPerMin) };
+const normal = KITS.map(k => balanceRowV2(k, "survive-circle", 1, SEEDS)), hard = KITS.map(k => balanceRowV2(k, "survive-sanctum", 1, SEEDS));
+const top = KITS.map(k => balanceRowV2(k, "survive-circle", 20, SEEDS));
+/** The scripted guardian fight (8 seeds, 10 min limit): median minutes and the ult's share of the damage. */
+const boss = KITS.map(k => {
+  const runs = Array.from({ length: 8 }, (_, i) => runV2(k, "boss", i + 1, 1, 600));
+  return { minutes: med(runs.map(r => (r.cleared ? r.seconds : 600) / 60)), share: runs.reduce((n, r) => n + r.ultDealt, 0) / runs.reduce((n, r) => n + r.dealt, 0),
+    ults: runs.reduce((n, r) => n + r.ults, 0), cleared: runs.filter(r => r.cleared).length };
+});
+
+describe("the Rangers in the band (§3), against today's kits on the same waves", () => {
+  it("clear every run, never die, and deal normal-run DPS within ±25% of the median, each role in its own range", () => {
+    for (const [i, r] of normal.entries()) {
+      expect(r.clearRate, r.subclass).toBe(1); expect(hard[i].clearRate, r.subclass).toBe(1);
+      expect(r.deaths + hard[i].deaths, r.subclass).toBe(0);
+      const ratio = r.dps / ref.dps, [lo, hi] = V2_TARGETS.roles[classKit(KITS[i])!.role];
+      expect(ratio, r.subclass).toBeGreaterThanOrEqual(V2_TARGETS.dpsBand[0]); expect(ratio, r.subclass).toBeLessThanOrEqual(V2_TARGETS.dpsBand[1]);
+      expect(ratio, `${r.subclass} as ${r.role}`).toBeGreaterThanOrEqual(lo); expect(ratio, `${r.subclass} as ${r.role}`).toBeLessThanOrEqual(hi);
+    }
+  });
+  it("keep the sanctum's damage taken inside a 3x spread with today's kits, and no clear under 0.7x the median", () => {
+    const taken = [...ref.taken, ...hard.map(r => r.takenPerMin)];
+    expect(Math.max(...taken) / Math.min(...taken)).toBeLessThanOrEqual(V2_TARGETS.takenSpread);
+    for (const r of normal) expect(r.medianClear / ref.clear, r.subclass).toBeGreaterThanOrEqual(V2_TARGETS.clearFloor);
+    for (const r of hard) expect(r.medianClear / ref.clearHard, r.subclass).toBeGreaterThanOrEqual(V2_TARGETS.clearFloor);
+  });
+  it("fill the ult in 60-90 s on the sanctum, and land 8-15% of the damage with it on the guardian", () => {
+    for (const r of hard) { expect(r.ultFill, r.subclass).toBeGreaterThanOrEqual(V2_TARGETS.ultFillSanctum[0]); expect(r.ultFill, r.subclass).toBeLessThanOrEqual(V2_TARGETS.ultFillSanctum[1]); }
+    for (const [i, b] of boss.entries()) { expect(b.share, KITS[i]).toBeGreaterThanOrEqual(V2_TARGETS.ultShare[0]); expect(b.share, KITS[i]).toBeLessThanOrEqual(V2_TARGETS.ultShare[1]); }
+  });
+  it("gain at most 1.2x DPS at mastery 20 (the family's median), no kit past 1.25x", () => {
+    expect(med(top.map(r => r.dps)) / med(normal.map(r => r.dps))).toBeLessThanOrEqual(V2_TARGETS.mastery20Ratio);
+    for (const [i, r] of top.entries()) expect(r.dps / normal[i].dps, r.subclass).toBeLessThanOrEqual(1.25);
+  });
+  it("writes specs/evidence/classes/K-ranger-balance.md when asked (WRITE_BALANCE=1)", () => {
+    if (!process.env.WRITE_BALANCE) return;
+    const pct = (v: number) => `${Math.round(v * 100)}%`, s = (v: number) => (Number.isFinite(v) ? `${Math.round(v)} s` : "–");
+    const row = (r: BalanceRowV2, i: number, h: BalanceRowV2) => `| ${r.subclass} | ${r.role} | ${r.weapon} | ${pct(r.clearRate)} | ${s(r.medianClear)} | ${r.dps.toFixed(1)} | ×${(r.dps / ref.dps).toFixed(2)} | ${Math.round(r.takenPerMin)} | ${s(h.medianClear)} | ${h.dps.toFixed(1)} | ${Math.round(h.takenPerMin)} | ${pct(h.minHp)} | ${s(h.ultFill)} | ${pct(h.ultShare)} | ×${(top[i].dps / r.dps).toFixed(2)} | ${boss[i].minutes.toFixed(1)} min | ${pct(boss[i].share)} |`;
+    writeFileSync(join(__dirname, "../../../../specs/evidence/classes/K-ranger-balance.md"), [
+      "# Classes v2, the Ranger family: balance rows", "",
+      `Generated by \`web/lib/game/combat/rangerBalance.test.ts\` (\`WRITE_BALANCE=1\`). The v2 bot (design sheet §3, \`runV2\`): level 10 and the family preset, the tier-1 signature weapon, mastery 1 (the movement key opens at 3), keys through the input layer, movement riders on 30% of casts, an aim that wanders up to 0.45 u round the target (weak points aren't free), the gold span hit half the time, the ult fired at a full meter on two or more enemies inside its area (or the boss). ${SEEDS} seeds a row; the guardian 8 seeds, 10 min limit.`, "",
+      `The reference until the other families land: today's sixteen kits on the same waves (\`balanceTable\`, 20 seeds): median normal-run DPS **${ref.dps.toFixed(1)}**, median clears ${Math.round(ref.clear)} s (normal) and ${Math.round(ref.clearHard)} s (sanctum), sanctum damage taken ${Math.round(Math.min(...ref.taken))}–${Math.round(Math.max(...ref.taken))} a minute.`, "",
+      "| Kit | Role | Weapon | Cleared | Median clear | DPS | vs median | Taken / min | Sanctum clear | Sanctum DPS | Sanctum taken / min | Lowest HP | Ult fill | Ult share | Mastery 20 | Guardian | Guardian ult share |",
+      "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+      ...normal.map((r, i) => row(r, i, hard[i])), "",
+      "## Against the band", "",
+      `- **Normal-run DPS** ×${Math.min(...normal.map(r => r.dps / ref.dps)).toFixed(2)}–×${Math.max(...normal.map(r => r.dps / ref.dps)).toFixed(2)} of the median (band ±25%); by role: damage 1.00–1.20 (Marksman, Sniper, Gunslinger), support 0.90–1.05 (Hunter).`,
+      `- **Sanctum damage taken**: the spread with today's kits is ×${(Math.max(...ref.taken, ...hard.map(r => r.takenPerMin)) / Math.min(...ref.taken, ...hard.map(r => r.takenPerMin))).toFixed(2)} (at most ×3). No clear under 0.7× the median.`,
+      `- **Ult cadence**: the meter fills in ${Math.round(Math.min(...hard.map(r => r.ultFill)))}–${Math.round(Math.max(...hard.map(r => r.ultFill)))} s on the sanctum (60–90). The normal run ends in about 25 s, before any meter fills.`,
+      `- **Ult weight**: ${boss.map((b, i) => `${normal[i].subclass} ${pct(b.share)}`).join(", ")} of the damage on the guardian (8–15%). On the sanctum the first ult fills as the last wave thins: the Marksman's and the Sniper's land on the last group (${pct(hard[0].ultShare)}, ${pct(hard[1].ultShare)}); the Hunter's and the Gunslinger's often find only the golem left, and the bot holds an ult for two or more (${pct(hard[2].ultShare)}, ${pct(hard[3].ultShare)}).`,
+      `- **Mastery 20**: the family's median DPS ×${(med(top.map(r => r.dps)) / med(normal.map(r => r.dps))).toFixed(2)} of mastery 1 (at most ×1.2).`,
+      `- **The guardian** (scripted fight): ${boss.map((b, i) => `${normal[i].subclass} ${b.minutes.toFixed(1)} min (${b.cleared}/8)`).join(", ")}. The §3 target is 4–6 minutes; today's kits on the old bot run 2.4–10 minutes there, so the guardian's pace is left to the wave-5 pass (specs/classes/ranger-questions.md).`,
+      "", "Tuned in data only (kit numbers, `ult.charge`, the bot's `ult.reach` hint for ults that aren't an area).", "",
+    ].join("\n"));
+  });
+});

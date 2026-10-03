@@ -34,7 +34,7 @@ export const SNIPER: ClassKit = {
   ],
   passive: { name: "Killstreak", description: "Each kill: +15% damage, five at most. Lost when you're hit or after 8 s without a kill.", kind: "killstreak", value: 0.15, cap: 5, icon: I("sniper-killstreak") },
   ult: { key: "sniper.ult", name: "Final Shot", description: "Time stops, the scope locks: one rail round through the whole field, every hit a crit.",
-    cooldown_s: 0, energy: 0, charge: 0.85, anticipation_ms: 600, impacts: "first",
+    cooldown_s: 0, energy: 0, charge: 1.0, anticipation_ms: 600, impacts: "first", reach: 6,
     effects: [{ ...shot, power: 6, speed: 120, range: 32, pierce: true, crit: true, look: "bullet", width: 0.7 }],
     clip: { unique: "Ult_Sniper" }, vfx: { cast: "sniper.ultCharge", travel: "sniper.ultRail", impact: "sniper.ultHit" }, icon: I("sniper-ult") },
   ranks: [

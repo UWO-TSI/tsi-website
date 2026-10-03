@@ -17,8 +17,8 @@ export const GUNSLINGER: ClassKit = {
     ammo: { size: 6, reload_s: 1.2, gold: [0.45, 0.65], bonus: 0.25, miss_s: 0.6, clip: "Unique_Reload" },
     rounds: {
       explosive: { power: 0.62, splash: 1.7, tier: "ability", vfx: "gunslinger.boom" },
-      gold: { power: 1.4, tier: "heavy", ult: true, vfx: "gunslinger.gold", travel: "gunslinger.goldTrail", cast: "gunslinger.muzzleBig" },
-      warhead: { power: 6, blast: 5, tier: "ult", ult: true, big: true, vfx: "gunslinger.nuke", travel: "gunslinger.warheadTrail", cast: "gunslinger.muzzleBig" },
+      gold: { power: 1.1, tier: "heavy", ult: true, vfx: "gunslinger.gold", travel: "gunslinger.goldTrail", cast: "gunslinger.muzzleBig" },
+      warhead: { power: 5, blast: 5, tier: "ult", ult: true, big: true, vfx: "gunslinger.nuke", travel: "gunslinger.warheadTrail", cast: "gunslinger.muzzleBig" },
     },
     vfx: { cast: "gunslinger.muzzle", travel: "gunslinger.tracer", impact: "gunslinger.hit" } },
   keys: [
@@ -39,7 +39,7 @@ export const GUNSLINGER: ClassKit = {
   ],
   passive: { name: "Last Round", description: "The sixth chamber always crits.", kind: "last_round", value: 1, icon: I("gunslinger-lastround") },
   ult: { key: "gunslinger.ult", name: "Russian Roulette", description: "A warhead spun into the cylinder with five golden rounds. Cock and aim every shot: one of them is a nuke. 10 s to fire all six.",
-    cooldown_s: 0, energy: 0, charge: 0.8, anticipation_ms: 500, impacts: "first", duration: 10, sequence: "trigger",
+    cooldown_s: 0, energy: 0, charge: 0.83, anticipation_ms: 500, impacts: "first", duration: 10, sequence: "trigger", reach: 14,
     effects: [{ kind: "load", rounds: ["warhead", "gold", "gold", "gold", "gold", "gold"], shuffle: true, cock: 0.6, window: 10 }],
     clip: { unique: "Ult_Gunslinger" }, vfx: { cast: "gunslinger.spin" }, icon: I("gunslinger-ult") },
   ranks: [

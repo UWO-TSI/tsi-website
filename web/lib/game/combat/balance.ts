@@ -207,7 +207,7 @@ export function signatureWeapon(kitKey: string): string {
   const kit = classKit(kitKey)!, sig = signatureGrant(kitKey, 1);
   return sig?.key ?? SYSTEM_WEAPONS.find(w => w.type === kit.signature.type && STARTER_WEAPONS.includes(w.key))?.key ?? SYSTEM_WEAPONS.find(w => w.type === kit.signature.type)!.key;
 }
-const ULT_REACH = (a: ClassAbility) => Math.max(...a.effects.map(e => (e.kind === "area" ? e.radius : e.kind === "projectile" ? 1.5 : 0)), 2);
+const ULT_REACH = (a: ClassAbility & { reach?: number }) => a.reach ?? Math.max(...a.effects.map(e => (e.kind === "area" ? e.radius : e.kind === "projectile" ? 1.5 : 0)), 2);
 
 /** One v2 run: a survive mission's waves, or the guardian (`"boss"`: the scripted fight, bot rules plus the stagger window). */
 export function runV2(kitKey: string, missionId: "survive-circle" | "survive-sanctum" | "boss", seed: number, mastery = 1, limit = 240): RunV2 {

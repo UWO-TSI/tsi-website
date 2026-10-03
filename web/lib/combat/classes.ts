@@ -81,6 +81,8 @@ export interface ClassUlt extends ClassAbility {
   duration?: number;
   /** "trigger": after the wind-up the sequence (freeze, flash, lines) waits for a hit that asks for it (the Russian Roulette's warhead), not the anticipation's end. */
   sequence?: "trigger";
+  /** The ult's area for the balance bot when it isn't an area effect (a line, the traps, a cylinder of rounds): the reach round the target it counts enemies in. */
+  reach?: number;
 }
 
 /**
