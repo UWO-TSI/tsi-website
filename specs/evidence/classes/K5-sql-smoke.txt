@@ -1,4 +1,4 @@
-# zsh specs/evidence/launch-fixes/sql-smoke.sh --drafts  (2026-10-03 12:52 EDT, game/classes-launch; ERROR/FAIL lines: 0)
+# zsh specs/evidence/launch-fixes/sql-smoke.sh --drafts  (2026-10-03 12:59 EDT, game/classes-launch after merging feat/game-default-island 22456d68; ERROR/FAIL lines: 0)
 chain ok (game)
 ── 029-031_smoke.sql
 NOTICE:  029 ok
@@ -84,9 +84,9 @@ NOTICE:  drops 3 once per recipe ok
 NOTICE:  drops 4 refused catches teach nothing ok
 NOTICE:  column "drop_rarity" of relation "crafting_recipes" already exists, skipping
 NOTICE:  relation "recipe_drop_chances" already exists, skipping
-NOTICE:  drops 5 rate rock_crystal: 137 of 6000 (chance 0.02)
-NOTICE:  drops 5 rate rock_gold_nugget: 197 of 4000 (chance 0.05)
-NOTICE:  drops 5 rate fish_golden_koi: 451 of 3000 (chance 0.15)
+NOTICE:  drops 5 rate rock_crystal: 113 of 6000 (chance 0.02)
+NOTICE:  drops 5 rate rock_gold_nugget: 184 of 4000 (chance 0.05)
+NOTICE:  drops 5 rate fish_golden_koi: 455 of 3000 (chance 0.15)
 NOTICE:  drops 5 rate rock_stone: 0 of 2000 (chance 0)
 recipe drops smoke ok
 ── catalogue_seed_smoke.sql
@@ -128,6 +128,9 @@ NOTICE:  column "locked" of relation "member_collections" already exists, skippi
 NOTICE:  relation "member_storage" already exists, skipping
 NOTICE:  relation "bag_log" already exists, skipping
 NOTICE:  backpack smoke ok
+── event_check_in_smoke.sql
+NOTICE:  check-in 1 code hidden ok
+NOTICE:  check-in 2 pays once ok
 ── draft: classes_v2_launch_smoke.sql
 NOTICE:  classes v2 launch: 9 mastery rows, 10 signature weapons, 19 repicks, 20 letters, 33 cosmetics on sale; the flag is on
 NOTICE:  classes v2 launch: first run ok
