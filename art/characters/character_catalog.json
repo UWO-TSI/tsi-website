@@ -3182,6 +3182,201 @@
     "impact": 0
    },
    {
+    "name": "CastForward_Rifle",
+    "verb": "CastForward",
+    "grip": "Rifle",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.36
+   },
+   {
+    "name": "CastUp_Rifle",
+    "verb": "CastUp",
+    "grip": "Rifle",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.42
+   },
+   {
+    "name": "Slam_Rifle",
+    "verb": "Slam",
+    "grip": "Rifle",
+    "length": 0.9,
+    "loop": false,
+    "frames": 27,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.44
+   },
+   {
+    "name": "Thrust_Rifle",
+    "verb": "Thrust",
+    "grip": "Rifle",
+    "length": 0.6,
+    "loop": false,
+    "frames": 18,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.34
+   },
+   {
+    "name": "Spin_Rifle",
+    "verb": "Spin",
+    "grip": "Rifle",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.3
+   },
+   {
+    "name": "LeapStrike_Rifle",
+    "verb": "LeapStrike",
+    "grip": "Rifle",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.56
+   },
+   {
+    "name": "Throw_Rifle",
+    "verb": "Throw",
+    "grip": "Rifle",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.4
+   },
+   {
+    "name": "Summon_Rifle",
+    "verb": "Summon",
+    "grip": "Rifle",
+    "length": 0.9,
+    "loop": false,
+    "frames": 27,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.46
+   },
+   {
+    "name": "Channel_Rifle",
+    "verb": "Channel",
+    "grip": "Rifle",
+    "length": 1.2,
+    "loop": false,
+    "frames": 36,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.2,
+    "hold": [
+     0.2,
+     0.8
+    ]
+   },
+   {
+    "name": "Guard_Rifle",
+    "verb": "Guard",
+    "grip": "Rifle",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.2,
+    "hold": [
+     0.2,
+     0.8
+    ]
+   },
+   {
+    "name": "Kick_Rifle",
+    "verb": "Kick",
+    "grip": "Rifle",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.36
+   },
+   {
+    "name": "Sweep_Rifle",
+    "verb": "Sweep",
+    "grip": "Rifle",
+    "length": 0.733,
+    "loop": false,
+    "frames": 22,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.42
+   },
+   {
+    "name": "Plant_Rifle",
+    "verb": "Plant",
+    "grip": "Rifle",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.42
+   },
+   {
+    "name": "DrawShot_Rifle",
+    "verb": "DrawShot",
+    "grip": "Rifle",
+    "length": 1.0,
+    "loop": false,
+    "frames": 30,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.66
+   },
+   {
+    "name": "QuickShot_Rifle",
+    "verb": "QuickShot",
+    "grip": "Rifle",
+    "length": 0.467,
+    "loop": false,
+    "frames": 14,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.16
+   },
+   {
+    "name": "Backstep_Rifle",
+    "verb": "Backstep",
+    "grip": "Rifle",
+    "length": 0.533,
+    "loop": false,
+    "frames": 16,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.3
+   },
+   {
+    "name": "HoldIdle_Rifle",
+    "verb": "HoldIdle",
+    "grip": "Rifle",
+    "length": 2.0,
+    "loop": true,
+    "frames": 60,
+    "hand": "R",
+    "upper": true,
+    "impact": 0
+   },
+   {
     "name": "Ult_Elementalist",
     "verb": "Ult_Elementalist",
     "grip": "Staff",
@@ -3279,6 +3474,149 @@
     "hand": "both",
     "upper": true,
     "impact": 0.5
+   },
+   {
+    "name": "Ult_Marksman",
+    "verb": "Ult_Marksman",
+    "grip": "Bow",
+    "length": 0.9,
+    "loop": false,
+    "frames": 27,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.39
+   },
+   {
+    "name": "Ult_Sniper",
+    "verb": "Ult_Sniper",
+    "grip": "Rifle",
+    "length": 1.4,
+    "loop": false,
+    "frames": 42,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.43
+   },
+   {
+    "name": "Ult_Hunter",
+    "verb": "Ult_Hunter",
+    "grip": "Rifle",
+    "length": 1.1,
+    "loop": false,
+    "frames": 33,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.41
+   },
+   {
+    "name": "Ult_Gunslinger",
+    "verb": "Ult_Gunslinger",
+    "grip": "Pistol",
+    "length": 1.2,
+    "loop": false,
+    "frames": 36,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.42
+   },
+   {
+    "name": "Unique_Reload",
+    "verb": "Unique_Reload",
+    "grip": "Pistol",
+    "length": 1.2,
+    "loop": false,
+    "frames": 36,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.75
+   },
+   {
+    "name": "Unique_FanHammer",
+    "verb": "Unique_FanHammer",
+    "grip": "Pistol",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "L",
+    "upper": true,
+    "impact": 0.14
+   },
+   {
+    "name": "Unique_HandSign",
+    "verb": "Unique_HandSign",
+    "grip": "Fists",
+    "length": 0.733,
+    "loop": false,
+    "frames": 22,
+    "hand": "both",
+    "upper": true,
+    "impact": 0.42
+   },
+   {
+    "name": "Ult_Summoner",
+    "verb": "Ult_Summoner",
+    "grip": "Fists",
+    "length": 1.4,
+    "loop": false,
+    "frames": 42,
+    "hand": "both",
+    "upper": false,
+    "impact": 0.32
+   },
+   {
+    "name": "Unique_TotemThrow",
+    "verb": "Unique_TotemThrow",
+    "grip": "Staff",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.4
+   },
+   {
+    "name": "Ult_Shaman",
+    "verb": "Ult_Shaman",
+    "grip": "Staff",
+    "length": 1.4,
+    "loop": false,
+    "frames": 42,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.36
+   },
+   {
+    "name": "Unique_VineSwing",
+    "verb": "Unique_VineSwing",
+    "grip": "Staff",
+    "length": 0.9,
+    "loop": false,
+    "frames": 27,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.3
+   },
+   {
+    "name": "Ult_Druid",
+    "verb": "Ult_Druid",
+    "grip": "Staff",
+    "length": 1.5,
+    "loop": false,
+    "frames": 45,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.37
+   },
+   {
+    "name": "Ult_Priest",
+    "verb": "Ult_Priest",
+    "grip": "Staff",
+    "length": 1.4,
+    "loop": false,
+    "frames": 42,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.36
    }
   ]
  }

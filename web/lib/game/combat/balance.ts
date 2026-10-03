@@ -24,11 +24,14 @@ import { MOVE_TUNING } from "@/lib/game/movement/sim";
 import { WAVES, type SpawnPoint } from "./spawns";
 import { classKit, type ClassAbility } from "@/lib/combat/classes";
 import { signatureGrant } from "@/lib/combat/weapons";
-import { classKey, equipClassKit, pressUlt, stepClass, ULT_REACH } from "./classRuntime";
+import { classKey, classReload, equipClassKit, pressUlt, stepClass, ULT_REACH } from "./classRuntime";
+import { justReloaded } from "./classFire";
 import { formBasic } from "./primitives";
 import { shapePotency } from "./abilities";
 import { BOSS_CENTER } from "@/lib/game/ruins";
 import { ULT } from "@/lib/combat/ult";
+import { FIELD_KINDS, type FieldEffect } from "@/lib/combat/wardenData";
+import { fieldUseful } from "./field";
 
 const FALLBACK: Record<string, string> = { Arcane: "staff-oak", Ranger: "bow-willow", Vanguard: "sword-driftwood", Warden: "tome-spirits" };
 /** What a sensible member carries: the first starter the kit suggests that scales with the family's stat (row 31), else the family's own. */
@@ -88,6 +91,7 @@ function useful(rt: CombatRuntime, a: Ability, me: Vec, target: Enemy | null, th
     if (e.kind === "surf") return !!target && dist < 6;
     if (e.kind === "pull") return !!target && dist > 3 && dist < e.range;
     if (e.kind === "form") return formWanted(rt, e.form, me, target, threat);
+    if (FIELD_KINDS.has(e.kind)) { if (fieldUseful(rt, e as FieldEffect, me, target, hurt, threat)) return true; continue; } // classes v2 field primitives
     if (!target) continue;
     if (e.kind === "projectile" && dist < (e.range ?? 10) - 0.5) return true;
     if (e.kind === "area" && e.power > 0 && (e.at === "aim" ? dist < 11 : dist < (e.length ?? e.radius) + 0.3)) return true;
@@ -250,6 +254,8 @@ export function signatureWeapon(kitKey: string): string {
   const kit = classKit(kitKey)!, sig = signatureGrant(kitKey, 1);
   return sig?.key ?? SYSTEM_WEAPONS.find(w => w.type === kit.signature.type && STARTER_WEAPONS.includes(w.key))?.key ?? SYSTEM_WEAPONS.find(w => w.type === kit.signature.type)!.key;
 }
+/** Where an ult's area sits: at the aim when any of its effects lands there, else round you (a self-centred ult wants them near you). */
+const ULT_AIMED = (a: ClassAbility) => a.effects.some(e => "at" in e && e.at === "aim");
 
 /** One v2 run: a survive mission's waves, or the guardian (`"boss"`: the scripted fight, bot rules plus the stagger window). */
 /** The bot knows every form a Transmuter can learn, each from one defeat (a fresh learner: the forms at tier 2). */
@@ -262,8 +268,8 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
   p.hp = p.maxHp; p.energy = 100;
   const v = rt.v2!, boss = missionId === "boss";
   const center = boss ? { x: BOSS_CENTER.x, z: BOSS_CENTER.z - 6 } : SURVIVE_CIRCLES[missionId], waves = boss ? [[{ id: "boss", type: "guardian-statue", x: 0, z: 25.5 }]] : WAVES[missionId];
-  let me: Vec = { x: center.x, z: center.z }, wave = 0, strafe = 1, t = 0, taken = 0, minHp = p.hp, fillFrom = 0, ults = 0, drawLeft = 0, mashAt = 0, react = "", reactAt = 0;
-  const fills: number[] = [], judged = new Set<string>(), held: { slot: number; at: number }[] = [];
+  let me: Vec = { x: center.x, z: center.z }, wave = 0, strafe = 1, t = 0, taken = 0, minHp = p.hp, fillFrom = 0, ults = 0, drawLeft = 0, mashAt = 0, react = "", reactAt = 0, reloadAt = 0;
+  const fills: number[] = [], judged = new Set<string>(), held: { slot: number; at: number }[] = [], jitter = { x: 0, z: 0, t: 0 };
   spawnWave(rt, waves[0]);
   const dt = 1 / 30;
   const done = (cleared: boolean, died = false): RunV2 => ({ cleared, seconds: t, dealt: rt.tally.dealt, taken, minHp: died ? 0 : minHp / p.maxHp, died, ultDealt: rt.tally.ult, fills, ults });
@@ -272,14 +278,23 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
     if (!alive.length) { if (++wave >= waves.length) return done(true); spawnWave(rt, waves[wave]); }
     const target = alive.filter(e => e.type.kind === "boss")[0] ?? alive.sort((a, b) => d2(a, me) - d2(b, me))[0] ?? null;
     const hpBefore = p.hp;
-    if (target) { p.aim = { x: target.x, z: target.z }; p.facing = Math.atan2(target.x - me.x, target.z - me.z); }
+    // A member's aim wanders a little round the target (up to 0.45 u, a new spot every 0.4 s): weak points aren't free.
+    if ((jitter.t -= dt) <= 0) { const a = random() * Math.PI * 2, r = 0.45 * Math.sqrt(random()); jitter.x = Math.cos(a) * r; jitter.z = Math.sin(a) * r; jitter.t = 0.4; }
+    if (target) { p.aim = { x: target.x + jitter.x, z: target.z + jitter.z }; p.facing = Math.atan2(p.aim.x - me.x, p.aim.z - me.z); }
     const threat = rt.enemies.find(e => e.state === "windup" && e.t > e.move.windup * 0.5 && strikeLands(e, me, 0.6)) ?? null;
     if (threat && !judged.has(`${threat.id}:${threat.cycle}:${Math.floor(t / 2)}`)) {
       judged.add(`${threat.id}:${threat.cycle}:${Math.floor(t / 2)}`);
-      if (random() < DODGE_SKILL && p.dodgeCd <= 0) { const a = Math.atan2(me.x - threat.x, me.z - threat.z) + strafe * 1.2; startDodge(rt, { x: Math.sin(a), z: Math.cos(a) }); }
+      const drawing = !!rt.casting?.ult; // a drawn ult is held to the end: a dodge would throw the drawing away (the wings take 3 s)
+      if (!drawing && random() < DODGE_SKILL && p.dodgeCd <= 0) { const a = Math.atan2(me.x - threat.x, me.z - threat.z) + strafe * 1.2; startDodge(rt, { x: Math.sin(a), z: Math.cos(a) }); }
       // Not dodged: a timed skill instead (a parry, a swap, a Perfect Shift) now and then, pressed at a human moment in the rest of the windup.
-      else if (random() < REACT_SKILL) { react = `${threat.id}:${threat.cycle}`; reactAt = threat.move.windup * (0.5 + 0.5 * random()); }
+      else if (!drawing && random() < REACT_SKILL) { react = `${threat.id}:${threat.cycle}`; reactAt = threat.move.windup * (0.5 + 0.5 * random()); }
     }
+    // A cylinder's active reload: half the time the bot hits the gold span, otherwise it waits the reload out.
+    const live = v.live, gold = v.kit.fire?.ammo?.gold;
+    if (gold && live.reload !== null) {
+      if (reloadAt === 0) reloadAt = random() < 0.5 ? (gold[0] + gold[1]) / 2 : 2;
+      if (!live.tried && live.reload / live.reloadLen >= reloadAt) classReload(rt, me);
+    } else reloadAt = 0;
     const reacting = !!threat && react === `${threat.id}:${threat.cycle}` && threat.t >= reactAt;
     // Riders: 30% of the time the bot is sliding, in the air, just off a dash and fast.
     const rider = random() < 0.3;
@@ -293,16 +308,21 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
     // A channelled ult's mash: about 3.5 notes a second, four in five right.
     if (v.channel && t >= mashAt) { mashAt = t + 0.28; const note = v.channel.notes[v.channel.at]; if (note !== undefined) classKey(rt, random() < 0.8 ? note : (note + 1) % 4, true); }
     // The ult: full, with two or more enemies inside its area (or the boss).
-    if (v.meter >= ULT.max && target && !v.channel && (target.type.kind === "boss" || alive.filter(e => d2(e, target) <= ULT_REACH(v.ult)).length >= 2)) pressUlt(rt);
+    if (v.meter >= ULT.max && target && !v.channel && (v.ult.input?.kind !== "drawn" || !rt.casting) && (target.type.kind === "boss" || alive.filter(e => d2(e, ULT_AIMED(v.ult) ? target : me) <= ULT_REACH(v.ult)).length >= 2)) {
+      pressUlt(rt);
+      if (v.ult.input?.kind === "drawn") drawLeft = RUNE_TIME.binding; // a drawn ult (the winged sigil): a hard shape takes longer
+    }
     else if (!rt.casting && !p.dash && p.dodgeAge === null && v.queue.length === 0 && !held.length) {
       for (let i = 0; i < v.keys.length; i++) {
         const a = v.keys[i];
         if (!a || (v.cd[a.key] ?? 0) > 0 || p.energy < a.energy || (a.when && !rider)) continue;
+        if ((a.needs === "reloaded" && !justReloaded(rt)) || (a.ammo && (live.ammo <= 0 || live.reload !== null || live.cockEvery > 0))) continue;
         const kind = a.input?.kind ?? "tap";
         if (kind === "toggle" && v.toggled[i]) continue;
         if (!(staggered || useful(rt, a, me, target, reacting))) continue;
         if (target?.type.kind === "boss" && glances(a)) continue; // the guardian's armour eats small hits: save the energy
         const combo = v.combos.find(c => c.keys[0] === i && c.keys[1] === i && p.energy >= c.ability.energy && random() < 0.5);
+        if (target && a.effects.some(e => e.kind === "barrier")) p.aim = { x: me.x + (target.x - me.x) * 0.55, z: me.z + (target.z - me.z) * 0.55 }; // a wall goes between you
         classKey(rt, i, true);
         if (kind === "hold" || kind === "charge") held.push({ slot: i, at: t + (kind === "hold" ? 1 : (a.input as { max_s: number }).max_s) }); // let go later
         else { classKey(rt, i, false); if (combo) { classKey(rt, i, true); classKey(rt, i, false); } }
