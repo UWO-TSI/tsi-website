@@ -7,6 +7,8 @@
  * the phone shell instead of the 3D world's HUD.
  */
 import { useCallback, useEffect, useState } from "react";
+import { Backpack, BookOpen, Mail } from "lucide-react";
+import { Button, ErrorNote } from "@/components/gui";
 import type { Family } from "@/lib/oracle/engine";
 import { apiCall } from "@/lib/apiClient";
 import { ClassBadge } from "@/components/portal/classIdentity";
@@ -56,16 +58,17 @@ export default function MeTab() {
             {me && me !== "error" && me.family ? <ClassBadge cls={me.family} iconSize={14} fontSize={13} /> : <span className={s.muted}>No family yet</span>}
           </div>
         </div>
-        {me === "error" ? <p className={`${s.note} ${s.err}`} role="alert">Couldn&apos;t load your profile.</p> : null}
+        {me === "error" ? <ErrorNote>Your profile didn’t load. The connection may have dropped.</ErrorNote> : null}
         <div className={s.row} style={{ marginTop: 12 }}>
-          <button className={s.ghost} onClick={() => setSheet("showcase")}>Showcase</button>
+          <Button variant="quiet" size="sm" onClick={() => setSheet("showcase")}>Your showcase</Button>
         </div>
       </section>
 
+      {/* The naming pass (menus §4): the Bag holds items, the Collection your catches (this said Journal). */}
       <div className={s.grid2}>
-        <button className={s.tile} onClick={() => setSheet("bag")}>🎒 Bag</button>
-        <button className={s.tile} onClick={() => setSheet("journal")}>📖 Journal</button>
-        <button className={s.tile} onClick={() => setSheet("mailbox")}>✉️ Mailbox</button>
+        <button className={s.tile} onClick={() => setSheet("bag")}><span className={s.appTile} style={{ "--tile": "#f7cd67" } as React.CSSProperties} aria-hidden><Backpack size={24} strokeWidth={2.2} /></span>Bag</button>
+        <button className={s.tile} onClick={() => setSheet("journal")}><span className={s.appTile} style={{ "--tile": "#82d5bb" } as React.CSSProperties} aria-hidden><BookOpen size={24} strokeWidth={2.2} /></span>Collection</button>
+        <button className={s.tile} onClick={() => setSheet("mailbox")}><span className={s.appTile} style={{ "--tile": "#e59266" } as React.CSSProperties} aria-hidden><Mail size={24} strokeWidth={2.2} /></span>Mailbox</button>
       </div>
 
       <InventorySheet open={sheet === "bag"} onClose={close} />

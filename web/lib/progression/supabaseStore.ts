@@ -227,7 +227,7 @@ export function supabaseProgressionStore(db: SupabaseClient): ProgressionStore {
           id: String(r.id),
           kind: r.kind === "note" ? "note" : "system",
           sender_id: (r.sender_id as string | null) ?? null,
-          sender_name: r.sender_id ? (names.get(String(r.sender_id)) ?? "Member") : "Village Hall",
+          sender_name: r.sender_id ? (names.get(String(r.sender_id)) ?? "Member") : "HQ",
           recipient_id: String(r.recipient_id),
           recipient_name: names.get(String(r.recipient_id)) ?? "Member",
           subject: String(r.subject ?? ""),

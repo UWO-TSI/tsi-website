@@ -5,23 +5,25 @@
  *
  * Spec: `specs/ux-onboarding.md` §4-5 + `specs/sprint-2026-06-tier-1-followups.md` R3-1.
  *
- * - Bottom-right floating widget on every dashboard page. Collapsible:
- *   icon-only at 56×56px (48×48 on mobile) when closed, expanded panel when open.
+ * - Bottom-right floating widget on every dashboard page. Collapsible: a round
+ *   paper bubble (56px, 44px on mobile) with a count of the quests left when
+ *   closed, a paper card when open (the GUI sheet's IconButton, Counter, Progress).
  * - Opt-in per design principle #7 (T1-T3 senior members can mute). Mute toggle
- *   lives in Settings → Appearance via localStorage key `tsi.quests.muted`. Widget
+ *   lives in Settings → World via localStorage key `tsi.quests.muted`. Widget
  *   reads on mount + subscribes to storage events for cross-tab sync.
  * - MVP quests sourced from a hardcoded array below. No migration. Completion
  *   state persisted in localStorage key `tsi.quests.v1.completed` (string array of
  *   quest ids, JSON-encoded).
  * - Rewards: NONE. Per design principle #3, online activity grants no TC/XP.
  *   Quests are signposts only. UI states this explicitly.
- * - Mobile (<640px): collapses to a 48×48 icon. Tapping expands as a bottom sheet
- *   (full-width, pull-down / handle-tap / backdrop-tap to close).
+ * - Mobile (<640px): tapping the bubble expands a paper bottom sheet
+ *   (full-width, handle-tap / backdrop-tap to close).
  */
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { CheckSquare, Square, ChevronDown, X, Sparkles } from "lucide-react";
+import { Circle, CircleCheck, ChevronDown, X, Sparkles } from "lucide-react";
 import { useUser } from "./UserContext";
+import { Counter, IconButton, Progress } from "@/components/gui";
 
 // ─── Quest data (hardcoded MVP per task spec) ───────────────────────────────
 interface Quest {
@@ -41,7 +43,7 @@ const QUESTS: readonly Quest[] = [
   {
     id: "claim_bounty",
     title: "Claim your first bounty",
-    hint: "Open the Bounty Board and pick something that fits.",
+    hint: "Open the bounty board and pick something that fits.",
   },
   {
     id: "add_social_link",
@@ -257,7 +259,7 @@ export default function QuestChecklist({ hidden = false }: { hidden?: boolean })
 
   // Hide entirely when:
   //   - User context still loading (avoid pop-in before tier known).
-  //   - User has muted via Settings → Appearance.
+  //   - User has muted via Settings → World.
   //   - Tier 1-3 default to muted-by-explicit-opt-out (they can re-enable via Settings).
   //     Per design principle #7: "Senior members can mute the game-feel."
   //     The mute toggle is the single source of truth; tier doesn't auto-mute.
@@ -271,68 +273,23 @@ export default function QuestChecklist({ hidden = false }: { hidden?: boolean })
   const totalCount = QUESTS.length;
   const allDone = completedCount === totalCount;
 
-  // ─── Collapsed icon (closed state) ────────────────────────────────────────
+  // ─── Collapsed bubble (closed state) ──────────────────────────────────────
   if (!open) {
-    const size = isMobile ? 48 : 56;
+    const iconSize = isMobile ? 20 : 24;
     return (
-      <button
-        type="button"
-        aria-label={`Open onboarding quests (${completedCount} of ${totalCount} complete)`}
+      <IconButton
+        label={`Open onboarding quests (${completedCount} of ${totalCount} complete)`}
         title="Onboarding quests"
+        size={isMobile ? "md" : "lg"}
         onClick={() => setOpen(true)}
-        style={{
-          position: "fixed",
-          bottom: 16,
-          right: 16,
-          width: size,
-          height: size,
-          borderRadius: "50%",
-          background: "var(--color-bg-navy, #0d1b2a)",
-          border: "1px solid rgba(0, 47, 167, 0.4)",
-          color: "var(--color-text-main, #f1ffff)",
-          cursor: "pointer",
-          zIndex: 30,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxShadow: "var(--shadow-soft, 0 4px 16px rgba(0,0,0,0.25))",
-          transition: "transform 0.15s ease, background 0.15s ease",
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "scale(1.05)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "scale(1)";
-        }}
+        style={{ position: "fixed", bottom: 16, right: 16, zIndex: 30 }}
       >
         <Sparkles
           aria-hidden="true"
-          style={{ width: 20, height: 20, color: allDone ? "#22c55e" : "var(--color-brand-blue, #1D9BF0)" }}
+          style={{ width: iconSize, height: iconSize, color: allDone ? "var(--gui-success)" : "var(--gui-sage)" }}
         />
-        <span
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            top: -4,
-            right: -4,
-            minWidth: 20,
-            height: 20,
-            padding: "0 6px",
-            borderRadius: 10,
-            background: allDone ? "#22c55e" : "var(--color-brand-blue, #1D9BF0)",
-            color: "#f1ffff",
-            fontFamily: "'IBM Plex Mono', monospace",
-            fontSize: 11,
-            fontWeight: 600,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            border: "1px solid var(--color-bg-navy, #0d1b2a)",
-          }}
-        >
-          {completedCount}/{totalCount}
-        </span>
-      </button>
+        <Counter n={totalCount - completedCount} className="absolute -top-1 -right-1" />
+      </IconButton>
     );
   }
 
@@ -347,7 +304,7 @@ export default function QuestChecklist({ hidden = false }: { hidden?: boolean })
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.4)",
+            background: "var(--gui-scrim)",
             zIndex: 29,
             animation: "questFade 0.2s ease-out",
           }}
@@ -362,13 +319,13 @@ export default function QuestChecklist({ hidden = false }: { hidden?: boolean })
             right: 0,
             bottom: 0,
             zIndex: 30,
-            background: "var(--color-bg-navy, #0d1b2a)",
-            borderTop: "1px solid rgba(0, 47, 167, 0.3)",
-            borderTopLeftRadius: 16,
-            borderTopRightRadius: 16,
-            boxShadow: "0 -8px 24px rgba(0,0,0,0.4)",
-            padding: 16,
-            paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))",
+            background: "var(--gui-grain) var(--gui-paper)",
+            color: "var(--gui-ink)",
+            fontFamily: "var(--gui-font)",
+            borderRadius: "28px 32px 0 0 / 26px 30px 0 0",
+            boxShadow: "var(--gui-shadow-lg)",
+            padding: "6px 18px 18px",
+            paddingBottom: "calc(18px + env(safe-area-inset-bottom, 0px))",
             animation: "questSlideUp 0.25s ease-out",
             maxHeight: "80vh",
             display: "flex",
@@ -382,17 +339,20 @@ export default function QuestChecklist({ hidden = false }: { hidden?: boolean })
             aria-label="Close quests"
             style={{
               alignSelf: "center",
-              width: 40,
-              height: 4,
-              borderRadius: 2,
-              background: "rgba(255,255,255,0.2)",
+              display: "grid",
+              placeItems: "center",
+              width: 64,
+              height: 24,
+              background: "transparent",
               border: "none",
               padding: 0,
               cursor: "pointer",
-              marginBottom: 12,
+              marginBottom: 6,
               flexShrink: 0,
             }}
-          />
+          >
+            <span aria-hidden="true" style={{ width: 40, height: 5, borderRadius: 3, background: "var(--gui-paper-line)" }} />
+          </button>
           <QuestPanelContent
             completed={completed}
             completedCount={completedCount}
@@ -426,14 +386,15 @@ export default function QuestChecklist({ hidden = false }: { hidden?: boolean })
         position: "fixed",
         bottom: 16,
         right: 16,
-        width: 320,
+        width: 330,
         maxHeight: "min(70vh, 560px)",
         zIndex: 30,
-        background: "var(--color-bg-navy, #0d1b2a)",
-        border: "1px solid rgba(0, 47, 167, 0.3)",
-        borderRadius: 16,
-        boxShadow: "var(--shadow-soft, 0 8px 24px rgba(0,0,0,0.35))",
-        padding: 16,
+        background: "var(--gui-grain) var(--gui-paper)",
+        color: "var(--gui-ink)",
+        fontFamily: "var(--gui-font)",
+        borderRadius: "var(--gui-r-paper)",
+        boxShadow: "var(--gui-shadow-lg)",
+        padding: "14px 14px 16px 18px",
         display: "flex",
         flexDirection: "column",
         animation: "questFadeIn 0.18s ease-out",
@@ -476,8 +437,6 @@ function QuestPanelContent({
   onClose: () => void;
   showCloseButton: boolean;
 }) {
-  const percent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
-
   return (
     <>
       {/* Header */}
@@ -491,113 +450,68 @@ function QuestPanelContent({
           flexShrink: 0,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-          <Sparkles
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+          <span
             aria-hidden="true"
             style={{
-              width: 16,
-              height: 16,
-              color: allDone ? "#22c55e" : "var(--color-brand-blue, #1D9BF0)",
+              display: "grid",
+              placeItems: "center",
+              width: 34,
+              height: 34,
               flexShrink: 0,
+              borderRadius: "var(--gui-r-blob)",
+              background: allDone ? "var(--gui-success-soft)" : "var(--gui-sage-soft)",
+              color: allDone ? "var(--gui-success)" : "var(--gui-sage)",
             }}
-          />
+          >
+            <Sparkles style={{ width: 18, height: 18 }} />
+          </span>
           <h2
             style={{
-              fontSize: 14,
-              fontWeight: 600,
-              color: "var(--color-text-main, #f1ffff)",
+              fontSize: 17,
+              fontWeight: 800,
+              color: "var(--gui-ink-strong)",
               margin: 0,
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
             }}
           >
-            Onboarding Quests
+            Onboarding quests
           </h2>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Collapse quests"
-          style={{
-            width: 28,
-            height: 28,
-            borderRadius: 6,
-            background: "transparent",
-            border: "none",
-            color: "var(--color-text-muted, #98a2b3)",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "var(--surface-chip)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "transparent";
-          }}
-        >
+        <IconButton label={showCloseButton ? "Collapse quests" : "Close quests"} size="sm" onClick={onClose}>
           {showCloseButton ? (
-            <ChevronDown aria-hidden="true" style={{ width: 16, height: 16 }} />
+            <ChevronDown aria-hidden="true" style={{ width: 18, height: 18 }} />
           ) : (
-            <X aria-hidden="true" style={{ width: 16, height: 16 }} />
+            <X aria-hidden="true" style={{ width: 18, height: 18 }} />
           )}
-        </button>
+        </IconButton>
       </div>
 
-      {/* Progress bar */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          marginBottom: 4,
-          flexShrink: 0,
-        }}
-      >
-        <span
-          style={{
-            fontFamily: "'IBM Plex Mono', monospace",
-            fontSize: 11,
-            color: "var(--color-text-subtle, #6b7280)",
-          }}
-        >
-          {`${completedCount} / ${totalCount}`}
-        </span>
-        <div
-          style={{
-            flex: 1,
-            height: 4,
-            borderRadius: 2,
-            background: "var(--surface-chip)",
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              width: `${percent}%`,
-              height: "100%",
-              background: allDone ? "#22c55e" : "var(--color-brand-blue, #1D9BF0)",
-              transition: "width 0.3s ease, background 0.3s ease",
-            }}
-          />
-        </div>
-      </div>
+      {/* Progress */}
+      <Progress
+        value={completedCount}
+        max={totalCount}
+        kind={allDone ? "xp" : "plain"}
+        label="Quests checked off"
+        showLabel
+        valueText={`${completedCount} of ${totalCount}`}
+        size={10}
+        className="shrink-0"
+      />
 
       {/* Reward disclaimer (design principle #3) */}
       <p
         style={{
-          fontSize: 11,
-          color: "var(--color-text-subtle, #6b7280)",
-          fontStyle: "italic",
-          margin: "8px 0 12px",
+          fontSize: 13,
+          color: "var(--gui-muted)",
+          margin: "10px 0 10px",
           lineHeight: 1.4,
           flexShrink: 0,
         }}
       >
-        Quest completion is for personal tracking — rewards come from real-world action.
+        These are just for you to keep track. Rewards come from real-world action.
       </p>
 
       {/* Quest list */}
@@ -608,7 +522,7 @@ function QuestPanelContent({
           padding: 0,
           display: "flex",
           flexDirection: "column",
-          gap: 4,
+          gap: 2,
           overflowY: "auto",
           flex: 1,
           minHeight: 0,
@@ -622,69 +536,63 @@ function QuestPanelContent({
                 type="button"
                 onClick={() => onToggle(quest.id)}
                 aria-pressed={isDone}
+                className="bg-transparent hover:bg-[var(--gui-paper-warm)]"
                 style={{
                   width: "100%",
                   display: "flex",
                   alignItems: "flex-start",
                   gap: 10,
-                  padding: "8px 8px",
-                  background: "transparent",
-                  border: "1px solid transparent",
-                  borderRadius: 8,
+                  padding: "8px 10px",
+                  border: "none",
+                  borderRadius: 14,
                   textAlign: "left",
                   cursor: "pointer",
                   color: "inherit",
-                  transition: "background 0.15s ease, border-color 0.15s ease",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "var(--surface-hover)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
+                  font: "inherit",
+                  transition: "background 0.15s ease",
                 }}
               >
                 {isDone ? (
-                  <CheckSquare
+                  <CircleCheck
                     aria-hidden="true"
                     style={{
-                      width: 16,
-                      height: 16,
-                      color: "#22c55e",
+                      width: 20,
+                      height: 20,
+                      color: "var(--gui-teal-ink)",
                       flexShrink: 0,
-                      marginTop: 2,
+                      marginTop: 1,
                     }}
                   />
                 ) : (
-                  <Square
+                  <Circle
                     aria-hidden="true"
                     style={{
-                      width: 16,
-                      height: 16,
-                      color: "var(--color-text-subtle, #6b7280)",
+                      width: 20,
+                      height: 20,
+                      color: "var(--gui-muted)",
                       flexShrink: 0,
-                      marginTop: 2,
+                      marginTop: 1,
                     }}
                   />
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p
                     style={{
-                      fontSize: 13,
-                      fontWeight: 500,
-                      color: isDone
-                        ? "var(--color-text-subtle, #6b7280)"
-                        : "var(--color-text-soft, #d1d5db)",
+                      fontSize: 14,
+                      fontWeight: 800,
+                      color: isDone ? "var(--gui-muted)" : "var(--gui-ink)",
                       margin: 0,
                       textDecoration: isDone ? "line-through" : "none",
-                      lineHeight: 1.4,
+                      lineHeight: 1.35,
                     }}
                   >
                     {quest.title}
                   </p>
                   <p
                     style={{
-                      fontSize: 11,
-                      color: "var(--color-text-subtle, #6b7280)",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: "var(--gui-muted)",
                       margin: "2px 0 0",
                       lineHeight: 1.4,
                     }}
@@ -701,11 +609,11 @@ function QuestPanelContent({
       {allDone && (
         <p
           style={{
-            fontSize: 12,
-            color: "#22c55e",
+            fontSize: 14,
+            color: "var(--gui-success)",
             margin: "12px 0 0",
             textAlign: "center",
-            fontWeight: 500,
+            fontWeight: 800,
             flexShrink: 0,
           }}
         >

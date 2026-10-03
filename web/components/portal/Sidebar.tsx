@@ -88,40 +88,41 @@ export default function Sidebar({ onClose }: SidebarProps) {
     <aside
       className="w-[240px] h-full flex flex-col shrink-0 overflow-y-auto"
       style={{
-        background: "var(--color-surface)",
-        borderRight: "1px solid var(--glass-border-soft)",
+        background: "var(--gui-grain) var(--gui-paper)",
+        borderRadius: "0 28px 28px 0 / 0 34px 34px 0",
       }}
     >
       {/* Player Status */}
       <div
         className="flex items-center gap-3"
         style={{
-          padding: "16px 8px 12px",
-          marginBottom: "16px",
-          borderBottom: "1px solid var(--glass-border-soft)",
+          padding: "18px 12px 14px",
+          marginBottom: "12px",
+          borderBottom: "2px dashed var(--gui-paper-edge)",
         }}
       >
         <div
-          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-          style={{ background: "var(--color-bg-alt)" }}
+          className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+          style={{ background: "var(--gui-paper-deep)", boxShadow: "var(--gui-shadow-sm)" }}
         >
           <User className="w-4 h-4" style={{ color: "var(--color-text-muted)" }} />
         </div>
         <div className="min-w-0 flex-1">
           <p
             className="text-sm truncate"
-            style={{ color: "var(--color-text-main)", fontWeight: 700 }}
+            style={{ color: "var(--gui-ink-strong)", fontWeight: 800 }}
           >
             {userName}
           </p>
           <p
-            className="font-mono"
+            className=""
             style={{
               fontSize: "12px",
-              color: "var(--color-text-muted)",
+              fontWeight: 800,
+              color: "var(--gui-muted)",
             }}
           >
-            Lv. {userLevel}
+            Lv {userLevel}
           </p>
           {/* Class flair per ux-classes.md §4.1 — cosmetic only (principle #4) */}
           <ClassBadge cls={profile?.class} iconSize={14} fontSize={12} />
@@ -159,13 +160,14 @@ export default function Sidebar({ onClose }: SidebarProps) {
         {((profile?.tier ?? 99) <= 2 || isWhitelistedAdmin) && (
           <>
             <div
-              className="font-mono uppercase tracking-wider"
+              className="uppercase tracking-wider"
               style={{
-                fontSize: "10px",
-                color: "var(--color-text-subtle)",
-                padding: "12px 12px 4px",
+                fontSize: "12px",
+                fontWeight: 800,
+                color: "var(--gui-muted)",
+                padding: "12px 14px 4px",
                 marginTop: "8px",
-                borderTop: "1px solid var(--glass-border-soft)",
+                borderTop: "2px dashed var(--gui-paper-edge)",
               }}
             >
               Admin
@@ -208,33 +210,32 @@ function NavLink({
       href={item.href}
       onClick={onClose}
       className="flex items-center gap-3 rounded-lg transition-[background,color]"
+      aria-current={active ? "page" : undefined}
       style={{
-        height: "40px",
-        padding: "0 12px",
-        paddingLeft: active ? "10px" : "12px",
-        borderLeft: active
-          ? "2px solid var(--color-brand-blue)"
-          : "2px solid transparent",
+        height: "44px",
+        padding: "0 14px",
         background: active
-          ? "var(--surface-chip)"
+          ? "var(--gui-butter)"
           : "transparent",
+        boxShadow: active ? "var(--gui-shadow-sm)" : "none",
         color: active
-          ? "var(--color-text-main)"
-          : "var(--color-text-muted)",
-        borderRadius: "8px",
+          ? "var(--gui-ink-strong)"
+          : "var(--gui-ink-2)",
+        fontWeight: 800,
+        borderRadius: "999px",
         transitionDuration: "0.15s",
         transitionTimingFunction: "ease",
       }}
       onMouseEnter={(e) => {
         if (!active) {
-          e.currentTarget.style.background = "var(--surface-hover)";
-          e.currentTarget.style.color = "var(--color-text-soft)";
+          e.currentTarget.style.background = "var(--gui-paper-warm)";
+          e.currentTarget.style.color = "var(--gui-ink)";
         }
       }}
       onMouseLeave={(e) => {
         if (!active) {
           e.currentTarget.style.background = "transparent";
-          e.currentTarget.style.color = "var(--color-text-muted)";
+          e.currentTarget.style.color = "var(--gui-ink-2)";
         }
       }}
     >
@@ -242,12 +243,12 @@ function NavLink({
         className="shrink-0"
         style={{ width: "18px", height: "18px" }}
       />
-      <span className="text-sm flex-1 truncate" style={{ fontWeight: 400 }}>
+      <span className="text-sm flex-1 truncate">
         {item.label}
       </span>
       {item.comingSoon && (
         <span
-          className="font-mono shrink-0"
+          className="shrink-0"
           style={{
             fontSize: "12px",
             color: "var(--color-text-subtle)",

@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Shield, ArrowLeft, Plus, Pencil, Printer } from "lucide-react";
+import { Lock, ArrowLeft, CalendarDays, Plus, Pencil, Printer } from "lucide-react";
 import { useUser } from "@/components/portal/UserContext";
+import { Amount } from "@/components/economy/Amount";
+import { Badge, Card, Empty, ErrorNote, Loading, type BadgeTone } from "@/components/gui";
+import { buttonLinkCls } from "@/components/portal/ProgressionAdminShared";
 
 interface EventRow {
   id: string;
@@ -20,15 +23,24 @@ interface EventRow {
   attendee_count?: number;
 }
 
-const typeColors: Record<string, string> = {
-  club: "text-[var(--color-brand-blue)] bg-[var(--color-brand-blue)]/10",
-  team: "text-[var(--color-accent-cyan)] bg-[var(--color-accent-cyan)]/10",
-  bounty: "text-red-400 bg-red-400/10",
-  volunteer: "text-green-400 bg-green-400/10",
-  social: "text-[#a78bfa] bg-[#a78bfa]/10",
-  workshop: "text-[var(--color-brand-yellow)] bg-[var(--color-brand-yellow)]/10",
-  meeting: "text-[var(--color-text-muted)] bg-[var(--color-text-muted)]/10",
+const typeTones: Record<string, BadgeTone> = {
+  club: "sage",
+  team: "info",
+  bounty: "gold",
+  volunteer: "success",
+  social: "neutral",
+  workshop: "info",
+  meeting: "neutral",
 };
+
+const PAGE = "mx-auto w-full max-w-6xl px-5 pt-6 pb-16 sm:px-8";
+const BACK = "mb-2 inline-flex items-center gap-1.5 text-sm font-bold text-[var(--gui-ink-2)] hover:text-[var(--gui-ink-strong)]";
+/** A link in the kit's small sage button. */
+const BUTTON_LINK = buttonLinkCls;
+const TH = "px-4 py-3 text-xs font-extrabold whitespace-nowrap text-[var(--gui-ink-2)]";
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " ");
+const when = (iso: string) =>
+  new Date(iso).toLocaleString("en-CA", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Toronto" });
 
 export default function AdminContentEventsPage() {
   const { profile, loading } = useUser();
@@ -64,104 +76,77 @@ export default function AdminContentEventsPage() {
 
   if (loading) {
     return (
-      <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
-        Loading...
-      </p>
+      <div className={PAGE}>
+        <Loading label="Opening the events…" />
+      </div>
     );
   }
 
   const tier = profile?.tier ?? 5;
   if (tier > 2) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <Shield
-            size={48}
-            className="mx-auto text-[var(--color-text-muted)]/20 mb-4"
-          />
-          <h2 className="text-lg font-heading font-bold text-[var(--color-text-primary)] mb-2">
-            Access Denied
-          </h2>
-          <p className="text-sm font-mono text-[var(--color-text-muted)]">
-            T1/T2 clearance required for content admin.
-          </p>
-        </div>
+      <div className={`${PAGE} flex min-h-[60vh] items-center justify-center`}>
+        <Empty icon={<Lock size={32} />} title="Admins only">
+          Event admin is only open to the club’s admins.
+        </Empty>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="mb-2">
-        <Link
-          href="/student/dashboard/admin"
-          className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-        >
-          <ArrowLeft size={12} />
-          Back to Admin
-        </Link>
-      </div>
+    <div className={PAGE}>
+      <Link href="/student/dashboard/admin" className={BACK}>
+        <ArrowLeft size={16} aria-hidden />
+        Back to admin
+      </Link>
 
-      <div className="mb-6 flex items-end justify-between gap-3 flex-wrap">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
+          <h1 className="text-2xl font-extrabold text-[var(--gui-ink-strong)]">
             Events
           </h1>
-          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
-            {events?.length ?? 0} approved events · click an event to edit or
-            print its QR check-in code.
+          <p className="mt-1 text-sm text-[var(--gui-muted)]">
+            {events?.length ?? 0} approved events. Edit one, or print its QR
+            code for check-in at the door.
           </p>
         </div>
         <Link
           href="/student/dashboard/admin/content/events/new"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 transition-opacity"
+          className={BUTTON_LINK}
+          data-size="sm"
         >
-          <Plus size={12} /> New Event
+          <Plus size={16} aria-hidden /> New event
         </Link>
       </div>
 
       {fetchError && (
-        <p className="mb-4 text-xs font-mono text-[var(--color-text-muted)]">
-          Events fetch failed ({fetchError}).
-        </p>
+        <ErrorNote className="mb-4">
+          The events didn’t load ({fetchError}).
+        </ErrorNote>
       )}
 
       {events === null ? (
-        <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
-          Loading events...
-        </p>
+        <Loading label="Getting the events…" />
       ) : events.length === 0 ? (
-        <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)]">
-          No events to show.
-        </p>
+        fetchError ? null : (
+          <Empty icon={<CalendarDays size={32} />} title="No events yet">
+            Make one and it shows up here, ready to print its QR code.
+          </Empty>
+        )
       ) : (
-        <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-x-auto">
+        <Card style={{ padding: 0 }} className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[var(--glass-border)]">
-                <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
-                  Title
-                </th>
-                <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
-                  Type
-                </th>
-                <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
-                  Start
-                </th>
-                <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
-                  Location
-                </th>
-                <th className="text-right px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
-                  XP / TC
-                </th>
-                <th className="text-right px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
-                  RSVPs
-                </th>
-                <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
-                  Status
-                </th>
-                <th className="text-right px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
-                  Actions
+              <tr className="bg-[var(--gui-paper-warm)]">
+                <th className={`${TH} text-left`}>Event</th>
+                <th className={`${TH} text-left`}>Type</th>
+                <th className={`${TH} text-left`}>Starts</th>
+                <th className={`${TH} text-left`}>Where</th>
+                <th className={`${TH} text-right`}>Rewards</th>
+                <th className={`${TH} text-right`}>RSVPs</th>
+                <th className={`${TH} text-left`}>Status</th>
+                <th className={TH}>
+                  <span className="sr-only">Actions</span>
                 </th>
               </tr>
             </thead>
@@ -169,63 +154,47 @@ export default function AdminContentEventsPage() {
               {events.map((ev) => (
                 <tr
                   key={ev.id}
-                  className="border-b border-[var(--glass-border)]/40 last:border-b-0"
+                  className="border-t-2 border-dashed border-[var(--gui-paper-edge)]"
                 >
-                  <td className="px-4 py-3 text-[var(--color-text-primary)]">
+                  <td className="px-4 py-3 font-extrabold text-[var(--gui-ink-strong)]">
                     {ev.title}
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`text-[0.6rem] font-mono uppercase px-2 py-0.5 rounded ${
-                        typeColors[ev.event_type] ?? typeColors.meeting
-                      }`}
-                    >
-                      {ev.event_type}
-                    </span>
+                    <Badge tone={typeTones[ev.event_type] ?? "neutral"}>
+                      {capitalize(ev.event_type)}
+                    </Badge>
                   </td>
-                  <td className="px-4 py-3 font-mono text-[0.65rem] text-[var(--color-text-muted)]">
-                    {new Date(ev.start_time).toLocaleString()}
+                  <td className="px-4 py-3 whitespace-nowrap text-[var(--gui-ink-2)]">
+                    {when(ev.start_time)}
                   </td>
-                  <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">
+                  <td className="px-4 py-3 text-[var(--gui-ink-2)]">
                     {ev.location ?? "—"}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-xs">
-                    <span className="text-[var(--color-accent-cyan)]">
-                      {ev.xp_reward ?? 0} XP
-                    </span>
-                    <span className="text-[var(--color-text-muted)]"> / </span>
-                    <span className="text-[var(--color-brand-yellow)]">
-                      ₮{ev.tc_reward ?? 0}
-                    </span>
+                  <td className="px-4 py-3 text-right whitespace-nowrap text-[var(--gui-ink)]">
+                    {ev.xp_reward ?? 0} XP · <Amount n={ev.tc_reward ?? 0} currency="gems" />
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-xs text-[var(--color-text-muted)]">
+                  <td className="px-4 py-3 text-right text-[var(--gui-ink-2)]">
                     {ev.attendee_count ?? 0}
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`text-[0.6rem] font-mono uppercase px-2 py-0.5 rounded ${
-                        ev.status === "approved"
-                          ? "text-green-400 bg-green-400/10"
-                          : "text-[var(--color-text-muted)] bg-[var(--color-text-muted)]/10"
-                      }`}
-                    >
-                      {ev.status}
-                    </span>
+                    <Badge tone={ev.status === "approved" ? "success" : "neutral"}>
+                      {capitalize(ev.status)}
+                    </Badge>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="inline-flex items-center gap-3">
+                    <div className="inline-flex items-center gap-3 whitespace-nowrap">
                       <Link
                         href={`/student/dashboard/admin/content/events/${ev.id}/edit`}
-                        className="inline-flex items-center gap-1 text-[0.65rem] font-mono text-[var(--color-accent-cyan)] hover:underline"
+                        className="inline-flex items-center gap-1 font-bold text-[var(--gui-sage)] hover:underline"
                       >
-                        <Pencil size={11} /> Edit
+                        <Pencil size={14} aria-hidden /> Edit
                       </Link>
                       <Link
                         href={`/student/dashboard/admin/content/events/${ev.id}/print`}
                         target="_blank"
-                        className="inline-flex items-center gap-1 text-[0.65rem] font-mono text-[var(--color-brand-yellow)] hover:underline"
+                        className="inline-flex items-center gap-1 font-bold text-[var(--gui-ink-2)] hover:underline"
                       >
-                        <Printer size={11} /> Print QR
+                        <Printer size={14} aria-hidden /> Print QR
                       </Link>
                     </div>
                   </td>
@@ -233,7 +202,7 @@ export default function AdminContentEventsPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </Card>
       )}
     </div>
   );

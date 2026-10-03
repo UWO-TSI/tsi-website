@@ -2,12 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Shield } from "lucide-react";
+import { Lock, Vote } from "lucide-react";
+import { Badge, Card, Empty, Loading, Progress } from "@/components/gui";
 
 interface ElectionResult {
   candidate: string;
   vote_count: number;
 }
+
+const PAGE = "mx-auto w-full max-w-6xl px-5 pt-6 pb-16 sm:px-8";
 
 export default function AdminElectionPage() {
   const [results, setResults] = useState<ElectionResult[]>([]);
@@ -52,29 +55,18 @@ export default function AdminElectionPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
-          Loading results...
-        </p>
+      <div className={`${PAGE} flex min-h-[60vh] items-center justify-center`}>
+        <Loading label="Counting the votes…" />
       </div>
     );
   }
 
   if (userTier > 2) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <Shield
-            size={48}
-            className="mx-auto text-[var(--color-text-muted)]/20 mb-4"
-          />
-          <h2 className="text-lg font-heading font-bold text-[var(--color-text-primary)] mb-2">
-            Access Denied
-          </h2>
-          <p className="text-sm font-mono text-[var(--color-text-muted)]">
-            T1/T2 clearance required for election results.
-          </p>
-        </div>
+      <div className={`${PAGE} flex min-h-[60vh] items-center justify-center`}>
+        <Empty icon={<Lock size={32} />} title="Admins only">
+          Election results are only open to the club’s admins.
+        </Empty>
       </div>
     );
   }
@@ -84,108 +76,77 @@ export default function AdminElectionPage() {
     totalProfiles > 0 ? ((totalVotes / totalProfiles) * 100).toFixed(1) : "0";
 
   return (
-    <div>
+    <div className={PAGE}>
       <div className="mb-8">
-        <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
-          Election Results
-        </h1>
-        <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
-          Presidential Election · Live tallies
+        <h1 className="text-2xl font-extrabold text-[var(--gui-ink-strong)]">Election results</h1>
+        <p className="mt-1 text-sm text-[var(--gui-muted)]">
+          The presidential election, counted live.
         </p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
-        <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4">
-          <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
-            Total Votes
-          </p>
-          <p className="text-2xl font-mono font-bold text-[var(--color-text-primary)]">
-            {totalVotes}
-          </p>
-        </div>
-        <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4">
-          <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
-            Total Members
-          </p>
-          <p className="text-2xl font-mono font-bold text-[var(--color-text-primary)]">
-            {totalProfiles}
-          </p>
-        </div>
-        <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4">
-          <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
-            Participation
-          </p>
-          <p className="text-2xl font-mono font-bold text-[var(--color-accent-cyan)]">
-            {participationRate}%
-          </p>
-        </div>
+      <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-3">
+        {[
+          { label: "Votes cast", value: totalVotes },
+          { label: "Members", value: totalProfiles },
+          { label: "Turnout", value: `${participationRate}%` },
+        ].map((stat) => (
+          <Card key={stat.label}>
+            <p className="text-sm font-bold text-[var(--gui-ink-2)]">{stat.label}</p>
+            <p className="mt-1 text-2xl font-extrabold text-[var(--gui-ink-strong)]">{stat.value}</p>
+          </Card>
+        ))}
       </div>
 
       {/* Results Table */}
-      <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-hidden">
-        <div className="px-5 py-3 border-b border-[var(--glass-border)]">
-          <p className="text-xs font-mono text-[var(--color-text-muted)] uppercase tracking-wider">
-            Candidates
-          </p>
-        </div>
-        <div className="divide-y divide-[var(--glass-border)]">
-          {results.length === 0 ? (
-            <div className="px-5 py-8 text-center">
-              <p className="text-sm font-mono text-[var(--color-text-muted)]">
-                No votes cast yet.
-              </p>
-            </div>
-          ) : (
-            results.map((r, i) => {
+      <Card style={{ padding: 0 }} className="overflow-hidden">
+        <h2 className="border-b-2 border-dashed border-[var(--gui-paper-edge)] px-5 py-3 text-base font-extrabold text-[var(--gui-ink-strong)]">
+          Candidates
+        </h2>
+        {results.length === 0 ? (
+          <Empty icon={<Vote size={32} />} title="No votes yet">
+            Results show here as members vote.
+          </Empty>
+        ) : (
+          <ul>
+            {results.map((r, i) => {
               const pct =
                 totalVotes > 0
                   ? ((r.vote_count / totalVotes) * 100).toFixed(1)
                   : "0";
-              const barWidth =
-                maxVotes > 0 ? (r.vote_count / maxVotes) * 100 : 0;
               const isLeader = i === 0;
 
               return (
-                <div key={r.candidate} className="px-5 py-4">
-                  <div className="flex items-center justify-between mb-2">
+                <li
+                  key={r.candidate}
+                  className="border-t-2 border-dashed border-[var(--gui-paper-edge)] px-5 py-4 first:border-t-0"
+                >
+                  <div className="mb-2 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <span
-                        className={`text-sm font-mono font-bold ${
-                          isLeader
-                            ? "text-[var(--color-brand-yellow)]"
-                            : "text-[var(--color-text-primary)]"
-                        }`}
-                      >
-                        {isLeader && "★ "}
+                      <span className="text-base font-extrabold text-[var(--gui-ink-strong)]">
                         {r.candidate}
                       </span>
+                      {isLeader && <Badge tone="gold">Leading</Badge>}
                     </div>
-                    <div className="flex items-center gap-3 text-xs font-mono">
-                      <span className="text-[var(--color-text-muted)]">
-                        {pct}%
-                      </span>
-                      <span className="text-[var(--color-text-primary)] font-bold">
-                        {r.vote_count}
+                    <div className="flex items-center gap-3 text-sm">
+                      <span className="text-[var(--gui-muted)]">{pct}%</span>
+                      <span className="font-extrabold text-[var(--gui-ink-strong)]">
+                        {r.vote_count} {r.vote_count === 1 ? "vote" : "votes"}
                       </span>
                     </div>
                   </div>
-                  <div className="h-2 rounded-full bg-white/[0.05] overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-700 ${
-                        isLeader
-                          ? "bg-gradient-to-r from-[var(--color-brand-blue)] to-[var(--color-accent-cyan)]"
-                          : "bg-[var(--color-brand-blue)]/60"
-                      }`}
-                      style={{ width: `${barWidth}%` }}
-                    />
-                  </div>
-                </div>
+                  <Progress
+                    value={r.vote_count}
+                    max={maxVotes}
+                    kind={isLeader ? "mastery" : "plain"}
+                    label={`${r.candidate}: ${r.vote_count} of ${totalVotes} votes`}
+                  />
+                </li>
               );
-            })
-          )}
-        </div>
-      </div>
+            })}
+          </ul>
+        )}
+      </Card>
     </div>
   );
 }

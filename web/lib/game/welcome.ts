@@ -44,9 +44,9 @@ export const HQ_LEAD = {
   },
   /** The greeting, one box each; `{name}` is the member's island name. */
   lines: [
-    "You made it! Welcome to Tethos Island, {name}. I'm Wren. I keep the clubhouse running, more or less.",
+    "You made it! Welcome to Tethos Island, {name}. I'm Wren. I keep HQ running, more or less.",
     "Everyone who joins gets a plot of their own out past the pier. Yours is waiting. We just need to make it official.",
-    "Come up to the clubhouse and claim it. It's the big house at the top of the path. I'll have the paperwork ready!",
+    "Come up to HQ and claim it. It's the big house at the top of the path. I'll have the paperwork ready!",
   ],
 } as const;
 

@@ -7,6 +7,7 @@
 
 import useSWR from "swr";
 import { RefreshCw, Sparkles } from "lucide-react";
+import { Card, ErrorNote, IconButton, List, ListRow, Loading } from "@/components/gui";
 
 interface TopUser {
   user_id: string;
@@ -41,6 +42,28 @@ function formatTokens(n: number): string {
   return `${n}`;
 }
 
+/** The API's "2026-10" (a UTC calendar month) as "October 2026". */
+function formatMonth(month: string): string {
+  const d = new Date(`${month}-01T12:00:00Z`);
+  return Number.isNaN(d.getTime()) ? month : d.toLocaleDateString("en-CA", { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+/** Someone and how many chats, with a dotted leader between. */
+function TopList({ title, rows, empty }: { title: string; rows: { id: string; name: string; interactions: number }[]; empty: string }) {
+  return (
+    <div>
+      <p className="text-[13px] font-extrabold text-[var(--gui-ink-2)] mb-1">{title}</p>
+      {rows.length === 0 ? (
+        <p className="text-[13px] text-[var(--gui-muted)]">{empty}</p>
+      ) : (
+        <List label={title}>
+          {rows.map((r) => <ListRow key={r.id} title={r.name} value={r.interactions} leader />)}
+        </List>
+      )}
+    </div>
+  );
+}
+
 export default function NPCSpendWidget() {
   const { data, error, isLoading, mutate } = useSWR<SpendResponse>(
     "npc-spend",
@@ -52,126 +75,71 @@ export default function NPCSpendWidget() {
   );
 
   return (
-    <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-5">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <div
-            className="w-8 h-8 rounded-md flex items-center justify-center"
-            style={{
-              backgroundColor: "color-mix(in srgb, #f59e0b 15%, transparent)",
-              color: "#f59e0b",
-            }}
-          >
-            <Sparkles size={16} />
+    <Card style={{ padding: 20 }}>
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 shrink-0 rounded-[46%_50%_44%_48%/54%_50%_46%_52%] flex items-center justify-center bg-[var(--gui-butter)] text-[var(--gui-ink-strong)]">
+            <Sparkles size={20} aria-hidden />
           </div>
           <div>
-            <h3 className="text-sm font-heading font-bold text-[var(--color-text-primary)]">
-              NPC Spend
+            <h3 className="text-[15px] font-extrabold text-[var(--gui-ink-strong)]">
+              NPC spend
             </h3>
-            <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)]">
-              {data?.month ?? "this month"} · T1 only
+            <p className="text-[13px] text-[var(--gui-muted)]">
+              {data?.month ? formatMonth(data.month) : "This month"} · T1 and T2
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => mutate()}
-          className="p-1.5 rounded-md text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--glass-border)]/40 transition-colors"
-          aria-label="Refresh"
-        >
-          <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
-        </button>
+        <IconButton label="Refresh" size="sm" onClick={() => mutate()}>
+          <RefreshCw size={16} aria-hidden className={isLoading ? "animate-spin" : ""} />
+        </IconButton>
       </div>
 
       {error ? (
-        <p className="text-xs font-mono text-red-400">
-          Failed to load spend data.
-        </p>
+        <ErrorNote onRetry={() => mutate()}>
+          This month’s NPC spend didn’t load.
+        </ErrorNote>
       ) : !data ? (
-        <p className="text-xs font-mono text-[var(--color-text-muted)] animate-pulse">
-          Loading spend...
-        </p>
+        <Loading label="Adding up this month’s NPC chats…" />
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 mb-4">
-            <div>
-              <p className="text-[0.6rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1">
-                Tokens (in / out)
+            <div className="rounded-2xl bg-[var(--gui-paper-warm)] px-4 py-3">
+              <p className="text-[13px] font-extrabold text-[var(--gui-ink-2)] mb-1">
+                Tokens in / out
               </p>
-              <p className="text-xl font-mono font-bold text-[var(--color-text-primary)]">
+              <p className="text-xl font-extrabold text-[var(--gui-ink-strong)]">
                 {formatTokens(data.tokens_in)}
-                <span className="text-sm text-[var(--color-text-muted)] font-normal">
+                <span className="text-sm font-semibold text-[var(--gui-muted)]">
                   {" "}
                   / {formatTokens(data.tokens_out)}
                 </span>
               </p>
             </div>
-            <div>
-              <p className="text-[0.6rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1">
-                Estimated cost
+            <div className="rounded-2xl bg-[var(--gui-paper-warm)] px-4 py-3">
+              <p className="text-[13px] font-extrabold text-[var(--gui-ink-2)] mb-1">
+                Estimated cost (USD)
               </p>
-              <p className="text-xl font-mono font-bold text-[var(--color-text-primary)]">
+              <p className="text-xl font-extrabold text-[var(--gui-ink-strong)]">
                 ${data.estimated_cost_usd.toFixed(4)}
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-            <div>
-              <p className="text-[0.6rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
-                Top chattiest users
-              </p>
-              {data.top_users.length === 0 ? (
-                <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)]">
-                  —
-                </p>
-              ) : (
-                <ul className="space-y-1">
-                  {data.top_users.map((u) => (
-                    <li
-                      key={u.user_id}
-                      className="flex items-center justify-between gap-2"
-                    >
-                      <span className="text-[var(--color-text-soft)] truncate">
-                        {u.name}
-                      </span>
-                      <span className="font-mono text-[0.65rem] text-[var(--color-text-muted)]">
-                        {u.interactions}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div>
-              <p className="text-[0.6rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
-                Top NPCs
-              </p>
-              {data.top_npcs.length === 0 ? (
-                <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)]">
-                  —
-                </p>
-              ) : (
-                <ul className="space-y-1">
-                  {data.top_npcs.map((n) => (
-                    <li
-                      key={n.npc_id}
-                      className="flex items-center justify-between gap-2"
-                    >
-                      <span className="text-[var(--color-text-soft)] truncate">
-                        {n.name}
-                      </span>
-                      <span className="font-mono text-[0.65rem] text-[var(--color-text-muted)]">
-                        {n.interactions}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <TopList
+              title="Chattiest members"
+              rows={data.top_users.map((u) => ({ id: u.user_id, name: u.name, interactions: u.interactions }))}
+              empty="No one has chatted with a resident yet this month."
+            />
+            <TopList
+              title="Most talked-to NPCs"
+              rows={data.top_npcs.map((n) => ({ id: n.npc_id, name: n.name, interactions: n.interactions }))}
+              empty="No NPC chats yet this month."
+            />
           </div>
         </>
       )}
-    </div>
+    </Card>
   );
 }

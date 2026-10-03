@@ -6,6 +6,9 @@ import Link from "next/link";
 import { ArrowLeft, Printer } from "lucide-react";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/client";
+import { CurrencyIcon } from "@/components/economy/Amount";
+import { Button, Card, Loading, Select } from "@/components/gui";
+import { AdminMessage, backLinkCls, buttonLinkCls, Field, inputCls, Toggle } from "./ProgressionAdminShared";
 
 // ─── EventEditor ────────────────────────────────────────────────────────────
 // Events live OUTSIDE the content_pipeline / content_drafts flow. Editor
@@ -232,39 +235,24 @@ export default function EventEditor({ mode, rowId, initial }: EventEditorProps) 
     : "";
 
   return (
-    <div>
-      <div className="mb-2">
-        <Link
-          href="/student/dashboard/admin/content/events"
-          className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-        >
-          <ArrowLeft size={12} />
-          Back to Events
-        </Link>
-      </div>
+    <div className="mx-auto w-full max-w-3xl">
+      <Link href="/student/dashboard/admin/content/events" className={backLinkCls}>
+        <ArrowLeft size={16} aria-hidden />
+        Back to events
+      </Link>
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
-          {mode === "new" ? "New Event" : `Edit: ${initial?.title ?? "Event"}`}
+      <div className="mt-2 mb-6">
+        <h1 className="text-2xl font-extrabold text-[var(--gui-ink-strong)]">
+          {mode === "new" ? "New event" : `Edit: ${initial?.title ?? "Event"}`}
         </h1>
-        <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
-          Events save directly. No draft preview — they are public on save.
+        <p className="text-sm text-[var(--gui-muted)] mt-1">
+          Events save straight away, with no draft: members see them as soon as you save.
         </p>
       </div>
 
-      {message ? (
-        <div
-          className={`mb-4 p-3 rounded-md text-xs font-mono border ${
-            message.kind === "ok"
-              ? "bg-green-400/10 border-green-400/30 text-green-400"
-              : "bg-red-400/10 border-red-400/30 text-red-400"
-          }`}
-        >
-          {message.text}
-        </div>
-      ) : null}
+      <AdminMessage message={message} className="mb-4" />
 
-      <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6 space-y-5">
+      <Card className="space-y-5" style={{ padding: "clamp(16px, 4vw, 24px)" }}>
         <Field label="Title" error={errors.title}>
           <input
             type="text"
@@ -286,23 +274,23 @@ export default function EventEditor({ mode, rowId, initial }: EventEditorProps) 
           />
         </Field>
 
-        <Field label="Event Type">
-          <select
+        <Field label="Event type">
+          <Select
             value={form.event_type}
             onChange={(e) =>
               update("event_type", e.target.value as EventType)
             }
-            className={inputCls}
+            className="w-full"
           >
             {EVENT_TYPES.map((t) => (
               <option key={t} value={t}>
                 {t}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
 
-        <Field label="Start Time" error={errors.start_time}>
+        <Field label="Starts" error={errors.start_time}>
           <input
             type="datetime-local"
             value={form.start_time}
@@ -311,7 +299,7 @@ export default function EventEditor({ mode, rowId, initial }: EventEditorProps) 
           />
         </Field>
 
-        <Field label="End Time" error={errors.end_time}>
+        <Field label="Ends" error={errors.end_time}>
           <input
             type="datetime-local"
             value={form.end_time}
@@ -332,7 +320,7 @@ export default function EventEditor({ mode, rowId, initial }: EventEditorProps) 
 
         <Toggle
           label="Unlimited capacity"
-          hint="When off, set a max-attendee count below."
+          hint="Off: set the most people who can come below."
           checked={form.unlimited_capacity}
           onChange={(v) => update("unlimited_capacity", v)}
         />
@@ -359,11 +347,11 @@ export default function EventEditor({ mode, rowId, initial }: EventEditorProps) 
         />
 
         <Field
-          label="XP Reward"
+          label="XP reward"
           hint={
             form.is_irl
-              ? "Granted to each member who scans the QR at check-in."
-              : "Disabled — non-IRL events can't award XP."
+              ? "Given to each member who scans the QR code at check-in."
+              : "Off: only in-person events give XP."
           }
           error={errors.xp_reward}
         >
@@ -374,48 +362,52 @@ export default function EventEditor({ mode, rowId, initial }: EventEditorProps) 
             disabled={!form.is_irl}
             value={form.xp_reward}
             onChange={(e) => update("xp_reward", e.target.value)}
-            className={`${inputCls} disabled:opacity-40 disabled:cursor-not-allowed`}
-          />
-        </Field>
-
-        <Field
-          label="Gem Reward"
-          hint="Granted to each member at check-in. Allowed for any event."
-          error={errors.tc_reward}
-        >
-          <input
-            type="number"
-            min={0}
-            step={1}
-            value={form.tc_reward}
-            onChange={(e) => update("tc_reward", e.target.value)}
             className={inputCls}
           />
         </Field>
 
+        <Field
+          label="Gem reward"
+          hint="Given to each member at check-in. Any event can give Gems."
+          error={errors.tc_reward}
+        >
+          <div className="flex items-center gap-2.5">
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={form.tc_reward}
+              onChange={(e) => update("tc_reward", e.target.value)}
+              className={inputCls}
+              aria-label="Gem reward"
+            />
+            <CurrencyIcon currency="gems" size={28} />
+          </div>
+        </Field>
+
         {mode === "edit" && qrCheckInCode ? (
-          <div className="border-t border-[var(--glass-border)] pt-5">
-            <label className="block text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
-              QR Check-in Code
-            </label>
+          <div className="border-t-2 border-dashed border-[var(--gui-paper-edge)] pt-5">
+            <h2 className="mb-2 text-[15px] font-extrabold text-[var(--gui-ink-strong)]">
+              Check-in QR code
+            </h2>
             <div className="flex flex-wrap items-start gap-4">
               {qrDataUrl ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={qrDataUrl}
                   alt="QR check-in code"
-                  className="w-40 h-40 rounded-md bg-white p-2"
+                  className="w-40 h-40 rounded-xl bg-white p-2 border-2 border-[var(--gui-paper-line)]"
                 />
               ) : (
-                <div className="w-40 h-40 rounded-md bg-[var(--color-bg)] border border-[var(--glass-border)] flex items-center justify-center text-[0.65rem] font-mono text-[var(--color-text-muted)]">
-                  rendering...
+                <div className="w-40 h-40 rounded-xl bg-[var(--gui-paper-warm)] border-2 border-[var(--gui-paper-edge)] flex items-center justify-center">
+                  <Loading label="Drawing the code…" />
                 </div>
               )}
               <div className="flex-1 min-w-0 space-y-2">
-                <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)] break-all">
+                <p className="text-sm font-bold text-[var(--gui-ink)] break-all">
                   {qrCheckInCode}
                 </p>
-                <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)]/70 break-all">
+                <p className="text-[13px] text-[var(--gui-muted)] break-all">
                   {checkInUrl}
                 </p>
                 {rowId ? (
@@ -423,39 +415,40 @@ export default function EventEditor({ mode, rowId, initial }: EventEditorProps) 
                     href={`/student/dashboard/admin/content/events/${rowId}/print`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={secondaryBtnCls}
+                    className={buttonLinkCls}
+                    data-variant="quiet"
+                    data-size="sm"
                   >
-                    <Printer size={12} /> Print QR
+                    <Printer size={16} aria-hidden /> Print the QR code
                   </a>
                 ) : null}
               </div>
             </div>
           </div>
         ) : null}
-      </div>
+      </Card>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
+        <Button
+          size="sm"
           onClick={handleSave}
           disabled={hasErrors || busy !== null}
-          className={primaryBtnCls}
         >
           {busy === "save"
-            ? "Saving..."
+            ? "Saving…"
             : mode === "new"
               ? "Create event"
               : "Save"}
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          size="sm"
+          variant="quiet"
           onClick={() =>
             router.push("/student/dashboard/admin/content/events")
           }
-          className={secondaryBtnCls}
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -514,86 +507,4 @@ function validate(form: FormState): Partial<Record<keyof FormState, string>> {
   }
 
   return errors;
-}
-
-// ─── Sub-components / classes ───────────────────────────────────────────────
-
-const inputCls =
-  "w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--glass-border)] rounded-md text-sm text-[var(--color-text-primary)] font-mono focus:outline-none focus:border-[var(--color-accent-cyan)] transition-colors";
-
-const primaryBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] font-mono text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
-
-const secondaryBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 border border-[var(--glass-border)] text-[var(--color-text-primary)] font-mono text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] transition-colors";
-
-function Field({
-  label,
-  hint,
-  error,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="block text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
-        {label}
-      </label>
-      {children}
-      {hint && !error ? (
-        <p className="mt-1 text-[0.65rem] font-mono text-[var(--color-text-muted)]/70">
-          {hint}
-        </p>
-      ) : null}
-      {error ? (
-        <p className="mt-1 text-[0.65rem] font-mono text-red-400">{error}</p>
-      ) : null}
-    </div>
-  );
-}
-
-function Toggle({
-  label,
-  hint,
-  checked,
-  onChange,
-}: {
-  label: string;
-  hint?: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <div className="flex items-start gap-3">
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border border-[var(--glass-border)] transition-colors ${
-          checked ? "bg-[var(--color-accent-cyan)]" : "bg-[var(--color-bg)]"
-        }`}
-      >
-        <span
-          className={`inline-block h-4 w-4 mt-0.5 transform rounded-full bg-white transition-transform ${
-            checked ? "translate-x-6" : "translate-x-1"
-          }`}
-        />
-      </button>
-      <div className="flex-1">
-        <label className="block text-xs font-mono text-[var(--color-text-primary)]">
-          {label}
-        </label>
-        {hint ? (
-          <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)]/70 mt-0.5">
-            {hint}
-          </p>
-        ) : null}
-      </div>
-    </div>
-  );
 }

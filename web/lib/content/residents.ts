@@ -20,7 +20,7 @@ export type ResidentPost = (typeof RESIDENT_POSTS)[number];
 export const RESIDENT_ANCHORS = {
   plaza: { label: "Plaza" },
   path: { label: "Main path" },
-  hq: { label: "Clubhouse steps" },
+  hq: { label: "HQ steps" },
   shop: { label: "Shop" },
   cafe: { label: "Café" },
   oracle: { label: "Oracle temple" },

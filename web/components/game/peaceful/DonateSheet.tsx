@@ -11,6 +11,8 @@ import type { JournalEntryKnown } from "@/lib/collections/logic";
 import { fetchJournalPage } from "../JournalPages";
 import { curatorLine } from "@/lib/game/peaceful";
 import IslandSheet from "../IslandSheet";
+import { Landmark } from "lucide-react";
+import { Badge, Empty, List, ListRow, Loading, NameTag } from "@/components/gui";
 import styles from "../DefaultIslandWorld.module.css";
 
 const DONATABLE: Category[] = CATEGORIES.filter(c => c === "fish" || c === "sea" || c === "bug" || c === "nature");
@@ -39,18 +41,13 @@ export default function DonateSheet({ open, onClose, onDonated }: { open: boolea
     });
     return () => { alive = false; };
   }, [open]);
-  if (!open) return null;
-  return <IslandSheet title="Museum curator" onClose={onClose} testId="donate-sheet">
-    <p className={styles.curatorLine} role="status">{line}</p>
-    {items === null ? <p>Looking through your pockets…</p> : items.length === 0 ? <p>You haven&apos;t found anything the museum collects yet.</p> :
-      <ul className={styles.donateList}>{items.map(item => <li key={item.key}>
-        <button data-key={item.key} onClick={async () => { setLine(await postDonation(item.key, item.name)); onDonated(); }}>
-          {item.icon && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={item.icon} alt="" width={28} height={28} />
-          )}
-          <span>{item.name}<small>{item.museum.donated ? `On display · ${item.museum.by_me ? "you" : item.museum.donor_name}` : `In bag ×${item.count}`}</small></span>
-        </button>
-      </li>)}</ul>}
+  // E at the curator opens it, and E (or Escape) closes it (it never closed on Escape before).
+  return <IslandSheet open={open} title="Museum curator" onClose={onClose} testId="donate-sheet" keys="e">
+    <p className={styles.curatorLine} role="status"><NameTag tone="sage">Curator</NameTag> {line}</p>
+    {items === null ? <Loading label="Looking through your pockets…" /> : items.length === 0 ? <Empty icon={<Landmark size={32} />} title="Nothing for the museum yet">Catch a fish or a bug, or find a fossil, and bring it here.</Empty> :
+      <List label="Things you can donate">{items.map(item => <ListRow key={item.key} data-key={item.key} icon={item.icon ?? undefined} title={item.name}
+        detail={item.museum.donated ? `On display · ${item.museum.by_me ? "you" : item.museum.donor_name}` : `In bag ×${item.count}`}
+        value={item.museum.donated ? <Badge tone="sage">Donated</Badge> : <Badge tone="gold">Donate</Badge>}
+        onClick={async () => { setLine(await postDonation(item.key, item.name)); onDonated(); }} />)}</List>}
   </IslandSheet>;
 }

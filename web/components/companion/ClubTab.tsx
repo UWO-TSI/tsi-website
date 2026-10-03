@@ -4,6 +4,7 @@
 import { useState } from "react";
 import BountyPage from "@/app/student/dashboard/bounty/page";
 import CalendarPage from "@/app/student/dashboard/calendar/page";
+import { Tabs } from "@/components/gui";
 import s from "@/components/study/companion.module.css";
 
 type Sub = "bounties" | "calendar";
@@ -16,22 +17,10 @@ export default function ClubTab() {
   const [sub, setSub] = useState<Sub>("bounties");
   return (
     <>
-      <div className={s.subtabs} role="tablist" aria-label="Club tools">
-        {SUBS.map((t) => (
-          <button key={t.key} role="tab" aria-selected={sub === t.key} className={s.subtab} onClick={() => setSub(t.key)}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-      {/*
-        These pages read --color-text-main etc. from tokens.css, which
-        default to the DARK palette unless an ancestor sets data-theme
-        (ThemeToggle normally does this on <html>, per the user's setting).
-        The companion shell is cream/light regardless of that setting, so
-        pin the light palette here — otherwise the dashboard's light-on-dark
-        text goes near-invisible on this light card.
-      */}
-      <div className={s.pageEmbed} data-theme="light">
+      <Tabs label="Club tools" value={sub} onChange={setSub} className={s.subtabs} tabs={SUBS.map((t) => ({ id: t.key, label: t.label }))} />
+      {/* The portal's bounty and calendar pages, reused: inside the shell's .gui scope their tokens are the GUI sheet's,
+          whatever the portal theme setting (it used to pin data-theme="light" here). */}
+      <div className={s.pageEmbed}>
         {sub === "bounties" ? <BountyPage /> : <CalendarPage />}
       </div>
     </>

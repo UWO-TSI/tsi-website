@@ -1,21 +1,31 @@
-/* Economy sheets: same cream/sage/wood family as the progression sheets. */
-.balances { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-.balance { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: #fff; border: 1px solid #5c746c33; font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
-.tile { display: grid; gap: 4px; align-content: start; padding: 10px; border-radius: 14px; background: #ffffffc0; border: 1px solid #5c746c2e; position: relative; }
-.tile h4 { margin: 0; font-size: 14px; line-height: 1.25; }
-.art { height: 64px; border-radius: 10px; background: linear-gradient(135deg, #e7eedf, #f4ecd9); display: grid; place-items: center; font-size: 28px; }
-.dye { width: 36px; height: 36px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 0 #0000002a; }
-.chip { justify-self: start; font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; background: #e4e8dc; color: #42544e; }
-.sale { position: absolute; top: 8px; right: 8px; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: #e8704a; color: #fff; }
-.price { font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
-.was { color: #8a9891; text-decoration: line-through; font-weight: 500; font-size: 12px; margin-left: 4px; }
-.small { min-height: 36px; padding: 0 12px; font-size: 12.5px; }
-.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 12px; background: #ffffffc0; border: 1px solid #5c746c26; font-size: 13.5px; }
-.big { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-.bigCard { padding: 14px; border-radius: 16px; background: #fff; border: 1px solid #5c746c2e; }
-.bigCard b { display: block; font-size: 28px; font-variant-numeric: tabular-nums; }
-.plus { color: #2f5a36; font-weight: 700; }
-.minus { color: #8a3417; font-weight: 700; }
-.code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 800; letter-spacing: 0.12em; background: #fff8ec; border: 1px dashed #bb813f; border-radius: 8px; padding: 2px 8px; }
+/* Economy sheets (shop, sell, bag, wallet) in the GUI sheet: paper tiles round each item's real icon, the kit's pills. */
+.balances { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.balance { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 4px 14px; border-radius: var(--gui-r-pill); background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge); color: var(--gui-ink-strong); font-weight: 800; font-size: var(--gui-text-md); font-variant-numeric: tabular-nums; }
+.tabs { margin-bottom: 12px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.tile { position: relative; display: grid; gap: 5px; align-content: start; padding: 10px 10px 12px; border-radius: var(--gui-r-card); background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge); }
+.tile h4 { margin: 2px 0 0; color: var(--gui-ink-strong); font-size: var(--gui-text-sm); font-weight: 800; line-height: 1.25; }
+/* The item's icon on a butter well, like the kit's selected slot. */
+.art { height: 72px; border-radius: var(--gui-r-blob); background: var(--gui-paper-warm); display: grid; place-items: center; }
+.art img { width: 58px; height: 58px; object-fit: contain; }
+.dye { width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--gui-paper-hi); box-shadow: 0 2px 0 rgb(114 92 78 / 0.2); }
+.chip { justify-self: start; text-transform: capitalize; }
+.sale { position: absolute; top: 8px; right: 8px; z-index: 1; padding: 2px 9px; border-radius: var(--gui-r-tag); background: var(--gui-coral); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); font-weight: 900; transform: rotate(4deg); }
+.price { color: var(--gui-ink-strong); font-weight: 800; font-size: var(--gui-text-md); font-variant-numeric: tabular-nums; }
+.was { margin-left: 6px; color: var(--gui-muted); font-size: var(--gui-text-xs); font-weight: 600; text-decoration: line-through; }
+.buy { width: 100%; margin-top: 2px; }
+.small { min-height: 36px; padding: 0 12px; font-size: var(--gui-text-sm); }
+.list { list-style: none; margin: 0; padding: 0; display: grid; }
+.list > li + li { border-top: 2px dashed var(--gui-paper-edge); }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 10px 6px; font-size: var(--gui-text-sm); }
+.row[data-icon] { grid-template-columns: 40px minmax(0, 1fr) auto auto; }
+.row b { color: var(--gui-ink-strong); }
+.rowIcon { width: 36px; height: 36px; object-fit: contain; }
+.rowActions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.big { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.bigCard { display: grid; gap: 2px; padding: 16px; border-radius: var(--gui-r-card); background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge); }
+.bigCard b { display: block; color: var(--gui-ink-strong); font-size: var(--gui-text-2xl); font-weight: 900; font-variant-numeric: tabular-nums; }
+.plus { color: var(--gui-success); font-weight: 800; }
+.minus { color: var(--gui-danger); font-weight: 800; }
+.code { padding: 2px 10px; border-radius: 8px; background: var(--gui-butter); color: var(--gui-ink-strong); outline: 2px dashed var(--gui-wood-light); outline-offset: -3px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 800; letter-spacing: 0.12em; }
+@media (max-width: 520px) { .big { grid-template-columns: 1fr; } .row[data-icon] { grid-template-columns: 36px minmax(0, 1fr); } .row[data-icon] > :nth-child(n+3) { grid-column: 2; justify-self: start; } }
