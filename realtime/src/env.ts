@@ -56,12 +56,14 @@ const EnvSchema = z
     PORT: z.coerce.number().int().min(1).max(65535).default(2567),
     /** The Supabase project URL, e.g. https://<ref>.supabase.co. Required in production. */
     SUPABASE_URL: z.url({ protocol: /^https?$/ }).optional(),
-    /** A secret (service) key; only used for the service-only RPC realtime_player_card. */
+    /** A secret (service) key, used only for the service-only calls: the card, the chat log, blocks, the sanctions poll. */
     SUPABASE_SECRET_KEY: z.string().min(20).optional(),
     ALLOWED_ORIGINS: originList.optional(),
     ALLOWED_ORIGIN_PATTERNS: patternList.optional(),
     /** 1 accepts `dev:<name>` tokens. Refused in production. */
     DEV_AUTH: z.enum(["0", "1"]).default("0"),
+    /** The shared secret the web app signs /internal/* requests with (M2 sanctions and blocks). Unset: they're off. */
+    REALTIME_INTERNAL_SECRET: z.string().min(32, "at least 32 characters").optional(),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== "production") return;
@@ -83,6 +85,8 @@ export type Env = {
   supabaseUrl?: string;
   supabaseSecretKey?: string;
   devAuth: boolean;
+  /** REALTIME_INTERNAL_SECRET, or undefined (the /internal endpoints answer 503). */
+  internalSecret?: string;
   allowedOrigins: string[];
   /** Production patterns plus, outside production, the local dev patterns. */
   allowedOriginPatterns: string[];
@@ -104,6 +108,7 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
     supabaseUrl: e.SUPABASE_URL?.replace(/\/+$/, ""),
     supabaseSecretKey: e.SUPABASE_SECRET_KEY,
     devAuth: e.DEV_AUTH === "1" && !production,
+    internalSecret: e.REALTIME_INTERNAL_SECRET,
     allowedOrigins: e.ALLOWED_ORIGINS ?? DEFAULT_ALLOWED_ORIGINS,
     allowedOriginPatterns: [
       ...(e.ALLOWED_ORIGIN_PATTERNS ?? DEFAULT_ALLOWED_ORIGIN_PATTERNS),

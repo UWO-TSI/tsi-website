@@ -15,7 +15,8 @@
     "skipLibCheck": true,
     "types": ["node"],
     "paths": {
-      "@net/*": ["../web/lib/net/*"]
+      "@net/*": ["../web/lib/net/*"],
+      "@moderation/*": ["../web/lib/moderation/*"]
     }
   },
   "include": ["src", "test", "scripts", "vitest.config.ts"]

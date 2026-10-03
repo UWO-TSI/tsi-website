@@ -43,10 +43,11 @@ variable (never its value). Template: `.env.example`.
 | `NODE_ENV` | `development` | `production` on Fly |
 | `PORT` | `2567` | |
 | `SUPABASE_URL` | none | required in production |
-| `SUPABASE_SECRET_KEY` | none | required in production; used only for `realtime_player_card` |
+| `SUPABASE_SECRET_KEY` | none | required in production; used only for the service-only reads and writes: `realtime_player_card`, `realtime_log_chat`, `realtime_sanctions_poll` and `world_blocks` |
 | `ALLOWED_ORIGINS` | §1.4 list | comma-separated exact origins |
 | `ALLOWED_ORIGIN_PATTERNS` | uwotsi Vercel previews | space-separated, anchored `^…$` regexes |
 | `DEV_AUTH` | `0` | `1` accepts `dev:<name>` tokens; refused in production |
+| `REALTIME_INTERNAL_SECRET` | none | 32+ characters, shared with the web app (Vercel, same name); signs `/internal/*`. Unset: those answer 503 and sanctions arrive only through the 60 s poll |
 
 Outside production, `http://localhost:*`, `http://play.localhost:*` and
 `http://127.0.0.1:*` are allowed origins as well.
@@ -99,6 +100,41 @@ contract (`web/lib/net/protocol.ts`).
 - **Restart.** Before a shutdown each room sends `sys {kind: "restart"}` and closes
   with 4010.
 
+## World chat, blocks and sanctions (§6, M2)
+
+- **Chat.** `chat {text}` up; the server cleans the text (`web/lib/moderation/chatText.ts`),
+  checks it (`src/rooms/chat.ts`, numbers from the contract's `CHAT`) and sends
+  `line {id, sid, uid, name, area, text, t}` to everyone in the shard, the sender
+  included, except players in a block with the sender. A refused line gets
+  `sys {kind: "refused", reason, text}`: muted, fast, slow (public accounts under a
+  day: 2 a minute), repeat (same text within 30 s), long, empty, filtered (the shared
+  word filter, `web/lib/moderation/profanity.ts`), url (accounts under a week). Only
+  sent lines count against the limits. More than 3 raw chat messages at once are
+  dropped unanswered; Colyseus' 60 a second still disconnects a flood.
+- **Log.** Every sent line queues for `realtime_log_chat` (member id, world name,
+  area, shard, room, text), written in one batch every 2 s (`src/chatLog.ts`). A
+  failed write stays queued and retries with backoff up to 30 s; the queue holds at
+  most 5000 lines and drops the oldest beyond that, so the rooms never wait on the
+  database. Shutdown writes what's left.
+- **Blocks.** Read at join, both directions, with the card (`world_blocks`); if they
+  can't be read the join is refused as busy (4107). Lines and emotes stop between
+  the pair either way (movement still shows: the world is shared).
+- **Sanctions.** `member_identity.muted_until` refuses chat; `removed_until` closes
+  the player with 4102 and refuses their rejoin. The web app's moderation routes tell
+  the server at once (below); every 60 s `realtime_sanctions_poll` re-reads the
+  connected players as the safety net. The latest word on a player outranks their
+  cached card for two minutes, so a removed player can't rejoin on an old card.
+
+### Internal endpoints
+
+`POST /internal/sanction {member_id, muted_until?, removed_until?}` and
+`POST /internal/block {blocker_id, blocked_id, blocked}`, called by
+`web/lib/server/realtimeNotify.ts`. Signed with `REALTIME_INTERNAL_SECRET`:
+`x-rt-time` (ms, within 30 s), `x-rt-nonce` (16–64 of `[A-Za-z0-9_-]`, single use) and
+`x-rt-signature` = hex HMAC-SHA256 of `` `${time}.${nonce}.${body}` ``, compared in
+constant time. Refusals: 401 (malformed, stale, bad signature), 409 (replay), 400
+(body), 411/413 (length), 503 (no secret). Answers `{ok: true, sessions}`.
+
 ## Bots and the soak (§5.9, §7)
 
 `scripts/bots.ts` runs real `@colyseus/sdk` clients with `dev:bot-NN` tokens against a
@@ -128,12 +164,13 @@ On the shared Mac mini, take the heavy lock first (see the team notes).
 App `tethos-rt` in `yyz`, served as `wss://tethos-rt.fly.dev` (§1.3: not a `.tethos.ca`
 host, so the shared session cookie never reaches Fly). One `shared-cpu-1x` machine with
 512 MB that never auto-stops. The Docker build context is the repo root, trimmed by the
-root `.dockerignore` to `realtime/` and `web/lib/net/` (plus `web/lib/moderation/` from
-M2). Fly builds remotely; no local Docker is needed.
+root `.dockerignore` to `realtime/`, `web/lib/net/` and `web/lib/moderation/` (the chat
+filter, bundled in). Fly builds remotely; no local Docker is needed.
 
 Prerequisites: a Fly account with a card (row 297) and `fly auth login`; the
-`20261003170000_realtime_card` migration applied to production (the server refuses
-every real join without it).
+`20261003170000_realtime_card` and `20261003190000_world_chat` migrations applied to
+production (without the first every real join is refused; without the second every
+join is refused as busy, since blocks can't be read).
 
 ```sh
 # once
@@ -143,6 +180,8 @@ fly secrets set --app tethos-rt --stage \
   SUPABASE_SECRET_KEY="$(pbpaste)" \
   ALLOWED_ORIGINS="https://play.tethos.ca,https://www.tethos.ca,https://tethos.ca,https://uwotsi.com,https://www.uwotsi.com" \
   ALLOWED_ORIGIN_PATTERNS='^https://uwotsi[a-z0-9-]*-davids-projects-e31987e3\.vercel\.app$'
+# M2: the secret the web app signs sanctions and blocks with (the same value goes on Vercel)
+fly secrets set --app tethos-rt --stage REALTIME_INTERNAL_SECRET="$(pbpaste)"
 
 # every deploy, from the repo root
 fly deploy . --config realtime/fly.toml --dockerfile realtime/Dockerfile --remote-only

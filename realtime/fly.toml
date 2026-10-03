@@ -1,7 +1,8 @@
 # The multiplayer server on Fly.io, Toronto (specs/multiplayer.md §1.3, row 297).
 # Deploy from the repo root (realtime/README.md "Deploy"):
 #   fly deploy . --config realtime/fly.toml --dockerfile realtime/Dockerfile --remote-only
-# Secrets (not here): SUPABASE_URL, SUPABASE_SECRET_KEY, ALLOWED_ORIGINS, ALLOWED_ORIGIN_PATTERNS.
+# Secrets (not here): SUPABASE_URL, SUPABASE_SECRET_KEY, ALLOWED_ORIGINS, ALLOWED_ORIGIN_PATTERNS,
+# REALTIME_INTERNAL_SECRET (M2).
 
 app = "tethos-rt"
 primary_region = "yyz"

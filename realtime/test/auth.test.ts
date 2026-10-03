@@ -185,14 +185,17 @@ describe("card loader", () => {
     expect(PlayerCardSchema.safeParse({ ...CARD, display_name: "Real Name" }).success).toBe(false);
   });
 
-  it("matches the keys the migration's realtime_player_card builds", () => {
+  it("matches the keys every migration's realtime_player_card builds (M1's, and M2's with the real removed_until)", () => {
     const dir = new URL("../../web/supabase/migrations/", import.meta.url);
-    const file = readdirSync(dir).find((f) => f.endsWith("_realtime_card.sql"));
-    expect(file).toBeDefined();
-    const sql = readFileSync(new URL(file!, dir), "utf8");
-    const body = sql.slice(sql.indexOf("jsonb_build_object("), sql.indexOf("FROM profiles"));
-    const keys = [...body.matchAll(/^\s*'([a-z_0-9]+)',/gm)].map((m) => m[1]);
-    expect(keys.sort()).toEqual([...CARD_FIELDS].sort());
+    const files = readdirSync(dir).filter((f) => f.endsWith(".sql") && readFileSync(new URL(f, dir), "utf8").includes("FUNCTION public.realtime_player_card("));
+    expect(files.length).toBeGreaterThanOrEqual(2);
+    for (const file of files) {
+      const sql = readFileSync(new URL(file, dir), "utf8");
+      const from = sql.indexOf("jsonb_build_object(", sql.indexOf("FUNCTION public.realtime_player_card("));
+      const body = sql.slice(from, sql.indexOf("FROM profiles", from));
+      const keys = [...body.matchAll(/^\s*'([a-z_0-9]+)',/gm)].map((m) => m[1]);
+      expect(keys.sort(), file).toEqual([...CARD_FIELDS].sort());
+    }
   });
 
   it("caches a card for 60 s per user", async () => {
