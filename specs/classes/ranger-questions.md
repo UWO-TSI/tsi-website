@@ -28,7 +28,7 @@ Nothing here blocked the build. Each item says what the wave does now; a one-wor
 
 ## Art and the HUD
 19. **The Rifle grip.** The long rifle and the harpoon crossbow share a new grip family (17 verb clips): the right hand on the grip, the left reaching along the barrel (the arms are short: it reaches as far as it goes), a shouldered aim for QuickShot and DrawShot. Hold idles exist for every grip but nothing lays them in the ruins yet, so the rifles' rest grip is solved for the plain arms (muzzle up at the side).
-20. **Animated runes at tier 5.** The trim kit's T5 has brighter, wider rune bands and glow parts; animating them needs a material pulse in the weapon renderer (not built). The mastery trim (13) and its glow (19) are equip rows today; drawing a skin or trim on the weapon needs the same material swap, wave 5.
+20. **Animated runes at tier 5.** The trim kit's T5 glow parts breathe (65–100% of their strength, every tier-5 copy together: `Weapon.pulse`). *Assumed:* a breathe is "animated"; a scrolling rune pattern needs a texture the meshes don't have. The mastery trim (13) and its glow (19) are equip rows today; drawing a skin or trim on the weapon needs a material swap in the weapon renderer, wave 5.
 21. **Ability icons on the HUD.** The kits' icons sit before each key's name in the bar (16 px) and the ult slot shows the ult's icon; the Path sheet still shows names only.
 22. **Unique clips.** Four ults (Ult_Marksman, Ult_Sniper, Ult_Hunter, Ult_Gunslinger), Unique_Reload (played at the reload stat's pace) and Unique_FanHammer. Smoke Roll plays the Backstep verb and the Harpoon DrawShot (both inside the 3-unique budget if you want them unique later).
 
