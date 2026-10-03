@@ -6,14 +6,15 @@
 .layer[data-state="closing"] * { pointer-events: none !important; }
 .scrim { position: absolute; inset: 0; background: var(--gui-scrim); pointer-events: auto; animation: scrimIn var(--gui-t) ease-out both; }
 .layer[data-state="closing"] .scrim { animation: scrimOut 160ms ease-in forwards; }
+/* Its heights divide by the text-size zoom (.gui [data-gui-overlay]), so the largest text still fits the screen. */
 .sheet { --sheet-w: 560px; position: relative; isolation: isolate; pointer-events: auto; display: flex; flex-direction: column; width: min(var(--sheet-w), 100%);
-  max-height: min(760px, calc(100dvh - 32px)); overflow: hidden; background: var(--gui-paper); color: var(--gui-ink); border-radius: var(--gui-r-paper);
+  max-height: min(760px, calc((100dvh - 32px) / var(--gui-overlay-zoom, 1))); overflow: hidden; background: var(--gui-paper); color: var(--gui-ink); border-radius: var(--gui-r-paper);
   box-shadow: var(--gui-shadow-lg); font-size: var(--gui-text-md); line-height: var(--gui-leading); outline: none; animation: sheetIn 260ms var(--gui-spring) both; }
 .sheet::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--gui-grain); mix-blend-mode: multiply; opacity: 0.4; pointer-events: none; }
 .layer[data-state="closing"] .sheet { animation: sheetOut 160ms ease-in forwards; }
 .sheet[data-size="sm"] { --sheet-w: 420px; }
 .sheet[data-size="lg"] { --sheet-w: 760px; }
-.sheet[data-size="xl"] { --sheet-w: 980px; max-height: min(860px, calc(100dvh - 32px)); }
+.sheet[data-size="xl"] { --sheet-w: 980px; max-height: min(860px, calc((100dvh - 32px) / var(--gui-overlay-zoom, 1))); }
 .head { --head: var(--gui-paper-warm); position: relative; z-index: 1; display: flex; align-items: center; gap: 12px; padding: 16px 16px 14px 24px; background: var(--head); }
 /* The header's wavy lower edge: our painted wave, in the header's colour. */
 .head::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 10px; background: var(--head); -webkit-mask: var(--gui-edge-wave) 0 0 / 400px 10px repeat-x; mask: var(--gui-edge-wave) 0 0 / 400px 10px repeat-x; pointer-events: none; }
@@ -37,7 +38,7 @@
 @keyframes sheetOut { to { opacity: 0; transform: translateY(10px) scale(0.97); } }
 @media (max-width: 560px) {
   .layer { padding: 0; place-items: end stretch; }
-  .sheet, .sheet[data-size] { width: 100%; max-height: 92dvh; border-radius: 28px 32px 0 0 / 26px 30px 0 0; animation-name: sheetUp; }
+  .sheet, .sheet[data-size] { width: 100%; max-height: calc(92dvh / var(--gui-overlay-zoom, 1)); border-radius: 28px 32px 0 0 / 26px 30px 0 0; animation-name: sheetUp; }
   .layer[data-state="closing"] .sheet { animation-name: sheetDown; }
   .body { padding: 18px 18px calc(18px + env(safe-area-inset-bottom)); }
   @keyframes sheetUp { from { opacity: 0.6; transform: translateY(40%); } }

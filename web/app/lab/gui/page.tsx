@@ -235,7 +235,9 @@ export default function GuiShowroom() {
 
     <section id="overlays" className={s.section}>
       <header className={s.sectionHead}><h2>The game’s overlays</h2><p>The same components the island mounts, over a stand-in world.</p></header>
-      {OVERLAYS.map(o => <div key={o.id} className={s.overlay}><h3>{o.title}</h3><Stage>{o.render()}</Stage></div>)}
+      {/* They are dialogs that re-open on a loop, so they step aside while a demo sheet is up (each re-open would take
+          the top of the dialog stack, and Escape with it). */}
+      {sheet === null && !confirm && OVERLAYS.map(o => <div key={o.id} className={s.overlay}><h3>{o.title}</h3><Stage>{o.render()}</Stage></div>)}
     </section>
 
     <Sheet open={sheet !== null} onClose={() => setSheet(null)} title={sheet === "oracle" ? "The Oracle" : sheet === "butter" ? "Shop" : "Settings"} eyebrow={sheet === "lg" ? "HQ" : undefined}
