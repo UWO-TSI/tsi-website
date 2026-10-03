@@ -271,7 +271,7 @@ export function classMods(kit: ClassKit, mastery: number): ClassMods {
   const v = statAt(kit, mastery), m = { ...NEUTRAL_MODS };
   switch (kit.stat.kind) {
     case "max_mana": m.energyMax = v; m.energyRegen = NEUTRAL_MODS.energyRegen * (v / NEUTRAL_MODS.energyMax); break;
-    case "summon_count": m.capacity = v; break;
+    case "summon_count": m.capacity = Math.floor(v); break;
     case "cooldown": m.cooldown = v; break;
     case "duration": m.duration = v; break;
     case "attack_speed": m.attackSpeed = v; break;
