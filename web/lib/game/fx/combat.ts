@@ -45,6 +45,43 @@ const sparks = (n: number, size: number) => glow(P("sparkBurst", [n, n], [0.22, 
 const star = (size: number, life = 0.25) => glow(P("impactStar", [1, 1], [life, life], [size, size], { grow: 1.3 }), { lift: 0.7 });
 const halo = (size: number, life = 0.3, lift = 0.7) => glow(P("halo", [1, 1], [life, life], [size, size], { grow: 1.2, alpha: 0.8 }), { lift });
 
+/** Dust kicked off the ground (ink pool: laid over). */
+const dust = (n: number, size: number, more: Partial<Recipe<CombatSprite>> = {}) => ink(P("smoke", [n, n], [0.5, 0.7], [size, size * 1.4], { speed: [1, 2.4], up: [0.2, 0.6], drag: 3, grow: 1.8, alpha: 0.7, jitter: 0.4, ...more }));
+const lines = (n: number, size: number, life = 0.25, more: Partial<ParticleLayer> = {}) => glow(P("speedLine", [n, n], [life, life], [size, size * 1.3], { face: FACE.streak, aspect: 0.14, speed: [7, 10], grow: 1.5 }), { lift: 0.8, ...more });
+const shards = (n: number, size: number, more: Partial<Recipe<CombatSprite>> = {}) => glow(P("shard", [n, n], [0.35, 0.5], [size, size * 1.3], { speed: [1.5, 3.2], up: [0.6, 1.6], gravity: 4, drag: 1.5, spin: 4, grow: 0.8, ...more }), { lift: 0.8 });
+const petals = (n: number, size: number, more: Partial<Recipe<CombatSprite>> = {}) => glow(P("petal", [n, n], [0.6, 0.9], [size, size * 1.3], { speed: [1.2, 2.6], up: [0.4, 1.2], gravity: 1.2, drag: 2, spin: 3, grow: 0.9, alpha: 0.9, ...more }), { lift: 0.9 });
+const brush = (size: number, life = 0.3, lift = 0.8) => ink(P("inkSlash", [1, 1], [life, life], [size, size], { grow: 1.1, face: FACE.billboard }), { lift });
+const splat = (n: number, size: number) => ink(P("ink", [n, n], [0.45, 0.6], [size, size * 1.3], { speed: [0.6, 1.6], up: [0.2, 0.6], drag: 3, grow: 1.3, alpha: 0.95, jitter: 0.3 }), { lift: 0.7 });
+const debrisOf = (n: number, size: number) => ink(P("debris", [n, n], [0.7, 0.9], [size, size * 1.4], { speed: [2.5, 5], up: [3, 6], gravity: 14, drag: 0.4, spin: 6, grow: 1 }));
+const decal = (sprite: CombatSprite, size: number, life: number, more: Partial<DecalLayer> = {}): DecalLayer => ({ kind: "decal", sprite, size, life, ...more });
+
+/**
+ * The Vanguard family's effects (classes v2 wave: specs/classes/design-sheet.md, the LOCKED kits): the Guardian's gold
+ * shield shards, the Juggernaut's dust, debris and cracked ground, the Martial Artist's flame-orange strike flares, and
+ * the Assassin's black ink with red (its ramp's mid band), brush slashes and lotus petals. All in each kit's ramp.
+ */
+const VANGUARD_FX: Record<string, FxRecipe> = {
+  // ── Guardian ──
+  "guardian.block": { tier: "ability", layers: [shards(3, 0.35, { speed: [0.5, 1.2], spread: 0.6, up: [0.2, 0.6], gravity: 0 }), halo(1.4, 0.3, 0.9)] },
+  "guardian.parry": { tier: "heavy", layers: [star(2.1, 0.28), glow(P("slash", [1, 1], [0.26, 0.26], [2.6, 2.6], { grow: 1.15 }), { lift: 0.9 }), shards(10, 0.4), sparks(3, 1.5), ring(0.3, 2.4, 0.3, { lift: 0.5 }), heavyLines] },
+  "guardian.challenge": { tier: "ability", layers: [ring(0.5, 7, 0.5, { lift: 0.25 }), decal("rune", 2.6, 1, { spin: 0.5 }), shards(8, 0.3, { speed: [0.3, 0.8], up: [1.2, 2], gravity: 0 })] },
+  "guardian.rush": { tier: "ability", layers: [lines(8, 1.2, 0.3, { toward: "aim" }), dust(4, 0.7, { speed: [0.8, 1.8] }), halo(1.2, 0.25, 0.8)] },
+  "guardian.rushHit": { tier: "ability", layers: [star(1.6), sparks(2, 1.2), shards(4, 0.32), debrisOf(4, 0.3)] },
+  "guardian.domeCast": { tier: "ability", layers: [decal("rune", 3.2, 1.1, { spin: 0.4 }), shards(10, 0.3, { speed: [0.4, 1], up: [2, 3.2], gravity: 1 }), halo(2, 0.4, 0.6)] },
+  /** Re-thrown each second while the dome stands (an effect lives at most 1.2 s): the shell and a few shards round its rim. */
+  "guardian.dome": { tier: "ability", layers: [{ kind: "mesh", shape: "dome", from: 2.55, to: 2.6, height: 1.5, life: 1.05 },
+    glow(P("shard", [4, 5], [0.8, 1], [0.22, 0.3], { speed: [0.1, 0.3], up: [0.2, 0.5], jitter: 2.4, spin: 1.5, grow: 0.8, alpha: 0.8 }), { lift: 0.6 })] },
+  "guardian.throwCast": { tier: "ability", layers: [sparks(1, 0.9), halo(0.9, 0.2, 1)] },
+  "guardian.shieldSpin": { tier: "ability", layers: [glow(P("shard", [1, 1], [0.16, 0.2], [0.42, 0.5], { spin: 9, grow: 0.6 }), { lift: 0.9 })] },
+  "guardian.shieldHit": { tier: "ability", layers: [star(1.2), shards(4, 0.3), sparks(1, 1)] },
+  "guardian.ultCast": { tier: "ult", layers: [decal("rune", 3.6, 1.2, { spin: 0.3 }), glow(P("shard", [20, 24], [0.45, 0.55], [0.26, 0.34], { speed: [-4.2, -3.2], jitter: 2.6, spin: 5, grow: 0.5, rise: [0.1, 2] }), { lift: 0.2 }),
+    { kind: "mesh", shape: "pillar", from: 0.5, to: 0.35, height: 3, life: 0.5 }, halo(2.2, 0.5, 0.9)] },
+  "guardian.ultImpact": { tier: "ult", layers: [star(5, 0.4), sparks(4, 3), halo(5, 0.5, 0.6), heavyLines, lines(14, 2.8, 0.4, { lift: 1 }),
+    ring(0.6, 6.5, 0.6, { lift: 0.2, byRadius: true }), ring(0.4, 4, 0.45, { lift: 1.2 }), { kind: "mesh", shape: "dome", from: 1, to: 5.2, height: 2, life: 0.75, byRadius: true },
+    shards(24, 0.45, { speed: [3, 7], up: [2, 5], gravity: 9 }), debrisOf(12, 0.5), dust(8, 1.8, { speed: [2, 4] }), { kind: "light", intensity: 40, distance: 12, life: 0.5 }] },
+  "guardian.ultDecal": { tier: "ult", layers: [decal("crack", 2.2, 4, { byRadius: true }), decal("rune", 1.6, 2.4, { byRadius: true, spin: 0.4 })] },
+};
+
 export const FX: Record<string, FxRecipe> = {
   // ── Hits by tier (impact.ts): a small spark, a spark burst in the ramp, the heavy tier's lines and ring ──
   "hit.light": { tier: "light", layers: [glow(P("flare", [1, 1], [0.14, 0.16], [0.45, 0.55]), { lift: 0.7 })] },
@@ -80,6 +117,7 @@ export const FX: Record<string, FxRecipe> = {
     ink(P("smoke", [10, 12], [1.2, 1.6], [1.6, 2.4], { speed: [2, 4], up: [0.4, 1.2], drag: 2.2, grow: 2, alpha: 0.8, jitter: 1.6 }), { byRadius: true }),
     { kind: "light", intensity: 40, distance: 12, life: 0.5 }] },
   "demo.ultDecal": { tier: "ult", layers: [{ kind: "decal", sprite: "crack", size: 2.2, life: 4, byRadius: true }, { kind: "decal", sprite: "rune", size: 1.6, life: 2, byRadius: true, spin: 0.4 }] },
+  ...VANGUARD_FX,
 };
 
 /** What a recipe can cost at most (a burst throws up to 1.6× its count at full scale). */
