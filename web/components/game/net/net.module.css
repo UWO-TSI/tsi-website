@@ -1,0 +1,32 @@
+/*
+ * The multiplayer layer in the GUI sheet (row 285). Nameplates copy the paper tag your own plate wears
+ * (PlayerAvatar.tsx; unify the two later, specs/multiplayer.md §9): the driver moves `.plateAt`, `.plate` is centred
+ * on that point and follows the text-size setting.
+ */
+.plateAt { position: absolute; top: 0; left: 0; pointer-events: none; user-select: none; will-change: transform; }
+.plate { transform: translate(-50%, -50%); width: max-content; white-space: nowrap; text-align: center; padding: 3px 11px 4px; border-radius: 999px;
+  background: rgb(255 251 231 / 0.95); color: var(--gui-ink-strong); font-family: var(--gui-font); zoom: var(--tsi-text-scale, 1);
+  box-shadow: 0 2px 0 rgb(114 92 78 / 0.18); transition: opacity 0.3s ease; }
+.plate[data-frame="bronze"] { box-shadow: 0 0 0 2.5px #c08a4a, 0 2px 0 rgb(114 92 78 / 0.18); }
+.plate[data-frame="silver"] { box-shadow: 0 0 0 2.5px #c9d3da, 0 2px 0 rgb(114 92 78 / 0.18); }
+.plate[data-frame="gold"] { box-shadow: 0 0 0 2.5px #f0c24a, 0 2px 0 rgb(114 92 78 / 0.18); }
+/* Away (dropped, inside the reconnection grace): the plate dims, they're still here. */
+.plate[data-away] { opacity: 0.5; }
+.plateName { display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 13px; font-weight: 800; line-height: 1.2; }
+.dot { display: none; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--gui-tethos-blue); box-shadow: 0 0 0 2px #fffbe7; }
+.plate[data-member] .dot { display: block; }
+.level { margin-left: 2px; padding: 0 6px; border-radius: 999px; background: var(--gui-sage); color: var(--gui-paper); font-size: 12px; font-weight: 800; }
+.level[hidden], .phone[hidden], .plateClass[hidden] { display: none; }
+.plateClass { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 2px; font-size: 12px; font-weight: 700; color: var(--gui-ink-2); line-height: 1.2; }
+.classIcon { width: 22px; height: 22px; border-radius: 50%; background: var(--gui-paper-hi); }
+
+/* A phone, in the paper kit's ink: on a remote resting from their phone, and in the people list. */
+.phone { display: inline-grid; place-items: center; flex: none; }
+.phone svg { display: block; overflow: visible; }
+.phone rect { fill: var(--gui-paper-hi); stroke: var(--gui-ink-2); stroke-width: 1.4; }
+.phone path { fill: none; stroke: var(--gui-ink-2); stroke-width: 1.2; stroke-linecap: round; }
+.phone circle { fill: var(--gui-ink-2); }
+
+:global(html[data-contrast="high"]) .plate { background: #000000; color: #ffffff; }
+:global(html[data-contrast="high"]) .plateClass { color: #ffffff; }
+@media (prefers-reduced-motion: reduce) { .plate { transition: none; } }
