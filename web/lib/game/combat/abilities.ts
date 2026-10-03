@@ -357,7 +357,7 @@ export function runEffects(rt: CombatRuntime, effects: Effect[], ctx: Ctx, rando
       case "transform": {
         rt.transform = { name: ctx.ability.name, t: Math.max(ef.duration, rt.transform?.t ?? 0) };
         const pv = passiveOf(rt);
-        if (pv?.kind === "transform_shield") addShield(rt, p.maxHp * pv.value, 4);
+        if (pv?.kind === "transform_shield") addShield(rt, p.maxHp * pv.value, rt.v2 ? 3 : 4); // classes v2 shifts often: a shorter barrier
         break;
       }
       // Movement hooks (classes v2): carried speed along the aim, a hop; the avatar applies them on its next step.

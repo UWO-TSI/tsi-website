@@ -68,11 +68,11 @@ function Mirrors({ ground }: { ground: Ground }) {
     m.traverse(o => { const mesh = o as THREE.Mesh; if (mesh.isMesh && (mesh.material as THREE.Material).name === "M_Glass") { mesh.material = invert; mesh.renderOrder = 6; } });
     return m;
   }, [scene]);
-  const path = useMemo(() => { const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0, 0, 0.5), new THREE.MeshBasicMaterial({ color: "#ffffff", ...INVERT })); m.renderOrder = 5; m.frustumCulled = false; return m; }, []);
-  const group = useRef<THREE.Group>(null), fade = useRef({ t: 0, s: null as null | { x: number; z: number; x0: number; z0: number; dx: number; dz: number; w: number } });
+  const strip = useMemo(() => new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0, 0, 0.5), []);
+  const group = useRef<THREE.Group>(null), pathRef = useRef<THREE.Mesh>(null), fade = useRef({ t: 0, s: null as null | { x: number; z: number; x0: number; z0: number; dx: number; dz: number; w: number } });
   useFrame((_, delta) => {
-    const g = group.current, f = fade.current, s = combat.rt.field.sweeps[0];
-    if (!g) return;
+    const g = group.current, path = pathRef.current, f = fade.current, s = combat.rt.field.sweeps[0];
+    if (!g || !path) return;
     if (s) { f.s = { x: s.x, z: s.z, x0: s.x0, z0: s.z0, dx: s.dx, dz: s.dz, w: s.w }; f.t = 0.45; } else f.t = Math.max(0, f.t - delta);
     g.visible = !!s; path.visible = f.t > 0 && !!f.s;
     if (!f.s) return;
@@ -83,7 +83,10 @@ function Mirrors({ ground }: { ground: Ground }) {
     g.position.set(s.x, ground(s.x, s.z), s.z); g.rotation.y = yaw + Math.PI; // the glass faces where it goes
     g.scale.set(s.w * 0.95, s.w * 0.55, s.w * 0.95);
   });
-  return <><primitive object={path} /><group ref={group} visible={false}><primitive object={frame} /></group></>;
+  return <>
+    <mesh ref={pathRef} geometry={strip} renderOrder={5} frustumCulled={false} visible={false}><meshBasicMaterial color="#ffffff" {...INVERT} /></mesh>
+    <group ref={group} visible={false}><primitive object={frame} /></group>
+  </>;
 }
 
 // ── Forms: the mob you shifted into, posed by the shared enemy animation helper; the Chimera wears all five ──
@@ -123,7 +126,7 @@ function MobBody({ type, scale, at, yaw, spin, ground, player }: { type: EnemyTy
     g.position.set(me.x, ground(me.x, me.z) + type.hover * s / type.modelScale, me.z);
     g.rotation.y = p.facing + type.modelYaw;
     g.scale.setScalar(s);
-    rig.root.position.set(at[0] / s, at[1] / s, at[2] / s); rig.root.rotation.y = yaw + spin * clock.elapsedTime;
+    rig.root.position.set(at[0] / s, at[1] / s, at[2] / s); rig.root.rotation.set(0, yaw + spin * clock.elapsedTime, 0);
     rig.root.updateMatrix();
     for (const n of rig.nodes) {
       if (n.o === rig.root) continue;
@@ -165,14 +168,12 @@ function Walls({ ground }: { ground: Ground }) {
 }
 
 // ── The Necromancer's corpses: a faint grave glyph on each body that can still rise ──
+const CORPSE_GLYPH = new THREE.RingGeometry(0.28, 0.42, 6).rotateX(-Math.PI / 2), corpseM = new THREE.Matrix4();
 function Corpses({ ground, max = 24 }: { ground: Ground; max?: number }) {
-  const mesh = useMemo(() => {
-    const m = new THREE.InstancedMesh(new THREE.RingGeometry(0.28, 0.42, 6).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: "#9ee6a8", transparent: true, opacity: 0.45, depthWrite: false, toneMapped: false }), max);
-    m.frustumCulled = false; m.renderOrder = 3.4;
-    return m;
-  }, [max]);
-  const tmp = useMemo(() => new THREE.Matrix4(), []);
+  const ref = useRef<THREE.InstancedMesh>(null);
   useFrame(({ clock }) => {
+    const mesh = ref.current, tmp = corpseM;
+    if (!mesh) return;
     let n = 0;
     for (const e of combat.rt.enemies) {
       if (n >= max || !corpse(e)) continue;
@@ -181,19 +182,23 @@ function Corpses({ ground, max = 24 }: { ground: Ground; max?: number }) {
     }
     mesh.count = n; mesh.instanceMatrix.needsUpdate = true;
   });
-  return <primitive object={mesh} />;
+  return <instancedMesh ref={ref} args={[CORPSE_GLYPH, undefined, max]} frustumCulled={false} renderOrder={3.4}>
+    <meshBasicMaterial color="#9ee6a8" transparent opacity={0.45} depthWrite={false} toneMapped={false} />
+  </instancedMesh>;
 }
 
 // ── Unseen (Vanish, a pollen scatter): only a faint ring shows you where you stand ──
+const SHIMMER_RING = new THREE.RingGeometry(0.45, 0.55, 32).rotateX(-Math.PI / 2);
 function Shimmer({ ground, player }: { ground: Ground; player: React.RefObject<THREE.Vector3> }) {
-  const mesh = useMemo(() => { const m = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.55, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: "#e9d8ff", transparent: true, opacity: 0.4, depthWrite: false, toneMapped: false })); m.renderOrder = 3.6; m.visible = false; return m; }, []);
+  const ref = useRef<THREE.Mesh>(null);
   useFrame(({ clock }) => {
-    const on = combat.rt.field.stealth > 0, me = player.current;
+    const mesh = ref.current, on = combat.rt.field.stealth > 0, me = player.current;
+    if (!mesh) return;
     mesh.visible = on;
     if (!on || !me) return;
     mesh.position.set(me.x, ground(me.x, me.z) + 0.05, me.z);
     (mesh.material as THREE.MeshBasicMaterial).opacity = 0.25 + 0.15 * Math.sin(clock.elapsedTime * 8);
   });
-  return <primitive object={mesh} />;
+  return <mesh ref={ref} geometry={SHIMMER_RING} renderOrder={3.6} visible={false}><meshBasicMaterial color="#e9d8ff" transparent opacity={0.4} depthWrite={false} toneMapped={false} /></mesh>;
 }
 

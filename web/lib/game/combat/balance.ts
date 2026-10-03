@@ -9,7 +9,7 @@
  * ten fizzles, one in ten is empowered). No collision (open ground).
  * specs/evidence/combat-b/balance.md is this table.
  */
-import { FAMILY_STAT, resolveLoadout, subclassByKey, UNITS, type Ability, type Subclass } from "@/lib/combat/kits";
+import { FAMILY_STAT, resolveLoadout, subclassByKey, UNITS, type Ability, type Effect, type Subclass } from "@/lib/combat/kits";
 import { damage, STARTER_WEAPONS, WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { derived, presetAllocation, ZERO_STATS } from "@/lib/combat/progression";
 import { potencyFor } from "@/lib/combat/incantation";
@@ -43,7 +43,7 @@ const RANGE: Record<string, number> = { melee: 1.2, bow: 7, staff: 6, summon: 5 
 const RUNE_TIME = { spark: 1.6, binding: 3.2 };
 const DODGE_SKILL = 0.6;
 /** A telegraph it didn't dodge: how often the v2 bot answers it with a timed skill instead (a guard, a parry, a swap, a Perfect Shift). */
-const REACT_SKILL = 0.35;
+const REACT_SKILL = 0.3;
 
 export interface RunResult { cleared: boolean; seconds: number; dealt: number; taken: number; minHp: number; died: boolean }
 
@@ -73,7 +73,7 @@ function useful(rt: CombatRuntime, a: Ability, me: Vec, target: Enemy | null, th
     const minions = rt.units.filter(u => u.def.kind === "minion" && u.source !== "weapon" && (u.def.cost ?? 1) > 0).length;
     if (e.kind === "zone") {
       if (e.heal && hurt < 0.75) return true;
-      if (e.blind && (threat || dist < 3)) return true;
+      if (e.blind && (threat || dist < 4)) return true;
       if (e.power && target && (e.at === "aim" ? dist < 10 : dist < e.radius + (e.length ?? 0) + 0.5)) return true;
       continue;
     }
@@ -105,8 +105,17 @@ function formWanted(rt: CombatRuntime, form: string, me: Vec, target: Enemy | nu
   if (!target) return false;
   const v = rt.v2!, has = (k: string) => v.keys.some(a => a?.effects.some(e => e.kind === "form" && e.form === k));
   const crowd = rt.enemies.filter(e => e.state !== "dead" && d2(e, me) < 3).length, far = d2(target, me) > 5, hurt = rt.player.hp / rt.player.maxHp;
-  const best = crowd >= 3 && has("golem") ? "golem" : threat && has("crab") ? "crab" : hurt < 0.45 && has("pollen") ? "pollen" : far && has("wisp") ? "wisp" : "fox";
+  const boss = target.type.kind === "boss"; // big slow hits get through its armour
+  const best = (crowd >= 3 || boss) && has("golem") ? "golem" : threat && has("crab") ? "crab" : hurt < 0.45 && has("pollen") ? "pollen" : far && has("wisp") ? "wisp" : "fox";
   return form === best && (v.form !== best || best === "golem" || (best === "fox" && d2(target, me) < 4.5));
+}
+
+/** Its hits are all small (power under 1.2): against flat armour they glance. Abilities that don't hit aren't. */
+function glances(a: ClassAbility): boolean {
+  const powers = (l: Effect[]): number[] => l.flatMap(e => e.kind === "projectile" ? [e.power, ...powers(e.burst ?? [])] : e.kind === "area" || e.kind === "detonate" ? [e.power] : e.kind === "dash" && e.power ? [e.power]
+    : e.kind === "delay" ? powers(e.effects) : e.kind === "zone" && e.power ? [e.power * (e.every ?? 0.5)] : []);
+  const p = powers(a.effects);
+  return p.length > 0 && Math.max(...p) < 1.2 && !a.effects.some(e => e.kind === "form");
 }
 
 /** One solo run of a survive mission's waves (the mission's own spawns and circle). */
@@ -243,8 +252,8 @@ export function signatureWeapon(kitKey: string): string {
 }
 
 /** One v2 run: a survive mission's waves, or the guardian (`"boss"`: the scripted fight, bot rules plus the stagger window). */
-/** The bot knows every form a Transmuter can learn (it has fought the outskirts and the temple). */
-const ALL_TRAITS = Object.fromEntries(["fox-stride", "crab-shell", "wisp-core", "pollen-swarm", "golem-fist"].map(k => [k, 30]));
+/** The bot knows every form a Transmuter can learn, each from one defeat (a fresh learner: the forms at tier 2). */
+const ALL_TRAITS = Object.fromEntries(["fox-stride", "crab-shell", "wisp-core", "pollen-swarm", "golem-fist"].map(k => [k, 1]));
 export function runV2(kitKey: string, missionId: "survive-circle" | "survive-sanctum" | "boss", seed: number, mastery = 1, limit = 240): RunV2 {
   const kit = classKit(kitKey)!, random = lcg(seed), rt = createRuntime(), p = rt.player;
   p.stats = presetAllocation(kit.family, 10); p.level = 10; p.safe = false;
@@ -253,7 +262,7 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
   p.hp = p.maxHp; p.energy = 100;
   const v = rt.v2!, boss = missionId === "boss";
   const center = boss ? { x: BOSS_CENTER.x, z: BOSS_CENTER.z - 6 } : SURVIVE_CIRCLES[missionId], waves = boss ? [[{ id: "boss", type: "guardian-statue", x: 0, z: 25.5 }]] : WAVES[missionId];
-  let me: Vec = { x: center.x, z: center.z }, wave = 0, strafe = 1, t = 0, taken = 0, minHp = p.hp, fillFrom = 0, ults = 0, drawLeft = 0, mashAt = 0, react = "";
+  let me: Vec = { x: center.x, z: center.z }, wave = 0, strafe = 1, t = 0, taken = 0, minHp = p.hp, fillFrom = 0, ults = 0, drawLeft = 0, mashAt = 0, react = "", reactAt = 0;
   const fills: number[] = [], judged = new Set<string>(), held: { slot: number; at: number }[] = [];
   spawnWave(rt, waves[0]);
   const dt = 1 / 30;
@@ -268,9 +277,10 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
     if (threat && !judged.has(`${threat.id}:${threat.cycle}:${Math.floor(t / 2)}`)) {
       judged.add(`${threat.id}:${threat.cycle}:${Math.floor(t / 2)}`);
       if (random() < DODGE_SKILL && p.dodgeCd <= 0) { const a = Math.atan2(me.x - threat.x, me.z - threat.z) + strafe * 1.2; startDodge(rt, { x: Math.sin(a), z: Math.cos(a) }); }
-      else if (random() < REACT_SKILL) react = `${threat.id}:${threat.cycle}`; // not dodged: a timed skill instead (a parry, a swap, a Perfect Shift), sometimes
+      // Not dodged: a timed skill instead (a parry, a swap, a Perfect Shift) now and then, pressed at a human moment in the rest of the windup.
+      else if (random() < REACT_SKILL) { react = `${threat.id}:${threat.cycle}`; reactAt = threat.move.windup * (0.5 + 0.5 * random()); }
     }
-    const reacting = !!threat && react === `${threat.id}:${threat.cycle}`;
+    const reacting = !!threat && react === `${threat.id}:${threat.cycle}` && threat.t >= reactAt;
     // Riders: 30% of the time the bot is sliding, in the air, just off a dash and fast.
     const rider = random() < 0.3;
     p.move = rider ? { mode: random() < 0.5 ? "slide" : "air", speed: 16, sinceDash: 0.1, vx: 0, vz: 16 } : { mode: "ground", speed: 7.4, sinceDash: 9, vx: 0, vz: 7.4 };
@@ -291,6 +301,7 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
         const kind = a.input?.kind ?? "tap";
         if (kind === "toggle" && v.toggled[i]) continue;
         if (!(staggered || useful(rt, a, me, target, reacting))) continue;
+        if (target?.type.kind === "boss" && glances(a)) continue; // the guardian's armour eats small hits: save the energy
         const combo = v.combos.find(c => c.keys[0] === i && c.keys[1] === i && p.energy >= c.ability.energy && random() < 0.5);
         classKey(rt, i, true);
         if (kind === "hold" || kind === "charge") held.push({ slot: i, at: t + (kind === "hold" ? 1 : (a.input as { max_s: number }).max_s) }); // let go later

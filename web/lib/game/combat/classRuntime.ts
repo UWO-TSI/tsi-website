@@ -7,7 +7,7 @@
  * decides when they run. Pure over the runtime: the ruins scene and the balance bot drive it the same way.
  */
 import { classMods, holdsSignature, kitAt, signatureHint, withMods, type ClassAbility, type ClassKit, type ClassMods, type ClassUlt, type MovementPassive } from "@/lib/combat/classes";
-import type { Passive } from "@/lib/combat/kits";
+import type { Effect, Passive } from "@/lib/combat/kits";
 import { derived } from "@/lib/combat/progression";
 import { ultBlock, ULT } from "@/lib/combat/ult";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
@@ -15,14 +15,15 @@ import { CAST, context, floater, fx, runEffects, spend } from "./abilities";
 import { BUFFER, faceAim } from "./actions";
 import { chargePotency, createInputState, press, release, tick, type InputKit, type InputState, type Intent } from "./input";
 import { addKick, MOVE_NEEDS, moveOk, speedBonus } from "./moveHooks";
-import { attune, mimic, refusal, reveal, setForm } from "./primitives";
+import { attune, formTier, mimic, refusal, reveal } from "./primitives";
 import { energyMax, V2_SLOT_IDS, type CombatRuntime } from "./runtime";
 import type { Vec } from "./sim";
 
 /** The ult's beats in seconds after its anticipation (§1.6): the freeze, then 200 ms more of i-frames; the sequence's presentation lasts this long (after a sustained ult's finisher). */
 export const ULT_BEATS = { freeze: 0.12, iframesAfter: ULT.iframesAfterFreeze, end: 3 } as const;
 /** How far an ult reaches (its widest area): the bot's trigger, the channel's warning glow. */
-export const ULT_REACH = (a: ClassAbility) => Math.max(2, ...a.effects.map(e => (e.kind === "area" ? e.radius : e.kind === "zone" ? e.radius : e.kind === "sweep" ? e.width / 2 : e.kind === "projectile" ? 1.5 : 0)));
+const reach = (e: Effect): number => (e.kind === "area" || e.kind === "zone" ? e.radius : e.kind === "sweep" ? e.width / 2 : e.kind === "delay" ? Math.max(0, ...e.effects.map(reach)) : e.kind === "projectile" ? 1.5 : 0);
+export const ULT_REACH = (a: ClassAbility) => Math.max(2, ...a.effects.map(reach));
 /** Seconds after the last threat that you still count as in combat (§1.3). */
 export const IN_COMBAT = 5;
 
@@ -85,8 +86,10 @@ export function equipClassKit(rt: CombatRuntime, kit: ClassKit, mastery: number,
 
 /** The cooldown an ability runs on: its own, or its group's (the Transmuter's forms share one). */
 export const cdKey = (a: ClassAbility) => a.group ?? a.key;
-/** The Chimera (a form "chimera"): the forms' moves without cooldowns or energy, and the body stays the Chimera. */
+/** The Chimera (a form "chimera"): the forms' moves without their cooldown or energy (a beat between them), and the body stays the Chimera. */
 const unbound = (v: ClassState, a: ClassAbility) => v.form === "chimera" && !!a.group;
+/** The beat between two moves in the Chimera (no form cooldown, but not every frame). */
+export const UNBOUND_BEAT = 0.5;
 
 /** Can `a` start now? (Cooldown aside: the queue waits on that.) Says why not with a floater. */
 function usable(rt: CombatRuntime, a: ClassAbility, me: Vec, energy = a.energy): boolean {
@@ -104,7 +107,7 @@ function usable(rt: CombatRuntime, a: ClassAbility, me: Vec, energy = a.energy):
 function fire(rt: CombatRuntime, a: ClassAbility, me: Vec, potency = 1, opts: { cooldown?: boolean; effects?: ClassAbility["effects"]; energy?: boolean } = {}, random = Math.random) {
   const p = rt.player, v = rt.v2!, free = unbound(v, a);
   if (opts.energy !== false && !free) spend(rt, a.energy);
-  if (opts.cooldown !== false && !free) v.cd[cdKey(a)] = a.cooldown_s;
+  if (opts.cooldown !== false) v.cd[cdKey(a)] = free ? UNBOUND_BEAT : a.cooldown_s;
   p.attackCd = Math.max(p.attackCd, 0.25); p.swing = 0.22;
   faceAim(p, me);
   if (!a.effects.some(e => e.kind === "stealth")) reveal(rt); // casting gives you away (Vanish itself aside)
@@ -112,6 +115,8 @@ function fire(rt: CombatRuntime, a: ClassAbility, me: Vec, potency = 1, opts: { 
   if (a.clip && clip) { p.clip = { verb: clip, scale: "verb" in a.clip ? a.clip.scale ?? 1 : 1, upper: true }; mimic(rt, clip); }
   const ctx = context(rt, a, me, potency * (1 + (a.scale ? speedBonus(p.move.speed, a.scale.max) : 0)), p.aim);
   ctx.impact = a.heavy ? "heavy" : "ability"; ctx.fx = a.vfx; ctx.ramp = a.ramp;
+  const shift = a.effects.find(e => e.kind === "form");
+  if (shift?.kind === "form") ctx.tier = formTier(rt, free ? "chimera" : shift.form); // a form's move hits at its trait's tier
   fx(rt, a.vfx?.cast, "cast", me, ctx.aim, ctx.impact, undefined, a.ramp);
   if (a.when === "airborne") p.kick = addKick(p.kick, 0, 0, 0, 0, true); // a short hang at an air cast
   if (a.elements) attune(rt, a.elements);
@@ -122,7 +127,7 @@ function fire(rt: CombatRuntime, a: ClassAbility, me: Vec, potency = 1, opts: { 
 function run(rt: CombatRuntime, q: Queued, me: Vec, random: () => number): "done" | "wait" {
   const v = rt.v2!, p = rt.player, it = q.intent;
   const deny = (slot: number | null) => { if (slot !== null) rt.denied[slotId(slot)]++; else rt.denied.ult++; return "done" as const; };
-  const cooling = (a: ClassAbility, slot: number | null) => { const cd = unbound(v, a) ? 0 : v.cd[cdKey(a)] ?? 0; return cd <= 0 ? null : cd > q.left ? deny(slot) : "wait" as const; };
+  const cooling = (a: ClassAbility, slot: number | null) => { const cd = Math.min(v.cd[cdKey(a)] ?? 0, unbound(v, a) ? UNBOUND_BEAT : Infinity); return cd <= 0 ? null : cd > q.left ? deny(slot) : "wait" as const; };
   switch (it.kind) {
     case "ult": {
       const why = ultBlock({ meter: v.meter, alive: p.alive, safe: p.safe, drawing: !!rt.casting, signature: holdsSignature(v.kit, weaponType(rt)), active: !!v.cast });

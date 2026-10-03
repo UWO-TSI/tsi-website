@@ -5,7 +5,8 @@
  * trap, delayed stages, forms, raising the dead, bursts, and clones that fight beside you. Pure over the runtime like
  * abilities.ts (which dispatches the effects here); `stepField` runs once a tick at the end of the encounter tick.
  */
-import type { Effect } from "@/lib/combat/kits";
+import { traitTier, type Effect } from "@/lib/combat/kits";
+import type { FormDef } from "@/lib/combat/classes";
 import type { EnemyType } from "./contract";
 import { addShield, applyStatus, chargeUlt, floater, fx, heal, runEffects, strike, summon, type Ctx } from "./abilities";
 import { addKick } from "./moveHooks";
@@ -199,20 +200,36 @@ export function setForm(rt: CombatRuntime, form: string) {
 }
 /** The click attack a form brings, or null in your own body. */
 export const formBasic = (rt: CombatRuntime) => (rt.v2?.form ? rt.v2.kit.forms?.[rt.v2.form]?.basic ?? null : null);
+/** A form's weapon tier: its trait's defeats (traitTier: tier 2 at the first, 3 at 10, 4 at 30), not the charm's; the Chimera the best of them. */
+export function formTier(rt: CombatRuntime, form: string | null | undefined): number | undefined {
+  const v = rt.v2, forms = v?.kit.forms;
+  if (!v || !forms || !form) return undefined;
+  const of = (f: FormDef | undefined) => (f?.trait ? traitTier(v.traits[f.trait] ?? 0) : undefined);
+  return form === "chimera" ? Math.max(0, ...Object.values(forms).map(of).filter((t): t is number => t !== undefined)) || undefined : of(forms[form]);
+}
 
 // ── Hooks the tick and the hit paths call ───────────────────────
-/** Where an enemy goes instead of you (abilities.ts enemyTarget): a clone it took for you (a decoy share), or home while you're unseen. */
+/** How long an enemy keeps its call on which of you is real before it makes a fresh one. */
+export const CALL_EVERY = 2.5;
+/** Each enemy's call, re-made every CALL_EVERY s (seeded by its id and the moment): over a fight it spends `share` of its time on a clone. */
+function fooled(e: Enemy, share: number, clock: number): boolean {
+  const key = `${e.id}:${Math.floor(clock / CALL_EVERY)}`;
+  let h = 2166136261; // FNV-1a and a murmur finish: keys that differ by one character still spread evenly
+  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619);
+  h = Math.imul(h ^ (h >>> 16), 0x85ebca6b); h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35); h ^= h >>> 16;
+  return ((h >>> 0) % 1000) / 1000 < share;
+}
+/**
+ * Where an enemy goes instead of you (abilities.ts enemyTarget): home while you're unseen, or the clone it took for
+ * you: a decoy share of the time (Who's Real?: a fresh call every few seconds) it goes after a clone.
+ */
 export function lure(rt: CombatRuntime, e: Enemy): Vec | null {
   const f = rt.field;
   if (f.stealth > 0) return { x: e.spawnX, z: e.spawnZ };
   const share = rt.v2?.passive.kind === "decoy_share" ? rt.v2.passive.value : 0;
   if (!share) return null;
   const clones = rt.units.filter(u => u.def.kind === "clone");
-  if (!clones.length) return null;
-  let h = 2166136261; // FNV-1a and a murmur finish: ids that differ by one character still spread evenly
-  for (let i = 0; i < e.id.length; i++) h = Math.imul(h ^ e.id.charCodeAt(i), 16777619);
-  h = Math.imul(h ^ (h >>> 16), 0x85ebca6b); h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35); h ^= h >>> 16;
-  return ((h >>> 0) % 1000) / 1000 < share ? nearestTo(clones, e) : null;
+  return clones.length && fooled(e, share, rt.v2!.clock) ? nearestTo(clones, e) : null;
 }
 
 /** Stealth ends when you attack or cast; the bonus waits for your first hit for a moment. */

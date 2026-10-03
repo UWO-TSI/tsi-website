@@ -151,7 +151,7 @@ describe("the shared primitives (primitives.ts)", () => {
     expect(back?.hit?.power).toBeGreaterThan(0);
   });
   it("Vanish: enemies lose you; coming close or attacking reveals you, and the first hit out deals 80% more once", () => {
-    const { rt, p, foe } = setup(ILLUSIONIST, 1, [[0, 6]]);
+    const { rt, p } = setup(ILLUSIONIST, 1, [[0, 6]]);
     tap(rt, 4); frame(rt);
     expect(rt.field.stealth).toBeGreaterThan(3);
     p.attackCd = 0; attack(rt, ME, never);

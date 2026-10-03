@@ -367,9 +367,9 @@ export const UNITS: Record<string, UnitDef> = {
   tripwire: { key: "tripwire", name: "Tripwire", kind: "trap", hp: 1, life: 25, radius: 1.2, power: 0.8 },
   decoy: { key: "decoy", name: "Phantom", kind: "decoy", hp: 50, life: 3, taunt: true },
   // Classes v2, Arcane: the Illusionist's doubles, the Necromancer's dead (a skeleton body, lib/game/combat/primitives.ts ALLY_BODIES).
-  "mirror-clone": { key: "mirror-clone", name: "Mirror clone", kind: "clone", hp: 30, hpShare: 0.3, life: 10, speed: 7.4, range: 9, power: 0.4, rate: 0.7 },
-  skeleton: { key: "skeleton", name: "Skeleton", kind: "minion", hp: 30, cost: 1, life: 20, speed: 5.6, range: 1.4, power: 0.3, rate: 0.8, model: "skeleton-warrior" },
-  "army-skeleton": { key: "army-skeleton", name: "Risen dead", kind: "minion", hp: 24, cost: 0, life: 8, speed: 6.6, range: 1.4, power: 0.25, rate: 0.8, model: "skeleton-warrior", burst: { radius: 1.7, power: 0.55 } },
+  "mirror-clone": { key: "mirror-clone", name: "Mirror clone", kind: "clone", hp: 30, hpShare: 0.3, life: 10, speed: 7.4, range: 9, power: 0.4, rate: 1.15 },
+  skeleton: { key: "skeleton", name: "Skeleton", kind: "minion", hp: 30, cost: 1, life: 20, speed: 5.6, range: 1.4, power: 0.22, rate: 0.8, model: "skeleton-warrior" },
+  "army-skeleton": { key: "army-skeleton", name: "Risen dead", kind: "minion", hp: 24, cost: 0, life: 8, speed: 6.6, range: 1.4, power: 0.25, rate: 0.8, model: "skeleton-warrior", burst: { radius: 1.7, power: 1 } },
 };
 /** Caps (row 50): minions share the capacity stat; one totem per role and three at most; two traps; one decoy; two weapon wisps. */
 export const CAPS = { totems: 3, traps: 2, decoys: 1, weaponWisps: 2 } as const;

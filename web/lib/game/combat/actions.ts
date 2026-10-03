@@ -11,7 +11,7 @@ import { BOSS, DODGE, engage, inArc, invulnerable, spawnEnemy, sweptHit, type En
 import { ENERGY, SLOT_IDS, energyMax, energyRegen, setWeapon, type AbilityId, type CombatRuntime } from "./runtime";
 import { cancelCast, chargeUlt, cue, floater, fx, mitigate, strike, summon, fireSlot } from "./abilities";
 import { takenCharge } from "@/lib/combat/ult";
-import { counterHit, formBasic, reveal } from "./primitives";
+import { counterHit, formBasic, formTier, reveal } from "./primitives";
 import type { SpawnPoint } from "./spawns";
 import { FAMILY_STAT } from "@/lib/combat/kits";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
@@ -51,7 +51,7 @@ export function attack(rt: CombatRuntime, player: Vec, random = Math.random): bo
   const p = rt.player;
   if (!p.alive || p.attackCd > 0 || rt.casting || p.dash || rt.v2?.channel || (p.dodgeAge !== null && p.dodgeAge < DODGE.duration)) return false; // a channel takes your hands
   // Classes v2: a form brings its own click attack (primitives.ts formBasic); attacking ends stealth.
-  const form = formBasic(rt), w = form ? { ...WEAPONS[p.weapon], ...form } : WEAPONS[p.weapon];
+  const form = formBasic(rt), w = form ? { ...WEAPONS[p.weapon], ...form } : WEAPONS[p.weapon], tier = form ? formTier(rt, rt.v2?.form) : undefined;
   p.attackCd = w.cooldown / (rt.v2?.mods.attackSpeed ?? 1);
   faceAim(p, player);
   reveal(rt);
@@ -60,12 +60,12 @@ export function attack(rt: CombatRuntime, player: Vec, random = Math.random): bo
   if (w.kind === "melee") {
     p.swing = 0.22;
     let landed = false;
-    for (const e of rt.enemies) if (e.state !== "dead" && inArc(player, p.facing, w.range, w.arc, e, e.type.radius)) { strike(rt, e, { power: form?.power ?? 1, from: player, knock: form?.knock ?? 4, melee: true, status: form?.status }, random); landed = true; }
+    for (const e of rt.enemies) if (e.state !== "dead" && inArc(player, p.facing, w.range, w.arc, e, e.type.radius)) { strike(rt, e, { power: form?.power ?? 1, from: player, knock: form?.knock ?? 4, melee: true, status: form?.status, tier }, random); landed = true; }
     if (landed) wearHit(rt);
   } else if (w.kind === "bow" || w.kind === "staff") {
     const speed = w.speed ?? 12, kind = w.shot ?? (w.kind === "bow" ? "arrow" : "bolt");
     rt.projectiles.push({ id: rt.seq++, x: player.x + dir.x * 0.5, z: player.z + dir.z * 0.5, vx: dir.x * speed, vz: dir.z * speed, life: w.range / speed, from: "player", damage: 0, kind, radius: w.kind === "bow" ? 0.15 : 0.3,
-      ...(form ? { hit: { power: form.power, status: form.status, splash: form.splash, hitIds: [], impact: "light" as const, ramp: rt.v2?.kit.look.ramp } } : {}) });
+      ...(form ? { hit: { power: form.power, status: form.status, splash: form.splash, tier, hitIds: [], impact: "light" as const, ramp: rt.v2?.kit.look.ramp } } : {}) });
   } else {
     // The summoning charm: a short-lived wisp at your side (two at most), apart from the kit's summons.
     const stat = SYSTEM_WEAPONS.find(x => x.key === p.weapon)?.scaling[0] ?? FAMILY_STAT.Warden;

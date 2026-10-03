@@ -81,6 +81,8 @@ export interface ClassAbility extends Ability {
 /** A form (the Transmuter): its body (a mob model), the click attack it brings, and what it does standing (a front guard, speed). */
 export interface FormDef {
   name: string;
+  /** The trait whose defeats level the form (rows 37, 41: trait mastery over weapon quality): its moves and click hit at traitTier(defeats). */
+  trait?: string;
   /** The ENEMIES model the body borrows, and its size against the mob's own. */
   body: string; scale: number;
   basic: { kind: "melee" | "bow" | "staff"; cooldown: number; range: number; arc: number; speed?: number; power: number; status?: Status; knock?: number; splash?: number };

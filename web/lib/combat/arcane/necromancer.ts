@@ -20,7 +20,7 @@ export const NECROMANCER: ClassKit = {
     ne("command", "Command", "Tap: all your minions charge the enemy you aim at. Tap again: they come back to guard you.", 1, 5,
       [{ kind: "command" }], { clip: { verb: "CastForward", scale: 1.4 }, vfx: { impact: "necromancer.command" } }),
     ne("corpse-explosion", "Corpse Explosion", "Blow up the minion or corpse nearest your aim. The blast chains through the corpses around it.", 6, 24,
-      [{ kind: "detonate", range: 3.5, radius: 2.4, power: 1.8, chain: 3.5, links: 3 }], { clip: { verb: "Throw" }, vfx: { impact: "necromancer.explode" } }),
+      [{ kind: "detonate", range: 3.5, radius: 2.4, power: 1.5, chain: 3.5, links: 3 }], { clip: { verb: "Throw" }, vfx: { impact: "necromancer.explode" } }),
     ne("dark-pact", "Dark Pact", "Consume one of your minions: heal 12% and a bone shield of 12% for 6 s.", 10, 15,
       [{ kind: "consume", heal: 0.12, shield: 0.12, duration: 6 }], { allies: 0, clip: { verb: "CastUp" }, vfx: { cast: "necromancer.pact", impact: "necromancer.pact.drain" } }),
     ne("bone-surf", "Bone Surf", "Mid-slide: skeletal hands carry your slide for 1.5 s without losing speed, steerable, ploughing enemies aside. Jump off for a bigger slide-jump.", 8, 15,
@@ -28,7 +28,7 @@ export const NECROMANCER: ClassKit = {
   ],
   passive: { name: "Grave Tithe", description: "Kills near you heal you 3% and leave corpses that last twice as long.", kind: "grave_tithe", value: 0.03, cap: 9 },
   ult: {
-    key: "necromancer.army-of-the-dead", name: "Army of the Dead", icon: icon("necromancer", "army-of-the-dead"), cooldown_s: 0, energy: 0, charge: 1, anticipation_ms: 500, impacts: "last", duration: 3,
+    key: "necromancer.army-of-the-dead", name: "Army of the Dead", icon: icon("necromancer", "army-of-the-dead"), cooldown_s: 0, energy: 0, charge: 0.8, anticipation_ms: 500, impacts: "last", duration: 3,
     description: "The ground cracks with green light: every corpse near your aim and thirty skeletons claw up, march on the pack and explode together.",
     effects: [{ kind: "raise", radius: 8, unit: "army-skeleton", max: 12 }, { kind: "summon", unit: "army-skeleton", count: 30, cap: 42 }],
     release: [{ kind: "burst" }],
