@@ -64,6 +64,8 @@ export interface CombatStore {
   mastery(memberId: string): Promise<MasteryRow[]>;
   /** Classes v2: equip (or, with null, take off) a cosmetic on one subclass's row; returns the row's cosmetics. */
   equipCosmetic(memberId: string, subclass: string, kind: CosmeticKind, value: string | null): Promise<MasteryRow["cosmetics"]>;
+  /** Classes v2: a weapon-skin shop item's skin key (shop_items.cosmetic->>skin), null when it isn't one. */
+  skinOf?(itemId: string): Promise<string | null>;
   /** Pay a rolled boss reward once per recorded boss kill, at most once per cooldown; a replay returns the first reward. */
   bossReward(memberId: string, eventKey: string, reward: BossReward): Promise<{ reward: BossReward; replayed: boolean }>;
   /** The same for a mini-boss (content.ts MINIBOSS_DROPS): once per recorded kill of that enemy, at most once per cooldown each. */

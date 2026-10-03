@@ -106,6 +106,11 @@ export function supabaseCombatStore(db: SupabaseClient): CombatStore {
       if (error) raise(error);
       return ((data ?? []) as Row[]).map((r): MasteryRow => ({ subclass: String(r.subclass), xp: Number(r.xp), mastery: Number(r.mastery), cosmetics: (r.cosmetics as MasteryRow["cosmetics"]) ?? {} }));
     },
+    async skinOf(id) {
+      const { data } = await db.from("shop_items").select("cosmetic").eq("id", id).maybeSingle();
+      const skin = ((data as Row | null)?.cosmetic as { skin?: unknown } | null)?.skin;
+      return typeof skin === "string" ? skin : null;
+    },
     equipCosmetic: async (m, subclass, kind, value) =>
       ((await rpc("combat_equip_cosmetic", { p_member_id: m, p_subclass: subclass, p_kind: kind, p_value: value })) as MasteryRow["cosmetics"]) ?? {},
     async bossReward(m, ev, reward) {

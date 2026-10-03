@@ -27,7 +27,8 @@ export function combatSeedSql(): string {
   return [
     SEED_BEGIN,
     `INSERT INTO weapons (${WEAPON_COLS.join(", ")}) VALUES`,
-    WEAPONS.filter((w) => !w.subclass).map((w) => `  (${weaponRow(w).join(", ")})`).join(",\n"), // signature weapons: their family wave's seed (below)
+    // Signature weapons (classes v2) are seeded by their family's own migration, with their subclass (signatureSeedSql).
+    WEAPONS.filter((w) => !w.subclass).map((w) => `  (${weaponRow(w).join(", ")})`).join(",\n"),
     upsert(WEAPON_COLS),
     `INSERT INTO enemy_types (${ENEMY_COLS.join(", ")}) VALUES`,
     ENEMIES.map((e) => `  (${[q(e.key), q(e.name), q(e.kind), q(e.zone), e.level, e.hp, e.damage, e.defense, e.armor, e.aggro_radius, e.attack_range, e.leash_radius, e.xp, q(e.behaviour)].join(", ")})`).join(",\n"),

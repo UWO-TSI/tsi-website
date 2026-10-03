@@ -24,6 +24,7 @@ import { useWorldClips } from "./character/useWorldClips";
 import { combat, useCombatValue } from "@/lib/game/combat/runtime";
 import { combatFacing, combatPush, combatTuning, dashDodge } from "@/lib/game/combat/actions";
 import { classMove } from "@/lib/game/combat/classRuntime";
+import { signaturePaint, surfJump } from "@/lib/game/combat/primitives";
 import { applyKick } from "@/lib/game/combat/moveHooks";
 import { fadeOf, rooted } from "@/lib/game/combat/field";
 import { weaponTrail } from "@/lib/game/fx/trail";
@@ -126,6 +127,8 @@ const GRIP_Y = 0.58 * CHARACTER_SCALE;
 
 /** Clips that hold while seated; the seat branch owns them. */
 const SEAT_CLIPS = new Set<ClipName>(["Sit", "Study", "Stretch", "Sleep"]);
+/** Space let go within this long in the air is a tap (an air-jump class's Air Step); held longer, the glider. */
+const AIR_TAP = 0.18;
 type Seat = { x: number; z: number; clip: ClipName; lift: number; yaw: number };
 
 export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, respawn = 0, glider = false, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed, walkOnly = false, held = null }: PlayerAvatarProps) {
@@ -146,7 +149,9 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   const fx = useRef({ sq: 0, sqv: 0, steps: 0, trail: 0, stuck: 0, level: 0, punch: 0, leaf: 0, leafV: 0, bank: 0, pitch: 0, sliding: false, slideT: 0, slideBeat: 0, drop: 0, heading: 0,
     mode: "ground", tumbled: false, ribbonT: 0, ribbonK: 0, lead: new THREE.Vector2(), pan: new THREE.Vector2(), rise: new THREE.Vector2(), focus: new THREE.Vector3(x0, 0, z0),
     // Juice timers (specs/movement-feel.md): anticipation, the Air pose, the camera dip, streaks, afterimages, the cooldown wind.
-    antic: 0, anticY: 0, jumped: false, vy0: 6, fallT: 0, dip: 0, dipV: 0, streakT: 0, streakK: 0, ghostT: 0, dashT: 0, cdT: 0, wispT: 0, ready: true, sinceDash: 99, fadeGhost: 0 });
+    antic: 0, anticY: 0, jumped: false, vy0: 6, fallT: 0, dip: 0, dipV: 0, streakT: 0, streakK: 0, ghostT: 0, dashT: 0, cdT: 0, wispT: 0, ready: true, sinceDash: 99, fadeGhost: 0,
+    /** An air press waiting to be a tap (Air Step) or a hold (the glider): seconds held, or null. */
+    airHeld: null as number | null });
   // The glider is a flag on the sim (never in an encounter); the lab's tuning can carry it too.
   const kit = useMemo(() => (glider ? { ...(tuning ?? MOVE_TUNING), glider: 1 } : tuning ?? MOVE_TUNING), [tuning, glider]);
   const leafOwned = !inCombat && kit.glider > 0;
@@ -268,7 +273,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     const g = anchor.current, bd = body.current, hd = head.current;
     if (!g || !bd || !hd) return;
     const p = combat.rt.player, d = dev.current, f = fx.current, m = motion.current, j = juice ?? MOVE_JUICE, st = touchStick, k = keys.current, b = bindings;
-    const t = inCombat ? combatTuning(p.speed) : kit;
+    // The ruins: the combat kit; an air-jump class (the Elementalist's Air Step) keeps the leaf glider on Space held (when owned).
+    const t = inCombat ? combatTuning(p.speed, kit.glider > 0 && combat.rt.v2?.kit.movement?.on === "airJump") : kit;
     if (!sim.current || simAt.current?.[0] !== x0 || simAt.current[1] !== z0 || simAt.current[2] !== respawn) {
       sim.current = createMoveSim(createMoveState(x0, z0, world));
       simAt.current = [x0, z0, respawn];
@@ -303,22 +309,38 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       const goal = target.current && towards(s.state, target.current.x, target.current.z, t);
       if (!goal) target.current = null;
       // In the ruins defeat stops you and a cast roots you (a v2 drawn shape doesn't: WASD keeps moving you); the dodge still goes, and breaks the cast (row C3).
-      // Rooted (the World Tree) you stay put and can't dash out.
-      const down = inCombat && !p.alive, root = inCombat && rooted(combat.rt), live = !frozen && !down && !root && !(inCombat && combat.rt.casting && !combat.rt.casting.free);
+      // Rooted (the World Tree) you stay put and can't dash out; rooted too while a channelled ult charges (Cataclysm).
+      const down = inCombat && !p.alive, root = inCombat && rooted(combat.rt), live = !frozen && !down && !root && !(inCombat && combat.rt.casting && !combat.rt.casting.free) && !(inCombat && combat.rt.v2?.channel);
       // Classes v2 movement hooks: an air jump is the movement passive's (Air Step), never a buffered jump; what abilities asked moves the sim now.
-      const aloftNow = s.state.mode === "air" || s.state.mode === "glide";
-      let airJump = false;
+      // An air-jump class taps or holds Space in the air: let go within AIR_TAP s and it's the Air Step; held, the press reaches the
+      // sim once you fall (the glider, when owned and allowed).
+      const aloftNow = s.state.mode === "air" || s.state.mode === "glide", tapKit = inCombat && combat.rt.v2?.kit.movement?.on === "airJump";
+      let airJump = false, airPress = false;
       if (inCombat && combat.rt.v2) {
-        if (jumpPressed && aloftNow && classMove(combat.rt, { x: s.state.x, z: s.state.z }, "airJump")) airJump = true;
-        if (p.kick) { applyKick(s.state, p.kick, t); p.kick = null; }
+        if (tapKit) {
+          if (jumpPressed && aloftNow) f.airHeld = 0;
+          if (f.airHeld !== null) {
+            if (!(k[b.jump] || st.jump)) { if (f.airHeld < AIR_TAP && aloftNow) airJump = classMove(combat.rt, { x: s.state.x, z: s.state.z }, "airJump"); f.airHeld = null; }
+            else if ((f.airHeld += dt) >= AIR_TAP && s.state.vy <= 0) { airPress = true; f.airHeld = null; }
+            if (!aloftNow) f.airHeld = null;
+          }
+        } else if (jumpPressed && aloftNow && classMove(combat.rt, { x: s.state.x, z: s.state.z }, "airJump")) airJump = true;
+        if (p.kick) {
+          const to = p.kick.to;
+          applyKick(s.state, p.kick, t);
+          // A teleport keeps speed and arc; on the ground it lands on the ground there; nothing streaks between the two places.
+          if (to) { if (s.state.mode !== "air" && s.state.mode !== "glide") s.state.y = groundHeight(to.x, to.z); else s.state.y = Math.max(s.state.y, groundHeight(to.x, to.z)); s.prev = { ...s.state }; }
+          p.kick = null;
+        }
       }
+      const press = tapKit && aloftNow ? airPress : jumpPressed;
       const piloted = d.pilot && dt > 0 ? d.pilot(s.state, dt) : null;
       if (d.pilot && dt > 0 && !piloted) d.pilot = null;
       const steer = goal ?? cameraRelative(ix, iz, fwdX, fwdZ);
       const input: MoveInput = piloted ?? (live ? {
         x: steer.x, z: steer.z,
         sprint: !walkOnly && (!!k[b.sprint] || (!keyed && tilt > 0.92)), sneak: (!!crouch && !!k[crouch]) || st.crouch,
-        jump: !walkOnly && (!!k[b.jump] || st.jump) && !airJump, jumpPressed: jumpPressed && !airJump, dashPressed,
+        jump: !walkOnly && (!!k[b.jump] || st.jump) && !airJump, jumpPressed: press && !airJump, dashPressed,
       } : { ...NO_INPUT, dashPressed: !frozen && !down && !root && dashPressed });
       if (inCombat) { input.push = push; if (p.aimHold > 0 || Math.hypot(s.state.vx, s.state.vz) < 0.6) s.state.facing = p.facing; } // attacking or standing: the kit turns from your facing (a dash with no stick goes that way)
       events = advanceMove(s, input, dt, world, t);
@@ -330,6 +352,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       if (inCombat && combat.rt.v2) for (const e of events) {
         const on = e.kind === "dash" ? "dash" : e.kind === "slide" || e.kind === "dashslide" || e.kind === "landslide" ? "slide" : e.kind === "land" ? "land" : null;
         if (on) classMove(combat.rt, { x: s.state.x, z: s.state.z }, on);
+        if (e.kind === "slidejump" && surfJump(combat.rt)) { applyKick(s.state, p.kick!, t); p.kick = null; } // off a bone surf: the slide-jump carries more
       }
     }
     const state = s.state, speed = sitting ? 0 : Math.hypot(state.vx, state.vz);
@@ -539,6 +562,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     bankAbout(bd, state.facing, f.bank, gliding ? y - groundY + GRIP_Y : 0.05, f.pitch);
     m.rate = rawDelta > 0 ? dt / Math.min(rawDelta, 0.1) : 1;
     if (inCombat) {
+      // Classes v2: in a form your body is the form's (ClassRender), and unseen you're only a shimmer.
+      bd.visible = !(combat.rt.field.stealth > 0 || combat.rt.v2?.form);
       weaponTrail.model = m.weaponModel ?? null; // the ribbon trail samples the weapon in hand (CombatFx)
       // Escape Rabbits (classes v2): translucent, trailing afterimages while it lasts.
       m.fade = fadeOf(combat.rt);
@@ -550,8 +575,9 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       let verbAsked = false;
       if (p.clip) {
         const grip = gripFor(SYSTEM_WEAPONS.find(w => w.key === p.weapon)?.type ?? "sword");
-        if ((VERBS as readonly string[]).includes(p.clip.verb)) {
-          const clip = verbClip(p.clip.verb as Verb, grip);
+        // A verb on the held weapon's grip, or a subclass's own clip by name (build_clips.py @unique: Ult_*, Unique_*).
+        const clip = (VERBS as readonly string[]).includes(p.clip.verb) ? verbClip(p.clip.verb as Verb, grip) : verbInfo(p.clip.verb) ? p.clip.verb as ClipName : null;
+        if (clip) {
           if (p.clip.upper && verbInfo(clip)?.upper) m.upper = clip; else m.play = clip;
           m.playRate = p.clip.scale; verbAsked = true;
         } else if (verbInfo(p.clip.verb)) { // a kit's own clip (build_clips.py @unique: Ult_*, Unique_*), authored for its grip
@@ -686,7 +712,7 @@ function PlayerCharacter({ look, motion, inCombat, walkSpeed, leaf, held }: { lo
     const w = WEAPONS[heldWeapon ?? key];
     // Classes v2: the verb library's grip decides the hand (the Book grip holds the tome in the left).
     const hand = v2 && inCombat ? GRIP_HAND[gripFor(SYSTEM_WEAPONS.find(x => x.key === (heldWeapon ?? key))?.type ?? "sword")] : undefined;
-    return w?.model && (shown || heldWeapon) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat || !!heldWeapon, grip: w.grip, hand } : null;
+    return w?.model && (shown || heldWeapon) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat || !!heldWeapon, grip: w.grip, hand, paint: v2 && inCombat ? signaturePaint : undefined } : null;
   }, [key, heldWeapon, shown, inCombat, v2]);
   const item = useMemo(() => (inCombat ? null : heldView(held)), [inCombat, held]);
   return <Character look={look} motion={motion} walkSpeed={walkSpeed} weapon={weapon} held={item} leaf={leaf} verbs={inCombat && v2} />;

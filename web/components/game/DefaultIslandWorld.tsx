@@ -623,7 +623,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     const v2 = g.view?.classes?.kit ? classKit(g.view.classes.kit) : null;
     combat.rt.v2 = null;
     setTamed(combat.rt, v2 && beastKit(v2) ? g.view!.classes!.tamed ?? [] : null); // the Summoner's tamed beasts (the rest wait at the ritual circle)
-    if (v2) equipClassKit(combat.rt, v2, g.view!.classes!.mastery.mastery, g.view!.classes!.mastery);
+    if (v2) { equipClassKit(combat.rt, v2, g.view!.classes!.mastery.mastery, g.view!.classes!.mastery, g.view?.traits ?? {}); Object.assign(combat.rt.v2!, { cosmetics: g.view!.classes!.cosmetics, skin: g.view!.classes!.skin }); }
     else equipKit(combat.rt, subclassByKey(g.subclass), g.view?.loadout ?? [], g.view?.traits ?? {});
     setOwnedWeapons(combat.rt, g.weapons);
     setDefaultWeapon(g.weapons.find(w => w.equipped)?.weapon_key ?? null);
@@ -918,7 +918,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
         <Suspense fallback={null}>
           {site === "ruins" ? <RuinsScene key={`ruins-${ruinsRun}`} level={level} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={devZoom} player={player}
-              onNear={n => setNear(n === "exit" ? "ruins_exit" : n)} onDefeat={onRuinsDefeat} start={ruinsRun <= 1 ? devAt : null} />
+              onNear={n => setNear(n === "exit" ? "ruins_exit" : n)} onDefeat={onRuinsDefeat} start={ruinsRun <= 1 ? devAt : null} glider={peaceful.glider} />
             : inside === "oracle" ? <OracleTemple frozen={fading || sheet === "oracle"} player={player} onNear={n => setNear(n)} ceremony={reveal} />
             : inside === "cafe" ? <CafeInterior phase={phase} player={player} frozen={fading || !!sheet} identity={identity} level={level} onNear={setNear} />
             : inside === "museum" ? <MuseumInterior wings={museumWings} frozen={fading || donateOpen} player={player} onNear={n => setNear(n === "donate" ? "curator" : n)} />

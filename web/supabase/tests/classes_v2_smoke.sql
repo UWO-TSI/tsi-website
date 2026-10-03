@@ -3,13 +3,15 @@
 \set ON_ERROR_STOP 1
 INSERT INTO auth.users (id, email) VALUES ('00000000-0000-4000-8000-0000000002c1', 'cv2-a@x'), ('00000000-0000-4000-8000-0000000002c2', 'cv2-b@x'),
   ('00000000-0000-4000-8000-0000000002c3', 'cv2-c@x') ON CONFLICT DO NOTHING;
--- Two signature types with their tiers (each family wave seeds the real ones).
+-- Two signature types with their tiers (each family wave seeds the real ones: where the Arcane wave's are in, those stand).
 INSERT INTO weapons (key, name, weapon_type, tier, scaling, max_durability, repair_per_point, subclass) VALUES
   ('cv2-staff-1', 'Smoke staff I', 'cv2staff', 1, ARRAY['arcana'], 90, 1, 'elementalist'),
   ('cv2-staff-2', 'Smoke staff II', 'cv2staff', 2, ARRAY['arcana'], 120, 2, 'elementalist'),
   ('cv2-staff-3', 'Smoke staff III', 'cv2staff', 3, ARRAY['arcana'], 150, 3, 'elementalist'),
   ('cv2-cards-1', 'Smoke cards I', 'cv2cards', 1, ARRAY['arcana'], 90, 1, 'illusionist'),
-  ('cv2-cards-2', 'Smoke cards II', 'cv2cards', 2, ARRAY['arcana'], 120, 2, 'illusionist');
+  ('cv2-cards-2', 'Smoke cards II', 'cv2cards', 2, ARRAY['arcana'], 120, 2, 'illusionist')
+ON CONFLICT DO NOTHING;
+CREATE TEMP TABLE cv2_sig AS SELECT subclass, tier, key FROM weapons WHERE subclass IN ('elementalist', 'illusionist');
 DO $$
 DECLARE r record; A uuid := '00000000-0000-4000-8000-0000000002c1'; B uuid := '00000000-0000-4000-8000-0000000002c2'; C uuid := '00000000-0000-4000-8000-0000000002c3';
   ord text[]; att uuid; v int; skin uuid; aura uuid; out jsonb;
@@ -34,7 +36,7 @@ BEGIN
   -- ── Flag off: today's rules hold (a change costs the fee, the gate's starters, no mastery) ──
   PERFORM combat_choose_subclass(A, 'elementalist', 'Arcane', 'cv2-sub-a1');
   ASSERT (SELECT count(*) FROM member_weapons WHERE member_id = A AND weapon_key IN ('bow-willow', 'staff-oak', 'tome-spirits')) = 3, 'cv2 off: starters';
-  ASSERT NOT EXISTS (SELECT 1 FROM member_weapons WHERE member_id = A AND weapon_key LIKE 'cv2-%'), 'cv2 off: no signature grant';
+  ASSERT NOT EXISTS (SELECT 1 FROM member_weapons WHERE member_id = A AND weapon_key IN (SELECT key FROM cv2_sig)), 'cv2 off: no signature grant';
   PERFORM combat_record_kill(A, 'shadow-fox', 'cv2-kill-a0');
   ASSERT NOT EXISTS (SELECT 1 FROM member_subclass_mastery WHERE member_id = A), 'cv2 off: kills train no mastery';
   ASSERT (SELECT subclass FROM combat_xp_ledger WHERE member_id = A AND idempotency_key = 'kill:cv2-kill-a0') IS NULL, 'cv2 off: ledger subclass null';
@@ -48,7 +50,7 @@ BEGIN
   SELECT * INTO r FROM combat_choose_subclass(B, 'elementalist', 'Arcane', 'cv2-sub-b1');
   ASSERT r.fee = 0 AND r.subclass = 'elementalist' AND NOT r.replayed, 'cv2 first choice free';
   ASSERT (SELECT xp FROM member_subclass_mastery WHERE member_id = B AND subclass = 'elementalist') = 0, 'cv2 mastery row at 0';
-  ASSERT EXISTS (SELECT 1 FROM member_weapons WHERE member_id = B AND weapon_key = 'cv2-staff-1'), 'cv2 tier-1 signature granted';
+  ASSERT EXISTS (SELECT 1 FROM member_weapons WHERE member_id = B AND weapon_key = (SELECT key FROM cv2_sig WHERE subclass = 'elementalist' AND tier = 1)), 'cv2 tier-1 signature granted';
   ASSERT NOT EXISTS (SELECT 1 FROM member_weapons WHERE member_id = B AND weapon_key IN ('bow-willow', 'staff-oak', 'tome-spirits')), 'cv2 no gate starters';
   -- Locked: a change needs the repick token.
   BEGIN PERFORM combat_choose_subclass(B, 'illusionist', 'Arcane', 'cv2-sub-b2'); RAISE EXCEPTION 'cv2 expected an error 3';
@@ -67,7 +69,7 @@ BEGIN
   ASSERT (SELECT xp FROM member_subclass_mastery WHERE member_id = B AND subclass = 'elementalist') = (SELECT xp FROM enemy_types WHERE key = 'shadow-fox') + 300, 'cv2 mission trains';
   ASSERT (SELECT mastery FROM member_subclass_mastery WHERE member_id = B AND subclass = 'elementalist') = 1, 'cv2 below 800 is mastery 1';
   -- The paid redo grants the token; the change spends it (no fee); the new weapon comes at the highest signature tier owned.
-  INSERT INTO member_weapons (member_id, weapon_key, durability) VALUES (B, 'cv2-staff-3', 150);
+  INSERT INTO member_weapons (member_id, weapon_key, durability) VALUES (B, (SELECT key FROM cv2_sig WHERE subclass = 'elementalist' AND tier = 3), 150);
   ord := ARRAY(SELECT format('%s%s', d, lpad(n::text, 2, '0')) FROM unnest(ARRAY['ei','sn','tf','jp']) d, generate_series(1, 16) n);
   PERFORM wallet_apply(B, 'coins', 1000, 'admin', 'smoke seed', 'cv2-seed-b');
   UPDATE member_identity SET quiz_taken_at = NOW() - interval '8 days' WHERE member_id = B;
@@ -81,8 +83,8 @@ BEGIN
   SELECT * INTO r FROM combat_choose_subclass(B, 'illusionist', 'Arcane', 'cv2-sub-b3');
   ASSERT r.fee = 0 AND NOT r.replayed AND (SELECT coins FROM wallets WHERE member_id = B) = v, 'cv2 the change is free with the token';
   ASSERT (SELECT repick_source FROM member_progression WHERE member_id = B) IS NULL, 'cv2 the token is spent';
-  ASSERT EXISTS (SELECT 1 FROM member_weapons WHERE member_id = B AND weapon_key = 'cv2-cards-2'), 'cv2 carry-over: the best tier the type has up to the owned 3';
-  ASSERT EXISTS (SELECT 1 FROM member_weapons WHERE member_id = B AND weapon_key = 'cv2-staff-1'), 'cv2 old signature weapons stay';
+  ASSERT EXISTS (SELECT 1 FROM member_weapons WHERE member_id = B AND weapon_key = (SELECT key FROM cv2_sig WHERE subclass = 'illusionist' ORDER BY (tier <= 3) DESC, tier DESC LIMIT 1)), 'cv2 carry-over: the best tier the type has up to the owned 3';
+  ASSERT EXISTS (SELECT 1 FROM member_weapons WHERE member_id = B AND weapon_key = (SELECT key FROM cv2_sig WHERE subclass = 'elementalist' AND tier = 1)), 'cv2 old signature weapons stay';
   SELECT * INTO r FROM combat_choose_subclass(B, 'illusionist', 'Arcane', 'cv2-sub-b3');
   ASSERT r.replayed AND r.subclass = 'illusionist', 'cv2 the change replays by its key';
   BEGIN PERFORM combat_choose_subclass(B, 'elementalist', 'Arcane', 'cv2-sub-b4'); RAISE EXCEPTION 'cv2 expected an error 4';

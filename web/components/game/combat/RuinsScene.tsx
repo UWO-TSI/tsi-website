@@ -28,7 +28,9 @@ import { beastState } from "@/lib/game/combat/beasts";
 import { WARDEN_ALLY_TYPES, WARDEN_RITUAL_TYPES } from "@/lib/game/combat/wardenBodies";
 import { AimReticle, Blasts, EnemyBars, EnemyInstances, FloaterProjector, PlayerAuras, Projectiles, Telegraphs, Totems, Wisps } from "./EncounterRender";
 import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BROKEN_ARCHES, RUINS_MOAI, RUINS_PILLARS, RUINS_ROCKS, RUINS_SPAWN, RUINS_TORCHES, SURVIVE_CIRCLES, createRuins } from "@/lib/game/ruins";
-import { combat, publishCombat, takeMissionQueue, V2_SLOT_IDS, type AbilityId, type CombatRuntime, type CueKind } from "@/lib/game/combat/runtime";
+import { combat, createField, publishCombat, takeMissionQueue, V2_SLOT_IDS, type AbilityId, type CombatRuntime, type CueKind } from "@/lib/game/combat/runtime";
+import { wallHeight } from "@/lib/game/combat/primitives";
+import ClassRender from "./ClassRender";
 import { classKey, equipClassKit, pressUlt, stepClass } from "@/lib/game/combat/classRuntime";
 import { unlocksAt } from "@/lib/combat/classes";
 import { AudioManager, type SFXName } from "@/lib/game/audio";
@@ -76,8 +78,10 @@ export function resetEncounter() {
   const path = rt.mission?.def.template === "escort" && rt.mission.status === "active" ? ESCORT_PATHS[rt.mission.def.id] : null;
   rt.escort = path ? { x: path[0].x, z: path[0].z, hp: 60, waypoint: 1 } : null;
   rt.player.energy = Math.max(rt.player.energy, 0);
-  // Classes v2: the meter starts empty on entry and empties on defeat (§1.2); nothing held, toggled or queued carries over.
-  if (rt.v2) Object.assign(rt.v2, { meter: 0, cast: null, queue: [], holding: rt.v2.holding.map(() => null), toggled: rt.v2.toggled.map(() => false), recast: rt.v2.recast.map(() => 0), combatT: 0 });
+  // Classes v2: the meter starts empty on entry and empties on defeat (§1.2); nothing held, toggled or queued carries over, you're in your own body.
+  if (rt.v2) Object.assign(rt.v2, { meter: 0, cast: null, queue: [], holding: rt.v2.holding.map(() => null), toggled: rt.v2.toggled.map(() => false), recast: rt.v2.recast.map(() => 0), combatT: 0,
+    channel: null, form: null, formBefore: null });
+  rt.field = createField();
   rt.player.ultIframes = 0; rt.player.kick = null; rt.player.clip = null; rt.fx = [];
   resetField(rt); // zones, walls, channels, totems' links, beasts' cooldowns, a ritual under way (the Warden's field primitives)
 }
@@ -88,14 +92,21 @@ function masteryUp(m: { mastery: number; into: number; needed: number; levelled_
   if (!v) return;
   v.progress = { into: m.into, needed: m.needed };
   if (!m.levelled_up || level <= v.mastery) return;
-  equipClassKit(rt, v.kit, level, v.progress);
+  equipClassKit(rt, v.kit, level, v.progress, v.traits);
   rt.banner = { kind: "mastery", title: `${v.kit.name} mastery ${level}`, text: unlocksAt(v.kit, level).join(" · ") || "Your path grows stronger.", until: now + 6 };
   publishCombat();
 }
 
-/** A Transmuter's first defeat of a species (row 40): the server taught a trait; it joins the kit, equipped at the Oracle. Returns its name. */
+/** A Transmuter's first defeat of a species (row 40): the server taught a trait; it joins the kit, equipped at the Oracle (classes v2: its form opens now). Returns its name. */
 function traitLearned(key: string, now: number, card = true): string | null {
-  const rt = combat.rt, t = TRAITS.find(x => x.key === key);
+  const rt = combat.rt, t = TRAITS.find(x => x.key === key), v = rt.v2;
+  if (v && t) {
+    const form = v.kit.keys.find(a => a.learn === key);
+    equipClassKit(rt, v.kit, v.mastery, v.progress, { ...v.traits, [key]: Math.max(1, v.traits[key] ?? 0) });
+    if (form && card) rt.banner = { kind: "trait", title: `New form: ${form.name}`, text: `Learned from its ${t.part}. Press its key to shift.`, until: now + 6 };
+    publishCombat();
+    return form?.name ?? null;
+  }
   if (!t || !rt.kit) return null;
   rt.kit.traits = { ...rt.kit.traits, [key]: Math.max(1, rt.kit.traits[key] ?? 0) };
   if (card) rt.banner = { kind: "trait", title: `New trait: ${t.ability.name}`, text: `From its ${t.part}. Equip it at the Oracle.`, until: now + 6 };
@@ -205,8 +216,15 @@ function ultPresentation(rt: CombatRuntime, camera: THREE.Camera, canvas: HTMLCa
     ultPrevT = -1;
     return;
   }
-  // A first-last ult (§1.6): past its window the finisher's beats run on the same clock again.
-  const span = v?.cast && v.ult.impacts === "first-last" ? v.ult.duration ?? 0 : 0, shift = span && cast.t >= A + span ? span : 0;
+  // A first-last ult (§1.6): past its window the finisher's beats run on the same clock again; a "last" one plays only those
+  // (the anticipation's dim starts its own A before the finisher).
+  const last = !!v?.cast && v.ult.impacts === "last", span = v?.cast && v.ult.impacts !== "first" ? v.ult.duration ?? 0 : 0;
+  const shift = last ? span : span && cast.t >= A + span ? span : 0;
+  if (cast.t - shift < 0) {
+    if (view.beats) { view.beats = null; holdFov(0); ultSlowMotion(1); canvas.style.filter = ""; }
+    ultPrevT = cast.t;
+    return;
+  }
   const b = ultBeats(cast.t - shift, A, reduce, ultPrevT - shift);
   if (b.freeze) combat.hitstop = Math.max(combat.hitstop, A + 0.12 - cast.t);
   if (b.flash && !view.beats?.flash) view.flashOk = b.flash === "full" && flashes.allow(performance.now() / 1000);
@@ -231,8 +249,10 @@ function playCues(rt: CombatRuntime, me: Vec) {
   for (const k of heard) for (const [name, rate, gain] of k === "swing" ? [SWING_SOUND[WEAPONS[rt.player.weapon].kind]] : CUE_SOUND[k]) AudioManager.playSFX(name, { rate, gain });
 }
 
-export default function RuinsScene({ level, phase, light, look, weather, liteMode, castShadows, zoom, player, onNear, onDefeat, start }: {
+export default function RuinsScene({ level, phase, light, look, weather, liteMode, castShadows, zoom, player, onNear, onDefeat, start, glider = false }: {
   phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; liteMode: boolean; castShadows: boolean; zoom: number;
+  /** The leaf glider is owned: an air-jump class (the Elementalist) holds Space in the air to glide here (classes v2 Air Step). */
+  glider?: boolean;
   player: React.RefObject<THREE.Vector3>; onNear: (near: RuinsNear) => void; onDefeat: () => void;
   /** Dev: start somewhere other than the gate (screenshots). */
   start?: [number, number, number] | null;
@@ -277,6 +297,11 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
       ...RUINS_MOAI.map(p => at(p, 0.9, 0.9, 3.5)), ...RUINS_BROKEN_ARCHES.map(p => at(p, 1.6, 1.6, 3.5))] };
   }, [ruins, player]);
   useFollowCamera(focus, zoom, null, follow);
+  // Classes v2 stone walls (primitives.ts) rise out of the canyon floor: the movement sim stands on them and climbs them.
+  const world = useMemo(() => ({ wet: ruins.world.wet, top: (x: number, z: number) => {
+    const t = ruins.world.top(x, z), h = combat.rt.field.walls.length ? wallHeight(combat.rt, x, z) : 0;
+    return h > 0 && t < Infinity ? t + h : t;
+  } }), [ruins]);
 
   // Mouse aim + click attack on the canvas; ability keys (remappable). A click or key waits BUFFER s for its cooldown (runInputs).
   // Movement, Space's jump and Q's dash-dodge are PlayerAvatar's (the kit).
@@ -437,13 +462,14 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     <MobFx ground={ruins.ground} />
     <Blasts ground={ruins.ground} />
     <CombatFx ground={ruins.ground} lite={liteMode} />
+    <ClassRender ground={ruins.ground} player={player} lite={liteMode} />
     <PlayerAuras player={player} ground={ruins.ground} />
     <AimReticle player={player} ground={ruins.ground} />
     <FloaterProjector />
     <EnemyBars ground={ruins.ground} />
     <Html position={[EXIT_SPOT.x, 2.2, EXIT_SPOT.z]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Gate · safe zone</div></Html>
     <PlayerAvatar spawnPosition={spawn} playerName="You" playerLevel={level} player={player}
-      world={ruins.world} groundHeight={ruins.ground} groundSurface={ruins.surface} camTarget={focus} combat respawn={respawn} />
+      world={world} groundHeight={ruins.ground} groundSurface={ruins.surface} camTarget={focus} combat respawn={respawn} glider={glider} />
   </>;
 }
 

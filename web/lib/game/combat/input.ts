@@ -8,11 +8,13 @@
  */
 import { COMBO_WINDOW, type InputSpec } from "@/lib/combat/classes";
 
-/** What each key does now (null: locked), and the combos as key-index pairs. */
-export interface InputKit { inputs: (InputSpec | null)[]; combos: [number, number][]; window?: number }
+/** What each key does now (null: locked), and the combos as key-index pairs (`holds`: which combos have a held variant). */
+export interface InputKit { inputs: (InputSpec | null)[]; combos: [number, number][]; holds?: boolean[]; window?: number }
+/** A pair with a held variant (Riptide) held this long casts that instead; let go sooner, the pair's tap. */
+export const HOLD_AFTER = 0.3;
 export type Intent =
   | { kind: "tap"; slot: number }
-  | { kind: "combo"; combo: number }
+  | { kind: "combo"; combo: number } | { kind: "comboHold"; combo: number }
   | { kind: "holdStart"; slot: number } | { kind: "holdEnd"; slot: number; held: number }
   | { kind: "chargeStart"; slot: number } | { kind: "charge"; slot: number; level: number }
   | { kind: "toggle"; slot: number }
@@ -23,8 +25,10 @@ export interface InputState {
   pending: { slot: number; t: number } | null;
   /** Holds and charges under way: key index → when it went down. */
   down: Map<number, number>;
+  /** A pair with a held variant, both keys down: tap or hold is decided on the release or at HOLD_AFTER. */
+  pair: { combo: number; t: number; slots: [number, number] } | null;
 }
-export const createInputState = (): InputState => ({ pending: null, down: new Map() });
+export const createInputState = (): InputState => ({ pending: null, down: new Map(), pair: null });
 
 const inCombo = (kit: InputKit, slot: number) => kit.combos.some(c => c[0] === slot || c[1] === slot);
 const comboOf = (kit: InputKit, a: number, b: number) => kit.combos.findIndex(c => (c[0] === a && c[1] === b) || (c[0] === b && c[1] === a));
@@ -36,7 +40,12 @@ export function press(s: InputState, kit: InputKit, slot: number, t: number): In
   const out: Intent[] = [], window = kit.window ?? COMBO_WINDOW;
   if (s.pending) {
     const c = t - s.pending.t <= window ? comboOf(kit, s.pending.slot, slot) : -1;
-    if (c >= 0 && spec.kind === "tap") { s.pending = null; return [{ kind: "combo", combo: c }]; }
+    if (c >= 0 && spec.kind === "tap") {
+      const first = s.pending.slot;
+      s.pending = null;
+      if (kit.holds?.[c]) { s.pair = { combo: c, t, slots: [first, slot] }; return []; }
+      return [{ kind: "combo", combo: c }];
+    }
     out.push({ kind: "tap", slot: s.pending.slot }); // its partner never came: it fires alone, first
     s.pending = null;
   }
@@ -55,6 +64,7 @@ export function press(s: InputState, kit: InputKit, slot: number, t: number): In
 
 /** A key came up. */
 export function release(s: InputState, kit: InputKit, slot: number, t: number): Intent[] {
+  if (s.pair?.slots.includes(slot)) { const combo = s.pair.combo; s.pair = null; return [{ kind: "combo", combo }]; } // let go in time: the pair's tap
   const at = s.down.get(slot), spec = kit.inputs[slot];
   if (at === undefined || !spec) return [];
   s.down.delete(slot);
@@ -67,6 +77,7 @@ export function release(s: InputState, kit: InputKit, slot: number, t: number): 
 export function tick(s: InputState, kit: InputKit, t: number): Intent[] {
   const out: Intent[] = [];
   if (s.pending && t - s.pending.t > (kit.window ?? COMBO_WINDOW)) { out.push({ kind: "tap", slot: s.pending.slot }); s.pending = null; }
+  if (s.pair && t - s.pair.t >= HOLD_AFTER) { out.push({ kind: "comboHold", combo: s.pair.combo }); s.pair = null; }
   for (const [slot, at] of s.down) {
     const spec = kit.inputs[slot];
     if (spec?.kind === "hold" && t - at >= spec.max_s) { s.down.delete(slot); out.push({ kind: "holdEnd", slot, held: spec.max_s }); }

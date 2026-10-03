@@ -64,6 +64,8 @@ export const getProgression = (store: CombatStore, m: string) =>
     const [p, family, owned, v2] = await Promise.all([store.progression(m), store.family(m), store.weapons(m), classesV2(store, m)]);
     const subclass = subclassByKey(p.subclass), kit = v2.on ? memberKit(p.subclass) : null;
     const row = v2.rows.find((r) => r.subclass === p.subclass), mastery = masteryProgress(row?.xp ?? 0);
+    // The equipped weapon skin as its look: the mastery trim, or a bought skin's key (classes.ts WEAPON_SKINS by subclass).
+    const worn = row?.cosmetics.weapon_skin, skin = !worn ? null : worn === "mastery:trim" ? worn : (await store.skinOf?.(worn)) ?? null;
     return {
       ...levelProgress(p.xp),
       stats: p.stats,
@@ -85,7 +87,7 @@ export const getProgression = (store: CombatStore, m: string) =>
        * equipped cosmetics, the next unlock, every subclass's row (the profile strip), the repick token, and the family's v2 kits.
        */
       classes: v2.on ? {
-        kit: kit?.key ?? null, mastery, title: kit ? masteryTitle(kit.name, mastery.mastery) : null, cosmetics: row?.cosmetics ?? {},
+        kit: kit?.key ?? null, mastery, title: kit ? masteryTitle(kit.name, mastery.mastery) : null, cosmetics: row?.cosmetics ?? {}, skin,
         next: kit ? nextUnlock(kit, mastery.mastery) : null, rows: v2.rows, repick: p.repick_source,
         kits: family ? CLASS_KITS.filter((k) => k.family === family && memberKit(k.key)).map((k) => k.key) : [],
         suggestion: family && p.level >= SUBCLASS_LEVEL ? await suggestion(store, m) : null,

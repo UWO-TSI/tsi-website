@@ -5,12 +5,13 @@
  * packs, pounces, lobs, blinks, bursts and hazards in mobs.ts), projectiles, summons and totems, effects. Inputs (aim, attack, dodge, keys),
  * missions, respawns and server sync stay with the caller.
  */
-import { cue, enemyTarget, floater, hurtUnits, moveSpeed, stepUnits } from "./abilities";
+import { cue, enemyTarget, floater, hurtUnits, moveSpeed, runEffects, stepUnits } from "./abilities";
 import { hurtPlayer, regenEnergy, resolvePlayerShot, summonWisps } from "./actions";
 import { SLOT_IDS, type AbilityId, type CombatRuntime } from "./runtime";
 import { beamLands, DODGE, separate, stepEnemy, strikeLands, sweptHit, type Vec } from "./sim";
 import { landLob, mobEvent, mobFx, rally, RUNE_BOLT_SPEED, stepHazards } from "./mobs";
-import { walled, wallStops } from "./field";
+import { walled as thornWalled, wallStops } from "./field";
+import { cloneWard, inWall, parryShot, stepField } from "./primitives";
 
 const ABILITY_IDS: readonly AbilityId[] = [...SLOT_IDS, "swap"];
 
@@ -18,9 +19,10 @@ const ABILITY_IDS: readonly AbilityId[] = [...SLOT_IDS, "swap"];
 const KNOCK_SPEED = 3;
 /** Scratch the tick reuses every frame (combat polish 12: nothing allocated per frame in a fight). */
 const YOU = { x: 0, z: 0, safe: false, alive: true }, FROM = { x: 0, z: 0 }, TO = { x: 0, z: 0 };
-let freeFor: (x: number, z: number, r: number) => boolean = () => true, bodyR = 0, wallRt: CombatRuntime | null = null;
-/** An enemy's body may step there: the ground's free, and no thorn wall (field.ts) in the way. */
-const freeBody = (x: number, z: number) => freeFor(x, z, bodyR) && !walled(wallRt!, x, z, bodyR);
+let freeFor: (x: number, z: number, r: number) => boolean = () => true, bodyR = 0, walled: CombatRuntime | null = null, thorns: CombatRuntime | null = null;
+/** Open ground for a body: the caller's, minus classes v2 stone walls (primitives.ts) and thorn walls (field.ts). */
+const freeAll = (x: number, z: number, r: number) => freeFor(x, z, r) && !(walled && inWall(walled, x, z, r)) && !(thorns && thornWalled(thorns, x, z, r));
+const freeBody = (x: number, z: number) => freeAll(x, z, bodyR);
 
 export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: number, z: number, r: number) => boolean = () => true, random: () => number = Math.random) {
   const p = rt.player;
@@ -53,7 +55,7 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
   // Enemies.
   const you = YOU, list = rt.enemies;
   you.x = me.x; you.z = me.z; you.safe = p.safe; you.alive = p.alive; // a boss reset or summon makes a new list: this frame keeps the old
-  freeFor = free; wallRt = rt;
+  freeFor = free; walled = rt.field.walls.length ? rt : null; thorns = rt;
   for (let i = 0; i < list.length; i++) {
     const e = list[i], was = e.state;
     bodyR = e.type.radius * 0.6;
@@ -78,7 +80,7 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
     else if (ev.kind === "reset" && e.type.kind === "boss") rt.enemies = rt.enemies.filter(x => !x.summoned);
   }
   rally(rt.enemies);
-  separate(rt.enemies, dt, free);
+  separate(rt.enemies, dt, freeAll);
   // Projectiles: yours hit enemies (pierce keeps going), theirs hit you or a unit.
   for (let i = rt.projectiles.length - 1; i >= 0; i--) {
     const sh = rt.projectiles[i], from = FROM, to = TO;
@@ -91,21 +93,24 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
     from.x = sh.x; from.z = sh.z;
     sh.x += sh.vx * dt; sh.z += sh.vz * dt; sh.life -= dt;
     to.x = sh.x; to.z = sh.z;
-    let gone = sh.life <= 0 || !free(sh.x, sh.z, 0.05);
+    let gone = sh.life <= 0 || !freeAll(sh.x, sh.z, 0.05);
     if (!gone && sh.from === "player") gone = resolvePlayerShot(rt, i, from, to, random);
     else if (!gone && sh.from === "enemy") {
-      if (wallStops(rt, from, to)) gone = true; // a thorn wall stops it
-      else if (sweptHit(from, to, me, 0.35 + sh.radius)) { hurtPlayer(rt, sh.damage, from, me, sh.knock, random); gone = true; }
+      // A thorn wall stops it (field.ts); a parry sends it back (primitives.ts); a clone that wards sends back its own.
+      if (wallStops(rt, from, to)) gone = true;
+      else if (sweptHit(from, to, me, 0.35 + sh.radius)) { if (!parryShot(rt, sh, me)) hurtPlayer(rt, sh.damage, from, me, sh.knock, random, true); gone = true; }
       else {
         const unit = rt.units.find(u => u.def.kind !== "trap" && sweptHit(from, to, u, 0.4 + sh.radius));
-        if (unit) { hurtUnits(rt, u => u === unit, sh.damage); gone = true; }
+        if (unit) { if (!cloneWard(rt, unit)) hurtUnits(rt, u => u === unit, sh.damage); gone = true; }
       }
     }
     if (gone && sh.kind === "rune") mobFx(rt, "runes", sh.x, sh.z); // a rune bolt bursts in a glyph wherever it ends
+    if (gone && sh.hit?.burst) runEffects(rt, sh.hit.burst.effects, { ...sh.hit.burst.ctx, pos: { x: sh.x, z: sh.z }, aim: { x: sh.x, z: sh.z } }, random); // a fireball bursting where it ends
     if (gone) rt.projectiles.splice(i, 1);
   }
   stepHazards(rt, me, dt, random);
   stepUnits(rt, me, dt, random);
+  stepField(rt, me, dt, random);
   for (let i = rt.blasts.length - 1; i >= 0; i--) { rt.blasts[i].age += dt; if (rt.blasts[i].age > rt.blasts[i].life) rt.blasts.splice(i, 1); }
   for (let i = rt.floaters.length - 1; i >= 0; i--) { rt.floaters[i].age += dt; if (rt.floaters[i].age > 1.1) rt.floaters.splice(i, 1); }
 }

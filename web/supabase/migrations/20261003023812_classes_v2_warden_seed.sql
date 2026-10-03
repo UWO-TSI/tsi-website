@@ -1,6 +1,6 @@
 -- ─── Classes v2, the Warden wave: signature weapons, shop cosmetics, the Summoner's tamings ─
 --
--- DRAFT 2026-10-02. NOT APPLIED. Apply after 20261002181044_classes_v2 (and every migration before it on main).
+-- DRAFT 2026-10-03. NOT APPLIED. Apply after 20261003015109_classes_v2_arcane_seed (and every migration before it on main).
 -- Spec: specs/classes/design-sheet.md "Summoner (LOCKED)", "Shaman (LOCKED)", "Druid (LOCKED)", "Priest (LOCKED)",
 -- §1.5 signature weapons, §1.10 shop cosmetics. Everything here waits behind economy_settings.classes_v2 (off).
 -- Test: web/supabase/tests/classes_v2_warden_smoke.sql.
@@ -34,15 +34,15 @@ ON CONFLICT (key) DO UPDATE SET name = EXCLUDED.name, weapon_type = EXCLUDED.wea
 -- ─── Shop cosmetics (§1.10): weapon skins and aura colours ─────────────────
 -- Mostly coins; two Gem items (an animated skin, a two-tone aura). Never a rate.
 INSERT INTO shop_items (slug, display_name, category, description, price_coins, tc_price, cosmetic, sprite_url, position, active) VALUES
-  ('skin-seal-gloves-moonink', 'Moon-ink seal gloves', 'weapon_skin', 'A Summoner skin: ink-blue gloves, the seals in moonlight. Every tier.', 800, NULL, '{"subclass":"summoner","skin":"moonink"}', '/assets/game/classes/summoner.svg', 900, TRUE),
-  ('skin-totem-staff-birch', 'Birch spirit staff', 'weapon_skin', 'A Shaman skin: pale birch, the faces carved in charcoal. Every tier.', 800, NULL, '{"subclass":"shaman","skin":"birch"}', '/assets/game/classes/shaman.svg', 901, TRUE),
-  ('skin-totem-staff-aurora', 'Aurora storm staff', 'weapon_skin', 'A Shaman skin whose carvings shimmer like an aurora. Every tier.', NULL, 200, '{"subclass":"shaman","skin":"aurora","animated":true}', '/assets/game/classes/shaman.svg', 902, TRUE),
-  ('skin-living-staff-cherry', 'Cherry blossom staff', 'weapon_skin', 'A Druid skin: dark cherry wood in blossom. Every tier.', 800, NULL, '{"subclass":"druid","skin":"cherry"}', '/assets/game/classes/druid.svg', 903, TRUE),
-  ('skin-sunstone-staff-dawn', 'Dawnglass staff', 'weapon_skin', 'A Priest skin: pearl wood and a rose sunstone. Every tier.', 800, NULL, '{"subclass":"priest","skin":"dawn"}', '/assets/game/classes/priest.svg', 904, TRUE),
-  ('aura-warden-moss', 'Moss lantern aura', 'aura', 'Aura colours: moss and lantern light.', 300, NULL, '{"ramp":["#f4ffe6","#9bd36a","#23401a"]}', '/assets/game/classes/aura-warden-moss.svg', 905, TRUE),
-  ('aura-warden-tide', 'Tidepool aura', 'aura', 'Aura colours: tidepool teal.', 300, NULL, '{"ramp":["#effcff","#5fc9d6","#0f3540"]}', '/assets/game/classes/aura-warden-tide.svg', 906, TRUE),
-  ('aura-warden-ember', 'Hearth ember aura', 'aura', 'Aura colours: hearth embers.', 300, NULL, '{"ramp":["#fff4e0","#f0a050","#40200c"]}', '/assets/game/classes/aura-warden-ember.svg', 907, TRUE),
-  ('aura-warden-sunrise', 'Sunrise shimmer aura', 'aura', 'Two-tone aura colours that shimmer at dawn.', NULL, 150, '{"ramp":["#fffbe6","#f2b75c","#4a2a10"],"shimmer":"#9fe3ff"}', '/assets/game/classes/aura-warden-sunrise.svg', 908, TRUE)
+  ('skin-seal-gloves-moonink', 'Moon-ink seal gloves', 'weapon_skin', 'A Summoner skin: ink-blue gloves, the seals in moonlight. Every tier.', 800, NULL, '{"subclass":"summoner","skin":"moonink"}', '/assets/game/classes/summoner.svg', 920, TRUE),
+  ('skin-totem-staff-birch', 'Birch spirit staff', 'weapon_skin', 'A Shaman skin: pale birch, the faces carved in charcoal. Every tier.', 800, NULL, '{"subclass":"shaman","skin":"birch"}', '/assets/game/classes/shaman.svg', 921, TRUE),
+  ('skin-totem-staff-aurora', 'Aurora storm staff', 'weapon_skin', 'A Shaman skin whose carvings shimmer like an aurora. Every tier.', NULL, 200, '{"subclass":"shaman","skin":"aurora","animated":true}', '/assets/game/classes/shaman.svg', 922, TRUE),
+  ('skin-living-staff-cherry', 'Cherry blossom staff', 'weapon_skin', 'A Druid skin: dark cherry wood in blossom. Every tier.', 800, NULL, '{"subclass":"druid","skin":"cherry"}', '/assets/game/classes/druid.svg', 923, TRUE),
+  ('skin-sunstone-staff-dawn', 'Dawnglass staff', 'weapon_skin', 'A Priest skin: pearl wood and a rose sunstone. Every tier.', 800, NULL, '{"subclass":"priest","skin":"dawn"}', '/assets/game/classes/priest.svg', 924, TRUE),
+  ('aura-warden-moss', 'Moss lantern aura', 'aura', 'Aura colours: moss and lantern light.', 300, NULL, '{"ramp":["#f4ffe6","#9bd36a","#23401a"]}', '/assets/game/classes/aura-warden-moss.svg', 925, TRUE),
+  ('aura-warden-tide', 'Tidepool aura', 'aura', 'Aura colours: tidepool teal.', 300, NULL, '{"ramp":["#effcff","#5fc9d6","#0f3540"]}', '/assets/game/classes/aura-warden-tide.svg', 926, TRUE),
+  ('aura-warden-ember', 'Hearth ember aura', 'aura', 'Aura colours: hearth embers.', 300, NULL, '{"ramp":["#fff4e0","#f0a050","#40200c"]}', '/assets/game/classes/aura-warden-ember.svg', 927, TRUE),
+  ('aura-warden-sunrise', 'Sunrise shimmer aura', 'aura', 'Two-tone aura colours that shimmer at dawn.', NULL, 150, '{"ramp":["#fffbe6","#f2b75c","#4a2a10"],"shimmer":"#9fe3ff"}', '/assets/game/classes/aura-warden-sunrise.svg', 928, TRUE)
 ON CONFLICT (slug) DO NOTHING;
 
 -- ─── The Summoner's tamings (design sheet: each beast is tamed before use) ─────

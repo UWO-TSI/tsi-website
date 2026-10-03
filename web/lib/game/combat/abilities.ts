@@ -19,7 +19,9 @@ import { SLOT_IDS, type Buff, type CombatRuntime, type CueKind, type FxEvent, ty
 import { addKick } from "./moveHooks";
 import { shellNote } from "./mobs";
 import { addCharge, dealtCharge, healedCharge } from "@/lib/combat/ult";
+import { ALLY_BODIES, expire, keepCorpse, CORPSE_LIFE, lure, orderOf, runPrimitive, takeAmbush } from "./primitives";
 import { runField } from "./field";
+import { FIELD_KINDS, type FieldEffect } from "@/lib/combat/wardenData";
 import { ultDrawn } from "./classRuntime";
 
 /** Plan §Combat and incantation defaults: starting a drawing spends 25% of its energy, a fizzle or cancel costs a short recovery instead of the cooldown. */
@@ -47,10 +49,15 @@ export function cue(rt: CombatRuntime, kind: CueKind, at: Vec, melee = false, ti
   if (rt.cues.length > 32) rt.cues.shift();
 }
 /** An FX event for the renderer (classes v2): seeded from the place and the runtime's sequence, so every client draws the same; at most 64 wait. */
-export function fx(rt: CombatRuntime, key: string | undefined, phase: FxEvent["phase"], at: Vec, aim: Vec, tier: ImpactTier, radius?: number) {
+export function fx(rt: CombatRuntime, key: string | undefined, phase: FxEvent["phase"], at: Vec, aim: Vec, tier: ImpactTier, radius?: number, ramp?: FxEvent["ramp"]) {
   if (!key || !rt.v2) return;
-  rt.fx.push({ caster: "me", key, phase, x: at.x, z: at.z, aim: { x: aim.x, z: aim.z }, seed: (rt.seq++ * 2654435761) >>> 0, tier, ramp: rt.v2.kit.look.ramp, radius });
+  rt.fx.push({ caster: "me", key, phase, x: at.x, z: at.z, aim: { x: aim.x, z: aim.z }, seed: (rt.seq++ * 2654435761) >>> 0, tier, ramp: ramp ?? rt.v2.kit.look.ramp, radius });
   if (rt.fx.length > 64) rt.fx.shift();
+}
+/** Classes v2: a sustained ult (one with a `duration`) between its first hits and its finisher: every hit you and your units land is the ult's (§1.2: ult hits charge nothing). */
+export function sustainedUlt(rt: CombatRuntime): boolean {
+  const v = rt.v2, c = v?.cast;
+  return !!c && !!v.ult.duration && c.fired && !c.last;
 }
 /** Classes v2: points on the ult meter (§1.2), never while an ult is under way for its own hits (the caller says). */
 export function chargeUlt(rt: CombatRuntime, points: number) {
@@ -93,7 +100,9 @@ export const distracted = (rt: CombatRuntime, e: Enemy) => e.status.distract > 0
 
 // ── Hits ────────────────────────────────────────────────────────
 /** `melee`: a weapon swing (its hits stop time for a beat). `impact`: its impact tier (§1.6); `ult`: an ult hit (charges no meter). */
-export interface HitSrc { power: number; from: Vec; stat?: Stat; tier?: number; unit?: boolean; knock?: number; status?: Status; melee?: boolean; impact?: ImpactTier; ult?: boolean; first?: boolean }
+export interface HitSrc { power: number; from: Vec; stat?: Stat; tier?: number; unit?: boolean; knock?: number; status?: Status; melee?: boolean; impact?: ImpactTier; ult?: boolean; first?: boolean;
+  /** A sure crit (a shot mirrored through a clone). */
+  crit?: boolean }
 
 /** The passive's damage bonus for this hit (a fraction). */
 function passiveBonus(rt: CombatRuntime, e: Enemy, src: HitSrc): number {
@@ -113,7 +122,7 @@ function passiveBonus(rt: CombatRuntime, e: Enemy, src: HitSrc): number {
 export function hitAmount(rt: CombatRuntime, e: Enemy, src: HitSrc, random: () => number = Math.random): { amount: number; crit: boolean; raw: number; base: number } {
   const p = rt.player, def = SYSTEM_WEAPONS.find(w => w.key === p.weapon)!;
   const weapon = src.stat || src.tier ? { ...def, scaling: src.stat ? [src.stat] : def.scaling, tier: (src.tier ?? def.tier) as typeof def.tier } : def;
-  const crit = random() < critChance(rt), critMult = rt.v2?.mods.critMult;
+  const crit = !!src.crit || random() < critChance(rt), critMult = rt.v2?.mods.critMult;
   // A front shell (zone-1 crabs) turns most of a hit aside: shellFactor in sim.ts.
   const mult = src.power * shellFactor(e, src.from) * (staggered(e) ? BOSS.staggerBonus : 1) * (1 + buffSum(rt, "damage") + passiveBonus(rt, e, src) + e.status.mark);
   const hit = { weapon, durability: src.tier ? 1 : p.durability[p.weapon], stats: p.stats, level: p.level, enemyDefense: e.type.defense, enemyArmor: e.type.armor, crit, critMult, potency: mult };
@@ -125,6 +134,9 @@ export function hitAmount(rt: CombatRuntime, e: Enemy, src: HitSrc, random: () =
 /** One hit on an enemy from anything the player owns: damage, statuses, passives, kill bookkeeping. Returns the damage dealt. */
 export function strike(rt: CombatRuntime, e: Enemy, src: HitSrc, random: () => number = Math.random): number {
   if (e.state === "dead" || e.state === "return") return 0;
+  const ambush = src.unit ? 0 : takeAmbush(rt); // the first hit out of stealth (primitives.ts)
+  if (ambush) src = { ...src, power: src.power * (1 + ambush) };
+  if (!src.ult && sustainedUlt(rt)) src = { ...src, ult: true }; // a sustained ult's window (the Chimera, the army's march): its hits are the ult's
   const { amount, crit, raw, base } = hitAmount(rt, e, src, random);
   const held = e.status.hold > 0, shell = shellFactor(e, src.from) < 1;
   const killed = damageEnemy(e, amount, src.from, src.knock ?? 0);
@@ -156,6 +168,7 @@ function onKill(rt: CombatRuntime, e: Enemy) {
   missionEvent(rt, { type: "kill", enemy: e.type.id });
   const pv = passiveOf(rt), me = rt.player.last;
   if (pv?.kind === "kill_heal" && me && dist(me, e) <= (pv.cap ?? 9)) heal(rt, rt.player.maxHp * pv.value);
+  if (pv?.kind === "grave_tithe" && me && dist(me, e) <= (pv.cap ?? 9)) { heal(rt, rt.player.maxHp * pv.value); keepCorpse(e, CORPSE_LIFE * 2); }
 }
 
 /** Bosses shrug off most control, elites some (row 51: the boss is a wall). */
@@ -215,7 +228,9 @@ export function mitigate(rt: CombatRuntime, amount: number, from: Vec, me: Vec, 
 // ── Using a slot ────────────────────────────────────────────────
 /** `impact`: the tier its hits land with; `ult`: the ult's own hits (no meter); `fx`: the ability's FX registry keys (classes v2). */
 export interface Ctx { ability: Ability; pos: Vec; aim: Vec; dir: Vec; dmg: number; sup: number; ctl: number; gear: number; stat: Stat; tier?: number; color: string;
-  impact?: ImpactTier; ult?: boolean; fx?: { cast?: string; travel?: string; impact?: string; zone?: string } }
+  impact?: ImpactTier; ult?: boolean; fx?: { cast?: string; travel?: string; impact?: string; zone?: string };
+  /** Classes v2: the ability's own colours (an element's), over the kit's. */
+  ramp?: readonly [string, string, string] }
 
 export function context(rt: CombatRuntime, ability: Ability, me: Vec, potency: number, aimAt: Vec): Ctx {
   const p = rt.player, sub = rt.kit?.subclass, family = sub?.family ?? rt.v2?.kit.family ?? "Vanguard";
@@ -307,9 +322,11 @@ export function runEffects(rt: CombatRuntime, effects: Effect[], ctx: Ctx, rando
         for (let k = 0; k < n; k++) {
           const a = base + (n > 1 ? (k / (n - 1) - 0.5) * (ef.spread ?? 0) : 0), vx = Math.sin(a), vz = Math.cos(a);
           const hit: ShotHit = { power: ef.power * ctx.dmg, stat: ctx.stat, tier: ctx.tier, pierce: ef.pierce, splash: ef.splash, status: scaled(ef.status, ctx.ctl), hitIds: [],
-            impact: ctx.impact, ult: ctx.ult, fx: ctx.fx?.impact, travel: ctx.fx?.travel, ramp: rt.v2?.kit.look.ramp };
-          rt.projectiles.push({ id: rt.seq++, x: ctx.pos.x + vx * 0.5, z: ctx.pos.z + vz * 0.5, vx: vx * speed, vz: vz * speed, life: (ef.range ?? 10) / speed,
-            from: "player", damage: 0, kind: ctx.stat === "finesse" ? "arrow" : "bolt", radius: 0.25, hit });
+            impact: ctx.impact, ult: ctx.ult, fx: ctx.fx?.impact, travel: ctx.fx?.travel, ramp: ctx.ramp ?? rt.v2?.kit.look.ramp, ...(ef.mark ? { mark: ctx.ability.key } : {}),
+            ...(ef.burst ? { burst: { effects: ef.burst, ctx } } : {}) };
+          const reach = ef.burst ? Math.min(ef.range ?? 10, Math.max(1, dist(ctx.pos, ctx.aim))) : ef.range ?? 10; // a bursting shot flies to the aim at most
+          rt.projectiles.push({ id: rt.seq++, x: ctx.pos.x + vx * 0.5, z: ctx.pos.z + vz * 0.5, vx: vx * speed, vz: vz * speed, life: reach / speed,
+            from: "player", damage: 0, kind: ef.shot ?? (ctx.stat === "finesse" ? "arrow" : "bolt"), radius: ef.size ?? 0.25, hit });
         }
         break;
       }
@@ -325,7 +342,7 @@ export function runEffects(rt: CombatRuntime, effects: Effect[], ctx: Ctx, rando
           else if (inside && ef.status) applyStatus(e, ef.status, ctx.ctl);
         }
         // Classes v2 draws its own effects from FX events (lib/game/fx/combat.ts); today's kits keep the flat blast.
-        if (rt.v2) { fx(rt, ctx.fx?.impact, "impact", center, ctx.aim, ctx.impact ?? "ability", ef.radius); fx(rt, ctx.fx?.zone, "zone", center, ctx.aim, ctx.impact ?? "ability", ef.radius); }
+        if (rt.v2) { fx(rt, ef.fx ?? ctx.fx?.impact, "impact", center, ctx.aim, ctx.impact ?? "ability", ef.radius, ctx.ramp); if (!ef.fx) fx(rt, ctx.fx?.zone, "zone", center, ctx.aim, ctx.impact ?? "ability", ef.radius, ctx.ramp); }
         else rt.blasts.push({ id: rt.seq++, x: center.x, z: center.z, radius: ef.radius, color: ctx.color, age: 0, life: 0.5, arc: ef.arc, rot: face, length: ef.length });
         break;
       }
@@ -341,19 +358,20 @@ export function runEffects(rt: CombatRuntime, effects: Effect[], ctx: Ctx, rando
       }
       case "shield": addShield(rt, ef.amount * ctx.sup * p.maxHp, ef.duration); floater(rt, ctx.pos, 2.1, "Shield", "info"); break;
       case "heal": { const got = heal(rt, ef.amount * ctx.sup * p.maxHp); floater(rt, ctx.pos, 2.1, `+${Math.round(got)}`, "info"); break; }
-      case "summon": summon(rt, ef.unit, ef.count ?? 1, ctx, ctx.ability.key); break;
+      case "summon": summon(rt, ef.unit, ef.count ?? 1, ctx, ctx.ability.key, ef.cap); break;
       case "buff": addBuff(rt, { stat: ef.stat, value: ef.stat === "block" ? ef.value * ctx.gear : ef.value, t: ef.duration, onBlock: ef.stat === "block" ? ctx.ability : undefined, source: ctx.ability.key }); break;
       case "transform": {
         rt.transform = { name: ctx.ability.name, t: Math.max(ef.duration, rt.transform?.t ?? 0) };
         const pv = passiveOf(rt);
-        if (pv?.kind === "transform_shield") addShield(rt, p.maxHp * pv.value, 4);
+        if (pv?.kind === "transform_shield") addShield(rt, p.maxHp * pv.value, rt.v2 ? 3 : 4); // classes v2 shifts often: a shorter barrier
         break;
       }
       // Movement hooks (classes v2): carried speed along the aim, a hop; the avatar applies them on its next step.
       case "momentum": p.kick = addKick(p.kick, ctx.dir.x, ctx.dir.z, ef.speed, 0); break;
       case "launch": p.kick = addKick(p.kick, 0, 0, 0, ef.height); break;
-      // Classes v2 field primitives (zones, pulls, thrown units, channels, walls, roots, tethers, fades, totems, risings): field.ts.
-      default: runField(rt, ef, ctx, random);
+      // Classes v2's shared primitives: the Warden's field effects (grounds, thrown units, channels, barriers, roots, tethers,
+      // fades, totems, risings: field.ts), the rest the Arcane wave's (primitives.ts).
+      default: if (FIELD_KINDS.has(ef.kind)) runField(rt, ef as FieldEffect, ctx, random); else runPrimitive(rt, ef, ctx, random);
     }
   }
 }
@@ -381,7 +399,8 @@ function enforceCaps(rt: CombatRuntime, added: Unit) {
   }
 }
 
-export function summon(rt: CombatRuntime, key: string, count: number, ctx: Pick<Ctx, "pos" | "aim" | "dir" | "sup" | "stat">, source: string) {
+/** `cap`: at most this many of this unit at once (the oldest goes); `place`: where it rises (a raised corpse). */
+export function summon(rt: CombatRuntime, key: string, count: number, ctx: Pick<Ctx, "pos" | "aim" | "dir" | "sup" | "stat">, source: string, cap?: number, place?: Vec) {
   const p = rt.player;
   for (let n = 0; n < count; n++) {
     let unit = key === "weapon" ? minionFor(p.weapon) : key;
@@ -393,15 +412,16 @@ export function summon(rt: CombatRuntime, key: string, count: number, ctx: Pick<
     }
     const def = UNITS[unit];
     const side = (n % 2 ? -1 : 1) * (0.9 + n * 0.3);
-    const at = def.kind === "totem" || def.kind === "trap" ? ctx.aim : def.kind === "decoy" ? ctx.pos
-      : body ? { x: body.x, z: body.z } : { x: ctx.pos.x - ctx.dir.z * side, z: ctx.pos.z + ctx.dir.x * side };
-    if (!body && def.model) body = spawnEnemy(`ally-${rt.seq}`, ENEMIES[def.model], at.x, at.z);
+    const at = place ?? (def.kind === "totem" || def.kind === "trap" ? ctx.aim : def.kind === "decoy" ? ctx.pos
+      : body ? { x: body.x, z: body.z } : { x: ctx.pos.x - ctx.dir.z * side, z: ctx.pos.z + ctx.dir.x * side });
+    if (!body && def.model) body = spawnEnemy(`ally-${rt.seq}`, ENEMIES[def.model] ?? ALLY_BODIES[def.model], at.x, at.z);
     if (body) body.state = "chase";
-    const hp = body && unit === "shade" ? Math.min(140, Math.round(body.type.hp * 0.6)) : def.hp;
+    const hp = body && unit === "shade" ? Math.min(140, Math.round(body.type.hp * 0.6)) : def.hpShare ? Math.round(rt.player.maxHp * def.hpShare) : def.hp;
     const u: Unit = { id: rt.seq++, def, source, x: at.x, z: at.z, hp, maxHp: hp, life: def.life === undefined ? null : def.life * (rt.v2?.mods.duration ?? 1), cd: 0.3,
       power: (def.power ?? 0) * ctx.sup * (rt.v2?.mods.summonPower ?? 1), stat: ctx.stat, body };
     rt.units.push(u);
     enforceCaps(rt, u);
+    if (cap) { const same = rt.units.filter(x => x.def.key === def.key); for (let i = 0; i < same.length - cap; i++) rt.units = rt.units.filter(x => x !== same[i]); }
   }
   if (source !== "weapon") floater(rt, ctx.pos, 2.1, UNITS[key]?.name ?? (key === "corpse" ? "Raise Shade" : "Summon"), "info");
 }
@@ -420,7 +440,7 @@ export function stepUnits(rt: CombatRuntime, me: Vec, dt: number, random: () => 
   for (let ui = 0; ui < units.length; ui++) {
     const u = units[ui];
     if (u.life !== null) u.life -= dt;
-    if ((u.life !== null && u.life <= 0) || u.hp <= 0) { rt.units = rt.units.filter(x => x !== u); continue; }
+    if ((u.life !== null && u.life <= 0) || u.hp <= 0) { expire(rt, u, random); rt.units = rt.units.filter(x => x !== u); continue; }
     u.cd -= dt;
     const d = u.def;
     if (d.driven) continue; // its kit's module moves and fights it (totems.ts)
@@ -448,16 +468,17 @@ export function stepUnits(rt: CombatRuntime, me: Vec, dt: number, random: () => 
       }
       continue;
     }
-    if (d.kind === "decoy") continue;
-    // Minions: the nearest foe within reach of both it and you, else back to your side.
-    let target: Enemy | undefined, near = 9;
-    for (const e of foes) { const de = foe(e) && dist(e, me) < 12 ? dist(e, u) : Infinity; if (de < near) { near = de; target = e; } }
+    if (d.kind === "decoy" || d.kind === "clone") continue; // a clone moves and fights on its own (primitives.ts)
+    // Minions: the nearest foe within reach of both it and you, else back to your side; a Command sends them all at one, or calls them close.
+    const o = orderOf(rt);
+    let target: Enemy | undefined = o.target ?? undefined, near = 9;
+    if (!target) for (const e of foes) { const de = foe(e) && dist(e, me) < o.reach ? dist(e, u) : Infinity; if (de < near) { near = de; target = e; } }
     const range = d.range ?? 1.5, gap = target ? dist(target, u) : dist(me, u);
-    const goal = dist(me, u) > 12 || !target ? me : target;
+    const goal = (!o.target && dist(me, u) > o.reach) || !target ? me : target;
     const stop = target && goal === target ? range * 0.8 : 1.4;
     if (gap > stop || goal === me) {
       const g = dist(goal, u);
-      if (g > stop) { const step = Math.min(g - stop, (d.speed ?? 5) * dt); u.x += ((goal.x - u.x) / g) * step; u.z += ((goal.z - u.z) / g) * step; }
+      if (g > stop) { const step = Math.min(g - stop, (d.speed ?? 5) * o.speed * dt); u.x += ((goal.x - u.x) / g) * step; u.z += ((goal.z - u.z) / g) * step; }
     }
     if (u.body) { u.body.x = u.x; u.body.z = u.z; u.body.facing = facingTo(u, target ?? me); u.body.t += dt; if (u.body.state === "recover" && u.body.t > 0.5) { u.body.state = "chase"; u.body.t = 0; } }
     if (!target || dist(target, u) > range + target.type.radius || u.cd > 0) continue;
@@ -482,6 +503,7 @@ const TARGET = { x: 0, z: 0, safe: false, alive: true };
 export function enemyTarget(rt: CombatRuntime, e: Enemy, player: Vec & { safe: boolean; alive: boolean }): Vec & { safe: boolean; alive: boolean } {
   let t: Vec | null = e.status.distract > 0 ? { x: e.spawnX, z: e.spawnZ } : null, best = e.type.aggroRadius + 3;
   if (!t) for (const u of rt.units) { const d = u.def.taunt ? dist(u, e) : Infinity; if (d < best) { best = d; t = u; } }
+  if (!t && rt.v2) t = lure(rt, e); // classes v2: a clone it took for you, or home while you're unseen
   if (!t) return player;
   TARGET.x = t.x; TARGET.z = t.z; TARGET.safe = player.safe; TARGET.alive = player.alive;
   return TARGET;

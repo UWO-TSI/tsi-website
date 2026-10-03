@@ -2,7 +2,7 @@
 /** The combat pack (specs/classes/design-sheet.md §1.7): heat in RGB, coverage in A; the shader maps heat through the effect's ramp. */
 export const COMBAT_PACK_URL = "/assets/fx/combat-pack.webp";
 export const COMBAT_PACK_COLS = 8;
-export const COMBAT_PACK_ROWS = 22;
+export const COMBAT_PACK_ROWS = 31;
 export const COMBAT_PACK = {
   impactStar: { row: 0, frames: 8 } /* spiky impact star: pops open, hollows out */,
   slash: { row: 1, frames: 8 } /* crescent slash arc: sweeps on, thins away */,
@@ -19,12 +19,21 @@ export const COMBAT_PACK = {
   beam: { row: 12, frames: 8 } /* beam segment along +u (tiles along u) */,
   ink: { row: 13, frames: 8 } /* black ink splash and flicks */,
   flare: { row: 14, frames: 8 } /* four-point flare star */,
-  shadow: { row: 15, frames: 8 } /* shadow wisp: ink tendril, colour rim */,
-  bolt: { row: 16, frames: 8 } /* lightning along +u (tiles along u) */,
-  leaf: { row: 17, frames: 8 } /* cel leaf tumbling */,
-  sun: { row: 18, frames: 8 } /* sun mote: disc and turning rays */,
-  flame: { row: 19, frames: 8 } /* flame tongue licking up, tearing off */,
-  feather: { row: 20, frames: 8 } /* feather rocking as it falls */,
-  thorn: { row: 21, frames: 8 } /* thorny vine unfurling */,
+  flame: { row: 15, frames: 8 } /* fire tongue licking up, tip tears off (loops) */,
+  droplet: { row: 16, frames: 8 } /* water spray: drops fly out and fall */,
+  wave: { row: 17, frames: 8 } /* wave crest side-on: curls forward, crashes */,
+  petal: { row: 18, frames: 8 } /* blossom opens, its petals fall tumbling */,
+  cloud: { row: 19, frames: 8 } /* dark storm-cloud puff, a few rim lights */,
+  card: { row: 20, frames: 8 } /* playing card flipping as it spins (loops) */,
+  shard: { row: 21, frames: 8 } /* glass shard tumbling, glint edge */,
+  bone: { row: 22, frames: 8 } /* bone fragment tumbling */,
+  skull: { row: 23, frames: 8 } /* skull glyph aura mote: pops in, fades */,
+  beast: { row: 24, frames: 8 } /* fox, crab, wisp, pollen, golem glyphs (loops) */,
+  shadow: { row: 25, frames: 8 } /* shadow wisp: ink tendril, colour rim */,
+  bolt: { row: 26, frames: 8 } /* lightning along +u (tiles along u) */,
+  leaf: { row: 27, frames: 8 } /* cel leaf tumbling */,
+  sun: { row: 28, frames: 8 } /* sun mote: disc and turning rays */,
+  feather: { row: 29, frames: 8 } /* feather rocking as it falls */,
+  thorn: { row: 30, frames: 8 } /* thorny vine unfurling */,
 } as const;
 export type CombatSprite = keyof typeof COMBAT_PACK;

@@ -4,6 +4,7 @@
  * Mirrored as seed rows in 20260926150800_combat.sql (weapons).
  */
 import type { Stat, StatBlock } from "./progression";
+import { ARCANE_WEAPONS } from "./arcaneSeed";
 import { WARDEN_WEAPONS } from "./wardenData";
 
 /** Today's types; classes v2 opens the list (one signature type per subclass, design sheet §1.5). */
@@ -45,7 +46,8 @@ export const WEAPONS: WeaponDef[] = [
   W("staff-sigil", "Sigil staff", "staff", 4, ["arcana"]),
   W("tome-warden", "Warden's grimoire", "tome", 4, ["spirit"]),
   W("staff-heartstone", "Heartstone staff", "staff", 5, ["arcana", "spirit"]),
-  // Classes v2 signature weapons (§1.5), one type per subclass, seeded by each family wave's migration.
+  // Classes v2 signature weapons, by family wave (their own seed migrations carry them, with weapons.subclass).
+  ...ARCANE_WEAPONS,
   ...WARDEN_WEAPONS,
 ];
 
