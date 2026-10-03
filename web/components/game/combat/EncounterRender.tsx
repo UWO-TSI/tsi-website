@@ -17,6 +17,7 @@ import { combat, type Projectile } from "@/lib/game/combat/runtime";
 import { ENEMIES, WEAPONS } from "@/lib/game/combat/data";
 import { airborne, glow, lobMarker, marker, partPose, type MarkerFamily, type PartPose } from "@/lib/game/combat/telegraph";
 import type { Enemy } from "@/lib/game/combat/sim";
+import type { EnemyType } from "@/lib/game/combat/contract";
 import { CAPS } from "@/lib/combat/kits";
 import { packMap, spriteQuad } from "../movement/moveFx";
 import { lobHeight } from "@/lib/game/combat/mobs";
@@ -30,7 +31,7 @@ const tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpS = new THRE
  * (`userData.name`), so the per-primitive child meshes of a multi-material
  * node follow their named parent instead of being posed twice.
  */
-function useRig(url: string) {
+export function useRig(url: string) {
   const { scene } = useGLTF(url);
   return useMemo(() => {
     const box = new THREE.Box3().setFromObject(scene);
@@ -75,10 +76,12 @@ const DYNAMIC = { sunCaster: "dynamic" };
 /** A defeated enemy's pop: seconds it swells before it vanishes. */
 const POP = 0.12;
 
-export function EnemyInstances({ typeId, capacity, ground, allies = false }: { typeId: string; capacity: number; ground: Ground;
+export function EnemyInstances({ typeId, capacity, ground, allies = false, type: own }: { typeId: string; capacity: number; ground: Ground;
   /** Your summons that borrow this model (kits.ts UNITS `model`, a Necromancer's shades): tinted spirit-green or shade-violet, a little smaller. */
-  allies?: boolean }) {
-  const type = ENEMIES[typeId];
+  allies?: boolean;
+  /** A body no enemy lends (primitives.ts ALLY_BODIES: the skeletons). */
+  type?: EnemyType }) {
+  const type = own ?? ENEMIES[typeId];
   const { nodes, parts, top, reach } = useRig(type.model);
   useEffect(() => { BAR_TOP[typeId] = top * type.modelScale; }, [typeId, top, type.modelScale]);
   const world = useMemo(() => nodes.map(() => new THREE.Matrix4()), [nodes]);
@@ -96,6 +99,7 @@ export function EnemyInstances({ typeId, capacity, ground, allies = false }: { t
       const bob = type.hover ? Math.sin(t * 6 + i) * 0.12 : 0;
       tmpQ.setFromAxisAngle(UP, (e.state === "active" ? e.beam : e.facing) + type.modelYaw);
       tmpS.setScalar(type.modelScale * dying * (allies ? 0.85 : 1));
+      if (e.flat) tmpS.z *= 1 - 0.94 * e.flat; // trapped in a sweeping mirror: pressed flat into the glass (primitives.ts sweep)
       tmpP.set(e.x, ground(e.x, e.z) + type.hover + bob + airborne(e), e.z);
       tmpM.compose(tmpP, tmpQ, tmpS);
       nodes.forEach((n, ni) => {
@@ -262,6 +266,9 @@ const SHOT: Record<Projectile["kind"], { model: string; scale: number; trail: TH
   // Classes v2 (the Rangers): a bullet (the shard, small and hot, a long gold tracer), a harpoon (the arrow, heavy, a chain-grey wake).
   bullet: { model: `${P}projectile-bolt.glb`, scale: 0.55, trail: new THREE.Color("#ffd27a"), width: 0.09, lit: false },
   harpoon: { model: `${P}projectile-arrow.glb`, scale: 2.1, trail: new THREE.Color("#c8d3dc"), width: 0.12, lit: true },
+  // Classes v2, Arcane: the Illusionist's thrown cards (and reflected shots), the Necromancer's bone shards.
+  card: { model: `${P}projectile-card.glb`, scale: 1.6, trail: new THREE.Color("#d79cff"), width: 0.12, lit: true },
+  bone: { model: `${P}projectile-bone.glb`, scale: 1.6, trail: new THREE.Color("#c9f5d2"), width: 0.1, lit: true },
 };
 const KINDS = Object.keys(SHOT) as Projectile["kind"][];
 /** A flat sliver behind the shot (local -Z), white at its head and black at its tail. */

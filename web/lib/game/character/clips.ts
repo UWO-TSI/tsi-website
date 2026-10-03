@@ -38,7 +38,9 @@ export type ClipName = VillageClip | VerbClip | HoldIdleClip | UniqueClip;
 
 /** The grip family of a weapon type (lib/combat/weapons.ts WeaponType; signature types fall back to one hand). */
 const GRIP_OF: Record<string, Grip> = { sword: "OneHand", shield: "OneHand", bow: "Bow", revolver: "Pistol", staff: "Staff", tome: "Book", fists: "Fists", totem: "Staff",
-  // Classes v2, the Rangers' signature types: the recurve on the bow grip, the long rifle and the harpoon crossbow shouldered (Rifle), the revolver.
+  // Classes v2 signature types: the Arcane wave's prism staff, the deck in one hand, the bone tome, the charm on bare fists;
+  // the Rangers' recurve on the bow grip, the long rifle and the harpoon crossbow shouldered (Rifle), the revolver.
+  "prism-staff": "Staff", "trick-deck": "OneHand", "bone-tome": "Book", "tooth-charm": "Fists",
   recurve: "Bow", rifle: "Rifle", harpoon: "Rifle", sixgun: "Pistol" };
 export const gripFor = (weaponType: string): Grip => GRIP_OF[weaponType] ?? "OneHand";
 export const verbClip = (verb: Verb, grip: Grip): VerbClip => `${verb}_${grip}`;

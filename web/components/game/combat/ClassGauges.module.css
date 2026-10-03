@@ -23,4 +23,3 @@
 .streak i { width: 8px; height: 12px; border-radius: 2px; background: #e0e6d8; border: 1px solid #c4ccbf; }
 .streak i[data-on] { background: var(--class); border-color: #293e3b; }
 .hint { color: #607069; }
-.hidden { color: #2c6b5c; background: #dff3ea; border-radius: 6px; padding: 1px 6px; }

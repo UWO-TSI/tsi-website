@@ -1,9 +1,9 @@
--- Local smoke test for draft 20261002190000_classes_v2_ranger_seed (the game chain, after classes_v2 and zone1_mobs).
+-- Local smoke test for draft 20261003023000_classes_v2_ranger_seed (the game chain, after the classes v2 and Arcane seeds).
 -- Never Supabase. Fails before the migration (no Ranger signature rows). Leaves the classes_v2 flag off.
 \set ON_ERROR_STOP 1
-INSERT INTO auth.users (id, email) VALUES ('00000000-0000-4000-8000-0000000003a1', 'ranger-a@x'), ('00000000-0000-4000-8000-0000000003a2', 'ranger-b@x') ON CONFLICT DO NOTHING;
+INSERT INTO auth.users (id, email) VALUES ('00000000-0000-4000-8000-0000000004b1', 'ranger-a@x'), ('00000000-0000-4000-8000-0000000004b2', 'ranger-b@x') ON CONFLICT DO NOTHING;
 DO $$
-DECLARE r record; A uuid := '00000000-0000-4000-8000-0000000003a1'; B uuid := '00000000-0000-4000-8000-0000000003a2'; s text;
+DECLARE r record; A uuid := '00000000-0000-4000-8000-0000000004b1'; B uuid := '00000000-0000-4000-8000-0000000004b2'; s text;
 BEGIN
   -- Four types, one per subclass, tiers 1–5, finesse, the durability and repair ladder of every weapon.
   FOREACH s IN ARRAY ARRAY['marksman:recurve', 'sniper:rifle', 'hunter:harpoon', 'gunslinger:sixgun'] LOOP

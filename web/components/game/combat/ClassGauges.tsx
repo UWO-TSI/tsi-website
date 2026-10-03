@@ -4,11 +4,10 @@
  * A v2 kit's own gauges on the ruins HUD (classes v2; the LOCKED Ranger sections), in the cream kit, read from the
  * runtime each publish: Focus and the fire rate (a focus passive), the cylinder's six chambers with special rounds
  * loaded next, the reload bar with its gold span and where the reload is (R), a spun cylinder's hammer and window,
- * the Killstreak's pips, the traps out against their cap, and "Hidden" while stealthed. Only what the kit has shows.
+ * the Killstreak's pips and the traps out against their cap ("Unseen" is the HUD's status line). Only what the kit has shows.
  */
-import { buffSum } from "@/lib/game/combat/abilities";
 import { trapCap } from "@/lib/game/combat/abilities";
-import { fireRate, stealthed } from "@/lib/game/combat/classFire";
+import { fireRate } from "@/lib/game/combat/classFire";
 import type { CombatRuntime } from "@/lib/game/combat/runtime";
 import { keyName } from "@/lib/game/movement/keys";
 import styles from "./ClassGauges.module.css";
@@ -40,6 +39,5 @@ export default function ClassGauges({ rt, swapKey }: { rt: CombatRuntime; swapKe
       <b>Streak</b>{Array.from({ length: pv.cap ?? 5 }, (_, i) => <i key={i} data-on={i < live.streak || undefined} />)}
     </div>}
     {traps !== null && <small className={styles.hint}>Traps {traps}/{trapCap(rt)}</small>}
-    {stealthed(rt) && <small className={styles.hidden}>Hidden · first shot +{Math.round(buffSum(rt, "stealth") * 100)}%</small>}
   </div>;
 }

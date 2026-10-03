@@ -10,10 +10,10 @@ import type { EnemyAttack, EnemyType, MissionDef, Weapon } from "./contract";
 
 const W = "/assets/game/weapons/", E = "/assets/game/enemies/";
 
-type Look = Pick<Weapon, "cooldown" | "range" | "arc" | "speed" | "model" | "modelScale" | "grip" | "pulse">;
+type Look = Pick<Weapon, "cooldown" | "range" | "arc" | "speed" | "model" | "modelScale" | "grip" | "pulse" | "shot">;
 /**
- * The Rangers' grips in socket space (three.js Euler XYZ, solved from the clips' frames by art/props-enemies/render_held.py
- * `ranger`): in the hand while shooting, at rest in the hand, across the back.
+ * The Rangers' grips in socket space (three.js Euler XYZ, solved from the clips' frames by
+ * art/props-enemies/render_ranger.py `grips`): in the hand while shooting, at rest in the hand, across the back.
  */
 const RIFLE_GRIP: NonNullable<Look["grip"]> = { hand: [-2.382, -0.919, 2.97], rest: [-0.729, 0.946, 2.325], back: [-1.571, 0.585, 0] };
 const RANGER_GRIPS: Record<string, Look["grip"]> = {
@@ -54,6 +54,18 @@ const WEAPON_LOOK: Record<string, Look> = {
 function signatureLooks(type: string, feel: Pick<Look, "cooldown" | "range" | "arc" | "speed">, grip?: Look["grip"]): Record<string, Look> {
   return Object.fromEntries([1, 2, 3, 4, 5].map(t => [`${type}-${t}`, { ...feel, model: `${W}${type}-${t}.glb`, modelScale: 1.3, ...(grip ? { grip } : {}), ...(t === 5 ? { pulse: true } : {}) }]));
 }
+// Classes v2, Arcane signature weapons (lib/combat/arcaneSeed.ts): one feel per type, every tier its own model.
+// The deck throws cards and the tome bone shards (their shot looks); the charm fights with bare fists. Grips solved on
+// the v7 rig and the verb library's hold idles (art/props-enemies/build_arcane.py `-- held`): the staff stands beside
+// the head, the deck fans above the right hand, the tome stands at the chest in the left, the charm wraps the right fist.
+const ARCANE_LOOK: Record<string, Omit<Look, "model">> = {
+  "prism-staff": { cooldown: 0.6, range: 8.5, arc: 0, speed: 15, modelScale: 1.3, grip: { hand: [Math.PI / 2, 0, 0], rest: [-1.084, -1.022, -2.079], back: [0, 0, -0.5] } },
+  "trick-deck": { cooldown: 0.45, range: 9, arc: 0, speed: 18, modelScale: 1.3, grip: { hand: [-0.41, -0.494, -0.8], back: [0, 0, Math.PI] } },
+  "bone-tome": { cooldown: 0.6, range: 8, arc: 0, speed: 16, modelScale: 1.3, grip: { hand: [0.465, 0.181, 0.344], back: [Math.PI, -Math.PI / 2, 0] } },
+  "tooth-charm": { cooldown: 0.45, range: 1.4, arc: 1.7, modelScale: 1.3, grip: { hand: [0, -Math.PI / 2, 0], back: [0, Math.PI, 0] } },
+};
+const SHOT: Record<string, Weapon["shot"]> = { "trick-deck": "card", "bone-tome": "bone" };
+for (const [type, look] of Object.entries(ARCANE_LOOK)) for (let t = 1; t <= 5; t++) WEAPON_LOOK[`${type}-${t}`] = { ...look, model: `${W}${type}-${t}.glb`, ...(SHOT[type] ? { shot: SHOT[type] } : {}) } as Look;
 export const WEAPONS: Record<string, Weapon> = Object.fromEntries(islandWeapons()
   .filter(w => WEAPON_LOOK[w.id])
   .map(w => [w.id, { ...w, ...WEAPON_LOOK[w.id] }]));

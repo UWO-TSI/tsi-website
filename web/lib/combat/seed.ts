@@ -20,6 +20,7 @@ export function combatSeedSql(): string {
   return [
     SEED_BEGIN,
     `INSERT INTO weapons (${WEAPON_COLS.join(", ")}) VALUES`,
+    // Signature weapons (classes v2) are seeded by their family's own migration, with their subclass.
     WEAPONS.filter((w) => !w.subclass).map((w) => `  (${[q(w.key), q(w.name), q(w.type), w.tier, `ARRAY[${w.scaling.map(q).join(",")}]::text[]`, w.max_durability, w.repair_per_point].join(", ")})`).join(",\n"),
     upsert(WEAPON_COLS),
     `INSERT INTO enemy_types (${ENEMY_COLS.join(", ")}) VALUES`,

@@ -51,20 +51,25 @@ describe("Hunter: traps (cap, duration, lunge, Prey), Camouflage, Harpoon, the G
     frame(rt);
     expect(m.hit / dealt(plain)).toBeCloseTo((1 + 0.2 + 0.3) / 1, 1); // mark +20% and Prey +30%, the same burst
   });
-  it("Camouflage: enemies lose you beyond 1.5 u; a quick step breaks it; the first shot out deals +60%", () => {
+  it("Camouflage: enemies lose you; a shot, a quick step or an enemy within 1.5 u gives you away; the first shot out deals +60%", () => {
     const { rt, p } = setup(HUNTER);
-    const e = dummy(rt, 0, 6), near = dummy(rt, 1.2, 0);
+    const e = dummy(rt, 0, 6);
     tap(rt, 0);
     const you = { x: 0, z: 0, safe: false, alive: true };
+    expect(rt.field.stealth).toBeGreaterThan(0);
     expect(enemyTarget(rt, e, you)).not.toBe(you);
-    expect(enemyTarget(rt, near, you)).toBe(you);
     const plain = setup(HUNTER), pe = dummy(plain.rt, 0, 6);
     holdFire(plain.rt, 0.5); holdFire(rt, 0.5);
     expect(dealt(e) / dealt(pe)).toBeGreaterThan(1.5); expect(dealt(e) / dealt(pe)).toBeLessThan(1.75); // +60%, whole numbers
-    expect(rt.buffs.some(b => b.stat === "stealth")).toBe(false);
-    tap(rt, 0); rt.v2!.cd = {}; p.energy = 100; tap(rt, 0);
-    p.move.speed = 7.4; frame(rt);
-    expect(rt.buffs.some(b => b.stat === "stealth")).toBe(false);
+    expect(rt.field.stealth).toBe(0);
+    rt.v2!.cd = {}; p.energy = 100; tap(rt, 0);
+    expect(rt.field.stealth).toBeGreaterThan(0);
+    p.move.speed = 7.4; frame(rt); // a quick step
+    expect(rt.field.stealth).toBe(0);
+    p.move.speed = 0; rt.v2!.cd = {}; p.energy = 100; tap(rt, 0);
+    expect(rt.field.stealth).toBeGreaterThan(0);
+    dummy(rt, 1.2, 0); frame(rt); // one close by
+    expect(rt.field.stealth).toBe(0);
   });
   it("Harpoon (mastery 3): drags an enemy toward you; into terrain it zips you there", () => {
     const { rt } = setup(HUNTER, 3);

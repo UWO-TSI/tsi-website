@@ -70,7 +70,7 @@ describe("Sniper: weak points, Killstreak, Scope, the rounds, Smoke Roll, Tripwi
     tap(rt, 3);
     expect(p.dash).toMatchObject({ iframes: true, z: -1 });
     expect(e.status.distract).toBeGreaterThan(0);
-    expect(rt.v2!.live.zones.length).toBe(1);
+    expect(rt.field.zones.length).toBe(1);
   });
   it("Tripwire: a mine that blasts everything near when one comes close", () => {
     const { rt } = setup(SNIPER);

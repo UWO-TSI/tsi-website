@@ -9,7 +9,7 @@ BEGIN
   -- content: the roster by zone, ten missions with difficulty and materials, crafted + boss gear
   ASSERT (SELECT zone FROM enemy_types WHERE key = 'rune-wisp') = 'outer' AND (SELECT armor FROM enemy_types WHERE key = 'guardian-statue') > 0, 'content roster';
   ASSERT (SELECT count(*) FROM missions WHERE active AND difficulty BETWEEN 1 AND 5 AND rewards ? 'materials') = 10, 'content missions';
-  ASSERT (SELECT count(*) FROM weapons WHERE tier >= 4 AND subclass IS NULL) = 5, 'content boss gear'; -- signature tiers 4–5 (classes v2) aren't the guardian's common gear
+  ASSERT (SELECT count(*) FROM weapons WHERE tier >= 4 AND subclass IS NULL) = 5, 'content boss gear'; -- classes v2 signature tiers aside
   -- starters: a sword and wraps at first; one per archetype when the gate opens (the subclass choice)
   PERFORM combat_ensure(G);
   ASSERT (SELECT count(*) FROM member_weapons WHERE member_id = G) = 2 AND (SELECT weapon_key FROM member_weapons WHERE member_id = G AND equipped) = 'sword-driftwood', 'content first weapons';

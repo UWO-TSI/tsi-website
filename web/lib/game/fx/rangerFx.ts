@@ -49,9 +49,9 @@ export const RANGER_FX: Record<string, FxRecipe> = {
   "marksman.flame": { tier: "ability", layers: [flames(6, 0.45, 0.6, { rise: [0.6, 1.2], jitter: 0.35 }), halo(1.1, 0.3, 1), sparks(1, 0.8, 1)] },
   "marksman.swift": { tier: "ability", layers: [lines(8, 1.4, 0.25, [9, 12], "aim", 1, 0.5), flare(0.9, 0.18, 1), halo(0.9, 0.25, 1)] },
   "marksman.hop": { tier: "ability", layers: [lines(6, 1.1, 0.22, [7, 9], "away", 0.6, 0.6), puff(3, 0.55, 0.45, {}, { lift: 0.1 }), ring(0.3, 1.4, 0.25, { lift: 0.08 })] },
-  /** Burning ground: a scorch, flames standing on it (they loop) and embers; the zone burns on for 2 s. */
-  "marksman.burn": { tier: "ability", layers: [decal("crack", 1, 2, { byRadius: true }), flames(4, 0.55, 1.05, {}, { lift: 0 }),
-    motes(6, 0.9, { up: [1.2, 2.2], speed: [0.1, 0.3] }, { lift: 0.2 })] },
+  /** Burning ground, each pulse (every 0.5 s while it burns, a shared zone): a scorch, flames standing on it and embers. */
+  "marksman.burn": { tier: "ability", layers: [decal("crack", 1, 0.6, { byRadius: true }), flames(4, 0.55, 0.55, {}, { lift: 0 }),
+    motes(3, 0.6, { up: [1.2, 2.2], speed: [0.1, 0.3] }, { lift: 0.2 })] },
   "marksman.surge": { tier: "light", layers: [glow(P("speedLine", [1, 1], [0.08, 0.08], [0.7, 0.8], { face: FACE.streak, aspect: 0.12, speed: [0.5, 0.5], spread: 0 }), { lift: 0.9 })] },
   "marksman.ultCharge": { tier: "ult", layers: [decal("rune", 3.4, 1, { spin: 0.8 }), gather(28), glow(P("swirl", [1, 1], [0.45, 0.45], [1.6, 1.6], { grow: 0.5 }), { lift: 1.1 }),
     glow(P("speedLine", [12, 14], [0.35, 0.4], [1.4, 1.8], { face: FACE.streak, aspect: 0.12, speed: [0.5, 1], up: [14, 18], spread: 0.6 }), { lift: 1.2 }),
@@ -75,7 +75,7 @@ export const RANGER_FX: Record<string, FxRecipe> = {
   "sniper.cluster": { tier: "heavy", layers: [star(1.8, 0.28, 0.5), sparks(3, 1.3), ring(0.4, 2.2, 0.35, { lift: 0.2 }), puff(5, 0.9, 0.9, {}, { lift: 0.3 }), debris(6, 0.35)] },
   "sniper.bomblet": { tier: "ability", layers: [star(1, 0.2, 0.4), sparks(1, 0.9, 0.4), puff(2, 0.6, 0.7, {}, { lift: 0.2 }), ring(0.2, 1.5, 0.25, { lift: 0.1, byRadius: true })] },
   "sniper.smoke": { tier: "heavy", layers: [puff(9, 1, 1.2, { speed: [1, 2.4], up: [0.1, 0.4], jitter: 0.8 }, { lift: 0.4 }), ring(0.4, 2.6, 0.35, { lift: 0.1 })] },
-  "sniper.smokeCloud": { tier: "heavy", layers: [puff(10, 1.2, 1.2, { speed: [0.2, 0.6], up: [0.05, 0.25], drag: 3, jitter: 1.6 }, { lift: 0.5, byRadius: true })] },
+  "sniper.smokeCloud": { tier: "heavy", layers: [puff(5, 1.2, 1, { speed: [0.2, 0.6], up: [0.05, 0.25], drag: 3, jitter: 1.6 }, { lift: 0.5, byRadius: true })] },
   "sniper.mineSet": { tier: "ability", layers: [flare(0.6, 0.15, 0.6), sparks(1, 0.6, 0.6)] },
   "sniper.mineZone": { tier: "ability", layers: [decal("rune", 1.5, 1.5, { spin: 2 }), halo(0.7, 0.4, 0.2)] },
   "trap.sniper-mine": { tier: "heavy", layers: [star(2, 0.28, 0.4), sparks(3, 1.4, 0.4), ring(0.4, 2.2, 0.35, { lift: 0.15, byRadius: true }), puff(5, 1, 0.9, {}, { lift: 0.2 }),

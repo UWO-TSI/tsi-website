@@ -20,10 +20,9 @@ describe("the kits' HUD gauges (ClassGauges)", () => {
     expect(out).toContain("Streak");
     expect(out.match(/<i data-on="true"/g)?.length).toBe(3);
   });
-  it("Hunter: traps against the cap, and Hidden", () => {
+  it("Hunter: traps against the cap", () => {
     const { rt } = setup(HUNTER);
-    rt.buffs.push({ stat: "stealth", value: 0.6, t: 5 });
-    expect(html(rt)).toMatch(/Traps 0\/3.*Hidden · first shot \+60%/);
+    expect(html(rt)).toMatch(/Traps 0\/3/);
   });
   it("Gunslinger: six chambers, the reload bar with its gold span, a spun cylinder's hammer", () => {
     const { rt } = setup(GUNSLINGER);

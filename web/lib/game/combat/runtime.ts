@@ -9,9 +9,11 @@ import type { Enemy, Vec } from "./sim";
 import { PLAYER_BASE, WEAPONS } from "./data";
 import { STARTER_WEAPONS } from "@/lib/combat/weapons";
 import { ZERO_STATS, type Stat, type StatBlock } from "@/lib/combat/progression";
-import type { Ability, BuffStat, Element, Status, Subclass, UnitDef } from "@/lib/combat/kits";
+import type { Ability, BuffStat, Effect, Element, Status, Subclass, UnitDef } from "@/lib/combat/kits";
+import type { Ctx } from "./abilities";
 import type { ClassState } from "./classRuntime";
 import type { Kick, MoveView } from "./moveHooks";
+import type { Field } from "./primitives";
 
 /** A shot. Weapon shots carry nothing; ability and unit shots carry what they do on impact. */
 export interface ShotHit { power: number; stat?: Stat; tier?: number; pierce?: boolean; splash?: number; status?: Status; unit?: boolean; hitIds?: string[];
@@ -19,19 +21,24 @@ export interface ShotHit { power: number; stat?: Stat; tier?: number; pierce?: b
   impact?: ImpactTier; ult?: boolean; fx?: string;
   /** Classes v2: the FX recipe thrown along the shot as it flies, in this ramp. */
   travel?: string; ramp?: readonly [string, string, string];
+  /** A sure crit (a mirrored shot, a weak point, Last Round, the Final Shot); the ability whose mark rides on it (a thrown card to teleport to). */
+  crit?: boolean; mark?: string;
+  /** Effects where it ends, from the ability's context (a fireball bursting at the aim). */
+  burst?: { effects: Effect[]; ctx: Ctx };
   /**
-   * Classes v2 shots (classFire.ts): `pierces` more enemies it passes through; always a crit; a weak point (the inner
-   * fraction of a body's radius) that crits; a burning zone where it lands (a burn rides on `status.dot`); bomblets; ricochets;
-   * a pull toward `from`; a zip to the terrain it meets; a burst where it ends (a bomblet); a special round's key.
+   * Classes v2 shots (classFire.ts): `pierces` more enemies it passes through; a weak point (the inner fraction of a
+   * body's radius) that crits; burning ground where it lands (the shared zone primitive; a burn rides on `status.dot`);
+   * bomblets; ricochets; a pull toward you; a zip to the terrain it meets (`grapple`: its FX); an area `blast` where it
+   * ends or on the first enemy (a bomblet, a blast round); a special round's key; a hit that doesn't hold a chase.
    */
-  pierces?: number; crit?: boolean; weak?: number; zone?: { radius: number; life: number; power: number; fx?: string };
+  pierces?: number; weak?: number; zone?: { radius: number; life: number; power: number; fx?: string };
   cluster?: { count: number; power: number; radius: number; fx?: string }; bounce?: number; pull?: number; grapple?: string;
-  burst?: { power: number; radius: number }; round?: string; from?: { x: number; z: number }; steady?: boolean }
+  blast?: { power: number; radius: number }; round?: string; steady?: boolean }
 /**
  * `knock`: an enemy shot's push on you (its attack's knockback). `arc`: a lobbed shot's flight time (s): it flies over
  * everything and bursts where it lands (`radius` then is the burst's), the height following the arc (mobs.ts).
  */
-export interface Projectile { id: number; x: number; z: number; vx: number; vz: number; life: number; from: "player" | "enemy"; damage: number; kind: "arrow" | "bolt" | "rune" | "spore" | "bullet" | "harpoon"; radius: number; hit?: ShotHit; knock?: number; arc?: number; source?: string;
+export interface Projectile { id: number; x: number; z: number; vx: number; vz: number; life: number; from: "player" | "enemy"; damage: number; kind: "arrow" | "bolt" | "rune" | "spore" | "card" | "bone" | "bullet" | "harpoon"; radius: number; hit?: ShotHit; knock?: number; arc?: number; source?: string;
   /** Classes v2: an arrow's drop (height above its launch line, falling under `g`; spent at the ground), and homing (turn rate, rad/s). */
   fall?: { y: number; vy: number; g: number }; home?: number }
 /** Summons, totems, traps and decoys (kits.ts UNITS): `source` is the ability that made it ("weapon" for the summoning charm's wisps). */
@@ -42,6 +49,8 @@ export interface Unit {
   cd: number; power: number; stat: Stat;
   /** Minions that borrow an enemy model: its pose (state/t/move) for the renderer; shades borrow their corpse's. */
   body: Enemy | null;
+  /** A clone's mind (primitives.ts stepClone): its drift, strafe side, next dash and skill, its ward, facing, and the clip it copies. */
+  ai?: { vx: number; vz: number; side: number; dash: number; skill: number; ward: number; facing: number; clip: string | null; mimic: number };
 }
 export interface Buff { stat: BuffStat; value: number; t: number; onBlock?: Ability; answered?: boolean;
   /** The ability that gave it (a v2 hold's buffs end on the release). */
@@ -128,6 +137,8 @@ export interface CombatRuntime {
   fx: FxEvent[];
   /** Damage dealt this run, and by ult hits (the balance harness's ult share). */
   tally: { dealt: number; ult: number };
+  /** Classes v2 shared primitives on the ground and on you (primitives.ts): zones, walls, sweeps, timed stages, minion orders, marks, counters, stealth, a surf. */
+  field: Field;
   /** Presses refused because the slot can't be ready in time (actions.ts runInputs): the HUD pulses the slot on each. */
   denied: Record<AbilityId, number>;
   enemies: Enemy[];
@@ -155,6 +166,8 @@ export interface CombatRuntime {
   seq: number;
 }
 
+/** The primitives' state, empty (primitives.ts). */
+export const createField = (): Field => ({ zones: [], walls: [], sweeps: [], timers: [], order: { mode: "free", target: null }, marks: {}, counter: null, stealth: 0, reveal: 0, walk: 0, ambush: 0, ambushFor: 0, surf: null });
 export function createRuntime(): CombatRuntime {
   return {
     player: { hp: PLAYER_BASE.maxHp, maxHp: PLAYER_BASE.maxHp, alive: true, safe: true, level: 10, stats: { ...ZERO_STATS },
@@ -166,7 +179,7 @@ export function createRuntime(): CombatRuntime {
       shield: 0, shieldFor: 0, dash: null, impulse: { x: 0, z: 0 }, speed: 1, still: 0, last: null,
       move: { mode: "ground", speed: 0, sinceDash: 99, vx: 0, vz: 0 }, kick: null, clip: null, ultIframes: 0 },
     cooldowns: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, slot5: 0, ult: 0, swap: 0 }, denied: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, slot5: 0, ult: 0, swap: 0 },
-    v2: null, fx: [], tally: { dealt: 0, ult: 0 },
+    v2: null, fx: [], tally: { dealt: 0, ult: 0 }, field: createField(),
     enemies: [], projectiles: [], units: [], buffs: [], floaters: [], blasts: [], cues: [], hazards: [], mobFx: [],
     casting: null, kit: null, slots: [null, null, null, null],
     passive: { element: null, target: null, stacks: 0, momentum: 0, momentumT: 0, procs: 0 }, transform: null,

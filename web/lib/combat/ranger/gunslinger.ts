@@ -7,13 +7,13 @@
 import type { ClassKit } from "../classes";
 
 const I = (k: string) => `/assets/game/classes/${k}.svg`;
-const shot = { kind: "projectile" as const };
+const proj = { kind: "projectile" as const };
 
 export const GUNSLINGER: ClassKit = {
   key: "gunslinger", name: "Gunslinger", family: "Ranger", role: "damage", style: "basic",
   signature: { type: "sixgun", name: "revolver" },
-  stat: { kind: "reload_speed", at1: 1, at20: 1.5 },
-  fire: { rate: 3.2, power: 0.58, speed: 55, range: 11, look: "bullet", clip: { verb: "QuickShot", scale: 1.6 },
+  stat: { kind: "reload_speed", at1: 1, at20: 1.4 },
+  fire: { rate: 2.6, power: 0.68, speed: 55, range: 11, look: "bullet", steady: true, clip: { verb: "QuickShot", scale: 1.6 },
     ammo: { size: 6, reload_s: 1.2, gold: [0.45, 0.65], bonus: 0.25, miss_s: 0.6, clip: "Unique_Reload", perfect: "gunslinger.perfect" },
     rounds: {
       explosive: { power: 0.62, splash: 1.7, tier: "ability", vfx: "gunslinger.boom", tint: "#ff8a3d" },
@@ -23,10 +23,10 @@ export const GUNSLINGER: ClassKit = {
     vfx: { cast: "gunslinger.muzzle", travel: "gunslinger.tracer", impact: "gunslinger.hit" } },
   keys: [
     { key: "gunslinger.fan", name: "Fan the Hammer", description: "Empty the cylinder in a fast cone, one shot a round.", cooldown_s: 5, energy: 15, ammo: "all",
-      effects: [{ ...shot, power: 0.7, count: 6, spread: 0.5, speed: 50, range: 9, look: "bullet" }], clip: { unique: "Unique_FanHammer" },
+      effects: [{ ...proj, power: 0.7, count: 6, spread: 0.5, speed: 50, range: 9, shot: "bullet" }], clip: { unique: "Unique_FanHammer" },
       vfx: { cast: "gunslinger.fan", travel: "gunslinger.tracer", impact: "gunslinger.hit" }, icon: I("gunslinger-fan") },
     { key: "gunslinger.trick", name: "Trick Shot", description: "A round that ricochets between up to four enemies.", cooldown_s: 6, energy: 20, ammo: 1,
-      effects: [{ ...shot, power: 1.3, speed: 45, range: 12, bounce: 3, look: "bullet" }], clip: { verb: "QuickShot", scale: 0.9 },
+      effects: [{ ...proj, power: 1.3, speed: 45, range: 12, bounce: 3, shot: "bullet" }], clip: { verb: "QuickShot", scale: 0.9 },
       vfx: { cast: "gunslinger.muzzle", travel: "gunslinger.trickTrail", impact: "gunslinger.ricochet" }, icon: I("gunslinger-trick") },
     { key: "gunslinger.special", name: "Special Rounds", description: "Load three explosive rounds into the next chambers.", cooldown_s: 10, energy: 20,
       effects: [{ kind: "load", rounds: ["explosive", "explosive", "explosive"] }], clip: { unique: "Unique_Reload" }, vfx: { cast: "gunslinger.load" }, icon: I("gunslinger-special") },
@@ -34,7 +34,7 @@ export const GUNSLINGER: ClassKit = {
       effects: [{ kind: "load", rounds: [], add: 2 }, { kind: "dash", distance: 3.5, iframes: true }, { kind: "momentum", speed: 3 }], clip: { verb: "Backstep", scale: 1.3 },
       vfx: { cast: "gunslinger.roll" }, icon: I("gunslinger-roll") },
     { key: "gunslinger.quickdraw", name: "Quickdraw", description: "Right after a reload: a shot that deals ×2 and staggers.", cooldown_s: 4, energy: 15, needs: "reloaded", ammo: 1,
-      effects: [{ ...shot, power: 1.25, speed: 65, range: 12, status: { hold: 0.6 }, look: "bullet" }], clip: { verb: "QuickShot", scale: 1.3 },
+      effects: [{ ...proj, power: 1.25, speed: 65, range: 12, status: { hold: 0.6 }, shot: "bullet" }], clip: { verb: "QuickShot", scale: 1.3 },
       vfx: { cast: "gunslinger.muzzleBig", travel: "gunslinger.tracer", impact: "gunslinger.quickdraw" }, icon: I("gunslinger-quickdraw") },
   ],
   passive: { name: "Last Round", description: "The sixth chamber always crits.", kind: "last_round", value: 1, icon: I("gunslinger-lastround") },
@@ -52,5 +52,5 @@ export const GUNSLINGER: ClassKit = {
     { at: 16, target: "passive", change: { label: "The last round deals +25%", power: 1.25 } },
     { at: 18, target: "ult", change: { label: "+10% damage while it lasts", add: [{ kind: "buff", stat: "damage", value: 0.1, duration: 10 }] } },
   ],
-  look: { ramp: ["#fff3cf", "#5a8dff", "#1a2470"], mote: "sparkBurst", drift: "orbit", icon: I("gunslinger") },
+  look: { ramp: ["#fff3cf", "#5a8dff", "#1a2470"], mote: "sparkBurst", drift: "orbit", icon: I("gunslinger"), trim: { M_Fit: "#5a8dff", M_Dark: "#1a2470" } },
 };

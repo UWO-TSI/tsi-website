@@ -6,10 +6,10 @@ import { attack } from "../actions";
 import { classKey, classReload, pressUlt, stepClass } from "../classRuntime";
 
 describe("Gunslinger: the cylinder, active reload, Last Round, the keys, Russian Roulette", () => {
-  it("mastery raises reload speed (its stat direction): ×1 to ×1.5", () => {
-    expect([setup(GUNSLINGER, 1).rt.v2!.mods.reload, setup(GUNSLINGER, 20).rt.v2!.mods.reload]).toEqual([1, 1.5]);
+  it("mastery raises reload speed (its stat direction): ×1 to ×1.4", () => {
+    expect([setup(GUNSLINGER, 1).rt.v2!.mods.reload, setup(GUNSLINGER, 20).rt.v2!.mods.reload]).toEqual([1, 1.4]);
   });
-  it("six rounds, then a 1.2 s reload with no shots; the reload stat at 20 makes it 0.8 s", () => {
+  it("six rounds, then a 1.2 s reload with no shots; the reload stat at 20 makes it 0.86 s", () => {
     const { rt } = setup(GUNSLINGER);
     dummy(rt, 0, 6);
     let shots = 0, t = 0;
@@ -20,7 +20,7 @@ describe("Gunslinger: the cylinder, active reload, Last Round, the keys, Russian
     expect(holdFire(rt, 0.3)).toBeGreaterThan(0);
     const top = setup(GUNSLINGER, 20);
     top.rt.v2!.live.ammo = 0; attack(top.rt, ME, never);
-    frame(top.rt, Math.ceil(0.82 / DT));
+    frame(top.rt, Math.ceil(0.87 / DT));
     expect(top.rt.v2!.live.reload).toBeNull();
   });
   it("active reload: R in the gold zone reloads at once and the next six deal +25%; outside it jams 0.6 s longer", () => {
@@ -52,7 +52,7 @@ describe("Gunslinger: the cylinder, active reload, Last Round, the keys, Russian
   it("Fan the Hammer fires what's left, one shot a round, and empties the cylinder (the last chamber's a crit)", () => {
     const { rt } = setup(GUNSLINGER);
     dummy(rt, 0, 4);
-    attack(rt, ME, never); frame(rt, 10); attack(rt, ME, never); frame(rt);
+    attack(rt, ME, never); frame(rt, 13); attack(rt, ME, never); frame(rt); // two rounds out (2.6 a second)
     const seq = rt.seq;
     classKey(rt, 0, true); classKey(rt, 0, false); stepClass(rt, ME, DT, DT, never);
     expect(rt.projectiles.filter(s => s.id >= seq).length).toBe(4);

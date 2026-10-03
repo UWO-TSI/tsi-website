@@ -1044,27 +1044,536 @@ def flare(t):
     return A, H
 
 
-def flame(t):
-    """Licking flame tongues rising from a hot base (burning ground, flame arrows): each a teardrop that sways and
-    flickers, white-hot at its root, the coloured band up its body, the dark edge at its tips; it loops (fps)."""
-    rng = np.random.default_rng(3601)
+# ---- the Arcane wave's rows (classes v2: Elementalist, Illusionist, Necromancer, Transmuter)
+# Hand-placed outlines (points in cell units, cut with exact signed distances) and tapered strokes, so the silhouettes
+# stay crisp at any turn or foreshortening; bands painted in painter's order.
+def poly_sd(pts, x=None, y=None):
+    """Signed distance (negative inside) to any simple polygon: the nearest edge, inside by the even-odd rule."""
+    x = U if x is None else x
+    y = V if y is None else y
+    d = np.full_like(x, 9.0)
+    inside = np.zeros(x.shape, bool)
+    n = len(pts)
+    for i in range(n):
+        (ax, ay), (bx, by) = pts[i], pts[(i + 1) % n]
+        d = np.minimum(d, seg(ax, ay, bx, by, x, y)[0])
+        if ay != by:
+            inside ^= ((ay > y) != (by > y)) & (x < ax + (y - ay) * (bx - ax) / (by - ay))
+    return np.where(inside, -d, d)
+
+
+def place(pts, cx=0.0, cy=0.0, rot=0.0, sx=1.0, sy=1.0):
+    """Hand-placed local points into the cell: scaled (sx foreshortens a turn), turned, then moved."""
+    c, s = math.cos(rot), math.sin(rot)
+    return [(cx + x * sx * c - y * sy * s, cy + x * sx * s + y * sy * c) for x, y in pts]
+
+
+def bez(p0, p1, p2, p3, n=10):
+    """n points along a cubic Bézier from p0 (kept) toward p3 (left out: the next piece starts there)."""
+    k = np.linspace(0, 1, n, endpoint=False)[:, None]
+    P = [np.array(p, float) for p in (p0, p1, p2, p3)]
+    out = (1 - k) ** 3 * P[0] + 3 * (1 - k) ** 2 * k * P[1] + 3 * (1 - k) * k * k * P[2] + k ** 3 * P[3]
+    return [tuple(p) for p in out]
+
+
+def ellipse_pts(cx, cy, rx, ry=None, n=40):
+    ry = rx if ry is None else ry
+    return [(cx + rx * math.cos(math.tau * i / n), cy + ry * math.sin(math.tau * i / n)) for i in range(n)]
+
+
+def tube(pts, ws):
+    """Signed distance to a tapered stroke through pts (a cone between each pair, the width eased along it)."""
+    d = np.full_like(U, 9.0)
+    for (a, b), (wa, wb) in zip(zip(pts[:-1], pts[1:]), zip(ws[:-1], ws[1:])):
+        dd, k = seg(a[0], a[1], b[0], b[1])
+        d = np.minimum(d, dd - (wa + (wb - wa) * k))
+    return d
+
+
+def paint(A, H, a, h):
+    """Paint a shape on top (painter's order): its heat wins wherever it covers more than half."""
+    return np.maximum(A, a), np.where(a > 0.5, h, H)
+
+
+def mirror(right):
+    """A left-right symmetric outline from its right half (listed top to bottom, x >= 0)."""
+    return list(right) + [(-x, y) for x, y in reversed(right) if x > 1e-9]
+
+
+def tongue(x0, yb, h, w, t, ph, n=28, lean=0.0, waist=0.0):
+    """A flame tongue from a round base at (x0, yb) up h: it sways with t, tapers to a point, a waist can pinch it."""
+    k = np.linspace(0, 1, n)
+    sway = (0.1 * np.sin(math.pi * 1.25 * k + math.tau * t + ph) * k + 0.045 * np.sin(math.tau * 1.5 * k - 2 * math.tau * t + ph) * k * k) * (h / 1.2)
+    xs, ys = x0 + sway + lean * k * k, yb + k * h
+    ws = w * (1 - k) ** 1.15 * np.minimum(1, np.sqrt(k / 0.16 + 0.12)) * (1 - waist * np.exp(-((k - 0.7) / 0.08) ** 2))
+    return tube(list(zip(xs, ys)), ws)
+
+
+def arc_flame(t):
+    """One licking fire tongue: a round base, a body that sways as it stretches up, cel bands nested as flames (the dark
+    edge outside, the coloured band, a white-hot inner tongue); at the top of its stretch a waist pinches in, the tip
+    tears off and rises away as a small lick, and the tongue drops back. Side licks flicker at its foot. Loops (fps)."""
     A, H = np.zeros_like(U), np.zeros_like(U)
-    for i in range(5):
-        x0, ph = rng.uniform(-0.42, 0.42), rng.uniform(0, math.tau)
-        h = rng.uniform(0.75, 1.35) * (0.82 + 0.18 * math.sin(math.tau * t * 2 + ph))
-        w0 = rng.uniform(0.15, 0.24)
-        base = -0.82
-        k = (V - base) / h
-        sway = 0.1 * np.sin(3.2 * k + math.tau * t + ph) * k
-        width = w0 * (1 - np.clip(k, 0, 1)) ** 1.15 * np.minimum(1, (k + 0.12) * 3.2)
-        d = np.abs(U - x0 - sway) - width
-        inside = (k >= -0.05) & (k <= 1)
-        a = hard(d) * inside
-        f = np.clip(1 - np.abs(U - x0 - sway) / np.maximum(width, 1e-4), 0, 1) * (1 - np.clip(k, 0, 1)) ** 0.6
-        A, H = lay(A, H, a, cel(f, t1=0.18, t2=0.52))
+    yb = -0.78
+    if t < 0.5:
+        h, waist = 1.0 + 0.5 * ss(0.0, 0.42, t), 0.9 * ss(0.3, 0.5, t)
+    else:
+        h, waist = 1.06 - 0.06 * ss(0.5, 1.0, t), 0.0
+    h += 0.04 * math.sin(math.tau * t * 2)
+    for x0, ph, hb, lean in ((-0.17, 0.9, 0.62, -0.16), (0.18, 2.6, 0.52, 0.14)):   # side licks, behind
+        hs = hb * (0.72 + 0.32 * math.sin(math.tau * t + ph))
+        A, H = paint(A, H, hard(tongue(x0, yb + 0.05, hs, 0.11, t, ph, lean=lean)), np.full_like(U, LO))
+        A, H = paint(A, H, hard(tongue(x0 * 0.8, yb + 0.07, hs * 0.55, 0.06, t, ph + 0.3, lean=lean * 0.6)), np.full_like(U, MID))
+    for scale, w, heat, dy in ((1.0, 0.31, LO, 0.0), (0.72, 0.205, MID, 0.04), (0.42, 0.12, HI, 0.07)):
+        d = tongue(0.0, yb + dy, h * scale, w, t, 0.25 * (1 - scale), waist=waist if scale == 1.0 else 0.0)
+        A, H = paint(A, H, hard(d), np.full_like(U, heat))
+    if t >= 0.5:                                                          # the torn-off lick rising away
+        u = (t - 0.5) / 0.5
+        s = (1 - u) ** 0.9
+        x0, y0 = 0.06 * math.sin(math.tau * t + 0.5), yb + 1.0 + 0.4 * u
+        A, H = paint(A, H, hard(tongue(x0, y0, 0.44 * s + 0.08, 0.12 * s + 0.02, t, 1.4)), np.full_like(U, LO))
+        A, H = paint(A, H, hard(tongue(x0, y0 + 0.035, 0.24 * s + 0.04, 0.065 * s + 0.01, t, 1.6)), np.full_like(U, MID))
+    for k, ph in enumerate((0.15, 0.62)):                                 # two embers rising
+        u = (t + ph) % 1
+        ex, ey = 0.32 * math.sin(math.tau * (u * 0.6 + ph)) * (0.6 + 0.4 * k), -0.3 + 1.1 * u
+        r = 0.026 * (1 - u) + 0.01
+        A, H = paint(A, H, hard(np.hypot(U - ex, V - ey) - r) * (1 - ss(0.75, 0.95, u)), np.full_like(U, HI))
     return A, H
 
 
+def water_drop(A, H, x, y, vx, vy, r):
+    """A drop flying with velocity (vx, vy): round at its head, drawn out to a point behind it the faster it goes; a dark
+    rim, the coloured body and a white-hot glint toward the light."""
+    sp = math.hypot(vx, vy) or 1e-6
+    dx, dy = vx / sp, vy / sp
+    L = r * (0.4 + 1.5 * min(sp, 2.4) / 2.4)
+    d, k = seg(x - dx * L, y - dy * L, x, y)
+    sd = np.minimum(d - r * np.clip(k, 0, 1) ** 0.75, np.hypot(U - x, V - y) - r)
+    f = np.clip(-sd / r, 0, 1)
+    h = np.where(f < 0.3, LO, MID)
+    gx, gy = x - dx * r * 0.1 - 0.32 * r, y - dy * r * 0.1 + 0.36 * r
+    h = np.where(np.hypot(U - gx, V - gy) < r * 0.36, HI, h)
+    return paint(A, H, hard(sd), h)
+
+
+def arc_droplet(t):
+    """Water spray: a splash crown at the start, then round drops flying up and out and falling, each stretched along its
+    speed; they shrink as they fall, mist specks with them."""
+    rng = np.random.default_rng(4201)
+    A, H = np.zeros_like(U), np.zeros_like(U)
+    x0, y0, g = 0.0, -0.52, 3.4
+    crown = 1 - ss(0.0, 0.32, t)
+    if crown > 0.02:
+        for j in range(7):
+            a = math.pi * (0.16 + 0.68 * j / 6)
+            L = (0.26 + 0.12 * (j % 2)) * (0.55 + 0.6 * ss(0, 0.2, t)) * crown
+            ca, sa = math.cos(a), math.sin(a)
+            d, k = seg(x0 + ca * 0.1, y0 + sa * 0.05, x0 + ca * (0.1 + L), y0 + sa * (0.05 + L))
+            A, H = paint(A, H, hard(d - (0.055 * (1 - k) + 0.01)), np.where(k > 0.55, HI, MID))
+        A, H = paint(A, H, hard(np.hypot((U - x0) / 1.6, V - y0) - 0.07 * crown), np.full_like(U, MID))
+    tt = 0.1 + t * 0.85
+    for i in range(7):
+        a = math.pi * (0.2 + 0.6 * (i + rng.uniform(-0.3, 0.3)) / 6)
+        sp = rng.uniform(0.62, 1.0)
+        vx, vy = math.cos(a) * sp * 0.85, math.sin(a) * sp * 2.5
+        r = rng.uniform(0.075, 0.115) * (1 - 0.4 * t)
+        A, H = water_drop(A, H, x0 + vx * tt, y0 + vy * tt - 0.5 * g * tt * tt, vx, vy - g * tt, r)
+    for i in range(6):
+        a = rng.uniform(0.25, math.pi - 0.25)
+        sp = rng.uniform(0.7, 1.15)
+        vx, vy = math.cos(a) * sp * 0.9, math.sin(a) * sp * 2.2
+        r = rng.uniform(0.026, 0.04) * (1 - 0.45 * t)
+        x, y = x0 + vx * tt, y0 + vy * tt - 0.5 * g * tt * tt
+        A, H = paint(A, H, hard(np.hypot(U - x, V - y) - r) * (1 - ss(0.62, 0.92, t + rng.uniform(-0.1, 0.1))), np.full_like(U, MID))
+    return A, H
+
+
+def arc_wave(t):
+    """A breaking wave crest seen side-on, rolling forward (+u): a swell rises, its crest throws a thick lip forward over
+    a dark barrel with white-hot foam claws on its leading edge; then the lip falls, the barrel closes and the crest
+    bursts into foam and spray as the wave sinks."""
+    yb = -0.56
+    X = -0.3 + 0.34 * t
+    build = ss(0.0, 0.42, t)
+    crash = ss(0.56, 0.95, t)
+    Hc = 0.36 + 0.8 * build - 0.62 * crash
+    rb = (0.15 + 0.17 * build) * (1 - 0.55 * crash)
+    theta = math.radians(10 + 190 * ss(0.05, 0.5, t) + 50 * crash)
+    top = (X, yb + Hc)
+    phis = math.radians(105)
+    cb = (top[0] - rb * math.cos(phis), top[1] - rb * math.sin(phis))
+    # The body: the back rising to the crest, the face falling under the barrel to its foot, a foam-edged underside.
+    back = bez((-0.9, yb - 0.1), (-0.62, yb + 0.02), (X - 0.52, yb + Hc * 0.98), top, 18)
+    face = bez(top, (cb[0] + rb * 0.3, cb[1] + rb * 0.35), (cb[0] - rb * 0.95, cb[1] - rb * 1.35), (cb[0] + rb * 1.7, yb), 14)
+    foot = bez((cb[0] + rb * 1.7, yb), (cb[0] + rb * 2.4, yb - 0.02), (0.86, yb - 0.04), (0.88, yb - 0.1), 6)
+    under = [(0.88 - 1.76 * u, yb - 0.1 - 0.06 * math.sin(math.pi * u) + 0.022 * math.sin(u * 47)) for u in np.linspace(0, 1, 26)[:-1]]
+    sd = poly_sd(back + face + foot + under)
+    A = hard(sd)
+    depth = np.clip(-sd, 0, 9)
+    H = np.where(depth < 0.09 + 0.04 * build, MID, LO)
+    for off, a0, a1 in ((0.13, 0.25, 0.8), (0.26, 0.15, 0.55)):          # two streaks along the back
+        pts = [(x, y - off) for x, y in back[int(a0 * 18):int(a1 * 18)]]
+        H = np.where((tube(pts, [PX * 1.2] * len(pts)) < 0) & (sd < 0), MID, H)
+    if theta > math.radians(60):                                          # the barrel: the dark inside of the curl
+        A, H = paint(A, H, hard(np.hypot(U - cb[0], V - cb[1]) - rb * 0.98) * (sd > -PX), np.full_like(U, LO))
+    # The lip: a thick arm curling round the barrel from the crest, thinning to the tip, its outer edge white-hot.
+    n = 32
+    s = np.linspace(0, 1, n)
+    phi = phis - theta * s
+    rr = rb * (1.0 - 0.25 * s * s)
+    ws = (0.05 + 0.11 * build) * (1 - s) ** 0.7 * (1 - 0.35 * crash) + PX * 0.8
+    pts = list(zip(cb[0] + rr * np.cos(phi), cb[1] + rr * np.sin(phi)))
+    da = tube(pts, ws)
+    outer = np.hypot(U - cb[0], V - cb[1]) > rb * 0.8
+    lip = hard(da)
+    lh = np.where(da > -PX * 2.8, np.where(outer, HI, LO), MID)
+    if crash > 0:                                                         # it turns to foam and breaks up
+        keep = fbm(U * 7 + 3, V * 7 + 1, 4301, 3)
+        lip = lip * ss(crash * 0.75 - 0.02, crash * 0.75 + 0.02, keep)
+        lh = np.where(keep < crash * 0.9 + 0.2, HI, lh)
+    A, H = paint(A, H, lip, lh)
+    claws = 1 - ss(0.55, 0.8, t)                                          # foam claws on the lip's leading edge
+    if theta > math.radians(110) and claws > 0.05:
+        for j in range(5):
+            m = int(n * (0.42 + 0.1 * j))
+            q, w, nrm = pts[m], ws[m], phi[m]                             # nrm: outward from the barrel centre
+            bx, by = q[0] + math.cos(nrm) * w * 0.8, q[1] + math.sin(nrm) * w * 0.8
+            g = nrm - 0.55
+            L = (0.1 + 0.035 * (j % 2)) * claws * (1 - 0.12 * j)
+            k = np.linspace(0, 1, 6)
+            cl = [(bx + math.cos(g - u) * L * u, by + math.sin(g - u) * L * u) for u in k]
+            A, H = paint(A, H, hard(tube(cl, (0.03 * (1 - k) + 0.006) * (0.6 + 0.4 * claws))), np.full_like(U, HI))
+    if crash > 0:
+        rng = np.random.default_rng(4302)
+        keep = fbm(U * 5 + 9, V * 5 + 4, 4303, 3)
+        for j in range(7):                                                # foam puffs bursting where the lip lands
+            a = rng.uniform(-0.3, math.pi * 0.9)
+            d = rng.uniform(0.3, 1.0)
+            px = cb[0] + rb * 0.5 + math.cos(a) * 0.3 * d * (0.4 + 0.6 * crash)
+            py = yb + 0.08 + abs(math.sin(a)) * 0.28 * d * (0.4 + 0.6 * crash)
+            r = rng.uniform(0.07, 0.13) * ss(0.0, 0.4, crash) * (1 + 0.3 * crash)
+            lit = (U - px) * -0.6 + (V - py) * 0.8 > -0.25 * r
+            a_ = hard(np.hypot(U - px, V - py) - r) * ss(crash * 0.8 - 0.25, crash * 0.8 - 0.21, keep)
+            A, H = paint(A, H, a_, np.where(lit, HI, MID))
+        for j in range(10):                                               # spray thrown forward and up
+            a = rng.uniform(0.25, 1.4)
+            sp = rng.uniform(0.5, 1.0)
+            px = cb[0] + rb * 0.6 + math.cos(a) * sp * 0.75 * crash
+            py = yb + 0.25 + math.sin(a) * sp * 1.0 * crash - 0.8 * crash * crash
+            r = rng.uniform(0.028, 0.05) * (1 - 0.35 * crash)
+            A, H = paint(A, H, hard(np.hypot(U - px, V - py) - r), np.where(np.hypot(U - px + r * 0.3, V - py - r * 0.3) < r * 0.45, HI, MID))
+    return A, H
+
+
+def petal_outline(L, W):
+    """A blossom petal from its base at the origin up +v: narrow at the base, full near the top, a notch in its tip."""
+    right = [(0.0, 0.0)] + [(W * math.sin(math.pi * 0.5 * u) ** 0.9 * (1.0 - 0.12 * u), L * (0.08 + 0.72 * u)) for u in np.linspace(0.12, 1, 7)]
+    right += [(W * 0.86, L * 0.88), (W * 0.62, L * 0.99), (W * 0.32, L * 1.0), (0.0, L * 0.86)]
+    return mirror(right)
+
+
+def arc_petal(t):
+    """A blossom: a closed bud that opens into five notched petals round a white-hot centre, holds, then lets go; the
+    petals drift out and fall, turning over (foreshortened) as they tumble. Each petal: the coloured band, a dark rim, a
+    hot spot at its base and a lit stripe on its sunward side."""
+    rng = np.random.default_rng(4401)
+    A, H = np.zeros_like(U), np.zeros_like(U)
+    o = ss(0.0, 0.4, t)
+    let_go = max(0.0, (t - 0.47) / 0.53)
+    for k in (0, 4, 1, 3, 2):
+        jit = rng.uniform(-0.12, 0.12)
+        spin = rng.uniform(1.6, 3.0) * (1 if k % 2 else -1)
+        fall_x = rng.uniform(-0.25, 0.25)
+        turn = rng.uniform(0.6, 1.6)
+        a = math.pi / 2 + o * (math.tau * (k - 2) / 5) + 0.12 * o
+        L, W, base = 0.26 + 0.22 * o, 0.13 + 0.07 * o, 0.1 * o
+        bx, by = math.cos(a) * base, 0.02 + math.sin(a) * base - 0.1 * (1 - o)
+        rot = a - math.pi / 2 + (1 - o) * (k - 2) * 0.12
+        sx = 1.0
+        if let_go > 0:
+            u = let_go
+            bx += math.cos(a) * 0.38 * u + fall_x * u
+            by += math.sin(a) * 0.22 * u - 0.72 * u * u
+            rot += spin * u
+            sx = max(0.3, abs(math.cos(u * math.pi * turn)))
+        sd = poly_sd(place(petal_outline(L, W), bx, by, rot, sx, 1.0))
+        a_ = hard(sd) * (1 - ss(0.78, 1.0, t + jit * 0.5))
+        ca, sa = math.cos(rot + math.pi / 2), math.sin(rot + math.pi / 2)
+        along = ((U - bx) * ca + (V - by) * sa) / L                      # 0 at the base, 1 at the tip
+        across = ((U - bx) * -sa + (V - by) * ca) / (W * sx)              # -1 .. 1 across it
+        sun = 1 if -sa * LIGHT[0] + ca * LIGHT[1] < 0 else -1
+        h = np.where(-sd < PX * 2.4, LO, MID)
+        h = np.where((across * sun > 0.38) & (across * sun < 0.62) & (along > 0.3) & (along < 0.78) & (-sd > PX * 2.4), HI, h)
+        h = np.where((along < 0.16) & (-sd > PX * 1.5), HI, h)
+        A, H = paint(A, H, a_, h)
+    c = 1 - ss(0.45, 0.62, t)                                             # the centre, gone as the petals let go
+    if c > 0.02:
+        rc = (0.06 + 0.05 * o) * c
+        A, H = paint(A, H, hard(np.hypot(U, V - 0.02) - rc), np.full_like(U, HI))
+        for j in range(5):
+            g = math.tau * j / 5 + 0.3
+            A, H = paint(A, H, hard(np.hypot(U - math.cos(g) * rc * 0.6, V - 0.02 - math.sin(g) * rc * 0.6) - rc * 0.2), np.full_like(U, LO))
+    return A, H
+
+
+def arc_cloud(t):
+    """A dark storm-cloud puff: cumulus lobes heaped on a flat underside that billow out and up, in two dark flat bands
+    (low heat, so the ramp's dark edge shows), a few lobes catching a bright rim light; past the middle it tears apart."""
+    rng = np.random.default_rng(4501)
+    pop = 1 - (1 - min(1.0, t / 0.3)) ** 2
+    Hh = np.full_like(U, -1.0)
+    NX, NY, NZ = np.zeros_like(U), np.zeros_like(U), np.ones_like(U)
+    SD = np.full_like(U, 9.0)
+    rims = np.zeros_like(U)
+    floor = -0.32 - 0.04 * t
+    lobes = [(0.0, 0.02, 0.32), (-0.33, -0.08, 0.24), (0.34, -0.06, 0.25), (-0.16, 0.22, 0.22), (0.17, 0.25, 0.2),
+             (-0.55, -0.16, 0.16), (0.56, -0.14, 0.17), (0.02, 0.4, 0.15)]
+    for i, (lx, ly, lr) in enumerate(lobes):
+        grow = ss(0.15, 0.5, t) if i >= 6 else 1.0                       # the last two billow out later
+        if grow <= 0.01:
+            continue
+        r = lr * (0.72 + 0.28 * pop) * (1 + 0.25 * t) * grow * rng.uniform(0.92, 1.05)
+        cx = lx * (0.62 + 0.38 * pop) * (1 + 0.3 * t) + 0.03 * math.sin(math.tau * t + i)
+        cy = ly * (0.6 + 0.4 * pop) + 0.12 * t + 0.02 * math.cos(math.tau * t + i * 1.7)
+        du, dv = (U - cx) / r, (V - cy) / r
+        q = du * du + dv * dv
+        h = np.where(q < 1, np.sqrt(np.clip(1 - q, 0, 1)), -1.0)
+        win = h > Hh
+        Hh = np.where(win, h, Hh)
+        NX, NY, NZ = np.where(win, du, NX), np.where(win, dv, NY), np.where(win, h, NZ)
+        SD = np.minimum(SD, (np.sqrt(q) - 1) * r)
+        if i in (0, 3, 4, 7):                                             # a rim light on the lit top edge of a few lobes
+            facing = (du * -0.45 + dv * 0.9) / np.maximum(np.sqrt(q), 1e-3)
+            rim = (np.sqrt(q) > 1 - 0.17 / max(r / 0.25, 0.6)) & (q < 1) & (facing > 0.55) & win
+            rims = np.where(rim, 1.0, np.where(win, 0.0, rims))
+    SD = np.maximum(SD, floor - V)
+    wob = (fbm(U * 4 + 2, V * 4, 4502, 2) - 0.5) * (0.035 + 0.05 * t)
+    alpha = hard(SD + wob)
+    holes = fbm(U * 4.5 + 5, V * 4.5, 4503, 3)
+    dry = ss(0.42, 1.12, t)
+    alpha *= ss(dry * 0.95 - 0.02, dry * 0.95 + 0.02, holes * 0.8 + np.clip(Hh, 0, 1) * 0.25)
+    inv = 1 / np.sqrt(NX * NX + NY * NY + NZ * NZ + 1e-9)
+    shade = (NX * LIGHT[0] + NY * LIGHT[1] + NZ * LIGHT[2]) * inv
+    heat = 0.03 + 0.08 * ss(0.5, 0.54, shade) + 0.07 * ss(0.82, 0.86, shade)
+    heat = np.where(V < floor + 0.05, 0.03, heat)
+    heat = np.where(rims > 0.5, 0.62 + 0.38 * (1 - ss(0.4, 0.8, t)) * (1 - 0.35 * ss(0.6, 0.9, t)), heat)
+    return alpha, heat
+
+
+def round_rect(a, b, r, n=6):
+    """A rounded rectangle's outline, half-sizes a by b, corner radius r."""
+    pts = []
+    for cx, cy, a0 in ((a - r, b - r, 0.0), (-a + r, b - r, math.pi / 2), (-a + r, -b + r, math.pi), (a - r, -b + r, 1.5 * math.pi)):
+        pts += [(cx + r * math.cos(a0 + math.pi / 2 * j / n), cy + r * math.sin(a0 + math.pi / 2 * j / n)) for j in range(n + 1)]
+    return pts
+
+
+def arc_card(t):
+    """A playing card spinning as it flips: the face white-hot with a coloured diamond pip and corner pips, the back in
+    the coloured band with a dark inset frame and a hot centre diamond, a dark rim on both; it foreshortens as it turns
+    and makes half a turn in the plane (the card looks the same upside down), so the 8 frames loop. Frame 2 (the aura's
+    mote frame) is the face, nearly upright."""
+    i = t * FRAMES
+    th = math.tau * (i - 2) / FRAMES + 0.2
+    phi = -0.54 + math.pi * i / FRAMES
+    c = math.cos(th)
+    sx = max(abs(c), 0.12)
+    on = lambda pts: poly_sd(place(pts, 0, 0, phi, sx, 1.0))
+    sd = on(round_rect(0.34, 0.5, 0.07))
+    if c > 0:
+        Hh = np.full_like(U, HI)
+        for p in ([(0, 0.21), (0.14, 0), (0, -0.21), (-0.14, 0)], [(-0.22, 0.42), (-0.17, 0.34), (-0.22, 0.26), (-0.27, 0.34)],
+                  [(0.22, -0.42), (0.27, -0.34), (0.22, -0.26), (0.17, -0.34)]):
+            Hh = np.where(on(p) < 0, MID, Hh)
+    else:
+        Hh = np.full_like(U, MID)
+        Hh = np.where(np.abs(on(round_rect(0.265, 0.425, 0.05))) < PX * 1.3, LO, Hh)
+        Hh = np.where(on([(0, 0.15), (0.1, 0), (0, -0.15), (-0.1, 0)]) < 0, HI, Hh)
+    return hard(sd), np.where(-sd < PX * 2.6, LO, Hh)
+
+
+GLASS_SHARD = [(0.0, 0.72), (0.25, 0.06), (0.11, -0.54), (-0.02, -0.36), (-0.17, -0.52), (-0.21, -0.02)]
+
+
+def arc_shard(t):
+    """A sharp glass shard tumbling: two facets (a lit one in the coloured band, a shade one darker), its edges that face
+    the light white-hot, a glint sliding along it as it turns and a twinkle at its tip when it faces the light."""
+    pop = 0.7 + 0.3 * ss(0.0, 0.18, t)
+    rot = 0.5 - 2.3 * math.pi * t
+    psi = math.tau * 1.25 * t + 0.35
+    cs = math.cos(psi)
+    s = pop * (1 - 0.15 * t)
+    pts = place(GLASS_SHARD, 0, 0, rot, (0.28 + 0.72 * abs(cs)) * s, s)
+    sd = poly_sd(pts)
+    A = hard(sd)
+    (ax, ay), (bx, by) = pts[0], pts[3]                                   # the facet line: tip to the notch at the break
+    side = (U - ax) * (by - ay) - (V - ay) * (bx - ax)
+    Hh = np.where((side > 0) == (cs > 0), MID, 0.26)
+    mx, my = np.mean([p[0] for p in pts]), np.mean([p[1] for p in pts])
+    for j in range(len(pts)):                                             # edges facing the light: a white-hot band
+        (px, py), (qx, qy) = pts[j], pts[(j + 1) % len(pts)]
+        l = math.hypot(qx - px, qy - py) or 1e-9
+        nx, ny = (qy - py) / l, -(qx - px) / l
+        if ((px + qx) / 2 - mx) * nx + ((py + qy) / 2 - my) * ny < 0:
+            nx, ny = -nx, -ny
+        if nx * LIGHT[0] + ny * LIGHT[1] > 0.15:
+            Hh = np.where((seg(px, py, qx, qy)[0] < PX * 2.6) & (sd < 0), HI, Hh)
+    ca, sa = math.cos(rot + math.pi / 2), math.sin(rot + math.pi / 2)
+    g = -0.5 * s + 1.2 * s * ((t * 1.25 + 0.1) % 1)
+    Hh = np.where((np.abs(U * ca + V * sa - g) < PX * 1.8) & (sd < -PX * 1.5), HI, Hh)
+    tw = max(0.0, cs) ** 6
+    if tw > 0.3:
+        x, y = U - pts[0][0], V - pts[0][1]
+        L = 0.2 * tw
+        rays = np.maximum(hard(np.abs(y) - PX * 1.6 * np.clip(1 - np.abs(x) / L, 0, 1)) * (np.abs(x) < L),
+                          hard(np.abs(x) - PX * 1.6 * np.clip(1 - np.abs(y) / L, 0, 1)) * (np.abs(y) < L))
+        A, Hh = paint(A, Hh, np.maximum(rays, hard(np.hypot(x, y) - PX * 2.5)), np.full_like(U, HI))
+    return A, Hh
+
+
+def arc_bone(t):
+    """A bone fragment tumbling end over end: a knobbed joint at one end, a jagged break at the other, shaded as a cel
+    cylinder (a white-hot edge toward the light, the coloured body, a dark underside), the marrow dark at the break.
+    Frame 2 (the aura's mote frame) shows it full length."""
+    rot = -1.13 + 2.2 * math.pi * t
+    sx = 0.5 + 0.5 * abs(math.cos(1.5 * math.pi * t + 1.96))
+    s = (0.85 + 0.2 * ss(0.0, 0.15, t)) * 1.12
+    c, sn = math.cos(rot), math.sin(rot)
+    x, y = (U * c + V * sn) / (sx * s), (-U * sn + V * c) / s
+    shaft, k = seg(-0.34, 0.0, 0.36, 0.0, x, y)
+    rr = 0.068 + 0.018 * (1 - k)
+    d = shaft - rr
+    nx, ny = np.zeros_like(U), y / np.maximum(rr, 1e-3)
+    for (kx, ky, kr) in ((-0.42, 0.07, 0.085), (-0.42, -0.07, 0.085), (-0.35, 0.0, 0.08)):
+        dk = np.hypot(x - kx, y - ky) - kr
+        win = dk < d
+        nx, ny = np.where(win, (x - kx) / kr, nx), np.where(win, (y - ky) / kr, ny)
+        d = np.minimum(d, dk)
+    jag = 0.3 + 0.05 * np.abs(((y / 0.045) % 2) - 1)
+    d = np.maximum(d, x - jag)
+    lx, ly = LIGHT[0] * c + LIGHT[1] * sn, -LIGHT[0] * sn + LIGHT[1] * c   # the light in the bone's frame
+    lit = (nx * lx + ny * ly) / math.hypot(lx, ly)
+    Hh = np.where(lit > 0.5, HI, np.where(lit < -0.45, LO, MID))
+    return hard(d * s), np.where((x > jag - 0.07) & (np.abs(y) < 0.035), LO, Hh)
+
+
+def skull_sd(cx, cy, s):
+    """A front-facing skull glyph at (cx, cy), size s: (the skull's signed distance, its sockets, nose and teeth)."""
+    cran = np.hypot(U - cx, V - cy - 0.1 * s) - 0.27 * s
+    jaw = poly_sd(place(round_rect(0.15, 0.13, 0.05), cx, cy - 0.17 * s, 0, s, s))
+    cheek = poly_sd(place([(-0.24, 0.02), (0.24, 0.02), (0.17, -0.16), (-0.17, -0.16)], cx, cy, 0, s, s))
+    body = np.minimum(np.minimum(cran, jaw), cheek)
+    holes = np.minimum(np.hypot(U - cx - 0.11 * s, (V - cy) / 0.92) - 0.085 * s, np.hypot(U - cx + 0.11 * s, (V - cy) / 0.92) - 0.085 * s)
+    holes = np.minimum(holes, poly_sd(place([(0, -0.07), (0.04, -0.15), (-0.04, -0.15)], cx, cy, 0, s, s)))
+    for x0, y0, x1, y1 in ((-0.065, -0.205, -0.065, -0.29), (0.0, -0.205, 0.0, -0.29), (0.065, -0.205, 0.065, -0.29), (-0.1, -0.205, 0.1, -0.205)):
+        holes = np.minimum(holes, seg(cx + x0 * s, cy + y0 * s, cx + x1 * s, cy + y1 * s)[0] - 0.012 * s)
+    return body, holes
+
+
+def arc_skull(t):
+    """A small skull glyph for auras: it pops in (overshooting), holds white-hot with a coloured rim and a soft glow, dark
+    sockets and teeth, then cools and breaks up from the edges as it drifts up. Frame 2 is the held glyph."""
+    s = 0.55 + 0.6 * t / 0.12 if t < 0.12 else 1.12 - 0.12 * ss(0.12, 0.25, t) - 0.06 * ss(0.5, 1.0, t)
+    body, holes = skull_sd(0.0, 0.12 * ss(0.5, 1.0, t), s * 0.92)
+    solid = hard(body)
+    glow = np.exp(-(np.maximum(body, 0) / (0.09 + 0.05 * (t < 0.15))) ** 2) * (0.55 - 0.3 * ss(0.4, 0.9, t)) * (body > 0)
+    core = np.full_like(U, HI) if t < 0.12 else np.where(-body > PX * (2.6 + 5 * ss(0.45, 0.85, t)), HI, MID)
+    Hh = np.where(solid > 0.5, np.where(holes < 0, 0.04, core), LO)
+    dry = ss(0.55, 1.05, t)
+    keep = fbm(U * 7 + 3, V * 7 + 2, 4601, 3) + 0.15 * np.clip(-body / 0.2, 0, 1)
+    return np.maximum(solid, glow) * ss(dry * 0.9 - 0.03, dry * 0.9 + 0.03, keep), Hh
+
+
+FOX_HEAD = mirror([(0.0, 0.16), (0.1, 0.21), (0.3, 0.58), (0.43, 0.15), (0.5, 0.03), (0.64, -0.1), (0.47, -0.14), (0.53, -0.25),
+                   (0.3, -0.3), (0.13, -0.42), (0.0, -0.5)])
+FOX_EYE = [(0.09, -0.02), (0.2, 0.04), (0.29, -0.02), (0.19, -0.08)]
+FOX_EAR = [(0.15, 0.22), (0.28, 0.46), (0.35, 0.18)]
+CRAB_CLAW = [(-0.62, -0.4), (-0.5, -0.56), (-0.22, -0.36), (0.12, -0.28), (0.42, -0.14), (0.66, 0.04), (0.44, 0.06), (0.38, 0.1),
+             (0.32, 0.05), (0.25, 0.1), (0.17, 0.05), (0.08, 0.12), (0.17, 0.21), (0.25, 0.19), (0.3, 0.26), (0.38, 0.25),
+             (0.44, 0.33), (0.58, 0.46), (0.38, 0.58), (0.1, 0.5), (-0.16, 0.34), (-0.32, 0.12), (-0.4, -0.16), (-0.6, -0.28)]
+GOLEM_FIST = [(-0.4, 0.02), (-0.4, 0.3), (-0.33, 0.37), (-0.22, 0.35), (-0.18, 0.4), (-0.06, 0.4), (-0.01, 0.36), (0.04, 0.41),
+              (0.16, 0.41), (0.2, 0.35), (0.25, 0.38), (0.36, 0.37), (0.42, 0.29), (0.43, -0.2), (0.36, -0.3), (0.22, -0.32),
+              (0.22, -0.6), (-0.22, -0.6), (-0.22, -0.32), (-0.36, -0.28), (-0.44, -0.16)]
+
+
+def beast_form(i):
+    """The Transmuter's i-th form as a glyph: (signed distance, dark detail mask). 0 fox head, 1 crab claw, 2 wisp ring,
+    3 pollen wings, 4 golem fist."""
+    if i == 0:
+        sd = poly_sd(place(FOX_HEAD, 0, 0, 0, 0.92, 0.92))
+        det = poly_sd(place([(-0.07, -0.38), (0.07, -0.38), (0.0, -0.47)], 0, 0, 0, 0.92, 0.92)) < 0
+        for sgn in (1, -1):
+            for part in (FOX_EYE, FOX_EAR):
+                det |= poly_sd(place([(sgn * x, y) for x, y in part], 0, 0, 0, 0.92, 0.92)) < 0
+        return sd, det
+    if i == 1:
+        sd = poly_sd(place(CRAB_CLAW, 0.02, 0, 0, 0.92, 0.92))
+        return sd, (seg(-0.3, 0.02, 0.0, -0.12)[0] < PX * 1.4) & (sd < -PX * 3)
+    if i == 2:
+        sd = np.abs(RAD - 0.48) - 0.05
+        for j in range(4):
+            g = math.pi / 4 + j * math.pi / 2
+            sd = np.minimum(sd, seg(math.cos(g) * 0.52, math.sin(g) * 0.52, math.cos(g) * 0.66, math.sin(g) * 0.66)[0] - 0.035)
+        k = np.linspace(0, 1, 16)
+        sd = np.minimum(sd, tube(list(zip(0.06 * np.sin(k * 4.5) * k, -0.2 + 0.52 * k)), 0.17 * (1 - k) ** 1.1 * np.minimum(1, np.sqrt(k / 0.2 + 0.2))))
+        return sd, (np.hypot(U - 0.06, V + 0.12) < 0.035) | (np.hypot(U + 0.06, V + 0.12) < 0.035)
+    if i == 3:
+        sd = poly_sd(ellipse_pts(0, -0.06, 0.1, 0.15, 24))
+        det = np.zeros_like(U, bool)
+        for sgn in (1, -1):
+            sd = np.minimum(sd, poly_sd(place(ellipse_pts(0, 0, 0.3, 0.17, 28), sgn * 0.28, 0.17, sgn * 0.5)))
+            sd = np.minimum(sd, poly_sd(place(ellipse_pts(0, 0, 0.19, 0.12, 24), sgn * 0.22, -0.2, -sgn * 0.45)))
+            sd = np.minimum(sd, np.minimum(seg(sgn * 0.03, 0.08, sgn * 0.14, 0.42)[0] - 0.018, np.hypot(U - sgn * 0.15, V - 0.44) - 0.04))
+            det |= (seg(sgn * 0.08, 0.03, sgn * 0.5, 0.3)[0] < PX * 1.3) | (seg(sgn * 0.07, -0.08, sgn * 0.35, -0.3)[0] < PX * 1.3)
+        return sd, det & (sd < -PX * 2)
+    sd = poly_sd(place(GOLEM_FIST, 0, 0.02, 0, 0.95, 0.95))
+    det = np.zeros_like(U, bool)
+    for x0, y0, x1, y1 in ((-0.19, 0.36, -0.2, 0.06), (0.01, 0.36, 0.0, 0.06), (0.21, 0.36, 0.2, 0.06), (-0.42, 0.04, 0.14, 0.04), (0.14, 0.04, 0.2, -0.12)):
+        det |= seg(x0, y0, x1, y1)[0] < PX * 1.4
+    return sd, det & (sd < -PX * 2)
+
+
+def glow_glyph(sd, det, glow=0.45):
+    """A glowing silhouette: a white-hot rim, the coloured fill, dark details, a soft glow round it."""
+    g = np.exp(-(np.maximum(sd, 0) / 0.08) ** 2) * glow * (sd > 0)
+    H = np.where(sd > 0, LO, np.where(-sd < PX * 2.6, HI, MID))
+    return np.maximum(hard(sd), g), np.where(det, LO, H)
+
+
+def scanline_slice(A, H, i, amount, drop_p):
+    """Cut a glyph into 12 px scanline bands, shift each sideways up to `amount` px and drop a few: a form flickering."""
+    rng = np.random.default_rng(4700 + i)
+    A, H = A.copy(), H.copy()
+    for b in range(CELL // 12 + 1):
+        sl = slice(b * 12, min(CELL, (b + 1) * 12))
+        if rng.random() < drop_p:
+            A[sl] = 0
+            continue
+        sh = int(round(rng.uniform(-1, 1) * amount))
+        A[sl], H[sl] = np.roll(A[sl], sh, axis=1), np.roll(H[sl], sh, axis=1)
+        if abs(sh) >= amount * 0.6:
+            H[sl.start] = np.where(A[sl.start] > 0, HI, H[sl.start])
+    return A, H
+
+
+def arc_beast(t):
+    """Monster silhouettes flickering through the Transmuter's forms: fox head, crab claw, wisp ring, pollen wings, golem
+    fist (frames 0-4, in key order: frame k is the form on key k + 1), then the shift back to the fox: the fist slices
+    apart, the two ghost through each other, the fox reassembles (5-7), so it loops."""
+    i = int(round(t * FRAMES)) % FRAMES
+    if i <= 4:
+        return glow_glyph(*beast_form(i))
+    if i == 5:
+        return scanline_slice(*glow_glyph(*beast_form(4), glow=0.3), i, 7, 0.22)
+    if i == 6:
+        a4, h4 = glow_glyph(*beast_form(4), glow=0.0)
+        a4, h4 = scanline_slice(a4 * 0.55, np.minimum(h4, MID), i, 9, 0.35)
+        return paint(a4, h4, hard(np.abs(beast_form(0)[0]) - PX * 1.6), np.full_like(U, HI))
+    return scanline_slice(*glow_glyph(*beast_form(0), glow=0.3), i, 3, 0.1)
+
+
+# ---- the Ranger wave's rows (classes v2: Marksman, Sniper, Hunter, Gunslinger); burning ground and flame arrows use
+# the Arcane wave's flame.
 def muzzle(t):
     """A muzzle blast along +u from the left edge: a hot core, three long petals forward and short ones fanned to the
     sides; it bangs open in two frames, then the petals shrink and hollow and a ring of smoke heat is left."""
@@ -1166,9 +1675,20 @@ COMBAT_SPRITES = [
     ("beam", beam, "beam segment along +u (tiles along u)", True),
     ("ink", ink, "black ink splash and flicks", False),
     ("flare", flare, "four-point flare star", True),
-    # The Rangers (classes v2 wave): burning ground and flame arrows, gun and bow blasts, the harpoon's and the traps'
-    # chain, the Russian Roulette's warhead.
-    ("flame", flame, "flame tongues licking up (loops)", True),
+    # The Arcane wave (classes v2): the Elementalist's elements, the Illusionist's cards and glass, the Necromancer's bones
+    # and skull mote, the Transmuter's form glyphs.
+    ("flame", arc_flame, "fire tongue licking up, tip tears off (loops)", True),
+    ("droplet", arc_droplet, "water spray: drops fly out and fall", False),
+    ("wave", arc_wave, "wave crest side-on: curls forward, crashes", False),
+    ("petal", arc_petal, "blossom opens, its petals fall tumbling", False),
+    ("cloud", arc_cloud, "dark storm-cloud puff, a few rim lights", False),
+    ("card", arc_card, "playing card flipping as it spins (loops)", False),
+    ("shard", arc_shard, "glass shard tumbling, glint edge", True),
+    ("bone", arc_bone, "bone fragment tumbling", False),
+    ("skull", arc_skull, "skull glyph aura mote: pops in, fades", True),
+    ("beast", arc_beast, "fox, crab, wisp, pollen, golem glyphs (loops)", True),
+    # The Rangers (classes v2 wave): gun and bow blasts, the harpoon's and the traps' chain, the Russian Roulette's
+    # warhead.
     ("muzzle", muzzle, "muzzle blast along +u", True),
     ("chain", chain, "chain links along +u (tiles)", True),
     ("mushroom", mushroom, "mushroom cloud: fireball, cap, skirt", True),

@@ -1,6 +1,6 @@
 -- ─── Classes v2, the Ranger family: signature weapons and shop cosmetics ──────
 --
--- DRAFT 2026-10-02. NOT APPLIED. Apply after 20261002182708_zone1_mobs (and
+-- DRAFT 2026-10-03. NOT APPLIED. Apply after 20261003015109_classes_v2_arcane_seed (and
 -- 20261002181044_classes_v2). Spec: specs/classes/design-sheet.md, the Marksman,
 -- Sniper, Hunter and Gunslinger sections (LOCKED), §1.5 signature weapons, §1.10
 -- shop cosmetics. Mirrored in web/lib/combat/weapons.ts (signature tiers) and
@@ -61,3 +61,7 @@ INSERT INTO shop_items (slug, display_name, category, description, price_coins, 
   ('frame-ranger-fletching', 'Fletching frame', 'frame', 'A nameplate frame of crossed arrows.', 250, NULL,
     '{"image":"/assets/game/frames/ranger-fletching.svg"}', FALSE, '/assets/game/classes/cosmetics/frame-ranger-fletching.svg')
 ON CONFLICT (slug) DO NOTHING;
+
+-- Class cosmetics stay off sale until the classes v2 launch (the coordinator's guard, as the Arcane seed ends): wave 5
+-- sets them active when it turns economy_settings.classes_v2 on.
+UPDATE shop_items SET active = FALSE WHERE category IN ('weapon_skin', 'aura', 'frame') AND NOT public.classes_v2_on();

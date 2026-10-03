@@ -3,12 +3,14 @@
  * behind the classes_v2 flag). Left click fires the kit's FireSpec: its rate (a Focus passive ramps it while you keep
  * firing, a pause or a hit halves it), arrow drop, weak points, the buffs that bend a shot (homing, flame, swift, scope,
  * a surge's rate), a cylinder with its reload and active reload, special rounds loaded next (a spun, hammer-cocked
- * cylinder for an ult), and the Killstreak, Last Round and stealth bookkeeping. Damage over time and ground zones tick
- * here too. Pure over the runtime, like the rest of the encounter: the ruins scene and the balance bot drive it alike.
+ * cylinder for an ult), and the Killstreak and Last Round bookkeeping. Damage over time ticks here; burning ground is
+ * the shared zone primitive (primitives.ts), stealth the shared one. Pure over the runtime, like the rest of the
+ * encounter: the ruins scene and the balance bot drive it alike.
  */
-import { FAMILY_STAT, type Effect, type Status } from "@/lib/combat/kits";
+import { FAMILY_STAT, type Ability, type Effect } from "@/lib/combat/kits";
 import type { RoundDef } from "@/lib/combat/classes";
-import { buffSum, cue, floater, fx, strike } from "./abilities";
+import { buffSum, context, cue, floater, fx, strike } from "./abilities";
+import { reveal } from "./primitives";
 import type { CombatRuntime, Projectile, ShotHit } from "./runtime";
 import type { Enemy, Vec } from "./sim";
 
@@ -23,8 +25,6 @@ export const FIRE = {
   homeTurn: 7, homeReach: 9,
   /** Killstreak: seconds without a kill before it's lost. */
   streakWindow: 8,
-  /** Stealth: moving faster than this breaks it (a slow walk stays hidden); enemies this close still find you. */
-  stealthWalk: 3.8, stealthNear: 1.5,
   /** A weak point is a head or a core: a fraction of the body's radius, never wider than this (a boss's head isn't its girth). */
   weakMax: 0.3,
   /** A ricochet's reach to its next enemy. */
@@ -34,7 +34,6 @@ export const FIRE = {
 } as const;
 
 interface Dot { enemy: Enemy; power: number; left: number; tick: number }
-export interface Zone { id: number; x: number; z: number; radius: number; life: number; power: number; status?: Status; tick: number }
 /** The kit's live counters (ClassState.live). */
 export interface FireState {
   /** Focus 0..1 toward the passive's top rate; seconds since the last basic shot; seconds the weapon has been ready and not fired (a pause); already halved for it. */
@@ -47,22 +46,15 @@ export interface FireState {
   loaded: string[]; cock: number; cockEvery: number; window: number;
   /** Killstreak stacks and the seconds left to add one; a surge's shots owed (fractions carry between frames). */
   streak: number; streakT: number; owed: number;
-  dots: Dot[]; zones: Zone[];
+  dots: Dot[];
 }
 export function createLive(size = 0): FireState {
   return { focus: 0, since: 99, idle: 99, dropped: true, ammo: size, chamber: 0, reload: null, reloadLen: 0, tried: false, bonus: 0, sinceReload: 99,
-    loaded: [], cock: 0, cockEvery: 0, window: 0, streak: 0, streakT: 0, owed: 0, dots: [], zones: [] };
+    loaded: [], cock: 0, cockEvery: 0, window: 0, streak: 0, streakT: 0, owed: 0, dots: [] };
 }
 
 const v2 = (rt: CombatRuntime) => rt.v2!;
 const passive = (rt: CombatRuntime) => rt.v2?.passive;
-export const stealthed = (rt: CombatRuntime) => buffSum(rt, "stealth") > 0;
-/** Stealth ends: on a shot, an ability, a hit taken or a quick step. Returns the first shot's bonus it carried. */
-export function breakStealth(rt: CombatRuntime): number {
-  const bonus = buffSum(rt, "stealth");
-  if (bonus > 0) rt.buffs = rt.buffs.filter(b => b.stat !== "stealth");
-  return bonus;
-}
 
 /** Shots a second now: a surge (the ult) sets it outright; otherwise the kit's rate ramped by Focus, times the attack-speed stat. */
 export function fireRate(rt: CombatRuntime): number {
@@ -118,7 +110,8 @@ export function fireBasic(rt: CombatRuntime, me: Vec, auto = false): boolean {
   const key = surge ? "surge" : live.loaded[0], round: RoundDef | undefined = key ? f.rounds?.[key] : undefined;
   if (key && !surge) live.loaded.shift();
   const last = !!a && passive(rt)?.kind === "last_round" && live.chamber === a.size - 1;
-  const ambush = breakStealth(rt), bonus = a && live.bonus > 0 ? 1 + a.bonus : 1;
+  reveal(rt); // shooting gives you away (the first hit out of stealth takes its bonus in strike)
+  const bonus = a && live.bonus > 0 ? 1 + a.bonus : 1;
   if (a && live.bonus > 0) live.bonus--;
   // Focus climbs while the shots keep coming; the first shot after a pause starts from what's left.
   const pv = passive(rt);
@@ -128,9 +121,9 @@ export function fireBasic(rt: CombatRuntime, me: Vec, auto = false): boolean {
   const swift = buffSum(rt, "swift") > 0, flame = buffSum(rt, "flame"), scope = buffSum(rt, "scope") > 0;
   const speed = f.speed * (swift ? 2 : 1), dir = { x: Math.sin(p.facing), z: Math.cos(p.facing) };
   const hit: ShotHit = {
-    power: (round?.power ?? f.power) * bonus * (1 + ambush) * (last ? passive(rt)!.value : 1), stat: FAMILY_STAT[v.kit.family], hitIds: [], impact: round?.tier ?? "light", ult: round?.ult,
+    power: (round?.power ?? f.power) * bonus * (last ? passive(rt)!.value : 1), stat: FAMILY_STAT[v.kit.family], hitIds: [], impact: round?.tier ?? "light", ult: round?.ult,
     fx: round?.vfx ?? f.vfx?.impact, travel: round?.travel ?? f.vfx?.travel, ramp: v.kit.look.ramp, splash: round?.splash, round: key,
-    burst: round?.blast ? { power: round.power * bonus, radius: round.blast } : undefined,
+    blast: round?.blast ? { power: round.power * bonus, radius: round.blast } : undefined,
     steady: f.steady, crit: round?.crit || last || undefined, weak: f.weak ? f.weak * (scope ? 1.5 : 1) : undefined, pierces: swift ? 1 : undefined,
     status: flame > 0 ? { dot: [flame, 3] } : undefined, zone: flame > 0 ? { radius: 1.1, life: 2, power: flame, fx: f.vfx?.zone } : undefined,
   };
@@ -180,12 +173,11 @@ export function takeRounds(rt: CombatRuntime, want: number | "all"): { n: number
   return { n, last };
 }
 
-/** A hit taken: Focus halves, the Killstreak is lost, stealth breaks. */
+/** A hit taken: Focus halves, the Killstreak is lost. */
 export function onHurt(rt: CombatRuntime) {
   const v = rt.v2;
   if (!v) return;
   v.live.focus /= 2; v.live.streak = 0;
-  breakStealth(rt);
 }
 
 /** Damage over time on an enemy: one per enemy, a new one keeps the stronger and the longer. */
@@ -196,21 +188,26 @@ export function addDot(rt: CombatRuntime, e: Enemy, [power, seconds]: [number, n
   if (d) { d.power = Math.max(d.power, power); d.left = Math.max(d.left, seconds); }
   else v.live.dots.push({ enemy: e, power, left: seconds, tick: FIRE.tick });
 }
-/** A ground zone: one already burning at this spot (inside its radius) is refreshed instead of a second one. */
-export function addZone(rt: CombatRuntime, at: Vec, z: { radius: number; life: number; power?: number; status?: Status; fx?: string }) {
-  const v = rt.v2;
-  if (!v) return;
-  const old = v.live.zones.find(o => Math.hypot(o.x - at.x, o.z - at.z) < o.radius);
+/** The burning ground's source: the shared zone primitive's zones are by ability. */
+const GROUND: Ability = { key: "fire.ground", name: "Burning ground", description: "", cooldown_s: 0, energy: 0, effects: [] };
+/**
+ * Burning ground where a shot lands (a flame arrow): a shared zone (primitives.ts) of `power` a second. One already
+ * burning at this spot (inside its radius) is refreshed instead of a second one, so a hail of arrows never stacks them.
+ */
+export function addZone(rt: CombatRuntime, at: Vec, z: { radius: number; life: number; power?: number; fx?: string }) {
+  if (!rt.v2) return;
+  const zones = rt.field.zones, old = zones.find(o => o.source === GROUND.key && Math.hypot(o.x - at.x, o.z - at.z) < o.r);
   if (old) { old.life = Math.max(old.life, z.life); old.power = Math.max(old.power, z.power ?? 0); return; }
-  v.live.zones.push({ id: rt.seq++, x: at.x, z: at.z, radius: z.radius, life: z.life, power: z.power ?? 0, status: z.status, tick: 0 });
-  if (v.live.zones.length > 12) v.live.zones.shift();
-  fx(rt, z.fx, "zone", at, at, "ability", z.radius);
+  const ctx = context(rt, GROUND, at, 1, at);
+  zones.push({ id: rt.seq++, source: GROUND.key, x: at.x, z: at.z, dx: 0, dz: 1, r: z.radius, length: 0, life: z.life, every: FIRE.tick, tick: 0,
+    power: z.power ?? 0, heal: 0, slow: 0, pull: 0, blind: 0, follow: false, seek: 0, fx: z.fx, ctx, steady: true });
+  if (zones.filter(o => o.source === GROUND.key).length > 12) zones.splice(zones.findIndex(o => o.source === GROUND.key), 1);
 }
 
 /**
  * Every frame (the encounter's clock): Focus decays in a pause, the reload runs (faster with the reload stat), a spun
- * cylinder's hammer cocks and its window closes, the Killstreak runs out, a quick step breaks stealth, a surge fires on
- * its own, and damage over time and zones tick.
+ * cylinder's hammer cocks and its window closes, the Killstreak runs out, a surge fires on its own, and damage over
+ * time ticks.
  */
 export function stepFire(rt: CombatRuntime, me: Vec, dt: number, random: () => number = Math.random) {
   const v = rt.v2;
@@ -222,7 +219,6 @@ export function stepFire(rt: CombatRuntime, me: Vec, dt: number, random: () => n
   if (live.reload !== null && (live.reload += dt * v.mods.reload) >= live.reloadLen) finishReload(rt);
   if (live.cockEvery > 0) { live.cock = Math.max(0, live.cock - dt); if ((live.window -= dt) <= 0) endSpin(rt); }
   if (live.streak && (live.streakT -= dt) <= 0) live.streak = 0;
-  if (p.move.speed > FIRE.stealthWalk && stealthed(rt)) breakStealth(rt);
   const surge = v.kit.fire ? buffSum(rt, "surge") : 0;
   if (surge > 0 && p.alive && !p.dash) { // its own pace whatever the frame rate: shots owed this frame, carried over
     live.focus = 1;
@@ -233,14 +229,6 @@ export function stepFire(rt: CombatRuntime, me: Vec, dt: number, random: () => n
     const d = live.dots[i];
     if (d.enemy.state === "dead" || (d.left -= dt) <= 0 || !rt.enemies.includes(d.enemy)) { live.dots.splice(i, 1); continue; } // gone with a reset too
     if ((d.tick -= dt) <= 0) { d.tick += FIRE.tick; strike(rt, d.enemy, { power: d.power * FIRE.tick, from: d.enemy, stat: FAMILY_STAT[v.kit.family], unit: true, knock: 0, steady: true }, random); }
-  }
-  for (let i = live.zones.length - 1; i >= 0; i--) {
-    const z = live.zones[i];
-    if ((z.life -= dt) <= 0) { live.zones.splice(i, 1); continue; }
-    if ((z.tick -= dt) > 0) continue;
-    z.tick += FIRE.tick;
-    for (const e of rt.enemies) if (e.state !== "dead" && e.state !== "return" && Math.hypot(e.x - z.x, e.z - z.z) <= z.radius + e.type.radius)
-      strike(rt, e, { power: z.power * FIRE.tick, from: z, stat: FAMILY_STAT[v.kit.family], unit: true, knock: 0, status: z.status, steady: true }, random);
   }
 }
 
@@ -265,8 +253,8 @@ export function steerShot(rt: CombatRuntime, sh: Projectile, dt: number) {
 /** An arrow that has dropped to the ground is spent. */
 export const fallen = (sh: Projectile) => !!sh.fall && sh.fall.y <= -FIRE.launch;
 
-/** A bomblet's, a splash's or a blast round's burst: everything within `radius` of `at` (but `skip`). A `big` round replays the ult's sequence there. */
-export function burst(rt: CombatRuntime, at: Vec, power: number, radius: number, h: ShotHit, random: () => number, skip?: Enemy, emit = true) {
+/** A bomblet's, a splash's or a blast round's area: everything within `radius` of `at` (but `skip`). A `big` round replays the ult's sequence there. */
+export function blastAt(rt: CombatRuntime, at: Vec, power: number, radius: number, h: ShotHit, random: () => number, skip?: Enemy, emit = true) {
   let first = true;
   if (h.round && rt.v2?.kit.fire?.rounds?.[h.round]?.big) triggerSequence(rt, at, true);
   for (const e of rt.enemies) if (e !== skip && e.state !== "dead" && e.state !== "return" && Math.hypot(e.x - at.x, e.z - at.z) <= radius + e.type.radius) {
@@ -279,7 +267,7 @@ export function scatter(rt: CombatRuntime, at: Vec, c: NonNullable<ShotHit["clus
   for (let k = 0; k < c.count; k++) {
     const a = (k / c.count) * Math.PI * 2 + random() * 0.6, sp = 5 + random() * 2;
     rt.projectiles.push({ id: rt.seq++, x: at.x, z: at.z, vx: Math.sin(a) * sp, vz: Math.cos(a) * sp, life: 0.32, from: "player", damage: 0, kind: "bullet", radius: 0.15,
-      hit: { power: 0, stat: h.stat, impact: "ability", fx: c.fx, ramp: h.ramp, hitIds: skip ? [skip.id] : [], burst: { power: c.power, radius: c.radius } } });
+      hit: { power: 0, stat: h.stat, impact: "ability", fx: c.fx, ramp: h.ramp, hitIds: skip ? [skip.id] : [], blast: { power: c.power, radius: c.radius } } });
   }
 }
 /** A ricochet: the shot turns to the nearest enemy it hasn't hit within reach. False when there's none. */
@@ -301,7 +289,7 @@ export function ricochet(rt: CombatRuntime, sh: Projectile, from: Enemy): boolea
 /** A shot that ended without hitting an enemy: a bomblet bursts, a flame arrow leaves burning ground, a harpoon in terrain zips you there. */
 export function shotSpent(rt: CombatRuntime, sh: Projectile, wall: boolean, random: () => number) {
   const h = sh.hit!, at = { x: sh.x, z: sh.z };
-  if (h.burst) burst(rt, at, h.burst.power, h.burst.radius, h, random);
+  if (h.blast) blastAt(rt, at, h.blast.power, h.blast.radius, h, random);
   if (h.zone) addZone(rt, at, h.zone);
   const p = rt.player, me = p.last;
   if (h.grapple && wall && me && p.alive) {

@@ -60,7 +60,8 @@ async function stage(weapon, foes = [], type = "shadow-fox", hp = 9999) {
     if (!rt.player.owned.includes(weapon)) rt.player.owned.push(weapon);
     Object.assign(rt.player, { hp: rt.player.maxHp, alive: true, energy: 100, weapon });
     v.cd = {}; v.meter = 0; v.cast = null;
-    Object.assign(v.live, { focus: 0, since: 99, idle: 99, dropped: true, reload: null, tried: false, bonus: 0, loaded: [], cock: 0, cockEvery: 0, window: 0, streak: 0, dots: [], zones: [] });
+    Object.assign(v.live, { focus: 0, since: 99, idle: 99, dropped: true, reload: null, tried: false, bonus: 0, loaded: [], cock: 0, cockEvery: 0, window: 0, streak: 0, dots: [] });
+    Object.assign(rt.field, { zones: [], stealth: 0, ambush: 0, ambushFor: 0 }); // the shared zones and stealth (primitives.ts)
     if (v.kit.fire?.ammo) { v.live.ammo = v.kit.fire.ammo.size; v.live.chamber = 0; }
     window.__move.teleport(x, z, 0);
     foes.forEach(([fx, fz], i) => window.__combatDev.spawn(type, fx, fz, `kr-${type}-${i}-${Math.random().toString(36).slice(2, 6)}`));
@@ -116,7 +117,7 @@ const KITS = {
   ] },
   hunter: { weapon: "harpoon-1", rows: [
     ["basic: harpoon bolt", click, [40, 150, 300, 600], ONE],
-    ["1 Camouflage: hidden, first shot +60%", async () => { await page.keyboard.press("1"); setTimeout(() => click().catch(() => {}), 900); }, [120, 600, 1050, 1300], ONE],
+    ["1 Camouflage: unseen, first shot +60%", async () => { await page.keyboard.press("1"); setTimeout(() => click().catch(() => {}), 900); }, [120, 600, 1050, 1300], ONE],
     ["2 Snare Trap: roots 2 s", press("2"), [60, 160, 420, 900], ONE],
     ["3 Spike Trap: burst, bleed", press("3"), [60, 160, 420, 900], GROUP],
     ["4 Mark Prey: seen through walls", press("4"), [60, 220, 520, 950], ONE],
@@ -208,7 +209,7 @@ if (wanted("hud")) {
   for (const [key, label, setup] of [
     ["marksman", "Marksman: Focus at 6.8/s, Swift on", l => { l.focus = 0.8; l.since = 0; l.idle = 0; }],
     ["sniper", "Sniper: Killstreak 3, Scope held", l => { l.streak = 3; l.streakT = 6; }],
-    ["hunter", "Hunter: traps 2/3, hidden", null],
+    ["hunter", "Hunter: traps 2/3, unseen", null],
     ["gunslinger", "Gunslinger: reloading, the gold span on the bar", l => { l.ammo = 0; l.reload = 0.5; l.reloadLen = 1.2; }],
     ["gunslinger", "Gunslinger: Russian Roulette, hammer cocked", l => { l.ammo = 4; l.chamber = 2; l.loaded = ["gold", "warhead", "gold", "gold"]; l.cockEvery = 0.6; l.cock = 0; l.window = 6.4; }],
   ]) {

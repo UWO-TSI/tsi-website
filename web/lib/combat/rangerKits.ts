@@ -18,3 +18,16 @@ import { SNIPER } from "./ranger/sniper";
 
 export { GUNSLINGER, HUNTER, MARKSMAN, SNIPER };
 export const RANGER_KITS: ClassKit[] = [MARKSMAN, SNIPER, HUNTER, GUNSLINGER];
+
+/**
+ * The family's weapon skins (the seed's weapon_skin rows, by `${subclass}:${cosmetic.skin}`) as colours by the weapons'
+ * material names (art/props-enemies/build_ranger_weapons.py: M_Wood, M_Dark, M_Wrap, M_String, M_Fit, M_Iron), every
+ * tier: classes.ts WEAPON_SKINS, painted in hand by primitives.ts signaturePaint.
+ */
+export const RANGER_SKINS: Record<string, Record<string, string>> = {
+  "marksman:fletcher": { M_Wood: "#e9dfc8", M_Dark: "#bcae8e", M_Wrap: "#3d8fb8", M_String: "#eef6f8" }, // pale ash limbs, sea-blue fletching
+  "sniper:longshot": { M_Fit: "#d0a94e", M_Iron: "#b8913f", M_Wood: "#4b2f1f", M_Dark: "#2e1c13" }, // polished brass, dark walnut
+  "hunter:whalebone": { M_Wood: "#ece3cf", M_Dark: "#d4c8ad", M_String: "#2b2522", M_Iron: "#3a3330" }, // a bone-white stock, a tarred chain
+  "gunslinger:pearl": { M_Wood: "#f1ece4", M_Iron: "#2e3c5e", M_Dark: "#222b42", M_Fit: "#9aa9bd" }, // a pearl grip, a blued barrel
+  "gunslinger:starfire": { M_Iron: "#1c2340", M_Fit: "#ffcf6a", M_Wood: "#3b2a1f" }, // night-blue steel, star-gold fittings
+};

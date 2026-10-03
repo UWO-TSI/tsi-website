@@ -10,6 +10,7 @@
 import { FACE, type Recipe } from "./particles";
 import type { CombatSprite } from "./combatPack";
 import type { ImpactTier } from "@/lib/game/combat/runtime";
+import { ARCANE_FX } from "./arcaneFx";
 import { RANGER_FX } from "./rangerFx";
 
 export type Ramp = readonly [core: string, mid: string, edge: string];
@@ -82,6 +83,7 @@ export const FX: Record<string, FxRecipe> = {
     { kind: "light", intensity: 40, distance: 12, life: 0.5 }] },
   "demo.ultDecal": { tier: "ult", layers: [{ kind: "decal", sprite: "crack", size: 2.2, life: 4, byRadius: true }, { kind: "decal", sprite: "rune", size: 1.6, life: 2, byRadius: true, spin: 0.4 }] },
   // ── The family waves' recipes ──
+  ...ARCANE_FX,
   ...RANGER_FX,
 };
 

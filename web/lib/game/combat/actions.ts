@@ -11,12 +11,13 @@ import { BOSS, DODGE, engage, inArc, invulnerable, spawnEnemy, sweptHit, type En
 import { ENERGY, SLOT_IDS, energyMax, energyRegen, setWeapon, type AbilityId, type CombatRuntime } from "./runtime";
 import { cancelCast, chargeUlt, cue, floater, fx, mitigate, strike, summon, fireSlot } from "./abilities";
 import { takenCharge } from "@/lib/combat/ult";
+import { counterHit, formBasic, formTier, reveal } from "./primitives";
 import type { SpawnPoint } from "./spawns";
 import { FAMILY_STAT } from "@/lib/combat/kits";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { MOVE_TUNING, type MoveTuning } from "@/lib/game/movement/sim";
 import { holdsSignature } from "@/lib/combat/classes";
-import { addZone, burst, FIRE, fireBasic, onHurt, ricochet, scatter } from "./classFire";
+import { addZone, blastAt, FIRE, fireBasic, onHurt, ricochet, scatter } from "./classFire";
 
 /** Energy regen: after ENERGY.delay seconds without spending, never while tracing. */
 export function regenEnergy(rt: CombatRuntime, dt: number) {
@@ -50,23 +51,26 @@ export function combatFacing(p: CombatRuntime["player"], at: Vec, travel: number
 /** Primary attack with the equipped weapon toward the aim. Returns true if it fired. */
 export function attack(rt: CombatRuntime, player: Vec, random = Math.random): boolean {
   const p = rt.player;
-  if (!p.alive || p.attackCd > 0 || rt.casting || p.dash || (p.dodgeAge !== null && p.dodgeAge < DODGE.duration)) return false;
+  if (!p.alive || p.attackCd > 0 || rt.casting || p.dash || rt.v2?.channel || (p.dodgeAge !== null && p.dodgeAge < DODGE.duration)) return false; // a channel takes your hands
   // Classes v2: a kit with its own basic attack fires it from its signature weapon (classFire.ts); any other weapon swings its own.
   const kit = rt.v2?.kit;
   if (kit?.fire && holdsSignature(kit, SYSTEM_WEAPONS.find(x => x.key === p.weapon)?.type)) { faceAim(p, player); return fireBasic(rt, player); }
-  const w = WEAPONS[p.weapon];
+  // Classes v2: a form brings its own click attack (primitives.ts formBasic); attacking ends stealth.
+  const form = formBasic(rt), w = form ? { ...WEAPONS[p.weapon], ...form } : WEAPONS[p.weapon], tier = form ? formTier(rt, rt.v2?.form) : undefined;
   p.attackCd = w.cooldown / (rt.v2?.mods.attackSpeed ?? 1);
   faceAim(p, player);
+  reveal(rt);
   cue(rt, "swing", player);
   const dir = { x: Math.sin(p.facing), z: Math.cos(p.facing) };
   if (w.kind === "melee") {
     p.swing = 0.22;
     let landed = false;
-    for (const e of rt.enemies) if (e.state !== "dead" && inArc(player, p.facing, w.range, w.arc, e, e.type.radius)) { strike(rt, e, { power: 1, from: player, knock: 4, melee: true }, random); landed = true; }
+    for (const e of rt.enemies) if (e.state !== "dead" && inArc(player, p.facing, w.range, w.arc, e, e.type.radius)) { strike(rt, e, { power: form?.power ?? 1, from: player, knock: form?.knock ?? 4, melee: true, status: form?.status, tier }, random); landed = true; }
     if (landed) wearHit(rt);
   } else if (w.kind === "bow" || w.kind === "staff") {
-    const speed = w.speed ?? 12;
-    rt.projectiles.push({ id: rt.seq++, x: player.x + dir.x * 0.5, z: player.z + dir.z * 0.5, vx: dir.x * speed, vz: dir.z * speed, life: w.range / speed, from: "player", damage: 0, kind: w.kind === "bow" ? "arrow" : "bolt", radius: w.kind === "bow" ? 0.15 : 0.3 });
+    const speed = w.speed ?? 12, kind = w.shot ?? (w.kind === "bow" ? "arrow" : "bolt");
+    rt.projectiles.push({ id: rt.seq++, x: player.x + dir.x * 0.5, z: player.z + dir.z * 0.5, vx: dir.x * speed, vz: dir.z * speed, life: w.range / speed, from: "player", damage: 0, kind, radius: w.kind === "bow" ? 0.15 : 0.3,
+      ...(form ? { hit: { power: form.power, status: form.status, splash: form.splash, tier, hitIds: [], impact: "light" as const, ramp: rt.v2?.kit.look.ramp } } : {}) });
   } else {
     // The summoning charm: a short-lived wisp at your side (two at most), apart from the kit's summons.
     const stat = SYSTEM_WEAPONS.find(x => x.key === p.weapon)?.scaling[0] ?? FAMILY_STAT.Warden;
@@ -87,14 +91,14 @@ export function resolvePlayerShot(rt: CombatRuntime, shotIdx: number, from: Vec,
     if (s.kind === "bolt") splash(rt, to, 1.3, target, { power: 0.5, from: to, knock: 2 }, random);
     return true;
   }
-  if (h.burst) { burst(rt, to, h.burst.power, h.burst.radius, h, random); return true; } // a bomblet or a blast round bursts on contact
+  if (h.blast) { blastAt(rt, to, h.blast.power, h.blast.radius, h, random); return true; } // a bomblet or a blast round bursts on contact
   // Classes v2: a weak point (the shot through the inner part of the body) always crits; a harpoon pulls toward you.
   const crit = h.crit || (!!h.weak && lineDist(target, from, to) <= Math.min(h.weak * target.type.radius, FIRE.weakMax)), me = rt.player.last;
   const pull = h.pull && me ? { from: me, knock: -h.pull * 8 } : null;
   strike(rt, target, { power: h.power, from: pull?.from ?? from, knock: pull?.knock ?? (h.unit ? 1 : h.steady ? 0 : knock), stat: h.stat, tier: h.tier, unit: h.unit, status: h.status, impact: h.impact, ult: h.ult, first: !h.hitIds?.length, crit: crit || undefined, steady: h.steady }, random);
   fx(rt, h.fx, "impact", to, to, h.impact ?? "ability");
   if (h.splash) {
-    if (rt.v2) burst(rt, to, h.power * 0.5, h.splash, h, random, target, false); // its FX is the hit's, above
+    if (rt.v2) blastAt(rt, to, h.power * 0.5, h.splash, h, random, target, false); // its FX is the hit's, above
     else splash(rt, to, h.splash, target, { power: h.power * 0.5, from: to, knock: 2, stat: h.stat, tier: h.tier }, random);
   }
   if (h.cluster) scatter(rt, to, h.cluster, h, random, target);
@@ -134,12 +138,13 @@ export const DODGE_SHAPE = { dashExit: 0.55, overspeedDecay: 5, keepGrace: 0 } a
  * The ruins on the movement kit (specs/movement.md): Q's dash is the dodge, the village dash's own burst with the
  * dodge's cooldown (combat polish 9: one dash), and walking and sprint scale with the combat speed stat.
  */
-let tuned: { speed: number; t: MoveTuning } | null = null;
-export function combatTuning(speed: number): MoveTuning {
-  if (tuned?.speed === speed) return tuned.t; // the avatar asks every frame; the speed stat changes rarely
+let tuned: { speed: number; glide: boolean; t: MoveTuning } | null = null;
+/** `glide`: the leaf glider on Space held in the air (an air-jump class that owns it; classes v2 Air Step). */
+export function combatTuning(speed: number, glide = false): MoveTuning {
+  if (tuned?.speed === speed && tuned.glide === glide) return tuned.t; // the avatar asks every frame; the speed stat changes rarely
   const t = MOVE_TUNING;
-  tuned = { speed, t: { ...t, walkSpeed: t.walkSpeed * speed, sneakSpeed: t.sneakSpeed * speed, sprintSpeed: t.sprintSpeed * speed,
-    dashCooldown: DODGE.duration + DODGE.cooldown, ...DODGE_SHAPE } };
+  tuned = { speed, glide, t: { ...t, walkSpeed: t.walkSpeed * speed, sneakSpeed: t.sneakSpeed * speed, sprintSpeed: t.sprintSpeed * speed,
+    dashCooldown: DODGE.duration + DODGE.cooldown, ...DODGE_SHAPE, glider: glide ? 1 : 0 } };
   return tuned.t;
 }
 /**
@@ -160,17 +165,20 @@ export function combatPush(p: CombatRuntime["player"]): Vec | undefined {
  * Damage the player unless safe or in i-frames (dodge, or a dash that grants them); guard, a frontal block and the shield
  * soak first. `knock` is the attack's knockback (data.ts): how hard it pushes you away. Returns health lost.
  */
-export function hurtPlayer(rt: CombatRuntime, amount: number, from: Vec, player: Vec, knock = 3, random: () => number = Math.random): number {
+export function hurtPlayer(rt: CombatRuntime, amount: number, from: Vec, player: Vec, knock = 3, random: () => number = Math.random, shot = false): number {
   const p = rt.player;
   if (!p.alive || p.safe || p.ultIframes > 0) return 0; // an ult's wind-up and freeze: nothing lands unseen
   if (invulnerable(p.dodgeAge) || p.dash?.iframes) { floater(rt, player, 1.7, "Dodged", "info"); return 0; }
   chargeUlt(rt, takenCharge(amount, p.maxHp)); // aimed at you, before guard, block and shield (§1.2)
-  onHurt(rt); // classes v2: Focus halves, a Killstreak ends, stealth breaks
-  const { damage } = mitigate(rt, amount, from, player, random); // the seeded roll in the balance runs (a block's counter can crit)
-  p.hurt = 0.35;
-  if (rt.kit?.subclass.passive.kind !== "poise") {
+  // Classes v2: a counter window (a Perfect Shift) cuts and answers it; a blinding zone makes it miss (primitives.ts).
+  const c = rt.field.counter || rt.field.zones.length ? counterHit(rt, amount, from, player, random, shot) : { amount, flinch: true };
+  if (c.amount <= 0) return 0;
+  onHurt(rt); // classes v2: Focus halves, a Killstreak ends
+  const { damage } = mitigate(rt, c.amount, from, player, random); // the seeded roll in the balance runs (a block's counter can crit)
+  if (!c.flinch) { /* taken without flinching (a Golem's Perfect Shift): no hit clip, no knockback */ }
+  else if (rt.kit?.subclass.passive.kind !== "poise") {
     const d = Math.hypot(player.x - from.x, player.z - from.z) || 1;
-    p.dodgeDir = { x: (player.x - from.x) / d, z: (player.z - from.z) / d };
+    p.hurt = 0.35; p.dodgeDir = { x: (player.x - from.x) / d, z: (player.z - from.z) / d };
     p.knock = knock;
   } else p.hurt = 0.19; // Unstoppable: the flinch shows, no knockback
   if (damage <= 0) return 0;

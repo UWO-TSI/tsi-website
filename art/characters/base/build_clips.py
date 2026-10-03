@@ -1515,6 +1515,267 @@ def unique(name, grip, seconds, impact, upper=False, post=None):
     return deco
 
 
+# ── Arcane (classes v2, the Arcane wave) ──
+# The Arcane family's ults and ability clips (design sheet: Elementalist, Illusionist, Necromancer, Transmuter). Helpers
+# carry an arc_ prefix so no other family's block can shadow them. In the attack grip a held weapon runs along its hand
+# socket's -Y (Character.tsx GRIP: the staff's head, the tome's top), which arc_wield aims; arc_palm turns a bare hand
+# (its palm faces -Z at rest). The arms are short beside the big head, so the poses read by moving the head (lean, side)
+# and by reaching out past it.
+def arc_turn(a0, b0, a1, b1):
+    """The rotation taking a0 onto a1 and b0 (perpendicular to a0) as near onto b1 as that allows."""
+    a1 = Vector(a1).normalized()
+    q = Vector(a0).rotation_difference(a1)
+    b, b1 = q @ Vector(b0), Vector(b1) - a1 * Vector(b1).dot(a1)
+    if b1.length < 1e-6:
+        return q
+    b1.normalize()
+    return (Quaternion(a1, math.pi) if b.dot(b1) < -0.9999 else b.rotation_difference(b1)) @ q
+
+
+def arc_hand0(s):
+    return (TAIL0[f"{s}Hand"] - HEAD0[f"{s}Hand"]).normalized()
+
+
+def arc_wield(P, s, d):
+    """Turn hand s so what it holds runs along d, the hand as straight on the forearm as d allows."""
+    fa = f"{s}ForeArm"
+    f = P.acc(fa) @ (TAIL0[fa] - HEAD0[fa]).normalized()
+    d = Vector(d).normalized()
+    h = f - d * f.dot(d)
+    h = h.normalized() if h.length > 1e-4 else d.orthogonal().normalized()
+    return P.world(f"{s}Hand", arc_turn(V(0, -1, 0), arc_hand0(s), d, h))
+
+
+def arc_palm(P, s, along, palm):
+    """A bare hand pointing along `along`, its palm facing `palm`."""
+    return P.world(f"{s}Hand", arc_turn(arc_hand0(s), V(0, 0, -1), along, palm))
+
+
+def arc_feet(*moves, knees_out=0.25, heels=False, hop=0.0):
+    """A post planting both feet, where each move (side, t0, t1, t2, t3, offset, lift) carries that ankle out by `offset`
+    over t0..t1 (lifted on the way), holds it to t2 and brings it home over t2..t3. heels: up onto the toes in a deep
+    squat (the shins would dip under the ground over flat feet); hop: the feet leave the ground with the hips."""
+    def post(P, p, flip):
+        ankles = {s: ANKLE[s].copy() for s, _ in SIDES}
+        for s, t0, t1, t2, t3, out, lift in moves:
+            if t0 < p < t1 or t2 < p < t3:
+                u = (p - t0) / (t1 - t0) if p < t1 else (p - t2) / (t3 - t2)
+                ankles[s] += out * (EASE["io"](u) if p < t1 else 1 - EASE["io"](u)) + V(0, 0, lift * math.sin(math.pi * u))
+            elif t1 <= p <= t2:
+                ankles[s] += out
+        th = math.radians(26 * ss(0.1, 0.16, N.loc.z - P.loc.z)) if heels else 0.0
+        plant(P, lift=0.04 * math.sin(th) + 0.017 * (math.cos(th) - 1) + lift_of(P, hop), ankles=ankles, knees_out=knees_out)
+        if th:
+            for s, _ in SIDES:
+                P.world(f"{s}Foot", rx(math.degrees(th))).world(f"{s}ToeBase", Quaternion())
+        return P
+    return post
+
+
+@unique("Ult_Elementalist", "Staff", 1.4, 0.32, post=arc_feet(("Right", 0.25, 0.32, 0.62, 0.84, V(-0.03, 0, 0), 0.025),
+                                                             ("Left", 0.25, 0.32, 0.62, 0.84, V(0.05, 0.01, 0), 0.025)))
+def arc_ult_elementalist(g):
+    """Cataclysm's release, after the 5 s charge: a coiled dip, the staff thrust high to the sky, a beat, then driven
+    down (the impact: its butt strikes the ground beside the lead foot), crouched through the shockwave, and up."""
+    dip = body(crouch=0.05, lean=16, nod=12, twist=-22, side=-4)
+    hand(dip, "Right", V(-0.16, 0.02, 0.27), V(-0.8, 0.5, -0.3))
+    arc_wield(dip, "Right", V(-0.1, 0.25, 0.96))
+    arm(dip, "Left", V(0.35, -0.7, -0.62), V(0.1, -0.85, -0.5))
+
+    def sky(k):
+        P = body(crouch=-0.01 - 0.004 * k, lean=-8 - 2 * k, side=16 + 2 * k, nod=-24 - 4 * k, twist=-8, turn=-14, tilt=-6)
+        arm(P, "Right", V(-0.6, -0.12, 0.79), V(-0.55, -0.16, 0.82))
+        arc_wield(P, "Right", V(-0.3, -0.35, 0.89))
+        return arm(P, "Left", V(0.78, 0.12, -0.62), V(0.62, 0.0, -0.78))
+
+    def strike(k):
+        P = body(crouch=0.13 - 0.006 * k, lean=20 - 3 * k, side=4, tilt=8, nod=16 - 2 * k, twist=-10, shift=(0, -0.01))
+        hand(P, "Right", V(-0.25, -0.05, 0.27), V(-0.6, 0.6, -0.4))
+        arc_wield(P, "Right", V(-0.15, -0.08, 1))
+        return arm(P, "Left", V(0.9, 0.28, -0.33), V(0.82, 0.18, -0.55))
+
+    rise = body(crouch=0.03, lean=6, nod=4)
+    hand(rise, "Right", V(-0.2, -0.02, 0.31))
+    arc_wield(rise, "Right", V(-0.15, -0.05, 1))
+    return [(0, N, "lin"), (0.06, dip, "io"), (0.17, sky(0), "out"), (0.25, sky(1), "lin"), (0.32, strike(0), "in"),
+            (0.58, strike(1), "lin"), (0.8, rise, "io"), (1.0, N, "io")]
+
+
+@unique("Ult_Illusionist", "OneHand", 1.2, 0.38, post=arc_feet(("Left", 0.22, 0.36, 0.6, 0.86, V(0.02, -0.07, 0), 0.03)))
+def arc_ult_illusionist(g):
+    """The Joker: a showman's flourish plucking the card from the air, a wind-up turned away with it held out behind,
+    then a big sidearm throw stepping in (the impact is the release) carried across, and a showman's bow."""
+    pluck = body(lean=-8, side=12, nod=-22, twist=-8, turn=-24, tilt=-8, crouch=-0.008)
+    arm(pluck, "Right", V(-0.78, -0.12, 0.62), V(-0.62, -0.2, 0.76))
+    arc_palm(pluck, "Right", V(-0.4, -0.25, 0.88), V(0.35, -0.85, 0.1))
+    arm(pluck, "Left", V(0.85, -0.3, -0.43), V(0.7, -0.6, -0.38))
+    arc_palm(pluck, "Left", V(0.55, -0.82, -0.1), V(0, 0, 1))
+    wind = body(twist=-50, lean=-6, side=-8, crouch=0.04, nod=-6, turn=36)
+    arm(wind, "Right", V(-0.85, 0.5, 0.16), V(-0.7, 0.7, 0.14))
+    arc_palm(wind, "Right", V(-0.5, 0.85, 0.15), V(0, 0, -1))
+    arm(wind, "Left", V(0.4, -0.88, 0.25), V(0.3, -0.92, 0.24))
+    release = body(twist=22, lean=16, crouch=0.05, shift=(0.006, -0.035), turn=-14, side=5)
+    arm(release, "Right", V(-0.42, -0.9, 0.06), V(-0.2, -0.98, 0.04))
+    arc_palm(release, "Right", V(-0.05, -1, 0.02), V(0, 0, -1))
+    arm(release, "Left", V(0.82, 0.45, -0.36), V(0.7, 0.58, -0.42))
+    follow = body(twist=44, lean=20, crouch=0.05, shift=(0.008, -0.04), turn=-26, side=8)
+    arm(follow, "Right", V(0.45, -0.86, -0.22), V(0.58, -0.78, -0.22))
+    arm(follow, "Left", V(0.78, 0.5, -0.38))
+    settle = body(lean=10, nod=12, twist=8)
+    hand(settle, "Right", V(-0.04, -0.15, 0.33), V(-0.8, 0.2, -0.6))
+    arm(settle, "Left", V(0.85, -0.15, -0.5), V(0.75, -0.3, -0.58))
+    return [(0, N, "lin"), (0.14, pluck, "out"), (0.29, wind, "io"), (0.38, release, "in"), (0.52, follow, "out"),
+            (0.76, settle, "io"), (1.0, N, "io")]
+
+
+@unique("Ult_Necromancer", "Book", 1.5, 0.33, post=arc_feet(("Right", 0.25, 0.33, 0.62, 0.86, V(-0.035, 0, 0), 0.02),
+                                                             ("Left", 0.25, 0.33, 0.62, 0.86, V(0.035, 0, 0), 0.02),
+                                                             knees_out=0.6, heels=True))
+def arc_ult_necromancer(g):
+    """Army of the Dead: the tome raised high, then down into a squat with the free right hand slammed flat to the
+    ground beside it (the impact: the ground cracks), the tome still held up, and a slow rise, the head last."""
+    def raised(k):
+        P = body(lean=-12 - 2 * k, nod=-24 - 3 * k, crouch=-0.008, tilt=4)
+        arm(P, "Left", V(0.62, -0.15, 0.77), V(0.5, -0.2, 0.84))
+        arc_wield(P, "Left", V(0.2, -0.25, 0.95))
+        arm(P, "Right", V(-0.85, 0.15, 0.5), V(-0.75, 0.05, 0.66))
+        return arc_palm(P, "Right", V(-0.6, 0.0, 0.8), V(0.1, -1, 0.1))
+
+    def slam(k):
+        P = body(crouch=0.19 - 0.004 * k, lean=42 - 2 * k, side=-38, twist=-10, nod=-30, tilt=26, shift=(0, 0.02))
+        P.rot("RightShoulder", ry(-30))
+        hand(P, "Right", V(-0.16, -0.05, 0.03 + 0.003 * k), V(-0.4, 0.5, 0.75))
+        arc_palm(P, "Right", V(-0.3, -0.95, 0), V(0, 0, -1))
+        arm(P, "Left", V(0.62, 0.3, 0.72), V(0.48, 0.22, 0.85))
+        return arc_wield(P, "Left", V(0.3, 0.15, 0.94))
+
+    low = body(crouch=0.08, lean=20, nod=18, side=-6)
+    hand(low, "Right", V(-0.15, -0.12, 0.2))
+    off(low, g, "free")
+    return [(0, N, "lin"), (0.16, raised(0), "out"), (0.25, raised(1), "lin"), (0.33, slam(0), "in"), (0.55, slam(1), "lin"),
+            (0.8, low, "io"), (1.0, N, "io")]
+
+
+@unique("Ult_Transmuter", "Fists", 1.3, 0.35, post=arc_feet(("Right", 0.3, 0.42, 0.66, 0.84, V(-0.03, 0, 0), 0.0),
+                                                           ("Left", 0.3, 0.42, 0.66, 0.84, V(0.03, 0, 0), 0.0),
+                                                           knees_out=0.45, hop=0.9))
+def arc_ult_transmuter(g):
+    """Chimera: a deep crouch curling in tighter, then exploding up and out in a hop that lands the feet apart, arms
+    flung wide in a roar (the impact is the burst), held, and down."""
+    def curl(k):
+        P = body(crouch=0.13 + 0.005 * k, lean=34 + 3 * k, nod=22 + 3 * k)
+        for s, sx in SIDES:
+            P.rot(f"{s}Shoulder", rz(-sx * 14) @ ry(sx * 4))
+            hand(P, s, chest(P, V(-sx * 0.02, -0.13, 0.03)), V(sx * 0.2, 0.3, -1))
+        return P
+
+    def roar(k):
+        P = body(crouch=(-0.03, 0.012, 0.004)[k], lean=-18 + 2 * k, nod=-28 + 3 * k)
+        for s, sx in SIDES:
+            P.rot(f"{s}Shoulder", rz(sx * 10) @ ry(-sx * 8))
+            arm(P, s, V(sx * 0.75, 0.05, 0.66), V(sx * 0.62, 0.0, 0.79))
+        return P
+
+    land = body(crouch=0.035, lean=8, nod=4)
+    for s, sx in SIDES:
+        arm(land, s, V(sx * 0.7, -0.2, -0.68))
+    return [(0, N, "lin"), (0.2, curl(0), "io"), (0.28, curl(1), "lin"), (0.35, roar(0), "out"), (0.46, roar(1), "io"),
+            (0.6, roar(2), "lin"), (0.76, land, "io"), (1.0, N, "io")]
+
+
+@unique("Unique_Javelin", "Staff", 0.8, 0.5, post=arc_feet(("Right", 0.36, 0.48, 0.7, 0.94, V(-0.015, -0.075, 0), 0.03)))
+def arc_javelin(g):
+    """Stone Javelin: the free left hand scoops the boulder up low, heaves it up behind the shoulder (the staff sighting
+    forward) and throws it overhand stepping in (the release is the impact), the staff swung back to balance."""
+    scoop = body(crouch=0.06, lean=26, nod=12, twist=14, side=4)
+    hand(scoop, "Left", V(0.17, -0.12, 0.17), V(0.7, 0.3, -1))
+    arc_palm(scoop, "Left", V(0.1, -0.9, -0.4), V(0, 0, 1))
+    arm(scoop, "Right", V(-0.62, 0.4, -0.67))
+    arc_wield(scoop, "Right", V(-0.1, -0.2, 0.97))
+    load = body(twist=30, lean=-14, side=-14, crouch=0.03, nod=-8, turn=-26)
+    arm(load, "Left", V(0.82, 0.38, 0.43), V(0.5, 0.45, 0.74))
+    arc_palm(load, "Left", V(0.15, 0.4, 0.9), V(-0.1, -0.5, 0.86))
+    arm(load, "Right", V(-0.6, -0.6, -0.53))
+    arc_wield(load, "Right", V(-0.2, -0.95, 0.15))
+    heave = body(twist=-26, lean=22, crouch=0.05, shift=(-0.005, -0.035), nod=6, turn=16, side=4)
+    arm(heave, "Left", V(0.12, -0.96, -0.1), V(0.05, -0.95, -0.3))
+    arc_palm(heave, "Left", V(0.05, -0.9, -0.42), V(0, -0.42, -0.9))
+    arm(heave, "Right", V(-0.62, 0.5, -0.6))
+    arc_wield(heave, "Right", V(-0.1, 0.25, 0.96))
+    follow = body(twist=-32, lean=26, crouch=0.055, shift=(-0.006, -0.04), nod=8, turn=18, side=4)
+    arm(follow, "Left", V(-0.3, -0.82, -0.48), V(-0.38, -0.76, -0.53))
+    arm(follow, "Right", V(-0.62, 0.5, -0.6))
+    arc_wield(follow, "Right", V(-0.1, 0.25, 0.96))
+    return [(0, N, "lin"), (0.16, scoop, "io"), (0.36, load, "io"), (0.5, heave, "in"), (0.66, follow, "out"), (1.0, N, "io")]
+
+
+@unique("Unique_CardFlick", "OneHand", 0.45, 0.45, upper=True)
+def arc_card_flick(g):
+    """The thrown card, backhand: the hand cocked in at the far shoulder, the wrist curled, then flicked out and
+    forward at shoulder height."""
+    cock = body(twist=26, lean=-2, turn=-20)
+    hand(cock, "Right", chest(cock, V(0.06, -0.12, 0.05)), V(-0.4, -0.6, 0.7))
+    arc_palm(cock, "Right", V(0.55, -0.35, 0.3), V(0, 0, -1))
+    arm(cock, "Left", V(0.7, -0.35, -0.62))
+    flick = body(twist=-22, lean=4, turn=16)
+    arm(flick, "Right", V(-0.72, -0.68, 0.12), V(-0.64, -0.75, 0.12))
+    arc_palm(flick, "Right", V(-0.75, -0.62, 0.15), V(0, 0, -1))
+    arm(flick, "Left", V(0.66, 0.2, -0.72))
+    follow = body(twist=-24, lean=5, turn=18)
+    arm(follow, "Right", V(-0.86, -0.5, 0.06), V(-0.82, -0.56, 0.0))
+    arm(follow, "Left", V(0.66, 0.2, -0.72))
+    return [(0, N, "lin"), (0.25, cock, "io"), (0.45, flick, "back"), (0.62, follow, "lin"), (1.0, N, "io")]
+
+
+@unique("Unique_Vanish", "OneHand", 0.7, 0.4, post=arc_feet(hop=0.9))
+def arc_vanish(g):
+    """Vanish: both hands gather low, then toss a burst of cards up overhead (the impact), held while it fades."""
+    gather = body(crouch=0.05, lean=16, nod=14)
+    for s, sx in SIDES:
+        hand(gather, s, V(sx * 0.05, -0.15, 0.27), V(sx * 0.7, 0.4, -1))
+        arc_palm(gather, s, V(-sx * 0.2, -0.95, -0.1), V(0, 0, 1))
+    toss = body(crouch=-0.028, lean=-12, nod=-24)
+    for s, sx in SIDES:
+        arm(toss, s, V(sx * 0.84, -0.16, 0.52), V(sx * 0.74, -0.22, 0.64))
+        arc_palm(toss, s, V(sx * 0.5, -0.3, 0.8), V(sx * 0.1, -0.5, 0.86))
+    hold_ = body(crouch=0.012, lean=-8, nod=-18)
+    for s, sx in SIDES:
+        arm(hold_, s, V(sx * 0.86, -0.14, 0.49), V(sx * 0.77, -0.2, 0.6))
+        arc_palm(hold_, s, V(sx * 0.55, -0.3, 0.78), V(sx * 0.1, -0.5, 0.86))
+    return [(0, N, "lin"), (0.2, gather, "io"), (0.4, toss, "out"), (0.56, hold_, "io"), (0.72, hold_, "lin"), (1.0, N, "io")]
+
+
+@unique("Unique_Raise", "Book", 0.9, 0.45)
+def arc_raise(g):
+    """Raise Dead: the free right hand reaches down over the ground, then claws up (the impact), held as they rise."""
+    reach = body(crouch=0.08, lean=28, nod=16, twist=-14, side=-8)
+    hand(reach, "Right", V(-0.2, -0.14, 0.12), V(-0.6, 0.5, 0.6))
+    arc_palm(reach, "Right", V(-0.2, -0.7, -0.68), V(0, 0, -1))
+    off(reach, g, "free")
+    claw = body(crouch=-0.008, lean=-10, nod=-14, twist=10, side=10)
+    arm(claw, "Right", V(-0.78, -0.35, 0.52), V(-0.66, -0.42, 0.62))
+    arc_palm(claw, "Right", V(-0.5, -0.35, 0.79), V(0.1, -0.5, 0.86))
+    off(claw, g, "free")
+    hold_ = body(crouch=-0.006, lean=-8, nod=-12, twist=10, side=10)
+    arm(hold_, "Right", V(-0.8, -0.32, 0.5), V(-0.68, -0.4, 0.6))
+    arc_palm(hold_, "Right", V(-0.52, -0.32, 0.78), V(0.1, -0.5, 0.86))
+    off(hold_, g, "free")
+    return [(0, N, "lin"), (0.24, reach, "io"), (0.45, claw, "out"), (0.7, hold_, "lin"), (1.0, N, "io")]
+
+
+@unique("Unique_Shift", "Fists", 0.3, 0.5, upper=True)
+def arc_shift(g):
+    """Shapeshift: a quick coil and a twisting snap out, arms wide (the impact), back up into the guard."""
+    coil = body(twist=-34, lean=14, nod=12, turn=14)
+    for s, sx in SIDES:
+        hand(coil, s, chest(coil, V(sx * 0.05, -0.13, -0.01)), V(sx * 0.4, 0.3, -1))
+    snap = body(twist=30, lean=-8, nod=-10, turn=-12)
+    for s, sx in SIDES:
+        arm(snap, s, V(sx * 0.85, -0.42, 0.1), V(sx * 0.75, -0.6, 0.18))
+    guard = body(lean=4, nod=4)
+    hand(guard, "Right", chest(guard, GUARD_R), V(-0.6, 0.5, -1))
+    hand(guard, "Left", chest(guard, GUARD_L), V(0.6, 0.5, -1))
+    return [(0, N, "lin"), (0.22, coil, "io"), (0.5, snap, "out"), (0.75, guard, "io"), (1.0, N, "io")]
 # ---------------------------------------------------------------- the Rangers' unique clips (classes v2, the Ranger wave)
 # Authored right-handed like the verbs (the Bow and Pistol grips mirror them into the left hand); the impact key is
 # where the ult's freeze holds (its anticipation_ms over the clip's length).

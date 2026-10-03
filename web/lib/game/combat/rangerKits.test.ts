@@ -1,8 +1,8 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { classKit, kitAt } from "@/lib/combat/classes";
-import { RANGER_KITS } from "@/lib/combat/rangerKits";
+import { RANGER_KITS, RANGER_SKINS } from "@/lib/combat/rangerKits";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { SUBCLASS_FOR_TYPE } from "@/lib/oracle/subclass";
 import { WEAPONS } from "./data";
@@ -64,12 +64,28 @@ describe("the Ranger kits: shape and invariants", () => {
         keys.push(...Object.values(a.vfx ?? {}));
         for (const e of [...a.effects, ...(a.release ?? [])]) {
           if (e.kind === "projectile") keys.push(e.cluster?.fx, e.grapple);
+          if (e.kind === "zone") keys.push(e.fx);
           if (e.kind === "summon" && UNITS[e.unit]?.kind === "trap") keys.push(`trap.${e.unit}`);
         }
       }
       keys.push(...Object.values(k.fire?.vfx ?? {}), k.fire?.ammo?.perfect);
       for (const r of Object.values(k.fire?.rounds ?? {})) keys.push(r.vfx, r.travel, r.cast);
       for (const key of keys) if (key) expect(FX[key], `${k.key}: ${key}`).toBeDefined();
+    }
+  });
+  it("the seed's weapon skins and each kit's mastery trim colour materials its weapons have", () => {
+    const pub = join(__dirname, "../../../public");
+    const materials = (url: string) => { // a GLB's JSON chunk: its material names
+      const b = readFileSync(join(pub, url)), n = b.readUInt32LE(12);
+      return (JSON.parse(b.subarray(20, 20 + n).toString("utf8")).materials ?? []).map((m: { name?: string }) => m.name);
+    };
+    const seed = readFileSync(join(__dirname, "../../../supabase/migrations/20261003023000_classes_v2_ranger_seed.sql"), "utf8");
+    expect(Object.keys(RANGER_SKINS).sort()).toEqual([...seed.matchAll(/"subclass":"(\w+)","skin":"(\w+)"/g)].map(m => `${m[1]}:${m[2]}`).sort());
+    for (const k of RANGER_KITS) {
+      const has = new Set(SYSTEM_WEAPONS.filter(w => w.subclass === k.key).flatMap(w => materials(WEAPONS[w.key].model)));
+      expect(Object.keys(k.look.trim ?? {})).toContain("M_Fit");
+      for (const name of Object.keys(k.look.trim ?? {})) expect(has.has(name), `${k.key} trim ${name}`).toBe(true);
+      for (const [key, set] of Object.entries(RANGER_SKINS)) if (key.startsWith(`${k.key}:`)) for (const name of Object.keys(set)) expect(has.has(name), `${key} ${name}`).toBe(true);
     }
   });
   it("every icon the kits name is on disk", () => {

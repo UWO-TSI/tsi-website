@@ -30,7 +30,7 @@ export const MARKSMAN: ClassKit = {
     cooldown_s: 0, energy: 0, charge: 0.98, anticipation_ms: 350, impacts: "first-last", duration: 6, reach: 8,
     effects: [{ kind: "buff", stat: "homing", value: 1, duration: 6 }, { kind: "buff", stat: "flame", value: 0.18, duration: 6 }, { kind: "buff", stat: "swift", value: 1, duration: 6 },
       { kind: "buff", stat: "surge", value: 20, duration: 6 }],
-    release: [{ kind: "area", power: 4.5, radius: 3.6, at: "aim", knock: 4 }],
+    release: [{ kind: "area", power: 2, radius: 3.6, at: "aim", knock: 4 }],
     clip: { unique: "Ult_Marksman" }, vfx: { cast: "marksman.ultCharge", impact: "marksman.volley", zone: "marksman.ultDecal" }, icon: I("marksman-ult") },
   ranks: [
     { at: 5, target: "marksman.homing", change: { label: "+25% duration", duration: 1.25 } },
@@ -42,5 +42,5 @@ export const MARKSMAN: ClassKit = {
     { at: 16, target: "passive", change: { label: "Focus tops out at 8.5 shots a second", power: 1.0625 } },
     { at: 18, target: "ult", change: { label: "+10% power", power: 1.1 } },
   ],
-  look: { ramp: ["#f2feff", "#62d8f0", "#0d4a5c"], mote: "speedLine", drift: "rise", icon: I("marksman") },
+  look: { ramp: ["#f2feff", "#62d8f0", "#0d4a5c"], mote: "speedLine", drift: "rise", icon: I("marksman"), trim: { M_Fit: "#62d8f0", M_Wrap: "#f2feff" } },
 };

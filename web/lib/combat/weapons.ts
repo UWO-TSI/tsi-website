@@ -4,6 +4,7 @@
  * Mirrored as seed rows in 20260926150800_combat.sql (weapons).
  */
 import type { Stat, StatBlock } from "./progression";
+import { ARCANE_WEAPONS } from "./arcaneSeed";
 
 /** Today's types; classes v2 opens the list (one signature type per subclass, design sheet §1.5). */
 export type WeaponType = "sword" | "shield" | "bow" | "revolver" | "staff" | "tome" | "fists" | "totem" | (string & {});
@@ -44,8 +45,10 @@ export const WEAPONS: WeaponDef[] = [
   W("staff-sigil", "Sigil staff", "staff", 4, ["arcana"]),
   W("tome-warden", "Warden's grimoire", "tome", 4, ["spirit"]),
   W("staff-heartstone", "Heartstone staff", "staff", 5, ["arcana", "spirit"]),
+  // Classes v2 signature weapons, by family wave (their own seed migrations carry them, with weapons.subclass).
+  ...ARCANE_WEAPONS,
   // Classes v2, the Rangers' signature weapons (one type each, tiers 1–5 on one trim kit: wood and cloth, iron,
-  // rune-etched, gold with a glow part, animated runes). Seeded in 20261002190000_classes_v2_ranger_seed.sql.
+  // rune-etched, gold with a glow part, animated runes). Seeded in 20261003023000_classes_v2_ranger_seed.sql.
   ...signature("marksman", "recurve", ["Ash recurve", "Iron-tipped recurve", "Runed recurve", "Gilded recurve", "Starlit recurve"]),
   ...signature("sniper", "rifle", ["Brass long rifle", "Iron long rifle", "Runed long rifle", "Gilded long rifle", "Starlit long rifle"]),
   ...signature("hunter", "harpoon", ["Harpoon crossbow", "Iron harpoon crossbow", "Runed harpoon crossbow", "Gilded harpoon crossbow", "Starlit harpoon crossbow"]),
