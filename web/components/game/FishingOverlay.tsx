@@ -33,17 +33,15 @@ import FishReveal from "./FishReveal";
 import { AudioManager } from "@/lib/game/audio";
 import { castLine, collect, landCatch, localCollections, localRecord, mergeWithLocal, type CatchAnswer } from "@/lib/game/collections";
 import { rodByTier, type RodTier } from "@/lib/game/rods";
-import { oneLinerFor, rollFishFor } from "@/lib/game/peaceful";
+import { rollFishFor } from "@/lib/game/peaceful";
 import type { WaterType } from "@/lib/game/fishingSpots";
-import { punchZoom, setTensionZoom } from "@/lib/game/cameraJuice";
+import { punchZoom, setAimZoom, setTensionZoom, shakeCamera } from "@/lib/game/cameraJuice";
 import {
   CAST,
-  CELEBRATE,
   FISH,
-  HOLO_GRADIENT,
   RARITY_META,
   START_PROGRESS,
-  celebrate,
+  catchShake,
   currentFishingContext,
   rollFish,
   rollSize,
@@ -53,12 +51,20 @@ import {
 import { weatherMods } from "@/lib/game/weatherPerks";
 import { liveIslandWeather, reelWeather } from "@/lib/game/islandWeather";
 import { advanceFishingReel, createFishingReel } from "@/lib/game/fishingReel";
-import { bindFishingCastLifecycle, bindFishingInput, type FishingHeldInput } from "@/lib/game/fishingInput";
+import { FISHING_HINTS, bindFishingCastLifecycle, bindFishingInput, castDevice, trackCastDevice, type CastDevice, type FishingHeldInput } from "@/lib/game/fishingInput";
 import { isGameControlTarget } from "@/lib/game/keyboardInput";
+import { live } from "@/lib/game/fishingRig";
 
-type Phase = "idle" | "charging" | "casting" | "waiting" | "bite" | "reeling" | "revealing" | "caught" | "missed";
+type Phase = "idle" | "charging" | "casting" | "waiting" | "bite" | "reeling" | "revealing" | "missed";
 
 const BITE_WINDOW_MS = 1400;
+/** The catch card arrives this long after the reel is won: the world's beat first (the fish out of the water and into your hands). */
+const REVEAL_DELAY_MS = 520;
+/** How far the camera leans in (degrees of field of view) on you and the catch while its card is up: a touch, so the
+ *  catch held at your chin stays above the card. */
+const REVEAL_ZOOM = 4;
+/** The wait starts when the bobber lands (tsi:fish-splash); this long after the cast it starts anyway (no bobber mounted). */
+const LANDING_FALLBACK_MS = 1600;
 
 /** `rod` (rods.ts) widens the hook window, slows the drain and adds rare luck; `tsi:fish-start` may carry `water` (fishingSpots.ts), and on the member island `site` and `from` (where the player stands) for the server roll. */
 export default function FishingOverlay({ onActiveChange, collectionScope, zoneOverride, rod = rodByTier(1) }: { onActiveChange?: (active: boolean) => void; collectionScope?: string; zoneOverride?: "river" | "sea"; rod?: RodTier }) {
@@ -78,12 +84,17 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
   const [newRecord, setNewRecord] = useState(false);
   const [learned, setLearned] = useState<string | null>(null); // a recipe the landed catch taught
   const [missNote, setMissNote] = useState<string | null>(null);
+  // The hints name the input that started the cast (E, the click or a tap): fishingInput.ts FISHING_HINTS.
+  const [device, setDevice] = useState<CastDevice>("mouse");
+  useEffect(() => trackCastDevice(), []);
   const waterRef = useRef<WaterType | null>(null);
   const castFromRef = useRef<{ site: "village" | "home"; from: [number, number] } | null>(null);
   // The server's roll for this cast (null: roll here), and once hooked, the roll to land.
   const rollRef = useRef<Promise<CatchAnswer | null> | null>(null);
   const landRef = useRef<{ roll: string; size: number | null } | null>(null);
   const hookedRef = useRef(false);
+  /** A landed catch goes into the bag as its card closes (the HUD's fly-in then, from where it was held up). */
+  const pendingBagRef = useRef<string | null>(null);
   useEffect(() => {
     const onStart = (e: Event) => {
       const d = (e as CustomEvent<{ water?: WaterType; site?: "village" | "home"; from?: [number, number] }>).detail;
@@ -141,7 +152,11 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     landRef.current = null;
     hookedRef.current = false;
     setTensionZoom(0);
+    setAimZoom(0);
     window.dispatchEvent(new CustomEvent("tsi:fish-end"));
+    const key = pendingBagRef.current;
+    pendingBagRef.current = null;
+    if (key) window.dispatchEvent(new CustomEvent("tsi:bag-got", { detail: { key } }));
   }, [changePhase]);
 
   /** A full bag (specs/game-ui.md §5): the note over the water, besides the card's own words. */
@@ -152,7 +167,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     clearTimers();
     setMissNote(note);
     changePhase("missed");
-    AudioManager.playSFX("exit");
+    // A refusal says why on the card (a full bag also shakes the Bag button, with its own sound): no door sound here.
     timersRef.current.push(window.setTimeout(cancel, 1800));
   };
 
@@ -171,10 +186,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         timersRef.current.push(
           window.setTimeout(() => {
             window.dispatchEvent(new CustomEvent("tsi:fish-nibble"));
-            document.querySelector("canvas")?.animate(
-              [{ transform: "translate(0,0)" }, { transform: "translate(1.5px,1px)" }, { transform: "translate(0,0)" }],
-              { duration: 90 }
-            );
+            shakeCamera(0.012); // the faintest tug
           }, at)
         );
       }
@@ -183,28 +195,19 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
       window.setTimeout(() => {
         changePhase("bite");
         punchZoom(3); // micro-zoom: the strike
-        window.dispatchEvent(new CustomEvent("tsi:fish-bite")); // bobber slam + "!"
-        // G1 hit-confirmation: a 130ms screen nudge sells the bite. The
-        // canvas transform is DOM-only — zero render cost.
-        document.querySelector("canvas")?.animate(
-          [
-            { transform: "translate(0,0)" },
-            { transform: "translate(5px,-3px)" },
-            { transform: "translate(-5px,3px)" },
-            { transform: "translate(3px,2px)" },
-            { transform: "translate(0,0)" },
-          ],
-          { duration: 150 }
-        );
+        window.dispatchEvent(new CustomEvent("tsi:fish-bite")); // the bobber pulled under in a crown of water, the "!"
+        // The bite lands on the camera (the world's shake, the Screen shake setting), never the page.
+        shakeCamera(0.065);
+        // The "!" alert: the kit's chime, the one cue a bite has until its splash sound exists (specs/polish/fishing-questions.md).
         AudioManager.playSFX("confirm");
         // Cast power widens the hook window (max cast: 1.4s → 2.2s).
         const windowMs = BITE_WINDOW_MS + CAST.biteBonusMs * powerRef.current + rod.biteWindowMs;
         biteDeadlineRef.current = performance.now() + windowMs;
-        // Auto-miss if the window lapses.
+        // Auto-miss if the window lapses: the fish lets go and the bobber bobs back up.
         timersRef.current.push(
           window.setTimeout(() => {
             changePhase("missed");
-            AudioManager.playSFX("exit");
+            window.dispatchEvent(new CustomEvent("tsi:fish-escaped", { detail: { hooked: false } }));
             timersRef.current.push(window.setTimeout(cancel, 1800));
           }, windowMs)
         );
@@ -222,11 +225,10 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     powerRef.current = power;
     const isMax = power >= CAST.maxZone;
     setMaxCast(isMax);
+    // Nailing the meter's gold tip is the meter's own chime; the cast itself waits for its whoosh (fishing-questions).
     if (isMax) {
       punchZoom(2.5); // micro-zoom: nailed the tip
       AudioManager.playSFX("confirm");
-    } else {
-      AudioManager.playSFX("click");
     }
     changePhase("casting");
     // Member island: the server rolls what will bite now; a refusal (too soon, no water here) ends the cast.
@@ -239,8 +241,17 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     landRef.current = null;
     const spot = spotRef.current ?? { x: 0, z: 0 };
     window.dispatchEvent(new CustomEvent("tsi:fish-cast", { detail: { x: spot.x, z: spot.z, power } }));
-    timersRef.current.push(window.setTimeout(beginWait, 650));
+    timersRef.current.push(window.setTimeout(beginWait, LANDING_FALLBACK_MS));
   };
+
+  // The wait starts as the bobber lands (FishingBobber's tsi:fish-splash), not on a guess at its flight.
+  useEffect(() => {
+    if (phase !== "casting") return;
+    const onSplash = () => beginWait();
+    window.addEventListener("tsi:fish-splash", onSplash);
+    return () => window.removeEventListener("tsi:fish-splash", onSplash);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
 
   /** Bite hooked (E or click) → the server's roll (or a local one), open the reel. */
   const hook = (input: KeyboardEvent | PointerEvent) => {
@@ -263,17 +274,30 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
       if (answer && !answer.ok) { bagFull(answer); miss(answer.error); return; }
       const rolled = answer && FISH.find(f => f.key === answer.catch.item_key);
       landRef.current = rolled && answer.catch.roll ? { roll: answer.catch.roll, size: answer.catch.size_cm } : null;
-      setFish(rolled || local());
+      const hooked = rolled || local();
+      setFish(hooked);
       changePhase("reeling");
-      AudioManager.playSFX("click");
+      // The yank, the line taut, the reel; the species' model rides along so the world has it ready when it comes out.
+      window.dispatchEvent(new CustomEvent("tsi:fish-hooked", { detail: { model: hooked.model, raw: hooked.raw } }));
     });
   };
 
-  /** Reel finished. Success → collect + celebrate; fail → it got away. */
+  /** Into the bag: as the catch's card closes if it is still up (cancel), else now. */
+  const intoBag = (key: string) => {
+    if (phaseRef.current === "revealing") pendingBagRef.current = key;
+    else window.dispatchEvent(new CustomEvent("tsi:bag-got", { detail: { key } }));
+  };
+
+  /** Reel finished. Success → collect + the catch card; fail → it got away. */
   const onReelDone = useCallback(
     (success: boolean) => {
       clearTimers();
       if (success && fish) {
+        // Every catch, first or repeat, gets the cozy card (FishReveal) after the world's beat; the camera leans in on
+        // you and the fish (in your hands, or over your head) while it's up, and the catch shakes it as it comes out.
+        changePhase("revealing");
+        shakeCamera(catchShake(fish.rarity));
+        setAimZoom(REVEAL_ZOOM);
         const isNew = !ownedRef.current.has(fish.key);
         ownedRef.current.add(fish.key);
         setWasNew(isNew);
@@ -287,7 +311,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         // zone + spot coords ride along for world reactions (gull swoop).
         window.dispatchEvent(
           new CustomEvent("tsi:fish-caught", {
-            detail: { key: fish.key, model: fish.model, raw: fish.raw, zone: fish.zone ?? "river", x: spotRef.current?.x, z: spotRef.current?.z },
+            detail: { key: fish.key, model: fish.model, raw: fish.raw, sizeCm: size, zone: fish.zone ?? "river", x: spotRef.current?.x, z: spotRef.current?.z },
           })
         );
         if (collectionScope) collect(fish.key, { scope: collectionScope });
@@ -296,32 +320,19 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
             // Refused (the hourly cap, the bag filled since the cast): the card stands, the catch isn't kept.
             if (answer && !answer.ok) { bagFull(answer); window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: answer.error } })); return; }
             collect(fish.key);
-            window.dispatchEvent(new CustomEvent("tsi:bag-got", { detail: { key: fish.key } }));
+            intoBag(fish.key);
             setLearned(answer?.catch.recipe?.name ?? null);
             const beat = localRecord(fish.key, size);
             setNewRecord(!isNew && (answer ? answer.catch.new_record === true && answer.catch.total_collected !== 1 : beat));
           });
         } else {
           collect(fish.key);
-          window.dispatchEvent(new CustomEvent("tsi:bag-got", { detail: { key: fish.key } }));
+          intoBag(fish.key);
           setNewRecord(!isNew && localRecord(fish.key, size));
-        }
-        if (isNew) {
-          // Blind-box ceremony (David 2026-07-23): first catches get the
-          // fullscreen staged reveal — it owns the celebration (confetti
-          // fires at its flash) and dismisses back to idle.
-          changePhase("revealing");
-          AudioManager.playSFX("click");
-        } else {
-          // Repeats keep the quick card + tier confetti.
-          changePhase("caught");
-          AudioManager.playSFX("confirm");
-          celebrate(fish.rarity, RARITY_META[fish.rarity].color);
-          timersRef.current.push(window.setTimeout(cancel, CELEBRATE[fish.rarity].cardMs));
         }
       } else {
         changePhase("missed");
-        AudioManager.playSFX("exit");
+        window.dispatchEvent(new CustomEvent("tsi:fish-escaped", { detail: { hooked: true } })); // the line snaps
         timersRef.current.push(window.setTimeout(cancel, 1800));
       }
     },
@@ -334,6 +345,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     onStart: (spot) => {
       spotRef.current = spot;
       releaseRequestedRef.current = false;
+      setDevice(castDevice());
       changePhase("charging");
     },
     onRelease: () => { releaseRequestedRef.current = true; },
@@ -378,9 +390,9 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
 
   if (phase === "idle") return null;
 
-  // First-catch blind-box ceremony — fullscreen, replaces the bottom card.
+  // The catch card, for every catch: it replaces the bottom card.
   if (phase === "revealing" && fish) {
-    return <FishReveal fish={fish} sizeCm={caughtSize} recipe={learned} onDone={cancel} />;
+    return <FishReveal fish={fish} sizeCm={caughtSize} recipe={learned} isNew={wasNew} newRecord={newRecord} delay={REVEAL_DELAY_MS} onDone={cancel} />;
   }
 
   const label =
@@ -392,14 +404,8 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         ? rod.tier > 1 ? `Waiting for a bite… · ${rod.name}` : "Waiting for a bite…"
         : phase === "bite"
           ? "!!  Hook it!"
-          : phase === "caught"
-            ? `You caught ${fish?.label ?? "a fish"}!`
-            : missNote ?? "It got away…";
-  const icon = phase === "caught" && fish ? iconFor(fish) : null;
-  const rarity = fish ? RARITY_META[fish.rarity] : null;
-  const glow = phase === "caught" && fish ? CELEBRATE[fish.rarity].glow : false;
-
-  const accent = phase === "bite" ? "#E5484D" : phase === "caught" ? "#3D8F52" : "var(--app-ink, #4A4034)";
+          : missNote ?? "It got away…";
+  const accent = phase === "bite" ? "#E5484D" : "var(--app-ink, #4A4034)";
 
   return (
     <div
@@ -421,76 +427,35 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
       }}
     >
       {phase === "charging" ? (
-        <CastMeter onRelease={castNow} releaseRequestedRef={releaseRequestedRef} byKey={!!collectionScope} />
+        <CastMeter onRelease={castNow} releaseRequestedRef={releaseRequestedRef} hint={FISHING_HINTS[device].charge} />
       ) : phase === "reeling" && fish ? (
-        <ReelMinigame fish={fish} known={ownedRef.current.has(fish.key)} onDone={onReelDone} initialInput={reelInputRef.current} tensionMul={rod.tensionMul} />
+        <ReelMinigame fish={fish} known={ownedRef.current.has(fish.key)} onDone={onReelDone} initialInput={reelInputRef.current} tensionMul={rod.tensionMul} help={FISHING_HINTS[device].reel} />
       ) : (
         <div
           style={{
             padding: "10px 20px",
             background: "var(--app-surface, #FFFDF5)",
             color: accent,
-            border: glow
-              ? `2px solid ${rarity!.color}`
-              : `2px solid ${phase === "bite" ? "#E5484D" : phase === "casting" && maxCast ? "#FFD166" : "var(--app-line, #E8DFC8)"}`,
+            border: `2px solid ${phase === "bite" ? "#E5484D" : phase === "casting" && maxCast ? "#FFD166" : "var(--app-line, #E8DFC8)"}`,
             borderRadius: 14,
             fontFamily: "var(--font-highlight, sans-serif)",
             fontSize: 15,
             fontWeight: 600,
             whiteSpace: "nowrap",
-            boxShadow: glow
-              ? `0 4px 24px ${rarity!.color}88, 0 0 0 4px ${rarity!.color}33`
-              : "0 4px 14px rgba(60, 45, 20, 0.2)",
+            boxShadow: "0 4px 14px rgba(60, 45, 20, 0.2)",
             animation:
               phase === "bite"
                 ? "fish-pulse 0.4s ease-in-out infinite"
-                : phase === "caught"
-                  ? fish?.rarity === "seaking"
-                    ? "fish-card-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), tsi-holo-glow 2.4s linear infinite"
-                    : "fish-card-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)"
-                  : phase === "missed"
-                    ? "fish-escape-jolt 0.38s ease-out"
-                    : undefined,
+                : phase === "missed"
+                  ? "fish-escape-jolt 0.38s ease-out"
+                  : undefined,
             position: "relative",
             display: "flex",
             alignItems: "center",
             gap: 8,
           }}
         >
-          {icon && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={icon} alt="" width={26} height={26} style={{ margin: "-4px 0" }} />
-          )}
           {label}
-          {phase === "caught" && caughtSize !== null && (
-            <span style={{ fontSize: 12, color: "var(--app-muted, #8a7f6a)", fontWeight: 600 }}>{caughtSize} cm</span>
-          )}
-          {phase === "caught" && rarity && (
-            <span
-              style={{
-                fontSize: "max(10px, var(--gui-min-text, 0px))",
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                color: "#FFFDF5",
-                borderRadius: 999,
-                padding: "3px 8px",
-                // Sea King is holographic (David 2026-07-23): animated
-                // iridescent gradient + shine sweep instead of flat teal.
-                ...(fish?.rarity === "seaking"
-                  ? {
-                      background: HOLO_GRADIENT,
-                      backgroundSize: "300% 100%",
-                      animation: "tsi-holo-shift 2.2s linear infinite",
-                      textShadow: "0 1px 2px rgba(20, 40, 60, 0.45)",
-                      boxShadow: "0 0 12px rgba(122, 231, 255, 0.75)",
-                    }
-                  : { background: rarity.color }),
-              }}
-            >
-              {rarity.label}
-            </span>
-          )}
           {phase === "missed" && fish && (
             // The one that got away — silhouette leaps off the card and dives.
             // eslint-disable-next-line @next/next/no-img-element
@@ -509,36 +474,6 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
               }}
             />
           )}
-          {phase === "caught" && newRecord && (
-            <span style={{ fontSize: "max(10px, var(--gui-min-text, 0px))", fontWeight: 700, letterSpacing: "0.06em", color: "#FFFDF5", background: "#C2410C", borderRadius: 999, padding: "3px 8px" }}>
-              NEW RECORD
-            </span>
-          )}
-          {phase === "caught" && wasNew && (
-            <span
-              style={{
-                fontSize: "max(10px, var(--gui-min-text, 0px))",
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                color: "#1A1410",
-                background: "#FFD166",
-                borderRadius: 999,
-                padding: "3px 8px",
-              }}
-            >
-              NEW!
-            </span>
-          )}
-        </div>
-      )}
-      {phase === "caught" && fish && oneLinerFor(fish.key) && (
-        <div style={{ fontFamily: "var(--font-highlight, sans-serif)", fontSize: 12, fontStyle: "italic", color: "#FFFDF5", textShadow: "0 1px 3px rgba(0,0,0,0.55)", maxWidth: 360, textAlign: "center" }} data-testid="catch-one-liner">
-          “{oneLinerFor(fish.key)}”
-        </div>
-      )}
-      {phase === "caught" && learned && (
-        <div style={{ fontFamily: "var(--font-highlight, sans-serif)", fontSize: 13, fontWeight: 700, color: "#FFFDF5", textShadow: "0 1px 3px rgba(0,0,0,0.55)" }} data-testid="catch-recipe">
-          You learned a recipe: {learned}
         </div>
       )}
       {phase === "charging" && (
@@ -550,7 +485,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
             textShadow: "0 1px 3px rgba(0,0,0,0.5)",
           }}
         >
-          {collectionScope ? "release E at the tip for MAX CAST" : "Let go at the tip for a max cast"}
+          {FISHING_HINTS[device].tip}
         </div>
       )}
       {(phase === "waiting" || phase === "bite" || phase === "casting") && (
@@ -562,22 +497,18 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
             textShadow: "0 1px 3px rgba(0,0,0,0.5)",
           }}
         >
-          {phase === "bite" ? "E, Space or click to hook" : "Watch for the bite"}
+          {phase === "bite" ? FISHING_HINTS[device].hook : "Watch for the bite"}
         </div>
       )}
       {phase !== "reeling" && (
         <button type="button" onClick={cancel} style={{ pointerEvents: "auto", padding: "7px 12px", borderRadius: 8, border: "1px solid var(--app-line, #D8CFB8)", background: "var(--app-surface, #FFFDF5)", color: "var(--app-ink, #4A4034)", fontSize: 12 }}>
-          {phase === "caught" || phase === "missed" ? "Close" : "Cancel cast (Esc)"}
+          {phase === "missed" ? "Close" : "Cancel cast (Esc)"}
         </button>
       )}
       <style>{`
         @keyframes fish-pulse {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.08); }
-        }
-        @keyframes fish-card-pop {
-          0% { transform: scale(0.6); opacity: 0; }
-          100% { transform: scale(1); opacity: 1; }
         }
         @keyframes fish-escape-jolt {
           0% { transform: translateX(0) rotate(0deg); }
@@ -589,16 +520,6 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
           0% { transform: translate(0, 0) rotate(0deg) scaleX(-1); opacity: 0.85; }
           45% { transform: translate(46px, -46px) rotate(28deg) scaleX(-1); opacity: 0.85; }
           100% { transform: translate(110px, 40px) rotate(80deg) scaleX(-1); opacity: 0; }
-        }
-        @keyframes tsi-holo-shift {
-          0% { background-position: 0% 50%; }
-          100% { background-position: 300% 50%; }
-        }
-        @keyframes tsi-holo-glow {
-          0%, 100% { box-shadow: 0 4px 26px rgba(94, 231, 247, 0.65), 0 0 0 4px rgba(94, 231, 247, 0.28); }
-          25% { box-shadow: 0 4px 26px rgba(181, 122, 255, 0.65), 0 0 0 4px rgba(181, 122, 255, 0.28); }
-          50% { box-shadow: 0 4px 26px rgba(255, 122, 217, 0.65), 0 0 0 4px rgba(255, 122, 217, 0.28); }
-          75% { box-shadow: 0 4px 26px rgba(125, 255, 196, 0.65), 0 0 0 4px rgba(125, 255, 196, 0.28); }
         }
       `}</style>
     </div>
@@ -628,12 +549,15 @@ export function ReelMinigame({
   onDone,
   initialInput,
   tensionMul = 1,
+  help = FISHING_HINTS.mouse.reel,
 }: {
   fish: FishDef;
   known: boolean;
   onDone: (success: boolean) => void;
   initialInput?: FishingHeldInput;
   tensionMul?: number;
+  /** How to reel on the device that started the cast (FISHING_HINTS). */
+  help?: string;
 }) {
   const reelRef = useRef<HTMLDivElement>(null);
   const pausedLabelRef = useRef<HTMLDivElement>(null);
@@ -642,6 +566,8 @@ export function ReelMinigame({
   const fishRef = useRef<HTMLImageElement>(null);
   const progRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  /** The splash a dart throws on the track: three drops made once and replayed (nothing is created in the loop). */
+  const dropRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const holdingRef = useRef(false);
   const doneRef = useRef(false);
   const lastThunkRef = useRef(0);
@@ -674,24 +600,19 @@ export function ReelMinigame({
       }
       const events = advanceFishingReel(simulation, dt, holdingRef.current, weatherMods(reelWeather(liveIslandWeather())).dartChanceMul, Math.random, tensionMul);
       const { position: pos, fishPosition: fishPos, inside, progress, tension } = simulation;
+      // The fight in the world: the fish pulls the bobber across, the line tightens, the reel cranks while held.
+      live.pull = fishPos * 2 - 1; live.tension = tension; live.reeling = holdingRef.current; live.reeled = progress;
       if (simulation.result !== null) return finish(simulation.result);
 
       if (events.bounced && now - lastThunkRef.current > 250) {
         lastThunkRef.current = now;
-        AudioManager.playSFX("blip3");
+        AudioManager.playSFX("click", { rate: 0.75, gain: 0.4 }); // the bar knocking the track's end: a soft tick
         barRef.current?.animate(
           [{ boxShadow: "0 0 0 0 rgba(61,143,82,0)" }, { boxShadow: "0 0 10px 2px rgba(61,143,82,0.8)" }, { boxShadow: "0 0 0 0 rgba(61,143,82,0)" }],
           { duration: 200 }
         );
       }
-      if (events.darted && trackRef.current) {
-        for (let i = 0; i < 3; i++) {
-          const drop = document.createElement("span");
-          drop.style.cssText = `position:absolute;left:${fishPos * 100}%;top:50%;width:5px;height:5px;border-radius:50%;background:#EAF6FF;pointer-events:none;--dx:${(Math.random() * 2 - 1) * 26}px;animation:reel-droplet 0.45s ease-out forwards;animation-delay:${i * 40}ms;`;
-          trackRef.current.appendChild(drop);
-          window.setTimeout(() => drop.remove(), 600);
-        }
-      }
+      if (events.darted) splashDrops(dropRefs.current, fishPos);
       setTensionZoom(tension);
 
       // DOM writes
@@ -734,6 +655,7 @@ export function ReelMinigame({
     return () => {
       cancelAnimationFrame(raf);
       setTensionZoom(0);
+      live.reeling = false;
       releaseInput();
       if (document.activeElement === reel && previouslyFocused?.isConnected) previouslyFocused.focus({ preventScroll: true });
     };
@@ -766,10 +688,6 @@ export function ReelMinigame({
           0% { transform: scale(0.7); opacity: 0; }
           70% { transform: scale(1.05); opacity: 1; }
           100% { transform: scale(1); opacity: 1; }
-        }
-        @keyframes reel-droplet {
-          0% { transform: translate(-50%, -50%); opacity: 0.95; }
-          100% { transform: translate(calc(-50% + var(--dx)), -26px); opacity: 0; }
         }
         @keyframes reel-heartbeat {
           0%, 100% { box-shadow: 0 0 0 0 rgba(255, 209, 102, 0); }
@@ -832,6 +750,7 @@ export function ReelMinigame({
             border: "2px solid #3D8F52",
           }}
         />
+        {DROP_SPREAD.map((_, i) => <span key={i} ref={el => { dropRefs.current[i] = el; }} aria-hidden style={DROP_STYLE} />)}
         {/* Fish icon riding the track — silhouetted until first caught */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -858,7 +777,7 @@ export function ReelMinigame({
         Paused · click the reel to resume
       </div>
       <div id="fishing-reel-help" style={{ marginTop: 8, fontSize: "max(11px, var(--gui-min-text, 0px))", color: "var(--app-muted, #635745)" }}>
-        Hold E, Space or left-click → · Release ← · Esc to let go
+        {help}
       </div>
       {/* Progress */}
       <div
@@ -890,6 +809,20 @@ export function ReelMinigame({
   );
 }
 
+/** The dart's drops: each flies out its own way from the fish (px across) and fades. */
+const DROP_SPREAD = [-22, 4, 24];
+const DROP_STYLE: React.CSSProperties = { position: "absolute", left: 0, top: "50%", width: 5, height: 5, borderRadius: "50%", background: "#EAF6FF", pointerEvents: "none", opacity: 0 };
+const DROP_FRAMES = DROP_SPREAD.map(dx => [{ transform: "translate(-50%, -50%)", opacity: 0.95 }, { transform: `translate(calc(-50% + ${dx}px), -26px)`, opacity: 0 }]);
+const DROP_TIMING = DROP_SPREAD.map((_, i) => ({ duration: 450, delay: i * 40, easing: "ease-out", fill: "forwards" as const }));
+/** Replay the three drops at the fish's place on the track. */
+function splashDrops(drops: (HTMLSpanElement | null)[], at: number) {
+  drops.forEach((drop, i) => {
+    if (!drop) return;
+    drop.style.left = `${at * 100}%`;
+    drop.animate(DROP_FRAMES[i], DROP_TIMING[i]);
+  });
+}
+
 // ─── Cast meter (David 2026-07-23) ──────────────────────────────────────────
 //
 // Hold E at a fishing spot → this vertical power bar ping-pongs bottom↔top
@@ -898,8 +831,8 @@ export function ReelMinigame({
 // wider hook window — see CAST in lib/game/fishing.ts). rAF + refs, zero
 // re-renders per frame; ESC cancels via the parent's key handler.
 
-/** `byKey`: the applicant island casts with E; the member island with the held rod's click (specs/game-ui.md). */
-function CastMeter({ onRelease, releaseRequestedRef, byKey }: { onRelease: (power: number) => void; releaseRequestedRef: React.RefObject<boolean>; byKey: boolean }) {
+/** `hint`: how to cast on the device that started it (the applicant island casts with E; the member island with the held rod's click or a tap). */
+function CastMeter({ onRelease, releaseRequestedRef, hint }: { onRelease: (power: number) => void; releaseRequestedRef: React.RefObject<boolean>; hint: string }) {
   const fillRef = useRef<HTMLDivElement>(null);
   const readoutRef = useRef<HTMLDivElement>(null);
   const pRef = useRef(0);
@@ -937,6 +870,7 @@ function CastMeter({ onRelease, releaseRequestedRef, byKey }: { onRelease: (powe
       const cyc = (vt % cycleMs) / cycleMs; // 0..1
       const p = cyc < 0.5 ? cyc * 2 : (1 - cyc) * 2;
       pRef.current = p;
+      live.power = p; // the avatar's wind-up deepens with it
       const inTip = p >= CAST.maxZone;
       if (fillRef.current) {
         fillRef.current.style.height = `${p * 100}%`;
@@ -1023,7 +957,7 @@ function CastMeter({ onRelease, releaseRequestedRef, byKey }: { onRelease: (powe
           0%
         </div>
         <div style={{ fontFamily: "var(--font-highlight, sans-serif)", fontSize: "max(11px, var(--gui-min-text, 0px))", color: "var(--app-muted, #8a7f6a)", maxWidth: 120 }}>
-          {byKey ? "hold E, release at the gold tip" : "Hold, then let go at the gold tip"}
+          {hint}
         </div>
       </div>
     </div>

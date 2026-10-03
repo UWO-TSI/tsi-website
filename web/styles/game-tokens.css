@@ -61,12 +61,13 @@
   --gui-warn: #8a5a12;     --gui-warn-soft: #fbedc9;
   --gui-info: #2f6d8a;     --gui-info-soft: #e1eff3;
 
-  /* ── Rarity edges (item tiles) ── */
+  /* ── Rarity: the one palette for item tiles, rarity badges, the catch card, the journal and the book (ink text on each) ── */
   --gui-rarity-common: #c9bd9f;
   --gui-rarity-uncommon: #8ac68a;
   --gui-rarity-rare: #889df0;
   --gui-rarity-epic: #b77dee;
   --gui-rarity-legendary: #f7cd67;
+  --gui-rarity-seaking: #7fd6dc;      /* the fish's crown tier (vacant until its marquee fish ship); holographic on the card */
 
   --gui-scrim: rgb(64 52 36 / 0.3);
 

@@ -1,13 +1,14 @@
 "use client";
 
 /**
- * FishCatchFX (ACNH revamp 2026-07) — the catch beat, in-world.
+ * FishCatchFX (ACNH revamp 2026-07) — the catch beat, in-world, on the
+ * applicant island (its player holds no rod; the member island shows the catch
+ * on the angler: character/FishingRig.tsx).
  *
  * FishingOverlay owns the cast/wait/bite machine in DOM; when it lands a
  * catch it dispatches `tsi:fish-caught` with the species' model path. This
- * layer (inside the Canvas) holds the fish GLB above the player for a
- * couple of seconds — the ACNH "show off the catch" pose. The models come
- * out of the pipeline hanging vertically, which reads exactly right.
+ * layer (inside the Canvas) holds the fish GLB above the player while the
+ * catch card is up. The models come out of the pipeline hanging vertically.
  */
 
 import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -16,7 +17,8 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 
-const SHOW_MS = 2400;
+/** The longest a catch stays over the head (the card normally closes first: the longest card is about 6.5 s). */
+const SHOW_MS = 8000;
 
 function CaughtFish({ url, raw }: { url: string; raw?: boolean }) {
   const { scene } = useGLTF(url);
@@ -52,10 +54,13 @@ export default function FishCatchFX({ playerPosRef }: { playerPosRef: React.Muta
     return () => window.removeEventListener("tsi:fish-caught", onCatch);
   }, []);
 
+  // Up while the catch card is (it closes with tsi:fish-end), never longer than SHOW_MS.
   useEffect(() => {
     if (!show) return;
-    const t = window.setTimeout(() => setShow(null), SHOW_MS);
-    return () => window.clearTimeout(t);
+    const end = () => setShow(null);
+    const t = window.setTimeout(end, SHOW_MS);
+    window.addEventListener("tsi:fish-end", end);
+    return () => { window.clearTimeout(t); window.removeEventListener("tsi:fish-end", end); };
   }, [show]);
 
   useFrame(() => {

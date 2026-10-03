@@ -184,3 +184,26 @@ describe("the verb library (classes v2, design sheet §1.8)", () => {
     expect(layerWeight(0.7, 0.7)).toBe(0);
   });
 });
+
+describe("the rod moment (specs/polish/fishing.md deliverable 2)", () => {
+  it("has its clips in the catalogue: a wind-up posed by the cast's power, a swing with its release key, the yank, the reel loop, the hold-up", () => {
+    expect(CLIP_BY_NAME.get("CastWindup")).toMatchObject({ scrub: true, loop: false });
+    expect(CLIP_BY_NAME.get("CastSwing")).toMatchObject({ loop: false, endsOn: "FishHold" });
+    const release = CLIP_BY_NAME.get("CastSwing")!.release!;
+    expect(release).toBeGreaterThan(0.2);
+    expect(release).toBeLessThan(0.5);
+    expect(CLIP_BY_NAME.get("HookYank")).toMatchObject({ loop: false, endsOn: "Reel" });
+    expect(CLIP_BY_NAME.get("HookYank")!.impact).toBeGreaterThan(0);
+    expect(CLIP_BY_NAME.get("Reel")).toMatchObject({ loop: true });
+    expect(CLIP_BY_NAME.get("HoldUp")).toMatchObject({ loop: true });
+    for (const c of ["Cheer", "Sad", "FishHold"]) expect(CLIP_BY_NAME.has(c)).toBe(true);
+  });
+  it("snaps from the wind-up into the swing and from the wait into the yank; lifts the catch and slumps more gently", () => {
+    expect(crossfade("CastWindup", "CastSwing")).toBeLessThanOrEqual(0.08);
+    expect(crossfade("FishHold", "HookYank")).toBeLessThanOrEqual(0.06);
+    expect(crossfade("Reel", "HoldUp")).toBeGreaterThanOrEqual(0.25);
+    expect(crossfade("Reel", "Sad")).toBeGreaterThanOrEqual(0.15);
+    expect(crossfade("Idle", "CastWindup")).toBeGreaterThan(0);
+    expect(resolveClip({ speed: 0, walkSpeed: 7.4, pose: "Reel", oneShot: "HookYank" })).toBe("HookYank");
+  });
+});

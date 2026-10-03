@@ -15,7 +15,7 @@ import { ReelMinigame } from "@/components/game/FishingOverlay";
 import FishReveal from "@/components/game/FishReveal";
 import FishPreview from "@/components/lab/FishPreview";
 import {
-  CELEBRATE,
+  REVEAL,
   FISH,
   HOLO_GRADIENT,
   RARITY_META,
@@ -273,13 +273,13 @@ export default function FishingBench() {
               mystery (??? + silhouette)
             </label>
             <button onClick={() => setRevealOpen(true)} style={btn()}>
-              Preview first-catch reveal
+              Preview the catch card
             </button>
             <button
               onClick={() => celebrate(selected.rarity, RARITY_META[selected.rarity].color)}
               style={btn()}
             >
-              Repeat-catch confetti ({CELEBRATE[selected.rarity].bursts} bursts)
+              Catch confetti ({REVEAL[selected.rarity].confetti} bursts)
             </button>
           </div>
 
@@ -301,7 +301,7 @@ export default function FishingBench() {
         </div>
       </div>
       {revealOpen && (
-        <FishReveal fish={selected} sizeCm={rollSize(selected.sizeCm)} onDone={() => setRevealOpen(false)} />
+        <FishReveal fish={selected} sizeCm={rollSize(selected.sizeCm)} isNew={mystery} onDone={() => setRevealOpen(false)} />
       )}
     </div>
   );

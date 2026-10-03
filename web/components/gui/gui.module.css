@@ -151,6 +151,7 @@ button.tile:hover { transform: translateY(-2px) scale(1.04); }
 .badge[data-tone="info"] { background: var(--gui-info-soft); color: var(--gui-info); }
 .badge[data-tone="gold"] { background: var(--gui-gold); color: var(--gui-ink-strong); }
 .badge[data-tone="new"] { background: var(--gui-coral); color: var(--gui-ink-strong); transform: rotate(-3deg); }
+.badge[data-tone="rarity"] { background: var(--rarity); color: var(--gui-ink-strong); text-transform: capitalize; }
 .counter { display: inline-grid; place-items: center; min-width: 21px; height: 21px; padding: 0 6px; box-sizing: border-box; border-radius: var(--gui-r-pill); background: var(--gui-danger); color: var(--gui-paper);
   border: 2px solid var(--gui-paper-hi); font: 800 var(--gui-text-xs)/1 var(--gui-font); font-variant-numeric: tabular-nums; animation: counterIn 0.35s var(--gui-spring); }
 @keyframes counterIn { from { transform: scale(0.3); opacity: 0; } }
