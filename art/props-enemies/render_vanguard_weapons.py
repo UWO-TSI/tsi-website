@@ -49,7 +49,9 @@ for t, names in TYPES.items():
     for n in names:
         objs = pe.import_glb(os.path.join(W, f"{t}-{n}.glb"))
         for o in objs:
-            o.rotation_euler = (0, 0, math.radians(35)) if o.parent is None else o.rotation_euler
+            if o.parent is None:                                 # the importer leaves quaternions: turn the root about the vertical
+                o.rotation_mode = "XYZ"
+                o.rotation_euler = (0, 0, math.radians(80 if t == "warhammer" else 30))   # the hammer's head side on
         st.shot(os.path.join(OUT, f"alone_{t}_{n}.png"), objs, elev=14, res=(220, 300), ground=False)
         for o in objs:
             bpy.data.objects.remove(o, do_unlink=True)
