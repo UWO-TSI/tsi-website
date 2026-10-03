@@ -21,6 +21,10 @@ import type { EnemyType } from "@/lib/game/combat/contract";
 import { CAPS } from "@/lib/combat/kits";
 import { packMap, spriteQuad } from "../movement/moveFx";
 import { lobHeight } from "@/lib/game/combat/mobs";
+import { WARDEN_ALLY_TYPES } from "@/lib/game/combat/wardenBodies";
+
+/** The Warden's beasts, totems and spirits carry their own colours (green-eyed shadows, elemental glows): no ally tint. */
+const OWN_COLOURS = new Set(WARDEN_ALLY_TYPES);
 
 type Ground = (x: number, z: number) => number;
 const tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpS = new THREE.Vector3(), tmpP = new THREE.Vector3(), tmpC = new THREE.Color(), UP = new THREE.Vector3(0, 1, 0);
@@ -100,7 +104,7 @@ export function EnemyInstances({ typeId, capacity, ground, allies = false, type:
       tmpQ.setFromAxisAngle(UP, (e.state === "active" ? e.beam : e.facing) + type.modelYaw);
       tmpS.setScalar(type.modelScale * dying * (allies ? 0.85 : 1));
       if (e.flat) tmpS.z *= 1 - 0.94 * e.flat; // trapped in a sweeping mirror: pressed flat into the glass (primitives.ts sweep)
-      tmpP.set(e.x, ground(e.x, e.z) + type.hover + bob + airborne(e), e.z);
+      tmpP.set(e.x, ground(e.x, e.z) + type.hover + bob + airborne(e) + (e.flat ?? 0) * 1.7, e.z); // a mirror's catch is lifted into its glass
       tmpM.compose(tmpP, tmpQ, tmpS);
       nodes.forEach((n, ni) => {
         const m = world[ni].copy(n.rest);
@@ -119,7 +123,7 @@ export function EnemyInstances({ typeId, capacity, ground, allies = false, type:
         else if (e.state === "windup") tmpC.setRGB(1.15, 0.95, 0.9);
         else if (e.state === "return") tmpC.setRGB(0.7, 0.75, 0.9);
         else tmpC.setScalar(1);
-        if (allies) tmpC.multiply(e.id.startsWith("shade") ? SHADE_TINT : ALLY_TINT);
+        if (allies && !OWN_COLOURS.has(typeId)) tmpC.multiply(e.id.startsWith("shade") ? SHADE_TINT : ALLY_TINT);
         mesh.setColorAt(i, tmpC);
       });
     });
@@ -263,6 +267,9 @@ const SHOT: Record<Projectile["kind"], { model: string; scale: number; trail: TH
   // Zone 1: the wisps' rune bolt (the rune shard, cyan), the mushroom's lobbed spore ball (the glob, on its arc).
   rune: { model: `${P}projectile-bolt.glb`, scale: 2.2, trail: new THREE.Color("#7fe8ff"), width: 0.32, lit: false },
   spore: { model: `${P}projectile-spit.glb`, scale: 2.4, trail: new THREE.Color("#b6e06a"), width: 0.2, lit: false },
+  // Classes v2 (the Rangers): a bullet (the shard, small and hot, a long gold tracer), a harpoon (the arrow, heavy, a chain-grey wake).
+  bullet: { model: `${P}projectile-bolt.glb`, scale: 0.55, trail: new THREE.Color("#ffd27a"), width: 0.09, lit: false },
+  harpoon: { model: `${P}projectile-arrow.glb`, scale: 2.1, trail: new THREE.Color("#c8d3dc"), width: 0.12, lit: true },
   // Classes v2, Arcane: the Illusionist's thrown cards (and reflected shots), the Necromancer's bone shards.
   card: { model: `${P}projectile-card.glb`, scale: 1.6, trail: new THREE.Color("#d79cff"), width: 0.12, lit: true },
   bone: { model: `${P}projectile-bone.glb`, scale: 1.6, trail: new THREE.Color("#c9f5d2"), width: 0.1, lit: true },
@@ -290,7 +297,7 @@ function ShotPool({ kind, ground, max }: { kind: Projectile["kind"]; ground: Gro
       if (s.kind !== kind || n >= max) continue;
       const speed = Math.hypot(s.vx, s.vz);
       tmpQ.setFromAxisAngle(UP, Math.atan2(s.vx, s.vz));
-      tmpP.set(s.x, ground(s.x, s.z) + 0.9 + (s.arc ? lobHeight(s.life, s.arc) : 0), s.z);
+      tmpP.set(s.x, ground(s.x, s.z) + 0.9 + (s.arc ? lobHeight(s.life, s.arc) : 0) + (s.fall?.y ?? 0), s.z);
       b.setMatrixAt(n, tmpM.compose(tmpP, tmpQ, tmpS.setScalar(look.scale)));
       t.setMatrixAt(n, tmpM.compose(tmpP, tmpQ, tmpS.set(look.width, 1, Math.min(1.4, speed * 0.06))));
       n++;
@@ -337,7 +344,9 @@ export function Wisps({ ground, max = 10 }: { ground: Ground; max?: number }) {
  * Totems (the carved post from art/props-enemies, its eyes and rings in the kind's colour, and the circle it covers, so
  * overlaps read), tripwires (a small disc), and a ring under each of your summons: green, violet for a shade.
  */
-const TOTEM_COLOR = colors({ "totem-ember": "#ff8a3d", "totem-mending": "#7dff9e", "totem-warding": "#8fd0ff", tripwire: "#ffe08a", shade: "#c9a7ff", decoy: "#d9b8ff" }), TOTEM_DEFAULT = TOTEM_COLOR["totem-mending"];
+const TOTEM_COLOR = colors({ "totem-ember": "#ff8a3d", "totem-mending": "#7dff9e", "totem-warding": "#8fd0ff", tripwire: "#ffe08a", shade: "#c9a7ff", decoy: "#d9b8ff",
+  // Classes v2, the Rangers' traps and the Great Hunt's hounds (in their kits' ramps).
+  "sniper-mine": "#a9c8ff", "snare-trap": "#5fd1b0", "spike-trap": "#d8f0a0", "spectral-hound": "#5fd1b0" }), TOTEM_DEFAULT = TOTEM_COLOR["totem-mending"];
 const glowing = (m: THREE.Material) => m.name === "M_Glow", solid = (m: THREE.Material) => m.name !== "M_Glow";
 const camDir = new THREE.Vector3();
 export function Totems({ ground, max = 16 }: { ground: Ground; max?: number }) {
@@ -347,7 +356,9 @@ export function Totems({ ground, max = 16 }: { ground: Ground; max?: number }) {
   const disc = useMemo(() => new THREE.CircleGeometry(1, 48).rotateX(-Math.PI / 2), []);
   useEffect(() => () => { ring.dispose(); disc.dispose(); }, [ring, disc]);
   useFrame(({ clock, camera }) => {
-    const list = combat.rt.units.filter(u => u.source !== "weapon"), p = post.current, e = eyes.current;
+    // No marker under a clone (it must pass for you), an ult's free horde (cost 0: thirty rings would bury the field) or a
+    // bodied totem (the Warden's draw as their own models).
+    const list = combat.rt.units.filter(u => u.source !== "weapon" && u.def.kind !== "clone" && u.def.cost !== 0 && !(u.def.kind === "totem" && u.body)), p = post.current, e = eyes.current;
     // Carved faces turn to the camera, wherever it orbits (specs/camera-orbit.md): yaw + π from its heading.
     camera.getWorldDirection(camDir);
     const facing = Math.atan2(camDir.x, camDir.z) + Math.PI;
@@ -398,7 +409,9 @@ export function PlayerAuras({ player, ground }: { player: React.RefObject<THREE.
     if (bubble.current) {
       bubble.current.visible = p.shield > 0.5 && p.alive;
       bubble.current.position.set(pl.x, g + 0.95, pl.z);
-      (bubble.current.material as THREE.MeshBasicMaterial).opacity = 0.12 + Math.min(0.18, p.shield / p.maxHp);
+      // A sliver of a barrier (the Transmuter's 1% on every shift) shows faint, not as a sphere over the form; 5% and up as before.
+      const share = p.shield / p.maxHp;
+      (bubble.current.material as THREE.MeshBasicMaterial).opacity = (0.12 + Math.min(0.18, share)) * Math.min(1, 0.3 + share * 14);
     }
     if (guard.current) {
       guard.current.visible = rt.buffs.some(b => b.stat === "block") && p.alive;

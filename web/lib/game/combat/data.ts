@@ -6,11 +6,23 @@
  * so modelScale 1.3 = CHARACTER_SCALE keeps them in proportion to the player.
  */
 import { islandEnemies, islandMissions, islandWeapons } from "@/lib/combat/islandAdapter";
+import { WARDEN_WEAPONS } from "@/lib/combat/wardenData";
 import type { EnemyAttack, EnemyType, MissionDef, Weapon } from "./contract";
+import { WARDEN_BODIES } from "./wardenBodies";
 
 const W = "/assets/game/weapons/", E = "/assets/game/enemies/";
 
-type Look = Pick<Weapon, "cooldown" | "range" | "arc" | "speed" | "model" | "modelScale" | "grip" | "shot">;
+type Look = Pick<Weapon, "cooldown" | "range" | "arc" | "speed" | "model" | "modelScale" | "grip" | "pulse" | "shot">;
+/**
+ * The Rangers' grips in socket space (three.js Euler XYZ, solved from the clips' frames by
+ * art/props-enemies/render_ranger.py `grips`): in the hand while shooting, at rest in the hand, across the back.
+ */
+const RIFLE_GRIP: NonNullable<Look["grip"]> = { hand: [-2.382, -0.919, 2.97], rest: [-0.729, 0.946, 2.325], back: [-1.571, 0.585, 0] };
+const RANGER_GRIPS: Record<string, Look["grip"]> = {
+  rifle: RIFLE_GRIP, harpoon: RIFLE_GRIP,
+  // The revolver is authored as the brass one (barrel +Z in glTF): its grips.
+  sixgun: { hand: [0.81, 1.41, -0.92], rest: [0.53, 0.92, 0.85], back: [Math.PI / 2, 0, 0] },
+};
 const WEAPON_LOOK: Record<string, Look> = {
   // Combat polish 11 (specs/evidence/combat-b/balance.md): the driftwood sword 0.42 → 0.45, the oak staff 0.75 → 0.5 with a
   // faster bolt (11 → 15), the wraps 0.32 → 0.42, so every subclass's normal-mission DPS sits within ±25% of the median.
@@ -34,7 +46,16 @@ const WEAPON_LOOK: Record<string, Look> = {
   "staff-sigil": { cooldown: 0.65, range: 10, arc: 0, speed: 14, model: `${W}staff-rune.glb`, modelScale: 1.45 },
   "tome-warden": { cooldown: 5, range: 8, arc: 0, model: `${W}tome-spirits.glb`, modelScale: 1.5 },
   "staff-heartstone": { cooldown: 0.6, range: 11, arc: 0, speed: 15, model: `${W}staff-rune.glb`, modelScale: 1.6 },
+  // Classes v2, the Rangers' signature weapons (art/props-enemies/build_weapons.py, one model per tier). The kit's own fire
+  // (lib/combat/rangerKits.ts) sets their pace in the ruins; these are the range the bot holds and the hand grips.
+  ...signatureLooks("recurve", { cooldown: 0.67, range: 11, arc: 0, speed: 24 }, RANGER_GRIPS.recurve),
+  ...signatureLooks("rifle", { cooldown: 1, range: 16, arc: 0, speed: 70 }, RANGER_GRIPS.rifle),
+  ...signatureLooks("harpoon", { cooldown: 0.83, range: 11, arc: 0, speed: 30 }, RANGER_GRIPS.harpoon),
+  ...signatureLooks("sixgun", { cooldown: 0.31, range: 10, arc: 0, speed: 55 }, RANGER_GRIPS.sixgun),
 };
+function signatureLooks(type: string, feel: Pick<Look, "cooldown" | "range" | "arc" | "speed">, grip?: Look["grip"]): Record<string, Look> {
+  return Object.fromEntries([1, 2, 3, 4, 5].map(t => [`${type}-${t}`, { ...feel, model: `${W}${type}-${t}.glb`, modelScale: 1.3, ...(grip ? { grip } : {}), ...(t === 5 ? { pulse: true } : {}) }]));
+}
 // Classes v2, Arcane signature weapons (lib/combat/arcaneSeed.ts): one feel per type, every tier its own model.
 // The deck throws cards and the tome bone shards (their shot looks); the charm fights with bare fists. Grips solved on
 // the v7 rig and the verb library's hold idles (art/props-enemies/build_arcane.py `-- held`): the staff stands beside
@@ -47,6 +68,16 @@ const ARCANE_LOOK: Record<string, Omit<Look, "model">> = {
 };
 const SHOT: Record<string, Weapon["shot"]> = { "trick-deck": "card", "bone-tome": "bone" };
 for (const [type, look] of Object.entries(ARCANE_LOOK)) for (let t = 1; t <= 5; t++) WEAPON_LOOK[`${type}-${t}`] = { ...look, model: `${W}${type}-${t}.glb`, ...(SHOT[type] ? { shot: SHOT[type] } : {}) } as Look;
+// Classes v2, the Warden wave's signature weapons (art/props-enemies/build_warden.py, a model per tier): the seal gloves'
+// shadow lash snaps out from the hand to 7 u (worn, so held like a blade: no upright rest); the three staffs throw their
+// bolts (the spirit bolt, thorn seeds, the Lightbolt).
+const WARDEN_LOOK: Record<string, Omit<Look, "model">> = {
+  "seal-gloves": { cooldown: 0.6, range: 7, arc: 0, speed: 24, modelScale: 1.3, grip: { hand: [Math.PI / 2, 0, 0], back: [0, 0, 0.5] } },
+  "totem-staff": { cooldown: 0.6, range: 9, arc: 0, speed: 16, modelScale: 1.3 },
+  "living-staff": { cooldown: 0.55, range: 8, arc: 0, speed: 15, modelScale: 1.3 },
+  "sunstone-staff": { cooldown: 0.55, range: 9, arc: 0, speed: 17, modelScale: 1.3 },
+};
+for (const w of WARDEN_WEAPONS) WEAPON_LOOK[w.key] = { ...WARDEN_LOOK[w.type], model: `${W}${w.key}.glb` };
 export const WEAPONS: Record<string, Weapon> = Object.fromEntries(islandWeapons()
   .filter(w => WEAPON_LOOK[w.id])
   .map(w => [w.id, { ...w, ...WEAPON_LOOK[w.id] }]));
@@ -96,7 +127,7 @@ const ENEMY_LOOK: Record<string, EnemyLook> = {
   ], "guardian-statue"),
 };
 
-export const ENEMIES: Record<string, EnemyType> = Object.fromEntries(islandEnemies().filter(e => ENEMY_LOOK[e.id]).map(e => {
+export const ENEMIES: Record<string, EnemyType> = { ...WARDEN_BODIES, ...Object.fromEntries(islandEnemies().filter(e => ENEMY_LOOK[e.id]).map(e => {
   const { attacks, ...l } = ENEMY_LOOK[e.id];
   const type: EnemyType = {
     id: e.id, name: e.name, kind: e.kind, level: e.level, hp: e.hp, defense: e.defense, armor: e.armor, xp: e.xp, elite: e.elite,
@@ -104,7 +135,7 @@ export const ENEMIES: Record<string, EnemyType> = Object.fromEntries(islandEnemi
     attacks: attacks.map(({ power = 1, range, ...m }) => ({ ...m, range: range ?? e.range, damage: Math.round(e.damage * power) })),
   };
   return [e.id, type];
-}));
+})) };
 
 /** Island wording for the board (systems titles, island blurbs). */
 const BLURB: Record<string, string> = {

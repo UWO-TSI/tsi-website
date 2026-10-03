@@ -28,9 +28,9 @@ export const ELEMENTALIST_FX: Record<string, FxRecipe> = {
   "elementalist.pillars": { tier: "heavy", layers: [mesh("beam", 1, 8, 0.5, { lift: 0.05 }), glow(P("flame", [18, 22], [0.5, 0.7], [0.5, 0.75], { speed: [6, 9], spread: 0.2, up: [3, 5.5], gravity: 6, drag: 1, grow: 0.8 }), { lift: 0.1, toward: "aim" }),
     debris(10), smoke(5, 1.1), lines(10, 1.1), decal("crack", 2.4, 3)] },
   "elementalist.lava": { tier: R, layers: [glow(P("flame", [5, 6], [0.4, 0.5], [0.25, 0.4], { speed: [3, 7], spread: 0.15, up: [0.6, 1.2], grow: 0.6 }), { lift: 0.05, toward: "aim" }), decal("crack", 1.2, 0.6, { byRadius: true })] },
-  "elementalist.grove.cast": { tier: R, layers: [decal("rune", 2.6, 1.2, { spin: 0.4 }), glow(P("petal", [8, 10], [0.6, 0.8], [0.2, 0.3], { jitter: 1.8, up: [0.8, 1.6], spin: 3, grow: 0.8 }), { lift: 0.2 })] },
-  /** The flower ring, each pulse: petals rising and healing motes. */
-  "elementalist.grove": { tier: R, layers: [glow(P("petal", [6, 7], [0.7, 0.9], [0.22, 0.32], { jitter: 2.2, up: [0.4, 0.9], spin: 2, grow: 0.9, gravity: -0.2 }), { lift: 0.1, byRadius: true }),
+  "elementalist.grove.cast": { tier: R, layers: [decal("rune", 2.6, 1.2, { spin: 0.4 }), glow(P("petal", [12, 14], [0.7, 0.9], [0.32, 0.46], { jitter: 2, up: [0.8, 1.6], spin: 3, grow: 0.9 }), { lift: 0.2 })] },
+  /** The flower ring, each pulse (every 0.5 s): its blossom edge and ground flowers outliving the next pulse so they never blink, petals rising, healing motes. */
+  "elementalist.grove": { tier: R, layers: [ring(2.65, 2.8, 0.9, 0.05), decal("petal", 0.9, 1, { byRadius: true, spin: 0.3 }), glow(P("petal", [8, 9], [0.7, 0.9], [0.34, 0.48], { jitter: 2.2, up: [0.4, 0.9], spin: 2, grow: 0.9, gravity: -0.2 }), { lift: 0.1, byRadius: true }),
     glow(P("mote", [4, 5], [0.6, 0.8], [0.12, 0.18], { jitter: 1.6, up: [1, 1.6], grow: 0.6 }), { lift: 0.2 })] },
   "elementalist.riptide": { tier: R, layers: [glow(P("wave", [3, 4], [0.35, 0.45], [0.8, 1.1], { speed: [9, 12], spread: 0.15, drag: 0.2 }), { lift: 0.7, toward: "away" }), glow(P("droplet", [10, 12], [0.4, 0.5], [0.16, 0.24], { speed: [5, 8], spread: 0.6, up: [1, 2.5], gravity: 9 }), { lift: 0.7 }), star(1.2, 0.2)] },
   "elementalist.rampart": { tier: R, layers: [debris(10), smoke(4, 1.2), ring(0.4, 2.2, 0.3, 0.2), decal("crack", 2.2, 3)] },
@@ -38,9 +38,9 @@ export const ELEMENTALIST_FX: Record<string, FxRecipe> = {
   "mash.miss": { tier: R, layers: [decal("crack", 1, 1), ink(P("debris", [4, 5], [0.4, 0.5], [0.15, 0.22], { speed: [1, 2], up: [2, 3], gravity: 12, spin: 5 }), { lift: 0.1 })] },
   "elementalist.cataclysm.charge": { tier: "heavy", layers: [decal("rune", 3.4, 1.5, { spin: 0.5 }), glow(P("mote", [22, 26], [0.5, 0.6], [0.2, 0.3], { speed: [-3.5, -2.5], jitter: 2.4, rise: [0.1, 2], grow: 0.4 }), { lift: 0.2 }), halo(2, 0.6, 1.2)] },
   /** The gathering storm over the aim, every 0.35 s of the channel: dark clouds overhead, the area glowing on the ground, falling sparks of all four elements. */
-  "elementalist.storm": { tier: "heavy", layers: [ink(P("cloud", [6, 7], [1.1, 1.4], [2.2, 3.2], { jitter: 4.2, speed: [0.3, 0.8], drag: 1, grow: 1.3, alpha: 0.85, rise: [5.2, 6.2] }), { lift: 0, byRadius: true }),
-    ring(0.92, 1.0, 0.45, 0.06), decal("rune", 1.9, 0.5, { byRadius: true, spin: 0.2 }),
-    glow(P("flare", [3, 4], [0.3, 0.4], [0.3, 0.5], { jitter: 3.5, rise: [4.5, 5.5], up: [-6, -4], grow: 0.6 }), { lift: 0 })] },
+  "elementalist.storm": { tier: "heavy", layers: [ink(P("cloud", [4, 5], [1.1, 1.4], [1.3, 1.9], { jitter: 5, speed: [0.2, 0.5], drag: 1, grow: 1.25, alpha: 0.72, rise: [3.4, 4.2] }), { lift: 0 }),
+    ring(2.62, 2.8, 0.45, 0.06), decal("rune", 1.9, 0.5, { byRadius: true, spin: 0.2 }),
+    glow(P("flare", [3, 4], [0.3, 0.4], [0.3, 0.5], { jitter: 4.5, rise: [3, 3.8], up: [-6, -4], grow: 0.6 }), { lift: 0 })] },
   "elementalist.meteor": { tier: "ult", layers: [star(6, 0.45), sparks(4, 3.2), halo(6, 0.5, 0.6), lines(14, 2.6, 0.35),
     glow(P("flame", [40, 46], [0.7, 1.1], [0.6, 1.1], { speed: [6, 12], up: [3, 8], gravity: 8, drag: 0.8, grow: 0.8 }), { lift: 0.3, byRadius: true }),
     ring(0.6, 6.5, 0.6, 0.2), ring(0.4, 4.2, 0.45, 1.2, false), mesh("pillar", 1.4, 2.8, 0.55, { height: 9 }), mesh("dome", 1, 4.8, 0.8, { height: 2.4, byRadius: true }),

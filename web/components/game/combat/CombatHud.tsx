@@ -14,13 +14,18 @@ import { cdKey, mashNotes } from "@/lib/game/combat/classRuntime";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { keyName, useAbilityKeys, useMoveKeys } from "@/lib/game/movement/keys";
 import { WEAPONS } from "@/lib/game/combat/data";
-import { CAST, cancelCast, FLOATERS, resolveCast } from "@/lib/game/combat/abilities";
+import { CAST, cancelCast, FLOATERS, resolveCast, shapePotency } from "@/lib/game/combat/abilities";
+import { screenAngle } from "@/lib/game/combat/runes";
+import { orbit } from "@/lib/game/orbitCamera";
 import { CAPS } from "@/lib/combat/kits";
 import { bigFoe, foeHint, phaseMarks } from "@/lib/game/combat/mobs";
 import type { IncantationScore } from "@/lib/game/combat/contract";
 import { floaterNodes, noteNodes } from "./EncounterRender";
+import { beastCap, beastKit, isTamed, ritualOn } from "@/lib/game/combat/beasts";
+import { totemState } from "@/lib/game/combat/totems";
 import IncantationOverlay from "./IncantationOverlay";
 import ImpactOverlay from "./ImpactOverlay";
+import ClassGauges from "./ClassGauges";
 import styles from "../DefaultIslandWorld.module.css";
 
 export default function CombatHud({ player }: { player: React.RefObject<{ x: number; z: number }> }) {
@@ -52,7 +57,7 @@ export default function CombatHud({ player }: { player: React.RefObject<{ x: num
       <div className={styles.weaponLine}>
         <span>{w.name}</span>
         <small data-broken={p.durability[p.weapon] <= 0 || undefined}>Durability {p.durability[p.weapon]}/{w.maxDurability}{p.durability[p.weapon] <= 0 ? " · broken, half damage" : ""}</small>
-        <small className={styles.dodgePip} data-ready={p.dodgeCd <= 0 || undefined}><kbd>{keyName(dash)}</kbd> Dodge · <kbd>{keyName(keys.swap)}</kbd> Previous weapon</small>
+        <small className={styles.dodgePip} data-ready={p.dodgeCd <= 0 || undefined}><kbd>{keyName(dash)}</kbd> Dodge · <kbd>{keyName(keys.swap)}</kbd> {rt.v2?.kit.fire?.ammo ? "Reload" : "Previous weapon"}</small>
       </div>
       {kit && <small className={styles.kitLine}>{kit.subclass.name} · {kit.subclass.passive.name}{rt.transform ? ` · ${rt.transform.name}` : ""}
         {summons ? ` · Summons ${minions.reduce((n, u) => n + (u.def.cost ?? 1), 0)}/${kit.capacity}` : ""}{usesTotems ? ` · Totems ${totems.length}/${CAPS.totems}` : ""}</small>}
@@ -79,7 +84,9 @@ export default function CombatHud({ player }: { player: React.RefObject<{ x: num
     </div>}
     {!p.alive && <p className={styles.defeat} role="alert">You&apos;re down. Waking at the gate…</p>}
     {p.alive && rt.banner && <p className={styles.banner} data-kind={rt.banner.kind} role="status"><b>{rt.banner.title}</b><span>{rt.banner.text}</span></p>}
-    {rt.casting && <IncantationOverlay key={rt.casting.id} runeId={rt.casting.rune} title={rt.casting.ability.name} effect={rt.casting.ability.description} onDone={onDone} onCancel={onCancel} />}
+    {rt.casting && <IncantationOverlay key={rt.casting.id} runeId={rt.casting.rune} title={rt.casting.ability.name} effect={rt.casting.ability.description} onDone={onDone} onCancel={onCancel}
+      angle={rt.casting.free ? screenAngle(rt.casting.aim.x - (player.current?.x ?? 0), rt.casting.aim.z - (player.current?.z ?? 0), orbit.view.yaw) : undefined}
+      power={rt.casting.free ? shapePotency : undefined} />}
   </>;
 }
 
@@ -101,25 +108,29 @@ function ClassBar({ rt, keys }: { rt: CombatRuntime; keys: Record<string, string
         const id = V2_SLOT_IDS[i], base = kit.keys[i], cd = a ? v.cd[cdKey(a)] ?? 0 : 0, held = v.holding[i];
         const max = a?.input?.kind === "hold" ? a.input.max_s : a?.input?.kind === "charge" ? a.input.max_s : 1;
         const left = held !== null ? 1 - Math.min(1, held / max) : a && cd > 0 ? Math.min(1, cd / Math.max(a.cooldown_s, 0.1)) : 0;
+        const untamed = !a && !!base.tame && !isTamed(rt, base.tame), ritual = !a && !untamed && ritualOn(rt), icon = (a ?? base).icon;
         return <li key={`${id}-${rt.denied[id]}`} data-denied={rt.denied[id] > 0 || undefined} data-cooling={cd > 0 || undefined} data-locked={!a || undefined}
           data-held={held !== null || undefined} data-on={v.toggled[i] || undefined} data-unarmed={!armed || undefined}
           data-form={a?.group && v.form && a.key.endsWith(`.${v.form}`) || undefined}
-          title={a ? `${a.name}${a.input && a.input.kind !== "tap" ? ` (${INPUT_WORD[a.input.kind]})` : ""}: ${a.description} · ${a.cooldown_s ? `${a.cooldown_s.toFixed(1)} s · ` : ""}${a.energy} ${word}` : `${base.name}: ${base.learn ? "learn it by defeating its creature" : `opens at mastery ${base.unlock}`}`}>
+          title={a ? `${a.name}${a.input && a.input.kind !== "tap" ? ` (${INPUT_WORD[a.input.kind]})` : ""}: ${a.description} · ${a.cooldown_s ? `${a.cooldown_s.toFixed(1)} s · ` : ""}${a.energy} ${word}` : `${base.name}: ${untamed ? "tame it first at the ritual circle in the outer wild" : ritual ? "your beasts wait while the ritual runs" : base.learn ? "learn it by defeating its creature" : `opens at mastery ${base.unlock}`}`}>
           <span className={styles.sweep} style={{ "--sweep": `${left * 360}deg` } as React.CSSProperties}><kbd>{keyName(keys[id])}</kbd></span>
           {/* eslint-disable-next-line @next/next/no-img-element -- a tiny static ability emblem */}
-          <span className={styles.slotName}>{base.icon && <img className={styles.slotIcon} src={base.icon} alt="" />}{a?.name ?? base.name}</span>
-          <small>{!a ? (base.learn ? "Not learned" : `Mastery ${base.unlock}`) : held !== null ? `${INPUT_WORD[a.input!.kind]}…` : cd > 0 ? `${cd.toFixed(cd < 1 ? 1 : 0)}s` : `${a.input && a.input.kind !== "tap" ? `${INPUT_WORD[a.input.kind]} · ` : ""}${a.energy}`}</small>
+          <span className={styles.slotName}>{icon && <img className={styles.slotIcon} src={icon} alt="" />}{a?.name ?? base.name}</span>
+          <small>{!a ? (untamed ? "Tame it" : ritual ? "Ritual" : base.learn ? "Not learned" : `Mastery ${base.unlock}`) : held !== null ? `${INPUT_WORD[a.input!.kind]}…` : cd > 0 ? `${cd.toFixed(cd < 1 ? 1 : 0)}s` : `${a.input && a.input.kind !== "tap" ? `${INPUT_WORD[a.input.kind]} · ` : ""}${a.energy}`}</small>
         </li>;
       })}</ol>
       <div className={styles.ultSlot} data-ready={ready || undefined} data-denied={rt.denied.ult || undefined} key={`ult-${rt.denied.ult}`}
         role="meter" aria-label={`${v.ult.name} charge`} aria-valuenow={Math.floor(v.meter)} aria-valuemin={0} aria-valuemax={ULT.max}
         title={`${v.ult.name}: ${v.ult.description}${ready ? " · ready" : ` · ${Math.floor(v.meter)}%`}`} style={{ "--meter": `${meter * 360}deg` } as React.CSSProperties}>
         {/* eslint-disable-next-line @next/next/no-img-element -- a tiny static class emblem */}
-        <img src={kit.look.icon} alt="" />
+        <img src={v.ult.icon ?? kit.look.icon} alt="" />
         <kbd>{keyName(keys.ult)}</kbd>
       </div>
     </div>
-    {v.combos.length > 0 && <small className={styles.kitLine}>{v.combos.map(c => { const [a, b] = c.keys.map(i => keyName(keys[V2_SLOT_IDS[i]])); return `${a === b ? `${a} ${a}` : `${a} + ${b}`}: ${c.ability.name}`; }).join(" · ")}</small>}
+    {beastKit(kit) && <small className={styles.kitLine}>Beasts out {rt.units.filter(u => u.def.key.startsWith("beast-")).reduce((n, u) => n + (u.def.cost ?? 1), 0)} / {beastCap(v.mastery)}</small>}
+    {rt.units.some(u => u.def.kind === "totem" && u.def.driven) && (() => { const s = totemState(rt); return <small className={styles.kitLine}>Totems {rt.units.filter(u => u.def.kind === "totem" && u.def.driven && !u.def.uncapped).length} / 3 · links {s.links.length} · enclosed {s.enclosed}</small>; })()}
+    <ClassGauges rt={rt} swapKey={keys.swap} />
+    {v.combos.length > 0 && <small className={styles.kitLine}>{v.combos.map(c => { const [a, b] = c.keys.map(i => keyName(keys[V2_SLOT_IDS[i]])); return `${a === b ? `${a}\u00a0${a}` : `${a}\u00a0+\u00a0${b}`}:\u00a0${c.ability.name}`; }).join(" · ")}</small>}
     <div className={styles.masteryBar} role="meter" aria-label="Mastery" aria-valuenow={v.progress.into} aria-valuemin={0} aria-valuemax={v.progress.needed || 1}>
       <span style={{ width: `${v.progress.needed ? (v.progress.into / v.progress.needed) * 100 : 100}%` }} />
     </div>
@@ -129,7 +140,8 @@ function ClassBar({ rt, keys }: { rt: CombatRuntime; keys: Record<string, string
 /** What the class has out or on right now (classes v2 primitives): clones, minions and their order, the form, unseen, an open counter. */
 function classStatus(rt: CombatRuntime): string {
   const v = rt.v2!, f = rt.field, out: string[] = [];
-  const clones = rt.units.filter(u => u.def.kind === "clone").length, minions = rt.units.filter(u => u.def.kind === "minion" && u.source !== "weapon" && (u.def.cost ?? 1) > 0).length;
+  // The Summoner's beasts are minions too; its own line counts them (beasts out), so they aren't "Skeletons" here.
+  const clones = rt.units.filter(u => u.def.kind === "clone").length, minions = rt.units.filter(u => u.def.kind === "minion" && u.source !== "weapon" && (u.def.cost ?? 1) > 0 && !u.def.key.startsWith("beast-")).length;
   if (v.form) out.push(`${v.kit.forms?.[v.form]?.name ?? v.form} form`);
   if (clones) out.push(`Clones ${clones}`);
   if (minions || v.kit.stat.kind === "summon_count") out.push(`Skeletons ${minions}/${v.capacity}${f.order.mode === "charge" ? " · charging" : f.order.mode === "guard" ? " · guarding" : ""}`);

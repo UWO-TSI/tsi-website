@@ -118,6 +118,8 @@ class Puppet {
   private readonly ghostParent: THREE.Object3D;
   private readonly ghosts: Ghost[] = [];
   private ghostNext = 0;
+  /** While faded (motion.fade < 1): the body's and print's own translucent copies of the shared materials, and the materials they replaced. */
+  private faded: { body: THREE.MeshPhysicalMaterial; decal: THREE.MeshPhysicalMaterial | null; was: { body: THREE.Material; decal: THREE.Material } } | null = null;
   /** The arm hold laid over locomotion (specs/game-ui.md §2): its clip (kept while it eases out) and weight. */
   private holdClip: ClipName | null = null;
   private holdShown: ClipName | null = null;
@@ -308,8 +310,30 @@ class Puppet {
     this.body.renderOrder = this.face.renderOrder = this.decal.renderOrder = GHOST_ORDER + 1;
   }
 
+  /** Translucent while `f` < 1 (classes v2: Escape Rabbits): the body and print draw from their own copies, the face's own material fades with them. */
+  private fade(f: number) {
+    const face = this.face.material as THREE.Material;
+    if (f >= 0.999) {
+      if (!this.faded) return;
+      this.body.material = this.faded.was.body; this.decal.material = this.faded.was.decal;
+      this.faded.body.dispose(); this.faded.decal?.dispose(); this.faded = null;
+      face.transparent = false; face.opacity = 1; face.depthWrite = true; face.needsUpdate = true;
+      return;
+    }
+    if (!this.faded) {
+      const glass = <M extends THREE.Material>(m: M) => Object.assign(m.clone(), { transparent: true, depthWrite: false }) as M;
+      this.faded = { body: glass(this.body.material as THREE.MeshPhysicalMaterial), decal: this.decal.visible ? glass(this.decal.material as THREE.MeshPhysicalMaterial) : null,
+        was: { body: this.body.material as THREE.Material, decal: this.decal.material as THREE.Material } };
+      this.body.material = this.faded.body;
+      if (this.faded.decal) this.decal.material = this.faded.decal;
+      face.transparent = true; face.depthWrite = false; face.needsUpdate = true;
+    }
+    this.faded.body.opacity = f; if (this.faded.decal) this.faded.decal.opacity = f; face.opacity = f;
+  }
+
   update(delta: number, motion: CharacterMotion, walkSpeed: number) {
     let restart = false;
+    this.fade(motion.fade ?? 1);
     if (motion.afterimages && this.body.visible) this.prepareGhosts();
     if (motion.ghost) { motion.ghost = false; if (this.body.visible) this.ghost(); }
     for (const g of this.ghosts) g.update(delta);
@@ -360,6 +384,8 @@ class Puppet {
 export interface WeaponView { kind: WeaponKind; model: string; modelScale: number; inHand: boolean; grip?: WeaponGrip;
   /** The hand that holds it, over the kind's (clips.ts GRIP_HAND: the verb library's Book grip holds the tome in the left). */
   hand?: "L" | "R";
+  /** Its glow parts breathe (a tier-5 signature weapon). */
+  pulse?: boolean;
   /** Classes v2: the weapon's named materials re-coloured each frame (a staff's crystal to your last element, a charm's
    * learned forms lit, a skin or the mastery trim); null leaves the model's own. */
   paint?: () => WeaponPaint | null }
@@ -377,28 +403,28 @@ const GRIP: Record<WeaponKind, WeaponGrip> = {
 };
 const gripQ = new THREE.Quaternion(), gripE = new THREE.Euler();
 
-function HeldWeapon({ puppet, motion, weapon: { kind, model: url, modelScale, inHand, grip, hand, paint } }: { puppet: Puppet; motion: RefObject<CharacterMotion>; weapon: WeaponView }) {
+function HeldWeapon({ puppet, motion, weapon: { kind, model: url, modelScale, inHand, grip, hand, pulse, paint } }: { puppet: Puppet; motion: RefObject<CharacterMotion>; weapon: WeaponView }) {
   const { scene } = useGLTF(url);
   const model = useMemo(() => tagLookClasses(scene.clone(true), url), [scene, url]);
-  // Painted weapons get their own copies of their named materials (the cached model's stay as authored).
-  const paints = useMemo(() => {
-    if (!paint) return null;
-    const own = new Map<string, THREE.MeshStandardMaterial>();
-    model.traverse(o => {
+  // Painted weapons get their own copies of their named materials (the cached model's stay as authored); a tier-5
+  // signature weapon's glow parts breathe (its painted copies, when it has them).
+  const { paints, glows } = useMemo(() => {
+    const own = paint ? new Map<string, THREE.MeshStandardMaterial>() : null;
+    if (own) model.traverse(o => {
       const mesh = o as THREE.Mesh, src = mesh.isMesh ? (mesh.material as THREE.MeshStandardMaterial) : null;
       if (!src || !/^M_/.test(src.name)) return;
       if (!own.has(src.name)) own.set(src.name, src.clone());
       mesh.material = own.get(src.name)!;
     });
-    return own;
-  }, [model, paint]);
+    return { paints: own, glows: pulse ? glowMaterials(model) : [] };
+  }, [model, paint, pulse]);
   useEffect(() => {
     placeWeapon(model, { kind, model: url, modelScale, inHand, grip }, inHand ? puppet.sockets[hand ?? WEAPON_HAND[kind]] : puppet.sockets.Back);
     const shown = showWeapon(motion.current, inHand ? model : null);
     return () => { model.removeFromParent(); shown(); };
   }, [model, puppet, motion, kind, url, modelScale, inHand, grip, hand]);
   // Upright at rest, the attack grip while an attack clip plays (eased so the swap doesn't pop).
-  useFrame((_, delta) => {
+  useFrame(({ clock }, delta) => {
     const g = grip ?? GRIP[kind], p = paints && paint?.();
     if (p) for (const name in p) {
       const m = paints!.get(name), q = p[name];
@@ -407,10 +433,23 @@ function HeldWeapon({ puppet, motion, weapon: { kind, model: url, modelScale, in
       if (q.emissive) m.emissive.set(q.emissive);
       if (q.intensity !== undefined) m.emissiveIntensity = q.intensity;
     }
+    breathe(glows, clock.elapsedTime, p);
     if (!inHand || !g.rest) return;
     model.quaternion.slerp(gripQ.setFromEuler(gripE.set(...(puppet.attacking ? g.hand : g.rest))), 1 - Math.exp(-delta * 24));
   });
   return null;
+}
+/** A weapon's emissive materials, each with its authored intensity kept (they're shared by every copy of the model). */
+function glowMaterials(model: THREE.Object3D): THREE.MeshStandardMaterial[] {
+  const out = new Set<THREE.MeshStandardMaterial>();
+  model.traverse(o => { const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined; if (m?.emissive && m.emissive.getHex() !== 0) out.add(m); });
+  for (const m of out) m.userData.glowBase ??= m.emissiveIntensity;
+  return [...out];
+}
+/** Module scope (hook values are never written in a component): the glow parts breathe, 65–100% of their intensity (a painted one's). */
+function breathe(glows: THREE.MeshStandardMaterial[], t: number, paint?: WeaponPaint | null) {
+  const k = 0.65 + 0.35 * (0.5 + 0.5 * Math.sin(t * 3.2));
+  for (const m of glows) m.emissiveIntensity = (paint?.[m.name]?.intensity ?? (m.userData.glowBase as number)) * k;
 }
 /** Ribbon trails sample the weapon in hand (CharacterMotion.weaponModel); returns the cleanup. Module scope: hook values are never written in a component. */
 function showWeapon(m: CharacterMotion | null, model: THREE.Object3D | null) {

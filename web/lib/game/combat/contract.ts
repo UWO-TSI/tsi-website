@@ -17,6 +17,8 @@ export interface Weapon {
   speed?: number;
   maxDurability: number;
   model: string; modelScale: number;
+  /** Classes v2: a tier-5 signature weapon's glow parts breathe (the trim kit's animated runes, design sheet §1.5). */
+  pulse?: boolean;
   /** Socket-space Euler overrides for a model that doesn't follow its kind's grip (the revolver's barrel is +Z). */
   grip?: WeaponGrip;
   /** A shot weapon's projectile look over its kind's (classes v2: thrown cards, bone shards). */
@@ -67,6 +69,8 @@ export interface EnemyType {
   hazard?: HazardDef;
   /** A mini-boss: its own health bar and name banner, and a reward roll on defeat (lib/combat/content.ts DROPS). */
   miniboss?: { title: string };
+  /** Only on this client (a Summoner's ritual form): its fall posts no kill to the server. */
+  local?: boolean;
 }
 
 export type MissionTemplate = "hunt" | "fetch" | "survive" | "escort";

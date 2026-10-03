@@ -1184,7 +1184,10 @@ class Grip:
 # busy), draw (a bowstring hand at `at`); the grip remaps what it can't do.
 GRIPS_V = [Grip("OneHand", False, {"two": "free"}, "R"), Grip("Staff", False, {}, "R"), Grip("Bow", True, {"two": "free"}, "L"),
            Grip("Pistol", True, {"two": "support"}, "L"), Grip("Fists", False, {"free": "guard", "two": "guard", "support": "guard", "gather": "guard"}, "both"),
-           Grip("Book", False, "book", "L")]
+           Grip("Book", False, "book", "L"),
+           # The Rangers (classes v2): the long rifle and the harpoon crossbow, right hand on the grip, the left reaching
+           # forward along the barrel; every off-hand want keeps it on the weapon.
+           Grip("Rifle", False, {"free": "two", "spread": "two", "gather": "two", "support": "two"}, "R")]
 FREE = V(0.6, -0.6, -0.5)
 # Chest-relative spots (offsets in the chest's rest frame from Spine2's head): they lean and turn with the body, so a
 # lean or a nod never brings the big head down onto them. Fists up in front of the chin; the book held open at the chest.
@@ -1436,8 +1439,20 @@ def aim_draw(g, draw, lean=0.0, recoil=0.0):
     return off(P, g, "draw", at=w.lerp(V(0.11, 0.05, 0.46), draw) + V(0.03, 0.02, 0.02) * (1 - draw))
 
 
+def rifle_aim(recoil=0.0, lean=0.0, crouch=0.0, nod=0.0):
+    """The Rifle grip's shouldered aim (right-handed): the chest turned a little right so the left shoulder leads, the head
+    turned back to the aim, the right hand at the chest, the left reaching out along the barrel (as far as the arm goes)."""
+    P = body(twist=-18, turn=16, lean=lean, crouch=crouch, nod=nod)
+    hand(P, "Right", chest(P, V(-0.07, -0.11, -0.01)) + V(0, 0, recoil * 0.4), V(-1, 0.6, -0.4))
+    hand(P, "Left", chest(P, V(0.0, -0.21, 0.01)) + V(0, 0, recoil), V(0.8, 0.3, -1))
+    return P
+
+
 @verb("DrawShot", 1.0, 0.66, True)
 def v_draw_shot(g):
+    if g.name == "Rifle":                                      # a braced shot: settle into the aim, hold, the heavy kick
+        return [(0, N, "lin"), (0.3, rifle_aim(crouch=0.02), "back"), (0.62, rifle_aim(crouch=0.02, nod=3), "lin"),
+                (0.68, rifle_aim(recoil=0.05, lean=-6, crouch=0.02, nod=-8), "out"), (1.0, N, "io")]
     rel = aim_draw(g, 1.0, lean=-4, recoil=0.1)
     if g.mode("draw") == "draw":
         hand(rel, "Left", V(0.18, 0.09, 0.47))
@@ -1447,6 +1462,8 @@ def v_draw_shot(g):
 
 @verb("QuickShot", 0.45, 0.16, True)
 def v_quick_shot(g):
+    if g.name == "Rifle":
+        return [(0, N, "lin"), (0.16, rifle_aim(), "out"), (0.26, rifle_aim(recoil=0.03, lean=-3, nod=-4), "out"), (0.42, rifle_aim(), "io"), (1.0, N, "io")]
     aim_ = body(twist=12, lean=4)
     off(arm(aim_, "Right", V(-0.05, -1, 0.12)), g, "support", V(0.55, -0.5, -0.65))
     recoil = body(twist=12, lean=-2, nod=-3)
@@ -1475,6 +1492,9 @@ def hold_idle(g, b):
         hand(P, "Left", chest(P, GUARD_L) + V(0, 0, b), V(0.6, 0.5, -1))
     elif g.name == "Book":
         hand(P, "Left", chest(P, BOOK) + V(0, 0, b))
+    elif g.name == "Rifle":                                    # the low ready: across the body, barrel forward and down
+        hand(P, "Right", V(-0.1, -0.08, 0.37 + b), V(-1, 0.5, -0.4))
+        hand(P, "Left", V(0.03, -0.11, 0.39 + b), V(1, 0.4, -0.6))
     else:
         target, pole = {"OneHand": (V(-0.15, -0.085, 0.34), V(-1, 0.7, -0.3)), "Staff": (V(-0.135, -0.075, 0.37), V(-1, 0.6, -0.3)),
                         "Bow": (V(-0.15, -0.06, 0.33), V(-1, 0.6, -0.3)), "Pistol": (V(-0.12, -0.12, 0.36), V(-1, 0.5, -0.4))}[g.name]
@@ -1756,6 +1776,255 @@ def arc_shift(g):
     hand(guard, "Right", chest(guard, GUARD_R), V(-0.6, 0.5, -1))
     hand(guard, "Left", chest(guard, GUARD_L), V(0.6, 0.5, -1))
     return [(0, N, "lin"), (0.22, coil, "io"), (0.5, snap, "out"), (0.75, guard, "io"), (1.0, N, "io")]
+# ---------------------------------------------------------------- the Rangers' unique clips (classes v2, the Ranger wave)
+# Authored right-handed like the verbs (the Bow and Pistol grips mirror them into the left hand); the impact key is
+# where the ult's freeze holds (its anticipation_ms over the clip's length).
+def bow_up(draw, lean=-10.0, crouch=0.0):
+    """The bow stance aimed high (a volley into the sky): the lead arm up and out, the draw hand to the chin."""
+    P = body(hips=rz(-35), twist=-10, turn=42, lean=lean, crouch=crouch, nod=-2)
+    arm(P, "Right", V(-0.36, -0.85, 0.38))
+    w = P.head("RightHand")
+    return hand(P, "Left", w.lerp(V(0.13, 0.0, 0.44), draw) + V(0.03, 0.02, 0.02) * (1 - draw))
+
+
+@unique("Ult_Marksman", "Bow", 0.9, 0.39)
+def u_ult_marksman(g):
+    """Thousand Arrows: a crouch, the bow swings up, a full draw at the sky (the freeze), the release kicks."""
+    gather = body(crouch=0.05, lean=12, nod=8)
+    arm(gather, "Right", V(-0.3, -0.8, -0.4))
+    hand(gather, "Left", V(0.05, -0.12, 0.38))
+    rel = bow_up(1.0, lean=-7)
+    hand(rel, "Left", V(0.2, 0.08, 0.44))
+    return [(0, N, "lin"), (0.16, gather, "io"), (0.3, bow_up(0.4, crouch=0.02, lean=-4), "out"), (0.39, bow_up(1.0, lean=-6), "io"),
+            (0.48, rel, "out"), (0.72, bow_up(0.2, lean=-3), "io"), (1.0, N, "io")]
+
+
+def kneel_post(P, p, flip):
+    """The kneel keeps both feet down (plant) at a deeper, wider bend."""
+    return plant(P, knees_out=0.45)
+
+
+@unique("Ult_Sniper", "Rifle", 1.4, 0.43, post=kneel_post)
+def u_ult_sniper(g):
+    """Final Shot: down on one knee into the aim, breath held (the freeze), the rail round's kick throws the shoulders back."""
+    kneel = rifle_aim(crouch=0.11, nod=4)
+    return [(0, N, "lin"), (0.16, rifle_aim(crouch=0.12, lean=8), "back"), (0.3, kneel, "io"), (0.43, rifle_aim(crouch=0.11, nod=6), "lin"),
+            (0.48, rifle_aim(recoil=0.07, lean=-12, crouch=0.1, nod=-12), "out"), (0.72, rifle_aim(crouch=0.07, lean=-3), "io"), (1.0, N, "io")]
+
+
+
+@unique("Ult_Hunter", "Rifle", 1.1, 0.41)
+def u_ult_hunter(g):
+    """The Great Hunt: the crossbow raised overhead in both hands (the call), then its butt slammed to the ground."""
+    call = body(crouch=-0.01, lean=-12, nod=-10, twist=-8)
+    arm(call, "Right", *OVERHEAD)
+    hand(call, "Left", call.head("RightHand") + V(0.02, 0.0, -0.11))
+    slam = body(crouch=0.1, lean=30, nod=14, twist=6, shift=(0, -0.025))
+    arm(slam, "Right", *LOW)
+    hand(slam, "Left", slam.head("RightHand") + V(0.05, 0.02, -0.05))
+    hold_ = body(crouch=0.09, lean=26, nod=12, twist=5, shift=(0, -0.025))
+    arm(hold_, "Right", *LOW)
+    hand(hold_, "Left", hold_.head("RightHand") + V(0.05, 0.02, -0.05))
+    return [(0, N, "lin"), (0.24, call, "back"), (0.41, slam, "in"), (0.62, hold_, "lin"), (1.0, N, "io")]
+
+
+def gun_up(P, at, off=None):
+    """The gun hand at `at`; the off hand at the gun (+off from the wrist) when given."""
+    hand(P, "Right", at, V(-1, 0.4, -0.6))
+    if off is not None:
+        hand(P, "Left", P.head("RightHand") + off, V(1, 0.4, -0.6))
+    return P
+
+
+@unique("Ult_Gunslinger", "Pistol", 1.2, 0.42)
+def u_ult_gunslinger(g):
+    """Russian Roulette: the cylinder swung out in front of the chest, spun with the off palm three times, snapped shut
+    (the freeze), the gun flipped up beside the face."""
+    out = gun_up(body(lean=6, nod=10), V(-0.06, -0.15, 0.43), V(0.05, 0.0, 0.02))
+    spin_a = gun_up(body(lean=6, nod=10), V(-0.06, -0.15, 0.43), V(0.06, 0.03, 0.04))
+    spin_b = gun_up(body(lean=6, nod=10), V(-0.06, -0.15, 0.43), V(0.05, -0.04, 0.0))
+    snap = gun_up(body(lean=-2, nod=-2, twist=8), V(-0.13, -0.12, 0.52))
+    arm(snap, "Left", V(0.6, 0.3, -0.75))
+    cocky = gun_up(body(lean=-4, nod=-2, twist=10, tilt=6), V(-0.15, -0.1, 0.54))
+    arm(cocky, "Left", V(0.6, 0.35, -0.72))
+    return [(0, N, "lin"), (0.12, out, "back"), (0.18, spin_a, "io"), (0.24, spin_b, "io"), (0.3, spin_a, "io"), (0.36, spin_b, "io"),
+            (0.42, snap, "back"), (0.7, cocky, "io"), (1.0, N, "io")]
+
+
+@unique("Unique_Reload", "Pistol", 1.2, 0.75, upper=True)
+def u_reload(g):
+    """The revolver's reload: the gun tilted up in front of the chest, the off hand ejects, thumbs rounds in twice from the
+    belt, and the cylinder's flicked shut (the impact) as the gun swings back out."""
+    def at(off):
+        return gun_up(body(lean=5, nod=12), V(-0.06, -0.13, 0.44), off)
+    belt = gun_up(body(lean=7, nod=14), V(-0.06, -0.13, 0.44))
+    hand(belt, "Left", V(0.1, -0.06, 0.33), V(1, 0.4, -0.6))
+    flick = gun_up(body(lean=2, nod=2, twist=6), V(-0.1, -0.18, 0.45))
+    arm(flick, "Left", V(0.6, 0.3, -0.75))
+    return [(0, N, "lin"), (0.12, at(V(0.05, -0.02, 0.03)), "out"), (0.24, at(V(0.05, 0.0, 0.01)), "io"), (0.36, belt, "io"), (0.48, at(V(0.05, 0.01, 0.03)), "io"),
+            (0.58, belt, "io"), (0.68, at(V(0.05, 0.01, 0.03)), "io"), (0.75, flick, "back"), (1.0, N, "io")]
+
+
+@unique("Unique_FanHammer", "Pistol", 0.7, 0.14, upper=True)
+def u_fan_hammer(g):
+    """Fan the Hammer: the gun low at the hip, the off palm sweeping over the hammer four times, fast."""
+    base = lambda off: gun_up(body(lean=6, crouch=0.02, twist=-6), V(-0.09, -0.12, 0.39), off)
+    back, fwd = V(0.0, 0.05, 0.07), V(0.0, -0.04, 0.05)
+    return [(0, N, "lin"), (0.1, base(back), "out"), (0.14, base(fwd), "in"), (0.24, base(back), "out"), (0.3, base(fwd), "in"),
+            (0.4, base(back), "out"), (0.46, base(fwd), "in"), (0.56, base(back), "out"), (0.62, base(fwd), "in"), (1.0, N, "io")]
+# ---- The Warden wave (classes v2): the Summoner's hand sign and Shadow Garden, the Shaman's totem throw and Spirit
+# Awakening, the Druid's vine swing and World Tree, the Priest's Divine Descent. Ult impacts sit at the ult's
+# anticipation over the clip's length (the freeze holds that key).
+@unique("Unique_HandSign", "Fists", 0.75, 0.42, upper=True)
+def u_hand_sign(g):
+    """The seal: both hands meet in a sign before the chest, then the right thrusts out palm first (the beast answers)."""
+    sign = body(crouch=0.02, lean=6, nod=8, twist=-6)
+    hand(sign, "Right", chest(sign, V(-0.012, -0.21, 0.07)), V(-0.6, 0.4, -1))
+    hand(sign, "Left", chest(sign, V(0.018, -0.2, 0.08)), V(0.6, 0.4, -1))
+    thrust = body(lean=12, twist=14, crouch=0.025, shift=(0, -0.02), nod=-2)
+    arm(thrust, "Right", V(-0.05, -1, 0.08))
+    hand(thrust, "Left", chest(thrust, GUARD_L), V(0.6, 0.5, -1))
+    follow = body(lean=8, twist=10, crouch=0.02, shift=(0, -0.015))
+    arm(follow, "Right", V(-0.1, -0.95, -0.05))
+    hand(follow, "Left", chest(follow, GUARD_L), V(0.6, 0.5, -1))
+    return [(0, N, "lin"), (0.24, sign, "io"), (0.42, thrust, "back"), (0.62, follow, "lin"), (1.0, N, "io")]
+
+
+@unique("Ult_Summoner", "Fists", 1.4, 0.32)
+def u_ult_summoner(g):
+    """Shadow Garden: the seal at the chest, both hands raised together, then both palms slammed flat to the ground (the
+    impact: the shadow floods out) and held low while the beasts rise, then up."""
+    seal = body(crouch=0.03, lean=8, nod=10)
+    hand(seal, "Right", chest(seal, V(-0.012, -0.21, 0.07)), V(-0.6, 0.4, -1))
+    hand(seal, "Left", chest(seal, V(0.018, -0.2, 0.08)), V(0.6, 0.4, -1))
+    raise_ = body(crouch=-0.01, lean=-12, nod=-14)
+    arm(raise_, "Right", V(-0.62, -0.22, 0.75), V(-0.48, -0.26, 0.84))       # up and out in a V, clear of the head
+    arm(raise_, "Left", V(0.62, -0.22, 0.75), V(0.48, -0.26, 0.84))
+    slam = body(crouch=0.13, lean=38, nod=14, shift=(0, -0.03))
+    arm(slam, "Right", V(-0.3, -0.55, -0.78), V(-0.15, -0.45, -0.88))
+    arm(slam, "Left", V(0.3, -0.55, -0.78), V(0.15, -0.45, -0.88))
+    hold_ = body(crouch=0.12, lean=34, nod=4, shift=(0, -0.03))
+    arm(hold_, "Right", V(-0.32, -0.55, -0.77), V(-0.17, -0.45, -0.88))
+    arm(hold_, "Left", V(0.32, -0.55, -0.77), V(0.17, -0.45, -0.88))
+    return [(0, N, "lin"), (0.14, seal, "io"), (0.26, raise_, "out"), (0.32, slam, "in"), (0.62, hold_, "lin"), (1.0, N, "io")]
+
+
+@unique("Unique_TotemThrow", "Staff", 0.7, 0.4, upper=True)
+def u_totem_throw(g):
+    """A totem lobbed overhand with the off hand like a grenade, the staff kept low in the right."""
+    cock = body(twist=24, lean=-8, side=-4, nod=-4)
+    arm(cock, "Left", V(0.55, 0.6, 0.55), V(0.3, 0.2, 0.93))
+    arm(cock, "Right", V(-0.35, -0.25, -0.9), V(-0.2, -0.75, -0.6))
+    release = body(twist=-24, lean=16, crouch=0.025, shift=(0, -0.025))
+    arm(release, "Left", V(0.1, -0.85, 0.5))
+    arm(release, "Right", V(-0.35, -0.2, -0.9), V(-0.2, -0.7, -0.65))
+    follow = body(twist=-28, lean=18, crouch=0.03, shift=(0, -0.025))
+    arm(follow, "Left", V(-0.15, -0.85, -0.45))
+    arm(follow, "Right", V(-0.35, -0.2, -0.9), V(-0.2, -0.7, -0.65))
+    return [(0, N, "lin"), (0.24, cock, "io"), (0.4, release, "back"), (0.6, follow, "lin"), (1.0, N, "io")]
+
+
+@unique("Ult_Shaman", "Staff", 1.4, 0.36)
+def u_ult_shaman(g):
+    """Spirit Awakening: the staff raised high in both hands, the body arched back, then its butt driven into the ground
+    (the impact: the spirits rise) and held with the head thrown up."""
+    lift = body(crouch=-0.02, lean=-16, nod=-20)
+    off(arm(lift, "Right", V(-0.25, -0.2, 0.95), V(-0.1, -0.25, 0.96)), g, "two", V(0.6, -0.3, -0.75))
+    drive = body(crouch=0.09, lean=24, nod=6)
+    off(arm(drive, "Right", V(-0.2, -0.45, -0.87), V(-0.12, -0.3, -0.95)), g, "two", V(0.45, -0.6, -0.66))
+    call = body(crouch=0.08, lean=14, nod=-22)
+    off(arm(call, "Right", V(-0.2, -0.45, -0.87), V(-0.12, -0.3, -0.95)), g, "two", V(0.45, -0.6, -0.66))
+    return [(0, N, "lin"), (0.24, lift, "io"), (0.36, drive, "in"), (0.66, call, "io"), (1.0, N, "io")]
+
+
+@unique("Unique_VineSwing", "Staff", 0.9, 0.3)
+def u_vine_swing(g):
+    """The vine shot ahead with the staff reaching up and out, then hanging from it: arms up, legs swung forward."""
+    reach = body(lean=-10, nod=-12, crouch=-0.01)
+    off(arm(reach, "Right", V(-0.2, -0.6, 0.78), V(-0.1, -0.55, 0.83)), g, "two", V(0.4, -0.5, 0.77))
+    hang = body(lean=-24, nod=-8, crouch=-0.04, shift=(0, 0.02))
+    off(arm(hang, "Right", V(-0.15, -0.35, 0.92), V(-0.08, -0.3, 0.95)), g, "two", V(0.25, -0.4, 0.88))
+    for s, sx in SIDES:
+        hang.ik(f"{s}UpLeg", f"{s}Leg", ANKLE[s] + V(0, -0.12, 0.1), V(sx * 0.2, -1, 0.2))
+    return [(0, N, "lin"), (0.2, reach, "out"), (0.3, reach, "lin"), (0.55, hang, "io"), (0.8, hang, "lin"), (1.0, N, "io")]
+
+
+@unique("Ult_Druid", "Staff", 1.5, 0.37)
+def u_ult_druid(g):
+    """World Tree: the living staff lifted in both hands, then planted deep in the ground before you (the impact: the
+    tree erupts), and you settle low on it, rooted, head up to the crown."""
+    lift = body(crouch=0.0, lean=-6, nod=-8)
+    off(arm(lift, "Right", V(-0.3, -0.55, 0.78), V(-0.25, -0.6, 0.76)), g, "two", V(0.6, -0.3, -0.75))
+    plant_ = body(crouch=0.1, lean=32, nod=12)
+    off(arm(plant_, "Right", V(-0.15, -0.5, -0.85), V(-0.1, -0.4, -0.91)), g, "two", V(0.45, -0.6, -0.66))
+    root_ = body(crouch=0.09, lean=12, nod=-18)
+    off(arm(root_, "Right", V(-0.15, -0.6, -0.78), V(-0.1, -0.55, -0.83)), g, "two", V(0.45, -0.65, -0.6))
+    return [(0, N, "lin"), (0.24, lift, "io"), (0.37, plant_, "in"), (0.62, root_, "io"), (0.85, root_, "lin"), (1.0, N, "io")]
+
+
+@unique("Ult_Priest", "Staff", 1.4, 0.36)
+def u_ult_priest(g):
+    """Divine Descent: arms spread wide like wings, the head back to the light, then the staff brought up and driven down
+    with both hands (the impact: the pillar slams), and a bow over it."""
+    wings = body(lean=-12, nod=-18, crouch=-0.01)
+    arm(wings, "Right", V(-0.92, -0.1, 0.38), V(-0.85, -0.15, 0.5))
+    arm(wings, "Left", V(0.92, -0.1, 0.38), V(0.85, -0.15, 0.5))
+    up = body(lean=-8, nod=-12)
+    off(arm(up, "Right", V(-0.58, -0.18, 0.79), V(-0.47, -0.22, 0.85)), g, "two", V(0.6, -0.3, -0.75))
+    down = body(crouch=0.07, lean=26, nod=10)
+    off(arm(down, "Right", V(-0.15, -0.6, -0.78), V(-0.1, -0.5, -0.86)), g, "two", V(0.45, -0.6, -0.66))
+    bow = body(crouch=0.06, lean=22, nod=16)
+    off(arm(bow, "Right", V(-0.15, -0.6, -0.78), V(-0.1, -0.5, -0.86)), g, "two", V(0.45, -0.6, -0.66))
+    return [(0, N, "lin"), (0.16, wings, "io"), (0.3, up, "io"), (0.36, down, "in"), (0.62, bow, "lin"), (1.0, N, "io")]
+
+
+
+WARDEN_EVIDENCE = os.path.join(HERE, "..", "..", "..", "specs", "evidence", "classes", "K-warden-clips.webp")
+
+
+def render_warden_clips(cat):
+    """K-warden-clips.webp: each Warden unique clip at five phases (start, anticipation, the impact key, follow-through,
+    settle), front three-quarter, on the body this build loaded (`-- verbs warden-evidence`)."""
+    import subprocess, tempfile
+    tmp = tempfile.mkdtemp(prefix="warden_clips_")
+    try:
+        sc.render.engine = "BLENDER_EEVEE"
+    except TypeError:
+        pass
+    sc.view_settings.view_transform = "Standard"
+    sc.render.resolution_x = sc.render.resolution_y = 240
+    sc.render.film_transparent = False
+    w = bpy.data.worlds.new("W")
+    sc.world = w
+    w.use_nodes = True
+    bg = next(n for n in w.node_tree.nodes if n.type == "BACKGROUND")
+    bg.inputs[0].default_value, bg.inputs[1].default_value = (0.8, 0.86, 0.82, 1), 0.9
+    sun = bpy.data.objects.new("Sun", bpy.data.lights.new("Sun", "SUN"))
+    sun.data.energy = 3.2
+    sun.rotation_euler = (math.radians(50), 0, math.radians(30))
+    sc.collection.objects.link(sun)
+    cam = bpy.data.objects.new("Cam", bpy.data.cameras.new("Cam"))
+    cam.data.type, cam.data.ortho_scale = "ORTHO", 1.7
+    cam.location = Vector(CAM)
+    cam.rotation_euler = (Vector((0, 0, 0.47)) - cam.location).to_track_quat("-Z", "Y").to_euler()
+    sc.collection.objects.link(cam)
+    sc.camera = cam
+    kit.show_vertex_colors(sc)
+    by = {c["name"]: c for c in cat}
+    files = []
+    for name in ("Unique_HandSign", "Ult_Summoner", "Unique_TotemThrow", "Ult_Shaman", "Unique_VineSwing", "Ult_Druid", "Ult_Priest"):
+        c = by[name]
+        for label, phase in (("start", 0.08), ("wind-up", c["impact"] * 0.7), ("impact", c["impact"]), ("follow", c["impact"] + (1 - c["impact"]) * 0.35), ("settle", 0.85)):
+            rig.animation_data.action = bpy.data.actions[name]
+            sc.frame_set(round(phase * c["frames"]))
+            sc.render.filepath = os.path.join(tmp, f"{name}_{label}.png")
+            bpy.ops.render.render(write_still=True)
+            files += ["-label", f"{name} {label} {phase:.2f}", sc.render.filepath]
+    sheet = os.path.join(tmp, "sheet.png")
+    subprocess.run(["magick", "montage", *files, "-tile", "5x", "-geometry", "+4+4", "-background", "#1b1f27", "-fill", "#f1ffff",
+                    "-pointsize", "12", "-font", "/System/Library/Fonts/Supplemental/Arial.ttf", sheet], check=True)
+    subprocess.run(["magick", sheet, "-quality", "85", WARDEN_EVIDENCE], check=True)
+    print("wrote", WARDEN_EVIDENCE)
 
 
 def verb_clips():
@@ -1990,6 +2259,8 @@ if VERBS_MODE:
     print("VERBS_OK", len(cat))
     if "evidence" in ARGS:
         render_verb_evidence(cat)
+    if "warden-evidence" in ARGS:
+        render_warden_clips(cat)
 else:
     catalog = [{"name": "Idle", "length": 2.0, "loop": True, "frames": 60, "source": "v6"},
                {"name": "Walk", "length": 1.0, "loop": True, "frames": 30, "source": "v6", "contacts": contacts(bpy.data.actions["Walk"], 30)}]
