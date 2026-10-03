@@ -21,6 +21,8 @@ David settled the direction in ledger rows 296–299. The plan (`specs/multiplay
 12. **Friends' shards (M3):** `lock()` also refuses `joinById`, so parties need their own path into a soft-locked shard (a reserved seat, or `unlock` while seating a party).
 13. **Phone players before M2:** an M1 phone client sits at 0,0,0 until it sends a pose; M2's phone presence gives it a rest spot.
 
+14. **Activity state on the wire (after M1, one PROTOCOL bump):** the fishing cast (`CharacterMotion.fishing`: bobber, line, catch; its `scrub` and `poseRate`) and the boat trip (a `trip` field: route, start time on the world clock) are both plain data on the avatar already, so remotes can draw them from one replicated field each. In M1 others see an angler stand with the rod, and a traveller fade out under the veil and appear in the other island's area.
+
 ## For David (not blocking M1)
 1. **Who answers chat reports, and how fast?** Today T1/T2 means you and the chapter presidents. Options: (a) T1/T2 as now, within a day; (b) add a moderator role for a few trusted execs; (c) you alone.
 2. **More rest spots on the map.** Phone players rest on benches and café seats, and the village has 2 benches. When you next paint the island in `/lab/map`, add benches where you'd like people to gather (each seats 2).

@@ -1,7 +1,11 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { balanceRowV2, bandV2, bossMinutesV2, runV2, signatureWeapon, V2_TARGETS, type BalanceRowV2 } from "./balance";
+import { balanceRowV2, bandV2, bossMinutesV2, bossRowV2, runV2, signatureWeapon, ultAdds, ultUplift, ultWanted, V2_TARGETS, type BalanceRowV2 } from "./balance";
+import { classKit } from "@/lib/combat/classes";
+import { spawnWave } from "./actions";
+import { equipClassKit } from "./classRuntime";
+import { createRuntime } from "./runtime";
 
 /** The harness can measure a v2 kit (design sheet §3): the dev kit stands in until the family waves land theirs. */
 describe("the v2 balance harness (§3): ult cadence, ult share, roles, mastery 1 vs 20, a scripted guardian fight", () => {
@@ -48,5 +52,85 @@ describe("the v2 balance harness (§3): ult cadence, ult share, roles, mastery 1
       f(normal), f(top), f(hard), "",
       `Rows 1–2: Hold the rune circle at mastery 1 and 20 (DPS ×${(top.dps / normal.dps).toFixed(2)}); row 3: Sanctum watch at mastery 1. The scripted guardian fight: ${bossMinutesV2("demo", 1, 4).toFixed(1)} min median (10 = never fell in 10 min).`, "",
     ].join("\n"));
+  });
+});
+
+/** Wave 5's measurement fixes (specs/evidence/classes/K5-balance.md): what the harness got wrong about ults and the guardian. */
+describe("the v2 harness, wave 5: measuring the ult and the guardian right", () => {
+  const median = (v: number[]) => { const s = [...v].sort((a, b) => a - b); return (s[(s.length - 1) >> 1] + s[s.length >> 1]) / 2; };
+  const ready = (kit: string, foes: { type: string; x: number; z: number }[]) => {
+    const rt = createRuntime();
+    rt.player.weapon = signatureWeapon(kit); rt.player.safe = false;
+    equipClassKit(rt, classKit(kit)!, 1);
+    rt.v2!.meter = 100;
+    spawnWave(rt, foes.map((f, i) => ({ id: `w5-${i}`, ...f })));
+    const alive = rt.enemies.filter(e => e.state !== "dead");
+    return [rt, { x: 0, z: 0 }, alive[0], alive] as const;
+  };
+  it("fires a full ult at a lone elite inside its area (the sanctum's golem), still never at a lone normal enemy", () => {
+    for (const k of ["shaman", "juggernaut", "gunslinger", "druid"]) {
+      expect(ultWanted(...ready(k, [{ type: "stone-golem", x: 0, z: 1.5 }])), k).toBe(true);
+      expect(ultWanted(...ready(k, [{ type: "animated-book", x: 0, z: 1.5 }])), k).toBe(false);
+    }
+    // a self-centred ult waits for the elite to come inside its area
+    expect(ultWanted(...ready("druid", [{ type: "stone-golem", x: 0, z: 12 }]))).toBe(false);
+  });
+  it("keeps its ability keys off a channelled ult's mash: the bot plays the Cataclysm's notes, about four in five right", () => {
+    const p = [1, 2, 3, 4, 5, 6].flatMap(s => runV2("elementalist", "boss", s, 1, 240).potencies);
+    expect(p.length).toBeGreaterThan(3);
+    expect(median(p)).toBeGreaterThanOrEqual(1.2); // 0.5 + the share of notes hit
+  });
+  it("measures a sustained ult by what its window adds over the kit's own rate (§3: 'the equivalent over a sustained window')", () => {
+    // 90 s outside the window at 1000 dealt (11.1/s); the 10 s window dealt 300: it added 300 − 111; the finisher's 50 is all the ult's
+    expect(ultUplift({ dealt: 1350, seconds: 100, windowDealt: 300, windowTime: 10, directDealt: 50 })).toBeCloseTo(50 + 300 - (1000 / 90) * 10);
+    expect(ultUplift({ dealt: 1050, seconds: 100, windowDealt: 50, windowTime: 10, directDealt: 0 })).toBe(0); // a window below your rate adds nothing
+    expect(ultUplift({ dealt: 1000, seconds: 100, windowDealt: 0, windowTime: 0, directDealt: 120 })).toBe(120); // an instant ult is its hits
+    const r = runV2("juggernaut", "boss", 1, 1, 240);
+    expect(r.ults).toBeGreaterThan(0);
+    expect(r.windowTime).toBeGreaterThan(9); // Titan: 10 s a cast
+    expect(r.ultDealt).toBeGreaterThanOrEqual(r.windowDealt);
+    expect(ultUplift(r)).toBeLessThan(r.ultDealt); // the swings you'd have made anyway aren't the ult's
+  });
+  it("projects the meter's fill on a run too short to fill it (the normal run's 45–90 s, §3)", () => {
+    const row = balanceRowV2("marksman", "survive-circle", 1, 4);
+    expect(Number.isFinite(row.ultFill)).toBe(false);
+    expect(row.ultFillProjected).toBeGreaterThan(20);
+    expect(row.ultFillProjected).toBeLessThan(200);
+  });
+  it("reports the guardian's pace at the fight's damage rate, deaths apart: a fall isn't a pace", () => {
+    const b = bossRowV2("monk", 1, 3);
+    expect(b.deaths).toBeGreaterThan(0);
+    expect(b.minutes).toBe(10); // the old measure: never fell
+    expect(b.rateMinutes).toBeGreaterThan(1);
+    expect(b.rateMinutes).toBeLessThan(8);
+  });
+});
+
+describe("the v2 harness, wave 5: a drawn ult's fill", () => {
+  it("times the next fill from a drawn ult's release (the Priest's wings drain the meter as the shape resolves)", () => {
+    const row = balanceRowV2("priest", "sanctum-loop", 1, 3);
+    expect(row.ultFill).toBeGreaterThan(30);
+    expect(row.ultFill).toBeLessThan(120);
+  });
+});
+
+describe("the v2 harness, wave 5: what an ult adds over a long pack fight", () => {
+  it("loops the sanctum's waves for a fight where the ult fires several times", () => {
+    const r = runV2("hunter", "sanctum-loop", 1, 1);
+    expect(r.cleared).toBe(true);
+    expect(r.seconds).toBeGreaterThan(150);
+    expect(r.ults).toBeGreaterThanOrEqual(2);
+  });
+  it("measures the ult by the damage it adds: the bot that never presses F deals less, and the difference is a share", () => {
+    expect(runV2("hunter", "sanctum-loop", 1, 1, 600, { noUlt: true }).ults).toBe(0);
+    const adds = ultAdds("hunter", 1, 4);
+    expect(adds).toBeGreaterThan(0.03);
+    expect(adds).toBeLessThan(0.4);
+  });
+});
+
+describe("the v2 harness, wave 5: pair combos", () => {
+  it("casts the Elementalist's pair combos (two elements within 0.4 s), not only its four solos", () => {
+    for (const m of ["survive-circle", "survive-sanctum"] as const) expect([1, 2, 3].reduce((n, s) => n + runV2("elementalist", m, s, 1).combos, 0), m).toBeGreaterThan(3);
   });
 });

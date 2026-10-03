@@ -145,8 +145,12 @@ export interface CombatRuntime {
   v2: ClassState | null;
   /** FX events for the renderer, oldest first, at most 64 (nobody drains them in the balance runs). */
   fx: FxEvent[];
-  /** Damage dealt this run, and by ult hits (the balance harness's ult share). */
-  tally: { dealt: number; ult: number };
+  /**
+   * Damage dealt this run, and by ult hits (the balance harness's ult share). For the harness's wave-5 measures also: what
+   * landed while a sustained ult's window ran (`window`), the ult's own hits outside one (`direct`), the meter points
+   * earned before the cap (`charged`), and the damage that reached you past a dodge, before guard, block and shield (`aimed`).
+   */
+  tally: { dealt: number; ult: number; window: number; direct: number; charged: number; aimed: number };
   /** Classes v2 shared primitives on the ground and on you (primitives.ts): zones, walls, sweeps, timed stages, minion orders, marks, counters, stealth, a surf. */
   field: Field;
   /** Presses refused because the slot can't be ready in time (actions.ts runInputs): the HUD pulses the slot on each. */
@@ -189,7 +193,7 @@ export function createRuntime(): CombatRuntime {
       shield: 0, shieldFor: 0, dash: null, impulse: { x: 0, z: 0 }, speed: 1, still: 0, last: null,
       move: { mode: "ground", speed: 0, sinceDash: 99, vx: 0, vz: 0 }, kick: null, clip: null, ultIframes: 0, taunt: null, absorbed: 0 },
     cooldowns: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, slot5: 0, ult: 0, swap: 0 }, denied: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, slot5: 0, ult: 0, swap: 0 },
-    v2: null, fx: [], tally: { dealt: 0, ult: 0 }, field: createField(),
+    v2: null, fx: [], tally: { dealt: 0, ult: 0, window: 0, direct: 0, charged: 0, aimed: 0 }, field: createField(),
     enemies: [], projectiles: [], units: [], buffs: [], floaters: [], blasts: [], cues: [], hazards: [], mobFx: [],
     casting: null, kit: null, slots: [null, null, null, null],
     passive: { element: null, target: null, stacks: 0, momentum: 0, momentumT: 0, procs: 0 }, transform: null,

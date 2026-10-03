@@ -302,6 +302,8 @@ ${WATER_OPTICS}`;
  * texture rather than as water. Exported for the glint sprites
  * (GridOcean), which ride the same crests.
  */
+const SWELL = { d1: [1, 0.35], d2: [-0.42, 1], k2: 1.63, s2: 1.31, w1: 0.62, w2: 0.38 } as const;
+const f2 = (v: number) => v.toFixed(2);
 export const WATER_SWELL = /* glsl */ `
 uniform float uTime;
 uniform float uWaveHeight;
@@ -310,15 +312,36 @@ uniform float uWaveSpeed;
 ${WATER_PHASE}
 float waterSwell(vec2 xz, out vec2 grad) {
   float k = 6.2831853 / max(uWaveScale, 0.001);
-  vec2 d1 = normalize(vec2(1.0, 0.35));
-  vec2 d2 = normalize(vec2(-0.42, 1.0));
+  vec2 d1 = normalize(vec2(${f2(SWELL.d1[0])}, ${f2(SWELL.d1[1])}));
+  vec2 d2 = normalize(vec2(${f2(SWELL.d2[0])}, ${f2(SWELL.d2[1])}));
   float a1 = dot(xz, d1) * k + waterPhase(uTime * uWaveSpeed);
-  float a2 = dot(xz, d2) * k * 1.63 + waterPhase(uTime * uWaveSpeed * 1.31);
-  grad = d1 * (cos(a1) * 0.62 * k * uWaveHeight)
-       + d2 * (cos(a2) * 0.38 * k * 1.63 * uWaveHeight);
-  return (sin(a1) * 0.62 + sin(a2) * 0.38) * uWaveHeight;
+  float a2 = dot(xz, d2) * k * ${f2(SWELL.k2)} + waterPhase(uTime * uWaveSpeed * ${f2(SWELL.s2)});
+  grad = d1 * (cos(a1) * ${f2(SWELL.w1)} * k * uWaveHeight)
+       + d2 * (cos(a2) * ${f2(SWELL.w2)} * k * ${f2(SWELL.k2)} * uWaveHeight);
+  return (sin(a1) * ${f2(SWELL.w1)} + sin(a2) * ${f2(SWELL.w2)}) * uWaveHeight;
 }
 `;
+
+const SW1 = Math.hypot(...SWELL.d1), SW2 = Math.hypot(...SWELL.d2);
+const D1X = SWELL.d1[0] / SW1, D1Z = SWELL.d1[1] / SW1, D2X = SWELL.d2[0] / SW2, D2Z = SWELL.d2[1] / SW2;
+const wrapPhase = (v: number) => v - 6.2831853 * Math.floor(v / 6.2831853);
+/**
+ * WATER_SWELL on the CPU, for what floats on the water (the boat, the buoys; arrival-wharf.md): the surface's rise at
+ * world (x, z) at world time `t` (the shader's uTime), and its slope (∂h/∂x, ∂h/∂z) into `grad`. The same constants
+ * print the shader, so the two cannot drift apart; read the live `p` from the water's uniforms
+ * (components/game/grid/terrainMaterials.ts waterSurfaceUniforms) to ride the waves as drawn.
+ */
+export function waterSwellAt(x: number, z: number, t: number, p: Pick<WaterParams, "waveHeight" | "waveScale" | "waveSpeed">, grad?: { x: number; z: number }): number {
+  const k = 6.2831853 / Math.max(p.waveScale, 0.001), h = p.waveHeight;
+  const a1 = (x * D1X + z * D1Z) * k + wrapPhase(t * p.waveSpeed);
+  const a2 = (x * D2X + z * D2Z) * k * SWELL.k2 + wrapPhase(t * p.waveSpeed * SWELL.s2);
+  if (grad) {
+    const c1 = Math.cos(a1) * SWELL.w1 * k * h, c2 = Math.cos(a2) * SWELL.w2 * k * SWELL.k2 * h;
+    grad.x = D1X * c1 + D2X * c2;
+    grad.z = D1Z * c1 + D2Z * c2;
+  }
+  return (Math.sin(a1) * SWELL.w1 + Math.sin(a2) * SWELL.w2) * h;
+}
 
 const VERTEX_DECLS = /* glsl */ `
 varying vec3 vWaterWorld;

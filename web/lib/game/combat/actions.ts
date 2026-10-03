@@ -219,6 +219,7 @@ export function hurtPlayer(rt: CombatRuntime, amount: number, from: Vec, player:
   if (!p.alive || p.safe || p.ultIframes > 0) return 0; // an ult's wind-up and freeze: nothing lands unseen
   if (invulnerable(p.dodgeAge) || p.dash?.iframes) { floater(rt, player, 1.7, "Dodged", "info"); return 0; }
   chargeUlt(rt, takenCharge(amount, p.maxHp)); // aimed at you, before guard, block and shield (§1.2)
+  rt.tally.aimed += amount;
   // Unbreakable (an absorb): nothing lands; all of it is stored for the release.
   if (buffSum(rt, "absorb") > 0) { p.absorbed += amount; floater(rt, player, 1.7, `+${Math.round(amount)} stored`, "info"); return 0; }
   // Classes v2: a counter window (a Perfect Shift) cuts and answers it; a blinding zone makes it miss (primitives.ts).

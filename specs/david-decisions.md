@@ -264,7 +264,7 @@ A) Send as drafted. B) Edit it first.
 **Rec: A**, after you read it.
 
 **42. The guardian's pace.** It falls in about 3.1 min at mastery 1, against a 4–6 min target.
-A) Armour 4, health 3000, its hits ×0.75 (about 4.4 min at mastery 1, 3.6 at mastery 20). B) Keep it fast. C) Decide after your own playtest.
+A) Armour 4, health 3000, its hits ×0.75 (about 4.4 min at mastery 1, 3.8 at mastery 20, untuned kits). B) Keep it fast. C) Decide after your own playtest.
 **Rec: A**, with your playtest as the check.
 
 **43. Tanks and the army ults.**

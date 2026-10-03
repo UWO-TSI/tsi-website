@@ -1,0 +1,162 @@
+# zsh specs/evidence/launch-fixes/sql-smoke.sh --drafts  (2026-10-03 14:12 EDT, game/classes-launch after merging feat/game-default-island 7f9e1305; ERROR/FAIL lines: 0)
+chain ok (game)
+── 029-031_smoke.sql
+NOTICE:  029 ok
+NOTICE:  030 ok
+NOTICE:  031 ok
+── 032_smoke.sql
+NOTICE:  032 ok
+── 033_smoke.sql
+NOTICE:  033 ok
+── 034_smoke.sql
+NOTICE:  034 ok
+NOTICE:  034 membership not self-editable ok
+── 034_legacy_smoke.sql
+NOTICE:  034 legacy ok
+── 035_smoke.sql
+NOTICE:  035 ok
+── game_security_smoke.sql
+NOTICE:  security 1 collections ok
+NOTICE:  security 2 sell retry race ok
+NOTICE:  security 3 gem types ok
+NOTICE:  security 4 class server-only ok
+── crafting_smoke.sql
+NOTICE:  crafting ok
+NOTICE:  crafting recipes not self-writable ok
+── ownership_smoke.sql
+NOTICE:  ownership catalogue ok
+NOTICE:  extension "dblink" already exists, skipping
+NOTICE:  ownership starters once ok
+NOTICE:  ownership buy after grant ok
+NOTICE:  ok: member cannot write avatar_config (profiles: avatar_config can only be changed by the server)
+NOTICE:  ownership avatar_config server-only ok
+ownership smoke ok
+── combat_content_smoke.sql
+NOTICE:  combat content ok
+NOTICE:  combat content: boss reward not callable by members ok
+NOTICE:  combat content: materials not callable by members ok
+── combat_kits_smoke.sql
+NOTICE:  combat kits ok
+NOTICE:  combat kits: loadout not callable by members ok
+NOTICE:  combat kits: kills not callable by members ok
+── admin_pass_smoke.sql
+NOTICE:  admin 1 residents ok
+NOTICE:  admin 2 text-keyed versioning ok
+NOTICE:  admin 3 drafts T1/T2 only ok
+── phase1_regressions.sql
+NOTICE:  phase1 1 letters ok
+NOTICE:  phase1 2 attendance ok
+NOTICE:  phase1 3 invite codes ok
+NOTICE:  phase1 4 member badges ok
+── launch_fixes_smoke.sql
+NOTICE:  launch 1 membership backfill ok
+NOTICE:  relation "data_backfills" already exists, skipping
+NOTICE:  membership backfill already applied, skipped
+NOTICE:  launch 1b backfill rerun is a no-op ok
+NOTICE:  launch 2 sign-up tiers ok
+NOTICE:  launch 3 admin membership ok
+NOTICE:  launch 4 un-RSVP ok
+── catch_rolls_smoke.sql
+NOTICE:  catch 1 members locked out ok
+NOTICE:  catch 2 casts ok
+NOTICE:  catch 3 harvests ok
+NOTICE:  catch 4 caps ok
+── moderation_log_smoke.sql
+NOTICE:  moderation log 1 T1/T2 read-only ok
+NOTICE:  moderation log 2 checks ok
+── chapter4_copy_smoke.sql
+NOTICE:  chapter 4 copy 1 seed renamed ok
+NOTICE:  chapter 4 copy 2 admin edits kept ok
+── seasonal_events_smoke.sql
+NOTICE:  seasonal 1 seeds ok
+NOTICE:  seasonal 2 landing in season ok
+NOTICE:  seasonal 3 member access ok
+NOTICE:  seasonal 4 completion rewards ok
+NOTICE:  column "event" of relation "club_goals" already exists, skipping
+NOTICE:  relation "tourney_entries" already exists, skipping
+NOTICE:  relation "idx_tourney_entries_board" already exists, skipping
+NOTICE:  seasonal 5 idempotent ok
+seasonal events smoke ok
+── recipe_drops_smoke.sql
+NOTICE:  drops 1 seeds ok
+NOTICE:  drops 2 members locked out ok
+NOTICE:  drops 3 once per recipe ok
+NOTICE:  drops 4 refused catches teach nothing ok
+NOTICE:  column "drop_rarity" of relation "crafting_recipes" already exists, skipping
+NOTICE:  relation "recipe_drop_chances" already exists, skipping
+NOTICE:  drops 5 rate rock_crystal: 120 of 6000 (chance 0.02)
+NOTICE:  drops 5 rate rock_gold_nugget: 219 of 4000 (chance 0.05)
+NOTICE:  drops 5 rate fish_golden_koi: 454 of 3000 (chance 0.15)
+NOTICE:  drops 5 rate rock_stone: 0 of 2000 (chance 0)
+recipe drops smoke ok
+── catalogue_seed_smoke.sql
+NOTICE:  catalogue seed ok
+── leaf_glider_smoke.sql
+NOTICE:  leaf glider ok
+── guardian_balance_smoke.sql
+NOTICE:  guardian balance ok
+── cafe_tables_smoke.sql
+NOTICE:  cafe tables ok
+── collections_eat_smoke.sql
+NOTICE:  collections eat ok
+── item_icons_smoke.sql
+NOTICE:  item icons ok
+── classes_v2_smoke.sql
+NOTICE:  classes v2 ok
+NOTICE:  classes v2: members read mastery, write and call nothing ok
+── zone1_mobs_smoke.sql
+NOTICE:  zone 1 mobs ok
+NOTICE:  zone 1 mobs: mini-boss reward not callable by members ok
+── classes_v2_arcane_smoke.sql
+NOTICE:  classes_v2_arcane smoke ok
+── classes_v2_ranger_smoke.sql
+NOTICE:  classes v2 ranger seed ok
+── classes_v2_warden_smoke.sql
+NOTICE:  classes v2 warden ok
+NOTICE:  classes v2 warden: members read their own tamings, write and call nothing ok
+── classes_v2_vanguard_smoke.sql
+NOTICE:  classes v2 vanguard ok
+── backpack_smoke.sql
+NOTICE:  backpack 1 members locked out ok
+NOTICE:  backpack 2 stack maths ok
+NOTICE:  backpack 3 full refusals ok
+NOTICE:  backpack 4 over capacity ok
+NOTICE:  backpack 5 upgrades ok
+NOTICE:  backpack 6 locks and drops ok
+NOTICE:  backpack 7 chest ok
+NOTICE:  column "locked" of relation "member_collections" already exists, skipping
+NOTICE:  relation "member_storage" already exists, skipping
+NOTICE:  relation "bag_log" already exists, skipping
+NOTICE:  backpack smoke ok
+── event_check_in_smoke.sql
+NOTICE:  check-in 1 code hidden ok
+NOTICE:  check-in 2 pays once ok
+── resident_talk_smoke.sql
+NOTICE:  talk 1 column and seed ok
+NOTICE:  talk 2 shape ok
+NOTICE:  talk 3 read by members, written by T1/T2 ok
+NOTICE:  resident talk smoke ok
+── realtime_card_smoke.sql
+NOTICE:  realtime card 1 anon and members denied ok
+NOTICE:  realtime card 1b definer, search_path, grants ok
+NOTICE:  realtime card 2 member fields ok
+NOTICE:  realtime card 3 no real names ok
+NOTICE:  realtime card 4 defaults ok
+NOTICE:  realtime card 5 classes_v2 ok
+── draft: classes_v2_launch_smoke.sql
+NOTICE:  classes v2 launch: 9 mastery rows, 11 signature weapons, 20 repicks, 21 letters, 33 cosmetics on sale; the flag is on
+NOTICE:  classes v2 launch: first run ok
+NOTICE:  classes v2 launch already applied, skipped
+NOTICE:  classes v2 launch smoke ok
+chain ok (guard)
+NOTICE:  ok: anon cannot read profiles
+NOTICE:  ok: service_role changes tier/tethos_coins and reads email
+NOTICE:  ok: final state (A still T4 / 0 Gems; B untouched by A)
+chain ok (rls)
+portal_rls_smoke exit 0
+chain ok (look)
+NOTICE:  column "avatar_config" of relation "profiles" already exists, skipping
+NOTICE:  ok: column re-added as jsonb, default {}, SELECT for authenticated only
+NOTICE:  ok: server saves the look
+NOTICE:  ok: another member reads the look
+avatar_config smoke ok

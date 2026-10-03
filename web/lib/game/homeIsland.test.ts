@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createHomeIsland, HOME_SPAWN, HOUSE, HOME_DOCK, HOME_RADII } from "./homeIsland";
+import { createHomeIsland, homeBoatPrompt, HOME_PIER, HOME_SPAWN, HOUSE, HOME_DOCK, HOME_RADII } from "./homeIsland";
+import { ASHORE, BOARDING, STEP_AT, dockToWorld } from "./wharf";
 import { canPlace } from "@/lib/homes/layout";
 import { NO_INPUT, STEP, createMoveState, stepMove, walkTo } from "./movement/sim";
 
@@ -28,6 +29,26 @@ describe("home island", () => {
     expect(seen).toContain("respawn");
     expect(world.wet(s.x, s.z)).toBe(false);
     expect(home.fixedFree(s.x, s.z)).toBe(true);
+  });
+  it("has a pier at the dock (arrival-wharf §2): you walk from the sand out along it to the boat, and the sea beside it stays the sea", () => {
+    const world = home.worldWith([]), tip = { x: 0, z: 0 }, step = { x: 0, z: 0 }, beside = { x: 0, z: 0 };
+    dockToWorld(HOME_PIER, ASHORE.x, ASHORE.z, tip);
+    // The pier's land end is the dock point.
+    expect([+tip.x.toFixed(6), +tip.z.toFixed(6)]).toEqual([HOME_DOCK[0], HOME_DOCK[1]]);
+    dockToWorld(HOME_PIER, STEP_AT.x, STEP_AT.z, step);
+    expect(world.wet(step.x, step.z)).toBe(false);
+    expect(home.fixedFree(step.x, step.z)).toBe(true);
+    const s = walkTo(world, HOME_SPAWN[0], HOME_SPAWN[2], step.x, step.z);
+    expect(Math.hypot(s.x - step.x, s.z - step.z)).toBeLessThan(0.2);
+    dockToWorld(HOME_PIER, 2.4, -2.5, beside);
+    expect(world.wet(beside.x, beside.z)).toBe(true);
+    expect(home.placeable(Math.floor(step.x), Math.floor(step.z))).toBe(false);
+  });
+  it("offers the boat at the pier's tip, by the moored boat, not on the beach", () => {
+    const tip = { x: 0, z: 0 };
+    dockToWorld(HOME_PIER, BOARDING.x, BOARDING.z, tip);
+    expect(homeBoatPrompt(tip.x, tip.z)).toBe(true);
+    expect(homeBoatPrompt(HOME_SPAWN[0], HOME_SPAWN[2])).toBe(false);
   });
   it("places outdoor items with the room code and blocks walking through them", () => {
     const bench = { uid: "b", piece: "bench-wood", cell: [-4, -3] as [number, number], rot: 0 as const };
