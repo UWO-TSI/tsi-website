@@ -21,7 +21,7 @@ import { hash01 } from "@/lib/game/worldFx";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import { dropWalker, setWalker } from "@/lib/game/footprintWalkers";
 import { orbit } from "@/lib/game/orbitCamera";
-import { TALK_CLICK_RANGE, TALK_RANGE, beginTalk, endTalk, leaveTalk, nearestTalker, requestTalk, routineLag, setTalkNear, startTalk, talkCameraYaw, talkChanged, talkStore, talkTyping } from "@/lib/game/residentTalk";
+import { TALK_CLICK_RANGE, TALK_PITCH, TALK_RANGE, beginTalk, endTalk, leaveTalk, nearestTalker, requestTalk, routineLag, setTalkNear, startTalk, talkCameraYaw, talkChanged, talkStore, talkTyping } from "@/lib/game/residentTalk";
 import { fillName, pickConversation, talkFor, type Conversation } from "@/lib/content/talk";
 import type { FaceOverride } from "@/lib/game/character/face";
 import { useStepDust } from "./movement/moveFx";
@@ -140,8 +140,9 @@ function startRequested(list: readonly Runtime[], c: Clock, p: THREE.Vector3, no
   talksBySlug.set(r.slug, n + 1);
   const conv = r.talk[pickConversation(r.talk.length, r.slug, c.span?.key ?? "", n)] ?? [];
   startTalk(beginTalk({ id: r.id, slug: r.slug, name: r.name, post: r.post, seed: r.seed }, conv.map(l => ({ text: fillName(l.text, playerName), face: l.face })), performance.now() / 1000));
-  talkStore.cameraYaw = orbit.target.yaw;
+  talkStore.cameraYaw = orbit.target.yaw; talkStore.cameraPitch = orbit.target.pitch;
   orbit.target.yaw = talkCameraYaw(p.x, p.z, r.x, r.z, orbit.target.yaw);
+  orbit.target.pitch = Math.min(orbit.target.pitch, TALK_PITCH);
   face({ x: r.x, z: r.z });
 }
 /**
@@ -284,6 +285,7 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
       r.talking = false; r.talkAt = ""; m.face = null; m.talk = 0;
       r.bubbleNext = Math.max(r.bubbleNext, now + BUBBLE_COOLDOWN_S);
       if (talkStore.cameraYaw !== null) { orbit.target.yaw = talkStore.cameraYaw; talkStore.cameraYaw = null; }
+      if (talkStore.cameraPitch !== null) { orbit.target.pitch = talkStore.cameraPitch; talkStore.cameraPitch = null; }
       face(null);
     } else if (r.chat && d >= FACE_RANGE) {
       const pair = r.seed ^ r.chat.seed, turn = Math.floor(now / 3.4 + hash01(pair, 1) * 4) % 2;
@@ -332,15 +334,16 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
     r.noticed = noticed;
     // Which overhead pieces show, as bits (bubble, "!", nameplate): the DOM is touched only when they change.
     // Right beside someone who's speaking, a resident's own "!" and nameplate step aside so they never cover the bubble.
-    // In a talk the box carries the name: the one you talk to shows only a "!" as they turn to you, the rest nothing new.
+    // In a talk the box carries the name and is the only voice: the one you talk to shows only a "!" as they turn to
+    // you, and everyone else's bubbles, "!" and names wait until you part.
     const bubble = r.bubbleUntil > now && !r.hidden, crowded = speaking && !bubble && dist(r.x, r.z, sx, sz) < 2.5;
     const first = r === nearest;
-    const state = talking ? (talk!.phase === "turning" ? 2 : 0) : talkingId ? (bubble ? 1 : 0)
+    const state = talking ? (talk!.phase === "turning" ? 2 : 0) : talkingId ? 0
       : (bubble ? 1 : 0) | (noticed && first && !bubble && !crowded ? 2 : 0) | (((noticed && first) || r.hovered) && !r.hidden && !crowded ? 4 : 0);
     if (state !== r.shown && r.ui.plate.current) {
       r.shown = state;
-      if (bubble && r.ui.text.current && r.ui.text.current.textContent !== r.line) r.ui.text.current.textContent = r.line;
-      show(r.ui.bubble.current, bubble); show(r.ui.notice.current, (state & 2) > 0); show(r.ui.plate.current, (state & 4) > 0);
+      if ((state & 1) && r.ui.text.current && r.ui.text.current.textContent !== r.line) r.ui.text.current.textContent = r.line;
+      show(r.ui.bubble.current, (state & 1) > 0); show(r.ui.notice.current, (state & 2) > 0); show(r.ui.plate.current, (state & 4) > 0);
     }
   }
 }

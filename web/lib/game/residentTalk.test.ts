@@ -4,7 +4,7 @@ import { village } from "./villageMap";
 import { PROPOSED_RESIDENTS } from "@/lib/content/residentRoster";
 import { RESIDENT_WALK, ResidentDay, daySpan, navGrid, newPose, planResident, residentSeats } from "./residentRoutine";
 import {
-  CATCH_UP, TALK_CLOSE_S, TALK_RANGE, TALK_TURN_S, beginTalk, blipAt, leaveTalk, nearestTalker, pressTalk, routineLag, stepTalk, talkCameraYaw, talkTyping, typeMs, typedAt,
+  CATCH_UP, TALK_CLOSE_S, TALK_PITCH, TALK_RANGE, TALK_TURN_S, beginTalk, blipAt, leaveTalk, nearestTalker, pressTalk, routineLag, stepTalk, talkCameraYaw, talkTyping, typeMs, typedAt,
 } from "./residentTalk";
 
 const WREN = { id: "r-wren", slug: "wren", name: "Wren", post: "hq_lead", seed: 7 };
@@ -103,16 +103,20 @@ describe("talking to residents: the camera", () => {
   it("looks over your shoulder at them, turning no more than it must, the shorter way", () => {
     // They stand straight ahead (+z) of you: the camera steps off the line between you, to the side it was nearer.
     const a = talkCameraYaw(0, 0, 0, 2, 0.1);
-    expect(a).toBeGreaterThan(0.2);
-    expect(a).toBeLessThan(0.8);
-    expect(talkCameraYaw(0, 0, 0, 2, -0.1)).toBeLessThan(-0.2);
+    expect(a).toBeGreaterThan(0.7);
+    expect(a).toBeLessThan(1);
+    expect(talkCameraYaw(0, 0, 0, 2, -0.1)).toBeLessThan(-0.7);
     // Already looking past your shoulder at them: it stays where it is.
-    expect(talkCameraYaw(0, 0, 0, 2, 0.6)).toBeCloseTo(0.6);
-    expect(talkCameraYaw(0, 0, 2, 0, Math.PI / 2 - 0.5)).toBeCloseTo(Math.PI / 2 - 0.5);
+    expect(talkCameraYaw(0, 0, 0, 2, 0.95)).toBeCloseTo(0.95);
+    expect(talkCameraYaw(0, 0, 2, 0, Math.PI / 2 - 1)).toBeCloseTo(Math.PI / 2 - 1);
+    // Never so close to the line between you that your head hides their face (a three-quarter view of it).
+    expect(Math.abs(talkCameraYaw(0, 0, 0, 2, 0.1))).toBeGreaterThanOrEqual(0.75);
     // They're behind you (the camera would see their back): it comes round the shorter way until they're in view.
     const behind = talkCameraYaw(0, 0, 0, -2, 0.3);
-    expect(Math.abs(Math.atan2(Math.sin(behind - Math.PI), Math.cos(behind - Math.PI)))).toBeLessThanOrEqual(1.0 + 1e-9);
+    expect(Math.abs(Math.atan2(Math.sin(behind - Math.PI), Math.cos(behind - Math.PI)))).toBeLessThanOrEqual(1.2 + 1e-9);
     expect(behind).toBeLessThan(Math.PI);
+    expect(TALK_PITCH).toBeGreaterThan(0.35);
+    expect(TALK_PITCH).toBeLessThan(0.6);
     expect(behind).toBeGreaterThan(0.3); // turned left (the shorter way from 0.3 toward pi)
   });
 });

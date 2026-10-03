@@ -7,10 +7,10 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRightLeft, Backpack, BookOpen, Briefcase, CalendarCheck, Check, Coins, Fish, Flag, Gift, Hammer, HandHeart, House, Lock, ReceiptText, ScrollText, Shirt, ShoppingBag,
-  ShoppingBasket, Sparkles, Store, Swords, Target, Undo2, type LucideIcon } from "lucide-react";
+  ShoppingBasket, Sparkles, Store, Swords, Target, Undo2, Wallet as WalletIcon, type LucideIcon } from "lucide-react";
 import { COINS, GEMS } from "@/lib/economy";
 import { iconUrl, shopIcon } from "@/lib/icons/keys";
-import { Badge, Button, Empty, ErrorNote, List, ListRow, Loading, SignInText, Tabs } from "@/components/gui";
+import { Badge, Button, Empty, ErrorNote, List, ListRow, Loading, SignInLink, SignInText, Tabs } from "@/components/gui";
 import { AudioManager } from "@/lib/game/audio";
 import { markGiftClaimed } from "@/lib/game/hudStore";
 import { walletSheet, type WalletKind } from "@/lib/wallet/walletSheet";
@@ -299,7 +299,9 @@ export function WalletBody({ transport = httpEconomyTransport }: { transport?: E
       setError(errText(err));
     }
   };
-  if (!model) return error ? <ErrorNote onRetry={() => void reload()}><SignInText text={signedOut(error) ? "Sign in to see your wallet." : error} /></ErrorNote> : <Loading label="Opening your wallet…" />;
+  if (!model) return error ? signedOut(error)
+    ? <Empty icon={<WalletIcon size={32} />} title="Sign in to see your wallet" action={<SignInLink button />}>Your TC, your Gems and today&apos;s gift live here.</Empty>
+    : <ErrorNote onRetry={() => void reload()}><SignInText text={error} /></ErrorNote> : <Loading label="Opening your wallet…" />;
   const days = tab === "earned" ? model.earned : model.spent;
   return (
     <div className={s.wallet}>

@@ -146,11 +146,14 @@ export function nearestTalker(list: readonly { x: number; z: number; hidden: boo
 export const routineLag = (lag: number, hold: boolean, dt: number) => (hold ? lag + dt : Math.max(0, lag - CATCH_UP * dt));
 
 /**
- * The camera looks past your shoulder at them: its heading 0.35 to 1 radian (20 to 57 degrees) off the line from you to
- * them. Already there, it stays; looking straight over your head it steps aside;
+ * The camera looks past your shoulder at them: its heading 0.8 to 1.2 radians (46 to 69 degrees) off the line from you
+ * to them, so your head never hides their face (a three-quarter view of it). Already there, it stays; looking straight
+ * over your head it steps aside;
  * behind you (it would see their back) it comes round the shorter way. As little turning as the view needs.
  */
-const SHOULDER_MIN = 0.35, SHOULDER_MAX = 1;
+const SHOULDER_MIN = 0.8, SHOULDER_MAX = 1.2;
+/** The camera comes a little lower while you talk (the orbit's pitch, radians): faces, not the tops of heads. */
+export const TALK_PITCH = 0.46;
 export function talkCameraYaw(px: number, pz: number, rx: number, rz: number, yaw: number): number {
   const a = Math.atan2(rx - px, rz - pz), off = wrapAngle(a - yaw);
   const want = (off < 0 ? -1 : 1) * Math.min(SHOULDER_MAX, Math.max(SHOULDER_MIN, Math.abs(off)));
@@ -170,8 +173,9 @@ export const talkStore = {
   /** A talk asked for, by E (the one in reach) or a click or tap; the residents' frame starts it with their lines. */
   request: null as { id: string; click: boolean } | null,
   active: null as Talk | null,
-  /** The camera's heading before the talk turned it, put back after. */
+  /** The camera's heading and tilt before the talk turned it, put back after. */
   cameraYaw: null as number | null,
+  cameraPitch: null as number | null,
 };
 const listeners = new Set<() => void>();
 let view = EMPTY;

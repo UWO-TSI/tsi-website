@@ -187,6 +187,8 @@ const benchSpot: { current: { x: number; z: number; yaw: number; seatY: number }
 /** Distance from a point to a landmark's footprint edge. */
 const footprintDistance = (l: Landmark, x: number, z: number) => Math.hypot(Math.max(0, Math.abs(x - l.x) - (l.half?.[0] ?? 0)), Math.max(0, Math.abs(z - l.z) - (l.half?.[1] ?? 0)));
 const PROMPT_IDS: readonly Landmark["id"][] = ["notice", "catch", "museum", "ruins", "mailbox", "monument"];
+/** The tool that acts on each peaceful target (a resident in reach takes the prompt from the target otherwise). */
+const TOOL_FOR: Record<"fish" | "net" | "dig", string> = { fish: "rod", net: "net", dig: "shovel" };
 /** The café's prompt is its door's, open or boarded up (cafe-polish §2). */
 const CAFE_DOOR_RANGE = 1.4;
 type Spot = [number, number, number];
@@ -354,10 +356,11 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     if (studyHoldsPrompt() || talking) next = null;
     else if (!fishing && (next === null || next === "talk")) {
       const peace = peacefulNear(island.map, layout.water, px, pz, fishSpot);
-      // A flower or shell nearer than the resident is picked up first. The held tool's targets (water, a bug, a dig
-      // spot) keep the prompt for its click; E there still talks to the resident (the key handler).
+      // A flower or shell nearer than the resident is picked up first. Water, a bug or a dig spot keep the prompt only
+      // with the tool for it in hand (its click; E there still talks to the resident, the key handler); empty-handed,
+      // the resident's "Talk to" beats "Take out your rod".
       if (next === null) next = peace;
-      else if (peace && (peace !== "forage" || (getPeacefulTarget()?.distance ?? Infinity) < tn.d)) next = peace;
+      else if (peace && (peace === "forage" ? (getPeacefulTarget()?.distance ?? Infinity) < tn.d : held?.kind === TOOL_FOR[peace])) next = peace;
     }
     if (near.current !== next) { near.current = next; onNear(next); }
   }, -2);
@@ -977,7 +980,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
               overview={overview} returned={returned} player={player} onNear={(n: HomeNear) => setNear(n)} outdoor={layout.outdoor}
               decorating={decor.decorating} selected={decor.selected} onPlace={item => decor.place("outdoor", item)} onPickUp={item => decor.pickUp("outdoor", item)} />
             : <IslandScene held={eating ? null : held} identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent}
-              lead={welcoming || welcome === "done" ? { line: greeting, hold: welcoming } : null} talking={talking} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={welcoming ? 0.7 : talking ? 0.78 : devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} />}
+              lead={welcoming || welcome === "done" ? { line: greeting, hold: welcoming } : null} talking={talking} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={welcoming ? 0.7 : talking ? 0.64 : devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} />}
           {/* Classes v2: the subclass's aura replaces the family's once its kit exists (§1.9). */}
           {identity.aura && (classAura ? <Suspense fallback={null}><SubclassAura player={player} kit={classAura.kit} mastery={classAura.mastery} colour={classAura.colour} /></Suspense>
             : identity.family && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>)}
