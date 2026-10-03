@@ -716,7 +716,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
 const FRAME_COLOR = { bronze: "#c08a4a", silver: "#c9d3da", gold: "#f0c24a" } as const;
 
 /** What a wheel item looks like in the hand (weapons aside: they are the character's `weapon`). */
-function heldView(item: WheelItem | null): HeldView | null {
+export function heldView(item: WheelItem | null): HeldView | null {
   if (!item) return null;
   if (item.kind === "glider") return { url: LEAF_URL, hold: "glider" };
   if (item.kind === "pin") { const m = itemModel(item.key); return m && { url: m.url, hold: "front", fit: m.fit }; }
