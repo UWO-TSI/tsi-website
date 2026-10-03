@@ -3,7 +3,7 @@
 /**
  * Crafting in the world (specs/crafting.md §4): the DIY workbench in the
  * clubhouse with its E prompt, the recipe sheet (learned recipes, ingredient
- * counts owned/needed, craft, result card) and today's message bottle on the
+ * counts owned/needed, craft; the shared reward card shows what was made) and today's message bottle on the
  * village beach. Branch drops and rock strikes are forage nodes (islandNodes).
  * Everything goes through /api/crafting; the server decides what you get.
  */
@@ -12,7 +12,6 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { Piece } from "../interiorShared";
 import { GLBProp } from "../NatureModels";
-import { AudioManager } from "@/lib/game/audio";
 import { constrainClubhouse } from "@/lib/game/clubhouse";
 import { villageBottleSpot } from "@/lib/game/islandNodes";
 import { setPeacefulTarget } from "@/lib/game/peacefulNear";
@@ -74,8 +73,9 @@ export function BeachBottle({ player, ground }: { player: React.RefObject<THREE.
       if ((e as CustomEvent<{ id: string }>).detail.id !== "bottle") return;
       out.current = false;
       setAvailable(false);
-      apiCall<{ name: string }>("/api/crafting/learn", "learned", { source: "bottle" }).then(
-        learned => { AudioManager.playSFX("confirm"); window.dispatchEvent(new CustomEvent("tsi:recipe-learned", { detail: { name: learned.name } })); },
+      apiCall<{ id: string; name: string }>("/api/crafting/learn", "learned", { source: "bottle" }).then(
+        // The shared reward card unrolls the recipe (RewardCard) with its chime.
+        learned => { window.dispatchEvent(new CustomEvent("tsi:recipe-learned", { detail: { id: learned.id, name: learned.name } })); },
         (e: unknown) => window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: e instanceof ApiError ? e.message : "The cork won't budge. Try again later." } })));
     };
     window.addEventListener("tsi:peaceful-act", onAct);
@@ -92,9 +92,7 @@ export function BeachBottle({ player, ground }: { player: React.RefObject<THREE.
   </group>;
 }
 
-// ── Recipe sheet and result card ──
-
-type Card = { title: string; name: string; note: string };
+// ── Recipe sheet ──
 
 export default function CraftingSheet() {
   const [open, setOpen] = useState(false);
@@ -103,27 +101,23 @@ export default function CraftingSheet() {
   const [error, setError] = useState<string | null>(null);
   const [pick, setPick] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [card, setCard] = useState<Card | null>(null);
   const pending = useRef<{ id: string; key: string } | null>(null); // a failed request retries with its key
 
   const load = useCallback(() => apiCall<RecipeBook>("/api/crafting/recipes", "book").then(
     b => { setBook(b); setError(null); },
     (e: unknown) => setError(e instanceof ApiError ? (e.status === 401 ? "Sign in to use the workbench." : e.message) : "The workbench isn't set up yet.")), []);
-  const show = useCallback(() => { setOpen(true); setCard(null); void load(); }, [load]);
+  const show = useCallback(() => { setOpen(true); void load(); }, [load]);
 
   useEffect(() => {
     const onNear = (e: Event) => setNear((e as CustomEvent<boolean>).detail);
-    const onLearned = (e: Event) => setCard({ title: "Recipe learned", name: (e as CustomEvent<{ name: string }>).detail.name, note: "The tide brought you a new recipe. Craft it at the workbench in HQ." });
     window.addEventListener("tsi:workbench-near", onNear);
-    window.addEventListener("tsi:recipe-learned", onLearned);
-    return () => { window.removeEventListener("tsi:workbench-near", onNear); window.removeEventListener("tsi:recipe-learned", onLearned); };
+    return () => window.removeEventListener("tsi:workbench-near", onNear);
   }, []);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       // The open sheet takes E and Escape itself (lib/game/useWorldDialog); under any other dialog the bench waits.
       if (e.repeat || worldKeysBlocked() || isTyping(e.target as Element)) return;
       if (e.key.toLowerCase() === "e" && near && !open) show();
-      if (e.key === "Escape") setCard(null);
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
@@ -136,9 +130,8 @@ export default function CraftingSheet() {
     try {
       const done = await apiCall<{ name: string }>("/api/crafting/craft", "craft", { recipe_id: r.id, idempotency_key: pending.current.key });
       pending.current = null;
-      AudioManager.playSFX("confirm");
-      window.dispatchEvent(new CustomEvent("tsi:crafted", { detail: { id: r.id } }));
-      setCard({ title: "Crafted", name: done.name, note: r.kind === "weapon" ? "It's in your gear rack for the ruins." : r.id.startsWith("bag-") ? "Your backpack has more room now." : "It takes no room in your pockets: find it in your Bag, under tools, clothes and furniture." });
+      // The shared reward card shows what was made, with its art and its chime (RewardCard).
+      window.dispatchEvent(new CustomEvent("tsi:crafted", { detail: { id: r.id, name: done.name, kind: r.kind } }));
       void load();
     } catch (e) {
       if (e instanceof ApiError) pending.current = null; // answered: the next press is a new craft
@@ -149,16 +142,9 @@ export default function CraftingSheet() {
   };
 
   const selected = book?.recipes.find(r => r.id === pick) ?? book?.recipes[0] ?? null;
-  const resultCard = card && <div className={styles.card} role="status" data-testid="craft-result">
-    <p className={styles.cardTitle}>{card.title}</p>
-    <p className={styles.cardName}>{card.name}</p>
-    <p>{card.note}</p>
-    <button onClick={() => setCard(null)}>Nice</button>
-  </div>;
 
   return <>
-    {!open && near && !card && <button className={world.interact} onClick={show}><kbd>E</kbd>Use the workbench</button>}
-    {!open && resultCard}
+    {!open && near && <button className={world.interact} onClick={show}><kbd>E</kbd>Use the workbench</button>}
     <IslandSheet open={open} title="Workbench" onClose={() => setOpen(false)} testId="crafting-sheet" keys="e" size="lg">
     {error && <ErrorNote onRetry={() => void load()}>{error}</ErrorNote>}
     {!book ? (error ? null : <Loading label="Laying out your recipes…" />) : <>
@@ -185,7 +171,6 @@ export default function CraftingSheet() {
         </div>}
       </div>
     </>}
-    {resultCard}
     </IslandSheet>
   </>;
 }

@@ -1,0 +1,43 @@
+/* The shared reward card (RewardCard.tsx), in the GUI sheet's paper: beside the pickup's fly-in, which leaves the middle
+   of the screen for the Bag (up and left); the card stands to the right of it, over the sheets and under the token. */
+.layer { position: fixed; left: calc(50% + 64px); top: 50%; z-index: 76; width: min(340px, calc(50% - 80px)); transform: translateY(-62%); pointer-events: none;
+  font-family: var(--gui-font); zoom: var(--tsi-text-scale, 1); }
+.card { --rarity: var(--gui-paper-line); position: relative; display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 14px; align-items: center; padding: 14px 18px 14px 14px;
+  border-radius: var(--gui-r-paper); background: var(--gui-grain) var(--gui-paper); color: var(--gui-ink); box-shadow: inset 0 0 0 3px var(--gui-paper-hi), var(--gui-shadow-lg);
+  pointer-events: auto; cursor: pointer; transform-origin: 18% 50%; animation: cardIn 520ms var(--gui-spring) both; }
+.card[data-leaving] { animation: cardOut 260ms ease-in forwards; }
+/* The art on a cream disc ringed in its rarity's colour; it pops in a beat after the card with a little turn. */
+.art { position: relative; display: grid; place-items: center; width: 92px; height: 92px; border-radius: 50%; background: radial-gradient(circle at 38% 32%, var(--gui-paper-hi), var(--gui-paper-warm) 70%);
+  box-shadow: inset 0 0 0 4px var(--rarity), inset 0 0 0 7px var(--gui-paper-hi), var(--gui-shadow-sm); }
+.art img { display: block; width: 72px; height: 72px; object-fit: contain; animation: artIn 640ms 90ms var(--gui-spring) both; }
+/* Rare and up: a slow glint across the disc. */
+.card[data-rarity="rare"] .art::after, .card[data-rarity="epic"] .art::after, .card[data-rarity="legendary"] .art::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  background: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.55) 48%, transparent 58%) no-repeat; background-size: 260% 100%; animation: glint 2.2s 0.5s ease-in-out infinite; }
+.text { min-width: 0; }
+.title { margin: 0; color: var(--gui-warn); font-size: var(--gui-text-xs); font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+.card[data-new] .title { color: var(--gui-coral-ink); }
+.name { margin: 1px 0 4px; color: var(--gui-ink-strong); font-size: var(--gui-text-xl); font-weight: 900; line-height: 1.1; overflow-wrap: anywhere; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 4px; }
+.rarity { padding: 1px 10px 2px; border-radius: var(--gui-r-pill); background: color-mix(in srgb, var(--rarity) 32%, var(--gui-paper-hi)); color: var(--gui-ink-strong);
+  box-shadow: inset 0 0 0 2px var(--rarity); font-size: var(--gui-text-xs); font-weight: 800; text-transform: capitalize; }
+.size { padding: 1px 10px 2px; border-radius: var(--gui-r-pill); background: var(--gui-paper-deep); color: var(--gui-ink); font-size: var(--gui-text-xs); font-weight: 800; font-variant-numeric: tabular-nums; }
+.note { margin: 2px 0 0; color: var(--gui-ink-2); font-size: var(--gui-text-sm); font-style: italic; line-height: 1.35; }
+.ingredients { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 2px; }
+.ingredients li { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 8px; font-size: var(--gui-text-sm); font-weight: 700; }
+.ingredients img { width: 24px; height: 24px; object-fit: contain; }
+.ingredients b { color: var(--gui-ink-strong); font-variant-numeric: tabular-nums; }
+@keyframes cardIn { 0% { opacity: 0; transform: translateX(-18px) scale(0.86); } 55% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+@keyframes cardOut { to { opacity: 0; transform: translateY(-10px) scale(0.96); } }
+@keyframes artIn { 0% { opacity: 0; transform: scale(0.4) rotate(-14deg); } 70% { opacity: 1; transform: scale(1.1) rotate(3deg); } 100% { transform: none; } }
+@keyframes glint { 0%, 55% { background-position: 130% 0; } 100% { background-position: -30% 0; } }
+/* A phone: under the middle, above the toast lane. */
+@media (max-width: 720px) {
+  .layer { left: 50%; top: auto; bottom: calc(var(--game-toast-bottom, 96px) + 52px); width: min(340px, calc(100% - 32px)); transform: translateX(-50%); }
+  .card { transform-origin: 50% 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card, .card[data-leaving], .art img, .art::after { animation: none !important; }
+  .card[data-leaving] { opacity: 0; }
+}
+:global(html[data-contrast="high"]) .card { background: #ffffff; color: #000000; box-shadow: inset 0 0 0 2px #000000; }

@@ -89,6 +89,7 @@ import { ShowcaseSheet, TrophySheet } from "./peaceful/ShowcaseSheets";
 import type { MuseumWing } from "@/lib/collections/logic";
 import FishingOverlay from "./FishingOverlay";
 import ToastHub, { toast } from "./ToastHub";
+import RewardCard from "./RewardCard";
 import IslandLoading from "./IslandLoading";
 import HQLead from "./HQLead";
 import DailyGift from "./DailyGift";
@@ -1018,6 +1019,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         enabled={ready && !inside && !fishing && !sheet && !bagOpen && !welcoming && !fading && !decor.decorating && !shopTab} />
       <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} onDonated={loadMuseum} />
       <ToastHub />
+      {/* What a catch, a find, a craft or a bottle gave you: one card with its art, beside the Bag's fly-in. */}
+      <RewardCard />
       {/* Today's gift once the island is showing and nothing else holds the player (first login, a fade, a sheet, a fight). */}
       <DailyGift ready={ready && !fading && !holdObjective && !sheet && site !== "ruins"} />
       {greeting !== null && <div className={styles.greeting} data-welcome>

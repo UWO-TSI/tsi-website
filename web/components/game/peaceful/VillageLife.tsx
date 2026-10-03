@@ -23,7 +23,6 @@ import { ROSTER } from "@/lib/collections/roster";
 import { forageSize } from "@/lib/collections/rolls";
 import { bugReaction, hasClue, hourKey, nodeAvailable, rollNode } from "@/lib/game/peaceful";
 import { setPeacefulTarget, type PeacefulTarget } from "@/lib/game/peacefulNear";
-import { iconUrl } from "@/lib/icons/keys";
 import type { Biome, Species } from "@/lib/collections/roster";
 import type { WorldMoment } from "@/lib/collections/logic";
 import { worldTime } from "@/lib/game/worldClock";
@@ -184,11 +183,12 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
         const isNew = answer ? answer.catch.total_collected === 1 : !(got.key in localCollections());
         collect(got.key);
         localRecord(got.key, size);
-        AudioManager.playSFX(bug ? "confirm" : "click");
-        window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `${isNew ? "NEW! " : ""}${bug ? "Caught" : "Got"} ${got.name}${size ? `, ${size} cm` : ""}!`, icon: iconUrl(got.key) } }));
-        if (answer?.catch.recipe) window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `You learned a recipe: ${answer.catch.recipe.name}` } }));
-        window.dispatchEvent(new CustomEvent("tsi:peaceful-got", { detail: { key: got.key, name: got.name, rarity: got.rarity, one_liner: got.oneLiner, size, isNew, bug: !!bug } }));
+        // The shared reward card says what it was, with its art and its chime (RewardCard); the token flies into the Bag.
+        window.dispatchEvent(new CustomEvent("tsi:peaceful-got", { detail: { key: got.key, name: got.name, rarity: got.rarity, one_liner: got.oneLiner, size, isNew,
+          kind: bug ? "bug" : buried(sp) ? "dig" : "forage" } }));
         window.dispatchEvent(new CustomEvent("tsi:bag-got", { detail: { key: got.key } }));
+        // A rare find that taught a recipe: its card follows the catch's.
+        if (answer?.catch.recipe) window.dispatchEvent(new CustomEvent("tsi:recipe-learned", { detail: { id: answer.catch.recipe.id, name: answer.catch.recipe.name } }));
       });
     };
     window.addEventListener("tsi:peaceful-act", onAct);
@@ -204,7 +204,8 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     let best: PeacefulTarget | null = null;
     for (const { n, sp } of forage) {
       const d = Math.hypot(n.x - p.x, n.z - p.z);
-      if (hasClue(sp) && d < 5 && !chimed.current.has(n.id)) { chimed.current.add(n.id); AudioManager.playSFX("blip3"); }
+      // The rare tell's chime: the success sound high and soft (a twinkle), never a dialogue blip.
+      if (hasClue(sp) && d < 5 && !chimed.current.has(n.id)) { chimed.current.add(n.id); AudioManager.playSFX("confirm", { rate: 1.9, gain: 0.22 }); }
       const target = forageTargets.get(n.id);
       if (target && d < REACH && (!best || d < best.distance)) { target.distance = d; best = target; }
     }
@@ -236,7 +237,8 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
         // Away from you, curving off to a side seeded by the bug, from where it was.
         bug.fled = true; bug.fleeT = 0; bug.fx = g.position.x; bug.fy = g.position.y; bug.fz = g.position.z;
         bug.dir = Math.atan2(bx - p.x, bz - p.z); bug.side = bug.x * 7.3 + bug.z * 3.1 - Math.floor(bug.x * 7.3 + bug.z * 3.1) < 0.5 ? 1 : -1;
-        AudioManager.playSFX("exit");
+        // Its wings brushing off (a quick, high brush), never the door sound.
+        AudioManager.playSFX("footstep", { rate: 1.7, gain: 0.45 });
         continue;
       }
       const wary = reaction === "wary" || reaction === "catchable";
