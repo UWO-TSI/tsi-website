@@ -50,7 +50,7 @@ Indoors now follows the island's blended light (`lib/game/interiorLight.ts`): th
 - **The aquarium's fish swim** (the species' own model from the fishing catalogue), lapping low by the front glass, tails beating, on the world clock, so everyone sees the same aquarium. Sea creatures keep to the tank floor.
 - **The crystal breathes**: its glow and light swell slowly (in the family's colour during the reveal).
 - **Candles burn**: a painted flame on each wick (the combat pack's fire tongue in candle colours) and sparks drifting up (its light mote), instead of the sphere embers; the candle pools flicker with them.
-- **The fitting room's curtain** stirs in the wind, swishes as you brush past it walking up, and sweeps across when you step in (E).
+- **The fitting room's curtain** stirs in the wind, swishes as you brush past it walking up, sweeps across when you step in (E: the wardrobe opens 0.6 s later, once you've seen it move; it used to cover the booth at once) and again as you step out.
 - **The HQ clock ticks**: its pendulum swings a beat a second and its hands keep the island's time (lifted out of the dump model at load).
 
 ## 5. Transitions (deliverable 5)
