@@ -21,7 +21,7 @@ import { hash01 } from "@/lib/game/worldFx";
 export interface Wick { x: number; z: number; top: number }
 const CANDLE_RAMP: Ramp = ["#fff8e2", "#ffc45e", "#c9571c"];
 /** A flame that never dies: the flipbook loops (fps), it never fades. */
-const FLAME: Recipe<CombatSprite> = { sprite: "flame", count: [1, 1], life: [1e9, 1e9], size: [0.17, 0.17], grow: 1, speed: [0, 0], spread: 0, up: [0, 0],
+const FLAME: Recipe<CombatSprite> = { sprite: "flame", count: [1, 1], life: [1e9, 1e9], size: [0.21, 0.21], grow: 1, speed: [0, 0], spread: 0, up: [0, 0],
   gravity: 0, drag: 0, wind: 0, fps: 11, alpha: 0.95, face: FACE.standing, fadeIn: 1e12 };
 const SPARK: Recipe<CombatSprite> = { sprite: "mote", count: [1, 1], life: [1.1, 1.7], size: [0.1, 0.14], grow: 0.35, speed: [0.01, 0.05], spread: Math.PI,
   up: [0.28, 0.42], gravity: 0, drag: 0.8, wind: 0, lift: 0.32, alpha: 1, face: FACE.billboard, jitter: 0.012, rise: [0.1, 0.14], fadeIn: 14 };

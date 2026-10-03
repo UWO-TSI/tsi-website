@@ -8,10 +8,10 @@ export const TANK = { cx: 0, cz: -0.14, rx: 0.42, rz: 0.12, y: 0.7, bob: 0.06, f
 
 export interface SwimPose { x: number; y: number; z: number; yaw: number; wag: number }
 
-/** A fish's length in the tank from its real size (cm): small fry about a quarter unit, the giants capped to fit. */
+/** A fish's length in the tank from its real size (cm): small fry a third of the tank's depth, the giants capped to fit. */
 export function tankLength(sizeCm: readonly [number, number]): number {
   const cm = (sizeCm[0] + sizeCm[1]) / 2;
-  return Math.min(0.5, Math.max(0.22, 0.22 + 0.1 * Math.log2(Math.max(1, cm) / 10)));
+  return Math.min(0.62, Math.max(0.3, 0.3 + 0.12 * Math.log2(Math.max(1, cm) / 10)));
 }
 
 /** The fish's pose at world time `t`; `speed` from its species' move (0.1 to 0.45), `creature` keeps to the floor. */
