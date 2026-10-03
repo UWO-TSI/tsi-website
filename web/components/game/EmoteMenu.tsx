@@ -8,8 +8,8 @@ import { useEmoteTypes } from "@/lib/content/loader";
 import type { EmoteType } from "@/lib/content/types";
 
 /**
- * EmoteMenu (sprint E2) — DOM overlay rendered alongside AudioController /
- * NPCChatOverlay, outside the R3F Canvas. Opens on G key or sidebar icon
+ * EmoteMenu (sprint E2) — DOM overlay rendered alongside AudioController,
+ * outside the R3F Canvas. Opens on G key or sidebar icon
  * (wired in GameWorld). Click an emote → onPick(emote) → onClose().
  *
  * Cosmetic-only: emotes don't grant XP/TC (CLAUDE.md principle #3 + #4).
