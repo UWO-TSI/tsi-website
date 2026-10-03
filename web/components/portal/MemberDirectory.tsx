@@ -1,11 +1,19 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
-import { Search, SlidersHorizontal, SearchX, Loader2 } from "lucide-react";
+import { useState, useMemo, useEffect, useCallback, type CSSProperties } from "react";
+import { Search, SlidersHorizontal, SearchX, Users } from "lucide-react";
 import MemberCard from "./MemberCard";
-import { CLASS_META } from "./classIdentity";
-import { TIER_COLORS } from "./types";
+import { CLASS_META, TIER_LOOK } from "./classIdentity";
+import { TIER_LABELS } from "./types";
+import { Banner, Button, Card, Empty, ErrorNote, Loading, Select, Tabs, type TabItem } from "@/components/gui";
 import type { DirectoryMember, Tier } from "@/lib/supabase/types";
+
+const STATUS_TABS: TabItem<"active" | "all">[] = [
+  { id: "active", label: "Active" },
+  { id: "all", label: "Everyone" },
+];
+
+const filterLabel: CSSProperties = { fontSize: "14px", fontWeight: 800, color: "var(--gui-ink-strong)" };
 
 export default function MemberDirectory() {
   const [members, setMembers] = useState<DirectoryMember[]>([]);
@@ -67,130 +75,80 @@ export default function MemberDirectory() {
     });
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center" style={{ padding: "80px 0" }}>
-        <Loader2
-          className="animate-spin"
-          style={{ width: "28px", height: "28px", color: "var(--color-accent-cyan)" }}
-        />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center" style={{ padding: "80px 0", gap: "12px" }}>
-        <SearchX style={{ width: "32px", height: "32px", color: "var(--color-text-subtle)", marginBottom: "4px" }} />
-        <p style={{ fontSize: "16px", color: "var(--color-text-muted)", fontWeight: 500 }}>Unable to load directory</p>
-        <p style={{ fontSize: "14px", color: "var(--color-text-subtle)" }}>The server is not available right now. Please try again later.</p>
-        <button onClick={fetchMembers} className="mt-2 text-sm underline" style={{ color: "var(--color-accent-cyan)" }}>Retry</button>
-      </div>
-    );
-  }
-
   return (
-    <div className="mx-auto" style={{ maxWidth: "960px", padding: "24px" }}>
-      <div className="flex gap-3 mb-4">
-        <div className="flex-1 relative">
-          <Search className="absolute top-1/2 -translate-y-1/2" style={{ left: "12px", width: "16px", height: "16px", color: "var(--color-text-subtle)" }} />
-          <input
-            type="text" placeholder="Search by name, class, or skill..." value={search}
-            onChange={(e) => setSearch(e.target.value)} aria-label="Search members"
-            className="w-full outline-none transition-shadow"
-            style={{ height: "40px", padding: "0 12px 0 36px", background: "var(--color-surface)", border: "1px solid var(--glass-border-soft)", borderRadius: "8px", fontSize: "14px", color: "var(--color-text-main)" }}
-            onFocus={(e) => { e.currentTarget.style.borderColor = "var(--color-brand-blue)"; e.currentTarget.style.boxShadow = "0 0 0 2px rgba(0,47,167,0.2)"; }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = "var(--glass-border-soft)"; e.currentTarget.style.boxShadow = "none"; }}
-          />
-        </div>
-        <button onClick={() => setFilterOpen((f) => !f)} className="flex items-center gap-2 shrink-0 transition-colors"
-          style={{ height: "40px", padding: "0 12px", background: "transparent", border: filterOpen ? "1px solid var(--color-brand-blue)" : "1px solid var(--gray-700)", borderRadius: "8px", color: "var(--color-text-muted)", fontSize: "14px" }}>
-          <SlidersHorizontal style={{ width: "16px", height: "16px" }} /> Filters
-        </button>
-      </div>
+    <div className="flex-1 overflow-y-auto" style={{ padding: "24px 20px 48px" }}>
+      <div className="mx-auto" style={{ maxWidth: "960px" }}>
+        <Banner title="Directory" icon={<Users size={26} />} tone="sage">Everyone in the club. Find people by name, class or skill.</Banner>
 
-      {filterOpen && (
-        <div className="mb-4 p-3" style={{ background: "var(--color-surface)", border: "1px solid var(--glass-border-soft)", borderRadius: "8px", boxShadow: "var(--shadow-soft)" }}>
-          <div className="mb-3">
-            <label className="block mb-2 font-mono uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Tier</label>
-            <div className="flex gap-2 flex-wrap">
-              {([1, 2, 3, 4, 5] as Tier[]).map((tier) => {
-                const selected = tierFilter.has(tier); const tc = TIER_COLORS[tier];
-                return (<button key={tier} onClick={() => toggleTier(tier)} className="font-mono transition-colors"
-                  style={{ height: "28px", padding: "0 12px", fontSize: "12px", borderRadius: "9999px", background: selected ? tc.bg : "transparent", border: selected ? `1px solid ${tc.color}` : "1px solid var(--gray-700)", color: selected ? tc.color : "var(--color-text-muted)" }}>T{tier}</button>);
-              })}
-            </div>
+        <div className="flex gap-3 mb-4">
+          <div className="flex-1 relative">
+            <Search aria-hidden className="absolute top-1/2 -translate-y-1/2 pointer-events-none" style={{ left: "16px", width: "18px", height: "18px", color: "var(--gui-muted)" }} />
+            <input
+              type="text" placeholder="Search by name, class or skill…" value={search}
+              onChange={(e) => setSearch(e.target.value)} aria-label="Search members"
+              className="w-full transition-colors border-2 border-[var(--gui-paper-line)] focus:border-[var(--gui-sage)] bg-[var(--gui-paper-hi)] text-[var(--gui-ink)] placeholder:text-[var(--gui-muted)]"
+              style={{ height: "48px", padding: "0 16px 0 44px", borderRadius: "18px 15px 17px 16px", fontSize: "15px", fontWeight: 600 }}
+            />
           </div>
-          <div className="mb-3">
-            <label htmlFor="dir-class-filter" className="block mb-2 font-mono uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Class</label>
-            <select
-              id="dir-class-filter"
-              value={classFilter}
-              onChange={(e) => setClassFilter(e.target.value)}
-              style={{ height: "28px", padding: "0 8px", fontSize: "12px", borderRadius: "8px", background: "var(--color-surface)", border: classFilter !== "all" ? "1px solid var(--color-brand-blue)" : "1px solid var(--gray-700)", color: classFilter !== "all" ? "var(--color-text-main)" : "var(--color-text-muted)" }}
-            >
+          <Button variant={filterOpen ? "secondary" : "quiet"} onClick={() => setFilterOpen((f) => !f)} aria-expanded={filterOpen} className="shrink-0">
+            <SlidersHorizontal size={18} aria-hidden /> Filters
+          </Button>
+        </div>
+
+        {filterOpen && (
+          <Card className="mb-4 grid gap-4">
+            <div>
+              <p className="mb-2" style={filterLabel}>Tier</p>
+              <div className="flex gap-2 flex-wrap">
+                {([1, 2, 3, 4, 5] as Tier[]).map((tier) => {
+                  const selected = tierFilter.has(tier);
+                  return (
+                    <button key={tier} type="button" onClick={() => toggleTier(tier)} aria-pressed={selected}
+                      className="inline-flex items-center gap-2 rounded-full transition-colors"
+                      style={{ minHeight: "38px", padding: "0 14px", fontSize: "13px", fontWeight: 800, background: selected ? "var(--gui-butter)" : "var(--gui-paper-deep)", color: selected ? "var(--gui-ink-strong)" : "var(--gui-ink-2)", boxShadow: selected ? "var(--gui-shadow-sm)" : "none" }}>
+                      <span aria-hidden className="rounded-full" style={{ width: "9px", height: "9px", background: TIER_LOOK[tier].ring }} />
+                      T{tier} · {TIER_LABELS[tier]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <Select label="Class" value={classFilter} onChange={(e) => setClassFilter(e.target.value)}>
               <option value="all">All classes</option>
               {Object.keys(CLASS_META).map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div className="mb-3">
-            <label htmlFor="dir-year-filter" className="block mb-2 font-mono uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Year</label>
-            <select
-              id="dir-year-filter"
-              value={yearFilter}
-              onChange={(e) => setYearFilter(e.target.value)}
-              style={{ height: "28px", padding: "0 8px", fontSize: "12px", borderRadius: "8px", background: "var(--color-surface)", border: yearFilter !== "all" ? "1px solid var(--color-brand-blue)" : "1px solid var(--gray-700)", color: yearFilter !== "all" ? "var(--color-text-main)" : "var(--color-text-muted)" }}
-            >
+            </Select>
+            <Select label="Year" value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
               <option value="all">All years</option>
               <option value="1">1st</option>
               <option value="2">2nd</option>
               <option value="3">3rd</option>
               <option value="4">4th</option>
               <option value="5">5th+</option>
-            </select>
-          </div>
-          <div>
-            <label className="block mb-2 font-mono uppercase" style={{ fontSize: "12px", color: "var(--color-text-subtle)", letterSpacing: "0.05em" }}>Status</label>
-            <div className="flex gap-2">
-              {(["active", "all"] as const).map((s) => (
-                <button key={s} onClick={() => setStatusFilter(s)} className="transition-colors capitalize"
-                  style={{ height: "28px", padding: "0 12px", fontSize: "12px", borderRadius: "9999px", background: statusFilter === s ? "rgba(0,47,167,0.15)" : "transparent", border: statusFilter === s ? "1px solid var(--color-brand-blue)" : "1px solid var(--gray-700)", color: statusFilter === s ? "var(--color-text-main)" : "var(--color-text-muted)" }}>{s}</button>
-              ))}
+            </Select>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <span style={filterLabel}>Status</span>
+              <Tabs label="Member status" value={statusFilter} onChange={setStatusFilter} tabs={STATUS_TABS} />
             </div>
-          </div>
-        </div>
-      )}
+          </Card>
+        )}
 
-      <p className="mb-3" style={{ fontSize: "14px", color: "var(--color-text-muted)" }}>
-        {loading ? "Loading..." : `Showing ${filtered.length} member${filtered.length !== 1 ? "s" : ""}`}
-      </p>
-
-      {loading && (
-        <div className="flex justify-center py-12">
-          <Loader2 className="animate-spin" style={{ width: "24px", height: "24px", color: "var(--color-text-subtle)" }} />
-        </div>
-      )}
-
-      {error && !loading && (
-        <div className="text-center py-12" style={{ color: "var(--color-error)" }}>
-          <p className="mb-2">{error}</p>
-          <button onClick={fetchMembers} className="text-sm underline" style={{ color: "var(--color-text-muted)" }}>Retry</button>
-        </div>
-      )}
-
-      {!loading && !error && filtered.length > 0 && (
-        <div role="listbox" aria-label="Member directory">
-          {filtered.map((member) => (<MemberCard key={member.id} member={member} />))}
-        </div>
-      )}
-
-      {!loading && !error && filtered.length === 0 && (
-        <div className="flex flex-col items-center justify-center" style={{ padding: "48px" }}>
-          <SearchX style={{ width: "32px", height: "32px", color: "var(--color-text-subtle)", marginBottom: "12px" }} />
-          <p style={{ fontSize: "16px", color: "var(--color-text-muted)", fontWeight: 500 }}>No members found</p>
-          <p style={{ fontSize: "14px", color: "var(--color-text-subtle)", marginTop: "4px" }}>Try adjusting your filters</p>
-        </div>
-      )}
+        {loading ? <Loading label="Finding the club’s members…" />
+          : error ? <ErrorNote onRetry={fetchMembers}>The member list didn’t load. Check your connection and try again.</ErrorNote>
+          : filtered.length === 0 ? (
+            <Empty icon={<SearchX size={32} />} title="No members found">Try another name, or loosen a filter.</Empty>
+          ) : (
+            <>
+              <p className="mb-3" style={{ fontSize: "14px", fontWeight: 700, color: "var(--gui-muted)" }}>
+                Showing {filtered.length} member{filtered.length !== 1 ? "s" : ""}
+              </p>
+              <Card style={{ padding: "4px 6px" }}>
+                <div role="listbox" aria-label="Member directory">
+                  {filtered.map((member) => (<MemberCard key={member.id} member={member} />))}
+                </div>
+              </Card>
+            </>
+          )}
+      </div>
     </div>
   );
 }

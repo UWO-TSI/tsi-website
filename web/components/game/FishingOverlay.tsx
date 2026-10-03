@@ -404,6 +404,8 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         // The bottom stack's lane (the prompt steps aside while you fish), under the toasts; 120 where no stack is set.
         bottom: "var(--hud-lane-bottom, 120px)",
         transform: "translateX(-50%)",
+        // The member world's text-size setting (styles/game-tokens.css sets --gui-overlay-zoom there); 1 on the applicant island.
+        zoom: "var(--gui-overlay-zoom, 1)",
         zIndex: 60,
         pointerEvents: "none",
         display: "flex",
@@ -460,7 +462,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
           {phase === "caught" && rarity && (
             <span
               style={{
-                fontSize: 10,
+                fontSize: "max(10px, var(--gui-min-text, 0px))",
                 fontWeight: 700,
                 letterSpacing: "0.06em",
                 textTransform: "uppercase",
@@ -502,14 +504,14 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
             />
           )}
           {phase === "caught" && newRecord && (
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "#FFFDF5", background: "#C2410C", borderRadius: 999, padding: "3px 8px" }}>
+            <span style={{ fontSize: "max(10px, var(--gui-min-text, 0px))", fontWeight: 700, letterSpacing: "0.06em", color: "#FFFDF5", background: "#C2410C", borderRadius: 999, padding: "3px 8px" }}>
               NEW RECORD
             </span>
           )}
           {phase === "caught" && wasNew && (
             <span
               style={{
-                fontSize: 10,
+                fontSize: "max(10px, var(--gui-min-text, 0px))",
                 fontWeight: 700,
                 letterSpacing: "0.06em",
                 color: "#1A1410",
@@ -537,7 +539,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         <div
           style={{
             fontFamily: "var(--font-highlight, sans-serif)",
-            fontSize: 11,
+            fontSize: "max(11px, var(--gui-min-text, 0px))",
             color: "rgba(255,255,255,0.7)",
             textShadow: "0 1px 3px rgba(0,0,0,0.5)",
           }}
@@ -549,7 +551,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         <div
           style={{
             fontFamily: "var(--font-highlight, sans-serif)",
-            fontSize: 11,
+            fontSize: "max(11px, var(--gui-min-text, 0px))",
             color: "rgba(255,255,255,0.7)",
             textShadow: "0 1px 3px rgba(0,0,0,0.5)",
           }}
@@ -776,7 +778,7 @@ export function ReelMinigame({
         </span>
         <span
           style={{
-            fontSize: 9,
+            fontSize: "max(9px, var(--gui-min-text, 0px))",
             fontWeight: 700,
             padding: "1px 7px",
             borderRadius: 999,
@@ -786,7 +788,7 @@ export function ReelMinigame({
         >
           {(fish.zone ?? "river") === "sea" ? "sea" : "river"}
         </span>
-        <span style={{ marginLeft: "auto", fontSize: 10, color: "var(--app-muted, #8a7f6a)" }}>
+        <span style={{ marginLeft: "auto", fontSize: "max(10px, var(--gui-min-text, 0px))", color: "var(--app-muted, #8a7f6a)" }}>
           keep the fish inside the green bar
         </span>
       </div>
@@ -849,7 +851,7 @@ export function ReelMinigame({
       <div ref={pausedLabelRef} hidden style={{ marginTop: 8, fontSize: 12, color: "var(--app-ink, #4A4034)" }}>
         Paused · click the reel to resume
       </div>
-      <div id="fishing-reel-help" style={{ marginTop: 8, fontSize: 11, color: "var(--app-muted, #635745)" }}>
+      <div id="fishing-reel-help" style={{ marginTop: 8, fontSize: "max(11px, var(--gui-min-text, 0px))", color: "var(--app-muted, #635745)" }}>
         Hold E, Space or left-click → · Release ← · Esc to let go
       </div>
       {/* Progress */}
@@ -1005,7 +1007,7 @@ function CastMeter({ onRelease, releaseRequestedRef, byKey }: { onRelease: (powe
         <div
           ref={readoutRef}
           style={{
-            fontFamily: "'IBM Plex Mono', monospace",
+            fontFamily: "var(--gui-mono, 'IBM Plex Mono', monospace)",
             fontSize: 15,
             fontWeight: 800,
             color: "var(--app-ink, #4A4034)",
@@ -1014,7 +1016,7 @@ function CastMeter({ onRelease, releaseRequestedRef, byKey }: { onRelease: (powe
         >
           0%
         </div>
-        <div style={{ fontFamily: "var(--font-highlight, sans-serif)", fontSize: 11, color: "var(--app-muted, #8a7f6a)", maxWidth: 120 }}>
+        <div style={{ fontFamily: "var(--font-highlight, sans-serif)", fontSize: "max(11px, var(--gui-min-text, 0px))", color: "var(--app-muted, #8a7f6a)", maxWidth: 120 }}>
           {byKey ? "hold E, release at the gold tip" : "Hold, then let go at the gold tip"}
         </div>
       </div>

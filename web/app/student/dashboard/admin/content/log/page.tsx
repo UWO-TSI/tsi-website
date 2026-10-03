@@ -6,17 +6,28 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileClock } from "lucide-react";
 import { AdminGate } from "@/components/portal/ProgressionAdminShared";
 import { createClient } from "@/lib/supabase/client";
 import NameReportsPanel from "@/components/portal/NameReportsPanel";
 import { CONTENT_ROUTES, type VersionedTable } from "@/lib/content/types";
+import { Badge, Button, Card, Empty, ErrorNote, Loading, Select } from "@/components/gui";
 
 const PAGE_SIZE = 20;
+const PAGE = "mx-auto w-full max-w-6xl px-5 pt-6 pb-16 sm:px-8";
 type TableFilter = "all" | VersionedTable;
+/** What each versioned table holds, in the words the admin pages use. */
+const TABLE_NAMES: Record<string, string> = {
+  npc_personas: "Residents",
+  shop_items: "Shop items",
+  seasonal_palettes: "Seasonal palettes",
+  quest_chapters: "Main quest",
+  club_goals: "Club goals",
+  crafting_recipes: "Recipes",
+};
 const TABLE_OPTIONS: { value: TableFilter; label: string }[] = [
-  { value: "all", label: "All tables" },
-  ...(Object.keys(CONTENT_ROUTES) as VersionedTable[]).map((t) => ({ value: t, label: t })),
+  { value: "all", label: "Everything" },
+  ...(Object.keys(CONTENT_ROUTES) as VersionedTable[]).map((t) => ({ value: t, label: TABLE_NAMES[t] ?? t })),
 ];
 
 interface VersionEntry {
@@ -48,6 +59,7 @@ export default function AdminContentLogPage() {
   const [dateTo, setDateTo] = useState<string>("");
 
   const load = useCallback(async () => {
+    setFetchError(null);
     try {
       const supabase = createClient();
       let query = supabase
@@ -192,62 +204,60 @@ export default function AdminContentLogPage() {
 
   return (
     <AdminGate>
-      <div>
-        <div className="mb-2">
-          <Link
-            href="/student/dashboard/admin"
-            className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-          >
-            <ArrowLeft size={12} />
-            Back to Admin
-          </Link>
-        </div>
+      <div className={PAGE}>
+        <Link
+          href="/student/dashboard/admin"
+          className="mb-2 inline-flex items-center gap-1.5 text-sm font-bold text-[var(--gui-ink-2)] hover:text-[var(--gui-ink-strong)]"
+        >
+          <ArrowLeft size={16} aria-hidden />
+          Back to admin
+        </Link>
 
         <div className="mb-6">
-          <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
-            Content Activity Log
+          <h1 className="text-2xl font-extrabold text-[var(--gui-ink-strong)]">
+            Content activity
           </h1>
-          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
-            All admin publish events across NPCs, shop, and palettes.
+          <p className="mt-1 text-sm text-[var(--gui-muted)]">
+            Everything admins have published: residents, shop items, palettes, chapters, goals and recipes.
           </p>
         </div>
 
         <NameReportsPanel />
 
-        <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4 mb-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <FilterField label="Table">
-              <select
+        <Card className="mb-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <FilterField label="Area">
+              <Select
+                className="w-full"
                 value={tableFilter}
                 onChange={(e) => {
                   setTableFilter(e.target.value as TableFilter);
                   setPage(0);
                 }}
-                className={inputCls}
               >
                 {TABLE_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
                     {o.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </FilterField>
-            <FilterField label="Author">
-              <select
+            <FilterField label="Published by">
+              <Select
+                className="w-full"
                 value={authorFilter}
                 onChange={(e) => {
                   setAuthorFilter(e.target.value);
                   setPage(0);
                 }}
-                className={inputCls}
               >
-                <option value="all">All authors</option>
+                <option value="all">Anyone</option>
                 {authorOptions.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </FilterField>
             <FilterField label="From">
               <input
@@ -274,41 +284,37 @@ export default function AdminContentLogPage() {
           </div>
           {filtersActive ? (
             <div className="mt-3 flex justify-end">
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] hover:text-[var(--color-accent-cyan)] transition-colors"
-              >
+              <Button size="sm" variant="quiet" onClick={resetFilters}>
                 Reset filters
-              </button>
+              </Button>
             </div>
           ) : null}
-        </div>
+        </Card>
 
         {fetchError ? (
-          <p className="mb-4 p-3 rounded-md text-xs font-mono border bg-red-400/10 border-red-400/30 text-red-400">
-            {fetchError}
-          </p>
+          <ErrorNote className="mb-4" onRetry={() => void load()}>
+            The activity didn’t load ({fetchError}).
+          </ErrorNote>
         ) : null}
 
         {versions === null ? (
-          <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
-            Loading activity...
-          </p>
+          <Loading label="Getting the activity…" />
         ) : versions.length === 0 ? (
-          <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)]">
-            No activity matches the current filters.
-          </p>
+          fetchError ? null : (
+            <Empty icon={<FileClock size={32} />} title={filtersActive ? "Nothing matches these filters" : "Nothing published yet"}>
+              {filtersActive ? "Try other dates, or reset the filters." : "Each publish from the content editors shows up here."}
+            </Empty>
+          )
         ) : (
-          <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-x-auto">
+          <Card style={{ padding: 0 }} className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[var(--glass-border)]">
-                  <Th>Time</Th>
-                  <Th>Author</Th>
+                <tr className="bg-[var(--gui-paper-warm)]">
+                  <Th>When</Th>
+                  <Th>Published by</Th>
                   <Th>Action</Th>
-                  <Th>Table</Th>
-                  <Th>Row</Th>
+                  <Th>Area</Th>
+                  <Th>Item</Th>
                 </tr>
               </thead>
               <tbody>
@@ -319,34 +325,32 @@ export default function AdminContentLogPage() {
                   return (
                     <tr
                       key={v.id}
-                      className="border-b border-[var(--glass-border)]/40 last:border-b-0"
+                      className="border-t-2 border-dashed border-[var(--gui-paper-edge)]"
                     >
-                      <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-soft)]">
+                      <td className="px-4 py-3 whitespace-nowrap text-[var(--gui-ink-2)]">
                         {formatDateTime(v.published_at)}
                       </td>
-                      <td className="px-4 py-3 text-[var(--color-text-primary)]">
+                      <td className="px-4 py-3 font-bold text-[var(--gui-ink)]">
                         {v.published_by
                           ? (authorMap[v.published_by] ?? "—")
                           : "—"}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-[0.6rem] font-mono uppercase px-2 py-0.5 rounded text-green-400 bg-green-400/10">
-                          Published
-                        </span>
+                        <Badge tone="success">Published</Badge>
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">
-                        {v.table_name}
+                      <td className="px-4 py-3 text-[var(--gui-ink-2)]">
+                        {TABLE_NAMES[v.table_name] ?? v.table_name}
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs">
+                      <td className="px-4 py-3">
                         {historyHref ? (
                           <Link
                             href={historyHref}
-                            className="text-[var(--color-accent-cyan)] hover:underline"
+                            className="font-bold text-[var(--gui-sage)] hover:underline"
                           >
                             {rowLabel}
                           </Link>
                         ) : (
-                          <span className="text-[var(--color-text-muted)]">
+                          <span className="text-[var(--gui-ink-2)]">
                             {rowLabel}
                           </span>
                         )}
@@ -356,30 +360,30 @@ export default function AdminContentLogPage() {
                 })}
               </tbody>
             </table>
-          </div>
+          </Card>
         )}
 
         <div className="mt-4 flex items-center justify-between gap-3">
-          <p className="text-[0.65rem] font-mono text-[var(--color-text-muted)]">
+          <p className="text-sm text-[var(--gui-muted)]">
             Page {page + 1}
           </p>
           <div className="flex gap-2">
-            <button
-              type="button"
+            <Button
+              size="sm"
+              variant="quiet"
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="px-3 py-1.5 border border-[var(--glass-border)] text-[var(--color-text-primary)] font-mono text-[0.65rem] uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              Prev
-            </button>
-            <button
-              type="button"
+              Previous
+            </Button>
+            <Button
+              size="sm"
+              variant="quiet"
               onClick={() => setPage((p) => p + 1)}
               disabled={!hasMore}
-              className="px-3 py-1.5 border border-[var(--glass-border)] text-[var(--color-text-primary)] font-mono text-[0.65rem] uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               Next
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -390,11 +394,11 @@ export default function AdminContentLogPage() {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const inputCls =
-  "w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--glass-border)] rounded-md text-sm text-[var(--color-text-primary)] font-mono focus:outline-none focus:border-[var(--color-accent-cyan)] transition-colors";
+  "w-full min-h-11 rounded-[14px_12px_14px_13px] border-2 border-[var(--gui-paper-line)] bg-[var(--gui-paper-hi)] px-3 py-2 text-sm text-[var(--gui-ink)] focus:border-[var(--gui-sage)] transition-colors";
 
 function Th({ children }: { children: React.ReactNode }) {
   return (
-    <th className="text-left px-4 py-3 text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)]">
+    <th className="px-4 py-3 text-left text-xs font-extrabold whitespace-nowrap text-[var(--gui-ink-2)]">
       {children}
     </th>
   );
@@ -408,24 +412,18 @@ function FilterField({
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      <label className="block text-[0.6rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-bold text-[var(--gui-ink-2)]">
         {label}
-      </label>
+      </span>
       {children}
-    </div>
+    </label>
   );
 }
 
 function formatDateTime(iso: string): string {
   if (!iso) return "—";
-  const d = new Date(iso);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mi = String(d.getMinutes()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+  return new Date(iso).toLocaleString("en-CA", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Toronto" });
 }
 
 function rowDisplay(v: {

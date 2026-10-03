@@ -13,8 +13,9 @@ export function Keycap({ children, className, ...props }: HTMLAttributes<HTMLEle
   return <kbd {...props} className={cx(styles.theme, styles.keycap, className)}>{children}</kbd>;
 }
 
-export function VillageButton({ variant = "primary", leadingKey, className, children, type = "button", ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "quiet"; leadingKey?: string }) {
-  return <button {...props} type={type} className={cx(styles.theme, styles.button, className)} data-variant={variant}>
+/** `size="sm"` and the `danger` variant are the GUI sheet's additions (components/gui); recruitment uses neither. */
+export function VillageButton({ variant = "primary", size, leadingKey, className, children, type = "button", ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "quiet" | "danger"; size?: "sm"; leadingKey?: string }) {
+  return <button {...props} type={type} className={cx(styles.theme, styles.button, className)} data-variant={variant} data-size={size}>
     {leadingKey && <Keycap aria-hidden="true">{leadingKey}</Keycap>}{children}
   </button>;
 }

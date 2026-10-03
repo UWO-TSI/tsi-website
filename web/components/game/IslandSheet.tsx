@@ -1,19 +1,21 @@
 "use client";
 
 import { useId, type ReactNode } from "react";
-import styles from "./DefaultIslandWorld.module.css";
+import { Card, Sheet, type SheetSize } from "@/components/gui";
 
 /**
- * In-world sheet chrome (non-modal, the world stays live behind it): title,
- * × close, body. The world's Escape handler closes it. `embedded`: inside
- * another sheet's frame, so no dialog role and no close button.
+ * An island sheet: the GUI sheet's one dialog frame (components/gui Sheet), so focus, Escape, the opening key
+ * (`keys`), the world's hotkeys held, the paper sound and the open and close animation are the same everywhere.
+ * `embedded`: inside another page's frame (the portal's Oracle page), a plain paper section.
  */
-export default function IslandSheet({ title, onClose, className, testId, embedded, children }: {
-  title: string; onClose?: () => void; className?: string; testId: string; embedded?: boolean; children: ReactNode;
+export default function IslandSheet({ open = true, title, onClose, className, testId, embedded, keys, size, tone, children }: {
+  open?: boolean; title: string; onClose?: () => void; className?: string; testId: string; embedded?: boolean; keys?: string | readonly string[];
+  size?: SheetSize; tone?: "butter" | "sage" | "oracle"; children: ReactNode;
 }) {
   const id = useId();
-  return <section className={`${styles.sheet} ${className ?? ""}`} role={embedded ? undefined : "dialog"} aria-modal={embedded ? undefined : false} aria-labelledby={id} data-testid={testId}>
-    <header><h2 id={id}>{title}</h2>{!embedded && onClose && <button onClick={onClose} aria-label="Close">×</button>}</header>
+  if (embedded) return <Card as="section" className={className} aria-labelledby={id} data-testid={testId}>
+    <h2 id={id} style={{ margin: "0 0 10px", fontSize: "var(--gui-text-xl)", fontWeight: 800, color: "var(--gui-ink-strong)" }}>{title}</h2>
     {children}
-  </section>;
+  </Card>;
+  return <Sheet open={open} onClose={onClose ?? (() => {})} title={title} className={className} testId={testId} keys={keys} size={size} tone={tone}>{children}</Sheet>;
 }

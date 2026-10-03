@@ -46,30 +46,34 @@ export default function MemberDashboardShell({ children }: { children: ReactNode
   }, []);
 
   const sidebarVisible = revealed || pinned;
+  const pathname = usePathname()?.replace(/\/+$/, "") ?? "";
   // The member island (/student/dashboard) is full-screen: no portal menu over its title, no portal quest bubble.
-  const island = usePathname()?.replace(/\/+$/, "") === "/student/dashboard";
+  const island = pathname === "/student/dashboard";
+  // The recruitment board (components/admin, live) keeps its own look inside the shell; everything else wears the GUI sheet.
+  const recruitment = pathname.startsWith("/student/dashboard/admin/recruitment");
 
   return (
     <UserProvider>
         <PreviewBanner />
         <div
-          className="fixed inset-0 z-50 flex"
+          className={`fixed inset-0 z-50 flex ${recruitment ? "" : "gui"}`}
           style={{ background: "var(--color-bg-main)" }}
         >
           {/* Hamburger button — top-left on portal pages. Hover or click. */}
           {!island && <button
             aria-label={pinned ? "Unpin menu" : "Open menu"}
-            className="hidden md:flex fixed items-center justify-center"
+            className="gui hidden md:flex fixed items-center justify-center print:hidden!"
             style={{
               top: "12px",
               left: "12px",
-              width: "40px",
-              height: "40px",
+              width: "44px",
+              height: "44px",
               zIndex: 60,
-              background: pinned ? "var(--color-brand-blue, #1D9BF0)" : "var(--color-surface)",
-              border: "1px solid var(--glass-border-soft)",
-              borderRadius: "8px",
-              color: "var(--color-text-main)",
+              background: pinned ? "var(--gui-butter)" : "var(--gui-paper-hi)",
+              border: 0,
+              borderRadius: "50%",
+              boxShadow: "var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge)",
+              color: "var(--gui-ink)",
               cursor: "pointer",
               transition: "background 0.15s ease",
             }}
@@ -82,14 +86,14 @@ export default function MemberDashboardShell({ children }: { children: ReactNode
 
           {/* Desktop sidebar — slides in/out, only mounted on md+ */}
           <div
-            className="hidden md:flex fixed top-0 bottom-0 left-0 flex-shrink-0"
+            className="gui hidden md:flex fixed top-0 bottom-0 left-0 flex-shrink-0"
             style={{
               zIndex: 55,
               transform: sidebarVisible ? "translateX(0)" : "translateX(-100%)",
               transition: "transform 0.22s ease-out",
               pointerEvents: sidebarVisible ? "auto" : "none",
               boxShadow: sidebarVisible
-                ? "0 0 24px rgba(0,0,0,0.35)"
+                ? "var(--gui-shadow-lg)"
                 : "none",
             }}
             onMouseEnter={handleEnter}
@@ -101,17 +105,18 @@ export default function MemberDashboardShell({ children }: { children: ReactNode
           {/* Mobile hamburger button (separate — tap behavior) */}
           {!island && <button
             aria-label="Open menu"
-            className="md:hidden fixed flex items-center justify-center"
+            className="gui md:hidden fixed flex items-center justify-center print:hidden!"
             style={{
               top: "12px",
               left: "12px",
-              width: "40px",
-              height: "40px",
+              width: "44px",
+              height: "44px",
               zIndex: 50,
-              background: "var(--color-surface)",
-              border: "1px solid var(--glass-border-soft)",
-              borderRadius: "8px",
-              color: "var(--color-text-main)",
+              background: "var(--gui-paper-hi)",
+              border: 0,
+              borderRadius: "50%",
+              boxShadow: "var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge)",
+              color: "var(--gui-ink)",
             }}
             onClick={() => setMobileOpen(true)}
           >
@@ -123,11 +128,11 @@ export default function MemberDashboardShell({ children }: { children: ReactNode
             <>
               <div
                 className="fixed inset-0 md:hidden"
-                style={{ zIndex: 45, background: "rgba(0, 0, 0, 0.5)" }}
+                style={{ zIndex: 45, background: "var(--gui-scrim)" }}
                 onClick={() => setMobileOpen(false)}
               />
               <div
-                className="fixed inset-y-0 left-0 md:hidden"
+                className="gui fixed inset-y-0 left-0 md:hidden"
                 style={{
                   zIndex: 50,
                   animation: "slideIn 0.25s ease-out",
@@ -138,13 +143,14 @@ export default function MemberDashboardShell({ children }: { children: ReactNode
             </>
           )}
 
-          {/* Main content — fills full width since sidebar is now an overlay */}
-          <main className="flex-1 h-full overflow-y-auto overflow-x-hidden">
+          {/* Main content — fills full width since sidebar is now an overlay. Portal pages start under the menu
+              button (a 44px band), so it never sits on a page's title or back link, on a phone or a desktop. */}
+          <main className={`flex-1 h-full overflow-y-auto overflow-x-hidden${island || recruitment ? "" : " pt-11 print:pt-0"}`}>
             {children}
           </main>
 
-          {/* R3-1: Onboarding quest checklist (floating, opt-in, mute via Settings → Appearance) */}
-          <QuestChecklist hidden={island} />
+          {/* R3-1: Onboarding quest checklist (floating, opt-in, mute via Settings → World) */}
+          <div className="print:hidden"><QuestChecklist hidden={island} /></div>
 
           {/* R3-2: apply stored theme on every portal page load, not just Settings */}
           <ThemeInit />

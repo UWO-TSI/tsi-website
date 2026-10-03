@@ -93,12 +93,12 @@ export default function IncantationOverlay({ runeId, title, effect, onDone, onCa
       onPointerDown={e => { if (result) return; e.currentTarget.setPointerCapture(e.pointerId); setCurrent({ pts: [at(e)] }); }}
       onPointerMove={e => { if (current) { current.pts.push(at(e)); setCurrent({ pts: current.pts }); } }}
       onPointerUp={finishStroke} onPointerCancel={finishStroke}>
-      <defs><marker id="rune-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#ffe08a" /></marker></defs>
+      <defs><marker id="rune-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#725c4e" /></marker></defs>
       {rune.strokes.map((s, i) => <path key={i} d={toPath(s)} className={styles.runeGuide} data-done={i < strokes.length || undefined} data-next={i === nextStroke && !result || undefined} />)}
       {guides.map((g, i) => i >= strokes.length && <g key={i} opacity={i === nextStroke ? 1 : 0.45}>
-        <line x1={g.start[0] * SIZE} y1={g.start[1] * SIZE} x2={g.start[0] * SIZE + Math.cos(g.angle) * 30} y2={g.start[1] * SIZE + Math.sin(g.angle) * 30} stroke="#ffe08a" strokeWidth={3} markerEnd="url(#rune-arrow)" />
-        <circle cx={g.start[0] * SIZE} cy={g.start[1] * SIZE} r={11} fill="#ffe08a" />
-        <text x={g.start[0] * SIZE} y={g.start[1] * SIZE + 4} textAnchor="middle" fontSize={12} fontWeight={700} fill="#2b1d3d">{i + 1}</text>
+        <line x1={g.start[0] * SIZE} y1={g.start[1] * SIZE} x2={g.start[0] * SIZE + Math.cos(g.angle) * 30} y2={g.start[1] * SIZE + Math.sin(g.angle) * 30} stroke="#725c4e" strokeWidth={3} markerEnd="url(#rune-arrow)" />
+        <circle cx={g.start[0] * SIZE} cy={g.start[1] * SIZE} r={11} fill="#725c4e" />
+        <text x={g.start[0] * SIZE} y={g.start[1] * SIZE + 4} textAnchor="middle" fontSize={12} fontWeight={800} fill="#fffbe7">{i + 1}</text>
       </g>)}
       {[...strokes, ...(current ? [current.pts] : [])].map((s, i) => <path key={`t${i}`} d={toPath(s)} className={styles.runeTrace} />)}
       {locked && !result && <circle cx={penAt[0] * SIZE} cy={penAt[1] * SIZE} r={6} fill="#fff6dc" stroke="#2b1d3d" strokeWidth={2} />}

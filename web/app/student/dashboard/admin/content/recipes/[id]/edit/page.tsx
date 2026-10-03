@@ -3,15 +3,20 @@
 import { use } from "react";
 import { AdminGate, useContentRow } from "@/components/portal/ProgressionAdminShared";
 import RecipeEditor, { type RecipeRow } from "@/components/portal/RecipeEditor";
+import { ErrorNote, Loading } from "@/components/gui";
+
+const PAGE = "mx-auto w-full max-w-6xl px-5 pt-6 pb-16 sm:px-8";
 
 export default function EditRecipePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { row, loading, error } = useContentRow<RecipeRow>("crafting_recipes", id);
   return (
     <AdminGate>
-      {loading ? <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">Loading...</p> : null}
-      {!loading && (error || !row) ? <p className="text-center py-8 font-mono text-sm text-red-400">{error ?? "Recipe not found"}</p> : null}
-      {row ? <RecipeEditor mode="edit" initial={row} /> : null}
+      <div className={PAGE}>
+        {loading ? <Loading label="Opening the recipe…" /> : null}
+        {!loading && (error || !row) ? <ErrorNote>This recipe didn’t load ({error ?? "Recipe not found"}).</ErrorNote> : null}
+        {row ? <RecipeEditor mode="edit" initial={row} /> : null}
+      </div>
     </AdminGate>
   );
 }

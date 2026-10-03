@@ -53,7 +53,7 @@ export default function EconomyHarness() {
   const view = q.get("view") ?? "shop";
   const close = () => undefined;
   return (
-    <main style={{ minHeight: "100dvh", background: view === "admin" ? "var(--color-bg-main, #0f0f10)" : "linear-gradient(180deg,#a9d8e6,#cfe7cf 55%,#9cc58f)", padding: view === "admin" ? 32 : 0 }}>
+    <main className="gui" style={{ minHeight: "100dvh", background: view === "admin" ? "var(--gui-page)" : "linear-gradient(180deg,#a9d8e6,#cfe7cf 55%,#9cc58f)", padding: view === "admin" ? 32 : 0 }}>
       {view === "shop" ? <ProgressionPanel open onClose={close} title="Shop" wide><ShopBody transport={t} initialTab={(q.get("tab") as "tools") ?? "tools"} /></ProgressionPanel> : null}
       {view === "sell" ? <SellSheet open onClose={close} transport={t} /> : null}
       {view === "inventory" ? <InventorySheet open onClose={close} transport={t} /> : null}

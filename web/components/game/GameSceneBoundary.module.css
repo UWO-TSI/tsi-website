@@ -1,6 +1,7 @@
-.recovery { display: grid; place-items: center; min-height: 480px; height: 100%; padding: 24px; background: #b7dce0; color: #293e3b; font-family: "IBM Plex Mono", monospace; }
-.recovery > div { max-width: 380px; padding: 28px; border: 1px solid #94a796; border-radius: 12px; background: #f8f7e9; }
-.recovery h2 { margin: 0 0 12px; font-size: 20px; line-height: 1.4; }
-.recovery p { margin: 0 0 20px; font-size: 13px; line-height: 1.6; }
-.recovery button { min-height: 44px; padding: 10px 16px; border: 0; border-radius: 6px; background: #426b5b; color: #fffdf0; font: inherit; font-size: 13px; cursor: pointer; }
-.recovery button:focus-visible { outline: 3px solid #bb813f; outline-offset: 4px; }
+/* The island's recovery card when a scene throws: paper in the GUI sheet. */
+.recovery { display: grid; place-items: center; min-height: 480px; height: 100%; padding: 24px; background: #b7dce0; color: var(--gui-ink); font-family: var(--gui-font); }
+.recovery > div { max-width: 400px; padding: 28px; border-radius: var(--gui-r-paper); background: var(--gui-paper); box-shadow: var(--gui-shadow-lg); }
+.recovery h2 { margin: 0 0 12px; color: var(--gui-ink-strong); font-size: var(--gui-text-xl); font-weight: 800; line-height: 1.3; }
+.recovery p { margin: 0 0 20px; font-size: var(--gui-text-sm); line-height: 1.6; }
+.recovery button { min-height: 44px; padding: 10px 22px; border: 0; border-radius: 999px; background: var(--gui-sage); color: var(--gui-paper); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; cursor: pointer; box-shadow: 0 3px 0 var(--gui-sage-deep); }
+.recovery button:focus-visible { outline: 3px solid var(--gui-focus); outline-offset: 4px; }

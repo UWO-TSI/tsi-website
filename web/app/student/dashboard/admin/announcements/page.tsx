@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Plus, Trash2, Pin } from "lucide-react";
+import { Megaphone, Plus, Trash2, Pin } from "lucide-react";
+import { Badge, Button, Card, Empty, Field, IconButton, Loading, Select, TextArea, Toggle, type BadgeTone } from "@/components/gui";
 
 interface Announcement {
   id: string;
@@ -14,6 +15,19 @@ interface Announcement {
   expires_at: string | null;
   created_at: string;
 }
+
+const PAGE = "mx-auto w-full max-w-6xl px-5 pt-6 pb-16 sm:px-8";
+
+const URGENCY: Record<Announcement["urgency"], { tone: BadgeTone; label: string }> = {
+  info: { tone: "info", label: "Info" },
+  warning: { tone: "warn", label: "Warning" },
+  critical: { tone: "danger", label: "Critical" },
+};
+
+const posted = (iso: string) =>
+  new Date(iso).toLocaleString("en-CA", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Toronto" });
+const day = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Toronto" });
 
 export default function AdminAnnouncementsPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -84,175 +98,142 @@ export default function AdminAnnouncementsPage() {
     );
   }
 
-  const urgencyColors: Record<string, string> = {
-    info: "text-[var(--color-brand-blue)] bg-[var(--color-brand-blue)]/10",
-    warning:
-      "text-[var(--color-brand-yellow)] bg-[var(--color-brand-yellow)]/10",
-    critical: "text-red-400 bg-red-400/10",
-  };
-
-  const inputClass =
-    "w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]/50 focus:outline-none focus:border-[var(--color-brand-blue)] transition-all";
-
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className={PAGE}>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
-            Announcements
-          </h1>
-          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
-            {announcements.length} total
-          </p>
+          <h1 className="text-2xl font-extrabold text-[var(--gui-ink-strong)]">Announcements</h1>
+          <p className="mt-1 text-sm text-[var(--gui-muted)]">{announcements.length} posted</p>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-4 py-2 bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/80 text-white font-mono text-sm rounded-md transition-all"
-        >
-          <Plus size={16} />
-          New Announcement
-        </button>
+        <Button size="sm" onClick={() => setShowForm(!showForm)} aria-expanded={showForm}>
+          <Plus size={16} aria-hidden />
+          New announcement
+        </Button>
       </div>
 
       {/* Create Form */}
       {showForm && (
-        <form
-          onSubmit={createAnnouncement}
-          className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-5 mb-6 space-y-3"
-        >
-          <input
-            className={inputClass}
-            value={formData.title}
-            onChange={(e) =>
-              setFormData({ ...formData, title: e.target.value })
-            }
-            placeholder="Title"
-            required
-          />
-          <textarea
-            className={`${inputClass} min-h-[80px]`}
-            value={formData.body}
-            onChange={(e) =>
-              setFormData({ ...formData, body: e.target.value })
-            }
-            placeholder="Body (markdown supported)"
-            required
-          />
-          <div className="flex items-center gap-4">
-            <select
-              className={inputClass + " w-auto"}
-              value={formData.urgency}
+        <Card as="section" className="mb-6" aria-label="New announcement">
+          <form onSubmit={createAnnouncement} className="space-y-4">
+            <Field
+              label="Title"
+              value={formData.title}
               onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  urgency: e.target.value as "info" | "warning" | "critical",
-                })
+                setFormData({ ...formData, title: e.target.value })
               }
-            >
-              <option value="info">Info</option>
-              <option value="warning">Warning</option>
-              <option value="critical">Critical</option>
-            </select>
-            <label className="flex items-center gap-2 text-sm font-mono text-[var(--color-text-muted)] cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.is_banner}
-                onChange={(e) =>
-                  setFormData({ ...formData, is_banner: e.target.checked })
-                }
-                className="accent-[var(--color-brand-blue)]"
-              />
-              Show as banner
-            </label>
-            <input
-              type="datetime-local"
-              className={inputClass + " w-auto"}
-              value={formData.expires_at}
-              onChange={(e) =>
-                setFormData({ ...formData, expires_at: e.target.value })
-              }
-              placeholder="Expires at (optional)"
+              required
             />
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              className="px-4 py-2 bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/80 text-white font-mono text-sm rounded-md transition-all"
-            >
-              Publish
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowForm(false)}
-              className="px-4 py-2 text-[var(--color-text-muted)] font-mono text-sm hover:text-[var(--color-text-primary)] transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+            <TextArea
+              label="Message"
+              hint="Markdown works here."
+              rows={4}
+              value={formData.body}
+              onChange={(e) =>
+                setFormData({ ...formData, body: e.target.value })
+              }
+              required
+            />
+            <div className="grid items-end gap-4 sm:grid-cols-3">
+              <label className="grid gap-2 text-base font-bold text-[var(--gui-ink)]">
+                Urgency
+                <Select
+                  className="w-full"
+                  value={formData.urgency}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      urgency: e.target.value as "info" | "warning" | "critical",
+                    })
+                  }
+                >
+                  <option value="info">Info</option>
+                  <option value="warning">Warning</option>
+                  <option value="critical">Critical</option>
+                </Select>
+              </label>
+              <Field
+                label="Expires"
+                hint="Optional"
+                type="datetime-local"
+                value={formData.expires_at}
+                onChange={(e) =>
+                  setFormData({ ...formData, expires_at: e.target.value })
+                }
+              />
+              <Toggle
+                checked={formData.is_banner}
+                onChange={(on) => setFormData({ ...formData, is_banner: on })}
+              >
+                Show as a banner
+              </Toggle>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" type="submit">
+                Publish
+              </Button>
+              <Button size="sm" variant="quiet" onClick={() => setShowForm(false)}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </Card>
       )}
 
       {/* Announcements List */}
       {loading ? (
-        <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
-          Loading...
-        </p>
+        <Loading label="Getting the announcements…" />
+      ) : announcements.length === 0 ? (
+        <Empty icon={<Megaphone size={32} />} title="No announcements yet">
+          Post one and members see it in the portal.
+        </Empty>
       ) : (
         <div className="space-y-3">
           {announcements.map((ann) => (
-            <div
-              key={ann.id}
-              className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span
-                      className={`text-[0.6rem] font-mono uppercase px-2 py-0.5 rounded ${urgencyColors[ann.urgency]}`}
-                    >
-                      {ann.urgency}
-                    </span>
-                    {ann.is_banner && (
-                      <span className="text-[0.6rem] font-mono text-[var(--color-accent-cyan)] bg-[var(--color-accent-cyan)]/10 px-2 py-0.5 rounded uppercase">
-                        Banner
-                      </span>
-                    )}
+            <Card key={ann.id} as="article">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <Badge tone={URGENCY[ann.urgency]?.tone ?? "neutral"}>
+                      {URGENCY[ann.urgency]?.label ?? ann.urgency}
+                    </Badge>
+                    {ann.is_banner && <Badge tone="sage">Banner</Badge>}
                     {ann.is_pinned && (
-                      <span className="text-[0.6rem] font-mono text-[var(--color-brand-yellow)]">
-                        📌 Pinned
-                      </span>
+                      <Badge tone="gold">
+                        <Pin size={12} aria-hidden /> Pinned
+                      </Badge>
                     )}
                   </div>
-                  <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
+                  <h3 className="text-base font-extrabold text-[var(--gui-ink-strong)]">
                     {ann.title}
                   </h3>
-                  <p className="text-xs text-[var(--color-text-muted)] mt-1 line-clamp-2">
+                  <p className="mt-1 line-clamp-2 text-sm text-[var(--gui-ink-2)]">
                     {ann.body}
                   </p>
-                  <p className="text-[0.55rem] font-mono text-[var(--color-text-muted)]/50 mt-2">
-                    {new Date(ann.created_at).toLocaleString()}
-                    {ann.expires_at &&
-                      ` · Expires: ${new Date(ann.expires_at).toLocaleDateString()}`}
+                  <p className="mt-2 text-xs text-[var(--gui-muted)]">
+                    Posted {posted(ann.created_at)}
+                    {ann.expires_at && ` · Expires ${day(ann.expires_at)}`}
                   </p>
                 </div>
-                <div className="flex items-center gap-1 ml-3">
-                  <button
+                <div className="flex items-center gap-2">
+                  <IconButton
+                    size="sm"
+                    label={ann.is_pinned ? "Unpin" : "Pin"}
+                    tone={ann.is_pinned ? "butter" : undefined}
                     onClick={() => togglePin(ann.id, ann.is_pinned)}
-                    className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-brand-yellow)] transition-colors"
-                    title={ann.is_pinned ? "Unpin" : "Pin"}
                   >
-                    <Pin size={14} />
-                  </button>
-                  <button
+                    <Pin size={16} aria-hidden />
+                  </IconButton>
+                  <IconButton
+                    size="sm"
+                    label="Delete"
                     onClick={() => deleteAnnouncement(ann.id)}
-                    className="p-1.5 text-[var(--color-text-muted)] hover:text-red-400 transition-colors"
-                    title="Delete"
+                    style={{ color: "var(--gui-danger)" }}
                   >
-                    <Trash2 size={14} />
-                  </button>
+                    <Trash2 size={16} aria-hidden />
+                  </IconButton>
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}

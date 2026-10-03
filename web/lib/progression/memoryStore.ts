@@ -146,7 +146,7 @@ export function memoryStore(seed?: { goals?: ClubGoal[]; chapters?: QuestChapter
         .filter((l) => l.recipient_id === memberId || l.sender_id === memberId)
         .slice(-limit)
         .reverse()
-        .map((l): LetterView => ({ ...l, sender_name: l.sender_id ?? "Village Hall", recipient_name: l.recipient_id, outgoing: l.sender_id === memberId && l.recipient_id !== memberId }));
+        .map((l): LetterView => ({ ...l, sender_name: l.sender_id ?? "HQ", recipient_name: l.recipient_id, outgoing: l.sender_id === memberId && l.recipient_id !== memberId }));
     },
     async markLetterRead(memberId, id, at) {
       const l = letters.find((x) => x.id === id && x.recipient_id === memberId);

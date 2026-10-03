@@ -1,12 +1,12 @@
-/* The island loading screen (hud-first-login §5): cream sky, the kit's sage track. Under the character creator (z 70), so a first login dresses up while the island loads. */
-.screen { position: absolute; inset: 0; z-index: 69; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 0; padding: 32px; box-sizing: border-box; text-align: center; color: #293e3b; font-family: "IBM Plex Mono", monospace;
+/* The island loading screen (hud-first-login §5): cream sky, the kit's sage track, the GUI sheet's type. Under the character creator (z 70), so a first login dresses up while the island loads. */
+.screen { position: absolute; inset: 0; z-index: 69; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 0; padding: 32px; box-sizing: border-box; text-align: center; color: var(--gui-ink-strong); font-family: var(--gui-font);
   background: radial-gradient(ellipse at 50% 38%, #fffbe7 0%, transparent 58%), linear-gradient(#cfe8e6, #f6f1df 70%, #efe6cc); opacity: 1; transition: opacity 0.6s ease; }
 .screen[data-leaving] { opacity: 0; pointer-events: none; }
-.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #607069; }
+.eyebrow { font-size: var(--gui-text-xs); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gui-muted); }
 .leaf { margin-top: 26px; font-size: 56px; line-height: 1; color: #80af67; }
-.screen h1 { margin: 16px 0 10px; font: 700 clamp(28px, 4.4vw, 46px)/1.1 var(--font-heading, "Test Sohne", sans-serif); letter-spacing: -1.2px; }
-.screen p { margin: 0; font-size: 14px; line-height: 1.6; color: #4f625b; min-height: 1.6em; }
-.track { position: relative; width: 180px; height: 6px; margin-top: 22px; border-radius: 99px; overflow: hidden; background: #dfe6d6; box-shadow: inset 0 1px 2px #29464120; }
-.track span { position: absolute; inset: 0 auto 0 0; width: 35%; border-radius: inherit; background: #426b5b; animation: drift 1.6s ease-in-out infinite alternate; }
+.screen h1 { margin: 16px 0 10px; font: 900 clamp(28px, 4.4vw, 46px)/1.1 var(--gui-font); letter-spacing: -0.01em; }
+.screen p { margin: 0; font-size: var(--gui-text-md); font-weight: 700; line-height: 1.6; color: var(--gui-ink-2); min-height: 1.6em; }
+.track { position: relative; width: 180px; height: 8px; margin-top: 22px; border-radius: 99px; overflow: hidden; background: var(--gui-paper-deep); box-shadow: inset 0 1px 2px rgb(79 63 49 / 0.15); }
+.track span { position: absolute; inset: 0 auto 0 0; width: 35%; border-radius: inherit; background: var(--gui-sage); animation: drift 1.6s ease-in-out infinite alternate; }
 @keyframes drift { from { transform: translateX(-10%); } to { transform: translateX(195%); } }
 @media (prefers-reduced-motion: reduce) { .screen { transition: none; } .track span { animation: none; width: 100%; opacity: 0.55; } }

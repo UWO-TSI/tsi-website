@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { ChevronRight } from "lucide-react";
-import { TIER_COLORS, getXpProgress } from "./types";
-import { CLASS_META, ClassBadge } from "./classIdentity";
+import { TIER_LABELS, getXpProgress } from "./types";
+import { CLASS_META, ClassBadge, TIER_LOOK } from "./classIdentity";
+import { Badge, Progress } from "@/components/gui";
 import type { DirectoryMember } from "@/lib/supabase/types";
 
 interface MemberCardProps {
@@ -12,7 +13,7 @@ interface MemberCardProps {
 
 export default function MemberCard({ member }: MemberCardProps) {
   const router = useRouter();
-  const tc = TIER_COLORS[member.tier];
+  const tier = TIER_LOOK[member.tier];
   const xp = getXpProgress(member.xp, member.level);
   const initials = member.display_name
     .split(" ")
@@ -25,21 +26,14 @@ export default function MemberCard({ member }: MemberCardProps) {
     <div
       role="option"
       tabIndex={0}
-      className="flex items-center cursor-pointer transition-[background] outline-none focus:outline-2 focus:outline-offset-2"
-      style={{
-        height: "64px", padding: "0 16px", gap: "12px",
-        borderBottom: "1px solid var(--glass-border-soft)",
-        borderRadius: "8px", background: "transparent",
-        outlineColor: "var(--color-brand-blue)",
-      }}
+      className="flex items-center cursor-pointer transition-colors border-b-2 border-dashed border-[var(--gui-paper-edge)] last:border-b-0 hover:bg-[var(--gui-paper-warm)]"
+      style={{ minHeight: "64px", padding: "8px 14px", gap: "12px" }}
       onClick={() => router.push(`/student/dashboard/directory/${member.id}`)}
       onKeyDown={(e) => { if (e.key === "Enter") router.push(`/student/dashboard/directory/${member.id}`); }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-hover)"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
     >
       {/* Avatar */}
-      <div className="shrink-0 rounded-full flex items-center justify-center"
-        style={{ width: "40px", height: "40px", border: `2px solid ${tc.border}`, background: "var(--color-surface)", fontSize: "13px", fontWeight: 600, color: "var(--color-text-muted)" }}>
+      <div className="shrink-0 rounded-full flex items-center justify-center overflow-hidden"
+        style={{ width: "40px", height: "40px", border: `2.5px solid ${tier.ring}`, background: "var(--gui-paper-deep)", fontSize: "13px", fontWeight: 800, color: "var(--gui-ink-2)" }}>
         {member.avatar_url ? (
           <img src={member.avatar_url} alt={member.display_name} className="w-full h-full rounded-full object-cover" />
         ) : initials}
@@ -47,39 +41,36 @@ export default function MemberCard({ member }: MemberCardProps) {
 
       {/* Name + Class */}
       <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-        <span className="truncate" style={{ fontSize: "14px", fontWeight: 600, color: member.is_active ? "var(--color-text-main)" : "var(--color-text-subtle)" }}>
+        <span className="truncate" style={{ fontSize: "15px", fontWeight: 800, color: member.is_active ? "var(--gui-ink-strong)" : "var(--gui-muted)" }}>
           {member.display_name}
         </span>
-        <span className="truncate" style={{ fontSize: "12px", color: "var(--color-text-muted)" }}>
-          {/* Class flair per ux-classes.md §4.2 — icon-prefixed, class-colored */}
+        <span className="truncate" style={{ fontSize: "13px", fontWeight: 700, color: "var(--gui-muted)" }}>
+          {/* Class flair per ux-classes.md §4.2: the family chip, then its name in ink */}
           {member.class && CLASS_META[member.class] ? (
-            <ClassBadge cls={member.class} iconSize={12} fontSize={12} />
+            <ClassBadge cls={member.class} iconSize={12} fontSize={13} />
           ) : (
             member.class || member.position || "Unclassed"
           )}
         </span>
       </div>
 
-      {/* Tier Badge */}
-      <span className="shrink-0 font-mono" style={{ height: "22px", padding: "0 8px", fontSize: "12px", fontWeight: 600, lineHeight: "22px", borderRadius: "9999px", background: tc.bg, color: tc.color }}
-        aria-label={`Tier ${member.tier}`}>
+      {/* Tier tag */}
+      <Badge tone={tier.tone} className="shrink-0" aria-label={`Tier ${member.tier}`} title={`Tier ${member.tier} · ${TIER_LABELS[member.tier]}`}>
         T{member.tier}
-      </span>
+      </Badge>
 
       {/* Level */}
-      <span className="shrink-0 font-mono text-right" style={{ width: "48px", fontSize: "14px", fontWeight: 500, color: "var(--color-text-soft)" }}>
-        Lv.{member.level}
+      <span className="shrink-0 text-right" style={{ width: "48px", fontSize: "14px", fontWeight: 800, color: "var(--gui-ink-2)" }}>
+        Lv {member.level}
       </span>
 
       {/* XP Bar */}
-      <div className="shrink-0" role="progressbar" aria-valuenow={xp.current} aria-valuemin={0} aria-valuemax={xp.needed}
-        style={{ width: "80px", height: "6px", borderRadius: "3px" }}>
-        <div className="h-full rounded-full overflow-hidden" style={{ background: "var(--gray-800)" }}>
-          <div className="h-full rounded-full" style={{ width: `${xp.percent}%`, background: "var(--color-brand-blue)", transition: "width 0.3s ease" }} />
-        </div>
+      <div className="hidden sm:block shrink-0" style={{ width: "80px" }}>
+        <Progress kind="xp" value={xp.current} max={xp.needed} size={8}
+          label={`${member.display_name}, level ${member.level}`} valueText={`${xp.current.toLocaleString()} of ${xp.needed.toLocaleString()} XP`} />
       </div>
 
-      <ChevronRight className="shrink-0" style={{ width: "16px", height: "16px", color: "var(--color-text-subtle)" }} />
+      <ChevronRight aria-hidden className="shrink-0" style={{ width: "18px", height: "18px", color: "var(--gui-muted)" }} />
     </div>
   );
 }
