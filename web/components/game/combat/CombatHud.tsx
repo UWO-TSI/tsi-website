@@ -130,7 +130,7 @@ function ClassBar({ rt, keys }: { rt: CombatRuntime; keys: Record<string, string
     {beastKit(kit) && <small className={styles.kitLine}>Beasts out {rt.units.filter(u => u.def.key.startsWith("beast-")).reduce((n, u) => n + (u.def.cost ?? 1), 0)} / {beastCap(v.mastery)}</small>}
     {rt.units.some(u => u.def.kind === "totem" && u.def.driven) && (() => { const s = totemState(rt); return <small className={styles.kitLine}>Totems {rt.units.filter(u => u.def.kind === "totem" && u.def.driven && !u.def.uncapped).length} / 3 · links {s.links.length} · enclosed {s.enclosed}</small>; })()}
     <ClassGauges rt={rt} swapKey={keys.swap} />
-    {v.combos.length > 0 && <small className={styles.kitLine}>{v.combos.map(c => { const [a, b] = c.keys.map(i => keyName(keys[V2_SLOT_IDS[i]])); return `${a === b ? `${a} ${a}` : `${a} + ${b}`}: ${c.ability.name}`; }).join(" · ")}</small>}
+    {v.combos.length > 0 && <small className={styles.kitLine}>{v.combos.map(c => { const [a, b] = c.keys.map(i => keyName(keys[V2_SLOT_IDS[i]])); return `${a === b ? `${a}\u00a0${a}` : `${a}\u00a0+\u00a0${b}`}:\u00a0${c.ability.name}`; }).join(" · ")}</small>}
     <div className={styles.masteryBar} role="meter" aria-label="Mastery" aria-valuenow={v.progress.into} aria-valuemin={0} aria-valuemax={v.progress.needed || 1}>
       <span style={{ width: `${v.progress.needed ? (v.progress.into / v.progress.needed) * 100 : 100}%` }} />
     </div>

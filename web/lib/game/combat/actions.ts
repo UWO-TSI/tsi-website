@@ -99,7 +99,7 @@ export function resolvePlayerShot(rt: CombatRuntime, shotIdx: number, from: Vec,
   const crit = h.crit || (!!h.weak && lineDist(target, from, to) <= Math.min(h.weak * target.type.radius, FIRE.weakMax)), me = rt.player.last;
   const pull = h.pull && me ? { from: me, knock: -h.pull * 8 } : null;
   strike(rt, target, { power: h.power, from: pull?.from ?? from, knock: pull?.knock ?? (h.unit ? 1 : h.steady ? 0 : knock), stat: h.stat, tier: h.tier, unit: h.unit, status: h.status, impact: h.impact, ult: h.ult, first: !h.hitIds?.length, crit: crit || undefined, steady: h.steady }, random);
-  fx(rt, h.fx, "impact", to, to, h.impact ?? "ability");
+  fx(rt, h.fx, "impact", to, to, h.impact ?? "ability", undefined, h.ramp); // in the shot's own colours (an element's)
   if (h.splash) {
     if (rt.v2) blastAt(rt, to, h.power * 0.5, h.splash, h, random, target, false); // its FX is the hit's, above
     else splash(rt, to, h.splash, target, { power: h.power * 0.5, from: to, knock: 2, stat: h.stat, tier: h.tier }, random);

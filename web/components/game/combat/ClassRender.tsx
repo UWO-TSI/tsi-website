@@ -7,8 +7,8 @@
  * sweeping the field over a path of inverted colour, the corpses a Necromancer can raise, and a shimmer where you stand
  * unseen. Effects (sparks, smoke, decals) are CombatFx's from FX events.
  */
-import { Suspense, useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { Suspense, useEffect, useMemo, useRef } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import Character, { type CharacterMotion, type ClipName } from "../character/Character";
@@ -60,53 +60,72 @@ function CloneBody({ id, ground }: { id: number; ground: Ground }) {
 }
 
 // ── The Joker: a huge mirror sweeping the field; behind it the ground is inverted until it shatters ──
-const INVERT = { blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.OneMinusDstColorFactor, blendDst: THREE.ZeroFactor, depthWrite: false, transparent: true, toneMapped: false } as const;
+/**
+ * The inversion is the page's, not the scene's: blending can only invert linear light (mid greens come out near white),
+ * so a page overlay over the canvas inverts what's under it in sRGB (`backdrop-filter: invert`), clipped each frame to
+ * the swept path as the camera sees it. The glass is a pale silvered sheen: what it carries, pressed flat, shows in it.
+ */
+const GLASS = new THREE.MeshBasicMaterial({ color: "#e9e2ff", transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false });
+const corner = new THREE.Vector3();
 function Mirrors({ ground }: { ground: Ground }) {
   const { scene } = useGLTF("/assets/game/props/joker-mirror.glb");
+  const { camera, gl } = useThree();
   const frame = useMemo(() => {
-    const m = scene.clone(true), invert = new THREE.MeshBasicMaterial({ color: "#ffffff", side: THREE.DoubleSide, ...INVERT });
-    m.traverse(o => { const mesh = o as THREE.Mesh; if (mesh.isMesh && (mesh.material as THREE.Material).name === "M_Glass") { mesh.material = invert; mesh.renderOrder = 6; } });
+    const m = scene.clone(true);
+    m.traverse(o => { const mesh = o as THREE.Mesh; if (mesh.isMesh && (mesh.material as THREE.Material).name === "M_Glass") mesh.material = GLASS; });
     return m;
   }, [scene]);
-  const strip = useMemo(() => new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0, 0, 0.5), []);
-  const group = useRef<THREE.Group>(null), pathRef = useRef<THREE.Mesh>(null), fade = useRef({ t: 0, s: null as null | { x: number; z: number; x0: number; z0: number; dx: number; dz: number; w: number } });
+  const veil = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const d = document.createElement("div");
+    Object.assign(d.style, { position: "absolute", inset: "0", pointerEvents: "none", zIndex: "1", backdropFilter: "invert(1)", WebkitBackdropFilter: "invert(1)", display: "none" });
+    gl.domElement.parentElement?.appendChild(d);
+    veil.current = d;
+    return () => { d.remove(); veil.current = null; };
+  }, [gl]);
+  const group = useRef<THREE.Group>(null), fade = useRef({ t: 0, s: null as null | { x: number; z: number; x0: number; z0: number; dx: number; dz: number; w: number } });
   useFrame((_, delta) => {
-    const g = group.current, path = pathRef.current, f = fade.current, s = combat.rt.field.sweeps[0];
+    const g = group.current, f = fade.current, s = combat.rt.field.sweeps[0], path = veil.current;
     if (!g || !path) return;
     if (s) { f.s = { x: s.x, z: s.z, x0: s.x0, z0: s.z0, dx: s.dx, dz: s.dz, w: s.w }; f.t = 0.45; } else f.t = Math.max(0, f.t - delta);
-    g.visible = !!s; path.visible = f.t > 0 && !!f.s;
-    if (!f.s) return;
-    const yaw = Math.atan2(f.s.dx, f.s.dz), len = Math.hypot(f.s.x - f.s.x0, f.s.z - f.s.z0);
-    path.position.set(f.s.x0, ground(f.s.x0, f.s.z0) + 0.06, f.s.z0); path.rotation.y = yaw; path.scale.set(f.s.w, 1, Math.max(0.01, len));
-    (path.material as THREE.MeshBasicMaterial).opacity = Math.min(1, f.t / 0.45);
-    if (!s) return;
-    g.position.set(s.x, ground(s.x, s.z), s.z); g.rotation.y = yaw + Math.PI; // the glass faces where it goes
-    g.scale.set(s.w * 0.95, s.w * 0.55, s.w * 0.95);
+    g.visible = !!s;
+    if (s) {
+      g.position.set(s.x, ground(s.x, s.z), s.z); g.rotation.y = Math.atan2(s.dx, s.dz) + Math.PI; // the glass faces back at you
+      g.scale.set(s.w * 0.95, s.w * 0.32, s.w * 0.32); // wide and low: a mirror the field fits in, not a wall the camera can't see past
+    }
+    if (!f.s || f.t <= 0) { path.style.display = "none"; return; }
+    // The path: from where the mirror set out to just short of its foot (the frame keeps its own colours), its width across.
+    const r = gl.domElement.getBoundingClientRect(), back = s ? 1.6 : 0;
+    const at = (x: number, z: number) => { corner.set(x, ground(x, z) + 0.05, z).project(camera); return `${((corner.x + 1) / 2) * r.width}px ${((1 - corner.y) / 2) * r.height}px`; };
+    const px = -f.s.dz * f.s.w / 2, pz = f.s.dx * f.s.w / 2, ex = f.s.x - f.s.dx * back, ez = f.s.z - f.s.dz * back;
+    path.style.display = "block"; path.style.opacity = String(Math.min(1, f.t / 0.45));
+    path.style.clipPath = `polygon(${at(f.s.x0 + px, f.s.z0 + pz)}, ${at(ex + px, ez + pz)}, ${at(ex - px, ez - pz)}, ${at(f.s.x0 - px, f.s.z0 - pz)})`;
   });
-  return <>
-    <mesh ref={pathRef} geometry={strip} renderOrder={5} frustumCulled={false} visible={false}><meshBasicMaterial color="#ffffff" {...INVERT} /></mesh>
-    <group ref={group} visible={false}><primitive object={frame} /></group>
-  </>;
+  return <group ref={group} visible={false}><primitive object={frame} /></group>;
 }
 
 // ── Forms: the mob you shifted into, posed by the shared enemy animation helper; the Chimera wears all five ──
+/** The Chimera: the golem's body with the fox riding its shoulders as its head, the crab's shell on its back, the wisp's
+ * core in its chest and pollen wings. Offsets in the golem model's units (1.12 tall), scaled with the form. */
 const FORM_PARTS: { body: string; scale: number; at: [number, number, number]; yaw?: number; spin?: number }[] = [
   { body: "stone-golem", scale: 1, at: [0, 0, 0] },
-  { body: "shadow-fox", scale: 0.75, at: [0, 1.55, 0.35] },
-  { body: "thorn-crab", scale: 0.7, at: [0, 1.15, -0.6], yaw: Math.PI },
-  { body: "rune-wisp", scale: 0.8, at: [0, 0.9, 0.9], spin: 2 },
-  { body: "pollen-sprite", scale: 3, at: [0.9, 1.35, -0.3], yaw: 0.5 },
-  { body: "pollen-sprite", scale: 3, at: [-0.9, 1.35, -0.3], yaw: -0.5 },
+  { body: "shadow-fox", scale: 0.85, at: [0, 0.92, 0.1] },
+  { body: "thorn-crab", scale: 0.75, at: [0, 0.5, -0.3], yaw: Math.PI },
+  { body: "rune-wisp", scale: 0.5, at: [0, 0.6, 0.3], spin: 2 },
+  { body: "pollen-sprite", scale: 1.7, at: [0.48, 0.86, -0.24], yaw: 0.6 },
+  { body: "pollen-sprite", scale: 1.7, at: [-0.48, 0.86, -0.24], yaw: -0.6 },
 ];
 function FormBody({ ground, player }: { ground: Ground; player: React.RefObject<THREE.Vector3> }) {
   const form = useCombatValue(() => combat.rt.v2?.form ?? "");
   const def = form ? combat.rt.v2?.kit.forms?.[form] : null;
   if (!def) return null;
-  const parts = form === "chimera" ? FORM_PARTS.map(p => ({ ...p, scale: p.scale * def.scale })) : [{ body: def.body, scale: def.scale, at: [0, 0, 0] as [number, number, number] }];
-  return <>{parts.map((p, i) => <MobBody key={`${form}-${i}`} type={ENEMIES[p.body]} scale={p.scale} at={p.at} yaw={"yaw" in p ? p.yaw ?? 0 : 0} spin={"spin" in p ? p.spin ?? 0 : 0} ground={ground} player={player} />)}</>;
+  const k = ENEMIES["stone-golem"].modelScale * def.scale;
+  const parts = form === "chimera" ? FORM_PARTS.map(p => ({ ...p, scale: p.scale * def.scale, at: p.at.map(v => v * k) as [number, number, number] })) : [{ body: def.body, scale: def.scale, at: [0, 0, 0] as [number, number, number] }];
+  // A form floats as its mob does (the wisp, the sprite); the Chimera's parts sit where they're fused.
+  return <>{parts.map((p, i) => <MobBody key={`${form}-${i}`} type={ENEMIES[p.body]} scale={p.scale} at={p.at} yaw={"yaw" in p ? p.yaw ?? 0 : 0} spin={"spin" in p ? p.spin ?? 0 : 0} hover={form !== "chimera"} ground={ground} player={player} />)}</>;
 }
 const poseM = new THREE.Matrix4(), poseQ = new THREE.Quaternion(), poseE = new THREE.Euler(), poseP = new THREE.Vector3(), poseS = new THREE.Vector3(), POSE: PartPose = { rx: 0, ry: 0, rz: 0, dy: 0, dz: 0, sy: 1, s: 1 };
-function MobBody({ type, scale, at, yaw, spin, ground, player }: { type: EnemyType; scale: number; at: [number, number, number]; yaw: number; spin: number; ground: Ground; player: React.RefObject<THREE.Vector3> }) {
+function MobBody({ type, scale, at, yaw, spin, hover, ground, player }: { type: EnemyType; scale: number; at: [number, number, number]; yaw: number; spin: number; hover: boolean; ground: Ground; player: React.RefObject<THREE.Vector3> }) {
   const { scene } = useGLTF(type.model);
   const rig = useMemo(() => {
     const root = scene.clone(true), nodes: { o: THREE.Object3D; rest: THREE.Matrix4; role: string | null }[] = [];
@@ -123,7 +142,7 @@ function MobBody({ type, scale, at, yaw, spin, ground, player }: { type: EnemyTy
     const state = swinging ? "active" : p.attackCd > 0.05 && e.state === "active" ? "recover" : moving ? "chase" : "idle";
     if (state !== e.state) { e.state = state; e.t = 0; } else e.t += delta;
     const s = type.modelScale * scale;
-    g.position.set(me.x, Math.max(me.y, ground(me.x, me.z)) + type.hover * s / type.modelScale, me.z); // it jumps and slides with you
+    g.position.set(me.x, Math.max(me.y, ground(me.x, me.z)) + (hover ? type.hover * s / type.modelScale : 0), me.z); // it jumps and slides with you
     g.rotation.y = p.facing + type.modelYaw;
     g.scale.setScalar(s);
     rig.root.position.set(at[0] / s, at[1] / s, at[2] / s); rig.root.rotation.set(0, yaw + spin * clock.elapsedTime, 0);
@@ -139,18 +158,25 @@ function MobBody({ type, scale, at, yaw, spin, ground, player }: { type: EnemyTy
 }
 
 // ── Stone walls: a ramped wedge of rock that bursts up out of the floor ──
+/** A wedge of broken rock in rig-free units (1 × 1 × 1, high side at +z): jagged slabs, earth-dark at the foot, pale stone up the ramp, moss on top. */
 function wedge() {
-  const g = new THREE.BoxGeometry(1, 1, 1, 6, 3, 4), pos = g.getAttribute("position") as THREE.BufferAttribute;
+  const g = new THREE.BoxGeometry(1, 1, 1, 9, 4, 7).toNonIndexed(), pos = g.getAttribute("position") as THREE.BufferAttribute, col: number[] = [];
+  const low = new THREE.Color("#5b4a3a"), high = new THREE.Color("#a8987e"), moss = new THREE.Color("#7c8f52"), c = new THREE.Color();
+  const n = (x: number, z: number) => Math.sin(x * 23.1 + z * 11.7) * 0.5 + Math.sin(x * 7.3 - z * 19.1) * 0.35 + Math.sin(x * 41.7 + z * 3.1) * 0.15;
   for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i), y = pos.getY(i) + 0.5, z = pos.getZ(i), h = 0.15 + 0.85 * (z + 0.5), n = Math.sin(x * 23.1 + z * 11.7) * 0.5 + Math.sin(x * 7.3 - z * 19.1) * 0.5;
-    pos.setXYZ(i, x + n * 0.03, y * h + (y > 0.01 ? n * 0.04 : 0), z + n * 0.03);
+    const x = pos.getX(i), y = pos.getY(i) + 0.5, z = pos.getZ(i), h = 0.15 + 0.85 * (z + 0.5), k = n(x, z);
+    pos.setXYZ(i, x + k * 0.05, y * h + (y > 0.01 ? k * 0.09 * h : 0), z + k * 0.05);
+    c.copy(low).lerp(high, Math.min(1, y * 0.9 + 0.1)).multiplyScalar(0.88 + 0.24 * ((k + 1) / 2));
+    if (y > 0.99) c.lerp(moss, 0.35 + 0.25 * k);
+    col.push(c.r, c.g, c.b);
   }
+  g.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
   g.computeVertexNormals();
   return g;
 }
 function Walls({ ground }: { ground: Ground }) {
   const meshes = useMemo(() => {
-    const geo = wedge(), mat = new THREE.MeshStandardMaterial({ color: "#8f7d66", roughness: 1, flatShading: true });
+    const geo = wedge(), mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true });
     return [0, 1].map(() => { const m = new THREE.Mesh(geo, mat); m.visible = false; m.castShadow = true; m.receiveShadow = true; return m; });
   }, []);
   useFrame(() => {
