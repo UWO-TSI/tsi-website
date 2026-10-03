@@ -1,5 +1,10 @@
 import { readFileSync } from "node:fs";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import * as THREE from "three";
 import { describe, expect, it } from "vitest";
+import NetHud from "./NetHud";
+import NetWorld from "./NetWorld";
 
 const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 
@@ -20,5 +25,10 @@ describe("multiplayer's edits to the shared scene files", () => {
     expect(world).toMatch(/benchSeat\(px, pz, 1\.3, v, layout\.benches, remoteSeatTaken\)/);
     // The bench's claim key rides the tsi:sit detail (the sender's `seat`).
     expect(world).toMatch(/benchSpot\.current = b && \{ \.\.\.b, seatY:/);
+  });
+
+  it("mounts nothing and costs nothing with multiplayer off (no realtime URL, no ?bots): the applicant island and solo play", () => {
+    expect(renderToStaticMarkup(createElement(NetWorld, { area: "village", player: { current: new THREE.Vector3() }, ready: true }))).toBe("");
+    expect(renderToStaticMarkup(createElement(NetHud, { area: "village" }))).toBe("");
   });
 });
