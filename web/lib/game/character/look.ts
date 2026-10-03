@@ -32,7 +32,9 @@ export interface ClipInfo { name: string; length: number; loop: boolean; endsNeu
   /** Locomotion loops: where each foot comes down, as phases [left, right] (build_clips.py measures them). */
   contacts?: number[];
   /** Posed by a phase the engine sets (Air: by vertical speed), not played on a clock. */
-  scrub?: boolean }
+  scrub?: boolean;
+  /** One-shots: the phases where a hand or the tool makes contact (the grab, the strike, each hammer blow; lib/game/actTiming.ts). */
+  hits?: number[] }
 
 export const PARTS = [...catalog.outfits, ...catalog.accessories, ...catalog.hair] as CatalogPart[];
 export const PART_BY_ID = new Map(PARTS.map(p => [p.id, p]));

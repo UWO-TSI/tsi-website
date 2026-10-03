@@ -333,7 +333,7 @@ def forage_keys():
 FORAGE = forage_keys()
 
 
-@clip("Forage", 1.3, False)
+@clip("Forage", 1.3, False, hits=[0.45])
 def forage(p):
     return plant(keys(p, FORAGE))
 
@@ -352,7 +352,7 @@ DIG = [(0, N, "lin"),
        (1.0, N, "io")]
 
 
-@clip("Dig", 1.3, False)
+@clip("Dig", 1.3, False, hits=[0.42])
 def dig(p):
     return plant(keys(p, DIG))
 
@@ -364,7 +364,7 @@ NET = [(0, N, "lin"),
        (1.0, N, "io")]
 
 
-@clip("Net", 1.1, False)
+@clip("Net", 1.1, False, hits=[0.48])
 def net(p):
     return plant(keys(p, NET))
 
@@ -1151,6 +1151,96 @@ EAT = eat_keys()
 @clip("Eat", 1.6, False)
 def eat(p):
     return plant(keys(p, EAT))
+
+
+# ================================================================ foraging and crafting (specs/polish/forage-craft-museum.md)
+# `hits`: the phases where a hand or the tool makes contact (the pick, the grab, the strike, each hammer blow). The
+# engine lands the world's reaction there (lib/game/actTiming.ts): a node leaves the ground at the grab, never on the
+# key press; the tree starts to sway at the first push; each blow throws its puff.
+def pickup_keys():
+    """Down for something lying on the ground: knees bent, a hand to the ground in front, the grab, and up again holding
+    it at the chest for a beat (the bag takes it from there)."""
+    reach = body(crouch=0.12, lean=34, nod=16)
+    hand(reach, "Right", V(-0.035, -0.22, 0.07)); hand(reach, "Left", V(0.08, -0.12, 0.2))
+    grab = body(crouch=0.125, lean=36, nod=14)
+    hand(grab, "Right", V(-0.03, -0.225, 0.055)); hand(grab, "Left", V(0.08, -0.12, 0.2))
+    grab.rot("RightHand", rx(-40))
+    lift = body(crouch=-0.01, nod=-4, tilt=6)
+    hand(lift, "Right", V(-0.03, -0.17, 0.43)); hand(lift, "Left", V(0.05, -0.15, 0.38))
+    lift.rot("RightHand", rx(-25))
+    return [(0, N, "lin"), (0.3, reach, "io"), (0.4, grab, "out"), (0.7, lift, "back"), (0.84, lift, "lin"), (1.0, N, "io")]
+
+
+PICKUP = pickup_keys()
+
+
+@clip("Pickup", 1.1, False, hits=[0.4])
+def pickup(p):
+    return plant(keys(p, PICKUP))
+
+
+def shake_keys():
+    """Both hands on the trunk at shoulder height and a good shake, three pushes and pulls, then a step back looking up
+    into the crown to see what falls."""
+    grip = body(lean=10, crouch=0.02, nod=-6)
+    two_hands(grip, (-0.075, -0.25, 0.5), (0.075, -0.25, 0.5))
+    push = body(lean=17, crouch=0.035, nod=-2, shift=(0.0, -0.02))
+    two_hands(push, (-0.075, -0.275, 0.49), (0.075, -0.275, 0.49))
+    pull = body(lean=3, crouch=0.012, nod=-9, shift=(0.0, 0.016))
+    two_hands(pull, (-0.075, -0.22, 0.515), (0.075, -0.22, 0.515))
+    look = body(lean=-6, nod=-16, tilt=5)
+    hand(look, "Right", V(-0.13, -0.06, 0.33)); hand(look, "Left", V(0.12, -0.08, 0.35))
+    return [(0, N, "lin"), (0.16, grip, "io"), (0.26, push, "out"), (0.36, pull, "io"), (0.46, push, "io"), (0.56, pull, "io"), (0.66, push, "io"),
+            (0.8, look, "back"), (0.9, look, "lin"), (1.0, N, "io")]
+
+
+SHAKE = shake_keys()
+
+
+@clip("Shake", 1.5, False, hits=[0.26, 0.46, 0.66])
+def shake(p):
+    return plant(keys(p, SHAKE))
+
+
+STRIKE = [(0, N, "lin"),
+          # the wind-up: the tool up over the shoulder in both hands, leaning back
+          (0.3, two_hands(body(twist=-16, lean=-8, nod=-8, side=-4), (-0.21, 0.0, 0.58), (-0.13, -0.05, 0.54)), "io"),
+          # down onto the rock (the hit), then the jolt back up off it
+          (0.46, two_hands(body(twist=-4, lean=24, crouch=0.045, nod=12), (-0.04, -0.27, 0.29), (0.02, -0.23, 0.32)), "in"),
+          (0.56, two_hands(body(twist=-6, lean=15, crouch=0.03, nod=6, tilt=-3), (-0.05, -0.23, 0.36), (0.012, -0.19, 0.39)), "out"),
+          (0.66, two_hands(body(twist=-5, lean=19, crouch=0.035, nod=9), (-0.045, -0.25, 0.32), (0.016, -0.21, 0.35)), "io"),
+          (1.0, N, "io")]
+
+
+@clip("Strike", 1.15, False, hits=[0.46])
+def strike(p):
+    return plant(keys(p, STRIKE))
+
+
+def craft_keys():
+    """At the workbench: lean in, the left hand steadying the piece, three blows of the hammer in the right, then hold
+    the made thing up to look at it."""
+    def at_bench(lean, nod, twist, right, wrist):
+        P = body(lean=lean, crouch=0.02 + lean * 0.001, nod=nod, twist=twist)
+        hand(P, "Left", V(0.075, -0.25, 0.42))
+        hand(P, "Right", V(*right))
+        P.rot("RightHand", rx(wrist))
+        return P
+    ready = at_bench(13, 10, 0, (-0.1, -0.2, 0.5), 0)
+    up = at_bench(9, 4, -7, (-0.2, -0.17, 0.6), 35)
+    down = at_bench(18, 14, 4, (-0.05, -0.27, 0.45), -20)
+    show = body(lean=-2, nod=-8, tilt=6)
+    two_hands(show, (-0.045, -0.2, 0.47), (0.045, -0.2, 0.47))
+    return [(0, N, "lin"), (0.1, ready, "io"), (0.17, up, "io"), (0.24, down, "in"), (0.32, up, "out"), (0.4, down, "in"), (0.48, up, "out"),
+            (0.56, down, "in"), (0.65, ready, "out"), (0.8, show, "back"), (0.9, show, "lin"), (1.0, N, "io")]
+
+
+CRAFT = craft_keys()
+
+
+@clip("Craft", 2.6, False, hits=[0.24, 0.4, 0.56])
+def craft(p):
+    return plant(keys(p, CRAFT))
 
 
 # ================================================================ verb library (classes v2, design sheet §1.8)

@@ -9,7 +9,8 @@ import type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
  * World interactions → player clips (row 111), shared by the outdoor and
  * interior controllers. Peaceful tools stay invisible (row 136).
  *   tsi:fish-cast {x, z} → Fish, then FishHold until tsi:fish-end
- *   tsi:peaceful-act → Net at a bug, Dig at a shovel find (buried clam, rock), otherwise Forage;
+ *   tsi:peaceful-act → the target's own clip (a tree's Shake, a Pickup off the ground, a rock's Strike), else Net at a
+ *     bug, Dig at a shovel find, otherwise Forage;
  *   tsi:flower-pick → Forage; tsi:critter-catch → Net
  *   tsi:emote {clip} → any catalogue clip as a one-shot (emote menu, study, admin tools)
  */
@@ -23,7 +24,7 @@ export function useWorldClips(motion: RefObject<CharacterMotion>, face: (x: numb
       "tsi:peaceful-act": () => {
         const t = getPeacefulTarget();
         if (t?.at) face(t.at[0], t.at[1]);
-        set({ play: ACT_CLIP[t?.kind ?? "forage"] });
+        set({ play: t?.clip ?? ACT_CLIP[t?.kind ?? "forage"] });
       },
       "tsi:flower-pick": () => set({ play: "Forage" }),
       "tsi:critter-catch": () => set({ play: "Net" }),

@@ -1174,21 +1174,30 @@
    "length": 1.3,
    "loop": false,
    "frames": 39,
-   "endsNeutral": true
+   "endsNeutral": true,
+   "hits": [
+    0.45
+   ]
   },
   {
    "name": "Dig",
    "length": 1.3,
    "loop": false,
    "frames": 39,
-   "endsNeutral": true
+   "endsNeutral": true,
+   "hits": [
+    0.42
+   ]
   },
   {
    "name": "Net",
    "length": 1.1,
    "loop": false,
    "frames": 33,
-   "endsNeutral": true
+   "endsNeutral": true,
+   "hits": [
+    0.48
+   ]
   },
   {
    "name": "Wave",
@@ -1458,6 +1467,50 @@
    "loop": false,
    "frames": 48,
    "endsNeutral": true
+  },
+  {
+   "name": "Pickup",
+   "length": 1.1,
+   "loop": false,
+   "frames": 33,
+   "endsNeutral": true,
+   "hits": [
+    0.4
+   ]
+  },
+  {
+   "name": "Shake",
+   "length": 1.5,
+   "loop": false,
+   "frames": 45,
+   "endsNeutral": true,
+   "hits": [
+    0.26,
+    0.46,
+    0.66
+   ]
+  },
+  {
+   "name": "Strike",
+   "length": 1.133,
+   "loop": false,
+   "frames": 34,
+   "endsNeutral": true,
+   "hits": [
+    0.46
+   ]
+  },
+  {
+   "name": "Craft",
+   "length": 2.6,
+   "loop": false,
+   "frames": 78,
+   "endsNeutral": true,
+   "hits": [
+    0.24,
+    0.4,
+    0.56
+   ]
   }
  ],
  "hair": [
