@@ -98,7 +98,7 @@ export default function CombatFx({ ground, lite = false }: { ground: Ground; lit
     for (const ev of rt.fx) {
       const r = FX[ev.key];
       if (!r) continue;
-      const row = ramps.row(ev.ramp ?? DEFAULT_RAMP), gy = ground(ev.x, ev.z), byR = ev.radius ? Math.min(2.4, Math.max(0.5, ev.radius / REF_RADIUS)) : 1;
+      const row = ramps.row(r.ramp ?? ev.ramp ?? DEFAULT_RAMP), gy = ground(ev.x, ev.z), byR = ev.radius ? Math.min(2.4, Math.max(0.5, ev.radius / REF_RADIUS)) : 1;
       r.layers.forEach((l, li) => {
         const seed = (ev.seed + li * 0x9e3779b1) | 0;
         if (l.kind === "particles") {
@@ -120,7 +120,7 @@ export default function CombatFx({ ground, lite = false }: { ground: Ground; lit
           const i = s.lit.findIndex(x => !x), at = i < 0 ? Math.min(s.lit.length, s.lights.length - 1) : i;
           s.lit[at] = { t: 0, life: l.life, intensity: l.intensity };
           const light = s.lights[at];
-          light.position.set(ev.x, gy + 1.5, ev.z); light.distance = l.distance; light.color.set((ev.ramp ?? DEFAULT_RAMP)[1]);
+          light.position.set(ev.x, gy + 1.5, ev.z); light.distance = l.distance; light.color.set((r.ramp ?? ev.ramp ?? DEFAULT_RAMP)[1]);
         }
       });
     }

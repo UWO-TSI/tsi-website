@@ -3540,6 +3540,83 @@
     "hand": "L",
     "upper": true,
     "impact": 0.14
+   },
+   {
+    "name": "Unique_HandSign",
+    "verb": "Unique_HandSign",
+    "grip": "Fists",
+    "length": 0.733,
+    "loop": false,
+    "frames": 22,
+    "hand": "both",
+    "upper": true,
+    "impact": 0.42
+   },
+   {
+    "name": "Ult_Summoner",
+    "verb": "Ult_Summoner",
+    "grip": "Fists",
+    "length": 1.4,
+    "loop": false,
+    "frames": 42,
+    "hand": "both",
+    "upper": false,
+    "impact": 0.32
+   },
+   {
+    "name": "Unique_TotemThrow",
+    "verb": "Unique_TotemThrow",
+    "grip": "Staff",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.4
+   },
+   {
+    "name": "Ult_Shaman",
+    "verb": "Ult_Shaman",
+    "grip": "Staff",
+    "length": 1.4,
+    "loop": false,
+    "frames": 42,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.36
+   },
+   {
+    "name": "Unique_VineSwing",
+    "verb": "Unique_VineSwing",
+    "grip": "Staff",
+    "length": 0.9,
+    "loop": false,
+    "frames": 27,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.3
+   },
+   {
+    "name": "Ult_Druid",
+    "verb": "Ult_Druid",
+    "grip": "Staff",
+    "length": 1.5,
+    "loop": false,
+    "frames": 45,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.37
+   },
+   {
+    "name": "Ult_Priest",
+    "verb": "Ult_Priest",
+    "grip": "Staff",
+    "length": 1.4,
+    "loop": false,
+    "frames": 42,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.36
    }
   ]
  }
