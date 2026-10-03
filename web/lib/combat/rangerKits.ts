@@ -11,8 +11,9 @@
  * lib/game/fx/rangerFx.ts; clips are verbs on the weapon's grip or `Unique_*` / `Ult_*` (build_clips.py).
  */
 import type { ClassKit } from "./classes";
+import { HUNTER } from "./ranger/hunter";
 import { MARKSMAN } from "./ranger/marksman";
 import { SNIPER } from "./ranger/sniper";
 
-export { MARKSMAN, SNIPER };
-export const RANGER_KITS: ClassKit[] = [MARKSMAN, SNIPER];
+export { HUNTER, MARKSMAN, SNIPER };
+export const RANGER_KITS: ClassKit[] = [MARKSMAN, SNIPER, HUNTER];
