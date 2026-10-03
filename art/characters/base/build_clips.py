@@ -1570,26 +1570,26 @@ def mt_stance(dip=0.0, twist=-10, lean=3, base=None):
 
 
 def mt_jab(base=None):
-    P = pb(crouch=0.02, twist=-18, lean=6, nod=6, shift=(0.0, -0.012), base=base)
+    P = pb(crouch=0.024, twist=-24, lean=9, nod=6, shift=(0.0, -0.026), base=base)
     arm(P, "Left", V(0.1, -1, 0.12))
     return guard(P, l=False)
 
 
 def mt_cross(base=None):
-    P = pb(hips=rz(16), crouch=0.024, twist=26, lean=10, nod=6, shift=(0.0, -0.022), base=base)
+    P = pb(hips=rz(24), crouch=0.03, twist=34, lean=13, nod=6, shift=(0.0, -0.036), base=base)
     arm(P, "Right", V(-0.1, -1, 0.1))
     return guard(P, r=False)
 
 
 def mt_hook(base=None):
-    P = pb(hips=rz(-14), crouch=0.026, twist=-30, lean=5, side=4, nod=5, base=base)
+    P = pb(hips=rz(-22), crouch=0.03, twist=-40, lean=6, side=6, nod=5, base=base)
     arm(P, "Left", V(0.5, -0.82, 0.18), V(-0.85, -0.5, 0.08))          # elbow at shoulder height, the forearm level across
     return guard(P, l=False)
 
 
 def mt_elbow(s="Right", base=None):
     sx = dict(SIDES)[s]
-    P = pb(hips=rz(-sx * 14), crouch=0.026, twist=-sx * 30, lean=10, nod=7, shift=(0.0, -0.02), base=base)
+    P = pb(hips=rz(-sx * 20), crouch=0.03, twist=-sx * 38, lean=12, nod=7, shift=(0.0, -0.03), base=base)
     arm(P, s, V(-sx * 0.15, -0.9, 0.36), V(sx * 0.7, 0.55, -0.2))      # the point of the elbow leads, the fist folded back and down
     return guard(P, r=s != "Right", l=s != "Left")
 
@@ -1603,8 +1603,8 @@ def mt_elbow_load(s="Right", base=None):
 
 def mt_knee(s="Right", clinch=True, height=0.0, base=None):
     sx = dict(SIDES)[s]
-    P = pb(crouch=0.01, lean=-3, nod=8, shift=(0.0, -0.03), base=base)
-    kick_leg(P, s, V(sx * 0.04, -0.07, 0.22 + height), V(0, -1, 0.2), V(0, 0.2, -1))
+    P = pb(crouch=0.01, lean=-5, nod=8, shift=(0.0, -0.045), base=base)
+    kick_leg(P, s, V(sx * 0.04, -0.08, 0.25 + height), V(0, -1, 0.2), V(0, 0.2, -1))
     if clinch:                                                           # both hands on the back of the opponent's neck, pulling down
         hand(P, "Right", V(-0.055, -0.22, 0.49), V(-0.6, 0.2, -1))
         hand(P, "Left", V(0.055, -0.22, 0.49), V(0.6, 0.2, -1))
@@ -1622,8 +1622,8 @@ def mt_clinch(base=None):
 
 def mt_round(chamber=False, high=False, follow=False, base=None):
     """The rear (right) roundhouse: the hips turn over, the shin swings across, the right arm swings down for balance."""
-    turn = -28 if chamber else (-95 if follow else -62)
-    P = pb(hips=rz(turn), crouch=0.012, lean=-6 if chamber else -16, side=-6 if chamber else -10, twist=-8, nod=4, base=base)
+    turn = -32 if chamber else (-105 if follow else -75)
+    P = pb(hips=rz(turn), crouch=0.012, lean=-7 if chamber else -20, side=-6 if chamber else -12, twist=-10, nod=4, base=base)
     if chamber:
         kick_leg(P, "Right", V(-0.11, -0.13, 0.21), V(-1, -0.4, 0.3), V(0.2, -0.6, -0.8))
         arm(P, "Right", V(-0.3, 0.2, -0.93))
@@ -1709,8 +1709,8 @@ def mt_flying(phase):
         hand(P, "Right", V(-0.06, -0.24, 0.55), V(-0.6, 0.2, -1)); hand(P, "Left", V(0.06, -0.24, 0.55), V(0.6, 0.2, -1))
         return P
     if phase == "apex":
-        P = body(crouch=-0.15, lean=-10, nod=8, shift=(0.0, -0.03))
-        kick_leg(P, "Right", V(-0.04, -0.12, 0.31), V(0, -1, 0.2), V(0, 0.3, -0.95))
+        P = body(crouch=-0.2, lean=-12, nod=8, shift=(0.0, -0.04))
+        kick_leg(P, "Right", V(-0.04, -0.13, 0.34), V(0, -1, 0.2), V(0, 0.3, -0.95))
         kick_leg(P, "Left", V(0.06, 0.1, 0.07), V(0, -1, -0.3))
         hand(P, "Right", V(-0.055, -0.23, 0.47), V(-0.6, 0.2, -1)); hand(P, "Left", V(0.055, -0.23, 0.47), V(0.6, 0.2, -1))
         return P
