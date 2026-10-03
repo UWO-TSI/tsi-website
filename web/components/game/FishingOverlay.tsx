@@ -167,7 +167,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     clearTimers();
     setMissNote(note);
     changePhase("missed");
-    AudioManager.playSFX("exit");
+    // A refusal says why on the card (a full bag also shakes the Bag button, with its own sound): no door sound here.
     timersRef.current.push(window.setTimeout(cancel, 1800));
   };
 
@@ -198,6 +198,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         window.dispatchEvent(new CustomEvent("tsi:fish-bite")); // the bobber pulled under in a crown of water, the "!"
         // The bite lands on the camera (the world's shake, the Screen shake setting), never the page.
         shakeCamera(0.065);
+        // The "!" alert: the kit's chime, the one cue a bite has until its splash sound exists (specs/polish/fishing-questions.md).
         AudioManager.playSFX("confirm");
         // Cast power widens the hook window (max cast: 1.4s → 2.2s).
         const windowMs = BITE_WINDOW_MS + CAST.biteBonusMs * powerRef.current + rod.biteWindowMs;
@@ -207,7 +208,6 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
           window.setTimeout(() => {
             changePhase("missed");
             window.dispatchEvent(new CustomEvent("tsi:fish-escaped", { detail: { hooked: false } }));
-            AudioManager.playSFX("exit");
             timersRef.current.push(window.setTimeout(cancel, 1800));
           }, windowMs)
         );
@@ -225,11 +225,10 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     powerRef.current = power;
     const isMax = power >= CAST.maxZone;
     setMaxCast(isMax);
+    // Nailing the meter's gold tip is the meter's own chime; the cast itself waits for its whoosh (fishing-questions).
     if (isMax) {
       punchZoom(2.5); // micro-zoom: nailed the tip
       AudioManager.playSFX("confirm");
-    } else {
-      AudioManager.playSFX("click");
     }
     changePhase("casting");
     // Member island: the server rolls what will bite now; a refusal (too soon, no water here) ends the cast.
@@ -280,7 +279,6 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
       changePhase("reeling");
       // The yank, the line taut, the reel; the species' model rides along so the world has it ready when it comes out.
       window.dispatchEvent(new CustomEvent("tsi:fish-hooked", { detail: { model: hooked.model, raw: hooked.raw } }));
-      AudioManager.playSFX("click");
     });
   };
 
@@ -335,7 +333,6 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
       } else {
         changePhase("missed");
         window.dispatchEvent(new CustomEvent("tsi:fish-escaped", { detail: { hooked: true } })); // the line snaps
-        AudioManager.playSFX("exit");
         timersRef.current.push(window.setTimeout(cancel, 1800));
       }
     },
@@ -609,7 +606,7 @@ export function ReelMinigame({
 
       if (events.bounced && now - lastThunkRef.current > 250) {
         lastThunkRef.current = now;
-        AudioManager.playSFX("blip3");
+        AudioManager.playSFX("click", { rate: 0.75, gain: 0.4 }); // the bar knocking the track's end: a soft tick
         barRef.current?.animate(
           [{ boxShadow: "0 0 0 0 rgba(61,143,82,0)" }, { boxShadow: "0 0 10px 2px rgba(61,143,82,0.8)" }, { boxShadow: "0 0 0 0 rgba(61,143,82,0)" }],
           { duration: 200 }
