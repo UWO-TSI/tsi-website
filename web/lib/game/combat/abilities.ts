@@ -465,9 +465,9 @@ export function stepUnits(rt: CombatRuntime, me: Vec, dt: number, random: () => 
     if (d.ranged) {
       const g = dist(target, u) || 1;
       rt.projectiles.push({ id: rt.seq++, x: u.x, z: u.z, vx: ((target.x - u.x) / g) * 14, vz: ((target.z - u.z) / g) * 14, life: (range + 1) / 14, from: "player", damage: 0, kind: "bolt", radius: 0.2,
-        hit: { power: u.power, stat: u.stat, unit: true } });
+        hit: { power: u.power, stat: u.stat, unit: true, ult: u.ult } });
     } else {
-      strike(rt, target, { power: u.power, from: u, stat: u.stat, unit: true, knock: 1.5 }, random);
+      strike(rt, target, { power: u.power, from: u, stat: u.stat, unit: true, ult: u.ult, knock: 1.5 }, random);
       if (u.body) { u.body.state = "recover"; u.body.t = 0; }
     }
   }

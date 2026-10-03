@@ -17,7 +17,7 @@ import { applyStatus, chargeUlt, floater, fx, runEffects, strike, summon, type C
 import type { CombatRuntime, ImpactTier } from "./runtime";
 import { segDist, type Enemy, type Vec } from "./sim";
 import { addKick } from "./moveHooks";
-import { awaken, overcharge, resetTotems, stepTotems } from "./totems";
+import { awaken, overcharge, resetTotems, stepTotems, totemState } from "./totems";
 import { resetBeasts, rise, stepBeasts } from "./beasts";
 
 export interface Zone {
@@ -100,7 +100,7 @@ const keep = (ctx: Ctx, at?: Vec): Ctx => ({ ...ctx, pos: { ...(at ?? ctx.pos) }
 export function runField(rt: CombatRuntime, ef: FieldEffect, ctx: Ctx, random: () => number) {
   const f = field(rt);
   switch (ef.kind) {
-    case "zone": {
+    case "ground": {
       const at = ef.at === "aim" ? ctx.aim : ctx.pos;
       const line: [Vec, Vec] | null = ef.at === "path" ? [{ x: ctx.pos.x - ctx.dir.x * (ef.length ?? 4), z: ctx.pos.z - ctx.dir.z * (ef.length ?? 4) }, { ...ctx.pos }] : null;
       f.zones = f.zones.filter(z => z.key !== ef.key); // one per key: a new one replaces the old
@@ -108,13 +108,6 @@ export function runField(rt: CombatRuntime, ef: FieldEffect, ctx: Ctx, random: (
         power: ef.power ?? 0, slow: ef.slow ?? 0, hold: ef.hold ?? 0, heal: ef.heal ?? 0, drain: ef.drain ?? 0, growth: !!ef.growth, sink: !!ef.sink, follow: !!ef.follow,
         ctx: keep(ctx, at), look: 0 };
       f.zones.push(z);
-      return;
-    }
-    case "pull": {
-      const e = targetNear(rt, ctx.pos, ctx.aim, ef.range);
-      if (!e) { floater(rt, ctx.pos, 1.9, "Nothing to pull", "info"); return; }
-      pullEnemy(rt, e, { x: ctx.pos.x + ctx.dir.x * FIELD.pullStop, z: ctx.pos.z + ctx.dir.z * FIELD.pullStop }, ef.hold ?? 0, ef.power ?? 0, ctx, random);
-      fx(rt, ctx.fx?.impact, "impact", e, ctx.pos, ctx.impact ?? "ability");
       return;
     }
     case "throw": {
@@ -126,10 +119,16 @@ export function runField(rt: CombatRuntime, ef: FieldEffect, ctx: Ctx, random: (
     case "channel":
       f.channel = { key: ctx.ability.key, life: ef.duration, t: 0, every: ef.every, next: 0, effects: ef.effects, ctx: keep(ctx) };
       return;
-    case "wall": {
+    case "barrier": {
       const px = -ctx.dir.z, pz = ctx.dir.x, h = ef.length / 2, c = ctx.aim;
       f.walls = f.walls.filter(w => w.ctx.ability.key !== ctx.ability.key);
-      f.walls.push({ id: rt.seq++, a: { x: c.x + px * h, z: c.z + pz * h }, b: { x: c.x - px * h, z: c.z - pz * h }, life: ef.duration, t: 0, every: ef.every, next: 0, power: ef.power, slow: ef.slow, ctx: keep(ctx, c) });
+      const w: Wall = { id: rt.seq++, a: { x: c.x + px * h, z: c.z + pz * h }, b: { x: c.x - px * h, z: c.z - pz * h }, life: ef.duration, t: 0, every: ef.every, next: 0, power: ef.power, slow: ef.slow, ctx: keep(ctx, c) };
+      f.walls.push(w);
+      // What the wall grows under is thrown clear to the side it was on (a wall never traps from inside).
+      for (const e of rt.enemies) if (live(e) && segDist(e, w.a, w.b) < FIELD.wallBlock + e.type.radius) {
+        const s = Math.sign((e.x - c.x) * ctx.dir.x + (e.z - c.z) * ctx.dir.z) || 1;
+        e.kx = ctx.dir.x * s * 8; e.kz = ctx.dir.z * s * 8;
+      }
       fx(rt, ctx.fx?.impact, "impact", c, { x: c.x + ctx.dir.x, z: c.z + ctx.dir.z }, ctx.impact ?? "ability", ef.length / 2);
       return;
     }
@@ -265,4 +264,25 @@ function gain(rt: CombatRuntime, amount: number, show = true) {
   chargeUlt(rt, healedCharge(got, p.maxHp));
   if (show && got >= 1) floater(rt, rt.player.last ?? { x: 0, z: 0 }, 2.1, `+${Math.round(got)}`, "info");
   return got;
+}
+
+/**
+ * The balance bot's judgement of a field effect (balance.ts useful): true or false, as a player would decide it now.
+ * Heals when hurt, areas on what's in reach, totems near enemies (and the hop's post where it links), Overcharge with
+ * something by a link, a wall between you, a channel in reach, the escape when hurt; movement and
+ * the ults' own effects are never pressed for their own sake.
+ */
+export function fieldUseful(rt: CombatRuntime, e: FieldEffect, me: Vec, target: Enemy | null, hurt: number, threat: boolean): boolean {
+  const d = target ? dist(me, target) : Infinity;
+  switch (e.kind) {
+    case "ground": return (!!e.heal && hurt < 0.8) || (!!target && (!!e.power || !!e.slow) && (e.at === "aim" ? d < 10 : d < e.radius + 0.5));
+    case "throw":
+      if (e.at === "self") return rt.units.some(u => u.def.kind === "totem" && u.def.driven && dist(u, me) < 8);
+      return !!target && d < 10 && !rt.units.some(u => u.def.key === e.unit && dist(u, target) < 3);
+    case "overcharge": { const s = totemState(rt); return !!target && s.links.some(([a, b]) => segDist(target, a, b) < 3 || dist(a, target) < e.radius + 1); }
+    case "barrier": return !!target && d > 2 && d < 8;
+    case "channel": return !!target && d < 9;
+    case "fade": return hurt < 0.55 || (threat && hurt < 0.8);
+    default: return false;
+  }
 }

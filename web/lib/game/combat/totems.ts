@@ -17,15 +17,15 @@ import { segDist, type Enemy, type Vec } from "./sim";
 export const TOTEM = {
   /** Link range (× area): two totems closer than this draw lightning between them. */
   link: 9,
-  beam: { every: 0.5, power: 0.3, width: 0.55 },
-  storm: { every: 0.9, power: 0.5 },
-  fire: { every: 1.6, power: 0.55 },
-  earth: { every: 0.5, slow: 0.4, root: 4, hold: 0.9 },
+  beam: { every: 0.5, power: 0.1, width: 0.55 },
+  storm: { every: 0.9, power: 0.18 },
+  fire: { every: 1.6, power: 0.22 },
+  earth: { every: 0.5, slow: 0.3, root: 5, hold: 0.45 },
   /** Along a line of two, enemies this close to it count as enclosed. */
   enclose: 1.2,
-  thunderbird: { every: 0.5, power: 1, reach: 7, orbit: 1.6 },
-  salamander: { every: 0.3, power: 0.5, reach: 1.3, hunt: 8 },
-  bear: { every: 1.4, power: 1.4, radius: 2.4, hold: 0.5, hunt: 7 },
+  thunderbird: { every: 0.5, power: 0.7, reach: 7, orbit: 1.6 },
+  salamander: { every: 0.3, power: 0.4, reach: 1.3, hunt: 8 },
+  bear: { every: 1.4, power: 1.1, radius: 2.4, hold: 0.5, hunt: 7 },
 } as const;
 const KINDS = ["totem-storm", "totem-fire", "totem-earth"] as const;
 const SPIRIT: Record<(typeof KINDS)[number], string> = { "totem-storm": "spirit-thunderbird", "totem-fire": "spirit-salamander", "totem-earth": "spirit-bear" };

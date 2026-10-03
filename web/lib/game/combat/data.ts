@@ -38,11 +38,12 @@ const WEAPON_LOOK: Record<string, Look> = {
   "staff-heartstone": { cooldown: 0.6, range: 11, arc: 0, speed: 15, model: `${W}staff-rune.glb`, modelScale: 1.6 },
 };
 // Classes v2, the Warden wave's signature weapons (art/props-enemies/build_warden.py, a model per tier): the seal gloves'
-// shadow lash reaches 2.6 u in a narrow arc; the three staffs throw their bolts (the spirit bolt, thorn seeds, the Lightbolt).
+// shadow lash snaps out from the hand to 7 u (worn, so held like a blade: no upright rest); the three staffs throw their
+// bolts (the spirit bolt, thorn seeds, the Lightbolt).
 const WARDEN_LOOK: Record<string, Omit<Look, "model">> = {
-  "seal-gloves": { cooldown: 0.55, range: 2.6, arc: 1.3, modelScale: 1.3 },
-  "totem-staff": { cooldown: 0.5, range: 9, arc: 0, speed: 16, modelScale: 1.3 },
-  "living-staff": { cooldown: 0.55, range: 8, arc: 0, speed: 15, modelScale: 1.3 },
+  "seal-gloves": { cooldown: 0.6, range: 7, arc: 0, speed: 24, modelScale: 1.3, grip: { hand: [Math.PI / 2, 0, 0], back: [0, 0, 0.5] } },
+  "totem-staff": { cooldown: 0.6, range: 9, arc: 0, speed: 16, modelScale: 1.3 },
+  "living-staff": { cooldown: 0.6, range: 8, arc: 0, speed: 15, modelScale: 1.3 },
   "sunstone-staff": { cooldown: 0.55, range: 9, arc: 0, speed: 17, modelScale: 1.3 },
 };
 for (const w of WARDEN_WEAPONS) WEAPON_LOOK[w.key] = { ...WARDEN_LOOK[w.type], model: `${W}${w.key}.glb` };

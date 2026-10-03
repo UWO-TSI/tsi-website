@@ -28,6 +28,8 @@ import { classKey, equipClassKit, pressUlt, stepClass } from "./classRuntime";
 import { shapePotency } from "./abilities";
 import { BOSS_CENTER } from "@/lib/game/ruins";
 import { ULT } from "@/lib/combat/ult";
+import { FIELD_KINDS, type FieldEffect } from "@/lib/combat/wardenData";
+import { fieldUseful } from "./field";
 
 const FALLBACK: Record<string, string> = { Arcane: "staff-oak", Ranger: "bow-willow", Vanguard: "sword-driftwood", Warden: "tome-spirits" };
 /** What a sensible member carries: the first starter the kit suggests that scales with the family's stat (row 31), else the family's own. */
@@ -63,8 +65,9 @@ function useful(rt: CombatRuntime, a: Ability, me: Vec, target: Enemy | null, th
       if (def.kind === "trap") return dist > 2.5 && dist < 9;
       if (def.kind === "decoy") return dist < 3;
       const used = rt.units.reduce((n, u) => n + (u.def.kind === "minion" && u.source !== "weapon" ? u.def.cost ?? 1 : 0), 0);
-      return e.unit === "corpse" || used + (def.cost ?? 1) * (e.count ?? 1) <= (rt.kit?.capacity ?? 2);
+      return e.unit === "corpse" || used + (def.cost ?? 1) * (e.count ?? 1) <= (rt.kit?.capacity ?? rt.v2?.capacity ?? 2);
     }
+    if (FIELD_KINDS.has(e.kind)) { if (fieldUseful(rt, e as FieldEffect, me, target, hurt, threat)) return true; continue; } // classes v2 field primitives
     if (!target) continue;
     if (e.kind === "projectile" && dist < (e.range ?? 10) - 0.5) return true;
     if (e.kind === "area" && e.power > 0 && (e.at === "aim" ? dist < 11 : dist < (e.length ?? e.radius) + 0.3)) return true;
@@ -206,7 +209,9 @@ export function signatureWeapon(kitKey: string): string {
   const kit = classKit(kitKey)!, sig = signatureGrant(kitKey, 1);
   return sig?.key ?? SYSTEM_WEAPONS.find(w => w.type === kit.signature.type && STARTER_WEAPONS.includes(w.key))?.key ?? SYSTEM_WEAPONS.find(w => w.type === kit.signature.type)!.key;
 }
-const ULT_REACH = (a: ClassAbility) => Math.max(...a.effects.map(e => (e.kind === "area" ? e.radius : e.kind === "projectile" ? 1.5 : 0)), 2);
+const ULT_REACH = (a: ClassAbility) => Math.max(...a.effects.map(e => (e.kind === "area" || e.kind === "ground" || e.kind === "rise" ? e.radius : e.kind === "awaken" ? e.ring + 4 : e.kind === "projectile" ? 1.5 : 0)), 2);
+/** Where an ult's area sits: at the aim when any of its effects lands there, else round you (a self-centred ult wants them near you). */
+const ULT_AIMED = (a: ClassAbility) => a.effects.some(e => "at" in e && e.at === "aim");
 
 /** One v2 run: a survive mission's waves, or the guardian (`"boss"`: the scripted fight, bot rules plus the stagger window). */
 export function runV2(kitKey: string, missionId: "survive-circle" | "survive-sanctum" | "boss", seed: number, mastery = 1, limit = 240): RunV2 {
@@ -231,7 +236,8 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
     const threat = rt.enemies.find(e => e.state === "windup" && e.t > e.move.windup * 0.5 && strikeLands(e, me, 0.6)) ?? null;
     if (threat && !judged.has(`${threat.id}:${threat.cycle}:${Math.floor(t / 2)}`)) {
       judged.add(`${threat.id}:${threat.cycle}:${Math.floor(t / 2)}`);
-      if (random() < DODGE_SKILL && p.dodgeCd <= 0) { const a = Math.atan2(me.x - threat.x, me.z - threat.z) + strafe * 1.2; startDodge(rt, { x: Math.sin(a), z: Math.cos(a) }); }
+      // A drawn ult is held to the end: a dodge would throw the drawing away (the wings take 3 s).
+      if (random() < DODGE_SKILL && p.dodgeCd <= 0 && !rt.casting?.ult) { const a = Math.atan2(me.x - threat.x, me.z - threat.z) + strafe * 1.2; startDodge(rt, { x: Math.sin(a), z: Math.cos(a) }); }
     }
     // Riders: 30% of the time the bot is sliding, in the air, just off a dash and fast.
     const rider = random() < 0.3;
@@ -243,7 +249,10 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
     for (let i = held.length - 1; i >= 0; i--) if (t >= held[i].at) { classKey(rt, held[i].slot, false); held.splice(i, 1); }
     const staggered = target?.type.kind === "boss" && target.state === "recover" && !!target.move.stagger;
     // The ult: full, with two or more enemies inside its area (or the boss).
-    if (v.meter >= ULT.max && target && (target.type.kind === "boss" || alive.filter(e => d2(e, target) <= ULT_REACH(v.ult)).length >= 2)) pressUlt(rt);
+    if (v.meter >= ULT.max && !rt.casting && target && (target.type.kind === "boss" || alive.filter(e => d2(e, ULT_AIMED(v.ult) ? target : me) <= ULT_REACH(v.ult)).length >= 2)) {
+      pressUlt(rt);
+      if (v.ult.input?.kind === "drawn") drawLeft = RUNE_TIME.binding; // a drawn ult (the winged sigil): a hard shape takes longer
+    }
     else if (!rt.casting && !p.dash && p.dodgeAge === null && v.queue.length === 0 && !held.length) {
       for (let i = 0; i < v.keys.length; i++) {
         const a = v.keys[i];
@@ -252,6 +261,7 @@ export function runV2(kitKey: string, missionId: "survive-circle" | "survive-san
         if (kind === "toggle" && v.toggled[i]) continue;
         if (!(staggered || useful(rt, a, me, target, !!threat))) continue;
         const combo = v.combos.find(c => c.keys[0] === i && c.keys[1] === i && p.energy >= c.ability.energy && random() < 0.5);
+        if (target && a.effects.some(e => e.kind === "barrier")) p.aim = { x: me.x + (target.x - me.x) * 0.55, z: me.z + (target.z - me.z) * 0.55 }; // a wall goes between you
         classKey(rt, i, true);
         if (kind === "hold" || kind === "charge") held.push({ slot: i, at: t + (kind === "hold" ? 1 : (a.input as { max_s: number }).max_s) }); // let go later
         else { classKey(rt, i, false); if (combo) { classKey(rt, i, true); classKey(rt, i, false); } }

@@ -28,7 +28,7 @@ import { equipClassKit } from "./classRuntime";
 export const BEAST = {
   /** Seconds before a killed beast can be called again. */
   deathCd: 10,
-  wolves: { power: 1, range: 9 },
+  wolves: { power: 0.7, range: 9 },
   owl: { push: 4, lift: 0.9 },
   toad: { range: 9, hold: 0.8, power: 0.6 },
   serpent: { range: 10, radius: 1.6, power: 1.4, hold: 1.6 },
@@ -99,7 +99,7 @@ export function rise(rt: CombatRuntime, ef: Extract<FieldEffect, { kind: "rise" 
     if (!call || call.kind !== "summon" || (a.tame && !isTamed(rt, a.tame)) || rt.units.some(u => u.source === a.key)) continue;
     const before = new Set(rt.units);
     summon(rt, call.unit, call.count ?? 1, ctx, a.key);
-    for (const u of rt.units) if (!before.has(u)) s.garden.added.add(u);
+    for (const u of rt.units) if (!before.has(u)) { s.garden.added.add(u); u.ult = true; } // the ult's own: its hits are the ult's
     delete s.dead[a.key];
   }
   void random;
@@ -126,7 +126,7 @@ export function gardenWarp(rt: CombatRuntime, me: Vec, random: () => number = Ma
 function enter(rt: CombatRuntime, u: Unit, me: Vec, index: number, random: () => number) {
   const p = rt.player, sp = rt.v2?.mods.summonPower ?? 1, b = u.body;
   const hit = (e: Enemy, power: number, knock: number, impact: "ability" | "heavy", first = true) =>
-    strike(rt, e, { power: power * sp, from: u, stat: u.stat, impact, knock, first }, random);
+    strike(rt, e, { power: power * sp, from: u, stat: u.stat, impact, knock, first, ult: u.ult }, random);
   switch (u.def.key) {
     case "beast-wolf": {
       const e = targetNear(rt, me, p.aim, BEAST.wolves.range);
@@ -171,7 +171,7 @@ function enter(rt: CombatRuntime, u: Unit, me: Vec, index: number, random: () =>
 const s = beastState;
 /** A context for a beast's own pulls (its stat; control at full). */
 const ctxOf = (rt: CombatRuntime, u: Unit): Ctx => ({ ability: { key: u.source, name: u.def.name, description: "", cooldown_s: 0, energy: 0, effects: [] }, pos: { x: u.x, z: u.z }, aim: { x: u.x, z: u.z },
-  dir: { x: 0, z: 1 }, dmg: 1, sup: 1, ctl: 1, gear: 1, stat: u.stat, color: rt.v2?.kit.look.ramp[1] ?? "#3fd67a", impact: "ability" });
+  dir: { x: 0, z: 1 }, dmg: 1, sup: 1, ctl: 1, gear: 1, stat: u.stat, color: rt.v2?.kit.look.ramp[1] ?? "#3fd67a", impact: "ability", ult: u.ult });
 
 /** One frame: the cap, untamed keys locked, entries, deaths and their cooldowns, Shadow Bond, the toad's guard, the garden, the ritual. */
 export function stepBeasts(rt: CombatRuntime, me: Vec, dt: number, random: () => number) {

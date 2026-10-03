@@ -74,7 +74,7 @@ describe("the Warden kits (data)", () => {
     }
     expect(gripFor("seal-gloves")).toBe("Fists");
     expect(["totem-staff", "living-staff", "sunstone-staff"].map(gripFor)).toEqual(["Staff", "Staff", "Staff"]);
-    expect(WEAPONS["seal-gloves-1"].kind).toBe("melee");
+    expect(WEAPONS["seal-gloves-1"].kind).toBe("staff");
     expect(WEAPONS["sunstone-staff-1"].kind).toBe("staff");
   });
   it("the family's seed migration carries the signature weapons exactly as the TS has them", () => {
@@ -83,7 +83,7 @@ describe("the Warden kits (data)", () => {
   });
   it("every zone draws itself: its key names an FX recipe (zones, totems' and beasts' own effects too)", () => {
     const keys = new Set<string>();
-    const walk = (effects: ClassKit["keys"][number]["effects"]) => { for (const e of effects) { if (e.kind === "zone") keys.add(e.key); if (e.kind === "channel") walk(e.effects); } };
+    const walk = (effects: ClassKit["keys"][number]["effects"]) => { for (const e of effects) { if (e.kind === "ground") keys.add(e.key); if (e.kind === "channel") walk(e.effects); } };
     for (const k of WARDEN_KITS) for (const a of [...k.keys, k.ult]) { walk(a.effects); walk(a.release ?? []); }
     for (const k of ["shaman.zap", "shaman.flame", "shaman.quake", "shaman.slam", "shaman.trailFire", "shaman.plant", "summoner.warp", "summoner.ritual", "summoner.tamed"]) keys.add(k);
     for (const k of keys) expect(FX[k], k).toBeDefined();
@@ -110,13 +110,13 @@ describe("the Warden kits (data)", () => {
   });
   it("ranks and the stat direction reach the field effects (area grows zones, healing power grows their heal)", () => {
     const zone = DRUID.keys[2].effects[0];
-    expect(zone.kind).toBe("zone");
+    expect(zone.kind).toBe("ground");
     const up = upgraded(DRUID.keys[2], { label: "x", power: 1.2, radius: 1.25 }).effects[0];
-    expect(up).toMatchObject({ kind: "zone", heal: 0.048, radius: 2.5 });
+    expect(up).toMatchObject({ kind: "ground", heal: 0.048, radius: 2.5 });
     const shaman20 = withMods(SHAMAN.keys[3], classMods(SHAMAN, 20)).effects[0];
     expect(shaman20).toMatchObject({ kind: "overcharge", radius: 2.6 * 1.25 });
     const priest20 = withMods(PRIEST.keys[3], classMods(PRIEST, 20)).effects[1];
-    expect(priest20).toMatchObject({ kind: "zone", heal: 0.025 * 1.3 });
+    expect(priest20).toMatchObject({ kind: "ground", heal: 0.025 * 1.3 });
   });
 });
 
@@ -283,6 +283,12 @@ describe("Summoner", () => {
     rt.v2!.meter = ULT.max; pressUlt(rt); frames(rt, 20);
     const beasts = rt.units.filter(u => u.def.key.startsWith("beast-"));
     expect(new Set(beasts.map(u => u.def.key))).toEqual(new Set(["beast-wolf", "beast-owl", "beast-toad", "beast-serpent"]));
+    // The risen are the ult's own: their hits are its share and charge nothing; the wolves called before aren't.
+    expect(beasts.filter(u => u.ult).map(u => u.def.key).sort()).toEqual(["beast-owl", "beast-serpent", "beast-toad"]);
+    const ult = rt.tally.ult, meter = rt.v2!.meter;
+    frames(rt, 60);
+    expect(rt.tally.ult).toBeGreaterThan(ult);
+    expect(rt.v2!.meter - meter).toBeLessThan(ULT.max * 0.2); // only the wolves (and the lash) charge it
     expect(beastState(rt).garden).toBeTruthy();
     p.aim = { x: 3, z: 0 };
     expect(classMove(rt, ME, "dash", never)).toBe(true);

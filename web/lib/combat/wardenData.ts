@@ -9,17 +9,16 @@ import type { WeaponDef } from "./weapons";
 
 /**
  * Field primitives (lib/game/combat/field.ts runs them; shared, each with its tests): things that stay on the ground or
- * on you after the cast.
- * - zone: a ground area that stays `duration` s (× the duration stat; radius × the area stat), pulsing every `every` s:
+ * on you after the cast. (Named apart from the other families' `zone`, `wall` and `pull`: different shapes, so both stand.)
+ * - ground: a ground area that stays `duration` s (× the duration stat; radius × the area stat), pulsing every `every` s:
  *   `power` to enemies inside, `slow` while inside, `hold` s on each pulse; it heals you `heal` of max HP per second
  *   while you stand in it (× healing power); `drain` returns that share of its damage to you as health; `growth` counts
  *   for Overgrowth; `sink` drags enemies inside (a stronger slow that grows to a hold at its end). At you (`follow`
  *   keeps it on you), at the aim, or as a line `length` u long behind you (a dash's trail). One per `key` at a time.
- * - pull: the enemy nearest the aim (inside `range` of you) is dragged to you, hit and held.
  * - throw: a unit flies `flight` s on an arc to the aim (or drops under you, `at: "self"`), plants there, and hits
  *   what it lands on (`power`, `hold` in `radius`).
  * - channel: `effects` again every `every` s for `duration` s toward your current aim; a dodge ends it.
- * - wall: `length` u across the aim, `duration` s: enemies can't walk or shoot through it; touching it cuts and slows.
+ * - barrier: a wall `length` u across the aim, `duration` s: enemies can't walk or shoot through it; touching it cuts and slows.
  * - root: you can't move for `duration` s (your skills still work).
  * - tether: a vine to the aim (≤ `range` u): while the key is held you swing toward it (`pull` u/s each second).
  * - fade: translucent for `duration` s (afterimages, a faded body); `rabbits` pour out round you as one instanced effect.
@@ -29,19 +28,18 @@ import type { WeaponDef } from "./weapons";
  * - rise: every tamed beast rises at once (past the cap) for `duration` s, and your dash warps inside a `radius` garden.
  */
 export type FieldEffect =
-  | { kind: "zone"; key: string; at: "self" | "aim" | "path"; radius: number; duration: number; every?: number; power?: number; slow?: number; hold?: number;
+  | { kind: "ground"; key: string; at: "self" | "aim" | "path"; radius: number; duration: number; every?: number; power?: number; slow?: number; hold?: number;
       heal?: number; drain?: number; growth?: boolean; sink?: boolean; follow?: boolean; length?: number }
-  | { kind: "pull"; range: number; power?: number; hold?: number }
   | { kind: "throw"; unit: string; flight: number; power: number; hold: number; radius: number; at?: "self" }
   | { kind: "channel"; duration: number; every: number; effects: Effect[] }
-  | { kind: "wall"; length: number; duration: number; power: number; every: number; slow: number }
+  | { kind: "barrier"; length: number; duration: number; power: number; every: number; slow: number }
   | { kind: "root"; duration: number }
   | { kind: "tether"; range: number; pull: number }
   | { kind: "fade"; duration: number; rabbits?: number }
   | { kind: "overcharge"; radius: number; power: number; link: number; per: number; max: number }
   | { kind: "awaken"; duration: number; ring: number }
   | { kind: "rise"; duration: number; radius: number };
-export const FIELD_KINDS = new Set<string>(["zone", "pull", "throw", "channel", "wall", "root", "tether", "fade", "overcharge", "awaken", "rise"]);
+export const FIELD_KINDS = new Set<string>(["ground", "throw", "channel", "barrier", "root", "tether", "fade", "overcharge", "awaken", "rise"]);
 
 /**
  * The Warden's units (kits.ts UNITS): the Summoner's shadow beasts (minions that borrow their beast model; the wolves come
@@ -50,10 +48,10 @@ export const FIELD_KINDS = new Set<string>(["zone", "pull", "throw", "channel", 
  * and fights it (lib/game/combat/totems.ts); the shared minion AI only ages it.
  */
 export const WARDEN_UNITS: Record<string, UnitDef> = {
-  "beast-wolf": { key: "beast-wolf", name: "Shadow wolf", kind: "minion", hp: 90, cost: 0.5, speed: 7, range: 1.4, power: 0.42, rate: 0.75, model: "beast-wolf" },
-  "beast-owl": { key: "beast-owl", name: "Shadow owl", kind: "minion", hp: 70, cost: 1, speed: 9, range: 1.5, power: 0.62, rate: 1.1, model: "beast-owl" },
-  "beast-toad": { key: "beast-toad", name: "Shadow toad", kind: "minion", hp: 280, cost: 1, speed: 3.4, range: 1.7, power: 0.4, rate: 1.2, taunt: true, model: "beast-toad" },
-  "beast-serpent": { key: "beast-serpent", name: "Shadow serpent", kind: "minion", hp: 150, cost: 1, speed: 6, range: 1.9, power: 0.75, rate: 1.0, model: "beast-serpent" },
+  "beast-wolf": { key: "beast-wolf", name: "Shadow wolf", kind: "minion", hp: 110, cost: 0.5, speed: 7, range: 1.4, power: 0.14, rate: 0.75, model: "beast-wolf" },
+  "beast-owl": { key: "beast-owl", name: "Shadow owl", kind: "minion", hp: 70, cost: 1, speed: 9, range: 1.5, power: 0.26, rate: 1.1, model: "beast-owl" },
+  "beast-toad": { key: "beast-toad", name: "Shadow toad", kind: "minion", hp: 280, cost: 1, speed: 3.4, range: 1.7, power: 0.26, rate: 1.2, taunt: true, model: "beast-toad" },
+  "beast-serpent": { key: "beast-serpent", name: "Shadow serpent", kind: "minion", hp: 150, cost: 1, speed: 6, range: 1.9, power: 0.4, rate: 1.0, model: "beast-serpent" },
   "totem-storm": { key: "totem-storm", name: "Storm totem", kind: "totem", hp: 120, life: 24, radius: 5.5, model: "totem-storm", driven: true },
   "totem-fire": { key: "totem-fire", name: "Fire totem", kind: "totem", hp: 120, life: 24, radius: 2.5, model: "totem-fire", driven: true },
   "totem-earth": { key: "totem-earth", name: "Earthbind totem", kind: "totem", hp: 160, life: 24, radius: 3.4, model: "totem-earth", driven: true },
@@ -87,7 +85,7 @@ const T = ["", "", "Iron-bound ", "Rune-carved ", "Gilded ", ""] as const;
 const sig = (type: string, subclass: string, names: [string, string, string, string, string], scaling: WeaponDef["scaling"], basic: WeaponDef["basic"]): WeaponDef[] =>
   names.map((name, i) => ({ key: `${type}-${i + 1}`, name, type, tier: (i + 1) as WeaponDef["tier"], scaling, max_durability: 60 + (i + 1) * 30, repair_per_point: i + 1, subclass, basic }));
 export const WARDEN_WEAPONS: WeaponDef[] = [
-  ...sig("seal-gloves", "summoner", ["Ink seal gloves", `${T[2]}seal gloves`, `${T[3]}seal gloves`, `${T[4]}seal gloves`, "Shadow sovereign gloves"], ["spirit"], "melee"),
+  ...sig("seal-gloves", "summoner", ["Ink seal gloves", `${T[2]}seal gloves`, `${T[3]}seal gloves`, `${T[4]}seal gloves`, "Shadow sovereign gloves"], ["spirit"], "staff"),
   ...sig("totem-staff", "shaman", ["Carved totem staff", `${T[2]}totem staff`, `${T[3]}totem staff`, `${T[4]}totem staff`, "Thunder spirit staff"], ["spirit"], "staff"),
   ...sig("living-staff", "druid", ["Living staff", `${T[2]}living staff`, `${T[3]}living staff`, `${T[4]}living staff`, "Elderbloom staff"], ["spirit", "vitality"], "staff"),
   ...sig("sunstone-staff", "priest", ["Sunstone staff", `${T[2]}sunstone staff`, `${T[3]}sunstone staff`, `${T[4]}sunstone staff`, "Dawnfire staff"], ["spirit"], "staff"),
@@ -97,11 +95,10 @@ export const WARDEN_WEAPONS: WeaponDef[] = [
 export function scaleField(e: Effect, c: { power?: number; radius?: number; duration?: number }, inner: (x: Effect) => Effect): Effect {
   const p = c.power ?? 1, r = c.radius ?? 1, d = c.duration ?? 1;
   switch (e.kind) {
-    case "zone": return { ...e, radius: e.radius * r, duration: e.duration * d, ...(e.power ? { power: e.power * p } : {}), ...(e.heal ? { heal: e.heal * p } : {}) };
-    case "pull": return e.power ? { ...e, power: e.power * p } : e;
+    case "ground": return { ...e, radius: e.radius * r, duration: e.duration * d, ...(e.power ? { power: e.power * p } : {}), ...(e.heal ? { heal: e.heal * p } : {}) };
     case "throw": return { ...e, power: e.power * p, radius: e.radius * r };
     case "channel": return { ...e, duration: e.duration * d, effects: e.effects.map(inner) };
-    case "wall": return { ...e, power: e.power * p, length: e.length * r, duration: e.duration * d };
+    case "barrier": return { ...e, power: e.power * p, length: e.length * r, duration: e.duration * d };
     case "overcharge": return { ...e, power: e.power * p, link: e.link * p, radius: e.radius * r };
     case "awaken": case "rise": case "fade": return { ...e, duration: e.duration * d };
     default: return e;
@@ -110,10 +107,10 @@ export function scaleField(e: Effect, c: { power?: number; radius?: number; dura
 /** The class's stat direction on a field effect (classes.ts `withMods`): radii and lengths × area, durations × duration, heals × healing power. */
 export function fieldMods(e: Effect, m: { area: number; duration: number; healing: number }, inner: (x: Effect) => Effect): Effect {
   switch (e.kind) {
-    case "zone": return { ...e, radius: e.radius * m.area, duration: e.duration * m.duration, ...(e.heal ? { heal: e.heal * m.healing } : {}), ...(e.length ? { length: e.length * m.area } : {}) };
+    case "ground": return { ...e, radius: e.radius * m.area, duration: e.duration * m.duration, ...(e.heal ? { heal: e.heal * m.healing } : {}), ...(e.length ? { length: e.length * m.area } : {}) };
     case "throw": return { ...e, radius: e.radius * m.area };
     case "channel": return { ...e, duration: e.duration * m.duration, effects: e.effects.map(inner) };
-    case "wall": return { ...e, length: e.length * m.area, duration: e.duration * m.duration };
+    case "barrier": return { ...e, length: e.length * m.area, duration: e.duration * m.duration };
     case "overcharge": return { ...e, radius: e.radius * m.area };
     case "awaken": return { ...e, duration: e.duration * m.duration, ring: e.ring * m.area };
     case "rise": return { ...e, duration: e.duration * m.duration, radius: e.radius * m.area };

@@ -32,6 +32,8 @@ export interface Unit {
   cd: number; power: number; stat: Stat;
   /** Minions that borrow an enemy model: its pose (state/t/move) for the renderer; shades borrow their corpse's. */
   body: Enemy | null;
+  /** An ult's own unit (classes v2: the beasts Shadow Garden raises): its hits are the ult's (they count as its share and charge nothing). */
+  ult?: boolean;
 }
 export interface Buff { stat: BuffStat; value: number; t: number; onBlock?: Ability; answered?: boolean;
   /** The ability that gave it (a v2 hold's buffs end on the release). */
