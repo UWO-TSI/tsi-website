@@ -18,7 +18,7 @@ Nothing here blocked the build. Each item says what the wave does now; a one-wor
 13. **Kunai Blink.** The kunai flies to the aim (up to 12 u) and sticks there, or in the first enemy it hits. 4 s to press again; the cooldown runs from the throw. *Assumed.*
 14. **Execute on mini-bosses.** The elder thorn crab counts as a boss here (2.5× instead of a kill). *Assumed.*
 15. **Death Lotus.** Everything within 9 u is cut at once (power 8 each), the world goes black-and-white ink through the 600 ms time stop, and the cuts show as ink slashes on every enemy. You don't actually travel between them. Should you end behind the last one?
-16. **Smoke Bomb.** Enemies within 3.5 u lose you for 2.5 s; inside the 2.8 u ink (4 s) nothing targets you. Attacking from inside doesn't reveal you (the design doesn't say).
+16. **Smoke Bomb.** Enemies within 3.5 u lose you for 2.5 s; inside the 2.8 u ink (4 s) nothing targets you. Attacking from inside doesn't reveal you (the design doesn't say). You aren't drawn see-through inside it (the characters share one material); the ink smoke covers you. Want a fade?
 17. **Stat directions** (mastery 1 → 20): Guardian armour 10% → 25%, Juggernaut max HP ×1.2 → ×1.35, Martial Artist attack speed ×1.0 → ×1.15, Assassin crit chance +10% → +25%. Trimmed so mastery 20 stays near the 1.2× power budget.
 
 ## Balance (specs/evidence/classes/K-vanguard-balance.md)
