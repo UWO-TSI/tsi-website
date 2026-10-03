@@ -15,10 +15,13 @@
 
 /* A full-height column that centres the brand and card, and scrolls rather than clipping when a form runs tall. */
 .column { position: absolute; left: clamp(24px, 7vw, 128px); top: 0; bottom: 56px; width: min(400px, calc(100vw - 48px)); padding: 28px 0;
-  box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 30px; overflow-y: auto; scrollbar-width: none;
+  box-sizing: border-box; display: flex; flex-direction: column; gap: 30px; overflow-y: auto; scrollbar-width: none;
   animation: rise 0.9s var(--gui-ease) both; }
 .column::-webkit-scrollbar { display: none; }
 .column > * { flex: none; }
+/* Auto margins centre the pair when it fits and let it scroll from the top when it doesn't (justify-content would clip the logo). */
+.column > :first-child { margin-top: auto; }
+.column > :last-child { margin-bottom: auto; }
 .column:has(.card:not([data-view="menu"])) .wordmark { font-size: clamp(48px, 5.4vw, 80px); }
 
 .brand { display: grid; justify-items: start; gap: 14px; }
@@ -70,7 +73,8 @@
 
 /* Phones: the wordmark up top, the card along the bottom, no key hints. */
 @media (max-width: 640px) {
-  .column { left: 16px; right: 16px; width: auto; bottom: 64px; justify-content: flex-end; gap: 22px; }
+  .column { left: 16px; right: 16px; width: auto; bottom: 64px; gap: 22px; }
+  .column > :last-child { margin-bottom: 0; }
   .card, .card[data-view="menu"] { width: 100%; }
   .footer { left: 16px; right: 16px; bottom: 14px; font-size: 12px; }
   .when { flex-wrap: nowrap; gap: 8px; }
