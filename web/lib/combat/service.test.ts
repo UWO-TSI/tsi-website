@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { islandMissions, islandProgression, islandScore, islandWeapons } from "./islandAdapter";
@@ -320,8 +320,9 @@ describe("combat B: subclass choice, loadout, stat allocation and traits (rows 2
     const o = await getProgression(c.store, other);
     expect(o.ok && o.data.traits).toEqual({});
   });
-  it("20260926210000_combat_kits.sql maps the same species to the same traits", () => {
-    const sql = readFileSync(join(__dirname, "../../supabase/migrations/20260926210000_combat_kits.sql"), "utf8");
+  it("20260926210000_combat_kits.sql (and the Arcane seed's pollen sprite) map the same species to the same traits", () => {
+    const dir = join(__dirname, "../../supabase/migrations"), arcane = readdirSync(dir).find((f) => f.endsWith("_classes_v2_arcane_seed.sql"))!;
+    const sql = readFileSync(join(dir, "20260926210000_combat_kits.sql"), "utf8") + readFileSync(join(dir, arcane), "utf8").match(/-- BEGIN TRAITS[\s\S]*?-- END TRAITS/)![0];
     const pairs = TRAITS.flatMap((t) => t.from.map((e) => `('${e}', '${t.key}')`));
     for (const pair of pairs) expect(sql).toContain(pair);
     expect(sql.match(/\('[a-z-]+', '[a-z-]+'\)/g)).toHaveLength(pairs.length);

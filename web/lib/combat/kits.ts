@@ -394,6 +394,8 @@ export const TRAITS: Trait[] = [
   trait("wisp-core", ["rune-wisp"], "wisp core", "Wisp Core", "A wisp's glowing core: three rune bolts.", 4, 15, [shot(0.6, { count: 3, spread: 0.2, speed: 16, range: 10 })]),
   trait("page-storm", ["animated-book"], "paper wings", "Page Storm", "Paper wings: a storm of cutting pages around you.", 8, 25, [hit(1.5, 3)]),
   trait("golem-fist", ["stone-golem"], "stone fist", "Golem Fist", "A stone fist: slam where you aim and stagger.", 12, 35, [hit(2.4, 2.8, "aim", { status: { hold: 1 } })]),
+  // Zone 1's pollen sprites (classes v2: the Transmuter's Pollen form; 2026..._classes_v2_arcane_seed.sql sets enemy_types.trait).
+  trait("pollen-swarm", ["pollen-sprite"], "pollen wings", "Pollen Swarm", "Pollen wings: burst into a swarm and flit clear, leaving pollen that slows.", 8, 20, [dash(4, { iframes: true }), hit(0, 2, "self", { status: { slow: [0.35, 2] } })]),
 ];
 export const STARTER_TRAIT = "fox-stride";
 export const traitFor = (enemyKey: string) => TRAITS.find((t) => t.from.includes(enemyKey)) ?? null;
