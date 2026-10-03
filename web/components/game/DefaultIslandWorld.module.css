@@ -123,11 +123,6 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .decorateToggle { position: absolute; right: var(--hud-edge); bottom: var(--hud-side-bottom); min-height: 44px; padding: 0 16px 0 10px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper); color: var(--gui-ink-strong); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; cursor: pointer; box-shadow: var(--gui-shadow-md); z-index: 11; display: inline-flex; align-items: center; gap: 7px; }
 .world[data-inside] .heading { color: var(--gui-paper); text-shadow: 0 2px 12px #11152a; }
 .bagButton { position: absolute; left: 16px; top: 150px; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 16px 0 10px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper); color: var(--gui-ink-strong); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; cursor: pointer; box-shadow: var(--gui-shadow-md); z-index: 11; }
-/* The museum's plaques: little wood signs in the kit's bark. */
-.plaque { min-width: 96px; padding: 4px 10px 5px; border-radius: 5px 7px 5px 6px; background: var(--gui-bark); color: var(--gui-paper); font-size: var(--gui-text-xs); line-height: 1.3; text-align: center; white-space: nowrap; pointer-events: none; box-shadow: 0 2px 0 #4f3f31; }
-.plaque b { display: block; font-size: var(--gui-text-sm); font-weight: 800; }
-.plaque span { display: block; color: #f3ead2; }
-.plaque[data-empty="true"] { background: var(--gui-bark); outline: 2px dashed #f3ead2aa; outline-offset: -5px; }
 .curatorLine { margin: 0 0 12px; padding: 10px 14px; border-radius: var(--gui-r-card); background: var(--gui-paper-warm); color: var(--gui-ink); font-style: italic; }
 .trophyRank { flex: none; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 99px; background: var(--gui-gold); color: var(--gui-ink-strong); font-weight: 900; font-size: var(--gui-text-xs); }
 /* Seasonal events: the tourney board (your row highlighted, unnamed neighbours muted), GENESIS posters, the trophy cue's leaders */
@@ -203,7 +198,6 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .pathStats button:disabled { opacity: 0.35; cursor: default; }
 .pathStats small { color: #8a7d99; font-size: 11px; }
 .pathStatus { margin: 10px 0 0; font-weight: 600; color: #3d3250; }
-.keeperBubble { width: 210px; white-space: normal; padding: 8px 12px; border-radius: 12px; background: #f6f1fb; color: #3d3250; font-size: 12px; font-style: italic; box-shadow: 0 4px 14px #1a122830; pointer-events: none; }
 /* Reveal ceremony card: paper lit by the family's colour (it was a dark glass card). */
 .reveal { position: absolute; left: 36px; top: 250px; width: min(360px, calc(100% - 32px)); padding: 22px 24px 20px; border-radius: var(--gui-r-paper); background: var(--gui-paper); color: var(--gui-ink); box-shadow: 0 0 0 3px var(--family), 0 0 40px color-mix(in srgb, var(--family) 45%, transparent), var(--gui-shadow-lg); text-align: center; z-index: 20; animation: reveal-in 0.9s 1.4s both ease-out; zoom: var(--tsi-text-scale, 1); }
 .reveal p { margin: 4px 0; font-size: var(--gui-text-md); line-height: 1.5; }
@@ -443,7 +437,6 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .runeTag { font-size: var(--gui-text-xs); }
 .pathLoadout em { font-size: var(--gui-text-xs); color: #5f4f78; }
 .pathStats small { font-size: var(--gui-text-xs); color: #6b5f7a; }
-.keeperBubble { background: var(--gui-paper); color: #3d3250; box-shadow: var(--gui-shadow-md); font-family: var(--gui-font); font-weight: 700; }
 /* A channelled ult's mash (classes v2 Arcane): the HUD's paper and face; the keycaps keep their element colours. */
 .mash { border: 0; border-radius: var(--gui-r-card); background: rgb(255 251 231 / 0.96); color: var(--gui-ink); box-shadow: var(--gui-shadow-md); font-family: var(--gui-font); }
 .mash b { font-weight: 800; color: var(--gui-ink-strong); }

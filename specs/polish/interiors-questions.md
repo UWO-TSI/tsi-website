@@ -58,6 +58,7 @@ Indoors now follows the island's blended light (`lib/game/interiorLight.ts`): th
 - The fade waits for the room: it lifts only after everything has loaded and the room has rendered a few frames (the warm-up step is now `lib/game/sceneGate.ts`, tested). Doors sound on the way in and out.
 - The camera arrives already in place in every room (the walker snaps it as it mounts; the temple's used to swoop in from the village).
 - Escape leaves a room by its door once nothing is open: it closes a sheet or dialog first, never leaves while you're seated studying, decorating or mid-fade.
+- You arrive a step inside every room, clear of the door's prompt, which now shows only when you walk back to the door (the café's rule). Before, "Return to the island" was up the moment you came in, so E took you straight back out.
 
 ## 6. Sounds this needs (none exist; the Sound pass, row 125)
 
@@ -74,5 +75,5 @@ Silent until sourced:
 ## 7. Found along the way
 
 - **The keepers' lines** are the roster's three each. The persona holding a post in the Residents editor replaces them.
-- **`.keeperBubble`** in `DefaultIslandWorld.module.css` is no longer used (Sable speaks in the residents' bubble). I left it for the GUI sheet branch, which restyles it, to avoid a merge conflict: delete it after that merges.
+- **`.keeperBubble` and `.plaque`** in `DefaultIslandWorld.module.css` were left unused (Sable speaks in the residents' bubble; the plaques are a texture) and are deleted, now that the GUI sheet, which restyled them, has merged.
 - **The wharf shack** (`/lab/interior?room=wharf`) is still flat planes; only its keeper changed (Bram). It's lab-only.
