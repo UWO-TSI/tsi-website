@@ -19,6 +19,7 @@ import { SLOT_IDS, type Buff, type CombatRuntime, type CueKind, type FxEvent, ty
 import { addKick } from "./moveHooks";
 import { shellNote } from "./mobs";
 import { addCharge, dealtCharge, healedCharge } from "@/lib/combat/ult";
+import { addDot, addZone, FIRE, loadRounds, stealthed } from "./classFire";
 
 /** Plan §Combat and incantation defaults: starting a drawing spends 25% of its energy, a fizzle or cancel costs a short recovery instead of the cooldown. */
 export const CAST = { start: 0.25, recovery: 1.5 } as const;
@@ -91,18 +92,23 @@ export const distracted = (rt: CombatRuntime, e: Enemy) => e.status.distract > 0
 
 // ── Hits ────────────────────────────────────────────────────────
 /** `melee`: a weapon swing (its hits stop time for a beat). `impact`: its impact tier (§1.6); `ult`: an ult hit (charges no meter). */
-export interface HitSrc { power: number; from: Vec; stat?: Stat; tier?: number; unit?: boolean; knock?: number; status?: Status; melee?: boolean; impact?: ImpactTier; ult?: boolean; first?: boolean }
+export interface HitSrc { power: number; from: Vec; stat?: Stat; tier?: number; unit?: boolean; knock?: number; status?: Status; melee?: boolean; impact?: ImpactTier; ult?: boolean; first?: boolean;
+  /** Classes v2: always a crit (a weak point, Last Round, the Final Shot); a trap's spring (the Hunter's Prey); `steady`: it doesn't hold the
+   * enemy's chase (a burn's tick, a zone, a rapid-fire arrow: otherwise they'd keep it flinching for good). */
+  crit?: boolean; trap?: boolean; steady?: boolean }
 
 /** The passive's damage bonus for this hit (a fraction). */
 function passiveBonus(rt: CombatRuntime, e: Enemy, src: HitSrc): number {
   const pv = passiveOf(rt), me = rt.player.last;
   if (!pv) return 0;
+  if (src.trap) return pv.kind === "prey" && e.status.mark > 0 ? pv.value : 0;
   if (src.unit) return pv.kind === "pack_bond" ? pv.value * Math.max(0, rt.units.filter(u => u.def.kind === "minion" && u.source !== "weapon").length - 1) : 0;
   switch (pv.kind) {
     case "distracted": return distracted(rt, e) ? pv.value : 0;
     case "still": return rt.player.still >= 0.8 ? pv.value : 0;
     case "same_target": return rt.passive.target === e.id ? pv.value * rt.passive.stacks : 0;
     case "distance": return me ? pv.value * Math.min(1, dist(me, e) / (pv.cap ?? 12)) : 0;
+    case "killstreak": return pv.value * (rt.v2?.live.streak ?? 0);
     default: return 0;
   }
 }
@@ -111,7 +117,7 @@ function passiveBonus(rt: CombatRuntime, e: Enemy, src: HitSrc): number {
 export function hitAmount(rt: CombatRuntime, e: Enemy, src: HitSrc, random: () => number = Math.random): { amount: number; crit: boolean; raw: number; base: number } {
   const p = rt.player, def = SYSTEM_WEAPONS.find(w => w.key === p.weapon)!;
   const weapon = src.stat || src.tier ? { ...def, scaling: src.stat ? [src.stat] : def.scaling, tier: (src.tier ?? def.tier) as typeof def.tier } : def;
-  const crit = random() < critChance(rt), critMult = rt.v2?.mods.critMult;
+  const crit = !!src.crit || random() < critChance(rt), critMult = rt.v2?.mods.critMult;
   // A front shell (zone-1 crabs) turns most of a hit aside: shellFactor in sim.ts.
   const mult = src.power * shellFactor(e, src.from) * (staggered(e) ? BOSS.staggerBonus : 1) * (1 + buffSum(rt, "damage") + passiveBonus(rt, e, src) + e.status.mark);
   const hit = { weapon, durability: src.tier ? 1 : p.durability[p.weapon], stats: p.stats, level: p.level, enemyDefense: e.type.defense, enemyArmor: e.type.armor, crit, critMult, potency: mult };
@@ -124,11 +130,12 @@ export function hitAmount(rt: CombatRuntime, e: Enemy, src: HitSrc, random: () =
 export function strike(rt: CombatRuntime, e: Enemy, src: HitSrc, random: () => number = Math.random): number {
   if (e.state === "dead" || e.state === "return") return 0;
   const { amount, crit, raw, base } = hitAmount(rt, e, src, random);
-  const held = e.status.hold > 0, shell = shellFactor(e, src.from) < 1;
+  const held = e.status.hold > 0, shell = shellFactor(e, src.from) < 1, stun = e.stun;
   const killed = damageEnemy(e, amount, src.from, src.knock ?? 0);
+  if (src.steady) e.stun = stun;
   if (shell) shellNote(rt, e, src.from);
   if (e.flash === 0.18) floater(rt, e, 1.4 + e.type.hover, String(amount), src.ult ? "ult" : crit ? "crit" : "hit");
-  if (src.status && !killed) applyStatus(e, src.status);
+  if (src.status && !killed) { applyStatus(e, src.status); if (src.status.dot) addDot(rt, e, src.status.dot); }
   if (!src.ult) chargeUlt(rt, dealtCharge(raw, base)); // you and your units; ult hits charge nothing
   rt.tally.dealt += amount; if (src.ult) rt.tally.ult += amount;
   if (!src.unit) { onPlayerHit(rt, e, amount, crit, held); cue(rt, crit ? "crit" : "hit", e, !!src.melee, src.impact, src.first); }
@@ -154,6 +161,7 @@ function onKill(rt: CombatRuntime, e: Enemy) {
   missionEvent(rt, { type: "kill", enemy: e.type.id });
   const pv = passiveOf(rt), me = rt.player.last;
   if (pv?.kind === "kill_heal" && me && dist(me, e) <= (pv.cap ?? 9)) heal(rt, rt.player.maxHp * pv.value);
+  if (pv?.kind === "killstreak" && rt.v2) { const l = rt.v2.live; l.streak = Math.min(pv.cap ?? 5, l.streak + 1); l.streakT = FIRE.streakWindow; }
 }
 
 /** Bosses shrug off most control, elites some (row 51: the boss is a wall). */
@@ -302,9 +310,10 @@ export function runEffects(rt: CombatRuntime, effects: Effect[], ctx: Ctx, rando
         for (let k = 0; k < n; k++) {
           const a = base + (n > 1 ? (k / (n - 1) - 0.5) * (ef.spread ?? 0) : 0), vx = Math.sin(a), vz = Math.cos(a);
           const hit: ShotHit = { power: ef.power * ctx.dmg, stat: ctx.stat, tier: ctx.tier, pierce: ef.pierce, splash: ef.splash, status: scaled(ef.status, ctx.ctl), hitIds: [],
-            impact: ctx.impact, ult: ctx.ult, fx: ctx.fx?.impact, travel: ctx.fx?.travel, ramp: rt.v2?.kit.look.ramp };
+            impact: ctx.impact, ult: ctx.ult, fx: ctx.fx?.impact, travel: ctx.fx?.travel, ramp: rt.v2?.kit.look.ramp,
+            crit: ef.crit, bounce: ef.bounce, pull: ef.pull, grapple: ef.grapple, cluster: ef.cluster && { ...ef.cluster, power: ef.cluster.power * ctx.dmg } };
           rt.projectiles.push({ id: rt.seq++, x: ctx.pos.x + vx * 0.5, z: ctx.pos.z + vz * 0.5, vx: vx * speed, vz: vz * speed, life: (ef.range ?? 10) / speed,
-            from: "player", damage: 0, kind: ctx.stat === "finesse" ? "arrow" : "bolt", radius: 0.25, hit });
+            from: "player", damage: 0, kind: ef.look ?? (ctx.stat === "finesse" ? "arrow" : "bolt"), radius: ef.width ?? 0.25, hit });
         }
         break;
       }
@@ -345,8 +354,12 @@ export function runEffects(rt: CombatRuntime, effects: Effect[], ctx: Ctx, rando
         break;
       }
       // Movement hooks (classes v2): carried speed along the aim, a hop; the avatar applies them on its next step.
-      case "momentum": p.kick = addKick(p.kick, ctx.dir.x, ctx.dir.z, ef.speed, 0); break;
+      case "momentum": p.kick = addKick(p.kick, ef.back ? -ctx.dir.x : ctx.dir.x, ef.back ? -ctx.dir.z : ctx.dir.z, ef.speed, 0); break;
       case "launch": p.kick = addKick(p.kick, 0, 0, 0, ef.height); break;
+      // Classes v2: a lasting zone, every trap at once, rounds into the cylinder (classFire.ts).
+      case "zone": addZone(rt, ef.at === "aim" ? ctx.aim : ctx.pos, { radius: ef.radius, life: ef.life, power: (ef.power ?? 0) * ctx.dmg, status: scaled(ef.status, ctx.ctl), fx: ctx.fx?.zone }); break;
+      case "trigger": triggerTraps(rt, ef, ctx, random); break;
+      case "load": loadRounds(rt, ef, random); break;
     }
   }
 }
@@ -361,7 +374,7 @@ function enforceCaps(rt: CombatRuntime, added: Unit) {
   };
   const k = added.def.kind;
   if (k === "totem") { rt.units = rt.units.filter(u => u === added || u.def.key !== added.def.key); drop(u => u.def.kind === "totem", CAPS.totems); }
-  else if (k === "trap") drop(u => u.def.kind === "trap", CAPS.traps);
+  else if (k === "trap") drop(u => u.def.kind === "trap", trapCap(rt));
   else if (k === "decoy") drop(u => u.def.kind === "decoy", CAPS.decoys);
   else if (added.source === "weapon") drop(u => u.source === "weapon", CAPS.weaponWisps);
   else {
@@ -374,7 +387,44 @@ function enforceCaps(rt: CombatRuntime, added: Unit) {
   }
 }
 
-export function summon(rt: CombatRuntime, key: string, count: number, ctx: Pick<Ctx, "pos" | "aim" | "dir" | "sup" | "stat">, source: string) {
+/** Traps out at once: a v2 kit's own (raised by its duration stat), else the shared cap. */
+export const trapCap = (rt: CombatRuntime) => (rt.v2?.kit.traps ? Math.floor(rt.v2.kit.traps * rt.v2.mods.duration + 1e-9) : CAPS.traps);
+
+/**
+ * A trap springs: on the enemy that tripped it (a v2 trap lunges onto a marked one first), or on everything in its
+ * `blast`, with its status (a 3 s hold for today's tripwire), at `mult` × its power. Gone after. Traps strike as the
+ * player's units, flagged so Prey reads them.
+ */
+export function springTrap(rt: CombatRuntime, u: Unit, e: Enemy | null, mult: number, random: () => number, blast = u.def.blast, ult = false) {
+  const st = u.def.status ?? { hold: 3 };
+  if (e && u.def.lunge) { u.x = e.x; u.z = e.z; }
+  const src = (from: Vec): HitSrc => ({ power: u.power * mult, from, stat: u.stat, unit: true, trap: true, knock: 0, status: st, ult });
+  if (blast) { for (const f of rt.enemies) if (foe(f) && dist(u, f) <= blast + f.type.radius) strike(rt, f, src(u), random); }
+  else if (e) strike(rt, e, src(u), random);
+  if (rt.v2) fx(rt, `trap.${u.def.key}`, "impact", u, u, mult > 1 ? "heavy" : "ability", blast ?? 1.4);
+  else rt.blasts.push({ id: rt.seq++, x: u.x, z: u.z, radius: 1.4, color: "#ffe08a", age: 0, life: 0.5 });
+  rt.units = rt.units.filter(x => x !== u);
+}
+/**
+ * Effect "trigger" (the Great Hunt): every trap springs at once, everything in a blast round each (at least 1.6 u) at
+ * `power` × its own, and the lines between the traps, in the order they were set, cut through what stands on them.
+ * Then a spectral hound for each marked enemy (two with none, four at most) runs them down.
+ */
+function triggerTraps(rt: CombatRuntime, ef: Extract<Effect, { kind: "trigger" }>, ctx: Ctx, random: () => number) {
+  const traps = rt.units.filter(u => u.def.kind === "trap");
+  for (let i = 0; i + 1 < traps.length; i++) {
+    const a = traps[i], b = traps[i + 1], len = dist(a, b);
+    for (const e of rt.enemies) if (foe(e) && segDist(e, a, b) <= 0.6 + e.type.radius)
+      strike(rt, e, { power: ef.chain * ctx.dmg, from: a, stat: ctx.stat, impact: ctx.impact, ult: ctx.ult, knock: 0, status: scaled(ef.status, ctx.ctl), trap: true }, random);
+    fx(rt, ctx.fx?.travel, "travel", a, b, ctx.impact ?? "ability", len);
+  }
+  for (const u of traps) { fx(rt, ctx.fx?.impact, "impact", u, u, ctx.impact ?? "ability"); springTrap(rt, u, null, ef.power, random, Math.max(1.6, u.def.blast ?? 0), !!ctx.ult); }
+  fx(rt, ctx.fx?.zone, "zone", ctx.pos, ctx.aim, ctx.impact ?? "ability");
+  const marks = rt.enemies.filter(e => foe(e) && e.status.mark > 0).length;
+  summon(rt, "spectral-hound", Math.min(4, Math.max(2, marks)), ctx, ctx.ability.key);
+}
+
+export function summon(rt: CombatRuntime, key: string, count: number, ctx: Pick<Ctx, "pos" | "aim" | "dir" | "sup" | "stat"> & { fx?: Ctx["fx"] }, source: string) {
   const p = rt.player;
   for (let n = 0; n < count; n++) {
     let unit = key === "weapon" ? minionFor(p.weapon) : key;
@@ -395,6 +445,7 @@ export function summon(rt: CombatRuntime, key: string, count: number, ctx: Pick<
       power: (def.power ?? 0) * ctx.sup * (rt.v2?.mods.summonPower ?? 1), stat: ctx.stat, body };
     rt.units.push(u);
     enforceCaps(rt, u);
+    if (def.kind === "trap") fx(rt, ctx.fx?.zone, "zone", at, at, "ability", def.radius); // classes v2: the trap's glyph as it's set
   }
   if (source !== "weapon") floater(rt, ctx.pos, 2.1, UNITS[key]?.name ?? (key === "corpse" ? "Raise Shade" : "Summon"), "info");
 }
@@ -432,18 +483,16 @@ export function stepUnits(rt: CombatRuntime, me: Vec, dt: number, random: () => 
       continue;
     }
     if (d.kind === "trap") {
-      const e = foes.find(f => foe(f) && dist(u, f) <= d.radius! + f.type.radius);
-      if (e) {
-        strike(rt, e, { power: u.power, from: u, stat: u.stat, unit: true, knock: 0, status: { hold: 3 } }, random);
-        rt.blasts.push({ id: rt.seq++, x: u.x, z: u.z, radius: 1.4, color: "#ffe08a", age: 0, life: 0.5 });
-        rt.units = rt.units.filter(x => x !== u);
-      }
+      // A marked enemy draws a v2 trap's lunge from further off (the Hunter's Mark Prey).
+      const e = foes.find(f => foe(f) && dist(u, f) <= d.radius! + f.type.radius + (d.lunge && f.status.mark > 0 ? d.lunge : 0));
+      if (e) springTrap(rt, u, e, 1, random);
       continue;
     }
     if (d.kind === "decoy") continue;
     // Minions: the nearest foe within reach of both it and you, else back to your side.
     let target: Enemy | undefined, near = 9;
-    for (const e of foes) { const de = foe(e) && dist(e, me) < 12 ? dist(e, u) : Infinity; if (de < near) { near = de; target = e; } }
+    // A hound (d.prey) runs down marked enemies first, from anywhere in reach.
+    for (const e of foes) { const de = foe(e) && dist(e, me) < 12 ? dist(e, u) * (d.prey && e.status.mark > 0 ? 0.2 : 1) : Infinity; if (de < near) { near = de; target = e; } }
     const range = d.range ?? 1.5, gap = target ? dist(target, u) : dist(me, u);
     const goal = dist(me, u) > 12 || !target ? me : target;
     const stop = target && goal === target ? range * 0.8 : 1.4;
@@ -457,9 +506,9 @@ export function stepUnits(rt: CombatRuntime, me: Vec, dt: number, random: () => 
     if (d.ranged) {
       const g = dist(target, u) || 1;
       rt.projectiles.push({ id: rt.seq++, x: u.x, z: u.z, vx: ((target.x - u.x) / g) * 14, vz: ((target.z - u.z) / g) * 14, life: (range + 1) / 14, from: "player", damage: 0, kind: "bolt", radius: 0.2,
-        hit: { power: u.power, stat: u.stat, unit: true } });
+        hit: { power: u.power, stat: u.stat, unit: true, ult: u.source === rt.v2?.ult.key || undefined } });
     } else {
-      strike(rt, target, { power: u.power, from: u, stat: u.stat, unit: true, knock: 1.5 }, random);
+      strike(rt, target, { power: u.power, from: u, stat: u.stat, unit: true, knock: 1.5, ult: u.source === rt.v2?.ult.key || undefined }, random); // an ult's summons strike as the ult
       if (u.body) { u.body.state = "recover"; u.body.t = 0; }
     }
   }
@@ -472,7 +521,9 @@ export function hurtUnits(rt: CombatRuntime, lands: (u: Unit) => boolean, amount
 /** Where an enemy goes: a phantom or a bulwark crab near it draws it; a distracted one wanders home. (One scratch target: read it before the next call.) */
 const TARGET = { x: 0, z: 0, safe: false, alive: true };
 export function enemyTarget(rt: CombatRuntime, e: Enemy, player: Vec & { safe: boolean; alive: boolean }): Vec & { safe: boolean; alive: boolean } {
-  let t: Vec | null = e.status.distract > 0 ? { x: e.spawnX, z: e.spawnZ } : null, best = e.type.aggroRadius + 3;
+  // Hidden (a v2 stealth buff): only an enemy right beside you still finds you.
+  const lost = e.status.distract > 0 || (rt.v2 !== null && stealthed(rt) && Math.hypot(e.x - player.x, e.z - player.z) > FIRE.stealthNear);
+  let t: Vec | null = lost ? { x: e.spawnX, z: e.spawnZ } : null, best = e.type.aggroRadius + 3;
   if (!t) for (const u of rt.units) { const d = u.def.taunt ? dist(u, e) : Infinity; if (d < best) { best = d; t = u; } }
   if (!t) return player;
   TARGET.x = t.x; TARGET.z = t.z; TARGET.safe = player.safe; TARGET.alive = player.alive;

@@ -2,6 +2,8 @@
  * SQL seed for weapons, enemy types and missions (first block in
  * 20260926190000_combat_content.sql; changes: lib/seedMigrations.ts). Upserts,
  * so the content pass overwrites the first seed in 20260926150800_combat.sql.
+ * Classes v2 signature weapons (`subclass` set) are seeded by their family's own
+ * migration (`*_classes_v2_<family>_seed.sql`, with the subclass column), not here.
  */
 import { ENEMIES, MISSIONS } from "./content";
 import { WEAPONS } from "./weapons";
@@ -18,7 +20,7 @@ export function combatSeedSql(): string {
   return [
     SEED_BEGIN,
     `INSERT INTO weapons (${WEAPON_COLS.join(", ")}) VALUES`,
-    WEAPONS.map((w) => `  (${[q(w.key), q(w.name), q(w.type), w.tier, `ARRAY[${w.scaling.map(q).join(",")}]::text[]`, w.max_durability, w.repair_per_point].join(", ")})`).join(",\n"),
+    WEAPONS.filter((w) => !w.subclass).map((w) => `  (${[q(w.key), q(w.name), q(w.type), w.tier, `ARRAY[${w.scaling.map(q).join(",")}]::text[]`, w.max_durability, w.repair_per_point].join(", ")})`).join(",\n"),
     upsert(WEAPON_COLS),
     `INSERT INTO enemy_types (${ENEMY_COLS.join(", ")}) VALUES`,
     ENEMIES.map((e) => `  (${[q(e.key), q(e.name), q(e.kind), q(e.zone), e.level, e.hp, e.damage, e.defense, e.armor, e.aggro_radius, e.attack_range, e.leash_radius, e.xp, q(e.behaviour)].join(", ")})`).join(",\n"),

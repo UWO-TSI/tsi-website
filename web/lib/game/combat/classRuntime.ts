@@ -7,7 +7,7 @@
  * decides when they run. Pure over the runtime: the ruins scene and the balance bot drive it the same way.
  */
 import { classMods, holdsSignature, kitAt, signatureHint, withMods, type ClassAbility, type ClassKit, type ClassMods, type ClassUlt, type MovementPassive } from "@/lib/combat/classes";
-import type { Passive } from "@/lib/combat/kits";
+import type { Effect, Passive } from "@/lib/combat/kits";
 import { derived } from "@/lib/combat/progression";
 import { ultBlock, ULT } from "@/lib/combat/ult";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
@@ -15,6 +15,7 @@ import { CAST, context, floater, fx, runEffects, spend } from "./abilities";
 import { BUFFER, faceAim } from "./actions";
 import { chargePotency, createInputState, press, release, tick, type InputKit, type InputState, type Intent } from "./input";
 import { addKick, MOVE_NEEDS, moveOk, speedBonus } from "./moveHooks";
+import { breakStealth, createLive, justReloaded, reloadKey, stepFire, takeRounds, type FireState } from "./classFire";
 import { energyMax, V2_SLOT_IDS, type CombatRuntime } from "./runtime";
 import type { Vec } from "./sim";
 
@@ -40,8 +41,14 @@ export interface ClassState {
   /** Seconds a recast key's second press stays open. */
   recast: number[];
   meter: number;
-  /** The ult under way: seconds since the press (real time), where it aims, its seed, whether its hits landed (and a first-last ult's finisher). */
-  cast: { t: number; aim: Vec; seed: number; fired: boolean; last?: boolean } | null;
+  /**
+   * The ult under way: seconds since the press (real time), where it aims, its seed, whether its hits landed (and a
+   * first-last ult's finisher). `shift`: the sequence replays from the anticipation's end shifted this far (a finisher,
+   * or a hit that asks for it, `big` playing it larger).
+   */
+  cast: { t: number; aim: Vec; seed: number; fired: boolean; last?: boolean; shift?: number; big?: boolean } | null;
+  /** The kit's live counters: Focus, the cylinder, special rounds, the Killstreak, damage over time, zones (classFire.ts). */
+  live: FireState;
   moveCd: number;
   combatT: number;
   /** The input layer's clock (real seconds). */
@@ -63,6 +70,7 @@ export function equipClassKit(rt: CombatRuntime, kit: ClassKit, mastery: number,
     input: same?.input ?? createInputState(), inputKit: { inputs: keys.map(a => (a ? a.input ?? { kind: "tap" } : null)), combos: combos.map(c => c.keys) },
     cd: same?.cd ?? {}, queue: same?.queue ?? [], holding: same?.holding ?? keys.map(() => null), toggled: same?.toggled ?? keys.map(() => false), recast: same?.recast ?? keys.map(() => 0),
     meter: same?.meter ?? 0, cast: same?.cast ?? null, moveCd: same?.moveCd ?? 0, combatT: same?.combatT ?? 0, clock: same?.clock ?? 0,
+    live: same?.live ?? createLive(kit.fire?.ammo?.size),
     progress: progress ?? same?.progress ?? { into: 0, needed: 0 } };
   p.maxHp = Math.round(d.max_hp * mods.maxHp); p.hp = Math.min(p.hp, p.maxHp);
   p.energy = Math.min(p.energy, energyMax(rt));
@@ -74,6 +82,7 @@ function usable(rt: CombatRuntime, a: ClassAbility, me: Vec, energy = a.energy):
   if (!p.alive || p.dash || rt.casting || (v.cast && v.cast.t < v.ult.anticipation_ms / 1000 + ULT_BEATS.freeze)) return false;
   if (!holdsSignature(v.kit, weaponType(rt))) { floater(rt, me, 1.9, signatureHint(v.kit), "info"); return false; }
   if (a.when && !moveOk(a.when, p.move)) { floater(rt, me, 1.9, MOVE_NEEDS[a.when], "info"); return false; }
+  if (a.needs === "reloaded" && !justReloaded(rt)) { floater(rt, me, 1.9, "Right after a reload", "info"); return false; }
   if (p.energy < energy) { floater(rt, me, 1.9, "Not enough energy", "info"); return false; }
   return true;
 }
@@ -81,16 +90,32 @@ function usable(rt: CombatRuntime, a: ClassAbility, me: Vec, energy = a.energy):
 /** Run an ability's effects now (energy and cooldown paid unless told), with its tier, FX and clip. */
 function fire(rt: CombatRuntime, a: ClassAbility, me: Vec, potency = 1, opts: { cooldown?: boolean; effects?: ClassAbility["effects"]; energy?: boolean } = {}, random = Math.random) {
   const p = rt.player, v = rt.v2!;
+  // Rounds from the cylinder (the Gunslinger): none left, or reloading, and it doesn't fire.
+  let effects = opts.effects ?? a.effects;
+  if (a.ammo && !opts.effects) {
+    const got = takeRounds(rt, a.ammo);
+    if (!got) { floater(rt, me, 1.9, "Reload first", "info"); return; }
+    effects = roundsFired(effects, got.n, got.last);
+  }
   if (opts.energy !== false) spend(rt, a.energy);
   if (opts.cooldown !== false) v.cd[a.key] = a.cooldown_s;
   p.attackCd = Math.max(p.attackCd, 0.25); p.swing = 0.22;
   faceAim(p, me);
-  if (a.clip && "verb" in a.clip) p.clip = { verb: a.clip.verb, scale: a.clip.scale ?? 1, upper: true };
+  if (!a.effects.some(e => e.kind === "buff" && e.stat === "stealth")) breakStealth(rt); // acting gives you away
+  if (a.clip) p.clip = "verb" in a.clip ? { verb: a.clip.verb, scale: a.clip.scale ?? 1, upper: true } : { verb: a.clip.unique, scale: 1, upper: false };
   const ctx = context(rt, a, me, potency * (1 + (a.scale ? speedBonus(p.move.speed, a.scale.max) : 0)), p.aim);
   ctx.impact = a.heavy ? "heavy" : "ability"; ctx.fx = a.vfx;
   fx(rt, a.vfx?.cast, "cast", me, ctx.aim, ctx.impact);
   if (a.when === "airborne") p.kick = addKick(p.kick, 0, 0, 0, 0, true); // a short hang at an air cast
-  runEffects(rt, opts.effects ?? a.effects, ctx, random);
+  runEffects(rt, effects, ctx, random);
+}
+/** An ammo ability's shots: one per round taken; with Last Round, the last chamber's shot crits. */
+function roundsFired(effects: ClassAbility["effects"], n: number, last: boolean): ClassAbility["effects"] {
+  return effects.flatMap((e): Effect[] => {
+    if (e.kind !== "projectile") return [e];
+    const count = (e.count ?? 1) === 1 ? 1 : n;
+    return last && count > 1 ? [{ ...e, count: count - 1 }, { ...e, count: 1, spread: 0, crit: true }] : [{ ...e, count, crit: e.crit || (last && count === 1) || undefined }];
+  });
 }
 
 /** One intent: "done" (fired, or refused for good), "wait" (on cooldown, still inside its buffer). */
@@ -187,6 +212,8 @@ export function classKey(rt: CombatRuntime, slot: number, down: boolean) {
   if (!v) return;
   for (const intent of (down ? press : release)(v.input, v.inputKit, slot, v.clock)) v.queue.push({ intent, left: BUFFER });
 }
+/** R for a kit with a cylinder: reload, or the active reload (classFire.ts); false when R swaps weapons as before. */
+export const classReload = (rt: CombatRuntime, me: Vec) => reloadKey(rt, me);
 /** F (buffered like the slots). */
 export const pressUlt = (rt: CombatRuntime) => { rt.v2?.queue.push({ intent: { kind: "ult" }, left: ULT.buffer }); };
 
@@ -197,7 +224,7 @@ function startUlt(rt: CombatRuntime, me: Vec) {
   v.cast = { t: 0, aim: { ...p.aim }, seed: (rt.seq++ * 2246822519) >>> 0, fired: false };
   p.ultIframes = A + ULT_BEATS.freeze + ULT_BEATS.iframesAfter;
   faceAim(p, me);
-  if (v.ult.clip && "verb" in v.ult.clip) p.clip = { verb: v.ult.clip.verb, scale: v.ult.clip.scale ?? 1, upper: false };
+  if (v.ult.clip) p.clip = "verb" in v.ult.clip ? { verb: v.ult.clip.verb, scale: v.ult.clip.scale ?? 1, upper: false } : { verb: v.ult.clip.unique, scale: 1, upper: false };
   fx(rt, v.ult.vfx?.cast, "cast", me, p.aim, "ult");
 }
 
@@ -241,6 +268,7 @@ export function stepClass(rt: CombatRuntime, me: Vec, dt: number, real: number, 
     if (v.toggled[i] && a && !rt.units.some(u => u.source === a.key)) v.toggled[i] = false; // what it called is gone
   }
   v.moveCd = Math.max(0, v.moveCd - dt);
+  stepFire(rt, me, dt, random); // Focus, the cylinder, the Killstreak, stealth, a surge's shots, burns and zones
   p.ultIframes = Math.max(0, p.ultIframes - real);
   // The ult: its hits at the anticipation's end (A), its presentation (impact.ts) until the end.
   if (v.cast) {
@@ -254,13 +282,13 @@ export function stepClass(rt: CombatRuntime, me: Vec, dt: number, real: number, 
     }
     const span = v.ult.impacts === "first-last" ? v.ult.duration ?? 0 : 0;
     if (span > 0 && !v.cast.last && v.cast.t >= A + span && p.alive) { // the finisher: its hits, and the sequence plays again (ultView)
-      v.cast.last = true;
+      v.cast.last = true; v.cast.shift = span;
       p.ultIframes = ULT_BEATS.freeze + ULT_BEATS.iframesAfter; // nothing lands unseen in this freeze either
       const ctx = context(rt, v.ult, me, 1, p.aim);
       ctx.impact = "ult"; ctx.ult = true; ctx.fx = v.ult.vfx;
       runEffects(rt, v.ult.release ?? v.ult.effects, ctx, random);
     }
-    if (v.cast.t >= A + span + ULT_BEATS.end) v.cast = null;
+    if (v.cast.t >= A + (v.ult.duration ?? 0) + ULT_BEATS.end) v.cast = null;
   }
   // In combat (§1.3): something hunting or hitting you, a wave running or the boss engaged, and for 5 s after.
   const threat = rt.wave?.active || rt.bossEngaged || rt.enemies.some(e => THREAT.has(e.state) && e.status.distract <= 0 && Math.hypot(e.x - me.x, e.z - me.z) < e.type.aggroRadius + 4);

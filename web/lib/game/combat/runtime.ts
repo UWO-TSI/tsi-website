@@ -18,12 +18,22 @@ export interface ShotHit { power: number; stat?: Stat; tier?: number; pierce?: b
   /** Classes v2: the impact tier, an ult's own shot, the FX registry key its hit plays. */
   impact?: ImpactTier; ult?: boolean; fx?: string;
   /** Classes v2: the FX recipe thrown along the shot as it flies, in this ramp. */
-  travel?: string; ramp?: readonly [string, string, string] }
+  travel?: string; ramp?: readonly [string, string, string];
+  /**
+   * Classes v2 shots (classFire.ts): `pierces` more enemies it passes through; always a crit; a weak point (the inner
+   * fraction of a body's radius) that crits; a burning zone where it lands (a burn rides on `status.dot`); bomblets; ricochets;
+   * a pull toward `from`; a zip to the terrain it meets; a burst where it ends (a bomblet); a special round's key.
+   */
+  pierces?: number; crit?: boolean; weak?: number; zone?: { radius: number; life: number; power: number; fx?: string };
+  cluster?: { count: number; power: number; radius: number }; bounce?: number; pull?: number; grapple?: boolean;
+  burst?: { power: number; radius: number }; round?: string; from?: { x: number; z: number }; steady?: boolean }
 /**
  * `knock`: an enemy shot's push on you (its attack's knockback). `arc`: a lobbed shot's flight time (s): it flies over
  * everything and bursts where it lands (`radius` then is the burst's), the height following the arc (mobs.ts).
  */
-export interface Projectile { id: number; x: number; z: number; vx: number; vz: number; life: number; from: "player" | "enemy"; damage: number; kind: "arrow" | "bolt" | "rune" | "spore"; radius: number; hit?: ShotHit; knock?: number; arc?: number; source?: string }
+export interface Projectile { id: number; x: number; z: number; vx: number; vz: number; life: number; from: "player" | "enemy"; damage: number; kind: "arrow" | "bolt" | "rune" | "spore" | "bullet" | "harpoon"; radius: number; hit?: ShotHit; knock?: number; arc?: number; source?: string;
+  /** Classes v2: an arrow's drop (height above its launch line, falling under `g`; spent at the ground), and homing (turn rate, rad/s). */
+  fall?: { y: number; vy: number; g: number }; home?: number }
 /** Summons, totems, traps and decoys (kits.ts UNITS): `source` is the ability that made it ("weapon" for the summoning charm's wisps). */
 export interface Unit {
   id: number; def: UnitDef; source: string; x: number; z: number; hp: number; maxHp: number;

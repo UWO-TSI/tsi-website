@@ -9,7 +9,7 @@
  * Family waves add their kits to CLASS_KITS; today's kits (kits.ts) stay live until wave 5.
  */
 import type { Family } from "@/lib/oracle/engine";
-import type { Ability, Effect, Passive } from "./kits";
+import type { Ability, Effect, Passive, ShotLook } from "./kits";
 import { DEMO_KIT } from "./demoKit";
 
 export type Role = "tank" | "healer" | "damage" | "support";
@@ -62,6 +62,12 @@ export interface ClassAbility extends Ability {
   scale?: { by: "speed"; max: number };
   /** Support radius for heals, shields and buffs: solo only the caster; allies inside it in a future group. */
   allies?: number;
+  /** Classes v2: the key works only just after a reload (the Gunslinger's Quickdraw, within FIRE.reloaded s). */
+  needs?: "reloaded";
+  /** Classes v2: it fires rounds from the cylinder (all: what's left; its projectiles fire one per round, the last chamber's crit with Last Round). */
+  ammo?: number | "all";
+  /** The key's icon (an SVG under /assets/game/classes/). */
+  icon?: string;
 }
 
 export interface ClassUlt extends ClassAbility {
@@ -72,7 +78,35 @@ export interface ClassUlt extends ClassAbility {
   impacts: "first" | "first-last";
   /** A sustained ult's window in seconds (Titan, Thousand Arrows, World Tree): with impacts "first-last" its finisher (`release`) lands at the end with the full sequence again. */
   duration?: number;
+  /** "trigger": after the wind-up the sequence (freeze, flash, lines) waits for a hit that asks for it (the Russian Roulette's warhead), not the anticipation's end. */
+  sequence?: "trigger";
 }
+
+/**
+ * A v2 basic attack (left click; lib/game/combat/classFire.ts): `rate` shots a second (× the attack-speed stat; a Focus
+ * passive ramps it), each a shot of `power` at `speed` for `range`. `drop`: arrows fall under that gravity (u/s²) from
+ * chest height and are spent where they meet the ground. `weak`: a shot through the inner `weak` of a body's radius (its
+ * head or core) always crits. `ammo`: a cylinder of `size`, reloaded in `reload_s` (automatic when empty, or R); a second
+ * R inside the `gold` span of the bar (fractions) reloads at once and adds `bonus` damage to the next `size` shots, a
+ * miss adds `miss_s`. `rounds`: the special rounds an Effect "load" puts in the cylinder.
+ */
+export interface FireSpec {
+  rate: number; power: number; speed: number; range: number;
+  look?: ShotLook; drop?: number; weak?: number;
+  /** Its shots don't hold an enemy's chase (rapid fire would keep everything flinching). */
+  steady?: boolean;
+  ammo?: { size: number; reload_s: number; gold: [number, number]; bonus: number; miss_s: number };
+  rounds?: Record<string, RoundDef>;
+  /** The verb each shot plays on the upper body, at its timing scale, and the FX per phase. */
+  clip?: { verb: string; scale?: number };
+  vfx?: { cast?: string; travel?: string; impact?: string };
+}
+/**
+ * A special round: its power (× base hit); a splash at half power round its hit, or a `blast` at full power instead of a
+ * hit (it bursts on the first enemy or where it ends); its impact tier and FX; an ult round charges nothing; `big`
+ * replays the ult's sequence there, larger (the warhead).
+ */
+export interface RoundDef { power: number; splash?: number; blast?: number; tier?: "light" | "ability" | "heavy" | "ult"; vfx?: string; travel?: string; cast?: string; ult?: boolean; big?: boolean; crit?: boolean }
 
 /** A ruins-only movement passive that extends the movement combo (row 292): Air Step, Bone Surf, Vault. */
 export interface MovementPassive { name: string; description: string; on: "airJump" | "slide" | "dash" | "land"; energy: number; effects: Effect[]; cooldown_s?: number }
@@ -98,6 +132,10 @@ export interface ClassKit {
   mods?: { max_hp?: number; speed?: number; capacity?: number };
   /** Dev-only (the `?combat=demo` kit): never offered to members. */
   dev?: true;
+  /** Classes v2: the basic attack (left click), when the kit has its own (FireSpec). */
+  fire?: FireSpec;
+  /** Traps out at once, before the duration stat (it raises the cap: floor(traps × duration)). Else the shared cap. */
+  traps?: number;
 }
 
 export const COMBO_WINDOW = 0.4;
@@ -126,6 +164,8 @@ function scaleEffect(e: Effect, c: AbilityUpgrade): Effect {
     case "heal": return { ...e, amount: e.amount * p };
     case "buff": return { ...e, value: e.value * p, duration: e.duration * d };
     case "transform": return { ...e, duration: e.duration * d };
+    case "zone": return { ...e, radius: e.radius * r, life: e.life * d, ...(e.power ? { power: e.power * p } : {}) };
+    case "trigger": return { ...e, power: e.power * p, chain: e.chain * p };
     default: return e;
   }
 }
@@ -184,6 +224,7 @@ export function withMods<A extends ClassAbility>(a: A, m: ClassMods): A {
       case "transform": return { ...e, duration: e.duration * m.duration };
       case "shield": return { ...e, amount: e.amount * m.healing, duration: e.duration * m.duration };
       case "heal": return { ...e, amount: e.amount * m.healing };
+      case "zone": return { ...e, radius: e.radius * m.area, life: e.life * m.duration };
       default: return e;
     }
   };

@@ -20,6 +20,7 @@ import type { IncantationScore } from "@/lib/game/combat/contract";
 import { floaterNodes, noteNodes } from "./EncounterRender";
 import IncantationOverlay from "./IncantationOverlay";
 import ImpactOverlay from "./ImpactOverlay";
+import ClassGauges from "./ClassGauges";
 import styles from "../DefaultIslandWorld.module.css";
 
 export default function CombatHud({ player }: { player: React.RefObject<{ x: number; z: number }> }) {
@@ -51,7 +52,7 @@ export default function CombatHud({ player }: { player: React.RefObject<{ x: num
       <div className={styles.weaponLine}>
         <span>{w.name}</span>
         <small data-broken={p.durability[p.weapon] <= 0 || undefined}>Durability {p.durability[p.weapon]}/{w.maxDurability}{p.durability[p.weapon] <= 0 ? " · broken, half damage" : ""}</small>
-        <small className={styles.dodgePip} data-ready={p.dodgeCd <= 0 || undefined}><kbd>{keyName(dash)}</kbd> Dodge · <kbd>{keyName(keys.swap)}</kbd> Previous weapon</small>
+        <small className={styles.dodgePip} data-ready={p.dodgeCd <= 0 || undefined}><kbd>{keyName(dash)}</kbd> Dodge · <kbd>{keyName(keys.swap)}</kbd> {rt.v2?.kit.fire?.ammo ? "Reload" : "Previous weapon"}</small>
       </div>
       {kit && <small className={styles.kitLine}>{kit.subclass.name} · {kit.subclass.passive.name}{rt.transform ? ` · ${rt.transform.name}` : ""}
         {summons ? ` · Summons ${minions.reduce((n, u) => n + (u.def.cost ?? 1), 0)}/${kit.capacity}` : ""}{usesTotems ? ` · Totems ${totems.length}/${CAPS.totems}` : ""}</small>}
@@ -103,7 +104,8 @@ function ClassBar({ rt, keys }: { rt: CombatRuntime; keys: Record<string, string
           data-held={held !== null || undefined} data-on={v.toggled[i] || undefined} data-unarmed={!armed || undefined}
           title={a ? `${a.name}${a.input && a.input.kind !== "tap" ? ` (${INPUT_WORD[a.input.kind]})` : ""}: ${a.description} · ${a.cooldown_s ? `${a.cooldown_s.toFixed(1)} s · ` : ""}${a.energy} energy` : `${base.name}: opens at mastery ${base.unlock}`}>
           <span className={styles.sweep} style={{ "--sweep": `${left * 360}deg` } as React.CSSProperties}><kbd>{keyName(keys[id])}</kbd></span>
-          <span className={styles.slotName}>{a?.name ?? base.name}</span>
+          {/* eslint-disable-next-line @next/next/no-img-element -- a tiny static ability icon */}
+          <span className={styles.slotName}>{base.icon && <img src={base.icon} alt="" width={16} height={16} style={{ verticalAlign: "-3px", marginRight: 3 }} />}{a?.name ?? base.name}</span>
           <small>{!a ? `Mastery ${base.unlock}` : held !== null ? `${INPUT_WORD[a.input!.kind]}…` : cd > 0 ? `${cd.toFixed(cd < 1 ? 1 : 0)}s` : `${a.input && a.input.kind !== "tap" ? `${INPUT_WORD[a.input.kind]} · ` : ""}${a.energy}`}</small>
         </li>;
       })}</ol>
@@ -111,10 +113,11 @@ function ClassBar({ rt, keys }: { rt: CombatRuntime; keys: Record<string, string
         role="meter" aria-label={`${v.ult.name} charge`} aria-valuenow={Math.floor(v.meter)} aria-valuemin={0} aria-valuemax={ULT.max}
         title={`${v.ult.name}: ${v.ult.description}${ready ? " · ready" : ` · ${Math.floor(v.meter)}%`}`} style={{ "--meter": `${meter * 360}deg` } as React.CSSProperties}>
         {/* eslint-disable-next-line @next/next/no-img-element -- a tiny static class emblem */}
-        <img src={kit.look.icon} alt="" />
+        <img src={v.ult.icon ?? kit.look.icon} alt="" />
         <kbd>{keyName(keys.ult)}</kbd>
       </div>
     </div>
+    <ClassGauges rt={rt} swapKey={keys.swap} />
     {v.combos.length > 0 && <small className={styles.kitLine}>{v.combos.map(c => { const [a, b] = c.keys.map(i => keyName(keys[V2_SLOT_IDS[i]])); return `${a === b ? `${a} ${a}` : `${a} + ${b}`}: ${c.ability.name}`; }).join(" · ")}</small>}
     <div className={styles.masteryBar} role="meter" aria-label="Mastery" aria-valuenow={v.progress.into} aria-valuemin={0} aria-valuemax={v.progress.needed || 1}>
       <span style={{ width: `${v.progress.needed ? (v.progress.into / v.progress.needed) * 100 : 100}%` }} />

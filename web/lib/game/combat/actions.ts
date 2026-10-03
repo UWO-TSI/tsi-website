@@ -15,6 +15,8 @@ import type { SpawnPoint } from "./spawns";
 import { FAMILY_STAT } from "@/lib/combat/kits";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { MOVE_TUNING, type MoveTuning } from "@/lib/game/movement/sim";
+import { holdsSignature } from "@/lib/combat/classes";
+import { addZone, burst, FIRE, fireBasic, onHurt, ricochet, scatter } from "./classFire";
 
 /** Energy regen: after ENERGY.delay seconds without spending, never while tracing. */
 export function regenEnergy(rt: CombatRuntime, dt: number) {
@@ -49,6 +51,9 @@ export function combatFacing(p: CombatRuntime["player"], at: Vec, travel: number
 export function attack(rt: CombatRuntime, player: Vec, random = Math.random): boolean {
   const p = rt.player;
   if (!p.alive || p.attackCd > 0 || rt.casting || p.dash || (p.dodgeAge !== null && p.dodgeAge < DODGE.duration)) return false;
+  // Classes v2: a kit with its own basic attack fires it from its signature weapon (classFire.ts); any other weapon swings its own.
+  const kit = rt.v2?.kit;
+  if (kit?.fire && holdsSignature(kit, SYSTEM_WEAPONS.find(x => x.key === p.weapon)?.type)) { faceAim(p, player); return fireBasic(rt, player); }
   const w = WEAPONS[p.weapon];
   p.attackCd = w.cooldown / (rt.v2?.mods.attackSpeed ?? 1);
   faceAim(p, player);
@@ -82,12 +87,28 @@ export function resolvePlayerShot(rt: CombatRuntime, shotIdx: number, from: Vec,
     if (s.kind === "bolt") splash(rt, to, 1.3, target, { power: 0.5, from: to, knock: 2 }, random);
     return true;
   }
-  strike(rt, target, { power: h.power, from, knock: h.unit ? 1 : knock, stat: h.stat, tier: h.tier, unit: h.unit, status: h.status, impact: h.impact, ult: h.ult, first: !h.hitIds?.length }, random);
+  if (h.burst) { burst(rt, to, h.burst.power, h.burst.radius, h, random); return true; } // a bomblet or a blast round bursts on contact
+  // Classes v2: a weak point (the shot through the inner part of the body) always crits; a harpoon pulls toward you.
+  const crit = h.crit || (!!h.weak && lineDist(target, from, to) <= Math.min(h.weak * target.type.radius, FIRE.weakMax)), me = rt.player.last;
+  const pull = h.pull && me ? { from: me, knock: -h.pull * 8 } : null;
+  strike(rt, target, { power: h.power, from: pull?.from ?? from, knock: pull?.knock ?? (h.unit ? 1 : h.steady ? 0 : knock), stat: h.stat, tier: h.tier, unit: h.unit, status: h.status, impact: h.impact, ult: h.ult, first: !h.hitIds?.length, crit: crit || undefined, steady: h.steady }, random);
   fx(rt, h.fx, "impact", to, to, h.impact ?? "ability");
-  if (h.splash) splash(rt, to, h.splash, target, { power: h.power * 0.5, from: to, knock: 2, stat: h.stat, tier: h.tier }, random);
+  if (h.splash) {
+    if (rt.v2) burst(rt, to, h.power * 0.5, h.splash, h, random, target, false); // its FX is the hit's, above
+    else splash(rt, to, h.splash, target, { power: h.power * 0.5, from: to, knock: 2, stat: h.stat, tier: h.tier }, random);
+  }
+  if (h.cluster) scatter(rt, to, h.cluster, h, random, target);
+  if (h.zone) addZone(rt, to, h.zone);
+  if (h.bounce) { (h.hitIds ??= []).push(target.id); return !ricochet(rt, s, target); }
+  if (h.pierces) { h.pierces--; (h.hitIds ??= []).push(target.id); return false; }
   if (!h.pierce) return true;
   h.hitIds!.push(target.id);
   return false;
+}
+/** How far `p` is off the shot's line through a→b (its path, not just this frame's step): a weak point's test. */
+function lineDist(p: Vec, a: Vec, b: Vec): number {
+  const dx = b.x - a.x, dz = b.z - a.z, l = Math.hypot(dx, dz);
+  return l > 1e-6 ? Math.abs(dx * (p.z - a.z) - dz * (p.x - a.x)) / l : Math.hypot(p.x - a.x, p.z - a.z);
 }
 function splash(rt: CombatRuntime, at: Vec, r: number, skip: Enemy, src: Parameters<typeof strike>[2], random: () => number) {
   rt.blasts.push({ id: rt.seq++, x: at.x, z: at.z, radius: r, color: "#b48cff", age: 0, life: 0.35 });
@@ -144,6 +165,7 @@ export function hurtPlayer(rt: CombatRuntime, amount: number, from: Vec, player:
   if (!p.alive || p.safe || p.ultIframes > 0) return 0; // an ult's wind-up and freeze: nothing lands unseen
   if (invulnerable(p.dodgeAge) || p.dash?.iframes) { floater(rt, player, 1.7, "Dodged", "info"); return 0; }
   chargeUlt(rt, takenCharge(amount, p.maxHp)); // aimed at you, before guard, block and shield (§1.2)
+  onHurt(rt); // classes v2: Focus halves, a Killstreak ends, stealth breaks
   const { damage } = mitigate(rt, amount, from, player, random); // the seeded roll in the balance runs (a block's counter can crit)
   p.hurt = 0.35;
   if (rt.kit?.subclass.passive.kind !== "poise") {
