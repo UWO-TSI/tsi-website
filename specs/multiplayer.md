@@ -141,6 +141,7 @@ New top-level package at `realtime/`.
 **How they are enforced.**
 - `matchMaker.controller.getCorsHeaders` echoes only allowed origins, with `Allow-Headers: authorization, content-type` and `Allow-Credentials: false`.
 - `beforeUpgrade` rejects disallowed `Origin`.
+- `@colyseus/sdk` fetches matchmake with `credentials: "include"` by default. The client sets `client.http.options.credentials = "omit"` right after `new Client(...)`, since the server never allows credentials.
 - The WebSocket transport gets `maxPayload: 4096`.
 - There is no CSP today (no `connect-src` in `next.config.ts` or middleware). If one is added later it must include the realtime origin.
 
@@ -223,6 +224,7 @@ New top-level package at `realtime/`.
 - **Drop:** `onDrop` gives `allowReconnection(client, 20)`, or 120 s for phones (iOS suspends sockets). The player is flagged `away` and their nameplate dims.
 - **Reconnect:** `onReconnect` clears `away`.
 - **Leave:** `onLeave` removes the player and frees their seat.
+- **Where refusals come from** (Colyseus 0.18): static `onAuth` runs in the matchmake HTTP POST, so its refusals arrive as HTTP **401** (token: refresh and retry once, like 4001) or **403** (origin). Refusals in `onJoin` arrive as 4xxx codes (4001, 4002, 4006, 4007). The contract's `joinRefusal(code)` maps both.
 - **Client close codes:**
 
 | Code | Meaning | Client does |
@@ -232,6 +234,7 @@ New top-level package at `realtime/`.
 | 4003 | Kicked for movement | Log it, stay offline |
 | 4004 | Replaced by a newer tab | "Play here" button |
 | 4006 | Old version | "Reload to see others" |
+| 4007 | Busy (player card timed out or database down) | Rejoin with backoff 2/4/8/16/30 s |
 | 4010 | Server restart | Rejoin after jitter |
 | Abnormal | Dropped connection | SDK auto-reconnect inside the grace window, then rejoin with backoff 2/4/8/16/30 s |
 
