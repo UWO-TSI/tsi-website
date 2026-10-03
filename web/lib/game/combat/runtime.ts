@@ -31,7 +31,7 @@ export interface ShotHit { power: number; stat?: Stat; tier?: number; pierce?: b
    * bomblets; ricochets; a pull toward you; a zip to the terrain it meets (`grapple`: its FX); an area `blast` where it
    * ends or on the first enemy (a bomblet, a blast round); a special round's key; a hit that doesn't hold a chase.
    */
-  pierces?: number; weak?: number; zone?: { radius: number; life: number; power: number; fx?: string };
+  pierces?: number; weak?: number; zone?: { radius: number; life: number; power: number; fx?: string; ramp?: readonly [string, string, string] };
   cluster?: { count: number; power: number; radius: number; fx?: string }; bounce?: number; pull?: number; grapple?: string;
   blast?: { power: number; radius: number }; round?: string; steady?: boolean }
 /**
