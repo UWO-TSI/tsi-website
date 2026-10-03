@@ -77,9 +77,9 @@ export function keeperYaw(rest: number, kx: number, kz: number, px: number, pz: 
  * Whether a keeper says hello now: once as you come in (`entry`, after the fade), then each time you walk up from
  * further away, after the quiet spell; never over a line they are already saying.
  */
-export function keeperGreets(s: { entry: boolean; near: boolean; wasNear: boolean; now: number; quietUntil: number; talking: boolean }): boolean {
-  if (s.talking) return false;
-  return s.entry || (s.near && !s.wasNear && s.now >= s.quietUntil);
+export function keeperGreets(entry: boolean, near: boolean, wasNear: boolean, now: number, quietUntil: number, talking: boolean): boolean {
+  if (talking) return false;
+  return entry || (near && !wasNear && now >= quietUntil);
 }
 
 /** Seconds of talking (the painted mouth) for a line: about a syllable a beat, a little lead-in. */

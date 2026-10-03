@@ -28,6 +28,10 @@ export interface InteriorStation {
   range?: number;
 }
 
+/** A walk constraint's answer, reused (the walker reads it at once): rooms' constraints return this, never a new array. */
+const STEP: [number, number] = [0, 0];
+export function stepTo(x: number, z: number): [number, number] { STEP[0] = x; STEP[1] = z; return STEP; }
+
 export interface RoomBounds {
   halfW: number;
   halfD: number;
@@ -140,7 +144,7 @@ export function InteriorPlayer({
       seatRef.current = null; motion.current.pose = null;
     } else if (seat) {
       p.x = seat.x; p.z = seat.z;
-      Object.assign(motion.current, { speed: 0, yaw: seat.yaw, lift: seat.lift });
+      motion.current.speed = 0; motion.current.yaw = seat.yaw; motion.current.lift = seat.lift;
       groupRef.current?.position.set(p.x, 0, p.z);
       playerPosRef.current.set(p.x, 0, p.z);
       followInteriorCamera(camera, p.x, p.z, delta);
@@ -168,7 +172,7 @@ export function InteriorPlayer({
     if (moving) {
       const nx = THREE.MathUtils.clamp(p.x + vx * PLAYER_SPEED * delta, -bounds.halfW + WALK_MARGIN, bounds.halfW - WALK_MARGIN);
       const nz = THREE.MathUtils.clamp(p.z + vz * PLAYER_SPEED * delta, -bounds.halfD + WALK_MARGIN, bounds.halfD - WALK_MARGIN);
-      [p.x, p.z] = constrainMove ? constrainMove(p.x, p.z, nx, nz) : [nx, nz];
+      if (constrainMove) { const c = constrainMove(p.x, p.z, nx, nz); p.x = c[0]; p.z = c[1]; } else { p.x = nx; p.z = nz; }
       onMove(p.x, p.z);
       playerPosRef.current.set(p.x, 0, p.z);
     }
@@ -261,6 +265,16 @@ export function Piece({ name, position, rotY = 0, rotX = 0, scale = 0.1, tint, g
 
 export function preloadPieces(names: string[]): void {
   names.forEach((n) => useGLTF.preload(pieceUrl(n)));
+}
+
+/** Module scope (the react compiler forbids writing through hook values). */
+function reportIfChanged(last: { current: InteriorStation | null | undefined }, s: InteriorStation | null, report: (s: InteriorStation | null) => void) {
+  if (s !== last.current) { last.current = s; report(s); }
+}
+/** A room walker's `onMove`: reports the nearest station only when it changes, never a React update per step. */
+export function useNearestStation(stations: InteriorStation[], report: (s: InteriorStation | null) => void) {
+  const last = useRef<InteriorStation | null | undefined>(undefined);
+  return useCallback((x: number, z: number) => reportIfChanged(last, nearestStation(stations, x, z), report), [stations, report]);
 }
 
 /** Nearest-station helper shared by all rooms. */

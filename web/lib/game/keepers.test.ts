@@ -53,13 +53,16 @@ describe("indoor keepers (interiors deliverable 1)", () => {
   });
 
   it("says hello as you come in, then only when you walk up after a quiet spell, never over a line", () => {
-    const base = { entry: false, near: false, wasNear: false, now: 100, quietUntil: 0, talking: false };
-    expect(keeperGreets({ ...base, entry: true })).toBe(true);
-    expect(keeperGreets({ ...base, entry: true, talking: true })).toBe(false);
-    expect(keeperGreets({ ...base, near: true })).toBe(true);
-    expect(keeperGreets({ ...base, near: true, wasNear: true })).toBe(false);          // still near: no repeat
-    expect(keeperGreets({ ...base, near: true, quietUntil: 100 + KEEPER_QUIET_S })).toBe(false);
-    expect(keeperGreets({ ...base, near: false })).toBe(false);
+    const greets = (s: Partial<{ entry: boolean; near: boolean; wasNear: boolean; now: number; quietUntil: number; talking: boolean }>) => {
+      const o = { entry: false, near: false, wasNear: false, now: 100, quietUntil: 0, talking: false, ...s };
+      return keeperGreets(o.entry, o.near, o.wasNear, o.now, o.quietUntil, o.talking);
+    };
+    expect(greets({ entry: true })).toBe(true);
+    expect(greets({ entry: true, talking: true })).toBe(false);
+    expect(greets({ near: true })).toBe(true);
+    expect(greets({ near: true, wasNear: true })).toBe(false);          // still near: no repeat
+    expect(greets({ near: true, quietUntil: 100 + KEEPER_QUIET_S })).toBe(false);
+    expect(greets({ near: false })).toBe(false);
     expect(KEEPER_NOTICE).toBeGreaterThan(2.5);
   });
 });

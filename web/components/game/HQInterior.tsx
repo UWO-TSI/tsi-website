@@ -18,7 +18,7 @@ import InteriorDaylight from "./InteriorDaylight";
 import TickingClock from "./TickingClock";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import {
-  InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
+  InteriorPlayer, Piece, applyInteriorBackdrop, preloadPieces, useNearestStation,
   type InteriorStation, type RoomBounds,
 } from "./interiorShared";
 import Keeper from "./Keeper";
@@ -78,7 +78,7 @@ export default function HQInterior({
 
   useEffect(() => applyInteriorBackdrop(scene), [scene]);
 
-  const handleMove = (x: number, z: number) => onNearestStation(nearestStation(stations, x, z));
+  const handleMove = useNearestStation(stations, onNearestStation);
 
   const onFloorClick = (e: ThreeEvent<MouseEvent>) => {
     window.dispatchEvent(new CustomEvent("tsi:interior-move", { detail: { x: e.point.x, z: e.point.z } }));

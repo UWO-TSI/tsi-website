@@ -15,7 +15,7 @@ import { ISLAND_LIGHTING, type IslandLight } from "@/lib/game/islandLighting";
 import { interiorLight } from "@/lib/game/interiorLight";
 import InteriorDaylight from "./InteriorDaylight";
 import {
-  InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
+  InteriorPlayer, Piece, applyInteriorBackdrop, preloadPieces, useNearestStation,
   type InteriorStation, type RoomBounds,
 } from "./interiorShared";
 import Keeper from "./Keeper";
@@ -46,6 +46,7 @@ export default function ShopInterior({
   const { scene } = useThree();
   useEffect(() => applyInteriorBackdrop(scene), [scene]);
   const lamps = interiorLight(light).lamps;
+  const onMove = useNearestStation(SHOP_STATIONS, onNearestStation);
 
   return (
     <group>
@@ -79,7 +80,7 @@ export default function ShopInterior({
         frozen={frozen}
         bounds={BOUNDS}
         playerPosRef={playerPosRef}
-        onMove={(x, z) => onNearestStation(nearestStation(SHOP_STATIONS, x, z))}
+        onMove={onMove}
       />
     </group>
   );

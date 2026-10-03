@@ -30,6 +30,8 @@ export const HQ_PENDANTS = [
 
 const HQ_FURNITURE = Object.values(HQ_LAYOUT).flatMap(piece => piece.footprint
   ? [[piece.position[0], piece.position[2], ...piece.footprint]] : []);
+/** The walker reads the answer at once: one tuple reused, nothing allocated per step. */
+const OUT: [number, number] = [0, 0];
 export function constrainClubhouse(x: number, z: number, nx: number, nz: number): [number, number] {
   const fits = (px: number, pz: number) => !HQ_FURNITURE.some(([cx, cz, w, d]) => Math.abs(px - cx) < w + 0.2 && Math.abs(pz - cz) < d + 0.2);
   const steps = Math.max(1, Math.ceil(Math.hypot(nx - x, nz - z) / 0.15));
@@ -40,5 +42,6 @@ export function constrainClubhouse(x: number, z: number, nx: number, nz: number)
     else if (fits(x, z + dz)) z += dz;
     else break;
   }
-  return [x, z];
+  OUT[0] = x; OUT[1] = z;
+  return OUT;
 }

@@ -12,7 +12,7 @@ import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useThree } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
-import { InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces, type InteriorStation, type RoomBounds } from "../interiorShared";
+import { InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces, stepTo, type InteriorStation, type RoomBounds } from "../interiorShared";
 import Keeper from "../Keeper";
 import { RoomShell, preloadShells, registerShellMaterial, useKitPiece } from "../RoomShell";
 import { GLBProp } from "../NatureModels";
@@ -162,7 +162,7 @@ export default function MuseumInterior({ wings, frozen, talking = false, player,
   // Cases in two rows per wing; keep the centre aisle and the curator desk clear.
   const constrain = (x: number, z: number, nx: number, nz: number): [number, number] => {
     const blocked = (px: number, pz: number) => pz > 0.6 || (Math.abs(px + 2.2) < 1 && Math.abs(pz + 1.3) < 0.6);
-    return !blocked(nx, nz) ? [nx, nz] : !blocked(nx, z) ? [nx, z] : !blocked(x, nz) ? [x, nz] : [x, z];
+    return !blocked(nx, nz) ? stepTo(nx, nz) : !blocked(nx, z) ? stepTo(nx, z) : !blocked(x, nz) ? stepTo(x, nz) : stepTo(x, z);
   };
   return <>
     {/* The museum keeps the island's hours: the day through its windows and clerestory, the case lights warm at night. */}

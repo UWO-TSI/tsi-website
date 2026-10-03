@@ -12,7 +12,7 @@ import { Suspense, useEffect } from "react";
 import { useThree, type ThreeEvent } from "@react-three/fiber";
 import { AudioManager } from "@/lib/game/audio";
 import {
-  InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
+  InteriorPlayer, Piece, applyInteriorBackdrop, preloadPieces, useNearestStation,
   type InteriorStation, type RoomBounds,
 } from "./interiorShared";
 import Keeper from "./Keeper";
@@ -37,6 +37,7 @@ export default function WharfShackInterior({
 }) {
   const { scene } = useThree();
   useEffect(() => applyInteriorBackdrop(scene, "#152028"), [scene]);
+  const onMove = useNearestStation(WHARF_STATIONS, onNearestStation);
 
   const onFloorClick = (e: ThreeEvent<MouseEvent>) => {
     window.dispatchEvent(new CustomEvent("tsi:interior-move", { detail: { x: e.point.x, z: e.point.z } }));
@@ -85,7 +86,7 @@ export default function WharfShackInterior({
         frozen={frozen}
         bounds={BOUNDS}
         playerPosRef={playerPosRef}
-        onMove={(x, z) => onNearestStation(nearestStation(WHARF_STATIONS, x, z))}
+        onMove={onMove}
       />
     </group>
   );

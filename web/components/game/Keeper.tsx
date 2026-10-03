@@ -66,7 +66,7 @@ function step(r: Runtime, room: KeeperRoom, m: CharacterMotion, g: THREE.Group |
   if (!r.ready) { r.ready = true; m.yaw = at.yaw; }
   const near = Math.hypot(p.x - r.x, p.z - r.z) < KEEPER_NOTICE;
   const entry = !r.entered && r.entryAt !== null && now >= r.entryAt && now >= (quietBySlug.get(r.slug) ?? 0);
-  if (r.pending === null && keeperGreets({ entry, near, wasNear: r.near, now, quietUntil: r.quietUntil, talking: busy })) {
+  if (r.pending === null && keeperGreets(entry, near, r.near, now, r.quietUntil, busy)) {
     r.pending = r.lines[r.next++ % r.lines.length]; r.wave = true;
   }
   if (r.entryAt !== null && now >= r.entryAt) r.entered = true;

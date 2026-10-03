@@ -12,7 +12,7 @@ import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useThree } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
-import { InteriorPlayer, applyInteriorBackdrop, nearestStation, type InteriorStation, type RoomBounds } from "../interiorShared";
+import { InteriorPlayer, applyInteriorBackdrop, nearestStation, stepTo, type InteriorStation, type RoomBounds } from "../interiorShared";
 import { useKitPiece } from "../RoomShell";
 import { PlacementLayer, type GridMapping } from "./PlacementLayer";
 import { CLUBHOUSE_LIGHTING, ISLAND_LIGHTING, type IslandLight } from "@/lib/game/islandLighting";
@@ -126,10 +126,10 @@ export default function HomeInterior({ layout, phase, light: islandLight, frozen
       && !dividers.some(d => Math.abs(x - d) < 0.4 && Math.abs(z) > 0.75);
     return (x: number, z: number, nx: number, nz: number): [number, number] => {
       // Getting out of bed: from inside furniture any step is allowed.
-      if (free(nx, nz) || !free(x, z)) return [nx, nz];
-      if (free(nx, z)) return [nx, z];
-      if (free(x, nz)) return [x, nz];
-      return [x, z];
+      if (free(nx, nz) || !free(x, z)) return stepTo(nx, nz);
+      if (free(nx, z)) return stepTo(nx, z);
+      if (free(x, nz)) return stepTo(x, nz);
+      return stepTo(x, z);
     };
   }, [blocked, n]);
   const stations: InteriorStation[] = useMemo(() => [

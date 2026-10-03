@@ -24,7 +24,7 @@ import { RoomShell, preloadShells, registerShellMaterial, useKitPiece } from "./
 import CandleFire, { type Wick } from "./oracle/CandleFire";
 import { worldTime } from "@/lib/game/worldClock";
 import {
-  InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
+  InteriorPlayer, Piece, applyInteriorBackdrop, preloadPieces, useNearestStation,
   type InteriorStation, type RoomBounds,
 } from "./interiorShared";
 import Keeper from "./Keeper";
@@ -173,6 +173,7 @@ export default function OracleInterior({
   const { scene } = useThree();
   useEffect(() => applyInteriorBackdrop(scene, "#100D18"), [scene]);
   const day = interiorLight(light).day;
+  const onMove = useNearestStation(ORACLE_STATIONS, onNearestStation);
   useEffect(() => lightRose(day), [day]);
 
   return (
@@ -206,7 +207,7 @@ export default function OracleInterior({
         frozen={frozen}
         bounds={BOUNDS}
         playerPosRef={playerPosRef}
-        onMove={(x, z) => onNearestStation(nearestStation(ORACLE_STATIONS, x, z))}
+        onMove={onMove}
       />
     </group>
   );
