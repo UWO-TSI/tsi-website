@@ -9,6 +9,8 @@ import { createRuntime, type CombatRuntime } from "./runtime";
 import { inRect, shellFactor, spawnEnemy } from "./sim";
 import { ENEMIES } from "./data";
 import { SPAWNS } from "./spawns";
+import { installCombatDemo } from "./demo";
+import { presetAllocation } from "@/lib/combat/progression";
 
 /** A page with this query (`?combat=demo` turns the playtest on), with its own localStorage. */
 function page(search: string) {
@@ -181,5 +183,27 @@ describe("the spawner", () => {
     expect(dpsView(rt)).toMatchObject({ total: 400, dps: 80 });
     for (let i = 0; i < 120; i++) playtestFrame(rt, me, 0.05);
     expect(dpsView(rt).dps).toBe(0);
+  });
+});
+
+describe("the demo's class switch (the panel's dev-class)", () => {
+  it("moves to another family's subclass and mastery in place, as a fresh demo would start it", async () => {
+    vi.stubGlobal("window", { location: { search: "?combat=demo&classes=v2&subclass=elementalist&mastery=20&traits=all", origin: "http://localhost" }, fetch: vi.fn() });
+    installCombatDemo();
+    const post = async (path: string, body: unknown) => (await window.fetch(path, { method: "POST", body: JSON.stringify(body) })).json();
+    const view = async () => (await (await window.fetch("/api/combat/progression")).json()).progression;
+    expect((await view()).classes).toMatchObject({ kit: "elementalist", mastery: { mastery: 20 } });
+    const other = classRows().find(r => r.kit && r.family !== "Arcane");
+    if (!other) return; // only the Arcane wave has landed
+    const r = await post("/api/combat/dev-class", { subclass: other.key, mastery: 7 });
+    expect(r.ok).toBe(true);
+    const v = await view();
+    expect(v).toMatchObject({ family: other.family, subclass_key: other.key, stats: presetAllocation(other.family, v.level), classes: { kit: other.key, mastery: { mastery: 7 } } });
+    const sig = bestSignature(other.key, r.owned);
+    expect(sig).not.toBeNull();
+    expect((await post("/api/combat/equip", { weapon: sig })).ok).toBe(true);
+    expect((await view()).weapons.find((w: { equipped?: boolean }) => w.equipped)?.weapon_key).toBe(sig); // a re-read keeps it in hand
+    expect((await post("/api/combat/dev-class", { subclass: "transmuter", mastery: 1 })).ok).toBe(true);
+    expect((await view()).traits).toMatchObject({ "crab-shell": 1, "wisp-core": 1, "pollen-swarm": 1, "golem-fist": 1 }); // every form learned
   });
 });
