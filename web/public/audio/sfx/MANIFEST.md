@@ -12,8 +12,7 @@ real generated SFX are pending.
 | Bug flees | `exit` | `VillageLife.tsx` |
 | Clue nearby | `blip3` | `VillageLife.tsx` |
 | Flower pick | `confirm` | `FlowerPickFX.tsx` |
-| Fish bite / land | `blip1` / `blip2` | `FishingBobber.tsx` |
-| Fish reveal | `confirm` | `FishReveal.tsx` |
+| Fishing (polish, `specs/polish/fishing.md` §6) | the meter's max cast and the bite's "!" `confirm`, the reel bar knocking its end `click` (0.75, 0.4), the catch card developing `confirm`; nothing else (no blips, no doors: the gaps are listed in `specs/polish/fishing-questions.md`) | `FishingOverlay.tsx`, `FishReveal.tsx` |
 | Tree shake | `exit` (knock) → `confirm` (drop) | `TreeShakeFX.tsx` |
 | Collection page turn | `click` / `blip1` | `CollectionBook.tsx` |
 
