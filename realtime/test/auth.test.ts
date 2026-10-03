@@ -1,5 +1,6 @@
 // specs/multiplayer.md §7 realtime/test/auth.test.ts: the token, origin and card gates.
 // The room-level codes (4001/4002/4006 on a real join) are in island.test.ts.
+import { readdirSync, readFileSync } from "node:fs";
 import { SignJWT } from "jose";
 import WebSocket from "ws";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -166,7 +167,7 @@ const CARD: PlayerCard = {
   look: { body: "v7" },
   family: "Warden",
   level: 12,
-  subclass: "lantern",
+  subclass: "druid",
   mastery: 3,
   aura: "mastery:colour",
   frame: null,
@@ -182,6 +183,16 @@ describe("card loader", () => {
     expect(Object.keys(PlayerCardSchema.shape).sort()).toEqual([...CARD_FIELDS].sort());
     expect(PlayerCardSchema.safeParse(CARD).success).toBe(true);
     expect(PlayerCardSchema.safeParse({ ...CARD, display_name: "Real Name" }).success).toBe(false);
+  });
+
+  it("matches the keys the migration's realtime_player_card builds", () => {
+    const dir = new URL("../../web/supabase/migrations/", import.meta.url);
+    const file = readdirSync(dir).find((f) => f.endsWith("_realtime_card.sql"));
+    expect(file).toBeDefined();
+    const sql = readFileSync(new URL(file!, dir), "utf8");
+    const body = sql.slice(sql.indexOf("jsonb_build_object("), sql.indexOf("FROM profiles"));
+    const keys = [...body.matchAll(/^\s*'([a-z_0-9]+)',/gm)].map((m) => m[1]);
+    expect(keys.sort()).toEqual([...CARD_FIELDS].sort());
   });
 
   it("caches a card for 60 s per user", async () => {
