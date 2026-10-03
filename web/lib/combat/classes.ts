@@ -11,6 +11,7 @@
 import type { Family } from "@/lib/oracle/engine";
 import type { Ability, Effect, Passive, ShotLook } from "./kits";
 import { DEMO_KIT } from "./demoKit";
+import { RANGER_KITS } from "./rangerKits";
 
 export type Role = "tank" | "healer" | "damage" | "support";
 /** Future co-op threat per role (§1.12): a tank's hits draw 2.5×. Kit data now so groups need no rewrite. */
@@ -142,7 +143,7 @@ export const COMBO_WINDOW = 0.4;
 export const MAX_KEYS = 5;
 
 /** Every v2 kit. Family waves append theirs. */
-export const CLASS_KITS: ClassKit[] = [DEMO_KIT];
+export const CLASS_KITS: ClassKit[] = [DEMO_KIT, ...RANGER_KITS];
 /** Display names that changed with the class designs (the key stays; David 2026-10-02: Monk → Martial Artist). */
 export const CLASS_RENAMES: Record<string, string> = { monk: "Martial Artist" };
 export const classKit = (key: string | null | undefined) => CLASS_KITS.find(k => k.key === key) ?? null;
