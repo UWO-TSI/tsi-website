@@ -1,11 +1,11 @@
 "use client";
 
 /**
- * The wharf (specs/polish/arrival-wharf.md deliverable 1): the timber
+ * The wharf, and the home island's pier to match (specs/polish/arrival-wharf.md deliverables 1 and 2): the timber
  * jetty modelled in Blender (art/wharf/build_wharf.py: weathered boards, piles with their wet band and weed, a rope
  * rail hung pile to pile, the end rail at the tip to lean on and fish, fenders, cleats, a coil of line), the boat
  * moored alongside the tip on its lines, and two buoys marking its lane, everything riding the shared swell. Placed
- * on a dock (the wharf landmark's spot and yaw), in that dock's frame.
+ * on a dock (the wharf landmark's spot and yaw, or the home island's HOME_PIER), in that dock's frame.
  */
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
