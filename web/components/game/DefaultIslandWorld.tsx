@@ -809,12 +809,15 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (site === "ruins" && !readHeld().held) holdItem(`weapon:${combat.rt.player.weapon}`);
   }, [wheelItems, site]);
   // A weapon from the wheel goes in hand (and, picked outside a fight's quick swap, becomes your default on the server);
-  // R's swap back in the ruins moves the wheel with it.
+  // R's swap back in the ruins moves the wheel with it. Keyed on the pick, not the item object: the wheel's contents are
+  // rebuilt when your weapons load, and a fresh object for the same pick took the old weapon back from the one you have
+  // equipped (that and the swap below then traded the two every render: React's update-depth error in the ruins).
+  const heldWeapon = held?.kind === "weapon" ? held.key : null;
   useEffect(() => {
-    if (held?.kind !== "weapon" || !setWeapon(combat.rt, held.key)) return;
+    if (!heldWeapon || !setWeapon(combat.rt, heldWeapon)) return;
     publishCombat();
-    void apiCall("/api/combat/equip", "equip", { weapon: held.key }).catch(() => {});
-  }, [held]);
+    void apiCall("/api/combat/equip", "equip", { weapon: heldWeapon }).catch(() => {});
+  }, [heldWeapon]);
   useEffect(() => { if (site === "ruins" && readHeld().held !== `weapon:${runtimeWeapon}`) holdItem(`weapon:${runtimeWeapon}`); }, [site, runtimeWeapon]);
   // What's in reach for the held tool, and what left click does with it.
   const reach: Reach = useMemo(() => ({ water: near === "fish", bug: near === "net" ? targetLabel : null, dig: near === "dig" ? targetLabel : null }), [near, targetLabel]);
