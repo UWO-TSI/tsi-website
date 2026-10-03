@@ -61,7 +61,14 @@ function Balances({ coins, gems }: { coins: number; gems: number }) {
 
 const TABS = [["tools", "Tools"], ["outfits", "Outfits"], ["furniture", "Furniture"], ["specials", "Today's specials"], ["merch", "Merch"]] as const;
 
-export function ShopBody({ transport = httpEconomyTransport, initialTab = "tools" }: { transport?: EconomyTransport; initialTab?: (typeof TABS)[number][0] }) {
+/**
+ * `hideBalances`: the shop's counter shows its own till (ShopCounter); `onBought` hears each purchase (the new coin
+ * balance and what it cost) for the keeper's thanks and the till.
+ */
+export function ShopBody({ transport = httpEconomyTransport, initialTab = "tools", hideBalances = false, onBought }: {
+  transport?: EconomyTransport; initialTab?: (typeof TABS)[number][0]; hideBalances?: boolean;
+  onBought?: (e: ShopEntry, r: { balance: number; price_each: number; currency: string }) => void;
+}) {
   const load = useCallback(() => transport.shop(), [transport]);
   const { data, error, reload, setError } = useLoad<ShopView>(load);
   const [tab, setTab] = useState<(typeof TABS)[number][0]>(initialTab);
@@ -79,8 +86,9 @@ export function ShopBody({ transport = httpEconomyTransport, initialTab = "tools
         const r = await transport.reserve(e.id, key);
         setNote(`Reserved ${e.name}. Show pickup code ${r.reservation?.pickup_code ?? ""} at HQ on campus.`);
       } else {
-        await transport.buy(e.id, 1, key);
+        const r = await transport.buy(e.id, 1, key);
         setNote(`Bought ${e.name}.`);
+        onBought?.(e, r);
       }
       keys.current.delete(e.id);
       await reload();
@@ -96,7 +104,7 @@ export function ShopBody({ transport = httpEconomyTransport, initialTab = "tools
   const list = data.tabs[tab];
   return (
     <div>
-      <Balances coins={data.coins} gems={data.gems} />
+      {!hideBalances && <Balances coins={data.coins} gems={data.gems} />}
       <Tabs label="Shop sections" value={tab} onChange={setTab} className={s.tabs}
         tabs={TABS.map(([k, label]) => ({ id: k, label, badge: k === "specials" ? data.tabs.specials.length : undefined }))} />
       {tab === "specials" ? <p className={p.muted} style={{ marginBottom: 8 }}>20% off today. New picks at midnight (Toronto time).</p> : null}

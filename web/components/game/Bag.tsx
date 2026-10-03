@@ -21,7 +21,7 @@ import { MAX_PINS } from "@/lib/game/toolWheel";
 import { togglePin, useHeld } from "@/lib/game/heldStore";
 import { AudioManager } from "@/lib/game/audio";
 import { ApiError } from "@/lib/apiClient";
-import { bagWrite, loadBag, saveOrder, seeBag, sellFromBag, sortBag, stockOf, swapSlots, useBag } from "@/lib/game/bagStore";
+import { bagWrite, loadBag, saveOrder, seeBag, sortBag, stockOf, swapSlots, useBag } from "@/lib/game/bagStore";
 import s from "./Bag.module.css";
 
 const KIND: Record<string, string> = { fish: "Fish", sea: "Sea creature", bug: "Bug", fruit: "Fruit", mineral: "Material", flower: "Flower", shell: "Shell", mushroom: "Mushroom", wood: "Material" };
@@ -142,7 +142,6 @@ function Pockets() {
       </div>
       <Details itemKey={key} qty={qty} total={key ? stock[key] ?? 0 : 0} view={view} locked={!!key && locked.has(key)} busy={busy || bag.local} note={note}
         onLock={() => key && run(async () => { await bagWrite({ action: "lock", item: key, locked: !locked.has(key) }); return null; })}
-        onSell={n => key && run(async () => { const paid = await sellFromBag(key, n); AudioManager.playSFX("confirm", { gain: 0.4 }); return `Sold for ${paid.toLocaleString()} coins.`; })}
         onDrop={() => setDropping(true)} />
     </div>
     <ConfirmDialog open={dropping && !!key} title={key ? `Drop ${qty > 1 ? `${qty} × ` : ""}${nameOf(key)}?` : "Drop it?"} confirmLabel="Drop" danger busy={busy}
@@ -154,9 +153,9 @@ function Pockets() {
 }
 
 /** The picked item: what it is, what it's worth and good for, and what you can do with it. */
-function Details({ itemKey, qty, total, view, locked, busy, note, onLock, onSell, onDrop }: {
+function Details({ itemKey, qty, total, view, locked, busy, note, onLock, onDrop }: {
   itemKey: string | null; qty: number; total: number; view: BagView; locked: boolean; busy: boolean; note: { ok: boolean; text: string } | null;
-  onLock: () => void; onSell: (n: number) => void; onDrop: () => void;
+  onLock: () => void; onDrop: () => void;
 }) {
   const { pins } = useHeld();
   if (!itemKey) return <aside className={s.details} data-empty>
@@ -178,7 +177,8 @@ function Details({ itemKey, qty, total, view, locked, busy, note, onLock, onSell
     <dl className={s.facts}>
       <dt>In your bag</dt><dd>{total.toLocaleString()}{total > qty ? ` (this stack ${qty})` : ""}</dd>
       <dt>Size</dt><dd>{best !== null ? `Your biggest: ${best} cm` : stack > 1 ? `Stacks to ${stack} in a slot` : "A slot each"}</dd>
-      <dt>Sells for</dt><dd>{price ? <><Amount n={price} /> each</> : "The shop doesn't buy it"}</dd>
+      {/* Selling happens at the shop's counter (ShopCounter), not from the bag. */}
+      <dt>Sells for</dt><dd>{price ? <><Amount n={price} /> each, at the shop&apos;s counter</> : "The shop doesn't buy it"}</dd>
       {sp?.donatable && <><dt>Museum</dt><dd>{museum === "you" ? "On show: you donated it" : museum ? "Already on show" : "The museum still needs one"}</dd></>}
       <dt>Used in</dt><dd>{recipes.length ? recipes.slice(0, 4).join(", ") + (recipes.length > 4 ? ` and ${recipes.length - 4} more` : "") : "No recipes"}</dd>
     </dl>
@@ -186,13 +186,9 @@ function Details({ itemKey, qty, total, view, locked, busy, note, onLock, onSell
       {pinnable(itemKey) && <Button size="sm" variant="secondary" onClick={() => { togglePin(itemKey); AudioManager.playSFX(pinned ? "exit" : "confirm", { rate: 1.2, gain: 0.35 }); }}>
         {pinned ? <PinOff size={15} aria-hidden /> : <Pin size={15} aria-hidden />} {pinned ? "Unpin from the wheel" : "Pin to the wheel"}</Button>}
       <Button size="sm" variant="quiet" disabled={busy} onClick={onLock}>{locked ? <LockOpen size={15} aria-hidden /> : <Lock size={15} aria-hidden />} {locked ? "Unlock" : "Lock"}</Button>
-      {price ? <>
-        <Button size="sm" disabled={busy || locked} onClick={() => onSell(1)}>Sell 1</Button>
-        {qty > 1 && <Button size="sm" disabled={busy || locked} onClick={() => onSell(qty)}>Sell {qty} · <Amount n={price * qty} /></Button>}
-      </> : null}
       <Button size="sm" variant="danger" disabled={busy || locked} onClick={onDrop}>Drop</Button>
     </div>
-    {locked && <p className={s.hint}>Locked: selling and dropping skip it, and it stays in your bag when you store all materials.</p>}
+    {locked && <p className={s.hint}>Locked: the shop won&apos;t buy it and dropping skips it, and it stays in your bag when you store all materials.</p>}
     {note && <p className={note.ok ? s.ok : s.bad} role="status">{note.text}</p>}
   </aside>;
 }

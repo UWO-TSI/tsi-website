@@ -3,12 +3,17 @@
 /**
  * Dev-only `?collections=demo`: the collections service on its in-memory
  * store, so the journal, museum, trophies, catch cards and the fishing
- * tourney board show mid-game data without a signed-in account.
+ * tourney board show mid-game data without a signed-in account; and the shop's
+ * counter (its shelves, the till and selling from the demo's pockets).
  */
 import { memoryCollectionsStore } from "@/lib/collections/memoryStore";
 import { torontoParts } from "@/lib/time";
 import { bagAction, bagView, catchAction, donate, getShowcase, journal, museum, setShowcase, tourney, trophies } from "@/lib/collections/service";
 import { sellPrice, speciesClass } from "@/lib/wallet/rules";
+import { memoryEconomyStore } from "@/lib/wallet/memoryStore";
+import { buy, getShop } from "@/lib/wallet/service";
+import { ROSTER } from "@/lib/collections/roster";
+import { MATERIALS } from "@/lib/crafting/recipes";
 import { slotsUsed } from "@/lib/collections/bag";
 import { DEFAULT_GOALS } from "@/lib/progression/defaults";
 import { latestTourney } from "@/lib/progression/seasonal";
@@ -31,7 +36,9 @@ export function installCollectionsDemo(): void {
   installDemoFetch("collections", "/api/", (query) => {
     const m = memoryCollectionsStore(() => new Date());
     if (query.get("chest")) for (const [key, n] of [["wood_branch", 60], ["rock_stone", 34], ["rock_clay", 8], ["apple", 22], ["flower_tulip", 7], ["fish_dace", 1], ["bug_common_butterfly", 1]] as const) m.stash(ME, key, n);
-    let coins = 0;
+    // The shop's till and shelves (the counter, ShopCounter): the economy service on its memory store, coins shared with sales.
+    const eco = memoryEconomyStore();
+    eco.fund(ME, 1200);
     m.name(ME, "You");
     [...OTHERS, ...ANGLERS].forEach(([id, name]) => m.name(id, name));
     const ready = (async () => {
@@ -79,15 +86,28 @@ export function installCollectionsDemo(): void {
         case "/api/collections/showcase": return reply(method === "PUT" ? await setShowcase(m.store, ME, body.items) : await getShowcase(m.store, ME), "showcase");
         case "/api/collections/bag": return reply(method === "POST" ? await bagAction(m.store, ME, body) : await bagView(m.store, ME), "bag");
         case "/api/economy/sell": {
+          if (method !== "POST") {
+            // What the counter will buy from the demo's pockets (the service's sellList over the bag: price by rarity, locks shown).
+            const rows = (await m.store.bag(ME)).items.flatMap(r => {
+              const cls = speciesClass(r.item_key), price = cls ? sellPrice(cls.category, cls.rarity) : null;
+              if (!cls || !price || r.count < 1) return [];
+              const name = [...ROSTER, ...MATERIALS].find(sp => sp.key === r.item_key)?.name ?? r.item_key;
+              return [{ item_key: r.item_key, name, category: cls.category, rarity: cls.rarity, count: r.count, price_each: price, locked: r.locked === true }];
+            }).sort((a, b) => b.price_each - a.price_each || a.name.localeCompare(b.name));
+            return reply({ ok: true, data: rows }, "sellable");
+          }
           // The shop's sale over the demo's pockets (economy_sell's rules: the price by rarity, a locked one refused).
           const row = (await m.store.bag(ME)).items.find(r => r.item_key === body.item_key);
           const cls = speciesClass(body.item_key), price = cls && sellPrice(cls.category, cls.rarity);
           if (!row || !price || row.count < body.qty) return reply({ ok: false, status: 409, code: "insufficient_items", error: "You don't have that many." }, "sale");
           if (row.locked) return reply({ ok: false, status: 409, code: "locked", error: "That's locked in your bag. Unlock it to sell it." }, "sale");
           m.give(ME, body.item_key, -body.qty);
-          coins += price * body.qty;
-          return reply({ ok: true, data: { balance: coins, remaining: row.count - body.qty, paid: price * body.qty, replayed: false } }, "sale");
+          eco.fund(ME, eco.coinsOf(ME) + price * body.qty);
+          return reply({ ok: true, data: { balance: eco.coinsOf(ME), remaining: row.count - body.qty, paid: price * body.qty, replayed: false } }, "sale");
         }
+        case "/api/economy/shop": return reply(await getShop(eco.store, ME, now), "shop");
+        case "/api/economy/buy": return reply(await buy(eco.store, ME, body, now), "purchase");
+        case "/api/economy/wallet": return reply({ ok: true, data: { coins: eco.coinsOf(ME), gems: eco.gemsOf(ME), daily_claimed: true, day: "", recent: [] } }, "wallet");
         default: return null;
       }
     };

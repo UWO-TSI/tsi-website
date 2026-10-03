@@ -46,7 +46,8 @@ export const LANDMARK_INFO: Record<LandmarkId, LandmarkInfo> = {
   mailbox: { label: "Mailbox", open: true, half: [0.3, 0.3], color: "#C0463C" },
   notice: { label: "Notice board", open: true, half: [0.75, 0.25], color: "#8A6A4A" },
   catch: { label: "Catch board", open: true, half: [0.75, 0.25], color: "#3E7FA6" },
-  shop: { label: "Shop", open: true, half: [3.25, 1.8], color: "#2B4EA0" },
+  // Its door prompt at the foot of the porch steps (the double doors stand back on the porch); you come back out a step further.
+  shop: { label: "Shop", open: true, half: [3.25, 1.8], color: "#2B4EA0", door: [0, -2.2], exit: [0, -3.1] },
   // The prompt is the door's (cafe-polish §2); you come back out past its range.
   // A 5 x 5 footprint on the grid (art/cafe/build_building.py), its porch inside it.
   cafe: { label: "Café", open: false, half: [2.5, 2.5], color: "#C9A227", door: [0, -2.8], exit: [0, -4.3] },
