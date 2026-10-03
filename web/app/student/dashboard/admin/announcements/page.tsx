@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Megaphone, Plus, Trash2, Pin } from "lucide-react";
-import { Badge, Button, Card, Empty, Field, IconButton, Loading, Select, TextArea, Toggle, type BadgeTone } from "@/components/gui";
+import { Badge, Button, Card, ConfirmDialog, Empty, ErrorNote, Field, IconButton, Loading, Select, TextArea, Toggle, type BadgeTone } from "@/components/gui";
 
 interface Announcement {
   id: string;
@@ -40,6 +40,8 @@ export default function AdminAnnouncementsPage() {
     expires_at: "",
   });
   const [loading, setLoading] = useState(true);
+  const [confirmDelete, setConfirmDelete] = useState<Announcement | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function fetchAnnouncements() {
     const supabase = createClient();
@@ -83,7 +85,9 @@ export default function AdminAnnouncementsPage() {
 
   async function deleteAnnouncement(id: string) {
     const supabase = createClient();
-    await supabase.from("announcements").delete().eq("id", id);
+    const { error: deleteError } = await supabase.from("announcements").delete().eq("id", id);
+    if (deleteError) return setError("That announcement wasn’t deleted. Try again.");
+    setError(null);
     setAnnouncements((prev) => prev.filter((a) => a.id !== id));
   }
 
@@ -179,6 +183,8 @@ export default function AdminAnnouncementsPage() {
         </Card>
       )}
 
+      {error && <ErrorNote className="mb-4">{error}</ErrorNote>}
+
       {/* Announcements List */}
       {loading ? (
         <Loading label="Getting the announcements…" />
@@ -226,7 +232,7 @@ export default function AdminAnnouncementsPage() {
                   <IconButton
                     size="sm"
                     label="Delete"
-                    onClick={() => deleteAnnouncement(ann.id)}
+                    onClick={() => setConfirmDelete(ann)}
                     style={{ color: "var(--gui-danger)" }}
                   >
                     <Trash2 size={16} aria-hidden />
@@ -237,6 +243,21 @@ export default function AdminAnnouncementsPage() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        danger
+        title="Delete this announcement?"
+        confirmLabel="Delete"
+        cancelLabel="Keep it"
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => {
+          if (confirmDelete) void deleteAnnouncement(confirmDelete.id);
+          setConfirmDelete(null);
+        }}
+      >
+        “{confirmDelete?.title}” comes down for every member, for good.
+      </ConfirmDialog>
     </div>
   );
 }

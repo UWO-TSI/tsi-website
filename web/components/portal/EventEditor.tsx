@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import { Button, Card, Loading, Select } from "@/components/gui";
 import { AdminMessage, backLinkCls, buttonLinkCls, Field, inputCls, Toggle } from "./ProgressionAdminShared";
+import { checkInUrl as eventCheckInUrl } from "@/lib/portal/checkIn";
 
 // ─── EventEditor ────────────────────────────────────────────────────────────
 // Events live OUTSIDE the content_pipeline / content_drafts flow. Editor
@@ -132,11 +133,11 @@ export default function EventEditor({ mode, rowId, initial }: EventEditorProps) 
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
 
   useEffect(() => {
-    if (!qrCheckInCode) {
+    if (!qrCheckInCode || !rowId) {
       setQrDataUrl("");
       return;
     }
-    const checkInUrl = `https://tethos.org/student/check-in?code=${qrCheckInCode}`;
+    const checkInUrl = eventCheckInUrl(rowId, qrCheckInCode);
     let cancelled = false;
     QRCode.toDataURL(checkInUrl, { width: 240, margin: 1 })
       .then((url) => {
@@ -148,7 +149,7 @@ export default function EventEditor({ mode, rowId, initial }: EventEditorProps) 
     return () => {
       cancelled = true;
     };
-  }, [qrCheckInCode]);
+  }, [qrCheckInCode, rowId]);
 
   const errors = useMemo(() => validate(form), [form]);
   const hasErrors = Object.keys(errors).length > 0;
@@ -230,9 +231,7 @@ export default function EventEditor({ mode, rowId, initial }: EventEditorProps) 
     }
   };
 
-  const checkInUrl = qrCheckInCode
-    ? `https://tethos.org/student/check-in?code=${qrCheckInCode}`
-    : "";
+  const checkInUrl = qrCheckInCode && rowId ? eventCheckInUrl(rowId, qrCheckInCode) : "";
 
   return (
     <div className="mx-auto w-full max-w-3xl">

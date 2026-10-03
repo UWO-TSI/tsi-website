@@ -40,16 +40,20 @@ export default function EditEventPage({
     (async () => {
       try {
         const supabase = createClient();
-        const { data, error } = await supabase
-          .from("events")
-          .select("*")
-          .eq("id", id)
-          .single();
+        // The check-in code isn't readable with a member's key; the T1/T2 route hands it over.
+        const [{ data, error }, code] = await Promise.all([
+          supabase
+            .from("events")
+            .select("id, title, description, event_type, start_time, end_time, location, capacity, is_irl, xp_reward, tc_reward")
+            .eq("id", id)
+            .single(),
+          fetch(`/api/events/${id}/check-in`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        ]);
         if (cancelled) return;
         if (error || !data) {
           setError(error?.message ?? "Event not found");
         } else {
-          setRow(data as EventRow);
+          setRow({ ...data, qr_check_in_code: code?.code ?? null } as EventRow);
         }
       } catch (err) {
         if (!cancelled) {

@@ -3,24 +3,10 @@
 import { useState, useEffect, type ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Amount } from "@/components/economy/Amount";
-import { Card, Loading, Progress } from "@/components/gui";
+import { Card, ErrorNote, Loading, Progress } from "@/components/gui";
+import { summarizeAnalytics } from "@/lib/portal/load";
 
-interface AnalyticsData {
-  totalMembers: number;
-  activeMembers: number;
-  alumni: number;
-  pendingOnboarding: number;
-  totalXP: number;
-  totalTC: number;
-  tcInCirculation: number;
-  totalBounties: number;
-  completedBounties: number;
-  totalQuests: number;
-  completedQuestEntries: number;
-  totalOrders: number;
-  fulfilledOrders: number;
-  tierDistribution: Record<number, number>;
-}
+type AnalyticsData = ReturnType<typeof summarizeAnalytics>;
 
 const PAGE = "mx-auto w-full max-w-6xl px-5 pt-6 pb-16 sm:px-8";
 
@@ -35,64 +21,40 @@ const outOf = (part: number, whole: number) => (
 export default function AdminAnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     async function fetchAnalytics() {
-      const supabase = createClient();
-
-      const [profiles, bounties, questProgress, orders] = await Promise.all([
-        supabase.from("profiles").select("tier, is_active, is_alumni, onboarding_completed, xp, tethos_coins"),
-        supabase.from("bounties").select("status"),
-        supabase.from("quest_progress").select("status"),
-        supabase.from("marketplace_orders").select("status, total_tc"),
-      ]);
-
-      const members = profiles.data ?? [];
-      const bountyList = bounties.data ?? [];
-      const questList = questProgress.data ?? [];
-      const orderList = orders.data ?? [];
-
-      const tierDist: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
-      let totalXP = 0;
-      let totalTC = 0;
-
-      members.forEach((m) => {
-        tierDist[m.tier] = (tierDist[m.tier] || 0) + 1;
-        totalXP += m.xp || 0;
-        totalTC += m.tethos_coins || 0;
-      });
-
-      setData({
-        totalMembers: members.length,
-        activeMembers: members.filter((m) => m.is_active).length,
-        alumni: members.filter((m) => m.is_alumni).length,
-        pendingOnboarding: members.filter((m) => !m.onboarding_completed).length,
-        totalXP,
-        totalTC,
-        tcInCirculation: totalTC,
-        totalBounties: bountyList.length,
-        completedBounties: bountyList.filter((b) => b.status === "completed").length,
-        totalQuests: questList.length,
-        completedQuestEntries: questList.filter((q) => q.status === "completed").length,
-        totalOrders: orderList.length,
-        fulfilledOrders: orderList.filter((o) => o.status === "fulfilled").length,
-        tierDistribution: tierDist,
-      });
-      setLoading(false);
+      try {
+        const supabase = createClient();
+        const [profiles, bounties, questProgress, orders] = await Promise.all([
+          supabase.from("profiles").select("tier, is_active, is_alumni, onboarding_completed, xp, tethos_coins"),
+          supabase.from("bounties").select("status"),
+          supabase.from("quest_progress").select("status"),
+          supabase.from("marketplace_orders").select("status, total_tc"),
+        ]);
+        // A failed read throws: zeros would look like a real, empty club.
+        setData(summarizeAnalytics(profiles, bounties, questProgress, orders));
+        setFailed(false);
+      } catch {
+        setFailed(true);
+      } finally {
+        setLoading(false);
+      }
     }
 
     fetchAnalytics();
-  }, []);
+  }, [reload]);
 
-  if (loading) {
+  if (loading || failed || !data) {
     return (
       <div className={PAGE}>
-        <Loading label="Adding up the numbers…" />
+        {loading ? <Loading label="Adding up the numbers…" />
+          : <ErrorNote onRetry={() => { setLoading(true); setReload((n) => n + 1); }}>The numbers didn’t load.</ErrorNote>}
       </div>
     );
   }
-
-  if (!data) return null;
 
   const statCards: { label: string; value: ReactNode }[] = [
     { label: "Members", value: data.totalMembers },

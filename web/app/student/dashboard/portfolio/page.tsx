@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, type CSSProperties } from "react";
+import { useState, useEffect, useCallback, type CSSProperties } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { settle } from "@/lib/portal/load";
+import { loadPortfolio } from "@/lib/portal/portfolio";
 import {
   Eye,
   EyeOff,
@@ -13,7 +15,7 @@ import {
   FolderOpen,
   X,
 } from "lucide-react";
-import { Badge, Banner, Button, Card, Empty, Field, IconButton, Loading, TextArea, Toggle, type BadgeTone } from "@/components/gui";
+import { Badge, Banner, Button, Card, ConfirmDialog, Empty, ErrorNote, Field, IconButton, Loading, TextArea, Toggle, type BadgeTone } from "@/components/gui";
 
 interface Portfolio {
   id: string;
@@ -36,7 +38,7 @@ interface PortfolioItem {
   tech_stack: string[] | null;
   image_url: string | null;
   is_visible: boolean;
-  sort_order: number;
+  position: number;
 }
 
 const ACCENT_COLORS = [
@@ -61,7 +63,7 @@ function AddItemForm({
   onAdd,
   onCancel,
 }: {
-  onAdd: (item: Omit<PortfolioItem, "id" | "portfolio_id" | "sort_order">) => void;
+  onAdd: (item: Omit<PortfolioItem, "id" | "portfolio_id" | "position">) => void;
   onCancel: () => void;
 }) {
   const [type, setType] = useState<PortfolioItem["type"]>("project");
@@ -133,56 +135,37 @@ function AddItemForm({
 export default function PortfolioPage() {
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [items, setItems] = useState<PortfolioItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<"loading" | "ready" | "signed-out" | "error">("loading");
   const [noPortfolio, setNoPortfolio] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [bio, setBio] = useState("");
   const [userId, setUserId] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<PortfolioItem | null>(null);
 
+  const load = useCallback(async () => {
+    const r = await loadPortfolio(createClient());
+    if (!r) return null;
+    setUserId(r.userId);
+    setDisplayName(r.displayName);
+    setPortfolio(r.portfolio as Portfolio | null);
+    setBio(r.portfolio?.bio ?? "");
+    setItems(r.items as PortfolioItem[]);
+    setNoPortfolio(!r.portfolio);
+    return r;
+  }, []);
 
   useEffect(() => {
-    async function load() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-      setUserId(user.id);
+    void settle(load).then(setState);
+  }, [load]);
 
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("display_name")
-        .eq("id", user.id)
-        .single();
-      if (prof) setDisplayName(prof.display_name);
-
-      const { data: port } = await supabase
-        .from("portfolios")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-
-      if (port) {
-        setPortfolio(port as Portfolio);
-        setBio(port.bio ?? "");
-
-        const { data: portItems } = await supabase
-          .from("portfolio_items")
-          .select("*")
-          .eq("portfolio_id", port.id)
-          .order("sort_order", { ascending: true });
-
-        setItems((portItems as PortfolioItem[]) ?? []);
-      } else {
-        setNoPortfolio(true);
-      }
-
-      setLoading(false);
-    }
-    load();
-  }, []);
+  /** A write's result: true when it saved, else the failure is shown and nothing on screen changes. */
+  const saved = (r: { error: unknown }) => {
+    setSaveError(r.error ? "That didn’t save. Try again." : null);
+    return !r.error;
+  };
 
   async function createPortfolio() {
     const supabase = createClient();
@@ -191,7 +174,7 @@ export default function PortfolioPage() {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
 
-    const { data } = await supabase
+    const r = await supabase
       .from("portfolios")
       .insert({
         user_id: userId,
@@ -203,53 +186,44 @@ export default function PortfolioPage() {
       .select()
       .single();
 
-    if (data) {
-      setPortfolio(data as Portfolio);
+    if (saved(r) && r.data) {
+      setPortfolio(r.data as Portfolio);
       setNoPortfolio(false);
     }
   }
 
   async function togglePublic() {
     if (!portfolio) return;
-    const supabase = createClient();
     const newVal = !portfolio.is_public;
-    await supabase.from("portfolios").update({ is_public: newVal }).eq("id", portfolio.id);
-    setPortfolio({ ...portfolio, is_public: newVal });
+    if (saved(await createClient().from("portfolios").update({ is_public: newVal }).eq("id", portfolio.id))) setPortfolio({ ...portfolio, is_public: newVal });
   }
 
   async function saveBio() {
     if (!portfolio) return;
     setSaving(true);
-    const supabase = createClient();
-    await supabase.from("portfolios").update({ bio }).eq("id", portfolio.id);
-    setPortfolio({ ...portfolio, bio });
+    if (saved(await createClient().from("portfolios").update({ bio }).eq("id", portfolio.id))) setPortfolio({ ...portfolio, bio });
     setSaving(false);
   }
 
   async function setAccentColor(color: string) {
     if (!portfolio) return;
-    const supabase = createClient();
-    await supabase.from("portfolios").update({ accent_color: color }).eq("id", portfolio.id);
-    setPortfolio({ ...portfolio, accent_color: color });
+    if (saved(await createClient().from("portfolios").update({ accent_color: color }).eq("id", portfolio.id))) setPortfolio({ ...portfolio, accent_color: color });
   }
 
-  async function addItem(item: Omit<PortfolioItem, "id" | "portfolio_id" | "sort_order">) {
+  async function addItem(item: Omit<PortfolioItem, "id" | "portfolio_id" | "position">) {
     if (!portfolio) return;
-    const supabase = createClient();
-    const sortOrder = items.length;
-
-    const { data } = await supabase
+    const r = await createClient()
       .from("portfolio_items")
       .insert({
         portfolio_id: portfolio.id,
         ...item,
-        sort_order: sortOrder,
+        position: items.length,
       })
       .select()
       .single();
 
-    if (data) {
-      setItems([...items, data as PortfolioItem]);
+    if (saved(r) && r.data) {
+      setItems([...items, r.data as PortfolioItem]);
       setShowAddForm(false);
     }
   }
@@ -257,16 +231,14 @@ export default function PortfolioPage() {
   async function toggleItemVisibility(itemId: string) {
     const item = items.find((i) => i.id === itemId);
     if (!item) return;
-    const supabase = createClient();
     const newVal = !item.is_visible;
-    await supabase.from("portfolio_items").update({ is_visible: newVal }).eq("id", itemId);
-    setItems(items.map((i) => (i.id === itemId ? { ...i, is_visible: newVal } : i)));
+    if (saved(await createClient().from("portfolio_items").update({ is_visible: newVal }).eq("id", itemId))) {
+      setItems(items.map((i) => (i.id === itemId ? { ...i, is_visible: newVal } : i)));
+    }
   }
 
   async function deleteItem(itemId: string) {
-    const supabase = createClient();
-    await supabase.from("portfolio_items").delete().eq("id", itemId);
-    setItems(items.filter((i) => i.id !== itemId));
+    if (saved(await createClient().from("portfolio_items").delete().eq("id", itemId))) setItems(items.filter((i) => i.id !== itemId));
   }
 
   async function moveItem(itemId: string, direction: "up" | "down") {
@@ -279,22 +251,28 @@ export default function PortfolioPage() {
     const newItems = [...items];
     [newItems[idx], newItems[swapIdx]] = [newItems[swapIdx], newItems[idx]];
 
-    // Update sort orders
-    const updated = newItems.map((item, i) => ({ ...item, sort_order: i }));
+    // Update positions
+    const before = items;
+    const updated = newItems.map((item, i) => ({ ...item, position: i }));
     setItems(updated);
 
     const supabase = createClient();
-    await Promise.all(
+    const results = await Promise.all(
       updated.map((item) =>
-        supabase.from("portfolio_items").update({ sort_order: item.sort_order }).eq("id", item.id)
+        supabase.from("portfolio_items").update({ position: item.position }).eq("id", item.id)
       )
     );
+    if (!saved(results.find((r) => r.error) ?? { error: null })) setItems(before);
   }
 
-  if (loading) {
+  if (state !== "ready") {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loading label="Opening your portfolio…" />
+      <div className="flex-1 overflow-y-auto" style={{ padding: "24px 20px 48px" }}>
+        <div className="max-w-2xl mx-auto">
+          {state === "loading" ? <Loading label="Opening your portfolio…" />
+            : state === "signed-out" ? <Empty icon={<FolderOpen size={32} />} title="Sign in to build your portfolio">Your portfolio shows up here once you’re signed in.</Empty>
+            : <ErrorNote onRetry={() => { setState("loading"); void settle(load).then(setState); }}>Your portfolio didn’t load.</ErrorNote>}
+        </div>
       </div>
     );
   }
@@ -304,6 +282,7 @@ export default function PortfolioPage() {
       <div className="flex-1 overflow-y-auto" style={{ padding: "24px 20px 48px" }}>
         <div className="max-w-2xl mx-auto">
           <Banner title="Portfolio" icon={<FolderOpen size={26} />} tone="sage">Show your work to the world.</Banner>
+          {saveError && <ErrorNote className="mb-4">{saveError}</ErrorNote>}
           <Card>
             <Empty
               icon={<FolderOpen size={32} />}
@@ -324,6 +303,8 @@ export default function PortfolioPage() {
         <Banner title="Portfolio builder" icon={<FolderOpen size={26} />} tone="sage">
           {items.length} item{items.length !== 1 ? "s" : ""} in your portfolio.
         </Banner>
+
+        {saveError && <ErrorNote className="sticky top-4 z-10 shadow-[var(--gui-shadow-md)]">{saveError}</ErrorNote>}
 
         {/* Sharing */}
         <Card style={{ padding: 20 }}>
@@ -450,7 +431,7 @@ export default function PortfolioPage() {
                           <ExternalLink size={18} aria-hidden />
                         </a>
                       )}
-                      <IconButton label="Delete this item" size="sm" onClick={() => deleteItem(item.id)}>
+                      <IconButton label="Delete this item" size="sm" onClick={() => setConfirmDelete(item)}>
                         <Trash2 size={18} aria-hidden style={{ color: "var(--gui-danger)" }} />
                       </IconButton>
                     </div>
@@ -461,6 +442,21 @@ export default function PortfolioPage() {
           </div>
         </Card>
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        danger
+        title="Delete this item?"
+        confirmLabel="Delete"
+        cancelLabel="Keep it"
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => {
+          if (confirmDelete) void deleteItem(confirmDelete.id);
+          setConfirmDelete(null);
+        }}
+      >
+        “{confirmDelete?.title}” comes off your portfolio for good.
+      </ConfirmDialog>
     </div>
   );
 }

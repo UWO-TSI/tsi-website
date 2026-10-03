@@ -4,17 +4,11 @@ import { useEffect, useState } from "react";
 import { Scroll, Clock, SearchX, Send } from "lucide-react";
 import type { Bounty } from "@/lib/supabase/types";
 import BountySubmitModal from "@/components/portal/BountySubmitModal";
+import { BountyDifficulty } from "@/components/portal/BountyDifficulty";
 import { Amount } from "@/components/economy/Amount";
-import { Badge, Banner, Button, Card, Empty, Loading, Sheet, Tabs, type BadgeTone } from "@/components/gui";
+import { Badge, Banner, Button, Card, Empty, Loading, Sheet, Tabs } from "@/components/gui";
 
 type Tab = "all" | "available" | "my_claims" | "completed";
-
-/** Difficulty 1-3 (the bounties table), as a tag. */
-const DIFFICULTY: Record<number, { tone: BadgeTone; label: string }> = {
-  1: { tone: "success", label: "Easy" },
-  2: { tone: "warn", label: "Medium" },
-  3: { tone: "danger", label: "Hard" },
-};
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "all", label: "All" },
@@ -97,7 +91,7 @@ export default function BountyPage() {
         footer={detail && <BountyActions bounty={detail} mine={myClaims.has(detail.id)} claiming={claiming} onClaim={() => handleClaim(detail.id)} onSubmit={() => setSubmitting(detail)} />}>
         {detail && <>
           <div className="flex flex-wrap gap-2 mb-4">
-            {DIFFICULTY[detail.difficulty] && <Badge tone={DIFFICULTY[detail.difficulty].tone}>{DIFFICULTY[detail.difficulty].label}</Badge>}
+            <BountyDifficulty level={detail.difficulty} />
             {detail.tech_stack?.map((t) => <Badge key={t}>{t}</Badge>)}
           </div>
           <div className="space-y-2 mb-5 text-sm" style={{ color: "var(--gui-ink)" }}>
@@ -136,7 +130,6 @@ function BountyActions({ bounty, mine, claiming, onClaim, onSubmit }: { bounty: 
 }
 
 function BountyCard({ bounty, mine, tilt, onClick }: { bounty: Bounty; mine?: boolean; tilt: number; onClick: () => void }) {
-  const diff = DIFFICULTY[bounty.difficulty];
   const isPastDeadline = bounty.deadline && new Date(bounty.deadline) < new Date();
   const status = bounty.status === "open" ? { tone: "sage" as const, label: "Open: claim it" }
     : mine && (bounty.status === "claimed" || bounty.status === "in_progress") ? { tone: "info" as const, label: "Yours: deliver it" }
@@ -148,7 +141,7 @@ function BountyCard({ bounty, mine, tilt, onClick }: { bounty: Bounty; mine?: bo
       <Card pinned tilt={tilt} className="h-full">
         <div className="flex items-start justify-between gap-2 mb-2">
           <h3 className="text-base line-clamp-2" style={{ color: "var(--gui-ink-strong)", fontWeight: 800 }}>{bounty.title}</h3>
-          {diff && <Badge tone={diff.tone}>{diff.label}</Badge>}
+          <BountyDifficulty level={bounty.difficulty} />
         </div>
         {bounty.client_name && <p className="text-sm mb-2" style={{ color: "var(--gui-muted)" }}>For {bounty.client_name}</p>}
         <div className="flex flex-wrap gap-1.5 mb-3">

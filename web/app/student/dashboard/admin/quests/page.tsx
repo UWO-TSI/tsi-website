@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, Target, Trash2 } from "lucide-react";
 import { Amount } from "@/components/economy/Amount";
-import { Badge, Button, Card, Empty, Field, IconButton, Loading, Select, TextArea, type BadgeTone } from "@/components/gui";
+import { Badge, Button, Card, ConfirmDialog, Empty, ErrorNote, Field, IconButton, Loading, Select, TextArea, type BadgeTone } from "@/components/gui";
 
 interface Quest {
   id: string;
@@ -31,6 +31,8 @@ export default function AdminQuestsPage() {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [confirmDelete, setConfirmDelete] = useState<Quest | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -98,7 +100,9 @@ export default function AdminQuestsPage() {
 
   async function deleteQuest(id: string) {
     const supabase = createClient();
-    await supabase.from("quests").delete().eq("id", id);
+    const { error: deleteError } = await supabase.from("quests").delete().eq("id", id);
+    if (deleteError) return setError("That quest wasn’t deleted. Try again.");
+    setError(null);
     setQuests((prev) => prev.filter((q) => q.id !== id));
   }
 
@@ -190,6 +194,8 @@ export default function AdminQuestsPage() {
         </Card>
       )}
 
+      {error && <ErrorNote className="mb-4">{error}</ErrorNote>}
+
       {loading ? (
         <Loading label="Getting the quests…" />
       ) : quests.length === 0 ? (
@@ -233,7 +239,7 @@ export default function AdminQuestsPage() {
                 <IconButton
                   size="sm"
                   label={`Delete ${quest.title}`}
-                  onClick={() => deleteQuest(quest.id)}
+                  onClick={() => setConfirmDelete(quest)}
                   style={{ color: "var(--gui-danger)" }}
                 >
                   <Trash2 size={16} aria-hidden />
@@ -243,6 +249,21 @@ export default function AdminQuestsPage() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        danger
+        title="Delete this quest?"
+        confirmLabel="Delete"
+        cancelLabel="Keep it"
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => {
+          if (confirmDelete) void deleteQuest(confirmDelete.id);
+          setConfirmDelete(null);
+        }}
+      >
+        “{confirmDelete?.title}” and everyone’s progress on it go for good. To pause it instead, turn it off.
+      </ConfirmDialog>
     </div>
   );
 }
