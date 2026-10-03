@@ -113,7 +113,7 @@ export interface ClassUlt extends ClassAbility {
    * A charge before the sequence (Cataclysm): `seconds` rooted with `guard` damage cut, a mash of `notes` keys 1–4
    * shown three at a time; the hits it lands set the potency 0.5 (none) to 1.5 (all). It releases early when all are played.
    */
-  channel?: { seconds: number; guard: number; notes: number };
+  channel?: { seconds: number; guard: number; notes: number; ramp?: [core: string, mid: string, edge: string] };
 }
 
 /**
@@ -315,7 +315,7 @@ export function classMods(kit: ClassKit, mastery: number): ClassMods {
   const v = statAt(kit, mastery), m = { ...NEUTRAL_MODS };
   switch (kit.stat.kind) {
     case "max_mana": m.energyMax = v; m.energyRegen = NEUTRAL_MODS.energyRegen * (v / NEUTRAL_MODS.energyMax); break;
-    case "summon_count": m.capacity = v; break;
+    case "summon_count": m.capacity = Math.floor(v); break;
     case "cooldown": m.cooldown = v; break;
     case "duration": m.duration = v; break;
     case "attack_speed": m.attackSpeed = v; break;

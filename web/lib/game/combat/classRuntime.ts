@@ -343,7 +343,7 @@ export function stepClass(rt: CombatRuntime, me: Vec, dt: number, real: number, 
     if (!p.alive) { v.channel = null; rt.buffs = rt.buffs.filter(b => b.source !== "channel"); }
     else {
       c.t += real; c.aim = { ...p.aim }; // the storm follows your aim while it gathers
-      if ((c.pulse -= real) <= 0) { c.pulse = 0.35; fx(rt, v.ult.vfx?.zone, "zone", c.aim, me, "heavy", ULT_REACH(v.ult)); p.clip = { verb: "Channel", scale: 1, upper: false }; }
+      if ((c.pulse -= real) <= 0) { c.pulse = 0.35; fx(rt, v.ult.vfx?.zone, "zone", c.aim, me, "heavy", ULT_REACH(v.ult), ch.ramp); p.clip = { verb: "Channel", scale: 1, upper: false }; }
       if (c.t >= ch.seconds || c.at >= c.notes.length) endChannel(rt, me);
     }
   }
