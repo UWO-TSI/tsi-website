@@ -11,6 +11,7 @@ import { ENEMIES } from "./data";
 import { stepCombat } from "./encounter";
 import { HOLD_AFTER, createInputState, press, release, tick } from "./input";
 import { corpse, corpseLife, inWall, wallHeight } from "./primitives";
+import { gripFor, verbClip, verbInfo, type Verb } from "@/lib/game/character/clips";
 import { createRuntime, energyMax, type CombatRuntime } from "./runtime";
 import { spawnEnemy, type Enemy } from "./sim";
 
@@ -312,3 +313,18 @@ describe("Attunement and Who's Real?", () => {
 });
 
 function p_aim(rt: CombatRuntime, e: Enemy) { rt.player.aim = { x: e.x, z: e.z }; }
+
+describe("the Arcane clips and grips", () => {
+  it("every clip an Arcane kit names is in the verb library (its own clips baked by build_clips.py @unique), on its weapon's grip", () => {
+    for (const k of [ELEMENTALIST, ILLUSIONIST, NECROMANCER, TRANSMUTER]) {
+      const grip = gripFor(k.signature.type);
+      for (const a of [...k.keys, ...(k.combos ?? []).flatMap(c => [c.ability, ...(c.hold ? [c.hold] : [])]), k.ult]) {
+        if (!a.clip) continue;
+        const name = "verb" in a.clip ? verbClip(a.clip.verb as Verb, grip) : a.clip.unique;
+        expect(verbInfo(name), `${a.key}: ${name}`).not.toBeNull();
+        if ("unique" in a.clip) expect(verbInfo(name)!.grip, name).toBe(grip);
+      }
+    }
+    expect([ELEMENTALIST, ILLUSIONIST, NECROMANCER, TRANSMUTER].map(k => gripFor(k.signature.type))).toEqual(["Staff", "OneHand", "Book", "Fists"]);
+  });
+});
