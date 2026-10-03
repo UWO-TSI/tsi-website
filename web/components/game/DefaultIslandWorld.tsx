@@ -43,6 +43,8 @@ import WardrobeSheet from "./peaceful/WardrobeSheet";
 import { ShopBody, WalletSheet } from "@/components/economy/EconomySheets";
 import { BagSheet } from "./Bag";
 import { ChestSheet } from "./ChestSheet";
+import { BagButton } from "./BagButton";
+import { bagRoom } from "@/lib/game/bagStore";
 import { isTyping, worldKeysBlocked } from "@/lib/game/useWorldDialog";
 import ProgressionPanel from "@/components/progression/ProgressionPanel";
 import { apiCall } from "@/lib/apiClient";
@@ -802,7 +804,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         setStock(mergeWithLocal(Object.fromEntries((d?.collections ?? []).map(r => [r.item_key, r.count]))))).catch(() => setStock(localCollections()));
     };
     load();
-    const events = ["tsi:peaceful-got", "tsi:fish-caught", "tsi:eaten", "tsi:crafted"];
+    const events = ["tsi:peaceful-got", "tsi:fish-caught", "tsi:eaten", "tsi:crafted", "tsi:bag-got", "tsi:bag-changed"];
     events.forEach(e => window.addEventListener(e, load));
     return () => events.forEach(e => window.removeEventListener(e, load));
   }, []);
@@ -829,6 +831,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     const clip = (name: string) => window.dispatchEvent(new CustomEvent("tsi:emote", { detail: { clip: name } }));
     if (toolAction.verb === "cast") {
       const spot = fishSpot.current;
+      // A full bag has no slot for a fish (the server refuses it too): the note over the water, no cast.
+      if (spot && !bagRoom()) { window.dispatchEvent(new CustomEvent("tsi:bag-full", { detail: { x: spot.target[0], z: spot.target[1] } })); return; }
       // Hold to charge, let go to cast (FishingOverlay); the server rolls on the held rod (its tier) from where you stand.
       if (spot) window.dispatchEvent(new CustomEvent("tsi:fish-start", { detail: { x: spot.target[0], z: spot.target[1], water: spot.water, site: atHome ? "home" : "village", from: at } }));
       return;
@@ -1018,7 +1022,11 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {(inside === "cafe" || (!inside && site === "village")) && <StudyHud />}
       <CraftingSheet />
       <CollectionBook open={bagOpen} onClose={() => setBagOpen(false)} keys={identity.settings.key_bindings.openJournal} />
-      {!bagOpen && full && <button className={styles.bagButton} onClick={() => setBagOpen(true)} aria-label="Open your collection"><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</button>}
+      {/* The Bag (I) shows in the clean HUD only as a pickup flies into it; the Collection (B) with the full HUD. */}
+      <div className={styles.bagButtons}>
+        <BagButton full={full && sheet !== "bag"} keyLabel={keyName(identity.settings.key_bindings.openBag)} onOpen={() => setSheet("bag")} />
+        {!bagOpen && full && <button className={styles.bagButton} onClick={() => setBagOpen(true)} aria-label="Open your collection"><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</button>}
+      </div>
       {!inside && !atHome && site !== "ruins" && !holdObjective && <div className={styles.minimap} data-minimap data-new={objectiveNew || undefined}>
         {mapOpen ? <MiniMap playerPosRef={player} plot={objectivePlot} toggleKey={identity.settings.key_bindings.openMap} onClose={() => setMapOpen(false)} />
           : full && <button className={styles.mapButton} onClick={() => setMapOpen(true)} aria-label="Show the island map"><MapIcon size={17} aria-hidden /><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</button>}

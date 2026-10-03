@@ -18,6 +18,7 @@ import { GLBProp, NatureMushroom } from "../NatureModels";
 import { SPECIES as CRITTERS } from "../Critters";
 import { AudioManager } from "@/lib/game/audio";
 import { collect, harvestNode, localCollections, localRecord } from "@/lib/game/collections";
+import { bagRoom } from "@/lib/game/bagStore";
 import { ROSTER } from "@/lib/collections/roster";
 import { forageSize } from "@/lib/collections/rolls";
 import { bugReaction, hasClue, hourKey, nodeAvailable, rollNode } from "@/lib/game/peaceful";
@@ -149,6 +150,13 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     // A harvest in the first seconds of a new hour is that hour's (before the 30 s tick would catch up).
     setHour(next[id]);
   };
+  /** The server refused it after all (the bag filled on another device): the node is still there. */
+  const unmarkHarvested = (id: string) => {
+    const next = { ...readHarvested() };
+    delete next[id];
+    try { localStorage.setItem(HARVEST_KEY, JSON.stringify(next)); } catch { /* session only */ }
+    setHarvested(next);
+  };
 
   useEffect(() => {
     const onAct = (e: Event) => {
@@ -157,6 +165,9 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
       const bug = bugState.current.get(id);
       const sp = node?.sp ?? (bug && !bug.fled ? bug.sp : null);
       if (!sp) return;
+      // A full bag (specs/game-ui.md §5): it stays in the world, and the note says why, over it.
+      const at = node ? node.n : bug!;
+      if (!bagRoom(sp.key)) { window.dispatchEvent(new CustomEvent("tsi:bag-full", { detail: { x: at.x, z: at.z } })); return; }
       const shaken = hanging.find(f => f.id === id && f.shaken === null);
       if (shaken) {
         const drop = { ...shaken, shaken: performance.now() };
@@ -165,6 +176,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
       }
       markHarvested(id);
       void harvestNode(id, [player.current.x, player.current.z], tool).then(answer => {
+        if (answer && !answer.ok && answer.code === "bag_full") { unmarkHarvested(id); window.dispatchEvent(new CustomEvent("tsi:bag-full", { detail: { x: at.x, z: at.z } })); return; }
         if (answer && !answer.ok) { window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: answer.error } })); return; }
         // The server's roll is the catch (normally the same species this node showed).
         const got = answer ? ROSTER.find(s => s.key === answer.catch.item_key) ?? sp : sp;
@@ -176,6 +188,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
         window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `${isNew ? "NEW! " : ""}${bug ? "Caught" : "Got"} ${got.name}${size ? `, ${size} cm` : ""}!`, icon: iconUrl(got.key) } }));
         if (answer?.catch.recipe) window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `You learned a recipe: ${answer.catch.recipe.name}` } }));
         window.dispatchEvent(new CustomEvent("tsi:peaceful-got", { detail: { key: got.key, name: got.name, rarity: got.rarity, one_liner: got.oneLiner, size, isNew, bug: !!bug } }));
+        window.dispatchEvent(new CustomEvent("tsi:bag-got", { detail: { key: got.key } }));
       });
     };
     window.addEventListener("tsi:peaceful-act", onAct);
