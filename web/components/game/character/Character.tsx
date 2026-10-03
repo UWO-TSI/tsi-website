@@ -534,8 +534,9 @@ const USE_GRIPS: Partial<Record<ClipName, Partial<Record<HoldKind, [number, numb
   Fish: { rod: ROD_FISHING }, FishHold: { rod: ROD_FISHING }, CastWindup: { rod: ROD_FISHING }, CastSwing: { rod: ROD_FISHING }, HookYank: { rod: ROD_FISHING },
   Reel: { rod: ROD_FISHING }, Cheer: { rod: ROD_FISHING }, Sad: { rod: ROD_FISHING },
   Net: { net: [2.472, -0.623, 2.401] }, Dig: { shovel: [-1.087, -0.652, -1.79] },
-  // A rock struck with the blade down, as the dig; the hammer's blows face down onto the bench.
-  Strike: { shovel: [-1.087, -0.652, -1.79] }, Craft: { hammer: [1.403, 0.0, 1.691] },
+  // A rock struck: the blade swung forward and down onto the rock in front (render_forage_clips.py); the hammer's blows
+  // face down onto the bench.
+  Strike: { shovel: [-1.458, -0.293, -1.846] }, Craft: { hammer: [1.403, 0.0, 1.691] },
 };
 /** Clips a hold lays over (the arms carry the item); in any other the item's own clip poses them. */
 const HOLD_OVER = new Set<ClipName>(["Idle", "Walk", "Run", "CrouchIdle", "CrouchWalk", "Jump", "Air", "Fall", "Land", "LandHeavy", "Skid", "Dash", "LookAround"]);

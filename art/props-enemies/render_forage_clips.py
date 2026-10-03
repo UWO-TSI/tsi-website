@@ -49,9 +49,11 @@ def euler_matrix(e):
 
 
 # The hammer: held at the side like the net (the handle up, the face forward), and in use (Craft's blows) the handle out
-# over the bench and the face down onto it.
+# over the bench and the face down onto it. The shovel striking a rock (Strike's hit): the blade swung forward and down
+# onto the rock in front, the handle back up to the hands (the dig's grip drove it into the ground at the feet).
 SOLVE = {"hammer": ("HoldTool", 0.0, Vector((-0.2, -0.35, 0.92)), Vector((0.0, -1.0, 0.1))),
-         "hammer_use": ("Craft", 0.24, Vector((0.05, -0.97, 0.22)), Vector((0.0, -0.15, -1.0)))}
+         "hammer_use": ("Craft", 0.24, Vector((0.05, -0.97, 0.22)), Vector((0.0, -0.15, -1.0))),
+         "shovel_strike": ("Strike", 0.46, Vector((0.0, 0.77, 0.64)), Vector((0.0, -1.0, 0.0)))}
 grips = {}
 for kind, (clip, at, z, front) in SOLVE.items():
     pe.use_action(rig, clip, at)
@@ -90,7 +92,7 @@ FRAME.data.materials.append(pe.materials({"M_Frame": ("#ffffff", 0, 0)})["M_Fram
 
 CLIPS = [("Pickup", (0.0, 0.3, 0.4, 0.7, 0.84), None),
          ("Shake", (0.16, 0.26, 0.36, 0.46, 0.8), None),
-         ("Strike", (0.3, 0.46, 0.56, 0.66), ("shovel", SHOVEL_USE)),
+         ("Strike", (0.3, 0.46, 0.56, 0.66), ("shovel", grips["shovel_strike"]["rotation"])),
          ("Craft", (0.1, 0.17, 0.24, 0.32, 0.56, 0.8), ("hammer", grips["hammer_use"]["rotation"])),
          ("Dig", (0.2, 0.42, 0.62), ("shovel", SHOVEL_USE))]
 for name, phases, tool in CLIPS:
