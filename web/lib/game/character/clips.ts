@@ -9,6 +9,7 @@ import { CLIP_BY_NAME, VERB_BY_NAME } from "./look";
 import { MOVE_TUNING } from "@/lib/game/movement/sim";
 import type { WeaponKind } from "@/lib/game/combat/contract";
 import type { FaceOverride } from "./face";
+import type { FishingState } from "@/lib/game/fishingRig";
 
 type VillageClip = "Idle" | "Walk" | "Run" | "Sit" | "Study" | "Sleep" | "Fish" | "FishHold" | "Forage" | "Dig" | "Net"
   | "Wave" | "Cheer" | "Laugh" | "Sad" | "Dance" | "AttackMelee" | "AttackBow" | "AttackCast" | "DodgeRoll" | "Hit" | "Defeat" | "Trace" | "Stretch"
@@ -17,7 +18,9 @@ type VillageClip = "Idle" | "Walk" | "Run" | "Sit" | "Study" | "Sleep" | "Fish" 
   // Residents' idles (specs/polish/living-village.md): a look round, a standing stretch, talking with someone.
   | "LookAround" | "StretchUp" | "Chat"
   // Holding things (specs/game-ui.md §2): arm poses laid over locomotion (Character.tsx), and eating a held snack.
-  | "HoldRod" | "HoldTool" | "HoldFront" | "Eat";
+  | "HoldRod" | "HoldTool" | "HoldFront" | "Eat"
+  // The rod moment (specs/polish/fishing.md): the wind-up posed by the cast's power, the swing, the yank on the bite, the reel, the catch held up.
+  | "CastWindup" | "CastSwing" | "HookYank" | "Reel" | "HoldUp";
 
 /**
  * The verb library (classes v2, design sheet §1.8): sixteen shared verbs, each authored once per grip family in
@@ -92,6 +95,7 @@ const FAMILY: Record<VillageClip, Family> = {
   Sit: "seat", Study: "seat", Stretch: "seat", Sleep: "seat",
   Fish: "act", FishHold: "act", Forage: "act", Dig: "act", Net: "act", Wave: "act", Cheer: "act", Laugh: "act", Sad: "act", Dance: "act", Trace: "act",
   LookAround: "act", StretchUp: "act", Chat: "act", Eat: "act",
+  CastWindup: "act", CastSwing: "act", HookYank: "act", Reel: "act", HoldUp: "act",
   HoldRod: "loco", HoldTool: "loco", HoldFront: "loco",
   AttackMelee: "combat", AttackBow: "combat", AttackCast: "combat", Hit: "combat", Defeat: "combat",
 };
@@ -126,6 +130,9 @@ const FADES: Readonly<Record<string, number>> = {
   "Slide>SlideBonk": 0.03, "SlideBonk>Idle": 0.12, "SlideBonk>CrouchIdle": 0.12, "SlideBonk>Walk": 0.14,
   "Idle>CrouchIdle": 0.18, "CrouchIdle>Idle": 0.18, "Walk>CrouchWalk": 0.14, "CrouchWalk>Walk": 0.14, "Run>CrouchWalk": 0.12,
   "CrouchIdle>CrouchWalk": 0.12, "CrouchWalk>CrouchIdle": 0.15, "Idle>CrouchWalk": 0.15, "CrouchWalk>Idle": 0.15, "Walk>CrouchIdle": 0.15, "CrouchIdle>Walk": 0.15,
+  // The rod moment: the swing leaves the wind-up at once, the yank cuts into the wait; the catch is lifted, an escape slumps.
+  "CastWindup>CastSwing": 0.06, "FishHold>HookYank": 0.05, "Reel>HookYank": 0.05, "Reel>HoldUp": 0.3, "Reel>Cheer": 0.14, "HoldUp>Cheer": 0.2,
+  "Reel>Sad": 0.2, "FishHold>Sad": 0.2, "CastSwing>Sad": 0.2,
 };
 export function crossfade(from: ClipName | null, to: ClipName): number {
   if (!from) return 0.16;
@@ -165,6 +172,12 @@ export interface CharacterMotion { speed: number; yaw: number; lift: number; pos
   leaf?: number;
   /** The Air clip's pose while `move` is "Air": 0 take-off, 0.5 the apex tuck, 1 reaching for the ground (airPhase). */
   air?: number;
+  /** Any other clip posed by a phase (catalogue `scrub`), 0..1: CastWindup by the cast's power. */
+  scrub?: number;
+  /** Timing scale for the held pose (`pose`), while set: the reel cranks faster while it's held. */
+  poseRate?: number;
+  /** This avatar's cast (lib/game/fishingRig.ts): its rod's bobber, line and catch draw from it, on this avatar. */
+  fishing?: FishingState | null;
   /** Foot contacts so far (the character counts them up as Walk or Run passes each foot's contact) and the last foot, 0 left 1 right. */
   steps?: number; foot?: number;
   /** An upper-body one-shot (a cast or a shot over a run, a slide or a jump): the spine up plays it over whatever the body plays; consumed like `play`. */

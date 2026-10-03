@@ -55,6 +55,7 @@ import { liveIslandWeather, reelWeather } from "@/lib/game/islandWeather";
 import { advanceFishingReel, createFishingReel } from "@/lib/game/fishingReel";
 import { FISHING_HINTS, bindFishingCastLifecycle, bindFishingInput, castDevice, trackCastDevice, type CastDevice, type FishingHeldInput } from "@/lib/game/fishingInput";
 import { isGameControlTarget } from "@/lib/game/keyboardInput";
+import { live } from "@/lib/game/fishingRig";
 
 type Phase = "idle" | "charging" | "casting" | "waiting" | "bite" | "reeling" | "revealing" | "caught" | "missed";
 
@@ -205,10 +206,11 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         // Cast power widens the hook window (max cast: 1.4s → 2.2s).
         const windowMs = BITE_WINDOW_MS + CAST.biteBonusMs * powerRef.current + rod.biteWindowMs;
         biteDeadlineRef.current = performance.now() + windowMs;
-        // Auto-miss if the window lapses.
+        // Auto-miss if the window lapses: the fish lets go and the bobber bobs back up.
         timersRef.current.push(
           window.setTimeout(() => {
             changePhase("missed");
+            window.dispatchEvent(new CustomEvent("tsi:fish-escaped", { detail: { hooked: false } }));
             AudioManager.playSFX("exit");
             timersRef.current.push(window.setTimeout(cancel, 1800));
           }, windowMs)
@@ -279,6 +281,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
       landRef.current = rolled && answer.catch.roll ? { roll: answer.catch.roll, size: answer.catch.size_cm } : null;
       setFish(rolled || local());
       changePhase("reeling");
+      window.dispatchEvent(new CustomEvent("tsi:fish-hooked")); // the yank, the line taut, the reel
       AudioManager.playSFX("click");
     });
   };
@@ -301,7 +304,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         // zone + spot coords ride along for world reactions (gull swoop).
         window.dispatchEvent(
           new CustomEvent("tsi:fish-caught", {
-            detail: { key: fish.key, model: fish.model, raw: fish.raw, zone: fish.zone ?? "river", x: spotRef.current?.x, z: spotRef.current?.z },
+            detail: { key: fish.key, model: fish.model, raw: fish.raw, sizeCm: size, zone: fish.zone ?? "river", x: spotRef.current?.x, z: spotRef.current?.z },
           })
         );
         if (collectionScope) collect(fish.key, { scope: collectionScope });
@@ -335,6 +338,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         }
       } else {
         changePhase("missed");
+        window.dispatchEvent(new CustomEvent("tsi:fish-escaped", { detail: { hooked: true } })); // the line snaps
         AudioManager.playSFX("exit");
         timersRef.current.push(window.setTimeout(cancel, 1800));
       }
@@ -694,6 +698,8 @@ export function ReelMinigame({
       }
       const events = advanceFishingReel(simulation, dt, holdingRef.current, weatherMods(reelWeather(liveIslandWeather())).dartChanceMul, Math.random, tensionMul);
       const { position: pos, fishPosition: fishPos, inside, progress, tension } = simulation;
+      // The fight in the world: the fish pulls the bobber across, the line tightens, the reel cranks while held.
+      live.pull = fishPos * 2 - 1; live.tension = tension; live.reeling = holdingRef.current; live.reeled = progress;
       if (simulation.result !== null) return finish(simulation.result);
 
       if (events.bounced && now - lastThunkRef.current > 250) {
@@ -747,6 +753,7 @@ export function ReelMinigame({
     return () => {
       cancelAnimationFrame(raf);
       setTensionZoom(0);
+      live.reeling = false;
       releaseInput();
       if (document.activeElement === reel && previouslyFocused?.isConnected) previouslyFocused.focus({ preventScroll: true });
     };
@@ -961,6 +968,7 @@ function CastMeter({ onRelease, releaseRequestedRef, hint }: { onRelease: (power
       const cyc = (vt % cycleMs) / cycleMs; // 0..1
       const p = cyc < 0.5 ? cyc * 2 : (1 - cyc) * 2;
       pRef.current = p;
+      live.power = p; // the avatar's wind-up deepens with it
       const inTip = p >= CAST.maxZone;
       if (fillRef.current) {
         fillRef.current.style.height = `${p * 100}%`;
