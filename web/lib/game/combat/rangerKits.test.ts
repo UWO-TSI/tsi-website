@@ -40,6 +40,8 @@ describe("the Ranger kits: shape and invariants", () => {
       expect(tiers.map(w => w.tier)).toEqual([1, 2, 3, 4, 5]);
       expect(tiers.every(w => w.type === k.signature.type && w.scaling[0] === "finesse")).toBe(true);
       for (const w of tiers) expect(WEAPONS[w.key]?.model).toBe(`/assets/game/weapons/${w.key}.glb`);
+      expect(tiers.map(w => !!WEAPONS[w.key].pulse)).toEqual([false, false, false, false, true]); // tier 5's runes breathe
+      for (const w of tiers) expect(existsSync(join(__dirname, "../../../public", WEAPONS[w.key].model)), w.key).toBe(true);
       expect(Object.values(SUBCLASS_FOR_TYPE).filter(s => s.subclass === k.key).length).toBe(1);
       expect(SYSTEM_WEAPONS.filter(w => w.type === k.signature.type).every(w => w.subclass === k.key)).toBe(true); // the type is theirs alone
     }

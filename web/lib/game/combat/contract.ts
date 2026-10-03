@@ -17,6 +17,8 @@ export interface Weapon {
   speed?: number;
   maxDurability: number;
   model: string; modelScale: number;
+  /** Classes v2: a tier-5 signature weapon's glow parts breathe (the trim kit's animated runes, design sheet §1.5). */
+  pulse?: boolean;
   /** Socket-space Euler overrides for a model that doesn't follow its kind's grip (the revolver's barrel is +Z). */
   grip?: WeaponGrip;
 }

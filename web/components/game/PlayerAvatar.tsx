@@ -681,7 +681,7 @@ function PlayerCharacter({ look, motion, inCombat, walkSpeed, leaf, held }: { lo
     const w = WEAPONS[heldWeapon ?? key];
     // Classes v2: the verb library's grip decides the hand (the Book grip holds the tome in the left).
     const hand = v2 && inCombat ? GRIP_HAND[gripFor(SYSTEM_WEAPONS.find(x => x.key === (heldWeapon ?? key))?.type ?? "sword")] : undefined;
-    return w?.model && (shown || heldWeapon) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat || !!heldWeapon, grip: w.grip, hand } : null;
+    return w?.model && (shown || heldWeapon) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat || !!heldWeapon, grip: w.grip, hand, pulse: w.pulse } : null;
   }, [key, heldWeapon, shown, inCombat, v2]);
   const item = useMemo(() => (inCombat ? null : heldView(held)), [inCombat, held]);
   return <Character look={look} motion={motion} walkSpeed={walkSpeed} weapon={weapon} held={item} leaf={leaf} verbs={inCombat && v2} />;

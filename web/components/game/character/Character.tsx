@@ -358,7 +358,9 @@ class Puppet {
 
 export interface WeaponView { kind: WeaponKind; model: string; modelScale: number; inHand: boolean; grip?: WeaponGrip;
   /** The hand that holds it, over the kind's (clips.ts GRIP_HAND: the verb library's Book grip holds the tome in the left). */
-  hand?: "L" | "R" }
+  hand?: "L" | "R";
+  /** Its glow parts breathe (a tier-5 signature weapon). */
+  pulse?: boolean }
 /**
  * Weapon placement per kind in socket space (row 140): in hand in the ruins, across the back elsewhere.
  * Weapons are authored grip-at-origin, tip up +Y. `rest` is the in-hand pose outside attack clips: the
@@ -373,7 +375,7 @@ const GRIP: Record<WeaponKind, WeaponGrip> = {
 };
 const gripQ = new THREE.Quaternion(), gripE = new THREE.Euler();
 
-function HeldWeapon({ puppet, motion, weapon: { kind, model: url, modelScale, inHand, grip, hand } }: { puppet: Puppet; motion: RefObject<CharacterMotion>; weapon: WeaponView }) {
+function HeldWeapon({ puppet, motion, weapon: { kind, model: url, modelScale, inHand, grip, hand, pulse } }: { puppet: Puppet; motion: RefObject<CharacterMotion>; weapon: WeaponView }) {
   const { scene } = useGLTF(url);
   const model = useMemo(() => tagLookClasses(scene.clone(true), url), [scene, url]);
   useEffect(() => {
@@ -381,13 +383,26 @@ function HeldWeapon({ puppet, motion, weapon: { kind, model: url, modelScale, in
     const shown = showWeapon(motion.current, inHand ? model : null);
     return () => { model.removeFromParent(); shown(); };
   }, [model, puppet, motion, kind, url, modelScale, inHand, grip, hand]);
+  const glows = useMemo(() => (pulse ? glowMaterials(model) : []), [model, pulse]);
   // Upright at rest, the attack grip while an attack clip plays (eased so the swap doesn't pop).
-  useFrame((_, delta) => {
+  useFrame(({ clock }, delta) => {
+    breathe(glows, clock.elapsedTime);
     const g = grip ?? GRIP[kind];
     if (!inHand || !g.rest) return;
     model.quaternion.slerp(gripQ.setFromEuler(gripE.set(...(puppet.attacking ? g.hand : g.rest))), 1 - Math.exp(-delta * 24));
   });
   return null;
+}
+/** A weapon's emissive materials, each with its authored intensity kept (they're shared by every copy of the model). */
+function glowMaterials(model: THREE.Object3D): THREE.MeshStandardMaterial[] {
+  const out = new Set<THREE.MeshStandardMaterial>();
+  model.traverse(o => { const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined; if (m?.emissive && m.emissive.getHex() !== 0) out.add(m); });
+  for (const m of out) m.userData.glowBase ??= m.emissiveIntensity;
+  return [...out];
+}
+/** Module scope (hook values are never written in a component): the glow parts breathe, 65–100% of their intensity. */
+function breathe(glows: THREE.MeshStandardMaterial[], t: number) {
+  for (const m of glows) m.emissiveIntensity = (m.userData.glowBase as number) * (0.65 + 0.35 * (0.5 + 0.5 * Math.sin(t * 3.2)));
 }
 /** Ribbon trails sample the weapon in hand (CharacterMotion.weaponModel); returns the cleanup. Module scope: hook values are never written in a component. */
 function showWeapon(m: CharacterMotion | null, model: THREE.Object3D | null) {

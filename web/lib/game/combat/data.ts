@@ -10,7 +10,7 @@ import type { EnemyAttack, EnemyType, MissionDef, Weapon } from "./contract";
 
 const W = "/assets/game/weapons/", E = "/assets/game/enemies/";
 
-type Look = Pick<Weapon, "cooldown" | "range" | "arc" | "speed" | "model" | "modelScale" | "grip">;
+type Look = Pick<Weapon, "cooldown" | "range" | "arc" | "speed" | "model" | "modelScale" | "grip" | "pulse">;
 /**
  * The Rangers' grips in socket space (three.js Euler XYZ, solved from the clips' frames by art/props-enemies/render_held.py
  * `ranger`): in the hand while shooting, at rest in the hand, across the back.
@@ -52,7 +52,7 @@ const WEAPON_LOOK: Record<string, Look> = {
   ...signatureLooks("sixgun", { cooldown: 0.31, range: 10, arc: 0, speed: 55 }, RANGER_GRIPS.sixgun),
 };
 function signatureLooks(type: string, feel: Pick<Look, "cooldown" | "range" | "arc" | "speed">, grip?: Look["grip"]): Record<string, Look> {
-  return Object.fromEntries([1, 2, 3, 4, 5].map(t => [`${type}-${t}`, { ...feel, model: `${W}${type}-${t}.glb`, modelScale: 1.3, ...(grip ? { grip } : {}) }]));
+  return Object.fromEntries([1, 2, 3, 4, 5].map(t => [`${type}-${t}`, { ...feel, model: `${W}${type}-${t}.glb`, modelScale: 1.3, ...(grip ? { grip } : {}), ...(t === 5 ? { pulse: true } : {}) }]));
 }
 export const WEAPONS: Record<string, Weapon> = Object.fromEntries(islandWeapons()
   .filter(w => WEAPON_LOOK[w.id])
