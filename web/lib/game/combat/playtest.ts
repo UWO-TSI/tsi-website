@@ -15,13 +15,20 @@ import { energyMax, type CombatRuntime } from "./runtime";
 import { spawnEnemy, type Enemy, type Vec } from "./sim";
 import { capacity, packAt } from "./spawns";
 
-let search: string | null = null, on = false;
-/** The demo is on: a dev build and `?combat=demo` on this page. */
+let search: string | null = null, on = false, harness = false;
+function read() {
+  const s = window.location?.search ?? "";
+  if (s !== search) { const q = new URLSearchParams(s); search = s; on = q.get("combat") === "demo"; harness = on && q.get("playtest") === "1"; }
+}
+/** The demo is on: a dev build and `?combat=demo` on this page (the dev panel's controls, the flags, the spawner). */
 export function playtestOn(): boolean {
   if (process.env.NODE_ENV === "production" || typeof window === "undefined") return false;
-  const s = window.location?.search ?? "";
-  if (s !== search) { search = s; on = new URLSearchParams(s).get("combat") === "demo"; }
+  read();
   return on;
+}
+/** Opened from /lab/classes (`&playtest=1` too): the ruins HUD (meter, notes, key card) and the signature weapon put in hand. Other demo pages stay as they were. */
+export function playtestHarness(): boolean {
+  return playtestOn() && harness;
 }
 
 // ── The roster (the picker and the panel's switch) ──────────────

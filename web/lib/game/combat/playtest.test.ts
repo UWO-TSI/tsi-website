@@ -4,7 +4,7 @@ import { ARCANE_KITS } from "@/lib/combat/arcaneKits";
 import { GATE_PLAZA } from "@/lib/game/ruins";
 import { hurtPlayer } from "./actions";
 import { stepCombat } from "./encounter";
-import { addNote, bestSignature, classRows, clearPlaytest, DUMMY_BOLT, dpsView, PLAYTEST, playtestFrame, readNotes, setPlaytest, spawnPlaytest, TEST_GROUND } from "./playtest";
+import { addNote, bestSignature, classRows, clearPlaytest, DUMMY_BOLT, dpsView, PLAYTEST, playtestFrame, playtestHarness, playtestOn, readNotes, setPlaytest, spawnPlaytest, TEST_GROUND } from "./playtest";
 import { createRuntime, type CombatRuntime } from "./runtime";
 import { inRect, shellFactor, spawnEnemy } from "./sim";
 import { ENEMIES } from "./data";
@@ -74,6 +74,15 @@ describe("the dev controls' guards", () => {
       expect(addNote(rt, "felt slow")).toBe(false);
     });
   }
+
+  it("turn on with ?combat=demo; the HUD and the weapon in hand only when opened from /lab/classes", () => {
+    page("?combat=demo&ruins=1");
+    expect([playtestOn(), playtestHarness()]).toEqual([true, false]);
+    page("?combat=demo&ruins=1&playtest=1");
+    expect([playtestOn(), playtestHarness()]).toEqual([true, true]);
+    page("?ruins=1&playtest=1");
+    expect([playtestOn(), playtestHarness()]).toEqual([false, false]);
+  });
 
   it("god mode keeps your health full and infinite mana your pool, in the demo", () => {
     page("?combat=demo&classes=v2");
