@@ -31,7 +31,7 @@ Nothing here blocked the build. Each item says what the wave does now; a one-wor
 22. **Icons** are hand-drawn SVG (no generation, per this wave's rule), on the cream disc with an ink outline. You approve the style on this family's set before the others follow it.
 23. **Weapon skins, the mastery trim and shop frames:** the rows are seeded and equip works (wave 0), but nothing renders a weapon skin, the trim or a shop frame yet, and T5's runes glow without animating. Each needs a renderer change shared by all families.
 24. **The kunai** has its model (kunai.glb) but a thrown kunai still flies as the generic streak with the ink and red trail. The Ranger wave added per-shot looks; the kunai can use them at merge.
-25. **Passive icons** are drawn (Bulwark, Unstoppable, Rhythm, Backstab, Vault) but the HUD shows the passive by name only.
+25. **Passive icons** (Bulwark, Unstoppable, Rhythm, Backstab, Vault) sit before their names on the HUD's class line; the Path sheet doesn't show them yet.
 26. **Sound:** nothing new; the re-pitched CC0 set as before.
 
 ## For the coordinator (shared files)
