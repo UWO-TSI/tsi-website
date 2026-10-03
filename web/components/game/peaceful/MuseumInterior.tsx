@@ -16,6 +16,7 @@ import { InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPi
 import Keeper from "../Keeper";
 import { RoomShell, preloadShells, registerShellMaterial, useKitPiece } from "../RoomShell";
 import { GLBProp } from "../NatureModels";
+import TankFish, { tankFishDef } from "./TankFish";
 import type { Exhibit, MuseumWing } from "@/lib/collections/logic";
 import type { Wing } from "@/lib/collections/roster";
 import { ROSTER } from "@/lib/collections/roster";
@@ -116,11 +117,13 @@ function IconSprite({ url, y, z = 0 }: { url: string; y: number; z?: number }) {
 function Case({ wing, exhibit, x, z }: { wing: Wing; exhibit: Exhibit; x: number; z: number }) {
   const piece = wing === "aquarium" ? "museum-tank" : wing === "insect_hall" ? "museum-case" : "museum-stand";
   const model = exhibit.key ? MODEL.get(exhibit.key) : null;
+  // The aquarium's fish swim (TankFish): the species' own model from the fishing catalogue.
+  const swimmer = wing === "aquarium" && exhibit.donated ? tankFishDef(exhibit.key) : null;
   // Aquarium fish swim low and near the glass: the tank lid hides the middle from the follow camera.
   const itemY = wing === "aquarium" ? 0.72 : wing === "insect_hall" ? 1.2 : 1.25;
   return <group position={[x, 0, z]}>
     <Suspense fallback={null}><Piece name={piece} position={[0, 0, 0]} scale={wing === "aquarium" ? 0.27 : 0.1} glassMaterial={wing === "aquarium" ? TANK_GLASS : wing === "insect_hall" ? CASE_GLASS : undefined} /></Suspense>
-    {exhibit.donated && (model
+    {swimmer ? <Suspense fallback={null}><TankFish def={swimmer} /></Suspense> : exhibit.donated && (model
       ? <Suspense fallback={null}><GLBProp url={model} position={[0, itemY - 0.2, 0]} scale={1.2} /></Suspense>
       : exhibit.icon ? <Suspense fallback={null}><IconSprite url={exhibit.icon} y={itemY} z={wing === "aquarium" ? -0.38 : 0} /></Suspense> : null)}
   </group>;

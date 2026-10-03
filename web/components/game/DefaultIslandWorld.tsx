@@ -19,6 +19,7 @@ import { InstancedModels } from "./InstancedNature";
 import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "./ACNHBuilding";
 import { NatureFence } from "./NatureModels";
 import WharfPier from "./WharfPier";
+import FittingRoom from "./FittingRoom";
 import { BASE_FOV } from "./movement/moveFx";
 import MiniMap from "./MiniMap";
 import { useDefaultIslandPlot } from "./DefaultIslandMap";
@@ -337,6 +338,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <BeachBottle player={player} ground={island.ground} />
       <StudySeats area="village" player={player} ground={island.ground} />
       <VillageLandmarks layout={layout} ground={island.ground} opened={progression.opened} stage={progression.stage} ceremony={ceremony} light={light} />
+      {layout.fitting && <FittingRoom at={layout.fitting} ground={island.ground} player={player} />}
       <EventDecor event={event} ground={island.ground} light={light} weather={weather} />
       {layout.bridges.map(b => <GLBProp key={b.id} url="/assets/acnh/props/bridge-wooden.glb" position={[b.x, b.y, b.z]} rotation={[0, b.yaw ?? 0, 0]} />)}
       {layout.lamps.map(l => <Lantern key={l.id} position={[l.x, island.ground(l.x, l.z), l.z]} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />)}
@@ -415,7 +417,7 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
   const at = (l: Landmark, dy = 0): [number, number, number] => [l.x, ground(l.x, l.z) + dy, l.z];
   const front = (l: Landmark) => l.z - (l.half?.[1] ?? 0);
   const { hq, shop, oracle, cafe, museum, ruins, monument, mailbox, notice, wharf } = Object.fromEntries(placed) as Partial<Record<Landmark["id"], Landmark>>;
-  const board = placed.get("catch"), { fitting, missions } = layout;
+  const board = placed.get("catch"), { missions } = layout;
   return <>
     {hq && <>
       {/* The clubhouse model's origin is 2.35 in front of its footprint centre; porch lamps flank the door. */}
@@ -424,7 +426,6 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
       <FadeLight position={[hq.x, ground(hq.x, hq.z) + 1.6, hq.z - 3.75]} color="#ffd68b" intensity={light.lamp * 1.5} distance={5.5} />
     </>}
     {shop && <group position={at(shop)}><ACNHBuilding id="shop" lit={windowLit(light)} /></group>}
-    {fitting && <GLBProp url="/assets/acnh/furniture/fitting-room.glb" position={[fitting[0], ground(...fitting), fitting[1] + 0.45]} scale={0.1} rotation={[0, Math.PI, 0]} />}
     {oracle && <group position={at(oracle)}><ACNHBuilding id="oracle" lit={windowLit(light)} /></group>}
     {cafe && <group position={at(cafe)}><CafeBuilding open={opened.includes("cafe")} light={light} /></group>}
     {museum && <group position={at(museum)}><ACNHParts parts={CHALET_VARIANTS.red} lit={windowLit(light)} /></group>}
@@ -680,7 +681,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (action === "curator") { setDonateOpen(true); return; }
     if (action === "display") { setSheet("trophies"); return; }
     if (action === "desk") { setSheet("showcase"); return; }
-    if (action === "closet" || action === "fitting") { setSheet(action); return; }
+    if (action === "closet" || action === "fitting") { if (action === "fitting") window.dispatchEvent(new CustomEvent("tsi:fitting")); setSheet(action); return; }
     if (action === "altar") { setReveal(null); setSheet("oracle"); return; }
     if (action === "missions") { setSheet("missions"); return; }
     if (action === "trophy" || action === "posters") { setSheet(action === "trophy" ? "tourney" : "posters"); return; }

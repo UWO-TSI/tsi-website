@@ -11,7 +11,7 @@
  * lavender, never scary.
  */
 
-import { Suspense, useEffect, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { FAMILIES } from "@/lib/game/oracle/family";
@@ -21,6 +21,8 @@ import { interiorLight } from "@/lib/game/interiorLight";
 import InteriorDaylight from "./InteriorDaylight";
 import { sigilTexture } from "./oracle/sigil";
 import { RoomShell, preloadShells, registerShellMaterial, useKitPiece } from "./RoomShell";
+import CandleFire, { type Wick } from "./oracle/CandleFire";
+import { worldTime } from "@/lib/game/worldClock";
 import {
   InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
   type InteriorStation, type RoomBounds,
@@ -107,65 +109,47 @@ let rose: THREE.MeshBasicMaterial | null = null;
 function lightRose(day: number) { rose?.color.setRGB(0.28 + 0.6 * day, 0.26 + 0.58 * day, 0.36 + 0.55 * day); }
 registerShellMaterial("oracle_banners", bannerMaterial);
 registerShellMaterial("oracle_rose", roseMaterial);
-// Candle embers (loop wake 41): three warm motes per cluster rise from the
-// flames, drift, shrink, and fade on staggered loops — the temple's candle
-// pools get living fire. Refs only, one useFrame.
-const CANDLE_XZ: [number, number][] = [
-  [-1.5, 1.4],
-  [1.6, 1.5],
-  [-1.2, 3.9],
-  [1.3, 3.8],
+// The candles (dump chambersticks, authored upside down: turned over and grounded) and their wicks' tips.
+const CANDLES: { x: number; z: number; rotY: number; scale: number }[] = [
+  { x: -1.5, z: 1.4, rotY: 0, scale: 0.09 }, { x: 1.6, z: 1.5, rotY: 1.2, scale: 0.08 },
+  { x: -1.2, z: 3.9, rotY: 2.2, scale: 0.08 }, { x: 1.3, z: 3.8, rotY: 0.4, scale: 0.09 },
 ];
+/** candle.glb is 6.02 tall, its wick at its foot (the model's origin): after the turn the wick tips the candle. */
+const WICKS: Wick[] = CANDLES.map(c => ({ x: c.x, z: c.z, top: 6.02 * c.scale + 0.005 }));
+const CANDLE_POOLS = [[-2.2, 1, 2.2], [2.2, 1, 2.2]] as const;
 
-function CandleEmbers() {
-  const refs = useRef<(THREE.Mesh | null)[]>([]);
-  useFrame(({ clock }) => {
-    const t = clock.elapsedTime;
-    for (let k = 0; k < refs.current.length; k++) {
-      const m = refs.current[k];
-      if (!m) continue;
-      const cluster = CANDLE_XZ[Math.floor(k / 3)];
-      const speed = 0.3 + (k % 3) * 0.08;
-      const p = (t * speed + k * 0.71) % 1;
-      m.position.set(
-        cluster[0] + Math.sin(t * 1.6 + k * 2.1) * 0.06 * p,
-        0.34 + p * 0.6,
-        cluster[1] + Math.cos(t * 1.2 + k * 1.7) * 0.05 * p
-      );
-      m.scale.setScalar(1 - p * 0.7);
-      (m.material as THREE.MeshBasicMaterial).opacity = 0.8 * (1 - p);
-    }
-  });
-  return (
-    <group>
-      {CANDLE_XZ.flatMap((_, i) =>
-        [0, 1, 2].map((j) => (
-          <mesh
-            key={`${i}-${j}`}
-            ref={(el) => {
-              refs.current[i * 3 + j] = el;
-            }}
-          >
-            <sphereGeometry args={[0.02, 6, 4]} />
-            <meshBasicMaterial color="#FFC070" transparent opacity={0} depthWrite={false} toneMapped={false} />
-          </mesh>
-        ))
-      )}
-    </group>
-  );
+/** The crystal breathes: its glow (in the room's light colour, the family's in the reveal) and its light swell and ease. */
+const CRYSTAL_GLOW = { base: 0.55, swell: 0.45 };
+function pulseCrystal(materials: readonly THREE.MeshStandardMaterial[], light: THREE.PointLight | null, tint: string, t: number) {
+  // A slow breath with a soft second beat: never a blink.
+  const p = Math.pow(0.5 + 0.5 * Math.sin(t * 1.25), 2) * 0.8 + 0.2 * (0.5 + 0.5 * Math.sin(t * 2.5 + 0.6));
+  for (const m of materials) {
+    if (m.userData.tint !== tint) { m.emissive.set(tint); m.userData.tint = tint; }
+    m.emissiveIntensity = (m.name === "M_CrystalDeep" ? 0.7 : 1) * (CRYSTAL_GLOW.base + CRYSTAL_GLOW.swell * p);
+  }
+  if (light) light.intensity = 8 + 6 * p;
 }
 
-function FloatingCrystal() {
-  const ref = useRef<THREE.Group>(null);
+function FloatingCrystal({ tint }: { tint: string }) {
+  const ref = useRef<THREE.Group>(null), glow = useRef<THREE.PointLight>(null);
   const crystal = useKitPiece("oracle_crystal");
+  const materials = useMemo(() => {
+    const out = new Set<THREE.MeshStandardMaterial>();
+    crystal.traverse(o => { const mesh = o as THREE.Mesh; if (mesh.isMesh && (mesh.material as THREE.MeshStandardMaterial).emissive) out.add(mesh.material as THREE.MeshStandardMaterial); });
+    return [...out];
+  }, [crystal]);
   useFrame(() => {
     const m = ref.current;
     if (!m) return;
-    const t = performance.now() / 1000;
+    const t = worldTime();
     m.rotation.y = t * 0.6;
     m.position.y = 2.35 + Math.sin(t * 1.1) * 0.12;
+    pulseCrystal(materials, glow.current, tint, t);
   });
-  return <group ref={ref} position={[0, 2.35, 2.6]}><primitive object={crystal} /></group>;
+  return <>
+    <group ref={ref} position={[0, 2.35, 2.6]}><primitive object={crystal} /></group>
+    <pointLight ref={glow} color={tint} intensity={10} distance={7} position={[0, 3, 2.6]} />
+  </>;
 }
 
 export default function OracleInterior({
@@ -197,9 +181,6 @@ export default function OracleInterior({
           candle pools and the crystal's glow carrying it at night. */}
       <InteriorDaylight light={light} tint="#cdb6ee" scale={{ key: 0.9, ambient: 0.4, hemisphere: 0.22, extent: 9 }} />
       <pointLight color={tint} intensity={26} distance={19} position={[0, 4.2, 0]} />
-      <pointLight color={tint} intensity={10} distance={7} position={[0, 3, 2.6]} />
-      <pointLight color="#FFCF8A" intensity={10} distance={5.5} position={[-2.2, 1, 2.2]} />
-      <pointLight color="#FFCF8A" intensity={10} distance={5.5} position={[2.2, 1, 2.2]} />
 
       {/* the temple's walls, windows, banners and floor (art/interiors/build_interiors.py) */}
       <Suspense fallback={null}><RoomShell room="oracle" light={light} /></Suspense>
@@ -208,16 +189,13 @@ export default function OracleInterior({
         {/* runic circle + altar + crystal (→ Oracle quiz sheet) */}
         <Piece name="magic-circle-rug" position={[0, 0.012, 2.6]} scale={0.14} />
         <Piece name="altar" position={[0, 0, 2.6]} scale={0.11} />
-        <FloatingCrystal />
+        <FloatingCrystal tint={tint} />
         {/* ruins pillars flanking the altar */}
         <Piece name="remains-pillar" position={[-3.6, 0, 3.6]} scale={0.12} />
         <Piece name="remains-pillar" position={[3.6, 0, 3.6]} rotY={0.6} scale={0.12} />
-        {/* candle clusters */}
-        <Piece name="candle" position={[-1.5, 0, 1.4]} scale={0.09} />
-        <Piece name="candle" position={[1.6, 0, 1.5]} rotY={1.2} scale={0.08} />
-        <Piece name="candle" position={[-1.2, 0, 3.9]} rotY={2.2} scale={0.08} />
-        <Piece name="candle" position={[1.3, 0, 3.8]} rotY={0.4} scale={0.09} />
-        <CandleEmbers />
+        {/* the candles, lit: painted flames on the wicks and sparks drifting up (CandleFire) */}
+        {CANDLES.map(c => <Piece key={c.x} name="candle" position={[c.x, 0, c.z]} rotY={c.rotY} rotX={Math.PI} scale={c.scale} />)}
+        <CandleFire wicks={WICKS} pools={CANDLE_POOLS} poolIntensity={10} />
         {/* exit mat */}
         <Piece name="yellow-message-mat" position={[0, 0.015, -5.3]} scale={0.12} />
       </Suspense>

@@ -15,6 +15,7 @@ import { AudioManager } from "@/lib/game/audio";
 import { CLUBHOUSE_LIGHTING, ISLAND_LIGHTING, type IslandLight } from "@/lib/game/islandLighting";
 import { interiorLight } from "@/lib/game/interiorLight";
 import InteriorDaylight from "./InteriorDaylight";
+import TickingClock from "./TickingClock";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import {
   InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
@@ -146,8 +147,8 @@ export default function HQInterior({
 
         {clubhouse && <Piece shadows name="study-chair" {...HQ_LAYOUT.loungeChair} />}
 
-        {/* Clock against the north wall, facing into the room. */}
-        <Piece shadows={clubhouse} name="antique-clock" glassMaterial={clubhouse ? "FtrAntiqueClock_mat0" : undefined} position={clubhouse ? HQ_LAYOUT.clock.position : [-7.1, 0, 3.6]} rotY={clubhouse ? Math.PI : -Math.PI / 2} />
+        {/* Clock against the north wall, facing into the room: its pendulum swings and its hands keep the island's time. */}
+        <TickingClock glassMaterial={clubhouse ? "FtrAntiqueClock_mat0" : undefined} position={clubhouse ? HQ_LAYOUT.clock.position : [-7.1, 0, 3.6]} rotY={clubhouse ? Math.PI : -Math.PI / 2} player={playerPosRef} />
 
         {/* Corner plants */}
         <Piece shadows={clubhouse} name="plant-monstera" position={clubhouse ? HQ_LAYOUT.monstera.position : [-7.2, 0, 5.2]} />

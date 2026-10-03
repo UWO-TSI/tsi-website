@@ -179,7 +179,7 @@ export function InteriorPlayer({
 
 const FURNITURE_BASE = "/assets/acnh/furniture";
 const RESTORED_PIECES = new Set(["study-desk", "study-chair", "bookshelf", "wooden-chest", "bulletinboard", "antique-clock", "plant-monstera", "plant-yucca", "reading-table"]);
-const pieceUrl = (name: string) => `${FURNITURE_BASE}/${name}.glb${name === "clubhouse-pendant" ? "?v=white-20260917" : RESTORED_PIECES.has(name) ? "?v=hq-textures-20260917" : ""}`;
+export const pieceUrl = (name: string) => `${FURNITURE_BASE}/${name}.glb${name === "clubhouse-pendant" ? "?v=white-20260917" : RESTORED_PIECES.has(name) ? "?v=hq-textures-20260917" : ""}`;
 
 /**
  * Recolor pipeline (2026-07-25): tint the clone's materials by name.
