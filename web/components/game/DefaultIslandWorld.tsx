@@ -40,7 +40,8 @@ import { useIslandConditions } from "@/lib/game/useIslandConditions";
 import { IslandAtmosphere, useFollowCamera, type TreeSpot } from "./IslandAtmosphere";
 import PeacefulLayer, { peacefulNear } from "./peaceful/PeacefulLayer";
 import WardrobeSheet from "./peaceful/WardrobeSheet";
-import { InventorySheet, ShopBody, WalletSheet } from "@/components/economy/EconomySheets";
+import { ShopBody, WalletSheet } from "@/components/economy/EconomySheets";
+import { BagSheet } from "./Bag";
 import { isTyping, worldKeysBlocked } from "@/lib/game/useWorldDialog";
 import ProgressionPanel from "@/components/progression/ProgressionPanel";
 import { apiCall } from "@/lib/apiClient";
@@ -1032,7 +1033,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <ProgressionPanel open={!!shopTab} onClose={() => setShopTab(null)} title="Shop" wide>{shopTab && <ShopBody initialTab={shopTab} />}</ProgressionPanel>
       <NoticeSheet open={sheet === "notice"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       <LettersSheet open={sheet === "letters"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openMail} />
-      <InventorySheet open={sheet === "bag"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openBag} />
+      <BagSheet open={sheet === "bag"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openBag} />
       <WalletSheet open={sheet === "wallet"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openWallet} />
       {(sheet === "closet" || sheet === "fitting") && <WardrobeSheet open place={sheet === "closet" ? "closet" : "fitting"} onClose={() => setSheet(null)} onShop={() => { setSheet(null); setShopTab("outfits"); }} />}
       <PlayerCharacterUI />

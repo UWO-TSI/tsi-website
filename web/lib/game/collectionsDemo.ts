@@ -7,7 +7,9 @@
  */
 import { memoryCollectionsStore } from "@/lib/collections/memoryStore";
 import { torontoParts } from "@/lib/time";
-import { catchAction, donate, getShowcase, journal, museum, setShowcase, tourney, trophies } from "@/lib/collections/service";
+import { bagAction, bagView, catchAction, donate, getShowcase, journal, museum, setShowcase, tourney, trophies } from "@/lib/collections/service";
+import { sellPrice, speciesClass } from "@/lib/wallet/rules";
+import { slotsUsed } from "@/lib/collections/bag";
 import { DEFAULT_GOALS } from "@/lib/progression/defaults";
 import { latestTourney } from "@/lib/progression/seasonal";
 import { installDemoFetch, reply } from "./demoFetch";
@@ -17,9 +19,19 @@ const OTHERS = [["00000000-0000-4000-8000-0000000001a1", "Maya Chen"], ["0000000
 /** More anglers for the tourney board, so "You" lands in its private bottom half. */
 const ANGLERS = [["00000000-0000-4000-8000-0000000001b1", "Sam Okafor"], ["00000000-0000-4000-8000-0000000001b2", "Alex Rivera"], ["00000000-0000-4000-8000-0000000001b3", "Riley Chen"], ["00000000-0000-4000-8000-0000000001b4", "Noor Haddad"]] as const;
 
+/**
+ * The demo's pockets (specs/game-ui.md milestone 2), `?bag=<slots>` to start that full (19: one pickup from full; 23:
+ * over the cap, as a member was before it) and `?chest=1` for a stocked storage chest. The bag's service runs here too.
+ */
+const POCKETS: [string, number][] = [["wood_branch", 29], ["rock_stone", 12], ["rock_iron_nugget", 4], ["rock_clay", 6], ["apple", 9], ["fruit_orange", 3], ["flower_rose", 4],
+  ["shell_scallop", 2], ["mushroom_round", 3], ["fish_carp", 1], ["fish_bluegill", 1], ["fish_salmon", 1], ["fish_squid", 1], ["fish_red_snapper", 1], ["sea_sea_star", 1],
+  ["bug_monarch_butterfly", 1], ["bug_ladybug", 1], ["bug_mantis", 1], ["fish_golden_koi", 1], ["rock_gold_nugget", 1], ["bug_firefly", 1], ["fish_pike", 1], ["shell_whelk", 1]];
+
 export function installCollectionsDemo(): void {
-  installDemoFetch("collections", "/api/collections", () => {
+  installDemoFetch("collections", "/api/", (query) => {
     const m = memoryCollectionsStore(() => new Date());
+    if (query.get("chest")) for (const [key, n] of [["wood_branch", 60], ["rock_stone", 34], ["rock_clay", 8], ["apple", 22], ["flower_tulip", 7], ["fish_dace", 1], ["bug_common_butterfly", 1]] as const) m.stash(ME, key, n);
+    let coins = 0;
     m.name(ME, "You");
     [...OTHERS, ...ANGLERS].forEach(([id, name]) => m.name(id, name));
     const ready = (async () => {
@@ -42,6 +54,12 @@ export function installCollectionsDemo(): void {
         [ANGLERS[3][0], "fish_dace", 17], [OTHERS[2][0], "sea_dungeness_crab", 21], [ME, "sea_sea_star", 13],
       ];
       if (t) for (const [who, key, size] of entries) m.enter(t.goal.id, t.cycle, who, key, size);
+      // `?bag=<slots>`: POCKETS until the bag fills that many (each adds a slot at most).
+      const fill = Number(query.get("bag") ?? 0);
+      for (const [key, n] of POCKETS) {
+        if (slotsUsed(Object.fromEntries((await m.store.bag(ME)).items.map(r => [r.item_key, r.count]))) >= fill) break;
+        m.give(ME, key, n);
+      }
     })();
     return async (path, body, url, method) => {
       await ready;
@@ -59,6 +77,17 @@ export function installCollectionsDemo(): void {
         case "/api/collections/trophies": return reply(await trophies(m.store, now), "case");
         case "/api/collections/tourney": return reply(await tourney(m.store, DEFAULT_GOALS, ME, now), "tourney");
         case "/api/collections/showcase": return reply(method === "PUT" ? await setShowcase(m.store, ME, body.items) : await getShowcase(m.store, ME), "showcase");
+        case "/api/collections/bag": return reply(method === "POST" ? await bagAction(m.store, ME, body) : await bagView(m.store, ME), "bag");
+        case "/api/economy/sell": {
+          // The shop's sale over the demo's pockets (economy_sell's rules: the price by rarity, a locked one refused).
+          const row = (await m.store.bag(ME)).items.find(r => r.item_key === body.item_key);
+          const cls = speciesClass(body.item_key), price = cls && sellPrice(cls.category, cls.rarity);
+          if (!row || !price || row.count < body.qty) return reply({ ok: false, status: 409, code: "insufficient_items", error: "You don't have that many." }, "sale");
+          if (row.locked) return reply({ ok: false, status: 409, code: "locked", error: "That's locked in your bag. Unlock it to sell it." }, "sale");
+          m.give(ME, body.item_key, -body.qty);
+          coins += price * body.qty;
+          return reply({ ok: true, data: { balance: coins, remaining: row.count - body.qty, paid: price * body.qty, replayed: false } }, "sale");
+        }
         default: return null;
       }
     };

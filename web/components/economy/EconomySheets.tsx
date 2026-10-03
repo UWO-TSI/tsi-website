@@ -6,7 +6,7 @@
  * as play coins or Gems only (their icons, components/economy/Amount); nothing is ever expressed as money.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Backpack, ReceiptText, ShoppingBasket, Store } from "lucide-react";
+import { Backpack, Lock, ReceiptText, ShoppingBasket, Store } from "lucide-react";
 import { COINS } from "@/lib/economy";
 import { iconUrl, shopIcon } from "@/lib/icons/keys";
 import { Badge, Button, Empty, ErrorNote, Loading, Tabs } from "@/components/gui";
@@ -175,7 +175,7 @@ export function SellBody({ transport = httpEconomyTransport }: { transport?: Eco
   if (!data) return error ? <ErrorNote onRetry={() => void reload()}>{error}</ErrorNote> : <Loading label="Counting your pockets…" />;
   return (
     <div>
-      <p className={p.muted} style={{ marginBottom: 10 }}>Prices go by rarity. Donate your first of each species to the museum before selling it.</p>
+      <p className={p.muted} style={{ marginBottom: 10 }}>Prices go by rarity. Donate your first of each species to the museum before selling it. Things you locked in your bag stay put.</p>
       {earned > 0 ? <p role="status" className={`${p.note} ${p.ok}`}>+{fmt(earned, "coins")} this visit</p> : null}
       {error ? <ErrorNote>{error}</ErrorNote> : null}
       {data.length === 0 ? <Empty icon={<ShoppingBasket size={32} />} title="Nothing to sell yet">Go fishing, bug hunting or foraging, then come back.</Empty> : null}
@@ -188,10 +188,11 @@ export function SellBody({ transport = httpEconomyTransport }: { transport?: Eco
               <b>{e.name}</b> ×{e.count}
               <span className={p.muted} style={{ display: "block" }}>{e.rarity} {e.category} · {fmt(e.price_each, "coins")} each</span>
             </span>
-            <span className={s.rowActions}>
+            {/* A favourite locked in the bag (specs/game-ui.md §7): listed, never sold. */}
+            {e.locked ? <Badge tone="warn"><Lock size={12} aria-hidden /> Locked in your bag</Badge> : <span className={s.rowActions}>
               <Button size="sm" variant="quiet" disabled={busy !== null} onClick={() => sellIt(e, 1)}>Sell 1</Button>
               <Button size="sm" disabled={busy !== null} onClick={() => sellIt(e, e.count)}>Sell all · {fmt(e.price_each * e.count, "coins")}</Button>
-            </span>
+            </span>}
           </li>
         ))}
       </ul>

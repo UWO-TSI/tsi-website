@@ -12,7 +12,7 @@ import { Button, ErrorNote } from "@/components/gui";
 import type { Family } from "@/lib/oracle/engine";
 import { apiCall } from "@/lib/apiClient";
 import { ClassBadge } from "@/components/portal/classIdentity";
-import { InventorySheet } from "@/components/economy/EconomySheets";
+import { BagSheet } from "@/components/game/Bag";
 import CollectionBook from "@/components/game/CollectionBook";
 import { ShowcaseSheet } from "@/components/game/peaceful/ShowcaseSheets";
 import LettersSheet from "@/components/progression/LettersSheet";
@@ -71,7 +71,7 @@ export default function MeTab() {
         <button className={s.tile} onClick={() => setSheet("mailbox")}><span className={s.appTile} style={{ "--tile": "#e59266" } as React.CSSProperties} aria-hidden><Mail size={24} strokeWidth={2.2} /></span>Mailbox</button>
       </div>
 
-      <InventorySheet open={sheet === "bag"} onClose={close} />
+      <BagSheet open={sheet === "bag"} onClose={close} />
       <LettersSheet open={sheet === "mailbox"} onClose={close} />
       <CollectionBook open={sheet === "journal"} onClose={close} />
       <ShowcaseSheet open={sheet === "showcase"} onClose={close} />
