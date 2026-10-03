@@ -11,7 +11,8 @@ import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useThree } from "@react-three/fiber";
 import { Html, useTexture } from "@react-three/drei";
 import * as THREE from "three";
-import { InteriorKeeper, InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces, type InteriorStation, type RoomBounds } from "../interiorShared";
+import { InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces, type InteriorStation, type RoomBounds } from "../interiorShared";
+import Keeper from "../Keeper";
 import { GLBProp } from "../NatureModels";
 import type { Exhibit, MuseumWing } from "@/lib/collections/logic";
 import type { Wing } from "@/lib/collections/roster";
@@ -61,8 +62,10 @@ function Case({ wing, exhibit, x, z }: { wing: Wing; exhibit: Exhibit; x: number
   </group>;
 }
 
-export default function MuseumInterior({ wings, frozen, player, onNear }: {
+export default function MuseumInterior({ wings, frozen, talking = false, player, onNear }: {
   wings: MuseumWing[] | null; frozen: boolean; player: React.RefObject<THREE.Vector3>; onNear: (near: "donate" | "exit" | null) => void;
+  /** The donation sheet is open: the curator serves you. */
+  talking?: boolean;
 }) {
   const { scene, camera } = useThree();
   useEffect(() => applyInteriorBackdrop(scene), [scene]);
@@ -93,7 +96,7 @@ export default function MuseumInterior({ wings, frozen, player, onNear }: {
       </group>;
     })}
     <mesh position={[-2.2, 0.45, -1.3]}><boxGeometry args={[1.8, 0.9, 0.7]} /><meshStandardMaterial color="#8a6a4a" roughness={0.85} /></mesh>
-    <InteriorKeeper position={[-2.2, 0, -0.7]} watch={[0, -3]} colors={{ apron: "#6b8f7a", shirt: "#e8dcc4" }} hat="none" playerPosRef={player as React.MutableRefObject<THREE.Vector3>} />
+    <Keeper room="museum" player={player} frozen={frozen} engaged={talking} />
     <InteriorPlayer frozen={frozen} bounds={BOUNDS} playerPosRef={player as React.MutableRefObject<THREE.Vector3>} onMove={onWalk} constrainMove={constrain} />
   </>;
 }

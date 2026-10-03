@@ -12,9 +12,10 @@ import { Suspense, useEffect } from "react";
 import { useThree, type ThreeEvent } from "@react-three/fiber";
 import { AudioManager } from "@/lib/game/audio";
 import {
-  InteriorKeeper, InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
+  InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
   type InteriorStation, type RoomBounds,
 } from "./interiorShared";
+import Keeper from "./Keeper";
 
 const BOUNDS: RoomBounds = { halfW: 4, halfD: 4, spawn: [0, -2.8] };
 
@@ -68,7 +69,7 @@ export default function WharfShackInterior({
         </mesh>
       ))}
 
-      <InteriorKeeper position={[0, 0, 3.35]} watch={[0, 2.2]} colors={{ apron: "#3E5C7A", shirt: "#C97E5A" }} hat="straw" playerPosRef={playerPosRef} />
+      <Keeper room="wharf" player={playerPosRef} frozen={frozen} />
 
       <Suspense fallback={null}>
         {/* the counter — selling happens here */}

@@ -2,13 +2,12 @@
 
 /**
  * Oracle temple on the default island: the existing OracleInterior (dump
- * pieces: altar, ruins pillars, magic-circle rug, candles, hooded keeper)
- * plus the keeper's quiz reactions and the reveal ceremony (row 206):
- * the hall washes in the family colour, a sigil rises over the altar and a
- * beam of light falls on it.
+ * pieces: altar, ruins pillars, magic-circle rug, candles; the Oracle keeper
+ * says the quiz's reactions) plus the reveal ceremony (row 206): the hall
+ * washes in the family colour, a sigil rises over the altar and a beam of
+ * light falls on it.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Html } from "@react-three/drei";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import OracleInterior from "../OracleInterior";
@@ -16,22 +15,8 @@ import type { InteriorStation } from "../interiorShared";
 import { FAMILIES } from "@/lib/game/oracle/family";
 import type { Family } from "@/lib/oracle/engine";
 import { sigilTexture } from "./sigil";
-import styles from "../DefaultIslandWorld.module.css";
 
 const ALTAR: [number, number, number] = [0, 0, 2.6];
-const KEEPER: [number, number, number] = [1.9, 0, 3.6];
-
-function KeeperBubble() {
-  const [line, setLine] = useState<string | null>(null);
-  useEffect(() => {
-    let t = 0;
-    const on = (e: Event) => { setLine((e as CustomEvent<{ line: string }>).detail.line); window.clearTimeout(t); t = window.setTimeout(() => setLine(null), 5000); };
-    window.addEventListener("tsi:oracle-keeper", on);
-    return () => { window.removeEventListener("tsi:oracle-keeper", on); window.clearTimeout(t); };
-  }, []);
-  if (!line) return null;
-  return <Html position={[KEEPER[0], 2.3, KEEPER[2]]} center distanceFactor={9} zIndexRange={[4, 0]}><div className={styles.keeperBubble}>{line}</div></Html>;
-}
 
 function Ceremony({ family, startedAt }: { family: Family; startedAt: number }) {
   const sigil = useRef<THREE.Sprite>(null);
@@ -64,15 +49,16 @@ function Ceremony({ family, startedAt }: { family: Family; startedAt: number }) 
   </group>;
 }
 
-export default function OracleTemple({ frozen, player, onNear, ceremony }: {
+export default function OracleTemple({ frozen, talking = false, player, onNear, ceremony }: {
   frozen: boolean; player: React.RefObject<THREE.Vector3>; onNear: (near: "altar" | "exit" | null) => void;
   ceremony: { family: Family; startedAt: number } | null;
+  /** The quiz sheet is open at the altar. */
+  talking?: boolean;
 }) {
   return <>
-    <OracleInterior frozen={frozen} playerPosRef={player as React.MutableRefObject<THREE.Vector3>}
+    <OracleInterior frozen={frozen} talking={talking} playerPosRef={player as React.MutableRefObject<THREE.Vector3>}
       tint={ceremony ? FAMILIES[ceremony.family].light : undefined}
       onNearestStation={(s: InteriorStation | null) => onNear(s ? (s.id === "altar" ? "altar" : "exit") : null)} />
-    {!ceremony && <KeeperBubble />}
     {ceremony && <Ceremony family={ceremony.family} startedAt={ceremony.startedAt} />}
   </>;
 }

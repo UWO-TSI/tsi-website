@@ -14,10 +14,10 @@ import { AudioManager } from "@/lib/game/audio";
 import { CLUBHOUSE_LIGHTING } from "@/lib/game/islandLighting";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import {
-  InteriorKeeper,
   InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
   type InteriorStation, type RoomBounds,
 } from "./interiorShared";
+import Keeper from "./Keeper";
 
 const BOUNDS: RoomBounds = { halfW: 8, halfD: 6, spawn: [0, -4.2] };
 
@@ -30,7 +30,7 @@ export type { InteriorStation };
 export const HQ_STATIONS: InteriorStation[] = [
   { id: "board", name: "Bulletin Board", pos: [-4.5, 5.1], action: "sheet:directory" },
   { id: "trophy", name: "Trophy Case", pos: [4.2, 5.1], action: "sheet:leaderboard" },
-  { id: "desk", name: "Front Desk", pos: [-5.2, -2.4], action: "sheet:profile" },
+  { id: "desk", name: "Front Desk", pos: [-5.2, -3.6], action: "sheet:profile" },
   { id: "shelf", name: "Bookshelf", pos: [5.6, -2.8], action: "sheet:quests" },
   { id: "admin", name: "Admin Room", pos: [-7.5, 1.2], action: "admin", range: 2.2 },
   { id: "exit", name: "Exit", pos: [0, -5.5], action: "exit", range: 2.4 },
@@ -54,7 +54,10 @@ export default function HQInterior({
   clubhouse = false,
   floorTexture,
   phase = "day",
+  talking = false,
 }: {
+  /** The front desk's sheet is open: the HQ lead serves you. */
+  talking?: boolean;
   clubhouse?: boolean;
   floorTexture?: THREE.Texture;
   phase?: IslandPhase;
@@ -214,8 +217,8 @@ export default function HQInterior({
         </mesh>
       ))}
 
-      {/* wake 69: front-desk receptionist (navy blazer, hair bun) */}
-      <InteriorKeeper position={[-6.3, 0, -2.4]} rotY={Math.PI / 2} watch={[-5.2, -2.4]} colors={{ apron: "#2E3E5C", shirt: "#F0E6D2" }} hat="bun" playerPosRef={playerPosRef} />
+      {/* The HQ lead behind the front desk (lib/game/keepers.ts). */}
+      <Keeper room="hq" player={playerPosRef} frozen={frozen} engaged={talking} />
       <InteriorPlayer frozen={frozen} bounds={BOUNDS} playerPosRef={playerPosRef} onMove={handleMove} constrainMove={constrainMove} />
     </group>
   );

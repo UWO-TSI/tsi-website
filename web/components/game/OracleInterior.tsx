@@ -14,10 +14,10 @@ import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { AudioManager } from "@/lib/game/audio";
 import {
-  InteriorKeeper,
   InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
   type InteriorStation, type RoomBounds,
 } from "./interiorShared";
+import Keeper from "./Keeper";
 
 const BOUNDS: RoomBounds = { halfW: 6, halfD: 6, spawn: [0, -4.2] };
 
@@ -103,7 +103,10 @@ export default function OracleInterior({
   playerPosRef,
   onNearestStation,
   tint = "#D4B0FF",
+  talking = false,
 }: {
+  /** The quiz sheet is open at the altar: the keeper faces you and says the quiz's reactions. */
+  talking?: boolean;
   /** Temple light colour; the reveal ceremony washes it in the family colour (row 206). */
   tint?: string;
   frozen: boolean;
@@ -176,8 +179,8 @@ export default function OracleInterior({
         <Piece name="yellow-message-mat" position={[0, 0.015, -5.3]} scale={0.12} />
       </Suspense>
 
-      {/* wake 69: hooded altar attendant */}
-      <InteriorKeeper position={[1.9, 0, 3.6]} rotY={Math.PI + 0.4} watch={[0, 2.6]} colors={{ apron: "#5A4A7E", shirt: "#8E7BB0" }} hat="hood" playerPosRef={playerPosRef} />
+      {/* The Oracle keeper beside the altar (lib/game/keepers.ts); the quiz's reactions are hers to say. */}
+      <Keeper room="oracle" player={playerPosRef} frozen={frozen} engaged={talking} sayEvent="tsi:oracle-keeper" />
       <InteriorPlayer
         frozen={frozen}
         bounds={BOUNDS}
