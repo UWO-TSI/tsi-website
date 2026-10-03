@@ -83,12 +83,16 @@ export async function reportName(store: IdentityStore, reporter: string, target:
 /** How long a moderation mute lasts (names and the reported-text queue). */
 export const MUTE_DAYS = 7;
 
-/** Row 221: T1-T2 can mute (letters/notes/chat) or remove a name (reset to a placeholder). */
-export async function moderate(store: IdentityStore, actor: string, actorTier: number, target: string, action: "mute" | "unmute" | "reset_name" | "dismiss", now: Date, muteDays = MUTE_DAYS): Promise<Result<{ action: string }>> {
+/**
+ * Row 221: T1-T2 can mute (letters/notes/chat, world chat too) or remove a name (reset to a placeholder). A mute or
+ * unmute returns the new muted_until, for the realtime server (world chat, M2).
+ */
+export async function moderate(store: IdentityStore, actor: string, actorTier: number, target: string, action: "mute" | "unmute" | "reset_name" | "dismiss", now: Date, muteDays = MUTE_DAYS): Promise<Result<{ action: string; muted_until?: string | null }>> {
   if (actorTier !== 1 && actorTier !== 2) return { ok: false, status: 403, code: "forbidden", error: ERR.forbidden[1] };
   try {
-    if (action === "mute") await store.setMute(target, new Date(now.getTime() + muteDays * 86_400_000).toISOString());
-    if (action === "unmute") await store.setMute(target, null);
+    let muted_until: string | null | undefined;
+    if (action === "mute") await store.setMute(target, (muted_until = new Date(now.getTime() + muteDays * 86_400_000).toISOString()));
+    if (action === "unmute") await store.setMute(target, (muted_until = null));
     if (action === "reset_name") {
       const placeholder = `Islander ${target.replace(/-/g, "").slice(-6)}`;
       const c = checkName(placeholder);
@@ -97,7 +101,7 @@ export async function moderate(store: IdentityStore, actor: string, actorTier: n
     }
     // Open name reports about this member close with the admin's action (row 221 log).
     if (action !== "unmute") await store.resolveReports(target, action === "dismiss" ? "dismissed" : "actioned");
-    return { ok: true, data: { action } };
+    return { ok: true, data: muted_until === undefined ? { action } : { action, muted_until } };
   } catch (err) {
     return fail(err);
   }
