@@ -50,3 +50,24 @@ variable (never its value). Template: `.env.example`.
 
 Outside production, `http://localhost:*`, `http://play.localhost:*` and
 `http://127.0.0.1:*` are allowed origins as well.
+
+## Auth and the player card (§2)
+
+- **Token.** The client sets `client.auth.token` to its Supabase access token. The
+  server verifies it locally with `jose` against
+  `<SUPABASE_URL>/auth/v1/.well-known/jwks.json` (ES256 only; issuer
+  `<SUPABASE_URL>/auth/v1`, audience `authenticated`, `role` `authenticated`, not
+  anonymous). No JWT secret is configured anywhere; an unknown `kid` refetches the set.
+- **Origins.** Checked on the matchmaking POST (CORS echoes only allowed origins and
+  never allows credentials), on the WebSocket handshake (`beforeUpgrade`, 403) and on
+  every join. A request with no `Origin` header is not a browser and goes on to the
+  token check. Because credentials are never allowed, the browser client must create
+  the SDK with `client.http.options.credentials = "omit"` (the SDK defaults to
+  `"include"`, which CORS would then block).
+- **Card.** `realtime_player_card(uuid)` (service-only RPC) gives the world name (never
+  the Google name), badge, tier, look, family, level, subclass, mastery, aura, frame,
+  the classes v2 flag, mute/removal and the account's age. Cached 60 s per user,
+  3 s timeout, re-read on `refresh` at most once per 10 s. Dev tokens get a synthetic
+  card and never touch a database.
+- Everything is injectable: `createApp({ env, verify, loadCard, origins })`. The tests
+  use a local `jose.generateKeyPair` JWKS and in-memory cards.
