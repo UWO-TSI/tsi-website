@@ -27,6 +27,8 @@ import type { Family } from "@/lib/oracle/engine";
 import { installDemoFetch, reply } from "../demoFetch";
 
 const ME = "00000000-0000-4000-8000-0000000c0de5";
+/** The playtest's switches, one idempotency key each (two in the same millisecond must not replay the first). */
+let devSeq = 0;
 
 /** Every form the kit learns from a mob, taught by one defeat of it (the playtest opens every skill). */
 async function learnForms(m: ReturnType<typeof memoryCombatStore>, subclass: string) {
@@ -89,10 +91,10 @@ export function installCombatDemo(): void {
           if (p.subclass !== kit.key) {
             if ((await m.store.family(ME)) !== kit.family) {
               m.setFamily(ME, kit.family); m.fund(ME, 2000);
-              if (q.get("stats") !== "none") { await resetStats(m.store, ME, `dev-${now.getTime()}`); await allocateStats(m.store, ME, presetAllocation(kit.family, p.level)); }
+              if (q.get("stats") !== "none") { await resetStats(m.store, ME, `dev-reset-${++devSeq}`); await allocateStats(m.store, ME, presetAllocation(kit.family, p.level)); }
             }
             m.grantRepick(ME, "oracle");
-            const r = await chooseSubclass(m.store, ME, kit.key, `dev-class-${now.getTime()}`);
+            const r = await chooseSubclass(m.store, ME, kit.key, `dev-class-${++devSeq}`);
             if (!r.ok) return reply(r, "subclass");
           }
           await learnForms(m, kit.key);
