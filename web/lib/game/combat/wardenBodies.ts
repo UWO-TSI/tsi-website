@@ -22,13 +22,14 @@ const ALLIES: EnemyType[] = [
   body("beast-owl", "Shadow owl", "beast-owl", [pounce], { hover: 1.5 }),
   body("beast-toad", "Shadow toad", "beast-toad", [{ shape: "lunge", windup: 0.3, recover: 0.5, range: 2, arc: 1, knockback: 0 }], { radius: 0.6 }),
   body("beast-serpent", "Shadow serpent", "beast-serpent", [idle]),
-  body("totem-storm", "Storm totem", "totem-storm", [idle], { modelScale: 1.3 }),
-  body("totem-fire", "Fire totem", "totem-fire", [idle], { modelScale: 1.3 }),
-  body("totem-earth", "Earthbind totem", "totem-earth", [idle], { modelScale: 1.3 }),
-  body("totem-spirit", "Spirit post", "totem-spirit", [idle], { modelScale: 1.3 }),
-  body("spirit-thunderbird", "Thunderbird", "spirit-thunderbird", [pounce], { hover: 2.2, modelScale: 1.5 }),
-  body("spirit-salamander", "Salamander", "spirit-salamander", [pounce], { modelScale: 1.4 }),
-  body("spirit-bear", "Spirit bear", "spirit-bear", [idle], { modelScale: 1.5, radius: 0.8 }),
+  // Totems stand a little over waist high (1.65 × the rig) so a planted field reads from the follow camera.
+  body("totem-storm", "Storm totem", "totem-storm", [idle], { modelScale: 1.65 }),
+  body("totem-fire", "Fire totem", "totem-fire", [idle], { modelScale: 1.65 }),
+  body("totem-earth", "Earthbind totem", "totem-earth", [idle], { modelScale: 1.65 }),
+  body("totem-spirit", "Spirit post", "totem-spirit", [idle], { modelScale: 1.65 }),
+  body("spirit-thunderbird", "Thunderbird", "spirit-thunderbird", [pounce], { hover: 2.2, modelScale: 1.9 }),
+  body("spirit-salamander", "Salamander", "spirit-salamander", [pounce], { modelScale: 1.6 }),
+  body("spirit-bear", "Spirit bear", "spirit-bear", [idle], { modelScale: 1.7, radius: 0.8 }),
 ];
 
 /**
