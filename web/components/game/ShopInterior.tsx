@@ -2,19 +2,22 @@
 
 /**
  * ShopInterior (2026-07-14) — ux-interiors.md §5, HQ-room pattern. A cozy
- * 10x10 general store: counter-register station opens the Shop sheet,
- * color-box display shelves flank the walls, barrels + cardboard piles +
- * a stray shopping cart fill the corners. Mint walls per the spec.
+ * 10x10 general store in its modelled shell (RoomShell: mint walls over a
+ * beadboard wainscot, plank floor, a window each side, a striped awning over
+ * the counter, the framed doorway): counter-register station opens the Shop
+ * sheet, color-box display shelves flank the walls, barrels + cardboard piles
+ * + a stray shopping cart fill the corners.
  */
 
 import { Suspense, useEffect } from "react";
-import { useThree, type ThreeEvent } from "@react-three/fiber";
-import { AudioManager } from "@/lib/game/audio";
+import { useThree } from "@react-three/fiber";
+import { ISLAND_LIGHTING, type IslandLight } from "@/lib/game/islandLighting";
 import {
   InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
   type InteriorStation, type RoomBounds,
 } from "./interiorShared";
 import Keeper from "./Keeper";
+import { RoomShell, preloadShells } from "./RoomShell";
 
 const BOUNDS: RoomBounds = { halfW: 5, halfD: 5, spawn: [0, -3.4] };
 
@@ -24,23 +27,22 @@ export const SHOP_STATIONS: InteriorStation[] = [
 ];
 
 preloadPieces(["counter-register", "color-box-shelf", "barrel", "cardboard-pile", "shopping-cart", "yellow-message-mat"]);
+preloadShells(["shop"]);
 
 export default function ShopInterior({
   frozen,
   playerPosRef,
   onNearestStation,
+  light = ISLAND_LIGHTING.day,
 }: {
+  /** The island's light now: the windows follow the time of day. */
+  light?: IslandLight;
   frozen: boolean;
   playerPosRef: React.MutableRefObject<import("three").Vector3>;
   onNearestStation: (s: InteriorStation | null) => void;
 }) {
   const { scene } = useThree();
   useEffect(() => applyInteriorBackdrop(scene), [scene]);
-
-  const onFloorClick = (e: ThreeEvent<MouseEvent>) => {
-    window.dispatchEvent(new CustomEvent("tsi:interior-move", { detail: { x: e.point.x, z: e.point.z } }));
-    AudioManager.playSFX("click");
-  };
 
   return (
     <group>
@@ -52,40 +54,8 @@ export default function ShopInterior({
       <directionalLight color="#FFE8C8" intensity={0.18} position={[5, 6, -3]} />
       <pointLight color="#FFDB98" intensity={9} distance={5} position={[0, 2.2, 2.6]} />
 
-      {/* floor + mint walls (§5.3) */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} onClick={onFloorClick}>
-        <planeGeometry args={[10, 10]} />
-        <meshStandardMaterial color="#D4B896" roughness={0.85} />
-      </mesh>
-      {[-3, 0, 3].map((x) => (
-        <mesh key={x} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.005, 0]}>
-          <planeGeometry args={[1.2, 10]} />
-          <meshStandardMaterial color="#C4A878" roughness={0.85} />
-        </mesh>
-      ))}
-      <mesh position={[0, 1.75, 5.15]}>
-        <boxGeometry args={[10.6, 3.5, 0.3]} />
-        <meshStandardMaterial color="#E8F0E8" roughness={0.9} />
-      </mesh>
-      <mesh position={[-5.15, 1.75, 0]}>
-        <boxGeometry args={[0.3, 3.5, 10.6]} />
-        <meshStandardMaterial color="#E8F0E8" roughness={0.9} />
-      </mesh>
-      <mesh position={[5.15, 1.75, 0]}>
-        <boxGeometry args={[0.3, 3.5, 10.6]} />
-        <meshStandardMaterial color="#E8F0E8" roughness={0.9} />
-      </mesh>
-      <mesh position={[0, 0.45, -5.15]}>
-        <boxGeometry args={[10.6, 0.9, 0.3]} />
-        <meshStandardMaterial color="#E8F0E8" roughness={0.9} />
-      </mesh>
-      {/* awning stripe banner behind the counter (§5.2) */}
-      {[-4, -2, 0, 2, 4].map((x, i) => (
-        <mesh key={i} position={[x, 2.9, 5.0]}>
-          <planeGeometry args={[1.6, 0.7]} />
-          <meshBasicMaterial color={i % 2 ? "#FFFFFF" : "#FFD166"} side={2} />
-        </mesh>
-      ))}
+      {/* walls, windows, the awning and the floor (art/interiors/build_interiors.py) */}
+      <Suspense fallback={null}><RoomShell room="shop" light={light} /></Suspense>
 
       <Suspense fallback={null}>
         {/* Counter + register (→ Shop sheet) */}

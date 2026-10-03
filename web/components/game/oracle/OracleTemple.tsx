@@ -15,6 +15,7 @@ import type { InteriorStation } from "../interiorShared";
 import { FAMILIES } from "@/lib/game/oracle/family";
 import type { Family } from "@/lib/oracle/engine";
 import { sigilTexture } from "./sigil";
+import type { IslandLight } from "@/lib/game/islandLighting";
 
 const ALTAR: [number, number, number] = [0, 0, 2.6];
 
@@ -49,14 +50,16 @@ function Ceremony({ family, startedAt }: { family: Family; startedAt: number }) 
   </group>;
 }
 
-export default function OracleTemple({ frozen, talking = false, player, onNear, ceremony }: {
+export default function OracleTemple({ frozen, talking = false, light, player, onNear, ceremony }: {
   frozen: boolean; player: React.RefObject<THREE.Vector3>; onNear: (near: "altar" | "exit" | null) => void;
   ceremony: { family: Family; startedAt: number } | null;
   /** The quiz sheet is open at the altar. */
   talking?: boolean;
+  /** The island's light now: the windows follow the time of day. */
+  light?: IslandLight;
 }) {
   return <>
-    <OracleInterior frozen={frozen} talking={talking} playerPosRef={player as React.MutableRefObject<THREE.Vector3>}
+    <OracleInterior frozen={frozen} talking={talking} light={light} playerPosRef={player as React.MutableRefObject<THREE.Vector3>}
       tint={ceremony ? FAMILIES[ceremony.family].light : undefined}
       onNearestStation={(s: InteriorStation | null) => onNear(s ? (s.id === "altar" ? "altar" : "exit") : null)} />
     {ceremony && <Ceremony family={ceremony.family} startedAt={ceremony.startedAt} />}

@@ -454,7 +454,7 @@ function BotanicalFrames() {
 }
 
 /** Clubhouse HQ interior as shipped on the applicant island (sage walls, lounge, pendants). */
-function Clubhouse({ phase, player, frozen, talking, onNear }: { phase: IslandPhase; player: React.RefObject<THREE.Vector3>; frozen: boolean; talking: boolean; onNear: (near: Near) => void }) {
+function Clubhouse({ phase, light, player, frozen, talking, onNear }: { phase: IslandPhase; light: IslandLight; player: React.RefObject<THREE.Vector3>; frozen: boolean; talking: boolean; onNear: (near: Near) => void }) {
   const wood = useTexture("/assets/acnh/interior/hq-parquet-albedo.png");
   const floor = useMemo(() => {
     const tex = wood.clone(); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(1, 0.75);
@@ -465,7 +465,7 @@ function Clubhouse({ phase, player, frozen, talking, onNear }: { phase: IslandPh
   useEffect(() => { player.current.set(0, 0, -4.2); camera.position.set(0, 8.4, -11.4); onNear("exit"); }, [camera, onNear, player]);
   const station = useCallback((s: InteriorStation | null) => onNear((s?.id as Near) ?? null), [onNear]);
   return <>
-    <HQInterior clubhouse phase={phase} floorTexture={floor} frozen={frozen} talking={talking} playerPosRef={player} onNearestStation={station} stations={CLUBHOUSE_STATIONS} constrainMove={constrainWorkshop} />
+    <HQInterior clubhouse phase={phase} light={light} floorTexture={floor} frozen={frozen} talking={talking} playerPosRef={player} onNearestStation={station} stations={CLUBHOUSE_STATIONS} constrainMove={constrainWorkshop} />
     <BotanicalFrames />
     <Workbench player={player} />
   </>;
@@ -917,10 +917,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         <Suspense fallback={null}>
           {site === "ruins" ? <RuinsScene key={`ruins-${ruinsRun}`} level={level} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={devZoom} player={player}
               onNear={n => setNear(n === "exit" ? "ruins_exit" : n)} onDefeat={onRuinsDefeat} start={ruinsRun <= 1 ? devAt : null} glider={peaceful.glider} />
-            : inside === "oracle" ? <OracleTemple frozen={fading || sheet === "oracle"} talking={sheet === "oracle"} player={player} onNear={n => setNear(n)} ceremony={reveal} />
+            : inside === "oracle" ? <OracleTemple frozen={fading || sheet === "oracle"} talking={sheet === "oracle"} light={light} player={player} onNear={n => setNear(n)} ceremony={reveal} />
             : inside === "cafe" ? <CafeInterior phase={phase} player={player} frozen={fading || !!sheet} identity={identity} level={level} onNear={setNear} />
-            : inside === "museum" ? <MuseumInterior wings={museumWings} frozen={fading || donateOpen} talking={donateOpen} player={player} onNear={n => setNear(n === "donate" ? "curator" : n)} />
-            : inside === "hq" ? <Clubhouse phase={phase} player={player} frozen={fading} talking={sheet === "showcase"} onNear={setNear} />
+            : inside === "museum" ? <MuseumInterior wings={museumWings} frozen={fading || donateOpen} talking={donateOpen} light={light} player={player} onNear={n => setNear(n === "donate" ? "curator" : n)} />
+            : inside === "hq" ? <Clubhouse phase={phase} light={light} player={player} frozen={fading} talking={sheet === "showcase"} onNear={setNear} />
             : inside === "house" ? <HomeInterior layout={layout} phase={phase} frozen={fading} player={player} onNear={(n: HouseNear) => setNear(n)}
               decorating={decor.decorating} selected={decor.selected} onPlace={decor.place} onPickUp={decor.pickUp} />
             : atHome ? <HomeIslandScene held={eating ? null : held} identity={identity} level={level} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={devZoom}

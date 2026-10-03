@@ -5,12 +5,15 @@
  * (interiorShared: backdrop, walker, camera). Rooms are 6×6 cells laid side
  * by side toward screen-right (−x), joined by a door gap. Wallpaper and
  * flooring are ACNH dump RoomTex albedos; furniture uses the placement layer.
+ * The modelled near wall (art/interiors kit) closes each room at the front, the
+ * first with the front door; a pendant lamp hangs where each room's light is.
  */
-import { useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useThree } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { InteriorPlayer, applyInteriorBackdrop, nearestStation, type InteriorStation, type RoomBounds } from "../interiorShared";
+import { useKitPiece } from "../RoomShell";
 import { PlacementLayer, type GridMapping } from "./PlacementLayer";
 import { CLUBHOUSE_LIGHTING } from "@/lib/game/islandLighting";
 import type { IslandPhase } from "@/lib/game/islandTime";
@@ -83,6 +86,19 @@ function RoomShell({ index, count, wallpaper, flooring }: { index: number; count
   </group>;
 }
 
+/** The front of room i: the low near wall (the first room's with the front door) and its pendant lamp. */
+function RoomFront({ index, count }: { index: number; count: number }) {
+  const wall = useKitPiece(index === 0 ? "home_lip_door" : "home_lip");
+  const lamp = useKitPiece("pendant_lamp");
+  const cx = roomLeft(index, count) - RW / 2;
+  return <>
+    <primitive object={wall} position={[cx, 0, -RD / 2]} />
+    <primitive object={lamp} position={[cx, WALL_H, LAMP_Z]} />
+  </>;
+}
+/** The pendant's depth into the room, and its bulb's height (the kit's shade hangs 0.8 under its ceiling cup). */
+const LAMP_Z = 0.4, LAMP_Y = WALL_H - 0.7;
+
 export default function HomeInterior({ layout, phase, frozen, player, onNear, decorating, selected, onPlace, onPickUp }: {
   layout: HomeLayoutDoc; phase: IslandPhase; frozen: boolean; player: React.RefObject<THREE.Vector3>;
   onNear: (near: HouseNear) => void; decorating: boolean; selected: { piece: string; rot: Rotation; uid?: string } | null;
@@ -131,7 +147,8 @@ export default function HomeInterior({ layout, phase, frozen, player, onNear, de
     <directionalLight color={light.keyColor} intensity={light.key} position={[3, 8, -4]} />
     {layout.rooms.map((room, i) => <group key={room.id}>
       <RoomShell index={i} count={n} wallpaper={room.wallpaper} flooring={room.flooring} />
-      <pointLight color="#ffe3ba" intensity={light.ceiling * 0.55} distance={9} position={[roomLeft(i, n) - RW / 2, 2.8, 0.4]} />
+      <pointLight color="#ffe3ba" intensity={light.ceiling * 0.55} distance={9} position={[roomLeft(i, n) - RW / 2, LAMP_Y, LAMP_Z]} />
+      <Suspense fallback={null}><RoomFront index={i} count={n} /></Suspense>
       <RoomPlacement index={i} count={n} items={room.items} decorating={decorating} selected={selected}
         onPlace={item => onPlace(i, item)} onPickUp={item => onPickUp(i, item)} />
     </group>)}
