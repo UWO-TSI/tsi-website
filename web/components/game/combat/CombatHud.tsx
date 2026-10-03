@@ -21,7 +21,7 @@ import { CAPS } from "@/lib/combat/kits";
 import { bigFoe, foeHint, phaseMarks } from "@/lib/game/combat/mobs";
 import type { IncantationScore } from "@/lib/game/combat/contract";
 import { floaterNodes, noteNodes } from "./EncounterRender";
-import { beastCap, beastKit, isTamed } from "@/lib/game/combat/beasts";
+import { beastCap, beastKit, isTamed, ritualOn } from "@/lib/game/combat/beasts";
 import { totemState } from "@/lib/game/combat/totems";
 import IncantationOverlay from "./IncantationOverlay";
 import ImpactOverlay from "./ImpactOverlay";
@@ -107,15 +107,15 @@ function ClassBar({ rt, keys }: { rt: CombatRuntime; keys: Record<string, string
         const id = V2_SLOT_IDS[i], base = kit.keys[i], cd = a ? v.cd[cdKey(a)] ?? 0 : 0, held = v.holding[i];
         const max = a?.input?.kind === "hold" ? a.input.max_s : a?.input?.kind === "charge" ? a.input.max_s : 1;
         const left = held !== null ? 1 - Math.min(1, held / max) : a && cd > 0 ? Math.min(1, cd / Math.max(a.cooldown_s, 0.1)) : 0;
-        const untamed = !a && !!base.tame && !isTamed(rt, base.tame), icon = (a ?? base).icon;
+        const untamed = !a && !!base.tame && !isTamed(rt, base.tame), ritual = !a && !untamed && ritualOn(rt), icon = (a ?? base).icon;
         return <li key={`${id}-${rt.denied[id]}`} data-denied={rt.denied[id] > 0 || undefined} data-cooling={cd > 0 || undefined} data-locked={!a || undefined}
           data-held={held !== null || undefined} data-on={v.toggled[i] || undefined} data-unarmed={!armed || undefined}
           data-form={a?.group && v.form && a.key.endsWith(`.${v.form}`) || undefined}
-          title={a ? `${a.name}${a.input && a.input.kind !== "tap" ? ` (${INPUT_WORD[a.input.kind]})` : ""}: ${a.description} · ${a.cooldown_s ? `${a.cooldown_s.toFixed(1)} s · ` : ""}${a.energy} ${word}` : `${base.name}: ${untamed ? "tame it first at the ritual circle in the outer wild" : base.learn ? "learn it by defeating its creature" : `opens at mastery ${base.unlock}`}`}>
+          title={a ? `${a.name}${a.input && a.input.kind !== "tap" ? ` (${INPUT_WORD[a.input.kind]})` : ""}: ${a.description} · ${a.cooldown_s ? `${a.cooldown_s.toFixed(1)} s · ` : ""}${a.energy} ${word}` : `${base.name}: ${untamed ? "tame it first at the ritual circle in the outer wild" : ritual ? "your beasts wait while the ritual runs" : base.learn ? "learn it by defeating its creature" : `opens at mastery ${base.unlock}`}`}>
           <span className={styles.sweep} style={{ "--sweep": `${left * 360}deg` } as React.CSSProperties}><kbd>{keyName(keys[id])}</kbd></span>
           {/* eslint-disable-next-line @next/next/no-img-element -- a tiny static ability emblem */}
           <span className={styles.slotName}>{icon && <img className={styles.slotIcon} src={icon} alt="" />}{a?.name ?? base.name}</span>
-          <small>{!a ? (untamed ? "Tame it" : base.learn ? "Not learned" : `Mastery ${base.unlock}`) : held !== null ? `${INPUT_WORD[a.input!.kind]}…` : cd > 0 ? `${cd.toFixed(cd < 1 ? 1 : 0)}s` : `${a.input && a.input.kind !== "tap" ? `${INPUT_WORD[a.input.kind]} · ` : ""}${a.energy}`}</small>
+          <small>{!a ? (untamed ? "Tame it" : ritual ? "Ritual" : base.learn ? "Not learned" : `Mastery ${base.unlock}`) : held !== null ? `${INPUT_WORD[a.input!.kind]}…` : cd > 0 ? `${cd.toFixed(cd < 1 ? 1 : 0)}s` : `${a.input && a.input.kind !== "tap" ? `${INPUT_WORD[a.input.kind]} · ` : ""}${a.energy}`}</small>
         </li>;
       })}</ol>
       <div className={styles.ultSlot} data-ready={ready || undefined} data-denied={rt.denied.ult || undefined} key={`ult-${rt.denied.ult}`}

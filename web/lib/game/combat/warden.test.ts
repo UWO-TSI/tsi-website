@@ -20,7 +20,8 @@ import { WARDEN_SKINS } from "@/lib/combat/wardenData";
 import { spawnEnemy, type Enemy } from "./sim";
 import { field, fadeOf, inGrowth, rankScale, rooted, walled, wallStops } from "./field";
 import { enclosed, hull, linksOf, totemState, TOTEM } from "./totems";
-import { BEAST, beastCap, beastState, RITUAL, setTamed } from "./beasts";
+import { BEAST, beastCap, beastState, RITUAL, ritualOn, setTamed } from "./beasts";
+import { zoneAt } from "@/lib/game/ruins";
 import { DIRECTIONAL, runeById, scoreTrace, screenAngle, turnRune } from "./runes";
 import { FX } from "@/lib/game/fx/combat";
 
@@ -296,6 +297,19 @@ describe("Summoner", () => {
     expect(beastState(rt).events.map(e => e.beast)).toEqual(["owl"]);
     expect(rt.v2!.keys[1]?.key).toBe("summoner.owl");
     expect(rt.killQueue.some(k => k.enemy === "shadow-owl")).toBe(false);
+  });
+  it("the ritual circle sits on open canyon floor, and the untamed form rises on it from whichever side you step in", () => {
+    for (let k = 0; k < 16; k++) { const a = (k / 16) * Math.PI * 2; expect(zoneAt(RITUAL.x + Math.sin(a) * (RITUAL.r + 0.6), RITUAL.z + Math.cos(a) * (RITUAL.r + 0.6))).toBe("outer"); }
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7]]) {
+      const { rt, p } = setup(SUMMONER, 1, []);
+      setTamed(rt, []);
+      ME = { x: RITUAL.x + dx * 1.5, z: RITUAL.z + dz * 1.5 }; p.last = { ...ME };
+      frame(rt);
+      expect(ritualOn(rt)).toBe(true);
+      frames(rt, 40);
+      const form = rt.enemies.find(e => e.type.id === "shadow-owl")!;
+      expect(zoneAt(form.x, form.z), `${dx},${dz}`).toBe("outer");
+    }
   });
   it("leaving the ward ends the ritual (the form sinks back) and it can start again", () => {
     const { rt, p } = setup(SUMMONER, 1, []);

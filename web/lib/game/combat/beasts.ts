@@ -23,6 +23,7 @@ import { addKick } from "./moveHooks";
 import type { CombatRuntime, Unit } from "./runtime";
 import { engage, spawnEnemy, type Enemy, type Vec } from "./sim";
 import { pullEnemy, rankScale, targetNear } from "./field";
+import { zoneAt } from "@/lib/game/ruins";
 import { equipClassKit } from "./classRuntime";
 
 export const BEAST = {
@@ -35,8 +36,11 @@ export const BEAST = {
   guard: { every: 3.5, reach: 4.5, hold: 0.8, power: 0.4 },
   warp: { power: 0.8, radius: 2 },
 } as const;
-/** The ritual circle in the outer wild (clear of the dens and the rune circle), the ward you must stay inside, and its wait. */
-export const RITUAL = { x: -12.5, z: -8.5, r: 2.2, ward: 9, wait: 1.2, limit: 150 } as const;
+/**
+ * The ritual circle in the outer wild's west (well inside the canyon floor: the form rises 3 u off it on open ground),
+ * the ward you must stay inside, and its wait.
+ */
+export const RITUAL = { x: -11, z: -15.5, r: 2.2, ward: 9, wait: 1.2, limit: 150 } as const;
 /** Beasts out at once by mastery (design sheet: 2 at 1, 3 at 10, 4 at 20). */
 export const beastCap = (mastery: number) => (mastery >= 20 ? 4 : mastery >= 10 ? 3 : 2);
 
@@ -81,6 +85,8 @@ export function setTamed(rt: CombatRuntime, beasts: readonly string[] | null) {
 }
 export const tamedList = (rt: CombatRuntime): string[] | null => { const t = TAMED.get(rt); return t ? [...t] : null; };
 export const isTamed = (rt: CombatRuntime, beast: string) => !TAMED.has(rt) || TAMED.get(rt)!.has(beast);
+/** A ritual under way (the HUD: the beast keys wait for it). */
+export const ritualOn = (rt: CombatRuntime) => !!STATE.get(rt)?.ritual;
 
 /** A kit that calls beasts (the Summoner): its keys' summons name beast units. */
 export const beastKit = (kit: ClassKit | null | undefined) => !!kit?.keys.some(k => k.effects.some(e => e.kind === "summon" && e.unit.startsWith("beast-")));
@@ -260,7 +266,9 @@ function stepRitual(rt: CombatRuntime, st: BeastState, me: Vec, dt: number) {
   for (const e of rt.enemies) if (e !== r.enemy && live(e) && dist(e, RITUAL) < RITUAL.ward + 4) e.status.distract = Math.max(e.status.distract, 0.5);
   const type = BEASTS.find(b => b.beast === r.beast)?.ritual;
   if (!r.enemy && r.t >= RITUAL.wait && type && ENEMIES[type]) {
-    const a = Math.atan2(RITUAL.x - me.x, RITUAL.z - me.z) || 0;
+    // Beyond the circle from you, turned along it until the spot is canyon floor (never up on a cliff).
+    let a = Math.atan2(RITUAL.x - me.x, RITUAL.z - me.z) || 0;
+    for (let k = 1; k < 12 && !zoneAt(RITUAL.x + Math.sin(a) * 3, RITUAL.z + Math.cos(a) * 3); k++) a += (k % 2 ? 1 : -1) * k * 0.5;
     const e = spawnEnemy(`ritual-${r.beast}-${rt.seq++}`, ENEMIES[type], RITUAL.x + Math.sin(a) * 3, RITUAL.z + Math.cos(a) * 3);
     e.summoned = true;
     rt.enemies.push(engage(e));
