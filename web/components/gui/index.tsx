@@ -147,7 +147,8 @@ export function List({ label, children, className }: { label?: string; children:
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
 /**
  * An item tile: the real icon on cream, its stack count, its rarity edge, a dot while it's new. `empty` is a free slot
- * (the kit's little dot); `unknown` shows the icon as a silhouette (not found yet). `caption` prints the name below.
+ * (the kit's little dot, still choosable with `onClick`); `unknown` shows the icon as a silhouette (not found yet).
+ * `caption` prints the name below. Without `onClick` it is a picture, not a button.
  */
 export function ItemTile({ icon, name, count, rarity, selected, isNew, unknown, empty, caption, size, onClick, className, ...rest }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick"> & {
   icon?: string | null; name: string; count?: number; rarity?: Rarity; selected?: boolean; isNew?: boolean; unknown?: boolean; empty?: boolean; caption?: ReactNode; size?: number; onClick?: () => void;
@@ -161,9 +162,10 @@ export function ItemTile({ icon, name, count, rarity, selected, isNew, unknown, 
     {isNew && <i className={styles.newDot} aria-hidden="true" />}
   </>;
   const look = { className: cx(styles.tile, className), style, title: empty ? undefined : unknown ? "???" : name, "data-selected": selected || undefined, "data-empty": empty || undefined, "data-unknown": unknown || undefined, "data-rarity": rarity };
-  const tile = onClick && !empty
-    ? <button type="button" {...rest} {...look} aria-label={label} aria-pressed={!!selected} onClick={onClick}>{face}</button>
-    : <span {...look} role="img" aria-label={label}>{face}</span>;
+  const named = rest["aria-label"] ?? label;
+  const tile = onClick
+    ? <button type="button" {...rest} {...look} aria-label={named} aria-pressed={!!selected} onClick={onClick}>{face}</button>
+    : <span {...look} role="img" aria-label={named}>{face}</span>;
   return caption === undefined ? tile : <span className={styles.tileWithCaption}>{tile}<span className={styles.caption}>{caption}</span></span>;
 }
 

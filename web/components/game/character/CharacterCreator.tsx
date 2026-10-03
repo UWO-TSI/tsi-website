@@ -12,7 +12,9 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { PerspectiveCamera, View } from "@react-three/drei";
 import Character, { type CharacterMotion } from "./Character";
+import { Lock } from "lucide-react";
 import { VillageButton, VillageField } from "@/components/recruit/ui";
+import { useWorldDialog } from "@/lib/game/useWorldDialog";
 import { dyeRef, FACE, FREE_HAIR_COLOURS, PALETTE, PART_BY_ID, partColor, partRef, partsIn, randomLook, STARTER_PARTS, wear, type CharacterLook, type PartSlot } from "@/lib/game/character/look";
 import styles from "./CharacterCreator.module.css";
 
@@ -82,8 +84,11 @@ export interface CreatorProps {
   onClose?: () => void;
 }
 
+const stay = () => {};
 export default function CharacterCreator({ initial, mode = "create", title, askName, owned = STARTERS, onShop, onDone, onClose }: CreatorProps) {
-  const root = useRef<HTMLElement>(null);
+  // A dialog (lib/game/useWorldDialog): the world's keys hold still under it (G no longer opens the emotes over it); Escape
+  // closes the wardrobe, never the first-login creator.
+  const root = useWorldDialog<HTMLElement>(true, onClose ?? stay, undefined, true);
   const [look, setLook] = useState(initial);
   const tabs = useMemo(() => (mode === "wardrobe" ? TABS.filter(t => WARDROBE_TABS.includes(t.id)) : TABS), [mode]);
   const [tabId, setTabId] = useState(tabs[0].id);
@@ -103,7 +108,7 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
   const target = colourTarget(tab.id, look, lastAccessory);
   const [name, setName] = useState(askName?.current === "You" ? "" : askName?.current ?? "");
   const [nameNote, setNameNote] = useState<{ ok: boolean; text: string } | null>(null);
-  useEffect(() => { root.current?.querySelector<HTMLButtonElement>("[role=tab]")?.focus(); }, []);
+  useEffect(() => { root.current?.querySelector<HTMLButtonElement>("[role=tab]")?.focus(); }, [root]);
   useEffect(() => {
     if (!askName || !name.trim() || name.trim() === askName.current) return;
     const timer = window.setTimeout(() => {
@@ -133,7 +138,9 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
   const swatchOn = (i: number) => tab.swatch === "skin" ? look.skin === i : tab.swatch === "hair" ? look.hair === i : target !== null && partColor(look, target) === i;
   const confirm = async (final: CharacterLook) => {
     setSaving(true);
-    const wanted = askName && name.trim() && name.trim() !== askName.current && nameNote?.ok ? name.trim() : null;
+    // The typed name goes with the look unless the check already said it's taken: confirming inside the check's 400 ms,
+    // or pressing Skip, used to drop it. The server checks again; a failure is surfaced (PlayerCharacterUI).
+    const wanted = askName && name.trim() && name.trim() !== askName.current && nameNote?.ok !== false ? name.trim() : null;
     await onDone(final, wanted);
     setSaving(false);
   };
@@ -159,7 +166,7 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
           <button aria-pressed={tab.on(look, id)} onClick={() => choose(id)} data-locked={!has(id) || undefined}
             aria-label={has(id) ? tab.name(id) : `${tab.name(id)} (${crafted(id) ? "crafted" : "in the shop"})`} title={tab.name(id)}>
             <View as="span" className={styles.thumb}><Stage look={tab.apply(look, id)} framing={tab.framing} /></View>
-            <span className={styles.label}>{has(id) ? "" : "🔒 "}{tab.name(id)}</span>
+            <span className={styles.label}>{has(id) ? null : <Lock size={11} strokeWidth={2.6} aria-hidden className={styles.lock} />}{tab.name(id)}</span>
           </button>
         </li>)}
       </ul>}

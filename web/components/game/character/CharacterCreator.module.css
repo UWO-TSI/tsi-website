@@ -25,7 +25,7 @@
 .grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .grid button { width: 100%; display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 6px; border: 3px solid transparent; border-radius: 24px; background: var(--c-cream); color: var(--c-ink); cursor: pointer; box-shadow: 0 3px 0 #d8d0b7; }
 .grid button[aria-pressed="true"] { border-color: var(--c-sage-deep); background: #f1f5e9; }
-.label { font-size: 11px; font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.label { font-size: max(11px, var(--gui-min-text, 0px)); font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .thumb { display: block; aspect-ratio: 1; width: 100%; border-radius: 18px; background: radial-gradient(circle at 50% 60%, #fffdf5, #efe7d0 80%); }
 .pager { display: flex; align-items: center; justify-content: center; gap: 14px; font-weight: 700; font-size: 13px; }
 .swatches { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px; border-radius: 22px; background: var(--c-cream); }
@@ -53,3 +53,15 @@
   .grid button[aria-pressed="true"] { background: #33443c; }
   .grid button[data-locked] { background: #27322f; border-color: #4d5c55; }
 }
+.lock { display: inline-block; margin-right: 3px; vertical-align: -1px; }
+/* The member world (.gui, the GUI sheet): the kit's paper and butter tabs, and cream whatever the OS appearance (it used
+   to turn dark). The applicant island keeps everything above. */
+:global(.gui) .creator { --c-cream: var(--gui-paper); --c-paper: var(--gui-paper-warm); --c-tri: var(--gui-paper-deep); --c-sage-deep: var(--gui-sage); --c-wood: var(--gui-wood);
+  --c-ink: var(--gui-ink); --c-muted: var(--gui-muted); color-scheme: light; }
+:global(.gui) .creator .stage { background: radial-gradient(ellipse at 50% 75%, #fff8e6, #e7eddf 70%); }
+:global(.gui) .creator .thumb { background: radial-gradient(circle at 50% 60%, #fffdf5, #efe7d0 80%); }
+:global(.gui) .creator .grid button[aria-pressed="true"] { border-color: var(--gui-highlight); background: var(--gui-butter); }
+:global(.gui) .creator .grid button[data-locked] { background: var(--gui-paper-deep); border-color: var(--gui-paper-line); }
+:global(.gui) .creator .tabs button { font-size: var(--gui-text-sm); font-weight: 800; }
+:global(.gui) .creator .tabs button[aria-selected="true"] { background: var(--gui-butter); color: var(--gui-ink-strong); box-shadow: 0 2px 0 #d4b64c; }
+:global(.gui) .creator .lockNote button { background: var(--gui-wood); color: var(--gui-paper); }

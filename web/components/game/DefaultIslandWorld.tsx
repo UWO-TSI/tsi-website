@@ -40,7 +40,8 @@ import { useIslandConditions } from "@/lib/game/useIslandConditions";
 import { IslandAtmosphere, useFollowCamera, type TreeSpot } from "./IslandAtmosphere";
 import PeacefulLayer, { peacefulNear } from "./peaceful/PeacefulLayer";
 import WardrobeSheet from "./peaceful/WardrobeSheet";
-import { ShopBody } from "@/components/economy/EconomySheets";
+import { InventorySheet, ShopBody, WalletSheet } from "@/components/economy/EconomySheets";
+import { isTyping, worldKeysBlocked } from "@/lib/game/useWorldDialog";
 import ProgressionPanel from "@/components/progression/ProgressionPanel";
 import { apiCall } from "@/lib/apiClient";
 import PlayerCharacterUI from "./character/PlayerCharacterUI";
@@ -141,9 +142,11 @@ import { boxOccluder, treeOccluder } from "@/lib/game/occluders";
 import styles from "./DefaultIslandWorld.module.css";
 
 type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | null;
-type Sheet = "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | null;
+type Sheet = "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | null;
 const DEV = process.env.NODE_ENV !== "production";
-const DEV_SHEETS: readonly Sheet[] = ["notice", "letters", "journal", "trophies", "showcase", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe"];
+const DEV_SHEETS: readonly Sheet[] = ["notice", "letters", "journal", "trophies", "showcase", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe", "wallet"];
+/** Sheets opened at a station with E: E closes them again (the dialog system's opening key). */
+const STATION_KEY = "e";
 const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight", evening: "Evening", night: "Night" };
 const CLUBHOUSE_STATIONS: InteriorStation[] = [
   { id: "board", name: "Notice board", pos: HQ_BOARD_APPROACH, action: "board", range: 2.3 },
@@ -154,12 +157,12 @@ const CLUBHOUSE_STATIONS: InteriorStation[] = [
   { id: "exit", name: "Island", pos: [0, -5.5], action: "exit", range: 1.6 },
 ];
 const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
-  enter: "Enter the clubhouse", exit: "Return to the island", board: "Read the notice board",
+  enter: "Enter HQ", exit: "Return to the island", board: "Read the notice board",
   display: "Look at the trophy case", desk: "Front desk · profile showcase", shelf: "Browse the bookshelf", clock: "Check the clock",
   notice: "Read the notice board", catch: "Check the catch board", mailbox: "Check the mailbox", monument: "Club monument",
   museum_enter: "Enter the museum", cafe_enter: "Enter the café", curator: "Talk to the curator", closet: "Open the closet", fitting: "Try on outfits", oracle_enter: "Enter the Oracle temple", altar: "Consult the crystal",
   home: "Take the boat home", fish: "Cast your line", forage: "Gather", net: "Swing the net", dig: "Dig", claim: "Claim your plot", donate: "Donate your first catch to the museum", report: "Report to HQ", house: "Enter your house", village: "Take the boat to the village",
-  buy: `Add a room · ${ROOM_PRICE.coins} coins + ${ROOM_PRICE.materials}`,
+  buy: `Add a room · ${ROOM_PRICE.coins} TC + ${ROOM_PRICE.materials}`,
   cafe: "Boarded up · help reopen it at the monument", museum: "Museum · Closed for now", ruins: "Enter the ruins", missions: "Read the mission board", ruins_exit: "Back to the village", lantern: "Pick it up",
   bench: "Sit on the bench", bed: "Sleep in your bed",
   trophy: "Read the tourney board", posters: "Look at the GENESIS posters", cocoa: "Get a hot cocoa", picnic: "Join the picnic",
@@ -592,7 +595,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   useEffect(() => {
     if (!classesOn) return;
     const on = (e: KeyboardEvent) => {
-      if (e.repeat || e.key.toLowerCase() !== "p" || (e.target instanceof HTMLElement && e.target.closest("input, textarea, select"))) return;
+      if (e.repeat || e.key.toLowerCase() !== "p" || worldKeysBlocked() || isTyping(e.target as Element)) return;
       setPathTick(n => n + 1); setSheet(s => (s === "path" ? null : s === null ? "path" : s));
     };
     window.addEventListener("keydown", on);
@@ -694,7 +697,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (action === "ruins" && !gate.open) { if (gate.reason) toast(gate.reason); return; }
     if (action === "buy") {
       void homeActions.buyRoom(homeActions.roomPrice() ?? ROOM_PRICE.coins).then(result => {
-        if (result.ok) { setHudCoins(result.coins); toast(`A new room is ready. ${result.coins} coins left.`, iconUrl("home-bed")); }
+        if (result.ok) { setHudCoins(result.coins); toast(`A new room is ready. ${result.coins.toLocaleString()} TC left.`, iconUrl("home-bed")); }
         else toast(/unauthori[sz]ed/i.test(result.error) ? "Sign in to add a room." : result.error);
       });
       return;
@@ -890,17 +893,25 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         else if (event.key === "Escape") finishWelcome();
         return;
       }
-      if (event.repeat || (event.target instanceof HTMLElement && event.target.closest("input, select, textarea, button"))) return;
-      if (event.key.toLowerCase() === "e") act(near);
-      if (event.key.toLowerCase() === "z" && !inside && !(site === "ruins" && Object.values(abilityKeys).includes("z"))) { toggleZoom(); saveOrbit(); }
       // Menus follow the account's key bindings (row 220); Escape is fixed.
       const menu = actionForKey(identity.settings, event.key);
+      // A dialog is open (lib/game/useWorldDialog): it takes Escape and its own key; the world holds still, and only
+      // the tab keys go through, to the top dialog's tabs.
+      if (worldKeysBlocked()) {
+        if (!event.repeat && (menu === "nextTab" || menu === "prevTab")) window.dispatchEvent(new CustomEvent("tsi:menu-tab", { detail: { step: menu === "nextTab" ? 1 : -1 } }));
+        return;
+      }
+      // Letters in a text field are typing; a focused HUD button doesn't swallow the world's keys any more.
+      if (event.repeat || isTyping(event.target as Element)) return;
+      if (event.key.toLowerCase() === "e") act(near);
+      if (event.key.toLowerCase() === "z" && !inside && !(site === "ruins" && Object.values(abilityKeys).includes("z"))) { toggleZoom(); saveOrbit(); }
       if (menu === "openMap") setMapOpen(value => !value);
-      // The collection journal is the bag (ACNH); quests keep J until the remap list has a quests action.
-      if (menu === "openJournal" || menu === "openBag") setBagOpen(value => !value);
-      if (!menu && event.key.toLowerCase() === "j") setSheet(value => (value === "journal" ? null : "journal"));
-      if (menu === "openMail") setSheet(value => (value === "letters" ? null : "letters"));
-      if (menu === "nextTab" || menu === "prevTab") window.dispatchEvent(new CustomEvent("tsi:menu-tab", { detail: { step: menu === "nextTab" ? 1 : -1 } }));
+      // The naming pass (menus §4): B the Collection (catches), I the Bag (items), K the wallet, J the Journal (quests).
+      if (menu === "openJournal") setBagOpen(true);
+      if (menu === "openBag") setSheet("bag");
+      if (menu === "openWallet") setSheet("wallet");
+      if (!menu && event.key.toLowerCase() === "j") setSheet("journal");
+      if (menu === "openMail") setSheet("letters");
       // The Esc that ended mouse-look capture is the browser's; a later one closes things (specs/camera-orbit.md).
       if (event.key === "Escape" && !escapeEndedCapture()) { setSheet(null); if (decor.selected) decor.cancel(); }
       if (atHome && event.key.toLowerCase() === "f") decor.toggle();
@@ -911,7 +922,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     return () => window.removeEventListener("keydown", key);
   }, [act, near, inside, atHome, decor, identity.settings, greeting, nextLine, finishWelcome, site, abilityKeys]);
   return (
-    <main className={styles.world} data-light={phase} data-inside={inside ?? undefined} data-site={site}>
+    <main className={`${styles.world} gui`} data-light={phase} data-inside={inside ?? undefined} data-site={site}>
       <Canvas ref={canvasRef} tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
         camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
@@ -940,12 +951,12 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           <WarmupProbe key={sceneShown} onReady={onSceneReady} />
           {children}
           {!inside && !atHome && site !== "ruins" && near !== "enter" && hqDoor && <Html position={[hqDoor[0], 2.9, hqDoor[1]]} center distanceFactor={10} zIndexRange={[3, 0]}>
-            <div className={styles.cue}>Clubhouse</div>
+            <div className={styles.cue}>HQ</div>
           </Html>}
         </Suspense>
       </Canvas>
       <header className={styles.heading} data-fading={fading || !ready || (!full && headingFlash === null)} data-clean={full ? undefined : ""}>
-        <h1>{site === "ruins" ? "The ruins" : inside === "oracle" ? "Oracle temple" : inside === "museum" ? "Museum" : inside === "cafe" ? "Café" : inside === "hq" ? "Clubhouse" : inside === "house" ? "Your house" : atHome ? "Your island" : "Tethos Island"}</h1>
+        <h1>{site === "ruins" ? "The ruins" : inside === "oracle" ? "Oracle temple" : inside === "museum" ? "Museum" : inside === "cafe" ? "Café" : inside === "hq" ? "HQ" : inside === "house" ? "Your house" : atHome ? "Your island" : "Tethos Island"}</h1>
         <p>{inside === "cafe" ? "Warm drinks and quiet tables. Find a seat to study." : !inside && !atHome && site === "village" && islandEvent ? `${islandEvent.goal.title} is on.` : "A little space to make our own."}</p>
       </header>
       {/* Top right (hud-first-login §1, §2): coins, level, clock and mail, then sound and the view options; panels open below it. */}
@@ -1004,8 +1015,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {/* Study tables are in the village and the café only: the HUD (its polling and session) lives there. */}
       {(inside === "cafe" || (!inside && site === "village")) && <StudyHud />}
       <CraftingSheet />
-      <CollectionBook open={bagOpen} onClose={() => setBagOpen(false)} />
-      {!bagOpen && full && <button className={styles.bagButton} onClick={() => setBagOpen(true)} aria-label="Open your collection journal"><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Journal</button>}
+      <CollectionBook open={bagOpen} onClose={() => setBagOpen(false)} keys={identity.settings.key_bindings.openJournal} />
+      {!bagOpen && full && <button className={styles.bagButton} onClick={() => setBagOpen(true)} aria-label="Open your collection"><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</button>}
       {!inside && !atHome && site !== "ruins" && !holdObjective && <div className={styles.minimap} data-minimap data-new={objectiveNew || undefined}>
         {mapOpen ? <MiniMap playerPosRef={player} plot={objectivePlot} toggleKey={identity.settings.key_bindings.openMap} onClose={() => setMapOpen(false)} />
           : full && <button className={styles.mapButton} onClick={() => setMapOpen(true)} aria-label="Show the island map"><MapIcon size={17} aria-hidden /><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</button>}
@@ -1019,11 +1030,13 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         onFinish={(key, value) => decor.setRoomFinish(roomAt(player.current.x, layout.rooms.length), key, value)} onShop={() => setShopTab("furniture")} />}
       {/* Locked wardrobe items and the decorate panel link here; closing remounts them with the new inventory. */}
       <ProgressionPanel open={!!shopTab} onClose={() => setShopTab(null)} title="Shop" wide>{shopTab && <ShopBody initialTab={shopTab} />}</ProgressionPanel>
-      <NoticeSheet open={sheet === "notice"} onClose={() => setSheet(null)} />
-      <LettersSheet open={sheet === "letters"} onClose={() => setSheet(null)} />
+      <NoticeSheet open={sheet === "notice"} onClose={() => setSheet(null)} keys={STATION_KEY} />
+      <LettersSheet open={sheet === "letters"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openMail} />
+      <InventorySheet open={sheet === "bag"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openBag} />
+      <WalletSheet open={sheet === "wallet"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openWallet} />
       {(sheet === "closet" || sheet === "fitting") && <WardrobeSheet open place={sheet === "closet" ? "closet" : "fitting"} onClose={() => setSheet(null)} onShop={() => { setSheet(null); setShopTab("outfits"); }} />}
       <PlayerCharacterUI />
-      <JournalSheet open={sheet === "journal"} onClose={() => setSheet(null)} />
+      <JournalSheet open={sheet === "journal"} onClose={() => setSheet(null)} keys="j" />
       <OracleQuizSheet open={sheet === "oracle"} onClose={() => setSheet(null)} onResult={onOracleResult} onPath={pathView?.family ? () => { setPathTick(n => n + 1); setSheet("path"); } : undefined} />
       {sheet === "path" && pathView && <PathSheet view={pathView} onClose={() => setSheet(null)} onChanged={() => setPathTick(n => n + 1)} />}
       <SettingsSheet open={sheet === "settings"} onClose={() => setSheet(null)} detectedTier={detectedTier} />
@@ -1037,8 +1050,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {site === "ruins" && <CombatHud player={player} />}
       {welcoming || !full ? null : site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>{mouseLook ? "Mouse Look and aim" : "Mouse Aim"}</span><span>Click Attack</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>←</kbd><kbd>→</kbd> Turn</span><span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Slide</span>}<span>{(combat.rt.v2 ? V2_SLOT_IDS : SLOT_IDS).map(s => <kbd key={s}>{keyName(abilityKeys[s])}</kbd>)} Abilities</span>{combat.rt.v2 && <span><kbd>{keyName(abilityKeys.ult)}</kbd> Ultimate</span>}<span><kbd>{keyName(wheelKeys.wheel)}</kbd> Weapons</span><span><kbd>{keyName(abilityKeys.swap)}</kbd> Previous weapon</span><span><kbd>E</kbd> Interact</span></div>
       // Indoors you walk (cafe-polish §4): no run, jump, dash, zoom or map.
-      : inside ? <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>E</kbd> Interact</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span></div>
-      : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span>{peaceful.glider && <span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air Glide</span>}<span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span><kbd>{keyName(wheelKeys.wheel)}</kbd> Tools</span><span>Click Use</span><span>{mouseLook ? "Mouse or " : ""}<kbd>←</kbd><kbd>→</kbd> Look</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Quests</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Crouch, at speed slide</span>}</div>}
+      : inside ? <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>E</kbd> Interact</span><span><kbd>J</kbd> Journal</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>{keyName(identity.settings.key_bindings.openBag)}</kbd> Bag</span></div>
+      : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span>{peaceful.glider && <span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air Glide</span>}<span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span><kbd>{keyName(wheelKeys.wheel)}</kbd> Tools</span><span>Click Use</span><span>{mouseLook ? "Mouse or " : ""}<kbd>←</kbd><kbd>→</kbd> Look</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Journal</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>{keyName(identity.settings.key_bindings.openBag)}</kbd> Bag</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Crouch, at speed slide</span>}</div>}
       {/* Clear of the minimap (left) and the audio widget (bottom right). */}
       {touch && (!inside || inside === "cafe") && <TouchControls left="var(--hud-stick-left)" bottom="var(--hud-stick-bottom)" walkOnly={inside === "cafe"} />}
       <p className={styles.touchControls}>Tap the ground to move · two fingers turn the camera</p>

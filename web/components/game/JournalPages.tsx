@@ -10,11 +10,12 @@ import { useEffect, useState } from "react";
 import { Landmark } from "lucide-react";
 import type { Category } from "@/lib/collections/roster";
 import type { JournalEntryKnown, JournalEntryUnknown, JournalPage } from "@/lib/collections/logic";
-import { useMenuTab } from "@/lib/game/useMenuTab";
 import { apiCall } from "@/lib/apiClient";
+import { Badge, Tabs, type BadgeTone } from "@/components/gui";
 
 const LABEL: Record<Category, string> = { fish: "Fish", sea: "Sea floor", bug: "Bugs", fruit: "Fruit", nature: "Nature", mineral: "Rocks & ore" };
-const RARITY_COLOR: Record<string, string> = { common: "#8A9A7B", uncommon: "#3D8F52", rare: "#2F6FB5", epic: "#8A4FC2", legendary: "#D08A1E" };
+/** Rarity as the GUI sheet's tags (AA; the old white-on-colour chips weren't) and the tile's edge. */
+const RARITY_TONE: Record<string, BadgeTone> = { common: "neutral", uncommon: "success", rare: "info", epic: "sage", legendary: "gold" };
 type Page = JournalPage & { categories: { category: Category; total: number; discovered: number }[] };
 
 export function fetchJournalPage(category: Category): Promise<Page | null> {
@@ -25,7 +26,6 @@ export default function JournalPages({ initial }: { initial: Page }) {
   const [page, setPage] = useState<Page>(initial);
   const [category, setCategory] = useState<Category>(initial.category);
   const [open, setOpen] = useState<number | null>(null);
-  useMenuTab(true, page.categories.map(c => c.category), category, setCategory);
   useEffect(() => {
     if (category === page.category) return;
     let alive = true;
@@ -34,43 +34,40 @@ export default function JournalPages({ initial }: { initial: Page }) {
   }, [category, page.category]);
   const detail = page.entries.find(e => e.slot === open);
   return <div data-testid="journal-pages">
-    <div role="tablist" aria-label="Journal pages" style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
-      {page.categories.map(c => <button key={c.category} role="tab" aria-selected={c.category === category} onClick={() => setCategory(c.category)}
-        style={{ padding: "5px 10px", borderRadius: 999, border: "1px solid #D8CBAA", background: c.category === category ? "#4A6B52" : "#FFF8E7", color: c.category === category ? "#FFFDF5" : "#4A4034", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-        {LABEL[c.category]} <span style={{ opacity: 0.75 }}>{c.discovered}/{c.total}</span>
-      </button>)}
-    </div>
+    {/* The menu's [ and ] keys step these (components/gui Tabs, inside the open book). */}
+    <Tabs label="Journal pages" value={category} onChange={setCategory} className="mb-3"
+      tabs={page.categories.map(c => ({ id: c.category, label: <>{LABEL[c.category]} <span style={{ fontWeight: 700, color: "var(--gui-muted)" }}>{c.discovered}/{c.total}</span></> }))} />
     <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6 }}>
       {page.entries.map(e => <button key={e.slot} onClick={() => setOpen(e.slot === open ? null : e.slot)} aria-label={e.discovered ? (e as JournalEntryKnown).name : `Undiscovered · ${e.clue}`}
-        style={{ position: "relative", aspectRatio: "1", borderRadius: 10, border: `2px solid ${e.slot === open ? "#79601F" : "#EFE4C8"}`, background: e.discovered ? "#FFF8E7" : "#F1EBDD", cursor: "pointer", padding: 4, display: "grid", placeItems: "center" }}>
+        style={{ position: "relative", aspectRatio: "1", borderRadius: 18, border: 0, boxShadow: e.slot === open ? "inset 0 0 0 3px var(--gui-highlight)" : "inset 0 0 0 2px var(--gui-paper-edge)", background: e.slot === open ? "var(--gui-butter)" : e.discovered ? "var(--gui-paper-hi)" : "var(--gui-paper-warm)", cursor: "pointer", padding: 4, display: "grid", placeItems: "center" }}>
         {e.discovered
           ? ((e as JournalEntryKnown).icon
             // eslint-disable-next-line @next/next/no-img-element
             ? <img src={(e as JournalEntryKnown).icon!} alt="" style={{ width: "80%", height: "80%", objectFit: "contain" }} />
-            : <span style={{ fontSize: 10, fontWeight: 700 }}>{(e as JournalEntryKnown).name}</span>)
+            : <span style={{ fontSize: "var(--gui-text-xs)", fontWeight: 800 }}>{(e as JournalEntryKnown).name}</span>)
           // eslint-disable-next-line @next/next/no-img-element
           : <img src={(e as JournalEntryUnknown).silhouette} alt="" style={{ width: "80%", height: "80%", objectFit: "contain", filter: "brightness(0) opacity(0.35)" }} onError={ev => { ev.currentTarget.style.display = "none"; }} />}
-        {e.available_now && <span title="Out right now" style={{ position: "absolute", top: 3, right: 3, width: 7, height: 7, borderRadius: 99, background: "#3D8F52" }} />}
-        {e.discovered && (e as JournalEntryKnown).museum.donated && <span title="On display at the museum" style={{ position: "absolute", bottom: 3, right: 4, display: "flex", color: "#7a6a4e" }}><Landmark size={11} aria-label="On display at the museum" /></span>}
+        {e.available_now && <span title="Out right now" style={{ position: "absolute", top: 4, right: 4, width: 9, height: 9, borderRadius: 99, background: "var(--gui-success)", boxShadow: "0 0 0 2px var(--gui-paper-hi)" }} />}
+        {e.discovered && (e as JournalEntryKnown).museum.donated && <span title="On display at the museum" style={{ position: "absolute", bottom: 4, right: 5, display: "flex", color: "var(--gui-bark)" }}><Landmark size={13} aria-label="On display at the museum" /></span>}
       </button>)}
     </div>
-    {detail && <section style={{ marginTop: 12, padding: 12, borderRadius: 12, background: "#FFF8E7", border: "1px solid #E8DCBC", fontSize: 12 }} aria-live="polite">
+    {detail && <section style={{ marginTop: 12, padding: "12px 14px", borderRadius: 18, background: "var(--gui-paper-hi)", boxShadow: "var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge)", fontSize: "var(--gui-text-sm)", color: "var(--gui-ink)" }} aria-live="polite">
       {detail.discovered ? <>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: "var(--gui-text-md)", color: "var(--gui-ink-strong)" }}>
           {(detail as JournalEntryKnown).name}
-          <span style={{ fontSize: 9, textTransform: "uppercase", padding: "1px 7px", borderRadius: 999, color: "#FFFDF5", background: RARITY_COLOR[(detail as JournalEntryKnown).rarity] }}>{(detail as JournalEntryKnown).rarity}</span>
+          <Badge tone={RARITY_TONE[(detail as JournalEntryKnown).rarity] ?? "neutral"} style={{ textTransform: "capitalize" }}>{(detail as JournalEntryKnown).rarity}</Badge>
         </div>
         {(detail as JournalEntryKnown).one_liner && <p style={{ margin: "6px 0", fontStyle: "italic" }}>“{(detail as JournalEntryKnown).one_liner}”</p>}
-        <p style={{ margin: "4px 0", color: "#6F624A" }}>
+        <p style={{ margin: "4px 0", color: "var(--gui-ink-2)" }}>
           Caught {(detail as JournalEntryKnown).total_collected}× · in bag {(detail as JournalEntryKnown).count}
           {(detail as JournalEntryKnown).best_size_cm !== null && <> · record {(detail as JournalEntryKnown).best_size_cm} cm</>}
         </p>
-        <p style={{ margin: "4px 0", color: "#6F624A" }}>{detail.clue}</p>
-        <p style={{ margin: "4px 0", color: "#6F624A" }}>{(detail as JournalEntryKnown).museum.donated ? `On display, donated by ${(detail as JournalEntryKnown).museum.by_me ? "you" : (detail as JournalEntryKnown).museum.donor_name}` : (detail as JournalEntryKnown).donatable ? "Not in the museum yet." : "The museum doesn't collect this."}</p>
+        <p style={{ margin: "4px 0", color: "var(--gui-ink-2)" }}>{detail.clue}</p>
+        <p style={{ margin: "4px 0", color: "var(--gui-ink-2)" }}>{(detail as JournalEntryKnown).museum.donated ? `On display, donated by ${(detail as JournalEntryKnown).museum.by_me ? "you" : (detail as JournalEntryKnown).museum.donor_name}` : (detail as JournalEntryKnown).donatable ? "Not in the museum yet." : "The museum doesn't collect this."}</p>
       </> : <>
-        <div style={{ fontWeight: 700, fontSize: 14 }}>Undiscovered</div>
-        <p style={{ margin: "6px 0", color: "#6F624A" }}>{detail.clue}</p>
-        <p style={{ margin: 0, color: "#6F624A" }}>{detail.available_now ? "Out right now." : detail.later_today ? "Out later today." : "Not out right now."}</p>
+        <div style={{ fontWeight: 800, fontSize: "var(--gui-text-md)", color: "var(--gui-ink-strong)" }}>Undiscovered</div>
+        <p style={{ margin: "6px 0", color: "var(--gui-ink-2)" }}>{detail.clue}</p>
+        <p style={{ margin: 0, color: "var(--gui-ink-2)" }}>{detail.available_now ? "Out right now." : detail.later_today ? "Out later today." : "Not out right now."}</p>
       </>}
     </section>}
   </div>;

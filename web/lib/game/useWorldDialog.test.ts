@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { dialogKeydown, isTyping, openDialog, routeDialogKey, worldKeysBlocked, type DialogEntry } from "./useWorldDialog";
+import { bindGameKeys } from "./keyboardInput";
 
 /** A stand-in DOM: a panel with buttons that record focus. */
 function fakeDialog(keys: string[] = [], buttons = 3) {
@@ -93,5 +94,21 @@ describe("the dialog stack", () => {
     const d = open(fakeDialog([], 0));
     dialogKeydown(key("Tab"), null);
     expect(d.log.at(-1)).toBe("focus panel");
+  });
+});
+
+describe("the world under a dialog", () => {
+  it("doesn't walk while a dialog is open, even with focus outside it, and walks again once it closes", () => {
+    const win = new EventTarget(), doc = Object.assign(new EventTarget(), { hidden: false, activeElement: null as Element | null });
+    const keys: Record<string, boolean> = {};
+    const dispose = bindGameKeys({ keys, accepted: ["w"], windowTarget: win, documentTarget: doc });
+    const press = () => win.dispatchEvent(Object.assign(new Event("keydown", { cancelable: true }), { key: "w" }));
+    const close = openDialog(fakeDialog().entry);
+    press();
+    expect(keys.w).toBeFalsy();
+    close();
+    press();
+    expect(keys.w).toBe(true);
+    dispose();
   });
 });

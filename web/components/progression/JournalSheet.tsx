@@ -11,6 +11,8 @@ import ContributeSheet from "./ContributeSheet";
 import GoalCard from "./GoalCard";
 import { LettersBody } from "./LettersSheet";
 import ProgressionPanel, { type ProgressionSheetProps } from "./ProgressionPanel";
+import { Empty, Tabs, Toggle } from "@/components/gui";
+import { Flag } from "lucide-react";
 import s from "./progression.module.css";
 
 type Tab = "quests" | "goals" | "letters";
@@ -47,7 +49,7 @@ export function JournalBody({ initialTab = "quests" }: { initialTab?: Tab }) {
       setProgressionState(await advance(slug, action));
       setMessage({ kind: "ok", text: action === "skip" ? "Chapter skipped." : "Journal updated." });
     } catch (err) {
-      setMessage({ kind: "err", text: err instanceof ApiError ? err.message : "Couldn't reach the village hall. Try again." });
+      setMessage({ kind: "err", text: err instanceof ApiError ? err.message : "Couldn't reach HQ. Try again." });
     } finally {
       setBusy(null);
     }
@@ -64,14 +66,8 @@ export function JournalBody({ initialTab = "quests" }: { initialTab?: Tab }) {
 
   return (
     <div>
-      <div className={s.tabs} role="tablist" aria-label="Journal sections">
-        {(["quests", "goals", "letters"] as const).map((t) => (
-          <button key={t} role="tab" aria-selected={tab === t} className={s.tab} onClick={() => setTab(t)}>
-            {t === "quests" ? "Quests" : t === "goals" ? "Club goals" : "Letters"}
-            {t === "letters" && state.unread_letters > 0 ? <span className={s.badge}>{state.unread_letters}</span> : null}
-          </button>
-        ))}
-      </div>
+      <Tabs label="Journal sections" value={tab} onChange={setTab} className={s.tabs}
+        tabs={[{ id: "quests", label: "Quests" }, { id: "goals", label: "Club goals" }, { id: "letters", label: "Letters", badge: state.unread_letters }]} />
       {preview ? <p className={`${s.note} ${s.info}`}>Preview: sign in to save quest progress.</p> : null}
       {message ? <p role="status" className={`${s.note} ${message.kind === "ok" ? s.ok : s.err}`}>{message.text}</p> : null}
 
@@ -121,16 +117,13 @@ export function JournalBody({ initialTab = "quests" }: { initialTab?: Tab }) {
               </div>
             </article>
           ))}
-          <label className={s.row} style={{ justifyContent: "flex-start", gap: 10, marginTop: 6, fontSize: 13 }}>
-            <input type="checkbox" checked={!state.hud_muted} onChange={toggleMute} disabled={preview} />
-            Show the current objective under the minimap
-          </label>
+          <Toggle checked={!state.hud_muted} onChange={() => void toggleMute()} disabled={preview}>Show the current objective under the minimap</Toggle>
         </div>
       ) : null}
 
       {tab === "goals" ? (
         <div>
-          {state.goals.length === 0 ? <p className={s.empty}>No club goals right now.</p> : null}
+          {state.goals.length === 0 ? <Empty icon={<Flag size={32} />} title="No club goals right now">The next one goes up on the notice board.</Empty> : null}
           {state.goals.filter(onBoard).map((g) => <GoalCard key={g.slug} goal={g} waitingOnTitle={state.goals.find((x) => x.slug === g.locked_by)?.title} onContribute={setContributeSlug} />)}
           <p className={s.muted}>Real club activity counts most: QR check-ins at events and completed bounties are credited automatically.</p>
         </div>
@@ -143,9 +136,10 @@ export function JournalBody({ initialTab = "quests" }: { initialTab?: Tab }) {
   );
 }
 
-export default function JournalSheet({ open, onClose, initialTab }: ProgressionSheetProps & { initialTab?: Tab }) {
+/** `keys`: J (fixed), which closes the journal too. */
+export default function JournalSheet({ open, onClose, initialTab, keys }: ProgressionSheetProps & { initialTab?: Tab; keys?: string }) {
   return (
-    <ProgressionPanel open={open} onClose={onClose} title="Journal" wide>
+    <ProgressionPanel open={open} onClose={onClose} title="Journal" wide keys={keys}>
       <JournalBody initialTab={initialTab} />
     </ProgressionPanel>
   );

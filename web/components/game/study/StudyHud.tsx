@@ -10,11 +10,16 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { useSearch } from "@/lib/game/useMediaQuery";
-import { COINS } from "@/lib/economy";
+import { Amount } from "@/components/economy/Amount";
+import { Empty, ErrorNote, Loading, Toggle } from "@/components/gui";
+import { BookOpen } from "lucide-react";
+import { worldKeysBlocked } from "@/lib/game/useWorldDialog";
+import IslandSheet from "../IslandSheet";
 import { studyDemo } from "@/lib/study/demo";
 import { settlementToast } from "@/lib/study/settlement";
 import { AudioManager } from "@/lib/game/audio";
 import { toast } from "../ToastHub";
+import { iconUrl } from "@/lib/icons/keys";
 import { httpStudyTransport, type Board, type StudyTransport } from "@/lib/study/transport";
 import { formatClock, useStudySession, type StudyHook } from "@/lib/study/useStudySession";
 import { seatAvatar, setWorldStudy, useWorldStudy } from "@/lib/study/worldStore";
@@ -69,7 +74,7 @@ function Hud({ transport }: { transport?: StudyTransport }) {
   };
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (e.repeat || e.key.toLowerCase() !== "e" || !near || boardOpen) return;
+      if (e.repeat || e.key.toLowerCase() !== "e" || !near || boardOpen || worldKeysBlocked()) return;
       if (e.target instanceof HTMLElement && e.target.closest("input, select, textarea, button")) return;
       act();
     };
@@ -77,12 +82,16 @@ function Hud({ transport }: { transport?: StudyTransport }) {
     return () => window.removeEventListener("keydown", key);
   });
 
+  // A study error (a full table, a dropped connection) is said in the toast lane, as the island's other notes are.
+  const error = study.error, here = !!(near || session);
+  useEffect(() => { if (error && here) toast(error); }, [error, here]);
+
   // Settlement (cafe-polish §5): a coin toast and the confirm chime (the café bell when it lands, row 125).
   const ended = study.lastEnded;
   useEffect(() => {
     const told = ended && settlementToast(ended);
     if (!told) return;
-    toast(told.text);
+    toast(told.text, told.coins > 0 ? iconUrl("coin") : undefined);
     if (told.coins > 0) AudioManager.playSFX("confirm");
   }, [ended]);
 
@@ -95,8 +104,7 @@ function Hud({ transport }: { transport?: StudyTransport }) {
       <Timer study={study} />
       {!study.chatMuted && <Chat study={study} />}
     </div>}
-    {study.error && (near || session) && <p className={world.actionNote} role="alert">{study.error}</p>}
-    {boardOpen && <BoardSheet study={study} transport={transport ?? httpStudyTransport} onClose={() => setBoardOpen(false)} />}
+    <BoardSheet open={boardOpen} study={study} transport={transport ?? httpStudyTransport} onClose={() => setBoardOpen(false)} />
   </>;
 }
 
@@ -107,41 +115,31 @@ function Timer({ study }: { study: StudyHook }) {
   return <section className={`${card.card} ${s.timer}`} aria-label="Study timer">
     <p className={s.phase} data-phase={x.phase}>{x.phase === "focus" ? "Focus" : "Break"}<span>{x.phase === "break" && " · stretch"} · cycle {x.cycle} of {x.settings?.cycles}</span></p>
     <p className={s.clock} role="timer">{formatClock(study.remaining)}</p>
-    <p className={card.muted}>{study.table?.label} · {x.minutes_completed} min banked · {x.coins_pending} {COINS.symbol} so far</p>
+    <p className={card.muted}>{study.table?.label} · {x.minutes_completed} min banked · <Amount n={x.coins_pending} /> so far</p>
     <div className={`${card.row} ${s.actions}`}>
       {x.phase === "focus"
         ? <button className={card.ghost} onClick={study.takeBreak} disabled={study.busy}>Break now</button>
         : <button className={card.ghost} onClick={study.resume} disabled={study.busy}>Skip break</button>}
       <button className={card.btn} onClick={study.end} disabled={study.busy}>Stand up</button>
     </div>
-    <p className={card.muted} style={{ marginTop: 8, fontSize: 11 }}>Walking away from your seat ends the session and pays your focus minutes.</p>
-    <label className={card.toggle}>
-      <input type="checkbox" checked={!study.chatMuted} disabled={x.phase === "break"} onChange={e => study.setChatOpen(e.target.checked)} />
-      Table chat {study.chatMuted ? "muted while you focus" : "on"}
-    </label>
-    {isHost && <label className={card.toggle}>
-      <input type="checkbox" checked={!!study.table?.is_private} onChange={e => study.lock(e.target.checked)} />
-      Private table (only people already here)
-    </label>}
+    <p className={card.muted} style={{ marginTop: 8 }}>Walking away from your seat ends the session and pays your focus minutes.</p>
+    <Toggle checked={!study.chatMuted} disabled={x.phase === "break"} onChange={on => study.setChatOpen(on)}>Table chat {study.chatMuted ? "muted while you focus" : "on"}</Toggle>
+    {isHost && <Toggle checked={!!study.table?.is_private} onChange={on => study.lock(on)} hint="Only people already here">Private table</Toggle>}
   </section>;
 }
 
-/** The cafe wall board: this week's opt-in top studiers (row 171). */
-function BoardSheet({ study, transport, onClose }: { study: StudyHook; transport: StudyTransport; onClose: () => void }) {
+/** The cafe wall board: this week's opt-in top studiers (row 171). Opened with E at the board; E closes it too. */
+function BoardSheet({ open, study, transport, onClose }: { open: boolean; study: StudyHook; transport: StudyTransport; onClose: () => void }) {
   const [board, setBoard] = useState<Board | null>(null);
   const [failed, setFailed] = useState(false);
   const optedIn = study.stats?.on_board;
-  useEffect(() => { transport.board().then(setBoard, () => setFailed(true)); }, [transport, optedIn]);
-  return <section className={world.sheet} role="dialog" aria-modal="false" aria-labelledby="study-board-title">
-    <header><h2 id="study-board-title">Top studiers this week</h2><button onClick={onClose} aria-label="Close">×</button></header>
-    {failed ? <p>The board couldn&apos;t load. Try again in a moment.</p>
-      : !board ? <p>Reading the board…</p>
-      : board.top.length === 0 ? <p>Nobody on the board yet this week. Opt in and study to be the first.</p>
+  useEffect(() => { if (open) transport.board().then(b => { setBoard(b); setFailed(false); }, () => setFailed(true)); }, [open, transport, optedIn]);
+  return <IslandSheet open={open} title="Top studiers this week" onClose={onClose} testId="study-board" keys="e">
+    {failed ? <ErrorNote>The board didn’t load. The connection may have dropped.</ErrorNote>
+      : !board ? <Loading label="Reading the board…" />
+      : board.top.length === 0 ? <Empty icon={<BookOpen size={32} />} title="Nobody on the board yet">Opt in and study to be the first this week.</Empty>
       : <ol className={s.board}>{board.top.map(r => <li key={r.rank}><span>{r.rank}. {r.name}</span><b>{r.minutes} min</b></li>)}</ol>}
-    {study.stats && <label className={card.toggle}>
-      <input type="checkbox" checked={study.stats.on_board} onChange={e => study.setBoardOptIn(e.target.checked)} />
-      Show me on this board ({study.stats.minutes} min so far this week)
-    </label>}
-    <small>Only members who opt in appear. Resets every Monday.</small>
-  </section>;
+    {study.stats && <Toggle checked={study.stats.on_board} onChange={on => study.setBoardOptIn(on)} hint={`${study.stats.minutes} min so far this week`}>Show me on this board</Toggle>}
+    <p className={card.muted}>Only members who opt in appear. Resets every Monday.</p>
+  </IslandSheet>;
 }

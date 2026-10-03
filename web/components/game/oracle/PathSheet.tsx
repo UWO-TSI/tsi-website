@@ -114,7 +114,7 @@ export default function PathSheet({ view, onClose, onChanged }: { view: Progress
     setAdd(next);
   };
 
-  return <IslandSheet title="Your path" onClose={onClose} className={`${styles.oracleSheet} ${styles.pathSheet}`} testId="path-sheet">
+  return <IslandSheet title="Your path" onClose={onClose} testId="path-sheet" keys="p" size="lg" tone="oracle">
     <p className={styles.oracleResult} style={{ ["--family" as string]: color }}>
       <b>{family}</b> · level {view.level}{current ? ` · ${current.name}` : ""}<br />
       <small>{current ? current.passive.name + ": " + current.passive.description : unlocked ? "Level 10: choose your subclass. The first choice is free." : `Subclasses open at level ${SUBCLASS_LEVEL}. Here's what waits for you.`}</small>

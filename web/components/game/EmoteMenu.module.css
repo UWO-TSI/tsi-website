@@ -1,0 +1,32 @@
+/* The emote tray (row 285): paper, round cream petals in the tool wheel's language, the kit's butter on hover and focus. */
+.layer { position: absolute; inset: 0; z-index: 55; pointer-events: none; }
+.layer[data-state="closing"] * { pointer-events: none !important; }
+.scrim { position: absolute; inset: 0; background: rgb(64 52 36 / 0.16); pointer-events: auto; animation: fadeIn var(--gui-t) ease-out both; }
+.layer[data-state="closing"] .scrim { animation: fadeOut 160ms ease-in forwards; }
+.tray { position: absolute; left: 50%; bottom: calc(var(--hud-lane-bottom, 80px) + 6px); width: min(620px, calc(100% - 24px)); max-height: calc(100% - 110px); overflow-y: auto; box-sizing: border-box;
+  padding: 14px 18px 18px; border-radius: var(--gui-r-paper); background: var(--gui-paper); color: var(--gui-ink); box-shadow: var(--gui-shadow-lg); outline: none; pointer-events: auto;
+  transform: translateX(-50%); animation: trayIn 260ms var(--gui-spring) both; }
+.layer[data-state="closing"] .tray { animation: trayOut 160ms ease-in forwards; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.head h2 { margin: 0; color: var(--gui-ink-strong); font-size: var(--gui-text-lg); font-weight: 800; }
+.close { display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 50%; background: var(--gui-paper-hi); color: var(--gui-ink); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge); cursor: pointer; }
+.empty { margin: 4px 0 8px; color: var(--gui-muted); font-size: var(--gui-text-sm); }
+.petals { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 12px; }
+.petals li { animation: petalIn 280ms var(--gui-spring) both; animation-delay: calc(var(--i) * 25ms); }
+.petal { width: 100%; display: grid; justify-items: center; gap: 6px; padding: 0; border: 0; background: none; color: var(--gui-ink-strong); font: inherit; cursor: pointer; }
+.petal > :first-child { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: #fffae6; box-shadow: 0 3px 0 rgb(114 92 78 / 0.13), 0 6px 16px rgb(41 70 65 / 0.12);
+  color: var(--gui-bark); transition: transform var(--gui-t-fast) var(--gui-spring), background var(--gui-t-fast) ease; }
+.petal:hover > :first-child, .petal:focus-visible > :first-child { background: var(--gui-butter); transform: scale(1.1); }
+.petal:focus-visible { outline: none; }
+.petal:focus-visible > :first-child { outline: 3px solid var(--gui-focus); outline-offset: 3px; }
+.icon { box-sizing: border-box; padding: 16px; }
+img.icon { padding: 15px; object-fit: contain; }
+.initial { font-size: 22px; font-weight: 900; }
+.name { max-width: 100%; font-size: var(--gui-text-xs); font-weight: 800; text-align: center; overflow-wrap: anywhere; }
+@keyframes fadeIn { from { opacity: 0; } }
+@keyframes fadeOut { to { opacity: 0; } }
+@keyframes trayIn { from { opacity: 0; transform: translateX(-50%) translateY(14px) scale(0.95); } }
+@keyframes trayOut { to { opacity: 0; transform: translateX(-50%) translateY(10px) scale(0.97); } }
+@keyframes petalIn { from { opacity: 0; transform: translateY(8px) scale(0.7); } }
+:global(html[data-contrast="high"]) .tray { background: #ffffff; color: #000000; box-shadow: inset 0 0 0 2px #000000; }
+:global(html[data-contrast="high"]) .petal > :first-child { background: #ffffff; box-shadow: inset 0 0 0 2px #000000; color: #000000; }

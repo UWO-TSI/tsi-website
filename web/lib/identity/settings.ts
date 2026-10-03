@@ -9,10 +9,13 @@ export const TEXT_SCALE: Record<TextSize, number> = { small: 0.9, default: 1, la
 
 export const MENU_ACTIONS = ["openJournal", "openBag", "openMap", "openWallet", "openMail", "nextTab", "prevTab", "confirm"] as const;
 export type MenuAction = (typeof MENU_ACTIONS)[number];
+/** The naming pass (menus §4): `openJournal` opens the Collection (catches), `openBag` the Bag (items); the Journal (quests) is J. */
 export const ACTION_LABEL: Record<MenuAction, string> = {
-  openJournal: "Open journal", openBag: "Open bag", openMap: "Open map", openWallet: "Open wallet", openMail: "Open mailbox",
+  openJournal: "Open collection", openBag: "Open bag", openMap: "Open map", openWallet: "Open wallet", openMail: "Open mailbox",
   nextTab: "Next tab", prevTab: "Previous tab", confirm: "Confirm",
 };
+/** The menu actions Settings offers to remap. `confirm` (Enter) stays a stored setting but isn't offered: Enter already presses the focused button. */
+export const REMAPPABLE_ACTIONS: readonly MenuAction[] = MENU_ACTIONS.filter(a => a !== "confirm");
 export const DEFAULT_KEYS: Record<MenuAction, string> = {
   openJournal: "b", openBag: "i", openMap: "m", openWallet: "k", openMail: "l", nextTab: "]", prevTab: "[", confirm: "enter",
 };

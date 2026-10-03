@@ -62,14 +62,18 @@ export function dialogKeydown(e: KeyEvent, active: unknown) {
 }
 const onKey = (e: KeyboardEvent) => dialogKeydown(e, document.activeElement);
 
-/** Put a dialog on top; the returned function takes it off (wherever it is in the stack). */
+/**
+ * Put a dialog on top; the returned function takes it off (wherever it is in the stack). The key handler sits on the
+ * document's capture phase: ahead of the world's handlers and the dialog's own controls, but after a window-level key
+ * grab (Settings listening for a new key binding takes Escape to cancel, not to close the sheet).
+ */
 export function openDialog(entry: DialogEntry): () => void {
-  if (!stack.length && typeof window !== "undefined") window.addEventListener("keydown", onKey, true);
+  if (!stack.length && typeof document !== "undefined") document.addEventListener("keydown", onKey, true);
   stack.push(entry);
   return () => {
     const i = stack.indexOf(entry);
     if (i >= 0) stack.splice(i, 1);
-    if (!stack.length && typeof window !== "undefined") window.removeEventListener("keydown", onKey, true);
+    if (!stack.length && typeof document !== "undefined") document.removeEventListener("keydown", onKey, true);
   };
 }
 
