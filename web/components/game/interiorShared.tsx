@@ -15,6 +15,7 @@ import { PIECE_TINTS, type Tint } from "@/lib/game/furniturePalettes";
 import * as THREE from "three";
 import Character, { CHARACTER_SCALE, type CharacterMotion, type ClipName, type HeldView } from "./character/Character";
 import { useWorldClips } from "./character/useWorldClips";
+import { useLocalAvatarTap } from "@/lib/net/localAvatar";
 import { useMyLook } from "@/lib/game/character/lookStore";
 import { seatLift } from "@/lib/game/character/clips";
 import { easeFacing } from "@/lib/game/locomotion";
@@ -104,6 +105,7 @@ export function InteriorPlayer({
   constrainMove?: (x: number, z: number, nx: number, nz: number) => [number, number];
 }) {
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null });
+  useLocalAvatarTap(motion);
   const { look } = useMyLook();
   const groupRef = useRef<THREE.Group>(null);
   const posRef = useRef({ x: bounds.spawn[0], z: bounds.spawn[1] });

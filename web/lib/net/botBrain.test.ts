@@ -7,7 +7,10 @@ import {
   AREAS, AREA_BOUNDS, CARD_FAMILIES, EMOTE_CLIP_NAMES, EV, EV_KINDS, LOOK_MAX_BYTES, PACKET_FLAG, SANITY, SEND, decodePose, hasFlag, inAreaBounds,
   isClipEv, isHeld, isSeatKey, parseSlowState, type Area, type Pose, type SlowState,
 } from "./protocol";
-import { BENCH_SLOT, Bot, benchKey, benchSlot, botCard, botWorld, createBots, type BotOutbox } from "./botBrain";
+import { BENCH_SLOT, Bot, benchKey, benchLift, benchSlot, botCard, botWorld, createBots, type BotOutbox } from "./botBrain";
+import { BENCH_SEAT_TOP } from "@/lib/game/defaultIsland";
+import { seatLift } from "@/lib/game/character/clips";
+import { CHARACTER_SCALE } from "@/components/game/character/Character";
 
 const STEP_MS = STEP * 1000;
 
@@ -177,6 +180,19 @@ describe("bots", () => {
     expect(poses.some(p => hasFlag(p.pose.flags, PACKET_FLAG.teleport))).toBe(true);
     // Standing up clears the claim.
     expect(slows.some(s => s.patch.seat === "" && s.patch.pose === "")).toBe(true);
+  });
+
+  it("sit at a real sitter's lift: seatLift(Sit, the bench's seat top, CHARACTER_SCALE), as PlayerAvatar takes it from tsi:sit", () => {
+    const w = botWorld();
+    for (const b of w.benches) for (const slot of [0, 1] as const) {
+      const [x, z] = benchSlot(b, slot), seatY = w.ground(b.x, b.z) + BENCH_SEAT_TOP; // IslandScene's tsi:sit detail
+      expect(benchLift(w, b, x, z)).toBeCloseTo(seatLift("Sit", seatY - w.ground(x, z), CHARACTER_SCALE), 12);
+    }
+    // And what goes on the wire with the snap onto a bench, to the millimetre the wire carries.
+    const snaps = poses.filter(p => hasFlag(p.pose.flags, PACKET_FLAG.teleport) && bots[p.bot].card.area === "village" && p.pose.lift > 0);
+    expect(snaps.length).toBeGreaterThan(0);
+    for (const { pose } of snaps) expect(pose.lift).toBeCloseTo(seatLift("Sit", BENCH_SEAT_TOP, CHARACTER_SCALE), 3);
+    expect(seatLift("Sit", BENCH_SEAT_TOP, CHARACTER_SCALE)).toBeGreaterThan(0.3); // not sunk into the slats
   });
 
   it("carry only what the contract allows: seat keys, held items, emote and clip names, lengths in range", () => {

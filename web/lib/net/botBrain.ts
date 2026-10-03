@@ -17,7 +17,8 @@
  * Pure: no clock, no DOM, no network. `advance(toMs, outbox)` steps a bot to a room time and hands its messages over.
  */
 import { MOVE_TUNING, NO_INPUT, STEP, createMoveState, stepMove, towards, type MoveEvent, type MoveInput, type MoveState, type MoveWorld } from "@/lib/game/movement/sim";
-import { villageIsland } from "@/lib/game/defaultIsland";
+import { BENCH_SEAT_TOP, villageIsland } from "@/lib/game/defaultIsland";
+import { CHARACTER_SCALE } from "@/components/game/character/Character";
 import { objectsOf, village, villageSpawnPoint } from "@/lib/game/villageMap";
 import { airPhase, isLoop, seatLift, type ClipName } from "@/lib/game/character/clips";
 import { randomLook, seeded } from "@/lib/game/character/look";
@@ -33,8 +34,6 @@ import {
 
 /** The kit bots move with: the village's, the leaf glider owned. */
 export const BOT_TUNING = { ...MOVE_TUNING, glider: 1 };
-/** The character's scale (Character.tsx CHARACTER_SCALE): seat lifts are in its units. */
-const CHARACTER_SCALE = 1.3;
 const STEP_MS = STEP * 1000;
 /** Bench slots: two along each bench, this far either side of its middle (specs/multiplayer.md §8). */
 export const BENCH_SLOT = 0.42;
@@ -168,6 +167,10 @@ export function benchSlot(b: BenchSpot, slot: 0 | 1): [number, number] {
   return [b.x + Math.cos(b.yaw) * k, b.z - Math.sin(b.yaw) * k];
 }
 export const benchKey = (b: BenchSpot, slot: 0 | 1) => `bench:${b.id}#${slot}`;
+/** A bench sitter's lift at (x, z), as PlayerAvatar's tsi:sit computes it: seatLift(Sit, seatY − the ground there, CHARACTER_SCALE). */
+export function benchLift(w: Pick<BotWorld, "ground">, b: BenchSpot, x: number, z: number): number {
+  return seatLift("Sit", w.ground(b.x, b.z) + BENCH_SEAT_TOP - w.ground(x, z), CHARACTER_SCALE);
+}
 /** The nearest standable spot within 2 u, or null. */
 function clear(standable: (x: number, z: number) => boolean, x: number, z: number): [number, number] | null {
   for (let r = 0; r <= 2; r += 0.25) for (let a = 0; a < 12; a++) {
@@ -446,9 +449,10 @@ export class Bot {
 
   /** Onto the bench slot: a seat snap (the teleport flag), the Sit pose, the seat claimed. */
   private snapToBench(b: BenchSpot, slot: 0 | 1) {
-    // PlayerAvatar's bench seat: on the ground under the slot, facing out, no lift (benchSeat's spot has no seatY).
-    const [x, z] = benchSlot(b, slot), front = benchFront(b, 0.9);
-    this.seat = { x, y: this.w.ground(x, z), z, yaw: b.yaw, lift: 0, clip: "Sit" };
+    // PlayerAvatar's bench seat: on the ground under the slot, facing out, lifted onto the slats. IslandScene's tsi:sit
+    // detail carries seatY = the bench's ground + BENCH_SEAT_TOP, and PlayerAvatar lifts the Sit clip onto it.
+    const [x, z] = benchSlot(b, slot), front = benchFront(b, 0.9), ground = this.w.ground(x, z);
+    this.seat = { x, y: ground, z, yaw: b.yaw, lift: benchLift(this.w, b, x, z), clip: "Sit" };
     this.teleport = true;
     const t = this.t;
     this.plan = { kind: "seated", key: benchKey(b, slot), stand: front, until: this.card.role === "rest" ? Infinity : t + 6000 + this.r() * 14_000, nextEmote: t + 4000 + this.r() * 8000 };

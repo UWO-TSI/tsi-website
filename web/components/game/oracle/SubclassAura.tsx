@@ -5,12 +5,13 @@
  * (the kit's mote sprite) through its ramp, each drifting the kit's way (orbiting, rising or falling), size
  * 0.12–0.22 u, alpha at most 0.8, no lights. Tier 2 (mastery 10) adds a soft ring of light at the feet, tier 3 (20)
  * a second mote type. In combat it drops to 40% so it never competes with telegraphs. "Show my aura" hides it on
- * your own screen. Drawn in one instanced draw with the combat particles' shader and ramp table.
+ * your own screen. Drawn in one instanced draw with the combat particles' shader and ramp table; nothing allocated per
+ * frame (multiplayer §5.6: one of these for each of up to 8 players nearby).
  */
 import { useEffect, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { fireflyOffset } from "@/lib/game/fireflyPath";
+import { fireflyOffsetInto } from "@/lib/game/fireflyPath";
 import { COMBAT_PACK, COMBAT_PACK_COLS, COMBAT_PACK_URL, type CombatSprite } from "@/lib/game/fx/combatPack";
 import { RampTable, sharedRamps } from "@/lib/game/fx/combat";
 import { createCombatParticleMaterial, rampMap } from "@/lib/game/fx/fxMaterial";
@@ -22,6 +23,7 @@ import { inCombat } from "@/lib/game/combat/classRuntime";
 const MOTES = 8, SECOND = 2, N = MOTES + SECOND + 1;
 let pack: THREE.Texture | null = null;
 const frame = (sprite: CombatSprite, f: number) => COMBAT_PACK[sprite].row * COMBAT_PACK_COLS + f;
+const drift: [number, number, number] = [0, 0, 0];
 
 export default function SubclassAura({ player, kit, mastery, colour }: { player: React.RefObject<THREE.Vector3>; kit: ClassKit; mastery: number;
   /** The equipped aura colour (the mastery colour, a shop ramp's mid), else the kit's own ramp. */
@@ -34,23 +36,24 @@ export default function SubclassAura({ player, kit, mastery, colour }: { player:
     g.index = quad.index;
     for (const n of ["position", "uv"]) g.setAttribute(n, quad.getAttribute(n));
     const arr = [0, 1, 2, 3].map(() => new Float32Array(N * 4));
-    arr.forEach((a, k) => g.setAttribute(`i${"ABCD"[k]}`, new THREE.InstancedBufferAttribute(a, 4).setUsage(THREE.DynamicDrawUsage)));
+    const attrs = arr.map(a => new THREE.InstancedBufferAttribute(a, 4).setUsage(THREE.DynamicDrawUsage));
+    attrs.forEach((a, k) => g.setAttribute(`i${"ABCD"[k]}`, a));
     g.instanceCount = N;
     const mesh = new THREE.Mesh(g, createCombatParticleMaterial(pack, rampMap(ramps), true));
     mesh.frustumCulled = false; mesh.renderOrder = 3.7; // over the terrain's painted sand and soil layers (2, 3), like the movement particles
-    return { mesh, g, arr, ramps };
+    return { mesh, g, arr, attrs, ramps };
   }, []);
   useEffect(() => () => { d.g.dispose(); (d.mesh.material as THREE.Material).dispose(); }, [d]);
   const ramp = useMemo(() => d.ramps.row(colour ? [kit.look.ramp[0], colour, kit.look.ramp[2]] : kit.look.ramp), [d, kit, colour]);
   const sprite = (kit.look.mote in COMBAT_PACK ? kit.look.mote : "mote") as CombatSprite, mote = frame(sprite, 2);
   useFrame(({ clock }) => {
-    const t = clock.elapsedTime, p = player.current, dim = inCombat(combat.rt) ? 0.4 : 1, [A, B, C, D] = d.arr;
+    const t = clock.elapsedTime, p = player.current, dim = inCombat(combat.rt) ? 0.4 : 1, A = d.arr[0], B = d.arr[1], C = d.arr[2], D = d.arr[3];
     rampMap(d.ramps);
     for (let i = 0; i < N; i++) {
       const q = i * 4, ring = i === N - 1, second = i >= MOTES && !ring, on = ring ? tier >= 2 : second ? tier >= 3 : true;
       let x = 0, y = 0.03, z = 0, size = 1.6, alpha = (0.3 + Math.sin(t * 1.5) * 0.05) * dim;
       if (!ring) {
-        if (kit.look.drift === "orbit") { const o = fireflyOffset(i + 41, t * 1.4); x = o[0] * 0.75; y = 0.15 + o[1] * 1.1; z = o[2] * 0.75; }
+        if (kit.look.drift === "orbit") { const o = fireflyOffsetInto(i + 41, t * 1.4, drift); x = o[0] * 0.75; y = 0.15 + o[1] * 1.1; z = o[2] * 0.75; }
         else { // rise or fall through 1.6 u round you, each on its own loop
           const u = (t * 0.35 + i * 0.37) % 1, a = i * 2.39996 + t * 0.4, r = 0.45 + (i % 3) * 0.12;
           x = Math.cos(a) * r; z = Math.sin(a) * r; y = kit.look.drift === "rise" ? 0.1 + u * 1.6 : 1.7 - u * 1.6;
@@ -64,7 +67,7 @@ export default function SubclassAura({ player, kit, mastery, colour }: { player:
       C[q] = C[q + 1] = C[q + 2] = 1; C[q + 3] = on ? alpha : 0;
       D[q] = 1; D[q + 1] = ramp; D[q + 2] = 0; D[q + 3] = ring ? 1 : 0; // flat on the ground, or facing you
     }
-    for (const a of Object.values(d.g.attributes)) if ((a as THREE.InstancedBufferAttribute).isInstancedBufferAttribute) (a as THREE.InstancedBufferAttribute).needsUpdate = true;
+    for (let k = 0; k < d.attrs.length; k++) d.attrs[k].needsUpdate = true;
   });
   return <primitive object={d.mesh} />;
 }

@@ -4,9 +4,12 @@
  * Ambient café patrons (row 271; lib/study/patrons.ts): background characters
  * on the shared rig, each in a look seeded by their visit, walking in from the
  * door to a free seat, studying at a laptop or a book or sitting over a cup,
- * and walking out again. Fewer as members sit down; any seat a member takes or
- * walks up to, its patron gives up. One frame loop for all of them; React only
- * hears about it when someone comes in or leaves.
+ * and walking out again. Fewer as members sit down or other players come in
+ * (multiplayer §5.8: the headcount is room state, every client agrees); any
+ * seat a member takes or a player walks up to, you or anyone else, its patron
+ * gives up. On the shared world clock, so everyone sees the same café. One
+ * frame loop for all of them; React only hears about it when someone comes in
+ * or leaves.
  */
 import { Suspense, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
@@ -15,8 +18,10 @@ import Character, { CHARACTER_SCALE, type CharacterMotion } from "../character/C
 import { randomLook, seeded } from "@/lib/game/character/look";
 import { seatLift } from "@/lib/game/character/clips";
 import { easeFacing } from "@/lib/game/locomotion";
-import { PATRON_SPEED, cafePatrons, patronTarget, propSpot, type PatronView, type PatronVisit } from "@/lib/study/patrons";
+import { PATRON_SPEED, PATRON_YIELD_RANGE, cafePatrons, patronSeats, patronTarget, propSpot, seatKey, type PatronView, type PatronVisit } from "@/lib/study/patrons";
 import { getWorldStudy, useWorldStudy } from "@/lib/study/worldStore";
+import { worldNow } from "@/lib/game/worldClock";
+import { liveRemotes, remoteNear, useOthersIn } from "../net/active";
 import { useCafeModel } from "./CafeModel";
 
 const PROP = { laptop: "prop_laptop", book: "prop_book", cup: "prop_cup" } as const;
@@ -54,6 +59,21 @@ function Patron({ visit, views }: { visit: PatronVisit; views: React.RefObject<M
   </>;
 }
 
+let seatKeys: string[] | null = null;
+function addTo(this: Set<string>, key: string) { this.add(key); }
+/**
+ * The seats patrons give up this frame: those members hold, and those another player in the room stands within reach
+ * of (as you do, `player`). Module scope, nothing allocated: no one else here, it's `taken` itself.
+ */
+export function seatsWanted(into: Set<string>, taken: ReadonlySet<string>): ReadonlySet<string> {
+  if (!liveRemotes.n) return taken;
+  const seats = patronSeats(), keys = (seatKeys ??= seats.map(seatKey));
+  into.clear();
+  taken.forEach(addTo, into);
+  for (let i = 0; i < seats.length; i++) if (remoteNear(seats[i].x, seats[i].z, PATRON_YIELD_RANGE)) into.add(keys[i]);
+  return into;
+}
+
 export default function CafePatrons({ player }: { player: React.RefObject<THREE.Vector3> }) {
   const tables = useWorldStudy(w => w.study?.tables);
   const mine = useWorldStudy(w => w.study?.session ?? null);
@@ -65,14 +85,16 @@ export default function CafePatrons({ player }: { player: React.RefObject<THREE.
     if (mine && myTable) keys.add(`${myTable}#${mine.seat}`);
     return keys;
   }, [tables, mine, myTable]);
-  const target = patronTarget(taken.size);
-  const state = useRef({ shown: new Set<string>(), yielded: new Map<string, number>(), since: -1, ids: "" });
+  // The other players in the café (0 offline or alone: then every patron comes): as many as are seated or here, fewer patrons.
+  const others = useOthersIn("cafe");
+  const target = patronTarget(Math.max(taken.size, others));
+  const state = useRef({ shown: new Set<string>(), yielded: new Map<string, number>(), since: -1, ids: "", wanted: new Set<string>() });
   const views = useRef(new Map<string, PatronView>());
   const [visits, setVisits] = useState<PatronVisit[]>([]);
   useFrame(() => {
-    const s = state.current, p = player.current, seated = getWorldStudy().seated, now = Date.now() / 1000;
+    const s = state.current, p = player.current, seated = getWorldStudy().seated, now = worldNow() / 1000;
     if (s.since < 0) s.since = now;
-    const list = cafePatrons(now, { taken, target, player: seated ? null : [p.x, p.z], shown: s.shown, yielded: s.yielded, since: s.since });
+    const list = cafePatrons(now, { taken: seatsWanted(s.wanted, taken), target, player: seated ? null : [p.x, p.z], shown: s.shown, yielded: s.yielded, since: s.since });
     views.current.clear();
     for (const v of list) views.current.set(v.visit.id, v);
     const ids = list.map(v => v.visit.id).join();

@@ -167,13 +167,35 @@ export function objectFootprint(o: MapObject): { hw: number; hd: number; cx: num
 
 /** Bench-wood seat top: its slats measure 0.48–0.51 above the ground. */
 export const BENCH_SEAT_TOP = 0.5;
-/** The village bench within reach, as a `tsi:sit` spot: its middle, facing the side you stand on. `benches`: the village's, when the caller holds them (every frame). */
-export function benchSeat(x: number, z: number, range = 1.3, v: Village = village(), benches: readonly MapObject[] = objectsOf("bench", v)): { x: number; z: number; yaw: number } | null {
+/** A bench seats two (specs/multiplayer-questions.md default 7): its slots sit this far either way along it from its middle. */
+export const BENCH_SLOTS = [-0.42, 0.42] as const;
+const slotKeys = new Map<string, readonly [string, string]>();
+/** A bench slot's seat claim (`s {seat}`, protocol isSeatKey): `bench:<map id>#0` or `#1`, made once per bench. */
+export function benchSlotKey(id: string, slot: 0 | 1): string {
+  let keys = slotKeys.get(id);
+  if (!keys) slotKeys.set(id, keys = [`bench:${id}#0`, `bench:${id}#1`]);
+  return keys[slot];
+}
+/**
+ * The village bench within reach, as a `tsi:sit` spot: the nearer of its two slots that nobody else holds (`taken`:
+ * another player's claim; with both held there's no seat), facing the side you stand on, and the slot's claim key.
+ * Along the bench is its local x. `benches`: the village's, when the caller holds them (every frame).
+ */
+export function benchSeat(x: number, z: number, range = 1.3, v: Village = village(), benches: readonly MapObject[] = objectsOf("bench", v),
+  taken?: (key: string) => boolean): { x: number; z: number; yaw: number; key: string } | null {
   const b = benches.find(p => Math.hypot(p.x - x, p.z - z) < range);
   if (!b) return null;
-  const yaw = b.yaw ?? 0;
+  const d0 = slotReach(b, 0, x, z, taken), d1 = slotReach(b, 1, x, z, taken);
+  if (d0 === Infinity && d1 === Infinity) return null;
+  const slot = d1 < d0 ? 1 : 0, yaw = b.yaw ?? 0, off = BENCH_SLOTS[slot];
   const front = (x - b.x) * Math.sin(yaw) + (z - b.z) * Math.cos(yaw) >= 0;
-  return { x: b.x, z: b.z, yaw: yaw + (front ? 0 : Math.PI) };
+  return { x: b.x + Math.cos(yaw) * off, z: b.z - Math.sin(yaw) * off, yaw: yaw + (front ? 0 : Math.PI), key: benchSlotKey(b.id, slot) };
+}
+/** How far a bench slot is from (x, z); Infinity while someone else holds it. */
+function slotReach(b: MapObject, slot: 0 | 1, x: number, z: number, taken?: (key: string) => boolean): number {
+  if (taken?.(benchSlotKey(b.id, slot))) return Infinity;
+  const yaw = b.yaw ?? 0, off = BENCH_SLOTS[slot];
+  return Math.hypot(b.x + Math.cos(yaw) * off - x, b.z - Math.sin(yaw) * off - z);
 }
 
 export const inRect = (x: number, z: number, r: { x0: number; x1: number; z0: number; z1: number }) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
