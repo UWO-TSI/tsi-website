@@ -6,7 +6,7 @@
  * keycaps, buttons, dialogue box, fields and panel it re-exports; inside a `.gui` scope those wear this sheet's tokens
  * (styles/game-tokens.css), while recruitment keeps its own look. /lab/gui shows every piece in every state.
  */
-import { Children, cloneElement, isValidElement, useEffect, useId, useRef, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes,
+import { Children, cloneElement, isValidElement, useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes,
   type InputHTMLAttributes, type KeyboardEvent, type ReactElement, type ReactNode, type SelectHTMLAttributes } from "react";
 import { Pointer, X } from "lucide-react";
 import { inTopDialog, usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
@@ -34,22 +34,27 @@ export function Sheet({ open, onClose, title, eyebrow, icon, size = "md", tone, 
   const state = usePresence(open);
   const ref = useWorldDialog<HTMLElement>(open, onClose, keys);
   const titleId = useId();
+  // Closing, it keeps what it last showed: callers often clear the item that filled it as they close it.
+  const [kept, setKept] = useState({ title, eyebrow, icon, headerExtra, footer, children });
+  if (open && (kept.title !== title || kept.eyebrow !== eyebrow || kept.icon !== icon || kept.headerExtra !== headerExtra
+    || kept.footer !== footer || kept.children !== children)) setKept({ title, eyebrow, icon, headerExtra, footer, children });
+  const shown = open ? { title, eyebrow, icon, headerExtra, footer, children } : kept;
   if (!state) return null;
   return <div className={styles.layer} data-state={state} data-modal={modal || undefined}>
     {modal && <div className={styles.scrim} onClick={onClose} aria-hidden="true" />}
     <section ref={ref} role="dialog" aria-modal={modal} aria-labelledby={titleId} tabIndex={-1} data-gui-dialog data-gui-overlay data-testid={testId}
       className={cx(styles.sheet, className)} data-size={size} data-tone={tone}>
       <header className={styles.head}>
-        {icon && <span className={styles.headIcon} aria-hidden="true">{icon}</span>}
+        {shown.icon && <span className={styles.headIcon} aria-hidden="true">{shown.icon}</span>}
         <div className={styles.headText}>
-          {eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}
-          <h2 id={titleId}>{title}</h2>
+          {shown.eyebrow && <p className={styles.eyebrow}>{shown.eyebrow}</p>}
+          <h2 id={titleId}>{shown.title}</h2>
         </div>
-        {headerExtra}
+        {shown.headerExtra}
         <IconButton label="Close" size="sm" onClick={onClose} className={styles.close}><X size={18} aria-hidden /></IconButton>
       </header>
-      <div className={cx(styles.body, bodyClassName)}>{children}</div>
-      {footer && <footer className={styles.foot}>{footer}</footer>}
+      <div className={cx(styles.body, bodyClassName)}>{shown.children}</div>
+      {shown.footer && <footer className={styles.foot}>{shown.footer}</footer>}
     </section>
   </div>;
 }

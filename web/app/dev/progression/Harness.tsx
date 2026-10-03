@@ -81,7 +81,7 @@ function HarnessBody({ params }: { params: URLSearchParams }) {
   if (admin) {
     // Editor preview without the T1/T2 gate (dev only); saving still goes through the real API.
     return (
-      <main style={{ minHeight: "100dvh", padding: "32px 24px", background: "var(--color-bg-main, #0f0f10)" }}>
+      <main className="gui" style={{ minHeight: "100dvh", padding: "32px 24px", background: "var(--gui-page)" }}>
         <div style={{ maxWidth: 880, margin: "0 auto" }}>
           {admin === "goal" ? <ClubGoalEditor mode="edit" initial={DEFAULT_GOALS[0]} />
             : admin === "seasonal" ? <ClubGoalEditor mode="edit" initial={SEASONAL_GOALS.find((g) => g.slug === params.get("event")) ?? SEASONAL_GOALS[0]} seasonal />
@@ -91,7 +91,7 @@ function HarnessBody({ params }: { params: URLSearchParams }) {
     );
   }
   return (
-    <main style={{ minHeight: "100dvh", background: "linear-gradient(180deg, #a9d8e6 0%, #cfe7cf 55%, #9cc58f 100%)", fontFamily: "system-ui, sans-serif" }}>
+    <main className="gui" style={{ minHeight: "100dvh", background: "linear-gradient(180deg, #a9d8e6 0%, #cfe7cf 55%, #9cc58f 100%)" }}>
       <nav style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 16 }}>
         {["journal", "goals", "letters", "contribute", "notice"].map((k) => (
           <button key={k} onClick={() => setSheet(k)} style={{ padding: "8px 12px", borderRadius: 10, border: "1px solid #5c746c55", background: "#f8f7e9" }}>{k}</button>

@@ -62,7 +62,7 @@ export default function MemberDashboardShell({ children }: { children: ReactNode
           {/* Hamburger button — top-left on portal pages. Hover or click. */}
           {!island && <button
             aria-label={pinned ? "Unpin menu" : "Open menu"}
-            className="gui hidden md:flex fixed items-center justify-center"
+            className="gui hidden md:flex fixed items-center justify-center print:hidden!"
             style={{
               top: "12px",
               left: "12px",
@@ -105,7 +105,7 @@ export default function MemberDashboardShell({ children }: { children: ReactNode
           {/* Mobile hamburger button (separate — tap behavior) */}
           {!island && <button
             aria-label="Open menu"
-            className="gui md:hidden fixed flex items-center justify-center"
+            className="gui md:hidden fixed flex items-center justify-center print:hidden!"
             style={{
               top: "12px",
               left: "12px",
@@ -143,13 +143,14 @@ export default function MemberDashboardShell({ children }: { children: ReactNode
             </>
           )}
 
-          {/* Main content — fills full width since sidebar is now an overlay */}
-          <main className="flex-1 h-full overflow-y-auto overflow-x-hidden">
+          {/* Main content — fills full width since sidebar is now an overlay. Portal pages start under the menu
+              button (a 44px band), so it never sits on a page's title or back link, on a phone or a desktop. */}
+          <main className={`flex-1 h-full overflow-y-auto overflow-x-hidden${island || recruitment ? "" : " pt-11 print:pt-0"}`}>
             {children}
           </main>
 
-          {/* R3-1: Onboarding quest checklist (floating, opt-in, mute via Settings → Appearance) */}
-          <QuestChecklist hidden={island} />
+          {/* R3-1: Onboarding quest checklist (floating, opt-in, mute via Settings → World) */}
+          <div className="print:hidden"><QuestChecklist hidden={island} /></div>
 
           {/* R3-2: apply stored theme on every portal page load, not just Settings */}
           <ThemeInit />

@@ -1,6 +1,6 @@
 /* Progression sheets and pages (journal, notice board, contributions, letters, the economy pages), in the GUI sheet:
    paper cards, sage and butter, the kit's pills. The frame is components/gui Sheet (ProgressionPanel). */
-.page { max-width: 760px; margin: 0 auto; padding: 72px 20px 40px; color: var(--gui-ink); }
+.page { max-width: 760px; margin: 0 auto; padding: 24px 20px 40px; color: var(--gui-ink); }
 .pageCard { padding: 20px 22px 24px; border-radius: var(--gui-r-paper); background: var(--gui-paper); box-shadow: var(--gui-shadow-md); }
 
 .tabs { display: flex; gap: 4px; margin-bottom: 16px; padding: 4px; border-radius: var(--gui-r-pill); background: var(--gui-paper-deep); width: fit-content; max-width: 100%; overflow-x: auto; }
