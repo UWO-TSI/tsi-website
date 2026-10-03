@@ -1,0 +1,66 @@
+/*
+ * The multiplayer layer in the GUI sheet (row 285). Nameplates copy the paper tag your own plate wears
+ * (PlayerAvatar.tsx; unify the two later, specs/multiplayer.md §9): the driver moves `.plateAt`, `.plate` is centred
+ * on that point and follows the text-size setting.
+ */
+.plateAt { position: absolute; top: 0; left: 0; pointer-events: none; user-select: none; will-change: transform; }
+.plate { transform: translate(-50%, -50%); width: max-content; white-space: nowrap; text-align: center; padding: 3px 11px 4px; border-radius: 999px;
+  background: rgb(255 251 231 / 0.95); color: var(--gui-ink-strong); font-family: var(--gui-font); zoom: var(--tsi-text-scale, 1);
+  box-shadow: 0 2px 0 rgb(114 92 78 / 0.18); transition: opacity 0.3s ease; }
+.plate[data-frame="bronze"] { box-shadow: 0 0 0 2.5px #c08a4a, 0 2px 0 rgb(114 92 78 / 0.18); }
+.plate[data-frame="silver"] { box-shadow: 0 0 0 2.5px #c9d3da, 0 2px 0 rgb(114 92 78 / 0.18); }
+.plate[data-frame="gold"] { box-shadow: 0 0 0 2.5px #f0c24a, 0 2px 0 rgb(114 92 78 / 0.18); }
+/* Development (?lod=1): the player's render tier under the name. */
+.plate[data-tier]::after { content: attr(data-tier); display: block; margin-top: 1px; font-size: 10px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--gui-sage); }
+.plate[data-tier="Reduced"]::after { color: var(--gui-warn); }
+/* Away (dropped, inside the reconnection grace): the plate dims, they're still here. */
+.plate[data-away] { opacity: 0.5; }
+.plateName { display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 13px; font-weight: 800; line-height: 1.2; }
+.dot { display: none; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--gui-tethos-blue); box-shadow: 0 0 0 2px #fffbe7; }
+.plate[data-member] .dot { display: block; }
+.level { margin-left: 2px; padding: 0 6px; border-radius: 999px; background: var(--gui-sage); color: var(--gui-paper); font-size: 12px; font-weight: 800; }
+.level[hidden], .phone[hidden], .plateClass[hidden] { display: none; }
+.plateClass { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 2px; font-size: 12px; font-weight: 700; color: var(--gui-ink-2); line-height: 1.2; }
+.classIcon { width: 22px; height: 22px; border-radius: 50%; background: var(--gui-paper-hi); }
+
+/* A phone, in the paper kit's ink: on a remote resting from their phone, and in the people list. */
+.phone { display: inline-grid; place-items: center; flex: none; }
+.phone svg { display: block; overflow: visible; }
+.phone rect { fill: var(--gui-paper-hi); stroke: var(--gui-ink-2); stroke-width: 1.4; }
+.phone path { fill: none; stroke: var(--gui-ink-2); stroke-width: 1.2; stroke-linecap: round; }
+.phone circle { fill: var(--gui-ink-2); }
+
+:global(html[data-contrast="high"]) .plate { background: #000000; color: #ffffff; }
+:global(html[data-contrast="high"]) .plateClass { color: #ffffff; }
+@media (prefers-reduced-motion: reduce) { .plate { transition: none; } }
+
+/* The HUD: under the top cluster on the right, above the world, below its sheets (they render outside it). */
+.hud { position: absolute; top: 76px; right: 20px; z-index: 13; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; pointer-events: none; zoom: var(--tsi-text-scale, 1); }
+.hud > * { pointer-events: auto; }
+.status { display: flex; align-items: center; gap: 8px; padding: 5px 6px 5px 6px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.96); box-shadow: var(--gui-shadow-md); font-family: var(--gui-font); }
+.status > :first-child { font-size: var(--gui-text-xs); font-weight: 800; }
+.beads { display: inline-flex; gap: 3px; margin-right: 2px; }
+.beads i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: bead 0.9s ease-in-out infinite; }
+.beads i:nth-child(2) { animation-delay: 0.15s; }
+.beads i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes bead { 0%, 100% { transform: translateY(0); opacity: 0.5; } 50% { transform: translateY(-3px); opacity: 1; } }
+.people { overflow: visible; }
+.count { position: absolute; right: -5px; bottom: -4px; min-width: 20px; height: 20px; box-sizing: border-box; padding: 0 5px; border-radius: 99px; background: var(--gui-sage); color: var(--gui-paper);
+  font: 800 11px/20px var(--gui-font); text-align: center; box-shadow: 0 0 0 2px var(--gui-paper-hi); }
+/* The clean HUD: the button slides in when someone comes or goes, then fades (as the top cluster's chips do). */
+.hud[data-clean] [data-flash] { animation: peopleIn 0.3s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+.hud[data-clean] [data-flash="out"] { animation: peopleOut 0.32s ease-in forwards; }
+@keyframes peopleIn { from { opacity: 0; transform: translateY(-10px) scale(0.94); } }
+@keyframes peopleOut { to { opacity: 0; transform: translateY(-8px); } }
+@media (max-width: 700px) { .hud { top: 112px; right: 12px; } }
+@media (prefers-reduced-motion: reduce) { .beads i, .hud[data-clean] [data-flash], .hud[data-clean] [data-flash="out"] { animation: none; } }
+:global(html[data-contrast="high"]) .status { background: #ffffff; color: #000000; box-shadow: inset 0 0 0 2px #000000; }
+
+/* The people list. */
+.group + .group { margin-top: 14px; }
+.groupHead { display: flex; align-items: baseline; justify-content: space-between; margin: 0 4px 4px; font-size: var(--gui-text-sm); font-weight: 800; color: var(--gui-ink-strong); }
+.groupHead small { font-size: var(--gui-text-xs); font-weight: 700; color: var(--gui-muted); }
+.personName { display: inline-flex; align-items: center; gap: 7px; }
+.memberDot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--gui-tethos-blue); box-shadow: 0 0 0 2px var(--gui-paper-hi); }
+.personLevel { padding: 1px 8px; border-radius: 999px; background: var(--gui-sage); color: var(--gui-paper); font-size: var(--gui-text-xs); font-weight: 800; }
+.person[data-away] { opacity: 0.6; }

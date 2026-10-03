@@ -54,12 +54,20 @@ describe("default island movement (frozen 2026-09-28 village)", () => {
     expect(x).toBeCloseTo(5);
     expect(island.standable(x, z)).toBe(true);
   });
-  it("sits you mid-bench facing the side you came from, and lets you step off", () => {
-    // Plaza bench (5, 4.5) runs north-south: from the plaza side you face west, from the east you face east.
-    expect(benchSeat(4, 4.5, 1.3, v0)).toMatchObject({ x: 5, z: 4.5 });
-    expect(benchSeat(4, 4.5, 1.3, v0)?.yaw).toBeCloseTo(Math.PI * 1.5);
+  it("seats two to a bench: the nearer slot nobody else holds, facing the side you came from, and lets you step off", () => {
+    // Plaza bench (5, 4.5) runs north-south, its slots 0.42 either way along it: from the plaza side you face west,
+    // from the east you face east. A little south of its middle, the south slot.
+    const plaza = benchSeat(4, 4.4, 1.3, v0)!;
+    expect([plaza.x, plaza.z, plaza.key]).toEqual([5, expect.closeTo(4.08), "bench:bench-1#1"]);
+    expect(plaza.yaw).toBeCloseTo(Math.PI * 1.5);
     expect(benchSeat(6, 4.5, 1.3, v0)?.yaw).toBeCloseTo(Math.PI / 2);
-    expect(benchSeat(-6, -9, 1.3, v0)).toEqual({ x: -6, z: -8, yaw: Math.PI });
+    // Another player holds the south slot (their seat claim): the north one; both held, no seat.
+    const held = new Set(["bench:bench-1#1"]), taken = (k: string) => held.has(k);
+    expect(benchSeat(4, 4.4, 1.3, v0, undefined, taken)).toMatchObject({ x: 5, z: expect.closeTo(4.92), key: "bench:bench-1#0" });
+    held.add("bench:bench-1#0");
+    expect(benchSeat(4, 4.4, 1.3, v0, undefined, taken)).toBeNull();
+    // The east-west bench from behind: the west slot of the two at the same distance, facing back the way you came.
+    expect(benchSeat(-6, -9, 1.3, v0)).toEqual({ x: -6.42, z: -8, yaw: Math.PI, key: "bench:bench-0#0" });
     expect(benchSeat(0, 0, 1.3, v0)).toBeNull();
     const [x, z] = island.move(5, 4.5, 3.8, 4.5);
     expect(x).toBeCloseTo(3.8);

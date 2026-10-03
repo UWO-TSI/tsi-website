@@ -22,6 +22,7 @@ import type { CharacterLook } from "@/lib/game/character/look";
 import { useMyLook } from "@/lib/game/character/lookStore";
 import { airPhase, combatClip, gripFor, GRIP_HAND, seatLift, VERBS, verbClip, verbInfo, type CombatView, type Verb } from "@/lib/game/character/clips";
 import { useWorldClips } from "./character/useWorldClips";
+import { useLocalAvatarTap } from "@/lib/net/localAvatar";
 import { combat, useCombatValue } from "@/lib/game/combat/runtime";
 import { combatFacing, combatPush, combatTuning, dashDodge } from "@/lib/game/combat/actions";
 import { classMove } from "@/lib/game/combat/classRuntime";
@@ -184,6 +185,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   const crouch = crouchKey(bindings, locked);
   const [x0, , z0] = spawnPosition;
   const sim = useRef<MoveSim | null>(null), simAt = useRef<[number, number, number] | null>(null);
+  useLocalAvatarTap(motion, held, sim);
   const keys = useRef<Record<string, boolean>>({});
   const presses = useRef({ jump: false, dash: false });
   const target = useRef<{ x: number; z: number } | null>(null);
@@ -786,7 +788,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
 const FRAME_COLOR = { bronze: "#c08a4a", silver: "#c9d3da", gold: "#f0c24a" } as const;
 
 /** What a wheel item looks like in the hand (weapons aside: they are the character's `weapon`). */
-function heldView(item: WheelItem | null): HeldView | null {
+export function heldView(item: WheelItem | null): HeldView | null {
   if (!item) return null;
   if (item.kind === "glider") return { url: LEAF_URL, hold: "glider" };
   if (item.kind === "pin") { const m = itemModel(item.key); return m && { url: m.url, hold: "front", fit: m.fit }; }
