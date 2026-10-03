@@ -19,13 +19,12 @@ import {
   type Area, type NetPlayer, type PosePacket, type RosterEntry, type SlowState,
 } from "./protocol";
 import { toRemotePlayer, type NetSource, type NetStatus } from "./types";
+import { MAX_BOTS } from "./netStore";
 
 /** How often a started loopback steps its bots (ms). */
 export const TICK_MS = 33;
 /** Behind by more than this (a hidden tab), bots skip the gap rather than replay it (ms). */
 const CATCH_UP_MS = 1000;
-/** At most this many bots. */
-export const MAX_BOTS = 64;
 const STEP_MS = 1000 / 120;
 
 export interface LoopbackOptions {
@@ -36,14 +35,6 @@ export interface LoopbackOptions {
   clock?: () => number;
   /** Step with a timer while started (default true); tests call `advance`. */
   timer?: boolean;
-}
-
-/** `?bots=N` (and `?seed=`): the loopback's options, or null without a valid count. */
-export function loopbackFromSearch(search: string): { bots: number; seed: number } | null {
-  const q = new URLSearchParams(search), raw = q.get("bots"), n = Number(raw);
-  if (!raw || !Number.isInteger(n) || n < 0 || n > MAX_BOTS) return null;
-  const seed = Number(q.get("seed") ?? 1);
-  return { bots: n, seed: Number.isInteger(seed) ? seed : 1 };
 }
 
 /** A bot as the room holds it. */
