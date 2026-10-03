@@ -24,7 +24,7 @@ const I = (k: string) => `/assets/game/classes/${k}.svg`;
 export const SUMMONER: ClassKit = {
   key: "summoner", name: "Summoner", family: "Warden", role: "support", style: "skill",
   signature: { type: "seal-gloves", name: "seal gloves" },
-  stat: { kind: "summon_power", at1: 1, at20: 1.2 },
+  stat: { kind: "summon_power", at1: 1, at20: 1.1 },
   keys: [
     { key: "summoner.wolves", name: "Wolves", description: "Sign the wolf: a pair of shadow wolves pounces your target, then hunts at your side. Press again to send them back.",
       cooldown_s: 1, energy: 20, input: { kind: "toggle" }, effects: [{ kind: "summon", unit: "beast-wolf", count: 2 }],
@@ -51,7 +51,7 @@ export const SUMMONER: ClassKit = {
     release: [{ kind: "area", power: 7, radius: 6.5, at: "self", knock: 2, status: { hold: 1.5 } }],
     clip: { unique: "Ult_Summoner" }, vfx: { cast: "summoner.ultCharge", impact: "summoner.ultImpact", zone: "summoner.ultDecal" }, icon: I("summoner-ult") },
   ranks: [
-    { at: 4, target: "summoner.wolves", change: { label: "+10% power", power: 1.1 } },
+    { at: 4, target: "summoner.wolves", change: { label: "−25% energy", energy: 0.75 } },
     { at: 7, target: "summoner.serpent", change: { label: "−25% energy", energy: 0.75 } },
     { at: 10, target: "ult", change: { label: "+10% power", power: 1.1 } },
     { at: 12, target: "summoner.toad", change: { label: "−25% energy", energy: 0.75 } },
@@ -70,16 +70,16 @@ export const SHAMAN: ClassKit = {
   stat: { kind: "area", at1: 1, at20: 1.25 },
   keys: [
     { key: "shaman.storm", name: "Storm Totem", description: "Throw a storm totem: it plants where it lands (staggering what it hits) and zaps the nearest enemy.",
-      cooldown_s: 5, energy: 20, effects: [{ kind: "throw", unit: "totem-storm", flight: 0.45, power: 0.35, hold: 0.3, radius: 1 }],
+      cooldown_s: 5, energy: 20, effects: [{ kind: "throw", unit: "totem-storm", flight: 0.45, power: 0.3, hold: 0.3, radius: 1 }],
       clip: { unique: "Unique_TotemThrow" }, vfx: { cast: "shaman.throw", impact: "shaman.plant" }, icon: I("shaman-storm") },
     { key: "shaman.fire", name: "Fire Totem", description: "Throw a fire totem: it plants and bursts in flame round itself.",
-      cooldown_s: 5, energy: 20, effects: [{ kind: "throw", unit: "totem-fire", flight: 0.45, power: 0.35, hold: 0.3, radius: 1 }],
+      cooldown_s: 5, energy: 20, effects: [{ kind: "throw", unit: "totem-fire", flight: 0.45, power: 0.3, hold: 0.3, radius: 1 }],
       clip: { unique: "Unique_TotemThrow" }, vfx: { cast: "shaman.throw", impact: "shaman.plant" }, icon: I("shaman-fire") },
     { key: "shaman.earth", name: "Earthbind Totem", description: "Throw an earthbind totem: it slows everything round it and roots it now and then, holding them in your kill zone.",
-      cooldown_s: 7, energy: 25, effects: [{ kind: "throw", unit: "totem-earth", flight: 0.45, power: 0.35, hold: 0.3, radius: 1 }],
+      cooldown_s: 7, energy: 25, effects: [{ kind: "throw", unit: "totem-earth", flight: 0.45, power: 0.3, hold: 0.3, radius: 1 }],
       clip: { unique: "Unique_TotemThrow" }, vfx: { cast: "shaman.throw", impact: "shaman.plant" }, icon: I("shaman-earth") },
     { key: "shaman.overcharge", name: "Overcharge", description: "Every linked totem unloads at once. The burst grows with each enemy inside your links.",
-      cooldown_s: 9, energy: 30, heavy: true, effects: [{ kind: "overcharge", radius: 2.6, power: 0.66, link: 0.5, per: 0.18, max: 2.4 }],
+      cooldown_s: 9, energy: 30, heavy: true, effects: [{ kind: "overcharge", radius: 2.6, power: 0.6, link: 0.5, per: 0.18, max: 2.4 }],
       clip: { verb: "Slam", scale: 1.2 }, vfx: { cast: "shaman.overcharge", impact: "shaman.unload" }, icon: I("shaman-overcharge") },
     { key: "shaman.hop", name: "Spirit Hop", description: "Mid-jump: plant a spirit post under you and jump off it. The post links with your totems for a few seconds.",
       cooldown_s: 4, energy: 15, unlock: 3, when: "airborne",
@@ -179,7 +179,7 @@ export const PRIEST: ClassKit = {
   passive: { name: "Blessed", description: "You regenerate 1% of your max HP a second, and healing past full becomes a shield.", kind: "blessed", value: 0.01, cap: 0.3 },
   ult: { key: "priest.ult", name: "Divine Descent", description: "Draw the winged sigil: wings of light, and a pillar slams down where you aim. You're healed full, allies too (the downed rise), and enemies burn.",
     cooldown_s: 0, energy: 0, charge: 1, anticipation_ms: 500, impacts: "first", input: { kind: "drawn", shape: "wings" },
-    effects: [{ kind: "area", power: 7.5, radius: 5, at: "aim", knock: 5 }, { kind: "heal", amount: 1 },
+    effects: [{ kind: "area", power: 6.5, radius: 5, at: "aim", knock: 5 }, { kind: "heal", amount: 1 },
       { kind: "ground", key: "priest.pillar", at: "aim", radius: 5, duration: 3, every: 0.5, power: 0.45, heal: 0.03 }],
     clip: { unique: "Ult_Priest" }, vfx: { cast: "priest.ultCharge", impact: "priest.ultImpact", zone: "priest.ultDecal" }, icon: I("priest-ult") },
   ranks: [
@@ -192,7 +192,7 @@ export const PRIEST: ClassKit = {
     { at: 16, target: "passive", change: { label: "+25%", power: 1.25 } },
     { at: 18, target: "ult", change: { label: "+10% power", power: 1.1 } },
   ],
-  look: { ramp: ["#fffbe6", "#d2dc66", "#3e4413"], mote: "sun", drift: "rise", icon: I("priest"), passive: I("priest-passive"), trim: { M_Wood: "#f4ecdc", M_Cradle: "#e2b84a", M_Cloth: "#fff8e8" } },
+  look: { ramp: ["#fffbe6", "#d2dc66", "#3e4413"], mote: "flare", drift: "rise", icon: I("priest"), passive: I("priest-passive"), trim: { M_Wood: "#f4ecdc", M_Cradle: "#e2b84a", M_Cloth: "#fff8e8" } },
   mods: { max_hp: 0.15 },
 };
 

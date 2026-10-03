@@ -48,8 +48,18 @@ export const WEAPONS: WeaponDef[] = [
   W("staff-heartstone", "Heartstone staff", "staff", 5, ["arcana", "spirit"]),
   // Classes v2 signature weapons, by family wave (their own seed migrations carry them, with weapons.subclass).
   ...ARCANE_WEAPONS,
+  // Classes v2, the Rangers' signature weapons (one type each, tiers 1–5 on one trim kit: wood and cloth, iron,
+  // rune-etched, gold with a glow part, animated runes). Seeded in 20261003023000_classes_v2_ranger_seed.sql.
+  ...signature("marksman", "recurve", ["Ash recurve", "Iron-tipped recurve", "Runed recurve", "Gilded recurve", "Starlit recurve"]),
+  ...signature("sniper", "rifle", ["Brass long rifle", "Iron long rifle", "Runed long rifle", "Gilded long rifle", "Starlit long rifle"]),
+  ...signature("hunter", "harpoon", ["Harpoon crossbow", "Iron harpoon crossbow", "Runed harpoon crossbow", "Gilded harpoon crossbow", "Starlit harpoon crossbow"]),
+  ...signature("gunslinger", "sixgun", ["Walnut revolver", "Iron revolver", "Runed revolver", "Gilded revolver", "Starlit revolver"]),
   ...WARDEN_WEAPONS,
 ];
+/** A subclass's five signature tiers: keys `<type>-<tier>`, finesse, shooting arrows or bolts (the kit's own fire decides how). */
+function signature(subclass: string, type: string, names: string[]): WeaponDef[] {
+  return names.map((name, i) => ({ ...W(`${type}-${i + 1}`, name, type, (i + 1) as WeaponDef["tier"], ["finesse"]), subclass, basic: "bow" as const }));
+}
 
 /** Everyone starts with a sword and wraps; ruling 2026-09-26: the rest of one-per-archetype arrives when the ruins gate opens (subclass choice). */
 export const FIRST_WEAPONS = ["sword-driftwood", "wraps-cloth"];

@@ -20,7 +20,7 @@ let punchDeg = 0, widenDeg = 0, holdDeg = 0;
 let shake = 0, shakeT = 0, kickX = 0;
 const SHAKE_DECAY = 16; // exponential /s: a shake is gone in ~0.25 s
 let shakeDecay = SHAKE_DECAY;
-let tension = 0;
+let tension = 0, aimDeg = 0;
 
 const PUNCH_DECAY = 5; // exponential /s — a 4° punch fades in ~0.5s
 const TENSION_DEG = 2; // max sustained creep
@@ -32,6 +32,8 @@ export function punchZoom(deg: number): void {
 export function setTensionZoom(v: number): void {
   tension = Math.max(0, Math.min(1, v));
 }
+/** A held aim zoom in degrees (a scope while it's up), 0 to let go; the FOV pass eases to it. */
+export function setAimZoom(deg: number): void { aimDeg = Math.max(0, deg); }
 
 /**
  * A camera shake (combat hits), `amount` world units at its start, scaled by the Screen shake setting (Off by
@@ -67,5 +69,5 @@ export function juiceFovOffset(delta: number): number {
   if (punchDeg < 0.01) punchDeg = 0;
   widenDeg *= Math.exp(-PUNCH_DECAY * delta);
   if (widenDeg < 0.01) widenDeg = 0;
-  return punchDeg + tension * TENSION_DEG - widenDeg - holdDeg;
+  return punchDeg + tension * TENSION_DEG + aimDeg - widenDeg - holdDeg;
 }

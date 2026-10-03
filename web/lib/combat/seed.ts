@@ -2,6 +2,8 @@
  * SQL seed for weapons, enemy types and missions (first block in
  * 20260926190000_combat_content.sql; changes: lib/seedMigrations.ts). Upserts,
  * so the content pass overwrites the first seed in 20260926150800_combat.sql.
+ * Classes v2 signature weapons (`subclass` set) are seeded by their family's own
+ * migration (`*_classes_v2_<family>_seed.sql`, with the subclass column), not here.
  */
 import { ENEMIES, MISSIONS } from "./content";
 import { WEAPONS } from "./weapons";

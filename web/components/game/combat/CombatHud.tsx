@@ -25,6 +25,7 @@ import { beastCap, beastKit, isTamed, ritualOn } from "@/lib/game/combat/beasts"
 import { totemState } from "@/lib/game/combat/totems";
 import IncantationOverlay from "./IncantationOverlay";
 import ImpactOverlay from "./ImpactOverlay";
+import ClassGauges from "./ClassGauges";
 import styles from "../DefaultIslandWorld.module.css";
 
 export default function CombatHud({ player }: { player: React.RefObject<{ x: number; z: number }> }) {
@@ -56,7 +57,7 @@ export default function CombatHud({ player }: { player: React.RefObject<{ x: num
       <div className={styles.weaponLine}>
         <span>{w.name}</span>
         <small data-broken={p.durability[p.weapon] <= 0 || undefined}>Durability {p.durability[p.weapon]}/{w.maxDurability}{p.durability[p.weapon] <= 0 ? " · broken, half damage" : ""}</small>
-        <small className={styles.dodgePip} data-ready={p.dodgeCd <= 0 || undefined}><kbd>{keyName(dash)}</kbd> Dodge · <kbd>{keyName(keys.swap)}</kbd> Previous weapon</small>
+        <small className={styles.dodgePip} data-ready={p.dodgeCd <= 0 || undefined}><kbd>{keyName(dash)}</kbd> Dodge · <kbd>{keyName(keys.swap)}</kbd> {rt.v2?.kit.fire?.ammo ? "Reload" : "Previous weapon"}</small>
       </div>
       {kit && <small className={styles.kitLine}>{kit.subclass.name} · {kit.subclass.passive.name}{rt.transform ? ` · ${rt.transform.name}` : ""}
         {summons ? ` · Summons ${minions.reduce((n, u) => n + (u.def.cost ?? 1), 0)}/${kit.capacity}` : ""}{usesTotems ? ` · Totems ${totems.length}/${CAPS.totems}` : ""}</small>}
@@ -128,6 +129,7 @@ function ClassBar({ rt, keys }: { rt: CombatRuntime; keys: Record<string, string
     </div>
     {beastKit(kit) && <small className={styles.kitLine}>Beasts out {rt.units.filter(u => u.def.key.startsWith("beast-")).reduce((n, u) => n + (u.def.cost ?? 1), 0)} / {beastCap(v.mastery)}</small>}
     {rt.units.some(u => u.def.kind === "totem" && u.def.driven) && (() => { const s = totemState(rt); return <small className={styles.kitLine}>Totems {rt.units.filter(u => u.def.kind === "totem" && u.def.driven && !u.def.uncapped).length} / 3 · links {s.links.length} · enclosed {s.enclosed}</small>; })()}
+    <ClassGauges rt={rt} swapKey={keys.swap} />
     {v.combos.length > 0 && <small className={styles.kitLine}>{v.combos.map(c => { const [a, b] = c.keys.map(i => keyName(keys[V2_SLOT_IDS[i]])); return `${a === b ? `${a} ${a}` : `${a} + ${b}`}: ${c.ability.name}`; }).join(" · ")}</small>}
     <div className={styles.masteryBar} role="meter" aria-label="Mastery" aria-valuenow={v.progress.into} aria-valuemin={0} aria-valuemax={v.progress.needed || 1}>
       <span style={{ width: `${v.progress.needed ? (v.progress.into / v.progress.needed) * 100 : 100}%` }} />

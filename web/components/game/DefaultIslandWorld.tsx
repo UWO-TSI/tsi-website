@@ -50,7 +50,7 @@ import OracleTemple from "./oracle/OracleTemple";
 import RuinsScene from "./combat/RuinsScene";
 import CombatHud from "./combat/CombatHud";
 import MissionBoardSheet from "./combat/MissionBoardSheet";
-import { SLOT_IDS, V2_SLOT_IDS, attachProgressId, combat, publishCombat, setMission, setOwnedWeapons, setWeapon, useCombatValue } from "@/lib/game/combat/runtime";
+import { SLOT_IDS, V2_SLOT_IDS, attachProgressId, combat, publishCombat, setMission, setOwnedWeapons, useCombatValue } from "@/lib/game/combat/runtime";
 import { missionEvent } from "@/lib/game/combat/abilities";
 import { combatProgression, postWear, startMissionRemote, type ProgressionView } from "@/lib/game/combat/progression";
 import { equipKit } from "@/lib/game/combat/abilities";
@@ -100,7 +100,8 @@ import CollectionBook from "./CollectionBook";
 import { usePeacefulContext } from "@/lib/game/usePeacefulContext";
 import ToolWheel from "./ToolWheel";
 import { clickAction, heldItem, toolNeeded, wheelContents, type Reach, type WheelItem, type WheelSite } from "@/lib/game/toolWheel";
-import { holdItem, readHeld, settleHeld, swapHeld, useHeld } from "@/lib/game/heldStore";
+import { holdItem, swapHeld, useHeld } from "@/lib/game/heldStore";
+import { useRuinsHand } from "@/lib/game/ruinsHand";
 import { useWheelKeys } from "@/lib/game/movement/keys";
 import { rodByTier } from "@/lib/game/rods";
 import { eatItem, localCollections, mergeWithLocal } from "@/lib/game/collections";
@@ -256,6 +257,8 @@ function QualityProbe({ onTier }: { onTier: (tier: QualityTier) => void }) {
 
 /** Module scope: the react compiler forbids writing through a prop. */
 const writeText = (el: HTMLElement | null, text: string) => { if (el) el.textContent = text; };
+/** A weapon picked on the wheel becomes your default on the server. */
+const equipOnServer = (weapon: string) => { void apiCall("/api/combat/equip", "equip", { weapon }).catch(() => {}); };
 
 /** Once a second into the options' Performance readout, straight to the DOM: a 1 Hz setState re-rendered the whole island. */
 function Performance({ player, output }: { player: React.RefObject<THREE.Vector3>; output: React.RefObject<HTMLOutputElement | null> }) {
@@ -806,23 +809,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     events.forEach(e => window.addEventListener(e, load));
     return () => events.forEach(e => window.removeEventListener(e, load));
   }, []);
-  // In the ruins a weapon is always in hand: what you held outside isn't on its wheel. Elsewhere a held item that isn't
-  // on the wheel just isn't shown (your inventory and stock load after the island), never dropped.
-  useEffect(() => {
-    if (site === "ruins") settleHeld(wheelItems, `weapon:${combat.rt.player.weapon}`);
-    if (site === "ruins" && !readHeld().held) holdItem(`weapon:${combat.rt.player.weapon}`);
-  }, [wheelItems, site]);
-  // A weapon from the wheel goes in hand (and, picked outside a fight's quick swap, becomes your default on the server);
-  // R's swap back in the ruins moves the wheel with it. Keyed on the pick, not the item object: the wheel's contents are
-  // rebuilt when your weapons load, and a fresh object for the same pick took the old weapon back from the one you have
-  // equipped (that and the swap below then traded the two every render: React's update-depth error in the ruins).
-  const heldWeapon = held?.kind === "weapon" ? held.key : null;
-  useEffect(() => {
-    if (!heldWeapon || !setWeapon(combat.rt, heldWeapon)) return;
-    publishCombat();
-    void apiCall("/api/combat/equip", "equip", { weapon: heldWeapon }).catch(() => {});
-  }, [heldWeapon]);
-  useEffect(() => { if (site === "ruins" && readHeld().held !== `weapon:${runtimeWeapon}`) holdItem(`weapon:${runtimeWeapon}`); }, [site, runtimeWeapon]);
+  // The ruins' hand (lib/game/ruinsHand.ts): the wheel and the weapon in hand kept in step. Elsewhere a held item that
+  // isn't on the wheel just isn't shown (your inventory and stock load after the island), never dropped.
+  useRuinsHand(site, wheelItems, held, runtimeWeapon, equipOnServer);
   // What's in reach for the held tool, and what left click does with it.
   const reach: Reach = useMemo(() => ({ water: near === "fish", bug: near === "net" ? targetLabel : null, dig: near === "dig" ? targetLabel : null }), [near, targetLabel]);
   const toolAction = clickAction(held, reach, wheelSite);

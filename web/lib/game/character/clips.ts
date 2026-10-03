@@ -26,7 +26,7 @@ type VillageClip = "Idle" | "Walk" | "Run" | "Sit" | "Study" | "Sleep" | "Fish" 
  */
 export const VERBS = ["CastForward", "CastUp", "Slam", "Thrust", "Spin", "LeapStrike", "Throw", "Summon", "Channel", "Guard", "Kick", "Sweep",
   "Plant", "DrawShot", "QuickShot", "Backstep"] as const;
-export const GRIPS = ["OneHand", "Staff", "Bow", "Pistol", "Fists", "Book"] as const;
+export const GRIPS = ["OneHand", "Staff", "Bow", "Pistol", "Fists", "Book", "Rifle"] as const;
 export type Verb = (typeof VERBS)[number];
 export type Grip = (typeof GRIPS)[number];
 export type VerbClip = `${Verb}_${Grip}`;
@@ -38,8 +38,10 @@ export type ClipName = VillageClip | VerbClip | HoldIdleClip | UniqueClip;
 
 /** The grip family of a weapon type (lib/combat/weapons.ts WeaponType; signature types fall back to one hand). */
 const GRIP_OF: Record<string, Grip> = { sword: "OneHand", shield: "OneHand", bow: "Bow", revolver: "Pistol", staff: "Staff", tome: "Book", fists: "Fists", totem: "Staff",
-  // Classes v2 signature types (the Arcane wave): the prism staff, the deck in one hand, the bone tome, the charm on bare fists.
+  // Classes v2 signature types: the Arcane wave's prism staff, the deck in one hand, the bone tome, the charm on bare fists;
+  // the Rangers' recurve on the bow grip, the long rifle and the harpoon crossbow shouldered (Rifle), the revolver.
   "prism-staff": "Staff", "trick-deck": "OneHand", "bone-tome": "Book", "tooth-charm": "Fists",
+  recurve: "Bow", rifle: "Rifle", harpoon: "Rifle", sixgun: "Pistol",
   // The Warden wave's signature types: the seal gloves leave both hands free for the signs; the three staffs.
   "seal-gloves": "Fists", "totem-staff": "Staff", "living-staff": "Staff", "sunstone-staff": "Staff" };
 export const gripFor = (weaponType: string): Grip => GRIP_OF[weaponType] ?? "OneHand";
@@ -48,7 +50,7 @@ export const holdIdle = (grip: Grip): HoldIdleClip => `HoldIdle_${grip}`;
 /** The verb library's entry for a clip (length, impact phase, upper-body, hand), or null for a village clip. */
 export const verbInfo = (name: string) => VERB_BY_NAME.get(name) ?? null;
 /** The socket a grip holds its weapon in: the bow and the pistol sit in the left hand, the book is held in the left while the right casts. */
-export const GRIP_HAND: Record<Grip, "L" | "R"> = { OneHand: "R", Staff: "R", Bow: "L", Pistol: "L", Fists: "R", Book: "L" };
+export const GRIP_HAND: Record<Grip, "L" | "R"> = { OneHand: "R", Staff: "R", Bow: "L", Pistol: "L", Fists: "R", Book: "L", Rifle: "R" };
 const isVerb = (name: string): name is VerbClip => VERB_BY_NAME.has(name) && !name.startsWith("HoldIdle_");
 
 /**

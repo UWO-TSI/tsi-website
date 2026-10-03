@@ -11,6 +11,7 @@ import { SLOT_IDS, type AbilityId, type CombatRuntime } from "./runtime";
 import { beamLands, DODGE, separate, stepEnemy, strikeLands, sweptHit, type Vec } from "./sim";
 import { landLob, mobEvent, mobFx, rally, RUNE_BOLT_SPEED, stepHazards } from "./mobs";
 import { walled as thornWalled, wallStops } from "./field";
+import { fallen, shotSpent, steerShot } from "./classFire";
 import { cloneWard, inWall, parryShot, stepField } from "./primitives";
 
 const ABILITY_IDS: readonly AbilityId[] = [...SLOT_IDS, "swap"];
@@ -91,9 +92,12 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
       continue;
     }
     from.x = sh.x; from.z = sh.z;
+    if (sh.home || sh.fall) steerShot(rt, sh, dt); // classes v2: homing turns it, an arrow drops
     sh.x += sh.vx * dt; sh.z += sh.vz * dt; sh.life -= dt;
     to.x = sh.x; to.z = sh.z;
-    let gone = sh.life <= 0 || !freeAll(sh.x, sh.z, 0.05);
+    const wall = !freeAll(sh.x, sh.z, 0.05);
+    let gone = sh.life <= 0 || wall || fallen(sh);
+    if (gone && sh.from === "player" && rt.v2 && sh.hit) shotSpent(rt, sh, wall, random); // a bomblet bursts, burning ground, a harpoon's zip
     if (!gone && sh.from === "player") gone = resolvePlayerShot(rt, i, from, to, random);
     else if (!gone && sh.from === "enemy") {
       // A thorn wall stops it (field.ts); a parry sends it back (primitives.ts); a clone that wards sends back its own.

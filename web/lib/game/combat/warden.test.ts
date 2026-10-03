@@ -121,13 +121,15 @@ describe("the Warden kits (data)", () => {
     rt.v2!.skin = "moonink";
     expect(signaturePaint()!.M_Leather.color).toBe(WARDEN_SKINS["summoner:moonink"].M_Leather);
   });
-  it("a key's ranks reach the units it calls: a beast's bite and entry, a totem's pulse and reach", () => {
-    const { rt } = setup(SUMMONER, 4);
+  it("a key's ranks reach the units it calls (a totem's pulse and reach); the Summoner's beast ranks are energy", () => {
+    const { rt } = setup(SUMMONER, 20);
     setTamed(rt, null);
     tap(rt, 0); frames(rt, 3);
     const wolf = rt.units.find(u => u.def.key === "beast-wolf")!;
-    expect(wolf.power).toBeCloseTo(UNITS["beast-wolf"].power! * rt.v2!.mods.summonPower * 1.1, 6); // Wolves +10% at 4
-    expect(rankScale(setup(SUMMONER, 3).rt, "summoner.wolves", "power")).toBe(1);
+    expect(wolf.power).toBeCloseTo(UNITS["beast-wolf"].power! * rt.v2!.mods.summonPower, 6); // summon power only
+    expect(rankScale(rt, "summoner.wolves", "power")).toBe(1);
+    expect(rankScale(setup(SHAMAN, 4).rt, "shaman.storm", "power")).toBeCloseTo(1.1, 6);
+    expect(rankScale(setup(SHAMAN, 3).rt, "shaman.storm", "power")).toBe(1);
     expect(rankScale(setup(SHAMAN, 9).rt, "shaman.earth", "radius")).toBe(1.25);
     expect(rankScale(setup(SHAMAN, 8).rt, "shaman.earth", "radius")).toBe(1);
     expect(rankScale(setup(SHAMAN, 20).rt, "shaman.storm", "power")).toBeCloseTo(1.1, 6);

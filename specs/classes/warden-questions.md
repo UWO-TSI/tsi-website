@@ -12,7 +12,7 @@ Nothing here blocked the build. Each item says what the wave does now; a one-wor
 6. **A killed beast** is back after 10 s. Shadow Bond: each fallen beast (up to 2) gives the others +30% damage until it returns.
 7. **Escape Rabbits** pours out 48 rabbits as one instanced effect (up to 256 drawn). You're translucent with afterimages, +50% speed for 3 s, and enemies within 4.5 u lose you for 1.6 s. It doesn't count toward the beast cap.
 8. **Shadow Garden's risen beasts are the ult's.** Their hits count as the ult's share and charge nothing. When it closes, the ones it raised go back, unless you called them since.
-9. **Beast ranks.** With four beasts out at 20 the Summoner already deals twice its beasts' damage, so after the wolves' +10% at 4 the beast ranks cut call energy by 25% instead of adding power. That keeps mastery 20 inside 1.2×.
+9. **Beast ranks.** With four beasts out at 20 the Summoner already deals twice its beasts' damage, so its beast ranks cut call energy by 25% instead of adding power, and summon power tops out at +10% at 20 (the other three's stat directions reach +25–30%). That keeps mastery 20 inside 1.2×.
 
 ## Shaman
 10. **Totems.** One of each at a time, three at most, 24 s each. They link within 9 u, and the beams cut every 0.5 s. An enemy counts as enclosed inside the triangle of three, or within 1.2 u of a two-totem line. Overcharge adds 18% per enclosed enemy, up to ×2.4.

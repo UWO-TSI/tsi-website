@@ -19,7 +19,7 @@ export const TOTEM = {
   /** Link range (× area): two totems closer than this draw lightning between them. */
   link: 9,
   beam: { every: 0.5, power: 0.1, width: 0.55 },
-  storm: { every: 0.9, power: 0.18 },
+  storm: { every: 0.9, power: 0.17 },
   fire: { every: 1.6, power: 0.22 },
   earth: { every: 0.5, slow: 0.3, root: 5, hold: 0.45 },
   /** Along a line of two, enemies this close to it count as enclosed. */

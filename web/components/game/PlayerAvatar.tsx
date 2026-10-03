@@ -580,7 +580,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
         if (clip) {
           if (p.clip.upper && verbInfo(clip)?.upper) m.upper = clip; else m.play = clip;
           m.playRate = p.clip.scale; verbAsked = true;
-        } else if (verbInfo(p.clip.verb)) { // a kit's own clip (build_clips.py @unique: Ult_*, Unique_*), authored for its grip
+        } else if (verbInfo(p.clip.verb)) { // a subclass's own clip (Ult_*, Unique_*: build_clips.py @unique), on its own grip
           const clip = p.clip.verb as ClipName;
           if (p.clip.upper && verbInfo(clip)?.upper) m.upper = clip; else m.play = clip;
           m.playRate = p.clip.scale; verbAsked = true;
@@ -715,7 +715,7 @@ function PlayerCharacter({ look, motion, inCombat, walkSpeed, leaf, held }: { lo
     const w = WEAPONS[heldWeapon ?? key];
     // Classes v2: the verb library's grip decides the hand (the Book grip holds the tome in the left).
     const hand = v2 && inCombat ? GRIP_HAND[gripFor(SYSTEM_WEAPONS.find(x => x.key === (heldWeapon ?? key))?.type ?? "sword")] : undefined;
-    return w?.model && (shown || heldWeapon) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat || !!heldWeapon, grip: w.grip, hand, paint: v2 && inCombat ? signaturePaint : undefined } : null;
+    return w?.model && (shown || heldWeapon) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat || !!heldWeapon, grip: w.grip, hand, pulse: w.pulse, paint: v2 && inCombat ? signaturePaint : undefined } : null;
   }, [key, heldWeapon, shown, inCombat, v2]);
   const item = useMemo(() => (inCombat ? null : heldView(held)), [inCombat, held]);
   return <Character look={look} motion={motion} walkSpeed={walkSpeed} weapon={weapon} held={item} leaf={leaf} verbs={inCombat && v2} />;
