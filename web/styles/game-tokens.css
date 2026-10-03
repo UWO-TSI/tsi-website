@@ -155,6 +155,22 @@
   --gui-kit-blob: block;
   --gui-kit-dialogue-fill: transparent;
   --gui-kit-dialogue-shadow: none;
+  /* Hooks for components shared with the applicant island (the collection book, the fishing overlay): the sheet's 12 px
+     floor and no monospace here; there, their own values. */
+  --gui-min-text: var(--gui-text-xs);
+  --gui-mono: var(--gui-font);
+  /* The first-catch reveal (components/game/FishReveal) on warm paper instead of the dark gacha backdrop. */
+  --gui-reveal-backdrop: radial-gradient(circle at 50% 46%, rgb(255 251 231 / 0.94) 0%, rgb(247 241 218 / 0.92) 60%, rgb(238 233 202 / 0.94) 100%);
+  --gui-reveal-ink: var(--gui-ink-strong);
+  --gui-reveal-soft: var(--gui-ink-2);
+  --gui-reveal-shadow: 0 2px 0 rgb(255 255 247 / 0.9);
+  --gui-reveal-chip-bg: var(--gui-paper-hi);
+  --gui-reveal-chip-ink: var(--gui-ink-strong);
+  --gui-reveal-chip-ring: 2.5px;
+  --gui-reveal-odds-bg: var(--gui-paper-deep);
+  --gui-reveal-radius: 999px;
+  --gui-reveal-tap: 44px;
+  --gui-reveal-weight: 800;
 
   /* The portal's legacy tokens (styles/tokens.css): the navy terminal look, mapped onto paper. */
   --color-bg-main: var(--gui-page);

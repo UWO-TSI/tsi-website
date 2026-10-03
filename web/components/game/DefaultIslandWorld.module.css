@@ -18,162 +18,149 @@
   --hud-stick-left: calc(var(--hud-edge) + 196px);
   --hud-stick-bottom: calc(var(--hud-floor) + 40px);
 }
-.world { position: relative; width: 100%; height: calc(100dvh - var(--island-top, 40px)); min-height: 480px; overflow: hidden; background: #b7dce0; color: #293e3b; font-family: "IBM Plex Mono", monospace; }
-.heading { position: absolute; top: 32px; left: 36px; pointer-events: none; text-shadow: 0 1px 10px #ffffff70; transition: opacity 0.6s ease 0.15s, transform 0.6s ease 0.15s; }
+/* The island wears the GUI sheet (styles/game-tokens.css): the root also carries the global `gui` class. */
+.world { position: relative; width: 100%; height: calc(100dvh - var(--island-top, 40px)); min-height: 480px; overflow: hidden; background: #b7dce0; color: var(--gui-ink); }
+.heading { position: absolute; top: 28px; left: 36px; pointer-events: none; color: var(--gui-ink-strong); text-shadow: 0 1px 0 #fffbe7b3, 0 2px 14px #fffbe7d9; transition: opacity 0.6s ease 0.15s, transform 0.6s ease 0.15s; }
 /* The scene title fades out with a door fade and back in, renamed, once the next scene shows. */
 .heading[data-fading="true"] { opacity: 0; transform: translateY(-4px); transition-duration: 0.25s; transition-delay: 0s; }
-.heading h1 { margin: 0; font-size: clamp(20px, 2.4vw, 30px); font-weight: 600; letter-spacing: -1.2px; }
-.heading p { margin-top: 6px; font-size: 12px; }
-.panel { position: absolute; right: 20px; top: 76px; width: 238px; max-height: calc(100% - 180px); z-index: 14; overflow-y: auto; padding: 17px; background: #f8f7e9f2; border: 1px solid #5c746c40; border-radius: 14px 14px 5px 14px; box-shadow: 0 6px 0 #47625218, 0 12px 36px #29464118; font-size: 12px; }
-.views { display: flex; gap: 4px; padding: 3px; background: #dfe6d6; border-radius: 8px; margin-bottom: 18px; }
-.views button { min-height: 44px; flex: 1; border: 0; background: transparent; color: #42544e; padding: 8px 4px; border-radius: 5px; font: inherit; cursor: pointer; }
-.views button[aria-pressed="true"] { background: #426b5b; color: #fffdf0; box-shadow: 0 2px 0 #294b3c; }
+.heading h1 { margin: 0; font: 800 clamp(22px, 2.6vw, 34px)/1.1 var(--gui-font); letter-spacing: -0.01em; }
+.heading p { margin-top: 4px; font-size: var(--gui-text-sm); font-weight: 700; }
+/* The development panel (dev only): paper like everything else. */
+.panel { position: absolute; right: 20px; top: 76px; width: 248px; max-height: calc(100% - 180px); z-index: 14; overflow-y: auto; padding: 16px; background: var(--gui-paper); border-radius: var(--gui-r-card); box-shadow: var(--gui-shadow-md); font-size: var(--gui-text-sm); }
+.views { display: flex; gap: 4px; padding: 4px; background: var(--gui-paper-deep); border-radius: var(--gui-r-pill); margin-bottom: 16px; }
+.views button { min-height: 40px; flex: 1; border: 0; background: transparent; color: var(--gui-ink-2); padding: 8px 4px; border-radius: var(--gui-r-pill); font: inherit; font-weight: 800; cursor: pointer; }
+.views button[aria-pressed="true"] { background: var(--gui-butter); color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-sm); }
 .toggle, .preset { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.toggle { min-height: 44px; cursor: pointer; font-weight: 600; }
-.toggle input { width: 19px; height: 19px; accent-color: #426b5b; cursor: pointer; }
-.hint { font-size: 10px; line-height: 1.5; margin: 6px 0 18px; color: #607069; }
-.preset select { min-height: 44px; font: inherit; color: #293e3b; background: #fffdf3; border: 1px solid #94a796; padding: 7px 5px; border-radius: 5px; max-width: 145px; }
-.return { min-height: 44px; display: block; width: 100%; margin-top: 15px; padding: 9px 4px; border: 1px solid #a1af9b; border-radius: 5px; background: transparent; font: inherit; color: #42544e; cursor: pointer; }
-.panel button:hover { filter: brightness(0.94); }
-.panel :focus-visible { outline: 3px solid #bb813f; outline-offset: 3px; }
-.performance { border-top: 1px solid #cbd1c0; margin-top: 16px; padding-top: 12px; color: #5b6b61; }
-.performance summary { min-height: 44px; align-content: center; cursor: pointer; font-size: 10px; }
-.performance output { display: block; white-space: pre-line; font-size: 10px; line-height: 1.7; margin-top: 9px; }
-.performance small { display: block; font-size: 9px; line-height: 1.5; margin-top: 7px; }
-.controls { position: absolute; bottom: var(--hud-bar-bottom); left: 50%; transform: translateX(-50%); display: flex; flex-wrap: nowrap; align-items: center; justify-content: center; width: max-content; max-width: calc(100% - 24px); height: var(--hud-bar); box-sizing: border-box; gap: 18px; padding: 0 18px; border: 1px solid #fff8; border-radius: 8px; background: #f8f7e9e8; white-space: nowrap; font-size: 11px; box-shadow: 0 4px 15px #29464115; }
+.toggle { min-height: 44px; cursor: pointer; font-weight: 700; }
+.toggle input { width: 20px; height: 20px; accent-color: var(--gui-sage); cursor: pointer; }
+.hint { font-size: var(--gui-text-xs); line-height: 1.5; margin: 6px 0 16px; color: var(--gui-muted); }
+.preset select { min-height: 44px; font: inherit; font-weight: 700; color: var(--gui-ink); background: var(--gui-paper-hi); border: 2px solid var(--gui-paper-line); padding: 6px 10px; border-radius: 14px; max-width: 150px; }
+.return { min-height: 44px; display: block; width: 100%; margin-top: 14px; padding: 9px 4px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper-warm); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge); font: inherit; font-weight: 800; color: var(--gui-ink); cursor: pointer; }
+.panel button:hover { filter: brightness(0.97); }
+.performance { border-top: 2px dashed var(--gui-paper-edge); margin-top: 16px; padding-top: 12px; color: var(--gui-ink-2); }
+.performance summary { min-height: 44px; align-content: center; cursor: pointer; font-size: var(--gui-text-xs); font-weight: 800; }
+.performance output { display: block; white-space: pre-line; font-size: var(--gui-text-xs); line-height: 1.7; margin-top: 8px; font-variant-numeric: tabular-nums; }
+.performance small { display: block; font-size: var(--gui-text-xs); line-height: 1.5; margin-top: 7px; }
+/* The key bar: a paper pill of the kit's round brown keycaps. */
+.controls { position: absolute; bottom: var(--hud-bar-bottom); left: 50%; transform: translateX(-50%); display: flex; flex-wrap: nowrap; align-items: center; justify-content: center; width: max-content; max-width: calc(100% - 24px); height: var(--hud-bar); box-sizing: border-box; gap: 16px; padding: 0 18px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.95); color: var(--gui-ink); white-space: nowrap; font-size: var(--gui-text-xs); font-weight: 700; box-shadow: var(--gui-shadow-md); }
 .controls span { display: flex; align-items: center; gap: 5px; }
 /* One row: the first six keys; a "?" says there are more, and pointing at the bar (or tabbing into it) shows them all. */
 .controls > span:nth-of-type(n+7) { display: none; }
-.controls:has(> span:nth-of-type(7))::after { content: "?"; display: grid; place-items: center; flex: none; width: 20px; height: 20px; border: 1px solid #a7b59e; border-radius: 50%; background: #e0e6d8; font-weight: 700; }
-.controls:hover, .controls:focus-within { height: auto; min-height: var(--hud-bar); flex-wrap: wrap; padding: 10px 18px; row-gap: 8px; z-index: 30; }
+.controls:has(> span:nth-of-type(7))::after { content: "?"; display: grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--gui-paper-deep); color: var(--gui-ink-2); font-weight: 900; }
+.controls:hover, .controls:focus-within { height: auto; min-height: var(--hud-bar); flex-wrap: wrap; padding: 10px 18px; row-gap: 8px; z-index: 30; border-radius: var(--gui-r-card); }
 .controls:hover > span, .controls:focus-within > span { display: flex; }
 .controls:hover::after, .controls:focus-within::after { display: none; }
-.controls kbd { font: inherit; background: #e0e6d8; border: 1px solid #a7b59e; border-bottom-width: 2px; border-radius: 3px; padding: 2px 4px; }
-.loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #f8f7e9; padding: 18px 24px; border-radius: 8px; font-size: 12px; }
-@media (max-width: 700px) { .heading { top: 20px; left: 18px; } .heading p { display: none; } .panel { right: 12px; top: 112px; width: 208px; padding: 12px; } .controls { gap: 10px; padding: 10px; font-size: 10px; } }
+/* The kit's keycap, wherever the HUD names a key. */
+.controls kbd, .interact kbd, .mapButton kbd, .decorateToggle kbd, .bagButton kbd, .decorate kbd, .hint kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; border-radius: var(--gui-r-pill); background: var(--gui-bark); color: var(--gui-paper); font: 800 var(--gui-text-xs)/1 var(--gui-font); }
+.loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; gap: 10px; justify-items: center; background: var(--gui-paper); padding: 18px 24px; border-radius: var(--gui-r-card); box-shadow: var(--gui-shadow-md); font-size: var(--gui-text-sm); font-weight: 700; }
+@media (max-width: 700px) { .heading { top: 20px; left: 18px; } .heading p { display: none; } .panel { right: 12px; top: 112px; width: 208px; padding: 12px; } .controls { gap: 10px; padding: 0 12px; } }
 
 .touchControls { display: none; }
-.performance .toggle { margin-top: 10px; font-size: 10px; font-weight: 400; }
+.performance .toggle { margin-top: 10px; font-size: var(--gui-text-xs); font-weight: 600; }
 .panel[data-open="false"] { display: none; }
 @media (pointer: coarse), (pointer: none) {
   /* Touch: the hint line is the floor; the lane and the toasts go up over the stick, the minimap stands beside it. */
   .world { --hud-bar: 32px; --hud-lane-bottom: calc(var(--hud-stick-bottom) + 132px + var(--hud-gap)); --hud-side-bottom: var(--hud-stick-bottom); }
   .controls { display: none; }
-  .touchControls { display: block; position: absolute; bottom: var(--hud-floor); left: 50%; transform: translateX(-50%); margin: 0; padding: 10px 14px; border-radius: 6px; background: #f8f7e9e8; white-space: nowrap; font-size: 11px; }
+  .touchControls { display: block; position: absolute; bottom: var(--hud-floor); left: 50%; transform: translateX(-50%); margin: 0; padding: 8px 16px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.95); color: var(--gui-ink); white-space: nowrap; font-size: var(--gui-text-xs); font-weight: 700; box-shadow: var(--gui-shadow-sm); }
 }
 
-.world[data-light="night"] .heading { color: #fff4da; text-shadow: 0 2px 12px #11152a; }
-.world[data-light="evening"] .heading { color: #3a3431; }
+.world[data-light="night"] .heading { color: var(--gui-paper); text-shadow: 0 2px 12px #11152a; }
+.world[data-light="evening"] .heading { color: var(--gui-ink-strong); }
 
-/* Interaction prompt and room fade, as on the applicant island. */
-.interact { position: absolute; bottom: var(--hud-lane-bottom); left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); box-sizing: border-box; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 9px 16px; border: 1px solid #fff8; border-radius: 999px; background: #f8f7e9f2; color: #293e3b; font: inherit; font-size: 12px; font-weight: 600; box-shadow: 0 4px 15px #29464120; cursor: pointer; }
-.interact kbd { font: inherit; background: #426b5b; color: #fffdf0; border-radius: 4px; padding: 1px 6px; }
-.interact:focus-visible { outline: 3px solid #bb813f; outline-offset: 3px; }
+/* Interaction prompt and room fade, as on the applicant island: the kit's cream pill with a round keycap. */
+.interact { position: absolute; bottom: var(--hud-lane-bottom); left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); box-sizing: border-box; display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 8px 18px 8px 9px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper); color: var(--gui-ink-strong); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; box-shadow: var(--gui-shadow-md); cursor: pointer; }
+.interact kbd { min-width: 28px; height: 28px; font-size: var(--gui-text-sm); }
 .fade { position: absolute; inset: 0; z-index: 40; background: #14100c; opacity: 0; pointer-events: none; transition: opacity 0.5s ease; }
 .fade[data-active="true"] { opacity: 1; transition-duration: 0.3s; }
-.cue { padding: 4px 10px; border-radius: 999px; background: #f8f7e9e0; color: #293e3b; font: 600 11px "IBM Plex Mono", monospace; white-space: nowrap; pointer-events: none; }
+/* Signs over the village, in paper. */
+.cue { padding: 4px 12px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.95); color: var(--gui-ink-strong); font: 800 var(--gui-text-xs)/1.3 var(--gui-font); white-space: nowrap; pointer-events: none; box-shadow: var(--gui-shadow-sm); }
 @media (prefers-reduced-motion: reduce) { .fade, .heading { transition: none; } }
-.cue[data-closed="true"] { background: #efe3cfe6; color: #6a4b2f; border: 1px dashed #a07850; }
-p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
-.sheet { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, calc(100% - 32px)); padding: 18px 20px; border-radius: 18px; background: #f8f7e9; color: #293e3b; border: 1px solid #5c746c40; box-shadow: 0 6px 0 #47625218, 0 16px 40px #29464130; font-size: 13px; line-height: 1.5; z-index: 20; }
-.sheet header { display: flex; align-items: center; justify-content: space-between; }
-.sheet h2 { margin: 0; font-size: 17px; }
-.sheet header button { min-width: 44px; min-height: 44px; border: 0; background: transparent; font-size: 22px; color: inherit; cursor: pointer; border-radius: 10px; }
-.sheet header button:focus-visible { outline: 3px solid #bb813f; }
-.sheet small { display: block; margin-top: 10px; color: #607069; font-size: 10px; }
+.cue[data-closed="true"] { background: var(--gui-paper-deep); color: var(--gui-warn); outline: 2px dashed rgb(138 90 18 / 0.45); outline-offset: -4px; }
+p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-warn); }
 
-.objective { margin: 6px 0 0; padding: 7px 10px; border-radius: 10px; background: #f8f7e9f2; color: #293e3b; border: 1px solid #a8bdba; font-size: 11px; line-height: 1.35; box-shadow: 0 4px 14px #132e3625; }
-.objective span { color: #e8704a; }
+.objective { margin: 6px 0 0; padding: 7px 12px; border-radius: var(--gui-r-card); background: rgb(255 251 231 / 0.96); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); font-weight: 800; line-height: 1.35; box-shadow: var(--gui-shadow-sm); }
+.objective span { color: var(--gui-coral-ink); }
 .minimap { position: absolute; left: var(--hud-edge); bottom: var(--hud-side-bottom); width: 180px; }
 .minimap > section { position: static; width: 100%; max-width: none; }
 /* The map closed: a pill in its place to bring it back (the objective stays under it). */
-.mapButton { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 14px; border: 1px solid #5c746c40; border-radius: 999px; background: #f8f7e9f2; color: #293e3b; font: inherit; font-size: 12px; font-weight: 600; box-shadow: 0 3px 0 #47625218, 0 6px 18px #29464118; cursor: pointer; }
-.mapButton:hover { background: #fffdf3; }
-.mapButton:focus-visible { outline: 3px solid #bb813f; outline-offset: 3px; }
-.mapButton kbd { font: inherit; background: #426b5b; color: #fffdf0; border-radius: 4px; padding: 0 5px; }
+.mapButton { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 16px 0 12px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper); color: var(--gui-ink-strong); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; box-shadow: var(--gui-shadow-md); cursor: pointer; }
+.mapButton:hover { background: var(--gui-paper-hi); }
 /* First login: the minimap and the chapter 1 objective arrive after the HQ lead's greeting (hud-first-login §6). */
 .minimap[data-new] { animation: objectiveIn 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
 .minimap[data-new] .objective { animation: objectiveGlow 2.2s ease-out 0.5s both; }
 @keyframes objectiveIn { from { opacity: 0; transform: translateY(14px) scale(0.96); } }
-@keyframes objectiveGlow { 0%, 100% { box-shadow: 0 4px 14px #132e3625; } 30% { box-shadow: 0 0 0 4px #e8704a55, 0 4px 14px #132e3625; } }
-/* The HQ lead's greeting box (the recruit kit's NPCDialogue) at the foot of the screen; its name tag in the island's sage (the portal's light theme turns the kit's navy white). */
-.greeting { --color-bg-navy: #426b5b; position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); width: min(720px, calc(100% - 32px)); z-index: 30; animation: greetingIn 0.35s ease-out both; }
-.greetingSkip { position: absolute; top: -14px; right: 22px; min-height: 32px; padding: 0 14px; border: 1px solid #5c746c40; border-radius: 999px; background: #f8f7e9; color: #4f625b; font: 600 12px "IBM Plex Mono", monospace; cursor: pointer; box-shadow: 0 2px 0 #47625218; }
-.greetingSkip:focus-visible { outline: 3px solid #bb813f; outline-offset: 3px; }
+@keyframes objectiveGlow { 0%, 100% { box-shadow: var(--gui-shadow-sm); } 30% { box-shadow: 0 0 0 4px #e2826a66, var(--gui-shadow-sm); } }
+/* The HQ lead's greeting box (the recruit kit's NPCDialogue, in this sheet's paper and coral tag) at the foot of the screen. */
+.greeting { position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); width: min(720px, calc(100% - 32px)); z-index: 30; animation: greetingIn 0.35s ease-out both; zoom: var(--tsi-text-scale, 1); }
+.greetingSkip { position: absolute; top: -14px; right: 26px; min-height: 36px; padding: 0 16px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper-hi); color: var(--gui-ink-2); font: 800 var(--gui-text-xs) var(--gui-font); cursor: pointer; box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge); }
 @keyframes greetingIn { from { opacity: 0; transform: translate(-50%, 16px); } }
 @media (prefers-reduced-motion: reduce) { .minimap[data-new], .minimap[data-new] .objective, .greeting { animation: none; } }
 .objectiveMarker { animation: markerPulse 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes markerPulse { 50% { opacity: 0.45; } }
 @media (prefers-reduced-motion: reduce) { .objectiveMarker { animation: none; } }
 .confetti { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
-/* Narrow windows: the map goes up under the Journal, so the prompt and the toast lane own the bottom; the key hints keep to one scrolling line. */
+/* Narrow windows: the map goes up under the Collection button, so the prompt and the toast lane own the bottom; the key hints keep to one scrolling line. */
 @media (max-width: 700px) { .world { --hud-stick-left: var(--hud-edge); } .minimap { width: 130px; top: 198px; bottom: auto; } .controls { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; } }
 
-/* Decorate panel (homes) */
-.decorate { position: absolute; right: var(--hud-edge); bottom: var(--hud-side-bottom); width: 280px; max-height: calc(100% - 180px); overflow-y: auto; padding: 14px; border-radius: 16px; background: #f8f7e9f5; color: #293e3b; border: 1px solid #5c746c40; box-shadow: 0 6px 0 #47625218, 0 12px 36px #29464125; font-size: 12px; z-index: 12; }
+/* Decorate panel (homes): non-modal paper beside the room. */
+.decorate { position: absolute; right: var(--hud-edge); bottom: var(--hud-side-bottom); width: 290px; max-height: calc(100% - 180px); overflow-y: auto; padding: 16px; border-radius: var(--gui-r-card); background: var(--gui-paper); color: var(--gui-ink); box-shadow: var(--gui-shadow-md); font-size: var(--gui-text-sm); z-index: 12; zoom: var(--tsi-text-scale, 1); }
 .decorate header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.decorate h2 { margin: 0; font-size: 14px; }
-.decorate button { min-height: 36px; border: 1px solid #a1af9b; border-radius: 8px; background: #fffdf3; color: #293e3b; font: inherit; cursor: pointer; padding: 4px 8px; }
+.decorate h2 { margin: 0; font-size: var(--gui-text-lg); font-weight: 800; color: var(--gui-ink-strong); }
+.decorate button { min-height: 40px; border: 0; border-radius: 14px; background: var(--gui-paper-hi); box-shadow: inset 0 0 0 1.5px var(--gui-paper-edge); color: var(--gui-ink); font: inherit; font-weight: 700; cursor: pointer; padding: 4px 10px; }
 .decorate button:disabled { opacity: 0.5; cursor: default; }
-.decorate button[aria-pressed="true"] { background: #426b5b; color: #fffdf0; border-color: #294b3c; }
-.decorate button:focus-visible { outline: 3px solid #bb813f; outline-offset: 2px; }
-.decorate kbd { font: inherit; font-size: 10px; background: #e0e6d8; color: #293e3b; border-radius: 3px; padding: 0 4px; margin-right: 3px; }
+.decorate button[aria-pressed="true"] { background: var(--gui-butter); box-shadow: inset 0 0 0 2px var(--gui-highlight); color: var(--gui-ink-strong); }
 .decorateActions { display: flex; gap: 6px; margin-bottom: 8px; }
-.catalogue { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
-.catalogue button { width: 100%; text-align: left; display: flex; flex-direction: column; font-size: 11px; }
-.catalogue small { color: #607069; font-size: 9px; }
-.catalogue button[aria-pressed="true"] small { color: #dfe9d9; }
+.catalogue { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.catalogue button { width: 100%; text-align: left; display: flex; flex-direction: column; font-size: var(--gui-text-xs); }
+.catalogue small { color: var(--gui-muted); font-size: var(--gui-text-xs); font-weight: 600; }
+.catalogue button[aria-pressed="true"] small { color: var(--gui-ink); }
 .finishes { margin-top: 10px; display: grid; gap: 6px; }
-.decorate .shopLink { width: 100%; margin-top: 8px; background: #a07850; border-color: #6e4e35; color: #fffbed; font-weight: 700; }
+.decorate .shopLink { width: 100%; margin-top: 8px; background: var(--gui-wood); box-shadow: 0 3px 0 #6e4e35; color: var(--gui-paper); font-weight: 800; }
 @media (max-width: 700px) { .decorate { width: calc(100% - 32px); max-height: 45%; } }
-.decorateToggle { position: absolute; right: var(--hud-edge); bottom: var(--hud-side-bottom); min-height: 44px; padding: 8px 14px; border: 1px solid #a1af9b; border-radius: 999px; background: #f8f7e9f2; color: #293e3b; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px #29464120; z-index: 11; }
-.decorateToggle kbd { font: inherit; background: #426b5b; color: #fffdf0; border-radius: 4px; padding: 1px 6px; margin-right: 4px; }
-.decorateToggle:focus-visible { outline: 3px solid #bb813f; outline-offset: 3px; }
-.world[data-inside] .heading { color: #fff4da; text-shadow: 0 2px 12px #11152a; }
-.bagButton { position: absolute; left: 16px; top: 150px; min-height: 40px; padding: 6px 12px; border: 1px solid #a1af9b; border-radius: 999px; background: #f8f7e9f2; color: #293e3b; font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; z-index: 11; }
-.bagButton kbd { font: inherit; background: #426b5b; color: #fffdf0; border-radius: 4px; padding: 0 5px; margin-right: 4px; }
-.plaque { min-width: 86px; padding: 3px 7px; border-radius: 6px; background: #3b2f25e8; color: #f6ecd6; font-size: 9px; line-height: 1.25; text-align: center; white-space: nowrap; pointer-events: none; }
-.plaque b { display: block; font-size: 10px; }
-.plaque span { display: block; opacity: 0.85; }
-.plaque[data-empty="true"] { background: #3b2f2599; }
-.curatorLine { margin: 8px 0; padding: 8px 10px; border-radius: 10px; background: #efe6cf; font-style: italic; }
-.donateList { list-style: none; padding: 0; margin: 8px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 280px; overflow-y: auto; }
-.donateList button { width: 100%; min-height: 44px; display: flex; gap: 8px; align-items: center; text-align: left; border: 1px solid #d8cbaa; border-radius: 10px; background: #fffdf3; font: inherit; font-size: 11px; cursor: pointer; padding: 4px 8px; color: #293e3b; }
-.donateList small { display: block; font-size: 9px; color: #6f624a; }
-.trophyList { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; }
-.trophyList li { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 10px; background: #fffdf3; border: 1px solid #e3d8ba; }
-.trophyList small { display: block; font-size: 10px; color: #6f624a; }
-.trophyRank { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 99px; background: #d9a441; color: #fffdf3; font-weight: 700; font-size: 11px; }
+.decorateToggle { position: absolute; right: var(--hud-edge); bottom: var(--hud-side-bottom); min-height: 44px; padding: 0 16px 0 10px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper); color: var(--gui-ink-strong); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; cursor: pointer; box-shadow: var(--gui-shadow-md); z-index: 11; display: inline-flex; align-items: center; gap: 7px; }
+.world[data-inside] .heading { color: var(--gui-paper); text-shadow: 0 2px 12px #11152a; }
+.bagButton { position: absolute; left: 16px; top: 150px; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 16px 0 10px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper); color: var(--gui-ink-strong); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; cursor: pointer; box-shadow: var(--gui-shadow-md); z-index: 11; }
+/* The museum's plaques: little wood signs in the kit's bark. */
+.plaque { min-width: 96px; padding: 4px 10px 5px; border-radius: 5px 7px 5px 6px; background: var(--gui-bark); color: var(--gui-paper); font-size: var(--gui-text-xs); line-height: 1.3; text-align: center; white-space: nowrap; pointer-events: none; box-shadow: 0 2px 0 #4f3f31; }
+.plaque b { display: block; font-size: var(--gui-text-sm); font-weight: 800; }
+.plaque span { display: block; color: #f3ead2; }
+.plaque[data-empty="true"] { background: var(--gui-bark); outline: 2px dashed #f3ead2aa; outline-offset: -5px; }
+.curatorLine { margin: 0 0 12px; padding: 10px 14px; border-radius: var(--gui-r-card); background: var(--gui-paper-warm); color: var(--gui-ink); font-style: italic; }
+.trophyRank { flex: none; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 99px; background: var(--gui-gold); color: var(--gui-ink-strong); font-weight: 900; font-size: var(--gui-text-xs); }
 /* Seasonal events: the tourney board (your row highlighted, unnamed neighbours muted), GENESIS posters, the trophy cue's leaders */
-.tourneyBoard h3 { margin: 14px 0 0; font-size: 13px; display: flex; justify-content: space-between; align-items: baseline; }
-.tourneyBoard h3 small { margin: 0; }
-.trophyList li[data-mine] { border-color: #426b5b; background: #eef5e8; }
-.trophyList li[data-anon] { color: #6f624a; background: transparent; border-style: dashed; }
-.posterList { margin: 10px 0 0; padding-left: 18px; display: grid; gap: 4px; }
-.cue small { display: block; font-weight: 500; font-size: 10px; }
-.showcaseSlots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
-.showcaseSlots button { min-height: 86px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 2px dashed #cdbf9b; border-radius: 12px; background: #fffdf3; cursor: pointer; font: inherit; font-size: 11px; color: #293e3b; }
-.showcaseSlots button[aria-pressed="true"] { border-style: solid; border-color: #426b5b; }
-/* Wardrobe: ACNH character cards on a pastel triangle pattern */
+.tourneyBoard h3 { margin: 16px 0 4px; font-size: var(--gui-text-md); font-weight: 800; display: flex; justify-content: space-between; align-items: baseline; color: var(--gui-ink-strong); }
+.tourneyBoard h3 small { margin: 0; color: var(--gui-muted); font-size: var(--gui-text-xs); }
+.posterList { margin: 10px 0 0; padding-left: 20px; display: grid; gap: 6px; }
+.anonRow { color: var(--gui-muted); font-style: italic; }
+.cue small { display: block; font-weight: 600; font-size: var(--gui-text-xs); }
+.showcaseSlots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 4px; }
+.showcaseSlots > * { justify-self: center; }
+.showcaseBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 14px 0 10px; }
 @media (max-width: 700px) { .wardrobeBody { grid-template-columns: 1fr; } }
-/* Oracle quiz sheet */
-.oracleSheet { width: min(520px, calc(100% - 32px)); background: #f6f1fb; }
-.keeperLine { display: flex; align-items: center; gap: 10px; margin: 8px 0 12px; padding: 10px 12px; border-radius: 12px; background: #ebe2f5; }
-.keeperLine p { margin: 0; font-style: italic; }
-.keeperFace { flex: none; width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 50% 62%, #f1c8a2 0 36%, transparent 37%), #5a4a7e; box-shadow: inset 0 -6px 0 #43365f; }
-.oracleProgress { height: 6px; border-radius: 99px; background: #e2d8ee; overflow: hidden; }
-.oracleProgress span { display: block; height: 100%; background: #7b5ea7; transition: width 0.2s ease; }
-.oracleCount { margin: 6px 0 0; font: 600 11px "IBM Plex Mono", monospace; color: #6f5f86; text-align: right; }
-.oracleStatement { margin: 14px 0 16px; font-size: 17px; line-height: 1.45; font-weight: 600; text-align: center; min-height: 3em; }
+/* Oracle quiz sheet: the Oracle keeps its lavender, in the kit's paper. */
+.keeperLine { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; padding: 12px 14px; border-radius: var(--gui-r-card); background: #ebe2f5; }
+.keeperLine p { margin: 0; font-style: italic; color: #3d3250; }
+.keeperFace { flex: none; width: 36px; height: 36px; border-radius: 50%; background: radial-gradient(circle at 50% 62%, #f1c8a2 0 36%, transparent 37%), #5a4a7e; box-shadow: inset 0 -6px 0 #43365f; }
+.oracleProgress { height: 8px; border-radius: 99px; background: #e2d8ee; overflow: hidden; }
+.oracleProgress span { display: block; height: 100%; border-radius: inherit; background: #7b5ea7; transition: width 0.2s ease; }
+.oracleCount { margin: 6px 0 0; font-size: var(--gui-text-xs); font-weight: 800; color: #5f4f78; text-align: right; font-variant-numeric: tabular-nums; }
+.oracleStatement { margin: 16px 0 18px; font-size: var(--gui-text-lg); line-height: 1.45; font-weight: 800; text-align: center; min-height: 3em; color: var(--gui-ink-strong); }
 .oracleScale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-.oracleScale button { min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 6px 4px; border: 1px solid #c9b8dd; border-radius: 10px; background: #fffdfb; font: inherit; font-size: 11px; color: #3d3250; cursor: pointer; }
+.oracleScale button { min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 6px 4px; border: 0; border-radius: 16px; background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px #d8cce6; font: inherit; font-size: var(--gui-text-xs); font-weight: 800; color: #3d3250; cursor: pointer; }
 .oracleScale button:hover { background: #efe7f8; }
-.oracleScale kbd { font: 600 10px "IBM Plex Mono", monospace; background: #e9e0f3; border-radius: 3px; padding: 0 4px; }
-.oracleBack, .oracleBegin { margin-top: 12px; min-height: 40px; padding: 8px 18px; border-radius: 999px; font: inherit; font-weight: 600; cursor: pointer; }
-.oracleBegin { border: 0; background: #5a4a7e; color: #fbf7ff; }
-.oracleBack { border: 1px solid #c9b8dd; background: transparent; color: #5a4a7e; }
-.oracleBack:disabled, .oracleBegin:disabled { opacity: 0.4; cursor: default; }
-.oracleResult { margin: 0; padding: 12px; border-left: 4px solid var(--family); border-radius: 8px; background: #fff; }
+.oracleScale kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 99px; background: #5a4a7e; color: var(--gui-paper); font: 800 var(--gui-text-xs)/1 var(--gui-font); }
+.oracleBack, .oracleBegin { margin-top: 14px; min-height: 44px; padding: 8px 20px; border-radius: 999px; font: inherit; font-weight: 800; cursor: pointer; }
+.oracleBegin { border: 0; background: #5a4a7e; color: #fbf7ff; box-shadow: 0 3px 0 #43365f; }
+.oracleBack { border: 0; background: var(--gui-paper-hi); box-shadow: inset 0 0 0 1.5px #c9b8dd; color: #4a3d6a; }
+.oracleBack:disabled, .oracleBegin:disabled { opacity: 0.45; cursor: default; }
+/* The tie-breaker (its styles were missing, so it showed raw browser buttons): two lavender choices. */
+.tieBreaker { display: grid; gap: 8px; margin: 4px 0 12px; padding: 0; border: 0; min-width: 0; }
+.tieBreaker legend { margin-bottom: 8px; padding: 0; color: var(--gui-ink-strong); font-weight: 800; }
+.tieBreaker button[aria-pressed="true"] { background: var(--gui-butter); box-shadow: inset 0 0 0 2px var(--gui-highlight); color: var(--gui-ink-strong); }
+.tieBreaker button { min-height: 52px; padding: 10px 16px; border: 0; border-radius: 18px; background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px #c9b8dd; color: #3d3250; font: inherit; font-weight: 800; text-align: left; cursor: pointer; }
+.tieBreaker button:hover { background: #efe7f8; }
+.oracleResult { margin: 0; padding: 14px; border-left: 5px solid var(--family); border-radius: 14px; background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm); }
 /* The Oracle's path sheet: subclass choice, loadout, stats (combat B) */
 .pathSheet { width: min(760px, calc(100% - 32px)); }
 .pathCards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
@@ -215,47 +202,44 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .pathStats small { color: #8a7d99; font-size: 11px; }
 .pathStatus { margin: 10px 0 0; font-weight: 600; color: #3d3250; }
 .keeperBubble { width: 210px; white-space: normal; padding: 8px 12px; border-radius: 12px; background: #f6f1fb; color: #3d3250; font-size: 12px; font-style: italic; box-shadow: 0 4px 14px #1a122830; pointer-events: none; }
-/* Reveal ceremony card */
-.reveal { position: absolute; left: 36px; top: 250px; width: min(340px, calc(100% - 32px)); padding: 16px 20px; border-radius: 16px; background: #150f1fe8; color: #f4eefc; border: 1px solid var(--family); box-shadow: 0 0 40px color-mix(in srgb, var(--family) 45%, transparent); text-align: center; z-index: 20; animation: reveal-in 0.9s 1.4s both ease-out; }
-.reveal p { margin: 4px 0; font-size: 13px; line-height: 1.5; }
-.reveal small { display: block; margin-top: 6px; font: 600 11px "IBM Plex Mono", monospace; color: var(--family); }
-.reveal button { margin-top: 10px; min-height: 40px; padding: 6px 20px; border: 1px solid var(--family); border-radius: 999px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
-.revealFamily { font-size: 24px !important; font-weight: 700; letter-spacing: 0.5px; color: var(--family); }
+/* Reveal ceremony card: paper lit by the family's colour (it was a dark glass card). */
+.reveal { position: absolute; left: 36px; top: 250px; width: min(360px, calc(100% - 32px)); padding: 22px 24px 20px; border-radius: var(--gui-r-paper); background: var(--gui-paper); color: var(--gui-ink); box-shadow: 0 0 0 3px var(--family), 0 0 40px color-mix(in srgb, var(--family) 45%, transparent), var(--gui-shadow-lg); text-align: center; z-index: 20; animation: reveal-in 0.9s 1.4s both ease-out; zoom: var(--tsi-text-scale, 1); }
+.reveal p { margin: 4px 0; font-size: var(--gui-text-md); line-height: 1.5; }
+.reveal small { display: inline-block; margin-top: 10px; padding: 3px 14px; border-radius: var(--gui-r-tag); background: color-mix(in srgb, var(--family) 24%, var(--gui-paper)); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); font-weight: 800; }
+.reveal button { display: block; margin: 14px auto 0; min-height: 44px; padding: 6px 26px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-sage); color: var(--gui-paper); font: inherit; font-weight: 800; cursor: pointer; box-shadow: 0 3px 0 var(--gui-sage-deep); }
+.revealFamily { font-size: 28px !important; font-weight: 900; letter-spacing: 0.01em; color: color-mix(in srgb, var(--family) 55%, var(--gui-ink-strong)); }
 @keyframes reveal-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @media (max-width: 700px) { .reveal { left: 16px; top: auto; bottom: 120px; } }
-/* Settings sheet */
-.settingsSheet fieldset { border: 0; padding: 0; margin: 12px 0; }
-.settingsSheet legend { font-weight: 700; margin-bottom: 6px; }
-.segmented { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
-.segmented button { min-height: 40px; border: 1px solid #a1af9b; border-radius: 6px; background: #fffdf3; font: inherit; font-size: 12px; color: #293e3b; cursor: pointer; }
-.segmented button[aria-pressed="true"], .segmented button[aria-selected="true"] { background: #426b5b; color: #fffdf0; }
-.keyList { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.keyList li { display: flex; align-items: center; justify-content: space-between; min-height: 40px; }
-.keyList button { min-width: 110px; min-height: 36px; border: 1px solid #a1af9b; border-radius: 6px; background: #fffdf3; font: inherit; font-size: 12px; color: #293e3b; cursor: pointer; }
-.keyList button[aria-pressed="true"] { border-color: #bb813f; background: #fff3dc; }
-.keyList kbd { font: 600 12px "IBM Plex Mono", monospace; }
-.sliderRow { display: grid; grid-template-columns: 84px 1fr 30px; align-items: center; gap: 8px; min-height: 32px; font-size: 11px; }
-.sliderRow input[type="range"] { width: 100%; min-height: 28px; accent-color: #426b5b; }
-.sliderRow span { text-align: right; color: #607069; }
-/* Text size (row 220): the HUD scales, the world doesn't. */
-.world .sheet, .world .wardrobe, .world .interact, .world .controls, .world .panel, .world .bagButton, .world .heading, .world .reveal, .world .decorateToggle, .world .minimap { zoom: var(--tsi-text-scale, 1); }
+/* Settings sheet: sections under dashed rules, the kit's segmented choice and keycaps. */
+.settingsSheet fieldset { border: 0; border-top: 2px dashed var(--gui-paper-edge); padding: 14px 0 6px; margin: 0; min-width: 0; }
+.settingsSheet fieldset:first-of-type { border-top: 0; padding-top: 0; }
+.settingsSheet legend { padding: 0; margin-bottom: 8px; font-size: var(--gui-text-md); font-weight: 800; color: var(--gui-ink-strong); }
+.segmented { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: var(--gui-r-pill); background: var(--gui-paper-deep); }
+.segmented button { min-height: 40px; border: 0; border-radius: var(--gui-r-pill); background: transparent; font: inherit; font-size: var(--gui-text-sm); font-weight: 800; color: var(--gui-ink-2); cursor: pointer; white-space: nowrap; }
+.segmented button[aria-pressed="true"], .segmented button[aria-selected="true"] { background: var(--gui-butter); color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-sm); }
+.keyList { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.keyList li { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 46px; font-weight: 700; }
+.keyList button { min-width: 112px; min-height: 40px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; color: var(--gui-ink); cursor: pointer; }
+.keyList button[aria-pressed="true"] { background: var(--gui-butter); box-shadow: inset 0 0 0 2px var(--gui-highlight); }
+.keyList kbd { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 8px; box-sizing: border-box; border-radius: var(--gui-r-pill); background: var(--gui-bark); color: var(--gui-paper); font: 800 var(--gui-text-xs)/1 var(--gui-font); }
+/* Text size (row 220): the HUD scales, the world doesn't. Sheets and dialogs scale through [data-gui-overlay]. */
+.world .interact, .world .controls, .world .panel, .world .bagButton, .world .heading, .world .decorateToggle, .world .minimap, .world .mapButton { zoom: var(--tsi-text-scale, 1); }
 /* High contrast (row 220) */
-:global(html[data-contrast="high"]) .world .sheet, :global(html[data-contrast="high"]) .world .wardrobe, :global(html[data-contrast="high"]) .world .panel, :global(html[data-contrast="high"]) .world .controls { background: #ffffff; color: #000000; border: 2px solid #000000; }
-:global(html[data-contrast="high"]) .world .interact, :global(html[data-contrast="high"]) .world .bagButton, :global(html[data-contrast="high"]) .world .cue { background: #000000; color: #ffffff; border: 2px solid #ffffff; }
+:global(html[data-contrast="high"]) .world .panel, :global(html[data-contrast="high"]) .world .controls, :global(html[data-contrast="high"]) .world .decorate { background: #ffffff; color: #000000; box-shadow: inset 0 0 0 2px #000000; }
+:global(html[data-contrast="high"]) .world .interact, :global(html[data-contrast="high"]) .world .bagButton, :global(html[data-contrast="high"]) .world .mapButton, :global(html[data-contrast="high"]) .world .cue { background: #000000; color: #ffffff; box-shadow: 0 0 0 2px #ffffff; }
 :global(html[data-contrast="high"]) .world .interact kbd { background: #ffe14d; color: #000000; }
-:global(html[data-contrast="high"]) .world kbd { background: #ffffff; color: #000000; border: 1px solid #000000; }
+:global(html[data-contrast="high"]) .world kbd { background: #ffffff; color: #000000; box-shadow: inset 0 0 0 1px #000000; }
 :global(html[data-contrast="high"]) .world .hint, :global(html[data-contrast="high"]) .world small { color: #000000; }
 :global(html[data-contrast="high"]) .world .keeperLine { background: #ffffff; border: 2px solid #000000; }
-:global(html[data-contrast="high"]) .world .oracleScale button, :global(html[data-contrast="high"]) .world .segmented button, :global(html[data-contrast="high"]) .world .keyList button, :global(html[data-contrast="high"]) .world .return { background: #ffffff; color: #000000; border: 2px solid #000000; }
+:global(html[data-contrast="high"]) .world .oracleScale button, :global(html[data-contrast="high"]) .world .segmented button, :global(html[data-contrast="high"]) .world .keyList button, :global(html[data-contrast="high"]) .world .return { background: #ffffff; color: #000000; box-shadow: inset 0 0 0 2px #000000; }
 :global(html[data-contrast="high"]) .world .segmented button[aria-pressed="true"] { background: #000000; color: #ffffff; }
 :global(html[data-contrast="high"]) .world .heading { text-shadow: 0 0 4px #ffffff, 0 0 8px #ffffff; color: #000000; }
 :global(html[data-contrast="high"]) .world :focus-visible { outline: 3px solid #ffb000 !important; outline-offset: 2px; }
 :global(html[data-contrast="high"]) .world .keyList kbd { border: 0; background: transparent; }
-.world .sheet { max-height: calc((100vh - 140px) / var(--tsi-text-scale, 1)); overflow-y: auto; box-sizing: border-box; }
 .oracleEmbedded, .revealEmbedded { position: static; transform: none; margin: 24px auto; animation: none; }
-/* Text size reaches the progression and collection sheets too (coordinator 2026-09-26). */
-.world :global([data-progression-sheet]), .world :global(.collection-book) { zoom: var(--tsi-text-scale, 1); max-height: calc(82vh / var(--tsi-text-scale, 1)); }
-:global(html[data-contrast="high"]) .world :global([data-progression-sheet]), :global(html[data-contrast="high"]) .world :global(.collection-book) { background: #ffffff !important; color: #000000 !important; border: 2px solid #000000 !important; }
+/* Text size reaches the collection book too (coordinator 2026-09-26). */
+.world :global(.collection-book) { zoom: var(--tsi-text-scale, 1); max-height: calc(82vh / var(--tsi-text-scale, 1)); }
+:global(html[data-contrast="high"]) .world :global(.collection-book) { background: #ffffff !important; color: #000000 !important; border: 2px solid #000000 !important; }
 /* Combat HUD (ruins) */
 /* Combat HUD (ruins), in the cream UI kit (row 124). */
 .combatHud { position: absolute; left: 50%; bottom: var(--hud-lane-bottom); transform: translateX(-50%); display: grid; gap: 7px; width: min(660px, calc(100% - 32px)); box-sizing: border-box; padding: 11px 14px 12px; border: 1px solid #5c746c40; border-radius: 14px 14px 5px 14px; background: #f8f7e9f2; color: #293e3b; box-shadow: 0 6px 0 #47625218, 0 12px 36px #29464118; font-size: 12px; z-index: 12; }
@@ -385,12 +369,60 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: #6a4b2f; }
 .runeTimer span { display: block; height: 100%; background: #ffe08a; transition: width 0.1s linear; }
 /* Mouse-look (specs/camera-orbit.md): the hint while the mouse is free, and the ruins' crosshair while it looks. */
 /* On the canvas, over the scene's middle: clear of the title, the top cluster and the bottom stack at every size. */
-.lookHint { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 14px; border-radius: 999px; background: #f8f7e9e8; color: #293e3b; border: 1px solid #fff8; font-size: 11px; font-weight: 600; box-shadow: 0 4px 14px #132e3620; pointer-events: none; white-space: nowrap; zoom: var(--tsi-text-scale, 1); }
+.lookHint { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 16px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.94); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); font-weight: 800; box-shadow: var(--gui-shadow-sm); pointer-events: none; white-space: nowrap; zoom: var(--tsi-text-scale, 1); }
 .crosshair { position: absolute; top: 50%; left: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; fill: none; stroke: #f8f3df; stroke-width: 1.4; filter: drop-shadow(0 0 1.2px #1b2a2acc); opacity: 0.85; }
 .crosshair circle + circle { fill: #f8f3df; stroke: none; }
 /* The clean HUD (row 283): the objective slides in when it changes and fades after; the place name fades after a scene comes in. */
 .objective[data-flash] { animation: objectiveIn 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
 .objective[data-flash="out"] { animation: hudFade 0.32s ease-in forwards; }
 @keyframes hudFade { to { opacity: 0; transform: translateY(6px); } }
-.interact[data-use] kbd { background: #bb813f; }
+.interact[data-use] kbd { background: var(--gui-wood); }
 @media (prefers-reduced-motion: reduce) { .objective[data-flash], .objective[data-flash="out"] { animation-duration: 0.01s; } }
+
+/* ── The GUI sheet over the ruins and the Oracle's path sheet (row 285) ─────────────────────────────────────────────
+   Appended rather than edited in place, so the classes v2 kits can keep editing the rules above. Paper, the kit's
+   keycaps and one rounded face; the rune overlay leaves its dark glass for parchment. */
+.combatHud, .bossBar, .banner, .defeat, .missionTracker, .floater, .incantation, .pathSheet { font-family: var(--gui-font); }
+.combatHud, .bossBar, .defeat, .banner, .missionTracker { background: rgb(255 251 231 / 0.96); color: var(--gui-ink); border-color: transparent; box-shadow: var(--gui-shadow-md); }
+.combatHud { border-radius: var(--gui-r-card); }
+.hpBar { background: var(--gui-paper-deep); }
+.hpBar b, .sweep kbd, .ultSlot kbd, .dodgePip kbd, .abilityBar li small, .abilityBar small, .runeReadout, .missionTemplate, .missionList h3, .pathLoadout kbd, .pathStats b { font-family: var(--gui-font); font-weight: 800; }
+.hpBar b { font-size: var(--gui-text-xs); color: var(--gui-ink-strong); }
+.energyBar b { font-size: var(--gui-text-xs); }
+.sweep kbd { background: var(--gui-paper-hi); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); }
+.ultSlot kbd, .dodgePip kbd { background: var(--gui-bark); color: var(--gui-paper); border: 0; border-radius: var(--gui-r-pill); padding: 1px 6px; font-size: var(--gui-text-xs); }
+.abilityBar li { border: 0; border-radius: 16px; background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge); }
+.slotName, .classBar .slotName { font-size: var(--gui-text-xs); font-weight: 800; color: var(--gui-ink-strong); }
+.abilityBar li small, .abilityBar small { font-size: var(--gui-text-xs); color: var(--gui-muted); opacity: 1; }
+.weaponLine small, .kitLine, .banner span, .bossBar small { color: var(--gui-ink-2); font-size: var(--gui-text-xs); }
+.ultSlot::before { background: var(--gui-paper-hi); border-color: var(--gui-paper-edge); }
+.masteryBar { height: 6px; border-radius: 99px; background: var(--gui-paper-deep); }
+.bossBar span { background: var(--gui-paper-deep); }
+.missionTemplate { background: var(--gui-gold); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); }
+.missionList h3 { font-size: var(--gui-text-xs); color: var(--gui-muted); letter-spacing: 0.04em; }
+.missionList li { border: 0; border-radius: var(--gui-r-card); background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge); }
+.missionList li[data-active] { box-shadow: inset 5px 0 0 var(--gui-sage), var(--gui-shadow-sm); }
+.missionList button { min-height: 40px; background: var(--gui-sage); color: var(--gui-paper); font-weight: 800; box-shadow: 0 3px 0 var(--gui-sage-deep); }
+.floater { font-weight: 900; }
+.floater[data-kind="info"] { background: var(--gui-paper); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); }
+.safeBadge { background: var(--gui-success-soft); color: var(--gui-success); font-weight: 800; }
+.incantation { background: var(--gui-paper); color: var(--gui-ink); border-radius: var(--gui-r-paper); box-shadow: var(--gui-shadow-lg); zoom: var(--tsi-text-scale, 1); }
+.incantation header { font-weight: 800; color: var(--gui-ink-strong); }
+.incantation header small { color: var(--gui-muted); opacity: 1; font-size: var(--gui-text-xs); }
+.incantation svg { background: radial-gradient(circle, var(--gui-paper-hi) 0%, #f3ead2 78%); box-shadow: inset 0 0 0 2px var(--gui-paper-edge); }
+.runeGuide { stroke: rgb(114 92 78 / 0.2); }
+.runeGuide[data-next] { stroke: rgb(114 92 78 / 0.42); }
+.runeGuide[data-done] { stroke: rgb(138 198 138 / 0.55); }
+.runeTrace { stroke: #5b3fa8; filter: drop-shadow(0 0 3px #b77dee99); }
+.runeReadout { font-size: var(--gui-text-sm); color: var(--gui-ink-strong); }
+.incantation[data-outcome="fail"] .runeReadout { color: var(--gui-danger); }
+.incantation[data-outcome="enhanced"] .runeReadout { color: var(--gui-warn); }
+.runeTimer { height: 6px; background: var(--gui-paper-deep); }
+.runeTimer span { background: var(--gui-wood-light); }
+.pathCards article { border-radius: var(--gui-r-card); background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm); }
+.pathCards header small, .pathNote { font-size: var(--gui-text-xs); color: #5f4f78; }
+.pathAbility small { font-size: var(--gui-text-xs); }
+.runeTag { font-size: var(--gui-text-xs); }
+.pathLoadout em { font-size: var(--gui-text-xs); color: #5f4f78; }
+.pathStats small { font-size: var(--gui-text-xs); color: #6b5f7a; }
+.keeperBubble { background: var(--gui-paper); color: #3d3250; box-shadow: var(--gui-shadow-md); font-family: var(--gui-font); font-weight: 700; }
