@@ -56,6 +56,7 @@ import { missionEvent } from "@/lib/game/combat/abilities";
 import { combatProgression, postWear, startMissionRemote, type ProgressionView } from "@/lib/game/combat/progression";
 import { equipKit } from "@/lib/game/combat/abilities";
 import { equipClassKit } from "@/lib/game/combat/classRuntime";
+import { beastKit, setTamed } from "@/lib/game/combat/beasts";
 import { classKit } from "@/lib/combat/classes";
 import { subclassByKey } from "@/lib/combat/kits";
 import PathSheet from "./oracle/PathSheet";
@@ -629,6 +630,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     // Classes v2 (the flag on and the subclass's family wave landed): its kit at its mastery; otherwise today's kit and loadout.
     const v2 = g.view?.classes?.kit ? classKit(g.view.classes.kit) : null;
     combat.rt.v2 = null;
+    setTamed(combat.rt, v2 && beastKit(v2) ? g.view!.classes!.tamed ?? [] : null); // the Summoner's tamed beasts (the rest wait at the ritual circle)
     if (v2) { equipClassKit(combat.rt, v2, g.view!.classes!.mastery.mastery, g.view!.classes!.mastery, g.view?.traits ?? {}); Object.assign(combat.rt.v2!, { cosmetics: g.view!.classes!.cosmetics, skin: g.view!.classes!.skin }); }
     else equipKit(combat.rt, subclassByKey(g.subclass), g.view?.loadout ?? [], g.view?.traits ?? {});
     setOwnedWeapons(combat.rt, g.weapons);

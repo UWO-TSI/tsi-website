@@ -13,6 +13,8 @@ import type { Ability, Effect, Passive, ShotLook, Status } from "./kits";
 import { DEMO_KIT } from "./demoKit";
 import { ARCANE_KITS } from "./arcaneKits";
 import { ARCANE_SKINS } from "./arcaneSeed";
+import { WARDEN_KITS } from "./wardenKits";
+import { fieldMods, scaleField, WARDEN_SKINS } from "./wardenData";
 import { RANGER_KITS, RANGER_SKINS } from "./rangerKits";
 
 export type Role = "tank" | "healer" | "damage" | "support";
@@ -68,6 +70,8 @@ export interface ClassAbility extends Ability {
   scale?: { by: "speed"; max: number };
   /** Support radius for heals, shields and buffs: solo only the caster; allies inside it in a future group. */
   allies?: number;
+  /** The beast this key calls must be tamed first (the Summoner's ritual, lib/game/combat/beasts.ts); locked until then. */
+  tame?: string;
   /** Classes v2: the key works only just after a reload (the Gunslinger's Quickdraw, within FIRE.reloaded s). */
   needs?: "reloaded";
   /** Classes v2: it fires rounds from the cylinder (all: what's left; its projectiles fire one per round, the last chamber's crit with Last Round). */
@@ -136,6 +140,8 @@ export interface FireSpec {
   /** The verb each shot plays on the upper body, at its timing scale, and the FX per phase (zone: the burning ground a flame buff leaves). */
   clip?: { verb: string; scale?: number };
   vfx?: { cast?: string; travel?: string; impact?: string; zone?: string };
+  /** The burning ground's colours (fire reads as fire whatever the kit's ramp). */
+  burn?: readonly [string, string, string];
 }
 /**
  * A special round: its power (× base hit); a splash at half power round its hit, or a `blast` at full power instead of a
@@ -171,11 +177,13 @@ export interface ClassKit {
   /** The class's own mastery track (build overrides): at a level, an ability key, "ult" or "passive" gets `change`. */
   ranks?: { at: number; target: string; change: AbilityUpgrade }[];
   /** `trim`: the mastery trim (mastery 13; its glow at 19), colours by the weapon's material names (M_Trim, M_Accent).
-   * `flicker`: the motes cycle through the sprite's first frames (the Transmuter's monster silhouettes). */
-  look: { ramp: [core: string, mid: string, edge: string]; mote: string; drift: "orbit" | "rise" | "fall"; icon: string; trim?: Record<string, string>; flicker?: number };
+   * `flicker`: the motes cycle through the sprite's first frames (the Transmuter's monster silhouettes). `passive`: the passive's icon. */
+  look: { ramp: [core: string, mid: string, edge: string]; mote: string; drift: "orbit" | "rise" | "fall"; icon: string; trim?: Record<string, string>; flicker?: number; passive?: string };
   mods?: { max_hp?: number; speed?: number; capacity?: number };
   /** Dev-only (the `?combat=demo` kit): never offered to members. */
   dev?: true;
+  /** Its basic attack's hits heal you this share of your max HP (× healing power): the Priest's Lightbolt. */
+  basicHeal?: number;
   /** Classes v2: the basic attack (left click), when the kit has its own (FireSpec). */
   fire?: FireSpec;
   /** Traps out at once, before the duration stat (it raises the cap: floor(traps × duration)). Else the shared cap. */
@@ -186,9 +194,9 @@ export const COMBO_WINDOW = 0.4;
 export const MAX_KEYS = 5;
 
 /** Every v2 kit. Family waves append theirs. */
-export const CLASS_KITS: ClassKit[] = [DEMO_KIT, ...ARCANE_KITS, ...RANGER_KITS];
+export const CLASS_KITS: ClassKit[] = [DEMO_KIT, ...ARCANE_KITS, ...RANGER_KITS, ...WARDEN_KITS];
 /** Every family's weapon skins (shop cosmetics) as material sets, by `${subclass}:${skin}`: the held weapon wears it. */
-export const WEAPON_SKINS: Record<string, Record<string, string>> = { ...ARCANE_SKINS, ...RANGER_SKINS };
+export const WEAPON_SKINS: Record<string, Record<string, string>> = { ...ARCANE_SKINS, ...RANGER_SKINS, ...WARDEN_SKINS };
 /** Display names that changed with the class designs (the key stays; David 2026-10-02: Monk → Martial Artist). */
 export const CLASS_RENAMES: Record<string, string> = { monk: "Martial Artist" };
 export const classKit = (key: string | null | undefined) => CLASS_KITS.find(k => k.key === key) ?? null;
@@ -224,7 +232,7 @@ function scaleEffect(e: Effect, c: AbilityUpgrade): Effect {
     case "raise": return { ...e, radius: e.radius * r };
     case "teleport": return e.heal ? { ...e, heal: e.heal * p } : e;
     case "trigger": return { ...e, power: e.power * p, chain: e.chain * p };
-    default: return e;
+    default: return scaleField(e, c, x => scaleEffect(x, c));
   }
 }
 /** An ability with one upgrade applied. */
@@ -295,7 +303,7 @@ export function withMods<A extends ClassAbility>(a: A, m: ClassMods): A {
       case "sweep": return { ...e, hold: e.hold * m.duration, effects: e.effects.map(fx) };
       case "counter": return e.effects ? { ...e, effects: e.effects.map(fx) } : e;
       case "delay": return { ...e, effects: e.effects.map(fx) };
-      default: return e;
+      default: return fieldMods(e, m, fx);
     }
   };
   return { ...a, cooldown_s: a.cooldown_s * m.cooldown, effects: a.effects.map(fx), ...(a.release ? { release: a.release.map(fx) } : {}) };

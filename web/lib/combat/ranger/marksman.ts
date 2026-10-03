@@ -7,6 +7,8 @@
 import type { ClassKit } from "../classes";
 
 const I = (k: string) => `/assets/game/classes/${k}.svg`;
+/** Flame Arrows' fire (its cast, the burning ground): fire reads as fire over the Marksman's cyan. */
+const FIRE: [string, string, string] = ["#fff4d6", "#ff8a3d", "#5a1a08"];
 
 export const MARKSMAN: ClassKit = {
   key: "marksman", name: "Marksman", family: "Ranger", role: "damage", style: "basic",
@@ -14,12 +16,12 @@ export const MARKSMAN: ClassKit = {
   stat: { kind: "attack_speed", at1: 1, at20: 1.15 },
   fire: { rate: 1.5, power: 0.25, speed: 24, range: 13, look: "arrow", drop: 8, steady: true, clip: { verb: "QuickShot", scale: 1.4 },
     rounds: { surge: { power: 0.08, ult: true, tier: "light", vfx: "marksman.hit", travel: "marksman.surge" } },
-    vfx: { cast: "marksman.loose", travel: "marksman.wake", impact: "marksman.hit", zone: "marksman.burn" } },
+    vfx: { cast: "marksman.loose", travel: "marksman.wake", impact: "marksman.hit", zone: "marksman.burn" }, burn: FIRE },
   keys: [
     { key: "marksman.homing", name: "Homing Arrows", description: "For 6 s your arrows curve onto the nearest enemy ahead.", cooldown_s: 14, energy: 20,
       effects: [{ kind: "buff", stat: "homing", value: 1, duration: 6 }], clip: { verb: "CastUp", scale: 1.6 }, vfx: { cast: "marksman.homing" }, icon: I("marksman-homing") },
     { key: "marksman.flame", name: "Flame Arrows", description: "For 6 s your arrows ignite what they hit and leave burning ground.", cooldown_s: 14, energy: 25,
-      effects: [{ kind: "buff", stat: "flame", value: 0.18, duration: 6 }], clip: { verb: "CastUp", scale: 1.6 }, vfx: { cast: "marksman.flame" }, icon: I("marksman-flame") },
+      effects: [{ kind: "buff", stat: "flame", value: 0.18, duration: 6 }], clip: { verb: "CastUp", scale: 1.6 }, vfx: { cast: "marksman.flame" }, ramp: FIRE, icon: I("marksman-flame") },
     { key: "marksman.swift", name: "Swift Arrows", description: "For 6 s your arrows fly twice as fast, flat, and pierce one enemy.", cooldown_s: 14, energy: 20,
       effects: [{ kind: "buff", stat: "swift", value: 1, duration: 6 }], clip: { verb: "CastUp", scale: 1.6 }, vfx: { cast: "marksman.swift" }, icon: I("marksman-swift") },
     { key: "marksman.backhop", name: "Back Hop", description: "Hop back and keep firing: Focus and your momentum carry. Hold crouch to land into a slide.", cooldown_s: 6, energy: 15,

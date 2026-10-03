@@ -1872,6 +1872,159 @@ def u_fan_hammer(g):
     back, fwd = V(0.0, 0.05, 0.07), V(0.0, -0.04, 0.05)
     return [(0, N, "lin"), (0.1, base(back), "out"), (0.14, base(fwd), "in"), (0.24, base(back), "out"), (0.3, base(fwd), "in"),
             (0.4, base(back), "out"), (0.46, base(fwd), "in"), (0.56, base(back), "out"), (0.62, base(fwd), "in"), (1.0, N, "io")]
+# ---- The Warden wave (classes v2): the Summoner's hand sign and Shadow Garden, the Shaman's totem throw and Spirit
+# Awakening, the Druid's vine swing and World Tree, the Priest's Divine Descent. Ult impacts sit at the ult's
+# anticipation over the clip's length (the freeze holds that key).
+@unique("Unique_HandSign", "Fists", 0.75, 0.42, upper=True)
+def u_hand_sign(g):
+    """The seal: both hands meet in a sign before the chest, then the right thrusts out palm first (the beast answers)."""
+    sign = body(crouch=0.02, lean=6, nod=8, twist=-6)
+    hand(sign, "Right", chest(sign, V(-0.012, -0.21, 0.07)), V(-0.6, 0.4, -1))
+    hand(sign, "Left", chest(sign, V(0.018, -0.2, 0.08)), V(0.6, 0.4, -1))
+    thrust = body(lean=12, twist=14, crouch=0.025, shift=(0, -0.02), nod=-2)
+    arm(thrust, "Right", V(-0.05, -1, 0.08))
+    hand(thrust, "Left", chest(thrust, GUARD_L), V(0.6, 0.5, -1))
+    follow = body(lean=8, twist=10, crouch=0.02, shift=(0, -0.015))
+    arm(follow, "Right", V(-0.1, -0.95, -0.05))
+    hand(follow, "Left", chest(follow, GUARD_L), V(0.6, 0.5, -1))
+    return [(0, N, "lin"), (0.24, sign, "io"), (0.42, thrust, "back"), (0.62, follow, "lin"), (1.0, N, "io")]
+
+
+@unique("Ult_Summoner", "Fists", 1.4, 0.32)
+def u_ult_summoner(g):
+    """Shadow Garden: the seal at the chest, both hands raised together, then both palms slammed flat to the ground (the
+    impact: the shadow floods out) and held low while the beasts rise, then up."""
+    seal = body(crouch=0.03, lean=8, nod=10)
+    hand(seal, "Right", chest(seal, V(-0.012, -0.21, 0.07)), V(-0.6, 0.4, -1))
+    hand(seal, "Left", chest(seal, V(0.018, -0.2, 0.08)), V(0.6, 0.4, -1))
+    raise_ = body(crouch=-0.01, lean=-12, nod=-14)
+    arm(raise_, "Right", V(-0.62, -0.22, 0.75), V(-0.48, -0.26, 0.84))       # up and out in a V, clear of the head
+    arm(raise_, "Left", V(0.62, -0.22, 0.75), V(0.48, -0.26, 0.84))
+    slam = body(crouch=0.13, lean=38, nod=14, shift=(0, -0.03))
+    arm(slam, "Right", V(-0.3, -0.55, -0.78), V(-0.15, -0.45, -0.88))
+    arm(slam, "Left", V(0.3, -0.55, -0.78), V(0.15, -0.45, -0.88))
+    hold_ = body(crouch=0.12, lean=34, nod=4, shift=(0, -0.03))
+    arm(hold_, "Right", V(-0.32, -0.55, -0.77), V(-0.17, -0.45, -0.88))
+    arm(hold_, "Left", V(0.32, -0.55, -0.77), V(0.17, -0.45, -0.88))
+    return [(0, N, "lin"), (0.14, seal, "io"), (0.26, raise_, "out"), (0.32, slam, "in"), (0.62, hold_, "lin"), (1.0, N, "io")]
+
+
+@unique("Unique_TotemThrow", "Staff", 0.7, 0.4, upper=True)
+def u_totem_throw(g):
+    """A totem lobbed overhand with the off hand like a grenade, the staff kept low in the right."""
+    cock = body(twist=24, lean=-8, side=-4, nod=-4)
+    arm(cock, "Left", V(0.55, 0.6, 0.55), V(0.3, 0.2, 0.93))
+    arm(cock, "Right", V(-0.35, -0.25, -0.9), V(-0.2, -0.75, -0.6))
+    release = body(twist=-24, lean=16, crouch=0.025, shift=(0, -0.025))
+    arm(release, "Left", V(0.1, -0.85, 0.5))
+    arm(release, "Right", V(-0.35, -0.2, -0.9), V(-0.2, -0.7, -0.65))
+    follow = body(twist=-28, lean=18, crouch=0.03, shift=(0, -0.025))
+    arm(follow, "Left", V(-0.15, -0.85, -0.45))
+    arm(follow, "Right", V(-0.35, -0.2, -0.9), V(-0.2, -0.7, -0.65))
+    return [(0, N, "lin"), (0.24, cock, "io"), (0.4, release, "back"), (0.6, follow, "lin"), (1.0, N, "io")]
+
+
+@unique("Ult_Shaman", "Staff", 1.4, 0.36)
+def u_ult_shaman(g):
+    """Spirit Awakening: the staff raised high in both hands, the body arched back, then its butt driven into the ground
+    (the impact: the spirits rise) and held with the head thrown up."""
+    lift = body(crouch=-0.02, lean=-16, nod=-20)
+    off(arm(lift, "Right", V(-0.25, -0.2, 0.95), V(-0.1, -0.25, 0.96)), g, "two", V(0.6, -0.3, -0.75))
+    drive = body(crouch=0.09, lean=24, nod=6)
+    off(arm(drive, "Right", V(-0.2, -0.45, -0.87), V(-0.12, -0.3, -0.95)), g, "two", V(0.45, -0.6, -0.66))
+    call = body(crouch=0.08, lean=14, nod=-22)
+    off(arm(call, "Right", V(-0.2, -0.45, -0.87), V(-0.12, -0.3, -0.95)), g, "two", V(0.45, -0.6, -0.66))
+    return [(0, N, "lin"), (0.24, lift, "io"), (0.36, drive, "in"), (0.66, call, "io"), (1.0, N, "io")]
+
+
+@unique("Unique_VineSwing", "Staff", 0.9, 0.3)
+def u_vine_swing(g):
+    """The vine shot ahead with the staff reaching up and out, then hanging from it: arms up, legs swung forward."""
+    reach = body(lean=-10, nod=-12, crouch=-0.01)
+    off(arm(reach, "Right", V(-0.2, -0.6, 0.78), V(-0.1, -0.55, 0.83)), g, "two", V(0.4, -0.5, 0.77))
+    hang = body(lean=-24, nod=-8, crouch=-0.04, shift=(0, 0.02))
+    off(arm(hang, "Right", V(-0.15, -0.35, 0.92), V(-0.08, -0.3, 0.95)), g, "two", V(0.25, -0.4, 0.88))
+    for s, sx in SIDES:
+        hang.ik(f"{s}UpLeg", f"{s}Leg", ANKLE[s] + V(0, -0.12, 0.1), V(sx * 0.2, -1, 0.2))
+    return [(0, N, "lin"), (0.2, reach, "out"), (0.3, reach, "lin"), (0.55, hang, "io"), (0.8, hang, "lin"), (1.0, N, "io")]
+
+
+@unique("Ult_Druid", "Staff", 1.5, 0.37)
+def u_ult_druid(g):
+    """World Tree: the living staff lifted in both hands, then planted deep in the ground before you (the impact: the
+    tree erupts), and you settle low on it, rooted, head up to the crown."""
+    lift = body(crouch=0.0, lean=-6, nod=-8)
+    off(arm(lift, "Right", V(-0.3, -0.55, 0.78), V(-0.25, -0.6, 0.76)), g, "two", V(0.6, -0.3, -0.75))
+    plant_ = body(crouch=0.1, lean=32, nod=12)
+    off(arm(plant_, "Right", V(-0.15, -0.5, -0.85), V(-0.1, -0.4, -0.91)), g, "two", V(0.45, -0.6, -0.66))
+    root_ = body(crouch=0.09, lean=12, nod=-18)
+    off(arm(root_, "Right", V(-0.15, -0.6, -0.78), V(-0.1, -0.55, -0.83)), g, "two", V(0.45, -0.65, -0.6))
+    return [(0, N, "lin"), (0.24, lift, "io"), (0.37, plant_, "in"), (0.62, root_, "io"), (0.85, root_, "lin"), (1.0, N, "io")]
+
+
+@unique("Ult_Priest", "Staff", 1.4, 0.36)
+def u_ult_priest(g):
+    """Divine Descent: arms spread wide like wings, the head back to the light, then the staff brought up and driven down
+    with both hands (the impact: the pillar slams), and a bow over it."""
+    wings = body(lean=-12, nod=-18, crouch=-0.01)
+    arm(wings, "Right", V(-0.92, -0.1, 0.38), V(-0.85, -0.15, 0.5))
+    arm(wings, "Left", V(0.92, -0.1, 0.38), V(0.85, -0.15, 0.5))
+    up = body(lean=-8, nod=-12)
+    off(arm(up, "Right", V(-0.58, -0.18, 0.79), V(-0.47, -0.22, 0.85)), g, "two", V(0.6, -0.3, -0.75))
+    down = body(crouch=0.07, lean=26, nod=10)
+    off(arm(down, "Right", V(-0.15, -0.6, -0.78), V(-0.1, -0.5, -0.86)), g, "two", V(0.45, -0.6, -0.66))
+    bow = body(crouch=0.06, lean=22, nod=16)
+    off(arm(bow, "Right", V(-0.15, -0.6, -0.78), V(-0.1, -0.5, -0.86)), g, "two", V(0.45, -0.6, -0.66))
+    return [(0, N, "lin"), (0.16, wings, "io"), (0.3, up, "io"), (0.36, down, "in"), (0.62, bow, "lin"), (1.0, N, "io")]
+
+
+
+WARDEN_EVIDENCE = os.path.join(HERE, "..", "..", "..", "specs", "evidence", "classes", "K-warden-clips.webp")
+
+
+def render_warden_clips(cat):
+    """K-warden-clips.webp: each Warden unique clip at five phases (start, anticipation, the impact key, follow-through,
+    settle), front three-quarter, on the body this build loaded (`-- verbs warden-evidence`)."""
+    import subprocess, tempfile
+    tmp = tempfile.mkdtemp(prefix="warden_clips_")
+    try:
+        sc.render.engine = "BLENDER_EEVEE"
+    except TypeError:
+        pass
+    sc.view_settings.view_transform = "Standard"
+    sc.render.resolution_x = sc.render.resolution_y = 240
+    sc.render.film_transparent = False
+    w = bpy.data.worlds.new("W")
+    sc.world = w
+    w.use_nodes = True
+    bg = next(n for n in w.node_tree.nodes if n.type == "BACKGROUND")
+    bg.inputs[0].default_value, bg.inputs[1].default_value = (0.8, 0.86, 0.82, 1), 0.9
+    sun = bpy.data.objects.new("Sun", bpy.data.lights.new("Sun", "SUN"))
+    sun.data.energy = 3.2
+    sun.rotation_euler = (math.radians(50), 0, math.radians(30))
+    sc.collection.objects.link(sun)
+    cam = bpy.data.objects.new("Cam", bpy.data.cameras.new("Cam"))
+    cam.data.type, cam.data.ortho_scale = "ORTHO", 1.7
+    cam.location = Vector(CAM)
+    cam.rotation_euler = (Vector((0, 0, 0.47)) - cam.location).to_track_quat("-Z", "Y").to_euler()
+    sc.collection.objects.link(cam)
+    sc.camera = cam
+    kit.show_vertex_colors(sc)
+    by = {c["name"]: c for c in cat}
+    files = []
+    for name in ("Unique_HandSign", "Ult_Summoner", "Unique_TotemThrow", "Ult_Shaman", "Unique_VineSwing", "Ult_Druid", "Ult_Priest"):
+        c = by[name]
+        for label, phase in (("start", 0.08), ("wind-up", c["impact"] * 0.7), ("impact", c["impact"]), ("follow", c["impact"] + (1 - c["impact"]) * 0.35), ("settle", 0.85)):
+            rig.animation_data.action = bpy.data.actions[name]
+            sc.frame_set(round(phase * c["frames"]))
+            sc.render.filepath = os.path.join(tmp, f"{name}_{label}.png")
+            bpy.ops.render.render(write_still=True)
+            files += ["-label", f"{name} {label} {phase:.2f}", sc.render.filepath]
+    sheet = os.path.join(tmp, "sheet.png")
+    subprocess.run(["magick", "montage", *files, "-tile", "5x", "-geometry", "+4+4", "-background", "#1b1f27", "-fill", "#f1ffff",
+                    "-pointsize", "12", "-font", "/System/Library/Fonts/Supplemental/Arial.ttf", sheet], check=True)
+    subprocess.run(["magick", sheet, "-quality", "85", WARDEN_EVIDENCE], check=True)
+    print("wrote", WARDEN_EVIDENCE)
 
 
 def verb_clips():
@@ -2106,6 +2259,8 @@ if VERBS_MODE:
     print("VERBS_OK", len(cat))
     if "evidence" in ARGS:
         render_verb_evidence(cat)
+    if "warden-evidence" in ARGS:
+        render_warden_clips(cat)
 else:
     catalog = [{"name": "Idle", "length": 2.0, "loop": True, "frames": 60, "source": "v6"},
                {"name": "Walk", "length": 1.0, "loop": True, "frames": 30, "source": "v6", "contacts": contacts(bpy.data.actions["Walk"], 30)}]

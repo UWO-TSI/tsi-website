@@ -17,6 +17,7 @@
 import type { Family } from "@/lib/oracle/engine";
 import type { Stat } from "./progression";
 import type { WeaponType } from "./weapons";
+import { WARDEN_UNITS, type FieldEffect } from "./wardenData";
 
 export type Element = "fire" | "frost" | "lightning";
 /** Enemy statuses: hold (seconds, rooted and not acting), slow [fraction, seconds], mark [+damage taken, seconds], distract (seconds, wanders off). */
@@ -107,7 +108,9 @@ export type Effect =
   /** Classes v2: rounds into the cylinder, next up (keys of the kit's fire.rounds); `shuffle` spins them, `cock` s between shots, `window` s to fire them. */
   | { kind: "load"; rounds: string[]; shuffle?: boolean; cock?: number; window?: number;
       /** Plain rounds added to the cylinder instead (a roll that reloads two), never past its size. */
-      add?: number };
+      add?: number }
+  /** Classes v2, the Warden's field primitives (wardenData.ts, lib/game/combat/field.ts): grounds, thrown units, channels, barriers, roots, tethers, fades, totem bursts, risings. */
+  | FieldEffect;
 
 export interface Ability {
   key: string;
@@ -136,7 +139,13 @@ export type PassiveKind =
   | "attunement" | "decoy_share" | "grave_tithe"
   // Classes v2 (the Rangers): Focus (value: the top fire rate, cap: seconds to reach it), Killstreak (value per kill, cap kills),
   // Prey (traps deal value more to marked enemies), Last Round (the cylinder's last chamber always crits).
-  | "focus" | "killstreak" | "prey" | "last_round";
+  | "focus" | "killstreak" | "prey" | "last_round"
+  /**
+   * Classes v2 (the Warden kits, lib/game/combat/field.ts): a fallen beast's strength passes to the others, `value` each
+   * (Shadow Bond); each link a totem holds adds `value` to its damage (Resonance); regen `value` of max HP a second,
+   * doubled in your own growth (Overgrowth); regen `value` a second and healing past full becomes a shield (Blessed).
+   */
+  | "shadow_bond" | "links" | "overgrowth" | "blessed";
 export interface Passive {
   name: string;
   description: string;
@@ -379,6 +388,10 @@ export interface UnitDef {
   radius?: number; model?: string;
   /** Totems: what a pulse does each second, per role. */
   pulse?: { damage?: number; heal?: number; slow?: number; shield?: number };
+  /** Classes v2: its kit's module moves and fights it (the Warden's totems and spirits, lib/game/combat/totems.ts); the shared AI only ages it. */
+  driven?: boolean;
+  /** Classes v2: a totem outside the three-totem cap (the Shaman's spirit post). */
+  uncapped?: boolean;
   /** Classes v2 traps: springs on everything within `blast` u (else the first enemy only), with this status (else a 3 s hold); reaches `lunge` u for a marked enemy. */
   blast?: number; status?: Status; lunge?: number;
   /** Classes v2 minions: runs down marked enemies first. */
@@ -405,6 +418,7 @@ export const UNITS: Record<string, UnitDef> = {
   "mirror-clone": { key: "mirror-clone", name: "Mirror clone", kind: "clone", hp: 30, hpShare: 0.3, life: 10, speed: 7.4, range: 9, power: 0.4, rate: 1.15 },
   skeleton: { key: "skeleton", name: "Skeleton", kind: "minion", hp: 30, cost: 1, life: 20, speed: 5.6, range: 1.4, power: 0.22, rate: 0.8, model: "skeleton-warrior" },
   "army-skeleton": { key: "army-skeleton", name: "Risen dead", kind: "minion", hp: 24, cost: 0, life: 8, speed: 6.6, range: 1.4, power: 0.25, rate: 0.8, model: "skeleton-warrior", burst: { radius: 1.7, power: 1 } },
+  ...WARDEN_UNITS,
 };
 /** Caps (row 50): minions share the capacity stat; one totem per role and three at most; two traps; one decoy; two weapon wisps. */
 export const CAPS = { totems: 3, traps: 2, decoys: 1, weaponWisps: 2 } as const;

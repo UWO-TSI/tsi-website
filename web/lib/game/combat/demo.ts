@@ -12,11 +12,17 @@
  * at level N; `?repick=oracle|launch` hands over a repick token; `?type=INTP` is the Oracle reading (`&unclear=JP`
  * makes that dichotomy 8% clear); `?frame=bronze|silver|gold` wears that mastery frame.
  *
+ * The Warden wave: a v2 subclass is handed its tier-1 signature weapon in hand; `?tamed=owl,toad` (or `all`) are the
+ * Summoner's tamed beasts (none by default, so the ritual circle has something to offer).
+ *
  * The class playtest (specs/classes/playtest.md): `?traits=all` teaches every form the kit learns from a mob, and the
- * panel's `/api/combat/dev-class` switches subclass and mastery in place. The wheel's weapon is kept (`/api/combat/equip`).
+ * panel's `/api/combat/dev-class` switches subclass and mastery in place (every form learned, every beast tamed). The
+ * wheel's weapon is kept (`/api/combat/equip`).
  */
 import { memoryCombatStore } from "@/lib/combat/memoryStore";
-import { allocateStats, claimBossReward, claimMinibossReward, completeMission, equipWeapon, getProgression, listMissions, missionProgress, recordKill, reportWear, resetStats, setLoadout, startMission, chooseSubclass } from "@/lib/combat/service";
+import { allocateStats, claimBossReward, claimMinibossReward, completeMission, equipWeapon, getProgression, listMissions, missionProgress, recordKill, reportWear, resetStats, setLoadout, startMission, chooseSubclass, tameBeast } from "@/lib/combat/service";
+import { TAME_ORDER } from "@/lib/combat/wardenData";
+import { signatureGrant } from "@/lib/combat/weapons";
 import { islandProgression } from "@/lib/combat/islandAdapter";
 import { subclassByKey, subclassesFor, TRAITS } from "@/lib/combat/kits";
 import { equipCosmetic } from "@/lib/combat/service";
@@ -53,6 +59,10 @@ export function installCombatDemo(): void {
       if (q.get("loadout")) await setLoadout(m.store, ME, q.get("loadout")!.split(","));
       const sub = (await m.store.progression(ME)).subclass;
       if (sub === "demo") m.giveWeapon(ME, "staff-oak"); // the dev kit's signature type, on the wheel (Tab); members pick theirs there too
+      const sig = sub && memberKit(sub) ? signatureGrant(sub, 1) : null;
+      if (sig) { m.giveWeapon(ME, sig.key); await m.store.equip(ME, sig.key); } // a v2 kit's tier-1 signature weapon, in hand
+      const tamed = q.get("tamed");
+      if (tamed) m.setTamed(ME, tamed === "all" ? [...TAME_ORDER] : tamed.split(","));
       if (sub && q.get("traits") === "all") await learnForms(m, sub);
       if (sub && q.get("mastery")) m.setMasteryXp(ME, sub, xpForMastery(Number(q.get("mastery"))));
       const token = q.get("repick");
@@ -79,6 +89,7 @@ export function installCombatDemo(): void {
         case "/api/combat/subclass": return reply(await chooseSubclass(m.store, ME, body.subclass, body.idempotency_key), "subclass");
         case "/api/combat/loadout": return reply(await setLoadout(m.store, ME, body.loadout), "loadout");
         case "/api/combat/cosmetic": return reply(await equipCosmetic(m.store, ME, body.subclass, body.kind, body.value), "cosmetics");
+        case "/api/combat/tame": return reply(await tameBeast(m.store, ME, body.beast, body.event_key), "tamed");
         case "/api/combat/allocate": return reply(await allocateStats(m.store, ME, body), "stats");
         case "/api/combat/reset-stats": return reply(await resetStats(m.store, ME, body.idempotency_key), "reset");
         case "/api/combat/equip": return reply(await equipWeapon(m.store, ME, body.weapon), "equip");

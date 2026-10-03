@@ -10,6 +10,7 @@ import { hurtPlayer, regenEnergy, resolvePlayerShot, summonWisps } from "./actio
 import { SLOT_IDS, type AbilityId, type CombatRuntime } from "./runtime";
 import { beamLands, DODGE, separate, stepEnemy, strikeLands, sweptHit, type Vec } from "./sim";
 import { landLob, mobEvent, mobFx, rally, RUNE_BOLT_SPEED, stepHazards } from "./mobs";
+import { walled as thornWalled, wallStops } from "./field";
 import { fallen, shotSpent, steerShot } from "./classFire";
 import { cloneWard, inWall, parryShot, stepField } from "./primitives";
 
@@ -19,9 +20,9 @@ const ABILITY_IDS: readonly AbilityId[] = [...SLOT_IDS, "swap"];
 const KNOCK_SPEED = 3;
 /** Scratch the tick reuses every frame (combat polish 12: nothing allocated per frame in a fight). */
 const YOU = { x: 0, z: 0, safe: false, alive: true }, FROM = { x: 0, z: 0 }, TO = { x: 0, z: 0 };
-let freeFor: (x: number, z: number, r: number) => boolean = () => true, bodyR = 0, walled: CombatRuntime | null = null;
-/** Open ground for a body: the caller's, minus classes v2 stone walls (primitives.ts). */
-const freeAll = (x: number, z: number, r: number) => freeFor(x, z, r) && !(walled && inWall(walled, x, z, r));
+let freeFor: (x: number, z: number, r: number) => boolean = () => true, bodyR = 0, walled: CombatRuntime | null = null, thorns: CombatRuntime | null = null;
+/** Open ground for a body: the caller's, minus classes v2 stone walls (primitives.ts) and thorn walls (field.ts). */
+const freeAll = (x: number, z: number, r: number) => freeFor(x, z, r) && !(walled && inWall(walled, x, z, r)) && !(thorns && thornWalled(thorns, x, z, r));
 const freeBody = (x: number, z: number) => freeAll(x, z, bodyR);
 
 export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: number, z: number, r: number) => boolean = () => true, random: () => number = Math.random) {
@@ -55,7 +56,7 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
   // Enemies.
   const you = YOU, list = rt.enemies;
   you.x = me.x; you.z = me.z; you.safe = p.safe; you.alive = p.alive; // a boss reset or summon makes a new list: this frame keeps the old
-  freeFor = free; walled = rt.field.walls.length ? rt : null;
+  freeFor = free; walled = rt.field.walls.length ? rt : null; thorns = rt;
   for (let i = 0; i < list.length; i++) {
     const e = list[i], was = e.state;
     bodyR = e.type.radius * 0.6;
@@ -99,8 +100,9 @@ export function stepCombat(rt: CombatRuntime, me: Vec, dt: number, free: (x: num
     if (gone && sh.from === "player" && rt.v2 && sh.hit) shotSpent(rt, sh, wall, random); // a bomblet bursts, burning ground, a harpoon's zip
     if (!gone && sh.from === "player") gone = resolvePlayerShot(rt, i, from, to, random);
     else if (!gone && sh.from === "enemy") {
-      // A parry sends it back (primitives.ts); a clone that wards sends back its own.
-      if (sweptHit(from, to, me, 0.35 + sh.radius)) { if (!parryShot(rt, sh, me)) hurtPlayer(rt, sh.damage, from, me, sh.knock, random, true); gone = true; }
+      // A thorn wall stops it (field.ts); a parry sends it back (primitives.ts); a clone that wards sends back its own.
+      if (wallStops(rt, from, to)) gone = true;
+      else if (sweptHit(from, to, me, 0.35 + sh.radius)) { if (!parryShot(rt, sh, me)) hurtPlayer(rt, sh.damage, from, me, sh.knock, random, true); gone = true; }
       else {
         const unit = rt.units.find(u => u.def.kind !== "trap" && sweptHit(from, to, u, 0.4 + sh.radius));
         if (unit) { if (!cloneWard(rt, unit)) hurtUnits(rt, u => u === unit, sh.damage); gone = true; }

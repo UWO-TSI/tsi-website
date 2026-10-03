@@ -92,6 +92,7 @@ describe("classes v2 on the server, mirrored by the memory store (20261002181044
     expect(signatureTier(["sword-iron", "staff-sigil"])).toBe(1); // today's weapons aren't signature weapons
     expect(signatureTier(["prism-staff-1", "bone-tome-4"])).toBe(4); // a family wave's are
     expect(signatureGrant("elementalist", 3)?.key).toBe("prism-staff-3");
-    expect(signatureGrant("priest", 3)).toBeNull(); // its wave hasn't seeded it here
+    expect(signatureGrant("priest", 3)?.key).toBe("sunstone-staff-3"); // the Warden wave's too
+    expect(signatureGrant("demo", 3)).toBeNull(); // no wave seeds the dev kit's type
   });
 });

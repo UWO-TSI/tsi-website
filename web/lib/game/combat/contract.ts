@@ -69,6 +69,8 @@ export interface EnemyType {
   hazard?: HazardDef;
   /** A mini-boss: its own health bar and name banner, and a reward roll on defeat (lib/combat/content.ts DROPS). */
   miniboss?: { title: string };
+  /** Only on this client (a Summoner's ritual form): its fall posts no kill to the server. */
+  local?: boolean;
 }
 
 export type MissionTemplate = "hunt" | "fetch" | "survive" | "escort";
