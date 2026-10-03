@@ -38,13 +38,14 @@ async function ready() {
 const button = name => page.getByRole("button", { name, exact: true });
 const panel = () => page.locator('section[aria-label="Class playtest"]');
 
-// ONLY=cards: straight into two kits for their key cards, then a note and the picker (a shorter run).
+// ONLY=cards (CARDS=a,b): straight into those kits for their key cards, then a note and the picker (a shorter run).
 if (process.env.ONLY === "cards") {
-  for (const kit of ["elementalist", "transmuter"]) {
+  for (const kit of (process.env.CARDS ?? "elementalist,transmuter").split(",")) {
     await page.goto(`http://localhost:${PORT}/lab/island?combat=demo&classes=v2&subclass=${kit}&mastery=20&traits=all&ruins=1&playtest=1`, { waitUntil: "domcontentloaded" });
     await ready();
     const s = await rt();
-    check(s.kit === kit && s.weapon === ({ elementalist: "prism-staff-1", transmuter: "tooth-charm-1" })[kit], `${kit} holds ${s.weapon}`);
+    const type = await page.evaluate(() => window.__combat.rt.v2.kit.signature.type);
+    check(s.kit === kit && s.weapon === `${type}-1`, `${kit} holds ${s.weapon}`);
     check(await page.locator('[data-testid="playtest-keycard"]').getByText("learn it by defeating").count() === 0, "every skill is open");
     const b = await page.locator('[data-testid="playtest-keycard"]').boundingBox(), m = await page.locator('section[aria-label="Damage meter"]').boundingBox();
     webp(await shot({ x: 0, y: Math.max(0, b.y - 12), width: Math.ceil(b.width + 40), height: Math.ceil(m.y + m.height - b.y + 24) }), `keycard-${kit}`);
