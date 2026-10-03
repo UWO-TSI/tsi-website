@@ -13,7 +13,7 @@ export const PLAY_ORIGIN = "https://play.tethos.ca";
 const ON_PLAY: Redirect["has"] = [{ type: "host", value: "play\\.tethos\\.ca" }];
 const ON_SITE: Redirect["has"] = [{ type: "host", value: "(?:www\\.)?tethos\\.ca" }];
 /** /student/<area> pages that belong to the portal. */
-const PORTAL = "go|dashboard|onboarding|companion|reset-password|opening-soon|election|auth";
+const PORTAL = "go|dashboard|onboarding|companion|check-in|reset-password|opening-soon|election|auth";
 /** Site pages someone might open on the play host. */
 const SITE_PAGES = "npo|genesis|admin|under-construction";
 

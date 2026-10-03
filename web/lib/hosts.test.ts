@@ -41,6 +41,7 @@ describe("www.tethos.ca and play.tethos.ca", () => {
     ["https://www.tethos.ca/student/go?next=%2Fstudent%2Fcompanion", "redirect https://play.tethos.ca/student/go?next=%2Fstudent%2Fcompanion"],
     ["https://www.tethos.ca/student/companion/study", "redirect https://play.tethos.ca/student/companion/study"],
     ["https://www.tethos.ca/student/auth/callback?code=abc", "redirect https://play.tethos.ca/student/auth/callback?code=abc"],
+    ["https://www.tethos.ca/student/check-in?event=e1&code=ABC", "redirect https://play.tethos.ca/student/check-in?event=e1&code=ABC"],
     ["https://www.tethos.ca/student/login", "redirect https://www.tethos.ca/student"],
     ["https://www.tethos.ca/student/signup", "redirect https://www.tethos.ca/student?view=signup"],
     // Recruitment, admin, the site and the API stay on www.
@@ -58,6 +59,7 @@ describe("www.tethos.ca and play.tethos.ca", () => {
     ["https://play.tethos.ca/student/signup", "redirect https://play.tethos.ca/student?view=signup"],
     ["https://play.tethos.ca/student/dashboard", "page /student/dashboard"],
     ["https://play.tethos.ca/student/go", "page /student/go"],
+    ["https://play.tethos.ca/student/check-in?event=e1&code=ABC", "page /student/check-in"],
     ["https://play.tethos.ca/student/apply/portal", "redirect https://www.tethos.ca/student/apply/portal"],
     ["https://play.tethos.ca/genesis", "redirect https://www.tethos.ca/genesis"],
     ["https://play.tethos.ca/admin/recruit", "redirect https://www.tethos.ca/admin/recruit"],
