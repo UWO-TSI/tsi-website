@@ -7,7 +7,7 @@ import { raisePg } from "@/lib/result";
 import { CombatError, type CombatErrorCode, type CombatStore, type MasteryRow, type ProgressRow } from "./store";
 
 type Row = Record<string, unknown>;
-const CODES: CombatErrorCode[] = ["bad_loadout", "no_subclass", "locked", "bad_cosmetic", "insufficient", "not_found", "not_owned", "needs_reset", "not_enough_points", "level_too_low", "wrong_family", "no_family", "cooldown", "not_ready", "kill_xp_cap", "unknown_enemy", "unknown_mission", "bad_hits", "boss_cooldown", "miniboss_cooldown"];
+const CODES: CombatErrorCode[] = ["bad_loadout", "no_subclass", "locked", "bad_cosmetic", "bad_beast", "unavailable", "insufficient", "not_found", "not_owned", "needs_reset", "not_enough_points", "level_too_low", "wrong_family", "no_family", "cooldown", "not_ready", "kill_xp_cap", "unknown_enemy", "unknown_mission", "bad_hits", "boss_cooldown", "miniboss_cooldown"];
 const raise = (error: { code?: string; message?: string } | null): never => raisePg(error, CODES);
 const first = (d: unknown) => ((Array.isArray(d) ? d[0] : d) ?? {}) as Row;
 const xpRes = (r: Row) => ({ xp: Number(r.xp), level: Number(r.level), levelled_up: r.levelled_up === true, replayed: r.replayed === true });
@@ -115,6 +115,15 @@ export function supabaseCombatStore(db: SupabaseClient): CombatStore {
     async minibossReward(m, enemy, ev, reward) {
       const r = first(await rpc("combat_miniboss_reward", { p_member_id: m, p_enemy_key: enemy, p_event_key: ev, p_reward: reward }));
       return { reward: r.reward as BossReward, replayed: r.replayed === true };
+    },
+    async tamed(m) {
+      const { data, error } = await db.from("member_tamed_beasts").select("beast").eq("member_id", m);
+      if (error) raise(error);
+      return ((data ?? []) as Row[]).map(r => String(r.beast));
+    },
+    async tameBeast(m, beast, key) {
+      const r = first(await rpc("combat_tame_beast", { p_member_id: m, p_beast: beast, p_key: key }));
+      return { tamed: (r.tamed as string[]) ?? [], replayed: r.replayed === true };
     },
   };
 }

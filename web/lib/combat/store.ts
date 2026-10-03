@@ -6,7 +6,7 @@ import { DomainError } from "@/lib/result";
 
 export type CombatErrorCode =
   | "unavailable" | "insufficient" | "not_found" | "not_owned" | "needs_reset" | "not_enough_points" | "level_too_low" | "wrong_family"
-  | "no_family" | "cooldown" | "not_ready" | "kill_xp_cap" | "unknown_enemy" | "unknown_mission" | "bad_hits" | "boss_cooldown" | "miniboss_cooldown" | "gate_closed" | "bad_loadout" | "no_subclass" | "locked" | "bad_cosmetic" | "failed";
+  | "no_family" | "cooldown" | "not_ready" | "kill_xp_cap" | "unknown_enemy" | "unknown_mission" | "bad_hits" | "boss_cooldown" | "miniboss_cooldown" | "gate_closed" | "bad_loadout" | "no_subclass" | "locked" | "bad_cosmetic" | "bad_beast" | "failed";
 export class CombatError extends DomainError<CombatErrorCode> {}
 
 export interface ProgressionRow {
@@ -68,4 +68,8 @@ export interface CombatStore {
   bossReward(memberId: string, eventKey: string, reward: BossReward): Promise<{ reward: BossReward; replayed: boolean }>;
   /** The same for a mini-boss (content.ts MINIBOSS_DROPS): once per recorded kill of that enemy, at most once per cooldown each. */
   minibossReward(memberId: string, enemyKey: string, eventKey: string, reward: BossReward): Promise<{ reward: BossReward; replayed: boolean }>;
+  /** Classes v2, the Summoner: the beasts tamed at the ritual circle (the wolves are known from the start and never stored). */
+  tamed(memberId: string): Promise<string[]>;
+  /** A taming (combat_tame_beast): the next beast in turn, for a Summoner with the flag on; once per key. Returns every tamed beast. */
+  tameBeast(memberId: string, beast: string, key: string): Promise<{ tamed: string[]; replayed: boolean }>;
 }
