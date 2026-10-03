@@ -95,6 +95,12 @@ export default function TalkBox() {
     return () => window.removeEventListener("keydown", on);
   }, [open]);
   const onBox = useCallback((e: MouseEvent) => { if (!(e.target as Element).closest("button")) press(); }, []);
+  // Focus comes into the box once it shows (it's hidden while they turn to you, when the dialog system first tries).
+  const phase = view.phase;
+  useEffect(() => {
+    const el = panel.current;
+    if (phase === "speaking" && el && !el.contains(document.activeElement)) el.focus({ preventScroll: true });
+  }, [phase, panel]);
 
   if (!open) return null;
   const line = talkStore.active?.lines[view.index]?.text ?? "";

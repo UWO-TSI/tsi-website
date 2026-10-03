@@ -39,13 +39,15 @@ Escape leaves at any point. Seated residents stay seated and talk from the bench
 
 **d. A listening pose.** Between lines the resident stands attentively (Idle, facing you), and you stand still facing them. **Question:** do you want a Listen clip, a few nods for whoever isn't talking, for you and for residents chatting with each other? It's a clip in `build_clips.py`.
 
-**e. Text speed.** Lines type at about 38 characters a second with a breath after each sentence. With the system's reduced-motion setting on, each line appears whole. **Question:** do you want a text-speed choice in Settings?
+**e. The keepers indoors.** Wren at the HQ desk, Sable, Odile and Toren keep the interiors pass's behaviour: their station's E opens its sheet, and a click gets a bubble line with the Chat clip. **Question:** should a click on a keeper open the dialogue box with their conversations too, as in the village?
+
+**f. Text speed.** Lines type at about 38 characters a second with a breath after each sentence. With the system's reduced-motion setting on, each line appears whole. **Question:** do you want a text-speed choice in Settings?
 
 ### Multiplayer (Colyseus, starting on another branch)
 
 **Built:** a talk is each viewer's own local presentation. Nothing about it is sent or stored. Where a resident stands comes from their routine on the shared world clock. A talk only holds this viewer's copy of that routine, so on everyone else's screen the same resident keeps walking. The "!", the turn, the face, the camera, the box, the voice and the goodbye are all local. It's the same rule as the greeting bubble and residents stepping round you.
 
-**What changes once players can see each other.** With purely local talks, other players see you talking to empty air while the resident walks off. I'd add one small piece of shared room state, `engaged: { residentId: playerId }`:
+**What changes once players can see each other** (`specs/multiplayer.md`). The shared clock in §4.7 lines residents up between players. A local talk then holds only the talker's copy, so for about a minute (the talk, then the catch-up) the talker sees the resident in a different place from everyone else, and the others see the talker talking to empty air. For M2 (bubbles and the talking mouth) I'd add one small piece of shared room state, `engaged: { residentId: playerId }`:
 - **One talker at a time.** The room grants the first E. Anyone else who presses E gets a short local line ("Oh, one moment!", in the same box), or waits in a queue of one.
 - **What others see.** The resident stops and faces the player talking to them, plays the Chat clip and shows a small "…" bubble. Others never see the words: the conversation stays private, and only that it's happening is shared.
 - **A time limit.** The room releases the hold after about 45 seconds, or when the talker leaves or disconnects.
@@ -89,7 +91,8 @@ The builder is `lib/game/signIn.ts`. It never points `next` at a sign-in page or
 
 **What I found at the sign-in entry (`/student`, `GamePortalLogin`; the other session owns it).**
 - Google is already offered first ("Continue with Google"), with email and password under it, plus "Forgot password?" and "Create an account".
-- `?next=` is honoured for both Google and email: through `/api/auth/callback?next=/student/go?next=…` and then `/student/go`. A visitor who is already signed in is sent from `/student` to `/student/go` with the `next` kept. While the member world is closed in production, `/student/go` sends everyone to the applicant portal and ignores `next`, which is fine for now.
+- `?next=` is honoured for both Google and email: through `/api/auth/callback?next=/student/go?next=…` and then `/student/go`. A visitor who is already signed in is sent from `/student` to `/student/go` with the `next` kept.
+- Since #46, while the member world is closed, `/student/go` honours `next` only for pages that are open (an event check-in, recruitment, admin). A `next` inside the closed world (the island, the companion) still lands on the applicant portal, as it should until the world opens.
 
 **What it needs from the other session (davidliu-37).**
 1. **Keep the page someone was going to.** The middleware sends a signed-out visitor from `/student/dashboard/**`, `/student/onboarding/**` and `/student/election` to `/student` *without* `next` (`lib/supabase/middleware.ts`, each `url.pathname = "/student"`). So a deep link such as `/student/dashboard/economy/wallet` lands on the island after sign-in. Fix: `url.searchParams.set("next", pathname + search)` before each redirect. `/student/go` already validates it.
