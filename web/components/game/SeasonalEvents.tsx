@@ -24,7 +24,7 @@ import type { IslandWeather } from "@/lib/game/islandWeather";
 import type { TourneyView } from "@/lib/collections/service";
 import { ApiError, apiCall } from "@/lib/apiClient";
 import { Trophy as TrophyIcon } from "lucide-react";
-import { Empty, ErrorNote, List, ListRow, Loading } from "@/components/gui";
+import { Empty, ErrorNote, List, ListRow, Loading, SignInLink } from "@/components/gui";
 import styles from "./DefaultIslandWorld.module.css";
 
 const P = "/assets/acnh/props/", F = "/assets/acnh/furniture/", PL = "/assets/acnh/plants/", S = "/assets/acnh/seasonal/";
@@ -213,7 +213,7 @@ export function TourneySheet({ open, onClose }: { open: boolean; onClose: () => 
     <ListRow key={r.rank} title={title} detail={detail ?? undefined} selected={r.mine} className={anon ? styles.anonRow : undefined} value={<span className={styles.trophyRank} aria-label={`Rank ${r.rank}`}>{r.rank}</span>} />;
   return <IslandSheet open={open} title="Fishing tourney" onClose={onClose} testId="tourney-sheet" keys="e">
     {data === "loading" ? <Loading label="Reading the board…" />
-      : data === "signed-out" ? <Empty icon={<TrophyIcon size={32} />} title="Sign in to see the tourney board">The biggest catches of the week go up here.</Empty>
+      : data === "signed-out" ? <Empty icon={<TrophyIcon size={32} />} title="Sign in to see the tourney board" action={<SignInLink button />}>The biggest catches of the week go up here.</Empty>
       : data === "error" ? <ErrorNote onRetry={() => { setData("loading"); setTries(n => n + 1); }}>The tourney board didn’t load. The connection may have dropped.</ErrorNote>
       : data === null ? <Empty icon={<TrophyIcon size={32} />} title="No tourney yet">It comes back every September.</Empty> : <>
       <p className={styles.hint}>{data.title} {data.cycle} · {data.open ? `biggest catch wins, until ${until(data.end)}` : "final standings"}. The top half is on the board by name; everyone else sees only their own place.</p>

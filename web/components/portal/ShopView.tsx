@@ -7,7 +7,7 @@ import { ShoppingBag, SearchX } from "lucide-react";
 import { presenceRequest, PresenceRequestError } from "@/lib/game/mobilePresence";
 import { shopReadTransport, type ShopProduct as Product, type ShopReadTransport } from "@/lib/game/shopRead";
 import { Amount } from "@/components/economy/Amount";
-import { Banner, Button, Card, Empty, ErrorNote, Loading, Sheet, Tabs } from "@/components/gui";
+import { Banner, Button, Card, Empty, ErrorNote, Loading, Sheet, SignInText, Tabs } from "@/components/gui";
 
 type Category = "all" | "apparel" | "accessories" | "digital" | "merch";
 
@@ -90,14 +90,14 @@ export default function ShopView({ transport = shopReadTransport }: { transport?
           <div role="status" className="inline-flex flex-wrap items-center gap-2"
             style={{ minHeight: 40, padding: balanceState === "error" ? "4px 4px 4px 16px" : "4px 16px", borderRadius: "var(--gui-r-pill)", background: "var(--gui-paper-hi)", boxShadow: "var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge)", color: "var(--gui-ink-strong)", fontSize: 15, fontWeight: 800 }}>
             {balanceState === "ready" && balance !== null ? <>You have <Amount n={balance} currency="gems" /></>
-              : balanceState === "loading" ? "Checking your Gems…" : balanceState === "signed-out" ? "Sign in to see your Gems" : "Your Gems didn’t load"}
+              : balanceState === "loading" ? "Checking your Gems…" : balanceState === "signed-out" ? <SignInText text="Sign in to see your Gems" /> : "Your Gems didn’t load"}
             {balanceState === "error" && <Button size="sm" variant="quiet" onClick={retry}>Try again</Button>}
           </div>
         </div>
 
         {/* Product grid */}
         {catalogueError ? (
-          <ErrorNote onRetry={retry}>{catalogueError === "signed-out" ? "You’re signed out. Sign in to browse the shop." : "The shop didn’t load. Check your connection and try again."}</ErrorNote>
+          <ErrorNote onRetry={retry}>{catalogueError === "signed-out" ? <SignInText text="You’re signed out. Sign in to browse the shop." /> : "The shop didn’t load. Check your connection and try again."}</ErrorNote>
         ) : loading ? (
           <Loading label="Stocking the shelves…" />
         ) : filtered.length === 0 ? (

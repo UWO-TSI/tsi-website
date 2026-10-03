@@ -10,7 +10,7 @@ import { Trophy as TrophyIcon, Sparkles } from "lucide-react";
 import type { Trophy, JournalEntryKnown } from "@/lib/collections/logic";
 import { CATEGORIES } from "@/lib/collections/roster";
 import { ApiError, apiCall } from "@/lib/apiClient";
-import { Button, Empty, ErrorNote, ItemTile, List, ListRow, Loading } from "@/components/gui";
+import { Button, Empty, ErrorNote, ItemTile, List, ListRow, Loading, SignInLink } from "@/components/gui";
 import { fetchJournalPage } from "../JournalPages";
 import IslandSheet from "../IslandSheet";
 import styles from "../DefaultIslandWorld.module.css";
@@ -31,7 +31,7 @@ export function TrophySheet({ open, onClose }: { open: boolean; onClose: () => v
   }, [open, tries]);
   return <IslandSheet open={open} title="Trophy case" onClose={onClose} testId="trophy-sheet" keys="e">
     {data === null ? <Loading label="Polishing the glass…" />
-      : data === "signed-out" ? <Empty icon={<TrophyIcon size={32} />} title="Sign in to see the case">This week’s biggest catches go up here.</Empty>
+      : data === "signed-out" ? <Empty icon={<TrophyIcon size={32} />} title="Sign in to see the case" action={<SignInLink button />}>This week’s biggest catches go up here.</Empty>
       : data === "error" ? <ErrorNote onRetry={() => { setData(null); setTries(n => n + 1); }}>The trophy case didn’t load. The connection may have dropped.</ErrorNote>
       : <>
         <p className={styles.hint}>Biggest catches since {weekDay(data.week_start)}. Two per member, so the wall shows the club.</p>

@@ -11,7 +11,7 @@ import ContributeSheet from "./ContributeSheet";
 import GoalCard from "./GoalCard";
 import { LettersBody } from "./LettersSheet";
 import ProgressionPanel, { type ProgressionSheetProps } from "./ProgressionPanel";
-import { Empty, Tabs, Toggle } from "@/components/gui";
+import { Empty, SignInText, Tabs, Toggle } from "@/components/gui";
 import { Flag } from "lucide-react";
 import s from "./progression.module.css";
 
@@ -68,7 +68,7 @@ export function JournalBody({ initialTab = "quests" }: { initialTab?: Tab }) {
     <div>
       <Tabs label="Journal sections" value={tab} onChange={setTab} className={s.tabsRow}
         tabs={[{ id: "quests", label: "Quests" }, { id: "goals", label: "Club goals" }, { id: "letters", label: "Letters", badge: state.unread_letters }]} />
-      {preview ? <p className={`${s.note} ${s.info}`}>Preview: sign in to save quest progress.</p> : null}
+      {preview ? <p className={`${s.note} ${s.info}`}><SignInText text="Preview: sign in to save quest progress." /></p> : null}
       {message ? <p role="status" className={`${s.note} ${message.kind === "ok" ? s.ok : s.err}`}>{message.text}</p> : null}
 
       {tab === "quests" ? (

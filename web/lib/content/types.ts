@@ -42,6 +42,8 @@ export interface NPCPersona {
   tone?: string | null;
   /** Phase → an anchor or a routine of stops (anchors, "bench", "home"); `home` → the building they live in (lib/game/residentRoutine.ts). */
   schedule?: Record<string, string | string[]>;
+  /** What they say when you talk to them (20261003161600_resident_talk; lib/content/talk.ts): conversations of 1-4 boxes, "[happy] ..." for a face. */
+  talk?: string[][];
 }
 
 export interface ShopItem {
