@@ -28,6 +28,14 @@ export interface FxGround { surface?: (x: number, z: number) => number; wet: (x:
 export interface FxState { dashT: number; streakT: number; streakK: number }
 export const createFxState = (): FxState => ({ dashT: 0, streakT: 0, streakK: 0 });
 
+/** One-shot clips and the like travel among the movement events in a frame. */
+const CLIP_KINDS: ReadonlySet<EvKind> = new Set<EvKind>(["play", "upper", "ghost", "stop"]);
+/** The nearest movement event from slot `from` on (step -1: back, 1: on) among a frame's events, past any clips; or null. */
+export function moveAt(s: RemoteSample, from: number, step: 1 | -1): EvKind | null {
+  for (let k = from; k >= 0 && k < s.eventCount; k += step) if (!CLIP_KINDS.has(s.events[k].kind)) return s.events[k].kind;
+  return null;
+}
+
 const groundAt = (w: FxGround, x: number, z: number): GroundKind => groundUnder(w.surface?.(x, z), WORLD_SNOW.value, w.wet, x, z);
 const TAKEOFF: ReadonlySet<EvKind> = new Set<EvKind>(["jump", "hop", "long", "dashjump"]);
 const ALOFT: ReadonlySet<string> = new Set(["Air", "Fall", "Glide"]);

@@ -24,7 +24,7 @@ import type { Area } from "@/lib/net/protocol";
 import type { NetSource } from "@/lib/net/types";
 import { useMoveParticles, type MoveParticles } from "../movement/moveFx";
 import { FLAT_GROUND, castSunShadows, driveRig, gateMixer, type GroundWorld, type JuiceSink, type RemoteRig } from "./drive";
-import { remoteDashTrail, remoteJuice, type FxGround } from "./fx";
+import { moveAt, remoteDashTrail, remoteJuice, type FxGround } from "./fx";
 import { FULL, LOD, LOD_CAPS, assignLod, createLodScratch, type LodCaps, type LodEntry, type LodScratch } from "./lod";
 import { RemoteAvatar } from "./RemoteAvatar";
 import { LIVE_MAX, liveRemotes } from "./active";
@@ -62,8 +62,8 @@ function juiceFor(particles: Particles, ground: FxGround): JuiceSink {
   return (r, e, i) => {
     const p = particles.current;
     if (!p) return;
-    const s = r.sample, prev = i > 0 ? s.events[i - 1].kind : null, next = i + 1 < s.eventCount ? s.events[i + 1].kind : null;
-    remoteJuice(p.pool, ground, r.fx, e.kind, typeof e.value === "number" ? e.value : 0, s, r.groundY, r.waterY, prev, next);
+    const s = r.sample;
+    remoteJuice(p.pool, ground, r.fx, e.kind, typeof e.value === "number" ? e.value : 0, s, r.groundY, r.waterY, moveAt(s, i - 1, -1), moveAt(s, i + 1, 1));
   };
 }
 

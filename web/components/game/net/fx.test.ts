@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { ParticlePool } from "@/lib/game/fx/particles";
 import type { EvKind } from "@/lib/net/protocol";
 import { createRemoteSample, type RemoteSample } from "@/lib/net/types";
-import { REMOTE_JUICE, createFxState, remoteDashTrail, remoteJuice, type FxGround } from "./fx";
+import { REMOTE_JUICE, createFxState, moveAt, remoteDashTrail, remoteJuice, type FxGround } from "./fx";
 
 const ground: FxGround = { surface: () => 1, wet: () => false };
 const sample = (o: Partial<RemoteSample> = {}) => Object.assign(createRemoteSample(), { x: 2, y: 0, z: 3, vx: 4, vz: 0, ...o });
@@ -28,6 +28,16 @@ describe("a remote's movement juice (spec §5.6)", () => {
     expect(thrown("land", 1, {}, null, "hop")).toBe(0);
     expect(thrown("furl", 0, {}, null, "land")).toBe(0);
     expect(thrown("land", 0.1, {}, "furl")).toBeGreaterThan(0); // out of a glide: the leaf's soft set-down
+  });
+
+  it("finds a move's neighbours past the clips journaled between them (a landing's hop, a furl before a landing)", () => {
+    const s = createRemoteSample();
+    (["land", "play", "ghost", "hop"] as const).forEach((kind, i) => Object.assign(s.events[i], { kind, value: kind === "play" ? "Jump" : 0, t: 0 }));
+    s.eventCount = 4;
+    expect(moveAt(s, 1, 1)).toBe("hop");
+    expect(moveAt(s, 2, -1)).toBe("land");
+    expect(moveAt(s, 4, 1)).toBeNull();
+    expect(moveAt(s, -1, -1)).toBeNull();
   });
 
   it("leaves the rest of the kit's moves alone", () => {
