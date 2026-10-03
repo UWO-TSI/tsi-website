@@ -28,7 +28,9 @@ const P = "/assets/game/props/", E = "/assets/game/enemies/";
 const ramps = (sharedRamps.table ??= new RampTable());
 let pack: THREE.Texture | null = null;
 const frameOf = (s: CombatSprite, f: number) => COMBAT_PACK[s].row * COMBAT_PACK_COLS + (f % 8);
-const INK: Ramp = ["#d8ffe6", "#2f7a54", "#0b1410"], TONGUE: Ramp = ["#ffe6ee", "#d86a8a", "#3a1020"], VINE: Ramp = ["#f4ffe2", "#6fae3e", "#1d3010"];
+// The streaks add light, so the ritual's rune and ward and the vine glow pale (dark inks and greens added nothing on the
+// grass and couldn't be seen).
+const RUNE: Ramp = ["#ffffff", "#a8ffe0", "#2a9a74"], TONGUE: Ramp = ["#ffe6ee", "#d86a8a", "#3a1020"], VINE: Ramp = ["#ffffff", "#e2ffb8", "#7cc04a"];
 const ease = (u: number) => u * u * (3 - 2 * u);
 
 /** Streaks: up to 48 quads in the combat particle layout, written each frame (links, zaps, tongues, the vine, the ritual's rune). */
@@ -139,12 +141,12 @@ void main() { float r = length(vP), a = atan(vP.y, vP.x); float edge = 0.82 + 0.
     for (const z of st.zaps) streak(z.from.x, z.from.z, z.to.x, z.to.z, 0.9, 0.5, "bolt", 1 - z.t / 0.18);
     for (const g of bs.tongues) streak(g.from.x, g.from.z, g.to.x, g.to.z, 0.45, 0.22, "beam", 1 - g.t / 0.25, ramps.row(TONGUE));
     const te = f.tether, me = player.current;
-    if (te && me) streak(me.x, me.z, te.x, te.z, 1.3, 0.16, "beam", 0.95, ramps.row(VINE));
+    if (te && me) streak(me.x, me.z, te.x, te.z, 1.3, 0.28, "beam", 0.95, ramps.row(VINE));
     // The ritual circle (a Summoner with a beast still to tame): its rune turning on the ground, the ward during a ritual.
     const tamed = v && beastKit(v.kit) ? tamedList(rt) : null, offer = tamed ? nextToTame(tamed) : null;
     if (offer) {
-      s.put(RITUAL.x, ground(RITUAL.x, RITUAL.z) + 0.05, RITUAL.z, RITUAL.r * 2.2, RITUAL.r * 2.2, frameOf("rune", 3), 0.55 + 0.2 * Math.sin(t * 2), ramps.row(INK), 1, 1, 0, t * 0.3);
-      if (bs.ritual) for (let k = 0; k < 24; k++) { const a = (k / 24) * Math.PI * 2 + t * 0.4; s.put(RITUAL.x + Math.cos(a) * RITUAL.ward, ground(RITUAL.x, RITUAL.z) + 0.25, RITUAL.z + Math.sin(a) * RITUAL.ward, 0.5, 0.5, frameOf("shadow", Math.floor(t * 10) + k), 0.5, ramps.row(INK), 0); }
+      s.put(RITUAL.x, ground(RITUAL.x, RITUAL.z) + 0.15, RITUAL.z, RITUAL.r * 2.2, RITUAL.r * 2.2, frameOf("rune", 3), 0.55 + 0.2 * Math.sin(t * 2), ramps.row(RUNE), 1, 1, 0, t * 0.3);
+      if (bs.ritual) for (let k = 0; k < 24; k++) { const a = (k / 24) * Math.PI * 2 + t * 0.4; s.put(RITUAL.x + Math.cos(a) * RITUAL.ward, ground(RITUAL.x, RITUAL.z) + 0.25, RITUAL.z + Math.sin(a) * RITUAL.ward, 0.5, 0.5, frameOf("shadow", Math.floor(t * 10) + k), 0.5, ramps.row(RUNE), 0); }
     }
     s.end();
     if (ritualLabel.current) {
