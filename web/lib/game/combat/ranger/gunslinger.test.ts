@@ -4,6 +4,7 @@ import { GUNSLINGER } from "@/lib/combat/rangerKits";
 import { ULT } from "@/lib/combat/ult";
 import { attack } from "../actions";
 import { classKey, classReload, pressUlt, stepClass } from "../classRuntime";
+import { sustainedUlt } from "../abilities";
 
 describe("Gunslinger: the cylinder, active reload, Last Round, the keys, Russian Roulette", () => {
   it("mastery raises reload speed (its stat direction): ×1 to ×1.4", () => {
@@ -123,5 +124,11 @@ describe("Gunslinger: the cylinder, active reload, Last Round, the keys, Russian
     const late = setup(GUNSLINGER);
     late.rt.v2!.meter = ULT.max; pressUlt(late.rt); frame(late.rt, Math.ceil(10.6 / DT));
     expect(late.rt.v2!.live.loaded).toEqual([]); // the window closed
+  });
+  it("Russian Roulette's window only waits for the warhead: the rounds are the ult's, your other hits stay yours", () => {
+    const { rt } = setup(GUNSLINGER);
+    rt.v2!.meter = ULT.max; pressUlt(rt); frame(rt, 18);
+    expect(rt.v2!.cast?.fired).toBe(true);
+    expect(sustainedUlt(rt)).toBe(false);
   });
 });

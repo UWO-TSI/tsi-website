@@ -2,7 +2,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { classKit, kitAt } from "@/lib/combat/classes";
-import { RANGER_KITS, RANGER_SKINS } from "@/lib/combat/rangerKits";
+import { MARKSMAN, RANGER_KITS, RANGER_SKINS } from "@/lib/combat/rangerKits";
+import { signaturePaint } from "./primitives";
+import { combat, createRuntime } from "./runtime";
+import { setup } from "./ranger/rig";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { SUBCLASS_FOR_TYPE } from "@/lib/oracle/subclass";
 import { WEAPONS } from "./data";
@@ -87,6 +90,16 @@ describe("the Ranger kits: shape and invariants", () => {
       for (const name of Object.keys(k.look.trim ?? {})) expect(has.has(name), `${k.key} trim ${name}`).toBe(true);
       for (const [key, set] of Object.entries(RANGER_SKINS)) if (key.startsWith(`${k.key}:`)) for (const name of Object.keys(set)) expect(has.has(name), `${key} ${name}`).toBe(true);
     }
+  });
+  it("the mastery trim and a bought skin paint the weapon in hand (signaturePaint)", () => {
+    const { rt } = setup(MARKSMAN, 20);
+    combat.rt = rt;
+    rt.v2!.skin = "mastery:trim";
+    expect(signaturePaint()!.M_Fit.color).toBe(MARKSMAN.look.trim!.M_Fit);
+    expect(signaturePaint()!.M_Glow.intensity).toBe(2); // its glow at 19
+    rt.v2!.skin = "fletcher";
+    expect(signaturePaint()!.M_Wrap.color).toBe(RANGER_SKINS["marksman:fletcher"].M_Wrap);
+    combat.rt = createRuntime();
   });
   it("every icon the kits name is on disk", () => {
     const pub = join(__dirname, "../../../public");

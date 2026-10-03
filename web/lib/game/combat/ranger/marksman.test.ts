@@ -3,7 +3,8 @@ import { DT, ME, never, dummy, setup, frame, holdFire, tap, dealt } from "./rig"
 import { MARKSMAN } from "@/lib/combat/rangerKits";
 import { ULT } from "@/lib/combat/ult";
 import { attack, hurtPlayer } from "../actions";
-import { fireRate } from "../classFire";
+import { addZone, fireRate } from "../classFire";
+import { sustainedUlt } from "../abilities";
 import { classKey, pressUlt, stepClass } from "../classRuntime";
 import { stepCombat } from "../encounter";
 
@@ -90,6 +91,29 @@ describe("Marksman: Focus, arrow drop, the three arrows, Back Hop, Thousand Arro
     expect(rt.tally.ult).toBeGreaterThan(0);
     expect(rt.v2!.cast?.last).toBe(true); // the finisher landed
     expect(dealt(e)).toBeGreaterThan(0);
+  });
+  it("Thousand Arrows is a sustained ult: the burns its arrows light in the window are the ult's", () => {
+    const { rt } = setup(MARKSMAN);
+    dummy(rt, 0, 6);
+    rt.v2!.meter = ULT.max; pressUlt(rt); frame(rt, Math.ceil(0.5 / DT));
+    expect(sustainedUlt(rt)).toBe(true);
+    frame(rt, Math.ceil(6 / DT));
+    expect(sustainedUlt(rt)).toBe(false); // the finisher closed it
+  });
+  it("burning ground is a shared zone whose ticks don't hold the chase (steady); one at the same spot is refreshed, not doubled", () => {
+    const tick = (steady: boolean) => {
+      const { rt } = setup(MARKSMAN), e = dummy(rt, 0, 3);
+      addZone(rt, { x: 0, z: 3 }, { radius: 1.1, life: 2, power: 0.18 });
+      addZone(rt, { x: 0.4, z: 3 }, { radius: 1.1, life: 2, power: 0.18 });
+      expect(rt.field.zones.length).toBe(1);
+      rt.field.zones[0].steady = steady;
+      frame(rt);
+      return { hit: dealt(e), stun: e.stun };
+    };
+    const s = tick(true), plain = tick(false);
+    expect(s.hit).toBeGreaterThan(0);
+    expect(s.stun).toBe(0);
+    expect(plain.stun).toBeGreaterThan(0);
   });
   it("mastery raises attack speed (its stat direction): ×1.15 at 20, it fires that much faster", () => {
     const a = setup(MARKSMAN, 1), b = setup(MARKSMAN, 20);
