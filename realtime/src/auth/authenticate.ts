@@ -1,6 +1,9 @@
 // The join gate (specs/multiplayer.md §2.1, §2.3 M1): origin, token, card, removal.
-// Pure of Colyseus so it can be tested on its own; the room maps each refusal to a
-// close code from the shared contract.
+// Pure of Colyseus so it can be tested on its own. Two phases, both run in the
+// room's static onAuth (the matchmake POST, before any seat is reserved):
+// - checkToken: the page and the token. Refused here as HTTP 403/401.
+// - admit: the card and removal. Refusals here travel as 41xx closes from onJoin,
+//   since an HTTP status can't carry them (the room keeps them on the auth data).
 import { CardError, type LoadCard, type PlayerCard } from "./card";
 import type { OriginPolicy } from "./origin";
 import { AuthError, type Identity, type Verify } from "./verify";
@@ -13,7 +16,7 @@ export type AuthServices = {
 };
 
 export type Refusal =
-  /** Token missing, invalid, expired, anonymous, or a dev token where none are allowed. */
+  /** Token missing, invalid, expired, anonymous, a dev token where none are allowed, or no profile. */
   | "auth"
   /** A browser page that isn't on the allowed list. */
   | "origin"
@@ -31,21 +34,19 @@ export class JoinRefused extends Error {
 
 export type Authenticated = { identity: Identity; card: PlayerCard };
 
-export async function authenticate(
-  services: AuthServices,
-  token: string | null | undefined,
-  origin: string | null | undefined,
-): Promise<Authenticated> {
+/** The page and the token. Throws JoinRefused "origin" or "auth". */
+export async function checkToken(services: AuthServices, token: string | null | undefined, origin: string | null | undefined): Promise<Identity> {
   if (!services.origins.allows(origin)) throw new JoinRefused("origin", "origin not allowed");
-
-  let identity: Identity;
   try {
-    identity = await services.verify(token);
+    return await services.verify(token);
   } catch (e) {
     if (e instanceof AuthError) throw new JoinRefused("auth", e.reason);
     throw e;
   }
+}
 
+/** The card, and whether its owner may come in. Throws JoinRefused "auth" (no profile), "card" or "removed". */
+export async function admit(services: AuthServices, identity: Identity): Promise<PlayerCard> {
   let card: PlayerCard;
   try {
     card = await services.loadCard(identity);
@@ -56,9 +57,18 @@ export async function authenticate(
     }
     throw e;
   }
-
   if (isRemoved(card, (services.now ?? Date.now)())) throw new JoinRefused("removed", "removed_until");
-  return { identity, card };
+  return card;
+}
+
+/** Both phases in order. */
+export async function authenticate(
+  services: AuthServices,
+  token: string | null | undefined,
+  origin: string | null | undefined,
+): Promise<Authenticated> {
+  const identity = await checkToken(services, token, origin);
+  return { identity, card: await admit(services, identity) };
 }
 
 export function isRemoved(card: PlayerCard, now: number): boolean {
