@@ -42,11 +42,13 @@ export const corpseLife = (e: Enemy) => longer.get(e) ?? CORPSE_LIFE;
 export const keepCorpse = (e: Enemy, seconds: number) => { longer.set(e, seconds); };
 /** A fallen enemy that can still be raised or blown up. */
 export const corpse = (e: Enemy) => e.state === "dead" && !e.raised && !e.summoned && e.deadFor < corpseLife(e) && e.type.kind !== "boss";
-const nearestTo = <T extends Vec>(list: T[], at: Vec, within = Infinity) => {
+/** The nearest of `list` to `at` inside `within` that passes `ok` (no list built: the tick calls it every frame). */
+const nearestTo = <T extends Vec>(list: readonly T[], at: Vec, within = Infinity, ok: (x: T) => boolean = () => true) => {
   let best: T | null = null, bd = within;
-  for (const x of list) { const d = dist(x, at); if (d < bd) { bd = d; best = x; } }
+  for (const x of list) { if (!ok(x)) continue; const d = dist(x, at); if (d < bd) { bd = d; best = x; } }
   return best;
 };
+const isClone = (u: Unit) => u.def.kind === "clone";
 /** Minions that are yours (a weapon's wisps and an ult's free army aside, they cost capacity). */
 const yours = (rt: CombatRuntime) => rt.units.filter(u => u.def.kind === "minion" && u.source !== "weapon");
 
@@ -228,8 +230,7 @@ export function lure(rt: CombatRuntime, e: Enemy): Vec | null {
   if (f.stealth > 0) return { x: e.spawnX, z: e.spawnZ };
   const share = rt.v2?.passive.kind === "decoy_share" ? rt.v2.passive.value : 0;
   if (!share) return null;
-  const clones = rt.units.filter(u => u.def.kind === "clone");
-  return clones.length && fooled(e, share, rt.v2!.clock) ? nearestTo(clones, e) : null;
+  return rt.units.some(isClone) && fooled(e, share, rt.v2!.clock) ? nearestTo(rt.units, e, Infinity, isClone) : null;
 }
 
 /** Stealth ends when you attack or cast; the bonus waits for your first hit for a moment. */
@@ -315,7 +316,7 @@ export function stepField(rt: CombatRuntime, me: Vec, dt: number, random: () => 
     if ((z.life -= dt) <= 0) { f.zones.splice(i, 1); continue; }
     if (z.follow) { z.x = me.x; z.z = me.z; }
     if (z.seek) {
-      const e = nearestTo(rt.enemies.filter(alive), z, 9);
+      const e = nearestTo(rt.enemies, z, 9, alive);
       if (e) { const d = dist(e, z) || 1, st = Math.min(d, z.seek * dt); z.x += ((e.x - z.x) / d) * st; z.z += ((e.z - z.z) / d) * st; }
     }
     if (z.pull) for (const e of rt.enemies) if (alive(e) && inZone(z, e, e.type.radius)) {
@@ -384,11 +385,12 @@ export function stepField(rt: CombatRuntime, me: Vec, dt: number, random: () => 
   for (const u of rt.units) if (u.def.kind === "clone") stepClone(rt, u, me, dt, random);
 }
 
-/** The enemy your minions go for now (a charge order), and how far from you they guard (a recall). */
-export function orderOf(rt: CombatRuntime): { target: Enemy | null; reach: number; speed: number } {
-  const o = rt.field.order;
-  if (o.mode === "charge") { const e = rt.enemies.find(x => x.id === o.target && alive(x)); if (e) return { target: e, reach: 20, speed: 1.4 }; }
-  return { target: null, reach: o.mode === "guard" ? 5 : 12, speed: 1 };
+/** The enemy your minions go for now (a charge order), and how far from you they guard (a recall). One scratch result: read it before the next call. */
+const ORDER = { target: null as Enemy | null, reach: 12, speed: 1 };
+export function orderOf(rt: CombatRuntime): typeof ORDER {
+  const o = rt.field.order, e = o.mode === "charge" ? rt.enemies.find(x => x.id === o.target && alive(x)) ?? null : null;
+  ORDER.target = e; ORDER.reach = e ? 20 : o.mode === "guard" ? 5 : 12; ORDER.speed = e ? 1.4 : 1;
+  return ORDER;
 }
 
 /** A unit's life ran out: a bursting one goes off (an army marching to the end). */
@@ -405,7 +407,7 @@ export function expire(rt: CombatRuntime, u: Unit, random: () => number) {
 function stepClone(rt: CombatRuntime, u: Unit, me: Vec, dt: number, random: () => number) {
   const ai = (u.ai ??= { vx: 0, vz: 0, side: random() < 0.5 ? 1 : -1, dash: 1 + random() * 2, skill: 3 + random() * 3, ward: 0, facing: 0, clip: null, mimic: 0 });
   const range = u.def.range ?? 8, speed = u.def.speed ?? 7.4, m = rt.v2?.mastery ?? 1;
-  const foes = rt.enemies.filter(e => alive(e) && dist(e, me) < 14), target = nearestTo(foes, u);
+  const target = nearestTo(rt.enemies, u, Infinity, e => alive(e) && dist(e, me) < 14);
   let gx = 0, gz = 0;
   if (target) {
     const d = dist(target, u) || 1, ux = (target.x - u.x) / d, uz = (target.z - u.z) / d, want = range * 0.6;
