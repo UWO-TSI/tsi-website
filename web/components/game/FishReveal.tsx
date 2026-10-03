@@ -209,7 +209,8 @@ export default function FishReveal({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "rgba(8, 10, 16, 0.82)",
+        // The member world (.gui) lays it on warm paper; the applicant island keeps the dark gacha backdrop.
+        background: "var(--gui-reveal-backdrop, rgba(8, 10, 16, 0.82))",
         backdropFilter: "blur(6px)",
         WebkitBackdropFilter: "blur(6px)",
         // Sol's-RNG monochrome moment: the sea-king crack drains the color
@@ -347,17 +348,17 @@ export default function FishReveal({
             fontFamily: "var(--font-highlight, sans-serif)",
           }}
         >
-          <div style={{ fontSize: 26, fontWeight: 800, color: "#FFFDF5", textShadow: "0 2px 12px rgba(0,0,0,0.6)" }}>
+          <div style={{ fontSize: 26, fontWeight: 800, color: "var(--gui-reveal-ink, #FFFDF5)", textShadow: "var(--gui-reveal-shadow, 0 2px 12px rgba(0,0,0,0.6))" }}>
             {fish.name}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span
               style={{
-                fontSize: 11,
+                fontSize: "max(11px, var(--gui-min-text, 0px))",
                 fontWeight: 700,
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
-                color: "#FFFDF5",
+                color: "var(--gui-reveal-chip-ink, #FFFDF5)",
                 borderRadius: 999,
                 padding: "4px 11px",
                 ...(holo
@@ -368,14 +369,14 @@ export default function FishReveal({
                       textShadow: "0 1px 2px rgba(20, 40, 60, 0.45)",
                       boxShadow: "0 0 14px rgba(122, 231, 255, 0.8)",
                     }
-                  : { background: meta.color }),
+                  : { background: `var(--gui-reveal-chip-bg, ${meta.color})`, boxShadow: `inset 0 0 0 var(--gui-reveal-chip-ring, 0px) ${meta.color}` }),
               }}
             >
               {meta.label}
             </span>
             <span
               style={{
-                fontSize: 11,
+                fontSize: "max(11px, var(--gui-min-text, 0px))",
                 fontWeight: 700,
                 letterSpacing: "0.06em",
                 color: "#1A1410",
@@ -386,13 +387,13 @@ export default function FishReveal({
             >
               NEW!
             </span>
-            {sizeCm !== null && <span style={{ fontSize: 13, color: "rgba(255, 253, 245, 0.85)", fontWeight: 600 }}>{sizeCm} cm</span>}
+            {sizeCm !== null && <span style={{ fontSize: 13, color: "var(--gui-reveal-soft, rgba(255, 253, 245, 0.85))", fontWeight: 600 }}>{sizeCm} cm</span>}
             <span
               style={{
-                fontSize: 11,
-                fontFamily: "'IBM Plex Mono', monospace",
-                color: "rgba(255,255,255,0.65)",
-                background: "rgba(255,255,255,0.1)",
+                fontSize: "max(11px, var(--gui-min-text, 0px))",
+                fontFamily: "var(--gui-mono, 'IBM Plex Mono', monospace)",
+                color: "var(--gui-reveal-soft, rgba(255,255,255,0.65))",
+                background: "var(--gui-reveal-odds-bg, rgba(255,255,255,0.1))",
                 borderRadius: 999,
                 padding: "4px 10px",
               }}
@@ -400,8 +401,8 @@ export default function FishReveal({
               Base odds · 1 in {odds}
             </span>
           </div>
-          {oneLinerFor(fish.key) && <p style={{ margin: "10px 0 0", fontSize: 13, fontStyle: "italic", color: "rgba(255, 253, 245, 0.85)", textAlign: "center" }}>“{oneLinerFor(fish.key)}”</p>}
-          {recipe && <p style={{ margin: "8px 0 0", fontSize: 13, fontWeight: 700, color: "#FFFDF5", textAlign: "center" }} data-testid="reveal-recipe">You learned a recipe: {recipe}</p>}
+          {oneLinerFor(fish.key) && <p style={{ margin: "10px 0 0", fontSize: 13, fontStyle: "italic", color: "var(--gui-reveal-soft, rgba(255, 253, 245, 0.85))", textAlign: "center" }}>“{oneLinerFor(fish.key)}”</p>}
+          {recipe && <p style={{ margin: "8px 0 0", fontSize: 13, fontWeight: 700, color: "var(--gui-reveal-ink, #FFFDF5)", textAlign: "center" }} data-testid="reveal-recipe">You learned a recipe: {recipe}</p>}
         </div>
       </div>
 
@@ -416,11 +417,12 @@ export default function FishReveal({
             transform: "translateX(-50%)",
             padding: "9px 22px",
             borderRadius: 999,
-            fontFamily: "'IBM Plex Mono', monospace",
+            fontFamily: "var(--gui-mono, 'IBM Plex Mono', monospace)",
             fontSize: 12,
             fontWeight: 700,
             letterSpacing: "0.06em",
             color: "#FFFDF5",
+            textShadow: "0 1px 2px rgba(20, 30, 40, 0.5)",
             background: holo ? HOLO_GRADIENT : `linear-gradient(90deg, ${meta.color}, ${meta.color}CC)`,
             backgroundSize: holo ? "300% 100%" : undefined,
             animation: holo
@@ -434,10 +436,10 @@ export default function FishReveal({
         </div>
       )}
 
-      <button type="button" onClick={finish} aria-label="Close reveal" style={{ position: "absolute", top: 24, right: 24, background: "#FFFDF5", color: "#4A4034", border: "1px solid #E8DFC8", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>
+      <button type="button" onClick={finish} aria-label="Close reveal" style={{ position: "absolute", top: 24, right: 24, background: "#FFFDF5", color: "#4A4034", border: "1px solid #E8DFC8", borderRadius: "var(--gui-reveal-radius, 8px)", padding: "8px 12px", minHeight: "var(--gui-reveal-tap, auto)", fontSize: 12, fontWeight: "var(--gui-reveal-weight, 400)" }}>
         Close · Esc
       </button>
-      <button type="button" onClick={skip} disabled={stage === "flash"} style={{ position: "absolute", bottom: 36, left: "50%", transform: "translateX(-50%)", padding: "10px 18px", borderRadius: 10, border: "1px solid #E8DFC8", background: "#FFFDF5", color: "#4A4034", fontSize: 13, fontWeight: 600 }}>
+      <button type="button" onClick={skip} disabled={stage === "flash"} style={{ position: "absolute", bottom: 36, left: "50%", transform: "translateX(-50%)", padding: "10px 18px", borderRadius: "var(--gui-reveal-radius, 10px)", border: "1px solid #E8DFC8", background: "#FFFDF5", color: "#4A4034", minHeight: "var(--gui-reveal-tap, auto)", fontSize: 13, fontWeight: 600 }}>
         {landed ? "Continue" : "Reveal catch"}
       </button>
 

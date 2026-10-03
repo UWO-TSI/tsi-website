@@ -9,9 +9,10 @@ import {
   Flame,
   Star,
   Check,
-  Coins,
   Zap,
 } from "lucide-react";
+import { Amount } from "@/components/economy/Amount";
+import { Badge, Banner, Button, Card, Empty, Loading, Tabs } from "@/components/gui";
 
 interface Quest {
   id: string;
@@ -39,6 +40,12 @@ const tabIcons: Record<string, any> = {
   daily: Clock,
   weekly: CalendarDays,
   seasonal: Flame,
+};
+
+const tabLabels: Record<(typeof questTabs)[number], string> = {
+  daily: "Daily",
+  weekly: "Weekly",
+  seasonal: "Seasonal",
 };
 
 export default function QuestsPage() {
@@ -118,165 +125,113 @@ export default function QuestsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
-          Loading quests...
-        </p>
+        <Loading label="Pinning up the quests…" />
       </div>
     );
   }
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)] flex items-center gap-2">
-            <Sword size={24} className="text-[var(--color-brand-blue)]" />
-            Quest Board
-          </h1>
-          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
-            Complete quests to earn XP and Tethos Coins
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5 text-sm font-mono">
-            <Zap size={14} className="text-[var(--color-brand-blue)]" />
-            <span className="text-[var(--color-text-muted)]">Active:</span>
-            <span className="text-[var(--color-brand-blue)] font-bold">{activeCount}</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-sm font-mono">
-            <Check size={14} className="text-green-400" />
-            <span className="text-[var(--color-text-muted)]">Done:</span>
-            <span className="text-green-400 font-bold">{completedCount}</span>
+    <div className="flex-1 overflow-y-auto" style={{ padding: "24px 20px 48px" }}>
+      <div style={{ maxWidth: 820, margin: "0 auto" }}>
+        <Banner title="Quest board" icon={<Sword size={26} />} tone="butter">
+          Finish quests to earn XP and Gems.
+        </Banner>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <Tabs
+            label="Quest type"
+            value={tab}
+            onChange={setTab}
+            tabs={questTabs.map((t) => {
+              const Icon = tabIcons[t];
+              return { id: t, label: tabLabels[t], icon: <Icon size={16} aria-hidden /> };
+            })}
+          />
+          <div className="flex items-center gap-2">
+            <Badge tone="info"><Zap size={14} aria-hidden /> {activeCount} active</Badge>
+            <Badge tone="success"><Check size={14} aria-hidden /> {completedCount} done</Badge>
           </div>
         </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1 bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md p-1 mb-6 w-fit">
-        {questTabs.map((t) => {
-          const Icon = tabIcons[t];
-          return (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded text-xs font-mono transition-all capitalize ${
-                tab === t
-                  ? "bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)]"
-                  : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-              }`}
-            >
-              <Icon size={14} />
-              {t}
-            </button>
-          );
-        })}
-      </div>
+        {/* Quest Cards */}
+        <div className="space-y-3">
+          {filteredQuests.map((quest) => {
+            const status = getQuestStatus(quest.id);
+            const isCompleted = status?.status === "completed";
+            const isAccepted = status?.status === "accepted";
 
-      {/* Quest Cards */}
-      <div className="space-y-3">
-        {filteredQuests.map((quest) => {
-          const status = getQuestStatus(quest.id);
-          const isCompleted = status?.status === "completed";
-          const isAccepted = status?.status === "accepted";
+            return (
+              <Card
+                key={quest.id}
+                as="article"
+                tone={isCompleted ? "warm" : isAccepted ? "butter" : "paper"}
+                style={{ padding: "16px 18px" }}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="flex-1" style={{ minWidth: 200 }}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {isCompleted && (
+                        <Check size={18} aria-hidden className="shrink-0" style={{ color: "var(--gui-success)" }} />
+                      )}
+                      <h3
+                        style={{
+                          fontSize: 15,
+                          fontWeight: 800,
+                          color: isCompleted ? "var(--gui-muted)" : "var(--gui-ink-strong)",
+                          textDecoration: isCompleted ? "line-through" : "none",
+                        }}
+                      >
+                        {quest.title}
+                      </h3>
+                      {isAccepted && <Badge tone="info">In progress</Badge>}
+                    </div>
 
-          return (
-            <div
-              key={quest.id}
-              className={`bg-[var(--color-bg-alt)] border rounded-lg p-4 transition-all ${
-                isCompleted
-                  ? "border-[var(--glass-border)] opacity-60"
-                  : isAccepted
-                  ? "border-[var(--color-brand-blue)]/30 shadow-[0_0_16px_rgba(0,47,167,0.12)]"
-                  : "border-[var(--glass-border)] hover:border-[var(--color-brand-blue)]/20"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    {isCompleted && (
-                      <Check size={16} className="text-green-400 shrink-0" />
+                    {quest.description && (
+                      <p className="text-sm mt-1" style={{ color: isCompleted ? "var(--gui-muted)" : "var(--gui-ink-2)" }}>
+                        {quest.description}
+                      </p>
                     )}
-                    <h3
-                      className={`text-sm font-heading font-bold ${
-                        isCompleted
-                          ? "text-[var(--color-text-muted)] line-through"
-                          : "text-[var(--color-text-primary)]"
-                      }`}
-                    >
-                      {quest.title}
-                    </h3>
-                    {isAccepted && (
-                      <span className="text-[0.55rem] font-mono px-1.5 py-0.5 rounded bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)] uppercase">
-                        Active
-                      </span>
+
+                    {/* Rewards */}
+                    {(quest.xp_reward > 0 || quest.tc_reward > 0) && (
+                      <div className="flex flex-wrap items-center gap-3 mt-2.5 text-sm" style={{ color: "var(--gui-ink)", fontWeight: 800 }}>
+                        {quest.xp_reward > 0 && (
+                          <span className="flex items-center gap-1">
+                            <Star size={14} aria-hidden style={{ color: "var(--gui-wood)" }} />
+                            {quest.xp_reward} XP
+                          </span>
+                        )}
+                        {quest.tc_reward > 0 && <Amount n={quest.tc_reward} currency="gems" size={16} />}
+                      </div>
                     )}
                   </div>
 
-                  {quest.description && (
-                    <p
-                      className={`text-xs mt-1 ${
-                        isCompleted
-                          ? "text-[var(--color-text-muted)]"
-                          : "text-[var(--color-text-secondary)]"
-                      }`}
-                    >
-                      {quest.description}
-                    </p>
-                  )}
-
-                  {/* Rewards */}
-                  <div className="flex items-center gap-3 mt-2.5">
-                    {quest.xp_reward > 0 && (
-                      <span className="flex items-center gap-1 text-[0.65rem] font-mono text-[var(--color-brand-blue)]">
-                        <Star size={12} />
-                        {quest.xp_reward} XP
-                      </span>
-                    )}
-                    {quest.tc_reward > 0 && (
-                      <span className="flex items-center gap-1 text-[0.65rem] font-mono text-[var(--color-brand-yellow)]">
-                        <Coins size={12} />
-                        {quest.tc_reward} &#x20AE;
-                      </span>
+                  {/* Action */}
+                  <div className="shrink-0">
+                    {isCompleted ? (
+                      <Badge tone="success">Completed</Badge>
+                    ) : isAccepted ? (
+                      <Button size="sm" onClick={() => completeQuest(quest.id)}>
+                        <Check size={16} aria-hidden />
+                        Mark complete
+                      </Button>
+                    ) : (
+                      <Button size="sm" onClick={() => acceptQuest(quest.id)}>
+                        Accept quest
+                      </Button>
                     )}
                   </div>
                 </div>
+              </Card>
+            );
+          })}
 
-                {/* Action Button */}
-                <div className="shrink-0">
-                  {isCompleted ? (
-                    <span className="text-[0.65rem] font-mono text-green-400 px-3 py-1.5 rounded border border-green-500/20 bg-green-500/5">
-                      Completed
-                    </span>
-                  ) : isAccepted ? (
-                    <button
-                      onClick={() => completeQuest(quest.id)}
-                      className="text-xs font-mono px-3 py-1.5 rounded bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20 transition-colors"
-                    >
-                      Complete
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => acceptQuest(quest.id)}
-                      className="text-xs font-mono px-3 py-1.5 rounded bg-[var(--color-brand-blue)] text-white hover:bg-[var(--color-brand-blue)]/80 transition-colors"
-                    >
-                      Accept Quest
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-
-        {filteredQuests.length === 0 && (
-          <div className="text-center py-12">
-            <Sword size={32} className="text-[var(--color-text-muted)] mx-auto mb-2" />
-            <p className="font-mono text-sm text-[var(--color-text-muted)]">
-              No {tab} quests available right now.
-            </p>
-          </div>
-        )}
+          {filteredQuests.length === 0 && (
+            <Empty icon={<Sword size={32} />} title={`No ${tab} quests right now`}>
+              New ones go up regularly. Check back soon.
+            </Empty>
+          )}
+        </div>
       </div>
     </div>
   );

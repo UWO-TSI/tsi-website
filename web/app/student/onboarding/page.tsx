@@ -123,7 +123,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12" style={{ background: "var(--color-bg-main)" }}>
+    <div className="gui min-h-screen flex flex-col items-center justify-center px-6 py-12" style={{ background: "var(--gui-confetti) var(--color-bg-main)" }}>
       {/* Step Progress */}
       <StepIndicator current={step} total={3} />
 
@@ -154,7 +154,7 @@ export default function OnboardingPage() {
           <div
             role="alert"
             className="mt-4 rounded-lg px-4 py-3 text-sm"
-            style={{ background: "rgba(229, 72, 77, 0.12)", border: "1px solid rgba(229, 72, 77, 0.4)", color: "#E5484D" }}
+            style={{ background: "var(--gui-danger-soft)", color: "var(--gui-danger)", fontWeight: 700 }}
           >
             {saveError}
           </div>
@@ -177,20 +177,20 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
               style={{
-                background: done || active ? "#002fa7" : "transparent",
-                border: done || active ? "2px solid #002fa7" : "2px solid var(--glass-border-soft)",
-                color: done || active ? "#f1ffff" : "var(--color-text-subtle)",
+                background: done || active ? "var(--gui-sage)" : "transparent",
+                border: done || active ? "2px solid var(--gui-sage)" : "2px solid var(--gui-paper-line)",
+                color: done || active ? "var(--gui-paper)" : "var(--color-text-subtle)",
               }}
             >
               {done ? <Check className="w-4 h-4" /> : stepNum}
             </div>
             {i < total - 1 && (
-              <div className="w-10 h-0.5" style={{ background: done ? "#002fa7" : "var(--glass-border-soft)" }} />
+              <div className="w-10 h-0.5" style={{ background: done ? "var(--gui-sage)" : "var(--glass-border-soft)" }} />
             )}
           </div>
         );
       })}
-      <span className="ml-3 text-xs font-mono" style={{ color: "var(--color-text-muted)" }}>Step {current} of {total}</span>
+      <span className="ml-3 text-xs " style={{ color: "var(--color-text-muted)" }}>Step {current} of {total}</span>
     </div>
   );
 }
@@ -199,13 +199,13 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 function WelcomeStep({ onNext }: { onNext: () => void }) {
   return (
     <div className="text-center animate-fadeIn">
-      <div className="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center" style={{ background: "rgba(0, 47, 167, 0.1)" }}>
-        <Sparkles className="w-8 h-8" style={{ color: "#4A7AFF" }} />
+      <div className="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center" style={{ background: "var(--gui-sage-soft)" }}>
+        <Sparkles className="w-8 h-8" style={{ color: "var(--gui-sage)" }} />
       </div>
       <h1 className="text-4xl md:text-5xl font-bold mb-4" style={{ color: "var(--color-text-main)" }}>
         Welcome to Tethos
       </h1>
-      <p className="font-mono text-base italic mb-6" style={{ color: "var(--color-text-muted)" }}>
+      <p className="text-base italic mb-6" style={{ color: "var(--color-text-muted)" }}>
         Technology That Moves People Forward
       </p>
       <p className="text-base mb-10 mx-auto leading-relaxed" style={{ color: "var(--color-text-soft)", maxWidth: 480 }}>
@@ -215,7 +215,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
       <button
         onClick={onNext}
         className="inline-flex items-center gap-2 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02]"
-        style={{ height: 48, padding: "0 28px", background: "#002fa7", color: "#f1ffff" }}
+        style={{ height: 48, padding: "0 28px", background: "var(--gui-sage)", color: "var(--gui-paper)", borderRadius: 999, boxShadow: "0 3px 0 var(--gui-sage-deep)" }}
       >
         Let&apos;s Go <ChevronRight className="w-4 h-4" />
       </button>
@@ -235,11 +235,11 @@ function ProfileStep({ displayName, setDisplayName, bio, setBio, year, setYear, 
   onBack: () => void; onNext: () => void;
 }) {
   const inputStyle = {
-    height: 40,
-    padding: "0 12px",
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid var(--glass-border-soft)",
-    borderRadius: 8,
+    height: 44,
+    padding: "0 14px",
+    background: "var(--gui-paper-hi)",
+    border: "2px solid var(--gui-paper-line)",
+    borderRadius: 16,
     color: "var(--color-text-main)",
     fontSize: 14,
     width: "100%",
@@ -286,9 +286,9 @@ function ProfileStep({ displayName, setDisplayName, bio, setBio, year, setYear, 
                 className="text-xs rounded-full transition-colors"
                 style={{
                   padding: "4px 10px",
-                  background: skills.includes(s) ? "rgba(0, 47, 167, 0.15)" : "rgba(255,255,255,0.04)",
-                  color: skills.includes(s) ? "#4A7AFF" : "var(--color-text-muted)",
-                  border: skills.includes(s) ? "1px solid #002fa7" : "1px solid var(--glass-border-soft)",
+                  background: skills.includes(s) ? "var(--gui-butter)" : "var(--gui-paper-hi)",
+                  color: skills.includes(s) ? "var(--gui-ink-strong)" : "var(--color-text-muted)",
+                  border: skills.includes(s) ? "1.5px solid var(--gui-highlight)" : "1.5px solid var(--gui-paper-edge)",
                 }}
               >
                 {s}
@@ -321,7 +321,7 @@ function ProfileStep({ displayName, setDisplayName, bio, setBio, year, setYear, 
           onClick={onNext}
           disabled={!displayName.trim()}
           className="flex items-center gap-2 rounded-xl text-sm font-semibold transition-all"
-          style={{ height: 40, padding: "0 20px", background: displayName.trim() ? "#002fa7" : "rgba(255,255,255,0.06)", color: displayName.trim() ? "#f1ffff" : "var(--color-text-subtle)" }}
+          style={{ height: 40, padding: "0 20px", background: displayName.trim() ? "var(--gui-sage)" : "var(--gui-paper-deep)", borderRadius: 999, color: displayName.trim() ? "var(--gui-paper)" : "var(--color-text-subtle)" }}
         >
           Continue <ChevronRight className="w-4 h-4" />
         </button>
@@ -337,8 +337,8 @@ function AvatarStep({ onBack, onFinish, saving }: { onBack: () => void; onFinish
       <h2 className="text-xl font-bold mb-2" style={{ color: "var(--color-text-main)" }}>Choose Your Look</h2>
       <p className="text-sm mb-8" style={{ color: "var(--color-text-muted)" }}>Avatar customization is coming soon. For now, you&apos;ll get a default character.</p>
 
-      <div className="w-24 h-24 rounded-full mx-auto mb-8 flex items-center justify-center" style={{ background: "rgba(0, 47, 167, 0.1)", border: "2px solid #002fa7" }}>
-        <User className="w-12 h-12" style={{ color: "#4A7AFF" }} />
+      <div className="w-24 h-24 rounded-full mx-auto mb-8 flex items-center justify-center" style={{ background: "var(--gui-sage-soft)", border: "2px solid var(--gui-sage)" }}>
+        <User className="w-12 h-12" style={{ color: "var(--gui-sage)" }} />
       </div>
 
       <div className="flex items-center justify-between">
@@ -349,7 +349,7 @@ function AvatarStep({ onBack, onFinish, saving }: { onBack: () => void; onFinish
           onClick={onFinish}
           disabled={saving}
           className="flex items-center gap-2 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02]"
-          style={{ height: 44, padding: "0 24px", background: "#002fa7", color: "#f1ffff", opacity: saving ? 0.6 : 1 }}
+          style={{ height: 44, padding: "0 24px", background: "var(--gui-sage)", color: "var(--gui-paper)", borderRadius: 999, boxShadow: "0 3px 0 var(--gui-sage-deep)", opacity: saving ? 0.6 : 1 }}
         >
           {saving ? "Saving..." : "Enter Campus"} <Sparkles className="w-4 h-4" />
         </button>

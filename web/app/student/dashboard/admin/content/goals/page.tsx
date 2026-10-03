@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, History, Pencil, Plus, RefreshCw } from "lucide-react";
-import { AdminGate, Field, inputCls, primaryBtnCls, thCls } from "@/components/portal/ProgressionAdminShared";
+import { ArrowLeft, Flag, History, Pencil, Plus, RefreshCw } from "lucide-react";
+import { AdminGate, buttonLinkCls } from "@/components/portal/ProgressionAdminShared";
+import { Badge, Button, Card, Empty, ErrorNote, Field, Loading, Progress, Select } from "@/components/gui";
 import { newKey } from "@/lib/apiClient";
 import type { GoalProgressView } from "@/lib/progression/types";
 import { createClient } from "@/lib/supabase/client";
@@ -18,6 +19,12 @@ interface GoalRow {
   active: boolean;
 }
 
+const PAGE = "mx-auto w-full max-w-6xl px-5 pt-6 pb-16 sm:px-8";
+const BACK = "mb-2 inline-flex items-center gap-1.5 text-sm font-bold text-[var(--gui-ink-2)] hover:text-[var(--gui-ink-strong)]";
+/** A link in the kit's small sage button. */
+const BUTTON_LINK = buttonLinkCls;
+const TH = "px-4 py-3 text-left text-xs font-extrabold whitespace-nowrap text-[var(--gui-ink-2)]";
+
 export default function AdminGoalsPage() {
   const [rows, setRows] = useState<GoalRow[] | null>(null);
   const [progress, setProgress] = useState<Record<string, GoalProgressView>>({});
@@ -29,7 +36,7 @@ export default function AdminGoalsPage() {
   const load = async () => {
     const { data, error } = await createClient().from("club_goals").select("id, slug, title, goal_type, target_points, position, active").order("position");
     setRows((data ?? []) as GoalRow[]);
-    setError(error ? "club_goals is not available (migration 029 not applied?)" : null);
+    setError(error ? "The club goals table isn’t there yet (is migration 029 applied?)." : null);
     const res = await fetch("/api/progression/goals").then((r) => r.json()).catch(() => null);
     if (res?.ok) setProgress(Object.fromEntries((res.goals as GoalProgressView[]).map((g) => [g.slug, g])));
   };
@@ -40,7 +47,7 @@ export default function AdminGoalsPage() {
 
   const sync = async () => {
     const res = await fetch("/api/progression/goals/sync", { method: "POST" }).then((r) => r.json()).catch(() => null);
-    setMessage(res?.ok ? `Synced: ${res.credited} new credits, ${res.skipped} over cap.` : (res?.error ?? "Sync failed"));
+    setMessage(res?.ok ? `Synced: ${res.credited} new credits, ${res.skipped} over the cap.` : (res?.error ?? "The sync didn’t go through."));
     void load();
   };
 
@@ -55,73 +62,98 @@ export default function AdminGoalsPage() {
     }).then((r) => r.json()).catch(() => null);
     if (res?.ok) {
       setCreditKey(null);
-      setMessage(res.credit.replayed ? "Already logged." : `Logged ${res.credit.credited_points} pts.`);
+      setMessage(res.credit.replayed ? "Already logged." : `Logged ${res.credit.credited_points} points.`);
       void load();
-    } else setMessage(res?.error ?? "Couldn't log that contribution.");
+    } else setMessage(res?.error ?? "Couldn’t log that contribution.");
   };
 
   return (
     <AdminGate>
-      <Link href="/student/dashboard/admin" className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] mb-2">
-        <ArrowLeft size={12} /> Back to Admin
-      </Link>
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">Club Goals</h1>
-          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">Server-wide goals · club_goals · real activity credits automatically</p>
+      <div className={PAGE}>
+        <Link href="/student/dashboard/admin" className={BACK}>
+          <ArrowLeft size={16} aria-hidden /> Back to admin
+        </Link>
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-extrabold text-[var(--gui-ink-strong)]">Club goals</h1>
+            <p className="mt-1 text-sm text-[var(--gui-muted)]">Goals the whole club works toward. Real activity counts toward them on its own.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="quiet" onClick={sync}><RefreshCw size={16} aria-hidden /> Sync check-ins</Button>
+            <Link href="/student/dashboard/admin/content/goals/new" className={BUTTON_LINK} data-size="sm"><Plus size={16} aria-hidden /> New goal</Link>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <button onClick={sync} className="inline-flex items-center gap-2 px-4 py-2 border border-[var(--glass-border)] text-[var(--color-text-primary)] font-mono text-xs uppercase tracking-wider rounded-md"><RefreshCw size={14} /> Sync check-ins</button>
-          <Link href="/student/dashboard/admin/content/goals/new" className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] font-mono text-xs uppercase tracking-wider rounded-md"><Plus size={14} /> New Goal</Link>
-        </div>
-      </div>
-      {error ? <p className="mb-4 text-xs font-mono text-red-400">{error}</p> : null}
-      {message ? <p className="mb-4 text-xs font-mono text-[var(--color-text-soft)]">{message}</p> : null}
-      {rows === null ? (
-        <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">Loading goals...</p>
-      ) : (
-        <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-x-auto mb-8">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--glass-border)]">{["#", "Goal", "Type", "Progress", "Members", "Active", ""].map((h) => <th key={h} className={thCls}>{h}</th>)}</tr>
-            </thead>
-            <tbody>
-              {rows.map((g) => {
-                const p = progress[g.slug];
-                return (
-                  <tr key={g.id} className="border-b border-[var(--glass-border)]/40 last:border-b-0">
-                    <td className="px-4 py-3 font-mono text-xs">{g.position}</td>
-                    <td className="px-4 py-3 text-[var(--color-text-primary)]">{g.title}<div className="font-mono text-[0.65rem] text-[var(--color-accent-cyan)]">{g.slug}</div></td>
-                    <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">{g.goal_type}</td>
-                    <td className="px-4 py-3 font-mono text-xs">{p ? `${p.points.toLocaleString()} / ${g.target_points.toLocaleString()} (${p.percent}%)${p.completed ? " ✓" : p.locked_by ? " · up next" : ""}` : `— / ${g.target_points.toLocaleString()}`}</td>
-                    <td className="px-4 py-3 font-mono text-xs">{p?.contributors ?? "—"}</td>
-                    <td className="px-4 py-3 font-mono text-xs">{g.active ? "active" : "inactive"}</td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <Link href={`/student/dashboard/admin/content/goals/${g.id}/edit`} className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-accent-cyan)] hover:underline mr-3"><Pencil size={12} /> Edit</Link>
-                      <Link href={`/student/dashboard/admin/content/goals/${g.id}/history`} className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:underline"><History size={12} /> History</Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6 space-y-4 max-w-xl">
-        <h2 className="font-heading font-bold text-[var(--color-text-primary)]">Log a contribution</h2>
-        <p className="text-xs font-mono text-[var(--color-text-muted)]">For real club work that is not a QR check-in or bounty. Weighted by the goal&apos;s admin weight; not capped.</p>
-        <Field label="Goal">
-          <select className={inputCls} value={credit.goal} onChange={(e) => { setCredit({ ...credit, goal: e.target.value }); setCreditKey(null); }}>
-            <option value="">Pick a goal…</option>
-            {(rows ?? []).map((g) => <option key={g.slug} value={g.slug}>{g.title}</option>)}
-          </select>
-        </Field>
-        <Field label="Member ID" hint="Profile UUID (from the Members admin page)">
-          <input className={inputCls} value={credit.member} onChange={(e) => { setCredit({ ...credit, member: e.target.value }); setCreditKey(null); }} spellCheck={false} />
-        </Field>
-        <Field label="Amount"><input className={inputCls} type="number" min={1} max={5000} value={credit.points} onChange={(e) => { setCredit({ ...credit, points: Number(e.target.value) }); setCreditKey(null); }} /></Field>
-        <Field label="Note"><input className={inputCls} maxLength={200} value={credit.note} onChange={(e) => setCredit({ ...credit, note: e.target.value })} /></Field>
-        <button className={primaryBtnCls} disabled={!credit.goal || !credit.member.trim() || !(credit.points > 0)} onClick={logCredit}>Log contribution</button>
+        {error ? <ErrorNote className="mb-4">{error}</ErrorNote> : null}
+        {message ? <p role="status" className="mb-4 rounded-2xl bg-[var(--gui-paper-warm)] px-4 py-2.5 text-sm font-bold text-[var(--gui-ink)]">{message}</p> : null}
+        {rows === null ? (
+          <Loading label="Getting the goals…" />
+        ) : rows.length === 0 ? (
+          error ? null : (
+            <Empty icon={<Flag size={32} />} title="No club goals yet" className="mb-8">
+              Add one and the whole club can work toward it.
+            </Empty>
+          )
+        ) : (
+          <Card style={{ padding: 0 }} className="mb-8 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-[var(--gui-paper-warm)]">
+                  {["#", "Goal", "Type", "Progress", "Members", "Status"].map((h) => <th key={h} className={TH}>{h}</th>)}
+                  <th className={TH}><span className="sr-only">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((g) => {
+                  const p = progress[g.slug];
+                  return (
+                    <tr key={g.id} className="border-t-2 border-dashed border-[var(--gui-paper-edge)]">
+                      <td className="px-4 py-3 text-[var(--gui-ink-2)]">{g.position}</td>
+                      <td className="px-4 py-3">
+                        <span className="font-extrabold text-[var(--gui-ink-strong)]">{g.title}</span>
+                        <div className="text-xs text-[var(--gui-muted)]">{g.slug}</div>
+                      </td>
+                      <td className="px-4 py-3 text-[var(--gui-ink-2)]">{g.goal_type}</td>
+                      <td className="min-w-[13rem] px-4 py-3">
+                        {p ? (
+                          <div className="grid gap-1.5">
+                            <div className="flex flex-wrap items-center gap-2 text-[var(--gui-ink)]">
+                              <span>{p.points.toLocaleString()} of {g.target_points.toLocaleString()} ({p.percent}%)</span>
+                              {p.completed ? <Badge tone="success">Done</Badge> : p.locked_by ? <Badge tone="info">Up next</Badge> : null}
+                            </div>
+                            <Progress value={p.points} max={g.target_points} label={`${g.title} progress`} />
+                          </div>
+                        ) : (
+                          <span className="text-[var(--gui-ink-2)]">Target {g.target_points.toLocaleString()}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-[var(--gui-ink-2)]">{p?.contributors ?? "—"}</td>
+                      <td className="px-4 py-3">{g.active ? <Badge tone="success">Active</Badge> : <Badge>Inactive</Badge>}</td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <Link href={`/student/dashboard/admin/content/goals/${g.id}/edit`} className="mr-3 inline-flex items-center gap-1 font-bold text-[var(--gui-sage)] hover:underline"><Pencil size={14} aria-hidden /> Edit</Link>
+                        <Link href={`/student/dashboard/admin/content/goals/${g.id}/history`} className="inline-flex items-center gap-1 font-bold text-[var(--gui-ink-2)] hover:underline"><History size={14} aria-hidden /> History</Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </Card>
+        )}
+        <Card as="section" className="max-w-xl space-y-4" aria-labelledby="log-contribution">
+          <h2 id="log-contribution" className="text-base font-extrabold text-[var(--gui-ink-strong)]">Log a contribution</h2>
+          <p className="text-sm text-[var(--gui-ink-2)]">For real club work that isn’t a QR check-in or a bounty. It’s weighted by the goal’s admin weight and isn’t capped.</p>
+          <label className="grid gap-2 text-base font-bold text-[var(--gui-ink)]">
+            Goal
+            <Select className="w-full" value={credit.goal} onChange={(e) => { setCredit({ ...credit, goal: e.target.value }); setCreditKey(null); }}>
+              <option value="">Pick a goal…</option>
+              {(rows ?? []).map((g) => <option key={g.slug} value={g.slug}>{g.title}</option>)}
+            </Select>
+          </label>
+          <Field label="Member ID" hint="Their profile ID, from the Members page." value={credit.member} onChange={(e) => { setCredit({ ...credit, member: e.target.value }); setCreditKey(null); }} spellCheck={false} />
+          <Field label="Points" type="number" min={1} max={5000} value={credit.points} onChange={(e) => { setCredit({ ...credit, points: Number(e.target.value) }); setCreditKey(null); }} />
+          <Field label="Note" hint="Optional" maxLength={200} value={credit.note} onChange={(e) => setCredit({ ...credit, note: e.target.value })} />
+          <Button size="sm" disabled={!credit.goal || !credit.member.trim() || !(credit.points > 0)} onClick={logCredit}>Log contribution</Button>
+        </Card>
       </div>
     </AdminGate>
   );

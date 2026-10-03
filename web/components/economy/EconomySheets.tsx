@@ -6,8 +6,10 @@
  * as play coins or Gems only (their icons, components/economy/Amount); nothing is ever expressed as money.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Backpack, ReceiptText, ShoppingBasket, Store } from "lucide-react";
 import { COINS } from "@/lib/economy";
-import { shopIcon } from "@/lib/icons/keys";
+import { iconUrl, shopIcon } from "@/lib/icons/keys";
+import { Badge, Button, Empty, ErrorNote, Loading, Tabs } from "@/components/gui";
 import { Amount } from "./Amount";
 import { ownedCounts } from "@/lib/wallet/rules";
 import type { InventoryView, SellEntry, ShopEntry, ShopView, WalletView } from "@/lib/wallet/service";
@@ -90,23 +92,20 @@ export function ShopBody({ transport = httpEconomyTransport, initialTab = "tools
     }
   };
 
-  if (!data) return <p className={p.empty}>{error ?? "Opening the shop…"}</p>;
+  if (!data) return error ? <ErrorNote onRetry={() => void reload()}>{error}</ErrorNote> : <Loading label="Opening the shop…" />;
   const list = data.tabs[tab];
   return (
     <div>
       <Balances coins={data.coins} gems={data.gems} />
-      <div className={p.tabs} role="tablist" aria-label="Shop sections" style={{ flexWrap: "wrap" }}>
-        {TABS.map(([k, label]) => (
-          <button key={k} role="tab" aria-selected={tab === k} className={p.tab} onClick={() => setTab(k)}>
-            {label}
-            {k === "specials" ? <span className={p.badge}>{data.tabs.specials.length}</span> : null}
-          </button>
-        ))}
-      </div>
+      <Tabs label="Shop sections" value={tab} onChange={setTab} className={s.tabs}
+        tabs={TABS.map(([k, label]) => ({ id: k, label, badge: k === "specials" ? data.tabs.specials.length : undefined }))} />
       {tab === "specials" ? <p className={p.muted} style={{ marginBottom: 8 }}>20% off today. New picks at midnight (Toronto time).</p> : null}
       {tab === "merch" ? <p className={p.muted} style={{ marginBottom: 8 }}>Real TSI merch for Gems. Reserve here, then pick it up at HQ on campus.</p> : null}
       {note ? <p role="status" className={`${p.note} ${p.ok}`}>{note}</p> : null}
-      {error ? <p role="alert" className={`${p.note} ${p.err}`}>{error}</p> : null}
+      {error ? <ErrorNote>{error}</ErrorNote> : null}
+      {list.length === 0 ? <Empty icon={<Store size={32} />} title={tab === "specials" ? "No specials today" : tab === "merch" ? "No merch in stock" : "Nothing on this shelf yet"}>
+        {tab === "specials" ? "New picks go up at midnight, Toronto time." : tab === "merch" ? "New club merch arrives with the next order." : "The shopkeeper restocks with each update."}
+      </Empty> : null}
       <div className={s.grid}>
         {list.map((e) => (
           <article key={e.id} className={s.tile} aria-label={e.name}>
@@ -115,16 +114,16 @@ export function ShopBody({ transport = httpEconomyTransport, initialTab = "tools
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <div className={s.art} aria-hidden><img src={e.sprite_url ?? shopIcon({ slug: e.slug, catalogue_ref: e.catalogue_ref, category: e.category })} alt="" width={56} height={56} /></div>
             <h4>{e.name}</h4>
-            {e.tier ? <span className={s.chip}>{e.tier}</span> : <span className={s.chip}>{e.category}</span>}
+            <Badge tone={e.tier === "premium" ? "gold" : "neutral"} className={s.chip}>{e.tier ?? e.category}</Badge>
             <span className={s.price}>
               {fmt(e.price, e.currency)}
               {e.special ? <span className={s.was}>{e.base_price.toLocaleString()}</span> : null}
             </span>
-            {e.stock !== null ? <span className={p.muted}>{e.stock > 0 ? `${e.stock} left` : "Sold out"}</span> : null}
+            {e.stock !== null ? (e.stock > 0 ? <span className={p.muted}>{e.stock} left</span> : <Badge tone="danger">Sold out</Badge>) : null}
             {e.owned > 0 ? <span className={p.muted}>You own {e.owned}</span> : null}
-            <button className={`${p.btn} ${s.small}`} disabled={!e.can_buy || busy !== null} onClick={() => act(e)}>
-              {busy === e.id ? "…" : e.category === "merch" ? "Reserve" : e.owned > 0 && e.can_buy ? "Buy another" : e.owned > 0 ? "Owned" : "Buy"}
-            </button>
+            <Button size="sm" className={s.buy} variant={e.owned > 0 && !e.can_buy ? "quiet" : "primary"} disabled={!e.can_buy || busy !== null} onClick={() => act(e)}>
+              {busy === e.id ? "One moment…" : e.category === "merch" ? "Reserve" : e.owned > 0 && e.can_buy ? "Buy another" : e.owned > 0 ? "Owned" : "Buy"}
+            </Button>
           </article>
         ))}
       </div>
@@ -173,22 +172,26 @@ export function SellBody({ transport = httpEconomyTransport }: { transport?: Eco
       setBusy(null);
     }
   };
-  if (!data) return <p className={p.empty}>{error ?? "Counting your pockets…"}</p>;
+  if (!data) return error ? <ErrorNote onRetry={() => void reload()}>{error}</ErrorNote> : <Loading label="Counting your pockets…" />;
   return (
     <div>
       <p className={p.muted} style={{ marginBottom: 10 }}>Prices go by rarity. Donate your first of each species to the museum before selling it.</p>
       {earned > 0 ? <p role="status" className={`${p.note} ${p.ok}`}>+{fmt(earned, "coins")} this visit</p> : null}
-      {error ? <p role="alert" className={`${p.note} ${p.err}`}>{error}</p> : null}
-      {data.length === 0 ? <p className={p.empty}>Nothing to sell yet. Go fishing, bug hunting or foraging.</p> : null}
+      {error ? <ErrorNote>{error}</ErrorNote> : null}
+      {data.length === 0 ? <Empty icon={<ShoppingBasket size={32} />} title="Nothing to sell yet">Go fishing, bug hunting or foraging, then come back.</Empty> : null}
       <ul className={s.list}>
         {data.map((e) => (
-          <li key={e.item_key} className={s.row}>
+          <li key={e.item_key} className={s.row} data-icon>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className={s.rowIcon} src={iconUrl(e.item_key)} alt="" width={36} height={36} />
             <span>
               <b>{e.name}</b> ×{e.count}
               <span className={p.muted} style={{ display: "block" }}>{e.rarity} {e.category} · {fmt(e.price_each, "coins")} each</span>
             </span>
-            <button className={`${p.ghost} ${s.small}`} disabled={busy !== null} onClick={() => sellIt(e, 1)}>Sell 1</button>
-            <button className={`${p.btn} ${s.small}`} disabled={busy !== null} onClick={() => sellIt(e, e.count)}>Sell all · {fmt(e.price_each * e.count, "coins")}</button>
+            <span className={s.rowActions}>
+              <Button size="sm" variant="quiet" disabled={busy !== null} onClick={() => sellIt(e, 1)}>Sell 1</Button>
+              <Button size="sm" disabled={busy !== null} onClick={() => sellIt(e, e.count)}>Sell all · {fmt(e.price_each * e.count, "coins")}</Button>
+            </span>
           </li>
         ))}
       </ul>
@@ -212,26 +215,28 @@ export function InventoryBody({ transport = httpEconomyTransport }: { transport?
       setError(errText(err));
     }
   };
-  if (!data) return <p className={p.empty}>{error ?? "Opening your bag…"}</p>;
+  if (!data) return error ? <ErrorNote onRetry={() => void reload()}>{error}</ErrorNote> : <Loading label="Opening your bag…" />;
   const groups = Object.entries(data.groups);
   return (
     <div>
-      {error ? <p role="alert" className={`${p.note} ${p.err}`}>{error}</p> : null}
-      {groups.length === 0 ? <p className={p.empty}>Your bag is empty. The shop is by the plaza.</p> : null}
+      {error ? <ErrorNote>{error}</ErrorNote> : null}
+      {groups.length === 0 ? <Empty icon={<Backpack size={32} />} title="Your bag is empty">The shop is by the plaza.</Empty> : null}
       {groups.map(([g, rows]) => (
         <section key={g} style={{ marginBottom: 12 }}>
           <div className={p.eyebrow}>{GROUP_LABEL[g] ?? g}</div>
           <ul className={s.list}>
             {rows.map((r) => (
-              <li key={r.item.id} className={s.row}>
+              <li key={r.item.id} className={s.row} data-icon>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className={s.rowIcon} src={r.item.sprite_url ?? shopIcon(r.item)} alt="" width={36} height={36} />
                 <span>
                   <b>{r.item.display_name}</b>
                   {r.qty > 1 ? ` ×${r.qty}` : ""}
                   {r.item.slot ? <span className={p.muted} style={{ display: "block" }}>{r.item.slot}</span> : null}
                 </span>
-                {r.equipped ? <span className={s.chip}>Equipped</span> : <span />}
+                {r.equipped ? <Badge tone="sage">Equipped</Badge> : <span />}
                 {r.item.slot ? (
-                  <button className={`${r.equipped ? p.ghost : p.btn} ${s.small}`} onClick={() => toggle(r.item.id, !r.equipped)}>{r.equipped ? "Unequip" : "Equip"}</button>
+                  <Button size="sm" variant={r.equipped ? "quiet" : "primary"} onClick={() => toggle(r.item.id, !r.equipped)}>{r.equipped ? "Unequip" : "Equip"}</Button>
                 ) : (
                   <span className={p.muted}>{USE_HINT[g] ?? ""}</span>
                 )}
@@ -260,41 +265,43 @@ export function WalletBody({ transport = httpEconomyTransport }: { transport?: E
   const claim = async () => {
     try {
       const r = await transport.dailyGift();
-      setGift(r.claimed ? `+${r.coins.toLocaleString()} ${COINS.name} daily gift` : "Already claimed today. Back tomorrow.");
+      setGift(r.claimed ? `+${r.coins.toLocaleString()} ${COINS.name}, today's gift` : "Already opened today. Back tomorrow.");
       await reload();
     } catch (err) {
       setError(errText(err));
     }
   };
-  if (!data) return <p className={p.empty}>{error ?? "Opening your wallet…"}</p>;
+  if (!data) return error ? <ErrorNote onRetry={() => void reload()}>{error}</ErrorNote> : <Loading label="Opening your wallet…" />;
   return (
     <div>
       <div className={s.big}>
-        <div className={s.bigCard}><span className={p.eyebrow}>Play coins</span><b>{fmt(data.coins, "coins")}</b><span className={p.muted}>Shop, rooms, club goals</span></div>
+        <div className={s.bigCard}><span className={p.eyebrow}>{COINS.name}</span><b>{fmt(data.coins, "coins")}</b><span className={p.muted}>Shop, rooms, club goals</span></div>
         <div className={s.bigCard}><span className={p.eyebrow}>Gems</span><b>{fmt(data.gems, "gems")}</b><span className={p.muted}>From club contributions · merch corner</span></div>
       </div>
       <div className={p.actions} style={{ marginTop: 0, marginBottom: 12 }}>
-        <button className={p.btn} onClick={claim} disabled={data.daily_claimed}>{data.daily_claimed ? "Daily gift claimed" : "Claim daily gift"}</button>
+        <Button size="sm" variant={data.daily_claimed ? "quiet" : "secondary"} onClick={claim} disabled={data.daily_claimed}>{data.daily_claimed ? "Today’s gift is opened" : "Open today’s gift"}</Button>
       </div>
       {gift ? <p role="status" className={`${p.note} ${p.ok}`}>{gift}</p> : null}
-      {error ? <p role="alert" className={`${p.note} ${p.err}`}>{error}</p> : null}
+      {error ? <ErrorNote>{error}</ErrorNote> : null}
       <div className={p.eyebrow}>Recent</div>
-      {data.recent.length === 0 ? <p className={p.empty}>No activity yet.</p> : null}
+      {data.recent.length === 0 ? <Empty icon={<ReceiptText size={32} />} title="No activity yet">What you earn and spend shows up here.</Empty> : null}
       <ul className={s.list}>
         {data.recent.map((e, i) => (
           <li key={i} className={s.row}>
-            <span>{SOURCE[e.source] ?? e.source}<span className={p.muted} style={{ display: "block" }}>{new Date(e.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span></span>
+            <span>{SOURCE[e.source] ?? e.source}<span className={p.muted} style={{ display: "block" }}>{new Date(e.created_at).toLocaleDateString("en-CA", { month: "short", day: "numeric", timeZone: "America/Toronto" })}</span></span>
             <span className={e.amount > 0 ? s.plus : s.minus}>{e.amount > 0 ? "+" : ""}{fmt(e.amount, e.currency)}</span>
             <span className={p.muted}>{fmt(e.balance_after, e.currency)}</span>
           </li>
         ))}
       </ul>
-      <p className={p.muted} style={{ marginTop: 10 }}>Coins and Gems can&apos;t be traded between members or bought.</p>
+      <p className={p.muted} style={{ marginTop: 10 }}>{COINS.name} and Gems can&apos;t be traded between members or bought.</p>
     </div>
   );
 }
 
-type SheetProps = ProgressionSheetProps & { transport?: EconomyTransport };
+type SheetProps = ProgressionSheetProps & { transport?: EconomyTransport; keys?: string };
 export const SellSheet = ({ open, onClose, transport }: SheetProps) => <ProgressionPanel open={open} onClose={onClose} title="Sell"><SellBody transport={transport} /></ProgressionPanel>;
-export const InventorySheet = ({ open, onClose, transport }: SheetProps) => <ProgressionPanel open={open} onClose={onClose} title="Bag"><InventoryBody transport={transport} /></ProgressionPanel>;
-export const WalletSheet = ({ open, onClose, transport }: SheetProps) => <ProgressionPanel open={open} onClose={onClose} title="Wallet"><WalletBody transport={transport} /></ProgressionPanel>;
+/** The Bag (items you own); `keys`: the bag key, which closes it too. */
+export const InventorySheet = ({ open, onClose, transport, keys }: SheetProps) => <ProgressionPanel open={open} onClose={onClose} title="Bag" keys={keys}><InventoryBody transport={transport} /></ProgressionPanel>;
+/** The wallet; `keys`: the wallet key, which closes it too. */
+export const WalletSheet = ({ open, onClose, transport, keys }: SheetProps) => <ProgressionPanel open={open} onClose={onClose} title="Wallet" keys={keys}><WalletBody transport={transport} /></ProgressionPanel>;

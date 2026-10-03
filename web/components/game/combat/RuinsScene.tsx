@@ -56,6 +56,7 @@ import type { SeasonLook } from "@/lib/game/seasonalLook";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import type { WeaponKind } from "@/lib/game/combat/contract";
+import { worldKeysBlocked } from "@/lib/game/useWorldDialog";
 import styles from "../DefaultIslandWorld.module.css";
 
 export type RuinsNear = "exit" | "lantern" | null;
@@ -308,7 +309,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     const up = () => { input.current.presses.held = false; };
     // First (the capture phase): an ability key wins over a fixed key it shares here (V's camera reset, the Z X C V preset).
     const kd = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLElement && e.target.closest("input, textarea, select")) return;
+      if (worldKeysBlocked() || (e.target instanceof HTMLElement && e.target.closest("input, textarea, select"))) return; // a sheet is open (the mission board, the path)
       const k = e.key.toLowerCase(), ability = (Object.keys(keys) as AbilityId[]).find(a => keys[a] === k);
       if (!ability) return;
       e.preventDefault();

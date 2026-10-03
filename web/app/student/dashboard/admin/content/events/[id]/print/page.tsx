@@ -1,10 +1,11 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import { Shield, Printer } from "lucide-react";
+import { Lock, Printer } from "lucide-react";
 import QRCode from "qrcode";
 import { useUser } from "@/components/portal/UserContext";
 import { createClient } from "@/lib/supabase/client";
+import { Button, Empty, ErrorNote, Loading } from "@/components/gui";
 
 interface EventRow {
   id: string;
@@ -14,6 +15,14 @@ interface EventRow {
   location: string | null;
   qr_check_in_code: string | null;
 }
+
+const PAGE = "mx-auto w-full max-w-6xl px-5 pt-6 pb-16 sm:px-8";
+const ZONE = "America/Toronto";
+const longDate = (d: Date) =>
+  d.toLocaleString("en-CA", { weekday: "long", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: ZONE });
+const timeOnly = (d: Date) => d.toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit", timeZone: ZONE });
+const sameDay = (a: Date, b: Date) =>
+  a.toLocaleDateString("en-CA", { timeZone: ZONE }) === b.toLocaleDateString("en-CA", { timeZone: ZONE });
 
 export default function PrintEventPage({
   params,
@@ -74,31 +83,27 @@ export default function PrintEventPage({
 
   if (loading || rowLoading) {
     return (
-      <p className="text-center py-8 font-mono text-sm text-gray-500 animate-pulse">
-        Loading...
-      </p>
+      <div className={PAGE}>
+        <Loading label="Getting the event…" />
+      </div>
     );
   }
 
   const tier = profile?.tier ?? 5;
   if (tier > 2) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-white text-black">
-        <div className="text-center">
-          <Shield size={48} className="mx-auto text-gray-300 mb-4" />
-          <h2 className="text-lg font-bold mb-2">Access Denied</h2>
-          <p className="text-sm">T1/T2 clearance required for content admin.</p>
-        </div>
+      <div className={`${PAGE} flex min-h-[60vh] items-center justify-center`}>
+        <Empty icon={<Lock size={32} />} title="Admins only">
+          Event admin is only open to the club’s admins.
+        </Empty>
       </div>
     );
   }
 
   if (error || !row) {
     return (
-      <div className="min-h-screen bg-white text-black text-center py-8">
-        <p className="font-mono text-sm text-red-600">
-          {error ?? "Event not found"}
-        </p>
+      <div className={PAGE}>
+        <ErrorNote>This event didn’t load ({error ?? "Event not found"}).</ErrorNote>
       </div>
     );
   }
@@ -107,59 +112,60 @@ export default function PrintEventPage({
     ? `https://tethos.org/student/check-in?code=${row.qr_check_in_code}`
     : "";
 
-  const dateStr = new Date(row.start_time).toLocaleString();
-  const endStr = row.end_time ? new Date(row.end_time).toLocaleString() : null;
+  const start = new Date(row.start_time);
+  const end = row.end_time ? new Date(row.end_time) : null;
+  const dateStr = longDate(start);
+  const endStr = end ? (sameDay(start, end) ? timeOnly(end) : longDate(end)) : null;
 
   return (
-    <div className="print-shell min-h-screen bg-white text-black flex flex-col items-center justify-center p-8">
+    <div className="print-shell flex flex-col items-center px-5 pt-6 pb-16 sm:px-8">
       <style>{`
         @media print {
           .no-print { display: none !important; }
-          .print-shell { min-height: auto !important; }
+          .print-shell { min-height: auto !important; padding: 0 !important; }
+          .print-sheet { box-shadow: none !important; }
           @page { margin: 1cm; }
         }
-        .print-shell { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
       `}</style>
 
-      <div className="no-print w-full max-w-2xl mb-6 flex items-center justify-end gap-3">
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white text-xs uppercase tracking-wider rounded-md hover:opacity-80 transition-opacity"
-        >
-          <Printer size={14} /> Print
-        </button>
+      <div className="no-print mb-6 flex w-full max-w-2xl flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-[var(--gui-muted)]">
+          Print this and put it up at the door. Members scan it to check in.
+        </p>
+        <Button size="sm" onClick={() => window.print()}>
+          <Printer size={16} aria-hidden /> Print
+        </Button>
       </div>
 
-      <div className="w-full max-w-2xl text-center">
-        <h1 className="text-3xl font-bold mb-2">{row.title}</h1>
-        <p className="text-sm text-gray-700 mb-1">
+      <div className="print-sheet w-full max-w-2xl rounded-[var(--gui-r-card)] bg-white px-6 py-10 text-center shadow-[var(--gui-shadow-md)]">
+        <h1 className="mb-2 text-3xl font-extrabold text-[var(--gui-ink-strong)]">{row.title}</h1>
+        <p className="mb-1 text-base text-[var(--gui-ink-2)]">
           {dateStr}
-          {endStr ? ` — ${endStr}` : null}
+          {endStr ? ` – ${endStr}` : null}
         </p>
         {row.location ? (
-          <p className="text-sm text-gray-700 mb-6">{row.location}</p>
+          <p className="mb-6 text-base text-[var(--gui-ink-2)]">{row.location}</p>
         ) : (
           <div className="mb-6" />
         )}
 
-        <div className="flex justify-center mb-6">
+        <div className="mb-6 flex justify-center">
           {qrDataUrl ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={qrDataUrl}
               alt="QR check-in code"
-              className="w-[400px] h-[400px]"
+              className="h-[400px] w-[400px] max-w-full object-contain"
             />
           ) : (
-            <div className="w-[400px] h-[400px] bg-gray-100 flex items-center justify-center text-sm text-gray-500">
-              rendering QR...
+            <div className="flex h-[400px] w-[400px] max-w-full items-center justify-center rounded-[var(--gui-r-card)] bg-[var(--gui-paper-warm)] px-6 text-sm font-bold text-[var(--gui-ink-2)]">
+              {row.qr_check_in_code ? "Drawing the QR code…" : "This event has no check-in code yet."}
             </div>
           )}
         </div>
 
-        <p className="text-sm font-semibold mb-1">Scan to check in</p>
-        <p className="text-xs text-gray-600 break-all max-w-md mx-auto">
+        <p className="mb-1 text-base font-extrabold text-[var(--gui-ink-strong)]">Scan to check in</p>
+        <p className="mx-auto max-w-md break-all text-sm text-[var(--gui-ink-2)]">
           {checkInUrl}
         </p>
       </div>

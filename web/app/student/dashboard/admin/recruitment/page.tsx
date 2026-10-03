@@ -49,7 +49,7 @@ export default function RecruitmentAdminTab() {
   if (userTier === null) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-sm font-mono text-[var(--color-text-muted)]">
+        <p className="text-sm text-[var(--color-text-muted)]">
           Checking clearance…
         </p>
       </div>
@@ -67,7 +67,7 @@ export default function RecruitmentAdminTab() {
           <h2 className="text-lg font-heading font-bold text-[var(--color-text-primary)] mb-2">
             Access Denied
           </h2>
-          <p className="text-sm font-mono text-[var(--color-text-muted)]">
+          <p className="text-sm text-[var(--color-text-muted)]">
             T1/T2 clearance required for recruitment admin.
           </p>
         </div>

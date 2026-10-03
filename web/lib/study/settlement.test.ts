@@ -8,8 +8,8 @@ describe("settlement toast (cafe-polish §5)", () => {
     const done = settlementToast({ ...base, end_reason: "finished", coins_paid: 140, minutes_completed: 100, blocks_completed: 4 })!;
     const left = settlementToast({ ...base, end_reason: "left" })!;
     const away = settlementToast({ ...base, end_reason: "timeout" })!;
-    expect(done.text).toBe("Session complete! +140 🪙 for 100 focus minutes across 4 blocks.");
-    expect(left.text).toBe("You left early and kept 27 focus minutes. +37 🪙");
+    expect(done.text).toBe("Session complete! +140 TC for 100 focus minutes across 4 blocks.");
+    expect(left.text).toBe("You left early and kept 27 focus minutes. +37 TC");
     expect(away.text).toMatch(/^Away for 5 minutes/);
     expect(new Set([done.text, left.text, away.text]).size).toBe(3);
   });
