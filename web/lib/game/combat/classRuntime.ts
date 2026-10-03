@@ -81,6 +81,9 @@ function usable(rt: CombatRuntime, a: ClassAbility, me: Vec, energy = a.energy):
   return true;
 }
 
+/** A clip request for an ability: a verb on the held weapon's grip, or the kit's own unique clip (full body unless the catalogue says upper). */
+export const clipOf = (c: ClassAbility["clip"], upper: boolean) => (c ? "verb" in c ? { verb: c.verb, scale: c.scale ?? 1, upper } : { verb: c.unique, scale: 1, upper } : null);
+
 /** Run an ability's effects now (energy and cooldown paid unless told), with its tier, FX and clip. */
 function fire(rt: CombatRuntime, a: ClassAbility, me: Vec, potency = 1, opts: { cooldown?: boolean; effects?: ClassAbility["effects"]; energy?: boolean } = {}, random = Math.random) {
   const p = rt.player, v = rt.v2!;
@@ -88,7 +91,7 @@ function fire(rt: CombatRuntime, a: ClassAbility, me: Vec, potency = 1, opts: { 
   if (opts.cooldown !== false) v.cd[a.key] = a.cooldown_s;
   p.attackCd = Math.max(p.attackCd, 0.25); p.swing = 0.22;
   faceAim(p, me);
-  if (a.clip && "verb" in a.clip) p.clip = { verb: a.clip.verb, scale: a.clip.scale ?? 1, upper: true };
+  p.clip = clipOf(a.clip, true) ?? p.clip;
   const ctx = context(rt, a, me, potency * (1 + (a.scale ? speedBonus(p.move.speed, a.scale.max) : 0)), p.aim);
   ctx.impact = a.heavy ? "heavy" : "ability"; ctx.fx = a.vfx;
   fx(rt, a.vfx?.cast, "cast", me, ctx.aim, ctx.impact);
@@ -205,7 +208,7 @@ function startUlt(rt: CombatRuntime, me: Vec, potency = 1) {
   v.cast = { t: 0, aim: { ...p.aim }, seed: (rt.seq++ * 2246822519) >>> 0, fired: false, potency };
   p.ultIframes = A + ULT_BEATS.freeze + ULT_BEATS.iframesAfter;
   faceAim(p, me);
-  if (v.ult.clip && "verb" in v.ult.clip) p.clip = { verb: v.ult.clip.verb, scale: v.ult.clip.scale ?? 1, upper: false };
+  p.clip = clipOf(v.ult.clip, false) ?? p.clip;
   fx(rt, v.ult.vfx?.cast, "cast", me, p.aim, "ult");
 }
 

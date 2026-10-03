@@ -549,6 +549,10 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
           const clip = verbClip(p.clip.verb as Verb, grip);
           if (p.clip.upper && verbInfo(clip)?.upper) m.upper = clip; else m.play = clip;
           m.playRate = p.clip.scale; verbAsked = true;
+        } else if (verbInfo(p.clip.verb)) { // a kit's own clip (build_clips.py @unique: Ult_*, Unique_*), authored for its grip
+          const clip = p.clip.verb as ClipName;
+          if (p.clip.upper && verbInfo(clip)?.upper) m.upper = clip; else m.play = clip;
+          m.playRate = p.clip.scale; verbAsked = true;
         }
         p.clip = null;
       }

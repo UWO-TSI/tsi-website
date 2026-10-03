@@ -8,7 +8,7 @@ import { UNITS, CAPS } from "@/lib/combat/kits";
 import { SUBCLASS_FOR_TYPE } from "@/lib/oracle/subclass";
 import { WEAPONS as SYSTEM_WEAPONS, signatureGrant } from "@/lib/combat/weapons";
 import { ULT } from "@/lib/combat/ult";
-import { gripFor } from "@/lib/game/character/clips";
+import { gripFor, verbInfo } from "@/lib/game/character/clips";
 import { cancelCast, resolveCast, strike } from "./abilities";
 import { attack, hurtPlayer } from "./actions";
 import { classKey, classMove, equipClassKit, pressUlt, stepClass } from "./classRuntime";
@@ -78,6 +78,16 @@ describe("the Warden kits (data)", () => {
   it("the family's seed migration carries the signature weapons exactly as the TS has them", () => {
     const dir = join(__dirname, "../../../supabase/migrations"), file = readdirSync(dir).find(f => f.endsWith("_classes_v2_warden_seed.sql"))!;
     expect(readFileSync(join(dir, file), "utf8")).toContain(signatureSeedSql(["summoner", "shaman", "druid", "priest"]));
+  });
+  it("its unique clips are in the verb library, authored for its signature weapon's grip; every ult has one", () => {
+    for (const k of WARDEN_KITS) {
+      expect(k.ult.clip && "unique" in k.ult.clip ? k.ult.clip.unique : null).toBe(`Ult_${k.name}`);
+      for (const a of [...k.keys, k.ult]) if (a.clip && "unique" in a.clip) {
+        const info = verbInfo(a.clip.unique);
+        expect(info, a.clip.unique).toBeTruthy();
+        expect(info!.grip).toBe(gripFor(k.signature.type));
+      }
+    }
   });
   it("every key, ult, passive and class has its icon on disk", () => {
     const pub = join(__dirname, "../../../public");
