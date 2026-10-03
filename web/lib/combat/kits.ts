@@ -35,9 +35,9 @@ export type ShotLook = "arrow" | "bolt" | "bullet" | "harpoon";
 export type Effect =
   /** Shots from the caster toward the aim; `count` fan out over `spread` radians. */
   | { kind: "projectile"; power: number; count?: number; spread?: number; speed?: number; range?: number; pierce?: boolean; splash?: number; status?: Status;
-      /** Classes v2: always a crit; ricochets to `bounce` more enemies within 6 u; pulls what it hits `pull` u toward you; zips you to terrain it hits;
+      /** Classes v2: always a crit; ricochets to `bounce` more enemies within 6 u; pulls what it hits `pull` u toward you; zips you to terrain it hits (`grapple`: the zip's FX);
        * bursts into `cluster.count` bomblets round its impact; how it looks; a wider body (a rail round). */
-      crit?: boolean; bounce?: number; pull?: number; grapple?: boolean; cluster?: { count: number; power: number; radius: number }; look?: ShotLook; width?: number }
+      crit?: boolean; bounce?: number; pull?: number; grapple?: string; cluster?: { count: number; power: number; radius: number; fx?: string }; look?: ShotLook; width?: number }
   /** A circle at the caster (or where a dash ended) or the aim; `arc` makes a cone toward the aim, `length` a beam of width 2·radius. */
   | { kind: "area"; power: number; radius: number; at: "self" | "aim"; arc?: number; length?: number; knock?: number; status?: Status }
   /** Move toward the aim (or away from it), hitting what's on the path if `power`; i-frames like a dodge if `iframes`. */

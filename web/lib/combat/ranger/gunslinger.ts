@@ -14,11 +14,11 @@ export const GUNSLINGER: ClassKit = {
   signature: { type: "sixgun", name: "revolver" },
   stat: { kind: "reload_speed", at1: 1, at20: 1.5 },
   fire: { rate: 3.2, power: 0.58, speed: 55, range: 11, look: "bullet", clip: { verb: "QuickShot", scale: 1.6 },
-    ammo: { size: 6, reload_s: 1.2, gold: [0.45, 0.65], bonus: 0.25, miss_s: 0.6, clip: "Unique_Reload" },
+    ammo: { size: 6, reload_s: 1.2, gold: [0.45, 0.65], bonus: 0.25, miss_s: 0.6, clip: "Unique_Reload", perfect: "gunslinger.perfect" },
     rounds: {
-      explosive: { power: 0.62, splash: 1.7, tier: "ability", vfx: "gunslinger.boom" },
-      gold: { power: 1.1, tier: "heavy", ult: true, vfx: "gunslinger.gold", travel: "gunslinger.goldTrail", cast: "gunslinger.muzzleBig" },
-      warhead: { power: 5, blast: 5, tier: "ult", ult: true, big: true, vfx: "gunslinger.nuke", travel: "gunslinger.warheadTrail", cast: "gunslinger.muzzleBig" },
+      explosive: { power: 0.62, splash: 1.7, tier: "ability", vfx: "gunslinger.boom", tint: "#ff8a3d" },
+      gold: { power: 1.1, tier: "heavy", ult: true, vfx: "gunslinger.gold", travel: "gunslinger.goldTrail", cast: "gunslinger.muzzleBig", tint: "#ffd27a" },
+      warhead: { power: 5, blast: 5, tier: "ult", ult: true, big: true, vfx: "gunslinger.nuke", travel: "gunslinger.warheadTrail", cast: "gunslinger.muzzleBig", tint: "#ffd27a" }, // it looks like the golden ones
     },
     vfx: { cast: "gunslinger.muzzle", travel: "gunslinger.tracer", impact: "gunslinger.hit" } },
   keys: [

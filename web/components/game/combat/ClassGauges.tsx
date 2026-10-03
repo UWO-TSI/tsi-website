@@ -13,8 +13,6 @@ import type { CombatRuntime } from "@/lib/game/combat/runtime";
 import { keyName } from "@/lib/game/movement/keys";
 import styles from "./ClassGauges.module.css";
 
-const ROUND_TINT: Record<string, string> = { explosive: "#ff8a3d", gold: "#ffd27a", warhead: "#ffd27a" };
-
 export default function ClassGauges({ rt, swapKey }: { rt: CombatRuntime; swapKey: string }) {
   const v = rt.v2!, kit = v.kit, f = kit.fire, live = v.live, pv = v.passive;
   const ammo = f?.ammo, focus = pv.kind === "focus", streak = pv.kind === "killstreak", traps = kit.traps ? rt.units.filter(u => u.def.kind === "trap").length : null;
@@ -29,7 +27,7 @@ export default function ClassGauges({ rt, swapKey }: { rt: CombatRuntime; swapKe
         // Chambers fire in order; the ones still loaded run from the current chamber; special rounds sit next up.
         const k = (i - live.chamber + ammo.size) % ammo.size, loaded = k < live.ammo, round = loaded ? live.loaded[k] : undefined;
         return <li key={i} data-loaded={loaded || undefined} data-next={(k === 0 && loaded) || undefined} data-last={i === ammo.size - 1 || undefined}
-          style={round ? { background: ROUND_TINT[round] ?? "var(--class)" } : undefined} />;
+          style={round ? { background: f?.rounds?.[round]?.tint ?? "var(--class)" } : undefined} />;
       })}</ol>
       {live.reload !== null ? <div className={styles.reload} aria-label="Reloading">
         <span style={{ left: `${ammo.gold[0] * (ammo.reload_s / live.reloadLen) * 100}%`, width: `${(ammo.gold[1] - ammo.gold[0]) * (ammo.reload_s / live.reloadLen) * 100}%` }} data-tried={live.tried || undefined} />

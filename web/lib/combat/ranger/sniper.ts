@@ -23,7 +23,7 @@ export const SNIPER: ClassKit = {
       effects: [{ ...shot, power: 2, speed: 90, range: 24, pierce: true, look: "bullet", width: 0.3 }], clip: { verb: "DrawShot", scale: 0.7 },
       vfx: { cast: "sniper.muzzleBig", travel: "sniper.rail", impact: "sniper.pierceHit" }, icon: I("sniper-pierce") },
     { key: "sniper.cluster", name: "Cluster Round", description: "Bursts where it hits and throws four bomblets round it: for groups.", cooldown_s: 9, energy: 30, heavy: true,
-      effects: [{ ...shot, power: 1.1, speed: 50, range: 18, splash: 1.8, cluster: { count: 4, power: 0.75, radius: 1.5 }, look: "bullet", width: 0.3 }], clip: { verb: "DrawShot", scale: 0.8 },
+      effects: [{ ...shot, power: 1.1, speed: 50, range: 18, splash: 1.8, cluster: { count: 4, power: 0.75, radius: 1.5, fx: "sniper.bomblet" }, look: "bullet", width: 0.3 }], clip: { verb: "DrawShot", scale: 0.8 },
       vfx: { cast: "sniper.muzzleBig", travel: "sniper.tracer", impact: "sniper.cluster" }, icon: I("sniper-cluster") },
     { key: "sniper.smoke", name: "Smoke Roll", description: "Roll back through smoke, untouchable, keeping your speed: what's near loses you.", cooldown_s: 9, energy: 20, unlock: 3,
       effects: [{ kind: "area", power: 0, radius: 3, at: "self", status: { distract: 1.5 } }, { kind: "zone", radius: 2.6, life: 2.5, at: "self", status: { distract: 1 } },

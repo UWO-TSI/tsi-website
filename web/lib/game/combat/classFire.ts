@@ -102,7 +102,7 @@ export function reloadKey(rt: CombatRuntime, me: Vec): boolean {
   if (at >= a.gold[0] && at <= a.gold[1]) {
     finishReload(rt); live.bonus = a.size;
     floater(rt, me, 1.9, "Perfect reload", "info");
-    fx(rt, "gunslinger.perfect", "cast", me, rt.player.aim, "ability");
+    fx(rt, a.perfect, "cast", me, rt.player.aim, "ability");
   } else { live.reloadLen += a.miss_s; floater(rt, me, 1.9, "Jammed", "info"); }
   return true;
 }
@@ -132,7 +132,7 @@ export function fireBasic(rt: CombatRuntime, me: Vec, auto = false): boolean {
     fx: round?.vfx ?? f.vfx?.impact, travel: round?.travel ?? f.vfx?.travel, ramp: v.kit.look.ramp, splash: round?.splash, round: key,
     burst: round?.blast ? { power: round.power * bonus, radius: round.blast } : undefined,
     steady: f.steady, crit: round?.crit || last || undefined, weak: f.weak ? f.weak * (scope ? 1.5 : 1) : undefined, pierces: swift ? 1 : undefined,
-    status: flame > 0 ? { dot: [flame, 3] } : undefined, zone: flame > 0 ? { radius: 1.1, life: 2, power: flame, fx: "marksman.burn" } : undefined,
+    status: flame > 0 ? { dot: [flame, 3] } : undefined, zone: flame > 0 ? { radius: 1.1, life: 2, power: flame, fx: f.vfx?.zone } : undefined,
   };
   const shot: Projectile = { id: rt.seq++, x: me.x + dir.x * 0.5, z: me.z + dir.z * 0.5, vx: dir.x * speed, vz: dir.z * speed, life: f.range / speed,
     from: "player", damage: 0, kind: f.look ?? "arrow", radius: 0.18, hit };
@@ -279,7 +279,7 @@ export function scatter(rt: CombatRuntime, at: Vec, c: NonNullable<ShotHit["clus
   for (let k = 0; k < c.count; k++) {
     const a = (k / c.count) * Math.PI * 2 + random() * 0.6, sp = 5 + random() * 2;
     rt.projectiles.push({ id: rt.seq++, x: at.x, z: at.z, vx: Math.sin(a) * sp, vz: Math.cos(a) * sp, life: 0.32, from: "player", damage: 0, kind: "bullet", radius: 0.15,
-      hit: { power: 0, stat: h.stat, impact: "ability", fx: "sniper.bomblet", ramp: h.ramp, hitIds: skip ? [skip.id] : [], burst: { power: c.power, radius: c.radius } } });
+      hit: { power: 0, stat: h.stat, impact: "ability", fx: c.fx, ramp: h.ramp, hitIds: skip ? [skip.id] : [], burst: { power: c.power, radius: c.radius } } });
   }
 }
 /** A ricochet: the shot turns to the nearest enemy it hasn't hit within reach. False when there's none. */
@@ -309,7 +309,7 @@ export function shotSpent(rt: CombatRuntime, sh: Projectile, wall: boolean, rand
     if (d > 1) {
       p.dash = { x: dx / d, z: dz / d, speed: 22, left: (d - 0.6) / 22, iframes: false, then: null };
       p.kick = { dx: dx / d, dz: dz / d, speed: 4, up: 0, hang: false }; // the zip keeps its speed (row 292)
-      fx(rt, "hunter.zip", "travel", me, at, "ability");
+      fx(rt, h.grapple, "travel", me, at, "ability");
     }
   }
 }

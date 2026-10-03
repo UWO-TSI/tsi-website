@@ -25,7 +25,7 @@ export interface ShotHit { power: number; stat?: Stat; tier?: number; pierce?: b
    * a pull toward `from`; a zip to the terrain it meets; a burst where it ends (a bomblet); a special round's key.
    */
   pierces?: number; crit?: boolean; weak?: number; zone?: { radius: number; life: number; power: number; fx?: string };
-  cluster?: { count: number; power: number; radius: number }; bounce?: number; pull?: number; grapple?: boolean;
+  cluster?: { count: number; power: number; radius: number; fx?: string }; bounce?: number; pull?: number; grapple?: string;
   burst?: { power: number; radius: number }; round?: string; from?: { x: number; z: number }; steady?: boolean }
 /**
  * `knock`: an enemy shot's push on you (its attack's knockback). `arc`: a lobbed shot's flight time (s): it flies over

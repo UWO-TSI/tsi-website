@@ -27,7 +27,7 @@ export const HUNTER: ClassKit = {
       effects: [{ ...shot, power: 0.5, speed: 36, range: 15, status: { mark: [0.2, 8] }, look: "arrow" }], clip: { verb: "QuickShot" },
       vfx: { cast: "hunter.loose", travel: "hunter.markWake", impact: "hunter.mark" }, icon: I("hunter-mark") },
     { key: "hunter.harpoon", name: "Harpoon", description: "A harpoon on a chain: an enemy is dragged to you, into your traps; terrain zips you there, keeping your speed.", cooldown_s: 6, energy: 15, unlock: 3,
-      effects: [{ ...shot, power: 1.1, speed: 32, range: 11, pull: 4, grapple: true, look: "harpoon", width: 0.3 }], clip: { verb: "DrawShot", scale: 0.8 },
+      effects: [{ ...shot, power: 1.1, speed: 32, range: 11, pull: 4, grapple: "hunter.zip", look: "harpoon", width: 0.3 }], clip: { verb: "DrawShot", scale: 0.8 },
       vfx: { cast: "hunter.loose", travel: "hunter.chain", impact: "hunter.harpoonHit" }, icon: I("hunter-harpoon") },
   ],
   passive: { name: "Prey", description: "Marked enemies take +30% from your traps.", kind: "prey", value: 0.3, icon: I("hunter-prey") },

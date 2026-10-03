@@ -6,6 +6,8 @@ import { RANGER_KITS } from "@/lib/combat/rangerKits";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { SUBCLASS_FOR_TYPE } from "@/lib/oracle/subclass";
 import { WEAPONS } from "./data";
+import { FX } from "@/lib/game/fx/combat";
+import { UNITS } from "@/lib/combat/kits";
 import { gripFor, verbClip, verbInfo, VERBS, type Verb } from "@/lib/game/character/clips";
 
 describe("the Ranger kits: shape and invariants", () => {
@@ -51,6 +53,21 @@ describe("the Ranger kits: shape and invariants", () => {
       for (const a of k.keys) if (a.clip && "verb" in a.clip) expect((VERBS as readonly string[]).includes(a.clip.verb), a.key).toBe(true);
       for (const n of names) expect(verbInfo(n), `${k.key}: ${n}`).not.toBeNull();
       expect(verbInfo(k.ult.clip && "unique" in k.ult.clip ? k.ult.clip.unique : "")?.grip).toBe(grip);
+    }
+  });
+  it("every FX key the kits name is in the registry: keys, the ult, the basic shot, rounds, bomblets, the zip, the perfect reload, trap springs", () => {
+    for (const k of RANGER_KITS) {
+      const keys: (string | undefined)[] = [];
+      for (const a of [...k.keys, k.ult]) {
+        keys.push(...Object.values(a.vfx ?? {}));
+        for (const e of [...a.effects, ...(a.release ?? [])]) {
+          if (e.kind === "projectile") keys.push(e.cluster?.fx, e.grapple);
+          if (e.kind === "summon" && UNITS[e.unit]?.kind === "trap") keys.push(`trap.${e.unit}`);
+        }
+      }
+      keys.push(...Object.values(k.fire?.vfx ?? {}), k.fire?.ammo?.perfect);
+      for (const r of Object.values(k.fire?.rounds ?? {})) keys.push(r.vfx, r.travel, r.cast);
+      for (const key of keys) if (key) expect(FX[key], `${k.key}: ${key}`).toBeDefined();
     }
   });
   it("every icon the kits name is on disk", () => {

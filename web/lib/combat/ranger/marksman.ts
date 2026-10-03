@@ -14,7 +14,7 @@ export const MARKSMAN: ClassKit = {
   stat: { kind: "attack_speed", at1: 1, at20: 1.15 },
   fire: { rate: 1.5, power: 0.25, speed: 24, range: 13, look: "arrow", drop: 8, steady: true, clip: { verb: "QuickShot", scale: 1.4 },
     rounds: { surge: { power: 0.08, ult: true, tier: "light", vfx: "marksman.hit", travel: "marksman.surge" } },
-    vfx: { cast: "marksman.loose", travel: "marksman.wake", impact: "marksman.hit" } },
+    vfx: { cast: "marksman.loose", travel: "marksman.wake", impact: "marksman.hit", zone: "marksman.burn" } },
   keys: [
     { key: "marksman.homing", name: "Homing Arrows", description: "For 6 s your arrows curve onto the nearest enemy ahead.", cooldown_s: 14, energy: 20,
       effects: [{ kind: "buff", stat: "homing", value: 1, duration: 6 }], clip: { verb: "CastUp", scale: 1.6 }, vfx: { cast: "marksman.homing" }, icon: I("marksman-homing") },

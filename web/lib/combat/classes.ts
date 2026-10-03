@@ -99,19 +99,21 @@ export interface FireSpec {
   /** Its shots don't hold an enemy's chase (rapid fire would keep everything flinching). */
   steady?: boolean;
   ammo?: { size: number; reload_s: number; gold: [number, number]; bonus: number; miss_s: number;
-    /** The reload's clip (upper body), played at the reload stat's pace. */
-    clip?: string };
+    /** The reload's clip (upper body), played at the reload stat's pace; the active reload's FX. */
+    clip?: string; perfect?: string };
   rounds?: Record<string, RoundDef>;
-  /** The verb each shot plays on the upper body, at its timing scale, and the FX per phase. */
+  /** The verb each shot plays on the upper body, at its timing scale, and the FX per phase (zone: the burning ground a flame buff leaves). */
   clip?: { verb: string; scale?: number };
-  vfx?: { cast?: string; travel?: string; impact?: string };
+  vfx?: { cast?: string; travel?: string; impact?: string; zone?: string };
 }
 /**
  * A special round: its power (× base hit); a splash at half power round its hit, or a `blast` at full power instead of a
  * hit (it bursts on the first enemy or where it ends); its impact tier and FX; an ult round charges nothing; `big`
  * replays the ult's sequence there, larger (the warhead).
  */
-export interface RoundDef { power: number; splash?: number; blast?: number; tier?: "light" | "ability" | "heavy" | "ult"; vfx?: string; travel?: string; cast?: string; ult?: boolean; big?: boolean; crit?: boolean }
+export interface RoundDef { power: number; splash?: number; blast?: number; tier?: "light" | "ability" | "heavy" | "ult"; vfx?: string; travel?: string; cast?: string; ult?: boolean; big?: boolean; crit?: boolean;
+  /** Its chamber's colour on the HUD (a round you mustn't tell apart shares its neighbours'). */
+  tint?: string }
 
 /** A ruins-only movement passive that extends the movement combo (row 292): Air Step, Bone Surf, Vault. */
 export interface MovementPassive { name: string; description: string; on: "airJump" | "slide" | "dash" | "land"; energy: number; effects: Effect[]; cooldown_s?: number }
