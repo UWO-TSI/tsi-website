@@ -12,7 +12,7 @@ import { Suspense, useEffect, useMemo, useRef, type RefObject } from "react";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
-import Character, { CHARACTER_HEIGHT, type CharacterMotion } from "./character/Character";
+import Character, { CHARACTER_HEIGHT, type CharacterMotion, type ClipName } from "./character/Character";
 import { hashSeed, parseLook, randomLook, seeded } from "@/lib/game/character/look";
 import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
 import { AudioManager } from "@/lib/game/audio";
@@ -39,8 +39,8 @@ interface Ui { bubble: RefObject<HTMLDivElement | null>; text: RefObject<HTMLSpa
 /** One keeper's live state, written only by its frame loop (and `pending` by events). */
 interface Runtime {
   slug: string; seed: number; lines: readonly string[]; next: number;
-  /** A line to say on the next frame (a click, the room's event), and whether it opens with a wave. */
-  pending: string | null; wave: boolean;
+  /** A line to say on the next frame (a click, the room's event), whether it opens with a wave, or the clip it's said with (a curator's delight). */
+  pending: string | null; wave: boolean; clip: ClipName | null;
   /** The work clock runs this many seconds behind the world's: talking pauses it. */
   lag: number; talkUntil: number; bubbleUntil: number; quietUntil: number;
   entryAt: number | null; entered: boolean; near: boolean; noticedAt: number; engaged: boolean;
@@ -79,8 +79,9 @@ function step(r: Runtime, room: KeeperRoom, m: CharacterMotion, g: THREE.Group |
     r.bubbleUntil = now + KEEPER_BUBBLE_S; r.talkUntil = Math.max(r.talkUntil, r.bubbleUntil); r.quietUntil = now + KEEPER_QUIET_S;
     quietBySlug.set(r.slug, r.quietUntil);
     m.talk = talkSeconds(line);
-    if (r.wave) m.play = "Wave";
-    r.wave = false;
+    if (r.clip) m.play = r.clip;
+    else if (r.wave) m.play = "Wave";
+    r.wave = false; r.clip = null;
     AudioManager.playBlip();
     r.timers.forEach(window.clearTimeout);
     r.timers = [140, 300].map(ms => window.setTimeout(() => AudioManager.playBlip(), ms));
@@ -115,9 +116,9 @@ function step(r: Runtime, room: KeeperRoom, m: CharacterMotion, g: THREE.Group |
 }
 function show(el: HTMLElement | null, on: boolean) { if (el && el.hidden === on) el.hidden = !on; }
 /** Module scope: a line from outside the frame loop (a click, the room's event) waits for the next frame. */
-function queue(r: Runtime | null, line: string | null, wave: boolean) { if (r && line) { r.pending = line; r.wave = wave; } }
+function queue(r: Runtime | null, line: string | null, wave: boolean, clip: ClipName | null = null) { if (r && line) { r.pending = line; r.wave = wave; r.clip = clip; } }
 function newRuntime(slug: string, lines: readonly string[]): Runtime {
-  return { slug, seed: hashSeed(slug), lines, next: 0, pending: null, wave: false, lag: 0, talkUntil: 0, bubbleUntil: 0, quietUntil: quietBySlug.get(slug) ?? 0,
+  return { slug, seed: hashSeed(slug), lines, next: 0, pending: null, wave: false, clip: null, lag: 0, talkUntil: 0, bubbleUntil: 0, quietUntil: quietBySlug.get(slug) ?? 0,
     entryAt: null, entered: false, near: false, noticedAt: 0, engaged: false, at: { x: 0, z: 0, yaw: 0, clip: "Idle", moving: false, station: 0 }, station: -1,
     x: 0, z: 0, ready: false, idleBeat: -1, shown: -1, line: "", timers: [] };
 }
@@ -130,7 +131,7 @@ export default function Keeper({ room, player, frozen, engaged = false, sayEvent
   frozen: boolean;
   /** Their station's sheet is open: they face you and talk you through it. */
   engaged?: boolean;
-  /** A window event whose `detail.line` they say (the Oracle quiz's `tsi:oracle-keeper` reactions). */
+  /** A window event whose `detail.line` they say, with `detail.clip` if it has one (the Oracle quiz's `tsi:oracle-keeper` reactions, the curator's to a donation). */
   sayEvent?: string;
 }) {
   const post = KEEPER_POSTS[room];
@@ -153,7 +154,7 @@ export default function Keeper({ room, player, frozen, engaged = false, sayEvent
   useEffect(() => { linesRef.current = lines; relines(runtime.current, persona.slug, lines); }, [persona.slug, lines]);
   useEffect(() => {
     if (!sayEvent) return;
-    const on = (e: Event) => queue(runtime.current, (e as CustomEvent<{ line?: string }>).detail?.line ?? null, false);
+    const on = (e: Event) => { const d = (e as CustomEvent<{ line?: string; clip?: ClipName }>).detail; queue(runtime.current, d?.line ?? null, false, d?.clip ?? null); };
     window.addEventListener(sayEvent, on);
     return () => window.removeEventListener(sayEvent, on);
   }, [sayEvent]);

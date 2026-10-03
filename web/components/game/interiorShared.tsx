@@ -67,11 +67,23 @@ export function snapInteriorCamera(camera: THREE.Camera, px: number, pz: number)
   if (camera instanceof THREE.PerspectiveCamera && camera.fov !== BASE_FOV) { camera.fov = BASE_FOV; camera.updateProjectionMatrix(); }
 }
 
+/** Somewhere the camera looks over to for a moment (a donation settling into its case): its spot and its time. */
+const focus = { x: 0, z: 0, start: 0, until: 0 };
+/** Look over toward (x, z) for `ms`, easing there and back (the walker keeps following you underneath). */
+export function lookToward(x: number, z: number, ms: number) { focus.x = x; focus.z = z; focus.start = performance.now(); focus.until = focus.start + ms; }
+const focusWeight = (now: number) => {
+  if (now >= focus.until) return 0;
+  const k = Math.min(1, (now - focus.start) / 500, (focus.until - now) / 650);
+  return k * k * (3 - 2 * k);
+};
 export function followInteriorCamera(camera: THREE.Camera, px: number, pz: number, delta: number) {
-  camera.position.x = THREE.MathUtils.damp(camera.position.x, px, 6, delta);
+  // Partway toward what's to be seen, so you stay in the picture.
+  const w = focusWeight(performance.now()) * 0.62;
+  const tx = px + (focus.x - px) * w, tz = pz + (focus.z - pz) * w;
+  camera.position.x = THREE.MathUtils.damp(camera.position.x, tx, 6, delta);
   camera.position.y = THREE.MathUtils.damp(camera.position.y, 8.4, 6, delta);
-  camera.position.z = THREE.MathUtils.damp(camera.position.z, pz - 7.2, 6, delta);
-  camera.lookAt(px, 0.7, pz + 1.2);
+  camera.position.z = THREE.MathUtils.damp(camera.position.z, tz - 7.2, 6, delta);
+  camera.lookAt(tx, 0.7, tz + 1.2);
 }
 
 /**
