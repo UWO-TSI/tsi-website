@@ -5,23 +5,27 @@
  * half of the fishing beats. Driven by window events from FishingOverlay:
  *
  *   tsi:fish-cast {x, z, power} — bobber arcs from the player to the water
- *       (throw distance scales with cast power), lands with a splash ring
- *       and a plop.
- *   tsi:fish-nibble — the fake-out: bobber dips, small ripple, soft blip.
- *   tsi:fish-bite — bobber slams under, big ripple, red "!" pops above
- *       the player (ACNH beat).
+ *       (throw distance scales with cast power, never past the far bank:
+ *       lib/game/fishingCast.ts), lands with a splash ring and announces it
+ *       (tsi:fish-splash {x, y, z}, after the frame: the overlay starts the
+ *       wait on it).
+ *   tsi:fish-nibble — the fake-out: bobber dips, small ripple.
+ *   tsi:fish-bite — bobber pulled under, thrashing (smooth seeded noise),
+ *       big ripple, red "!" pops above the player (ACNH beat).
  *   tsi:fish-end — everything unmounts.
  *
- * Motion runs on refs in useFrame (no per-frame React); rings and the "!"
- * are the only stateful bits, set from event handlers.
+ * Motion and rings run on refs in useFrame (no React state per frame, nothing
+ * allocated per frame); the "!" is the only stateful bit, set from an event.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Billboard, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { AudioManager } from "@/lib/game/audio";
 import { getCameraForwardXZ } from "@/lib/game/cameraBasis";
+import { castLanding, thrash } from "@/lib/game/fishingCast";
+import { seedAt } from "@/lib/game/fx/particles";
 
 interface CastDetail {
   x: number;
@@ -29,132 +33,84 @@ interface CastDetail {
   power: number;
 }
 
-export default function FishingBobber({ playerPosRef, waterHeight, towardWater = false }: { playerPosRef: React.MutableRefObject<THREE.Vector3>; waterHeight: (x: number, z: number) => number; towardWater?: boolean }) {
+/** Rings on the water at once (a landing, a nibble or two, the bite). */
+const RINGS = 4;
+const ringGeometry = new THREE.RingGeometry(0.34, 0.42, 24);
+const anywhere = () => true;
+
+export default function FishingBobber({ playerPosRef, waterHeight, towardWater = false, isWater = anywhere }: {
+  playerPosRef: React.MutableRefObject<THREE.Vector3>; waterHeight: (x: number, z: number) => number; towardWater?: boolean;
+  /** The drawn water (not the coast): a throw never carries over land. Without it the throw runs its full reach. */
+  isWater?: (x: number, z: number) => boolean;
+}) {
   const { camera } = useThree();
   const [active, setActive] = useState(false);
   const activeRef = useRef(false);
-  const ringTimers = useRef(new Set<number>());
   const [bite, setBite] = useState(false);
-  const [rings, setRings] = useState<{ id: number; x: number; y: number; z: number; big: boolean }[]>([]);
-  const ringIdRef = useRef(0);
   const groupRef = useRef<THREE.Group>(null);
   const biteGroupRef = useRef<THREE.Group>(null);
-  const phaseRef = useRef<"arc" | "float" | "bite">("arc");
-  const tRef = useRef(0);
-  const nibbleAtRef = useRef(-1);
-  const startRef = useRef(new THREE.Vector3());
-  const landRef = useRef(new THREE.Vector3());
-  const powerRef = useRef(0);
-  const waterYRef = useRef(0);
-
-  const clearRingTimers = useCallback(() => {
-    ringTimers.current.forEach((timer) => window.clearTimeout(timer));
-    ringTimers.current.clear();
-  }, []);
-
-  const addRing = useCallback((big: boolean) => {
-    const id = ringIdRef.current++;
-    const { x, z } = landRef.current;
-    const y = waterYRef.current + 0.015;
-    setRings((r) => [...r, { id, x, y, z, big }]);
-    const timer = window.setTimeout(() => {
-      ringTimers.current.delete(timer);
-      setRings((r) => r.filter((q) => q.id !== id));
-    }, big ? 900 : 650);
-    ringTimers.current.add(timer);
-  }, []);
+  const ringRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const fx = useRef<Fx>({
+    phase: "arc", t: 0, biteT: 0, nibbleAt: -1, power: 0, waterY: 0, seed: 0,
+    start: new THREE.Vector3(), land: new THREE.Vector3(), aim: { x: 0, z: 0 }, shake: { x: 0, y: 0, z: 0 },
+    rings: Array.from({ length: RINGS }, () => ({ age: -1, life: 0.6, big: false })), nextRing: 0,
+  });
 
   useEffect(() => {
+    const f = fx.current;
     const onCast = (e: Event) => {
       const d = (e as CustomEvent<CastDetail>).detail;
       const p = playerPosRef.current;
-      clearRingTimers();
-      setRings([]);
-      nibbleAtRef.current = Number.NEGATIVE_INFINITY;
+      for (const r of f.rings) r.age = -1;
+      f.nibbleAt = Number.NEGATIVE_INFINITY;
       activeRef.current = true;
-      // Casting aims from you toward the validated water target (both islands); without
-      // `towardWater` the throw would run along the camera's forward, which turns now.
+      // Casting aims from you toward the validated water target (both islands); without `towardWater` the throw would
+      // run along the camera's forward, which turns now. It carries past the spot by its power, stopping short of land.
       const fwd = getCameraForwardXZ(camera);
-      const dir = towardWater ? new THREE.Vector3(d.x - p.x, 0, d.z - p.z) : new THREE.Vector3(fwd.fx, 0, fwd.fz);
-      if (dir.lengthSq() < 0.01) dir.set(0, 0, 1);
-      else dir.normalize();
-      // Power = visibly longer throw past the spot marker.
-      const extend = 0.6 + d.power * 2.0;
-      landRef.current.set(d.x + dir.x * extend, 0, d.z + dir.z * extend);
-      waterYRef.current = waterHeight(landRef.current.x, landRef.current.z);
-      landRef.current.y = waterYRef.current + 0.08;
-      startRef.current.set(p.x, p.y + 0.9, p.z);
-      powerRef.current = d.power;
-      tRef.current = 0;
-      phaseRef.current = "arc";
+      const fromX = towardWater ? p.x : d.x - fwd.fx, fromZ = towardWater ? p.z : d.z - fwd.fz;
+      castLanding(isWater, fromX, fromZ, d.x, d.z, d.power, f.aim);
+      f.waterY = waterHeight(f.aim.x, f.aim.z);
+      f.land.set(f.aim.x, f.waterY + 0.08, f.aim.z);
+      f.start.set(p.x, p.y + 0.9, p.z);
+      f.power = d.power;
+      f.seed = seedAt(f.aim.x, f.aim.z, 61);
+      f.t = 0;
+      f.phase = "arc";
       setBite(false);
       setActive(true);
     };
     const onNibble = () => {
       if (!activeRef.current) return;
-      nibbleAtRef.current = performance.now();
-      addRing(false);
+      f.nibbleAt = performance.now();
+      addRing(f, false);
       AudioManager.playSFX("blip1");
     };
     const onBite = () => {
       if (!activeRef.current) return;
-      phaseRef.current = "bite";
+      f.phase = "bite";
+      f.biteT = 0;
       setBite(true);
-      addRing(true);
+      addRing(f, true);
     };
     const onEnd = () => {
       activeRef.current = false;
-      clearRingTimers();
+      for (const r of f.rings) r.age = -1;
       setActive(false);
       setBite(false);
-      setRings([]);
     };
     window.addEventListener("tsi:fish-cast", onCast);
     window.addEventListener("tsi:fish-nibble", onNibble);
     window.addEventListener("tsi:fish-bite", onBite);
     window.addEventListener("tsi:fish-end", onEnd);
     return () => {
-      clearRingTimers();
       window.removeEventListener("tsi:fish-cast", onCast);
       window.removeEventListener("tsi:fish-nibble", onNibble);
       window.removeEventListener("tsi:fish-bite", onBite);
       window.removeEventListener("tsi:fish-end", onEnd);
     };
-  }, [camera, playerPosRef, waterHeight, towardWater, addRing, clearRingTimers]);
+  }, [camera, playerPosRef, waterHeight, towardWater, isWater]);
 
-  useFrame((_, dt) => {
-    const g = groupRef.current;
-    if (!g || !activeRef.current) return;
-    const player = playerPosRef.current;
-    biteGroupRef.current?.position.set(player.x, player.y + 2.4, player.z);
-    tRef.current += dt;
-    const t = tRef.current;
-    if (phaseRef.current === "arc") {
-      const k = Math.min(1, t / 0.45);
-      g.position.lerpVectors(startRef.current, landRef.current, k);
-      g.position.y += Math.sin(k * Math.PI) * (1.1 + powerRef.current * 0.9);
-      if (k >= 1) {
-        phaseRef.current = "float";
-        window.dispatchEvent(new CustomEvent("tsi:fish-splash", { detail: { x: landRef.current.x, z: landRef.current.z } }));
-        addRing(false);
-        AudioManager.playSFX("blip2"); // plop
-      }
-    } else if (phaseRef.current === "float") {
-      const dip = performance.now() - nibbleAtRef.current < 420 ? -0.16 : 0;
-      g.position.set(
-        landRef.current.x,
-        waterYRef.current + 0.08 + Math.sin(t * 2.6) * 0.05 + dip,
-        landRef.current.z
-      );
-    } else {
-      // bite: slammed under, thrashing
-      g.position.set(
-        landRef.current.x + (Math.random() * 2 - 1) * 0.03,
-        waterYRef.current - 0.08 + Math.sin(t * 18) * 0.04,
-        landRef.current.z + (Math.random() * 2 - 1) * 0.03
-      );
-    }
-  });
+  useFrame((_, dt) => step(fx.current, groupRef.current, biteGroupRef.current, ringRefs.current, activeRef.current, playerPosRef.current, dt));
 
   if (!active) return null;
 
@@ -172,8 +128,10 @@ export default function FishingBobber({ playerPosRef, waterHeight, towardWater =
         </mesh>
       </group>
 
-      {rings.map((r) => (
-        <RippleRing key={r.id} x={r.x} y={r.y} z={r.z} big={r.big} />
+      {Array.from({ length: RINGS }, (_, i) => (
+        <mesh key={i} ref={m => { ringRefs.current[i] = m; }} visible={false} rotation-x={-Math.PI / 2} geometry={ringGeometry}>
+          <meshBasicMaterial color="#EAF6FF" transparent opacity={0.55} depthWrite={false} />
+        </mesh>
       ))}
 
       {/* ACNH bite "!" above the player */}
@@ -209,24 +167,56 @@ export default function FishingBobber({ playerPosRef, waterHeight, towardWater =
   );
 }
 
-/** Expanding water ring; parent removes it from the list after its life. */
-function RippleRing({ x, y, z, big }: { x: number; y: number; z: number; big: boolean }) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const tRef = useRef(0);
-  useFrame((_, dt) => {
-    const m = meshRef.current;
-    if (!m) return;
-    tRef.current += dt;
-    const life = big ? 0.85 : 0.6;
-    const k = Math.min(1, tRef.current / life);
-    const s = (big ? 2.6 : 1.4) * (0.3 + k);
+/** The cast's state, kept in a ref: where it flies from and lands, its phase, the thrash's seed and the rings. */
+interface Fx { phase: "arc" | "float" | "bite"; t: number; biteT: number; nibbleAt: number; power: number; waterY: number; seed: number;
+  start: THREE.Vector3; land: THREE.Vector3; aim: { x: number; z: number }; shake: { x: number; y: number; z: number };
+  /** Each ring's age (s) and life; a negative age is a free slot, taken in turn. */
+  rings: { age: number; life: number; big: boolean }[]; nextRing: number }
+
+/** A ring on the water at the bobber: the next slot, no React. */
+function addRing(f: Fx, big: boolean) {
+  const r = f.rings[f.nextRing];
+  f.nextRing = (f.nextRing + 1) % RINGS;
+  r.age = 0; r.life = big ? 0.85 : 0.6; r.big = big;
+}
+
+/** One frame of the bobber and its rings (module scope: the react compiler freezes values reached through hooks). */
+function step(f: Fx, g: THREE.Group | null, biteGroup: THREE.Group | null, rings: (THREE.Mesh | null)[], active: boolean, player: THREE.Vector3, dt: number) {
+  if (!g || !active) return;
+  biteGroup?.position.set(player.x, player.y + 2.4, player.z);
+  f.t += dt;
+  if (f.phase === "arc") {
+    const k = Math.min(1, f.t / 0.45);
+    g.position.lerpVectors(f.start, f.land, k);
+    g.position.y += Math.sin(k * Math.PI) * (1.1 + f.power * 0.9);
+    if (k >= 1) {
+      f.phase = "float";
+      addRing(f, false);
+      AudioManager.playSFX("blip2"); // plop
+      // After the frame: the overlay starts the wait on the landing (a React update, never inside useFrame).
+      const { x, z } = f.aim, y = f.waterY;
+      queueMicrotask(() => window.dispatchEvent(new CustomEvent("tsi:fish-splash", { detail: { x, y, z } })));
+    }
+  } else if (f.phase === "float") {
+    const dip = performance.now() - f.nibbleAt < 420 ? -0.16 : 0;
+    g.position.set(f.land.x, f.waterY + 0.08 + Math.sin(f.t * 2.6) * 0.05 + dip, f.land.z);
+  } else {
+    // bite: pulled under, thrashing on the cast's own smooth noise
+    f.biteT += dt;
+    thrash(f.biteT, f.seed, f.shake);
+    g.position.set(f.land.x + f.shake.x, f.waterY + f.shake.y, f.land.z + f.shake.z);
+  }
+  for (let i = 0; i < RINGS; i++) {
+    const r = f.rings[i], m = rings[i];
+    if (!m) continue;
+    if (r.age < 0) { m.visible = false; continue; }
+    r.age += dt;
+    const k = Math.min(1, r.age / r.life);
+    if (k >= 1) { r.age = -1; m.visible = false; continue; }
+    const s = (r.big ? 2.6 : 1.4) * (0.3 + k);
+    m.visible = true;
+    m.position.set(f.land.x, f.waterY + 0.015, f.land.z);
     m.scale.set(s, s, s);
     (m.material as THREE.MeshBasicMaterial).opacity = 0.55 * (1 - k);
-  });
-  return (
-    <mesh ref={meshRef} position={[x, y, z]} rotation-x={-Math.PI / 2}>
-      <ringGeometry args={[0.34, 0.42, 24]} />
-      <meshBasicMaterial color="#EAF6FF" transparent opacity={0.55} depthWrite={false} />
-    </mesh>
-  );
+  }
 }

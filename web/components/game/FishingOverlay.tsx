@@ -53,12 +53,14 @@ import {
 import { weatherMods } from "@/lib/game/weatherPerks";
 import { liveIslandWeather, reelWeather } from "@/lib/game/islandWeather";
 import { advanceFishingReel, createFishingReel } from "@/lib/game/fishingReel";
-import { bindFishingCastLifecycle, bindFishingInput, type FishingHeldInput } from "@/lib/game/fishingInput";
+import { FISHING_HINTS, bindFishingCastLifecycle, bindFishingInput, castDevice, trackCastDevice, type CastDevice, type FishingHeldInput } from "@/lib/game/fishingInput";
 import { isGameControlTarget } from "@/lib/game/keyboardInput";
 
 type Phase = "idle" | "charging" | "casting" | "waiting" | "bite" | "reeling" | "revealing" | "caught" | "missed";
 
 const BITE_WINDOW_MS = 1400;
+/** The wait starts when the bobber lands (tsi:fish-splash); this long after the cast it starts anyway (no bobber mounted). */
+const LANDING_FALLBACK_MS = 1600;
 
 /** `rod` (rods.ts) widens the hook window, slows the drain and adds rare luck; `tsi:fish-start` may carry `water` (fishingSpots.ts), and on the member island `site` and `from` (where the player stands) for the server roll. */
 export default function FishingOverlay({ onActiveChange, collectionScope, zoneOverride, rod = rodByTier(1) }: { onActiveChange?: (active: boolean) => void; collectionScope?: string; zoneOverride?: "river" | "sea"; rod?: RodTier }) {
@@ -78,6 +80,9 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
   const [newRecord, setNewRecord] = useState(false);
   const [learned, setLearned] = useState<string | null>(null); // a recipe the landed catch taught
   const [missNote, setMissNote] = useState<string | null>(null);
+  // The hints name the input that started the cast (E, the click or a tap): fishingInput.ts FISHING_HINTS.
+  const [device, setDevice] = useState<CastDevice>("mouse");
+  useEffect(() => trackCastDevice(), []);
   const waterRef = useRef<WaterType | null>(null);
   const castFromRef = useRef<{ site: "village" | "home"; from: [number, number] } | null>(null);
   // The server's roll for this cast (null: roll here), and once hooked, the roll to land.
@@ -239,8 +244,17 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     landRef.current = null;
     const spot = spotRef.current ?? { x: 0, z: 0 };
     window.dispatchEvent(new CustomEvent("tsi:fish-cast", { detail: { x: spot.x, z: spot.z, power } }));
-    timersRef.current.push(window.setTimeout(beginWait, 650));
+    timersRef.current.push(window.setTimeout(beginWait, LANDING_FALLBACK_MS));
   };
+
+  // The wait starts as the bobber lands (FishingBobber's tsi:fish-splash), not on a guess at its flight.
+  useEffect(() => {
+    if (phase !== "casting") return;
+    const onSplash = () => beginWait();
+    window.addEventListener("tsi:fish-splash", onSplash);
+    return () => window.removeEventListener("tsi:fish-splash", onSplash);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
 
   /** Bite hooked (E or click) → the server's roll (or a local one), open the reel. */
   const hook = (input: KeyboardEvent | PointerEvent) => {
@@ -334,6 +348,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
     onStart: (spot) => {
       spotRef.current = spot;
       releaseRequestedRef.current = false;
+      setDevice(castDevice());
       changePhase("charging");
     },
     onRelease: () => { releaseRequestedRef.current = true; },
@@ -421,9 +436,9 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
       }}
     >
       {phase === "charging" ? (
-        <CastMeter onRelease={castNow} releaseRequestedRef={releaseRequestedRef} byKey={!!collectionScope} />
+        <CastMeter onRelease={castNow} releaseRequestedRef={releaseRequestedRef} hint={FISHING_HINTS[device].charge} />
       ) : phase === "reeling" && fish ? (
-        <ReelMinigame fish={fish} known={ownedRef.current.has(fish.key)} onDone={onReelDone} initialInput={reelInputRef.current} tensionMul={rod.tensionMul} />
+        <ReelMinigame fish={fish} known={ownedRef.current.has(fish.key)} onDone={onReelDone} initialInput={reelInputRef.current} tensionMul={rod.tensionMul} help={FISHING_HINTS[device].reel} />
       ) : (
         <div
           style={{
@@ -550,7 +565,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
             textShadow: "0 1px 3px rgba(0,0,0,0.5)",
           }}
         >
-          {collectionScope ? "release E at the tip for MAX CAST" : "Let go at the tip for a max cast"}
+          {FISHING_HINTS[device].tip}
         </div>
       )}
       {(phase === "waiting" || phase === "bite" || phase === "casting") && (
@@ -562,7 +577,7 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
             textShadow: "0 1px 3px rgba(0,0,0,0.5)",
           }}
         >
-          {phase === "bite" ? "E, Space or click to hook" : "Watch for the bite"}
+          {phase === "bite" ? FISHING_HINTS[device].hook : "Watch for the bite"}
         </div>
       )}
       {phase !== "reeling" && (
@@ -628,12 +643,15 @@ export function ReelMinigame({
   onDone,
   initialInput,
   tensionMul = 1,
+  help = FISHING_HINTS.mouse.reel,
 }: {
   fish: FishDef;
   known: boolean;
   onDone: (success: boolean) => void;
   initialInput?: FishingHeldInput;
   tensionMul?: number;
+  /** How to reel on the device that started the cast (FISHING_HINTS). */
+  help?: string;
 }) {
   const reelRef = useRef<HTMLDivElement>(null);
   const pausedLabelRef = useRef<HTMLDivElement>(null);
@@ -642,6 +660,8 @@ export function ReelMinigame({
   const fishRef = useRef<HTMLImageElement>(null);
   const progRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  /** The splash a dart throws on the track: three drops made once and replayed (nothing is created in the loop). */
+  const dropRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const holdingRef = useRef(false);
   const doneRef = useRef(false);
   const lastThunkRef = useRef(0);
@@ -684,14 +704,7 @@ export function ReelMinigame({
           { duration: 200 }
         );
       }
-      if (events.darted && trackRef.current) {
-        for (let i = 0; i < 3; i++) {
-          const drop = document.createElement("span");
-          drop.style.cssText = `position:absolute;left:${fishPos * 100}%;top:50%;width:5px;height:5px;border-radius:50%;background:#EAF6FF;pointer-events:none;--dx:${(Math.random() * 2 - 1) * 26}px;animation:reel-droplet 0.45s ease-out forwards;animation-delay:${i * 40}ms;`;
-          trackRef.current.appendChild(drop);
-          window.setTimeout(() => drop.remove(), 600);
-        }
-      }
+      if (events.darted) splashDrops(dropRefs.current, fishPos);
       setTensionZoom(tension);
 
       // DOM writes
@@ -767,10 +780,6 @@ export function ReelMinigame({
           70% { transform: scale(1.05); opacity: 1; }
           100% { transform: scale(1); opacity: 1; }
         }
-        @keyframes reel-droplet {
-          0% { transform: translate(-50%, -50%); opacity: 0.95; }
-          100% { transform: translate(calc(-50% + var(--dx)), -26px); opacity: 0; }
-        }
         @keyframes reel-heartbeat {
           0%, 100% { box-shadow: 0 0 0 0 rgba(255, 209, 102, 0); }
           50% { box-shadow: 0 0 10px 2px rgba(255, 209, 102, 0.85); }
@@ -832,6 +841,7 @@ export function ReelMinigame({
             border: "2px solid #3D8F52",
           }}
         />
+        {DROP_SPREAD.map((_, i) => <span key={i} ref={el => { dropRefs.current[i] = el; }} aria-hidden style={DROP_STYLE} />)}
         {/* Fish icon riding the track — silhouetted until first caught */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -858,7 +868,7 @@ export function ReelMinigame({
         Paused · click the reel to resume
       </div>
       <div id="fishing-reel-help" style={{ marginTop: 8, fontSize: "max(11px, var(--gui-min-text, 0px))", color: "var(--app-muted, #635745)" }}>
-        Hold E, Space or left-click → · Release ← · Esc to let go
+        {help}
       </div>
       {/* Progress */}
       <div
@@ -890,6 +900,20 @@ export function ReelMinigame({
   );
 }
 
+/** The dart's drops: each flies out its own way from the fish (px across) and fades. */
+const DROP_SPREAD = [-22, 4, 24];
+const DROP_STYLE: React.CSSProperties = { position: "absolute", left: 0, top: "50%", width: 5, height: 5, borderRadius: "50%", background: "#EAF6FF", pointerEvents: "none", opacity: 0 };
+const DROP_FRAMES = DROP_SPREAD.map(dx => [{ transform: "translate(-50%, -50%)", opacity: 0.95 }, { transform: `translate(calc(-50% + ${dx}px), -26px)`, opacity: 0 }]);
+const DROP_TIMING = DROP_SPREAD.map((_, i) => ({ duration: 450, delay: i * 40, easing: "ease-out", fill: "forwards" as const }));
+/** Replay the three drops at the fish's place on the track. */
+function splashDrops(drops: (HTMLSpanElement | null)[], at: number) {
+  drops.forEach((drop, i) => {
+    if (!drop) return;
+    drop.style.left = `${at * 100}%`;
+    drop.animate(DROP_FRAMES[i], DROP_TIMING[i]);
+  });
+}
+
 // ─── Cast meter (David 2026-07-23) ──────────────────────────────────────────
 //
 // Hold E at a fishing spot → this vertical power bar ping-pongs bottom↔top
@@ -898,8 +922,8 @@ export function ReelMinigame({
 // wider hook window — see CAST in lib/game/fishing.ts). rAF + refs, zero
 // re-renders per frame; ESC cancels via the parent's key handler.
 
-/** `byKey`: the applicant island casts with E; the member island with the held rod's click (specs/game-ui.md). */
-function CastMeter({ onRelease, releaseRequestedRef, byKey }: { onRelease: (power: number) => void; releaseRequestedRef: React.RefObject<boolean>; byKey: boolean }) {
+/** `hint`: how to cast on the device that started it (the applicant island casts with E; the member island with the held rod's click or a tap). */
+function CastMeter({ onRelease, releaseRequestedRef, hint }: { onRelease: (power: number) => void; releaseRequestedRef: React.RefObject<boolean>; hint: string }) {
   const fillRef = useRef<HTMLDivElement>(null);
   const readoutRef = useRef<HTMLDivElement>(null);
   const pRef = useRef(0);
@@ -1023,7 +1047,7 @@ function CastMeter({ onRelease, releaseRequestedRef, byKey }: { onRelease: (powe
           0%
         </div>
         <div style={{ fontFamily: "var(--font-highlight, sans-serif)", fontSize: "max(11px, var(--gui-min-text, 0px))", color: "var(--app-muted, #8a7f6a)", maxWidth: 120 }}>
-          {byKey ? "hold E, release at the gold tip" : "Hold, then let go at the gold tip"}
+          {hint}
         </div>
       </div>
     </div>
