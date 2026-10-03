@@ -19,12 +19,12 @@ import { GLBProp } from "../NatureModels";
 import type { Exhibit, MuseumWing } from "@/lib/collections/logic";
 import type { Wing } from "@/lib/collections/roster";
 import { ROSTER } from "@/lib/collections/roster";
-import { CLUBHOUSE_LIGHTING, ISLAND_LIGHTING, type IslandLight } from "@/lib/game/islandLighting";
+import { ISLAND_LIGHTING, type IslandLight } from "@/lib/game/islandLighting";
+import { interiorLight } from "@/lib/game/interiorLight";
+import InteriorDaylight from "../InteriorDaylight";
 
 preloadPieces(["museum-tank", "museum-case", "museum-stand"]);
 preloadShells(["museum"]);
-/** Daytime interior light, shared with the clubhouse. */
-const MUSEUM_LIGHT = CLUBHOUSE_LIGHTING.day;
 const BOUNDS: RoomBounds = { halfW: 9, halfD: 5, spawn: [0, -3.4] };
 const CASES_PER_WING = 6;
 /** The wings in the shell's order (build_interiors.py WINGS): a label column each. */
@@ -143,6 +143,7 @@ export default function MuseumInterior({ wings, frozen, talking = false, player,
   useEffect(() => applyInteriorBackdrop(scene), [scene]);
   useEffect(() => { player.current.set(0, 0, -3.4); camera.position.set(0, 8.4, -10.6); }, [camera, player]);
   const byWing = useMemo(() => new Map((wings ?? []).map(w => [w.wing, w])), [wings]);
+  const lamps = interiorLight(light).lamps;
   useEffect(() => {
     labelAtlas().draw(byWing);
     // The kit's rounded face may arrive after the first draw: draw again in it.
@@ -161,14 +162,13 @@ export default function MuseumInterior({ wings, frozen, talking = false, player,
     return !blocked(nx, nz) ? [nx, nz] : !blocked(nx, z) ? [nx, z] : !blocked(x, nz) ? [x, nz] : [x, z];
   };
   return <>
-    <ambientLight intensity={MUSEUM_LIGHT.ambient} color="#fff6ea" />
-    <hemisphereLight args={["#e6efff", "#b49f80", MUSEUM_LIGHT.hemisphere]} />
-    <directionalLight intensity={MUSEUM_LIGHT.key} position={[3, 8, -4]} color={MUSEUM_LIGHT.keyColor} />
+    {/* The museum keeps the island's hours: the day through its windows and clerestory, the case lights warm at night. */}
+    <InteriorDaylight light={light} scale={{ key: 1.4, ambient: 0.32, hemisphere: 0.36, extent: 12 }} />
     <Suspense fallback={null}><RoomShell room="museum" light={light} /><CuratorDesk /></Suspense>
     {WINGS.map(wing => {
       const cx = WING_X[wing], cases = wingCases(byWing.get(wing));
       return <group key={wing}>
-        <pointLight position={[cx, 3, 2.6]} intensity={10} distance={8} color="#fff0d6" />
+        <pointLight position={[cx, 3, 2.6]} intensity={12 * lamps} distance={8} color="#fff0d6" />
         {cases.map((exhibit, i) => <Case key={exhibit.slot} wing={wing} exhibit={exhibit} x={cx + 1.8 - (i % 3) * 1.8} z={i < 3 ? 1.6 : 3.8} />)}
       </group>;
     })}

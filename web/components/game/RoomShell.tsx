@@ -5,8 +5,8 @@
  * walls with their panelling and trim, windows, the framed doorway in the cut-away near wall, and each room's own
  * fittings, as one GLB per room. Here they're prepared for the game: the panes show the outside for the time of day
  * (drawn from the island's blended light once a minute, looked at through the glass with a little depth), the ceiling
- * and the cut-away wall above the doorway cast shadows without being drawn (the sun comes in by the windows), and a
- * click on the floor walks you there.
+ * and the cut-away wall above the doorway cast shadows without being drawn (the sun comes in by the windows,
+ * InteriorDaylight), and a click on the floor walks you there.
  */
 import { useEffect, useMemo } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
@@ -161,7 +161,15 @@ function prepareShell(scene: THREE.Object3D, url: string) {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
     const name = mesh.name || mesh.parent?.name || "";
-    if (/_caster/.test(name)) { mesh.visible = false; mesh.castShadow = false; return; }
+    if (/_caster/.test(name)) {
+      // Shadow only (SunShadows draws it into the key light's map; the camera never sees it): the ceiling and the
+      // cut-away wall above the doorway, so the sun or the moon comes in by the windows.
+      mesh.material = new THREE.MeshBasicMaterial({ name: "Caster", side: THREE.DoubleSide, colorWrite: false, depthWrite: false });
+      mesh.visible = false;
+      mesh.castShadow = true;
+      mesh.userData.casterOnly = true;
+      return;
+    }
     if (/_windows/.test(name)) { mesh.material = windowViewMaterial(); mesh.castShadow = false; mesh.receiveShadow = false; return; }
     for (const [prefix, make] of ROOM_MATERIALS) if (name.startsWith(prefix)) { mesh.material = make(); mesh.castShadow = false; mesh.receiveShadow = true; return; }
     mesh.castShadow = true;

@@ -13,6 +13,8 @@ import type * as THREE from "three";
 import { HQ_LAYOUT, HQ_PENDANTS } from "@/lib/game/clubhouse";
 import { AudioManager } from "@/lib/game/audio";
 import { CLUBHOUSE_LIGHTING, ISLAND_LIGHTING, type IslandLight } from "@/lib/game/islandLighting";
+import { interiorLight } from "@/lib/game/interiorLight";
+import InteriorDaylight from "./InteriorDaylight";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import {
   InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
@@ -69,8 +71,9 @@ export default function HQInterior({
   onNearestStation: (s: InteriorStation | null) => void;
 }) {
   const { scene } = useThree();
-  const light = CLUBHOUSE_LIGHTING[phase];
   const outside = islandLight ?? ISLAND_LIGHTING[phase];
+  // Lamps at their night strength, eased down by day (lib/game/interiorLight.ts).
+  const lamp = CLUBHOUSE_LIGHTING.night, lamps = interiorLight(outside).lamps;
 
   useEffect(() => applyInteriorBackdrop(scene), [scene]);
 
@@ -84,32 +87,21 @@ export default function HQInterior({
 
   return (
     <group>
-      {/* Neutral fill preserves atlas colors; warmth comes from local lamp pools. */}
-      <ambientLight color={clubhouse ? "#fff7ed" : "#FFD9A0"} intensity={clubhouse ? light.ambient : 0.34} />
-      {clubhouse && <hemisphereLight args={["#dde8ff", "#b79c80", light.hemisphere]} />}
-      {!clubhouse && <pointLight color="#FFC985" intensity={32} distance={16} position={[0, 3.8, 0.6]} />}
-      <directionalLight color={clubhouse ? light.keyColor : "#fff4df"} intensity={clubhouse ? light.key : 0.18} position={[3, 8, -4]}
-        castShadow={clubhouse} shadow-mapSize={[2048, 2048]} shadow-radius={3}
-        shadow-bias={-0.00015} shadow-normalBias={0.025}
-        shadow-camera-left={-12} shadow-camera-right={12} shadow-camera-top={12} shadow-camera-bottom={-12}
-        shadow-camera-near={0.5} shadow-camera-far={30} />
-      {clubhouse ? <>
-        <Suspense fallback={null}>
-          {HQ_PENDANTS.map(({ position, scale, drop, power }) => <group key={position[0]} position={position}>
-            <Piece name="clubhouse-pendant" position={[0, 0, 0]} scale={scale} />
-            <pointLight color="#ffe3ba" intensity={light.ceiling * power} distance={8} position={[0, -drop, 0]} />
-          </group>)}
-          <Piece name="floor-lamp" {...HQ_LAYOUT.loungeLamp} />
-        </Suspense>
-        <pointLight color="#ffdfae" intensity={light.lamp * 0.48} distance={4.8}
-          position={[HQ_LAYOUT.loungeLamp.position[0], 1.52, HQ_LAYOUT.loungeLamp.position[2]]} />
-        {/* The study desk already contains its own lamp model. */}
-        <pointLight color="#ffe2ae" intensity={light.desk} distance={3.3}
-          position={[HQ_LAYOUT.desk.position[0] + 0.4, 1.6, HQ_LAYOUT.desk.position[2] - 0.1]} />
-      </> : <>
-        <pointLight color="#FFDB98" intensity={11} distance={5.5} position={[-4.5, 2.4, 4.6]} />
-        <pointLight color="#FFDB98" intensity={11} distance={5.5} position={[4.2, 2.4, 4.6]} />
-      </>}
+      {/* The day through the windows (the sun, or the moon's cool sliver at night); warmth comes from the lamp pools. */}
+      <InteriorDaylight light={outside} shadows={clubhouse} scale={{ key: 1.5, ambient: 0.32, hemisphere: 0.36, extent: 12 }} />
+      <Suspense fallback={null}>
+        {HQ_PENDANTS.map(({ position, scale }) => <group key={position[0]} position={position}>
+          <Piece name="clubhouse-pendant" position={[0, 0, 0]} scale={scale} />
+        </group>)}
+        <Piece name="floor-lamp" {...HQ_LAYOUT.loungeLamp} />
+      </Suspense>
+      {HQ_PENDANTS.map(({ position, drop, power }) => <pointLight key={position[0]} color="#ffe3ba" intensity={lamp.ceiling * power * lamps} distance={8}
+        position={[position[0], position[1] - drop, position[2]]} />)}
+      <pointLight color="#ffdfae" intensity={lamp.lamp * 0.48 * lamps} distance={4.8}
+        position={[HQ_LAYOUT.loungeLamp.position[0], 1.52, HQ_LAYOUT.loungeLamp.position[2]]} />
+      {/* The study desk already contains its own lamp model. */}
+      <pointLight color="#ffe2ae" intensity={lamp.desk * lamps} distance={3.3}
+        position={[HQ_LAYOUT.desk.position[0] + 0.4, 1.6, HQ_LAYOUT.desk.position[2] - 0.1]} />
 
       {/* floor: warm planks + alternating strips */}
       <mesh receiveShadow={clubhouse} rotation={[-Math.PI / 2, 0, 0]} onClick={onFloorClick}>

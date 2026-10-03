@@ -12,6 +12,8 @@
 import { Suspense, useEffect } from "react";
 import { useThree } from "@react-three/fiber";
 import { ISLAND_LIGHTING, type IslandLight } from "@/lib/game/islandLighting";
+import { interiorLight } from "@/lib/game/interiorLight";
+import InteriorDaylight from "./InteriorDaylight";
 import {
   InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces,
   type InteriorStation, type RoomBounds,
@@ -43,16 +45,14 @@ export default function ShopInterior({
 }) {
   const { scene } = useThree();
   useEffect(() => applyInteriorBackdrop(scene), [scene]);
+  const lamps = interiorLight(light).lamps;
 
   return (
     <group>
-      {/* warm-amber pass (2026-07-14, AC interior refs): low warm ambient,
-          the shop keeps a touch more brightness than HQ (retail read) but
-          the light is all amber — plus a warm counter pool. */}
-      <ambientLight color="#FFDCA8" intensity={0.38} />
-      <pointLight color="#FFC985" intensity={28} distance={17} position={[0, 3.2, 0]} />
-      <directionalLight color="#FFE8C8" intensity={0.18} position={[5, 6, -3]} />
-      <pointLight color="#FFDB98" intensity={9} distance={5} position={[0, 2.2, 2.6]} />
+      {/* The day through the two windows; the shop's warm amber lamps come up as it goes (a brighter retail read). */}
+      <InteriorDaylight light={light} scale={{ key: 1.2, ambient: 0.36, hemisphere: 0.3, extent: 8 }} />
+      <pointLight color="#FFC985" intensity={28 * lamps} distance={17} position={[0, 3.2, 0]} />
+      <pointLight color="#FFDB98" intensity={9 * lamps} distance={5} position={[0, 2.2, 2.6]} />
 
       {/* walls, windows, the awning and the floor (art/interiors/build_interiors.py) */}
       <Suspense fallback={null}><RoomShell room="shop" light={light} /></Suspense>

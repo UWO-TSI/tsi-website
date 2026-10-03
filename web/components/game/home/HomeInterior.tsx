@@ -15,7 +15,9 @@ import * as THREE from "three";
 import { InteriorPlayer, applyInteriorBackdrop, nearestStation, type InteriorStation, type RoomBounds } from "../interiorShared";
 import { useKitPiece } from "../RoomShell";
 import { PlacementLayer, type GridMapping } from "./PlacementLayer";
-import { CLUBHOUSE_LIGHTING } from "@/lib/game/islandLighting";
+import { CLUBHOUSE_LIGHTING, ISLAND_LIGHTING, type IslandLight } from "@/lib/game/islandLighting";
+import { interiorLight } from "@/lib/game/interiorLight";
+import InteriorDaylight from "../InteriorDaylight";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import { catalogueItem } from "@/lib/homes/catalogue";
 import {
@@ -99,13 +101,16 @@ function RoomFront({ index, count }: { index: number; count: number }) {
 /** The pendant's depth into the room, and its bulb's height (the kit's shade hangs 0.8 under its ceiling cup). */
 const LAMP_Z = 0.4, LAMP_Y = WALL_H - 0.7;
 
-export default function HomeInterior({ layout, phase, frozen, player, onNear, decorating, selected, onPlace, onPickUp }: {
+export default function HomeInterior({ layout, phase, light: islandLight, frozen, player, onNear, decorating, selected, onPlace, onPickUp }: {
   layout: HomeLayoutDoc; phase: IslandPhase; frozen: boolean; player: React.RefObject<THREE.Vector3>;
+  /** The island's light now (the phase's look when not given). */
+  light?: IslandLight;
   onNear: (near: HouseNear) => void; decorating: boolean; selected: { piece: string; rot: Rotation; uid?: string } | null;
   onPlace: (room: number, item: PlacedItem) => void; onPickUp: (room: number, item: PlacedItem) => void;
 }) {
   const n = layout.rooms.length;
-  const light = CLUBHOUSE_LIGHTING[phase];
+  const outside = islandLight ?? ISLAND_LIGHTING[phase];
+  const lamps = interiorLight(outside).lamps;
   const { scene, camera } = useThree();
   useEffect(() => applyInteriorBackdrop(scene), [scene]);
   const spawnX = roomLeft(0, n) - RW / 2;
@@ -142,12 +147,10 @@ export default function HomeInterior({ layout, phase, frozen, player, onNear, de
     if (nearRef.current !== next) { nearRef.current = next; onNear(next); }
   };
   return <>
-    <ambientLight color="#fff7ed" intensity={light.ambient} />
-    <hemisphereLight args={["#dde8ff", "#b79c80", light.hemisphere]} />
-    <directionalLight color={light.keyColor} intensity={light.key} position={[3, 8, -4]} />
+    <InteriorDaylight light={outside} scale={{ key: 0.9, ambient: 0.32, hemisphere: 0.4, extent: 10 }} />
     {layout.rooms.map((room, i) => <group key={room.id}>
       <RoomShell index={i} count={n} wallpaper={room.wallpaper} flooring={room.flooring} />
-      <pointLight color="#ffe3ba" intensity={light.ceiling * 0.55} distance={9} position={[roomLeft(i, n) - RW / 2, LAMP_Y, LAMP_Z]} />
+      <pointLight color="#ffe3ba" intensity={CLUBHOUSE_LIGHTING.night.ceiling * 0.55 * lamps} distance={9} position={[roomLeft(i, n) - RW / 2, LAMP_Y, LAMP_Z]} />
       <Suspense fallback={null}><RoomFront index={i} count={n} /></Suspense>
       <RoomPlacement index={i} count={n} items={room.items} decorating={decorating} selected={selected}
         onPlace={item => onPlace(i, item)} onPickUp={item => onPickUp(i, item)} />

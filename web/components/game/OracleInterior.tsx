@@ -17,6 +17,8 @@ import * as THREE from "three";
 import { FAMILIES } from "@/lib/game/oracle/family";
 import type { Family } from "@/lib/oracle/engine";
 import { ISLAND_LIGHTING, type IslandLight } from "@/lib/game/islandLighting";
+import { interiorLight } from "@/lib/game/interiorLight";
+import InteriorDaylight from "./InteriorDaylight";
 import { sigilTexture } from "./oracle/sigil";
 import { RoomShell, preloadShells, registerShellMaterial, useKitPiece } from "./RoomShell";
 import {
@@ -98,8 +100,11 @@ function roseMaterial(): THREE.Material {
   for (const r of [0.32, 0.5, 0.82]) { g.beginPath(); g.arc(c, c, R * r, 0, Math.PI * 2); g.stroke(); }
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
-  return new THREE.MeshBasicMaterial({ name: "RoseGlass", map: tex, color: "#c9c0d6" });
+  return (rose = new THREE.MeshBasicMaterial({ name: "RoseGlass", map: tex, color: "#c9c0d6" }));
 }
+let rose: THREE.MeshBasicMaterial | null = null;
+/** The rose window glows with the day behind it and darkens to a deep jewel at night (module scope: written from an effect). */
+function lightRose(day: number) { rose?.color.setRGB(0.28 + 0.6 * day, 0.26 + 0.58 * day, 0.36 + 0.55 * day); }
 registerShellMaterial("oracle_banners", bannerMaterial);
 registerShellMaterial("oracle_rose", roseMaterial);
 // Candle embers (loop wake 41): three warm motes per cluster rise from the
@@ -183,13 +188,14 @@ export default function OracleInterior({
 }) {
   const { scene } = useThree();
   useEffect(() => applyInteriorBackdrop(scene, "#100D18"), [scene]);
+  const day = interiorLight(light).day;
+  useEffect(() => lightRose(day), [day]);
 
   return (
     <group>
-      {/* warm-amber pass (2026-07-14, AC interior refs): the temple keeps
-          its violet identity but drops the flat fill — candle pools +
-          crystal glow carry the room. */}
-      <ambientLight color="#D8C4EE" intensity={0.4} />
+      {/* The temple keeps its violet identity: a lavender fill, the day (or the moon) through its windows, and the
+          candle pools and the crystal's glow carrying it at night. */}
+      <InteriorDaylight light={light} tint="#cdb6ee" scale={{ key: 0.9, ambient: 0.4, hemisphere: 0.22, extent: 9 }} />
       <pointLight color={tint} intensity={26} distance={19} position={[0, 4.2, 0]} />
       <pointLight color={tint} intensity={10} distance={7} position={[0, 3, 2.6]} />
       <pointLight color="#FFCF8A" intensity={10} distance={5.5} position={[-2.2, 1, 2.2]} />
