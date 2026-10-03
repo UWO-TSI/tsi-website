@@ -419,9 +419,10 @@ function HeldWeapon({ puppet, motion, weapon: { kind, model: url, modelScale, in
     return { paints: own, glows: pulse ? glowMaterials(model) : [] };
   }, [model, paint, pulse]);
   useEffect(() => {
-    placeWeapon(model, { kind, model: url, modelScale, inHand, grip }, inHand ? puppet.sockets[hand ?? WEAPON_HAND[kind]] : puppet.sockets.Back);
-    const shown = showWeapon(motion.current, inHand ? model : null);
-    return () => { model.removeFromParent(); shown(); };
+    const main = hand ?? WEAPON_HAND[kind];
+    placeWeapon(model, { kind, model: url, modelScale, inHand, grip }, inHand ? puppet.sockets[main] : puppet.sockets.Back);
+    const shown = showWeapon(motion.current, inHand ? model : null), off = inHand ? holdOffHand(model, puppet.sockets[main === "R" ? "L" : "R"], grip ?? GRIP[kind]) : null;
+    return () => { off?.(); model.removeFromParent(); shown(); };
   }, [model, puppet, motion, kind, url, modelScale, inHand, grip, hand]);
   // Upright at rest, the attack grip while an attack clip plays (eased so the swap doesn't pop).
   useFrame(({ clock }, delta) => {
@@ -455,6 +456,21 @@ function breathe(glows: THREE.MeshStandardMaterial[], t: number, paint?: WeaponP
 function showWeapon(m: CharacterMotion | null, model: THREE.Object3D | null) {
   if (m) m.weaponModel = model;
   return () => { if (m && model && m.weaponModel === model) m.weaponModel = null; };
+}
+/**
+ * A weapon in two hands' worth of parts (classes v2: the Guardian's shield, the Assassin's second tanto, the Martial
+ * Artist's left wrap): the model's `OffHand` node, authored grip-at-origin like the weapon, goes to the other hand while
+ * it's in hand, and back to its place on the model (across the back with the rest) after. Returns the undo.
+ */
+function holdOffHand(model: THREE.Object3D, socket: THREE.Object3D, g: WeaponGrip): (() => void) | null {
+  const off = model.getObjectByName("OffHand");
+  if (!off) return null;
+  const home = off.parent!, at = off.matrix.clone();
+  off.scale.setScalar(model.scale.x);
+  off.position.set(0, 0, 0);
+  off.rotation.set(...(g.off ?? g.hand));
+  socket.add(off);
+  return () => { off.removeFromParent(); home.add(off); at.decompose(off.position, off.quaternion, off.scale); };
 }
 function placeWeapon(model: THREE.Object3D, weapon: WeaponView, socket: THREE.Object3D) {
   const g = weapon.grip ?? GRIP[weapon.kind];

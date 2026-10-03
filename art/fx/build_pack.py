@@ -1044,6 +1044,37 @@ def flare(t):
     return A, H
 
 
+
+# ---------------------------------------------------------------- the Vanguard wave's rows (classes v2)
+def ink_slash(t):
+    """A brush-stroke slash for the Assassin: a crescent of black ink laid with one sweep of a loaded brush, its leading
+    edge a thin band of the ramp's mid colour (red on the Assassin's ramp), bristle streaks along the stroke and the dry
+    tail breaking up; it sweeps on, then dries away from the tail. Low heat (ink) with a mid rim."""
+    head = 0.25 + 0.75 * ss(0.0, 0.3, t)
+    tail = 0.95 * ss(0.4, 1.0, t)
+    cx, cy, R, W = 0.05, -0.45, 0.85, 0.42
+    r = np.hypot(U - cx, V - cy)
+    ang = np.arctan2(V - cy, U - cx)
+    a0, a1 = math.radians(165), math.radians(15)
+    s = (a0 - ang) / (a0 - a1)
+    k = np.clip((s - tail) / max(head - tail, 1e-3), 0, 1)
+    prof = np.sin(math.pi * np.clip(k, 0, 1)) ** 0.55 * (0.25 + 0.75 * k)       # a fat belly toward the head, a dry point behind
+    w = W * prof * (1 - 0.35 * ss(0.5, 1.0, t))
+    inner, outer = R - 0.4 * w, R + 0.6 * w
+    inside = (s > tail) & (s < head) & (w > PX * 0.4)
+    across = np.clip((r - inner) / np.maximum(outer - inner, 1e-4), 0, 1)
+    br = vnoise(s * 26 + 3, across * 9 + 40, 4101)                               # bristles run along the stroke
+    thirst = 0.55 * (1 - k) ** 1.5 + 0.35 * ss(0.55, 1.0, t)
+    A = hard(np.maximum(inner - r, r - outer)) * inside * ss(thirst - 0.06, thirst + 0.1, br + 0.2)
+    H = np.where(across > 0.8, MID, np.where(across > 0.68, 0.3, 0.04 + 0.05 * br))  # the leading rim, a red bleed, else ink
+    for i, (dk, dr) in enumerate([(0.62, 0.16), (0.78, -0.12), (0.9, 0.2)]):     # flung drops off the belly
+        g = a0 - (a0 - a1) * min(head, dk)
+        rr = R + dr + 0.25 * ss(0.2, 1.0, t)
+        d = np.hypot(U - cx - math.cos(g) * rr, V - cy - math.sin(g) * rr)
+        A, H = lay(A, H, hard(d - 0.03 * (1 - 0.5 * t)) * (t > 0.15) * (t < 0.9), np.full_like(U, 0.05))
+    return A, H
+
+
 # ---- the Arcane wave's rows (classes v2: Elementalist, Illusionist, Necromancer, Transmuter)
 # Hand-placed outlines (points in cell units, cut with exact signed distances) and tapered strokes, so the silhouettes
 # stay crisp at any turn or foreshortening; bands painted in painter's order.
@@ -1827,6 +1858,9 @@ COMBAT_SPRITES = [
     ("bolt", c_bolt, "lightning along +u (tiles along u)", True),
     ("leaf", c_leaf, "cel leaf tumbling", True),
     ("thorn", c_thorn, "thorny vine unfurling", False),
+    # The Vanguard wave (classes v2): the Assassin's ink brush slash (its petals are the Warden's leaf, the Guardian's
+    # shield shards the Arcane shard).
+    ("inkSlash", ink_slash, "ink brush slash with a mid rim", False),
 ]
 SHEET_RAMPS = [("arcane", "#fff6ff", "#b48cff", "#3a2466"), ("fire", "#fff4d6", "#ff8a3d", "#5a1a08"), ("holy", "#ffffff", "#ffe08a", "#8a6a20")]
 DARK, GRASS = "#1b1f27", "#8fa16c"
@@ -1834,8 +1868,10 @@ DARK, GRASS = "#1b1f27", "#8fa16c"
 
 def build_combat():
     rows = len(COMBAT_SPRITES)
-    if rows > 32:
-        raise SystemExit("the combat pack holds 32 rows at most")
+    # 33 rows = 4224 px tall: past a device's max texture size (4096 on the oldest) three.js scales the atlas down to
+    # fit (UVs unchanged), so it only draws a little softer there.
+    if rows > 33:
+        raise SystemExit("the combat pack holds 33 rows at most")
     atlas = np.zeros((rows * CELL, FRAMES * CELL, 4))
     for r, (name, fn, _, _) in enumerate(COMBAT_SPRITES):
         for i in range(FRAMES):

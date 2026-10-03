@@ -2027,6 +2027,513 @@ def render_warden_clips(cat):
     print("wrote", WARDEN_EVIDENCE)
 
 
+# ---------------------------------------------------------------- the Vanguard wave (classes v2: the LOCKED Guardian,
+# Juggernaut, Martial Artist and Assassin). Their basic chains, techniques and ults, keyed on the same rig with the same
+# helpers. Strikes carry the weight: the hips turn into a cross, a hook and a kick (the support foot pivots with them),
+# the shoulders turn over the hips, the body leans back from a kick and forward into a punch, every strike comes back to
+# guard before the next. Arm-only strikes (punches, cuts) can play on the upper body over a run.
+STANCE_FEET = {"Left": ANKLE["Left"] + V(0.004, -0.03, 0), "Right": ANKLE["Right"] + V(-0.004, 0.03, 0)}   # lead (left) foot forward
+WIDE_FEET = {"Left": ANKLE["Left"] + V(0.035, -0.02, 0), "Right": ANKLE["Right"] + V(-0.035, 0.03, 0)}
+
+
+def pb(feet=STANCE_FEET, **kw):
+    """A body pose with both feet planted (at the stance's spots): a leg that a post leaves free starts from the ground."""
+    return plant(body(**kw), ankles=feet)
+
+
+def guard(P, dz=0.0, r=True, l=True):
+    """Both fists up at the chin (the Fists grip's guard spots)."""
+    if r:
+        hand(P, "Right", chest(P, GUARD_R) + V(0, 0, dz), V(-0.6, 0.5, -1))
+    if l:
+        hand(P, "Left", chest(P, GUARD_L) + V(0, 0, dz), V(0.6, 0.5, -1))
+    return P
+
+
+def ramp_in_out(p, a=0.12, b=0.85):
+    """0 at the clip's ends, 1 inside: blends the fighting stance in from Idle and back out."""
+    return ss(0, a, p) * (1 - ss(b, 1, p))
+
+
+def feet_at(w, target=STANCE_FEET):
+    return {s: ANKLE[s].lerp(target[s], w) for s, _ in SIDES}
+
+
+def plant_leg(P, s, ankle, yaw=0.0, knees_out=0.25):
+    """One foot flat at `ankle`, turned `yaw` degrees about the vertical (a pivot on the ball of the support foot)."""
+    sx = dict(SIDES)[s]
+    P.ik(f"{s}UpLeg", f"{s}Leg", ankle, rz(yaw) @ V(sx * knees_out, -1, 0))
+    P.world(f"{s}Foot", rz(yaw))
+    P.R[f"{s}ToeBase"] = Quaternion()
+    return P
+
+
+def fight_post(free=None, pivot=None, target=STANCE_FEET, lift=None):
+    """A post for a fighter's clip: the stance's feet blended in and out, a leg left free (its keyed kick or knee) inside its
+    windows [(side, a, b)], one foot pivoting with the hips (pivot = (side, yaw(p) in degrees, the hips' sign)), and an
+    optional lift (a jump)."""
+    def post(P, p, flip):
+        ank = feet_at(ramp_in_out(p), target)
+        up = lift(P, p) if lift else 0.0
+        for s, _ in SIDES:
+            if free and any(fs == s and a <= p <= b for fs, a, b in free):
+                continue
+            plant_leg(P, s, ank[s] + V(0, 0, up), pivot[1](p) if pivot and pivot[0] == s else 0.0)
+        return P
+    return post
+
+
+def kick_leg(P, s, target, pole, foot=None):
+    """A kicking (or kneeing) leg: the ankle to `target` bending toward `pole`, the foot along `foot` if given."""
+    P.ik(f"{s}UpLeg", f"{s}Leg", target, pole)
+    if foot is not None:
+        P.aim(f"{s}Foot", foot)
+    return P
+
+
+def ftime(keys, seconds):
+    """Keys written in seconds, as phases."""
+    return [(t / seconds, P, e) for t, P, e in keys]
+
+
+# ── the Martial Artist: Muay Thai on the wraps (grip Fists) ──
+def mt_stance(dip=0.0, twist=-10, lean=3, base=None):
+    return guard(pb(crouch=0.018 + dip, twist=twist, lean=lean, nod=5, base=base))
+
+
+def mt_jab(base=None):
+    P = pb(crouch=0.024, twist=-24, lean=9, nod=6, shift=(0.0, -0.026), base=base)
+    arm(P, "Left", V(0.1, -1, 0.12))
+    return guard(P, l=False)
+
+
+def mt_cross(base=None):
+    P = pb(hips=rz(24), crouch=0.03, twist=34, lean=13, nod=6, shift=(0.0, -0.036), base=base)
+    arm(P, "Right", V(-0.1, -1, 0.1))
+    return guard(P, r=False)
+
+
+def mt_hook(base=None):
+    P = pb(hips=rz(-22), crouch=0.03, twist=-40, lean=6, side=6, nod=5, base=base)
+    arm(P, "Left", V(0.5, -0.82, 0.18), V(-0.85, -0.5, 0.08))          # elbow at shoulder height, the forearm level across
+    return guard(P, l=False)
+
+
+def mt_elbow(s="Right", base=None):
+    sx = dict(SIDES)[s]
+    P = pb(hips=rz(-sx * 20), crouch=0.03, twist=-sx * 38, lean=12, nod=7, shift=(0.0, -0.03), base=base)
+    arm(P, s, V(-sx * 0.15, -0.9, 0.36), V(sx * 0.7, 0.55, -0.2))      # the point of the elbow leads, the fist folded back and down
+    return guard(P, r=s != "Right", l=s != "Left")
+
+
+def mt_elbow_load(s="Right", base=None):
+    sx = dict(SIDES)[s]
+    P = pb(crouch=0.02, twist=sx * 14, lean=2, nod=4, base=base)
+    arm(P, s, V(sx * 0.85, -0.1, 0.45), V(-sx * 0.2, 0.6, 0.55))
+    return guard(P, r=s != "Right", l=s != "Left")
+
+
+def mt_knee(s="Right", clinch=True, height=0.0, base=None):
+    sx = dict(SIDES)[s]
+    P = pb(crouch=0.01, lean=-5, nod=8, shift=(0.0, -0.045), base=base)
+    kick_leg(P, s, V(sx * 0.04, -0.08, 0.25 + height), V(0, -1, 0.2), V(0, 0.2, -1))
+    if clinch:                                                           # both hands on the back of the opponent's neck, pulling down
+        hand(P, "Right", V(-0.055, -0.22, 0.49), V(-0.6, 0.2, -1))
+        hand(P, "Left", V(0.055, -0.22, 0.49), V(0.6, 0.2, -1))
+    else:
+        guard(P)
+    return P
+
+
+def mt_clinch(base=None):
+    P = pb(crouch=0.02, lean=8, nod=8, base=base)
+    hand(P, "Right", V(-0.055, -0.225, 0.52), V(-0.6, 0.2, -1))
+    hand(P, "Left", V(0.055, -0.225, 0.52), V(0.6, 0.2, -1))
+    return P
+
+
+def mt_round(chamber=False, high=False, follow=False, base=None):
+    """The rear (right) roundhouse: the hips turn over, the shin swings across, the right arm swings down for balance."""
+    turn = -32 if chamber else (-105 if follow else -75)
+    P = pb(hips=rz(turn), crouch=0.012, lean=-7 if chamber else -20, side=-6 if chamber else -12, twist=-10, nod=4, base=base)
+    if chamber:
+        kick_leg(P, "Right", V(-0.11, -0.13, 0.21), V(-1, -0.4, 0.3), V(0.2, -0.6, -0.8))
+        arm(P, "Right", V(-0.3, 0.2, -0.93))
+    else:
+        z = 0.3 if high else 0.22
+        tgt = V(0.16, -0.16, z - 0.02) if follow else V(0.05, -0.25, z)
+        kick_leg(P, "Right", tgt, V(-0.15, 0.2, 1), V(0.95, -0.2, 0.1))
+        arm(P, "Right", V(-0.35, 0.65, -0.68))
+    return guard(P, r=False)
+
+
+def mt_teep(chamber=False, base=None):
+    P = pb(crouch=0.01, lean=-5 if chamber else -14, nod=8, shift=(0.0, 0.01 if chamber else 0.024), base=base)
+    if chamber:
+        kick_leg(P, "Right", V(-0.05, -0.12, 0.25), V(0, -1, 0.4), V(0, -0.3, -0.95))
+    else:
+        kick_leg(P, "Right", V(-0.04, -0.27, 0.2), V(0, -0.3, 1), V(0, -0.35, 0.94))   # the sole drives through, toes up
+    return guard(P)
+
+
+@unique("Unique_Jab", "Fists", 0.36, 0.3, upper=True, post=fight_post())
+def u_jab(g):
+    return [(0, N, "lin"), (0.12, mt_stance(0.006, -6), "io"), (0.3, mt_jab(), "back"), (0.6, mt_stance(), "io"), (1.0, N, "io")]
+
+
+@unique("Unique_Cross", "Fists", 0.4, 0.33, upper=True, post=fight_post(pivot=("Right", lambda p: 16 * ss(0.15, 0.33, p) * (1 - ss(0.6, 0.95, p)))))
+def u_cross(g):
+    return [(0, N, "lin"), (0.14, mt_stance(0.01, -14), "io"), (0.33, mt_cross(), "back"), (0.62, mt_stance(), "io"), (1.0, N, "io")]
+
+
+@unique("Unique_Hook", "Fists", 0.42, 0.35, upper=True, post=fight_post())
+def u_hook(g):
+    P = mt_stance(0.014, 10)
+    return [(0, N, "lin"), (0.15, P, "io"), (0.35, mt_hook(), "back"), (0.52, mt_hook(), "lin"), (0.72, mt_stance(), "io"), (1.0, N, "io")]
+
+
+@unique("Unique_BodyKick", "Fists", 0.6, 0.4, post=fight_post(free=[("Right", 0.1, 0.86)], pivot=("Left", lambda p: -60 * ss(0.12, 0.4, p) * (1 - ss(0.66, 0.9, p)))))
+def u_body_kick(g):
+    return [(0, N, "lin"), (0.1, mt_stance(0.012, -6), "io"), (0.24, mt_round(chamber=True), "io"), (0.4, mt_round(), "back"), (0.54, mt_round(follow=True), "out"),
+            (0.72, mt_round(chamber=True), "io"), (0.88, mt_stance(), "io"), (1.0, N, "io")]
+
+
+@unique("Unique_Teep", "Fists", 0.55, 0.4, post=fight_post(free=[("Right", 0.1, 0.84)]))
+def u_teep(g):
+    return [(0, N, "lin"), (0.1, mt_stance(0.01), "io"), (0.24, mt_teep(True), "io"), (0.4, mt_teep(), "back"), (0.58, mt_teep(), "lin"), (0.72, mt_teep(True), "io"),
+            (0.88, mt_stance(), "io"), (1.0, N, "io")]
+
+
+@unique("Unique_Elbow", "Fists", 0.48, 0.4, upper=True, post=fight_post(pivot=("Right", lambda p: 14 * ss(0.2, 0.4, p) * (1 - ss(0.62, 0.95, p)))))
+def u_elbow(g):
+    return [(0, N, "lin"), (0.18, mt_elbow_load(), "io"), (0.4, mt_elbow(), "back"), (0.58, mt_elbow(), "lin"), (0.78, mt_stance(), "io"), (1.0, N, "io")]
+
+
+CLINCH_T = 1.4
+@unique("Unique_ClinchKnees", "Fists", CLINCH_T, 0.3 / CLINCH_T,
+        post=fight_post(free=[("Right", 0.16 / CLINCH_T, 0.44 / CLINCH_T), ("Left", 0.56 / CLINCH_T, 0.84 / CLINCH_T), ("Right", 0.96 / CLINCH_T, 1.26 / CLINCH_T)]))
+def u_clinch(g):
+    k = [(0, N, "lin"), (0.14, mt_clinch(), "io"), (0.3, mt_knee("Right"), "back"), (0.46, mt_clinch(), "io"), (0.7, mt_knee("Left"), "back"),
+         (0.86, mt_clinch(), "io"), (1.1, mt_knee("Right", height=0.03), "back"), (1.24, mt_clinch(), "io"), (1.32, mt_stance(), "io"), (1.4, N, "io")]
+    return ftime(k, CLINCH_T)
+
+
+@unique("Unique_Roundhouse", "Fists", 0.7, 0.38, post=fight_post(free=[("Right", 0.1, 0.88)], pivot=("Left", lambda p: -90 * ss(0.1, 0.5, p) * (1 - ss(0.7, 0.92, p)))))
+def u_roundhouse(g):
+    return [(0, N, "lin"), (0.1, mt_stance(0.012, -6), "io"), (0.24, mt_round(chamber=True), "io"), (0.38, mt_round(high=True), "back"), (0.55, mt_round(high=True, follow=True), "out"),
+            (0.74, mt_round(chamber=True), "io"), (0.9, mt_stance(), "io"), (1.0, N, "io")]
+
+
+def fk_lift(P, p):
+    return lift_of(P, 1.4)
+
+
+def mt_flying(phase):
+    """The flying knee's keys: the crouch, the spring, the apex with the knee driven up and the hands pulling down, the drop."""
+    if phase == "crouch":
+        P = body(crouch=0.05, lean=12, nod=6)
+        arm(P, "Right", V(-0.4, 0.6, -0.7)); arm(P, "Left", V(0.4, 0.6, -0.7))
+        return P
+    if phase == "rise":
+        P = body(crouch=-0.1, lean=-4, nod=4)
+        kick_leg(P, "Right", V(-0.05, -0.06, 0.2), V(0, -1, 0.3), V(0, 0.2, -1))
+        kick_leg(P, "Left", V(0.06, 0.08, 0.05), V(0, -1, -0.2))
+        hand(P, "Right", V(-0.06, -0.24, 0.55), V(-0.6, 0.2, -1)); hand(P, "Left", V(0.06, -0.24, 0.55), V(0.6, 0.2, -1))
+        return P
+    if phase == "apex":
+        P = body(crouch=-0.2, lean=-12, nod=8, shift=(0.0, -0.04))
+        kick_leg(P, "Right", V(-0.04, -0.13, 0.34), V(0, -1, 0.2), V(0, 0.3, -0.95))
+        kick_leg(P, "Left", V(0.06, 0.1, 0.07), V(0, -1, -0.3))
+        hand(P, "Right", V(-0.055, -0.23, 0.47), V(-0.6, 0.2, -1)); hand(P, "Left", V(0.055, -0.23, 0.47), V(0.6, 0.2, -1))
+        return P
+    P = body(crouch=0.05, lean=10, nod=6)                     # land
+    return guard(P)
+
+
+@unique("Unique_FlyingKnee", "Fists", 0.75, 0.45, post=fight_post(free=[("Right", 0.22, 0.72), ("Left", 0.26, 0.68)], lift=fk_lift))
+def u_flying_knee(g):
+    return [(0, N, "lin"), (0.16, mt_flying("crouch"), "io"), (0.32, mt_flying("rise"), "out"), (0.45, mt_flying("apex"), "back"), (0.62, mt_flying("rise"), "in"),
+            (0.8, mt_flying("land"), "in"), (1.0, N, "io")]
+
+
+ULT_MA_T = 3.4
+ULT_MA_FREE = [("Right", 1.12, 1.38), ("Left", 2.0, 2.26), ("Right", 2.42, 3.26)]
+@unique("Ult_MartialArtist", "Fists", ULT_MA_T, 0.4 / ULT_MA_T,
+        post=fight_post(free=[(s, a / ULT_MA_T, b / ULT_MA_T) for s, a, b in ULT_MA_FREE],
+                        pivot=("Left", lambda p: -90 * ss(2.45 / ULT_MA_T, 2.8 / ULT_MA_T, p) * (1 - ss(3.0 / ULT_MA_T, 3.3 / ULT_MA_T, p)))))
+def u_ult_martial(g):
+    """The Art of Eight Limbs: a breath in a low guard (the anticipation), then jab, cross, left elbow, right knee, left hook,
+    right elbow, left knee, each snapping back toward guard, and the final rear roundhouse (the second impact)."""
+    focus = mt_stance(0.035, -12, 6)
+    k = [(0, N, "lin"), (0.25, focus, "io"), (0.4, mt_jab(), "back"), (0.54, mt_stance(0.02), "io"), (0.68, mt_cross(), "back"), (0.82, mt_stance(0.02), "io"),
+         (0.96, mt_elbow("Left"), "back"), (1.1, mt_clinch(), "io"), (1.24, mt_knee("Right"), "back"), (1.38, mt_stance(0.02), "io"), (1.52, mt_hook(), "back"),
+         (1.66, mt_elbow_load(), "io"), (1.8, mt_elbow(), "back"), (1.96, mt_clinch(), "io"), (2.12, mt_knee("Left"), "back"), (2.3, mt_stance(0.02), "io"),
+         (2.55, mt_round(chamber=True), "io"), (2.8, mt_round(high=True), "back"), (3.0, mt_round(high=True, follow=True), "out"), (3.2, mt_stance(), "io"), (3.4, N, "io")]
+    return ftime(k, ULT_MA_T)
+
+
+# ── the Assassin: twin tanto (grip Fists: a blade in each fist) ──
+def as_cut(s="Right", load=False, base=None):
+    """A diagonal tanto cut, high on the cutting side down across the body; the other blade held at guard."""
+    sx = dict(SIDES)[s]
+    if load:
+        P = pb(crouch=0.02, twist=sx * 18, lean=4, base=base)
+        hand(P, s, V(sx * 0.19, -0.1, 0.56), V(sx * 0.7, 0.4, -0.6))
+    else:
+        P = pb(hips=rz(-sx * 10), crouch=0.03, twist=-sx * 30, lean=12, shift=(0.0, -0.018), base=base)
+        hand(P, s, V(-sx * 0.07, -0.22, 0.36), V(sx * 0.6, 0.2, -1))
+    return guard(P, r=s != "Right", l=s != "Left")
+
+
+@unique("Unique_TantoCut", "Fists", 0.34, 0.32, upper=True, post=fight_post())
+def u_tanto_cut(g):
+    return [(0, N, "lin"), (0.14, as_cut("Right", True), "io"), (0.32, as_cut("Right"), "back"), (0.6, mt_stance(0.01), "io"), (1.0, N, "io")]
+
+
+@unique("Unique_TantoBackcut", "Fists", 0.34, 0.32, upper=True, post=fight_post())
+def u_tanto_backcut(g):
+    return [(0, N, "lin"), (0.14, as_cut("Left", True), "io"), (0.32, as_cut("Left"), "back"), (0.6, mt_stance(0.01), "io"), (1.0, N, "io")]
+
+
+def as_low(nod=-8):
+    P = body(crouch=0.075, lean=24, nod=nod)
+    arm(P, "Right", V(-0.85, -0.25, -0.45)); arm(P, "Left", V(0.85, -0.25, -0.45))       # blades out low to the sides
+    return P
+
+
+@unique("Unique_ShadowStep", "Fists", 0.5, 0.15, post=fight_post(target=WIDE_FEET))
+def u_shadow_step(g):
+    return [(0, as_low(), "lin"), (0.15, as_low(-10), "out"), (0.45, as_low(-4), "lin"), (0.75, mt_stance(0.02), "io"), (1.0, N, "io")]
+
+
+def lotus_pose(yaw, crouch=0.04):
+    P = body(hips=rz(yaw), crouch=crouch, lean=6)
+    arm(P, "Right", rz(yaw) @ V(-0.95, -0.25, 0.02)); arm(P, "Left", rz(yaw) @ V(0.95, 0.25, 0.02))
+    return P
+
+
+@unique("Unique_InkLotus", "Fists", 0.65, 0.25, post=spin_post)
+def u_ink_lotus(g):
+    wind = body(twist=28, crouch=0.04, lean=8)
+    arm(wind, "Right", V(-0.4, 0.7, -0.4)); arm(wind, "Left", V(0.7, -0.5, -0.3))
+    turn = [(t, lotus_pose(-90 * k), "in" if k == 1 else "lin") for k, t in zip(range(1, 5), (0.25, 0.38, 0.51, 0.64))]
+    return [(0, N, "lin"), (0.12, wind, "io"), *turn, (0.8, lotus_pose(-360, 0.03), "out"), (1.0, N, "io")]
+
+
+def as_execute(load=False):
+    if load:
+        P = body(crouch=0.03, lean=-4, nod=-4)
+        hand(P, "Right", V(-0.05, -0.2, 0.55), V(-0.6, 0.4, -1)); hand(P, "Left", V(0.05, -0.2, 0.55), V(0.6, 0.4, -1))
+        return P
+    P = body(crouch=0.07, lean=30, nod=12, shift=(0.0, -0.04))
+    hand(P, "Right", V(-0.04, -0.27, 0.27), V(-0.6, 0.4, -1)); hand(P, "Left", V(0.04, -0.27, 0.27), V(0.6, 0.4, -1))
+    return P
+
+
+@unique("Unique_Execute", "Fists", 0.55, 0.4, post=fight_post(target=WIDE_FEET))
+def u_execute(g):
+    return [(0, N, "lin"), (0.2, as_execute(True), "io"), (0.4, as_execute(), "in"), (0.62, as_execute(), "lin"), (0.82, mt_stance(0.02), "io"), (1.0, N, "io")]
+
+
+VAULT = (0.2, 0.78)
+def vault_post(P, p, flip):
+    """A front flip over an enemy: crouch, spring, a full turn forward about the body's middle while airborne, land."""
+    a, b = VAULT
+    if p < a or p > b:
+        return plant(P)
+    u = (p - a) / (b - a)
+    R = rx(360 * EASE["io"](u))
+    hip = HEAD0["Hips"] + P.loc
+    C = (hip + P.head("Head") + P.acc("Head") @ V(0, 0, 0.22)) / 2
+    P.R["Hips"] = R @ P.q("Hips")
+    P.loc = (C + R @ (hip - C)) - HEAD0["Hips"] + V(0, 0, 0.28 * math.sin(math.pi * u))
+    return P
+
+
+@unique("Unique_Vault", "Fists", 0.6, 0.5, post=vault_post)
+def u_vault(g):
+    tuck = tuck_pose(0.9)
+    crouch = body(crouch=0.06, lean=22, nod=10)
+    arm(crouch, "Right", V(-0.4, 0.6, -0.7)); arm(crouch, "Left", V(0.4, 0.6, -0.7))
+    land = as_low(-6)
+    return [(0, N, "lin"), (0.16, crouch, "io"), (0.26, tuck, "out"), (0.72, tuck, "lin"), (0.84, land, "in"), (1.0, N, "io")]
+
+
+ULT_AS_T = 1.8
+@unique("Ult_Assassin", "Fists", ULT_AS_T, 0.6 / ULT_AS_T, post=fight_post(target=WIDE_FEET))
+def u_ult_assassin(g):
+    """Death Lotus: the draw (low, still, both hands at the right hip, head down) through the time stop; at the impact the
+    cuts have landed: standing turned, both blades out wide; then the blades come in, crossed, and down."""
+    draw = body(crouch=0.07, lean=20, nod=14, twist=-22)
+    hand(draw, "Right", V(-0.12, 0.0, 0.33), V(-0.6, 0.6, -1)); hand(draw, "Left", V(-0.05, -0.04, 0.33), V(0.6, 0.6, -1))
+    after = body(hips=rz(30), crouch=0.025, lean=-4, nod=-6, twist=18)
+    arm(after, "Right", V(-0.95, -0.2, 0.08)); arm(after, "Left", V(0.95, -0.25, 0.04))
+    crossed = body(crouch=0.02, lean=4, nod=4)
+    hand(crossed, "Right", V(0.03, -0.18, 0.42), V(-0.6, 0.2, -1)); hand(crossed, "Left", V(-0.03, -0.18, 0.42), V(0.6, 0.2, -1))
+    k = [(0, N, "lin"), (0.22, draw, "io"), (0.58, draw, "lin"), (0.6, after, "out"), (0.95, after, "lin"), (1.35, crossed, "io"), (1.8, N, "io")]
+    return ftime(k, ULT_AS_T)
+
+
+# ── the Guardian: sword (right) and shield on the left forearm (grip OneHand) ──
+SHIELD_UP = V(0.075, -0.17, 0.0)                                        # chest-relative: the shield held up in front
+
+def shield_guard(P):
+    hand(P, "Left", chest(P, SHIELD_UP), V(1, 0.3, -0.6))
+    return P
+
+
+def gd_cut(phase, back=False):
+    """A sword cut, forehand (right to left) or backhand, with the shield kept up."""
+    if not back:
+        P = {"load": body(crouch=0.02, twist=-26, lean=2), "hit": body(hips=rz(14), crouch=0.03, twist=24, lean=9, shift=(0.0, -0.016)),
+             "follow": body(hips=rz(18), crouch=0.03, twist=30, lean=8)}[phase]
+        arm(P, "Right", {"load": V(-0.82, 0.25, 0.45), "hit": V(0.15, -0.97, 0.18), "follow": V(0.6, -0.75, 0.0)}[phase])
+    else:
+        P = {"load": body(crouch=0.02, twist=22, lean=2), "hit": body(hips=rz(-12), crouch=0.03, twist=-22, lean=8, shift=(0.0, -0.016)),
+             "follow": body(hips=rz(-16), crouch=0.03, twist=-28, lean=7)}[phase]
+        arm(P, "Right", {"load": V(0.55, -0.65, 0.45), "hit": V(-0.55, -0.82, 0.12), "follow": V(-0.88, -0.35, 0.0)}[phase],
+            {"load": V(0.85, 0.2, 0.3), "hit": None, "follow": None}[phase])
+    return shield_guard(P)
+
+
+@unique("Unique_AegisCut", "OneHand", 0.42, 0.33, upper=True, post=fight_post(target=WIDE_FEET))
+def u_aegis_cut(g):
+    return [(0, N, "lin"), (0.16, gd_cut("load"), "io"), (0.33, gd_cut("hit"), "back"), (0.5, gd_cut("follow"), "out"), (1.0, N, "io")]
+
+
+@unique("Unique_AegisBackcut", "OneHand", 0.42, 0.33, upper=True, post=fight_post(target=WIDE_FEET))
+def u_aegis_backcut(g):
+    return [(0, N, "lin"), (0.16, gd_cut("load", True), "io"), (0.33, gd_cut("hit", True), "back"), (0.5, gd_cut("follow", True), "out"), (1.0, N, "io")]
+
+
+@unique("Unique_AegisThrust", "OneHand", 0.45, 0.36, upper=True, post=fight_post(target=WIDE_FEET))
+def u_aegis_thrust(g):
+    cock = body(twist=-24, lean=-2, crouch=0.025)
+    hand(cock, "Right", V(-0.14, 0.06, 0.4), V(-1, 0.5, -0.3))
+    lunge = body(hips=rz(12), twist=22, lean=14, crouch=0.04, shift=(0.0, -0.035))
+    arm(lunge, "Right", V(-0.04, -1, 0.06))
+    return [(0, N, "lin"), (0.2, shield_guard(cock), "io"), (0.36, shield_guard(lunge), "back"), (0.56, shield_guard(lunge.copy()), "lin"), (1.0, N, "io")]
+
+
+LUNGE_FEET = {"Left": ANKLE["Left"] + V(0.01, -0.075, 0), "Right": ANKLE["Right"] + V(-0.01, 0.07, 0)}
+
+
+def gd_rush(drive):
+    P = pb(feet=LUNGE_FEET, crouch=0.03 + 0.03 * drive, lean=10 + 20 * drive, nod=-6, twist=-14)
+    hand(P, "Left", chest(P, V(0.06, -0.2, 0.02)), V(1, 0.2, -0.5))   # the shield driven out in front
+    arm(P, "Right", V(-0.45, 0.75, -0.45))
+    return P
+
+
+@unique("Unique_ShieldRush", "OneHand", 0.6, 0.3, post=fight_post(target=LUNGE_FEET))
+def u_shield_rush(g):
+    return [(0, N, "lin"), (0.12, gd_rush(0.3), "io"), (0.3, gd_rush(1.0), "out"), (0.7, gd_rush(0.8), "lin"), (1.0, N, "io")]
+
+
+def gd_slam(phase):
+    if phase == "raise":
+        P = body(crouch=-0.005, lean=-8, nod=-6)
+        arm(P, "Left", V(0.35, -0.25, 0.9)); arm(P, "Right", V(-0.6, 0.3, -0.7))
+        return P
+    P = body(crouch=0.095, lean=36, nod=14)
+    hand(P, "Left", V(0.08, -0.22, 0.14), V(1, 0.2, -0.3)); arm(P, "Right", V(-0.5, 0.65, -0.55))
+    return P
+
+
+AEGIS_SLAM_T = 0.9
+@unique("Unique_AegisSlam", "OneHand", AEGIS_SLAM_T, 0.3 / AEGIS_SLAM_T, post=fight_post(target=WIDE_FEET))
+def u_aegis_slam(g):
+    return ftime([(0, N, "lin"), (0.14, gd_slam("raise"), "io"), (0.3, gd_slam("slam"), "in"), (0.55, gd_slam("slam"), "lin"), (0.9, N, "io")], AEGIS_SLAM_T)
+
+
+ULT_GD_T = 1.1
+@unique("Ult_Guardian", "OneHand", ULT_GD_T, 0.35 / ULT_GD_T, post=fight_post(target=WIDE_FEET))
+def u_ult_guardian(g):
+    """Unbreakable: the shield lifted and the sword raised, then planted in a wide brace, the shield forward."""
+    lift_ = body(crouch=-0.01, lean=-8, nod=-8)
+    arm(lift_, "Left", V(0.3, -0.35, 0.88)); arm(lift_, "Right", V(-0.45, -0.3, 0.84))
+    brace = body(crouch=0.075, lean=18, nod=8)
+    hand(brace, "Left", chest(brace, V(0.05, -0.2, -0.05)), V(1, 0.2, -0.5)); arm(brace, "Right", V(-0.55, 0.45, 0.7), V(-0.3, -0.4, 0.86))
+    return ftime([(0, N, "lin"), (0.18, lift_, "io"), (0.35, brace, "in"), (0.8, brace, "lin"), (1.1, N, "io")], ULT_GD_T)
+
+
+# ── the Juggernaut: the war hammer in both hands (grip Staff) ──
+HAMMER_UP = (V(-0.82, 0.3, 0.5), V(-0.55, 0.25, 0.8))
+
+
+def jg_swing(phase, g):
+    P = {"wind": body(crouch=0.025, twist=-44, lean=4), "hit": body(hips=rz(22), crouch=0.04, twist=30, lean=14, shift=(0.0, -0.02)),
+         "follow": body(hips=rz(30), crouch=0.035, twist=42, lean=10)}[phase]
+    arm(P, "Right", {"wind": V(-0.75, 0.45, 0.32), "hit": V(0.3, -0.92, 0.02), "follow": V(0.78, -0.55, -0.12)}[phase])
+    return off(P, g, "two", V(0.5, -0.5, -0.6))
+
+
+@unique("Unique_HammerSwing", "Staff", 0.75, 0.45, post=fight_post(target=WIDE_FEET, pivot=("Right", lambda p: 22 * ss(0.3, 0.45, p) * (1 - ss(0.65, 0.95, p)))))
+def u_hammer_swing(g):
+    return [(0, N, "lin"), (0.28, jg_swing("wind", g), "io"), (0.45, jg_swing("hit", g), "in"), (0.62, jg_swing("follow", g), "out"), (1.0, N, "io")]
+
+
+def jg_over(phase, g):
+    if phase == "wind":
+        P = body(crouch=-0.015, lean=-12, nod=-6, twist=-12)
+        arm(P, "Right", *HAMMER_UP)                                       # up over the right shoulder: both hands stay clear of the head
+        return off(P, g, "two", V(0.6, 0.3, -0.75))
+    P = body(crouch=0.085, lean=30, nod=12, shift=(0.0, -0.025))
+    arm(P, "Right", *LOW)
+    return off(P, g, "two", V(0.55, 0.4, -0.73))
+
+
+@unique("Unique_HammerOverhead", "Staff", 0.85, 0.5, post=fight_post(target=WIDE_FEET))
+def u_hammer_overhead(g):
+    return [(0, N, "lin"), (0.32, jg_over("wind", g), "back"), (0.5, jg_over("slam", g), "in"), (0.68, jg_over("slam", g), "lin"), (1.0, N, "io")]
+
+
+def jg_charge(drive, g):
+    P = pb(feet=LUNGE_FEET, crouch=0.035 + 0.03 * drive, lean=12 + 20 * drive, nod=12, twist=20)
+    arm(P, "Right", V(0.3, -0.6, -0.72))
+    return off(P, g, "two", V(0.55, -0.5, -0.6))
+
+
+@unique("Unique_Charge", "Staff", 0.7, 0.3, post=fight_post(target=LUNGE_FEET))
+def u_charge(g):
+    return [(0, N, "lin"), (0.12, jg_charge(0.3, g), "io"), (0.3, jg_charge(1.0, g), "out"), (0.75, jg_charge(0.9, g), "lin"), (1.0, N, "io")]
+
+
+@unique("Unique_WarCry", "Staff", 0.9, 0.3, post=lambda P, p, flip: plant(tremble(P, p, k=6, amount=2.0), ankles=feet_at(ramp_in_out(p), WIDE_FEET)))
+def u_war_cry(g):
+    breath = body(crouch=0.035, lean=10, nod=10)
+    arm(breath, "Right", V(-0.35, -0.3, -0.88)); arm(breath, "Left", V(0.35, -0.3, -0.88))
+    roar = body(crouch=0.045, lean=-14, nod=-18)
+    arm(roar, "Right", V(-0.82, -0.2, -0.38)); arm(roar, "Left", V(0.85, -0.3, 0.25), V(0.5, -0.3, 0.8))
+    return [(0, N, "lin"), (0.15, breath, "io"), (0.3, roar, "back"), (0.75, roar, "lin"), (1.0, N, "io")]
+
+
+def jg_drop(phase, g):
+    if phase == "air":
+        P = body(crouch=-0.02, lean=-10, nod=-6)
+        arm(P, "Right", *OVERHEAD); off(P, g, "two", V(0.6, 0.3, -0.75))
+        return legs(P, (55, 45), (80, 95))
+    P = body(crouch=0.1, lean=32, nod=14, shift=(0.0, -0.02))
+    arm(P, "Right", *LOW)
+    return off(P, g, "two", V(0.55, 0.4, -0.73))
+
+
+@unique("Unique_SeismicDrop", "Staff", 0.6, 0.4, post=lambda P, p, flip: P if p < 0.38 else plant(P, ankles=WIDE_FEET if p < 0.8 else None))
+def u_seismic_drop(g):
+    return [(0, jg_drop("air", g), "lin"), (0.3, jg_drop("air", g), "lin"), (0.4, jg_drop("slam", g), "in"), (0.7, jg_drop("slam", g), "lin"), (1.0, N, "io")]
+
+
+ULT_JG_T = 1.0
+@unique("Ult_Juggernaut", "Staff", ULT_JG_T, 0.3 / ULT_JG_T, post=fight_post(target=WIDE_FEET))
+def u_ult_juggernaut(g):
+    """Titan's end: the hammer lifted overhead on tiptoe, brought down to split the earth, held in a deep crouch."""
+    wind = body(crouch=-0.025, lean=-14, nod=-6, twist=-12)
+    arm(wind, "Right", *HAMMER_UP); off(wind, g, "two", V(0.6, 0.3, -0.75))
+    split = body(crouch=0.105, lean=36, nod=14, shift=(0.0, -0.03))
+    arm(split, "Right", *LOW); off(split, g, "two", V(0.55, 0.4, -0.73))
+    return ftime([(0, N, "lin"), (0.13, wind, "back"), (0.3, split, "in"), (0.65, split, "lin"), (1.0, N, "io")], ULT_JG_T)
+
+
 def verb_clips():
     """Every verb for every grip, the hold idles, then the subclasses' unique clips, as bake() dicts."""
     out = []
