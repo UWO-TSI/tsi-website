@@ -240,3 +240,17 @@ Already given: the café reference (row 270) and the face, hair and eye sheets (
 - Everything else in the 53 files (about 790 numbered lines) is a built default, a coordinator-accepted detail or a fix, and none needs you.
 
 Sources are under `/Users/DavidLiu/Developer/uwotsi/.claude/worktrees/restart-art-cohesion/specs/`. `avatar-v8-questions.md` is under `/Users/DavidLiu/Developer/uwotsi/.claude/worktrees/avatar-v8/specs/` because that branch is unmerged.
+
+## Added 2026-10-03: from the portal-bugs pass
+
+**38. The event editor's "XP reward" and "Gem reward" fields.** They claim to pay at check-in, but the triggers pay the global settings (2,000 XP and 50 coins for any in-person event). Paying Gems for attendance would also break principle 3.
+A) Drop both fields; every in-person event pays the global amounts. B) Keep XP per event (the triggers read it), drop Gems. C) Keep both.
+**Rec: B.** Bigger events can be worth more XP, and Gems stay contribution-only.
+
+**39. A time window on check-in?** A photographed QR works at any time today.
+A) The event's start minus 30 min to its end plus 2 h. B) No window. C) A window plus a code that rotates every few minutes on the door screen.
+**Rec: A.** It's cheap, and it stops check-ins from home after the event.
+
+**40. Public (T5) accounts at events.** Check-in refuses them, so they earn no XP or coins for attending. This ties into #9 and #20.
+A) Keep members only. B) Public accounts check in for coins only. C) Same rewards for everyone.
+**Rec: B.** It rewards showing up without opening club data.
