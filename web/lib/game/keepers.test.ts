@@ -17,14 +17,15 @@ describe("indoor keepers (interiors deliverable 1)", () => {
     }
   });
 
-  it("puts the HQ lead behind the front desk, between it and its chair, facing the room", () => {
-    const [dx, , dz] = HQ_LAYOUT.desk.position, [halfW, halfD] = HQ_LAYOUT.desk.footprint!, chair = HQ_LAYOUT.deskChair;
+  it("puts the HQ lead at the front desk's end, clear of its hutch, ready facing the room", () => {
+    // study-desk.glb is 16.34 x 8.59 model units; its hutch runs the back, so anyone behind the desk is hidden.
+    const [dx, , dz] = HQ_LAYOUT.desk.position, halfW = 8.17 * HQ_LAYOUT.desk.scale, halfD = 4.295 * HQ_LAYOUT.desk.scale;
     for (const s of KEEPER_POSTS.hq.stations) {
-      expect(s.at[1]).toBeGreaterThan(dz + halfD);                                  // past the desk's back edge
-      expect(s.at[1]).toBeLessThan(chair.position[2] - chair.footprint![1]);        // in front of the chair
-      expect(Math.abs(s.at[0] - dx)).toBeLessThan(halfW);                            // along the desk, never at its end
-      expect(Math.abs(ang(s.yaw - Math.PI))).toBeLessThan(0.01);                     // facing the room (and the camera)
+      expect(s.at[0]).toBeGreaterThan(dx + halfW + 0.25);      // beside the desk's room-side end, not behind the hutch
+      expect(s.at[0]).toBeLessThan(dx + halfW + 0.8);          // still at the desk
+      expect(Math.abs(s.at[1] - dz)).toBeLessThan(halfD + 0.3); // between its front and back
     }
+    expect(Math.abs(ang(KEEPER_POSTS.hq.stations[0].yaw - Math.PI))).toBeLessThan(0.01); // ready, facing the room
   });
 
   it("walks their stations on the shared clock without allocating a pose", () => {

@@ -160,7 +160,7 @@ export default function HQInterior({
         <Piece name="yellow-message-mat" rotX={clubhouse ? Math.PI : 0} rotY={clubhouse ? Math.PI : 0} position={[0, 0.015, -5.2]} scale={0.14} />
       </Suspense>
 
-      {/* The HQ lead behind the front desk (lib/game/keepers.ts). */}
+      {/* The HQ lead at the front desk (lib/game/keepers.ts). */}
       <Keeper room="hq" player={playerPosRef} frozen={frozen} engaged={talking} />
       <InteriorPlayer frozen={frozen} bounds={BOUNDS} playerPosRef={playerPosRef} onMove={handleMove} constrainMove={constrainMove} />
     </group>

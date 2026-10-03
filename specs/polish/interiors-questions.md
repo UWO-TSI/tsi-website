@@ -8,7 +8,7 @@ The keepers are the living village's proposed roster (`living-village-questions.
 
 | Room | Post | Resident (proposed) | Where | Their work loop |
 |---|---|---|---|---|
-| HQ | `hq_lead` | **Wren** (the first-login greeter) | Behind the front desk, between it and its chair, facing the room | Stands ready, sorts the papers on the desk (Trace), reaches into a drawer |
+| HQ | `hq_lead` | **Wren** (the first-login greeter) | At the front desk's end on the room side, by its back corner, facing the room | Stands ready, sorts the papers on the desk's top (Trace), reaches under the desk's end |
 | Shop | `shopkeeper` | **Toren** | Behind the counter and register | Ready, works the register, reaches under the counter's end |
 | Oracle temple | `oracle_keeper` | **Sable** | Beside the altar | Ready, hands to the crystal, tends the front candle |
 | Museum | `museum_curator` | **Odile** | Behind the curator's desk | Ready, labels specimens, a specimen drawer |
@@ -18,7 +18,7 @@ Each one, as Rosa does in the café: looks up and waves hello as you come in (on
 
 **Assumptions taken:**
 - **a. Keepers are always at their posts**, as in ACNH's Resident Services: the same resident also walks their routine in the village. You can see Wren on the plaza, walk into HQ and find her at the desk. **Question:** keep it (never an empty desk, principle 2), or empty the post while they're out and close the counter?
-- **b. The front desk is served from the room side.** The desk's prompt moved to the customer's side (in front of the drawers); Wren stands where the chair is. The receptionist used to stand at the desk's end, side-on.
+- **b. The front desk is served from the room side.** The desk's prompt moved to the customer's side (in front of the drawers). Wren stands at the desk's end, not behind it: the desk's hutch is 1.65 tall, and from the camera it hid her completely when she stood at the chair. **Question:** do you want her behind the desk, which would need a lower desk without the hutch (a Blender piece), or is the end of the desk fine?
 - **c. The applicant island's HQ** (the parked island application) is the same room component, so it gets Wren and the new room too.
 
 ## 2. Room shells (deliverable 2)

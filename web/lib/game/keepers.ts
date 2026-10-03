@@ -23,17 +23,18 @@ export interface KeeperPost {
 
 const ROOM = Math.PI;
 export const KEEPER_POSTS: Record<KeeperRoom, KeeperPost> = {
-  // HQ: behind the front desk (lib/game/clubhouse.ts desk at -5.2, -2.4), between it and its chair, facing the room.
+  // HQ: at the front desk's end on the room side (lib/game/clubhouse.ts desk at -5.2, -2.4, 1.8 wide), by its back
+  // corner: behind it, the desk's hutch (1.65 tall) hides anyone from the camera.
   hq: { post: "hq_lead", slug: "wren", title: "HQ lead", stations: [
-    { at: [-5.05, -1.45], yaw: ROOM, stay: 7, clip: "Idle" },
-    { at: [-5.75, -1.45], yaw: ROOM, stay: 6.5, clip: "Trace" },  // the papers on the desk
-    { at: [-4.5, -1.45], yaw: ROOM, stay: 1.3, clip: "Forage" },  // a drawer
+    { at: [-3.9, -1.95], yaw: ROOM, stay: 7, clip: "Idle" },
+    { at: [-3.95, -2.45], yaw: -Math.PI / 2, stay: 6.5, clip: "Trace" }, // the papers on the desk's top
+    { at: [-3.8, -1.75], yaw: ROOM, stay: 1.3, clip: "Forage" },         // reaching under the desk's end
   ] },
-  // Shop: behind the counter and register (ShopInterior: counter at 0, 3.4, its back at z 4.1).
+  // Shop: behind the counter and register (ShopInterior: counter at 0, 3.4, its back at z 3.9).
   shop: { post: "shopkeeper", slug: "shopkeeper", title: "Shopkeeper", stations: [
-    { at: [0.15, 4.5], yaw: ROOM, stay: 7, clip: "Idle" },
-    { at: [-0.4, 4.5], yaw: ROOM, stay: 6, clip: "Trace" },       // the register
-    { at: [0.75, 4.5], yaw: ROOM, stay: 1.3, clip: "Forage" },    // under the counter's end
+    { at: [0.1, 4.3], yaw: ROOM, stay: 7, clip: "Idle" },
+    { at: [-0.3, 4.3], yaw: ROOM, stay: 6, clip: "Trace" },       // the register
+    { at: [0.45, 4.3], yaw: ROOM, stay: 1.3, clip: "Forage" },    // under the counter's end
   ] },
   // Oracle: beside the altar (0, 2.6), tending the crystal and the candles.
   oracle: { post: "oracle_keeper", slug: "oracle-keeper", title: "Oracle keeper", stations: [

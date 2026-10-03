@@ -60,7 +60,7 @@ export default function ShopInterior({
 
       <Suspense fallback={null}>
         {/* Counter + register (→ Shop sheet) */}
-        <Piece name="counter-register" position={[0, 0, 3.4]} rotY={Math.PI} scale={0.16} />
+        <Piece name="counter-register" position={[0, 0, 3.4]} rotY={Math.PI} scale={0.115} />
         {/* Display shelves */}
         <Piece name="color-box-shelf" position={[-4.1, 0, 2.2]} rotY={Math.PI / 2} scale={0.13} />
         <Piece name="color-box-shelf" position={[4.1, 0, 2.2]} rotY={-Math.PI / 2} scale={0.13} />
