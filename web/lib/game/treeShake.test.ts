@@ -52,7 +52,8 @@ describe("what falls from it", () => {
     const from = { x: 0.3, y: 2.6, z: -0.5 }, rest = { x: 0.55, z: -1.2 }, out = { x: 0, y: 0, z: 0, spin: 0 };
     expect(fallAt(from, rest, 0, 0.12, 0, out)).toBe("falling");
     expect(out.y).toBeCloseTo(2.6, 6);
-    let lowest = Infinity, phases = new Set<string>();
+    let lowest = Infinity;
+    const phases = new Set<string>();
     for (let t = 0; t < 4; t += 0.01) { phases.add(fallAt(from, rest, 0, 0.12, t, out)); lowest = Math.min(lowest, out.y); }
     expect([...phases]).toEqual(["falling", "bouncing", "rolling", "resting"]);
     expect(lowest).toBeGreaterThanOrEqual(0.12 - 1e-9);

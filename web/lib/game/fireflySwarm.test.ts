@@ -31,7 +31,8 @@ describe("the fireflies' no-allocation path", () => {
 
   it("keeps each firefly low over the ground near its bush, its glow pulsing on its own phase", () => {
     const swarm = new FireflySwarm(12, [[10, -3]]);
-    let maxR = 0, low = Infinity, high = -Infinity, lit = new Set<number>();
+    let maxR = 0, low = Infinity, high = -Infinity;
+    const lit = new Set<number>();
     for (let f = 0; f < 600; f++) {
       swarm.step(f / 30, () => 0.5);
       for (let i = 0; i < 12; i++) {
