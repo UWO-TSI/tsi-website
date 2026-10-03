@@ -123,7 +123,7 @@ function MobBody({ type, scale, at, yaw, spin, ground, player }: { type: EnemyTy
     const state = swinging ? "active" : p.attackCd > 0.05 && e.state === "active" ? "recover" : moving ? "chase" : "idle";
     if (state !== e.state) { e.state = state; e.t = 0; } else e.t += delta;
     const s = type.modelScale * scale;
-    g.position.set(me.x, ground(me.x, me.z) + type.hover * s / type.modelScale, me.z);
+    g.position.set(me.x, Math.max(me.y, ground(me.x, me.z)) + type.hover * s / type.modelScale, me.z); // it jumps and slides with you
     g.rotation.y = p.facing + type.modelYaw;
     g.scale.setScalar(s);
     rig.root.position.set(at[0] / s, at[1] / s, at[2] / s); rig.root.rotation.set(0, yaw + spin * clock.elapsedTime, 0);
