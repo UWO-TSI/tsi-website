@@ -50,6 +50,7 @@ import { boxOccluder } from "@/lib/game/occluders";
 import { BUFFER, createInputs, hurtPlayer, runInputs, spawnWave } from "@/lib/game/combat/actions";
 import { buffSum, missionEvent } from "@/lib/game/combat/abilities";
 import { stepCombat } from "@/lib/game/combat/encounter";
+import { playtestFrame } from "@/lib/game/combat/playtest";
 import { claimBossReward, claimMinibossReward, postKill, postMissionEvents, postTame } from "@/lib/game/combat/progression";
 import { materialsLabel } from "@/lib/game/combat/missions";
 import { ENEMIES, WEAPONS } from "@/lib/game/combat/data";
@@ -375,6 +376,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     stepClass(rt, me, dt, Math.min(rawDelta, 0.05));
     // Timers, energy, enemies, projectiles, summons and totems (lib/game/combat/encounter.ts); ability dashes and knockback push PlayerAvatar.
     stepCombat(rt, me, dt, ruins.free);
+    playtestFrame(rt, me, dt); // dev, ?combat=demo only: the class playtest's god mode, mana, dummies and DPS meter
     setAimZoom(rt.v2 && buffSum(rt, "scope") > 0 ? 14 : 0); // a scope's zoom while it's up
     playCues(rt, me);
     impact(rt, particles.pool, ruins.ground);
