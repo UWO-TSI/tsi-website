@@ -64,7 +64,9 @@ function tap(): TapState {
     kind: new Int16Array(JOURNAL), value: new Array<number | string>(JOURNAL).fill(0), at: new Float64Array(JOURNAL), start: 0, count: 0, dropped: 0,
   });
 }
-const clock = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
+const perfNow = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
+/** The journal's clock: the arming sender's (performance.now() in the game; tests drive their own). */
+let clock = perfNow;
 
 /** Register the local controller (passive: refs only). PlayerAvatar: `useLocalAvatarTap(motion, held, sim)`. */
 export function useLocalAvatarTap(motion: RefObject<CharacterMotion>, held?: WheelItem | null, sim?: RefObject<MoveSim | null>): void {
@@ -206,11 +208,13 @@ function rearm() {
 }
 
 /**
- * Start journaling the local avatar's one-shots and movement events (a sender's lifetime). Returns the disarm: plain
- * properties come back with their values once the last sender has gone.
+ * Start journaling the local avatar's one-shots and movement events (a sender's lifetime), stamped with `now` (the
+ * sender's clock, performance.now() by default). Returns the disarm: plain properties come back with their values once
+ * the last sender has gone.
  */
-export function armJournal(): () => void {
+export function armJournal(now: () => number = perfNow): () => void {
   const s = tap();
+  clock = now;
   s.armed++;
   if (s.armed === 1) { clearJournal(); rearm(); }
   let done = false;

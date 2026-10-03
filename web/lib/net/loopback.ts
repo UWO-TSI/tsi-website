@@ -50,6 +50,10 @@ interface Peer {
 
 /** The loopback NetSource, and what netStore drives it with. */
 export interface Loopback extends NetSource {
+  /** SenderHints (sender.ts): joins, area changes and the room epoch. */
+  readonly joinSeq: number;
+  readonly areaSeq: number;
+  readonly epoch: number;
   readonly remotes: Remotes;
   /** Join as `area` (netStore's acquire): bots start stepping, you join the roster. */
   start(area: Area): void;
@@ -71,7 +75,9 @@ export function createLoopback(o: LoopbackOptions): Loopback {
   const remotes = new Remotes();
   const listeners = new Set<() => void>();
   const sent = { poses: 0, slow: [] as SlowState[] };
-  const epoch = 0;
+  /** Room time's zero as a wall-clock instant, like IslandState.epoch: room time + epoch ≈ Date.now(). */
+  const epoch = Date.now() - clock();
+  let joinSeq = 0, areaSeq = 0;
   let status: NetStatus = { kind: "off" };
   let area: Area = "village";
   let started = false;
@@ -171,6 +177,9 @@ export function createLoopback(o: LoopbackOptions): Loopback {
   };
 
   const source: Loopback = {
+    get joinSeq() { return joinSeq; },
+    get areaSeq() { return areaSeq; },
+    epoch,
     remotes,
     bots,
     sent,
@@ -191,6 +200,7 @@ export function createLoopback(o: LoopbackOptions): Loopback {
       area = next;
       if (started) { source.setArea(next); return; }
       started = true;
+      joinSeq++;
       stepT = Math.max(stepT, clock() - STEP_MS);
       status = { kind: "joined", shard: 1 };
       advance();
@@ -212,6 +222,7 @@ export function createLoopback(o: LoopbackOptions): Loopback {
     setArea(next) {
       if (next === area) return;
       area = next;
+      if (started) areaSeq++;
       views();
       rebuildRoster();
       emit();
