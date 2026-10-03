@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   X,
   Loader2,
@@ -10,8 +10,10 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
+  Send,
 } from "lucide-react";
 import type { Bounty, BountySubmission } from "@/lib/supabase/types";
+import { Badge, Button, ErrorNote, Field, IconButton, Loading, Sheet, TextArea, type BadgeTone } from "@/components/gui";
 
 interface BountySubmitModalProps {
   bounty: Bounty;
@@ -23,8 +25,10 @@ const MAX_TEXT = 5000;
 const MAX_ATTACHMENTS = 10;
 
 // ─── BountySubmitModal ──────────────────────────────────────────────────────
-// Modal that lets the bounty claimant submit deliverables for admin review.
-// Wired into /student/dashboard/bounty/page.tsx detail view.
+// The sheet that lets the bounty claimant submit deliverables for admin review.
+// Wired into /student/dashboard/bounty/page.tsx detail view, which mounts it
+// only while it's open (so the Sheet is always open here; Escape, focus and the
+// scrim come from the Sheet).
 //
 // - Fetches the user's existing submissions on mount so we can show the latest
 //   status (pending/approved/revision_requested/rejected) + reviewer notes.
@@ -34,10 +38,10 @@ const MAX_ATTACHMENTS = 10;
 //   resubmission creates a fresh row; the most recent one wins for review.
 //
 // Status transitions handled here:
-//   bounty.claimed | in_progress  +  no submission     → "Submit Deliverables"
-//   bounty.review                 +  pending submission → read-only banner
+//   bounty.claimed | in_progress  +  no submission     → "Submit for review"
+//   bounty.review                 +  pending submission → read-only note
 //   bounty.in_progress            +  revision_requested → "Resubmit" form
-//   bounty.completed              +  approved          → success banner
+//   bounty.completed              +  approved          → approved note
 
 export default function BountySubmitModal({
   bounty,
@@ -75,15 +79,6 @@ export default function BountySubmitModal({
     };
   }, [bounty.id]);
 
-  // ESC closes
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   const latest = submissions[0] ?? null;
   const isPendingReview = latest?.status === "pending";
   const isApproved = latest?.status === "approved";
@@ -100,11 +95,11 @@ export default function BountySubmitModal({
     try {
       new URL(trimmed);
     } catch {
-      setSubmitError("That link doesn't look like a valid URL.");
+      setSubmitError("That doesn’t look like a link. Paste the whole address, starting with https://");
       return;
     }
     if (links.length + attachments.length >= MAX_ATTACHMENTS) {
-      setSubmitError(`Max ${MAX_ATTACHMENTS} attachments total.`);
+      setSubmitError(`You can add up to ${MAX_ATTACHMENTS} files and links.`);
       return;
     }
     setSubmitError(null);
@@ -126,7 +121,7 @@ export default function BountySubmitModal({
     if (!file) return;
 
     if (links.length + attachments.length >= MAX_ATTACHMENTS) {
-      setUploadError(`Max ${MAX_ATTACHMENTS} attachments total.`);
+      setUploadError(`You can add up to ${MAX_ATTACHMENTS} files and links.`);
       return;
     }
 
@@ -145,12 +140,12 @@ export default function BountySubmitModal({
         error?: string;
       };
       if (!res.ok || !body.ok || !body.url) {
-        setUploadError(body.error ?? "Upload failed");
+        setUploadError(body.error ?? "That file didn’t upload. Try again.");
         return;
       }
       setAttachments((prev) => [...prev, body.url as string]);
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : "Upload failed");
+      setUploadError(err instanceof Error ? err.message : "That file didn’t upload. Try again.");
     } finally {
       setUploadBusy(false);
     }
@@ -163,7 +158,7 @@ export default function BountySubmitModal({
       return;
     }
     if (trimmed.length > MAX_TEXT) {
-      setSubmitError(`Description is too long (max ${MAX_TEXT} chars).`);
+      setSubmitError(`Keep the description to ${MAX_TEXT.toLocaleString()} characters or fewer.`);
       return;
     }
     const attachment_urls = [...attachments, ...links];
@@ -184,386 +179,233 @@ export default function BountySubmitModal({
         error?: string;
       };
       if (!res.ok) {
-        setSubmitError(body.error ?? "Could not submit. Try again.");
+        setSubmitError(body.error ?? "Your work didn’t send. Try again.");
         return;
       }
       onSubmitted();
       onClose();
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Network error.");
+      setSubmitError(err instanceof Error ? err.message : "Your work didn’t send. Check your connection and try again.");
     } finally {
       setSubmitBusy(false);
     }
   };
 
+  const reviewing = bounty.status === "review" || bounty.status === "completed";
+
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.7)" }}
-      onClick={onClose}
-    >
-      <div
-        className="w-full rounded-2xl flex flex-col overflow-hidden"
-        style={{
-          maxWidth: 640,
-          maxHeight: "90vh",
-          background: "var(--color-bg-navy)",
-          border: "1px solid rgba(0, 47, 167, 0.3)",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div
-          className="flex items-center justify-between"
-          style={{
-            padding: "16px 20px",
-            borderBottom: "1px solid var(--glass-border-soft)",
-          }}
-        >
-          <div className="min-w-0">
-            <p
-              className="text-xs uppercase tracking-wider"
-              style={{ color: "var(--color-text-subtle)" }}
-            >
-              Submit deliverables
-            </p>
-            <h2
-              className="text-base sm:text-lg font-semibold truncate"
-              style={{ color: "var(--color-text-main)" }}
-            >
-              {bounty.title}
-            </h2>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="shrink-0 ml-3 rounded-lg p-1.5 hover:bg-[var(--surface-hover)]"
-            style={{ color: "var(--color-text-muted)" }}
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto" style={{ padding: 20 }}>
-          {/* Status banners */}
-          {loadingHistory ? (
-            <div
-              className="flex items-center gap-2 text-sm mb-4"
-              style={{ color: "var(--color-text-muted)" }}
-            >
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Checking submission status...
-            </div>
-          ) : (
-            <>
-              {isPendingReview && latest && (
-                <StatusBanner
-                  icon={<Clock className="w-4 h-4" />}
-                  title="Submitted — awaiting review"
-                  bg="rgba(255, 209, 102, 0.08)"
-                  border="rgba(255, 209, 102, 0.3)"
-                  color="#ffd166"
-                >
-                  An admin will review your work shortly. You&apos;ll be able to
-                  resubmit if changes are requested.
-                </StatusBanner>
-              )}
-              {isApproved && (
-                <StatusBanner
-                  icon={<CheckCircle2 className="w-4 h-4" />}
-                  title="Approved"
-                  bg="rgba(34, 197, 94, 0.08)"
-                  border="rgba(34, 197, 94, 0.3)"
-                  color="#22c55e"
-                >
-                  Your reward has been credited. Nice work.
-                </StatusBanner>
-              )}
-              {needsRevision && latest && (
-                <StatusBanner
-                  icon={<AlertCircle className="w-4 h-4" />}
-                  title="Revisions requested"
-                  bg="rgba(239, 68, 68, 0.08)"
-                  border="rgba(239, 68, 68, 0.3)"
-                  color="#ef4444"
-                >
-                  {latest.reviewer_notes ? (
-                    <>
-                      <span style={{ color: "var(--color-text-soft)" }}>
-                        Reviewer feedback:
-                      </span>{" "}
-                      <span style={{ color: "var(--color-text-main)" }}>
-                        {latest.reviewer_notes}
-                      </span>
-                    </>
-                  ) : (
-                    "An admin requested changes. Update your submission below."
-                  )}
-                </StatusBanner>
-              )}
-            </>
-          )}
-
-          {/* Form (only if user can still submit) */}
-          {canSubmit && !loadingHistory && (
-            <>
-              <label
-                className="block text-xs uppercase tracking-wider mb-2"
-                style={{ color: "var(--color-text-subtle)" }}
-              >
-                Describe your work
-              </label>
-              <textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="What you built, how to test it, any caveats..."
-                rows={5}
-                maxLength={MAX_TEXT}
-                className="w-full rounded-lg text-sm resize-y"
-                style={{
-                  background: "var(--color-surface)",
-                  border: "1px solid var(--glass-border-soft)",
-                  color: "var(--color-text-main)",
-                  padding: "10px 12px",
-                  minHeight: 120,
-                  fontFamily: "inherit",
-                }}
-              />
-              <div
-                className="text-xs mt-1"
-                style={{ color: "var(--color-text-subtle)" }}
-              >
-                {text.length} / {MAX_TEXT}
-              </div>
-
-              {/* Link attachments */}
-              <label
-                className="block text-xs uppercase tracking-wider mt-5 mb-2"
-                style={{ color: "var(--color-text-subtle)" }}
-              >
-                Link to deliverables (repo, doc, demo...)
-              </label>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="url"
-                  value={linkDraft}
-                  onChange={(e) => setLinkDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddLink();
-                    }
-                  }}
-                  placeholder="https://github.com/your/repo"
-                  className="flex-1 rounded-lg text-sm"
-                  style={{
-                    background: "var(--color-surface)",
-                    border: "1px solid var(--glass-border-soft)",
-                    color: "var(--color-text-main)",
-                    padding: "10px 12px",
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={handleAddLink}
-                  className="rounded-lg text-sm font-medium px-4 py-2"
-                  style={{
-                    background: "rgba(0, 47, 167, 0.15)",
-                    border: "1px solid rgba(0, 47, 167, 0.3)",
-                    color: "var(--color-text-main)",
-                  }}
-                >
-                  Add link
-                </button>
-              </div>
-
-              {/* File upload */}
-              <div className="mt-3">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadBusy}
-                  className="inline-flex items-center gap-2 rounded-lg text-sm font-medium px-3 py-2 disabled:opacity-50"
-                  style={{
-                    background: "transparent",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    color: "var(--color-text-soft)",
-                  }}
-                >
-                  {uploadBusy ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4" />
-                      Upload image or PDF
-                    </>
-                  )}
-                </button>
-                {uploadError && (
-                  <p
-                    className="text-xs mt-1.5"
-                    style={{ color: "#ef4444" }}
-                  >
-                    {uploadError}
-                  </p>
-                )}
-              </div>
-
-              {/* Attachment list */}
-              {(attachments.length > 0 || links.length > 0) && (
-                <div className="mt-4 space-y-1.5">
-                  {attachments.map((url, i) => (
-                    <AttachmentRow
-                      key={`f-${i}`}
-                      icon={<Paperclip className="w-3.5 h-3.5" />}
-                      url={url}
-                      label={fileLabel(url)}
-                      onRemove={() => handleRemoveAttachment(i)}
-                    />
-                  ))}
-                  {links.map((url, i) => (
-                    <AttachmentRow
-                      key={`l-${i}`}
-                      icon={<LinkIcon className="w-3.5 h-3.5" />}
-                      url={url}
-                      label={url}
-                      onRemove={() => handleRemoveLink(i)}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {submitError && (
-                <p
-                  className="text-sm mt-4 rounded-lg"
-                  style={{
-                    color: "#ef4444",
-                    background: "rgba(239, 68, 68, 0.08)",
-                    padding: "8px 12px",
-                  }}
-                >
-                  {submitError}
-                </p>
-              )}
-            </>
-          )}
-
-          {/* Past submissions (read-only) when there's history */}
-          {!loadingHistory && submissions.length > 0 && (
-            <div className="mt-6">
-              <p
-                className="text-xs uppercase tracking-wider mb-2"
-                style={{ color: "var(--color-text-subtle)" }}
-              >
-                {submissions.length === 1
-                  ? "Submission"
-                  : `Previous submissions (${submissions.length})`}
-              </p>
-              <div className="space-y-2">
-                {submissions.map((s) => (
-                  <PastSubmissionRow key={s.id} submission={s} />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div
-          className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2"
-          style={{
-            padding: "12px 20px",
-            borderTop: "1px solid var(--glass-border-soft)",
-          }}
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg text-sm font-medium px-4 py-2"
-            style={{
-              background: "transparent",
-              border: "1px solid rgba(255,255,255,0.1)",
-              color: "var(--color-text-soft)",
-            }}
-          >
+    <Sheet
+      open
+      onClose={onClose}
+      title={bounty.title}
+      eyebrow={reviewing ? "Your submission" : "Submit deliverables"}
+      icon={<Send size={22} />}
+      size="md"
+      footer={
+        <>
+          <Button size="sm" variant="quiet" onClick={onClose}>
             {canSubmit ? "Cancel" : "Close"}
-          </button>
+          </Button>
           {canSubmit && (
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={submitBusy || uploadBusy}
-              className="rounded-lg text-sm font-semibold px-4 py-2 disabled:opacity-50"
-              style={{
-                background: "#002fa7",
-                color: "#f1ffff",
-              }}
-            >
+            <Button size="sm" onClick={handleSubmit} disabled={submitBusy || uploadBusy}>
               {submitBusy ? (
-                <span className="inline-flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Submitting...
-                </span>
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+                  Sending…
+                </>
               ) : needsRevision ? (
                 "Resubmit"
               ) : (
                 "Submit for review"
               )}
-            </button>
+            </Button>
           )}
+        </>
+      }
+    >
+      {/* Status notes */}
+      {loadingHistory ? (
+        <Loading label="Looking for your earlier submissions…" />
+      ) : (
+        <>
+          {isPendingReview && latest && (
+            <StatusNote tone="warn" icon={<Clock className="w-4 h-4" aria-hidden />} title="Submitted, waiting for review">
+              An admin will look at it soon. If they ask for changes, you can send it again here.
+            </StatusNote>
+          )}
+          {isApproved && (
+            <StatusNote tone="success" icon={<CheckCircle2 className="w-4 h-4" aria-hidden />} title="Approved">
+              Your reward has been paid out. Nice work.
+            </StatusNote>
+          )}
+          {needsRevision && latest && (
+            <StatusNote tone="danger" icon={<AlertCircle className="w-4 h-4" aria-hidden />} title="Changes requested">
+              {latest.reviewer_notes ? (
+                <>
+                  <span style={{ color: "var(--gui-ink-2)" }}>
+                    Reviewer feedback:
+                  </span>{" "}
+                  <span style={{ color: "var(--gui-ink-strong)" }}>
+                    {latest.reviewer_notes}
+                  </span>
+                </>
+              ) : (
+                "An admin asked for changes. Update your submission below."
+              )}
+            </StatusNote>
+          )}
+        </>
+      )}
+
+      {/* Form (only if user can still submit) */}
+      {canSubmit && !loadingHistory && (
+        <div className="space-y-6">
+          <div>
+            <TextArea
+              label="Describe your work"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="What you built, how to test it, anything to watch out for…"
+              rows={5}
+              maxLength={MAX_TEXT}
+            />
+            <p className="text-xs mt-1.5 text-right" style={{ color: "var(--gui-muted)" }}>
+              {text.length.toLocaleString()} / {MAX_TEXT.toLocaleString()}
+            </p>
+          </div>
+
+          <div>
+            {/* Link attachments */}
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+              <Field
+                className="flex-1"
+                label="Links to your work"
+                hint="A repo, a doc or a live demo."
+                type="url"
+                value={linkDraft}
+                onChange={(e) => setLinkDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddLink();
+                  }
+                }}
+                placeholder="https://github.com/your/repo"
+              />
+              <Button variant="quiet" onClick={handleAddLink}>
+                Add link
+              </Button>
+            </div>
+
+            {/* File upload */}
+            <div className="mt-4">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <Button size="sm" variant="quiet" onClick={() => fileInputRef.current?.click()} disabled={uploadBusy}>
+                {uploadBusy ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+                    Uploading…
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" aria-hidden />
+                    Upload an image or PDF
+                  </>
+                )}
+              </Button>
+              {uploadError && <ErrorNote className="mt-2">{uploadError}</ErrorNote>}
+            </div>
+
+            {/* Attachment list */}
+            {(attachments.length > 0 || links.length > 0) && (
+              <ul className="mt-4 space-y-2" aria-label="Attached so far">
+                {attachments.map((url, i) => (
+                  <AttachmentRow
+                    key={`f-${i}`}
+                    icon={<Paperclip className="w-4 h-4" />}
+                    url={url}
+                    label={fileLabel(url)}
+                    onRemove={() => handleRemoveAttachment(i)}
+                  />
+                ))}
+                {links.map((url, i) => (
+                  <AttachmentRow
+                    key={`l-${i}`}
+                    icon={<LinkIcon className="w-4 h-4" />}
+                    url={url}
+                    label={url}
+                    onRemove={() => handleRemoveLink(i)}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {submitError && <ErrorNote>{submitError}</ErrorNote>}
         </div>
-      </div>
-    </div>
+      )}
+
+      {/* Past submissions (read-only) when there's history */}
+      {!loadingHistory && submissions.length > 0 && (
+        <section className={canSubmit ? "mt-8" : "mt-2"}>
+          <h3 className="text-sm mb-2" style={{ color: "var(--gui-ink-strong)", fontWeight: 800 }}>
+            {submissions.length === 1
+              ? "Your submission"
+              : `Your submissions (${submissions.length})`}
+          </h3>
+          <div className="space-y-2">
+            {submissions.map((s) => (
+              <PastSubmissionRow key={s.id} submission={s} />
+            ))}
+          </div>
+        </section>
+      )}
+    </Sheet>
   );
 }
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
-function StatusBanner({
+/** Soft status paper: the tone's wash with its ink for the title (the Badge pairs, AA). */
+const NOTE_TONES = {
+  warn: { bg: "var(--gui-warn-soft)", ink: "var(--gui-warn)" },
+  success: { bg: "var(--gui-success-soft)", ink: "var(--gui-success)" },
+  danger: { bg: "var(--gui-danger-soft)", ink: "var(--gui-danger)" },
+} as const;
+
+function StatusNote({
+  tone,
   icon,
   title,
   children,
-  bg,
-  border,
-  color,
 }: {
-  icon: React.ReactNode;
+  tone: keyof typeof NOTE_TONES;
+  icon: ReactNode;
   title: string;
-  children: React.ReactNode;
-  bg: string;
-  border: string;
-  color: string;
+  children: ReactNode;
 }) {
+  const t = NOTE_TONES[tone];
   return (
     <div
-      className="rounded-lg text-sm mb-4"
+      className="text-sm mb-5"
       style={{
-        background: bg,
-        border: `1px solid ${border}`,
-        padding: "10px 12px",
-        color: "var(--color-text-soft)",
+        background: t.bg,
+        borderRadius: "var(--gui-r-card)",
+        padding: "12px 16px",
+        color: "var(--gui-ink)",
       }}
     >
-      <div
-        className="flex items-center gap-2 font-semibold mb-1"
-        style={{ color }}
-      >
+      <p className="flex items-center gap-2 mb-1" style={{ color: t.ink, fontWeight: 800 }}>
         {icon}
         {title}
-      </div>
-      <div className="text-sm leading-relaxed">{children}</div>
+      </p>
+      <div className="leading-relaxed">{children}</div>
     </div>
   );
 }
@@ -574,112 +416,90 @@ function AttachmentRow({
   label,
   onRemove,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   url: string;
   label: string;
   onRemove: () => void;
 }) {
   return (
-    <div
-      className="flex items-center gap-2 rounded-lg text-xs"
+    <li
+      className="flex items-center gap-2.5 text-sm"
       style={{
-        background: "var(--surface-hover)",
-        border: "1px solid var(--glass-border-soft)",
-        padding: "6px 10px",
+        background: "var(--gui-paper-warm)",
+        borderRadius: 16,
+        padding: "4px 4px 4px 14px",
+        boxShadow: "inset 0 0 0 1.5px var(--gui-paper-edge)",
       }}
     >
-      <span style={{ color: "var(--color-text-subtle)" }}>{icon}</span>
+      <span className="shrink-0" style={{ color: "var(--gui-bark)" }} aria-hidden>
+        {icon}
+      </span>
       <a
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex-1 truncate hover:underline"
-        style={{ color: "var(--color-text-soft)" }}
+        className="flex-1 min-w-0 truncate underline-offset-2 hover:underline"
+        style={{ color: "var(--gui-ink)", fontWeight: 700 }}
       >
         {label}
       </a>
-      <button
-        type="button"
-        onClick={onRemove}
-        aria-label="Remove attachment"
-        className="rounded p-1 hover:bg-[var(--surface-hover)]"
-        style={{ color: "var(--color-text-muted)" }}
-      >
-        <X className="w-3 h-3" />
-      </button>
-    </div>
+      <IconButton label="Remove attachment" size="sm" onClick={onRemove}>
+        <X size={16} aria-hidden />
+      </IconButton>
+    </li>
   );
 }
 
+const SUBMISSION_STATUS: Record<BountySubmission["status"], { label: string; tone: BadgeTone }> = {
+  pending: { label: "Waiting for review", tone: "warn" },
+  approved: { label: "Approved", tone: "success" },
+  rejected: { label: "Not accepted", tone: "danger" },
+  revision_requested: { label: "Changes requested", tone: "danger" },
+};
+
 function PastSubmissionRow({ submission }: { submission: BountySubmission }) {
-  const statusMeta: Record<
-    BountySubmission["status"],
-    { label: string; color: string; bg: string }
-  > = {
-    pending: {
-      label: "Pending",
-      color: "#ffd166",
-      bg: "rgba(255, 209, 102, 0.1)",
-    },
-    approved: {
-      label: "Approved",
-      color: "#22c55e",
-      bg: "rgba(34, 197, 94, 0.1)",
-    },
-    rejected: {
-      label: "Rejected",
-      color: "#ef4444",
-      bg: "rgba(239, 68, 68, 0.1)",
-    },
-    revision_requested: {
-      label: "Revisions requested",
-      color: "#ef4444",
-      bg: "rgba(239, 68, 68, 0.1)",
-    },
-  };
-  const meta = statusMeta[submission.status];
+  const meta = SUBMISSION_STATUS[submission.status];
   return (
     <div
-      className="rounded-lg text-xs"
+      className="text-sm"
       style={{
-        background: "var(--surface-hover)",
-        border: "1px solid var(--glass-border-soft)",
-        padding: 10,
+        background: "var(--gui-paper-warm)",
+        borderRadius: "var(--gui-r-card)",
+        boxShadow: "inset 0 0 0 1.5px var(--gui-paper-edge)",
+        padding: "10px 14px 12px",
       }}
     >
-      <div className="flex items-center justify-between mb-1">
-        <span
-          className="uppercase tracking-wider px-2 py-0.5 rounded"
-          style={{
-            background: meta.bg,
-            color: meta.color,
-            fontSize: 10,
-          }}
-        >
-          {meta.label}
-        </span>
-        <span style={{ color: "var(--color-text-subtle)" }}>
-          {new Date(submission.created_at).toLocaleString()}
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+        <Badge tone={meta.tone}>{meta.label}</Badge>
+        <span className="text-xs" style={{ color: "var(--gui-muted)" }}>
+          {new Date(submission.created_at).toLocaleString("en-CA", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            timeZone: "America/Toronto",
+          })}
         </span>
       </div>
       <p
-        className="text-xs leading-relaxed whitespace-pre-wrap"
-        style={{ color: "var(--color-text-soft)" }}
+        className="leading-relaxed whitespace-pre-wrap"
+        style={{ color: "var(--gui-ink)" }}
       >
         {submission.submission_text}
       </p>
       {submission.attachment_urls.length > 0 && (
-        <div className="mt-1.5 flex flex-wrap gap-1">
+        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
           {submission.attachment_urls.map((u, i) => (
             <a
               key={i}
               href={u}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 hover:underline"
-              style={{ color: "var(--color-accent-cyan)" }}
+              className="inline-flex items-center gap-1 underline-offset-2 hover:underline"
+              style={{ color: "var(--gui-teal-ink)", fontWeight: 700 }}
             >
-              <LinkIcon className="w-3 h-3" />
+              <LinkIcon className="w-3.5 h-3.5" aria-hidden />
               {fileLabel(u)}
             </a>
           ))}
@@ -687,10 +507,10 @@ function PastSubmissionRow({ submission }: { submission: BountySubmission }) {
       )}
       {submission.reviewer_notes && (
         <p
-          className="mt-2 text-xs leading-relaxed"
-          style={{ color: "var(--color-text-muted)" }}
+          className="mt-2 leading-relaxed"
+          style={{ color: "var(--gui-ink-2)" }}
         >
-          <span style={{ color: "var(--color-text-subtle)" }}>Reviewer:</span>{" "}
+          <span style={{ color: "var(--gui-muted)", fontWeight: 800 }}>Reviewer:</span>{" "}
           {submission.reviewer_notes}
         </p>
       )}

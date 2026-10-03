@@ -3,30 +3,34 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Trophy } from "lucide-react";
 import type { LeaderboardEntry, Tier } from "@/lib/supabase/types";
-import { TIER_COLORS } from "@/components/portal/types";
 import { useUser } from "@/components/portal/UserContext";
+import { Badge, Banner, Empty, Loading, Tabs } from "@/components/gui";
+import { TIER_LOOK } from "@/components/portal/classIdentity";
 
 type TimePeriod = "weekly" | "monthly" | "all_time";
 
 const TIME_TABS: { key: TimePeriod; label: string }[] = [
   { key: "weekly", label: "Weekly" },
   { key: "monthly", label: "Monthly" },
-  { key: "all_time", label: "All-Time" },
+  { key: "all_time", label: "All time" },
 ];
 
-const RANK_COLORS: Record<number, string> = {
-  1: "#ffd166",
-  2: "#d4d4d8",
-  3: "#cd7f32",
+// The top three wear a coin: gold, silver (a pale well with a rim) and bronze (the kit's coral). Ink on each (AA).
+const RANK_COINS: Record<number, { bg: string; ring?: string }> = {
+  1: { bg: "var(--gui-gold)" },
+  2: { bg: "var(--gui-paper-deep)", ring: "var(--gui-paper-line)" },
+  3: { bg: "var(--gui-coral)" },
 };
 
-// Accent color for own-row highlight (per ux-leaderboard.md §6 + game-tokens.css)
-const OWN_ROW_BG = "rgba(0, 47, 167, 0.12)";
-const OWN_ROW_BG_STICKY = "rgba(0, 47, 167, 0.18)";
-const OWN_ROW_ACCENT = "#002fa7";
+// Own-row highlight (per ux-leaderboard.md §6, in the cream kit): the butter selection with a sage edge.
+const OWN_ROW_BG = "color-mix(in srgb, var(--gui-butter) 60%, var(--gui-paper-hi))";
+const OWN_ROW_BG_STICKY = "var(--gui-butter)";
+const OWN_ROW_ACCENT = "var(--gui-sage)";
 
-// Grid column template — shared between header + every row + sticky row so columns align
-const GRID_COLS = "40px 40px 1fr 60px 80px 50px";
+// Grid columns, shared between header + every row + sticky row so columns align. Level shows from sm, Tier from md
+// (ux-leaderboard.md §8), so the template drops those tracks below them instead of leaving empty columns.
+const GRID_COLS =
+  "grid-cols-[40px_40px_minmax(0,1fr)_80px] sm:grid-cols-[40px_40px_minmax(0,1fr)_60px_80px] md:grid-cols-[40px_40px_minmax(0,1fr)_60px_80px_50px]";
 
 interface LeaderboardResponse {
   leaderboard?: LeaderboardEntry[];
@@ -120,41 +124,27 @@ export default function LeaderboardPage() {
   const showStickyOwnRow = stickyEntry !== null && (!ownEntry || !ownRowVisible);
 
   return (
-    <div className="flex-1 overflow-y-auto" style={{ padding: 24 }}>
+    <div className="flex-1 overflow-y-auto" style={{ padding: "24px 20px 48px" }}>
       <div style={{ maxWidth: 800, margin: "0 auto" }}>
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(255, 209, 102, 0.1)" }}>
-            <Trophy className="w-5 h-5" style={{ color: "#ffd166" }} />
-          </div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--color-text-main)" }}>Leaderboard</h1>
-        </div>
+        <Banner title="Leaderboard" icon={<Trophy size={26} />} tone="sage">
+          Members ranked by the XP they’ve earned with the club.
+        </Banner>
 
         {/* Time Period Tabs */}
-        <div className="flex gap-2 mb-2">
-          {TIME_TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setPeriod(t.key)}
-              className="shrink-0 text-sm font-medium rounded-full transition-colors"
-              style={{
-                height: 36,
-                padding: "0 16px",
-                background: period === t.key ? "rgba(0, 47, 167, 0.15)" : "transparent",
-                color: period === t.key ? "var(--color-text-main)" : "var(--color-text-muted)",
-                border: period === t.key ? "1px solid #002fa7" : "1px solid var(--glass-border-soft)",
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        <Tabs
+          label="Time period"
+          value={period}
+          onChange={setPeriod}
+          tabs={TIME_TABS.map((t) => ({ id: t.key, label: t.label }))}
+          className="mb-2"
+        />
 
         {/* Period note — weekly/monthly not yet wired (no xp_log table) */}
         <p
-          className="text-xs mb-4"
+          className="text-xs mb-3"
           style={{
-            color: "var(--color-text-muted)",
+            color: "var(--gui-muted)",
+            fontWeight: 700,
             minHeight: 18,
             opacity: period === "all_time" ? 0 : 1,
             transition: "opacity 0.15s",
@@ -163,33 +153,41 @@ export default function LeaderboardPage() {
         >
           {period === "all_time"
             ? ""
-            : "Weekly / Monthly XP windows coming soon — showing All-Time totals."}
+            : "Weekly and monthly totals are coming soon. These are all-time totals."}
         </p>
 
         {/* Privacy note for non-admin viewers */}
         {!isAdmin && !loading && entries.length > 0 ? (
-          <p className="text-xs mb-4" style={{ color: "var(--color-text-subtle)" }}>
-            Top half of the leaderboard is public. Bottom half is anonymized — only your own row is shown clearly.
+          <p className="text-xs mb-4" style={{ color: "var(--gui-muted)" }}>
+            Names show for the top half of the board. The bottom half stays anonymous, apart from your own row.
           </p>
         ) : null}
 
         {/* Table */}
         <div
-          className="rounded-2xl overflow-hidden relative"
-          style={{ background: "var(--color-surface)", border: "1px solid var(--glass-border-soft)" }}
+          className="overflow-hidden relative"
+          style={{
+            background: "var(--gui-paper-hi)",
+            border: "1.5px solid var(--gui-paper-edge)",
+            borderRadius: "var(--gui-r-card)",
+            boxShadow: "var(--gui-shadow-sm)",
+          }}
         >
           {/* Header Row */}
           <div
-            className="grid items-center text-xs uppercase tracking-wider"
+            className={`grid ${GRID_COLS} items-center text-xs`}
             style={{
-              gridTemplateColumns: GRID_COLS,
               height: 36,
               padding: "0 16px",
-              color: "#6b7280",
-              borderBottom: "1px solid var(--glass-border-soft)",
+              gap: 12,
+              color: "var(--gui-muted)",
+              fontWeight: 800,
+              background: "var(--gui-paper-warm)",
+              borderLeft: "3px solid transparent",
+              borderBottom: "1px solid var(--gui-paper-edge)",
             }}
           >
-            <span className="text-right pr-2">#</span>
+            <span className="text-center">#</span>
             <span />
             <span>Name</span>
             <span className="hidden sm:block">Level</span>
@@ -209,20 +207,11 @@ export default function LeaderboardPage() {
             }}
           >
             {loading ? (
-              Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} className="animate-pulse" style={{ height: 56, borderBottom: "1px solid var(--glass-border-soft)" }}>
-                  <div className="h-full flex items-center px-4 gap-3">
-                    <div className="w-6 h-3 rounded" style={{ background: "var(--surface-chip)" }} />
-                    <div className="w-9 h-9 rounded-full" style={{ background: "var(--surface-chip)" }} />
-                    <div className="flex-1 h-3 rounded" style={{ background: "var(--surface-chip)", maxWidth: 120 }} />
-                  </div>
-                </div>
-              ))
+              <Loading label="Loading the leaderboard…" />
             ) : entries.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <Trophy className="w-8 h-8 mb-3" style={{ color: "var(--color-text-subtle)" }} />
-                <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>No rankings yet for this period.</p>
-              </div>
+              <Empty icon={<Trophy size={32} />} title="No rankings yet">
+                Check in at a club event to start earning XP.
+              </Empty>
             ) : (
               entries.map((m, i) => {
                 const rank = m.rank_position ?? i + 1;
@@ -252,9 +241,9 @@ export default function LeaderboardPage() {
                 bottom: 0,
                 left: 0,
                 right: 0,
-                background: "#0d1626",
-                borderTop: "1px dashed var(--glass-border-soft)",
-                boxShadow: "0 -4px 12px rgba(0, 0, 0, 0.35)",
+                background: OWN_ROW_BG_STICKY,
+                borderTop: "2px dashed var(--gui-paper-line)",
+                boxShadow: "0 -6px 14px rgb(79 63 49 / 0.12)",
               }}
               aria-label="Your row (pinned)"
             >
@@ -286,7 +275,7 @@ interface RowProps {
 
 function Row({ entry, rank, isOwn, anonymized, pinned, rowRef }: RowProps) {
   const tier = (entry.tier ?? 5) as Tier;
-  const tierStyle = TIER_COLORS[tier];
+  const tierLook = TIER_LOOK[tier];
 
   // Anonymization rules:
   // - name → "Member #{rank}"
@@ -295,40 +284,54 @@ function Row({ entry, rank, isOwn, anonymized, pinned, rowRef }: RowProps) {
   // - XP / Level hidden (privacy: don't leak progress)
   const displayName = anonymized ? `Member #${rank}` : entry.display_name ?? "Unknown";
   const avatarInitial = anonymized ? "?" : (entry.display_name ?? "?")[0]?.toUpperCase();
-  const avatarBg = anonymized ? "var(--surface-hover)" : tierStyle.bg;
-  const avatarBorder = anonymized ? "#3f3f46" : tierStyle.border;
-  const avatarColor = anonymized ? "#6b7280" : tierStyle.color;
-  const nameColor = anonymized ? "var(--color-text-muted)" : "var(--color-text-main)";
-  const tierLabelColor = anonymized ? "#6b7280" : tierStyle.color;
+  const avatarBg = anonymized ? "var(--gui-paper-deep)" : "var(--gui-paper-hi)";
+  const avatarBorder = anonymized ? "var(--gui-paper-line)" : tierLook.ring;
+  const avatarColor = anonymized ? "var(--gui-muted)" : "var(--gui-ink-strong)";
+  const nameColor = anonymized ? "var(--gui-muted)" : "var(--gui-ink-strong)";
 
   // Own-row highlight per ux-leaderboard.md §6
   const ownBg = pinned ? OWN_ROW_BG_STICKY : OWN_ROW_BG;
+  const coin = RANK_COINS[rank];
 
   return (
     <div
       ref={rowRef}
-      className="grid items-center transition-colors hover:bg-white/[0.03]"
+      className={`grid ${GRID_COLS} items-center transition-colors hover:bg-[var(--gui-paper-warm)]`}
       style={{
-        gridTemplateColumns: GRID_COLS,
         height: 56,
         padding: "0 16px",
         gap: 12,
-        borderBottom: pinned ? "none" : "1px solid var(--glass-border-soft)",
-        background: isOwn ? ownBg : "transparent",
+        borderBottom: pinned ? "none" : "1px solid var(--gui-paper-edge)",
+        // Inline only for your own row, so the hover wash still shows on everyone else's.
+        background: isOwn ? ownBg : undefined,
         borderLeft: isOwn ? `3px solid ${OWN_ROW_ACCENT}` : "3px solid transparent",
       }}
     >
-      <span
-        className="text-right pr-2 font-bold"
-        style={{ fontSize: 16, color: RANK_COLORS[rank] ?? "#9ca3af" }}
-      >
-        {rank}
+      <span className="flex justify-center">
+        {coin ? (
+          <span
+            className="inline-grid place-items-center w-7 h-7 rounded-full text-sm"
+            style={{
+              background: coin.bg,
+              color: "var(--gui-ink-strong)",
+              fontWeight: 800,
+              boxShadow: coin.ring ? `inset 0 0 0 2px ${coin.ring}` : "var(--gui-shadow-sm)",
+            }}
+          >
+            {rank}
+          </span>
+        ) : (
+          <span style={{ fontSize: 16, fontWeight: 800, color: "var(--gui-ink-2)", fontVariantNumeric: "tabular-nums" }}>
+            {rank}
+          </span>
+        )}
       </span>
       <div
-        className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+        className="w-9 h-9 rounded-full flex items-center justify-center text-xs shrink-0"
         style={{
           background: avatarBg,
           color: avatarColor,
+          fontWeight: 800,
           border: `2px solid ${avatarBorder}`,
           filter: anonymized ? "saturate(0)" : undefined,
         }}
@@ -336,33 +339,38 @@ function Row({ entry, rank, isOwn, anonymized, pinned, rowRef }: RowProps) {
         {avatarInitial}
       </div>
       <span
-        className="text-sm font-semibold truncate"
-        style={{ color: nameColor, fontStyle: anonymized ? "italic" : "normal" }}
+        className="text-sm truncate"
+        style={{ color: nameColor, fontWeight: 700, fontStyle: anonymized ? "italic" : "normal" }}
       >
         {displayName}
         {isOwn ? (
-          <span className="ml-1.5 text-xs font-normal" style={{ color: "var(--color-text-muted)" }}>
-            (You)
+          <span className="ml-1.5 text-xs" style={{ color: "var(--gui-ink-2)", fontWeight: 600 }}>
+            (you)
           </span>
         ) : null}
       </span>
       <span
         className="hidden sm:block text-sm"
-        style={{ color: anonymized ? "transparent" : "var(--color-text-soft)" }}
+        style={{ color: anonymized ? "transparent" : "var(--gui-ink-2)" }}
       >
         {anonymized ? "—" : `Lv.${entry.level ?? 1}`}
       </span>
       <span
-        className="text-right text-sm font-medium"
-        style={{ color: anonymized ? "var(--color-text-subtle)" : "var(--color-text-main)" }}
+        className="text-right text-sm"
+        style={{
+          color: anonymized ? "var(--gui-muted)" : "var(--gui-ink-strong)",
+          fontWeight: 800,
+          fontVariantNumeric: "tabular-nums",
+        }}
       >
         {anonymized ? "—" : (entry.xp ?? 0).toLocaleString()}
       </span>
-      <span
-        className="hidden md:block text-right text-xs font-bold"
-        style={{ color: tierLabelColor }}
-      >
-        {anonymized ? "—" : `T${tier}`}
+      <span className="hidden md:block text-right text-xs">
+        {anonymized ? (
+          <span style={{ color: "var(--gui-muted)", fontWeight: 800 }}>—</span>
+        ) : (
+          <Badge tone={tierLook.tone}>T{tier}</Badge>
+        )}
       </span>
     </div>
   );
