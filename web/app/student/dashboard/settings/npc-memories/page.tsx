@@ -2,13 +2,14 @@
 
 // ─── User-Facing NPC Memory Wipe (D7) ──────────────────────────────────────
 // Lists every NPC the calling user has talked to + interaction count + last
-// interaction. Per-row "Wipe Memory" button calls /api/npc/memories/wipe and
+// interaction. Per-row "Wipe memory" button calls /api/npc/memories/wipe and
 // removes the row from the list on success.
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Brain, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { Banner, Button, Card, ConfirmDialog, Empty, ErrorNote, List, ListRow, Loading } from "@/components/gui";
 
 interface MemoryRow {
   npc_id: string;
@@ -31,7 +32,7 @@ export default function NPCMemoriesPage() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        setError("You must be signed in.");
+        setError("You’re signed out. Sign in to see who remembers you.");
         setRows([]);
         return;
       }
@@ -44,7 +45,7 @@ export default function NPCMemoriesPage() {
         .eq("user_id", user.id)
         .order("last_interaction_at", { ascending: false });
       if (qErr || !data) {
-        setError(qErr?.message ?? "Failed to load NPC memories");
+        setError("Your NPC memories didn’t load. Try again in a moment.");
         setRows([]);
         return;
       }
@@ -60,20 +61,20 @@ export default function NPCMemoriesPage() {
           : r.npc_personas;
         return {
           npc_id: r.npc_id,
-          npc_name: joined?.display_name ?? "unknown NPC",
+          npc_name: joined?.display_name ?? "Unknown NPC",
           interaction_count: r.interaction_count,
           last_interaction_at: r.last_interaction_at,
         };
       });
       setRows(list);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
+    } catch {
+      setError("Your NPC memories didn’t load. Try again in a moment.");
       setRows([]);
     }
   }, []);
 
   useEffect(() => {
-     
+
     load();
   }, [load]);
 
@@ -90,11 +91,10 @@ export default function NPCMemoriesPage() {
       if (res.ok) {
         setRows((prev) => (prev ?? []).filter((r) => r.npc_id !== npcId));
       } else {
-        const body = await res.json().catch(() => ({}));
-        setError((body as { error?: string }).error ?? "Failed to wipe memory");
+        setError(res.status === 401 ? "You’re signed out. Sign in and try again." : "That memory didn’t wipe. Try again.");
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to wipe memory");
+    } catch {
+      setError("That memory didn’t wipe. Check your connection and try again.");
     } finally {
       setBusyNPC(null);
       setConfirmNPC(null);
@@ -102,179 +102,74 @@ export default function NPCMemoriesPage() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto" style={{ padding: 24 }}>
+    <div className="flex-1 overflow-y-auto" style={{ padding: "24px 20px 48px" }}>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
-        <div className="mb-2">
-          <Link
-            href="/student/dashboard/settings"
-            className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-          >
-            <ArrowLeft size={12} />
-            Back to Settings
-          </Link>
-        </div>
+        <Link
+          href="/student/dashboard/settings"
+          className="inline-flex items-center gap-1.5 mb-3 text-sm transition-colors text-[var(--gui-ink-2)] hover:text-[var(--gui-sage)]"
+          style={{ fontWeight: 800, minHeight: 32 }}
+        >
+          <ArrowLeft size={16} aria-hidden />
+          Back to settings
+        </Link>
 
-        <div className="flex items-center gap-3 mb-6">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ background: "var(--surface-chip)" }}
-          >
-            <Brain
-              className="w-5 h-5"
-              style={{ color: "var(--color-text-muted)" }}
-            />
-          </div>
-          <div>
-            <h1
-              className="text-2xl font-bold"
-              style={{ color: "var(--color-text-main)" }}
-            >
-              NPC Memories
-            </h1>
-            <p className="text-sm text-[var(--color-text-muted)] mt-0.5">
-              NPCs you&apos;ve spoken with. Wipe a memory and they&apos;ll greet
-              you as a stranger.
-            </p>
-          </div>
-        </div>
+        <Banner title="NPC memories" icon={<Brain size={26} />} tone="sage">
+          The NPCs you&apos;ve talked to. Wipe a memory and they&apos;ll greet you as a stranger.
+        </Banner>
 
-        {error ? (
-          <p className="mb-4 p-3 rounded-md text-xs border bg-[var(--gui-danger-soft)] border-[var(--gui-danger)]/30 text-[var(--gui-danger)]">
-            {error}
-          </p>
-        ) : null}
+        {error ? <ErrorNote onRetry={load} className="mb-4">{error}</ErrorNote> : null}
 
         {rows === null ? (
-          <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
-            Loading...
-          </p>
+          <Loading label="Checking who remembers you…" />
         ) : rows.length === 0 ? (
-          <div
-            className="text-center py-12 rounded-2xl"
-            style={{
-              background: "var(--color-surface)",
-              border: "1px solid var(--glass-border-soft)",
-            }}
-          >
-            <p className="text-sm text-[var(--color-text-muted)]">
-              No NPCs remember you yet. Go say hi to someone in the world.
-            </p>
-          </div>
+          error ? null : (
+            <Empty icon={<Brain size={32} />} title="No NPCs remember you yet">
+              Go say hi to someone on the island.
+            </Empty>
+          )
         ) : (
-          <div
-            className="rounded-2xl overflow-hidden"
-            style={{
-              background: "var(--color-surface)",
-              border: "1px solid var(--glass-border-soft)",
-            }}
-          >
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b" style={{ borderColor: "var(--glass-border-soft)" }}>
-                  <Th>NPC</Th>
-                  <Th>Interactions</Th>
-                  <Th>Last seen</Th>
-                  <Th>Actions</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr
-                    key={r.npc_id}
-                    className="border-b last:border-b-0"
-                    style={{ borderColor: "var(--glass-border-soft)" }}
-                  >
-                    <td className="px-4 py-3 text-[var(--color-text-main)]">
-                      {r.npc_name}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-[var(--color-text-soft)]">
-                      {r.interaction_count}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-[var(--color-text-soft)]">
-                      {relativeTime(r.last_interaction_at)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        type="button"
-                        disabled={busyNPC === r.npc_id}
-                        onClick={() => setConfirmNPC(r)}
-                        className="inline-flex items-center gap-1 text-xs uppercase tracking-wider text-[var(--gui-danger)] hover:underline disabled:opacity-40"
-                      >
-                        <Trash2 size={12} />
-                        Wipe Memory
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Card style={{ padding: "6px 8px" }}>
+            <List label="NPCs who remember you">
+              {rows.map((r) => (
+                <ListRow
+                  key={r.npc_id}
+                  title={r.npc_name}
+                  detail={`Talked ${r.interaction_count} time${r.interaction_count === 1 ? "" : "s"} · last seen ${relativeTime(r.last_interaction_at)}`}
+                  value={
+                    <Button size="sm" variant="danger" disabled={busyNPC === r.npc_id} onClick={() => setConfirmNPC(r)}>
+                      <Trash2 size={16} aria-hidden />
+                      Wipe memory
+                    </Button>
+                  }
+                />
+              ))}
+            </List>
+          </Card>
         )}
       </div>
 
-      {confirmNPC ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.6)" }}
-          onClick={() => setConfirmNPC(null)}
-        >
-          <div
-            className="rounded-2xl max-w-md w-full"
-            style={{
-              background: "var(--color-surface)",
-              border: "1px solid var(--glass-border-soft)",
-              padding: 24,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2
-              className="text-lg font-bold mb-2"
-              style={{ color: "var(--color-text-main)" }}
-            >
-              Confirm wipe
-            </h2>
-            <p
-              className="text-sm mb-6"
-              style={{ color: "var(--color-text-soft)" }}
-            >
-              Wipe {confirmNPC.npc_name}&apos;s memory of you? They will greet
-              you as a stranger next time. This cannot be undone.
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setConfirmNPC(null)}
-                className="px-3 py-1.5 border border-[var(--glass-border)] text-[var(--color-text-primary)] text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={busyNPC !== null}
-                onClick={confirmAndWipe}
-                className="px-3 py-1.5 text-xs uppercase tracking-wider rounded-md transition-colors disabled:opacity-40"
-                style={{ background: "#ef4444", color: "#fff" }}
-              >
-                {busyNPC ? "Wiping..." : "Wipe Memory"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <ConfirmDialog
+        open={confirmNPC !== null}
+        title="Wipe this memory?"
+        danger
+        busy={busyNPC !== null}
+        confirmLabel="Wipe memory"
+        cancelLabel="Keep it"
+        onConfirm={confirmAndWipe}
+        onCancel={() => setConfirmNPC(null)}
+      >
+        {confirmNPC && (
+          <p>
+            {confirmNPC.npc_name} will forget you and greet you as a stranger next time. This can&apos;t be undone.
+          </p>
+        )}
+      </ConfirmDialog>
     </div>
   );
 }
 
-function Th({ children }: { children: React.ReactNode }) {
-  return (
-    <th className="text-left px-4 py-3 text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
-      {children}
-    </th>
-  );
-}
-
 function relativeTime(iso: string): string {
-  if (!iso) return "—";
+  if (!iso) return "a while ago";
   const then = new Date(iso).getTime();
   const diff = Date.now() - then;
   const m = Math.floor(diff / 60000);

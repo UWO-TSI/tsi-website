@@ -1,70 +1,68 @@
 "use client";
 
 import Link from "next/link";
-import { Terminal, Brain, ArrowRight } from "lucide-react";
+import { Terminal, Brain, ArrowRight, Wrench } from "lucide-react";
+import { Banner, Card } from "@/components/gui";
 
 const tools = [
   {
-    title: "ASCII Converter",
-    description: "Convert images and text to ASCII art for marketing",
+    title: "ASCII converter",
+    description: "Turn images and text into ASCII art for marketing posts.",
     href: "/student/dashboard/tools/ascii",
     icon: Terminal,
-    accentColor: "var(--color-accent-cyan)",
+    tint: "var(--gui-paper-deep)",
+    ink: "var(--gui-teal-ink)",
   },
   {
-    title: "TETHOS RAG",
-    description: "AI assistant with TSI knowledge base",
+    title: "Tethos RAG",
+    description: "An AI assistant with the TSI knowledge base.",
     href: "/student/dashboard/tools/rag",
     icon: Brain,
-    accentColor: "var(--color-brand-blue)",
+    tint: "var(--gui-sage-soft)",
+    ink: "var(--gui-sage)",
   },
 ];
 
 export default function ToolsPage() {
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
-          Tools
-        </h1>
-        <p className="text-sm text-[var(--color-text-muted)] mt-1">
-          Internal utilities and integrations
-        </p>
-      </div>
+    <div className="flex-1 overflow-y-auto" style={{ padding: "24px 20px 48px" }}>
+      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+        <Banner title="Tools" icon={<Wrench size={26} />} tone="sage">Internal utilities and integrations.</Banner>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
-        {tools.map((tool) => {
-          const Icon = tool.icon;
-          return (
-            <Link
-              key={tool.title}
-              href={tool.href}
-              className="group bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6 hover:border-[var(--color-brand-blue)]/30 hover:shadow-[0_0_16px_rgba(0,47,167,0.1)] transition-all"
-            >
-              <div
-                className="w-12 h-12 rounded-lg flex items-center justify-center mb-4"
-                style={{
-                  backgroundColor: `color-mix(in srgb, ${tool.accentColor} 10%, transparent)`,
-                  border: `1px solid color-mix(in srgb, ${tool.accentColor} 20%, transparent)`,
-                }}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {tools.map((tool) => {
+            const Icon = tool.icon;
+            return (
+              <Link
+                key={tool.title}
+                href={tool.href}
+                className="group block rounded-[18px] transition-transform hover:-translate-y-1"
               >
-                <Icon size={24} style={{ color: tool.accentColor }} />
-              </div>
+                <Card className="h-full" style={{ padding: 22 }}>
+                  <span
+                    aria-hidden
+                    className="grid place-items-center mb-4"
+                    style={{ width: 52, height: 52, borderRadius: "var(--gui-r-blob)", background: tool.tint, color: tool.ink }}
+                  >
+                    <Icon size={26} />
+                  </span>
 
-              <h2 className="text-base font-heading font-bold text-[var(--color-text-primary)] mb-1">
-                {tool.title}
-              </h2>
-              <p className="text-sm text-[var(--color-text-muted)] mb-4">
-                {tool.description}
-              </p>
+                  <h2 className="text-base mb-1" style={{ color: "var(--gui-ink-strong)", fontWeight: 800 }}>
+                    {tool.title}
+                  </h2>
+                  <p className="text-sm mb-4" style={{ color: "var(--gui-ink-2)" }}>
+                    {tool.description}
+                  </p>
 
-              <span className="inline-flex items-center gap-1.5 text-xs text-[var(--color-brand-blue)] group-hover:gap-2.5 transition-all">
-                Launch
-                <ArrowRight size={12} />
-              </span>
-            </Link>
-          );
-        })}
+                  <span className="inline-flex items-center gap-1.5 text-sm group-hover:gap-2.5 transition-all" style={{ color: "var(--gui-sage)", fontWeight: 800 }}>
+                    Open
+                    <ArrowRight size={16} aria-hidden />
+                  </span>
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

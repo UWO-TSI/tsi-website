@@ -1,20 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type CSSProperties } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   Users,
   Search,
   UserPlus,
-  Shield,
   Clock,
   Check,
   X,
-  ChevronRight,
-  Sparkles,
   Minus,
   Plus,
 } from "lucide-react";
+import { CLASS_META, ClassBadge } from "@/components/portal/classIdentity";
+import { Badge, Banner, Button, Card, Empty, Field, IconButton, Loading, Select, Tabs, TextArea, Toggle } from "@/components/gui";
 
 interface MentorProfile {
   id: string;
@@ -51,6 +50,37 @@ interface MentorshipMatch {
     level: number;
     rank: string;
   };
+}
+
+const AVAILABILITY: Record<string, string> = {
+  weekly: "Weekly",
+  biweekly: "Every two weeks",
+  monthly: "Monthly",
+  as_needed: "As needed",
+};
+
+const cardTitle: CSSProperties = { fontSize: 16, fontWeight: 800, color: "var(--gui-ink-strong)" };
+
+function Initial({ name, size = 40 }: { name: string | undefined; size?: number }) {
+  return (
+    <span
+      aria-hidden
+      className="shrink-0 grid place-items-center"
+      style={{ width: size, height: size, borderRadius: "var(--gui-r-blob)", background: "var(--gui-sage-soft)", color: "var(--gui-sage-deep)", fontSize: size > 40 ? 18 : 15, fontWeight: 800 }}
+    >
+      {name?.[0]?.toUpperCase()}
+    </span>
+  );
+}
+
+function ClassAndLevel({ cls, level, rank }: { cls: string | null | undefined; level: number | undefined; rank?: string }) {
+  return (
+    <span className="flex flex-wrap items-center gap-x-2 gap-y-1" style={{ fontSize: 13, fontWeight: 700, color: "var(--gui-ink-2)" }}>
+      {cls && CLASS_META[cls] ? <ClassBadge cls={cls} iconSize={12} fontSize={13} /> : cls && <span>{cls}</span>}
+      {cls && <span aria-hidden style={{ color: "var(--gui-muted)" }}>·</span>}
+      <span>Lv {level}{rank ? ` ${rank}` : ""}</span>
+    </span>
+  );
 }
 
 export default function MentorshipPage() {
@@ -255,393 +285,249 @@ export default function MentorshipPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <p className="text-sm text-[var(--color-text-muted)] animate-pulse">
-          Loading mentorship data...
-        </p>
+        <Loading label="Finding mentors…" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
-          Mentorship
-        </h1>
-        <p className="text-sm text-[var(--color-text-muted)] mt-1">
-          Learn from experienced members or guide the next generation
-        </p>
-      </div>
+    <div className="flex-1 overflow-y-auto" style={{ padding: "24px 20px 48px" }}>
+      <div className="max-w-4xl mx-auto space-y-6">
+        <Banner title="Mentorship" icon={<Users size={26} />} tone="sage">
+          Learn from experienced members, or guide the next ones.
+        </Banner>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1 bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md p-1 w-fit">
-        <button
-          onClick={() => setTab("find")}
-          className={`px-4 py-2 rounded text-sm transition-all ${
-            tab === "find"
-              ? "bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)]"
-              : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-          }`}
-        >
-          Find a Mentor
-        </button>
-        <button
-          onClick={() => setTab("my")}
-          className={`px-4 py-2 rounded text-sm transition-all ${
-            tab === "my"
-              ? "bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)]"
-              : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-          }`}
-        >
-          My Mentorship
-        </button>
-      </div>
+        <Tabs
+          label="Mentorship"
+          value={tab}
+          onChange={setTab}
+          tabs={[
+            { id: "find", label: "Find a mentor" },
+            { id: "my", label: "My mentorship", badge: myMentorProfile?.is_mentor ? pendingRequests.length : 0 },
+          ]}
+        />
 
-      {/* Find a Mentor Tab */}
-      {tab === "find" && (
-        <div className="space-y-4">
-          {/* Search */}
-          <div className="relative">
-            <Search
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
-            />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md pl-9 pr-4 py-2.5 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)] transition-all"
-              placeholder="Search by name, skill, or class..."
-            />
-          </div>
-
-          {/* Mentor Grid */}
-          {filteredMentors.length === 0 ? (
-            <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-8 text-center">
-              <Users size={32} className="text-[var(--color-text-muted)] mx-auto mb-3" />
-              <p className="text-sm text-[var(--color-text-muted)]">
-                No mentors found. Check back later or become one yourself.
-              </p>
+        {/* Find a Mentor Tab */}
+        {tab === "find" && (
+          <div className="space-y-4">
+            {/* Search */}
+            <div className="relative">
+              <Search
+                aria-hidden
+                className="absolute top-1/2 -translate-y-1/2 pointer-events-none"
+                style={{ left: 16, width: 18, height: 18, color: "var(--gui-muted)" }}
+              />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                aria-label="Search mentors"
+                className="w-full transition-colors border-2 border-[var(--gui-paper-line)] focus:border-[var(--gui-sage)] bg-[var(--gui-paper-hi)] text-[var(--gui-ink)] placeholder:text-[var(--gui-muted)]"
+                style={{ height: 48, padding: "0 16px 0 44px", borderRadius: "18px 15px 17px 16px", fontSize: 15, fontWeight: 600 }}
+                placeholder="Search by name, skill or class…"
+              />
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {filteredMentors.map((mentor) => {
-                const isFull = (mentor.mentee_count ?? 0) >= mentor.max_mentees;
-                const alreadyRequested = requestsSent.includes(mentor.user_id);
 
-                return (
-                  <div
-                    key={mentor.id}
-                    className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4 hover:border-[var(--color-brand-blue)]/20 transition-all"
-                  >
-                    <div className="flex items-start gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-full bg-[var(--color-brand-blue)]/10 border border-[var(--color-brand-blue)]/20 flex items-center justify-center shrink-0">
-                        <span className="text-sm text-[var(--color-brand-blue)]">
-                          {mentor.profile.display_name?.[0]?.toUpperCase()}
-                        </span>
+            {/* Mentor Grid */}
+            {filteredMentors.length === 0 ? (
+              <Card>
+                <Empty icon={<Users size={32} />} title="No mentors found">
+                  Check back later, or become one yourself under My mentorship.
+                </Empty>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredMentors.map((mentor) => {
+                  const isFull = (mentor.mentee_count ?? 0) >= mentor.max_mentees;
+                  const alreadyRequested = requestsSent.includes(mentor.user_id);
+
+                  return (
+                    <Card key={mentor.id} as="article" className="flex flex-col gap-3" style={{ padding: 18 }}>
+                      <div className="flex items-start gap-3">
+                        <Initial name={mentor.profile.display_name} />
+                        <div className="flex-1 min-w-0">
+                          <h3 style={{ fontSize: 15, fontWeight: 800, color: "var(--gui-ink-strong)", overflowWrap: "anywhere" }}>
+                            {mentor.profile.display_name}
+                          </h3>
+                          <ClassAndLevel cls={mentor.profile.class} level={mentor.profile.level} rank={mentor.profile.rank} />
+                        </div>
+                        <Badge tone={isFull ? "danger" : "success"} className="shrink-0">{isFull ? "Full" : "Open"}</Badge>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
-                          {mentor.profile.display_name}
-                        </h3>
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className="text-[var(--color-brand-blue)]">
-                            {mentor.profile.class}
+
+                      {/* Skills */}
+                      {mentor.skills.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {mentor.skills.map((skill) => (
+                            <Badge key={skill}>{skill}</Badge>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Meta */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 mt-auto">
+                        <div className="flex flex-wrap items-center gap-3 text-sm" style={{ color: "var(--gui-muted)", fontWeight: 700 }}>
+                          <span className="flex items-center gap-1.5">
+                            <Users size={14} aria-hidden />
+                            {mentor.mentee_count}/{mentor.max_mentees} mentees
                           </span>
-                          <span className="text-[var(--color-text-muted)]">·</span>
-                          <span className="text-[var(--color-brand-yellow)]">
-                            LV{mentor.profile.level} {mentor.profile.rank}
+                          <span className="flex items-center gap-1.5">
+                            <Clock size={14} aria-hidden />
+                            {AVAILABILITY[mentor.availability] ?? mentor.availability}
                           </span>
                         </div>
-                      </div>
-                      <div
-                        className={`px-2 py-0.5 rounded text-xs ${
-                          isFull
-                            ? "bg-[var(--gui-danger-soft)] text-[var(--gui-danger)]"
-                            : "bg-[var(--gui-success-soft)] text-[var(--gui-success)]"
-                        }`}
-                      >
-                        {isFull ? "Full" : "Open"}
-                      </div>
-                    </div>
-
-                    {/* Skills */}
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {mentor.skills.map((skill) => (
-                        <span
-                          key={skill}
-                          className="text-xs px-1.5 py-0.5 rounded bg-[var(--color-accent-cyan)]/10 text-[var(--color-accent-cyan)] border border-[var(--color-accent-cyan)]/20"
+                        <Button
+                          size="sm"
+                          variant={alreadyRequested ? "secondary" : "primary"}
+                          onClick={() => requestMentorship(mentor.user_id)}
+                          disabled={isFull || alreadyRequested}
                         >
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-
-                    {/* Meta */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
-                        <span className="flex items-center gap-1">
-                          <Users size={10} />
-                          {mentor.mentee_count}/{mentor.max_mentees} mentees
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock size={10} />
-                          {mentor.availability}
-                        </span>
+                          {alreadyRequested ? (
+                            <>
+                              <Clock size={16} aria-hidden />
+                              Requested
+                            </>
+                          ) : (
+                            <>
+                              <UserPlus size={16} aria-hidden />
+                              Request
+                            </>
+                          )}
+                        </Button>
                       </div>
-                      <button
-                        onClick={() => requestMentorship(mentor.user_id)}
-                        disabled={isFull || alreadyRequested}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
-                          alreadyRequested
-                            ? "border border-[var(--color-brand-yellow)]/30 text-[var(--color-brand-yellow)] bg-[var(--color-brand-yellow)]/10"
-                            : isFull
-                            ? "border border-[var(--glass-border)] text-[var(--color-text-muted)] opacity-50 cursor-not-allowed"
-                            : "bg-[var(--color-brand-blue)] text-white hover:brightness-110"
-                        }`}
-                      >
-                        {alreadyRequested ? (
-                          <>
-                            <Clock size={12} />
-                            Requested
-                          </>
-                        ) : (
-                          <>
-                            <UserPlus size={12} />
-                            Request
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
-      {/* My Mentorship Tab */}
-      {tab === "my" && (
-        <div className="space-y-6">
-          {/* My Mentor */}
-          <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-hidden">
-            <div className="px-4 py-3 border-b border-[var(--glass-border)]">
-              <h2 className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
-                // My Mentor
-              </h2>
-            </div>
-            <div className="p-4">
+        {/* My Mentorship Tab */}
+        {tab === "my" && (
+          <div className="space-y-6">
+            {/* My Mentor */}
+            <Card style={{ padding: 20 }}>
+              <h2 className="mb-3" style={cardTitle}>My mentor</h2>
               {myMentor ? (
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-[var(--color-brand-blue)]/10 border border-[var(--color-brand-blue)]/20 flex items-center justify-center">
-                    <span className="text-lg text-[var(--color-brand-blue)]">
-                      {myMentor.mentor_profile?.display_name?.[0]?.toUpperCase()}
-                    </span>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-[var(--color-text-primary)]">
+                  <Initial name={myMentor.mentor_profile?.display_name} size={48} />
+                  <div className="min-w-0">
+                    <h3 style={{ fontSize: 15, fontWeight: 800, color: "var(--gui-ink-strong)" }}>
                       {myMentor.mentor_profile?.display_name}
                     </h3>
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="text-[var(--color-brand-blue)]">
-                        {myMentor.mentor_profile?.class}
-                      </span>
-                      <span className="text-[var(--color-text-muted)]">·</span>
-                      <span className="text-[var(--color-brand-yellow)]">
-                        LV{myMentor.mentor_profile?.level} {myMentor.mentor_profile?.rank}
-                      </span>
-                    </div>
-                    <span
-                      className={`text-xs mt-1 inline-block px-2 py-0.5 rounded ${
-                        myMentor.status === "active"
-                          ? "bg-[var(--gui-success-soft)] text-[var(--gui-success)]"
-                          : "bg-yellow-500/10 text-[var(--gui-warn)]"
-                      }`}
-                    >
+                    <ClassAndLevel cls={myMentor.mentor_profile?.class} level={myMentor.mentor_profile?.level} rank={myMentor.mentor_profile?.rank} />
+                    <Badge tone={myMentor.status === "active" ? "success" : "warn"} className="mt-1.5">
                       {myMentor.status === "active" ? "Active" : "Pending"}
-                    </span>
+                    </Badge>
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-[var(--color-text-muted)] italic">
-                  You don&apos;t have a mentor yet. Browse the &quot;Find a Mentor&quot; tab to request one.
+                <p className="text-sm" style={{ color: "var(--gui-ink-2)" }}>
+                  You don&apos;t have a mentor yet. Find one in the Find a mentor tab and send a request.
                 </p>
               )}
-            </div>
-          </div>
+            </Card>
 
-          {/* Become a Mentor / Mentor Settings */}
-          <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-hidden">
-            <div className="px-4 py-3 border-b border-[var(--glass-border)] flex items-center justify-between">
-              <h2 className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider flex items-center gap-2">
-                <Shield size={14} />
-                Mentor Mode
-              </h2>
-              <button
-                onClick={toggleMentor}
-                className={`relative w-10 h-5 rounded-full transition-colors ${
-                  myMentorProfile?.is_mentor
-                    ? "bg-[var(--color-brand-blue)]"
-                    : "bg-[var(--color-bg-main)] border border-[var(--glass-border)]"
-                }`}
-              >
-                <div
-                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                    myMentorProfile?.is_mentor ? "translate-x-5" : "translate-x-0.5"
-                  }`}
-                />
-              </button>
-            </div>
+            {/* Become a Mentor / Mentor Settings */}
+            <Card style={{ padding: 20 }}>
+              <Toggle checked={!!myMentorProfile?.is_mentor} onChange={() => toggleMentor()} hint="Let other members ask you to mentor them.">
+                Mentor mode
+              </Toggle>
 
-            {(showMentorForm || myMentorProfile?.is_mentor) && (
-              <div className="p-4 space-y-4">
-                <div>
-                  <label className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
-                    Skills (comma-separated)
-                  </label>
-                  <input
+              {(showMentorForm || myMentorProfile?.is_mentor) && (
+                <div className="space-y-4 mt-4 pt-4" style={{ borderTop: "2px dashed var(--gui-paper-edge)" }}>
+                  <Field
+                    label="Skills"
+                    hint="Separate them with commas."
                     value={mentorSkills}
                     onChange={(e) => setMentorSkills(e.target.value)}
-                    className="mt-1 w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)]"
-                    placeholder="React, TypeScript, System Design, Leadership"
+                    placeholder="React, TypeScript, system design, leadership"
                   />
-                </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
-                      Availability
-                    </label>
-                    <select
-                      value={mentorAvailability}
-                      onChange={(e) => setMentorAvailability(e.target.value)}
-                      className="mt-1 w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-brand-blue)]"
-                    >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Select label="Availability" value={mentorAvailability} onChange={(e) => setMentorAvailability(e.target.value)}>
                       <option value="weekly">Weekly</option>
-                      <option value="biweekly">Bi-weekly</option>
+                      <option value="biweekly">Every two weeks</option>
                       <option value="monthly">Monthly</option>
-                      <option value="as_needed">As Needed</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
-                      Max Mentees
-                    </label>
-                    <div className="mt-1 flex items-center gap-2">
-                      <button
-                        onClick={() => setMentorMaxMentees(Math.max(1, mentorMaxMentees - 1))}
-                        className="w-8 h-8 rounded bg-[var(--color-bg-main)] border border-[var(--glass-border)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-                      >
-                        <Minus size={14} />
-                      </button>
-                      <span className="text-sm text-[var(--color-text-primary)] w-8 text-center">
-                        {mentorMaxMentees}
-                      </span>
-                      <button
-                        onClick={() => setMentorMaxMentees(Math.min(10, mentorMaxMentees + 1))}
-                        className="w-8 h-8 rounded bg-[var(--color-bg-main)] border border-[var(--glass-border)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-                      >
-                        <Plus size={14} />
-                      </button>
+                      <option value="as_needed">As needed</option>
+                    </Select>
+                    <div className="flex items-center justify-between gap-3" style={{ minHeight: 48 }}>
+                      <span style={{ fontWeight: 700 }}>Max mentees</span>
+                      <div className="flex items-center gap-2">
+                        <IconButton label="Fewer mentees" size="sm" onClick={() => setMentorMaxMentees(Math.max(1, mentorMaxMentees - 1))}>
+                          <Minus size={16} aria-hidden />
+                        </IconButton>
+                        <span aria-live="polite" className="text-center" style={{ width: 28, fontSize: 18, fontWeight: 800, color: "var(--gui-ink-strong)" }}>
+                          {mentorMaxMentees}
+                        </span>
+                        <IconButton label="More mentees" size="sm" onClick={() => setMentorMaxMentees(Math.min(10, mentorMaxMentees + 1))}>
+                          <Plus size={16} aria-hidden />
+                        </IconButton>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
-                    Mentor Bio
-                  </label>
-                  <textarea
+                  <TextArea
+                    label="Mentor bio"
                     value={mentorBio}
                     onChange={(e) => setMentorBio(e.target.value)}
                     rows={3}
-                    className="mt-1 w-full bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-brand-blue)] resize-none"
                     placeholder="What can you help mentees with?"
+                    style={{ minHeight: 96 }}
                   />
+
+                  <Button size="sm" onClick={saveMentorProfile} disabled={savingMentor}>
+                    {savingMentor ? "Saving…" : "Save mentor profile"}
+                  </Button>
                 </div>
+              )}
 
-                <button
-                  onClick={saveMentorProfile}
-                  disabled={savingMentor}
-                  className="px-4 py-2 rounded-md bg-[var(--color-brand-blue)] text-white text-sm font-bold hover:brightness-110 transition-all disabled:opacity-50"
-                >
-                  {savingMentor ? "Saving..." : "Save Mentor Profile"}
-                </button>
-              </div>
-            )}
-
-            {!showMentorForm && !myMentorProfile?.is_mentor && (
-              <div className="p-4">
-                <p className="text-sm text-[var(--color-text-muted)] italic">
-                  Enable Mentor Mode to start mentoring other members.
+              {!showMentorForm && !myMentorProfile?.is_mentor && (
+                <p className="text-sm mt-2" style={{ color: "var(--gui-ink-2)" }}>
+                  Turn on mentor mode to start mentoring other members.
                 </p>
-              </div>
+              )}
+            </Card>
+
+            {/* Pending Requests (for mentors) */}
+            {myMentorProfile?.is_mentor && pendingRequests.length > 0 && (
+              <Card tone="butter" style={{ padding: 20 }}>
+                <h2 className="mb-3" style={cardTitle}>Requests waiting ({pendingRequests.length})</h2>
+                <div className="space-y-2">
+                  {pendingRequests.map((req) => (
+                    <div
+                      key={req.id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-2xl"
+                      style={{ background: "var(--gui-paper-hi)", padding: "10px 12px", boxShadow: "var(--gui-shadow-sm)" }}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Initial name={req.mentee_profile?.display_name} size={36} />
+                        <div className="min-w-0">
+                          <p style={{ fontSize: 15, fontWeight: 800, color: "var(--gui-ink-strong)" }}>
+                            {req.mentee_profile?.display_name}
+                          </p>
+                          <ClassAndLevel cls={req.mentee_profile?.class} level={req.mentee_profile?.level} />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <IconButton label={`Accept ${req.mentee_profile?.display_name ?? "this request"}`} tone="sage" size="sm" onClick={() => handleRequest(req.id, true)}>
+                          <Check size={18} aria-hidden />
+                        </IconButton>
+                        <IconButton label={`Decline ${req.mentee_profile?.display_name ?? "this request"}`} size="sm" onClick={() => handleRequest(req.id, false)}>
+                          <X size={18} aria-hidden style={{ color: "var(--gui-danger)" }} />
+                        </IconButton>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
             )}
-          </div>
 
-          {/* Pending Requests (for mentors) */}
-          {myMentorProfile?.is_mentor && pendingRequests.length > 0 && (
-            <div className="bg-[var(--color-bg-alt)] border border-[var(--color-brand-yellow)]/20 rounded-lg overflow-hidden">
-              <div className="px-4 py-3 border-b border-[var(--glass-border)]">
-                <h2 className="text-xs text-[var(--color-brand-yellow)] uppercase tracking-wider flex items-center gap-2">
-                  <Sparkles size={14} />
-                  Pending Requests ({pendingRequests.length})
-                </h2>
-              </div>
-              <div className="p-4 space-y-2">
-                {pendingRequests.map((req) => (
-                  <div
-                    key={req.id}
-                    className="flex items-center justify-between bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-lg p-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[var(--color-brand-blue)]/10 border border-[var(--color-brand-blue)]/20 flex items-center justify-center">
-                        <span className="text-xs text-[var(--color-brand-blue)]">
-                          {req.mentee_profile?.display_name?.[0]?.toUpperCase()}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-[var(--color-text-primary)]">
-                          {req.mentee_profile?.display_name}
-                        </p>
-                        <p className="text-xs text-[var(--color-text-muted)]">
-                          {req.mentee_profile?.class} · LV{req.mentee_profile?.level}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleRequest(req.id, true)}
-                        className="p-1.5 rounded bg-[var(--gui-success-soft)] text-[var(--gui-success)] hover:bg-[var(--gui-success-soft)] transition-colors"
-                      >
-                        <Check size={14} />
-                      </button>
-                      <button
-                        onClick={() => handleRequest(req.id, false)}
-                        className="p-1.5 rounded bg-[var(--gui-danger-soft)] text-[var(--gui-danger)] hover:bg-[var(--gui-danger-soft)] transition-colors"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* My Mentees (for mentors) */}
-          {myMentorProfile?.is_mentor && (
-            <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-hidden">
-              <div className="px-4 py-3 border-b border-[var(--glass-border)]">
-                <h2 className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider flex items-center gap-2">
-                  <Users size={14} />
-                  My Mentees ({myMentees.length})
-                </h2>
-              </div>
-              <div className="p-4">
+            {/* My Mentees (for mentors) */}
+            {myMentorProfile?.is_mentor && (
+              <Card style={{ padding: 20 }}>
+                <h2 className="mb-3" style={cardTitle}>My mentees ({myMentees.length})</h2>
                 {myMentees.length === 0 ? (
-                  <p className="text-sm text-[var(--color-text-muted)] italic">
+                  <p className="text-sm" style={{ color: "var(--gui-ink-2)" }}>
                     No active mentees yet.
                   </p>
                 ) : (
@@ -649,35 +535,25 @@ export default function MentorshipPage() {
                     {myMentees.map((mentee) => (
                       <div
                         key={mentee.id}
-                        className="flex items-center gap-3 bg-[var(--color-bg-main)] border border-[var(--glass-border)] rounded-lg p-3"
+                        className="flex items-center gap-3 rounded-2xl"
+                        style={{ background: "var(--gui-paper-warm)", padding: "10px 12px" }}
                       >
-                        <div className="w-8 h-8 rounded-full bg-[var(--color-accent-cyan)]/10 border border-[var(--color-accent-cyan)]/20 flex items-center justify-center">
-                          <span className="text-xs text-[var(--color-accent-cyan)]">
-                            {mentee.mentee_profile?.display_name?.[0]?.toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-bold text-[var(--color-text-primary)]">
+                        <Initial name={mentee.mentee_profile?.display_name} size={36} />
+                        <div className="flex-1 min-w-0">
+                          <p style={{ fontSize: 15, fontWeight: 800, color: "var(--gui-ink-strong)" }}>
                             {mentee.mentee_profile?.display_name}
                           </p>
-                          <p className="text-xs text-[var(--color-text-muted)]">
-                            {mentee.mentee_profile?.class} · LV{mentee.mentee_profile?.level}{" "}
-                            {mentee.mentee_profile?.rank}
-                          </p>
+                          <ClassAndLevel cls={mentee.mentee_profile?.class} level={mentee.mentee_profile?.level} rank={mentee.mentee_profile?.rank} />
                         </div>
-                        <ChevronRight
-                          size={14}
-                          className="text-[var(--color-text-muted)]"
-                        />
                       </div>
                     ))}
                   </div>
                 )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+              </Card>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
