@@ -13,8 +13,13 @@
   background: linear-gradient(90deg, rgb(16 24 19 / 0.5) 0%, rgb(16 24 19 / 0.22) 30%, transparent 56%),
               linear-gradient(0deg, rgb(10 14 12 / 0.32) 0%, transparent 20%); }
 
-.column { position: absolute; left: clamp(24px, 7vw, 128px); top: 50%; transform: translateY(-50%); display: grid; gap: 34px;
-  width: min(400px, calc(100vw - 48px)); animation: rise 0.9s var(--gui-ease) both; }
+/* A full-height column that centres the brand and card, and scrolls rather than clipping when a form runs tall. */
+.column { position: absolute; left: clamp(24px, 7vw, 128px); top: 0; bottom: 56px; width: min(400px, calc(100vw - 48px)); padding: 28px 0;
+  box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 30px; overflow-y: auto; scrollbar-width: none;
+  animation: rise 0.9s var(--gui-ease) both; }
+.column::-webkit-scrollbar { display: none; }
+.column > * { flex: none; }
+.column:has(.card:not([data-view="menu"])) .wordmark { font-size: clamp(48px, 5.4vw, 80px); }
 
 .brand { display: grid; justify-items: start; gap: 14px; }
 .logo { color: #fff; filter: drop-shadow(0 2px 10px rgb(0 0 0 / 0.3)); }
@@ -37,7 +42,7 @@
 .menu button:focus-visible { outline: none; }
 .caption { position: relative; margin: 6px 0 2px; text-align: center; font: 700 13px/1.4 var(--gui-font); color: var(--gui-muted); overflow-wrap: anywhere; }
 
-.form { position: relative; display: grid; gap: 12px; padding: 8px 10px 6px; }
+.form { position: relative; display: grid; gap: 10px; padding: 8px 10px 6px; }
 .formHead { display: flex; align-items: center; gap: 10px; }
 .formHead h2 { margin: 0; font: 900 22px/1.2 var(--gui-font); color: var(--gui-ink-strong); }
 .back { width: 32px; height: 32px; flex: none; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper-deep); color: var(--gui-ink);
@@ -60,18 +65,19 @@
 .soon { font-style: normal; padding: 3px 10px; border-radius: var(--gui-r-pill); background: var(--gui-butter); color: var(--gui-ink-strong); text-shadow: none; }
 .keys { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 
-@keyframes rise { from { opacity: 0; transform: translateY(calc(-50% + 18px)); } }
+@keyframes rise { from { opacity: 0; transform: translateY(18px); } }
 @keyframes pop { from { opacity: 0; transform: scale(0.94); } }
 
 /* Phones: the wordmark up top, the card along the bottom, no key hints. */
 @media (max-width: 640px) {
-  .column { left: 16px; right: 16px; width: auto; top: auto; bottom: 56px; transform: none; gap: 22px; animation-name: riseFlat; }
+  .column { left: 16px; right: 16px; width: auto; bottom: 64px; justify-content: flex-end; gap: 22px; }
   .card, .card[data-view="menu"] { width: 100%; }
-  .footer { left: 16px; right: 16px; bottom: 16px; }
+  .footer { left: 16px; right: 16px; bottom: 14px; font-size: 12px; }
+  .when { flex-wrap: nowrap; gap: 8px; }
+  .soon { padding: 2px 8px; white-space: nowrap; }
   .keys { display: none; }
 }
 @media (pointer: coarse) { .keys { display: none; } }
-@keyframes riseFlat { from { opacity: 0; transform: translateY(18px); } }
 
 @media (prefers-reduced-motion: reduce) {
   .column, .card { animation: none; }

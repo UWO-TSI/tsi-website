@@ -128,8 +128,8 @@ export default function TitleScreen({ landing, account, open, initialView, when,
             <Or />
             <Field label="Name" value={form.name} onChange={set("name")} required autoComplete="name" autoFocus />
             <Field label="Email" type="email" value={form.email} onChange={set("email")} required autoComplete="email" />
-            <Field label="Password" type="password" value={form.password} onChange={set("password")} required minLength={6} autoComplete="new-password" hint="At least 6 characters." />
-            <Field label="Invite code" value={form.invite} onChange={set("invite")} autoComplete="off" hint="TSI members get one from their chapter. Leave it blank if you don't have one." />
+            <Field label="Password" type="password" value={form.password} onChange={set("password")} required minLength={6} autoComplete="new-password" placeholder="At least 6 characters" />
+            <Field label="Invite code" value={form.invite} onChange={set("invite")} autoComplete="off" placeholder="Optional, from your TSI chapter" />
             <Messages error={error} notice={notice} />
             <Button type="submit" disabled={busy}>{busy ? "Creating…" : "Create account"}</Button>
             <div className={s.links}><button type="button" onClick={() => go("signin")}>I already have an account</button></div>
