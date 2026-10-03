@@ -110,7 +110,7 @@ if (wanted("juggernaut")) await kit("juggernaut", [
   ["1 Charge: a bull rush through the line", press("1"), 260],
   ["2 Ground Slam: cracked ground, everything stunned", press("2"), 140],
   ["3 War Cry: enemies come, temporary health", press("3"), 260],
-  ["4 Seismic Drop (from the air): the quake", async () => { await page.evaluate(() => { window.__combat.rt.player.move = { mode: "air", speed: 0, sinceDash: 9, vx: 0, vz: 0, height: 2.4 }; }); await page.keyboard.press("4"); }, 260],
+  ["4 Seismic Drop (from a jump): the quake", async () => { await page.keyboard.press(" "); await page.waitForTimeout(260); await page.keyboard.press("4"); }, 300],
 ]);
 if (wanted("monk")) await kit("monk", [
   ["basic chain: jab, cross, hook, body kick", chain(4), 80],
@@ -118,7 +118,7 @@ if (wanted("monk")) await kit("monk", [
   ["2 Elbow mid-chain: the slash and the cut", async () => { await chain(1)(); await page.keyboard.press("2"); }, 120],
   ["3 Clinch Knees: held for the whole technique", press("3"), 760],
   ["4 Roundhouse: the shin across the pack", press("4"), 260],
-  ["5 Flying Knee (from a run)", async () => { await page.evaluate(() => { window.__combat.rt.player.move = { mode: "ground", speed: 8, sinceDash: 9, vx: 0, vz: 8 }; }); await page.keyboard.press("5"); }, 300],
+  ["5 Flying Knee (off a dash)", async () => { await page.keyboard.press("q"); await page.waitForTimeout(120); await page.keyboard.press("5"); }, 300],
 ]);
 if (wanted("assassin")) await kit("assassin", [
   ["basic: twin tanto cuts up close", chain(2), 60],
