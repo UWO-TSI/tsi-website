@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ASSASSIN, GUARDIAN, JUGGERNAUT, MARTIAL_ARTIST, VANGUARD_KITS, VANGUARD_WEAPONS } from "./vanguardKits";
-import { classKit, kitAt, memberKit, type ClassAbility } from "./classes";
+import { classKit, kitAt, memberKit, WEAPON_SKINS, type ClassAbility } from "./classes";
 import { subclassByKey } from "./kits";
 import { signatureSeedSql } from "./seed";
 import { signatureGrant, WEAPONS } from "./weapons";
@@ -118,5 +118,24 @@ describe("the Vanguard signature weapons (§1.5)", () => {
   it("the seed migration carries exactly these rows", () => {
     const sql = readFileSync(join(__dirname, "../../supabase/migrations/20261003024419_classes_v2_vanguard_seed.sql"), "utf8");
     expect(sql).toContain(signatureSeedSql(["guardian", "juggernaut", "monk", "assassin"]));
+  });
+  it("every weapon skin the seed sells has its material set, every kit a mastery trim, naming only its weapon's materials", () => {
+    const sql = readFileSync(join(__dirname, "../../supabase/migrations/20261003024419_classes_v2_vanguard_seed.sql"), "utf8");
+    const skins = [...sql.matchAll(/'weapon_skin',[^\n]*'\{"subclass":"(\w+)","skin":"([\w-]+)"/g)].map(m => `${m[1]}:${m[2]}`);
+    expect(skins).toHaveLength(5);
+    const materials = (type: string) => new Set(VANGUARD_WEAPONS.filter(w => w.type === type).flatMap(w => {
+      const glb = readFileSync(join(PUBLIC, `assets/game/weapons/${w.key}.glb`)), n = glb.readUInt32LE(12);
+      return (JSON.parse(glb.subarray(20, 20 + n).toString("utf8")).materials as { name: string }[]).map(m => m.name);
+    }));
+    for (const s of skins) {
+      const kit = classKit(s.split(":")[0])!, have = materials(kit.signature.type);
+      expect(WEAPON_SKINS[s], s).toBeDefined();
+      for (const m of Object.keys(WEAPON_SKINS[s])) expect(have.has(m), `${s} ${m}`).toBe(true);
+    }
+    for (const k of VANGUARD_KITS) {
+      const have = materials(k.signature.type), trim = Object.keys(k.look.trim ?? {});
+      expect(trim.length, k.key).toBeGreaterThan(0);
+      for (const m of trim) expect(have.has(m), `${k.key} trim ${m}`).toBe(true);
+    }
   });
 });

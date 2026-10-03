@@ -11,7 +11,7 @@
 import type { Family } from "@/lib/oracle/engine";
 import type { Ability, Effect, Passive, Status } from "./kits";
 import { DEMO_KIT } from "./demoKit";
-import { VANGUARD_KITS } from "./vanguardKits";
+import { VANGUARD_KITS, VANGUARD_SKINS } from "./vanguardKits";
 import { ARCANE_KITS } from "./arcaneKits";
 import { ARCANE_SKINS } from "./arcaneSeed";
 
@@ -175,7 +175,7 @@ export const MAX_KEYS = 5;
 /** Every v2 kit. Family waves append theirs. */
 export const CLASS_KITS: ClassKit[] = [DEMO_KIT, ...ARCANE_KITS, ...VANGUARD_KITS];
 /** Every family's weapon skins (shop cosmetics) as material sets, by `${subclass}:${skin}`: the held weapon wears it. */
-export const WEAPON_SKINS: Record<string, Record<string, string>> = { ...ARCANE_SKINS };
+export const WEAPON_SKINS: Record<string, Record<string, string>> = { ...ARCANE_SKINS, ...VANGUARD_SKINS };
 /** Display names that changed with the class designs (the key stays; David 2026-10-02: Monk → Martial Artist). */
 export const CLASS_RENAMES: Record<string, string> = { monk: "Martial Artist" };
 export const classKit = (key: string | null | undefined) => CLASS_KITS.find(k => k.key === key) ?? null;

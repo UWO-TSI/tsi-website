@@ -64,7 +64,7 @@ export const GUARDIAN: ClassKit = {
     { at: 16, target: "passive", change: { label: "+25% armour from a parry", power: 1.25 } },
     { at: 18, target: "ult", change: { label: "+10% power", power: 1.1 } },
   ]),
-  look: { ramp: ["#fffbea", "#f0c23c", "#4a3208"], mote: "aegisShard", drift: "orbit", icon: "/assets/game/classes/guardian.svg" },
+  look: { ramp: ["#fffbea", "#f0c23c", "#4a3208"], mote: "aegisShard", drift: "orbit", icon: "/assets/game/classes/guardian.svg", trim: { M_Brass: "#f0c23c", M_Cloth: "#fffbea" } },
 };
 
 // ── Juggernaut: max HP, basic attacks, the unstoppable war hammer, Titan ───────────────────────────────────
@@ -110,7 +110,7 @@ export const JUGGERNAUT: ClassKit = {
     { at: 16, target: "passive", change: { label: "+25%", power: 1.25 } },
     { at: 18, target: "ult", change: { label: "+10% power", power: 1.1 } },
   ]),
-  look: { ramp: ["#fff3dc", "#e8a23a", "#4a2408"], mote: "debris", drift: "fall", icon: "/assets/game/classes/juggernaut.svg" },
+  look: { ramp: ["#fff3dc", "#e8a23a", "#4a2408"], mote: "debris", drift: "fall", icon: "/assets/game/classes/juggernaut.svg", trim: { M_Brass: "#e8a23a", M_Wrap: "#4a2408" } },
 };
 
 // ── Martial Artist (key `monk`): attack speed, realistic Muay Thai; skills are techniques woven into the chain ──
@@ -164,7 +164,7 @@ export const MARTIAL_ARTIST: ClassKit = {
     { at: 16, target: "passive", change: { label: "+25% attack speed per hit", power: 1.25 } },
     { at: 18, target: "ult", change: { label: "+10% power", power: 1.1 } },
   ]),
-  look: { ramp: ["#fff6e8", "#f2913a", "#5a1e08"], mote: "flare", drift: "rise", icon: "/assets/game/classes/martial-artist.svg" },
+  look: { ramp: ["#fff6e8", "#f2913a", "#5a1e08"], mote: "flare", drift: "rise", icon: "/assets/game/classes/martial-artist.svg", trim: { M_Cloth: "#f2913a", M_Brass: "#5a1e08" } },
 };
 
 // ── Assassin: crit chance, the movement class; twin tanto and kunai, black ink and red ──────────────────────
@@ -215,7 +215,7 @@ export const ASSASSIN: ClassKit = {
     { at: 16, target: "passive", change: { label: "+25% backstab damage", power: 1.25 } },
     { at: 18, target: "ult", change: { label: "+10% power", power: 1.1 } },
   ]),
-  look: { ramp: ["#fff1ee", "#e0303c", "#120709"], mote: "lotusPetal", drift: "fall", icon: "/assets/game/classes/assassin.svg" },
+  look: { ramp: ["#fff1ee", "#e0303c", "#120709"], mote: "lotusPetal", drift: "fall", icon: "/assets/game/classes/assassin.svg", trim: { M_Wrap: "#e0303c", M_Brass: "#120709" } },
 };
 
 export const VANGUARD_KITS: ClassKit[] = [GUARDIAN, JUGGERNAUT, MARTIAL_ARTIST, ASSASSIN];
@@ -223,6 +223,15 @@ export const VANGUARD_KITS: ClassKit[] = [GUARDIAN, JUGGERNAUT, MARTIAL_ARTIST, 
 // ── Signature weapons (§1.5): one type per subclass, tiers 1–5 (T1 wood/cloth, T2 iron, T3 rune-etched, T4 gilded with a glow part, T5 animated runes) ──
 const SIG = (subclass: string, type: string, scaling: WeaponDef["scaling"], names: [string, string][]): WeaponDef[] =>
   names.map(([key, name], i) => ({ key, name, type, tier: (i + 1) as WeaponDef["tier"], scaling, max_durability: 60 + (i + 1) * 30, repair_per_point: i + 1, subclass }));
+/** The family's shop weapon skins as material sets, by `${subclass}:${skin}` (the seed's cosmetic->>skin; classes.ts WEAPON_SKINS). */
+export const VANGUARD_SKINS: Record<string, Record<string, string>> = {
+  "guardian:ivory": { M_Blade: "#eee8da", M_Iron: "#e3d9c3", M_Wood: "#e3d9c3", M_Brass: "#b8893a" },
+  "juggernaut:obsidian": { M_Iron: "#1d1a22", M_Brass: "#3b3542", M_Wood: "#2b211c", M_Wrap: "#141216" },
+  "monk:temple-red": { M_Cloth: "#a3191f", M_Iron: "#d9a93a", M_Brass: "#e8b84a" },
+  "assassin:moonlit": { M_Blade: "#e6eeff", M_Iron: "#8d97ad", M_Brass: "#8d97ad", M_Wrap: "#1b2033" },
+  "assassin:lotus-fire": { M_Blade: "#ff6b57", M_Iron: "#3a1418", M_Brass: "#c8242e", M_Wrap: "#2a0c0e" },
+};
+
 export const VANGUARD_WEAPONS: WeaponDef[] = [
   ...SIG("guardian", "aegis", ["might", "vitality"], [["aegis-oak", "Oak shield and sword"], ["aegis-iron", "Iron shield and sword"], ["aegis-rune", "Rune-etched aegis"], ["aegis-gilt", "Gilded aegis"], ["aegis-dawn", "Dawnward aegis"]]),
   ...SIG("juggernaut", "warhammer", ["might", "vitality"], [["warhammer-timber", "Timber war hammer"], ["warhammer-iron", "Iron war hammer"], ["warhammer-rune", "Rune-etched war hammer"], ["warhammer-gilt", "Gilded war hammer"], ["warhammer-quake", "Quakeborn war hammer"]]),
