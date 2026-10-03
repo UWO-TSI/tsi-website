@@ -143,6 +143,7 @@ import styles from "./DefaultIslandWorld.module.css";
 type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | null;
 type Sheet = "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | null;
 const DEV = process.env.NODE_ENV !== "production";
+const DEV_SHEETS: readonly Sheet[] = ["notice", "letters", "journal", "trophies", "showcase", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe"];
 const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight", evening: "Evening", night: "Night" };
 const CLUBHOUSE_STATIONS: InteriorStation[] = [
   { id: "board", name: "Notice board", pos: HQ_BOARD_APPROACH, action: "board", range: 2.3 },
@@ -522,7 +523,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [devAt] = useState<[number, number, number] | null>(() => { const v = devHome.getAll("at").map(a => a.split(",").map(Number)).find(p => p.length === 2 && p.every(Number.isFinite)); return v ? [v[0], 0, v[1]] : null; });
   // Follow-camera distance scale for close-up captures (dev only, e.g. ?zoom=0.45).
   const [devZoom] = useState(() => Number(devHome.get("zoom")) || 1);
-  const [donateOpen, setDonateOpen] = useState(false);
+  const [donateOpen, setDonateOpen] = useState(() => devHome.get("sheet") === "donate");
   const [museumWings, setMuseumWings] = useState<MuseumWing[] | null>(null);
   const loadMuseumRef = useRef(false);
   const loadMuseum = useCallback(() => { apiCall<MuseumWing[]>("/api/collections/museum", "wings").then(setMuseumWings, () => {}); }, []);
@@ -532,9 +533,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [sceneShown, setSceneShown] = useState(0);
   const onSceneReady = useCallback(() => { setReady(true); setFading(false); }, []);
   const [near, setNear] = useState<Near>(null);
-  // Dev (screenshots): `?sheet=path` opens the Oracle path sheet once progression loads.
-  const [sheet, setSheet] = useState<Sheet>(() => (devHome.get("sheet") === "path" ? "path" : null));
-  const [shopTab, setShopTab] = useState<"outfits" | "furniture" | null>(null);
+  // Dev (screenshots): `?sheet=<name>` opens that sheet (the Oracle path sheet once progression loads; donate, shop and bag too).
+  const [sheet, setSheet] = useState<Sheet>(() => (DEV_SHEETS.includes(devHome.get("sheet") as Sheet) ? devHome.get("sheet") as Sheet : null));
+  const [shopTab, setShopTab] = useState<"outfits" | "furniture" | null>(() => (devHome.get("sheet") === "shop" ? "furniture" : null));
   // The clean HUD (row 283): the minimap opens on M.
   const [mapOpen, setMapOpen] = useState(false);
   const progression = useProgressionWorld();
@@ -559,7 +560,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   useMusicDirector({ season: season.season, override: musicOverride });
   const ambientPhase: AmbientPhase = phase === "evening" ? "dusk" : phase;
   const [fishing, setFishing] = useState(false);
-  const [bagOpen, setBagOpen] = useState(false);
+  const [bagOpen, setBagOpen] = useState(() => devHome.get("sheet") === "bag");
   const identity = useWorldIdentity();
   const step = welcomeStep({ lookLoaded: mine.loaded, lookSaved: mine.saved, signedIn: identity.signedIn || devHome.get("welcome") === "1", progressionLoaded, chapterFresh: chapterActions.claim, welcomed });
   const greeting = typeof welcome === "number" ? welcome : null;
