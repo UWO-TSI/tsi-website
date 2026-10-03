@@ -524,6 +524,8 @@ const HELD_GRIPS: Record<HoldKind, Grip> = {
 /** The grip while a tool's own clip plays (render_held.py: the cast forward, the net's swing out, the blade into the ground). */
 const USE_GRIPS: Partial<Record<ClipName, Partial<Record<HoldKind, [number, number, number]>>>> = {
   Fish: { rod: [1.611, -0.292, 2.157] }, FishHold: { rod: [1.611, -0.292, 2.157] }, Net: { net: [2.472, -0.623, 2.401] }, Dig: { shovel: [-1.087, -0.652, -1.79] },
+  // A rock struck with the blade down, as the dig.
+  Strike: { shovel: [-1.087, -0.652, -1.79] },
 };
 /** Clips a hold lays over (the arms carry the item); in any other the item's own clip poses them. */
 const HOLD_OVER = new Set<ClipName>(["Idle", "Walk", "Run", "CrouchIdle", "CrouchWalk", "Jump", "Air", "Fall", "Land", "LandHeavy", "Skid", "Dash", "LookAround"]);

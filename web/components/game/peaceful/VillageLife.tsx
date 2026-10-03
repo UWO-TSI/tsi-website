@@ -17,11 +17,12 @@
  */
 import { Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useFrame } from "@react-three/fiber";
-import { useGLTF, useTexture } from "@react-three/drei";
+import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { GLBProp, NatureMushroom } from "../NatureModels";
 import { SPECIES as CRITTERS } from "../Critters";
-import { useMoveParticles } from "../movement/moveFx";
+import { packMap, spriteQuad, useMoveParticles } from "../movement/moveFx";
+import { useGlowParticles } from "../GlowFx";
 import { AudioManager } from "@/lib/game/audio";
 import { collect, harvestNode, localCollections, localRecord } from "@/lib/game/collections";
 import { bagRoom } from "@/lib/game/bagStore";
@@ -37,9 +38,11 @@ import { FLEE_TIME, WARY_HOP, carryBugs, fleeAt, waryHop, type FleePose } from "
 import { FRUIT_MODEL, fruitTree, hangAt, nearestHang, type Point, type TreeSpot } from "@/lib/game/treeFruit";
 import { SHAKE, WORLD_SHAKES, fallAt, restPoint, type Fall } from "@/lib/game/treeShake";
 import { contactDelay, hitDelays, landAt } from "@/lib/game/actTiming";
-import { addDrop, dropsFor, dropsVersion, removeDrop, setFallen, fallenOf, subscribeDrops, type Drop } from "@/lib/game/forageWorld";
+import { addDrop, dropsFor, dropsVersion, fallenOf, removeDrop, setFallen, subscribeDrops, type Drop } from "@/lib/game/forageWorld";
 import { LIFT, handOf, liftPose, type Lift } from "@/lib/game/forageLift";
 import { FACE, seedAt, type Recipe } from "@/lib/game/fx/particles";
+import { CHIPS, CHIP_TINT, FLOWER_TINT, GLINT, GLINT_EVERY, GLINT_TINT, LIFT_PUFF, PETALS, ROCK_DUST, STRIKE_PUFF } from "@/lib/game/forageFx";
+import { hash01 } from "@/lib/game/worldFx";
 import { TREE_WIND, WORLD_SNOW, leafTintHex, prepareModel } from "@/lib/game/modelMaterials";
 import TreeFruit, { FRUIT_REST_RADIUS, type HangingFruit } from "./TreeFruit";
 
@@ -56,13 +59,59 @@ const BRANCH_URL = "/assets/game/props/branch.glb";
 /** The branch is authored at the character rig's scale (CHARACTER_SCALE, like the workbench's). */
 const BRANCH_SCALE = 1.3, BRANCH_RADIUS = 0.05;
 
-function Sparkle({ position, strong }: { position: [number, number, number]; strong: boolean }) {
-  const glow = useTexture("/assets/sky/sun.png");
-  const ref = useRef<THREE.SpriteMaterial>(null);
-  useFrame(({ clock }) => { if (ref.current) ref.current.opacity = (strong ? 0.55 : 0.3) + Math.sin(clock.elapsedTime * 5 + position[0]) * 0.25; });
-  return <sprite position={position} scale={strong ? [0.5, 0.5, 1] : [0.34, 0.34, 1]}>
-    <spriteMaterial ref={ref} map={glow} color="#fff4b0" transparent depthWrite={false} toneMapped={false} blending={THREE.AdditiveBlending} />
-  </sprite>;
+/** The rock outcrops a shovel strikes (art/props-enemies/build_forage.py): one per material, and the bare one it leaves. */
+const OUTCROP = (key: string) => `/assets/game/forage/outcrop-${key}.glb`;
+const SPENT_OUTCROP = "/assets/game/forage/outcrop-spent.glb";
+/** Their face is authored toward Blender's -Y (glTF +Z): turned to face the way you come at them (the node stands in front of its boulder, -z). */
+const OUTCROP_YAW = Math.PI;
+/** What a struck rock is doing: performance.now() of its last hit (the flinch) and whether its material has come out. */
+interface Struck { hit: number; taken: boolean }
+const STRUCK_MS = 200;
+/** Module scope (the react compiler forbids writing through hook values): the rock flinches at the hit and settles back; once its material is out it shows the bare rock. */
+function strikeRock(g: THREE.Group | null, ore: THREE.Group | null, bare: THREE.Group | null, s: Struck | undefined, spent: boolean, now: number) {
+  if (!g) return;
+  const k = s ? (now - s.hit) / STRUCK_MS : 1;
+  const j = k >= 0 && k < 1 ? Math.sin(k * Math.PI) * (1 - k) : 0;
+  g.scale.set(1.3 * (1 + 0.05 * j), 1.3 * (1 - 0.1 * j), 1.3 * (1 + 0.05 * j));
+  if (ore) ore.visible = !s?.taken;
+  if (bare) bare.visible = spent || !!s?.taken;
+}
+/** A rock node: its outcrop with the material showing (or the bare rock, spent for the hour), flinching when struck. */
+function Outcrop({ sp, at, nodeId, struck, spent = false }: { sp: Species; at: [number, number, number]; nodeId: string; struck: ReadonlyMap<string, Struck>; spent?: boolean }) {
+  const group = useRef<THREE.Group>(null), ore = useRef<THREE.Group>(null), bare = useRef<THREE.Group>(null);
+  useFrame(() => strikeRock(group.current, ore.current, bare.current, struck.get(nodeId), spent, performance.now()));
+  return <group ref={group} position={at} rotation={[0, OUTCROP_YAW, 0]} scale={1.3}>
+    {!spent && <group ref={ore}><GLBProp url={OUTCROP(sp.key)} /></group>}
+    <group ref={bare} visible={spent}><GLBProp url={SPENT_OUTCROP} /></group>
+  </group>;
+}
+
+/** A dig spot (a buried find): a little star of cracks in the ground from our pack, each spot its own frame. */
+let crackMaterial: THREE.MeshStandardMaterial | null = null;
+const crackLook = () => (crackMaterial ??= new THREE.MeshStandardMaterial({ name: "DigSpot", map: packMap(), color: "#6f5a40", roughness: 1, metalness: 0, transparent: true,
+  depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+const CRACKS = Array.from({ length: 8 }, (_, f) => spriteQuad("crack", f, 0.62).rotateX(-Math.PI / 2));
+function DigSpot({ at, seed }: { at: [number, number, number]; seed: number }) {
+  return <mesh geometry={CRACKS[Math.floor(hash01(seed, 7) * 8) % 8]} material={crackLook()} position={[at[0], at[1] + 0.015, at[2]]} rotation={[0, seed * 1.3, 0]} renderOrder={2} receiveShadow />;
+}
+
+/** Something leaving the world for a hand that isn't its node's own model (a rock's material, a dug-up shell). */
+interface Piece { key: string; url: string; scale: number }
+const _pieceOut = { x: 0, y: 0, z: 0, scale: 1 };
+function placePiece(g: THREE.Group | null, lift: Lift | undefined, scale: number, now: number) {
+  if (!g) return;
+  if (!lift || !liftPose(lift, now, _pieceOut)) { g.visible = false; return; }
+  g.visible = true;
+  g.position.set(_pieceOut.x, _pieceOut.y, _pieceOut.z);
+  g.scale.setScalar(scale * _pieceOut.scale);
+  g.rotation.y = (now - lift.t0) * 0.006;
+}
+function LiftedPiece({ piece, lifts }: { piece: Piece; lifts: ReadonlyMap<string, Lift> }) {
+  const { scene } = useGLTF(piece.url);
+  const model = useMemo(() => prepareModel(scene, piece.url, undefined, "none"), [scene, piece.url]);
+  const group = useRef<THREE.Group>(null);
+  useFrame(() => placePiece(group.current, lifts.get(piece.key), piece.scale, performance.now()));
+  return <group ref={group} visible={false}><primitive object={model} /></group>;
 }
 
 const buried = (sp: Species) => sp.tool === "shovel" && sp.category !== "mineral";
@@ -82,10 +131,9 @@ function NodeVisual({ sp, canopy }: { sp: Species; canopy?: boolean }) {
   }
   if (sp.sub === "wood") return null; // still up in the tree until it's shaken
   if (sp.sub === "mushroom") return <NatureMushroom position={[0, 0, 0]} seed={sp.position} />;
-  // Buried (a shovel find that isn't a rock): only a dark dig spot shows in the sand.
-  if (buried(sp)) return <mesh position={[0, 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.17, 10]} /><meshStandardMaterial color="#6e5a3e" roughness={1} /></mesh>;
+  // Rocks are their Outcrop and a buried find its DigSpot: neither goes into the hand itself.
+  if (buried(sp) || sp.category === "mineral") return null;
   if (sp.model) return <GLBProp url={sp.model} position={[0, 0.02, 0]} scale={1} />;
-  if (sp.category === "mineral") return <mesh position={[0, 0.12, 0]}><dodecahedronGeometry args={[0.16, 0]} /><meshStandardMaterial color={sp.key.includes("gold") ? "#e2b640" : sp.key.includes("crystal") ? "#b9e3f2" : "#8d8a84"} roughness={0.5} metalness={sp.key.includes("gold") ? 0.6 : 0} /></mesh>;
   // A flower to pick: one bloom of its own kind (the cluster's ACNH models), a little smaller than a cluster's.
   if (sp.sub === "flower") return <GLBProp url={`/assets/acnh/plants/flower-${sp.key.replace(/^flower_/, "")}.glb`} position={[0, 0, 0]} rotation={[0, sp.position * 1.7, 0]} scale={0.42} />;
   return null;
@@ -150,6 +198,8 @@ function fade(group: THREE.Group, opacity: number, sparkle = opacity >= 1) {
 }
 /** Module scope (the react compiler forbids writing through hook values): start and end a thing's lift into a hand. */
 const setLift = (lifts: Map<string, Lift>, id: string, lift: Lift) => { lifts.set(id, lift); };
+const setStruck = (struck: Map<string, Struck>, id: string, at: number) => { const s = struck.get(id); if (s) s.hit = at; else struck.set(id, { hit: at, taken: false }); };
+const takeOre = (struck: Map<string, Struck>, id: string) => { const s = struck.get(id); if (s) s.taken = true; else struck.set(id, { hit: -1e9, taken: true }); };
 const endLift = (lifts: Map<string, Lift>, id: string) => { lifts.delete(id); };
 /** Module scope: a node (or a netted bug) on its way into the hand; false once it's gone in. */
 function liftGroup(g: THREE.Group, lift: Lift, now: number, base: number): boolean {
@@ -234,10 +284,22 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     return [{ id: n.id, key: sp!.key, tree, drop, fallen: drop ? drop.k : out ? -1 : fallenOf(n.id, hour) }];
   }), [rolled, ground, treeModels, lyingByNode, hour]);
   const branches = useMemo(() => lying.filter(d => d.kind === "branch"), [lying]);
+  // Where a rare find twinkles: round a bloom or a shell, over a rock's face, up in a tree's crown (its own phase each).
+  const glints = useMemo(() => new Map(forage.filter(({ sp }) => hasClue(sp)).map(({ n }) => {
+    const y = ground(n.x, n.z), up = n.canopy ? crownTop(n, treeModels) - 0.6 : 0.25;
+    return [n.id, { x: n.x, y: y + up, z: n.z, ground: y, spread: n.canopy ? 1.1 : 0.45, phase: hash01(Math.round(n.x * 31 + n.z * 17), 3) }];
+  })), [forage, ground, treeModels]);
+  const glintBeat = useRef(new Map<string, number>());
   const groups = useRef(new Map<string, THREE.Group>());
   const nodeGroups = useRef(new Map<string, THREE.Group>());
   // Things on their way into a hand, by node: the same map for the frame loop here and the fruit and branches' own.
   const lifts = useMemo(() => new Map<string, Lift>(), []);
+  // Rocks being struck (their flinch, their material out), and what's flying from a rock or a hole to a hand.
+  const struck = useMemo(() => new Map<string, Struck>(), []);
+  const [pieces, setPieces] = useState<Piece[]>([]);
+  const glow = useGlowParticles();
+  // The rocks already struck this hour: the bare outcrop stays where it was.
+  const spentRocks = useMemo(() => rolled.filter(e => !e.out && e.sp?.category === "mineral" && !e.n.canopy), [rolled]);
   const acts = useRef(new Map<string, Act>());
   const last = useRef(new THREE.Vector3());
   const chimed = useRef(new Set<string>());
@@ -291,16 +353,46 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
       }));
     };
     /** Take it: at the contact, once the server has said yes, it lifts into the hand; then the card, the Bag and the mark. */
+    /** The contact frame: the world reacts to the hit whatever the server says (a rock is struck, a net swings). */
+    const contact = (act: Act) => {
+      if (act.kind !== "strike") return;
+      const { x, y, z } = act.at, dx = act.actor.x - x, dz = act.actor.z - z, l = Math.hypot(dx, dz) || 1;
+      // Off the face toward the striker: a puff of rock dust and chips in the colour of what it holds; it flinches.
+      const fx0 = x + (dx / l) * 0.28, fz0 = z + (dz / l) * 0.28;
+      fx.pool.burst(STRIKE_PUFF, fx0, y + 0.1, fz0, y, dx / l, dz / l, 1, ROCK_DUST, seedAt(x, z, 61));
+      fx.pool.burst(CHIPS, fx0, y + 0.15, fz0, y, dx / l, dz / l, 1, CHIP_TINT[act.sp.key] ?? CHIP_TINT.rock_stone, seedAt(x, z, 62));
+      setStruck(struck, act.nodeId, performance.now());
+      AudioManager.playSFX("click", { rate: 0.62, gain: 0.75 });
+      AudioManager.playSFX("footstep", { rate: 0.5, gain: 0.45 });
+    };
+    /** Take it: at the contact, once the server has said yes, it lifts into the hand; then the card, the Bag and the mark. */
     const tryLand = (act: Act) => {
       const when = landAt(act.contactAt, act.answer);
       if (when === null || act.landed) return;
       later(when - performance.now(), () => {
         if (act.landed) return;
         act.landed = true;
-        const hand = handOf(act.actor, act.actor.yaw);
-        setLift(lifts, act.nodeId, { t0: performance.now(), from: { ...act.at }, to: hand, ms: LIFT.ms });
+        const hand = handOf(act.actor, act.actor.yaw), t0 = performance.now();
+        const { x, y, z } = act.at;
+        if (act.kind === "strike" || act.kind === "dig") {
+          // The rock keeps standing (bare now) and the ground stays: what comes out of them flies to the hand.
+          const key = `piece:${act.nodeId}`, dx = act.actor.x - x, dz = act.actor.z - z, l = Math.hypot(dx, dz) || 1;
+          const from = act.kind === "strike" ? { x: x + (dx / l) * 0.3, y: y + 0.3, z: z + (dz / l) * 0.3 } : { x, y: y + 0.05, z };
+          setLift(lifts, key, { t0, from, to: hand, ms: LIFT.ms + 140 });
+          if (act.kind === "strike") takeOre(struck, act.nodeId);
+          setPieces(list => [...list, { key, url: act.sp.category === "mineral" ? `/assets/game/items/${act.sp.key}.glb` : act.sp.model ?? `/assets/game/items/${act.sp.key}.glb`,
+            scale: act.sp.category === "mineral" ? 2.4 : 1.1 }]);
+          later(LIFT.ms + 140, () => finish(act));
+        } else {
+          setLift(lifts, act.nodeId, { t0, from: { ...act.at }, to: hand, ms: LIFT.ms });
+          // A flower comes away in a puff of its own petals; a shell or a fruit off the ground in a little sand.
+          if (act.kind === "pick" && FLOWER_TINT[act.sp.key]) {
+            fx.pool.burst(PETALS, x, y + 0.2, z, y, 0, 0, 1, FLOWER_TINT[act.sp.key], seedAt(x, z, 63));
+            AudioManager.playSFX("footstep", { rate: 1.45, gain: 0.3 });
+          } else if (act.kind === "pickup" && !act.nodeId.startsWith("bug")) fx.pool.burst(LIFT_PUFF, x, y, z, y, 0, 0, 0.8, 0xd8c39a, seedAt(x, z, 64));
+          later(LIFT.ms, () => finish(act));
+        }
         AudioManager.playSFX("click", { rate: 1.55, gain: 0.45 });
-        later(LIFT.ms, () => finish(act));
       });
     };
     const finish = (act: Act) => {
@@ -318,6 +410,8 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
       removeDrop(act.nodeId);
       markHarvested(act.nodeId);
       endLift(lifts, act.nodeId);
+      endLift(lifts, `piece:${act.nodeId}`);
+      setPieces(list => list.filter(p => p.key !== `piece:${act.nodeId}`));
       acts.current.delete(act.nodeId);
     };
     const onAct = (e: Event) => {
@@ -344,7 +438,7 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
       if (!bagRoom(sp.key)) { window.dispatchEvent(new CustomEvent("tsi:bag-full", { detail: { x: at.x, z: at.z } })); return; }
       const act: Act = { kind, nodeId: id, clip, sp, contactAt: performance.now() + contactDelay(clip), answer: null, landed: false, actor, at };
       acts.current.set(id, act);
-      later(contactDelay(clip), () => tryLand(act));
+      later(contactDelay(clip), () => { contact(act); tryLand(act); });
       void harvestNode(id, [p.x, p.z], tool).then(answer => {
         const t = performance.now();
         if (answer && !answer.ok) {
@@ -391,6 +485,15 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     // Things on their way into a hand.
     for (const [id, lift] of lifts) { const g = nodeGroups.current.get(id) ?? groups.current.get(id); if (g) liftGroup(g, lift, nowMs, g.userData.base ?? 1); }
     const t = worldTime();
+    // A rare find's tell: a twinkle from the glow layer near it now and then, on the world clock (stronger on High).
+    for (const [id, gl] of glints) {
+      if (lyingByNode.has(id) || acts.current.has(id) || Math.hypot(gl.x - p.x, gl.z - p.z) > 18) continue;
+      const beat = Math.floor(t / GLINT_EVERY + gl.phase);
+      if (glintBeat.current.get(id) === beat) continue;
+      glintBeat.current.set(id, beat);
+      const a = hash01(beat, gl.phase * 1000) * Math.PI * 2, r = hash01(beat + 7, gl.phase * 1000) * gl.spread, h = hash01(beat + 13, gl.phase * 1000);
+      glow.pool.burst(GLINT, gl.x + Math.cos(a) * r, gl.y + h * (gl.spread * 0.6 + 0.25), gl.z + Math.sin(a) * r, gl.ground, 0, 0, highTier ? 1.15 : 0.85, GLINT_TINT, beat);
+    }
     for (const bug of bugState.current.values()) {
       const g = groups.current.get(bug.id);
       if (!g || lifts.has(bug.id)) continue;
@@ -412,6 +515,14 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
       // The wary tell: a quick hop when it first notices you creeping up.
       if (bug.hopT >= 0) { bug.hopT += delta; if (bug.hopT > WARY_HOP) bug.hopT = -1; }
       g.position.set(bx, ground(bug.x, bug.z) + bug.baseY + (flutter ? Math.sin(t * 3 + bug.z) * 0.08 : 0) + waryHop(bug.hopT), bz);
+      if (hasClue(bug.sp)) {
+        const beat = Math.floor(t / GLINT_EVERY + bug.x * 0.37);
+        if (glintBeat.current.get(bug.id) !== beat) {
+          glintBeat.current.set(bug.id, beat);
+          const a = hash01(beat, bug.x * 100) * Math.PI * 2;
+          glow.pool.burst(GLINT, g.position.x + Math.cos(a) * 0.22, g.position.y + 0.2, g.position.z + Math.sin(a) * 0.22, g.position.y - bug.baseY, 0, 0, highTier ? 1 : 0.75, GLINT_TINT, beat);
+        }
+      }
       // Being netted: it holds still for the swing.
       const act = acts.current.get(bug.id);
       if (act) { act.at.x = g.position.x; act.at.y = g.position.y; act.at.z = g.position.z; continue; }
@@ -439,18 +550,21 @@ export default function VillageLife({ nodes, bugNodes, moment, member, player, g
     {branches.map(d => <Suspense key={d.nodeId} fallback={null}><FallenBranch drop={d} lifts={lifts} /></Suspense>)}
     {forage.map(({ n, sp }) => {
       const y = ground(n.x, n.z);
+      // A rock is its outcrop (struck where it stands); a buried find its crack in the ground.
+      if (sp!.category === "mineral" && !n.canopy) return <Suspense key={n.id} fallback={null}><Outcrop sp={sp!} at={[n.x, y, n.z]} nodeId={n.id} struck={struck} /></Suspense>;
+      if (buried(sp!)) return <DigSpot key={n.id} at={[n.x, y, n.z]} seed={n.x * 13.1 + n.z * 7.7} />;
       return <Suspense key={n.id} fallback={null}>
         <group position={[n.x, y, n.z]} ref={g => { if (g) nodeGroups.current.set(n.id, g); else nodeGroups.current.delete(n.id); }}>
           <NodeVisual sp={sp!} canopy={n.canopy} />
         </group>
-        {hasClue(sp) && !lyingByNode.has(n.id) && <Sparkle position={[n.x, y + (n.canopy ? crownTop(n, treeModels) : 0.5), n.z]} strong={highTier} />}
       </Suspense>;
     })}
+    {spentRocks.map(({ n, sp }) => <Suspense key={n.id} fallback={null}><Outcrop sp={sp!} at={[n.x, ground(n.x, n.z), n.z]} nodeId={n.id} struck={struck} spent /></Suspense>)}
+    {pieces.map(p => <Suspense key={p.key} fallback={null}><LiftedPiece piece={p} lifts={lifts} /></Suspense>)}
     {bugs.map(b => {
       const model = MODEL_OF.get(b.sp.key)!;
       return <group key={b.id} ref={g => { if (g) { g.userData.base = 1; groups.current.set(b.id, g); } else groups.current.delete(b.id); }}>
         <Suspense fallback={null}><GLBProp url={model.model} scale={model.scale} /></Suspense>
-        {hasClue(b.sp) && <Suspense fallback={null}><Sparkle position={[0, 0.35, 0]} strong={highTier} /></Suspense>}
       </group>;
     })}
   </>;

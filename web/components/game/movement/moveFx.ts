@@ -114,7 +114,8 @@ vec3 transformed = pCentre + axX * (lp.x * pc - lp.y * ps) + axY * (lp.x * ps + 
 vAbove = onGround ? 10.0 : transformed.y - iA.w;
 vTint = iC;
 `;
-const PICK_FRAME = `{
+/** The pack cell a particle shows (its row and frame from the instance data), shared with the glow layer (GlowFx). */
+export const PICK_FRAME = `{
   float pRow = floor((iB.w + 0.5) / ${PACK_COLS.toFixed(1)});
   float pCol = iB.w - pRow * ${PACK_COLS.toFixed(1)};
   vMapUv = vec2((pCol + uv.x) / ${PACK_COLS.toFixed(1)}, 1.0 - (pRow + 1.0 - uv.y) / ${PACK_ROWS.toFixed(1)});
