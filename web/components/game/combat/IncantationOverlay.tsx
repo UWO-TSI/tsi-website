@@ -9,9 +9,14 @@
  * Under mouse-look (classes v2, the Priest's shapes) the pointer stays locked: the overlay sits in the middle of the
  * screen, the mouse's movement moves a pen dot instead of the camera (orbitCamera `pen`), the button draws, and the
  * pen waits on each stroke's numbered dot; WASD keeps moving you.
+ *
+ * Classes v2 shapes (the Priest, David 2026-10-02): a directional shape (the Holy Beam's line, Light Step's chevron) turns
+ * to point the way the spell will go on screen (`angle`: 0 right, -π/2 up), so you draw the line the way the beam goes
+ * and the chevron where you dash; the readout gives the spell's power for the accuracy (`power`: 60% for a rough
+ * sketch up to 150% for a clean one).
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { runeById, scoreTrace, strokeGuides, type Pt, type TracePt } from "@/lib/game/combat/runes";
+import { DIRECTIONAL, runeById, scoreTrace, strokeGuides, turnRune, type Pt, type TracePt } from "@/lib/game/combat/runes";
 import type { IncantationScore } from "@/lib/game/combat/contract";
 import { keyName, useMoveKeys } from "@/lib/game/movement/keys";
 import { capture, pen } from "@/lib/game/orbitCamera";
@@ -20,10 +25,15 @@ import styles from "../DefaultIslandWorld.module.css";
 const SIZE = 320;
 const toPath = (s: (Pt | TracePt)[]) => s.map(([x, y], i) => `${i ? "L" : "M"}${(x * SIZE).toFixed(1)} ${(y * SIZE).toFixed(1)}`).join(" ");
 
-export default function IncantationOverlay({ runeId, title, effect, onDone, onCancel }: { runeId: string; onDone: (score: IncantationScore) => void; onCancel: () => void;
+export default function IncantationOverlay({ runeId, title, effect, onDone, onCancel, angle, power }: { runeId: string; onDone: (score: IncantationScore) => void; onCancel: () => void;
   /** The kit ability being drawn (kits.ts), shown over the rune's own name. */
-  title?: string; effect: string }) {
-  const rune = runeById(runeId), dash = keyName(useMoveKeys().dash);
+  title?: string; effect: string;
+  /** Classes v2: where the spell goes on screen (radians, 0 right, -π/2 up): a directional shape turns to point there. */
+  angle?: number;
+  /** Classes v2: the spell's power for an accuracy (abilities.ts shapePotency), shown in the readout. */
+  power?: (accuracy: number) => number }) {
+  const [turn] = useState(() => (angle !== undefined && DIRECTIONAL.has(runeId) ? angle : 0)); // fixed when the drawing opens
+  const rune = useMemo(() => turnRune(runeById(runeId), turn), [runeId, turn]), dash = keyName(useMoveKeys().dash);
   const [strokes, setStrokes] = useState<TracePt[][]>([]);
   // The stroke being drawn grows in place (no copy per pointer move); a new wrapper re-renders it.
   const [current, setCurrent] = useState<{ pts: TracePt[] } | null>(null);
@@ -104,10 +114,12 @@ export default function IncantationOverlay({ runeId, title, effect, onDone, onCa
       {locked && !result && <circle cx={penAt[0] * SIZE} cy={penAt[1] * SIZE} r={6} fill="#fff6dc" stroke="#2b1d3d" strokeWidth={2} />}
     </svg>
     <div className={styles.runeTimer} aria-label="Time left"><span style={{ width: `${(left / rune.timeLimitMs) * 100}%` }} /></div>
-    <p className={styles.runeReadout} role="status">
-      {result ? (result.outcome === "fail" ? (left <= 0 && result.accuracy === 0 ? "Out of time · fizzled" : `Fizzled · ${Math.round(result.accuracy)}%`) : `${result.outcome === "enhanced" ? "Empowered" : "Cast"} · ${Math.round(result.accuracy)}%`)
-        : shown ? `Accuracy ${Math.round(shown.accuracy)}% · stroke ${strokes.length + 1} of ${rune.strokes.length}` : `Trace from the numbered dot, following the arrow · ${rune.strokes.length} stroke${rune.strokes.length > 1 ? "s" : ""}`}
+    <p className={styles.runeReadout} role="status" data-testid="rune-readout">
+      {result ? (result.outcome === "fail" ? (left <= 0 && result.accuracy === 0 ? "Out of time · fizzled" : `Fizzled · ${Math.round(result.accuracy)}%`)
+        : `${result.outcome === "enhanced" ? "Empowered" : "Cast"} · ${Math.round(result.accuracy)}%${power ? ` · power ${Math.round(power(result.accuracy) * 100)}%` : ""}`)
+        : shown ? `Accuracy ${Math.round(shown.accuracy)}%${power && shown.accuracy >= 50 ? ` · power ${Math.round(power(shown.accuracy) * 100)}%` : ""} · stroke ${strokes.length + 1} of ${rune.strokes.length}`
+        : `Trace from the numbered dot, following the arrow · ${rune.strokes.length} stroke${rune.strokes.length > 1 ? "s" : ""}`}
     </p>
-    <small className={styles.hint}>{locked ? "Hold the mouse button and move the mouse to draw · " : ""}Under 50% fizzles · 95% and up is empowered · {dash} dodges and cancels</small>
+    <small className={styles.hint}>{locked ? "Hold the mouse button and move the mouse to draw · " : ""}{power ? "Under 50% fizzles · a rough sketch casts at 60%, a clean one up to 150%" : "Under 50% fizzles · 95% and up is empowered"} · {dash} dodges and cancels</small>
   </section>;
 }

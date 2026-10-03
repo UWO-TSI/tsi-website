@@ -19,6 +19,8 @@ import { spawnEnemy, type Enemy } from "./sim";
 import { field, fadeOf, inGrowth, rooted, walled, wallStops } from "./field";
 import { enclosed, hull, linksOf, totemState, TOTEM } from "./totems";
 import { BEAST, beastCap, beastState, RITUAL, setTamed } from "./beasts";
+import { DIRECTIONAL, runeById, scoreTrace, screenAngle, turnRune } from "./runes";
+import { FX } from "@/lib/game/fx/combat";
 
 const never = () => 0.99; // no crits, no rolls
 let ME = { x: 0, z: 0 };
@@ -78,6 +80,13 @@ describe("the Warden kits (data)", () => {
   it("the family's seed migration carries the signature weapons exactly as the TS has them", () => {
     const dir = join(__dirname, "../../../supabase/migrations"), file = readdirSync(dir).find(f => f.endsWith("_classes_v2_warden_seed.sql"))!;
     expect(readFileSync(join(dir, file), "utf8")).toContain(signatureSeedSql(["summoner", "shaman", "druid", "priest"]));
+  });
+  it("every zone draws itself: its key names an FX recipe (zones, totems' and beasts' own effects too)", () => {
+    const keys = new Set<string>();
+    const walk = (effects: ClassKit["keys"][number]["effects"]) => { for (const e of effects) { if (e.kind === "zone") keys.add(e.key); if (e.kind === "channel") walk(e.effects); } };
+    for (const k of WARDEN_KITS) for (const a of [...k.keys, k.ult]) { walk(a.effects); walk(a.release ?? []); }
+    for (const k of ["shaman.zap", "shaman.flame", "shaman.quake", "shaman.slam", "shaman.trailFire", "shaman.plant", "summoner.warp", "summoner.ritual", "summoner.tamed"]) keys.add(k);
+    for (const k of keys) expect(FX[k], k).toBeDefined();
   });
   it("its unique clips are in the verb library, authored for its signature weapon's grip; every ult has one", () => {
     for (const k of WARDEN_KITS) {
@@ -393,6 +402,16 @@ describe("Druid", () => {
 });
 
 describe("Priest", () => {
+  it("the line and the chevron turn to point where the spell goes on screen, and are scored that way", () => {
+    expect(screenAngle(0, 1, 0)).toBeCloseTo(-Math.PI / 2); // the camera's forward is up the screen
+    expect(screenAngle(-1, 0, 0)).toBeCloseTo(0); // world -x is screen right at yaw 0
+    expect([...DIRECTIONAL]).toEqual(["line", "chevron"]);
+    const up = turnRune(runeById("line"), -Math.PI / 2);
+    expect(up.strokes[0][0][1]).toBeCloseTo(0.9); expect(up.strokes[0][1][1]).toBeCloseTo(0.1); // drawn from the bottom up
+    const stroke = Array.from({ length: 20 }, (_, i) => [0.5, 0.9 - (0.8 * i) / 19, i * 20] as [number, number, number]);
+    expect(scoreTrace(up, [stroke]).accuracy).toBeGreaterThan(90);
+    expect(scoreTrace(runeById("line"), [stroke]).accuracy).toBeLessThan(50);
+  });
   const score = (accuracy: number) => ({ accuracy, coverage: 1, deviation: 0, order: 1, scribble: false, outcome: (accuracy < 50 ? "fail" : accuracy >= 95 ? "enhanced" : "normal") as "fail" | "normal" | "enhanced", power: 1 });
   it("every skill is drawn; the drawing scales it 60% (rough) to 150% (clean), heals included", () => {
     const heal = (acc: number) => {
