@@ -36,12 +36,16 @@ const WEAPON_LOOK: Record<string, Look> = {
   "tome-warden": { cooldown: 5, range: 8, arc: 0, model: `${W}tome-spirits.glb`, modelScale: 1.5 },
   "staff-heartstone": { cooldown: 0.6, range: 11, arc: 0, speed: 15, model: `${W}staff-rune.glb`, modelScale: 1.6 },
 };
-// Classes v2 signature weapons (the Vanguard wave): one look per type, a model per tier (art/props-enemies/build_weapons.py).
+// Classes v2 signature weapons (the Vanguard wave): one look per type, a model per tier (art/props-enemies/build_vanguard_weapons.py).
+// Grips from art/props-enemies/solve_vanguard_grips.py (vanguard_grips.json): the melee hold in the right hand, the OffHand
+// part's rotation in the left (the shield facing forward on the forearm; the second tanto and the left wrap mirrored), the
+// hammer upright at rest like a staff.
+const MELEE_HAND: [number, number, number] = [Math.PI / 2, 0, 0], BACK: [number, number, number] = [0, 0, 0.5], MIRRORED: [number, number, number] = [1.942, -0.255, -0.15];
 const SIGNATURE_LOOK: Record<string, Omit<Look, "model">> = {
-  aegis: { cooldown: 0.5, range: 1.8, arc: 2.0, modelScale: 1.3 },
-  warhammer: { cooldown: 0.85, range: 2.2, arc: 2.4, modelScale: 1.3 },
-  handwraps: { cooldown: 0.36, range: 1.45, arc: 1.6, modelScale: 1.3 },
-  tanto: { cooldown: 0.4, range: 1.5, arc: 1.9, modelScale: 1.3 },
+  aegis: { cooldown: 0.5, range: 1.8, arc: 2.0, modelScale: 1.3, grip: { hand: MELEE_HAND, back: BACK, off: [0.029, 0.238, 1.146] } },
+  warhammer: { cooldown: 0.85, range: 2.2, arc: 2.4, modelScale: 1.3, grip: { hand: MELEE_HAND, back: BACK, rest: [0.03, -0.24, -1.15] } },
+  handwraps: { cooldown: 0.36, range: 1.45, arc: 1.6, modelScale: 1.3, grip: { hand: MELEE_HAND, back: BACK, off: MIRRORED } },
+  tanto: { cooldown: 0.4, range: 1.5, arc: 1.9, modelScale: 1.3, grip: { hand: MELEE_HAND, back: BACK, off: MIRRORED } },
 };
 for (const w of SYSTEM_WEAPONS) if (w.subclass && SIGNATURE_LOOK[w.type]) WEAPON_LOOK[w.key] = { ...SIGNATURE_LOOK[w.type], model: `${W}${w.key}.glb` };
 export const WEAPONS: Record<string, Weapon> = Object.fromEntries(islandWeapons()
