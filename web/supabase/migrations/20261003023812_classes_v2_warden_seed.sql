@@ -85,3 +85,7 @@ END;
 $$;
 REVOKE ALL ON FUNCTION public.combat_tame_beast(UUID, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.combat_tame_beast(UUID, TEXT, TEXT) TO service_role;
+
+-- Class cosmetics stay off sale until the classes v2 launch (the coordinator's guard, as on the Arcane seed): wave 5 sets
+-- them active when it turns economy_settings.classes_v2 on.
+UPDATE shop_items SET active = FALSE WHERE category IN ('weapon_skin', 'aura', 'frame') AND NOT public.classes_v2_on();

@@ -12,11 +12,12 @@ BEGIN
   ASSERT (SELECT count(DISTINCT weapon_type) FROM weapons WHERE subclass IN ('summoner', 'shaman', 'druid', 'priest')) = 4, 'wdn four types';
   ASSERT (SELECT array_agg(tier ORDER BY tier) FROM weapons WHERE subclass = 'summoner') = ARRAY[1, 2, 3, 4, 5], 'wdn tiers 1-5';
   ASSERT (SELECT weapon_type FROM weapons WHERE key = 'sunstone-staff-1') = 'sunstone-staff' AND (SELECT scaling FROM weapons WHERE key = 'living-staff-3') = ARRAY['spirit', 'vitality'], 'wdn types and scaling';
-  -- Shop cosmetics: skins fit one subclass's weapon, auras are three colours; two are priced in Gems.
+  -- Shop cosmetics: skins fit one subclass's weapon, auras are three colours; two are priced in Gems; all off sale until launch.
   ASSERT (SELECT count(*) FROM shop_items WHERE slug LIKE 'skin-%' AND category = 'weapon_skin' AND cosmetic->>'subclass' IN ('summoner', 'shaman', 'druid', 'priest')) = 5, 'wdn five skins';
   ASSERT (SELECT count(*) FROM shop_items WHERE slug LIKE 'aura-warden-%' AND category = 'aura' AND jsonb_array_length(cosmetic->'ramp') = 3) = 4, 'wdn four auras';
   ASSERT (SELECT count(*) FROM shop_items WHERE ((slug LIKE 'skin-%' AND cosmetic->>'subclass' IN ('summoner', 'shaman', 'druid', 'priest')) OR slug LIKE 'aura-warden-%') AND tc_price IS NOT NULL) = 2, 'wdn two Gem items';
   ASSERT (SELECT count(*) FROM shop_items WHERE ((slug LIKE 'skin-%' AND cosmetic->>'subclass' IN ('summoner', 'shaman', 'druid', 'priest')) OR slug LIKE 'aura-warden-%') AND sprite_url IS NULL) = 0, 'wdn every row has its icon';
+  ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE ((slug LIKE 'skin-%' AND cosmetic->>'subclass' IN ('summoner', 'shaman', 'druid', 'priest')) OR slug LIKE 'aura-warden-%') AND active), 'wdn cosmetics off sale while the flag is off';
 
   INSERT INTO member_identity (member_id, family) VALUES (A, 'Warden'), (B, 'Warden') ON CONFLICT (member_id) DO UPDATE SET family = EXCLUDED.family;
   PERFORM combat_grant_xp(A, 11625, 'admin', 'x', 'wdn-xp-a');
