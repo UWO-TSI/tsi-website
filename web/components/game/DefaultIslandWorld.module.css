@@ -444,3 +444,10 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .pathLoadout em { font-size: var(--gui-text-xs); color: #5f4f78; }
 .pathStats small { font-size: var(--gui-text-xs); color: #6b5f7a; }
 .keeperBubble { background: var(--gui-paper); color: #3d3250; box-shadow: var(--gui-shadow-md); font-family: var(--gui-font); font-weight: 700; }
+/* A channelled ult's mash (classes v2 Arcane): the HUD's paper and face; the keycaps keep their element colours. */
+.mash { border: 0; border-radius: var(--gui-r-card); background: rgb(255 251 231 / 0.96); color: var(--gui-ink); box-shadow: var(--gui-shadow-md); font-family: var(--gui-font); }
+.mash b { font-weight: 800; color: var(--gui-ink-strong); }
+.mash kbd { font-family: var(--gui-font); font-weight: 800; color: var(--gui-ink-strong); }
+.mash small { color: var(--gui-ink-2); font-weight: 700; }
+.mash > span { background: var(--gui-paper-deep); }
+.mash > span i { background: var(--gui-sage); }
