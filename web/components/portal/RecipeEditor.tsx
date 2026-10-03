@@ -7,7 +7,8 @@ import { ROSTER } from "@/lib/collections/roster";
 import { WEAPONS } from "@/lib/combat/weapons";
 import { CRAFTED_ITEMS, DROP_RARITIES, MATERIALS, RECIPE_SOURCES, validateRecipeDraft, type DropRarity, type RecipeSource } from "@/lib/crafting/recipes";
 import { CATALOGUE } from "@/lib/wallet/catalogue";
-import { DraftBar, Field, inputCls, Toggle, useDraftFlow } from "./ProgressionAdminShared";
+import { Button, Card, IconButton, Select } from "@/components/gui";
+import { backLinkCls, DraftBar, Field, FixList, inputCls, Toggle, useDraftFlow } from "./ProgressionAdminShared";
 
 // ─── RecipeEditor ───────────────────────────────────────────────────────────
 // A crafting_recipes row (rows 63, 199): output, ingredients from the
@@ -65,29 +66,29 @@ export default function RecipeEditor({ mode, initial }: { mode: "new" | "edit"; 
   const errors = validateRecipeDraft(draft);
 
   return (
-    <div>
-      <Link href={BACK} className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] mb-2">
-        <ArrowLeft size={12} /> Back to Recipes
+    <div className="mx-auto w-full max-w-3xl">
+      <Link href={BACK} className={backLinkCls}>
+        <ArrowLeft size={16} aria-hidden /> Back to recipes
       </Link>
-      <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">{mode === "new" ? "New recipe" : `Edit: ${initial?.id ?? "Recipe"}`}</h1>
-      <p className="text-sm text-[var(--color-text-muted)] mt-1 mb-6">Crafted at the HQ workbench from collection items. The output must already exist in the shop catalogue or the weapons list.</p>
+      <h1 className="mt-2 text-2xl font-extrabold text-[var(--gui-ink-strong)]">{mode === "new" ? "New recipe" : `Edit: ${initial?.id ?? "Recipe"}`}</h1>
+      <p className="text-sm text-[var(--gui-muted)] mt-1 mb-6">Crafted at the HQ workbench from collection items. The output must already exist in the shop catalogue or the weapons list.</p>
 
-      <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6 space-y-5">
+      <Card className="space-y-5" style={{ padding: "clamp(16px, 4vw, 24px)" }}>
         <div className="grid gap-5 md:grid-cols-[1fr_120px]">
-          <Field label="Recipe id" hint={mode === "edit" ? "Fixed once published (members' recipe books point at it)" : "lowercase-with-dashes, usually the output's key"}>
+          <Field label="Recipe id" hint={mode === "edit" ? "Fixed once published (members' recipe books point at it)" : "Lowercase with dashes, usually the output's key"}>
             <input className={inputCls} value={form.id} disabled={mode === "edit"} onChange={(e) => set("id", e.target.value)} spellCheck={false} />
           </Field>
           <Field label="Order"><input className={inputCls} type="number" value={form.position} onChange={(e) => set("position", Number(e.target.value))} /></Field>
         </div>
-        <div className="grid gap-5 md:grid-cols-[140px_1fr_100px]">
+        <div className="grid gap-5 md:grid-cols-[150px_1fr_110px]">
           <Field label="Makes a">
-            <select className={inputCls} value={form.kind} onChange={(e) => set("kind", e.target.value as "item" | "weapon")}>
+            <Select className="w-full" value={form.kind} onChange={(e) => set("kind", e.target.value as "item" | "weapon")}>
               <option value="item">Shop item</option>
               <option value="weapon">Weapon</option>
-            </select>
+            </Select>
           </Field>
           <Field label="Output">
-            <input className={inputCls} list={`recipe-${form.kind}s`} value={form.output} onChange={(e) => set("output", e.target.value)} spellCheck={false} />
+            <input className={inputCls} list={`recipe-${form.kind}s`} aria-label="Output" value={form.output} onChange={(e) => set("output", e.target.value)} spellCheck={false} />
             <datalist id="recipe-items">{ITEM_KEYS.map((k) => <option key={k} value={k} />)}</datalist>
             <datalist id="recipe-weapons">{WEAPONS.map((w) => <option key={w.key} value={w.key}>{w.name}</option>)}</datalist>
           </Field>
@@ -96,35 +97,35 @@ export default function RecipeEditor({ mode, initial }: { mode: "new" | "edit"; 
         <Field label="Ingredients" hint="Collection item keys (fish, bugs, flowers, shells, minerals, wood_branch) and how many">
           <div className="space-y-2">
             {form.ingredients.map(([key, n], i) => (
-              <div key={i} className="grid grid-cols-[1fr_96px_auto] gap-2">
-                <input className={inputCls} list="recipe-ingredients" aria-label="Ingredient" value={key} onChange={(e) => setIngredient(i, e.target.value, n)} spellCheck={false} />
-                <input className={inputCls} aria-label="Count" type="number" min={1} max={99} value={n} onChange={(e) => setIngredient(i, key, Number(e.target.value))} />
-                <button type="button" aria-label="Remove ingredient" onClick={() => set("ingredients", form.ingredients.filter((_, j) => j !== i))} className="px-2 text-[var(--color-text-muted)] hover:text-[var(--gui-danger)]"><Trash2 size={14} /></button>
+              <div key={i} className="grid grid-cols-[1fr_96px_auto] items-center gap-2">
+                <input className={inputCls} list="recipe-ingredients" aria-label={`Ingredient ${i + 1}`} value={key} onChange={(e) => setIngredient(i, e.target.value, n)} spellCheck={false} />
+                <input className={inputCls} aria-label={`How many of ingredient ${i + 1}`} type="number" min={1} max={99} value={n} onChange={(e) => setIngredient(i, key, Number(e.target.value))} />
+                <IconButton label={`Remove ingredient ${i + 1}`} size="sm" onClick={() => set("ingredients", form.ingredients.filter((_, j) => j !== i))}><Trash2 size={16} aria-hidden /></IconButton>
               </div>
             ))}
             <datalist id="recipe-ingredients">{INGREDIENT_KEYS.map((k) => <option key={k} value={k} />)}</datalist>
-            <button type="button" onClick={() => set("ingredients", [...form.ingredients, ["", 1]])} className="inline-flex items-center gap-1 text-xs text-[var(--color-accent-cyan)] hover:underline"><Plus size={12} /> Add ingredient</button>
+            <Button size="sm" variant="quiet" onClick={() => set("ingredients", [...form.ingredients, ["", 1]])}><Plus size={16} aria-hidden /> Add an ingredient</Button>
           </div>
         </Field>
         <Field label="Learned from" hint="Shop recipes also need a recipe card in the shop catalogue (catalogue_ref recipe:<id>)">
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
             {RECIPE_SOURCES.map((s) => (
-              <label key={s} className="flex items-center gap-2 text-xs text-[var(--color-text-primary)]">
-                <input type="checkbox" checked={form.sources.includes(s)} onChange={(e) => set("sources", e.target.checked ? [...form.sources, s] : form.sources.filter((x) => x !== s))} />
-                {s} <span className="text-[var(--color-text-muted)]">({SOURCE_HINT[s]})</span>
+              <label key={s} className="flex items-center gap-2 min-h-[32px] text-sm font-bold text-[var(--gui-ink)] cursor-pointer">
+                <input type="checkbox" className="h-[18px] w-[18px] accent-[var(--gui-sage)] cursor-pointer" checked={form.sources.includes(s)} onChange={(e) => set("sources", e.target.checked ? [...form.sources, s] : form.sources.filter((x) => x !== s))} />
+                {s} <span className="font-semibold text-[var(--gui-muted)]">({SOURCE_HINT[s]})</span>
               </label>
             ))}
           </div>
         </Field>
         <Field label="Rare-catch drop" hint="Which catches can teach it, once per member (the chance per catch is set by rarity). Not for starter or shop-card recipes.">
-          <select className={inputCls} value={form.drop} onChange={(e) => set("drop", e.target.value as DropRarity | "")}>
+          <Select className="w-full" value={form.drop} onChange={(e) => set("drop", e.target.value as DropRarity | "")}>
             <option value="">Never</option>
             {DROP_RARITIES.map((r) => <option key={r} value={r}>{DROP_LABEL[r]}</option>)}
-          </select>
+          </Select>
         </Field>
         <Toggle label="Active" hint="Inactive recipes leave every recipe book and can't be crafted." checked={form.active} onChange={(v) => set("active", v)} />
-        {errors.length ? <ul className="text-xs text-[var(--gui-danger)] list-disc pl-4">{errors.map((e) => <li key={e}>{e}</li>)}</ul> : null}
-      </div>
+        <FixList errors={errors} />
+      </Card>
       <DraftBar flow={flow} canSave={errors.length === 0} onSave={() => flow.save(draft)} />
     </div>
   );

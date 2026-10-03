@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { Badge, Card } from "@/components/gui";
 import { thCls } from "./ProgressionAdminShared";
 
 const A = "/student/dashboard/admin";
@@ -56,37 +57,39 @@ export default function GameContentIndex() {
   const published = (area: (typeof AREAS)[number]) => {
     const row = last?.get("seasonal" in area ? `club_goals:${area.seasonal}` : area.table);
     if (!last) return "…";
-    if (!row) return "never";
-    return `${new Date(row.published_at).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" })} · ${row.author ? (names.get(row.author) ?? "Member") : "—"}`;
+    if (!row) return "Never";
+    return `${new Date(row.published_at).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Toronto" })} · ${row.author ? (names.get(row.author) ?? "Member") : "—"}`;
   };
 
   return (
     <div className="mb-8">
-      <h2 className="text-sm font-heading font-bold text-[var(--color-text-primary)] mb-3">Game content</h2>
-      <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-x-auto mb-4">
+      <h2 className="text-lg font-extrabold text-[var(--gui-ink-strong)] mb-3">Game content</h2>
+      <Card className="overflow-x-auto mb-4" style={{ padding: 0 }}>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[var(--glass-border)]">{["Area", "Holds", "Last published"].map((h) => <th key={h} className={thCls}>{h}</th>)}</tr>
+            <tr className="bg-[var(--gui-paper-warm)]">{["Area", "Holds", "Last published"].map((h) => <th key={h} className={thCls}>{h}</th>)}</tr>
           </thead>
           <tbody>
             {AREAS.map((a) => (
-              <tr key={a.title} className="border-b border-[var(--glass-border)]/40 last:border-b-0">
-                <td className="px-4 py-3"><Link href={a.href} className="text-[var(--color-accent-cyan)] hover:underline">{a.title}</Link></td>
-                <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">{a.what}</td>
-                <td className="px-4 py-3 text-xs text-[var(--color-text-primary)]">{published(a)}</td>
+              <tr key={a.title} className="border-t-2 border-dashed border-[var(--gui-paper-edge)]">
+                <td className="px-4 py-3 whitespace-nowrap"><Link href={a.href} className="font-extrabold text-[var(--gui-sage)] hover:underline">{a.title}</Link></td>
+                <td className="px-4 py-3 text-[13px] text-[var(--gui-ink-2)]">{a.what}</td>
+                <td className="px-4 py-3 text-[13px] font-semibold text-[var(--gui-ink)] whitespace-nowrap">{published(a)}</td>
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
+      </Card>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         {TOOLS.map((t) => (
-          <Link key={t.title} href={t.href} className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4 hover:shadow-[0_0_12px_rgba(0,47,167,0.1)] transition-all">
-            <h3 className="text-sm font-heading font-bold text-[var(--color-text-primary)] mb-1">
-              {t.title}
-              {t.title === "Moderation queue" && openReports ? <span className="ml-2 text-xs text-[var(--gui-danger)] bg-[var(--gui-danger-soft)] px-1.5 py-0.5 rounded">{openReports} open</span> : null}
-            </h3>
-            <p className="text-xs text-[var(--color-text-muted)]">{t.what}</p>
+          <Link key={t.title} href={t.href} className="block rounded-[18px] transition-transform hover:-translate-y-0.5">
+            <Card className="h-full">
+              <h3 className="flex flex-wrap items-center gap-2 text-[15px] font-extrabold text-[var(--gui-ink-strong)] mb-1">
+                {t.title}
+                {t.title === "Moderation queue" && openReports ? <Badge tone="danger">{openReports} open</Badge> : null}
+              </h3>
+              <p className="text-[13px] text-[var(--gui-ink-2)]">{t.what}</p>
+            </Card>
           </Link>
         ))}
       </div>

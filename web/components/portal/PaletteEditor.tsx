@@ -6,6 +6,8 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { SeasonalPalette, PaletteColors } from "@/lib/content/types";
+import { Button, Card } from "@/components/gui";
+import { AdminMessage, backLinkCls, Field, inputCls } from "./ProgressionAdminShared";
 
 // ─── PaletteEditor ──────────────────────────────────────────────────────────
 // Shared form component used by both /new and /[id]/edit. Mirrors NPCEditor /
@@ -46,6 +48,9 @@ const DEFAULT_COLORS: PaletteColors = {
   island_grass: "#91B47F",
   leaf: "#9BC87E",
 };
+
+/** "building_primary" → "Building primary". */
+const colourName = (key: string) => key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " ");
 
 interface FormState {
   slug: string;
@@ -272,44 +277,29 @@ export default function PaletteEditor({
   };
 
   return (
-    <div>
-      <div className="mb-2">
-        <Link
-          href="/student/dashboard/admin/content/palettes"
-          className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-        >
-          <ArrowLeft size={12} />
-          Back to Palettes
-        </Link>
-      </div>
+    <div className="mx-auto w-full max-w-3xl">
+      <Link href="/student/dashboard/admin/content/palettes" className={backLinkCls}>
+        <ArrowLeft size={16} aria-hidden />
+        Back to palettes
+      </Link>
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
+      <div className="mt-2 mb-6">
+        <h1 className="text-2xl font-extrabold text-[var(--gui-ink-strong)]">
           {mode === "new"
-            ? "New Palette"
+            ? "New palette"
             : `Edit: ${initial?.display_name ?? "Palette"}`}
         </h1>
-        <p className="text-sm text-[var(--color-text-muted)] mt-1">
+        <p className="text-sm text-[var(--gui-muted)] mt-1">
           Drafts stay invisible to members until published.
         </p>
       </div>
 
-      {message ? (
-        <div
-          className={`mb-4 p-3 rounded-md text-xs border ${
-            message.kind === "ok"
-              ? "bg-[var(--gui-success-soft)] border-[var(--gui-success)]/30 text-[var(--gui-success)]"
-              : "bg-[var(--gui-danger-soft)] border-[var(--gui-danger)]/30 text-[var(--gui-danger)]"
-          }`}
-        >
-          {message.text}
-        </div>
-      ) : null}
+      <AdminMessage message={message} className="mb-4" />
 
-      <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6 space-y-5">
+      <Card className="space-y-5" style={{ padding: "clamp(16px, 4vw, 24px)" }}>
         <Field
           label="Slug"
-          hint="kebab-case identifier, e.g. autumn-2026"
+          hint="Lowercase letters, numbers and dashes, e.g. autumn-2026"
           error={errors.slug}
         >
           <input
@@ -322,7 +312,7 @@ export default function PaletteEditor({
           />
         </Field>
 
-        <Field label="Display Name" error={errors.display_name}>
+        <Field label="Display name" error={errors.display_name}>
           <input
             type="text"
             value={form.display_name}
@@ -332,50 +322,50 @@ export default function PaletteEditor({
           />
         </Field>
 
-        <div>
-          <label className="block text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
-            Colors
-          </label>
+        <fieldset>
+          <legend className="block mb-1.5 text-[15px] font-extrabold text-[var(--gui-ink-strong)]">
+            Colours
+          </legend>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {COLOR_KEYS.map((key) => (
               <ColorRow
                 key={key}
-                label={key}
+                label={colourName(key)}
                 value={form.colors[key] ?? ""}
                 onChange={(v) => updateColor(key, v)}
               />
             ))}
           </div>
           {errors.colors ? (
-            <p className="mt-2 text-xs text-[var(--gui-danger)]">
+            <p className="mt-2 text-[13px] font-bold text-[var(--gui-danger)]">
               {errors.colors}
             </p>
           ) : null}
 
           {/* Swatch row preview */}
-          <div className="mt-4 p-3 bg-[var(--color-bg)] border border-[var(--glass-border)] rounded-md">
-            <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
+          <div className="mt-4 p-3 rounded-2xl bg-[var(--gui-paper-warm)]">
+            <p className="text-[13px] font-extrabold text-[var(--gui-ink-2)] mb-2">
               Preview
             </p>
             <div className="flex flex-wrap gap-3">
               {COLOR_KEYS.map((key) => (
                 <div key={key} className="flex flex-col items-center gap-1">
                   <div
-                    className="w-6 h-6 rounded border border-[var(--glass-border)]"
+                    className="w-8 h-8 rounded-lg border-2 border-[var(--gui-paper-line)]"
                     style={{ backgroundColor: form.colors[key] }}
                   />
-                  <span className="text-xs text-[var(--color-text-muted)]">
-                    {key}
+                  <span className="text-xs text-[var(--gui-muted)]">
+                    {colourName(key)}
                   </span>
                 </div>
               ))}
             </div>
           </div>
-        </div>
+        </fieldset>
 
         <Field
-          label="Scheduled Start"
-          hint="Optional. Informational — activation is manual via the listing."
+          label="Starts"
+          hint="Optional and for reference: you switch palettes on from the list."
         >
           <input
             type="datetime-local"
@@ -386,8 +376,8 @@ export default function PaletteEditor({
         </Field>
 
         <Field
-          label="Scheduled End"
-          hint="Optional. Must be after Scheduled Start if both are set."
+          label="Ends"
+          hint="Optional. After the start, if both are set."
           error={errors.scheduled_end}
         >
           <input
@@ -397,38 +387,28 @@ export default function PaletteEditor({
             className={inputCls}
           />
         </Field>
-      </div>
+      </Card>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
+        <Button
+          size="sm"
+          variant={draftId ? "quiet" : "primary"}
           onClick={handleSaveDraft}
           disabled={hasErrors || busy !== null}
-          className={primaryBtnCls}
         >
-          {busy === "save" ? "Saving..." : "Save as draft"}
-        </button>
+          {busy === "save" ? "Saving…" : "Save as draft"}
+        </Button>
 
         {draftId ? (
-          <button
-            type="button"
-            onClick={handlePublish}
-            disabled={busy !== null}
-            className={publishBtnCls}
-          >
-            {busy === "publish" ? "Publishing..." : "Publish"}
-          </button>
+          <Button size="sm" onClick={handlePublish} disabled={busy !== null}>
+            {busy === "publish" ? "Publishing…" : "Publish"}
+          </Button>
         ) : null}
 
         {draftId ? (
-          <button
-            type="button"
-            onClick={handleDiscard}
-            disabled={busy !== null}
-            className={dangerBtnCls}
-          >
-            {busy === "discard" ? "Discarding..." : "Discard draft"}
-          </button>
+          <Button size="sm" variant="danger" onClick={handleDiscard} disabled={busy !== null}>
+            {busy === "discard" ? "Discarding…" : "Discard draft"}
+          </Button>
         ) : null}
       </div>
     </div>
@@ -477,48 +457,7 @@ function validate(
   return errors;
 }
 
-// ─── Sub-components / classes ───────────────────────────────────────────────
-
-const inputCls =
-  "w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--glass-border)] rounded-md text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-cyan)] transition-colors";
-
-const primaryBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
-
-const publishBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
-
-const dangerBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 border border-[var(--gui-danger)]/30 text-[var(--gui-danger)] text-xs uppercase tracking-wider rounded-md hover:bg-[var(--gui-danger-soft)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
-
-function Field({
-  label,
-  hint,
-  error,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="block text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
-        {label}
-      </label>
-      {children}
-      {hint && !error ? (
-        <p className="mt-1 text-xs text-[var(--color-text-muted)]/70">
-          {hint}
-        </p>
-      ) : null}
-      {error ? (
-        <p className="mt-1 text-xs text-[var(--gui-danger)]">{error}</p>
-      ) : null}
-    </div>
-  );
-}
+// ─── Sub-components ─────────────────────────────────────────────────────────
 
 function ColorRow({
   label,
@@ -530,19 +469,19 @@ function ColorRow({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="flex items-center gap-3 p-2 bg-[var(--color-bg)] border border-[var(--glass-border)] rounded-md">
+    <div className="flex items-center gap-3 p-2 pr-3 rounded-2xl bg-[var(--gui-paper-warm)] border-2 border-[var(--gui-paper-edge)]">
       <input
         type="color"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-9 w-12 rounded cursor-pointer bg-transparent border border-[var(--glass-border)]"
-        aria-label={`${label} color`}
+        className="h-10 w-12 shrink-0 rounded-xl cursor-pointer bg-transparent border-2 border-[var(--gui-paper-line)]"
+        aria-label={`${label} colour`}
       />
       <div className="flex-1 min-w-0">
-        <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
+        <p className="text-sm font-extrabold text-[var(--gui-ink-strong)]">
           {label}
         </p>
-        <p className="text-xs text-[var(--color-text-primary)] truncate">
+        <p className="text-[13px] font-semibold text-[var(--gui-ink-2)] truncate">
           {value.toUpperCase()}
         </p>
       </div>

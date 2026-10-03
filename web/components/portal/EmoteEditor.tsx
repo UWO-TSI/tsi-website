@@ -7,6 +7,8 @@ import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { EmoteType } from "@/lib/content/types";
 import ImageUploadButton from "@/components/portal/ImageUploadButton";
+import { Button, Card } from "@/components/gui";
+import { AdminMessage, backLinkCls, Field, inputCls, Toggle } from "./ProgressionAdminShared";
 
 // ─── EmoteEditor (sprint E8) ────────────────────────────────────────────────
 // Shared form component used by both /new and /[id]/edit. Mirrors the C1
@@ -198,42 +200,27 @@ export default function EmoteEditor({ mode, rowId, initial }: EmoteEditorProps) 
   };
 
   return (
-    <div>
-      <div className="mb-2">
-        <Link
-          href="/student/dashboard/admin/content/emotes"
-          className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-        >
-          <ArrowLeft size={12} />
-          Back to Emotes
-        </Link>
-      </div>
+    <div className="mx-auto w-full max-w-3xl">
+      <Link href="/student/dashboard/admin/content/emotes" className={backLinkCls}>
+        <ArrowLeft size={16} aria-hidden />
+        Back to emotes
+      </Link>
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
-          {mode === "new" ? "New Emote" : `Edit: ${initial?.display_name ?? "Emote"}`}
+      <div className="mt-2 mb-6">
+        <h1 className="text-2xl font-extrabold text-[var(--gui-ink-strong)]">
+          {mode === "new" ? "New emote" : `Edit: ${initial?.display_name ?? "Emote"}`}
         </h1>
-        <p className="text-sm text-[var(--color-text-muted)] mt-1">
+        <p className="text-sm text-[var(--gui-muted)] mt-1">
           Drafts stay invisible to members until published.
         </p>
       </div>
 
-      {message ? (
-        <div
-          className={`mb-4 p-3 rounded-md text-xs border ${
-            message.kind === "ok"
-              ? "bg-[var(--gui-success-soft)] border-[var(--gui-success)]/30 text-[var(--gui-success)]"
-              : "bg-[var(--gui-danger-soft)] border-[var(--gui-danger)]/30 text-[var(--gui-danger)]"
-          }`}
-        >
-          {message.text}
-        </div>
-      ) : null}
+      <AdminMessage message={message} className="mb-4" />
 
-      <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6 space-y-5">
+      <Card className="space-y-5" style={{ padding: "clamp(16px, 4vw, 24px)" }}>
         <Field
           label="Slug"
-          hint="kebab-case identifier, e.g. wave or dance"
+          hint="Lowercase letters, numbers and dashes, e.g. wave or dance"
           error={errors.slug}
         >
           <input
@@ -246,7 +233,7 @@ export default function EmoteEditor({ mode, rowId, initial }: EmoteEditorProps) 
           />
         </Field>
 
-        <Field label="Display Name" error={errors.display_name}>
+        <Field label="Display name" error={errors.display_name}>
           <input
             type="text"
             value={form.display_name}
@@ -257,8 +244,8 @@ export default function EmoteEditor({ mode, rowId, initial }: EmoteEditorProps) 
         </Field>
 
         <Field
-          label="Animation Key"
-          hint="Free-form; convention: same as slug (e.g. 'wave', 'dance'). Drives the client animation."
+          label="Animation key"
+          hint="Usually the same as the slug (wave, dance). It picks the animation the game plays. Empty = the slug."
           error={errors.animation_key}
         >
           <input
@@ -271,12 +258,13 @@ export default function EmoteEditor({ mode, rowId, initial }: EmoteEditorProps) 
           />
         </Field>
 
-        <Field label="Icon URL" hint="Optional. Paste a URL or upload an image (≤ 5MB).">
+        <Field label="Icon URL" hint="Optional. Paste a URL or upload an image (up to 5 MB).">
           <input
             type="text"
             value={form.icon_url}
             onChange={(e) => update("icon_url", e.target.value)}
             className={inputCls}
+            aria-label="Icon URL"
             placeholder="https://..."
             spellCheck={false}
           />
@@ -284,8 +272,8 @@ export default function EmoteEditor({ mode, rowId, initial }: EmoteEditorProps) 
         </Field>
 
         <Field
-          label="Unlock Condition"
-          hint="e.g. 'level:5' or 'class:explorer'. Leave blank for always-unlocked."
+          label="Unlock condition"
+          hint="e.g. level:5 or class:explorer. Leave it empty and everyone has it."
         >
           <input
             type="text"
@@ -303,38 +291,28 @@ export default function EmoteEditor({ mode, rowId, initial }: EmoteEditorProps) 
           checked={form.active}
           onChange={(v) => update("active", v)}
         />
-      </div>
+      </Card>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
+        <Button
+          size="sm"
+          variant={draftId ? "quiet" : "primary"}
           onClick={handleSaveDraft}
           disabled={hasErrors || busy !== null}
-          className={primaryBtnCls}
         >
-          {busy === "save" ? "Saving..." : "Save as draft"}
-        </button>
+          {busy === "save" ? "Saving…" : "Save as draft"}
+        </Button>
 
         {draftId ? (
-          <button
-            type="button"
-            onClick={handlePublish}
-            disabled={busy !== null}
-            className={publishBtnCls}
-          >
-            {busy === "publish" ? "Publishing..." : "Publish"}
-          </button>
+          <Button size="sm" onClick={handlePublish} disabled={busy !== null}>
+            {busy === "publish" ? "Publishing…" : "Publish"}
+          </Button>
         ) : null}
 
         {draftId ? (
-          <button
-            type="button"
-            onClick={handleDiscard}
-            disabled={busy !== null}
-            className={dangerBtnCls}
-          >
-            {busy === "discard" ? "Discarding..." : "Discard draft"}
-          </button>
+          <Button size="sm" variant="danger" onClick={handleDiscard} disabled={busy !== null}>
+            {busy === "discard" ? "Discarding…" : "Discard draft"}
+          </Button>
         ) : null}
       </div>
     </div>
@@ -371,91 +349,4 @@ function validate(
   }
 
   return errors;
-}
-
-// ─── Sub-components / classes ───────────────────────────────────────────────
-
-const inputCls =
-  "w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--glass-border)] rounded-md text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-cyan)] transition-colors";
-
-const primaryBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
-
-const publishBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
-
-const dangerBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 border border-[var(--gui-danger)]/30 text-[var(--gui-danger)] text-xs uppercase tracking-wider rounded-md hover:bg-[var(--gui-danger-soft)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
-
-function Field({
-  label,
-  hint,
-  error,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="block text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
-        {label}
-      </label>
-      {children}
-      {hint && !error ? (
-        <p className="mt-1 text-xs text-[var(--color-text-muted)]/70">
-          {hint}
-        </p>
-      ) : null}
-      {error ? (
-        <p className="mt-1 text-xs text-[var(--gui-danger)]">{error}</p>
-      ) : null}
-    </div>
-  );
-}
-
-function Toggle({
-  label,
-  hint,
-  checked,
-  onChange,
-}: {
-  label: string;
-  hint?: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <div className="flex items-start gap-3">
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border border-[var(--glass-border)] transition-colors ${
-          checked
-            ? "bg-[var(--color-accent-cyan)]"
-            : "bg-[var(--color-bg)]"
-        }`}
-      >
-        <span
-          className={`inline-block h-4 w-4 mt-0.5 transform rounded-full bg-white transition-transform ${
-            checked ? "translate-x-6" : "translate-x-1"
-          }`}
-        />
-      </button>
-      <div className="flex-1">
-        <label className="block text-xs text-[var(--color-text-primary)]">
-          {label}
-        </label>
-        {hint ? (
-          <p className="text-xs text-[var(--color-text-muted)]/70 mt-0.5">
-            {hint}
-          </p>
-        ) : null}
-      </div>
-    </div>
-  );
 }

@@ -8,6 +8,9 @@ import { createClient } from "@/lib/supabase/client";
 import type { ShopItem, ShopCategory, Rarity } from "@/lib/content/types";
 import type { ShopCategory as CatalogueCategory } from "@/lib/wallet/catalogue";
 import ImageUploadButton from "@/components/portal/ImageUploadButton";
+import { CurrencyIcon } from "@/components/economy/Amount";
+import { Button, Card, ItemTile, Select } from "@/components/gui";
+import { AdminMessage, backLinkCls, Field, inputCls, Toggle } from "./ProgressionAdminShared";
 
 // ─── ShopEditor ─────────────────────────────────────────────────────────────
 // Shared form component used by both /new and /[id]/edit. Mirrors NPCEditor:
@@ -314,44 +317,29 @@ export default function ShopEditor({ mode, rowId, initial }: ShopEditorProps) {
   const trimmedSprite = form.sprite_url.trim();
 
   return (
-    <div>
-      <div className="mb-2">
-        <Link
-          href="/student/dashboard/admin/content/shop"
-          className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-        >
-          <ArrowLeft size={12} />
-          Back to Shop
-        </Link>
-      </div>
+    <div className="mx-auto w-full max-w-3xl">
+      <Link href="/student/dashboard/admin/content/shop" className={backLinkCls}>
+        <ArrowLeft size={16} aria-hidden />
+        Back to the shop
+      </Link>
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
+      <div className="mt-2 mb-6">
+        <h1 className="text-2xl font-extrabold text-[var(--gui-ink-strong)]">
           {mode === "new"
-            ? "New Shop Item"
-            : `Edit: ${initial?.display_name ?? "Shop Item"}`}
+            ? "New shop item"
+            : `Edit: ${initial?.display_name ?? "Shop item"}`}
         </h1>
-        <p className="text-sm text-[var(--color-text-muted)] mt-1">
+        <p className="text-sm text-[var(--gui-muted)] mt-1">
           Drafts stay invisible to members until published.
         </p>
       </div>
 
-      {message ? (
-        <div
-          className={`mb-4 p-3 rounded-md text-xs border ${
-            message.kind === "ok"
-              ? "bg-[var(--gui-success-soft)] border-[var(--gui-success)]/30 text-[var(--gui-success)]"
-              : "bg-[var(--gui-danger-soft)] border-[var(--gui-danger)]/30 text-[var(--gui-danger)]"
-          }`}
-        >
-          {message.text}
-        </div>
-      ) : null}
+      <AdminMessage message={message} className="mb-4" />
 
-      <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6 space-y-5">
+      <Card className="space-y-5" style={{ padding: "clamp(16px, 4vw, 24px)" }}>
         <Field
           label="Slug"
-          hint="kebab-case identifier, e.g. tsi-hoodie"
+          hint="Lowercase letters, numbers and dashes, e.g. tsi-hoodie"
           error={errors.slug}
         >
           <input
@@ -364,7 +352,7 @@ export default function ShopEditor({ mode, rowId, initial }: ShopEditorProps) {
           />
         </Field>
 
-        <Field label="Display Name" error={errors.display_name}>
+        <Field label="Display name" error={errors.display_name}>
           <input
             type="text"
             value={form.display_name}
@@ -375,49 +363,49 @@ export default function ShopEditor({ mode, rowId, initial }: ShopEditorProps) {
         </Field>
 
         <Field label="Category">
-          <select
+          <Select
             value={form.category}
             onChange={(e) =>
               update("category", e.target.value as EditorCategory)
             }
-            className={inputCls}
+            className="w-full"
           >
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
 
         <Field
           label="Sprite URL"
-          hint="Paste a URL or upload an image (≤ 5MB, PNG/JPEG/WebP/GIF)"
+          hint="Paste a URL or upload an image (up to 5 MB: PNG, JPEG, WebP or GIF)"
         >
           <input
             type="text"
             value={form.sprite_url}
             onChange={(e) => update("sprite_url", e.target.value)}
             className={inputCls}
+            aria-label="Sprite URL"
             placeholder="https://..."
             spellCheck={false}
           />
           <ImageUploadButton onUpload={(url) => update("sprite_url", url)} />
           {trimmedSprite ? (
-            <div className="mt-2 inline-flex items-center justify-center w-20 h-20 border border-[var(--glass-border)] rounded-md bg-[var(--color-bg)] overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={trimmedSprite}
-                alt="Sprite preview"
-                className="max-w-full max-h-full object-contain"
-              />
-            </div>
+            <ItemTile
+              className="mt-3"
+              icon={trimmedSprite}
+              name={form.display_name.trim() || "Sprite preview"}
+              rarity={form.rarity}
+              size={80}
+            />
           ) : null}
         </Field>
 
         <Field
           label="Description"
-          hint="Shown on the shop listing. ≤ 500 chars."
+          hint="Shown on the shop listing. Up to 500 characters."
           error={errors.description}
         >
           <textarea
@@ -425,38 +413,39 @@ export default function ShopEditor({ mode, rowId, initial }: ShopEditorProps) {
             value={form.description}
             onChange={(e) => update("description", e.target.value)}
             className={`${inputCls} resize-y`}
+            aria-label="Description"
             placeholder="Heavyweight cotton hoodie with the TSI crest..."
           />
           <p
-            className={`mt-1 text-xs ${
+            className={`mt-1.5 text-[13px] font-semibold ${
               descOver
                 ? "text-[var(--gui-danger)]"
                 : descWarn
-                  ? "text-[var(--color-brand-yellow)]"
-                  : "text-[var(--color-text-muted)]"
+                  ? "text-[var(--gui-warn)]"
+                  : "text-[var(--gui-muted)]"
             }`}
           >
             {descriptionLength} / 500 characters
           </p>
         </Field>
 
-        <Field label="Priced in" hint="Merch is always Gems (campus pickup). Everything else can be play coins or Gems." error={errors.currency}>
-          <select value={form.currency} onChange={(e) => update("currency", e.target.value as FormState["currency"])} className={inputCls}>
-            <option value="coins">Play coins</option>
+        <Field label="Priced in" hint="Merch is always Gems (picked up on campus). Everything else can be TC or Gems." error={errors.currency}>
+          <Select value={form.currency} onChange={(e) => update("currency", e.target.value as FormState["currency"])} className="w-full">
+            <option value="coins">TC</option>
             <option value="gems">Gems</option>
-          </select>
+          </Select>
         </Field>
 
         <div className="grid gap-5 md:grid-cols-2">
-          <Field label="Tier" hint="Tools: basic / mid / premium">
-            <select value={form.tier} onChange={(e) => update("tier", e.target.value)} className={inputCls}>
+          <Field label="Tier" hint="Tools: basic, mid or premium">
+            <Select value={form.tier} onChange={(e) => update("tier", e.target.value)} className="w-full">
               {TIERS.map((t) => <option key={t} value={t}>{t || "none"}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label="Equip slot" hint="One equipped item per slot">
-            <select value={form.slot} onChange={(e) => update("slot", e.target.value)} className={inputCls}>
+            <Select value={form.slot} onChange={(e) => update("slot", e.target.value)} className="w-full">
               {SLOTS.map((t) => <option key={t} value={t}>{t || "none"}</option>)}
-            </select>
+            </Select>
           </Field>
         </div>
 
@@ -464,42 +453,42 @@ export default function ShopEditor({ mode, rowId, initial }: ShopEditorProps) {
           <input type="text" value={form.catalogue_ref} onChange={(e) => update("catalogue_ref", e.target.value)} className={inputCls} spellCheck={false} />
         </Field>
 
-        <Toggle label="Daily specials pool" hint="Eligible for the three daily specials (20% off, same for everyone each Toronto day). Coin-priced items only." checked={form.special_pool} onChange={(v) => update("special_pool", v)} />
+        <Toggle label="Daily specials pool" hint="Eligible for the three daily specials (20% off, the same for everyone each Toronto day). TC-priced items only." checked={form.special_pool} onChange={(v) => update("special_pool", v)} />
         <Toggle label="Stackable" hint="Members can own more than one (furniture). Off: one per member." checked={form.stackable} onChange={(v) => update("stackable", v)} />
 
-        <Field label={form.currency === "coins" ? "Coin Price" : "Gem Price"} error={errors.tc_price}>
-          <input
-            type="number"
-            min={0}
-            step={1}
-            value={form.tc_price}
-            onChange={(e) => update("tc_price", e.target.value)}
-            className={inputCls}
-            placeholder="0"
-          />
+        <Field label={form.currency === "coins" ? "Price in TC" : "Price in Gems"} error={errors.tc_price}>
+          <div className="flex items-center gap-2.5">
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={form.tc_price}
+              onChange={(e) => update("tc_price", e.target.value)}
+              className={inputCls}
+              placeholder="0"
+              aria-label={form.currency === "coins" ? "Price in TC" : "Price in Gems"}
+            />
+            <CurrencyIcon currency={form.currency} size={28} />
+          </div>
         </Field>
 
         <Field label="Rarity">
-          <select
+          <Select
             value={form.rarity}
             onChange={(e) => update("rarity", e.target.value as Rarity)}
-            className={inputCls}
+            className="w-full"
           >
             {RARITIES.map((r) => (
-              <option
-                key={r}
-                value={r}
-                style={{ color: rarityOptionColor[r] }}
-              >
+              <option key={r} value={r}>
                 {r}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
 
         <Toggle
           label="Unlimited stock"
-          hint="When on, stock is treated as null (infinite). When off, set an integer count below."
+          hint="On: it never sells out. Off: set how many there are below."
           checked={form.unlimited_stock}
           onChange={(v) => update("unlimited_stock", v)}
         />
@@ -526,8 +515,8 @@ export default function ShopEditor({ mode, rowId, initial }: ShopEditorProps) {
         />
 
         <Field
-          label="Released At"
-          hint="When the item becomes available."
+          label="Released"
+          hint="When the item goes on sale."
           error={errors.released_at}
         >
           <input
@@ -539,8 +528,8 @@ export default function ShopEditor({ mode, rowId, initial }: ShopEditorProps) {
         </Field>
 
         <Field
-          label="Retired At"
-          hint="Leave blank for never-retired."
+          label="Retired"
+          hint="Leave it empty to keep it on sale."
         >
           <input
             type="datetime-local"
@@ -549,38 +538,28 @@ export default function ShopEditor({ mode, rowId, initial }: ShopEditorProps) {
             className={inputCls}
           />
         </Field>
-      </div>
+      </Card>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
+        <Button
+          size="sm"
+          variant={draftId ? "quiet" : "primary"}
           onClick={handleSaveDraft}
           disabled={hasErrors || busy !== null}
-          className={primaryBtnCls}
         >
-          {busy === "save" ? "Saving..." : "Save as draft"}
-        </button>
+          {busy === "save" ? "Saving…" : "Save as draft"}
+        </Button>
 
         {draftId ? (
-          <button
-            type="button"
-            onClick={handlePublish}
-            disabled={busy !== null}
-            className={publishBtnCls}
-          >
-            {busy === "publish" ? "Publishing..." : "Publish"}
-          </button>
+          <Button size="sm" onClick={handlePublish} disabled={busy !== null}>
+            {busy === "publish" ? "Publishing…" : "Publish"}
+          </Button>
         ) : null}
 
         {draftId ? (
-          <button
-            type="button"
-            onClick={handleDiscard}
-            disabled={busy !== null}
-            className={dangerBtnCls}
-          >
-            {busy === "discard" ? "Discarding..." : "Discard draft"}
-          </button>
+          <Button size="sm" variant="danger" onClick={handleDiscard} disabled={busy !== null}>
+            {busy === "discard" ? "Discarding…" : "Discard draft"}
+          </Button>
         ) : null}
       </div>
     </div>
@@ -615,7 +594,7 @@ function validate(
     errors.currency = "Merch is priced in Gems";
   }
   if (form.special_pool && form.currency !== "coins") {
-    errors.currency = "Daily specials are coin-priced items only";
+    errors.currency = "Daily specials are TC-priced items only";
   }
 
   if (form.description.length > 500) {
@@ -628,7 +607,7 @@ function validate(
   } else if (!Number.isInteger(price)) {
     errors.tc_price = "Price must be a whole number";
   } else if (price < 0 || (form.currency === "coins" && price < 1)) {
-    errors.tc_price = form.currency === "coins" ? "Coin price must be at least 1" : "Price must be ≥ 0";
+    errors.tc_price = form.currency === "coins" ? "The TC price must be at least 1" : "Price must be ≥ 0";
   }
 
   if (!form.unlimited_stock) {
@@ -643,105 +622,11 @@ function validate(
   }
 
   if (!form.released_at) {
-    errors.released_at = "Released-at is required";
+    errors.released_at = "Set when it goes on sale";
   } else {
     const iso = fromLocalDatetime(form.released_at);
     if (!iso) errors.released_at = "Invalid timestamp";
   }
 
   return errors;
-}
-
-// ─── Sub-components / classes ───────────────────────────────────────────────
-
-const inputCls =
-  "w-full px-3 py-2 bg-[var(--color-bg)] border border-[var(--glass-border)] rounded-md text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-cyan)] transition-colors";
-
-const primaryBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
-
-const publishBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity";
-
-const dangerBtnCls =
-  "inline-flex items-center gap-2 px-4 py-2 border border-[var(--gui-danger)]/30 text-[var(--gui-danger)] text-xs uppercase tracking-wider rounded-md hover:bg-[var(--gui-danger-soft)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
-
-const rarityOptionColor: Record<Rarity, string> = {
-  common: "#9ca3af",
-  rare: "#60a5fa",
-  epic: "#a78bfa",
-  legendary: "#fb923c",
-};
-
-function Field({
-  label,
-  hint,
-  error,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="block text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
-        {label}
-      </label>
-      {children}
-      {hint && !error ? (
-        <p className="mt-1 text-xs text-[var(--color-text-muted)]/70">
-          {hint}
-        </p>
-      ) : null}
-      {error ? (
-        <p className="mt-1 text-xs text-[var(--gui-danger)]">{error}</p>
-      ) : null}
-    </div>
-  );
-}
-
-function Toggle({
-  label,
-  hint,
-  checked,
-  onChange,
-}: {
-  label: string;
-  hint?: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <div className="flex items-start gap-3">
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border border-[var(--glass-border)] transition-colors ${
-          checked
-            ? "bg-[var(--color-accent-cyan)]"
-            : "bg-[var(--color-bg)]"
-        }`}
-      >
-        <span
-          className={`inline-block h-4 w-4 mt-0.5 transform rounded-full bg-white transition-transform ${
-            checked ? "translate-x-6" : "translate-x-1"
-          }`}
-        />
-      </button>
-      <div className="flex-1">
-        <label className="block text-xs text-[var(--color-text-primary)]">
-          {label}
-        </label>
-        {hint ? (
-          <p className="text-xs text-[var(--color-text-muted)]/70 mt-0.5">
-            {hint}
-          </p>
-        ) : null}
-      </div>
-    </div>
-  );
 }

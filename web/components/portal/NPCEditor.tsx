@@ -10,7 +10,8 @@ import { MAX_STOPS, RESIDENT_ANCHORS, RESIDENT_POSTS, validateResidentDraft, typ
 import { HOME_LANDMARKS, ROUTINE_SPECIAL } from "@/lib/game/residentRoutine";
 import { LANDMARK_INFO, type LandmarkId } from "@/lib/game/defaultIsland";
 import { ISLAND_PHASES } from "@/lib/game/islandTime";
-import { DraftBar, Field, inputCls, Toggle, useDraftFlow } from "./ProgressionAdminShared";
+import { Button, Card, IconButton, Select } from "@/components/gui";
+import { backLinkCls, buttonLinkCls, DraftBar, Field, FixList, inputCls, Toggle, useDraftFlow } from "./ProgressionAdminShared";
 
 // ─── NPCEditor (Residents) ──────────────────────────────────────────────────
 // Shared form component used by both /new and /[id]/edit. Renders all NPC
@@ -174,30 +175,25 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
   const promptWarn = !promptOver && promptLength > 1800;
 
   return (
-    <div>
-      <div className="mb-2">
-        <Link
-          href={BACK}
-          className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-        >
-          <ArrowLeft size={12} />
-          Back to Residents
-        </Link>
-      </div>
+    <div className="mx-auto w-full max-w-3xl">
+      <Link href={BACK} className={backLinkCls}>
+        <ArrowLeft size={16} aria-hidden />
+        Back to residents
+      </Link>
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
+      <div className="mt-2 mb-6">
+        <h1 className="text-2xl font-extrabold text-[var(--gui-ink-strong)]">
           {mode === "new" ? "New resident" : `Edit: ${initial?.display_name ?? "Resident"}`}
         </h1>
-        <p className="text-sm text-[var(--color-text-muted)] mt-1">
+        <p className="text-sm text-[var(--gui-muted)] mt-1">
           Drafts stay invisible to members until published.
         </p>
       </div>
 
-      <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6 space-y-5">
+      <Card className="space-y-5" style={{ padding: "clamp(16px, 4vw, 24px)" }}>
         <Field
           label="Slug"
-          hint="kebab-case identifier, e.g. wise-shopkeeper"
+          hint="Lowercase letters, numbers and dashes, e.g. wise-shopkeeper"
         >
           <input
             type="text"
@@ -209,7 +205,7 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
           />
         </Field>
 
-        <Field label="Display Name">
+        <Field label="Display name">
           <input
             type="text"
             value={form.display_name}
@@ -220,16 +216,16 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
         </Field>
 
         <div className="grid gap-5 md:grid-cols-2">
-          <Field label="Post" hint="The service post they staff (row 122), or a flavour villager">
-            <select value={form.post} onChange={(e) => update("post", e.target.value)} className={inputCls}>
-              <option value="">(none)</option>
+          <Field label="Post" hint="The service post they staff, or a flavour villager">
+            <Select value={form.post} onChange={(e) => update("post", e.target.value)} className="w-full">
+              <option value="">None</option>
               {RESIDENT_POSTS.map((p) => (
                 <option key={p} value={p}>{POST_LABELS[p]}</option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field label="Tone" hint="How they talk: warm, dry, playful, earnest…">
-            <input type="text" list="resident-tones" value={form.tone} onChange={(e) => update("tone", e.target.value)} className={inputCls} placeholder="warm" />
+            <input type="text" list="resident-tones" aria-label="Tone" value={form.tone} onChange={(e) => update("tone", e.target.value)} className={inputCls} placeholder="warm" />
             <datalist id="resident-tones">
               {["warm", "dry", "playful", "earnest"].map((t) => <option key={t} value={t} />)}
             </datalist>
@@ -240,8 +236,8 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
           <textarea rows={3} value={form.bio} onChange={(e) => update("bio", e.target.value)} className={`${inputCls} resize-y`} maxLength={1000} />
         </Field>
 
-        <Field label="Home" hint="The building they go into at night (their door). Empty = by post (the shop for the shopkeeper; the clubhouse otherwise).">
-          <select
+        <Field label="Home" hint="The building they go into at night (their door). Empty = by post: the shop for the shopkeeper, HQ for everyone else.">
+          <Select
             value={form.schedule.home ?? ""}
             onChange={(e) => {
               const next = { ...form.schedule };
@@ -249,11 +245,11 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
               else delete next.home;
               update("schedule", next);
             }}
-            className={inputCls}
+            className="w-full"
           >
-            <option value="">(by post)</option>
+            <option value="">By post</option>
             {HOME_LANDMARKS.map((id) => <option key={id} value={id}>{LANDMARK_INFO[id].label}</option>)}
-          </select>
+          </Select>
         </Field>
 
         <Field label="Routine" hint="Per part of the day, the places they walk between in turn, stopping a while at each. One place = they mill about it. Empty = the day's routine (night: home).">
@@ -268,20 +264,23 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
                 update("schedule", next);
               };
               return (
-                <div key={phase} className="block">
-                  <span className="block text-xs uppercase text-[var(--color-text-muted)] mb-1">{phase}</span>
+                <div key={phase} className="rounded-2xl bg-[var(--gui-paper-warm)] p-3">
+                  <span className="block mb-2 text-sm font-extrabold capitalize text-[var(--gui-ink-strong)]">{phase}</span>
                   {stops.map((stop, i) => (
-                    <div key={i} className="flex gap-1 mb-1">
-                      <select value={stop} onChange={(e) => set(stops.map((s, j) => (j === i ? (e.target.value as ResidentStop) : s)))} className={inputCls} aria-label={`${phase} stop ${i + 1}`}>
+                    <div key={i} className="flex items-center gap-2 mb-2">
+                      <Select value={stop} onChange={(e) => set(stops.map((s, j) => (j === i ? (e.target.value as ResidentStop) : s)))} className="w-full min-w-0" aria-label={`${phase} stop ${i + 1}`}>
                         {STOP_OPTIONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-                      </select>
-                      <button type="button" onClick={() => set(stops.filter((_, j) => j !== i))} className="px-2 text-[var(--color-text-muted)]" aria-label={`Remove ${phase} stop ${i + 1}`}><Trash2 size={14} /></button>
+                      </Select>
+                      <IconButton label={`Remove ${phase} stop ${i + 1}`} size="sm" onClick={() => set(stops.filter((_, j) => j !== i))}><Trash2 size={16} aria-hidden /></IconButton>
                     </div>
                   ))}
+                  {stops.length === 0 && (
+                    <p className="mb-2 text-[13px] text-[var(--gui-muted)]">{phase === "night" ? "Nothing set: they go home." : "Nothing set: the day's routine."}</p>
+                  )}
                   {stops.length < MAX_STOPS && (
-                    <button type="button" onClick={() => set([...stops, phase === "night" ? "home" : "plaza"])} className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
-                      <Plus size={12} /> {stops.length ? "Add a stop" : phase === "night" ? "(home) Add a stop" : "(day routine) Add a stop"}
-                    </button>
+                    <Button size="sm" variant="quiet" onClick={() => set([...stops, phase === "night" ? "home" : "plaza"])}>
+                      <Plus size={16} aria-hidden /> Add a stop
+                    </Button>
                   )}
                 </div>
               );
@@ -289,18 +288,18 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
           </div>
         </Field>
 
-        <Field label="Spawn Zone" hint="Legacy portal world only; the member island uses the schedule.">
-          <select
+        <Field label="Spawn zone" hint="Legacy portal world only; the member island uses the schedule.">
+          <Select
             value={form.spawn_zone}
             onChange={(e) => update("spawn_zone", e.target.value as SpawnZone)}
-            className={inputCls}
+            className="w-full"
           >
             {SPAWN_ZONES.map((z) => (
               <option key={z} value={z}>
                 {z}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
 
         <Toggle
@@ -311,23 +310,24 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
         />
 
         <Field
-          label="Persona Prompt"
-          hint="LLM system prompt for the NPC's voice and behavior. Used when LLM-NPC ships."
+          label="Persona prompt"
+          hint="LLM system prompt for the NPC's voice and behaviour. Used when LLM NPCs ship."
         >
           <textarea
             rows={6}
             value={form.persona_prompt}
             onChange={(e) => update("persona_prompt", e.target.value)}
             className={`${inputCls} resize-y`}
+            aria-label="Persona prompt"
             placeholder="You are Marigold, the cheerful merchant of the courtyard..."
           />
           <p
-            className={`mt-1 text-xs ${
+            className={`mt-1.5 text-[13px] font-semibold ${
               promptOver
                 ? "text-[var(--gui-danger)]"
                 : promptWarn
-                  ? "text-[var(--color-brand-yellow)]"
-                  : "text-[var(--color-text-muted)]"
+                  ? "text-[var(--gui-warn)]"
+                  : "text-[var(--gui-muted)]"
             }`}
           >
             {promptLength} / 2000 characters
@@ -336,44 +336,37 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
 
         <Field
           label="Dialogue lines"
-          hint="What they say in their speech bubble when you pass by. ≤ 200 chars per line."
+          hint="What they say in their speech bubble when you pass by. Up to 200 characters a line."
         >
           <div className="space-y-2">
             {form.canned_dialogue.map((line, idx) => (
-              <div key={idx} className="flex gap-2 items-start">
+              <div key={idx} className="flex gap-2 items-center">
                 <input
                   type="text"
                   value={line}
                   onChange={(e) => handleEditLine(idx, e.target.value)}
                   className={`${inputCls} flex-1`}
+                  aria-label={`Dialogue line ${idx + 1}`}
                   placeholder="Welcome, traveler!"
                 />
-                <button
-                  type="button"
-                  onClick={() => handleRemoveLine(idx)}
-                  className="px-2 py-2 text-[var(--color-text-muted)] hover:text-[var(--gui-danger)] transition-colors"
-                  aria-label="Remove line"
-                >
-                  <Trash2 size={14} />
-                </button>
+                <IconButton label={`Remove line ${idx + 1}`} size="sm" onClick={() => handleRemoveLine(idx)}>
+                  <Trash2 size={16} aria-hidden />
+                </IconButton>
               </div>
             ))}
-            <button
-              type="button"
-              onClick={handleAddLine}
-              className="inline-flex items-center gap-1 text-xs text-[var(--color-accent-cyan)] hover:underline"
-            >
-              <Plus size={12} /> Add line
-            </button>
+            <Button size="sm" variant="quiet" onClick={handleAddLine}>
+              <Plus size={16} aria-hidden /> Add a line
+            </Button>
           </div>
         </Field>
 
-        <Field label="Sprite URL" hint="Paste a URL or upload an image (≤ 5MB, PNG/JPEG/WebP/GIF)">
+        <Field label="Sprite URL" hint="Paste a URL or upload an image (up to 5 MB: PNG, JPEG, WebP or GIF)">
           <input
             type="text"
             value={form.sprite_url}
             onChange={(e) => update("sprite_url", e.target.value)}
             className={inputCls}
+            aria-label="Sprite URL"
             placeholder="https://..."
             spellCheck={false}
           />
@@ -386,18 +379,20 @@ export default function NPCEditor({ mode, rowId, initial }: NPCEditorProps) {
           checked={form.active}
           onChange={(v) => update("active", v)}
         />
-      </div>
+      </Card>
 
-      {errors.length ? <ul className="mt-4 text-xs text-[var(--gui-danger)] list-disc pl-4">{errors.map((e) => <li key={e}>{e}</li>)}</ul> : null}
+      <FixList errors={errors} className="mt-4" />
       <DraftBar flow={flow} canSave={errors.length === 0} onSave={() => flow.save(draft)} />
       {flow.draftId ? (
         <a
           href={`/student/dashboard?preview=draft-${flow.draftId}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 inline-flex items-center gap-2 px-4 py-2 border border-[var(--glass-border)] text-[var(--color-text-primary)] text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] transition-colors"
+          className={`mt-3 ${buttonLinkCls}`}
+          data-variant="quiet"
+          data-size="sm"
         >
-          <ExternalLink size={12} /> Preview
+          <ExternalLink size={16} aria-hidden /> Preview the draft
         </a>
       ) : null}
     </div>

@@ -8,7 +8,8 @@ import { validateGoalDraft } from "@/lib/progression/goals";
 import { DECOR_SETS } from "@/lib/progression/seasonal";
 import { torontoInstant, torontoParts } from "@/lib/time";
 import { DELIVERY_KINDS, type ClubGoal, type DeliveryKind, type GoalType, type WeightKey } from "@/lib/progression/types";
-import { DraftBar, Field, inputCls, listToText, textToList, Toggle, useDraftFlow } from "./ProgressionAdminShared";
+import { Card, Select } from "@/components/gui";
+import { backLinkCls, DraftBar, Field, FixList, inputCls, listToText, textToList, Toggle, useDraftFlow } from "./ProgressionAdminShared";
 
 // ─── ClubGoalEditor ─────────────────────────────────────────────────────────
 // Server-wide goal: type (story one-time / seasonal yearly), target, weights
@@ -21,7 +22,7 @@ import { DraftBar, Field, inputCls, listToText, textToList, Toggle, useDraftFlow
 const GOALS = "/student/dashboard/admin/content/goals";
 export const SEASONAL = "/student/dashboard/admin/content/seasonal";
 const WEIGHT_LABELS: Record<WeightKey, string> = {
-  coins: "Coin (per 1)",
+  coins: "TC (per 1)",
   material: "Material (per item)",
   specimen: "Specimen (per item)",
   event: "Event QR check-in",
@@ -39,7 +40,7 @@ const fromLocalInput = (v: string) => (v ? torontoInstant(v.slice(0, 10), Number
 
 export default function ClubGoalEditor({ mode, initial, seasonal = false }: { mode: "new" | "edit"; initial?: Partial<ClubGoal> | null; seasonal?: boolean }) {
   const BACK = seasonal ? SEASONAL : GOALS;
-  const noun = seasonal ? "Seasonal Event" : "Club Goal";
+  const noun = seasonal ? "Seasonal event" : "Club goal";
   const [form, setForm] = useState(() => ({
     slug: initial?.slug ?? "",
     title: initial?.title ?? "",
@@ -99,31 +100,31 @@ export default function ClubGoalEditor({ mode, initial, seasonal = false }: { mo
   const checkinsToFill = w.event > 0 ? Math.ceil(form.target_points / w.event) : null;
 
   return (
-    <div>
-      <Link href={BACK} className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] mb-2">
-        <ArrowLeft size={12} /> Back to {seasonal ? "Seasonal Events" : "Club Goals"}
+    <div className="mx-auto w-full max-w-3xl">
+      <Link href={BACK} className={backLinkCls}>
+        <ArrowLeft size={16} aria-hidden /> Back to {seasonal ? "seasonal events" : "club goals"}
       </Link>
-      <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">{mode === "new" ? `New ${noun}` : `Edit: ${initial?.title ?? noun}`}</h1>
-      <p className="text-sm text-[var(--color-text-muted)] mt-1 mb-6">Default size: about two weeks for 20–30 active members (~30 check-ins or ~15,000 coins).</p>
+      <h1 className="mt-2 text-2xl font-extrabold text-[var(--gui-ink-strong)]">{mode === "new" ? `New ${noun.toLowerCase()}` : `Edit: ${initial?.title ?? noun}`}</h1>
+      <p className="text-sm text-[var(--gui-muted)] mt-1 mb-6">Default size: about two weeks for 20–30 active members (~30 check-ins or ~15,000 TC).</p>
 
-      <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6 space-y-5">
+      <Card className="space-y-5" style={{ padding: "clamp(16px, 4vw, 24px)" }}>
         <div className="grid gap-5 md:grid-cols-[1fr_1fr_120px]">
           <Field label="Slug"><input className={inputCls} value={form.slug} onChange={(e) => set("slug", e.target.value)} spellCheck={false} /></Field>
           <Field label="Type" hint="Story: one-time. Seasonal: repeats yearly.">
-            <select className={inputCls} value={form.goal_type} disabled={seasonal} onChange={(e) => set("goal_type", e.target.value as GoalType)}>
+            <Select className="w-full disabled:opacity-60" value={form.goal_type} disabled={seasonal} onChange={(e) => set("goal_type", e.target.value as GoalType)}>
               <option value="story">Story (one-time)</option>
               <option value="seasonal">Seasonal (yearly)</option>
-            </select>
+            </Select>
           </Field>
           <Field label="Order" hint="Story goals run in this order"><input className={inputCls} type="number" value={form.position} onChange={(e) => set("position", Number(e.target.value))} /></Field>
         </div>
         <Field label="Title"><input className={inputCls} value={form.title} maxLength={80} onChange={(e) => set("title", e.target.value)} /></Field>
         <Field label="Summary"><textarea className={`${inputCls} min-h-[70px]`} value={form.summary} maxLength={500} onChange={(e) => set("summary", e.target.value)} /></Field>
-        <Field label="Target (points)" hint={checkinsToFill ? `≈ ${checkinsToFill} event check-ins or ${Math.ceil(form.target_points / Math.max(w.coins, 0.001)).toLocaleString()} coins` : undefined}>
+        <Field label="Target (points)" hint={checkinsToFill ? `≈ ${checkinsToFill} event check-ins or ${Math.ceil(form.target_points / Math.max(w.coins, 0.001)).toLocaleString()} TC` : undefined}>
           <input className={inputCls} type="number" min={1} value={form.target_points} onChange={(e) => set("target_points", Number(e.target.value))} />
         </Field>
         <fieldset>
-          <legend className="block text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">Weights (points per unit)</legend>
+          <legend className="block mb-1.5 text-[15px] font-extrabold text-[var(--gui-ink-strong)]">Weights (points per unit)</legend>
           <div className="grid gap-3 md:grid-cols-3">
             {(Object.keys(WEIGHT_LABELS) as WeightKey[]).map((k) => (
               <Field key={k} label={WEIGHT_LABELS[k]}>
@@ -141,11 +142,11 @@ export default function ClubGoalEditor({ mode, initial, seasonal = false }: { mo
           </Field>
         </div>
         <Field label="Accepts deliveries of">
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
             {DELIVERY_KINDS.map((k) => (
-              <label key={k} className="flex items-center gap-2 text-xs text-[var(--color-text-primary)]">
-                <input type="checkbox" checked={form.accepts.includes(k)} onChange={(e) => set("accepts", e.target.checked ? [...form.accepts, k] : form.accepts.filter((x) => x !== k))} />
-                {k}
+              <label key={k} className="flex items-center gap-2 min-h-[32px] text-sm font-bold text-[var(--gui-ink)] cursor-pointer">
+                <input type="checkbox" className="h-[18px] w-[18px] accent-[var(--gui-sage)] cursor-pointer" checked={form.accepts.includes(k)} onChange={(e) => set("accepts", e.target.checked ? [...form.accepts, k] : form.accepts.filter((x) => x !== k))} />
+                {k === "coins" ? "TC" : k}
               </label>
             ))}
           </div>
@@ -169,14 +170,14 @@ export default function ClubGoalEditor({ mode, initial, seasonal = false }: { mo
           <textarea className={`${inputCls} min-h-[90px]`} value={form.completion_letter_body} maxLength={2000} onChange={(e) => set("completion_letter_body", e.target.value)} />
         </Field>
         {form.goal_type === "seasonal" ? (
-          <fieldset className="space-y-4 border-t border-[var(--glass-border)] pt-5">
-            <legend className="block text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">Event (while the window is open)</legend>
-            <div className="grid gap-5 md:grid-cols-2">
+          <fieldset className="space-y-4 border-t-2 border-dashed border-[var(--gui-paper-edge)] pt-5">
+            <legend className="float-left w-full mb-1.5 text-[15px] font-extrabold text-[var(--gui-ink-strong)]">Event (while the window is open)</legend>
+            <div className="clear-both grid gap-5 md:grid-cols-2">
               <Field label="Decorations" hint="What goes up around the plaza for the window">
-                <select className={inputCls} value={form.decor} onChange={(e) => set("decor", e.target.value)}>
+                <Select className="w-full" value={form.decor} onChange={(e) => set("decor", e.target.value)}>
                   <option value="">None</option>
                   {Object.entries(DECOR_SETS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-                </select>
+                </Select>
               </Field>
               <Toggle label="Fishing tourney" hint="Catches during the window go on the tourney board; top half shown by name, the rest only see their own place." checked={form.tourney} onChange={(v) => set("tourney", v)} />
             </div>
@@ -192,8 +193,8 @@ export default function ClubGoalEditor({ mode, initial, seasonal = false }: { mo
           </fieldset>
         ) : null}
         <Toggle label="Active" hint="Inactive goals are hidden and take no contributions." checked={form.active} onChange={(v) => set("active", v)} />
-        {errors.length ? <ul className="text-xs text-[var(--gui-danger)] list-disc pl-4">{errors.map((e) => <li key={e}>{e}</li>)}</ul> : null}
-      </div>
+        <FixList errors={errors} />
+      </Card>
       <DraftBar flow={flow} canSave={errors.length === 0} onSave={() => flow.save(draft)} />
     </div>
   );

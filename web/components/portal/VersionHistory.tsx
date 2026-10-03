@@ -6,12 +6,15 @@
 // who/when, allows expanding the snapshot, and creates a new draft from any
 // historical snapshot (rollback flow).
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ChevronDown, ChevronRight, RotateCcw } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronRight, History, RotateCcw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { CONTENT_ROUTES, type VersionedTable } from "@/lib/content/types";
+import { Amount } from "@/components/economy/Amount";
+import { Button, Card, Empty, ErrorNote, Loading, Sheet } from "@/components/gui";
+import { AdminMessage, backLinkCls } from "./ProgressionAdminShared";
 
 type TableName = VersionedTable;
 
@@ -142,52 +145,34 @@ export default function VersionHistory({
   };
 
   return (
-    <div>
-      <div className="mb-2">
-        <Link
-          href={`${CONTENT_ROUTES[tableName]}/${rowId}/edit`}
-          className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-        >
-          <ArrowLeft size={12} />
-          Back to editor
-        </Link>
-      </div>
+    <div className="mx-auto w-full max-w-3xl">
+      <Link href={`${CONTENT_ROUTES[tableName]}/${rowId}/edit`} className={backLinkCls}>
+        <ArrowLeft size={16} aria-hidden />
+        Back to the editor
+      </Link>
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
-          Version History — {displayName}
+      <div className="mt-2 mb-6">
+        <h1 className="text-2xl font-extrabold text-[var(--gui-ink-strong)]">
+          Version history: {displayName}
         </h1>
-        <p className="text-sm text-[var(--color-text-muted)] mt-1">
-          Last 10 published versions. Restore to create a new draft from any
-          snapshot.
+        <p className="text-sm text-[var(--gui-muted)] mt-1">
+          The last 10 published versions. Restoring one makes a new draft from
+          it, for you to check before you publish.
         </p>
       </div>
 
-      {message ? (
-        <div
-          className={`mb-4 p-3 rounded-md text-xs border ${
-            message.kind === "ok"
-              ? "bg-[var(--gui-success-soft)] border-[var(--gui-success)]/30 text-[var(--gui-success)]"
-              : "bg-[var(--gui-danger-soft)] border-[var(--gui-danger)]/30 text-[var(--gui-danger)]"
-          }`}
-        >
-          {message.text}
-        </div>
-      ) : null}
+      <AdminMessage message={message} className="mb-4" />
 
-      {error ? (
-        <p className="text-sm text-[var(--gui-danger)] mb-4">{error}</p>
-      ) : null}
+      {error ? <ErrorNote className="mb-4">{error}</ErrorNote> : null}
 
       {versions === null ? (
-        <p className="text-center py-8 text-sm text-[var(--color-text-muted)] animate-pulse">
-          Loading versions...
-        </p>
+        <Loading label="Loading the version history…" />
       ) : versions.length === 0 ? (
-        <p className="text-center py-8 text-sm text-[var(--color-text-muted)]">
-          No version history yet. Snapshots are created when a draft is
-          published over this row.
-        </p>
+        error ? null : (
+          <Empty icon={<History size={32} />} title="No versions yet">
+            A version is kept here each time a draft is published over this one.
+          </Empty>
+        )
       ) : (
         <ol className="space-y-3">
           {versions.map((v) => {
@@ -196,78 +181,87 @@ export default function VersionHistory({
               ? (authors[v.published_by] ?? "unknown")
               : "unknown";
             return (
-              <li
-                key={v.id}
-                className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4"
-              >
+              <Card as="li" key={v.id}>
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div>
-                    <p className="text-sm text-[var(--color-text-primary)]">
+                    <p className="text-[15px] font-extrabold text-[var(--gui-ink-strong)]">
                       {formatRelative(v.published_at)}
                     </p>
-                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                      {new Date(v.published_at).toLocaleString()} · by{" "}
-                      <span className="text-[var(--color-text-soft)]">
+                    <p className="text-[13px] text-[var(--gui-muted)] mt-0.5">
+                      {formatWhen(v.published_at)} · by{" "}
+                      <span className="font-bold text-[var(--gui-ink-2)]">
                         {author}
                       </span>
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="quiet"
                       onClick={() => toggleExpand(v.id)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 border border-[var(--glass-border)] text-[var(--color-text-primary)] text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] transition-colors"
+                      aria-expanded={isOpen}
                     >
                       {isOpen ? (
-                        <ChevronDown size={12} />
+                        <ChevronDown size={16} aria-hidden />
                       ) : (
-                        <ChevronRight size={12} />
+                        <ChevronRight size={16} aria-hidden />
                       )}
                       {isOpen ? "Hide" : "Show"} snapshot
-                    </button>
-                    <button
-                      type="button"
+                    </Button>
+                    <Button
+                      size="sm"
                       onClick={() => setConfirmingId(v.id)}
                       disabled={restoring}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
                     >
-                      <RotateCcw size={12} /> Restore this version
-                    </button>
+                      <RotateCcw size={16} aria-hidden /> Restore this version
+                    </Button>
                   </div>
                 </div>
 
                 {isOpen ? (
-                  <div className="mt-3 pt-3 border-t border-[var(--glass-border)]/40">
+                  <div className="mt-3 pt-3 border-t-2 border-dashed border-[var(--gui-paper-edge)]">
                     <SnapshotView
                       tableName={tableName}
                       data={v.snapshot_data}
                     />
                   </div>
                 ) : null}
-              </li>
+              </Card>
             );
           })}
         </ol>
       )}
 
-      {confirmingId ? (
-        <ConfirmModal
-          versionPublishedAt={
-            versions?.find((v) => v.id === confirmingId)?.published_at ?? ""
-          }
-          busy={restoring}
-          onCancel={() => setConfirmingId(null)}
-          onConfirm={() => {
-            const v = versions?.find((x) => x.id === confirmingId);
-            if (v) handleRestore(v);
-          }}
-        />
-      ) : null}
+      <ConfirmModal
+        open={confirmingId !== null}
+        versionPublishedAt={
+          versions?.find((v) => v.id === confirmingId)?.published_at ?? ""
+        }
+        busy={restoring}
+        onCancel={() => setConfirmingId(null)}
+        onConfirm={() => {
+          const v = versions?.find((x) => x.id === confirmingId);
+          if (v) handleRestore(v);
+        }}
+      />
     </div>
   );
 }
 
 // ─── SnapshotView ────────────────────────────────────────────────────────────
+
+/** The seven original colours always; the island tints when the snapshot has them (older ones don't). */
+const PALETTE_KEYS = [
+  "sky",
+  "grass",
+  "accent",
+  "fog",
+  "water",
+  "building_primary",
+  "building_accent",
+  "island_grass",
+  "leaf",
+];
 
 function SnapshotView({
   tableName,
@@ -278,47 +272,29 @@ function SnapshotView({
 }) {
   if (tableName === "seasonal_palettes") {
     const palette = (data.palette ?? {}) as Record<string, string>;
-    const swatchKeys = [
-      "sky",
-      "grass",
-      "accent",
-      "fog",
-      "water",
-      "building_primary",
-      "building_accent",
-    ];
     return (
-      <div className="space-y-3">
-        <KV label="display_name" value={String(data.display_name ?? "—")} />
-        <KV label="slug" value={String(data.slug ?? "—")} />
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
-            palette
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {swatchKeys.map((k) => (
+      <dl className="space-y-2">
+        <KV label="Display name" value={plain(data.display_name)} />
+        <KV label="Slug" value={plain(data.slug)} />
+        <KV label="Palette">
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
+            {PALETTE_KEYS.filter((k, i) => i < 7 || k in palette).map((k) => (
               <div key={k} className="flex items-center gap-2">
                 <span
-                  className="inline-block w-6 h-6 rounded border border-[var(--glass-border)]"
+                  className="inline-block w-7 h-7 rounded-lg border-2 border-[var(--gui-paper-line)]"
                   style={{ backgroundColor: palette[k] ?? "#000" }}
                 />
-                <span className="text-xs text-[var(--color-text-muted)]">
-                  {k}: {palette[k] ?? "—"}
+                <span className="text-[13px] text-[var(--gui-ink-2)]">
+                  {humanize(k)}: {palette[k] ?? "—"}
                 </span>
               </div>
             ))}
           </div>
-        </div>
-        <KV label="active" value={String(data.active ?? false)} />
-        <KV
-          label="scheduled_start"
-          value={data.scheduled_start ? String(data.scheduled_start) : "—"}
-        />
-        <KV
-          label="scheduled_end"
-          value={data.scheduled_end ? String(data.scheduled_end) : "—"}
-        />
-      </div>
+        </KV>
+        <KV label="Active" value={plain(data.active ?? false)} />
+        <KV label="Starts" value={plain(data.scheduled_start)} />
+        <KV label="Ends" value={plain(data.scheduled_end)} />
+      </dl>
     );
   }
 
@@ -327,117 +303,105 @@ function SnapshotView({
       ? (data.canned_dialogue as unknown[]).map(String)
       : [];
     return (
-      <div className="space-y-2">
-        <KV label="slug" value={String(data.slug ?? "—")} />
-        <KV label="display_name" value={String(data.display_name ?? "—")} />
-        <KV label="post" value={String(data.post ?? "—")} />
-        <KV label="tone" value={String(data.tone ?? "—")} />
-        <KV label="schedule" value={JSON.stringify(data.schedule ?? {})} />
-        <KV label="bio" value={data.bio ? String(data.bio) : "—"} multiline />
-        <KV label="spawn_zone" value={String(data.spawn_zone ?? "—")} />
-        <KV label="is_permanent" value={String(data.is_permanent ?? false)} />
-        <KV label="active" value={String(data.active ?? false)} />
-        <KV
-          label="sprite_url"
-          value={data.sprite_url ? String(data.sprite_url) : "—"}
-        />
-        <KV
-          label="persona_prompt"
-          value={data.persona_prompt ? String(data.persona_prompt) : "—"}
-          multiline
-        />
-        <div>
-          <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1">
-            canned_dialogue ({dialogue.length})
-          </p>
+      <dl className="space-y-2">
+        <KV label="Slug" value={plain(data.slug)} />
+        <KV label="Display name" value={plain(data.display_name)} />
+        <KV label="Post" value={plain(data.post)} />
+        <KV label="Tone" value={plain(data.tone)} />
+        <KV label="Schedule" value={plain(data.schedule ?? {})} />
+        <KV label="Bio" value={plain(data.bio)} multiline />
+        <KV label="Spawn zone" value={plain(data.spawn_zone)} />
+        <KV label="Permanent" value={plain(data.is_permanent ?? false)} />
+        <KV label="Active" value={plain(data.active ?? false)} />
+        <KV label="Sprite URL" value={plain(data.sprite_url)} />
+        <KV label="Persona prompt" value={plain(data.persona_prompt)} multiline />
+        <KV label={`Dialogue lines (${dialogue.length})`} multiline>
           {dialogue.length === 0 ? (
-            <p className="text-xs text-[var(--color-text-muted)]/60">
-              —
-            </p>
+            "—"
           ) : (
             <ul className="space-y-1">
               {dialogue.map((line, i) => (
                 <li
                   key={i}
-                  className="text-xs text-[var(--color-text-soft)] pl-2 border-l border-[var(--glass-border)]"
+                  className="pl-2.5 border-l-2 border-[var(--gui-paper-line)]"
                 >
                   {line}
                 </li>
               ))}
             </ul>
           )}
-        </div>
-      </div>
+        </KV>
+      </dl>
     );
   }
 
   if (tableName === "shop_items") {
     return (
-      <div className="space-y-2">
-        <KV label="slug" value={String(data.slug ?? "—")} />
-        <KV label="display_name" value={String(data.display_name ?? "—")} />
-        <KV label="category" value={String(data.category ?? "—")} />
-        <KV label="rarity" value={String(data.rarity ?? "—")} />
-        <KV label="tc_price" value={String(data.tc_price ?? "—")} />
+      <dl className="space-y-2">
+        <KV label="Slug" value={plain(data.slug)} />
+        <KV label="Display name" value={plain(data.display_name)} />
+        <KV label="Category" value={plain(data.category)} />
+        <KV label="Rarity" value={plain(data.rarity)} />
+        {typeof data.price_coins === "number" ? (
+          <KV label="Price (TC)"><Amount n={data.price_coins} currency="coins" /></KV>
+        ) : (
+          <KV label="Price (Gems)">
+            {typeof data.tc_price === "number" ? <Amount n={data.tc_price} currency="gems" /> : plain(data.tc_price)}
+          </KV>
+        )}
         <KV
-          label="stock"
-          value={data.stock === null ? "unlimited" : String(data.stock ?? "—")}
+          label="Stock"
+          value={data.stock === null ? "Unlimited" : plain(data.stock)}
         />
-        <KV label="active" value={String(data.active ?? false)} />
-        <KV
-          label="sprite_url"
-          value={data.sprite_url ? String(data.sprite_url) : "—"}
-        />
-        <KV
-          label="description"
-          value={data.description ? String(data.description) : "—"}
-          multiline
-        />
-        <KV
-          label="released_at"
-          value={data.released_at ? String(data.released_at) : "—"}
-        />
-        <KV
-          label="retired_at"
-          value={data.retired_at ? String(data.retired_at) : "—"}
-        />
-      </div>
+        <KV label="Active" value={plain(data.active ?? false)} />
+        <KV label="Sprite URL" value={plain(data.sprite_url)} />
+        <KV label="Description" value={plain(data.description)} multiline />
+        <KV label="Released" value={plain(data.released_at)} />
+        <KV label="Retired" value={plain(data.retired_at)} />
+      </dl>
     );
   }
 
-  // Fallback: raw JSON
+  // Everything else: every column, in plain words.
   return (
-    <pre className="text-xs text-[var(--color-text-soft)] whitespace-pre-wrap break-all">
-      {JSON.stringify(data, null, 2)}
-    </pre>
+    <dl className="space-y-2">
+      {Object.entries(data).map(([key, v]) => {
+        const amount = typeof v === "number" ? (GEM_COLUMN.test(key) ? "gems" : COIN_COLUMN.test(key) ? "coins" : null) : null;
+        const text = amount ? "" : plain(v);
+        return (
+          <KV key={key} label={humanize(key)} value={text} multiline={!amount && text.length > 80}>
+            {amount ? <Amount n={v as number} currency={amount} /> : undefined}
+          </KV>
+        );
+      })}
+    </dl>
   );
 }
 
+/** A labelled value in a snapshot; `children` for a value that isn't plain text. */
 function KV({
   label,
   value,
   multiline,
+  children,
 }: {
   label: string;
-  value: string;
+  value?: string;
   multiline?: boolean;
+  children?: ReactNode;
 }) {
   return (
-    <div className={multiline ? "" : "flex items-start gap-3"}>
-      <p
-        className={`text-xs uppercase tracking-wider text-[var(--color-text-muted)] ${
-          multiline ? "mb-1" : "min-w-[8rem] pt-0.5"
-        }`}
-      >
+    <div className={multiline ? "" : "grid gap-x-4 gap-y-0.5 sm:grid-cols-[10rem_minmax(0,1fr)]"}>
+      <dt className={`text-[13px] font-extrabold text-[var(--gui-ink-2)] ${multiline ? "mb-1" : "pt-px"}`}>
         {label}
-      </p>
-      <p
-        className={`text-xs text-[var(--color-text-soft)] ${
-          multiline ? "whitespace-pre-wrap" : "flex-1 break-all"
+      </dt>
+      <dd
+        className={`text-sm text-[var(--gui-ink)] ${
+          multiline ? "whitespace-pre-wrap" : "break-words min-w-0"
         }`}
       >
-        {value}
-      </p>
+        {children ?? value}
+      </dd>
     </div>
   );
 }
@@ -445,56 +409,86 @@ function KV({
 // ─── ConfirmModal ────────────────────────────────────────────────────────────
 
 function ConfirmModal({
+  open,
   versionPublishedAt,
   busy,
   onCancel,
   onConfirm,
 }: {
+  open: boolean;
   versionPublishedAt: string;
   busy: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
   return (
-    <div
-      className="fixed inset-0 bg-[var(--gui-scrim)] flex items-center justify-center z-50 p-4"
-      onClick={busy ? undefined : onCancel}
-    >
-      <div
-        className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6 max-w-md w-full"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-lg font-heading font-bold text-[var(--color-text-primary)] mb-2">
-          Restore this version?
-        </h2>
-        <p className="text-sm text-[var(--color-text-muted)] mb-5">
-          Restore to version published {formatRelative(versionPublishedAt)}?
-          This will create a new draft you can review before publishing.
-        </p>
-        <div className="flex gap-3 justify-end">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={busy}
-            className="px-4 py-2 border border-[var(--glass-border)] text-[var(--color-text-primary)] text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] disabled:opacity-40 transition-colors"
-          >
+    <Sheet
+      open={open}
+      onClose={busy ? () => {} : onCancel}
+      title="Restore this version?"
+      icon={<RotateCcw size={20} />}
+      size="sm"
+      footer={
+        <>
+          <Button size="sm" variant="quiet" onClick={onCancel} disabled={busy}>
             Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={busy}
-            className="px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] text-xs uppercase tracking-wider rounded-md hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
-          >
-            {busy ? "Restoring..." : "Restore"}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+          <Button size="sm" onClick={onConfirm} disabled={busy}>
+            {busy ? "Restoring…" : "Restore"}
+          </Button>
+        </>
+      }
+    >
+      {open ? (
+        <p className="text-[var(--gui-ink-2)]">
+          This makes a new draft from the version published{" "}
+          {formatRelative(versionPublishedAt)}. You can check it before you
+          publish.
+        </p>
+      ) : null}
+    </Sheet>
   );
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Gems live in the legacy tc_* columns (lib/economy.ts); play coins in *_coins. */
+const GEM_COLUMN = /^tc_|_tc$/;
+const COIN_COLUMN = /coins/;
+const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+
+/** "building_primary" → "Building primary". */
+function humanize(key: string): string {
+  const words = key.replace(/_/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** A snapshot value in plain words: Yes/No, dates in Toronto time, lists and small objects inline. */
+function plain(v: unknown): string {
+  if (v === null || v === undefined || v === "") return "—";
+  if (typeof v === "boolean") return v ? "Yes" : "No";
+  if (typeof v === "number") return v.toLocaleString();
+  if (typeof v === "string") return ISO_TIME.test(v) ? formatWhen(v) : v;
+  if (Array.isArray(v)) return v.length ? v.map(plain).join(", ") : "—";
+  if (typeof v === "object") {
+    const entries = Object.entries(v as Record<string, unknown>);
+    return entries.length ? entries.map(([k, x]) => `${k}: ${plain(x)}`).join(" · ") : "—";
+  }
+  return String(v);
+}
+
+function formatWhen(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("en-CA", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "America/Toronto",
+  });
+}
 
 function formatRelative(iso: string): string {
   if (!iso) return "—";

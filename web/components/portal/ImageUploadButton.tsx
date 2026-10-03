@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Upload, Loader2 } from "lucide-react";
+import { Button } from "@/components/gui";
 
 // ─── ImageUploadButton ──────────────────────────────────────────────────────
 // Small companion to the sprite_url text field on the NPC and Shop editors.
@@ -61,10 +62,6 @@ export default function ImageUploadButton({
     }
   };
 
-  const btnCls =
-    className ??
-    "inline-flex items-center gap-2 px-3 py-2 border border-[var(--glass-border)] text-[var(--color-text-primary)] text-xs uppercase tracking-wider rounded-md hover:border-[var(--color-accent-cyan)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors";
-
   return (
     <div className="mt-2">
       <input
@@ -74,26 +71,27 @@ export default function ImageUploadButton({
         onChange={handleChange}
         className="hidden"
       />
-      <button
-        type="button"
+      <Button
+        size="sm"
+        variant="quiet"
         onClick={handleClick}
         disabled={busy}
-        className={btnCls}
+        className={className}
       >
         {busy ? (
           <>
-            <Loader2 size={14} className="animate-spin" />
+            <Loader2 size={16} aria-hidden className="animate-spin" />
             Uploading…
           </>
         ) : (
           <>
-            <Upload size={14} />
-            Upload image
+            <Upload size={16} aria-hidden />
+            Upload an image
           </>
         )}
-      </button>
+      </Button>
       {error ? (
-        <p className="mt-1 text-xs text-[var(--color-accent-red,#ff6b6b)]">
+        <p role="alert" className="mt-1.5 text-[13px] font-bold text-[var(--gui-danger)]">
           {error}
         </p>
       ) : null}
