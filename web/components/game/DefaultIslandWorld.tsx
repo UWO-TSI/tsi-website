@@ -18,7 +18,7 @@ import { GLBProp, sceneryOf } from "./NatureModels";
 import { InstancedModels } from "./InstancedNature";
 import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "./ACNHBuilding";
 import { NatureFence } from "./NatureModels";
-import WharfPier from "./WharfPier";
+import Wharf from "./wharf/Wharf";
 import FittingRoom, { FITTING_STEP_MS } from "./FittingRoom";
 import { BASE_FOV } from "./movement/moveFx";
 import MiniMap from "./MiniMap";
@@ -452,7 +452,7 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {notice && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(notice)} />}
     {board && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(board)} />}
     {missions && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
-    {wharf && <group position={[wharf.x, 0, wharf.z]} rotation={[0, wharf.yaw ?? 0, 0]}><WharfPier /></group>}
+    {wharf && <Wharf dock={{ x: wharf.x, z: wharf.z, yaw: wharf.yaw ?? 0 }} light={light} />}
     {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <Html key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} center distanceFactor={10} zIndexRange={[3, 0]}>
       <div className={styles.cue} data-closed={!l.open}>{SIGNS[l.id]}</div>
     </Html>)}
