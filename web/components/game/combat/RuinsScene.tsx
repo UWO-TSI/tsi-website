@@ -39,7 +39,7 @@ import { readComfort } from "@/lib/game/comfortSettings";
 import { ULT } from "@/lib/combat/ult";
 import { capture, crosshairAim } from "@/lib/game/orbitCamera";
 import { boxOccluder } from "@/lib/game/occluders";
-import { BUFFER, createInputs, runInputs, spawnWave } from "@/lib/game/combat/actions";
+import { BUFFER, createInputs, hurtPlayer, runInputs, spawnWave } from "@/lib/game/combat/actions";
 import { missionEvent } from "@/lib/game/combat/abilities";
 import { stepCombat } from "@/lib/game/combat/encounter";
 import { claimBossReward, claimMinibossReward, postKill, postMissionEvents } from "@/lib/game/combat/progression";
@@ -257,7 +257,9 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
       /** One enemy of a type at (x, z), hunting you (evidence). */
       spawn: (type: string, x: number, z: number, id: string) => spawnWave(combat.rt, [{ id, type, x, z }]),
       /** The whole spawn table back at its spots, dens and clouds as packs (evidence). */
-      reset: () => resetEncounter() } });
+      reset: () => resetEncounter(),
+      /** A hit of `amount` on you from (x, z), through guard, block, parry and shield (evidence: the Guardian's parry). */
+      hit: (amount: number, x: number, z: number) => hurtPlayer(combat.rt, amount, { x, z }, { x: player.current.x, z: player.current.z }) } });
   }, [player, spawn]);
   // Dev (screenshots): where a ground point is on the page, to aim the mouse at an enemy.
   useEffect(() => {
