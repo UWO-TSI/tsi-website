@@ -21,6 +21,9 @@ export const HQ_LAYOUT = {
   monstera: hqPiece([-7.2, 0, 3.2], 0.1, 0, [0.55, 0.5]),
   yucca: hqPiece([7.25, 0, -4], 0.1, 0, [0.55, 0.5]),
 };
+/** The front desk at HQ_LAYOUT.desk (art/interiors/build_interiors.py hq_front_desk; its scale and turn are the model's own):
+ * half its width and depth, and its counter's ledge, at the visitor's side; the work surface behind is at 0.76. */
+export const HQ_FRONT_DESK = { halfW: 0.95, halfD: 0.36, ledge: 1.04, ledgeBack: -0.04 };
 export const HQ_CLOCK = HQ_LAYOUT.clock.position;
 export const HQ_BOARD_APPROACH: [number, number] = [HQ_LAYOUT.board.position[0], 4.3];
 export const HQ_PENDANTS = [

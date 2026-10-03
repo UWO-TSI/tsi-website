@@ -8,7 +8,7 @@ The keepers are the living village's proposed roster (`living-village-questions.
 
 | Room | Post | Resident (proposed) | Where | Their work loop |
 |---|---|---|---|---|
-| HQ | `hq_lead` | **Wren** (the first-login greeter) | At the front desk's end on the room side, by its back corner, facing the room | Stands ready, sorts the papers on the desk's top (Trace), reaches under the desk's end |
+| HQ | `hq_lead` | **Wren** (the first-login greeter) | Behind the front desk, between it and its chair, facing the room | Stands ready, sorts the post in the desk's tray (Trace), reaches under the counter |
 | Shop | `shopkeeper` | **Toren** | Behind the counter and register | Ready, works the register, reaches under the counter's end |
 | Oracle temple | `oracle_keeper` | **Sable** | Beside the altar | Ready, hands to the crystal, tends the front candle |
 | Museum | `museum_curator` | **Odile** | Behind the curator's desk | Ready, labels specimens, a specimen drawer |
@@ -18,7 +18,7 @@ Each one, as Rosa does in the café: looks up and waves hello as you come in (on
 
 **Assumptions taken:**
 - **a. Keepers are always at their posts**, as in ACNH's Resident Services: the same resident also walks their routine in the village. You can see Wren on the plaza, walk into HQ and find her at the desk. **Question:** keep it (never an empty desk, principle 2), or empty the post while they're out and close the counter?
-- **b. The front desk is served from the room side.** The desk's prompt moved to the customer's side (in front of the drawers). Wren stands at the desk's end, not behind it: the desk's hutch is 1.65 tall, and from the camera it hid her completely when she stood at the chair. **Question:** do you want her behind the desk, which would need a lower desk without the hutch (a Blender piece), or is the end of the desk fine?
+- **b. The front desk is a reception desk now, served from the room side.** The study desk's hutch is 1.65 tall: standing behind it, Wren showed only as a nameplate. The new desk is modelled for the HQ (`hq_front_desk` in the interiors kit: honey oak and the wainscot's sage, a counter with a ledge on your side holding the sign-in book and a bell, the lamp, a pot of pens and the post tray on the work surface behind), low enough that you see her from the hips up. Its prompt is on your side of it. The study desk stays in the furniture catalogue for homes.
 - **c. The applicant island's HQ** (the parked island application) is the same room component, so it gets Wren and the new room too.
 
 ## 2. Room shells (deliverable 2)
@@ -27,7 +27,7 @@ Modelled headless in Blender (`art/interiors/build_interiors.py`, reusing the ca
 
 | Room | Walls | Windows | Its own pieces |
 |---|---|---|---|
-| HQ | Cream-sage plaster over the sage raised-panel wainscot | Two each side, glazing bars, mustard pleated drapes | The parquet floor and furniture as they were |
+| HQ | Cream-sage plaster over the sage raised-panel wainscot | Two each side, glazing bars, mustard pleated drapes | The front desk (above); the parquet floor and the rest of the furniture as they were |
 | Shop | Mint plaster over beadboard, a plank floor | One each side | A yellow-and-cream striped awning with a scalloped edge over the counter |
 | Oracle temple | Lavender plaster on a stone plinth, stone pilasters and cornice, flagstones | Two round windows each side, a rose window over the altar | A banner per family (Arcane, Ranger, Warden, Vanguard) with its sigil, the crystal a modelled cluster |
 | Museum | Each wing its own wall colour (aqua, ochre, sage) over a walnut wainscot | One each side, a clerestory of nine along the back | Three floors (tile, herringbone, slate) with brass strips, Odile's desk, a plaque stand at every case, a sign over each wing |

@@ -23,12 +23,12 @@ export interface KeeperPost {
 
 const ROOM = Math.PI;
 export const KEEPER_POSTS: Record<KeeperRoom, KeeperPost> = {
-  // HQ: at the front desk's end on the room side (lib/game/clubhouse.ts desk at -5.2, -2.4, 1.8 wide), by its back
-  // corner: behind it, the desk's hutch (1.65 tall) hides anyone from the camera.
+  // HQ: behind the front desk (lib/game/clubhouse.ts HQ_LAYOUT.desk at -5.2, -2.4, HQ_FRONT_DESK), between it and its
+  // chair, facing the room: its counter is low enough that the walking camera sees her from the hips up.
   hq: { post: "hq_lead", slug: "wren", title: "HQ lead", stations: [
-    { at: [-3.9, -1.95], yaw: ROOM, stay: 7, clip: "Idle" },
-    { at: [-3.95, -2.45], yaw: -Math.PI / 2, stay: 6.5, clip: "Trace" }, // the papers on the desk's top
-    { at: [-3.8, -1.75], yaw: ROOM, stay: 1.3, clip: "Forage" },         // reaching under the desk's end
+    { at: [-5.05, -1.78], yaw: ROOM, stay: 7, clip: "Idle" },
+    { at: [-4.7, -1.78], yaw: ROOM, stay: 6.5, clip: "Trace" },   // the post tray
+    { at: [-5.55, -1.78], yaw: ROOM, stay: 1.3, clip: "Forage" }, // under the counter
   ] },
   // Shop: behind the counter and register (ShopInterior: counter at 0, 3.4, its back at z 3.9).
   shop: { post: "shopkeeper", slug: "shopkeeper", title: "Shopkeeper", stations: [

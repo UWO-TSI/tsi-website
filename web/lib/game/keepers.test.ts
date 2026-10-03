@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { KEEPER_NOTICE, KEEPER_POSTS, KEEPER_QUIET_S, KEEPER_TURN, keeperGreets, keeperYaw } from "./keepers";
 import { ownerAt } from "./cafe";
-import { HQ_LAYOUT } from "./clubhouse";
+import { HQ_FRONT_DESK, HQ_LAYOUT } from "./clubhouse";
 import { PROPOSED_RESIDENTS, RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import { parseLook } from "@/lib/game/character/look";
 
@@ -17,15 +17,19 @@ describe("indoor keepers (interiors deliverable 1)", () => {
     }
   });
 
-  it("puts the HQ lead at the front desk's end, clear of its hutch, ready facing the room", () => {
-    // study-desk.glb is 16.34 x 8.59 model units; its hutch runs the back, so anyone behind the desk is hidden.
-    const [dx, , dz] = HQ_LAYOUT.desk.position, halfW = 8.17 * HQ_LAYOUT.desk.scale, halfD = 4.295 * HQ_LAYOUT.desk.scale;
+  it("puts the HQ lead behind the front desk, between it and its chair, facing the room, seen over its counter", () => {
+    const [dx, , dz] = HQ_LAYOUT.desk.position, desk = HQ_FRONT_DESK, chair = HQ_LAYOUT.deskChair;
+    // The walking camera (interiorShared snapInteriorCamera): 8.4 up and 7.2 behind you at the desk's station (1.2 out).
+    const camZ = dz - 1.2 - 7.2, camY = 8.4, ledgeZ = dz + desk.ledgeBack, hips = 0.55;
     for (const s of KEEPER_POSTS.hq.stations) {
-      expect(s.at[0]).toBeGreaterThan(dx + halfW + 0.25);      // beside the desk's room-side end, not behind the hutch
-      expect(s.at[0]).toBeLessThan(dx + halfW + 0.8);          // still at the desk
-      expect(Math.abs(s.at[1] - dz)).toBeLessThan(halfD + 0.3); // between its front and back
+      expect(s.at[1]).toBeGreaterThan(dz + desk.halfD);                        // past the desk's back
+      expect(s.at[1]).toBeLessThan(chair.position[2] - chair.footprint![1]);   // in front of its chair
+      expect(Math.abs(s.at[0] - dx)).toBeLessThan(desk.halfW - 0.2);           // along it, never at its end
+      expect(Math.abs(ang(s.yaw - Math.PI))).toBeLessThan(0.01);               // facing the room (and the camera)
+      // The line from the camera to their hips passes over the counter's ledge.
+      const overLedge = hips + (camY - hips) * (s.at[1] - ledgeZ) / (s.at[1] - camZ);
+      expect(overLedge).toBeGreaterThan(desk.ledge);
     }
-    expect(Math.abs(ang(KEEPER_POSTS.hq.stations[0].yaw - Math.PI))).toBeLessThan(0.01); // ready, facing the room
   });
 
   it("walks their stations on the shared clock without allocating a pose", () => {

@@ -6,8 +6,8 @@ palette. No downloads, no references beyond the rooms themselves.
 
   /Applications/Blender.app/Contents/MacOS/Blender -b -P art/interiors/build_interiors.py [-- hq shop oracle museum kit]
 
-Writes web/public/assets/game/interiors/<room>.glb and kit.glb (the curator's desk, the crystal, the home's pendant lamp
-and near-wall pieces, as named nodes). Game coordinates throughout (cafekit.G): x across (+x on screen left), y up, z
+Writes web/public/assets/game/interiors/<room>.glb and kit.glb (the HQ's front desk, the curator's desk, the crystal, the
+home's pendant lamp and near-wall pieces, as named nodes). Game coordinates throughout (cafekit.G): x across (+x on screen left), y up, z
 into the room; the camera looks up +z over the cut-away near wall at z = -D.
 
 Named objects the engine looks for (components/game/interiors/RoomShell.tsx):
@@ -695,7 +695,7 @@ def label_uv(x, y, z):
     return ((k + 0.5 + u * 0.96) / 3, 1 - (LABEL_SIGN_H + LABEL_ROW_H * (i + 0.5 - v * 0.94)) / LABEL_H)
 
 
-# ================================================================ the kit: the curator's desk, the crystal, the home's lamp and near wall
+# ================================================================ the kit: the HQ's front desk, the curator's desk, the crystal, the home's lamp and near wall
 def kit():
     M = {
         "walnut": Mat("M_Walnut", "#6e4b33", 0.8, K.image("kit_walnut", K.wood(512, "#5a3a24", "#7b5236", seed=34, planks=3, joint="#3a2414", joint_px=2, streak=0.4)), tile=1.4),
@@ -713,8 +713,60 @@ def kit():
         "stone": Mat("M_Step", "#b3aa99", 0.95, K.image("kit_step", flagstones(256, "#b9b0a0", "#8a8172", seed=2, rows=2)), tile=1.2),
         "threshold": Mat("M_Threshold", "#9a8a72", 0.7),
         "cord": Mat("M_Cord", "#2e2722", 0.8),
+        "oak": Mat("M_HoneyOak", "#c0904f", 0.8, K.image("kit_oak", K.wood(512, "#a87a43", "#cf9f62", seed=41, planks=2, joint_px=0, streak=0.45)), tile=1.3),
+        "sage": Mat("M_DeskPanel", "#a1ae91", 0.9),
+        "cream": Mat("M_DeskTrim", "#efe9da", 0.85),
+        "envelope": Mat("M_Envelope", "#f6eedc", 0.95),
+        "stamp": Mat("M_Stamp", "#c46a4a", 0.9),
     }
     obs = []
+    # the HQ's front desk (HQInterior at lib/game/clubhouse.ts HQ_LAYOUT.desk; HQ_FRONT_DESK mirrors these numbers): a
+    # reception desk in the room's honey oak and sage, its front to the visitor at -z. A counter with a ledge on the
+    # visitor's side, low enough that whoever serves behind it shows from the waist up; the work surface behind at
+    # desk height, with the lamp, the post tray and a pot of pens; the sign-in book and a bell on the ledge.
+    f = Model("hq_front_desk")
+    W2, D2, HW, HC, ZS = 0.95, 0.36, 0.76, 1.0, -0.06       # half width, half depth, work surface, ledge, counter's back
+    f.box((0, HC / 2, (-D2 + ZS) / 2), (2 * W2, HC, ZS + D2), M["oak"])                                  # the counter
+    f.box((0, HC + 0.02, (-D2 - 0.06 + ZS + 0.02) / 2), (2 * W2 + 0.08, 0.04, ZS + 0.02 + D2 + 0.06), M["oak"], bevel=0.012)  # its ledge
+    f.box((0, HW - 0.02, (ZS + D2) / 2), (2 * W2, 0.04, D2 - ZS), M["oak"], bevel=0.008)               # the work surface
+    for sx in (-1, 1):                                                                                     # its end panels
+        f.box((sx * (W2 - 0.025), (HW - 0.04) / 2, (ZS + D2) / 2), (0.05, HW - 0.04, D2 - ZS), M["oak"])
+    f.box((-0.1, HW + 0.003, 0.13), (0.62, 0.006, 0.26), M["leather"])                                  # writing inset
+    for k in range(3):                                                                                     # raised sage panels
+        x = -W2 + (k + 0.5) * (2 * W2 / 3)
+        f.box((x, 0.53, -D2 - 0.012), (2 * W2 / 3 - 0.16, 0.6, 0.03), M["sage"], bevel=0.02)
+        f.box((x, 0.53, -D2 - 0.006), (2 * W2 / 3 - 0.08, 0.68, 0.016), M["oak"], bevel=0.006)          # its frame
+    f.box((0, HC - 0.07, -D2 - 0.012), (2 * W2, 0.05, 0.03), M["cream"], bevel=0.006)                    # a band under the ledge
+    f.box((0, 0.06, -D2 - 0.02), (2 * W2 + 0.04, 0.12, 0.05), M["oak"], bevel=0.01)                      # plinth
+    for sx in (-1, 1):                                                                                     # corner posts
+        f.box((sx * (W2 - 0.03), HC / 2, -D2 - 0.01), (0.07, HC, 0.06), M["oak"], bevel=0.01)
+    top = HC + 0.04
+    # on the ledge: the sign-in book open on its cover with a pen, and the bell
+    f.box((-0.12, top + 0.006, -0.2), (0.46, 0.012, 0.3), M["leather"], bevel=0.003)
+    for side in (-1, 1):
+        pg = f.box((-0.12 + side * 0.105, top + 0.02, -0.2), (0.2, 0.016, 0.27), M["paper"], bevel=0.003)
+        f.rot(pg, (-0.12, top + 0.012, -0.2), "z", side * 0.06)
+    f.tube([(0.02, top + 0.036, -0.27), (0.14, top + 0.036, -0.16)], 0.006, M["ink"], n=5)
+    f.lathe((0.58, top, -0.22), [(0, 0), (0.07, 0), (0.07, 0.012), (0.012, 0.014), (0, 0.014)], M["walnut"], n=14)
+    f.lathe((0.58, top + 0.014, -0.22), [(0.055, 0), (0.054, 0.02), (0.04, 0.045), (0.015, 0.058), (0, 0.06)], M["brass"], n=14)
+    f.lathe((0.58, top + 0.072, -0.22), [(0, 0), (0.008, 0), (0.008, 0.012), (0.014, 0.016), (0, 0.02)], M["brass"], n=8)
+    # on the work surface: the lamp at the wall end, the post tray with its letters, a pot of pens
+    f.lathe((-0.7, HW, 0.2), [(0, 0), (0.08, 0), (0.08, 0.02), (0.02, 0.03), (0, 0.03)], M["brass"], n=12)
+    f.tube([(-0.7, HW + 0.03, 0.2), (-0.7, HW + 0.38, 0.2), (-0.62, HW + 0.46, 0.14)], 0.012, M["brass"], n=6)
+    f.lathe((-0.62, HW + 0.32, 0.14), [(0, 0.16), (0.03, 0.16), (0.11, 0.06), (0.12, 0.0), (0, 0.0)], M["sage"], n=14)
+    f.disc((-0.62, HW + 0.322, 0.14), 0.1, M["glow"], d=(0, -1, 0))
+    tray = (0.56, HW, 0.16)
+    f.box((tray[0], HW + 0.008, tray[2]), (0.4, 0.016, 0.3), M["walnut"])
+    for dx, dz, sx, sz in ((0, -0.145, 0.4, 0.012), (0, 0.145, 0.4, 0.012), (-0.195, 0, 0.012, 0.3), (0.195, 0, 0.012, 0.3)):
+        f.box((tray[0] + dx, HW + 0.035, tray[2] + dz), (sx, 0.05, sz), M["walnut"])
+    for k, (dx, dz, yaw) in enumerate(((0.0, 0.0, 0.05), (0.02, -0.015, -0.08), (-0.015, 0.012, 0.14))):
+        f.box((tray[0] + dx, HW + 0.022 + k * 0.008, tray[2] + dz), (0.3, 0.006, 0.2), M["envelope"], yaw=yaw)
+    f.box((tray[0] + 0.1, HW + 0.042, tray[2] + 0.06), (0.05, 0.002, 0.05), M["stamp"], yaw=0.14)
+    f.lathe((0.3, HW, 0.26), [(0, 0), (0.045, 0), (0.045, 0.11), (0.04, 0.11), (0.04, 0.012), (0, 0.012)], M["sage"], n=12)
+    for k, (dx, dz, lean) in enumerate(((-0.012, 0.0, 0.12), (0.014, 0.01, -0.1), (0.0, -0.014, 0.05))):
+        pen = f.cyl((0.3 + dx, HW + 0.02, 0.26 + dz), 0.006, 0.15, M["ink"] if k != 1 else M["stamp"], n=5)
+        f.rot(pen, (0.3 + dx, HW + 0.02, 0.26 + dz), "z", lean)
+    obs.append(f.finish())
     # the curator's desk (MuseumInterior: centre -2.2, -1.3; 1.8 wide, 0.7 deep; its front faces the visitor at -z)
     d = Model("curator_desk")
     W2, D2, Hd = 0.9, 0.35, 0.8

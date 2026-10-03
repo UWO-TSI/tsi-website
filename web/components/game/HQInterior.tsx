@@ -22,7 +22,7 @@ import {
   type InteriorStation, type RoomBounds,
 } from "./interiorShared";
 import Keeper from "./Keeper";
-import { RoomShell, preloadShells } from "./RoomShell";
+import { RoomShell, preloadShells, useKitPiece } from "./RoomShell";
 
 const BOUNDS: RoomBounds = { halfW: 8, halfD: 6, spawn: [0, -4.2] };
 
@@ -40,11 +40,16 @@ export const HQ_STATIONS: InteriorStation[] = [
 // Pieces are floor-origin normalized at extraction; ACNH items face -Z.
 preloadPieces([
   "bulletinboard", "gold-hha-trophy", "silver-hha-trophy", "bronze-hha-trophy",
-  "study-desk", "study-chair", "bookshelf", "acorn-rug", "antique-clock",
+  "study-chair", "bookshelf", "acorn-rug", "antique-clock",
   "plant-monstera", "plant-yucca", "yellow-message-mat", "wooden-chest",
   "floor-lamp", "clubhouse-pendant", "lounge-rug", "reading-table", "lounge-sofa", "lounge-table", "lounge-tea", "lounge-book",
 ]);
 preloadShells(["hq"]);
+
+/** The front desk (art/interiors/build_interiors.py hq_front_desk): a reception desk the HQ lead serves from. */
+function FrontDesk() {
+  return <primitive object={useKitPiece("hq_front_desk")} position={HQ_LAYOUT.desk.position} />;
+}
 
 export default function HQInterior({
   frozen,
@@ -100,9 +105,9 @@ export default function HQInterior({
         position={[position[0], position[1] - drop, position[2]]} />)}
       <pointLight color="#ffdfae" intensity={lamp.lamp * 0.48 * lamps} distance={4.8}
         position={[HQ_LAYOUT.loungeLamp.position[0], 1.52, HQ_LAYOUT.loungeLamp.position[2]]} />
-      {/* The study desk already contains its own lamp model. */}
+      {/* The front desk's lamp, at the desk's wall end. */}
       <pointLight color="#ffe2ae" intensity={lamp.desk * lamps} distance={3.3}
-        position={[HQ_LAYOUT.desk.position[0] + 0.4, 1.6, HQ_LAYOUT.desk.position[2] - 0.1]} />
+        position={[HQ_LAYOUT.desk.position[0] - 0.62, 1.0, HQ_LAYOUT.desk.position[2] + 0.14]} />
 
       {/* floor: warm planks + alternating strips */}
       <mesh receiveShadow={clubhouse} rotation={[-Math.PI / 2, 0, 0]} onClick={onFloorClick}>
@@ -139,7 +144,7 @@ export default function HQInterior({
         <Piece shadows={clubhouse} name="bronze-hha-trophy" rotX={clubhouse ? Math.PI / 2 : 0} position={[clubhouse ? HQ_LAYOUT.display.position[0] + 0.65 : 4.85, 0.8, 5.35]} rotY={clubhouse ? Math.PI : 0} scale={0.085} />
 
         {/* Front Desk (→ Profile) + chair */}
-        <Piece shadows={clubhouse} name="study-desk" rotX={clubhouse ? Math.PI : 0} position={HQ_LAYOUT.desk.position} rotY={clubhouse ? HQ_LAYOUT.desk.rotY : 0} scale={HQ_LAYOUT.desk.scale} />
+        <FrontDesk />
         <Piece shadows={clubhouse} name="study-chair" {...HQ_LAYOUT.deskChair} />
 
         {/* Bookshelf (→ Quests) */}
@@ -160,7 +165,7 @@ export default function HQInterior({
         <Piece name="yellow-message-mat" rotX={clubhouse ? Math.PI : 0} rotY={clubhouse ? Math.PI : 0} position={[0, 0.015, -5.2]} scale={0.14} />
       </Suspense>
 
-      {/* The HQ lead at the front desk (lib/game/keepers.ts). */}
+      {/* The HQ lead behind the front desk (lib/game/keepers.ts). */}
       <Keeper room="hq" player={playerPosRef} frozen={frozen} engaged={talking} />
       <InteriorPlayer frozen={frozen} bounds={BOUNDS} playerPosRef={playerPosRef} onMove={handleMove} constrainMove={constrainMove} />
     </group>

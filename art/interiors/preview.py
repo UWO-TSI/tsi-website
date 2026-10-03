@@ -108,8 +108,12 @@ if "hq" in WHAT:
     for name, at, yaw, s in (("bulletinboard", (0, 1.28, 5.78), math.pi, 0.2), ("lounge-sofa", (4.85, 0, 4.8), math.pi, 0.16), ("lounge-table", (4.85, 0, 2.85), 0, 0.12),
                              ("study-chair", (6.55, 0, 1.15), -0.45, 0.1), ("floor-lamp", (6.8, 0, 4.8), 0, 0.115), ("study-chair", (-5.2, 0, -0.7), math.pi, 0.1),
                              ("bookshelf", (7.7, 0, -1.3), math.pi / 2, 0.1), ("antique-clock", (-7, 0, 5.55), math.pi, 0.1), ("plant-monstera", (-7.2, 0, 3.2), 0, 0.1),
-                             ("plant-yucca", (7.25, 0, -4), 0, 0.1), ("study-desk", (-5.2, 0, -2.4), math.pi, 0.11)):
+                             ("plant-yucca", (7.25, 0, -4), 0, 0.1)):
         piece(name, at, yaw, s)
+    load(os.path.join(INT, "kit.glb"), hide=("curator", "oracle", "pendant", "home"))
+    for o in bpy.data.objects:
+        if o.name.startswith("hq_front_desk"):
+            o.location = G(-5.2, 0, -2.4)
     for at in ((0, 3.2, 5.0), (4.85, 2.9, 2.85), (-3, 3.4, -2), (3, 3.4, -2)):
         light(at, 260)
     sun(30, 75, 2.2)
@@ -117,6 +121,10 @@ if "hq" in WHAT:
     shot("hq-game")
     cam((-2.0, 1.7, -3.5), (-7.6, 2.0, -1.7), 22)
     shot("hq-window")
+    cam((-5.2, 8.4, -10.8), (-5.2, 0.7, -3.6), GAME_CAM_LENS)
+    shot("hq-desk-game")
+    cam((-4.2, 2.6, -4.9), (-5.2, 0.85, -2.4), 30)
+    shot("hq-desk")
 if "shop" in WHAT:
     setup()
     load(os.path.join(INT, "shop.glb"), hide=("shop_caster",))
@@ -164,7 +172,7 @@ if "museum" in WHAT:
 if "kit" in WHAT:
     setup((0.5, 0.5, 0.52))
     load(os.path.join(INT, "kit.glb"))
-    xs = {"curator_desk": -2.0, "oracle_crystal": 0.0, "pendant_lamp": 1.4, "home_lip": 0.0, "home_lip_door": 0.0}
+    xs = {"curator_desk": -2.0, "oracle_crystal": 0.0, "pendant_lamp": 1.4, "home_lip": 0.0, "home_lip_door": 0.0, "hq_front_desk": 2.6}
     for o in bpy.data.objects:
         for k, x in xs.items():
             if o.name.startswith(k) and o.parent is None:
