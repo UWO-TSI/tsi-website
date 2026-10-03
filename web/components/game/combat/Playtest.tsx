@@ -76,7 +76,7 @@ function Controls({ ruins, onChanged }: { ruins: boolean; onChanged: () => void 
   const v2 = () => combat.rt.v2;
   return <section className={css.section} aria-label="Class playtest">
     <h2>Class playtest</h2>
-    <div className={css.pair}>
+    <div className={css.selects}>
       <label>Subclass
         <select value={kitKey} disabled={busy} onChange={e => { void switchTo(e.target.value, mastery || 20); blur(e); }}>
           {!kitKey && <option value="">None</option>}
@@ -151,14 +151,15 @@ function Hud() {
   return <div className={css.hud}>
     {card && rt.v2 && <KeyCard rt={rt} />}
     <section className={`${css.card} ${css.meter}`} aria-label="Damage meter">
-      <small>DPS over the last {DPS_WINDOW} s of fight</small>
-      <b data-testid="playtest-dps">{view.dps.toFixed(1)}</b>
+      <div className={css.dps}><span><small>DPS, last {DPS_WINDOW} s of fight</small><b data-testid="playtest-dps">{view.dps.toFixed(1)}</b></span>
+        {!noting && <button onClick={() => setNoting(true)}><kbd>N</kbd> Note</button>}</div>
       <small>{view.total ? `${Math.round(view.total)} damage · biggest ${view.biggest?.n ?? 0}${view.biggest?.crit ? " crit" : ""}` : "Hit something to start the meter"}</small>
       <div className={css.hits} aria-label="Last hits">{view.last.map((h, i) => <span key={`${h.t}-${i}`} data-crit={h.crit || undefined}>{h.n}</span>)}</div>
-      {noting ? <form className={css.noteRow} onSubmit={e => { e.preventDefault(); const text = new FormData(e.currentTarget).get("note"); if (addNote(rt, String(text ?? ""))) setSaved(true); setNoting(false); }}>
+      {noting && <form className={css.noteRow} onSubmit={e => { e.preventDefault(); const text = new FormData(e.currentTarget).get("note"); if (addNote(rt, String(text ?? ""))) setSaved(true); setNoting(false); }}>
         <input name="note" aria-label="Note" placeholder="What felt off?" autoFocus autoComplete="off" onKeyDown={e => { if (e.key === "Escape") setNoting(false); }} />
         <button type="submit">Save</button>
-      </form> : <div className={css.noteRow}><button onClick={() => setNoting(true)}><kbd>N</kbd> Note</button>{saved && <small role="status">Noted. It&apos;s on /lab/classes.</small>}</div>}
+      </form>}
+      {saved && <small role="status">Noted. It&apos;s on /lab/classes.</small>}
     </section>
   </div>;
 }
@@ -176,28 +177,29 @@ function inputWord(a: ClassAbility): string {
   }
 }
 
-/** Everything the class's keys do at this mastery, read off its kit (so a family that lands brings its own card). */
+/** Everything the class's keys do at this mastery, read off its kit (so a family that lands brings its own card). Each line is cut to two; hover shows it whole. */
 function KeyCard({ rt }: { rt: CombatRuntime }) {
-  const keys = useAbilityKeys(), v = rt.v2!, kit = v.kit, held = WEAPONS[rt.player.weapon];
-  const drawn = v.keys.some(a => a?.input?.kind === "drawn");
-  const combo = (i: number) => keyName(keys[V2_SLOT_IDS[i]]);
+  const keys = useAbilityKeys(), v = rt.v2!, kit = v.kit;
+  const drawn = v.keys.some(a => a?.input?.kind === "drawn"), holds = v.combos.filter(c => c.hold);
+  const key = (i: number) => keyName(keys[V2_SLOT_IDS[i]]);
+  const line = (text: string) => <span title={text}>{text}</span>;
   return <section className={`${css.card} ${css.keyCard}`} aria-label={`${kit.name} keys`} data-testid="playtest-keycard">
-    <header><b>{kit.name} · mastery {v.mastery}</b><small><kbd>H</kbd> hides</small></header>
-    <p className={css.note}>{kit.style === "basic" ? "Basic-attack" : "Skill"} class · builds {STAT_DIRECTION_LABEL[kit.stat.kind].toLowerCase()}</p>
+    <header><span><b>{kit.name}</b> · mastery {v.mastery} · {kit.style === "basic" ? "basic-attack" : "skill"} class, builds {STAT_DIRECTION_LABEL[kit.stat.kind].toLowerCase()}</span><small><kbd>H</kbd> hides</small></header>
     <dl>
-      <dt><kbd>Click</kbd></dt><dd><b>Attack</b><span>{held ? `Your ${held.name.toLowerCase()}` : "Your weapon"}; skills need your {kit.signature.name}{kit.forms ? ", and a form brings its own attack" : ""}.</span></dd>
+      <dt><kbd>Click</kbd></dt><dd><b>Attack</b><em> · skills need your {kit.signature.name}{kit.forms ? "; a form brings its own attack" : ""}</em></dd>
       {kit.keys.map((base, i) => {
         const a = v.keys[i], how = a ? inputWord(a) : "";
-        return <Fragment key={base.key}><dt><kbd>{keyName(keys[V2_SLOT_IDS[i]])}</kbd></dt>
-          <dd data-locked={!a || undefined}><b>{base.name}</b>{how && <em> · {how}</em>}{!a && <em> · {base.learn ? "learn it by defeating its creature" : `mastery ${base.unlock}`}</em>}<span>{base.description}</span></dd></Fragment>;
+        return <Fragment key={base.key}><dt><kbd>{key(i)}</kbd></dt>
+          <dd data-locked={!a || undefined}><b>{base.name}</b>{how && <em> · {how}</em>}{!a && <em> · {base.learn ? "learn it by defeating its creature" : `mastery ${base.unlock}`}</em>}{line(base.description)}</dd></Fragment>;
       })}
-      {v.combos.length > 0 && <><dt>Combos</dt><dd><b>Two keys within {COMBO_WINDOW} s, either order</b>
-        {v.combos.map(c => <span key={c.ability.key}>{combo(c.keys[0])}+{combo(c.keys[1])} {c.ability.name}{c.hold ? ` · ${c.hold.description}` : ""}</span>)}
-        {kit.combos!.length > v.combos.length && <span>{kit.combos!.length - v.combos.length} more open with mastery.</span>}</dd></>}
-      <dt><kbd>{keyName(keys.ult)}</kbd></dt><dd><b>{v.ult.name}</b><em> · ultimate, fills as you fight</em><span>{v.ult.description}</span></dd>
-      <dt>Passive</dt><dd><b>{v.passive.name}</b><span>{v.passive.description}</span></dd>
-      {kit.movement && <><dt>Move</dt><dd><b>{kit.movement.name}</b><em> · ruins only</em><span>{kit.movement.description}</span></dd></>}
-      {drawn && <><dt>Draw</dt><dd><b>Trace the shape</b><span>The closer the stroke, the stronger: 60% for a rough sketch up to 150% for a clean one; under half fizzles.</span></dd></>}
+      {v.combos.length > 0 && <><dt>Combos</dt><dd data-short><b>Two keys within {COMBO_WINDOW} s, either order</b>
+        <span className={css.combos}>{v.combos.map(c => <i key={c.ability.key}>{key(c.keys[0])}+{key(c.keys[1])} {c.ability.name}</i>)}
+          {kit.combos!.length > v.combos.length && <i>{kit.combos!.length - v.combos.length} more with mastery</i>}</span>
+        {holds.map(c => <Fragment key={c.hold!.key}>{line(`Hold ${key(c.keys[0])}+${key(c.keys[1])}: ${c.hold!.description.replace(/^Held:\s*/i, "")}`)}</Fragment>)}</dd></>}
+      <dt><kbd>{keyName(keys.ult)}</kbd></dt><dd><b>{v.ult.name}</b><em> · ultimate, fills as you fight</em>{line(v.ult.description)}</dd>
+      <dt>Passive</dt><dd data-short><b>{v.passive.name}</b>{line(v.passive.description)}</dd>
+      {kit.movement && <><dt>Move</dt><dd data-short><b>{kit.movement.name}</b><em> · ruins only</em>{line(kit.movement.description)}</dd></>}
+      {drawn && <><dt>Draw</dt><dd><b>Trace the shape</b>{line("The closer the stroke, the stronger: 60% for a rough sketch up to 150% for a clean one; under half fizzles.")}</dd></>}
     </dl>
   </section>;
 }
