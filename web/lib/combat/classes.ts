@@ -104,7 +104,7 @@ export interface ClassUlt extends ClassAbility {
    * A charge before the sequence (Cataclysm): `seconds` rooted with `guard` damage cut, a mash of `notes` keys 1–4
    * shown three at a time; the hits it lands set the potency 0.5 (none) to 1.5 (all). It releases early when all are played.
    */
-  channel?: { seconds: number; guard: number; notes: number };
+  channel?: { seconds: number; guard: number; notes: number; ramp?: [core: string, mid: string, edge: string] };
 }
 
 /** A ruins-only movement passive that extends the movement combo (row 292): Air Step, Bone Surf, Vault. */

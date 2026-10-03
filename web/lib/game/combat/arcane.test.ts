@@ -45,7 +45,7 @@ describe("the Arcane kits as locked (design sheet)", () => {
     const combo = Math.min(...k.combos!.map(c => c.ability.energy)), solo = Math.max(...k.keys.map(a => a.energy));
     expect(combo).toBeGreaterThan(solo); // combos cost more than solos
     expect(classMods(k, 1).energyMax).toBe(120); expect(classMods(k, 20).energyMax).toBe(200);
-    expect(k.ult.channel).toEqual({ seconds: 5, guard: 0.5, notes: 12 });
+    expect(k.ult.channel).toMatchObject({ seconds: 5, guard: 0.5, notes: 12 });
     expect(k.movement).toMatchObject({ name: "Air Step", on: "airJump" });
   });
   it("Illusionist: Mirror Clone, Swap, Mirror Ward, Trick Card (mastery 3), Vanish; clones 2/3/4 and 10/14/18 s by mastery", () => {

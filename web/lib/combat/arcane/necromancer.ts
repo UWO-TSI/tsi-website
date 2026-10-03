@@ -24,7 +24,7 @@ export const NECROMANCER: ClassKit = {
     ne("dark-pact", "Dark Pact", "Consume one of your minions: heal 12% and a bone shield of 12% for 6 s.", 10, 15,
       [{ kind: "consume", heal: 0.12, shield: 0.12, duration: 6 }], { allies: 0, clip: { verb: "CastUp" }, vfx: { cast: "necromancer.pact", impact: "necromancer.pact.drain" } }),
     ne("bone-surf", "Bone Surf", "Mid-slide: skeletal hands carry your slide for 1.5 s without losing speed, steerable, ploughing enemies aside. Jump off for a bigger slide-jump.", 8, 15,
-      [{ kind: "surf", duration: 1.5, power: 0.9 }], { unlock: 3, when: "sliding", vfx: { cast: "necromancer.surf", zone: "necromancer.surf.trail" } }),
+      [{ kind: "surf", duration: 1.5, power: 0.9 }], { unlock: 3, when: "sliding", ramp: ["#fffaf0", "#e6dcc4", "#3a2f4a"], vfx: { cast: "necromancer.surf", zone: "necromancer.surf.trail" } }),
   ],
   passive: { name: "Grave Tithe", description: "Kills near you heal you 3% and leave corpses that last twice as long.", kind: "grave_tithe", value: 0.03, cap: 9 },
   ult: {

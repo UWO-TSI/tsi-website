@@ -87,7 +87,7 @@ export function resolvePlayerShot(rt: CombatRuntime, shotIdx: number, from: Vec,
     return true;
   }
   strike(rt, target, { power: h.power, from, knock: h.unit ? 1 : knock, stat: h.stat, tier: h.tier, unit: h.unit, status: h.status, impact: h.impact, ult: h.ult, first: !h.hitIds?.length }, random);
-  fx(rt, h.fx, "impact", to, to, h.impact ?? "ability");
+  fx(rt, h.fx, "impact", to, to, h.impact ?? "ability", undefined, h.ramp); // in the shot's own colours (an element's)
   if (h.splash) splash(rt, to, h.splash, target, { power: h.power * 0.5, from: to, knock: 2, stat: h.stat, tier: h.tier }, random);
   if (!h.pierce) return true;
   h.hitIds!.push(target.id);
