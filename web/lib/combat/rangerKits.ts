@@ -12,6 +12,7 @@
  */
 import type { ClassKit } from "./classes";
 import { MARKSMAN } from "./ranger/marksman";
+import { SNIPER } from "./ranger/sniper";
 
-export { MARKSMAN };
-export const RANGER_KITS: ClassKit[] = [MARKSMAN];
+export { MARKSMAN, SNIPER };
+export const RANGER_KITS: ClassKit[] = [MARKSMAN, SNIPER];
