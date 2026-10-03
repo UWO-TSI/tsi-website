@@ -16,6 +16,8 @@ import styles from "./gui.module.css";
 export { Keycap, NPCDialogue as Dialogue, VillageButton as Button, VillageField as Field, VillageTextArea as TextArea, VillagePanel as Panel };
 /** Toasts: the island's one lane (components/game/ToastHub), paper slips inside a .gui scope. `toast(text, icon?)` from anywhere. */
 export { default as ToastHub, toast } from "@/components/game/ToastHub";
+/** "Sign in" links back to where you are (reachability §3). */
+export { SignInLink, SignInText, useSignInHref } from "./SignIn";
 
 const cx = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(" ");
 
@@ -102,6 +104,25 @@ export function Tabs<T extends string>({ tabs, value, onChange, label, keyHints,
   const ref = useRef<HTMLDivElement>(null);
   const live = useRef<TabState>({ tabs, value, onChange: onChange as (id: string) => void });
   useEffect(() => { live.current = { tabs, value, onChange: onChange as (id: string) => void }; });
+  // Too many to fit (filter chips on a phone): the row scrolls sideways, its edges fade where more is hidden, and the
+  // chosen tab slides into view (reachability §4: the bounty board's chips were cut off at "Complet").
+  const [edges, setEdges] = useState<"start" | "end" | "both" | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setEdges(overflowEdges(el.scrollLeft, el.clientWidth, el.scrollWidth));
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    ro?.observe(el);
+    return () => { el.removeEventListener("scroll", measure); ro?.disconnect(); };
+  }, []);
+  const shown = useRef<string | null>(null);
+  useEffect(() => {
+    const el = ref.current, tab = el?.querySelector<HTMLElement>(`[data-tab="${value}"]`);
+    if (shown.current !== null && el && tab) revealTab(el, tab);
+    shown.current = value;
+  }, [value]);
   useEffect(() => {
     const on = (e: Event) => { if (inTopDialog(ref.current)) stepTab(ref.current, live.current, (e as CustomEvent<{ step: number }>).detail.step); };
     window.addEventListener("tsi:menu-tab", on);
@@ -110,7 +131,7 @@ export function Tabs<T extends string>({ tabs, value, onChange, label, keyHints,
   const onKey = (e: KeyboardEvent) => { if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); stepTab(ref.current, live.current, e.key === "ArrowRight" ? 1 : -1); } };
   return <div className={cx(styles.tabsWrap, className)}>
     {keyHints && <Keycap aria-hidden="true" className={styles.tabKey} data-shape="square">{keyHints[0]}</Keycap>}
-    <div ref={ref} role="tablist" aria-label={label} className={styles.tabs} onKeyDown={onKey}>
+    <div ref={ref} role="tablist" aria-label={label} className={styles.tabs} data-edges={edges ?? undefined} onKeyDown={onKey}>
       {tabs.map(t => <button key={t.id} type="button" role="tab" data-tab={t.id} aria-selected={t.id === value} tabIndex={t.id === value ? 0 : -1} disabled={t.disabled}
         className={styles.tab} onClick={() => onChange(t.id)}>
         {t.icon && <span className={styles.tabIcon} aria-hidden="true">{t.icon}</span>}<span className={styles.tabLabel}>{t.label}</span>
@@ -119,6 +140,18 @@ export function Tabs<T extends string>({ tabs, value, onChange, label, keyHints,
     </div>
     {keyHints && <Keycap aria-hidden="true" className={styles.tabKey} data-shape="square">{keyHints[1]}</Keycap>}
   </div>;
+}
+
+/** Which ends of a sideways-scrolling row hide more (a pixel or two of slack). */
+export function overflowEdges(left: number, width: number, full: number): "start" | "end" | "both" | null {
+  const start = left > 2, end = left + width < full - 2;
+  return start && end ? "both" : start ? "start" : end ? "end" : null;
+}
+/** Slide a tab into view inside its row, without moving the page. */
+function revealTab(row: HTMLElement, tab: HTMLElement) {
+  const l = tab.offsetLeft, r = l + tab.offsetWidth, pad = 24;
+  if (l - pad < row.scrollLeft) row.scrollTo({ left: Math.max(0, l - pad), behavior: "smooth" });
+  else if (r + pad > row.scrollLeft + row.clientWidth) row.scrollTo({ left: r + pad - row.clientWidth, behavior: "smooth" });
 }
 
 // ── Lists and items ─────────────────────────────────────────────────────────────────────────────────────────────────

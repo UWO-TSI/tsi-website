@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { type IslandMap, WATER_DROP, LEVEL_STEP, cellToWorldX, cellToWorldZ, isGroundAtWorld, isRiver, levelAt, surfaceAt } from "@/lib/game/grid";
 import { WATER_CHOP, WATER_CLOUDS, WATER_OPTICS, WATER_RIPPLE, WATER_SWELL, facetTilt } from "@/lib/game/waterShader";
 import { terrainMaterial, waterSurfaceUniforms } from "./terrainMaterials";
+import { TUNING_DEFAULTS } from "@/lib/game/tuning";
 
 /**
  * Continue the grid's water outside its editable rectangle to the horizon, with its glint sprites
@@ -13,20 +14,69 @@ import { terrainMaterial, waterSurfaceUniforms } from "./terrainMaterials";
  */
 export default function GridOcean({ map, lite = false, skip, radius }: { map: IslandMap; lite?: boolean; skip?: (x: number, z: number) => boolean; radius?: number }) {
   const material = useMemo(() => terrainMaterial("mRiver")!, []);
+  const bed = useMemo(() => terrainMaterial("mRiverBed")!, []);
+  const geometry = useMemo(() => oceanGeometry(map), [map]);
+  const floor = useMemo(() => seaBedGeometry(), []);
+  useEffect(() => () => { geometry.dispose(); floor.dispose(); }, [geometry, floor]);
+  // The deep bed goes on under the open sea, a little below where it lies at the map's edge (the map's own bed covers
+  // it inside), so the little you see through deep water is the same sand inside and out, not the sky behind it.
+  return <group>
+    <mesh position={[0, -WATER_DROP, 0]} geometry={geometry} material={material} />
+    <mesh position={[0, -WATER_DROP - TUNING_DEFAULTS.water.bedDepth - 0.15, 0]} geometry={floor} material={bed} />
+    <WaterGlints map={map} lite={lite} skip={skip} radius={radius} />
+  </group>;
+}
+
+/**
+ * Outward from the map's edge: a row every unit at first, then each twice as far, then every 24 units out to the
+ * horizon (the curved world bends the sea down by distance squared, and a longer span would cut the curve short).
+ */
+const GRADED = [0, 1, 3, 7, 15, 31, ...Array.from({ length: 40 }, (_, i) => 55 + 24 * i)];
+const graded = (span: number) => [...GRADED.filter(d => d < span - 0.5), span];
+/**
+ * The open sea round a map's rectangle, out to `reach` every way, as one mesh in the world's frame (y 0). The map draws
+ * its own water a quad per cell and the swell is evaluated per vertex, so the sea must have a vertex at every cell
+ * corner along the map's edge or the two surfaces part as the swell runs (a dark crack along the map's edge, seen as
+ * soon as a boat or the camera goes out to sea). So: west and east strips the full depth, their rows a unit apart
+ * beside the map and graded beyond it; north and south strips the map's width, their columns a unit apart; each strip
+ * a whole grid (its rows and columns run right across), graded outward from the map, so no edge meets a coarser one.
+ */
+export function oceanGeometry(map: IslandMap, reach = 300): THREE.BufferGeometry {
   const minX = map.originX - 0.5, minZ = map.originZ - 0.5;
   const maxX = minX + map.width, maxZ = minZ + map.depth;
-  const reach = 300;
-  const rectangles = [
-    [(minX - reach) / 2, (minZ + maxZ) / 2, minX + reach, map.depth],
-    [(maxX + reach) / 2, (minZ + maxZ) / 2, reach - maxX, map.depth],
-    [0, (minZ - reach) / 2, reach * 2, minZ + reach],
-    [0, (maxZ + reach) / 2, reach * 2, reach - maxZ],
+  const units = (a: number, b: number) => Array.from({ length: Math.round(b - a) + 1 }, (_, i) => a + i);
+  const southRows = graded(minZ + reach).map(d => minZ - d).reverse(), northRows = graded(reach - maxZ).map(d => maxZ + d);
+  const sideRows = [...southRows.slice(0, -1), ...units(minZ, maxZ), ...northRows.slice(1)];
+  const strips: [number[], number[]][] = [
+    [graded(minX + reach).map(d => minX - d).reverse(), sideRows],
+    [graded(reach - maxX).map(d => maxX + d), sideRows],
+    [units(minX, maxX), southRows],
+    [units(minX, maxX), northRows],
   ];
-  return <group>{rectangles.map(([x, z, width, depth], i) => (
-    <mesh key={i} position={[x, -WATER_DROP, z]} rotation={[-Math.PI / 2, 0, 0]} material={material}>
-      <planeGeometry args={[width, depth, 20, 20]} />
-    </mesh>
-  ))}<WaterGlints map={map} lite={lite} skip={skip} radius={radius} /></group>;
+  const position: number[] = [], index: number[] = [];
+  for (const [xs, zs] of strips) {
+    const base = position.length / 3, w = xs.length;
+    for (const z of zs) for (const x of xs) position.push(x, 0, z);
+    for (let j = 0; j + 1 < zs.length; j++) for (let i = 0; i + 1 < w; i++) {
+      const a = base + j * w + i, b = a + 1, c = a + w, d = c + 1;
+      index.push(a, c, b, b, c, d); // facing up
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(position, 3));
+  g.setIndex(index);
+  return g;
+}
+
+/**
+ * The open sea's bed: one plane out to `reach`, a vertex every 24 units (the world's bend cuts no more than half a unit
+ * off its curve between them, well inside its depth), in the terrain's sand at the map bed's scale (two cells a repeat).
+ */
+export function seaBedGeometry(reach = 300): THREE.BufferGeometry {
+  const n = Math.round((2 * reach) / 24), g = new THREE.PlaneGeometry(2 * reach, 2 * reach, n, n).rotateX(-Math.PI / 2);
+  const p = g.getAttribute("position"), uv = g.getAttribute("uv");
+  for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) * 0.5, p.getZ(i) * 0.5);
+  return g;
 }
 
 /** At most this many glints inside the map: a big painted sea thins its two-per-cell. */

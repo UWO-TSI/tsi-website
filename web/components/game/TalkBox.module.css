@@ -1,0 +1,19 @@
+/* The talk dialogue box (TalkBox): the HQ lead greeting's place at the foot of the screen, the text size setting with
+   it. Hidden while the resident turns to you, up with a little lift, away as they wave goodbye. */
+.talk { position: absolute; left: 50%; bottom: 40px; z-index: 30; width: min(720px, calc(100% - 32px)); transform: translateX(-50%); zoom: var(--tsi-text-scale, 1); outline: none; cursor: pointer; }
+.talk[data-phase="turning"] { visibility: hidden; }
+.talk[data-phase="speaking"] { animation: talkIn 0.26s cubic-bezier(0.2, 0.9, 0.3, 1.15) both; }
+.talk[data-phase="closing"] { animation: talkOut 0.22s ease-in forwards; pointer-events: none; }
+@keyframes talkIn { from { opacity: 0; transform: translate(-50%, 14px) scale(0.97); } }
+@keyframes talkOut { to { opacity: 0; transform: translate(-50%, 10px) scale(0.98); } }
+/* The line keeps its full width from the first letter: the unseen rest holds its place, so nothing reflows as it types. */
+.line { margin: 0; min-height: 3.3em; }
+.rest { visibility: hidden; }
+.sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* The amber continue chevron bobs once a line is down (the kit's "press to go on"); still while it types. */
+.talk button > span { display: inline-block; transition: opacity 0.15s; }
+.talk:not([data-ready]) button > span { opacity: 0.35; }
+.talk[data-ready] button > span { animation: chevron 0.9s ease-in-out infinite; }
+@keyframes chevron { 50% { transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) { .talk[data-phase] { animation: none; } .talk[data-ready] button > span { animation: none; } }
+@media (max-width: 560px) { .talk { bottom: calc(18px + env(safe-area-inset-bottom)); } }

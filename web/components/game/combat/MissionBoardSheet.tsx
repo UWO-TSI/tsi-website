@@ -13,6 +13,7 @@ import { materialsLabel, startMission } from "@/lib/game/combat/missions";
 import { completeMissionRemote, missionBoard, postMissionEvents, startMissionRemote } from "@/lib/game/combat/progression";
 import { attachProgressId, combat, setMission, takeMissionQueue, useCombatVersion } from "@/lib/game/combat/runtime";
 import IslandSheet from "../IslandSheet";
+import { SignInText } from "@/components/gui";
 import styles from "../DefaultIslandWorld.module.css";
 
 const TEMPLATE: Record<string, string> = { hunt: "Hunt", fetch: "Fetch", survive: "Survive waves", escort: "Escort" };
@@ -43,7 +44,7 @@ function MissionBoard({ gateNote }: { gateNote: string | null }) {
   };
   const claim = async () => {
     const m = combat.rt.mission;
-    if (!m?.progressId) { setNote("Claimed locally. Rewards need a signed-in account."); setMission(null); return; }
+    if (!m?.progressId) { setNote("Claimed on this device. Sign in to keep the rewards."); setMission(null); return; }
     const queued = takeMissionQueue();
     if (queued.length) await postMissionEvents(m.progressId, queued);
     const r = await completeMissionRemote(m.progressId);
@@ -51,8 +52,8 @@ function MissionBoard({ gateNote }: { gateNote: string | null }) {
     if (r.ok) { setMission(null); setCooldowns(c => ({ ...c, [m.def.id]: 20 })); }
   };
   return <>
-    {gateNote && <p className={styles.hint}>{gateNote}</p>}
-    {note && <p className={styles.hint} role="status">{note}</p>}
+    {gateNote && <p className={styles.hint}><SignInText text={gateNote} /></p>}
+    {note && <p className={styles.hint} role="status"><SignInText text={note} /></p>}
     <ul className={styles.missionList}>{MISSIONS.map((m, i) => {
       const mine = active?.def.id === m.id, cool = cooldowns[m.id];
       return <li key={m.id} data-active={mine || undefined}>
