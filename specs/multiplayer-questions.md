@@ -16,6 +16,11 @@ David settled the direction in ledger rows 296–299. The plan (`specs/multiplay
 8. **Testing before the world opens:** a Vercel Preview with `NEXT_PUBLIC_MEMBER_WORLD=open` and `NEXT_PUBLIC_REALTIME_URL` set for Preview only; production stays closed.
 9. **Co-op authority (M3):** server-owned outcomes (HP, kills, rewards) with host-driven enemy motion, decided again when M3 starts.
 
+10. **Requests without an Origin header** (non-browser clients) go on to the token check rather than being refused. A forged Origin is trivial outside a browser, so refusing them would add nothing; the token is the gate.
+11. **Deploy order for new message types:** Colyseus closes a client that sends an unknown message type (a bare 4002), so the server always deploys before a client that sends new messages (M2 chat first).
+12. **Friends' shards (M3):** `lock()` also refuses `joinById`, so parties need their own path into a soft-locked shard (a reserved seat, or `unlock` while seating a party).
+13. **Phone players before M2:** an M1 phone client sits at 0,0,0 until it sends a pose; M2's phone presence gives it a rest spot.
+
 ## For David (not blocking M1)
 1. **Who answers chat reports, and how fast?** Today T1/T2 means you and the chapter presidents. Options: (a) T1/T2 as now, within a day; (b) add a moderator role for a few trusted execs; (c) you alone.
 2. **More rest spots on the map.** Phone players rest on benches and café seats, and the village has 2 benches. When you next paint the island in `/lab/map`, add benches where you'd like people to gather (each seats 2).
