@@ -91,6 +91,18 @@ export const WARDEN_WEAPONS: WeaponDef[] = [
   ...sig("sunstone-staff", "priest", ["Sunstone staff", `${T[2]}sunstone staff`, `${T[3]}sunstone staff`, `${T[4]}sunstone staff`, "Dawnfire staff"], ["spirit"], "staff"),
 ];
 
+/**
+ * The shop's Warden weapon skins (the seed's weapon_skin rows) as material sets on each weapon's own materials, by
+ * `${subclass}:${skin}` (classes.ts WEAPON_SKINS): every tier wears them; the glow part keeps its tier.
+ */
+export const WARDEN_SKINS: Record<string, Record<string, string>> = {
+  "summoner:moonink": { M_Leather: "#1d2846", M_Cuff: "#b9c6e8" },
+  "shaman:birch": { M_Wood: "#e6e0d0", M_Paint: "#2a2a2e", M_Dark: "#4a4540", M_Cloth: "#7a8a9a" },
+  "shaman:aurora": { M_Wood: "#2c3440", M_Paint: "#6af0c8", M_Dark: "#1a2030", M_Cloth: "#8a7aff" },
+  "druid:cherry": { M_Wood: "#4a1e22", M_Leaf: "#5a7a3a", M_Petal: "#ffb7c9" },
+  "priest:dawn": { M_Wood: "#efe6da", M_Cradle: "#d8b8a0", M_Cloth: "#f6d6de" },
+};
+
 /** A rank's change on a field effect (classes.ts `upgraded`): power and heal by `power`, radii by `radius`, durations by `duration`; a channel's own effects through `inner`. */
 export function scaleField(e: Effect, c: { power?: number; radius?: number; duration?: number }, inner: (x: Effect) => Effect): Effect {
   const p = c.power ?? 1, r = c.radius ?? 1, d = c.duration ?? 1;

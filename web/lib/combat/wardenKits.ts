@@ -60,7 +60,7 @@ export const SUMMONER: ClassKit = {
     { at: 16, target: "passive", change: { label: "+25%", power: 1.25 } },
     { at: 18, target: "ult", change: { label: "+10% power", power: 1.1 } },
   ],
-  look: { ramp: ["#eafff1", "#3fd67a", "#0d1f17"], mote: "shadow", drift: "fall", icon: I("summoner"), passive: I("summoner-passive") },
+  look: { ramp: ["#eafff1", "#3fd67a", "#0d1f17"], mote: "shadow", drift: "fall", icon: I("summoner"), passive: I("summoner-passive"), trim: { M_Leather: "#2b2140", M_Cuff: "#c9a24a" } },
   mods: { max_hp: 0.15 },
 };
 
@@ -102,7 +102,7 @@ export const SHAMAN: ClassKit = {
     { at: 16, target: "passive", change: { label: "+25%", power: 1.25 } },
     { at: 18, target: "ult", change: { label: "+10% power", power: 1.1 } },
   ],
-  look: { ramp: ["#f0fffb", "#4fd6b8", "#0f3532"], mote: "bolt", drift: "rise", icon: I("shaman"), passive: I("shaman-passive") },
+  look: { ramp: ["#f0fffb", "#4fd6b8", "#0f3532"], mote: "bolt", drift: "rise", icon: I("shaman"), passive: I("shaman-passive"), trim: { M_Wood: "#3e2c22", M_Paint: "#e8c050", M_Cloth: "#2f5f8a" } },
   mods: { max_hp: 0.1 },
 };
 
@@ -147,7 +147,7 @@ export const DRUID: ClassKit = {
     { at: 16, target: "passive", change: { label: "+25%", power: 1.25 } },
     { at: 18, target: "ult", change: { label: "+10% power", power: 1.1 } },
   ],
-  look: { ramp: ["#f4ffe2", "#7fcc4f", "#1d3a12"], mote: "leaf", drift: "fall", icon: I("druid"), passive: I("druid-passive") },
+  look: { ramp: ["#f4ffe2", "#7fcc4f", "#1d3a12"], mote: "leaf", drift: "fall", icon: I("druid"), passive: I("druid-passive"), trim: { M_Wood: "#5a3b26", M_Leaf: "#9be06a", M_Petal: "#f6f0c0" } },
   mods: { max_hp: 0.3 },
 };
 
@@ -192,7 +192,7 @@ export const PRIEST: ClassKit = {
     { at: 16, target: "passive", change: { label: "+25%", power: 1.25 } },
     { at: 18, target: "ult", change: { label: "+10% power", power: 1.1 } },
   ],
-  look: { ramp: ["#fffbe6", "#d2dc66", "#3e4413"], mote: "sun", drift: "rise", icon: I("priest"), passive: I("priest-passive") },
+  look: { ramp: ["#fffbe6", "#d2dc66", "#3e4413"], mote: "sun", drift: "rise", icon: I("priest"), passive: I("priest-passive"), trim: { M_Wood: "#f4ecdc", M_Cradle: "#e2b84a", M_Cloth: "#fff8e8" } },
   mods: { max_hp: 0.15 },
 };
 

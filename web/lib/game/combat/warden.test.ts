@@ -14,7 +14,9 @@ import { attack, hurtPlayer } from "./actions";
 import { classKey, classMove, equipClassKit, pressUlt, stepClass } from "./classRuntime";
 import { ENEMIES, WEAPONS } from "./data";
 import { stepCombat } from "./encounter";
-import { createRuntime, energyMax, type CombatRuntime } from "./runtime";
+import { combat, createRuntime, energyMax, type CombatRuntime } from "./runtime";
+import { signaturePaint } from "./primitives";
+import { WARDEN_SKINS } from "@/lib/combat/wardenData";
 import { spawnEnemy, type Enemy } from "./sim";
 import { field, fadeOf, inGrowth, rooted, walled, wallStops } from "./field";
 import { enclosed, hull, linksOf, totemState, TOTEM } from "./totems";
@@ -97,6 +99,26 @@ describe("the Warden kits (data)", () => {
         expect(info!.grip).toBe(gripFor(k.signature.type));
       }
     }
+  });
+  it("the mastery trim and every shop skin re-colour the weapon's own materials, every tier", () => {
+    const dir = join(__dirname, "../../../supabase/migrations"), file = readdirSync(dir).find(f => f.endsWith("_classes_v2_warden_seed.sql"))!;
+    const rows = [...readFileSync(join(dir, file), "utf8").matchAll(/"subclass":"(\w+)","skin":"(\w+)"/g)].map(m => `${m[1]}:${m[2]}`);
+    expect(rows.sort()).toEqual(Object.keys(WARDEN_SKINS).sort());
+    const materials = (key: string) => {
+      const b = readFileSync(join(__dirname, `../../../public/assets/game/weapons/${key}.glb`)), n = b.readUInt32LE(12);
+      return (JSON.parse(b.subarray(20, 20 + n).toString()).materials as { name: string }[]).map(m => m.name);
+    };
+    for (const k of WARDEN_KITS) for (let t = 1; t <= 5; t++) {
+      const have = materials(`${k.signature.type}-${t}`);
+      for (const name of Object.keys(k.look.trim!)) expect(have, `${k.key} trim ${name}, tier ${t}`).toContain(name);
+      for (const [key, set] of Object.entries(WARDEN_SKINS)) if (key.startsWith(`${k.key}:`)) for (const name of Object.keys(set)) expect(have, `${key} ${name}, tier ${t}`).toContain(name);
+    }
+    const { rt } = setup(SUMMONER, 13);
+    combat.rt = rt;
+    rt.v2!.skin = "mastery:trim";
+    expect(signaturePaint()!.M_Cuff.color).toBe(SUMMONER.look.trim!.M_Cuff);
+    rt.v2!.skin = "moonink";
+    expect(signaturePaint()!.M_Leather.color).toBe(WARDEN_SKINS["summoner:moonink"].M_Leather);
   });
   it("every key, ult, passive and class has its icon on disk", () => {
     const pub = join(__dirname, "../../../public");
