@@ -41,15 +41,17 @@ has 90, and once it's at 0 every hit you land does half, abilities and ults incl
 A) Keep per-hit wear. B) Wear only when you're defeated (−10%, row 229). C) Never: signature weapons don't wear;
 common weapons keep their durability. D) Per-hit wear with about 10× the durability.
 **Rec: C**, matching row 279's "tools never break": the signature weapon is your class's tool, and §1.5 already says it
-never strands you. The numbers make it more than a feel call (K5-balance.md, measured with the wear off):
+never strands you. The numbers make it more than a feel call (measured with the wear off, on the families' kit numbers,
+before the proposed tuning):
 - Wear only touches the twelve kits whose basic is a plain swing or shot. The four Rangers' own shots and the
   Transmuter's forms never wear.
-- Those twelve lose half their damage about a minute into the sanctum. With no wear their sanctum DPS rises 11–57%
-  (the Martial Artist 57%, the Assassin 55%, the Illusionist 41%, the Druid 38%, the Guardian 35%), and their
-  five-minute loop DPS 29–78%.
-- The sanctum evens out: the fastest clear goes from 0.74× the median to 0.83×. The Martial Artist stops falling on
-  the loop (19 of 20 → 0), and the Guardian kit stops falling to the guardian (12 of 12 → 2).
-- The guardian gets faster: 3.1 → 2.5 minutes median. That pairs with item 8.
+- Those twelve lose half their damage about a minute into the sanctum. With no wear, eleven of them gain 11–57% on
+  the sanctum (the Martial Artist 57%, the Assassin 55%, the Illusionist 40%, the Druid 38%, the Guardian 34%; the
+  Juggernaut only 3%) and 28–78% on the five-minute loop.
+- The sanctum evens out: the fastest clear goes from 0.72× the median to 0.82×. The Martial Artist and the Guardian
+  stop falling on the loop (19 and 14 of 20 → 0). The Guardian kit still falls to the guardian (12 of 12 → 10; the
+  proposed armour change takes that to 2).
+- The guardian gets faster: 3.2 → 2.5 minutes median. That pairs with item 8.
 With B or C the band is re-measured (one command) and lightly retuned; C also needs the wear rule to skip signature
 weapons and the repair screen to leave them out (a small build task).
 
@@ -60,7 +62,8 @@ two slowest damage kits, and the slower of them reads at or under 1.00× (the Ma
 median, the Marksman, the Illusionist, the Summoner and the Druid fall out of their role ranges, and buffing them moves
 the median with them.
 A) Roles against the all-16 mean; the ±25% band against the median. B) Everything against the median, as §3 says.
-**Rec: A.** With it every role holds its range (the pinned test uses it).
+**Rec: A.** With it every role holds its range but the Druid, a hair under its 0.80× floor (the proposed Druid change
+lifts it to 0.83×). The band test on the tuning branch uses the mean.
 
 **5. The Elementalist's ult fills in about 56 s** on the sanctum (target 60–90). Its `ult.charge` is already 0.8, the
 floor of §1.2's 0.8–1.25 range. Its many area hits fill the meter; Attunement is only about 2 s of it, and trimming
@@ -77,16 +80,16 @@ A) Keep them: the army is those kits' identity. B) Trim them toward 15% (fewer r
 C) Count only an ult's own hits for these two.
 **Rec: A** for launch, and watch it in the playtest.
 
-**7. Damage taken and the tanks.** On the sanctum the spread is about 4× (target 3×): the clone and beast kits take
-13–16 a minute (their decoys take the hits), the squishy melee about 62 (the Martial Artist and the Assassin; they also
-fall on the five-minute loop). The tanks don't take the least: the Druid 20, the Guardian 33, the Juggernaut 36. A melee
+**7. Damage taken and the tanks.** On the sanctum the spread is about 3.8× (target 3×): the clone and beast kits take
+16–17 a minute (their decoys take the hits), the squishy melee about 62 (the Martial Artist and the Assassin; they also
+fall on the five-minute loop). The tanks don't take the least: the Druid 22, the Guardian 47, the Juggernaut 37. A melee
 tank stands in every attack a ranged kit never meets; what sets the tanks apart is that they mitigate (the Guardian
-55%, the Juggernaut 46%) and outlast (the Druid's lowest health 97%).
+37%, about 55% with the proposed armour; the Juggernaut 45%) and outlast (the Druid's lowest health 97%).
 A) Restate the rules: tanks mitigate the most and outlast; the 3× spread holds among kits of the same reach. B) Give
 the squishy melee some sustain (a new mechanic each). C) Keep the rules and cut the melee kits' exposure with guard
 (changes what they are).
-**Rec: A.** The pinned test already holds the tanks to mitigation and lowest health, and the squishy melee to a 4.5×
-guard, until you decide.
+**Rec: A.** The band test on the tuning branch holds the tanks to that (mitigation and lowest health) and the squishy
+melee to a 4.5× guard until you decide.
 
 **8. The guardian's pace.** On the shared bot the v2 kits bring it down in about 3 minutes (target 4–6; 2.5 at mastery
 20, target 3.5–5). Its flat armour (7) turns every hit under about power 0.6 into 1, so the kits built on many small
@@ -97,11 +100,11 @@ for plain swings still reads 4.3–5.8.
 |---|---|---|---|---|
 | A. As built: health 1700, armour 7 | 3.2 (1.9–7.8) | 2.5 | 47 | 4.3–5.8 |
 | B. Armour 4, health 2800, its hits ×0.75 | 4.0 (2.3–7.9) | 3.3 | 44 | 4.7–6.3 |
-| C. Armour 4, health 3000, its hits ×0.75 | 4.4 (2.5–10.0) | 3.6 | 56 | 5.1–6.7 |
+| C. Armour 4, health 3000, its hits ×0.75 | 4.4 (2.5–10.0) | 3.8 | 56 | 5.1–6.7 |
 | D. Health 2600, its hits ×0.75 (armour 7) | 5.1 (2.8–13.1) | 4.1 | 61 | 6.6–8.8 |
 
-**Rec: C**: the only option with both masteries in their bands, and the lower armour narrows the gap between small and
-big hitters. It's content, not a kit number: a seeded row (`enemy_types`) and `lib/combat/content.ts`, as its own
+**Rec: C**: both masteries in their bands with the narrowest spread. D lands in band too, but it keeps the armour at 7,
+so the small-hit kits take up to 13 minutes. It's content, not a kit number: a seeded row (`enemy_types`) and `lib/combat/content.ts`, as its own
 migration. If item 3 goes to C, re-measure first: without wear every kit is about 20% faster on the guardian.
 
 **9. Melee falls in the guardian fight.** The Guardian, the Martial Artist and the Assassin fall in every option above,
