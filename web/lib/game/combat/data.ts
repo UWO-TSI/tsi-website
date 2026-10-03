@@ -6,6 +6,7 @@
  * so modelScale 1.3 = CHARACTER_SCALE keeps them in proportion to the player.
  */
 import { islandEnemies, islandMissions, islandWeapons } from "@/lib/combat/islandAdapter";
+import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import type { EnemyAttack, EnemyType, MissionDef, Weapon } from "./contract";
 
 const W = "/assets/game/weapons/", E = "/assets/game/enemies/";
@@ -18,7 +19,7 @@ const WEAPON_LOOK: Record<string, Look> = {
   "bow-willow": { cooldown: 0.6, range: 11, arc: 0, speed: 18, model: `${W}bow-willow.glb`, modelScale: 1.3 },
   "staff-oak": { cooldown: 0.5, range: 8, arc: 0, speed: 15, model: `${W}staff-oak.glb`, modelScale: 1.3 },
   "tome-spirits": { cooldown: 6, range: 7, arc: 0, model: `${W}tome-spirits.glb`, modelScale: 1.3 },
-  // Bare hands with wraps (the Monk's full combo): quick, short, nothing held.
+  // Bare hands with wraps (the Martial Artist's full combo): quick, short, nothing held.
   "wraps-cloth": { cooldown: 0.42, range: 1.35, arc: 1.7, model: "", modelScale: 1 },
   // Crafted (lib/crafting/recipes.ts): damage comes from the tier in the weapons table; these are the feel.
   "sword-iron": { cooldown: 0.45, range: 1.9, arc: 2.0, model: `${W}sword-iron.glb`, modelScale: 1.3 },
@@ -35,6 +36,14 @@ const WEAPON_LOOK: Record<string, Look> = {
   "tome-warden": { cooldown: 5, range: 8, arc: 0, model: `${W}tome-spirits.glb`, modelScale: 1.5 },
   "staff-heartstone": { cooldown: 0.6, range: 11, arc: 0, speed: 15, model: `${W}staff-rune.glb`, modelScale: 1.6 },
 };
+// Classes v2 signature weapons (the Vanguard wave): one look per type, a model per tier (art/props-enemies/build_weapons.py).
+const SIGNATURE_LOOK: Record<string, Omit<Look, "model">> = {
+  aegis: { cooldown: 0.5, range: 1.8, arc: 2.0, modelScale: 1.3 },
+  warhammer: { cooldown: 0.85, range: 2.2, arc: 2.4, modelScale: 1.3 },
+  handwraps: { cooldown: 0.36, range: 1.45, arc: 1.6, modelScale: 1.3 },
+  tanto: { cooldown: 0.4, range: 1.5, arc: 1.9, modelScale: 1.3 },
+};
+for (const w of SYSTEM_WEAPONS) if (w.subclass && SIGNATURE_LOOK[w.type]) WEAPON_LOOK[w.key] = { ...SIGNATURE_LOOK[w.type], model: `${W}${w.key}.glb` };
 export const WEAPONS: Record<string, Weapon> = Object.fromEntries(islandWeapons()
   .filter(w => WEAPON_LOOK[w.id])
   .map(w => [w.id, { ...w, ...WEAPON_LOOK[w.id] }]));

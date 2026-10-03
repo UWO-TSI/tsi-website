@@ -21,13 +21,23 @@ import type { WeaponType } from "./weapons";
 export type Element = "fire" | "frost" | "lightning";
 /** Enemy statuses: hold (seconds, rooted and not acting), slow [fraction, seconds], mark [+damage taken, seconds], distract (seconds, wanders off). */
 export interface Status { hold?: number; slow?: [number, number]; mark?: [number, number]; distract?: number }
-export type BuffStat = "damage" | "speed" | "guard" | "block" | "crit";
+/** Classes v2 adds: a parry window (its ability's `on_parry` answers a frontal hit inside it), absorbing (hits are stored,
+ * not taken: an area's `stored` releases them), and size (the body grows by the value: Titan). */
+export type BuffStat = "damage" | "speed" | "guard" | "block" | "crit" | "parry" | "absorb" | "size";
 
 export type Effect =
   /** Shots from the caster toward the aim; `count` fan out over `spread` radians. */
-  | { kind: "projectile"; power: number; count?: number; spread?: number; speed?: number; range?: number; pierce?: boolean; splash?: number; status?: Status }
+  | { kind: "projectile"; power: number; count?: number; spread?: number; speed?: number; range?: number; pierce?: boolean; splash?: number; status?: Status;
+      /** Classes v2: hops on to the nearest unhit enemy this many times, then flies home (Shield Throw). */
+      bounce?: number;
+      /** Classes v2: flies to the aim and stays where it lands or in what it hits: the blink anchor (Kunai Blink). */
+      stick?: boolean }
   /** A circle at the caster (or where a dash ended) or the aim; `arc` makes a cone toward the aim, `length` a beam of width 2·radius. */
-  | { kind: "area"; power: number; radius: number; at: "self" | "aim"; arc?: number; length?: number; knock?: number; status?: Status }
+  | { kind: "area"; power: number; radius: number; at: "self" | "aim"; arc?: number; length?: number; knock?: number; status?: Status;
+      /** Classes v2: adds what an absorb stored × this to each hit, and empties the store (Unbreakable's release). */
+      stored?: number;
+      /** Classes v2: its impact effect plays on every enemy it hits, not once at its centre. */
+      fxEach?: boolean }
   /** Move toward the aim (or away from it), hitting what's on the path if `power`; i-frames like a dodge if `iframes`. */
   | { kind: "dash"; distance: number; back?: boolean; power?: number; iframes?: boolean }
   /** Fractions of max HP. */
@@ -35,12 +45,26 @@ export type Effect =
   | { kind: "heal"; amount: number }
   /** Units from UNITS; "weapon" = the minion the equipped summoning weapon selects (row 43); "corpse" = raised from a fallen enemy. */
   | { kind: "summon"; unit: string; count?: number }
-  | { kind: "buff"; stat: BuffStat; value: number; duration: number }
+  | { kind: "buff"; stat: BuffStat; value: number; duration: number;
+      /** Classes v2: run on every basic attack while the buff lasts (Titan's shockwaves). */
+      swing?: Effect[] }
   /** A body-part change (row 34): shown on the character, triggers the Transmuter passive. */
   | { kind: "transform"; duration: number }
   /** Classes v2 movement hooks (design sheet §1.1): carried speed added along the aim (≤ 4 u/s a cast, never past the 18 u/s ceiling), and a small hop. */
   | { kind: "momentum"; speed: number }
-  | { kind: "launch"; height: number };
+  | { kind: "launch"; height: number }
+  /**
+   * Classes v2 primitives (the Vanguard kits): one hit on one enemy (the nearest the aim inside `range` and the front
+   * `arc`, then locked for the rest of the cast), optionally an execute (under `below` of its health and hit from behind:
+   * it falls; a boss or mini-boss takes `boss` × power instead); effects that land `delay` s later where the caster is
+   * then (a combo's strikes, a cut's bleed); a blink behind the target under the crosshair or to the thrown anchor
+   * (holding the target `status`); a taunt (enemies within `radius` come for you for `duration` s); a slam down out of the air.
+   */
+  | { kind: "strike"; power: number; range: number; arc?: number; knock?: number; status?: Status; execute?: { below: number; boss: number } }
+  | { kind: "after"; delay: number; effects: Effect[]; fx?: string; tier?: "light" | "ability" | "heavy" | "ult" }
+  | { kind: "blink"; to: "behind" | "anchor"; range?: number; status?: Status }
+  | { kind: "taunt"; radius: number; duration: number }
+  | { kind: "drop" };
 
 export interface Ability {
   key: string;
@@ -57,13 +81,21 @@ export interface Ability {
   gear?: { type: WeaponType; without: number };
   /** Guardian: what a successful block (buff "block") does back. */
   on_block?: Effect[];
+  /** Classes v2 Guardian: what a parry (a frontal hit inside the buff "parry" window) does back. */
+  on_parry?: Effect[];
   /** Elementalist: the element it applies; "cycle" = the one after the last used. */
   element?: Element | "cycle";
 }
 
 export type PassiveKind =
   | "element_switch" | "distracted" | "kill_heal" | "transform_shield" | "still" | "same_target" | "distance" | "crit_cdr"
-  | "block_shield" | "momentum" | "poise" | "lifesteal" | "pack_bond" | "resonance" | "overheal_shield";
+  | "block_shield" | "momentum" | "poise" | "lifesteal" | "pack_bond" | "resonance" | "overheal_shield"
+  /**
+   * Classes v2 (the Vanguard kits): a parry restores `cap` energy and grants `value` armour for 3 s (Bulwark); no
+   * knockback while attacking (Unstoppable); each chain hit adds `value` attack speed up to `cap` stacks, gone after a
+   * 1 s gap (Rhythm); hits from behind always crit and deal `value` more (Backstab).
+   */
+  | "parry" | "unstoppable" | "rhythm" | "backstab";
 export interface Passive {
   name: string;
   description: string;
@@ -287,7 +319,8 @@ export const subclassByKey = (key: string | null | undefined) => SUBCLASSES.find
 export interface UnitDef {
   key: string;
   name: string;
-  kind: "minion" | "totem" | "trap" | "decoy";
+  /** Classes v2: a dome stops enemy shots crossing its radius (Aegis Dome); a veil hides you inside it (Smoke Bomb). */
+  kind: "minion" | "totem" | "trap" | "decoy" | "dome" | "veil";
   hp: number;
   /** Seconds it lasts; absent = persists until destroyed, dismissed or the loadout drops its ability (row 50). */
   life?: number;
@@ -312,9 +345,11 @@ export const UNITS: Record<string, UnitDef> = {
   "totem-warding": { key: "totem-warding", name: "Warding totem", kind: "totem", hp: 90, radius: 3.4, pulse: { slow: 0.35, shield: 0.015 } },
   tripwire: { key: "tripwire", name: "Tripwire", kind: "trap", hp: 1, life: 25, radius: 1.2, power: 0.8 },
   decoy: { key: "decoy", name: "Phantom", kind: "decoy", hp: 50, life: 3, taunt: true },
+  aegis: { key: "aegis", name: "Aegis dome", kind: "dome", hp: 1, life: 5, radius: 2.6 },
+  "ink-smoke": { key: "ink-smoke", name: "Ink smoke", kind: "veil", hp: 1, life: 4, radius: 2.8 },
 };
 /** Caps (row 50): minions share the capacity stat; one totem per role and three at most; two traps; one decoy; two weapon wisps. */
-export const CAPS = { totems: 3, traps: 2, decoys: 1, weaponWisps: 2 } as const;
+export const CAPS = { totems: 3, traps: 2, decoys: 1, weaponWisps: 2, domes: 1, veils: 1 } as const;
 /** Row 43: the summoning weapon selects the Summoner's companions. */
 export const WEAPON_MINION: Record<string, string> = { "tome-spirits": "wisp", "tome-warden": "fox" };
 export const minionFor = (weaponKey: string) => WEAPON_MINION[weaponKey] ?? "wisp";

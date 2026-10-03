@@ -9,7 +9,8 @@ import { ENEMIES, WEAPONS } from "./data";
 import type { Vec } from "./sim";
 import { BOSS, DODGE, engage, inArc, invulnerable, spawnEnemy, sweptHit, type Enemy } from "./sim";
 import { ENERGY, SLOT_IDS, energyMax, energyRegen, setWeapon, type AbilityId, type CombatRuntime } from "./runtime";
-import { cancelCast, chargeUlt, cue, floater, fx, mitigate, strike, summon, fireSlot } from "./abilities";
+import { baseHit, buffSum, cancelCast, chargeUlt, context, cue, floater, fx, mitigate, passiveOf, runEffects, strike, summon, fireSlot } from "./abilities";
+import { holdsSignature, type ChainStep } from "@/lib/combat/classes";
 import { takenCharge } from "@/lib/combat/ult";
 import type { SpawnPoint } from "./spawns";
 import { FAMILY_STAT } from "@/lib/combat/kits";
@@ -45,20 +46,52 @@ export function combatFacing(p: CombatRuntime["player"], at: Vec, travel: number
   return p.facing + Math.atan2(Math.sin(to - p.facing), Math.cos(to - p.facing)) * (1 - Math.exp(-AIM_TURN * dt));
 }
 
+/** Attack speed now: the class's stat direction, and the Martial Artist's Rhythm (its chain stacks). */
+export function attackSpeed(rt: CombatRuntime): number {
+  const v = rt.v2, pv = passiveOf(rt);
+  return (v?.mods.attackSpeed ?? 1) * (1 + (v && pv?.kind === "rhythm" ? pv.value * Math.min(pv.cap ?? 5, v.chain.stacks) : 0));
+}
+/** A chain hit (a basic step or a technique slotted in): the chain moves on, and a landed one stacks Rhythm. */
+export function chainHit(rt: CombatRuntime, landed: boolean) {
+  const v = rt.v2!, pv = passiveOf(rt);
+  v.chain.i++; v.chain.gap = 0;
+  if (landed && pv?.kind === "rhythm") v.chain.stacks = Math.min(pv.cap ?? 5, v.chain.stacks + 1);
+}
+
 /** Primary attack with the equipped weapon toward the aim. Returns true if it fired. */
 export function attack(rt: CombatRuntime, player: Vec, random = Math.random): boolean {
   const p = rt.player;
   if (!p.alive || p.attackCd > 0 || rt.casting || p.dash || (p.dodgeAge !== null && p.dodgeAge < DODGE.duration)) return false;
-  const w = WEAPONS[p.weapon];
-  p.attackCd = w.cooldown / (rt.v2?.mods.attackSpeed ?? 1);
+  const w = WEAPONS[p.weapon], v = rt.v2;
+  // Classes v2: the kit's own basic on its signature weapon (a chain, HP-scaled hits, a throw past reach).
+  const basic = v && holdsSignature(v.kit, SYSTEM_WEAPONS.find(x => x.key === p.weapon)?.type) ? v.kit.basic : undefined;
+  const step: ChainStep | null = basic?.chain ? basic.chain[v!.chain.i % basic.chain.length] : null, speed = attackSpeed(rt);
+  const thrown = basic?.throw && Math.hypot(p.aim.x - player.x, p.aim.z - player.z) > basic.throw.beyond ? basic.throw : null;
+  p.attackCd = (w.cooldown * (thrown ? 1 : step?.time ?? 1)) / speed;
   faceAim(p, player);
   cue(rt, "swing", player);
   const dir = { x: Math.sin(p.facing), z: Math.cos(p.facing) };
+  if (thrown) {
+    rt.projectiles.push({ id: rt.seq++, x: player.x + dir.x * 0.5, z: player.z + dir.z * 0.5, vx: dir.x * thrown.speed, vz: dir.z * thrown.speed, life: thrown.range / thrown.speed, from: "player", damage: 0, kind: "arrow", radius: 0.18,
+      hit: { power: thrown.power, hitIds: [], impact: "light", fx: thrown.fx, ramp: v!.kit.look.ramp } });
+    p.clip = { verb: "Throw", scale: 1.5 * speed, upper: true };
+    v!.chain.gap = 0;
+    return true;
+  }
   if (w.kind === "melee") {
     p.swing = 0.22;
     let landed = false;
-    for (const e of rt.enemies) if (e.state !== "dead" && inArc(player, p.facing, w.range, w.arc, e, e.type.radius)) { strike(rt, e, { power: 1, from: player, knock: 4, melee: true }, random); landed = true; }
+    // Titan (a size buff): the reach grows with the body; each swing also throws its riders (the shockwaves).
+    const size = buffSum(rt, "size"), range = (step?.range ?? w.range) * (1 + size * 0.5), arc = step?.arc ?? w.arc;
+    const power = (step?.power ?? 1) + (basic?.hp ? (basic.hp * p.maxHp) / Math.max(1, baseHit(rt)) : 0);
+    for (const e of rt.enemies) if (e.state !== "dead" && inArc(player, p.facing, range, arc, e, e.type.radius)) { strike(rt, e, { power, from: player, knock: step?.knock ?? 4, melee: true }, random); landed = true; }
     if (landed) wearHit(rt);
+    if (step) { chainHit(rt, landed); p.clip = { verb: step.clip, scale: speed, upper: false }; }
+    for (const b of rt.buffs) if (b.swing && b.t > 0) {
+      const ctx = context(rt, { key: b.source ?? "swing", name: "", description: "", cooldown_s: 0, energy: 0, effects: b.swing }, player, 1, p.aim);
+      ctx.fx = { impact: b.swingFx }; ctx.impact = "ability";
+      runEffects(rt, b.swing, ctx, random);
+    }
   } else if (w.kind === "bow" || w.kind === "staff") {
     const speed = w.speed ?? 12;
     rt.projectiles.push({ id: rt.seq++, x: player.x + dir.x * 0.5, z: player.z + dir.z * 0.5, vx: dir.x * speed, vz: dir.z * speed, life: w.range / speed, from: "player", damage: 0, kind: w.kind === "bow" ? "arrow" : "bolt", radius: w.kind === "bow" ? 0.15 : 0.3 });
@@ -73,6 +106,7 @@ export function attack(rt: CombatRuntime, player: Vec, random = Math.random): bo
 /** Player projectile hits: weapon shots at weapon damage (staff bolts splash at half), ability and summon shots carry their own power. */
 export function resolvePlayerShot(rt: CombatRuntime, shotIdx: number, from: Vec, to: Vec, random = Math.random): boolean {
   const s = rt.projectiles[shotIdx], h = s.hit;
+  if (h?.spent) { const me = rt.player.last; return !!me && Math.hypot(me.x - to.x, me.z - to.z) < 0.7; } // flying home: caught
   const target = rt.enemies.find(e => e.state !== "dead" && e.state !== "return" && !h?.hitIds?.includes(e.id) && sweptHit(from, to, e, e.type.radius + s.radius));
   if (!target) return false;
   const knock = s.kind === "arrow" ? 2.5 : 3;
@@ -84,9 +118,25 @@ export function resolvePlayerShot(rt: CombatRuntime, shotIdx: number, from: Vec,
   }
   strike(rt, target, { power: h.power, from, knock: h.unit ? 1 : knock, stat: h.stat, tier: h.tier, unit: h.unit, status: h.status, impact: h.impact, ult: h.ult, first: !h.hitIds?.length }, random);
   fx(rt, h.fx, "impact", to, to, h.impact ?? "ability");
+  if (h.stick && rt.v2) rt.v2.anchor = { x: target.x, z: target.z, enemy: target.id }; // stuck in it: the blink lands at its back
+  if (h.bounce !== undefined) return bounce(rt, s, target);
   if (h.splash) splash(rt, to, h.splash, target, { power: h.power * 0.5, from: to, knock: 2, stat: h.stat, tier: h.tier }, random);
   if (!h.pierce) return true;
   h.hitIds!.push(target.id);
+  return false;
+}
+/** Classes v2: a bouncing shot hops to the nearest enemy it hasn't hit (within 7 u) while it has hops, then flies home. False: it flies on. */
+export const BOUNCE = { reach: 7 } as const;
+function bounce(rt: CombatRuntime, s: CombatRuntime["projectiles"][number], hit: Enemy): boolean {
+  const h = s.hit!, speed = Math.hypot(s.vx, s.vz) || 16;
+  h.hitIds!.push(hit.id);
+  let next: Enemy | null = null, best: number = BOUNCE.reach;
+  if (h.bounce! > 0) for (const e of rt.enemies) { const d = e.state !== "dead" && e.state !== "return" && !h.hitIds!.includes(e.id) ? Math.hypot(e.x - hit.x, e.z - hit.z) : Infinity; if (d < best) { best = d; next = e; } }
+  const to = next ?? rt.player.last;
+  if (!to) return true;
+  if (next) h.bounce!--; else h.spent = true;
+  const d = Math.hypot(to.x - s.x, to.z - s.z) || 1;
+  s.vx = ((to.x - s.x) / d) * speed; s.vz = ((to.z - s.z) / d) * speed; s.life = d / speed + 0.4;
   return false;
 }
 function splash(rt: CombatRuntime, at: Vec, r: number, skip: Enemy, src: Parameters<typeof strike>[2], random: () => number) {
@@ -144,9 +194,14 @@ export function hurtPlayer(rt: CombatRuntime, amount: number, from: Vec, player:
   if (!p.alive || p.safe || p.ultIframes > 0) return 0; // an ult's wind-up and freeze: nothing lands unseen
   if (invulnerable(p.dodgeAge) || p.dash?.iframes) { floater(rt, player, 1.7, "Dodged", "info"); return 0; }
   chargeUlt(rt, takenCharge(amount, p.maxHp)); // aimed at you, before guard, block and shield (§1.2)
-  const { damage } = mitigate(rt, amount, from, player, random); // the seeded roll in the balance runs (a block's counter can crit)
+  // Unbreakable (an absorb): nothing lands; all of it is stored for the release.
+  if (buffSum(rt, "absorb") > 0) { p.absorbed += amount; floater(rt, player, 1.7, `+${Math.round(amount)} stored`, "info"); return 0; }
+  const { damage, parried } = mitigate(rt, amount, from, player, random); // the seeded roll in the balance runs (a block's counter can crit)
+  if (parried) return 0; // negated: no flinch, no push
   p.hurt = 0.35;
-  if (rt.kit?.subclass.passive.kind !== "poise") {
+  // Unstoppable (classes v2): no knockback while attacking (a swing, an ability's dash, the ult).
+  const unstoppable = passiveOf(rt)?.kind === "unstoppable" && (p.attackCd > 0 || p.swing > 0 || !!p.dash || !!rt.v2?.cast);
+  if (rt.kit?.subclass.passive.kind !== "poise" && !unstoppable) {
     const d = Math.hypot(player.x - from.x, player.z - from.z) || 1;
     p.dodgeDir = { x: (player.x - from.x) / d, z: (player.z - from.z) / d };
     p.knock = knock;

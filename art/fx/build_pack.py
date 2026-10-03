@@ -1044,6 +1044,71 @@ def flare(t):
     return A, H
 
 
+
+# ---------------------------------------------------------------- the Vanguard wave's rows (classes v2)
+def ink_slash(t):
+    """A brush-stroke slash for the Assassin: a crescent of black ink laid with one sweep of a loaded brush, its leading
+    edge a thin band of the ramp's mid colour (red on the Assassin's ramp), bristle streaks along the stroke and the dry
+    tail breaking up; it sweeps on, then dries away from the tail. Low heat (ink) with a mid rim."""
+    head = 0.25 + 0.75 * ss(0.0, 0.3, t)
+    tail = 0.95 * ss(0.4, 1.0, t)
+    cx, cy, R, W = 0.05, -0.45, 0.85, 0.42
+    r = np.hypot(U - cx, V - cy)
+    ang = np.arctan2(V - cy, U - cx)
+    a0, a1 = math.radians(165), math.radians(15)
+    s = (a0 - ang) / (a0 - a1)
+    k = np.clip((s - tail) / max(head - tail, 1e-3), 0, 1)
+    prof = np.sin(math.pi * np.clip(k, 0, 1)) ** 0.55 * (0.25 + 0.75 * k)       # a fat belly toward the head, a dry point behind
+    w = W * prof * (1 - 0.35 * ss(0.5, 1.0, t))
+    inner, outer = R - 0.4 * w, R + 0.6 * w
+    inside = (s > tail) & (s < head) & (w > PX * 0.4)
+    across = np.clip((r - inner) / np.maximum(outer - inner, 1e-4), 0, 1)
+    br = vnoise(s * 26 + 3, across * 9 + 40, 4101)                               # bristles run along the stroke
+    thirst = 0.55 * (1 - k) ** 1.5 + 0.35 * ss(0.55, 1.0, t)
+    A = hard(np.maximum(inner - r, r - outer)) * inside * ss(thirst - 0.06, thirst + 0.1, br + 0.2)
+    H = np.where(across > 0.8, MID, np.where(across > 0.68, 0.3, 0.04 + 0.05 * br))  # the leading rim, a red bleed, else ink
+    for i, (dk, dr) in enumerate([(0.62, 0.16), (0.78, -0.12), (0.9, 0.2)]):     # flung drops off the belly
+        g = a0 - (a0 - a1) * min(head, dk)
+        rr = R + dr + 0.25 * ss(0.2, 1.0, t)
+        d = np.hypot(U - cx - math.cos(g) * rr, V - cy - math.sin(g) * rr)
+        A, H = lay(A, H, hard(d - 0.03 * (1 - 0.5 * t)) * (t > 0.15) * (t < 0.9), np.full_like(U, 0.05))
+    return A, H
+
+
+def petal(t):
+    """A lotus petal for auras and the Assassin's lotus: a pointed almond, its base white-hot, a flat mid body, a dark tip
+    edge; it turns over as it drifts and fades from the tip."""
+    rot = 0.6 + 2.2 * t
+    cr, sr = math.cos(rot), math.sin(rot)
+    x, y = U * cr + V * sr, -U * sr + V * cr
+    flip = 0.35 + 0.65 * abs(math.cos(math.pi * t))                              # turning over: it narrows and widens
+    L, Wd = 0.62, 0.3 * flip
+    yy = (y + L) / (2 * L)                                                       # 0 at the base, 1 at the tip
+    half = Wd * np.sin(math.pi * np.clip(yy, 0, 1)) ** 0.8 * (1 - 0.25 * yy)
+    inside = (yy > 0) & (yy < 1)
+    A = hard(np.abs(x) - half) * inside * (1 - ss(0.75, 1.0, t + 0.2 * yy))
+    vein = np.abs(x) < PX * 1.2
+    H = np.where(yy < 0.22, HI, np.where(yy > 0.86, LO, np.where(vein, 0.72, MID)))
+    return A, H
+
+
+def shard(t):
+    """A shield shard for the Guardian: a faceted hexagonal plate, a lit face, a shade face and a white-hot glint edge
+    that sweeps across it as it turns; it pops in and fades."""
+    rot = 0.4 + 1.6 * t
+    pop = 0.35 + 0.65 * (1 - (1 - min(1.0, t / 0.2)) ** 2)
+    size = 0.5 * pop * (1 - 0.25 * ss(0.6, 1.0, t))
+    pts = [(math.cos(rot + math.pi / 3 * k) * size, math.sin(rot + math.pi / 3 * k) * size * 0.82) for k in range(6)]
+    A = hard(poly_sdf(pts, U, V)) * (1 - ss(0.82, 1.0, t))
+    split = U * math.cos(rot + 0.8) + V * math.sin(rot + 0.8)
+    H = np.where(split > 0, MID, 0.3)
+    glint = np.abs(split - size * (1.4 * t - 0.5)) < PX * 2.5
+    H = np.where(glint, HI, H)
+    inner = hard(poly_sdf([(x * 0.55, y * 0.55) for x, y in pts], U, V))
+    H = np.where((inner > 0.5) & ~glint, H + 0.12, H)
+    return A, np.clip(H, 0, 1)
+
+
 # name, painter, what it is, how the sheet shows it (glow: additive; else straight alpha). Append only: rows are indices.
 COMBAT_SPRITES = [
     ("impactStar", impact_star, "spiky impact star: pops open, hollows out", True),
@@ -1061,6 +1126,10 @@ COMBAT_SPRITES = [
     ("beam", beam, "beam segment along +u (tiles along u)", True),
     ("ink", ink, "black ink splash and flicks", False),
     ("flare", flare, "four-point flare star", True),
+    # The Vanguard wave (classes v2): the Assassin's ink brush slash and lotus petal, the Guardian's shield shard.
+    ("inkSlash", ink_slash, "ink brush slash with a mid rim", False),
+    ("petal", petal, "lotus petal: tumbles, fades from the tip", True),
+    ("shard", shard, "shield shard: faceted plate, glint sweep", True),
 ]
 SHEET_RAMPS = [("arcane", "#fff6ff", "#b48cff", "#3a2466"), ("fire", "#fff4d6", "#ff8a3d", "#5a1a08"), ("holy", "#ffffff", "#ffe08a", "#8a6a20")]
 DARK, GRASS = "#1b1f27", "#8fa16c"

@@ -9,12 +9,14 @@ import type { Enemy, Vec } from "./sim";
 import { PLAYER_BASE, WEAPONS } from "./data";
 import { STARTER_WEAPONS } from "@/lib/combat/weapons";
 import { ZERO_STATS, type Stat, type StatBlock } from "@/lib/combat/progression";
-import type { Ability, BuffStat, Element, Status, Subclass, UnitDef } from "@/lib/combat/kits";
+import type { Ability, BuffStat, Effect, Element, Status, Subclass, UnitDef } from "@/lib/combat/kits";
 import type { ClassState } from "./classRuntime";
 import type { Kick, MoveView } from "./moveHooks";
 
 /** A shot. Weapon shots carry nothing; ability and unit shots carry what they do on impact. */
 export interface ShotHit { power: number; stat?: Stat; tier?: number; pierce?: boolean; splash?: number; status?: Status; unit?: boolean; hitIds?: string[];
+  /** Classes v2: hops left to the next enemy; flying home (hits nothing); sticks as the blink anchor. */
+  bounce?: number; spent?: boolean; stick?: boolean;
   /** Classes v2: the impact tier, an ult's own shot, the FX registry key its hit plays. */
   impact?: ImpactTier; ult?: boolean; fx?: string;
   /** Classes v2: the FX recipe thrown along the shot as it flies, in this ramp. */
@@ -32,10 +34,14 @@ export interface Unit {
   cd: number; power: number; stat: Stat;
   /** Minions that borrow an enemy model: its pose (state/t/move) for the renderer; shades borrow their corpse's. */
   body: Enemy | null;
+  /** Classes v2: the FX registry key a dome or a veil re-throws while it stands. */
+  fx?: string;
 }
 export interface Buff { stat: BuffStat; value: number; t: number; onBlock?: Ability; answered?: boolean;
   /** The ability that gave it (a v2 hold's buffs end on the release). */
-  source?: string }
+  source?: string;
+  /** Run on each basic attack while it lasts (Titan's shockwaves), drawn with the cast's zone effect. */
+  swing?: Effect[]; swingFx?: string }
 /** `ult`: an ult hit's number, in the large style (§1.6 follow-through). */
 export interface Floater { id: number; x: number; y: number; z: number; text: string; kind: "hit" | "crit" | "hurt" | "info" | "ult"; age: number }
 /** Something the scene plays (sound, hitstop, camera shake, a puff): pushed by the pure combat code, drained every frame. */
@@ -110,6 +116,8 @@ export interface CombatRuntime {
     clip: { verb: string; scale: number; upper: boolean } | null;
     /** Seconds of the ult's i-frames left (the press to 200 ms past the freeze, real time). */
     ultIframes: number;
+    /** Classes v2: enemies within `r` come for you for `t` more seconds (Challenge, War Cry); damage an absorb stored (Unbreakable). */
+    taunt: { t: number; r: number } | null; absorbed: number;
   };
   cooldowns: Record<AbilityId, number>;
   /** Classes v2 (the classes_v2 flag and a v2 kit; classRuntime.ts): null runs today's kits. */
@@ -154,7 +162,7 @@ export function createRuntime(): CombatRuntime {
       attackCd: 0, swing: 0, dodgeAge: null, dodgeCd: 0, dodgeDir: { x: 0, z: 1 }, knock: 0,
       aim: { x: 0, z: 0 }, facing: 0, aimHold: 0, hurt: 0, downFor: 0, armed: false,
       shield: 0, shieldFor: 0, dash: null, impulse: { x: 0, z: 0 }, speed: 1, still: 0, last: null,
-      move: { mode: "ground", speed: 0, sinceDash: 99, vx: 0, vz: 0 }, kick: null, clip: null, ultIframes: 0 },
+      move: { mode: "ground", speed: 0, sinceDash: 99, vx: 0, vz: 0 }, kick: null, clip: null, ultIframes: 0, taunt: null, absorbed: 0 },
     cooldowns: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, slot5: 0, ult: 0, swap: 0 }, denied: { slot1: 0, slot2: 0, slot3: 0, slot4: 0, slot5: 0, ult: 0, swap: 0 },
     v2: null, fx: [], tally: { dealt: 0, ult: 0 },
     enemies: [], projectiles: [], units: [], buffs: [], floaters: [], blasts: [], cues: [], hazards: [], mobFx: [],
