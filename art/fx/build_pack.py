@@ -1656,6 +1656,135 @@ def mushroom(t):
         e = np.hypot(U / R, (V + 0.85) / (R * 0.22))
         A, H = lay(A, H, hard((np.abs(e - 1) - 0.12) * R * 0.5) * (V < -0.6), np.full_like(U, 0.32 - 0.12 * t))
     return A, H
+# ---- the Warden wave's rows (classes v2: Summoner, Shaman, Druid, Priest)
+def c_shadow(t):
+    """A shadow wisp for the Summoner: an S-curved ink tendril rising and thinning, its body dark (the ramp's edge) inside a
+    thin rim of the class colour, two embers riding it; past the middle it frays into flecks."""
+    rng = np.random.default_rng(4101)
+    A, H = np.zeros_like(U), np.zeros_like(U)
+    grow = ss(0.0, 0.35, t)
+    pts = []
+    for i in range(14):
+        k = i / 13
+        y = -0.78 + 1.5 * k * (0.45 + 0.55 * grow) + 0.12 * t
+        x = 0.22 * math.sin(k * 5.2 + t * 4.0) * (0.4 + 0.6 * k)
+        pts.append((x, y))
+    D = np.full_like(U, 9.0)
+    W = np.full_like(U, 0.01)
+    K = np.zeros_like(U)
+    for i in range(13):
+        (ax, ay), (bx, by) = pts[i], pts[i + 1]
+        d, k = seg(ax, ay, bx, by)
+        kk = (i + k) / 13
+        w = 0.17 * (1 - kk) ** 0.8 * (1 - 0.35 * t) + 0.012
+        better = d - w < D - W
+        D, W, K = np.where(better, d, D), np.where(better, w, W), np.where(better, kk, K)
+    body = hard(D - W)
+    f = 1 - D / np.maximum(W, 1e-4)
+    heat = np.where(f > 0.28, 0.05, MID)
+    A, H = lay(A, H, body, heat)
+    for e in range(2):
+        kk = 0.25 + 0.4 * e + 0.08 * math.sin(t * 6 + e)
+        i = min(12, int(kk * 13))
+        ex, ey = pts[i]
+        r = 0.035 * (1 - 0.5 * t)
+        A, H = lay(A, H, hard(np.hypot(U - ex, V - ey) - r), np.full_like(U, HI))
+    fray = fbm(U * 7 + 3, V * 7 - t * 4, 4102, 3)
+    A = A * ss(0.75 * ss(0.45, 1.0, t) - 0.04, 0.75 * ss(0.45, 1.0, t) + 0.04, fray)
+    return A, H
+
+
+BOLT_PATHS = None
+
+
+def bolt_paths():
+    """Eight jagged lightning paths across the cell (u -1 to 1, ends at v 0 so the strip tiles), each with a fork."""
+    rng = np.random.default_rng(4201)
+    out = []
+    for f in range(8):
+        n = 9
+        xs = np.linspace(-1.02, 1.02, n)
+        ys = np.concatenate([[0.0], rng.uniform(-0.3, 0.3, n - 2), [0.0]])
+        fork_at = rng.integers(2, n - 3)
+        fx = xs[fork_at] + rng.uniform(0.15, 0.3)
+        fy = ys[fork_at] + rng.choice([-1, 1]) * rng.uniform(0.25, 0.45)
+        out.append((list(zip(xs, ys)), (xs[fork_at], ys[fork_at], fx, fy)))
+    return out
+
+
+def c_bolt(t):
+    """A lightning bolt along +u for links, zaps and the thunderbird: a jagged white-hot core in a flat mid band with a
+    short fork; each frame is a new path (it crackles), and the strip tiles along u."""
+    global BOLT_PATHS
+    BOLT_PATHS = BOLT_PATHS or bolt_paths()
+    path, (ax, ay, bx, by) = BOLT_PATHS[int(round(t * 8)) % 8]
+    D = np.full_like(U, 9.0)
+    for (p, q) in zip(path[:-1], path[1:]):
+        d, _ = seg(p[0], p[1], q[0], q[1])
+        D = np.minimum(D, d)
+    dfork, kf = seg(ax, ay, bx, by)
+    Df = dfork + 0.03 * kf
+    A = np.maximum(hard(D - 0.075), hard(Df - 0.045))
+    glow = np.exp(-(np.minimum(D, Df) / 0.16) ** 2)
+    A = np.maximum(A, glow * 0.45)
+    H = LO + (MID - LO) * np.maximum(hard(D - 0.075), hard(Df - 0.045)) + (HI - MID) * np.maximum(hard(D - 0.03), hard(Df - 0.016))
+    return A, H
+
+
+def c_leaf(t):
+    """A cel leaf tumbling end over end (the Druid's motes and blooms): a mid-band blade with a hot rib and lit upper
+    half, a dark rim; foreshortened as it turns."""
+    turn = math.cos(t * math.tau)
+    roll = t * math.tau * 0.5
+    L, Wd = 0.6, 0.3 * max(0.16, abs(turn))
+    ca, sa = math.cos(roll + 0.6), math.sin(roll + 0.6)
+    x, y = U * ca + V * sa, -U * sa + V * ca
+    xn = x / L
+    half = Wd * np.clip(1 - xn * xn, 0, 1) ** 0.75 * (1 + 0.25 * xn)
+    inside = ss(half, half - PX * 1.4, np.abs(y)) * (np.abs(xn) < 1)
+    stem = ss(PX * 1.8, 0, np.abs(y)) * ((xn < -0.95) & (xn > -1.25))
+    A = np.maximum(inside, stem)
+    f = 1 - np.abs(y) / np.maximum(half, 1e-3)
+    lit = (y > 0) if turn > 0 else (y < 0)
+    H = np.where(f < 0.16, LO, np.where(lit, 0.68, MID))
+    rib = ss(PX * 1.3, 0, np.abs(y)) * (np.abs(xn) < 0.9)
+    H = np.where(rib > 0.5, HI, H)
+    return A, H
+
+
+def c_thorn(t):
+    """A thorny vine curling up out of the ground (the Druid's snare and wall; lies flat as a decal or stands as a
+    sprite): a dark stem with a mid highlight, hooked thorns along it, unfurling over the frames."""
+    grow = ss(0.0, 0.6, t)
+    pts = []
+    for i in range(16):
+        k = i / 15 * grow
+        a = -1.9 + k * 4.2
+        r = 0.72 * (1 - k * 0.75)
+        pts.append((math.cos(a) * r * 0.9, math.sin(a) * r * 0.9 - 0.05))
+    A, H = np.zeros_like(U), np.zeros_like(U)
+    D = np.full_like(U, 9.0)
+    W = np.full_like(U, 0.01)
+    for i in range(15):
+        (ax, ay), (bx, by) = pts[i], pts[i + 1]
+        d, k = seg(ax, ay, bx, by)
+        w = 0.07 * (1 - (i + k) / 15) ** 0.7 + 0.014
+        better = d - w < D - W
+        D, W = np.where(better, d, D), np.where(better, w, W)
+    stem = hard(D - W)
+    f = 1 - D / np.maximum(W, 1e-4)
+    A, H = lay(A, H, stem, np.where(f > 0.55, MID, LO))
+    for i in range(2, 14, 3):
+        (ax, ay), (bx, by) = pts[i], pts[i + 1]
+        tx, ty = bx - ax, by - ay
+        tl = math.hypot(tx, ty) or 1
+        nx, ny = -ty / tl, tx / tl
+        side = 1 if i % 2 else -1
+        base = (ax, ay)
+        tip = (ax + nx * side * 0.13 + tx / tl * 0.05, ay + ny * side * 0.13 + ty / tl * 0.05)
+        d, k = seg(base[0], base[1], tip[0], tip[1])
+        A, H = lay(A, H, hard(d - 0.03 * (1 - k) - 0.004), np.full_like(U, 0.68))
+    return A * (1 - 0.5 * ss(0.8, 1.0, t)), H
 
 
 # name, painter, what it is, how the sheet shows it (glow: additive; else straight alpha). Append only: rows are indices.
@@ -1692,6 +1821,12 @@ COMBAT_SPRITES = [
     ("muzzle", muzzle, "muzzle blast along +u", True),
     ("chain", chain, "chain links along +u (tiles)", True),
     ("mushroom", mushroom, "mushroom cloud: fireball, cap, skirt", True),
+    # The Warden wave (classes v2): the Summoner's shadow, the Shaman's lightning, the Druid's leaves and thorns (the pack
+    # holds 32 rows: the Priest's motes use the flare, wings' feathers the leaf, and fire the Arcane wave's flame).
+    ("shadow", c_shadow, "shadow wisp: ink tendril, colour rim", True),
+    ("bolt", c_bolt, "lightning along +u (tiles along u)", True),
+    ("leaf", c_leaf, "cel leaf tumbling", True),
+    ("thorn", c_thorn, "thorny vine unfurling", False),
 ]
 SHEET_RAMPS = [("arcane", "#fff6ff", "#b48cff", "#3a2466"), ("fire", "#fff4d6", "#ff8a3d", "#5a1a08"), ("holy", "#ffffff", "#ffe08a", "#8a6a20")]
 DARK, GRASS = "#1b1f27", "#8fa16c"

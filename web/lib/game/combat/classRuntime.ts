@@ -11,7 +11,10 @@ import type { Effect, Passive } from "@/lib/combat/kits";
 import { derived } from "@/lib/combat/progression";
 import { ultBlock, ULT } from "@/lib/combat/ult";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
-import { CAST, context, floater, fx, runEffects, spend } from "./abilities";
+import { CAST, context, floater, fx, runEffects, shapePotency, spend } from "./abilities";
+import type { IncantationScore } from "./contract";
+import { stepField } from "./field";
+import { gardenWarp } from "./beasts";
 import { BUFFER, faceAim } from "./actions";
 import { chargePotency, createInputState, press, release, tick, type InputKit, type InputState, type Intent } from "./input";
 import { addKick, MOVE_NEEDS, moveOk, speedBonus } from "./moveHooks";
@@ -23,7 +26,7 @@ import type { Vec } from "./sim";
 /** The ult's beats in seconds after its anticipation (§1.6): the freeze, then 200 ms more of i-frames; the sequence's presentation lasts this long (after a sustained ult's finisher). */
 export const ULT_BEATS = { freeze: 0.12, iframesAfter: ULT.iframesAfterFreeze, end: 3 } as const;
 /** How far an ult reaches (its widest area, or its `reach` when it isn't an area): the bot's trigger, the channel's warning glow. */
-const reach = (e: Effect): number => (e.kind === "area" || e.kind === "zone" ? e.radius : e.kind === "sweep" ? e.width / 2 : e.kind === "delay" ? Math.max(0, ...e.effects.map(reach)) : e.kind === "projectile" ? 1.5 : 0);
+const reach = (e: Effect): number => (e.kind === "area" || e.kind === "zone" || e.kind === "ground" || e.kind === "rise" ? e.radius : e.kind === "awaken" ? e.ring + 4 : e.kind === "sweep" ? e.width / 2 : e.kind === "delay" ? Math.max(0, ...e.effects.map(reach)) : e.kind === "projectile" ? 1.5 : 0);
 export const ULT_REACH = (a: ClassAbility & { reach?: number }) => a.reach ?? Math.max(2, ...a.effects.map(reach));
 /** Seconds after the last threat that you still count as in combat (§1.3). */
 export const IN_COMBAT = 5;
@@ -158,6 +161,11 @@ function run(rt: CombatRuntime, q: Queued, me: Vec, random: () => number): "done
       if (why === "charging") return "wait";
       if (why) { if (why === "weapon") floater(rt, me, 1.9, signatureHint(v.kit), "info"); return deny(null); }
       if (v.channel) return deny(null);
+      // A drawn ult (the Priest's winged sigil): the shape first; the meter empties only on a good release (§1.1).
+      if (v.ult.input?.kind === "drawn") {
+        rt.casting = { id: rt.seq++, rune: v.ult.input.shape, aim: { ...p.aim }, slot: -1, ability: v.ult, free: true, ult: true };
+        return "done";
+      }
       if (v.ult.channel) startChannel(rt, me, random); else startUlt(rt, me);
       return "done";
     }
@@ -294,8 +302,25 @@ function startUlt(rt: CombatRuntime, me: Vec, potency = 1, aim = rt.player.aim) 
   if (!v.ult.channel) fx(rt, v.ult.vfx?.cast, "cast", me, aim, "ult");
 }
 
-/** The movement passive (ruins only): an air jump, a slide, a dash or a landing the avatar reports. */
+/**
+ * A drawn ult's release (abilities.ts resolveCast and cancelCast): a good shape starts it at the shape's potency
+ * (60–150%); a fizzle or a cancel keeps 75% of the meter (design sheet §1.1).
+ */
+export function ultDrawn(rt: CombatRuntime, me: Vec, score: IncantationScore | null) {
+  const v = rt.v2;
+  if (!v) return;
+  if (score && score.outcome !== "fail") {
+    startUlt(rt, me, shapePotency(score.accuracy));
+    floater(rt, me, 1.9, `${score.outcome === "enhanced" ? "Empowered" : "Cast"} · ${v.ult.name} · ${Math.round(score.accuracy)}%`, "info");
+  } else {
+    v.meter = ULT.max * 0.75;
+    floater(rt, me, 1.9, score ? `Fizzled · ${Math.round(score.accuracy)}% · the meter keeps 75%` : "The meter keeps 75%", "info");
+  }
+}
+
+/** The movement passive (ruins only): an air jump, a slide, a dash or a landing the avatar reports. Inside Shadow Garden your dash is a warp. */
 export function classMove(rt: CombatRuntime, me: Vec, on: MovementPassive["on"], random = Math.random): boolean {
+  if (on === "dash" && gardenWarp(rt, me, random)) return true;
   const v = rt.v2, p = rt.player, m = v?.kit.movement;
   if (!v || !m || m.on !== on || !p.alive || v.moveCd > 0 || p.energy < m.energy) return false;
   spend(rt, m.energy);
@@ -343,7 +368,7 @@ export function stepClass(rt: CombatRuntime, me: Vec, dt: number, real: number, 
     if (!p.alive) { v.channel = null; rt.buffs = rt.buffs.filter(b => b.source !== "channel"); }
     else {
       c.t += real; c.aim = { ...p.aim }; // the storm follows your aim while it gathers
-      if ((c.pulse -= real) <= 0) { c.pulse = 0.35; fx(rt, v.ult.vfx?.zone, "zone", c.aim, me, "heavy", ULT_REACH(v.ult)); p.clip = { verb: "Channel", scale: 1, upper: false }; }
+      if ((c.pulse -= real) <= 0) { c.pulse = 0.35; fx(rt, v.ult.vfx?.zone, "zone", c.aim, me, "heavy", ULT_REACH(v.ult), ch.ramp); p.clip = { verb: "Channel", scale: 1, upper: false }; }
       if (c.t >= ch.seconds || c.at >= c.notes.length) endChannel(rt, me);
     }
   }
@@ -354,6 +379,7 @@ export function stepClass(rt: CombatRuntime, me: Vec, dt: number, real: number, 
     if (!v.cast.fired && v.cast.t >= A && p.alive) {
       v.cast.fired = true;
       const ctx = context(rt, v.ult, me, v.cast.potency ?? 1, v.cast.aim);
+      if (v.cast.potency !== undefined && v.ult.input?.kind === "drawn") ctx.sup = v.cast.potency; // a drawn ult heals at its shape's potency too
       ctx.impact = finisherOnly ? "heavy" : "ult"; ctx.ult = true; ctx.fx = v.ult.vfx; ctx.ramp = v.ult.ramp;
       runEffects(rt, v.ult.effects, ctx, random);
     }
@@ -370,4 +396,6 @@ export function stepClass(rt: CombatRuntime, me: Vec, dt: number, real: number, 
   // In combat (§1.3): something hunting or hitting you, a wave running or the boss engaged, and for 5 s after.
   const threat = rt.wave?.active || rt.bossEngaged || rt.enemies.some(e => THREAT.has(e.state) && e.status.distract <= 0 && Math.hypot(e.x - me.x, e.z - me.z) < e.type.aggroRadius + 4);
   v.combatT = threat ? IN_COMBAT : Math.max(0, v.combatT - dt);
+  // What stays after a cast (zones, walls, channels, thrown units, tethers), the totems and the beasts: field.ts.
+  stepField(rt, me, dt, random);
 }

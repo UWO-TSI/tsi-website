@@ -5,7 +5,9 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { STEP_KEYS, validateChapterDraft } from "@/lib/progression/chapters";
 import type { ChapterRequirement, QuestChapter } from "@/lib/progression/types";
-import { DraftBar, Field, inputCls, listToText, textToList, Toggle, useDraftFlow } from "./ProgressionAdminShared";
+import { CurrencyIcon } from "@/components/economy/Amount";
+import { Badge, Card, Select } from "@/components/gui";
+import { backLinkCls, DraftBar, Field, FixList, inputCls, listToText, textToList, Toggle, useDraftFlow } from "./ProgressionAdminShared";
 
 // ─── QuestChapterEditor ─────────────────────────────────────────────────────
 // Main quest chapter copy, order, regions, skip rule and (for club_goal
@@ -62,16 +64,16 @@ export default function QuestChapterEditor({ mode, initial, goalSlugs }: { mode:
   const errors = validateChapterDraft(draft);
 
   return (
-    <div>
-      <Link href={BACK} className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] mb-2">
-        <ArrowLeft size={12} /> Back to Main Quest
+    <div className="mx-auto w-full max-w-3xl">
+      <Link href={BACK} className={backLinkCls}>
+        <ArrowLeft size={16} aria-hidden /> Back to the main quest
       </Link>
-      <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">{mode === "new" ? "New Chapter" : `Edit: ${initial?.title ?? "Chapter"}`}</h1>
-      <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1 mb-6">Drafts stay invisible to members until published. Every publish is versioned.</p>
+      <h1 className="mt-2 text-2xl font-extrabold text-[var(--gui-ink-strong)]">{mode === "new" ? "New chapter" : `Edit: ${initial?.title ?? "Chapter"}`}</h1>
+      <p className="text-sm text-[var(--gui-muted)] mt-1 mb-6">Drafts stay invisible to members until published. Every publish is versioned.</p>
 
-      <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-6 space-y-5">
+      <Card className="space-y-5" style={{ padding: "clamp(16px, 4vw, 24px)" }}>
         <div className="grid gap-5 md:grid-cols-[1fr_120px]">
-          <Field label="Slug" hint="kebab-case, e.g. settle-in">
+          <Field label="Slug" hint="Lowercase with dashes, e.g. settle-in">
             <input className={inputCls} value={form.slug} onChange={(e) => set("slug", e.target.value)} spellCheck={false} />
           </Field>
           <Field label="Order" hint="1 = first chapter">
@@ -85,25 +87,25 @@ export default function QuestChapterEditor({ mode, initial, goalSlugs }: { mode:
           <textarea className={`${inputCls} min-h-[70px]`} value={form.summary} maxLength={500} onChange={(e) => set("summary", e.target.value)} />
         </Field>
         <Field label="Requirement" hint="What finishes the chapter. New requirement types need code.">
-          <select className={inputCls} value={form.requirement} onChange={(e) => set("requirement", e.target.value as ChapterRequirement)}>
+          <Select className="w-full" value={form.requirement} onChange={(e) => set("requirement", e.target.value as ChapterRequirement)}>
             {REQUIREMENTS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-          </select>
+          </Select>
         </Field>
         {form.requirement === "club_goal" ? (
           <Field label="Club goal" hint="The chapter shows this goal and completes when it does.">
-            <select className={inputCls} value={form.goal_slug} onChange={(e) => set("goal_slug", e.target.value)}>
+            <Select className="w-full" value={form.goal_slug} onChange={(e) => set("goal_slug", e.target.value)}>
               <option value="">Pick a goal…</option>
               {goalSlugs.map((g) => <option key={g} value={g}>{g}</option>)}
-            </select>
+            </Select>
           </Field>
         ) : null}
         <fieldset className="space-y-3">
-          <legend className="block text-[0.65rem] font-mono uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">Step copy</legend>
+          <legend className="block mb-1.5 text-[15px] font-extrabold text-[var(--gui-ink-strong)]">Step copy</legend>
           {STEP_KEYS[form.requirement].map((k) => (
             <div key={k} className="grid gap-2 md:grid-cols-[140px_1fr_1fr] items-center">
-              <code className="text-xs text-[var(--color-accent-cyan)]">{k}</code>
-              <input className={inputCls} placeholder="Label" value={form.step_copy[k]?.label ?? ""} onChange={(e) => set("step_copy", { ...form.step_copy, [k]: { ...form.step_copy[k], label: e.target.value } })} />
-              <input className={inputCls} placeholder="Hint (optional)" value={form.step_copy[k]?.hint ?? ""} onChange={(e) => set("step_copy", { ...form.step_copy, [k]: { label: form.step_copy[k]?.label ?? "", hint: e.target.value } })} />
+              <span><Badge>{k}</Badge></span>
+              <input className={inputCls} placeholder="Label" aria-label={`${k}: label`} value={form.step_copy[k]?.label ?? ""} onChange={(e) => set("step_copy", { ...form.step_copy, [k]: { ...form.step_copy[k], label: e.target.value } })} />
+              <input className={inputCls} placeholder="Hint (optional)" aria-label={`${k}: hint`} value={form.step_copy[k]?.hint ?? ""} onChange={(e) => set("step_copy", { ...form.step_copy, [k]: { label: form.step_copy[k]?.label ?? "", hint: e.target.value } })} />
             </div>
           ))}
         </fieldset>
@@ -114,21 +116,24 @@ export default function QuestChapterEditor({ mode, initial, goalSlugs }: { mode:
           <textarea className={`${inputCls} min-h-[70px]`} value={form.completion_letter} maxLength={2000} onChange={(e) => set("completion_letter", e.target.value)} />
         </Field>
         <Field label="Skippable by" hint="Members at this tier or above (lower number) can skip in one click. Club-goal chapters can't be skipped.">
-          <select className={inputCls} value={form.skippable_max_tier} onChange={(e) => set("skippable_max_tier", Number(e.target.value))}>
+          <Select className="w-full" value={form.skippable_max_tier} onChange={(e) => set("skippable_max_tier", Number(e.target.value))}>
             <option value={0}>Nobody</option>
             <option value={1}>T1 only</option>
             <option value={2}>T1–T2</option>
             <option value={3}>T1–T3</option>
             <option value={4}>T1–T4</option>
             <option value={5}>Everyone (default for onboarding)</option>
-          </select>
+          </Select>
         </Field>
-        <Field label="Reward (play coins)" hint="Paid once when a member completes the chapter; skipping pays nothing. 0 = none.">
-          <input className={inputCls} type="number" min={0} max={5000} value={form.reward_coins} onChange={(e) => set("reward_coins", Number(e.target.value))} />
+        <Field label="Reward in TC" hint="Paid once when a member completes the chapter; skipping pays nothing. 0 = none.">
+          <div className="flex items-center gap-2.5">
+            <input className={inputCls} type="number" min={0} max={5000} aria-label="Reward in TC" value={form.reward_coins} onChange={(e) => set("reward_coins", Number(e.target.value))} />
+            <CurrencyIcon currency="coins" size={28} />
+          </div>
         </Field>
         <Toggle label="Active" hint="Inactive chapters are hidden from the journal." checked={form.active} onChange={(v) => set("active", v)} />
-        {errors.length ? <ul className="text-[0.65rem] font-mono text-red-400 list-disc pl-4">{errors.map((e) => <li key={e}>{e}</li>)}</ul> : null}
-      </div>
+        <FixList errors={errors} />
+      </Card>
       <DraftBar flow={flow} canSave={errors.length === 0} onSave={() => flow.save(draft)} />
     </div>
   );

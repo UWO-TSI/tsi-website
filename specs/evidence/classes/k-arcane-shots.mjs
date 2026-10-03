@@ -8,6 +8,7 @@
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { loadavg } from "node:os";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
 const { chromium } = require("playwright");
 const [OUT = "specs/evidence/classes", ONLY_LIST] = process.argv.slice(2);
@@ -19,7 +20,9 @@ mkdirSync(OUT, { recursive: true });
 const PORT = process.env.PORT ?? 3133, W = 1280, H = 940;
 const browser = await chromium.launch({ headless: false, args: ["--mute-audio", "--window-position=2400,0", "--use-angle=metal", "--ignore-gpu-blocklist"] });
 const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_curtain", back: "back_bob", top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: {} });
-const WEAPON = { elementalist: "prism-staff-3", illusionist: "trick-deck-3", necromancer: "bone-tome-3", transmuter: "tooth-charm-3" };
+// The tier-1 signature weapon the choice granted (on the wheel). A weapon put in hand that isn't on the wheel loops the
+// island's held/equipped effects (wave0-questions #19), so the evidence holds the one the member owns.
+const WEAPON = { elementalist: "prism-staff-1", illusionist: "trick-deck-1", necromancer: "bone-tome-1", transmuter: "tooth-charm-1" };
 let ctx, page;
 async function fresh(store = {}) {
   await ctx?.close();
@@ -57,8 +60,7 @@ async function stage(kit, x, z, foes = [], type = "shadow-fox", hold = true) {
     rt.enemies = rt.enemies.filter(e => e.type.kind === "boss").map(e => ({ ...e, state: "idle", x: e.spawnX, z: e.spawnZ }));
     rt.projectiles = []; rt.units = []; rt.floaters = []; rt.blasts = []; rt.banner = null; rt.fx = []; rt.hazards = [];
     Object.assign(rt.field, { zones: [], walls: [], sweeps: [], timers: [], marks: {}, counter: null, stealth: 0, surf: null, order: { mode: "free", target: null } });
-    if (!rt.player.owned.includes(weapon)) rt.player.owned.push(weapon);
-    Object.assign(rt.player, { hp: rt.player.maxHp, alive: true, energy: 999, weapon });
+    Object.assign(rt.player, { hp: rt.player.maxHp, alive: true, energy: 999, weapon, shield: 0, shieldFor: 0 });
     Object.assign(rt.v2, { cd: {}, meter: 0, cast: null, channel: null, form: null });
     window.__move.teleport(x, z, 0);
     foes.forEach(([fx, fz], i) => window.__combatDev.spawn(type, fx, fz, `ka-${type}-${i}-${Math.random().toString(36).slice(2, 6)}`));
@@ -72,20 +74,32 @@ const around = async (x, z, w = 760, h = 470) => { const p = await page.evaluate
 const keys = async (...ks) => { for (const k of ks) { await page.keyboard.down(k); await page.waitForTimeout(40); } for (const k of ks) await page.keyboard.up(k); };
 const ME = { x: 2, z: -16 }, AIM = { x: 2, z: -11.5 }, PACK = [[2, -11], [3.2, -12], [0.8, -12.2], [2.8, -10.2], [1.2, -10.4]];
 
-/** An ability's moments: fire it with `act`, then capture at each delay (ms after the act). */
+/** An ability's moments: start `act`, then capture at each delay (ms after the act began; an entry's action runs first, a second press). */
 async function strip(kit, label, act, delays, foes = PACK, type = "shadow-fox", opts = {}) {
   await stage(kit, opts.me?.x ?? ME.x, opts.me?.z ?? ME.z, foes, type, opts.hold ?? true);
   if (opts.before) await opts.before();
   await aimAt(opts.aim?.x ?? AIM.x, opts.aim?.z ?? AIM.z);
+  const t0 = Date.now();
   await act();
   const files = [], labels = [];
-  let t = 0;
-  for (const [d, what] of delays) { await page.waitForTimeout(Math.max(0, d - t)); t = d; files.push(await shot(await around(opts.focus?.x ?? ME.x, opts.focus?.z ?? ME.z + 2.4, 520, 330))); labels.push(`${label} · ${what} ${d} ms`); }
+  for (const [d, what, action] of delays) {
+    const wait = t0 + d - Date.now();
+    if (wait > 0) await page.waitForTimeout(wait);
+    if (action) await action();
+    const at = opts.follow ? await page.evaluate(() => { const s = window.__move.sim.current.state; return { x: s.x, z: s.z }; }) : { x: opts.focus?.x ?? ME.x, z: opts.focus?.z ?? ME.z + 2.4 };
+    files.push(await shot(await around(at.x, at.z, ...(opts.size ?? [520, 330])))); labels.push(`${label} · ${what} ${d} ms`);
+  }
   return { files, labels };
+}
+/** A Transmuter learns its forms the real way: kills of each mob post to the server, which teaches the trait; the kit re-equips with the form open. */
+async function learnForms() {
+  await page.evaluate(() => { const rt = window.__combat.rt; ["thorn-crab", "rune-wisp", "pollen-sprite", "stone-golem"].forEach((e, i) => rt.killQueue.push({ enemy: e, key: `ev-learn-${i}-${Date.now()}` })); });
+  await page.waitForFunction(() => window.__combat.rt.v2.keys.every(k => k), null, { timeout: 20000 });
 }
 async function kitSheet(kit, name, entries, mastery = 9) {
   await fresh();
   await open(kit, `mastery=${mastery}`);
+  if (kit === "transmuter") await learnForms();
   const files = [], labels = [];
   for (const e of entries) { const r = await strip(kit, ...e); files.push(...r.files); labels.push(...r.labels); }
   tile(files, labels, name, 4, "520x330+3+3");
@@ -106,9 +120,9 @@ if (wanted("elementalist")) await kitSheet("elementalist", "K-arcane-elementalis
 ]);
 if (wanted("illusionist")) await kitSheet("illusionist", "K-arcane-illusionist", [
   ["1 Mirror Clone", () => keys("1"), [[300, "cards burst"], [700, "the double"], [1500, "strafing, throwing"], [2600, "a dash"]], PACK, "shadow-fox", { hold: false }],
-  ["2 Swap", async () => { await keys("1"); await page.waitForTimeout(1300); await keys("2"); }, [[1450, "shards"], [1600, "traded places"], [1800, "momentum kept"], [2200, "settled"]], [[2, -9]]],
+  ["2 Swap", () => keys("1"), [[1100, "a double out ahead"], [1250, "swapped: you at its place", () => keys("2")], [1500, "it at yours"], [2000, "settled"]], [[2, -9]], "shadow-fox", { focus: { x: 2, z: -12.5 }, size: [760, 480] }],
   ["3 Mirror Ward", async () => { await keys("3"); await page.evaluate(() => { const rt = window.__combat.rt, me = window.__move.sim.current.state; rt.projectiles.push({ id: rt.seq++, x: me.x, z: me.z + 3, vx: 0, vz: -11, life: 1, from: "enemy", damage: 12, kind: "rune", radius: 0.3 }); }); }, [[120, "the mirror"], [300, "reflected"], [500, "back to its shooter"], [800, "hit"]], [[2, -9]]],
-  ["4 Trick Card", async () => { await keys("4"); await page.waitForTimeout(450); await keys("4"); }, [[200, "the card"], [430, "in flight"], [600, "teleported to it"], [900, "after"]], [[2, -9]]],
+  ["4 Trick Card", () => keys("4"), [[150, "the card thrown"], [380, "in flight: the mark rides it"], [470, "pressed again: teleported to it", () => keys("4")], [800, "speed and arc kept"]], [[6, -9]], "shadow-fox", { focus: { x: 2, z: -11.5 }, size: [860, 520] }],
   ["5 Vanish", () => keys("5"), [[250, "cards thrown up"], [600, "gone"], [1500, "a shimmer only"], [2600, "still unseen"]], [[2, -8]]],
 ], 9);
 if (wanted("necromancer")) await kitSheet("necromancer", "K-arcane-necromancer", [
@@ -116,9 +130,21 @@ if (wanted("necromancer")) await kitSheet("necromancer", "K-arcane-necromancer",
   ["2 Command", async () => { await page.evaluate(() => { const rt = window.__combat.rt; for (const e of rt.enemies.slice(0, 3)) if (e.id.startsWith("ka-")) { e.state = "dead"; e.hp = 0; e.deadFor = 1; } }); await keys("1"); await page.waitForTimeout(900); await keys("2"); }, [[1000, "charge!"], [1500, "marching on it"], [2200, "swarming"], [3000, "on it"]]],
   ["3 Corpse Explosion", async () => { await page.evaluate(() => { const rt = window.__combat.rt; for (const e of rt.enemies.slice(0, 3)) if (e.id.startsWith("ka-")) { e.state = "dead"; e.hp = 0; e.deadFor = 1; } }); await keys("3"); }, [[80, "the corpse bursts"], [250, "the chain"], [500, "bone"], [900, "after"]]],
   ["4 Dark Pact", async () => { await page.evaluate(() => { const rt = window.__combat.rt; rt.player.hp = rt.player.maxHp * 0.5; const e = rt.enemies.find(x => x.id.startsWith("ka-")); e.state = "dead"; e.hp = 0; e.deadFor = 1; }); await keys("1"); await page.waitForTimeout(900); await keys("4"); }, [[1000, "consumed"], [1150, "drained"], [1400, "bone shield"], [1900, "after"]]],
-  ["5 Bone Surf", async () => { await page.keyboard.down("w"); await page.keyboard.down("Shift"); await page.waitForTimeout(650); await page.keyboard.down("c"); await page.waitForTimeout(90); await keys("5"); }, [[900, "hands rise"], [1100, "surfing"], [1400, "ploughing"], [1700, "carried"]], [[2, -12], [1.5, -10]], "shadow-fox", { aim: { x: 2, z: -4 } }],
+  // A sprint to the right (D: open ground for 20 u from here; W+D ends on a cliff), the slide (Ctrl on macOS: C crouches only off a Mac) and key 5 mid-slide; the
+  // foxes are set down the line the run took, 5–12 u on, so the surf ploughs through them.
+  ["5 Bone Surf", async () => {
+    for (const k of ["d", "Shift"]) await page.keyboard.down(k);
+    await page.waitForTimeout(300);
+    await page.evaluate(() => {
+      const s = window.__move.sim.current.state, v = Math.hypot(s.vx, s.vz) || 1, dx = s.vx / v, dz = s.vz / v, rt = window.__combat.rt;
+      for (let i = 0; i < 8; i++) { const k = 5 + i, side = (i % 2 ? 1 : -1) * 0.8; window.__combatDev.spawn("shadow-fox", s.x + dx * k - dz * side, s.z + dz * k + dx * side, `ka-surf-${i}-${Math.random().toString(36).slice(2, 6)}`); }
+      for (const e of rt.enemies) if (e.type.kind !== "boss") { e.status.hold = 99; e.hp = e.type.hp * 20; }
+      window.__publishCombat();
+    });
+    await page.waitForTimeout(350); await page.keyboard.down("Control"); await page.waitForTimeout(90); await keys("5");
+  }, [[850, "hands rise"], [1050, "surfing"], [1250, "ploughing"], [1450, "carried"]], [], "shadow-fox", { aim: { x: 2, z: -4 }, follow: true, size: [640, 400] }],
 ], 9);
-await page?.keyboard.up("w").catch(() => {}); await page?.keyboard.up("Shift").catch(() => {}); await page?.keyboard.up("c").catch(() => {});
+for (const k of ["w", "d", "Shift", "Control"]) await page?.keyboard.up(k).catch(() => {});
 if (wanted("transmuter")) await kitSheet("transmuter", "K-arcane-transmuter", [
   ["1 Fox Form: Lunge", () => keys("1"), [[120, "the shift"], [300, "lunge"], [600, "the fox"], [1100, "bite combo"]]],
   ["2 Crab Form: Block", async () => { await page.waitForTimeout(3200); await keys("2"); }, [[3300, "shell up"], [3500, "the crab"], [3900, "blocking"], [4600, "pinch"]]],
@@ -143,7 +169,7 @@ async function ultStrip(kit, reduce) {
     await page.waitForFunction(() => !!window.__combat.rt.v2.channel, null, { timeout: 3000 });
     for (let i = 0; i < 5; i++) { const note = await page.evaluate(() => window.__combat.rt.v2.channel?.notes[window.__combat.rt.v2.channel.at]); if (note !== undefined) await page.keyboard.press(String(note + 1)); await page.waitForTimeout(160); }
     await page.waitForTimeout(500);
-    files.push(await shot()); labels.push("charge: storm clouds, the glowing area, the mash");
+    files.push(await crop()); labels.push("charge: clouds, the area, the mash");
     for (let i = 0; i < 12; i++) { const note = await page.evaluate(() => window.__combat.rt.v2.channel?.notes[window.__combat.rt.v2.channel.at]); if (note === undefined) break; await page.keyboard.press(String(note + 1)); await page.waitForTimeout(120); }
   } else await page.keyboard.press("f");
   await page.waitForFunction(() => !!window.__combat.rt.v2.cast, null, { timeout: 8000 });
@@ -160,7 +186,7 @@ async function ultStrip(kit, reduce) {
     await page.waitForTimeout(Math.min(span * 450, 2500));
     await page.evaluate(() => { window.__classDev.holdUlt = true; window.__combat.freeze = true; });
     await page.waitForTimeout(80);
-    files.push(await crop()); labels.push(kit === "illusionist" ? "the mirror sweeps: an inverted path, enemies pressed into the glass" : kit === "necromancer" ? "the dead march on the pack" : "the Chimera");
+    files.push(await crop()); labels.push(kit === "illusionist" ? "the mirror sweeps: path inverted" : kit === "necromancer" ? "the dead march on the pack" : "the Chimera"); // ≤ 39 characters: "Reduce flashing · " goes in front, in a 450 px tile
     await page.evaluate(() => { window.__combat.freeze = false; });
   }
   const B = A + span;
@@ -168,7 +194,7 @@ async function ultStrip(kit, reduce) {
   await page.evaluate(() => { window.__classDev.holdUlt = false; window.__combat.freeze = false; });
   return { files, labels };
 }
-if (wanted("ults")) for (const kit of ["elementalist", "illusionist", "necromancer", "transmuter"]) {
+if (wanted("ults")) for (const kit of (process.env.ULTS ?? "elementalist,illusionist,necromancer,transmuter").split(",")) {
   const off = await ultStrip(kit, false), on = await ultStrip(kit, true);
   tile([...off.files, ...on.files], [...off.labels, ...on.labels.map(l => `Reduce flashing · ${l}`)], `K-arcane-ult-${kit}`, 4, "450x250+3+3");
 }
@@ -176,14 +202,14 @@ if (wanted("ults")) for (const kit of ["elementalist", "illusionist", "necromanc
 // ── The HUD per kit: keys with icons, the class line, the ult slot; the Cataclysm mash ──
 if (wanted("hud")) {
   const files = [], labels = [];
-  const crop = { x: (W - 760) / 2, y: H - 262, width: 760, height: 260 };
+  const crop = { x: (W - 760) / 2, y: H - 292, width: 760, height: 290 }; // tall enough for the Elementalist's combo lines under its health
   for (const [kit, m, label] of [["elementalist", 9, "Elementalist: four elements, the combos, mana"], ["illusionist", 12, "Illusionist: clones out"], ["necromancer", 12, "Necromancer: skeletons and the order"], ["transmuter", 12, "Transmuter: a form taken (one form locked)"]]) {
     await fresh();
     await open(kit, `mastery=${m}`);
     await stage(kit, ME.x, ME.z, PACK);
     if (kit === "illusionist") await keys("1");
     if (kit === "necromancer") { await page.evaluate(() => { for (const e of window.__combat.rt.enemies.slice(0, 3)) if (e.id.startsWith("ka-")) { e.state = "dead"; e.hp = 0; e.deadFor = 1; } }); await keys("1"); }
-    if (kit === "transmuter") { await page.evaluate(() => { const v = window.__combat.rt.v2; v.traits = { "crab-shell": 1, "wisp-core": 1, "pollen-swarm": 1 }; }); await keys("2"); }
+    if (kit === "transmuter") { await page.evaluate(() => { const rt = window.__combat.rt; ["thorn-crab", "rune-wisp", "pollen-sprite"].forEach((e, i) => rt.killQueue.push({ enemy: e, key: `hud-learn-${i}-${Date.now()}` })); }); await page.waitForFunction(() => !!window.__combat.rt.v2.keys[3], null, { timeout: 20000 }); await page.waitForTimeout(400); await keys("2"); }
     await page.evaluate(() => { const v = window.__combat.rt.v2; v.meter = 72; v.progress = { into: 600, needed: 3800 }; window.__publishCombat(); });
     await page.waitForTimeout(600);
     files.push(await shot(crop)); labels.push(label);
@@ -195,7 +221,8 @@ if (wanted("hud")) {
   for (let i = 0; i < 3; i++) { const note = await page.evaluate(() => window.__combat.rt.v2.channel.notes[window.__combat.rt.v2.channel.at]); await page.keyboard.press(String(note + 1)); await page.waitForTimeout(150); }
   await page.waitForTimeout(200);
   const b = await page.locator('[data-testid="cataclysm-mash"]').boundingBox();
-  files.push(await shot({ x: Math.max(0, b.x - 40), y: Math.max(0, b.y - 20), width: Math.min(W, b.width + 80), height: b.height + 40 })); labels.push("the Cataclysm mash: three notes, the front one big");
+  const mw = Math.max(560, b.width + 80); // wide enough for its label (montage centres the label under the tile)
+  files.push(await shot({ x: Math.max(0, Math.min(W - mw, Math.round(b.x + b.width / 2 - mw / 2))), y: Math.max(0, b.y - 20), width: mw, height: b.height + 40 })); labels.push("the Cataclysm mash: three notes, the front one big");
   tile(files, labels, "K-arcane-hud", 2, "+4+4");
 }
 
@@ -219,7 +246,8 @@ if (wanted("fps")) {
     rows.push(`| ${label} | ${fps.toFixed(0)} |`);
   }
   tile(files, labels, "K-arcane-fps", 2, "450x250+3+3");
-  writeFileSync(`${OUT}/K-arcane-fps.md`, ["# Classes v2, the Arcane wave: FPS in its busiest scenes", "", "Measured by `k-arcane-shots.mjs fps` (headed Chromium, Apple M4 Mac mini, 1280×940, High graphics with shadows, the ruins, a 12-enemy pack; frames counted over 3 s). Screens: K-arcane-fps.webp.", "", "| Scene | FPS |", "|---|---|", ...rows, ""].join("\n"));
+  writeFileSync(`${OUT}/K-arcane-fps.md`, ["# Classes v2, the Arcane wave: FPS in its busiest scenes", "", "Measured by `k-arcane-shots.mjs fps` (headed Chromium, Apple M4 Mac mini, 1280×940, High graphics with shadows, the ruins, a 12-enemy pack; frames counted over 3 s). Screens: K-arcane-fps.webp.", "",
+    `Load average at the end of the run: ${loadavg().map(x => x.toFixed(1)).join(" / ")} (1, 5, 15 min). The machine was shared with other work, so read these as floors.`, "", "| Scene | FPS |", "|---|---|", ...rows, ""].join("\n"));
 }
 
 // ── The auras and nameplates in the village (mastery 20: the second motes, the ring, the gold frame) ──
@@ -229,9 +257,10 @@ if (wanted("aura")) {
   for (const kit of ["elementalist", "illusionist", "necromancer", "transmuter"]) {
     await open(kit, "mastery=20&frame=gold", false);
     await page.waitForSelector('[data-testid="nameplate-class"]', { timeout: 30000 });
+    await page.evaluate(([w]) => { window.__combat.rt.player.weapon = w; window.__publishCombat(); }, [WEAPON[kit]]); // the signature weapon on the back
     await page.waitForTimeout(1500);
     const p = await page.evaluate(() => window.__move.screen());
-    files.push(await shot({ x: Math.max(0, Math.round(p.x - 210)), y: Math.max(0, Math.round(p.y - 300)), width: 420, height: 400 })); labels.push(`${kit}: aura, Master title, gold frame, weapon on the back`);
+    files.push(await shot({ x: Math.max(0, Math.round(p.x - 210)), y: Math.max(0, Math.round(p.y - 300)), width: 420, height: 400 })); labels.push(`${kit}: aura · Master title · gold frame`); // short enough for its 420 px tile
   }
   tile(files, labels, "K-arcane-aura-nameplate", 4, "420x400+4+4");
 }

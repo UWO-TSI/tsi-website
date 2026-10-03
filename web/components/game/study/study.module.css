@@ -1,16 +1,16 @@
-/* Study in the world: overhead timers, the timer card column, the start sheet. Cream / sage / wood like the island sheets. */
-.overhead { display: grid; justify-items: center; gap: 1px; padding: 3px 9px; border-radius: 999px; background: #f8f7e9ee; color: #293e3b; border: 1px solid #5c746c40; box-shadow: 0 2px 8px #29464125; font: 700 10px "IBM Plex Mono", monospace; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.overhead b { font-size: 8px; font-weight: 600; color: #607069; }
-.overhead[data-phase="focus"] { background: #f6ddb9f0; color: #7a4c16; }
-.overhead[data-phase="break"] { background: #cfe3c7f0; color: #2f5a36; animation: stretch 1.4s ease-in-out infinite; }
-.overhead[data-phase="private"] { background: #e4e4dcee; color: #6f7a74; }
+/* Study in the world, in the GUI sheet: overhead timers, the timer card column, the start sheet. */
+.overhead { display: grid; justify-items: center; gap: 1px; padding: 3px 10px; border-radius: 999px; background: rgb(255 251 231 / 0.95); color: var(--gui-ink-strong); box-shadow: 0 2px 0 rgb(114 92 78 / 0.16); font: 800 var(--gui-text-xs)/1.25 var(--gui-font); white-space: nowrap; font-variant-numeric: tabular-nums; zoom: var(--tsi-text-scale, 1); }
+.overhead b { font-size: var(--gui-text-xs); font-weight: 700; color: var(--gui-muted); }
+.overhead[data-phase="focus"] { background: var(--gui-warn-soft); color: var(--gui-warn); }
+.overhead[data-phase="break"] { background: var(--gui-success-soft); color: var(--gui-success); animation: stretch 1.4s ease-in-out infinite; }
+.overhead[data-phase="private"] { background: var(--gui-paper-deep); color: var(--gui-ink-2); }
 @keyframes stretch { 50% { transform: translateY(-4px); } }
 
-.panel { position: absolute; left: 16px; top: 200px; width: 290px; max-height: calc(100% - 300px); overflow-y: auto; display: grid; gap: 10px; z-index: 12; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
-.panel > section { box-shadow: 0 6px 0 #47625218, 0 12px 30px #29464120; background: #f8f7e9f5; }
-.phase { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #bb813f; }
-.phase[data-phase="break"] { color: #6c9a6f; }
-.clock { margin: 2px 0 4px; font-size: 40px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.panel { position: absolute; left: 16px; top: 200px; width: 300px; max-height: calc(100% - 300px); overflow-y: auto; display: grid; gap: 10px; z-index: 12; zoom: var(--tsi-text-scale, 1); }
+.panel > section { box-shadow: var(--gui-shadow-md); background: var(--gui-paper); }
+.phase { margin: 0; font-size: var(--gui-text-xs); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gui-warn); }
+.phase[data-phase="break"] { color: var(--gui-success); }
+.clock { margin: 2px 0 4px; color: var(--gui-ink-strong); font-size: 40px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1.1; }
 .actions { margin-top: 10px; }
 
 /* Short laptop screens (study ruling 10): the timer card is one line and the column stops above the open minimap (bottom 84 + ~300 tall). */
@@ -25,20 +25,22 @@
 }
 
 /* Beside the seated avatar (screen centre), not over it. */
-.startSheet { position: absolute; left: calc(50% + 70px); top: 50%; transform: translateY(-50%); width: min(360px, calc(100% - 32px)); z-index: 20; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
-.startSheet > section { box-shadow: 0 6px 0 #47625218, 0 16px 40px #29464130; background: #f8f7e9; }
+.startSheet { position: absolute; left: calc(50% + 70px); top: 50%; transform: translateY(-50%); width: min(360px, calc(100% - 32px)); z-index: 20; zoom: var(--tsi-text-scale, 1); }
+.startSheet > section { box-shadow: var(--gui-shadow-lg); background: var(--gui-paper); }
 
-.board { margin: 10px 0 4px; padding: 0; list-style: none; display: grid; gap: 4px; }
-.board li { display: flex; justify-content: space-between; padding: 6px 10px; border-radius: 10px; background: #fffdf3; border: 1px solid #e3d8ba; }
+.board { margin: 4px 0 12px; padding: 0; list-style: none; display: grid; }
+.board li { display: flex; justify-content: space-between; padding: 9px 12px; font-weight: 700; }
+.board li + li { border-top: 2px dashed var(--gui-paper-edge); }
+.board li:first-child { border-radius: 999px; background: repeating-linear-gradient(-45deg, var(--gui-stripe-a) 0 12px, var(--gui-stripe-b) 12px 24px); color: var(--gui-ink-strong); }
 
 /* Narrow: over the bottom stack (the prompt, and room for two toasts above it; DefaultIslandWorld.module.css), never on it. */
 @media (max-width: 700px) { .startSheet { left: 16px; top: auto; bottom: calc(var(--game-toast-bottom, 132px) + 84px); transform: none; } .panel { top: auto; bottom: calc(var(--game-toast-bottom, 132px) + 84px); left: 12px; width: calc(100% - 24px); max-height: 45%; } }
 @media (prefers-reduced-motion: reduce) { .overhead[data-phase="break"] { animation: none; } }
 
-/* The café owner's greeting bubble and nameplate (cafe-polish §6): the residents' cream bubble with a tail. */
-.bubble { position: relative; max-width: 220px; width: max-content; padding: 8px 12px; border-radius: 14px; background: #fffdf5; color: #4a4034; border: 2px solid #e8dfc8; box-shadow: 0 3px 10px #3c2d142e; font: 500 12px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif; text-align: center; animation: pop 0.25s ease-out; }
-.bubble::after { content: ""; position: absolute; left: 50%; bottom: -7px; width: 12px; height: 12px; background: #fffdf5; border-right: 2px solid #e8dfc8; border-bottom: 2px solid #e8dfc8; transform: translateX(-50%) rotate(45deg); }
-.nameplate { display: grid; justify-items: center; padding: 2px 10px 3px; border-radius: 999px; background: #3a2a1ccc; color: #fff4e2; font: 700 11px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; white-space: nowrap; }
-.nameplate small { font-size: 9px; font-weight: 500; color: #e8cfa6; }
+/* The café owner's greeting bubble and nameplate (cafe-polish §6): the residents' paper bubble with a tail, a paper name tag. */
+.bubble { position: relative; max-width: 230px; width: max-content; padding: 8px 14px 9px; border-radius: 18px 20px 17px 19px; background: var(--gui-paper); color: var(--gui-ink); box-shadow: 0 3px 0 rgb(114 92 78 / 0.16), 0 6px 14px rgb(60 45 20 / 0.15); font: 700 var(--gui-text-sm)/1.35 var(--gui-font); text-align: center; animation: pop 0.25s ease-out; zoom: var(--tsi-text-scale, 1); }
+.bubble::after { content: ""; position: absolute; left: 50%; bottom: -8px; width: 14px; height: 9px; background: var(--gui-paper); transform: translateX(-50%); clip-path: polygon(0 0, 100% 0, 50% 100%); }
+.nameplate { display: grid; justify-items: center; padding: 2px 11px 3px; border-radius: 999px; background: rgb(255 251 231 / 0.94); color: var(--gui-ink-strong); box-shadow: 0 2px 0 rgb(114 92 78 / 0.16); font: 800 var(--gui-text-xs)/1.25 var(--gui-font); white-space: nowrap; zoom: var(--tsi-text-scale, 1); }
+.nameplate small { font-size: var(--gui-text-xs); font-weight: 700; color: var(--gui-muted); }
 @keyframes pop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .bubble { animation: none; } }

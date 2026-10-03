@@ -45,7 +45,7 @@ describe("the Arcane kits as locked (design sheet)", () => {
     const combo = Math.min(...k.combos!.map(c => c.ability.energy)), solo = Math.max(...k.keys.map(a => a.energy));
     expect(combo).toBeGreaterThan(solo); // combos cost more than solos
     expect(classMods(k, 1).energyMax).toBe(120); expect(classMods(k, 20).energyMax).toBe(200);
-    expect(k.ult.channel).toEqual({ seconds: 5, guard: 0.5, notes: 12 });
+    expect(k.ult.channel).toMatchObject({ seconds: 5, guard: 0.5, notes: 12 });
     expect(k.movement).toMatchObject({ name: "Air Step", on: "airJump" });
   });
   it("Illusionist: Mirror Clone, Swap, Mirror Ward, Trick Card (mastery 3), Vanish; clones 2/3/4 and 10/14/18 s by mastery", () => {
@@ -64,6 +64,7 @@ describe("the Arcane kits as locked (design sheet)", () => {
     expect(NECROMANCER.keys[4]).toMatchObject({ name: "Bone Surf", unlock: 3, when: "sliding" });
     expect(rt.v2!.capacity).toBe(4);
     expect(setup(NECROMANCER, 20).rt.v2!.capacity).toBe(8);
+    expect([6, 12, 16].map(m => setup(NECROMANCER, m).rt.v2!.capacity)).toEqual([5, 6, 7]);
   });
   it("Transmuter: five forms on one shared form cooldown, 3 s at mastery 1 down to 0.75 s at 20, learned by defeating their mob", () => {
     const { rt } = setup(TRANSMUTER, 1, [[0, 4]], {});

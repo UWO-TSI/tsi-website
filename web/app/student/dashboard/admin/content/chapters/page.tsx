@@ -2,10 +2,17 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, History, Pencil, Plus } from "lucide-react";
-import { AdminGate, thCls } from "@/components/portal/ProgressionAdminShared";
+import { ArrowLeft, BookOpen, History, Pencil, Plus } from "lucide-react";
+import { AdminGate, buttonLinkCls } from "@/components/portal/ProgressionAdminShared";
+import { Badge, Card, Empty, ErrorNote, Loading } from "@/components/gui";
 import { createClient } from "@/lib/supabase/client";
 import type { QuestChapter } from "@/lib/progression/types";
+
+const PAGE = "mx-auto w-full max-w-6xl px-5 pt-6 pb-16 sm:px-8";
+const BACK = "mb-2 inline-flex items-center gap-1.5 text-sm font-bold text-[var(--gui-ink-2)] hover:text-[var(--gui-ink-strong)]";
+/** A link in the kit's small sage button. */
+const BUTTON_LINK = buttonLinkCls;
+const TH = "px-4 py-3 text-left text-xs font-extrabold whitespace-nowrap text-[var(--gui-ink-2)]";
 
 export default function AdminChaptersPage() {
   const [rows, setRows] = useState<QuestChapter[] | null>(null);
@@ -16,7 +23,7 @@ export default function AdminChaptersPage() {
       const { data, error } = await createClient().from("quest_chapters").select("*").order("position");
       if (cancelled) return;
       setRows((data ?? []) as QuestChapter[]);
-      setError(error ? "quest_chapters is not available (migration 029 not applied?)" : null);
+      setError(error ? "The chapters table isn’t there yet (is migration 029 applied?)." : null);
     })();
     return () => {
       cancelled = true;
@@ -25,49 +32,61 @@ export default function AdminChaptersPage() {
 
   return (
     <AdminGate>
-      <Link href="/student/dashboard/admin" className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] mb-2">
-        <ArrowLeft size={12} /> Back to Admin
-      </Link>
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">Main Quest</h1>
-          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">{rows?.length ?? 0} chapters · quest_chapters</p>
-        </div>
-        <Link href="/student/dashboard/admin/content/chapters/new" className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-accent-cyan)] text-[var(--color-bg)] font-mono text-xs uppercase tracking-wider rounded-md">
-          <Plus size={14} /> New Chapter
+      <div className={PAGE}>
+        <Link href="/student/dashboard/admin" className={BACK}>
+          <ArrowLeft size={16} aria-hidden /> Back to admin
         </Link>
-      </div>
-      {error ? <p className="mb-4 text-xs font-mono text-red-400">{error}</p> : null}
-      {rows === null ? (
-        <p className="text-center py-8 font-mono text-sm text-[var(--color-text-muted)] animate-pulse">Loading chapters...</p>
-      ) : (
-        <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--glass-border)]">
-                {["#", "Title", "Requirement", "Goal", "Opens", "Skip", "Active", ""].map((h) => <th key={h} className={thCls}>{h}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((c) => (
-                <tr key={c.id} className="border-b border-[var(--glass-border)]/40 last:border-b-0">
-                  <td className="px-4 py-3 font-mono text-xs">{c.position}</td>
-                  <td className="px-4 py-3 text-[var(--color-text-primary)]">{c.title}<div className="font-mono text-[0.65rem] text-[var(--color-accent-cyan)]">{c.slug}</div></td>
-                  <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">{c.requirement}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">{c.goal_slug ?? "—"}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">{(c.unlocks_regions ?? []).join(", ") || "—"}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-muted)]">{c.skippable_max_tier ? `T1–T${c.skippable_max_tier}` : "no"}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{c.active ? "active" : "inactive"}</td>
-                  <td className="px-4 py-3 text-right whitespace-nowrap">
-                    <Link href={`/student/dashboard/admin/content/chapters/${c.id}/edit`} className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-accent-cyan)] hover:underline mr-3"><Pencil size={12} /> Edit</Link>
-                    <Link href={`/student/dashboard/admin/content/chapters/${c.id}/history`} className="inline-flex items-center gap-1 text-xs font-mono text-[var(--color-text-muted)] hover:underline"><History size={12} /> History</Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-extrabold text-[var(--gui-ink-strong)]">Main quest</h1>
+            <p className="mt-1 text-sm text-[var(--gui-muted)]">{rows?.length ?? 0} chapters, in the order members play them</p>
+          </div>
+          <Link href="/student/dashboard/admin/content/chapters/new" className={BUTTON_LINK} data-size="sm">
+            <Plus size={16} aria-hidden /> New chapter
+          </Link>
         </div>
-      )}
+        {error ? <ErrorNote className="mb-4">{error}</ErrorNote> : null}
+        {rows === null ? (
+          <Loading label="Getting the chapters…" />
+        ) : rows.length === 0 ? (
+          error ? null : (
+            <Empty icon={<BookOpen size={32} />} title="No chapters yet">
+              Add the first one to start the main quest.
+            </Empty>
+          )
+        ) : (
+          <Card style={{ padding: 0 }} className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-[var(--gui-paper-warm)]">
+                  {["#", "Title", "Requirement", "Goal", "Opens", "Can skip", "Status"].map((h) => <th key={h} className={TH}>{h}</th>)}
+                  <th className={TH}><span className="sr-only">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((c) => (
+                  <tr key={c.id} className="border-t-2 border-dashed border-[var(--gui-paper-edge)]">
+                    <td className="px-4 py-3 text-[var(--gui-ink-2)]">{c.position}</td>
+                    <td className="px-4 py-3">
+                      <span className="font-extrabold text-[var(--gui-ink-strong)]">{c.title}</span>
+                      <div className="text-xs text-[var(--gui-muted)]">{c.slug}</div>
+                    </td>
+                    <td className="px-4 py-3 text-[var(--gui-ink-2)]">{c.requirement}</td>
+                    <td className="px-4 py-3 text-[var(--gui-ink-2)]">{c.goal_slug ?? "—"}</td>
+                    <td className="px-4 py-3 text-[var(--gui-ink-2)]">{(c.unlocks_regions ?? []).join(", ") || "—"}</td>
+                    <td className="px-4 py-3 text-[var(--gui-ink-2)]">{c.skippable_max_tier ? `T1 to T${c.skippable_max_tier}` : "No"}</td>
+                    <td className="px-4 py-3">{c.active ? <Badge tone="success">Active</Badge> : <Badge>Inactive</Badge>}</td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <Link href={`/student/dashboard/admin/content/chapters/${c.id}/edit`} className="mr-3 inline-flex items-center gap-1 font-bold text-[var(--gui-sage)] hover:underline"><Pencil size={14} aria-hidden /> Edit</Link>
+                      <Link href={`/student/dashboard/admin/content/chapters/${c.id}/history`} className="inline-flex items-center gap-1 font-bold text-[var(--gui-ink-2)] hover:underline"><History size={14} aria-hidden /> History</Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        )}
+      </div>
     </AdminGate>
   );
 }

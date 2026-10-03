@@ -5,6 +5,7 @@
  */
 import type { Stat, StatBlock } from "./progression";
 import { ARCANE_WEAPONS } from "./arcaneSeed";
+import { WARDEN_WEAPONS } from "./wardenData";
 
 /** Today's types; classes v2 opens the list (one signature type per subclass, design sheet §1.5). */
 export type WeaponType = "sword" | "shield" | "bow" | "revolver" | "staff" | "tome" | "fists" | "totem" | (string & {});
@@ -53,6 +54,7 @@ export const WEAPONS: WeaponDef[] = [
   ...signature("sniper", "rifle", ["Brass long rifle", "Iron long rifle", "Runed long rifle", "Gilded long rifle", "Starlit long rifle"]),
   ...signature("hunter", "harpoon", ["Harpoon crossbow", "Iron harpoon crossbow", "Runed harpoon crossbow", "Gilded harpoon crossbow", "Starlit harpoon crossbow"]),
   ...signature("gunslinger", "sixgun", ["Walnut revolver", "Iron revolver", "Runed revolver", "Gilded revolver", "Starlit revolver"]),
+  ...WARDEN_WEAPONS,
 ];
 /** A subclass's five signature tiers: keys `<type>-<tier>`, finesse, shooting arrows or bolts (the kit's own fire decides how). */
 function signature(subclass: string, type: string, names: string[]): WeaponDef[] {

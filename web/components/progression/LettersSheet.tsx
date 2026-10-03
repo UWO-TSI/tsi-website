@@ -7,6 +7,8 @@ import { NOTE_MAX_LEN, SUBJECT_MAX_LEN } from "@/lib/progression/letters";
 import { refreshProgression } from "@/lib/progression/useProgression";
 import type { LetterView } from "@/lib/progression/types";
 import ProgressionPanel, { type ProgressionSheetProps } from "./ProgressionPanel";
+import { Button, Empty, ErrorNote, Loading } from "@/components/gui";
+import { Mail } from "lucide-react";
 import s from "./progression.module.css";
 
 export interface MemberOption {
@@ -41,7 +43,7 @@ type View = { mode: "list" } | { mode: "read"; letter: LetterView } | { mode: "c
 
 export function LettersBody({ transport = lettersTransport, systemOnly = false }: { transport?: LettersTransport; systemOnly?: boolean }) {
   const [letters, setLetters] = useState<LetterView[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<"signed-out" | "failed" | null>(null);
   const [view, setView] = useState<View>({ mode: "list" });
 
   const load = useCallback(async () => {
@@ -51,7 +53,8 @@ export function LettersBody({ transport = lettersTransport, systemOnly = false }
       setLetters(rows);
     } catch (err) {
       setLetters([]);
-      setError(err instanceof ApiError && err.status === 401 ? "Sign in to read your mail." : "The mailbox is empty for now.");
+      // A failed load is said as one (it used to read "The mailbox is empty for now").
+      setError(err instanceof ApiError && err.status === 401 ? "signed-out" : "failed");
     }
   }, [transport]);
 
@@ -84,8 +87,10 @@ export function LettersBody({ transport = lettersTransport, systemOnly = false }
           <button className={s.btn} onClick={() => setView({ mode: "compose" })}>Write a note</button>
         </div>
       ) : null}
-      {letters === null ? <p className={s.empty}>Checking the mailbox…</p> : null}
-      {letters !== null && shown.length === 0 ? <p className={s.empty}>{error ?? "No letters yet."}</p> : null}
+      {letters === null ? <Loading label="Checking the mailbox…" /> : null}
+      {error === "failed" ? <ErrorNote onRetry={() => { setLetters(null); void load(); }}>Your mail didn’t load. The connection may have dropped.</ErrorNote> : null}
+      {error === "signed-out" ? <Empty icon={<Mail size={32} />} title="Sign in to read your mail" action={<a className={s.btn} style={{ display: "inline-grid", placeItems: "center", textDecoration: "none" }} href="/student?next=/student/dashboard">Sign in</a>}>Letters from members and HQ wait here.</Empty> : null}
+      {letters !== null && !error && shown.length === 0 ? <Empty icon={<Mail size={32} />} title={systemOnly ? "No notices from HQ yet" : "No letters yet"}>{systemOnly ? "Club news and ceremony letters go up here." : "When someone writes, it arrives here. You can write first."}</Empty> : null}
       <ul className={s.letters}>
         {shown.map((l) => (
           <li key={l.id}>
@@ -122,7 +127,7 @@ function LetterReader({ letter, transport, onBack, onReply }: { letter: LetterVi
     <div>
       <div className={s.row} style={{ marginBottom: 10 }}>
         <div>
-          <div className={s.eyebrow}>{letter.kind === "system" ? "From the Village Hall" : letter.outgoing ? `You wrote to ${letter.recipient_name}` : `From ${letter.sender_name}`}</div>
+          <div className={s.eyebrow}>{letter.kind === "system" ? "From HQ" : letter.outgoing ? `You wrote to ${letter.recipient_name}` : `From ${letter.sender_name}`}</div>
           <h3 style={{ margin: 0, fontSize: 16 }}>{letter.subject || "A note"}</h3>
         </div>
         <span className={s.muted}>{when(letter.created_at)}</span>
@@ -138,7 +143,7 @@ function LetterReader({ letter, transport, onBack, onReply }: { letter: LetterVi
         {canReport && !reported ? (
           confirming ? (
             <>
-              <button className={s.btn} style={{ background: "#b4492a", boxShadow: "0 3px 0 #7d2f18" }} onClick={report}>Report this note</button>
+              <Button variant="danger" size="sm" onClick={report}>Report this note</Button>
               <button className={s.ghost} onClick={() => setConfirming(false)}>Cancel</button>
             </>
           ) : (
@@ -216,7 +221,7 @@ function LetterComposer({ transport, to: initialTo, onDone }: { transport: Lette
         <textarea id="letter-body" className={s.input} maxLength={NOTE_MAX_LEN} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Say hi, thank someone, plan a fishing trip…" />
         <span className={s.count}>{body.length}/{NOTE_MAX_LEN}</span>
       </div>
-      <p className={s.muted}>Notes are text only. No items or coins travel by mail.</p>
+      <p className={s.muted}>Notes are text only. No items or TC travel by mail.</p>
       {message ? <p role="status" className={`${s.note} ${message.kind === "ok" ? s.ok : s.err}`}>{message.text}</p> : null}
       <div className={s.actions}>
         <button className={s.ghost} onClick={onDone}>Cancel</button>
@@ -226,9 +231,10 @@ function LetterComposer({ transport, to: initialTo, onDone }: { transport: Lette
   );
 }
 
-export default function LettersSheet({ open, onClose, transport }: ProgressionSheetProps & { transport?: LettersTransport }) {
+/** `keys`: the mail key, which closes the mailbox too. */
+export default function LettersSheet({ open, onClose, transport, keys }: ProgressionSheetProps & { transport?: LettersTransport; keys?: string }) {
   return (
-    <ProgressionPanel open={open} onClose={onClose} title="Mailbox">
+    <ProgressionPanel open={open} onClose={onClose} title="Mailbox" keys={keys}>
       <LettersBody transport={transport} />
     </ProgressionPanel>
   );

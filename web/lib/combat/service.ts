@@ -15,6 +15,7 @@ import { CLASS_KITS, CLASS_RENAMES, classKit, memberKit, nextUnlock } from "./cl
 import { masteryProgress, masteryTitle } from "./mastery";
 import { suggestSubclass } from "@/lib/oracle/subclass";
 import type { CosmeticKind } from "./store";
+import { isBeast } from "./wardenData";
 
 const ERR: Record<string, [number, string]> = {
   unavailable: [503, "The ruins are closed for now."],
@@ -39,6 +40,7 @@ const ERR: Record<string, [number, string]> = {
   no_subclass: [409, "Choose your subclass at the Oracle first."],
   locked: [409, "Your path is locked. Redo the Oracle to choose again."],
   bad_cosmetic: [400, "That doesn't go there."],
+  bad_beast: [409, "That beast isn't yours to tame yet."],
   failed: [500, "Something went wrong. Try again."],
 };
 async function run<T>(f: () => Promise<T>): Promise<Result<T>> {
@@ -89,6 +91,8 @@ export const getProgression = (store: CombatStore, m: string) =>
         next: kit ? nextUnlock(kit, mastery.mastery) : null, rows: v2.rows, repick: p.repick_source,
         kits: family ? CLASS_KITS.filter((k) => k.family === family && memberKit(k.key)).map((k) => k.key) : [],
         suggestion: family && p.level >= SUBCLASS_LEVEL ? await suggestion(store, m) : null,
+        /** The Summoner's tamed beasts (the ritual circle; the wolves are known from the start). */
+        tamed: p.subclass === "summoner" ? await store.tamed(m) : [],
         /** The profile's class fields (§1.9: portal profile and phone companion, no 3D): icon, subclass, mastery and title, frame, and the other subclasses past mastery 1. */
         profile: p.subclass ? {
           icon: classKit(p.subclass)?.look.icon ?? null, subclass: p.subclass, name: classKit(p.subclass)?.name ?? CLASS_RENAMES[p.subclass] ?? subclass?.name ?? p.subclass,
@@ -168,6 +172,13 @@ export const recordKill = (store: CombatStore, m: string, enemyKey: string, even
     return { ...r, trait_unlocked: t && before === 0 && after > 0 ? t.key : null,
       /** Classes v2: the active subclass's mastery after this kill, and whether it levelled. */
       mastery: mastery && { ...mastery, levelled_up: mastery.mastery > masteryProgress(was).mastery } };
+  });
+
+/** Classes v2, the Summoner: a taming at the ritual circle (the next beast in turn), recorded once per key. */
+export const tameBeast = (store: CombatStore, m: string, beast: string, key: string) =>
+  run(async () => {
+    if (!isBeast(beast) || beast === "wolves") throw new CombatError("bad_beast");
+    return store.tameBeast(m, beast, key);
   });
 
 /** Classes v2: put on (or take off, null) a weapon skin, aura colours or a nameplate frame for one subclass (§1.10). */

@@ -21,6 +21,10 @@ import type { EnemyType } from "@/lib/game/combat/contract";
 import { CAPS } from "@/lib/combat/kits";
 import { packMap, spriteQuad } from "../movement/moveFx";
 import { lobHeight } from "@/lib/game/combat/mobs";
+import { WARDEN_ALLY_TYPES } from "@/lib/game/combat/wardenBodies";
+
+/** The Warden's beasts, totems and spirits carry their own colours (green-eyed shadows, elemental glows): no ally tint. */
+const OWN_COLOURS = new Set(WARDEN_ALLY_TYPES);
 
 type Ground = (x: number, z: number) => number;
 const tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpS = new THREE.Vector3(), tmpP = new THREE.Vector3(), tmpC = new THREE.Color(), UP = new THREE.Vector3(0, 1, 0);
@@ -100,7 +104,7 @@ export function EnemyInstances({ typeId, capacity, ground, allies = false, type:
       tmpQ.setFromAxisAngle(UP, (e.state === "active" ? e.beam : e.facing) + type.modelYaw);
       tmpS.setScalar(type.modelScale * dying * (allies ? 0.85 : 1));
       if (e.flat) tmpS.z *= 1 - 0.94 * e.flat; // trapped in a sweeping mirror: pressed flat into the glass (primitives.ts sweep)
-      tmpP.set(e.x, ground(e.x, e.z) + type.hover + bob + airborne(e), e.z);
+      tmpP.set(e.x, ground(e.x, e.z) + type.hover + bob + airborne(e) + (e.flat ?? 0) * 1.7, e.z); // a mirror's catch is lifted into its glass
       tmpM.compose(tmpP, tmpQ, tmpS);
       nodes.forEach((n, ni) => {
         const m = world[ni].copy(n.rest);
@@ -119,7 +123,7 @@ export function EnemyInstances({ typeId, capacity, ground, allies = false, type:
         else if (e.state === "windup") tmpC.setRGB(1.15, 0.95, 0.9);
         else if (e.state === "return") tmpC.setRGB(0.7, 0.75, 0.9);
         else tmpC.setScalar(1);
-        if (allies) tmpC.multiply(e.id.startsWith("shade") ? SHADE_TINT : ALLY_TINT);
+        if (allies && !OWN_COLOURS.has(typeId)) tmpC.multiply(e.id.startsWith("shade") ? SHADE_TINT : ALLY_TINT);
         mesh.setColorAt(i, tmpC);
       });
     });
@@ -352,7 +356,9 @@ export function Totems({ ground, max = 16 }: { ground: Ground; max?: number }) {
   const disc = useMemo(() => new THREE.CircleGeometry(1, 48).rotateX(-Math.PI / 2), []);
   useEffect(() => () => { ring.dispose(); disc.dispose(); }, [ring, disc]);
   useFrame(({ clock, camera }) => {
-    const list = combat.rt.units.filter(u => u.source !== "weapon"), p = post.current, e = eyes.current;
+    // No marker under a clone (it must pass for you), an ult's free horde (cost 0: thirty rings would bury the field) or a
+    // bodied totem (the Warden's draw as their own models).
+    const list = combat.rt.units.filter(u => u.source !== "weapon" && u.def.kind !== "clone" && u.def.cost !== 0 && !(u.def.kind === "totem" && u.body)), p = post.current, e = eyes.current;
     // Carved faces turn to the camera, wherever it orbits (specs/camera-orbit.md): yaw + π from its heading.
     camera.getWorldDirection(camDir);
     const facing = Math.atan2(camDir.x, camDir.z) + Math.PI;
@@ -403,7 +409,9 @@ export function PlayerAuras({ player, ground }: { player: React.RefObject<THREE.
     if (bubble.current) {
       bubble.current.visible = p.shield > 0.5 && p.alive;
       bubble.current.position.set(pl.x, g + 0.95, pl.z);
-      (bubble.current.material as THREE.MeshBasicMaterial).opacity = 0.12 + Math.min(0.18, p.shield / p.maxHp);
+      // A sliver of a barrier (the Transmuter's 1% on every shift) shows faint, not as a sphere over the form; 5% and up as before.
+      const share = p.shield / p.maxHp;
+      (bubble.current.material as THREE.MeshBasicMaterial).opacity = (0.12 + Math.min(0.18, share)) * Math.min(1, 0.3 + share * 14);
     }
     if (guard.current) {
       guard.current.visible = rt.buffs.some(b => b.stat === "block") && p.alive;

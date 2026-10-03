@@ -9,7 +9,7 @@ import { ENEMIES, WEAPONS } from "./data";
 import type { Vec } from "./sim";
 import { BOSS, DODGE, engage, inArc, invulnerable, spawnEnemy, sweptHit, type Enemy } from "./sim";
 import { ENERGY, SLOT_IDS, energyMax, energyRegen, setWeapon, type AbilityId, type CombatRuntime } from "./runtime";
-import { cancelCast, chargeUlt, cue, floater, fx, mitigate, strike, summon, fireSlot } from "./abilities";
+import { cancelCast, chargeUlt, cue, floater, fx, heal, mitigate, strike, summon, fireSlot } from "./abilities";
 import { takenCharge } from "@/lib/combat/ult";
 import { counterHit, formBasic, formTier, reveal } from "./primitives";
 import type { SpawnPoint } from "./spawns";
@@ -27,6 +27,8 @@ export function regenEnergy(rt: CombatRuntime, dt: number) {
 }
 
 const wearHit = (rt: CombatRuntime) => { const p = rt.player; p.hits[p.weapon] = (p.hits[p.weapon] ?? 0) + 1; p.durability[p.weapon] = Math.max(0, p.durability[p.weapon] - 1); };
+/** A v2 kit whose basic hits heal you (the Priest's Lightbolt): that share of max HP, × healing power. */
+const basicHeal = (rt: CombatRuntime) => { const v = rt.v2; if (v?.kit.basicHeal) heal(rt, rt.player.maxHp * v.kit.basicHeal * v.mods.healing); };
 
 /**
  * Facing (combat polish 10): an attack or ability snaps you to the aim and holds it AIM_HOLD s; otherwise you face the
@@ -66,7 +68,7 @@ export function attack(rt: CombatRuntime, player: Vec, random = Math.random): bo
     p.swing = 0.22;
     let landed = false;
     for (const e of rt.enemies) if (e.state !== "dead" && inArc(player, p.facing, w.range, w.arc, e, e.type.radius)) { strike(rt, e, { power: form?.power ?? 1, from: player, knock: form?.knock ?? 4, melee: true, status: form?.status, tier }, random); landed = true; }
-    if (landed) wearHit(rt);
+    if (landed) { wearHit(rt); basicHeal(rt); }
   } else if (w.kind === "bow" || w.kind === "staff") {
     const speed = w.speed ?? 12, kind = w.shot ?? (w.kind === "bow" ? "arrow" : "bolt");
     rt.projectiles.push({ id: rt.seq++, x: player.x + dir.x * 0.5, z: player.z + dir.z * 0.5, vx: dir.x * speed, vz: dir.z * speed, life: w.range / speed, from: "player", damage: 0, kind, radius: w.kind === "bow" ? 0.15 : 0.3,
@@ -88,6 +90,7 @@ export function resolvePlayerShot(rt: CombatRuntime, shotIdx: number, from: Vec,
   if (!h) {
     strike(rt, target, { power: 1, from, knock }, random);
     wearHit(rt);
+    basicHeal(rt);
     if (s.kind === "bolt") splash(rt, to, 1.3, target, { power: 0.5, from: to, knock: 2 }, random);
     return true;
   }
@@ -96,7 +99,7 @@ export function resolvePlayerShot(rt: CombatRuntime, shotIdx: number, from: Vec,
   const crit = h.crit || (!!h.weak && lineDist(target, from, to) <= Math.min(h.weak * target.type.radius, FIRE.weakMax)), me = rt.player.last;
   const pull = h.pull && me ? { from: me, knock: -h.pull * 8 } : null;
   strike(rt, target, { power: h.power, from: pull?.from ?? from, knock: pull?.knock ?? (h.unit ? 1 : h.steady ? 0 : knock), stat: h.stat, tier: h.tier, unit: h.unit, status: h.status, impact: h.impact, ult: h.ult, first: !h.hitIds?.length, crit: crit || undefined, steady: h.steady }, random);
-  fx(rt, h.fx, "impact", to, to, h.impact ?? "ability");
+  fx(rt, h.fx, "impact", to, to, h.impact ?? "ability", undefined, h.ramp); // in the shot's own colours (an element's)
   if (h.splash) {
     if (rt.v2) blastAt(rt, to, h.power * 0.5, h.splash, h, random, target, false); // its FX is the hit's, above
     else splash(rt, to, h.splash, target, { power: h.power * 0.5, from: to, knock: 2, stat: h.stat, tier: h.tier }, random);

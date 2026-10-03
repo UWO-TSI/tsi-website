@@ -5,11 +5,11 @@ import { createClient } from "@/lib/supabase/client";
 import {
   ShoppingBag,
   Package,
-  X,
-  Filter,
   Check,
   AlertTriangle,
 } from "lucide-react";
+import { Amount } from "@/components/economy/Amount";
+import { Badge, Banner, Button, Card, Empty, List, ListRow, Loading, Sheet, Tabs, type BadgeTone } from "@/components/gui";
 
 interface MarketplaceItem {
   id: string;
@@ -34,12 +34,41 @@ interface Order {
 
 const categories = ["all", "merch", "theme", "accessory", "special"] as const;
 
-const categoryGradients: Record<string, string> = {
-  merch: "from-[var(--color-brand-blue)] to-indigo-800",
-  theme: "from-purple-600 to-fuchsia-700",
-  accessory: "from-[var(--color-accent-cyan)] to-teal-700",
-  special: "from-[var(--color-brand-yellow)] to-amber-700",
+const MARKET_TABS: { id: "shop" | "orders"; label: string }[] = [
+  { id: "shop", label: "Shop" },
+  { id: "orders", label: "My orders" },
+];
+
+const CATEGORY_LABELS: Record<string, string> = {
+  all: "All",
+  merch: "Merch",
+  theme: "Theme",
+  accessory: "Accessory",
+  special: "Special",
 };
+
+/** Each category's shelf behind the item (a wash on paper; no text sits on it). */
+const categoryShelves: Record<string, string> = {
+  merch: "var(--gui-sage-soft)",
+  theme: "color-mix(in srgb, var(--gui-rarity-epic) 22%, var(--gui-paper-hi))",
+  accessory: "color-mix(in srgb, var(--gui-teal-pill) 32%, var(--gui-paper-hi))",
+  special: "var(--gui-confetti) var(--gui-butter)",
+};
+
+/** Order status tags: fulfilled is done, pending is waiting, anything else is plain. */
+const ORDER_TONES: Record<string, BadgeTone> = {
+  fulfilled: "success",
+  pending: "warn",
+};
+
+/** "pending_pickup" → "Pending pickup". */
+const statusLabel = (s: string) => {
+  const words = s.replace(/_/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+};
+
+const formatDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Toronto" });
 
 export default function MarketplacePage() {
   const [items, setItems] = useState<MarketplaceItem[]>([]);
@@ -95,7 +124,7 @@ export default function MarketplacePage() {
     }
 
     if (balance < buyItem.price) {
-      setBuyResult({ success: false, message: "Insufficient Tethos Coins." });
+      setBuyResult({ success: false, message: "You don’t have enough Gems for this." });
       setBuying(false);
       return;
     }
@@ -109,13 +138,13 @@ export default function MarketplacePage() {
 
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setBuyResult({ success: false, message: body?.error ?? "Order failed. Try again." });
+      setBuyResult({ success: false, message: body?.error ?? "That didn’t go through. Try again." });
       setBuying(false);
       return;
     }
 
     setBalance((prev) => prev - buyItem.price);
-    setBuyResult({ success: true, message: `Acquired ${buyItem.name}!` });
+    setBuyResult({ success: true, message: `${buyItem.name} is yours.` });
     setBuying(false);
     fetchData();
   };
@@ -125,292 +154,225 @@ export default function MarketplacePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="font-mono text-sm text-[var(--color-text-muted)] animate-pulse">
-          Loading marketplace...
-        </p>
+      <div className="flex-1 overflow-y-auto" style={{ padding: "24px 20px 48px" }}>
+        <Loading label="Loading the marketplace…" />
       </div>
     );
   }
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-[var(--color-text-primary)]">
-            Marketplace
-          </h1>
-          <p className="text-sm font-mono text-[var(--color-text-muted)] mt-1">
-            Spend your hard-earned Tethos Coins
-          </p>
-        </div>
-        <div className="flex items-center gap-2 bg-[var(--color-bg-alt)] border border-[var(--color-brand-yellow)]/30 rounded-lg px-4 py-2">
-          <span className="text-lg font-heading font-bold text-[var(--color-brand-yellow)]">
-            {balance.toLocaleString()} &#x20AE;
+    <div className="flex-1 overflow-y-auto" style={{ padding: "24px 20px 48px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <Banner title="Marketplace" icon={<ShoppingBag size={26} />} tone="butter">
+          Club merch and extras, bought with your Gems.
+        </Banner>
+
+        {/* Tabs + your balance */}
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          <Tabs label="Marketplace" value={tab} onChange={setTab} tabs={MARKET_TABS} />
+          {tab === "shop" && (
+            <Tabs
+              label="Category"
+              value={category}
+              onChange={setCategory}
+              tabs={categories.map((c) => ({ id: c, label: CATEGORY_LABELS[c] }))}
+            />
+          )}
+          <span
+            className="ml-auto inline-flex items-center gap-2 text-sm"
+            style={{
+              minHeight: 40,
+              padding: "6px 16px",
+              borderRadius: "var(--gui-r-pill)",
+              background: "var(--gui-butter)",
+              color: "var(--gui-ink-strong)",
+              fontWeight: 800,
+              boxShadow: "var(--gui-shadow-sm)",
+            }}
+          >
+            Balance <Amount n={balance} currency="gems" />
           </span>
         </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="flex items-center gap-1 bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md p-1">
-          {(["shop", "orders"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-4 py-1.5 rounded text-xs font-mono transition-all ${
-                tab === t
-                  ? "bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)]"
-                  : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-              }`}
-            >
-              {t === "shop" ? "Shop" : "My Orders"}
-            </button>
-          ))}
-        </div>
-
+        {/* Shop Grid */}
         {tab === "shop" && (
-          <div className="flex items-center gap-1 bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-md p-1">
-            <Filter size={12} className="text-[var(--color-text-muted)] ml-2" />
-            {categories.map((c) => (
-              <button
-                key={c}
-                onClick={() => setCategory(c)}
-                className={`px-3 py-1.5 rounded text-xs font-mono transition-all capitalize ${
-                  category === c
-                    ? "bg-[var(--color-brand-blue)]/10 text-[var(--color-brand-blue)]"
-                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-                }`}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
+          filteredItems.length === 0 ? (
+            <Empty
+              icon={<Package size={32} />}
+              title={category === "all" ? "The shelves are empty" : "Nothing in this category"}
+            >
+              {category === "all" ? "New items go up through the year. Check back soon." : "Try another category."}
+            </Empty>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filteredItems.map((item) => (
+                <Card key={item.id} as="article" className="flex flex-col overflow-hidden group" style={{ padding: 0 }}>
+                  {/* Shelf */}
+                  <div
+                    className="h-32 flex items-center justify-center"
+                    style={{ background: categoryShelves[item.category] ?? "var(--gui-paper-deep)" }}
+                  >
+                    <ShoppingBag
+                      size={32}
+                      className="transition-transform group-hover:scale-110"
+                      style={{ color: "var(--gui-bark)" }}
+                      aria-hidden
+                    />
+                  </div>
+
+                  <div className="p-4 flex flex-col flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-sm" style={{ color: "var(--gui-ink-strong)", fontWeight: 800 }}>
+                        {item.name}
+                      </h3>
+                      <Badge>{CATEGORY_LABELS[item.category] ?? item.category}</Badge>
+                    </div>
+
+                    {item.description && (
+                      <p className="text-xs mt-1 line-clamp-2" style={{ color: "var(--gui-muted)" }}>
+                        {item.description}
+                      </p>
+                    )}
+
+                    <div className="flex items-center justify-between gap-2 mt-auto pt-3">
+                      <div className="flex items-baseline flex-wrap gap-x-2">
+                        <span className="text-base" style={{ color: "var(--gui-ink-strong)", fontWeight: 800 }}>
+                          {item.price != null && <Amount n={item.price} currency="gems" />}
+                        </span>
+                        <span className="text-xs" style={{ color: "var(--gui-muted)" }}>
+                          {item.stock} left
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setBuyItem(item);
+                          setBuyResult(null);
+                        }}
+                        disabled={item.stock <= 0}
+                      >
+                        {item.stock <= 0 ? "Sold out" : "Buy"}
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )
+        )}
+
+        {/* Orders Tab */}
+        {tab === "orders" && (
+          orders.length === 0 ? (
+            <Empty
+              icon={<Package size={32} />}
+              title="No orders yet"
+              action={<Button size="sm" variant="quiet" onClick={() => setTab("shop")}>Browse the shop</Button>}
+            >
+              Things you buy show up here.
+            </Empty>
+          ) : (
+            <Card style={{ padding: "6px 8px" }}>
+              <List label="Your orders">
+                {orders.map((order) => (
+                  <ListRow
+                    key={order.id}
+                    icon={<Package size={24} />}
+                    title={order.item?.name ?? "Unknown item"}
+                    detail={<>{formatDate(order.created_at)} · Qty {order.quantity}</>}
+                    value={
+                      <span className="flex flex-col items-end gap-1">
+                        <span style={{ color: "var(--gui-ink-strong)" }}>
+                          {order.total_price != null && <Amount n={order.total_price} currency="gems" />}
+                        </span>
+                        <Badge tone={ORDER_TONES[order.status] ?? "neutral"}>{statusLabel(order.status)}</Badge>
+                      </span>
+                    }
+                  />
+                ))}
+              </List>
+            </Card>
+          )
         )}
       </div>
 
-      {/* Shop Grid */}
-      {tab === "shop" && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredItems.map((item) => (
-            <div
-              key={item.id}
-              className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg overflow-hidden hover:border-[var(--color-brand-blue)]/30 hover:shadow-[0_0_12px_rgba(0,47,167,0.1)] transition-all group"
-            >
-              {/* Image / Gradient Placeholder */}
-              <div
-                className={`h-36 bg-gradient-to-br ${
-                  categoryGradients[item.category] ?? "from-gray-700 to-gray-900"
-                } flex items-center justify-center`}
+      {/* Buy Confirmation Sheet */}
+      <Sheet
+        open={buyItem !== null}
+        onClose={() => setBuyItem(null)}
+        title={buyResult ? (buyResult.success ? "It’s yours" : "That didn’t go through") : "Confirm purchase"}
+        eyebrow="Marketplace"
+        icon={<ShoppingBag size={22} />}
+        size="sm"
+        footer={buyItem && (
+          buyResult ? (
+            <Button size="sm" variant="quiet" onClick={() => setBuyItem(null)}>Close</Button>
+          ) : (
+            <>
+              <Button size="sm" variant="quiet" onClick={() => setBuyItem(null)}>Cancel</Button>
+              <Button size="sm" onClick={handleBuy} disabled={buying || balance < buyItem.price}>
+                {buying ? "Buying…" : "Buy it"}
+              </Button>
+            </>
+          )
+        )}
+      >
+        {buyItem && (
+          buyResult ? (
+            <div className="text-center py-2" role="status">
+              {buyResult.success ? (
+                <Check size={32} className="mx-auto mb-2" style={{ color: "var(--gui-success)" }} aria-hidden />
+              ) : (
+                <AlertTriangle size={32} className="mx-auto mb-2" style={{ color: "var(--gui-danger)" }} aria-hidden />
+              )}
+              <p
+                className="text-sm"
+                style={{ color: buyResult.success ? "var(--gui-success)" : "var(--gui-danger)", fontWeight: 800 }}
               >
-                <ShoppingBag
-                  size={32}
-                  className="text-white/30 group-hover:text-white/50 transition-colors"
-                />
-              </div>
-
-              <div className="p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="text-sm font-heading font-bold text-[var(--color-text-primary)]">
-                    {item.name}
-                  </h3>
-                  <span className="text-[0.6rem] font-mono text-[var(--color-text-muted)] uppercase bg-[var(--color-bg-main)] px-1.5 py-0.5 rounded shrink-0">
-                    {item.category}
-                  </span>
-                </div>
-
-                {item.description && (
-                  <p className="text-xs text-[var(--color-text-muted)] mt-1 line-clamp-2">
-                    {item.description}
-                  </p>
-                )}
-
-                <div className="flex items-center justify-between mt-3">
-                  <div>
-                    <span className="text-base font-heading font-bold text-[var(--color-brand-yellow)]">
-                      {item.price} &#x20AE;
-                    </span>
-                    <span className="text-[0.6rem] font-mono text-[var(--color-text-muted)] ml-2">
-                      {item.stock} left
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setBuyItem(item);
-                      setBuyResult(null);
-                    }}
-                    disabled={item.stock <= 0}
-                    className="px-3 py-1.5 text-xs font-mono bg-[var(--color-brand-blue)] text-white rounded hover:bg-[var(--color-brand-blue)]/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {item.stock <= 0 ? "Sold Out" : "Buy"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {filteredItems.length === 0 && (
-            <div className="col-span-full text-center py-12">
-              <Package size={32} className="text-[var(--color-text-muted)] mx-auto mb-2" />
-              <p className="font-mono text-sm text-[var(--color-text-muted)]">
-                No items in this category.
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Orders Tab */}
-      {tab === "orders" && (
-        <div className="space-y-3">
-          {orders.length === 0 ? (
-            <div className="text-center py-12">
-              <Package size={32} className="text-[var(--color-text-muted)] mx-auto mb-2" />
-              <p className="font-mono text-sm text-[var(--color-text-muted)]">
-                No orders yet. Start shopping!
+                {buyResult.message}
               </p>
             </div>
           ) : (
-            orders.map((order) => (
+            <>
               <div
-                key={order.id}
-                className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4 flex items-center justify-between"
+                className="p-4 mb-4"
+                style={{
+                  background: "var(--gui-paper-warm)",
+                  borderRadius: "var(--gui-r-card)",
+                  boxShadow: "inset 0 0 0 1.5px var(--gui-paper-edge)",
+                }}
               >
-                <div>
-                  <p className="text-sm font-heading font-bold text-[var(--color-text-primary)]">
-                    {order.item?.name ?? "Unknown Item"}
+                <h3 className="text-base" style={{ color: "var(--gui-ink-strong)", fontWeight: 800 }}>
+                  {buyItem.name}
+                </h3>
+                {buyItem.description && (
+                  <p className="text-sm mt-1" style={{ color: "var(--gui-muted)" }}>
+                    {buyItem.description}
                   </p>
-                  <p className="text-[0.6rem] font-mono text-[var(--color-text-muted)] mt-0.5">
-                    {new Date(order.created_at).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}{" "}
-                    &middot; Qty: {order.quantity}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-heading font-bold text-[var(--color-brand-yellow)]">
-                    {order.total_price} &#x20AE;
-                  </span>
-                  <span
-                    className={`text-[0.6rem] font-mono px-2 py-0.5 rounded uppercase ${
-                      order.status === "fulfilled"
-                        ? "bg-green-500/10 text-green-400"
-                        : order.status === "pending"
-                        ? "bg-[var(--color-brand-yellow)]/10 text-[var(--color-brand-yellow)]"
-                        : "bg-[var(--color-text-muted)]/10 text-[var(--color-text-muted)]"
-                    }`}
-                  >
-                    {order.status}
+                )}
+                <div className="flex items-center justify-between gap-2 mt-3">
+                  <Badge>{CATEGORY_LABELS[buyItem.category] ?? buyItem.category}</Badge>
+                  <span className="text-lg" style={{ color: "var(--gui-ink-strong)", fontWeight: 800 }}>
+                    {buyItem.price != null && <Amount n={buyItem.price} currency="gems" />}
                   </span>
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      )}
 
-      {/* Buy Confirmation Modal */}
-      {buyItem && (
-        <div
-          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
-          onClick={() => setBuyItem(null)}
-        >
-          <div
-            className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg w-full max-w-sm"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-5 border-b border-[var(--glass-border)] flex items-center justify-between">
-              <h2 className="text-lg font-heading font-bold text-[var(--color-text-primary)]">
-                Confirm Purchase
-              </h2>
-              <button
-                onClick={() => setBuyItem(null)}
-                className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="p-5">
-              {buyResult ? (
-                <div className="text-center py-4">
-                  {buyResult.success ? (
-                    <Check size={32} className="text-green-400 mx-auto mb-2" />
-                  ) : (
-                    <AlertTriangle size={32} className="text-red-400 mx-auto mb-2" />
-                  )}
-                  <p
-                    className={`font-mono text-sm ${
-                      buyResult.success ? "text-green-400" : "text-red-400"
-                    }`}
-                  >
-                    {buyResult.message}
-                  </p>
-                  <button
-                    onClick={() => setBuyItem(null)}
-                    className="mt-4 px-4 py-2 text-xs font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-                  >
-                    Close
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="bg-[var(--color-bg-main)] rounded-md p-4 mb-4">
-                    <h3 className="text-sm font-heading font-bold text-[var(--color-text-primary)]">
-                      {buyItem.name}
-                    </h3>
-                    {buyItem.description && (
-                      <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                        {buyItem.description}
-                      </p>
-                    )}
-                    <div className="flex items-center justify-between mt-3">
-                      <span className="text-[0.6rem] font-mono text-[var(--color-text-muted)] uppercase">
-                        {buyItem.category}
-                      </span>
-                      <span className="text-lg font-heading font-bold text-[var(--color-brand-yellow)]">
-                        {buyItem.price} &#x20AE;
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-sm font-mono mb-4">
-                    <span className="text-[var(--color-text-muted)]">Your Balance</span>
-                    <span
-                      className={
-                        balance >= buyItem.price
-                          ? "text-[var(--color-text-primary)]"
-                          : "text-red-400"
-                      }
-                    >
-                      {balance} &#x20AE;
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setBuyItem(null)}
-                      className="flex-1 py-2 text-sm font-mono text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] border border-[var(--glass-border)] rounded-md transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleBuy}
-                      disabled={buying || balance < buyItem.price}
-                      className="flex-1 py-2 text-sm font-mono bg-[var(--color-brand-blue)] text-white rounded-md hover:bg-[var(--color-brand-blue)]/80 transition-colors disabled:opacity-40"
-                    >
-                      {buying ? "Processing..." : "Confirm"}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+              <div className="flex items-center justify-between text-sm">
+                <span style={{ color: "var(--gui-ink-2)" }}>Your balance</span>
+                <span
+                  style={{
+                    color: balance >= buyItem.price ? "var(--gui-ink-strong)" : "var(--gui-danger)",
+                    fontWeight: 800,
+                  }}
+                >
+                  <Amount n={balance} currency="gems" />
+                </span>
+              </div>
+            </>
+          )
+        )}
+      </Sheet>
     </div>
   );
 }

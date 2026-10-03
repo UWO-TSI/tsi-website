@@ -5,9 +5,12 @@
  * world names, with T1/T2 actions (reset name, mute 7 days, dismiss).
  */
 import { useCallback, useEffect, useState } from "react";
+import { Button, Card } from "@/components/gui";
 
 type Who = { id: string; name: string; world_name: string | null } | null;
 interface NameReport { id: string; reason: string | null; created_at: string; target: Who; reporter: Who }
+
+const reportedOn = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Toronto" });
 
 export default function NameReportsPanel({ showEmpty = false }: { showEmpty?: boolean }) {
   const [rows, setRows] = useState<NameReport[] | null>(null);
@@ -29,22 +32,23 @@ export default function NameReportsPanel({ showEmpty = false }: { showEmpty?: bo
   };
   if (!rows || (rows.length === 0 && !showEmpty)) return null;
   return (
-    <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border)] rounded-lg p-4 mb-4">
-      <h2 className="font-heading font-bold text-[var(--color-text-primary)] mb-2">Name reports ({rows.length} open)</h2>
-      {msg ? <p className="text-xs font-mono text-[var(--color-text-soft)] mb-2">{msg}</p> : null}
-      <ul className="space-y-2">
+    <Card className="mb-4" style={{ padding: 20 }}>
+      <h2 className="text-lg font-extrabold text-[var(--gui-ink-strong)] mb-2">Name reports ({rows.length} open)</h2>
+      {msg ? <p role="status" className="text-sm font-bold text-[var(--gui-ink-2)] mb-2">{msg}</p> : null}
+      {rows.length === 0 ? <p className="text-[13px] text-[var(--gui-muted)]">No world names reported right now.</p> : null}
+      <ul className="divide-y-2 divide-dashed divide-[var(--gui-paper-edge)]">
         {rows.map((r) => (
-          r.target && <li key={r.id} className="flex flex-wrap items-center gap-3 text-sm">
-            <span className="font-mono text-[var(--color-accent-cyan)]">{r.target.world_name ?? "(no world name)"}</span>
-            <span className="text-[var(--color-text-muted)] font-mono text-xs">{r.target.name} · reported by {r.reporter?.name ?? "A former member"} · {new Date(r.created_at).toLocaleDateString()}{r.reason ? ` · “${r.reason}”` : ""}</span>
-            <span className="ml-auto flex gap-2">
-              <button onClick={() => act(r.target!.id, "reset_name")} className="px-2 py-1 border border-red-500/40 text-red-400 font-mono text-xs rounded">Reset name</button>
-              <button onClick={() => act(r.target!.id, "mute")} className="px-2 py-1 border border-[var(--glass-border)] font-mono text-xs rounded text-[var(--color-text-primary)]">Mute 7d</button>
-              <button onClick={() => act(r.target!.id, "dismiss")} className="px-2 py-1 border border-[var(--glass-border)] font-mono text-xs rounded text-[var(--color-text-muted)]">Dismiss</button>
+          r.target && <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3 text-sm">
+            <span className="font-extrabold text-[var(--gui-ink-strong)]">{r.target.world_name ?? "(no world name)"}</span>
+            <span className="text-[13px] text-[var(--gui-ink-2)]">{r.target.name} · reported by {r.reporter?.name ?? "A former member"} · {reportedOn(r.created_at)}{r.reason ? ` · “${r.reason}”` : ""}</span>
+            <span className="ml-auto flex flex-wrap gap-2">
+              <Button size="sm" variant="danger" onClick={() => act(r.target!.id, "reset_name")}>Reset name</Button>
+              <Button size="sm" variant="quiet" onClick={() => act(r.target!.id, "mute")}>Mute 7 days</Button>
+              <Button size="sm" variant="quiet" onClick={() => act(r.target!.id, "dismiss")}>Dismiss</Button>
             </span>
           </li>
         ))}
       </ul>
-    </div>
+    </Card>
   );
 }

@@ -12,6 +12,7 @@ import type { CombatSprite } from "./combatPack";
 import type { ImpactTier } from "@/lib/game/combat/runtime";
 import { ARCANE_FX } from "./arcaneFx";
 import { RANGER_FX } from "./rangerFx";
+import { WARDEN_FX } from "./wardenFx";
 
 export type Ramp = readonly [core: string, mid: string, edge: string];
 /** Flipbooks: `glow` adds (sparks, stars, halos, lines), `ink` lays over (smoke, debris, ink). `at` where it starts: the event's spot or the caster's hands. */
@@ -22,7 +23,8 @@ export interface DecalLayer { kind: "decal"; sprite: CombatSprite; size: number;
 export interface MeshLayer { kind: "mesh"; shape: "ring" | "pillar" | "dome" | "beam" | "spike"; from: number; to: number; height?: number; life: number; lift?: number; byRadius?: boolean }
 export interface LightLayer { kind: "light"; intensity: number; distance: number; life: number }
 export type FxLayer = ParticleLayer | DecalLayer | MeshLayer | LightLayer;
-export interface FxRecipe { tier: ImpactTier; layers: FxLayer[] }
+/** `ramp`: the recipe's own colour (an element's: fire, earth, petals) over the caster's. */
+export interface FxRecipe { tier: ImpactTier; layers: FxLayer[]; ramp?: Ramp }
 
 /** §1.7 budgets per effect (particles at most; meshes; decals; lights; seconds alive, decals apart). */
 export const FX_BUDGET: Record<ImpactTier, { particles: number; meshes: number; decals: number; lights: number; life: number; decalLife: number }> = {
@@ -85,6 +87,7 @@ export const FX: Record<string, FxRecipe> = {
   // ── The family waves' recipes ──
   ...ARCANE_FX,
   ...RANGER_FX,
+  ...WARDEN_FX,
 };
 
 /** What a recipe can cost at most (a burst throws up to 1.6× its count at full scale). */
