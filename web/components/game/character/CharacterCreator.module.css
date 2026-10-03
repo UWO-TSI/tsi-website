@@ -65,3 +65,8 @@
 :global(.gui) .creator .tabs button { font-size: var(--gui-text-sm); font-weight: 800; }
 :global(.gui) .creator .tabs button[aria-selected="true"] { background: var(--gui-butter); color: var(--gui-ink-strong); box-shadow: 0 2px 0 #d4b64c; }
 :global(.gui) .creator .lockNote button { background: var(--gui-wood); color: var(--gui-paper); }
+/* The member world: face styles are pictures, not sheet codes (the label stays for screen readers), and the creator's text follows the text-size setting. */
+:global(.gui) .creator .grid:is([data-tab="eyes"], [data-tab="mouth"]) .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+:global(.gui) .creator .tabs button, :global(.gui) .creator .lockNote, :global(.gui) .creator .pager { font-size: calc(var(--gui-text-sm) * var(--tsi-text-scale, 1)); }
+:global(.gui) .creator .label { font-size: calc(var(--gui-text-xs) * var(--tsi-text-scale, 1)); }
+:global(.gui) .creator .preview h1 { font-size: calc(clamp(22px, 2.6vw, 32px) * var(--tsi-text-scale, 1)); }

@@ -44,6 +44,8 @@ const TABS: Tab[] = [
   slotTab("accessory", "Accessories", ["accessory"], "head", "outfit"),
 ];
 const WARDROBE_TABS = ["bangs", "back", "top", "bottom", "shoes", "accessory"];
+/** Face cells have sheet codes for names ("Eyes F1.1"): said as their place in the row instead. */
+const spoken = (tab: Tab, id: string | null, items: (string | null)[]) => (tab.id === "eyes" || tab.id === "mouth" ? `${tab.label}, style ${items.indexOf(id) + 1} of ${items.length}` : tab.name(id));
 const PAGE = 8;
 const STARTERS: ReadonlySet<string> = new Set(STARTER_PARTS);
 
@@ -161,10 +163,10 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
       <div role="tablist" aria-label="Categories" className={styles.tabs}>
         {tabs.map(t => <button key={t.id} role="tab" aria-selected={t.id === tabId} onClick={() => { setTabId(t.id); setPage(0); setLockNote(null); }}>{t.label}</button>)}
       </div>
-      {items.length > 0 && <ul className={styles.grid} aria-label={tab.label}>
+      {items.length > 0 && <ul className={styles.grid} aria-label={tab.label} data-tab={tab.id}>
         {cells.map(id => <li key={id ?? "none"}>
           <button aria-pressed={tab.on(look, id)} onClick={() => choose(id)} data-locked={!has(id) || undefined}
-            aria-label={has(id) ? tab.name(id) : `${tab.name(id)} (${crafted(id) ? "crafted" : "in the shop"})`} title={tab.name(id)}>
+            aria-label={has(id) ? spoken(tab, id, items) : `${spoken(tab, id, items)} (${crafted(id) ? "crafted" : "in the shop"})`} title={tab.name(id)}>
             <View as="span" className={styles.thumb}><Stage look={tab.apply(look, id)} framing={tab.framing} /></View>
             <span className={styles.label}>{has(id) ? null : <Lock size={11} strokeWidth={2.6} aria-hidden className={styles.lock} />}{tab.name(id)}</span>
           </button>

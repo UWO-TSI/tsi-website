@@ -404,6 +404,8 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         // The bottom stack's lane (the prompt steps aside while you fish), under the toasts; 120 where no stack is set.
         bottom: "var(--hud-lane-bottom, 120px)",
         transform: "translateX(-50%)",
+        // The member world's text-size setting (styles/game-tokens.css sets --gui-overlay-zoom there); 1 on the applicant island.
+        zoom: "var(--gui-overlay-zoom, 1)",
         zIndex: 60,
         pointerEvents: "none",
         display: "flex",

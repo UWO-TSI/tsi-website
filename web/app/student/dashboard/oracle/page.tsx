@@ -6,7 +6,7 @@ import OracleSheetEmbed from "@/components/game/oracle/OracleSheetEmbed";
 // island temple and the OverlaySheet "oracle" target.
 export default function OraclePage() {
   return (
-    <div style={{ padding: "72px 16px 32px" }}>
+    <div style={{ maxWidth: 640, margin: "0 auto", padding: "72px 16px 32px" }}>
       <OracleSheetEmbed />
     </div>
   );
