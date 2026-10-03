@@ -1,8 +1,8 @@
 -- ─── Classes v2, wave 5: the launch ─────────────────────────────────────────
 --
 -- DRAFT 2026-10-03. NOT A MIGRATION YET. It lives in web/supabase/drafts/ so nothing applies it by accident. At go
--- time the coordinator moves it into web/supabase/migrations/ with a fresh timestamp (after the latest applied one,
--- 20261003054110_backpack today) and applies it in one transaction.
+-- time the coordinator moves it into web/supabase/migrations/ with a fresh timestamp (after the latest migration then)
+-- and applies it in one transaction, after every migration before it.
 -- Spec: specs/classes/design-sheet.md §4 "Wave 5 (launch)", §1.5 "At launch", §1.11 "Existing members at launch",
 -- §1.10 (shop cosmetics). Open calls for David: specs/classes/launch-questions.md (the letter's copy, which cosmetics
 -- go on sale, signature-weapon wear). Test: web/supabase/tests/classes_v2_launch_smoke.sql

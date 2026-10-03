@@ -51,8 +51,10 @@ the member world opens keeps the blast radius small.
 
 ## 3. Single-player assumptions in the combat runtime (for co-op later)
 
-Colyseus work is starting elsewhere. None of this blocks the launch (the ruins are single-player), but a co-op pass meets
-it first. The five riskiest:
+Colyseus work is starting elsewhere; co-op ruins are specs/multiplayer.md's M3, which starts after this branch merges
+(the party leader's client runs `stepCombat` for everyone, the server keeps a damage ledger). None of this blocks the
+launch (the ruins are single-player), but M3 meets it first. Item 2 matters most there: on the host, its own ult freeze,
+hitstop and slow motion would pause or slow the enemies for the whole party. The five riskiest:
 
 1. **Hits have no owner.** `HitSrc` (`web/lib/game/combat/abilities.ts` L116–178) carries no player: `hitAmount` scales
    every hit, units included, off `rt.player`'s weapon, stats and buffs, and `strike` charges the one meter, the tally,
