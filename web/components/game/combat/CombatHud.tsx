@@ -10,6 +10,7 @@ import { SLOT_IDS, V2_SLOT_IDS, combat, energyMax, publishCombat, useCombatVersi
 import { ULT } from "@/lib/combat/ult";
 import { masteryTitle } from "@/lib/combat/mastery";
 import { holdsSignature } from "@/lib/combat/classes";
+import { cdKey, mashNotes } from "@/lib/game/combat/classRuntime";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
 import { keyName, useAbilityKeys, useMoveKeys } from "@/lib/game/movement/keys";
 import { WEAPONS } from "@/lib/game/combat/data";
@@ -91,20 +92,23 @@ const INPUT_WORD: Record<string, string> = { hold: "Hold", charge: "Charge", tog
  */
 function ClassBar({ rt, keys }: { rt: CombatRuntime; keys: Record<string, string> }) {
   const v = rt.v2!, kit = v.kit, color = kit.look.ramp[1], meter = v.meter / ULT.max, ready = v.meter >= ULT.max;
-  const armed = holdsSignature(kit, SYSTEM_WEAPONS.find(w => w.key === rt.player.weapon)?.type);
+  const armed = holdsSignature(kit, SYSTEM_WEAPONS.find(w => w.key === rt.player.weapon)?.type), word = kit.stat.kind === "max_mana" ? "mana" : "energy";
   return <>
-    <small className={styles.kitLine}><b>{masteryTitle(kit.name, v.mastery)}</b> · mastery {v.mastery} · {v.passive.name}{kit.movement ? ` · ${kit.movement.name}` : ""}{armed ? "" : ` · hold your ${kit.signature.name} for your skills`}</small>
+    <small className={styles.kitLine}><b>{masteryTitle(kit.name, v.mastery)}</b> · mastery {v.mastery} · {v.passive.name}{kit.movement ? ` · ${kit.movement.name}` : ""}{classStatus(rt)}{armed ? "" : ` · hold your ${kit.signature.name} for your skills`}</small>
+    {v.channel && <Mash rt={rt} keys={keys} />}
     <div className={styles.classBar} style={{ ["--class" as string]: color }}>
       <ol className={styles.abilityBar} style={{ gridTemplateColumns: `repeat(${v.keys.length}, 1fr)` }}>{v.keys.map((a, i) => {
-        const id = V2_SLOT_IDS[i], base = kit.keys[i], cd = a ? v.cd[a.key] ?? 0 : 0, held = v.holding[i];
+        const id = V2_SLOT_IDS[i], base = kit.keys[i], cd = a ? v.cd[cdKey(a)] ?? 0 : 0, held = v.holding[i];
         const max = a?.input?.kind === "hold" ? a.input.max_s : a?.input?.kind === "charge" ? a.input.max_s : 1;
         const left = held !== null ? 1 - Math.min(1, held / max) : a && cd > 0 ? Math.min(1, cd / Math.max(a.cooldown_s, 0.1)) : 0;
         return <li key={`${id}-${rt.denied[id]}`} data-denied={rt.denied[id] > 0 || undefined} data-cooling={cd > 0 || undefined} data-locked={!a || undefined}
           data-held={held !== null || undefined} data-on={v.toggled[i] || undefined} data-unarmed={!armed || undefined}
-          title={a ? `${a.name}${a.input && a.input.kind !== "tap" ? ` (${INPUT_WORD[a.input.kind]})` : ""}: ${a.description} · ${a.cooldown_s ? `${a.cooldown_s.toFixed(1)} s · ` : ""}${a.energy} energy` : `${base.name}: opens at mastery ${base.unlock}`}>
+          data-form={a?.group && v.form && a.key.endsWith(`.${v.form}`) || undefined}
+          title={a ? `${a.name}${a.input && a.input.kind !== "tap" ? ` (${INPUT_WORD[a.input.kind]})` : ""}: ${a.description} · ${a.cooldown_s ? `${a.cooldown_s.toFixed(1)} s · ` : ""}${a.energy} ${word}` : `${base.name}: ${base.learn ? "learn it by defeating its creature" : `opens at mastery ${base.unlock}`}`}>
           <span className={styles.sweep} style={{ "--sweep": `${left * 360}deg` } as React.CSSProperties}><kbd>{keyName(keys[id])}</kbd></span>
-          <span className={styles.slotName}>{a?.name ?? base.name}</span>
-          <small>{!a ? `Mastery ${base.unlock}` : held !== null ? `${INPUT_WORD[a.input!.kind]}…` : cd > 0 ? `${cd.toFixed(cd < 1 ? 1 : 0)}s` : `${a.input && a.input.kind !== "tap" ? `${INPUT_WORD[a.input.kind]} · ` : ""}${a.energy}`}</small>
+          {/* eslint-disable-next-line @next/next/no-img-element -- a tiny static ability emblem */}
+          <span className={styles.slotName}>{base.icon && <img className={styles.slotIcon} src={base.icon} alt="" />}{a?.name ?? base.name}</span>
+          <small>{!a ? (base.learn ? "Not learned" : `Mastery ${base.unlock}`) : held !== null ? `${INPUT_WORD[a.input!.kind]}…` : cd > 0 ? `${cd.toFixed(cd < 1 ? 1 : 0)}s` : `${a.input && a.input.kind !== "tap" ? `${INPUT_WORD[a.input.kind]} · ` : ""}${a.energy}`}</small>
         </li>;
       })}</ol>
       <div className={styles.ultSlot} data-ready={ready || undefined} data-denied={rt.denied.ult || undefined} key={`ult-${rt.denied.ult}`}
@@ -120,4 +124,30 @@ function ClassBar({ rt, keys }: { rt: CombatRuntime; keys: Record<string, string
       <span style={{ width: `${v.progress.needed ? (v.progress.into / v.progress.needed) * 100 : 100}%` }} />
     </div>
   </>;
+}
+
+/** What the class has out or on right now (classes v2 primitives): clones, minions and their order, the form, unseen, an open counter. */
+function classStatus(rt: CombatRuntime): string {
+  const v = rt.v2!, f = rt.field, out: string[] = [];
+  const clones = rt.units.filter(u => u.def.kind === "clone").length, minions = rt.units.filter(u => u.def.kind === "minion" && u.source !== "weapon" && (u.def.cost ?? 1) > 0).length;
+  if (v.form) out.push(`${v.kit.forms?.[v.form]?.name ?? v.form} form`);
+  if (clones) out.push(`Clones ${clones}`);
+  if (minions || v.kit.stat.kind === "summon_count") out.push(`Skeletons ${minions}/${v.capacity}${f.order.mode === "charge" ? " · charging" : f.order.mode === "guard" ? " · guarding" : ""}`);
+  if (f.stealth > 0) out.push("Unseen");
+  if (f.counter) out.push("Mirror up");
+  return out.length ? ` · ${out.join(" · ")}` : "";
+}
+
+/**
+ * A channelled ult's mash (Cataclysm): the next three keys, the front one big; press it and the next slides in. A hit
+ * pulses that element into the sky over the aim, a miss cracks it (CombatFx). The bar is the charge's 5 s.
+ */
+function Mash({ rt, keys }: { rt: CombatRuntime; keys: Record<string, string> }) {
+  const v = rt.v2!, c = v.channel!, ch = v.ult.channel!, notes = mashNotes(v);
+  return <div className={styles.mash} role="status" aria-live="polite" data-testid="cataclysm-mash">
+    <b>{v.ult.name} · {c.hits}/{c.notes.length}</b>
+    <ol key={c.at}>{notes.map((n, i) => <li key={`${c.at}-${i}`} data-front={i === 0 || undefined} style={{ ["--note" as string]: v.kit.keys[n]?.ramp?.[1] ?? v.kit.look.ramp[1] }}>
+      <kbd>{keyName(keys[V2_SLOT_IDS[n]])}</kbd><small>{v.kit.keys[n]?.name.split(" ")[0]}</small></li>)}</ol>
+    <span><i style={{ width: `${Math.min(100, (c.t / ch.seconds) * 100)}%` }} /></span>
+  </div>;
 }

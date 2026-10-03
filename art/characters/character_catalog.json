@@ -3180,6 +3180,105 @@
     "hand": "L",
     "upper": true,
     "impact": 0
+   },
+   {
+    "name": "Ult_Elementalist",
+    "verb": "Ult_Elementalist",
+    "grip": "Staff",
+    "length": 1.4,
+    "loop": false,
+    "frames": 42,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.32
+   },
+   {
+    "name": "Ult_Illusionist",
+    "verb": "Ult_Illusionist",
+    "grip": "OneHand",
+    "length": 1.2,
+    "loop": false,
+    "frames": 36,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.38
+   },
+   {
+    "name": "Ult_Necromancer",
+    "verb": "Ult_Necromancer",
+    "grip": "Book",
+    "length": 1.5,
+    "loop": false,
+    "frames": 45,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.33
+   },
+   {
+    "name": "Ult_Transmuter",
+    "verb": "Ult_Transmuter",
+    "grip": "Fists",
+    "length": 1.3,
+    "loop": false,
+    "frames": 39,
+    "hand": "both",
+    "upper": false,
+    "impact": 0.35
+   },
+   {
+    "name": "Unique_Javelin",
+    "verb": "Unique_Javelin",
+    "grip": "Staff",
+    "length": 0.8,
+    "loop": false,
+    "frames": 24,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.5
+   },
+   {
+    "name": "Unique_CardFlick",
+    "verb": "Unique_CardFlick",
+    "grip": "OneHand",
+    "length": 0.467,
+    "loop": false,
+    "frames": 14,
+    "hand": "R",
+    "upper": true,
+    "impact": 0.45
+   },
+   {
+    "name": "Unique_Vanish",
+    "verb": "Unique_Vanish",
+    "grip": "OneHand",
+    "length": 0.7,
+    "loop": false,
+    "frames": 21,
+    "hand": "R",
+    "upper": false,
+    "impact": 0.4
+   },
+   {
+    "name": "Unique_Raise",
+    "verb": "Unique_Raise",
+    "grip": "Book",
+    "length": 0.9,
+    "loop": false,
+    "frames": 27,
+    "hand": "L",
+    "upper": false,
+    "impact": 0.45
+   },
+   {
+    "name": "Unique_Shift",
+    "verb": "Unique_Shift",
+    "grip": "Fists",
+    "length": 0.3,
+    "loop": false,
+    "frames": 9,
+    "hand": "both",
+    "upper": true,
+    "impact": 0.5
    }
   ]
  }

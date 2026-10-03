@@ -109,6 +109,8 @@ export interface Enemy {
   cd: number;
   /** A swarm's turn round you (radians), shared by the cloud because they all turn at one rate. */
   orbit: number;
+  /** Classes v2: pressed flat (0..1) into a sweeping mirror that carries it (primitives.ts sweep; the renderer flattens it). */
+  flat?: number;
 }
 export interface Pack { id: string; slot: number; size: number; cx: number; cz: number }
 export function spawnEnemy(id: string, type: EnemyType, x: number, z: number, pack: Pack | null = null): Enemy {

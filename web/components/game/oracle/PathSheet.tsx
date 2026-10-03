@@ -38,11 +38,11 @@ const nameOf = (key: string) => classKit(key)?.name ?? CLASS_RENAMES[key] ?? sub
 
 /** Classes v2's Kit tab: the class's keys (all equipped), combos, ult, passives, stat direction and track, and its mastery frames. */
 function ClassKitPanel({ kit, view, busy, run }: { kit: ClassKit; view: ProgressionView; busy: boolean; run: (f: () => Promise<{ ok: boolean; error?: string }>, done: string) => Promise<boolean> }) {
-  const c = view.classes!, m = c.mastery.mastery, at = kitAt(kit, m), mods = classMods(kit, m), look = masteryCosmetics(m);
+  const c = view.classes!, m = c.mastery.mastery, at = kitAt(kit, m, view.traits ?? {}), mods = classMods(kit, m), look = masteryCosmetics(m);
   return <div data-testid="class-kit">
     <p className={styles.hint}>Mastery {m}{c.mastery.needed ? ` · ${c.mastery.into} / ${c.mastery.needed} XP to ${m + 1}` : " · mastered"}{c.next ? ` · Mastery ${c.next.at}: ${c.next.what.join(", ")}` : ""}</p>
     <ul className={styles.pathLoadout}>{kit.keys.map((base, i) => { const a = at.keys[i]; return <li key={base.key} data-locked={!a || undefined}>
-      <button disabled aria-disabled="true"><kbd>{i + 1}</kbd><AbilityLine a={a ?? base} /><em>{a ? INPUT_WORD[a.input?.kind ?? "tap"] : `Mastery ${base.unlock}`}</em></button></li>; })}
+      <button disabled aria-disabled="true"><kbd>{i + 1}</kbd><AbilityLine a={a ?? base} /><em>{a ? INPUT_WORD[a.input?.kind ?? "tap"] : base.learn && (base.unlock ?? 1) <= m ? "Defeat its creature" : `Mastery ${base.unlock}`}</em></button></li>; })}
       {(kit.combos ?? []).map(cb => { const a = at.combos.find(x => x.ability.key === cb.ability.key)?.ability; return <li key={cb.ability.key} data-locked={!a || undefined}>
         <button disabled aria-disabled="true"><kbd>{cb.keys[0] === cb.keys[1] ? `${cb.keys[0] + 1}${cb.keys[0] + 1}` : `${cb.keys[0] + 1}+${cb.keys[1] + 1}`}</kbd><AbilityLine a={a ?? cb.ability} /><em>{a ? "Combo" : `Mastery ${cb.ability.unlock}`}</em></button></li>; })}
       <li><button disabled aria-disabled="true"><kbd>F</kbd><AbilityLine a={at.ult} /><em>Ultimate</em></button></li>
