@@ -23,7 +23,8 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("first-login routing to the island", () => {
   it("sends signed-out visitors to sign in", async () => {
-    expect(await go("/student/dashboard")).toBe("https://tethos.ca/student");
+    expect(await go("/student/dashboard")).toBe("https://tethos.ca/student?next=%2Fstudent%2Fdashboard");
+    expect(await go("/student/dashboard/bounty?tab=open")).toBe("https://tethos.ca/student?next=%2Fstudent%2Fdashboard%2Fbounty%3Ftab%3Dopen");
   });
   it("sends signed-in visitors past the /student login into the portal", async () => {
     expect(await go("/student")).toBeNull();

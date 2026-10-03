@@ -3,7 +3,8 @@ import {
   isGroundAtWorld, drawnSurfaceAt } from "./grid";
 import { cellsOf, type PlacedItem } from "@/lib/homes/layout";
 import { standWorld, type MoveWorld } from "./movement/sim";
-import { TREE_TRUNK } from "./defaultIsland";
+import { TREE_TRUNK, WHARF_DECK_LOCAL } from "./defaultIsland";
+import { ASHORE, BOARDING, dockToWorld, worldToDock, type Dock } from "./wharf";
 
 /**
  * Personal home island (specs/homes.md §1): a fixed natural islet about a
@@ -15,8 +16,21 @@ export const HOME_SPAWN: [number, number, number] = [0, 0, -6.5];
 /** House footprint (world rect) and front door. */
 export const HOUSE = { x: 0, z: 4, halfW: 2.5, halfD: 2.1, door: [0, 1.3] as [number, number] };
 export const HOME_MAILBOX: [number, number] = [2.3, 1.3];
-/** Dock sign: return to the village. */
+/** The dock: where the pier meets the sand (arrival-wharf.md §2). */
 export const HOME_DOCK: [number, number] = [0, -8.4];
+/** The pier, the village wharf's model, running out to sea from the dock: its land end (ASHORE) at HOME_DOCK. */
+export const HOME_PIER: Dock = { x: HOME_DOCK[0] - ASHORE.x, z: HOME_DOCK[1] - ASHORE.z, yaw: 0 };
+const pierAt = { x: 0, z: 0 };
+/** On the pier's deck (WHARF_DECK_LOCAL, as on the village wharf); `pad` widens it all round. */
+export function onHomePier(x: number, z: number, pad = 0): boolean {
+  const d = WHARF_DECK_LOCAL, p = worldToDock(HOME_PIER, x, z, pierAt);
+  return p.x >= d.x0 - pad && p.x <= d.x1 + pad && p.z >= d.z0 - pad && p.z <= d.z1 + pad;
+}
+/** Water under the pier and just round it: no sun glints there, they would show through the boards (as at the village wharf). */
+export const underHomePier = (x: number, z: number) => onHomePier(x, z, 0.4);
+const boardAt = dockToWorld(HOME_PIER, BOARDING.x, BOARDING.z, { x: 0, z: 0 });
+/** In reach of the boat: the pier's boarding point, as at the village wharf's door. */
+export const homeBoatPrompt = (x: number, z: number) => Math.hypot(x - boardAt.x, z - boardAt.z) < BOARDING.range;
 export const HOME_TREES: [number, number][] = [[-7, 3], [7.5, 2], [-5, -5], [6, -5.5]];
 /** Each home tree's seed (its model slot, turn and size; the third is a cedar). */
 export const HOME_TREE_SEEDS = [0, 1, 3, 2];
@@ -37,20 +51,20 @@ export function createHomeIsland() {
   const field = heightField(map);
   const ground = (x: number, z: number) => sampleGroundHeight(map, field, x, z);
   const surface = (x: number, z: number) => drawnSurfaceAt(map, x, z);
-  /** Fixed obstacles only: water, house, mailbox, trees, dock sign. */
-  const fixedFree = (x: number, z: number) => isGroundAtWorld(map, x, z)
+  /** Fixed obstacles only: water (but for the pier's deck), house, mailbox, trees. */
+  const fixedFree = (x: number, z: number) => (isGroundAtWorld(map, x, z) || onHomePier(x, z))
     && !inRect(x, z, HOUSE.x, HOUSE.z, HOUSE.halfW, HOUSE.halfD)
     && !inRect(x, z, HOME_MAILBOX[0], HOME_MAILBOX[1], 0.35, 0.35)
     && !HOME_TREES.some(([tx, tz]) => Math.hypot(tx - x, tz - z) < TREE_TRUNK);
-  /** Can a placed item cover this cell? Needs all four corners of the cell free, and keeps the door approach open. */
+  /** Can a placed item cover this cell? Needs all four corners of the cell free (ground, not the pier), and keeps the door approach open. */
   const placeable = (cx: number, cz: number) =>
-    [[0.1, 0.1], [0.9, 0.1], [0.1, 0.9], [0.9, 0.9]].every(([dx, dz]) => fixedFree(cx + dx, cz + dz))
+    [[0.1, 0.1], [0.9, 0.1], [0.1, 0.9], [0.9, 0.9]].every(([dx, dz]) => fixedFree(cx + dx, cz + dz) && !onHomePier(cx + dx, cz + dz))
     && !inRect(cx + 0.5, cz + 0.5, HOUSE.door[0], HOUSE.door[1] - 0.5, 1, 1)
     && !inRect(cx + 0.5, cz + 0.5, HOME_DOCK[0], HOME_DOCK[1], 1, 1.2);
   /** The islet for the movement sim with these outdoor items placed (flowers are walked over). */
   const worldWith = (items: readonly PlacedItem[]): MoveWorld => {
     const blocked = new Set(items.filter(i => !i.piece.startsWith("flower-")).flatMap(cellsOf).map(([x, z]) => `${x},${z}`));
-    return standWorld(ground, (x, z) => fixedFree(x, z) && !blocked.has(`${Math.floor(x)},${Math.floor(z)}`), (x, z) => !isGroundAtWorld(map, x, z));
+    return standWorld(ground, (x, z) => fixedFree(x, z) && !blocked.has(`${Math.floor(x)},${Math.floor(z)}`), (x, z) => !isGroundAtWorld(map, x, z) && !onHomePier(x, z));
   };
   return { map, ground, surface, fixedFree, placeable, worldWith };
 }

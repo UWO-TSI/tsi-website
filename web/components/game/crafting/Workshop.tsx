@@ -32,7 +32,7 @@ import { FINISH_GLINT, FINISH_SPARKS, GLINT_TINT, HAMMER_PUFF, SAWDUST, SAWDUST_
 import { seedAt } from "@/lib/game/fx/particles";
 import { handOf, liftPose, type Lift } from "@/lib/game/forageLift";
 import { prepareModel } from "@/lib/game/modelMaterials";
-import { ErrorNote, Loading } from "@/components/gui";
+import { ErrorNote, Loading, SignInText } from "@/components/gui";
 import { isTyping, worldKeysBlocked } from "@/lib/game/useWorldDialog";
 import IslandSheet from "../IslandSheet";
 import type { RecipeBook, RecipeView } from "@/lib/crafting/service";
@@ -305,7 +305,7 @@ export default function CraftingSheet() {
   return <>
     {!open && near && !making && <button className={world.interact} onClick={show}><kbd>E</kbd>Use the workbench</button>}
     <IslandSheet open={open} title="Workbench" onClose={() => setOpen(false)} testId="crafting-sheet" keys="e" size="lg">
-    {error && <ErrorNote onRetry={() => void load()}>{error}</ErrorNote>}
+    {error && <ErrorNote onRetry={() => void load()}><SignInText text={error} /></ErrorNote>}
     {!book ? (error ? null : <Loading label="Laying out your recipes…" />) : <>
       <p className={styles.count}>{book.recipes.length} of {book.total} recipes known</p>
       <div className={styles.body}>

@@ -16,6 +16,8 @@ import { ParticlePool } from "@/lib/game/fx/particles";
 import { liveIslandWeather } from "@/lib/game/islandWeather";
 import type { MoveEvent } from "@/lib/game/movement/sim";
 import { worldWind, type WorldWind } from "@/lib/game/worldFx";
+import { WATER_SWELL } from "@/lib/game/waterShader";
+import { waterSurfaceUniforms } from "../grid/terrainMaterials";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 
 /** Feel values on the renderer's side, tuned next to the sim's in /lab/move. */
@@ -103,13 +105,13 @@ vec3 axX = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
 vec3 axY = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
 vec3 objectNormal = normalize(vec3(0.0, 0.55, 0.0) + toCam * 0.45);
 float face = iD.w;
-bool onGround = face > 0.5 && face < 1.5;
+bool onGround = (face > 0.5 && face < 1.5) || face > 3.5; // flat: on the ground, or on the water
 if (onGround) { axX = vec3(1.0, 0.0, 0.0); axY = vec3(0.0, 0.0, -1.0); objectNormal = vec3(0.0, 1.0, 0.0); }
 else if (face > 1.5 && face < 2.5) { axX = normalize(iD.xyz); axY = normalize(cross(toCam, axX)); }
 `;
 export const PLACE_VERTEX = `float pc = cos(iB.z), ps = sin(iB.z);
 vec2 lp = position.xy * iB.xy;
-if (face > 2.5) lp.y += 0.3 * iB.y; // standing: the painted ground line (0.2 up the cell) on the point
+if (face > 2.5 && face < 3.5) lp.y += 0.3 * iB.y; // standing: the painted ground line (0.2 up the cell) on the point
 vec3 transformed = pCentre + axX * (lp.x * pc - lp.y * ps) + axY * (lp.x * ps + lp.y * pc);
 vAbove = onGround ? 10.0 : transformed.y - iA.w;
 vTint = iC;
@@ -127,16 +129,19 @@ function moveParticleMaterial(): THREE.MeshStandardMaterial {
   if (particleMaterial) return particleMaterial;
   const m = new THREE.MeshStandardMaterial({ name: "MoveParticles", map: packMap(), roughness: 1, metalness: 0, transparent: true, depthWrite: false });
   m.onBeforeCompile = shader => {
-    shader.vertexShader = VERTEX_PARS + shader.vertexShader
+    // On the water (FACE.water) a particle rides the swell the water draws: the same function, the same live uniforms.
+    const u = waterSurfaceUniforms();
+    Object.assign(shader.uniforms, { uTime: u.uTime, uWaveHeight: u.uWaveHeight, uWaveScale: u.uWaveScale, uWaveSpeed: u.uWaveSpeed });
+    shader.vertexShader = VERTEX_PARS + WATER_SWELL + shader.vertexShader
       .replace("#include <uv_vertex>", `#include <uv_vertex>\n${PICK_FRAME}`)
       .replace("#include <beginnormal_vertex>", PLACE_NORMAL)
-      .replace("#include <begin_vertex>", PLACE_VERTEX);
+      .replace("#include <begin_vertex>", `${PLACE_VERTEX}\nif (face > 3.5) { vec2 swellSlope; transformed.y += waterSwell(transformed.xz, swellSlope); }`);
     shader.fragmentShader = "varying vec4 vTint;\nvarying float vAbove;\n" + shader.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
   diffuseColor *= vTint;
   diffuseColor.a *= smoothstep(0.0, ${SOFT.toFixed(2)}, vAbove);
   if (diffuseColor.a < 0.003) discard;`);
   };
-  m.customProgramCacheKey = () => "move-particles-v1";
+  m.customProgramCacheKey = () => "move-particles-v2";
   return (particleMaterial = m);
 }
 

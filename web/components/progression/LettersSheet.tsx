@@ -7,7 +7,7 @@ import { NOTE_MAX_LEN, SUBJECT_MAX_LEN } from "@/lib/progression/letters";
 import { refreshProgression } from "@/lib/progression/useProgression";
 import type { LetterView } from "@/lib/progression/types";
 import ProgressionPanel, { type ProgressionSheetProps } from "./ProgressionPanel";
-import { Button, Empty, ErrorNote, Loading } from "@/components/gui";
+import { Button, Empty, ErrorNote, Loading, SignInLink } from "@/components/gui";
 import { Mail } from "lucide-react";
 import s from "./progression.module.css";
 
@@ -89,7 +89,7 @@ export function LettersBody({ transport = lettersTransport, systemOnly = false }
       ) : null}
       {letters === null ? <Loading label="Checking the mailbox…" /> : null}
       {error === "failed" ? <ErrorNote onRetry={() => { setLetters(null); void load(); }}>Your mail didn’t load. The connection may have dropped.</ErrorNote> : null}
-      {error === "signed-out" ? <Empty icon={<Mail size={32} />} title="Sign in to read your mail" action={<a className={s.btn} style={{ display: "inline-grid", placeItems: "center", textDecoration: "none" }} href="/student?next=/student/dashboard">Sign in</a>}>Letters from members and HQ wait here.</Empty> : null}
+      {error === "signed-out" ? <Empty icon={<Mail size={32} />} title="Sign in to read your mail" action={<SignInLink button />}>Letters from members and HQ wait here.</Empty> : null}
       {letters !== null && !error && shown.length === 0 ? <Empty icon={<Mail size={32} />} title={systemOnly ? "No notices from HQ yet" : "No letters yet"}>{systemOnly ? "Club news and ceremony letters go up here." : "When someone writes, it arrives here. You can write first."}</Empty> : null}
       <ul className={s.letters}>
         {shown.map((l) => (
