@@ -9,7 +9,8 @@
  * |-----------------------------|-----------------|-------|--------------------|-------------------------------|
  * | 21 u                        | 72 px           | LOD 1 | every frame        | yes                           |
  * | 28 u                        | 48 px           | LOD 1 | 30 Hz              | yes                           |
- * | 40 u                        | 28 px           | LOD 1 | 15 Hz              | no (its contact shadow stays) |
+ * | 40 u                        | 28 px           | LOD 1 | 15 Hz              | yes                           |
+ * | 40 u                        | 10 px           | LOD 1 | 15 Hz              | no (its contact shadow stays) |
  * | 21 u, out of view; hidden   |                 | LOD 1 | 5 Hz (state keeps) | no                            |
  *
  * Each line has hysteresis (15% on both measures): a character crosses back only past it, so one standing on a line
@@ -22,8 +23,11 @@ export const CHARACTER_LOD = {
   mesh: 72,
   /** Animation at 30 Hz past this distance and under this height. */
   half: { distance: 28, px: 48 },
-  /** Animation at 15 Hz and no sun shadow past this distance and under this height. */
+  /** Animation at 15 Hz past this distance and under this height. */
   quarter: { distance: 40, px: 28 },
+  /** No sun shadow past the quarter line's distance and under this height: a speck whose shadow is a speck. (A long
+   * afternoon shadow reads from much further than the figure that casts it, so it goes last.) */
+  shadowPx: 10,
   /** Off screen or hidden: the mixer steps at this rate (one-shots finish, footsteps count). */
   offHz: 5,
   /** Crossing back needs this much margin on both measures. */
@@ -59,7 +63,7 @@ export function characterLod(s: LodState, d: number, px: number, visible = true)
   s.lod = reduced(d, px, L.near, L.mesh, s.lod);
   const half = reduced(d, px, L.half.distance, L.half.px, s.hz <= 30), quarter = reduced(d, px, L.quarter.distance, L.quarter.px, s.hz <= 15);
   s.hz = quarter ? 15 : half ? 30 : Infinity;
-  s.shadow = !quarter;
+  s.shadow = !reduced(d, px, L.quarter.distance, L.shadowPx, !s.shadow);
   return s;
 }
 

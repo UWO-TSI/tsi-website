@@ -6,10 +6,12 @@
  * | Level | What changes (on top of the one before)                                                        |
  * |-------|-------------------------------------------------------------------------------------------------|
  * | 0     | nothing: the settings as chosen                                                                 |
- * | 1     | the moving casters' sun shadow map (characters, enemies: SunShadows) at half size               |
- * | 2     | characters past 21 u reach their lighter tiers sooner (character/lod.ts: as if drawn 2/3 tall)  |
- * | 3     | combat effects' particles at 60%                                                                |
- * | 4     | the canvas renders at 85% of its resolution                                                     |
+ * | 1     | characters past 21 u reach their lighter tiers sooner (character/lod.ts: as if drawn 2/3 tall)  |
+ * | 2     | combat effects' particles at 60%                                                                |
+ * | 3     | the canvas renders at 85% of its resolution                                                     |
+ *
+ * Not a knob: the moving casters' sun shadow map. Resized mid-session in testing it drew characters' shadows in the
+ * wrong place, and that map has an older problem of its own (specs/perf/2026-10-results.md, "Found along the way").
  *
  * If every level is on and the frame rate is no better than with none (a busy CPU, which these don't relieve), the
  * detail comes back and it waits a minute before trying again: never a lower look for nothing.
@@ -17,8 +19,6 @@
  * Pure: the world's QualityGovernor feeds it every frame's time and applies `knobs`.
  */
 export interface Knobs {
-  /** The moving casters' shadow map size, as a share of the key light's. */
-  shadowScale: number;
   /** Characters' drawn size is divided by this before their detail tier (lod.ts). */
   lodBias: number;
   /** Particle bursts' counts, as a share. */
@@ -27,11 +27,10 @@ export interface Knobs {
   renderScale: number;
 }
 export const LEVELS: readonly Readonly<Knobs>[] = [
-  { shadowScale: 1, lodBias: 1, particles: 1, renderScale: 1 },
-  { shadowScale: 0.5, lodBias: 1, particles: 1, renderScale: 1 },
-  { shadowScale: 0.5, lodBias: 1.5, particles: 1, renderScale: 1 },
-  { shadowScale: 0.5, lodBias: 1.5, particles: 0.6, renderScale: 1 },
-  { shadowScale: 0.5, lodBias: 1.5, particles: 0.6, renderScale: 0.85 },
+  { lodBias: 1, particles: 1, renderScale: 1 },
+  { lodBias: 1.5, particles: 1, renderScale: 1 },
+  { lodBias: 1.5, particles: 0.6, renderScale: 1 },
+  { lodBias: 1.5, particles: 0.6, renderScale: 0.85 },
 ];
 
 export const GOVERNOR = {

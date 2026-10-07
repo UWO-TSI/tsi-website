@@ -28,7 +28,6 @@
 import { useEffect, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import { quality } from "@/lib/game/perf/governor";
 
 type Caster = THREE.Mesh & { userData: { sunCaster?: "static" | "dynamic"; casterOnly?: boolean } };
 
@@ -139,9 +138,7 @@ class SunShadowCache {
       Object.assign(own, { left: cam.left, right: cam.right, top: cam.top, bottom: cam.bottom, near: cam.near, far: cam.far });
       own.updateProjectionMatrix();
     }
-    // Adaptive quality (governor.ts) can halve the moving casters' map; the key light's cached map keeps its size.
-    const size = Math.round(from.mapSize.x * quality.knobs.shadowScale);
-    if (to.mapSize.x !== size || to.mapSize.y !== size) { to.mapSize.set(size, size); to.map?.dispose(); to.map = null; }
+    if (!to.mapSize.equals(from.mapSize)) { to.mapSize.copy(from.mapSize); to.map?.dispose(); to.map = null; }
     Object.assign(to, { bias: from.bias, normalBias: from.normalBias, radius: from.radius, intensity: from.intensity });
   }
 

@@ -746,7 +746,7 @@ let viewAt = -1, viewCam: THREE.Camera | null = null;
  */
 function viewCharacter(puppet: Puppet, g: THREE.Object3D, camera: THREE.Camera, viewportPx: number, scale: number, now: number) {
   for (let o: THREE.Object3D | null = g; o; o = o.parent) if (!o.visible) return puppet.view(Infinity, 0, false);
-  if (SHOW_LOD) return puppet.view(Infinity, 0, true);
+  if (SHOW_LOD) return puppet.view(30, 50, true); // past `near`, under the mesh line, above the rest: LOD 1 alone
   if (now !== viewAt || camera !== viewCam) {
     viewAt = now; viewCam = camera;
     view.setFromProjectionMatrix(viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));

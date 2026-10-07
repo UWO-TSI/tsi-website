@@ -19,8 +19,8 @@ describe("adaptive quality", () => {
     const g = new Governor();
     expect(run(g, 30, GOVERNOR.downAfter - 0.5)).toEqual([]);
     expect(run(g, 30, 1)).toEqual([1]);
-    expect(g.knobs).toMatchObject({ shadowScale: 0.5, renderScale: 1, particles: 1 });
-    expect(run(g, 30, 12).slice(0, 3)).toEqual([2, 3, 4]);
+    expect(g.knobs).toMatchObject({ lodBias: 1.5, renderScale: 1, particles: 1 });
+    expect(run(g, 30, 9).slice(0, 2)).toEqual([2, 3]);
     expect(LEVELS.findIndex(l => l.renderScale < 1)).toBe(LEVELS.length - 1); // resolution goes last
   });
   it("ignores single hitches", () => {
@@ -41,8 +41,8 @@ describe("adaptive quality", () => {
   it("gives the detail back when stepping down bought nothing, and holds off a while", () => {
     const g = new Governor();
     const seen = run(g, 40, 30); // the same 40 ms frames whatever the level
-    expect(seen).toEqual([1, 2, 3, 4, 0]); // 15 s in: every level on, no faster
-    expect(run(g, 40, GOVERNOR.holdOff - 20)).toEqual([]); // holding off
+    expect(seen.slice(0, 4)).toEqual([1, 2, 3, 0]); // 12 s in: every level on, no faster
+    expect(run(g, 40, GOVERNOR.holdOff - 25)).toEqual([]); // holding off
     expect(run(g, 40, 30)[0]).toBe(1); // then it tries again
     // Where a level does help (a GPU-bound load), it stays down.
     const h = new Governor();

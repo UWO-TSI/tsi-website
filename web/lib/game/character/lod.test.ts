@@ -14,7 +14,8 @@ describe("character detail by distance and drawn size", () => {
   it("steps down only when both far and small", () => {
     expect(characterLod(createLodState(), 25, L.mesh - 1)).toMatchObject({ lod: true, hz: Infinity, shadow: true });
     expect(characterLod(createLodState(), 30, L.half.px - 1)).toMatchObject({ lod: true, hz: 30, shadow: true });
-    expect(characterLod(createLodState(), 45, L.quarter.px - 1)).toMatchObject({ lod: true, hz: 15, shadow: false });
+    expect(characterLod(createLodState(), 45, L.quarter.px - 1)).toMatchObject({ lod: true, hz: 15, shadow: true });
+    expect(characterLod(createLodState(), 60, L.shadowPx - 1)).toMatchObject({ lod: true, hz: 15, shadow: false });
     expect(characterLod(createLodState(), 25, L.quarter.px - 1)).toMatchObject({ lod: true, hz: Infinity, shadow: true });
     expect(characterLod(createLodState(), 45, 0, false)).toMatchObject({ lod: true, hz: L.offHz, shadow: false });
     expect(characterLod(createLodState(), Infinity, 0, false)).toMatchObject({ lod: true, hz: L.offHz, shadow: false });
@@ -25,8 +26,11 @@ describe("character detail by distance and drawn size", () => {
     expect(characterLod(s, L.near - 1, 40).lod).toBe(true);
     expect(characterLod(s, L.near / L.hysteresis - 0.1, 40).lod).toBe(false);
     characterLod(s, 50, L.quarter.px - 1);
-    expect(characterLod(s, 50, L.quarter.px + 1)).toMatchObject({ hz: 15, shadow: false });
-    expect(characterLod(s, 50, L.quarter.px * L.hysteresis + 1)).toMatchObject({ hz: 30, shadow: true });
+    expect(characterLod(s, 50, L.quarter.px + 1)).toMatchObject({ hz: 15 });
+    expect(characterLod(s, 50, L.quarter.px * L.hysteresis + 1)).toMatchObject({ hz: 30 });
+    characterLod(s, 60, L.shadowPx - 1);
+    expect(characterLod(s, 60, L.shadowPx + 0.5).shadow).toBe(false);
+    expect(characterLod(s, 60, L.shadowPx * L.hysteresis + 0.5).shadow).toBe(true);
   });
   it("saves animation time up and steps it at the tier's rate, all of it at once", () => {
     const s = characterLod(createLodState(), 50, 10); // 15 Hz
