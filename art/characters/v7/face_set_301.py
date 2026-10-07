@@ -32,7 +32,7 @@ def parts(g):
     anchors and kinds (K, AUTH, BOX per layer kind) are the new entries build_face.py adds to its tables."""
     P, P0, bez, taper, hex_srgb = g["P"], g["P0"], g["bez"], g["taper"], g["hex_srgb"]
     C_DOLL, C_LINE = g["C_DOLL"], g["C_LINE"]
-    C_ROSE = hex_srgb("#F0909F")     # the band: a little pinker than the cheek blush (#F4A0A0), still matte paint
+    C_ROSE = hex_srgb("#E8798E")     # the band: a deeper rose than the cheek blush (#F4A0A0), so it never glows on dark skin
 
     # ------------------------------------------------------------ eyes (the canvas-left eye; +dx is outward)
     def sleepy_lash(L):
@@ -50,15 +50,17 @@ def parts(g):
         c = bez([P0(*p) for p in pts], 16)
         L.paint(L.stroke(c, taper(len(c), r0, r1, r2)), C_LINE)
 
-    def cat_w(L):
+    # Both are drawn larger than the resting picks: the mouth sits where the face turns under toward the chin, so
+    # the camera sees it smaller than drawn (see the talk cells in build_face.py).
+    def cat_w(L, k=1.45):
         for s in (-1, 1):
-            line(L, [(0.0, -0.01), (s * 0.003, 0.016), (s * 0.034, 0.019), (s * 0.038, -0.003)], 0.0048, 0.0064, 0.0056)
-            line(L, [(s * 0.038, -0.003), (s * 0.039, -0.011), (s * 0.046, -0.016), (s * 0.054, -0.013)], 0.0056, 0.0046, 0.003)
+            line(L, [(0.0, -0.01 * k), (s * 0.003 * k, 0.016 * k), (s * 0.034 * k, 0.019 * k), (s * 0.038 * k, -0.003 * k)], 0.0055, 0.0075, 0.0065)
+            line(L, [(s * 0.038 * k, -0.003 * k), (s * 0.039 * k, -0.011 * k), (s * 0.046 * k, -0.016 * k), (s * 0.054 * k, -0.013 * k)], 0.0065, 0.0052, 0.0034)
 
     def grin_curl(L):
-        line(L, [(-0.09, -0.012), (-0.045, 0.026), (0.045, 0.026), (0.09, -0.012)], 0.0056, 0.0074, 0.0056)
+        line(L, [(-0.094, -0.016), (-0.047, 0.034), (0.047, 0.034), (0.094, -0.016)], 0.0064, 0.0085, 0.0064)
         for s in (-1, 1):
-            line(L, [(s * 0.09, -0.012), (s * 0.101, -0.022), (s * 0.103, -0.038), (s * 0.09, -0.041)], 0.0056, 0.005, 0.003)
+            line(L, [(s * 0.094, -0.016), (s * 0.106, -0.028), (s * 0.108, -0.046), (s * 0.094, -0.05)], 0.0064, 0.0056, 0.0034)
 
     # ------------------------------------------------------------ the blush band (one cell on the centre line)
     blush_anchor = (0.5, 0.72)       # between the eye line (0.614) and the cheek blush (0.789)
@@ -67,7 +69,7 @@ def parts(g):
         du, dv = (L.U - blush_anchor[0]) / 0.3, (L.V - blush_anchor[1]) / 0.042
         r = (np.abs(du) ** 2.6 + np.abs(dv) ** 2.0) ** (1 / 2.0)
         soft = np.clip((1.0 - r) / 0.45, 0.0, 1.0)
-        L.paint(soft * soft * (3 - 2 * soft), C_ROSE, 0.55)          # smoothstep edge, no hard line anywhere
+        L.paint(soft * soft * (3 - 2 * soft), C_ROSE, 0.42)          # smoothstep edge, no hard line anywhere
 
     eyes = {"sleepy_lash": sleepy_lash, "dot": dot}
     mouths = {"cat_w": cat_w, "grin_curl": grin_curl}
