@@ -20,7 +20,8 @@
  *
  * Casters: `userData.sunCaster` "dynamic" is set by Character, the enemies and
  * prepareModel's swaying canopy casters; every other mesh with castShadow is
- * static. castShadow is per object, not per light, so the first caster in the
+ * static. A dynamic caster marked `shadowCulled` (a character drawn too small,
+ * character/lod.ts) casts nothing. castShadow is per object, not per light, so the first caster in the
  * scene (`base`) switches the two sets as each light's pass begins; between
  * passes ACNH's caster-only hulls stay hidden.
  */
@@ -105,7 +106,9 @@ class SunShadowCache {
     if ((object as THREE.DirectionalLight).isDirectionalLight && object.castShadow && object !== this.moving && !this.light) this.light = object as THREE.DirectionalLight;
     if (mesh.isMesh && object !== this.base) {
       const kind = mesh.userData.sunCaster ?? (mesh.castShadow ? (mesh.userData.sunCaster = "static") : undefined);
-      if (kind === "dynamic") this.dynamics.push(mesh);
+      // A character drawn too small for its shadow to show (character/lod.ts) casts nothing this frame.
+      if (kind === "dynamic" && mesh.userData.shadowCulled) mesh.castShadow = false;
+      else if (kind === "dynamic") this.dynamics.push(mesh);
       else if (kind === "static") {
         const captured = this.statics.get(mesh);
         if (!captured) dirty = true;

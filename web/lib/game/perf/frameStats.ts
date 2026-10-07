@@ -7,4 +7,7 @@ export const frameStats = {
   mixers: 0,
   /** Skeletons whose bone matrices were recomputed and uploaded this frame (one per skinned character drawn). */
   skeletons: 0,
+  /** Characters drawing their LOD 1 mesh this frame, and those whose mixer runs below every frame (lod.ts). */
+  lodMeshes: 0,
+  throttled: 0,
 };

@@ -13,6 +13,9 @@ import faceV7 from "@/data/characters/face_v7.json";
 export const CHARACTER_ROOT = "/assets/characters/v6/";
 /** The clip-bearing base: the v6 body with the hand-modeled v7 head (avatar v7). */
 export const BASE_URL = `${CHARACTER_ROOT}${catalog.base.clips_glb}`;
+/** LOD 1 (art/characters/build_lod.py): every part decimated on the same rig, and the base's skin alone (the face, head and clips stay the base's). */
+export const LOD_ROOT = `${CHARACTER_ROOT}lod1/`;
+export const LOD_SKIN_URL = `${LOD_ROOT}base/skin.glb`;
 /** The face layer atlas: 1024 px per face canvas in the creator, the 512 copy in the world (same layout). */
 export const FACE_ATLAS_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas}`, world: `${CHARACTER_ROOT}base/${faceV7.atlas_world}` };
 /** Ruling 24: the crewneck carries the site's own TSI mark (public/logo.svg, rasterised by the sync script). */
@@ -170,7 +173,7 @@ export function wornParts(look: CharacterLook): CatalogPart[] {
   return parts.some(p => p.hidesBackHair) ? parts.filter(p => p.slot !== "back") : parts;
 }
 
-export interface ResolvedPart { id: string; url: string; tints: Record<string, string>; decal: string | null }
+export interface ResolvedPart { id: string; url: string; /** Its LOD 1 GLB. */ lod: string; tints: Record<string, string>; decal: string | null }
 /** Parts with their GLB URL and one sRGB hex per tinted material; decal materials without art are dropped. */
 export function resolveParts(look: CharacterLook): ResolvedPart[] {
   return wornParts(look).map(part => {
@@ -185,7 +188,7 @@ export function resolveParts(look: CharacterLook): ResolvedPart[] {
         first = false;
       } else if (m.color) tints[m.name] = m.color;
     }
-    return { id: part.id, url: CHARACTER_ROOT + part.glb, tints, decal };
+    return { id: part.id, url: CHARACTER_ROOT + part.glb, lod: LOD_ROOT + part.glb, tints, decal };
   });
 }
 

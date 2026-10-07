@@ -173,7 +173,7 @@ for (const scene of SCENES.split(",")) {
     appendFileSync(OUT, JSON.stringify(row) + "\n");
     const p = row.perf;
     console.log(`${scene}${ult ? ` (${ult})` : ""} ${TIER_NAME}: ${row.fps} FPS, 1% low ${row.low1}, median ${row.median} p95 ${row.p95} worst ${row.worst} ms; first ult ${row.firstUlt} second ${row.secondUlt}`
-      + ` | calls ${n(p.calls.median)} (p95 ${n(p.calls.p95)}), tris ${Math.round(p.triangles.median)}, mixers ${n(p.mixers.median)}, skeletons ${n(p.skeletons.median)}, cpu ${n(p.cpu.median)} (p95 ${n(p.cpu.p95)}) render ${n(p.render.median)} ms`
+      + ` | LOD ${n(p.lodMeshes?.median)}, throttled ${n(p.throttled?.median)}, scenes ${n(p.scenes?.median)} | calls ${n(p.calls.median)} (p95 ${n(p.calls.p95)}), tris ${Math.round(p.triangles.median)}, mixers ${n(p.mixers.median)}, skeletons ${n(p.skeletons.median)}, cpu ${n(p.cpu.median)} (p95 ${n(p.cpu.p95)}) render ${n(p.render.median)} ms`
       + ` | skinned ${sceneCounts.skinned}, instanced ${sceneCounts.instanced}, meshes ${sceneCounts.meshes}, lights ${sceneCounts.lights}, programs ${sceneCounts.programs} | heap ${heap} MB | load ${row.load.toFixed(2)}`);
     if (row.profile) for (const [k, ms, share] of row.profile.top.slice(0, 15)) console.log(`   ${share}%  ${ms} ms  ${k}`);
   } catch (err) { console.log("failed", scene, err.message.slice(0, 300)); }
