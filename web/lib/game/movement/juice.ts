@@ -8,6 +8,7 @@
 import type { SFXName } from "@/lib/game/audio";
 import { FACE, seedAt, type ParticlePool, type Recipe } from "@/lib/game/fx/particles";
 import { Surface } from "@/lib/game/grid";
+import { puddleAt } from "@/lib/game/puddles";
 
 // ── The ground under the feet ────────────────────────────────────────
 export type GroundKind = "grass" | "sand" | "wetSand" | "soil" | "stone" | "wood" | "snow" | "water";
@@ -86,6 +87,12 @@ const SALT = { step: 1, rain: 2, kick: 3, extra: 4, ring: 5, plume: 6, dash: 7, 
  */
 export function footstep(pool: ParticlePool, g: GroundKind, x: number, y: number, z: number, vx: number, vz: number, rain: boolean, amount = 1) {
   const fx = GROUND[g], speed = Math.hypot(vx, vz), scale = (0.8 + Math.min(speed, 14) * 0.035) * amount;
+  // Into a rain puddle (lib/game/puddles.ts): a crown of droplets and a ring running out across it, whoever stepped.
+  if (rain && amount > 0 && g !== "wood" && g !== "water" && puddleAt(x, z)) {
+    pool.burst(PUDDLE_SPLASH, x, y + 0.02, z, y, -vx, -vz, scale, 0xd4ecf7, seedAt(x, z, SALT.splash));
+    pool.burst(PUDDLE_RING, x, y + 0.03, z, y, 0, 0, amount, 0xe4f4fb, seedAt(x, z, SALT.ripple));
+    return PUDDLE_SOUND;
+  }
   if (amount > 0) {
     for (let k = 0; k < fx.step.length; k++) pool.burst(fx.step[k], x, y, z, y, -vx, -vz, scale, fx.stepTint, seedAt(x, z, SALT.step + k * 31));
     if (rain && g !== "wood") {
@@ -204,6 +211,11 @@ const DEFEAT: Recipe = { ...PLUME, count: [4, 5], size: [0.7, 0.9], speed: [0.6,
 /** Splash sizes by the drop into the water (world units from the arc's top): a step in, a jump, a fall from a cliff. */
 export const SPLASH = { small: 0.6, big: 1.8 };
 const SPLASH_SMALL: Recipe = { ...SPLASH_DROPS, count: [4, 4], up: [1.6, 2.4], speed: [0.6, 1.1], size: [0.32, 0.4] };
+/** A foot coming down in a rain puddle: a small crown of droplets kicked forward, and a ring running out across it. */
+const PUDDLE_SPLASH: Recipe = { ...SPLASH_DROPS, count: [5, 6], up: [1.4, 2.2], speed: [0.5, 1.1], size: [0.3, 0.38], spread: 1.4 };
+const PUDDLE_RING: Recipe = { ...SPLASH_RIPPLE, count: [1, 1], size: [0.9, 1.1], grow: 1.7, life: [0.65, 0.8], alpha: 0.7 };
+/** Its sound: the step pitched up and brighter (a real splash is on the sound list). */
+const PUDDLE_SOUND = { name: "footstep" as SFXName, rate: 1.35, gain: 1.1 };
 const SPLASH_CROWN: Recipe = { ...SPLASH_DROPS, count: [10, 11], up: [3.6, 4.8], speed: [1.2, 2.2], size: [0.42, 0.55], life: [0.62, 0.8] };
 const SPLASH_WIDE: Recipe = { ...SPLASH_RIPPLE, count: [1, 1], size: [2.2, 2.4], grow: 1.6, life: [1.2, 1.4], alpha: 0.55 };
 const SPLASH_MIST: Recipe = { sprite: "dust", count: [3, 3], life: [0.5, 0.65], size: [0.6, 0.75], grow: 1.6, speed: [0.4, 0.8], spread: Math.PI, up: [0.5, 0.9], gravity: 0, drag: 3, wind: 0.6, lift: 0.3, alpha: 0.45, face: B, rise: [0.1, 0.2] };

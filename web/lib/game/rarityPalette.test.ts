@@ -7,13 +7,13 @@ const css = readFileSync(new URL("../../styles/game-tokens.css", import.meta.url
 const token = (name: string) => css.match(new RegExp(`--gui-${name}:\\s*(#[0-9a-f]{6})\\b`, "i"))?.[1]?.toLowerCase();
 const source = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 
-describe("one rarity palette across the catch card, the journal and the book", () => {
+describe("one rarity palette across the catch card, the reward card, the journal and the book", () => {
   it.each(Object.keys(RARITY_META) as Rarity[])("%s is the GUI sheet's token", r => {
     expect(token(`rarity-${r}`)).toBeDefined();
     expect(RARITY_META[r].color.toLowerCase()).toBe(token(`rarity-${r}`));
   });
-  it("the card, the journal and the book draw rarity with the kit's rarity badge, not colours of their own", () => {
-    for (const file of ["../../components/game/FishReveal.tsx", "../../components/game/JournalPages.tsx", "../../components/game/CollectionBook.tsx"]) {
+  it("the cards, the journal and the book draw rarity with the kit's rarity badge, not colours of their own", () => {
+    for (const file of ["../../components/game/FishReveal.tsx", "../../components/game/RewardCard.tsx", "../../components/game/JournalPages.tsx", "../../components/game/CollectionBook.tsx"]) {
       const src = source(file);
       expect(src, file).toMatch(/RarityBadge/);
       expect(src, file).not.toMatch(/RARITY_TONE|RARITY_META\[[^\]]+\]\.color/);

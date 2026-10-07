@@ -20,7 +20,10 @@ type VillageClip = "Idle" | "Walk" | "Run" | "Sit" | "Study" | "Sleep" | "Fish" 
   // Holding things (specs/game-ui.md §2): arm poses laid over locomotion (Character.tsx), and eating a held snack.
   | "HoldRod" | "HoldTool" | "HoldFront" | "Eat"
   // The rod moment (specs/polish/fishing.md): the wind-up posed by the cast's power, the swing, the yank on the bite, the reel, the catch held up.
-  | "CastWindup" | "CastSwing" | "HookYank" | "Reel" | "HoldUp";
+  | "CastWindup" | "CastSwing" | "HookYank" | "Reel" | "HoldUp"
+  // Foraging and crafting (specs/polish/forage-craft-museum.md): picking something off the ground, shaking a tree,
+  // striking a rock with the shovel, hammering at the workbench. Their contacts are the catalogue's `hits`.
+  | "Pickup" | "Shake" | "Strike" | "Craft";
 
 /**
  * The verb library (classes v2, design sheet §1.8): sixteen shared verbs, each authored once per grip family in
@@ -94,7 +97,7 @@ const FAMILY: Record<VillageClip, Family> = {
   Dash: "move", Skid: "move", DodgeRoll: "move", Slide: "move", SlideIn: "move", SlideInDash: "move", SlideUp: "move", SlideStand: "move", SlideBonk: "move",
   Sit: "seat", Study: "seat", Stretch: "seat", Sleep: "seat",
   Fish: "act", FishHold: "act", Forage: "act", Dig: "act", Net: "act", Wave: "act", Cheer: "act", Laugh: "act", Sad: "act", Dance: "act", Trace: "act",
-  LookAround: "act", StretchUp: "act", Chat: "act", Eat: "act",
+  LookAround: "act", StretchUp: "act", Chat: "act", Eat: "act", Pickup: "act", Shake: "act", Strike: "act", Craft: "act",
   CastWindup: "act", CastSwing: "act", HookYank: "act", Reel: "act", HoldUp: "act",
   HoldRod: "loco", HoldTool: "loco", HoldFront: "loco",
   AttackMelee: "combat", AttackBow: "combat", AttackCast: "combat", Hit: "combat", Defeat: "combat",

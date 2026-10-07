@@ -831,7 +831,83 @@ def kit():
             m.box((0, 0.012, -T / 2), (1.8, 0.024, T + 0.08), M["threshold"], bevel=0.006)
             m.box((0, -0.06, -T - 0.35), (2.3, 0.12, 0.62), M["stone"], bevel=0.03)
         obs.append(m.finish())
+    obs += trophy_case(M)
     return obs
+
+
+# The HQ's trophy case (specs/polish/forage-craft-museum.md 8; DefaultIslandWorld's member clubhouse at
+# lib/game/clubhouse.ts HQ_LAYOUT.display): a walnut cabinet with a glass front against the back wall, its front to the
+# room at -z. This week's trophies stand inside on little walnut stands (TROPHY_SLOTS, mirrored by components/game/
+# TrophyCase.tsx), each with a brass plate whose face is a cell of the engine's label atlas (trophy_labels, M_TrophyLabels:
+# the sign over the case on top, then a row per stand); the top shelf keeps the club's gold, silver and bronze cups.
+TROPHY = dict(W2=1.15, D2=0.27, H=1.9, shelves=(0.17, 0.75), top=1.33)
+TROPHY_XS = (0.72, 0.0, -0.72)
+TROPHY_PLATE = (0.3, 0.075)                 # plate face width, height (tilted back 25 degrees)
+TROPHY_SIGN_H, TROPHY_ROW_H = 96, 96        # atlas rows: the sign, then six plates (1 column, 512 wide)
+
+
+def trophy_slots():
+    return [(x, y) for y in TROPHY["shelves"] for x in TROPHY_XS]
+
+
+def trophy_case(M):
+    W2, D2, H = TROPHY["W2"], TROPHY["D2"], TROPHY["H"]
+    felt = Mat("M_Felt", "#5f7a5c", 0.95)
+    labels_mat = Mat("M_TrophyLabels", "#b08a52", 0.6, K.image("trophy_labels_ph", np.ones((8, 8, 3)) * 0.5), tile=1.0)
+    c, lab = Model("trophy_case"), Model("trophy_labels")
+    c.box((0, 0.06, 0), (2 * W2 + 0.06, 0.12, 2 * D2 + 0.06), M["walnut"], bevel=0.015)                 # plinth
+    for sx in (-1, 1):                                                                                  # sides
+        c.box((sx * (W2 - 0.03), H / 2, 0), (0.06, H, 2 * D2), M["walnut"], bevel=0.01)
+    c.box((0, H / 2, D2 - 0.025), (2 * W2 - 0.06, H - 0.1, 0.05), felt)                                  # the felt back
+    c.box((0, H - 0.035, 0), (2 * W2 + 0.12, 0.07, 2 * D2 + 0.12), M["walnut"], bevel=0.015)            # cornice
+    c.box((0, H + 0.01, 0), (2 * W2 + 0.04, 0.03, 2 * D2 + 0.04), M["walnut"], bevel=0.008)
+    c.box((0, 0.135, 0.0), (2 * W2 - 0.06, 0.03, 2 * D2 - 0.02), M["walnut"])                          # the deck
+    for y in TROPHY["shelves"][1:] + (TROPHY["top"],):                                                  # shelves
+        c.box((0, y - 0.015, 0.01), (2 * W2 - 0.08, 0.03, 2 * D2 - 0.06), M["walnut"], bevel=0.006)
+    # the glass doors: a pane each in a walnut frame, brass knobs where they meet
+    for sx in (-1, 1):
+        x0, x1 = (0.01, W2 - 0.05) if sx > 0 else (-(W2 - 0.05), -0.01)
+        cx, w = (x0 + x1) / 2, x1 - x0
+        y0, y1 = 0.17, H - 0.08
+        c.box((cx, (y0 + y1) / 2, -D2 + 0.012), (w - 0.06, y1 - y0 - 0.06, 0.008), M["glass"])
+        for (bx, by, bw, bh) in ((cx, y0 + 0.02, w, 0.04), (cx, y1 - 0.02, w, 0.04), (x0 + 0.02, (y0 + y1) / 2, 0.04, y1 - y0), (x1 - 0.02, (y0 + y1) / 2, 0.04, y1 - y0)):
+            c.box((bx, by, -D2 + 0.01), (bw, bh, 0.03), M["walnut"], bevel=0.006)
+        c.lathe((sx * 0.06, H / 2, -D2 - 0.005), [(0, 0), (0.018, 0), (0.018, 0.012), (0.01, 0.02), (0, 0.022)], M["brass"], n=10, d=(0, 0, -1))
+    # the sign board on the cornice, its face a label
+    c.box((0, H + 0.17, -D2 + 0.04), (1.3, 0.28, 0.04), M["walnut"], bevel=0.012)
+    lab.quad([(0.6, H + 0.06, -D2 + 0.017), (-0.6, H + 0.06, -D2 + 0.017), (-0.6, H + 0.28, -D2 + 0.017), (0.6, H + 0.28, -D2 + 0.017)], labels_mat, (0, 0, -1))
+    # a stand at each slot: a walnut block with a brass plate on its tilted front
+    tilt = math.radians(25)
+    w, h = TROPHY_PLATE
+    for (x, y) in trophy_slots():
+        c.box((x, y + 0.03, -0.03), (0.4, 0.06, 0.24), M["walnut"], bevel=0.01)
+        c.box((x, y + 0.075, -0.03), (0.3, 0.03, 0.16), M["walnut"], bevel=0.008)
+        pz, py = -0.03 - 0.12 - 0.006, y + 0.035
+        ct, st = math.cos(tilt), math.sin(tilt)
+        plate = c.box((x, py, pz + 0.004), (w + 0.03, h + 0.024, 0.008), M["brass"])
+        c.rot(plate, (x, py, pz), "x", -tilt)
+        def pt(u, v, x=x, py=py, pz=pz):
+            return (x + u, py + ct * v, pz + st * v - 0.002)
+        lab.quad([pt(w / 2, -h / 2), pt(-w / 2, -h / 2), pt(-w / 2, h / 2), pt(w / 2, h / 2)], labels_mat, (0, st, -ct))
+    obs = [c.finish(), lab.finish()]
+    set_uv(obs[1], "M_TrophyLabels", trophy_uv)
+    return obs
+
+
+def trophy_uv(x, y, z):
+    """The label atlas (1 column, 512 wide): the sign (96 px) on top, then a 96 px row per stand in trophy_slots() order."""
+    rows = TROPHY_SIGN_H + 6 * TROPHY_ROW_H
+    H = TROPHY["H"]
+    if y > H:
+        v_local = (y - (H + 0.17)) / 0.22
+        return (0.5 + (-x) / 1.2 * 0.96, 1 - (TROPHY_SIGN_H * (0.5 - v_local * 0.92)) / rows)
+    slots = trophy_slots()
+    i = min(range(len(slots)), key=lambda k: abs(x - slots[k][0]) + abs(y - slots[k][1]))
+    sx, sy = slots[i]
+    tilt = math.radians(25)
+    v = (y - (sy + 0.035)) / math.cos(tilt) / TROPHY_PLATE[1]
+    u = (sx - x) / TROPHY_PLATE[0]
+    return (0.5 + u * 0.96, 1 - (TROPHY_SIGN_H + TROPHY_ROW_H * (i + 0.5 - v * 0.92)) / rows)
 
 
 ROOMS = {"hq": hq, "shop": shop, "oracle": oracle, "museum": museum}

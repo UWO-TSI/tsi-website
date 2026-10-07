@@ -1,0 +1,15 @@
+/* The shop's counter (ShopCounter.tsx) in the GUI sheet's paper: the till over the tabs, the sell list's rows. */
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 12px; }
+.till { display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 6px 16px 6px 10px; border-radius: var(--gui-r-pill); background: var(--gui-paper-deep);
+  color: var(--gui-ink-strong); font-size: var(--gui-text-xl); font-weight: 900; font-variant-numeric: tabular-nums; box-shadow: var(--gui-shadow-inset); }
+.tillValue { min-width: 3.5ch; text-align: right; }
+.unit { color: var(--gui-muted); font-size: var(--gui-text-sm); font-weight: 800; }
+.coin { display: inline-grid; place-items: center; }
+/* Each clink: the coin hops and turns. */
+.clink { animation: clink 220ms var(--gui-spring); }
+@keyframes clink { 40% { transform: translateY(-5px) rotate(-14deg) scale(1.15); } }
+.lead { margin: 0 0 10px; color: var(--gui-muted); font-size: var(--gui-text-sm); }
+.count { color: var(--gui-muted); font-weight: 800; }
+.detail { text-transform: capitalize; }
+.actions { display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+@media (prefers-reduced-motion: reduce) { .clink { animation: none; } }

@@ -1,5 +1,5 @@
 /* The workbench sheet in the GUI sheet: recipes as list rows, the chosen one in the kit's butter, ingredients with their
-   real icons and counts like the kit's recipe list, the result card on paper. */
+   real icons and counts like the kit's recipe list (what was made shows on the shared reward card, RewardCard). */
 .count { margin: 0 0 12px; color: var(--gui-muted); font-size: var(--gui-text-xs); font-weight: 800; }
 .error { margin: 6px 0; padding: 8px 12px; border-radius: 12px; background: var(--gui-danger-soft); color: var(--gui-danger); font-size: var(--gui-text-sm); font-weight: 700; }
 .body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; }
@@ -26,10 +26,3 @@
 .craft { width: 100%; min-height: 46px; border: 0; border-radius: 999px; background: var(--gui-sage); color: var(--gui-paper); font: inherit; font-weight: 800; cursor: pointer; box-shadow: 0 3px 0 var(--gui-sage-deep); }
 .craft:disabled { background: var(--gui-paper-deep); color: var(--gui-muted); box-shadow: none; cursor: default; }
 
-.card { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 25; width: min(300px, calc(100% - 32px)); padding: 20px 22px; border-radius: var(--gui-r-paper); background: var(--gui-grain) var(--gui-paper); color: var(--gui-ink); box-shadow: 0 0 0 3px var(--gui-highlight), var(--gui-shadow-lg); text-align: center; font-size: var(--gui-text-sm); animation: card-in 0.35s ease-out both; zoom: var(--tsi-text-scale, 1); }
-.card p { margin: 4px 0; }
-.cardTitle { font-size: var(--gui-text-xs) !important; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gui-warn); }
-.cardName { color: var(--gui-ink-strong); font-size: var(--gui-text-xl); font-weight: 900; }
-.card button { margin-top: 12px; min-height: 42px; padding: 6px 26px; border: 0; border-radius: 999px; background: var(--gui-sage); color: var(--gui-paper); font: inherit; font-weight: 800; cursor: pointer; box-shadow: 0 3px 0 var(--gui-sage-deep); }
-@keyframes card-in { from { opacity: 0; transform: translate(-50%, -44%) scale(0.94); } }
-@media (prefers-reduced-motion: reduce) { .card { animation: none; } }

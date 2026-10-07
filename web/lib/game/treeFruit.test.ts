@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { DROP_TIME, FRUIT_MODEL, dropAt, fruitTree, hangAt, type Point } from "./treeFruit";
+import { FRUIT_MODEL, fruitTree, hangAt, nearestHang, type Point } from "./treeFruit";
+import { Shakes } from "./treeShake";
 import { TREE_HANG } from "./treeHang";
 import { treeParts } from "./natureParts";
 import { ROSTER } from "@/lib/collections/roster";
@@ -50,15 +51,28 @@ describe("fruit on the trees", () => {
     expect(moved.y).toBe(still.y);
   });
 
-  it("drops from where it hangs to the ground, hops once, rests and shrinks away", () => {
-    const from = { x: 1, y: 3, z: 2 }, out = p();
-    expect(dropAt(from, 0.5, 0.14, 0, out)).toBe(1);
-    expect(out).toEqual({ x: 1, y: 3, z: 2 });
-    let lowest = Infinity;
-    for (let t = 0; t < DROP_TIME; t += 0.02) { dropAt(from, 0.5, 0.14, t, out); lowest = Math.min(lowest, out.y); expect(out.x).toBe(1); }
-    expect(lowest).toBeCloseTo(0.64, 6);
-    expect(dropAt(from, 0.5, 0.14, 1.2, out)).toBe(1);
-    expect(dropAt(from, 0.5, 0.14, DROP_TIME, out)).toBe(0);
+  it("wobbles with its tree's shake (the shader's own formula), and only that tree's", () => {
+    const tree = fruitTree({ x: 2, z: 4, seed: 0 }, 0)!, shakes = new Shakes();
+    const still = hangAt(tree, 0, 5.08, 0, p(), shakes);
+    shakes.start(2, 4, 5, 0.13);
+    const shaken = hangAt(tree, 0, 5.08, 0, p(), shakes);
+    expect(Math.hypot(shaken.x - still.x, shaken.z - still.z)).toBeGreaterThan(0.01);
+    expect(shaken.y).toBe(still.y);
+    const other = fruitTree({ x: 8, z: 4, seed: 0 }, 0)!;
+    expect(hangAt(other, 0, 5.08, 0, p(), shakes)).toEqual(hangAt(other, 0, 5.08, 0, p(), new Shakes()));
+  });
+
+  it("lets go of the fruit hanging nearest the shaker, so it falls on their side", () => {
+    const tree = fruitTree({ x: 0, z: 0, seed: 0 }, 0)!;
+    for (const [sx, sz] of [[0, -1.2], [1.2, 0], [0, 1.2], [-1.2, 0]]) {
+      const k = nearestHang(tree, sx, sz, 0);
+      const at = hangAt(tree, k, 0, 0, p(), new Shakes());
+      for (let j = 0; j < tree.hang.length; j++) {
+        const o = hangAt(tree, j, 0, 0, p(), new Shakes());
+        expect(Math.hypot(at.x - sx, at.z - sz)).toBeLessThanOrEqual(Math.hypot(o.x - sx, o.z - sz) + 0.9);
+      }
+      expect(nearestHang(tree, sx, sz, 0, k)).not.toBe(k);
+    }
   });
 
   it("has a model for every fruit a tree or the beach grows", () => {

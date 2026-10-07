@@ -90,14 +90,6 @@ export async function bagWrite(body: Record<string, unknown>): Promise<BagView> 
   changed();
   return view;
 }
-/** Sell from the bag (the shop's own sale, /api/economy/sell): coins in, the bag read again. Returns what it paid. */
-export async function sellFromBag(itemKey: string, qty: number): Promise<number> {
-  const sale = await apiCall<{ paid: number }>("/api/economy/sell", "sale", { item_key: itemKey, qty, idempotency_key: newKey() });
-  await loadBag();
-  changed();
-  return sale.paid;
-}
-
 /** Keep the grid as it shows now, so an emptied stack leaves its hole and the next pickup fills the first one. */
 export function saveOrder(slots: readonly Slot[]) {
   if (slots.length !== state.order.length || slots.some((k, i) => k !== state.order[i])) set({ order: [...slots] });
