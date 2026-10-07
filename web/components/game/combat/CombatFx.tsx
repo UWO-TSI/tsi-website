@@ -19,6 +19,7 @@ import { COMBAT_PACK, COMBAT_PACK_URL } from "@/lib/game/fx/combatPack";
 import { DEFAULT_RAMP, FX, FX_POOLS, RampTable, sharedRamps, type MeshLayer } from "@/lib/game/fx/combat";
 import { createCombatParticleMaterial, createFxMaterial, createTrailMaterial, rampMap } from "@/lib/game/fx/fxMaterial";
 import { weaponTrail } from "@/lib/game/fx/trail";
+import { quality } from "@/lib/game/perf/governor";
 
 type Ground = (x: number, z: number) => number;
 /** An area's effects scale with its radius against this one (the demo slam's). */
@@ -85,7 +86,7 @@ function stepFx(s: FxSystem, cam: { p: THREE.Vector3; d: THREE.Vector3 }, ground
       const seed = (ev.seed + li * 0x9e3779b1) | 0;
       if (l.kind === "particles") {
         const pool = l.pool === "glow" ? s.glow : s.ink, dx = l.toward ? (ev.aim.x - ev.x) * (l.toward === "away" ? -1 : 1) : 0, dz = l.toward ? (ev.aim.z - ev.z) * (l.toward === "away" ? -1 : 1) : 0;
-        pool.burst(l.recipe, ev.x, gy + (l.lift ?? 0), ev.z, gy, dx, dz, l.byRadius ? byR : 1, 0xffffff, seed, 1, row, lite ? 0.5 : 1);
+        pool.burst(l.recipe, ev.x, gy + (l.lift ?? 0), ev.z, gy, dx, dz, l.byRadius ? byR : 1, 0xffffff, seed, 1, row, (lite ? 0.5 : 1) * quality.knobs.particles);
       } else if (l.kind === "decal") {
         const size = l.size * (l.byRadius ? ev.radius ?? 1 : 1);
         s.decals.burst({ sprite: l.sprite, count: [1, 1], life: [l.life, l.life], size: [size, size], grow: 1.05, speed: [0, 0], spread: 0, up: [0, 0], gravity: 0, drag: 0, wind: 0,
@@ -114,7 +115,7 @@ function stepFx(s: FxSystem, cam: { p: THREE.Vector3; d: THREE.Vector3 }, ground
     const row = ramps.row(sh.hit!.ramp ?? DEFAULT_RAMP), gy = ground(sh.x, sh.z);
     for (let li = 0; li < r.layers.length; li++) {
       const l = r.layers[li];
-      if (l.kind === "particles") (l.pool === "glow" ? s.glow : s.ink).burst(l.recipe, sh.x, gy + (l.lift ?? 0), sh.z, gy, 0, 0, 1, 0xffffff, (sh.id * 7919 + li + Math.floor(clock.elapsedTime * 60)) | 0, 1, row, lite ? 0.5 : 1);
+      if (l.kind === "particles") (l.pool === "glow" ? s.glow : s.ink).burst(l.recipe, sh.x, gy + (l.lift ?? 0), sh.z, gy, 0, 0, 1, 0xffffff, (sh.id * 7919 + li + Math.floor(clock.elapsedTime * 60)) | 0, 1, row, (lite ? 0.5 : 1) * quality.knobs.particles);
     }
   }
   // Step and draw the pools.

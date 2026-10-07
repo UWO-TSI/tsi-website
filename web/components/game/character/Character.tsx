@@ -16,6 +16,7 @@ import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { BASE_URL, FACE_ATLAS_URLS, LOD_SKIN_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
 import { characterLod, createLodState, drawnHeight, mixerStep } from "@/lib/game/character/lod";
+import { quality } from "@/lib/game/perf/governor";
 import { FaceAnimator, faceSlots, poseKey } from "@/lib/game/character/face";
 import { createFaceMaterial, MATTE, prepareFaceAtlas, type FaceMaterial } from "@/lib/game/character/faceMaterial";
 import { ATTACK_CLIP, WEAPON_HAND, contactCrossed, crossfade, holdLayer, isLoop, layerTrack, layerWeight, matchPhase, resolveClip, tempo, verbInfo, type CharacterMotion, type ClipName, type Layer } from "@/lib/game/character/clips";
@@ -750,7 +751,8 @@ function viewCharacter(puppet: Puppet, g: THREE.Object3D, camera: THREE.Camera, 
   body.center.copy(seen).setY(seen.y + height / 2);
   body.radius = height * 0.75;
   const fov = (camera as THREE.PerspectiveCamera).isPerspectiveCamera ? (camera as THREE.PerspectiveCamera).getEffectiveFOV() : 30;
-  puppet.view(d, drawnHeight(height, d, fov, viewportPx), view.intersectsSphere(body));
+  // Adaptive quality (governor.ts) can have small characters reach their lighter tiers sooner (never nearer than `near`).
+  puppet.view(d, drawnHeight(height, d, fov, viewportPx) / quality.knobs.lodBias, view.intersectsSphere(body));
 }
 function VerbClips({ puppet }: { puppet: Puppet }) {
   const { animations } = useGLTF(VERBS_URL) as unknown as Gltf;
