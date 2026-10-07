@@ -22,6 +22,7 @@ import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } 
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
 import { addContact } from "../ContactShadows";
+import { frameStats } from "@/lib/game/perf/frameStats";
 import FishingRig from "./FishingRig";
 
 export type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
@@ -359,6 +360,7 @@ class Puppet {
     // Walk and Run count each foot's contact as the playhead passes it (footsteps come from the feet, not a timer).
     const contacts = changed ? undefined : CLIP_BY_NAME.get(want)?.contacts, before = action.time / length;
     this.mixer.update(delta);
+    frameStats.mixers++;
     this.hold(delta, want, motion.hold ?? null);
     this.upper(delta);
     this.retireStep(delta);
