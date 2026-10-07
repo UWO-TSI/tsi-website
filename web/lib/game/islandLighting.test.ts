@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Color } from "three";
-import { ISLAND_LIGHTING, fireflyNight, withWeather } from "./islandLighting";
+import { ISLAND_LIGHTING, fireflyNight, weatherLight, withWeather } from "./islandLighting";
 import { ISLAND_PHASES } from "./islandTime";
 import { ISLAND_WEATHERS } from "./islandWeather";
 
@@ -59,5 +59,45 @@ describe("island lighting profiles", () => {
     for (const phase of ISLAND_PHASES) expect(ratio(phase), phase).toBeLessThanOrEqual(ratio("day") * 1.08);
     expect(lumaHex(ISLAND_LIGHTING.evening.water.foamColor)).toBeLessThan(lumaHex(ISLAND_LIGHTING.day.water.foamColor));
     expect(lumaHex(ISLAND_LIGHTING.night.water.foamColor)).toBeLessThan(lumaHex(ISLAND_LIGHTING.evening.water.foamColor));
+  });
+
+  // Audit 2026-10 world item 10, proposed (?proposal=overcast): rain under an overcast sky, a softened sun and
+  // shadows and a wet sheen, eased with the weather; snow a lighter overcast. The default stays as approved.
+  describe("overcast proposal", () => {
+    const sat = (hex: string) => { const hsl = { h: 0, s: 0, l: 0 }; new Color(hex).getHSL(hsl); return hsl.s; };
+    const OVERCAST = new Set(["overcast" as const]);
+    const settled = (w: (typeof ISLAND_WEATHERS)[number]) => ({ from: w, to: w, t: 1 });
+    it("leaves every weather as approved without the proposal", () => {
+      for (const phase of ISLAND_PHASES) for (const w of ISLAND_WEATHERS)
+        expect(weatherLight(ISLAND_LIGHTING[phase], { from: "clear", to: w, t: 0.4 }, new Set())).toEqual(withWeather(ISLAND_LIGHTING[phase], w));
+    });
+    it("greys the sky, softens the sun and its shadows and wets the ground in rain", () => {
+      const clear = ISLAND_LIGHTING.day, now = withWeather(clear, "rain"), rain = weatherLight(clear, settled("rain"), OVERCAST);
+      expect(sat(rain.sky)).toBeLessThan(sat(clear.sky) * 0.35);
+      expect(sat(rain.sky)).toBeLessThan(sat(now.sky));
+      expect(rain.sunIntensity).toBeLessThanOrEqual(clear.sunIntensity * 0.3);
+      expect(rain.shadow.intensity).toBeLessThanOrEqual(clear.shadow.intensity * 0.2);
+      expect(rain.wet).toBe(1);
+      expect(weatherLight(clear, settled("clear"), OVERCAST).wet).toBe(0);
+    });
+    it("makes snow a lighter overcast, dry", () => {
+      const clear = ISLAND_LIGHTING.day, rain = weatherLight(clear, settled("rain"), OVERCAST), snow = weatherLight(clear, settled("snow"), OVERCAST);
+      expect(snow.sunIntensity).toBeGreaterThan(rain.sunIntensity);
+      expect(snow.shadow.intensity).toBeGreaterThan(rain.shadow.intensity);
+      expect(snow.shadow.intensity).toBeLessThan(clear.shadow.intensity);
+      expect(snow.wet).toBe(0);
+    });
+    it("eases across a change of weather", () => {
+      const clear = ISLAND_LIGHTING.day, a = weatherLight(clear, settled("clear"), OVERCAST), b = weatherLight(clear, settled("rain"), OVERCAST);
+      const mid = weatherLight(clear, { from: "clear", to: "rain", t: 0.5 }, OVERCAST);
+      expect(mid.wet).toBeCloseTo(0.5, 5);
+      expect(mid.sunIntensity).toBeCloseTo((a.sunIntensity + b.sunIntensity) / 2, 5);
+      expect(mid.shadow.intensity).toBeCloseTo((a.shadow.intensity + b.shadow.intensity) / 2, 5);
+      expect(luma(mid.sky)).toBeLessThan(luma(a.sky));
+      expect(weatherLight(clear, { from: "clear", to: "rain", t: 0 }, OVERCAST)).toEqual(a);
+    });
+    it("never turns night into day", () => {
+      for (const w of ISLAND_WEATHERS) expect(luma(weatherLight(ISLAND_LIGHTING.night, settled(w), OVERCAST).sky)).toBeLessThan(luma(ISLAND_LIGHTING.day.sky));
+    });
   });
 });

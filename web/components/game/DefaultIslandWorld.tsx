@@ -38,7 +38,7 @@ import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmar
 import { village, objectsOf, type Village } from "@/lib/game/villageMap";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
-import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLightAt, windowLit, withWeather, withSeason, type IslandLight } from "@/lib/game/islandLighting";
+import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLightAt, weatherLight, windowLit, withSeason, type IslandLight } from "@/lib/game/islandLighting";
 import { SEASON_TREES, paletteBySeason, seasonLook, type SeasonLook } from "@/lib/game/seasonalLook";
 import { useNPCPersonas, useSeasonPalettes } from "@/lib/content/loader";
 import type { IslandWeather } from "@/lib/game/islandWeather";
@@ -726,7 +726,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const sun = preset ? null : conditions.sun;
   // Across a phase boundary the light blends continuously from one phase's look to the next (living-village §5).
   const blend = conditions.blend;
-  const light = useMemo(() => withWeather(withSeason(islandLightAt(lookPreset, blend, sun), look), weather), [blend, look, weather, lookPreset, sun]);
+  const weatherBlend = conditions.weatherBlend;
+  const light = useMemo(() => weatherLight(withSeason(islandLightAt(lookPreset, blend, sun), look), weatherBlend), [blend, look, weatherBlend, lookPreset, sun]);
   const conditionsLabel = `${season.season[0].toUpperCase()}${season.season.slice(1)}${Object.values(season.weights).some(w => w > 0 && w < 1) ? " (changing)" : ""} · ${weather[0].toUpperCase()}${weather.slice(1)}`;
   const grade = inside === "cafe" ? { ...CLUBHOUSE_LIGHTING[phase].grade, ...CAFE_GRADE } : inside ? CLUBHOUSE_LIGHTING[phase].grade : light.grade;
   const atHome = site === "home";

@@ -514,6 +514,11 @@ export type TerrainPalette = { grass: string; soil: string; sand: string };
  * dump's own `mSandSnow_Alb` snow variant (FldUnit), on grass, paths and beach.
  */
 export const TERRAIN_SNOW = { value: 0 };
+/**
+ * How wet the ground is (0..1, IslandLight `wet`; GridWorld writes it): rain darkens the paths, the plaza and the beach
+ * and gives them a sheen, the grass a little (proposal `overcast`, lib/game/lookProposals.ts). Zero leaves them matte.
+ */
+export const TERRAIN_WET = { value: 0 };
 /** Grass detail and hue variation from the look preset (x = texture contrast kept, y = patch hue); LookMaterials writes it. */
 export const TERRAIN_GRASS = { value: new THREE.Vector2(0.38, 0) };
 let snowGrain: THREE.Texture | null = null;
@@ -525,11 +530,17 @@ function getSnowGrain(): THREE.Texture {
   }
   return snowGrain;
 }
-/** Paths keep a little of their colour through the snow; grass is covered. */
-function addSnow(shader: THREE.WebGLProgramParametersWithUniforms, cover: number) {
+/**
+ * Paths keep a little of their colour through the snow; grass is covered. Wet ground (TERRAIN_WET) darkens by `wet`
+ * and its roughness falls toward a damp sheen by `gloss`.
+ */
+function addSnow(shader: THREE.WebGLProgramParametersWithUniforms, cover: number, wet = 0.2, gloss = 0.5) {
   shader.uniforms.uSnow = TERRAIN_SNOW;
   shader.uniforms.uSnowGrain = { value: getSnowGrain() };
-  shader.fragmentShader = "uniform float uSnow;\nuniform sampler2D uSnowGrain;\n" + shader.fragmentShader.replace("#include <normal_fragment_begin>", `
+  shader.uniforms.uWet = TERRAIN_WET;
+  shader.fragmentShader = "uniform float uSnow;\nuniform sampler2D uSnowGrain;\nuniform float uWet;\n" + shader.fragmentShader.replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
+    roughnessFactor = mix(roughnessFactor, 0.42, uWet * ${gloss.toFixed(2)});`).replace("#include <normal_fragment_begin>", `
+    diffuseColor.rgb *= 1.0 - uWet * ${wet.toFixed(2)};
     #ifdef USE_MAP
       // The dump's snow albedo is warm-tinted; keep only its grain and use ACNH's cool snow ground.
       float snowGrain = dot(texture2D(uSnowGrain, vMapUv * 1.3).rgb, vec3(0.2126, 0.7152, 0.0722));
@@ -587,7 +598,7 @@ export function useTerrainMaterials(palette?: TerrainPalette): TerrainMaterials 
       if (shared && palette && s === Surface.Stone) {
         // Island stone (plaza) keeps its shared look and gains winter snow cover.
         const stone = shared.clone() as THREE.MeshStandardMaterial;
-        stone.onBeforeCompile = (shader, renderer) => { shared.onBeforeCompile(shader, renderer); addSnow(shader, 0.8); };
+        stone.onBeforeCompile = (shader, renderer) => { shared.onBeforeCompile(shader, renderer); addSnow(shader, 0.8, 0.26, 0.75); };
         stone.customProgramCacheKey = () => "island-stone-snow-v1";
         m.set(s, stone);
         continue;
@@ -645,7 +656,7 @@ export function useTerrainMaterials(palette?: TerrainPalette): TerrainMaterials 
                   diffuseColor.rgb = diffuse * mix(vec3(0.9, 0.96, 0.88), sampledDiffuseColor.rgb, uGrassLook.x) * grassShift;
                 #endif
               `);
-              addSnow(shader, 0.96);
+              addSnow(shader, 0.96, 0.14, 0.3);
               // The cliff kit's grass is instanced and carries its own UVs: give it the ground's world
               // UVs, so a plateau top is the same lawn as the ground around it.
               shader.vertexShader = shader.vertexShader.replace("#include <uv_vertex>", `#include <uv_vertex>
@@ -678,7 +689,7 @@ export function useTerrainMaterials(palette?: TerrainPalette): TerrainMaterials 
                   diffuseColor.rgb = diffuse * mix(vec3(0.82), soilDetail, 0.18) * (0.8 + grain * 0.5);
                 #endif
               `);
-              addSnow(shader, 0.7);
+              addSnow(shader, 0.7, 0.3, 0.65);
             };
             overlay.customProgramCacheKey = () => "island-soil-detail-v3";
           }
@@ -693,7 +704,7 @@ export function useTerrainMaterials(palette?: TerrainPalette): TerrainMaterials 
                   diffuseColor.rgb = diffuse * (0.84 + (sandLuma - 0.4) * 0.32);
                 #endif
               `);
-              addSnow(shader, 0.85);
+              addSnow(shader, 0.85, 0.28, 0.6);
             };
             overlay.customProgramCacheKey = () => "island-sand-detail-v3";
           }

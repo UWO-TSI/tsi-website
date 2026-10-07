@@ -23,7 +23,7 @@ import {
   type IslandMap,
 } from "@/lib/game/grid";
 import { setTerrainHeightProvider } from "../terrain";
-import GridTerrain, { CLIFF_FRINGE, useTerrainMaterials, type TerrainPalette } from "./GridTerrain";
+import GridTerrain, { CLIFF_FRINGE, TERRAIN_WET, useTerrainMaterials, type TerrainPalette } from "./GridTerrain";
 import GridCliffs from "./GridCliffs";
 import GrassTufts from "./GrassTufts";
 import { applyGrassNormalStrength, advanceWater, shadeWaterByClouds } from "./terrainMaterials";
@@ -35,9 +35,12 @@ import { worldTime } from "@/lib/game/worldClock";
 
 /** `field`: the map's height field when the caller already built it (the village builds it once). */
 /** `light`: the scene's IslandLight; the water mirrors its key light (sun by day, moon by night) in its colour. */
-export default function GridWorld({ map, field: suppliedField, light, palette, windScale }: { map: IslandMap; field?: Float32Array; light: Pick<IslandLight, "water" | "sunPosition" | "sun">; palette?: TerrainPalette; windScale?: number }) {
+export default function GridWorld({ map, field: suppliedField, light, palette, windScale }: { map: IslandMap; field?: Float32Array; light: Pick<IslandLight, "water" | "sunPosition" | "sun" | "wet">; palette?: TerrainPalette; windScale?: number }) {
   const t = useTuning();
   const materials = useTerrainMaterials(palette);
+  // The ground's wetness is the light's (it eases with the weather); dry when the scene goes.
+  useEffect(() => { TERRAIN_WET.value = light.wet ?? 0; }, [light.wet]);
+  useEffect(() => () => { TERRAIN_WET.value = 0; }, []);
 
   // The ground material is shared and cached, so the normal-map settings are
   // pushed onto it rather than recreated — a slider move must not rebuild every
