@@ -12,4 +12,9 @@ describe("the clean HUD (row 283)", () => {
     expect(fullHud({ ...exploring, touch: true })).toBe(true);
     expect(fullHud({ ...exploring, always: true })).toBe(true);
   });
+  it("stands back in a cinematic moment (talking, the greeting, the boat trip), whatever else holds it open", () => {
+    expect(fullHud({ ...exploring, capture: "free", cinematic: true })).toBe(false);
+    expect(fullHud({ ...exploring, always: true, keyHeld: true, touch: true, capture: "off", cinematic: true })).toBe(false);
+    expect(fullHud({ ...exploring, capture: "free", cinematic: false })).toBe(true);
+  });
 });

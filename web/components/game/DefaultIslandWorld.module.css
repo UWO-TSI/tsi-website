@@ -448,3 +448,6 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .mash > span i { background: var(--gui-sage); }
 /* A boat trip (arrival-wharf.md §3): the HUD's buttons stand back while it plays; the trip's own hint is the only prompt. */
 .world[data-trip] .bagButtons, .world[data-trip] .decorateToggle { opacity: 0; pointer-events: none; transition: opacity 0.4s ease; }
+/* Talking, the greeting and the trip (world audit item 7): everything but the dialogue or the trip's Skip stands back. */
+.world[data-cinematic] .bagButtons, .world[data-cinematic] .decorateToggle, .world[data-cinematic] .minimap, .netHud[data-hidden] { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.3s ease, visibility 0s linear 0.3s; }
+.bagButtons, .decorateToggle, .minimap, .netHud { transition: opacity 0.3s ease, visibility 0s; }

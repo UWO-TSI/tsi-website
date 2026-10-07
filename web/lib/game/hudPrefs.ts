@@ -9,9 +9,13 @@
 import { useSyncExternalStore } from "react";
 import type { CaptureState } from "./orbitCamera";
 
-/** The full HUD or the clean one, from the setting, the HUD key, the device and the mouse capture. */
-export function fullHud(s: { always: boolean; keyHeld: boolean; touch: boolean; capture: CaptureState }): boolean {
-  return s.always || s.keyHeld || s.touch || s.capture !== "captured";
+/**
+ * The full HUD or the clean one, from the setting, the HUD key, the device and the mouse capture. A cinematic moment
+ * (talking to a resident, the HQ lead's greeting, the boat trip; world audit item 7) lets the cursor go but is not the
+ * pause view: the HUD stands back for it, leaving the dialogue or the trip's Skip.
+ */
+export function fullHud(s: { always: boolean; keyHeld: boolean; touch: boolean; capture: CaptureState; cinematic?: boolean }): boolean {
+  return !s.cinematic && (s.always || s.keyHeld || s.touch || s.capture !== "captured");
 }
 
 /** How long a change shows in the clean HUD (ms), and the fade after it. */

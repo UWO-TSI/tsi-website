@@ -9,7 +9,11 @@
  * The clean HUD (`full` false, row 283): nothing shows while exploring; coins
  * slide in when they change, XP on a gain, the clock on the hour and mail when a
  * letter arrives, then fade. The full HUD (the key held, the pause view, the
- * setting) shows everything.
+ * setting) shows everything. The caller's buttons stay mounted while hidden: the
+ * sound button is the ambience's owner (useAmbience stops all sound on unmount).
+ *
+ * `hidden`: a cinematic moment (talking, the greeting, the boat trip; world
+ * audit item 7), where the whole cluster fades out, flashes included.
  */
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { CloudFog, CloudRain, Mail, Moon, Snowflake, Sun, Sunrise, Sunset, Wind } from "lucide-react";
@@ -89,8 +93,8 @@ const DATE = new Intl.DateTimeFormat("en-US", { timeZone: "America/Toronto", wee
 const up = (a: unknown, b: unknown) => (b as number) > (a as number);
 const onTheHour = (_: unknown, b: unknown) => (b as number) % 60 === 0;
 
-export default function TopCluster({ weather, phase, unread, mailKey, onMail, onWallet, walletKey, full = true, children }: {
-  weather: IslandWeather; phase: IslandPhase; unread: number; mailKey: string; onMail: () => void; full?: boolean; children?: ReactNode;
+export default function TopCluster({ weather, phase, unread, mailKey, onMail, onWallet, walletKey, full = true, hidden = false, children }: {
+  weather: IslandWeather; phase: IslandPhase; unread: number; mailKey: string; onMail: () => void; full?: boolean; hidden?: boolean; children?: ReactNode;
   /** The coins open the wallet (reachability §2), its key shown on the tooltip. */
   onWallet?: () => void; walletKey?: string;
 }) {
@@ -109,7 +113,7 @@ export default function TopCluster({ weather, phase, unread, mailKey, onMail, on
   const coins = shows(flash.coins), xp = shows(flash.xp), clock = shows(flash.clock), mail = shows(flash.mail);
 
   return (
-    <div className={styles.cluster} data-clean={full ? undefined : ""}>
+    <div className={styles.cluster} data-clean={full ? undefined : ""} data-hidden={hidden || undefined} aria-hidden={hidden || undefined}>
       <div className={styles.chips}>
         {hud.coins !== null && coins.show && (() => {
           const label = `${hud.coins.toLocaleString()} ${COINS.name}`, face = <>
@@ -137,7 +141,7 @@ export default function TopCluster({ weather, phase, unread, mailKey, onMail, on
         {mail.show && <button className={styles.button} data-flash={mail.at} onClick={onMail} aria-label={unread ? `Mail, ${unread} unread` : "Mail"} title={`Mail (${mailKey})`}>
           <Mail size={18} aria-hidden />{unread > 0 && <span className={styles.badge} aria-hidden="true">{unread > 9 ? "9+" : unread}</span>}
         </button>}
-        {full && children}
+        <span className={styles.more} data-hidden={full ? undefined : ""}>{children}</span>
       </div>
     </div>
   );
