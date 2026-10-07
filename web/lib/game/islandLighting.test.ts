@@ -51,4 +51,13 @@ describe("island lighting profiles", () => {
   it("thickens haze for fog more than for rain", () => {
     expect(withWeather(ISLAND_LIGHTING.day, "fog").fogNear).toBeLessThan(withWeather(ISLAND_LIGHTING.day, "rain").fogNear);
   });
+  // Audit 2026-10 world item 16: the water is unlit, so its foam is only as dim as its phase colour. It sits as far
+  // above the lit shallows at dusk and night as it does by day, never glowing round a dark river.
+  it("keeps the foam as far above the shallow water at every phase as by day", () => {
+    const lumaHex = (hex: number) => luma(`#${hex.toString(16).padStart(6, "0")}`);
+    const ratio = (phase: (typeof ISLAND_PHASES)[number]) => lumaHex(ISLAND_LIGHTING[phase].water.foamColor) / lumaHex(ISLAND_LIGHTING[phase].water.shallowColor);
+    for (const phase of ISLAND_PHASES) expect(ratio(phase), phase).toBeLessThanOrEqual(ratio("day") * 1.08);
+    expect(lumaHex(ISLAND_LIGHTING.evening.water.foamColor)).toBeLessThan(lumaHex(ISLAND_LIGHTING.day.water.foamColor));
+    expect(lumaHex(ISLAND_LIGHTING.night.water.foamColor)).toBeLessThan(lumaHex(ISLAND_LIGHTING.evening.water.foamColor));
+  });
 });

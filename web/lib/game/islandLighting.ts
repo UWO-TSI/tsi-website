@@ -63,19 +63,23 @@ export interface IslandLight {
   fillLift?: boolean;
 }
 
-/** Per phase: the water palette and the lamps (look values come from the preset). */
+/**
+ * Per phase: the water palette and the lamps (look values come from the preset). The water is unlit (waterShader.ts),
+ * so its phase colours are its light: the foam sits as far above the shallows at dusk and night as by day, instead of
+ * glowing day-white round a dark river (audit 2026-10 world item 16).
+ */
 const PHASE_BASE: Record<IslandPhase, PhaseBase> = {
   dawn: {
-    water: { ...water, deepColor: 0x4a7d93, midColor: 0x7ea9b3, shallowColor: 0xb7c9c6, glare: 0.18, sunGlint: 1.8 },
+    water: { ...water, deepColor: 0x4a7d93, midColor: 0x7ea9b3, shallowColor: 0xb7c9c6, foamColor: 0xe9e8de, glare: 0.18, sunGlint: 1.8 },
     lamp: 2, lampsOn: true, windowGlow: 0.8, fireflies: false,
   },
   day: { water, lamp: 0.6, lampsOn: false, windowGlow: 0.3, fireflies: false },
   evening: {
-    water: { ...water, deepColor: 0x426f87, midColor: 0x649ca7, shallowColor: 0x95b7b1, glare: 0.25, sunGlint: 2.2 },
+    water: { ...water, deepColor: 0x426f87, midColor: 0x649ca7, shallowColor: 0x95b7b1, foamColor: 0xd4d0bb, glare: 0.25, sunGlint: 2.2 },
     lamp: 4, lampsOn: true, windowGlow: 1.15, fireflies: true,
   },
   night: {
-    water: { ...water, deepColor: 0x152943, midColor: 0x284c67, shallowColor: 0x516e81, bedColor: 0x394b59, foamColor: 0x8babc2, ringColor: 0x7493aa, glare: 0.06, sunGlint: 0.4 },
+    water: { ...water, deepColor: 0x152943, midColor: 0x284c67, shallowColor: 0x516e81, bedColor: 0x394b59, foamColor: 0x67818f, ringColor: 0x7493aa, glare: 0.06, sunGlint: 0.4 },
     lamp: 6, lampsOn: true, windowGlow: 1.6, fireflies: true,
   },
 };
