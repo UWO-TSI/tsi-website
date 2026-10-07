@@ -1,18 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Terminal, Brain, ArrowRight, Wrench } from "lucide-react";
+import { Brain, ArrowRight, Wrench } from "lucide-react";
 import { Banner, Card } from "@/components/gui";
 
+// The ASCII converter (/student/dashboard/tools/ascii) is still a "Coming soon" page, so it has no tile until it ships.
 const tools = [
-  {
-    title: "ASCII converter",
-    description: "Turn images and text into ASCII art for marketing posts.",
-    href: "/student/dashboard/tools/ascii",
-    icon: Terminal,
-    tint: "var(--gui-paper-deep)",
-    ink: "var(--gui-teal-ink)",
-  },
   {
     title: "Tethos RAG",
     description: "An AI assistant with the TSI knowledge base.",
