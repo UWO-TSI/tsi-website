@@ -8,7 +8,6 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Backpack } from "lucide-react";
 import { Counter } from "@/components/gui";
 import { iconUrl } from "@/lib/icons/keys";
-import { AudioManager } from "@/lib/game/audio";
 import { loadBag, useBag } from "@/lib/game/bagStore";
 import s from "./BagHud.module.css";
 
@@ -37,15 +36,17 @@ export function BagButton({ full, keyLabel, onOpen }: { full: boolean; keyLabel:
       const x = window.innerWidth / 2, y = window.innerHeight * 0.55;
       setFlights(f => [...f, { id: ++seq, icon: iconUrl(key), x, y, dx: r.left + r.width / 2 - x, dy: r.top + r.height / 2 - y }]);
     };
-    const refused = () => { show(); setBump("shake"); AudioManager.playSFX("exit", { rate: 0.85, gain: 0.3 }); };
+    // No sound until there is one of its own (specs/polish/forage-craft-museum-questions.md): never the door's.
+    const refused = () => { show(); setBump("shake"); };
     window.addEventListener("tsi:bag-got", got);
     window.addEventListener("tsi:bag-full", refused);
     return () => { window.removeEventListener("tsi:bag-got", got); window.removeEventListener("tsi:bag-full", refused); window.clearTimeout(hide); };
   }, []);
+  // It lands without a sound: the reward card's chime is the pickup's (a dialogue blip here sounded at the end of
+  // every catch and find; a pickup pop is on the sound list in specs/polish/forage-craft-museum-questions.md).
   const landed = (id: number) => {
     setFlights(f => f.filter(x => x.id !== id));
     setBump("bounce");
-    AudioManager.playSFX("blip1", { rate: 1.5, gain: 0.28 });
   };
   const shown = full || flash;
   return <>

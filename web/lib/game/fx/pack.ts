@@ -2,7 +2,7 @@
 /** Our particle pack (specs/movement-feel.md deliverable 1): one row of 8 frames per sprite, 128 px cells. */
 export const PACK_URL = "/assets/fx/move-pack.webp";
 export const PACK_COLS = 8;
-export const PACK_ROWS = 18;
+export const PACK_ROWS = 27;
 export const PACK = {
   dust: { row: 0, frames: 8 } /* dust puff */,
   dustLow: { row: 1, frames: 8 } /* low dust burst (hugs the ground) */,
@@ -22,5 +22,14 @@ export const PACK = {
   splash: { row: 15, frames: 8 } /* splash crown (stands on the water) */,
   foam: { row: 16, frames: 8 } /* wake foam (lies on the water) */,
   spray: { row: 17, frames: 8 } /* bow spray (thrown drops and mist) */,
+  petal: { row: 18, frames: 8 } /* flower petal (tumbling) */,
+  chip: { row: 19, frames: 8 } /* rock chips (tumbling) */,
+  crack: { row: 20, frames: 8 } /* dig spot crack (lies on the ground) */,
+  hole: { row: 21, frames: 8 } /* dug hole filling in (lies on the ground) */,
+  sandBurst: { row: 22, frames: 8 } /* spade's throw of sand */,
+  hammerPuff: { row: 23, frames: 8 } /* hammer blow puff and shavings */,
+  glint: { row: 24, frames: 8 } /* finishing sparkle */,
+  leafBits: { row: 25, frames: 8 } /* leaves shaken loose */,
+  glow: { row: 26, frames: 8 } /* firefly glow (additive) */,
 } as const;
 export type SpriteName = keyof typeof PACK;

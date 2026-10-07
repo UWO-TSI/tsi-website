@@ -8,11 +8,16 @@
  * name their species). Signs and plaques are one label texture, redrawn when the wings change. Odile the curator, at
  * her desk, takes donations (DonateSheet) and refuses duplicates.
  */
-import { Suspense, useEffect, useMemo, useRef } from "react";
-import { useThree } from "@react-three/fiber";
+import { Suspense, useCallback, useEffect, useMemo, useRef } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
-import { InteriorPlayer, Piece, applyInteriorBackdrop, nearestStation, preloadPieces, stepTo, type InteriorStation, type RoomBounds } from "../interiorShared";
+import { InteriorPlayer, Piece, applyInteriorBackdrop, lookToward, nearestStation, preloadPieces, stepTo, type InteriorStation, type RoomBounds } from "../interiorShared";
+import { useGlowParticles } from "../GlowFx";
+import { AudioManager } from "@/lib/game/audio";
+import { DONATE_LOOK_MS, donatedAt, newSettle, settleStep, type Settle } from "@/lib/game/museumMoment";
+import { FINISH_GLINT, FINISH_SPARKS, GLINT_TINT } from "@/lib/game/forageFx";
+import { seedAt } from "@/lib/game/fx/particles";
 import Keeper from "../Keeper";
 import { RoomShell, preloadShells, registerShellMaterial, useKitPiece } from "../RoomShell";
 import { GLBProp } from "../NatureModels";
@@ -115,6 +120,22 @@ function IconSprite({ url, y, z = 0 }: { url: string; y: number; z?: number }) {
   return <sprite position={[0, y, z]} scale={[0.85, 0.85, 1]} renderOrder={2}><spriteMaterial map={tex} transparent depthWrite={false} /></sprite>;
 }
 
+/** A just-donated specimen fades into its case (lib/game/museumMoment.ts settleStep); as it begins, the camera looks over, a sparkle and a chime. */
+function Settling({ exhibitKey, at, children }: { exhibitKey: string | null; at: [number, number, number]; children: React.ReactNode }) {
+  const group = useRef<THREE.Group>(null);
+  const state = useRef<Settle>(newSettle());
+  const glow = useGlowParticles();
+  const [x, y, z] = at;
+  const begin = useCallback(() => {
+    lookToward(x, z, DONATE_LOOK_MS);
+    glow.pool.burst(FINISH_SPARKS, x, y, z, 0, 0, 0, 1.2, GLINT_TINT, seedAt(x, z, 97));
+    glow.pool.burst(FINISH_GLINT, x, y + 0.2, z, 0, 0, 0, 0.9, GLINT_TINT, seedAt(x, z, 98));
+    AudioManager.playSFX("confirm", { rate: 1.25, gain: 0.55 });
+  }, [x, y, z, glow]);
+  useFrame(() => { if (group.current) settleStep(group.current, donatedAt(exhibitKey), state.current, performance.now(), begin); });
+  return <group ref={group}>{children}</group>;
+}
+
 function Case({ wing, exhibit, x, z }: { wing: Wing; exhibit: Exhibit; x: number; z: number }) {
   const piece = wing === "aquarium" ? "museum-tank" : wing === "insect_hall" ? "museum-case" : "museum-stand";
   const model = exhibit.key ? MODEL.get(exhibit.key) : null;
@@ -124,9 +145,12 @@ function Case({ wing, exhibit, x, z }: { wing: Wing; exhibit: Exhibit; x: number
   const itemY = wing === "aquarium" ? 0.72 : wing === "insect_hall" ? 1.2 : 1.25;
   return <group position={[x, 0, z]}>
     <Suspense fallback={null}><Piece name={piece} position={[0, 0, 0]} scale={wing === "aquarium" ? 0.27 : 0.1} glassMaterial={wing === "aquarium" ? TANK_GLASS : wing === "insect_hall" ? CASE_GLASS : undefined} /></Suspense>
-    {swimmer ? <Suspense fallback={null}><TankFish def={swimmer} /></Suspense> : exhibit.donated && (model
-      ? <Suspense fallback={null}><GLBProp url={model} position={[0, itemY - 0.2, 0]} scale={1.2} /></Suspense>
-      : exhibit.icon ? <Suspense fallback={null}><IconSprite url={exhibit.icon} y={itemY} z={wing === "aquarium" ? -0.38 : 0} /></Suspense> : null)}
+    {/* A just-donated one fades into its case (lib/game/museumMoment.ts). */}
+    {exhibit.donated && <Settling exhibitKey={exhibit.key} at={[x, itemY + 0.3, z]}>
+      {swimmer ? <Suspense fallback={null}><TankFish def={swimmer} /></Suspense> : model
+        ? <Suspense fallback={null}><GLBProp url={model} position={[0, itemY - 0.2, 0]} scale={1.2} /></Suspense>
+        : exhibit.icon ? <Suspense fallback={null}><IconSprite url={exhibit.icon} y={itemY} z={wing === "aquarium" ? -0.38 : 0} /></Suspense> : null}
+    </Settling>}
   </group>;
 }
 
@@ -177,7 +201,8 @@ export default function MuseumInterior({ wings, frozen, talking = false, player,
         {cases.map((exhibit, i) => <Case key={exhibit.slot} wing={wing} exhibit={exhibit} x={cx + 1.8 - (i % 3) * 1.8} z={i < 3 ? 1.6 : 3.8} />)}
       </group>;
     })}
-    <Keeper room="museum" player={player} frozen={frozen} engaged={talking} />
+    {/* Odile says her donation lines herself, delighted at a new specimen (DonateSheet's tsi:curator-say). */}
+    <Keeper room="museum" player={player} frozen={frozen} engaged={talking} sayEvent="tsi:curator-say" />
     <InteriorPlayer frozen={frozen} bounds={BOUNDS} playerPosRef={player as React.MutableRefObject<THREE.Vector3>} onMove={onWalk} constrainMove={constrain} />
   </>;
 }

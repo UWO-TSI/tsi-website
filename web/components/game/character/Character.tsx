@@ -588,7 +588,7 @@ function placeLeaf(model: THREE.Object3D, hand: THREE.Object3D, open: number, sc
  * own clip plays (the cast, the swing, the dig) it eases to that clip's grip. It shows in its hold and its use, and
  * hides in a seat, a glide, a slide, a roll or a climb. A new item pops out of the hand; one put away shrinks back in.
  */
-export type HoldKind = "rod" | "net" | "shovel" | "glider" | "front";
+export type HoldKind = "rod" | "net" | "shovel" | "glider" | "front" | "hammer";
 export interface HeldView { url: string; hold: HoldKind; /** Something held in front: fitted to this size (rig units) about its centre. */ fit?: number }
 type Grip = { clip: ClipName; rotation: [number, number, number]; offset?: [number, number, number]; scale?: number };
 const HELD_GRIPS: Record<HoldKind, Grip> = {
@@ -597,6 +597,8 @@ const HELD_GRIPS: Record<HoldKind, Grip> = {
   shovel: { clip: "HoldTool", rotation: [-0.461, 0.175, -1.611] },
   glider: { clip: "HoldTool", rotation: [-0.572, -0.643, -0.883], scale: 0.45 },
   front: { clip: "HoldFront", rotation: [-2.049, -1.105, -2.508], offset: [-0.0306, 0.0195, 0.0249] },
+  // The workbench's hammer (art/props-enemies/build_forage.py), held like the net; its grips solved by render_forage_clips.py.
+  hammer: { clip: "HoldTool", rotation: [-0.169, -1.074, -1.039] },
 };
 /**
  * The fist round the rod while fishing (art/props-enemies/render_fishing.py solves it from FishHold: 20 degrees up over
@@ -608,6 +610,9 @@ const USE_GRIPS: Partial<Record<ClipName, Partial<Record<HoldKind, [number, numb
   Fish: { rod: ROD_FISHING }, FishHold: { rod: ROD_FISHING }, CastWindup: { rod: ROD_FISHING }, CastSwing: { rod: ROD_FISHING }, HookYank: { rod: ROD_FISHING },
   Reel: { rod: ROD_FISHING }, Cheer: { rod: ROD_FISHING }, Sad: { rod: ROD_FISHING },
   Net: { net: [2.472, -0.623, 2.401] }, Dig: { shovel: [-1.087, -0.652, -1.79] },
+  // A rock struck: the blade swung forward and down onto the rock in front (render_forage_clips.py); the hammer's blows
+  // face down onto the bench.
+  Strike: { shovel: [-1.458, -0.293, -1.846] }, Craft: { hammer: [1.403, 0.0, 1.691] },
 };
 /** Clips a hold lays over (the arms carry the item); in any other the item's own clip poses them. */
 const HOLD_OVER = new Set<ClipName>(["Idle", "Walk", "Run", "CrouchIdle", "CrouchWalk", "Jump", "Air", "Fall", "Land", "LandHeavy", "Skid", "Dash", "LookAround"]);
