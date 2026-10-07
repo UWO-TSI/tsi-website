@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, type ReactNode } from "react";
+import { CircleCheck, Vote } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { Badge, Banner, Button, Card, ErrorNote, Field, List, ListRow, Loading } from "@/components/gui";
 
 const CANDIDATES = [
   { name: "Marco Chen", code: "MC" },
@@ -9,30 +11,6 @@ const CANDIDATES = [
   { name: "Anthony Lam", code: "AL" },
   { name: "Scott McLaughlin", code: "SM" },
   { name: "Alice Nguyen", code: "AN" },
-];
-
-const ASCII_BALLOT = `
- ╔══════════════════════════════════════════╗
- ║  ████████╗███████╗████████╗██╗  ██╗     ║
- ║  ╚══██╔══╝██╔════╝╚══██╔══╝██║  ██║     ║
- ║     ██║   █████╗     ██║   ███████║     ║
- ║     ██║   ██╔══╝     ██║   ██╔══██║     ║
- ║     ██║   ███████╗   ██║   ██║  ██║     ║
- ║     ╚═╝   ╚══════╝   ╚═╝   ╚═╝  ╚═╝     ║
- ╠══════════════════════════════════════════╣
- ║   PRESIDENTIAL ELECTION — W26           ║
- ║   ANONYMOUS · IMMUTABLE · FINAL         ║
- ╚══════════════════════════════════════════╝`;
-
-const BOOT_LINES = [
-  { text: "$ tethos --election --init", delay: 0 },
-  { text: "Loading election module...", delay: 80 },
-  { text: "Cryptographic ballot initialized", delay: 160 },
-  { text: "Anonymity layer: ACTIVE", delay: 240 },
-  { text: "Verifying voter eligibility...", delay: 320 },
-  { text: "Status: ELIGIBLE", delay: 480 },
-  { text: "Candidates loaded: 5", delay: 560 },
-  { text: ">> IDENTIFY YOURSELF, THEN VOTE", delay: 720 },
 ];
 
 type Step = "name" | "vote" | "confirm";
@@ -44,45 +22,7 @@ export default function ElectionPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [bootStep, setBootStep] = useState(0);
-  const [bootDone, setBootDone] = useState(false);
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const [voteSuccess, setVoteSuccess] = useState(false);
-  const logRef = useRef<HTMLDivElement>(null);
-  const nameInputRef = useRef<HTMLInputElement>(null);
-
-  // Boot sequence animation
-  useEffect(() => {
-    if (loading) return;
-    let cancelled = false;
-    const timers: NodeJS.Timeout[] = [];
-    BOOT_LINES.forEach((line, i) => {
-      timers.push(
-        setTimeout(() => {
-          if (cancelled) return;
-          setBootStep(i + 1);
-          if (i === BOOT_LINES.length - 1) {
-            setTimeout(() => {
-              if (cancelled) return;
-              setBootDone(true);
-              setTimeout(() => nameInputRef.current?.focus(), 100);
-            }, 300);
-          }
-        }, line.delay)
-      );
-    });
-    return () => {
-      cancelled = true;
-      timers.forEach(clearTimeout);
-    };
-  }, [loading]);
-
-  // Auto-scroll terminal log
-  useEffect(() => {
-    if (logRef.current) {
-      logRef.current.scrollTop = logRef.current.scrollHeight;
-    }
-  }, [bootStep]);
 
   // Check if user already voted on mount
   useEffect(() => {
@@ -181,411 +121,163 @@ export default function ElectionPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--color-bg-main)] flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block w-5 h-5 border-2 border-[var(--color-brand-blue)]/30 border-t-[var(--color-brand-blue)] rounded-full animate-spin mb-3" />
-          <p className="font-mono text-xs text-[var(--color-text-muted)]">
-            Initializing election protocol...
-          </p>
-        </div>
-      </div>
+      <Shell>
+        <Loading label="Loading the ballot…" />
+      </Shell>
     );
   }
 
   // Success screen after voting
   if (voteSuccess) {
     return (
-      <div className="min-h-screen bg-[var(--color-bg-main)] flex items-center justify-center px-4">
-        <div className="w-full max-w-md text-center">
-          <div
-            className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-6"
-            style={{
-              background: "rgba(34, 197, 94, 0.1)",
-              border: "1px solid rgba(34, 197, 94, 0.3)",
-              boxShadow: "0 0 40px rgba(34, 197, 94, 0.15)",
-            }}
+      <Shell>
+        <Card pinned className="text-center" style={{ padding: "36px 28px 30px" }}>
+          <span
+            aria-hidden
+            className="inline-grid place-items-center mb-4"
+            style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--gui-sage-soft)", color: "var(--gui-sage)" }}
           >
-            <span className="text-2xl text-[var(--color-success)]">✓</span>
-          </div>
-          <pre className="font-mono text-[0.55rem] text-[var(--color-success)] mb-4 leading-tight">
-{`╔═══════════════════════════╗
-║   VOTE RECORDED           ║
-║   BALLOT: SEALED          ║
-║   STATUS: IMMUTABLE       ║
-╚═══════════════════════════╝`}
-          </pre>
-          <p className="font-mono text-sm text-[var(--color-text-primary)] mb-2">
+            <CircleCheck size={34} />
+          </span>
+          <h1 style={{ margin: "0 0 8px", fontSize: "var(--gui-text-2xl)", fontWeight: 900, color: "var(--gui-ink-strong)" }}>
             Your vote has been cast, {fullName.split(" ")[0]}.
-          </p>
-          <p className="font-mono text-xs text-[var(--color-text-muted)]">
+          </h1>
+          <p style={{ margin: 0, fontSize: "var(--gui-text-md)", color: "var(--gui-ink-2)" }}>
             Thank you for participating in the election.
           </p>
-        </div>
-      </div>
+        </Card>
+      </Shell>
     );
   }
 
   const selectedCandidate = CANDIDATES.find((c) => c.name === selected);
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg-main)] flex items-center justify-center px-4 py-12">
-      {/* Subtle background glow */}
-      <div
-        className="fixed pointer-events-none"
-        style={{
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: "600px",
-          height: "600px",
-          borderRadius: "50%",
-          background: selected
-            ? "radial-gradient(circle, rgba(0,47,167,0.08) 0%, transparent 70%)"
-            : "radial-gradient(circle, rgba(34,211,238,0.04) 0%, transparent 70%)",
-          transition: "background 0.8s ease",
-        }}
-      />
+    <Shell>
+      <Banner title="Presidential election" icon={<Vote size={26} />} tone="sage">
+        W26. Anonymous, one vote per member, and final.
+      </Banner>
 
-      <div className="w-full max-w-xl relative z-10">
-        {/* Terminal Window */}
-        <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border-soft)] rounded-lg overflow-hidden mb-6">
-          {/* Window Chrome */}
-          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-[var(--glass-border-soft)]">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
-            <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
-            <span className="w-2.5 h-2.5 rounded-full bg-green-500/70" />
-            <span className="flex-1" />
-            <span className="font-mono text-[0.6rem] text-[var(--color-text-subtle)] tracking-wider">
-              tethos://election/ballot
-            </span>
-          </div>
+      <Card style={{ padding: "24px 22px" }}>
+        {/* ── Step 1: Full Name ── */}
+        {step === "name" && (
+          <>
+            <Heading>Tell us who you are before you vote.</Heading>
+            <Field
+              label="Full name"
+              hint="As it appears on your membership."
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              onKeyDown={handleNameKeyDown}
+              placeholder="e.g. Jane Doe"
+              autoComplete="name"
+              autoFocus
+            />
+            <Button className="w-full mt-5" onClick={handleNameSubmit} disabled={!fullName.trim()}>
+              {fullName.trim() ? "Continue to the ballot" : "Enter your name"}
+            </Button>
+          </>
+        )}
 
-          {/* Boot Log */}
-          <div ref={logRef} className="px-4 py-3 font-mono text-xs leading-relaxed">
-            {BOOT_LINES.slice(0, bootStep).map((line, i) => (
-              <div
-                key={i}
-                className={`transition-opacity duration-200 ${
-                  line.text.startsWith("$")
-                    ? "text-[var(--color-accent-cyan)]"
-                    : line.text.startsWith(">>")
-                      ? "text-[var(--color-brand-yellow)]"
-                      : line.text.includes("ELIGIBLE")
-                        ? "text-[var(--color-success)]"
-                        : "text-[var(--color-text-muted)]"
-                }`}
-              >
-                {line.text}
-              </div>
-            ))}
-            {!bootDone && bootStep > 0 && (
-              <span className="text-[var(--color-accent-cyan)] animate-pulse">█</span>
-            )}
-          </div>
-        </div>
-
-        {/* Main Ballot Card */}
-        <div
-          className="transition-all duration-500"
-          style={{
-            opacity: bootDone ? 1 : 0,
-            transform: bootDone ? "translateY(0)" : "translateY(8px)",
-          }}
-        >
-          <div className="bg-[var(--color-bg-alt)] border border-[var(--glass-border-soft)] rounded-lg overflow-hidden">
-            {/* ASCII Header */}
-            <div className="px-6 pt-6 pb-0">
-              <pre className="text-[0.4rem] sm:text-[0.5rem] leading-tight font-mono text-[var(--color-brand-blue)] overflow-x-auto whitespace-pre select-none">
-                {ASCII_BALLOT}
-              </pre>
+        {/* ── Step 2: Vote ── */}
+        {step === "vote" && (
+          <>
+            <div className="flex items-center gap-2 mb-5" style={{ fontSize: "var(--gui-text-sm)", color: "var(--gui-ink-2)" }}>
+              <span>
+                Voting as <strong style={{ color: "var(--gui-ink-strong)" }}>{fullName}</strong>
+              </span>
+              <Button variant="quiet" size="sm" className="ml-auto" onClick={() => setStep("name")}>
+                Edit
+              </Button>
             </div>
 
-            <div className="px-6 pb-6">
-              <div className="border-t border-[var(--glass-border-soft)] mt-4 pt-5">
+            <Heading sub="One vote per member. It’s anonymous and can’t be changed.">Choose your candidate for President.</Heading>
 
-                {/* ── Step 1: Full Name ── */}
-                {step === "name" && (
-                  <>
-                    <div className="mb-6">
-                      <p className="font-mono text-[0.65rem] text-[var(--color-accent-cyan)] mb-1.5 tracking-wide">
-                        {">"} Identify yourself before casting your ballot.
-                      </p>
-                      <p className="font-mono text-xs text-[var(--color-text-subtle)]">
-                        Enter your full name as it appears on your membership.
-                      </p>
-                    </div>
+            <List label="Candidates">
+              {CANDIDATES.map((candidate) => (
+                <ListRow
+                  key={candidate.name}
+                  icon={<Initials code={candidate.code} on={selected === candidate.name} />}
+                  title={candidate.name}
+                  selected={selected === candidate.name}
+                  onClick={() => setSelected(candidate.name)}
+                />
+              ))}
+            </List>
 
-                    <div className="mb-6">
-                      <label className="block text-xs font-mono text-[var(--color-text-muted)] mb-2 uppercase tracking-wider">
-                        Full Name
-                      </label>
-                      <input
-                        ref={nameInputRef}
-                        type="text"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        onKeyDown={handleNameKeyDown}
-                        className="w-full bg-[var(--color-bg-main)] border border-[var(--glass-border-soft)] rounded-lg px-4 py-3.5 font-mono text-sm text-[var(--color-text-main)] placeholder:text-[var(--color-text-subtle)]/50 focus:outline-none focus:border-[var(--color-brand-blue)] focus:shadow-[0_0_12px_rgba(0,47,167,0.2)] transition-all"
-                        placeholder="e.g. Jane Doe"
-                        autoFocus
-                      />
-                    </div>
+            <Button className="w-full mt-6" onClick={() => selected && setStep("confirm")} disabled={!selected}>
+              {selected ? "Cast ballot" : "Choose a candidate"}
+            </Button>
+          </>
+        )}
 
-                    <button
-                      onClick={handleNameSubmit}
-                      disabled={!fullName.trim()}
-                      className="w-full py-3.5 rounded-lg font-mono text-sm uppercase tracking-[0.12em] transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed"
-                      style={{
-                        background: fullName.trim()
-                          ? "var(--color-brand-blue)"
-                          : "transparent",
-                        color: fullName.trim()
-                          ? "#fff"
-                          : "var(--color-text-subtle)",
-                        border: fullName.trim()
-                          ? "1px solid var(--color-brand-blue)"
-                          : "1px solid rgba(241,255,255,0.08)",
-                        boxShadow: fullName.trim()
-                          ? "0 0 30px rgba(0,47,167,0.25)"
-                          : "none",
-                      }}
-                    >
-                      {fullName.trim() ? "[ Continue to Ballot ]" : "[ Enter your name ]"}
-                    </button>
-                  </>
-                )}
+        {/* ── Step 3: Confirm ── */}
+        {step === "confirm" && (
+          <>
+            <p className="flex items-center gap-2" style={{ margin: "0 0 20px", fontSize: "var(--gui-text-sm)", color: "var(--gui-ink-2)" }}>
+              <Badge tone="warn">Confirm</Badge> This is permanent.
+            </p>
 
-                {/* ── Step 2: Vote ── */}
-                {step === "vote" && (
-                  <>
-                    {/* Voter identity bar */}
-                    <div
-                      className="flex items-center gap-2 rounded-lg px-3 py-2 mb-5 font-mono text-xs"
-                      style={{
-                        background: "rgba(34,211,238,0.04)",
-                        border: "1px solid rgba(34,211,238,0.1)",
-                      }}
-                    >
-                      <span className="text-[var(--color-accent-cyan)]">Voter:</span>
-                      <span className="text-[var(--color-text-main)]">{fullName}</span>
-                      <button
-                        onClick={() => setStep("name")}
-                        className="ml-auto text-[var(--color-text-subtle)] hover:text-[var(--color-text-muted)] transition-colors"
-                      >
-                        edit
-                      </button>
-                    </div>
-
-                    <div className="mb-6">
-                      <p className="font-mono text-[0.65rem] text-[var(--color-accent-cyan)] mb-1.5 tracking-wide">
-                        {">"} Select your candidate for President.
-                      </p>
-                      <p className="font-mono text-xs text-[var(--color-text-subtle)]">
-                        One vote per member. Anonymous and irreversible.
-                      </p>
-                    </div>
-
-                    {/* Candidate Cards */}
-                    <div className="space-y-2">
-                      {CANDIDATES.map((candidate, i) => {
-                        const isSelected = selected === candidate.name;
-                        const isHovered = hoveredIdx === i;
-                        return (
-                          <button
-                            key={candidate.name}
-                            onClick={() => setSelected(candidate.name)}
-                            onMouseEnter={() => setHoveredIdx(i)}
-                            onMouseLeave={() => setHoveredIdx(null)}
-                            style={{
-                              transition: "all 0.2s ease",
-                              ...(isSelected
-                                ? {
-                                    borderColor: "var(--color-brand-blue)",
-                                    boxShadow: "0 0 20px rgba(0,47,167,0.15), inset 0 0 30px rgba(0,47,167,0.05)",
-                                  }
-                                : isHovered
-                                  ? { borderColor: "rgba(241,255,255,0.2)" }
-                                  : {}),
-                            }}
-                            className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-lg border font-mono text-left ${
-                              isSelected
-                                ? "border-[var(--color-brand-blue)] bg-[var(--color-brand-blue)]/[0.06]"
-                                : "border-[var(--glass-border-soft)] hover:bg-white/[0.02]"
-                            }`}
-                          >
-                            <div
-                              className="shrink-0 w-10 h-10 rounded-md flex items-center justify-center text-xs font-bold tracking-wider transition-all duration-200"
-                              style={{
-                                background: isSelected
-                                  ? "rgba(0,47,167,0.15)"
-                                  : "rgba(241,255,255,0.04)",
-                                color: isSelected
-                                  ? "var(--color-brand-blue)"
-                                  : "var(--color-text-subtle)",
-                                border: `1px solid ${
-                                  isSelected
-                                    ? "rgba(0,47,167,0.3)"
-                                    : "rgba(241,255,255,0.06)"
-                                }`,
-                              }}
-                            >
-                              {candidate.code}
-                            </div>
-
-                            <span
-                              className={`text-sm tracking-wide transition-colors duration-200 ${
-                                isSelected
-                                  ? "text-[var(--color-text-main)]"
-                                  : "text-[var(--color-text-muted)]"
-                              }`}
-                            >
-                              {candidate.name}
-                            </span>
-
-                            <div className="ml-auto">
-                              <div
-                                className="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all duration-200"
-                                style={{
-                                  borderColor: isSelected
-                                    ? "var(--color-brand-blue)"
-                                    : "rgba(241,255,255,0.12)",
-                                }}
-                              >
-                                {isSelected && (
-                                  <div
-                                    className="w-2 h-2 rounded-full"
-                                    style={{
-                                      background: "var(--color-brand-blue)",
-                                      boxShadow: "0 0 6px rgba(0,47,167,0.5)",
-                                    }}
-                                  />
-                                )}
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <button
-                      onClick={() => selected && setStep("confirm")}
-                      disabled={!selected}
-                      className="w-full mt-6 py-3.5 rounded-lg font-mono text-sm uppercase tracking-[0.12em] transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed"
-                      style={{
-                        background: selected
-                          ? "var(--color-brand-blue)"
-                          : "transparent",
-                        color: selected
-                          ? "#fff"
-                          : "var(--color-text-subtle)",
-                        border: selected
-                          ? "1px solid var(--color-brand-blue)"
-                          : "1px solid rgba(241,255,255,0.08)",
-                        boxShadow: selected
-                          ? "0 0 30px rgba(0,47,167,0.25)"
-                          : "none",
-                      }}
-                    >
-                      {selected ? "[ Cast Ballot ]" : "[ Select a candidate ]"}
-                    </button>
-                  </>
-                )}
-
-                {/* ── Step 3: Confirm ── */}
-                {step === "confirm" && (
-                  <div className="py-6">
-                    {/* Warning Banner */}
-                    <div
-                      className="rounded-lg px-4 py-3 mb-6 font-mono text-xs"
-                      style={{
-                        background: "rgba(255,209,102,0.06)",
-                        border: "1px solid rgba(255,209,102,0.15)",
-                      }}
-                    >
-                      <span className="text-[var(--color-brand-yellow)]">
-                        {"["} CONFIRMATION REQUIRED {"]"}
-                      </span>
-                      <span className="text-[var(--color-text-muted)] ml-2">
-                        This action is permanent.
-                      </span>
-                    </div>
-
-                    {/* Selected Candidate Display */}
-                    <div className="text-center mb-8">
-                      <p className="font-mono text-[0.65rem] text-[var(--color-text-subtle)] uppercase tracking-[0.15em] mb-3">
-                        Your vote for President
-                      </p>
-                      <div
-                        className="inline-flex items-center gap-3 px-6 py-4 rounded-lg"
-                        style={{
-                          background: "rgba(0,47,167,0.08)",
-                          border: "1px solid rgba(0,47,167,0.2)",
-                          boxShadow: "0 0 40px rgba(0,47,167,0.1)",
-                        }}
-                      >
-                        <div
-                          className="w-10 h-10 rounded-md flex items-center justify-center font-mono text-xs font-bold tracking-wider"
-                          style={{
-                            background: "rgba(0,47,167,0.2)",
-                            color: "var(--color-brand-blue)",
-                            border: "1px solid rgba(0,47,167,0.3)",
-                          }}
-                        >
-                          {selectedCandidate?.code}
-                        </div>
-                        <span className="font-mono text-lg font-bold text-[var(--color-text-main)] tracking-wide">
-                          {selected}
-                        </span>
-                      </div>
-                    </div>
-
-                    {error && (
-                      <div
-                        className="rounded-lg px-4 py-3 mb-4 font-mono text-xs"
-                        style={{
-                          background: "rgba(239,68,68,0.06)",
-                          border: "1px solid rgba(239,68,68,0.15)",
-                        }}
-                      >
-                        <span className="text-[var(--color-error)]">{error}</span>
-                      </div>
-                    )}
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-3">
-                      <button
-                        onClick={() => setStep("vote")}
-                        disabled={submitting}
-                        className="flex-1 py-3 rounded-lg font-mono text-xs uppercase tracking-[0.1em] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] transition-all duration-200 border border-[var(--glass-border-soft)] hover:border-[rgba(241,255,255,0.2)]"
-                      >
-                        Go Back
-                      </button>
-                      <button
-                        onClick={submitVote}
-                        disabled={submitting}
-                        className="flex-1 py-3 rounded-lg font-mono text-xs uppercase tracking-[0.1em] text-white transition-all duration-200 disabled:opacity-50"
-                        style={{
-                          background: "var(--color-brand-blue)",
-                          boxShadow: "0 0 30px rgba(0,47,167,0.3)",
-                        }}
-                      >
-                        {submitting ? "Sealing ballot..." : "Confirm Vote"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+            <div className="text-center mb-6">
+              <p style={{ margin: "0 0 10px", fontSize: "var(--gui-text-sm)", fontWeight: 800, color: "var(--gui-muted)" }}>
+                Your vote for President
+              </p>
+              <Card tone="butter" className="inline-flex items-center gap-3" style={{ padding: "14px 22px" }}>
+                <Initials code={selectedCandidate?.code ?? ""} on />
+                <span style={{ fontSize: "var(--gui-text-lg)", fontWeight: 900, color: "var(--gui-ink-strong)" }}>{selected}</span>
+              </Card>
             </div>
-          </div>
-        </div>
 
-        {/* Footer */}
-        <div className="mt-5 text-center">
-          <p className="font-mono text-[0.55rem] text-[var(--color-text-subtle)]/50 tracking-wider">
-            TSI-SYS v3.2.1 · ELECTION MODULE · ENCRYPTED · ONE VOTE PER AGENT
-          </p>
-        </div>
-      </div>
+            {error && <ErrorNote className="mb-4">{error}</ErrorNote>}
+
+            <div className="flex gap-3">
+              <Button variant="secondary" className="flex-1" onClick={() => setStep("vote")} disabled={submitting}>
+                Go back
+              </Button>
+              <Button className="flex-1" onClick={submitVote} disabled={submitting}>
+                {submitting ? "Sealing your ballot…" : "Confirm vote"}
+              </Button>
+            </div>
+          </>
+        )}
+      </Card>
+    </Shell>
+  );
+}
+
+/** The cream page every step sits on (the check-in page's paper notice layout). */
+function Shell({ children }: { children: ReactNode }) {
+  return (
+    <main className="gui" style={{ minHeight: "100dvh", padding: "96px 16px 48px", background: "var(--gui-confetti) var(--gui-page)" }}>
+      <div style={{ maxWidth: 560, margin: "0 auto" }}>{children}</div>
+    </main>
+  );
+}
+
+function Heading({ children, sub }: { children: ReactNode; sub?: ReactNode }) {
+  return (
+    <div className="mb-5">
+      <h2 style={{ margin: 0, fontSize: "var(--gui-text-lg)", fontWeight: 900, color: "var(--gui-ink-strong)" }}>{children}</h2>
+      {sub && <p style={{ margin: "4px 0 0", fontSize: "var(--gui-text-sm)", color: "var(--gui-ink-2)" }}>{sub}</p>}
     </div>
+  );
+}
+
+function Initials({ code, on }: { code: string; on?: boolean }) {
+  return (
+    <span
+      className="inline-grid place-items-center shrink-0"
+      style={{
+        width: 40,
+        height: 40,
+        borderRadius: "50%",
+        fontSize: "var(--gui-text-sm)",
+        fontWeight: 900,
+        background: on ? "var(--gui-sage-soft)" : "var(--gui-paper-deep)",
+        color: on ? "var(--gui-sage)" : "var(--gui-ink-2)",
+      }}
+    >
+      {code}
+    </span>
   );
 }
