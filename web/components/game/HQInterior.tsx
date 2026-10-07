@@ -62,7 +62,10 @@ export default function HQInterior({
   phase = "day",
   light: islandLight,
   talking = false,
+  trophyCase = false,
 }: {
+  /** The member clubhouse's 3D trophy case stands at the display (TrophyCase): the chest and its cups step aside. */
+  trophyCase?: boolean;
   /** The island's light now (blended across the phases); the phase's look when not given (the applicant island). */
   light?: IslandLight;
   /** The front desk's sheet is open: the HQ lead serves you. */
@@ -137,11 +140,13 @@ export default function HQInterior({
       <Suspense fallback={null}>
         <Piece name="bulletinboard" {...(clubhouse ? HQ_LAYOUT.board : { position: [-4.5, 1.15, 5.55] as [number, number, number], scale: 0.16 })} />
 
-        {/* Trophy display (→ Leaderboard): chest pedestal + the HHA tier set */}
-        <Piece shadows={clubhouse} name="wooden-chest" rotX={clubhouse ? -Math.PI / 2 : 0} position={clubhouse ? HQ_LAYOUT.display.position : [4.2, 0, 5.2]} rotY={clubhouse ? Math.PI : 0} />
-        <Piece shadows={clubhouse} name="gold-hha-trophy" rotX={clubhouse ? Math.PI / 2 : 0} position={[clubhouse ? HQ_LAYOUT.display.position[0] : 4.2, 0.8, 5.2]} rotY={clubhouse ? Math.PI : 0} />
-        <Piece shadows={clubhouse} name="silver-hha-trophy" rotX={clubhouse ? Math.PI / 2 : 0} position={[clubhouse ? HQ_LAYOUT.display.position[0] - 0.65 : 3.55, 0.8, 5.35]} rotY={clubhouse ? Math.PI : 0} scale={0.085} />
-        <Piece shadows={clubhouse} name="bronze-hha-trophy" rotX={clubhouse ? Math.PI / 2 : 0} position={[clubhouse ? HQ_LAYOUT.display.position[0] + 0.65 : 4.85, 0.8, 5.35]} rotY={clubhouse ? Math.PI : 0} scale={0.085} />
+        {/* Trophy display (→ Leaderboard): chest pedestal + the HHA tier set (the member clubhouse's trophy case replaces it) */}
+        {!trophyCase && <>
+          <Piece shadows={clubhouse} name="wooden-chest" rotX={clubhouse ? -Math.PI / 2 : 0} position={clubhouse ? HQ_LAYOUT.display.position : [4.2, 0, 5.2]} rotY={clubhouse ? Math.PI : 0} />
+          <Piece shadows={clubhouse} name="gold-hha-trophy" rotX={clubhouse ? Math.PI / 2 : 0} position={[clubhouse ? HQ_LAYOUT.display.position[0] : 4.2, 0.8, 5.2]} rotY={clubhouse ? Math.PI : 0} />
+          <Piece shadows={clubhouse} name="silver-hha-trophy" rotX={clubhouse ? Math.PI / 2 : 0} position={[clubhouse ? HQ_LAYOUT.display.position[0] - 0.65 : 3.55, 0.8, 5.35]} rotY={clubhouse ? Math.PI : 0} scale={0.085} />
+          <Piece shadows={clubhouse} name="bronze-hha-trophy" rotX={clubhouse ? Math.PI / 2 : 0} position={[clubhouse ? HQ_LAYOUT.display.position[0] + 0.65 : 4.85, 0.8, 5.35]} rotY={clubhouse ? Math.PI : 0} scale={0.085} />
+        </>}
 
         {/* Front Desk (→ Profile) + chair */}
         <FrontDesk />

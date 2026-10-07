@@ -82,6 +82,13 @@ describe("default island movement (frozen 2026-09-28 village)", () => {
     [x, z] = island.move(0, -10, 0, 4.5);
     expect(landmarks(v0).some(l => (l.id === "notice" || l.id === "catch") && Math.hypot(l.x - x, l.z - z) < 3.2)).toBe(true);
   });
+  it("gives the shop a door you can walk up to, and a step out in front of it to come back to", () => {
+    const door = landmarkPoint("shop", "door", v0)!, exit = landmarkPoint("shop", "exit", v0)!, shop = landmark("shop", v0)!;
+    expect(door[1]).toBeLessThan(shop.z - shop.half![1]);
+    expect(island.standable(door[0], door[1])).toBe(true);
+    expect(island.standable(exit[0], exit[1])).toBe(true);
+    expect(exit[1]).toBeLessThan(door[1]);
+  });
   it("has water in the pond and a walkable wharf stub over the sea", () => {
     expect(island.surface(landmark("pond", v0)!.x, landmark("pond", v0)!.z)).toBe(Surface.River);
     expect(island.standable((WHARF_DECK.x0 + WHARF_DECK.x1) / 2, WHARF_DECK.z0 + 0.5)).toBe(true);

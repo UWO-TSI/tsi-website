@@ -1,0 +1,9 @@
+/* The guided first glide's note (GlideGuide.tsx): a paper card at the top, under the place heading, out of the
+   prompt lane and the minimap's way. */
+.hint { position: absolute; left: 50%; top: 92px; z-index: 14; display: flex; align-items: center; gap: 12px; width: min(460px, calc(100% - 32px)); box-sizing: border-box;
+  padding: 10px 12px 10px 14px; transform: translateX(-50%); font-family: var(--gui-font); font-size: var(--gui-text-sm); font-weight: 700; color: var(--gui-ink);
+  zoom: var(--tsi-text-scale, 1); animation: hintIn 380ms var(--gui-spring) both; }
+.hint img { flex: none; width: 40px; height: 40px; object-fit: contain; }
+.hint p { flex: 1; margin: 0; line-height: 1.35; }
+@keyframes hintIn { from { opacity: 0; transform: translateX(-50%) translateY(-8px) scale(0.96); } }
+@media (prefers-reduced-motion: reduce) { .hint { animation: none; } }
