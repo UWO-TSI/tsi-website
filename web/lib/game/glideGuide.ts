@@ -18,8 +18,12 @@ const DIRS: readonly (readonly [number, number])[] = [[1, 0], [-1, 0], [0, 1], [
 /** Cells out from the edge the ring may lie (a glide off one level clears about seven; four or five is an easy first try). */
 const RING_FROM = 4, RING_TO = 6;
 
-/** The nearest edge within `range` of (x, z) worth a first glide, bigger drops preferred; null when there's none. */
-export function glideSpot(map: IslandMap, x: number, z: number, range = 28): GlideSpot | null {
+/**
+ * The nearest edge within `range` of (x, z) worth a first glide, bigger drops preferred; null when there's none.
+ * `blocked`: where a building stands (world x, z): never an edge with one over its run-up (the camera couldn't see the
+ * marker, and there's nowhere to run from) or over its ring.
+ */
+export function glideSpot(map: IslandMap, x: number, z: number, range = 28, blocked?: (x: number, z: number) => boolean): GlideSpot | null {
   const cx0 = worldToCellX(map, x), cz0 = worldToCellZ(map, z), r = Math.ceil(range);
   let best: GlideSpot | null = null, bestScore = Infinity;
   for (let cz = cz0 - r; cz <= cz0 + r; cz++) for (let cx = cx0 - r; cx <= cx0 + r; cx++) {
@@ -39,10 +43,12 @@ export function glideSpot(map: IslandMap, x: number, z: number, range = 28): Gli
       }
       if (ring < 0) continue;
       const ex = cellToWorldX(map, cx) + dx * 0.5, ez = cellToWorldZ(map, cz) + dz * 0.5;
+      const lx = cellToWorldX(map, cx + dx * ring), lz = cellToWorldZ(map, cz + dz * ring);
+      if (blocked && (blocked(lx, lz) || [0.5, 1.5, 2.5].some(b => blocked(ex - dx * b, ez - dz * b)))) continue;
       const score = Math.hypot(ex - x, ez - z) - 3 * Math.min(drop, 3);
       if (score >= bestScore) continue;
       bestScore = score;
-      best = { edge: [ex, ez], dir: [dx, dz], land: [cellToWorldX(map, cx + dx * ring), cellToWorldZ(map, cz + dz * ring)], drop, top: lv * LEVEL_STEP, below: nl * LEVEL_STEP };
+      best = { edge: [ex, ez], dir: [dx, dz], land: [lx, lz], drop, top: lv * LEVEL_STEP, below: nl * LEVEL_STEP };
     }
   }
   return best;

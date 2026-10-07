@@ -39,8 +39,10 @@ function breathe(ring: THREE.Mesh | null, t: number) {
   if (ring.geometry !== RINGS[f]) ring.geometry = RINGS[f];
 }
 
-export default function GlideGuide({ map, ground, player, owned, active }: {
+export default function GlideGuide({ map, ground, player, owned, active, blocked }: {
   map: IslandMap; ground: (x: number, z: number) => number; player: React.RefObject<THREE.Vector3>;
+  /** Where a building stands: no ledge behind one (glideSpot). */
+  blocked?: (x: number, z: number) => boolean;
   /** Owns the leaf glider (its unlock was crafted). */
   owned: boolean;
   /** The player is free to move (no fishing, no sheet, no greeting). */
@@ -52,9 +54,9 @@ export default function GlideGuide({ map, ground, player, owned, active }: {
   const [spot, setSpot] = useState<GlideSpot | null>(null);
   useEffect(() => {
     if (!on) return;
-    const t = window.setTimeout(() => setSpot(s => s ?? glideSpot(map, player.current.x, player.current.z)), 0);
+    const t = window.setTimeout(() => setSpot(s => s ?? glideSpot(map, player.current.x, player.current.z, 28, blocked)), 0);
     return () => window.clearTimeout(t);
-  }, [on, map, player]);
+  }, [on, map, player, blocked]);
   const guide = useRef<Guide | null>(null);
   useEffect(() => { guide.current = spot ? newGuide(spot) : null; }, [spot]);
   const glow = useGlowParticles();

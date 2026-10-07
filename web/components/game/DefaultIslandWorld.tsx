@@ -239,6 +239,8 @@ function villageLayout(v: Village) {
     /** What can stand between the orbit camera and you: the buildings and the trees' canopies (lib/game/occluders.ts). */
     occluders: [...marks.filter(l => l.half && Math.max(...l.half) >= 1).map(l => boxOccluder(l.x, l.z, l.half![0], l.half![1], island.ground(l.x, l.z), 5)),
       ...trees.map(t => treeOccluder(t.x, t.z, island.ground(t.x, t.z)))],
+    /** Inside a building's footprint, with a step's margin (the glide guide never marks a ledge behind one). */
+    underBuilding: (x: number, z: number) => marks.some(l => !!l.half && Math.abs(x - l.x) < l.half[0] + 0.5 && Math.abs(z - l.z) < l.half[1] + 0.5),
     fireflies: objectsOf("bush", v).map(xz),
     puddles: objectsOf("puddle", v).map(xz),
     benches: objectsOf("bench", v),
@@ -392,7 +394,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <PeacefulLayer map={island.map} nodes={layout.nodes} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} treeModels={SEASON_TREES[look.season]} />
       <BeachBottle player={player} ground={island.ground} />
       {/* After the first leaf glider is made: a marked edge and a ring to land in (the guided first glide). */}
-      <GlideGuide map={island.map} ground={island.ground} player={player} owned={peaceful.glider} active={!fishing && !lead?.hold} />
+      <GlideGuide map={island.map} ground={island.ground} player={player} owned={peaceful.glider} active={!fishing && !lead?.hold} blocked={layout.underBuilding} />
       <StudySeats area="village" player={player} ground={island.ground} />
       <VillageLandmarks layout={layout} ground={island.ground} opened={progression.opened} stage={progression.stage} ceremony={ceremony} light={light} />
       {layout.fitting && <FittingRoom at={layout.fitting} ground={island.ground} player={player} />}

@@ -25,6 +25,18 @@ describe("the guided first glide's spot", () => {
     expect(s.land[0]).toBeLessThan(cellToWorldX(map, 21) - 0.5);
   });
 
+  it("never marks an edge with a building over its run-up or its ring (hidden from the camera, nowhere to run from)", () => {
+    const map = island(), x = cellToWorldX(map, 6), z = cellToWorldZ(map, 12);
+    const rim = cellToWorldX(map, 9);
+    // A building standing on the plateau against the rim, across the rows the nearest edge would use.
+    const building = (bx: number, bz: number) => bx > rim - 2.5 && bx < rim + 0.4 && Math.abs(bz - z) < 3;
+    const s = glideSpot(map, x, z, 28, building)!;
+    expect(s).not.toBeNull();
+    expect(Math.abs(s.edge[1] - z)).toBeGreaterThanOrEqual(3);
+    expect(building(s.edge[0] - s.dir[0] * 1.5, s.edge[1] - s.dir[1] * 1.5)).toBe(false);
+    expect(building(s.land[0], s.land[1])).toBe(false);
+  });
+
   it("takes a bank when there's no cliff, and never a ramp's slope", () => {
     const map = createCenteredMap(20, 20);
     for (let cz = 0; cz < 20; cz++) for (let cx = 0; cx < 20; cx++) setCell(map, cx, cz, cz < 8 ? 1 : 0, cz === 8 && cx < 4 ? Surface.Ramp : Surface.Grass);
