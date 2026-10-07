@@ -364,7 +364,7 @@ export function seatChoice(stop: Stop, held: (key: string, x: number, z: number)
 }
 
 /** A spot at an anchor for this resident: its ring slot (or the next free one), facing the place's point of interest. */
-function anchorStop(key: string, v: Village, nav: NavGrid, slot: number, work: boolean, slug: string, res: Reservations): Stop | null {
+function anchorStop(key: string, v: Village, nav: NavGrid, slot: number, work: boolean, night: boolean, slug: string, res: Reservations): Stop | null {
   const a = objectById("anchor", key, v);
   const base: [number, number] | null = a ? [a.x, a.z] : key === "plaza" ? villageSpawnPoint(v) : null;
   if (!base) return null;
@@ -398,8 +398,8 @@ function anchorStop(key: string, v: Village, nav: NavGrid, slot: number, work: b
   const water = WATER_ANCHORS.has(key);
   return {
     id: `anchor:${key}`, kind: "stand", at, yaw,
-    // A resident's own post (the shop for the shopkeeper) holds them longest.
-    dwell: work ? [140, 300] : water ? [60, 140] : [40, 100],
+    // A resident's own post (the shop for the shopkeeper) holds them longest; at night they linger under the lamps.
+    dwell: work ? [140, 300] : night ? [600, 1500] : water ? [60, 140] : [40, 100],
     idles: water ? ["gaze", "look", "idle"] : ["idle", "look", "stretch"],
   };
 }
@@ -441,7 +441,7 @@ export function planResident(r: ResidentSource, slot: number, v: Village, island
         seat = benchStop(v, nav, last, night, phase === "night", res.seats[phase]);
         if (seat) res.spots.push({ x: seat.at[0], z: seat.at[1], slug: r.slug });
       }
-      const s = key === "home" ? home : key === "bench" ? seat ?? null : anchorStop(key, v, nav, slot, key === work, r.slug, res);
+      const s = key === "home" ? home : key === "bench" ? seat ?? null : anchorStop(key, v, nav, slot, key === work, phase === "night", r.slug, res);
       if (!s) continue;
       stops.push(s);
       last = s.door ?? s.at;

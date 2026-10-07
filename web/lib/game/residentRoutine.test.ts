@@ -158,6 +158,22 @@ describe("resident routines", () => {
     expect(clash).toEqual([]);
   });
 
+  it("keeps three or more residents out at night, and the village thins out rather than emptying at once", () => {
+    for (const when of ["2026-10-02T02:30:00Z", "2026-10-02T04:30:00Z", "2026-07-02T02:30:00Z"]) {
+      const t = Date.parse(when) / 1000, out = plans.filter(p => !new ResidentDay(p, nav).at(t, null, newPose()).inside).map(p => p.slug);
+      expect(out.length, `${when}: ${out}`).toBeGreaterThanOrEqual(3);
+    }
+    // From the evening into the first hour of night, minute by minute: never more than two go in within a minute.
+    const night = span.phases[span.phases.length - 1].t0, live = plans.map(p => ({ day: new ResidentDay(p, nav), pose: newPose() }));
+    let prev = -1, worst = 0;
+    for (let t = night - 1800; t < night + 3600; t += 60) {
+      const n = live.filter(r => !r.day.at(t, null, r.pose).inside).length;
+      if (prev >= 0) worst = Math.max(worst, prev - n);
+      prev = n;
+    }
+    expect(worst).toBeLessThanOrEqual(2);
+  });
+
   it("is the same on every client: a function of world time only", () => {
     const a = newPose(), b = newPose(), again = planResidents(SORTED, v, island);
     for (const [i, { plan }] of days.entries()) for (const t of [T, T + 1234.5, T + 40000]) {
