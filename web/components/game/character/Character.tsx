@@ -52,6 +52,7 @@ const GHOST = { life: 0.2, opacity: 0.17, rise: 0.04 };
  * character that leaves it (`GHOST_ORDER` + 1), so the character draws over it wherever they overlap.
  */
 const GHOST_ORDER = 1;
+const ghostM = new THREE.Matrix4(), toLocal = new THREE.Matrix4();
 class Ghost {
   readonly skeleton: THREE.Skeleton;
   readonly meshes: THREE.SkinnedMesh[];
@@ -73,9 +74,10 @@ class Ghost {
       return m;
     });
   }
-  snap(live: THREE.Skeleton, geometries: THREE.BufferGeometry[]) {
+  /** `world`: the live body's world matrix (its bone matrices are relative to it, Puppet.uploadPose); the afterimage keeps them in the world. */
+  snap(live: THREE.Skeleton, geometries: THREE.BufferGeometry[], world: THREE.Matrix4) {
     if (!live.boneMatrices || !this.skeleton.boneMatrices) return;
-    this.skeleton.boneMatrices.set(live.boneMatrices.subarray(0, live.bones.length * 16));
+    for (let i = 0; i < live.bones.length; i++) ghostM.fromArray(live.boneMatrices, i * 16).premultiply(world).toArray(this.skeleton.boneMatrices, i * 16);
     if (this.skeleton.boneTexture) this.skeleton.boneTexture.needsUpdate = true;
     geometries.forEach((g, i) => { this.meshes[i].geometry = g; });
     this.age = 0;
@@ -89,6 +91,12 @@ class Ghost {
     if (this.warm > 0) this.warm--;
   }
   dispose() { this.material.dispose(); this.skeleton.boneTexture?.dispose(); for (const m of this.meshes) m.removeFromParent(); }
+}
+
+/** A vertex skinned for a raycast, in the mesh's own space (the bones' world pose, less where the mesh is now). */
+function localBoneTransform(this: THREE.SkinnedMesh, index: number, target: THREE.Vector3) {
+  THREE.SkinnedMesh.prototype.applyBoneTransform.call(this, index, target);
+  return target.applyMatrix4(toLocal.copy(this.matrixWorld).invert());
 }
 
 /** What a look merges (rig.ts mergeLook): the base's skin in the look's skin colour, then each part but its print. */
@@ -130,6 +138,10 @@ class Puppet {
   private upperT = 0;
   private upperRate = 1;
   private readonly skeleton: THREE.Skeleton;
+  /** The GLB's bind matrix, folded into the bone matrices (the meshes bind detached at identity). */
+  private readonly bind: THREE.Matrix4;
+  /** The bones moved since the pose was last uploaded (Puppet.update ran). */
+  private posed = true;
   private readonly ghostParent: THREE.Object3D;
   private readonly ghosts: Ghost[] = [];
   private ghostNext = 0;
@@ -156,6 +168,12 @@ class Puppet {
       const mesh = new THREE.SkinnedMesh(geometry, material);
       parent.add(mesh);
       mesh.bind(skeleton, first.bindMatrix);
+      // Bone matrices relative to the body (uploadPose), so a pose that hasn't changed is never uploaded again, however
+      // the character moves: detached, with the bind folded into the bones. Raycasts (a resident's click) still meet
+      // the mesh in its own space.
+      mesh.bindMode = THREE.DetachedBindMode;
+      mesh.bindMatrix.identity(); mesh.bindMatrixInverse.identity();
+      mesh.applyBoneTransform = localBoneTransform;
       mesh.receiveShadow = true;
       // Characters are solids that move: they cast the sun shadow every frame (SunShadows).
       mesh.castShadow = true;
@@ -173,6 +191,8 @@ class Puppet {
     this.body.visible = this.face.visible = this.decal.visible = false; // until dress()
     this.sockets = { R: this.root.getObjectByName("Socket_R_Hand")!, L: this.root.getObjectByName("Socket_L_Hand")!, Back: this.root.getObjectByName("Socket_Back")! };
     this.skeleton = skeleton;
+    this.bind = first.bindMatrix.clone();
+    skeleton.update = () => this.uploadPose();
     // Two afterimages, made when first asked for (only the player dashes).
     this.ghostParent = parent;
     this.mixer = new THREE.AnimationMixer(this.root);
@@ -337,7 +357,7 @@ class Puppet {
     this.prepareGhosts();
     const g = this.ghosts[this.ghostNext];
     this.ghostNext = (this.ghostNext + 1) % 2;
-    g.snap(this.skeleton, [this.body.geometry, this.face.geometry]);
+    g.snap(this.skeleton, [this.body.geometry, this.face.geometry], this.body.matrixWorld);
   }
 
   private prepareGhosts() {
@@ -368,6 +388,21 @@ class Puppet {
     this.faded.body.opacity = f; if (this.faded.decal) this.faded.decal.opacity = f; face.opacity = f;
   }
 
+  /**
+   * The skeleton's upload (three calls it once a frame for each skinned character drawn): each bone's matrix relative to
+   * the body, recomputed only when the pose has changed since the last upload. Moving, turning or lifting the character
+   * moves the body with its bones, so it needs none; a character whose mixer steps at 15 Hz uploads 15 times a second.
+   */
+  private uploadPose() {
+    const sk = this.skeleton;
+    if (!this.posed || !sk.boneMatrices) return;
+    this.posed = false;
+    frameStats.skeletons++;
+    toLocal.copy(this.body.matrixWorld).invert();
+    for (let i = 0; i < sk.bones.length; i++) ghostM.multiplyMatrices(toLocal, sk.bones[i].matrixWorld).multiply(sk.boneInverses[i]).multiply(this.bind).toArray(sk.boneMatrices, i * 16);
+    if (sk.boneTexture) sk.boneTexture.needsUpdate = true;
+  }
+
   update(delta: number, motion: CharacterMotion, walkSpeed: number) {
     let restart = false;
     this.fade(motion.fade ?? 1);
@@ -395,6 +430,7 @@ class Puppet {
     // Walk and Run count each foot's contact as the playhead passes it (footsteps come from the feet, not a timer).
     const contacts = changed ? undefined : CLIP_BY_NAME.get(want)?.contacts, before = action.time / length;
     this.mixer.update(delta);
+    this.posed = true;
     frameStats.mixers++;
     this.hold(delta, want, motion.hold ?? null);
     this.upper(delta);
@@ -417,7 +453,7 @@ class Puppet {
     this.full = this.lodGeometry = null; this.lodKey = "";
     this.faceMat?.dispose();
     this.faceMat = null;
-    this.bodyKey = ""; this.shownFace = "";
+    this.bodyKey = ""; this.shownFace = ""; this.posed = true;
   }
 }
 
