@@ -119,9 +119,10 @@ const prints = { slots: [] as PrintSlot[], trails: new Map<string, Trail>(), nex
 function stamp(id: string, x: number, z: number) {
   let trail = prints.trails.get(id);
   if (!trail) prints.trails.set(id, trail = newTrail());
-  const p = stepTrail(trail, x, z, _print), site = prints.site!;
-  if (!p) return;
-  const s = site.surface ? site.surface(p.x, p.z) : Surface.Grass;
+  stepTrail(trail, x, z, _print, leavePrint);
+}
+function leavePrint(p: Print) {
+  const site = prints.site!, s = site.surface ? site.surface(p.x, p.z) : Surface.Grass;
   if (s === Surface.Wood || s === Surface.River || s === Surface.Void) return;
   const slot = prints.slots[prints.next];
   prints.next = (prints.next + 1) % prints.slots.length;

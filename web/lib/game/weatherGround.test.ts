@@ -33,25 +33,26 @@ describe("weather on the ground", () => {
 
   it("leaves a print every stride, feet alternating either side of the way walked, none across a teleport", () => {
     const trail = newTrail(), out: Print = { x: 0, z: 0, yaw: 0, left: false }, prints: Print[] = [];
-    for (let z = 0; z <= 5; z += 0.05) { const p = stepTrail(trail, 0, z, out); if (p) prints.push({ ...p }); }
+    for (let z = 0; z <= 5; z += 0.05) stepTrail(trail, 0, z, out, p => prints.push({ ...p }));
     expect(prints.length).toBe(Math.floor(5 / STRIDE));
     for (let i = 1; i < prints.length; i++) {
       expect(prints[i].left).toBe(!prints[i - 1].left);
       expect(Math.abs(prints[i].x)).toBeCloseTo(FOOT_SIDE, 6);
       expect(prints[i].yaw).toBeCloseTo(0, 6);
     }
-    expect(stepTrail(trail, 40, 40, out)).toBeNull();
+    expect(stepTrail(trail, 40, 40, out, () => {})).toBe(0);
   });
 
-  // Audit 2026-10 world item 15: at 5 FPS a run covers more than a stride a frame. The backlog of unwalked strides
-  // grew without bound, so once the frame rate recovered every frame left a print: a smear, not a trail.
-  it("keeps a stride apart after a slow-frame stretch", () => {
-    const trail = newTrail(), out: Print = { x: 0, z: 0, yaw: 0, left: false };
-    let slow = 0, fast = 0;
-    for (let i = 0; i <= 8; i++) if (stepTrail(trail, 0, i * 1.2, out)) slow++;
-    expect(slow).toBe(8);
-    for (let i = 1; i <= 40; i++) if (stepTrail(trail, 0, 9.6 + i * 0.05, out)) fast++;
-    expect(fast).toBeLessThanOrEqual(Math.ceil(2 / STRIDE));
+  // Audit 2026-10 world item 15: at 5 FPS a run covers more than a stride a frame. The trail owed the strides it skipped
+  // and, once the frame rate recovered, left a print every frame: a smear, not a trail. Now every stride is printed where
+  // it ended, at any frame rate.
+  it("keeps a print every stride at a low frame rate, and after it", () => {
+    const trail = newTrail(), out: Print = { x: 0, z: 0, yaw: 0, left: false }, zs: number[] = [];
+    for (let i = 0; i <= 8; i++) stepTrail(trail, 0, i * 1.2, out, p => zs.push(p.z));
+    expect(zs.length).toBe(Math.floor(9.6 / STRIDE));
+    for (let i = 1; i <= 40; i++) stepTrail(trail, 0, 9.6 + i * 0.05, out, p => zs.push(p.z));
+    expect(zs.length).toBe(Math.floor(11.6 / STRIDE + 1e-9));
+    for (let i = 1; i < zs.length; i++) expect(zs[i] - zs[i - 1]).toBeCloseTo(STRIDE, 6);
   });
 
   it("keeps a print, then fades it out", () => {
