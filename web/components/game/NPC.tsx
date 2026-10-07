@@ -17,12 +17,13 @@ import { landmark, type VillageIsland } from "@/lib/game/defaultIsland";
 import { objectsOf, type Village } from "@/lib/game/villageMap";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import { RESIDENT_STRIDE, RESIDENT_WALK, ResidentDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResident, residentSeats, type DaySpan, type IdleClip, type NavGrid, type ResidentPose } from "@/lib/game/residentRoutine";
+import { torontoHour } from "@/lib/game/islandTime";
 import { hash01 } from "@/lib/game/worldFx";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import { dropWalker, setWalker } from "@/lib/game/footprintWalkers";
 import { orbit } from "@/lib/game/orbitCamera";
 import { TALK_CLICK_RANGE, TALK_PITCH, TALK_RANGE, beginTalk, endTalk, leaveTalk, nearestTalker, requestTalk, routineLag, setTalkNear, startTalk, talkCameraYaw, talkChanged, talkStore, talkTyping } from "@/lib/game/residentTalk";
-import { fillName, pickConversation, talkFor, type Conversation } from "@/lib/content/talk";
+import { fillName, lineTime, linesNow, pickConversation, talkFor } from "@/lib/content/talk";
 import type { FaceOverride } from "@/lib/game/character/face";
 import { useStepDust } from "./movement/moveFx";
 import type { NPCPersona } from "@/lib/content/types";
@@ -84,8 +85,8 @@ interface Ui { bubble: RefObject<HTMLDivElement | null>; text: RefObject<HTMLSpa
 /** One resident's live state, owned by its figure and driven by the residents' frame loop. */
 interface Runtime {
   id: string; slug: string; seed: number; lines: readonly string[]; day: ResidentDay; gather: readonly [number, number];
-  /** Who they are in the dialogue box, and what they say there (lib/content/talk.ts). */
-  name: string; post: string | null; talk: readonly Conversation[];
+  /** Who they are in the dialogue box, and the row their conversations come from (lib/content/talk.ts, picked by the time of day). */
+  name: string; post: string | null; persona: NPCPersona;
   /** In a talk with you last frame, the phase and line it was at (their wave and face follow it), and the face they make. */
   talking: boolean; talkAt: string; face: FaceOverride;
   home: readonly [number, number] | null;
@@ -129,7 +130,7 @@ const talksBySlug = new Map<string, number>();
 const face = (detail: { x: number; z: number } | null) => window.dispatchEvent(new CustomEvent("tsi:face", { detail }));
 
 /** A talk asked for (E, a click or tap) starts here, where their position and lines are: E's is in reach; a click from farther away gets a wave. */
-function startRequested(list: readonly Runtime[], c: Clock, p: THREE.Vector3, now: number, playerName: string | null, ceremony: boolean) {
+function startRequested(list: readonly Runtime[], c: Clock, p: THREE.Vector3, now: number, playerName: string | null, ceremony: boolean, phase: IslandPhase, t: number) {
   const req = talkStore.request;
   talkStore.request = null;
   if (!req || talkStore.active) return;
@@ -140,7 +141,9 @@ function startRequested(list: readonly Runtime[], c: Clock, p: THREE.Vector3, no
   if (d > (req.click ? TALK_CLICK_RANGE : TALK_RANGE + 0.6)) { if (req.click) r.greetAt = now; return; }
   const n = talksBySlug.get(r.slug) ?? 0;
   talksBySlug.set(r.slug, n + 1);
-  const conv = r.talk[pickConversation(r.talk.length, r.slug, c.span?.key ?? "", n)] ?? [];
+  // What they'd say now (a morning conversation only in the morning).
+  const talk = talkFor(r.persona, { phase, hour: torontoHour(new Date(t * 1000)) });
+  const conv = talk[pickConversation(talk.length, r.slug, c.span?.key ?? "", n)] ?? [];
   startTalk(beginTalk({ id: r.id, slug: r.slug, name: r.name, post: r.post, seed: r.seed }, conv.map(l => ({ text: fillName(l.text, playerName), face: l.face })), performance.now() / 1000));
   talkStore.cameraYaw = orbit.target.yaw; talkStore.cameraPitch = orbit.target.pitch;
   orbit.target.yaw = talkCameraYaw(p.x, p.z, r.x, r.z, orbit.target.yaw);
@@ -154,7 +157,6 @@ function startRequested(list: readonly Runtime[], c: Clock, p: THREE.Vector3, no
 function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, phase: IslandPhase, ceremony: boolean, nav: NavGrid, island: VillageIsland, monument: { x: number; z: number } | null, away: string | null, playerName: string | null,
   home: ReadonlySet<string>) {
   const now = worldNow() / 1000, days = liveSunDays();
-  if (talkStore.request) startRequested(list, c, p, now, playerName, ceremony);
   // The club's ceremony calls everyone to the monument: a talk going on says goodbye.
   const talk = talkStore.active;
   if (talk && ceremony && talk.phase !== "closing" && talk.phase !== "ended") { leaveTalk(talk, performance.now() / 1000); talkChanged(); }
@@ -166,6 +168,7 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
     if (c.forced !== phase) { c.forced = phase; c.since = now; c.base = phaseInstant(phase, new Date(now * 1000), days).getTime() / 1000; }
     t = c.base + (now - c.since);
   } else c.forced = null;
+  if (talkStore.request) startRequested(list, c, p, now, playerName, ceremony, phase, t);
 
   // 1. Where everyone is.
   for (const r of list) {
@@ -329,7 +332,9 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
     const noticed = d < NOTICE_RANGE && !r.hidden;
     if (noticed && !r.noticed && now >= r.bubbleNext && !speaking) {
       speaking = true;
-      const line = r.lines[Math.floor(hash01(r.seed, Math.floor(now / 30)) * r.lines.length) % r.lines.length];
+      // A line for the time of day ("Morning!" only in the morning), its time tag left off.
+      const said = linesNow(r.lines, phase, torontoHour(new Date(t * 1000))), lines = said.length ? said : FILLER_LINES;
+      const line = lineTime(lines[Math.floor(hash01(r.seed, Math.floor(now / 30)) * lines.length) % lines.length]).text;
       r.bubbleUntil = now + BUBBLE_S; r.bubbleNext = now + BUBBLE_COOLDOWN_S;
       r.line = line;
       r.shown = -1;
@@ -431,7 +436,7 @@ function Figure({ persona, day, look, gather, home, seed, registry, island }: {
   useEffect(() => {
     const r: Runtime = {
       id: persona.id, slug: persona.slug, seed, lines: persona.canned_dialogue?.length ? persona.canned_dialogue : FILLER_LINES, day, gather, home,
-      name: persona.display_name, post: persona.post ?? null, talk: talkFor(persona), talking: false, talkAt: "", face: { expression: "neutral" },
+      name: persona.display_name, post: persona.post ?? null, persona, talking: false, talkAt: "", face: { expression: "neutral" },
       pose: newPose(), motion, group, visual, ui: { bubble, text, notice, plate },
       ready: false, x: 0, z: 0, speed: 0, ox: 0, oz: 0, hidden: false, lift: 0, lag: 0, detour: null, detourAt: 0, detourGoal: [0, 0],
       want: 0, line: "", noticed: false, bubbleUntil: 0, bubbleNext: 0, shown: -1, idleKey: -1, idleVisit: -1, laughBeat: -1, chat: null, hopT: -1, hopNext: 0, greetAt: 0, hovered: false, timers: [],

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { PROPOSED_RESIDENTS } from "./residentRoster";
 import { DEFAULT_NPC_PERSONAS } from "@/data/content-defaults";
 import { validateResidentDraft } from "./residents";
-import { TALK_LIMITS, fillName, parseTalkLine, pickConversation, talkFor, validateTalk } from "./talk";
+import { TALK_LIMITS, fillName, lineTime, linesNow, parseTalkLine, pickConversation, saidAt, talkFor, validateTalk } from "./talk";
 
 describe("resident talk lines: parsing", () => {
   it("reads an expression at the start of a line and leaves the words", () => {
@@ -70,5 +70,33 @@ describe("resident talk lines: the loader", () => {
     expect(pickConversation(3, "wren", "2026-10-03", 1)).toBe((first + 1) % 3);
     expect(pickConversation(3, "wren", "2026-10-03", 3)).toBe(first);
     expect(pickConversation(0, "wren", "2026-10-03", 0)).toBe(0);
+  });
+});
+
+describe("resident lines: said at the right time of day", () => {
+  it("reads an optional time tag, and a tagged line is said only then", () => {
+    expect(lineTime("@morning Morning! Up early?")).toEqual({ text: "Morning! Up early?", times: ["morning"] });
+    expect(lineTime("@evening,night [sleepy] Long day.")).toEqual({ text: "[sleepy] Long day.", times: ["evening", "night"] });
+    expect(lineTime("Nice day, eh?")).toEqual({ text: "Nice day, eh?", times: null });
+    // Morning: dawn, or the day before noon. Afternoon: the day from noon.
+    expect(saidAt(["morning"], "dawn", 6.5)).toBe(true);
+    expect(saidAt(["morning"], "day", 10)).toBe(true);
+    expect(saidAt(["morning"], "day", 14)).toBe(false);
+    expect(saidAt(["morning"], "evening", 18.6)).toBe(false);
+    expect(saidAt(["afternoon"], "day", 14)).toBe(true);
+    expect(saidAt(["night"], "night", 23)).toBe(true);
+    expect(saidAt(null, "night", 23)).toBe(true);
+    expect(linesNow(["@morning Morning!", "Hi.", "@night Late one."], "evening", 18.6)).toEqual(["Hi."]);
+    expect(linesNow(["@morning Morning!"], "evening", 18.6)).toEqual([]);
+    expect(parseTalkLine("@morning [happy] Morning laps!")).toEqual({ text: "Morning laps!", face: "happy" });
+    expect(validateTalk([["@morning [happy] Morning!"]])).toBeNull();
+    expect(validateTalk([["@lunch Hi."]])).toMatch(/@lunch/);
+  });
+  it("never greets with a time of day out of its time: every \"morning\" line in the roster is tagged", () => {
+    const greets = /\b(good )?(morning|afternoon|evening|night)\b[!,.]/i;
+    for (const r of PROPOSED_RESIDENTS) {
+      for (const l of r.canned_dialogue ?? []) if (greets.test(l)) expect(l, r.slug).toMatch(/^@/);
+      for (const c of r.talk ?? []) if (greets.test(c[0])) expect(c[0], r.slug).toMatch(/^@/);
+    }
   });
 });

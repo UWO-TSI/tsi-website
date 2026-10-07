@@ -14,6 +14,9 @@
  *
  * Schedules: per phase, one anchor or a routine of stops (map anchors, `bench`,
  * `home`); `home` names the building they live in (lib/game/residentRoutine.ts).
+ *
+ * Lines may open with a time tag (`@morning`, lib/content/talk.ts): a greeting
+ * is said only at its time of day.
  */
 import type { NPCPersona } from "./types";
 
@@ -98,7 +101,7 @@ export const RESIDENT_TALK: Record<string, string[][]> = {
     ["Bottles wash up on the beach sometimes.", "Some have notes in them. Some have recipes. Keep your eyes open."],
   ],
   juniper: [
-    ["[happy] Morning laps! Want to race to the pier?", "Kidding. Mostly. Stretch first, trust me."],
+    ["@morning [happy] Morning laps! Want to race to the pier?", "Kidding. Mostly. Stretch first, trust me."],
     ["The sand's firmest right by the water.", "[happy] Best place on the island for a sprint. Try it!"],
     ["[sleepy] I've been up since dawn. Is it lunch yet?", "No? Then one more lap."],
   ],
@@ -129,7 +132,7 @@ export const PROPOSED_RESIDENTS: NPCPersona[] = [
     bio: "Keeps HQ running, more or less: club goals, the notice board, everyone's first day. Meets every new member on the wharf.",
     schedule: { home: "hq", dawn: ["hq"], day: ["hq", "plaza", "path", "hq", "pond"], evening: ["plaza", "bench"], night: ["bench", "home"] },
     canned_dialogue: [
-      "Morning! The notice board has something new, I think. Probably.",
+      "@morning Morning! The notice board has something new, I think. Probably.",
       "Club goals are coming along. Every bit helps.",
       "If you need anything, I'm usually at HQ. Or near it. Or looking for it.",
     ] }),
@@ -164,7 +167,7 @@ export const PROPOSED_RESIDENTS: NPCPersona[] = [
   row({ slug: "juniper", display_name: "Juniper", post: "villager", tone: "playful",
     bio: "Up before the sun to run the beach and stretch on the sand. Knows every shortcut on the island.",
     schedule: { home: "hq", dawn: ["beach", "path"], day: ["pond", "plaza", "beach"], evening: ["plaza", "bench"], night: ["home"] },
-    canned_dialogue: ["Morning laps! Want to race to the pier?", "Stretch first. Trust me.", "The sand's firmest right by the water."] }),
+    canned_dialogue: ["@morning Morning laps! Want to race to the pier?", "Stretch first. Trust me.", "The sand's firmest right by the water."] }),
   row({ slug: "marlo", display_name: "Marlo", post: "villager", tone: "warm",
     bio: "Sketches the island from the benches, a page a day. Has drawn HQ forty times and isn't happy with any of them.",
     schedule: { home: "hq", day: ["bench", "pond", "museum"], evening: ["beach", "bench"], night: ["home"] },
