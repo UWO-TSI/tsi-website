@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fallbackWeather, parseOpenMeteo, parseWeatherOverride, torontoHourKey, weatherAt, weatherFromCode } from "./islandWeather";
+import { fallbackWeather, parseOpenMeteo, parseWeatherBlendOverride, parseWeatherOverride, torontoHourKey, weatherAt, weatherBlendAt, weatherFromCode, WEATHER_EASE_MIN } from "./islandWeather";
 
 describe("weather code mapping", () => {
   it("maps WMO codes to island states", () => {
@@ -46,5 +46,28 @@ describe("fallback and overrides", () => {
     expect(parseWeatherOverride("?rain=1")).toBe("rain");
     expect(parseWeatherOverride("?weather=hail")).toBeNull();
     expect(parseWeatherOverride("")).toBeNull();
+  });
+});
+
+// Audit 2026-10 world item 10: a change of weather eases in over the first minutes of its hour, the same for everyone
+// (a function of the shared forecast and the world clock).
+describe("weather transitions", () => {
+  const report = { source: "open-meteo" as const, hours: [{ time: "2026-09-23T10:00", state: "clear" as const }, { time: "2026-09-23T11:00", state: "rain" as const }] };
+  it("eases from the last hour's weather over the first minutes of the hour", () => {
+    expect(weatherBlendAt(report, new Date("2026-09-23T15:00:00Z"))).toEqual({ from: "clear", to: "rain", t: 0 });
+    const mid = weatherBlendAt(report, new Date(Date.UTC(2026, 8, 23, 15, WEATHER_EASE_MIN / 2)))!;
+    expect(mid.from).toBe("clear");
+    expect(mid.t).toBeCloseTo(0.5, 5);
+    expect(weatherBlendAt(report, new Date(Date.UTC(2026, 8, 23, 15, WEATHER_EASE_MIN)))).toEqual({ from: "rain", to: "rain", t: 1 });
+    expect(weatherBlendAt(report, new Date("2026-09-23T14:30:00Z"))).toEqual({ from: "clear", to: "clear", t: 1 });
+    expect(weatherBlendAt(report, new Date("2026-09-23T20:00:00Z"))).toBeNull();
+  });
+  it("reads ?weather=clear-rain:0.3 as a transition caught part way", () => {
+    expect(parseWeatherBlendOverride("?weather=clear-rain:0.3")).toEqual({ from: "clear", to: "rain", t: 0.3 });
+    expect(parseWeatherBlendOverride("?weather=clear-rain")).toEqual({ from: "clear", to: "rain", t: 0.5 });
+    expect(parseWeatherBlendOverride("?weather=rain")).toEqual({ from: "rain", to: "rain", t: 1 });
+    expect(parseWeatherBlendOverride("?weather=clear-hail:0.3")).toBeNull();
+    expect(parseWeatherBlendOverride("")).toBeNull();
+    expect(parseWeatherOverride("?weather=clear-rain:0.3")).toBe("rain");
   });
 });

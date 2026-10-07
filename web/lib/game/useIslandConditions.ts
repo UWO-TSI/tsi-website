@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { islandPhase, parseClockOverride, parseTimeOverride, torontoHour, type IslandPhase } from "./islandTime";
-import { parseWeatherOverride, setLiveIslandWeather, weatherAt, type IslandWeather, type WeatherReport } from "./islandWeather";
+import { parseWeatherBlendOverride, parseWeatherOverride, setLiveIslandWeather, weatherAt, weatherBlendAt, type IslandWeather, type WeatherBlend, type WeatherReport } from "./islandWeather";
 import { parseSeasonOverride, seasonBlend, type SeasonBlend } from "./season";
 import { phaseBlend, setLiveSunDays, sunFor, type PhaseBlend } from "./sunTimes";
 import { phaseInstant, solarPosition, SUN_STEP_MS, type SunAngles } from "./sunPath";
@@ -18,6 +18,8 @@ export interface IslandConditions {
   setForcedPhase: (phase: IslandPhase | null) => void;
   livePhase: IslandPhase;
   weather: IslandWeather;
+  /** The weather with its transition (a new hour's eases in); `weather` is where it is going. */
+  weatherBlend: WeatherBlend;
   season: SeasonBlend;
   sunSource: "open-meteo" | "fallback";
   /** The real sun (row 239) at world-clock time, or a forced phase's preview time; the same object until it moves a step. */
@@ -52,6 +54,7 @@ export function useIslandConditions(): IslandConditions {
     return () => setWorldClockOffset(0);
   }, [previewOffset]);
   const [weatherOverride] = useState(() => parseWeatherOverride(search()));
+  const [weatherBlendOverride] = useState(() => parseWeatherBlendOverride(search()));
   const [seasonOverride] = useState(() => parseSeasonOverride(search()));
   const [report, setReport] = useState<WeatherReport | null>(null);
   const [now, setNow] = useState(() => worldNow());
@@ -70,6 +73,13 @@ export function useIslandConditions(): IslandConditions {
   const sunStep = Math.floor((forcedPhase ? phaseInstant(forcedPhase, date, report?.sun) : date).getTime() / SUN_STEP_MS);
   const sun = useMemo(() => solarPosition(new Date(sunStep * SUN_STEP_MS)), [sunStep]);
   const weather = weatherOverride ?? (report && weatherAt(report, date)) ?? "clear";
+  // Keyed by value, like the phase blend: rebuilt only while a transition moves.
+  const liveWeather = weatherBlendOverride ?? (!weatherOverride && report ? weatherBlendAt(report, date) : null);
+  const weatherKey = liveWeather && liveWeather.to === weather ? `${liveWeather.from} ${weather} ${Math.round(liveWeather.t * 1000) / 1000}` : `${weather} ${weather} 1`;
+  const weatherBlend = useMemo((): WeatherBlend => {
+    const [from, to, t] = weatherKey.split(" ");
+    return { from: from as IslandWeather, to: to as IslandWeather, t: Number(t) };
+  }, [weatherKey]);
   // Keyed by value, so the light is only rebuilt when the blend moves (once a minute across a boundary).
   const live = phaseBlend(torontoHour(date), sunFor(date, report?.sun));
   const blendKey = forcedPhase ? `${forcedPhase} ${forcedPhase} 0` : `${live.from} ${live.to} ${Math.round(live.t * 1000) / 1000}`;
@@ -84,6 +94,7 @@ export function useIslandConditions(): IslandConditions {
   return {
     phase: forcedPhase ?? livePhase, forcedPhase, setForcedPhase, livePhase,
     weather,
+    weatherBlend,
     season: seasonOverride ?? seasonBlend(date),
     sunSource: sunFor(date, report?.sun).source,
     sun,

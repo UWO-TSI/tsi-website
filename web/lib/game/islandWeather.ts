@@ -77,10 +77,41 @@ export function weatherAt(report: WeatherReport, date = new Date()): IslandWeath
   return report.hours.find(hour => hour.time === key)?.state ?? null;
 }
 
-/** QA override `?weather=snow` (or the legacy `?rain=1`). */
+/** QA override `?weather=snow` (or the legacy `?rain=1`); a transition `?weather=clear-rain:0.3` gives where it is going. */
 export function parseWeatherOverride(search: string): IslandWeather | null {
-  const params = new URLSearchParams(search);
-  const value = params.get("weather");
-  if (value && (ISLAND_WEATHERS as readonly string[]).includes(value)) return value as IslandWeather;
-  return params.has("rain") ? "rain" : null;
+  const blend = parseWeatherBlendOverride(search);
+  if (blend) return blend.to;
+  return new URLSearchParams(search).has("rain") ? "rain" : null;
+}
+
+/**
+ * A change of weather caught part way (`t` 0 = `from`, 1 = `to`). The light, the sky and the wet ground ease across it
+ * (islandLighting `weatherLight`); what falls (rain, snow) follows `to`.
+ */
+export interface WeatherBlend { from: IslandWeather; to: IslandWeather; t: number }
+/** A new hour's weather eases in over its first minutes. */
+export const WEATHER_EASE_MIN = 20;
+const isWeather = (name?: string): name is IslandWeather => !!name && (ISLAND_WEATHERS as readonly string[]).includes(name);
+
+/**
+ * The weather at `date` with its transition: the hour's state, eased from the previous hour's over the first
+ * WEATHER_EASE_MIN minutes. A function of the shared forecast and the world clock, so every player sees the same sky.
+ */
+export function weatherBlendAt(report: WeatherReport, date = new Date()): WeatherBlend | null {
+  const to = weatherAt(report, date);
+  if (!to) return null;
+  const from = weatherAt(report, new Date(date.getTime() - 3_600_000)) ?? to;
+  const u = Math.min(1, (date.getUTCMinutes() + date.getUTCSeconds() / 60) / WEATHER_EASE_MIN);
+  return u >= 1 || from === to ? { from: to, to, t: 1 } : { from, to, t: u * u * (3 - 2 * u) };
+}
+
+/** QA override: `?weather=rain` (settled), or a transition `?weather=clear-rain` (half way) / `?weather=clear-rain:0.3`. */
+export function parseWeatherBlendOverride(search: string): WeatherBlend | null {
+  const value = new URLSearchParams(search).get("weather");
+  if (!value) return null;
+  const [pair, amount] = value.split(":"), [from, to] = pair.split("-");
+  if (!isWeather(from) || (to !== undefined && !isWeather(to))) return null;
+  if (to === undefined) return { from, to: from, t: 1 };
+  const t = amount === undefined ? 0.5 : Number(amount);
+  return Number.isFinite(t) ? { from, to, t: Math.min(1, Math.max(0, t)) } : null;
 }
