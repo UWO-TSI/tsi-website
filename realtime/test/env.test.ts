@@ -54,4 +54,16 @@ describe("env", () => {
   it("enables DEV_AUTH outside production", () => {
     expect(parseEnv({ DEV_AUTH: "1" }).devAuth).toBe(true);
   });
+
+  it("takes the internal secret (32+ characters) without echoing a short one; unset turns /internal off", () => {
+    expect(parseEnv({}).internalSecret).toBeUndefined();
+    expect(parseEnv({ ...PROD, REALTIME_INTERNAL_SECRET: "s".repeat(32) }).internalSecret).toBe("s".repeat(32));
+    try {
+      parseEnv({ REALTIME_INTERNAL_SECRET: "too-short-secret" });
+      expect.unreachable();
+    } catch (e) {
+      expect(String(e)).toMatch(/REALTIME_INTERNAL_SECRET/);
+      expect(String(e)).not.toContain("too-short-secret");
+    }
+  });
 });

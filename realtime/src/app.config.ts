@@ -10,11 +10,18 @@ import { CardError, createCardLoader, supabaseCardSource } from "./auth/card";
 import { BASE_CORS_HEADERS, corsHeaders, createOriginPolicy } from "./auth/origin";
 import { createVerifier } from "./auth/verify";
 import { getEnv, type Env } from "./env";
+import { internalEndpoints } from "./internal";
 import { createIslandRoom, type IslandRoomOptions } from "./rooms/IslandRoom";
+import { offlineWorldSources, supabaseWorldSources } from "./sources";
+import { createWorld, type World } from "./world";
 
 export type AppServices = AuthServices;
 export type AppOptions = Partial<AppServices> &
-  Partial<Pick<IslandRoomOptions, "kickForMovement" | "graceS" | "log">> & { env?: Env };
+  Partial<Pick<IslandRoomOptions, "kickForMovement" | "graceS" | "log">> & {
+    env?: Env;
+    /** The rooms' shared chat log, blocks and sanctions (tests pass one with in-memory sources; theirs to start). */
+    world?: World;
+  };
 
 /** One JSON line per event on stdout (Fly keeps them in `fly logs`). Never tokens, emails or real names. */
 export function logLine(event: string, fields: Record<string, unknown>): void {
@@ -54,16 +61,30 @@ export function createServices(env: Env, overrides: Partial<AppServices> = {}): 
   };
 }
 
+/** The world from the environment: Supabase when it's configured, else nothing logged, blocked or sanctioned. */
+export function createWorldFromEnv(env: Env, log: (event: string, fields: Record<string, unknown>) => void): World {
+  const sources = env.supabaseUrl && env.supabaseSecretKey ? supabaseWorldSources(env.supabaseUrl, env.supabaseSecretKey) : offlineWorldSources;
+  return createWorld({ ...sources, log });
+}
+
 export function createApp(options: AppOptions = {}): ConfigOptions {
-  const { env: envOverride, kickForMovement, graceS, log, ...overrides } = options;
+  const { env: envOverride, kickForMovement, graceS, log, world: given, ...overrides } = options;
   const env = envOverride ?? getEnv();
+  const logFn = log ?? logLine;
   const services = createServices(env, overrides);
+  const world = given ?? createWorldFromEnv(env, logFn);
+  if (!given) world.start();
+  // A sanction's latest word outranks a card cached before it (M2: a removed player can't rejoin on an old card).
+  const loadCard = services.loadCard;
+  services.loadCard = async (identity, opts) => world.overlayCard(identity.uid, await loadCard(identity, opts));
   const IslandRoom = createIslandRoom({
     services,
+    world,
     kickForMovement: kickForMovement ?? env.production,
     graceS: graceS ?? RECONNECT_GRACE_S,
-    log: log ?? logLine,
+    log: logFn,
   });
+  const internal = internalEndpoints({ world, secret: env.internalSecret, log: logFn });
 
   // §1.4: echo only allowed origins; never allow credentials (auth is a bearer token).
   // The controller is process-wide: the last app created owns it.
@@ -78,7 +99,9 @@ export function createApp(options: AppOptions = {}): ConfigOptions {
     options: { greet: false },
     // §3: joinOrCreate fills the fullest open shard.
     rooms: { [ROOM_NAME]: defineRoom(IslandRoom).sortBy({ clients: -1 }) },
-    routes: createRouter({ health }),
+    routes: createRouter({ health, sanction: internal.sanction, block: internal.block }),
+    // Last chat lines to the log before the process exits.
+    initializeGameServer: (server) => server.onShutdown(() => world.stop()),
     initializeTransport: (opts) =>
       new WebSocketTransport({
         ...opts,

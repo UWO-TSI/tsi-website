@@ -1,13 +1,15 @@
 /**
- * Moderation audit log (20260929100100): who did what to which item, when.
+ * Moderation audit log (20260929100100; world chat kinds and actions from 20261003190000): who did what to which
+ * item, when.
  * Written after the action by the routes that act; read in the moderation queue.
  */
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface ModerationEntry {
-  action: "remove" | "remove_mute" | "dismiss" | "mute" | "unmute" | "reset_name";
-  item_kind: "letter" | "chat" | "name" | "member";
+  /** remove_world / restore_world: written by realtime_sanction itself (20261003190000_world_chat). */
+  action: "remove" | "remove_mute" | "dismiss" | "mute" | "unmute" | "reset_name" | "remove_world" | "restore_world";
+  item_kind: "letter" | "chat" | "name" | "member" | "world_chat";
   item_id?: string;
   target_id: string | null;
   excerpt?: string | null;

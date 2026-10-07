@@ -29,6 +29,11 @@ describe("name filter", () => {
     ["shit head", false],
     ["sh1thead", false],
     ["xXfuckXx", false],
+    ["Fvck3r", false],
+    ["Phuck Off", false],
+    ["Dickens", true],
+    ["Cassandra", true],
+    ["Fukuda", true],
   ])("%s → %s", (raw, ok) => {
     expect(checkName(raw).ok).toBe(ok);
   });

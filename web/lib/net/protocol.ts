@@ -26,6 +26,11 @@
  * 7. `held` takes `shovel:<key>` too: the spec's list predates the shovel on the tool wheel.
  * 8. The card's badge, family and frame are indexes into CARD_BADGES, CARD_FAMILIES and CARD_FRAMES; `frame` is the
  *    equipped mastery frame, the only frames the world nameplate draws.
+ * 9. World chat (M2, §6) is two messages: `chat {text}` up, and `line` down to the whole shard, the sender included
+ *    (their copy is the acceptance). A line carries the server's id (the world_chat_messages row a report names) and
+ *    the sender's world name. A refused line gets `sys {kind: "refused", reason, text}` instead. Reports and blocks
+ *    are HTTP routes (/api/world/report, /api/world/blocks), not messages. Added before anything was deployed, so
+ *    PROTOCOL stayed 1; the server deploys before any client that sends `chat` (an unknown type closes with 4002).
  */
 
 // ── Version and connecting ────────────────────────────────────────
@@ -39,8 +44,11 @@ export const PROTOCOL = 1;
  * `client.auth.token = <Supabase access token>` and `client.joinOrCreate(ROOM_NAME, joinOptions)`.
  */
 export const ROOM_NAME = "island";
-/** Message types (§4.2). Client to server: p, s, ping, refresh. Server to client: e, pong, sys (and state patches). */
-export const MSG = { pose: "p", slow: "s", ping: "ping", refresh: "refresh", event: "e", pong: "pong", sys: "sys" } as const;
+/**
+ * Message types (§4.2). Client to server: p, s, ping, refresh, chat. Server to client: e, pong, sys, line (and state
+ * patches).
+ */
+export const MSG = { pose: "p", slow: "s", ping: "ping", refresh: "refresh", chat: "chat", event: "e", pong: "pong", sys: "sys", line: "line" } as const;
 /** Dev tokens (`DEV_AUTH=1`, refused in production): `dev:<name>`, as `?mp=dev&as=Alice` and the bots send. */
 export const DEV_TOKEN_PREFIX = "dev:";
 /** The most a client message may weigh (the WebSocket transport's maxPayload). */
@@ -507,15 +515,74 @@ export function parsePong(x: unknown): Pong | null {
   return Array.isArray(x) && x.length === 2 && isFiniteNumber(x[0]) && isFiniteNumber(x[1]) ? { client: x[0], server: x[1] } : null;
 }
 
-/** `sys {kind, text}`: restart (before a 4010) or a notice to show. Append-only. */
-export const SYS_KINDS = ["restart", "notice"] as const;
+/**
+ * `sys {kind, text}`: restart (before a 4010), a notice to show, or (M2) `refused`: your last chat line wasn't sent,
+ * with its `reason` (CHAT_REFUSALS) beside the text. Append-only.
+ */
+export const SYS_KINDS = ["restart", "notice", "refused"] as const;
 export type SysKind = (typeof SYS_KINDS)[number];
-export interface SysMessage { kind: SysKind; text: string }
+export type SysMessage = { kind: Exclude<SysKind, "refused">; text: string } | { kind: "refused"; reason: ChatRefusal; text: string };
 export const SYS_TEXT_MAX = 500;
 export function parseSys(x: unknown): SysMessage | null {
-  if (!isRecord(x) || Object.keys(x).length !== 2) return null;
+  if (!isRecord(x)) return null;
   const { kind, text } = x;
-  return SYS_KINDS.includes(kind as SysKind) && typeof text === "string" && text.length <= SYS_TEXT_MAX ? { kind: kind as SysKind, text } : null;
+  if (typeof text !== "string" || text.length > SYS_TEXT_MAX) return null;
+  if (kind === "refused") {
+    const { reason } = x;
+    return Object.keys(x).length === 3 && CHAT_REFUSALS.includes(reason as ChatRefusal) ? { kind, reason: reason as ChatRefusal, text } : null;
+  }
+  return Object.keys(x).length === 2 && SYS_KINDS.includes(kind as SysKind) ? { kind: kind as Exclude<SysKind, "refused">, text } : null;
+}
+
+// ── World chat (M2, §6) ───────────────────────────────────────────
+
+/**
+ * Why a chat line was refused (`sys {kind: "refused", reason}`). Append-only.
+ * - muted: a T1/T2 mute is running (member_identity.muted_until);
+ * - fast: over CHAT's gap, per-minute or per-hour limit; slow: over slow mode's per-minute limit;
+ * - repeat: the same text as one of your own lines within CHAT.repeatMs;
+ * - long: over CHAT.maxLength once cleaned; empty: nothing left once cleaned;
+ * - filtered: the word filter (lib/moderation/profanity); url: a link from an account younger than CHAT.urlAccountMs.
+ */
+export const CHAT_REFUSALS = ["muted", "fast", "slow", "repeat", "long", "empty", "filtered", "url"] as const;
+export type ChatRefusal = (typeof CHAT_REFUSALS)[number];
+
+/** `chat {text}`: say a line to the shard. The server cleans it (lib/moderation/chatText cleanChatText), then checks it. */
+export interface ChatSend { text: string }
+export function parseChat(x: unknown): ChatSend | null {
+  return isRecord(x) && Object.keys(x).length === 1 && typeof x.text === "string" ? { text: x.text } : null;
+}
+
+/**
+ * `line {id, sid, uid, name, area, text, t}`: a chat line, to everyone in the shard but players in a block with the
+ * sender (either way), the sender included. Clients draw a bubble over a player in their view and log the rest.
+ */
+export interface ChatLine {
+  /** The server's id for the line: what POST /api/world/report names. */
+  id: string;
+  /** The sender's Player.sid (their bubble). */
+  sid: number;
+  uid: string;
+  /** The sender's world name when they said it (never the real name, row 222). */
+  name: string;
+  /** AREAS index the sender was in. */
+  area: number;
+  /** Cleaned, 1..CHAT.maxLength. Plain text: never render it as markup or turn it into links. */
+  text: string;
+  /** Room time it was said (ms since IslandState.epoch). */
+  t: number;
+}
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuid = (s: unknown): s is string => typeof s === "string" && UUID_RE.test(s);
+/** A card name's most characters (the server's card allows 32; world names are 3–16). */
+const LINE_NAME_MAX = 32;
+export function parseChatLine(x: unknown): ChatLine | null {
+  if (!isRecord(x) || Object.keys(x).length !== 7) return null;
+  const { id, sid, uid, name, area, text, t } = x;
+  if (!isUuid(id) || !isUint(sid, 0xffff) || !isUuid(uid) || !isIndex(area, AREAS.length) || !isUint(t, TIME_MAX)) return null;
+  if (typeof name !== "string" || name.length < 1 || name.length > LINE_NAME_MAX) return null;
+  if (typeof text !== "string" || text.length < 1 || text.length > CHAT.maxLength) return null;
+  return { id, sid, uid, name, area, text, t };
 }
 
 /**
@@ -618,7 +685,8 @@ export const AFK_MS = 5 * 60_000;
 /**
  * World chat (M2, §6): `maxLength` characters, `perMinute` and `perHour` lines, `gapMs` apart, no repeat of the same
  * text within `repeatMs`. Public accounts younger than `slowModeAccountMs` get `slowModePerMinute`; URLs are refused
- * from accounts younger than `urlAccountMs` (specs/multiplayer-questions.md default 4).
+ * from accounts younger than `urlAccountMs` (specs/multiplayer-questions.md default 4). Characters are String.length
+ * (UTF-16 units, what an input's maxLength counts), measured after cleaning. Only accepted lines count.
  */
 export const CHAT = {
   maxLength: 200, perMinute: 6, perHour: 60, gapMs: 1500, repeatMs: 30_000,

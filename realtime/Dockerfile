@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # The multiplayer server (specs/multiplayer.md §1.3). Build context is the REPO ROOT,
-# trimmed by the root .dockerignore to realtime/ and the shared contract in web/lib/net/
-# (plus web/lib/moderation/ from M2). Deploy:
+# trimmed by the root .dockerignore to realtime/, the shared contract in web/lib/net/ and
+# the chat filter in web/lib/moderation/. Deploy:
 #   fly deploy . --config realtime/fly.toml --dockerfile realtime/Dockerfile --remote-only
 
 # ── build: install everything, bundle src + @net/* into dist/index.mjs ─────────
@@ -10,8 +10,10 @@ WORKDIR /app/realtime
 COPY realtime/package.json realtime/package-lock.json realtime/.npmrc ./
 RUN npm ci --no-audit --no-fund
 COPY realtime/ ./
-# tsconfig maps @net/* to ../web/lib/net/*, i.e. /app/web/lib/net here.
+# tsconfig maps @net/* to ../web/lib/net/* and @moderation/* to ../web/lib/moderation/*,
+# i.e. /app/web/lib/net and /app/web/lib/moderation here (the chat filter, M2).
 COPY web/lib/net/ /app/web/lib/net/
+COPY web/lib/moderation/ /app/web/lib/moderation/
 RUN npm run build
 
 # ── runtime: production dependencies and the bundle, as the unprivileged user ──

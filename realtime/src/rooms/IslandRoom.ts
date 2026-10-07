@@ -1,8 +1,11 @@
-// The island room (specs/multiplayer.md §3, §4): one per shard, covering the village
+// The island room (specs/multiplayer.md §3, §4, §6): one per shard, covering the village
 // and the interiors. Each client's StateView holds the players it can see (same area,
 // not private, in range); the roster lists the whole shard. Movement is the client's
-// own, checked here before anyone else sees it. Everything on the wire comes from the
-// shared contract (web/lib/net/protocol.ts, imported as @net/protocol).
+// own, checked here before anyone else sees it. Chat goes to the whole shard, past the
+// checks in ./chat and around blocks; sanctions reach a player's sessions through the
+// world (../world). Everything on the wire comes from the shared contract
+// (web/lib/net/protocol.ts, imported as @net/protocol).
+import { randomUUID } from "node:crypto";
 import { getMessageBytes, Protocol, Room, ServerError, definePlugins, type AuthContext, type Client } from "@colyseus/core";
 import { StateView } from "@colyseus/schema";
 import { UniqueSessionPlugin } from "colyseus/plugins/unique-session";
@@ -10,6 +13,8 @@ import * as N from "@net/protocol";
 import { admit, checkToken, isRemoved, JoinRefused, type AuthServices } from "../auth/authenticate";
 import type { PlayerCard } from "../auth/card";
 import type { Identity } from "../auth/verify";
+import type { Blocks, SanctionPatch, World, WorldRoom } from "../world";
+import { checkChat, createChatMeter, recordChat, type ChatMeter, type ChatSender } from "./chat";
 import { limiters, type Limiter, type RateSpec } from "./limits";
 import { addStrike, checkPose, newTrack, resetBaseline, SANITY, type MotionTrack } from "./sanity";
 import { IslandState, Player, RosterEntry } from "./state";
@@ -25,9 +30,9 @@ const DEFERRED_CLOSE: Record<Deferred, number> = {
 };
 
 /** client.auth: `id` is the verified sub, the key UniqueSessionPlugin and the session index use. */
-export type IslandAuth = { id: string; identity: Identity; card?: PlayerCard; refusal?: Deferred };
+export type IslandAuth = { id: string; identity: Identity; card?: PlayerCard; blocks?: Blocks; refusal?: Deferred };
 
-type LimitKind = "p" | "s" | "area" | "events" | "emotes" | "refresh" | "ping";
+type LimitKind = "p" | "s" | "area" | "events" | "emotes" | "refresh" | "ping" | "chat";
 const RATES: Record<LimitKind, RateSpec> = {
   p: N.RATE_LIMITS.p,
   s: N.RATE_LIMITS.s,
@@ -36,6 +41,8 @@ const RATES: Record<LimitKind, RateSpec> = {
   emotes: N.RATE_LIMITS.emotes,
   refresh: { perSecond: 1000 / N.RATE_LIMITS.refresh.everyMs, burst: 1 },
   ping: N.RATE_LIMITS.ping,
+  // Raw chat messages, before the CHAT checks (which answer each with a line or a refusal): a flood is dropped unanswered.
+  chat: { perSecond: 2, burst: 3 },
 };
 
 /** Per session, kept across a reconnection (Colyseus carries userData over). */
@@ -56,7 +63,29 @@ type Session = {
   grace?: { reject: (reason?: unknown) => void };
   /** In development the kick is only logged, once per crossing. */
   warned: boolean;
+  /** Accepted chat lines (the limits), and what the checks know of the sender. */
+  chat: ChatMeter;
+  sender: ChatSender;
+  /** Players this one blocked, and players who blocked this one: no chat lines or emotes between them. */
+  blocks: Set<string>;
+  blockedBy: Set<string>;
 };
+
+/** Chat lines and emotes don't pass between a blocked pair, whichever of them blocked. */
+const blockedPair = (a: Session, b: Session) => a.blocks.has(b.uid) || a.blockedBy.has(b.uid) || b.blocks.has(a.uid) || b.blockedBy.has(a.uid);
+
+const timeOf = (iso: string | null | undefined): number | null => {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  return Number.isNaN(t) ? null : t;
+};
+
+/** What the chat checks need from a card. */
+const senderOf = (card: PlayerCard): ChatSender => ({
+  mutedUntil: timeOf(card.muted_until),
+  createdAt: timeOf(card.created_at) ?? 0,
+  member: card.badge === "member",
+});
 
 const VIEW_RULES: ViewRules = {
   hidden: (a) => N.isPrivateArea(N.AREAS[a] ?? "village"),
@@ -67,6 +96,8 @@ const VIEW_RULES: ViewRules = {
 
 export type IslandRoomOptions = {
   services: AuthServices;
+  /** The chat log, blocks and sanctions every room shares. */
+  world: World;
   /** Production closes with CLOSE.kicked at the strike limit; development only logs (§4.5). */
   kickForMovement: boolean;
   graceS: { desktop: number; phone: number };
@@ -103,7 +134,7 @@ export function createIslandRoom(o: IslandRoomOptions) {
     }
   }
 
-  return class IslandRoom extends Room<{ state: IslandState; metadata: { shard: number } }> {
+  return class IslandRoom extends Room<{ state: IslandState; metadata: { shard: number } }> implements WorldRoom {
     plugins = definePlugins({
       unique: new OneSessionPerUser({
         max: 1,
@@ -136,11 +167,17 @@ export function createIslandRoom(o: IslandRoomOptions) {
         auth.refusal = "version";
         return auth;
       }
-      try {
-        auth.card = await admit(o.services, identity);
-      } catch (e) {
+      // The card and the player's blocks, side by side; without either the join waits for the database (4107).
+      const [card, blocks] = await Promise.allSettled([admit(o.services, identity), o.world.loadBlocks(identity)]);
+      if (card.status === "rejected") {
+        const e = card.reason;
         if (!(e instanceof JoinRefused)) throw e;
         auth.refusal = e.refusal === "removed" ? "removed" : e.refusal === "card" ? "card" : "auth";
+      } else if (blocks.status === "rejected") {
+        auth.refusal = "card";
+      } else {
+        auth.card = card.value;
+        auth.blocks = blocks.value;
       }
       return auth;
     }
@@ -164,6 +201,8 @@ export function createIslandRoom(o: IslandRoomOptions) {
       this.onMessage(N.MSG.refresh, (client: Client) => {
         this.onRefresh(client).catch((e) => this.report(N.MSG.refresh, e));
       });
+      this.onMessage(N.MSG.chat, this.guard(N.MSG.chat, (client: Client, message: unknown) => this.onChat(client, message)));
+      o.world.register(this);
       this.clock.setInterval(this.guard("views", () => this.rebuildViews()), N.INTEREST.rebuildMs);
     }
 
@@ -228,6 +267,10 @@ export function createIslandRoom(o: IslandRoomOptions) {
         pose: N.createPose(),
         view,
         warned: false,
+        chat: createChatMeter(),
+        sender: senderOf(card),
+        blocks: new Set(auth.blocks?.blocks ?? []),
+        blockedBy: new Set(auth.blocks?.blockedBy ?? []),
       };
       client.userData = session;
       this.sessions.set(client.sessionId, session);
@@ -268,6 +311,7 @@ export function createIslandRoom(o: IslandRoomOptions) {
 
     onDispose(): void {
       shards.delete(this.metadata.shard);
+      o.world.unregister(this);
     }
 
     /** Before a deploy restarts the process: tell everyone, then close with CLOSE.restart (clients rejoin after jitter). */
@@ -334,8 +378,16 @@ export function createIslandRoom(o: IslandRoomOptions) {
         if (N.isClipEv(kind) && N.isEmoteClip(value) && !s.limit.emotes.take(now)) continue;
         const e = N.encodeEvent({ sid: s.sid, t: pose.t - dt, kind, value }, out);
         if (!e) continue;
+        const emote = N.isClipEv(kind) && N.isEmoteClip(value);
         const bytes = getMessageBytes.raw(Protocol.ROOM_DATA, N.MSG.event, e);
-        for (const c of this.clients) if (this.visible.get(c.sessionId)?.has(s.key)) c.enqueueRaw(bytes);
+        for (const c of this.clients) {
+          if (!this.visible.get(c.sessionId)?.has(s.key)) continue;
+          if (emote) {
+            const r = this.sessions.get(c.sessionId);
+            if (!r || blockedPair(s, r)) continue;
+          }
+          c.enqueueRaw(bytes);
+        }
       }
     }
 
@@ -392,6 +444,96 @@ export function createIslandRoom(o: IslandRoomOptions) {
       applyCard(p, card);
       r.name = p.name;
       r.badge = p.badge;
+      s.sender = senderOf(card);
+    }
+
+    /**
+     * `chat {text}` (§6): checked (./chat), then one line to everyone in the shard but players in a block with the
+     * sender, the sender included, and queued for the log. A refused line gets `sys {kind: "refused"}` back.
+     */
+    private onChat(client: Client, message: unknown): void {
+      const s = this.sessions.get(client.sessionId);
+      const p = this.state.players.get(client.sessionId);
+      if (!s || !p || this.shuttingDown) return;
+      const now = Date.now();
+      if (!s.limit.chat.take(now)) return;
+      const m = N.parseChat(message);
+      if (!m) return;
+      const verdict = checkChat(s.chat, s.sender, m.text, now);
+      if (!verdict.ok) {
+        client.send(N.MSG.sys, { kind: "refused", reason: verdict.reason, text: verdict.notice } satisfies N.SysMessage);
+        return;
+      }
+      recordChat(s.chat, verdict.text, now);
+      const line: N.ChatLine = {
+        id: randomUUID(),
+        sid: s.sid,
+        uid: s.uid,
+        name: p.name,
+        area: p.area,
+        text: verdict.text,
+        t: N.quantTime(now - this.state.epoch),
+      };
+      const bytes = getMessageBytes.raw(Protocol.ROOM_DATA, N.MSG.line, line);
+      for (const c of this.clients) {
+        const r = this.sessions.get(c.sessionId);
+        if (r && !blockedPair(s, r)) c.enqueueRaw(bytes);
+      }
+      o.world.chatLog.push({
+        id: line.id,
+        shard: this.state.shard,
+        room_id: this.roomId,
+        area: N.AREAS[p.area] ?? "village",
+        member_id: s.uid,
+        world_name: p.name,
+        body: verdict.text,
+        created_at: new Date(now).toISOString(),
+      });
+    }
+
+    // ── The world's calls ────────────────────────────────────────────
+
+    /** A T1/T2 sanction (the admin routes or the poll): a mute takes effect on the next line, a removal closes now. */
+    applySanction(uid: string, patch: SanctionPatch): number {
+      let n = 0;
+      const now = Date.now();
+      for (const s of [...this.sessions.values()]) {
+        if (s.uid !== uid || s.final !== undefined) continue;
+        n++;
+        if (patch.muted_until !== undefined) s.sender = { ...s.sender, mutedUntil: timeOf(patch.muted_until) };
+        const removed = patch.removed_until !== undefined ? timeOf(patch.removed_until) : null;
+        if (removed === null || removed <= now) continue;
+        o.log("removed", { uid: s.uid, sid: s.sid });
+        if (s.grace) {
+          s.final = N.CLOSE.removed;
+          s.grace.reject(new Error("removed"));
+          continue;
+        }
+        const client = this.clients.getById(s.key);
+        if (client) this.close(client, s, N.CLOSE.removed, "removed");
+      }
+      return n;
+    }
+
+    /** A block changed: from now on lines and emotes between the pair stop (or flow again). */
+    applyBlock(blocker: string, blocked: string, on: boolean): number {
+      let n = 0;
+      for (const s of this.sessions.values()) {
+        if (s.uid === blocker) {
+          if (on) s.blocks.add(blocked);
+          else s.blocks.delete(blocked);
+          n++;
+        } else if (s.uid === blocked) {
+          if (on) s.blockedBy.add(blocker);
+          else s.blockedBy.delete(blocker);
+          n++;
+        }
+      }
+      return n;
+    }
+
+    memberIds(): string[] {
+      return [...new Set([...this.sessions.values()].filter((s) => s.final === undefined).map((s) => s.uid))];
     }
 
     // ── Helpers ─────────────────────────────────────────────────────

@@ -11,15 +11,15 @@ import type { Frame } from "@/lib/combat/mastery";
 import type { Phase } from "@/lib/study/rules";
 import type { WheelKind } from "@/lib/game/toolWheel";
 import {
-  AREAS, AREA_BOUNDS, CARD_BADGES, CARD_FAMILIES, CARD_FRAMES, CHAT, CLIMB_RATIO, CLOCK, CLOSE, COLYSEUS_CLOSE, EMOTE_CLIP_NAMES, EV, EV_DT_MAX_MS, EV_KINDS, EV_MAX, FLAG,
-  HELD_KINDS, HTTP_REFUSAL, INTEREST, INTERP_DELAY_MS, MOVE_CLIPS, NET_MOVE, NET_PLAYER_FIELDS, NET_ROSTER_FIELDS, PACKET_FLAG, PATCH_RATE_MS, POSE_FIELDS,
-  POSE_LEN, PRIVATE_AREAS, PROTOCOL, RATE_LIMITS, RECONNECT_GRACE_S, REJOIN_BACKOFF_S, RESTART_JITTER_MS, SANITY, SEND, SHARD, STUDY_STATES, SYS_TEXT_MAX,
-  TIME_MAX, cardBadge, cardFamily, cardFrame, createPose, decodeEvent, decodePose, dequantAir, dequantLeaf, dequantLift, dequantPos, dequantVel,
-  dequantYaw, encodeEvent, encodePose, estimateClockOffset, hasFlag, heldOf, inAreaBounds, isClipEv, isEmoteClip, isHeld, isPrivateArea, joinRefusal,
-  moveIndex, parseHeld, parseJoinOptions, parsePing, parsePong, parseSlowState, parseSys, pushEv, quantAir, quantLeaf, quantLift, quantPos, quantTime,
-  nextTp, quantVel, quantYaw, roomTime, seqAfter, studyIndex, tpChanged,
-  type CardFamily, type CardFrame, type ClockSample, type EvKind, type HeldKind, type MoveClip, type NetPlayer, type Pose, type PosePacket,
-  type RosterEntry, type StudyState,
+  AREAS, AREA_BOUNDS, CARD_BADGES, CARD_FAMILIES, CARD_FRAMES, CHAT, CHAT_REFUSALS, CLIMB_RATIO, CLOCK, CLOSE, COLYSEUS_CLOSE, EMOTE_CLIP_NAMES, EV, EV_DT_MAX_MS,
+  EV_KINDS, EV_MAX, FLAG, HELD_KINDS, HTTP_REFUSAL, INTEREST, INTERP_DELAY_MS, MOVE_CLIPS, MSG, NET_MOVE, NET_PLAYER_FIELDS, NET_ROSTER_FIELDS, PACKET_FLAG,
+  PATCH_RATE_MS, POSE_FIELDS, POSE_LEN, PRIVATE_AREAS, PROTOCOL, RATE_LIMITS, RECONNECT_GRACE_S, REJOIN_BACKOFF_S, RESTART_JITTER_MS, SANITY, SEND, SHARD,
+  STUDY_STATES, SYS_KINDS, SYS_TEXT_MAX, TIME_MAX, cardBadge, cardFamily, cardFrame, createPose, decodeEvent, decodePose, dequantAir, dequantLeaf,
+  dequantLift, dequantPos, dequantVel, dequantYaw, encodeEvent, encodePose, estimateClockOffset, hasFlag, heldOf, inAreaBounds, isClipEv, isEmoteClip,
+  isHeld, isPrivateArea, joinRefusal, moveIndex, parseChat, parseChatLine, parseHeld, parseJoinOptions, parsePing, parsePong, parseSlowState, parseSys,
+  pushEv, quantAir, quantLeaf, quantLift, quantPos, quantTime, nextTp, quantVel, quantYaw, roomTime, seqAfter, studyIndex, tpChanged,
+  type CardFamily, type CardFrame, type ChatLine, type ChatRefusal, type ClockSample, type EvKind, type HeldKind, type MoveClip, type NetPlayer, type Pose,
+  type PosePacket, type RosterEntry, type StudyState, type SysMessage,
 } from "./protocol";
 
 /** mulberry32: a seeded generator, so the random cases are the same every run. */
@@ -74,6 +74,14 @@ describe("append-only tables (wire indexes: add at the end, never reorder, renam
   it("held kinds are the tool wheel's", () => {
     locked(HELD_KINDS, ["rod", "net", "shovel", "pin", "weapon"]);
     expectTypeOf<HeldKind | "glider">().toEqualTypeOf<WheelKind>();
+  });
+  it("sys kinds and chat refusal reasons", () => {
+    locked(SYS_KINDS, ["restart", "notice", "refused"]);
+    locked(CHAT_REFUSALS, ["muted", "fast", "slow", "repeat", "long", "empty", "filtered", "url"]);
+  });
+  it("message names (the server registers each client-to-server one; an unknown type closes with 4002)", () => {
+    expect(MSG).toEqual({ pose: "p", slow: "s", ping: "ping", refresh: "refresh", chat: "chat", event: "e", pong: "pong", sys: "sys", line: "line" });
+    expect(new Set(Object.values(MSG)).size).toBe(Object.keys(MSG).length);
   });
 });
 
@@ -322,6 +330,40 @@ describe("other messages", () => {
     expect(parseSys({ kind: "notice", text: "Please keep it friendly." })).toEqual({ kind: "notice", text: "Please keep it friendly." });
     for (const x of [{ kind: "party", text: "" }, { kind: "notice" }, { kind: "notice", text: "x".repeat(SYS_TEXT_MAX + 1) }, { kind: "notice", text: "", x: 1 }, null, []])
       expect(parseSys(x)).toBeNull();
+  });
+  it("sys {kind: refused, reason, text}: a chat line refused, with its reason key", () => {
+    for (const reason of CHAT_REFUSALS) expect(parseSys({ kind: "refused", reason, text: "Slow down a little." })).toEqual({ kind: "refused", reason, text: "Slow down a little." });
+    const bad: unknown[] = [
+      { kind: "refused", text: "x" }, { kind: "refused", reason: "rude", text: "x" }, { kind: "refused", reason: "muted" },
+      { kind: "refused", reason: "muted", text: 3 }, { kind: "refused", reason: "muted", text: "x".repeat(SYS_TEXT_MAX + 1) },
+      { kind: "refused", reason: "muted", text: "x", extra: 1 }, { kind: "notice", reason: "muted", text: "x" }, { kind: "restart", reason: "fast", text: "" },
+    ];
+    for (const x of bad) expect(parseSys(x), JSON.stringify(x)).toBeNull();
+    const m = parseSys({ kind: "refused", reason: "url", text: "x" })!;
+    expect(m.kind === "refused" && m.reason).toBe("url");
+    expectTypeOf<Extract<SysMessage, { kind: "refused" }>["reason"]>().toEqualTypeOf<ChatRefusal>();
+  });
+  it("chat {text}: any string goes up; the server cleans and checks it", () => {
+    expect(parseChat({ text: "hello there" })).toEqual({ text: "hello there" });
+    expect(parseChat({ text: "" })).toEqual({ text: "" });
+    const msg = { text: "x" };
+    expect(parseChat(msg)).not.toBe(msg);
+    for (const x of [null, undefined, "hi", ["hi"], {}, { text: 3 }, { text: null }, { text: "hi", area: 0 }, { body: "hi" }]) expect(parseChat(x), JSON.stringify(x)).toBeNull();
+  });
+  it("line {id, sid, uid, name, area, text, t}: a chat line", () => {
+    const line: ChatLine = { id: "6f1c2b9e-3d4a-4e5f-8a6b-7c8d9e0f1a2b", sid: 3, uid: "11111111-2222-4333-8444-555555555555", name: "Maple", area: 1, text: "hi all", t: 123_456 };
+    expect(parseChatLine(line)).toEqual(line);
+    expect(parseChatLine({ ...line, text: "x".repeat(CHAT.maxLength), name: "Islander" })).not.toBeNull();
+    expect(parseChatLine({ ...line, id: line.id.toUpperCase() })).not.toBeNull();
+    const bad: Record<string, unknown>[] = [
+      { id: "line-1" }, { id: 7 }, { uid: "alice" }, { sid: -1 }, { sid: 65536 }, { sid: 1.5 }, { area: AREAS.length }, { area: -1 }, { area: "cafe" },
+      { name: "" }, { name: "n".repeat(33) }, { name: null }, { text: "" }, { text: "x".repeat(CHAT.maxLength + 1) }, { text: 5 },
+      { t: -1 }, { t: TIME_MAX + 1 }, { t: 1.5 }, { extra: 1 },
+    ];
+    for (const over of bad) expect(parseChatLine({ ...line, ...over }), JSON.stringify(over)).toBeNull();
+    const { t: _t, ...noT } = line;
+    void _t;
+    for (const x of [noT, null, [], "line"]) expect(parseChatLine(x)).toBeNull();
   });
   it("e [sid, t, kind, value]: lengths in centimetres on the wire, units decoded", () => {
     const wire = encodeEvent({ sid: 3, t: 5000.4, kind: EV.land, value: 1.23 });
