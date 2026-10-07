@@ -159,6 +159,8 @@ import type { Area } from "@/lib/net/protocol";
 import NetWorld from "./net/NetWorld";
 import NetHud from "./net/NetHud";
 import { remoteSeatTaken } from "./net/active";
+import { localAvatar } from "@/lib/net/localAvatar";
+import { isSeatedPose, seatPrompt } from "@/lib/game/seatPrompt";
 import styles from "./DefaultIslandWorld.module.css";
 
 type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | null;
@@ -281,6 +283,16 @@ function QualityProbe({ onTier }: { onTier: (tier: QualityTier) => void }) {
 const writeText = (el: HTMLElement | null, text: string) => { if (el) el.textContent = text; };
 /** A weapon picked on the wheel becomes your default on the server. */
 const equipOnServer = (weapon: string) => { void apiCall("/api/combat/equip", "equip", { weapon }).catch(() => {}); };
+
+/** Whether you sit (or lie) on a seat now, from the local avatar's pose, handed up only when it changes. */
+function SeatWatch({ onChange }: { onChange: (seated: boolean) => void }) {
+  const last = useRef(false);
+  useFrame(() => {
+    const seated = isSeatedPose(localAvatar()?.motion.current?.pose);
+    if (seated !== last.current) { last.current = seated; onChange(seated); }
+  });
+  return null;
+}
 
 /** Once a second into the options' Performance readout, straight to the DOM: a 1 Hz setState re-rendered the whole island. */
 function Performance({ player, output }: { player: React.RefObject<THREE.Vector3>; output: React.RefObject<HTMLOutputElement | null> }) {
@@ -583,6 +595,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [sceneShown, setSceneShown] = useState(0);
   const onSceneReady = useCallback(() => { setReady(true); setFading(false); tripSceneReady(); }, []);
   const [near, setNear] = useState<Near>(null);
+  // On a bench or in bed the seat's prompt stands you up (world audit item 17).
+  const [seated, setSeated] = useState(false);
   // Dev (screenshots): `?sheet=<name>` opens that sheet (the Oracle path sheet once progression loads; donate, shop and bag too).
   const [sheet, setSheet] = useState<Sheet>(() => (DEV_SHEETS.includes(devHome.get("sheet") as Sheet) ? devHome.get("sheet") as Sheet : null));
   const [shopTab, setShopTab] = useState<"outfits" | "furniture" | null>(() => (devHome.get("sheet") === "shop" ? "furniture" : null));
@@ -1006,6 +1020,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           <SunShadows />
           <Performance player={player} output={perfOutput} />
           <QualityProbe onTier={onTier} />
+          <SeatWatch onChange={setSeated} />
           <WarmupProbe key={sceneShown} onReady={onSceneReady} />
           {children}
           <NetWorld area={area} player={player} ready={ready && !fading} />
@@ -1056,7 +1071,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       </section>}
       {near && !toolNear && !sheet && !cinematic && !talking && !(reveal && inside === "oracle") && (CLOSED.includes(near)
         ? <p className={styles.interact} data-closed="true" role="status">{NEAR_LABELS[near]}</p>
-        : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>{touch ? "Tap" : "E"}</kbd>{near === "forage" ? targetLabel ?? NEAR_LABELS[near] : near === "talk" && talkNow.nearName ? `Talk to ${talkNow.nearName}` : NEAR_LABELS[near]}</button>)}
+        : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>{touch ? "Tap" : "E"}</kbd>{near === "forage" ? targetLabel ?? NEAR_LABELS[near] : near === "talk" && talkNow.nearName ? `Talk to ${talkNow.nearName}` : near === "bench" || near === "bed" ? seatPrompt(NEAR_LABELS[near], seated) : NEAR_LABELS[near]}</button>)}
       {/* The held item's use (specs/game-ui.md §2): what left click does with it here, or the tool something in reach wants. Touch presses the prompt. */}
       {!sheet && !cinematic && !talking && !fishing && !inside && site !== "ruins" && (toolAction && (toolAction.target && (toolNear || toolAction.verb === "eat"))
         ? <button className={styles.interact} data-use onPointerDown={e => { if (e.pointerType !== "mouse" || capture.state !== "captured") applyTool(); }}><kbd>{touch ? "Tap" : "Click"}</kbd>{toolAction.label}</button>
