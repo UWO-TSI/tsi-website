@@ -14,7 +14,7 @@ export const LOOK_PROPOSALS: readonly LookProposal[] = ["autumn", "overcast"];
 export const NO_PROPOSALS: ReadonlySet<LookProposal> = new Set();
 
 /** The autumn `island_grass` proposed for the seasonal palette (now #C6B46D, a few lightness steps off the paths). */
-export const PROPOSED_AUTUMN_GRASS = "#A2A44A";
+export const PROPOSED_AUTUMN_GRASS = "#A4A046";
 
 /** `?proposal=autumn,overcast`, `?proposal=all`. */
 export function parseProposals(search: string): ReadonlySet<LookProposal> {
