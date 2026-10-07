@@ -745,6 +745,15 @@ export function useTerrainMaterials(palette?: TerrainPalette): TerrainMaterials 
   return materials;
 }
 
+/**
+ * The ground's draw order: the see-through layers (rock, then sand, then soil) after the rest. Anything lying on the
+ * ground that does not write depth (the snow prints, WeatherGround) draws after GROUND_TOP_ORDER, or a path paints over it.
+ */
+export function groundRenderOrder(surface: number): number {
+  return surface === ROCK_LAYER ? 1 : surface === Surface.Sand ? 2 : surface === Surface.Soil ? GROUND_TOP_ORDER : 0;
+}
+export const GROUND_TOP_ORDER = 3;
+
 export default function GridTerrain({ map, field: heights, materials }: { map: IslandMap; field?: Float32Array; materials: TerrainMaterials }) {
   // ONE field, read twice: the seabed geometry samples it on the CPU, the water
   // shader samples it on the GPU. Two bakes would be two shorelines.
@@ -773,7 +782,7 @@ export default function GridTerrain({ map, field: heights, materials }: { map: I
     <group>
       {chunks.map((c) => (
         // Rock, then sand, then soil: where a path meets the beach the soil is always the one on top.
-        <mesh key={c.key} geometry={c.geometry} material={materials.get(c.surface)} receiveShadow renderOrder={c.surface === ROCK_LAYER ? 1 : c.surface === Surface.Sand ? 2 : c.surface === Surface.Soil ? 3 : 0} />
+        <mesh key={c.key} geometry={c.geometry} material={materials.get(c.surface)} receiveShadow renderOrder={groundRenderOrder(c.surface)} />
       ))}
     </group>
   );

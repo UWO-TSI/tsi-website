@@ -43,6 +43,17 @@ describe("weather on the ground", () => {
     expect(stepTrail(trail, 40, 40, out)).toBeNull();
   });
 
+  // Audit 2026-10 world item 15: at 5 FPS a run covers more than a stride a frame. The backlog of unwalked strides
+  // grew without bound, so once the frame rate recovered every frame left a print: a smear, not a trail.
+  it("keeps a stride apart after a slow-frame stretch", () => {
+    const trail = newTrail(), out: Print = { x: 0, z: 0, yaw: 0, left: false };
+    let slow = 0, fast = 0;
+    for (let i = 0; i <= 8; i++) if (stepTrail(trail, 0, i * 1.2, out)) slow++;
+    expect(slow).toBe(8);
+    for (let i = 1; i <= 40; i++) if (stepTrail(trail, 0, 9.6 + i * 0.05, out)) fast++;
+    expect(fast).toBeLessThanOrEqual(Math.ceil(2 / STRIDE));
+  });
+
   it("keeps a print, then fades it out", () => {
     expect(printOpacity(1)).toBe(1);
     expect(printOpacity(PRINT_LIFE - PRINT_FADE - 0.01)).toBe(1);

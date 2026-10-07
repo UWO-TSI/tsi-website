@@ -62,10 +62,12 @@ export function stepTrail(trail: Trail, x: number, z: number, out: Print): Print
   trail.walked += d;
   trail.x = x; trail.z = z;
   if (trail.walked < STRIDE) return null;
-  trail.walked -= STRIDE;
+  // One print a frame: at a low frame rate a frame can cover several strides, and the ones it skips are dropped, not
+  // owed (owing them left a print every frame once the rate recovered). The print sits where the last stride ended.
+  trail.walked %= STRIDE;
   trail.foot ^= 1;
-  const sx = dz / d, sz = -dx / d, side = trail.foot ? FOOT_SIDE : -FOOT_SIDE;
-  out.x = x + sx * side; out.z = z + sz * side; out.yaw = Math.atan2(dx, dz); out.left = !trail.foot;
+  const back = Math.min(trail.walked, d) / d, sx = dz / d, sz = -dx / d, side = trail.foot ? FOOT_SIDE : -FOOT_SIDE;
+  out.x = x - dx * back + sx * side; out.z = z - dz * back + sz * side; out.yaw = Math.atan2(dx, dz); out.left = !trail.foot;
   return out;
 }
 
