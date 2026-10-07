@@ -33,6 +33,8 @@ export interface ClipInfo { name: string; length: number; loop: boolean; endsNeu
   contacts?: number[];
   /** Posed by a phase the engine sets (Air: by vertical speed), not played on a clock. */
   scrub?: boolean;
+  /** One-shots: the phases where a hand or the tool makes contact (the grab, the strike, each hammer blow; lib/game/actTiming.ts). */
+  hits?: number[];
   /** CastSwing: the phase the bobber leaves the rod's tip. */
   release?: number;
   /** HookYank: the phase the rod snaps up (the line goes taut). */

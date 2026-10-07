@@ -29,28 +29,34 @@ function place(group: THREE.Group | null, body: THREE.Object3D, p: SwimPose) {
   body.rotation.y = p.wag;
 }
 
+/**
+ * A fish's model laid level (head first along +z, back up), centred, `length` long: the museum's tank and the HQ's
+ * trophy case both show it this way.
+ */
+export function levelFish(scene: THREE.Object3D, def: FishDef, length: number): THREE.Group {
+  const model = tagLookClasses(cloneSkeleton(scene), def.model);
+  // Raw dump exports (×10, lying along z) first get the catalogue's calibration so they hang head up like the rest.
+  const hang = new THREE.Group();
+  if (def.raw) { hang.scale.setScalar(0.1); hang.rotation.x = Math.PI / 2; }
+  hang.add(model);
+  // Hanging head up (+y), back toward -z: a quarter turn about x lays it level, head first (+z), back up.
+  const level = new THREE.Group();
+  level.rotation.x = Math.PI / 2;
+  level.add(hang);
+  level.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(level), size = box.getSize(new THREE.Vector3()), mid = box.getCenter(new THREE.Vector3());
+  const k = length / Math.max(size.z, 1e-3);
+  const fit = new THREE.Group();
+  level.position.copy(mid).multiplyScalar(-1);
+  fit.add(level);
+  fit.scale.setScalar(k);
+  fit.traverse(o => { const mesh = o as THREE.Mesh; if (mesh.isMesh) { mesh.castShadow = false; mesh.receiveShadow = true; mesh.frustumCulled = false; } });
+  return fit;
+}
+
 export default function TankFish({ def }: { def: FishDef }) {
   const { scene } = useGLTF(def.model);
-  const body = useMemo(() => {
-    const model = tagLookClasses(cloneSkeleton(scene), def.model);
-    // Raw dump exports (×10, lying along z) first get the catalogue's calibration so they hang head up like the rest.
-    const hang = new THREE.Group();
-    if (def.raw) { hang.scale.setScalar(0.1); hang.rotation.x = Math.PI / 2; }
-    hang.add(model);
-    // Hanging head up (+y), back toward -z: a quarter turn about x lays it level, head first (+z), back up.
-    const level = new THREE.Group();
-    level.rotation.x = Math.PI / 2;
-    level.add(hang);
-    level.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(level), size = box.getSize(new THREE.Vector3()), mid = box.getCenter(new THREE.Vector3());
-    const k = tankLength(def.sizeCm) / Math.max(size.z, 1e-3);
-    const fit = new THREE.Group();
-    level.position.copy(mid).multiplyScalar(-1);
-    fit.add(level);
-    fit.scale.setScalar(k);
-    fit.traverse(o => { const mesh = o as THREE.Mesh; if (mesh.isMesh) { mesh.castShadow = false; mesh.receiveShadow = true; mesh.frustumCulled = false; } });
-    return fit;
-  }, [scene, def]);
+  const body = useMemo(() => levelFish(scene, def, tankLength(def.sizeCm)), [scene, def]);
   const group = useRef<THREE.Group>(null);
   const seed = useMemo(() => hashSeed(def.key), [def.key]);
   const pose = useRef<SwimPose>({ x: 0, y: 0, z: 0, yaw: 0, wag: 0 });

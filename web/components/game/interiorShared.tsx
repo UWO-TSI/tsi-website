@@ -7,13 +7,13 @@
  * station type the central E-handler consumes.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import { bindGameKeys } from "@/lib/game/keyboardInput";
 import { PIECE_TINTS, type Tint } from "@/lib/game/furniturePalettes";
 import * as THREE from "three";
-import Character, { CHARACTER_SCALE, type CharacterMotion, type ClipName } from "./character/Character";
+import Character, { CHARACTER_SCALE, type CharacterMotion, type ClipName, type HeldView } from "./character/Character";
 import { useWorldClips } from "./character/useWorldClips";
 import { useLocalAvatarTap } from "@/lib/net/localAvatar";
 import { useMyLook } from "@/lib/game/character/lookStore";
@@ -68,11 +68,23 @@ export function snapInteriorCamera(camera: THREE.Camera, px: number, pz: number)
   if (camera instanceof THREE.PerspectiveCamera && camera.fov !== BASE_FOV) { camera.fov = BASE_FOV; camera.updateProjectionMatrix(); }
 }
 
+/** Somewhere the camera looks over to for a moment (a donation settling into its case): its spot and its time. */
+const focus = { x: 0, z: 0, start: 0, until: 0 };
+/** Look over toward (x, z) for `ms`, easing there and back (the walker keeps following you underneath). */
+export function lookToward(x: number, z: number, ms: number) { focus.x = x; focus.z = z; focus.start = performance.now(); focus.until = focus.start + ms; }
+const focusWeight = (now: number) => {
+  if (now >= focus.until) return 0;
+  const k = Math.min(1, (now - focus.start) / 500, (focus.until - now) / 650);
+  return k * k * (3 - 2 * k);
+};
 export function followInteriorCamera(camera: THREE.Camera, px: number, pz: number, delta: number) {
-  camera.position.x = THREE.MathUtils.damp(camera.position.x, px, 6, delta);
+  // Partway toward what's to be seen, so you stay in the picture.
+  const w = focusWeight(performance.now()) * 0.62;
+  const tx = px + (focus.x - px) * w, tz = pz + (focus.z - pz) * w;
+  camera.position.x = THREE.MathUtils.damp(camera.position.x, tx, 6, delta);
   camera.position.y = THREE.MathUtils.damp(camera.position.y, 8.4, 6, delta);
-  camera.position.z = THREE.MathUtils.damp(camera.position.z, pz - 7.2, 6, delta);
-  camera.lookAt(px, 0.7, pz + 1.2);
+  camera.position.z = THREE.MathUtils.damp(camera.position.z, tz - 7.2, 6, delta);
+  camera.lookAt(tx, 0.7, tz + 1.2);
 }
 
 /**
@@ -102,6 +114,19 @@ export function InteriorPlayer({
   const { camera } = useThree();
   const face = useCallback((x: number, z: number) => { motion.current.yaw = Math.atan2(x - posRef.current.x, z - posRef.current.z); }, []);
   useWorldClips(motion, face);
+  // A tool an act puts in your hand for its length (the workbench's hammer: `tsi:act-hold` {url, hold, ms}).
+  const [actHeld, setActHeld] = useState<HeldView | null>(null);
+  useEffect(() => {
+    let timer = 0;
+    const on = (e: Event) => {
+      const d = (e as CustomEvent<HeldView & { ms: number }>).detail;
+      window.clearTimeout(timer);
+      setActHeld({ url: d.url, hold: d.hold });
+      timer = window.setTimeout(() => setActHeld(null), d.ms);
+    };
+    window.addEventListener("tsi:act-hold", on);
+    return () => { window.removeEventListener("tsi:act-hold", on); window.clearTimeout(timer); };
+  }, []);
   // Arriving: the camera is already where it follows you from (every room, the temple's included). Once, on arrival.
   const arrival = useRef(bounds.spawn);
   useEffect(() => { snapInteriorCamera(camera, arrival.current[0], arrival.current[1]); }, [camera]);
@@ -188,7 +213,7 @@ export function InteriorPlayer({
 
   return (
     <group ref={groupRef} position={[bounds.spawn[0], 0, bounds.spawn[1]]}>
-      <Character look={look} motion={motion} walkSpeed={PLAYER_SPEED} />
+      <Character look={look} motion={motion} walkSpeed={PLAYER_SPEED} held={actHeld} />
       <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.42, 20]} />
         <meshBasicMaterial color="#000000" transparent opacity={0.18} depthWrite={false} />

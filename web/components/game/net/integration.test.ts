@@ -19,8 +19,8 @@ describe("multiplayer's edits to the shared scene files", () => {
 
   it("mounts NetWorld in the island's Canvas and NetHud over it, with the scene's area, and passes the bench claims", () => {
     const world = read("../DefaultIslandWorld.tsx");
-    expect(world).toMatch(/const area: Area = site === "ruins" \? "ruins" : site === "home" \? \(inside === "house" \? "house" : "home"\) : inside \?\? "village";/);
-    expect(world).toMatch(/\{children\}\n\s*<NetWorld area=\{area\} player=\{player\} ready=\{ready && !fading\} \/>/);
+    expect(world).toMatch(/const area: Area = site === "ruins" \? "ruins" : site === "home" \? \(inside === "house" \? "house" : "home"\) : (inside === "shop" \? "village" : )?inside \?\? "village";/);
+    expect(world).toMatch(/\{children\}\n\s*<NetWorld area=\{area\} player=\{player\} ready=\{ready && !fading( && netReady)?\} \/>/);
     // (inside the wrapper that hides it in a cinematic moment, world audit item 7)
     expect(world).toMatch(/<NetHud area=\{area\} \/>(<\/div>)?\n\s*<LoadingStatus ready=\{ready\} \/>/);
     expect(world).toMatch(/benchSeat\(px, pz, 1\.3, v, layout\.benches, remoteSeatTaken\)/);

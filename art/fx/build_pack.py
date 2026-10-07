@@ -658,6 +658,236 @@ def spray(t):
     return A, C
 
 
+# ---------------------------------------------------------------- foraging and crafting (specs/polish/forage-craft-museum.md)
+def petal(t):
+    """One flower petal tumbling: broad and rounded at the tip with a shallow notch, narrowing to its base, a soft vein
+    down the middle; foreshortened as it turns over, its paler back showing. Near white: the engine tints it the flower's."""
+    turn = math.cos(t * math.tau * 0.9 + 0.4)
+    roll = t * math.tau * 0.6 + 0.3
+    L = 0.56
+    ca, sa = math.cos(roll), math.sin(roll)
+    x, y = U * ca + V * sa, -U * sa + V * ca
+    xn = x / L                                            # -1 at the base, +1 at the tip
+    wide = 0.36 * max(0.15, abs(turn))
+    half = wide * np.sqrt(np.clip(1 - ((xn - 0.2) / 0.92) ** 2, 0, 1)) * (0.3 + 0.7 * ss(-1.05, 0.1, xn))
+    notch = ss(0.75, 1.0, xn) * ss(0.07, 0.0, np.abs(y)) * 0.6
+    inside = ss(half, half - PX * 1.5, np.abs(y)) * (xn > -1.05) * (1 - notch)
+    front = turn > 0
+    v = 0.9 + 0.08 * ss(-1, 1, xn) + (0 if front else 0.05)
+    v = v - 0.07 * ss(PX * 2.5, 0, np.abs(y)) * (xn < 0.55) * (1 if front else 0.4)
+    v = v - 0.05 * np.clip(np.abs(y) / np.maximum(half, 1e-3), 0, 1) ** 2
+    v = v + 0.04 * (vnoise(x * 12 + 5, y * 26, 1717) - 0.5)
+    return inside, colour(np.clip(v, 0, 1), 0.45)
+
+
+def chip(t):
+    """Rock chips knocked off a strike: four faceted flakes, a lit face and a shade face split by a ridge that turns as
+    they tumble apart. Mid grey, tinted the rock's colour."""
+    rng = np.random.default_rng(1818)
+    A, val = np.zeros_like(U), np.ones_like(U)
+    for i in range(4):
+        nv = int(rng.integers(4, 6))
+        angs = np.sort(rng.uniform(0, 2 * math.pi, nv))
+        size = rng.uniform(0.2, 0.28)
+        rad = size * rng.uniform(0.7, 1.0, nv)
+        a = i * math.tau / 4 + rng.uniform(-0.5, 0.5)
+        cx, cy = math.cos(a) * (0.2 + 0.32 * t), math.sin(a) * (0.2 + 0.32 * t)
+        rot = rng.uniform(0, math.tau) + rng.uniform(2.5, 5.0) * (1 if i % 2 else -1) * t
+        squash = 0.45 + 0.55 * abs(math.cos(t * math.pi * rng.uniform(1.2, 2.2) + i))
+        pts = [(math.cos(g + rot) * r, math.sin(g + rot) * r * squash) for g, r in zip(angs, rad)]
+        xx, yy = U - cx, V - cy
+        m = ss(PX * 1.2, -PX * 1.2, poly_sdf(pts, xx, yy))
+        split = math.radians(130) + rot * 0.4
+        lit = (xx * math.cos(split) + yy * math.sin(split)) > 0
+        v = np.where(lit, 0.98, 0.7)
+        upd = m > A
+        A = np.maximum(A, m)
+        val = np.where(upd, v, val)
+    return A, colour(np.clip(val, 0, 1), 0.3)
+
+
+def crack(t):
+    """A dig spot, lying on the ground: a little star of cracks round a pressed-in centre, each crack dark in its floor
+    with a pale lifted lip on the side away from the light. Each of the 8 frames is another spot (one per node)."""
+    rng = np.random.default_rng(1919 + int(round(t * FRAMES)))
+    A, val = np.zeros_like(U), np.ones_like(U)
+    arms = int(rng.integers(4, 6))
+    base = rng.uniform(0, math.tau)
+    for k in range(arms):
+        a = base + k * math.tau / arms + rng.uniform(-0.3, 0.3)
+        L = rng.uniform(0.42, 0.7)
+        pts, ws = [], []
+        for j in range(6):
+            f = j / 5
+            wig = rng.uniform(-0.07, 0.07) * f
+            r = L * f
+            pts.append((math.cos(a + wig) * r, math.sin(a + wig) * r))
+            ws.append(0.04 * (1 - f) ** 0.8 + PX * 0.8)
+        m, v = stroke(pts, ws, 1920 + k, value=0.5, dry=0.05, taper_soft=1.4, grain=0.06)
+        upd = m > A
+        A = np.maximum(A, m * 0.95)
+        val = np.where(upd, v, val)
+        # The lip: the same crack nudged away from the light, pale, under it.
+        off = 0.022
+        lip_pts = [(px - LIGHT[0] * off, py - LIGHT[1] * off) for px, py in pts]
+        m2, _ = stroke(lip_pts, [w * 0.9 for w in ws], 1930 + k, value=1.0, dry=0.08, taper_soft=1.6, grain=0.04)
+        lip = np.clip(m2 - m, 0, 1) * 0.55
+        A = np.maximum(A, lip)
+        val = np.where(lip > m, 1.05, val)
+    pit = ss(0.13, 0.05, np.hypot(U, V))
+    A = np.maximum(A, pit * 0.9)
+    val = np.where(pit > 0.5, 0.48, val)
+    return A, colour(np.clip(val, 0, 1.05), 0.25)
+
+
+def hole(t):
+    """A dug hole seen from above, filling back in over its 8 frames: a dark pit (its wall lit on the far side, in shade
+    on the near), a crumbly rim of thrown-out ground and a few clods round it. As it fills the pit shallows and the rim
+    settles, until only a soft disturbed patch is left. Neutral: tinted the ground's colour."""
+    f = ss(0.0, 1.0, t / 0.875)                           # 0 fresh, 1 the last frame
+    r = np.hypot(U, V)
+    ang = np.arctan2(V, U)
+    R = 0.33 - 0.1 * f
+    wob = (fbm(ang * 2 + 3, r * 3 + 1, 2020, 2) - 0.5) * 0.06
+    pit = ss(R + 0.02, R - 0.03, r + wob)
+    depth = (1 - f) * ss(R, 0.0, r)
+    facing = np.cos(ang - math.atan2(LIGHT[1], LIGHT[0]))      # the far wall faces the light
+    wall = ss(R * 0.55, R, r) * pit
+    v_pit = 0.62 - 0.3 * depth + 0.12 * wall * facing * (1 - f)
+    rim_noise = fbm(ang * 4 + 9, r * 6, 2021, 3)
+    rim = ss(R - 0.02, R + 0.04, r) * ss(R + 0.24 + 0.08 * rim_noise, R + 0.08, r) * (0.55 + 0.45 * rim_noise) * (1 - 0.85 * f)
+    v_rim = 0.98 + 0.08 * (rim_noise - 0.5) + 0.06 * np.clip(-facing, 0, 1)
+    A = np.maximum(pit * (0.95 - 0.55 * f), rim * 0.9)
+    val = np.where(pit >= rim, v_pit, v_rim)
+    rng = np.random.default_rng(2022)
+    for i in range(9):                                    # clods thrown out round it, sinking back as it fills
+        a = rng.uniform(0, math.tau)
+        d = rng.uniform(0.46, 0.8)
+        cr = rng.uniform(0.03, 0.055) * (1 - 0.7 * f)
+        if cr < 0.012:
+            continue
+        cx, cy = math.cos(a) * d, math.sin(a) * d * 0.95
+        m = ss(cr, cr - PX * 1.4, np.hypot(U - cx, V - cy)) * (1 - f) * 0.85
+        lit = ss(cr, 0, np.hypot(U - (cx - cr * 0.3), V - (cy + cr * 0.3)))
+        upd = m > A
+        A = np.maximum(A, m)
+        val = np.where(upd, 0.88 + 0.14 * lit, val)
+    return np.clip(A, 0, 1), colour(np.clip(val, 0, 1.05), 0.3)
+
+
+def sand_burst(t):
+    """A spade's throw of sand: a fan of grains flung up and out over the hole, arcing and falling away, over a low puff
+    of dust. Bigger and higher than a footstep's kick."""
+    rng = np.random.default_rng(2121)
+    A, C = puff(t, 2122, lobes=5, spread=(0.3, 0.08), base_r=0.2, grow=0.5, drift=0.6, rise=0.08, centre=(0, -0.45))
+    A = A * 0.5
+    for i in range(46):
+        a = rng.uniform(0.25, math.pi - 0.25)
+        sp = rng.uniform(0.35, 1.0)
+        x = math.cos(a) * sp * (0.2 + 0.75 * t)
+        y = -0.45 + math.sin(a) * sp * (0.4 + 1.25 * t) - 1.35 * t * t
+        r = rng.uniform(0.024, 0.055) * (1 - 0.25 * t)
+        fade = 1 - ss(0.7, 1.05, t + rng.uniform(-0.12, 0.12))
+        A, C = grain(A, C, x, y, r, rng.uniform(0.82, 1.0), fade)
+    return A, C
+
+
+def shaving(A, C, cx, cy, rot, size, curl, value, alpha):
+    """A curled wood shaving: a short tapered stroke bending round on itself."""
+    pts, ws = [], []
+    for j in range(9):
+        f = j / 8
+        a = rot + curl * f * math.pi * 1.2
+        rr = size * (1 - 0.55 * f)
+        pts.append((cx + math.cos(a) * rr * f * 1.4, cy + math.sin(a) * rr * f * 1.4))
+        ws.append(size * 0.22 * (1 - 0.6 * f) + PX * 0.6)
+    m, v = stroke(pts, ws, 2223 + int(size * 1000), value=value, dry=0.04, taper_soft=1.3, grain=0.05)
+    return over(A, C, m * alpha, colour(np.clip(v, 0, 1), 0.5))
+
+
+def hammer_puff(t):
+    """A hammer blow on the bench: a quick puff that pops out low and sideways, and three curled shavings jumping off it.
+    Neutral: tinted sawdust in the engine."""
+    A, C = puff(t, 2224, lobes=5, spread=(0.36, 0.12), base_r=0.22, grow=0.65, drift=0.9, rise=0.1, centre=(0, -0.2), lo=0.82)
+    rng = np.random.default_rng(2225)
+    for i in range(3):
+        a = rng.uniform(0.3, math.pi - 0.3)
+        d = 0.18 + 0.55 * t
+        x, y = math.cos(a) * d, -0.15 + math.sin(a) * d * 0.9 - 0.6 * t * t
+        A, C = shaving(A, C, x, y, rng.uniform(0, math.tau) + t * 6 * (1 if i % 2 else -1), rng.uniform(0.09, 0.13), rng.uniform(0.7, 1.1),
+                       rng.uniform(0.86, 0.98), 1 - ss(0.65, 1.0, t))
+    return A, C
+
+
+def glint(t):
+    """The finishing sparkle (a thing just made): a long four-point star with a soft core, a thin ring flashing out
+    round it, and two small twinkles beside it, opening fast and closing slow."""
+    s = math.sin(math.pi * min(1.0, t * 1.1)) ** 0.6
+    rot = 0.35 * t
+    ca, sa = math.cos(rot), math.sin(rot)
+    x, y = U * ca + V * sa, -U * sa + V * ca
+    core = ss(0.2 * s + 0.03, 0.0, np.hypot(x, y))
+    rays = np.zeros_like(U)
+    for (ax, ay, L) in [(1, 0, 0.92), (0, 1, 0.92), (0.707, 0.707, 0.42), (0.707, -0.707, 0.42)]:
+        along = np.abs(x * ax + y * ay)
+        across = np.abs(-x * ay + y * ax)
+        width = 0.09 * s * np.clip(1 - along / max(L * s, 1e-3), 0, 1) ** 1.6
+        rays = np.maximum(rays, ss(width, width * 0.15, across) * (along < L * s))
+    rr = 0.3 + 0.5 * ss(0.05, 0.7, t)
+    ring = np.exp(-((np.hypot(U, V) - rr) / 0.02) ** 2) * (1 - ss(0.35, 0.85, t)) * 0.8
+    tw = np.zeros_like(U)
+    for (cx, cy, ph) in ((0.55, 0.42, 0.25), (-0.5, -0.5, 0.45)):
+        k = math.sin(math.pi * np.clip((t - ph) / 0.4, 0, 1))
+        if k <= 0:
+            continue
+        d = np.hypot(U - cx, V - cy)
+        arm = np.minimum(np.abs(U - cx), np.abs(V - cy))
+        tw = np.maximum(tw, (ss(0.05 * k, 0, d) + ss(0.012 * k, 0, arm) * ss(0.16 * k, 0, d)) * k)
+    A = np.clip(np.maximum.reduce([core, rays, ring, tw]), 0, 1) * (1 - ss(0.88, 1, t))
+    v = np.where(core > 0.5, 1.0, 0.97)
+    return A, colour(v + 0 * U, 0.6)
+
+
+def leaf_bits(t):
+    """A few small leaves shaken loose together, with a twig fleck: each tumbling on its own phase, flipping to its
+    paler back. Tinted the season's leaf colour."""
+    rng = np.random.default_rng(2323)
+    A, val = np.zeros_like(U), np.ones_like(U)
+    for i in range(3):
+        cx, cy = rng.uniform(-0.38, 0.38), rng.uniform(-0.32, 0.32)
+        cx, cy = cx * (1 + 0.3 * t), cy * (1 + 0.3 * t) - 0.12 * t
+        ph = rng.uniform(0, math.tau)
+        turn = math.cos(t * math.tau * rng.uniform(0.8, 1.3) + ph)
+        roll = ph + t * math.tau * rng.uniform(0.3, 0.6) * (1 if i % 2 else -1)
+        L, Wd = rng.uniform(0.2, 0.27), rng.uniform(0.11, 0.14) * max(0.15, abs(turn))
+        ca, sa = math.cos(roll), math.sin(roll)
+        x, y = (U - cx) * ca + (V - cy) * sa, -(U - cx) * sa + (V - cy) * ca
+        xn = x / L
+        half = Wd * np.clip(1 - xn * xn, 0, 1) ** 0.75 * (1 + 0.25 * xn)
+        m = ss(half, half - PX * 1.4, np.abs(y)) * (np.abs(xn) < 1)
+        v = (0.88 if turn > 0 else 1.0) - 0.1 * (y > 0) * (1 if turn > 0 else 0.5) - 0.1 * ss(PX * 1.4, 0, np.abs(y)) * (np.abs(xn) < 0.85)
+        upd = m > A
+        A = np.maximum(A, m)
+        val = np.where(upd, v, val)
+    tx, ty = rng.uniform(-0.2, 0.2), rng.uniform(-0.2, 0.2) - 0.1 * t
+    a = 1.2 + t * 5
+    m, v = stroke([(tx - math.cos(a) * 0.16, ty - math.sin(a) * 0.16), (tx, ty), (tx + math.cos(a + 0.3) * 0.15, ty + math.sin(a + 0.3) * 0.15)],
+                  [0.022, 0.02, 0.012], 2324, value=0.62, dry=0.05, taper_soft=1.4, grain=0.04)
+    upd = m > A
+    A = np.maximum(A, m)
+    val = np.where(upd, v, val)
+    return A, colour(np.clip(val, 0, 1), 0.5)
+
+
+def glow(t):
+    """A firefly's light: a small hot core in a soft, wide glow (additive in the engine); each frame a little brighter or
+    dimmer, so a swarm doesn't pulse as one."""
+    k = 0.75 + 0.25 * math.sin(t * math.tau)
+    r = np.hypot(U, V)
+    A = np.clip(np.exp(-(r / (0.34 * k)) ** 2) * 0.62 + ss(0.1 * k, 0.0, r), 0, 1)
+    return A, colour(np.full_like(U, 1.0), 0.8)
+
+
 # ---------------------------------------------------------------- the pack
 # name, painter, what it is (one row each, FRAMES frames). Append only: rows are indices in the engine.
 SPRITES = [
@@ -679,6 +909,15 @@ SPRITES = [
     ("splash", splash, "splash crown (stands on the water)"),
     ("foam", foam, "wake foam (lies on the water)"),
     ("spray", spray, "bow spray (thrown drops and mist)"),
+    ("petal", petal, "flower petal (tumbling)"),
+    ("chip", chip, "rock chips (tumbling)"),
+    ("crack", crack, "dig spot crack (lies on the ground)"),
+    ("hole", hole, "dug hole filling in (lies on the ground)"),
+    ("sandBurst", sand_burst, "spade's throw of sand"),
+    ("hammerPuff", hammer_puff, "hammer blow puff and shavings"),
+    ("glint", glint, "finishing sparkle"),
+    ("leafBits", leaf_bits, "leaves shaken loose"),
+    ("glow", glow, "firefly glow (additive)"),
 ]
 
 # How the sheet shows each row: the tint the engine gives it and the ground behind it.
@@ -692,6 +931,9 @@ SHEET = {
     "sandPrint": ("#c9ad78", "#e2cb93"),
     "splash": ("#d4ecf7", "#568cb2"),
     "foam": ("#f2f8f8", "#3f8fa6"), "spray": ("#e6f3f7", "#4f97ad"),
+    "petal": ("#f5a9c4", "#8fa16c"), "chip": ("#a9a39a", "#8c8577"), "crack": ("#7d6a52", "#c9b089"),
+    "hole": ("#9a8462", "#d8bd85"), "sandBurst": ("#e2cb93", "#d8bd85"), "hammerPuff": ("#e3d2b4", "#8a6a4a"),
+    "glint": ("#fff3c4", "#5f7a55"), "leafBits": ("#8fbf6a", "#5f7a55"), "glow": ("#ffe98a", "#1d2531"),
 }
 
 

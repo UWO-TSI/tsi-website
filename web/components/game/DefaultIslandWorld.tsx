@@ -46,13 +46,12 @@ import { useIslandConditions } from "@/lib/game/useIslandConditions";
 import { IslandAtmosphere, useFollowCamera, type TreeSpot } from "./IslandAtmosphere";
 import PeacefulLayer, { peacefulNear } from "./peaceful/PeacefulLayer";
 import WardrobeSheet from "./peaceful/WardrobeSheet";
-import { ShopBody, WalletSheet } from "@/components/economy/EconomySheets";
+import { WalletSheet } from "@/components/economy/EconomySheets";
 import { BagSheet } from "./Bag";
 import { ChestSheet } from "./ChestSheet";
 import { BagButton } from "./BagButton";
 import { bagRoom } from "@/lib/game/bagStore";
 import { isTyping, worldKeysBlocked } from "@/lib/game/useWorldDialog";
-import ProgressionPanel from "@/components/progression/ProgressionPanel";
 import { apiCall } from "@/lib/apiClient";
 import PlayerCharacterUI from "./character/PlayerCharacterUI";
 import CharacterCrowd from "./character/CharacterCrowd";
@@ -94,6 +93,11 @@ import { ShowcaseSheet, TrophySheet } from "./peaceful/ShowcaseSheets";
 import type { MuseumWing } from "@/lib/collections/logic";
 import FishingOverlay from "./FishingOverlay";
 import ToastHub, { toast } from "./ToastHub";
+import RewardCard from "./RewardCard";
+import GlideGuide, { GlideGuideHint } from "./GlideGuide";
+import TrophyCase from "./TrophyCase";
+import ShopInterior from "./ShopInterior";
+import ShopCounter from "./ShopCounter";
 import IslandLoading from "./IslandLoading";
 import HQLead from "./HQLead";
 import TalkBox from "./TalkBox";
@@ -166,10 +170,10 @@ import { localAvatar } from "@/lib/net/localAvatar";
 import { isSeatedPose, seatPrompt } from "@/lib/game/seatPrompt";
 import styles from "./DefaultIslandWorld.module.css";
 
-type Near = "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | null;
-type Sheet = "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | null;
+type Near = "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | null;
+type Sheet = "counter" | "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | null;
 const DEV = process.env.NODE_ENV !== "production";
-const DEV_SHEETS: readonly Sheet[] = ["notice", "letters", "journal", "trophies", "showcase", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest"];
+const DEV_SHEETS: readonly Sheet[] = ["counter", "notice", "letters", "journal", "trophies", "showcase", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest"];
 /** Sheets opened at a station with E: E closes them again (the dialog system's opening key). */
 const STATION_KEY = "e";
 const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight", evening: "Evening", night: "Night" };
@@ -192,6 +196,7 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   bench: "Sit on the bench", bed: "Sleep in your bed", chest: "Open your storage chest",
   trophy: "Read the tourney board", posters: "Look at the GENESIS posters", cocoa: "Get a hot cocoa", picnic: "Join the picnic",
   owner: `Talk to ${CAFE_OWNER.name}`,
+  shop_enter: "Enter the shop", counter: "Buy and sell at the counter",
   // The resident in reach says their own name (TalkPrompt).
   talk: "Talk",
 };
@@ -241,15 +246,18 @@ function villageLayout(v: Village) {
     occluders: [...buildings, ...trees.map(t => treeOccluder(t.x, t.z, island.ground(t.x, t.z)))],
     /** What hides a label (lib/game/labelLayout.ts): the buildings only, a canopy is see-through enough. */
     buildings,
+    /** Inside a building's footprint, with a step's margin (the glide guide never marks a ledge behind one). */
+    underBuilding: (x: number, z: number) => marks.some(l => !!l.half && Math.abs(x - l.x) < l.half[0] + 0.5 && Math.abs(z - l.z) < l.half[1] + 0.5),
     fireflies: objectsOf("bush", v).map(xz),
     puddles: objectsOf("puddle", v).map(xz),
     benches: objectsOf("bench", v),
     lamps: objectsOf("lamp", v),
     bridges: objectsOf("bridge", v).map(o => ({ ...o, y: levelAt(v.map, worldToCellX(v.map, o.x), worldToCellZ(v.map, o.z)) * LEVEL_STEP - 0.065 })),
-    doors: { hq: landmarkPoint("hq", "door", v), oracle: landmarkPoint("oracle", "door", v), boat: landmarkPoint("wharf", "door", v), cafe: landmarkPoint("cafe", "door", v) },
+    doors: { hq: landmarkPoint("hq", "door", v), oracle: landmarkPoint("oracle", "door", v), boat: landmarkPoint("wharf", "door", v), cafe: landmarkPoint("cafe", "door", v), shop: landmarkPoint("shop", "door", v) },
     spawns: {
       start: villageSpawn(v), returned: spot(landmarkPoint("hq", "exit", v)), oracle: spot(landmarkPoint("oracle", "exit", v)),
       museum: spot(landmarkPoint("museum", "exit", v)), cafe: spot(landmarkPoint("cafe", "exit", v)), ruins: spot(landmarkPoint("ruins", "exit", v)), boat: spot(landmarkPoint("wharf", "exit", v)),
+      shop: spot(landmarkPoint("shop", "exit", v)),
     },
     /** Fitting room beside the shop; ruins mission board beside the cliff gate (combat-foundation.md §6). */
     fitting: fitting ? xz(fitting) : null,
@@ -283,6 +291,9 @@ function QualityProbe({ onTier }: { onTier: (tier: QualityTier) => void }) {
   return null;
 }
 
+
+/** The wardrobe's and the decorate panel's "shop" links: the shop is a place now (its counter, ShopCounter), not a panel. */
+const toShop = (what: string) => toast(`${what} at the shop in the village: buy it at the counter.`, iconUrl("shopping-cart"));
 
 /** Module scope: the react compiler forbids writing through a prop. */
 const writeText = (el: HTMLElement | null, text: string) => { if (el) el.textContent = text; };
@@ -325,7 +336,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   /** The HQ lead on the wharf for a first login (`line`: the one she is saying; the player holds still while she talks). */
   lead: { line: number | null; hold: boolean } | null;
   chapter: { claim: boolean; donate: boolean; report: boolean };
-  peaceful: { moment: WorldMoment; member: string; glider: boolean }; fishSpot: { current: FishingSpot | null }; fishing: boolean; exitFrom: "museum" | "oracle" | "ruins" | "cafe" | null; devAt: [number, number, number] | null; identity: WorldIdentity; level?: number;
+  peaceful: { moment: WorldMoment; member: string; glider: boolean }; fishSpot: { current: FishingSpot | null }; fishing: boolean; exitFrom: "museum" | "oracle" | "ruins" | "cafe" | "shop" | null; devAt: [number, number, number] | null; identity: WorldIdentity; level?: number;
   phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; overview: boolean; zoom: number; reset: number; returned: boolean; liteMode: boolean; castShadows: boolean;
   player: React.RefObject<THREE.Vector3>; onNear: (near: Near) => void;
 }) {
@@ -333,7 +344,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   const layout = useMemo(() => villageLayout(v), [v]);
   const { island, spawns, doors } = layout;
   const { data: personas } = useNPCPersonas({ permanentOnly: true });
-  const exitSpot = exitFrom === "museum" ? spawns.museum : exitFrom === "cafe" ? spawns.cafe : exitFrom === "oracle" ? spawns.oracle : exitFrom === "ruins" ? spawns.ruins : null;
+  const exitSpot = exitFrom === "museum" ? spawns.museum : exitFrom === "cafe" ? spawns.cafe : exitFrom === "oracle" ? spawns.oracle : exitFrom === "ruins" ? spawns.ruins : exitFrom === "shop" ? spawns.shop : null;
   const spawn = (devAt && !returned && !fromBoat && !exitFrom ? devAt : fromBoat ? spawns.boat : exitSpot ?? (returned ? spawns.returned : null)) ?? spawns.start;
   const terrain = useMemo(() => ({ ...ISLAND_TERRAIN, grass: look.grass }), [look.grass]);
   const scenery = useMemo(() => sceneryOf(v, island.ground, look.season), [v, island, look.season]);
@@ -355,6 +366,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       : within(doors.boat, 1.6) ? ["home", doors.boat]
       : within(layout.fitting, 1.5) ? ["fitting", layout.fitting]
       : within(doors.oracle, 1.6) ? ["oracle_enter", doors.oracle]
+      : within(doors.shop, 1.6) ? ["shop_enter", doors.shop]
       : within(doors.cafe, CAFE_DOOR_RANGE) ? [progression.opened.includes("cafe") ? "cafe_enter" : "cafe", doors.cafe]
       : within(layout.missions?.at ?? null, 1.5) ? ["missions", layout.missions!.at] : [null, null];
     let next: Near = door[0], nextD = gap(door[1]);
@@ -399,6 +411,8 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <GridOcean map={island.map} lite={liteMode} skip={layout.underWharf} radius={layout.scale.glintRadius} />
       <PeacefulLayer map={island.map} nodes={layout.nodes} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} treeModels={SEASON_TREES[look.season]} />
       <BeachBottle player={player} ground={island.ground} />
+      {/* After the first leaf glider is made: a marked edge and a ring to land in (the guided first glide). */}
+      <GlideGuide map={island.map} ground={island.ground} player={player} owned={peaceful.glider} active={!fishing && !lead?.hold} blocked={layout.underBuilding} />
       <StudySeats area="village" player={player} ground={island.ground} />
       <VillageLandmarks layout={layout} ground={island.ground} opened={progression.opened} stage={progression.stage} ceremony={ceremony} light={light} />
       {layout.fitting && <FittingRoom at={layout.fitting} ground={island.ground} player={player} />}
@@ -521,7 +535,7 @@ function BotanicalFrames() {
 }
 
 /** Clubhouse HQ interior as shipped on the applicant island (sage walls, lounge, pendants). */
-function Clubhouse({ phase, light, player, frozen, talking, onNear }: { phase: IslandPhase; light: IslandLight; player: React.RefObject<THREE.Vector3>; frozen: boolean; talking: boolean; onNear: (near: Near) => void }) {
+function Clubhouse({ phase, light, player, frozen, talking, member, onNear }: { phase: IslandPhase; light: IslandLight; player: React.RefObject<THREE.Vector3>; frozen: boolean; talking: boolean; member: string; onNear: (near: Near) => void }) {
   const wood = useTexture("/assets/acnh/interior/hq-parquet-albedo.png");
   const floor = useMemo(() => {
     const tex = wood.clone(); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(1, 0.75);
@@ -533,9 +547,11 @@ function Clubhouse({ phase, light, player, frozen, talking, onNear }: { phase: I
   useEffect(() => { player.current.set(0, 0, -4.2); camera.position.set(0, 8.4, -11.4); onNear(null); }, [camera, onNear, player]);
   const station = useCallback((s: InteriorStation | null) => onNear((s?.id as Near) ?? null), [onNear]);
   return <>
-    <HQInterior clubhouse phase={phase} light={light} floorTexture={floor} frozen={frozen} talking={talking} playerPosRef={player} onNearestStation={station} stations={CLUBHOUSE_STATIONS} constrainMove={constrainWorkshop} />
+    <HQInterior clubhouse trophyCase phase={phase} light={light} floorTexture={floor} frozen={frozen} talking={talking} playerPosRef={player} onNearestStation={station} stations={CLUBHOUSE_STATIONS} constrainMove={constrainWorkshop} />
     <BotanicalFrames />
     <Workbench player={player} />
+    {/* This week's biggest catches in 3D (the display's E still opens the list). */}
+    <TrophyCase member={member} />
   </>;
 }
 
@@ -567,13 +583,16 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // Dev: ?home=1 starts on the home island, ?home=inside in the house; ?decorate=1&place=<piece> opens decorating.
   const [devHome] = useState(() => (process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams()));
   const [site, setSite] = useState<"village" | "home" | "ruins">(devHome.get("home") ? "home" : devHome.get("ruins") ? "ruins" : "village");
-  const [inside, setInside] = useState<"hq" | "house" | "museum" | "oracle" | "cafe" | null>(devHome.get("home") === "inside" ? "house" : devHome.get("cafe") === "inside" ? "cafe" : devHome.get("museum") === "inside" ? "museum" : devHome.get("hq") === "inside" ? "hq" : devHome.get("temple") === "inside" ? "oracle" : null);
-  const area: Area = site === "ruins" ? "ruins" : site === "home" ? (inside === "house" ? "house" : "home") : inside ?? "village";
+  const [inside, setInside] = useState<"hq" | "house" | "museum" | "oracle" | "cafe" | "shop" | null>(devHome.get("home") === "inside" ? "house" : devHome.get("cafe") === "inside" ? "cafe" : devHome.get("museum") === "inside" ? "museum" : devHome.get("hq") === "inside" ? "hq" : devHome.get("temple") === "inside" ? "oracle" : devHome.get("shop") === "inside" ? "shop" : null);
+  // The shop has no multiplayer area yet (lib/net/protocol.ts AREAS is snapshot-locked): inside it you're offline, never
+  // shown in the village at the room's coordinates.
+  const area: Area = site === "ruins" ? "ruins" : site === "home" ? (inside === "house" ? "house" : "home") : inside === "shop" ? "village" : inside ?? "village";
+  const netReady = inside !== "shop";
   const [layout, setLayout, , homeActions] = useHomeLayout();
   const decor = useDecorate(layout, setLayout, { on: devHome.get("decorate") === "1", piece: devHome.get("place") && catalogueItem(devHome.get("place")!) ? devHome.get("place") : null });
   const [returned, setReturned] = useState(false);
   const [fromBoat, setFromBoat] = useState(false);
-  const [exitFrom, setExitFrom] = useState<"museum" | "oracle" | "ruins" | "cafe" | null>(null);
+  const [exitFrom, setExitFrom] = useState<"museum" | "oracle" | "ruins" | "cafe" | "shop" | null>(null);
   const [ruinsRun, setRuinsRun] = useState(0);
   // Dev: ?mission=<id> accepts a board mission up front (screenshots).
   const [devMission] = useState(() => { const id = devHome.get("mission"); const def = MISSIONS.find(m => m.id === id); if (def) { setMission(startMission(def)); void startMissionRemote(def.id).then(r => { if (r.ok) attachProgressId(def.id, r.data.progress_id); }); } return !!def; });
@@ -605,7 +624,6 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [seated, setSeated] = useState(false);
   // Dev (screenshots): `?sheet=<name>` opens that sheet (the Oracle path sheet once progression loads; donate, shop and bag too).
   const [sheet, setSheet] = useState<Sheet>(() => (DEV_SHEETS.includes(devHome.get("sheet") as Sheet) ? devHome.get("sheet") as Sheet : null));
-  const [shopTab, setShopTab] = useState<"outfits" | "furniture" | null>(() => (devHome.get("sheet") === "shop" ? "furniture" : null));
   // The clean HUD (row 283): the minimap opens on M.
   const [mapOpen, setMapOpen] = useState(false);
   // A phone's folded HUD (world audit item 11): Bag, Collection and Map behind one menu button.
@@ -761,6 +779,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [eating, setEating] = useState(false);
   const act = useCallback((action: Near) => {
     if (action === "notice") { setSheet("notice"); return; }
+    if (action === "counter") { setSheet("counter"); return; }
     if (action === "cafe") { setSheet("cafe"); return; }
     if (action === "owner") { window.dispatchEvent(new CustomEvent("tsi:cafe-owner-talk")); return; }
     if (action === "talk") { requestTalk(talkStore.near.id); return; }
@@ -815,7 +834,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       return;
     }
     if (action === "home" || action === "village") { if (!fading) { setNear(null); startTrip(atHome ? "home" : "village", action); } return; }
-    if (fading || !action || !["enter", "exit", "house", "museum_enter", "cafe_enter", "oracle_enter", "ruins", "ruins_exit"].includes(action)) return;
+    if (fading || !action || !["enter", "exit", "house", "museum_enter", "cafe_enter", "oracle_enter", "shop_enter", "ruins", "ruins_exit"].includes(action)) return;
     setFading(true); setNear(null);
     // Doors sound as you go in and out (the café bell, row 125, replaces enter.ogg there when it lands).
     AudioManager.playSFX(action === "exit" || action === "ruins_exit" ? "exit" : "enter");
@@ -824,7 +843,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       if (action === "house") setInside("house");
       if (action === "museum_enter") setInside("museum");
       if (action === "cafe_enter") setInside("cafe");
-      if (action === "exit") setExitFrom(inside === "museum" || inside === "oracle" || inside === "cafe" ? inside : null);
+      if (action === "exit") setExitFrom(inside === "museum" || inside === "oracle" || inside === "cafe" || inside === "shop" ? inside : null);
+      if (action === "shop_enter") setInside("shop");
       if (action === "oracle_enter") setInside("oracle");
       if (action === "ruins") { setSite("ruins"); setInside(null); setRuinsRun(n => n + 1); }
       if (action === "ruins_exit") {
@@ -907,7 +927,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       if (target) window.dispatchEvent(new CustomEvent("tsi:peaceful-act", { detail: { id: target.id, tool: held.key } }));
       return;
     }
-    if (toolAction.verb === "swing") { clip("Net"); AudioManager.playSFX("blip4", { rate: 0.8, gain: 0.45 }); return; }
+    // The net through the air: the footstep quickened as the whoosh (the combat swing's stand-in), never a dialogue blip.
+    if (toolAction.verb === "swing") { clip("Net"); AudioManager.playSFX("footstep", { rate: 1.5, gain: 0.45 }); return; }
     if (toolAction.verb === "dig") { clip("Dig"); window.setTimeout(() => AudioManager.playSFX("footstep", { rate: 0.6, gain: 0.7 }), 540); return; }
     if (toolAction.verb === "attack") {
       const kind = WEAPONS[held.key]?.kind;
@@ -995,7 +1016,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       // The Esc that ended mouse-look capture is the browser's; a later one closes things (specs/camera-orbit.md), and in a
       // room with nothing open it leaves by the door (interiors §5; lib/game/sceneGate.ts).
       if (event.key === "Escape") {
-        const open = !!sheet || bagOpen || donateOpen || !!shopTab || decor.decorating || !!(reveal && inside === "oracle") || studyHoldsPrompt() || !!document.querySelector('[role="dialog"]');
+        const open = !!sheet || bagOpen || donateOpen || decor.decorating || !!(reveal && inside === "oracle") || studyHoldsPrompt() || !!document.querySelector('[role="dialog"]');
         const esc = escapeAction({ captureEnded: escapeEndedCapture(), fading, open, inside: !!inside });
         if (esc === "close") { setSheet(null); if (decor.selected) decor.cancel(); }
         if (esc === "exit") act("exit");
@@ -1006,7 +1027,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [act, near, inside, atHome, decor, identity.settings, greeting, nextLine, finishWelcome, site, abilityKeys, sheet, bagOpen, donateOpen, shopTab, reveal, fading]);
+  }, [act, near, inside, atHome, decor, identity.settings, greeting, nextLine, finishWelcome, site, abilityKeys, sheet, bagOpen, donateOpen, reveal, fading]);
   return (
     <main className={`${styles.world} gui`} data-light={phase} data-inside={inside ?? undefined} data-site={site} data-trip={trip.active || undefined} data-cinematic={hudCinematic || undefined} data-compact={compact || undefined}>
       <Canvas ref={canvasRef} tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
@@ -1017,8 +1038,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
               onNear={n => setNear(n === "exit" ? "ruins_exit" : n)} onDefeat={onRuinsDefeat} start={ruinsRun <= 1 ? devAt : null} glider={peaceful.glider} />
             : inside === "oracle" ? <OracleTemple frozen={fading || sheet === "oracle"} talking={sheet === "oracle"} light={light} player={player} onNear={n => setNear(n)} ceremony={reveal} />
             : inside === "cafe" ? <CafeInterior phase={phase} player={player} frozen={fading || !!sheet} identity={identity} level={level} onNear={setNear} />
+            : inside === "shop" ? <ShopInterior frozen={fading || sheet === "counter"} talking={sheet === "counter"} light={light} playerPosRef={player}
+              onNearestStation={s => setNear(s?.id === "counter" ? "counter" : s?.id === "exit" ? "exit" : null)} />
             : inside === "museum" ? <MuseumInterior wings={museumWings} frozen={fading || donateOpen} talking={donateOpen} light={light} player={player} onNear={n => setNear(n === "donate" ? "curator" : n)} />
-            : inside === "hq" ? <Clubhouse phase={phase} light={light} player={player} frozen={fading} talking={sheet === "showcase"} onNear={setNear} />
+            : inside === "hq" ? <Clubhouse phase={phase} light={light} player={player} frozen={fading} talking={sheet === "showcase"} member={peaceful.member} onNear={setNear} />
             : inside === "house" ? <HomeInterior layout={layout} phase={phase} light={light} frozen={fading} player={player} onNear={(n: HouseNear) => setNear(n)}
               decorating={decor.decorating} selected={decor.selected} onPlace={decor.place} onPickUp={decor.pickUp} />
             : atHome ? <HomeIslandScene held={eating || trip.active ? null : held} identity={identity} level={level} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={devZoom}
@@ -1037,13 +1060,13 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           <SeatWatch onChange={setSeated} />
           <WarmupProbe key={sceneShown} onReady={onSceneReady} />
           {children}
-          <NetWorld area={area} player={player} ready={ready && !fading} />
+          <NetWorld area={area} player={player} ready={ready && !fading && netReady} />
           {!inside && !atHome && site !== "ruins" && near !== "enter" && hqDoor && <LandmarkTag position={[hqDoor[0], 2.9, hqDoor[1]]}>HQ</LandmarkTag>}
           <LabelLayer focus={player} />
         </Suspense>
       </Canvas>
       <header className={styles.heading} data-fading={fading || !ready || hudCinematic || ((!full || compact) && headingFlash === null)} data-clean={full && !compact ? undefined : ""}>
-        <h1>{site === "ruins" ? "The ruins" : inside === "oracle" ? "Oracle temple" : inside === "museum" ? "Museum" : inside === "cafe" ? "Café" : inside === "hq" ? "HQ" : inside === "house" ? "Your house" : atHome ? "Your island" : "Tethos Island"}</h1>
+        <h1>{site === "ruins" ? "The ruins" : inside === "oracle" ? "Oracle temple" : inside === "museum" ? "Museum" : inside === "shop" ? "Shop" : inside === "cafe" ? "Café" : inside === "hq" ? "HQ" : inside === "house" ? "Your house" : atHome ? "Your island" : "Tethos Island"}</h1>
         <p>{inside === "cafe" ? "Warm drinks and quiet tables. Find a seat to study." : !inside && !atHome && site === "village" && islandEvent ? `${islandEvent.goal.title} is on.` : "A little space to make our own."}</p>
       </header>
       {/* Top right (hud-first-login §1, §2): coins, level, clock and mail, then sound and the view options; panels open below it. */}
@@ -1091,9 +1114,12 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         : needTool && <p className={styles.interact} data-closed="true" role="status"><kbd>{touch ? "Wheel" : keyName(wheelKeys.wheel)}</kbd>Take out your {needTool === "rod" ? "fishing rod" : needTool}</p>)}
       <FishingOverlay rod={held?.kind === "rod" && held.tier ? rodByTier(held.tier) : peaceful.rod} onActiveChange={setFishing} />
       <ToolWheel items={wheelItems} held={heldState.held} wheelKey={wheelKeys.wheel} touch={touch} onEquip={holdItem} onSwap={() => swapHeld(wheelItems)}
-        enabled={ready && !inside && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !shopTab} />
+        enabled={ready && !inside && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating} />
       <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} onDonated={loadMuseum} />
       <ToastHub />
+      {/* What a catch, a find, a craft or a bottle gave you: one card with its art, beside the Bag's fly-in. */}
+      <RewardCard />
+      <GlideGuideHint show={ready && !fading && !inside && site === "village" && !sheet && !cinematic && !talking} />
       {/* Today's gift once the island is showing and nothing else holds the player (first login, a fade, a sheet, a fight). */}
       <DailyGift ready={ready && !fading && !holdObjective && !sheet && !talking && site !== "ruins"} />
       {/* Talking with a resident: the dialogue box (its own keys; the world holds still under it). */}
@@ -1122,18 +1148,17 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       </div>}
       <CeremonyConfetti active={ceremony && !inside && !atHome} />
       {atHome && !decor.decorating && full && <button className={styles.decorateToggle} onClick={decor.toggle}><kbd>F</kbd> Decorate</button>}
-      {atHome && decor.decorating && !shopTab && <DecorateSheet indoor={inside === "house"} selected={decor.selected} layout={layout}
+      {atHome && decor.decorating && <DecorateSheet indoor={inside === "house"} selected={decor.selected} layout={layout}
         room={inside === "house" ? layout.rooms[roomAt(player.current.x, layout.rooms.length)] ?? null : null}
         onChoose={decor.choose} onRotate={decor.rotateSelected} onPutAway={decor.putAway} onDone={decor.toggle}
-        onFinish={(key, value) => decor.setRoomFinish(roomAt(player.current.x, layout.rooms.length), key, value)} onShop={() => setShopTab("furniture")} />}
-      {/* Locked wardrobe items and the decorate panel link here; closing remounts them with the new inventory. */}
-      <ProgressionPanel open={!!shopTab} onClose={() => setShopTab(null)} title="Shop" wide>{shopTab && <ShopBody initialTab={shopTab} />}</ProgressionPanel>
+        onFinish={(key, value) => decor.setRoomFinish(roomAt(player.current.x, layout.rooms.length), key, value)} onShop={() => toShop("More furniture")} />}
       <NoticeSheet open={sheet === "notice"} onClose={() => setSheet(null)} keys={STATION_KEY} />
+      <ShopCounter open={sheet === "counter"} onClose={() => setSheet(null)} />
       <LettersSheet open={sheet === "letters"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openMail} />
       <BagSheet open={sheet === "bag"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openBag} />
       <ChestSheet open={sheet === "chest"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       <WalletSheet open={sheet === "wallet"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openWallet} />
-      {(sheet === "closet" || sheet === "fitting") && <WardrobeSheet open place={sheet === "closet" ? "closet" : "fitting"} onClose={() => { if (sheet === "fitting") window.dispatchEvent(new CustomEvent("tsi:fitting")); setSheet(null); }} onShop={() => { setSheet(null); setShopTab("outfits"); }} />}
+      {(sheet === "closet" || sheet === "fitting") && <WardrobeSheet open place={sheet === "closet" ? "closet" : "fitting"} onClose={() => { if (sheet === "fitting") window.dispatchEvent(new CustomEvent("tsi:fitting")); setSheet(null); }} onShop={() => { setSheet(null); toShop("More clothes"); }} />}
       <PlayerCharacterUI />
       <JournalSheet open={sheet === "journal"} onClose={() => setSheet(null)} keys="j" />
       <OracleQuizSheet open={sheet === "oracle"} onClose={() => setSheet(null)} onResult={onOracleResult} onPath={pathView?.family ? () => { setPathTick(n => n + 1); setSheet("path"); } : undefined} />

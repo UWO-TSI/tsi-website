@@ -8,20 +8,24 @@ real generated SFX are pending.
 
 | Event | Existing SFX | Where |
 |---|---|---|
-| Bug catch | `confirm` | `VillageLife.tsx` |
-| Bug flees | `exit` | `VillageLife.tsx` |
-| Clue nearby | `blip3` | `VillageLife.tsx` |
-| Flower pick | `confirm` | `FlowerPickFX.tsx` |
+| Foraging (polish, `specs/polish/forage-craft-museum.md`): every find, bug, dig, craft and recipe | the reward card's `confirm` (lower and fuller the rarer, `lib/game/reward.ts` rewardSound); the Bag's fly-in and a full bag are silent | `RewardCard.tsx`, `BagButton.tsx` |
+| Tree shake | each push `footstep` (1.25 to 1.45, 0.42 to 0.26) as a rustle; the drop's landing `footstep` (0.62 fruit, 0.8 branch; 0.6) as a thud | `VillageLife.tsx` |
+| Rock struck, dig, lift | strike `click` (0.62, 0.75) + `footstep` (0.5, 0.45); the spade `footstep` (0.6, 0.8); into the hand `click` (1.55, 0.45); a flower's petals `footstep` (1.45, 0.3) | `VillageLife.tsx` |
+| Rare tell, bug flees, net through the air | `confirm` (1.9, 0.22) once in range; `footstep` (1.7, 0.45); `footstep` (1.5, 0.45) | `VillageLife.tsx`, `DefaultIslandWorld.tsx` |
+| Flower pick on the applicant island | `confirm` | `FlowerPickFX.tsx` |
+| Puddle step (rain) | `footstep` (1.35, 1.1) | `lib/game/movement/juice.ts` |
+| Museum donation settles, guided glide lands | `confirm` (1.25, 0.55); `confirm` (0.9, 0.8) | `MuseumInterior.tsx`, `GlideGuide.tsx` |
+| Shop till counting | `click` (1.65 rising, 0.3; the last 0.5) | `ShopCounter.tsx` |
+| Missing (no blips, no doors; listed in `specs/polish/forage-craft-museum-questions.md`) | leaf rustle, fruit thud, rock clink, shovel scrape, pickup pop, cork, paper unroll, hammering, craft jingle, coin clink, museum chime, puddle splash, bug wings, bag full | |
 | Fishing (polish, `specs/polish/fishing.md` §6) | the meter's max cast and the bite's "!" `confirm`, the reel bar knocking its end `click` (0.75, 0.4), the catch card developing `confirm`; nothing else (no blips, no doors: the gaps are listed in `specs/polish/fishing-questions.md`) | `FishingOverlay.tsx`, `FishReveal.tsx` |
-| Tree shake | `exit` (knock) → `confirm` (drop) | `TreeShakeFX.tsx` |
 | Collection page turn | `click` / `blip1` | `CollectionBook.tsx` |
 
 ## Crafting (already wired)
 
 | Event | Existing SFX | Where |
 |---|---|---|
-| Recipe learned | `confirm` | `Workshop.tsx` |
-| Craft complete | `confirm` | `Workshop.tsx` |
+| Recipe learned, craft complete | the reward card's `confirm` | `RewardCard.tsx` |
+| Hammer blows at the bench, the bottle's cork | `click` (0.82 to 0.92, 0.7) a blow; `click` (1.8, 0.7) | `Workshop.tsx` |
 
 ## Combat (wired 2026-10-01, combat polish 3)
 
