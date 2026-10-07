@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExt
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useProgress, useTexture } from "@react-three/drei";
 import * as THREE from "three";
-import { Map as MapIcon, Settings, Wrench } from "lucide-react";
+import { Map as MapIcon, Menu, Settings, Wrench } from "lucide-react";
 import GridWorld from "./grid/GridWorld";
 import GridOcean from "./grid/GridOcean";
 import PlayerAvatar from "./PlayerAvatar";
@@ -121,7 +121,7 @@ import { rodByTier } from "@/lib/game/rods";
 import { eatItem, localCollections, mergeWithLocal } from "@/lib/game/collections";
 import { capture } from "@/lib/game/orbitCamera";
 import { iconUrl } from "@/lib/icons/keys";
-import { FLASH_MS, fullHud as isFullHud, setClassTag, useAlwaysFullHud } from "@/lib/game/hudPrefs";
+import { FLASH_MS, compactTouchHud, fullHud as isFullHud, setClassTag, useAlwaysFullHud } from "@/lib/game/hudPrefs";
 import { useFlash } from "./useFlash";
 
 import { villageNodes } from "@/lib/game/islandNodes";
@@ -608,6 +608,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [shopTab, setShopTab] = useState<"outfits" | "furniture" | null>(() => (devHome.get("sheet") === "shop" ? "furniture" : null));
   // The clean HUD (row 283): the minimap opens on M.
   const [mapOpen, setMapOpen] = useState(false);
+  // A phone's folded HUD (world audit item 11): Bag, Collection and Map behind one menu button.
+  const [menuOpen, setMenuOpen] = useState(false);
   const progression = useProgressionWorld();
   const plot = useDefaultIslandPlot(progression.completedGoals);
   const ceremony = useCeremony(progression.ceremonyGoal, progression.forceCeremony);
@@ -939,6 +941,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const hudCinematic = cinematic || talking;
   // Dev (screenshots without pointer lock): ?hud=clean shows the HUD as it is while exploring in mouse-look.
   const full = isFullHud({ always: alwaysFullHud, keyHeld: hudKey, touch, capture: devHome.get("hud") === "clean" ? "captured" : captured, cinematic: hudCinematic });
+  // On a phone the full HUD folds: one menu button, the heading, chips and touch hint flash (world audit item 11).
+  const compact = compactTouchHud({ touch, always: alwaysFullHud });
+  const menuShows = full && (!compact || menuOpen);
   // Hold the HUD key (H) for the full HUD.
   useEffect(() => {
     const key = wheelKeys.hud;
@@ -1003,7 +1008,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     return () => window.removeEventListener("keydown", key);
   }, [act, near, inside, atHome, decor, identity.settings, greeting, nextLine, finishWelcome, site, abilityKeys, sheet, bagOpen, donateOpen, shopTab, reveal, fading]);
   return (
-    <main className={`${styles.world} gui`} data-light={phase} data-inside={inside ?? undefined} data-site={site} data-trip={trip.active || undefined} data-cinematic={hudCinematic || undefined}>
+    <main className={`${styles.world} gui`} data-light={phase} data-inside={inside ?? undefined} data-site={site} data-trip={trip.active || undefined} data-cinematic={hudCinematic || undefined} data-compact={compact || undefined}>
       <Canvas ref={canvasRef} tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
         camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
@@ -1037,12 +1042,12 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           <LabelLayer focus={player} />
         </Suspense>
       </Canvas>
-      <header className={styles.heading} data-fading={fading || !ready || hudCinematic || (!full && headingFlash === null)} data-clean={full ? undefined : ""}>
+      <header className={styles.heading} data-fading={fading || !ready || hudCinematic || ((!full || compact) && headingFlash === null)} data-clean={full && !compact ? undefined : ""}>
         <h1>{site === "ruins" ? "The ruins" : inside === "oracle" ? "Oracle temple" : inside === "museum" ? "Museum" : inside === "cafe" ? "Café" : inside === "hq" ? "HQ" : inside === "house" ? "Your house" : atHome ? "Your island" : "Tethos Island"}</h1>
         <p>{inside === "cafe" ? "Warm drinks and quiet tables. Find a seat to study." : !inside && !atHome && site === "village" && islandEvent ? `${islandEvent.goal.title} is on.` : "A little space to make our own."}</p>
       </header>
       {/* Top right (hud-first-login §1, §2): coins, level, clock and mail, then sound and the view options; panels open below it. */}
-      <TopCluster full={full} hidden={hudCinematic} weather={weather} phase={phase} unread={progression.unreadLetters} mailKey={keyName(identity.settings.key_bindings.openMail)} onMail={() => setSheet("letters")}
+      <TopCluster full={full && !compact} buttons={full} hidden={hudCinematic} weather={weather} phase={phase} unread={progression.unreadLetters} mailKey={keyName(identity.settings.key_bindings.openMail)} onMail={() => setSheet("letters")}
         onWallet={() => setSheet(value => (value === "wallet" ? null : "wallet"))} walletKey={keyName(identity.settings.key_bindings.openWallet)}>
         <AudioController phase={ambientPhase} weather={weather} season={season.season} className={hudButton} />
         <button className={hudButton} onClick={() => setSheet(value => (value === "settings" ? null : "settings"))} aria-label="Settings" title="Settings: text, sound, keys, look"><Settings size={18} aria-hidden /></button>
@@ -1105,13 +1110,15 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <CollectionBook open={bagOpen} onClose={() => setBagOpen(false)} keys={identity.settings.key_bindings.openJournal} />
       {/* The Bag (I) shows in the clean HUD only as a pickup flies into it; the Collection (B) with the full HUD. */}
       <div className={styles.bagButtons}>
-        <BagButton full={full && sheet !== "bag"} keyLabel={keyName(identity.settings.key_bindings.openBag)} onOpen={() => setSheet("bag")} />
-        {!bagOpen && full && <button className={styles.bagButton} onClick={() => setBagOpen(true)} aria-label="Open your collection"><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</button>}
+        {compact && full && <button className={styles.menuButton} onClick={() => setMenuOpen(o => !o)} aria-expanded={menuOpen} aria-label={menuOpen ? "Close the menu" : "Menu: bag, collection and map"}><Menu size={20} aria-hidden /></button>}
+        <BagButton full={menuShows && sheet !== "bag"} keyLabel={keyName(identity.settings.key_bindings.openBag)} onOpen={() => { setMenuOpen(false); setSheet("bag"); }} />
+        {!bagOpen && menuShows && <button className={styles.bagButton} onClick={() => { setMenuOpen(false); setBagOpen(true); }} aria-label="Open your collection"><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</button>}
+        {compact && menuShows && !mapOpen && !inside && !atHome && site !== "ruins" && !holdObjective && <button className={styles.bagButton} onClick={() => { setMenuOpen(false); setMapOpen(true); }} aria-label="Show the island map"><MapIcon size={17} aria-hidden /> Map</button>}
       </div>
       {!inside && !atHome && site !== "ruins" && !holdObjective && <div className={styles.minimap} data-minimap data-new={objectiveNew || undefined}>
         {mapOpen ? <MiniMap playerPosRef={player} plot={objectivePlot} toggleKey={identity.settings.key_bindings.openMap} onClose={() => setMapOpen(false)} />
-          : full && <button className={styles.mapButton} onClick={() => setMapOpen(true)} aria-label="Show the island map"><MapIcon size={17} aria-hidden /><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</button>}
-        {progression.objective.text && (full || mapOpen || objectiveNew || objectiveFlash) && <p className={styles.objective} data-testid="objective" data-flash={full ? undefined : objectiveFlash ?? undefined}><span aria-hidden="true">◆</span> {progression.objective.text}</p>}
+          : full && !compact && <button className={styles.mapButton} onClick={() => setMapOpen(true)} aria-label="Show the island map"><MapIcon size={17} aria-hidden /><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</button>}
+        {progression.objective.text && ((full && !compact) || mapOpen || objectiveNew || objectiveFlash) && <p className={styles.objective} data-testid="objective" data-flash={full && !compact ? undefined : objectiveFlash ?? undefined}><span aria-hidden="true">◆</span> {progression.objective.text}</p>}
       </div>}
       <CeremonyConfetti active={ceremony && !inside && !atHome} />
       {atHome && !decor.decorating && full && <button className={styles.decorateToggle} onClick={decor.toggle}><kbd>F</kbd> Decorate</button>}
@@ -1147,7 +1154,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span>{peaceful.glider && <span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air Glide</span>}<span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span><kbd>{keyName(wheelKeys.wheel)}</kbd> Tools</span><span>Click Use</span><span>{mouseLook ? "Mouse or " : ""}<kbd>←</kbd><kbd>→</kbd> Look</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Journal</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>{keyName(identity.settings.key_bindings.openBag)}</kbd> Bag</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Crouch, at speed slide</span>}</div>}
       {/* Clear of the minimap (left) and the audio widget (bottom right). */}
       {touch && !hudCinematic && (!inside || inside === "cafe") && <TouchControls left="var(--hud-stick-left)" bottom="var(--hud-stick-bottom)" walkOnly={inside === "cafe"} />}
-      <p className={styles.touchControls}>Tap the ground to move · two fingers turn the camera</p>
+      {(!compact || (headingFlash !== null && !hudCinematic)) && <p className={styles.touchControls} data-flash={compact ? headingFlash ?? undefined : undefined}>Tap the ground to move · two fingers turn the camera</p>}
       {captured === "free" && !touch && !hudCinematic && <p className={styles.lookHint} role="status">Click to look around</p>}
       {captured === "captured" && site === "ruins" && <svg className={styles.crosshair} viewBox="-10 -10 20 20" aria-hidden="true"><circle r="5.5" /><circle r="1.2" /></svg>}
       <div className={styles.fade} data-active={fading} aria-hidden="true" />

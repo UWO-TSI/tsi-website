@@ -60,7 +60,7 @@
 .panel[data-open="false"] { display: none; }
 @media (pointer: coarse), (pointer: none) {
   /* Touch: the hint line is the floor; the lane and the toasts go up over the stick, the minimap stands beside it. */
-  .world { --hud-bar: 32px; --hud-lane-bottom: calc(var(--hud-stick-bottom) + 132px + var(--hud-gap)); --hud-side-bottom: var(--hud-stick-bottom); }
+  .world { --hud-bar: 32px; --hud-lane-bottom: calc(var(--hud-stick-bottom) + var(--touch-stick, 132px) + var(--hud-gap)); --hud-side-bottom: var(--hud-stick-bottom); }
   .controls { display: none; }
   .touchControls { display: block; position: absolute; bottom: var(--hud-floor); left: 50%; transform: translateX(-50%); margin: 0; padding: 8px 16px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.95); color: var(--gui-ink); white-space: nowrap; font-size: var(--gui-text-xs); font-weight: 700; box-shadow: var(--gui-shadow-sm); }
 }
@@ -451,3 +451,22 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 /* Talking, the greeting and the trip (world audit item 7): everything but the dialogue or the trip's Skip stands back. */
 .world[data-cinematic] .bagButtons, .world[data-cinematic] .decorateToggle, .world[data-cinematic] .minimap, .netHud[data-hidden] { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.3s ease, visibility 0s linear 0.3s; }
 .bagButtons, .decorateToggle, .minimap, .netHud { transition: opacity 0.3s ease, visibility 0s; }
+
+/* ── A phone's folded HUD (world audit item 11) ─────────────────────────────────────────────────────────────────────
+   Touch keeps the full HUD's buttons but folds them: Bag, Collection and Map open from one menu button top left, the
+   place name sits beside it and fades after a scene comes in, the touch hint flashes with it. */
+.menuButton { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: var(--gui-paper); color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-md); cursor: pointer; zoom: var(--tsi-text-scale, 1); }
+.menuButton[aria-expanded="true"] { background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 2px var(--gui-paper-edge); }
+.world[data-compact] .bagButtons { top: max(14px, env(safe-area-inset-top)); left: var(--hud-edge); flex-direction: column; align-items: flex-start; }
+.world[data-compact] .heading { top: calc(max(14px, env(safe-area-inset-top)) + 6px); left: calc(var(--hud-edge) + 56px); }
+.touchControls[data-flash="out"] { animation: hintFade 0.32s ease-in forwards; }
+@keyframes hintFade { to { opacity: 0; } }
+:global(html[data-contrast="high"]) .world .menuButton { background: #000000; color: #ffffff; box-shadow: 0 0 0 2px #ffffff; }
+/* A phone on its side: the controls size from the short side, the stick moves to the corner with the map above it, and
+   the world no longer insists on 480px of height (it ran the stick and buttons off the bottom). */
+@media (pointer: coarse) and (max-height: 430px) {
+  .world { min-height: 0; --touch-stick: 104px; --touch-scale: 0.78; --hud-floor: max(10px, env(safe-area-inset-bottom)); --hud-stick-bottom: calc(var(--hud-floor) + 30px);
+    --hud-stick-left: var(--hud-edge); --hud-side-bottom: calc(var(--hud-stick-bottom) + var(--touch-stick) + var(--hud-gap)); }
+  .world[data-compact] .heading p { display: none; }
+}
+

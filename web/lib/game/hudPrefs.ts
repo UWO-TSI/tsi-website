@@ -18,6 +18,13 @@ export function fullHud(s: { always: boolean; keyHeld: boolean; touch: boolean; 
   return !s.cinematic && (s.always || s.keyHeld || s.touch || s.capture !== "captured");
 }
 
+/**
+ * A phone's HUD (world audit item 11): a touch screen has no pause view, so it keeps the full HUD's buttons but folds
+ * them: Bag, Collection and Map behind one menu button, the clock and coins flashing on change, the place name and the
+ * touch hint flashing as a scene comes in. "Show full HUD" unfolds it.
+ */
+export const compactTouchHud = (s: { touch: boolean; always: boolean }): boolean => s.touch && !s.always;
+
 /** How long a change shows in the clean HUD (ms), and the fade after it. */
 export const FLASH_MS = { coins: 3200, xp: 3200, clock: 4500, mail: 5000, objective: 6000, heading: 3500 } as const;
 export const FLASH_OUT_MS = 320;

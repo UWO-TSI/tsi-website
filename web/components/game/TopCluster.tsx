@@ -12,6 +12,9 @@
  * setting) shows everything. The caller's buttons stay mounted while hidden: the
  * sound button is the ambience's owner (useAmbience stops all sound on unmount).
  *
+ * `buttons` (default `full`): the mail and the caller's buttons stay while the
+ * chips flash, for a phone's folded HUD (world audit item 11).
+ *
  * `hidden`: a cinematic moment (talking, the greeting, the boat trip; world
  * audit item 7), where the whole cluster fades out, flashes included.
  */
@@ -93,8 +96,8 @@ const DATE = new Intl.DateTimeFormat("en-US", { timeZone: "America/Toronto", wee
 const up = (a: unknown, b: unknown) => (b as number) > (a as number);
 const onTheHour = (_: unknown, b: unknown) => (b as number) % 60 === 0;
 
-export default function TopCluster({ weather, phase, unread, mailKey, onMail, onWallet, walletKey, full = true, hidden = false, children }: {
-  weather: IslandWeather; phase: IslandPhase; unread: number; mailKey: string; onMail: () => void; full?: boolean; hidden?: boolean; children?: ReactNode;
+export default function TopCluster({ weather, phase, unread, mailKey, onMail, onWallet, walletKey, full = true, buttons = full, hidden = false, children }: {
+  weather: IslandWeather; phase: IslandPhase; unread: number; mailKey: string; onMail: () => void; full?: boolean; buttons?: boolean; hidden?: boolean; children?: ReactNode;
   /** The coins open the wallet (reachability §2), its key shown on the tooltip. */
   onWallet?: () => void; walletKey?: string;
 }) {
@@ -109,8 +112,8 @@ export default function TopCluster({ weather, phase, unread, mailKey, onMail, on
   const fill = progress ? (progress.needed ? progress.into / progress.needed : 1) : 0;
   const flash = { coins: useFlash(hud.coins, FLASH_MS.coins), xp: useFlash(hud.xp, FLASH_MS.xp, up), clock: useFlash(minute, FLASH_MS.clock, onTheHour), mail: useFlash(unread, FLASH_MS.mail, up) };
   /** In the clean HUD a part shows only while its change is (its flash state for the slide in and out). */
-  const shows = (f: "in" | "out" | null) => (full ? { show: true, at: undefined } : { show: f !== null, at: f ?? undefined });
-  const coins = shows(flash.coins), xp = shows(flash.xp), clock = shows(flash.clock), mail = shows(flash.mail);
+  const shows = (f: "in" | "out" | null, all = full) => (all ? { show: true, at: undefined } : { show: f !== null, at: f ?? undefined });
+  const coins = shows(flash.coins), xp = shows(flash.xp), clock = shows(flash.clock), mail = shows(flash.mail, buttons);
 
   return (
     <div className={styles.cluster} data-clean={full ? undefined : ""} data-hidden={hidden || undefined} aria-hidden={hidden || undefined}>
@@ -141,7 +144,7 @@ export default function TopCluster({ weather, phase, unread, mailKey, onMail, on
         {mail.show && <button className={styles.button} data-flash={mail.at} onClick={onMail} aria-label={unread ? `Mail, ${unread} unread` : "Mail"} title={`Mail (${mailKey})`}>
           <Mail size={18} aria-hidden />{unread > 0 && <span className={styles.badge} aria-hidden="true">{unread > 9 ? "9+" : unread}</span>}
         </button>}
-        <span className={styles.more} data-hidden={full ? undefined : ""}>{children}</span>
+        <span className={styles.more} data-hidden={buttons ? undefined : ""}>{children}</span>
       </div>
     </div>
   );
