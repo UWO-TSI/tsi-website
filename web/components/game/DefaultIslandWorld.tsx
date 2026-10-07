@@ -482,8 +482,9 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {ruins && [-1.9, 1.9].map(dz => <GLBProp key={dz} url="/assets/acnh/props/stone-lantern.glb" position={[ruins.x, ground(ruins.x, ruins.z + dz), ruins.z + dz]} />)}
     {monument && <ClubMonument position={at(monument)} stage={stage} ceremony={ceremony} />}
     {mailbox && <GLBProp url="/assets/acnh/furniture/mailbox.glb" position={at(mailbox)} scale={0.1} />}
-    {notice && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(notice)} />}
-    {board && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(board)} />}
+    {/* The board model's notices face +z; the plaza boards stand in front of the HQ, so they turn to face the plaza (a painter yaw adds on). */}
+    {notice && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(notice)} rotation={[0, Math.PI + (notice.yaw ?? 0), 0]} />}
+    {board && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(board)} rotation={[0, Math.PI + (board.yaw ?? 0), 0]} />}
     {missions && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
     {wharf && <Wharf dock={{ x: wharf.x, z: wharf.z, yaw: wharf.yaw ?? 0 }} light={light} place="village" />}
     {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <Html key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} center distanceFactor={10} zIndexRange={[3, 0]}>
