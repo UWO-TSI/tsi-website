@@ -20,14 +20,14 @@
  *    never garish" law.
  */
 
-import { useEffect, useMemo, useSyncExternalStore } from "react";
-import { useThree } from "@react-three/fiber";
+import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
 import { EffectComposer, Bloom, FXAA, N8AO, TiltShift2, ToneMapping, Vignette } from "@react-three/postprocessing";
 import { createGraphicsContextStore } from "@/lib/game/graphicsContext";
 import type { Grade } from "@/lib/game/grading";
 import type { LookFx, ToneMap } from "@/lib/game/lookPreset";
 import { BlendFunction, Effect, ToneMappingMode } from "postprocessing";
-import { Uniform, Vector3 } from "three";
+import { Uniform, Vector3, type Scene } from "three";
 
 // Pastel master grade (AC-reference calibration, 2026-07-14 — David's
 // snapshots in specs/references/acnh measure mean outdoor saturation
@@ -96,6 +96,28 @@ class PastelEffect extends Effect {
   }
 }
 
+/**
+ * The AO pass's two extra scene renders (specs/perf/2026-10-baseline.md item 1). N8AO is transparency aware once the
+ * scene holds a transparent material (it always does here): every frame it renders the scene twice more, the
+ * transparent objects alone, into its own targets. Each `renderer.render` would walk the whole scene graph for world
+ * matrices again, though nothing moves between the composer's scene render and the AO pass. So the scene's own
+ * matrix update runs only in the frame's first render (the frame's start turns it back on); the shadow maps already
+ * draw once a frame (SunShadows). The image is the same. Module scope: hook values are never written in a component.
+ */
+function onceAFrame(scene: Scene) {
+  const after = scene.onAfterRender;
+  scene.onAfterRender = (...args) => { after.apply(scene, args); scene.matrixWorldAutoUpdate = false; };
+  return () => { scene.onAfterRender = after; scene.matrixWorldAutoUpdate = true; };
+}
+function frameStart(scene: Scene) { scene.matrixWorldAutoUpdate = true; }
+type AoPass = { autoDetectTransparency: boolean; configuration: { transparencyAware: boolean } };
+/** Transparency aware from the start, as the pass would decide on its first frame, without walking the scene every frame to decide it again. */
+function settleTransparency(pass: AoPass | null) {
+  if (!pass) return;
+  pass.autoDetectTransparency = false;
+  pass.configuration.transparencyAware = true;
+}
+
 interface PostFXProps {
   /** Smooth mode only; keep the intentionally pixelated target unfiltered. */
   antialias?: boolean;
@@ -112,6 +134,12 @@ export default function PostFX({ antialias = false, grade: g, fx }: PostFXProps)
   const gl = useThree((s) => s.gl);
   const context = useMemo(() => createGraphicsContextStore(gl.getContext(), gl.domElement), [gl]);
   const contextAvailable = useSyncExternalStore(context.subscribe, context.getSnapshot, () => false);
+  const scene = useThree((s) => s.scene);
+  const ao = useRef<AoPass>(null);
+  const aoOn = !!fx.ao && contextAvailable;
+  useEffect(() => (aoOn ? onceAFrame(scene) : undefined), [scene, aoOn]);
+  useEffect(() => { if (aoOn) settleTransparency(ao.current); }, [aoOn]);
+  useFrame(() => frameStart(scene), -1001);
   useEffect(() => {
     (pastel.uniforms.get("uDesat")!).value = g.desat;
     (pastel.uniforms.get("uWarmCast")!.value as Vector3).set(1 + 0.03 * g.warmth, 1.0, 1 - 0.06 * g.warmth);
@@ -126,7 +154,7 @@ export default function PostFX({ antialias = false, grade: g, fx }: PostFXProps)
   return (
     <EffectComposer multisampling={0}>
       {/* Look lab AO runs on the raw scene render, before anything filters it. */}
-      {fx.ao ? <N8AO aoRadius={fx.ao.radius} intensity={fx.ao.intensity} distanceFalloff={1} quality="performance" halfRes /> : <></>}
+      {fx.ao ? <N8AO ref={ao as never} aoRadius={fx.ao.radius} intensity={fx.ao.intensity} distanceFalloff={1} quality="performance" halfRes /> : <></>}
       {/* FXAA samples neighboring input pixels. Run it before the merged grade
           so its center and neighbor samples use the same color space. */}
       {antialias ? <FXAA /> : <></>}

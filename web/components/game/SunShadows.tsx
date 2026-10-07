@@ -151,11 +151,14 @@ class SunShadowCache {
     const dirty = this.visit(scene);
     const light = this.light as THREE.DirectionalLight | null;
     if (!light || !gl.shadowMap.enabled) {
-      if (this.active) this.deactivate();
+      if (this.active) this.deactivate(gl);
       return;
     }
     this.active = true;
-    gl.shadowMap.autoUpdate = true;
+    // Once a frame, in its first render: the AO pass renders the scene twice more (PostFX), and the maps drawn for
+    // the first are the frame's (specs/perf/2026-10-baseline.md item 1).
+    gl.shadowMap.autoUpdate = false;
+    gl.shadowMap.needsUpdate = true;
     if (this.moving.parent !== scene) scene.add(this.moving);
     this.follow(light);
     this.cast(false);
@@ -164,8 +167,9 @@ class SunShadowCache {
     if (this.pending) light.shadow.needsUpdate = true;
   }
 
-  private deactivate() {
+  private deactivate(gl: THREE.WebGLRenderer) {
     this.active = false;
+    gl.shadowMap.autoUpdate = true;
     this.pending = true;
     this.moving.removeFromParent();
     for (const mesh of this.dynamics) if (mesh.userData.casterOnly) mesh.visible = false;
