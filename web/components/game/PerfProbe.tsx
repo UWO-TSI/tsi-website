@@ -13,7 +13,7 @@ import * as THREE from "three";
 import { frameStats } from "@/lib/game/perf/frameStats";
 
 const CAP = 8192;
-const FIELDS = ["calls", "triangles", "mixers", "skeletons", "cpu", "render"] as const;
+const FIELDS = ["calls", "triangles", "mixers", "skeletons", "cpu", "render", "scenes"] as const;
 type Field = (typeof FIELDS)[number];
 
 class Recorder {
@@ -23,14 +23,19 @@ class Recorder {
   start = -1;
   before = -1;
   after = -1;
+  /** Scene renders this frame (the composer's, and any pass that draws the scene again), and who asked, when `trace` is on. */
+  scenes = 0;
+  trace = false;
+  readonly callers: string[] = [];
   /** The frame that just ended (read at the start of the next, before the world's Performance probe resets gl.info). */
   close(info: THREE.WebGLInfo) {
     if (this.on && this.start >= 0 && this.after >= this.start && this.n < CAP) {
       const r = this.rows, i = this.n++;
       r.calls[i] = info.render.calls; r.triangles[i] = info.render.triangles;
       r.mixers[i] = frameStats.mixers; r.skeletons[i] = frameStats.skeletons;
-      r.cpu[i] = this.after - this.start; r.render[i] = this.before >= 0 ? this.after - this.before : 0;
+      r.cpu[i] = this.after - this.start; r.render[i] = this.before >= 0 ? this.after - this.before : 0; r.scenes[i] = this.scenes;
     }
+    this.scenes = 0;
     frameStats.mixers = 0; frameStats.skeletons = 0;
     this.start = performance.now(); this.before = -1; this.after = -1;
   }
@@ -75,12 +80,24 @@ function sceneCounts(scene: THREE.Scene, gl: THREE.WebGLRenderer) {
 function attach(rec: Recorder, scene: THREE.Scene, gl: THREE.WebGLRenderer) {
   countSkeletons();
   const before = scene.onBeforeRender, after = scene.onAfterRender;
-  scene.onBeforeRender = (...args) => { if (rec.before < 0) rec.before = performance.now(); before.apply(scene, args); };
+  scene.onBeforeRender = (...args) => {
+    if (rec.before < 0) rec.before = performance.now();
+    rec.scenes++;
+    if (rec.trace) rec.callers.push(new Error().stack?.split("\n").slice(2, 9).join(" < ") ?? "");
+    before.apply(scene, args);
+  };
   scene.onAfterRender = (...args) => { after.apply(scene, args); rec.after = performance.now(); };
   Object.assign(window, { __perf: {
     begin: () => { rec.n = 0; rec.on = true; },
     end: () => { rec.on = false; return rec.summary(); },
     scene: () => sceneCounts(scene, gl),
+    /** Who renders the scene, over the next `frames` frames (call stacks). */
+    callers: (frames = 1) => new Promise<string[]>(done => {
+      rec.callers.length = 0; rec.trace = true;
+      let left = frames + 1;
+      const tick = () => { if (--left > 0) requestAnimationFrame(tick); else { rec.trace = false; done([...rec.callers]); } };
+      requestAnimationFrame(tick);
+    }),
   } });
   return () => { scene.onBeforeRender = before; scene.onAfterRender = after; delete (window as { __perf?: unknown }).__perf; };
 }

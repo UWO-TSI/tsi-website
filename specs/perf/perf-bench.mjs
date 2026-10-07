@@ -17,7 +17,7 @@ const require = createRequire("/opt/homebrew/lib/node_modules/");
 const { chromium } = require("playwright");
 const [SCENES = "village,cafe,ruins-summoner,ruins-illusionist,ruins-elementalist,ruins-marksman", OUT = "/tmp/perf-bench.jsonl"] = process.argv.slice(2);
 const PORT = process.env.PORT ?? 3149, W = 1280, H = 800, SECONDS = Number(process.env.SECONDS ?? 8), TIER_NAME = process.env.TIER ?? "high";
-const UNCAPPED = process.env.UNCAPPED !== "0", PROFILE = process.env.PROFILE === "1", SHOTS = process.env.SHOTS ?? "";
+const UNCAPPED = process.env.UNCAPPED !== "0", PROFILE = process.env.PROFILE === "1", SHOTS = process.env.SHOTS ?? "", HITCH = process.env.HITCH === "1";
 const args = ["--mute-audio", "--window-position=2400,0", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-precise-memory-info"];
 if (UNCAPPED) args.push("--disable-gpu-vsync", "--disable-frame-rate-limit");
 const browser = await chromium.launch({ headless: false, args });
@@ -129,6 +129,28 @@ function summarise(scene, s) {
     firstUlt: s.ults[0] !== undefined ? +after(s.ults[0]).toFixed(1) : null, secondUlt: s.ults[1] !== undefined ? +after(s.ults[1]).toFixed(1) : null, perf: s.perf };
 }
 const n = v => (typeof v === "number" ? +v.toFixed(2) : v);
+/** HITCH=1: each frame over 40 ms of the measured pass, by the functions that took its time (the profile's own clock is aligned on its last sample, the end of the pass). */
+function hitches(prof, s) {
+  const byId = new Map(prof.nodes.map(x => [x.id, x])), parent = new Map();
+  for (const x of prof.nodes) for (const c of x.children ?? []) parent.set(c, x.id);
+  let at = prof.startTime;
+  const times = prof.timeDeltas.map(d => (at += d));
+  const lastFrame = s.t.at(-1)[0], shift = lastFrame - (times.at(-1) - prof.startTime) / 1000;
+  const label = x => { const cf = x.callFrame, name = cf.functionName || "(anonymous)"; return name.startsWith("(") ? name : `${name} ${cf.url.split("/").pop().split("?")[0].replace(/_[0-9a-f]{8}\._?\.js|\.js/g, "")}:${cf.lineNumber + 1}`; };
+  for (const [end, dur] of s.t) {
+    if (dur < 40) continue;
+    const self = new Map(), ours = new Map();
+    prof.samples.forEach((id, k) => {
+      const t = shift + (times[k] - prof.startTime) / 1000;
+      if (t <= end - dur || t > end) return;
+      const key = label(byId.get(id));
+      self.set(key, (self.get(key) ?? 0) + 0.1);
+      for (let p = id; p !== undefined; p = parent.get(p)) { const u = byId.get(p).callFrame.url; if (/components_|lib_|app_/.test(u)) { const o = label(byId.get(p)); ours.set(o, (ours.get(o) ?? 0) + 0.1); break; } }
+    });
+    const top = m => [...m].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, ms]) => `${ms.toFixed(1)} ${k}`).join("\n        ");
+    console.log(`  frame at ${Math.round(end - dur)} ms (ults at ${s.ults.map(Math.round).join(", ")}): ${dur.toFixed(1)} ms\n    self: ${top(self)}\n    ours: ${top(ours)}`);
+  }
+}
 for (const scene of SCENES.split(",")) {
   try {
     await fresh();
@@ -139,7 +161,10 @@ for (const scene of SCENES.split(",")) {
     await settle(fight ? ready.ruins : scene === "cafe" ? ready.world : ready.net);
     if (fight) await stage();
     const ult = fight ? await page.evaluate(() => window.__combat.rt.v2.ult.name) : null;
+    let cdp = null, t0 = 0;
+    if (HITCH) { cdp = await ctx.newCDPSession(page); await cdp.send("Profiler.enable"); await cdp.send("Profiler.setSamplingInterval", { interval: 100 }); await cdp.send("Profiler.start"); }
     const s = await sample(SECONDS, fight);
+    if (cdp) { const { profile: prof } = await cdp.send("Profiler.stop"); hitches(prof, s); }
     const sceneCounts = await page.evaluate(() => window.__perf.scene());
     const heap = await page.evaluate(() => Math.round((performance.memory?.usedJSHeapSize ?? 0) / 1048576));
     if (SHOTS) { mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: `${SHOTS}/${scene}-${TIER_NAME}.png` }); }
