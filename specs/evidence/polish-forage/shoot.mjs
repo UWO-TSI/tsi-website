@@ -23,9 +23,12 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const N = JSON.parse(execFileSync("npx", ["vite-node", "-c", "vitest.config.ts", join(HERE, "nodes.ts")], { cwd: join(HERE, "../../../web") }).toString().trim().split("\n").pop());
 console.log("nodes at", N.now);
 
-// HEADLESS=1: no window at all, WebGL on SwiftShader (looks only; FPS needs the real GPU window).
-const HEADLESS = process.env.HEADLESS === "1";
-const browser = await chromium.launch(HEADLESS
+// HEADLESS=gpu: no window, Chromium's new headless mode on the Mac's GPU (Metal). HEADLESS=1: no window, WebGL on
+// SwiftShader (about 4 s a frame: stills only, the clips crawl at their 0.1 s step cap).
+const HEADLESS = process.env.HEADLESS;
+const browser = await chromium.launch(HEADLESS === "gpu"
+  ? { headless: true, channel: "chromium", args: ["--mute-audio", "--use-angle=metal", "--enable-gpu", "--ignore-gpu-blocklist"] }
+  : HEADLESS === "1"
   ? { headless: true, args: ["--mute-audio", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] }
   : { headless: false, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist", "--window-position=2400,0"] });
 let page;

@@ -3,8 +3,9 @@
 # holds it), runs a dev server from this tree on 3143 with the Supabase env blanked (never production), shoots the
 # scenes (shoot.mjs), stops the server, releases the lock, then tiles the sheets (sheets.py).
 #   specs/evidence/polish-forage/run.sh <before_dir> <after_dir> [scene ...]      (HEADLESS=1 for no window)
-# The before frames come from the same scenes run against a84643f9 (this pass's base).
-HERE=${0:A:h}; TREE=${HERE:h:h:h}
+# The before frames come from the same scenes served from a checkout of a84643f9 (this pass's base):
+#   SERVE_TREE=<that checkout> NO_SHEETS=1 run.sh - <before_dir> [scene ...]
+HERE=${0:A:h}; TREE=${SERVE_TREE:-${HERE:h:h:h}}
 BEFORE=$1; AFTER=$2; shift 2
 LOCK=/private/tmp/claude-501/uwotsi-devserver.lock
 ME=game/polish-forage
@@ -23,4 +24,4 @@ for p in $(pgrep -P $DEV); do for c in $(pgrep -P $p); do kill $c 2>/dev/null; d
 kill $DEV 2>/dev/null; sleep 3; kill -9 $DEV 2>/dev/null
 kill $REFRESH 2>/dev/null
 [ "$(cut -d' ' -f1 $LOCK/owner 2>/dev/null)" = "$ME" ] && rm -rf $LOCK
-python3 $HERE/sheets.py $BEFORE $AFTER
+[ -n "$NO_SHEETS" ] || python3 $HERE/sheets.py $BEFORE $AFTER

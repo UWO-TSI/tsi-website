@@ -5,7 +5,7 @@
 import { villageNodes, villageBottleSpot } from "@/lib/game/islandNodes";
 import { nodeRoll } from "@/lib/collections/rolls";
 import { objectsOf } from "@/lib/game/villageMap";
-import { landmark, landmarkPoint } from "@/lib/game/defaultIsland";
+import { landmark, landmarkPoint, landmarks } from "@/lib/game/defaultIsland";
 import { FRUIT_MODEL } from "@/lib/game/treeFruit";
 import { SPECIES as CRITTERS } from "@/components/game/Critters";
 import { torontoDay } from "@/lib/wallet/rules";
@@ -35,9 +35,12 @@ const cards = [
 ];
 /** A ledge for the guided first glide that runs off toward +z (the follow camera looks that way): where to stand, and its spot. */
 const island = villageIsland();
+const marks = landmarks();
+const underBuilding = (x: number, z: number) => marks.some(l => !!l.half && Math.abs(x - l.x) < l.half[0] + 0.5 && Math.abs(z - l.z) < l.half[1] + 0.5);
 let glide: { stand: [number, number]; spot: ReturnType<typeof glideSpot> } | null = null;
 for (let z = -30; z <= 30 && !glide; z += 1) for (let x = -30; x <= 30 && !glide; x += 1) {
-  const spot = glideSpot(island.map, x, z);
+  const spot = glideSpot(island.map, x, z, 28, underBuilding);
+  if (underBuilding(x, z)) continue;
   if (spot && spot.dir[1] === 1 && Math.hypot(spot.edge[0] - x, spot.edge[1] - z) < 3 && z < spot.edge[1] - 1.5) glide = { stand: [x, z], spot };
 }
 const pick = (f: (e: (typeof rolled)[number]) => boolean) => rolled.filter(f).map(({ n, sp }) => ({ id: n.id, x: n.x, z: n.z, key: sp!.key, tool: sp!.tool, rarity: sp!.rarity, tree: n.tree ?? null }));
