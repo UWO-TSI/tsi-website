@@ -13,10 +13,10 @@ import { easeFacing } from "@/lib/game/locomotion";
 import { worldNow } from "@/lib/game/worldClock";
 import { liveSunDays } from "@/lib/game/sunTimes";
 import { phaseInstant } from "@/lib/game/sunPath";
-import { landmark, type VillageIsland } from "@/lib/game/defaultIsland";
+import { benchHeld, landmark, type VillageIsland } from "@/lib/game/defaultIsland";
 import { objectsOf, type Village } from "@/lib/game/villageMap";
 import type { IslandPhase } from "@/lib/game/islandTime";
-import { RESIDENT_STRIDE, RESIDENT_WALK, ResidentDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResident, residentSeats, type DaySpan, type IdleClip, type NavGrid, type ResidentPose } from "@/lib/game/residentRoutine";
+import { RESIDENT_STRIDE, RESIDENT_WALK, ResidentDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResidents, seatChoice, type DaySpan, type IdleClip, type NavGrid, type ResidentPose } from "@/lib/game/residentRoutine";
 import { torontoHour } from "@/lib/game/islandTime";
 import { hash01 } from "@/lib/game/worldFx";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
@@ -27,7 +27,7 @@ import { fillName, lineTime, linesNow, pickConversation, talkFor } from "@/lib/c
 import type { FaceOverride } from "@/lib/game/character/face";
 import { useStepDust } from "./movement/moveFx";
 import type { NPCPersona } from "@/lib/content/types";
-import { useOthersIn } from "./net/active";
+import { remoteNear, remoteSeatTaken, useOthersIn } from "./net/active";
 import { residentsHome } from "./net/thinning";
 import s from "./residents.module.css";
 
@@ -62,6 +62,8 @@ const BLOCK_RANGE = 0.95;
 const CLEAR_SIDE = 0.95;
 /** The bubble stack never sits lower than this above the bottom edge: the prompt lives there. */
 const PROMPT_CLEAR = 132;
+/** A player this close to a bench slot is sitting in it (a bench is solid: standing, you can't get nearer). */
+const SLOT_NEAR = 0.4;
 
 // Fillers (no canned_dialogue) draw from a cozy pool. Original lines, gently TSI-flavoured.
 const FILLER_LINES = [
@@ -103,6 +105,11 @@ interface Runtime {
   line: string;
   idleKey: number; idleVisit: number; laughBeat: number; chat: Runtime | null; hopT: number; hopNext: number; greetAt: number; hovered: boolean;
   timers: number[];
+  /**
+   * The bench seat model (defaultIsland BENCH_SLOTS): the slot they sit in or are taking (`bench:<id>#0|1`, "" none),
+   * which they took this visit (seatChoice: 0 theirs, 1 the bench's other slot, 2 standing by) and the visit.
+   */
+  seatKey: string; seatPick: 0 | 1 | 2; seatVisit: number;
 }
 
 /** The residents on stage: by id (greetings) and as a list (the frame loop, which must not allocate). */
@@ -123,6 +130,15 @@ function stepDetour(r: Runtime, speed: number, dt: number): number {
 }
 
 const _idle: { clip: IdleClip; key: number } = { clip: null, key: -1 };
+
+/** The frame's view for the module-scope checks below (nothing is allocated per frame): who's asking, everyone, you. */
+const seen = { self: null as Runtime | null, list: [] as readonly Runtime[], px: 0, pz: 0 };
+/** Someone else holds a bench slot: a player's seat claim, a player in it (you, or a remote whose claim is on its way), or another resident. */
+function slotHeld(key: string, x: number, z: number): boolean {
+  if (remoteSeatTaken(key) || remoteNear(x, z, SLOT_NEAR) || dist(seen.px, seen.pz, x, z) < SLOT_NEAR) return true;
+  for (const o of seen.list) if (o !== seen.self && o.seatKey === key) return true;
+  return false;
+}
 interface Clock { span: DaySpan | null; forced: IslandPhase | null; base: number; since: number }
 /** Talks so far this visit by resident (slug): each one after the first is their next conversation (row 92: nothing is counted on the server). */
 const talksBySlug = new Map<string, number>();
@@ -157,6 +173,7 @@ function startRequested(list: readonly Runtime[], c: Clock, p: THREE.Vector3, no
 function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, phase: IslandPhase, ceremony: boolean, nav: NavGrid, island: VillageIsland, monument: { x: number; z: number } | null, away: string | null, playerName: string | null,
   home: ReadonlySet<string>) {
   const now = worldNow() / 1000, days = liveSunDays();
+  seen.list = list; seen.px = p.x; seen.pz = p.z;
   // The club's ceremony calls everyone to the monument: a talk going on says goodbye.
   const talk = talkStore.active;
   if (talk && ceremony && talk.phase !== "closing" && talk.phase !== "ended") { leaveTalk(talk, performance.now() / 1000); talkChanged(); }
@@ -173,12 +190,25 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
   // 1. Where everyone is.
   for (const r of list) {
     const talking = r.id === talkingId;
-    const pose = r.day.at(t - r.lag, days, r.pose), m = r.motion.current;
+    const pose = r.day.at(t - r.lag, days, r.pose), m = r.motion.current, st = pose.stop;
+    seen.self = r;
+    // One seat model (world audit item 3): sitting down, or about to, in a slot someone else holds (a player's claim,
+    // a player or bot in it, another resident), they take the bench's other slot, or stand at their seat's step.
+    let seatDoor = st?.door ?? null;
+    r.seatKey = "";
+    if (st?.seatKey && !ceremony && (pose.seat > 0 || (pose.moving && dist(pose.x, pose.z, st.at[0], st.at[1]) < 1.1))) {
+      if (pose.visit !== r.seatVisit) { r.seatVisit = pose.visit; r.seatPick = 0; }
+      if (!talking) r.seatPick = seatChoice(st, slotHeld, r.seatPick);
+      if (r.seatPick === 1 && st.alt) { pose.x = st.alt.at[0]; pose.z = st.alt.at[1]; pose.seat = st.seat ?? 0; seatDoor = st.alt.door; r.seatKey = st.alt.key; }
+      else if (r.seatPick === 2 && st.door) { pose.x = st.door[0]; pose.z = st.door[1]; pose.seat = 0; pose.yaw = st.yaw + Math.PI; seatDoor = null; }
+      else r.seatKey = st.seatKey;
+      if (r.seatPick) { pose.moving = false; pose.speed = 0; }
+    }
     // Players filling the village send this flavour villager home (multiplayer §5.8): in through their own door, out
     // again as it empties. A talk goes on first; the ceremony calls everyone out; already in by their routine, they stay.
     const homeward = home.has(r.slug) && !talking && !ceremony && !(r.hidden && pose.inside);
     // Where to make for when off the routine: the ceremony spot, home, or the routine's door or seat step, or where it is.
-    const door = homeward ? r.home : !ceremony && (pose.inside || pose.seat > 0) ? pose.stop?.door : null;
+    const door = homeward ? r.home : !ceremony && (pose.inside || pose.seat > 0) ? seatDoor : null;
     const gx = ceremony ? r.gather[0] : door ? door[0] : pose.x, gz = ceremony ? r.gather[1] : door ? door[1] : pose.z;
     if (!r.ready) { r.ready = true; r.x = pose.x; r.z = pose.z; r.hidden = pose.inside; m.yaw = pose.yaw; if (homeward && r.home) { r.x = r.home[0]; r.z = r.home[1]; r.hidden = true; } }
     // Coming out of hiding somewhere else (a forced phase while indoors, the village emptying): out through their own door.
@@ -263,6 +293,8 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
   // notice you speaks and the rest just look up; nobody starts one while you're talking with someone.
   // Only the nearest resident who notices you shows the "!" and their name (a bench of three would stack them).
   let speaking = !!talkingId, sx = 0, sz = 0, nearest: Runtime | null = null, nearestD = NOTICE_RANGE;
+  // The slots residents sit in, for the bench prompt (benchSeat): rewritten each frame.
+  benchHeld.clear();
   for (const r of list) {
     if (r.bubbleUntil > now && !r.hidden) { speaking = true; sx = r.x; sz = r.z; }
     const d = dist(p.x, p.z, r.x, r.z);
@@ -278,6 +310,7 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
     }
     m.yaw = easeFacing(m.yaw, want, talking ? 8 : r.speed > 0.05 ? 7 : 4, dt);
     m.pose = sitting ? "Sit" : null;
+    if (sitting && r.seatKey) benchHeld.add(r.seatKey);
     if (talking) {
       // Talking with you: the Chat clip and the mouth while a line types out, the line's face; a wave goodbye. Seated, they stay seated.
       const at = `${talk!.phase}:${talk!.index}`;
@@ -380,9 +413,9 @@ export default function Residents({ personas, phase, ceremony, player, island, v
   const [cap] = useState(() => (process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? Number(new URLSearchParams(window.location.search).get("residents") ?? Infinity) : Infinity));
   const residents = useMemo(() => {
     const sorted = [...personas].sort((a, b) => a.slug.localeCompare(b.slug)).slice(0, cap);
-    const seats = residentSeats(sorted), gather = objectsOf("gather", v);
+    const plans = planResidents(sorted, v, island), gather = objectsOf("gather", v);
     return sorted.map((persona, i) => {
-      const plan = planResident(persona, i, v, island, seats[i]);
+      const plan = plans[i];
       const g = gather.length ? gather[i % gather.length] : null;
       const authored = RESIDENT_LOOKS[persona.slug];
       return {
@@ -410,12 +443,12 @@ export default function Residents({ personas, phase, ceremony, player, island, v
   }, []);
 
   useFrame((_, raw) => tick(registry.current.list, clock.current, Math.min(raw, 0.1), player.current, phase, ceremony, nav, island, monument, away, playerName, home), -3);
-  // Leaving the village (a door, the boat) ends any talk and the prompt with it.
-  useEffect(() => () => { if (talkStore.active) endTalk(); setTalkNear(null, "", Infinity); }, []);
+  // Leaving the village (a door, the boat) ends any talk and the prompt with it, and frees the benches.
+  useEffect(() => () => { if (talkStore.active) endTalk(); setTalkNear(null, "", Infinity); benchHeld.clear(); }, []);
   // Dev (evidence scripts): where everyone is, to walk up to one.
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
-    Object.assign(window, { __residents: () => registry.current.list.map(r => ({ id: r.id, slug: r.slug, name: r.name, x: r.x, z: r.z, hidden: r.hidden, speed: r.speed, lag: r.lag })) });
+    Object.assign(window, { __residents: () => registry.current.list.map(r => ({ id: r.id, slug: r.slug, name: r.name, x: r.x, z: r.z, hidden: r.hidden, speed: r.speed, lag: r.lag, seat: r.seatKey })) });
   }, []);
 
   return <>{residents.map(({ persona, day, look, gather, plan }) => (
@@ -440,6 +473,7 @@ function Figure({ persona, day, look, gather, home, seed, registry, island }: {
       pose: newPose(), motion, group, visual, ui: { bubble, text, notice, plate },
       ready: false, x: 0, z: 0, speed: 0, ox: 0, oz: 0, hidden: false, lift: 0, lag: 0, detour: null, detourAt: 0, detourGoal: [0, 0],
       want: 0, line: "", noticed: false, bubbleUntil: 0, bubbleNext: 0, shown: -1, idleKey: -1, idleVisit: -1, laughBeat: -1, chat: null, hopT: -1, hopNext: 0, greetAt: 0, hovered: false, timers: [],
+      seatKey: "", seatPick: 0, seatVisit: -1,
     };
     runtime.current = r;
     const reg = registry.current;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { benchSeat, islandOf, landmark, landmarkPoint, landmarks, LANDMARK_IDS, propFootprint, villageIsland, villageSpawn, wharfDeck } from "./defaultIsland";
+import { benchHeld, benchSeat, islandOf, landmark, landmarkPoint, landmarks, LANDMARK_IDS, propFootprint, villageIsland, villageSpawn, wharfDeck } from "./defaultIsland";
 import { clearSpot, walkTo } from "./movement/sim";
 import { createCenteredMap, setCell, Surface, heightField, sampleGroundHeight, sampleHeightField, isGroundAtWorld, surfaceAt } from "./grid";
 import { buildVillage, objectsOf, village, type VillageDoc } from "./villageMap";
@@ -53,6 +53,14 @@ describe("default island movement (frozen 2026-09-28 village)", () => {
     const [x, z] = island.move(0, 6, 5, 9);
     expect(x).toBeCloseTo(5);
     expect(island.standable(x, z)).toBe(true);
+  });
+  it("treats a bench slot a resident sits in as taken: residents and players share one seat model", () => {
+    benchHeld.add("bench:bench-1#1");
+    try {
+      expect(benchSeat(4, 4.4, 1.3, v0)).toMatchObject({ x: 5, z: expect.closeTo(4.92), key: "bench:bench-1#0" });
+      benchHeld.add("bench:bench-1#0");
+      expect(benchSeat(4, 4.4, 1.3, v0)).toBeNull();
+    } finally { benchHeld.clear(); }
   });
   it("keeps you out of the bridge's rails, on the deck and on the bank at its ends", () => {
     // bridge-0 at (0, 0.5), a quarter turn: it runs along z, its rails at x = ±1.45 (the cells under it are Wood here).

@@ -180,8 +180,19 @@ export function objectFootprint(o: MapObject): { hw: number; hd: number; cx: num
 
 /** Bench-wood seat top: its slats measure 0.48–0.51 above the ground. */
 export const BENCH_SEAT_TOP = 0.5;
-/** A bench seats two (specs/multiplayer-questions.md default 7): its slots sit this far either way along it from its middle. */
+/**
+ * A bench seats two (specs/multiplayer-questions.md default 7): its slots sit this far either way along it from its
+ * middle. One seat model for everyone: players and bots claim a slot over the network (benchSlotKey), and residents
+ * sit only in these slots, yielding to a player's claim (components/game/NPC.tsx).
+ */
 export const BENCH_SLOTS = [-0.42, 0.42] as const;
+/** A bench slot's spot in world XZ: along the bench (its local x), either side of its middle. */
+export function benchSlotPoint(b: Pick<MapObject, "x" | "z" | "yaw">, slot: 0 | 1): [number, number] {
+  const yaw = b.yaw ?? 0, off = BENCH_SLOTS[slot];
+  return [b.x + Math.cos(yaw) * off, b.z - Math.sin(yaw) * off];
+}
+/** The bench slots residents sit in this frame (their claim keys), written by the residents' frame: `benchSeat` treats them as taken. */
+export const benchHeld = new Set<string>();
 const slotKeys = new Map<string, readonly [string, string]>();
 /** A bench slot's seat claim (`s {seat}`, protocol isSeatKey): `bench:<map id>#0` or `#1`, made once per bench. */
 export function benchSlotKey(id: string, slot: 0 | 1): string {
@@ -204,9 +215,10 @@ export function benchSeat(x: number, z: number, range = 1.3, v: Village = villag
   const front = (x - b.x) * Math.sin(yaw) + (z - b.z) * Math.cos(yaw) >= 0;
   return { x: b.x + Math.cos(yaw) * off, z: b.z - Math.sin(yaw) * off, yaw: yaw + (front ? 0 : Math.PI), key: benchSlotKey(b.id, slot) };
 }
-/** How far a bench slot is from (x, z); Infinity while someone else holds it. */
+/** How far a bench slot is from (x, z); Infinity while someone else (a player's claim, a resident) holds it. */
 function slotReach(b: MapObject, slot: 0 | 1, x: number, z: number, taken?: (key: string) => boolean): number {
-  if (taken?.(benchSlotKey(b.id, slot))) return Infinity;
+  const key = benchSlotKey(b.id, slot);
+  if (taken?.(key) || benchHeld.has(key)) return Infinity;
   const yaw = b.yaw ?? 0, off = BENCH_SLOTS[slot];
   return Math.hypot(b.x + Math.cos(yaw) * off - x, b.z - Math.sin(yaw) * off - z);
 }
