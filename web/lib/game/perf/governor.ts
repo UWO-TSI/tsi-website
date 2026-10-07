@@ -11,6 +11,9 @@
  * | 3     | combat effects' particles at 60%                                                                |
  * | 4     | the canvas renders at 85% of its resolution                                                     |
  *
+ * If every level is on and the frame rate is no better than with none (a busy CPU, which these don't relieve), the
+ * detail comes back and it waits a minute before trying again: never a lower look for nothing.
+ *
  * Pure: the world's QualityGovernor feeds it every frame's time and applies `knobs`.
  */
 export interface Knobs {
@@ -43,6 +46,12 @@ export const GOVERNOR = {
   undoWithin: 10,
   /** Frames longer than this (a hitch, a tab coming back) are left out. */
   ignoreMs: 250,
+  /**
+   * Still slow at the last level and no faster than at the settings as chosen (within this share): the load is not one
+   * detail can relieve (a busy CPU), so the detail comes back and it holds off for `holdOff` seconds.
+   */
+  noGain: 0.05,
+  holdOff: 60,
 } as const;
 
 /** Median of the first `n` values (insertion-sorted into `scratch`; no allocation). */
@@ -70,6 +79,9 @@ export class Governor {
   private upAfter: number = GOVERNOR.upAfter;
   /** Seconds since the last step up (Infinity: none to undo). */
   private sinceUp = Infinity;
+  /** The median frame when it first stepped down from 0, and seconds left holding off after a step that bought nothing. */
+  private before = 0;
+  private hold = 0;
 
   /** One frame of `ms`; returns whether the level changed. */
   frame(ms: number): boolean {
@@ -81,9 +93,15 @@ export class Governor {
     if (this.window < 1) return false;
     const m = median(this.frames, this.n, this.scratch);
     this.n = 0; this.window = 0;
+    if (this.hold > 0) { this.hold--; return false; }
     this.slow = m > GOVERNOR.slowMs ? this.slow + 1 : 0;
     this.fast = m < GOVERNOR.fastMs ? this.fast + 1 : 0;
+    if (this.slow >= GOVERNOR.downAfter && this.level === LEVELS.length - 1 && m > this.before * (1 - GOVERNOR.noGain)) {
+      this.hold = GOVERNOR.holdOff;
+      return this.set(0);
+    }
     if (this.slow >= GOVERNOR.downAfter && this.level < LEVELS.length - 1) {
+      if (this.level === 0) this.before = m;
       if (this.sinceUp < GOVERNOR.undoWithin) this.upAfter = Math.min(GOVERNOR.maxUpAfter, this.upAfter * 2);
       this.sinceUp = Infinity;
       return this.set(this.level + 1);
@@ -96,7 +114,7 @@ export class Governor {
   }
 
   /** Back to the settings as chosen (a new scene: its own costs). */
-  reset() { this.n = 0; this.window = 0; this.slow = 0; this.fast = 0; this.sinceUp = Infinity; return this.set(0); }
+  reset() { this.n = 0; this.window = 0; this.slow = 0; this.fast = 0; this.sinceUp = Infinity; this.hold = 0; return this.set(0); }
 
   set(level: number): boolean {
     const next = Math.max(0, Math.min(LEVELS.length - 1, level));
