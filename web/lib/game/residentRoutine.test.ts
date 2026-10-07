@@ -142,6 +142,22 @@ describe("resident routines", () => {
     }
   });
 
+  it("never stacks two residents: no two stopped residents within 0.5u at any time of day", () => {
+    const clash: string[] = [];
+    for (const when of ["2026-10-01T16:00:00Z", "2026-06-21T16:00:00Z"]) {
+      const sp = daySpan(Date.parse(when)), live = plans.map(p => ({ slug: p.slug, day: new ResidentDay(p, nav), pose: newPose() }));
+      for (let t = sp.t0; t < sp.t1; t += 15) {
+        for (const r of live) r.day.at(t, null, r.pose);
+        for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) {
+          const a = live[i].pose, b = live[j].pose;
+          if (a.inside || b.inside || a.moving || b.moving) continue;
+          if (Math.hypot(a.x - b.x, a.z - b.z) < 0.5 && clash.length < 12) clash.push(`${live[i].slug}+${live[j].slug} at ${new Date(t * 1000).toISOString()} (${a.x.toFixed(2)}, ${a.z.toFixed(2)})`);
+        }
+      }
+    }
+    expect(clash).toEqual([]);
+  });
+
   it("is the same on every client: a function of world time only", () => {
     const a = newPose(), b = newPose(), again = planResidents(SORTED, v, island);
     for (const [i, { plan }] of days.entries()) for (const t of [T, T + 1234.5, T + 40000]) {

@@ -261,12 +261,31 @@ const ANCHOR_VIEW: Partial<Record<string, LandmarkId>> = { pond: "pond", beach: 
 const ANCHOR_BUILDING: Partial<Record<string, LandmarkId>> = { hq: "hq", shop: "shop", cafe: "cafe", oracle: "oracle", museum: "museum" };
 const WATER_ANCHORS = new Set(["pond", "beach", "wharf"]);
 
-/** A resident's place in a ring round an anchor, so residents sharing a spot stand apart and face in. */
-const RING = 0.75, RING_SLOTS = 6;
+/**
+ * A resident's place round an anchor, so residents sharing a place stand apart and face in: the first ring, then wider
+ * ones when it's full or in the water (ten residents can share one place).
+ */
+const RINGS = [{ r: 0.75, n: 6 }, { r: 1.5, n: 10 }, { r: 2.25, n: 14 }] as const;
+/** Two residents' stops are never closer than this (world units), whatever the phase: nobody stands inside anybody. */
+export const STOP_SPACING = 0.8;
 
-/** What the residents planned so far hold, so the next one plans round them (planResidents, in a fixed order, so every client agrees): bench slots per phase. */
-export interface Reservations { seats: Record<IslandPhase, Set<string>> }
-export const newReservations = (): Reservations => ({ seats: { dawn: new Set(), day: new Set(), evening: new Set(), night: new Set() } });
+/**
+ * What the residents planned so far hold, so the next one plans round them (planResidents, in a fixed order, so every
+ * client agrees): bench slots per phase, each one's spot at each anchor, and every spot anyone stops at.
+ */
+export interface Reservations {
+  seats: Record<IslandPhase, Set<string>>;
+  anchors: Map<string, readonly [number, number]>;
+  spots: { x: number; z: number; slug: string }[];
+}
+export const newReservations = (): Reservations => ({
+  seats: { dawn: new Set(), day: new Set(), evening: new Set(), night: new Set() }, anchors: new Map(), spots: [],
+});
+/** Nobody else stops within STOP_SPACING of (x, z). */
+function spotFree(res: Reservations, slug: string, x: number, z: number): boolean {
+  for (const s of res.spots) if (s.slug !== slug && Math.hypot(s.x - x, s.z - z) < STOP_SPACING) return false;
+  return true;
+}
 
 export interface ResidentPlan {
   slug: string;
@@ -345,19 +364,32 @@ export function seatChoice(stop: Stop, held: (key: string, x: number, z: number)
 }
 
 /** A spot at an anchor for this resident: its ring slot (or the next free one), facing the place's point of interest. */
-function anchorStop(key: string, v: Village, nav: NavGrid, slot: number, work: boolean): Stop | null {
+function anchorStop(key: string, v: Village, nav: NavGrid, slot: number, work: boolean, slug: string, res: Reservations): Stop | null {
   const a = objectById("anchor", key, v);
   const base: [number, number] | null = a ? [a.x, a.z] : key === "plaza" ? villageSpawnPoint(v) : null;
   if (!base) return null;
-  let at: [number, number] | null = null;
+  // The same spot at a place all day: theirs once taken.
+  const mine = `${slug}|${key}`;
+  let at: readonly [number, number] | null = res.anchors.get(mine) ?? null;
   const turn = hash01(hashStr(key), 7) * Math.PI * 2;
-  for (let k = 0; k < RING_SLOTS && !at; k++) {
-    const ang = turn + ((slot + k) % RING_SLOTS) * (Math.PI * 2 / RING_SLOTS);
-    const x = base[0] + Math.sin(ang) * RING, z = base[1] + Math.cos(ang) * RING;
-    if (nav.fits(x, z) && nav.clear(base[0], base[1], x, z)) at = [x, z];
+  for (const ring of RINGS) {
+    for (let k = 0; k < ring.n && !at; k++) {
+      const ang = turn + ((slot + k) % ring.n) * (Math.PI * 2 / ring.n);
+      const x = base[0] + Math.sin(ang) * ring.r, z = base[1] + Math.cos(ang) * ring.r;
+      if (nav.fits(x, z) && nav.clear(base[0], base[1], x, z) && spotFree(res, slug, x, z)) at = [x, z];
+    }
+  }
+  // Every ring full or in the water: the nearest free cell nobody else stands on.
+  for (let r = 0; r <= 8 && !at; r++) {
+    for (let dz = -r; dz <= r && !at; dz++) for (let dx = -r; dx <= r && !at; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+      const cx = nav.cx(base[0]) + dx, cz = nav.cz(base[1]) + dz, x = nav.wx(cx), z = nav.wz(cz);
+      if (nav.cellFree(cx, cz) && nav.fits(x, z) && spotFree(res, slug, x, z)) at = [x, z];
+    }
   }
   at ??= nav.snap(base[0], base[1]);
   if (!at) return null;
+  if (!res.anchors.has(mine)) { res.anchors.set(mine, at); res.spots.push({ x: at[0], z: at[1], slug }); }
   const view = ANCHOR_VIEW[key] && landmark(ANCHOR_VIEW[key]!, v), building = ANCHOR_BUILDING[key] && landmark(ANCHOR_BUILDING[key]!, v);
   // Out from a building's front; toward the water or the monument; else toward the anchor's middle.
   const yaw = building ? yawTo(building.x, building.z, at[0], at[1])
@@ -373,12 +405,13 @@ function anchorStop(key: string, v: Village, nav: NavGrid, slot: number, work: b
 }
 
 /** Two more spots near a lone anchor, so a one-place schedule still mills about (walkable, a short reachable stroll away). */
-function wanderStops(stop: Stop, nav: NavGrid, seed: number): Stop[] {
+function wanderStops(stop: Stop, nav: NavGrid, seed: number, slug: string, res: Reservations): Stop[] {
   const out: Stop[] = [];
   for (let k = 0; k < 8 && out.length < 2; k++) {
     const ang = hash01(seed, 40 + k) * Math.PI * 2, r = 1.6 + hash01(seed, 60 + k) * 1.4;
     const x = stop.at[0] + Math.sin(ang) * r, z = stop.at[1] + Math.cos(ang) * r;
-    if (!nav.fits(x, z) || !nav.clear(stop.at[0], stop.at[1], x, z)) continue;
+    if (!nav.fits(x, z) || !nav.clear(stop.at[0], stop.at[1], x, z) || !spotFree(res, slug, x, z)) continue;
+    res.spots.push({ x, z, slug });
     out.push({ ...stop, id: `${stop.id}~${k}`, at: [x, z], yaw: stop.yaw + (hash01(seed, 80 + k) - 0.5) * 1.6, dwell: [18, 45] });
   }
   return out;
@@ -389,7 +422,7 @@ const POST_ANCHOR: Record<string, string> = { hq_lead: "hq", shopkeeper: "shop",
 
 /**
  * Resolve a resident's schedule into stops on this map. `slot` spreads residents round shared anchors; `res` is what
- * the residents planned before them hold (planResidents), so no two share a seat in a phase.
+ * the residents planned before them hold (planResidents), so no two share a seat in a phase or stand in one spot.
  */
 export function planResident(r: ResidentSource, slot: number, v: Village, island: VillageIsland, res: Reservations = newReservations()): ResidentPlan {
   const nav = navGrid(island, v), seed = hashStr(r.slug);
@@ -404,15 +437,18 @@ export function planResident(r: ResidentSource, slot: number, v: Village, island
     let seat: Stop | null | undefined;
     const stops: Stop[] = [];
     for (const key of routineKeys(r.schedule, phase)) {
-      if (key === "bench" && seat === undefined) seat = benchStop(v, nav, last, night, phase === "night", res.seats[phase]);
-      const s = key === "home" ? home : key === "bench" ? seat ?? null : anchorStop(key, v, nav, slot, key === work);
+      if (key === "bench" && seat === undefined) {
+        seat = benchStop(v, nav, last, night, phase === "night", res.seats[phase]);
+        if (seat) res.spots.push({ x: seat.at[0], z: seat.at[1], slug: r.slug });
+      }
+      const s = key === "home" ? home : key === "bench" ? seat ?? null : anchorStop(key, v, nav, slot, key === work, r.slug, res);
       if (!s) continue;
       stops.push(s);
       last = s.door ?? s.at;
     }
     if (!stops.length && home) stops.push(home);
     // One place for the phase: mill about it (unless it's home or a seat).
-    if (stops.length === 1 && stops[0].kind === "stand") stops.push(...wanderStops(stops[0], nav, seed + ISLAND_PHASES.indexOf(phase)));
+    if (stops.length === 1 && stops[0].kind === "stand") stops.push(...wanderStops(stops[0], nav, seed + ISLAND_PHASES.indexOf(phase), r.slug, res));
     phases[phase] = stops;
   }
   return { slug: r.slug, seed, home, phases };
