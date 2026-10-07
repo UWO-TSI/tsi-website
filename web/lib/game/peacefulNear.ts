@@ -5,8 +5,13 @@
  * Module state; the prompt's label is the one subscribed value, published only
  * when it changes (walking from a branch to a shell renames the prompt).
  */
-/** `dig`: a shovel find (buried clam, rock), gathered like forage but played with the Dig clip. `at`: where to turn to. */
-export interface PeacefulTarget { id: string; kind: "forage" | "bug" | "dig"; label: string; distance: number; at?: [number, number] }
+import type { ClipName } from "./character/clips";
+
+/**
+ * `dig`: a shovel find (buried clam, rock), gathered like forage but with the shovel's left click. `at`: where to turn
+ * to. `clip`: the act's own clip (a tree's Shake, a Pickup off the ground, a rock's Strike), else the kind's.
+ */
+export interface PeacefulTarget { id: string; kind: "forage" | "bug" | "dig"; label: string; distance: number; at?: [number, number]; clip?: ClipName }
 const nearest = new Map<string, PeacefulTarget | null>();
 const listeners = new Set<() => void>();
 let label: string | null = null;

@@ -1,6 +1,7 @@
 import { Color, DoubleSide, FrontSide, Material, Mesh, MeshBasicMaterial, MeshDepthMaterial, MeshStandardMaterial, Object3D, SRGBColorSpace, Texture, TextureLoader, Vector2, type WebGLProgramParametersWithUniforms } from "three";
 import { CASTER_MATERIAL, meshShadow, shadowClassFor, type ShadowClass } from "./shadows";
 import { addCutout } from "./occluders";
+import { SHAKE, SHAKE_RADIUS, SHAKE_SLOTS, TREE_SHAKE } from "./treeShake";
 
 let flagTexture: Texture | null = null;
 let shopSignTexture: Texture | null = null;
@@ -43,6 +44,8 @@ function getFlagTexture() {
  */
 const LEAF_GAIN = 1.6;
 const leafTint = new Color("#9bc87e");
+/** The season's leaf colour now (sRGB hex number), for what the trees drop (a shake's leaf bits). */
+export const leafTintHex = () => leafTint.getHex();
 const leafMaterials = new Set<MeshStandardMaterial>();
 export function setLeafTint(hex: string): void {
   if (leafTint.equals(new Color(hex))) return;
@@ -56,9 +59,15 @@ export function setLeafTint(hex: string): void {
  * that never drive it are unchanged.
  */
 export const TREE_WIND = { value: new Vector2(0, 0) };
+/**
+ * A shaken tree's wobble (specs/polish/forage-craft-museum.md 2; lib/game/treeShake.ts): up to SHAKE_SLOTS slots of
+ * (x, z, start second on the world clock, strength). A tree whose root stands on a slot's spot wobbles, damped; the
+ * formula is treeShake.shakeOffset's, so the fruit in its crown moves with it.
+ */
 function addTreeSway(shader: WebGLProgramParametersWithUniforms) {
   shader.uniforms.uTreeWind = TREE_WIND;
-  shader.vertexShader = "uniform vec2 uTreeWind;\n" + shader.vertexShader.replace("#include <begin_vertex>", `
+  shader.uniforms.uTreeShake = TREE_SHAKE;
+  shader.vertexShader = `uniform vec2 uTreeWind;\nuniform vec4 uTreeShake[${SHAKE_SLOTS}];\n` + shader.vertexShader.replace("#include <begin_vertex>", `
     #include <begin_vertex>
     float swayH = clamp(position.y / 3.0, 0.0, 1.0);
     swayH *= swayH;
@@ -70,7 +79,16 @@ function addTreeSway(shader: WebGLProgramParametersWithUniforms) {
     #endif
     float swayPhase = uTreeWind.x * 1.7 + swayRoot.x * 0.37 + swayRoot.z * 0.23;
     transformed.x += sin(swayPhase) * uTreeWind.y * swayH;
-    transformed.z += cos(swayPhase * 0.8) * uTreeWind.y * 0.6 * swayH;`);
+    transformed.z += cos(swayPhase * 0.8) * uTreeWind.y * 0.6 * swayH;
+    for (int i = 0; i < ${SHAKE_SLOTS}; i++) {
+      vec4 shk = uTreeShake[i];
+      float shkAge = uTreeWind.x - shk.z;
+      if (shk.w > 0.0 && shkAge >= 0.0 && shkAge < ${SHAKE.duration.toFixed(2)} && distance(swayRoot.xz, shk.xy) < ${SHAKE_RADIUS.toFixed(2)}) {
+        float shkEnv = shk.w * exp(-shkAge * ${SHAKE.decay.toFixed(2)}) * (1.0 - smoothstep(${(SHAKE.duration * 0.8).toFixed(3)}, ${SHAKE.duration.toFixed(2)}, shkAge));
+        transformed.x += sin(shkAge * ${SHAKE.fx.toFixed(1)}) * shkEnv * swayH;
+        transformed.z += sin(shkAge * ${SHAKE.fz.toFixed(1)} + 1.3) * shkEnv * 0.7 * swayH;
+      }
+    }`);
 }
 
 /** The shadow pass of ACNH's swaying canopy caster (mShadowShake): the leaves' own wind, so shadow and canopy move together. */

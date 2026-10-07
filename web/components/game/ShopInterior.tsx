@@ -4,9 +4,10 @@
  * ShopInterior (2026-07-14) — ux-interiors.md §5, HQ-room pattern. A cozy
  * 10x10 general store in its modelled shell (RoomShell: mint walls over a
  * beadboard wainscot, plank floor, a window each side, a striped awning over
- * the counter, the framed doorway): counter-register station opens the Shop
- * sheet, color-box display shelves flank the walls, barrels + cardboard piles
- * + a stray shopping cart fill the corners.
+ * the counter, the framed doorway): the counter's station opens the counter
+ * (ShopCounter: buy and sell with the shopkeeper), color-box display shelves
+ * flank the walls, barrels + cardboard piles + a stray shopping cart fill the
+ * corners. The village's shop door comes here (DefaultIslandWorld).
  */
 
 import { Suspense, useEffect } from "react";
@@ -24,7 +25,7 @@ import { RoomShell, preloadShells } from "./RoomShell";
 const BOUNDS: RoomBounds = { halfW: 5, halfD: 5, spawn: [0, -3.2] };
 
 export const SHOP_STATIONS: InteriorStation[] = [
-  { id: "counter", name: "Counter", pos: [0, 2.6], action: "sheet:shop", range: 2.4 },
+  { id: "counter", name: "Counter", pos: [0, 2.6], action: "counter", range: 2.4 },
   { id: "exit", name: "Exit", pos: [0, -4.4], action: "exit", range: 1.1 },
 ];
 
@@ -36,9 +37,12 @@ export default function ShopInterior({
   playerPosRef,
   onNearestStation,
   light = ISLAND_LIGHTING.day,
+  talking = false,
 }: {
   /** The island's light now: the windows follow the time of day. */
   light?: IslandLight;
+  /** The counter is open (ShopCounter): the shopkeeper serves you from behind it. */
+  talking?: boolean;
   frozen: boolean;
   playerPosRef: React.MutableRefObject<import("three").Vector3>;
   onNearestStation: (s: InteriorStation | null) => void;
@@ -74,8 +78,8 @@ export default function ShopInterior({
         <Piece name="yellow-message-mat" rotX={Math.PI} rotY={Math.PI} position={[0, 0.015, -4.3]} scale={0.12} />
       </Suspense>
 
-      {/* The shopkeeper behind the counter (lib/game/keepers.ts). */}
-      <Keeper room="shop" player={playerPosRef} frozen={frozen} />
+      {/* The shopkeeper behind the counter (lib/game/keepers.ts): serves you at the counter and has a word about each sale. */}
+      <Keeper room="shop" player={playerPosRef} frozen={frozen} engaged={talking} sayEvent="tsi:shopkeeper-say" />
       <InteriorPlayer
         frozen={frozen}
         bounds={BOUNDS}

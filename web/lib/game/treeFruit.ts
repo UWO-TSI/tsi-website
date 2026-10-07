@@ -7,6 +7,7 @@
  */
 import { TREE_HANG } from "./treeHang";
 import { treeParts } from "./natureParts";
+import { WORLD_SHAKES, type Shakes } from "./treeShake";
 
 /** ACNH's own fruit (the dump's UnitIconPltFruit models, extracted like the rest of the kit). */
 export const FRUIT_MODEL: Readonly<Record<string, string>> = {
@@ -32,15 +33,18 @@ export function fruitTree(spot: TreeSpot, y: number, models?: readonly string[])
   return hang ? { x: spot.x, y, z: spot.z, yaw: part.yaw, scale: part.scale, hang } : null;
 }
 
+const _shake = { x: 0, z: 0 };
 /**
  * Fruit `i` of a tree in the world: its hang point in the tree's frame, pushed by the canopy's sway (`time`, `amp`:
- * TREE_WIND, the shader's own formula, so it moves with the leaves around it), then turned and sized with the tree.
+ * TREE_WIND, the shader's own formula, so it moves with the leaves around it) and by a shake of that tree (`shakes`,
+ * lib/game/treeShake.ts: the shader's own wobble), then turned and sized with the tree.
  */
-export function hangAt(t: FruitTree, i: number, time: number, amp: number, out: Point): Point {
-  const [hx, hy, hz] = t.hang[i];
+export function hangAt(t: FruitTree, i: number, time: number, amp: number, out: Point, shakes: Shakes = WORLD_SHAKES): Point {
+  const hang = t.hang[i], hx = hang[0], hy = hang[1], hz = hang[2];
   const h = Math.min(1, Math.max(0, hy / 3)) ** 2;
   const phase = time * 1.7 + t.x * 0.37 + t.z * 0.23;
-  const lx = hx + Math.sin(phase) * amp * h, lz = hz + Math.cos(phase * 0.8) * amp * 0.6 * h;
+  shakes.at(t.x, t.z, time, _shake);
+  const lx = hx + (Math.sin(phase) * amp + _shake.x) * h, lz = hz + (Math.cos(phase * 0.8) * amp * 0.6 + _shake.z) * h;
   const c = Math.cos(t.yaw), s = Math.sin(t.yaw);
   out.x = t.x + (lx * c + lz * s) * t.scale;
   out.y = t.y + hy * t.scale;
@@ -48,22 +52,18 @@ export function hangAt(t: FruitTree, i: number, time: number, amp: number, out: 
   return out;
 }
 
-/** Seconds a shaken fruit takes to fall, settle and go. */
-export const DROP = { gravity: 9.8, bounce: 0.18, rest: 1.4, fade: 0.35 } as const;
-export const DROP_TIME = 3;
-
 /**
- * A shaken fruit `t` seconds after the shake, from `from` (where it hung) down to `ground` under it: it falls, hops
- * once on landing, rests, then shrinks away (returned scale 1 to 0; never a pop). `radius` is its half height.
+ * The hang point a shake lets go of: the one hanging nearest the shaker, so it falls on their side of the tree.
+ * `time` the world second (the canopy where it is now, still air).
  */
-export function dropAt(from: Point, ground: number, radius: number, t: number, out: Point): number {
-  out.x = from.x; out.z = from.z;
-  const rest = ground + radius, height = Math.max(0, from.y - rest);
-  const fall = Math.sqrt((2 * height) / DROP.gravity);
-  if (t < fall) { out.y = from.y - 0.5 * DROP.gravity * t * t; return 1; }
-  // One small hop: up with a fraction of the landing speed, back down.
-  const v = DROP.gravity * fall * DROP.bounce, hop = (2 * v) / DROP.gravity, u = t - fall;
-  out.y = rest + (u < hop ? v * u - 0.5 * DROP.gravity * u * u : 0);
-  const gone = u - hop - DROP.rest;
-  return gone <= 0 ? 1 : Math.max(0, 1 - gone / DROP.fade);
+export function nearestHang(t: FruitTree, x: number, z: number, time: number, skip = -1): number {
+  let best = -1, bestD = Infinity;
+  for (let k = 0; k < t.hang.length; k++) {
+    if (k === skip) continue;
+    hangAt(t, k, time, 0, _near);
+    const d = Math.hypot(_near.x - x, _near.z - z) + Math.max(0, _near.y - t.y - 2.2 * t.scale) * 0.3;
+    if (d < bestD) { bestD = d; best = k; }
+  }
+  return best;
 }
+const _near: Point = { x: 0, y: 0, z: 0 };
