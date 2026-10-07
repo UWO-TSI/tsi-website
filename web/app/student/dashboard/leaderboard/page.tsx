@@ -4,16 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Trophy } from "lucide-react";
 import type { LeaderboardEntry, Tier } from "@/lib/supabase/types";
 import { useUser } from "@/components/portal/UserContext";
-import { Badge, Banner, Empty, Loading, Tabs } from "@/components/gui";
+import { Badge, Banner, Empty, Loading } from "@/components/gui";
 import { TIER_LOOK } from "@/components/portal/classIdentity";
-
-type TimePeriod = "weekly" | "monthly" | "all_time";
-
-const TIME_TABS: { key: TimePeriod; label: string }[] = [
-  { key: "weekly", label: "Weekly" },
-  { key: "monthly", label: "Monthly" },
-  { key: "all_time", label: "All time" },
-];
 
 // The top three wear a coin: gold, silver (a pale well with a rim) and bronze (the kit's coral). Ink on each (AA).
 const RANK_COINS: Record<number, { bg: string; ring?: string }> = {
@@ -47,7 +39,6 @@ export default function LeaderboardPage() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [yourRank, setYourRank] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<TimePeriod>("all_time");
 
   // Sticky logic: detect when viewer's own row scrolls out of view
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -71,7 +62,7 @@ export default function LeaderboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [period]);
+  }, []);
 
   // Find viewer's row in the loaded list (may be absent if outside top 100)
   const ownEntry = useMemo(
@@ -129,32 +120,6 @@ export default function LeaderboardPage() {
         <Banner title="Leaderboard" icon={<Trophy size={26} />} tone="sage">
           Members ranked by the XP they’ve earned with the club.
         </Banner>
-
-        {/* Time Period Tabs */}
-        <Tabs
-          label="Time period"
-          value={period}
-          onChange={setPeriod}
-          tabs={TIME_TABS.map((t) => ({ id: t.key, label: t.label }))}
-          className="mb-2"
-        />
-
-        {/* Period note — weekly/monthly not yet wired (no xp_log table) */}
-        <p
-          className="text-xs mb-3"
-          style={{
-            color: "var(--gui-muted)",
-            fontWeight: 700,
-            minHeight: 18,
-            opacity: period === "all_time" ? 0 : 1,
-            transition: "opacity 0.15s",
-          }}
-          aria-live="polite"
-        >
-          {period === "all_time"
-            ? ""
-            : "Weekly and monthly totals are coming soon. These are all-time totals."}
-        </p>
 
         {/* Privacy note for non-admin viewers */}
         {!isAdmin && !loading && entries.length > 0 ? (
