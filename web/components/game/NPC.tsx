@@ -17,6 +17,7 @@ import { benchHeld, landmark, type VillageIsland } from "@/lib/game/defaultIslan
 import { objectsOf, type Village } from "@/lib/game/villageMap";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import { RESIDENT_STRIDE, RESIDENT_WALK, ResidentDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResidents, seatChoice, type DaySpan, type IdleClip, type NavGrid, type ResidentPose } from "@/lib/game/residentRoutine";
+import { KEEP, inCorridor, roomFor } from "@/lib/game/residentSpace";
 import { torontoHour } from "@/lib/game/islandTime";
 import { hash01 } from "@/lib/game/worldFx";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
@@ -64,6 +65,10 @@ const CLEAR_SIDE = 0.95;
 const PROMPT_CLEAR = 132;
 /** A player this close to a bench slot is sitting in it (a bench is solid: standing, you can't get nearer). */
 const SLOT_NEAR = 0.4;
+/** Personal space: checked fully for this long after they stop somewhere, then only the camera line, this often. */
+const ROOM_ARRIVE_S = 3, ROOM_CHECK_S = 1;
+/** Two residents stepping aside never pick spots closer than this. */
+const ROOM_APART = 0.6;
 
 // Fillers (no canned_dialogue) draw from a cozy pool. Original lines, gently TSI-flavoured.
 const FILLER_LINES = [
@@ -110,6 +115,8 @@ interface Runtime {
    * which they took this visit (seatChoice: 0 theirs, 1 the bench's other slot, 2 standing by) and the visit.
    */
   seatKey: string; seatPick: 0 | 1 | 2; seatVisit: number;
+  /** Personal space: their step aside from the stop this visit, the visit, when they stopped there and when it was last checked. */
+  roomX: number; roomZ: number; roomVisit: number; roomSince: number; roomAt: number;
 }
 
 /** The residents on stage: by id (greetings) and as a list (the frame loop, which must not allocate). */
@@ -131,14 +138,23 @@ function stepDetour(r: Runtime, speed: number, dt: number): number {
 
 const _idle: { clip: IdleClip; key: number } = { clip: null, key: -1 };
 
-/** The frame's view for the module-scope checks below (nothing is allocated per frame): who's asking, everyone, you. */
-const seen = { self: null as Runtime | null, list: [] as readonly Runtime[], px: 0, pz: 0 };
+/** The frame's view for the module-scope checks below (nothing is allocated per frame): who's asking, everyone, you, your camera. */
+const seen = { self: null as Runtime | null, list: [] as readonly Runtime[], px: 0, pz: 0, cx: 0, cz: 0, ox: 0, oz: 0, nav: null as NavGrid | null };
 /** Someone else holds a bench slot: a player's seat claim, a player in it (you, or a remote whose claim is on its way), or another resident. */
 function slotHeld(key: string, x: number, z: number): boolean {
   if (remoteSeatTaken(key) || remoteNear(x, z, SLOT_NEAR) || dist(seen.px, seen.pz, x, z) < SLOT_NEAR) return true;
   for (const o of seen.list) if (o !== seen.self && o.seatKey === key) return true;
   return false;
 }
+/** Too close for comfort: within KEEP of a player (you or a remote), on the line between your camera and you, or on another resident. */
+function crowdedAt(x: number, z: number): boolean {
+  if (dist(x, z, seen.px, seen.pz) < KEEP || remoteNear(x, z, KEEP) || inCorridor(x, z, seen.cx, seen.cz, seen.px, seen.pz)) return true;
+  for (const o of seen.list) if (o !== seen.self && !o.hidden && dist(o.x, o.z, x, z) < ROOM_APART) return true;
+  return false;
+}
+/** A spot a resident can step to from their stop: their body fits and the step there is clear. */
+const roomFits = (x: number, z: number) => seen.nav!.fits(x, z) && seen.nav!.clear(seen.ox, seen.oz, x, z);
+const _room: [number, number] = [0, 0];
 interface Clock { span: DaySpan | null; forced: IslandPhase | null; base: number; since: number }
 /** Talks so far this visit by resident (slug): each one after the first is their next conversation (row 92: nothing is counted on the server). */
 const talksBySlug = new Map<string, number>();
@@ -171,9 +187,9 @@ function startRequested(list: readonly Runtime[], c: Clock, p: THREE.Vector3, no
  * the chats, then each one's clip, facing, talk and overhead UI.
  */
 function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, phase: IslandPhase, ceremony: boolean, nav: NavGrid, island: VillageIsland, monument: { x: number; z: number } | null, away: string | null, playerName: string | null,
-  home: ReadonlySet<string>) {
+  home: ReadonlySet<string>, camera: THREE.Vector3) {
   const now = worldNow() / 1000, days = liveSunDays();
-  seen.list = list; seen.px = p.x; seen.pz = p.z;
+  seen.list = list; seen.px = p.x; seen.pz = p.z; seen.cx = camera.x; seen.cz = camera.z; seen.nav = nav;
   // The club's ceremony calls everyone to the monument: a talk going on says goodbye.
   const talk = talkStore.active;
   if (talk && ceremony && talk.phase !== "closing" && talk.phase !== "ended") { leaveTalk(talk, performance.now() / 1000); talkChanged(); }
@@ -230,8 +246,24 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
           else if (nav.fits(pose.x - fz * away * far, pose.z + fx * away * far)) { tx = -fz * away * far; tz = fx * away * far; }
           else blocked = dist(p.x, p.z, pose.x, pose.z) < BLOCK_RANGE && ahead > 0.1;
         }
+      } else if (st?.kind === "stand" && !pose.inside && !talking) {
+        // Personal space (world audit item 14): stopping where a player stands, or on the line between your camera and
+        // you, they take a spot a comfortable step away instead. Once there, only the camera line moves them again:
+        // walk up to someone and they stay put.
+        if (pose.visit !== r.roomVisit) { r.roomVisit = pose.visit; r.roomX = 0; r.roomZ = 0; r.roomSince = now; r.roomAt = -Infinity; }
+        if (now - r.roomAt >= ROOM_CHECK_S) {
+          r.roomAt = now;
+          const x = pose.x + r.roomX, z = pose.z + r.roomZ;
+          if (now - r.roomSince < ROOM_ARRIVE_S ? crowdedAt(x, z) : inCorridor(x, z, seen.cx, seen.cz, p.x, p.z)) {
+            seen.ox = pose.x; seen.oz = pose.z;
+            if (roomFor(pose.x, pose.z, roomFits, crowdedAt, _room)) { r.roomX = _room[0] - pose.x; r.roomZ = _room[1] - pose.z; }
+          }
+        }
+        tx = r.roomX; tz = r.roomZ;
       }
-      r.ox = THREE.MathUtils.damp(r.ox, tx, 5, dt); r.oz = THREE.MathUtils.damp(r.oz, tz, 5, dt);
+      // Toward the step aside (or back onto the path) at no more than a stroll: they walk there, never slide.
+      const nx = THREE.MathUtils.damp(r.ox, tx, 5, dt), nz = THREE.MathUtils.damp(r.oz, tz, 5, dt), step = dist(nx, nz, r.ox, r.oz), cap = RESIDENT_WALK * dt;
+      if (step > cap) { r.ox += (nx - r.ox) * cap / step; r.oz += (nz - r.oz) * cap / step; } else { r.ox = nx; r.oz = nz; }
       if (!blocked) {
         const px = r.x, pz = r.z;
         r.x = pose.x + r.ox; r.z = pose.z + r.oz;
@@ -442,7 +474,7 @@ export default function Residents({ personas, phase, ceremony, player, island, v
     return () => window.removeEventListener("tsi:npc-greet", onGreet);
   }, []);
 
-  useFrame((_, raw) => tick(registry.current.list, clock.current, Math.min(raw, 0.1), player.current, phase, ceremony, nav, island, monument, away, playerName, home), -3);
+  useFrame((state, raw) => tick(registry.current.list, clock.current, Math.min(raw, 0.1), player.current, phase, ceremony, nav, island, monument, away, playerName, home, state.camera.position), -3);
   // Leaving the village (a door, the boat) ends any talk and the prompt with it, and frees the benches.
   useEffect(() => () => { if (talkStore.active) endTalk(); setTalkNear(null, "", Infinity); benchHeld.clear(); }, []);
   // Dev (evidence scripts): where everyone is, to walk up to one.
@@ -473,7 +505,7 @@ function Figure({ persona, day, look, gather, home, seed, registry, island }: {
       pose: newPose(), motion, group, visual, ui: { bubble, text, notice, plate },
       ready: false, x: 0, z: 0, speed: 0, ox: 0, oz: 0, hidden: false, lift: 0, lag: 0, detour: null, detourAt: 0, detourGoal: [0, 0],
       want: 0, line: "", noticed: false, bubbleUntil: 0, bubbleNext: 0, shown: -1, idleKey: -1, idleVisit: -1, laughBeat: -1, chat: null, hopT: -1, hopNext: 0, greetAt: 0, hovered: false, timers: [],
-      seatKey: "", seatPick: 0, seatVisit: -1,
+      seatKey: "", seatPick: 0, seatVisit: -1, roomX: 0, roomZ: 0, roomVisit: -1, roomSince: 0, roomAt: 0,
     };
     runtime.current = r;
     const reg = registry.current;
