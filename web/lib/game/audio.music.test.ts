@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AudioManagerImpl } from "./audio";
 
+// These tests drive the engine with every block file present; which files exist is musicSchedule's (audioFiles.test.ts).
+vi.mock("./musicSchedule", async importOriginal => {
+  const real = await importOriginal<typeof import("./musicSchedule")>();
+  const all = new Set(["cafe.mp3", "interior.mp3", ...real.MUSIC_BLOCKS.flatMap(b => [`${b}.mp3`, `${b}-winter.mp3`])]);
+  return { ...real, buildMusicSrcList: (block: Parameters<typeof real.buildMusicSrcList>[0], opts?: Parameters<typeof real.buildMusicSrcList>[1]) => real.buildMusicSrcList(block, opts, all) };
+});
+
 // Same fake used by audio.test.ts, duplicated locally so this file can add a
 // `src` setter (the cascading-candidate engine reassigns `.src` on retry,
 // which the original fixture never needed to support).

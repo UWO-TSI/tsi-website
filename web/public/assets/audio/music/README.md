@@ -3,7 +3,8 @@
 Audio pass (ledger rows 84, 106, 112-114). The member island's music channel
 follows the real Toronto clock in twelve 2-hour blocks. `AudioManager`
 (`web/lib/game/audio.ts`, schedule in `web/lib/game/musicSchedule.ts`) loads
-`{block}.mp3` from this folder when present, crossfading at the block
+`{block}.mp3` from this folder when it is listed in `MUSIC_FILES`
+(`musicSchedule.ts`), crossfading at the block
 boundary (~800ms fade, same engine as the day/night ambient bed). Until a
 file lands, that block silently falls back to one of the two existing
 applicant-island tracks (Ocean Railway for daytime blocks, Willow Tree for
@@ -43,8 +44,12 @@ loop-trim locally after export.
   building (HQ, house, museum, Oracle temple).
 - `{block}-{season}.mp3` (e.g. `12-winter.mp3`) — a seasonal variant slot for
   a given block (decision 113: "seasonal variants later"). Tried before the
-  plain block file when present; nothing needs to change in code when these
-  land.
+  plain block file.
+
+**When a file lands, add its name to `MUSIC_FILES`** in
+`web/lib/game/musicSchedule.ts`. Only listed files are requested, so an
+unauthored slot costs no 404 (audit 2026-10 world item 19);
+`audioFiles.test.ts` fails if a listed file is missing.
 
 ## Loudness target
 

@@ -2,6 +2,7 @@ import { Color } from "three";
 import type { PaletteColors, SeasonalPalette } from "@/lib/content/types";
 import type { Season, SeasonBlend } from "./season";
 import { SEASONS } from "./season";
+import { activeProposals, PROPOSED_AUTUMN_GRASS, type LookProposal } from "./lookProposals";
 
 /**
  * Seasonal dressing for the member island (decisions 99, 161, 176): tints are
@@ -68,7 +69,9 @@ export function paletteBySeason(rows: readonly SeasonalPalette[]): Partial<Recor
 
 const SUMMER_FALLBACK = { island_grass: "#91B47F", leaf: "#9BC87E", sky: "#BFE9FA", fog: "#CDEBF7", water: "#398D9F" };
 
-export function seasonLook(blend: SeasonBlend, palettes: Partial<Record<Season, PaletteColors>>): SeasonLook {
+/** `proposals`: look changes waiting on David (lookProposals.ts); the URL's in dev, none otherwise. */
+export function seasonLook(blend: SeasonBlend, palettes: Partial<Record<Season, PaletteColors>>, proposals: ReadonlySet<LookProposal> = activeProposals()): SeasonLook {
+  if (proposals.has("autumn")) palettes = { ...palettes, autumn: { ...palettes.autumn, island_grass: PROPOSED_AUTUMN_GRASS } as PaletteColors };
   const pick = (key: keyof typeof SUMMER_FALLBACK) => mixHex(SEASONS.map(season => ({
     hex: (palettes[season]?.[key] as string | undefined) ?? SUMMER_FALLBACK[key], weight: blend.weights[season],
   })));
