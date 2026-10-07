@@ -4,10 +4,10 @@
  * Twelve two-hour blocks keyed to the real Toronto clock (the same
  * `torontoHour` the island's day/night phase already uses, so the block
  * follows real time including the DST jump for free). Each block loads
- * `/assets/audio/music/{block}.mp3` when present, tries a seasonal variant
- * first when one is authored, and otherwise falls back to the two existing
- * applicant-island tracks (Ocean Railway / Willow Tree) until David's Suno
- * tracks land (see `web/public/audio/music/README.md`).
+ * `/assets/audio/music/{block}.mp3` when it is listed in `MUSIC_FILES`, tries
+ * a listed seasonal variant first, and otherwise falls back to the two
+ * existing applicant-island tracks (Ocean Railway / Willow Tree) until
+ * David's Suno tracks land (see `web/public/assets/audio/music/README.md`).
  */
 import { torontoHour } from "./islandTime";
 import type { Season } from "./season";
@@ -19,6 +19,13 @@ export type MusicBlock = (typeof MUSIC_BLOCKS)[number];
 export type MusicOverride = "cafe" | "interior" | null;
 
 const MUSIC_DIR = "/assets/audio/music";
+
+/**
+ * The files in `public/assets/audio/music/` (names only). Only these are ever requested, so a block without its
+ * track goes straight to the fallback instead of a 404 on every load (audit 2026-10 world item 19). Add a name here
+ * when its file lands; `audioFiles.test.ts` checks every listed file is on disk.
+ */
+export const MUSIC_FILES: ReadonlySet<string> = new Set<string>([]);
 
 /** Which 2-hour block a Toronto-local fractional hour (0-24) falls in. */
 export function blockForHour(hour: number): MusicBlock {
@@ -45,16 +52,13 @@ export function fallbackTrackFor(block: MusicBlock): string {
 /**
  * Ordered source candidates for the music channel: cafe/interior override
  * first, else a seasonal variant, then the plain block file, then the
- * guaranteed-to-exist fallback track. `AudioManager` tries each in turn and
- * stays on the first one that actually decodes.
+ * guaranteed-to-exist fallback track, each only when it is in `files`.
+ * `AudioManager` tries each in turn and stays on the first one that decodes.
  */
-export function buildMusicSrcList(block: MusicBlock, opts: { season?: Season | null; override?: MusicOverride } = {}): string[] {
+export function buildMusicSrcList(block: MusicBlock, opts: { season?: Season | null; override?: MusicOverride } = {}, files: ReadonlySet<string> = MUSIC_FILES): string[] {
   const { season, override } = opts;
-  if (override === "cafe") return [`${MUSIC_DIR}/cafe.mp3`, fallbackTrackFor(block)];
-  if (override === "interior") return [`${MUSIC_DIR}/interior.mp3`, fallbackTrackFor(block)];
-  const list: string[] = [];
-  if (season) list.push(`${MUSIC_DIR}/${block}-${season}.mp3`);
-  list.push(`${MUSIC_DIR}/${block}.mp3`);
+  const names = override ? [`${override}.mp3`] : season ? [`${block}-${season}.mp3`, `${block}.mp3`] : [`${block}.mp3`];
+  const list = names.filter(name => files.has(name)).map(name => `${MUSIC_DIR}/${name}`);
   list.push(fallbackTrackFor(block));
   return list;
 }
