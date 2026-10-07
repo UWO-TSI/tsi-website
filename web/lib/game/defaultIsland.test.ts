@@ -54,6 +54,15 @@ describe("default island movement (frozen 2026-09-28 village)", () => {
     expect(x).toBeCloseTo(5);
     expect(island.standable(x, z)).toBe(true);
   });
+  it("keeps you out of the bridge's rails, on the deck and on the bank at its ends", () => {
+    // bridge-0 at (0, 0.5), a quarter turn: it runs along z, its rails at x = ±1.45 (the cells under it are Wood here).
+    const island = villageIsland(v0);
+    for (const z of [-1.2, 0.5, 2.2]) for (const x of [-1.3, 1.3, -1.1, 1.1]) expect(island.standable(x, z), `${x}, ${z}`).toBe(false);
+    for (const z of [-1.2, 0.5, 2.2]) expect(island.standable(0, z)).toBe(true);
+    // Walking out of the deck's middle sideways stops short of the rail: the body's edge (0.3) stays clear of it.
+    const [x] = island.move(0, 0.5, 2, 0.5);
+    expect(x + 0.3).toBeLessThan(1.45 - 0.05);
+  });
   it("seats two to a bench: the nearer slot nobody else holds, facing the side you came from, and lets you step off", () => {
     // Plaza bench (5, 4.5) runs north-south, its slots 0.42 either way along it: from the plaza side you face west,
     // from the east you face east. A little south of its middle, the south slot.

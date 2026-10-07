@@ -62,8 +62,13 @@ export const LANDMARK_IDS = Object.keys(LANDMARK_INFO) as LandmarkId[];
 
 /** Wharf stub deck (walkable over the water), relative to the wharf before its yaw. */
 export const WHARF_DECK_LOCAL = { x0: -0.9, x1: 0.9, z0: -3.5, z1: 2 };
-/** Wooden bridge deck, relative, before its yaw: the model spans ±1.9 along x, ±1.45 across with rails. */
-export const BRIDGE_DECK_HALF: [number, number] = [1.9, 1.2];
+/**
+ * Wooden bridge deck, relative, before its yaw: the model spans ±1.9 along x, its rails at ±1.45 across. The deck
+ * stops 1.0 out so a body (0.2 probes, about 0.3 wide) walks clear of the rails.
+ */
+export const BRIDGE_DECK_HALF: [number, number] = [1.9, 1.0];
+/** The rails are solid from the deck's edge out to here (across, relative), along the whole deck: on water or on the bank. */
+export const BRIDGE_RAIL_OUT = 1.65;
 /** Solid footprints (half width, half depth, before rotation and scale), from the measured GLB bounds. */
 export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   "bench-wood": [0.98, 0.27], "rock-a": [0.48, 0.45], "rock-b": [0.46, 0.42], "rock-c": [0.5, 0.5],
@@ -121,6 +126,15 @@ export function wharfDeck(v: Village = village()) {
 export function bridgeDecks(v: Village = village()) {
   const [a, b] = BRIDGE_DECK_HALF;
   return objectsOf("bridge", v).map(o => turnedRect(o.x, o.z, { x0: -a, x1: a, z0: -b, z1: b }, o.yaw));
+}
+
+/** Each bridge's two rails as solid strips in world XZ, either side of its deck. */
+export function bridgeRails(v: Village = village()) {
+  const [a, b] = BRIDGE_DECK_HALF;
+  return objectsOf("bridge", v).flatMap(o => [
+    turnedRect(o.x, o.z, { x0: -a, x1: a, z0: b, z1: BRIDGE_RAIL_OUT }, o.yaw),
+    turnedRect(o.x, o.z, { x0: -a, x1: a, z0: -BRIDGE_RAIL_OUT, z1: -b }, o.yaw),
+  ]);
 }
 
 /** Where a fresh visit starts. */
@@ -227,6 +241,7 @@ export function islandOf(v: Village): VillageIsland {
   const ground = (x: number, z: number) => sampleGroundHeight(map, field, x, z);
   const surface = (x: number, z: number) => drawnSurfaceAt(map, x, z);
   const decks = [wharfDeck(v), ...bridgeDecks(v)].filter(d => d !== null);
+  const rails = bridgeRails(v);
   const solids = landmarks(v).filter(l => l.half);
   const props = propsOf(v).flatMap(o => {
     const f = propFootprint(o);
@@ -246,7 +261,7 @@ export function islandOf(v: Village): VillageIsland {
   const wet = (x: number, z: number) => !onDeck(x, z) && !isGroundAtWorld(map, x, z);
   /** Top of the solid at a point: a prop's measured top, Infinity for buildings, study furniture and trunks, -Infinity for none. */
   const solidTop = (x: number, z: number) => {
-    if (solids.some(l => Math.abs(x - l.x) < l.half![0] && Math.abs(z - l.z) < l.half![1]) || eventSolids.some(r => inRect(x, z, r))) return Infinity;
+    if (solids.some(l => Math.abs(x - l.x) < l.half![0] && Math.abs(z - l.z) < l.half![1]) || eventSolids.some(r => inRect(x, z, r)) || rails.some(r => inRect(x, z, r))) return Infinity;
     let top = -Infinity, trunk = false;
     const bx = Math.floor(x / 4), bz = Math.floor(z / 4);
     for (let oz = -1; oz <= 1; oz++) for (let ox = -1; ox <= 1; ox++) {
