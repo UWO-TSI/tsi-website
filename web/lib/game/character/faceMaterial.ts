@@ -2,7 +2,7 @@
  * Character shaders (avatar v7): the animated painted face. Characters are matte: no specular from the sun or the
  * sky on skin, hair or clothes (David, 2026-10-01: "they should not be toys ... normal matte hair").
  *
- * Face: a matte MeshPhysicalMaterial (lit exactly like the body) whose albedo is the skin colour with the seven layer
+ * Face: a matte MeshPhysicalMaterial (lit exactly like the body) whose albedo is the skin colour with the eight layer
  * slots of face.ts drawn over it from the shared face atlas. Every character owns one material; they share one
  * program (a module-level onBeforeCompile and a fixed program key), and a blink or a talking mouth is a uniform
  * write. Mipmapped atlas with bled gutters: sharp at 1024 px per face canvas in the creator, 512 in the world.
@@ -81,7 +81,7 @@ export function createFaceMaterial(atlas: THREE.Texture): FaceMaterial {
   const material = new THREE.MeshPhysicalMaterial({ name: "CharacterFace", ...MATTE });
   material.userData.face = u;
   material.onBeforeCompile = faceCompile;
-  material.customProgramCacheKey = () => "character-face-v7-matte";
+  material.customProgramCacheKey = () => `character-face-v7-matte-${N}`;
   const tint = new THREE.Color();
   return {
     material,
