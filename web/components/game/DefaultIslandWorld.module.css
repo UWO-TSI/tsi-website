@@ -382,8 +382,8 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .runeTimer { width: 320px; height: 5px; border-radius: 3px; background: #3b2f45; overflow: hidden; }
 .runeTimer span { display: block; height: 100%; background: #ffe08a; transition: width 0.1s linear; }
 /* Mouse-look (specs/camera-orbit.md): the hint while the mouse is free, and the ruins' crosshair while it looks. */
-/* On the canvas, over the scene's middle: clear of the title, the top cluster and the bottom stack at every size. */
-.lookHint { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 16px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.94); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); font-weight: 800; box-shadow: var(--gui-shadow-sm); pointer-events: none; white-space: nowrap; zoom: var(--tsi-text-scale, 1); }
+/* Top centre, between the title and the top cluster: clear of the bottom stack and of the bubbles and plates over heads (world audit item 2). */
+.lookHint { position: absolute; top: max(24px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 16px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.94); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); font-weight: 800; box-shadow: var(--gui-shadow-sm); pointer-events: none; white-space: nowrap; zoom: var(--tsi-text-scale, 1); }
 .crosshair { position: absolute; top: 50%; left: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; fill: none; stroke: #f8f3df; stroke-width: 1.4; filter: drop-shadow(0 0 1.2px #1b2a2acc); opacity: 0.85; }
 .crosshair circle + circle { fill: #f8f3df; stroke: none; }
 /* The clean HUD (row 283): the objective slides in when it changes and fades after; the place name fades after a scene comes in. */

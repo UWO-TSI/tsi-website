@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Html, useProgress, useTexture } from "@react-three/drei";
+import { useProgress, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { Map as MapIcon, Settings, Wrench } from "lucide-react";
 import GridWorld from "./grid/GridWorld";
@@ -159,6 +159,9 @@ import type { Area } from "@/lib/net/protocol";
 import NetWorld from "./net/NetWorld";
 import NetHud from "./net/NetHud";
 import { remoteSeatTaken } from "./net/active";
+import LabelLayer from "./LabelLayer";
+import LandmarkTag from "./LandmarkTag";
+import { worldLabels } from "@/lib/game/labelLayout";
 import { localAvatar } from "@/lib/net/localAvatar";
 import { isSeatedPose, seatPrompt } from "@/lib/game/seatPrompt";
 import styles from "./DefaultIslandWorld.module.css";
@@ -229,13 +232,15 @@ function villageLayout(v: Village) {
   const deck = wharfDeck(v);
   const fitting = objectsOf("fitting", v)[0], missions = objectsOf("missions", v)[0], marks = landmarks(v);
   const island = villageIsland(v), trees = objectsOf("tree", v).map((o): TreeSpot => ({ x: o.x, z: o.z, seed: o.seed ?? 0 }));
+  const buildings = marks.filter(l => l.half && Math.max(...l.half) >= 1).map(l => boxOccluder(l.x, l.z, l.half![0], l.half![1], island.ground(l.x, l.z), 5));
   return {
     island,
     landmarks: marks,
     trees,
     /** What can stand between the orbit camera and you: the buildings and the trees' canopies (lib/game/occluders.ts). */
-    occluders: [...marks.filter(l => l.half && Math.max(...l.half) >= 1).map(l => boxOccluder(l.x, l.z, l.half![0], l.half![1], island.ground(l.x, l.z), 5)),
-      ...trees.map(t => treeOccluder(t.x, t.z, island.ground(t.x, t.z)))],
+    occluders: [...buildings, ...trees.map(t => treeOccluder(t.x, t.z, island.ground(t.x, t.z)))],
+    /** What hides a label (lib/game/labelLayout.ts): the buildings only, a canopy is see-through enough. */
+    buildings,
     fireflies: objectsOf("bush", v).map(xz),
     puddles: objectsOf("puddle", v).map(xz),
     benches: objectsOf("bench", v),
@@ -337,6 +342,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   const leadAt = useMemo((): [number, number] | null => (spawns.boat ? [spawns.boat[0] + LEAD_OFFSET[0], spawns.boat[2] + LEAD_OFFSET[1]] : anchorAt("wharf", v)), [v, spawns.boat]);
   const spots = useMemo(() => eventSpots(event?.decor ?? null), [event]);
   useEffect(() => { player.current.set(...spawn); }, [reset, spawn, player]);
+  useEffect(() => { worldLabels.setOccluders(layout.buildings); return () => worldLabels.setOccluders([]); }, [layout]);
   const focus = useRef(new THREE.Vector3(...spawn));
   const follow = useMemo(() => ({ ground: island.ground, player, occluders: layout.occluders }), [island, player, layout]);
   useFollowCamera(focus, zoom, overview ? layout.scale.overview : null, follow);
@@ -499,9 +505,9 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {board && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(board)} rotation={[0, Math.PI + (board.yaw ?? 0), 0]} />}
     {missions && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
     {wharf && <Wharf dock={{ x: wharf.x, z: wharf.z, yaw: wharf.yaw ?? 0 }} light={light} place="village" />}
-    {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <Html key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} center distanceFactor={10} zIndexRange={[3, 0]}>
-      <div className={styles.cue} data-closed={!l.open}>{SIGNS[l.id]}</div>
-    </Html>)}
+    {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <LandmarkTag key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} closed={!l.open}>
+      {SIGNS[l.id]}
+    </LandmarkTag>)}
   </>;
 }
 
@@ -1027,9 +1033,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           <WarmupProbe key={sceneShown} onReady={onSceneReady} />
           {children}
           <NetWorld area={area} player={player} ready={ready && !fading} />
-          {!inside && !atHome && site !== "ruins" && near !== "enter" && hqDoor && <Html position={[hqDoor[0], 2.9, hqDoor[1]]} center distanceFactor={10} zIndexRange={[3, 0]}>
-            <div className={styles.cue}>HQ</div>
-          </Html>}
+          {!inside && !atHome && site !== "ruins" && near !== "enter" && hqDoor && <LandmarkTag position={[hqDoor[0], 2.9, hqDoor[1]]}>HQ</LandmarkTag>}
+          <LabelLayer focus={player} />
         </Suspense>
       </Canvas>
       <header className={styles.heading} data-fading={fading || !ready || hudCinematic || (!full && headingFlash === null)} data-clean={full ? undefined : ""}>
