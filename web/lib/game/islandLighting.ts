@@ -3,7 +3,8 @@ import { ISLAND_PHASES, type IslandPhase } from "./islandTime";
 import type { EnvPhaseSpec } from "./envLight";
 import { TUNING_DEFAULTS } from "./tuning";
 import { Color } from "three";
-import type { IslandWeather } from "./islandWeather";
+import type { IslandWeather, WeatherBlend } from "./islandWeather";
+import { activeProposals, type LookProposal } from "./lookProposals";
 import { leanHue, leanWater, type SeasonLook } from "./seasonalLook";
 import { CURRENT, lookToLight, type LookPreset, type PhaseBase } from "./lookPreset";
 import { phaseInstant, solarPosition, type SunAngles } from "./sunPath";
@@ -61,21 +62,27 @@ export interface IslandLight {
   skyTop?: string;
   /** The fill carries the backlit lift for today's heading (lookPreset fillForHeading moves it with the orbit camera). */
   fillLift?: boolean;
+  /** How wet the ground is, 0..1 (the terrain darkens and takes a sheen; proposal `overcast`, lookProposals.ts). */
+  wet?: number;
 }
 
-/** Per phase: the water palette and the lamps (look values come from the preset). */
+/**
+ * Per phase: the water palette and the lamps (look values come from the preset). The water is unlit (waterShader.ts),
+ * so its phase colours are its light: the foam sits as far above the shallows at dusk and night as by day, instead of
+ * glowing day-white round a dark river (audit 2026-10 world item 16).
+ */
 const PHASE_BASE: Record<IslandPhase, PhaseBase> = {
   dawn: {
-    water: { ...water, deepColor: 0x4a7d93, midColor: 0x7ea9b3, shallowColor: 0xb7c9c6, glare: 0.18, sunGlint: 1.8 },
+    water: { ...water, deepColor: 0x4a7d93, midColor: 0x7ea9b3, shallowColor: 0xb7c9c6, foamColor: 0xe9e8de, glare: 0.18, sunGlint: 1.8 },
     lamp: 2, lampsOn: true, windowGlow: 0.8, fireflies: false,
   },
   day: { water, lamp: 0.6, lampsOn: false, windowGlow: 0.3, fireflies: false },
   evening: {
-    water: { ...water, deepColor: 0x426f87, midColor: 0x649ca7, shallowColor: 0x95b7b1, glare: 0.25, sunGlint: 2.2 },
+    water: { ...water, deepColor: 0x426f87, midColor: 0x649ca7, shallowColor: 0x95b7b1, foamColor: 0xd4d0bb, glare: 0.25, sunGlint: 2.2 },
     lamp: 4, lampsOn: true, windowGlow: 1.15, fireflies: true,
   },
   night: {
-    water: { ...water, deepColor: 0x152943, midColor: 0x284c67, shallowColor: 0x516e81, bedColor: 0x394b59, foamColor: 0x8babc2, ringColor: 0x7493aa, glare: 0.06, sunGlint: 0.4 },
+    water: { ...water, deepColor: 0x152943, midColor: 0x284c67, shallowColor: 0x516e81, bedColor: 0x394b59, foamColor: 0x67818f, ringColor: 0x7493aa, glare: 0.06, sunGlint: 0.4 },
     lamp: 6, lampsOn: true, windowGlow: 1.6, fireflies: true,
   },
 };
@@ -138,7 +145,8 @@ export const ISLAND_LIGHTING = Object.fromEntries(ISLAND_PHASES.map(phase =>
  * 30 km/h windy line), spreading the same light wider, so the sheet's peak
  * falls by the square.
  */
-const WEATHER_MOD: Record<IslandWeather, { desat: number; dim: number; sun: number; fill: number; fog: number; shadowRadius: number; shadowIntensity: number; grade: number; glare: number; roughness: number }> = {
+type WeatherMod = { desat: number; dim: number; sun: number; fill: number; fog: number; shadowRadius: number; shadowIntensity: number; grade: number; glare: number; roughness: number };
+const WEATHER_MOD: Record<IslandWeather, WeatherMod> = {
   clear: { desat: 0, dim: 1, sun: 1, fill: 1, fog: 1, shadowRadius: 1, shadowIntensity: 1, grade: 0, glare: 1, roughness: 1 },
   rain: { desat: 0.45, dim: 0.9, sun: 0.45, fill: 1.3, fog: 0.75, shadowRadius: 3, shadowIntensity: 0.5, grade: 0.08, glare: 0, roughness: 1 },
   snow: { desat: 0.45, dim: 1.08, sun: 0.6, fill: 1.3, fog: 0.7, shadowRadius: 2.5, shadowIntensity: 0.65, grade: 0.05, glare: 0, roughness: 1 },
@@ -154,7 +162,10 @@ function soften(hex: string, desat: number, dim: number): string {
 
 export function withWeather(light: IslandLight, weather: IslandWeather): IslandLight {
   if (weather === "clear") return light;
-  const m = WEATHER_MOD[weather];
+  return modWeather(light, WEATHER_MOD[weather]);
+}
+
+function modWeather(light: IslandLight, m: WeatherMod): IslandLight {
   const sky = soften(light.sky, m.desat, m.dim);
   return {
     ...light,
@@ -173,6 +184,39 @@ export function withWeather(light: IslandLight, weather: IslandWeather): IslandL
     water: { ...light.water, glare: light.water.glare * m.glare / m.roughness ** 2, sunGlint: light.water.sunGlint * m.glare, roughness: light.water.roughness * m.roughness },
     shadow: { ...light.shadow, radius: light.shadow.radius * m.shadowRadius, intensity: light.shadow.intensity * m.shadowIntensity },
   };
+}
+
+/**
+ * Proposed (audit 2026-10 world item 10, `?proposal=overcast`; lookProposals.ts): rain under a closed grey sky. The
+ * sun is a soft brightness through cloud with faint, wide shadows, the fill carries the scene, the water greys with the
+ * sky (it is unlit, so its colours are its light) and the ground is wet. Snow is a lighter overcast, dry underfoot.
+ */
+const OVERCAST_MOD: Partial<Record<IslandWeather, WeatherMod & { water: number; wet: number }>> = {
+  rain: { desat: 0.82, dim: 0.78, sun: 0.25, fill: 1.45, fog: 0.7, shadowRadius: 4, shadowIntensity: 0.15, grade: 0.1, glare: 0, roughness: 1, water: 0.45, wet: 1 },
+  snow: { desat: 0.62, dim: 1.02, sun: 0.45, fill: 1.35, fog: 0.65, shadowRadius: 3, shadowIntensity: 0.4, grade: 0.05, glare: 0, roughness: 1, water: 0.3, wet: 0 },
+};
+const greyWater = (hex: number, desat: number, dim: number) => parseInt(soften(`#${hex.toString(16).padStart(6, "0")}`, desat, dim).slice(1), 16);
+function withOvercast(light: IslandLight, weather: IslandWeather): IslandLight {
+  const m = OVERCAST_MOD[weather];
+  if (!m) return { ...withWeather(light, weather), wet: 0 };
+  const out = modWeather(light, m), w = out.water;
+  return {
+    ...out,
+    water: { ...w, deepColor: greyWater(w.deepColor, m.water, 0.92), midColor: greyWater(w.midColor, m.water, 0.92), shallowColor: greyWater(w.shallowColor, m.water, 0.95), foamColor: greyWater(w.foamColor, m.water, 0.92) },
+    wet: m.wet,
+  };
+}
+
+/**
+ * The weather on a time-of-day profile, across a change of weather (`blend`, islandWeather `weatherBlendAt`). As
+ * approved, the weather it is going to; with the `overcast` proposal, the overcast eased in from the last hour's.
+ */
+export function weatherLight(light: IslandLight, blend: WeatherBlend, proposals: ReadonlySet<LookProposal> = activeProposals()): IslandLight {
+  if (!proposals.has("overcast")) return withWeather(light, blend.to);
+  const b = withOvercast(light, blend.to);
+  if (blend.t >= 1 || blend.from === blend.to) return b;
+  const a = withOvercast(light, blend.from);
+  return blend.t <= 0 ? a : mixValue(a, b, blend.t, "") as IslandLight;
 }
 
 /**

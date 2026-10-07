@@ -1804,13 +1804,28 @@ export function shoreSdf(map: IslandMap, scale = SHORE_SDF_SCALE): ShoreSdf {
     }
   }
 
-  return sdfFromMask(land, width, height, scale, {
+  const sdf = sdfFromMask(land, width, height, scale, {
     minX: map.originX - TILE / 2,
     minZ: map.originZ - TILE / 2,
     sizeX: map.width * TILE,
     sizeZ: map.depth * TILE,
   });
+  // Near the waterline the mask's distance steps by its samples (up to a tenth of a cell off the drawn coast), and the
+  // foam starts where this crosses 0: where it said land over open water there was no foam, and the clear shallows
+  // showed grey stair-step teeth between it (audit 2026-10 world item 13). There, read the coast's own signed
+  // distance, which crosses 0 exactly on the drawn waterline; further out the transform takes over.
+  for (let j = 0; j < height; j++) {
+    for (let i = 0; i < width; i++) {
+      const k = j * width + i, w = smoothstep(SHORE_EXACT[0], SHORE_EXACT[1], Math.abs(sdf.data[k]));
+      if (w >= 1) continue;
+      const x = map.originX - TILE / 2 + (i + 0.5) / scale, z = map.originZ - TILE / 2 + (j + 0.5) / scale;
+      sdf.data[k] = -coastDistance(map, x, z) * (1 - w) + sdf.data[k] * w;
+    }
+  }
+  return sdf;
 }
+/** Cells from the waterline: the coast's own distance inside the first, the distance transform past the second. */
+const SHORE_EXACT = [0.5, 1] as const;
 
 /**
  * Signed distance in CELLS from the edge of `mask`, positive where the mask is

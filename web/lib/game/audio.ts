@@ -471,14 +471,20 @@ export class AudioManagerImpl {
   }
 }
 
-/** Ambient candidate list: an optional weather variant, then season variant, then the base file (guaranteed to exist). */
-function ambientCandidates(input: { phase: AmbientPhase; weather?: IslandWeather; season?: Season }): string[] {
+/**
+ * The weather and season variants in `public/audio/ambient/` (`{phase}-{weather|season}`, e.g. "day-rain"). Only
+ * these are requested, so an unauthored variant is never a 404 (audit 2026-10 world item 19). Add a name here when its
+ * file lands; `audioFiles.test.ts` checks every listed file is on disk.
+ */
+export const AMBIENT_VARIANTS: ReadonlySet<string> = new Set<string>([]);
+
+/** Ambient candidate list: a listed weather variant, then a listed season variant, then the base file (guaranteed to exist). */
+export function ambientCandidates(input: { phase: AmbientPhase; weather?: IslandWeather; season?: Season }, variants: ReadonlySet<string> = AMBIENT_VARIANTS): string[] {
   const { phase, weather, season } = input;
-  const base = MANIFEST.ambient[phase];
   const list: string[] = [];
-  if (weather && weather !== "clear") list.push(`/audio/ambient/${phase}-${weather}.ogg`);
-  if (season) list.push(`/audio/ambient/${phase}-${season}.ogg`);
-  list.push(base);
+  if (weather && weather !== "clear" && variants.has(`${phase}-${weather}`)) list.push(`/audio/ambient/${phase}-${weather}.ogg`);
+  if (season && variants.has(`${phase}-${season}`)) list.push(`/audio/ambient/${phase}-${season}.ogg`);
+  list.push(MANIFEST.ambient[phase]);
   return list;
 }
 
