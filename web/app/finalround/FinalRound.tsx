@@ -76,6 +76,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
   const lastAttempt = useRef({ active: false, typed: 0 });
   const shakeCtl = useAnimationControls();
   const [scrollDark, setScrollDark] = useState(0);
+  const [timeUp, setTimeUp] = useState(false);
   const ended = useRef(false);
   const captureRef = useRef<(() => string) | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -110,13 +111,18 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
     []
   );
 
+  // Clock hit zero: hold on a red 0:00 for a beat, then move on.
   const fail = useCallback(() => {
     if (ended.current) return;
     ended.current = true;
+    setRemaining(0);
+    setTimeUp(true);
     buzz([80, 60, 80, 60, 200]);
     sfx.deny();
-    setPhase("judging");
-    window.setTimeout(() => setPhase("status"), 3000);
+    window.setTimeout(() => {
+      setPhase("judging");
+      window.setTimeout(() => setPhase("status"), 3000);
+    }, 1600);
   }, []);
 
   const checkStatus = () => {
@@ -136,8 +142,8 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
       const now = performance.now();
       // On the last attempt, don't run out before they start typing.
       const la = lastAttempt.current;
-      const target = la.active && la.typed === 0 && vLeft.current < 4500 ? Math.min(rateTarget.current, 0.25) : rateTarget.current;
-      rate.current += (target - rate.current) * 0.15;
+      const target = la.active && la.typed === 0 && vLeft.current < 7000 ? Math.min(rateTarget.current, 0.3) : rateTarget.current;
+      rate.current += (target - rate.current) * (la.active && la.typed > 0 ? 0.4 : 0.15);
       vLeft.current -= (now - lastReal.current) * rate.current;
       lastReal.current = now;
       const sec = Math.max(0, Math.ceil(vLeft.current / 1000));
@@ -164,13 +170,16 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
       const gaps = keyTimes.current.slice(1).map((t, i) => t - keyTimes.current[i]);
       const perKey = clamp((gaps.length ? gaps.reduce((a, b) => a + b, 0) / gaps.length : 700) / 1000, 0.3, 1.2);
       const avgGuess = (now - testStart.current) / Math.max(1, done) / 1000;
-      const realLeft = typed === 0 ? Math.max(6, avgGuess) : Math.max(0.25, (CODE_LENGTH - typed) * perKey - 0.15);
-      rateTarget.current = clamp(secsLeft / realLeft, typed === 0 ? 0.3 : 0.5, 6);
+      // Thinking: crawl. Typing: drain so it reaches 0:00 on the 6th digit,
+      // speeding up visibly with every keystroke.
+      const realLeft = typed === 0 ? Math.max(6, avgGuess) : Math.max(0.3, (CODE_LENGTH - typed) * perKey + 0.15);
+      rateTarget.current = clamp(secsLeft / realLeft, typed === 0 ? 0.3 : 1, 14);
     } else if (done >= 1) {
       const avgGuess = (now - testStart.current) / done / 1000;
+      // Aim to reach the last attempt with about 9 seconds on the clock.
       const attemptsLeft = MAX_ATTEMPTS - done;
-      const realLeft = avgGuess * (attemptsLeft - 1) + Math.min(avgGuess * 0.8, 9);
-      rateTarget.current = clamp(secsLeft / realLeft, 0.55, 1.7);
+      const realLeft = avgGuess * (attemptsLeft - 1);
+      rateTarget.current = clamp((secsLeft - 9) / realLeft, 0.4, 1.7);
     }
   };
 
@@ -218,7 +227,8 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
   const finalSet = history.length >= MAX_ATTEMPTS - 1;
 
   const applyAnswer = (raw: string) => {
-    if (ended.current) return;
+    // During the 0:00 hold they can still finish typing, just never submit.
+    if (ended.current && (phase !== "test" || raw.length < answer.length)) return;
     const v = raw.replace(/\D/g, "").slice(0, CODE_LENGTH);
     if (v.length > answer.length) {
       buzz(8);
@@ -226,11 +236,14 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
       keyTimes.current.push(performance.now());
     }
     setAnswer(v);
+    if (ended.current) return;
     lastAttempt.current = { active: finalSet, typed: v.length };
     if (finalSet) {
       calibrate(history.length, v.length);
       // The clock gives out on the last keystroke.
-      if (v.length === CODE_LENGTH) vLeft.current = 0;
+      if (v.length === CODE_LENGTH && vLeft.current > 0) {
+        rateTarget.current = rate.current = Math.max(rate.current, vLeft.current / 350);
+      }
     }
   };
 
@@ -360,6 +373,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
       <style>{`
         @keyframes fr-glitch{0%,100%{transform:translate(0);text-shadow:2px 0 #22d3ee,-2px 0 #ef4444}25%{transform:translate(-3px,2px)}50%{transform:translate(3px,-2px);text-shadow:-3px 0 #22d3ee,3px 0 #ef4444}75%{transform:translate(-2px,-1px)}}
         @keyframes fr-caret{0%,100%{opacity:1}50%{opacity:0}}
+        @keyframes fr-blink{0%,100%{opacity:1}50%{opacity:.25}}
         @keyframes fr-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
         .fr-panel{padding-top:44svh}
         @media (max-aspect-ratio:1/1){.fr-panel.fr-tight{padding-top:35svh}}
@@ -452,6 +466,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
               className={`${mono} rounded-lg bg-black/40 px-3 py-1 text-3xl font-bold tabular-nums backdrop-blur ${
                 urgent ? "text-[#ef4444]" : "text-[#f1ffff]"
               }`}
+              style={timeUp ? { animation: "fr-blink .45s steps(1) infinite" } : undefined}
             >
               {fmt(remaining)}
             </motion.span>
@@ -638,7 +653,10 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                   FINAL ATTEMPT
                 </p>
               )}
-              <motion.div className={finalSet ? "mt-2" : "mt-4"} animate={shakeCtl}>
+              <motion.div
+                className={`${finalSet ? "mt-2" : "mt-4"} transition-opacity duration-300 ${timeUp ? "pointer-events-none opacity-40" : ""}`}
+                animate={shakeCtl}
+              >
                 <div className="relative" onClick={() => inputRef.current?.focus()}>
                   <input
                     ref={inputRef}
@@ -834,13 +852,9 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                   initial={{ opacity: 0, y: 24 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ ...spring, delay: 0.7 }}
-                  className="pointer-events-auto flex flex-col items-center"
+                  className="pointer-events-auto flex w-full flex-col items-center"
                 >
-                  <p className="max-w-sm text-sm text-[#e5e7eb] [text-shadow:0_1px_14px_rgba(0,0,0,0.95)]">
-                    That vault was rigged. Nobody cracks it. You were accepted before
-                    you opened this page. Breathe. You&apos;re in.
-                  </p>
-                  <div className="mt-4 flex w-full max-w-sm gap-3">
+                  <div className="flex w-full max-w-sm gap-3">
                     <motion.button
                       onClick={save}
                       disabled={saving}
@@ -900,11 +914,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                           >
                             {s.cta} <span aria-hidden>→</span>
                           </motion.a>
-                        ) : (
-                          <span className="mt-3 inline-flex rounded-full border border-white/10 px-4 py-2 text-sm text-white/40">
-                            Link coming soon
-                          </span>
-                        )}
+                        ) : null}
                       </div>
                     </motion.li>
                   ))}

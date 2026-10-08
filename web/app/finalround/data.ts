@@ -14,7 +14,6 @@ export const NEAR_MISS = [
   "Almost there.",
 ];
 
-// TODO: monthly townhall LettuceMeet link still pending.
 export const ONBOARDING = [
   {
     title: "Join the Discord",
@@ -27,12 +26,6 @@ export const ONBOARDING = [
     cta: "Open LettuceMeet",
     body: "Fill out the LettuceMeet for the first townhall on Oct 24 or 25 with the times you're free.",
     href: "https://lettucemeet.com/l/6WRlV",
-  },
-  {
-    title: "Set your monthly townhall availability",
-    cta: "Open LettuceMeet",
-    body: "Fill out the LettuceMeet for the recurring monthly townhall.",
-    href: "",
   },
   {
     title: "Fill out the team directory",
