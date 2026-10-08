@@ -12,16 +12,13 @@ describe("the place heading (audit-2026-10-ui item 5)", () => {
     expect(roomHeading({ ...village, site: "home", atHome: true, inside: "house" }).title).toBe("Your house");
     expect(roomHeading({ ...village, site: "home", atHome: true }).title).toBe("Your island");
   });
-  it("gives every room its own line, not the village's", () => {
+  it("shows only the name in rooms (David, 2026-10-08)", () => {
     const rooms = [
       { ...village, site: "ruins" as const },
-      ...(["hq", "oracle", "museum", "shop", "cafe"] as const).map(inside => ({ ...village, inside })),
+      ...(["hq", "oracle", "museum", "shop"] as const).map(inside => ({ ...village, inside })),
       { ...village, site: "home" as const, atHome: true, inside: "house" as const },
     ];
-    const lines = rooms.map(p => roomHeading(p).subtitle);
-    const islandLine = roomHeading(village).subtitle;
-    for (const line of lines) expect(line).not.toBe(islandLine);
-    expect(new Set(lines).size).toBe(lines.length);
+    for (const p of rooms) expect(roomHeading(p).subtitle).toBe("");
   });
   it("keeps the café's line and the village's event line", () => {
     expect(roomHeading({ ...village, inside: "cafe" }).subtitle).toBe("Warm drinks and quiet tables. Find a seat to study.");

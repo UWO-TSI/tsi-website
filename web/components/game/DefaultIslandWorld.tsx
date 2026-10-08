@@ -1074,7 +1074,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       </Canvas>
       <header className={styles.heading} data-fading={fading || !ready || hudCinematic || ((!full || compact) && headingFlash === null)} data-clean={full && !compact ? undefined : ""}>
         <h1>{heading.title}</h1>
-        <p>{heading.subtitle}</p>
+        {heading.subtitle && <p>{heading.subtitle}</p>}
       </header>
       {/* Top right (hud-first-login §1, §2): coins, level, clock and mail, then sound and the view options; panels open below it. */}
       <TopCluster full={full && !compact} buttons={full} hidden={hudCinematic} weather={weather} phase={phase} unread={progression.unreadLetters} mailKey={keyName(identity.settings.key_bindings.openMail)} onMail={() => setSheet("letters")}
