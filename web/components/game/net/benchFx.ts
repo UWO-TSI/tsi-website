@@ -48,6 +48,8 @@ export function placeInFormation(s: RemoteSample, i: number, you: THREE.Vector3,
 export function forceMotion(r: RemoteRig, i: number, t: number, dt: number) {
   const m = r.motion, full = r.lod.tier === FULL, phase = (t + i * 0.137) % 1e6;
   if (fxForced("leaf")) m.leaf = 1;
+  // A forced cast is the bench's to take back (remote casts aren't sent: nothing else clears it).
+  if (!fxForced("fishing") && m.fishing && m.fishing === casts.get(r)) m.fishing = null;
   if (!full) return;
   if (fxForced("ghost") && crossed(phase, dt, 0.4)) m.ghost = true;
   if (fxForced("emotes") && crossed(phase, dt, 3)) m.play = EMOTE_CLIP_NAMES[Math.floor(phase / 3) % EMOTE_CLIP_NAMES.length];
