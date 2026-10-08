@@ -6,6 +6,7 @@
  * ceremony lives in the island temple; here the reveal is the keeper's card.
  */
 import { useState } from "react";
+import { usePresence } from "@/lib/game/useWorldDialog";
 import OracleQuizSheet from "./OracleQuizSheet";
 import { FAMILIES } from "@/lib/game/oracle/family";
 import { setFamily } from "@/lib/game/identity";
@@ -13,12 +14,25 @@ import type { Family } from "@/lib/oracle/engine";
 import type { ResultView } from "@/lib/oracle/service";
 import styles from "../DefaultIslandWorld.module.css";
 
-/** The keeper's card after a reading: in the island temple (with Continue) and here. */
-export function FamilyReveal({ family, type, embedded, onContinue }: { family: Family; type: string; embedded?: boolean; onContinue?: () => void }) {
-  return <section className={`${styles.reveal} ${embedded ? styles.revealEmbedded : ""}`} role="status" style={{ ["--family" as string]: FAMILIES[family].color }} data-testid="oracle-reveal">
-    <p className={styles.revealFamily}>{family}</p>
-    <p>{FAMILIES[family].keeperLine}</p>
-    <small>Aura unlocked · {type}</small>
+type Reading = { family: Family; type: string };
+
+/**
+ * The keeper's card after a reading: in the island temple (with Continue) and here. `open` given (the temple): it
+ * stays mounted and fades out with what it last showed when it closes (audit-2026-10-ui item 4); without it, it is
+ * simply shown.
+ */
+export function FamilyReveal({ open, family, type, embedded, onContinue }: { open?: boolean; family: Family | null; type: string; embedded?: boolean; onContinue?: () => void }) {
+  const showing = open ?? true;
+  const state = usePresence(showing && !!family, 260);
+  const [kept, setKept] = useState<Reading | null>(family ? { family, type } : null);
+  if (showing && family && (kept?.family !== family || kept.type !== type)) setKept({ family, type });
+  const shown = showing && family ? { family, type } : kept;
+  if (!state || !shown) return null;
+  return <section className={`${styles.reveal} ${embedded ? styles.revealEmbedded : ""}`} role="status" style={{ ["--family" as string]: FAMILIES[shown.family].color }} data-testid="oracle-reveal"
+    data-state={open === undefined ? undefined : state}>
+    <p className={styles.revealFamily}>{shown.family}</p>
+    <p>{FAMILIES[shown.family].keeperLine}</p>
+    <small>Aura unlocked · {shown.type}</small>
     {onContinue && <button onClick={onContinue}>Continue</button>}
   </section>;
 }

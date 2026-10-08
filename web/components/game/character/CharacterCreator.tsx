@@ -86,13 +86,15 @@ export interface CreatorProps {
   onShop?: () => void;
   onDone: (look: CharacterLook, name: string | null) => void | Promise<void>;
   onClose?: () => void;
+  /** The wardrobe's open and close motion (WardrobeSheet keeps it mounted while it closes); without it, no motion. */
+  presence?: "open" | "closing";
 }
 
 const stay = () => {};
-export default function CharacterCreator({ initial, mode = "create", title, askName, owned = STARTERS, onShop, onDone, onClose }: CreatorProps) {
+export default function CharacterCreator({ initial, mode = "create", title, askName, owned = STARTERS, onShop, onDone, onClose, presence }: CreatorProps) {
   // A dialog (lib/game/useWorldDialog): the world's keys hold still under it (G no longer opens the emotes over it); Escape
-  // closes the wardrobe, never the first-login creator.
-  const root = useWorldDialog<HTMLElement>(true, onClose ?? stay, undefined, true);
+  // closes the wardrobe, never the first-login creator. Closing, it lets go at once: focus goes back, the world moves.
+  const root = useWorldDialog<HTMLElement>(presence !== "closing", onClose ?? stay, undefined, true);
   const [look, setLook] = useState(initial);
   const tabs = useMemo(() => (mode === "wardrobe" ? TABS.filter(t => WARDROBE_TABS.includes(t.id)) : TABS), [mode]);
   const [tabId, setTabId] = useState(tabs[0].id);
@@ -150,7 +152,7 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
     setSaving(false);
   };
 
-  return <section ref={root} className={styles.creator} role="dialog" aria-modal="true" aria-labelledby="creator-title" data-mode={mode}>
+  return <section ref={root} className={styles.creator} role="dialog" aria-modal="true" aria-labelledby="creator-title" data-mode={mode} data-state={presence}>
     <div className={styles.preview}>
       <h1 id="creator-title">{title ?? (mode === "wardrobe" ? "Your closet" : "Make your character")}</h1>
       <View className={styles.stage}><Stage look={look} framing="body" yaw={yaw} faceSize={1024} /></View>

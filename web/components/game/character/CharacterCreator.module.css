@@ -10,6 +10,13 @@
   overflow: auto;
 }
 .canvas { position: fixed !important; inset: 0; pointer-events: none; z-index: 2; }
+/* The wardrobe (presence given): it rises in and sinks away instead of popping (audit-2026-10-ui item 4). */
+.creator[data-state="open"] { animation: creatorIn 240ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
+.creator[data-state="closing"] { animation: creatorOut 200ms ease-in forwards; pointer-events: none; }
+.creator[data-state="closing"] * { pointer-events: none !important; }
+@keyframes creatorIn { from { opacity: 0; transform: translateY(18px) scale(0.985); } }
+@keyframes creatorOut { to { opacity: 0; transform: translateY(14px) scale(0.985); } }
+@media (prefers-reduced-motion: reduce) { .creator[data-state] { animation: none; } }
 .preview, .picker { position: relative; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .preview { align-items: stretch; }
 .preview h1 { margin: 0; font-size: clamp(22px, 2.6vw, 32px); font-weight: 800; }
