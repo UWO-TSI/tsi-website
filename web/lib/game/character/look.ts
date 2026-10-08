@@ -9,6 +9,7 @@
 import catalog from "@/data/characters/character_catalog.json";
 import palette from "@/data/characters/palette.json";
 import faceV7 from "@/data/characters/face_v7.json";
+import { LOOK_MAX_BYTES } from "@/lib/net/protocol";
 
 export const CHARACTER_ROOT = "/assets/characters/v6/";
 /** The clip-bearing base: the v6 body with the hand-modeled v7 head (avatar v7). */
@@ -86,6 +87,18 @@ export const FACE = faceV7 as unknown as {
 export type FaceLayer = "extras" | "brows" | "eyes" | "mouth";
 export const partsIn = (slot: PartSlot) => PARTS.filter(p => p.slot === slot);
 
+/**
+ * Face placement (the creator's sliders, after the Li'l Lads reference, 2026-10-08): per part, whole steps of
+ * [Down–Up, Left–Right (spacing), Rotate, Smaller–Bigger], each -PLACE_STEPS..PLACE_STEPS. Optional and sparse: a
+ * part left where it was is absent, so a look without placement is today's face exactly. face.ts turns the steps
+ * into the face shader's slot rects and tilt, clamped to the face area.
+ */
+export type PlacePart = "eyes" | "brows" | "mouth";
+export type Placement = [up: number, apart: number, rotate: number, size: number];
+export const PLACE_STEPS = 10;
+/** Which sliders each part has: the mouth sits on the centre line, so it has no spacing. */
+export const PLACE_PARTS: Record<PlacePart, { apart: boolean }> = { eyes: { apart: true }, brows: { apart: true }, mouth: { apart: false } };
+
 export interface CharacterLook {
   skin: number; hair: number;
   eyes: string; mouth: string; brows: string; extras: string[];
@@ -94,6 +107,8 @@ export interface CharacterLook {
   acc: Partial<Record<AccGroup, string>>;
   /** Outfit palette index per part id for its first outfit-tinted material; others keep catalogue defaults. */
   colors: Record<string, number>;
+  /** Face placement from the creator's sliders; absent is today's placement. */
+  place?: Partial<Record<PlacePart, Placement>>;
 }
 
 export const DEFAULT_LOOK: CharacterLook = {
@@ -130,7 +145,47 @@ export function parseLook(raw: unknown): CharacterLook {
     onepiece, shoes: r.shoes === null ? null : inSlot(r.shoes, "shoes") ? r.shoes : d.shoes, acc, colors,
   };
   if (hood(look)) delete look.acc.head; // a hood and a hat never stack
+  const place = parsePlace(r.place);
+  if (place) look.place = place;
+  // The multiplayer card carries the look only up to LOOK_MAX_BYTES: remembered colours of parts not worn go first.
+  if (lookBytes(look) > LOOK_MAX_BYTES) {
+    const worn = new Set(wornParts(look).map(p => p.id));
+    look.colors = Object.fromEntries(Object.entries(look.colors).filter(([id]) => worn.has(id)));
+  }
   return look;
+}
+
+const step = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.max(-PLACE_STEPS, Math.min(PLACE_STEPS, Math.round(v))) : null);
+/** Placement as whole steps in range; parts at rest (or malformed) are left out, and so is an empty placement. */
+function parsePlace(raw: unknown): CharacterLook["place"] | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const out: CharacterLook["place"] = {};
+  for (const part of Object.keys(PLACE_PARTS) as PlacePart[]) {
+    const v = (raw as Record<string, unknown>)[part];
+    if (!Array.isArray(v) || v.length !== 4) continue;
+    const steps = v.map(step);
+    if (steps.some(x => x === null)) continue;
+    const p = steps as Placement;
+    if (!PLACE_PARTS[part].apart) p[1] = 0;
+    if (p.some(x => x !== 0)) out[part] = p.map(x => x + 0) as Placement; // + 0: no -0 in the saved JSON
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+/**
+ * A look's size as the multiplayer card measures it (realtime_player_card: octet_length of the jsonb as text, which
+ * puts a space after every comma and colon between values).
+ */
+export function lookBytes(look: CharacterLook): number {
+  const json = JSON.stringify(look);
+  let n = new TextEncoder().encode(json).length, inString = false;
+  for (let i = 0; i < json.length; i++) {
+    const c = json[i];
+    if (inString) { if (c === "\\") i++; else if (c === '"') inString = false; }
+    else if (c === '"') inString = true;
+    else if (c === "," || c === ":") n++;
+  }
+  return n;
 }
 
 /**

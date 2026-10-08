@@ -224,7 +224,7 @@ class Puppet {
     this.faceMat.setAtlas(atlas);
     this.face.material = this.faceMat.material;
     this.look = look;
-    this.faceLookKey = JSON.stringify([look.skin, look.hair, look.brows, look.eyes, look.mouth, look.extras]);
+    this.faceLookKey = JSON.stringify([look.skin, look.hair, look.brows, look.eyes, look.mouth, look.extras, look.place ?? null]);
     this.shownFace = "";
   }
 

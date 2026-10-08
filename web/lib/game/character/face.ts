@@ -6,7 +6,7 @@
  * Blinking, talking and the six expressions only change which cell each slot shows and the brows' pose.
  * Pure: FaceAnimator picks the frame, faceSlots turns it into slot data, faceMaterial.ts uploads it.
  */
-import { FACE, PALETTE, type CharacterLook, type EyeFrame, type FaceCell } from "./look";
+import { FACE, PALETTE, PLACE_STEPS, type CharacterLook, type EyeFrame, type FaceCell, type Placement } from "./look";
 
 export type Expression = "neutral" | "happy" | "surprised" | "sad" | "angry" | "sleepy";
 export const EXPRESSIONS: readonly Expression[] = ["neutral", "happy", "surprised", "sad", "angry", "sleepy"];
@@ -113,15 +113,69 @@ export interface FaceSlot { src: [number, number, number, number] | null; dst: [
 export const FACE_SLOT_COUNT = 8;
 const OFF: FaceSlot = { src: null, dst: [0, 0, 0, 0], mirror: 0, tint: null, pose: [0, 0, 0, 0] };
 
-function slot(cell: FaceCell, anchor: [number, number], mirror: 0 | 1 | 2, tint: string | null = null, brow: [number, number] = [0, 0]): FaceSlot {
+function slot(cell: FaceCell, anchor: [number, number], mirror: 0 | 1 | 2, tint: string | null = null, brow: [number, number] = [0, 0], place?: Placement): FaceSlot {
   const [x, y, w, h, ax, ay] = cell, [W, H] = FACE.atlas_size, k = 1 / FACE.density;
   const u0 = anchor[0] - ax * k, w0 = anchor[1] - ay * k;
-  return { src: [x / W, y / H, w / W, h / H], dst: [u0, w0, u0 + w * k, w0 + h * k], mirror, tint, pose: [anchor[0], anchor[1], brow[0], (brow[1] * Math.PI) / 180] };
+  const s: FaceSlot = { src: [x / W, y / H, w / W, h / H], dst: [u0, w0, u0 + w * k, w0 + h * k], mirror, tint, pose: [anchor[0], anchor[1], brow[0], (brow[1] * Math.PI) / 180] };
+  return place && place.some(v => v !== 0) ? placed(s, cell, place) : s;
+}
+
+/**
+ * The face area (canvas units, [u0, w0, u1, w1]) a placed part must stay in: the front of the face between the temples'
+ * hairline and the chin (head_shape.face_chart: lat 22 at the temples is w 0.29, lat -55 at the chin about w 1.03,
+ * lon ±52 about u 0.07 and 0.93). A part whose default already reaches further keeps that reach (old looks never move).
+ */
+export const FACE_AREA: readonly [number, number, number, number] = [0.07, 0.3, 0.93, 1.02];
+/** The sliders at full travel: up (canvas units), apart (canvas units), rotate (degrees), size (factor at the top). */
+export const PLACE_RANGE = { up: 0.07, apart: 0.05, rotate: 25, size: 1.4 } as const;
+/** Paired parts (eyes, brows) keep this far from the centre line. */
+const CENTRE_GAP = 0.004;
+
+/**
+ * Where a slot is drawn on the face canvas: the bounds of its rect turned about its pivot (the shader samples
+ * q = pivot + R(tilt)(p - pivot - dy), so the cell shows at p = pivot + dy + R(-tilt)(q - pivot)). For the drawn side;
+ * a mirrored copy is the same box mirrored about u = 0.5.
+ */
+export function slotBounds(s: FaceSlot): [number, number, number, number] {
+  const [px, py, dy, tilt] = s.pose, c = Math.cos(tilt), sn = Math.sin(tilt);
+  let u0 = Infinity, w0 = Infinity, u1 = -Infinity, w1 = -Infinity;
+  for (const [qx, qy] of [[s.dst[0], s.dst[1]], [s.dst[2], s.dst[1]], [s.dst[0], s.dst[3]], [s.dst[2], s.dst[3]]]) {
+    const dx = qx - px, dz = qy - py;
+    const u = px + dx * c + dz * sn, w = py + dy - dx * sn + dz * c;
+    u0 = Math.min(u0, u); u1 = Math.max(u1, u); w0 = Math.min(w0, w); w1 = Math.max(w1, w);
+  }
+  return [u0, w0, u1, w1];
+}
+
+/**
+ * A slot moved by the creator's sliders: the anchor (and pivot) shifted, the rect scaled about it, the tilt added.
+ * Then clamped: shrunk if it can't fit, and slid back inside the face area (paired parts also stay on their own side
+ * of the centre line). Only the slot's existing rect and pose change: the shader, its uniforms and draws are as before.
+ */
+function placed(s: FaceSlot, cell: FaceCell, [up, apart, rotate, size]: Placement): FaceSlot {
+  const k = 1 / FACE.density, [, , w, h, ax, ay] = cell;
+  const before = slotBounds(s);
+  const paired = s.mirror !== 0 || s.dst[2] <= 0.5;
+  const area = [Math.min(FACE_AREA[0], before[0]), Math.min(FACE_AREA[1], before[1]), Math.max(FACE_AREA[2], before[2]), Math.max(FACE_AREA[3], before[3])];
+  if (paired) area[2] = Math.max(Math.min(area[2], 0.5 - CENTRE_GAP), before[2]);
+  const tilt = s.pose[3] + ((rotate / PLACE_STEPS) * PLACE_RANGE.rotate * Math.PI) / 180;
+  let scale = PLACE_RANGE.size ** (size / PLACE_STEPS);
+  let u = s.pose[0] - (paired ? (apart / PLACE_STEPS) * PLACE_RANGE.apart : 0), v = s.pose[1] - (up / PLACE_STEPS) * PLACE_RANGE.up;
+  const at = (): FaceSlot => {
+    const kk = k * scale, u0 = u - ax * kk, w0 = v - ay * kk;
+    return { ...s, dst: [u0, w0, u0 + w * kk, w0 + h * kk], pose: [u, v, s.pose[2], tilt] };
+  };
+  let out = at(), b = slotBounds(out);
+  const fit = Math.min(1, (area[2] - area[0]) / (b[2] - b[0]), (area[3] - area[1]) / (b[3] - b[1]));
+  if (fit < 1) { scale *= fit; out = at(); b = slotBounds(out); }
+  u += Math.max(0, area[0] - b[0]) - Math.max(0, b[2] - area[2]);
+  v += Math.max(0, area[1] - b[1]) - Math.max(0, b[3] - area[3]);
+  return at();
 }
 
 /** The eight slots (blush band, blush, freckles, mole, brows, right eye, left eye, mouth) for a look showing `pose`. */
 export function faceSlots(look: CharacterLook, pose: FacePose): FaceSlot[] {
-  const { extras, brows, mouth } = FACE.layers, A = FACE.anchors;
+  const { extras, brows, mouth } = FACE.layers, A = FACE.anchors, P = look.place;
   const extra = (id: string) => {
     const it = extras.items[id];
     return look.extras.includes(id) && it ? slot(it.cell, A[it.anchor], it.mirror ? 1 : 0) : OFF;
@@ -129,10 +183,10 @@ export function faceSlots(look: CharacterLook, pose: FacePose): FaceSlot[] {
   const eyeCell = eyeCells(pose.eyes)[pose.eyeFrame] ?? eyeCells(pose.eyes).open;
   return [
     extra("blush_band"), extra("blush"), extra("freckles"), extra("mole"),
-    slot(brows.items[look.brows] ?? brows.items[brows.default], A.brow, 1, PALETTE.hair[look.hair], pose.brow),
-    slot(eyeCell, A.eye, 0),
-    slot(eyeCell, A.eye, 2),
-    slot(mouth.items[pose.mouth] ?? FACE.layers.talk.items[pose.mouth] ?? mouth.items[mouth.default], A.mouth, 0),
+    slot(brows.items[look.brows] ?? brows.items[brows.default], A.brow, 1, PALETTE.hair[look.hair], pose.brow, P?.brows),
+    slot(eyeCell, A.eye, 0, null, undefined, P?.eyes),
+    slot(eyeCell, A.eye, 2, null, undefined, P?.eyes),
+    slot(mouth.items[pose.mouth] ?? FACE.layers.talk.items[pose.mouth] ?? mouth.items[mouth.default], A.mouth, 0, null, undefined, P?.mouth),
   ];
 }
 
