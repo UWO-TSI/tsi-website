@@ -16,7 +16,7 @@ import { phaseInstant } from "@/lib/game/sunPath";
 import { benchHeld, landmark, type VillageIsland } from "@/lib/game/defaultIsland";
 import { objectsOf, type Village } from "@/lib/game/villageMap";
 import type { IslandPhase } from "@/lib/game/islandTime";
-import { RESIDENT_STRIDE, RESIDENT_WALK, ResidentDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResidents, seatChoice, type DaySpan, type IdleClip, type NavGrid, type ResidentPose } from "@/lib/game/residentRoutine";
+import { RESIDENT_STRIDE, RESIDENT_WALK, ResidentDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResidents, seatChoice, STOP_SPACING, type DaySpan, type IdleClip, type NavGrid, type ResidentPose } from "@/lib/game/residentRoutine";
 import { KEEP, inCorridor, roomFor } from "@/lib/game/residentSpace";
 import { torontoHour } from "@/lib/game/islandTime";
 import { hash01 } from "@/lib/game/worldFx";
@@ -67,8 +67,8 @@ const PROMPT_CLEAR = 132;
 const SLOT_NEAR = 0.4;
 /** Personal space: checked fully for this long after they stop somewhere, then only the camera line, this often. */
 const ROOM_ARRIVE_S = 3, ROOM_CHECK_S = 1;
-/** Two residents stepping aside never pick spots closer than this. */
-const ROOM_APART = 0.6;
+/** Two residents stepping aside never pick spots closer than this (their stops' own spacing, STOP_SPACING). */
+const ROOM_APART = STOP_SPACING;
 
 // Fillers (no canned_dialogue) draw from a cozy pool. Original lines, gently TSI-flavoured.
 const FILLER_LINES = [
@@ -246,10 +246,10 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
           else if (nav.fits(pose.x - fz * away * far, pose.z + fx * away * far)) { tx = -fz * away * far; tz = fx * away * far; }
           else blocked = dist(p.x, p.z, pose.x, pose.z) < BLOCK_RANGE && ahead > 0.1;
         }
-      } else if (st?.kind === "stand" && !pose.inside && !talking) {
+      } else if ((st?.kind === "stand" || r.seatPick === 2) && !pose.inside && !talking) {
         // Personal space (world audit item 14): stopping where a player stands, or on the line between your camera and
         // you, they take a spot a comfortable step away instead. Once there, only the camera line moves them again:
-        // walk up to someone and they stay put.
+        // walk up to someone and they stay put. Standing by a full bench counts: clear of its sitters and of each other.
         if (pose.visit !== r.roomVisit) { r.roomVisit = pose.visit; r.roomX = 0; r.roomZ = 0; r.roomSince = now; r.roomAt = -Infinity; }
         if (now - r.roomAt >= ROOM_CHECK_S) {
           r.roomAt = now;
