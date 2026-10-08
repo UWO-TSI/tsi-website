@@ -11,7 +11,7 @@ import { useSyncExternalStore } from "react";
 export const FX_BENCH = process.env.NODE_ENV !== "production";
 
 /** The effects the bench switches, on the other players (specs/perf/effects-cost.md has what each one covers). */
-export const FX_KEYS = ["auraFamily", "auraSubclass", "dust", "juice", "ghost", "leaf", "held", "weapon", "fishing", "plates", "shadows", "emotes", "interp"] as const;
+export const FX_KEYS = ["auraFamily", "auraSubclass", "dust", "juice", "ghost", "leaf", "held", "weapon", "rod", "fishing", "plates", "shadows", "emotes", "interp"] as const;
 export type FxKey = (typeof FX_KEYS)[number];
 
 export interface FxBenchState {

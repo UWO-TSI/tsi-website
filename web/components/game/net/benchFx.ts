@@ -5,7 +5,8 @@
  * - The formation: every remote stands in a block in front of you (rows of six, 1.5 u apart, from 3.5 u out), so 1, 12
  *   or 24 of them are in view and near whatever the bots are doing. Their own motion still plays on the spot.
  * - Forced effects, staggered by player so they never all fire on one frame: an afterimage every 0.4 s (`ghost`), an
- *   emote every 3 s (`emotes`), the leaf open (`leaf`), a fishing cast floating 4 u ahead (`fishing`) and a movement
+ *   emote every 3 s (`emotes`), the leaf open (`leaf`), a rod in hand with its rig idle (`rod`), the rod with a cast
+ *   floating 4 u ahead (`fishing`) and a movement
  *   event every 0.5 s cycling through the take-off, landing, dash, slide, glide and splash (`juice`).
  */
 import * as THREE from "three";
@@ -88,11 +89,11 @@ function castFor(r: RemoteRig): FishingState {
 const HAND_TOOLS = TOOLS.filter(t => t.kind !== "rod"), ROD = TOOLS.find(t => t.kind === "rod")!;
 const ARMS = Object.keys(WEAPONS).filter(k => WEAPONS[k].model);
 export function benchHeld(fx: FxBenchState, sid: number, held: string): string {
-  if (fx.force.has("fishing")) return `rod:${ROD.key}`;
+  if (fx.force.has("fishing") || fx.force.has("rod")) return `rod:${ROD.key}`;
   if (fx.force.has("weapon")) return `weapon:${ARMS[sid % ARMS.length]}`;
   if (fx.force.has("held")) { const t = HAND_TOOLS[sid % HAND_TOOLS.length]; return `${t.kind}:${t.key}`; }
   if (held.startsWith("weapon:")) return fx.off.has("weapon") ? "" : held;
-  if (held.startsWith("rod:")) return fx.off.has("fishing") || fx.off.has("held") ? "" : held;
+  if (held.startsWith("rod:")) return fx.off.has("rod") || fx.off.has("held") ? "" : held;
   return fx.off.has("held") ? "" : held;
 }
 /** The weapon on the back, unless weapons are off. */
