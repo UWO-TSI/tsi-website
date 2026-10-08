@@ -40,7 +40,7 @@ import { easeFacing } from "@/lib/game/locomotion";
 import { routePilot, type RouteStep } from "@/lib/game/movement/course";
 import type { AvatarRide } from "@/lib/game/movement/ride";
 import { BASE_FOV, EVENT_CLIP, MOVE_JUICE, TAKEOFF, applyFov, liveWind, momentumOf, screenOf, touchStick, useMoveParticles, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
-import { SPLASH, cooldownWisp, dashBurst, dashReady as dashBack, footprint, footstep, glideFurl, glideOpen, glideRibbon, glideSetDown, groundUnder, landKind, landing, mantleGrab, mantleStep, puffRing, rollTumble, scuff, settle, skidKick, skidPush, slideBurst, slidePop, slideTrail, splash, streak, takeoff, trail, type GroundKind } from "@/lib/game/movement/juice";
+import { SPLASH, cooldownWisp, dashBurst, dashReady as dashBack, footprint, footstep, glideFurl, glideOpen, glideRibbon, glideSetDown, groundUnder, landKind, landing, mantleGrab, mantleStep, puffRing, rollTumble, scuff, settle, skidKick, skidPush, slideBurst, slidePop, slideTrail, splash, springStep, streak, takeoff, trail, type GroundKind } from "@/lib/game/movement/juice";
 
 /**
  * The player on the movement kit (specs/movement.md): keys, the touch stick or
@@ -620,8 +620,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     if (antic > 0 && f.antic === 0) f.sqv += 5 * j.squash;
     const hold = f.antic / ANTIC, drawnY = y - Math.max(0, y - f.anticY) * hold * hold;
     const want = f.antic > 0 ? -0.14 * j.squash * j.anticipation : !sitting && state.mode === "air" ? THREE.MathUtils.clamp(state.vy * 0.012, -0.07, 0.12) * j.squash : 0;
-    f.sqv += ((want - f.sq) * 260 - f.sqv * 16) * dt;
-    f.sq = THREE.MathUtils.clamp(f.sq + f.sqv * dt, -0.3, 0.3);
+    const sq = springStep(f.sq, f.sqv, want, 260, 16, dt);
+    f.sqv = sq.v; f.sq = THREE.MathUtils.clamp(sq.x, -0.3, 0.3);
     f.rise.multiplyScalar(Math.exp(-18 * dt));
     const sy = 1 + f.sq, sxz = 1 / Math.sqrt(sy), rx = x + f.rise.x, rz = z + f.rise.y;
     g.position.set(rx, groundY, rz);
@@ -644,8 +644,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     }
     f.sliding = !sitting && state.mode === "slide";
     // The leaf springs open past full size (the pop) and folds away; gliding banks into turns and sways about the grip.
-    f.leafV += (((gliding ? 1 : 0) - f.leaf) * 220 - f.leafV * 15) * dt;
-    f.leaf = THREE.MathUtils.clamp(f.leaf + f.leafV * dt, 0, 1.3);
+    const leaf = springStep(f.leaf, f.leafV, gliding ? 1 : 0, 220, 15, dt);
+    f.leafV = leaf.v; f.leaf = THREE.MathUtils.clamp(leaf.x, 0, 1.3);
     m.leaf = f.leaf;
     const heading = Math.atan2(state.vx, state.vz), turn = speed > 1 && dt > 0 ? Math.atan2(Math.sin(heading - f.heading), Math.cos(heading - f.heading)) / dt : 0;
     f.heading = heading;
@@ -702,8 +702,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     f.lead.y = THREE.MathUtils.damp(f.lead.y, state.vz * dir, 3, dt);
     f.pan.multiplyScalar(Math.exp(-5 * dt));
     // A heavy landing dips the camera a touch and springs it back.
-    f.dipV += (-f.dip * 180 - f.dipV * 18) * dt;
-    f.dip += f.dipV * dt;
+    const dip = springStep(f.dip, f.dipV, 0, 180, 18, dt);
+    f.dip = dip.x; f.dipV = dip.v;
     // Sliding, the camera's focus drops a little with you.
     f.drop = THREE.MathUtils.damp(f.drop, f.sliding ? j.slideDrop : 0, 8, dt);
     f.focus.set(x + f.lead.x + f.pan.x, f.level + f.dip - f.drop, z + f.lead.y + f.pan.y);

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ParticlePool } from "@/lib/game/fx/particles";
 import { PACK, PACK_COLS } from "@/lib/game/fx/pack";
 import { Surface } from "@/lib/game/grid";
-import { LAND, SPLASH, dashBurst, footprint, footstep, glideFurl, glideOpen, glideRibbon, glideSetDown, groundUnder, landKind, landing, mantleGrab, mantleStep, rollTumble, skidKick, skidPush, slideBurst, slidePop, slideTrail, splash, takeoff } from "./juice";
+import { LAND, SPLASH, dashBurst, springStep, footprint, footstep, glideFurl, glideOpen, glideRibbon, glideSetDown, groundUnder, landKind, landing, mantleGrab, mantleStep, rollTumble, skidKick, skidPush, slideBurst, slidePop, slideTrail, splash, takeoff } from "./juice";
 
 const dry = () => false;
 /** Sprite names written to the pool, sorted (what a move threw). */
@@ -179,5 +179,30 @@ describe("skid, mantle, glide, splash and roll (movement feel milestone 2)", () 
   it("a roll tumbles a ring of dust with the ground's flecks; built ground only the faint dust", () => {
     expect(throw_(p => rollTumble(p, "grass", 0, 0, 0, 0, 9))).toEqual(expect.arrayContaining(["dustLow", "grass"]));
     expect(new Set(throw_(p => rollTumble(p, "wood", 0, 0, 0, 0, 9)))).toEqual(new Set(["dustLow"]));
+  });
+});
+
+describe("the cosmetic springs at a low frame rate (world audit item 23)", () => {
+  /** The squash spring (PlayerAvatar) nudged once, then stepped at a fixed frame time: its value each frame. */
+  const run = (frame: number, frames = 30) => {
+    let x = 0, v = -1.5; // a landing tap's kick
+    const out: number[] = [];
+    for (let i = 0; i < frames; i++) { ({ x, v } = springStep(x, v, 0, 260, 16, frame)); out.push(x); }
+    return out;
+  };
+  it("settles the same at 5 FPS (the 0.1 s step cap) as at 60, never flipping sign frame to frame", () => {
+    for (const frame of [1 / 60, 1 / 12, 0.1]) {
+      const xs = run(frame);
+      expect(Math.abs(xs.at(-1)!), `at ${frame}`).toBeLessThan(1e-3);
+      expect(Math.max(...xs.map(Math.abs)), `at ${frame}`).toBeLessThan(0.1);
+      const flips = xs.slice(1).filter((x, i) => Math.sign(x) !== Math.sign(xs[i]) && Math.abs(x) > 1e-3 && Math.abs(xs[i]) > 1e-3).length;
+      expect(flips, `at ${frame}`).toBeLessThanOrEqual(1);
+    }
+  });
+  it("a frame-time step matches the same time in small steps", () => {
+    const one = springStep(0.1, 0, 0, 260, 16, 0.05);
+    let s = { x: 0.1, v: 0 };
+    for (let i = 0; i < 5; i++) s = { ...springStep(s.x, s.v, 0, 260, 16, 0.01) };
+    expect(one.x).toBeCloseTo(s.x, 3);
   });
 });
