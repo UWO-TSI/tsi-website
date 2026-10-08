@@ -1,7 +1,8 @@
 /* A v2 kit's gauges (ClassGauges.tsx) in the cream kit: Focus, the cylinder and its reload bar, the Killstreak, traps. */
-.gauges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font: 600 10px "IBM Plex Mono", monospace; color: #4f625b; }
-.gauges b { font-weight: 700; color: #293e3b; }
-.gauges kbd { font: 700 9px "IBM Plex Mono", monospace; background: #fffdf3; border: 1px solid #a7b59e; border-bottom-width: 2px; border-radius: 3px; padding: 0 3px; color: #293e3b; }
+.gauges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font: 800 var(--gui-text-xs) var(--gui-font); font-variant-numeric: tabular-nums; color: #4f625b; }
+.gauges b { font-weight: 900; color: #293e3b; }
+.gauges small { font-size: inherit; }
+.gauges kbd { font: 800 var(--gui-text-xs) var(--gui-font); background: #fffdf3; border: 1px solid #a7b59e; border-bottom-width: 2px; border-radius: 3px; padding: 0 3px; color: #293e3b; }
 .focus { display: grid; grid-template-columns: auto 90px auto; align-items: center; gap: 6px; }
 .focus span { position: relative; height: 7px; border-radius: 4px; background: #e0e6d8; overflow: hidden; box-shadow: inset 0 0 0 1px #d8cbaa; }
 .focus i { position: absolute; inset: 0 auto 0 0; background: var(--class); transition: width 0.1s linear; }

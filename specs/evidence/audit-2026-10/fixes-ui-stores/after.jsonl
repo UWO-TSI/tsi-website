@@ -1,0 +1,17 @@
+{"name":"bag-500","sheet":["Your bag didn't load.\nTry again"]}
+{"name":"bag-500","retryButtons":1}
+{"name":"bag-500-retry","alert":[],"grid":1}
+{"name":"chest-500","dialogs":[{"label":"Storage chest","state":"open","modal":"true"}],"alert":["The chest didn't open.\nTry again"],"loading":[]}
+{"name":"phone-bag-500","alert":["Your bag didn't load.\nTry again"]}
+{"name":"study-setup","dialogs":[{"label":"Start studying","state":"open","modal":"false"}],"focus":{"tag":"SECTION","text":"Start studyingTable for four · seat 125 ","outline":"none 3px rgb(79, 63, 49)","inDialog":true}}
+{"name":"study-setup-tab2","focus":{"tag":"BUTTON","text":"25 / 5 × 4","outline":"solid 3px rgb(168, 114, 47)","inDialog":true}}
+{"name":"study-setup-esc60ms","dialogs":[]}
+{"name":"study-setup-esc","dialogs":[],"prompt":["E","I","B"],"timer":[]}
+{"name":"study-focus","buttons":[{"text":"Break now","cls":"village-ui-module__M4CvoW__theme village-ui-module__M4CvoW__","font":"\"Tethos Nunito\", Nunito, ui-rounded, sys","h":38},{"text":"Stand up","cls":"village-ui-module__M4CvoW__theme village-ui-module__M4CvoW__","font":"\"Tethos Nunito\", Nunito, ui-rounded, sys","h":38},{"text":"Table chat muted while you focus","cls":"gui-module__RjzS-q__toggle","font":"\"Tethos Nunito\", Nunito, ui-rounded, sys","h":0}]}
+{"name":"study-390-setup","dialogs":[{"label":"Start studying","state":"open","modal":"false"}],"focus":{"tag":"SECTION","text":"Start studyingTable for four · seat 125 ","outline":"none 3px rgb(79, 63, 49)","inDialog":true}}
+{"name":"study-390-setup-tab2","focus":{"tag":"BUTTON","text":"25 / 5 × 4","outline":"solid 3px rgb(168, 114, 47)","inDialog":true}}
+{"name":"study-390-setup-esc-frames","samples":[[0,"Start studying:closing"],[162,"none"]]}
+{"name":"study-390-setup-esc","dialogs":[],"prompt":["E","I","B"],"timer":[]}
+{"name":"study-390-focus","buttons":[{"text":"Break now","cls":"village-ui-module__M4CvoW__theme village-ui-module__M4CvoW__","font":"\"Tethos Nunito\", Nunito, ui-rounded, sys","h":49},{"text":"Stand up","cls":"village-ui-module__M4CvoW__theme village-ui-module__M4CvoW__","font":"\"Tethos Nunito\", Nunito, ui-rounded, sys","h":49},{"text":"Table chat muted while you focus","cls":"gui-module__RjzS-q__toggle","font":"\"Tethos Nunito\", Nunito, ui-rounded, sys","h":48}]}
+{"name":"gauges","box":{"x":325,"y":608,"width":630,"height":16},"type":["DIV 12px 800 \"Tethos Nunito\", Nunito, ui-rounded, system-ui, -a","SMALL 12px 800 \"Tethos Nunito\", Nunito, ui-rounded, system-ui, -a","KBD 12px 800 \"Tethos Nunito\", Nunito, ui-rounded, system-ui, -a"]}
+{"name":"people","label":"People on the island, 5","badge":["SPAN \"5\" 12px rgb(178, 58, 46)"]}

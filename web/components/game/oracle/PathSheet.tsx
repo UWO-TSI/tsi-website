@@ -60,7 +60,17 @@ function ClassKitPanel({ kit, view, busy, run }: { kit: ClassKit; view: Progress
   </div>;
 }
 
-export default function PathSheet({ view, onClose, onChanged }: { view: ProgressionView; onClose: () => void; onChanged: () => void }) {
+/**
+ * `open`: the sheet stays mounted and its frame plays the close motion (audit-2026-10-ui item 4). Its body mounts with
+ * each opening, so the tab and any half-made choice start fresh as before.
+ */
+export default function PathSheet({ open = true, view, onClose, onChanged }: { open?: boolean; view: ProgressionView; onClose: () => void; onChanged: () => void }) {
+  return <IslandSheet open={open} title="Your path" onClose={onClose} testId="path-sheet" keys="p" size="lg" tone="oracle">
+    {open && <PathBody view={view} onChanged={onChanged} />}
+  </IslandSheet>;
+}
+
+function PathBody({ view, onChanged }: { view: ProgressionView; onChanged: () => void }) {
   const family = view.family as Family;
   const current = subclassByKey(view.subclass?.key); // the local kit objects, so ability identity checks hold
   const v2 = view.classes, chosen = view.subclass_key, kit = v2 && chosen ? classKit(chosen) : null;
@@ -114,7 +124,7 @@ export default function PathSheet({ view, onClose, onChanged }: { view: Progress
     setAdd(next);
   };
 
-  return <IslandSheet title="Your path" onClose={onClose} testId="path-sheet" keys="p" size="lg" tone="oracle">
+  return <>
     <p className={styles.oracleResult} style={{ ["--family" as string]: color }}>
       <b>{family}</b> · level {view.level}{current ? ` · ${current.name}` : ""}<br />
       <small>{current ? current.passive.name + ": " + current.passive.description : unlocked ? "Level 10: choose your subclass. The first choice is free." : `Subclasses open at level ${SUBCLASS_LEVEL}. Here's what waits for you.`}</small>
@@ -207,5 +217,5 @@ export default function PathSheet({ view, onClose, onChanged }: { view: Progress
         : <button className={styles.oracleBack} disabled={view.points_available === (view.level - 1) * 3} onClick={() => setResetting(true)}>Reset · {view.fees.stat_reset} coins</button>}
     </div>}
     {note && <p role="status" className={styles.pathStatus}>{note}</p>}
-  </IslandSheet>;
+  </>;
 }

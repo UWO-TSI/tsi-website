@@ -11,7 +11,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { Amount } from "@/components/economy/Amount";
-import { Empty, ErrorNote, Loading, Toggle, useSignInHref } from "@/components/gui";
+import { Button, Empty, ErrorNote, Loading, Sheet, Toggle, useSignInHref } from "@/components/gui";
 import { BookOpen } from "lucide-react";
 import { worldKeysBlocked } from "@/lib/game/useWorldDialog";
 import IslandSheet from "../IslandSheet";
@@ -101,7 +101,11 @@ function Hud({ transport }: { transport?: StudyTransport }) {
     {near && !boardOpen && (study.signedOut && near !== "board"
       ? <a className={world.interact} href={signIn}>Sign in to study here</a>
       : <button className={world.interact} onClick={act} disabled={study.busy}><kbd>E</kbd>{near === "board" ? "Read the study board" : session ? "Sit back down" : `Sit · ${table?.label ?? "Table"}`}</button>)}
-    {session?.phase === "seated" && <div className={s.startSheet} role="dialog" aria-label="Start studying"><Setup study={study} /></div>}
+    {/* Seated: the start card is a non-modal sheet beside you (the world stays bright); Escape, like its X, leaves the seat. */}
+    <Sheet open={session?.phase === "seated"} onClose={() => { if (!study.busy) void study.end(); }} modal={false} size="sm" title="Start studying"
+      className={s.startSheet} bodyClassName={s.startBody} testId="study-setup">
+      <Setup study={study} />
+    </Sheet>
     {session && session.phase !== "seated" && <div className={s.panel}>
       <Timer study={study} />
       {!study.chatMuted && <Chat study={study} />}
@@ -120,9 +124,9 @@ function Timer({ study }: { study: StudyHook }) {
     <p className={card.muted}>{study.table?.label} · {x.minutes_completed} min banked · <Amount n={x.coins_pending} /> so far</p>
     <div className={`${card.row} ${s.actions}`}>
       {x.phase === "focus"
-        ? <button className={card.ghost} onClick={study.takeBreak} disabled={study.busy}>Break now</button>
-        : <button className={card.ghost} onClick={study.resume} disabled={study.busy}>Skip break</button>}
-      <button className={card.btn} onClick={study.end} disabled={study.busy}>Stand up</button>
+        ? <Button variant="secondary" onClick={study.takeBreak} disabled={study.busy}>Break now</Button>
+        : <Button variant="secondary" onClick={study.resume} disabled={study.busy}>Skip break</Button>}
+      <Button onClick={study.end} disabled={study.busy}>Stand up</Button>
     </div>
     <p className={card.muted} style={{ marginTop: 8 }}>Walking away from your seat ends the session and pays your focus minutes.</p>
     <Toggle checked={!study.chatMuted} disabled={x.phase === "break"} onChange={on => study.setChatOpen(on)}>Table chat {study.chatMuted ? "muted while you focus" : "on"}</Toggle>
