@@ -206,6 +206,10 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .reveal button { display: block; margin: 14px auto 0; min-height: 44px; padding: 6px 26px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-sage); color: var(--gui-paper); font: inherit; font-weight: 800; cursor: pointer; box-shadow: 0 3px 0 var(--gui-sage-deep); }
 .revealFamily { font-size: 28px !important; font-weight: 900; letter-spacing: 0.01em; color: color-mix(in srgb, var(--family) 55%, var(--gui-ink-strong)); }
 @keyframes reveal-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+/* Continue: the card fades down instead of vanishing (audit-2026-10-ui item 4; FamilyReveal keeps it for this). */
+.reveal[data-state="closing"] { animation: reveal-out 260ms ease-in forwards; pointer-events: none; }
+@keyframes reveal-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(10px) scale(0.97); } }
+@media (prefers-reduced-motion: reduce) { .reveal[data-state="closing"] { animation: none; } }
 @media (max-width: 700px) { .reveal { left: 16px; top: auto; bottom: 120px; } }
 /* Settings sheet: sections under dashed rules, the kit's segmented choice and keycaps. */
 .settingsSheet fieldset { border: 0; border-top: 2px dashed var(--gui-paper-edge); padding: 14px 0 6px; margin: 0; min-width: 0; }
