@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { EXPRESSIONS, FACE_AREA, PLACE_RANGE, faceSlots, restPose, slotBounds, type FaceSlot } from "./face";
+import { EXPRESSIONS, FACE_AREA, FACE_SLOT_COUNT, PLACE_RANGE, faceSlots, restPose, slotBounds, type FaceSlot } from "./face";
 import { DEFAULT_LOOK, FACE, PARTS, PALETTE, PLACE_STEPS, lookBytes, parseLook, randomLook, seeded, type CharacterLook, type PlacePart, type Placement } from "./look";
 import { LOOK_MAX_BYTES } from "@/lib/net/protocol";
 
 const look = (x: Partial<CharacterLook> = {}): CharacterLook => ({ ...DEFAULT_LOOK, ...x });
 const slots = (l: CharacterLook, expression: (typeof EXPRESSIONS)[number] = "neutral") => faceSlots(l, restPose(l, expression));
-/** Slot indices: brows 4, the right eye 5 (canvas left), its mirror 6, the mouth 7. */
-const BROWS = 4, EYE = 5, EYE_MIRROR = 6, MOUTH = 7;
+/** Slot indices, after one slot per extra: brows, the right eye (canvas left), its mirror (or own left cell), the mouth. */
+const BROWS = FACE_SLOT_COUNT - 4, EYE = FACE_SLOT_COUNT - 3, EYE_MIRROR = FACE_SLOT_COUNT - 2, MOUTH = FACE_SLOT_COUNT - 1;
 const S = PLACE_STEPS;
+type Box = [number, number, number, number];
+const union = (a: Box, b: Box): Box => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])];
+/** A box on the canvas-right side reflected to the canvas-left one (about u = 0.5). */
+const reflect = (b: Box): Box => [1 - b[2], b[1], 1 - b[0], b[3]];
 
 describe("face placement: the creator's sliders as look data", () => {
   it("parses placement per part as whole steps, clamped to the slider range; the mouth has no spacing", () => {
@@ -92,7 +96,7 @@ describe("clamping: placed parts never leave the face area", () => {
     expect(b[3], `${what} bottom`).toBeLessThanOrEqual(area[3] + 1e-9);
   };
   /** The area a part may use: the face area, or wider where today's default already reaches (it never moves an old look). */
-  const allowed = (s: FaceSlot) => { const d = slotBounds(s); return [Math.min(FACE_AREA[0], d[0]), Math.min(FACE_AREA[1], d[1]), Math.max(FACE_AREA[2], d[2]), Math.max(FACE_AREA[3], d[3])]; };
+  const allowedBounds = (d: number[]) => [Math.min(FACE_AREA[0], d[0]), Math.min(FACE_AREA[1], d[1]), Math.max(FACE_AREA[2], d[2]), Math.max(FACE_AREA[3], d[3])];
   const cases: { part: PlacePart; ids: string[]; slot: number; field: "eyes" | "brows" | "mouth"; pair: boolean }[] = [
     { part: "eyes", ids: Object.keys(FACE.layers.eyes.items), slot: EYE, field: "eyes", pair: true },
     { part: "brows", ids: Object.keys(FACE.layers.brows.items), slot: BROWS, field: "brows", pair: true },
@@ -101,13 +105,17 @@ describe("clamping: placed parts never leave the face area", () => {
   for (const c of cases) it(`${c.part}: every style at every slider extreme stays on the face${c.pair ? ", each side of the centre line" : ""}`, () => {
     for (const id of c.ids) {
       const plain = look({ [c.field]: id });
-      const area = allowed(slots(plain)[c.slot]);
+      // David's pairs drawn as two cells move and clamp as one: their reach is both cells' (the other one reflected)
+      const two = c.part === "eyes" && !!FACE.layers.eyes.items[id].left;
+      const rest = (l: CharacterLook) => two ? union(slotBounds(slots(l)[EYE]), reflect(slotBounds(slots(l)[EYE_MIRROR]))) : slotBounds(slots(l)[c.slot]);
+      const area = allowedBounds(rest(plain));
+      // a pair stays on its own side of the centre line; David's pairs drawn as one cell (left: null) span it
+      const side = c.part === "eyes" && FACE.layers.eyes.items[id].left === null ? Infinity : Math.max(0.5, rest(plain)[2]);
       for (const p of all) for (const e of ["neutral", "surprised", "sad"] as const) {
         const l = parseLook({ ...plain, place: { [c.part]: p } });
-        const s = slots(l, e)[c.slot];
-        const b = slotBounds(s);
+        const b = two ? union(slotBounds(slots(l, e)[EYE]), reflect(slotBounds(slots(l, e)[EYE_MIRROR]))) : slotBounds(slots(l, e)[c.slot]);
         within(b, area, `${id} ${p} ${e}`);
-        if (c.pair) expect(b[2], `${id} ${p} crosses the centre line`).toBeLessThanOrEqual(0.5 + 1e-9);
+        if (c.pair) expect(b[2], `${id} ${p} crosses the centre line`).toBeLessThanOrEqual(side + 1e-9);
       }
     }
   });
@@ -151,5 +159,65 @@ describe("the look stays within the multiplayer card's 2 KB (realtime_player_car
     expect(lookBytes(parsed)).toBeLessThanOrEqual(LOOK_MAX_BYTES);
     for (const id of [parsed.top, parsed.bottom, parsed.shoes, ...Object.values(parsed.acc)]) if (id && id in big.colors && outfitTinted.some(p => p.id === id)) expect(parsed.colors[id], id).toBe(big.colors[id]);
     expect(parsed.place).toEqual(big.place);
+  });
+});
+
+describe("David's eye pairs (face set 305) under the sliders", () => {
+  const EXTREMES = [-S, 0, S];
+  const all: Placement[] = EXTREMES.flatMap(a => EXTREMES.flatMap(b => EXTREMES.flatMap(c => EXTREMES.map(d => [a, b, c, d] as Placement))));
+  const own = Object.keys(FACE.layers.eyes.items).filter(id => FACE.layers.eyes.items[id].left);
+  const whole = Object.keys(FACE.layers.eyes.items).filter(id => FACE.layers.eyes.items[id].left === null);
+  const inside = (b: number[], area: number[], what: string) =>
+    expect(b[0] >= area[0] - 1e-9 && b[1] >= area[1] - 1e-9 && b[2] <= area[2] + 1e-9 && b[3] <= area[3] + 1e-9, what).toBe(true);
+  it("has both kinds", () => expect([own.length > 5, whole.length > 0]).toEqual([true, true]));
+
+  it("a pair drawn as two cells moves as one mirrored pair: up together, apart symmetrically, rotation mirrored, same size", () => {
+    for (const id of own) {
+      const rest = slots(look({ eyes: id }));
+      for (const p of [[4, 0, 0, 0], [0, 4, 0, 0], [0, -4, 0, 0], [0, 0, 4, 0], [0, 0, 0, 4], [-3, 2, -3, -2]] as Placement[]) {
+        const s = slots(look({ eyes: id, place: { eyes: p } }));
+        // the pivots (each cell's anchor) carry the move; a turn spins each drawing about its own pivot
+        const pivot = (x: FaceSlot) => x.pose.slice(0, 2);
+        const [r0, l0, r1, l1] = [pivot(rest[EYE]), pivot(rest[EYE_MIRROR]), pivot(s[EYE]), pivot(s[EYE_MIRROR])];
+        expect(l1[1] - l0[1], `${id} ${p} up`).toBeCloseTo(r1[1] - r0[1], 6);
+        expect(l1[0] - l0[0], `${id} ${p} apart`).toBeCloseTo(-(r1[0] - r0[0]), 6);
+        expect(s[EYE_MIRROR].pose[3], `${id} ${p} rotate`).toBeCloseTo(-s[EYE].pose[3], 9);
+        const width = (x: FaceSlot) => x.dst[2] - x.dst[0];
+        expect(width(s[EYE_MIRROR]) / width(rest[EYE_MIRROR]), `${id} ${p} size`).toBeCloseTo(width(s[EYE]) / width(rest[EYE]), 6);
+        expect([s[EYE].mirror, s[EYE_MIRROR].mirror, s[EYE_MIRROR].src]).toEqual([0, 0, rest[EYE_MIRROR].src]);
+      }
+    }
+  });
+
+  it("at every slider extreme, both cells stay on the face and on their own side of the centre line", () => {
+    for (const id of own) {
+      const rest = slots(look({ eyes: id }));
+      // the pair's reach is both cells' (the canvas-right one reflected onto the left): the face area, or wider where
+      // the pair already reached at rest
+      const reach = union(slotBounds(rest[EYE]), reflect(slotBounds(rest[EYE_MIRROR])));
+      const area = [Math.min(FACE_AREA[0], reach[0]), Math.min(FACE_AREA[1], reach[1]), Math.max(FACE_AREA[2], reach[2]), Math.max(FACE_AREA[3], reach[3])];
+      const side = Math.max(0.5, reach[2]);
+      for (const p of all) for (const e of ["neutral", "surprised", "sad"] as const) {
+        const s = slots(look({ eyes: id, place: { eyes: p } }), e);
+        const [bR, bL] = [slotBounds(s[EYE]), reflect(slotBounds(s[EYE_MIRROR]))];
+        inside(bR, area, `${id} ${p} ${e} right`);
+        inside(bL, area, `${id} ${p} ${e} left`);
+        expect(bR[2] <= side + 1e-9 && bL[2] <= side + 1e-9, `${id} ${p} ${e} sides`).toBe(true);
+      }
+    }
+  });
+
+  it("a pair drawn as one cell turns and scales about the centre line, stays on the face, and is drawn once", () => {
+    for (const id of whole) {
+      const rest = slots(look({ eyes: id }));
+      expect(rest[EYE].pose.slice(0, 2)).toEqual(FACE.anchors.eye_pair);
+      const d = slotBounds(rest[EYE]);
+      const area = [Math.min(FACE_AREA[0], d[0]), Math.min(FACE_AREA[1], d[1]), Math.max(FACE_AREA[2], d[2]), Math.max(FACE_AREA[3], d[3])];
+      for (const p of all) {
+        const s = slots(look({ eyes: id, place: { eyes: p } }));
+        inside(slotBounds(s[EYE]), area, `${id} ${p}`);
+        expect(s[EYE_MIRROR].src, `${id} ${p}`).toBeNull();
+      }
+    }
   });
 });

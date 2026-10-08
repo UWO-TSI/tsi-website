@@ -1,7 +1,7 @@
 /**
  * Animated painted face (avatar v7, rows 132, 144, 192, 254): an ACNH-style face the engine animates without
  * redrawing a canvas. The face atlas (art/characters/v7/build_face.py) holds every feature once; the face shader
- * draws the skin colour plus eight layer slots (blush band, blush, freckles, mole, brows, the two eyes, mouth), each an atlas
+ * draws the skin colour plus a layer slot per extra (blush band, blush, freckles, mole, set 305's accents), brows, the two eyes and the mouth, each an atlas
  * cell placed at its anchor on the face canvas (the head's UVs), mirrored for the other side where the layer is.
  * Blinking, talking and the six expressions only change which cell each slot shows and the brows' pose.
  * Pure: FaceAnimator picks the frame, faceSlots turns it into slot data, faceMaterial.ts uploads it.
@@ -109,15 +109,32 @@ export class FaceAnimator {
  * cell lands on the face canvas [u0, w0, u1, w1] for the canvas-left side; mirror: 0 as placed, 1 also mirrored to
  * the other side, 2 only the mirrored copy; tint = hex multiplied into white art (brows: the hair colour);
  * pose = [pivot u, pivot w, dy, tilt in radians] rotating the cell about its anchor. src null = the slot is off. */
-export interface FaceSlot { src: [number, number, number, number] | null; dst: [number, number, number, number]; mirror: 0 | 1 | 2; tint: string | null; pose: [number, number, number, number] }
-export const FACE_SLOT_COUNT = 8;
-const OFF: FaceSlot = { src: null, dst: [0, 0, 0, 0], mirror: 0, tint: null, pose: [0, 0, 0, 0] };
+export interface FaceSlot { src: [number, number, number, number] | null; dst: [number, number, number, number]; mirror: 0 | 1 | 2; tint: string | null; pose: [number, number, number, number]; page: 0 | 1 }
+/** Extras in draw order: the earlier four as they always drew, then every later accent in catalogue order. */
+const EXTRA_ORDER = [...new Set(["blush_band", "blush", "freckles", "mole", ...Object.keys(FACE.layers.extras.items)])];
+/** One slot per extra, then brows, the two eyes and the mouth. */
+export const FACE_SLOT_COUNT = EXTRA_ORDER.length + 4;
+const OFF: FaceSlot = { src: null, dst: [0, 0, 0, 0], mirror: 0, tint: null, pose: [0, 0, 0, 0], page: 0 };
 
-function slot(cell: FaceCell, anchor: [number, number], mirror: 0 | 1 | 2, tint: string | null = null, brow: [number, number] = [0, 0], place?: Placement): FaceSlot {
-  const [x, y, w, h, ax, ay] = cell, [W, H] = FACE.atlas_size, k = 1 / FACE.density;
+function slot(cell: FaceCell, anchor: [number, number], mirror: 0 | 1 | 2, tint: string | null = null, brow: [number, number] = [0, 0], place?: Placement, paired?: boolean): FaceSlot {
+  const [x, y, w, h, ax, ay, page = 0] = cell, [W, H] = page ? FACE.atlas2_size : FACE.atlas_size, k = 1 / FACE.density;
   const u0 = anchor[0] - ax * k, w0 = anchor[1] - ay * k;
-  const s: FaceSlot = { src: [x / W, y / H, w / W, h / H], dst: [u0, w0, u0 + w * k, w0 + h * k], mirror, tint, pose: [anchor[0], anchor[1], brow[0], (brow[1] * Math.PI) / 180] };
-  return place && place.some(v => v !== 0) ? placed(s, cell, place) : s;
+  const s: FaceSlot = { src: [x / W, y / H, w / W, h / H], dst: [u0, w0, u0 + w * k, w0 + h * k], mirror, tint, pose: [anchor[0], anchor[1], brow[0], (brow[1] * Math.PI) / 180], page };
+  return place && place.some(v => v !== 0) ? placed(s, cell, place, paired) : s;
+}
+
+/**
+ * A pair drawn as two cells (David's faces): the canvas-right cell, reflected about the centre line, shares the
+ * canvas-left cell's pivot (eye_left mirrors eye), so the sliders move both as one mirrored pair (up together, apart
+ * symmetrically, rotation mirrored, the same size), clamped by their union so the pair never goes lopsided.
+ */
+const flip = (t: FaceSlot): FaceSlot => ({ ...t, dst: [1 - t.dst[2], t.dst[1], 1 - t.dst[0], t.dst[3]], pose: [1 - t.pose[0], t.pose[1], t.pose[2], -t.pose[3]] });
+function slotPair(right: FaceCell, left: FaceCell, place?: Placement): [FaceSlot, FaceSlot] {
+  const A = FACE.anchors, r = slot(right, A.eye, 0), l = slot(left, A.eye_left, 0);
+  if (!place || !place.some(v => v !== 0)) return [r, l];
+  const [x, y, w, h, ax, ay, page] = left;
+  const [rp, lp] = placedTogether([[r, right], [flip(l), [x, y, w, h, w - ax, ay, page]]], place, true);
+  return [rp, flip(lp)];
 }
 
 /**
@@ -152,40 +169,59 @@ export function slotBounds(s: FaceSlot): [number, number, number, number] {
  * Then clamped: shrunk if it can't fit, and slid back inside the face area (paired parts also stay on their own side
  * of the centre line). Only the slot's existing rect and pose change: the shader, its uniforms and draws are as before.
  */
-function placed(s: FaceSlot, cell: FaceCell, [up, apart, rotate, size]: Placement): FaceSlot {
-  const k = 1 / FACE.density, [, , w, h, ax, ay] = cell;
-  const before = slotBounds(s);
-  const paired = s.mirror !== 0 || s.dst[2] <= 0.5;
+function placed(s: FaceSlot, cell: FaceCell, place: Placement, paired = s.mirror !== 0 || s.dst[2] <= 0.5): FaceSlot {
+  return placedTogether([[s, cell]], place, paired)[0];
+}
+
+/** placed() for cells that share one pivot, moved and clamped as one (their bounds' union). */
+function placedTogether(parts: [FaceSlot, FaceCell][], [up, apart, rotate, size]: Placement, paired: boolean): FaceSlot[] {
+  const k = 1 / FACE.density, s = parts[0][0];
+  const union = (bs: [number, number, number, number][]): [number, number, number, number] =>
+    [Math.min(...bs.map(b => b[0])), Math.min(...bs.map(b => b[1])), Math.max(...bs.map(b => b[2])), Math.max(...bs.map(b => b[3]))];
+  const before = union(parts.map(([p]) => slotBounds(p)));
   const area = [Math.min(FACE_AREA[0], before[0]), Math.min(FACE_AREA[1], before[1]), Math.max(FACE_AREA[2], before[2]), Math.max(FACE_AREA[3], before[3])];
   if (paired) area[2] = Math.max(Math.min(area[2], 0.5 - CENTRE_GAP), before[2]);
-  const tilt = s.pose[3] + ((rotate / PLACE_STEPS) * PLACE_RANGE.rotate * Math.PI) / 180;
+  const turn = ((rotate / PLACE_STEPS) * PLACE_RANGE.rotate * Math.PI) / 180;
   let scale = PLACE_RANGE.size ** (size / PLACE_STEPS);
   let u = s.pose[0] - (paired ? (apart / PLACE_STEPS) * PLACE_RANGE.apart : 0), v = s.pose[1] - (up / PLACE_STEPS) * PLACE_RANGE.up;
-  const at = (): FaceSlot => {
+  const at = (): FaceSlot[] => parts.map(([p, [, , w, h, ax, ay]]) => {
     const kk = k * scale, u0 = u - ax * kk, w0 = v - ay * kk;
-    return { ...s, dst: [u0, w0, u0 + w * kk, w0 + h * kk], pose: [u, v, s.pose[2], tilt] };
-  };
-  let out = at(), b = slotBounds(out);
+    return { ...p, dst: [u0, w0, u0 + w * kk, w0 + h * kk], pose: [u, v, p.pose[2], p.pose[3] + turn] };
+  });
+  let out = at(), b = union(out.map(slotBounds));
   const fit = Math.min(1, (area[2] - area[0]) / (b[2] - b[0]), (area[3] - area[1]) / (b[3] - b[1]));
-  if (fit < 1) { scale *= fit; out = at(); b = slotBounds(out); }
+  if (fit < 1) { scale *= fit; out = at(); b = union(out.map(slotBounds)); }
   u += Math.max(0, area[0] - b[0]) - Math.max(0, b[2] - area[2]);
   v += Math.max(0, area[1] - b[1]) - Math.max(0, b[3] - area[3]);
   return at();
 }
 
-/** The eight slots (blush band, blush, freckles, mole, brows, right eye, left eye, mouth) for a look showing `pose`. */
+/**
+ * The two eye slots. Most eye styles are one eye, mirrored for the other side. David's asymmetric pairs carry their
+ * canvas-right eye as its own `left` cell (at the eye_left anchor, moved as the mirror image of the other); a pair
+ * drawn as one cell (left: null, marks across the centre line) sits at eye_pair on the centre line, and the second
+ * slot is off (its spacing slider has nothing to spread).
+ */
+function eyeSlots(eye: ReturnType<typeof eyeCells>, cell: FaceCell, place?: Placement): [FaceSlot, FaceSlot] {
+  const A = FACE.anchors;
+  if (eye.left === null) return [slot(cell, A.eye_pair, 0, null, undefined, place, false), OFF];
+  if (eye.left) return slotPair(cell, eye.left, place);
+  return [slot(cell, A.eye, 0, null, undefined, place), slot(cell, A.eye, 2, null, undefined, place)];
+}
+
+/** The slots (each extra, brows, right eye, left eye, mouth) for a look showing `pose`. */
 export function faceSlots(look: CharacterLook, pose: FacePose): FaceSlot[] {
   const { extras, brows, mouth } = FACE.layers, A = FACE.anchors, P = look.place;
   const extra = (id: string) => {
     const it = extras.items[id];
     return look.extras.includes(id) && it ? slot(it.cell, A[it.anchor], it.mirror ? 1 : 0) : OFF;
   };
-  const eyeCell = eyeCells(pose.eyes)[pose.eyeFrame] ?? eyeCells(pose.eyes).open;
+  const eye = eyeCells(pose.eyes), eyeCell = eye[pose.eyeFrame] ?? eye.open;
+  const browCell = brows.items[look.brows] ?? brows.items[brows.default];
   return [
-    extra("blush_band"), extra("blush"), extra("freckles"), extra("mole"),
-    slot(brows.items[look.brows] ?? brows.items[brows.default], A.brow, 1, PALETTE.hair[look.hair], pose.brow, P?.brows),
-    slot(eyeCell, A.eye, 0, null, undefined, P?.eyes),
-    slot(eyeCell, A.eye, 2, null, undefined, P?.eyes),
+    ...EXTRA_ORDER.map(extra),
+    browCell[2] ? slot(browCell, A.brow, 1, PALETTE.hair[look.hair], pose.brow, P?.brows) : OFF,   // an empty cell: no brows
+    ...eyeSlots(eye, eyeCell, P?.eyes),
     slot(mouth.items[pose.mouth] ?? FACE.layers.talk.items[pose.mouth] ?? mouth.items[mouth.default], A.mouth, 0, null, undefined, P?.mouth),
   ];
 }

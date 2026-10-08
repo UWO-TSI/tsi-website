@@ -22,6 +22,7 @@ Milestone 1 (the head, the face system, three styles) was approved with three tw
 | `split_blends.py` | Splits the live working file into the review files above. |
 | `build_face.py` | Builds the face atlas, `face/face_v7.json`, and composed faces. |
 | `face_set_301.py` | Row 301's parts (sleepy and dot eyes, cat and curled-grin mouths, the blush band), imported by `build_face.py`. |
+| `face_set_305.py` | David's 19 faces (eyes, mouths, two accents) from `face/source/david/`, onto the atlas's second page, imported by `build_face.py`. |
 | `face/` | `v7_face_atlas.png` (1024 px per face canvas), `v7_face_atlas_512.png` (the world copy), `face_v7.json`, and `v7_face_default.png` (the `.blend` preview). |
 
 `hair/build_hair.py` (the parametric shell builder) is retired: it exits unless run with `--force-legacy`.
@@ -103,18 +104,28 @@ Gathered styles (pony, pigtails, buns) take their locks from the crown for low t
 `build_face.py` redraws v6's measured drawings of David's picks (row 192), one side per cell. The engine mirrors eyes, brows, blush and freckles.
 
 **Atlas contents:**
-- 16 eye styles; every lidded eye has `open`, `half` and `closed` frames.
-- 2 brows (white, tinted with the hair colour).
-- 78 mouths (M picks, the whole G grid, and row 301's two).
+- 35 eye styles; every lidded eye has `open`, `half` and `closed` frames. David's 19 have none (static).
+- 2 brows (white, tinted with the hair colour), and `brow_none` (an empty cell: no brows).
+- 97 mouths (M picks, the whole G grid, row 301's two and David's 19).
 - 4 talk cells (`layers.talk`, T1-T4).
-- 4 extras.
+- 6 extras.
 
-**Atlas format:** 2048×1344 px at 1024 px per face canvas, with 16 px gutters whose colour is bled outward for mipmaps. The world loads the 512 copy. A cell is `[x, y, w, h, ax, ay]`, where `(ax, ay)` sits on the layer's anchor measured on reference 18: eye, brow, mouth, cheek, mole (plus `blush`, the band's point on the centre line between the eyes and the cheeks).
+**Atlas format:** page 1 is 2048×1344 px at 1024 px per face canvas, with 16 px gutters whose colour is bled outward for mipmaps. The world loads the 512 copy. A cell is `[x, y, w, h, ax, ay]`, where `(ax, ay)` sits on the layer's anchor measured on reference 18: eye, brow, mouth, cheek, mole (plus `blush`, the band's point on the centre line between the eyes and the cheeks).
 
 **Engine** (`web/lib/game/character/face.ts`, `faceMaterial.ts`):
-- The face draws the skin colour plus eight slots: blush band, blush, freckles, mole, brows, right eye, left eye (mirror only) and mouth.
+- The face draws the skin colour plus a slot per extra (blush band, blush, freckles, mole, then later accents), brows, right eye, left eye (the right eye mirrored, or its own `left` cell) and mouth: 10 slots now.
+- A slot reads page 1 or page 2 (a second sampler, `uFaceAtlas2`); page 2 is a 1×1 transparent stand-in until a look that wears one of its parts loads it.
 - Each slot is uniforms only: the atlas rect, where it lands on the canvas, a mirror mode, a tint, and a pose that moves and tilts the brows.
 - Each character owns one material; they all share one program.
+
+**David's 19 faces (row 305 set, `face_set_305.py`).** David confirmed in-session on 2026-10-08 that he made these 19 dynamic heads himself (for his own Roblox shop), so their drawings ship as they are. Source: `face/source/david/{eyes,mouth,face}/NN-*.glb` (split by "split_head"), with contact sheets in `_previews/`. Only the textures and where the parts sit are used, never the head geometry.
+
+- Placement: each head's front is unwrapped by arc length from its face shell (rays along +z), over its half width; one similarity for all 19 puts their median eye line on our eye anchor and their median mouth on our mouth anchor (scale 0.715 canvas per half width). Their median eye pair then lands at u 0.255 / 0.745, beside our 0.2416 / 0.7584. Cells are anchored in face-canvas coordinates, so they follow any head that keeps the face chart (the v8 head).
+- Drawing: every primitive drawn front on, far to near, with Catmull-Rom texture samples at 4x, box-filtered: about 1:1 with most sources. Black line edges are tightened to about a pixel next to an opaque dark core, and upscaled sources (#12 at 512 px, #19 at 256 px, the modelled parts) also get their colour edges back, so the lines stay crisp. Soft paint (blush, grey shading) keeps its gradient.
+- Eyes: split at the emptiest column near the centre line into `open` (canvas left, at `eye`) and `left` (canvas right, at `eye_left`); a pair whose halves mirror (bean, unimpressed, sleepy) keeps one cell; a pair with marks across the centre line (dazed, nervous) is one cell. Mouths: one cell at `mouth`. Accents: only two face shells carry anything besides plain skin, #6 (a blush on the nose) and #14 (a sweat drop). They are lifted off the skin by colour-to-alpha and anchored at their own centre (`nose_blush`, `sweat_drop`). The rest are residue under 2% and skipped.
+- Recolor: #4 and #15 are sold as recolorable, but our eyes have no colour tint, so they stay as drawn.
+- Names (creator): eyes Bean eyes, Dazed, Half-lidded, Dizzy swirls, Mochi dots, Shy glance, Relieved, Chill, Tiny dots, Stare, Offset blobs, Unimpressed, Close dots, Teary wide, Doll lashes, Nervous, Focused, Sleepy, Square dots; mouths Little v, Drumstick, Drool, Gritted teeth, Pout, Tiny smirk, Open smile, Small frown, Pill mouth, Deadpan, Dash, Side smirk, Long drool, Nervous laugh, Tiny mouth, Gasp, Kitty, Tired drool, Buck tooth; accents Nose blush, Sweat drop; plus No brows.
+- Page 2: `v7_face_atlas_2.png` 2048×2688 (RGBA8 21 MiB, 28 MiB with mips) and the world copy `v7_face_atlas_2_512.png` 1024×1344 (5.3 MiB, 7 MiB with mips). Page 1 is unchanged: 2048×1344 (10.5 / 14 MiB) and 1024×672 (2.6 / 3.5 MiB). Page 2 is fetched only by a character whose look wears one of these parts. Random looks (residents, bots) never roll them, and old looks never touch it. No new material or draw call: it is one more sampler in the shared face program.
 
 **Animation** (`FaceAnimator`):
 
