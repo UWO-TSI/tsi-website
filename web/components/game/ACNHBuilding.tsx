@@ -76,6 +76,8 @@ function dressBack(root: THREE.Object3D) {
 
 /** Warm window light at night (living-village §5): a lit room seen through the glass. */
 const WINDOW_LIGHT = "#ffcf7a";
+/** The chalet's porch lanterns: their emissive map is the lit lantern, so by day it is off (world audit item 22). */
+const LAMP = /^mLamp$/;
 /** Plain glass panes (no emissive map of their own) that glow from inside once it's dark. */
 const GLASS = /^m(?:WindowGlass|SideWindow)$/;
 /** Module scope: give the panes a warm emission shaped by their own texture, off until `lit` turns it up. */
@@ -127,7 +129,7 @@ export function ACNHParts({
   }, [gltfs, parts, windowColor, lights]);
   useContactShadow(group, useMemo(() => modelContact(group, parts[0], "solid"), [group, parts]));
 
-  const emitters = useRef<{ material: THREE.MeshStandardMaterial; gain: number; pane: boolean }[]>([]);
+  const emitters = useRef<{ material: THREE.MeshStandardMaterial; gain: number; pane: boolean; lamp: boolean }[]>([]);
   useEffect(() => {
     const materials = new Set<THREE.MeshStandardMaterial>();
     group.traverse((object) => {
@@ -143,14 +145,16 @@ export function ACNHParts({
       // The HQ window lightmaps are much dimmer than its clock/lamp map.
       gain: isHQ && !windowColor && /^mWindow[LR]$/.test(material.name) ? 4 : 1,
       pane: !!material.userData.pane,
+      lamp: LAMP.test(material.name),
     }));
     return () => { emitters.current = []; };
   }, [group, parts, windowColor]);
   useFrame((_, delta) => {
     if (windowGlow === undefined && lit === undefined) return;
-    for (const { material, gain, pane } of emitters.current) {
-      // Lit: panes from dark to a warm glow, the model's own lamps and rooms from their day level up a little.
-      const target = windowGlow !== undefined ? windowGlow * gain : pane ? 1.3 * lit! : 1 + 0.7 * lit!;
+    for (const { material, gain, pane, lamp } of emitters.current) {
+      // Lit: panes from dark to a warm glow, the porch lanterns off by day and on at night, the model's own lit rooms
+      // from their day level up a little.
+      const target = windowGlow !== undefined ? windowGlow * gain : pane ? 1.3 * lit! : lamp ? 1.7 * lit! : 1 + 0.7 * lit!;
       // These are instance-owned Three materials, animated outside React rendering.
       // eslint-disable-next-line react-hooks/immutability
       material.emissiveIntensity = THREE.MathUtils.damp(material.emissiveIntensity, target, 1.2, Math.min(delta, 0.1));
