@@ -196,7 +196,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   const fx = useRef({ sq: 0, sqv: 0, steps: 0, trail: 0, stuck: 0, level: 0, punch: 0, leaf: 0, leafV: 0, bank: 0, pitch: 0, sliding: false, slideT: 0, slideBeat: 0, drop: 0, heading: 0,
     mode: "ground", tumbled: false, ribbonT: 0, ribbonK: 0, lead: new THREE.Vector2(), pan: new THREE.Vector2(), rise: new THREE.Vector2(), focus: new THREE.Vector3(x0, 0, z0),
     // Juice timers (specs/movement-feel.md): anticipation, the Air pose, the camera dip, streaks, afterimages, the cooldown wind.
-    antic: 0, anticY: 0, jumped: false, vy0: 6, fallT: 0, dip: 0, dipV: 0, streakT: 0, streakK: 0, ghostT: 0, dashT: 0, cdT: 0, wispT: 0, ready: true, sinceDash: 99, grow: 1, fadeGhost: 0,
+    antic: 0, anticY: 0, jumped: false, vy0: 6, fallT: 0, dip: 0, dipV: 0, streakT: 0, streakK: 0, ghostT: 0, dashT: 0, cdT: 0, wispT: 0, ready: true, sinceDash: 99, grow: 1, fadeGhost: 0, shoreT: 0, shoreOn: false,
     /** An air press waiting to be a tap (Air Step) or a hold (the glider): seconds held, or null. */
     airHeld: null as number | null });
   // The glider is a flag on the sim (never in an encounter); the lab's tuning can carry it too.
@@ -611,6 +611,16 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     }
     if (dashReady && !f.ready && !sitting) dashBack(pool, x, y, z, j.cooldown);
     f.ready = dashReady;
+    // Pushing into the sea (world audit item 21): water stays a wall, so a little splash at the toes as you meet it,
+    // a ripple there every so often while you keep pushing, and the body leans back (below).
+    const bracing = !sitting && state.shore > 0, met = bracing && !f.shoreOn;
+    f.shoreOn = bracing;
+    if (met || (bracing && (f.shoreT -= dt) <= 0)) {
+      const tx = x + Math.sin(state.facing) * 0.35, tz = z + Math.cos(state.facing) * 0.35;
+      if (world.wet(tx, tz)) splash(pool, tx, world.top(tx, tz) + 0.02, tz, j.splash * (met ? 0.8 : 0.45), 0);
+      if (met) { f.sqv -= 1.2 * j.squash; playSFX("blip5", 1.35, 0.35); }
+      f.shoreT = 0.75;
+    }
     particles.tick(_state.clock.elapsedTime, dt, camera, liveWind());
 
     // Squash and stretch: a spring, stretched by vertical speed in the air, held in the anticipation crouch, which then
@@ -652,7 +662,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     // Gliding banks into turns and sways about the grip; sliding leans into the steer and lies back deeper the faster it goes (about the seat on the ground).
     const deep = f.sliding ? THREE.MathUtils.clamp((speed - t.walkSpeed * t.slideEnterAt) / Math.max(1, t.momentumCeiling - t.walkSpeed * t.slideEnterAt), 0, 1) : 0;
     f.bank = THREE.MathUtils.damp(f.bank, gliding ? THREE.MathUtils.clamp(-turn * 0.12, -0.3, 0.3) + 0.035 * Math.sin(state.modeT * Math.PI) : f.sliding ? THREE.MathUtils.clamp(-turn * 0.09, -0.24, 0.24) : 0, 6, dt);
-    f.pitch = THREE.MathUtils.damp(f.pitch, -0.12 * deep, 5, dt);
+    f.pitch = THREE.MathUtils.damp(f.pitch, -0.12 * deep - (bracing ? 0.09 : 0), bracing ? 9 : 5, dt);
     bankAbout(bd, state.facing, f.bank, gliding ? y - groundY + GRIP_Y : 0.05, f.pitch);
     m.rate = rawDelta > 0 ? dt / Math.min(rawDelta, 0.1) : 1;
     if (inCombat) {
