@@ -57,6 +57,7 @@ for lc in bpy.context.view_layer.layer_collection.children:
         lc.exclude = False
         lc.hide_viewport = True
 rig.hide_set(True)
+bpy.context.preferences.filepaths.save_version = 0
 bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, "head.blend"), compress=True)
 print("HEAD_V8_OK")
 

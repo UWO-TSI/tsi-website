@@ -35,7 +35,7 @@ for (const glb of Object.keys(lod)) copy(join(art, "lod1", glb), join(out, "lod1
 // avatar v7 face: the layer atlas at 1024 px per face canvas (creator) and 512 (world), animated by uniforms
 const face = JSON.parse(readFileSync(join(art, "v7/face/face_v7.json"), "utf8"));
 for (const f of [face.atlas, face.atlas_world]) copy(join(art, "v7/face", f), join(out, "base", f));
-for (const name of ["character_catalog.json", "palette.json", "v7/face/face_v7.json"]) copy(join(art, name), join(data, name.replace(/^.*\//, "")));
+for (const name of ["character_catalog.json", "palette.json", "v7/face/face_v7.json", "skull/skull.json"]) copy(join(art, name), join(data, name.replace(/^.*\//, "")));
 
 // Crewneck decal: the site's own mark in cream on transparency, square with padding.
 const svg = readFileSync(join(web, "public/logo.svg"), "utf8").replaceAll("currentColor", "#F3E9D2");
@@ -44,4 +44,4 @@ writeFileSync(tmp, svg.replace(/<svg ([^>]*)>/, '<svg $1 preserveAspectRatio="xM
 execFileSync("rsvg-convert", ["-w", "192", "-h", "184", "-o", join(out, "decal_tsi_mark.png"), tmp]);
 execFileSync("magick", [join(out, "decal_tsi_mark.png"), "-background", "none", "-gravity", "center", "-extent", "256x256", join(out, "decal_tsi_mark.png")]);
 execFileSync("rm", [tmp]);
-console.log(`synced ${parts.length} parts, base, ${Object.keys(lod).length} LOD GLBs, 2 face atlases, 3 JSON files, TSI decal`);
+console.log(`synced ${parts.length} parts, base, ${Object.keys(lod).length} LOD GLBs, 2 face atlases, 4 JSON files, TSI decal`);
