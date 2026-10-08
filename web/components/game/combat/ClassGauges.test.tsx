@@ -44,6 +44,9 @@ describe("the gauges' type (UI audit 2026-10 item 12)", () => {
     expect(css).not.toMatch(/IBM Plex Mono|monospace/);
     expect(css).toMatch(/var\(--gui-font\)/);
   });
+  it("keeps its small print (the rate, the reload hint, traps) at the row's size, not the browser's smaller", () => {
+    expect(css).toMatch(/\.gauges small\s*\{[^}]*font-size:\s*inherit/);
+  });
   it("is never under the kit's 12 px floor", () => {
     const sizes = [...css.matchAll(/font(?:-size)?:[^;]*?\b(\d+(?:\.\d+)?)px/g)].map(m => Number(m[1]));
     expect(sizes.filter(px => px < 12)).toEqual([]);
