@@ -63,8 +63,13 @@ export const LANDMARK_IDS = Object.keys(LANDMARK_INFO) as LandmarkId[];
 
 /** Wharf stub deck (walkable over the water), relative to the wharf before its yaw. */
 export const WHARF_DECK_LOCAL = { x0: -0.9, x1: 0.9, z0: -3.5, z1: 2 };
-/** Wooden bridge deck, relative, before its yaw: the model spans ±1.9 along x, ±1.45 across with rails. */
-export const BRIDGE_DECK_HALF: [number, number] = [1.9, 1.2];
+/**
+ * Wooden bridge deck, relative, before its yaw: the model spans ±1.9 along x, its rails at ±1.45 across. The deck
+ * stops 1.0 out so a body (0.2 probes, about 0.3 wide) walks clear of the rails.
+ */
+export const BRIDGE_DECK_HALF: [number, number] = [1.9, 1.0];
+/** The rails are solid from the deck's edge out to here (across, relative), along the whole deck: on water or on the bank. */
+export const BRIDGE_RAIL_OUT = 1.65;
 /** Solid footprints (half width, half depth, before rotation and scale), from the measured GLB bounds. */
 export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   "bench-wood": [0.98, 0.27], "rock-a": [0.48, 0.45], "rock-b": [0.46, 0.42], "rock-c": [0.5, 0.5],
@@ -124,6 +129,15 @@ export function bridgeDecks(v: Village = village()) {
   return objectsOf("bridge", v).map(o => turnedRect(o.x, o.z, { x0: -a, x1: a, z0: -b, z1: b }, o.yaw));
 }
 
+/** Each bridge's two rails as solid strips in world XZ, either side of its deck. */
+export function bridgeRails(v: Village = village()) {
+  const [a, b] = BRIDGE_DECK_HALF;
+  return objectsOf("bridge", v).flatMap(o => [
+    turnedRect(o.x, o.z, { x0: -a, x1: a, z0: b, z1: BRIDGE_RAIL_OUT }, o.yaw),
+    turnedRect(o.x, o.z, { x0: -a, x1: a, z0: -BRIDGE_RAIL_OUT, z1: -b }, o.yaw),
+  ]);
+}
+
 /** Where a fresh visit starts. */
 export function villageSpawn(v: Village = village()): [number, number, number] {
   const [x, z] = villageSpawnPoint(v);
@@ -167,8 +181,19 @@ export function objectFootprint(o: MapObject): { hw: number; hd: number; cx: num
 
 /** Bench-wood seat top: its slats measure 0.48–0.51 above the ground. */
 export const BENCH_SEAT_TOP = 0.5;
-/** A bench seats two (specs/multiplayer-questions.md default 7): its slots sit this far either way along it from its middle. */
+/**
+ * A bench seats two (specs/multiplayer-questions.md default 7): its slots sit this far either way along it from its
+ * middle. One seat model for everyone: players and bots claim a slot over the network (benchSlotKey), and residents
+ * sit only in these slots, yielding to a player's claim (components/game/NPC.tsx).
+ */
 export const BENCH_SLOTS = [-0.42, 0.42] as const;
+/** A bench slot's spot in world XZ: along the bench (its local x), either side of its middle. */
+export function benchSlotPoint(b: Pick<MapObject, "x" | "z" | "yaw">, slot: 0 | 1): [number, number] {
+  const yaw = b.yaw ?? 0, off = BENCH_SLOTS[slot];
+  return [b.x + Math.cos(yaw) * off, b.z - Math.sin(yaw) * off];
+}
+/** The bench slots residents sit in this frame (their claim keys), written by the residents' frame: `benchSeat` treats them as taken. */
+export const benchHeld = new Set<string>();
 const slotKeys = new Map<string, readonly [string, string]>();
 /** A bench slot's seat claim (`s {seat}`, protocol isSeatKey): `bench:<map id>#0` or `#1`, made once per bench. */
 export function benchSlotKey(id: string, slot: 0 | 1): string {
@@ -191,9 +216,10 @@ export function benchSeat(x: number, z: number, range = 1.3, v: Village = villag
   const front = (x - b.x) * Math.sin(yaw) + (z - b.z) * Math.cos(yaw) >= 0;
   return { x: b.x + Math.cos(yaw) * off, z: b.z - Math.sin(yaw) * off, yaw: yaw + (front ? 0 : Math.PI), key: benchSlotKey(b.id, slot) };
 }
-/** How far a bench slot is from (x, z); Infinity while someone else holds it. */
+/** How far a bench slot is from (x, z); Infinity while someone else (a player's claim, a resident) holds it. */
 function slotReach(b: MapObject, slot: 0 | 1, x: number, z: number, taken?: (key: string) => boolean): number {
-  if (taken?.(benchSlotKey(b.id, slot))) return Infinity;
+  const key = benchSlotKey(b.id, slot);
+  if (taken?.(key) || benchHeld.has(key)) return Infinity;
   const yaw = b.yaw ?? 0, off = BENCH_SLOTS[slot];
   return Math.hypot(b.x + Math.cos(yaw) * off - x, b.z - Math.sin(yaw) * off - z);
 }
@@ -228,6 +254,7 @@ export function islandOf(v: Village): VillageIsland {
   const ground = (x: number, z: number) => sampleGroundHeight(map, field, x, z);
   const surface = (x: number, z: number) => drawnSurfaceAt(map, x, z);
   const decks = [wharfDeck(v), ...bridgeDecks(v)].filter(d => d !== null);
+  const rails = bridgeRails(v);
   const solids = landmarks(v).filter(l => l.half);
   const props = propsOf(v).flatMap(o => {
     const f = propFootprint(o);
@@ -247,7 +274,7 @@ export function islandOf(v: Village): VillageIsland {
   const wet = (x: number, z: number) => !onDeck(x, z) && !isGroundAtWorld(map, x, z);
   /** Top of the solid at a point: a prop's measured top, Infinity for buildings, study furniture and trunks, -Infinity for none. */
   const solidTop = (x: number, z: number) => {
-    if (solids.some(l => Math.abs(x - l.x) < l.half![0] && Math.abs(z - l.z) < l.half![1]) || eventSolids.some(r => inRect(x, z, r))) return Infinity;
+    if (solids.some(l => Math.abs(x - l.x) < l.half![0] && Math.abs(z - l.z) < l.half![1]) || eventSolids.some(r => inRect(x, z, r)) || rails.some(r => inRect(x, z, r))) return Infinity;
     let top = -Infinity, trunk = false;
     const bx = Math.floor(x / 4), bz = Math.floor(z / 4);
     for (let oz = -1; oz <= 1; oz++) for (let ox = -1; ox <= 1; ox++) {

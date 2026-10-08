@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { villageIsland } from "./defaultIsland";
+import { BENCH_SLOTS, benchSlotKey, villageIsland } from "./defaultIsland";
 import { objectsOf, village } from "./villageMap";
 import { PROPOSED_RESIDENTS } from "@/lib/content/residentRoster";
 import { DEFAULT_NPC_PERSONAS } from "@/data/content-defaults";
 import { CLIP_BY_NAME } from "./character/look";
 import {
-  MIN_STAY, RESIDENT_WALK, ResidentDay, buildDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResident, residentSeats, routineKeys, walkDistance, type Leg,
+  MIN_STAY, RESIDENT_WALK, ResidentDay, buildDay, daySpan, idleAt, navGrid, newPose, phaseOn, planResident, planResidents, routineKeys, walkDistance, type Leg,
 } from "./residentRoutine";
 
 const v = village(), island = villageIsland(v), nav = navGrid(island, v);
-const SORTED = [...PROPOSED_RESIDENTS].sort((a, b) => a.slug.localeCompare(b.slug)), SEATS = residentSeats(SORTED);
-const plans = SORTED.map((r, i) => planResident(r, i, v, island, SEATS[i]));
+const SORTED = [...PROPOSED_RESIDENTS].sort((a, b) => a.slug.localeCompare(b.slug));
+const plans = planResidents(SORTED, v, island);
 // A day in October (sun times from the monthly table).
 const T = Date.parse("2026-10-01T16:00:00Z") / 1000;
 const span = daySpan(T * 1000);
@@ -132,11 +132,53 @@ describe("resident routines", () => {
     for (const { plan } of days) for (const s of plan.phases.night) if (s.kind === "sit") expect(Math.hypot(s.at[0] - lamp.x, s.at[1] - lamp.z), plan.slug).toBeLessThan(3.5);
   });
 
+  it("seats residents only on the players' two bench slots, under the slot's claim key", () => {
+    const slots = objectsOf("bench", v).flatMap(b => BENCH_SLOTS.map((off, s) => ({ key: benchSlotKey(b.id, s as 0 | 1), x: b.x + Math.cos(b.yaw ?? 0) * off, z: b.z - Math.sin(b.yaw ?? 0) * off })));
+    for (const p of plans) for (const stops of Object.values(p.phases)) for (const s of stops) {
+      if (s.kind !== "sit") continue;
+      const slot = slots.find(o => Math.hypot(o.x - s.at[0], o.z - s.at[1]) < 1e-6);
+      expect(slot, `${p.slug} ${s.id} at ${s.at}`).toBeDefined();
+      expect((s as { seatKey?: string }).seatKey, p.slug).toBe(slot!.key);
+    }
+  });
+
+  it("never stacks two residents: no two stopped residents within 0.5u at any time of day", () => {
+    const clash: string[] = [];
+    for (const when of ["2026-10-01T16:00:00Z", "2026-06-21T16:00:00Z"]) {
+      const sp = daySpan(Date.parse(when)), live = plans.map(p => ({ slug: p.slug, day: new ResidentDay(p, nav), pose: newPose() }));
+      for (let t = sp.t0; t < sp.t1; t += 15) {
+        for (const r of live) r.day.at(t, null, r.pose);
+        for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) {
+          const a = live[i].pose, b = live[j].pose;
+          if (a.inside || b.inside || a.moving || b.moving) continue;
+          if (Math.hypot(a.x - b.x, a.z - b.z) < 0.5 && clash.length < 12) clash.push(`${live[i].slug}+${live[j].slug} at ${new Date(t * 1000).toISOString()} (${a.x.toFixed(2)}, ${a.z.toFixed(2)})`);
+        }
+      }
+    }
+    expect(clash).toEqual([]);
+  });
+
+  it("keeps three or more residents out at night, and the village thins out rather than emptying at once", () => {
+    for (const when of ["2026-10-02T02:30:00Z", "2026-10-02T04:30:00Z", "2026-07-02T02:30:00Z"]) {
+      const t = Date.parse(when) / 1000, out = plans.filter(p => !new ResidentDay(p, nav).at(t, null, newPose()).inside).map(p => p.slug);
+      expect(out.length, `${when}: ${out}`).toBeGreaterThanOrEqual(3);
+    }
+    // From the evening into the first hour of night, minute by minute: never more than two go in within a minute.
+    const night = span.phases[span.phases.length - 1].t0, live = plans.map(p => ({ day: new ResidentDay(p, nav), pose: newPose() }));
+    let prev = -1, worst = 0;
+    for (let t = night - 1800; t < night + 3600; t += 60) {
+      const n = live.filter(r => !r.day.at(t, null, r.pose).inside).length;
+      if (prev >= 0) worst = Math.max(worst, prev - n);
+      prev = n;
+    }
+    expect(worst).toBeLessThanOrEqual(2);
+  });
+
   it("is the same on every client: a function of world time only", () => {
-    const a = newPose(), b = newPose();
-    for (const { plan } of days) for (const t of [T, T + 1234.5, T + 40000]) {
+    const a = newPose(), b = newPose(), again = planResidents(SORTED, v, island);
+    for (const [i, { plan }] of days.entries()) for (const t of [T, T + 1234.5, T + 40000]) {
       new ResidentDay(plan, nav).at(t, null, a);
-      new ResidentDay(planResident(SORTED[plans.indexOf(plan)], plans.indexOf(plan), v, island, SEATS[plans.indexOf(plan)]), nav).at(t, null, b);
+      new ResidentDay(again[i], nav).at(t, null, b);
       expect([b.x, b.z, b.yaw, b.inside]).toEqual([a.x, a.z, a.yaw, a.inside]);
     }
     expect(phaseOn(span, T)).toBe("day");

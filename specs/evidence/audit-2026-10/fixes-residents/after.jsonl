@@ -1,0 +1,12 @@
+{"scene":"bench","t":0,"residents":[{"slug":"nell","x":5.75,"z":3.88,"hidden":false,"speed":1.28,"seat":""}]}
+{"scene":"bench","t":5,"residents":[{"slug":"nell","x":5.75,"z":3.22,"hidden":false,"speed":1.28,"seat":""}]}
+{"scene":"bench","t":10,"residents":[{"slug":"nell","x":5.31,"z":2.75,"hidden":false,"speed":1.28,"seat":""}]}
+{"scene":"bench","t":15,"residents":[{"slug":"nell","x":4.41,"z":2.75,"hidden":false,"speed":1.28,"seat":""}]}
+{"scene":"bench","t":20,"residents":[{"slug":"nell","x":3.9,"z":3.1,"hidden":false,"speed":1.28,"seat":""}]}
+{"scene":"bench","t":25,"residents":[{"slug":"nell","x":3.13,"z":3.78,"hidden":false,"speed":1.28,"seat":""}]}
+{"scene":"night","out":["nell@5.7,2.75","wharf-keeper@-4.5,-15.96","wren@5.75,3.06"],"inside":7}
+{"scene":"bridge","key":"a","stoppedAt":{"x":-0.8,"z":0.6},"rail":1.45}
+{"scene":"bridge","key":"d","stoppedAt":{"x":0.8,"z":0.77},"rail":1.45}
+{"scene":"stack","within05":[]}
+{"scene":"night","out":["nell@0.73,5.84","wharf-keeper@-4.5,-15.96","wren@3.75,4.25"],"inside":7}
+{"scene":"space","closestStopped":3.37,"who":"curator@-6.65,2.65"}

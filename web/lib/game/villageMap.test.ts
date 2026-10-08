@@ -3,7 +3,7 @@ import doc from "../../data/village-map.json";
 import { buildVillage, landBounds, normaliseSea, parseVillage, serialiseVillage, village, villageJson, type VillageDoc } from "./villageMap";
 import { villageHealth } from "./mapHealth";
 import { villageScale } from "./defaultIsland";
-import { createCenteredMap, setCell, Surface } from "./grid";
+import { createCenteredMap, setCell, Surface, type SurfaceId } from "./grid";
 
 /**
  * The shipped village map, held to exactly what /lab/map's health panel shows
@@ -23,6 +23,19 @@ describe("web/data/village-map.json", () => {
     const { map, objects, annotations } = parseVillage(doc as VillageDoc);
     const out = villageJson(serialiseVillage(map, objects, annotations));
     expect(JSON.parse(out)).toEqual(JSON.parse(JSON.stringify(doc)));
+  });
+});
+
+describe("bridge health", () => {
+  const withBridge = (under: SurfaceId) => {
+    const map = createCenteredMap(16, 16);
+    for (let cz = 0; cz < 16; cz++) for (let cx = 0; cx < 16; cx++) setCell(map, cx, cz, 0, Surface.Grass);
+    for (let cz = 0; cz < 16; cz++) for (let x = -1; x <= 1; x++) setCell(map, x - map.originX, cz, 0, under);
+    return buildVillage(serialiseVillage(map, [{ id: "bridge-0", kind: "bridge", x: 0, z: 0, yaw: 0 }]));
+  };
+  it("warns when a bridge stands on land instead of over water (David repaints the cells as River)", () => {
+    expect(villageHealth(withBridge(Surface.Wood)).warnings).toContain("bridge:bridge-0 is not over water: paint River under it");
+    expect(villageHealth(withBridge(Surface.River)).warnings.filter(w => w.startsWith("bridge:bridge-0 is not"))).toEqual([]);
   });
 });
 

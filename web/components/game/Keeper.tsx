@@ -22,6 +22,7 @@ import { hash01 } from "@/lib/game/worldFx";
 import { OWNER_WALK, ownerAt, type OwnerPose } from "@/lib/game/cafe";
 import { KEEPER_BUBBLE_S, KEEPER_ENTRY_S, KEEPER_NOTICE, KEEPER_POSTS, KEEPER_QUIET_S, keeperGreets, keeperYaw, talkSeconds, type KeeperRoom } from "@/lib/game/keepers";
 import { PROPOSED_RESIDENTS, RESIDENT_LOOKS } from "@/lib/content/residentRoster";
+import { untimed } from "@/lib/content/lineTime";
 import { useNPCPersonas } from "@/lib/content/loader";
 import s from "./residents.module.css";
 
@@ -139,7 +140,9 @@ export default function Keeper({ room, player, frozen, engaged = false, sayEvent
   const { data: personas } = useNPCPersonas({ permanentOnly: true });
   const persona = personas.find(p => p.post === post.post) ?? PROPOSED_RESIDENTS.find(r => r.slug === post.slug)!;
   const look = useMemo(() => (RESIDENT_LOOKS[persona.slug] ? parseLook(RESIDENT_LOOKS[persona.slug]) : randomLook(seeded(hashSeed(persona.slug)))), [persona.slug]);
-  const lines = persona.canned_dialogue?.length ? persona.canned_dialogue : PROPOSED_RESIDENTS.find(r => r.slug === post.slug)!.canned_dialogue;
+  const authored = persona.canned_dialogue?.length ? persona.canned_dialogue : PROPOSED_RESIDENTS.find(r => r.slug === post.slug)!.canned_dialogue;
+  // Indoors there's no time of day: the lines said any time, time tags left off ("@morning Morning!" stays outside).
+  const lines = useMemo(() => untimed(authored), [authored]);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: Math.PI, lift: 0, pose: null, play: null });
   const group = useRef<THREE.Group>(null);
   const bubble = useRef<HTMLDivElement>(null), text = useRef<HTMLSpanElement>(null), notice = useRef<HTMLDivElement>(null), plate = useRef<HTMLDivElement>(null);

@@ -15,7 +15,7 @@
  * frame loop allocates nothing.
  */
 import { CLIFF_LEVELS, levelAt, rampRun, worldToCellX, worldToCellZ } from "./grid";
-import { BENCH_SEAT_TOP, LANDMARK_INFO, landmark, type LandmarkId, type VillageIsland } from "./defaultIsland";
+import { BENCH_SEAT_TOP, LANDMARK_INFO, benchSlotKey, benchSlotPoint, landmark, type LandmarkId, type VillageIsland } from "./defaultIsland";
 import { objectById, objectsOf, villageSpawnPoint, type Village } from "./villageMap";
 import { ISLAND_PHASES, type IslandPhase } from "./islandTime";
 import { DAWN_HOURS, EVENING_HALF_HOURS, sunFor, torontoDate, type SunDay } from "./sunTimes";
@@ -40,15 +40,14 @@ const PLANT_COST = 8;
 
 /** Where the inside point sits past the door, into the building (hidden there). */
 const INSIDE_DEPTH = 0.9;
-/** Seat offsets along a bench. */
-/** Three to a bench (it's nearly two units long). */
-const SEAT_OFFSETS = [-0.6, 0, 0.6];
 /** Where you stand before sitting: this far in front of the seat. */
 const SEAT_APPROACH = 0.62;
 
 // ── Stops ───────────────────────────────────────────────────────────────
 export type IdleKind = "idle" | "look" | "stretch" | "gaze";
 export type StopKind = "stand" | "sit" | "home";
+/** A bench slot (the seat model players and bots share, defaultIsland BENCH_SLOTS): its claim key, the seat, the step in front of it. */
+export interface SeatSlot { key: string; at: readonly [number, number]; door: readonly [number, number] }
 export interface Stop {
   /** Stable per resident and place (hashing, chats). */
   id: string;
@@ -61,6 +60,9 @@ export interface Stop {
   yaw: number;
   /** sit: seat top above the ground at `at`. */
   seat?: number;
+  /** sit: the bench slot's claim key (`bench:<id>#0|1`), and the bench's other slot, where they sit when a player holds theirs. */
+  seatKey?: string;
+  alt?: SeatSlot | null;
   /** Seconds there, drawn per visit from the range. */
   dwell: readonly [number, number];
   /** Which idles this place invites. */
@@ -259,8 +261,31 @@ const ANCHOR_VIEW: Partial<Record<string, LandmarkId>> = { pond: "pond", beach: 
 const ANCHOR_BUILDING: Partial<Record<string, LandmarkId>> = { hq: "hq", shop: "shop", cafe: "cafe", oracle: "oracle", museum: "museum" };
 const WATER_ANCHORS = new Set(["pond", "beach", "wharf"]);
 
-/** A resident's place in a ring round an anchor, so residents sharing a spot stand apart and face in. */
-const RING = 0.75, RING_SLOTS = 6;
+/**
+ * A resident's place round an anchor, so residents sharing a place stand apart and face in: the first ring, then wider
+ * ones when it's full or in the water (ten residents can share one place).
+ */
+const RINGS = [{ r: 0.75, n: 6 }, { r: 1.5, n: 10 }, { r: 2.25, n: 14 }] as const;
+/** Two residents' stops are never closer than this (world units), whatever the phase: nobody stands inside anybody. */
+export const STOP_SPACING = 0.8;
+
+/**
+ * What the residents planned so far hold, so the next one plans round them (planResidents, in a fixed order, so every
+ * client agrees): bench slots per phase, each one's spot at each anchor, and every spot anyone stops at.
+ */
+export interface Reservations {
+  seats: Record<IslandPhase, Set<string>>;
+  anchors: Map<string, readonly [number, number]>;
+  spots: { x: number; z: number; slug: string }[];
+}
+export const newReservations = (): Reservations => ({
+  seats: { dawn: new Set(), day: new Set(), evening: new Set(), night: new Set() }, anchors: new Map(), spots: [],
+});
+/** Nobody else stops within STOP_SPACING of (x, z). */
+function spotFree(res: Reservations, slug: string, x: number, z: number): boolean {
+  for (const s of res.spots) if (s.slug !== slug && Math.hypot(s.x - x, s.z - z) < STOP_SPACING) return false;
+  return true;
+}
 
 export interface ResidentPlan {
   slug: string;
@@ -288,49 +313,83 @@ function homeStop(id: LandmarkId, v: Village, slug: string, nav: NavGrid): Stop 
 }
 
 /**
- * A bench seat: benches under a lamp first at night, else the nearest to `near`; `slot` (the resident's rank among
- * bench sitters) takes the seats in turn, two to a bench, so sitters never share a seat.
+ * A bench seat: one of the two slots players and bots sit in (defaultIsland BENCH_SLOTS), on a bench under a lamp first
+ * in the evening and only there at night (`dark`), else the nearest to `near`; the slot nearer the way they come, unless another resident has it this phase
+ * (`taken`, claim keys). Backless: they sit facing the side they came from, approaching from it.
  */
-function benchStop(v: Village, nav: NavGrid, slot: number, near: readonly [number, number], night: boolean): Stop | null {
+function benchStop(v: Village, nav: NavGrid, near: readonly [number, number], night: boolean, dark: boolean, taken: Set<string>): Stop | null {
   const benches = objectsOf("bench", v);
   if (!benches.length) return null;
   const lamps = objectsOf("lamp", v);
   const lit = (b: { x: number; z: number }) => lamps.some(l => Math.hypot(l.x - b.x, l.z - b.z) < 3.2);
-  const ranked = [...benches].sort((a, b) => (night ? Number(lit(b)) - Number(lit(a)) : 0) || Math.hypot(a.x - near[0], a.z - near[1]) - Math.hypot(b.x - near[0], b.z - near[1]));
-  for (let r = 0; r < ranked.length; r++) {
-    const b = ranked[(Math.floor(slot / SEAT_OFFSETS.length) + r) % ranked.length], yaw = b.yaw ?? 0;
-    const off = SEAT_OFFSETS[slot % SEAT_OFFSETS.length];
-    // Along the bench is its local x; it faces local ±z. Backless: sit facing the side you came from (the open side
-    // toward the previous stop), approaching from it.
-    const ax = Math.cos(yaw), az = -Math.sin(yaw);
-    const at: [number, number] = [b.x + ax * off, b.z + az * off];
-    let best: Stop | null = null, bestD = Infinity;
-    for (const face of [yaw, yaw + Math.PI]) {
-      const fx = Math.sin(face), fz = Math.cos(face);
-      const front = nav.snap(at[0] + fx * SEAT_APPROACH, at[1] + fz * SEAT_APPROACH);
-      if (!front || Math.hypot(front[0] - at[0], front[1] - at[1]) > 1.2) continue;
-      const d = Math.hypot(front[0] - near[0], front[1] - near[1]);
-      if (d < bestD) { bestD = d; best = { id: `bench:${b.id}:${off}`, kind: "sit", at, door: front, yaw: face, seat: BENCH_SEAT_TOP, dwell: night ? [420, 900] : [90, 220], idles: ["idle"] }; }
+  // After dark only a bench under a lamp will do (when the village has one): with those full, they skip the bench.
+  const any = !dark || !lamps.length || !benches.some(lit);
+  const ranked = [...benches].filter(b => any || lit(b)).sort((a, b) => (night ? Number(lit(b)) - Number(lit(a)) : 0) || Math.hypot(a.x - near[0], a.z - near[1]) - Math.hypot(b.x - near[0], b.z - near[1]));
+  for (const b of ranked) {
+    const yaw = b.yaw ?? 0;
+    // The step in front of a slot on one side (local ±z), or null when that side is blocked.
+    const front = (slot: 0 | 1, face: number): SeatSlot | null => {
+      const at = benchSlotPoint(b, slot), f = nav.snap(at[0] + Math.sin(face) * SEAT_APPROACH, at[1] + Math.cos(face) * SEAT_APPROACH);
+      return f && Math.hypot(f[0] - at[0], f[1] - at[1]) <= 1.2 ? { key: benchSlotKey(b.id, slot), at, door: f } : null;
+    };
+    let best: { slot: SeatSlot; face: number; other: 0 | 1 } | null = null, bestD = Infinity;
+    for (const slot of [0, 1] as const) for (const face of [yaw, yaw + Math.PI]) {
+      const s = front(slot, face);
+      if (!s || taken.has(s.key)) continue;
+      const d = Math.hypot(s.door[0] - near[0], s.door[1] - near[1]);
+      if (d < bestD) { bestD = d; best = { slot: s, face, other: slot === 0 ? 1 : 0 }; }
     }
-    if (best) return best;
+    if (!best) continue;
+    taken.add(best.slot.key);
+    return {
+      id: best.slot.key, kind: "sit", at: best.slot.at, door: best.slot.door, yaw: best.face, seat: BENCH_SEAT_TOP,
+      seatKey: best.slot.key, alt: front(best.other, best.face),
+      dwell: night ? [420, 900] : [90, 220], idles: ["idle"],
+    };
   }
   return null;
 }
 
+/**
+ * Which seat a sitter takes (client-side: the routine stays shared): 0 their own slot; 1 the bench's other slot when
+ * someone else holds theirs (a player's claim, a player or bot on it, another resident); 2 neither is free, so they
+ * stand at their seat's front step. `held(key, x, z)`: someone else holds that slot. `prev`, their pick so far this
+ * visit: once moved over to the other slot they stay there while it's free.
+ */
+export function seatChoice(stop: Stop, held: (key: string, x: number, z: number) => boolean, prev: 0 | 1 | 2 = 0): 0 | 1 | 2 {
+  const alt = stop.alt;
+  if (prev === 1 && alt && !held(alt.key, alt.at[0], alt.at[1])) return 1;
+  if (!stop.seatKey || !held(stop.seatKey, stop.at[0], stop.at[1])) return 0;
+  return alt && !held(alt.key, alt.at[0], alt.at[1]) ? 1 : 2;
+}
+
 /** A spot at an anchor for this resident: its ring slot (or the next free one), facing the place's point of interest. */
-function anchorStop(key: string, v: Village, nav: NavGrid, slot: number, work: boolean): Stop | null {
+function anchorStop(key: string, v: Village, nav: NavGrid, slot: number, work: boolean, night: boolean, slug: string, res: Reservations): Stop | null {
   const a = objectById("anchor", key, v);
   const base: [number, number] | null = a ? [a.x, a.z] : key === "plaza" ? villageSpawnPoint(v) : null;
   if (!base) return null;
-  let at: [number, number] | null = null;
+  // The same spot at a place all day: theirs once taken.
+  const mine = `${slug}|${key}`;
+  let at: readonly [number, number] | null = res.anchors.get(mine) ?? null;
   const turn = hash01(hashStr(key), 7) * Math.PI * 2;
-  for (let k = 0; k < RING_SLOTS && !at; k++) {
-    const ang = turn + ((slot + k) % RING_SLOTS) * (Math.PI * 2 / RING_SLOTS);
-    const x = base[0] + Math.sin(ang) * RING, z = base[1] + Math.cos(ang) * RING;
-    if (nav.fits(x, z) && nav.clear(base[0], base[1], x, z)) at = [x, z];
+  for (const ring of RINGS) {
+    for (let k = 0; k < ring.n && !at; k++) {
+      const ang = turn + ((slot + k) % ring.n) * (Math.PI * 2 / ring.n);
+      const x = base[0] + Math.sin(ang) * ring.r, z = base[1] + Math.cos(ang) * ring.r;
+      if (nav.fits(x, z) && nav.clear(base[0], base[1], x, z) && spotFree(res, slug, x, z)) at = [x, z];
+    }
+  }
+  // Every ring full or in the water: the nearest free cell nobody else stands on.
+  for (let r = 0; r <= 8 && !at; r++) {
+    for (let dz = -r; dz <= r && !at; dz++) for (let dx = -r; dx <= r && !at; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+      const cx = nav.cx(base[0]) + dx, cz = nav.cz(base[1]) + dz, x = nav.wx(cx), z = nav.wz(cz);
+      if (nav.cellFree(cx, cz) && nav.fits(x, z) && spotFree(res, slug, x, z)) at = [x, z];
+    }
   }
   at ??= nav.snap(base[0], base[1]);
   if (!at) return null;
+  if (!res.anchors.has(mine)) { res.anchors.set(mine, at); res.spots.push({ x: at[0], z: at[1], slug }); }
   const view = ANCHOR_VIEW[key] && landmark(ANCHOR_VIEW[key]!, v), building = ANCHOR_BUILDING[key] && landmark(ANCHOR_BUILDING[key]!, v);
   // Out from a building's front; toward the water or the monument; else toward the anchor's middle.
   const yaw = building ? yawTo(building.x, building.z, at[0], at[1])
@@ -339,19 +398,20 @@ function anchorStop(key: string, v: Village, nav: NavGrid, slot: number, work: b
   const water = WATER_ANCHORS.has(key);
   return {
     id: `anchor:${key}`, kind: "stand", at, yaw,
-    // A resident's own post (the shop for the shopkeeper) holds them longest.
-    dwell: work ? [140, 300] : water ? [60, 140] : [40, 100],
+    // A resident's own post (the shop for the shopkeeper) holds them longest; at night they linger under the lamps.
+    dwell: work ? [140, 300] : night ? [600, 1500] : water ? [60, 140] : [40, 100],
     idles: water ? ["gaze", "look", "idle"] : ["idle", "look", "stretch"],
   };
 }
 
 /** Two more spots near a lone anchor, so a one-place schedule still mills about (walkable, a short reachable stroll away). */
-function wanderStops(stop: Stop, nav: NavGrid, seed: number): Stop[] {
+function wanderStops(stop: Stop, nav: NavGrid, seed: number, slug: string, res: Reservations): Stop[] {
   const out: Stop[] = [];
   for (let k = 0; k < 8 && out.length < 2; k++) {
     const ang = hash01(seed, 40 + k) * Math.PI * 2, r = 1.6 + hash01(seed, 60 + k) * 1.4;
     const x = stop.at[0] + Math.sin(ang) * r, z = stop.at[1] + Math.cos(ang) * r;
-    if (!nav.fits(x, z) || !nav.clear(stop.at[0], stop.at[1], x, z)) continue;
+    if (!nav.fits(x, z) || !nav.clear(stop.at[0], stop.at[1], x, z) || !spotFree(res, slug, x, z)) continue;
+    res.spots.push({ x, z, slug });
     out.push({ ...stop, id: `${stop.id}~${k}`, at: [x, z], yaw: stop.yaw + (hash01(seed, 80 + k) - 0.5) * 1.6, dwell: [18, 45] });
   }
   return out;
@@ -361,23 +421,10 @@ function wanderStops(stop: Stop, nav: NavGrid, seed: number): Stop[] {
 const POST_ANCHOR: Record<string, string> = { hq_lead: "hq", shopkeeper: "shop", cafe_owner: "cafe", museum_curator: "museum", wharf_keeper: "wharf", oracle_keeper: "oracle", workshop_crafter: "hq" };
 
 /**
- * Resolve a resident's schedule into stops on this map. `slot` spreads residents round shared anchors; `seats` is their
- * rank among the residents who sit on a bench in each phase (residentSeats), so no two share a seat.
+ * Resolve a resident's schedule into stops on this map. `slot` spreads residents round shared anchors; `res` is what
+ * the residents planned before them hold (planResidents), so no two share a seat in a phase or stand in one spot.
  */
-/**
- * Each resident's rank among the residents who sit on a bench in each phase (sorted as given): the seats they take, so
- * no two sitters in a phase share one. Phases without a bench in someone's routine leave them out.
- */
-export function residentSeats(rs: readonly ResidentSource[]): Partial<Record<IslandPhase, number>>[] {
-  const out = rs.map(() => ({} as Partial<Record<IslandPhase, number>>));
-  for (const phase of ISLAND_PHASES) {
-    let k = 0;
-    rs.forEach((r, i) => { if (routineKeys(r.schedule, phase).includes("bench")) out[i][phase] = k++; });
-  }
-  return out;
-}
-
-export function planResident(r: ResidentSource, slot: number, v: Village, island: VillageIsland, seats: number | Partial<Record<IslandPhase, number>> = slot): ResidentPlan {
+export function planResident(r: ResidentSource, slot: number, v: Village, island: VillageIsland, res: Reservations = newReservations()): ResidentPlan {
   const nav = navGrid(island, v), seed = hashStr(r.slug);
   const homeId = (typeof r.schedule?.home === "string" && (HOME_LANDMARKS as readonly string[]).includes(r.schedule.home) ? r.schedule.home : POST_HOME[r.post ?? "villager"] ?? "hq") as LandmarkId;
   const home = homeStop(homeId, v, r.slug, nav) ?? homeStop("hq", v, r.slug, nav);
@@ -386,20 +433,31 @@ export function planResident(r: ResidentSource, slot: number, v: Village, island
   for (const phase of ISLAND_PHASES) {
     const night = phase === "night" || phase === "evening";
     let last: readonly [number, number] = home?.door ?? villageSpawnPoint(v);
+    // One seat a phase: a routine that comes back to the bench sits in the same one.
+    let seat: Stop | null | undefined;
     const stops: Stop[] = [];
     for (const key of routineKeys(r.schedule, phase)) {
-      const seat = typeof seats === "number" ? seats : seats[phase] ?? 0;
-      const s = key === "home" ? home : key === "bench" ? benchStop(v, nav, seat, last, night) : anchorStop(key, v, nav, slot, key === work);
+      if (key === "bench" && seat === undefined) {
+        seat = benchStop(v, nav, last, night, phase === "night", res.seats[phase]);
+        if (seat) res.spots.push({ x: seat.at[0], z: seat.at[1], slug: r.slug });
+      }
+      const s = key === "home" ? home : key === "bench" ? seat ?? null : anchorStop(key, v, nav, slot, key === work, phase === "night", r.slug, res);
       if (!s) continue;
       stops.push(s);
       last = s.door ?? s.at;
     }
     if (!stops.length && home) stops.push(home);
     // One place for the phase: mill about it (unless it's home or a seat).
-    if (stops.length === 1 && stops[0].kind === "stand") stops.push(...wanderStops(stops[0], nav, seed + ISLAND_PHASES.indexOf(phase)));
+    if (stops.length === 1 && stops[0].kind === "stand") stops.push(...wanderStops(stops[0], nav, seed + ISLAND_PHASES.indexOf(phase), r.slug, res));
     phases[phase] = stops;
   }
   return { slug: r.slug, seed, home, phases };
+}
+
+/** Every resident's plan, in the order given (sort them the same way on every client: by slug), round each other. */
+export function planResidents(rs: readonly ResidentSource[], v: Village, island: VillageIsland): ResidentPlan[] {
+  const res = newReservations();
+  return rs.map((r, i) => planResident(r, i, v, island, res));
 }
 
 // ── The day as legs ─────────────────────────────────────────────────────

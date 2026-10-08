@@ -17,7 +17,7 @@
  * Pure: no clock, no DOM, no network. `advance(toMs, outbox)` steps a bot to a room time and hands its messages over.
  */
 import { MOVE_TUNING, NO_INPUT, STEP, createMoveState, stepMove, towards, type MoveEvent, type MoveInput, type MoveState, type MoveWorld } from "@/lib/game/movement/sim";
-import { BENCH_SEAT_TOP, villageIsland } from "@/lib/game/defaultIsland";
+import { BENCH_SEAT_TOP, BENCH_SLOTS, benchSlotKey, benchSlotPoint, villageIsland } from "@/lib/game/defaultIsland";
 import { CHARACTER_SCALE } from "@/components/game/character/Character";
 import { objectsOf, village, villageSpawnPoint } from "@/lib/game/villageMap";
 import { airPhase, isLoop, seatLift, type ClipName } from "@/lib/game/character/clips";
@@ -35,8 +35,8 @@ import {
 /** The kit bots move with: the village's, the leaf glider owned. */
 export const BOT_TUNING = { ...MOVE_TUNING, glider: 1 };
 const STEP_MS = STEP * 1000;
-/** Bench slots: two along each bench, this far either side of its middle (specs/multiplayer.md §8). */
-export const BENCH_SLOT = 0.42;
+/** Bench slots: two along each bench, this far either side of its middle (specs/multiplayer.md §8): the one seat model players and residents share (defaultIsland BENCH_SLOTS). */
+export const BENCH_SLOT = BENCH_SLOTS[1];
 
 /** The words bots are named from ("Pebble 03"). */
 const NAME_WORDS = ["Pebble", "Juniper", "Bramble", "Saffron", "Tidepool", "Marlow", "Thistle", "Clover", "Puffin", "Driftwood", "Sorrel", "Kelp",
@@ -162,11 +162,9 @@ function benchFront(b: BenchSpot, d: number): [number, number] {
   return [b.x + Math.sin(b.yaw) * d, b.z + Math.cos(b.yaw) * d];
 }
 /** A bench slot's spot: along the bench, either side of its middle. */
-export function benchSlot(b: BenchSpot, slot: 0 | 1): [number, number] {
-  const k = slot === 0 ? -BENCH_SLOT : BENCH_SLOT;
-  return [b.x + Math.cos(b.yaw) * k, b.z - Math.sin(b.yaw) * k];
-}
-export const benchKey = (b: BenchSpot, slot: 0 | 1) => `bench:${b.id}#${slot}`;
+export const benchSlot = (b: BenchSpot, slot: 0 | 1): [number, number] => benchSlotPoint(b, slot);
+/** A bench slot's seat claim (`bench:<id>#0|1`). */
+export const benchKey = (b: BenchSpot, slot: 0 | 1) => benchSlotKey(b.id, slot);
 /** A bench sitter's lift at (x, z), as PlayerAvatar's tsi:sit computes it: seatLift(Sit, seatY − the ground there, CHARACTER_SCALE). */
 export function benchLift(w: Pick<BotWorld, "ground">, b: BenchSpot, x: number, z: number): number {
   return seatLift("Sit", w.ground(b.x, b.z) + BENCH_SEAT_TOP - w.ground(x, z), CHARACTER_SCALE);
