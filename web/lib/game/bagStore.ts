@@ -24,10 +24,12 @@ export interface BagState {
   order: Slot[];
   /** Picked up since you last looked. */
   fresh: string[];
+  /** The last read failed (a 500, a 429): the sheet says so with a retry instead of loading forever. */
+  error: boolean;
 }
 
 const KEY = "tsi.bag.v1";
-const EMPTY: BagState = { view: null, local: false, order: [], fresh: [] };
+const EMPTY: BagState = { view: null, local: false, order: [], fresh: [], error: false };
 let state: BagState = EMPTY, loaded = false;
 const listeners = new Set<() => void>();
 
@@ -73,11 +75,14 @@ let inflight: Promise<void> | null = null;
 /** Read the bag again (a pickup, a sale, opening the bag). Signed out or with no server, this browser's record. */
 export function loadBag(): Promise<void> {
   boot();
+  // Trying again after an error: the sheet goes back to "Opening…" while it asks.
+  if (!inflight && state.error) set({ error: false });
   inflight ??= fetch("/api/collections/bag").then(async res => {
     const json = await res.json().catch(() => null) as { ok?: boolean; bag?: BagView } | null;
-    if (res.ok && json?.bag) set({ view: json.bag, local: false });
-    else if (res.status === 401 || res.status === 503 || res.status === 404) set({ view: localView(), local: true });
-  }, () => set({ view: localView(), local: true })).finally(() => { inflight = null; });
+    if (res.ok && json?.bag) set({ view: json.bag, local: false, error: false });
+    else if (res.status === 401 || res.status === 503 || res.status === 404) set({ view: localView(), local: true, error: false });
+    else set({ error: true });
+  }, () => set({ view: localView(), local: true, error: false })).finally(() => { inflight = null; });
   return inflight;
 }
 
@@ -86,7 +91,7 @@ const changed = () => window.dispatchEvent(new CustomEvent("tsi:bag-changed"));
 export async function bagWrite(body: Record<string, unknown>): Promise<BagView> {
   const write = body.action === "lock" ? body : { ...body, idempotency_key: newKey() };
   const view = await apiCall<BagView>("/api/collections/bag", "bag", write);
-  set({ view, local: false });
+  set({ view, local: false, error: false });
   changed();
   return view;
 }
