@@ -31,12 +31,12 @@ const slotTab = (id: string, label: string, slots: PartSlot[], framing: Tab["fra
 });
 const TABS: Tab[] = [
   { id: "skin", label: "Skin", items: [], framing: "head", swatch: "skin", apply: l => l, on: () => false, name: () => "" },
-  { id: "eyes", label: "Eyes", items: Object.keys(FACE.layers.eyes.items), framing: "head", swatch: null, apply: (l, id) => ({ ...l, eyes: id! }), on: (l, id) => l.eyes === id, name: id => `Eyes ${id}` },
-  { id: "mouth", label: "Mouth", items: Object.keys(FACE.layers.mouth.items), framing: "head", swatch: null, apply: (l, id) => ({ ...l, mouth: id! }), on: (l, id) => l.mouth === id, name: id => `Mouth ${id}` },
+  { id: "eyes", label: "Eyes", items: Object.keys(FACE.layers.eyes.items), framing: "head", swatch: null, apply: (l, id) => ({ ...l, eyes: id! }), on: (l, id) => l.eyes === id, name: id => FACE.names[id!] ?? `Eyes ${id}` },
+  { id: "mouth", label: "Mouth", items: Object.keys(FACE.layers.mouth.items), framing: "head", swatch: null, apply: (l, id) => ({ ...l, mouth: id! }), on: (l, id) => l.mouth === id, name: id => FACE.names[id!] ?? `Mouth ${id}` },
   {
     id: "features", label: "Brows & extras", items: [...Object.keys(FACE.layers.brows.items), ...Object.keys(FACE.layers.extras.items)], framing: "head", swatch: "hair",
     apply: (l, id) => id! in FACE.layers.brows.items ? { ...l, brows: id! } : { ...l, extras: l.extras.includes(id!) ? l.extras.filter(e => e !== id) : [...l.extras, id!] },
-    on: (l, id) => l.brows === id || l.extras.includes(id!), name: id => ({ brow_soft: "Soft brows", brow_flat: "Flat brows", blush: "Blush", mole: "Mole", freckles: "Freckles" } as Record<string, string>)[id!] ?? id!,
+    on: (l, id) => l.brows === id || l.extras.includes(id!), name: id => ({ brow_soft: "Soft brows", brow_flat: "Flat brows", blush: "Blush", mole: "Mole", freckles: "Freckles" } as Record<string, string>)[id!] ?? FACE.names[id!] ?? id!,
   },
   slotTab("bangs", "Bangs", ["bangs"], "head", "hair"),
   slotTab("back", "Back hair", ["back"], "head", "hair"),
@@ -70,7 +70,7 @@ function Stage({ look, framing, yaw = -0.4, faceSize = 512 }: { look: CharacterL
     <ambientLight intensity={1.1} color="#fff6e6" />
     <hemisphereLight args={["#fff8ec", "#b7c7a8", 0.9]} />
     <directionalLight position={[1.6, 2.6, 2.2]} intensity={1.7} color="#fff1d8" />
-    <Suspense fallback={null}><Character look={look} motion={motion} scale={1} faceSize={faceSize} /></Suspense>
+    <Suspense fallback={null}><Character look={look} motion={motion} scale={1} faceSize={faceSize} lod={false} /></Suspense>
   </>;
 }
 

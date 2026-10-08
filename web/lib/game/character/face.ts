@@ -1,7 +1,7 @@
 /**
  * Animated painted face (avatar v7, rows 132, 144, 192, 254): an ACNH-style face the engine animates without
  * redrawing a canvas. The face atlas (art/characters/v7/build_face.py) holds every feature once; the face shader
- * draws the skin colour plus seven layer slots (blush, freckles, mole, brows, the two eyes, mouth), each an atlas
+ * draws the skin colour plus eight layer slots (blush band, blush, freckles, mole, brows, the two eyes, mouth), each an atlas
  * cell placed at its anchor on the face canvas (the head's UVs), mirrored for the other side where the layer is.
  * Blinking, talking and the six expressions only change which cell each slot shows and the brows' pose.
  * Pure: FaceAnimator picks the frame, faceSlots turns it into slot data, faceMaterial.ts uploads it.
@@ -110,7 +110,7 @@ export class FaceAnimator {
  * the other side, 2 only the mirrored copy; tint = hex multiplied into white art (brows: the hair colour);
  * pose = [pivot u, pivot w, dy, tilt in radians] rotating the cell about its anchor. src null = the slot is off. */
 export interface FaceSlot { src: [number, number, number, number] | null; dst: [number, number, number, number]; mirror: 0 | 1 | 2; tint: string | null; pose: [number, number, number, number] }
-export const FACE_SLOT_COUNT = 7;
+export const FACE_SLOT_COUNT = 8;
 const OFF: FaceSlot = { src: null, dst: [0, 0, 0, 0], mirror: 0, tint: null, pose: [0, 0, 0, 0] };
 
 function slot(cell: FaceCell, anchor: [number, number], mirror: 0 | 1 | 2, tint: string | null = null, brow: [number, number] = [0, 0]): FaceSlot {
@@ -119,7 +119,7 @@ function slot(cell: FaceCell, anchor: [number, number], mirror: 0 | 1 | 2, tint:
   return { src: [x / W, y / H, w / W, h / H], dst: [u0, w0, u0 + w * k, w0 + h * k], mirror, tint, pose: [anchor[0], anchor[1], brow[0], (brow[1] * Math.PI) / 180] };
 }
 
-/** The seven slots (blush, freckles, mole, brows, right eye, left eye, mouth) for a look showing `pose`. */
+/** The eight slots (blush band, blush, freckles, mole, brows, right eye, left eye, mouth) for a look showing `pose`. */
 export function faceSlots(look: CharacterLook, pose: FacePose): FaceSlot[] {
   const { extras, brows, mouth } = FACE.layers, A = FACE.anchors;
   const extra = (id: string) => {
@@ -128,7 +128,7 @@ export function faceSlots(look: CharacterLook, pose: FacePose): FaceSlot[] {
   };
   const eyeCell = eyeCells(pose.eyes)[pose.eyeFrame] ?? eyeCells(pose.eyes).open;
   return [
-    extra("blush"), extra("freckles"), extra("mole"),
+    extra("blush_band"), extra("blush"), extra("freckles"), extra("mole"),
     slot(brows.items[look.brows] ?? brows.items[brows.default], A.brow, 1, PALETTE.hair[look.hair], pose.brow),
     slot(eyeCell, A.eye, 0),
     slot(eyeCell, A.eye, 2),

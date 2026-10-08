@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { BASE_URL, CLIPS, DEFAULT_LOOK, FACE, FACE_ATLAS_URLS, PALETTE, PARTS, PART_BY_ID, parseLook, randomLook, resolveParts, seeded, wear, wornParts } from "./look";
+import { BASE_URL, LOD_SKIN_URL, CLIPS, DEFAULT_LOOK, FACE, FACE_ATLAS_URLS, PALETTE, PARTS, PART_BY_ID, parseLook, randomLook, resolveParts, seeded, wear, wornParts } from "./look";
 
 const web = join(__dirname, "../../..");
 const art = join(web, "../art/characters");
@@ -17,6 +17,17 @@ describe("character catalogue", () => {
     for (const f of [BASE_URL, FACE_ATLAS_URLS.creator, FACE_ATLAS_URLS.world]) expect(existsSync(join(web, "public", f)), f).toBe(true);
     expect(existsSync(join(web, "public/assets/characters/v6/decal_tsi_mark.png"))).toBe(true);
     expect(BASE_URL).toMatch(/v7_clips\.glb$/); // the hand-modeled v7 head (avatar v7)
+  });
+  it("ships a LOD 1 for every part and the base skin, lighter than the full (art/characters/build_lod.py)", () => {
+    const lod = JSON.parse(readFileSync(join(art, "lod1/lod.json"), "utf8")) as Record<string, { tris: number; lod1: number }>;
+    for (const p of PARTS) {
+      expect(lod[p.glb], p.glb).toBeDefined();
+      expect(readFileSync(join(web, "public/assets/characters/v6/lod1", p.glb)).equals(readFileSync(join(art, "lod1", p.glb))), p.glb).toBe(true);
+      expect(lod[p.glb].lod1, p.glb).toBeLessThanOrEqual(lod[p.glb].tris);
+    }
+    expect(existsSync(join(web, "public", LOD_SKIN_URL))).toBe(true);
+    const all = Object.values(lod).reduce((s, v) => [s[0] + v.tris, s[1] + v.lod1], [0, 0]);
+    expect(all[1] / all[0]).toBeLessThan(0.9); // shape-checked: hair and outfits lighten, glasses, prints and layered tops stay whole
   });
   it("has unique ids, known slots, budgets, and the palette sizes of row 143", () => {
     expect(new Set(PARTS.map(p => p.id)).size).toBe(PARTS.length);

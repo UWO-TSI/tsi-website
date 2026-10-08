@@ -21,6 +21,7 @@ Milestone 1 (the head, the face system, three styles) was approved with three tw
 | `export_hair.py` | Runs headless: reads both `.blend` files, writes the 28 GLBs and both catalogues' hair entries. |
 | `split_blends.py` | Splits the live working file into the review files above. |
 | `build_face.py` | Builds the face atlas, `face/face_v7.json`, and composed faces. |
+| `face_set_301.py` | Row 301's parts (sleepy and dot eyes, cat and curled-grin mouths, the blush band), imported by `build_face.py`. |
 | `face/` | `v7_face_atlas.png` (1024 px per face canvas), `v7_face_atlas_512.png` (the world copy), `face_v7.json`, and `v7_face_default.png` (the `.blend` preview). |
 
 `hair/build_hair.py` (the parametric shell builder) is retired: it exits unless run with `--force-legacy`.
@@ -102,16 +103,16 @@ Gathered styles (pony, pigtails, buns) take their locks from the crown for low t
 `build_face.py` redraws v6's measured drawings of David's picks (row 192), one side per cell. The engine mirrors eyes, brows, blush and freckles.
 
 **Atlas contents:**
-- 14 eye styles; every lidded eye has `open`, `half` and `closed` frames.
+- 16 eye styles; every lidded eye has `open`, `half` and `closed` frames.
 - 2 brows (white, tinted with the hair colour).
-- 76 mouths (M picks plus the whole G grid).
+- 78 mouths (M picks, the whole G grid, and row 301's two).
 - 4 talk cells (`layers.talk`, T1-T4).
-- 3 extras.
+- 4 extras.
 
-**Atlas format:** 2048×1152 px at 1024 px per face canvas, with 16 px gutters whose colour is bled outward for mipmaps. The world loads the 512 copy. A cell is `[x, y, w, h, ax, ay]`, where `(ax, ay)` sits on the layer's anchor measured on reference 18: eye, brow, mouth, cheek, mole.
+**Atlas format:** 2048×1344 px at 1024 px per face canvas, with 16 px gutters whose colour is bled outward for mipmaps. The world loads the 512 copy. A cell is `[x, y, w, h, ax, ay]`, where `(ax, ay)` sits on the layer's anchor measured on reference 18: eye, brow, mouth, cheek, mole (plus `blush`, the band's point on the centre line between the eyes and the cheeks).
 
 **Engine** (`web/lib/game/character/face.ts`, `faceMaterial.ts`):
-- The face draws the skin colour plus seven slots: blush, freckles, mole, brows, right eye, left eye (mirror only) and mouth.
+- The face draws the skin colour plus eight slots: blush band, blush, freckles, mole, brows, right eye, left eye (mirror only) and mouth.
 - Each slot is uniforms only: the atlas rect, where it lands on the canvas, a mirror mode, a tint, and a pose that moves and tilts the brows.
 - Each character owns one material; they all share one program.
 

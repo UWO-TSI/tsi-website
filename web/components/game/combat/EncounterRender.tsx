@@ -96,7 +96,8 @@ export function EnemyInstances({ typeId, capacity, ground, allies = false, type:
     const t = clock.elapsedTime, { sphere } = scratch.current;
     const list = collect(scratch.current.list, typeId, allies, capacity);
     BOX.makeEmpty();
-    list.forEach((e, i) => {
+    for (let i = 0; i < list.length; i++) {
+      const e = list[i];
       BOX.expandByPoint(tmpP.set(e.x, ground(e.x, e.z) + type.hover, e.z));
       // A hit swells it a little with the flash; a defeat pops it a size up and it's gone in a puff (RuinsScene).
       const dying = e.state === "dead" ? 1 + 0.18 * Math.sin((e.deadFor / POP) * Math.PI * 0.5) : 1 + e.flash * 0.45;
@@ -106,16 +107,16 @@ export function EnemyInstances({ typeId, capacity, ground, allies = false, type:
       if (e.flat) tmpS.z *= 1 - 0.94 * e.flat; // trapped in a sweeping mirror: pressed flat into the glass (primitives.ts sweep)
       tmpP.set(e.x, ground(e.x, e.z) + type.hover + bob + airborne(e) + (e.flat ?? 0) * 1.7, e.z); // a mirror's catch is lifted into its glass
       tmpM.compose(tmpP, tmpQ, tmpS);
-      nodes.forEach((n, ni) => {
-        const m = world[ni].copy(n.rest);
+      for (let ni = 0; ni < nodes.length; ni++) {
+        const n = nodes[ni], m = world[ni].copy(n.rest);
         const pose = n.role && partPose(n.role, e, t, i * 1.7, POSE);
         if (pose) m.multiply(poseM.compose(poseP.set(0, pose.dy, pose.dz), poseQ.setFromEuler(poseE.set(pose.rx, pose.ry, pose.rz)), poseS.set(pose.s, pose.sy * pose.s, pose.s)));
         m.premultiply(n.parent < 0 ? tmpM : world[n.parent]);
-      });
+      }
       const lit = glow(e, t);
-      parts.forEach((part, pi) => {
-        const mesh = refs.current[pi];
-        if (!mesh) return;
+      for (let pi = 0; pi < parts.length; pi++) {
+        const part = parts[pi], mesh = refs.current[pi];
+        if (!mesh) continue;
         mesh.setMatrixAt(i, world[part.node]);
         // Telegraph parts: their glow. Others: hit flash (bright enough to read on the dark fox too), windup tint (warm), home-walk (faded).
         if (part.telegraph) tmpC.setScalar(lit + e.flash * 4);
@@ -125,11 +126,13 @@ export function EnemyInstances({ typeId, capacity, ground, allies = false, type:
         else tmpC.setScalar(1);
         if (allies && !OWN_COLOURS.has(typeId)) tmpC.multiply(e.id.startsWith("shade") ? SHADE_TINT : ALLY_TINT);
         mesh.setColorAt(i, tmpC);
-      });
-    });
+      }
+    }
     if (list.length) { BOX.getBoundingSphere(sphere); sphere.radius += reach * type.modelScale; }
     for (const mesh of refs.current) {
       if (!mesh) continue;
+      // None of this type out: not drawn at all (an empty instanced mesh still costs a draw and its shadow pass's).
+      mesh.visible = list.length > 0;
       mesh.count = list.length;
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
@@ -303,6 +306,7 @@ function ShotPool({ kind, ground, max }: { kind: Projectile["kind"]; ground: Gro
       n++;
     }
     b.count = t.count = n;
+    b.visible = t.visible = n > 0;
     b.instanceMatrix.needsUpdate = t.instanceMatrix.needsUpdate = true;
   });
   return <>
@@ -322,10 +326,12 @@ export function Wisps({ ground, max = 10 }: { ground: Ground; max?: number }) {
   const glow = useTexture("/assets/sky/sun.png");
   const refs = useRef<(THREE.Sprite | null)[]>([]);
   useFrame(({ clock }) => {
-    const list = combat.rt.units.filter(u => !u.body && SPRITE_TINT[u.def.key]);
+    const units = combat.rt.units;
+    let next = 0;
     for (let i = 0; i < max; i++) {
       const s = refs.current[i]; if (!s) continue;
-      const m = list[i];
+      while (next < units.length && (units[next].body || !SPRITE_TINT[units[next].def.key])) next++;
+      const m = next < units.length ? units[next++] : undefined;
       s.visible = !!m;
       if (!m) continue;
       const decoy = m.def.kind === "decoy";
@@ -349,6 +355,8 @@ const TOTEM_COLOR = colors({ "totem-ember": "#ff8a3d", "totem-mending": "#7dff9e
   "sniper-mine": "#a9c8ff", "snare-trap": "#5fd1b0", "spike-trap": "#d8f0a0", "spectral-hound": "#5fd1b0" }), TOTEM_DEFAULT = TOTEM_COLOR["totem-mending"];
 const glowing = (m: THREE.Material) => m.name === "M_Glow", solid = (m: THREE.Material) => m.name !== "M_Glow";
 const camDir = new THREE.Vector3();
+/** A unit that gets a ring or a totem's post: not a weapon's, a clone (it must pass for you), an ult's free horde (cost 0: thirty rings would bury the field) or a bodied totem (the Warden's draw as their own models). */
+const marked = (u: (typeof combat.rt.units)[number]) => u.source !== "weapon" && u.def.kind !== "clone" && u.def.cost !== 0 && !(u.def.kind === "totem" && u.body);
 export function Totems({ ground, max = 16 }: { ground: Ground; max?: number }) {
   const rings = useRef<(THREE.Mesh | null)[]>([]), post = useRef<THREE.InstancedMesh>(null), eyes = useRef<THREE.InstancedMesh>(null);
   const postGeo = useBaked(`${P}totem.glb`, solid), glowGeo = useBaked(`${P}totem.glb`, glowing);
@@ -356,16 +364,18 @@ export function Totems({ ground, max = 16 }: { ground: Ground; max?: number }) {
   const disc = useMemo(() => new THREE.CircleGeometry(1, 48).rotateX(-Math.PI / 2), []);
   useEffect(() => () => { ring.dispose(); disc.dispose(); }, [ring, disc]);
   useFrame(({ clock, camera }) => {
-    // No marker under a clone (it must pass for you), an ult's free horde (cost 0: thirty rings would bury the field) or a
-    // bodied totem (the Warden's draw as their own models).
-    const list = combat.rt.units.filter(u => u.source !== "weapon" && u.def.kind !== "clone" && u.def.cost !== 0 && !(u.def.kind === "totem" && u.body)), p = post.current, e = eyes.current;
+    // The units that get a marker (`marked`), in order, without a list made each frame.
+    const units = combat.rt.units, p = post.current, e = eyes.current;
+    let next = 0;
     // Carved faces turn to the camera, wherever it orbits (specs/camera-orbit.md): yaw + π from its heading.
     camera.getWorldDirection(camDir);
     const facing = Math.atan2(camDir.x, camDir.z) + Math.PI;
     let posts = 0;
     for (let i = 0; i < max; i++) {
-      const r = rings.current[i], u = list[i];
+      const r = rings.current[i];
       if (!r) continue;
+      while (next < units.length && !marked(units[next])) next++;
+      const u = next < units.length ? units[next++] : undefined;
       r.visible = !!u;
       if (!u) continue;
       const g = ground(u.x, u.z), c = TOTEM_COLOR[u.def.key] ?? TOTEM_DEFAULT, totem = u.def.kind === "totem", area = totem || u.def.kind === "trap";
@@ -385,6 +395,7 @@ export function Totems({ ground, max = 16 }: { ground: Ground; max?: number }) {
     }
     if (p && e) {
       p.count = e.count = posts;
+      p.visible = e.visible = posts > 0;
       p.instanceMatrix.needsUpdate = e.instanceMatrix.needsUpdate = true;
       if (e.instanceColor) e.instanceColor.needsUpdate = true;
     }

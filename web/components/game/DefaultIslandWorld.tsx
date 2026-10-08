@@ -13,6 +13,8 @@ import GameSceneBoundary from "./GameSceneBoundary";
 import PostFX from "./PostFX";
 import HQInterior from "./HQInterior";
 import SunShadows from "./SunShadows";
+import PerfProbe from "./PerfProbe";
+import QualityGovernor from "./QualityGovernor";
 import { FadeLight, Lantern } from "./AmbientProps";
 import { GLBProp, sceneryOf } from "./NatureModels";
 import { InstancedModels } from "./InstancedNature";
@@ -1057,6 +1059,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           <LookMaterials preset={lookPreset} />
           <SunShadows />
           <Performance player={player} output={perfOutput} />
+          {DEV && <PerfProbe />}
+          <QualityGovernor dpr={graphics.pixelated ? 0.5 : [1, 1.5]} scene={`${site}:${inside ?? ""}`} />
           <QualityProbe onTier={onTier} />
           <SeatWatch onChange={setSeated} />
           <WarmupProbe key={sceneShown} onReady={onSceneReady} />

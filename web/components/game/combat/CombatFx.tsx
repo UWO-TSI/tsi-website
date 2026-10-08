@@ -19,6 +19,7 @@ import { COMBAT_PACK, COMBAT_PACK_URL } from "@/lib/game/fx/combatPack";
 import { DEFAULT_RAMP, FX, FX_POOLS, RampTable, sharedRamps, type MeshLayer } from "@/lib/game/fx/combat";
 import { createCombatParticleMaterial, createFxMaterial, createTrailMaterial, rampMap } from "@/lib/game/fx/fxMaterial";
 import { weaponTrail } from "@/lib/game/fx/trail";
+import { quality } from "@/lib/game/perf/governor";
 
 type Ground = (x: number, z: number) => number;
 /** An area's effects scale with its radius against this one (the demo slam's). */
@@ -63,12 +64,96 @@ const SHAPES: Record<MeshLayer["shape"], () => THREE.BufferGeometry> = {
   beam: () => new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0, 0, 0.5),
   spike: () => new THREE.ConeGeometry(1, 1, 6, 1, true).translate(0, 0.5, 0),
 };
+/** The FX lights stay in the scene at a constant count (dark when idle); Lite has none. Module scope: hook values are never written in a component. */
+function showLights(lights: THREE.PointLight[], on: boolean) { for (const l of lights) l.visible = on; }
 interface LiveMesh { layer: MeshLayer; t: number; x: number; y: number; z: number; yaw: number; scale: number; row: number; seed: number }
 interface LiveLight { t: number; life: number; intensity: number }
+interface FxSystem {
+  glow: ParticlePool; ink: ParticlePool; decals: ParticlePool; pools: ParticlePool[];
+  layers: ReturnType<typeof poolMesh>[]; meshes: THREE.Mesh[]; lights: THREE.PointLight[]; group: THREE.Group;
+  geos: Record<MeshLayer["shape"], THREE.BufferGeometry>; live: (LiveMesh | null)[]; lit: (LiveLight | null)[]; color: THREE.Color;
+}
+
+/** One frame of the effects (module scope: hook values are never written in a component): spawn the events, step and draw the pools, meshes and lights. */
+function stepFx(s: FxSystem, cam: { p: THREE.Vector3; d: THREE.Vector3 }, ground: Ground, lite: boolean, camera: THREE.Camera, clock: { elapsedTime: number }, delta: number) {
+  const rt = combat.rt, dt = combat.hitstop > 0 || combat.freeze ? 0 : Math.min(delta, 0.05) * worldSpeed();
+  // Spawn this frame's events.
+  for (const ev of rt.fx) {
+    const r = FX[ev.key];
+    if (!r) continue;
+    const row = ramps.row(r.ramp ?? ev.ramp ?? DEFAULT_RAMP), gy = ground(ev.x, ev.z), byR = ev.radius ? Math.min(2.4, Math.max(0.5, ev.radius / REF_RADIUS)) : 1;
+    r.layers.forEach((l, li) => {
+      const seed = (ev.seed + li * 0x9e3779b1) | 0;
+      if (l.kind === "particles") {
+        const pool = l.pool === "glow" ? s.glow : s.ink, dx = l.toward ? (ev.aim.x - ev.x) * (l.toward === "away" ? -1 : 1) : 0, dz = l.toward ? (ev.aim.z - ev.z) * (l.toward === "away" ? -1 : 1) : 0;
+        pool.burst(l.recipe, ev.x, gy + (l.lift ?? 0), ev.z, gy, dx, dz, l.byRadius ? byR : 1, 0xffffff, seed, 1, row, (lite ? 0.5 : 1) * quality.knobs.particles);
+      } else if (l.kind === "decal") {
+        const size = l.size * (l.byRadius ? ev.radius ?? 1 : 1);
+        s.decals.burst({ sprite: l.sprite, count: [1, 1], life: [l.life, l.life], size: [size, size], grow: 1.05, speed: [0, 0], spread: 0, up: [0, 0], gravity: 0, drag: 0, wind: 0,
+          alpha: 0.9, face: FACE.ground, fadeIn: 25, spin: l.spin }, ev.x, gy + 0.02, ev.z, gy, 0, 0, 1, 0xffffff, seed, 1, row);
+      } else if (l.kind === "mesh") {
+        const i = s.live.findIndex(x => !x), at = i < 0 ? s.live.length : i;
+        if (at >= s.meshes.length) return; // the pool's full: the oldest effects already fill the screen
+        s.live[at] = { layer: l, t: 0, x: ev.x, y: gy + (l.lift ?? 0), z: ev.z, yaw: Math.atan2(ev.aim.x - ev.x, ev.aim.z - ev.z), scale: l.byRadius ? byR : 1, row, seed: (seed >>> 0) % 997 };
+        const m = s.meshes[at], up = l.shape === "pillar" || l.shape === "dome" || l.shape === "spike";
+        m.geometry = s.geos[l.shape];
+        (m.material as THREE.ShaderMaterial).uniforms.uUp.value = up ? 1 : 0;
+        (m.material as THREE.ShaderMaterial).uniforms.uRim.value = l.shape === "dome" || l.shape === "pillar" ? 0.9 : 0.3;
+      } else if (!lite) {
+        const i = s.lit.findIndex(x => !x), at = i < 0 ? Math.min(s.lit.length, s.lights.length - 1) : i;
+        s.lit[at] = { t: 0, life: l.life, intensity: l.intensity };
+        const light = s.lights[at];
+        light.position.set(ev.x, gy + 1.5, ev.z); light.distance = l.distance; light.color.set((r.ramp ?? ev.ramp ?? DEFAULT_RAMP)[1]);
+      }
+    });
+  }
+  rt.fx.length = 0;
+  // Travel recipes: a wake thrown along each v2 shot every frame it flies.
+  if (dt > 0) for (const sh of rt.projectiles) {
+    const r = sh.hit?.travel ? FX[sh.hit.travel] : undefined;
+    if (!r) continue;
+    const row = ramps.row(sh.hit!.ramp ?? DEFAULT_RAMP), gy = ground(sh.x, sh.z);
+    for (let li = 0; li < r.layers.length; li++) {
+      const l = r.layers[li];
+      if (l.kind === "particles") (l.pool === "glow" ? s.glow : s.ink).burst(l.recipe, sh.x, gy + (l.lift ?? 0), sh.z, gy, 0, 0, 1, 0xffffff, (sh.id * 7919 + li + Math.floor(clock.elapsedTime * 60)) | 0, 1, row, (lite ? 0.5 : 1) * quality.knobs.particles);
+    }
+  }
+  // Step and draw the pools.
+  camera.getWorldPosition(cam.p); camera.getWorldDirection(cam.d);
+  const { p, d } = cam;
+  for (let k = 0; k < s.pools.length; k++) {
+    const pool = s.pools[k];
+    pool.update(dt, 0, 0);
+    const n = pool.write(p.x, p.y, p.z, d.x, d.y, d.z), layer = s.layers[k];
+    layer.g.instanceCount = n;
+    layer.mesh.visible = n > 0;
+    if (n) for (const a of layer.attrs) { a.clearUpdateRanges(); a.addUpdateRange(0, n * 4); a.needsUpdate = true; }
+  }
+  rampMap(ramps); // a new kit's ramp uploads once
+  for (let i = 0; i < s.meshes.length; i++) {
+    const m = s.meshes[i], live = s.live[i];
+    if (!live) { m.visible = false; continue; }
+    live.t += dt;
+    const l = live.layer, u = Math.min(1, live.t / l.life), size = (l.from + (l.to - l.from) * (1 - (1 - u) * (1 - u))) * live.scale;
+    if (u >= 1) { s.live[i] = null; m.visible = false; continue; }
+    m.visible = true;
+    m.position.set(live.x, live.y, live.z);
+    m.rotation.set(0, l.shape === "beam" ? live.yaw : 0, 0);
+    if (l.shape === "beam") m.scale.set(Math.max(0.2, size * 0.25), 1, l.to * live.scale);
+    else m.scale.set(size, l.shape === "ring" ? 1 : (l.height ?? 1) * (l.shape === "dome" ? size / Math.max(0.01, l.to) : 1), size);
+    const un = (m.material as THREE.ShaderMaterial).uniforms;
+    un.uRow.value = live.row; un.uLife.value = u * u; un.uTime.value = clock.elapsedTime; un.uSeed.value = live.seed; un.uOpacity.value = 1 - u * 0.3;
+  }
+  for (let i = 0; i < s.lights.length; i++) {
+    const light = s.lights[i], l = s.lit[i];
+    if (l && (l.t += dt) >= l.life) s.lit[i] = null;
+    light.intensity = s.lit[i] ? l!.intensity * (1 - l!.t / l!.life) : 0;
+  }
+}
 
 export default function CombatFx({ ground, lite = false }: { ground: Ground; lite?: boolean }) {
   const scene = useThree(s => s.scene);
-  const sys = useMemo(() => {
+  const sys = useMemo((): FxSystem => {
     const map = combatPackMap(), ramp = rampMap(ramps);
     const glow = new ParticlePool(FX_POOLS.glow, COMBAT_PACK), ink = new ParticlePool(FX_POOLS.ink, COMBAT_PACK), decals = new ParticlePool(FX_POOLS.decals, COMBAT_PACK);
     // Above the terrain's painted sand and soil layers (render orders 2, 3, transparent), under the telegraphs' rims (4).
@@ -79,92 +164,23 @@ export default function CombatFx({ ground, lite = false }: { ground: Ground; lit
       m.visible = false; m.frustumCulled = false; m.renderOrder = 3.5;
       return m;
     });
-    const lights = Array.from({ length: FX_POOLS.lights }, () => { const l = new THREE.PointLight("#ffffff", 0, 10, 2); l.visible = false; return l; });
+    // Always in the scene at a constant count (dark when idle): a light appearing changes every lit material's program,
+    // which recompiled the whole scene on the first ult (specs/perf/2026-10-baseline.md). Lite has none.
+    const lights = Array.from({ length: FX_POOLS.lights }, () => { const l = new THREE.PointLight("#ffffff", 0, 10, 2); return l; });
     const group = new THREE.Group();
     for (const l of layers) group.add(l.mesh);
     for (const m of meshes) group.add(m);
     for (const l of lights) group.add(l);
-    return { glow, ink, decals, layers, meshes, lights, group, geos, live: [] as (LiveMesh | null)[], lit: [] as (LiveLight | null)[], color: new THREE.Color() };
+    return { glow, ink, decals, layers, meshes, lights, group, geos, pools: [decals, ink, glow], live: [] as (LiveMesh | null)[], lit: [] as (LiveLight | null)[], color: new THREE.Color() };
   }, []);
   useEffect(() => {
     scene.add(sys.group);
     return () => { scene.remove(sys.group); for (const l of sys.layers) { l.g.dispose(); (l.mesh.material as THREE.Material).dispose(); } for (const m of sys.meshes) (m.material as THREE.Material).dispose(); for (const g of Object.values(sys.geos)) g.dispose(); };
   }, [scene, sys]);
+  useEffect(() => showLights(sys.lights, !lite), [sys, lite]);
   const cam = useRef({ p: new THREE.Vector3(), d: new THREE.Vector3() });
 
-  useFrame(({ camera, clock }, delta) => {
-    const rt = combat.rt, s = sys, dt = combat.hitstop > 0 || combat.freeze ? 0 : Math.min(delta, 0.05) * worldSpeed();
-    // Spawn this frame's events.
-    for (const ev of rt.fx) {
-      const r = FX[ev.key];
-      if (!r) continue;
-      const row = ramps.row(r.ramp ?? ev.ramp ?? DEFAULT_RAMP), gy = ground(ev.x, ev.z), byR = ev.radius ? Math.min(2.4, Math.max(0.5, ev.radius / REF_RADIUS)) : 1;
-      r.layers.forEach((l, li) => {
-        const seed = (ev.seed + li * 0x9e3779b1) | 0;
-        if (l.kind === "particles") {
-          const pool = l.pool === "glow" ? s.glow : s.ink, dx = l.toward ? (ev.aim.x - ev.x) * (l.toward === "away" ? -1 : 1) : 0, dz = l.toward ? (ev.aim.z - ev.z) * (l.toward === "away" ? -1 : 1) : 0;
-          pool.burst(l.recipe, ev.x, gy + (l.lift ?? 0), ev.z, gy, dx, dz, l.byRadius ? byR : 1, 0xffffff, seed, 1, row, lite ? 0.5 : 1);
-        } else if (l.kind === "decal") {
-          const size = l.size * (l.byRadius ? ev.radius ?? 1 : 1);
-          s.decals.burst({ sprite: l.sprite, count: [1, 1], life: [l.life, l.life], size: [size, size], grow: 1.05, speed: [0, 0], spread: 0, up: [0, 0], gravity: 0, drag: 0, wind: 0,
-            alpha: 0.9, face: FACE.ground, fadeIn: 25, spin: l.spin }, ev.x, gy + 0.02, ev.z, gy, 0, 0, 1, 0xffffff, seed, 1, row);
-        } else if (l.kind === "mesh") {
-          const i = s.live.findIndex(x => !x), at = i < 0 ? s.live.length : i;
-          if (at >= s.meshes.length) return; // the pool's full: the oldest effects already fill the screen
-          s.live[at] = { layer: l, t: 0, x: ev.x, y: gy + (l.lift ?? 0), z: ev.z, yaw: Math.atan2(ev.aim.x - ev.x, ev.aim.z - ev.z), scale: l.byRadius ? byR : 1, row, seed: (seed >>> 0) % 997 };
-          const m = s.meshes[at], up = l.shape === "pillar" || l.shape === "dome" || l.shape === "spike";
-          m.geometry = s.geos[l.shape];
-          (m.material as THREE.ShaderMaterial).uniforms.uUp.value = up ? 1 : 0;
-          (m.material as THREE.ShaderMaterial).uniforms.uRim.value = l.shape === "dome" || l.shape === "pillar" ? 0.9 : 0.3;
-        } else if (!lite) {
-          const i = s.lit.findIndex(x => !x), at = i < 0 ? Math.min(s.lit.length, s.lights.length - 1) : i;
-          s.lit[at] = { t: 0, life: l.life, intensity: l.intensity };
-          const light = s.lights[at];
-          light.position.set(ev.x, gy + 1.5, ev.z); light.distance = l.distance; light.color.set((r.ramp ?? ev.ramp ?? DEFAULT_RAMP)[1]);
-        }
-      });
-    }
-    rt.fx.length = 0;
-    // Travel recipes: a wake thrown along each v2 shot every frame it flies.
-    if (dt > 0) for (const sh of rt.projectiles) {
-      const r = sh.hit?.travel ? FX[sh.hit.travel] : undefined;
-      if (!r) continue;
-      const row = ramps.row(sh.hit!.ramp ?? DEFAULT_RAMP), gy = ground(sh.x, sh.z);
-      r.layers.forEach((l, li) => { if (l.kind === "particles") (l.pool === "glow" ? s.glow : s.ink).burst(l.recipe, sh.x, gy + (l.lift ?? 0), sh.z, gy, 0, 0, 1, 0xffffff, (sh.id * 7919 + li + Math.floor(clock.elapsedTime * 60)) | 0, 1, row, lite ? 0.5 : 1); });
-    }
-    // Step and draw the pools.
-    camera.getWorldPosition(cam.current.p); camera.getWorldDirection(cam.current.d);
-    const { p, d } = cam.current;
-    [s.decals, s.ink, s.glow].forEach((pool, k) => {
-      pool.update(dt, 0, 0);
-      const n = pool.write(p.x, p.y, p.z, d.x, d.y, d.z), layer = s.layers[k];
-      layer.g.instanceCount = n;
-      layer.mesh.visible = n > 0;
-      if (n) for (const a of layer.attrs) { a.clearUpdateRanges(); a.addUpdateRange(0, n * 4); a.needsUpdate = true; }
-    });
-    rampMap(ramps); // a new kit's ramp uploads once
-    s.meshes.forEach((m, i) => {
-      const live = s.live[i];
-      if (!live) { m.visible = false; return; }
-      live.t += dt;
-      const l = live.layer, u = Math.min(1, live.t / l.life), size = (l.from + (l.to - l.from) * (1 - (1 - u) * (1 - u))) * live.scale;
-      if (u >= 1) { s.live[i] = null; m.visible = false; return; }
-      m.visible = true;
-      m.position.set(live.x, live.y, live.z);
-      m.rotation.set(0, l.shape === "beam" ? live.yaw : 0, 0);
-      if (l.shape === "beam") m.scale.set(Math.max(0.2, size * 0.25), 1, l.to * live.scale);
-      else m.scale.set(size, l.shape === "ring" ? 1 : (l.height ?? 1) * (l.shape === "dome" ? size / Math.max(0.01, l.to) : 1), size);
-      const un = (m.material as THREE.ShaderMaterial).uniforms;
-      un.uRow.value = live.row; un.uLife.value = u * u; un.uTime.value = clock.elapsedTime; un.uSeed.value = live.seed; un.uOpacity.value = 1 - u * 0.3;
-    });
-    s.lights.forEach((light, i) => {
-      const l = s.lit[i];
-      if (!l) { light.visible = false; return; }
-      l.t += dt;
-      if (l.t >= l.life) { s.lit[i] = null; light.visible = false; return; }
-      light.visible = true; light.intensity = l.intensity * (1 - l.t / l.life);
-    });
-  });
+  useFrame(({ camera, clock }, delta) => stepFx(sys, cam.current, ground, lite, camera, clock, delta));
   return <WeaponTrail ramp={ramps} />;
 }
 

@@ -1,0 +1,70 @@
+ 1 s  CPU /6   18 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+ 2 s  CPU /6   21 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+ 3 s  CPU /6   20 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+ 4 s  CPU /6   18 FPS  level 1  {"shadowScale":0.5,"lodBias":1,"particles":1,"renderScale":1}
+ 5 s  CPU /6   20 FPS  level 1  {"shadowScale":0.5,"lodBias":1,"particles":1,"renderScale":1}
+ 6 s  CPU /6   20 FPS  level 1  {"shadowScale":0.5,"lodBias":1,"particles":1,"renderScale":1}
+ 7 s  CPU /6   20 FPS  level 2  {"shadowScale":0.5,"lodBias":1.5,"particles":1,"renderScale":1}
+ 8 s  CPU /6   21 FPS  level 2  {"shadowScale":0.5,"lodBias":1.5,"particles":1,"renderScale":1}
+ 9 s  CPU /6   21 FPS  level 2  {"shadowScale":0.5,"lodBias":1.5,"particles":1,"renderScale":1}
+10 s  CPU /6   19 FPS  level 3  {"shadowScale":0.5,"lodBias":1.5,"particles":0.6,"renderScale":1}
+11 s  CPU /6   21 FPS  level 3  {"shadowScale":0.5,"lodBias":1.5,"particles":0.6,"renderScale":1}
+12 s  CPU /6   23 FPS  level 3  {"shadowScale":0.5,"lodBias":1.5,"particles":0.6,"renderScale":1}
+13 s  CPU /6   18 FPS  level 4  {"shadowScale":0.5,"lodBias":1.5,"particles":0.6,"renderScale":0.85}
+14 s  CPU /6   20 FPS  level 4  {"shadowScale":0.5,"lodBias":1.5,"particles":0.6,"renderScale":0.85}
+15 s  CPU /6   21 FPS  level 4  {"shadowScale":0.5,"lodBias":1.5,"particles":0.6,"renderScale":0.85}
+16 s  CPU /6   21 FPS  level 4  {"shadowScale":0.5,"lodBias":1.5,"particles":0.6,"renderScale":0.85}
+17 s  CPU /6   21 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+18 s  CPU /6   21 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+19 s  CPU /6   22 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+20 s  CPU /6   21 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+21 s  CPU /6   23 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+22 s  CPU /6   22 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+23 s  CPU /6   21 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+24 s  CPU /6   22 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+25 s  CPU /6   21 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+26 s  CPU x1  124 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+27 s  CPU x1  120 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+28 s  CPU x1  119 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+29 s  CPU x1  118 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+30 s  CPU x1   90 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+31 s  CPU x1  116 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+32 s  CPU x1  119 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+33 s  CPU x1  115 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+34 s  CPU x1  116 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+35 s  CPU x1  115 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+36 s  CPU x1  106 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+37 s  CPU x1   98 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+38 s  CPU x1  118 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+39 s  CPU x1  115 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+40 s  CPU x1  111 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+41 s  CPU x1  109 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+42 s  CPU x1  118 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+43 s  CPU x1   98 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+44 s  CPU x1  117 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+45 s  CPU x1  118 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+46 s  CPU x1  115 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+47 s  CPU x1  115 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+48 s  CPU x1  113 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+49 s  CPU x1  108 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+50 s  CPU x1  116 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+51 s  CPU x1  114 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+52 s  CPU x1  113 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+53 s  CPU x1  116 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+54 s  CPU x1  115 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+55 s  CPU x1  113 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+56 s  CPU x1  118 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+57 s  CPU x1  114 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+58 s  CPU x1  114 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+59 s  CPU x1  102 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+60 s  CPU x1  117 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+61 s  CPU x1  118 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+62 s  CPU x1   88 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+63 s  CPU x1  117 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+64 s  CPU x1  103 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+65 s  CPU x1   98 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+66 s  CPU x1  116 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+67 s  CPU x1   99 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+68 s  CPU x1  119 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+69 s  CPU x1  118 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}
+70 s  CPU x1  118 FPS  level 0  {"shadowScale":1,"lodBias":1,"particles":1,"renderScale":1}

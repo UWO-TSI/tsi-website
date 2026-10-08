@@ -5,7 +5,7 @@
  * base.clips_glb: v7_clips.glb, the hand-modeled v7 head) and the verb library (verbs.glb) to
  * public/assets/characters/v6/, the v7 face layer atlases next to it, the
  * catalogue/palette/face JSON to data/characters/, and the official TSI mark
- * (public/logo.svg, ruling 24) as the crewneck decal PNG.
+ * (public/logo.svg, ruling 24) as the crewneck decal PNG, and the LOD 1 GLBs (art/characters/lod1, build_lod.py) to lod1/.
  *
  *   node web/scripts/sync-character-assets.mjs
  *
@@ -29,6 +29,9 @@ for (const part of parts) copy(join(art, part.glb), join(out, part.glb));
 copy(join(art, catalog.base.clips_glb), join(out, catalog.base.clips_glb));
 // The verb library (classes v2): the rig's combat actions only, loaded by the ruins beside the clip base.
 if (catalog.verbs) copy(join(art, catalog.verbs.glb), join(out, catalog.verbs.glb));
+// LOD 1 (art/characters/build_lod.py): every part decimated, and the base's skin, for characters seen small.
+const lod = JSON.parse(readFileSync(join(art, "lod1/lod.json"), "utf8"));
+for (const glb of Object.keys(lod)) copy(join(art, "lod1", glb), join(out, "lod1", glb));
 // avatar v7 face: the layer atlas at 1024 px per face canvas (creator) and 512 (world), animated by uniforms
 const face = JSON.parse(readFileSync(join(art, "v7/face/face_v7.json"), "utf8"));
 for (const f of [face.atlas, face.atlas_world]) copy(join(art, "v7/face", f), join(out, "base", f));
@@ -41,4 +44,4 @@ writeFileSync(tmp, svg.replace(/<svg ([^>]*)>/, '<svg $1 preserveAspectRatio="xM
 execFileSync("rsvg-convert", ["-w", "192", "-h", "184", "-o", join(out, "decal_tsi_mark.png"), tmp]);
 execFileSync("magick", [join(out, "decal_tsi_mark.png"), "-background", "none", "-gravity", "center", "-extent", "256x256", join(out, "decal_tsi_mark.png")]);
 execFileSync("rm", [tmp]);
-console.log(`synced ${parts.length} parts, base, 2 face atlases, 3 JSON files, TSI decal`);
+console.log(`synced ${parts.length} parts, base, ${Object.keys(lod).length} LOD GLBs, 2 face atlases, 3 JSON files, TSI decal`);
