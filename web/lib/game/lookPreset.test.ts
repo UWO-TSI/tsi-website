@@ -204,16 +204,22 @@ describe("time of day as multipliers on the day preset (§5.5)", () => {
 });
 
 describe("weather and season on top of the look (§5.5)", () => {
-  it("lowers the ratio and softens shadows in rain, snow and fog without going grey", () => {
+  it("lowers the ratio and softens shadows in rain, snow and fog; fog keeps its colour, rain and snow go overcast", () => {
     const day = ISLAND_LIGHTING.day;
     for (const weather of ["rain", "snow", "fog"] as const) {
       const w = withWeather(day, weather);
       expect(ratio(w), weather).toBeLessThan(ratio(day) * 0.5);
-      expect(ratio(w), weather).toBeGreaterThan(1);
       expect(w.shadow.radius, weather).toBeGreaterThan(day.shadow.radius * 2);
       expect(w.shadow.intensity, weather).toBeLessThan(day.shadow.intensity);
-      expect(sat(w.skyTop!), weather).toBeGreaterThan(sat(day.skyTop!) * 0.5);
     }
+    const [rain, snow, fog] = (["rain", "snow", "fog"] as const).map(weather => withWeather(day, weather));
+    expect(ratio(fog)).toBeGreaterThan(1);
+    expect(sat(fog.skyTop!)).toBeGreaterThan(sat(day.skyTop!) * 0.5);
+    // Overcast (audit 2026-10 world item 10): the fill carries rain; snow is lighter, the sun still ahead of the fill.
+    expect(ratio(rain)).toBeLessThan(1);
+    expect(ratio(snow)).toBeGreaterThan(1);
+    expect(sat(rain.skyTop!)).toBeLessThan(sat(snow.skyTop!));
+    expect(sat(snow.skyTop!)).toBeLessThan(sat(fog.skyTop!));
   });
   it("layers season and weather on every phase without touching the preset", () => {
     for (const phase of ISLAND_PHASES) for (const weather of ISLAND_WEATHERS) {

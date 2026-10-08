@@ -516,7 +516,7 @@ export type TerrainPalette = { grass: string; soil: string; sand: string };
 export const TERRAIN_SNOW = { value: 0 };
 /**
  * How wet the ground is (0..1, IslandLight `wet`; GridWorld writes it): rain darkens the paths, the plaza and the beach
- * and gives them a sheen, the grass a little (proposal `overcast`, lib/game/lookProposals.ts). Zero leaves them matte.
+ * and gives them a sheen, the grass a little (audit 2026-10 world item 10). Zero leaves them matte.
  */
 export const TERRAIN_WET = { value: 0 };
 /** Grass detail and hue variation from the look preset (x = texture contrast kept, y = patch hue); LookMaterials writes it. */
