@@ -70,7 +70,7 @@ function Stage({ look, framing, yaw = -0.4, faceSize = 512 }: { look: CharacterL
     <ambientLight intensity={1.1} color="#fff6e6" />
     <hemisphereLight args={["#fff8ec", "#b7c7a8", 0.9]} />
     <directionalLight position={[1.6, 2.6, 2.2]} intensity={1.7} color="#fff1d8" />
-    <Suspense fallback={null}><Character look={look} motion={motion} scale={1} faceSize={faceSize} /></Suspense>
+    <Suspense fallback={null}><Character look={look} motion={motion} scale={1} faceSize={faceSize} lod={false} /></Suspense>
   </>;
 }
 

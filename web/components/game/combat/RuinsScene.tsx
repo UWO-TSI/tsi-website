@@ -32,6 +32,7 @@ import { BOSS_CENTER, ESCORT_PATHS, EXIT_SPOT, FETCH_SPOTS, GATE_PLAZA, RUINS_BR
 import { combat, createField, publishCombat, takeMissionQueue, V2_SLOT_IDS, type AbilityId, type CombatRuntime, type CueKind } from "@/lib/game/combat/runtime";
 import { wallHeight } from "@/lib/game/combat/primitives";
 import ClassRender from "./ClassRender";
+import UltWarmup from "./UltWarmup";
 import { classKey, classReload, equipClassKit, pressUlt, stepClass } from "@/lib/game/combat/classRuntime";
 import { createLive } from "@/lib/game/combat/classFire";
 import { unlocksAt } from "@/lib/combat/classes";
@@ -200,7 +201,12 @@ function impactV2(rt: CombatRuntime, pool: ParticlePool, ground: (x: number, z: 
  * once, the flash frame through the limiter (the canvas cut to two tones, or darkened with Reduce flashing), and the
  * overlay pass's screen spots. The meter filling plays the ready chime and the bottom-edge glow.
  */
-const ultScratch = new THREE.Vector3();
+const ultScratch = new THREE.Vector3(), ultEdge = { x: 0, y: 0 };
+/** A ground point's page position into `out` (the canvas at `r`). */
+function toScreen(camera: THREE.Camera, r: DOMRect, ground: (x: number, z: number) => number, x: number, z: number, lift: number, out: { x: number; y: number }) {
+  ultScratch.set(x, ground(x, z) + lift, z).project(camera);
+  out.x = r.left + ((ultScratch.x + 1) / 2) * r.width; out.y = r.top + ((1 - ultScratch.y) / 2) * r.height;
+}
 let ultPrevT = -1, wasReady = false, bossBeat: { t: number; aim: Vec } | null = null;
 /** The boss defeat's sequence: no wind-up (it's already down), the rest of the ult's beats. */
 const BOSS_A = 0.05;
@@ -240,10 +246,12 @@ function ultPresentation(rt: CombatRuntime, camera: THREE.Camera, canvas: HTMLCa
   // Death Lotus (`world: "ink"`): time stops and the world turns to black-and-white ink until the cuts land.
   const ink = v?.cast && v.ult.world === "ink" && cast.t < A + ULT_SEQ.freeze;
   canvas.style.filter = b.flash === "full" && view.flashOk ? "grayscale(1) brightness(1.02) contrast(10)" : b.flash === "reduced" ? "saturate(0.35) brightness(0.75)" : ink ? "grayscale(1) contrast(1.7) brightness(1.08)" : "";
-  const toScreen = (x: number, z: number, lift: number) => { ultScratch.set(x, ground(x, z) + lift, z).project(camera); const r = canvas.getBoundingClientRect(); return { x: r.left + ((ultScratch.x + 1) / 2) * r.width, y: r.top + ((1 - ultScratch.y) / 2) * r.height }; };
-  const c = toScreen(me.x, me.z, 0.7), edge = toScreen(me.x + 3, me.z, 0.7);
-  view.caster = { x: c.x, y: c.y, r: Math.max(60, Math.hypot(edge.x - c.x, edge.y - c.y)) };
-  view.hit = toScreen(cast.aim.x, cast.aim.z, 0.4);
+  // The screen spots, written in place (one layout read a frame, nothing allocated).
+  const r = canvas.getBoundingClientRect(), c = view.caster;
+  toScreen(camera, r, ground, me.x, me.z, 0.7, c);
+  toScreen(camera, r, ground, me.x + 3, me.z, 0.7, ultEdge);
+  c.r = Math.max(60, Math.hypot(ultEdge.x - c.x, ultEdge.y - c.y));
+  toScreen(camera, r, ground, cast.aim.x, cast.aim.z, 0.4, view.hit);
   view.beats = b;
   ultPrevT = cast.t;
 }
@@ -383,8 +391,8 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     rt.cues.length = 0;
     ultPresentation(rt, camera, gl.domElement, me, ruins.ground, Math.min(rawDelta, 0.05));
     // Respawn (spawn-table enemies only) once dead long enough and you're away from the spot.
-    for (const [i, e] of rt.enemies.entries()) {
-      const after = e.state === "dead" && !e.summoned ? respawnAfter(e.id) : 0;
+    for (let i = 0; i < rt.enemies.length; i++) {
+      const e = rt.enemies[i], after = e.state === "dead" && !e.summoned ? respawnAfter(e.id) : 0;
       if (after && e.deadFor > after && Math.hypot(pl.x - e.spawnX, pl.z - e.spawnZ) > 12) rt.enemies[i] = spawnEnemy(e.id, e.type, e.spawnX, e.spawnZ, e.pack);
     }
     rt.bossEngaged = rt.enemies.some(e => e.type.kind === "boss" && ENGAGED.has(e.state));
@@ -401,7 +409,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     const circle = mission ? SURVIVE_CIRCLES[mission.def.id] : undefined;
     const inCircle = !!circle && Math.hypot(me.x - circle.x, me.z - circle.z) < circle.r;
     if (p.safe && !zones.current.gate && rt.idol === "carried") missionEvent(rt, { type: "return" });
-    zones.current = { gate: p.safe, circle: inCircle };
+    zones.current.gate = p.safe; zones.current.circle = inCircle;
     if (rt.idol === "carried" && rt.mission?.status === "complete" && rt.mission.def.template === "fetch") rt.idol = "returned";
     // Survive waves: start on stepping into the mission's circle; next wave when the last is down.
     const waves = mission?.def.template === "survive" ? WAVES[mission.def.id] : undefined;
@@ -482,6 +490,8 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
     <AimReticle player={player} ground={ruins.ground} />
     <FloaterProjector />
     <EnemyBars ground={ruins.ground} />
+    {/* Behind the gate's fade: every hidden effect, beast and ult model compiled and uploaded before the first cast. */}
+    <UltWarmup />
     <Html position={[EXIT_SPOT.x, 2.2, EXIT_SPOT.z]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Gate · safe zone</div></Html>
     <PlayerAvatar spawnPosition={spawn} playerName="You" playerLevel={level} player={player}
       world={world} groundHeight={ruins.ground} groundSurface={ruins.surface} camTarget={focus} combat respawn={respawn} glider={glider} />
