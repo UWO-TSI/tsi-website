@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Component, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion, useAnimationControls } from "framer-motion";
 import confetti from "canvas-confetti";
@@ -21,6 +21,17 @@ import { renderShareCard, shareCaption, type ShareFormat } from "./shareCard";
 import type { VaultMode } from "./VaultScene";
 
 const VaultScene = dynamic(() => import("./VaultScene"), { ssr: false });
+
+// Without WebGL the game still works on the plain page; only the 3D vault is lost.
+class SceneBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
 
 const mono = "font-[family-name:var(--font-highlight)]";
 const spring = { type: "spring", stiffness: 520, damping: 26 } as const;
@@ -43,6 +54,14 @@ function applicationId(name: string) {
   return `APP-${String(10000 + (h % 90000))}`;
 }
 
+// Deadline is 11:59 PM ET on the day they finished (today on a first visit).
+function deadlineLabel(revealedAt: string | null) {
+  const day = (d: Date) =>
+    new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric" }).format(d);
+  if (!revealedAt || day(new Date(revealedAt)) === day(new Date())) return "11:59 PM ET tonight";
+  return `11:59 PM ET on ${day(new Date(revealedAt))}`;
+}
+
 function fmt(s: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
@@ -61,10 +80,14 @@ export default function FinalRound({
   invite,
   token,
   progress = "new",
+  revealedAt = null,
+  emailsOn = false,
 }: {
   invite?: Invite;
   token?: string;
   progress?: Progress;
+  revealedAt?: string | null;
+  emailsOn?: boolean;
 }) {
   const [phase, setPhase] = useState<Phase>(startPhase(progress));
   const [returning, setReturning] = useState(progress === "done");
@@ -96,6 +119,8 @@ export default function FinalRound({
   const ended = useRef(false);
   const captureRef = useRef<(() => string) | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const proxyRef = useRef<HTMLInputElement>(null);
+  const [inputFocused, setInputFocused] = useState(false);
   const rig = useRef<ReturnType<typeof createRig> | null>(null);
 
   const cleanName = name.trim();
@@ -120,7 +145,7 @@ export default function FinalRound({
 
   useEffect(() => {
     track("open");
-    if (!memKey || progress !== "new") return;
+    if (!memKey || progress === "done") return;
     let saved: string | null = null;
     try {
       saved = localStorage.getItem(memKey);
@@ -128,7 +153,7 @@ export default function FinalRound({
     if (saved === "reveal") {
       setReturning(true);
       setPhase("reveal");
-    } else if (saved === "start") {
+    } else if (saved === "start" && progress === "new") {
       setPhase("status");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per page load
@@ -177,6 +202,7 @@ export default function FinalRound({
   }, [track]);
 
   const checkStatus = () => {
+    if (phase !== "status") return;
     unlockAudio();
     setPhase("checking");
     window.setTimeout(() => {
@@ -193,7 +219,7 @@ export default function FinalRound({
       const now = performance.now();
       // On the last attempt, don't run out before they start typing.
       const la = lastAttempt.current;
-      const crawl = la.active && la.typed === 0 && vLeft.current < 8500;
+      const crawl = la.active && la.typed === 0 && vLeft.current < 9500;
       const target = crawl ? Math.min(rateTarget.current, 0.35) : rateTarget.current;
       // Drift slowly between attempts so the change isn't noticeable; react fast on the last one.
       rate.current += (target - rate.current) * (la.active ? (crawl ? 0.25 : 0.4) : 0.035);
@@ -234,7 +260,7 @@ export default function FinalRound({
       const lastGuess = (now - (lastSubmit.current || testStart.current)) / 1000;
       const pace = Math.max(avgGuess, lastGuess);
       const attemptsLeft = MAX_ATTEMPTS - done;
-      rateTarget.current = clamp((secsLeft - 10) / (pace * (attemptsLeft - 1)), 0.45, 1 + 0.15 * done);
+      rateTarget.current = clamp((secsLeft - 10) / (pace * (attemptsLeft - 1)), 0.2, Math.min(2.8, 1 + 0.6 * done));
     }
   };
 
@@ -245,16 +271,18 @@ export default function FinalRound({
     sfx.angel();
     const end = Date.now() + 2200;
     const colors = ["#1d9bf0", "#22d3ee", "#ffd166", "#f1ffff"];
-    confetti({ particleCount: 140, spread: 100, startVelocity: 55, origin: { y: 0.55 }, colors });
+    confetti({ particleCount: 140, spread: 100, startVelocity: 55, origin: { y: 0.55 }, colors, zIndex: 40 });
     const burst = () => {
-      confetti({ particleCount: 5, angle: 60, spread: 60, origin: { x: 0, y: 0.75 }, colors });
-      confetti({ particleCount: 5, angle: 120, spread: 60, origin: { x: 1, y: 0.75 }, colors });
+      confetti({ particleCount: 5, angle: 60, spread: 60, origin: { x: 0, y: 0.75 }, colors, zIndex: 40 });
+      confetti({ particleCount: 5, angle: 120, spread: 60, origin: { x: 1, y: 0.75 }, colors, zIndex: 40 });
       if (Date.now() < end) requestAnimationFrame(burst);
     };
     burst();
   }, [track]);
 
   const begin = () => {
+    // iOS only opens the keyboard for focus inside a tap; hold it on a proxy until the code input mounts.
+    proxyRef.current?.focus();
     if (!cleanName || phase !== "gate") return;
     unlockAudio();
     track("start");
@@ -361,6 +389,13 @@ export default function FinalRound({
   }, [phase]);
 
   // Darken the scene as they scroll down to the next steps.
+  // If the 3D ticket never arrives (slow device, no WebGL), show the reveal anyway.
+  useEffect(() => {
+    if (phase !== "reveal" || opened) return;
+    const id = window.setTimeout(onOpened, 3500);
+    return () => window.clearTimeout(id);
+  }, [phase, opened, onOpened]);
+
   useEffect(() => {
     if (phase !== "reveal") return;
     const onScroll = () => setScrollDark(clamp(window.scrollY / (window.innerHeight * 0.7), 0, 1));
@@ -444,6 +479,7 @@ export default function FinalRound({
       `}</style>
 
       <div className="fixed inset-0 z-0">
+        <SceneBoundary>
         <VaultScene
           mode={phase === "countdown" || phase === "status" || phase === "checking" ? "test" : phase}
           feedback={phase === "test" ? latest : null}
@@ -455,6 +491,7 @@ export default function FinalRound({
           onOpened={onOpened}
           captureRef={captureRef}
         />
+        </SceneBoundary>
       </div>
 
       {(phase === "gate" || phase === "countdown" || phase === "test") && (
@@ -710,6 +747,14 @@ export default function FinalRound({
                 </ul>
               )}
 
+              {!inputFocused && !answer && !timeUp && (
+                <p
+                  className={`${mono} mt-4 text-center text-[11px] tracking-[0.2em] text-[#1d9bf0]`}
+                  style={{ animation: "fr-caret 1.4s ease-in-out infinite" }}
+                >
+                  TAP THE BOXES TO TYPE
+                </p>
+              )}
               {finalSet && (
                 <p className={`${mono} mt-4 text-[11px] tracking-[0.25em] text-[#ef4444]`}>
                   FINAL ATTEMPT
@@ -725,6 +770,8 @@ export default function FinalRound({
                     value={answer}
                     onChange={(e) => applyAnswer(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && submit()}
+                    onFocus={() => setInputFocused(true)}
+                    onBlur={() => setInputFocused(false)}
                     inputMode="numeric"
                     autoComplete="off"
                     aria-label={`${CODE_LENGTH}-digit code`}
@@ -949,8 +996,8 @@ export default function FinalRound({
                   YOUR NEXT STEPS
                 </h3>
                 <p className="mt-3 rounded-xl border border-[#ffd166]/40 bg-[#ffd166]/10 px-4 py-3 text-sm text-[#ffe9b0]">
-                  To confirm your position, complete these by <strong>11:59 PM ET tonight</strong>.
-                  {invite ? " We've also emailed them to you." : ""}
+                  To confirm your position, complete these by <strong>{deadlineLabel(revealedAt)}</strong>.
+                  {invite && emailsOn ? " We've also emailed them to you." : ""}
                 </p>
                 <ol className="mt-5 space-y-3">
                   {ONBOARDING.map((s, i) => (
@@ -991,6 +1038,14 @@ export default function FinalRound({
         </>
       )}
       {phase !== "test" && muteButton("fixed bottom-4 right-4 z-30 h-11 w-11")}
+      <input
+        ref={proxyRef}
+        aria-hidden
+        tabIndex={-1}
+        inputMode="numeric"
+        className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0"
+        style={{ fontSize: 16 }}
+      />
 
       <AnimatePresence>
         {share && (
