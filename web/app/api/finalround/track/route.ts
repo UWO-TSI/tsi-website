@@ -35,19 +35,24 @@ async function sendFollowup(id: string) {
   if (claimError) console.error("finalround followup claim failed", claimError);
   if (!data?.email) return;
 
-  const { error } = await getResend().emails.send({
-    from: FROM,
-    to: data.email,
-    cc: data.cc ?? [],
-    replyTo: REPLY_TO,
-    subject: "Welcome to Tech for Social Impact: confirm your spot today",
-    react: FinalRoundWelcome({
-      firstName: data.name.split(" ")[0],
-      project: data.project === "External Team" ? "External" : data.project,
-      deadline: deadlineToday(),
-      steps: ONBOARDING,
-    }),
-  });
+  let error: unknown = null;
+  try {
+    ({ error } = await getResend().emails.send({
+      from: FROM,
+      to: data.email,
+      cc: data.cc ?? [],
+      replyTo: REPLY_TO,
+      subject: "Welcome to Tech for Social Impact: confirm your spot today",
+      react: FinalRoundWelcome({
+        firstName: data.name.split(" ")[0],
+        project: data.project === "External Team" ? "External" : data.project,
+        deadline: deadlineToday(),
+        steps: ONBOARDING,
+      }),
+    }));
+  } catch (e) {
+    error = e;
+  }
   // Release the claim if the send failed, so the next visit retries.
   if (error) {
     console.error("finalround followup send failed", error);
