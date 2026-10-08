@@ -1,5 +1,6 @@
-export const TIME_LIMIT_SECONDS = 180;
-export const MAX_ATTEMPTS = 8;
+export const TIME_LIMIT_SECONDS = 120;
+export const MAX_ATTEMPTS = 5;
+export const CODE_LENGTH = 6;
 
 export const NEAR_MISS = [
   "One digit away.",

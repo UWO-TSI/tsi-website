@@ -4,10 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
 import confetti from "canvas-confetti";
-import { MAX_ATTEMPTS, NEAR_MISS, ONBOARDING, TIME_LIMIT_SECONDS, teamStep } from "./data";
+import { CODE_LENGTH, MAX_ATTEMPTS, NEAR_MISS, ONBOARDING, TIME_LIMIT_SECONDS, teamStep } from "./data";
 import { setMuted, sfx, unlockAudio } from "./sfx";
 import type { Invite } from "./token";
-import { rigged, type Feedback } from "./vault";
+import { createRig, type Feedback } from "./vault";
 import type { VaultMode } from "./VaultScene";
 
 const VaultScene = dynamic(() => import("./VaultScene"), { ssr: false });
@@ -27,6 +27,12 @@ function memberNumber(name: string) {
   return `TSI-${String(1000 + (h % 9000))}`;
 }
 
+function applicationId(name: string) {
+  let h = 7;
+  for (const c of name.toLowerCase()) h = (h * 131 + c.charCodeAt(0)) >>> 0;
+  return `APP-${String(10000 + (h % 90000))}`;
+}
+
 function fmt(s: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
@@ -37,8 +43,11 @@ function buzz(pattern: number | number[]) {
   } catch {}
 }
 
+type Phase = VaultMode | "countdown";
+
 export default function FinalRound({ invite }: { invite?: Invite }) {
-  const [phase, setPhase] = useState<VaultMode>("gate");
+  const [phase, setPhase] = useState<Phase>("gate");
+  const [count, setCount] = useState(3);
   const [name, setName] = useState(invite?.name ?? "");
   const [muted, setMutedState] = useState(false);
   const [answer, setAnswer] = useState("");
@@ -52,6 +61,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
   const ended = useRef(false);
   const captureRef = useRef<(() => string) | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const rig = useRef<ReturnType<typeof createRig> | null>(null);
 
   const cleanName = name.trim();
   const project = invite?.project ?? "";
@@ -128,29 +138,61 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
   }, []);
 
   const begin = () => {
-    if (!cleanName) return;
+    if (!cleanName || phase !== "gate") return;
     unlockAudio();
-    sfx.clunk();
-    deadline.current = Date.now() + TIME_LIMIT_SECONDS * 1000;
-    setRemaining(TIME_LIMIT_SECONDS);
-    setPhase("test");
-    window.setTimeout(() => inputRef.current?.focus(), 450);
+    setPhase("countdown");
+    setCount(3);
+    sfx.count();
+    window.setTimeout(() => {
+      setCount(2);
+      sfx.count();
+    }, 1000);
+    window.setTimeout(() => {
+      setCount(1);
+      sfx.count();
+    }, 2000);
+    window.setTimeout(() => {
+      sfx.clunk();
+      deadline.current = Date.now() + TIME_LIMIT_SECONDS * 1000;
+      setRemaining(TIME_LIMIT_SECONDS);
+      setPhase("test");
+      window.setTimeout(() => inputRef.current?.focus(), 450);
+    }, 3000);
   };
 
+  // Faint clock tick that speeds up in the last 30 seconds.
+  useEffect(() => {
+    if (phase !== "test") return;
+    let id = 0;
+    const tick = () => {
+      if (ended.current) return;
+      const fast = deadline.current - Date.now() <= 30000;
+      sfx.tick(fast);
+      id = window.setTimeout(tick, fast ? 500 : 1000);
+    };
+    id = window.setTimeout(tick, 1000);
+    return () => window.clearTimeout(id);
+  }, [phase]);
+
   const submit = () => {
-    if (answer.length !== 4 || ended.current) return;
-    const fb = rigged(answer, history);
+    if (answer.length !== CODE_LENGTH || ended.current) return;
+    rig.current ??= createRig(CODE_LENGTH);
+    // Last guess always lands one digit short.
+    const fb =
+      history.length === MAX_ATTEMPTS - 1
+        ? { exact: CODE_LENGTH - 1, misplaced: 0 }
+        : rig.current(answer, history.length);
     const next = [{ guess: answer, fb }, ...history];
     setHistory(next);
     setShake((s) => s + 1);
     setAnswer("");
-    buzz(fb.exact === 3 ? [20, 30, 60] : 25);
+    buzz(fb.exact === CODE_LENGTH - 1 ? [20, 30, 60] : 25);
     sfx.clunk();
     for (let i = 0; i < fb.exact + fb.misplaced; i++) sfx.lamp(i, i < fb.exact ? "green" : "amber");
-    if (fb.exact === 3) sfx.close();
+    if (fb.exact === CODE_LENGTH - 1) sfx.close();
     setMessage(
-      fb.exact === 3
-        ? NEAR_MISS[next.filter((h) => h.fb.exact === 3).length % NEAR_MISS.length]
+      fb.exact === CODE_LENGTH - 1
+        ? NEAR_MISS[next.filter((h) => h.fb.exact === CODE_LENGTH - 1).length % NEAR_MISS.length]
         : ""
     );
     if (next.length >= MAX_ATTEMPTS) window.setTimeout(fail, 1100);
@@ -177,7 +219,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
       ctx.fillText("I MADE IT INTO TSI.", c.width / 2, c.height * 0.14);
       ctx.fillStyle = "rgba(241,255,255,0.55)";
       ctx.font = `500 ${Math.round(s * 0.03)}px ${body}`;
-      ctx.fillText("tethos.ca", c.width / 2, c.height * 0.93);
+      ctx.fillText("Tech for Social Impact", c.width / 2, c.height * 0.93);
 
       const blob: Blob = await new Promise((r) => c.toBlob((b) => r(b!), "image/png"));
       const file = new File([blob], `tsi-acceptance-${memberNo}.png`, { type: "image/png" });
@@ -197,13 +239,13 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
 
   const attemptsLeft = MAX_ATTEMPTS - history.length;
   const urgent = phase === "test" && remaining <= 30;
+  const dread = phase === "test" ? 1 - remaining / TIME_LIMIT_SECONDS : 0;
   const latest = history[0]?.fb ?? null;
 
   return (
     <main className="relative min-h-svh overflow-x-hidden bg-[#0b0c0f] text-[#f1ffff]">
       <style>{`
         @keyframes fr-glitch{0%,100%{transform:translate(0);text-shadow:2px 0 #22d3ee,-2px 0 #ef4444}25%{transform:translate(-3px,2px)}50%{transform:translate(3px,-2px);text-shadow:-3px 0 #22d3ee,3px 0 #ef4444}75%{transform:translate(-2px,-1px)}}
-        @keyframes fr-pulse{0%,100%{opacity:.0}50%{opacity:.22}}
         @keyframes fr-caret{0%,100%{opacity:1}50%{opacity:0}}
         @keyframes fr-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
         .fr-panel{padding-top:44svh}
@@ -213,7 +255,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
 
       <div className="fixed inset-0 z-0">
         <VaultScene
-          mode={phase}
+          mode={phase === "countdown" ? "test" : phase}
           feedback={latest}
           guessKey={shake}
           name={cleanName}
@@ -225,15 +267,48 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
         />
       </div>
 
-      {(phase === "gate" || phase === "test") && (
+      {(phase === "gate" || phase === "countdown" || phase === "test") && (
         <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[1] h-[62svh] bg-gradient-to-t from-[#0b0c0f] via-[#0b0c0f]/90 to-transparent [@media(min-aspect-ratio:1/1)]:inset-y-0 [@media(min-aspect-ratio:1/1)]:left-1/2 [@media(min-aspect-ratio:1/1)]:h-auto [@media(min-aspect-ratio:1/1)]:bg-gradient-to-l" />
       )}
-      {urgent && (
+      {phase === "test" && (
         <div
-          className="pointer-events-none fixed inset-0 z-[2] bg-[#ef4444]"
-          style={{ animation: "fr-pulse 1s infinite" }}
+          className="pointer-events-none fixed inset-0 z-[2] transition-[background] duration-1000"
+          style={{
+            background: `radial-gradient(ellipse at 50% 45%, transparent ${55 - dread * 25}%, rgba(${
+              remaining <= 20 ? "30,0,0" : "0,0,0"
+            },${(0.08 + dread * 0.55).toFixed(2)}) 100%)`,
+          }}
         />
       )}
+
+      <AnimatePresence>
+        {phase === "countdown" && (
+          <motion.div
+            key="countdown"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.3 } }}
+            className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-[#0b0c0f]/70 backdrop-blur-sm"
+          >
+            <p className={`${mono} text-xs tracking-[0.35em] text-white/50`}>
+              ASSESSMENT BEGINS IN
+            </p>
+            <AnimatePresence mode="popLayout">
+              <motion.span
+                key={count}
+                initial={{ scale: 1.8, opacity: 0, filter: "blur(12px)" }}
+                animate={{ scale: 1, opacity: 1, filter: "blur(0px)" }}
+                exit={{ scale: 0.6, opacity: 0, filter: "blur(8px)" }}
+                transition={{ type: "spring", stiffness: 300, damping: 22 }}
+                className={`${mono} mt-4 text-[9rem] font-bold leading-none tabular-nums`}
+              >
+                {count}
+              </motion.span>
+            </AnimatePresence>
+            <p className="mt-6 text-sm text-white/45">One attempt. Make it count.</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {phase === "test" && (
         <div className="fixed inset-x-0 top-0 z-20 px-4 pt-4">
@@ -243,13 +318,12 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
             </span>
             <motion.span
               key={urgent ? remaining : "calm"}
-              initial={urgent ? { scale: 1.25 } : false}
+              initial={urgent ? { scale: 1.08 } : false}
               animate={{ scale: 1 }}
               transition={spring}
               className={`${mono} rounded-lg bg-black/40 px-3 py-1 text-3xl font-bold tabular-nums backdrop-blur ${
                 urgent ? "text-[#ef4444]" : "text-[#f1ffff]"
               }`}
-              style={urgent ? { animation: "fr-glitch .4s infinite" } : undefined}
             >
               {fmt(remaining)}
             </motion.span>
@@ -267,22 +341,25 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
         {phase === "gate" && (
           <motion.section key="gate" {...enter} className="fr-panel relative z-10 px-4 pb-10">
             <div className="mx-auto w-full max-w-md">
-              <p className={`${mono} text-xs tracking-[0.3em] text-[#22d3ee]`}>
-                TETHOS / FINAL ROUND
+              <p className={`${mono} text-[11px] tracking-[0.2em] text-[#22d3ee] sm:text-xs sm:tracking-[0.3em]`}>
+                TECH FOR SOCIAL IMPACT / FINAL ROUND
               </p>
               <h1 className="mt-3 text-[2rem] font-bold leading-[1.05] sm:text-5xl">
                 Competence Assessment
               </h1>
               <p className="mt-4 text-[#9ca3af]">
-                This is the last stage of your application. Your result on this
-                assessment determines your outcome.
+                There is only one attempt at the final round. It is make or
+                break: your result here decides your application.
+              </p>
+              <p className="mt-2 text-sm text-white/45">
+                Don&apos;t worry, most applicants complete this with no problem.
               </p>
               <ul className={`${mono} mt-5 space-y-1.5 text-sm text-[#e5e7eb]`}>
                 {[
-                  "Crack the 4-digit vault code.",
+                  `Crack the ${CODE_LENGTH}-digit vault code.`,
                   `${fmt(TIME_LIMIT_SECONDS)} on the clock. It does not pause.`,
                   `${MAX_ATTEMPTS} guesses. Pure logic, no luck required.`,
-                  "No second chances.",
+                  "One attempt only. Results are final.",
                 ].map((r, i) => (
                   <motion.li
                     key={r}
@@ -294,23 +371,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                   </motion.li>
                 ))}
               </ul>
-              {invite ? (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ ...spring, delay: 0.6 }}
-                  className="mt-7 rounded-2xl border border-white/10 bg-[#121418]/90 p-4 backdrop-blur"
-                >
-                  <p className={`${mono} text-[10px] tracking-[0.3em] text-white/45`}>CANDIDATE</p>
-                  <p className="mt-1 text-2xl font-bold">{invite.name}</p>
-                  {project && (
-                    <>
-                      <p className={`${mono} mt-3 text-[10px] tracking-[0.3em] text-white/45`}>APPLIED TO</p>
-                      <p className="mt-1 text-[#22d3ee]">{project}</p>
-                    </>
-                  )}
-                </motion.div>
-              ) : (
+              {!invite && (
                 <>
                   <label className="mt-8 block text-sm text-[#9ca3af]" htmlFor="nm">
                     Full name (as it appears on your application)
@@ -326,6 +387,40 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                   />
                 </>
               )}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...spring, delay: 0.6 }}
+                className={`${invite ? "mt-7" : "mt-4"} rounded-2xl border border-white/10 bg-[#121418]/90 p-4 backdrop-blur`}
+              >
+                {invite && (
+                  <>
+                    <p className={`${mono} text-[10px] tracking-[0.3em] text-white/45`}>CANDIDATE</p>
+                    <p className="mt-1 text-2xl font-bold">{invite.name}</p>
+                    {project && (
+                      <>
+                        <p className={`${mono} mt-3 text-[10px] tracking-[0.3em] text-white/45`}>APPLIED TO</p>
+                        <p className="mt-1 text-[#22d3ee]">{project}</p>
+                      </>
+                    )}
+                  </>
+                )}
+                <div className={`${invite ? "mt-3 border-t border-white/10 pt-3" : ""} flex items-end justify-between gap-3`}>
+                  <div>
+                    <p className={`${mono} text-[10px] tracking-[0.3em] text-white/45`}>APPLICATION STATUS</p>
+                    <p className={`${mono} mt-1 flex items-center gap-2 text-sm font-semibold text-[#ffd166]`}>
+                      <span className="relative flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#ffd166] opacity-60" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-[#ffd166]" />
+                      </span>
+                      PENDING FINAL ROUND
+                    </p>
+                  </div>
+                  {cleanName && (
+                    <p className={`${mono} text-right text-xs text-white/45`}>{applicationId(cleanName)}</p>
+                  )}
+                </div>
+              </motion.div>
               <motion.button
                 onClick={begin}
                 disabled={!cleanName}
@@ -364,7 +459,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                     ref={inputRef}
                     value={answer}
                     onChange={(e) => {
-                      const v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                      const v = e.target.value.replace(/\D/g, "").slice(0, CODE_LENGTH);
                       if (v.length > answer.length) {
                         buzz(8);
                         sfx.key();
@@ -375,17 +470,17 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                     inputMode="numeric"
                     autoComplete="off"
                     disabled={attemptsLeft <= 0}
-                    aria-label="4-digit code"
+                    aria-label={`${CODE_LENGTH}-digit code`}
                     className="absolute inset-0 z-10 h-full w-full cursor-text opacity-0"
                   />
-                  <div className="grid grid-cols-4 gap-2">
-                    {[0, 1, 2, 3].map((i) => {
+                  <div className="grid grid-cols-6 gap-1.5 sm:gap-2">
+                    {Array.from({ length: CODE_LENGTH }, (_, i) => {
                       const ch = answer[i];
                       const active = i === answer.length;
                       return (
                         <div
                           key={i}
-                          className={`${mono} relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-2xl border text-4xl font-semibold transition-colors duration-150 ${
+                          className={`${mono} relative flex aspect-[3/4] items-center justify-center overflow-hidden rounded-[10px] border text-3xl font-semibold sm:text-4xl transition-colors duration-150 ${
                             active
                               ? "border-[#1d9bf0] bg-[#1d9bf0]/10 shadow-[0_0_24px_-6px_rgba(29,155,240,0.9)]"
                               : ch
@@ -406,7 +501,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                               </motion.span>
                             ) : active ? (
                               <span
-                                className="h-9 w-[3px] rounded bg-[#1d9bf0]"
+                                className="h-7 w-[3px] rounded bg-[#1d9bf0]"
                                 style={{ animation: "fr-caret 1s steps(1) infinite" }}
                               />
                             ) : null}
@@ -418,7 +513,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                 </div>
                 <motion.button
                   onClick={submit}
-                  disabled={answer.length !== 4 || attemptsLeft <= 0}
+                  disabled={answer.length !== CODE_LENGTH || attemptsLeft <= 0}
                   whileTap={{ scale: 0.95 }}
                   transition={spring}
                   className="mt-3 flex w-full items-center justify-center gap-3 rounded-xl bg-[#1d9bf0] px-6 py-4 text-lg font-semibold text-white shadow-[0_10px_30px_-10px_rgba(29,155,240,0.8)] transition-opacity disabled:opacity-40 disabled:shadow-none"
@@ -461,15 +556,15 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                       <span className={`${mono} text-xs text-white/40`}>
                         #{history.length - i}
                       </span>
-                      <span className={`${mono} text-xl tracking-[0.4em]`}>{h.guess}</span>
-                      <span className="flex gap-1.5">
-                        {[0, 1, 2, 3].map((k) => (
+                      <span className={`${mono} text-lg tracking-[0.3em]`}>{h.guess}</span>
+                      <span className="flex gap-1">
+                        {Array.from({ length: CODE_LENGTH }, (_, k) => (
                           <motion.span
                             key={k}
                             initial={i === 0 ? { scale: 0 } : false}
                             animate={{ scale: 1 }}
                             transition={{ ...spring, delay: 0.08 * k }}
-                            className={`h-3 w-3 rounded-full ${
+                            className={`h-2.5 w-2.5 shrink-0 rounded-full ${
                               k < h.fb.exact
                                 ? "bg-[#22c55e] shadow-[0_0_10px_#22c55e]"
                                 : k < h.fb.exact + h.fb.misplaced
@@ -483,8 +578,8 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                   ))}
                 </AnimatePresence>
               </ul>
-              <p className={`${mono} pt-6 text-center text-[11px] text-white/35`}>
-                Only 3% of applicants crack this vault.
+              <p className={`${mono} pt-6 text-center text-[11px] tracking-[0.15em] text-[#ef4444]/70`}>
+                YOUR APPLICATION DEPENDS ON THIS RESULT.
               </p>
             </div>
           </motion.section>
@@ -510,7 +605,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
 
       {phase === "reveal" && (
         <>
-          <section className="pointer-events-none relative z-10 flex min-h-svh flex-col items-center justify-between px-4 pb-8 pt-[7svh] text-center">
+          <section className="pointer-events-none relative z-10 flex min-h-svh flex-col items-center justify-between px-4 pb-20 pt-[7svh] text-center">
             <AnimatePresence>
               {opened && (
                 <motion.div key="head" initial="h" animate="s" variants={{ s: { transition: { staggerChildren: 0.12 } } }}>
@@ -552,22 +647,27 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                     That vault was rigged. Nobody cracks it. You were accepted before
                     you opened this page. Breathe. You&apos;re in.
                   </p>
-                  <motion.button
-                    onClick={save}
-                    disabled={saving}
-                    whileHover={{ scale: 1.04 }}
-                    whileTap={{ scale: 0.95 }}
-                    transition={spring}
-                    className="mt-4 rounded-full bg-[#ffd166] px-7 py-3 font-bold text-[#0b0c0f] shadow-[0_10px_40px_-8px_rgba(255,209,102,0.8)] disabled:opacity-60"
-                  >
-                    {saving ? "Saving..." : "Save your ticket"}
-                  </motion.button>
-                  <a
-                    href="#next"
-                    className={`${mono} mt-4 text-[11px] tracking-[0.3em] text-white/50`}
-                  >
-                    YOUR NEXT STEPS ↓
-                  </a>
+                  <div className="mt-4 flex w-full max-w-sm gap-3">
+                    <motion.button
+                      onClick={save}
+                      disabled={saving}
+                      whileHover={{ scale: 1.04 }}
+                      whileTap={{ scale: 0.95 }}
+                      transition={spring}
+                      className="flex-1 rounded-full border border-[#ffd166]/70 bg-black/40 px-5 py-3 font-bold text-[#ffd166] backdrop-blur disabled:opacity-60"
+                    >
+                      {saving ? "Saving..." : "Save ticket"}
+                    </motion.button>
+                    <motion.button
+                      onClick={() => document.getElementById("next")?.scrollIntoView({ behavior: "smooth" })}
+                      whileHover={{ scale: 1.04 }}
+                      whileTap={{ scale: 0.95 }}
+                      transition={spring}
+                      className="flex-1 rounded-full bg-[#ffd166] px-5 py-3 font-bold text-[#0b0c0f] shadow-[0_10px_40px_-8px_rgba(255,209,102,0.8)]"
+                    >
+                      Next steps ↓
+                    </motion.button>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>

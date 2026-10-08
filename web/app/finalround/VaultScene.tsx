@@ -25,7 +25,7 @@ type Props = {
 
 const VAULT_SIZE = 4.6;
 const BOLTS = 10;
-const LAMP_X = [-0.42, -0.14, 0.14, 0.42];
+const LAMP_X = [-0.6, -0.36, -0.12, 0.12, 0.36, 0.6];
 
 const GREEN = new THREE.Color("#22c55e");
 const AMBER = new THREE.Color("#ffd166");
@@ -172,7 +172,7 @@ function Vault({
       let target = OFF;
       let intensity = 1;
       if (opening >= 0) {
-        const on = opening > 0.15 + i * 0.16;
+        const on = opening > 0.15 + i * 0.11;
         target = on ? GREEN : OFF;
         intensity = on ? 3.5 : 1;
       } else if (mode === "judging") {
@@ -182,7 +182,7 @@ function Vault({
       } else if (feedback) {
         if (i < feedback.exact) target = GREEN;
         else if (i < feedback.exact + feedback.misplaced) target = AMBER;
-        else if (feedback.exact === 3) {
+        else if (feedback.exact === LAMP_X.length - 1) {
           target = RED;
           intensity = 2 + Math.sin(t * 9) * 1.4;
         }
@@ -192,7 +192,7 @@ function Vault({
       mat.emissiveIntensity = THREE.MathUtils.lerp(mat.emissiveIntensity, intensity, 1 - Math.exp(-dt * 14));
       const lm = lampMeshes.current[i];
       if (lm) {
-        const p = opening >= 0 ? (opening > 0.15 + i * 0.16 ? Math.max(0, 1 - (opening - 0.15 - i * 0.16) * 4) : 0) : pop.current;
+        const p = opening >= 0 ? (opening > 0.15 + i * 0.11 ? Math.max(0, 1 - (opening - 0.15 - i * 0.11) * 4) : 0) : pop.current;
         lm.scale.setScalar(1 + p * 0.45);
       }
     });

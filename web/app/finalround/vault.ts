@@ -1,52 +1,61 @@
 export type Feedback = { exact: number; misplaced: number };
 
-const ALL_CODES = Array.from({ length: 10000 }, (_, i) =>
-  String(i).padStart(4, "0")
-);
+// Adversarial code-breaker: there is no secret code. Every guess is answered
+// with whichever feedback keeps the most codes possible, so the player never
+// narrows it down. The full answer is never returned. From the third guess on,
+// "one digit off" wins whenever any remaining code allows it.
+export function createRig(length: number) {
+  const space = 10 ** length;
+  let candidates: Uint32Array | null = null;
+  const gCount = new Int8Array(10);
+  const cCount = new Int8Array(10);
 
-export function score(guess: string, code: string): Feedback {
-  let exact = 0;
-  const g: number[] = Array(10).fill(0);
-  const c: number[] = Array(10).fill(0);
-  for (let i = 0; i < 4; i++) {
-    if (guess[i] === code[i]) exact++;
-    else {
-      g[+guess[i]]++;
-      c[+code[i]]++;
+  return function answer(guess: string, step: number): Feedback {
+    if (!candidates) {
+      candidates = new Uint32Array(space);
+      for (let i = 0; i < space; i++) candidates[i] = i;
     }
-  }
-  let misplaced = 0;
-  for (let d = 0; d < 10; d++) misplaced += Math.min(g[d], c[d]);
-  return { exact, misplaced };
-}
+    const g = Array.from(guess, Number).reverse();
+    const keys = new Uint8Array(candidates.length);
+    const buckets = new Uint32Array(length * 11 + 11);
 
-// Rigged: never returns 4 exact. Early guesses dodge to the largest bucket,
-// later guesses steer to "3 correct" whenever any code allows it.
-export function rigged(guess: string, history: { guess: string; fb: Feedback }[]) {
-  const candidates = ALL_CODES.filter((code) =>
-    history.every((h) => {
-      const s = score(h.guess, code);
-      return s.exact === h.fb.exact && s.misplaced === h.fb.misplaced;
-    })
-  );
+    for (let k = 0; k < candidates.length; k++) {
+      let code = candidates[k];
+      let exact = 0;
+      gCount.fill(0);
+      cCount.fill(0);
+      for (let i = 0; i < length; i++) {
+        const d = code % 10;
+        code = (code - d) / 10;
+        if (d === g[i]) exact++;
+        else {
+          gCount[g[i]]++;
+          cCount[d]++;
+        }
+      }
+      let misplaced = 0;
+      for (let d = 0; d < 10; d++) misplaced += Math.min(gCount[d], cCount[d]);
+      const key = exact * 11 + misplaced;
+      keys[k] = key;
+      buckets[key]++;
+    }
 
-  const buckets = new Map<string, number>();
-  for (const code of candidates) {
-    const s = score(guess, code);
-    if (s.exact === 4) continue;
-    const key = `${s.exact}:${s.misplaced}`;
-    buckets.set(key, (buckets.get(key) ?? 0) + 1);
-  }
+    let best = -1;
+    const pickFrom = (ok: (exact: number) => boolean) => {
+      for (let key = 0; key < buckets.length; key++) {
+        const exact = Math.floor(key / 11);
+        if (exact >= length || !buckets[key] || !ok(exact)) continue;
+        if (best < 0 || buckets[key] > buckets[best]) best = key;
+      }
+    };
+    if (step >= 2) pickFrom((e) => e === length - 1);
+    if (best < 0) pickFrom(() => true);
+    if (best < 0) return { exact: length - 1, misplaced: 0 };
 
-  const entries = [...buckets.entries()];
-  if (entries.length === 0) return { exact: 3, misplaced: 0 };
+    let n = 0;
+    for (let k = 0; k < candidates.length; k++) if (keys[k] === best) candidates[n++] = candidates[k];
+    candidates = candidates.slice(0, n);
 
-  const pick =
-    history.length >= 2
-      ? entries.filter(([k]) => k.startsWith("3:")).sort((a, b) => b[1] - a[1])[0] ??
-        entries.sort((a, b) => b[1] - a[1])[0]
-      : entries.sort((a, b) => b[1] - a[1])[0];
-
-  const [exact, misplaced] = pick[0].split(":").map(Number);
-  return { exact, misplaced };
+    return { exact: Math.floor(best / 11), misplaced: best % 11 };
+  };
 }

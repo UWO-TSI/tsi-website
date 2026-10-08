@@ -60,7 +60,7 @@ export async function drawTicket(name: string, project: string, memberNo: string
   ctx.fillStyle = "#22d3ee";
   ctx.font = `600 44px ${mono}`;
   ctx.letterSpacing = "14px";
-  ctx.fillText("TETHOS STUDENT INITIATIVE", pad, pad + 40);
+  ctx.fillText("TECH FOR SOCIAL IMPACT", pad, pad + 40);
   ctx.fillStyle = "rgba(241,255,255,0.5)";
   ctx.fillText("2026 / 27 COHORT", pad, pad + 110);
 

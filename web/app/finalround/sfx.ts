@@ -78,6 +78,12 @@ export const sfx = {
     noise({ dur: 0.03, vol: 0.12, freq: 3800, q: 4 });
     tone(1800, { type: "square", dur: 0.025, vol: 0.02 });
   },
+  tick(fast: boolean) {
+    noise({ dur: 0.02, vol: fast ? 0.05 : 0.035, freq: fast ? 3200 : 2600, q: 8 });
+  },
+  count() {
+    tone(660, { dur: 0.16, vol: 0.09, type: "triangle" });
+  },
   clunk() {
     tone(110, { dur: 0.32, vol: 0.5, slide: 45 });
     noise({ dur: 0.18, vol: 0.35, freq: 420, q: 0.8 });
@@ -97,7 +103,7 @@ export const sfx = {
     tone(55, { dur: 1.2, vol: 0.25, slide: 40 });
   },
   open() {
-    for (let i = 0; i < 4; i++) tone(988 + i * 165, { at: 0.15 + i * 0.16, dur: 0.14, vol: 0.06, type: "triangle" });
+    for (let i = 0; i < 6; i++) tone(988 + i * 110, { at: 0.15 + i * 0.11, dur: 0.14, vol: 0.06, type: "triangle" });
     for (let i = 0; i < 10; i++) noise({ at: 0.9 + i * 0.05, dur: 0.05, vol: 0.18, freq: 1500, q: 3 });
     tone(80, { at: 1.6, dur: 1.4, vol: 0.4, slide: 50 });
     noise({ at: 1.6, dur: 1.2, vol: 0.12, freq: 300, q: 0.5 });
