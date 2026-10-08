@@ -201,6 +201,14 @@ export default function FinalRound({
     }, 1600);
   }, [track]);
 
+  // Nobody gets stranded on the status screen: continue on their behalf after a pause.
+  const checkStatusRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    if (phase !== "status") return;
+    const id = window.setTimeout(() => checkStatusRef.current(), 8000);
+    return () => window.clearTimeout(id);
+  }, [phase]);
+
   const checkStatus = () => {
     if (phase !== "status") return;
     unlockAudio();
@@ -210,6 +218,9 @@ export default function FinalRound({
       sfx.open();
     }, 2600);
   };
+  useEffect(() => {
+    checkStatusRef.current = checkStatus;
+  });
 
   useEffect(() => {
     if (phase !== "test") return;
@@ -887,11 +898,12 @@ export default function FinalRound({
             <motion.button
               onClick={checkStatus}
               initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0, transition: { delay: 2.4, duration: 0.8 } }}
+              animate={{ opacity: 1, y: 0, transition: { delay: 1, duration: 0.6 } }}
               whileTap={{ scale: 0.96 }}
-              className="mt-8 rounded-xl border border-white/20 bg-white/5 px-7 py-4 font-semibold text-white backdrop-blur"
+              className="relative mt-8 rounded-full bg-[#ffd166] px-8 py-4 text-lg font-bold text-[#0b0c0f] shadow-[0_10px_40px_-8px_rgba(255,209,102,0.9)]"
             >
-              Check application status
+              <span className="absolute inset-0 animate-ping rounded-full bg-[#ffd166] opacity-30" aria-hidden />
+              <span className="relative">Check application status</span>
             </motion.button>
           </motion.section>
         )}
