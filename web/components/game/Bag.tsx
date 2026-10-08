@@ -8,7 +8,7 @@
  */
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { ArrowDownWideNarrow, Backpack, Lock, LockOpen, Pin, PinOff } from "lucide-react";
-import { Badge, Button, ConfirmDialog, IconButton, ItemTile, Loading, Progress, Sheet, SignInText, Tabs, type Rarity } from "@/components/gui";
+import { Badge, Button, ConfirmDialog, ErrorNote, IconButton, ItemTile, Loading, Progress, Sheet, SignInText, Tabs, type Rarity } from "@/components/gui";
 import { InventoryBody } from "@/components/economy/EconomySheets";
 import { Amount } from "@/components/economy/Amount";
 import { arrange, itemInfo, slotCounts, stackSize, type Slot } from "@/lib/collections/bag";
@@ -113,7 +113,7 @@ function Pockets() {
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [dropping, setDropping] = useState(false);
-  if (!view) return <Loading label="Opening your bag…" />;
+  if (!view) return bag.error ? <ErrorNote onRetry={() => void loadBag()}>Your bag didn&apos;t load.</ErrorNote> : <Loading label="Opening your bag…" />;
   const key = sel !== null ? slots[sel] ?? null : null;
   const qty = sel !== null ? counts[sel] ?? 0 : 0;
   const run = async (act: () => Promise<string | null>) => {

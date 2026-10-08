@@ -12,6 +12,7 @@
 .phase[data-phase="break"] { color: var(--gui-success); }
 .clock { margin: 2px 0 4px; color: var(--gui-ink-strong); font-size: 40px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1.1; }
 .actions { margin-top: 10px; }
+.actions > button { flex: 1; }
 
 /* Short laptop screens (study ruling 10): the timer card is one line and the column stops above the open minimap (bottom 84 + ~300 tall). */
 @media (max-height: 759px) and (min-width: 701px) {
@@ -24,9 +25,10 @@
   .timer .actions button { min-height: 38px; padding: 0 12px; font-size: 13px; white-space: nowrap; }
 }
 
-/* Beside the seated avatar (screen centre), not over it. */
-.startSheet { position: absolute; left: calc(50% + 70px); top: 50%; transform: translateY(-50%); width: min(360px, calc(100% - 32px)); z-index: 20; zoom: var(--tsi-text-scale, 1); }
-.startSheet > section { box-shadow: var(--gui-shadow-lg); background: var(--gui-paper); }
+/* The start sheet (the kit's non-modal Sheet): beside the seated avatar (screen centre), not over it; the companion's
+   Setup card inside it lies flat on the sheet's paper. Narrow, the kit's own placement (a bottom sheet on a phone). */
+@media (min-width: 701px) { .startSheet { justify-self: start; margin-left: min(calc(50% + 70px), calc(100% - var(--sheet-w))); } }
+.startBody > section { padding: 0; background: none; box-shadow: none; }
 
 .board { margin: 4px 0 12px; padding: 0; list-style: none; display: grid; }
 .board li { display: flex; justify-content: space-between; padding: 9px 12px; font-weight: 700; }
@@ -34,7 +36,7 @@
 .board li:first-child { border-radius: 999px; background: repeating-linear-gradient(-45deg, var(--gui-stripe-a) 0 12px, var(--gui-stripe-b) 12px 24px); color: var(--gui-ink-strong); }
 
 /* Narrow: over the bottom stack (the prompt, and room for two toasts above it; DefaultIslandWorld.module.css), never on it. */
-@media (max-width: 700px) { .startSheet { left: 16px; top: auto; bottom: calc(var(--game-toast-bottom, 132px) + 84px); transform: none; } .panel { top: auto; bottom: calc(var(--game-toast-bottom, 132px) + 84px); left: 12px; width: calc(100% - 24px); max-height: 45%; } }
+@media (max-width: 700px) { .panel { top: auto; bottom: calc(var(--game-toast-bottom, 132px) + 84px); left: 12px; width: calc(100% - 24px); max-height: 45%; } }
 @media (prefers-reduced-motion: reduce) { .overhead[data-phase="break"] { animation: none; } }
 
 /* The café owner's greeting bubble and nameplate (cafe-polish §6): the residents' paper bubble with a tail, a paper name tag. */

@@ -1,0 +1,22 @@
+{"name":"bag-500","sheet":[]}
+{"name":"bag-500","retryButtons":0}
+{"name":"chest-500","dialogs":[{"label":"Storage chest","state":"open","modal":"true"}],"alert":[],"loading":[]}
+{"name":"phone-bag-500","alert":[]}
+{"name":"study-setup","dialogs":[{"label":"Start studying","state":null,"modal":null}],"focus":{"tag":"BODY","text":"TSI LABIndexDefault islandLook labFishin","outline":"none 3px rgb(241, 255, 255)","inDialog":false}}
+{"name":"study-setup-tab2","focus":{"tag":"A","text":"Default island","outline":"auto 1px rgb(0, 95, 204)","inDialog":false}}
+{"name":"study-setup-esc60ms","dialogs":[{"label":"Start studying","state":null,"modal":null}]}
+{"name":"study-setup-esc","dialogs":[{"label":"Start studying","state":null,"modal":null}],"prompt":["I","B"],"timer":[]}
+{"name":"study-focus","buttons":[{"text":"Break now","cls":"companion-module__Af64gW__ghost","font":"\"Tethos Nunito\", Nunito, ui-rounded, sys","h":38},{"text":"Stand up","cls":"companion-module__Af64gW__btn","font":"\"Tethos Nunito\", Nunito, ui-rounded, sys","h":38},{"text":"Table chat muted while you focus","cls":"gui-module__RjzS-q__toggle","font":"\"Tethos Nunito\", Nunito, ui-rounded, sys","h":0}]}
+{"name":"study-390-setup","dialogs":[{"label":"Start studying","state":null,"modal":null}],"focus":{"tag":"BODY","text":"TSI LABIndexDefault islandLook labFishin","outline":"none 3px rgb(241, 255, 255)","inDialog":false}}
+{"name":"study-390-setup-tab2","focus":{"tag":"A","text":"Default island","outline":"auto 1px rgb(0, 95, 204)","inDialog":false}}
+{"name":"study-390-setup-esc60ms","dialogs":[{"label":"Start studying","state":null,"modal":null}]}
+{"name":"study-390-setup-esc","dialogs":[{"label":"Start studying","state":null,"modal":null}],"prompt":["I","B"],"timer":[]}
+{"name":"study-390-focus","buttons":[{"text":"Break now","cls":"companion-module__Af64gW__ghost","font":"\"Tethos Nunito\", Nunito, ui-rounded, sys","h":48},{"text":"Stand up","cls":"companion-module__Af64gW__btn","font":"\"Tethos Nunito\", Nunito, ui-rounded, sys","h":48},{"text":"Table chat muted while you focus","cls":"gui-module__RjzS-q__toggle","font":"\"Tethos Nunito\", Nunito, ui-rounded, sys","h":48}]}
+{"name":"people","missing":true}
+{"name":"bag-500","sheet":["Opening your bag…"]}
+{"name":"bag-500","retryButtons":0}
+{"name":"chest-500","dialogs":[{"label":"Storage chest","state":"open","modal":"true"}],"alert":[],"loading":["Opening the chest…"]}
+{"name":"people","missing":true}
+{"name":"people","label":"People on the island: 5","badge":["B \"5\" 11px rgb(66, 107, 91)"]}
+{"name":"gauges","box":{"x":325,"y":613,"width":630,"height":11},"type":["DIV 10px 600 \"IBM Plex Mono\", monospace","SMALL 8px 600 \"IBM Plex Mono\", monospace","KBD 9px 700 \"IBM Plex Mono\", monospace"]}
+{"name":"gauges","box":{"x":325,"y":613,"width":630,"height":11},"type":["DIV 10px 600 \"IBM Plex Mono\", monospace","SMALL 8px 600 \"IBM Plex Mono\", monospace","KBD 9px 700 \"IBM Plex Mono\", monospace"]}
