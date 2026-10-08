@@ -64,7 +64,11 @@ LIMITS = {
     "glasses_offset_max": 0.012,   # lens centre vs painted eye centre
     "face_stretch_max": 1.2,       # texture stretch where features are painted
     "face_aniso_max": 1.25,
-    "eye_reach_lon_max_deg": 55.0,  # how far round the head (azimuth) any eye pixel sits: ref 18's lid ends ~51 deg
+    "eye_reach_lon_max_deg": 55.0,
+    "face_facing_max_deg": 52.0,   # head fit (row 304): no painted pixel of any eye, brow or mouth faces more than this
+                                    # away from straight ahead. v7: eyes 46.9, mouth 61.2 (the widest grins wrapped under
+                                    # the chin); v8's flat face: eyes 36, brows 17, mouth 51 (only the lowest pixels of the
+                                    # widest grins, W > 0.93 on the canvas, reach the chin's turn)  # how far round the head (azimuth) any eye pixel sits: ref 18's lid ends ~51 deg
                                     # round, so both eyes stay on the face in 3/4 view (v6 shipped 63)
     "lock_roots_exposed": 0,       # lock root-ring vertices not buried in the head or other hair
     "lock_dive_max": 0.002,        # m: how deep a lock's outward-facing surface goes under the skin past its root zone
@@ -75,7 +79,7 @@ DEFAULT_BANGS, DEFAULT_BACK = "bangs_straight", "back_bob"
 bpy.ops.wm.read_factory_settings(use_empty=True)
 CAT = json.load(open(os.path.join(HERE, "character_catalog.json")))
 V7_FACE = os.path.join(HERE, "v7", "face", "face_v7.json")
-FACE_V7 = os.path.exists(V7_FACE) and CAT["base"].get("head") == "v7/head.blend"
+FACE_V7 = os.path.exists(V7_FACE) and CAT["base"].get("head") in ("v7/head.blend", "skull/head.blend")   # the v7 face atlas on the v7 or v8 head
 FACEV = json.load(open(V7_FACE if FACE_V7 else os.path.join(HERE, "base", "face_variants.json")))
 
 
@@ -392,12 +396,24 @@ for fid in FACEV["layers"]["eyes"]["items"]:
             cen[side] = locate(U, W)
     eye_centres[fid] = cen
 
+# head fit (row 304): how far every painted layer turns away from straight ahead, over every pixel of every item: the
+# flat face area keeps the mouth and brows facing the camera, not wrapping under the chin or over the brow
+facing_max = {}
+for layer in ("eyes", "brows", "mouth"):
+    ys, xs = np.nonzero(LAYER_MASK[layer] > 0.5)
+    worst = 0.0
+    for k in range(0, len(xs), 4):
+        p = locate((xs[k] + 0.5) / RES, (ys[k] + 0.5) / RES)
+        if p is not None:
+            worst = max(worst, facing(p))
+    facing_max[layer] = round(worst, 1)
+
 brow = item_alpha("brows", FACEV["layers"]["brows"]["default"], RES)
 by, bx = np.nonzero(brow > 0.5)
 BROW_PTS = [p for p in (locate((bx[k] + 0.5) / RES, (by[k] + 0.5) / RES) for k in range(0, len(bx), 2)) if p is not None]
 dflt = eye_centres[FACEV["layers"]["eyes"]["default"]]
 face = {"feature_tris": n_feat, "stretch_max": round(worst_stretch, 3), "aniso_max": round(worst_aniso, 3), "per_layer": per_layer,
-        "stretch_worst_at": worst_at, "aniso_worst_at": aniso_at, "eye_reach_deg": round(eye_reach, 1), "eye_reach_lon_deg": round(eye_lon, 1),
+        "stretch_worst_at": worst_at, "aniso_worst_at": aniso_at, "eye_reach_deg": round(eye_reach, 1), "eye_reach_lon_deg": round(eye_lon, 1), "facing_max_deg": facing_max,
         "default_eye_centre_lon_deg": round(abs(lon_of(dflt["L"])), 1) if dflt.get("L") else None,
         "default_eye_centre_z": round(dflt["L"].z, 4) if dflt.get("L") else None}
 
@@ -520,7 +536,7 @@ def head_only_bvh(path):
     dg = bpy.context.evaluated_depsgraph_get()
     vs, ps = [], []
     for o in new:
-        if o.type == "MESH" and o.name.split(".")[0] in ("V7_Head", "V6_Head"):
+        if o.type == "MESH" and o.name.split(".")[0] in ("V8_Head", "V7_Head", "V6_Head"):
             e = o.evaluated_get(dg)
             me = e.to_mesh()
             base = len(vs)
@@ -712,6 +728,8 @@ for pid, r in lock_report.items():
 check("stretch_max", face["stretch_max"], LIMITS["face_stretch_max"], "face")
 check("aniso_max", face["aniso_max"], LIMITS["face_aniso_max"], "face")
 check("eye_reach_lon_deg", face["eye_reach_lon_deg"], LIMITS["eye_reach_lon_max_deg"], "face")
+for layer, v in face["facing_max_deg"].items():
+    check(f"facing_max_deg {layer}", v, LIMITS["face_facing_max_deg"], "face")
 
 report = {"limits": LIMITS, "face": face, "seam": seam, "hair": hair, "locks": lock_report, "headwear": headwear,
           "glasses": glasses, "fails": fails, "flags": flags}
