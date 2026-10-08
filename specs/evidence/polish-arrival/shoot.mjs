@@ -18,10 +18,11 @@ const rad = d => (Number(d) * Math.PI) / 180;
 const framesFile = `${OUT}/frames.json`;
 const frames = existsSync(framesFile) ? JSON.parse(readFileSync(framesFile, "utf8")) : {};
 
-// HEADLESS=1: no window at all, WebGL on SwiftShader (looks only; frame times there say nothing about the GPU).
-const HEADLESS = process.env.HEADLESS === "1";
+// HEADLESS=1: no window at all, WebGL on the GPU through Metal (the trip's frames need real frame rates);
+// HEADLESS=swiftshader: no GPU at all (stills only: the trip outruns its screenshots there).
+const HEADLESS = process.env.HEADLESS;
 const browser = await chromium.launch(HEADLESS
-  ? { headless: true, args: ["--mute-audio", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] }
+  ? { headless: true, args: HEADLESS === "swiftshader" ? ["--mute-audio", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] : ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"] }
   : { headless: false, args: ["--mute-audio", "--window-position=2400,0", "--use-angle=metal", "--ignore-gpu-blocklist"] });
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
 const page = await ctx.newPage();
@@ -59,7 +60,7 @@ async function strip(name, marks) {
       if (!s) return p === "done";
       const ip = order.indexOf(s.phase), iq = order.indexOf(p);
       return ip > iq || (ip === iq && s.t >= tt);
-    }, [phase, t, ORDER], { timeout: 180000, polling: 16 });
+    }, [phase, t, ORDER], { timeout: 400000, polling: 16 });
     const s = await page.evaluate(() => window.__trip?.state() ?? null);
     const file = `${name}-${String(k).padStart(2, "0")}`;
     await shot(file);
@@ -108,6 +109,8 @@ for (const scene of SCENES) {
     if (!out) await page.evaluate(() => window.__move?.teleport(0, -12, Math.PI));
     await page.waitForTimeout(800);
     await perf(`${scene} before`);
+    // E only once the boat's prompt is up (slow renderers take a while to place you by it).
+    await page.getByText(out ? "Take the boat home" : "Take the boat to the village").first().waitFor({ timeout: 240000 });
     await page.keyboard.press("e");
     await strip(scene, OUT_MARKS);
     await page.waitForTimeout(600);
@@ -116,8 +119,9 @@ for (const scene of SCENES) {
   if (scene === "skip") {
     await open("at=8,-21&at=13:00", { cam: [180, 30, 1] });
     await page.waitForTimeout(2500);
+    await page.getByText("Take the boat home").first().waitFor({ timeout: 240000 });
     await page.keyboard.press("e");
-    await page.waitForFunction(() => window.__trip?.state()?.phase === "sail", null, { timeout: 60000 });
+    await page.waitForFunction(() => window.__trip?.state()?.phase === "sail", null, { timeout: 240000 });
     await page.waitForTimeout(500);
     await shot("skip-pre");
     await page.keyboard.press(" ");
@@ -157,7 +161,7 @@ for (const scene of SCENES) {
       await open(`at=-15.5,2.2&at=${time}`, { cam: [0, 46, 0.85] });
       await page.waitForTimeout(3000);
       await nohud();
-      await page.evaluate(() => window.__move?.tapTo(-15.4, 5.9));
+      await page.evaluate(() => window.__move?.tapTo(-13.2, 5.4));
       for (const ms of [70, 200, 650]) { await page.waitForTimeout(ms === 70 ? 70 : ms - (ms === 200 ? 70 : 200)); await shot(`target-${label}-${ms}`); }
     }
     // A touch screen's own context (hasTouch: a coarse pointer, so a tap walks).
