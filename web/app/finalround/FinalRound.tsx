@@ -12,7 +12,6 @@ import {
   NEAR_MISS,
   ONBOARDING,
   TIME_LIMIT_SECONDS,
-  teamStep,
 } from "./data";
 import { setMuted, sfx, unlockAudio } from "./sfx";
 import type { Invite } from "./token";
@@ -74,11 +73,6 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
 
   const cleanName = name.trim();
   const project = invite?.project ?? "";
-  const steps = useMemo(() => {
-    const list = [...ONBOARDING];
-    list.splice(2, 0, teamStep(project));
-    return list;
-  }, [project]);
 
   useEffect(() => {
     try {
@@ -769,30 +763,38 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                   YOUR NEXT STEPS
                 </h3>
                 <ol className="mt-5 space-y-3">
-                  {steps.map((s, i) => (
+                  {ONBOARDING.map((s, i) => (
                     <motion.li
                       key={s.title}
                       initial={{ opacity: 0, y: 24 }}
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true, margin: "-40px" }}
                       transition={{ ...spring, delay: i * 0.08 }}
-                      whileHover={{ x: 4 }}
                       className="flex gap-4 rounded-2xl border border-white/10 bg-[#121418] p-4"
                     >
                       <span className={`${mono} text-2xl font-bold text-[#ffd166]`}>
                         {String(i + 1).padStart(2, "0")}
                       </span>
-                      <div>
-                        <p className="font-semibold">
-                          {s.href ? (
-                            <a href={s.href} target="_blank" rel="noreferrer" className="text-[#1d9bf0] underline">
-                              {s.title}
-                            </a>
-                          ) : (
-                            s.title
-                          )}
-                        </p>
-                        <p className="text-sm text-[#9ca3af]">{s.body}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold">{s.title}</p>
+                        <p className="mt-0.5 text-sm text-[#9ca3af]">{s.body}</p>
+                        {s.href ? (
+                          <motion.a
+                            href={s.href}
+                            target="_blank"
+                            rel="noreferrer"
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.96 }}
+                            transition={spring}
+                            className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#1d9bf0] px-4 py-2 text-sm font-semibold text-white"
+                          >
+                            {s.cta} <span aria-hidden>→</span>
+                          </motion.a>
+                        ) : (
+                          <span className="mt-3 inline-flex rounded-full border border-white/10 px-4 py-2 text-sm text-white/40">
+                            Link coming soon
+                          </span>
+                        )}
                       </div>
                     </motion.li>
                   ))}

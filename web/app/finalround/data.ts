@@ -13,17 +13,30 @@ export const NEAR_MISS = [
   "Almost there.",
 ];
 
-// TODO: replace with the real onboarding steps and links.
+// TODO: paste the real links into each href.
 export const ONBOARDING = [
-  { title: "Join the Discord", body: "Your private onboarding channel is waiting.", href: "" },
-  { title: "Introduce yourself", body: "Say hi and tell us what you want to build.", href: "" },
-  { title: "Show up to kickoff", body: "Date and location drop in Discord.", href: "" },
-];
-
-export function teamStep(project: string) {
-  return {
-    title: project ? `Meet your ${project} lead` : "Meet your team lead",
-    body: `Your ${project || "team"} lead will DM you within 48 hours.`,
+  {
+    title: "Join the Discord",
+    cta: "Join Discord",
+    body: "New to TSI? Introduce yourself in #introduction. Returning member? Message Alice and she'll give you the Developer role.",
     href: "",
-  };
-}
+  },
+  {
+    title: "Pick your first townhall time",
+    cta: "Open LettuceMeet",
+    body: "Fill out the LettuceMeet for the first townhall on Oct 24 or 25 with the times you're free.",
+    href: "",
+  },
+  {
+    title: "Set your monthly townhall availability",
+    cta: "Open LettuceMeet",
+    body: "Fill out the LettuceMeet for the recurring monthly townhall.",
+    href: "",
+  },
+  {
+    title: "Fill out the team directory",
+    cta: "Open directory",
+    body: "Add yourself so your team can find you.",
+    href: "",
+  },
+];
