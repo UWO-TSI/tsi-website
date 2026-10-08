@@ -28,6 +28,10 @@ With `compose <dir>`, also writes composed faces for the review sheets (expressi
 
 face_set_301.py adds the row-301 parts (sleepy and dot eyes, cat and curled-grin mouths, the blush band). They are
 packed in a band below the earlier cells, which keep their exact rects and pixels.
+
+face_set_305.py adds David's 19 faces (row 305 set: 19 eyes, 19 mouths, 2 accents) on a second atlas page,
+v7_face_atlas_2.png (and its _512 world copy), which the engine loads only for a look that wears one of them. Their
+cells carry a 7th value, the page (1). The first page is unchanged by them.
 """
 import bpy, json, math, os, sys
 import numpy as np
@@ -605,15 +609,42 @@ def save_png(name, arr, path):
     bpy.data.images.remove(img)
 
 
+def half_size(a):
+    h, w = a.shape[:2]
+    q = a.reshape(h // 2, 2, w // 2, 2, 4)
+    qa = q[..., 3].mean(axis=(1, 3))
+    qrgb = (q[..., :3] * q[..., 3:4]).sum(axis=(1, 3)) / np.maximum(q[..., 3:4].sum(axis=(1, 3)), 1e-6)
+    qrgb = np.where(qa[..., None] > 0, qrgb, q[..., :3].mean(axis=(1, 3)))
+    return np.concatenate([qrgb, qa[..., None]], axis=2)
+
+
 os.makedirs(OUT, exist_ok=True)
 save_png("V7FaceAtlas", atlas, os.path.join(OUT, "v7_face_atlas.png"))
 save_png("V7FaceAtlas512", atlas_512, os.path.join(OUT, "v7_face_atlas_512.png"))
+
+# ================================================================ page 2: David's 19 faces (face_set_305.py)
+import face_set_305  # noqa: E402
+P2_CELLS, P2_ANCHORS, P2_NAMES, P2_INFO = face_set_305.build(PX, dict(ANCHOR))
+ANCHOR.update(P2_ANCHORS)
+cells.update(P2_CELLS)
+P2_KEYS = set(P2_CELLS)
+P2_EYES = list(dict.fromkeys(k[1] for k in P2_CELLS if k[0] == "eyes"))
+P2_MOUTHS = [k[1] for k in P2_CELLS if k[0] == "mouth"]
+P2_EXTRAS = [k[1] for k in P2_CELLS if k[0] == "extras"]
+ATLAS2_H = pack(sorted(P2_KEYS, key=str), GUTTER)
+atlas2 = np.zeros((ATLAS2_H, ATLAS_W, 4), np.float32)
+for key in P2_KEYS:
+    px_, py_, w, h = placements[key]
+    atlas2[py_:py_ + h, px_:px_ + w] = cells[key][0]
+atlas2 = bleed(atlas2, GUTTER)
+save_png("V7FaceAtlas2", atlas2, os.path.join(OUT, "v7_face_atlas_2.png"))
+save_png("V7FaceAtlas2_512", half_size(atlas2), os.path.join(OUT, "v7_face_atlas_2_512.png"))
 
 
 def rect(key):
     x_, y_, w, h = placements[key]
     ax, ay = cells[key][1]
-    return [x_, y_, w, h, round(float(ax), 2), round(float(ay), 2)]
+    return [x_, y_, w, h, round(float(ax), 2), round(float(ay), 2)] + ([1] if key in P2_KEYS else [])
 
 
 face = {
@@ -622,25 +653,30 @@ face = {
             "= 2 FH of arc). A cell [x, y, w, h, ax, ay] is an atlas rect (px, top-left origin, at `density` px per "
             "canvas) whose point (ax, ay) sits on its layer's anchor; `mirror` layers are drawn for the character's "
             "right side (canvas left) and mirrored for the left. Brows are white, tinted with the hair colour. Eye "
-            "cells have frames open/half/closed for the blink. Ids are the cell codes on David's labelled sheets.",
+            "cells have frames open/half/closed for the blink. Ids are the cell codes on David's labelled sheets. "
+            "A cell with a 7th value 1 is on the second page (atlas2, atlas2_world, atlas2_size: David's 19 faces, "
+            "face_set_305.py); an eye with a `left` cell draws it at the eye_left anchor instead of mirroring `open`.",
     "density": PX, "canvas_m": round(2 * FH, 4),
     "atlas": "v7_face_atlas.png", "atlas_world": "v7_face_atlas_512.png", "atlas_size": [ATLAS_W, ATLAS_H],
+    "atlas2": "v7_face_atlas_2.png", "atlas2_world": "v7_face_atlas_2_512.png", "atlas2_size": [ATLAS_W, ATLAS2_H],
     "anchors": {k: [round(v[0], 4), round(v[1], 4)] for k, v in ANCHOR.items()},
     "layers": {
         "extras": {"default": None, "multi": True, "tint": None, "items": {
-            xid: {"anchor": kind, "mirror": mir, "cell": rect(("extras", xid, None))} for xid, (kind, mir, _) in EXTRAS.items()}},
+            **{xid: {"anchor": kind, "mirror": mir, "cell": rect(("extras", xid, None))} for xid, (kind, mir, _) in EXTRAS.items()},
+            **{xid: {"anchor": xid, "mirror": False, "cell": rect(("extras", xid, None))} for xid in P2_EXTRAS}}},
         "brows": {"default": "brow_soft", "anchor": "brow", "mirror": True, "tint": "hair",
-                  "items": {bid: rect(("brows", bid, None)) for bid in BROWS}},
+                  # brow_none: an empty cell, no brows (David's faces draw their own in the eye cell)
+                  "items": {**{bid: rect(("brows", bid, None)) for bid in BROWS}, "brow_none": [0, 0, 0, 0, 0, 0]}},
         "eyes": {"default": "F1.1", "anchor": "eye", "mirror": True, "tint": None,
-                 "items": {eid: {f: rect(("eyes", eid, f)) for f in ("open", "half", "closed") if ("eyes", eid, f) in cells}
-                           for eid in EYE_ORDER}},
+                 "items": {eid: {f: rect(("eyes", eid, f)) for f in ("open", "half", "closed", "left") if ("eyes", eid, f) in cells}
+                           for eid in EYE_ORDER + P2_EYES}},
         "mouth": {"default": "M1.1", "anchor": "mouth", "mirror": False, "tint": None,
-                  "items": {mid: rect(("mouth", mid, None)) for mid in MOUTHS}},
+                  "items": {mid: rect(("mouth", mid, None)) for mid in list(MOUTHS) + P2_MOUTHS}},
         "talk": {"default": None, "anchor": "mouth", "mirror": False, "tint": None,
                  "items": {tid: rect(("talk", tid, None)) for tid in TALK_CELLS}},
     },
     "expressions": EXPRESSIONS, "blink": BLINK, "talk": TALK, "emoteMouth": EMOTE_MOUTH,
-    "names": face_set_301.NAMES,
+    "names": {**face_set_301.NAMES, "brow_none": "No brows", **P2_NAMES},
 }
 json.dump(face, open(os.path.join(OUT, "face_v7.json"), "w"), indent=1)
 
@@ -702,4 +738,4 @@ if COMPOSE_DIR:
         save_png(f"blink_{f}", compose(eye_frame=f), os.path.join(COMPOSE_DIR, f"blink_{f}.png"))
     for m in ["M1.1"] + TALK["frames"]:
         save_png(f"talk_{m}", compose(mouth=m), os.path.join(COMPOSE_DIR, f"talk_{m}.png"))
-print("FACE_OK", len(cells), "cells", ATLAS_W, "x", ATLAS_H)
+print("FACE_OK", len(cells), "cells", ATLAS_W, "x", ATLAS_H, "page 2", ATLAS_W, "x", ATLAS2_H, json.dumps(P2_INFO))

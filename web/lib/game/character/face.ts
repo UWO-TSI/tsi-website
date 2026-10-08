@@ -1,7 +1,7 @@
 /**
  * Animated painted face (avatar v7, rows 132, 144, 192, 254): an ACNH-style face the engine animates without
  * redrawing a canvas. The face atlas (art/characters/v7/build_face.py) holds every feature once; the face shader
- * draws the skin colour plus eight layer slots (blush band, blush, freckles, mole, brows, the two eyes, mouth), each an atlas
+ * draws the skin colour plus a layer slot per extra (blush band, blush, freckles, mole, set 305's accents), brows, the two eyes and the mouth, each an atlas
  * cell placed at its anchor on the face canvas (the head's UVs), mirrored for the other side where the layer is.
  * Blinking, talking and the six expressions only change which cell each slot shows and the brows' pose.
  * Pure: FaceAnimator picks the frame, faceSlots turns it into slot data, faceMaterial.ts uploads it.
@@ -109,29 +109,34 @@ export class FaceAnimator {
  * cell lands on the face canvas [u0, w0, u1, w1] for the canvas-left side; mirror: 0 as placed, 1 also mirrored to
  * the other side, 2 only the mirrored copy; tint = hex multiplied into white art (brows: the hair colour);
  * pose = [pivot u, pivot w, dy, tilt in radians] rotating the cell about its anchor. src null = the slot is off. */
-export interface FaceSlot { src: [number, number, number, number] | null; dst: [number, number, number, number]; mirror: 0 | 1 | 2; tint: string | null; pose: [number, number, number, number] }
-export const FACE_SLOT_COUNT = 8;
-const OFF: FaceSlot = { src: null, dst: [0, 0, 0, 0], mirror: 0, tint: null, pose: [0, 0, 0, 0] };
+export interface FaceSlot { src: [number, number, number, number] | null; dst: [number, number, number, number]; mirror: 0 | 1 | 2; tint: string | null; pose: [number, number, number, number]; page: 0 | 1 }
+/** Extras in draw order: the earlier four as they always drew, then every later accent in catalogue order. */
+const EXTRA_ORDER = [...new Set(["blush_band", "blush", "freckles", "mole", ...Object.keys(FACE.layers.extras.items)])];
+/** One slot per extra, then brows, the two eyes and the mouth. */
+export const FACE_SLOT_COUNT = EXTRA_ORDER.length + 4;
+const OFF: FaceSlot = { src: null, dst: [0, 0, 0, 0], mirror: 0, tint: null, pose: [0, 0, 0, 0], page: 0 };
 
 function slot(cell: FaceCell, anchor: [number, number], mirror: 0 | 1 | 2, tint: string | null = null, brow: [number, number] = [0, 0]): FaceSlot {
-  const [x, y, w, h, ax, ay] = cell, [W, H] = FACE.atlas_size, k = 1 / FACE.density;
+  const [x, y, w, h, ax, ay, page = 0] = cell, [W, H] = page ? FACE.atlas2_size : FACE.atlas_size, k = 1 / FACE.density;
   const u0 = anchor[0] - ax * k, w0 = anchor[1] - ay * k;
-  return { src: [x / W, y / H, w / W, h / H], dst: [u0, w0, u0 + w * k, w0 + h * k], mirror, tint, pose: [anchor[0], anchor[1], brow[0], (brow[1] * Math.PI) / 180] };
+  return { src: [x / W, y / H, w / W, h / H], dst: [u0, w0, u0 + w * k, w0 + h * k], mirror, tint, pose: [anchor[0], anchor[1], brow[0], (brow[1] * Math.PI) / 180], page };
 }
 
-/** The eight slots (blush band, blush, freckles, mole, brows, right eye, left eye, mouth) for a look showing `pose`. */
+/** The slots (each extra, brows, right eye, left eye, mouth) for a look showing `pose`. */
 export function faceSlots(look: CharacterLook, pose: FacePose): FaceSlot[] {
   const { extras, brows, mouth } = FACE.layers, A = FACE.anchors;
   const extra = (id: string) => {
     const it = extras.items[id];
     return look.extras.includes(id) && it ? slot(it.cell, A[it.anchor], it.mirror ? 1 : 0) : OFF;
   };
-  const eyeCell = eyeCells(pose.eyes)[pose.eyeFrame] ?? eyeCells(pose.eyes).open;
+  const eye = eyeCells(pose.eyes), eyeCell = eye[pose.eyeFrame] ?? eye.open;
+  const browCell = brows.items[look.brows] ?? brows.items[brows.default];
   return [
-    extra("blush_band"), extra("blush"), extra("freckles"), extra("mole"),
-    slot(brows.items[look.brows] ?? brows.items[brows.default], A.brow, 1, PALETTE.hair[look.hair], pose.brow),
+    ...EXTRA_ORDER.map(extra),
+    browCell[2] ? slot(browCell, A.brow, 1, PALETTE.hair[look.hair], pose.brow) : OFF,   // an empty cell: no brows
     slot(eyeCell, A.eye, 0),
-    slot(eyeCell, A.eye, 2),
+    // an eye pair drawn as two cells places its own canvas-right eye; the others mirror the one eye
+    eye.left ? slot(eye.left, A.eye_left, 0) : slot(eyeCell, A.eye, 2),
     slot(mouth.items[pose.mouth] ?? FACE.layers.talk.items[pose.mouth] ?? mouth.items[mouth.default], A.mouth, 0),
   ];
 }

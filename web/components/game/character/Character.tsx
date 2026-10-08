@@ -14,11 +14,11 @@ import { useGLTF } from "@react-three/drei";
 import type { WeaponPaint } from "@/lib/game/combat/primitives";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { BASE_URL, FACE_ATLAS_URLS, LOD_SKIN_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
+import { BASE_URL, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, LOD_SKIN_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, usesFacePage2, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
 import { characterLod, createLodState, drawnHeight, mixerStep } from "@/lib/game/character/lod";
 import { quality } from "@/lib/game/perf/governor";
 import { FaceAnimator, faceSlots, poseKey } from "@/lib/game/character/face";
-import { createFaceMaterial, MATTE, prepareFaceAtlas, type FaceMaterial } from "@/lib/game/character/faceMaterial";
+import { createFaceMaterial, loadFacePage, MATTE, prepareFaceAtlas, type FaceMaterial } from "@/lib/game/character/faceMaterial";
 import { ATTACK_CLIP, WEAPON_HAND, contactCrossed, crossfade, holdLayer, isLoop, layerTrack, layerWeight, matchPhase, resolveClip, tempo, verbInfo, type CharacterMotion, type ClipName, type Layer } from "@/lib/game/character/clips";
 import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } from "@/lib/game/character/rig";
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
@@ -127,6 +127,8 @@ class Puppet {
   readonly lod = createLodState();
   private look: CharacterLook | null = null;
   private faceMat: FaceMaterial | null = null;
+  /** The face atlas's second page, once a look of this character has needed it (David's 19 faces). */
+  private faceAtlas2: THREE.Texture | null = null;
   private readonly faceAnim = new FaceAnimator();
   private faceLookKey = "";
   private shownFace = "";
@@ -222,6 +224,7 @@ class Puppet {
     // The face is one material per character over the shared atlas; a new look or atlas only re-uploads uniforms.
     if (!this.faceMat) this.faceMat = createFaceMaterial(atlas);
     this.faceMat.setAtlas(atlas);
+    if (this.faceAtlas2) this.faceMat.setAtlas2(this.faceAtlas2);
     this.face.material = this.faceMat.material;
     this.look = look;
     this.faceLookKey = JSON.stringify([look.skin, look.hair, look.brows, look.eyes, look.mouth, look.extras]);
@@ -249,6 +252,12 @@ class Puppet {
     if (g === this.lodGeometry) frameStats.lodMeshes++;
     if (s.hz !== Infinity) frameStats.throttled++;
     this.body.userData.shadowCulled = this.face.userData.shadowCulled = !s.shadow;
+  }
+
+  /** The second face page arrived: a uniform swap on the face, no new material or program. */
+  setFaceAtlas2(tex: THREE.Texture) {
+    this.faceAtlas2 = tex;
+    this.faceMat?.setAtlas2(tex);
   }
 
   /** Blink, talk and expression for this frame: uniform writes only, and only when the frame changes. */
@@ -697,6 +706,15 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
   useEffect(() => {
     dressPuppet(puppet, shown, parts, loaded.slice(1).map(g => g.scene), atlas, decalMap);
   }, [puppet, shown, parts, loaded, atlas, decalMap]);
+  // The face atlas's second page loads only for a look that wears one of its parts, without suspending: until it
+  // arrives those parts are transparent. Everyone else never fetches it.
+  const page2 = usesFacePage2(shown) ? (faceSize >= 1024 ? FACE_ATLAS2_URLS.creator : FACE_ATLAS2_URLS.world) : null;
+  useEffect(() => {
+    if (!page2) return;
+    let live = true;
+    loadFacePage(page2).then(tex => { if (live) puppet.setFaceAtlas2(tex); }, () => {});
+    return () => { live = false; };
+  }, [puppet, page2]);
   const group = useRef<THREE.Group>(null);
   // The contact sits under the caller's anchor (ground level), not the group that lifts for seats and hops.
   const scene = useThree(s => s.scene);

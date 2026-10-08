@@ -1,5 +1,5 @@
 {
- "note": "v7 face layers (specs/avatar-v7.md): the engine draws the skin colour, then extras, brows, eyes and mouth as atlas cells placed on the face canvas (the v7 head's UVs, head_shape.face_chart, U right, W down, 1 canvas = 2 FH of arc). A cell [x, y, w, h, ax, ay] is an atlas rect (px, top-left origin, at `density` px per canvas) whose point (ax, ay) sits on its layer's anchor; `mirror` layers are drawn for the character's right side (canvas left) and mirrored for the left. Brows are white, tinted with the hair colour. Eye cells have frames open/half/closed for the blink. Ids are the cell codes on David's labelled sheets.",
+ "note": "v7 face layers (specs/avatar-v7.md): the engine draws the skin colour, then extras, brows, eyes and mouth as atlas cells placed on the face canvas (the v7 head's UVs, head_shape.face_chart, U right, W down, 1 canvas = 2 FH of arc). A cell [x, y, w, h, ax, ay] is an atlas rect (px, top-left origin, at `density` px per canvas) whose point (ax, ay) sits on its layer's anchor; `mirror` layers are drawn for the character's right side (canvas left) and mirrored for the left. Brows are white, tinted with the hair colour. Eye cells have frames open/half/closed for the blink. Ids are the cell codes on David's labelled sheets. A cell with a 7th value 1 is on the second page (atlas2, atlas2_world, atlas2_size: David's 19 faces, face_set_305.py); an eye with a `left` cell draws it at the eye_left anchor instead of mirroring `open`.",
  "density": 1024,
  "canvas_m": 0.449,
  "atlas": "v7_face_atlas.png",
@@ -7,6 +7,12 @@
  "atlas_size": [
   2048,
   1344
+ ],
+ "atlas2": "v7_face_atlas_2.png",
+ "atlas2_world": "v7_face_atlas_2_512.png",
+ "atlas2_size": [
+  2048,
+  2688
  ],
  "anchors": {
   "eye": [
@@ -32,6 +38,18 @@
   "blush": [
    0.5,
    0.72
+  ],
+  "eye_left": [
+   0.7584,
+   0.6144
+  ],
+  "nose_blush": [
+   0.5,
+   0.6694
+  ],
+  "sweat_drop": [
+   0.8135,
+   0.8423
   ]
  },
  "layers": {
@@ -87,6 +105,32 @@
       302.0,
       42.5
      ]
+    },
+    "nose_blush": {
+     "anchor": "nose_blush",
+     "mirror": false,
+     "cell": [
+      350,
+      2556,
+      184,
+      69,
+      92.0,
+      34.47,
+      1
+     ]
+    },
+    "sweat_drop": {
+     "anchor": "sweat_drop",
+     "mirror": false,
+     "cell": [
+      1396,
+      2556,
+      52,
+      49,
+      26.02,
+      24.52,
+      1
+     ]
     }
    }
   },
@@ -111,6 +155,14 @@
      26,
      58.0,
      14.0
+    ],
+    "brow_none": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
     ]
    }
   },
@@ -454,6 +506,341 @@
       66,
       30.0,
       25.5
+     ]
+    },
+    "bean": {
+     "open": [
+      1108,
+      1984,
+      105,
+      203,
+      0.39,
+      32.16,
+      1
+     ]
+    },
+    "daze": {
+     "open": [
+      16,
+      1984,
+      788,
+      211,
+      117.39,
+      98.16,
+      1
+     ]
+    },
+    "half_lid": {
+     "open": [
+      1382,
+      2228,
+      371,
+      115,
+      184.39,
+      66.16,
+      1
+     ],
+     "left": [
+      756,
+      1706,
+      388,
+      241,
+      182.61,
+      158.16,
+      1
+     ]
+    },
+    "swirl": {
+     "open": [
+      16,
+      544,
+      467,
+      388,
+      212.39,
+      249.16,
+      1
+     ],
+     "left": [
+      1436,
+      544,
+      436,
+      369,
+      263.61,
+      240.16,
+      1
+     ]
+    },
+    "mochi": {
+     "open": [
+      1468,
+      1984,
+      189,
+      186,
+      83.39,
+      15.16,
+      1
+     ],
+     "left": [
+      1246,
+      1984,
+      190,
+      186,
+      100.61,
+      15.16,
+      1
+     ]
+    },
+    "shy": {
+     "open": [
+      1682,
+      964,
+      275,
+      333,
+      109.39,
+      233.16,
+      1
+     ],
+     "left": [
+      1176,
+      1706,
+      312,
+      233,
+      159.61,
+      84.16,
+      1
+     ]
+    },
+    "relieved": {
+     "open": [
+      16,
+      2556,
+      302,
+      72,
+      146.39,
+      -5.84,
+      1
+     ],
+     "left": [
+      662,
+      1362,
+      303,
+      287,
+      156.61,
+      176.16,
+      1
+     ]
+    },
+    "chill": {
+     "open": [
+      978,
+      544,
+      425,
+      382,
+      237.39,
+      268.16,
+      1
+     ],
+     "left": [
+      516,
+      544,
+      429,
+      382,
+      181.61,
+      268.16,
+      1
+     ]
+    },
+    "tiny_dots": {
+     "open": [
+      1060,
+      2556,
+      81,
+      56,
+      108.39,
+      -92.84,
+      1
+     ],
+     "left": [
+      1296,
+      2556,
+      67,
+      50,
+      0.61,
+      -75.84,
+      1
+     ]
+    },
+    "stare": {
+     "open": [
+      338,
+      2416,
+      310,
+      107,
+      50.39,
+      90.16,
+      1
+     ],
+     "left": [
+      16,
+      2416,
+      289,
+      107,
+      206.61,
+      100.16,
+      1
+     ]
+    },
+    "offset": {
+     "open": [
+      16,
+      2228,
+      221,
+      156,
+      126.39,
+      -52.84,
+      1
+     ],
+     "left": [
+      1690,
+      1984,
+      221,
+      156,
+      94.61,
+      -118.84,
+      1
+     ]
+    },
+    "unimpressed": {
+     "open": [
+      16,
+      1362,
+      342,
+      312,
+      130.39,
+      132.16,
+      1
+     ]
+    },
+    "close_dots": {
+     "open": [
+      812,
+      2416,
+      87,
+      105,
+      -131.61,
+      155.16,
+      1
+     ],
+     "left": [
+      680,
+      2416,
+      99,
+      106,
+      212.61,
+      201.16,
+      1
+     ]
+    },
+    "teary": {
+     "open": [
+      16,
+      964,
+      351,
+      366,
+      149.39,
+      214.16,
+      1
+     ],
+     "left": [
+      392,
+      16,
+      383,
+      441,
+      194.61,
+      289.16,
+      1
+     ]
+    },
+    "doll_lash": {
+     "open": [
+      1230,
+      16,
+      568,
+      437,
+      247.39,
+      42.16,
+      1
+     ],
+     "left": [
+      808,
+      16,
+      390,
+      437,
+      142.61,
+      42.16,
+      1
+     ]
+    },
+    "nervous": {
+     "open": [
+      998,
+      1362,
+      1024,
+      248,
+      247.39,
+      200.16,
+      1
+     ]
+    },
+    "focused": {
+     "open": [
+      824,
+      964,
+      363,
+      350,
+      149.39,
+      232.16,
+      1
+     ],
+     "left": [
+      400,
+      964,
+      392,
+      361,
+      213.61,
+      247.16,
+      1
+     ]
+    },
+    "sleepy": {
+     "open": [
+      1220,
+      964,
+      429,
+      341,
+      247.39,
+      199.16,
+      1
+     ]
+    },
+    "square_dots": {
+     "open": [
+      1674,
+      2416,
+      112,
+      75,
+      142.39,
+      -45.84,
+      1
+     ],
+     "left": [
+      1532,
+      2416,
+      110,
+      75,
+      -28.39,
+      36.16,
+      1
      ]
     }
    }
@@ -1087,6 +1474,177 @@
      113,
      147.0,
      72.0
+    ],
+    "little_v": [
+     566,
+     2556,
+     120,
+     66,
+     60.0,
+     23.66,
+     1
+    ],
+    "drumstick": [
+     16,
+     1706,
+     484,
+     246,
+     207.0,
+     147.66,
+     1
+    ],
+    "drool": [
+     1218,
+     2416,
+     282,
+     76,
+     100.0,
+     -22.34,
+     1
+    ],
+    "gritted": [
+     932,
+     2416,
+     253,
+     102,
+     131.0,
+     124.66,
+     1
+    ],
+    "pout": [
+     718,
+     2556,
+     141,
+     57,
+     68.0,
+     16.66,
+     1
+    ],
+    "tiny_smirk": [
+     1480,
+     2556,
+     68,
+     41,
+     95.0,
+     -34.34,
+     1
+    ],
+    "open_smile": [
+     1520,
+     1706,
+     235,
+     226,
+     115.0,
+     127.66,
+     1
+    ],
+    "small_frown": [
+     892,
+     2556,
+     136,
+     57,
+     41.0,
+     -37.34,
+     1
+    ],
+    "pill": [
+     1008,
+     2228,
+     341,
+     127,
+     184.0,
+     191.66,
+     1
+    ],
+    "deadpan": [
+     836,
+     1984,
+     239,
+     205,
+     97.0,
+     170.66,
+     1
+    ],
+    "dash": [
+     1668,
+     2556,
+     98,
+     12,
+     49.0,
+     27.66,
+     1
+    ],
+    "side_smirk": [
+     1788,
+     1706,
+     216,
+     212,
+     88.0,
+     152.66,
+     1
+    ],
+    "long_drool": [
+     532,
+     1706,
+     191,
+     243,
+     37.0,
+     144.66,
+     1
+    ],
+    "nervous_laugh": [
+     390,
+     1362,
+     240,
+     304,
+     96.0,
+     205.66,
+     1
+    ],
+    "tiny_mouth": [
+     1580,
+     2556,
+     56,
+     22,
+     14.0,
+     -19.34,
+     1
+    ],
+    "gasp": [
+     270,
+     2228,
+     159,
+     151,
+     51.0,
+     81.66,
+     1
+    ],
+    "kitty": [
+     1174,
+     2556,
+     89,
+     54,
+     30.0,
+     -2.34,
+     1
+    ],
+    "tired_drool": [
+     16,
+     16,
+     343,
+     496,
+     152.0,
+     397.66,
+     1
+    ],
+    "buck_tooth": [
+     462,
+     2228,
+     514,
+     127,
+     229.0,
+     220.66,
+     1
     ]
    }
   },
@@ -1245,6 +1803,47 @@
   "dot": "Dot eyes",
   "cat_w": "Cat mouth",
   "grin_curl": "Curled grin",
-  "blush_band": "Blush band"
+  "blush_band": "Blush band",
+  "brow_none": "No brows",
+  "bean": "Bean eyes",
+  "little_v": "Little v",
+  "daze": "Dazed",
+  "drumstick": "Drumstick",
+  "half_lid": "Half-lidded",
+  "drool": "Drool",
+  "swirl": "Dizzy swirls",
+  "gritted": "Gritted teeth",
+  "mochi": "Mochi dots",
+  "pout": "Pout",
+  "shy": "Shy glance",
+  "tiny_smirk": "Tiny smirk",
+  "relieved": "Relieved",
+  "open_smile": "Open smile",
+  "chill": "Chill",
+  "small_frown": "Small frown",
+  "tiny_dots": "Tiny dots",
+  "pill": "Pill mouth",
+  "stare": "Stare",
+  "deadpan": "Deadpan",
+  "offset": "Offset blobs",
+  "dash": "Dash",
+  "unimpressed": "Unimpressed",
+  "side_smirk": "Side smirk",
+  "close_dots": "Close dots",
+  "long_drool": "Long drool",
+  "teary": "Teary wide",
+  "nervous_laugh": "Nervous laugh",
+  "doll_lash": "Doll lashes",
+  "tiny_mouth": "Tiny mouth",
+  "nervous": "Nervous",
+  "gasp": "Gasp",
+  "focused": "Focused",
+  "kitty": "Kitty",
+  "sleepy": "Sleepy",
+  "tired_drool": "Tired drool",
+  "square_dots": "Square dots",
+  "buck_tooth": "Buck tooth",
+  "nose_blush": "Nose blush",
+  "sweat_drop": "Sweat drop"
  }
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { BASE_URL, LOD_SKIN_URL, CLIPS, DEFAULT_LOOK, FACE, FACE_ATLAS_URLS, PALETTE, PARTS, PART_BY_ID, parseLook, randomLook, resolveParts, seeded, wear, wornParts } from "./look";
+import { BASE_URL, LOD_SKIN_URL, CLIPS, DEFAULT_LOOK, FACE, FACE_ATLAS2_URLS, FACE_ATLAS_URLS, PALETTE, PARTS, PART_BY_ID, parseLook, randomLook, resolveParts, seeded, wear, wornParts } from "./look";
 
 const web = join(__dirname, "../../..");
 const art = join(web, "../art/characters");
@@ -14,7 +14,7 @@ describe("character catalogue", () => {
   });
   it("ships every part GLB, the clip base and the face atlases", () => {
     for (const p of PARTS) expect(existsSync(join(web, "public/assets/characters/v6", p.glb)), p.glb).toBe(true);
-    for (const f of [BASE_URL, FACE_ATLAS_URLS.creator, FACE_ATLAS_URLS.world]) expect(existsSync(join(web, "public", f)), f).toBe(true);
+    for (const f of [BASE_URL, FACE_ATLAS_URLS.creator, FACE_ATLAS_URLS.world, FACE_ATLAS2_URLS.creator, FACE_ATLAS2_URLS.world]) expect(existsSync(join(web, "public", f)), f).toBe(true);
     expect(existsSync(join(web, "public/assets/characters/v6/decal_tsi_mark.png"))).toBe(true);
     expect(BASE_URL).toMatch(/v7_clips\.glb$/); // the hand-modeled v7 head (avatar v7)
   });
@@ -43,15 +43,25 @@ describe("character catalogue", () => {
     }
     expect([PALETTE.skin.length, PALETTE.hair.length, PALETTE.outfit.length]).toEqual([12, 12, 16]);
     expect(CLIPS.map(c => c.name)).toEqual(expect.arrayContaining(["Idle", "Walk", "Run", "Sit", "Study", "Sleep", "Fish", "FishHold", "Forage", "Dig", "Net", "Wave", "Cheer", "Laugh", "Sad", "Dance", "AttackMelee", "AttackBow", "AttackCast", "DodgeRoll", "Hit", "Defeat", "Trace", "Stretch"]));
-    const cells: [string, number[]][] = [
-      ...Object.entries(FACE.layers.eyes.items).flatMap(([id, frames]) => Object.entries(frames).map(([f, c]) => [`${id}/${f}`, c] as [string, number[]])),
-      ...Object.entries(FACE.layers.mouth.items), ...Object.entries(FACE.layers.talk.items), ...Object.entries(FACE.layers.brows.items),
-      ...Object.entries(FACE.layers.extras.items).map(([id, it]) => [id, it.cell] as [string, number[]]),
+    const A = FACE.anchors;
+    const cells: [string, number[], [number, number]][] = [
+      ...Object.entries(FACE.layers.eyes.items).flatMap(([id, frames]) => Object.entries(frames).map(([f, c]) => [`${id}/${f}`, c, f === "left" ? A.eye_left : A.eye] as [string, number[], [number, number]])),
+      ...[...Object.entries(FACE.layers.mouth.items), ...Object.entries(FACE.layers.talk.items)].map(([id, c]) => [id, c, A.mouth] as [string, number[], [number, number]]),
+      ...Object.entries(FACE.layers.brows.items).map(([id, c]) => [id, c, A.brow] as [string, number[], [number, number]]),
+      ...Object.entries(FACE.layers.extras.items).map(([id, it]) => [id, it.cell, A[it.anchor]] as [string, number[], [number, number]]),
     ];
-    for (const [id, [x, y, w, h, ax, ay]] of cells) {
-      expect(x + w <= FACE.atlas_size[0] && y + h <= FACE.atlas_size[1], id).toBe(true);
-      // placed on its anchor, a cell lands on the face canvas (the shut eye frames sit a little under the eye centre)
-      expect(Math.abs(ax - w / 2) < w && Math.abs(ay - h / 2) < h, id).toBe(true);
+    for (const [id, [x, y, w, h, ax, ay, page], [au, aw]] of cells) {
+      const [W, H] = page ? FACE.atlas2_size : FACE.atlas_size;   // a 7th value 1: the second page
+      expect(x + w <= W && y + h <= H, id).toBe(true);
+      if (!w) continue;   // brow_none: an empty cell
+      if (page) {
+        // David's faces sit where they sat on their own heads: placed at the anchor, the cell lies on the face canvas
+        const u0 = au - ax / FACE.density, w0 = aw - ay / FACE.density;
+        expect(u0 >= -1e-3 && w0 >= -1e-3 && u0 + w / FACE.density <= 1.001 && w0 + h / FACE.density <= 1.001, id).toBe(true);
+      } else {
+        // drawn round its anchor, a cell lands on the face canvas (the shut eye frames sit a little under the eye centre)
+        expect(Math.abs(ax - w / 2) < w && Math.abs(ay - h / 2) < h, id).toBe(true);
+      }
     }
   });
   it("keeps a full look with sculpted-lock hair under ~4000 triangles (avatar v7)", () => {
