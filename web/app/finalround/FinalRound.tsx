@@ -4,10 +4,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
 import confetti from "canvas-confetti";
-import { CODE_LENGTH, MAX_ATTEMPTS, NEAR_MISS, ONBOARDING, TIME_LIMIT_SECONDS, teamStep } from "./data";
+import {
+  CLOSER,
+  CODE_LENGTH,
+  MAX_ATTEMPTS,
+  MIN_GREENS,
+  NEAR_MISS,
+  ONBOARDING,
+  TIME_LIMIT_SECONDS,
+  teamStep,
+} from "./data";
 import { setMuted, sfx, unlockAudio } from "./sfx";
 import type { Invite } from "./token";
-import { createRig, type Feedback } from "./vault";
+import { createRig, greens, type Feedback } from "./vault";
 import type { VaultMode } from "./VaultScene";
 
 const VaultScene = dynamic(() => import("./VaultScene"), { ssr: false });
@@ -43,7 +52,7 @@ function buzz(pattern: number | number[]) {
   } catch {}
 }
 
-type Phase = VaultMode | "countdown";
+type Phase = VaultMode | "countdown" | "status" | "checking";
 
 export default function FinalRound({ invite }: { invite?: Invite }) {
   const [phase, setPhase] = useState<Phase>("gate");
@@ -103,11 +112,17 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
     buzz([80, 60, 80, 60, 200]);
     sfx.deny();
     setPhase("judging");
+    window.setTimeout(() => setPhase("status"), 3000);
+  }, []);
+
+  const checkStatus = () => {
+    unlockAudio();
+    setPhase("checking");
     window.setTimeout(() => {
       setPhase("reveal");
       sfx.open();
-    }, 3600);
-  }, []);
+    }, 2600);
+  };
 
   useEffect(() => {
     if (phase !== "test") return;
@@ -177,23 +192,23 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
   const submit = () => {
     if (answer.length !== CODE_LENGTH || ended.current) return;
     rig.current ??= createRig(CODE_LENGTH);
-    // Last guess always lands one digit short.
-    const fb =
-      history.length === MAX_ATTEMPTS - 1
-        ? { exact: CODE_LENGTH - 1, misplaced: 0 }
-        : rig.current(answer, history.length);
+    const fb = rig.current(answer, history.length, MIN_GREENS[history.length] ?? CODE_LENGTH - 1);
+    const g = greens(fb);
+    const best = Math.max(0, ...history.map((h) => greens(h.fb)));
     const next = [{ guess: answer, fb }, ...history];
     setHistory(next);
     setShake((s) => s + 1);
     setAnswer("");
-    buzz(fb.exact === CODE_LENGTH - 1 ? [20, 30, 60] : 25);
+    buzz(g === CODE_LENGTH - 1 ? [20, 30, 60] : 25);
     sfx.clunk();
-    for (let i = 0; i < fb.exact + fb.misplaced; i++) sfx.lamp(i, i < fb.exact ? "green" : "amber");
-    if (fb.exact === CODE_LENGTH - 1) sfx.close();
+    fb.forEach((m, i) => m && sfx.lamp(i, m === 2 ? "green" : "amber"));
+    if (g === CODE_LENGTH - 1) sfx.close();
     setMessage(
-      fb.exact === CODE_LENGTH - 1
-        ? NEAR_MISS[next.filter((h) => h.fb.exact === CODE_LENGTH - 1).length % NEAR_MISS.length]
-        : ""
+      g === CODE_LENGTH - 1
+        ? NEAR_MISS[next.filter((h) => greens(h.fb) === CODE_LENGTH - 1).length % NEAR_MISS.length]
+        : g > best
+          ? CLOSER[history.length % CLOSER.length]
+          : ""
     );
     if (next.length >= MAX_ATTEMPTS) window.setTimeout(fail, 1100);
   };
@@ -255,8 +270,8 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
 
       <div className="fixed inset-0 z-0">
         <VaultScene
-          mode={phase === "countdown" ? "test" : phase}
-          feedback={latest}
+          mode={phase === "countdown" || phase === "status" || phase === "checking" ? "test" : phase}
+          feedback={phase === "test" ? latest : null}
           guessKey={shake}
           name={cleanName}
           project={project}
@@ -280,6 +295,18 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
           }}
         />
       )}
+
+      <AnimatePresence>
+        {(phase === "judging" || phase === "status" || phase === "checking") && (
+          <motion.div
+            key="hush"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: phase === "judging" ? 0.35 : 0.7, transition: { duration: 1.4 } }}
+            exit={{ opacity: 0, transition: { duration: 0.8 } }}
+            className="pointer-events-none fixed inset-0 z-[3] bg-[#050506]"
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {phase === "countdown" && (
@@ -442,11 +469,22 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                 VAULT / ACCESS CODE
               </p>
               <p className="mt-2 text-sm leading-relaxed text-[#cbd5e1]">
-                Each guess lights the vault:{" "}
-                <span className="text-[#22c55e]">green</span> = right digit, right
-                place. <span className="text-[#ffd166]">amber</span> = right digit,
-                wrong place. Digits can repeat.
+                After each guess, every digit gets a colour. Digits can repeat.
               </p>
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-[#cbd5e1]">
+                {[
+                  ["border-[#22c55e] bg-[#22c55e]/20 text-[#4ade80]", "Right digit, right spot"],
+                  ["border-[#ffd166] bg-[#ffd166]/15 text-[#ffd166]", "In the code, wrong spot"],
+                  ["border-white/15 bg-white/5 text-white/40", "Not in the code"],
+                ].map(([cls, label], i) => (
+                  <span key={label} className="flex items-center gap-1.5">
+                    <span className={`${mono} flex h-5 w-5 items-center justify-center rounded-[5px] border text-[11px] font-semibold ${cls}`}>
+                      {[7, 3, 1][i]}
+                    </span>
+                    {label}
+                  </span>
+                ))}
+              </div>
 
               <motion.div
                 key={shake}
@@ -553,26 +591,30 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                       transition={spring}
                       className="flex items-center justify-between rounded-xl border border-white/10 bg-[#121418]/90 px-4 py-2.5 backdrop-blur"
                     >
-                      <span className={`${mono} text-xs text-white/40`}>
+                      <span className={`${mono} w-7 text-xs text-white/40`}>
                         #{history.length - i}
                       </span>
-                      <span className={`${mono} text-lg tracking-[0.3em]`}>{h.guess}</span>
-                      <span className="flex gap-1">
-                        {Array.from({ length: CODE_LENGTH }, (_, k) => (
+                      <span className="flex gap-1.5" style={{ perspective: 400 }}>
+                        {h.fb.map((m, k) => (
                           <motion.span
                             key={k}
-                            initial={i === 0 ? { scale: 0 } : false}
-                            animate={{ scale: 1 }}
-                            transition={{ ...spring, delay: 0.08 * k }}
-                            className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-                              k < h.fb.exact
-                                ? "bg-[#22c55e] shadow-[0_0_10px_#22c55e]"
-                                : k < h.fb.exact + h.fb.misplaced
-                                  ? "bg-[#ffd166] shadow-[0_0_10px_#ffd166]"
-                                  : "bg-white/10"
+                            initial={i === 0 ? { rotateX: -90, opacity: 0 } : false}
+                            animate={{ rotateX: 0, opacity: 1 }}
+                            transition={{ ...spring, delay: 0.1 * k }}
+                            className={`${mono} flex h-9 w-8 items-center justify-center rounded-[7px] border text-lg font-semibold ${
+                              m === 2
+                                ? "border-[#22c55e] bg-[#22c55e]/20 text-[#4ade80] shadow-[0_0_14px_-4px_#22c55e]"
+                                : m === 1
+                                  ? "border-[#ffd166] bg-[#ffd166]/15 text-[#ffd166]"
+                                  : "border-white/10 bg-white/5 text-white/35"
                             }`}
-                          />
+                          >
+                            {h.guess[k]}
+                          </motion.span>
                         ))}
+                      </span>
+                      <span className={`${mono} w-9 text-right text-xs text-[#4ade80]`}>
+                        {greens(h.fb)}/{CODE_LENGTH}
                       </span>
                     </motion.li>
                   ))}
@@ -596,9 +638,59 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
               className="mt-3 text-4xl font-bold sm:text-5xl"
               style={{ animation: "fr-glitch .5s infinite" }}
             >
-              Reviewing your result...
+              Assessment ended.
             </h1>
-            <p className="mt-3 text-[#9ca3af]">Do not close this page.</p>
+            <p className="mt-3 text-[#9ca3af]">Submitting your result...</p>
+          </motion.section>
+        )}
+
+        {phase === "status" && (
+          <motion.section
+            key="status"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: { duration: 1.6, delay: 0.6 } }}
+            exit={{ opacity: 0, transition: { duration: 0.4 } }}
+            className="relative z-10 flex min-h-svh flex-col items-center justify-end px-4 pb-[12svh] text-center"
+          >
+            <p className={`${mono} text-xs tracking-[0.3em] text-white/45`}>ASSESSMENT COMPLETE</p>
+            <h1 className="mt-3 text-3xl font-bold sm:text-4xl">Your result has been recorded.</h1>
+            <p className="mt-3 max-w-sm text-[#9ca3af]">
+              A decision has been made on your application.
+            </p>
+            <motion.button
+              onClick={checkStatus}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0, transition: { delay: 2.4, duration: 0.8 } }}
+              whileTap={{ scale: 0.96 }}
+              className="mt-8 rounded-xl border border-white/20 bg-white/5 px-7 py-4 font-semibold text-white backdrop-blur"
+            >
+              Check application status
+            </motion.button>
+          </motion.section>
+        )}
+
+        {phase === "checking" && (
+          <motion.section
+            key="checking"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.6 } }}
+            className="relative z-10 flex min-h-svh flex-col items-center justify-end px-4 pb-[14svh] text-center"
+          >
+            <p className={`${mono} text-xs tracking-[0.3em] text-white/45`}>APPLICATION STATUS</p>
+            <p className="mt-4 flex items-center gap-2 text-lg text-white/80">
+              Retrieving your result
+              <span className="flex gap-1">
+                {[0, 1, 2].map((d) => (
+                  <motion.span
+                    key={d}
+                    className="h-1.5 w-1.5 rounded-full bg-white/70"
+                    animate={{ opacity: [0.2, 1, 0.2] }}
+                    transition={{ duration: 1.1, repeat: Infinity, delay: d * 0.18 }}
+                  />
+                ))}
+              </span>
+            </p>
           </motion.section>
         )}
       </AnimatePresence>
@@ -610,10 +702,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
               {opened && (
                 <motion.div key="head" initial="h" animate="s" variants={{ s: { transition: { staggerChildren: 0.12 } } }}>
                   {[
-                    <p key="a" className={`${mono} text-xs tracking-[0.35em] text-[#22d3ee]`}>
-                      PLOT TWIST
-                    </p>,
-                    <h1 key="b" className="mt-2 text-5xl font-extrabold leading-none tracking-tight sm:text-7xl">
+                    <h1 key="b" className="text-5xl font-extrabold leading-none tracking-tight sm:text-7xl">
                       JUST KIDDING.
                     </h1>,
                     <h2 key="c" className="fr-shimmer mt-2 text-3xl font-extrabold sm:text-5xl">

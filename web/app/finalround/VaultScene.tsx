@@ -6,7 +6,7 @@ import { Environment, Lightformer, RoundedBox, Sparkles } from "@react-three/dre
 import { Bloom, EffectComposer, Vignette } from "@react-three/postprocessing";
 import { easing } from "maath";
 import * as THREE from "three";
-import type { Feedback } from "./vault";
+import { greens, type Feedback } from "./vault";
 import { drawTicket, TICKET_H, TICKET_W } from "./ticketTexture";
 
 export type VaultMode = "gate" | "test" | "judging" | "reveal";
@@ -180,9 +180,9 @@ function Vault({
         target = blink ? RED : OFF;
         intensity = blink ? 4 : 1;
       } else if (feedback) {
-        if (i < feedback.exact) target = GREEN;
-        else if (i < feedback.exact + feedback.misplaced) target = AMBER;
-        else if (feedback.exact === LAMP_X.length - 1) {
+        if (feedback[i] === 2) target = GREEN;
+        else if (feedback[i] === 1) target = AMBER;
+        else if (greens(feedback) === LAMP_X.length - 1) {
           target = RED;
           intensity = 2 + Math.sin(t * 9) * 1.4;
         }
