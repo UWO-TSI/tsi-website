@@ -1,7 +1,11 @@
 // Creator evidence (specs/evidence/creator-ui/): every category at 1440x900 and phone size, slider extremes, and the
 // creator's frame rate and memory, on the member island's first-login creator (/student/dashboard, signed out, no saved look).
-//   PORT=3159 node specs/evidence/creator-ui/capture.mjs <before|after> [perf|shots|extremes|world|all]
-// Headless Chromium on the real GPU (ANGLE on Metal), muted, never brought to the front.
+//   PORT=3159 node specs/evidence/creator-ui/capture.mjs <before|after> [perf|shots|extremes|world|extra|all]
+// The applicant island (extra) needs a Supabase URL to build its client: run that pass with a dummy local one
+// (NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:9), never the production values.
+// Phone size is a 390x844 window with a fine pointer: touch-first devices get the companion, which has no creator.
+// Headless Chromium on the real GPU (ANGLE on Metal), muted, never brought to the front. It writes PNGs; the folder keeps
+// them as WebP (cwebp -q 80), with compare-desktop.webp and compare-phone.webp (before | after, one row per category).
 import { createRequire } from "node:module";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -14,12 +18,14 @@ const [STAGE = "after", WHAT = "all"] = process.argv.slice(2);
 const PORT = process.env.PORT ?? 3159, BASE = `http://localhost:${PORT}`;
 const URL = `${BASE}/student/dashboard?time=day&weather=clear&season=summer`;
 const browser = await chromium.launch({ headless: true, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-precise-memory-info", "--enable-gpu"] });
-const VIEWPORTS = { desktop: { width: 1440, height: 900, deviceScaleFactor: 1 }, phone: { width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true } };
+const VIEWPORTS = { desktop: { width: 1440, height: 900, deviceScaleFactor: 1 }, phone: { width: 390, height: 844, deviceScaleFactor: 2 } };
 const results = {};
 
 async function open(vp, look = null) {
   const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, deviceScaleFactor: vp.deviceScaleFactor, isMobile: vp.isMobile, hasTouch: vp.hasTouch });
   await ctx.addInitScript(l => { try { if (l) localStorage.setItem("tsi.look.v1", l); else localStorage.removeItem("tsi.look.v1"); localStorage.setItem("tsi.hud.full.v1", "true"); } catch {} }, look);
+  // The dev server's corner badge sits over the phone tab row: hidden, as in production.
+  await ctx.addInitScript(() => { addEventListener("DOMContentLoaded", () => { const st = document.createElement("style"); st.textContent = "nextjs-portal{display:none!important}"; document.head.append(st); }); });
   const page = await ctx.newPage();
   page.on("pageerror", e => console.log("pageerror", e.message.slice(0, 200)));
   await page.goto(URL, { waitUntil: "domcontentloaded", timeout: 240000 });
@@ -33,7 +39,7 @@ const tabs = page => page.locator('[aria-label="Categories"] [role="tab"]');
 async function slug(tab) { return (await tab.getAttribute("aria-label") ?? await tab.textContent()).toLowerCase().replace(/[^a-z]+/g, "-").replace(/^-|-$/g, ""); }
 
 async function shots() {
-  for (const [name, vp] of Object.entries(VIEWPORTS)) {
+  for (const [name, vp] of Object.entries(VIEWPORTS).filter(([n]) => !process.env.ONLY || n === process.env.ONLY)) {
     const { ctx, page } = await open(vp);
     await creator(page);
     const n = await tabs(page).count();
@@ -93,7 +99,7 @@ async function perf() {
         const world = window.__perf; world?.begin?.();
         const times = []; let last = performance.now();
         await new Promise(done => { const t0 = last; const f = now => { times.push(now - last); last = now; now - t0 < 5000 ? requestAnimationFrame(f) : done(); }; requestAnimationFrame(f); });
-        const worldFrames = world?.end ? (world.end(), world.summary().frames) : null;
+        const worldFrames = world?.end ? world.end().frames : null;
         times.sort((a, b) => a - b);
         const q = p => times[Math.min(times.length - 1, Math.floor(p * times.length))];
         return {
@@ -121,8 +127,7 @@ async function world() {
     out[label] = await page.evaluate(async () => {
       window.__perf.begin();
       await new Promise(r => setTimeout(r, 6000));
-      window.__perf.end();
-      const s = window.__perf.summary();
+      const s = window.__perf.end();
       return { frames: s.frames, calls: s.calls.median, triangles: s.triangles.median, cpuMs: +s.cpu.median.toFixed(2), renderMs: +s.render.median.toFixed(2) };
     });
     console.log(label, JSON.stringify(out[label]));
@@ -131,6 +136,39 @@ async function world() {
   results[`${STAGE}-world`] = out;
 }
 
+/** The closet (wardrobe mode) and the applicant island: its creator on a first visit, and an old saved look in its world. */
+async function extra() {
+  const OLD = JSON.stringify({ skin: 6, hair: 1, eyes: "E5.5", mouth: "G2.3", brows: "brow_flat", extras: ["blush", "mole"], bangs: "bangs_swept_l", back: "back_high_pony", top: "top_stripe_ls", bottom: "bottom_trousers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: { top_stripe_ls: 7 } });
+  for (const [name, vp] of Object.entries(VIEWPORTS).filter(() => process.env.SKIP_WARDROBE !== "1")) {
+    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, deviceScaleFactor: vp.deviceScaleFactor });
+    await ctx.addInitScript(l => { try { localStorage.setItem("tsi.look.v1", l); } catch {} addEventListener("DOMContentLoaded", () => { const st = document.createElement("style"); st.textContent = "nextjs-portal{display:none!important}"; document.head.append(st); }); }, OLD);
+    const page = await ctx.newPage();
+    await page.goto(`${BASE}/student/dashboard?time=day&weather=clear&season=summer&sheet=closet`, { waitUntil: "domcontentloaded", timeout: 240000 });
+    await page.waitForSelector('[role="dialog"][aria-labelledby="creator-title"]', { timeout: 240000 });
+    await page.waitForTimeout(7000);
+    await page.screenshot({ path: join(OUT, `${STAGE}-${name}-wardrobe-hair.png`) }); console.log("wardrobe", name);
+    await page.locator('[aria-label="Categories"] [role="tab"]').nth(2).click(); await page.waitForTimeout(2500);
+    await page.screenshot({ path: join(OUT, `${STAGE}-${name}-wardrobe-tops.png`) });
+    await ctx.close();
+  }
+  for (const [label, look] of [["first-visit", null], ["old-look", OLD]]) {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    await ctx.addInitScript(l => { try { if (l) localStorage.setItem("tsi.look.v1", l); else localStorage.removeItem("tsi.look.v1"); } catch {} addEventListener("DOMContentLoaded", () => { const st = document.createElement("style"); st.textContent = "nextjs-portal{display:none!important}"; document.head.append(st); }); }, look);
+    const page = await ctx.newPage();
+    page.on("pageerror", e => console.log("pageerror", e.message.slice(0, 200)));
+    await page.goto(`${BASE}/student/apply/portal?preview=1`, { waitUntil: "domcontentloaded", timeout: 240000 });
+    await page.waitForTimeout(25000);
+    await page.screenshot({ path: join(OUT, `${STAGE}-applicant-${label}.png`) }); console.log("applicant", label);
+    if (look) {
+      // Its own "Change your character" (the game menu) opens the creator on the saved look.
+      const menu = page.getByRole("button", { name: "Open game menu" });
+      if (await menu.count()) { await menu.click(); await page.waitForTimeout(800); const change = page.getByRole("button", { name: "Change your character" }); if (await change.count()) { await change.click(); await page.waitForTimeout(6000); await page.screenshot({ path: join(OUT, `${STAGE}-applicant-old-look-creator.png`) }); console.log("applicant creator on the old look"); } }
+    }
+    await ctx.close();
+  }
+}
+
+if (WHAT === "extra") await extra();
 if (WHAT === "shots" || WHAT === "all") await shots();
 if (STAGE === "after" && (WHAT === "extremes" || WHAT === "all")) await extremes();
 if (WHAT === "perf" || WHAT === "all") await perf();
