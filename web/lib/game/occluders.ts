@@ -11,8 +11,8 @@
 import * as THREE from "three";
 import type { WebGLProgramParametersWithUniforms } from "three";
 
-/** A box from the ground up that can hide the player: a building's footprint, a tree's canopy. */
-export interface Occluder { x: number; z: number; hx: number; hz: number; y0: number; y1: number }
+/** A box from the ground up that can hide the player: a building's footprint, a tree's canopy (`canopy`). */
+export interface Occluder { x: number; z: number; hx: number; hz: number; y0: number; y1: number; canopy?: boolean }
 
 /** Whether the segment a→b passes through the box (the slab test; touching counts). */
 export function segmentHitsBox(a: THREE.Vector3Like, b: THREE.Vector3Like, o: Occluder): boolean {
@@ -47,7 +47,10 @@ export function groundBlocks(eye: THREE.Vector3Like, target: THREE.Vector3Like, 
 export const lineBlocked = (eye: THREE.Vector3Like, target: THREE.Vector3Like, list: readonly Occluder[]) => list.some(o => segmentHitsBox(eye, target, o));
 
 /** A canopy's box round a tree at (x, z) standing on y: generous, since a miss hides the player and a false hit cuts nothing that isn't in front. */
-export const treeOccluder = (x: number, z: number, y: number): Occluder => ({ x, z, hx: 1.5, hz: 1.5, y0: y + 0.8, y1: y + 5.5 });
+export const treeOccluder = (x: number, z: number, y: number): Occluder => ({ x, z, hx: 1.5, hz: 1.5, y0: y + 0.8, y1: y + 5.5, canopy: true });
+/** Whether a point (the player's head) is inside a tree's crown: then the leaves round it sit at its own depth, not in front. */
+export const canopyAround = (p: THREE.Vector3Like, list: readonly Occluder[]) =>
+  list.some(o => o.canopy && Math.abs(p.x - o.x) <= o.hx && Math.abs(p.z - o.z) <= o.hz && p.y >= o.y0 && p.y <= o.y1);
 /** A footprint (half extents) standing `height` tall on y. */
 export const boxOccluder = (x: number, z: number, hx: number, hz: number, y: number, height: number): Occluder => ({ x, z, hx, hz, y0: y, y1: y + height });
 
@@ -56,6 +59,14 @@ export const boxOccluder = (x: number, z: number, hx: number, hz: number, y: num
 export const CUTOUT = { value: new THREE.Vector4(0, 0, 0.2, 0) };
 /** x: the aspect (NDC x to y), y: the player's view depth (only nearer fragments are cut), z: the lowest world height cut (just over their feet). */
 export const CUTOUT_VIEW = { value: new THREE.Vector3(1, 0, 0) };
+/**
+ * Standing in a tree's crown (world audit item 9): the leaves round the head are at the player's own depth, so the
+ * near rule never reaches them. x: the view depth the cut then reaches to (0: off), y: the lowest world height it
+ * takes (the chest: the trunk and the ground below stay).
+ */
+export const CUTOUT_CROWN = { value: new THREE.Vector2(0, 0) };
+/** How far past the player's depth the crown cut reaches: the leaves round the head and the near half of the crown. */
+export const CROWN_REACH = 0.9;
 /** Ground within this of the player's feet stays, so the slope or step they stand on never opens. */
 export const CUT_FLOOR = 0.35;
 /** The circle's radius in world units at the player (about their height round the chest). */
@@ -67,6 +78,7 @@ const CUT_MARGIN = 0.6;
 export function addCutout(shader: WebGLProgramParametersWithUniforms) {
   shader.uniforms.uCut = CUTOUT;
   shader.uniforms.uCutView = CUTOUT_VIEW;
+  shader.uniforms.uCutCrown = CUTOUT_CROWN;
   shader.vertexShader = "varying vec4 vCutClip;\nvarying float vCutY;\n" + shader.vertexShader.replace("#include <fog_vertex>", `#include <fog_vertex>
   vCutClip = gl_Position;
   #ifdef USE_INSTANCING
@@ -76,6 +88,7 @@ export function addCutout(shader: WebGLProgramParametersWithUniforms) {
   #endif`);
   shader.fragmentShader = `uniform vec4 uCut;
 uniform vec3 uCutView;
+uniform vec2 uCutCrown;
 varying vec4 vCutClip;
 varying float vCutY;
 float tsiBayer(vec2 p) {
@@ -83,7 +96,7 @@ float tsiBayer(vec2 p) {
   return (4.0 * mod(2.0 * lo.x + 3.0 * lo.y, 4.0) + mod(2.0 * hi.x + 3.0 * hi.y, 4.0) + 0.5) / 16.0;
 }
 ` + shader.fragmentShader.replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>
-  if (uCut.w > 0.0 && vCutClip.w < uCutView.y - ${CUT_MARGIN.toFixed(2)} && vCutY > uCutView.z) {
+  if (uCut.w > 0.0 && ((vCutClip.w < uCutView.y - ${CUT_MARGIN.toFixed(2)} && vCutY > uCutView.z) || (vCutClip.w < uCutCrown.x && vCutY > uCutCrown.y))) {
     vec2 cutD = (vCutClip.xy / vCutClip.w - uCut.xy) * vec2(uCutView.x, 1.0);
     float cutKeep = mix(1.0, smoothstep(0.55, 1.0, length(cutD) / uCut.z), uCut.w);
     if (cutKeep < tsiBayer(gl_FragCoord.xy)) discard;

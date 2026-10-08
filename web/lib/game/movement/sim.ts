@@ -142,6 +142,8 @@ export interface MoveState {
   keep: number; bleed: boolean; slid: boolean;
   /** Crouched on the ground (the crouch key held, not sliding): crouch idle and crouch walk. */
   crouch: boolean;
+  /** Seconds the stick has pushed into water on foot and been held at its edge (0 when not): the avatar braces. */
+  shore: number;
   events: MoveEvent[];
 }
 
@@ -155,7 +157,7 @@ export function createMoveState(x: number, z: number, world: MoveWorld, facing =
   return {
     x, y, z, vx: 0, vy: 0, vz: 0, mode: "ground", modeT: 0, facing, coyote: 0, buffer: 0, cut: false, long: false, slideJump: false,
     airMax: 0, topY: y, hops: 0, dashT: 0, dashCd: 0, dashCarry: 0, dashX: Math.sin(facing), dashZ: Math.cos(facing), dashSpeed: 0, dashEnd: 0, airDashes: 0,
-    from: [x, y, z], to: [x, y, z], safe: [x, y, z], keep: 0, bleed: false, slid: false, crouch: false, events: [],
+    from: [x, y, z], to: [x, y, z], safe: [x, y, z], keep: 0, bleed: false, slid: false, crouch: false, shore: 0, events: [],
   };
 }
 
@@ -554,6 +556,13 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
   if (hitZ) s.vz = 0;
   if ((hitX || hitZ) && s.dashT > 0 && hypot(s.vx, s.vz) < before * 0.5) { s.dashT = 0; emit(s, "bonk"); }
   if ((hitX || hitZ) && s.mode === "slide" && hypot(s.vx, s.vz) < before * 0.5) endSlide(s, t, "bonk"); // a graze slides on along it (or stands, slowed)
+  // Into the sea on foot (world audit item 21): water stays a wall, but the push is answered: `shore` counts up while it's
+  // held (the avatar braces and ripples at its toes; state, not an event, so the wire protocol is unchanged). A graze along
+  // the waterline keeps going and isn't one.
+  const pushX = s.dashT > 0 ? s.dashX : ix, pushZ = s.dashT > 0 ? s.dashZ : iz, ahead = R + 0.1;
+  const atSea = s.mode === "ground" && (steering || s.dashT > 0) && (prev.shore > 0 || ((hitX || hitZ) && hypot(s.vx, s.vz) < before * 0.5))
+    && w.wet(s.x + pushX * ahead, s.z + pushZ * ahead) && w.top(s.x + pushX * ahead, s.z + pushZ * ahead) <= s.y + t.stepUp;
+  s.shore = atSea ? s.shore + dt : 0;
 
   if (s.mode === "air") {
     s.coyote = Math.max(0, s.coyote - dt);

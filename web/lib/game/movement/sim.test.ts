@@ -346,6 +346,28 @@ describe("collision", () => {
   });
 });
 
+describe("the sea's edge on foot (world audit item 21)", () => {
+  // Dry land to z = 2, the sea past it; a wall at x > 3.
+  const shore: MoveWorld = { top: x => (x > 3 ? Infinity : 0), wet: (_x, z) => z > 2 };
+  it("pushing into the water starts once, keeps counting while held, and never moves you in", () => {
+    let starts = 0, was = 0, longest = 0;
+    const s = drive(createMoveState(0, 0, shore), shore, 1.5, () => ({ z: 1 }), q => { if (q.shore > 0 && was === 0) starts++; was = q.shore; longest = Math.max(longest, q.shore); });
+    expect(starts).toBe(1);
+    expect(s.shore).toBeGreaterThan(0.8);
+    expect(longest).toBe(s.shore);
+    expect(shore.wet(s.x, s.z)).toBe(false);
+    expect(s.z).toBeGreaterThan(1.6);
+    // Let go: it stops.
+    expect(drive(s, shore, 0.1, () => ({})).shore).toBe(0);
+  });
+  it("walking along the waterline, or into a wall, is not pushing into the sea", () => {
+    let s = drive(createMoveState(0, 1.75, shore), shore, 0.5, () => ({ x: -1 }));
+    expect(s.shore).toBe(0);
+    s = drive(createMoveState(2, 0, shore), shore, 1, () => ({ x: 1 }));
+    expect(s.shore).toBe(0);
+  });
+});
+
 describe("in the game (step 4)", () => {
   it("taps to walk: arrives at the target and stops there, at any frame rate", () => {
     for (const fps of [10, 30, 60, 144]) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boxOccluder, groundBlocks, lineBlocked, segmentHitsBox, treeOccluder } from "./occluders";
+import { boxOccluder, canopyAround, groundBlocks, lineBlocked, segmentHitsBox, treeOccluder } from "./occluders";
 import { DEFAULT_PITCH, ORBIT_DISTANCE, PITCH_MIN, orbitOffset } from "./orbitCamera";
 
 const v = (x: number, y: number, z: number) => ({ x, y, z });
@@ -46,6 +46,23 @@ describe("occluder selection", () => {
     const list = [hq, boxOccluder(10, -6, 3.25, 1.8, 0, 5), treeOccluder(0, 11.5, 0), treeOccluder(-12, 0, 0)];
     const s = sight(0, 14.5, 0);
     expect(list.flatMap((o, i) => (segmentHitsBox(s.eye, s.chest, o) ? [i] : []))).toEqual([0, 2]);
+  });
+});
+
+describe("standing in a canopy (world audit item 9)", () => {
+  const oak = treeOccluder(14, -12, 0), hq = boxOccluder(0, 9.35, 3.5, 2.65, 0, 5);
+  it("a head inside a tree's crown is in it, on the camera's side of the trunk or not; a building never is", () => {
+    // The audit's spot: a step west of the oak, the camera looking past them at it.
+    expect(canopyAround(v(13.1, 1.3, -12), [hq, oak])).toBe(true);
+    expect(canopyAround(v(14.9, 1.3, -12), [hq, oak])).toBe(true);
+    expect(canopyAround(v(12.2, 1.3, -12), [hq, oak])).toBe(false); // clear of the crown
+    expect(canopyAround(v(0, 1.3, 9.35), [hq])).toBe(false);
+  });
+  it("the line of sight to them counts as blocked from any side", () => {
+    for (const yaw of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+      const s = sight(13.1, -12, yaw);
+      expect(lineBlocked(s.eye, s.chest, [oak]), `yaw ${yaw}`).toBe(true);
+    }
   });
 });
 

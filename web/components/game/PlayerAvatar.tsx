@@ -40,7 +40,7 @@ import { easeFacing } from "@/lib/game/locomotion";
 import { routePilot, type RouteStep } from "@/lib/game/movement/course";
 import type { AvatarRide } from "@/lib/game/movement/ride";
 import { BASE_FOV, EVENT_CLIP, MOVE_JUICE, TAKEOFF, applyFov, liveWind, momentumOf, screenOf, touchStick, useMoveParticles, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
-import { SPLASH, cooldownWisp, dashBurst, dashReady as dashBack, footprint, footstep, glideFurl, glideOpen, glideRibbon, glideSetDown, groundUnder, landKind, landing, mantleGrab, mantleStep, puffRing, rollTumble, scuff, settle, skidKick, skidPush, slideBurst, slidePop, slideTrail, splash, streak, takeoff, trail, type GroundKind } from "@/lib/game/movement/juice";
+import { SPLASH, cooldownWisp, dashBurst, dashReady as dashBack, footprint, footstep, glideFurl, glideOpen, glideRibbon, glideSetDown, groundUnder, landKind, landing, mantleGrab, mantleStep, puffRing, rollTumble, scuff, settle, skidKick, skidPush, slideBurst, slidePop, slideTrail, splash, springStep, streak, takeoff, trail, type GroundKind } from "@/lib/game/movement/juice";
 
 /**
  * The player on the movement kit (specs/movement.md): keys, the touch stick or
@@ -196,7 +196,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   const fx = useRef({ sq: 0, sqv: 0, steps: 0, trail: 0, stuck: 0, level: 0, punch: 0, leaf: 0, leafV: 0, bank: 0, pitch: 0, sliding: false, slideT: 0, slideBeat: 0, drop: 0, heading: 0,
     mode: "ground", tumbled: false, ribbonT: 0, ribbonK: 0, lead: new THREE.Vector2(), pan: new THREE.Vector2(), rise: new THREE.Vector2(), focus: new THREE.Vector3(x0, 0, z0),
     // Juice timers (specs/movement-feel.md): anticipation, the Air pose, the camera dip, streaks, afterimages, the cooldown wind.
-    antic: 0, anticY: 0, jumped: false, vy0: 6, fallT: 0, dip: 0, dipV: 0, streakT: 0, streakK: 0, ghostT: 0, dashT: 0, cdT: 0, wispT: 0, ready: true, sinceDash: 99, grow: 1, fadeGhost: 0,
+    antic: 0, anticY: 0, jumped: false, vy0: 6, fallT: 0, dip: 0, dipV: 0, streakT: 0, streakK: 0, ghostT: 0, dashT: 0, cdT: 0, wispT: 0, ready: true, sinceDash: 99, grow: 1, fadeGhost: 0, shoreT: 0, shoreOn: false,
     /** An air press waiting to be a tap (Air Step) or a hold (the glider): seconds held, or null. */
     airHeld: null as number | null });
   // The glider is a flag on the sim (never in an encounter); the lab's tuning can carry it too.
@@ -611,6 +611,16 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     }
     if (dashReady && !f.ready && !sitting) dashBack(pool, x, y, z, j.cooldown);
     f.ready = dashReady;
+    // Pushing into the sea (world audit item 21): water stays a wall, so a little splash at the toes as you meet it,
+    // a ripple there every so often while you keep pushing, and the body leans back (below).
+    const bracing = !sitting && state.shore > 0, met = bracing && !f.shoreOn;
+    f.shoreOn = bracing;
+    if (met || (bracing && (f.shoreT -= dt) <= 0)) {
+      const tx = x + Math.sin(state.facing) * 0.35, tz = z + Math.cos(state.facing) * 0.35;
+      if (world.wet(tx, tz)) splash(pool, tx, world.top(tx, tz) + 0.02, tz, j.splash * (met ? 0.8 : 0.45), 0);
+      if (met) { f.sqv -= 1.2 * j.squash; playSFX("blip5", 1.35, 0.35); }
+      f.shoreT = 0.75;
+    }
     particles.tick(_state.clock.elapsedTime, dt, camera, liveWind());
 
     // Squash and stretch: a spring, stretched by vertical speed in the air, held in the anticipation crouch, which then
@@ -620,8 +630,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     if (antic > 0 && f.antic === 0) f.sqv += 5 * j.squash;
     const hold = f.antic / ANTIC, drawnY = y - Math.max(0, y - f.anticY) * hold * hold;
     const want = f.antic > 0 ? -0.14 * j.squash * j.anticipation : !sitting && state.mode === "air" ? THREE.MathUtils.clamp(state.vy * 0.012, -0.07, 0.12) * j.squash : 0;
-    f.sqv += ((want - f.sq) * 260 - f.sqv * 16) * dt;
-    f.sq = THREE.MathUtils.clamp(f.sq + f.sqv * dt, -0.3, 0.3);
+    const sq = springStep(f.sq, f.sqv, want, 260, 16, dt);
+    f.sqv = sq.v; f.sq = THREE.MathUtils.clamp(sq.x, -0.3, 0.3);
     f.rise.multiplyScalar(Math.exp(-18 * dt));
     const sy = 1 + f.sq, sxz = 1 / Math.sqrt(sy), rx = x + f.rise.x, rz = z + f.rise.y;
     g.position.set(rx, groundY, rz);
@@ -644,15 +654,15 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     }
     f.sliding = !sitting && state.mode === "slide";
     // The leaf springs open past full size (the pop) and folds away; gliding banks into turns and sways about the grip.
-    f.leafV += (((gliding ? 1 : 0) - f.leaf) * 220 - f.leafV * 15) * dt;
-    f.leaf = THREE.MathUtils.clamp(f.leaf + f.leafV * dt, 0, 1.3);
+    const leaf = springStep(f.leaf, f.leafV, gliding ? 1 : 0, 220, 15, dt);
+    f.leafV = leaf.v; f.leaf = THREE.MathUtils.clamp(leaf.x, 0, 1.3);
     m.leaf = f.leaf;
     const heading = Math.atan2(state.vx, state.vz), turn = speed > 1 && dt > 0 ? Math.atan2(Math.sin(heading - f.heading), Math.cos(heading - f.heading)) / dt : 0;
     f.heading = heading;
     // Gliding banks into turns and sways about the grip; sliding leans into the steer and lies back deeper the faster it goes (about the seat on the ground).
     const deep = f.sliding ? THREE.MathUtils.clamp((speed - t.walkSpeed * t.slideEnterAt) / Math.max(1, t.momentumCeiling - t.walkSpeed * t.slideEnterAt), 0, 1) : 0;
     f.bank = THREE.MathUtils.damp(f.bank, gliding ? THREE.MathUtils.clamp(-turn * 0.12, -0.3, 0.3) + 0.035 * Math.sin(state.modeT * Math.PI) : f.sliding ? THREE.MathUtils.clamp(-turn * 0.09, -0.24, 0.24) : 0, 6, dt);
-    f.pitch = THREE.MathUtils.damp(f.pitch, -0.12 * deep, 5, dt);
+    f.pitch = THREE.MathUtils.damp(f.pitch, -0.12 * deep - (bracing ? 0.09 : 0), bracing ? 9 : 5, dt);
     bankAbout(bd, state.facing, f.bank, gliding ? y - groundY + GRIP_Y : 0.05, f.pitch);
     m.rate = rawDelta > 0 ? dt / Math.min(rawDelta, 0.1) : 1;
     if (inCombat) {
@@ -702,8 +712,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     f.lead.y = THREE.MathUtils.damp(f.lead.y, state.vz * dir, 3, dt);
     f.pan.multiplyScalar(Math.exp(-5 * dt));
     // A heavy landing dips the camera a touch and springs it back.
-    f.dipV += (-f.dip * 180 - f.dipV * 18) * dt;
-    f.dip += f.dipV * dt;
+    const dip = springStep(f.dip, f.dipV, 0, 180, 18, dt);
+    f.dip = dip.x; f.dipV = dip.v;
     // Sliding, the camera's focus drops a little with you.
     f.drop = THREE.MathUtils.damp(f.drop, f.sliding ? j.slideDrop : 0, 8, dt);
     f.focus.set(x + f.lead.x + f.pan.x, f.level + f.dip - f.drop, z + f.lead.y + f.pan.y);

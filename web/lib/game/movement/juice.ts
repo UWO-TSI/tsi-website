@@ -395,3 +395,21 @@ export function rollTumble(pool: ParticlePool, g: GroundKind, x: number, y: numb
   pool.carry(n, vx * 0.35, vz * 0.35);
   if (fx.extra && !HARD.has(g)) pool.burst(fx.extra, x, y, z, y, vx, vz, amount * 0.7, fx.extraTint, seedAt(x, z, SALT.roll + 1));
 }
+
+/** The longest piece a cosmetic spring is stepped in: one 0.1 s step (a 5 FPS frame) overshoots and flips sign every frame. */
+const SPRING_STEP = 1 / 60;
+const SPRING_OUT = { x: 0, v: 0 };
+/**
+ * A cosmetic spring (stiffness `k`, damping `c`) moved toward `target` over `dt` in pieces of at most 1/60 s, so it
+ * settles the same at any frame rate (world audit item 23: the squash spring alternated upright and bowed below 6 FPS).
+ * Returns a shared scratch { x, v }: read it before the next call.
+ */
+export function springStep(x: number, v: number, target: number, k: number, c: number, dt: number) {
+  const n = Math.max(1, Math.ceil(dt / SPRING_STEP)), h = dt / n;
+  for (let i = 0; i < n; i++) {
+    v += ((target - x) * k - v * c) * h;
+    x += v * h;
+  }
+  SPRING_OUT.x = x; SPRING_OUT.v = v;
+  return SPRING_OUT;
+}
