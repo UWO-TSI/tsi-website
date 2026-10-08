@@ -121,8 +121,9 @@ function Vault({
       sc = Math.min(1.1, (vp.height * 0.78) / VAULT_SIZE, (vp.width * 0.46) / VAULT_SIZE);
       x = -vp.width * 0.24;
     } else {
-      sc = Math.min(1, (vp.width * 0.82) / VAULT_SIZE, (vp.height * 0.38) / VAULT_SIZE);
-      y = vp.height / 2 - vp.height * 0.23;
+      const tight = mode === "test";
+      sc = Math.min(1, (vp.width * 0.82) / VAULT_SIZE, (vp.height * (tight ? 0.3 : 0.38)) / VAULT_SIZE);
+      y = vp.height / 2 - vp.height * (tight ? 0.185 : 0.23);
     }
     if (root.current) {
       easing.damp3(root.current.position, [x, y, 0], 0.5, dt);
@@ -353,9 +354,10 @@ function Ticket({
     g.visible = t > 1.7;
     const out = outBack(seg(t, 2.1, 3.4));
     const vp = state.viewport.getCurrentViewport(state.camera, [0, 0, 1.7]);
-    const fit = Math.min(1, (vp.width * 0.86) / TICKET_W, (vp.height * 0.4) / TICKET_H);
+    const fit = Math.min(1, (vp.width * 0.86) / TICKET_W, (vp.height * 0.36) / TICKET_H);
 
-    g.position.set(0, Math.sin(state.clock.elapsedTime * 1.2) * 0.04 * out, THREE.MathUtils.lerp(-1.0, 1.7, out));
+    const lift = vp.width < vp.height ? vp.height * 0.04 * out : 0;
+    g.position.set(0, lift + Math.sin(state.clock.elapsedTime * 1.2) * 0.04 * out, THREE.MathUtils.lerp(-1.0, 1.7, out));
     g.scale.setScalar(THREE.MathUtils.lerp(fit * 0.55, fit, out));
     g.rotation.y = (1 - out) * Math.PI * 2;
     g.rotation.z = (1 - out) * -0.25;

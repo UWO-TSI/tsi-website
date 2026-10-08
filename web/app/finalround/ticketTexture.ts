@@ -13,6 +13,9 @@ function fontVar(name: string, fallback: string) {
 
 export async function drawTicket(name: string, project: string, memberNo: string, date: string) {
   await document.fonts.ready;
+  const logo = new Image();
+  logo.src = "/logo-dark.svg";
+  const hasLogo = await logo.decode().then(() => true, () => false);
   const body = fontVar("--font-body", "system-ui, sans-serif");
   const mono = fontVar("--font-highlight", "ui-monospace, monospace");
 
@@ -71,11 +74,14 @@ export async function drawTicket(name: string, project: string, memberNo: string
   const pw = ctx.measureText(pill).width + 90;
   ctx.strokeStyle = "rgba(255,209,102,0.8)";
   ctx.lineWidth = 4;
+  const logoSize = 210;
+  const pillRight = hasLogo ? PX - pad - logoSize - 36 : PX - pad;
   ctx.beginPath();
-  ctx.roundRect(PX - pad - pw, pad - 20, pw, 84, 42);
+  ctx.roundRect(pillRight - pw, pad - 20, pw, 84, 42);
   ctx.stroke();
   ctx.fillStyle = "#ffd166";
-  ctx.fillText(pill, PX - pad - pw + 45, pad + 36);
+  ctx.fillText(pill, pillRight - pw + 45, pad + 36);
+  if (hasLogo) ctx.drawImage(logo, PX - pad - logoSize + 20, pad - 82, logoSize, logoSize);
 
   ctx.letterSpacing = "12px";
   ctx.fillStyle = "rgba(241,255,255,0.6)";

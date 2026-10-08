@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useAnimationControls } from "framer-motion";
 import confetti from "canvas-confetti";
 import {
   CLOSER,
@@ -65,7 +65,17 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
   const [remaining, setRemaining] = useState(TIME_LIMIT_SECONDS);
   const [opened, setOpened] = useState(false);
   const [saving, setSaving] = useState(false);
-  const deadline = useRef(0);
+  // Hidden clock: the display counts down a virtual time whose rate drifts so
+  // it hits zero as the last attempt is being typed.
+  const vLeft = useRef(TIME_LIMIT_SECONDS * 1000);
+  const rate = useRef(1);
+  const rateTarget = useRef(1);
+  const lastReal = useRef(0);
+  const testStart = useRef(0);
+  const keyTimes = useRef<number[]>([]);
+  const lastAttempt = useRef({ active: false, typed: 0 });
+  const shakeCtl = useAnimationControls();
+  const [scrollDark, setScrollDark] = useState(0);
   const ended = useRef(false);
   const captureRef = useRef<(() => string) | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -120,16 +130,49 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
 
   useEffect(() => {
     if (phase !== "test") return;
+    lastReal.current = performance.now();
+    let shown = Math.ceil(vLeft.current / 1000);
     const id = window.setInterval(() => {
-      const left = Math.max(0, Math.ceil((deadline.current - Date.now()) / 1000));
-      setRemaining(left);
-      if (left <= 0) {
+      const now = performance.now();
+      // On the last attempt, don't run out before they start typing.
+      const la = lastAttempt.current;
+      const target = la.active && la.typed === 0 && vLeft.current < 4500 ? Math.min(rateTarget.current, 0.25) : rateTarget.current;
+      rate.current += (target - rate.current) * 0.15;
+      vLeft.current -= (now - lastReal.current) * rate.current;
+      lastReal.current = now;
+      const sec = Math.max(0, Math.ceil(vLeft.current / 1000));
+      if (sec !== shown) {
+        shown = sec;
+        setRemaining(sec);
+        if (sec > 0) sfx.tick(sec <= 15);
+      }
+      if (vLeft.current <= 0) {
         window.clearInterval(id);
         fail();
       }
-    }, 200);
+    }, 100);
     return () => window.clearInterval(id);
   }, [phase, fail]);
+
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+  const calibrate = (done: number, typed: number) => {
+    const secsLeft = vLeft.current / 1000;
+    const now = performance.now();
+    if (done >= MAX_ATTEMPTS - 1) {
+      // Final attempt: land on zero right as the last digit goes in.
+      const gaps = keyTimes.current.slice(1).map((t, i) => t - keyTimes.current[i]);
+      const perKey = clamp((gaps.length ? gaps.reduce((a, b) => a + b, 0) / gaps.length : 700) / 1000, 0.3, 1.2);
+      const avgGuess = (now - testStart.current) / Math.max(1, done) / 1000;
+      const realLeft = typed === 0 ? Math.max(6, avgGuess) : Math.max(0.25, (CODE_LENGTH - typed) * perKey - 0.15);
+      rateTarget.current = clamp(secsLeft / realLeft, typed === 0 ? 0.3 : 0.5, 6);
+    } else if (done >= 1) {
+      const avgGuess = (now - testStart.current) / done / 1000;
+      const attemptsLeft = MAX_ATTEMPTS - done;
+      const realLeft = avgGuess * (attemptsLeft - 1) + Math.min(avgGuess * 0.8, 9);
+      rateTarget.current = clamp(secsLeft / realLeft, 0.55, 1.7);
+    }
+  };
 
   const onOpened = useCallback(() => {
     setOpened(true);
@@ -162,29 +205,37 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
     }, 2000);
     window.setTimeout(() => {
       sfx.clunk();
-      deadline.current = Date.now() + TIME_LIMIT_SECONDS * 1000;
+      vLeft.current = TIME_LIMIT_SECONDS * 1000;
+      rate.current = 1;
+      rateTarget.current = 1;
+      testStart.current = performance.now();
       setRemaining(TIME_LIMIT_SECONDS);
       setPhase("test");
       window.setTimeout(() => inputRef.current?.focus(), 450);
     }, 3000);
   };
 
-  // Faint clock tick that speeds up in the last 30 seconds.
-  useEffect(() => {
-    if (phase !== "test") return;
-    let id = 0;
-    const tick = () => {
-      if (ended.current) return;
-      const fast = deadline.current - Date.now() <= 30000;
-      sfx.tick(fast);
-      id = window.setTimeout(tick, fast ? 500 : 1000);
-    };
-    id = window.setTimeout(tick, 1000);
-    return () => window.clearTimeout(id);
-  }, [phase]);
+  const finalSet = history.length >= MAX_ATTEMPTS - 1;
+
+  const applyAnswer = (raw: string) => {
+    if (ended.current) return;
+    const v = raw.replace(/\D/g, "").slice(0, CODE_LENGTH);
+    if (v.length > answer.length) {
+      buzz(8);
+      sfx.key();
+      keyTimes.current.push(performance.now());
+    }
+    setAnswer(v);
+    lastAttempt.current = { active: finalSet, typed: v.length };
+    if (finalSet) {
+      calibrate(history.length, v.length);
+      // The clock gives out on the last keystroke.
+      if (v.length === CODE_LENGTH) vLeft.current = 0;
+    }
+  };
 
   const submit = () => {
-    if (answer.length !== CODE_LENGTH || ended.current) return;
+    if (answer.length !== CODE_LENGTH || ended.current || finalSet) return;
     rig.current ??= createRig(CODE_LENGTH);
     const fb = rig.current(answer, history.length, MIN_GREENS[history.length] ?? CODE_LENGTH - 1);
     const g = greens(fb);
@@ -193,6 +244,11 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
     setHistory(next);
     setShake((s) => s + 1);
     setAnswer("");
+    keyTimes.current = [];
+    lastAttempt.current = { active: next.length >= MAX_ATTEMPTS - 1, typed: 0 };
+    calibrate(next.length, 0);
+    shakeCtl.start({ x: [0, -12, 10, -7, 4, 0], transition: { duration: 0.42 } });
+    inputRef.current?.focus();
     buzz(g === CODE_LENGTH - 1 ? [20, 30, 60] : 25);
     sfx.clunk();
     fb.forEach((m, i) => m && sfx.lamp(i, m === 2 ? "green" : "amber"));
@@ -204,8 +260,41 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
           ? CLOSER[history.length % CLOSER.length]
           : ""
     );
-    if (next.length >= MAX_ATTEMPTS) window.setTimeout(fail, 1100);
   };
+
+  // Typing works even when the hidden input has lost focus.
+  const keys = useRef({ applyAnswer, submit, answer });
+  useEffect(() => {
+    keys.current = { applyAnswer, submit, answer };
+  });
+  useEffect(() => {
+    if (phase !== "test") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (document.activeElement === inputRef.current || e.metaKey || e.ctrlKey || e.altKey) return;
+      const k = keys.current;
+      if (/^\d$/.test(e.key)) {
+        e.preventDefault();
+        k.applyAnswer(k.answer + e.key);
+        inputRef.current?.focus();
+      } else if (e.key === "Backspace") {
+        e.preventDefault();
+        k.applyAnswer(k.answer.slice(0, -1));
+        inputRef.current?.focus();
+      } else if (e.key === "Enter") {
+        k.submit();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [phase]);
+
+  // Darken the scene as they scroll down to the next steps.
+  useEffect(() => {
+    if (phase !== "reveal") return;
+    const onScroll = () => setScrollDark(clamp(window.scrollY / (window.innerHeight * 0.7), 0, 1));
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [phase]);
 
   const save = async () => {
     const shot = captureRef.current?.();
@@ -247,7 +336,22 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
   };
 
   const attemptsLeft = MAX_ATTEMPTS - history.length;
-  const urgent = phase === "test" && remaining <= 30;
+  const urgent = phase === "test" && remaining <= 15;
+
+  const muteButton = (cls: string) => (
+    <motion.button
+      onClick={toggleMute}
+      whileTap={{ scale: 0.88 }}
+      transition={spring}
+      aria-label={muted ? "Unmute sound" : "Mute sound"}
+      className={`${cls} flex shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white/80 backdrop-blur`}
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M11 5 6 9H2v6h4l5 4V5z" />
+        {muted ? <path d="m23 9-6 6M17 9l6 6" /> : <path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14" />}
+      </svg>
+    </motion.button>
+  );
   const dread = phase === "test" ? 1 - remaining / TIME_LIMIT_SECONDS : 0;
   const latest = history[0]?.fb ?? null;
 
@@ -258,6 +362,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
         @keyframes fr-caret{0%,100%{opacity:1}50%{opacity:0}}
         @keyframes fr-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
         .fr-panel{padding-top:44svh}
+        @media (max-aspect-ratio:1/1){.fr-panel.fr-tight{padding-top:35svh}}
         @media (min-aspect-ratio:1/1){.fr-panel{padding-top:0;margin-left:50%;width:50%;min-height:100svh;display:flex;flex-direction:column;justify-content:center}}
         .fr-shimmer{background:linear-gradient(90deg,#ffd166 0%,#fff3cf 25%,#ffd166 50%,#fff3cf 75%,#ffd166 100%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:fr-shimmer 3s linear infinite}
       `}</style>
@@ -284,7 +389,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
           className="pointer-events-none fixed inset-0 z-[2] transition-[background] duration-1000"
           style={{
             background: `radial-gradient(ellipse at 50% 45%, transparent ${55 - dread * 25}%, rgba(${
-              remaining <= 20 ? "30,0,0" : "0,0,0"
+              remaining <= 10 ? "30,0,0" : "0,0,0"
             },${(0.08 + dread * 0.55).toFixed(2)}) 100%)`,
           }}
         />
@@ -337,6 +442,8 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
             <span className={`${mono} max-w-[45%] truncate text-[11px] tracking-[0.25em] text-white/50`}>
               {cleanName.toUpperCase()}
             </span>
+            <span className="flex items-center gap-2">
+            {muteButton("h-9 w-9")}
             <motion.span
               key={urgent ? remaining : "calm"}
               initial={urgent ? { scale: 1.08 } : false}
@@ -348,6 +455,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
             >
               {fmt(remaining)}
             </motion.span>
+            </span>
           </div>
           <div className="mx-auto mt-2 h-1 max-w-5xl overflow-hidden rounded bg-white/10">
             <div
@@ -457,19 +565,21 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
         )}
 
         {phase === "test" && (
-          <motion.section key="test" {...enter} className="fr-panel relative z-10 px-4 pb-10">
+          <motion.section key="test" {...enter} className="fr-panel fr-tight relative z-10 px-4 pb-10">
             <div className="mx-auto w-full max-w-md">
               <p className={`${mono} text-xs tracking-[0.25em] text-[#22d3ee]`}>
                 VAULT / ACCESS CODE
               </p>
-              <p className="mt-2 text-sm leading-relaxed text-[#cbd5e1]">
-                After each guess, every digit gets a colour. Digits can repeat.
-              </p>
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-[#cbd5e1]">
+              {history.length === 0 && (
+                <p className="mt-2 text-sm leading-relaxed text-[#cbd5e1]">
+                  After each guess, every digit gets a colour. Digits can repeat.
+                </p>
+              )}
+              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-[#cbd5e1]">
                 {[
-                  ["border-[#22c55e] bg-[#22c55e]/20 text-[#4ade80]", "Right digit, right spot"],
-                  ["border-[#ffd166] bg-[#ffd166]/15 text-[#ffd166]", "In the code, wrong spot"],
-                  ["border-white/15 bg-white/5 text-white/40", "Not in the code"],
+                  ["border-[#22c55e] bg-[#22c55e]/20 text-[#4ade80]", "Right spot"],
+                  ["border-[#ffd166] bg-[#ffd166]/15 text-[#ffd166]", "Wrong spot"],
+                  ["border-white/15 bg-white/5 text-white/40", "Not in code"],
                 ].map(([cls, label], i) => (
                   <span key={label} className="flex items-center gap-1.5">
                     <span className={`${mono} flex h-5 w-5 items-center justify-center rounded-[5px] border text-[11px] font-semibold ${cls}`}>
@@ -480,28 +590,63 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                 ))}
               </div>
 
-              <motion.div
-                key={shake}
-                className="mt-4"
-                animate={shake ? { x: [0, -12, 10, -7, 4, 0] } : undefined}
-                transition={{ duration: 0.42 }}
-              >
+              {history.length > 0 && (
+                <ul className="mt-3 space-y-1.5">
+                  {[...history].reverse().map((h, idx) => {
+                    const latest = idx === history.length - 1;
+                    return (
+                      <motion.li
+                        key={idx}
+                        initial={{ opacity: 0, y: 10, scale: 0.97 }}
+                        animate={{ opacity: latest ? 1 : 0.55, y: 0, scale: 1 }}
+                        transition={spring}
+                        className={`flex items-center justify-between rounded-xl border bg-[#121418]/90 px-3 py-2 backdrop-blur ${
+                          latest ? "border-white/20" : "border-white/10"
+                        }`}
+                      >
+                        <span className={`${mono} w-6 text-xs text-white/40`}>#{idx + 1}</span>
+                        <span className="flex gap-1.5" style={{ perspective: 400 }}>
+                          {h.fb.map((m, k) => (
+                            <motion.span
+                              key={k}
+                              initial={latest ? { rotateX: -90, opacity: 0 } : false}
+                              animate={{ rotateX: 0, opacity: 1 }}
+                              transition={{ ...spring, delay: 0.1 * k }}
+                              className={`${mono} flex h-8 w-8 items-center justify-center rounded-[7px] border text-base font-semibold ${
+                                m === 2
+                                  ? "border-[#22c55e] bg-[#22c55e]/20 text-[#4ade80] shadow-[0_0_14px_-4px_#22c55e]"
+                                  : m === 1
+                                    ? "border-[#ffd166] bg-[#ffd166]/15 text-[#ffd166]"
+                                    : "border-white/10 bg-white/5 text-white/35"
+                              }`}
+                            >
+                              {h.guess[k]}
+                            </motion.span>
+                          ))}
+                        </span>
+                        <span className={`${mono} w-8 text-right text-xs text-[#4ade80]`}>
+                          {greens(h.fb)}/{CODE_LENGTH}
+                        </span>
+                      </motion.li>
+                    );
+                  })}
+                </ul>
+              )}
+
+              {finalSet && (
+                <p className={`${mono} mt-4 text-[11px] tracking-[0.25em] text-[#ef4444]`}>
+                  FINAL ATTEMPT
+                </p>
+              )}
+              <motion.div className={finalSet ? "mt-2" : "mt-4"} animate={shakeCtl}>
                 <div className="relative" onClick={() => inputRef.current?.focus()}>
                   <input
                     ref={inputRef}
                     value={answer}
-                    onChange={(e) => {
-                      const v = e.target.value.replace(/\D/g, "").slice(0, CODE_LENGTH);
-                      if (v.length > answer.length) {
-                        buzz(8);
-                        sfx.key();
-                      }
-                      setAnswer(v);
-                    }}
+                    onChange={(e) => applyAnswer(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && submit()}
                     inputMode="numeric"
                     autoComplete="off"
-                    disabled={attemptsLeft <= 0}
                     aria-label={`${CODE_LENGTH}-digit code`}
                     className="absolute inset-0 z-10 h-full w-full cursor-text opacity-0"
                   />
@@ -545,7 +690,8 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                 </div>
                 <motion.button
                   onClick={submit}
-                  disabled={answer.length !== CODE_LENGTH || attemptsLeft <= 0}
+                  onPointerDown={(e) => e.preventDefault()}
+                  disabled={answer.length !== CODE_LENGTH || attemptsLeft <= 0 || finalSet}
                   whileTap={{ scale: 0.95 }}
                   transition={spring}
                   className="mt-3 flex w-full items-center justify-center gap-3 rounded-xl bg-[#1d9bf0] px-6 py-4 text-lg font-semibold text-white shadow-[0_10px_30px_-10px_rgba(29,155,240,0.8)] transition-opacity disabled:opacity-40 disabled:shadow-none"
@@ -574,47 +720,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                 </AnimatePresence>
               </div>
 
-              <ul className="mt-2 space-y-2">
-                <AnimatePresence initial={false}>
-                  {history.map((h, i) => (
-                    <motion.li
-                      key={history.length - i}
-                      layout
-                      initial={{ opacity: 0, y: -16, scale: 0.96 }}
-                      animate={{ opacity: i === 0 ? 1 : 0.6, y: 0, scale: 1 }}
-                      transition={spring}
-                      className="flex items-center justify-between rounded-xl border border-white/10 bg-[#121418]/90 px-4 py-2.5 backdrop-blur"
-                    >
-                      <span className={`${mono} w-7 text-xs text-white/40`}>
-                        #{history.length - i}
-                      </span>
-                      <span className="flex gap-1.5" style={{ perspective: 400 }}>
-                        {h.fb.map((m, k) => (
-                          <motion.span
-                            key={k}
-                            initial={i === 0 ? { rotateX: -90, opacity: 0 } : false}
-                            animate={{ rotateX: 0, opacity: 1 }}
-                            transition={{ ...spring, delay: 0.1 * k }}
-                            className={`${mono} flex h-9 w-8 items-center justify-center rounded-[7px] border text-lg font-semibold ${
-                              m === 2
-                                ? "border-[#22c55e] bg-[#22c55e]/20 text-[#4ade80] shadow-[0_0_14px_-4px_#22c55e]"
-                                : m === 1
-                                  ? "border-[#ffd166] bg-[#ffd166]/15 text-[#ffd166]"
-                                  : "border-white/10 bg-white/5 text-white/35"
-                            }`}
-                          >
-                            {h.guess[k]}
-                          </motion.span>
-                        ))}
-                      </span>
-                      <span className={`${mono} w-9 text-right text-xs text-[#4ade80]`}>
-                        {greens(h.fb)}/{CODE_LENGTH}
-                      </span>
-                    </motion.li>
-                  ))}
-                </AnimatePresence>
-              </ul>
-              <p className={`${mono} pt-6 text-center text-[11px] tracking-[0.15em] text-[#ef4444]/70`}>
+              <p className={`${mono} pt-4 text-center text-[11px] tracking-[0.15em] text-[#ef4444]/70`}>
                 YOUR APPLICATION DEPENDS ON THIS RESULT.
               </p>
             </div>
@@ -627,7 +733,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
             {...enter}
             className="relative z-10 flex min-h-svh flex-col items-center justify-end px-4 pb-[14svh] text-center"
           >
-            <p className={`${mono} text-xs tracking-[0.3em] text-[#ef4444]`}>ACCESS DENIED</p>
+            <p className={`${mono} text-xs tracking-[0.3em] text-[#ef4444]`}>TIME EXPIRED</p>
             <h1
               className="mt-3 text-4xl font-bold sm:text-5xl"
               style={{ animation: "fr-glitch .5s infinite" }}
@@ -691,15 +797,19 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
 
       {phase === "reveal" && (
         <>
+          <div
+            className="pointer-events-none fixed inset-0 z-[5] bg-[#050506]"
+            style={{ opacity: scrollDark * 0.88 }}
+          />
           <section className="pointer-events-none relative z-10 flex min-h-svh flex-col items-center justify-between px-4 pb-20 pt-[7svh] text-center">
             <AnimatePresence>
               {opened && (
                 <motion.div key="head" initial="h" animate="s" variants={{ s: { transition: { staggerChildren: 0.12 } } }}>
                   {[
-                    <h1 key="b" className="text-5xl font-extrabold leading-none tracking-tight sm:text-7xl">
+                    <h1 key="b" className="text-[clamp(2.1rem,11vw,4.5rem)] font-extrabold leading-none tracking-tight">
                       JUST KIDDING.
                     </h1>,
-                    <h2 key="c" className="fr-shimmer mt-2 text-3xl font-extrabold sm:text-5xl">
+                    <h2 key="c" className="fr-shimmer mt-2 text-[clamp(1.3rem,6.6vw,3rem)] font-extrabold">
                       YOU MADE IT INTO TSI.
                     </h2>,
                   ].map((el) => (
@@ -804,22 +914,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
           )}
         </>
       )}
-      <motion.button
-        onClick={toggleMute}
-        whileTap={{ scale: 0.88 }}
-        transition={spring}
-        aria-label={muted ? "Unmute sound" : "Mute sound"}
-        className="fixed bottom-4 right-4 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white/80 backdrop-blur"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M11 5 6 9H2v6h4l5 4V5z" />
-          {muted ? (
-            <path d="m23 9-6 6M17 9l6 6" />
-          ) : (
-            <path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14" />
-          )}
-        </svg>
-      </motion.button>
+      {phase !== "test" && muteButton("fixed bottom-4 right-4 z-30 h-11 w-11")}
     </main>
   );
 }
