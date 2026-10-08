@@ -31,7 +31,7 @@ import { treeParts } from "./NatureModels";
 import AmbientFauna, { type FaunaProps } from "./AmbientFauna";
 import WeatherGround from "./WeatherGround";
 import { autoFollow, capture, orbit, ORBIT_DISTANCE, orbitOffset, stepOrbit, turnOffset } from "@/lib/game/orbitCamera";
-import { CUT_FLOOR, CUT_RADIUS, CUTOUT, CUTOUT_VIEW, groundBlocks, lineBlocked, type Occluder } from "@/lib/game/occluders";
+import { CROWN_REACH, CUT_FLOOR, CUT_RADIUS, CUTOUT, CUTOUT_CROWN, CUTOUT_VIEW, canopyAround, groundBlocks, lineBlocked, type Occluder } from "@/lib/game/occluders";
 import { bendViewPoint } from "@/lib/game/worldProjection";
 import { orbitKeys, useOrbitInput } from "./useOrbitInput";
 
@@ -143,6 +143,8 @@ export interface FollowScene {
 }
 /** How far ahead of the focus the camera looks: walking, and aiming with the crosshair (the crosshair clears your head and its ground point lands about 3 ahead; further, you would sink behind the combat HUD). */
 const LOOK_AHEAD = 1.5, AIM_AHEAD = 2.2;
+/** The top of the head over the feet (a character stands 1.36): the cut also follows the line of sight to it. */
+const HEAD = 1.3;
 /** The least height the camera keeps over the ground under it (a hill or cliff behind you lifts it, never through). */
 const CLEARANCE = 0.8;
 /**
@@ -158,8 +160,8 @@ const CLEARANCE = 0.8;
 export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: number, overview: Overview | null, scene?: FollowScene) {
   const { camera } = useThree();
   useOrbitInput();
-  const rig = useMemo(() => ({ ahead: LOOK_AHEAD, cut: 0, chest: new THREE.Vector3(), last: new THREE.Vector3(NaN, 0, 0), vx: 0, vz: 0 }), []);
-  useEffect(() => () => { CUTOUT.value.w = 0; }, []);
+  const rig = useMemo(() => ({ ahead: LOOK_AHEAD, cut: 0, chest: new THREE.Vector3(), head: new THREE.Vector3(), last: new THREE.Vector3(NaN, 0, 0), vx: 0, vz: 0 }), []);
+  useEffect(() => () => { CUTOUT.value.w = 0; CUTOUT_CROWN.value.x = 0; }, []);
   const baseFar = useRef<number | null>(null);
   const blend = useRef({ zoom, overview: overview ? 1 : 0, last: overview });
   const look = useMemo(() => new THREE.Vector3(), []);
@@ -205,15 +207,18 @@ export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: num
     }
     camera.lookAt(look);
     camera.updateMatrixWorld();
-    // A building, tree or cliff on the line of sight to the player's chest eases the cut in; the circle sits where they are drawn.
+    // A building, tree or cliff on the line of sight to the player's chest or head eases the cut in; the circle sits where they are drawn.
     if (!p || !(camera instanceof THREE.PerspectiveCamera)) return;
-    const c = rig.chest.set(p.x, p.y + 1, p.z);
-    const blocked = b.overview === 0 && (lineBlocked(camera.position, c, scene!.occluders) || groundBlocks(camera.position, c, scene!.ground));
+    const c = rig.chest.set(p.x, p.y + 1, p.z), h = rig.head.set(p.x, p.y + HEAD, p.z), list = scene!.occluders;
+    const crown = b.overview === 0 && canopyAround(h, list);
+    const blocked = b.overview === 0 && (crown || lineBlocked(camera.position, c, list) || lineBlocked(camera.position, h, list) || groundBlocks(camera.position, c, scene!.ground));
     rig.cut = THREE.MathUtils.damp(rig.cut, blocked ? 1 : 0, 8, dt);
     c.applyMatrix4(camera.matrixWorldInverse);
     const depth = -c.z;
     bendViewPoint(c).applyMatrix4(camera.projectionMatrix);
     CUTOUT.value.set(c.x, c.y, CUT_RADIUS / (depth * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))), rig.cut < 0.01 ? 0 : rig.cut);
     CUTOUT_VIEW.value.set(camera.aspect, depth, p.y + CUT_FLOOR);
+    // In a tree's crown the leaves round the head are at the player's own depth: cut those too, above the chest.
+    CUTOUT_CROWN.value.set(crown ? depth + CROWN_REACH : 0, p.y + 1);
   }, -3);
 }
