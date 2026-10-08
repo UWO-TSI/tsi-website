@@ -18,13 +18,21 @@ import Character, { type CharacterMotion } from "./Character";
 import { DEFAULT_LOOK, PART_BY_ID, wear, type CharacterLook } from "@/lib/game/character/look";
 import type { Framing } from "@/lib/game/character/creatorCategories";
 
-/** Camera per framing (the character stands at scale 1: 1.045 m, the face centre about 0.87 m up). */
-export const FRAMES: Record<Framing, { pos: [number, number, number]; at: [number, number, number]; fov: number; yaw: number }> = {
-  face: { pos: [0, 0.885, 0.98], at: [0, 0.865, 0], fov: 25, yaw: -0.12 },
-  head: { pos: [0, 0.86, 1.42], at: [0, 0.82, 0], fov: 27, yaw: -0.38 },
-  upper: { pos: [0, 0.72, 2.02], at: [0, 0.64, 0], fov: 29, yaw: -0.32 },
-  body: { pos: [0, 0.6, 2.85], at: [0, 0.5, 0], fov: 29, yaw: -0.32 },
+/**
+ * Camera per framing (the character stands at scale 1: 1.045 m, the head about 0.62 to 1.04 m up): the point to look
+ * at, the height and width that must fit in the portrait whatever its shape, the lens, and the turn it starts at.
+ */
+export const FRAMES: Record<Framing, { at: [number, number, number]; h: number; w: number; fov: number; lift: number; yaw: number }> = {
+  face: { at: [0, 0.79, 0], h: 0.57, w: 0.6, fov: 25, lift: 0.03, yaw: -0.12 },
+  head: { at: [0, 0.76, 0], h: 0.72, w: 0.66, fov: 26, lift: 0.05, yaw: -0.38 },
+  upper: { at: [0, 0.64, 0], h: 0.98, w: 0.8, fov: 28, lift: 0.08, yaw: -0.32 },
+  body: { at: [0, 0.53, 0], h: 1.24, w: 0.86, fov: 28, lift: 0.1, yaw: -0.32 },
 };
+/** How far back the camera stands for a framing to fit a portrait of this aspect (width / height). */
+export function frameDistance(f: (typeof FRAMES)[Framing], aspect: number) {
+  const t = Math.tan(THREE.MathUtils.degToRad(f.fov) / 2);
+  return Math.max(f.h / 2 / t, f.w / 2 / (t * aspect));
+}
 
 /** The studio: key, fill and rim fixed to the camera's side of the set, a little warm sky, nothing shiny. */
 function Lights() {
@@ -32,7 +40,7 @@ function Lights() {
     <hemisphereLight args={["#fff4e2", "#cdb995", 0.62]} />
     <directionalLight position={[-1.5, 2.1, 2.5]} intensity={2.3} color="#fff0d9" />
     <directionalLight position={[2.4, 0.9, 1.4]} intensity={0.62} color="#e6eef9" />
-    <directionalLight position={[0.9, 2.2, -2.6]} intensity={1.7} color="#fff1dc" />
+    <directionalLight position={[1.8, 2.0, -2.2]} intensity={2.4} color="#fff3df" />
   </>;
 }
 
@@ -62,8 +70,8 @@ const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(pre
 
 /** Ease the camera toward a framing (snap the first frame, and always under reduced motion). Module scope: hook values are never written in a component. */
 function frameCamera(camera: THREE.PerspectiveCamera, at: THREE.Vector3, f: (typeof FRAMES)[Framing], jump: boolean, dt: number) {
-  const k = 7, e = (a: number, b: number) => (jump ? b : damp(a, b, k, dt));
-  camera.position.set(e(camera.position.x, f.pos[0]), e(camera.position.y, f.pos[1]), e(camera.position.z, f.pos[2]));
+  const k = 7, e = (a: number, b: number) => (jump ? b : damp(a, b, k, dt)), d = frameDistance(f, camera.aspect);
+  camera.position.set(e(camera.position.x, f.at[0]), e(camera.position.y, f.at[1] + f.lift), e(camera.position.z, f.at[2] + d));
   at.set(e(at.x, f.at[0]), e(at.y, f.at[1]), e(at.z, f.at[2]));
   const fov = e(camera.fov, f.fov);
   if (fov !== camera.fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
@@ -135,8 +143,8 @@ export function prioritiseThumbs(keys: ReadonlySet<string>) {
 
 const SIZE = 160;
 const VIEWS: Record<ThumbView, { pos: [number, number, number]; at: [number, number, number]; fov: number }> = {
-  front: { pos: [0.42, 0.98, 1.08], at: [0, 0.875, 0], fov: 23 },
-  back: { pos: [0.5, 0.98, -1.05], at: [0, 0.86, 0], fov: 24 },
+  front: { pos: [0.48, 0.9, 1.42], at: [0, 0.82, 0], fov: 24 },
+  back: { pos: [0.55, 0.92, -1.4], at: [0, 0.8, 0], fov: 24 },
   body: { pos: [0.6, 0.66, 2.3], at: [0, 0.52, 0], fov: 28 },
 };
 const still: CharacterMotion = { speed: 0, yaw: 0, lift: 0, pose: null, play: null };
@@ -174,7 +182,7 @@ export function ThumbBaker() {
   const frames = useRef(-1);
   const motion = useRef<CharacterMotion>({ ...still });
   useFrame(({ gl }) => {
-    if (!job || frames.current < 0 || ++frames.current < 4) return; // a few frames: the mixer has posed it and the face is set
+    if (!job || frames.current < 0 || ++frames.current < 3) return; // a few frames: the mixer has posed it and the face is set
     if (!bake(gl, job)) return;
     frames.current = -1;
     current = queue.shift() ?? null;

@@ -122,10 +122,10 @@ function slot(cell: FaceCell, anchor: [number, number], mirror: 0 | 1 | 2, tint:
 
 /**
  * The face area (canvas units, [u0, w0, u1, w1]) a placed part must stay in: the front of the face between the temples'
- * hairline and the chin (head_shape.face_chart: lat 22 at the temples is w 0.29, lat -55 at the chin about w 1.03,
+ * hairline and the chin (head_shape.face_chart: lat 22 at the temples is w 0.29, lat -50 above the chin about w 0.985,
  * lon ±52 about u 0.07 and 0.93). A part whose default already reaches further keeps that reach (old looks never move).
  */
-export const FACE_AREA: readonly [number, number, number, number] = [0.07, 0.3, 0.93, 1.02];
+export const FACE_AREA: readonly [number, number, number, number] = [0.07, 0.3, 0.93, 0.985];
 /** The sliders at full travel: up (canvas units), apart (canvas units), rotate (degrees), size (factor at the top). */
 export const PLACE_RANGE = { up: 0.07, apart: 0.05, rotate: 25, size: 1.4 } as const;
 /** Paired parts (eyes, brows) keep this far from the centre line. */

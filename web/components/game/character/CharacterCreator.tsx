@@ -23,6 +23,7 @@ import { dyeRef, FACE, FACE_ATLAS_URLS, FREE_HAIR_COLOURS, PALETTE, PART_BY_ID, 
   type CharacterLook, type FaceCell, type Placement } from "@/lib/game/character/look";
 import { CATEGORIES, choose, colourTarget, isOn, optionName, type Category, type Section } from "@/lib/game/character/creatorCategories";
 import { holdCreatorOpen } from "@/lib/game/character/creatorPresence";
+import { PLACE_RANGE } from "@/lib/game/character/face";
 import CreatorIcon from "./CreatorIcon";
 import { FRAMES, Portrait, ThumbBaker, prioritiseThumbs, thumbJob, useThumb } from "./CreatorStage";
 import styles from "./CharacterCreator.module.css";
@@ -45,11 +46,11 @@ export interface CreatorProps {
 
 const STARTERS: ReadonlySet<string> = new Set(STARTER_PARTS);
 const stay = () => {};
-const SLIDERS: { i: 0 | 1 | 2 | 3; label: string; ends: [string, string] }[] = [
-  { i: 0, label: "Down – Up", ends: ["down", "up"] },
-  { i: 1, label: "Left – Right", ends: ["closer", "apart"] },
-  { i: 2, label: "Rotate", ends: ["turned one way", "turned the other way"] },
-  { i: 3, label: "Smaller – Bigger", ends: ["smaller", "bigger"] },
+const SLIDERS: { i: 0 | 1 | 2 | 3; label: string; say: (v: number) => string }[] = [
+  { i: 0, label: "Down – Up", say: v => (v ? `${Math.abs(v)} ${v > 0 ? "up" : "down"}` : "centred") },
+  { i: 1, label: "Left – Right", say: v => (v ? `${Math.abs(v)} ${v > 0 ? "apart" : "closer"}` : "centred") },
+  { i: 2, label: "Rotate", say: v => (v ? `${v > 0 ? "+" : "−"}${Math.round((Math.abs(v) / PLACE_STEPS) * PLACE_RANGE.rotate)}°` : "level") },
+  { i: 3, label: "Smaller – Bigger", say: v => (v ? `${Math.round(PLACE_RANGE.size ** (v / PLACE_STEPS) * 100)}%` : "100%") },
 ];
 
 export default function CharacterCreator({ initial, mode = "create", title, askName, owned = STARTERS, onShop, onDone, onClose, presence }: CreatorProps) {
@@ -167,7 +168,7 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
       onPointerMove={e => { const d = drag.current; if (!d || d.id !== e.pointerId) return; const dx = e.clientX - d.x; d.x = e.clientX; yaw.current.target += dx * 0.012; yaw.current.now = yaw.current.target; }}
       onPointerUp={e => { if (drag.current?.id === e.pointerId) drag.current = null; }} onPointerCancel={() => { drag.current = null; }}>
       <h1 id="creator-title" className={styles.heading}>{title ?? (mode === "wardrobe" ? "Your closet" : "Make your character")}</h1>
-      <Canvas className={styles.canvas} gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }} dpr={[1, 2]} camera={{ fov: FRAMES.face.fov, near: 0.05, far: 30, position: FRAMES[cat.framing].pos }}
+      <Canvas className={styles.canvas} gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }} dpr={[1, 2]} camera={{ fov: FRAMES.face.fov, near: 0.05, far: 30 }}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace;
           if (process.env.NODE_ENV !== "production") (window as unknown as { __creatorGl?: THREE.WebGLRenderer }).__creatorGl = gl;
@@ -190,7 +191,7 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
       <div className={styles.body}>
         {place && cat.place && <div className={styles.sliders} role="group" aria-label={`${cat.label} placement`}>
           {SLIDERS.filter(s => s.i !== 1 || PLACE_PARTS[cat.place!].apart).map(s => <Slider key={s.i} className={styles.slider} label={s.label} min={-PLACE_STEPS} max={PLACE_STEPS} value={place[s.i]}
-            onChange={v => setPlace(s.i, v)} format={v => (v === 0 ? "centred" : `${Math.abs(v)} ${v < 0 ? s.ends[0] : s.ends[1]}`)} />)}
+            onChange={v => setPlace(s.i, v)} format={s.say} />)}
           <Button variant="quiet" className={styles.reset} disabled={place.every(v => v === 0)} onClick={() => setLook(l => {
             const next: NonNullable<CharacterLook["place"]> = { ...l.place }; delete next[cat.place!];
             const out: CharacterLook = { ...l, place: next }; if (!Object.keys(next).length) delete out.place; return out;
@@ -216,7 +217,9 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
             </ul>
           </section>;
         })}
-        {swatches.length > 0 && <div className={styles.swatchBlock}>
+        {cat.sections.length > 0 && shownTiles.length === 0 && <p className={styles.empty}>
+          Nothing here yet. These come from the shop and the workbench; once you have some, try them on in your closet.</p>}
+        {swatches.length > 0 && (cat.swatch !== "outfit" || shownTiles.length > 0) && <div className={styles.swatchBlock}>
           <h3>{cat.swatch === "skin" ? "Skin" : cat.swatch === "hair" ? (cat.id === "brows" ? "Brow and hair colour" : "Hair colour") : target ? `${PART_BY_ID.get(target)?.name ?? "Its"} colour` : "Colour"}</h3>
           <div className={styles.swatches} role="group" aria-label={`${cat.swatch} colours`} data-kind={cat.swatch}>
             {swatches.map((hex, i) => {
@@ -259,6 +262,8 @@ function PartArt({ id, look }: { id: string; look: CharacterLook }) {
   return src ? <img src={src} alt="" width={80} height={80} draggable={false} /> : <span className={styles.baking} aria-hidden="true" />;
 }
 
+/** The least of the face a tile shows (canvas units), so a mole or a freckle keeps its size against the face. */
+const MIN_SPAN = { eyes: 0.5, brows: 0.5, mouth: 0.3, extras: 0.62 } as const;
 /** A face part as it sits on the face: its atlas cells at their anchors (both sides for paired parts), on the skin. */
 function FaceArt({ layer, id, look }: { layer: "eyes" | "brows" | "mouth" | "extras"; id: string; look: CharacterLook }) {
   const L = FACE.layers, A = FACE.anchors;
@@ -275,7 +280,7 @@ function FaceArt({ layer, id, look }: { layer: "eyes" | "brows" | "mouth" | "ext
   if (!rects.length) return null;
   // The view: the parts' bounds with a little room, square, centred.
   const u0 = Math.min(...rects.map(r => r.u0)), u1 = Math.max(...rects.map(r => r.u1)), w0 = Math.min(...rects.map(r => r.w0)), w1 = Math.max(...rects.map(r => r.w1));
-  const span = Math.max(u1 - u0, w1 - w0) * 1.18, cu = (u0 + u1) / 2, cw = (w0 + w1) / 2;
+  const span = Math.max(u1 - u0, w1 - w0, MIN_SPAN[layer]) * 1.18, cu = (u0 + u1) / 2, cw = (w0 + w1) / 2;
   const [W, H] = FACE.atlas_size, pct = (v: number) => `${(v * 100).toFixed(3)}%`;
   const tint = layer === "brows" && L.brows.tint === "hair" ? PALETTE.hair[look.hair] : null;
   return <span className={styles.face} style={{ "--skin": PALETTE.skin[look.skin] } as CSSProperties}>
