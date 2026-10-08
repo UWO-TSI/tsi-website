@@ -45,7 +45,8 @@ describe("character catalogue", () => {
     expect(CLIPS.map(c => c.name)).toEqual(expect.arrayContaining(["Idle", "Walk", "Run", "Sit", "Study", "Sleep", "Fish", "FishHold", "Forage", "Dig", "Net", "Wave", "Cheer", "Laugh", "Sad", "Dance", "AttackMelee", "AttackBow", "AttackCast", "DodgeRoll", "Hit", "Defeat", "Trace", "Stretch"]));
     const A = FACE.anchors;
     const cells: [string, number[], [number, number]][] = [
-      ...Object.entries(FACE.layers.eyes.items).flatMap(([id, frames]) => Object.entries(frames).map(([f, c]) => [`${id}/${f}`, c, f === "left" ? A.eye_left : A.eye] as [string, number[], [number, number]])),
+      ...Object.entries(FACE.layers.eyes.items).flatMap(([id, frames]) => Object.entries(frames).filter(([, c]) => c).map(([f, c]) =>
+        [`${id}/${f}`, c, f === "left" ? A.eye_left : frames.left === null ? A.eye_pair : A.eye] as [string, number[], [number, number]])),
       ...[...Object.entries(FACE.layers.mouth.items), ...Object.entries(FACE.layers.talk.items)].map(([id, c]) => [id, c, A.mouth] as [string, number[], [number, number]]),
       ...Object.entries(FACE.layers.brows.items).map(([id, c]) => [id, c, A.brow] as [string, number[], [number, number]]),
       ...Object.entries(FACE.layers.extras.items).map(([id, it]) => [id, it.cell, A[it.anchor]] as [string, number[], [number, number]]),

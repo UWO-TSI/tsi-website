@@ -107,7 +107,7 @@ describe("row 301 face set (face_set_301.py: sleepy and dot eyes, cat and curled
     for (const id of [...EYES, ...MOUTHS, ...EXTRAS]) expect(FACE.names[id], id).toBeDefined();
     const set = new Set([...EYES, ...MOUTHS, ...EXTRAS]);
     const cells = [
-      ...Object.entries(FACE.layers.eyes.items).flatMap(([id, f]) => Object.values(f).map(c => [id, c!] as const)),
+      ...Object.entries(FACE.layers.eyes.items).flatMap(([id, f]) => Object.values(f).filter(c => c).map(c => [id, c!] as const)),
       ...Object.entries(FACE.layers.mouth.items), ...Object.entries(FACE.layers.talk.items), ...Object.entries(FACE.layers.brows.items),
       ...Object.entries(FACE.layers.extras.items).map(([id, it]) => [id, it.cell] as const),
     ];
@@ -173,7 +173,7 @@ describe("David's 19 faces (face set 305, art/characters/v7/face_set_305.py)", (
       const item = FACE.layers.eyes.items[id];
       expect(item, id).toBeDefined();
       expect(Object.keys(item).every(f => f === "open" || f === "left"), id).toBe(true);   // no blink frames
-      for (const c of Object.values(item)) expect(c![6], id).toBe(1);
+      for (const c of Object.values(item)) if (c) expect(c[6], id).toBe(1);
       expect(canBlink(id), id).toBe(false);
     }
     for (const id of MOUTHS) expect(FACE.layers.mouth.items[id]?.[6], id).toBe(1);
@@ -226,6 +226,7 @@ describe("David's 19 faces (face set 305, art/characters/v7/face_set_305.py)", (
       const item = FACE.layers.eyes.items[id];
       expect([eyeR.src, eyeR.page, eyeR.mirror]).toEqual([page2(item.open), 1, 0]);
       if (item.left) expect([eyeL.src, eyeL.page, eyeL.mirror]).toEqual([page2(item.left), 1, 0]);   // its own drawing
+      else if (item.left === null) expect(eyeL.src).toBeNull();                                  // the pair in one cell
       else expect([eyeL.src, eyeL.mirror]).toEqual([eyeR.src, 2]);                                // a mirrored pair
       expect([mouth.src, mouth.page]).toEqual([page2(FACE.layers.mouth.items[l.mouth]), 1]);
       const accents = s.filter(x => x.src && ACCENTS.some(a => x.src!.join() === page2(FACE.layers.extras.items[a].cell).join()));

@@ -24,7 +24,8 @@ stay crisp at our resolution, whether the source was coarser (#12, #19, the mode
 Eyes: the pair is split at the emptiest column near the centre line into the canvas-left cell (`open`, at the eye
 anchor) and the canvas-right cell (`left`, at the mirrored eye anchor `eye_left`). A pair whose halves mirror each other
 keeps one cell and the engine mirrors it, as for the older eyes. A pair with something across the centre line (the
-dizzy hatching, the nervous hatching, a blush across the nose) is one cell. They have no blink frames (static).
+dizzy hatching, the nervous hatching, a blush across the nose) is one cell at `eye_pair` (the eye line on the centre
+line), marked `left: null` so the engine draws it once. They have no blink frames (static).
 Mouths: one cell at the mouth anchor. Accents: the face shells that carry something besides the plain skin (#6 a blush
 on the nose, #14 a sweat drop) become extras, their colour lifted off the shell's skin (colour to alpha) and anchored
 at their own centre. Everything off the face canvas is cut.
@@ -315,7 +316,8 @@ def build(PX, anchors):
     k = (anchors["mouth"][1] - eye_w) / (my - ey)          # canvas units per head half width
     w0 = eye_w - k * ey
     place = dict(scale=round(float(k), 4), eye_line=round(float(ey), 4), mouth_line=round(float(my), 4))
-    new_anchors = {"eye_left": (1 - eye_u, eye_w)}
+    new_anchors = {"eye_left": (1 - eye_u, eye_w), "eye_pair": (0.5, eye_w)}
+    whole = set()          # eye pairs drawn as one cell (on the centre line, at eye_pair)
 
     def to_canvas(uw):
         return lambda P: np.stack([0.5 + k * uw(P)[:, 0], w0 + k * uw(P)[:, 1]], 1)
@@ -354,7 +356,8 @@ def build(PX, anchors):
         band = range(max(1, centre - int(0.06 * PX)), min(a.shape[1] - 1, centre + int(0.06 * PX)))
         col = min(band, key=lambda c: (a[:, c].sum(), abs(c - centre)))
         if a[:, col].max() > 0:                                     # something crosses the centre line: one cell
-            out[("eyes", eid, "open")] = crop(img, org, "eye")
+            out[("eyes", eid, "open")] = crop(img, org, "eye_pair")
+            whole.add(eid)
             info[eid] = "one cell"
         else:
             L, R = img[:, :col], img[:, col:]
@@ -391,4 +394,4 @@ def build(PX, anchors):
         new_anchors[xid] = (round(pt[0], 4), round(pt[1], 4))
         out[("extras", xid, None)] = crop(img, org, xid, new_anchors[xid])
         names[xid] = xname
-    return out, new_anchors, names, dict(place=place, eyes=info)
+    return out, new_anchors, names, dict(place=place, eyes=info, whole=sorted(whole))

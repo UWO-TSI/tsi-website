@@ -15,7 +15,9 @@ import {
 } from "./data";
 import { setMuted, sfx, unlockAudio } from "./sfx";
 import type { Invite } from "./token";
+import type { Progress, ProgressEvent } from "./progress";
 import { createRig, greens, type Feedback } from "./vault";
+import { renderShareCard, shareCaption, type ShareFormat } from "./shareCard";
 import type { VaultMode } from "./VaultScene";
 
 const VaultScene = dynamic(() => import("./VaultScene"), { ssr: false });
@@ -53,8 +55,19 @@ function buzz(pattern: number | number[]) {
 
 type Phase = VaultMode | "countdown" | "status" | "checking";
 
-export default function FinalRound({ invite }: { invite?: Invite }) {
-  const [phase, setPhase] = useState<Phase>("gate");
+const startPhase = (p: Progress): Phase => (p === "done" ? "reveal" : p === "started" ? "status" : "gate");
+
+export default function FinalRound({
+  invite,
+  token,
+  progress = "new",
+}: {
+  invite?: Invite;
+  token?: string;
+  progress?: Progress;
+}) {
+  const [phase, setPhase] = useState<Phase>(startPhase(progress));
+  const [returning, setReturning] = useState(progress === "done");
   const [count, setCount] = useState(3);
   const [name, setName] = useState(invite?.name ?? "");
   const [muted, setMutedState] = useState(false);
@@ -65,6 +78,8 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
   const [remaining, setRemaining] = useState(TIME_LIMIT_SECONDS);
   const [opened, setOpened] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [share, setShare] = useState<{ format: ShareFormat; blob: Blob; url: string } | null>(null);
+  const [copied, setCopied] = useState(false);
   // Hidden clock: the display counts down a virtual time whose rate drifts so
   // it hits zero as the last attempt is being typed.
   const vLeft = useRef(TIME_LIMIT_SECONDS * 1000);
@@ -84,6 +99,40 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
   const rig = useRef<ReturnType<typeof createRig> | null>(null);
 
   const cleanName = name.trim();
+
+  // Progress lives in the database (any device) and in this browser (fallback).
+  const memKey = token ? `fr:${token.split(".")[0]}` : null;
+  const track = useCallback(
+    (event: ProgressEvent) => {
+      if (!token) return;
+      try {
+        if (memKey && (event === "start" || event === "reveal")) localStorage.setItem(memKey, event);
+      } catch {}
+      fetch("/api/finalround/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, event }),
+        keepalive: true,
+      }).catch(() => {});
+    },
+    [token, memKey]
+  );
+
+  useEffect(() => {
+    track("open");
+    if (!memKey || progress !== "new") return;
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem(memKey);
+    } catch {}
+    if (saved === "reveal") {
+      setReturning(true);
+      setPhase("reveal");
+    } else if (saved === "start") {
+      setPhase("status");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per page load
+  }, []);
   const project = invite?.project ?? "";
 
   useEffect(() => {
@@ -116,6 +165,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
   const fail = useCallback(() => {
     if (ended.current) return;
     ended.current = true;
+    track("finish");
     setRemaining(0);
     setTimeUp(true);
     buzz([80, 60, 80, 60, 200]);
@@ -124,7 +174,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
       setPhase("judging");
       window.setTimeout(() => setPhase("status"), 3000);
     }, 1600);
-  }, []);
+  }, [track]);
 
   const checkStatus = () => {
     unlockAudio();
@@ -190,6 +240,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
 
   const onOpened = useCallback(() => {
     setOpened(true);
+    track("reveal");
     buzz([30, 40, 30]);
     sfx.angel();
     const end = Date.now() + 2200;
@@ -201,11 +252,12 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
       if (Date.now() < end) requestAnimationFrame(burst);
     };
     burst();
-  }, []);
+  }, [track]);
 
   const begin = () => {
     if (!cleanName || phase !== "gate") return;
     unlockAudio();
+    track("start");
     setPhase("countdown");
     setCount(3);
     sfx.count();
@@ -316,43 +368,46 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, [phase]);
 
-  const save = async () => {
-    const shot = captureRef.current?.();
-    if (!shot) return;
+  const openShare = async (format: ShareFormat) => {
     setSaving(true);
     try {
-      const img = new Image();
-      img.src = shot;
-      await img.decode();
-      const c = document.createElement("canvas");
-      c.width = img.width;
-      c.height = img.height;
-      const ctx = c.getContext("2d")!;
-      ctx.drawImage(img, 0, 0);
-      const body = getComputedStyle(document.documentElement).getPropertyValue("--font-body");
-      const s = Math.min(c.width, c.height);
-      ctx.textAlign = "center";
-      ctx.fillStyle = "#ffd166";
-      ctx.font = `800 ${Math.round(s * 0.075)}px ${body}`;
-      ctx.fillText("I MADE IT INTO TSI.", c.width / 2, c.height * 0.14);
-      ctx.fillStyle = "rgba(241,255,255,0.55)";
-      ctx.font = `500 ${Math.round(s * 0.03)}px ${body}`;
-      ctx.fillText("Tech for Social Impact", c.width / 2, c.height * 0.93);
-
+      const c = await renderShareCard({ name: cleanName, project, memberNo, date }, format);
       const blob: Blob = await new Promise((r) => c.toBlob((b) => r(b!), "image/png"));
-      const file = new File([blob], `tsi-acceptance-${memberNo}.png`, { type: "image/png" });
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: "I made it into TSI" }).catch(() => {});
-      } else {
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = file.name;
-        a.click();
-        URL.revokeObjectURL(a.href);
-      }
+      setShare((prev) => {
+        if (prev) URL.revokeObjectURL(prev.url);
+        return { format, blob, url: URL.createObjectURL(blob) };
+      });
     } finally {
       setSaving(false);
     }
+  };
+
+  const shareFile = () =>
+    share ? new File([share.blob], `tsi-${share.format}-${memberNo}.png`, { type: "image/png" }) : null;
+
+  const shareNative = async () => {
+    const file = shareFile();
+    if (!file) return;
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], text: shareCaption(project) }).catch(() => {});
+    } else downloadShare();
+  };
+
+  const downloadShare = () => {
+    const file = shareFile();
+    if (!file || !share) return;
+    const a = document.createElement("a");
+    a.href = share.url;
+    a.download = file.name;
+    a.click();
+  };
+
+  const copyCaption = async () => {
+    try {
+      await navigator.clipboard.writeText(shareCaption(project));
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {}
   };
 
   const attemptsLeft = MAX_ATTEMPTS - history.length;
@@ -832,7 +887,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                 <motion.div key="head" initial="h" animate="s" variants={{ s: { transition: { staggerChildren: 0.12 } } }}>
                   {[
                     <h1 key="b" className="text-[clamp(2.1rem,11vw,4.5rem)] font-extrabold leading-none tracking-tight">
-                      JUST KIDDING.
+                      {returning ? "WELCOME BACK." : "JUST KIDDING."}
                     </h1>,
                     <h2 key="c" className="fr-shimmer mt-2 text-[clamp(1.3rem,6.6vw,3rem)] font-extrabold">
                       YOU MADE IT INTO TSI.
@@ -863,7 +918,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                 >
                   <div className="flex w-full max-w-sm gap-3">
                     <motion.button
-                      onClick={save}
+                      onClick={() => openShare("post")}
                       disabled={saving}
                       whileHover={{ scale: 1.04 }}
                       whileTap={{ scale: 0.95 }}
@@ -893,6 +948,10 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
                 <h3 className={`${mono} text-xs tracking-[0.3em] text-[#22d3ee]`}>
                   YOUR NEXT STEPS
                 </h3>
+                <p className="mt-3 rounded-xl border border-[#ffd166]/40 bg-[#ffd166]/10 px-4 py-3 text-sm text-[#ffe9b0]">
+                  To confirm your position, complete these by <strong>11:59 PM ET tonight</strong>.
+                  {invite ? " We've also emailed them to you." : ""}
+                </p>
                 <ol className="mt-5 space-y-3">
                   {ONBOARDING.map((s, i) => (
                     <motion.li
@@ -932,6 +991,69 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
         </>
       )}
       {phase !== "test" && muteButton("fixed bottom-4 right-4 z-30 h-11 w-11")}
+
+      <AnimatePresence>
+        {share && (
+          <motion.div
+            key="share"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShare(null)}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 backdrop-blur-sm sm:items-center"
+          >
+            <motion.div
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              transition={spring}
+              onClick={(e) => e.stopPropagation()}
+              className="flex max-h-[92svh] w-full max-w-md flex-col rounded-t-3xl border border-white/10 bg-[#111317] p-4 sm:rounded-3xl"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex gap-1 rounded-full bg-white/5 p-1 text-sm">
+                  {(["post", "story"] as const).map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => openShare(f)}
+                      className={`rounded-full px-4 py-1.5 font-semibold transition ${
+                        share.format === f ? "bg-white text-black" : "text-white/60"
+                      }`}
+                    >
+                      {f === "post" ? "Post" : "Story"}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => setShare(null)} aria-label="Close" className="px-2 text-2xl leading-none text-white/50">
+                  ×
+                </button>
+              </div>
+              <div className="mt-3 flex min-h-0 flex-1 justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element -- local blob preview */}
+                <img
+                  src={share.url}
+                  alt="Your acceptance ticket"
+                  className={`max-h-full rounded-xl object-contain ${share.format === "story" ? "max-h-[52svh]" : "max-h-[50svh]"}`}
+                />
+              </div>
+              <p className="mt-3 text-center text-xs text-white/45">
+                Sized for Instagram, LinkedIn and X. Tag us when you post.
+              </p>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <motion.button whileTap={{ scale: 0.95 }} onClick={shareNative} className="rounded-xl bg-[#ffd166] py-3 text-sm font-bold text-black">
+                  Share
+                </motion.button>
+                <motion.button whileTap={{ scale: 0.95 }} onClick={downloadShare} className="rounded-xl border border-white/15 py-3 text-sm font-semibold">
+                  Download
+                </motion.button>
+                <motion.button whileTap={{ scale: 0.95 }} onClick={copyCaption} className="rounded-xl border border-white/15 py-3 text-sm font-semibold">
+                  {copied ? "Copied" : "Copy caption"}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }

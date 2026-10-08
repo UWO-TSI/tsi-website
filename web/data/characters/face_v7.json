@@ -1,5 +1,5 @@
 {
- "note": "v7 face layers (specs/avatar-v7.md): the engine draws the skin colour, then extras, brows, eyes and mouth as atlas cells placed on the face canvas (the v7 head's UVs, head_shape.face_chart, U right, W down, 1 canvas = 2 FH of arc). A cell [x, y, w, h, ax, ay] is an atlas rect (px, top-left origin, at `density` px per canvas) whose point (ax, ay) sits on its layer's anchor; `mirror` layers are drawn for the character's right side (canvas left) and mirrored for the left. Brows are white, tinted with the hair colour. Eye cells have frames open/half/closed for the blink. Ids are the cell codes on David's labelled sheets. A cell with a 7th value 1 is on the second page (atlas2, atlas2_world, atlas2_size: David's 19 faces, face_set_305.py); an eye with a `left` cell draws it at the eye_left anchor instead of mirroring `open`.",
+ "note": "v7 face layers (specs/avatar-v7.md): the engine draws the skin colour, then extras, brows, eyes and mouth as atlas cells placed on the face canvas (the v7 head's UVs, head_shape.face_chart, U right, W down, 1 canvas = 2 FH of arc). A cell [x, y, w, h, ax, ay] is an atlas rect (px, top-left origin, at `density` px per canvas) whose point (ax, ay) sits on its layer's anchor; `mirror` layers are drawn for the character's right side (canvas left) and mirrored for the left. Brows are white, tinted with the hair colour. Eye cells have frames open/half/closed for the blink. Ids are the cell codes on David's labelled sheets. A cell with a 7th value 1 is on the second page (atlas2, atlas2_world, atlas2_size: David's 19 faces, face_set_305.py); an eye with a `left` cell draws it at the eye_left anchor instead of mirroring `open`; `left: null` is a pair drawn as one cell at eye_pair, drawn once.",
  "density": 1024,
  "canvas_m": 0.449,
  "atlas": "v7_face_atlas.png",
@@ -41,6 +41,10 @@
   ],
   "eye_left": [
    0.7584,
+   0.6144
+  ],
+  "eye_pair": [
+   0.5,
    0.6144
   ],
   "nose_blush": [
@@ -525,10 +529,11 @@
       1984,
       788,
       211,
-      117.39,
+      382.0,
       98.16,
       1
-     ]
+     ],
+     "left": null
     },
     "half_lid": {
      "open": [
@@ -787,10 +792,11 @@
       1362,
       1024,
       248,
-      247.39,
+      512.0,
       200.16,
       1
-     ]
+     ],
+     "left": null
     },
     "focused": {
      "open": [

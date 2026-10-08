@@ -655,7 +655,8 @@ face = {
             "right side (canvas left) and mirrored for the left. Brows are white, tinted with the hair colour. Eye "
             "cells have frames open/half/closed for the blink. Ids are the cell codes on David's labelled sheets. "
             "A cell with a 7th value 1 is on the second page (atlas2, atlas2_world, atlas2_size: David's 19 faces, "
-            "face_set_305.py); an eye with a `left` cell draws it at the eye_left anchor instead of mirroring `open`.",
+            "face_set_305.py); an eye with a `left` cell draws it at the eye_left anchor instead of mirroring `open`; `left: null` "
+            "is a pair drawn as one cell at eye_pair, drawn once.",
     "density": PX, "canvas_m": round(2 * FH, 4),
     "atlas": "v7_face_atlas.png", "atlas_world": "v7_face_atlas_512.png", "atlas_size": [ATLAS_W, ATLAS_H],
     "atlas2": "v7_face_atlas_2.png", "atlas2_world": "v7_face_atlas_2_512.png", "atlas2_size": [ATLAS_W, ATLAS2_H],
@@ -668,7 +669,8 @@ face = {
                   # brow_none: an empty cell, no brows (David's faces draw their own in the eye cell)
                   "items": {**{bid: rect(("brows", bid, None)) for bid in BROWS}, "brow_none": [0, 0, 0, 0, 0, 0]}},
         "eyes": {"default": "F1.1", "anchor": "eye", "mirror": True, "tint": None,
-                 "items": {eid: {f: rect(("eyes", eid, f)) for f in ("open", "half", "closed", "left") if ("eyes", eid, f) in cells}
+                 "items": {eid: {**{f: rect(("eyes", eid, f)) for f in ("open", "half", "closed", "left") if ("eyes", eid, f) in cells},
+                                 **({"left": None} if eid in P2_INFO["whole"] else {})}
                            for eid in EYE_ORDER + P2_EYES}},
         "mouth": {"default": "M1.1", "anchor": "mouth", "mirror": False, "tint": None,
                   "items": {mid: rect(("mouth", mid, None)) for mid in list(MOUTHS) + P2_MOUTHS}},

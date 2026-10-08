@@ -227,7 +227,7 @@ class Puppet {
     if (this.faceAtlas2) this.faceMat.setAtlas2(this.faceAtlas2);
     this.face.material = this.faceMat.material;
     this.look = look;
-    this.faceLookKey = JSON.stringify([look.skin, look.hair, look.brows, look.eyes, look.mouth, look.extras]);
+    this.faceLookKey = JSON.stringify([look.skin, look.hair, look.brows, look.eyes, look.mouth, look.extras, look.place ?? null]);
     this.shownFace = "";
   }
 
@@ -463,6 +463,8 @@ class Puppet {
     this.full = this.lodGeometry = null; this.lodKey = "";
     this.faceMat?.dispose();
     this.faceMat = null;
+    // Its bone texture (three makes one per skeleton on first draw): every character that left used to keep one on the GPU.
+    this.skeleton.dispose();
     this.bodyKey = ""; this.shownFace = ""; this.posed = true;
   }
 }
