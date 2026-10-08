@@ -990,7 +990,7 @@ export default function FinalRound({
                 >
                   <div className="flex w-full max-w-sm gap-3">
                     <motion.button
-                      onClick={() => openShare("post")}
+                      onClick={() => openShare("story")}
                       disabled={saving}
                       whileHover={{ scale: 1.04 }}
                       whileTap={{ scale: 0.95 }}
@@ -1092,7 +1092,7 @@ export default function FinalRound({
             >
               <div className="flex items-center justify-between">
                 <div className="flex gap-1 rounded-full bg-white/5 p-1 text-sm">
-                  {(["post", "story"] as const).map((f) => (
+                  {(["story", "linkedin"] as const).map((f) => (
                     <button
                       key={f}
                       onClick={() => openShare(f)}
@@ -1100,7 +1100,7 @@ export default function FinalRound({
                         share.format === f ? "bg-white text-black" : "text-white/60"
                       }`}
                     >
-                      {f === "post" ? "Post" : "Story"}
+                      {f === "story" ? "Story" : "LinkedIn"}
                     </button>
                   ))}
                 </div>
@@ -1113,11 +1113,11 @@ export default function FinalRound({
                 <img
                   src={share.url}
                   alt="Your acceptance ticket"
-                  className={`max-h-full rounded-xl object-contain ${share.format === "story" ? "max-h-[52svh]" : "max-h-[50svh]"}`}
+                  className={`max-h-full rounded-xl object-contain ${share.format === "story" ? "max-h-[56svh]" : "w-full"}`}
                 />
               </div>
               <p className="mt-3 text-center text-xs text-white/45">
-                Sized for Instagram, LinkedIn and X. Tag us when you post.
+                {share.format === "story" ? "Sized for Instagram and TikTok stories." : "Sized for the LinkedIn feed."} Tag us when you post.
               </p>
               <div className="mt-3 grid grid-cols-3 gap-2">
                 <motion.button whileTap={{ scale: 0.95 }} onClick={shareNative} className="rounded-xl bg-[#ffd166] py-3 text-sm font-bold text-black">
