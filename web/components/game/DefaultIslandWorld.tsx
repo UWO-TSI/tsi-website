@@ -56,6 +56,7 @@ import { bagRoom } from "@/lib/game/bagStore";
 import { isTyping, worldKeysBlocked } from "@/lib/game/useWorldDialog";
 import { apiCall } from "@/lib/apiClient";
 import PlayerCharacterUI from "./character/PlayerCharacterUI";
+import { useCreatorOpen } from "@/lib/game/character/creatorPresence";
 import CharacterCrowd from "./character/CharacterCrowd";
 import OracleTemple from "./oracle/OracleTemple";
 import RuinsScene from "./combat/RuinsScene";
@@ -761,6 +762,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   }, [actions]);
   const liteMode = graphics.liteMode;
   const castShadows = graphics.shadows && !liteMode;
+  // The creator and the wardrobe cover the screen: the island stops drawing under them (it resumes as they close).
+  const creatorOpen = useCreatorOpen();
   const seasonRows = useSeasonPalettes();
   const seasonKey = JSON.stringify(season.weights);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by value: the blend object is rebuilt every render.
@@ -1036,7 +1039,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   return (
     <main className={`${styles.world} gui`} data-light={phase} data-inside={inside ?? undefined} data-site={site} data-trip={trip.active || undefined} data-cinematic={hudCinematic || undefined} data-compact={compact || undefined}>
       <Canvas ref={canvasRef} tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
-        camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false}
+        camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false} frameloop={creatorOpen ? "never" : "always"}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
         <Suspense fallback={null}>
           {site === "ruins" ? <RuinsScene key={`ruins-${ruinsRun}`} level={level} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={devZoom} player={player}

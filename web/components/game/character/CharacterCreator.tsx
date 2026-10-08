@@ -1,78 +1,32 @@
 "use client";
 
 /**
- * Character creator (rows 141, 142, 191, 210): ACNH layout in the Tethos
- * palette. Character in three-quarter view on the left, category tabs top
- * right, a 2x4 grid of rendered previews (each cell is the character wearing
- * that option, drawn live through one shared canvas with drei <View>), a
- * swatch row from the shared palette, confirm bottom right. `mode="wardrobe"`
- * is the same sheet limited to hair and clothes (closet and fitting room).
+ * Character creator (rows 141, 142, 191, 210; layout from David's Li'l Lads reference, 2026-10-08): an icon rail of
+ * categories on the left, a big lit 3D portrait that frames the face for face parts and the whole body for clothes,
+ * and a paper panel with the category's title, its face sliders, its option tiles and its colour swatches.
+ * `mode="wardrobe"` is the same sheet limited to hair and clothes (closet and fitting room). On a phone the rail is a
+ * tab row along the bottom, the portrait on top and the options between.
+ *
+ * Categories, options and swatches come from the catalogue (lib/game/character/creatorCategories.ts). Tiles are
+ * pictures, never live 3D: face parts are their atlas cells, clothes their item icons, hair a thumbnail baked once.
  */
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Canvas } from "@react-three/fiber";
-import { PerspectiveCamera, View } from "@react-three/drei";
-import Character, { type CharacterMotion } from "./Character";
-import { Lock } from "lucide-react";
-import { VillageButton, VillageField } from "@/components/recruit/ui";
-import { useWorldDialog } from "@/lib/game/useWorldDialog";
-import { mentionsSignIn } from "@/lib/game/signIn";
+import * as THREE from "three";
+import { Lock, RotateCcw, RotateCw, X } from "lucide-react";
+import { Button, Field, IconButton, Slider } from "@/components/gui";
 import { SignInText } from "@/components/gui/SignIn";
-import { dyeRef, FACE, FREE_HAIR_COLOURS, PALETTE, PART_BY_ID, partColor, partRef, partsIn, randomLook, STARTER_PARTS, wear, type CharacterLook, type PartSlot } from "@/lib/game/character/look";
+import { inTopDialog, useWorldDialog } from "@/lib/game/useWorldDialog";
+import { mentionsSignIn } from "@/lib/game/signIn";
+import { iconUrl } from "@/lib/icons/keys";
+import { dyeRef, FACE, FACE_ATLAS_URLS, FREE_HAIR_COLOURS, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, partRef, randomLook, STARTER_PARTS,
+  type CharacterLook, type FaceCell, type Placement } from "@/lib/game/character/look";
+import { CATEGORIES, choose, colourTarget, isOn, optionName, type Category, type Section } from "@/lib/game/character/creatorCategories";
+import { holdCreatorOpen } from "@/lib/game/character/creatorPresence";
+import { PLACE_RANGE } from "@/lib/game/character/face";
+import CreatorIcon from "./CreatorIcon";
+import { FRAMES, Portrait, ThumbBaker, prioritiseThumbs, thumbJob, useThumb } from "./CreatorStage";
 import styles from "./CharacterCreator.module.css";
-
-type Swatch = "skin" | "hair" | "outfit" | null;
-interface Tab { id: string; label: string; items: (string | null)[]; framing: "head" | "body"; swatch: Swatch; apply: (look: CharacterLook, id: string | null) => CharacterLook; on: (look: CharacterLook, id: string | null) => boolean; name: (id: string | null) => string }
-const partName = (id: string | null) => (id ? PART_BY_ID.get(id)?.name ?? id : "None");
-const slotTab = (id: string, label: string, slots: PartSlot[], framing: Tab["framing"], swatch: Swatch, extra: (string | null)[] = []): Tab => ({
-  id, label, framing, swatch, name: partName,
-  items: [...extra, ...slots.flatMap(s => partsIn(s).map(p => p.id))],
-  apply: (look, part) => (part ? wear(look, PART_BY_ID.get(part)!.slot, part) : wear(look, slots[0], null)),
-  on: (look, part) => (part ? [look.bangs, look.back, look.top, look.bottom, look.onepiece, look.shoes, ...Object.values(look.acc)].includes(part) : !look[slots[0] as "shoes"]),
-});
-const TABS: Tab[] = [
-  { id: "skin", label: "Skin", items: [], framing: "head", swatch: "skin", apply: l => l, on: () => false, name: () => "" },
-  { id: "eyes", label: "Eyes", items: Object.keys(FACE.layers.eyes.items), framing: "head", swatch: null, apply: (l, id) => ({ ...l, eyes: id! }), on: (l, id) => l.eyes === id, name: id => FACE.names[id!] ?? `Eyes ${id}` },
-  { id: "mouth", label: "Mouth", items: Object.keys(FACE.layers.mouth.items), framing: "head", swatch: null, apply: (l, id) => ({ ...l, mouth: id! }), on: (l, id) => l.mouth === id, name: id => FACE.names[id!] ?? `Mouth ${id}` },
-  {
-    id: "features", label: "Brows & extras", items: [...Object.keys(FACE.layers.brows.items), ...Object.keys(FACE.layers.extras.items)], framing: "head", swatch: "hair",
-    apply: (l, id) => id! in FACE.layers.brows.items ? { ...l, brows: id! } : { ...l, extras: l.extras.includes(id!) ? l.extras.filter(e => e !== id) : [...l.extras, id!] },
-    on: (l, id) => l.brows === id || l.extras.includes(id!), name: id => ({ brow_soft: "Soft brows", brow_flat: "Flat brows", blush: "Blush", mole: "Mole", freckles: "Freckles" } as Record<string, string>)[id!] ?? FACE.names[id!] ?? id!,
-  },
-  slotTab("bangs", "Bangs", ["bangs"], "head", "hair"),
-  slotTab("back", "Back hair", ["back"], "head", "hair"),
-  slotTab("top", "Tops", ["top"], "body", "outfit"),
-  slotTab("bottom", "Bottoms & one-pieces", ["bottom", "onepiece"], "body", "outfit"),
-  slotTab("shoes", "Shoes", ["shoes"], "body", "outfit", [null]),
-  slotTab("accessory", "Accessories", ["accessory"], "head", "outfit"),
-];
-const WARDROBE_TABS = ["bangs", "back", "top", "bottom", "shoes", "accessory"];
-/** Face cells have sheet codes for names ("Eyes F1.1"): said as their place in the row instead. */
-const spoken = (tab: Tab, id: string | null, items: (string | null)[]) => (tab.id === "eyes" || tab.id === "mouth" ? `${tab.label}, style ${items.indexOf(id) + 1} of ${items.length}` : tab.name(id));
-const PAGE = 8;
-const STARTERS: ReadonlySet<string> = new Set(STARTER_PARTS);
-
-/** The part a colour swatch recolours on the current tab. */
-function colourTarget(tab: string, look: CharacterLook, lastAccessory: string | null): string | null {
-  if (tab === "top") return look.onepiece ?? look.top;
-  if (tab === "bottom") return look.onepiece ?? look.bottom;
-  if (tab === "shoes") return look.shoes;
-  if (tab === "accessory") return lastAccessory && Object.values(look.acc).includes(lastAccessory) ? lastAccessory : Object.values(look.acc)[0] ?? null;
-  return null;
-}
-
-const STILL: CharacterMotion = { speed: 0, yaw: -0.4, lift: 0, pose: null, play: null };
-function Stage({ look, framing, yaw = -0.4, faceSize = 512 }: { look: CharacterLook; framing: "head" | "body"; yaw?: number; faceSize?: number }) {
-  const motion = useRef<CharacterMotion>({ ...STILL, yaw });
-  useEffect(() => { motion.current.yaw = yaw; }, [yaw]);
-  const head = framing === "head";
-  return <>
-    <PerspectiveCamera makeDefault fov={head ? 30 : 30} position={head ? [0.1, 0.86, 1.3] : [0.15, 0.6, 2.05]} onUpdate={c => c.lookAt(0, head ? 0.8 : 0.5, 0)} />
-    <ambientLight intensity={1.1} color="#fff6e6" />
-    <hemisphereLight args={["#fff8ec", "#b7c7a8", 0.9]} />
-    <directionalLight position={[1.6, 2.6, 2.2]} intensity={1.7} color="#fff1d8" />
-    <Suspense fallback={null}><Character look={look} motion={motion} scale={1} faceSize={faceSize} lod={false} /></Suspense>
-  </>;
-}
 
 export interface CreatorProps {
   initial: CharacterLook;
@@ -90,31 +44,38 @@ export interface CreatorProps {
   presence?: "open" | "closing";
 }
 
+const STARTERS: ReadonlySet<string> = new Set(STARTER_PARTS);
 const stay = () => {};
+const SLIDERS: { i: 0 | 1 | 2 | 3; label: string; say: (v: number) => string }[] = [
+  { i: 0, label: "Down – Up", say: v => (v ? `${Math.abs(v)} ${v > 0 ? "up" : "down"}` : "centred") },
+  { i: 1, label: "Left – Right", say: v => (v ? `${Math.abs(v)} ${v > 0 ? "apart" : "closer"}` : "centred") },
+  { i: 2, label: "Rotate", say: v => (v ? `${v > 0 ? "+" : "−"}${Math.round((Math.abs(v) / PLACE_STEPS) * PLACE_RANGE.rotate)}°` : "level") },
+  { i: 3, label: "Smaller – Bigger", say: v => (v ? `${Math.round(PLACE_RANGE.size ** (v / PLACE_STEPS) * 100)}%` : "100%") },
+];
+
 export default function CharacterCreator({ initial, mode = "create", title, askName, owned = STARTERS, onShop, onDone, onClose, presence }: CreatorProps) {
   // A dialog (lib/game/useWorldDialog): the world's keys hold still under it (G no longer opens the emotes over it); Escape
   // closes the wardrobe, never the first-login creator. Closing, it lets go at once: focus goes back, the world moves.
   const root = useWorldDialog<HTMLElement>(presence !== "closing", onClose ?? stay, undefined, true);
+  // Full screen and opaque: the island under it stops drawing while it's up (DefaultIslandWorld).
+  const covering = presence !== "closing";
+  useEffect(() => (covering ? holdCreatorOpen() : undefined), [covering]);
   const [look, setLook] = useState(initial);
-  const tabs = useMemo(() => (mode === "wardrobe" ? TABS.filter(t => WARDROBE_TABS.includes(t.id)) : TABS), [mode]);
-  const [tabId, setTabId] = useState(tabs[0].id);
-  const [page, setPage] = useState(0);
-  const [yaw, setYaw] = useState(-0.4);
+  const cats = useMemo(() => CATEGORIES.filter(c => mode === "create" || c.wardrobe), [mode]);
+  const [catId, setCatId] = useState(cats[0].id);
+  const cat = cats.find(c => c.id === catId)!;
+  const yaw = useRef({ now: FRAMES[cat.framing].yaw, target: FRAMES[cat.framing].yaw });
   const [lastAccessory, setLastAccessory] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const tab = tabs.find(t => t.id === tabId)!;
+  const [lockNote, setLockNote] = useState<string | null>(null);
   // Identity (face, hair styles, the free colours) is always free; clothes and dyes are owned (ruling on audit item 22).
   const has = (id: string | null) => { const ref = id && partRef(id); return !ref || owned.has(ref); };
   const hasHair = (i: number) => i < FREE_HAIR_COLOURS || owned.has(dyeRef(i));
   const crafted = (id: string | null) => !!id && !!PART_BY_ID.get(id)?.item; // unlocked by a crafted item, never sold
-  const [lockNote, setLockNote] = useState<string | null>(null);
-  const items = mode === "create" ? tab.items.filter(has) : tab.items;
-  const pages = Math.max(1, Math.ceil(items.length / PAGE));
-  const cells = items.slice(page * PAGE, page * PAGE + PAGE);
-  const target = colourTarget(tab.id, look, lastAccessory);
+  const target = colourTarget(cat, look, lastAccessory);
   const [name, setName] = useState(askName?.current === "You" ? "" : askName?.current ?? "");
   const [nameNote, setNameNote] = useState<{ ok: boolean; text: string } | null>(null);
-  useEffect(() => { root.current?.querySelector<HTMLButtonElement>("[role=tab]")?.focus(); }, [root]);
+  useEffect(() => { root.current?.querySelector<HTMLButtonElement>("[role=tab][aria-selected=true]")?.focus(); }, [root]);
   useEffect(() => {
     if (!askName || !name.trim() || name.trim() === askName.current) return;
     const timer = window.setTimeout(() => {
@@ -126,23 +87,55 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
     return () => window.clearTimeout(timer);
   }, [name, askName]);
 
-  const choose = (id: string | null) => {
-    setLockNote(has(id) ? null : `${tab.name(id)} is ${crafted(id) ? "made at the workbench" : "sold in the shop"}.`);
+  const openCat = (c: Category, focus = false) => {
+    setCatId(c.id);
+    setLockNote(null);
+    if (FRAMES[c.framing].yaw !== FRAMES[cat.framing].yaw || c.framing !== cat.framing) yaw.current.target = FRAMES[c.framing].yaw;
+    if (focus) root.current?.querySelector<HTMLElement>(`[data-cat="${c.id}"]`)?.focus();
+  };
+  const step = (by: number) => openCat(cats[(cats.indexOf(cat) + by + cats.length) % cats.length], true);
+  const live = useRef(step);
+  useEffect(() => { live.current = step; });
+  useEffect(() => {
+    // The menu's tab keys ([ and ], remappable) arrive as tsi:menu-tab inside the top dialog, as for the kit's Tabs.
+    const on = (e: Event) => { if (inTopDialog(root.current)) live.current((e as CustomEvent<{ step: number }>).detail.step); };
+    window.addEventListener("tsi:menu-tab", on);
+    return () => window.removeEventListener("tsi:menu-tab", on);
+  }, [root]);
+  const railKey = (e: React.KeyboardEvent) => {
+    const by = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
+    if (by) { e.preventDefault(); step(by); }
+    else if (e.key === "Home" || e.key === "End") { e.preventDefault(); openCat(e.key === "Home" ? cats[0] : cats[cats.length - 1], true); }
+  };
+
+  const pick = (section: Section, id: string | null) => {
+    setLockNote(has(id) ? null : `${optionName(section, id)} is ${crafted(id) ? "made at the workbench" : "sold in the shop"}.`);
     if (!has(id)) return;
-    setLook(l => tab.apply(l, id));
-    if (tab.id === "accessory" && id) setLastAccessory(id);
+    setLook(l => choose(l, section, id));
+    if ("slot" in section.source && section.source.slot === "accessory" && id) setLastAccessory(id);
   };
   const paint = (i: number) => {
-    const locked = tab.swatch === "hair" && !hasHair(i);
+    const locked = cat.swatch === "hair" && !hasHair(i);
     setLockNote(locked ? "That colour is a hair dye from the shop." : null);
     if (!locked) setLook(l => {
-      if (tab.swatch === "skin") return { ...l, skin: i };
-      if (tab.swatch === "hair") return { ...l, hair: i };
+      if (cat.swatch === "skin") return { ...l, skin: i };
+      if (cat.swatch === "hair") return { ...l, hair: i };
       return target ? { ...l, colors: { ...l.colors, [target]: i } } : l;
     });
   };
-  const swatches = !tab.swatch ? [] : tab.swatch === "hair" && mode === "create" ? PALETTE.hair.slice(0, FREE_HAIR_COLOURS) : PALETTE[tab.swatch];
-  const swatchOn = (i: number) => tab.swatch === "skin" ? look.skin === i : tab.swatch === "hair" ? look.hair === i : target !== null && partColor(look, target) === i;
+  const swatches = !cat.swatch ? [] : cat.swatch === "hair" && mode === "create" ? PALETTE.hair.slice(0, FREE_HAIR_COLOURS) : PALETTE[cat.swatch];
+  const swatchOn = (i: number) => cat.swatch === "skin" ? look.skin === i : cat.swatch === "hair" ? look.hair === i : target !== null && partColor(look, target) === i;
+  const place = cat.place ? look.place?.[cat.place] ?? [0, 0, 0, 0] as Placement : null;
+  const setPlace = (i: number, v: number) => setLook(l => {
+    if (!cat.place) return l;
+    const p = [...(l.place?.[cat.place] ?? [0, 0, 0, 0])] as Placement;
+    p[i] = v;
+    const next: NonNullable<CharacterLook["place"]> = { ...l.place, [cat.place]: p };
+    if (p.every(x => x === 0)) delete next[cat.place];
+    const out: CharacterLook = { ...l, place: next };
+    if (!Object.keys(next).length) delete out.place;
+    return out;
+  });
   const confirm = async (final: CharacterLook) => {
     setSaving(true);
     // The typed name goes with the look unless the check already said it's taken: confirming inside the check's 400 ms,
@@ -152,54 +145,156 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
     setSaving(false);
   };
 
+  // Drag the portrait to turn the character.
+  const drag = useRef<{ x: number; id: number } | null>(null);
+  const turnBy = (rad: number) => { yaw.current.target += rad; };
+  const shownTiles = cat.sections.flatMap(s => s.options.filter(id => mode !== "create" || has(id)));
+  const thumbKeys = new Set(shownTiles.flatMap(id => (id && needsBake(id) ? [thumbJob(id, look).key] : [])));
+  useEffect(() => { prioritiseThumbs(thumbKeys); });
+
   return <section ref={root} className={styles.creator} role="dialog" aria-modal="true" aria-labelledby="creator-title" data-mode={mode} data-state={presence}>
-    <div className={styles.preview}>
-      <h1 id="creator-title">{title ?? (mode === "wardrobe" ? "Your closet" : "Make your character")}</h1>
-      <View className={styles.stage}><Stage look={look} framing="body" yaw={yaw} faceSize={1024} /></View>
-      <div className={styles.turn} aria-label="Turn the character">
-        <button onClick={() => setYaw(y => y - Math.PI / 4)} aria-label="Turn left">⟲</button>
-        <button onClick={() => setYaw(y => y + Math.PI / 4)} aria-label="Turn right">⟳</button>
+    <nav className={styles.rail} role="tablist" aria-label="Categories" aria-orientation="vertical" onKeyDown={railKey}>
+      {cats.map(c => <button key={c.id} type="button" role="tab" data-cat={c.id} id={`creator-tab-${c.id}`} aria-selected={c.id === cat.id} aria-controls="creator-panel"
+        tabIndex={c.id === cat.id ? 0 : -1} aria-label={c.label} title={c.label} onClick={() => openCat(c)} className={styles.railTab}>
+        {c.itemIcon
+          // eslint-disable-next-line @next/next/no-img-element
+          ? <img src={iconUrl(c.itemIcon)} alt="" width={40} height={40} draggable={false} />
+          : <CreatorIcon icon={c.icon} size={34} />}
+      </button>)}
+    </nav>
+
+    <div className={styles.portrait} data-framing={cat.framing}
+      onPointerDown={e => { if (e.button !== 0 || (e.target as Element).closest("button")) return; drag.current = { x: e.clientX, id: e.pointerId }; e.currentTarget.setPointerCapture(e.pointerId); }}
+      onPointerMove={e => { const d = drag.current; if (!d || d.id !== e.pointerId) return; const dx = e.clientX - d.x; d.x = e.clientX; yaw.current.target += dx * 0.012; yaw.current.now = yaw.current.target; }}
+      onPointerUp={e => { if (drag.current?.id === e.pointerId) drag.current = null; }} onPointerCancel={() => { drag.current = null; }}>
+      <h1 id="creator-title" className={styles.heading}>{title ?? (mode === "wardrobe" ? "Your closet" : "Make your character")}</h1>
+      <Canvas className={styles.canvas} gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }} dpr={[1, 2]} camera={{ fov: FRAMES.face.fov, near: 0.05, far: 30 }}
+        onCreated={({ gl }) => {
+          gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace;
+          if (process.env.NODE_ENV !== "production") (window as unknown as { __creatorGl?: THREE.WebGLRenderer }).__creatorGl = gl;
+        }}>
+        <Portrait look={look} framing={cat.framing} yaw={yaw} />
+        <ThumbBaker />
+      </Canvas>
+      <p className={styles.dragHint} aria-hidden="true">Drag to turn</p>
+      <div className={styles.turn}>
+        <IconButton label="Turn left" onClick={() => turnBy(-Math.PI / 4)}><RotateCcw size={20} strokeWidth={2.4} /></IconButton>
+        <IconButton label="Turn right" onClick={() => turnBy(Math.PI / 4)}><RotateCw size={20} strokeWidth={2.4} /></IconButton>
       </div>
-      {askName && <VillageField label="Your name on the island" hint="Letters and numbers; everyone in the world sees it." value={name} maxLength={24}
-        onChange={e => { setName(e.target.value); setNameNote(null); }} error={nameNote && !nameNote.ok && !mentionsSignIn(nameNote.text) ? nameNote.text : undefined} className={styles.name} />}
-      {askName && nameNote?.ok && <p className={styles.nameOk} role="status">{nameNote.text}</p>}
-      {askName && nameNote && !nameNote.ok && mentionsSignIn(nameNote.text) && <p className={styles.nameOk} role="status"><SignInText text={nameNote.text} /></p>}
     </div>
-    <div className={styles.picker}>
-      <div role="tablist" aria-label="Categories" className={styles.tabs}>
-        {tabs.map(t => <button key={t.id} role="tab" aria-selected={t.id === tabId} onClick={() => { setTabId(t.id); setPage(0); setLockNote(null); }}>{t.label}</button>)}
-      </div>
-      {items.length > 0 && <ul className={styles.grid} aria-label={tab.label} data-tab={tab.id}>
-        {cells.map(id => <li key={id ?? "none"}>
-          <button aria-pressed={tab.on(look, id)} onClick={() => choose(id)} data-locked={!has(id) || undefined}
-            aria-label={has(id) ? spoken(tab, id, items) : `${spoken(tab, id, items)} (${crafted(id) ? "crafted" : "in the shop"})`} title={tab.name(id)}>
-            <View as="span" className={styles.thumb}><Stage look={tab.apply(look, id)} framing={tab.framing} /></View>
-            <span className={styles.label}>{has(id) ? null : <Lock size={11} strokeWidth={2.6} aria-hidden className={styles.lock} />}{tab.name(id)}</span>
-          </button>
-        </li>)}
-      </ul>}
-      {lockNote && <p className={styles.lockNote} role="status">{lockNote}{onShop && <button onClick={onShop}>Visit the shop</button>}</p>}
-      {pages > 1 && <div className={styles.pager}>
-        <button onClick={() => setPage(p => (p + pages - 1) % pages)} aria-label="Previous page">‹</button>
-        <span>{page + 1} / {pages}</span>
-        <button onClick={() => setPage(p => (p + 1) % pages)} aria-label="Next page">›</button>
-      </div>}
-      {swatches.length > 0 && <div className={styles.swatches} role="group" aria-label={`${tab.swatch} colours`}>
-        {swatches.map((hex, i) => {
-          const locked = tab.swatch === "hair" && !hasHair(i);
-          return <button key={hex} style={{ background: hex }} aria-pressed={swatchOn(i)} aria-label={`${tab.swatch} colour ${i + 1}${locked ? " (hair dye in the shop)" : ""}`}
-            data-locked={locked || undefined} disabled={tab.swatch === "outfit" && !target} onClick={() => paint(i)} />;
+
+    <div className={styles.panel} role="tabpanel" id="creator-panel" aria-labelledby={`creator-tab-${cat.id}`}>
+      <header className={styles.panelHead}>
+        <h2 className={styles.title}>{cat.label}</h2>
+        {onClose && <IconButton label="Close" onClick={onClose} className={styles.close}><X size={20} strokeWidth={2.6} /></IconButton>}
+      </header>
+      <div className={styles.body}>
+        {place && cat.place && <div className={styles.sliders} role="group" aria-label={`${cat.label} placement`}>
+          {SLIDERS.filter(s => s.i !== 1 || PLACE_PARTS[cat.place!].apart).map(s => <Slider key={s.i} className={styles.slider} label={s.label} min={-PLACE_STEPS} max={PLACE_STEPS} value={place[s.i]}
+            onChange={v => setPlace(s.i, v)} format={s.say} />)}
+          <Button variant="quiet" className={styles.reset} disabled={place.every(v => v === 0)} onClick={() => setLook(l => {
+            const next: NonNullable<CharacterLook["place"]> = { ...l.place }; delete next[cat.place!];
+            const out: CharacterLook = { ...l, place: next }; if (!Object.keys(next).length) delete out.place; return out;
+          })}>Reset</Button>
+        </div>}
+        {cat.sections.map(section => {
+          const options = section.options.filter(id => mode !== "create" || has(id));
+          if (!options.length) return null;
+          return <section key={section.id} className={styles.section} aria-label={section.label}>
+            {cat.sections.length > 1 && <h3>{section.label}</h3>}
+            <ul className={styles.tiles} data-face={"face" in section.source || undefined}>
+              {options.map(id => {
+                const locked = !has(id);
+                const label = optionName(section, id);
+                return <li key={id ?? "none"}>
+                  <button type="button" className={styles.tile} aria-pressed={isOn(look, section, id)} data-locked={locked || undefined} onClick={() => pick(section, id)}
+                    aria-label={locked ? `${label} (${crafted(id) ? "crafted" : "in the shop"})` : label} title={label}>
+                    {"face" in section.source ? <FaceArt layer={section.source.face} id={id!} look={look} /> : id ? <PartArt id={id} look={look} /> : <span className={styles.none}>None</span>}
+                    {locked && <Lock size={13} strokeWidth={2.6} aria-hidden className={styles.lock} />}
+                  </button>
+                </li>;
+              })}
+            </ul>
+          </section>;
         })}
-      </div>}
-      <div className={styles.actions}>
-        {mode === "create" && <VillageButton variant="quiet" onClick={() => setLook(randomLook(Math.random, owned))}>Surprise me</VillageButton>}
-        {mode === "create" && <VillageButton variant="quiet" disabled={saving} onClick={() => void confirm(randomLook(Math.random, owned))}>Skip</VillageButton>}
-        {onClose && <VillageButton variant="quiet" onClick={onClose}>Close</VillageButton>}
-        <VillageButton disabled={saving} onClick={() => void confirm(look)}>{mode === "wardrobe" ? "Wear this" : "That's me"}</VillageButton>
+        {cat.sections.length > 0 && shownTiles.length === 0 && <p className={styles.empty}>
+          Nothing here yet. These come from the shop and the workbench; once you have some, try them on in your closet.</p>}
+        {swatches.length > 0 && (cat.swatch !== "outfit" || shownTiles.length > 0) && <div className={styles.swatchBlock}>
+          <h3>{cat.swatch === "skin" ? "Skin" : cat.swatch === "hair" ? (cat.id === "brows" ? "Brow and hair colour" : "Hair colour") : target ? `${PART_BY_ID.get(target)?.name ?? "Its"} colour` : "Colour"}</h3>
+          <div className={styles.swatches} role="group" aria-label={`${cat.swatch} colours`} data-kind={cat.swatch}>
+            {swatches.map((hex, i) => {
+              const locked = cat.swatch === "hair" && !hasHair(i);
+              return <button key={hex} type="button" style={{ "--swatch": hex } as CSSProperties} aria-pressed={swatchOn(i)}
+                aria-label={`${cat.swatch} colour ${i + 1}${locked ? " (hair dye in the shop)" : ""}`} data-locked={locked || undefined}
+                disabled={cat.swatch === "outfit" && !target} onClick={() => paint(i)} />;
+            })}
+          </div>
+          {cat.swatch === "outfit" && !target && <p className={styles.hint}>Wear something here to colour it.</p>}
+        </div>}
+        {lockNote && <p className={styles.lockNote} role="status">{lockNote}{onShop && <button type="button" onClick={onShop}>Visit the shop</button>}</p>}
       </div>
+      <footer className={styles.foot}>
+        {askName && <Field label="Your name on the island" hint="Letters and numbers; everyone in the world sees it." value={name} maxLength={24}
+          onChange={e => { setName(e.target.value); setNameNote(null); }} error={nameNote && !nameNote.ok && !mentionsSignIn(nameNote.text) ? nameNote.text : undefined} className={styles.name} />}
+        {askName && nameNote?.ok && <p className={styles.nameOk} role="status">{nameNote.text}</p>}
+        {askName && nameNote && !nameNote.ok && mentionsSignIn(nameNote.text) && <p className={styles.nameOk} role="status"><SignInText text={nameNote.text} /></p>}
+        <div className={styles.actions}>
+          {mode === "create" && <Button variant="quiet" onClick={() => setLook(randomLook(Math.random, owned))}>Surprise me</Button>}
+          {mode === "create" && <Button variant="quiet" disabled={saving} onClick={() => void confirm(randomLook(Math.random, owned))}>Skip</Button>}
+          <Button disabled={saving} onClick={() => void confirm(look)}>{mode === "wardrobe" ? "Wear this" : "That's me"}</Button>
+        </div>
+      </footer>
     </div>
-    <Canvas className={styles.canvas} eventSource={root as React.RefObject<HTMLElement>} gl={{ antialias: true, alpha: true }} dpr={[1, 2]}>
-      <View.Port />
-    </Canvas>
   </section>;
+}
+
+/** Hair has no item icon: its tile is a baked thumbnail. So is any part whose item icon is missing. */
+const needsBake = (id: string) => { const slot = PART_BY_ID.get(id)?.slot; return slot === "bangs" || slot === "back"; };
+
+function PartArt({ id, look }: { id: string; look: CharacterLook }) {
+  const [iconFailed, setIconFailed] = useState(false);
+  const bake = needsBake(id) || iconFailed;
+  const job = useMemo(() => (bake ? thumbJob(id, look) : null), [bake, id, look]);
+  const src = useThumb(job);
+  // eslint-disable-next-line @next/next/no-img-element
+  if (!bake) return <img src={iconUrl(id)} alt="" width={64} height={64} draggable={false} onError={() => setIconFailed(true)} />;
+  // eslint-disable-next-line @next/next/no-img-element
+  return src ? <img src={src} alt="" width={80} height={80} draggable={false} /> : <span className={styles.baking} aria-hidden="true" />;
+}
+
+/** The least of the face a tile shows (canvas units), so a mole or a freckle keeps its size against the face. */
+const MIN_SPAN = { eyes: 0.5, brows: 0.5, mouth: 0.3, extras: 0.62 } as const;
+/** A face part as it sits on the face: its atlas cells at their anchors (both sides for paired parts), on the skin. */
+function FaceArt({ layer, id, look }: { layer: "eyes" | "brows" | "mouth" | "extras"; id: string; look: CharacterLook }) {
+  const L = FACE.layers, A = FACE.anchors;
+  const pieces: { cell: FaceCell; anchor: [number, number]; mirror: boolean }[] = [];
+  if (layer === "eyes") { const c = L.eyes.items[id]?.open; if (c) pieces.push({ cell: c, anchor: A.eye, mirror: true }); }
+  else if (layer === "brows") { const c = L.brows.items[id]; if (c) pieces.push({ cell: c, anchor: A.brow, mirror: true }); }
+  else if (layer === "mouth") { const c = L.mouth.items[id]; if (c) pieces.push({ cell: c, anchor: A.mouth, mirror: false }); }
+  else { const it = L.extras.items[id]; if (it) pieces.push({ cell: it.cell, anchor: A[it.anchor], mirror: it.mirror }); }
+  const k = 1 / FACE.density;
+  const rects = pieces.flatMap(p => {
+    const [, , w, h, ax, ay] = p.cell, u0 = p.anchor[0] - ax * k, w0 = p.anchor[1] - ay * k, r = { cell: p.cell, u0, w0, u1: u0 + w * k, w1: w0 + h * k, flip: false };
+    return p.mirror ? [r, { ...r, u0: 1 - r.u1, u1: 1 - r.u0, flip: true }] : [r];
+  });
+  if (!rects.length) return null;
+  // The view: the parts' bounds with a little room, square, centred.
+  const u0 = Math.min(...rects.map(r => r.u0)), u1 = Math.max(...rects.map(r => r.u1)), w0 = Math.min(...rects.map(r => r.w0)), w1 = Math.max(...rects.map(r => r.w1));
+  const span = Math.max(u1 - u0, w1 - w0, MIN_SPAN[layer]) * 1.18, cu = (u0 + u1) / 2, cw = (w0 + w1) / 2;
+  const [W, H] = FACE.atlas_size, pct = (v: number) => `${(v * 100).toFixed(3)}%`;
+  const tint = layer === "brows" && L.brows.tint === "hair" ? PALETTE.hair[look.hair] : null;
+  return <span className={styles.face} style={{ "--skin": PALETTE.skin[look.skin] } as CSSProperties}>
+    {rects.map((r, i) => {
+      const [x, y, w, h] = r.cell;
+      // The cell's box in the tile, and the atlas scaled so the cell fills it.
+      const box: CSSProperties = {
+        left: pct((r.u0 - (cu - span / 2)) / span), top: pct((r.w0 - (cw - span / 2)) / span), width: pct((r.u1 - r.u0) / span), height: pct((r.w1 - r.w0) / span),
+        transform: r.flip ? "scaleX(-1)" : undefined,
+      };
+      const art = `url(${FACE_ATLAS_URLS.world})`, size = `${(W / w) * 100}% ${(H / h) * 100}%`, at = `${(x / (W - w)) * 100}% ${(y / (H - h)) * 100}%`;
+      return <i key={i} style={{ ...box, ...(tint
+        ? { backgroundColor: tint, maskImage: art, WebkitMaskImage: art, maskSize: size, WebkitMaskSize: size, maskPosition: at, WebkitMaskPosition: at, maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat" }
+        : { backgroundImage: art, backgroundSize: size, backgroundPosition: at }) }} />;
+    })}
+  </span>;
 }
