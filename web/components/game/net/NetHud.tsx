@@ -79,9 +79,9 @@ function Hud({ area, status }: { area: Area; status: NetStatus }) {
         <Badge tone={line.tone}>{line.busy && <span className={s.beads} aria-hidden="true"><i /><i /><i /></span>}{line.text}</Badge>
         {line.action && <Button size="sm" variant="secondary" onClick={() => act(line.action!)}>{line.action === "play" ? "Play here" : "Reload"}</Button>}
       </div>}
-      {(full || flash || open) && n > 0 && <IconButton label={`People on the island: ${n}`} className={s.people} data-flash={full ? undefined : flash ?? undefined}
+      {(full || flash || open) && n > 0 && <IconButton label="People on the island" badge={n} className={s.people} data-flash={full ? undefined : flash ?? undefined}
         aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(o => !o)}>
-        <Users size={19} aria-hidden /><b className={s.count} aria-hidden="true">{n}</b>
+        <Users size={19} aria-hidden />
       </IconButton>}
     </div>
     <PresenceList open={open} onClose={() => setOpen(false)} area={area} />

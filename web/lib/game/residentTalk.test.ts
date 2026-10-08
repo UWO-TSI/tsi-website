@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { villageIsland } from "./defaultIsland";
 import { village } from "./villageMap";
 import { PROPOSED_RESIDENTS } from "@/lib/content/residentRoster";
-import { RESIDENT_WALK, ResidentDay, daySpan, navGrid, newPose, planResident, residentSeats } from "./residentRoutine";
+import { RESIDENT_WALK, ResidentDay, daySpan, navGrid, newPose, planResidents } from "./residentRoutine";
 import {
   CATCH_UP, TALK_CLOSE_S, TALK_PITCH, TALK_RANGE, TALK_TURN_S, beginTalk, blipAt, leaveTalk, nearestTalker, pressTalk, routineLag, stepTalk, talkCameraYaw, talkTyping, typeMs, typedAt,
 } from "./residentTalk";
@@ -123,7 +123,7 @@ describe("talking to residents: the camera", () => {
 
 describe("talking to residents: the routine holds and resumes where it left off", () => {
   const v = village(), island = villageIsland(v), nav = navGrid(island, v);
-  const sorted = [...PROPOSED_RESIDENTS].sort((a, b) => a.slug.localeCompare(b.slug)), seats = residentSeats(sorted);
+  const sorted = [...PROPOSED_RESIDENTS].sort((a, b) => a.slug.localeCompare(b.slug)), plans = planResidents(sorted, v, island);
   const T = Date.parse("2026-10-01T16:00:00Z") / 1000, span = daySpan(T * 1000);
 
   it("routineLag: holding adds the time, letting go catches up a little brisker until level", () => {
@@ -135,8 +135,8 @@ describe("talking to residents: the routine holds and resumes where it left off"
   it("a resident stopped mid-walk stays put through the talk, then walks on from the same spot without a jump", () => {
     // Find someone walking in the afternoon.
     let found: { day: ResidentDay; t: number } | null = null;
-    for (const [i, r] of sorted.entries()) {
-      const day = new ResidentDay(planResident(r, i, v, island, seats[i]), nav), pose = newPose();
+    for (const plan of plans) {
+      const day = new ResidentDay(plan, nav), pose = newPose();
       for (let t = span.t0 + 12 * 3600; t < span.t0 + 15 * 3600 && !found; t += 5) if (day.at(t, null, pose).moving && pose.speed > RESIDENT_WALK * 0.8) found = { day, t };
       if (found) break;
     }

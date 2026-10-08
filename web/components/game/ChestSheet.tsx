@@ -7,7 +7,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { Archive } from "lucide-react";
-import { Button, Loading, Sheet, SignInText } from "@/components/gui";
+import { Button, ErrorNote, Loading, Sheet, SignInText } from "@/components/gui";
 import { isMaterial, slotCounts, sortSlots, type Slot } from "@/lib/collections/bag";
 import { AudioManager } from "@/lib/game/audio";
 import { bagWrite, loadBag, stockOf, swapSlots, useBag } from "@/lib/game/bagStore";
@@ -65,7 +65,7 @@ export function ChestSheet({ open, onClose, keys }: { open: boolean; onClose: ()
       {picked?.key && <Button size="sm" disabled={busy || off} onClick={() => void move(picked.key!, picked.qty ?? 1, sel!.pane === "bag" ? "chest" : "bag")}>
         {sel!.pane === "bag" ? "Store" : "Take"} {picked.qty && picked.qty > 1 ? `${picked.qty} × ` : ""}{nameOf(picked.key)}</Button>}
     </>}>
-    {!view ? <Loading label="Opening the chest…" /> : <>
+    {!view ? bag.error ? <ErrorNote onRetry={() => void loadBag()}>The chest didn&apos;t open.</ErrorNote> : <Loading label="Opening the chest…" /> : <>
       {bag.local && <p className={s.hint}><SignInText text="Sign in to keep a storage chest." /></p>}
       {note && <p className={note.ok ? s.ok : s.bad} role="status">{note.text}</p>}
       <div className={s.panes}>

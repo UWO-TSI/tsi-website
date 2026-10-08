@@ -246,8 +246,12 @@ export function villageHealth(v: Village): VillageHealth {
   if (present.has(WATER_CLASS.pond) && !fished.has("pond")) add("fishing", "pond not fishable");
   if (spots < 60) add("fishing", `60+ shore spots needed (${spots}, reach ${CAST_REACH})`);
 
-  // Overlaps: warnings only.
+  // Overlaps and bridges on land: warnings only.
   const warnings: string[] = [];
+  // A bridge stands over water: its middle on a river or the sea, not on painted ground.
+  for (const [i, d] of bridgeDecks(v).entries()) {
+    if (isGroundAtWorld(map, (d.x0 + d.x1) / 2, (d.z0 + d.z1) / 2)) warnings.push(`bridge:${objectsOf("bridge", v)[i].id} is not over water: paint River under it`);
+  }
   const boxes = v.objects.flatMap(o => { const f = footprintOf(o); return f ? [{ o, f }] : []; });
   for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
     const a = boxes[i], b = boxes[j], gap = a.f.building && b.f.building ? 1 : 0;
