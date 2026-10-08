@@ -170,6 +170,7 @@ import LandmarkTag from "./LandmarkTag";
 import { worldLabels } from "@/lib/game/labelLayout";
 import { localAvatar } from "@/lib/net/localAvatar";
 import { isSeatedPose, seatPrompt } from "@/lib/game/seatPrompt";
+import { roomHeading } from "@/lib/game/roomHeading";
 import styles from "./DefaultIslandWorld.module.css";
 
 type Near = "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | null;
@@ -774,6 +775,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const conditionsLabel = `${season.season[0].toUpperCase()}${season.season.slice(1)}${Object.values(season.weights).some(w => w > 0 && w < 1) ? " (changing)" : ""} · ${weather[0].toUpperCase()}${weather.slice(1)}`;
   const grade = inside === "cafe" ? { ...CLUBHOUSE_LIGHTING[phase].grade, ...CAFE_GRADE } : inside ? CLUBHOUSE_LIGHTING[phase].grade : light.grade;
   const atHome = site === "home";
+  const heading = roomHeading({ site, inside, atHome, event: islandEvent?.goal.title ?? null });
   const wheelSite: WheelSite = site === "ruins" ? "ruins" : atHome ? "home" : "village";
   const wheelItems = useMemo(() => wheelContents({ site: wheelSite, owned: peaceful.owned, chosen: heldState.chosen, weapons: weaponList.split(","), defaultWeapon, armed, pins: heldState.pins, stock }),
     [wheelSite, peaceful.owned, heldState.chosen, weaponList, defaultWeapon, armed, heldState.pins, stock]);
@@ -1071,8 +1073,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         </Suspense>
       </Canvas>
       <header className={styles.heading} data-fading={fading || !ready || hudCinematic || ((!full || compact) && headingFlash === null)} data-clean={full && !compact ? undefined : ""}>
-        <h1>{site === "ruins" ? "The ruins" : inside === "oracle" ? "Oracle temple" : inside === "museum" ? "Museum" : inside === "shop" ? "Shop" : inside === "cafe" ? "Café" : inside === "hq" ? "HQ" : inside === "house" ? "Your house" : atHome ? "Your island" : "Tethos Island"}</h1>
-        <p>{inside === "cafe" ? "Warm drinks and quiet tables. Find a seat to study." : !inside && !atHome && site === "village" && islandEvent ? `${islandEvent.goal.title} is on.` : "A little space to make our own."}</p>
+        <h1>{heading.title}</h1>
+        <p>{heading.subtitle}</p>
       </header>
       {/* Top right (hud-first-login §1, §2): coins, level, clock and mail, then sound and the view options; panels open below it. */}
       <TopCluster full={full && !compact} buttons={full} hidden={hudCinematic} weather={weather} phase={phase} unread={progression.unreadLetters} mailKey={keyName(identity.settings.key_bindings.openMail)} onMail={() => setSheet("letters")}
