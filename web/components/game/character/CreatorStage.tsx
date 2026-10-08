@@ -111,7 +111,7 @@ const subscribe = (l: () => void) => { listeners.add(l); return () => { listener
 export function thumbJob(id: string, look: CharacterLook): Job {
   const part = PART_BY_ID.get(id);
   const slot = part?.slot;
-  const plain: CharacterLook = { ...DEFAULT_LOOK, skin: look.skin, hair: look.hair, eyes: look.eyes, mouth: look.mouth, brows: look.brows, colors: { ...look.colors } };
+  const plain: CharacterLook = { ...DEFAULT_LOOK, skin: look.skin, hair: look.hair, colors: { ...look.colors } };
   const view: ThumbView = slot === "back" ? "back" : slot === "bangs" || part?.group === "head" || part?.group === "face" ? "front" : "body";
   const worn = slot ? wear(plain, slot, id) : plain;
   const colour = part?.materials.some(m => m.tint === "outfit") ? `|c${look.colors[id] ?? "-"}` : "";
@@ -141,7 +141,6 @@ const VIEWS: Record<ThumbView, { pos: [number, number, number]; at: [number, num
 };
 const still: CharacterMotion = { speed: 0, yaw: 0, lift: 0, pose: null, play: null };
 
-/** Bakes the queue one thumbnail at a time inside the portrait's canvas (no second WebGL context). */
 /** The baker's set: its own scene (never drawn by the portrait), camera and read-back buffers. One creator at a time. */
 const BAKE = { scene: null as THREE.Scene | null, cam: null as THREE.PerspectiveCamera | null, px: new Uint8Array(SIZE * SIZE * 4), canvas: null as HTMLCanvasElement | null,
   v: new THREE.Vector4(), s: new THREE.Vector4(), size: new THREE.Vector2(), clear: new THREE.Color() };

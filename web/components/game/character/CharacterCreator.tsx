@@ -238,7 +238,6 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
         <div className={styles.actions}>
           {mode === "create" && <Button variant="quiet" onClick={() => setLook(randomLook(Math.random, owned))}>Surprise me</Button>}
           {mode === "create" && <Button variant="quiet" disabled={saving} onClick={() => void confirm(randomLook(Math.random, owned))}>Skip</Button>}
-          {onClose && <Button variant="quiet" onClick={onClose}>Close</Button>}
           <Button disabled={saving} onClick={() => void confirm(look)}>{mode === "wardrobe" ? "Wear this" : "That's me"}</Button>
         </div>
       </footer>
