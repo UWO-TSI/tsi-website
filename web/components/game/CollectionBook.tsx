@@ -11,12 +11,12 @@
 
 import { useEffect, useState } from "react";
 import { FISH, RARITY_META, type FishDef } from "@/lib/game/fishing";
-import { RarityBadge } from "@/components/gui";
+import { RarityBadge, Sheet, SignInText } from "@/components/gui";
 import { iconUrl } from "@/lib/icons/keys";
 import { ROSTER } from "@/lib/collections/roster";
 import { AudioManager } from "@/lib/game/audio";
 import { localCollections, mergeWithLocal } from "@/lib/game/collections";
-import { Check, X } from "lucide-react";
+import { BookOpen, Check, X } from "lucide-react";
 import JournalPages, { fetchJournalPage } from "./JournalPages";
 import { useWorldDialog } from "@/lib/game/useWorldDialog";
 
@@ -43,63 +43,38 @@ const CATALOG: { group: string; items: { key: string; name: string; zone?: strin
   { group: "Shore", items: ROSTER.filter((sp) => sp.key.startsWith("shore_")) },
 ];
 
+type Sync = "loading" | "synced" | "signed-out" | "local";
+
+/** The line under the counts: where the collection is kept, said plainly (signed out is a sign-in, not an error). */
+export function collectionNote(collectionScope: string | undefined, sync: Sync): string | null {
+  if (collectionScope) return "Saved on this device · Just for fun";
+  if (sync === "loading") return "Checking saved collection…";
+  if (sync === "signed-out") return "Sign in to keep your collection on your account.";
+  if (sync === "local") return "Showing this browser’s collection: your account’s copy didn’t load.";
+  return null;
+}
+
 /**
- * `keys`: the key that opened it (the member world's Collection key), which closes it too. Shared with the applicant
- * island: its colours come from the --app-* tokens there; inside the member world's .gui scope they are the GUI sheet's.
+ * `keys`: the key that opened it (the member world's Collection key), which closes it too. In the member world and on
+ * the phone it is the GUI sheet's one dialog frame (audit-2026-10-ui item 1: a bottom sheet on a phone, its close
+ * motion, focus, Escape and the opening key). The applicant island (`collectionScope`) keeps its own card, in the
+ * --app-* tokens there.
  */
 export default function CollectionBook({ open, onClose, collectionScope, keys }: { open: boolean; onClose: () => void; collectionScope?: string; keys?: string }) {
-  return open ? <OpenCollectionBook onClose={onClose} collectionScope={collectionScope} keys={keys} /> : null;
+  if (collectionScope) return open ? <ApplicantCollectionBook onClose={onClose} collectionScope={collectionScope} /> : null;
+  // The body mounts with each opening (a fresh read) and stays through the close motion (the sheet keeps it).
+  return <Sheet open={open} onClose={onClose} title="Collection" icon={<BookOpen size={22} aria-hidden />} size="md" keys={keys} testId="collection-sheet">
+    {open && <CollectionBody />}
+  </Sheet>;
 }
 
 /** 11 px on the applicant island, the sheet's 12 px floor in the member world. */
 const SMALL = "max(11px, var(--gui-min-text, 0px))";
 
-function OpenCollectionBook({ onClose, collectionScope, keys }: { onClose: () => void; collectionScope?: string; keys?: string }) {
-  const [counts, setCounts] = useState(() => localCollections(collectionScope));
-  const [sync, setSync] = useState<"loading" | "synced" | "local">(collectionScope ? "local" : "loading");
-  const [detailKey, setDetailKey] = useState<string | null>(null);
-  const [fishFilter, setFishFilter] = useState<"all" | "river" | "sea" | "caught">("all");
-  // Journal pages from /api/collections/journal when the server has them; the local catalog otherwise.
-  const [journal, setJournal] = useState<Awaited<ReturnType<typeof fetchJournalPage>>>(null);
-  useEffect(() => {
-    if (collectionScope) return;
-    let alive = true;
-    void fetchJournalPage("fish").then(p => { if (alive) setJournal(p); });
-    return () => { alive = false; };
-  }, [collectionScope]);
-  // The one dialog system (focus in and back, Escape and the opening key, the world held still, the paper sound).
-  const dialogRef = useWorldDialog<HTMLDivElement>(true, onClose, keys);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    let cancelled = false;
-    if (collectionScope) return () => { controller.abort(); };
-    fetch("/api/collections", { signal: controller.signal })
-      .then(async (r) => {
-        if (!r.ok) throw new Error("Collection sync unavailable");
-        const d: { collections?: Row[] } = await r.json();
-        if (!Array.isArray(d.collections)) throw new Error("Invalid collection response");
-        const map = Object.fromEntries(d.collections.map((row) => [row.item_key, row.count]));
-        if (!cancelled) {
-          setCounts(mergeWithLocal(map, collectionScope));
-          setSync("synced");
-        }
-      })
-      .catch(() => { if (!cancelled) setSync("local"); });
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [collectionScope]);
-
-  const detail = detailKey ? FISH_BY_KEY.get(detailKey) ?? null : null;
-  const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  const discovered = CATALOG.reduce(
-    (n, g) => n + g.items.filter((it) => Object.hasOwn(counts, it.key)).length,
-    0
-  );
-  const totalKinds = CATALOG.reduce((n, g) => n + g.items.length, 0);
-
+/** The applicant island's card (recruitment keeps its look): the same body in its own frame. */
+function ApplicantCollectionBook({ onClose, collectionScope }: { onClose: () => void; collectionScope: string }) {
+  // The one dialog system (focus in and back, Escape, the world held still, the paper sound).
+  const dialogRef = useWorldDialog<HTMLDivElement>(true, onClose);
   return (
     <div
       onClick={onClose}
@@ -148,6 +123,67 @@ function OpenCollectionBook({ onClose, collectionScope, keys }: { onClose: () =>
           color: "var(--app-ink, #4A4034)",
         }}
       >
+        <CollectionBody collectionScope={collectionScope} onClose={onClose} />
+      </div>
+    </div>
+  );
+}
+
+/** The counts and the groups; `onClose` given: the applicant card's own header with its close button. */
+function CollectionBody({ collectionScope, onClose }: { collectionScope?: string; onClose?: () => void }) {
+  const [counts, setCounts] = useState(() => localCollections(collectionScope));
+  const [sync, setSync] = useState<Sync>(collectionScope ? "local" : "loading");
+  const [detailKey, setDetailKey] = useState<string | null>(null);
+  const [fishFilter, setFishFilter] = useState<"all" | "river" | "sea" | "caught">("all");
+  // Journal pages from /api/collections/journal when the server has them; the local catalog otherwise.
+  const [journal, setJournal] = useState<Awaited<ReturnType<typeof fetchJournalPage>>>(null);
+  useEffect(() => {
+    if (collectionScope) return;
+    let alive = true;
+    void fetchJournalPage("fish").then(p => { if (alive) setJournal(p); });
+    return () => { alive = false; };
+  }, [collectionScope]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let cancelled = false;
+    if (collectionScope) return () => { controller.abort(); };
+    fetch("/api/collections", { signal: controller.signal })
+      .then(async (r) => {
+        if (r.status === 401) { if (!cancelled) setSync("signed-out"); return; }
+        if (!r.ok) throw new Error("Collection sync unavailable");
+        const d: { collections?: Row[] } = await r.json();
+        if (!Array.isArray(d.collections)) throw new Error("Invalid collection response");
+        const map = Object.fromEntries(d.collections.map((row) => [row.item_key, row.count]));
+        if (!cancelled) {
+          setCounts(mergeWithLocal(map, collectionScope));
+          setSync("synced");
+        }
+      })
+      .catch(() => { if (!cancelled) setSync("local"); });
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [collectionScope]);
+
+  const detail = detailKey ? FISH_BY_KEY.get(detailKey) ?? null : null;
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  const discovered = CATALOG.reduce(
+    (n, g) => n + g.items.filter((it) => Object.hasOwn(counts, it.key)).length,
+    0
+  );
+  const totalKinds = CATALOG.reduce((n, g) => n + g.items.length, 0);
+
+  const note = collectionNote(collectionScope, sync);
+  const summary = <p style={{ fontSize: 12, color: "var(--app-muted, #8A7B5E)", marginTop: 0, marginBottom: 0 }}>
+    {discovered}/{totalKinds} kinds discovered · {total} caught
+    <span role="status" style={{ display: "block", marginTop: 4 }}>{note && <SignInText text={note} />}</span>
+  </p>;
+
+  return (
+    <>
+      {onClose ? (
         <header style={{ position: "sticky", top: -20, zIndex: 2, background: "var(--app-surface, #FFFDF5)", margin: "-20px -20px 16px", padding: "16px 20px 12px", borderBottom: "1px solid var(--app-line, #E0D2B0)" }}>
           <div className="flex items-center justify-between" style={{ marginBottom: 4 }}>
             <h2 id="collection-book-title" style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Collection</h2>
@@ -160,14 +196,9 @@ function OpenCollectionBook({ onClose, collectionScope, keys }: { onClose: () =>
               <X size={18} />
             </button>
           </div>
-          <p style={{ fontSize: 12, color: "var(--app-muted, #8A7B5E)", marginTop: 0, marginBottom: 0 }}>
-            {discovered}/{totalKinds} kinds discovered · {total} in your bag
-            <span role="status" style={{ display: "block", marginTop: 4 }}>
-              {collectionScope ? "Saved on this device · Just for fun" : sync === "loading" ? "Checking saved collection…" : sync === "local" ? "Showing this browser’s collection: your account’s copy didn’t load." : null}
-            </span>
-          </p>
+          {summary}
         </header>
-
+      ) : <div style={{ marginBottom: 16 }}>{summary}</div>}
 
         {journal ? <JournalPages initial={journal} /> : CATALOG.map((g) => {
           // Loop wake 27: per-group completion count — the Critterpedia
@@ -297,7 +328,7 @@ function OpenCollectionBook({ onClose, collectionScope, keys }: { onClose: () =>
             aria-label={`${detail.name} field notes`}
             style={{
               position: "sticky",
-              bottom: -20,
+              bottom: onClose ? -20 : -22, // the frame's padding: the applicant card's, the sheet's body
               margin: "8px -8px -8px",
               padding: "10px 12px",
               display: "flex",
@@ -321,13 +352,12 @@ function OpenCollectionBook({ onClose, collectionScope, keys }: { onClose: () =>
                 </span>
               </div>
               <div style={{ fontSize: SMALL, color: "var(--app-muted, #8A7B5E)", marginTop: 2 }}>
-                bites: {detail.whenLabel ?? "any time"} · {detail.sizeCm[0]}-{detail.sizeCm[1]} cm · in bag ×
+                bites: {detail.whenLabel ?? "any time"} · {detail.sizeCm[0]}-{detail.sizeCm[1]} cm · caught ×
                 {counts[detail.key] ?? 0}
               </div>
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </>
   );
 }
