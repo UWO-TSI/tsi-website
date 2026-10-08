@@ -28,12 +28,13 @@ describe("seasonal look", () => {
       expect(palettes[season]?.leaf, season).toMatch(/^#[0-9A-F]{6}$/i);
     }
   });
-  it("keeps summer on the calibrated applicant baseline and turns autumn orange", () => {
+  it("keeps summer on the calibrated applicant baseline, turns the leaves orange and the grass an olive gold", () => {
     expect(seasonLook(on("2026-07-20"), palettes).grass).toBe("#91b47f");
     const autumn = seasonLook(on("2026-10-25"), palettes);
     expect(hue(autumn.leaf)).toBeGreaterThan(10);
     expect(hue(autumn.leaf)).toBeLessThan(40);
-    expect(hue(autumn.grass)).toBeLessThan(45);
+    expect(hue(autumn.grass)).toBeGreaterThan(50);
+    expect(hue(autumn.grass)).toBeLessThan(65);
     expect(autumn.snow).toBe(0);
   });
   it("blends tints through a transition and covers the ground only in winter", () => {
@@ -60,15 +61,14 @@ describe("seasonal look", () => {
   });
 
   // Audit 2026-10 world item 1: autumn grass sat 17 ΔE from the paths (summer 30), so the village read as one tan
-  // desert. The proposal (?proposal=autumn) keeps the paths apart at least as well as summer does, and the beach too.
-  it("proposes an autumn grass at least as far from the paths as summer's", () => {
+  // desert. The olive gold (#A4A046, approved 2026-10-07) keeps the paths apart at least as well as summer does, and
+  // the beach too.
+  it("keeps autumn grass at least as far from the paths as summer's", () => {
     const summer = seasonLook(on("2026-07-20"), palettes).grass;
-    const autumn = seasonLook(on("2026-10-25"), palettes, new Set(["autumn"])).grass;
+    const autumn = seasonLook(on("2026-10-25"), palettes).grass;
     expect(deltaE(autumn, ISLAND_TERRAIN.soil)).toBeGreaterThanOrEqual(deltaE(summer, ISLAND_TERRAIN.soil));
     expect(deltaE(autumn, ISLAND_TERRAIN.sand)).toBeGreaterThanOrEqual(deltaE(summer, ISLAND_TERRAIN.sand) * 0.9);
     // Still autumn: a gold, not summer's green.
     expect(hue(autumn)).toBeLessThan(hue(summer) - 25);
-    // The default stays as approved until David picks it.
-    expect(seasonLook(on("2026-10-25"), palettes).grass).toBe(seasonLook(on("2026-10-25"), palettes, new Set()).grass);
   });
 });
