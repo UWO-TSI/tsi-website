@@ -72,10 +72,10 @@ describe("render tiers (spec §5.5)", () => {
     expect(reduced[0].aura).toBe(false);
   });
 
-  it("shows a real player's plate within 22 u whatever the tier, the nearest 12", () => {
-    const es = run([at(3), at(21, { inView: false }), at(23), at(15, { phone: true })]);
+  it("shows a real player's plate only when close (within 8 u) whatever the tier, the nearest 12", () => {
+    const es = run([at(3), at(7, { inView: false }), at(9), at(6, { phone: true })]);
     expect(es.map(e => e.plate)).toEqual([true, true, false, true]);
-    const many = run(Array.from({ length: 16 }, (_, i) => at(1 + i)));
+    const many = run(Array.from({ length: 16 }, (_, i) => at(1 + i * 0.4)));
     expect(many.filter(e => e.plate).length).toBe(LOD.plates);
     expect(many[15].plate).toBe(false);
   });

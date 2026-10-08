@@ -8,7 +8,7 @@
  * | Reduced | next 12     | next 8      | within 40 u: the mixer at 15 Hz, no effects, no aura, no sun shadow |
  * | Hidden  | the rest    | the rest    | not drawn, no mixer; still interpolated, so they reappear in the right place |
  *
- * Phone resters are Reduced at most. A real player's nameplate shows within 22 u whatever the tier (the nearest 12,
+ * Phone resters are Reduced at most. A real player's nameplate shows within 8 u (close only, David 2026-10-08) whatever the tier (the nearest 12,
  * the pool's size), so players read as people, not residents. Hysteresis: anyone keeps a tier, aura or plate until 2 u
  * past the line that gave it, and ranks 2 u nearer than they are for the slots, so two players at the same distance
  * don't trade places every quarter second.
@@ -20,7 +20,7 @@ export type Tier = typeof FULL | typeof REDUCED | typeof HIDDEN;
 export const LOD = {
   fullRange: 20,
   drawnRange: 40,
-  plateRange: 22,
+  plateRange: 8,
   hysteresis: 2,
   /** Seconds between re-tiers. */
   every: 0.25,

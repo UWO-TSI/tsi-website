@@ -3,7 +3,7 @@
 /**
  * The other players' nameplates (specs/multiplayer.md §5.5): one pooled DOM overlay of 12 paper tags, not a drei
  * `<Html>` each (every one of those is its own React root with its own projection each frame). The re-tier hands the
- * plates out (lod.ts: every drawn player within 22 u, the nearest 12; a real player's plate always shows there, so
+ * plates out (lod.ts: every drawn player within 8 u, the nearest 12; a real player's plate always shows there, so
  * people read as people, not residents); after each frame is drawn, the camera final, the world's label layout
  * (lib/game/labelLayout.ts; world audit item 2) projects each plate through the curved world's bend, stacks one that
  * would cover a nearer plate above it (or shrinks it to a dot when the stack runs too tall), fades it behind a building,
