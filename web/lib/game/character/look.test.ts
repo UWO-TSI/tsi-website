@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { BASE_URL, LOD_SKIN_URL, CLIPS, DEFAULT_LOOK, FACE, FACE_ATLAS_URLS, PALETTE, PARTS, PART_BY_ID, parseLook, randomLook, resolveParts, seeded, wear, wornParts } from "./look";
+import { BASE_URL, HAIR_MAPS_URL, LOD_SKIN_URL, CLIPS, DEFAULT_LOOK, FACE, FACE_ATLAS_URLS, PALETTE, PARTS, PART_BY_ID, parseLook, randomLook, resolveParts, seeded, wear, wornParts } from "./look";
 
 const web = join(__dirname, "../../..");
 const art = join(web, "../art/characters");
@@ -36,7 +36,8 @@ describe("character catalogue", () => {
       // Hair and headwear are closed solids (avatar-fit); a hat carries its own hair tuck and replaces the back hair.
       // Sculpted-lock hair (avatar v7) spends more per piece; the full look stays under ~4000 (next test).
       const lockHair = (p as { v7?: boolean }).v7;
-      expect(p.tris, p.id).toBeLessThanOrEqual(lockHair ? 1200 : p.slot === "bangs" || p.slot === "back" ? 700 : p.group === "head" ? 1150 : 300);
+      // a full hairstyle (head fit) is the whole hair: within the library's bangs + back looks (1,110-1,756)
+      expect(p.tris, p.id).toBeLessThanOrEqual(p.full ? 1756 : lockHair ? 1200 : p.slot === "bangs" || p.slot === "back" ? 700 : p.group === "head" ? 1150 : 300);
       if (p.slot === "accessory") expect(["face", "head", "bag", "neck"]).toContain(p.group);
       if (p.variantOf) expect(PART_BY_ID.has(p.variantOf)).toBe(true);
       for (const m of p.materials) if (m.tint === "outfit") expect(m.default as number).toBeLessThan(PALETTE.outfit.length);
@@ -69,7 +70,9 @@ describe("character catalogue", () => {
     const glasses = Math.max(...PARTS.filter(p => p.group === "face").map(p => p.tris));
     // every bangs with every back, or with a hat (which replaces the back hair and carries its own tuck)
     const bangs = Math.max(...PARTS.filter(p => p.slot === "bangs").map(p => p.tris));
-    const back = Math.max(...PARTS.filter(p => p.slot === "back").map(p => p.tris));
+    const back = Math.max(...PARTS.filter(p => p.slot === "back" && !p.full).map(p => p.tris));
+    const full = Math.max(...PARTS.filter(p => p.full).map(p => p.tris));   // a whole hairstyle replaces bangs and back
+    expect(base + full + outfit + glasses, "heaviest full hairstyle").toBeLessThanOrEqual(4000);
     const hat = Math.max(...PARTS.filter(p => p.group === "head" && p.hidesBackHair).map(p => p.tris));
     expect(base + bangs + back + outfit + glasses, "heaviest bangs + back").toBeLessThanOrEqual(4000);
     expect(base + bangs + hat + outfit + glasses, "heaviest bangs + hat").toBeLessThanOrEqual(4000);
@@ -108,6 +111,32 @@ describe("looks", () => {
     expect(crew.decal).toMatch(/decal_tsi_mark\.png$/);
     expect(resolveParts(DEFAULT_LOOK).find(p => p.id === "top_tee")!.decal).toBeNull();
     expect(resolveParts(DEFAULT_LOOK).find(p => p.id === "shoes_slipon")!.tints.M_Sole).toBe("#C9A63A");
+  });
+  it("a full hairstyle replaces the bangs, and picking bangs brings a two-piece back (head fit)", () => {
+    const full = PARTS.find(p => p.slot === "back" && p.full)!;
+    expect(full).toBeDefined();
+    const look = wear(DEFAULT_LOOK, "back", full.id);
+    expect(wornParts(look).map(p => p.slot).filter(s => s === "bangs" || s === "back")).toEqual(["back"]);
+    const again = wear(look, "bangs", "bangs_curtain");
+    expect([again.bangs, again.back]).toEqual(["bangs_curtain", DEFAULT_LOOK.back]);
+    expect(wornParts(wear(look, "accessory", "acc_beanie")).some(p => p.slot === "back" || p.slot === "bangs")).toBe(false); // under a hat: the tuck
+  });
+  it("tints a mapped hairstyle from the palette and its accent from the look, the style's default or the skin (head fit)", () => {
+    const two = PARTS.find(p => p.full && p.map?.accent !== undefined && typeof p.accent?.default === "number")!;
+    const look = { ...wear(DEFAULT_LOOK, "back", two.id), hair: 5 };
+    const r = resolveParts(look).find(p => p.id === two.id)!;
+    expect(r.tints.M_Hair).toBe(PALETTE.hair[5]);
+    expect(r.map).toEqual({ shade: two.map!.shade, accent: two.map!.accent, accentHex: PALETTE.hair[two.accent!.default as number] });
+    expect(resolveParts({ ...look, hairAccent: 2 }).find(p => p.id === two.id)!.map!.accentHex).toBe(PALETTE.hair[2]);
+    const fade = PARTS.find(p => p.accent?.default === "skin")!;
+    expect(resolveParts({ ...wear(DEFAULT_LOOK, "back", fade.id), skin: 7 }).find(p => p.id === fade.id)!.map!.accentHex).toBe(PALETTE.skin[7]);
+    expect(parseLook({ hairAccent: 3 }).hairAccent).toBe(3);
+    expect(parseLook({ hairAccent: 99 }).hairAccent).toBeUndefined();
+    expect(resolveParts(DEFAULT_LOOK).find(p => p.id === "back_bob")!.map).toBeNull();
+  });
+  it("ships the hair shading atlas the mapped styles sample", () => {
+    expect(existsSync(join(web, "public", HAIR_MAPS_URL))).toBe(true);
+    for (const p of PARTS.filter(p => p.map)) expect([p.map!.shade, p.map!.accent ?? 0].every(c => c >= 0 && c <= 2), p.id).toBe(true);
   });
   it("random looks are always valid and seeded ones repeat", () => {
     for (let i = 0; i < 200; i++) { const look = randomLook(seeded(i)); expect(parseLook(JSON.parse(JSON.stringify(look)))).toEqual(look); }

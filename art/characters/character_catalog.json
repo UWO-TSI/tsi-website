@@ -2131,6 +2131,568 @@
    "v7": true,
    "skull": "v8",
    "capFrom": -6
+  },
+  {
+   "id": "hair_messy_boy",
+   "slot": "back",
+   "name": "Messy boy",
+   "glb": "hair/full/hair_messy_boy.glb",
+   "tris": 921,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    },
+    {
+     "name": "M_HairCap",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/02-Low-Poly-Messy-Boy-Hair-Black-128971224541817.glb",
+   "map": {
+    "shade": 1
+   }
+  },
+  {
+   "id": "hair_hime_short",
+   "slot": "back",
+   "name": "Short hime cut",
+   "glb": "hair/full/hair_hime_short.glb",
+   "tris": 1735,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    },
+    {
+     "name": "M_HairCap",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/05-Black-Hime-Short-Straight-Hair-Cut-13856173456.glb",
+   "map": {
+    "shade": 1
+   }
+  },
+  {
+   "id": "hair_visor_messy",
+   "slot": "back",
+   "name": "Messy with visor",
+   "glb": "hair/full/hair_visor_messy.glb",
+   "tris": 1735,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    },
+    {
+     "name": "M_Cap",
+     "color": "#2B2B33"
+    },
+    {
+     "name": "M_HairCap",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/08-McDonalds-106903086636118.glb",
+   "map": {
+    "shade": 1
+   }
+  },
+  {
+   "id": "hair_baby_sprout",
+   "slot": "back",
+   "name": "Baby sprout",
+   "glb": "hair/full/hair_baby_sprout.glb",
+   "tris": 1732,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/01-Baby-Hair-87848056624320.glb",
+   "covers": [
+    "top"
+   ],
+   "map": {
+    "shade": 0
+   }
+  },
+  {
+   "id": "hair_long_scruffy",
+   "slot": "back",
+   "name": "Long scruffy",
+   "glb": "hair/full/hair_long_scruffy.glb",
+   "tris": 1735,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    },
+    {
+     "name": "M_HairCap",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/03-cute-messy-long-scruffy-black-hair-136727109636132.glb",
+   "map": {
+    "shade": 2
+   }
+  },
+  {
+   "id": "hair_short_tufts",
+   "slot": "back",
+   "name": "Short with tufts",
+   "glb": "hair/full/hair_short_tufts.glb",
+   "tris": 1735,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    },
+    {
+     "name": "M_HairCap",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/04-messy-cute-short-hair-with-tufts-in-black-83295904708963.glb",
+   "map": {
+    "shade": 0
+   }
+  },
+  {
+   "id": "hair_windy_bob",
+   "slot": "back",
+   "name": "Windy bob",
+   "glb": "hair/full/hair_windy_bob.glb",
+   "tris": 1735,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    },
+    {
+     "name": "M_HairCap",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/06-Black-Anime-Windy-Bob-78364092542791.glb",
+   "map": {
+    "shade": 2
+   }
+  },
+  {
+   "id": "hair_wispy_ponytail",
+   "slot": "back",
+   "name": "Wispy ponytail",
+   "glb": "hair/full/hair_wispy_ponytail.glb",
+   "tris": 1728,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    },
+    {
+     "name": "M_HairCap",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/07-Short-Anime-Wispy-Ponytail-Black-87974376605658.glb",
+   "map": {
+    "shade": 0
+   }
+  },
+  {
+   "id": "hair_fluffy_boy",
+   "slot": "back",
+   "name": "Fluffy boy",
+   "glb": "hair/full/hair_fluffy_boy.glb",
+   "tris": 1522,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    },
+    {
+     "name": "M_HairCap",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/09-Low-Poly-Fluffy-Messy-Boy-Hair-Brown-86495776285585.glb"
+  },
+  {
+   "id": "hair_messy_wolf",
+   "slot": "back",
+   "name": "Messy wolf cut",
+   "glb": "hair/full/hair_messy_wolf.glb",
+   "tris": 1735,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    },
+    {
+     "name": "M_HairCap",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/10-Black-Messy-Wolfcut-98528599025378.glb",
+   "map": {
+    "shade": 0
+   }
+  },
+  {
+   "id": "hair_bowl_cut",
+   "slot": "back",
+   "name": "Bowl cut",
+   "glb": "hair/full/hair_bowl_cut.glb",
+   "tris": 1735,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    },
+    {
+     "name": "M_HairCap",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/11-Blonde-Bowl-Cut-11103880280.glb",
+   "map": {
+    "shade": 1
+   }
+  },
+  {
+   "id": "hair_layered_shag",
+   "slot": "back",
+   "name": "Layered shag",
+   "glb": "hair/full/hair_layered_shag.glb",
+   "tris": 1734,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    },
+    {
+     "name": "M_HairCap",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/12-Ryo-137412726411371.glb",
+   "map": {
+    "shade": 2
+   }
+  },
+  {
+   "id": "hair_anime_spikes",
+   "slot": "back",
+   "name": "Anime spikes",
+   "glb": "hair/full/hair_anime_spikes.glb",
+   "tris": 1735,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    },
+    {
+     "name": "M_HairCap",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/13-Ben-10-Anime-Hair-125540259305979.glb",
+   "map": {
+    "shade": 0
+   }
+  },
+  {
+   "id": "hair_messy_low_pony",
+   "slot": "back",
+   "name": "Messy low ponytail",
+   "glb": "hair/full/hair_messy_low_pony.glb",
+   "tris": 1735,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    },
+    {
+     "name": "M_HairCap",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/14-White-Blue-Short-Messy-w-Low-Ponytail-119601543909065.glb",
+   "map": {
+    "shade": 1,
+    "accent": 2
+   },
+   "accent": {
+    "default": 11
+   }
+  },
+  {
+   "id": "hair_vkei",
+   "slot": "back",
+   "name": "V-kei layers",
+   "glb": "hair/full/hair_vkei.glb",
+   "tris": 1735,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    },
+    {
+     "name": "M_HairCap",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/15-Vkei-Moe-Boy-Face-Hair-137700402637392.glb",
+   "map": {
+    "shade": 0
+   }
+  },
+  {
+   "id": "hair_swept_fringe",
+   "slot": "back",
+   "name": "Swept fringe",
+   "glb": "hair/full/hair_swept_fringe.glb",
+   "tris": 1735,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    },
+    {
+     "name": "M_HairCap",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/16-Isagi-17727987910.glb",
+   "map": {
+    "shade": 1
+   }
+  },
+  {
+   "id": "hair_bob_pigtail",
+   "slot": "back",
+   "name": "Bob with a pigtail",
+   "glb": "hair/full/hair_bob_pigtail.glb",
+   "tris": 1735,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    },
+    {
+     "name": "M_HairCap",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/17-cutesy-bob-with-adorable-pigtail-in-brown-118937471732434.glb",
+   "map": {
+    "shade": 2
+   }
+  },
+  {
+   "id": "hair_long_pigtails",
+   "slot": "back",
+   "name": "Long pigtails",
+   "glb": "hair/full/hair_long_pigtails.glb",
+   "tris": 1735,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    },
+    {
+     "name": "M_HairCap",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/18-long-pretty-black-pigtails-117422689311117.glb",
+   "map": {
+    "shade": 0
+   }
+  },
+  {
+   "id": "hair_dreads_cap",
+   "slot": "back",
+   "name": "Dreads with a cap",
+   "glb": "hair/full/hair_dreads_cap.glb",
+   "tris": 1734,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    },
+    {
+     "name": "M_Cap",
+     "color": "#26262A"
+    },
+    {
+     "name": "M_HairCap",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/19-OTF-Von-Dreads-w-Hat-89998678118416.glb",
+   "map": {
+    "shade": 1,
+    "accent": 2
+   },
+   "accent": {
+    "default": 3
+   }
+  },
+  {
+   "id": "hair_waves",
+   "slot": "back",
+   "name": "Waves with a fade",
+   "glb": "hair/full/hair_waves.glb",
+   "tris": 1560,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    },
+    {
+     "name": "M_HairCap",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/20-360-Waves-in-Black-113478080627568.glb",
+   "map": {
+    "shade": 0,
+    "accent": 1
+   },
+   "accent": {
+    "default": "skin"
+   }
+  },
+  {
+   "id": "hair_messy_dreads",
+   "slot": "back",
+   "name": "Messy dreads",
+   "glb": "hair/full/hair_messy_dreads.glb",
+   "tris": 1735,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    },
+    {
+     "name": "M_HairCap",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/21-M11-Messy-Dreads-Black-86633981568887.glb",
+   "map": {
+    "shade": 2
+   }
   }
  ],
  "verbs": {
@@ -4065,5 +4627,15 @@
     "impact": 0.3
    }
   ]
+ },
+ "hairMaps": {
+  "atlas": "hair/hair_maps.png",
+  "gain": 1.25,
+  "cells": [
+   4,
+   2
+  ],
+  "cell": 512,
+  "note": "Shading maps of the full hairstyles (hair/import_hair.py): one channel per hair (accent masks in the next channel), luminance / median / gain; the engine multiplies the palette tint by map x gain (lib/game/character/rig.ts, Character.tsx)."
  }
 }

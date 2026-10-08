@@ -44,6 +44,17 @@ def nape(lon):
     return -36 + 8 * max(0.0, math.cos(math.radians(lon)))     # -36 at the back, rising toward the jaw
 
 
+def scalp_line(lon):
+    """The edge of the scalp hair covers (lat): the hairline in front, easing down past the temples (lon 60-100) to the
+    nape line at the back. A full hairstyle covers everything above it (its under-cap runs exactly to it); below it,
+    hair may hang free of the head (side locks, a fringe over the face)."""
+    a = abs(((lon + 180) % 360) - 180)
+    if a <= 60:
+        return hairline(lon) + 1
+    t = hs._ss(60, 100, a)
+    return (hairline(60) + 1) * (1 - t) + (nape(180) + 10) * t
+
+
 EAR_LAT = (EYE_LAT + MOUTH_LAT) / 2      # face thirds: the ear sits between the eye line and the mouth
 EAR_LON = 92.0
 EAR_R = 14.0                             # deg: the ear zone (glasses temples, headphones): a hat's rim stays above it
@@ -87,7 +98,7 @@ CLEARANCE = {
     "hat_poke_max": 0.002,      # hair through a hat
     "ear_top_lat": round(EAR_TOP, 2),   # no hat rim below this at the sides
     # m from `top`: the box a piece of each type stays in (Roblox's per-type accessory bounds; catches a mis-scaled import)
-    "reach": {"hair": {"up": 0.15, "down": 0.72, "front": 0.30, "back": 0.36, "side": 0.34},
+    "reach": {"hair": {"up": 0.18, "down": 0.72, "front": 0.42, "back": 0.42, "side": 0.40},
               "hat": {"up": 0.16, "down": 0.36, "front": 0.42, "back": 0.42, "side": 0.42}},
 }
 
@@ -153,6 +164,7 @@ def export(path=os.path.join(HERE, "skull.json")):
             "hairline": [[lo, round(hairline(lo), 2)] for lo in range(-60, 61, 15)],
             "hatline": [[lo, round(hatline(lo), 2)] for lo in lons],
             "nape": [[lo, round(nape(lo), 2)] for lo in lons if abs(lo) >= 90],
+            "scalp": [[lo, round(scalp_line(lo), 2)] for lo in lons],
             "ear": {"lat": round(EAR_LAT, 2), "lon": EAR_LON, "radius_deg": EAR_R, "top_lat": round(EAR_TOP, 2)},
         },
         "shells": {

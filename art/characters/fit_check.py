@@ -58,6 +58,7 @@ LIMITS = {
     "hair_open_edges": 0,          # closed shells only
     "hair_gap_max": 0.004,         # m of air under the hair anywhere on the scalp region
     "hair_gap_median": 0.001,
+    "hair_gap_median_full": 0.003,  # head fit: a full hairstyle's under-cap rides CAP_H (2.5 mm) over the scalp
     "hair_skin_through_max": 0.0,  # m the head's skin stands out of a covering shell piece (neighbour-confirmed);
                                    # reported as a FLAG: the older library's long side locks had it on v6 already
     "seam_ledge_max": 0.003,       # step where bangs and back cap meet over the crown (shell pieces)
@@ -171,6 +172,7 @@ for la in LATS:
 LAT = np.array([r[0] for r in RAYS], float)
 LON = np.array([r[1] for r in RAYS], float)
 HAIRLINE = np.array([hairline(lo) for lo in LON])
+SCALP_LINE = np.array([SK.scalp_line(lo) for lo in LON])
 
 
 def hits(bvh, d, far=0.7, signed=False):
@@ -444,7 +446,11 @@ for part in CAT["hair"]:
     tables[part["id"]] = (inn, out)
     everys[part["id"]] = (every, open_e == 0)
     groups_of[part["id"]] = groups
-    if part["slot"] == "bangs":         # the forehead: above the hairline every back cap covers the scalp under them
+    if part.get("full"):                # head fit: a whole hairstyle covers the scalp above the skull's scalp line (its
+        region = LAT >= SCALP_LINE + 5  # under-cap runs to it, a polyline of 15 deg columns: 5 deg of margin); below it,
+        if part.get("covers") == ["top"]:   # side locks and fringes may hang free. A tuft covers no scalp (a bald style).
+            region = np.zeros(len(RAYS), bool)
+    elif part["slot"] == "bangs":       # the forehead: above the hairline every back cap covers the scalp under them
         region = (LAT >= -60) & (LAT <= HAIRLINE + 2)
     else:   # over the under-cap: from its hem up, outside the face window (no cap there by design: hair frames the face)
         region = (LAT >= part.get("capFrom", -24)) & ~((np.abs(LON) < 61) & (LAT < HAIRLINE))
@@ -726,7 +732,7 @@ def neighbours(k):
     return [ii * NLO + (j + dj) % NLO for ii in (i - 1, i, i + 1) if 0 <= ii < NLA for dj in (-1, 0, 1)]
 
 
-def clip_depth(groups, skip_root=False):
+def clip_depth(groups, below=None):
     """Deepest point under the skin of any outward-facing face a viewer could see: faces whose centre is within 2 cm
     under the scalp (deeper is hidden closing geometry), facing out (normal . radial > 0.3); lock root zones are skipped
     by the caller's per-lock check, so here the v7 pieces skip faces within 1.5 cm of the scalp's root ring depth."""
@@ -741,6 +747,11 @@ def clip_depth(groups, skip_root=False):
             dd = depth_in_head(c)
             if dd <= 0 or dd > 0.02:
                 continue
+            if below is not None:            # only where it would show: under the scalp line (the face, the ears)
+                d0 = (c - HC).normalized()
+                lat_g = math.degrees(math.asin(max(-1, min(1, d0.z))))
+                if lat_g >= below(lon_of(c)) - 2:
+                    continue
             if dd > worst:
                 d = (c - HC).normalized()
                 worst, at = dd, [round(math.degrees(math.asin(max(-1, min(1, d.z))))), round(lon_of(c))]
@@ -751,6 +762,12 @@ def kind_of(part):
     if part["slot"] == "accessory":
         return "hat" if part.get("hidesBackHair") else None
     return "full" if part.get("full") else part["slot"]
+
+
+def GEO_SCALP(lon):
+    """The scalp line as a geocentric latitude (clip_depth measures directions from the head centre)."""
+    d = (head_point(SK.scalp_line(lon), lon) - HC).normalized()
+    return math.degrees(math.asin(max(-1, min(1, d.z))))
 
 
 ANCHOR_RAYS = {n: ray_index(lat, lon) for n, (lat, lon, _, _) in SK.POINTS.items()}
@@ -771,9 +788,15 @@ for part in CAT["hair"] + [a for a in CAT["accessories"] if kind_of(a) == "hat"]
         every, closed = ray_table(hb, keep_all=True)[2], open_e == 0
     rec = {"kind": kind}
     # clip: v7 lock pieces have their own lock-by-lock dive check (root zones are buried on purpose)
-    rec["clip"], rec["clip_at"] = (None, None) if pid in V7_LOCKS else clip_depth(groups)
+    # a full hairstyle's cards root under its own under-cap above the scalp line (hidden, like the locks' buried roots)
+    rec["clip"], rec["clip_at"] = (None, None) if pid in V7_LOCKS else clip_depth(
+        {k: v for k, v in groups.items() if k != "M_HairCap"}, below=GEO_SCALP if kind == "full" else None)
     floats, uncovered = {}, []
-    for name in part.get("covers") or SK.COVERS[kind]:
+    if part.get("covers") == ["top"]:                 # a tuft on the crown: its foot on the top fit point
+        top_tree, _ = bvh_of(groups)
+        _, _, _, dist = top_tree.find_nearest(SK.point("top"))
+        floats["top"] = round(max(0.0, dist - 0.0), 4)
+    for name in ([] if part.get("covers") == ["top"] else part.get("covers") or SK.COVERS[kind]):
         vals = []
         for k in neighbours(ANCHOR_RAYS[name]):
             base = R_SCALP[k] + (hair_outer(LAT[k]) if kind == "hat" else 0.0)
@@ -809,10 +832,12 @@ def check(name, value, limit, what):
         fails.append(f"{what}: {name} {value} > {limit}")
 
 
+FULL_IDS = {h["id"] for h in CAT["hair"] if h.get("full")}
 for pid, r in hair.items():
-    check("open_edges", r["open_edges"], LIMITS["hair_open_edges"], pid)
+    if pid not in FULL_IDS:             # strand-card hair is open sheets by design (the body material is double-sided)
+        check("open_edges", r["open_edges"], LIMITS["hair_open_edges"], pid)
     check("gap_max", r["gap"]["max"], LIMITS["hair_gap_max"], pid)
-    check("gap_median", r["gap"]["median"], LIMITS["hair_gap_median"], pid)
+    check("gap_median", r["gap"]["median"], LIMITS["hair_gap_median_full"] if pid in FULL_IDS else LIMITS["hair_gap_median"], pid)
     if r.get("skin_through") is not None and r["skin_through"] > LIMITS["hair_skin_through_max"]:
         flags.append(f"{pid}: skin_through {r['skin_through']} (a shell piece of the older library; rebuilt as locks next)")
 V7_IDS = {h["id"] for h in CAT["hair"] if h.get("v7")}

@@ -14,6 +14,11 @@
  * ?sheet=bangs     every bangs style over a back (&back=, back_bob); ?sheet=backs every back under a bangs (&bangs=)
  * ?sheet=hats      the four hats (they hide the back hair and carry a lock tuck), front and back 3/4
  * ?sheet=faces     row 301's face set (sleepy and dot eyes, cat and curled-grin mouths, the blush band) on three skins (&skins=)
+ * ?sheet=facekit   head fit (specs/characters/head-fit.md): every face option once, on one skin and view (&view=front|34|side):
+ *                  one cell per mouth, with the eyes, brows and extras cycling through all of theirs alongside
+ * ?sheet=hairkit   head fit: every bangs (over the bob), every back (under the straight cut), every hat, band and glasses,
+ *                  on one skin and view (&view=front|34|side|back)
+ * ?sheet=fullkit   head fit: every whole hairstyle (David's set) on one skin, hair colour (&hair=) and view
  * &hair=<0-11>&skin=<0-11>&face=512 (the world atlas) &framing=head|body
  */
 import { Suspense, useMemo, useRef } from "react";
@@ -29,6 +34,10 @@ const STYLES: Record<string, Pick<CharacterLook, "bangs" | "back">> = {
   bob: { bangs: "bangs_straight", back: "back_bob" },
   long: { bangs: "bangs_curtain", back: "back_long" },
 };
+/** Head fit sheets: the three review views (the character faces the camera at yaw 0). */
+const VIEWS: Record<string, number> = { front: 0, "34": -0.6, side: -Math.PI / 2, back: Math.PI };
+/** Kit sheets hold the eyes open (no blink lands mid-capture). */
+const OPEN: FaceOverride = { eyeFrame: "open" };
 interface Cell { label: string; look: CharacterLook; yaw: number; face?: FaceOverride | null; talk?: boolean }
 
 function Stage({ cell, framing, faceSize }: { cell: Cell; framing: "head" | "body"; faceSize: number }) {
@@ -55,6 +64,7 @@ function AvatarBench() {
   const base: CharacterLook = { ...DEFAULT_LOOK, hair: Number(q.get("hair") ?? 2), skin: Number(q.get("skin") ?? 3) };
   const style = (s: string) => ({ ...base, ...STYLES[s] });
   const yaw = Number(q.get("yaw") ?? -0.5);
+  const view = VIEWS[q.get("view") ?? "34"] ?? VIEWS["34"];
   const cells = useMemo<Cell[]>(() => {
     const bob = style(q.get("style") ?? "bob");
     if (sheet === "expr") return EXPRESSIONS.map(e => ({ label: e, look: bob, yaw, face: { expression: e, eyeFrame: FACE.expressions[e].eyeFrame } }));
@@ -71,11 +81,26 @@ function AvatarBench() {
       ["dot", "cat_w", ["blush_band"], 0], ["F1.1", "grin_curl", ["blush_band"], 0], ["sleepy_lash", "cat_w", ["blush_band"], yaw],
     ] as [string, string, string[], number][]).map(([eyes, mouth, extras, y]) => ({
       label: `skin ${skin} ${eyes} ${mouth}${extras.length ? " +band" : ""}${y ? " 3/4" : ""}`, look: { ...bob, skin, eyes, mouth, extras }, yaw: y })));
+    if (sheet === "facekit") {
+      const eyes = Object.keys(FACE.layers.eyes.items), brows = Object.keys(FACE.layers.brows.items);
+      const extras = [[], ...Object.keys(FACE.layers.extras.items).map(e => [e])];
+      return Object.keys(FACE.layers.mouth.items).map((mouth, i) => {
+        const look = { ...bob, mouth, eyes: eyes[i % eyes.length], brows: brows[i % brows.length], extras: extras[i % extras.length] };
+        return { label: `${look.eyes} ${mouth}${look.extras.length ? ` +${look.extras[0]}` : ""}`, look, yaw: view, face: OPEN };
+      });
+    }
+    if (sheet === "hairkit") return [
+      ...partsIn("bangs").map(p => ({ label: p.id, look: { ...bob, bangs: p.id, back: "back_bob" }, yaw: view, face: OPEN })),
+      ...partsIn("back").filter(p => !p.full).map(p => ({ label: p.id, look: { ...bob, bangs: "bangs_straight", back: p.id }, yaw: view, face: OPEN })),
+      ...partsIn("accessory").filter(p => p.group === "head" || p.group === "face").map(p => ({ label: p.id, look: { ...bob, acc: { [p.group!]: p.id } }, yaw: view, face: OPEN })),
+    ];
+    // head fit: the whole hairstyles (David's set), each alone
+    if (sheet === "fullkit") return partsIn("back").filter(p => p.full).map(p => ({ label: p.id, look: { ...bob, back: p.id }, yaw: view, face: OPEN }));
     return Object.keys(STYLES).flatMap(s => [{ label: `${s} front`, look: style(s), yaw: 0 }, { label: `${s} 3/4`, look: style(s), yaw: -0.6 }]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheet, yaw, q]);
   const root = useRef<HTMLDivElement>(null);
-  const cols = sheet === "styles" || sheet === "backs" || sheet === "faces" ? 6 : sheet === "bangs" || sheet === "hats" ? 8 : cells.length;
+  const cols = sheet === "facekit" ? 13 : sheet === "hairkit" ? 10 : sheet === "fullkit" ? 7 : sheet === "styles" || sheet === "backs" || sheet === "faces" ? 6 : sheet === "bangs" || sheet === "hats" ? 8 : cells.length;
   return <div ref={root} style={{ position: "relative", paddingTop: 48, minHeight: "100vh", background: "#efe7d6" }}>
     <div data-sheet={sheet} style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, ${cols === 1 ? "420px" : "1fr"})`, gap: 8, padding: 8 }}>
       {cells.map(c => <figure key={c.label} style={{ margin: 0 }}>

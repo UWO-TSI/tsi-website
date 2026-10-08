@@ -96,7 +96,7 @@ def covered(ob, others):
     return False
 
 
-def decimate(ob, under):
+def decimate(ob, under, cards=False):
     """Decimate `ob` in place at the first ratio that keeps its shape (`under`: something lies on it); returns the
     ratio, or None (kept whole)."""
     for ratio in RATIOS:
@@ -114,7 +114,9 @@ def decimate(ob, under):
         bpy.ops.object.modifier_move_to_index(modifier="LOD", index=0)
         bpy.ops.object.modifier_apply(modifier="LOD")
         far, out, sink = deviation(ob, trial)
-        if far <= TOLERANCE and sink <= SNUG and (out <= SNUG or not under):
+        # cards: strand-card hair (thin open sheets over its own opaque under-cap) has no inside to sink into, so only
+        # the shape tolerance holds it (the sign of a sheet's normal says nothing about sinking)
+        if far <= TOLERANCE and (cards or (sink <= SNUG and (out <= SNUG or not under))):
             old = ob.data
             ob.data = trial.data
             bpy.data.objects.remove(trial)
@@ -127,9 +129,11 @@ def decimate(ob, under):
     return None
 
 
-def build(src, dst, skin_only=False):
+def build(src, dst, skin_only=False, merge=True, cards=False):
+    """merge=False for strand-card hair (head fit: import_hair.py's full styles): welding its cards makes non-manifold
+    junctions the collapse cannot reduce, so it is decimated as the converter split it, card by card."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    bpy.ops.import_scene.gltf(filepath=src, merge_vertices=True)
+    bpy.ops.import_scene.gltf(filepath=src, merge_vertices=merge)
     rig = next(o for o in bpy.data.objects if o.type == "ARMATURE")
     for ob in [o for o in bpy.data.objects if o.type == "MESH"]:
         bpy.ops.object.select_all(action="DESELECT")
@@ -151,7 +155,7 @@ def build(src, dst, skin_only=False):
         n = ntris(ob)
         before += n
         if not whole and n >= KEEP:
-            decimate(ob, under[ob.name])
+            decimate(ob, under[ob.name], cards=cards and material_of(ob) == "M_Hair")
         after += ntris(ob)
         kept.append(ob)
     os.makedirs(os.path.dirname(dst), exist_ok=True)
@@ -176,7 +180,7 @@ def main():
     for p in parts:
         if only and p["id"] not in only:
             continue
-        report[p["glb"]] = build(os.path.join(HERE, p["glb"]), os.path.join(OUT, p["glb"]))
+        report[p["glb"]] = build(os.path.join(HERE, p["glb"]), os.path.join(OUT, p["glb"]), merge=not p.get("full"), cards=bool(p.get("full")))
     path = os.path.join(OUT, "lod.json")
     old = json.load(open(path)) if only and os.path.exists(path) else {}
     old.update({k: {"tris": v[0], "lod1": v[1]} for k, v in report.items()})

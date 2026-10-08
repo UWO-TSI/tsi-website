@@ -17,7 +17,7 @@ import { VillageButton, VillageField } from "@/components/recruit/ui";
 import { useWorldDialog } from "@/lib/game/useWorldDialog";
 import { mentionsSignIn } from "@/lib/game/signIn";
 import { SignInText } from "@/components/gui/SignIn";
-import { dyeRef, FACE, FREE_HAIR_COLOURS, PALETTE, PART_BY_ID, partColor, partRef, partsIn, randomLook, STARTER_PARTS, wear, type CharacterLook, type PartSlot } from "@/lib/game/character/look";
+import { dyeRef, FACE, FREE_HAIR_COLOURS, hairAccentHex, PALETTE, PART_BY_ID, partColor, partRef, partsIn, randomLook, STARTER_PARTS, wear, type CharacterLook, type PartSlot } from "@/lib/game/character/look";
 import styles from "./CharacterCreator.module.css";
 
 type Swatch = "skin" | "hair" | "outfit" | null;
@@ -39,13 +39,17 @@ const TABS: Tab[] = [
     on: (l, id) => l.brows === id || l.extras.includes(id!), name: id => ({ brow_soft: "Soft brows", brow_flat: "Flat brows", blush: "Blush", mole: "Mole", freckles: "Freckles" } as Record<string, string>)[id!] ?? FACE.names[id!] ?? id!,
   },
   slotTab("bangs", "Bangs", ["bangs"], "head", "hair"),
-  slotTab("back", "Back hair", ["back"], "head", "hair"),
+  { ...slotTab("back", "Back hair", ["back"], "head", "hair"), items: partsIn("back").filter(p => !p.full).map(p => p.id) },
+  // head fit: whole hairstyles (David's own set) in the back slot; the bangs come off while one is worn
+  { ...slotTab("hairstyle", "Hairstyles", ["back"], "head", "hair"), items: partsIn("back").filter(p => p.full).map(p => p.id) },
   slotTab("top", "Tops", ["top"], "body", "outfit"),
   slotTab("bottom", "Bottoms & one-pieces", ["bottom", "onepiece"], "body", "outfit"),
   slotTab("shoes", "Shoes", ["shoes"], "body", "outfit", [null]),
   slotTab("accessory", "Accessories", ["accessory"], "head", "outfit"),
 ];
-const WARDROBE_TABS = ["bangs", "back", "top", "bottom", "shoes", "accessory"];
+const WARDROBE_TABS = ["bangs", "back", "hairstyle", "top", "bottom", "shoes", "accessory"];
+/** Tabs where a two-tone hairstyle's accent colour can be picked too. */
+const HAIR_TABS = new Set(["bangs", "back", "hairstyle"]);
 /** Face cells have sheet codes for names ("Eyes F1.1"): said as their place in the row instead. */
 const spoken = (tab: Tab, id: string | null, items: (string | null)[]) => (tab.id === "eyes" || tab.id === "mouth" ? `${tab.label}, style ${items.indexOf(id) + 1} of ${items.length}` : tab.name(id));
 const PAGE = 8;
@@ -142,6 +146,14 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
     });
   };
   const swatches = !tab.swatch ? [] : tab.swatch === "hair" && mode === "create" ? PALETTE.hair.slice(0, FREE_HAIR_COLOURS) : PALETTE[tab.swatch];
+  const backPart = PART_BY_ID.get(look.back);
+  const accentPart = HAIR_TABS.has(tab.id) && backPart?.full && backPart.accent ? backPart : null;
+  const accentHex = accentPart ? hairAccentHex(look, accentPart) : null;
+  const paintAccent = (i: number) => {
+    const locked = !hasHair(i);
+    setLockNote(locked ? "That colour is a hair dye from the shop." : null);
+    if (!locked) setLook(l => ({ ...l, hairAccent: i }));
+  };
   const swatchOn = (i: number) => tab.swatch === "skin" ? look.skin === i : tab.swatch === "hair" ? look.hair === i : target !== null && partColor(look, target) === i;
   const confirm = async (final: CharacterLook) => {
     setSaving(true);
@@ -189,6 +201,13 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
           const locked = tab.swatch === "hair" && !hasHair(i);
           return <button key={hex} style={{ background: hex }} aria-pressed={swatchOn(i)} aria-label={`${tab.swatch} colour ${i + 1}${locked ? " (hair dye in the shop)" : ""}`}
             data-locked={locked || undefined} disabled={tab.swatch === "outfit" && !target} onClick={() => paint(i)} />;
+        })}
+      </div>}
+      {accentPart && <div className={styles.swatches} role="group" aria-label="accent colours">
+        {swatches.map((hex, i) => {
+          const locked = !hasHair(i);
+          return <button key={hex} style={{ background: hex }} aria-pressed={accentHex === hex} aria-label={`accent colour ${i + 1}${locked ? " (hair dye in the shop)" : ""}`}
+            data-locked={locked || undefined} onClick={() => paintAccent(i)} />;
         })}
       </div>}
       <div className={styles.actions}>
