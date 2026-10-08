@@ -19,6 +19,8 @@ import type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
 import { createRemoteSample, type RemoteEntry, type RemoteEvent, type RemoteSample } from "@/lib/net/types";
 import { FULL, HIDDEN, LOD, createLodEntry, type LodEntry } from "./lod";
 import { createFxState, type FxState } from "./fx";
+import { FX_BENCH, fxOn } from "@/lib/game/perf/fxBench";
+import { isEmoteClip } from "@/lib/net/protocol";
 
 /** What remotes stand on: the scene's walk world (movement's `top` and `wet`). Interiors are flat. */
 export interface GroundWorld { top(x: number, z: number): number; wet(x: number, z: number): boolean }
@@ -94,8 +96,11 @@ export type JuiceSink = (r: RemoteRig, e: RemoteEvent, i: number) => void;
  * `upper`) on any drawn tier, an afterimage and the juice at Full only; Hidden plays none (they'd play late on coming
  * back), but its state keeps up so it reappears in the right pose.
  */
-export function driveRig(r: RemoteRig, now: number, world: GroundWorld, juice: JuiceSink | null): RemoteSample {
-  const s = r.entry.sample(now, r.sample), m = r.motion, tier = r.lod.tier;
+export function driveRig(r: RemoteRig, now: number, world: GroundWorld, juice: JuiceSink | null,
+  /** Development (the effect bench, benchFx.ts): rewrites the sample before it is used. */
+  place?: ((s: RemoteSample) => void) | null): RemoteSample {
+  const s = FX_BENCH ? benchSample(r, now) : r.entry.sample(now, r.sample), m = r.motion, tier = r.lod.tier;
+  if (FX_BENCH && place) place(s);
   const groundY = Math.min(s.y, floorUnder(r, world, s.x, s.z));
   r.groundY = groundY;
   r.feet.current.set(s.x, s.y, s.z);
@@ -111,14 +116,14 @@ export function driveRig(r: RemoteRig, now: number, world: GroundWorld, juice: J
   m.move = seated ? null : s.move;
   m.speed = seated || (s.move !== null && !GROUND_MOVES.has(s.move)) ? 0 : Math.hypot(s.vx, s.vz);
   m.air = s.air;
-  m.leaf = s.leaf;
+  m.leaf = !FX_BENCH || fxOn("leaf") ? s.leaf : 0;
   m.lift = seated ? s.lift : s.y - groundY;
   for (let i = 0; i < s.eventCount; i++) {
     const e = s.events[i];
     switch (e.kind) {
-      case "play": if (tier !== HIDDEN && knownClip(e.value)) { if (seated) m.upper = e.value; else m.play = e.value; } break;
+      case "play": if (tier !== HIDDEN && knownClip(e.value) && (!FX_BENCH || fxOn("emotes") || !isEmoteClip(e.value))) { if (seated) m.upper = e.value; else m.play = e.value; } break;
       case "upper": if (tier !== HIDDEN && knownClip(e.value)) m.upper = e.value; break;
-      case "ghost": if (tier === FULL) m.ghost = true; break;
+      case "ghost": if (tier === FULL && (!FX_BENCH || fxOn("ghost"))) m.ghost = true; break;
       case "stop": m.stop = true; break;
       default: if (tier === FULL && juice) juice(r, e, i);
     }
@@ -134,7 +139,7 @@ export function driveRig(r: RemoteRig, now: number, world: GroundWorld, juice: J
 export function gateMixer(r: RemoteRig, dt: number): void {
   const tier = r.lod.tier, m = r.motion, a = r.anchor.current, shown = tier !== HIDDEN;
   if (a && a.visible !== shown) a.visible = shown;
-  r.dust.current = tier === FULL ? m : null;
+  r.dust.current = tier === FULL && (!FX_BENCH || fxOn("dust")) ? m : null;
   if (!shown) { r.live.current = null; r.mixerT = 0; return; }
   // Full, and anyone with the leaf open: HeldLeaf places the leaf from the motion every frame (null hides it).
   if (tier === FULL || (m.leaf ?? 0) > 0.01) { m.rate = 1; r.live.current = m; r.mixerT = 0; return; }
@@ -143,6 +148,17 @@ export function gateMixer(r: RemoteRig, dt: number): void {
   m.rate = dt > 0 ? Math.min(r.mixerT, 0.2) / dt : 1;
   r.live.current = m;
   r.mixerT = 0;
+}
+
+/**
+ * Development (the effect bench): the interpolated sample, or with `interp` off the last one held still (no events),
+ * so the bench can price the interpolation itself.
+ */
+const sampled = new WeakSet<RemoteRig>();
+function benchSample(r: RemoteRig, now: number): RemoteSample {
+  if (fxOn("interp") || !sampled.has(r)) { sampled.add(r); return r.entry.sample(now, r.sample); }
+  r.sample.eventCount = 0; r.sample.snapped = false;
+  return r.sample;
 }
 
 let castOn = false;

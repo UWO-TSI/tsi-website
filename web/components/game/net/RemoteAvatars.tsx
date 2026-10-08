@@ -32,6 +32,9 @@ import RemoteAuras, { AuraStore, showsAura } from "./RemoteAuras";
 import Nameplates, { PlatePool } from "./Nameplates";
 import { projectCurved } from "./projection";
 import { RigStore } from "./rigs";
+import { FX_BENCH, fxForced, fxFormation, fxOn, useFxBench } from "@/lib/game/perf/fxBench";
+import type { RemoteSample } from "@/lib/net/types";
+import { forceJuice, forceMotion, placeInFormation, resetFormation } from "./benchFx";
 
 /** Indoors (interiorShared's walker, PLAYER_SPEED) people walk at 4.6: the Walk clip keeps their pace there. */
 const INDOOR_WALK = 4.6, WALK = 7.4;
@@ -61,7 +64,7 @@ function FxHost({ into }: { into: Particles }) {
 function juiceFor(particles: Particles, ground: FxGround): JuiceSink {
   return (r, e, i) => {
     const p = particles.current;
-    if (!p) return;
+    if (!p || (FX_BENCH && !fxOn("juice"))) return;
     const s = r.sample;
     remoteJuice(p.pool, ground, r.fx, e.kind, typeof e.value === "number" ? e.value : 0, s, r.groundY, r.waterY, moveAt(s, i - 1, -1), moveAt(s, i + 1, 1));
   };
@@ -89,12 +92,12 @@ function reTier(d: Driver, camera: THREE.Camera, caps: LodCaps) {
     d.body.center.set(r.sample.x, r.groundY + 0.7, r.sample.z);
     lod.inView = d.frustum.intersectsSphere(d.body);
     lod.phone = p.mobile;
-    lod.hasAura = showsAura(p);
+    lod.hasAura = FX_BENCH ? (showsAura(p) && (fxOn("auraFamily") || fxOn("auraSubclass"))) || fxForced("auraFamily") || fxForced("auraSubclass") : showsAura(p);
     d.entries[i] = lod;
   }
   assignLod(d.entries, n, caps, d.scratch);
   for (let i = 0; i < n; i++) {
-    const r = list[i], a = r.anchor.current, full = r.lod.tier === FULL;
+    const r = list[i], a = r.anchor.current, full = r.lod.tier === FULL && (!FX_BENCH || fxOn("shadows"));
     if (!a || (full && r.casting === true)) continue;
     castSunShadows(a, full);
     r.casting = full;
@@ -103,16 +106,24 @@ function reTier(d: Driver, camera: THREE.Camera, caps: LodCaps) {
   d.plates.assign(list, d.here);
 }
 
+/** Development (the effect bench's formation): who is being placed this frame, and where you and the camera are. */
+const bench = { i: 0, you: null as THREE.Vector3 | null, camera: null as THREE.Camera | null, world: null as GroundWorld | null };
+const benchPlace = (s: RemoteSample) => placeInFormation(s, bench.i, bench.you!, bench.camera!, bench.world!);
+
 /** The frame (module scope: the react compiler forbids writing through hook values). */
 function driveAll(d: Driver, source: NetSource, world: GroundWorld, juice: JuiceSink, you: THREE.Vector3, camera: THREE.Camera, caps: LodCaps, delta: number) {
   const { store } = d, reg = source.remotes, now = source.now(), dt = Math.min(delta, 0.1), pool = d.particles.current?.pool;
   let n = 0;
+  const formation = FX_BENCH && fxFormation();
+  if (formation) { bench.you = you; bench.camera = camera; bench.world = world; }
   for (let i = 0; i < reg.size; i++) {
     const e = reg.at(i), r = store.map.get(e.sid);
     if (!r) continue;
     r.entry = e;
-    const s = driveRig(r, now, world, juice);
-    if (pool && r.lod.tier === FULL) remoteDashTrail(pool, r.fx, s, r.groundY, dt);
+    bench.i = i;
+    const s = driveRig(r, now, world, juice, formation ? benchPlace : null);
+    if (FX_BENCH) { forceMotion(r, i, now / 1000, dt); if (pool) forceJuice(pool, DRY, r, i, now / 1000, dt); }
+    if (pool && r.lod.tier === FULL && (!FX_BENCH || fxOn("juice"))) remoteDashTrail(pool, r.fx, s, r.groundY, dt);
     r.lod.dist = Math.hypot(s.x - you.x, s.z - you.z);
     // Where they stand this frame, for what yields to people (the café's patrons).
     if (n < LIVE_MAX) { liveRemotes.x[n] = s.x; liveRemotes.z[n] = s.z; n++; }
@@ -157,10 +168,13 @@ export default function RemoteAvatars({ source, area, player }: { source: NetSou
   }, [driver, get]);
   useFrame(({ camera }, delta) => driveAll(driver, source, world, juice, player.current, camera, caps, delta), -3);
   const walk = INDOORS.has(area) ? INDOOR_WALK : WALK;
+  // Development (the effect bench): the plates on or off; a new block each time the formation turns on.
+  const fx = useFxBench();
+  useEffect(() => { if (FX_BENCH && !fx.formation) resetFormation(); }, [fx.formation]);
   return <>
     {rigs.map(r => <RemoteAvatar key={r.sid} rig={r} player={r.entry.player} walkSpeed={walk} dust={dusty} ground={island} />)}
     {dusty && <FxHost into={driver.particles} />}
     <RemoteAuras store={driver.auras} />
-    <Nameplates pool={driver.plates} here={driver.here} />
+    {(!FX_BENCH || !fx.off.has("plates")) && <Nameplates pool={driver.plates} here={driver.here} />}
   </>;
 }
