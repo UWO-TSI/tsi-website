@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fullHud } from "./hudPrefs";
+import { compactTouchHud, fullHud } from "./hudPrefs";
 
 describe("the clean HUD (row 283)", () => {
   const exploring = { always: false, keyHeld: false, touch: false, capture: "captured" as const };
@@ -11,5 +11,18 @@ describe("the clean HUD (row 283)", () => {
     for (const capture of ["free", "menu", "cursor", "off"] as const) expect(fullHud({ ...exploring, capture })).toBe(true);
     expect(fullHud({ ...exploring, touch: true })).toBe(true);
     expect(fullHud({ ...exploring, always: true })).toBe(true);
+  });
+  it("stands back in a cinematic moment (talking, the greeting, the boat trip), whatever else holds it open", () => {
+    expect(fullHud({ ...exploring, capture: "free", cinematic: true })).toBe(false);
+    expect(fullHud({ ...exploring, always: true, keyHeld: true, touch: true, capture: "off", cinematic: true })).toBe(false);
+    expect(fullHud({ ...exploring, capture: "free", cinematic: false })).toBe(true);
+  });
+});
+
+describe("the phone HUD (world audit item 11)", () => {
+  it("folds on a touch screen unless the setting asks for the full HUD", () => {
+    expect(compactTouchHud({ touch: true, always: false })).toBe(true);
+    expect(compactTouchHud({ touch: true, always: true })).toBe(false);
+    expect(compactTouchHud({ touch: false, always: false })).toBe(false);
   });
 });

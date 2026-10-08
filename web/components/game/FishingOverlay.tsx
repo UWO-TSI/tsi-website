@@ -66,6 +66,19 @@ const REVEAL_ZOOM = 4;
 /** The wait starts when the bobber lands (tsi:fish-splash); this long after the cast it starts anyway (no bobber mounted). */
 const LANDING_FALLBACK_MS = 1600;
 
+/** The line under the card (a tip, "Watch for the bite"): a small cream pill, so it reads on sand, water and grass alike. */
+const HINT_PILL: React.CSSProperties = {
+  padding: "4px 12px",
+  borderRadius: 999,
+  background: "rgb(255 251 231 / 0.94)",
+  color: "var(--gui-ink-strong, var(--app-ink, #4A4034))",
+  boxShadow: "0 2px 6px rgba(60, 45, 20, 0.16)",
+  fontFamily: "var(--font-highlight, sans-serif)",
+  fontSize: "max(12px, var(--gui-min-text, 0px))",
+  fontWeight: 700,
+  whiteSpace: "nowrap",
+};
+
 /** `rod` (rods.ts) widens the hook window, slows the drain and adds rare luck; `tsi:fish-start` may carry `water` (fishingSpots.ts), and on the member island `site` and `from` (where the player stands) for the server roll. */
 export default function FishingOverlay({ onActiveChange, collectionScope, zoneOverride, rod = rodByTier(1) }: { onActiveChange?: (active: boolean) => void; collectionScope?: string; zoneOverride?: "river" | "sea"; rod?: RodTier }) {
   const [phase, setPhase] = useState<Phase>("idle");
@@ -477,26 +490,12 @@ export default function FishingOverlay({ onActiveChange, collectionScope, zoneOv
         </div>
       )}
       {phase === "charging" && (
-        <div
-          style={{
-            fontFamily: "var(--font-highlight, sans-serif)",
-            fontSize: "max(11px, var(--gui-min-text, 0px))",
-            color: "rgba(255,255,255,0.7)",
-            textShadow: "0 1px 3px rgba(0,0,0,0.5)",
-          }}
-        >
+        <div style={HINT_PILL}>
           {FISHING_HINTS[device].tip}
         </div>
       )}
       {(phase === "waiting" || phase === "bite" || phase === "casting") && (
-        <div
-          style={{
-            fontFamily: "var(--font-highlight, sans-serif)",
-            fontSize: "max(11px, var(--gui-min-text, 0px))",
-            color: "rgba(255,255,255,0.7)",
-            textShadow: "0 1px 3px rgba(0,0,0,0.5)",
-          }}
-        >
+        <div style={HINT_PILL}>
           {phase === "bite" ? FISHING_HINTS[device].hook : "Watch for the bite"}
         </div>
       )}

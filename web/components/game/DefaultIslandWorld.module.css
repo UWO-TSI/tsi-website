@@ -60,7 +60,7 @@
 .panel[data-open="false"] { display: none; }
 @media (pointer: coarse), (pointer: none) {
   /* Touch: the hint line is the floor; the lane and the toasts go up over the stick, the minimap stands beside it. */
-  .world { --hud-bar: 32px; --hud-lane-bottom: calc(var(--hud-stick-bottom) + 132px + var(--hud-gap)); --hud-side-bottom: var(--hud-stick-bottom); }
+  .world { --hud-bar: 32px; --hud-lane-bottom: calc(var(--hud-stick-bottom) + var(--touch-stick, 132px) + var(--hud-gap)); --hud-side-bottom: var(--hud-stick-bottom); }
   .controls { display: none; }
   .touchControls { display: block; position: absolute; bottom: var(--hud-floor); left: 50%; transform: translateX(-50%); margin: 0; padding: 8px 16px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.95); color: var(--gui-ink); white-space: nowrap; font-size: var(--gui-text-xs); font-weight: 700; box-shadow: var(--gui-shadow-sm); }
 }
@@ -382,8 +382,8 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .runeTimer { width: 320px; height: 5px; border-radius: 3px; background: #3b2f45; overflow: hidden; }
 .runeTimer span { display: block; height: 100%; background: #ffe08a; transition: width 0.1s linear; }
 /* Mouse-look (specs/camera-orbit.md): the hint while the mouse is free, and the ruins' crosshair while it looks. */
-/* On the canvas, over the scene's middle: clear of the title, the top cluster and the bottom stack at every size. */
-.lookHint { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 16px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.94); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); font-weight: 800; box-shadow: var(--gui-shadow-sm); pointer-events: none; white-space: nowrap; zoom: var(--tsi-text-scale, 1); }
+/* Top centre, between the title and the top cluster: clear of the bottom stack and of the bubbles and plates over heads (world audit item 2). */
+.lookHint { position: absolute; top: max(24px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 16px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.94); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); font-weight: 800; box-shadow: var(--gui-shadow-sm); pointer-events: none; white-space: nowrap; zoom: var(--tsi-text-scale, 1); }
 .crosshair { position: absolute; top: 50%; left: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; fill: none; stroke: #f8f3df; stroke-width: 1.4; filter: drop-shadow(0 0 1.2px #1b2a2acc); opacity: 0.85; }
 .crosshair circle + circle { fill: #f8f3df; stroke: none; }
 /* The clean HUD (row 283): the objective slides in when it changes and fades after; the place name fades after a scene comes in. */
@@ -448,3 +448,27 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .mash > span i { background: var(--gui-sage); }
 /* A boat trip (arrival-wharf.md §3): the HUD's buttons stand back while it plays; the trip's own hint is the only prompt. */
 .world[data-trip] .bagButtons, .world[data-trip] .decorateToggle { opacity: 0; pointer-events: none; transition: opacity 0.4s ease; }
+/* Talking, the greeting and the trip (world audit item 7): everything but the dialogue or the trip's Skip stands back. */
+.world[data-cinematic] .bagButtons, .world[data-cinematic] .decorateToggle, .world[data-cinematic] .minimap, .netHud[data-hidden] { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.3s ease, visibility 0s linear 0.3s; }
+.bagButtons, .decorateToggle, .minimap, .netHud { transition: opacity 0.3s ease, visibility 0s; }
+
+/* ── A phone's folded HUD (world audit item 11) ─────────────────────────────────────────────────────────────────────
+   Touch keeps the full HUD's buttons but folds them: Bag, Collection and Map open from one menu button top left, the
+   place name sits beside it and fades after a scene comes in, the touch hint flashes with it. */
+.menuButton { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: var(--gui-paper); color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-md); cursor: pointer; zoom: var(--tsi-text-scale, 1); }
+.menuButton[aria-expanded="true"] { background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 2px var(--gui-paper-edge); }
+.world[data-compact] .bagButtons { top: max(14px, env(safe-area-inset-top)); left: var(--hud-edge); flex-direction: column; align-items: flex-start; }
+.world[data-compact] .heading { top: calc(max(14px, env(safe-area-inset-top)) + 6px); left: calc(var(--hud-edge) + 56px); }
+/* Narrow: the top cluster's buttons share that row, so the place name drops just under the menu button. */
+@media (max-width: 700px) { .world[data-compact] .heading { top: calc(max(14px, env(safe-area-inset-top)) + 54px); left: var(--hud-edge); } }
+.touchControls[data-flash="out"] { animation: hintFade 0.32s ease-in forwards; }
+@keyframes hintFade { to { opacity: 0; } }
+:global(html[data-contrast="high"]) .world .menuButton { background: #000000; color: #ffffff; box-shadow: 0 0 0 2px #ffffff; }
+/* A phone on its side: the controls size from the short side, the stick moves to the corner with the map above it, and
+   the world no longer insists on 480px of height (it ran the stick and buttons off the bottom). */
+@media (pointer: coarse) and (max-height: 430px) {
+  .world { min-height: 0; --touch-stick: 104px; --touch-scale: 0.78; --hud-floor: max(10px, env(safe-area-inset-bottom)); --hud-stick-bottom: calc(var(--hud-floor) + 30px);
+    --hud-stick-left: var(--hud-edge); --hud-side-bottom: calc(var(--hud-stick-bottom) + var(--touch-stick) + var(--hud-gap)); }
+  .world[data-compact] .heading p { display: none; }
+}
+

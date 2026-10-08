@@ -1,6 +1,12 @@
 /* Top cluster (hud-first-login §2): the GUI sheet's paper chips and round buttons (row 285), top right. */
 .cluster { position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 8px; z-index: 14; color: var(--gui-ink-strong); zoom: var(--tsi-text-scale, 1); }
 .chips, .buttons { display: flex; align-items: center; gap: 8px; }
+/* The caller's buttons: laid out as the cluster's own, kept mounted (display: none) in the clean HUD. */
+.more { display: contents; }
+.more[data-hidden] { display: none; }
+/* A cinematic moment (world audit item 7): the cluster fades out and can't be focused or clicked. */
+.cluster { transition: opacity 0.3s ease, visibility 0s; }
+.cluster[data-hidden] { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.3s ease, visibility 0s linear 0.3s; }
 .chip { position: relative; display: flex; align-items: center; gap: 7px; height: 44px; box-sizing: border-box; padding: 0 15px; border: 0; border-radius: 999px; background: rgb(255 251 231 / 0.96); box-shadow: var(--gui-shadow-md); font-size: var(--gui-text-md); font-weight: 700; white-space: nowrap; }
 .chip b { font-weight: 900; font-variant-numeric: tabular-nums; }
 /* The coins open the wallet: the chip is a button that lifts a touch under the pointer. */
