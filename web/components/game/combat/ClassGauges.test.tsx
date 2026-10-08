@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -34,5 +35,17 @@ describe("the kits' HUD gauges (ClassGauges)", () => {
     const spun = html(rt);
     expect(spun).toContain("Cocking… · 8 s");
     expect(spun.match(/background:#ffd27a/g)?.length).toBe(2); // the warhead looks like the golden ones
+  });
+});
+
+describe("the gauges' type (UI audit 2026-10 item 12)", () => {
+  const css = readFileSync(new URL("./ClassGauges.module.css", import.meta.url), "utf8");
+  it("is the kit's face through its variable, not a literal family next/font never registers", () => {
+    expect(css).not.toMatch(/IBM Plex Mono|monospace/);
+    expect(css).toMatch(/var\(--gui-font\)/);
+  });
+  it("is never under the kit's 12 px floor", () => {
+    const sizes = [...css.matchAll(/font(?:-size)?:[^;]*?\b(\d+(?:\.\d+)?)px/g)].map(m => Number(m[1]));
+    expect(sizes.filter(px => px < 12)).toEqual([]);
   });
 });
