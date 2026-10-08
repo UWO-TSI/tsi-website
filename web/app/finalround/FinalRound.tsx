@@ -74,6 +74,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
   const testStart = useRef(0);
   const keyTimes = useRef<number[]>([]);
   const lastAttempt = useRef({ active: false, typed: 0 });
+  const lastSubmit = useRef(0);
   const shakeCtl = useAnimationControls();
   const [scrollDark, setScrollDark] = useState(0);
   const [timeUp, setTimeUp] = useState(false);
@@ -142,8 +143,10 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
       const now = performance.now();
       // On the last attempt, don't run out before they start typing.
       const la = lastAttempt.current;
-      const target = la.active && la.typed === 0 && vLeft.current < 7000 ? Math.min(rateTarget.current, 0.3) : rateTarget.current;
-      rate.current += (target - rate.current) * (la.active && la.typed > 0 ? 0.4 : 0.15);
+      const crawl = la.active && la.typed === 0 && vLeft.current < 8500;
+      const target = crawl ? Math.min(rateTarget.current, 0.35) : rateTarget.current;
+      // Drift slowly between attempts so the change isn't noticeable; react fast on the last one.
+      rate.current += (target - rate.current) * (la.active ? (crawl ? 0.25 : 0.4) : 0.035);
       vLeft.current -= (now - lastReal.current) * rate.current;
       lastReal.current = now;
       const sec = Math.max(0, Math.ceil(vLeft.current / 1000));
@@ -176,10 +179,12 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
       rateTarget.current = clamp(secsLeft / realLeft, typed === 0 ? 0.3 : 1, 14);
     } else if (done >= 1) {
       const avgGuess = (now - testStart.current) / done / 1000;
-      // Aim to reach the last attempt with about 9 seconds on the clock.
+      // Aim to reach the last attempt with about 10 seconds on the clock,
+      // only allowing the clock to get slightly faster after each attempt.
+      const lastGuess = (now - (lastSubmit.current || testStart.current)) / 1000;
+      const pace = Math.max(avgGuess, lastGuess);
       const attemptsLeft = MAX_ATTEMPTS - done;
-      const realLeft = avgGuess * (attemptsLeft - 1);
-      rateTarget.current = clamp((secsLeft - 9) / realLeft, 0.4, 1.7);
+      rateTarget.current = clamp((secsLeft - 10) / (pace * (attemptsLeft - 1)), 0.45, 1 + 0.15 * done);
     }
   };
 
@@ -218,6 +223,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
       rate.current = 1;
       rateTarget.current = 1;
       testStart.current = performance.now();
+      lastSubmit.current = 0;
       setRemaining(TIME_LIMIT_SECONDS);
       setPhase("test");
       window.setTimeout(() => inputRef.current?.focus(), 450);
@@ -260,6 +266,7 @@ export default function FinalRound({ invite }: { invite?: Invite }) {
     keyTimes.current = [];
     lastAttempt.current = { active: next.length >= MAX_ATTEMPTS - 1, typed: 0 };
     calibrate(next.length, 0);
+    lastSubmit.current = performance.now();
     shakeCtl.start({ x: [0, -12, 10, -7, 4, 0], transition: { duration: 0.42 } });
     inputRef.current?.focus();
     buzz(g === CODE_LENGTH - 1 ? [20, 30, 60] : 25);
