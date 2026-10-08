@@ -19,7 +19,7 @@ import { SignInText } from "@/components/gui/SignIn";
 import { inTopDialog, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { mentionsSignIn } from "@/lib/game/signIn";
 import { iconUrl } from "@/lib/icons/keys";
-import { dyeRef, FACE, FACE_ATLAS_URLS, FREE_HAIR_COLOURS, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, partRef, randomLook, STARTER_PARTS,
+import { dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR_COLOURS, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, partRef, randomLook, STARTER_PARTS,
   type CharacterLook, type FaceCell, type Placement } from "@/lib/game/character/look";
 import { CATEGORIES, choose, colourTarget, isOn, optionName, type Category, type Section } from "@/lib/game/character/creatorCategories";
 import { holdCreatorOpen } from "@/lib/game/character/creatorPresence";
@@ -268,8 +268,14 @@ const MIN_SPAN = { eyes: 0.5, brows: 0.5, mouth: 0.3, extras: 0.62 } as const;
 function FaceArt({ layer, id, look }: { layer: "eyes" | "brows" | "mouth" | "extras"; id: string; look: CharacterLook }) {
   const L = FACE.layers, A = FACE.anchors;
   const pieces: { cell: FaceCell; anchor: [number, number]; mirror: boolean }[] = [];
-  if (layer === "eyes") { const c = L.eyes.items[id]?.open; if (c) pieces.push({ cell: c, anchor: A.eye, mirror: true }); }
-  else if (layer === "brows") { const c = L.brows.items[id]; if (c) pieces.push({ cell: c, anchor: A.brow, mirror: true }); }
+  if (layer === "eyes") {
+    // David's pairs (face set 305): two cells (the canvas-right eye its own `left` cell) or one cell on the centre line
+    const it = L.eyes.items[id];
+    if (it?.left === null) pieces.push({ cell: it.open, anchor: A.eye_pair, mirror: false });
+    else if (it?.left) pieces.push({ cell: it.open, anchor: A.eye, mirror: false }, { cell: it.left, anchor: A.eye_left, mirror: false });
+    else if (it) pieces.push({ cell: it.open, anchor: A.eye, mirror: true });
+  }
+  else if (layer === "brows") { const c = L.brows.items[id]; if (c?.[2]) pieces.push({ cell: c, anchor: A.brow, mirror: true }); }   // brow_none: an empty cell
   else if (layer === "mouth") { const c = L.mouth.items[id]; if (c) pieces.push({ cell: c, anchor: A.mouth, mirror: false }); }
   else { const it = L.extras.items[id]; if (it) pieces.push({ cell: it.cell, anchor: A[it.anchor], mirror: it.mirror }); }
   const k = 1 / FACE.density;
@@ -277,21 +283,21 @@ function FaceArt({ layer, id, look }: { layer: "eyes" | "brows" | "mouth" | "ext
     const [, , w, h, ax, ay] = p.cell, u0 = p.anchor[0] - ax * k, w0 = p.anchor[1] - ay * k, r = { cell: p.cell, u0, w0, u1: u0 + w * k, w1: w0 + h * k, flip: false };
     return p.mirror ? [r, { ...r, u0: 1 - r.u1, u1: 1 - r.u0, flip: true }] : [r];
   });
-  if (!rects.length) return null;
+  if (!rects.length) return <span className={styles.face} style={{ "--skin": PALETTE.skin[look.skin] } as CSSProperties} />;
   // The view: the parts' bounds with a little room, square, centred.
   const u0 = Math.min(...rects.map(r => r.u0)), u1 = Math.max(...rects.map(r => r.u1)), w0 = Math.min(...rects.map(r => r.w0)), w1 = Math.max(...rects.map(r => r.w1));
   const span = Math.max(u1 - u0, w1 - w0, MIN_SPAN[layer]) * 1.18, cu = (u0 + u1) / 2, cw = (w0 + w1) / 2;
-  const [W, H] = FACE.atlas_size, pct = (v: number) => `${(v * 100).toFixed(3)}%`;
+  const pct = (v: number) => `${(v * 100).toFixed(3)}%`;
   const tint = layer === "brows" && L.brows.tint === "hair" ? PALETTE.hair[look.hair] : null;
   return <span className={styles.face} style={{ "--skin": PALETTE.skin[look.skin] } as CSSProperties}>
     {rects.map((r, i) => {
-      const [x, y, w, h] = r.cell;
+      const [x, y, w, h, , , page] = r.cell, [W, H] = page ? FACE.atlas2_size : FACE.atlas_size;
       // The cell's box in the tile, and the atlas scaled so the cell fills it.
       const box: CSSProperties = {
         left: pct((r.u0 - (cu - span / 2)) / span), top: pct((r.w0 - (cw - span / 2)) / span), width: pct((r.u1 - r.u0) / span), height: pct((r.w1 - r.w0) / span),
         transform: r.flip ? "scaleX(-1)" : undefined,
       };
-      const art = `url(${FACE_ATLAS_URLS.world})`, size = `${(W / w) * 100}% ${(H / h) * 100}%`, at = `${(x / (W - w)) * 100}% ${(y / (H - h)) * 100}%`;
+      const art = `url(${page ? FACE_ATLAS2_URLS.world : FACE_ATLAS_URLS.world})`, size = `${(W / w) * 100}% ${(H / h) * 100}%`, at = `${(x / (W - w)) * 100}% ${(y / (H - h)) * 100}%`;
       return <i key={i} style={{ ...box, ...(tint
         ? { backgroundColor: tint, maskImage: art, WebkitMaskImage: art, maskSize: size, WebkitMaskSize: size, maskPosition: at, WebkitMaskPosition: at, maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat" }
         : { backgroundImage: art, backgroundSize: size, backgroundPosition: at }) }} />;
