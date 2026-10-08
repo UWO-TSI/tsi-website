@@ -459,6 +459,8 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .menuButton[aria-expanded="true"] { background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 2px var(--gui-paper-edge); }
 .world[data-compact] .bagButtons { top: max(14px, env(safe-area-inset-top)); left: var(--hud-edge); flex-direction: column; align-items: flex-start; }
 .world[data-compact] .heading { top: calc(max(14px, env(safe-area-inset-top)) + 6px); left: calc(var(--hud-edge) + 56px); }
+/* Narrow: the top cluster's buttons share that row, so the place name drops just under the menu button. */
+@media (max-width: 700px) { .world[data-compact] .heading { top: calc(max(14px, env(safe-area-inset-top)) + 54px); left: var(--hud-edge); } }
 .touchControls[data-flash="out"] { animation: hintFade 0.32s ease-in forwards; }
 @keyframes hintFade { to { opacity: 0; } }
 :global(html[data-contrast="high"]) .world .menuButton { background: #000000; color: #ffffff; box-shadow: 0 0 0 2px #ffffff; }
