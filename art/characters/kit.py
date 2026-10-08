@@ -13,6 +13,8 @@ BASE = os.path.join(HERE, "base")
 sys.path.insert(0, BASE)
 from head_shape import HC, hair_point, INNER, hair_vol, hairline  # noqa: E402
 import body_shape as body  # noqa: E402
+sys.path.insert(0, os.path.join(HERE, "skull"))
+from skull import VERSION as SKULL_VERSION  # noqa: E402  (head fit: head pieces record the skull they are fitted to)
 
 PAL = json.load(open(os.path.join(HERE, "palette.json")))
 TAU = math.tau
@@ -432,7 +434,7 @@ def seam_off(lat):
     return CAP_MIN * hair_vol(lat)
 
 
-def hair_cap(bottom, vol=1.0, hem=0.009, tips=None, side=None, lons=None, top=None, outer=None):
+def hair_cap(bottom, vol=1.0, hem=0.009, tips=None, side=None, lons=None, top=None, outer=None, outer_ll=None):
     """Closed crown cap on the scalp: the face window open below the hairline, sides and back down to bottom(lon) lat,
     outer surface on hair_vol x vol, tapering to seam_off at the front edge and to `hem` at the bottom edge (side =
     fixed offset for the rows above the hem, e.g. an undercut), underside tucked into the scalp. Rows: hem, two
@@ -454,7 +456,8 @@ def hair_cap(bottom, vol=1.0, hem=0.009, tips=None, side=None, lons=None, top=No
         return [bt, bt + (hl - bt) / 3, bt + (hl - bt) * 2 / 3] + up
 
     def off(lat, lon, ri):
-        v = outer(lat) if outer else hair_vol(lat) * vol       # outer(lat): the v7 lock hair's under-cap (avatar v7)
+        v = outer_ll(lat, lon) if outer_ll else outer(lat) if outer else hair_vol(lat) * vol   # outer(lat): the v7 lock
+        #  hair's under-cap (avatar v7); outer_ll(lat, lon): an under-cap that changes round the head (head fit)
         if ri == 0:
             return hem
         if ri in (1, 2):
@@ -472,7 +475,7 @@ def hair_cap(bottom, vol=1.0, hem=0.009, tips=None, side=None, lons=None, top=No
     grid = pc.patch(base, rows, off, skip=win, wrap=True,
                     tips=(lambda i, la, lb: None if max(abs(la), abs(lb)) < WINDOW else tips(i, la, lb, cmid(la, lb))) if tips else None)
     if not top:
-        apex = pc.hv(90, 0, outer(90) if outer else hair_vol(90) * vol)
+        apex = pc.hv(90, 0, outer_ll(90, 0) if outer_ll else outer(90) if outer else hair_vol(90) * vol)
         for i in range(len(lons) - 1):
             pc.f([grid[i][-1], grid[i + 1][-1], apex], HC)
     pc.close_fan(pc.since(n0), lambda v: hair_point(*pc.sph[v], INNER))
@@ -566,6 +569,7 @@ def build_parts(parts, rig, section, subdir, images=None, max_tris=300):
             "decalSlot": {"material": "M_Decal", "uv": [0, 0, 1, 1], "alphaMode": "MASK"} if m.get("decal") else None,
             "hidesBackHair": m.get("hidesBackHair", False), "hides": list(m.get("hides", [])),
             **{key: m[key] for key in ("group", "variantOf", "item") if key in m},
+            **({"skull": SKULL_VERSION} if m.get("group") in ("head", "face") else {}),
         })
         unused = set(spec["mats"]) - set(used)
         limit = HEADWEAR_TRIS if m.get("group") == "head" else max_tris

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { SKULL, SKULL_ANCHORS, skullAnchor, type SkullAnchor } from "./skull";
+import { PARTS } from "./look";
 
 const web = join(__dirname, "../../..");
 
@@ -47,5 +48,10 @@ describe("the shared skull", () => {
   it("lays the shells outward: hair undersides under the scalp, lock tops over the hair volume", () => {
     expect(SKULL.shells.inner).toBeLessThan(0);
     SKULL.shells.hair_outer.forEach(([lat, off], i) => expect(off, `lat ${lat}`).toBeGreaterThan(SKULL.shells.hair_vol[i][1]));
+  });
+  it("has every hairstyle, hat and face accessory fitted to this skull (refit them after a skull change)", () => {
+    const onHead = PARTS.filter(p => p.slot === "bangs" || p.slot === "back" || p.group === "head" || p.group === "face");
+    expect(onHead.length).toBeGreaterThan(30);
+    for (const p of onHead) expect((p as { skull?: string }).skull, p.id).toBe(SKULL.version);
   });
 });

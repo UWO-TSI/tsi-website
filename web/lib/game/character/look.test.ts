@@ -16,7 +16,7 @@ describe("character catalogue", () => {
     for (const p of PARTS) expect(existsSync(join(web, "public/assets/characters/v6", p.glb)), p.glb).toBe(true);
     for (const f of [BASE_URL, FACE_ATLAS_URLS.creator, FACE_ATLAS_URLS.world]) expect(existsSync(join(web, "public", f)), f).toBe(true);
     expect(existsSync(join(web, "public/assets/characters/v6/decal_tsi_mark.png"))).toBe(true);
-    expect(BASE_URL).toMatch(/v7_clips\.glb$/); // the hand-modeled v7 head (avatar v7)
+    expect(BASE_URL).toMatch(/v8_clips\.glb$/); // the v8 head on the shared skull (head fit, row 304)
   });
   it("ships a LOD 1 for every part and the base skin, lighter than the full (art/characters/build_lod.py)", () => {
     const lod = JSON.parse(readFileSync(join(art, "lod1/lod.json"), "utf8")) as Record<string, { tris: number; lod1: number }>;

@@ -30,8 +30,8 @@ COVER = 0.004
 KEEP = 120
 SHARP = math.radians(40.0)
 PROTECT = {"M_Face", "M_Decal"}
-# The v7 head's skin stays whole: the painted face (M_Face) is a shell over it that a decimated head would cut through.
-PROTECT_OBJECTS = ("V7_Head",)
+# The head's skin stays whole: the painted face (M_Face) is a shell over it that a decimated head would cut through.
+PROTECT_OBJECTS = ("V7_Head", "V8_Head")
 
 
 def ntris(ob):

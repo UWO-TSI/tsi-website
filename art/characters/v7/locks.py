@@ -218,7 +218,8 @@ class Surface:
 
 
 ROOT_DEPTH = 0.003      # every root ring sits this far under the skin: buried whatever hair covers it
-HUG_DEPTH = 0.001       # a lock resting on the head: its underside and edges this far under the skin
+HUG_DEPTH = 0.0006      # a lock resting on the head: its underside and edges this far under the skin (head fit: 1 mm put
+                        # the side faces of hugging locks 2.2 mm under the v8 head's fuller cheeks)
 HUG_FROM, HUG_FULL = 0.03, 0.018   # the lock's spine height over the scalp where hugging starts / is complete
 
 

@@ -609,8 +609,7 @@
   ],
   "hat": [
    "top",
-   "crown",
-   "hat_C"
+   "crown"
   ]
  },
  "clearance": {
@@ -620,12 +619,21 @@
   "hat_gap_max": 0.01,
   "hat_poke_max": 0.002,
   "ear_top_lat": -9.51,
-  "hair_reach": {
-   "up": 0.12,
-   "down": 0.42,
-   "front": 0.24,
-   "back": 0.3,
-   "side": 0.3
+  "reach": {
+   "hair": {
+    "up": 0.15,
+    "down": 0.72,
+    "front": 0.3,
+    "back": 0.36,
+    "side": 0.34
+   },
+   "hat": {
+    "up": 0.16,
+    "down": 0.36,
+    "front": 0.42,
+    "back": 0.42,
+    "side": 0.42
+   }
   }
  }
 }

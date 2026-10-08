@@ -655,7 +655,7 @@ ledges, ledge_at = {}, {}
 # a piece's surface under the scalp (buried lock roots, the hidden closing fan at the head centre) is no seam edge
 OUTER = {pid: np.where(o < R_SCALP - 0.006, np.nan, o) for pid, (_, o) in tables.items()}
 for b in (p["id"] for p in CAT["hair"] if p["slot"] == "bangs"):
-    for k in (p["id"] for p in CAT["hair"] if p["slot"] == "back"):
+    for k in (p["id"] for p in CAT["hair"] if p["slot"] == "back" and not p.get("full")):   # a full style has no bangs
         ledges[f"{b}+{k}"], ledge_at[f"{b}+{k}"] = seam_step(OUTER[b], OUTER[k])
 worst_pair = max(ledges, key=ledges.get)
 seam = {"ledge_max": ledges[worst_pair], "worst_pair": worst_pair, "worst_at": ledge_at.get(worst_pair),
@@ -773,7 +773,7 @@ for part in CAT["hair"] + [a for a in CAT["accessories"] if kind_of(a) == "hat"]
     # clip: v7 lock pieces have their own lock-by-lock dive check (root zones are buried on purpose)
     rec["clip"], rec["clip_at"] = (None, None) if pid in V7_LOCKS else clip_depth(groups)
     floats, uncovered = {}, []
-    for name in SK.COVERS[kind]:
+    for name in part.get("covers") or SK.COVERS[kind]:
         vals = []
         for k in neighbours(ANCHOR_RAYS[name]):
             base = R_SCALP[k] + (hair_outer(LAT[k]) if kind == "hat" else 0.0)
