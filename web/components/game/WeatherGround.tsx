@@ -17,6 +17,7 @@ import { WORLD_SNOW } from "@/lib/game/modelMaterials";
 import { Surface, waterHeightAt, worldToCellX, worldToCellZ, type IslandMap } from "@/lib/game/grid";
 import { inPuddle, newTrail, printOpacity, rainLandings, stepTrail, type Print, type Trail } from "@/lib/game/weatherGround";
 import { walkers } from "@/lib/game/footprintWalkers";
+import { GROUND_TOP_ORDER } from "./grid/GridTerrain";
 
 type Ground = (x: number, z: number) => number;
 export interface GroundSite {
@@ -102,6 +103,13 @@ function printMaterial(): THREE.MeshStandardMaterial {
   return m;
 }
 
+/**
+ * After every ground layer (GridTerrain groundRenderOrder). The beach and the paths are see-through overlays that do not
+ * write depth, so prints drawn before them were painted over: no prints in snow on sand or a path (audit 2026-10 world
+ * item 15).
+ */
+export const PRINT_ORDER = GROUND_TOP_ORDER + 1;
+
 interface PrintSlot { x: number; z: number; y: number; yaw: number; left: boolean; born: number; frame: number }
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _e = new THREE.Euler();
 const _print: Print = { x: 0, z: 0, yaw: 0, left: false };
@@ -111,9 +119,10 @@ const prints = { slots: [] as PrintSlot[], trails: new Map<string, Trail>(), nex
 function stamp(id: string, x: number, z: number) {
   let trail = prints.trails.get(id);
   if (!trail) prints.trails.set(id, trail = newTrail());
-  const p = stepTrail(trail, x, z, _print), site = prints.site!;
-  if (!p) return;
-  const s = site.surface ? site.surface(p.x, p.z) : Surface.Grass;
+  stepTrail(trail, x, z, _print, leavePrint);
+}
+function leavePrint(p: Print) {
+  const site = prints.site!, s = site.surface ? site.surface(p.x, p.z) : Surface.Grass;
   if (s === Surface.Wood || s === Surface.River || s === Surface.Void) return;
   const slot = prints.slots[prints.next];
   prints.next = (prints.next + 1) % prints.slots.length;
@@ -152,7 +161,7 @@ function SnowFootprints({ site }: { site: GroundSite }) {
   const mesh = useRef<THREE.InstancedMesh>(null);
   const slots = useRef(Array.from({ length: MAX_PRINTS }, (): PrintSlot => ({ x: 0, z: 0, y: -100, yaw: 0, left: false, born: 0, frame: 0 })));
   useFrame(() => { if (mesh.current) tickPrints(mesh.current, attr, slots.current, site, WORLD_SNOW.value >= 0.5); });
-  return <instancedMesh ref={mesh} args={[geometry, material, MAX_PRINTS]} frustumCulled={false} receiveShadow renderOrder={2} />;
+  return <instancedMesh ref={mesh} args={[geometry, material, MAX_PRINTS]} frustumCulled={false} receiveShadow renderOrder={PRINT_ORDER} />;
 }
 
 /** Rain on the ground in rain; footprints whenever the ground is snowed over. */

@@ -25,12 +25,16 @@ Output (art/characters/v7/face/):
   face_v7.json            cells, anchors, frames, expressions, talk and emote mouth cycles
   v7_face_default.png     skin + brows + F1.1 + M1.1 at 1024 (the .blend's M_Face preview, Blender review renders)
 With `compose <dir>`, also writes composed faces for the review sheets (expressions, blink, talk).
+
+face_set_301.py adds the row-301 parts (sleepy and dot eyes, cat and curled-grin mouths, the blush band). They are
+packed in a band below the earlier cells, which keep their exact rects and pixels.
 """
 import bpy, json, math, os, sys
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "base"))
+sys.path.insert(0, HERE)
 from head_shape import face_chart, EYE_LAT, EYE_LON, MOUTH_LAT, FH  # noqa: E402
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
@@ -494,6 +498,18 @@ TALK = {"frames": list(TALK_CELLS), "rate": 9.0,
 EMOTE_MOUTH = {"Laugh": {"frames": ["M2.1", "G1.1"], "rate": 7.0}, "Cheer": {"frames": ["M2.1", "G2.1"], "rate": 4.0},
                "Dance": {"frames": ["M2.1", "G1.3"], "rate": 3.0}}
 
+# ================================================================ row 301 set (face_set_301.py): appended, packed apart
+import face_set_301  # noqa: E402
+SET_EYES, SET_MOUTHS, SET_EXTRAS, SET_ANCHORS, SET_KINDS = face_set_301.parts(globals())
+ANCHOR.update(SET_ANCHORS)
+for _kind, _t in SET_KINDS.items():
+    K[_kind], AUTH[_kind], BOX[_kind] = _t["K"], _t["AUTH"], _t["BOX"]
+EYE_PLAIN.update(SET_EYES)
+EYE_ORDER += list(SET_EYES)
+MOUTHS.update(SET_MOUTHS)
+EXTRAS.update(SET_EXTRAS)
+SET_KEYS = {("eyes", e, "open") for e in SET_EYES} | {("mouth", m, None) for m in SET_MOUTHS} | {("extras", x, None) for x in SET_EXTRAS}
+
 
 # ================================================================ render, crop, pack
 def render(kind, fn, *a):
@@ -518,25 +534,35 @@ for eid in EYE_ORDER:
 for bid, fn in BROWS.items():
     cells[("brows", bid, None)] = render("brow", fn)
 for mid, fn in MOUTHS.items():
-    cells[("mouth", mid, None)] = render("mouth", fn)
+    cells[("mouth", mid, None)] = render("mouth_wide" if mid in SET_MOUTHS else "mouth", fn)
 for tid, fn in TALK_CELLS.items():
     cells[("talk", tid, None)] = render("mouth", fn)
 for xid, (kind, _, fn) in EXTRAS.items():
     cells[("extras", xid, None)] = render(kind, fn)
 
 ATLAS_W = 2048
-placements, x, y, row_h = {}, GUTTER, GUTTER, 0
-for key in sorted(cells, key=lambda k: -cells[k][0].shape[0]):
-    h, w = cells[key][0].shape[:2]
-    if x + w + GUTTER > ATLAS_W:
-        y += row_h
-        x, row_h = GUTTER, 0
-    placements[key] = (x, y, w, h)
-    x += w + 2 * GUTTER
-    x = (x + 1) // 2 * 2                      # even offsets: cells stay on whole pixels at half size
-    row_h = max(row_h, h + 2 * GUTTER)
-    row_h = (row_h + 1) // 2 * 2
-ATLAS_H = int(math.ceil((y + row_h) / 64) * 64)
+placements = {}
+
+
+def pack(keys, y):
+    """Shelf-pack `keys` (tallest first) from row `y`; returns the 64-px-rounded bottom of the band."""
+    x, row_h = GUTTER, 0
+    for key in sorted(keys, key=lambda k: -cells[k][0].shape[0]):
+        h, w = cells[key][0].shape[:2]
+        if x + w + GUTTER > ATLAS_W:
+            y += row_h
+            x, row_h = GUTTER, 0
+        placements[key] = (x, y, w, h)
+        x += w + 2 * GUTTER
+        x = (x + 1) // 2 * 2                      # even offsets: cells stay on whole pixels at half size
+        row_h = max(row_h, h + 2 * GUTTER)
+        row_h = (row_h + 1) // 2 * 2
+    return int(math.ceil((y + row_h) / 64) * 64)
+
+
+# The earlier cells pack exactly as they always have; the row-301 set gets its own band below them.
+LEGACY_H = pack([k for k in cells if k not in SET_KEYS], GUTTER)
+ATLAS_H = pack([k for k in cells if k in SET_KEYS], LEGACY_H + GUTTER)
 atlas = np.zeros((ATLAS_H, ATLAS_W, 4), np.float32)
 for key, (px_, py_, w, h) in placements.items():
     atlas[py_:py_ + h, px_:px_ + w] = cells[key][0]
@@ -614,6 +640,7 @@ face = {
                  "items": {tid: rect(("talk", tid, None)) for tid in TALK_CELLS}},
     },
     "expressions": EXPRESSIONS, "blink": BLINK, "talk": TALK, "emoteMouth": EMOTE_MOUTH,
+    "names": face_set_301.NAMES,
 }
 json.dump(face, open(os.path.join(OUT, "face_v7.json"), "w"), indent=1)
 

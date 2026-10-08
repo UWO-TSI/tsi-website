@@ -13,6 +13,7 @@
  * ?sheet=live      one character at a time, the face on its own clock (blinks, &talk=1 talks); &style=, &yaw=
  * ?sheet=bangs     every bangs style over a back (&back=, back_bob); ?sheet=backs every back under a bangs (&bangs=)
  * ?sheet=hats      the four hats (they hide the back hair and carry a lock tuck), front and back 3/4
+ * ?sheet=faces     row 301's face set (sleepy and dot eyes, cat and curled-grin mouths, the blush band) on three skins (&skins=)
  * &hair=<0-11>&skin=<0-11>&face=512 (the world atlas) &framing=head|body
  */
 import { Suspense, useMemo, useRef } from "react";
@@ -38,7 +39,7 @@ function Stage({ cell, framing, faceSize }: { cell: Cell; framing: "head" | "bod
     <ambientLight intensity={1.1} color="#fff6e6" />
     <hemisphereLight args={["#fff8ec", "#b7c7a8", 0.9]} />
     <directionalLight position={[1.6, 2.6, 2.2]} intensity={1.7} color="#fff1d8" />
-    <Suspense fallback={null}><Character look={cell.look} motion={motion} scale={1} faceSize={faceSize} /></Suspense>
+    <Suspense fallback={null}><Character look={cell.look} motion={motion} scale={1} faceSize={faceSize} lod={false} /></Suspense>
   </>;
 }
 
@@ -65,11 +66,16 @@ function AvatarBench() {
     if (sheet === "backs") return partsIn("back").map(p => ({ label: p.id, look: { ...bob, bangs: q.get("bangs") ?? "bangs_straight", back: p.id }, yaw: yaw - 0.9 }));
     if (sheet === "hats") return ["acc_sunhat", "acc_cap", "acc_beanie", "acc_straw_hat"].flatMap(h => [
       { label: `${h} front`, look: { ...bob, acc: { head: h } }, yaw }, { label: `${h} back`, look: { ...bob, acc: { head: h } }, yaw: yaw + 2.6 }]);
+    if (sheet === "faces") return (q.get("skins") ?? "1,5,10").split(",").map(Number).flatMap(skin => ([
+      ["sleepy_lash", "cat_w", ["blush_band"], 0], ["dot", "grin_curl", [], 0], ["sleepy_lash", "M1.1", [], 0],
+      ["dot", "cat_w", ["blush_band"], 0], ["F1.1", "grin_curl", ["blush_band"], 0], ["sleepy_lash", "cat_w", ["blush_band"], yaw],
+    ] as [string, string, string[], number][]).map(([eyes, mouth, extras, y]) => ({
+      label: `skin ${skin} ${eyes} ${mouth}${extras.length ? " +band" : ""}${y ? " 3/4" : ""}`, look: { ...bob, skin, eyes, mouth, extras }, yaw: y })));
     return Object.keys(STYLES).flatMap(s => [{ label: `${s} front`, look: style(s), yaw: 0 }, { label: `${s} 3/4`, look: style(s), yaw: -0.6 }]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheet, yaw, q]);
   const root = useRef<HTMLDivElement>(null);
-  const cols = sheet === "styles" || sheet === "backs" ? 6 : sheet === "bangs" || sheet === "hats" ? 8 : cells.length;
+  const cols = sheet === "styles" || sheet === "backs" || sheet === "faces" ? 6 : sheet === "bangs" || sheet === "hats" ? 8 : cells.length;
   return <div ref={root} style={{ position: "relative", paddingTop: 48, minHeight: "100vh", background: "#efe7d6" }}>
     <div data-sheet={sheet} style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, ${cols === 1 ? "420px" : "1fr"})`, gap: 8, padding: 8 }}>
       {cells.map(c => <figure key={c.label} style={{ margin: 0 }}>

@@ -14,7 +14,9 @@ import { useGLTF } from "@react-three/drei";
 import type { WeaponPaint } from "@/lib/game/combat/primitives";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { BASE_URL, FACE_ATLAS_URLS, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
+import { BASE_URL, FACE_ATLAS_URLS, LOD_SKIN_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
+import { characterLod, createLodState, drawnHeight, mixerStep } from "@/lib/game/character/lod";
+import { quality } from "@/lib/game/perf/governor";
 import { FaceAnimator, faceSlots, poseKey } from "@/lib/game/character/face";
 import { createFaceMaterial, MATTE, prepareFaceAtlas, type FaceMaterial } from "@/lib/game/character/faceMaterial";
 import { ATTACK_CLIP, WEAPON_HAND, contactCrossed, crossfade, holdLayer, isLoop, layerTrack, layerWeight, matchPhase, resolveClip, tempo, verbInfo, type CharacterMotion, type ClipName, type Layer } from "@/lib/game/character/clips";
@@ -22,6 +24,7 @@ import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } 
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
 import { addContact } from "../ContactShadows";
+import { frameStats } from "@/lib/game/perf/frameStats";
 import FishingRig from "./FishingRig";
 
 export type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
@@ -50,6 +53,7 @@ const GHOST = { life: 0.2, opacity: 0.17, rise: 0.04 };
  * character that leaves it (`GHOST_ORDER` + 1), so the character draws over it wherever they overlap.
  */
 const GHOST_ORDER = 1;
+const ghostM = new THREE.Matrix4(), toLocal = new THREE.Matrix4();
 class Ghost {
   readonly skeleton: THREE.Skeleton;
   readonly meshes: THREE.SkinnedMesh[];
@@ -71,9 +75,10 @@ class Ghost {
       return m;
     });
   }
-  snap(live: THREE.Skeleton, geometries: THREE.BufferGeometry[]) {
+  /** `world`: the live body's world matrix (its bone matrices are relative to it, Puppet.uploadPose); the afterimage keeps them in the world. */
+  snap(live: THREE.Skeleton, geometries: THREE.BufferGeometry[], world: THREE.Matrix4) {
     if (!live.boneMatrices || !this.skeleton.boneMatrices) return;
-    this.skeleton.boneMatrices.set(live.boneMatrices.subarray(0, live.bones.length * 16));
+    for (let i = 0; i < live.bones.length; i++) ghostM.fromArray(live.boneMatrices, i * 16).premultiply(world).toArray(this.skeleton.boneMatrices, i * 16);
     if (this.skeleton.boneTexture) this.skeleton.boneTexture.needsUpdate = true;
     geometries.forEach((g, i) => { this.meshes[i].geometry = g; });
     this.age = 0;
@@ -89,6 +94,18 @@ class Ghost {
   dispose() { this.material.dispose(); this.skeleton.boneTexture?.dispose(); for (const m of this.meshes) m.removeFromParent(); }
 }
 
+/** A vertex skinned for a raycast, in the mesh's own space (the bones' world pose, less where the mesh is now). */
+function localBoneTransform(this: THREE.SkinnedMesh, index: number, target: THREE.Vector3) {
+  THREE.SkinnedMesh.prototype.applyBoneTransform.call(this, index, target);
+  return target.applyMatrix4(toLocal.copy(this.matrixWorld).invert());
+}
+
+/** What a look merges (rig.ts mergeLook): the base's skin in the look's skin colour, then each part but its print. */
+function lookPieces(look: CharacterLook, parts: ResolvedPart[], base: THREE.Object3D, scenes: THREE.Object3D[]) {
+  return [{ root: base, tints: { M_Skin: PALETTE.skin[look.skin] }, keep: (m: string) => m === "M_Skin" },
+    ...parts.map((p, i) => ({ root: scenes[i], tints: p.tints, keep: (m: string) => m !== "M_Decal" }))];
+}
+
 /** One character instance: its own bones and mixer, shared geometry/materials. */
 class Puppet {
   readonly root: THREE.Object3D;
@@ -102,6 +119,12 @@ class Puppet {
   private readonly face: THREE.SkinnedMesh;
   private readonly decal: THREE.SkinnedMesh;
   private bodyKey = "";
+  /** The look's full merged geometry, and its LOD 1 (lod.ts: drawn while the character is small) once its GLBs load. */
+  private full: THREE.BufferGeometry | null = null;
+  private lodGeometry: THREE.BufferGeometry | null = null;
+  private lodKey = "";
+  /** Detail by screen size this frame (lod.ts). */
+  readonly lod = createLodState();
   private look: CharacterLook | null = null;
   private faceMat: FaceMaterial | null = null;
   private readonly faceAnim = new FaceAnimator();
@@ -116,6 +139,10 @@ class Puppet {
   private upperT = 0;
   private upperRate = 1;
   private readonly skeleton: THREE.Skeleton;
+  /** The GLB's bind matrix, folded into the bone matrices (the meshes bind detached at identity). */
+  private readonly bind: THREE.Matrix4;
+  /** The bones moved since the pose was last uploaded (Puppet.update ran). */
+  private posed = true;
   private readonly ghostParent: THREE.Object3D;
   private readonly ghosts: Ghost[] = [];
   private ghostNext = 0;
@@ -142,6 +169,12 @@ class Puppet {
       const mesh = new THREE.SkinnedMesh(geometry, material);
       parent.add(mesh);
       mesh.bind(skeleton, first.bindMatrix);
+      // Bone matrices relative to the body (uploadPose), so a pose that hasn't changed is never uploaded again, however
+      // the character moves: detached, with the bind folded into the bones. Raycasts (a resident's click) still meet
+      // the mesh in its own space.
+      mesh.bindMode = THREE.DetachedBindMode;
+      mesh.bindMatrix.identity(); mesh.bindMatrixInverse.identity();
+      mesh.applyBoneTransform = localBoneTransform;
       mesh.receiveShadow = true;
       // Characters are solids that move: they cast the sun shadow every frame (SunShadows).
       mesh.castShadow = true;
@@ -159,6 +192,8 @@ class Puppet {
     this.body.visible = this.face.visible = this.decal.visible = false; // until dress()
     this.sockets = { R: this.root.getObjectByName("Socket_R_Hand")!, L: this.root.getObjectByName("Socket_L_Hand")!, Back: this.root.getObjectByName("Socket_Back")! };
     this.skeleton = skeleton;
+    this.bind = first.bindMatrix.clone();
+    skeleton.update = () => this.uploadPose();
     // Two afterimages, made when first asked for (only the player dashes).
     this.ghostParent = parent;
     this.mixer = new THREE.AnimationMixer(this.root);
@@ -168,9 +203,8 @@ class Puppet {
   dress(look: CharacterLook, parts: ResolvedPart[], scenes: THREE.Object3D[], atlas: THREE.Texture, decalMap: THREE.Texture) {
     const key = bodyKey(look);
     if (key !== this.bodyKey) {
-      const pieces = [{ root: this.base.scene, tints: { M_Skin: PALETTE.skin[look.skin] }, keep: (m: string) => m === "M_Skin" },
-        ...parts.map((p, i) => ({ root: scenes[i], tints: p.tints, keep: (m: string) => m !== "M_Decal" }))];
-      this.body.geometry = bodies.acquire(key, () => mergeLook(pieces, this.bones));
+      this.full = bodies.acquire(key, () => mergeLook(lookPieces(look, parts, this.base.scene, scenes), this.bones));
+      this.body.geometry = this.full;
       if (this.bodyKey) bodies.release(this.bodyKey);
       this.bodyKey = key;
       this.body.visible = this.face.visible = true;
@@ -192,6 +226,29 @@ class Puppet {
     this.look = look;
     this.faceLookKey = JSON.stringify([look.skin, look.hair, look.brows, look.eyes, look.mouth, look.extras]);
     this.shownFace = "";
+  }
+
+  /** The look's LOD 1 (Character's LodMesh, once its GLBs load): the LOD skin and each part's scene. Drawn only while it matches the look shown. */
+  setLod(look: CharacterLook, parts: ResolvedPart[], skin: THREE.Object3D, scenes: THREE.Object3D[]) {
+    const key = `${bodyKey(look)}|lod1`;
+    if (key === this.lodKey) return;
+    this.lodGeometry = bodies.acquire(key, () => mergeLook(lookPieces(look, parts, skin, scenes), this.bones));
+    if (this.lodKey) bodies.release(this.lodKey);
+    this.lodKey = key;
+  }
+
+  /**
+   * Where the character is this frame (lod.ts: `d` from the camera, `px` drawn tall, in view or not): the LOD 1 mesh
+   * when far and small (for this look only), and no sun shadow when tiny (SunShadows skips a caster marked
+   * `shadowCulled`; its contact shadow stays).
+   */
+  view(d: number, px: number, visible: boolean) {
+    const s = characterLod(this.lod, d, px, visible);
+    const g = s.lod && this.lodGeometry && this.lodKey === `${this.bodyKey}|lod1` ? this.lodGeometry : this.full;
+    if (g && this.body.geometry !== g) this.body.geometry = g;
+    if (g === this.lodGeometry) frameStats.lodMeshes++;
+    if (s.hz !== Infinity) frameStats.throttled++;
+    this.body.userData.shadowCulled = this.face.userData.shadowCulled = !s.shadow;
   }
 
   /** Blink, talk and expression for this frame: uniform writes only, and only when the frame changes. */
@@ -301,7 +358,7 @@ class Puppet {
     this.prepareGhosts();
     const g = this.ghosts[this.ghostNext];
     this.ghostNext = (this.ghostNext + 1) % 2;
-    g.snap(this.skeleton, [this.body.geometry, this.face.geometry]);
+    g.snap(this.skeleton, [this.body.geometry, this.face.geometry], this.body.matrixWorld);
   }
 
   private prepareGhosts() {
@@ -332,6 +389,21 @@ class Puppet {
     this.faded.body.opacity = f; if (this.faded.decal) this.faded.decal.opacity = f; face.opacity = f;
   }
 
+  /**
+   * The skeleton's upload (three calls it once a frame for each skinned character drawn): each bone's matrix relative to
+   * the body, recomputed only when the pose has changed since the last upload. Moving, turning or lifting the character
+   * moves the body with its bones, so it needs none; a character whose mixer steps at 15 Hz uploads 15 times a second.
+   */
+  private uploadPose() {
+    const sk = this.skeleton;
+    if (!this.posed || !sk.boneMatrices) return;
+    this.posed = false;
+    frameStats.skeletons++;
+    toLocal.copy(this.body.matrixWorld).invert();
+    for (let i = 0; i < sk.bones.length; i++) ghostM.multiplyMatrices(toLocal, sk.bones[i].matrixWorld).multiply(sk.boneInverses[i]).multiply(this.bind).toArray(sk.boneMatrices, i * 16);
+    if (sk.boneTexture) sk.boneTexture.needsUpdate = true;
+  }
+
   update(delta: number, motion: CharacterMotion, walkSpeed: number) {
     let restart = false;
     this.fade(motion.fade ?? 1);
@@ -359,6 +431,8 @@ class Puppet {
     // Walk and Run count each foot's contact as the playhead passes it (footsteps come from the feet, not a timer).
     const contacts = changed ? undefined : CLIP_BY_NAME.get(want)?.contacts, before = action.time / length;
     this.mixer.update(delta);
+    this.posed = true;
+    frameStats.mixers++;
     this.hold(delta, want, motion.hold ?? null);
     this.upper(delta);
     this.retireStep(delta);
@@ -376,9 +450,11 @@ class Puppet {
     this.mixer.uncacheRoot(this.root);
     this.action = null; this.clip = null; this.oneShot = null; this.upperClip = null;
     if (this.bodyKey) bodies.release(this.bodyKey);
+    if (this.lodKey) bodies.release(this.lodKey);
+    this.full = this.lodGeometry = null; this.lodKey = "";
     this.faceMat?.dispose();
     this.faceMat = null;
-    this.bodyKey = ""; this.shownFace = "";
+    this.bodyKey = ""; this.shownFace = ""; this.posed = true;
   }
 }
 
@@ -602,9 +678,11 @@ export interface CharacterProps {
   /** Face atlas density: 512 px per face canvas in the world (sharp at village distance), 1024 in the creator. */
   faceSize?: number;
   scale?: number;
+  /** Detail by drawn size (lod.ts); off in the creator, which shows one character up close. */
+  lod?: boolean;
 }
 
-export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, held = null, leaf = false, verbs = false, faceSize = 512, scale = CHARACTER_SCALE }: CharacterProps) {
+export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, held = null, leaf = false, verbs = false, faceSize = 512, scale = CHARACTER_SCALE, lod = true }: CharacterProps) {
   // While a newly chosen part loads, keep showing the previous look instead of suspending.
   const shown = useDeferredValue(look);
   const parts = useMemo(() => resolveParts(shown), [shown]);
@@ -626,17 +704,22 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
     const anchor = group.current?.parent;
     return anchor ? addContact(scene, anchor, CONTACT) : undefined;
   }, [scene]);
-  // Before the default frame work (-1): what reads this frame's pose (the held rod's tip, step dust) sees it.
-  useFrame((_, delta) => {
+  // Before the default frame work (-1): what reads this frame's pose (the held rod's tip, step dust) sees it. Detail by
+  // drawn size (lod.ts): small characters draw LOD 1 and step their mixer less often; the creator's never change.
+  useFrame(({ camera, size, gl, clock }, delta) => {
     const m = motion.current, g = group.current;
     if (!m || !g) return;
     g.rotation.y = m.yaw;
     g.position.y = m.lift;
-    puppet.update(Math.min(delta, 0.1) * (m.rate ?? 1), m, walkSpeed);
+    if (lod) viewCharacter(puppet, g, camera, size.height * gl.getPixelRatio(), scale, clock.elapsedTime);
+    const step = mixerStep(puppet.lod, Math.min(delta, 0.1) * (m.rate ?? 1));
+    if (step > 0) puppet.update(step, m, walkSpeed);
   }, -1);
   return <group ref={group}>
     <primitive object={puppet.root} scale={scale} dispose={null} />
     {weapon && <HeldWeapon puppet={puppet} motion={motion} weapon={weapon} />}
+    {/* Its own boundary: the LOD 1 GLBs load after the character shows, never suspending it. */}
+    {lod && <Suspense fallback={null}><LodMesh puppet={puppet} look={shown} parts={parts} /></Suspense>}
     {/* Its own boundary: the ruins never wait for the verb library; a verb asked for meanwhile plays the attack clip. */}
     {verbs && <Suspense fallback={null}><VerbClips puppet={puppet} /></Suspense>}
     {/* Its own boundary: taking out a tool never suspends the scene while its model loads. */}
@@ -646,6 +729,36 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
   </group>;
 }
 /** The verb library's actions (build_clips.py `-- verbs`): the same rig's tracks, merged into the puppet's clips. */
+/** The look's LOD 1 parts (art/characters/build_lod.py), merged once per look and shared like the full one. */
+function LodMesh({ puppet, look, parts }: { puppet: Puppet; look: CharacterLook; parts: ResolvedPart[] }) {
+  const loaded = useGLTF([LOD_SKIN_URL, ...parts.map(p => p.lod)]) as unknown as Gltf[];
+  useEffect(() => puppet.setLod(look, parts, loaded[0].scene, loaded.slice(1).map(g => g.scene)), [puppet, look, parts, loaded]);
+  return null;
+}
+/** Development (evidence): `?charlod=1` draws every character's LOD 1 mesh, so it can be looked at up close. */
+const SHOW_LOD = process.env.NODE_ENV !== "production" && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("charlod") === "1";
+const seen = new THREE.Vector3(), view = new THREE.Frustum(), viewProj = new THREE.Matrix4(), body = new THREE.Sphere(new THREE.Vector3(), 1);
+let viewAt = -1, viewCam: THREE.Camera | null = null;
+/**
+ * Where `g`'s character is this frame for its detail tier (lod.ts): its distance from the camera, its drawn height in
+ * canvas pixels, and whether it is in view (hidden: not, at Infinity). The view's frustum is made once a frame (keyed by
+ * the frame clock) and shared by every character. Module scope: hook values are never written in a component.
+ */
+function viewCharacter(puppet: Puppet, g: THREE.Object3D, camera: THREE.Camera, viewportPx: number, scale: number, now: number) {
+  for (let o: THREE.Object3D | null = g; o; o = o.parent) if (!o.visible) return puppet.view(Infinity, 0, false);
+  if (SHOW_LOD) return puppet.view(30, 50, true); // past `near`, under the mesh line, above the rest: LOD 1 alone
+  if (now !== viewAt || camera !== viewCam) {
+    viewAt = now; viewCam = camera;
+    view.setFromProjectionMatrix(viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+  }
+  g.getWorldPosition(seen);
+  const height = 1.045 * scale, d = seen.distanceTo(camera.position);
+  body.center.copy(seen).setY(seen.y + height / 2);
+  body.radius = height * 0.75;
+  const fov = (camera as THREE.PerspectiveCamera).isPerspectiveCamera ? (camera as THREE.PerspectiveCamera).getEffectiveFOV() : 30;
+  // Adaptive quality (governor.ts) can have small characters reach their lighter tiers sooner (never nearer than `near`).
+  puppet.view(d, drawnHeight(height, d, fov, viewportPx) / quality.knobs.lodBias, view.intersectsSphere(body));
+}
 function VerbClips({ puppet }: { puppet: Puppet }) {
   const { animations } = useGLTF(VERBS_URL) as unknown as Gltf;
   useEffect(() => puppet.addClips(animations), [puppet, animations]);

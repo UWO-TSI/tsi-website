@@ -2,9 +2,9 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Html, useProgress, useTexture } from "@react-three/drei";
+import { useProgress, useTexture } from "@react-three/drei";
 import * as THREE from "three";
-import { Map as MapIcon, Settings, Wrench } from "lucide-react";
+import { Map as MapIcon, Menu, Settings, Wrench } from "lucide-react";
 import GridWorld from "./grid/GridWorld";
 import GridOcean from "./grid/GridOcean";
 import PlayerAvatar from "./PlayerAvatar";
@@ -13,6 +13,8 @@ import GameSceneBoundary from "./GameSceneBoundary";
 import PostFX from "./PostFX";
 import HQInterior from "./HQInterior";
 import SunShadows from "./SunShadows";
+import PerfProbe from "./PerfProbe";
+import QualityGovernor from "./QualityGovernor";
 import { FadeLight, Lantern } from "./AmbientProps";
 import { GLBProp, sceneryOf } from "./NatureModels";
 import { InstancedModels } from "./InstancedNature";
@@ -38,7 +40,7 @@ import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmar
 import { village, objectsOf, type Village } from "@/lib/game/villageMap";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
-import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLightAt, windowLit, withWeather, withSeason, type IslandLight } from "@/lib/game/islandLighting";
+import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLightAt, weatherLight, windowLit, withSeason, type IslandLight } from "@/lib/game/islandLighting";
 import { SEASON_TREES, paletteBySeason, seasonLook, type SeasonLook } from "@/lib/game/seasonalLook";
 import { useNPCPersonas, useSeasonPalettes } from "@/lib/content/loader";
 import type { IslandWeather } from "@/lib/game/islandWeather";
@@ -125,7 +127,7 @@ import { rodByTier } from "@/lib/game/rods";
 import { eatItem, localCollections, mergeWithLocal } from "@/lib/game/collections";
 import { capture } from "@/lib/game/orbitCamera";
 import { iconUrl } from "@/lib/icons/keys";
-import { FLASH_MS, fullHud as isFullHud, setClassTag, useAlwaysFullHud } from "@/lib/game/hudPrefs";
+import { FLASH_MS, compactTouchHud, fullHud as isFullHud, setClassTag, useAlwaysFullHud } from "@/lib/game/hudPrefs";
 import { useFlash } from "./useFlash";
 
 import { villageNodes } from "@/lib/game/islandNodes";
@@ -163,6 +165,11 @@ import type { Area } from "@/lib/net/protocol";
 import NetWorld from "./net/NetWorld";
 import NetHud from "./net/NetHud";
 import { remoteSeatTaken } from "./net/active";
+import LabelLayer from "./LabelLayer";
+import LandmarkTag from "./LandmarkTag";
+import { worldLabels } from "@/lib/game/labelLayout";
+import { localAvatar } from "@/lib/net/localAvatar";
+import { isSeatedPose, seatPrompt } from "@/lib/game/seatPrompt";
 import styles from "./DefaultIslandWorld.module.css";
 
 type Near = "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | null;
@@ -232,13 +239,15 @@ function villageLayout(v: Village) {
   const deck = wharfDeck(v);
   const fitting = objectsOf("fitting", v)[0], missions = objectsOf("missions", v)[0], marks = landmarks(v);
   const island = villageIsland(v), trees = objectsOf("tree", v).map((o): TreeSpot => ({ x: o.x, z: o.z, seed: o.seed ?? 0 }));
+  const buildings = marks.filter(l => l.half && Math.max(...l.half) >= 1).map(l => boxOccluder(l.x, l.z, l.half![0], l.half![1], island.ground(l.x, l.z), 5));
   return {
     island,
     landmarks: marks,
     trees,
     /** What can stand between the orbit camera and you: the buildings and the trees' canopies (lib/game/occluders.ts). */
-    occluders: [...marks.filter(l => l.half && Math.max(...l.half) >= 1).map(l => boxOccluder(l.x, l.z, l.half![0], l.half![1], island.ground(l.x, l.z), 5)),
-      ...trees.map(t => treeOccluder(t.x, t.z, island.ground(t.x, t.z)))],
+    occluders: [...buildings, ...trees.map(t => treeOccluder(t.x, t.z, island.ground(t.x, t.z)))],
+    /** What hides a label (lib/game/labelLayout.ts): the buildings only, a canopy is see-through enough. */
+    buildings,
     /** Inside a building's footprint, with a step's margin (the glide guide never marks a ledge behind one). */
     underBuilding: (x: number, z: number) => marks.some(l => !!l.half && Math.abs(x - l.x) < l.half[0] + 0.5 && Math.abs(z - l.z) < l.half[1] + 0.5),
     fireflies: objectsOf("bush", v).map(xz),
@@ -293,6 +302,16 @@ const writeText = (el: HTMLElement | null, text: string) => { if (el) el.textCon
 /** A weapon picked on the wheel becomes your default on the server. */
 const equipOnServer = (weapon: string) => { void apiCall("/api/combat/equip", "equip", { weapon }).catch(() => {}); };
 
+/** Whether you sit (or lie) on a seat now, from the local avatar's pose, handed up only when it changes. */
+function SeatWatch({ onChange }: { onChange: (seated: boolean) => void }) {
+  const last = useRef(false);
+  useFrame(() => {
+    const seated = isSeatedPose(localAvatar()?.motion.current?.pose);
+    if (seated !== last.current) { last.current = seated; onChange(seated); }
+  });
+  return null;
+}
+
 /** Once a second into the options' Performance readout, straight to the DOM: a 1 Hz setState re-rendered the whole island. */
 function Performance({ player, output }: { player: React.RefObject<THREE.Vector3>; output: React.RefObject<HTMLOutputElement | null> }) {
   const samples = useRef({ seconds: 0, frames: 0 });
@@ -336,6 +355,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   const leadAt = useMemo((): [number, number] | null => (spawns.boat ? [spawns.boat[0] + LEAD_OFFSET[0], spawns.boat[2] + LEAD_OFFSET[1]] : anchorAt("wharf", v)), [v, spawns.boat]);
   const spots = useMemo(() => eventSpots(event?.decor ?? null), [event]);
   useEffect(() => { player.current.set(...spawn); }, [reset, spawn, player]);
+  useEffect(() => { worldLabels.setOccluders(layout.buildings); return () => worldLabels.setOccluders([]); }, [layout]);
   const focus = useRef(new THREE.Vector3(...spawn));
   const follow = useMemo(() => ({ ground: island.ground, player, occluders: layout.occluders }), [island, player, layout]);
   useFollowCamera(focus, zoom, overview ? layout.scale.overview : null, follow);
@@ -496,13 +516,14 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {ruins && [-1.9, 1.9].map(dz => <GLBProp key={dz} url="/assets/acnh/props/stone-lantern.glb" position={[ruins.x, ground(ruins.x, ruins.z + dz), ruins.z + dz]} />)}
     {monument && <ClubMonument position={at(monument)} stage={stage} ceremony={ceremony} />}
     {mailbox && <GLBProp url="/assets/acnh/furniture/mailbox.glb" position={at(mailbox)} scale={0.1} />}
-    {notice && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(notice)} />}
-    {board && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(board)} />}
+    {/* The board model's notices face +z; the plaza boards stand in front of the HQ, so they turn to face the plaza (a painter yaw adds on). */}
+    {notice && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(notice)} rotation={[0, Math.PI + (notice.yaw ?? 0), 0]} />}
+    {board && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(board)} rotation={[0, Math.PI + (board.yaw ?? 0), 0]} />}
     {missions && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
     {wharf && <Wharf dock={{ x: wharf.x, z: wharf.z, yaw: wharf.yaw ?? 0 }} light={light} place="village" />}
-    {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <Html key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} center distanceFactor={10} zIndexRange={[3, 0]}>
-      <div className={styles.cue} data-closed={!l.open}>{SIGNS[l.id]}</div>
-    </Html>)}
+    {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <LandmarkTag key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} closed={!l.open}>
+      {SIGNS[l.id]}
+    </LandmarkTag>)}
   </>;
 }
 
@@ -601,10 +622,14 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [sceneShown, setSceneShown] = useState(0);
   const onSceneReady = useCallback(() => { setReady(true); setFading(false); tripSceneReady(); }, []);
   const [near, setNear] = useState<Near>(null);
+  // On a bench or in bed the seat's prompt stands you up (world audit item 17).
+  const [seated, setSeated] = useState(false);
   // Dev (screenshots): `?sheet=<name>` opens that sheet (the Oracle path sheet once progression loads; donate, shop and bag too).
   const [sheet, setSheet] = useState<Sheet>(() => (DEV_SHEETS.includes(devHome.get("sheet") as Sheet) ? devHome.get("sheet") as Sheet : null));
   // The clean HUD (row 283): the minimap opens on M.
   const [mapOpen, setMapOpen] = useState(false);
+  // A phone's folded HUD (world audit item 11): Bag, Collection and Map behind one menu button.
+  const [menuOpen, setMenuOpen] = useState(false);
   const progression = useProgressionWorld();
   const plot = useDefaultIslandPlot(progression.completedGoals);
   const ceremony = useCeremony(progression.ceremonyGoal, progression.forceCeremony);
@@ -744,7 +769,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const sun = preset ? null : conditions.sun;
   // Across a phase boundary the light blends continuously from one phase's look to the next (living-village §5).
   const blend = conditions.blend;
-  const light = useMemo(() => withWeather(withSeason(islandLightAt(lookPreset, blend, sun), look), weather), [blend, look, weather, lookPreset, sun]);
+  const weatherBlend = conditions.weatherBlend;
+  const light = useMemo(() => weatherLight(withSeason(islandLightAt(lookPreset, blend, sun), look), weatherBlend), [blend, look, weatherBlend, lookPreset, sun]);
   const conditionsLabel = `${season.season[0].toUpperCase()}${season.season.slice(1)}${Object.values(season.weights).some(w => w > 0 && w < 1) ? " (changing)" : ""} · ${weather[0].toUpperCase()}${weather.slice(1)}`;
   const grade = inside === "cafe" ? { ...CLUBHOUSE_LIGHTING[phase].grade, ...CAFE_GRADE } : inside ? CLUBHOUSE_LIGHTING[phase].grade : light.grade;
   const atHome = site === "home";
@@ -934,8 +960,14 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     return () => el.removeEventListener("pointerdown", down);
   }, [applyTool]);
   const toolNear = near === "fish" || near === "net" || near === "dig";
+  // Talking, the greeting and the boat trip are cinematic (world audit item 7): the HUD stands back, flashes included,
+  // leaving the dialogue or the trip's Skip. They let the cursor go, but they aren't the pause view.
+  const hudCinematic = cinematic || talking;
   // Dev (screenshots without pointer lock): ?hud=clean shows the HUD as it is while exploring in mouse-look.
-  const full = isFullHud({ always: alwaysFullHud, keyHeld: hudKey, touch, capture: devHome.get("hud") === "clean" ? "captured" : captured });
+  const full = isFullHud({ always: alwaysFullHud, keyHeld: hudKey, touch, capture: devHome.get("hud") === "clean" ? "captured" : captured, cinematic: hudCinematic });
+  // On a phone the full HUD folds: one menu button, the heading, chips and touch hint flash (world audit item 11).
+  const compact = compactTouchHud({ touch, always: alwaysFullHud });
+  const menuShows = full && (!compact || menuOpen);
   // Hold the HUD key (H) for the full HUD.
   useEffect(() => {
     const key = wheelKeys.hud;
@@ -1000,7 +1032,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     return () => window.removeEventListener("keydown", key);
   }, [act, near, inside, atHome, decor, identity.settings, greeting, nextLine, finishWelcome, site, abilityKeys, sheet, bagOpen, donateOpen, reveal, fading]);
   return (
-    <main className={`${styles.world} gui`} data-light={phase} data-inside={inside ?? undefined} data-site={site} data-trip={trip.active || undefined}>
+    <main className={`${styles.world} gui`} data-light={phase} data-inside={inside ?? undefined} data-site={site} data-trip={trip.active || undefined} data-cinematic={hudCinematic || undefined} data-compact={compact || undefined}>
       <Canvas ref={canvasRef} tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
         camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
@@ -1027,21 +1059,23 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           <LookMaterials preset={lookPreset} />
           <SunShadows />
           <Performance player={player} output={perfOutput} />
+          {DEV && <PerfProbe />}
+          <QualityGovernor dpr={graphics.pixelated ? 0.5 : [1, 1.5]} scene={`${site}:${inside ?? ""}`} />
           <QualityProbe onTier={onTier} />
+          <SeatWatch onChange={setSeated} />
           <WarmupProbe key={sceneShown} onReady={onSceneReady} />
           {children}
           <NetWorld area={area} player={player} ready={ready && !fading && netReady} />
-          {!inside && !atHome && site !== "ruins" && near !== "enter" && hqDoor && <Html position={[hqDoor[0], 2.9, hqDoor[1]]} center distanceFactor={10} zIndexRange={[3, 0]}>
-            <div className={styles.cue}>HQ</div>
-          </Html>}
+          {!inside && !atHome && site !== "ruins" && near !== "enter" && hqDoor && <LandmarkTag position={[hqDoor[0], 2.9, hqDoor[1]]}>HQ</LandmarkTag>}
+          <LabelLayer focus={player} />
         </Suspense>
       </Canvas>
-      <header className={styles.heading} data-fading={fading || !ready || (!full && headingFlash === null)} data-clean={full ? undefined : ""}>
+      <header className={styles.heading} data-fading={fading || !ready || hudCinematic || ((!full || compact) && headingFlash === null)} data-clean={full && !compact ? undefined : ""}>
         <h1>{site === "ruins" ? "The ruins" : inside === "oracle" ? "Oracle temple" : inside === "museum" ? "Museum" : inside === "shop" ? "Shop" : inside === "cafe" ? "Café" : inside === "hq" ? "HQ" : inside === "house" ? "Your house" : atHome ? "Your island" : "Tethos Island"}</h1>
         <p>{inside === "cafe" ? "Warm drinks and quiet tables. Find a seat to study." : !inside && !atHome && site === "village" && islandEvent ? `${islandEvent.goal.title} is on.` : "A little space to make our own."}</p>
       </header>
       {/* Top right (hud-first-login §1, §2): coins, level, clock and mail, then sound and the view options; panels open below it. */}
-      <TopCluster full={full} weather={weather} phase={phase} unread={progression.unreadLetters} mailKey={keyName(identity.settings.key_bindings.openMail)} onMail={() => setSheet("letters")}
+      <TopCluster full={full && !compact} buttons={full} hidden={hudCinematic} weather={weather} phase={phase} unread={progression.unreadLetters} mailKey={keyName(identity.settings.key_bindings.openMail)} onMail={() => setSheet("letters")}
         onWallet={() => setSheet(value => (value === "wallet" ? null : "wallet"))} walletKey={keyName(identity.settings.key_bindings.openWallet)}>
         <AudioController phase={ambientPhase} weather={weather} season={season.season} className={hudButton} />
         <button className={hudButton} onClick={() => setSheet(value => (value === "settings" ? null : "settings"))} aria-label="Settings" title="Settings: text, sound, keys, look"><Settings size={18} aria-hidden /></button>
@@ -1078,7 +1112,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       </section>}
       {near && !toolNear && !sheet && !cinematic && !talking && !(reveal && inside === "oracle") && (CLOSED.includes(near)
         ? <p className={styles.interact} data-closed="true" role="status">{NEAR_LABELS[near]}</p>
-        : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>{touch ? "Tap" : "E"}</kbd>{near === "forage" ? targetLabel ?? NEAR_LABELS[near] : near === "talk" && talkNow.nearName ? `Talk to ${talkNow.nearName}` : NEAR_LABELS[near]}</button>)}
+        : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>{touch ? "Tap" : "E"}</kbd>{near === "forage" ? targetLabel ?? NEAR_LABELS[near] : near === "talk" && talkNow.nearName ? `Talk to ${talkNow.nearName}` : near === "bench" || near === "bed" ? seatPrompt(NEAR_LABELS[near], seated) : NEAR_LABELS[near]}</button>)}
       {/* The held item's use (specs/game-ui.md §2): what left click does with it here, or the tool something in reach wants. Touch presses the prompt. */}
       {!sheet && !cinematic && !talking && !fishing && !inside && site !== "ruins" && (toolAction && (toolAction.target && (toolNear || toolAction.verb === "eat"))
         ? <button className={styles.interact} data-use onPointerDown={e => { if (e.pointerType !== "mouse" || capture.state !== "captured") applyTool(); }}><kbd>{touch ? "Tap" : "Click"}</kbd>{toolAction.label}</button>
@@ -1107,13 +1141,15 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <CollectionBook open={bagOpen} onClose={() => setBagOpen(false)} keys={identity.settings.key_bindings.openJournal} />
       {/* The Bag (I) shows in the clean HUD only as a pickup flies into it; the Collection (B) with the full HUD. */}
       <div className={styles.bagButtons}>
-        <BagButton full={full && sheet !== "bag"} keyLabel={keyName(identity.settings.key_bindings.openBag)} onOpen={() => setSheet("bag")} />
-        {!bagOpen && full && <button className={styles.bagButton} onClick={() => setBagOpen(true)} aria-label="Open your collection"><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</button>}
+        {compact && full && <button className={styles.menuButton} onClick={() => setMenuOpen(o => !o)} aria-expanded={menuOpen} aria-label={menuOpen ? "Close the menu" : "Menu: bag, collection and map"}><Menu size={20} aria-hidden /></button>}
+        <BagButton full={menuShows && sheet !== "bag"} keyLabel={keyName(identity.settings.key_bindings.openBag)} onOpen={() => { setMenuOpen(false); setSheet("bag"); }} />
+        {!bagOpen && menuShows && <button className={styles.bagButton} onClick={() => { setMenuOpen(false); setBagOpen(true); }} aria-label="Open your collection"><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</button>}
+        {compact && menuShows && !mapOpen && !inside && !atHome && site !== "ruins" && !holdObjective && <button className={styles.bagButton} onClick={() => { setMenuOpen(false); setMapOpen(true); }} aria-label="Show the island map"><MapIcon size={17} aria-hidden /> Map</button>}
       </div>
       {!inside && !atHome && site !== "ruins" && !holdObjective && <div className={styles.minimap} data-minimap data-new={objectiveNew || undefined}>
         {mapOpen ? <MiniMap playerPosRef={player} plot={objectivePlot} toggleKey={identity.settings.key_bindings.openMap} onClose={() => setMapOpen(false)} />
-          : full && <button className={styles.mapButton} onClick={() => setMapOpen(true)} aria-label="Show the island map"><MapIcon size={17} aria-hidden /><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</button>}
-        {progression.objective.text && (full || mapOpen || objectiveNew || objectiveFlash) && <p className={styles.objective} data-testid="objective" data-flash={full ? undefined : objectiveFlash ?? undefined}><span aria-hidden="true">◆</span> {progression.objective.text}</p>}
+          : full && !compact && <button className={styles.mapButton} onClick={() => setMapOpen(true)} aria-label="Show the island map"><MapIcon size={17} aria-hidden /><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</button>}
+        {progression.objective.text && ((full && !compact) || mapOpen || objectiveNew || objectiveFlash) && <p className={styles.objective} data-testid="objective" data-flash={full && !compact ? undefined : objectiveFlash ?? undefined}><span aria-hidden="true">◆</span> {progression.objective.text}</p>}
       </div>}
       <CeremonyConfetti active={ceremony && !inside && !atHome} />
       {atHome && !decor.decorating && full && <button className={styles.decorateToggle} onClick={decor.toggle}><kbd>F</kbd> Decorate</button>}
@@ -1147,13 +1183,13 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       : inside ? <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>E</kbd> Interact</span><span><kbd>J</kbd> Journal</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>{keyName(identity.settings.key_bindings.openBag)}</kbd> Bag</span></div>
       : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span>{peaceful.glider && <span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air Glide</span>}<span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span><kbd>{keyName(wheelKeys.wheel)}</kbd> Tools</span><span>Click Use</span><span>{mouseLook ? "Mouse or " : ""}<kbd>←</kbd><kbd>→</kbd> Look</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Journal</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>{keyName(identity.settings.key_bindings.openBag)}</kbd> Bag</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Crouch, at speed slide</span>}</div>}
       {/* Clear of the minimap (left) and the audio widget (bottom right). */}
-      {touch && !talking && !trip.active && (!inside || inside === "cafe") && <TouchControls left="var(--hud-stick-left)" bottom="var(--hud-stick-bottom)" walkOnly={inside === "cafe"} />}
-      <p className={styles.touchControls}>Tap the ground to move · two fingers turn the camera</p>
-      {captured === "free" && !touch && <p className={styles.lookHint} role="status">Click to look around</p>}
+      {touch && !hudCinematic && (!inside || inside === "cafe") && <TouchControls left="var(--hud-stick-left)" bottom="var(--hud-stick-bottom)" walkOnly={inside === "cafe"} />}
+      {(!compact || (headingFlash !== null && !hudCinematic)) && <p className={styles.touchControls} data-flash={compact ? headingFlash ?? undefined : undefined}>Tap the ground to move · two fingers turn the camera</p>}
+      {captured === "free" && !touch && !hudCinematic && <p className={styles.lookHint} role="status">Click to look around</p>}
       {captured === "captured" && site === "ruins" && <svg className={styles.crosshair} viewBox="-10 -10 20 20" aria-hidden="true"><circle r="5.5" /><circle r="1.2" /></svg>}
       <div className={styles.fade} data-active={fading} aria-hidden="true" />
       {trip.active && <TripVeil phase={trip.phase} to={trip.to} firstLogin={trip.firstLogin} quick={trip.quick} haze={light.fogColor} touch={touch} onSkip={trip.skip} />}
-      <NetHud area={area} />
+      <div className={styles.netHud} data-hidden={hudCinematic || undefined}><NetHud area={area} /></div>
       <LoadingStatus ready={ready} />
     </main>
   );

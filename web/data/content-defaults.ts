@@ -71,7 +71,7 @@ export const DEFAULT_PALETTES: SeasonalPalette[] = [
       water: "#4E7FA8",
       building_primary: "#C08A52",
       building_accent: "#7A5230",
-      island_grass: "#C6B46D",
+      island_grass: "#A4A046",
       leaf: "#FF9A3C",
     },
     active: false,

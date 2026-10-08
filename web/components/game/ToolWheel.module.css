@@ -36,7 +36,7 @@
 .hint span { display: flex; align-items: center; gap: 7px; padding: 5px 14px 5px 5px; border-radius: 999px; background: var(--cream); color: var(--gui-ink-strong); font-size: var(--gui-text-sm); font-weight: 800; box-shadow: 0 2px 0 #725c4e1f; }
 .hint kbd { min-width: 28px; height: 28px; padding: 0 8px; box-sizing: border-box; display: grid; place-items: center; border-radius: 999px; background: var(--ink); color: var(--cream); font: inherit; font-size: var(--gui-text-xs); }
 /* Touch: the wheel button, bottom right above the stick's corner. */
-.touchButton { position: absolute; right: 18px; bottom: 150px; z-index: 12; width: 62px; height: 62px; display: grid; place-items: center; border: 0; border-radius: 50%; background: #fffae6; color: #725c4e; box-shadow: 0 3px 0 #725c4e26, 0 6px 16px #2946411f; }
+.touchButton { position: absolute; right: max(18px, var(--hud-edge, 0px)); bottom: calc(var(--hud-stick-bottom, 56px) + 84px * var(--touch-scale, 1) + 10px); z-index: 12; width: 62px; height: 62px; display: grid; place-items: center; border: 0; border-radius: 50%; background: #fffae6; color: #725c4e; box-shadow: 0 3px 0 #725c4e26, 0 6px 16px #2946411f; }
 .touchButton .icon { width: 44px; height: 44px; }
 @media (max-height: 640px) { .flower { zoom: 0.8; } }
 @media (prefers-reduced-motion: reduce) { .flower, .petal, .centre, .name, .wheel::before { transition: none; animation: none; } }

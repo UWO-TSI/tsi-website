@@ -13,6 +13,9 @@ import faceV7 from "@/data/characters/face_v7.json";
 export const CHARACTER_ROOT = "/assets/characters/v6/";
 /** The clip-bearing base: the v6 body with the hand-modeled v7 head (avatar v7). */
 export const BASE_URL = `${CHARACTER_ROOT}${catalog.base.clips_glb}`;
+/** LOD 1 (art/characters/build_lod.py): every part decimated on the same rig, and the base's skin alone (the face, head and clips stay the base's). */
+export const LOD_ROOT = `${CHARACTER_ROOT}lod1/`;
+export const LOD_SKIN_URL = `${LOD_ROOT}base/skin.glb`;
 /** The face layer atlas: 1024 px per face canvas in the creator, the 512 copy in the world (same layout). */
 export const FACE_ATLAS_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas}`, world: `${CHARACTER_ROOT}base/${faceV7.atlas_world}` };
 /** Ruling 24: the crewneck carries the site's own TSI mark (public/logo.svg, rasterised by the sync script). */
@@ -64,9 +67,9 @@ export type EyeFrame = "open" | "half" | "closed";
  */
 export const FACE = faceV7 as unknown as {
   density: number; atlas_size: [number, number];
-  anchors: Record<"eye" | "brow" | "mouth" | "cheek" | "mole", [number, number]>;
+  anchors: Record<"eye" | "brow" | "mouth" | "cheek" | "mole" | "blush", [number, number]>;
   layers: {
-    extras: { default: null; multi: true; tint: null; items: Record<string, { anchor: "cheek" | "mole"; mirror: boolean; cell: FaceCell }> };
+    extras: { default: null; multi: true; tint: null; items: Record<string, { anchor: "cheek" | "mole" | "blush"; mirror: boolean; cell: FaceCell }> };
     brows: { default: string; anchor: "brow"; mirror: true; tint: "hair"; items: Record<string, FaceCell> };
     eyes: { default: string; anchor: "eye"; mirror: true; tint: null; items: Record<string, Partial<Record<EyeFrame, FaceCell>> & { open: FaceCell }> };
     mouth: { default: string; anchor: "mouth"; mirror: false; tint: null; items: Record<string, FaceCell> };
@@ -77,6 +80,8 @@ export const FACE = faceV7 as unknown as {
   blink: { interval: [number, number]; frames: [EyeFrame, number][] };
   talk: { frames: string[]; rate: number };
   emoteMouth: Record<string, { frames: string[]; rate: number }>;
+  /** Creator names of the parts that have no sheet code (face_set_301.py: sleepy and dot eyes, cat and curled-grin mouths, the blush band). */
+  names: Record<string, string>;
 };
 export type FaceLayer = "extras" | "brows" | "eyes" | "mouth";
 export const partsIn = (slot: PartSlot) => PARTS.filter(p => p.slot === slot);
@@ -172,7 +177,7 @@ export function wornParts(look: CharacterLook): CatalogPart[] {
   return parts.some(p => p.hidesBackHair) ? parts.filter(p => p.slot !== "back") : parts;
 }
 
-export interface ResolvedPart { id: string; url: string; tints: Record<string, string>; decal: string | null }
+export interface ResolvedPart { id: string; url: string; /** Its LOD 1 GLB. */ lod: string; tints: Record<string, string>; decal: string | null }
 /** Parts with their GLB URL and one sRGB hex per tinted material; decal materials without art are dropped. */
 export function resolveParts(look: CharacterLook): ResolvedPart[] {
   return wornParts(look).map(part => {
@@ -187,7 +192,7 @@ export function resolveParts(look: CharacterLook): ResolvedPart[] {
         first = false;
       } else if (m.color) tints[m.name] = m.color;
     }
-    return { id: part.id, url: CHARACTER_ROOT + part.glb, tints, decal };
+    return { id: part.id, url: CHARACTER_ROOT + part.glb, lod: LOD_ROOT + part.glb, tints, decal };
   });
 }
 
@@ -241,7 +246,8 @@ export function randomLook(rand: () => number = Math.random, owned?: ReadonlySet
   let look: CharacterLook = {
     ...DEFAULT_LOOK,
     skin: Math.floor(rand() * PALETTE.skin.length), hair: Math.floor(rand() * (owned ? FREE_HAIR_COLOURS : PALETTE.hair.length)),
-    eyes: pick(Object.keys(FACE.layers.eyes.items)), mouth: pick(Object.keys(FACE.layers.mouth.items).filter(m => m.startsWith("M"))),
+    // sheet-coded styles only (E/F eyes, M mouths): later sets stay creator picks, so seeded residents keep their faces
+    eyes: pick(Object.keys(FACE.layers.eyes.items).filter(e => /^[EF]\d/.test(e))), mouth: pick(Object.keys(FACE.layers.mouth.items).filter(m => m.startsWith("M"))),
     extras: rand() < 0.3 ? ["blush"] : [], bangs: pick(ids("bangs")), back: pick(ids("back")), shoes: pick(ids("shoes")), acc: {}, colors: {},
   };
   look = rand() < 0.2 ? wear(look, "onepiece", pick(ids("onepiece"))) : wear(wear(look, "top", pick(ids("top"))), "bottom", pick(ids("bottom")));

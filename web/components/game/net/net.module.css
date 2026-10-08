@@ -13,6 +13,11 @@
 /* Development (?lod=1): the player's render tier under the name. */
 .plate[data-tier]::after { content: attr(data-tier); display: block; margin-top: 1px; font-size: 10px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--gui-sage); }
 .plate[data-tier="Reduced"]::after { color: var(--gui-warn); }
+/* Squeezed out of a crowd (world audit item 2, lib/game/labelLayout.ts): a small paper dot, blue for a member, until
+   there's room for the name again. */
+.plate[data-dot] { width: 12px; height: 12px; padding: 0; box-sizing: border-box; border: 3px solid rgb(255 251 231 / 0.95); background: var(--gui-ink-2); }
+.plate[data-dot][data-member] { background: var(--gui-tethos-blue); }
+.plate[data-dot] > * { display: none; }
 /* Away (dropped, inside the reconnection grace): the plate dims, they're still here. */
 .plate[data-away] { opacity: 0.5; }
 .plateName { display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 13px; font-weight: 800; line-height: 1.2; }

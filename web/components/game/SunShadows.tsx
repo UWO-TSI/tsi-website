@@ -20,7 +20,8 @@
  *
  * Casters: `userData.sunCaster` "dynamic" is set by Character, the enemies and
  * prepareModel's swaying canopy casters; every other mesh with castShadow is
- * static. castShadow is per object, not per light, so the first caster in the
+ * static. A dynamic caster marked `shadowCulled` (a character drawn too small,
+ * character/lod.ts) casts nothing. castShadow is per object, not per light, so the first caster in the
  * scene (`base`) switches the two sets as each light's pass begins; between
  * passes ACNH's caster-only hulls stay hidden.
  */
@@ -105,7 +106,9 @@ class SunShadowCache {
     if ((object as THREE.DirectionalLight).isDirectionalLight && object.castShadow && object !== this.moving && !this.light) this.light = object as THREE.DirectionalLight;
     if (mesh.isMesh && object !== this.base) {
       const kind = mesh.userData.sunCaster ?? (mesh.castShadow ? (mesh.userData.sunCaster = "static") : undefined);
-      if (kind === "dynamic") this.dynamics.push(mesh);
+      // A character drawn too small for its shadow to show (character/lod.ts) casts nothing this frame.
+      if (kind === "dynamic" && mesh.userData.shadowCulled) mesh.castShadow = false;
+      else if (kind === "dynamic") this.dynamics.push(mesh);
       else if (kind === "static") {
         const captured = this.statics.get(mesh);
         if (!captured) dirty = true;
@@ -148,11 +151,14 @@ class SunShadowCache {
     const dirty = this.visit(scene);
     const light = this.light as THREE.DirectionalLight | null;
     if (!light || !gl.shadowMap.enabled) {
-      if (this.active) this.deactivate();
+      if (this.active) this.deactivate(gl);
       return;
     }
     this.active = true;
-    gl.shadowMap.autoUpdate = true;
+    // Once a frame, in its first render: the AO pass renders the scene twice more (PostFX), and the maps drawn for
+    // the first are the frame's (specs/perf/2026-10-baseline.md item 1).
+    gl.shadowMap.autoUpdate = false;
+    gl.shadowMap.needsUpdate = true;
     if (this.moving.parent !== scene) scene.add(this.moving);
     this.follow(light);
     this.cast(false);
@@ -161,8 +167,9 @@ class SunShadowCache {
     if (this.pending) light.shadow.needsUpdate = true;
   }
 
-  private deactivate() {
+  private deactivate(gl: THREE.WebGLRenderer) {
     this.active = false;
+    gl.shadowMap.autoUpdate = true;
     this.pending = true;
     this.moving.removeFromParent();
     for (const mesh of this.dynamics) if (mesh.userData.casterOnly) mesh.visible = false;

@@ -4,8 +4,10 @@
  * The other players' nameplates (specs/multiplayer.md §5.5): one pooled DOM overlay of 12 paper tags, not a drei
  * `<Html>` each (every one of those is its own React root with its own projection each frame). The re-tier hands the
  * plates out (lod.ts: every drawn player within 22 u, the nearest 12; a real player's plate always shows there, so
- * people read as people, not residents); after each frame is drawn, the camera final, each plate is projected through
- * the curved world's bend (projection.ts) and moved only when it moved more than half a pixel.
+ * people read as people, not residents); after each frame is drawn, the camera final, the world's label layout
+ * (lib/game/labelLayout.ts; world audit item 2) projects each plate through the curved world's bend, stacks one that
+ * would cover a nearer plate above it (or shrinks it to a dot when the stack runs too tall), fades it behind a building,
+ * and the plate is moved only when it moved more than half a pixel.
  *
  * The plates are plain elements beside drei's labels in the canvas's own box, stacked by distance on the same scale as
  * your nameplate's, so a nearer plate covers a farther one whichever kind they are. Their look is your plate's
@@ -14,15 +16,14 @@
  * (row 299), and dimmed while they're away (dropped, inside the reconnection grace). World names only (row 222).
  */
 import { useEffect } from "react";
-import { addAfterEffect, useThree } from "@react-three/fiber";
-import * as THREE from "three";
+import { useThree } from "@react-three/fiber";
 import { CHARACTER_HEIGHT } from "../character/Character";
+import { LABEL_PRIORITY, worldLabels, type LabelLayout, type LabelSpec } from "@/lib/game/labelLayout";
 import { classKit } from "@/lib/combat/classes";
 import { masteryTitle } from "@/lib/combat/mastery";
 import type { RemotePlayer } from "@/lib/net/types";
 import type { RemoteRig } from "./drive";
 import { LOD } from "./lod";
-import { projectCurved, type ScreenPoint } from "./projection";
 import styles from "./net.module.css";
 
 /** Over the head as yours is (PlayerAvatar: the character's height and 0.28; the leaf's open height clears an open leaf). */
@@ -59,7 +60,7 @@ interface Slot {
   cls: HTMLDivElement; icon: HTMLImageElement; title: HTMLSpanElement;
   /** What it shows now, and what of theirs it was filled from. */
   player: RemotePlayer | null;
-  x: number; y: number; z: number; shown: boolean;
+  x: number; y: number; z: number; shown: boolean; alpha: number;
 }
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, className: string, parent?: HTMLElement) => {
@@ -77,7 +78,7 @@ function makeSlot(): Slot {
   phone.innerHTML = PHONE;
   const cls = el("div", styles.plateClass, plate), icon = el("img", styles.classIcon, cls), title = el("span", "", cls);
   icon.alt = ""; icon.width = 22; icon.height = 22;
-  return { root, plate, name, level, phone, cls, icon, title, player: null, x: NaN, y: NaN, z: NaN, shown: false };
+  return { root, plate, name, level, phone, cls, icon, title, player: null, x: NaN, y: NaN, z: NaN, shown: false, alpha: 1 };
 }
 const flag = (e: HTMLElement, name: string, on: boolean) => { if (e.hasAttribute(name) !== on) e.toggleAttribute(name, on); };
 
@@ -101,7 +102,8 @@ function fill(s: Slot, p: RemotePlayer) {
   if (frame) s.plate.dataset.frame = frame; else delete s.plate.dataset.frame;
 }
 
-const point: ScreenPoint = { x: 0, y: 0, depth: 0 }, eye = new THREE.Vector3(), head = new THREE.Vector3();
+/** The island camera's clip range (DefaultIslandWorld), for the stacking scale. */
+const CAMERA_NEAR = 0.1, CAMERA_FAR = 120;
 
 const TIER_TAG = ["Full", "Reduced", "Hidden"] as const;
 
@@ -112,12 +114,12 @@ export class PlatePool {
   /** Development (`?lod=1`): each plate names its player's render tier. */
   private debug = false;
 
-  /** Into the canvas's own box (where drei puts its labels); returns the removal. */
-  mount(container: HTMLElement, debug = false): () => void {
+  /** Into the canvas's own box (where drei puts its labels), each plate a label in the layout; returns the removal. */
+  mount(container: HTMLElement, here: (r: RemoteRig) => boolean, debug = false, labels: LabelLayout = worldLabels): () => void {
     this.debug = debug;
     this.slots = this.shows.map(() => makeSlot());
-    for (const s of this.slots) container.appendChild(s.root);
-    return () => { for (const s of this.slots) s.root.remove(); this.slots = []; };
+    const offs = this.slots.map((s, i) => { container.appendChild(s.root); return labels.add(this.label(s, i, here)); });
+    return () => { offs.forEach(off => off()); for (const s of this.slots) s.root.remove(); this.slots = []; };
   }
 
   /** After a re-tier: who gets a plate (lod.plate), each kept in the slot it had. */
@@ -125,38 +127,47 @@ export class PlatePool {
     assignPlates(this.shows, rigs, here);
   }
 
-  /** After the frame is drawn: place each shown plate over its player's head. */
-  place(camera: THREE.Camera, width: number, height: number, here: (r: RemoteRig) => boolean) {
-    const cam = camera as THREE.PerspectiveCamera;
-    eye.setFromMatrixPosition(camera.matrixWorld);
-    for (let i = 0; i < this.slots.length; i++) {
-      const s = this.slots[i], r = this.shows[i];
-      const on = !!r && here(r) && r.anchor.current?.visible === true;
-      if (on && s.player !== r.entry.player) fill(s, r.entry.player);
-      if (on && this.debug && s.plate.dataset.tier !== TIER_TAG[r.lod.tier]) s.plate.dataset.tier = TIER_TAG[r.lod.tier];
-      if (on) head.set(r.feet.current.x, plateY(r), r.feet.current.z);
-      const seen = on && projectCurved(head.x, head.y, head.z, camera, width, height, point);
-      if (seen !== s.shown) { s.shown = seen; s.root.style.display = seen ? "" : "none"; }
-      if (!seen) continue;
-      if (!(Math.abs(point.x - s.x) <= 0.5 && Math.abs(point.y - s.y) <= 0.5)) {
-        s.x = point.x; s.y = point.y;
-        s.root.style.transform = `translate3d(${point.x}px,${point.y}px,0)`;
-      }
-      const z = plateZ(eye.distanceTo(head), cam.near ?? 0.1, cam.far ?? 120);
-      if (z !== s.z) { s.z = z; s.root.style.zIndex = String(z); }
-    }
+  /** Slot i as a label: anchored over its player's head, placed where the layout says. */
+  private label(s: Slot, i: number, here: (r: RemoteRig) => boolean): LabelSpec {
+    const size = { w: 0, h: 0 };
+    let measure = true;
+    return {
+      priority: LABEL_PRIORITY.player, size,
+      anchor: out => {
+        const r = this.shows[i];
+        if (!r || !here(r) || r.anchor.current?.visible !== true) return false;
+        if (s.player !== r.entry.player) { fill(s, r.entry.player); measure = true; }
+        if (this.debug && s.plate.dataset.tier !== TIER_TAG[r.lod.tier]) { s.plate.dataset.tier = TIER_TAG[r.lod.tier]; measure = true; }
+        out.set(r.feet.current.x, plateY(r), r.feet.current.z);
+        return true;
+      },
+      place: o => {
+        if (o.shown !== s.shown) { s.shown = o.shown; s.root.style.display = o.shown ? "" : "none"; }
+        if (!o.shown) return;
+        // Its box, once its card is in (a dot's would be too small): read only when the card changed.
+        if (measure && !o.dot) { measure = false; const b = s.plate.getBoundingClientRect(); size.w = b.width; size.h = b.height; }
+        flag(s.plate, "data-dot", o.dot);
+        const y = o.y + o.dy;
+        if (!(Math.abs(o.x - s.x) <= 0.5 && Math.abs(y - s.y) <= 0.5)) {
+          s.x = o.x; s.y = y;
+          s.root.style.transform = `translate3d(${o.x}px,${y}px,0)`;
+        }
+        const a = Math.round(o.alpha * 50) / 50;
+        if (a !== s.alpha) { s.alpha = a; s.root.style.opacity = a < 1 ? String(a) : ""; }
+        const z = plateZ(o.depth, CAMERA_NEAR, CAMERA_FAR);
+        if (z !== s.z) { s.z = z; s.root.style.zIndex = String(z); }
+      },
+    };
   }
 }
 
-/** Mounts the pool beside the canvas and places it after every frame (R3F's after-render effect: the camera is final). */
+/** Mounts the pool beside the canvas; the world's label layout (LabelLayer) places it after every frame. */
 export default function Nameplates({ pool, here }: { pool: PlatePool; here: (r: RemoteRig) => boolean }) {
-  const gl = useThree(s => s.gl), get = useThree(s => s.get);
+  const gl = useThree(s => s.gl);
   useEffect(() => {
     const box = gl.domElement.parentElement;
     if (!box) return;
-    const unmount = pool.mount(box, process.env.NODE_ENV !== "production" && new URLSearchParams(window.location.search).has("lod"));
-    const off = addAfterEffect(() => { const { camera, size } = get(); pool.place(camera, size.width, size.height, here); });
-    return () => { off(); unmount(); };
-  }, [gl, get, pool, here]);
+    return pool.mount(box, here, process.env.NODE_ENV !== "production" && new URLSearchParams(window.location.search).has("lod"));
+  }, [gl, pool, here]);
   return null;
 }
