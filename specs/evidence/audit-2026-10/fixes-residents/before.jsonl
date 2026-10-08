@@ -1,0 +1,11 @@
+{"scene":"bench","t":0,"residents":[{"slug":"juniper","x":5.75,"z":4.67,"hidden":false,"speed":1.28,"seat":null},{"slug":"nell","x":5.75,"z":3.17,"hidden":false,"speed":1.28,"seat":null},{"slug":"wharf-keeper","x":-6.3,"z":-6.84,"hidden":false,"speed":1.28,"seat":null},{"slug":"wren","x":-6,"z":-8,"hidden":false,"speed":0,"seat":null}]}
+{"scene":"bench","t":5,"residents":[{"slug":"juniper","x":5.75,"z":3.37,"hidden":false,"speed":1.28,"seat":null},{"slug":"nell","x":4.87,"z":2.75,"hidden":false,"speed":1.28,"seat":null},{"slug":"wharf-keeper","x":-5.4,"z":-5.91,"hidden":false,"speed":1.28,"seat":null},{"slug":"wren","x":-6,"z":-8,"hidden":false,"speed":0,"seat":null}]}
+{"scene":"bench","t":10,"residents":[{"slug":"juniper","x":5.59,"z":2.75,"hidden":false,"speed":1.28,"seat":null},{"slug":"nell","x":4.13,"z":2.87,"hidden":false,"speed":1.28,"seat":null},{"slug":"wharf-keeper","x":-4.7,"z":-5.89,"hidden":false,"speed":1.28,"seat":null},{"slug":"wren","x":-6,"z":-8,"hidden":false,"speed":0,"seat":null}]}
+{"scene":"bench","t":15,"residents":[{"slug":"juniper","x":4.43,"z":2.75,"hidden":false,"speed":1.28,"seat":null},{"slug":"nell","x":3.29,"z":3.65,"hidden":false,"speed":1.28,"seat":null},{"slug":"wren","x":-6,"z":-8,"hidden":false,"speed":0,"seat":null}]}
+{"scene":"bench","t":20,"residents":[{"slug":"juniper","x":3.65,"z":3.34,"hidden":false,"speed":1.28,"seat":null},{"slug":"nell","x":2.51,"z":4.32,"hidden":false,"speed":1.28,"seat":null},{"slug":"wren","x":-6,"z":-8,"hidden":false,"speed":0,"seat":null}]}
+{"scene":"bench","t":25,"residents":[{"slug":"juniper","x":2.77,"z":4.09,"hidden":false,"speed":1.28,"seat":null},{"slug":"wren","x":-6,"z":-8,"hidden":false,"speed":0,"seat":null}]}
+{"scene":"stack","within05":[]}
+{"scene":"night","out":["nell@-3.22,-7.98"],"inside":9}
+{"scene":"space","closestStopped":3.37,"who":"wren@-6.65,2.65"}
+{"scene":"bridge","key":"a","stoppedAt":{"x":-1.45,"z":0.61},"rail":1.45}
+{"scene":"bridge","key":"d","stoppedAt":{"x":1.46,"z":0.71},"rail":1.45}

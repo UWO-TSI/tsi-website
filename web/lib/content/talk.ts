@@ -4,8 +4,15 @@
  * conversations; a conversation is one to four boxes; a box may open with an expression in brackets, which their
  * painted face shows while they say it ("[happy] Oh! Hi."). `{name}` is the member's island name. Admins write them in
  * the Residents editor (principle 8), next to the bubble lines (`canned_dialogue`) they say in passing.
+ *
+ * A line may open with a time tag (world audit item 20): `@morning Morning!` is said only in the morning. A tag on a
+ * conversation's first box holds for the whole conversation; untagged lines are said any time.
  */
 import { hashSeed } from "@/lib/game/character/look";
+import type { IslandPhase } from "@/lib/game/islandTime";
+import { TIME, TIME_TAGS, isTimeTag, lineTime, saidAt } from "./lineTime";
+
+export { TIME_TAGS, lineTime, linesNow, saidAt, untimed, type TimeTag } from "./lineTime";
 import { EXPRESSIONS, type Expression } from "@/lib/game/character/face";
 import { PROPOSED_RESIDENTS } from "./residentRoster";
 import type { NPCPersona } from "./types";
@@ -17,10 +24,10 @@ export type Conversation = TalkLine[];
 const MARK = /^\s*\[([a-z]+)\]\s*/i;
 const isExpression = (w: string): w is Expression => (EXPRESSIONS as readonly string[]).includes(w);
 
-/** "[happy] Oh! Hi." → the words and the face; an unknown word in brackets is just words. */
+/** "[happy] Oh! Hi." → the words and the face; an unknown word in brackets is just words. A time tag before it goes. */
 export function parseTalkLine(raw: string): TalkLine {
-  const m = raw.match(MARK), face = m?.[1].toLowerCase();
-  return m && face && isExpression(face) ? { text: raw.slice(m[0].length).trim(), face } : { text: raw.trim(), face: null };
+  const line = lineTime(raw).text, m = line.match(MARK), face = m?.[1].toLowerCase();
+  return m && face && isExpression(face) ? { text: line.slice(m[0].length).trim(), face } : { text: line, face: null };
 }
 
 /** The server's check on a draft's `talk` (null when it can be said). */
@@ -31,9 +38,11 @@ export function validateTalk(v: unknown): string | null {
     if (c.length < 1 || c.length > TALK_LIMITS.lines) return `talk: each conversation has 1-${TALK_LIMITS.lines} lines`;
     for (const l of c) {
       if (typeof l !== "string") return "talk: lines are text";
-      const m = l.match(MARK);
+      const tag = l.match(TIME);
+      if (tag && !tag[1].toLowerCase().split(",").every(isTimeTag)) return `talk: "@${tag[1]}" isn't a time of day (${TIME_TAGS.join(", ")})`;
+      const said = lineTime(l).text, m = said.match(MARK);
       if (m && !isExpression(m[1].toLowerCase())) return `talk: "[${m[1]}]" isn't an expression (${EXPRESSIONS.join(", ")})`;
-      const words = m ? l.slice(m[0].length).trim() : l.trim();
+      const words = m ? said.slice(m[0].length).trim() : said;
       if (!words) return "talk: a line is empty";
       if (l.length > TALK_LIMITS.chars) return `talk: lines are up to ${TALK_LIMITS.chars} characters`;
     }
@@ -49,13 +58,16 @@ const FILLER: Conversation[] = [
 
 /**
  * A resident's conversations: their own (`talk`), else the proposed roster's for their slug (a live row saved before
- * the column existed), else their bubble lines one box each, else gentle fillers. Never empty.
+ * the column existed), else their bubble lines one box each, else gentle fillers. Never empty. `now`: only those said
+ * at this time of day (a time tag on the first box); none left, the next source down.
  */
-export function talkFor(p: Pick<NPCPersona, "slug" | "canned_dialogue"> & { talk?: string[][] | null }): Conversation[] {
+export function talkFor(p: Pick<NPCPersona, "slug" | "canned_dialogue"> & { talk?: string[][] | null }, now?: { phase: IslandPhase; hour: number }): Conversation[] {
+  const timely = (c: readonly string[]) => !now || saidAt(lineTime(c[0]).times, now.phase, now.hour);
   const own = p.talk?.filter(c => c.length);
   const source = own?.length ? own : PROPOSED_RESIDENTS.find(r => r.slug === p.slug)?.talk;
-  if (source?.length) return source.map(c => c.map(parseTalkLine).filter(l => l.text));
-  const bubble = (p.canned_dialogue ?? []).filter(l => l.trim());
+  const pick = source?.filter(timely);
+  if (pick?.length) return pick.map(c => c.map(parseTalkLine).filter(l => l.text));
+  const bubble = (p.canned_dialogue ?? []).filter(l => l.trim() && timely([l]));
   return bubble.length ? bubble.map(l => [parseTalkLine(l)]) : FILLER;
 }
 

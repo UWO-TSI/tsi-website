@@ -5,6 +5,8 @@
  * gives us regression protection on the LLM-NPC integration without
  * needing the full Anthropic SDK or Supabase mocks.
  */
+import { lineTime, linesNow, untimed } from "@/lib/content/lineTime";
+import { islandPhase, torontoHour } from "@/lib/game/islandTime";
 
 export const RATE_LIMIT_COUNT = 30;
 export const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
@@ -59,10 +61,12 @@ After your reply, output a JSON block on its own line:
 <memory_update>{"facts": ["fact 1", "fact 2"], "last_topic": "..."}</memory_update>`;
 }
 
-export function pickCannedDialogue(persona: NPCPersona): string {
-  const lines = persona.canned_dialogue ?? [];
-  if (lines.length === 0) return "I'm not feeling chatty right now.";
-  return lines[Math.floor(Math.random() * lines.length)];
+export function pickCannedDialogue(persona: NPCPersona, now = new Date()): string {
+  const all = persona.canned_dialogue ?? [];
+  if (all.length === 0) return "I'm not feeling chatty right now.";
+  // A line for the time of day ("Morning!" only in the morning), its time tag left off.
+  const said = linesNow(all, islandPhase(now), torontoHour(now)), lines = said.length ? said : untimed(all);
+  return lineTime(lines[Math.floor(Math.random() * lines.length)]).text;
 }
 
 export function extractMemoryUpdate(raw: string): {
