@@ -931,12 +931,25 @@ export default function FinalRound({
           <section className="pointer-events-none relative z-10 flex min-h-svh flex-col items-center justify-between px-4 pb-20 pt-[7svh] text-center">
             <AnimatePresence>
               {opened && (
-                <motion.div key="head" initial="h" animate="s" variants={{ s: { transition: { staggerChildren: 0.12 } } }}>
+                <motion.div key="head" initial="h" animate="s" variants={{ s: { transition: { staggerChildren: 0.12 } } }} className="relative">
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute -inset-x-10 -inset-y-8 -z-10"
+                    style={{ background: "radial-gradient(ellipse at center, rgba(5,5,6,0.82) 0%, rgba(5,5,6,0.55) 45%, transparent 75%)" }}
+                  />
                   {[
-                    <h1 key="b" className="text-[clamp(2.1rem,11vw,4.5rem)] font-extrabold leading-none tracking-tight">
+                    <h1
+                      key="b"
+                      className="text-[clamp(2.1rem,11vw,4.5rem)] font-extrabold leading-none tracking-tight"
+                      style={{ textShadow: "0 2px 18px rgba(0,0,0,0.85)" }}
+                    >
                       {returning ? "WELCOME BACK." : "JUST KIDDING."}
                     </h1>,
-                    <h2 key="c" className="fr-shimmer mt-2 text-[clamp(1.3rem,6.6vw,3rem)] font-extrabold">
+                    <h2
+                      key="c"
+                      className="fr-shimmer mt-2 text-[clamp(1.3rem,6.6vw,3rem)] font-extrabold"
+                      style={{ filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.95)) drop-shadow(0 0 14px rgba(0,0,0,0.85))" }}
+                    >
                       YOU MADE IT INTO TSI.
                     </h2>,
                   ].map((el) => (
