@@ -1,0 +1,89 @@
+/* The portal title screen: the live island behind a white wordmark and the GUI sheet's cream menu card. Above the
+   site splash (z 99999), which the title never needs. */
+.screen { position: fixed; inset: 0; z-index: 100000; overflow: hidden; color: #fff; font-family: var(--gui-font);
+  background: linear-gradient(#8fc3dc 0%, #cfe3e2 55%, #e8e0c2 100%); }
+
+/* The island fades in once its first frames have drawn; until then the sky colour holds the screen. */
+.scene { position: absolute; inset: 0; opacity: 0; transition: opacity 1.6s ease; }
+.screen[data-ready] .scene { opacity: 1; }
+.scene canvas { display: block; }
+
+/* Reading light behind the wordmark and the card, and a little weight at the bottom for the footer. */
+.shade { position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, rgb(16 24 19 / 0.5) 0%, rgb(16 24 19 / 0.22) 30%, transparent 56%),
+              linear-gradient(0deg, rgb(10 14 12 / 0.32) 0%, transparent 20%); }
+
+/* A full-height column that centres the brand and card, and scrolls rather than clipping when a form runs tall. */
+.column { position: absolute; left: clamp(24px, 7vw, 128px); top: 0; bottom: 56px; width: min(400px, calc(100vw - 48px)); padding: 28px 0;
+  box-sizing: border-box; display: flex; flex-direction: column; gap: 30px; overflow-y: auto; scrollbar-width: none;
+  animation: rise 0.9s var(--gui-ease) both; }
+.column::-webkit-scrollbar { display: none; }
+.column > * { flex: none; }
+/* Auto margins centre the pair when it fits and let it scroll from the top when it doesn't (justify-content would clip the logo). */
+.column > :first-child { margin-top: auto; }
+.column > :last-child { margin-bottom: auto; }
+.column:has(.card:not([data-view="menu"])) .wordmark { font-size: clamp(48px, 5.4vw, 80px); }
+
+.brand { display: grid; justify-items: start; gap: 14px; }
+.logo { color: #fff; filter: drop-shadow(0 2px 10px rgb(0 0 0 / 0.3)); }
+.wordmark { margin: 0; display: grid; font: 900 clamp(60px, 7.4vw, 108px)/0.9 var(--gui-font); letter-spacing: -0.02em; color: #fff;
+  text-shadow: 0 0 30px rgb(255 255 255 / 0.32), 0 3px 18px rgb(0 0 0 / 0.26); }
+.wordmark span { margin-top: 14px; font: 800 clamp(14px, 1.35vw, 19px)/1.2 var(--gui-font); letter-spacing: 0.34em; text-transform: uppercase;
+  text-shadow: 0 2px 10px rgb(0 0 0 / 0.4); }
+
+/* The card: cream paper with a dashed inner border; the chosen row is a sage pill. */
+.card { position: relative; justify-self: start; width: 100%; padding: 16px; box-sizing: border-box; color: var(--gui-ink-strong);
+  background: var(--gui-paper); border-radius: var(--gui-r-card); box-shadow: var(--gui-shadow-lg); animation: pop 0.5s var(--gui-spring) 0.25s both; }
+.card::before { content: ""; position: absolute; inset: 7px; border: 2px dashed var(--gui-paper-line); border-radius: inherit; pointer-events: none; }
+.card[data-view="menu"] { width: 296px; }
+
+.menu { list-style: none; margin: 0; padding: 6px 4px; display: grid; gap: 2px; position: relative; }
+.menu button { width: 100%; min-height: 44px; padding: 8px 18px; border: 0; border-radius: var(--gui-r-pill); background: transparent; cursor: pointer;
+  font: 800 19px/1.2 var(--gui-font); color: var(--gui-ink); transition: background var(--gui-t-fast) ease, color var(--gui-t-fast) ease, transform var(--gui-t-fast) ease; }
+.menu button[data-selected] { background: var(--gui-sage); color: #fffdf0; box-shadow: inset 0 -3px 0 var(--gui-sage-deep); }
+.menu button:active { transform: scale(0.97); }
+.menu button:focus-visible { outline: none; }
+.caption { position: relative; margin: 6px 0 2px; text-align: center; font: 700 13px/1.4 var(--gui-font); color: var(--gui-muted); overflow-wrap: anywhere; }
+
+.form { position: relative; display: grid; gap: 10px; padding: 8px 10px 6px; }
+.formHead { display: flex; align-items: center; gap: 10px; }
+.formHead h2 { margin: 0; font: 900 22px/1.2 var(--gui-font); color: var(--gui-ink-strong); }
+.back { width: 32px; height: 32px; flex: none; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper-deep); color: var(--gui-ink);
+  font: 900 20px/1 var(--gui-font); cursor: pointer; }
+.back:hover { background: var(--gui-paper-edge); }
+.form button svg { flex: none; }
+.lead { margin: 0; font: 600 14px/1.5 var(--gui-font); color: var(--gui-ink-2); overflow-wrap: anywhere; }
+.or { display: flex; align-items: center; gap: 10px; font: 700 12px var(--gui-font); color: var(--gui-muted); }
+.or::before, .or::after { content: ""; flex: 1; height: 2px; border-radius: 2px; background: var(--gui-paper-edge); }
+.links { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.links button { padding: 2px 0; border: 0; background: none; cursor: pointer; font: 700 13px var(--gui-font); color: var(--gui-teal-ink);
+  text-decoration: underline; text-underline-offset: 3px; }
+.error, .notice { margin: 0; padding: 9px 12px; border-radius: 12px; font: 700 13px/1.45 var(--gui-font); overflow-wrap: anywhere; }
+.error { background: var(--gui-danger-soft); color: var(--gui-danger); }
+.notice { background: var(--gui-success-soft); color: var(--gui-success); }
+
+.footer { position: absolute; left: clamp(24px, 7vw, 128px); right: clamp(24px, 4vw, 64px); bottom: 22px; display: flex; justify-content: space-between;
+  align-items: center; gap: 16px; font: 700 13px/1.3 var(--gui-font); color: rgb(255 255 255 / 0.88); text-shadow: 0 1px 6px rgb(0 0 0 / 0.45); }
+.when { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.soon { font-style: normal; padding: 3px 10px; border-radius: var(--gui-r-pill); background: var(--gui-butter); color: var(--gui-ink-strong); text-shadow: none; }
+.keys { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+
+@keyframes rise { from { opacity: 0; transform: translateY(18px); } }
+@keyframes pop { from { opacity: 0; transform: scale(0.94); } }
+
+/* Phones: the wordmark up top, the card along the bottom, no key hints. */
+@media (max-width: 640px) {
+  .column { left: 16px; right: 16px; width: auto; bottom: 64px; gap: 22px; }
+  .column > :last-child { margin-bottom: 0; }
+  .card, .card[data-view="menu"] { width: 100%; }
+  .footer { left: 16px; right: 16px; bottom: 14px; font-size: 12px; }
+  .when { flex-wrap: nowrap; gap: 8px; }
+  .soon { padding: 2px 8px; white-space: nowrap; }
+  .keys { display: none; }
+}
+@media (pointer: coarse) { .keys { display: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .column, .card { animation: none; }
+  .scene { transition: none; }
+}
