@@ -1,7 +1,12 @@
 # STATE.md — where things actually are
 
 > Read this before `AGENT_LOG.md`. It answers "which branch, what's live, what's next"
-> in one page. Update it whenever direction changes. Last updated **2026-10-03**.
+> in one page. Update it whenever direction changes. Last updated **2026-10-09**.
+
+## play.tethos.ca is live (2026-10-09)
+
+- `feat/play-subdomain` merged to `main` (`bb0a0f9e`, David's call) and deployed. The domain is on the Vercel project and the Namecheap CNAME (`play` → `cname.vercel-dns.com`, added by David) resolves. Verified in production: `play.tethos.ca/` serves the title screen, `www.tethos.ca/student` and portal paths 307 to play, `play` sends `/student/apply/*` and site pages back to www.
+- Unmerged branches triaged the same day: `game/avatar-v8` stays open (on hold for David's references); `fix/recruitment-empty-sheet-setting` and `feat/director-developer-recruitment` are patch-equivalent to `main`; `feat/apply-world` (draft PR #17) and `fix/recruitment-release-followup` are superseded by the newer applicant island and finalround work on `main`.
 
 ## Game polish and classes v2 (2026-10-03)
 
