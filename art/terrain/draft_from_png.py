@@ -69,7 +69,10 @@ ISLET_MIN = 150                   # a surviving island grows into the sea until 
 ISLET_RINGS = 6                   # how many rings of growth a small island may take
 
 # Bridge marks in his drawing (image px) and the deck's crossing direction.
+# NOT emitted yet: the north island launches cut off, no bridge (David
+# 2026-10-10); these return as objects when that zone opens.
 BRIDGES = [((900, 575), 0.0), ((1185, 500), 0.35)]
+EMIT_BRIDGES = False
 SPAWN_PX = (925, 980)             # just south of the village dots
 
 # Zone notes for the painter: name, colour, centre (image px), radius (cells).
@@ -111,9 +114,12 @@ def world_of_cell(cx, cz):
 
 WATER_WINS = 0.25  # a cell is water once this fraction of its pixels are (keeps the thin channel open)
 
-# The drawn channel's centreline (image px): dug open as sea even where the
-# downsample loses it, so the strait always reads and the bridges always cross water.
-CHANNEL = [(620, 455), (760, 515), (900, 570), (1050, 545), (1185, 500), (1300, 425)]
+# The drawn channel's centreline (image px), dug open as sea even where the
+# downsample loses it. The drawing dead-ends it at a land neck (~px 1400,420);
+# the last points cut through that neck to the open NE sea, so the north
+# island really is an island (David 2026-10-10: cut off, "no bridge to island").
+CHANNEL = [(620, 455), (760, 515), (900, 570), (1050, 545), (1185, 500), (1300, 425),
+           (1450, 390), (1600, 330), (1700, 280)]
 CHANNEL_R = 3  # cells either side of the line
 
 
@@ -443,10 +449,11 @@ def main():
     sx, szd = cell_of_px(*SPAWN_PX)
     wx, wz = world_of_cell(sx, szd)
     doc["objects"].append({"id": "default", "kind": "spawn", "x": wx, "z": wz})
-    for i, ((px_x, px_y), yaw) in enumerate(BRIDGES):
-        cx, cz = cell_of_px(px_x, px_y)
-        x, z = world_of_cell(cx, cz)
-        doc["objects"].append({"id": f"bridge-{i}", "kind": "bridge", "x": x, "z": z, "yaw": yaw})
+    if EMIT_BRIDGES:
+        for i, ((px_x, px_y), yaw) in enumerate(BRIDGES):
+            cx, cz = cell_of_px(px_x, px_y)
+            x, z = world_of_cell(cx, cz)
+            doc["objects"].append({"id": f"bridge-{i}", "kind": "bridge", "x": x, "z": z, "yaw": yaw})
 
     rows = lambda a: "[\n" + ",\n".join("    " + json.dumps(r, separators=(",", ":")) for r in a) + "\n  ]"
     head = ",\n".join(f'  "{k}": {json.dumps(doc[k])}' for k in ("width", "depth", "originX", "originZ", "tile", "levelStep"))

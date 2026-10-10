@@ -29,6 +29,20 @@ bridges vs the forest ruins ("still need to think what each section would be
 for"). Both stay combat-capable terrain until he calls it; nothing in P0-P2
 depends on the answer.
 
+## Launch world: the village, everything else sealed (David 2026-10-10)
+
+The first release is a COMPREHENSIVE VILLAGE. The other zones exist in the
+terrain but are cut off naturally, no invisible walls:
+
+- **Mountain**: tall rocks seal the trailhead; the stair up is blocked.
+- **Forest ruins**: dense trees close the way southeast.
+- **North island**: no bridges, and the strait is dug through the drawn neck
+  so it is a real island across open water.
+
+Zones then open over time (fits the monthly content cadence, design
+principle 8). **Arrival**: a first-time member gets a boat-to-shore moment, a
+cutscene-style landing at the wharf, before they step into the village.
+
 ## Decisions (David, 2026-10-09/10)
 
 | Topic | Decision |
@@ -39,9 +53,10 @@ depends on the answer.
 | Heights | MAX_LEVEL raised 6 -> 8 engine-wide (grid.ts). Mountain tiers 2/4/6/8, 2-level kit cliffs, carved west trail to the summit, peak waterfall into a tier-2 pond. |
 | Ground | Rolling value-noise swells to level 2 off-mountain, tapered to 1-level steps (David: "if its not a extreme height difference it will taper off as a slope"). |
 | Village | Organic, central plaza, HQ + main buildings radiating; mainly chill study. Wharf connected as the village entrance: planks, boat dock, small click ladder down to the water, lamp posts for vibes. Claude proposes the full layout; David reviews top-down in the painter before anything is wired. |
-| Oracle Temple | On the mountain summit plateau, reached by the carved trail. Leaves the village ring. Class quiz happens at the top. |
+| Oracle Temple | On the mountain summit, reached by a WINDING natural stair with a SUSPENSION BRIDGE on the way: either two peaks, or a shorter peak crossing to the taller one (David 2026-10-10). Temple on the tall summit; class quiz at the top. The current straight carved trail is a placeholder until the mountain opens. |
+| Arrival | First-time members land by boat: a cutscene-style boat-to-shore moment at the wharf, then into the village. Design lands with the wharf build. |
 | Resident houses | Yes. Small homes around the village so each resident lives somewhere. Needs house models + a home landmark/object design + resident home re-wiring. |
-| Rivers | A river system from the mountain through the island to the sea, with bridge crossings. Adds river fishing water. |
+| Rivers | Natural system from the mountain to the sea. Varied water: some deep, some shallow; some banks slightly taller than others. Crossings fit their spot: stepping stones, small stone paths, or small bridges. Dressed with stone steps, loose rock and wildflowers. Adds river fishing water. |
 | Ruins | Scenery only this pass: ruined props in the SE forest, no gate, no combat hook yet. Candidate combat home (see Zone purposes). |
 | Cave | Mouth on the NW cliff face, sealed by rocks for now. Interior is a later scene. |
 | Plains | Open ground over the bay, shaped to stay combat-capable. Candidate combat home (see Zone purposes). |
@@ -76,8 +91,11 @@ tsc, lint ceiling, build.
 
 - Ruins gate landmark needs a home or combat is unreachable (ruins zone is
   scenery-only by decision; gate placement TBD with David).
-- Fishing: classifyWater re-verified (sea/bay/ponds/rivers all classify as
-  intended; the strait is a BAY, open west, dead-end east, per the drawing).
+- Fishing: classifyWater re-verified (sea/strait/ponds/rivers all classify as
+  intended; the strait is dug through the drawn neck, so the north island is
+  a real island).
+- The two drawn bridges return when the north island opens (positions kept in
+  the generator's BRIDGES constant).
 - Residents: all schedules resolve on the new map; no spawn-cluster fallback.
 - Gulls/shore, puddles, bugs, shells, bottles: re-seeded for the new coasts.
 - Painter: the new map becomes the painter's shipped base; health suite green.
