@@ -10,46 +10,33 @@ import SunShadows from "@/components/game/SunShadows";
 import { IslandAtmosphere } from "@/components/game/IslandAtmosphere";
 import { sceneryOf } from "@/components/game/NatureModels";
 import { InstancedModels } from "@/components/game/InstancedNature";
-import { village, objectsOf, type Village } from "@/lib/game/villageMap";
-import { villageIsland, villageScale, type VillageIsland } from "@/lib/game/defaultIsland";
+import Residents from "@/components/game/NPC";
+import TitleVillage from "./TitleVillage";
+import { stagedShot, type Shot } from "./shots";
+import { village, objectsOf } from "@/lib/game/villageMap";
+import { villageIsland, villageScale } from "@/lib/game/defaultIsland";
 import { villageWater } from "@/lib/game/fishingSpots";
 import { ISLAND_TERRAIN, islandLightAt, withSeason, withWeather } from "@/lib/game/islandLighting";
 import { seasonLook } from "@/lib/game/seasonalLook";
 import { CURRENT, lookFx } from "@/lib/game/lookPreset";
 import { useIslandConditions } from "@/lib/game/useIslandConditions";
 import { parseTimeOverride } from "@/lib/game/islandTime";
+import { DEFAULT_NPC_PERSONAS } from "@/data/content-defaults";
 
 /**
- * The title screen's backdrop: the real island, live, from eye level (David, 2026-10-03: "cinematic shot of game
- * graphics, slight movement of grass or wind on trees in a first person perspective of the game in the pixel style").
- * The game's own parts, read-only: terrain with its wind-blown grass, the sea, the trees and props from the shipped map,
- * the atmosphere (real sun, sky, clouds, weather and falling leaves on the world clock) and the grade, rendered at half
- * resolution with crisp pixels like the game's pixel finish. No player, no HUD, no buildings: a quiet nature shot.
- * The camera drifts slowly along a short path. Tuning (works on previews too): `?shot=x,z,yawDeg,eye,pitchDeg,fov` frames
- * another shot, `?time=dawn|day|evening|night` holds a phase, `?px=0.5` sets the pixel scale.
+ * The title screen's backdrop: the real island, live, staged (David, 2026-10-10: "a staged shot with good camera
+ * angle... that adjusts and changes based on time and season", superseding the 2026-10-03 empty nature shot).
+ * The game's own parts, read-only: terrain with its wind-blown grass, the sea, the trees and props from the shipped
+ * map, the village buildings with their windows on the clock, the residents walking their real routines, and the
+ * atmosphere (real sun, sky, clouds, weather and falling leaves on the world clock), rendered at half resolution
+ * with crisp pixels like the game's pixel finish. No player, no HUD. The framing comes from the staged shots table
+ * (`shots.ts`), picked by the live phase and season; the camera drifts slowly across it. Tuning (works on previews
+ * too): `?shot=x,z,yawDeg,eye,pitchDeg,fov` frames another shot, `?time=dawn|day|evening|night` holds a phase,
+ * `?px=0.5` sets the pixel scale.
  */
-
-export type Shot = { x: number; z: number; yaw: number; eye: number; pitch: number; fov: number };
 
 const DRIFT_SECONDS = 48;
 const DRIFT_DISTANCE = 1.6;
-
-/**
- * The title shot on today's island: low in the north-east meadow on a long lens, looking down the row of trees and
- * flowers, with open sky on the left for the wordmark. A repainted island that puts this spot in the water falls back
- * to a meadow a few steps in from the western shore, looking out to sea (the game's camera faces west, +z).
- */
-const TITLE_SHOT: Shot = { x: 14.5, z: 12.5, yaw: 190, eye: 0.8, pitch: -1, fov: 32 };
-
-export function defaultShot(v: Village, island: VillageIsland): Shot {
-  if (!island.wet(TITLE_SHOT.x, TITLE_SHOT.z) && island.standable(TITLE_SHOT.x, TITLE_SHOT.z)) return TITLE_SHOT;
-  const { cx, cz, maxZ } = v.bounds;
-  let shore = cz;
-  for (let z = maxZ; z > cz; z -= 0.25) {
-    if (!island.wet(cx, z) && island.standable(cx, z)) { shore = z; break; }
-  }
-  return { x: cx, z: shore - 6, yaw: 0, eye: 1.35, pitch: -3, fov: 52 };
-}
 
 function parseShot(value: string | null): Partial<Shot> {
   const n = (value ?? "").split(",").map(Number);
@@ -68,7 +55,7 @@ function CinematicCamera({ shot, ground }: { shot: Shot; ground: (x: number, z: 
     // A slow ping-pong dolly across the view, eased at both ends, with a faint breathing sway.
     const phase = still ? 0.5 : 0.5 - 0.5 * Math.cos((t / DRIFT_SECONDS) * Math.PI * 2);
     const yaw = THREE.MathUtils.degToRad(shot.yaw), pitch = THREE.MathUtils.degToRad(shot.pitch);
-    const side = (phase - 0.5) * DRIFT_DISTANCE;
+    const side = (phase - 0.5) * (shot.drift ?? DRIFT_DISTANCE);
     const x = shot.x + Math.cos(yaw) * side, z = shot.z - Math.sin(yaw) * side;
     const sway = still ? 0 : Math.sin(t * 0.45) * 0.015;
     at.current.set(x, ground(x, z) + shot.eye + sway, z);
@@ -93,8 +80,11 @@ function Scene() {
   const light = useMemo(() => withWeather(withSeason(islandLightAt(CURRENT, blend, sun), look), weather), [blend, look, weather, sun]);
   const scenery = useMemo(() => sceneryOf(v, island.ground, look.season), [v, island, look.season]);
   const terrain = useMemo(() => ({ ...ISLAND_TERRAIN, grass: look.grass }), [look.grass]);
-  const shot = useMemo(() => ({ ...defaultShot(v, island), ...parseShot(new URLSearchParams(window.location.search).get("shot")) }), [v, island]);
+  const shot = useMemo(() => ({ ...stagedShot(phase, look.season, v, island), ...parseShot(new URLSearchParams(window.location.search).get("shot")) }),
+    [v, island, phase, look.season]);
   const viewer = useRef(new THREE.Vector3(shot.x, 0, shot.z));
+  // Residents never notice the title camera: the "player" stands far off the map, so no nameplates, no greetings.
+  const nobody = useRef(new THREE.Vector3(500, 0, 500));
   const trees = useMemo(() => objectsOf("tree", v).map(o => ({ x: o.x, z: o.z, seed: o.seed ?? 0 })), [v]);
   const fauna = useMemo(() => ({
     site: { map: v.map, flowers: objectsOf("flower", v).map(o => [o.x, o.z] as [number, number]), water: villageWater(v).classify },
@@ -109,6 +99,13 @@ function Scene() {
       <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={weather === "wind" ? 2.2 : 1.4} />
       <GridOcean map={island.map} lite={false} radius={scale.glintRadius} />
       <InstancedModels items={scenery} />
+      {/* Own boundaries: the base world draws (and the page fades in) while the buildings and residents stream in. */}
+      <Suspense fallback={null}>
+        <TitleVillage v={v} island={island} light={light} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <Residents personas={DEFAULT_NPC_PERSONAS} phase={phase} ceremony={false} player={nobody} island={island} v={v} />
+      </Suspense>
       <PostFX antialias={false} grade={light.grade} fx={lookFx(CURRENT, true)} />
       <SunShadows />
     </>

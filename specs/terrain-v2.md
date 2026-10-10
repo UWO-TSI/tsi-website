@@ -99,6 +99,9 @@ tsc, lint ceiling, build.
 - Residents: all schedules resolve on the new map; no spawn-cluster fallback.
 - Gulls/shore, puddles, bugs, shells, bottles: re-seeded for the new coasts.
 - Painter: the new map becomes the painter's shipped base; health suite green.
+- Title screen: the staged shots (`web/components/title/shots.ts`) are framed on
+  the old island; restage all phases on the village (wharf at dawn, plaza by
+  night) or the fallback shore shot takes over.
 - Load/perf measured on David's machine, not headless.
 
 ## Working rules
