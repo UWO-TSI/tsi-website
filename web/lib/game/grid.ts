@@ -332,10 +332,12 @@ export function clampToCell(map: IslandMap, field: Float32Array, cx: number, cz:
 export const CHUNK = 16;
 
 /**
- * Ground plus three cliff tiers, in HALF steps — so the reachable ceiling is
- * unchanged at 3 x 1.5u, it just takes twice as many levels to get there.
+ * Ground plus four cliff tiers, in HALF steps (a 6u ceiling). Raised from
+ * three tiers for the world-map terrain (David 2026-10-09: the mountain
+ * "needs to be very exaggerated, like 8+ blocks high"). Must stay a single
+ * digit: map files store one digit per cell.
  */
-export const MAX_LEVEL = 6;
+export const MAX_LEVEL = 8;
 
 // ── Surfaces ─────────────────────────────────────────────────────
 // Values are stable — they are persisted in the map file. Append only.

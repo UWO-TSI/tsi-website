@@ -77,7 +77,7 @@ describe("constants", () => {
     expect(isWalkableDrop(CLIFF_LEVELS)).toBe(false);
     expect(WATER_DROP).toBeCloseTo(0.078, 5);
     expect(CHUNK).toBe(16);
-    expect(MAX_LEVEL).toBe(6);
+    expect(MAX_LEVEL).toBe(8);
   });
 });
 
