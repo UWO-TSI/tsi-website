@@ -21,11 +21,17 @@ describe("the terrain v2 draft", () => {
     expect(Number.isFinite(heightAtWorld(v.map, sx, sz))).toBe(true);
   });
 
-  it("keeps the strait open: both bridges stand over water", () => {
-    const bridges = v.objects.filter(o => o.kind === "bridge");
-    expect(bridges.length).toBe(2);
-    for (const b of bridges) {
-      expect(isWater(surfaceAt(v.map, worldToCellX(v.map, b.x), worldToCellZ(v.map, b.z)))).toBe(true);
+  it("the north island launches cut off: no bridges, no land path from the village", () => {
+    // David 2026-10-10: the launch world is the village; the strait is dug
+    // through the drawn neck and the bridges return when the zone opens.
+    expect(v.objects.filter(o => o.kind === "bridge").length).toBe(0);
+    const { map } = v;
+    const [sx, sz] = villageSpawnPoint(v);
+    const island = flood(worldToCellX(map, sx), worldToCellZ(map, sz), false);
+    const plains = annotations.find(a => a.name.startsWith("Plains"))!;
+    for (const [cx, cz] of plains.cells) {
+      if (isWater(surfaceAt(map, cx, cz))) continue;
+      expect(island.has(cz * map.width + cx), `cell ${cx},${cz}`).toBe(false);
     }
   });
 
