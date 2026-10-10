@@ -528,8 +528,13 @@ export function buildDay(plan: ResidentPlan, span: DaySpan, nav: NavGrid): Leg[]
   const legs: Leg[] = [];
   const nightStops = plan.phases.night;
   const terminal = (stops: Stop[]) => stops.length > 0 && stops[stops.length - 1].kind === "home";
-  // 03:00: at night's last stop if night ends at home, else at its first.
-  let at = terminal(nightStops) ? nightStops[nightStops.length - 1] : nightStops[0] ?? plan.home!;
+  // 03:00: at night's last stop if night ends at home, else at its first. A map with no
+  // homes (a terrain-only painter draft) starts at any phase's first stop; with no
+  // stops anywhere the day has no legs and poseAt keeps them hidden.
+  const start = terminal(nightStops) ? nightStops[nightStops.length - 1]
+    : nightStops[0] ?? plan.home ?? ISLAND_PHASES.map(ph => plan.phases[ph][0]).find(Boolean) ?? null;
+  if (!start) return legs;
+  let at: Stop = start;
   let t = span.t0, visit = 0;
   const stay = (until: number) => { legs[legs.length - 1].t1 = Math.max(legs[legs.length - 1].t1, until); t = Math.max(t, until); };
   legs.push({ t0: t, t1: t, walk: null, from: null, stop: at, visit: visit++ });
@@ -609,6 +614,12 @@ function legAt(legs: readonly Leg[], t: number): number {
 
 /** Where the resident is at epoch second `t` (within the day's legs), written into `out`. */
 export function poseAt(legs: readonly Leg[], t: number, out: ResidentPose): ResidentPose {
+  if (!legs.length) {
+    // A day with no legs (a map giving this resident nowhere to stand): hidden.
+    out.stop = null; out.moving = false; out.inside = true;
+    out.speed = 0; out.seat = 0; out.stayed = 0; out.left = 0; out.visit = 0;
+    return out;
+  }
   const leg = legs[legAt(legs, t)], stop = leg.stop;
   out.stop = stop; out.visit = leg.visit; out.seat = 0;
   if (leg.walk && t < leg.t1) {
@@ -667,9 +678,12 @@ export class ResidentDay {
   at(t: number, days: readonly SunDay[] | null, out: ResidentPose): ResidentPose {
     const sunKey = days ? days.map(d => `${d.date}${d.sunrise}${d.sunset}`).join() : "";
     if (!this.span || t < this.span.t0 || t >= this.span.t1 || sunKey !== this.sunKey) {
-      this.span = daySpan(t * 1000, days);
+      // Legs before span and key: a throw mid-build must not leave the stale
+      // markers set, or every later frame reads a day that was never built.
+      const span = daySpan(t * 1000, days);
+      this.legs = buildDay(this.plan, span, this.nav);
+      this.span = span;
       this.sunKey = sunKey;
-      this.legs = buildDay(this.plan, this.span, this.nav);
     }
     return poseAt(this.legs, t, out);
   }

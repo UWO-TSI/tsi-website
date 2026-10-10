@@ -74,6 +74,7 @@ import {
 import { LANDMARK_IDS, LANDMARK_INFO, PROP_FOOTPRINT, TREE_SLOTS, TREE_TRUNK, objectFootprint, turn, type LandmarkId } from "@/lib/game/defaultIsland";
 import { villageHealth, type VillageHealth } from "@/lib/game/mapHealth";
 import { terrainFixtureDoc } from "@/lib/game/fixtures/terrainFixture";
+import { terrainV2DraftDoc } from "@/lib/game/fixtures/terrainV2Draft";
 import { mapBudget } from "@/lib/game/mapBudget";
 import { classifyWater, WATER_CLASS } from "@/lib/game/fishingSpots";
 import { SLOPE_RUN, cellsInPolygon, cliffDab, nextObjectId, organicCell, slopeDab, snapPlacement, snapshotCells, softDab, waterDistance, type CellSnapshot, type OrganicOp } from "@/lib/game/painterTools";
@@ -513,8 +514,10 @@ export default function MapLab() {
    */
   useEffect(() => {
     // `?fixture=terrain`: the natural-terrain test island (never the shipped one), for trying the brushes.
-    if (new URLSearchParams(window.location.search).get("fixture") === "terrain") {
-      WORLD = fromDoc(terrainFixtureDoc(), "village");
+    const fixture = new URLSearchParams(window.location.search).get("fixture");
+    if (fixture === "terrain" || fixture === "v2") {
+      // `v2`: David's drawn world-map draft (terrain sizing pass, 2026-10-09).
+      WORLD = fromDoc(fixture === "v2" ? terrainV2DraftDoc() : terrainFixtureDoc(), "village");
       setVersion((v) => v + 1);
       return;
     }
@@ -1413,11 +1416,18 @@ export default function MapLab() {
             <button onClick={() => setSheet(sheet === "import" ? "none" : "import")} style={btn(sheet === "import", { flex: 1 })}>import</button>
             <button
               onClick={() => {
+                // An unedited fixture walks as the fixture: saving it first would
+                // overwrite the painter's own autosaved draft with the fixture.
+                const fixture = new URLSearchParams(window.location.search).get("fixture");
+                if ((fixture === "terrain" || fixture === "v2") && !edited) {
+                  window.open(`/lab/island?fixture=${fixture}`, "_blank");
+                  return;
+                }
                 saveNow();
                 window.open("/lab/island?draft=1", "_blank");
               }}
               style={btn(false, { flex: 1.3, borderColor: "#7fd1c0", color: "#7fd1c0" })}
-              title="open this draft in 3D at /lab/island?draft=1"
+              title="open this draft in 3D at /lab/island"
             >
               walk it ↗
             </button>
