@@ -38,9 +38,12 @@
 .card[data-view="menu"] { width: 312px; }
 
 /* Chunky game buttons (David, 2026-10-10): every row a real raised button with a pressed edge; the chosen one fills
-   sage and grows a marker. The lift/settle moves transform only, so the rows never reflow. */
+   sage and grows a marker. The lift/settle moves transform only, so the rows never reflow.
+   Rounded RECTANGLES, not pills: full rounding on a wide button reads as an oval (David: "the oval ui shape looks
+   bad"), so every button on this screen sits on --title-r. */
+.screen { --title-r: 14px; }
 .menu { list-style: none; margin: 0; padding: 8px 6px; display: grid; gap: 9px; position: relative; }
-.menu button { position: relative; width: 100%; min-height: 48px; padding: 10px 20px; border: 0; border-radius: var(--gui-r-pill); cursor: pointer;
+.menu button { position: relative; width: 100%; min-height: 48px; padding: 10px 20px; border: 0; border-radius: var(--title-r); cursor: pointer;
   background: var(--gui-paper-deep); color: var(--gui-ink); box-shadow: 0 3px 0 var(--gui-paper-edge), 0 4px 10px rgb(61 48 30 / 0.08);
   font: 800 19px/1.2 var(--gui-font);
   transition: background var(--gui-t-fast) ease, color var(--gui-t-fast) ease, transform var(--gui-t-fast) ease, box-shadow var(--gui-t-fast) ease; }
@@ -54,9 +57,11 @@
 .caption { position: relative; margin: 6px 0 2px; text-align: center; font: 700 13px/1.4 var(--gui-font); color: var(--gui-muted); overflow-wrap: anywhere; }
 
 .form { position: relative; display: grid; gap: 10px; padding: 8px 10px 6px; }
+/* The kit's buttons and fields are pills; on this screen they square up to the title's rounded rectangle. */
+.form button:not(.back), .form input { border-radius: var(--title-r) !important; }
 .formHead { display: flex; align-items: center; gap: 10px; }
 .formHead h2 { margin: 0; font: 900 22px/1.2 var(--gui-font); color: var(--gui-ink-strong); }
-.back { width: 32px; height: 32px; flex: none; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper-deep); color: var(--gui-ink);
+.back { width: 32px; height: 32px; flex: none; border: 0; border-radius: 10px; background: var(--gui-paper-deep); color: var(--gui-ink);
   font: 900 20px/1 var(--gui-font); cursor: pointer; }
 .back:hover { background: var(--gui-paper-edge); }
 .form button svg { flex: none; }

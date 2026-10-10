@@ -190,14 +190,16 @@ export const TUNING_DEFAULTS: Tuning = {
     horizon: 0xa9dcf2,
     night: 0,
   },
+  // Cinematic pass (David, 2026-10-10: "grass needs texture and flowing
+  // grass"): denser, taller tufts with a longer lean, and a stronger quilt.
   grass: {
     model: 1,
-    normalStrength: 0.6,
+    normalStrength: 0.72,
     normalScale: 2,
-    tuftDensity: 6,
-    tuftHeight: 0.34,
-    swayAmount: 0.09,
-    swaySpeed: 1.1,
+    tuftDensity: 13,
+    tuftHeight: 0.42,
+    swayAmount: 0.13,
+    swaySpeed: 1.0,
     gustLength: 9,
   },
 };

@@ -113,7 +113,9 @@ function Scene() {
 }
 
 /** The live backdrop. `onReady` fires after the first frames have drawn, so the page can fade it in. */
-const PIXEL_SCALE = 0.4;
+// 0.65 (was 0.4): the cinematic pass needs the quilt, the tufts and the sky's
+// clouds to survive the downsample; the finish still reads as crisp pixels.
+const PIXEL_SCALE = 0.65;
 
 export default function TitleScene({ onReady }: { onReady?: () => void }) {
   const [px] = useState(() => {
