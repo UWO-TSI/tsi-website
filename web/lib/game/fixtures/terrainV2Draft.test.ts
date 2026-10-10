@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { terrainV2DraftDoc } from "./terrainV2Draft";
 import { buildVillage, parseVillage, villageSpawnPoint } from "../villageMap";
 import { MAX_LEVEL, heightAtWorld, isWater, surfaceAt, worldToCellX, worldToCellZ } from "../grid";
-import { villageIsland } from "../defaultIsland";
+import { LANDMARK_INFO, villageIsland, type LandmarkId } from "../defaultIsland";
 import { ResidentDay, navGrid, newPose, planResidents } from "../residentRoutine";
 import { DEFAULT_NPC_PERSONAS } from "@/data/content-defaults";
 
@@ -35,9 +35,10 @@ describe("the terrain v2 draft", () => {
     }
   });
 
-  it("hosts residents without a village: no homes, yet every pose reads all day", { timeout: 30_000 }, () => {
-    // The walk bench froze on this map: buildDay assumed plan.home, threw inside
-    // useFrame, and the loading screen never lifted. No landmarks may ever crash it.
+  it("hosts residents before wiring: every pose reads all day", { timeout: 30_000 }, () => {
+    // The walk bench froze on this map when it had no landmarks: buildDay assumed
+    // plan.home, threw inside useFrame, and the loading screen never lifted. A
+    // partial map may never crash it.
     const island = villageIsland(v);
     const nav = navGrid(island, v);
     const plans = planResidents(DEFAULT_NPC_PERSONAS.slice(0, 3), v, island);
@@ -107,6 +108,38 @@ describe("the terrain v2 draft", () => {
     // terrace (water sits one below its ground).
     expect(high).toBeGreaterThanOrEqual(MAX_LEVEL - 2);
     expect(pondLevels.get(1) ?? 0).toBeGreaterThanOrEqual(30);
+  });
+
+  it("the village stands: every building on flat dry ground, the oracle on the summit", () => {
+    const { map } = v;
+    for (const o of v.objects.filter(b => b.kind === "landmark")) {
+      const info = LANDMARK_INFO[o.id as LandmarkId];
+      if (!info?.half || o.id === "wharf") continue;        // the wharf's deck stands over water by design
+      const r = Math.ceil(Math.max(...info.half));
+      const cx0 = worldToCellX(map, o.x), cz0 = worldToCellZ(map, o.z);
+      const pad = new Set<number>();
+      for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
+        expect(isWater(surfaceAt(map, cx0 + dx, cz0 + dz)), `${o.id} wet at ${cx0 + dx},${cz0 + dz}`).toBe(false);
+        pad.add(map.levels[(cz0 + dz) * map.width + (cx0 + dx)]);
+      }
+      expect(pad.size, `${o.id} pad tilts`).toBe(1);
+      if (o.id === "oracle") expect([...pad][0]).toBe(MAX_LEVEL);
+    }
+  });
+
+  it("the village connects: from the boat you can walk to every door and the plaza", () => {
+    const { map } = v;
+    const [sx, sz] = villageSpawnPoint(v);
+    const reach = flood(worldToCellX(map, sx), worldToCellZ(map, sz), true);
+    for (const id of ["plaza", "monument", "hq", "shop", "cafe", "museum", "wharf"]) {
+      const o = v.objects.find(b => b.kind === "landmark" && b.id === id)!;
+      const cx0 = worldToCellX(map, o.x), cz0 = worldToCellZ(map, o.z);
+      let near = false;
+      for (let dx = -4; dx <= 4 && !near; dx++) for (let dz = -4; dz <= 4 && !near; dz++) {
+        near = reach.has((cz0 + dz) * map.width + (cx0 + dx));
+      }
+      expect(near, `${id} unreachable from spawn`).toBe(true);
+    }
   });
 
   it("islands are actual islands: every landmass holds playable ground", () => {
