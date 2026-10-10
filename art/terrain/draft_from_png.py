@@ -73,7 +73,40 @@ ISLET_RINGS = 6                   # how many rings of growth a small island may 
 # 2026-10-10); these return as objects when that zone opens.
 BRIDGES = [((900, 575), 0.0), ((1185, 500), 0.35)]
 EMIT_BRIDGES = False
-SPAWN_PX = (925, 980)             # just south of the village dots
+
+# ── The village (P1 proposal, specs/terrain-v2.md) ──────────────────────
+# A fishing village: the wharf is the entrance, a main street runs up to a
+# central plaza, HQ and the main buildings radiate off it, houses sit in two
+# loose clusters, study spots everywhere. Cell coords (cx south+, cz west+).
+# Doors: a building's front is local -z; yaw turns it (see door_yaw uses).
+PLAZA = (216, 334)                # plaza centre; stone disc + monument
+PLAZA_R = 7
+WHARF_CZ = 326                    # the shore column the wharf stands on
+HALF_PI = 1.5707963267948966
+# id, (cx, cz), yaw, flatten radius. Yaws face each door at the plaza/trail.
+BUILDINGS = [
+    ("hq",     (204, 334), -HALF_PI, 4),   # north of the plaza, door south
+    ("shop",   (216, 320),  3.1415926535897931, 4),  # east, door west
+    ("cafe",   (216, 348),  0.0, 4),       # west, door east
+    ("museum", (228, 322),  HALF_PI, 4),   # southeast, door north
+]
+HOUSES = [(222, 352), (228, 356), (224, 362), (200, 324), (196, 332), (206, 318)]
+STUDY_TABLES = [(212, 338), (213, 346), (206, 328), (244, 332)]
+BENCHES = [(218, 337), (213, 330), (246, 328), (218, 360)]
+LAMPS = [(246, 332), (250, 328), (240, 331), (232, 332), (224, 333),
+         (212, 328), (212, 340), (221, 328), (221, 340), (200, 330), (224, 354)]
+# Relaxed soil paths: main street to the wharf, spokes to each door, strolls
+# to the house clusters, the beach and the north garden.
+PATHS = [
+    [(248, 330), (240, 331), (232, 332), (224, 333), (218, 334)],
+    [(209, 334), (207, 334)],
+    [(216, 328), (216, 323)],
+    [(216, 340), (216, 345)],
+    [(221, 329), (225, 325), (226, 323)],
+    [(220, 340), (223, 350), (225, 356), (222, 366)],
+    [(210, 331), (204, 327), (200, 325)],
+]
+BEACH_LANDMARK = (177, 388)       # the west beach anchor (residents, gulls)
 
 # Zone notes for the painter: name, colour, centre (image px), radius (cells).
 # The plains disc also clamps the rolling hills flat: combat ground stays open.
@@ -414,6 +447,104 @@ def carve_trail(lv, cls, mtn):
     return set()
 
 
+def flatten_pad(lv, cls, cx, cz, r, level=None):
+    """A building (or plaza) pad: one level across the footprint's ground
+    (water keeps its own level). The LOWEST ground level in the pad wins, so
+    the later taper pass only shaves around it and never tilts the pad."""
+    x0, x1 = max(0, cx - r), min(WIDTH, cx + r + 1)
+    z0, z1 = max(0, cz - r), min(DEPTH, cz + r + 1)
+    ground = ~np.isin(cls[x0:x1, z0:z1], [CLASS_OF.index("sea"), CLASS_OF.index("blue")])
+    if not ground.any():
+        return 0
+    pad = int(lv[x0:x1, z0:z1][ground].min()) if level is None else level
+    lv[x0:x1, z0:z1][ground] = pad
+    return pad
+
+
+def paint_path(surf, cls, pts, surface):
+    """A relaxed path: straight runs between the waypoints, 3 cells wide,
+    painted only over plain grass (never water, sand or the plaza)."""
+    grass_i = CLASS_OF.index("grass")
+    ok = np.isin(cls, [grass_i, CLASS_OF.index("dark1"), CLASS_OF.index("dark2"),
+                       CLASS_OF.index("brown"), CLASS_OF.index("text")])
+    for (ax, az), (bx, bz) in zip(pts, pts[1:]):
+        n = int(max(abs(bx - ax), abs(bz - az), 1))
+        for i in range(n + 1):
+            cx, cz = round(ax + (bx - ax) * i / n), round(az + (bz - az) * i / n)
+            for dx in range(-1, 2):
+                for dz in range(-1, 2):
+                    gx, gz = cx + dx, cz + dz
+                    if 0 <= gx < WIDTH and 0 <= gz < DEPTH and ok[gx, gz] and surf[gx, gz] == GRASS:
+                        surf[gx, gz] = surface
+
+
+def village_layout(lv, surf, cls, mtn):
+    """The P1 village proposal on the terrain: pads, plaza, paths, objects.
+    Returns (objects, annotations) for the document; mutates lv and surf."""
+    objects, annotations = [], []
+    w = lambda cx, cz: world_of_cell(cx, cz)
+
+    # The wharf stands where the main street meets the sea: find that shore.
+    sea_i = CLASS_OF.index("sea")
+    shore = next(cx for cx in range(PLAZA[0], WIDTH) if cls[cx, WHARF_CZ] == sea_i)
+    wharf = (shore - 2, WHARF_CZ)
+    flatten_pad(lv, cls, wharf[0] - 1, wharf[1], 2)
+    x, z = w(*wharf)
+    objects.append({"id": "wharf", "kind": "landmark", "x": x, "z": z, "yaw": -HALF_PI})
+    x, z = w(wharf[0] - 5, wharf[1])
+    objects.append({"id": "default", "kind": "spawn", "x": x, "z": z})
+    annotations.append({"name": "Boat arrival: first-login cutscene lands here", "color": "#7FB4D9",
+                        "cells": [[cx, cz] for cx in range(shore, min(WIDTH, shore + 4))
+                                  for cz in range(WHARF_CZ - 2, WHARF_CZ + 3)]})
+
+    # Plaza: stone heart of the village, monument in the middle.
+    plaza_level = flatten_pad(lv, cls, PLAZA[0], PLAZA[1], PLAZA_R + 1)
+    for cx in range(PLAZA[0] - PLAZA_R, PLAZA[0] + PLAZA_R + 1):
+        for cz in range(PLAZA[1] - PLAZA_R, PLAZA[1] + PLAZA_R + 1):
+            if (cx - PLAZA[0]) ** 2 + (cz - PLAZA[1]) ** 2 <= PLAZA_R * PLAZA_R and cls[cx, cz] != sea_i:
+                surf[cx, cz] = STONE
+    x, z = w(*PLAZA)
+    objects.append({"id": "plaza", "kind": "landmark", "x": x, "z": z})
+    objects.append({"id": "monument", "kind": "landmark", "x": x, "z": z})
+
+    for lid, (cx, cz), yaw, r in BUILDINGS:
+        flatten_pad(lv, cls, cx, cz, r, plaza_level if max(abs(cx - PLAZA[0]), abs(cz - PLAZA[1])) <= PLAZA_R + r + 3 else None)
+        x, z = w(cx, cz)
+        objects.append({"id": lid, "kind": "landmark", "x": x, "z": z, **({"yaw": yaw} if yaw else {})})
+
+    # Oracle temple: staked on the summit, door toward the trail (west).
+    top = np.argwhere(mtn & (lv == MOUNTAIN_TOP))
+    if len(top):
+        tx, tz = (int(v) for v in top[np.argmin(((top - top.mean(0)) ** 2).sum(1))])
+        flatten_pad(lv, cls, tx, tz, 5, MOUNTAIN_TOP)
+        x, z = w(tx, tz)
+        objects.append({"id": "oracle", "kind": "landmark", "x": x, "z": z, "yaw": 3.1415926535897931})
+        annotations.append({"name": "Oracle Temple: the climb is the class pilgrimage", "color": "#2E8B8B",
+                            "cells": [[tx + dx, tz + dz] for dx in range(-6, 7) for dz in range(-6, 7)
+                                      if dx * dx + dz * dz <= 36]})
+
+    x, z = w(*BEACH_LANDMARK)
+    objects.append({"id": "beach", "kind": "landmark", "x": x, "z": z})
+
+    for i, (cx, cz) in enumerate(HOUSES):
+        flatten_pad(lv, cls, cx, cz, 2)
+        annotations.append({"name": f"House {i + 1}", "color": "#D9A05B",
+                            "cells": [[cx + dx, cz + dz] for dx in range(-2, 3) for dz in range(-2, 3)
+                                      if dx * dx + dz * dz <= 5]})
+    for i, (cx, cz) in enumerate(STUDY_TABLES):
+        x, z = w(cx, cz)
+        objects.append({"id": f"study-{i}", "kind": "study", "x": x, "z": z})
+    for i, (cx, cz) in enumerate(BENCHES):
+        x, z = w(cx, cz)
+        objects.append({"id": f"bench-{i}", "kind": "bench", "x": x, "z": z})
+    for i, (cx, cz) in enumerate(LAMPS):
+        x, z = w(cx, cz)
+        objects.append({"id": f"lamp-{i}", "kind": "lamp", "x": x, "z": z})
+    for pts in PATHS:
+        paint_path(surf, cls, pts, SOIL)
+    return objects, annotations
+
+
 def annotate():
     """Zone notes for the painter, cells from his labels (coarse discs)."""
     out = []
@@ -436,6 +567,8 @@ def main():
     mtn = mountain_mask(cls)
     lv = levels_of(cls, mtn, cell_lum)
     surf = np.vectorize(lambda i: BASE_SURFACE[CLASS_OF[i]])(cls)
+    objects, village_notes = village_layout(lv, surf, cls, mtn)
+    taper(lv, mtn)                 # the pads' rims settle back into slopes
 
     doc = {
         "width": WIDTH, "depth": DEPTH,
@@ -443,12 +576,9 @@ def main():
         "tile": 1, "levelStep": 0.75,
         "levels": ["".join(str(int(lv[cx, cz])) for cx in range(WIDTH)) for cz in range(DEPTH)],
         "surfaces": ["".join(str(int(surf[cx, cz])) for cx in range(WIDTH)) for cz in range(DEPTH)],
-        "annotations": annotate(),
-        "objects": [],
+        "annotations": annotate() + village_notes,
+        "objects": objects,
     }
-    sx, szd = cell_of_px(*SPAWN_PX)
-    wx, wz = world_of_cell(sx, szd)
-    doc["objects"].append({"id": "default", "kind": "spawn", "x": wx, "z": wz})
     if EMIT_BRIDGES:
         for i, ((px_x, px_y), yaw) in enumerate(BRIDGES):
             cx, cz = cell_of_px(px_x, px_y)
@@ -476,7 +606,8 @@ def main():
 
     land = (surf != RIVER).sum()
     cliff_edges = int(((np.abs(np.diff(lv, axis=0)) > 1).sum() + (np.abs(np.diff(lv, axis=1)) > 1).sum()))
-    print(f"{WIDTH}x{DEPTH} cells, {land} land ({land/1434:.1f}x today), levels to {lv.max()}, {cliff_edges} cliff edges")
+    print(f"{WIDTH}x{DEPTH} cells, {land} land ({land/1434:.1f}x today), levels to {lv.max()}, {cliff_edges} cliff edges, "
+          f"{len(doc['objects'])} objects")
     print(f"wrote {OUT.relative_to(ROOT)} and {PREVIEW.relative_to(ROOT)}")
 
 
