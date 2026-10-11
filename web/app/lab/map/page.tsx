@@ -264,6 +264,36 @@ function draftDoc(w: World): VillageDoc {
 }
 
 /**
+ * Where a freshly loaded map should open: its spawn (the village heart), else the centre of its land. On a world
+ * map (384x552) the top-left corner is open sea, and a painter that opens on blank water reads as a page that
+ * never loaded (David, 2026-10-10: "the page is not loading for me"). Module scope like WORLD: the load sites set
+ * it, one effect consumes it.
+ */
+let FOCUS: { at: [number, number]; w: number; d: number } | null = null;
+/** Remember where this world should open; consumed by the scroll effect once THIS map is the rendered one. */
+function setLoadFocus(w: World): void {
+  FOCUS = { at: loadFocus(w), w: w.map.width, d: w.map.depth };
+}
+function loadFocus(w: World): [number, number] {
+  // Objects live in world coordinates; the canvas is cell space (`pointer`: wx = originX + u - 0.5).
+  const spawn = w.objects.find((o) => o.kind === "spawn");
+  if (spawn) return [spawn.x - w.map.originX + 0.5, spawn.z - w.map.originZ + 0.5];
+  const { map } = w;
+  let x0 = map.width, x1 = 0, z0 = map.depth, z1 = 0, any = false;
+  for (let z = 0; z < map.depth; z++) {
+    for (let x = 0; x < map.width; x++) {
+      if (isWater(surfaceAt(map, x, z))) continue;
+      any = true;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (z < z0) z0 = z;
+      if (z > z1) z1 = z;
+    }
+  }
+  return any ? [(x0 + x1) / 2, (z0 + z1) / 2] : [map.width / 2, map.depth / 2];
+}
+
+/**
  * Undo history, also module scope and for the same reason.
  *
  * A snapshot is a full copy of both arrays. At 128² that is 32KB, at 256² it is
@@ -518,6 +548,7 @@ export default function MapLab() {
     if (fixture === "terrain" || fixture === "v2") {
       // `v2`: David's drawn world-map draft (terrain sizing pass, 2026-10-09).
       WORLD = fromDoc(fixture === "v2" ? terrainV2DraftDoc() : terrainFixtureDoc(), "village");
+      setLoadFocus(WORLD);
       setVersion((v) => v + 1);
       return;
     }
@@ -531,6 +562,7 @@ export default function MapLab() {
     if (!saved) return;
     try {
       WORLD = fromDoc(JSON.parse(saved) as VillageDoc);
+      setLoadFocus(WORLD);
     } catch {
       return;
     }
@@ -584,6 +616,7 @@ export default function MapLab() {
     (next: World) => {
       commit();
       WORLD = next;
+      setLoadFocus(next);
       setSelected(null);
       bump();
     },
@@ -676,6 +709,21 @@ export default function MapLab() {
   }, [undo, redo, selected, deleteObject, updateObject, snap, view]);
 
   const flip = view === "game";
+  /** The canvas's scroll viewport; a freshly loaded map centres its FOCUS in it (the fixture's first screen was open sea). */
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = scrollRef.current;
+    // Consume only once the rendered map IS the loaded one: on the load's own commit this effect still sees the
+    // previous render's map (the fixture effect runs earlier in the same pass), and scrolling then would aim with
+    // the wrong dimensions and throw the focus away.
+    if (!el || !FOCUS || FOCUS.w !== map.width || FOCUS.d !== map.depth) return;
+    const [u, v] = FOCUS.at;
+    FOCUS = null;
+    const cx = (flip ? (map.width - u) : u) * zoom, cy = (flip ? (map.depth - v) : v) * zoom;
+    // A frame later: the draw effect (declared below) must size the canvas first, or the scroll clamps to 0.
+    const id = requestAnimationFrame(() => el.scrollTo({ left: Math.max(0, cx + 16 - el.clientWidth / 2), top: Math.max(0, cy + 16 - el.clientHeight / 2) }));
+    return () => cancelAnimationFrame(id);
+  }, [version, flip, zoom, map.width, map.depth]);
   /** Cell space (cell (x, z) spans [x, x + 1] × [z, z + 1]) → canvas pixels, for text drawn unflipped. */
   const toPx = useCallback(
     (u: number, v: number): [number, number] => (flip ? [(map.width - u) * zoom, (map.depth - v) * zoom] : [u * zoom, v * zoom]),
@@ -1281,7 +1329,7 @@ export default function MapLab() {
 
   return (
     <div style={{ position: "fixed", inset: 0, top: 40, background: "#11151a", display: "flex", color: "#c8cfd4" }}>
-      <div style={{ flex: 1, overflow: "auto", padding: 16 }}>
+      <div ref={scrollRef} style={{ flex: 1, overflow: "auto", padding: 16 }}>
         <canvas
           ref={canvasRef}
           data-testid="painter-canvas"
@@ -1403,6 +1451,7 @@ export default function MapLab() {
                 // floats every building over open water on a map that no longer
                 // has ground.
                 WORLD = { ...world(), map: m, props: [], annotations: [], objects: [] };
+                setLoadFocus(WORLD);
                 setSelected(null);
                 bump();
               }}
@@ -1786,6 +1835,7 @@ export default function MapLab() {
             onClick={() => {
               commit();
               WORLD = shippedVillage();
+              setLoadFocus(WORLD);
               setSelected(null);
               try {
                 window.localStorage.removeItem(PAINTER_DRAFT_KEY);
