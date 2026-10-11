@@ -79,32 +79,53 @@ EMIT_BRIDGES = False
 # central plaza, HQ and the main buildings radiate off it, houses sit in two
 # loose clusters, study spots everywhere. Cell coords (cx south+, cz west+).
 # Doors: a building's front is local -z; yaw turns it (see door_yaw uses).
-PLAZA = (216, 334)                # plaza centre; stone disc + monument
-PLAZA_R = 7
+PLAZA = (202, 336)                # plaza centre; stone disc + monument (off-centre)
+PLAZA_R = 9                       # roomier: crowds gather here (city-planning pass)
 WHARF_CZ = 326                    # the shore column the wharf stands on
 HALF_PI = 1.5707963267948966
-# id, (cx, cz), yaw, flatten radius. Yaws face each door at the plaza/trail.
+PI = 3.1415926535897931
+BUILDING_SCALE = 1.15             # the world map's buildings run a touch larger (David: "slightly bigger")
+# id, (cx, cz), yaw, flatten radius. City-planning pass (David, 2026-10-10:
+# "organic, not a circle; stores side by side facing the street; looser"):
+# the main street is the spine from the wharf (gateway) to the plaza (civic
+# node); shop and cafe stand SIDE BY SIDE on its east side as the street
+# wall, doors facing the street with a little yaw jitter so nothing sits on
+# a perfect compass point; HQ closes the vista at the head of the street;
+# the museum keeps the quiet west side between civic and the house lanes.
 BUILDINGS = [
-    ("hq",     (204, 334), -HALF_PI, 4),   # north of the plaza, door south
-    ("shop",   (216, 320),  3.1415926535897931, 4),  # east, door west
-    ("cafe",   (216, 348),  0.0, 4),       # west, door east
-    ("museum", (228, 322),  HALF_PI, 4),   # southeast, door north
+    ("hq",     (193, 336), -HALF_PI + 0.06, 5),  # head of the street, door south down the spine
+    ("shop",   (215, 325),  PI + 0.10,      4),  # street wall, door west onto the dockfront leg
+    ("cafe",   (207, 327),  PI - 0.06,      4),  # beside the shop, same frontage line
+    ("museum", (202, 348),  0.0 - 0.08,     5),  # quiet side, door east toward the plaza
 ]
-HOUSES = [(222, 352), (228, 356), (224, 362), (200, 324), (196, 332), (206, 318)]
-STUDY_TABLES = [(212, 338), (213, 346), (206, 328), (244, 332)]
-BENCHES = [(218, 337), (213, 330), (246, 328), (218, 360)]
-LAMPS = [(246, 332), (250, 328), (240, 331), (232, 332), (224, 333),
-         (212, 328), (212, 340), (221, 328), (221, 340), (200, 330), (224, 354)]
-# Relaxed soil paths: main street to the wharf, spokes to each door, strolls
-# to the house clusters, the beach and the north garden.
+# Back lanes, not a ring: a west lane behind the museum, a north lane behind
+# HQ, wide gaps for walking crowds.
+HOUSES = [(210, 352), (216, 357), (205, 358), (188, 328), (185, 338), (190, 346)]
+STUDY_TABLES = [(206, 332), (209, 340), (198, 341), (212, 344)]
+BENCHES = [(222, 331), (218, 332), (202, 331), (199, 340)]
+LAMPS = [(226, 327), (221, 329), (216, 330), (211, 332), (207, 334),
+         (198, 336), (202, 341), (206, 331), (209, 350), (188, 332), (214, 355)]
+# Relaxed soil paths: the spine (two legs, wharf to plaza), the museum loop,
+# the two house lanes, and the long beach stroll.
 PATHS = [
-    [(248, 330), (240, 331), (232, 332), (224, 333), (218, 334)],
-    [(209, 334), (207, 334)],
-    [(216, 328), (216, 323)],
-    [(216, 340), (216, 345)],
-    [(221, 329), (225, 325), (226, 323)],
-    [(220, 340), (223, 350), (225, 356), (222, 366)],
-    [(210, 331), (204, 327), (200, 325)],
+    [(228, 326), (224, 327), (220, 329), (216, 330), (212, 332)],   # dockfront leg
+    [(212, 332), (209, 334), (206, 336)],                            # high-street leg into the plaza
+    [(199, 342), (202, 346)],                                        # museum loop
+    [(206, 344), (209, 351), (215, 356), (206, 357)],                # west house lane
+    [(197, 334), (190, 330), (186, 337), (189, 345)],                # north house lane
+    [(200, 345), (190, 360), (180, 378)],                            # beach stroll
+]
+# Reserved lots (annotations only): the village is planned to grow. Next
+# shop slots extend the street wall; the workshop lot is the sudo pets
+# build (specs/lore.md); house lots extend each lane; civic expansion sits
+# west of HQ. Nothing builds here yet; the painter shows the plan.
+LOTS = [
+    ("Lot: future shop (street wall, south)", (222, 323)),
+    ("Lot: future shop (street wall, north)", (200, 329)),
+    ("Lot: workshop (sudo pets, P2+)",        (208, 345)),
+    ("Lot: future houses (west lane)",        (222, 361)),
+    ("Lot: future houses (north lane)",       (182, 352)),
+    ("Lot: civic expansion",                  (193, 344)),
 ]
 BEACH_LANDMARK = (177, 388)       # the west beach anchor (residents, gulls)
 
@@ -505,12 +526,15 @@ def village_layout(lv, surf, cls, mtn):
                 surf[cx, cz] = STONE
     x, z = w(*PLAZA)
     objects.append({"id": "plaza", "kind": "landmark", "x": x, "z": z})
-    objects.append({"id": "monument", "kind": "landmark", "x": x, "z": z})
+    # The monument stands off-centre so the plaza reads organic and flow wraps around it.
+    mx, mz = w(PLAZA[0] + 3, PLAZA[1] + 2)
+    objects.append({"id": "monument", "kind": "landmark", "x": mx, "z": mz})
 
     for lid, (cx, cz), yaw, r in BUILDINGS:
-        flatten_pad(lv, cls, cx, cz, r, plaza_level if max(abs(cx - PLAZA[0]), abs(cz - PLAZA[1])) <= PLAZA_R + r + 3 else None)
+        flatten_pad(lv, cls, cx, cz, r, plaza_level if max(abs(cx - PLAZA[0]), abs(cz - PLAZA[1])) <= PLAZA_R + r + 1 else None)
         x, z = w(cx, cz)
-        objects.append({"id": lid, "kind": "landmark", "x": x, "z": z, **({"yaw": yaw} if yaw else {})})
+        objects.append({"id": lid, "kind": "landmark", "x": x, "z": z, "scale": BUILDING_SCALE,
+                        **({"yaw": yaw} if yaw else {})})
 
     # Oracle temple: staked on the summit, door toward the trail (west).
     top = np.argwhere(mtn & (lv == MOUNTAIN_TOP))
@@ -542,6 +566,10 @@ def village_layout(lv, surf, cls, mtn):
         objects.append({"id": f"lamp-{i}", "kind": "lamp", "x": x, "z": z})
     for pts in PATHS:
         paint_path(surf, cls, pts, SOIL)
+    for name, (cx, cz) in LOTS:
+        annotations.append({"name": name, "color": "#9AA3AB",
+                            "cells": [[cx + dx, cz + dz] for dx in range(-2, 3) for dz in range(-2, 3)
+                                      if dx * dx + dz * dz <= 5]})
     return objects, annotations
 
 

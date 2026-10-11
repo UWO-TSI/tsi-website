@@ -27,6 +27,8 @@ export interface Landmark {
   half?: [number, number];
   /** Minimap marker colour. */
   color: string;
+  /** Model scale (the world map runs its buildings a touch larger). `half` and door points arrive already scaled. */
+  scale?: number;
   /** Radians about +y (the wharf only; buildings face the camera). */
   yaw?: number;
 }
@@ -97,7 +99,15 @@ export function landmarks(v: Village = village(), opened: readonly string[] = []
     if (!o) return [];
     const { door: _door, exit: _exit, ...info } = LANDMARK_INFO[id];
     void _door; void _exit;
-    return [{ id, x: o.x, z: o.z, ...info, open: info.open || opened.includes(id), ...(o.yaw ? { yaw: o.yaw } : {}) }];
+    const s = o.scale ?? 1;
+    // The axis-aligned footprint of the scaled, turned building (|cos|/|sin| bound: exact at quarter turns,
+    // a hair generous at the organic jitter angles the world map uses).
+    const yaw = o.yaw ?? 0, c = Math.abs(Math.cos(yaw)), n = Math.abs(Math.sin(yaw));
+    const half = info.half && ((s !== 1 || yaw)
+      ? [ (info.half[0] * c + info.half[1] * n) * s, (info.half[0] * n + info.half[1] * c) * s ] as [number, number]
+      : info.half);
+    return [{ id, x: o.x, z: o.z, ...info, ...(half ? { half } : {}), open: info.open || opened.includes(id),
+      ...(o.yaw ? { yaw: o.yaw } : {}), ...(s !== 1 ? { scale: s } : {}) }];
   });
 }
 export const landmark = (id: LandmarkId, v: Village = village()): Landmark | null => landmarks(v).find(l => l.id === id) ?? null;
@@ -106,7 +116,8 @@ export const landmark = (id: LandmarkId, v: Village = village()): Landmark | nul
 export function landmarkPoint(id: LandmarkId, which: "door" | "exit", v: Village = village()): [number, number] | null {
   const l = landmark(id, v), offset = LANDMARK_INFO[id][which];
   if (!l || !offset) return null;
-  const [dx, dz] = turn(offset[0], offset[1], l.yaw);
+  const k = l.scale ?? 1;
+  const [dx, dz] = turn(offset[0] * k, offset[1] * k, l.yaw);
   return [l.x + dx, l.z + dz];
 }
 

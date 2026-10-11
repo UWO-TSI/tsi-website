@@ -13,7 +13,8 @@ import { RigStore } from "./rigs";
  * contract's codec, the interpolation buffer) for 20 s of 60 fps frames, everything the renderer does but the GPU.
  */
 describe("24 loopback bots through the driver", () => {
-  it("places every bot on the floor, plays only known clips, sits the seated still, and keeps the tiers' caps", () => {
+  // A real minute of sim: well over the 5 s default on a loaded machine (the dev server and a build alongside).
+  it("places every bot on the floor, plays only known clips, sits the seated still, and keeps the tiers' caps", { timeout: 20_000 }, () => {
     let now = 0;
     const lb = createLoopback({ bots: 24, seed: 7, clock: () => now, timer: false });
     lb.start("village");

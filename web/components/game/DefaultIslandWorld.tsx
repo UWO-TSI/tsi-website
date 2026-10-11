@@ -36,7 +36,7 @@ import JournalSheet from "@/components/progression/JournalSheet";
 import { useProgressionWorld, useCeremony, useChapterActions, type WorldGoalId } from "@/lib/game/progressionBridge";
 import confetti from "canvas-confetti";
 import type { InteriorStation } from "./interiorShared";
-import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmarkPoint, wharfDeck, benchSeat, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
+import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmarkPoint, turn, wharfDeck, benchSeat, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
 import { village, objectsOf, type Village } from "@/lib/game/villageMap";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
@@ -503,15 +503,16 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
   const board = placed.get("catch"), { missions } = layout;
   return <>
     {hq && <>
-      {/* The clubhouse model's origin is 2.35 in front of its footprint centre; porch lamps flank the door. */}
-      <group position={[hq.x, ground(hq.x, hq.z), hq.z - 2.35]}><ACNHBuilding id="hq" windowColor="#ffc95a" windowGlow={light.windowGlow} /></group>
-      {[-2, 2].map(x => <FadeLight key={x} position={[hq.x + x, ground(hq.x, hq.z) + 1.25, hq.z - 3.65]} color="#ffd17a" intensity={light.lampsOn ? light.lamp * 0.85 : 0} distance={4} decay={2} />)}
-      <FadeLight position={[hq.x, ground(hq.x, hq.z) + 1.6, hq.z - 3.75]} color="#ffd68b" intensity={light.lamp * 1.5} distance={5.5} />
+      {/* The clubhouse model's origin is 2.35 in front of its footprint centre; porch lamps flank the door.
+          `scale` (the world map's bigger buildings): the offsets scale with the model. */}
+      <group position={[hq.x + Math.sin(hq.yaw ?? 0) * -2.35 * (hq.scale ?? 1), ground(hq.x, hq.z), hq.z - Math.cos(hq.yaw ?? 0) * 2.35 * (hq.scale ?? 1)]} rotation={[0, hq.yaw ?? 0, 0]} scale={hq.scale ?? 1}><ACNHBuilding id="hq" windowColor="#ffc95a" windowGlow={light.windowGlow} /></group>
+      {[-2, 2].map(x => { const k = hq.scale ?? 1, [px, pz] = turn(x * k, -3.65 * k, hq.yaw); return <FadeLight key={x} position={[hq.x + px, ground(hq.x, hq.z) + 1.25 * k, hq.z + pz]} color="#ffd17a" intensity={light.lampsOn ? light.lamp * 0.85 : 0} distance={4} decay={2} />; })}
+      <FadeLight position={[hq.x + turn(0, -3.75 * (hq.scale ?? 1), hq.yaw)[0], ground(hq.x, hq.z) + 1.6 * (hq.scale ?? 1), hq.z + turn(0, -3.75 * (hq.scale ?? 1), hq.yaw)[1]]} color="#ffd68b" intensity={light.lamp * 1.5} distance={5.5} />
     </>}
-    {shop && <group position={at(shop)}><ACNHBuilding id="shop" lit={windowLit(light)} /></group>}
-    {oracle && <group position={at(oracle)}><ACNHBuilding id="oracle" lit={windowLit(light)} /></group>}
-    {cafe && <group position={at(cafe)}><CafeBuilding open={opened.includes("cafe")} light={light} /></group>}
-    {museum && <group position={at(museum)}><ACNHParts parts={CHALET_VARIANTS.red} lit={windowLit(light)} /></group>}
+    {shop && <group position={at(shop)} rotation={[0, shop.yaw ?? 0, 0]} scale={shop.scale ?? 1}><ACNHBuilding id="shop" lit={windowLit(light)} /></group>}
+    {oracle && <group position={at(oracle)} rotation={[0, oracle.yaw ?? 0, 0]} scale={oracle.scale ?? 1}><ACNHBuilding id="oracle" lit={windowLit(light)} /></group>}
+    {cafe && <group position={at(cafe)} rotation={[0, cafe.yaw ?? 0, 0]} scale={cafe.scale ?? 1}><CafeBuilding open={opened.includes("cafe")} light={light} /></group>}
+    {museum && <group position={at(museum)} rotation={[0, museum.yaw ?? 0, 0]} scale={museum.scale ?? 1}><ACNHParts parts={CHALET_VARIANTS.red} lit={windowLit(light)} /></group>}
     {/* Boarded doors: the existing log fence across the museum's entrance (the café boards its own, CafeBuilding). */}
     {[museum].filter(l => l && !opened.includes(l.id as WorldGoalId)).map(l => [-0.6, 0.6].map(dx => <NatureFence key={`${l!.id}${dx}`} position={[l!.x + dx, ground(l!.x, l!.z), front(l!) - 0.35]} variant={1} />))}
     {ruins && [-1.2, 0, 1.2].map(dz => <group key={dz} position={[ruins.x, ground(ruins.x, ruins.z + dz), ruins.z + dz]} rotation={[0, Math.PI / 2, 0]}><NatureFence position={[0, 0, 0]} variant={1} /></group>)}

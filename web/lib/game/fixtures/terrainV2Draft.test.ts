@@ -115,7 +115,7 @@ describe("the terrain v2 draft", () => {
     for (const o of v.objects.filter(b => b.kind === "landmark")) {
       const info = LANDMARK_INFO[o.id as LandmarkId];
       if (!info?.half || o.id === "wharf") continue;        // the wharf's deck stands over water by design
-      const r = Math.ceil(Math.max(...info.half));
+      const r = Math.ceil(Math.max(...info.half) * (o.scale ?? 1));
       const cx0 = worldToCellX(map, o.x), cz0 = worldToCellZ(map, o.z);
       const pad = new Set<number>();
       for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
