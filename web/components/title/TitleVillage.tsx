@@ -4,7 +4,7 @@ import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "@/components/game/ACNH
 import CafeBuilding from "@/components/game/study/CafeBuilding";
 import Wharf from "@/components/game/wharf/Wharf";
 import { FadeLight, Lantern } from "@/components/game/AmbientProps";
-import { landmarks, type Landmark, type VillageIsland } from "@/lib/game/defaultIsland";
+import { landmarks, turn, type Landmark, type VillageIsland } from "@/lib/game/defaultIsland";
 import { objectsOf, type Village } from "@/lib/game/villageMap";
 import { windowLit, type IslandLight } from "@/lib/game/islandLighting";
 
@@ -22,13 +22,13 @@ export default function TitleVillage({ v, island, light }: { v: Village; island:
   return <>
     {hq && <>
       {/* The clubhouse model's origin is 2.35 in front of its footprint centre; porch lamps flank the door. */}
-      <group position={[hq.x, ground(hq.x, hq.z), hq.z - 2.35]}><ACNHBuilding id="hq" windowColor="#ffc95a" windowGlow={light.windowGlow} /></group>
-      {[-2, 2].map(x => <FadeLight key={x} position={[hq.x + x, ground(hq.x, hq.z) + 1.25, hq.z - 3.65]} color="#ffd17a" intensity={light.lampsOn ? light.lamp * 0.85 : 0} distance={4} decay={2} />)}
+      <group position={[hq.x + Math.sin(hq.yaw ?? 0) * -2.35 * (hq.scale ?? 1), ground(hq.x, hq.z), hq.z - Math.cos(hq.yaw ?? 0) * 2.35 * (hq.scale ?? 1)]} rotation={[0, hq.yaw ?? 0, 0]} scale={hq.scale ?? 1}><ACNHBuilding id="hq" windowColor="#ffc95a" windowGlow={light.windowGlow} /></group>
+      {[-2, 2].map(x => { const k = hq.scale ?? 1, [px, pz] = turn(x * k, -3.65 * k, hq.yaw); return <FadeLight key={x} position={[hq.x + px, ground(hq.x, hq.z) + 1.25 * k, hq.z + pz]} color="#ffd17a" intensity={light.lampsOn ? light.lamp * 0.85 : 0} distance={4} decay={2} />; })}
     </>}
-    {shop && <group position={at(shop)}><ACNHBuilding id="shop" lit={windowLit(light)} /></group>}
-    {oracle && <group position={at(oracle)}><ACNHBuilding id="oracle" lit={windowLit(light)} /></group>}
-    {cafe && <group position={at(cafe)}><CafeBuilding open light={light} /></group>}
-    {museum && <group position={at(museum)}><ACNHParts parts={CHALET_VARIANTS.red} lit={windowLit(light)} /></group>}
+    {shop && <group position={at(shop)} rotation={[0, shop.yaw ?? 0, 0]} scale={shop.scale ?? 1}><ACNHBuilding id="shop" lit={windowLit(light)} /></group>}
+    {oracle && <group position={at(oracle)} rotation={[0, oracle.yaw ?? 0, 0]} scale={oracle.scale ?? 1}><ACNHBuilding id="oracle" lit={windowLit(light)} /></group>}
+    {cafe && <group position={at(cafe)} rotation={[0, cafe.yaw ?? 0, 0]} scale={cafe.scale ?? 1}><CafeBuilding open light={light} /></group>}
+    {museum && <group position={at(museum)} rotation={[0, museum.yaw ?? 0, 0]} scale={museum.scale ?? 1}><ACNHParts parts={CHALET_VARIANTS.red} lit={windowLit(light)} /></group>}
     {wharf && <Wharf dock={{ x: wharf.x, z: wharf.z, yaw: wharf.yaw ?? 0 }} light={light} place="village" />}
     {objectsOf("lamp", v).map(l => <Lantern key={l.id} position={[l.x, ground(l.x, l.z), l.z]} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />)}
   </>;
