@@ -23,7 +23,7 @@ import { hash01 } from "@/lib/game/worldFx";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import { dropWalker, setWalker } from "@/lib/game/footprintWalkers";
 import { orbit } from "@/lib/game/orbitCamera";
-import { TALK_CLICK_RANGE, TALK_PITCH, TALK_RANGE, beginTalk, endTalk, leaveTalk, nearestTalker, requestTalk, routineLag, setTalkNear, startTalk, talkCameraYaw, talkChanged, talkStore, talkTyping } from "@/lib/game/residentTalk";
+import { TALK_CLICK_RANGE, TALK_PITCH, TALK_RANGE, beginTalk, endTalk, leaveTalk, nearestTalker, requestTalk, routineLag, setTalkNear, startTalk, steerTalkShot, talkCameraYaw, talkChanged, talkStore, talkTyping } from "@/lib/game/residentTalk";
 import { fillName, lineTime, linesNow, pickConversation, talkFor } from "@/lib/content/talk";
 import type { FaceOverride } from "@/lib/game/character/face";
 import { useStepDust } from "./movement/moveFx";
@@ -177,7 +177,7 @@ function startRequested(list: readonly Runtime[], c: Clock, p: THREE.Vector3, no
   const talk = talkFor(r.persona, { phase, hour: torontoHour(new Date(t * 1000)) });
   const conv = talk[pickConversation(talk.length, r.slug, c.span?.key ?? "", n)] ?? [];
   startTalk(beginTalk({ id: r.id, slug: r.slug, name: r.name, post: r.post, seed: r.seed }, conv.map(l => ({ text: fillName(l.text, playerName), face: l.face })), performance.now() / 1000));
-  talkStore.cameraYaw = orbit.target.yaw; talkStore.cameraPitch = orbit.target.pitch;
+  talkStore.cameraYaw = orbit.target.yaw; talkStore.cameraPitch = orbit.target.pitch; talkStore.cameraZoom = orbit.target.zoom;
   orbit.target.yaw = talkCameraYaw(p.x, p.z, r.x, r.z, orbit.target.yaw);
   orbit.target.pitch = Math.min(orbit.target.pitch, TALK_PITCH);
   face({ x: r.x, z: r.z });
@@ -352,6 +352,8 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
         r.talkAt = at;
       }
       r.talking = true;
+      // The conversation shot (residentTalk.ts TALK_SHOT): the camera glides down to the two-shot while it sits idle.
+      steerTalkShot(dt, now, p.x, p.z, r.x, r.z, talk!.index);
       if (typing && !sitting) m.pose = "Chat";
       if (typing) m.talk = Math.max(m.talk ?? 0, 0.15);
       r.face.expression = talk!.phase === "closing" ? "happy" : talk!.phase === "speaking" ? talk!.lines[talk!.index].face ?? "neutral" : "neutral";
@@ -362,6 +364,7 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
       r.bubbleNext = Math.max(r.bubbleNext, now + BUBBLE_COOLDOWN_S);
       if (talkStore.cameraYaw !== null) { orbit.target.yaw = talkStore.cameraYaw; talkStore.cameraYaw = null; }
       if (talkStore.cameraPitch !== null) { orbit.target.pitch = talkStore.cameraPitch; talkStore.cameraPitch = null; }
+      if (talkStore.cameraZoom !== null) { orbit.target.zoom = talkStore.cameraZoom; talkStore.cameraZoom = null; }
       face(null);
     } else if (r.chat && d >= FACE_RANGE) {
       const pair = r.seed ^ r.chat.seed, turn = Math.floor(now / 3.4 + hash01(pair, 1) * 4) % 2;

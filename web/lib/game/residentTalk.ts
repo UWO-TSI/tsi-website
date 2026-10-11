@@ -15,7 +15,7 @@
  */
 import type { TalkLine } from "@/lib/content/talk";
 import type { SFXName } from "./audio";
-import { wrapAngle } from "./orbitCamera";
+import { STEER_IDLE, orbit, wrapAngle, type OrbitAngles } from "./orbitCamera";
 import { hash01 } from "./worldFx";
 
 /** Walk this close and E talks to them. */
@@ -160,6 +160,37 @@ export function talkCameraYaw(px: number, pz: number, rx: number, rz: number, ya
   return yaw + wrapAngle(a - want - yaw);
 }
 
+/**
+ * The conversation shot (David, 2026-10-10: "when talking camera dips down to conversation"). The start of a talk
+ * snaps the shoulder yaw and TALK_PITCH as before; this glides the rest of the way each frame: down to face level,
+ * in to a close two-shot, a touch closer still on every line said, with a faint handheld sway. The player's own
+ * look always wins: the glide only steers while the camera sits idle (STEER_IDLE, the boat trip's rule), and the
+ * parted camera goes back to the saved angles.
+ */
+export const TALK_SHOT = {
+  /** Radians down from level: faces, not the tops of heads. Below PITCH_MIN on purpose; only the glide goes here.
+      0.18 ≈ 10°, nearly eye level (David, 2026-10-10: "slightly more exaggerated camera movement"). */
+  pitch: 0.18,
+  /** × the follow distance: the two-shot. Below ZOOM_MIN on purpose, same deal. */
+  zoom: 0.48,
+  /** Extra zoom per line said, and where the push stops. */
+  push: 0.018, pushMax: 4,
+  /** Per second: how fast the glide eases toward the shot. */
+  rate: 2.4,
+  /** The handheld sway: radians of yaw, cycles per second. */
+  swayYaw: 0.008, swayHz: 0.1,
+};
+export function steerTalkShot(dt: number, elapsed: number, px: number, pz: number, rx: number, rz: number, line: number,
+  o: { target: OrbitAngles; idle: number } = orbit): void {
+  if (o.idle < STEER_IDLE) return;
+  const k = 1 - Math.exp(-TALK_SHOT.rate * dt);
+  const sway = Math.sin(elapsed * TALK_SHOT.swayHz * Math.PI * 2) * TALK_SHOT.swayYaw;
+  o.target.yaw += wrapAngle(talkCameraYaw(px, pz, rx, rz, o.target.yaw) + sway - o.target.yaw) * k;
+  const push = Math.min(line, TALK_SHOT.pushMax);
+  o.target.pitch += (TALK_SHOT.pitch + push * 0.0045 - o.target.pitch) * k;
+  o.target.zoom += (TALK_SHOT.zoom - push * TALK_SHOT.push - o.target.zoom) * k;
+}
+
 // ── The store ───────────────────────────────────────────────────────────────────────────────────────────────────────
 export interface TalkView {
   nearId: string | null; nearName: string;
@@ -173,9 +204,10 @@ export const talkStore = {
   /** A talk asked for, by E (the one in reach) or a click or tap; the residents' frame starts it with their lines. */
   request: null as { id: string; click: boolean } | null,
   active: null as Talk | null,
-  /** The camera's heading and tilt before the talk turned it, put back after. */
+  /** The camera's heading, tilt and zoom before the talk turned it, put back after. */
   cameraYaw: null as number | null,
   cameraPitch: null as number | null,
+  cameraZoom: null as number | null,
 };
 const listeners = new Set<() => void>();
 let view = EMPTY;
