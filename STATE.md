@@ -3,6 +3,14 @@
 > Read this before `AGENT_LOG.md`. It answers "which branch, what's live, what's next"
 > in one page. Update it whenever direction changes. Last updated **2026-10-10**.
 
+## Game lore locked (2026-10-10)
+
+- **`specs/lore.md` is the story canon**, set with David: the Answer, the Keepers and
+  their questions, the veil, the buried ship, the one-year arc, the never-resolved
+  outside world, and the sudo pet system (sudo / Root / nib / tidbit / chiplet / whit /
+  pip, Tethotchi hardware tie-in, assembly-as-hardware-dev). Read it before writing any
+  quest, NPC, monster, pet, or cutscene content. The museum plaque is David's to write.
+
 ## Terrain v2: the world island (2026-10-10)
 
 - **`specs/terrain-v2.md` is the plan**, agreed with David. His drawing became a 384x552
