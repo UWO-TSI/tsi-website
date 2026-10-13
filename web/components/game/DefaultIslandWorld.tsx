@@ -430,7 +430,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <Residents personas={personas} phase={phase} ceremony={ceremony} player={player} island={island} v={v} away={lead ? HQ_LEAD_SLUG : null}
         playerName={identity.display_name !== "You" ? identity.display_name : null} />
       <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={fishing || !!lead?.hold || talking}
-        showNameplate={!talking} ride={myTrip.ride}
+        ride={myTrip.ride}
         world={island} groundHeight={island.ground} groundSurface={island.surface} camTarget={focus} glider={peaceful.glider} held={held} />
       <CharacterCrowd player={player} ground={island.ground} stepWorld={island} />
       {lead && leadAt && <HQLead at={leadAt} ground={island.ground} player={player} line={lead.line} />}
