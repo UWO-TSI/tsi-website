@@ -16,24 +16,48 @@
 | v3 | Combat: the classes and ruins (classes v2 is built behind its flag) |
 | v4 | Personal islands: home island and visits |
 
-## 1. Opening: the arrival (lore: "you wake almost drowning")
-One continuous sequence after the title screen. It plays once on first login, and can be skipped after its first play.
-1. **The water.** Black, then underwater light and a muffled heartbeat. You gasp at the surface. A weathered hand (the fisherman) grabs your wrist.
-2. **Aboard.** You're slumped in the fisherman's boat and Root, the mascot sudo, watches you from the bow. **Everything is blurred and washed out**, because your memories are gone.
-3. **The reflection is the creator.** You lean over the side. Your reflection ripples on the water, and "who am I?" is the creator. The water is the mirror: every choice you make sharpens the reflection, and the world's blur clears as you finish.
-4. **The crossing.** Cinematic shots on the shared world clock and sky:
+## 1. Opening: the arrival (decided with David 2026-10-13)
+One continuous sequence after the title screen. It plays once on first login and is skippable.
+1. **Underwater, 4–6 s.** Black, then dim blue water with light shafts above, a muffled heartbeat and bubbles. You drift up and gasp at the surface. A weathered hand grabs your wrist: **Bram**, the wharf resident, becomes the fisherman Keeper (lore: the one who pulls you out).
+2. **Aboard Bram's small wooden fishing boat** (the one moored at the wharf: one-person cabin, nets, lantern). The world is **heavily blurred and washed out**, because your memories are gone. No Root in v1; sudo pets come later.
+3. **The reflection is the creator** (David's sketch: `references/ui/creator/2026-10-13-reflection-creator-sketch.png`).
+   - Layout:
+     - the left two-thirds is the scene: the boat's edge on a diagonal, the back of your head leaning over it, your reflection in the water below with natural ripples;
+     - the options panel sits right of the scene;
+     - the category rail runs down the far right edge;
+     - a "Yes" pill sits on the water at the bottom.
+   - The reflection is always clearly readable. Each change sends a ripple or wave across the water that rewrites that feature.
+   - **Every choice sharpens the reflection and the world a little; fully clear on "Yes".**
+   - Polish it with the GUI kit, reusing the Li'l Lads creator's panels and data, but keep the layout and the water reflection central.
+4. **The crossing, about 25 s, always golden hour** (warm sunrise light and soft mist, whatever the real time). Five shots:
    - a wide drone shot of the island coming out of the veil mist;
-   - a low shot over the bow with Root;
-   - a close-up of your character, still dripping;
-   - the wake behind the boat;
-   - the village lights or the morning glow on the wharf, depending on real time.
-5. **The wharf.** The fisherman helps you onto the dock and says his first line, and your first quest starts from him.
+   - a low bow shot;
+   - a close-up of you, dripping;
+   - the wake;
+   - the wharf coming up.
+   
+   You step into real island time on the dock.
+5. **The tutorial (approved).** Walk-along, learn by doing, minimal: players figure it out.
+   - **No movement UI anywhere.** The controls list lives only in Settings, with rebinding.
+   - If a player stalls for about 10 s, Bram says a gentle hint in a speech bubble.
+   - The Tab wheel and the bag each get a one-time keycap glyph at the moment they're needed.
+   - The steps:
+     1. **Dock:** Bram helps you up. "Easy now. Walk with me." You follow him up the pier. If you stall: "Use W A S D to walk."
+     2. **Crate** on the pier: you jump it. If you stall: "Space to hop over."
+     3. **Fishing spot:** he hands you his old rod. "Try the water." The 'Tab' keycap pulses once. You open the wheel, pick the rod, cast and catch a fish.
+     4. **Bag:** the fish flies in and 'B' pulses once. "Keep what you find. The museum likes fish." You open the bag once.
+     5. **Main street:** you walk **physically to the front of each building** with Bram, and he says one line there:
+        - Museum: "Bring them what you find."
+        - Shop: "Sell, buy, trade a story."
+        - HQ: "Notices, mail, club news."
+        - Café: "Opening soon. Rosa's still sweeping."
+     6. **Plaza:** "The island will show you the rest." Reward: Bram's old rod and a few coins.
+   - The lines are drafts for David's review.
+6. **Moves:**
+   - At the start: walk, run, jump, crouch and slide, plus sit and the emote wheel.
+   - **Dash (Q) and the glider are taught later by Keepers** through small quests.
 
-Rules:
-- The player's substrate is never named.
-- No codex dump: the lore arrives sideways.
-- Every shot is skippable, and nothing pops (loads wait).
-- The shots reuse the boat-trip system (`boatTrip`) and the title screen's staged-shot tools.
+Lore rules: the player's substrate is never named, there are no codex dumps, nothing pops (loads wait), and every shot is skippable. Shots reuse `boatTrip` and the title screen's staged-shot tools.
 
 ## 2. The world
 - **Map:** the terrain v2 world. The village (main street, wharf entrance, plaza, resident houses) is open.

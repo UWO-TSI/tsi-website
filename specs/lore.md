@@ -143,6 +143,8 @@ stance is the thesis, and it is shown, not told.
 
 ## sudo canon (the pets)
 
+Naming rule (David, 2026-10-13): every species name is code- or hardware-related and cute (Root = the admin user, ping = the network command). The kept names are tidbit, ping, nib, pip, whit and chiplet. Root sits out the v1 opening; the pets come in a later drop.
+
 | Name | What it is |
 |---|---|
 | **Tethotchi** | The real TV-shaped BLE keychain. In fiction: the one vessel that can carry a sudo across the veil. The island's parting gift, given physically. |
@@ -150,6 +152,7 @@ stance is the thesis, and it is shown, not told.
 | **Root** | The first sudo ever built, the Founder's own companion, the club mascot's canonical body. Old, patient, often on the fisherman's boat. Every sudo's crossing permission is borrowed from Root's original key. |
 | **nib** | Common inland starter species. Slim pen-like body, nib antenna. Orbits small written questions. |
 | **tidbit** | Shoreline species, shell and driftwood parts. Unlocks when the fisherman trusts you. |
+| **ping** | Shoreline/sea species with sonar ears; chirps back when you call (named for the network command). Added with David 2026-10-13. |
 | **chiplet** | Ruins-adjacent species, bare-PCB exoskeleton, slightly tanky, blunt questions. Unlocks with the ruins. |
 | **whit** | Tiny airborne species, glows at night with the fireflies. Unlocks after a night event. |
 | **pip** | Garden seed-pod species. Spring content drop. |
