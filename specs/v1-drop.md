@@ -164,6 +164,18 @@ These are style targets: we rebuild the look in our own art and copy no assets.
 - **Title** (`title-piece-by-piece-ref.png`): a lush, close, depth-of-field scene; the logo top-left; a cream menu card with a dashed border and a pill highlight on the selected item; a small input hint bottom-right.
 - **Grass** (`grass-shader-ref.png`): wind; blade-card texture shapes; a colour gradient plus noise; bending under characters; trails; receiving lights and shadows; perspective correction from above; distance fading.
 
+## 8c. The water and look pass (approved 2026-10-13; ref `water-clarity-palette-ref.png`)
+1. **Depth water.** Colour comes from the water depth, taken from the known seabed height (no extra pass): sand-tinted teal over the shallows to deep navy. Shallows are see-through to the seabed, which gets sand, boulders, seagrass and coral-like plants (instanced).
+2. **Foam and ripples.**
+   - A shore foam band pulsing toward the beach.
+   - Foam rings wherever something meets the water: posts, rocks, moored boats, wading players.
+   - Ripple rings from fish jumps, bobbers, steps in the shallows and waterfalls.
+3. **Surface.** Big slow swells, a fresnel sky reflection, optics-driven sparkles (row 238), horizon haze.
+4. **Land to match.** The new grass (`grass-shader-ref.png`), chunky faceted rock props on coasts and cliff edges, a warmer key light with a cooler fill, AO in crevices, soft glow on foam and waterfalls.
+5. **Glass water**, High only: a refraction wobble at about 0.3 ms.
+6. **Decorative fish** glide in the shallows as scenery. They can't be caught and don't mark fishing spots.
+7. **The pixel filter stays the default look** (David).
+
 ## 9. Shipping v1
 **Launch: Halloween, Oct 31** (David, 2026-10-13: "Rush v1 for Halloween"). Halloween is the launch event, running Oct 25 to Nov 1. **New-world checkpoint Oct 24:** if the terrain v2 village isn't wired and smooth by then, launch on the current village and swap to the new world in November.
 
