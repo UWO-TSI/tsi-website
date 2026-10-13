@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
 export default function LoadingScreen() {
-  // The applicant island and the member island (/student/dashboard) have their own loading screens.
-  const recruitment = /^\/student\/(apply|dashboard\/?$)/.test(usePathname());
+  // The applicant island, the member island (/student/dashboard) and the portal's title screen (/student) have their own.
+  const recruitment = /^\/student(\/(apply|dashboard\/?$)|\/?$)/.test(usePathname());
   const [phase, setPhase] = useState<"enter" | "visible" | "logo-out" | "bg-out" | "gone">(
     "enter"
   );

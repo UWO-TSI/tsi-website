@@ -1,11 +1,15 @@
 /** Event check-in: the QR's link, and what the check-in page makes of POST /api/events/:id/check-in. */
+import { PLAY_ORIGIN } from "@/lib/hosts";
 
-/** The site the printed QR codes point at (they outlive any deploy, so never a preview host). */
-export const SITE_ORIGIN = "https://www.tethos.ca";
+/**
+ * The portal the printed QR codes point at (they outlive any deploy, so never a preview host). Codes printed
+ * before the portal moved to play.tethos.ca point at www, which sends /student/check-in across (lib/hosts.ts).
+ */
+export const CHECK_IN_ORIGIN = PLAY_ORIGIN;
 
 export const checkInPath = (eventId: string, code: string) =>
   `/student/check-in?event=${encodeURIComponent(eventId)}&code=${encodeURIComponent(code)}`;
-export const checkInUrl = (eventId: string, code: string) => `${SITE_ORIGIN}${checkInPath(eventId, code)}`;
+export const checkInUrl = (eventId: string, code: string) => `${CHECK_IN_ORIGIN}${checkInPath(eventId, code)}`;
 
 export type CheckInResult =
   | { kind: "done"; title: string; irl: boolean; already: boolean }

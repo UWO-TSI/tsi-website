@@ -14,7 +14,7 @@ interface FinalRoundWelcomeProps {
   steps: Step[];
 }
 
-const SIGNATURE_LOGO = "https://uwo-tsi.github.io/tsi-signature-generator/logo.png";
+const SIGNATURE_LOGO = "https://uwo-tsi.github.io/tsi-signature-generator/logo-blue.png";
 
 export default function FinalRoundWelcome({
   firstName = "Kayden",
@@ -110,7 +110,7 @@ const stepBody = { color: "#3a3a44", fontSize: "14px", lineHeight: "1.55", margi
 
 const button = {
   display: "inline-block",
-  backgroundColor: "#002FA7",
+  backgroundColor: "#1d9bf0",
   color: "#ffffff",
   fontSize: "14px",
   fontWeight: 600,
@@ -123,5 +123,5 @@ const sigName = { fontFamily: font, fontSize: "15px", fontWeight: 600, color: "#
 const sigRole = { fontFamily: font, fontSize: "13px", color: "#3a3a44", lineHeight: "19px" };
 const sigMuted = { fontFamily: font, fontSize: "12px", color: "#7a7a85", lineHeight: "18px" };
 const sigLine = { fontFamily: font, fontSize: "12px", lineHeight: "18px" };
-const sigLink = { color: "#3a3a44", textDecoration: "none" };
+const sigLink = { color: "#1d9bf0", textDecoration: "none" };
 const sigDot = { color: "#b8b8c0" };

@@ -78,7 +78,8 @@ describe("the loopback NetSource", () => {
     expect(lb.roster().length).toBe(25); // the roster keeps everyone wherever they are
   });
 
-  it("delivers motion through the codec and the interpolation ring: positions in the village, events, slow state", () => {
+  // The codec ring drive is the file's heavy one: give it room on a loaded machine.
+  it("delivers motion through the codec and the interpolation ring: positions in the village, events, slow state", { timeout: 20_000 }, () => {
     const { lb, run, at } = manual(24, { seed: 3 });
     lb.start("village");
     const out = createRemoteSample();

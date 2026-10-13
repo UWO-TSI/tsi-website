@@ -16,19 +16,29 @@ import { parseLook } from "@/lib/game/character/look";
 import { calculateCurvedHtmlPosition } from "@/lib/game/worldProjection";
 import { easeFacing } from "@/lib/game/locomotion";
 import { HQ_LEAD } from "@/lib/game/welcome";
+import { steerTalkShot } from "@/lib/game/residentTalk";
+import { orbit } from "@/lib/game/orbitCamera";
 import s from "./study/study.module.css";
 
 export default function HQLead({ at, ground, player, line }: { at: [number, number]; ground: (x: number, z: number) => number; player: React.RefObject<THREE.Vector3>; line: number | null }) {
   const look = useMemo(() => parseLook(HQ_LEAD.look), []);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: Math.PI, lift: 0, pose: null, play: null });
+  // The greeting borrows the conversation shot (residentTalk.ts TALK_SHOT); the angles go back when she's done.
+  const saved = useRef<{ pitch: number; zoom: number } | null>(null);
+  useEffect(() => {
+    if (line !== null && !saved.current) saved.current = { pitch: orbit.target.pitch, zoom: orbit.target.zoom };
+    if (line === null && saved.current) { orbit.target.pitch = saved.current.pitch; orbit.target.zoom = saved.current.zoom; saved.current = null; }
+  }, [line]);
+  useEffect(() => () => { if (saved.current) { orbit.target.pitch = saved.current.pitch; orbit.target.zoom = saved.current.zoom; saved.current = null; } }, []);
   useEffect(() => {
     if (line === null) return;
     if (line === 0) motion.current.play = "Wave";
     motion.current.talk = Math.min(3.2, 0.8 + (HQ_LEAD.lines[line]?.length ?? 0) * 0.045);
   }, [line]);
-  useFrame((_, raw) => {
-    const p = player.current, m = motion.current;
-    m.yaw = easeFacing(m.yaw, Math.atan2(p.x - at[0], p.z - at[1]), 6, Math.min(raw, 0.1));
+  useFrame((state, raw) => {
+    const p = player.current, m = motion.current, dt = Math.min(raw, 0.1);
+    m.yaw = easeFacing(m.yaw, Math.atan2(p.x - at[0], p.z - at[1]), 6, dt);
+    if (line !== null) steerTalkShot(dt, state.clock.elapsedTime, p.x, p.z, at[0], at[1], line);
   });
   return <group position={[at[0], ground(at[0], at[1]), at[1]]}>
     <Suspense fallback={null}><Character look={look} motion={motion} /></Suspense>

@@ -26,11 +26,10 @@ describe("first-login routing to the island", () => {
     expect(await go("/student/dashboard")).toBe("https://tethos.ca/student?next=%2Fstudent%2Fdashboard");
     expect(await go("/student/dashboard/bounty?tab=open")).toBe("https://tethos.ca/student?next=%2Fstudent%2Fdashboard%2Fbounty%3Ftab%3Dopen");
   });
-  it("sends signed-in visitors past the /student login into the portal", async () => {
+  it("shows the /student title screen to everyone (signed-in members get Continue there)", async () => {
     expect(await go("/student")).toBeNull();
     auth.user = { id: "back" }; auth.profile = { onboarding_completed: true };
-    expect(await go("/student")).toBe("https://tethos.ca/student/go");
-    expect(await go("/student?next=/student/companion")).toBe("https://tethos.ca/student/go?next=/student/companion");
+    expect(await go("/student")).toBeNull();
   });
   it("lets a new member straight onto the island (the creator asks the name), past the portal wizard", async () => {
     auth.user = { id: "new" }; auth.profile = { onboarding_completed: false };
