@@ -22,7 +22,7 @@
   {"file": "16-Isagi-17727987910.glb", "id": "hair_swept_fringe", "name": "Swept fringe", "yaw": 180},
   {"file": "17-cutesy-bob-with-adorable-pigtail-in-brown-118937471732434.glb", "id": "hair_bob_pigtail", "name": "Bob with a pigtail", "yaw": 0},
   {"file": "18-long-pretty-black-pigtails-117422689311117.glb", "id": "hair_long_pigtails", "name": "Long pigtails", "yaw": 0},
-  {"file": "19-OTF-Von-Dreads-w-Hat-89998678118416.glb", "id": "hair_dreads_cap", "name": "Dreads with a cap", "yaw": 180,
+  {"file": "19-OTF-Von-Dreads-w-Hat-89998678118416.glb", "id": "hair_dreads_cap", "name": "Dreads with a cap", "yaw": 0,
    "accent": {"default": 3}, "cap": {"rule": "uv_not_dreads", "color": "#26262A", "logos": "light_or_vivid"}},
   {"file": "20-360-Waves-in-Black-113478080627568.glb", "id": "hair_waves", "name": "Waves with a fade", "yaw": 180, "accent": {"default": "skin"}, "trim": "face_window"},
   {"file": "21-M11-Messy-Dreads-Black-86633981568887.glb", "id": "hair_messy_dreads", "name": "Messy dreads", "yaw": 180}
