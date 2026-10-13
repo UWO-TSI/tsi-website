@@ -1195,7 +1195,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {captured === "captured" && site === "ruins" && <svg className={styles.crosshair} viewBox="-10 -10 20 20" aria-hidden="true"><circle r="5.5" /><circle r="1.2" /></svg>}
       <div className={styles.fade} data-active={fading} aria-hidden="true" />
       {trip.active && <TripVeil phase={trip.phase} to={trip.to} firstLogin={trip.firstLogin} quick={trip.quick} haze={light.fogColor} touch={touch} onSkip={trip.skip} />}
-      <div className={styles.netHud} data-hidden={hudCinematic || undefined}><NetHud area={area} /></div>
+      <div className={styles.netHud} data-hidden={hudCinematic || undefined}><NetHud area={area} hidden={hudCinematic} /></div>
       <LoadingStatus ready={ready} />
     </main>
   );

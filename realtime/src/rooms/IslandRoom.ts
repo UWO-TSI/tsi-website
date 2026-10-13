@@ -418,6 +418,8 @@ export function createIslandRoom(o: IslandRoomOptions) {
       if (m.studyEnds !== undefined) p.studyEnds = m.studyEnds;
       if (m.showClass !== undefined) this.setFlag(s.key, N.FLAG.showClass, m.showClass);
       if (m.afk !== undefined) this.setFlag(s.key, N.FLAG.afk, m.afk);
+      // v1: the "…" over someone writing a chat line.
+      if (m.typing !== undefined) this.setFlag(s.key, N.FLAG.typing, m.typing);
       if (m.area !== undefined) this.rebuildViews();
     }
 
@@ -465,6 +467,8 @@ export function createIslandRoom(o: IslandRoomOptions) {
         return;
       }
       recordChat(s.chat, verdict.text, now);
+      // The line is out: the "…" comes down with it (the sender's own clear may be on its way).
+      this.setFlag(s.key, N.FLAG.typing, false);
       const line: N.ChatLine = {
         id: randomUUID(),
         sid: s.sid,
@@ -555,11 +559,15 @@ export function createIslandRoom(o: IslandRoomOptions) {
       client.leave(code, reason);
     }
 
+    /**
+     * A presence bit on the player and the roster. Typing stays off the roster: only those who see you draw the "…",
+     * and a toggle shouldn't patch the whole shard's list.
+     */
     private setFlag(key: string, bit: number, on: boolean): void {
       const p = this.state.players.get(key), r = this.state.roster.get(key);
       if (!p || !r) return;
       p.flags = on ? p.flags | bit : p.flags & ~bit;
-      r.flags = p.flags;
+      r.flags = p.flags & ~N.FLAG.typing;
     }
 
     /** §4.4: bring every view in line with areas and distances (2 Hz, and at once on a join or a door). */

@@ -19,6 +19,7 @@ import { useThree } from "@react-three/fiber";
 import { CHARACTER_HEIGHT } from "../character/Character";
 import { LABEL_PRIORITY, worldLabels, type LabelLayout, type LabelSpec } from "@/lib/game/labelLayout";
 import type { RemotePlayer } from "@/lib/net/types";
+import { chatStore } from "@/lib/net/chat";
 import type { RemoteRig } from "./drive";
 import { LOD } from "./lod";
 import styles from "./net.module.css";
@@ -120,6 +121,8 @@ export class PlatePool {
       anchor: out => {
         const r = this.shows[i];
         if (!r || !here(r) || r.anchor.current?.visible !== true) return false;
+        // While their speech bubble shows, it carries the name (SpeechBubbles.tsx).
+        if (chatStore().bubble(r.sid, r.entry.player.uid)) return false;
         if (s.player !== r.entry.player) { fill(s, r.entry.player); measure = true; }
         if (this.debug && s.tag.dataset.tier !== TIER_TAG[r.lod.tier]) { s.tag.dataset.tier = TIER_TAG[r.lod.tier]; measure = true; }
         out.set(r.feet.current.x, plateY(r), r.feet.current.z);

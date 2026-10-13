@@ -9,6 +9,7 @@ import {
 } from "./netStore";
 import { BURST_GAP_MS } from "./clock";
 import { createLoopback } from "./loopback";
+import { ChatStore } from "./chat";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -184,6 +185,7 @@ class FakeCallbacks {
 }
 class FakeRoom {
   sessionId = "me";
+  roomId = "room-1";
   state: Record<string, unknown> = {};
   cb = new FakeCallbacks(this.state);
   reconnection = { enabled: true, maxRetries: 15 };
@@ -207,7 +209,7 @@ class FakeRoom {
 }
 
 /** The store on a fake SDK, a hand-driven wall clock and timers. */
-function roomRig(o: { joins?: (FakeRoom | { code: unknown })[]; token?: (refresh: boolean) => Promise<string | null>; devName?: string | null } = {}) {
+function roomRig(o: { joins?: (FakeRoom | { code: unknown })[]; token?: (refresh: boolean) => Promise<string | null>; devName?: string | null; chat?: ChatStore } = {}) {
   let wall = 1_791_000_000_000;
   const timers: { at: number; fn: () => void }[] = [], clients: { options: unknown; credentials: unknown; token: unknown }[] = [], rooms: FakeRoom[] = [];
   const windowFns = new Map<string, (e: Event) => void>(), applied: number[] = [], tokens: boolean[] = [];
@@ -237,6 +239,7 @@ function roomRig(o: { joins?: (FakeRoom | { code: unknown })[]; token?: (refresh
     applyWorld: ms => applied.push(ms),
     previewActive: () => false,
     listen: (type, fn) => { windowFns.set(type, fn); return () => windowFns.delete(type); },
+    chat: o.chat,
   });
   const settle = () => act(async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); });
   /** Advance the wall clock, firing due timers (and answering pings: the server is 300 ms ahead, 20 ms away). */
@@ -527,5 +530,57 @@ describe("the Colyseus store", () => {
     r.windowFns.get("pageshow")!(Object.assign(new Event("pageshow"), { persisted: true }));
     await r.settle();
     expect(r.clients).toHaveLength(3);
+  });
+});
+
+describe("world chat through the store (v1, specs/v1-drop.md §3)", () => {
+  const ME = "11111111-1111-4111-8111-111111111111", ANN = "22222222-2222-4222-8222-222222222222";
+  const line = (uid: string, sid: number, text: string) => ({ id: "6f1c2b9e-3d4a-4e5f-8a6b-7c8d9e0f1a2b", sid, uid, name: uid === ME ? "Me" : "Ann", area: 0, text, t: 5 });
+  async function joined() {
+    const chat = new ChatStore(), r = roomRig({ chat });
+    r.store.acquire();
+    await r.settle();
+    const room = await r.join();
+    room.cb.add("roster", room.sessionId, { uid: ME, name: "Me", badge: 0, area: 0, flags: 0 });
+    room.cb.add("roster", "ann", { uid: ANN, name: "Ann", badge: 1, area: 0, flags: 0 });
+    return { r, room, chat };
+  }
+
+  it("registers `line`: every good line reaches the chat, yours marked by the roster's entry for your session", async () => {
+    const { room, chat } = await joined();
+    room.msg.get("line")!(line(ANN, 2, "hi there"));
+    room.msg.get("line")!(line(ME, 1, "hello"));
+    room.msg.get("line")!({ ...line(ANN, 2, "bad"), id: "nope" });
+    expect(chat.entries().map(e => e.kind === "line" && [e.text, e.mine])).toEqual([["hi there", false], ["hello", true]]);
+    expect(chat.selfUid).toBe(ME);
+  });
+
+  it("keeps `sys` refusals (the chat's) apart from restart notices (the HUD's)", async () => {
+    const { r, room, chat } = await joined();
+    room.msg.get("sys")!({ kind: "refused", reason: "fast", text: "Slow down a little." });
+    expect(chat.entries()).toEqual([expect.objectContaining({ kind: "notice", reason: "fast", text: "Slow down a little." })]);
+    expect(r.src.sys).toBeNull();
+    room.msg.get("sys")!({ kind: "restart", text: "The island is restarting. Back in a moment." });
+    expect(r.src.sys).toEqual({ kind: "restart", text: "The island is restarting. Back in a moment." });
+    expect(chat.entries()).toHaveLength(1);
+    room.msg.get("sys")!({ kind: "refused", reason: "rude", text: "x" });
+    expect(chat.entries()).toHaveLength(1);
+    expect(r.src.sys?.kind).toBe("restart");
+  });
+
+  it("sends a line and the typing flag only while joined, trimmed to the server's limit", async () => {
+    const chat = new ChatStore(), r = roomRig({ chat });
+    expect(r.src.sendChat("early")).toBe(false);
+    r.store.acquire();
+    await r.settle();
+    const room = await r.join();
+    expect(r.src.sendChat("  hello  ")).toBe(true);
+    expect(r.src.sendChat("   ")).toBe(false);
+    expect(r.src.sendChat("x".repeat(300))).toBe(true);
+    expect(room.sentOf("chat")).toEqual([{ text: "hello" }, { text: "x".repeat(200) }]);
+    r.src.sendTyping(true);
+    r.src.sendTyping(false);
+    expect(room.sentOf("s")).toEqual([{ typing: true }, { typing: false }]);
+    expect(r.src.roomId).toBe("room-1");
   });
 });

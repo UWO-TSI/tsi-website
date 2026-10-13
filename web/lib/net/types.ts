@@ -164,4 +164,11 @@ export interface NetSource {
   sendSlow(patch: SlowState): void;
   /** Leave the room and stop. */
   leave(): void;
+  /**
+   * World chat (lib/net/chat.ts): say a line (trimmed, at most CHAT.maxLength; false when it can't go). The line comes
+   * back through the page's chat store as everyone's does. The `?bots` loopback echoes it.
+   */
+  sendChat?(text: string): boolean;
+  /** The "…" over you while you write a line (`s {typing}`). */
+  sendTyping?(on: boolean): void;
 }

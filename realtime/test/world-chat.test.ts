@@ -235,6 +235,23 @@ describe("world chat", () => {
     expect(alice.code).toBe(0);
   });
 
+  it("the typing flag (v1): s {typing} sets FLAG.typing for those who see you (never the roster); an accepted line clears it", async () => {
+    const alice = await join("alice");
+    const bob = await join("bob");
+    await until(() => players(bob)?.get(alice.room.sessionId) !== undefined, "bob sees alice");
+    const flags = () => players(bob)!.get(alice.room.sessionId)!.flags;
+    alice.room.send(N.MSG.slow, { typing: true });
+    await until(() => N.hasFlag(flags(), N.FLAG.typing), "typing up");
+    const roster = (bob.room.state as unknown as { roster: N.NetMap<N.RosterEntry> }).roster;
+    expect(N.hasFlag(roster.get(alice.room.sessionId)!.flags, N.FLAG.typing)).toBe(false);
+    alice.room.send(N.MSG.slow, { typing: false });
+    await until(() => !N.hasFlag(flags(), N.FLAG.typing), "typing down");
+    alice.room.send(N.MSG.slow, { typing: true });
+    await until(() => N.hasFlag(flags(), N.FLAG.typing), "typing up again");
+    say(alice, "done typing");
+    await until(() => bob.lines.length === 1 && !N.hasFlag(flags(), N.FLAG.typing), "the line clears it");
+  });
+
   it("an unknown message type still closes the client with 4002", async () => {
     const alice = await join("alice");
     say(alice, "chat is known");

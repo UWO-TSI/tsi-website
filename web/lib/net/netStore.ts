@@ -30,9 +30,10 @@ import { useShowClass } from "@/lib/game/hudPrefs";
 import { setWorldClockOffset } from "@/lib/game/worldClock";
 import { parseClockOverride } from "@/lib/game/islandTime";
 import {
-  AREAS, DEV_TOKEN_PREFIX, MSG, NET_PLAYER_FIELDS, PROTOCOL, RECONNECT_GRACE_S, REJOIN_BACKOFF_S, RESTART_JITTER_MS, ROOM_NAME, decodeEvent, isPrivateArea,
-  joinRefusal, parsePong, parseSys, type Area, type NetPlayer, type PosePacket, type RosterEntry, type SlowState, type SysMessage,
+  AREAS, CHAT, DEV_TOKEN_PREFIX, MSG, NET_PLAYER_FIELDS, PROTOCOL, RECONNECT_GRACE_S, REJOIN_BACKOFF_S, RESTART_JITTER_MS, ROOM_NAME, decodeEvent, isPrivateArea,
+  joinRefusal, parseChatLine, parsePong, parseSys, type Area, type NetPlayer, type PosePacket, type RosterEntry, type SlowState, type SysMessage,
 } from "./protocol";
+import { chatStore, type ChatStore } from "./chat";
 import { toRemotePlayer, type KickReason, type NetSource, type NetStatus } from "./types";
 import { RemoteBuffer, Remotes, parseNetsim, type Netsim } from "./interp";
 import { NetClock } from "./clock";
@@ -134,6 +135,7 @@ export function loopbackStore(lb: { start(area: Area): void; stop(): void; setAr
 /** The parts of @colyseus/sdk the store uses (tests give it a fake). */
 export interface SdkRoom {
   readonly sessionId: string;
+  readonly roomId: string;
   readonly state: unknown;
   reconnection: { enabled: boolean; maxRetries: number };
   send(type: string, payload?: unknown): void;
@@ -184,15 +186,25 @@ export interface RoomStoreOptions {
   previewActive?: () => boolean;
   /** Listen on the window; returns the unlisten. */
   listen?: (type: string, fn: (e: Event) => void) => () => void;
+  /** Where `line`s and refusals go (the page's chat store by default). */
+  chat?: ChatStore;
 }
 
-/** The room's NetSource, with the sender's hints (sender.ts SenderHints) and the last `sys` notice. */
+/** The room's NetSource, with the sender's hints (sender.ts SenderHints), the last restart notice and the chat. */
 export interface RoomSource extends NetSource {
   readonly remotes: Remotes;
   readonly joinSeq: number;
   readonly areaSeq: number;
   readonly epoch: number;
-  readonly sys: SysMessage | null;
+  /** The last `sys` that isn't a chat refusal (a restart's notice), for the HUD. Refusals go to the chat store. */
+  readonly sys: Exclude<SysMessage, { kind: "refused" }> | null;
+  /** Your room's id (a report's context), null while not in one. */
+  readonly roomId: string | null;
+  readonly chat: ChatStore;
+  /** Say a line (trimmed, at most CHAT.maxLength): false when there's nothing to say or no room to say it in. */
+  sendChat(text: string): boolean;
+  /** The "…" over you while you write (`s {typing}`). */
+  sendTyping(on: boolean): void;
 }
 
 /** The slow and card fields of a schema player: a change among them replaces the remote's `player`. */
@@ -230,6 +242,7 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
   const later = o.later ?? ((fn: () => void, ms: number) => { const id = setTimeout(fn, ms); return () => clearTimeout(id); });
   const random = o.random ?? Math.random;
   const listen = o.listen ?? windowListen;
+  const chat = o.chat ?? chatStore();
   const remotes = new Remotes();
   const listeners = new Set<() => void>();
   let status: NetStatus = { kind: "off" };
@@ -250,7 +263,7 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
     previewActive: o.previewActive ?? (() => DEV && typeof window !== "undefined" && parseClockOverride(new URLSearchParams(window.location.search)) !== null),
     later,
   });
-  let lastSys: SysMessage | null = null;
+  let lastSys: Exclude<SysMessage, { kind: "refused" }> | null = null;
 
   const emit = () => { for (const l of listeners) l(); };
   const setStatus = (next: NetStatus) => { status = next; emit(); };
@@ -258,7 +271,11 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
 
   function rebuildRoster(state: StateLike) {
     const list: RosterEntry[] = [];
-    state.roster?.forEach(e => list.push({ uid: e.uid, name: e.name, badge: e.badge, area: e.area, flags: e.flags }));
+    state.roster?.forEach((e, key) => {
+      list.push({ uid: e.uid, name: e.name, badge: e.badge, area: e.area, flags: e.flags });
+      // Your own entry (keyed by your session): your lines are yours in the chat.
+      if (key === room?.sessionId) chat.setSelf(e.uid);
+    });
     roster = list;
     emit();
   }
@@ -352,7 +369,13 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
       if (e) remotes.get(e.sid)?.pushEvent(e.t, e.kind, e.value, roomNow());
     });
     r.onMessage(MSG.pong, msg => { const p = parsePong(msg); if (p) clock.onPong(p); });
-    r.onMessage(MSG.sys, msg => { lastSys = parseSys(msg); });
+    // A chat line (yours too: your copy is the acceptance) and a refused one go to the chat; a restart's notice stays here.
+    r.onMessage(MSG.line, msg => { const l = parseChatLine(msg); if (l) chat.receive(l); });
+    r.onMessage(MSG.sys, msg => {
+      const m = parseSys(msg);
+      if (m?.kind === "refused") chat.refused(m.reason, m.text);
+      else if (m) lastSys = m;
+    });
     r.onDrop(code => {
       if (gen !== generation) return;
       // A restart (4010): the SDK would try the old process; rejoin after jitter instead (joinRefusal "restart").
@@ -478,8 +501,19 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
       if (room && status.kind === "joined") room.send(MSG.slow, patch);
     },
     leave() { wanted = false; leaveRoom(); },
-    /** The last `sys` notice (a restart's), for the HUD. */
     get sys() { return lastSys; },
+    get roomId() { return room?.roomId ?? null; },
+    chat,
+    sendChat(text: string) {
+      const t = text.trim().slice(0, CHAT.maxLength);
+      if (!t || !room || status.kind !== "joined") return false;
+      room.send(MSG.chat, { text: t });
+      chat.sent(t);
+      return true;
+    },
+    sendTyping(on: boolean) {
+      if (room && status.kind === "joined") room.send(MSG.slow, { typing: on } satisfies SlowState);
+    },
   };
   return {
     source,
@@ -533,7 +567,9 @@ function loadStore(): Promise<NetStore | null> {
   const m = netMode(search());
   if (m?.kind !== "bots") return Promise.resolve(peekStore());
   h.loading = import("./loopback").then(({ createLoopback }) => {
-    const lb = createLoopback({ bots: m.bots, seed: m.seed, netsim: DEV ? parseNetsim(search()) : null });
+    // `?botchat=S`: bots in view chat every S seconds or so (bubbles, the "…" and the talking without a server).
+    const chatEvery = Number(new URLSearchParams(search()).get("botchat")) || 0;
+    const lb = createLoopback({ bots: m.bots, seed: m.seed, netsim: DEV ? parseNetsim(search()) : null, chatEvery });
     const store = loopbackStore(lb);
     setStore(store);
     return store;

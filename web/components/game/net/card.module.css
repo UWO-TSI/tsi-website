@@ -1,0 +1,14 @@
+/* A player's card (PlayerCard.tsx): the GUI sheet's small paper sheet, its rows and a report's reasons. */
+.eyebrow { display: inline-flex; align-items: center; gap: 6px; }
+.dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--gui-tethos-blue); box-shadow: 0 0 0 2px var(--gui-paper-hi); }
+.lead { margin: 0 0 10px; font-size: var(--gui-text-sm); font-weight: 700; color: var(--gui-ink); }
+.small { margin: 10px 0 0; font-size: var(--gui-text-xs); font-weight: 700; color: var(--gui-muted); }
+.error { margin: 8px 0 0; font-size: var(--gui-text-xs); font-weight: 800; color: var(--gui-danger, #b4572e); }
+.reasons { display: grid; gap: 6px; }
+.reason { min-height: 40px; padding: 8px 14px; border: 0; border-radius: 14px; background: var(--gui-paper-hi); box-shadow: inset 0 0 0 1.5px var(--gui-paper-line);
+  font: 700 var(--gui-text-sm)/1.2 var(--gui-font); color: var(--gui-ink); text-align: left; cursor: pointer; }
+.reason[aria-checked="true"] { background: var(--gui-butter); box-shadow: inset 0 0 0 2px var(--gui-sage); color: var(--gui-ink-strong); }
+.reason:focus-visible { outline: 2px solid var(--gui-sage); outline-offset: 2px; }
+.actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.friendRow { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.status { margin: 0 0 10px; font-size: var(--gui-text-xs); font-weight: 800; color: var(--gui-sage); }
