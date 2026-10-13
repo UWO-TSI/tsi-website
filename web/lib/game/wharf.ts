@@ -16,6 +16,8 @@ export const SEA_Y = -WATER_DROP;
 /** The pier as built: its ends, the standing piles (x, then each z on both sides), the gap on +x where you step aboard, the cleat the bow line is made fast to and the tip pile the stern line goes round. */
 export const PIER = {
   tip: -3.5, land: 1.12, postX: 1.06, postR: 0.085, railZ: [-3.42, -1.62, -0.28, 1.0], gap: [-3.42, -1.62],
+  /** The piles under the deck that stop short of it (x either side, each z). */
+  underX: 0.84, underZ: [-2.5, -0.95, 0.35],
   bowCleat: [0.8, 0.066, -1.98], sternPost: [1.06, 0.3, -3.42],
 } as const;
 

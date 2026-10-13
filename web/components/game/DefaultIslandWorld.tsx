@@ -8,6 +8,7 @@ import { Map as MapIcon, Menu, Settings, Wrench } from "lucide-react";
 import GridWorld from "./grid/GridWorld";
 import GridOcean from "./grid/GridOcean";
 import Seabed from "./water/Seabed";
+import WaterContacts from "./water/WaterContacts";
 import PlayerAvatar from "./PlayerAvatar";
 import Residents from "./NPC";
 import GameSceneBoundary from "./GameSceneBoundary";
@@ -37,7 +38,7 @@ import JournalSheet from "@/components/progression/JournalSheet";
 import { useProgressionWorld, useCeremony, useChapterActions, type WorldGoalId } from "@/lib/game/progressionBridge";
 import confetti from "canvas-confetti";
 import type { InteriorStation } from "./interiorShared";
-import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmarkPoint, turn, wharfDeck, benchSeat, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
+import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmarkPoint, turn, wharfDeck, benchSeat, propFootprint, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
 import { village, objectsOf, type Village } from "@/lib/game/villageMap";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
@@ -273,6 +274,8 @@ function villageLayout(v: Village) {
     scale: villageScale(v),
     /** Ambient life (AmbientFauna): flowers for the butterflies, the water's kinds, gulls off the shores in view. */
     fauna: { site: { map: v.map, flowers: objectsOf("flower", v).map(xz), water: villageWater(v).classify }, gulls: gullAnchors(v.bounds), perches: gullPerchSpots(v, island.ground) },
+    /** The map's rocks (centre and footprint radius): the ones standing in the water wear a foam ring (WaterContacts). */
+    rocks: objectsOf("rock", v).flatMap(o => { const f = propFootprint(o); return f ? [{ x: o.x, z: o.z, r: Math.max(f[0], f[1]) }] : []; }),
     /** No water glints under the wharf deck: it sits a few centimetres above the water and they would show through. */
     underWharf: (x: number, z: number) => !!deck && x > deck.x0 - 0.4 && x < deck.x1 + 0.4 && z > deck.z0 - 0.4 && z < deck.z1 + 0.4,
   };
@@ -412,9 +415,10 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     <>
       <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} overview={overview} overviewFog={layout.scale.overviewFog}
         ground={island.ground} puddles={layout.puddles} cloudSize={layout.scale.cloudSize} shadowExtent={layout.scale.shadowExtent} fireflyAnchors={layout.fireflies} trees={layout.trees} fauna={fauna} />
-      <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} />
+      <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} lite={liteMode} />
       <GridOcean map={island.map} lite={liteMode} skip={layout.underWharf} radius={layout.scale.glintRadius} />
       <Suspense fallback={null}><Seabed map={island.map} lite={liteMode} skip={layout.underWharf} /></Suspense>
+      <WaterContacts map={island.map} player={player} ground={island.ground} rocks={layout.rocks} />
       <PeacefulLayer map={island.map} nodes={layout.nodes} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} treeModels={SEASON_TREES[look.season]} />
       <BeachBottle player={player} ground={island.ground} />
       {/* After the first leaf glider is made: a marked edge and a ring to land in (the guided first glide). */}

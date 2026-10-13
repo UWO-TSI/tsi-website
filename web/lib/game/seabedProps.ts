@@ -43,7 +43,7 @@ export interface SeabedItem { x: number; y: number; z: number; yaw: number; scal
 export interface SeabedLayout {
   items: Record<string, SeabedItem[]>;
   /** The rocks whose tops stand out of the water: centre and the radius where they meet the surface. */
-  breaking: { x: number; z: number; r: number; top: number }[];
+  breaking: { x: number; z: number; r: number; top: number; kind: string }[];
 }
 
 /** A cell's own random stream (a hash of its place and a salt): the same on every client. */
@@ -88,7 +88,7 @@ export function seabedProps(map: IslandMap, shore: ShoreSdf, { skip, lite = fals
         items[kind.name].push({ x, y, z, yaw, scale, tint });
         const top = y + kind.height * scale;
         // A rock that stands out of the water, ringed with foam where it meets it (a third of its footprint's span).
-        if (rock && top > surface + 0.03) breaking.push({ x, z, r: (kind.name === "boulder_c" ? 0.3 : 0.38) * scale, top });
+        if (rock && top > surface + 0.03) breaking.push({ x, z, r: (kind.name === "boulder_c" ? 0.3 : 0.38) * scale, top, kind: kind.name });
         break;
       }
     }

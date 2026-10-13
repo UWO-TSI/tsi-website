@@ -14,7 +14,8 @@ import * as THREE from "three";
 import { disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import { windowLit, type IslandLight } from "@/lib/game/islandLighting";
 import { worldNow } from "@/lib/game/worldClock";
-import { BOAT, MOORED, PIER, SEA_Y, floatBoat, newBoatPose, newFloat, type BoatPose, type Dock, type Float } from "@/lib/game/wharf";
+import { BOAT, MOORED, PIER, SEA_Y, dockToWorld, floatBoat, newBoatPose, newFloat, type BoatPose, type Dock, type Float } from "@/lib/game/wharf";
+import { foamRings } from "@/lib/game/foamRings";
 import { waterSurfaceUniforms } from "../grid/terrainMaterials";
 import { liveWind } from "../movement/moveFx";
 import { RopeLine } from "./ropeLine";
@@ -69,7 +70,22 @@ type BoatState = { pose: BoatPose; float: Float; glow: number; flagYaw: number; 
  * floated on the swell; the lantern easing with the windows; the flag streaming down the wind it feels (the island's,
  * less the boat's own way) and fluttering harder in more of it; its lines to the pier; then whatever rides it.
  */
-function placeBoat(g: THREE.Group | null, dock: Dock, light: IslandLight, poseAt: PoseAt, onPlaced: OnPlaced | undefined, parts: BoatParts, lines: BoatLines, s: BoatState, dt: number) {
+/**
+ * Where the hull meets the water, as foam rings (v1 water item 3): three circles along its length (the boat's frame, z
+ * along; the hull is about 3 long and 2 across), each its radius. Foam while it lies still; under way the wake takes over.
+ */
+const HULL_RINGS = [[1.05, 0.62], [0.25, 0.86], [-0.6, 0.8]] as const;
+const _ring = { x: 0, z: 0 };
+function ringHull(rings: readonly number[], dock: Dock, pose: BoatPose) {
+  const c = Math.cos(pose.yaw), sn = Math.sin(pose.yaw), still = Math.max(0, 1 - pose.speed / 1.5);
+  HULL_RINGS.forEach(([bz, r], i) => {
+    dockToWorld(dock, pose.x + bz * sn, pose.z + bz * c, _ring);
+    foamRings.move(rings[i], _ring.x, _ring.z);
+    foamRings.set(rings[i], { r, strength: still * 0.9 });
+  });
+}
+
+function placeBoat(g: THREE.Group | null, dock: Dock, light: IslandLight, poseAt: PoseAt, onPlaced: OnPlaced | undefined, parts: BoatParts, lines: BoatLines, s: BoatState, dt: number, rings: readonly number[] | null) {
   if (!g) return;
   const now = worldNow(), swell = readSwell();
   poseAt(now, s.pose);
@@ -97,6 +113,7 @@ function placeBoat(g: THREE.Group | null, dock: Dock, light: IslandLight, poseAt
     hangLine(lines.bow, BOW_CLEAT, BOW_LINE, g, lines.bowRest, s.pose.lines);
     hangLine(lines.stern, STERN_POST, STERN_LINE, g, lines.sternRest, s.pose.lines);
   }
+  if (rings) ringHull(rings, dock, s.pose);
   onPlaced?.(s.pose, s.float, g, now, dt);
 }
 
@@ -155,7 +172,13 @@ export default function Boat({ dock, light, rope, poseAt, onPlaced }: {
 
   const group = useRef<THREE.Group>(null);
   const state = useMemo((): BoatState => ({ pose: newBoatPose(), float: newFloat(), glow: 0, flagYaw: 0, lastX: 0, lastZ: 0, time: 0 }), []);
-  useFrame((_, raw) => placeBoat(group.current, dock, light, poseAt, onPlaced, parts, lines, state, Math.min(raw, 0.1)), -5);
+  const rings = useRef<number[] | null>(null);
+  useEffect(() => {
+    const handles = HULL_RINGS.map(() => foamRings.add(0, 0, 0.5, 0));
+    rings.current = handles;
+    return () => { handles.forEach(h => foamRings.remove(h)); rings.current = null; };
+  }, []);
+  useFrame((_, raw) => placeBoat(group.current, dock, light, poseAt, onPlaced, parts, lines, state, Math.min(raw, 0.1), rings.current), -5);
 
   return <>
     <group ref={group} matrixAutoUpdate={false}>

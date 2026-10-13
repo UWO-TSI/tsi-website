@@ -13,7 +13,8 @@ import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import type { IslandLight } from "@/lib/game/islandLighting";
-import { BUOYS, PIER_URL, floatBuoy, newFloat, type Dock } from "@/lib/game/wharf";
+import { BUOYS, PIER, PIER_URL, dockToWorld, floatBuoy, newFloat, type Dock } from "@/lib/game/wharf";
+import { foamRings } from "@/lib/game/foamRings";
 import { berthTaken, type TripPlace } from "@/lib/game/boatTrip";
 import { myTrip, readMyTrip, subscribeMyTrip } from "@/lib/game/myTrip";
 import Boat, { readSwell } from "./Boat";
@@ -61,6 +62,17 @@ export default function Wharf({ dock, light, place, children }: { dock: Dock; li
     pier.traverse(o => { const m = (o as THREE.Mesh).material as THREE.Material | undefined; if (m && !Array.isArray(m) && m.name === "M_Rope") found = m; });
     return found;
   }, [pier]);
+  // Foam where the piles and the buoys meet the water (v1 water item 3); a ring over the beach is never drawn.
+  const { x: dockX, z: dockZ, yaw: dockYaw } = dock;
+  useEffect(() => {
+    const d = { x: dockX, z: dockZ, yaw: dockYaw }, at = { x: 0, z: 0 }, handles: number[] = [];
+    for (const side of [-1, 1]) {
+      for (const z of PIER.railZ) { dockToWorld(d, side * PIER.postX, z, at); handles.push(foamRings.add(at.x, at.z, PIER.postR * 1.05, 0.95)); }
+      for (const z of PIER.underZ) { dockToWorld(d, side * PIER.underX, z, at); handles.push(foamRings.add(at.x, at.z, PIER.postR * 0.9, 0.85)); }
+    }
+    for (const [x, z] of BUOYS) { dockToWorld(d, x, z, at); handles.push(foamRings.add(at.x, at.z, 0.14, 0.7)); }
+    return () => handles.forEach(h => foamRings.remove(h));
+  }, [dockX, dockZ, dockYaw]);
   return <group position={[dock.x, 0, dock.z]} rotation={[0, dock.yaw, 0]}>
     <primitive object={pier} />
     {BUOYS.map(([x, z], i) => <Buoy key={i} dock={dock} x={x} z={z} />)}

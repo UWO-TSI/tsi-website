@@ -71,6 +71,10 @@ export interface WaterParams {
   /** How far the waterline runs up and back, in cells. 0 is a static edge. */
   foamWave: number;
   foamWaveSpeed: number;
+  /** The shore band pulsing toward the beach (v1 water item 3): its strength (0 off), how far out it starts (cells), and how many run in a second. */
+  foamPulse: number;
+  foamPulseReach: number;
+  foamPulseSpeed: number;
   /** Size of the multiply blobs, world units per blob. */
   blobScale: number;
   /** How far the blobs darken the base. 1 is off. */
@@ -147,7 +151,7 @@ export function waterRampAt(depth: number, p: Pick<WaterParams, "bedColor" | "sh
 const WATER_KEYS = [
   "navyColor", "deepColor", "midColor", "shallowColor", "bedColor", "foamColor", "ringColor", "depthFalloff", "bedDepth", "bedSlope",
   "shelfDepth", "shelfFrom", "shelfTo",
-  "foamWidth", "foamStrength", "foamSoft", "foamWave", "foamWaveSpeed", "blobScale", "blobDarken", "blobSpeed", "ringWidth",
+  "foamWidth", "foamStrength", "foamSoft", "foamWave", "foamWaveSpeed", "foamPulse", "foamPulseReach", "foamPulseSpeed", "blobScale", "blobDarken", "blobSpeed", "ringWidth",
   "ringStrength", "shoreAlpha", "opacity", "fresnel", "glare", "roughness", "sunGlint", "sunSize", "waveHeight", "waveScale", "waveSpeed",
 ] as const satisfies readonly (keyof WaterParams)[];
 const uniformOf = (k: string) => `u${k[0].toUpperCase()}${k.slice(1)}`;
@@ -307,6 +311,51 @@ uniform vec3 uSunColor;
 ${WATER_KEYS.map(k => `uniform ${k.endsWith("Color") ? "vec3" : "float"} ${uniformOf(k)};`).join("\n")}
 `;
 
+/** How many foam rings the water has room for (lib/game/foamRings.ts FOAM_RING_SLOTS.high; Lite fills fewer). */
+export const FOAM_RING_MAX = 32;
+/**
+ * Foam (v1 water item 3, references/look/2026-10-13/water-foam-shallows-ref.png):
+ *  - `shorePulse`: a second line of foam that starts `uFoamPulseReach` cells out and runs in to the beach, swelling
+ *    in and fading as it arrives, again and again; broken along the shore and offset by where it is, so the coast
+ *    never pulses as one piece. World time and world position only.
+ *  - `ringFoam`: a collar where something meets the water (lib/game/foamRings.ts: posts, rocks, hulls, waders), its
+ *    edge wobbling round it, and a thin ring lapping out from it and fading. The nearest FOAM_RING_MAX to the view.
+ * Time is wrapped on whole cycles before fract(), as WATER_PHASE does for sin(): uTime runs to a day of seconds.
+ */
+const WATER_FOAM = /* glsl */ `
+uniform vec4 uFoamRings[${FOAM_RING_MAX}];
+uniform int uFoamRingCount;
+float shorePulse(float shore, vec2 xz, float px) {
+  if (uFoamPulse <= 0.0 || shore < 0.0 || shore > uFoamPulseReach + 0.4) return 0.0;
+  float speed = floor(uFoamPulseSpeed * 1000.0 + 0.5) / 1000.0;
+  float drift = 0.25 * sin(xz.x * 0.21 + xz.y * 0.13) + 0.2 * sin(xz.y * 0.37 - xz.x * 0.17);
+  float cyc = fract(mod(uTime, 1000.0) * speed + drift);
+  float at = uFoamPulseReach * (1.0 - cyc);
+  float band = 1.0 - smoothstep(0.035, 0.075 + px * 1.5, abs(shore - at));
+  float broken = smoothstep(-0.25, 0.35, sin(xz.x * 1.3 + sin(xz.y * 0.9) * 2.0) * sin(xz.y * 1.1 + sin(xz.x * 0.7) * 2.0) + 0.35);
+  return band * broken * smoothstep(0.0, 0.3, cyc) * (1.0 - smoothstep(0.78, 1.0, cyc)) * uFoamPulse;
+}
+float ringFoam(vec2 p, float px) {
+  float f = 0.0;
+  for (int i = 0; i < ${FOAM_RING_MAX}; i++) {
+    if (i >= uFoamRingCount) break;
+    vec4 ring = uFoamRings[i];
+    vec2 d = p - ring.xy;
+    float edge = length(d) - ring.z;
+    if (edge > 0.9 || edge < -0.05) continue;
+    float a = atan(d.y, d.x), seed = ring.x * 1.7 + ring.y * 2.3;
+    float wob = 0.022 * sin(a * 5.0 + waterPhase(uTime * 1.2) + seed) + 0.016 * sin(a * 8.0 - waterPhase(uTime * 1.9) + seed * 1.3);
+    float w = 0.06 + 0.06 * min(ring.z, 1.0);
+    float collar = 1.0 - smoothstep(w - px, w + px, edge + wob);
+    float cyc = fract(mod(uTime, 1000.0) * 0.45 + fract(seed * 0.13));
+    float out_ = w + cyc * (0.3 + 0.35 * min(ring.z, 1.0));
+    float pulse = (1.0 - smoothstep(0.012, 0.03 + px * 1.5, abs(edge + wob * 0.6 - out_))) * (1.0 - cyc) * (1.0 - cyc);
+    f = max(f, max(collar, pulse * 0.8) * ring.w);
+  }
+  return f;
+}
+`;
+
 /** The shading itself; `shoreDistance` comes from the baked field (SHORE_FROM_FIELD). */
 const WATER_FUNCTIONS = /* glsl */ `
 ${WATER_PHASE}${WATER_DEPTH_RAMP}
@@ -319,7 +368,7 @@ float blobField(vec2 p, float t) {
   float b = sin((q.x + q.y) * 0.61 - waterPhase(t * 0.19)) * sin((q.x - q.y) * 0.53 + waterPhase(t * 0.27));
   return a * 0.6 + b * 0.4;
 }
-${WATER_OPTICS}`;
+${WATER_OPTICS}${WATER_FOAM}`;
 
 /**
  * Swell. Two waves at different angles and incommensurate frequencies, so the
@@ -444,6 +493,10 @@ const FRAGMENT_BODY = /* glsl */ `
   float foam = 1.0 - smoothstep(uFoamWidth - aa, uFoamWidth + aa, edge);
   foam *= step(0.0, shore); // nothing under the land itself
   foam = clamp(foam * uFoamStrength, 0.0, 1.0);
+  // The band running in to the beach, and the collars round what stands in the water (v1 water item 3).
+  float px = max(length(fwidth(vWaterWorld.xz)), 1e-4) * 0.7;
+  foam = max(foam, shorePulse(shore, vWaterWorld.xz, px) * uFoamStrength);
+  foam = max(foam, ringFoam(vWaterWorld.xz, px));
 
   col += uSunColor * glare * uGlare * (1.0 - foam);
   col = mix(col, uFoamColor, foam);

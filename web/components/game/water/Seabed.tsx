@@ -15,6 +15,7 @@ import type { IslandMap } from "@/lib/game/grid";
 import { shoreFieldOf } from "@/lib/game/seabed";
 import { SEABED_KINDS, seabedProps, type SeabedKind } from "@/lib/game/seabedProps";
 import { fxOn } from "@/lib/game/perf/fxBench";
+import { foamRings } from "@/lib/game/foamRings";
 import { addUnderwater, waterSurfaceUniforms } from "../grid/terrainMaterials";
 
 export const SEABED_URL = "/assets/game/water/seabed.glb";
@@ -107,6 +108,12 @@ export default function Seabed({ map, lite = false, skip }: { map: IslandMap; li
     return { mesh, matrices, tints, xz };
   }), [nodes, layout, lite]);
   useEffect(() => () => { for (const k of kinds) { (k.mesh.material as THREE.Material).dispose(); k.mesh.dispose(); } }, [kinds]);
+  // The rocks that stand out of the water wear a foam collar where they meet it (v1 water item 3).
+  useEffect(() => {
+    const drawn = new Set(SEABED_KINDS.filter(k => !lite || k.lite).map(k => k.name));
+    const handles = layout.breaking.filter(b => drawn.has(b.kind)).map(b => foamRings.add(b.x, b.z, b.r, 1));
+    return () => handles.forEach(h => foamRings.remove(h));
+  }, [layout, lite]);
 
   const last = useRef<Last>({ x: Infinity, z: Infinity, kinds: null });
   useFrame(({ camera }) => refill(kinds, last.current, camera, lite));

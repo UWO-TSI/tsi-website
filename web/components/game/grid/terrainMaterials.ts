@@ -27,7 +27,8 @@ import * as THREE from "three";
 import { addCutout } from "@/lib/game/occluders";
 import { getGrassTexture } from "@/lib/game/grassTexture";
 import { GRASS_COLOR, WATER_DROP } from "@/lib/game/grid";
-import { SHORE_FROM_FIELD, UNDERWATER, UNDERWATER_UNIFORMS, WATER_DEPTH_RAMP, bedDepth, waterMaterial, waterUniforms, writeWaterUniforms, type WaterParams } from "@/lib/game/waterShader";
+import { FOAM_RING_MAX, SHORE_FROM_FIELD, UNDERWATER, UNDERWATER_UNIFORMS, WATER_DEPTH_RAMP, bedDepth, waterMaterial, waterUniforms, writeWaterUniforms, type WaterParams } from "@/lib/game/waterShader";
+import { foamRings } from "@/lib/game/foamRings";
 import { TUNING_DEFAULTS } from "@/lib/game/tuning";
 
 const TEX_DIR = "/assets/acnh/terrain/";
@@ -327,7 +328,23 @@ const waterUniformBlock = {
   uCloudMap: { value: null as THREE.Texture | null },
   uCloudUv: { value: new THREE.Vector4() },
   uCloudShade: { value: 0 },
+  /** The foam rings drawn this frame (x, z, radius, strength each; lib/game/foamRings.ts), and how many. */
+  uFoamRings: { value: new Float32Array(FOAM_RING_MAX * 4) },
+  uFoamRingCount: { value: 0 },
 };
+
+const _eye = new THREE.Vector3(), _dir = new THREE.Vector3();
+/**
+ * Hand the water the foam rings nearest the view's focus (where its ray meets the sea), at most `slots` (Lite fewer).
+ * Called once per frame from GridWorld; `on` false (the world bench's switch) draws none.
+ */
+export function drawFoamRings(camera: THREE.Camera, slots: number, on = true): void {
+  if (!on) { waterUniformBlock.uFoamRingCount.value = 0; return; }
+  camera.getWorldPosition(_eye);
+  camera.getWorldDirection(_dir);
+  const t = _dir.y < -0.05 ? Math.min(-_eye.y / _dir.y, 60) : 60;
+  waterUniformBlock.uFoamRingCount.value = foamRings.nearest(_eye.x + _dir.x * t, _eye.z + _dir.z * t, Math.min(slots, FOAM_RING_MAX), waterUniformBlock.uFoamRings.value, 70);
+}
 
 /**
  * The cloud layer CloudShadows draws (its texture and world-to-uv transform),
