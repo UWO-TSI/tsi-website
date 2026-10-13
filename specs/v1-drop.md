@@ -157,8 +157,46 @@ Lore rules: the player's substrate is never named, there are no codex dumps, not
   - the v2 world's draws batched (697, 50% over the village);
   - the flowing grass thinned with distance on Lite.
 
+## 8b. Look references (David, 2026-10-13, `references/look/2026-10-13/`)
+These are style targets: we rebuild the look in our own art and copy no assets.
+- **Wharf** (`wharf-creatures-of-the-deep-ref.png`): wooden plank piers on posts with ropes and rails, lantern poles, small moored boats, turquoise water, white foam rings where the posts meet the water.
+- **Water** (`water-foam-shallows-ref.png`): shallow water shows the sand beneath. It grades from sand to teal to deep blue as the land drops underwater, with soft white foam outlining every shore and rock, and sparkles.
+- **Title** (`title-piece-by-piece-ref.png`): a lush, close, depth-of-field scene; the logo top-left; a cream menu card with a dashed border and a pill highlight on the selected item; a small input hint bottom-right.
+- **Grass** (`grass-shader-ref.png`): wind; blade-card texture shapes; a colour gradient plus noise; bending under characters; trails; receiving lights and shadows; perspective correction from above; distance fading.
+
 ## 9. Shipping v1
-v1 ships when the checklist is green, with no fixed date (David).
+**Launch: Halloween, Oct 31** (David, 2026-10-13: "Rush v1 for Halloween"). Halloween is the launch event, running Oct 25 to Nov 1. **New-world checkpoint Oct 24:** if the terrain v2 village isn't wired and smooth by then, launch on the current village and swap to the new world in November.
+
+**Must ship Oct 31:**
+- performance pass;
+- the opening and tutorial;
+- slim name tags and chat;
+- the emote wheel, 8 dances and group sync;
+- the campfire drum dance;
+- friends, friend codes and join;
+- photo mode, saving to device;
+- the Halloween event (pumpkin lanterns, costume closet, trick-or-treat at resident doors, spooky fog nights);
+- natural barriers, the café closed, the home island and combat hidden;
+- moderation ready;
+- Supabase Pro (David pays);
+- the member world opens.
+
+**v1.1 (November):**
+- gifting, postcards by mail, friendship hearts;
+- friend perks for fishing and trees;
+- stargazing, message in a bottle;
+- the rockslide cleanup, kites;
+- the other place-aware emotes;
+- the Keeper questions rewrite and the museum plaque;
+- Lunar New Year, exam calm.
+
+**Also decided:**
+- Giftable items: clothes and cosmetics (not Gem-priced), crafted items, tools, materials, recipe cards and quest items, with a daily limit.
+- Photo mode: P key or a camera icon.
+- The rockslide: carry rocks to a shared bar, celebrate when it fills, and open the trail at v2.
+- Kites: a limited event item that appears in the emote bar while it's in your inventory. It can't be traded or sold; the shop sells it later.
+- Bottles: one a day, found only on the beach or fished up.
+- Stargazing: a hill by the village, with 8 constellations named for the Keepers' questions.
 
 Checklist:
 - [ ] every section above built and seen in-game;
