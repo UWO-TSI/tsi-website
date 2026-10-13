@@ -26,6 +26,9 @@ RATIOS = (0.5, 0.65, 0.8)
 # rises at most SNUG through it. A piece that can't keep within these at any ratio stays whole.
 TOLERANCE = 0.012
 SNUG = 0.003
+# Lock hair (M_Hair) may sink a little more into the head it lies on: 4 mm is a fifth of a pixel on a character drawn
+# under 72 px (LOD 1's line); on the v8 head the default fringe and bob sank 3.3-3.8 mm at every ratio and stayed whole.
+SNUG_HAIR = 0.004
 COVER = 0.004
 KEEP = 120
 SHARP = math.radians(40.0)
@@ -96,7 +99,7 @@ def covered(ob, others):
     return False
 
 
-def decimate(ob, under, cards=False):
+def decimate(ob, under, cards=False, snug=SNUG):
     """Decimate `ob` in place at the first ratio that keeps its shape (`under`: something lies on it); returns the
     ratio, or None (kept whole)."""
     for ratio in RATIOS:
@@ -114,9 +117,11 @@ def decimate(ob, under, cards=False):
         bpy.ops.object.modifier_move_to_index(modifier="LOD", index=0)
         bpy.ops.object.modifier_apply(modifier="LOD")
         far, out, sink = deviation(ob, trial)
+        if os.environ.get("LOD_DEBUG"):
+            print("LODDBG", ob.name, ratio, round(far, 4), round(out, 4), round(sink, 4), under)
         # cards: strand-card hair (thin open sheets over its own opaque under-cap) has no inside to sink into, so only
         # the shape tolerance holds it (the sign of a sheet's normal says nothing about sinking)
-        if far <= TOLERANCE and (cards or (sink <= SNUG and (out <= SNUG or not under))):
+        if far <= TOLERANCE and (cards or (sink <= snug and (out <= SNUG or not under))):
             old = ob.data
             ob.data = trial.data
             bpy.data.objects.remove(trial)
@@ -155,7 +160,8 @@ def build(src, dst, skin_only=False, merge=True, cards=False):
         n = ntris(ob)
         before += n
         if not whole and n >= KEEP:
-            decimate(ob, under[ob.name], cards=cards and material_of(ob) == "M_Hair")
+            decimate(ob, under[ob.name], cards=cards and material_of(ob) == "M_Hair",
+                     snug=SNUG_HAIR if material_of(ob) == "M_Hair" else SNUG)
         after += ntris(ob)
         kept.append(ob)
     os.makedirs(os.path.dirname(dst), exist_ok=True)

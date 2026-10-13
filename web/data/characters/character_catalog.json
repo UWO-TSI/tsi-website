@@ -2137,7 +2137,7 @@
    "slot": "back",
    "name": "Messy boy",
    "glb": "hair/full/hair_messy_boy.glb",
-   "tris": 969,
+   "tris": 995,
    "materials": [
     {
      "name": "M_Hair",
@@ -2163,7 +2163,7 @@
    "slot": "back",
    "name": "Short hime cut",
    "glb": "hair/full/hair_hime_short.glb",
-   "tris": 1536,
+   "tris": 1528,
    "materials": [
     {
      "name": "M_Hair",
@@ -2270,7 +2270,7 @@
    "slot": "back",
    "name": "Short with tufts",
    "glb": "hair/full/hair_short_tufts.glb",
-   "tris": 1538,
+   "tris": 1544,
    "materials": [
     {
      "name": "M_Hair",
@@ -2296,7 +2296,7 @@
    "slot": "back",
    "name": "Windy bob",
    "glb": "hair/full/hair_windy_bob.glb",
-   "tris": 1539,
+   "tris": 1546,
    "materials": [
     {
      "name": "M_Hair",
@@ -2505,7 +2505,7 @@
    "slot": "back",
    "name": "V-kei layers",
    "glb": "hair/full/hair_vkei.glb",
-   "tris": 1442,
+   "tris": 1445,
    "materials": [
     {
      "name": "M_Hair",
@@ -2643,7 +2643,7 @@
    "slot": "back",
    "name": "Waves with a fade",
    "glb": "hair/full/hair_waves.glb",
-   "tris": 1660,
+   "tris": 1316,
    "materials": [
     {
      "name": "M_Hair",

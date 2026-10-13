@@ -574,6 +574,23 @@ def collapse(ob, max_tris, passes=4):
         bpy.ops.object.modifier_apply(modifier="Budget")
 
 
+def trim_face_window(ob):
+    """A shell that wraps the whole head (#20's fade) loses what lies over the face: below the hairline in front."""
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    bad = []
+    for f in bm.faces:
+        la, lo = gcoords((f.calc_center_median() - HC).normalized())
+        if abs(lo) < 70 and la < GEO_SCALP(lo) - 2:
+            bad.append(f)
+    bmesh.ops.delete(bm, geom=bad, context="FACES")
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+    bm.to_mesh(ob.data)
+    bm.free()
+    ob.data.update()
+    return len(bad)
+
+
 def drop_slivers(ob, length=0.15, thin=0.004):
     """Collapse leaves a few long slivers across the hair (an edge over 15 cm, under 4 mm wide): they add nothing to the
     silhouette and cut chords through the head, so they go."""
@@ -765,7 +782,7 @@ def shade_map(img, me, spec):
     out = np.zeros((hh, ww), np.float32)
     for reg, name in regions:
         ref = np.median(L[reg]) if reg.sum() > 50 else ref_all
-        r = L / max(ref, 1e-4)
+        r = (L / max(ref, 1e-4)) ** 0.6                           # strands kept, a near-black source's noise softened
         r = np.where(r > 1.0, 1.0 + (r - 1.0) * 0.35, r)          # glossy bands pressed down: matte
         r = np.clip(r, 0.06, GAIN)
         out = np.where(reg, r / GAIN, out)
@@ -925,6 +942,7 @@ def main():
             params, c = register(ob)
             apply_params(ob, params)
         t0 = time.time()
+        trimmed = trim_face_window(ob) if spec.get("trim") == "face_window" else 0
         stats = conform(ob) if spec.get("covers") != ["top"] else []
         lengths = fit_lengths(ob, BODY)
         if spec.get("covers") != ["top"]:
@@ -974,7 +992,7 @@ def main():
         entries[pid] = e
         report.append(f"IMPORT {pid:22s} src_tris={src_tris} tris={e['tris']} scale={tuple(round(x, 4) for x in params[:3])} "
                       f"offset={tuple(round(x, 4) for x in params[3:])} yaw={yaw} facing={fa if fa is None else round(fa, 2)}/{fb if fb is None else round(fb, 2)} cost={c:.4f} conform(in,out,hidden)={stats} dropped={dropped} "
-                      f"cap_faces={n_cap} slivers={slivers} logo_texels={painted} below_chin(before,after,out_of_body)={lengths} map={'cell %d ch %s' % (cell, chans) if mapped else 'none'}")
+                      f"cap_faces={n_cap} slivers={slivers} trimmed={trimmed} logo_texels={painted} below_chin(before,after,out_of_body)={lengths} map={'cell %d ch %s' % (cell, chans) if mapped else 'none'}")
         print(report[-1])
         built.append(ob)
         if not RENDER:
