@@ -1,6 +1,7 @@
 // The performance pass's bench (specs/perf/2026-10-baseline.md, 2026-10-results.md): the same scenes before and after.
 //   PORT=3149 node specs/perf/perf-bench.mjs [scenes] [outFile]
-//   scenes: comma list of village, cafe, ruins-<kit> (default: village,cafe and the four heavy ults' kits).
+//   scenes: comma list of village, cafe, v2 (the terrain v2 world draft, 384 × 552, with 24 bots), ruins-<kit>
+//   (default: village,cafe and the four heavy ults' kits).
 //   Env: TIER=high|lite (default high), SECONDS (default 8), PROFILE=1 (a CPU profile after each run, top self time),
 //   UNCAPPED=0 (keep the display's frame pacing; default off so the frame rate shows the real cost), SHOTS=dir (a
 //   close-up and a wide screenshot per scene).
@@ -156,7 +157,7 @@ for (const scene of SCENES.split(",")) {
     await fresh();
     const fight = scene.startsWith("ruins-"), kit = fight ? scene.slice(6) : null;
     const url = fight ? `/lab/island?${BASE}&ruins=1&combat=demo&classes=v2&subclass=${kit}&mastery=20&traits=all&tamed=all`
-      : scene === "cafe" ? `/lab/island?${BASE}&cafe=inside&bots=24` : `/lab/island?${BASE}&bots=24`;
+      : scene === "cafe" ? `/lab/island?${BASE}&cafe=inside&bots=24` : scene === "v2" ? `/lab/island?${BASE}&fixture=v2&bots=24` : `/lab/island?${BASE}&bots=24`;
     await page.goto(`http://localhost:${PORT}${url}`, { waitUntil: "domcontentloaded" });
     await settle(fight ? ready.ruins : scene === "cafe" ? ready.world : ready.net);
     if (fight) await stage();

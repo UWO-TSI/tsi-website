@@ -1,0 +1,170 @@
+/**
+ * The game's performance budget (specs/perf/budget.md): what a scene, a character, an effect, an asset and a player on
+ * the network may cost. The numbers come from the October 2026 measurements (specs/perf/2026-10-results.md,
+ * specs/perf/effects-cost.md) with headroom for a full shard of 40 players. Two checks hold them:
+ * - budget.test.ts (the normal vitest gate): every shipped GLB within its category, every particle pool registered and
+ *   within its cap, no light in a character effect, LOD coverage, the network rates;
+ * - `npm run perf:check` (specs/perf/perf-check.mjs): the bench scenes on a production build against
+ *   specs/perf/baseline.json, failing on a regression over 10% in frame time or draw calls.
+ *
+ * Frame numbers are on the reference machine (Mac mini M4, Chrome, 1280 × 800 at DPR 1, the pixel finish on), uncapped:
+ * the median frame and the main thread's frame CPU. The member floor is a 60 FPS frame (16.7 ms) on an M1 / Iris Xe
+ * class laptop, about 2–2.5× slower than the reference in GPU and 1.6× in single-thread CPU; so the reference must
+ * stay under ~6 ms a frame on High (Lite's machines are slower still: 4 ms).
+ */
+
+/** Per scene and tier: the ceilings the bench scenes are held to (reference machine, uncapped). */
+export interface SceneBudget {
+  /** Median frame (ms). */
+  frameMs: number;
+  /** 95th-percentile frame (ms). */
+  p95Ms: number;
+  /** The probe's frame CPU (ms): first frame callback to the end of the render. */
+  cpuMs: number;
+  /** Draw calls a frame, every pass. */
+  draws: number;
+  /** Triangles a frame, every pass. */
+  triangles: number;
+  /** Longest frame within 1.5 s of an ult (ms), at the display's pace; fights only. */
+  ultHitchMs?: number;
+}
+export type SceneName = "village" | "v2" | "cafe" | "ruins";
+export type Tier = "high" | "lite";
+
+/**
+ * Village: 24 players (?bots=24) and the residents, at the spawn. v2: the terrain v2 world draft (?fixture=v2, 384 ×
+ * 552) with the same 24. Café: inside with its patrons and 24 bots. Ruins: a pack of 17 hunting you, the kit on a loop
+ * and Shadow Garden's ults. Today's medians are specs/perf/baseline.json; each budget leaves room for a full shard of
+ * 40 (at most 3 more drawn players and 16 more interpolated ones: specs/perf/budget.md "Headroom") and for content,
+ * under the floor machine's ceiling (frame ≤ 6 ms here on High, ≤ 4 ms on Lite).
+ */
+export const SCENE_BUDGET: Record<SceneName, Record<Tier, SceneBudget>> = {
+  village: {
+    high: { frameMs: 6, p95Ms: 9, cpuMs: 5, draws: 560, triangles: 560_000 },
+    lite: { frameMs: 4, p95Ms: 6, cpuMs: 3.5, draws: 420, triangles: 420_000 },
+  },
+  v2: {
+    high: { frameMs: 6.5, p95Ms: 10, cpuMs: 6, draws: 760, triangles: 1_200_000 },
+    lite: { frameMs: 4, p95Ms: 6, cpuMs: 3.5, draws: 560, triangles: 950_000 },
+  },
+  cafe: {
+    high: { frameMs: 4, p95Ms: 6, cpuMs: 2.5, draws: 180, triangles: 110_000 },
+    lite: { frameMs: 2.5, p95Ms: 4.5, cpuMs: 1.5, draws: 140, triangles: 90_000 },
+  },
+  ruins: {
+    high: { frameMs: 5, p95Ms: 10, cpuMs: 4, draws: 480, triangles: 280_000, ultHitchMs: 40 },
+    lite: { frameMs: 3.5, p95Ms: 7, cpuMs: 2.5, draws: 290, triangles: 210_000, ultHitchMs: 33 },
+  },
+};
+
+/** The shard (specs/multiplayer.md §4): what the scene budgets leave room for. */
+export const SHARD = { players: 40, fullHigh: 12, fullLite: 8, drawnHigh: 24, drawnLite: 16, auras: 8, plates: 12 } as const;
+
+/**
+ * One character, by its detail tier (lib/game/character/lod.ts and net/lod.ts). Triangles are the merged look (base
+ * skin and face plus every worn part), before anything held; draws are its own meshes in the scene pass (the body,
+ * the face, the print), shadow draws those again in the sun's map; materials are the shared body material and any
+ * held item's.
+ */
+export interface CharacterBudget { triangles: number; draws: number; shadowDraws: number; materials: number; bones: number; mixerHz: number }
+export const CHARACTER_BUDGET: Record<"full" | "lod1" | "reduced", CharacterBudget> = {
+  /** Within 21 u, or any Full remote: the whole look, every frame, the sun shadow. */
+  full: { triangles: 5200, draws: 3, shadowDraws: 2, materials: 1, bones: 22, mixerHz: 60 },
+  /** Past 21 u and under 72 px: LOD 1 parts (art/characters/build_lod.py). */
+  lod1: { triangles: 4600, draws: 3, shadowDraws: 2, materials: 1, bones: 22, mixerHz: 30 },
+  /** A Reduced remote: no sun shadow, the mixer at 15 Hz. */
+  reduced: { triangles: 4600, draws: 3, shadowDraws: 0, materials: 1, bones: 22, mixerHz: 15 },
+};
+/** What one more player in view may add to a frame (specs/multiplayer.md §5.5 targets, kept). */
+export const PER_PLAYER = { fullCpuMs: 0.12, drawnCpuMsTotal24: 3, drawsHigh: 5, drawsLite: 3 } as const;
+
+/**
+ * Character effects (specs/perf/effects-cost.md): an effect's share, what it may add when every Full player in view
+ * shows it (12 on High). `drawsPerPlayer` for what a player carries (scene and shadow passes together; 0 for the
+ * scene's shared pools and DOM overlays); `cpuMs` main-thread time per frame for all 12; `particles` alive from one
+ * player's effect at once; `lights` always 0 (a light appearing recompiles every lit material:
+ * specs/perf/2026-10-baseline.md item 2).
+ */
+export interface EffectBudget { drawsPerPlayer: number; cpuMs: number; particles: number; lights: 0 }
+export const EFFECT_BUDGET: Record<string, EffectBudget> = {
+  auraSubclass: { drawsPerPlayer: 2, cpuMs: 0.15, particles: 11, lights: 0 },
+  auraFamily: { drawsPerPlayer: 2, cpuMs: 0.1, particles: 7, lights: 0 },
+  dust: { drawsPerPlayer: 0, cpuMs: 0.15, particles: 12, lights: 0 },
+  juice: { drawsPerPlayer: 0, cpuMs: 0.2, particles: 24, lights: 0 },
+  ghost: { drawsPerPlayer: 2, cpuMs: 0.15, particles: 0, lights: 0 },
+  leaf: { drawsPerPlayer: 2, cpuMs: 0.25, particles: 0, lights: 0 },
+  held: { drawsPerPlayer: 2, cpuMs: 0.25, particles: 0, lights: 0 },
+  weapon: { drawsPerPlayer: 2, cpuMs: 0.25, particles: 0, lights: 0 },
+  rod: { drawsPerPlayer: 2, cpuMs: 0.25, particles: 0, lights: 0 },
+  fishing: { drawsPerPlayer: 4, cpuMs: 0.3, particles: 20, lights: 0 },
+  plates: { drawsPerPlayer: 0, cpuMs: 0.25, particles: 0, lights: 0 },
+  shadows: { drawsPerPlayer: 2, cpuMs: 0.25, particles: 0, lights: 0 },
+  emotes: { drawsPerPlayer: 0, cpuMs: 0.15, particles: 0, lights: 0 },
+  interp: { drawsPerPlayer: 0, cpuMs: 0.1, particles: 0, lights: 0 },
+};
+
+/**
+ * Particle pools (the scene's fixed capacities: nothing allocated as effects fire). Every `new ParticlePool(` in the
+ * code is listed here with the most its file may hold in all; budget.test.ts reads the sources, so a new pool fails
+ * until it is registered.
+ */
+export const PARTICLE_POOLS: Record<string, number> = {
+  "components/game/movement/moveFx.ts": 544, // movement juice 384, footprints 160: shared by every avatar in a scene
+  "components/game/GlowFx.tsx": 160,
+  "components/game/combat/CombatFx.tsx": 1040, // glow 768, ink 256, decals 16 (fx/combat.ts FX_POOLS)
+  "components/game/combat/MobFx.tsx": 360,
+  "components/game/oracle/CandleFire.tsx": 48,
+};
+/** Particles one movement event may throw (one avatar, juice amount 1): the heaviest today is a heavy landing on grass, 19. */
+export const JUICE_EVENT_PARTICLES = 24;
+
+/**
+ * Per player on the network (specs/multiplayer.md §4.3): the pose stream up (msgpack arrays at 10 Hz on the ground, 15
+ * while a move is set, an extra packet per event at most every 30 ms), and down: everyone else in your view relayed,
+ * a full shard of the busiest mover. Measured on the bots (budget.test.ts): at most 272 B/s and 9.9 packets a second.
+ */
+export const NETWORK_BUDGET = { upBytesPerSecond: 600, packetsPerSecond: 16, downBytesPerSecond: 16 * 1024 } as const;
+
+/** Files whose effects draw on characters: never a light in them. */
+export const CHARACTER_EFFECT_FILES = [
+  "components/game/oracle/FamilyAura.tsx", "components/game/oracle/SubclassAura.tsx", "components/game/movement/moveFx.ts",
+  "components/game/character/Character.tsx", "components/game/character/FishingRig.tsx", "components/game/net/RemoteAvatars.tsx",
+  "components/game/net/RemoteAvatar.tsx", "components/game/net/RemoteAuras.tsx", "components/game/net/Nameplates.tsx", "components/game/net/fx.ts",
+  "components/game/PlayerAvatar.tsx",
+] as const;
+
+/**
+ * Asset budgets by folder under web/public/assets (the first matching prefix wins). A GLB over its category fails
+ * budget.test.ts naming the asset and the budget; an existing asset over the line is listed in ASSET_EXCEPTIONS with
+ * its own cap (its numbers today), so it can't grow either.
+ */
+export interface AssetBudget { triangles: number; primitives: number; materials: number; texture: number; bones: number }
+export interface AssetCategory extends AssetBudget { name: string; prefixes: readonly string[] }
+export const ASSET_CATEGORIES: readonly AssetCategory[] = [
+  { name: "character LOD 1 part", prefixes: ["characters/v6/lod1/"], triangles: 1200, primitives: 4, materials: 4, texture: 256, bones: 22 },
+  { name: "character base", prefixes: ["characters/v6/base/"], triangles: 2000, primitives: 8, materials: 6, texture: 1024, bones: 22 },
+  { name: "hair", prefixes: ["characters/v6/hair/"], triangles: 1200, primitives: 1, materials: 1, texture: 0, bones: 22 },
+  { name: "accessory", prefixes: ["characters/v6/accessories/"], triangles: 1200, primitives: 4, materials: 4, texture: 128, bones: 22 },
+  { name: "outfit", prefixes: ["characters/v6/outfits/"], triangles: 300, primitives: 4, materials: 4, texture: 128, bones: 22 },
+  { name: "weapon", prefixes: ["game/weapons/"], triangles: 1000, primitives: 8, materials: 8, texture: 256, bones: 0 },
+  { name: "tool", prefixes: ["game/tools/"], triangles: 600, primitives: 5, materials: 5, texture: 256, bones: 0 },
+  { name: "effect", prefixes: ["game/props/"], triangles: 3000, primitives: 6, materials: 6, texture: 512, bones: 0 },
+  { name: "enemy", prefixes: ["game/enemies/"], triangles: 1500, primitives: 16, materials: 8, texture: 512, bones: 0 },
+  { name: "interior room", prefixes: ["game/cafe/", "game/interiors/"], triangles: 12_000, primitives: 24, materials: 24, texture: 1024, bones: 0 },
+  { name: "building", prefixes: ["acnh/buildings/", "buildings/", "game/buildings/", "game/wharf/"], triangles: 12_000, primitives: 10, materials: 10, texture: 1024, bones: 0 },
+];
+/** Shipped before the budget, over their category: each capped where it is today. Shrink, never raise. */
+export const ASSET_EXCEPTIONS: Record<string, Partial<AssetBudget> & { why: string }> = {
+  "game/weapons/tanto-gilt.glb": { primitives: 12, why: "twin blades in 12 parts: 24 draws with its shadow on each Full player holding it" },
+  "game/weapons/tanto-lotus.glb": { primitives: 12, why: "twin blades in 12 parts" },
+  "game/weapons/tanto-rune.glb": { primitives: 10, why: "twin blades in 10 parts" },
+  "game/weapons/aegis-dawn.glb": { primitives: 10, why: "shield and blade in 10 parts" },
+  "game/weapons/aegis-gilt.glb": { primitives: 10, why: "shield and blade in 10 parts" },
+  "game/weapons/handwraps-gilt.glb": { primitives: 10, why: "two hands' wraps in 10 parts" },
+  "game/weapons/handwraps-sun.glb": { primitives: 10, why: "two hands' wraps in 10 parts" },
+  "game/weapons/tooth-charm-4.glb": { primitives: 9, materials: 9, why: "tier-4 charm, a material per part" },
+  "game/weapons/tooth-charm-5.glb": { primitives: 10, materials: 10, why: "tier-5 charm, a material per part" },
+  "game/cafe/cafe-room.glb": { triangles: 34_170, primitives: 48, materials: 33, why: "the café interior, one room drawn alone: 48 draws" },
+  "game/interiors/kit.glb": { primitives: 35, why: "the interiors' shared kit; pieces are drawn one by one" },
+  "game/buildings/cafe.glb": { primitives: 34, materials: 25, why: "the café exterior: 34 draws in the village, the most of any building" },
+};
