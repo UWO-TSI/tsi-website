@@ -14,31 +14,28 @@
  * ACNH varies rock detail so a long cliff run does not look tiled. So we pick
  * a variant per cell and apply the rotation ourselves.
  *
- * One InstancedMesh per (file, sub-mesh). The kit is 44 files but a real map
- * touches a handful, and each is drawn once however many cells use it.
+ * Drawn as static blocks (cliffBlocks.ts, v1 performance): every placement's sub-meshes baked into world space and
+ * merged per shared material per block of 4 x 4 chunks, each block shown while the curved world can bring it into
+ * view (lib/game/curvedCull.ts). It used to be one InstancedMesh per (file, sub-mesh), never culled: 270 of the v2
+ * world's 700 draw calls.
  */
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { type IslandMap, listChunks, cliffPieceFor, cellToWorldX, cellToWorldZ } from "@/lib/game/grid";
+import { CurvedCull, cullMeshes } from "@/lib/game/curvedCull";
 import { terrainMaterial } from "./terrainMaterials";
+import { cliffBlocks, type CliffMaterial, type CliffPlacement } from "./cliffBlocks";
+import { GROUND_UV } from "./GridTerrain";
 
-// Raw dump units are 10x world units; the kit ships raw, like buildings do.
-const KIT_SCALE = 0.1;
 const CLIFF_DIR = "/assets/acnh/cliff/";
 
-interface Placement {
-  x: number;
-  z: number;
-  y: number;
-  rotation: number;
-}
-
 /** Every cliff placement on the map, bucketed by which file it wants. */
-function useCliffPlacements(map: IslandMap): Map<string, Placement[]> {
+function useCliffPlacements(map: IslandMap): Map<string, CliffPlacement[]> {
   return useMemo(() => {
-    const byFile = new Map<string, Placement[]>();
+    const byFile = new Map<string, CliffPlacement[]>();
     for (const chunk of listChunks(map)) {
       for (let cz = chunk.minCellZ; cz <= chunk.maxCellZ; cz++) {
         for (let cx = chunk.minCellX; cx <= chunk.maxCellX; cx++) {
@@ -59,74 +56,32 @@ function useCliffPlacements(map: IslandMap): Map<string, Placement[]> {
   }, [map]);
 }
 
-const _m = new THREE.Matrix4();
-const _q = new THREE.Quaternion();
-const _p = new THREE.Vector3();
-const _s = new THREE.Vector3(KIT_SCALE, KIT_SCALE, KIT_SCALE);
-const _euler = new THREE.Euler();
-
-/** One kit file, instanced across every cell that asked for it. */
-function CliffPiece({ file, placements, grass, drape }: { file: string; placements: Placement[]; grass?: THREE.Material; drape?: THREE.Material }) {
-  const { scene } = useGLTF(CLIFF_DIR + file);
-
-  // Pull geometry+material per sub-mesh. Safe to read straight off the source
-  // (rather than cloning) because InstancedMesh never mutates them, and the
-  // extractor already stripped the skinning that would have made this unsafe.
-  const subMeshes = useMemo(() => {
-    const out: { geometry: THREE.BufferGeometry; material: THREE.Material }[] = [];
-    scene.traverse((o) => {
-      const mesh = o as THREE.Mesh;
-      if (!mesh.isMesh || !mesh.geometry) return;
-      const own = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
-      // The kit's own materials are unusable: no textures (they live in the
-      // shared FldUnit asset) and baseColorFactor [0,0,0,0], which renders
-      // every cliff face as a black slab. Swap to the shared terrain set,
-      // matched by ACNH material name. See terrainMaterials.ts.
-      const name = own?.name ?? mesh.name ?? "";
-      // The kit's grass top and drape wear the island's own grass, so a plateau is the same lawn as the ground.
-      const island = name.includes("mGrassCliffXlu") ? drape : name.includes("mGrass") ? grass : undefined;
-      const shared = island ?? terrainMaterial(name);
-      out.push({ geometry: mesh.geometry, material: shared ?? own });
-    });
-    return out;
-  }, [scene, grass, drape]);
-
-  return (
-    <group>
-      {subMeshes.map((sm, i) => (
-        <instancedMesh
-          key={i}
-          args={[sm.geometry, sm.material, placements.length]}
-          receiveShadow
-          // Instanced bounds do not follow per-instance transforms well enough
-          // for a spread-out set; culling the whole batch when the origin
-          // leaves view would pop entire cliff runs.
-          frustumCulled={false}
-          ref={(inst) => {
-            if (!inst) return;
-            placements.forEach((p, idx) => {
-              _euler.set(0, (-p.rotation * Math.PI) / 2, 0);
-              _q.setFromEuler(_euler);
-              _p.set(p.x, p.y, p.z);
-              _m.compose(_p, _q, _s);
-              inst.setMatrixAt(idx, _m);
-            });
-            inst.instanceMatrix.needsUpdate = true;
-          }}
-        />
-      ))}
-    </group>
-  );
+/**
+ * The shared material a kit sub-mesh draws with. The kit's own materials are unusable: no textures (they live in the
+ * shared FldUnit asset) and baseColorFactor [0,0,0,0], which renders every cliff face as a black slab. Swap to the
+ * shared terrain set, matched by ACNH material name (terrainMaterials.ts). The kit's grass top and drape wear the
+ * island's own grass, so a plateau is the same lawn as the ground; the grass top with the ground's world UVs.
+ */
+function kitMaterial(own: THREE.Material | undefined, mesh: THREE.Mesh, grass?: THREE.Material, drape?: THREE.Material): CliffMaterial {
+  const name = own?.name ?? mesh.name ?? "";
+  const island = name.includes("mGrassCliffXlu") ? drape : name.includes("mGrass") ? grass : undefined;
+  const material = island ?? terrainMaterial(name) ?? own!;
+  return { material, worldUv: !!grass && material === grass };
 }
 
 /** `grass`, `drape`: the island's grass and its drape (GridTerrain's materials), for the kit's grass top and lip. */
 export default function GridCliffs({ map, grass, drape }: { map: IslandMap; grass?: THREE.Material; drape?: THREE.Material }) {
   const byFile = useCliffPlacements(map);
+  const files = useMemo(() => [...byFile.keys()], [byFile]);
+  const gltfs = useGLTF(files.map(f => CLIFF_DIR + f)) as unknown as { scene: THREE.Object3D }[];
+  const meshes = useMemo(() => cliffBlocks(map, files, gltfs.map(g => g.scene), byFile, (own, mesh) => kitMaterial(own, mesh, grass, drape), GROUND_UV),
+    [map, files, gltfs, byFile, grass, drape]);
+  useEffect(() => () => meshes.forEach(m => m.geometry.dispose()), [meshes]);
+  const cull = useMemo(() => new CurvedCull(), []);
+  useFrame(({ camera }) => cullMeshes(cull.update(camera), meshes));
   return (
     <group>
-      {[...byFile.entries()].map(([file, placements]) => (
-        <CliffPiece key={file} file={file} placements={placements} grass={grass} drape={drape} />
-      ))}
+      {meshes.map((m) => <primitive key={m.name} object={m} />)}
     </group>
   );
 }
