@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { GLBProp } from "./NatureModels";
+import InstancedGLB from "./InstancedNature";
 
 /** Seconds-ish a lamp takes to come up to full (or go out): an ease, never a switch (living-village §5). */
 const LAMP_RATE = 0.9;
@@ -39,6 +40,41 @@ export function Lantern({ position, lampsOn = true, intensity, glow }: { positio
       {/* The globe starts dark and eases to its target (a fixed prepared intensity, so the model is never rebuilt). */}
       <group ref={model}><GLBProp url="/assets/acnh/props/streetlamp.glb" emissiveIntensity={0} /></group>
       <pointLight ref={light} color="#FFA040" intensity={0} distance={5} position={[0, 2.4, 0]} />
+    </group>
+  );
+}
+
+const LAMP_URL = "/assets/acnh/props/streetlamp.glb";
+/** The frame a shared globe material was last eased in (each eases once a frame, however many meshes share it). */
+let lampFrame = 0;
+function easeGlowOnce(group: THREE.Object3D, target: number, dt: number) {
+  lampFrame++;
+  group.traverse(o => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+      if (!(m instanceof THREE.MeshStandardMaterial) || !m.emissiveMap || m.userData.lampFrame === lampFrame) continue;
+      m.userData.lampFrame = lampFrame;
+      m.emissiveIntensity = THREE.MathUtils.damp(m.emissiveIntensity, target, LAMP_RATE, dt);
+    }
+  });
+}
+
+/**
+ * Every streetlamp of a scene as one instanced model (v1 performance): a draw per sub-mesh for all of them (the body
+ * and the two glass halves, each glass drawn twice as a two-sided see-through), where each Lantern drew its own five.
+ * The globes share their materials, so they ease up and down together as the Lanterns' did; each lamp keeps its own
+ * pool of light.
+ */
+export function Lanterns({ positions, intensity, glow }: { positions: readonly [number, number, number][]; intensity: number; glow: number }) {
+  const group = useRef<THREE.Group>(null);
+  const placements = useMemo(() => positions.map(position => ({ position })), [positions]);
+  useFrame((_, raw) => { if (group.current) easeGlowOnce(group.current, glow, Math.min(raw, 0.1)); });
+  return (
+    <group>
+      {/* The globes start dark and ease to their target (a fixed prepared intensity, so the model is never rebuilt). */}
+      <group ref={group}><InstancedGLB url={LAMP_URL} placements={placements} emissiveIntensity={0} /></group>
+      {positions.map((p, i) => <FadeLight key={i} color="#FFA040" intensity={intensity} distance={5} position={[p[0], p[1] + 2.4, p[2]]} />)}
     </group>
   );
 }
