@@ -209,7 +209,7 @@ export const EV_DT_MAX_MS = 2000;
 /** Kinds whose value is a clip name. */
 export const isClipEv = (kind: number) => kind === EV.play || kind === EV.upper;
 /** The emote menu's clips (character/clips EMOTE_CLIPS): a play or upper event with one counts against RATE_LIMITS.emotes. */
-export const EMOTE_CLIP_NAMES = ["Wave", "Dance", "Laugh", "Cheer", "Sad"] as const;
+export const EMOTE_CLIP_NAMES = ["Wave", "Dance", "Laugh", "Cheer", "Sad", "Clap", "Bow", "Shrug", "DanceBounce", "DanceSpin", "DanceShuffle", "DanceSway", "DanceWiggle", "DanceFlail", "DanceRobot", "DanceSprinkler", "DanceStomp"] as const;
 export const isEmoteClip = (name: unknown) => typeof name === "string" && (EMOTE_CLIP_NAMES as readonly string[]).includes(name);
 
 // ── Strings on the wire ───────────────────────────────────────────

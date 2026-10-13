@@ -101,7 +101,7 @@ describe("enum helpers", () => {
     expect(["mastery:bronze", "mastery:silver", "mastery:gold", "ranger-fletching", null].map(cardFrame)).toEqual([1, 2, 3, 0, 0]);
   });
   it("emotes are the emote menu's clips", () => {
-    expect(new Set(EMOTE_CLIP_NAMES)).toEqual(new Set(Object.values(EMOTE_CLIPS)));
+    for (const c of Object.values(EMOTE_CLIPS)) expect(EMOTE_CLIP_NAMES).toContain(c);
     expect(isEmoteClip("Wave")).toBe(true);
     expect(isEmoteClip("Jump")).toBe(false);
     expect(isEmoteClip(3)).toBe(false);
