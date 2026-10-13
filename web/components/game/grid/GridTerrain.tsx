@@ -63,7 +63,7 @@ import {
   type ShoreSdf,
 } from "@/lib/game/grid";
 import { terrainMaterial, setShoreField } from "./terrainMaterials";
-import { bakeWaterDepth, seabedDip } from "@/lib/game/seabed";
+import { bakeWaterDepth, seabedDip, shoreFieldOf } from "@/lib/game/seabed";
 
 // Flat colours for the surfaces whose road-kit textures are not wired yet.
 const SURFACE_COLOR: Record<number, string> = {
@@ -749,7 +749,7 @@ export const GROUND_TOP_ORDER = 3;
 export default function GridTerrain({ map, field: heights, materials }: { map: IslandMap; field?: Float32Array; materials: TerrainMaterials }) {
   // ONE field, read twice: the seabed geometry samples it on the CPU, the water
   // shader samples it on the GPU. Two bakes would be two shorelines.
-  const field = useMemo(() => shoreSdf(map), [map]);
+  const field = useMemo(() => shoreFieldOf(map), [map]);
 
   /**
    * The continuous ground height. One field, read by the mesh here and by the

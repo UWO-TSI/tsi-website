@@ -152,6 +152,9 @@ export const ASSET_CATEGORIES: readonly AssetCategory[] = [
   { name: "enemy", prefixes: ["game/enemies/"], triangles: 1500, primitives: 16, materials: 8, texture: 512, bones: 0 },
   { name: "interior room", prefixes: ["game/cafe/", "game/interiors/"], triangles: 12_000, primitives: 24, materials: 24, texture: 1024, bones: 0 },
   { name: "building", prefixes: ["acnh/buildings/", "buildings/", "game/buildings/", "game/wharf/"], triangles: 12_000, primitives: 10, materials: 10, texture: 1024, bones: 0 },
+  // v1 water (2026-10-13): the seabed's kinds and the decorative fish, each node drawn instanced (one draw per kind
+  // however many lie in reach), so primitives are the scene's draws for the whole seabed.
+  { name: "seabed and water life", prefixes: ["game/water/"], triangles: 1200, primitives: 10, materials: 6, texture: 256, bones: 0 },
 ];
 /** Shipped before the budget, over their category: each capped where it is today. Shrink, never raise. */
 export const ASSET_EXCEPTIONS: Record<string, Partial<AssetBudget> & { why: string }> = {

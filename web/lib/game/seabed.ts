@@ -4,7 +4,7 @@
  * colour reads (the water field's depth channel, terrainMaterials.ts setShoreField), so the shallows are always the
  * shade of the sand you can see under them: depth comes from the known seabed, with no depth pass.
  */
-import { Surface, coastDistance, overlayAt, sampleShore, smoothstep, type IslandMap, type ShoreSdf } from "./grid";
+import { Surface, coastDistance, overlayAt, sampleShore, shoreSdf, smoothstep, type IslandMap, type ShoreSdf } from "./grid";
 import { bedDepth, type WaterParams } from "./waterShader";
 import { TUNING_DEFAULTS } from "./tuning";
 
@@ -49,3 +49,11 @@ export function bakeWaterDepth(map: IslandMap, shore: ShoreSdf, p: BedParams = T
 
 /** The deepest the seabed gets anywhere (the open sea past the drop-off): where the open sea's own floor lies. */
 export const deepestSeabed = (p: BedParams = TUNING_DEFAULTS.water) => bedDepth(1e4, p);
+
+const fields = new WeakMap<IslandMap, ShoreSdf>();
+/** A map's shore field, made once and shared (the terrain, the water's bake, the seabed's props, the fish). */
+export function shoreFieldOf(map: IslandMap): ShoreSdf {
+  let f = fields.get(map);
+  if (!f) fields.set(map, f = shoreSdf(map));
+  return f;
+}

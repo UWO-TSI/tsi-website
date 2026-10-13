@@ -119,6 +119,7 @@ wherever its node is drawn, and another in the shadow pass if it casts.
 | Effect | `game/props` | 3,000 | 6 | 6 | 512 | – |
 | Enemy | `game/enemies` | 1,500 | 16 (instanced: one draw per part per type) | 8 | 512 | – |
 | Building | `acnh/buildings`, `buildings`, `game/buildings`, `game/wharf` | 12,000 | 10 | 10 | 1,024 | – |
+| Seabed and water life (v1 water, 2026-10-13) | `game/water` | 1,200 (the whole set) | 10 (one instanced draw each) | 6 | 256 | – |
 | Interior room | `game/cafe`, `game/interiors` | 12,000 | 24 | 24 | 1,024 | – |
 
 Shipped before the budget and over it, each capped where it is today (`ASSET_EXCEPTIONS`; shrink, never raise): seven

@@ -7,7 +7,8 @@
  * `fxForced` always false, whatever the URL says.
  *
  * World switches for the world bench (specs/perf/world-bench.mjs): `skyDome` off draws the flat gradient on High as
- * Lite does, and `window.__fx.tune(group, key, value)` sets a tuning value (the grass's density) as /lab/tune does.
+ * Lite does, `seabed` off hides the seabed's props (v1 water), and `window.__fx.tune(group, key, value)` sets a tuning
+ * value (the grass's density) as /lab/tune does.
  */
 import { useSyncExternalStore } from "react";
 import { resetTuning, setTuning, type Tuning } from "@/lib/game/tuning";
@@ -18,7 +19,7 @@ export const FX_BENCH = process.env.NODE_ENV !== "production";
 export const FX_KEYS = ["auraFamily", "auraSubclass", "dust", "juice", "ghost", "leaf", "held", "weapon", "rod", "fishing", "plates", "shadows", "emotes", "interp"] as const;
 export type FxKey = (typeof FX_KEYS)[number];
 /** World costs the bench can switch off (not other players' effects: `fxoff=all` leaves these on). */
-export const WORLD_KEYS = ["skyDome"] as const;
+export const WORLD_KEYS = ["skyDome", "seabed"] as const;
 export type WorldKey = (typeof WORLD_KEYS)[number];
 type BenchKey = FxKey | WorldKey;
 

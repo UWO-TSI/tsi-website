@@ -71,7 +71,8 @@ const TEXTURE_FOR: Record<string, string> = {
   // composites the pair into one RGBA file with these names.
   mGrassCliffXlu: "mGrassCliffXlu.png",
   mGrassRiverXlu: "mGrassRiverXlu.png",
-  mRiverBed: "mRiverBed_Alb.png",
+  // Our own seabed sand (art/water/build_seabed.py, v1 water item 2): ripple marks seen through the shallows.
+  mRiverBed: "seabed-sand.webp",
   mSand: "mSand_Alb.png",
 };
 
@@ -138,9 +139,9 @@ export function applyGrassNormalStrength(strength: number, worldUnitsPerRepeat: 
 
 const ROAD_DIR = "/assets/acnh/road/";
 
-/** Road materials ship in road/, the rest in terrain/. */
+/** Road materials ship in road/, the seabed's sand in game/water/, the rest in terrain/. */
 function dirFor(name: string): string {
-  return name.startsWith("mRoad") ? ROAD_DIR : TEX_DIR;
+  return name.startsWith("mRoad") ? ROAD_DIR : name === "mRiverBed" ? "/assets/game/water/" : TEX_DIR;
 }
 
 function loadTexture(loader: THREE.TextureLoader, file: string, dir = TEX_DIR, colorSpace: THREE.ColorSpace = THREE.SRGBColorSpace): THREE.Texture {
@@ -255,7 +256,11 @@ export function terrainMaterial(name: string): THREE.Material | null {
     };
     mat.customProgramCacheKey = () => "terrain-fringe-alpha-v1";
   }
-  if (key === "mRiverBed") seenThroughWater(mat);
+  if (key === "mRiverBed") {
+    // One repeat of the sand per four cells (the ground's UVs repeat every two).
+    mat.map!.repeat.setScalar(0.5);
+    seenThroughWater(mat);
+  }
   mat.name = `terrain:${key}`;
   cache.set(key, withCutout(mat));
   return mat;
