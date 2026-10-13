@@ -15,6 +15,7 @@ import { fxForced } from "@/lib/game/perf/fxBench";
 import type { FishingState } from "@/lib/game/fishingRig";
 import { EMOTE_CLIP_NAMES, type EvKind } from "@/lib/net/protocol";
 import type { RemoteSample } from "@/lib/net/types";
+import type { ClipName } from "@/lib/game/character/clips";
 import type { GroundWorld, RemoteRig } from "./drive";
 import { remoteJuice, type FxGround } from "./fx";
 import { FULL } from "./lod";
@@ -46,7 +47,7 @@ export function placeInFormation(s: RemoteSample, i: number, you: THREE.Vector3,
 
 /** The bench's forced one-shots and holds on a Full remote this frame (`t` room seconds, `i` its rank). */
 /** The five emote clips every rig has today; the v1 wheel and dances append to EMOTE_CLIP_NAMES as their clips land. */
-const BENCH_EMOTES = EMOTE_CLIP_NAMES.slice(0, 5);
+const BENCH_EMOTES = EMOTE_CLIP_NAMES.slice(0, 5) as readonly ClipName[];
 
 export function forceMotion(r: RemoteRig, i: number, t: number, dt: number) {
   const m = r.motion, full = r.lod.tier === FULL, phase = (t + i * 0.137) % 1e6;
