@@ -74,6 +74,7 @@ import {
 import { LANDMARK_IDS, LANDMARK_INFO, PROP_FOOTPRINT, TREE_SLOTS, TREE_TRUNK, objectFootprint, turn, type LandmarkId } from "@/lib/game/defaultIsland";
 import { villageHealth, type VillageHealth } from "@/lib/game/mapHealth";
 import { terrainFixtureDoc } from "@/lib/game/fixtures/terrainFixture";
+import { terrainV2DraftDoc } from "@/lib/game/fixtures/terrainV2Draft";
 import { mapBudget } from "@/lib/game/mapBudget";
 import { classifyWater, WATER_CLASS } from "@/lib/game/fishingSpots";
 import { SLOPE_RUN, cellsInPolygon, cliffDab, nextObjectId, organicCell, slopeDab, snapPlacement, snapshotCells, softDab, waterDistance, type CellSnapshot, type OrganicOp } from "@/lib/game/painterTools";
@@ -260,6 +261,36 @@ function world(): World {
 /** The working draft as a document: the village format, plus legacy markers so a legacy draft survives a reload. */
 function draftDoc(w: World): VillageDoc {
   return { ...serialiseVillage(w.map, w.objects, w.annotations), ...(w.props.length ? { props: w.props } : {}), ...(w.source === "legacy" ? { objects: undefined } : {}) };
+}
+
+/**
+ * Where a freshly loaded map should open: its spawn (the village heart), else the centre of its land. On a world
+ * map (384x552) the top-left corner is open sea, and a painter that opens on blank water reads as a page that
+ * never loaded (David, 2026-10-10: "the page is not loading for me"). Module scope like WORLD: the load sites set
+ * it, one effect consumes it.
+ */
+let FOCUS: { at: [number, number]; w: number; d: number } | null = null;
+/** Remember where this world should open; consumed by the scroll effect once THIS map is the rendered one. */
+function setLoadFocus(w: World): void {
+  FOCUS = { at: loadFocus(w), w: w.map.width, d: w.map.depth };
+}
+function loadFocus(w: World): [number, number] {
+  // Objects live in world coordinates; the canvas is cell space (`pointer`: wx = originX + u - 0.5).
+  const spawn = w.objects.find((o) => o.kind === "spawn");
+  if (spawn) return [spawn.x - w.map.originX + 0.5, spawn.z - w.map.originZ + 0.5];
+  const { map } = w;
+  let x0 = map.width, x1 = 0, z0 = map.depth, z1 = 0, any = false;
+  for (let z = 0; z < map.depth; z++) {
+    for (let x = 0; x < map.width; x++) {
+      if (isWater(surfaceAt(map, x, z))) continue;
+      any = true;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (z < z0) z0 = z;
+      if (z > z1) z1 = z;
+    }
+  }
+  return any ? [(x0 + x1) / 2, (z0 + z1) / 2] : [map.width / 2, map.depth / 2];
 }
 
 /**
@@ -513,8 +544,11 @@ export default function MapLab() {
    */
   useEffect(() => {
     // `?fixture=terrain`: the natural-terrain test island (never the shipped one), for trying the brushes.
-    if (new URLSearchParams(window.location.search).get("fixture") === "terrain") {
-      WORLD = fromDoc(terrainFixtureDoc(), "village");
+    const fixture = new URLSearchParams(window.location.search).get("fixture");
+    if (fixture === "terrain" || fixture === "v2") {
+      // `v2`: David's drawn world-map draft (terrain sizing pass, 2026-10-09).
+      WORLD = fromDoc(fixture === "v2" ? terrainV2DraftDoc() : terrainFixtureDoc(), "village");
+      setLoadFocus(WORLD);
       setVersion((v) => v + 1);
       return;
     }
@@ -528,6 +562,7 @@ export default function MapLab() {
     if (!saved) return;
     try {
       WORLD = fromDoc(JSON.parse(saved) as VillageDoc);
+      setLoadFocus(WORLD);
     } catch {
       return;
     }
@@ -581,6 +616,7 @@ export default function MapLab() {
     (next: World) => {
       commit();
       WORLD = next;
+      setLoadFocus(next);
       setSelected(null);
       bump();
     },
@@ -673,6 +709,21 @@ export default function MapLab() {
   }, [undo, redo, selected, deleteObject, updateObject, snap, view]);
 
   const flip = view === "game";
+  /** The canvas's scroll viewport; a freshly loaded map centres its FOCUS in it (the fixture's first screen was open sea). */
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = scrollRef.current;
+    // Consume only once the rendered map IS the loaded one: on the load's own commit this effect still sees the
+    // previous render's map (the fixture effect runs earlier in the same pass), and scrolling then would aim with
+    // the wrong dimensions and throw the focus away.
+    if (!el || !FOCUS || FOCUS.w !== map.width || FOCUS.d !== map.depth) return;
+    const [u, v] = FOCUS.at;
+    FOCUS = null;
+    const cx = (flip ? (map.width - u) : u) * zoom, cy = (flip ? (map.depth - v) : v) * zoom;
+    // A frame later: the draw effect (declared below) must size the canvas first, or the scroll clamps to 0.
+    const id = requestAnimationFrame(() => el.scrollTo({ left: Math.max(0, cx + 16 - el.clientWidth / 2), top: Math.max(0, cy + 16 - el.clientHeight / 2) }));
+    return () => cancelAnimationFrame(id);
+  }, [version, flip, zoom, map.width, map.depth]);
   /** Cell space (cell (x, z) spans [x, x + 1] × [z, z + 1]) → canvas pixels, for text drawn unflipped. */
   const toPx = useCallback(
     (u: number, v: number): [number, number] => (flip ? [(map.width - u) * zoom, (map.depth - v) * zoom] : [u * zoom, v * zoom]),
@@ -1278,7 +1329,7 @@ export default function MapLab() {
 
   return (
     <div style={{ position: "fixed", inset: 0, top: 40, background: "#11151a", display: "flex", color: "#c8cfd4" }}>
-      <div style={{ flex: 1, overflow: "auto", padding: 16 }}>
+      <div ref={scrollRef} style={{ flex: 1, overflow: "auto", padding: 16 }}>
         <canvas
           ref={canvasRef}
           data-testid="painter-canvas"
@@ -1400,6 +1451,7 @@ export default function MapLab() {
                 // floats every building over open water on a map that no longer
                 // has ground.
                 WORLD = { ...world(), map: m, props: [], annotations: [], objects: [] };
+                setLoadFocus(WORLD);
                 setSelected(null);
                 bump();
               }}
@@ -1413,11 +1465,18 @@ export default function MapLab() {
             <button onClick={() => setSheet(sheet === "import" ? "none" : "import")} style={btn(sheet === "import", { flex: 1 })}>import</button>
             <button
               onClick={() => {
+                // An unedited fixture walks as the fixture: saving it first would
+                // overwrite the painter's own autosaved draft with the fixture.
+                const fixture = new URLSearchParams(window.location.search).get("fixture");
+                if ((fixture === "terrain" || fixture === "v2") && !edited) {
+                  window.open(`/lab/island?fixture=${fixture}`, "_blank");
+                  return;
+                }
                 saveNow();
                 window.open("/lab/island?draft=1", "_blank");
               }}
               style={btn(false, { flex: 1.3, borderColor: "#7fd1c0", color: "#7fd1c0" })}
-              title="open this draft in 3D at /lab/island?draft=1"
+              title="open this draft in 3D at /lab/island"
             >
               walk it ↗
             </button>
@@ -1776,6 +1835,7 @@ export default function MapLab() {
             onClick={() => {
               commit();
               WORLD = shippedVillage();
+              setLoadFocus(WORLD);
               setSelected(null);
               try {
                 window.localStorage.removeItem(PAINTER_DRAFT_KEY);

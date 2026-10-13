@@ -1,4 +1,5 @@
 import { APPLICANT_PORTAL } from "@/lib/recruitment-access";
+import { authCookieOptions } from "./cookie";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -26,6 +27,7 @@ export async function updateSession(request: NextRequest) {
     supabaseUrl,
     supabaseKey,
     {
+      cookieOptions: authCookieOptions(request.headers.get("host")),
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -143,16 +145,6 @@ export async function updateSession(request: NextRequest) {
     }
 
     return supabaseResponse;
-  }
-
-  // ─── Already logged in — redirect away from login (/student) and signup ─
-  if (
-    (pathname.replace(/\/+$/, "") === "/student" || pathname === "/student/signup") &&
-    user
-  ) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/student/go";
-    return NextResponse.redirect(url);
   }
 
   return supabaseResponse;

@@ -6,8 +6,8 @@ const C = "00000000-0000-4000-8000-0000000000c1";
 const answer = (status: number, body: unknown) => (async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch;
 
 describe("event check-in links and results (#26)", () => {
-  it("the QR points at tethos.ca's check-in page with the event and its code", () => {
-    expect(checkInUrl(E, C)).toBe(`https://www.tethos.ca/student/check-in?event=${E}&code=${C}`);
+  it("the QR points at the portal's check-in page (play.tethos.ca) with the event and its code", () => {
+    expect(checkInUrl(E, C)).toBe(`https://play.tethos.ca/student/check-in?event=${E}&code=${C}`);
     expect(checkInPath(E, C)).toBe(`/student/check-in?event=${E}&code=${C}`);
   });
   it("reads the route's answers", async () => {

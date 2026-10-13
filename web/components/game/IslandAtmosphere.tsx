@@ -11,6 +11,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import ContactShadows from "./ContactShadows";
 import Puddles from "./Puddles";
+import SkyDome from "./SkyDome";
 import { setPuddles } from "@/lib/game/puddles";
 import { CloudShadows, MistBanks, TreeLeaves } from "./AmbienceFX";
 import { Fireflies } from "./AmbientLife";
@@ -110,7 +111,11 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
   // Footsteps splash in them while it rains (lib/game/puddles.ts), whoever steps.
   useEffect(() => { setPuddles(weather === "rain" ? puddleBlobs : []); return () => setPuddles([]); }, [weather, puddleBlobs]);
   return <>
-    {light.skyTop ? <SkyGradient top={light.skyTop} horizon={light.sky} /> : <color attach="background" args={[light.sky]} />}
+    {/* The full tier flies the tuned dome (sun-phase colours, weather clouds, stars); Light keeps the flat gradient.
+        The background colour stays behind both as the backstop past the dome's radius. */}
+    {liteMode
+      ? light.skyTop ? <SkyGradient top={light.skyTop} horizon={light.sky} /> : <color attach="background" args={[light.sky]} />
+      : <><color attach="background" args={[light.sky]} /><SkyDome light={light} weather={weather} /></>}
     <fog attach="fog" args={[light.fogColor, overview ? light.fogNear + 28 + overviewFog : light.fogNear, overview ? light.fogFar + 15 + overviewFog : light.fogFar]} />
     <ambientLight ref={ambient} intensity={light.ambient} color={light.fill} />
     <hemisphereLight ref={hemisphere} args={[light.fill, light.bounce, light.hemisphere]} />

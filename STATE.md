@@ -1,7 +1,32 @@
 # STATE.md — where things actually are
 
 > Read this before `AGENT_LOG.md`. It answers "which branch, what's live, what's next"
-> in one page. Update it whenever direction changes. Last updated **2026-10-03**.
+> in one page. Update it whenever direction changes. Last updated **2026-10-10**.
+
+## Game lore locked (2026-10-10)
+
+- **`specs/lore.md` is the story canon**, set with David: the Answer, the Keepers and
+  their questions, the veil, the buried ship, the one-year arc, the never-resolved
+  outside world, and the sudo pet system (sudo / Root / nib / tidbit / chiplet / whit /
+  pip, Tethotchi hardware tie-in, assembly-as-hardware-dev). Read it before writing any
+  quest, NPC, monster, pet, or cutscene content. The museum plaque is David's to write.
+
+## Terrain v2: the world island (2026-10-10)
+
+- **`specs/terrain-v2.md` is the plan**, agreed with David. His drawing became a 384x552
+  world draft that will REPLACE the live member island once village + residents + fishing
+  pass gates. Merged to `main` (`0c0310e6`): generator `art/terrain/draft_from_png.py`,
+  draft data + fixture, 7 guard tests, `MAX_LEVEL` 6 -> 8, residentRoutine crash guards.
+- Walk it at `/lab/island?fixture=v2`, paint it at `/lab/map?fixture=v2`. Iterate the
+  generator's constants, never the JSON.
+- Next: P0 David signs off the walk, then P1 village + wharf layout proposal (Oracle
+  Temple goes on the summit, village is chill study, wharf is the fishing-village
+  entrance). Combat home still open: north island vs forest ruins, David deciding.
+
+## play.tethos.ca is live (2026-10-09)
+
+- `feat/play-subdomain` merged to `main` (`bb0a0f9e`, David's call) and deployed. The domain is on the Vercel project and the Namecheap CNAME (`play` → `cname.vercel-dns.com`, added by David) resolves. Verified in production: `play.tethos.ca/` serves the title screen, `www.tethos.ca/student` and portal paths 307 to play, `play` sends `/student/apply/*` and site pages back to www.
+- Unmerged branches triaged the same day: `game/avatar-v8` stays open (on hold for David's references); `fix/recruitment-empty-sheet-setting` and `feat/director-developer-recruitment` are patch-equivalent to `main`; `feat/apply-world` (draft PR #17) and `fix/recruitment-release-followup` are superseded by the newer applicant island and finalround work on `main`.
 
 ## Game polish and classes v2 (2026-10-03)
 

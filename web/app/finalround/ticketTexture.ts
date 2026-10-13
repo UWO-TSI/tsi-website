@@ -98,7 +98,7 @@ export async function drawTicket(name: string, project: string, memberNo: string
   }
   ctx.fillText(name, pad, 470 + 40 + size * 0.85);
 
-  const welcome = project ? `Welcome to ${project}.` : "Welcome to the team.";
+  const welcome = !project ? "Welcome to the team." : / team$/i.test(project) ? `Welcome to the ${project}.` : `Welcome to ${project}.`;
   let wsize = 60;
   ctx.font = `500 ${wsize}px ${body}`;
   while (ctx.measureText(welcome).width > PX - pad * 2 && wsize > 34) {

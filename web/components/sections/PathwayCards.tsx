@@ -29,7 +29,7 @@ const cards: PathwayCard[] = [
   },
   {
     title: "Students",
-    subtitle: "Log in to the game portal",
+    subtitle: "Enter the student portal",
     href: "/student",
   },
 ];

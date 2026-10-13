@@ -1,0 +1,31 @@
+   × face placement: the creator's sliders as look data > parses placement per part as whole steps, clamped to the slider range; the mouth has no spacing 14ms
+   × face placement: the creator's sliders as look data > drops garbage and parts left where they were, so a look only carries what moved 1ms
+   × face placement: the creator's sliders as look data > survives a save round trip 3ms
+   ✓ old looks are unchanged > parse to exactly what they were: no placement field appears 6ms
+   ✓ old looks are unchanged > draw the face exactly as before: no placement and zero placement give the same slots, for every expression 23ms
+   ✓ old looks are unchanged > keep today's anchors: the default eye, brow and mouth sit on face_v7.json's anchors at its density 0ms
+   × placement moves each part in the face shader's own slot data (no new uniforms) > Down–Up moves the part up the face (W runs down) 1ms
+   × placement moves each part in the face shader's own slot data (no new uniforms) > Left–Right spaces the pair: the drawn eye moves out from the centre line and its mirror follows 1ms
+   × placement moves each part in the face shader's own slot data (no new uniforms) > Smaller–Bigger scales the cell about its anchor; Rotate adds to the tilt (the brows keep their expression) 1ms
+   × clamping: placed parts never leave the face area > eyes: every style at every slider extreme stays on the face, each side of the centre line 1ms
+   × clamping: placed parts never leave the face area > brows: every style at every slider extreme stays on the face, each side of the centre line 0ms
+   × clamping: placed parts never leave the face area > mouth: every style at every slider extreme stays on the face 0ms
+   × clamping: placed parts never leave the face area > talking mouths (bigger cells) are clamped too 0ms
+   × the look stays within the multiplayer card's 2 KB (realtime_player_card, specs/multiplayer.md) > measures the size the card measures: jsonb text, with its spaces 0ms
+   × the look stays within the multiplayer card's 2 KB (realtime_player_card, specs/multiplayer.md) > the fullest look fits, placement included 1ms
+   × the look stays within the multiplayer card's 2 KB (realtime_player_card, specs/multiplayer.md) > a look over the cap sheds the colours of parts it isn't wearing, never what it shows 1ms
+⎯⎯⎯⎯⎯⎯ Failed Tests 13 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  lib/game/character/placement.test.ts > face placement: the creator's sliders as look data > parses placement per part as whole steps, clamped to the slider range; the mouth has no spacing
+ FAIL  lib/game/character/placement.test.ts > face placement: the creator's sliders as look data > drops garbage and parts left where they were, so a look only carries what moved
+ FAIL  lib/game/character/placement.test.ts > face placement: the creator's sliders as look data > survives a save round trip
+ FAIL  lib/game/character/placement.test.ts > placement moves each part in the face shader's own slot data (no new uniforms) > Down–Up moves the part up the face (W runs down)
+ FAIL  lib/game/character/placement.test.ts > placement moves each part in the face shader's own slot data (no new uniforms) > Left–Right spaces the pair: the drawn eye moves out from the centre line and its mirror follows
+ FAIL  lib/game/character/placement.test.ts > placement moves each part in the face shader's own slot data (no new uniforms) > Smaller–Bigger scales the cell about its anchor; Rotate adds to the tilt (the brows keep their expression)
+ FAIL  lib/game/character/placement.test.ts > clamping: placed parts never leave the face area > eyes: every style at every slider extreme stays on the face, each side of the centre line
+ FAIL  lib/game/character/placement.test.ts > clamping: placed parts never leave the face area > brows: every style at every slider extreme stays on the face, each side of the centre line
+ FAIL  lib/game/character/placement.test.ts > clamping: placed parts never leave the face area > mouth: every style at every slider extreme stays on the face
+ FAIL  lib/game/character/placement.test.ts > clamping: placed parts never leave the face area > talking mouths (bigger cells) are clamped too
+ FAIL  lib/game/character/placement.test.ts > the look stays within the multiplayer card's 2 KB (realtime_player_card, specs/multiplayer.md) > measures the size the card measures: jsonb text, with its spaces
+ FAIL  lib/game/character/placement.test.ts > the look stays within the multiplayer card's 2 KB (realtime_player_card, specs/multiplayer.md) > the fullest look fits, placement included
+ FAIL  lib/game/character/placement.test.ts > the look stays within the multiplayer card's 2 KB (realtime_player_card, specs/multiplayer.md) > a look over the cap sheds the colours of parts it isn't wearing, never what it shows
+      Tests  13 failed | 3 passed (16)

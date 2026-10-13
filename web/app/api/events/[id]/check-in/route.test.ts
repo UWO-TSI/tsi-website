@@ -75,7 +75,7 @@ describe("GET /api/events/:id/check-in (#26): the QR link for admins", () => {
   it("gives T1/T2 the event's check-in link and no one else", async () => {
     as(1);
     const res = await GET(new Request("http://localhost/api"), { params: Promise.resolve({ id: E }) });
-    expect(await res.json()).toEqual({ ok: true, code: CODE, url: `https://www.tethos.ca/student/check-in?event=${E}&code=${CODE}` });
+    expect(await res.json()).toEqual({ ok: true, code: CODE, url: `https://play.tethos.ca/student/check-in?event=${E}&code=${CODE}` });
     as(3);
     expect((await GET(new Request("http://localhost/api"), { params: Promise.resolve({ id: E }) })).status).toBe(403);
   });

@@ -4,7 +4,7 @@ import { village } from "./villageMap";
 import { PROPOSED_RESIDENTS } from "@/lib/content/residentRoster";
 import { RESIDENT_WALK, ResidentDay, daySpan, navGrid, newPose, planResidents } from "./residentRoutine";
 import {
-  CATCH_UP, TALK_CLOSE_S, TALK_PITCH, TALK_RANGE, TALK_TURN_S, beginTalk, blipAt, leaveTalk, nearestTalker, pressTalk, routineLag, stepTalk, talkCameraYaw, talkTyping, typeMs, typedAt,
+  CATCH_UP, TALK_CLOSE_S, TALK_PITCH, TALK_RANGE, TALK_SHOT, TALK_TURN_S, beginTalk, blipAt, leaveTalk, nearestTalker, pressTalk, routineLag, steerTalkShot, stepTalk, talkCameraYaw, talkTyping, typeMs, typedAt,
 } from "./residentTalk";
 
 const WREN = { id: "r-wren", slug: "wren", name: "Wren", post: "hq_lead", seed: 7 };
@@ -118,6 +118,32 @@ describe("talking to residents: the camera", () => {
     expect(TALK_PITCH).toBeGreaterThan(0.35);
     expect(TALK_PITCH).toBeLessThan(0.6);
     expect(behind).toBeGreaterThan(0.3); // turned left (the shorter way from 0.3 toward pi)
+  });
+
+  it("the conversation shot glides down to face level and in to the two-shot while the camera sits idle", () => {
+    const o = { target: { yaw: 0.9, pitch: 0.6, zoom: 1 }, idle: 5 };
+    for (let i = 0; i < 300; i++) steerTalkShot(1 / 60, i / 60, 0, 0, 0, 2, 0, o);
+    expect(o.target.pitch).toBeCloseTo(TALK_SHOT.pitch, 1);
+    expect(o.target.zoom).toBeCloseTo(TALK_SHOT.zoom, 1);
+    // The sway keeps the heading near the shoulder, never wandering.
+    expect(Math.abs(o.target.yaw)).toBeGreaterThan(0.7);
+    expect(Math.abs(o.target.yaw)).toBeLessThan(1.3);
+  });
+
+  it("the player's own look wins: a touched camera is not steered", () => {
+    const o = { target: { yaw: 0.2, pitch: 0.6, zoom: 1 }, idle: 0 };
+    steerTalkShot(1 / 60, 0, 0, 0, 0, 2, 0, o);
+    expect(o.target).toEqual({ yaw: 0.2, pitch: 0.6, zoom: 1 });
+  });
+
+  it("each line said pushes a little closer, and the push stops growing", () => {
+    const settle = (line: number) => {
+      const o = { target: { yaw: 0.9, pitch: 0.6, zoom: 1 }, idle: 5 };
+      for (let i = 0; i < 300; i++) steerTalkShot(1 / 60, i / 60, 0, 0, 0, 2, line, o);
+      return o.target.zoom;
+    };
+    expect(settle(2)).toBeLessThan(settle(0));
+    expect(settle(TALK_SHOT.pushMax + 3)).toBeCloseTo(settle(TALK_SHOT.pushMax), 2);
   });
 });
 

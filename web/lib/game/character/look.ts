@@ -9,6 +9,7 @@
 import catalog from "@/data/characters/character_catalog.json";
 import palette from "@/data/characters/palette.json";
 import faceV7 from "@/data/characters/face_v7.json";
+import { LOOK_MAX_BYTES } from "@/lib/net/protocol";
 
 export const CHARACTER_ROOT = "/assets/characters/v6/";
 /** The clip-bearing base: the v6 body with the hand-modeled v7 head (avatar v7). */
@@ -18,6 +19,8 @@ export const LOD_ROOT = `${CHARACTER_ROOT}lod1/`;
 export const LOD_SKIN_URL = `${LOD_ROOT}base/skin.glb`;
 /** The face layer atlas: 1024 px per face canvas in the creator, the 512 copy in the world (same layout). */
 export const FACE_ATLAS_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas}`, world: `${CHARACTER_ROOT}base/${faceV7.atlas_world}` };
+/** Its second page (David's 19 faces, face_set_305.py), loaded only for a look that wears one of them. */
+export const FACE_ATLAS2_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas2}`, world: `${CHARACTER_ROOT}base/${faceV7.atlas2_world}` };
 /** Ruling 24: the crewneck carries the site's own TSI mark (public/logo.svg, rasterised by the sync script). */
 export const TSI_DECAL_URL = `${CHARACTER_ROOT}decal_tsi_mark.png`;
 
@@ -57,8 +60,9 @@ export const VERBS_URL = `${CHARACTER_ROOT}${catalog.verbs.glb}`;
 export const VERB_CLIPS = catalog.verbs.clips as VerbInfo[];
 export const VERB_BY_NAME = new Map(VERB_CLIPS.map(c => [c.name, c]));
 export const PALETTE = { skin: palette.skin, hair: palette.hair, outfit: palette.outfit };
-/** An atlas cell: rect [x, y, w, h] (px, top-left origin) and the point (ax, ay) in it that sits on its anchor. */
-export type FaceCell = [number, number, number, number, number, number];
+/** An atlas cell: rect [x, y, w, h] (px, top-left origin) and the point (ax, ay) in it that sits on its anchor; a 7th
+ * value 1 puts it on the second atlas page. */
+export type FaceCell = [number, number, number, number, number, number, (0 | 1)?];
 export type EyeFrame = "open" | "half" | "closed";
 /**
  * The v7 face (art/characters/v7/build_face.py): features drawn once into atlas cells at `density` px per face
@@ -66,12 +70,15 @@ export type EyeFrame = "open" | "half" | "closed";
  * on mirrored layers, and animates by switching cells (blink frames, talk and emote mouths, expressions).
  */
 export const FACE = faceV7 as unknown as {
-  density: number; atlas_size: [number, number];
-  anchors: Record<"eye" | "brow" | "mouth" | "cheek" | "mole" | "blush", [number, number]>;
+  density: number; atlas_size: [number, number]; atlas2_size: [number, number];
+  /** eye_left: the eye anchor mirrored, where an eye's own `left` cell sits; an accent of set 305 sits on its own. */
+  anchors: Record<"eye" | "eye_left" | "eye_pair" | "brow" | "mouth" | "cheek" | "mole" | "blush", [number, number]> & Record<string, [number, number]>;
   layers: {
-    extras: { default: null; multi: true; tint: null; items: Record<string, { anchor: "cheek" | "mole" | "blush"; mirror: boolean; cell: FaceCell }> };
+    extras: { default: null; multi: true; tint: null; items: Record<string, { anchor: string; mirror: boolean; cell: FaceCell }> };
     brows: { default: string; anchor: "brow"; mirror: true; tint: "hair"; items: Record<string, FaceCell> };
-    eyes: { default: string; anchor: "eye"; mirror: true; tint: null; items: Record<string, Partial<Record<EyeFrame, FaceCell>> & { open: FaceCell }> };
+    /** `left`: the canvas-right eye drawn on its own (set 305's asymmetric pairs); `left: null`: `open` is the whole
+     * pair, at eye_pair, drawn once; absent: `open` is one eye, mirrored. */
+    eyes: { default: string; anchor: "eye"; mirror: true; tint: null; items: Record<string, Partial<Record<EyeFrame, FaceCell>> & { open: FaceCell; left?: FaceCell | null }> };
     mouth: { default: string; anchor: "mouth"; mirror: false; tint: null; items: Record<string, FaceCell> };
     /** Larger open mouths shown only while talking (not creator options). */
     talk: { default: null; anchor: "mouth"; mirror: false; tint: null; items: Record<string, FaceCell> };
@@ -80,11 +87,29 @@ export const FACE = faceV7 as unknown as {
   blink: { interval: [number, number]; frames: [EyeFrame, number][] };
   talk: { frames: string[]; rate: number };
   emoteMouth: Record<string, { frames: string[]; rate: number }>;
-  /** Creator names of the parts that have no sheet code (face_set_301.py: sleepy and dot eyes, cat and curled-grin mouths, the blush band). */
+  /** Creator names of the parts that have no sheet code (face_set_301.py, face_set_305.py). */
   names: Record<string, string>;
 };
+/** Whether a look wears a part from the second atlas page (so its character loads that page). */
+export function usesFacePage2(look: CharacterLook): boolean {
+  const { eyes, mouth, extras } = FACE.layers;
+  const cells = [...Object.values(eyes.items[look.eyes] ?? {}), mouth.items[look.mouth], ...look.extras.map(x => extras.items[x]?.cell)];
+  return cells.some(c => c?.[6] === 1);
+}
 export type FaceLayer = "extras" | "brows" | "eyes" | "mouth";
 export const partsIn = (slot: PartSlot) => PARTS.filter(p => p.slot === slot);
+
+/**
+ * Face placement (the creator's sliders, after the Li'l Lads reference, 2026-10-08): per part, whole steps of
+ * [Down–Up, Left–Right (spacing), Rotate, Smaller–Bigger], each -PLACE_STEPS..PLACE_STEPS. Optional and sparse: a
+ * part left where it was is absent, so a look without placement is today's face exactly. face.ts turns the steps
+ * into the face shader's slot rects and tilt, clamped to the face area.
+ */
+export type PlacePart = "eyes" | "brows" | "mouth";
+export type Placement = [up: number, apart: number, rotate: number, size: number];
+export const PLACE_STEPS = 10;
+/** Which sliders each part has: the mouth sits on the centre line, so it has no spacing. */
+export const PLACE_PARTS: Record<PlacePart, { apart: boolean }> = { eyes: { apart: true }, brows: { apart: true }, mouth: { apart: false } };
 
 export interface CharacterLook {
   skin: number; hair: number;
@@ -94,6 +119,8 @@ export interface CharacterLook {
   acc: Partial<Record<AccGroup, string>>;
   /** Outfit palette index per part id for its first outfit-tinted material; others keep catalogue defaults. */
   colors: Record<string, number>;
+  /** Face placement from the creator's sliders; absent is today's placement. */
+  place?: Partial<Record<PlacePart, Placement>>;
 }
 
 export const DEFAULT_LOOK: CharacterLook = {
@@ -130,7 +157,47 @@ export function parseLook(raw: unknown): CharacterLook {
     onepiece, shoes: r.shoes === null ? null : inSlot(r.shoes, "shoes") ? r.shoes : d.shoes, acc, colors,
   };
   if (hood(look)) delete look.acc.head; // a hood and a hat never stack
+  const place = parsePlace(r.place);
+  if (place) look.place = place;
+  // The multiplayer card carries the look only up to LOOK_MAX_BYTES: remembered colours of parts not worn go first.
+  if (lookBytes(look) > LOOK_MAX_BYTES) {
+    const worn = new Set(wornParts(look).map(p => p.id));
+    look.colors = Object.fromEntries(Object.entries(look.colors).filter(([id]) => worn.has(id)));
+  }
   return look;
+}
+
+const step = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.max(-PLACE_STEPS, Math.min(PLACE_STEPS, Math.round(v))) : null);
+/** Placement as whole steps in range; parts at rest (or malformed) are left out, and so is an empty placement. */
+function parsePlace(raw: unknown): CharacterLook["place"] | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const out: CharacterLook["place"] = {};
+  for (const part of Object.keys(PLACE_PARTS) as PlacePart[]) {
+    const v = (raw as Record<string, unknown>)[part];
+    if (!Array.isArray(v) || v.length !== 4) continue;
+    const steps = v.map(step);
+    if (steps.some(x => x === null)) continue;
+    const p = steps as Placement;
+    if (!PLACE_PARTS[part].apart) p[1] = 0;
+    if (p.some(x => x !== 0)) out[part] = p.map(x => x + 0) as Placement; // + 0: no -0 in the saved JSON
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+/**
+ * A look's size as the multiplayer card measures it (realtime_player_card: octet_length of the jsonb as text, which
+ * puts a space after every comma and colon between values).
+ */
+export function lookBytes(look: CharacterLook): number {
+  const json = JSON.stringify(look);
+  let n = new TextEncoder().encode(json).length, inString = false;
+  for (let i = 0; i < json.length; i++) {
+    const c = json[i];
+    if (inString) { if (c === "\\") i++; else if (c === '"') inString = false; }
+    else if (c === '"') inString = true;
+    else if (c === "," || c === ":") n++;
+  }
+  return n;
 }
 
 /**

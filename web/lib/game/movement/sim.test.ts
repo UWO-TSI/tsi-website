@@ -1029,7 +1029,8 @@ describe("the slide (row 274)", () => {
     const off = (sneak: boolean, sprint = true) => {
       const steps: MoveState[] = [];
       let pressed = false;
-      drive(createMoveState(0, -12, cliff), cliff, 4, (_t, q) => {
+      // 6 s: the cliff really is 6u now (MAX_LEVEL 8), and the walked glide needs the extra fall time to land.
+      drive(createMoveState(0, -12, cliff), cliff, 6, (_t, q) => {
         const press = !pressed && q.mode === "air" && q.coyote <= 0 && q.y < 5.6; // past coyote time (a press there is a slide-jump)
         pressed ||= press;
         return { z: 1, sprint, sneak: sneak && q.z > -2, jump: pressed, jumpPressed: press };
