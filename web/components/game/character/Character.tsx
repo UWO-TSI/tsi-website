@@ -160,6 +160,8 @@ class Puppet {
   private readonly layerTracks = new Map<string, { bone: THREE.Bone; at: THREE.Interpolant }[]>();
   /** Held items put away: they shrink into the hand before they go (never a pop). */
   private readonly retiring: { model: THREE.Object3D; t: number; from: number }[] = [];
+  /** Another player (Character `remote`): their afterimages are the body alone, from the LOD 1 mesh once it has loaded. */
+  remote = false;
 
   constructor(private readonly base: Gltf) {
     this.root = cloneSkinned(base.scene);
@@ -189,9 +191,9 @@ class Puppet {
     this.body = make(new THREE.BufferGeometry(), BODY_MATERIAL);
     this.face = make(facePrim.geometry, BODY_MATERIAL);
     this.decal = make(new THREE.BufferGeometry(), BODY_MATERIAL);
-    // A print on the shirt, inside the body's silhouette: not a caster.
-    this.decal.castShadow = false;
-    delete this.decal.userData.sunCaster;
+    // A print on the shirt, inside the body's silhouette: not a caster. Nor the face, a shell over the head
+    // (art/characters/build_lod.py) whose shadow falls inside the head's (specs/perf/effects-cost.md).
+    for (const m of [this.decal, this.face]) { m.castShadow = false; delete m.userData.sunCaster; }
     this.body.visible = this.face.visible = this.decal.visible = false; // until dress()
     this.sockets = { R: this.root.getObjectByName("Socket_R_Hand")!, L: this.root.getObjectByName("Socket_L_Hand")!, Back: this.root.getObjectByName("Socket_Back")! };
     this.skeleton = skeleton;
@@ -363,17 +365,26 @@ class Puppet {
     this.clip = name;
   }
 
+  /**
+   * What an afterimage freezes: the body and the face; another player's, the body alone at the lower detail (the LOD 1
+   * mesh once loaded: a faint copy for a fifth of a second, specs/perf/effects-cost.md).
+   */
+  private ghostGeometries() {
+    if (!this.remote) return [this.body.geometry, this.face.geometry];
+    return [this.lodGeometry && this.lodKey === `${this.bodyKey}|lod1` ? this.lodGeometry : this.body.geometry];
+  }
+
   /** Leave an afterimage of the last drawn pose (the oldest of two is reused). */
   private ghost() {
     this.prepareGhosts();
     const g = this.ghosts[this.ghostNext];
     this.ghostNext = (this.ghostNext + 1) % 2;
-    g.snap(this.skeleton, [this.body.geometry, this.face.geometry], this.body.matrixWorld);
+    g.snap(this.skeleton, this.ghostGeometries(), this.body.matrixWorld);
   }
 
   private prepareGhosts() {
     if (this.ghosts.length) return;
-    while (this.ghosts.length < 2) this.ghosts.push(new Ghost(this.skeleton, this.body.bindMatrix, this.ghostParent, [this.body.geometry, this.face.geometry]));
+    while (this.ghosts.length < 2) this.ghosts.push(new Ghost(this.skeleton, this.body.bindMatrix, this.ghostParent, this.ghostGeometries()));
     // The character that leaves afterimages draws after them (Ghost): over them where they overlap.
     this.body.renderOrder = this.face.renderOrder = this.decal.renderOrder = GHOST_ORDER + 1;
   }
@@ -599,12 +610,16 @@ const gripAt = new THREE.Vector3();
  * the head whatever the wrist does), sized by `motion.leaf` from the grip, so it grows out of the hand as it opens and
  * lifts a little as it pops past full size.
  */
-function HeldLeaf({ puppet, motion, scale }: { puppet: Puppet; motion: RefObject<CharacterMotion>; scale: number }) {
+function HeldLeaf({ puppet, motion, scale, remote }: { puppet: Puppet; motion: RefObject<CharacterMotion>; scale: number; remote: boolean }) {
   const { scene } = useGLTF(LEAF_URL);
-  const model = useMemo(() => tagLookClasses(scene.clone(true), LEAF_URL), [scene]);
-  useEffect(() => { model.traverse(o => { o.castShadow = true; o.userData.sunCaster = "dynamic"; }); }, [model]);
+  // One mesh (heldMesh.ts). Yours casts its sun shadow; another player's casts none (specs/perf/effects-cost.md).
+  const model = useMemo(() => tagLookClasses(heldTemplate(scene, LEAF_URL).clone(true), LEAF_URL), [scene]);
+  useEffect(() => leafCasts(model, !remote), [model, remote]);
   useFrame(() => placeLeaf(model, puppet.sockets.R, motion.current?.leaf ?? 0, scale));
   return <primitive object={model} />;
+}
+function leafCasts(model: THREE.Object3D, on: boolean) {
+  model.traverse(o => { o.castShadow = on; if (on) o.userData.sunCaster = "dynamic"; else delete o.userData.sunCaster; });
 }
 function placeLeaf(model: THREE.Object3D, hand: THREE.Object3D, open: number, scale: number) {
   model.visible = open > 0.01 && !!model.parent;
@@ -721,8 +736,9 @@ export interface CharacterProps {
   /** Detail by drawn size (lod.ts); off in the creator, which shows one character up close. */
   lod?: boolean;
   /**
-   * Another player (RemoteAvatar): their rod mounts no fishing rig (remote casts aren't sent yet), and what they hold
-   * casts a sun shadow only while `motion.itemShadow` (Full, near you; specs/perf/effects-cost.md).
+   * Another player (RemoteAvatar): their rod mounts no fishing rig (remote casts aren't sent yet), their leaf casts no
+   * sun shadow, what else they hold casts one only while `motion.itemShadow` (Full, near you), and their afterimages
+   * are the body alone at the lower detail (specs/perf/effects-cost.md).
    */
   remote?: boolean;
 }
@@ -739,6 +755,7 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
   useEffect(() => () => puppet.dispose(), [puppet]);
   // A verb asked for before the library loads plays the weapon's own attack clip.
   useEffect(() => setFallback(puppet, weapon?.kind), [puppet, weapon?.kind]);
+  useEffect(() => setRemote(puppet, remote), [puppet, remote]);
   useEffect(() => {
     dressPuppet(puppet, shown, parts, loaded.slice(1).map(g => g.scene), atlas, decalMap);
   }, [puppet, shown, parts, loaded, atlas, decalMap]);
@@ -779,7 +796,7 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
     {/* Its own boundary: taking out a tool never suspends the scene while its model loads. */}
     {held && <Suspense fallback={null}><HeldItem key={`${held.hold}:${held.url}`} puppet={puppet} motion={motion} view={held} remote={remote} /></Suspense>}
     {/* Its own boundary: crafting the glider mid-session must not suspend the scene while the leaf loads. */}
-    {leaf && <Suspense fallback={null}><HeldLeaf puppet={puppet} motion={motion} scale={scale} /></Suspense>}
+    {leaf && <Suspense fallback={null}><HeldLeaf puppet={puppet} motion={motion} scale={scale} remote={remote} /></Suspense>}
   </group>;
 }
 /** The verb library's actions (build_clips.py `-- verbs`): the same rig's tracks, merged into the puppet's clips. */
@@ -819,6 +836,7 @@ function VerbClips({ puppet }: { puppet: Puppet }) {
   return null;
 }
 function setFallback(puppet: Puppet, kind: WeaponKind | undefined) { puppet.fallback = ATTACK_CLIP[kind ?? "melee"]; }
+function setRemote(puppet: Puppet, remote: boolean) { puppet.remote = remote; }
 function dressPuppet(puppet: Puppet, look: CharacterLook, parts: ResolvedPart[], scenes: THREE.Object3D[], atlas: THREE.Texture, decalMap: THREE.Texture) {
   decalMap.flipY = false;
   decalMap.colorSpace = THREE.SRGBColorSpace;
