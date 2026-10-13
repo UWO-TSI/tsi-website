@@ -128,6 +128,7 @@ export const TUNING_DEFAULTS: Tuning = {
   // they can be called his again. roughness is his glare spread (a specular
   // power of 26) as the RMS slope with the same width (row 238).
   water: {
+    navyColor: 0x1d4a86,
     deepColor: 0x3098b3,
     midColor: 0x5bc5cb,
     shallowColor: 0xcadcbc,
@@ -150,6 +151,11 @@ export const TUNING_DEFAULTS: Tuning = {
      * banks; the sea has a beach.
      */
     bedSlope: 1.45,
+    // v1 water pass (2026-10-13): past the shallows the bed drops off to the open sea, so the sea goes navy
+    // (references/look/2026-10-13/water-foam-shallows-ref.png). A river stays inside shelfFrom of its banks.
+    shelfDepth: 2.6,
+    shelfFrom: 3.5,
+    shelfTo: 10,
     foamWidth: 0.85,
     foamStrength: 0.9,
     foamSoft: 0.06,

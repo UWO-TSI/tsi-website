@@ -26,9 +26,11 @@
  * The ramp ENDS IN THE SAND COLOUR. Shallow water in those images is not a
  * lighter blue, it is the seabed seen through a thin blue film. That is
  * absorption over depth, so the driver has to be depth, and depth has to
- * exist — which is what the bathymetry below is for. `bedDepth` is mirrored in
- * TS and GLSL because the seabed MESH and the shader ramp have to agree; they
- * are three lines each and sit next to each other for that reason.
+ * exist — which is what the bathymetry below is for. The seabed MESH and the
+ * shader ramp have to agree, so the depth is baked from the same function the
+ * mesh is built on (lib/game/seabed.ts) into the water's field, and the shader
+ * reads it there (v1 water pass, 2026-10-13: sand-tinted teal over the shallows
+ * to deep navy past the drop-off, references/look/2026-10-13).
  *
  * ── THE CEL LAYERS ──────────────────────────────────────────────────────
  * David's image 15 is an art tutorial and it spells out the construction:
@@ -43,18 +45,24 @@ import * as THREE from "three";
 
 /** Everything the bench can move. Sea and river get their own set. */
 export interface WaterParams {
+  /** The ramp's stops by depth (v1 water item 1): the seabed's sand at the waterline, a sand-tinted teal over the shallows, teal, deep blue, navy over the open sea. */
+  navyColor: number;
   deepColor: number;
   midColor: number;
   shallowColor: number;
   bedColor: number;
   foamColor: number;
   ringColor: number;
-  /** World units of water the ramp spans before it is fully "deep". */
+  /** World units of water for the ramp to go ~63% of the way from the sand to the navy. */
   depthFalloff: number;
-  /** Deepest the bed ever gets, world units. */
+  /** How deep the bed gets over the shallows, world units. */
   bedDepth: number;
   /** Cells of shore distance to reach ~63% of bedDepth. */
   bedSlope: number;
+  /** The drop-off past the shallows: this much more depth (world units), from `shelfFrom` to `shelfTo` cells out. */
+  shelfDepth: number;
+  shelfFrom: number;
+  shelfTo: number;
   /** Foam collar width, in cells. */
   foamWidth: number;
   foamStrength: number;
@@ -91,19 +99,54 @@ export interface WaterParams {
 }
 
 /**
- * How deep the water is, `d` cells out from the waterline.
+ * How deep the water is, `d` cells out from the waterline: the shallows (`bedDepth`, approached over `bedSlope`
+ * cells), then past them the drop-off to the open sea (`shelfDepth` more, from `shelfFrom` to `shelfTo` cells out).
+ * A river is never more than a few cells from a bank, so only the sea and the big bays reach the drop-off.
  *
- * MIRRORED IN GLSL BELOW. If you change one, change the other: this drives the
- * seabed geometry and the GLSL drives the colour, and a disagreement shows up
- * as sand that is the wrong shade for how deep it visibly is.
+ * The seabed mesh is built on this (lib/game/seabed.ts seabedDip) and the same values are baked into the water's
+ * field (the depth channel), which is what the colour reads: one seabed, no second copy in GLSL to drift.
  */
-export function bedDepth(d: number, p: Pick<WaterParams, "bedDepth" | "bedSlope">): number {
-  return p.bedDepth * (1 - Math.exp(-Math.max(d, 0) / Math.max(p.bedSlope, 0.01)));
+export function bedDepth(d: number, p: Pick<WaterParams, "bedDepth" | "bedSlope" | "shelfDepth" | "shelfFrom" | "shelfTo">): number {
+  const dd = Math.max(d, 0);
+  return p.bedDepth * (1 - Math.exp(-dd / Math.max(p.bedSlope, 0.01))) + p.shelfDepth * smooth01(p.shelfFrom, p.shelfTo, dd);
+}
+function smooth01(a: number, b: number, x: number): number {
+  const t = Math.min(1, Math.max(0, (x - a) / Math.max(b - a, 1e-6)));
+  return t * t * (3 - 2 * t);
+}
+
+/**
+ * The colour ramp by depth (v1 water item 1, references/look/2026-10-13/water-foam-shallows-ref.png): `t` is how far
+ * along it the depth is (1 − e^(−depth / depthFalloff)), and each stop eases in over its window of `t`: the shallow
+ * sand-teal, the teal, the deep blue, the navy. MIRRORED by `waterRampAt` below; the windows print the GLSL.
+ */
+export const DEPTH_RAMP = [[0.0, 0.22], [0.18, 0.5], [0.45, 0.8], [0.75, 0.97]] as const;
+const RAMP_STOPS = ["uShallowColor", "uMidColor", "uDeepColor", "uNavyColor"] as const;
+export const WATER_DEPTH_RAMP = /* glsl */ `
+vec3 waterRamp(float depth) {
+  float t = 1.0 - exp(-max(depth, 0.0) / max(uDepthFalloff, 0.001));
+  vec3 c = uBedColor;
+${DEPTH_RAMP.map(([a, b], i) => `  c = mix(c, ${RAMP_STOPS[i]}, smoothstep(${a.toFixed(2)}, ${b.toFixed(2)}, t));`).join("\n")}
+  return c;
+}
+`;
+const _rampColor = new THREE.Color();
+/** The water's colour `depth` world units over the bed, linear RGB (the shader's working space): WATER_DEPTH_RAMP on the CPU. */
+export function waterRampAt(depth: number, p: Pick<WaterParams, "bedColor" | "shallowColor" | "midColor" | "deepColor" | "navyColor" | "depthFalloff">): [number, number, number] {
+  const t = 1 - Math.exp(-Math.max(depth, 0) / Math.max(p.depthFalloff, 0.001));
+  const c = _rampColor.setHex(p.bedColor).toArray() as [number, number, number];
+  const stops = [p.shallowColor, p.midColor, p.deepColor, p.navyColor];
+  DEPTH_RAMP.forEach(([a, b], i) => {
+    const k = smooth01(a, b, t), s = _rampColor.setHex(stops[i]);
+    c[0] += (s.r - c[0]) * k; c[1] += (s.g - c[1]) * k; c[2] += (s.b - c[2]) * k;
+  });
+  return c;
 }
 
 /** Every WaterParams key but rippleStrength, each the shader's `u<Key>` uniform (a Color when the key ends in Color). */
 const WATER_KEYS = [
-  "deepColor", "midColor", "shallowColor", "bedColor", "foamColor", "ringColor", "depthFalloff", "bedDepth", "bedSlope",
+  "navyColor", "deepColor", "midColor", "shallowColor", "bedColor", "foamColor", "ringColor", "depthFalloff", "bedDepth", "bedSlope",
+  "shelfDepth", "shelfFrom", "shelfTo",
   "foamWidth", "foamStrength", "foamSoft", "foamWave", "foamWaveSpeed", "blobScale", "blobDarken", "blobSpeed", "ringWidth",
   "ringStrength", "shoreAlpha", "opacity", "fresnel", "glare", "roughness", "sunGlint", "sunSize", "waveHeight", "waveScale", "waveSpeed",
 ] as const satisfies readonly (keyof WaterParams)[];
@@ -266,20 +309,7 @@ ${WATER_KEYS.map(k => `uniform ${k.endsWith("Color") ? "vec3" : "float"} ${unifo
 
 /** The shading itself; `shoreDistance` comes from the baked field (SHORE_FROM_FIELD). */
 const WATER_FUNCTIONS = /* glsl */ `
-${WATER_PHASE}// Mirrors bedDepth() in waterShader.ts. Change both together.
-float bedDepthAt(float d) {
-  return uBedDepth * (1.0 - exp(-max(d, 0.0) / max(uBedSlope, 0.01)));
-}
-
-// Four stops, ending in the SEABED colour. See the header: shallow water in
-// the reference is sand under a blue film, not a paler blue.
-vec3 waterRamp(float t) {
-  vec3 c = mix(uBedColor, uShallowColor, smoothstep(0.0, 0.34, t));
-  c = mix(c, uMidColor, smoothstep(0.28, 0.68, t));
-  c = mix(c, uDeepColor, smoothstep(0.62, 1.0, t));
-  return c;
-}
-
+${WATER_PHASE}${WATER_DEPTH_RAMP}
 // Irregular patches for the multiply layer. Four sines at mutually
 // incommensurate rates, so the pattern has no period and never lines up into
 // the plaid that two crossed waves give.
@@ -346,6 +376,7 @@ export function waterSwellAt(x: number, z: number, t: number, p: Pick<WaterParam
 const VERTEX_DECLS = /* glsl */ `
 varying vec3 vWaterWorld;
 varying vec2 vWaterGrad;
+varying float vWaterRise;
 ${WATER_SWELL}`;
 
 const VERTEX_BODY = /* glsl */ `
@@ -355,6 +386,7 @@ const VERTEX_BODY = /* glsl */ `
   transformed.y += h;
   vWaterWorld = wp;
   vWaterWorld.y += h;
+  vWaterRise = h;
 }
 `;
 
@@ -370,10 +402,12 @@ const FRAGMENT_BODY = /* glsl */ `
   float lap = sin(vWaterWorld.x * 0.9 + vWaterWorld.z * 0.7 + waterPhase(uTime * uFoamWaveSpeed)) * uFoamWave;
 
   float edge = max(shore - lap, 0.0);
-  float depth = bedDepthAt(edge);
-  float t = clamp(depth / max(uDepthFalloff, 0.001), 0.0, 1.0);
+  // How deep the water is here: the known seabed (the bake's depth channel, the same seabed the bed mesh is built
+  // on) under the surface as the swell has it now. No depth pass: the bed's height is known, so the depth is too.
+  float depth = max(waterDepthAt(vWaterWorld.xz) + vWaterRise, 0.0);
+  float t = 1.0 - exp(-depth / max(uDepthFalloff, 0.001));
 
-  vec3 col = waterRamp(t);
+  vec3 col = waterRamp(depth);
 
 
   // MULTIPLY layer, then the two ADD layers that ring it. Straight out of the
@@ -415,10 +449,11 @@ const FRAGMENT_BODY = /* glsl */ `
   col = mix(col, uFoamColor, foam);
 
   diffuseColor.rgb = col;
-  // Clear enough at the waterline to show the bed, opaque once the ramp has
+  // Clear enough over the shallows to show the bed, opaque once the ramp has
   // done its work. This is the other half of selling absorption: a uniformly
-  // translucent sheet reads as coloured glass.
-  diffuseColor.a = mix(uShoreAlpha, uOpacity, t);
+  // translucent sheet reads as coloured glass. (The bed under it is fogged
+  // toward the same ramp by its own depth, UNDERWATER, so the two agree.)
+  diffuseColor.a = mix(uShoreAlpha, uOpacity, smoothstep(0.0, 0.8, t));
   diffuseColor.a = mix(diffuseColor.a, 1.0, foam);
 }
 `;
@@ -456,7 +491,7 @@ export function waterMaterial(uniforms: Record<string, THREE.IUniform>): THREE.M
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
-        "#include <common>\nvarying vec3 vWaterWorld;\nvarying vec2 vWaterGrad;\n" +
+        "#include <common>\nvarying vec3 vWaterWorld;\nvarying vec2 vWaterGrad;\nvarying float vWaterRise;\n" +
           UNIFORM_DECLS +
           WATER_CLOUDS +
           SHORE_FROM_FIELD +
@@ -469,11 +504,40 @@ export function waterMaterial(uniforms: Record<string, THREE.IUniform>): THREE.M
   return mat;
 }
 
-/** Shore distance read from the baked field. Grid path. */
+/**
+ * The baked water field (components/game/grid/terrainMaterials.ts setShoreField): red is the distance to the shore in
+ * cells (positive over water), green how deep the seabed lies under the still surface there (lib/game/seabed.ts).
+ */
 export const SHORE_FROM_FIELD = /* glsl */ `
 uniform sampler2D uShoreMap;
 uniform vec4 uShoreRect;
 float shoreDistance(vec2 xz) {
   return texture2D(uShoreMap, (xz - uShoreRect.xy) / uShoreRect.zw).r;
 }
+float waterDepthAt(vec2 xz) {
+  return texture2D(uShoreMap, (xz - uShoreRect.xy) / uShoreRect.zw).g;
+}
+`;
+
+/**
+ * Under the water (v1 water item 1): what lies on the seabed (the bed itself, the plants and rocks, the fish) is seen
+ * through the depth of water over it, so its lit colour fogs toward the water's own ramp by that depth, the way the
+ * reference's sand goes teal and then blue as the land drops away. Needs SHORE_FROM_FIELD, WATER_DEPTH_RAMP and the
+ * ramp's uniforms (UNDERWATER_UNIFORMS). `depth`: world units of water above the point.
+ */
+export const UNDERWATER = /* glsl */ `
+uniform float uUnderwaterFog;
+vec3 underwater(vec3 lit, float depth) {
+  float t = 1.0 - exp(-max(depth, 0.0) / max(uDepthFalloff, 0.001));
+  return mix(lit, waterRamp(depth), clamp(t * uUnderwaterFog, 0.0, 1.0));
+}
+`;
+/** The uniforms UNDERWATER reads, declared (the live values are the water's: waterSurfaceUniforms). */
+export const UNDERWATER_UNIFORMS = /* glsl */ `
+uniform float uDepthFalloff;
+uniform vec3 uBedColor;
+uniform vec3 uShallowColor;
+uniform vec3 uMidColor;
+uniform vec3 uDeepColor;
+uniform vec3 uNavyColor;
 `;

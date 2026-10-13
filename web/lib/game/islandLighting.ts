@@ -18,7 +18,9 @@ import { phaseInstant, solarPosition, type SunAngles } from "./sunPath";
 export const ISLAND_TERRAIN = { grass: "#91b47f", soil: "#e6c69b", sand: "#f5e6c7" };
 const water = {
   ...TUNING_DEFAULTS.water,
-  deepColor: 0x398d9f, midColor: 0x78bdbe, shallowColor: 0xc4ddd0, bedColor: 0xf0e2c6,
+  // By depth (v1 water pass, references/look/2026-10-13): the sand at the waterline, a sand-tinted teal over the
+  // shallows, teal, a deep blue, navy past the drop-off. depthFalloff: the depth (world units) ~63% of the way down.
+  bedColor: 0xf0e2c6, shallowColor: 0xa6dccb, midColor: 0x3fb4bf, deepColor: 0x2a7eae, navyColor: 0x1c4583, depthFalloff: 1.15,
   foamWidth: 0.2, foamStrength: 0.42, foamSoft: 0.17, foamWave: 0.07, foamWaveSpeed: 0.85,
   blobScale: 1.35, blobDarken: 0.96, blobSpeed: 0.16, ringWidth: 0.12, ringStrength: 0.035,
   // The real sun on the water (row 238, look spec §7.4): a glare sheet from the ripples too small to
@@ -72,16 +74,16 @@ export interface IslandLight {
  */
 const PHASE_BASE: Record<IslandPhase, PhaseBase> = {
   dawn: {
-    water: { ...water, deepColor: 0x4a7d93, midColor: 0x7ea9b3, shallowColor: 0xb7c9c6, foamColor: 0xe9e8de, glare: 0.18, sunGlint: 1.8 },
+    water: { ...water, navyColor: 0x2a4a72, deepColor: 0x3f7495, midColor: 0x6aa6b3, shallowColor: 0xb2cdc6, foamColor: 0xe9e8de, glare: 0.18, sunGlint: 1.8 },
     lamp: 2, lampsOn: true, windowGlow: 0.8, fireflies: false,
   },
   day: { water, lamp: 0.6, lampsOn: false, windowGlow: 0.3, fireflies: false },
   evening: {
-    water: { ...water, deepColor: 0x426f87, midColor: 0x649ca7, shallowColor: 0x95b7b1, foamColor: 0xd4d0bb, glare: 0.25, sunGlint: 2.2 },
+    water: { ...water, navyColor: 0x26405f, deepColor: 0x3a6684, midColor: 0x5a95a2, shallowColor: 0x98b9b0, foamColor: 0xd4d0bb, glare: 0.25, sunGlint: 2.2 },
     lamp: 4, lampsOn: true, windowGlow: 1.15, fireflies: true,
   },
   night: {
-    water: { ...water, deepColor: 0x152943, midColor: 0x284c67, shallowColor: 0x516e81, bedColor: 0x394b59, foamColor: 0x67818f, ringColor: 0x7493aa, glare: 0.06, sunGlint: 0.4 },
+    water: { ...water, navyColor: 0x0c1830, deepColor: 0x152943, midColor: 0x284c67, shallowColor: 0x516e81, bedColor: 0x394b59, foamColor: 0x67818f, ringColor: 0x7493aa, glare: 0.06, sunGlint: 0.4 },
     lamp: 6, lampsOn: true, windowGlow: 1.6, fireflies: true,
   },
 };
@@ -173,7 +175,7 @@ const greyWater = (hex: number, desat: number, dim: number) => parseInt(soften(`
 function modWeather(light: IslandLight, m: WeatherMod): IslandLight {
   const sky = soften(light.sky, m.desat, m.dim);
   const w = light.water, water = { ...w, glare: w.glare * m.glare / m.roughness ** 2, sunGlint: w.sunGlint * m.glare, roughness: w.roughness * m.roughness };
-  if (m.water) Object.assign(water, { deepColor: greyWater(w.deepColor, m.water, 0.92), midColor: greyWater(w.midColor, m.water, 0.92), shallowColor: greyWater(w.shallowColor, m.water, 0.95), foamColor: greyWater(w.foamColor, m.water, 0.92) });
+  if (m.water) Object.assign(water, { navyColor: greyWater(w.navyColor, m.water, 0.92), deepColor: greyWater(w.deepColor, m.water, 0.92), midColor: greyWater(w.midColor, m.water, 0.92), shallowColor: greyWater(w.shallowColor, m.water, 0.95), foamColor: greyWater(w.foamColor, m.water, 0.92) });
   return {
     ...light,
     sky,
@@ -219,6 +221,7 @@ export function withSeason(light: IslandLight, look: SeasonLook): IslandLight {
     environment: { ...light.environment, skyBottom: leanHue(light.environment.skyBottom, look.sky, 0.25) },
     water: {
       ...light.water,
+      navyColor: leanWater(light.water.navyColor, look.water, 0.15),
       deepColor: leanWater(light.water.deepColor, look.water, 0.2),
       midColor: leanWater(light.water.midColor, look.water, 0.15),
     },

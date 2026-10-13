@@ -26,8 +26,8 @@
 import * as THREE from "three";
 import { addCutout } from "@/lib/game/occluders";
 import { getGrassTexture } from "@/lib/game/grassTexture";
-import { GRASS_COLOR } from "@/lib/game/grid";
-import { waterMaterial, waterUniforms, writeWaterUniforms, type WaterParams } from "@/lib/game/waterShader";
+import { GRASS_COLOR, WATER_DROP } from "@/lib/game/grid";
+import { SHORE_FROM_FIELD, UNDERWATER, UNDERWATER_UNIFORMS, WATER_DEPTH_RAMP, bedDepth, waterMaterial, waterUniforms, writeWaterUniforms, type WaterParams } from "@/lib/game/waterShader";
 import { TUNING_DEFAULTS } from "@/lib/game/tuning";
 
 const TEX_DIR = "/assets/acnh/terrain/";
@@ -255,10 +255,46 @@ export function terrainMaterial(name: string): THREE.Material | null {
     };
     mat.customProgramCacheKey = () => "terrain-fringe-alpha-v1";
   }
+  if (key === "mRiverBed") seenThroughWater(mat);
   mat.name = `terrain:${key}`;
   cache.set(key, withCutout(mat));
   return mat;
 }
+
+/**
+ * The seabed is seen through the water over it (v1 water item 1): its lit colour fogs toward the water's own depth
+ * ramp by the depth the water field bakes for that point (the bed lies exactly at that depth), so sand under a hand
+ * of water is sand, and it goes teal and then blue as the bed drops away. One texture read, no extra pass.
+ */
+function seenThroughWater(mat: THREE.MeshStandardMaterial) {
+  mat.onBeforeCompile = (shader) => addUnderwater(shader, "field");
+  mat.customProgramCacheKey = () => "seabed-underwater-v1";
+}
+
+/**
+ * Patch a lit built-in material so what it draws is seen through the water over it (UNDERWATER): the bed itself
+ * (`field`: it lies at the depth the field bakes) or something standing in the sea (`sea`: its depth under the sea's
+ * still surface, level 0), instanced or not. Shares the water's live uniforms, so the fog follows the phase and weather.
+ */
+export function addUnderwater(shader: THREE.WebGLProgramParametersWithUniforms, depth: "field" | "sea") {
+  const u = waterUniformBlock as Record<string, THREE.IUniform>;
+  Object.assign(shader.uniforms, {
+    uShoreMap: u.uShoreMap, uShoreRect: u.uShoreRect, uDepthFalloff: u.uDepthFalloff, uUnderwaterFog: UNDERWATER_FOG,
+    uBedColor: u.uBedColor, uShallowColor: u.uShallowColor, uMidColor: u.uMidColor, uDeepColor: u.uDeepColor, uNavyColor: u.uNavyColor,
+  });
+  shader.vertexShader = "varying vec3 vSeaWorld;\n" + shader.vertexShader.replace("#include <project_vertex>", `#include <project_vertex>
+    #ifdef USE_INSTANCING
+      vSeaWorld = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
+    #else
+      vSeaWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;
+    #endif`);
+  const at = depth === "field" ? "waterDepthAt(vSeaWorld.xz)" : `max(${(-WATER_DROP).toFixed(4)} - vSeaWorld.y, 0.0)`;
+  shader.fragmentShader = "varying vec3 vSeaWorld;\n" + UNDERWATER_UNIFORMS + SHORE_FROM_FIELD + WATER_DEPTH_RAMP + UNDERWATER + shader.fragmentShader
+    .replace("#include <opaque_fragment>", `outgoingLight = underwater(outgoingLight, ${at});
+    #include <opaque_fragment>`);
+}
+/** How strongly what lies under the water fogs toward the water's colour by its depth (0 off). Shared: the bed, the seabed props, the fish. */
+export const UNDERWATER_FOG = { value: 0.85 };
 
 /**
  * The terrain fades round the player where a hill or a cliff stands between them and the orbit camera
@@ -300,14 +336,16 @@ export function shadeWaterByClouds(map: THREE.Texture | null, uv: THREE.Vector4)
 }
 
 /**
- * Hand the water shader its distance field.
+ * Hand the water shader its field: the distance to the shore and the seabed's depth.
  *
  * Half-float so the waterline stays exactly where `shoreSdf` put it — an 8-bit
- * texture would quantise the crossing and contour the foam edge. R16F is core
+ * texture would quantise the crossing and contour the foam edge. RG16F is core
  * WebGL2 and linearly filterable without an extension.
  */
 export function setShoreField(f: {
   data: Float32Array;
+  /** The seabed's depth at each sample (lib/game/seabed.ts bakeWaterDepth); without it, the profile of the distance alone. */
+  depth?: Float32Array;
   width: number;
   height: number;
   minX: number;
@@ -315,9 +353,13 @@ export function setShoreField(f: {
   sizeX: number;
   sizeZ: number;
 }): void {
-  const half = new Uint16Array(f.data.length);
-  for (let i = 0; i < f.data.length; i++) half[i] = THREE.DataUtils.toHalfFloat(f.data[i]);
-  const tex = new THREE.DataTexture(half, f.width, f.height, THREE.RedFormat, THREE.HalfFloatType);
+  // Two channels: red the distance to the shore, green how deep the seabed lies (the water's colour reads it).
+  const half = new Uint16Array(f.data.length * 2);
+  for (let i = 0; i < f.data.length; i++) {
+    half[i * 2] = THREE.DataUtils.toHalfFloat(f.data[i]);
+    half[i * 2 + 1] = THREE.DataUtils.toHalfFloat(f.depth ? f.depth[i] : f.data[i] > 0 ? bedDepth(f.data[i], TUNING_DEFAULTS.water) : 0);
+  }
+  const tex = new THREE.DataTexture(half, f.width, f.height, THREE.RGFormat, THREE.HalfFloatType);
   tex.minFilter = THREE.LinearFilter;
   tex.magFilter = THREE.LinearFilter;
   // Clamp, not repeat: sampling past the map edge must read the last shoreline

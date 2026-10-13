@@ -52,21 +52,18 @@ import {
   clampToCell,
   beachDropAt,
   shoreSdf,
-  sampleShore,
   terrainOf,
   cellPieces,
   latticeAt,
   overlayAlpha,
   smoothstep,
   coastDistance,
-  overlayAt,
   ROCK,
   WET,
   type ShoreSdf,
 } from "@/lib/game/grid";
 import { terrainMaterial, setShoreField } from "./terrainMaterials";
-import { TUNING_DEFAULTS } from "@/lib/game/tuning";
-import { bedDepth } from "@/lib/game/waterShader";
+import { bakeWaterDepth, seabedDip } from "@/lib/game/seabed";
 
 // Flat colours for the surfaces whose road-kit textures are not wired yet.
 const SURFACE_COLOR: Record<number, string> = {
@@ -150,9 +147,6 @@ const emptyMesh = (): Mesh => ({ pos: [], uv: [], nrm: [], idx: [], color: [] })
 
 type Height = (x: number, z: number) => number;
 
-
-/** How far the bed drops below a grass bank's water at once: the river channel's edge. */
-const BANK_DIP = 0.12;
 
 /** How steep a height function is at a point, rise over run. */
 function steepness(h: Height, x: number, z: number): number {
@@ -345,23 +339,10 @@ export function terrainChunks(map: IslandMap, heights: Float32Array | null, shor
   const { coast } = terrain;
   const S = LATTICE, LW = map.width * S + 1;
 
-  // How far the bed drops below the surface at a given point. Reads the
-  // SHIPPED tuning, not the live bench value: this is geometry, and rebuilding
-  // 128x128 cells of it on every slider frame would stall the tab. Moving
-  // `bedDepth` or `bedSlope` on the bench changes the colour instantly and the
-  // bed shape on reload.
-  const water = TUNING_DEFAULTS.water;
-  /**
-   * The bed under a beach starts AT the waterline and carries the sand's slope on
-   * down (a grass bank keeps its 0.12 channel edge). Near the coast the distance is
-   * the coast field's own (smooth, so the sand and the bed meet without a step);
-   * past a cell the shore field takes over.
-   */
-  const dipAt = (px: number, pz: number) => {
-    const far = sampleShore(shore, px, pz), k = smoothstep(0.6, 1.2, far);
-    const d = -coastDistance(map, px, pz) * (1 - k) + far * k;
-    return Math.max(BANK_DIP * (1 - overlayAt(map, Surface.Sand, px, pz)), bedDepth(d, water));
-  };
+  // How far the bed drops below the surface at a given point (lib/game/seabed.ts): the same seabed the water's colour
+  // reads from its bake. Reads the SHIPPED tuning, not the live bench value: this is geometry, and rebuilding 128x128
+  // cells of it on every slider frame would stall the tab.
+  const dipAt = (px: number, pz: number) => seabedDip(map, shore, px, pz);
 
   /**
    * The ground a cell draws: the level field clamped to what this cell can
@@ -440,8 +421,8 @@ export function terrainChunks(map: IslandMap, heights: Float32Array | null, shor
           // bathymetry 2026-07-29: the reference colour ramp ends in the
           // SEABED colour, so there has to be a seabed and it has to get
           // further away as the water deepens, or the ramp has nothing to
-          // ramp over. Depth comes from `bedDepth`, the same function the
-          // shader mirrors in GLSL.
+          // ramp over. Depth comes from `seabedDip`, the same function the
+          // water's depth bake is made from.
           const bedH: Height = (px, pz) => waterY - dipAt(px, pz);
           addPolygons(bed, wet === "full" ? cellSquares(map, cx, cz, 1) : wet, (px, pz) => vertex(bed, bedH, px, pz));
         }
@@ -782,11 +763,11 @@ export default function GridTerrain({ map, field: heights, materials }: { map: I
     [map, heights, field]
   );
 
-  // The water reads its distance to the shore from a baked field rather than
-  // from anything on the mesh, so this is a one-shot upload, not geometry.
+  // The water reads its distance to the shore and the seabed's depth from a baked field rather than from anything on
+  // the mesh, so this is a one-shot upload, not geometry.
   useEffect(() => {
-    setShoreField(field);
-  }, [field]);
+    setShoreField({ ...field, depth: bakeWaterDepth(map, field) });
+  }, [map, field]);
 
   useEffect(() => () => { chunks.forEach(({ geometry }) => geometry.dispose()); }, [chunks]);
   return (
