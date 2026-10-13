@@ -196,7 +196,12 @@ export interface CharacterMotion { speed: number; yaw: number; lift: number; pos
   /** This character leaves afterimages (the player): they are made and compiled up front, so the first dash never hitches. */
   afterimages?: boolean;
   /** How solid it draws (1 solid; classes v2: Escape Rabbits turns you translucent). */
-  fade?: number }
+  fade?: number;
+  /**
+   * Another player's (Character `remote`): what they hold casts a sun shadow this frame. The remote driver sets it for
+   * a Full player within HELD_SHADOW_RANGE of you (net/drive.ts); unset, it casts none. Yours always cast.
+   */
+  itemShadow?: boolean }
 
 export const isLoop = (clip: ClipName) => (CLIP_BY_NAME.get(clip) ?? VERB_BY_NAME.get(clip))?.loop ?? true;
 

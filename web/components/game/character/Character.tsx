@@ -23,6 +23,7 @@ import { ATTACK_CLIP, WEAPON_HAND, contactCrossed, crossfade, holdLayer, isLoop,
 import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } from "@/lib/game/character/rig";
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
+import { heldGlows, heldTemplate, type HeldGlow } from "@/lib/game/character/heldMesh";
 import { addContact } from "../ContactShadows";
 import { frameStats } from "@/lib/game/perf/frameStats";
 import FishingRig from "./FishingRig";
@@ -491,9 +492,13 @@ const GRIP: Record<WeaponKind, WeaponGrip> = {
 };
 const gripQ = new THREE.Quaternion(), gripE = new THREE.Euler();
 
-function HeldWeapon({ puppet, motion, weapon: { kind, model: url, modelScale, inHand, grip, hand, pulse, paint } }: { puppet: Puppet; motion: RefObject<CharacterMotion>; weapon: WeaponView }) {
+function HeldWeapon({ puppet, motion, weapon: { kind, model: url, modelScale, inHand, grip, hand, pulse, paint }, remote }: { puppet: Puppet; motion: RefObject<CharacterMotion>; weapon: WeaponView; remote: boolean }) {
   const { scene } = useGLTF(url);
-  const model = useMemo(() => tagLookClasses(scene.clone(true), url), [scene, url]);
+  // One mesh per look class (heldMesh.ts), shared by every copy; a painted weapon (yours, classes v2) keeps its named
+  // parts, which the paint recolours one by one.
+  const painted = !!paint;
+  const model = useMemo(() => tagLookClasses((painted ? scene : heldTemplate(scene, url)).clone(true), url), [scene, url, painted]);
+  const casters = useMemo(() => meshesOf(model), [model]);
   // Painted weapons get their own copies of their named materials (the cached model's stay as authored); a tier-5
   // signature weapon's glow parts breathe (its painted copies, when it has them).
   const { paints, glows } = useMemo(() => {
@@ -504,7 +509,7 @@ function HeldWeapon({ puppet, motion, weapon: { kind, model: url, modelScale, in
       if (!own.has(src.name)) own.set(src.name, src.clone());
       mesh.material = own.get(src.name)!;
     });
-    return { paints: own, glows: pulse ? glowMaterials(model) : [] };
+    return { paints: own, glows: pulse ? [...glowMaterials(model), ...heldGlows(model)] : [] };
   }, [model, paint, pulse]);
   useEffect(() => {
     const main = hand ?? WEAPON_HAND[kind];
@@ -523,10 +528,24 @@ function HeldWeapon({ puppet, motion, weapon: { kind, model: url, modelScale, in
       if (q.intensity !== undefined) m.emissiveIntensity = q.intensity;
     }
     breathe(glows, clock.elapsedTime, p);
+    castItem(casters, !remote || !!motion.current?.itemShadow);
     if (!inHand || !g.rest) return;
     model.quaternion.slerp(gripQ.setFromEuler(gripE.set(...(puppet.attacking ? g.hand : g.rest))), 1 - Math.exp(-delta * 24));
   });
   return null;
+}
+/** A held item's meshes (the off hand's too, wherever it is held), for its sun shadow. */
+function meshesOf(model: THREE.Object3D): THREE.Mesh[] {
+  const out: THREE.Mesh[] = [];
+  model.traverse(o => { if ((o as THREE.Mesh).isMesh) out.push(o as THREE.Mesh); });
+  return out;
+}
+/**
+ * Whether what a character holds casts its sun shadow this frame (SunShadows skips a caster marked `shadowCulled`):
+ * yours always; another player's only at Full within HELD_SHADOW_RANGE of you (`motion.itemShadow`, net/drive.ts).
+ */
+function castItem(meshes: THREE.Mesh[], on: boolean) {
+  for (const m of meshes) if (m.userData.shadowCulled !== !on) m.userData.shadowCulled = !on;
 }
 /** A weapon's emissive materials, each with its authored intensity kept (they're shared by every copy of the model). */
 function glowMaterials(model: THREE.Object3D): THREE.MeshStandardMaterial[] {
@@ -536,9 +555,12 @@ function glowMaterials(model: THREE.Object3D): THREE.MeshStandardMaterial[] {
   return [...out];
 }
 /** Module scope (hook values are never written in a component): the glow parts breathe, 65–100% of their intensity (a painted one's). */
-function breathe(glows: THREE.MeshStandardMaterial[], t: number, paint?: WeaponPaint | null) {
+function breathe(glows: (THREE.MeshStandardMaterial | HeldGlow)[], t: number, paint?: WeaponPaint | null) {
   const k = 0.65 + 0.35 * (0.5 + 0.5 * Math.sin(t * 3.2));
-  for (const m of glows) m.emissiveIntensity = (paint?.[m.name]?.intensity ?? (m.userData.glowBase as number)) * k;
+  for (const m of glows) {
+    if ("value" in m) m.value = k; // a merged item's glow (heldMesh.ts)
+    else m.emissiveIntensity = (paint?.[m.name]?.intensity ?? (m.userData.glowBase as number)) * k;
+  }
 }
 /** Ribbon trails sample the weapon in hand (CharacterMotion.weaponModel); returns the cleanup. Module scope: hook values are never written in a component. */
 function showWeapon(m: CharacterMotion | null, model: THREE.Object3D | null) {
@@ -636,7 +658,7 @@ const holdQ = new THREE.Quaternion(), heldQ = new THREE.Quaternion(), heldE = ne
 
 /** Fit a model to `size` about its centre (something held in front: a fruit, a shell). */
 function fitted(scene: THREE.Object3D, url: string, size: number) {
-  const inner = tagLookClasses(scene.clone(true), url), box = new THREE.Box3().setFromObject(inner), dim = new THREE.Vector3(), mid = new THREE.Vector3();
+  const inner = tagLookClasses(heldTemplate(scene, url).clone(true), url), box = new THREE.Box3().setFromObject(inner), dim = new THREE.Vector3(), mid = new THREE.Vector3();
   box.getSize(dim); box.getCenter(mid);
   const k = size / Math.max(dim.x, dim.y, dim.z, 1e-3);
   inner.position.copy(mid).multiplyScalar(-k);
@@ -646,13 +668,15 @@ function fitted(scene: THREE.Object3D, url: string, size: number) {
   return outer;
 }
 
-function HeldItem({ puppet, motion, view: { url, hold, fit } }: { puppet: Puppet; motion: RefObject<CharacterMotion>; view: HeldView }) {
+function HeldItem({ puppet, motion, view: { url, hold, fit }, remote }: { puppet: Puppet; motion: RefObject<CharacterMotion>; view: HeldView; remote: boolean }) {
   const { scene } = useGLTF(url);
+  // One mesh per look class (heldMesh.ts): a rod, a net, a shovel is one draw, shared by every copy.
   const model = useMemo(() => {
-    const m = hold === "front" ? fitted(scene, url, fit ?? 0.1) : tagLookClasses(scene.clone(true), url);
+    const m = hold === "front" ? fitted(scene, url, fit ?? 0.1) : tagLookClasses(heldTemplate(scene, url).clone(true), url);
     m.traverse(o => { o.castShadow = true; o.userData.sunCaster = "dynamic"; });
     return m;
   }, [scene, url, hold, fit]);
+  const casters = useMemo(() => meshesOf(model), [model]);
   const grip = HELD_GRIPS[hold];
   const age = useRef(0);
   useEffect(() => {
@@ -660,7 +684,11 @@ function HeldItem({ puppet, motion, view: { url, hold, fit } }: { puppet: Puppet
     puppet.takeOut(model, grip);
     return () => puppet.putAway(model, grip);
   }, [model, puppet, grip]);
-  useFrame((_, delta) => { age.current += delta; poseHeld(model, puppet.current, grip, hold, age.current, delta); });
+  useFrame((_, delta) => {
+    age.current += delta;
+    poseHeld(model, puppet.current, grip, hold, age.current, delta);
+    castItem(casters, !remote || !!motion.current?.itemShadow);
+  });
   // The rod carries its fishing: the bobber, the line and the catch of this avatar's own cast.
   return hold === "rod" ? <FishingRig motion={motion} rod={model} hands={puppet.sockets} /> : null;
 }
@@ -691,9 +719,14 @@ export interface CharacterProps {
   scale?: number;
   /** Detail by drawn size (lod.ts); off in the creator, which shows one character up close. */
   lod?: boolean;
+  /**
+   * Another player (RemoteAvatar): what they hold casts a sun shadow only while `motion.itemShadow` (Full, near you;
+   * specs/perf/effects-cost.md).
+   */
+  remote?: boolean;
 }
 
-export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, held = null, leaf = false, verbs = false, faceSize = 512, scale = CHARACTER_SCALE, lod = true }: CharacterProps) {
+export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, held = null, leaf = false, verbs = false, faceSize = 512, scale = CHARACTER_SCALE, lod = true, remote = false }: CharacterProps) {
   // While a newly chosen part loads, keep showing the previous look instead of suspending.
   const shown = useDeferredValue(look);
   const parts = useMemo(() => resolveParts(shown), [shown]);
@@ -737,13 +770,13 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
   }, -1);
   return <group ref={group}>
     <primitive object={puppet.root} scale={scale} dispose={null} />
-    {weapon && <HeldWeapon puppet={puppet} motion={motion} weapon={weapon} />}
+    {weapon && <HeldWeapon puppet={puppet} motion={motion} weapon={weapon} remote={remote} />}
     {/* Its own boundary: the LOD 1 GLBs load after the character shows, never suspending it. */}
     {lod && <Suspense fallback={null}><LodMesh puppet={puppet} look={shown} parts={parts} /></Suspense>}
     {/* Its own boundary: the ruins never wait for the verb library; a verb asked for meanwhile plays the attack clip. */}
     {verbs && <Suspense fallback={null}><VerbClips puppet={puppet} /></Suspense>}
     {/* Its own boundary: taking out a tool never suspends the scene while its model loads. */}
-    {held && <Suspense fallback={null}><HeldItem key={`${held.hold}:${held.url}`} puppet={puppet} motion={motion} view={held} /></Suspense>}
+    {held && <Suspense fallback={null}><HeldItem key={`${held.hold}:${held.url}`} puppet={puppet} motion={motion} view={held} remote={remote} /></Suspense>}
     {/* Its own boundary: crafting the glider mid-session must not suspend the scene while the leaf loads. */}
     {leaf && <Suspense fallback={null}><HeldLeaf puppet={puppet} motion={motion} scale={scale} /></Suspense>}
   </group>;
