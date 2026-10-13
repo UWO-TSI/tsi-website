@@ -91,6 +91,18 @@ export const isCedar = (seed: number) => seed % TREE_SLOTS === 3;
 export const turn = (dx: number, dz: number, yaw = 0): [number, number] =>
   yaw ? [dx * Math.cos(yaw) + dz * Math.sin(yaw), -dx * Math.sin(yaw) + dz * Math.cos(yaw)] : [dx, dz];
 
+/**
+ * A landmark's solid footprint as world-axis half extents, after its scale and yaw: the bound of the turned rect
+ * (exact at quarter turns, a hair generous at the organic jitter angles the world map uses). Null when it has none.
+ */
+export function landmarkHalf(id: LandmarkId, yaw = 0, scale = 1): [number, number] | null {
+  const half = LANDMARK_INFO[id]?.half;
+  if (!half) return null;
+  if (!yaw && scale === 1) return half;
+  const c = Math.abs(Math.cos(yaw)), n = Math.abs(Math.sin(yaw));
+  return [(half[0] * c + half[1] * n) * scale, (half[0] * n + half[1] * c) * scale];
+}
+
 /** Landmarks placed on the map, in the table's order; `opened` lists the buildings completed club goals have opened (the café, the museum). */
 export function landmarks(v: Village = village(), opened: readonly string[] = []): Landmark[] {
   const placed = new Map(objectsOf("landmark", v).map(o => [o.id, o]));
@@ -99,13 +111,7 @@ export function landmarks(v: Village = village(), opened: readonly string[] = []
     if (!o) return [];
     const { door: _door, exit: _exit, ...info } = LANDMARK_INFO[id];
     void _door; void _exit;
-    const s = o.scale ?? 1;
-    // The axis-aligned footprint of the scaled, turned building (|cos|/|sin| bound: exact at quarter turns,
-    // a hair generous at the organic jitter angles the world map uses).
-    const yaw = o.yaw ?? 0, c = Math.abs(Math.cos(yaw)), n = Math.abs(Math.sin(yaw));
-    const half = info.half && ((s !== 1 || yaw)
-      ? [ (info.half[0] * c + info.half[1] * n) * s, (info.half[0] * n + info.half[1] * c) * s ] as [number, number]
-      : info.half);
+    const s = o.scale ?? 1, half = landmarkHalf(id, o.yaw, s);
     return [{ id, x: o.x, z: o.z, ...info, ...(half ? { half } : {}), open: info.open || opened.includes(id),
       ...(o.yaw ? { yaw: o.yaw } : {}), ...(s !== 1 ? { scale: s } : {}) }];
   });
@@ -179,7 +185,8 @@ export function objectFootprint(o: MapObject): { hw: number; hd: number; cx: num
   if (o.kind === "landmark") {
     const d = WHARF_DECK_LOCAL, half = LANDMARK_INFO[o.id as LandmarkId]?.half;
     if (o.id === "wharf") return { hw: (d.x1 - d.x0) / 2, hd: (d.z1 - d.z0) / 2, cx: (d.x0 + d.x1) / 2, cz: (d.z0 + d.z1) / 2 };
-    return half ? { hw: half[0], hd: half[1], cx: 0, cz: 0 } : null;
+    const k = o.scale ?? 1;
+    return half ? { hw: half[0] * k, hd: half[1] * k, cx: 0, cz: 0 } : null;
   }
   if (o.kind === "bridge") return { hw: BRIDGE_DECK_HALF[0], hd: BRIDGE_DECK_HALF[1], cx: 0, cz: 0 };
   if (o.kind === "study" && o.model && o.model in FURNITURE) {
