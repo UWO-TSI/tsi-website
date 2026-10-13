@@ -2137,14 +2137,10 @@
    "slot": "back",
    "name": "Messy boy",
    "glb": "hair/full/hair_messy_boy.glb",
-   "tris": 995,
+   "tris": 935,
    "materials": [
     {
      "name": "M_Hair",
-     "tint": "hair"
-    },
-    {
-     "name": "M_HairCap",
      "tint": "hair"
     }
    ],
@@ -2163,14 +2159,10 @@
    "slot": "back",
    "name": "Short hime cut",
    "glb": "hair/full/hair_hime_short.glb",
-   "tris": 1528,
+   "tris": 1305,
    "materials": [
     {
      "name": "M_Hair",
-     "tint": "hair"
-    },
-    {
-     "name": "M_HairCap",
      "tint": "hair"
     }
    ],
@@ -2189,18 +2181,10 @@
    "slot": "back",
    "name": "Messy with visor",
    "glb": "hair/full/hair_visor_messy.glb",
-   "tris": 1545,
+   "tris": 1296,
    "materials": [
     {
      "name": "M_Hair",
-     "tint": "hair"
-    },
-    {
-     "name": "M_Cap",
-     "color": "#2B2B33"
-    },
-    {
-     "name": "M_HairCap",
      "tint": "hair"
     }
    ],
@@ -2211,7 +2195,8 @@
    "skull": "v8",
    "source": "hair/source/david/08-McDonalds-106903086636118.glb",
    "map": {
-    "shade": 1
+    "shade": 1,
+    "cap": 2
    }
   },
   {
@@ -2219,7 +2204,7 @@
    "slot": "back",
    "name": "Baby sprout",
    "glb": "hair/full/hair_baby_sprout.glb",
-   "tris": 1534,
+   "tris": 1286,
    "materials": [
     {
      "name": "M_Hair",
@@ -2244,14 +2229,10 @@
    "slot": "back",
    "name": "Long scruffy",
    "glb": "hair/full/hair_long_scruffy.glb",
-   "tris": 1525,
+   "tris": 1261,
    "materials": [
     {
      "name": "M_Hair",
-     "tint": "hair"
-    },
-    {
-     "name": "M_HairCap",
      "tint": "hair"
     }
    ],
@@ -2270,14 +2251,10 @@
    "slot": "back",
    "name": "Short with tufts",
    "glb": "hair/full/hair_short_tufts.glb",
-   "tris": 1544,
+   "tris": 1294,
    "materials": [
     {
      "name": "M_Hair",
-     "tint": "hair"
-    },
-    {
-     "name": "M_HairCap",
      "tint": "hair"
     }
    ],
@@ -2296,14 +2273,10 @@
    "slot": "back",
    "name": "Windy bob",
    "glb": "hair/full/hair_windy_bob.glb",
-   "tris": 1546,
+   "tris": 1296,
    "materials": [
     {
      "name": "M_Hair",
-     "tint": "hair"
-    },
-    {
-     "name": "M_HairCap",
      "tint": "hair"
     }
    ],
@@ -2322,14 +2295,10 @@
    "slot": "back",
    "name": "Wispy ponytail",
    "glb": "hair/full/hair_wispy_ponytail.glb",
-   "tris": 1749,
+   "tris": 1500,
    "materials": [
     {
      "name": "M_Hair",
-     "tint": "hair"
-    },
-    {
-     "name": "M_HairCap",
      "tint": "hair"
     }
    ],
@@ -2348,14 +2317,10 @@
    "slot": "back",
    "name": "Fluffy boy",
    "glb": "hair/full/hair_fluffy_boy.glb",
-   "tris": 1648,
+   "tris": 1339,
    "materials": [
     {
      "name": "M_Hair",
-     "tint": "hair"
-    },
-    {
-     "name": "M_HairCap",
      "tint": "hair"
     }
    ],
@@ -2371,14 +2336,10 @@
    "slot": "back",
    "name": "Messy wolf cut",
    "glb": "hair/full/hair_messy_wolf.glb",
-   "tris": 1750,
+   "tris": 1372,
    "materials": [
     {
      "name": "M_Hair",
-     "tint": "hair"
-    },
-    {
-     "name": "M_HairCap",
      "tint": "hair"
     }
    ],
@@ -2389,7 +2350,7 @@
    "skull": "v8",
    "source": "hair/source/david/10-Black-Messy-Wolfcut-98528599025378.glb",
    "map": {
-    "shade": 0
+    "shade": 1
    }
   },
   {
@@ -2397,14 +2358,10 @@
    "slot": "back",
    "name": "Bowl cut",
    "glb": "hair/full/hair_bowl_cut.glb",
-   "tris": 1536,
+   "tris": 1290,
    "materials": [
     {
      "name": "M_Hair",
-     "tint": "hair"
-    },
-    {
-     "name": "M_HairCap",
      "tint": "hair"
     }
    ],
@@ -2415,7 +2372,7 @@
    "skull": "v8",
    "source": "hair/source/david/11-Blonde-Bowl-Cut-11103880280.glb",
    "map": {
-    "shade": 1
+    "shade": 2
    }
   },
   {
@@ -2423,14 +2380,10 @@
    "slot": "back",
    "name": "Layered shag",
    "glb": "hair/full/hair_layered_shag.glb",
-   "tris": 1559,
+   "tris": 1327,
    "materials": [
     {
      "name": "M_Hair",
-     "tint": "hair"
-    },
-    {
-     "name": "M_HairCap",
      "tint": "hair"
     }
    ],
@@ -2441,7 +2394,7 @@
    "skull": "v8",
    "source": "hair/source/david/12-Ryo-137412726411371.glb",
    "map": {
-    "shade": 2
+    "shade": 0
    }
   },
   {
@@ -2449,14 +2402,10 @@
    "slot": "back",
    "name": "Anime spikes",
    "glb": "hair/full/hair_anime_spikes.glb",
-   "tris": 1610,
+   "tris": 1350,
    "materials": [
     {
      "name": "M_Hair",
-     "tint": "hair"
-    },
-    {
-     "name": "M_HairCap",
      "tint": "hair"
     }
    ],
@@ -2467,7 +2416,7 @@
    "skull": "v8",
    "source": "hair/source/david/13-Ben-10-Anime-Hair-125540259305979.glb",
    "map": {
-    "shade": 0
+    "shade": 1
    }
   },
   {
@@ -2475,14 +2424,10 @@
    "slot": "back",
    "name": "Messy low ponytail",
    "glb": "hair/full/hair_messy_low_pony.glb",
-   "tris": 1517,
+   "tris": 1224,
    "materials": [
     {
      "name": "M_Hair",
-     "tint": "hair"
-    },
-    {
-     "name": "M_HairCap",
      "tint": "hair"
     }
    ],
@@ -2493,8 +2438,8 @@
    "skull": "v8",
    "source": "hair/source/david/14-White-Blue-Short-Messy-w-Low-Ponytail-119601543909065.glb",
    "map": {
-    "shade": 1,
-    "accent": 2
+    "shade": 0,
+    "accent": 1
    },
    "accent": {
     "default": 11
@@ -2505,14 +2450,10 @@
    "slot": "back",
    "name": "V-kei layers",
    "glb": "hair/full/hair_vkei.glb",
-   "tris": 1445,
+   "tris": 1198,
    "materials": [
     {
      "name": "M_Hair",
-     "tint": "hair"
-    },
-    {
-     "name": "M_HairCap",
      "tint": "hair"
     }
    ],
@@ -2523,7 +2464,7 @@
    "skull": "v8",
    "source": "hair/source/david/15-Vkei-Moe-Boy-Face-Hair-137700402637392.glb",
    "map": {
-    "shade": 0
+    "shade": 2
    }
   },
   {
@@ -2531,14 +2472,10 @@
    "slot": "back",
    "name": "Swept fringe",
    "glb": "hair/full/hair_swept_fringe.glb",
-   "tris": 1749,
+   "tris": 1500,
    "materials": [
     {
      "name": "M_Hair",
-     "tint": "hair"
-    },
-    {
-     "name": "M_HairCap",
      "tint": "hair"
     }
    ],
@@ -2549,7 +2486,7 @@
    "skull": "v8",
    "source": "hair/source/david/16-Isagi-17727987910.glb",
    "map": {
-    "shade": 1
+    "shade": 0
    }
   },
   {
@@ -2557,14 +2494,10 @@
    "slot": "back",
    "name": "Bob with a pigtail",
    "glb": "hair/full/hair_bob_pigtail.glb",
-   "tris": 1734,
+   "tris": 1359,
    "materials": [
     {
      "name": "M_Hair",
-     "tint": "hair"
-    },
-    {
-     "name": "M_HairCap",
      "tint": "hair"
     }
    ],
@@ -2575,7 +2508,7 @@
    "skull": "v8",
    "source": "hair/source/david/17-cutesy-bob-with-adorable-pigtail-in-brown-118937471732434.glb",
    "map": {
-    "shade": 2
+    "shade": 1
    }
   },
   {
@@ -2583,14 +2516,10 @@
    "slot": "back",
    "name": "Long pigtails",
    "glb": "hair/full/hair_long_pigtails.glb",
-   "tris": 1750,
+   "tris": 1500,
    "materials": [
     {
      "name": "M_Hair",
-     "tint": "hair"
-    },
-    {
-     "name": "M_HairCap",
      "tint": "hair"
     }
    ],
@@ -2601,7 +2530,7 @@
    "skull": "v8",
    "source": "hair/source/david/18-long-pretty-black-pigtails-117422689311117.glb",
    "map": {
-    "shade": 0
+    "shade": 2
    }
   },
   {
@@ -2609,18 +2538,10 @@
    "slot": "back",
    "name": "Dreads with a cap",
    "glb": "hair/full/hair_dreads_cap.glb",
-   "tris": 1750,
+   "tris": 1499,
    "materials": [
     {
      "name": "M_Hair",
-     "tint": "hair"
-    },
-    {
-     "name": "M_Cap",
-     "color": "#26262A"
-    },
-    {
-     "name": "M_HairCap",
      "tint": "hair"
     }
    ],
@@ -2631,8 +2552,9 @@
    "skull": "v8",
    "source": "hair/source/david/19-OTF-Von-Dreads-w-Hat-89998678118416.glb",
    "map": {
-    "shade": 1,
-    "accent": 2
+    "shade": 0,
+    "accent": 1,
+    "cap": 2
    },
    "accent": {
     "default": 3
@@ -2643,14 +2565,10 @@
    "slot": "back",
    "name": "Waves with a fade",
    "glb": "hair/full/hair_waves.glb",
-   "tris": 1316,
+   "tris": 1116,
    "materials": [
     {
      "name": "M_Hair",
-     "tint": "hair"
-    },
-    {
-     "name": "M_HairCap",
      "tint": "hair"
     }
    ],
@@ -2673,14 +2591,10 @@
    "slot": "back",
    "name": "Messy dreads",
    "glb": "hair/full/hair_messy_dreads.glb",
-   "tris": 1750,
+   "tris": 1500,
    "materials": [
     {
      "name": "M_Hair",
-     "tint": "hair"
-    },
-    {
-     "name": "M_HairCap",
      "tint": "hair"
     }
    ],
@@ -4632,10 +4546,11 @@
   "atlas": "hair/hair_maps.png",
   "gain": 1.25,
   "cells": [
-   4,
+   5,
    2
   ],
   "cell": 512,
-  "note": "Shading maps of the full hairstyles (hair/import_hair.py): one channel per hair (accent masks in the next channel), luminance / median / gain; the engine multiplies the palette tint by map x gain (lib/game/character/rig.ts, Character.tsx)."
+  "cap": "#28282E",
+  "note": "Shading maps of the full hairstyles (hair/import_hair.py): one channel per hair, its accent and cap masks in the next channels of the same cell; luminance / median / gain. The engine multiplies the palette tint by map x gain, mixes the accent colour and the fixed cap colour in by their masks, and leaves u < 0 (the under-cap) to the tint (rig.ts, Character.tsx). Every hairstyle is one primitive in one material."
  }
 }

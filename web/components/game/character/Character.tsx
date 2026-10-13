@@ -14,7 +14,7 @@ import { useGLTF } from "@react-three/drei";
 import type { WeaponPaint } from "@/lib/game/combat/primitives";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { BASE_URL, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, HAIR_MAP_GAIN, HAIR_MAPS_URL, LOD_SKIN_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, usesFacePage2, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
+import { BASE_URL, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, HAIR_CAP_COLOR, HAIR_MAP_GAIN, HAIR_MAPS_URL, LOD_SKIN_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, usesFacePage2, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
 import { characterLod, createLodState, drawnHeight, mixerStep } from "@/lib/game/character/lod";
 import { quality } from "@/lib/game/perf/governor";
 import { FaceAnimator, faceSlots, poseKey } from "@/lib/game/character/face";
@@ -61,23 +61,29 @@ function ensureHairAtlas() {
   });
 }
 const HAIR_CHANNEL = /* glsl */ `float hairChannel(vec3 t, float c) { return c < 1.5 ? t.r : (c < 2.5 ? t.g : t.b); }`;
+const CAP = new THREE.Color(HAIR_CAP_COLOR);       // linear: a cap or visor's fixed colour, by its mask channel
+const glsl = (c: THREE.Color) => `vec3(${c.r.toFixed(5)}, ${c.g.toFixed(5)}, ${c.b.toFixed(5)})`;
 BODY_MATERIAL.onBeforeCompile = shader => {
   shader.uniforms.uHairAtlas = HAIR_ATLAS;
   shader.vertexShader = shader.vertexShader
-    .replace("#include <uv_pars_vertex>", "#include <uv_pars_vertex>\nattribute vec2 hairMap;\nattribute vec3 hairAccent;\nvarying vec2 vHairUv;\nvarying vec2 vHairMap;\nvarying vec3 vHairAccent;")
+    .replace("#include <uv_pars_vertex>", "#include <uv_pars_vertex>\nattribute vec3 hairMap;\nattribute vec3 hairAccent;\nvarying vec2 vHairUv;\nvarying vec3 vHairMap;\nvarying vec3 vHairAccent;")
     .replace("#include <uv_vertex>", "#include <uv_vertex>\nvHairUv = uv;\nvHairMap = hairMap;\nvHairAccent = hairAccent;");
   shader.fragmentShader = shader.fragmentShader
-    .replace("#include <uv_pars_fragment>", `#include <uv_pars_fragment>\nuniform sampler2D uHairAtlas;\nvarying vec2 vHairUv;\nvarying vec2 vHairMap;\nvarying vec3 vHairAccent;\n${HAIR_CHANNEL}`)
+    .replace("#include <uv_pars_fragment>", `#include <uv_pars_fragment>\nuniform sampler2D uHairAtlas;\nvarying vec2 vHairUv;\nvarying vec3 vHairMap;\nvarying vec3 vHairAccent;\n${HAIR_CHANNEL}`)
     // before the vertex colour (the tint) is applied, so the look's saturation and value act on the result as on any surface
-    .replace("#include <color_fragment>", `if (vHairMap.x > 0.5) {
+    // u < 0: the under-cap (no map: its COLOR_0 and the tint). Else tint x shade, the accent and the cap's fixed colour
+    // mixed in by their masks, all before the vertex colour multiplies in (hence the division by it)
+    .replace("#include <color_fragment>", `if (vHairMap.x > 0.5 && vHairUv.x >= 0.0) {
       vec3 t = texture2D(uHairAtlas, vHairUv).rgb;
       float s = hairChannel(t, vHairMap.x) * ${HAIR_MAP_GAIN.toFixed(4)};
       float a = vHairMap.y > 0.5 ? hairChannel(t, vHairMap.y) : 0.0;
-      diffuseColor.rgb *= s * mix(vec3(1.0), vHairAccent / max(vColor, vec3(1e-4)), a);
+      float c = vHairMap.z > 0.5 ? hairChannel(t, vHairMap.z) : 0.0;
+      vec3 inv = 1.0 / max(vColor, vec3(1e-4));
+      diffuseColor.rgb *= s * mix(mix(vec3(1.0), vHairAccent * inv, a), ${glsl(CAP)} * inv, c);
     }
     #include <color_fragment>`);
 };
-BODY_MATERIAL.customProgramCacheKey = () => "character-body-hairmap-v1";
+BODY_MATERIAL.customProgramCacheKey = () => "character-body-hairmap-v2";
 let decalMaterial: THREE.MeshPhysicalMaterial | null = null;
 const bodies = refCache<THREE.BufferGeometry>();
 const decals = new Map<string, THREE.BufferGeometry>();

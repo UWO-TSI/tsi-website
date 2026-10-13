@@ -45,7 +45,8 @@ RENDER = ARGS[ARGS.index("--render") + 1] if "--render" in ARGS else None
 SRC = os.path.join(HERE, "source", WHO)
 MANIFEST = json.load(open(os.path.join(SRC, "manifest.json")))
 
-LOD0_MAX = 1750          # the library's full looks (bangs + back) run 1,110-1,756 triangles
+LOD0_MAX = 1500          # the library's full looks (bangs + back) run 1,110-1,756 triangles: the full hair budget is
+                         # 1,750 (specs/perf/budget.md); David's styles aim at 1,500, under-cap included
 DEEP = 0.03              # geometry more than this under the skin is hidden inside the head: it neither seats nor clips
 CLEAR = 0.004            # conform: the hair's inside at least this far over the skin (over the under-cap)
 SNUG = 0.006             # conform: and at most this far where it lies on the head
@@ -53,7 +54,8 @@ CLEAR_FREE = 0.010       # conform: below the scalp line (the face, the cheeks, 
 SPLIT_RESERVE = 200      # triangles kept back from the budget for the cage step's edge splits
 CAP_H = 0.0025           # the matte under-cap over the scalp (the library's rule: no skin shows between the hair from any
                          # angle): the head's own faces above the scalp line, this far out
-CELL, COLS, ROWS = 512, 4, 2
+CELL, COLS, ROWS = 512, 5, 2    # 10 cells x 3 channels: 21 shading maps, 3 accent masks, 2 cap masks
+CAP_COLOR = "#28282E"            # a cap's or visor's fixed colour (its mask channel; one material, never a second one)
 PAD = 8                  # px of each cell kept clear round the map (mip bleed)
 GAIN = 1.25              # shading maps store luminance / median / GAIN (the shader multiplies by GAIN)
 ATLAS = os.path.join(HERE, "hair_maps.png")
@@ -591,6 +593,72 @@ def trim_face_window(ob):
     return len(bad)
 
 
+def trim_fringe(ob, opt, step="squash"):
+    """A fringe that hides the eyes from the front is cut shorter (David tunes it after): in front of the face, within
+    |x| < opt["half_width"], whatever hangs below the brows is drawn up to a band opt["keep"] as long, so the eyes read
+    through it. The cage step then keeps it off the skin. Returns the vertices moved."""
+    lat, lon = SK.hs.chart_inv(SK.hs.FACE_ANCHORS["brow"][0], SK.hs.FACE_ANCHORS["brow"][1], (8.0, -28.0))
+    brow_z = SK.hs.head_point(lat, lon).z + opt.get("raise", 0.0)
+    face_y = HC.y - SK.SKULL["B_FRONT"] * 0.6
+    moved = 0
+    for v in (ob.data.vertices if step == "squash" else []):
+        if v.co.y < face_y and abs(v.co.x - HC.x) < opt.get("half_width", 0.16) and v.co.z < brow_z and v.co.z > HC.z - 0.24:
+            v.co.z = brow_z - (brow_z - v.co.z) * opt.get("keep", 0.25)
+            moved += 1
+    ob.data.update()
+    if step == "squash":
+        return moved
+    # then whatever still lies across either eye, seen from the front, is cut away: rays from a small grid over each
+    # painted eye (its canvas anchor) straight forward, every hair face they meet goes (open_face: from a grid over the
+    # whole face, brows to mouth, for a fringe that walls the face off)
+    lat_e, lon_e = SK.hs.chart_inv(1 - SK.hs.FACE_ANCHORS["eye"][0], SK.hs.FACE_ANCHORS["eye"][1], (SK.hs.EYE_LAT, SK.hs.EYE_LON))
+    cut = set()
+    for _ in range(6):
+        me = ob.data
+        tree = BVHTree.FromPolygons([v.co for v in me.vertices], [list(p.vertices) for p in me.polygons])
+        hits = set()
+        rays = [(lat_e + dla, side * lon_e + dlo) for side in (1, -1) for dla in (-3, 0, 3, 6) for dlo in (-5, 0, 5)]
+        if opt.get("open_face"):    # the whole face from the brows to the mouth, not only the eyes
+            rays += [(la, lo) for la in range(int(SK.hs.MOUTH_LAT) - 4, int(lat_e) + 7, 4) for lo in range(-36, 37, 6)]
+        for la, lo in rays:
+            o = SK.hs.head_point(la, lo)
+            loc, _, idx, _ = tree.ray_cast(o + Vector((0, -0.001, 0)), Vector((0, -1, 0)), 0.3)
+            if loc is not None:
+                hits.add(idx)
+        if not hits:
+            break
+        bm = bmesh.new()
+        bm.from_mesh(me)
+        bm.faces.ensure_lookup_table()
+        bmesh.ops.delete(bm, geom=[bm.faces[i] for i in hits], context="FACES")
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+        bm.to_mesh(me)
+        bm.free()
+        me.update()
+        cut |= hits
+    print("  fringe: drawn up", moved, "vertices, cut", len(cut), "faces across the eyes")
+    return moved + len(cut)
+
+
+def keep_in_box(ob):
+    """Faces reaching outside the hair type's box from the top fit point (skull.CLEARANCE reach: what a hairstyle may
+    occupy; a decimated card can leave a long sliver flung sideways) go. Returns the faces dropped."""
+    top, box = SK.point("top"), SK.CLEARANCE["reach"]["hair"]
+
+    def out(co):
+        d = co - top
+        return abs(d.x) > box["side"] or d.z > box["up"] or -d.z > box["down"] or -d.y > box["front"] or d.y > box["back"]
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    bad = [f for f in bm.faces if any(out(v.co) for v in f.verts)]
+    bmesh.ops.delete(bm, geom=bad, context="FACES")
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+    bm.to_mesh(ob.data)
+    bm.free()
+    ob.data.update()
+    return len(bad)
+
+
 def drop_slivers(ob, length=0.15, thin=0.004):
     """Collapse leaves a few long slivers across the hair (an edge over 15 cm, under 4 mm wide): they add nothing to the
     silhouette and cut chords through the head, so they go."""
@@ -787,7 +855,7 @@ def shade_map(img, me, spec):
         r = np.clip(r, 0.06, GAIN)
         out = np.where(reg, r / GAIN, out)
     out = np.where(cov, out, 1.0 / GAIN)
-    return out, accent, painted
+    return out, accent, painted, (cap_region & cov) if cap_region.any() else None
 
 
 def coverage_only(me, w, h, mat_index):
@@ -809,28 +877,27 @@ def resample(a, size):
 
 
 # ================================================================ 7. export
-def finish(ob, rig, pid, cap_color):
-    """The fitted mesh as a catalogue part: M_Hair (+ M_Cap), a flat COLOR_0, smooth by angle, 100% on the head bone."""
+def finish(ob, rig, pid):
+    """The fitted mesh as a catalogue part: one material (M_Hair, one primitive, one draw): a cap or visor is a mask
+    channel in the atlas, and the under-cap (material slot 2 until now) is marked by u < 0, shaded by its COLOR_0
+    (0.55, the hair's shadow) and the tint alone. Smooth by angle, 100% on the head bone."""
     me = ob.data
     hair = bpy.data.materials.get("M_Hair") or kit.material("M_Hair", kit.PAL["hair"][kit.PAL["ref_girl_defaults"]["hair"]])
-    used = {p.material_index for p in me.polygons}
-    mats = [hair, bpy.data.materials.get("M_Cap") or kit.material("M_Cap", cap_color),
-            bpy.data.materials.get("M_HairCap") or kit.material("M_HairCap", kit.PAL["hair"][0])]
-    idx = [p.material_index for p in me.polygons]       # clearing the slots resets the faces' indices
+    undercap = [p.material_index == 2 for p in me.polygons]
     me.materials.clear()
-    for m in mats:
-        me.materials.append(m)
-    for p, k in zip(me.polygons, idx):
-        p.use_smooth = True
-        p.material_index = k
-    # unused slots dropped (the exporter writes one primitive per used material anyway)
+    me.materials.append(hair)
     if "Color" not in me.color_attributes:
         me.color_attributes.new("Color", "FLOAT_COLOR", "CORNER")
     col = me.color_attributes["Color"]
-    for p in me.polygons:
-        c = 0.55 if p.material_index == 2 else 1.0           # the under-cap reads as the hair's shadow
+    uv = me.uv_layers.active.data if me.uv_layers else None
+    for p, u in zip(me.polygons, undercap):
+        p.use_smooth = True
+        p.material_index = 0
         for li in p.loop_indices:
+            c = 0.55 if u else 1.0
             col.data[li].color = (c, c, c, 1)
+            if u and uv is not None:
+                uv[li].uv = (-1.0, -1.0)
     me.color_attributes.active_color = col
     me.color_attributes.render_color_index = me.color_attributes.active_color_index
     ob.name = pid
@@ -904,7 +971,7 @@ def main():
     # re-importing one hair keeps everyone's place in the atlas.
     slots, used = {}, 0
     for spec in MANIFEST["hairs"]:
-        need = 2 if spec.get("accent") else 1
+        need = 1 + bool(spec.get("accent")) + bool(spec.get("cap"))
         if (used % 3) + need > 3:
             used += 3 - used % 3
         slots[spec["id"]] = (used // 3, [used % 3 + k for k in range(need)])
@@ -943,18 +1010,22 @@ def main():
             apply_params(ob, params)
         t0 = time.time()
         trimmed = trim_face_window(ob) if spec.get("trim") == "face_window" else 0
+        fringe = trim_fringe(ob, spec["fringe"], "squash") if spec.get("fringe") else 0
         stats = conform(ob) if spec.get("covers") != ["top"] else []
         lengths = fit_lengths(ob, BODY)
         if spec.get("covers") != ["top"]:
             room = LOD0_MAX - (CAP_TRIS if capped else 0) - kit.ntris(ob)
             stats += conform(ob, rounds=7, pulls=False, split_budget=room)   # what the lengths drew in goes back out
         print("  time conform", round(time.time() - t0, 1))
+        # the cut comes last: the cage step pushes hair that ran through the head out in front of the face too
+        fringe += trim_fringe(ob, spec["fringe"], "cut") if spec.get("fringe") else 0
+        boxed = keep_in_box(ob)
         if capped:
             undercap(ob, HEAD)
         cell, chans = slots[pid]
         mapped = has_uv
         if mapped:
-            shade, accent, painted = shade_map(img, ob.data, spec)
+            shade, accent, painted, capmask = shade_map(img, ob.data, spec)
             cx, cy = cell % COLS, cell // COLS
             inner = CELL - 2 * PAD
             block = np.full((CELL, CELL), 1.0 / GAIN, np.float32)
@@ -970,29 +1041,29 @@ def main():
                 a_ = resample(accent, inner)
                 ablock[PAD:PAD + inner, PAD:PAD + inner] = a_
                 atlas[cy * CELL:(cy + 1) * CELL, cx * CELL:(cx + 1) * CELL, chans[1]] = ablock
+            if capmask is not None:                  # the cap's or visor's texels: its fixed colour (one material)
+                cblock = np.zeros((CELL, CELL), np.float32)
+                c_ = resample(capmask.astype(np.float32), inner)
+                cblock[PAD:PAD + inner, PAD:PAD + inner] = c_
+                atlas[cy * CELL:(cy + 1) * CELL, cx * CELL:(cx + 1) * CELL, chans[-1]] = cblock
             remap_uvs(ob.data, cell)
         else:
             painted = 0
-        ob = finish(ob, rig, pid, (spec.get("cap") or {}).get("color", "#2B2B33"))
+        ob = finish(ob, rig, pid)
         rel = f"hair/full/{pid}.glb"
         kit.export(ob, rig, os.path.join(ART, rel))
-        used = {p.material_index for p in ob.data.polygons}
         mats = [{"name": "M_Hair", "tint": "hair"}]
-        if 1 in used:
-            mats.append({"name": "M_Cap", "color": spec["cap"]["color"]})
-        if 2 in used:
-            mats.append({"name": "M_HairCap", "tint": "hair"})
         acc = spec.get("accent")
         e = {"id": pid, "slot": "back", "name": spec["name"], "glb": rel, "tris": kit.ntris(ob), "materials": mats,
              "decalSlot": None, "hidesBackHair": False, "hides": [], "full": True, "skull": SK.VERSION,
              "source": f"hair/source/{WHO}/{spec['file']}",
              **({"covers": spec["covers"]} if spec.get("covers") else {}),
-             **({"map": {"shade": chans[0], **({"accent": chans[1]} if acc else {})}} if mapped else {}),
+             **({"map": {"shade": chans[0], **({"accent": chans[1]} if acc else {}), **({"cap": chans[-1]} if spec.get("cap") else {})}} if mapped else {}),
              **({"accent": {"default": acc["default"]}} if acc and mapped else {})}
         entries[pid] = e
         report.append(f"IMPORT {pid:22s} src_tris={src_tris} tris={e['tris']} scale={tuple(round(x, 4) for x in params[:3])} "
                       f"offset={tuple(round(x, 4) for x in params[3:])} yaw={yaw} facing={fa if fa is None else round(fa, 2)}/{fb if fb is None else round(fb, 2)} cost={c:.4f} conform(in,out,hidden)={stats} dropped={dropped} "
-                      f"cap_faces={n_cap} slivers={slivers} trimmed={trimmed} logo_texels={painted} below_chin(before,after,out_of_body)={lengths} map={'cell %d ch %s' % (cell, chans) if mapped else 'none'}")
+                      f"cap_faces={n_cap} slivers={slivers} trimmed={trimmed} fringe={fringe} out_of_box={boxed} logo_texels={painted} below_chin(before,after,out_of_body)={lengths} map={'cell %d ch %s' % (cell, chans) if mapped else 'none'}")
         print(report[-1])
         built.append(ob)
         if not RENDER:
@@ -1009,10 +1080,12 @@ def main():
     im.save()
     cat = json.load(open(cat_path))
     cat["hair"] = [entries.get(h["id"], h) for h in cat["hair"]] + [e for k, e in entries.items() if k not in {h["id"] for h in cat["hair"]}]
-    cat["hairMaps"] = {"atlas": "hair/hair_maps.png", "gain": GAIN, "cells": [COLS, ROWS], "cell": CELL,
-                       "note": "Shading maps of the full hairstyles (hair/import_hair.py): one channel per hair (accent masks in "
-                               "the next channel), luminance / median / gain; the engine multiplies the palette tint by "
-                               "map x gain (lib/game/character/rig.ts, Character.tsx)."}
+    cat["hairMaps"] = {"atlas": "hair/hair_maps.png", "gain": GAIN, "cells": [COLS, ROWS], "cell": CELL, "cap": CAP_COLOR,
+                       "note": "Shading maps of the full hairstyles (hair/import_hair.py): one channel per hair, its accent and "
+                               "cap masks in the next channels of the same cell; luminance / median / gain. The engine "
+                               "multiplies the palette tint by map x gain, mixes the accent colour and the fixed cap colour "
+                               "in by their masks, and leaves u < 0 (the under-cap) to the tint (rig.ts, Character.tsx). "
+                               "Every hairstyle is one primitive in one material."}
     json.dump(cat, open(cat_path, "w"), indent=1)
     print("IMPORT_HAIR_OK", len(entries))
 

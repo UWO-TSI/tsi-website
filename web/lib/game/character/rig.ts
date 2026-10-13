@@ -20,16 +20,17 @@ export function skinnedPrimitives(root: THREE.Object3D): THREE.SkinnedMesh[] {
 export const materialName = (mesh: THREE.Mesh) => (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material).name;
 
 /** A mapped hairstyle's channels in the hair shading atlas (head fit) and its accent colour. */
-export interface HairMapUse { shade: number; accent?: number; accentColor?: THREE.Color }
+export interface HairMapUse { shade: number; accent?: number; cap?: number; accentColor?: THREE.Color }
 
 /**
  * A primitive's geometry re-expressed for the target skeleton: joint indices
  * remapped by bone name, colour = COLOR_0 (linear) x tint, a uv channel, and
  * the hair map channels every piece carries so they all merge with one
- * attribute set: `hairMap` = (shade channel + 1, accent channel + 1), 0 for
- * no map, and `hairAccent` = the accent colour (linear). The body material
- * tints a mapped hairstyle by its shading map from the shared hair atlas
- * (Character.tsx); everything else ignores them.
+ * attribute set: `hairMap` = (shade, accent, cap channel + 1), 0 for none,
+ * and `hairAccent` = the accent colour (linear). The body material tints a
+ * mapped hairstyle by its shading map from the shared hair atlas, mixes in
+ * the accent and the fixed cap colour by their masks (Character.tsx), and
+ * leaves a vertex with u < 0 (the under-cap) to its COLOR_0 and tint alone.
  */
 export function adoptPrimitive(mesh: THREE.SkinnedMesh, boneIndex: ReadonlyMap<string, number>, tint: THREE.Color | null, map: HairMapUse | null = null): THREE.BufferGeometry {
   const src = mesh.geometry, n = src.getAttribute("position").count;
@@ -40,13 +41,14 @@ export function adoptPrimitive(mesh: THREE.SkinnedMesh, boneIndex: ReadonlyMap<s
   const uv = src.getAttribute("uv");
   g.setAttribute("uv", uv ?? new THREE.BufferAttribute(new Float32Array(n * 2), 2));
   const mapped = !!(map && uv);
-  const hm = new Float32Array(n * 2), ha = new Float32Array(n * 3);
+  const hm = new Float32Array(n * 3), ha = new Float32Array(n * 3);
   if (mapped) for (let i = 0; i < n; i++) {
-    hm[i * 2] = map!.shade + 1;
-    hm[i * 2 + 1] = map!.accent === undefined ? 0 : map!.accent + 1;
+    hm[i * 3] = map!.shade + 1;
+    hm[i * 3 + 1] = map!.accent === undefined ? 0 : map!.accent + 1;
+    hm[i * 3 + 2] = map!.cap === undefined ? 0 : map!.cap + 1;
     if (map!.accentColor) { ha[i * 3] = map!.accentColor.r; ha[i * 3 + 1] = map!.accentColor.g; ha[i * 3 + 2] = map!.accentColor.b; }
   }
-  g.setAttribute("hairMap", new THREE.BufferAttribute(hm, 2));
+  g.setAttribute("hairMap", new THREE.BufferAttribute(hm, 3));
   g.setAttribute("hairAccent", new THREE.BufferAttribute(ha, 3));
   const base = src.getAttribute("color"), color = new Float32Array(n * 3), t = tint ?? new THREE.Color(1, 1, 1);
   for (let i = 0; i < n; i++) {
@@ -73,7 +75,7 @@ export function adoptPrimitive(mesh: THREE.SkinnedMesh, boneIndex: ReadonlyMap<s
 
 export interface PieceSource { root: THREE.Object3D; tints: Record<string, string>; keep?: (materialName: string) => boolean;
   /** A mapped hairstyle (head fit): its hair and cap primitives sample the hair atlas. */
-  map?: { shade: number; accent?: number; accentHex?: string } | null }
+  map?: { shade: number; accent?: number; cap?: number; accentHex?: string } | null }
 /**
  * Merge the untextured primitives of every piece into one geometry for
  * `bones`. A primitive is tinted by its material name when the piece lists a
@@ -88,8 +90,8 @@ export function mergeLook(pieces: PieceSource[], bones: readonly THREE.Bone[]): 
     if (piece.keep && !piece.keep(name)) continue;
     const hex = piece.tints[name];
     const own = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as THREE.MeshStandardMaterial;
-    const m = piece.map && (name === "M_Hair" || name === "M_Cap")
-      ? { shade: piece.map.shade, accent: name === "M_Hair" ? piece.map.accent : undefined, accentColor: piece.map.accentHex ? new THREE.Color(piece.map.accentHex) : undefined }
+    const m = piece.map && name === "M_Hair"
+      ? { shade: piece.map.shade, accent: piece.map.accent, cap: piece.map.cap, accentColor: piece.map.accentHex ? new THREE.Color(piece.map.accentHex) : undefined }
       : null;
     parts.push(adoptPrimitive(mesh, boneIndex, hex ? new THREE.Color(hex) : own.color ?? null, m));
   }

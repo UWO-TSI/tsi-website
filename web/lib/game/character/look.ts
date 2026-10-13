@@ -23,6 +23,8 @@ export const FACE_ATLAS_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas}
 export const HAIR_MAPS_URL = `${CHARACTER_ROOT}${catalog.hairMaps.atlas}`;
 /** A map stores luminance / median / gain: the shader multiplies the tint by map x gain. */
 export const HAIR_MAP_GAIN = catalog.hairMaps.gain;
+/** The fixed colour a hairstyle's cap or visor takes through its cap mask (never the hair tint). */
+export const HAIR_CAP_COLOR = catalog.hairMaps.cap;
 /** Its second page (David's 19 faces, face_set_305.py), loaded only for a look that wears one of them. */
 export const FACE_ATLAS2_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas2}`, world: `${CHARACTER_ROOT}base/${faceV7.atlas2_world}` };
 /** Ruling 24: the crewneck carries the site's own TSI mark (public/logo.svg, rasterised by the sync script). */
@@ -38,7 +40,7 @@ export interface CatalogPart {
   /** A whole hairstyle in the back slot (head fit): the bangs are not worn with it. */
   full?: boolean;
   /** Its channels in the hair shading atlas: tinted by map, not by COLOR_0 alone. */
-  map?: { shade: number; accent?: number };
+  map?: { shade: number; accent?: number; cap?: number };
   /** A two-tone style's second colour: a hair palette index, or "skin" (a fade to the skin), unless the look picks one. */
   accent?: { default: number | "skin" };
   /** The economy item (crafted) that unlocks this part; its catalogue_ref is this part's id. Such parts are never sold. */
@@ -263,7 +265,7 @@ export function wornParts(look: CharacterLook): CatalogPart[] {
 
 export interface ResolvedPart { id: string; url: string; /** Its LOD 1 GLB. */ lod: string; tints: Record<string, string>; decal: string | null;
   /** A mapped hairstyle: its atlas channels and accent colour (sRGB hex). */
-  map: { shade: number; accent?: number; accentHex?: string } | null }
+  map: { shade: number; accent?: number; cap?: number; accentHex?: string } | null }
 /** The accent colour of a two-tone hairstyle on a look: the look's pick, else the style's default (a palette colour or the skin). */
 export function hairAccentHex(look: CharacterLook, part: CatalogPart): string | undefined {
   if (!part.accent) return undefined;
@@ -284,7 +286,8 @@ export function resolveParts(look: CharacterLook): ResolvedPart[] {
         first = false;
       } else if (m.color) tints[m.name] = m.color;
     }
-    const map = part.map ? { shade: part.map.shade, ...(part.map.accent !== undefined ? { accent: part.map.accent, accentHex: hairAccentHex(look, part) } : {}) } : null;
+    const map = part.map ? { shade: part.map.shade, ...(part.map.cap !== undefined ? { cap: part.map.cap } : {}),
+      ...(part.map.accent !== undefined ? { accent: part.map.accent, accentHex: hairAccentHex(look, part) } : {}) } : null;
     return { id: part.id, url: CHARACTER_ROOT + part.glb, lod: LOD_ROOT + part.glb, tints, decal, map };
   });
 }

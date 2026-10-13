@@ -137,7 +137,7 @@ describe("looks", () => {
     const look = { ...wear(DEFAULT_LOOK, "back", two.id), hair: 5 };
     const r = resolveParts(look).find(p => p.id === two.id)!;
     expect(r.tints.M_Hair).toBe(PALETTE.hair[5]);
-    expect(r.map).toEqual({ shade: two.map!.shade, accent: two.map!.accent, accentHex: PALETTE.hair[two.accent!.default as number] });
+    expect(r.map).toEqual({ shade: two.map!.shade, accent: two.map!.accent, ...(two.map!.cap !== undefined ? { cap: two.map!.cap } : {}), accentHex: PALETTE.hair[two.accent!.default as number] });
     expect(resolveParts({ ...look, hairAccent: 2 }).find(p => p.id === two.id)!.map!.accentHex).toBe(PALETTE.hair[2]);
     const fade = PARTS.find(p => p.accent?.default === "skin")!;
     expect(resolveParts({ ...wear(DEFAULT_LOOK, "back", fade.id), skin: 7 }).find(p => p.id === fade.id)!.map!.accentHex).toBe(PALETTE.skin[7]);
@@ -145,9 +145,16 @@ describe("looks", () => {
     expect(parseLook({ hairAccent: 99 }).hairAccent).toBeUndefined();
     expect(resolveParts(DEFAULT_LOOK).find(p => p.id === "back_bob")!.map).toBeNull();
   });
+  it("draws every hairstyle as one primitive in one material: caps and second colours are mask channels (head fit)", () => {
+    for (const p of PARTS.filter(p => p.slot === "bangs" || p.slot === "back")) expect(p.materials.map(m => m.name), p.id).toEqual(["M_Hair"]);
+    const capped = PARTS.filter(p => p.map?.cap !== undefined).map(p => p.id).sort();
+    expect(capped).toEqual(["hair_dreads_cap", "hair_visor_messy"]);
+    const r = resolveParts({ ...wear(DEFAULT_LOOK, "back", "hair_visor_messy") }).find(p => p.id === "hair_visor_messy")!;
+    expect(r.map?.cap).toBe(PART_BY_ID.get("hair_visor_messy")!.map!.cap);
+  });
   it("ships the hair shading atlas the mapped styles sample", () => {
     expect(existsSync(join(web, "public", HAIR_MAPS_URL))).toBe(true);
-    for (const p of PARTS.filter(p => p.map)) expect([p.map!.shade, p.map!.accent ?? 0].every(c => c >= 0 && c <= 2), p.id).toBe(true);
+    for (const p of PARTS.filter(p => p.map)) expect([p.map!.shade, p.map!.accent ?? 0, p.map!.cap ?? 0].every(c => c >= 0 && c <= 2), p.id).toBe(true);
   });
   it("random looks are always valid and seeded ones repeat", () => {
     for (let i = 0; i < 200; i++) { const look = randomLook(seeded(i)); expect(parseLook(JSON.parse(JSON.stringify(look)))).toEqual(look); }

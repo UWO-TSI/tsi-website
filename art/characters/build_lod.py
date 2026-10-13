@@ -29,6 +29,9 @@ SNUG = 0.003
 # Lock hair (M_Hair) may sink a little more into the head it lies on: 4 mm is a fifth of a pixel on a character drawn
 # under 72 px (LOD 1's line); on the v8 head the default fringe and bob sank 3.3-3.8 mm at every ratio and stayed whole.
 SNUG_HAIR = 0.004
+# Strand-card hair (import_hair.py's full styles): collapse takes whole thin cards, so the furthest strand tip always
+# strays; the LOD keeps 95% of the hair's surface (both ways) within TOLERANCE instead.
+CARD_QUANTILE = 0.95
 COVER = 0.004
 KEEP = 120
 SHARP = math.radians(40.0)
@@ -69,11 +72,27 @@ def tree(ob):
     return t, verts
 
 
-def deviation(full, lod):
+def deviation(full, lod, quantile=None):
     """(furthest either way, furthest outward, furthest inward) of the LOD against the full piece, by the surfaces'
-    outward normals: a LOD vertex outside the full surface rose; inside it, or a full vertex outside the LOD's, sank."""
+    outward normals: a LOD vertex outside the full surface rose; inside it, or a full vertex outside the LOD's, sank.
+    quantile: "furthest either way" is that share of the full piece's vertices instead of all of them (strand cards: a
+    few strand tips may go at LOD 1's size, as long as the hair's surface stays)."""
     (tf, vf), (tl, vl) = tree(full), tree(lod)
     far = out = sink = 0.0
+    if quantile is not None:
+        ds = []
+        for v in vf:
+            p, n, _, d = tl.find_nearest(v)
+            if p is None:
+                return math.inf, math.inf, math.inf
+            ds.append(d)
+        for v in vl:
+            p, n, _, d = tf.find_nearest(v)
+            if p is None:
+                return math.inf, math.inf, math.inf
+            ds.append(d)
+        ds.sort()
+        return ds[int(quantile * (len(ds) - 1))], 0.0, 0.0
     for v in vl:
         p, n, _, d = tf.find_nearest(v)
         if p is None:
@@ -116,7 +135,7 @@ def decimate(ob, under, cards=False, snug=SNUG):
         # Above the armature: the rest shape is decimated, not the posed one.
         bpy.ops.object.modifier_move_to_index(modifier="LOD", index=0)
         bpy.ops.object.modifier_apply(modifier="LOD")
-        far, out, sink = deviation(ob, trial)
+        far, out, sink = deviation(ob, trial, CARD_QUANTILE if cards else None)
         if os.environ.get("LOD_DEBUG"):
             print("LODDBG", ob.name, ratio, round(far, 4), round(out, 4), round(sink, 4), under)
         # cards: strand-card hair (thin open sheets over its own opaque under-cap) has no inside to sink into, so only
@@ -135,10 +154,18 @@ def decimate(ob, under, cards=False, snug=SNUG):
 
 
 def build(src, dst, skin_only=False, merge=True, cards=False):
-    """merge=False for strand-card hair (head fit: import_hair.py's full styles): welding its cards makes non-manifold
-    junctions the collapse cannot reduce, so it is decimated as the converter split it, card by card."""
+    """cards (head fit: import_hair.py's full styles, imported unmerged): welded here with the non-manifold junctions
+    split, so the collapse can reduce them without shredding the cards."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=src, merge_vertices=merge)
+    if cards:   # strand cards welded (collapse shreds them unwelded), with the edges where three cards meet split (the
+        for ob in [o for o in bpy.data.objects if o.type == "MESH"]:      # collapse stalls on them)
+            bm = bmesh.new()
+            bm.from_mesh(ob.data)
+            bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+            bmesh.ops.split_edges(bm, edges=[e for e in bm.edges if len(e.link_faces) > 2])
+            bm.to_mesh(ob.data)
+            bm.free()
     rig = next(o for o in bpy.data.objects if o.type == "ARMATURE")
     for ob in [o for o in bpy.data.objects if o.type == "MESH"]:
         bpy.ops.object.select_all(action="DESELECT")

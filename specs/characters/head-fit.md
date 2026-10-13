@@ -181,10 +181,10 @@ The importer accepts GLB, glTF, FBX, OBJ and `.blend` files. For each one it run
 
 1. **Import.** Meshes are joined and transforms applied. Face front is -Y and up is Z.
 2. **Weld and budget.**
-   - Collapse to `LOD0_MAX` (1,750) less the under-cap. Strand cards are welded first; collapsing them unwelded shreds them.
+   - Collapse to `LOD0_MAX` (1,500) less the under-cap. Strand cards are welded first; collapsing them unwelded shreds them.
    - Where cards meet three or more to an edge, the collapse stalls; those edges are split and collapsed again.
    - The smallest wisps go last, if needed.
-3. **Clean.** A face shell is dropped (#15). Cap and visor faces move to `M_Cap`, which takes a fixed colour.
+3. **Clean.** A face shell is dropped (#15). Cap and visor faces are marked; they become a cap mask channel (step 9).
 4. **Orient.** The hair is seated both ways and keeps the facing that leaves the face open and covers the back.
 5. **Seat.** It is scaled by the head: Roblox's head is 1.2 studs wide and ours is the skull's width, so 1 stud = 0.358 m, within about 10% per hair. Nelder-Mead over the cap's rays then finds a per-axis scale (within 12% of uniform) and an offset that:
    - minimise the air under the hair;
@@ -200,12 +200,14 @@ The importer accepts GLB, glTF, FBX, OBJ and `.blend` files. For each one it run
    - Lengths below the chin follow our proportions: the neck at 0.63 and the torso at 0.30, so waist-long hair ends at our waist. They also draw in toward the body.
    - Nothing stays inside the body.
    - A last push pass follows.
-8. **Under-cap.** The head's own faces above the scalp line, 2.5 mm out, form a matte `M_HairCap` shell. No skin shows through a gap in the hair from any angle.
+8. **Under-cap.** The head's own faces above the scalp line, 2.5 mm out, form a matte shell (UVs at u < 0, COLOR_0 0.55: the engine leaves it to the tint, the hair's shadow). No skin shows through a gap in the hair from any angle.
+   - Before it: a fringe that hid the eyes (manifest `fringe`) is drawn up toward the brows before the cage step, and after it whatever still lies across the eyes (`open_face`: the face from the brows to the mouth) seen from the front is cut away; faces flung outside the hair box go.
 9. **Maps.**
    - Each texture becomes a shading map: luminance over the median of the part it shades, with glossy bands pressed down (matte, row 264).
    - Two-tone styles also get an accent mask from their saturated texels.
    - Logos are painted out with the median of the surrounding surface.
-   - Maps go into `hair/hair_maps.png`: 2048 x 1024, eight 512 px cells, one map per channel.
+   - Maps go into `hair/hair_maps.png`: 2560 x 1024, ten 512 px cells, one map per channel: 21 shading maps, 3 accent masks and 2 cap masks.
+   - **One primitive, one material** (`specs/perf/budget.md`): the cap or visor takes the fixed colour `hairMaps.cap` (#28282E) through its mask, the second colour through its accent mask, the under-cap through its UV marker. Nothing is a second material, so a full hairstyle adds no draw.
 10. **Export.** The output is `hair/full/<id>.glb` plus its catalogue entry: slot `back`, `full: true`, `map` channels, `accent`, `skull`, `source`.
 
 Then run `fit_check.py` (must PASS), `build_lod.py -- <ids>` and the sync.
@@ -217,7 +219,9 @@ Then run `fit_check.py` (must PASS), `build_lod.py -- <ids>` and the sync.
 
 ## 7. David's 21 hairstyles
 
-**Facing.** `manifest.json` pins each style's turn to face front, as reviewed in the bench: the converter kept David's own facing, which differs between styles, and the importer's guess got 5 of 21 wrong. #19's cap brim faces front, with its dreads hanging in front of the face as he made it. **Open question for David:** the messy boy (#2), the messy wolf cut (#10) and the bob with a pigtail (#17) cover the eyes from the front either way round; their facing and height need his eye.
+**Facing.** `manifest.json` pins each style's turn to face front, as reviewed in the bench: the converter kept David's own facing, which differs between styles, and the importer's guess got 5 of 21 wrong. #19's cap is worn backwards: brim forward, its dreads hung over the whole face and the cap sat low. **For David to confirm.**
+
+**Fringes.** The messy boy (#2), the messy wolf cut (#10) and the bob with a pigtail (#17) hid the eyes from the front. Their fringes are drawn up toward the brows and whatever still lay across the face (brows to mouth) seen from the front is cut away, so the eyes read through (`10-fringes.webp`). This is a first pass for David to tune.
 
 **Authorship.** David confirmed on 2026-10-08 that he made all 21 himself for his own Roblox shop, so they ship as our hair (ledger row 305). The sources are in `art/characters/hair/source/david/`.
 
@@ -231,37 +235,37 @@ Then run `fit_check.py` (must PASS), `build_lod.py -- <ids>` and the sync.
 - #20 (waves with a fade): the fade is an accent that follows the skin by default.
 - #9 has no UVs and takes the tint alone.
 
-**Cost.** Draw calls added per character: 0, since the hair merges into the body mesh. Materials added: 0. Texture: one 512 px cell channel each in the shared atlas (2048 x 1024 RGB, about 11 MB on the GPU with mipmaps, loaded once).
+**Cost.** Each style is one primitive in one material (the hair budget's rule), so it adds no draw call or material per character: it merges into the body mesh. Texture: one 512 px cell channel each in the shared atlas (2560 x 1024 RGB, about 14 MB on the GPU with mipmaps, loaded once). Before this pass most had 2 primitives and materials (the under-cap) and #8 and #19 had 3 (the cap); each extra one was a draw per character on screen, until the merge.
 
-| Hairstyle | LOD 0 | LOD 1 |
-|---|---|---|
-| hair_anime_spikes | 1,610 | 1,046 |
-| hair_baby_sprout | 1,534 | 996 |
-| hair_bob_pigtail | 1,734 | 1,622 |
-| hair_bowl_cut | 1,536 | 816 |
-| hair_dreads_cap | 1,750 | 1,638 |
-| hair_fluffy_boy | 1,648 | 1,536 |
-| hair_hime_short | 1,528 | 1,416 |
-| hair_layered_shag | 1,559 | 1,013 |
-| hair_long_pigtails | 1,750 | 1,638 |
-| hair_long_scruffy | 1,525 | 1,413 |
-| hair_messy_boy | 995 | 747 |
-| hair_messy_dreads | 1,750 | 1,638 |
-| hair_messy_low_pony | 1,517 | 1,405 |
-| hair_messy_wolf | 1,750 | 1,638 |
-| hair_short_tufts | 1,544 | 1,187 |
-| hair_swept_fringe | 1,749 | 1,637 |
-| hair_visor_messy | 1,545 | 1,433 |
-| hair_vkei | 1,445 | 1,333 |
-| hair_waves | 1,316 | 705 |
-| hair_windy_bob | 1,546 | 1,434 |
-| hair_wispy_ponytail | 1,749 | 1,637 |
+| Hairstyle | Full, before | Full, now | LOD 1, before | LOD 1, now | Primitives and materials, before | Now |
+|---|---|---|---|---|---|---|
+| hair_anime_spikes | 1,610 | 1,350 | 1,046 | 675 | 2 | 1 |
+| hair_baby_sprout | 1,534 | 1,286 | 996 | 643 | 1 | 1 |
+| hair_bob_pigtail | 1,734 | 1,359 | 1,622 | 679 | 2 | 1 |
+| hair_bowl_cut | 1,536 | 1,290 | 816 | 644 | 2 | 1 |
+| hair_dreads_cap | 1,750 | 1,499 | 1,638 | 748 | 3 | 1 |
+| hair_fluffy_boy | 1,648 | 1,339 | 1,536 | 668 | 2 | 1 |
+| hair_hime_short | 1,528 | 1,305 | 1,416 | 652 | 2 | 1 |
+| hair_layered_shag | 1,559 | 1,327 | 1,013 | 663 | 2 | 1 |
+| hair_long_pigtails | 1,750 | 1,500 | 1,638 | 749 | 2 | 1 |
+| hair_long_scruffy | 1,525 | 1,261 | 1,413 | 629 | 2 | 1 |
+| hair_messy_boy | 995 | 935 | 747 | 465 | 2 | 1 |
+| hair_messy_dreads | 1,750 | 1,500 | 1,638 | 974 | 2 | 1 |
+| hair_messy_low_pony | 1,517 | 1,224 | 1,405 | 795 | 2 | 1 |
+| hair_messy_wolf | 1,750 | 1,372 | 1,638 | 679 | 2 | 1 |
+| hair_short_tufts | 1,544 | 1,294 | 1,187 | 646 | 2 | 1 |
+| hair_swept_fringe | 1,749 | 1,500 | 1,637 | 749 | 2 | 1 |
+| hair_visor_messy | 1,545 | 1,296 | 1,433 | 648 | 3 | 1 |
+| hair_vkei | 1,445 | 1,198 | 1,333 | 777 | 2 | 1 |
+| hair_waves | 1,316 | 1,116 | 705 | 558 | 2 | 1 |
+| hair_windy_bob | 1,546 | 1,296 | 1,434 | 643 | 2 | 1 |
+| hair_wispy_ponytail | 1,749 | 1,500 | 1,637 | 745 | 2 | 1 |
 
-The sources had 609-4,000 triangles. LOD 0 runs 995-1,750, under-cap included (the head's faces above the scalp line); LOD 1 runs 705-1,638.
+The sources had 609-4,000 triangles. Now Full runs 935-1,500, under-cap included (the head's faces above the scalp line), and LOD 1 runs 465-974.
 
-LOD 0 stays within the library's full-look range: the default pair is 1,576, and the heaviest bangs plus the heaviest back is 1,756.
+Full stays under the full hair budget (1,750: the heaviest bangs-plus-back pair, which a whole hairstyle replaces; `specs/perf/budget.md`) and under the default pair (1,576).
 
-LOD 1 is often only about 110 triangles lighter, because strand cards cannot lose more within the 12 mm shape tolerance. A distant character wearing one of these styles costs up to about 470 triangles more than the default bob's LOD 1 (1,172).
+LOD 1 is about half: `build_lod.py` welds the cards, splits their three-way junctions, and holds them to 95% of the hair's surface within its 12 mm tolerance (collapse takes whole thin cards, so the furthest strand tip always strays). A distant character in one of these costs at most 974, under the default bob's 1,172.
 
 ## 8. Per-character cost, before and after
 
@@ -281,7 +285,7 @@ LOD 1 is often only about 110 triangles lighter, because strand cards cannot los
 
 **LOD 0 changes:**
 - `bangs_hime` went from 634 to 644 triangles: its side locks need more segments over the jaw.
-- The heaviest full look stays under 4,000 with the heaviest outfit and glasses: 1,264 + 1,750 + 761 + 208 = 3,983.
+- The heaviest full look stays under 4,000 with the heaviest outfit and glasses: 1,264 + 1,500 + 761 + 208 = 3,733 with one of David's styles. With every accessory slot filled, the heaviest wearable look is 4,941 at Full and 4,376 at LOD 1 (`specs/perf/budget.md`: 5,200 and 4,600), its hair a lock pair and a band.
 
 **LOD 1 changes:**
 - Lock hair's LOD 1 may now sink 4 mm (was 3) into the head. On the v8 head, the default fringe and bob otherwise stayed whole.
@@ -291,7 +295,7 @@ LOD 1 is often only about 110 triangles lighter, because strand cards cannot los
 ## 9. Known limits
 
 - David's strand-card styles are open sheets. They render because the body material is double-sided, and the checker exempts them from the closed-solid rule.
-- Three of his styles (#2, #10, #17) hide the eyes from the front: their facing and height are for David to confirm.
+- The fringes cut for #2, #10 and #17, and #19's backwards cap, are first passes for David to tune.
 - The cage step reshapes his hair a little where it met our head:
   - fringes hang 1 cm off the face;
   - long cards over the jaw bulge out locally;
