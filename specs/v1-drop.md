@@ -69,25 +69,55 @@ Lore rules: the player's substrate is never named, there are no codex dumps, not
 - **Café:** built but closed. Its lights are warm, there's an "Opening soon" chalkboard, and Rosa sweeps out front. Study tables wait for v2.
 - **Hidden until their drop:** the home island boat (v4), combat, ruins, classes and the tool-wheel weapons (v3).
 
-## 3. Community
-| Feature | Notes |
-|---|---|
-| Chat box and speech bubbles | The backend is live (world chat, filter, block, report). Build the UI |
-| Name tags | Just the name: small, clean text with a soft shadow, no plate. A member dot. Shown only when close |
-| Emote wheel | Hold a key or tap: wave, cheer, clap, sit, laugh, shrug, bow, sleep, plus the dances |
-| Dances | 4–6 looping dance clips. Moving cancels |
-| Group dance sync | 2+ dancers near each other snap to one shared beat (on the world clock) |
-| People list and **friends** | Friends list, where your friends are on the island, join a friend's shard |
-| Gifting | Hand a fish, flower or shell to a player, with a give-and-receive animation and a note |
-| Postcards | Photo-mode snaps sent to a friend's mailbox |
-| Photo mode | Hide the HUD, frames and filters, save and share (TSI socials) |
-| Nightly campfire | A beach fire at real night where players and residents sit together |
-| Rockslide cleanup | The v1 community goal. Everyone hauls rocks over about a week, with shared progress on the notice board. It opens the mountain and launches v2 |
-| Fishing buddies | Fish near someone for a calm "good company" boost and a shared catch log |
-| Kites | On windy days, kites on the beach riding the shared wind |
-| Traditions calendar | What happens depends on the day and real traditions: kites on windy days, lanterns on festival nights, seasonal events. The calendar is admin-editable (principle 8) |
+## 3. Community (decided with David 2026-10-13)
+**Name tags.** Shown only over other players and residents, within about 8 steps; your own name is hidden. Small clean text with a soft shadow, no plate. Members get a tiny dot, and residents use a warmer colour.
 
-Later: interactive emotes (high-five, hug), campfire stories, lantern night, the café debates (v2).
+**Chat.**
+- Enter (or a small chat icon on touch) opens a slim cream bar at bottom-left. Enter sends, Esc closes, and the world ignores your movement keys while you type.
+- Messages show as a speech bubble over the speaker for about 6 s (visible within about 20 steps), plus the last 4–5 lines fading at bottom-left. Enter shows the full scrollable log.
+- While a bubble shows, the speaker's mouth moves with small gestures and a little hop now and then. A "…" bubble shows while someone types.
+- The backend (filter, mute, block, report) is live. The client must register the `line` message and keep `sys` refusals separate from restart notices.
+
+**Emote wheel.**
+- Hold G and release to pick. Tap G repeats the last emote. On phones it's an emote button. Rebindable.
+- Main ring: wave, cheer, clap, laugh, sit, sleep, bow, shrug.
+- The centre button flips the ring to the **8 dances**, all cozy and silly: happy bounce, little spin, shuffle, sway, wiggle, goofy flail, robot, sprinkler. Moving cancels a dance.
+
+**Group dance sync.** 2+ dancers within about 6 steps snap to one shared beat on the world clock, each keeping their own move. Music-note particles rise and a soft beat plays nearby.
+
+**Emotes that react to places:**
+- sleep on the stargazing hill at night starts stargazing;
+- sit at the campfire warms your hands, and people sit together in a ring;
+- sit at the dock edge dangles your feet over the water;
+- sleep on a bench is a nap with drifting z's;
+- wave at the sea while Bram's boat is out and he waves back;
+- cheer when someone nearby lands a rare fish and residents cheer too;
+- bow to Odile at the museum and she bows back.
+
+**The campfire dance (the signature community moment).**
+- At the beach fire, which is lit every real night, dancing turns into **our own joyful "liberation" stomp dance** circling the fire, for up to 8 dancers.
+- Each dancer adds a drum layer, up to 6 unique layers from CC0 drum loops, and **6 dancers play the full drum song**.
+- Every dancer makes the fire bigger and brighter.
+- No One Piece name or music (copyright); the energy is ours.
+
+**Friends.**
+- Add a friend by clicking a player nearby (a card with Add friend / Wave / Gift) or by **friend code**.
+- Friends get their location on the island, **Join** (moves you into their shard), an online toast, and a friend marker by their name tag and on the minimap.
+- A **shard** is one copy of the island, holding about 30–40 people. Join keeps friends in the same copy.
+
+**Friend perks.** Rewards are cosmetic or coins, never XP.
+- **Fishing together:** fishing within a few steps of a friend gives you both a slightly better rare chance and a shared catch log.
+- **Friendship hearts:** fishing, dancing, stargazing and gifting together raise a friendship level. Milestones unlock cosmetics: matching bracelets, duo photo frames, a shared bench nameplate.
+- **Shaking a tree together** gives you each an extra fruit.
+
+**Gifting.**
+- Walk up to someone, choose Gift, pick an item from your bag and add an optional note. You hold it out, they accept, and they play a thank-you animation. A declined or missed gift waits in their mailbox.
+- Giftable: **clothes and cosmetics** (never Gem-priced items), **crafted items**, and **progression items** (exact list to confirm).
+- About 10 gifts a day; coin value can't be moved.
+
+**Postcards.** In photo mode, after a snap you can send it as a postcard to a friend's mailbox with a short message, or save it to your device to post anywhere.
+
+**Still open in this section:** photo mode details, the rockslide cleanup, kites, traditions, the people list.
 
 ## 4. Calm activities
 - **Already in:** fishing, foraging, bugs, digging, the museum, crafting and the glider.
