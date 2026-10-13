@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SLOPE_RUN, cellsInPolygon, cliffDab, nextObjectId, organicCell, slopeDab, snapPlacement, snapshotCells, softDab, waterDistance, type OrganicOp } from "./painterTools";
+import { SLOPE_RUN, cellsInPolygon, cliffDab, nextObjectId, organicCell, padUnder, slopeDab, snapPlacement, snapshotCells, softDab, waterDistance, type OrganicOp } from "./painterTools";
 import { CLIFF_LEVELS, createCenteredMap, levelAt, setCell, surfaceAt, Surface, isRiver, valueNoise, type IslandMap } from "./grid";
 import { LANDMARK_INFO } from "./defaultIsland";
 
@@ -169,5 +169,54 @@ describe("objects", () => {
     expect(Math.abs((z - hd - 0.5) % 1)).toBeCloseTo(0);
     expect(snapPlacement(1.26, -3.74, 0.5)).toEqual([1.5, -3.5]);
     expect(snapPlacement(1.26, -3.74, 0)).toEqual([1.26, -3.74]);
+  });
+});
+
+describe("padUnder: a dropped building levels the ground it stands on", () => {
+  /** A 21×21 grass field rising a level every column, so any pad shows. */
+  function ramp(): IslandMap {
+    const map = createCenteredMap(21, 21);
+    for (let z = 0; z < 21; z++) for (let x = 0; x < 21; x++) setCell(map, x, z, Math.min(8, Math.floor(x / 3)), Surface.Grass);
+    return map;
+  }
+  const at = (map: IslandMap, x: number, z: number) => levelAt(map, x, z);
+
+  it("takes the level under the building's centre across the footprint and a one-cell rim", () => {
+    const map = ramp(), o = { x: 0, z: 0 }; // the centre cell (10, 10), level 3
+    const bounds = padUnder(map, o, { hw: 2, hd: 1, cx: 0, cz: 0 });
+    expect(bounds).toEqual([7, 8, 13, 12]);
+    for (let z = 8; z <= 12; z++) for (let x = 7; x <= 13; x++) expect(at(map, x, z), `${x},${z}`).toBe(3);
+    // Past the rim the ground is untouched.
+    expect(at(map, 14, 10)).toBe(4);
+    expect(at(map, 10, 13)).toBe(3); // was 3 already: column 10
+    expect(at(map, 6, 10)).toBe(2);
+  });
+
+  it("turns with the building: a quarter turn swaps the pad's width and depth", () => {
+    const map = ramp();
+    padUnder(map, { x: 0, z: 0, yaw: Math.PI / 2 }, { hw: 2, hd: 1, cx: 0, cz: 0 });
+    // Now 2 cells (+ rim) along z and 1 (+ rim) along x.
+    expect(at(map, 8, 10)).toBe(3);
+    expect(at(map, 7, 10)).toBe(2);
+    expect(at(map, 10, 7)).toBe(3);
+  });
+
+  it("never makes land out of water, and does nothing when the centre is in the sea", () => {
+    const map = ramp();
+    for (let x = 0; x < 21; x++) setCell(map, x, 12, 0, Surface.River);
+    padUnder(map, { x: 0, z: 0 }, { hw: 2, hd: 2, cx: 0, cz: 0 });
+    expect(surfaceAt(map, 10, 12)).toBe(Surface.River);
+    expect(at(map, 10, 12)).toBe(0);
+    const sea = ramp();
+    for (let x = 0; x < 21; x++) setCell(sea, x, 10, 0, Surface.River);
+    expect(padUnder(sea, { x: 0, z: 0 }, { hw: 2, hd: 1, cx: 0, cz: 0 })).toBeNull();
+    expect(at(sea, 12, 9)).toBe(4);
+  });
+
+  it("flattens a ramp inside the pad into plain ground", () => {
+    const map = ramp();
+    setCell(map, 11, 10, 3, Surface.Ramp);
+    padUnder(map, { x: 0, z: 0 }, { hw: 1, hd: 1, cx: 0, cz: 0 });
+    expect(surfaceAt(map, 11, 10)).toBe(Surface.Grass);
   });
 });

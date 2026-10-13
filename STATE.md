@@ -17,8 +17,9 @@
   world draft that will REPLACE the live member island once village + residents + fishing
   pass gates. Merged to `main` (`0c0310e6`): generator `art/terrain/draft_from_png.py`,
   draft data + fixture, 7 guard tests, `MAX_LEVEL` 6 -> 8, residentRoutine crash guards.
-- Walk it at `/lab/island?fixture=v2`, paint it at `/lab/map?fixture=v2`. Iterate the
-  generator's constants, never the JSON.
+- Walk it at `/lab/island?fixture=v2`, paint it at `/lab/map?fixture=v2`. FROZEN
+  2026-10-10: `web/data/world-map.json` is David's hand-edited source of truth (painter
+  Save writes it; committed when he locks the layout). The generator no longer writes it.
 - Next: P0 David signs off the walk, then P1 village + wharf layout proposal (Oracle
   Temple goes on the summit, village is chill study, wharf is the fishing-village
   entrance). Combat home still open: north island vs forest ruins, David deciding.

@@ -71,13 +71,12 @@ import {
   PAINTER_DRAFT_KEY, normaliseSea, parseVillage, serialiseVillage, villageJson, villageOf,
   type MapObject, type ObjectKind, type VillageDoc,
 } from "@/lib/game/villageMap";
-import { LANDMARK_IDS, LANDMARK_INFO, PROP_FOOTPRINT, TREE_SLOTS, TREE_TRUNK, objectFootprint, turn, type LandmarkId } from "@/lib/game/defaultIsland";
+import { LANDMARK_IDS, LANDMARK_INFO, PROP_FOOTPRINT, TREE_SLOTS, TREE_TRUNK, landmarkHalf, objectFootprint, turn, type LandmarkId } from "@/lib/game/defaultIsland";
 import { villageHealth, type VillageHealth } from "@/lib/game/mapHealth";
 import { terrainFixtureDoc } from "@/lib/game/fixtures/terrainFixture";
-import { terrainV2DraftDoc } from "@/lib/game/fixtures/terrainV2Draft";
 import { mapBudget } from "@/lib/game/mapBudget";
 import { classifyWater, WATER_CLASS } from "@/lib/game/fishingSpots";
-import { SLOPE_RUN, cellsInPolygon, cliffDab, nextObjectId, organicCell, slopeDab, snapPlacement, snapshotCells, softDab, waterDistance, type CellSnapshot, type OrganicOp } from "@/lib/game/painterTools";
+import { SLOPE_RUN, cellsInPolygon, cliffDab, nextObjectId, organicCell, padUnder, slopeDab, snapPlacement, snapshotCells, softDab, waterDistance, type CellSnapshot, type OrganicOp } from "@/lib/game/painterTools";
 import { RESIDENT_ANCHORS, SHARED_SPACING } from "@/lib/content/residents";
 import { FURNITURE, type Furniture } from "@/lib/study/seats";
 import { DEFAULT_TABLES } from "@/lib/study/tables";
@@ -245,6 +244,25 @@ interface World {
   source: "village" | "legacy";
 }
 let WORLD: World | null = null;
+
+/**
+ * The world map (terrain v2), David's painted source of truth since 2026-10-10 (specs/terrain-v2.md). With
+ * `?fixture=v2` the painter edits it over /api/lab/world-map, not as a bundled import: a Save rewrites the file, and
+ * a page that imported it would hot-reload under you and lose the undo history. `BASIS` fingerprints the file text
+ * the working copy started from, so an autosave is only restored onto the same file it was made from.
+ */
+let TARGET: "world" | null = null;
+let BASIS = "";
+const WORLD_DRAFT_KEY = "lab-map-world-draft-v1";
+const textHash = (t: string) => {
+  let h = 5381;
+  for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0;
+  return `${t.length}:${h >>> 0}`;
+};
+/** The world map runs its buildings a touch larger (art/terrain/draft_from_png.py BUILDING_SCALE); new ones match. */
+const WORLD_BUILDING_SCALE = 1.15;
+/** Buildings stand on a levelled pad (`padUnder`): the landmarks with a real footprint, not the wharf over water. */
+const PADDED = (o: MapObject) => o.kind === "landmark" && o.id !== "wharf" && Math.max(...(LANDMARK_INFO[o.id as LandmarkId]?.half ?? [0])) > 1;
 
 /** Any document into the working world: one sea convention (Void becomes River at level 0). */
 function fromDoc(doc: VillageDoc, source?: World["source"]): World {
@@ -443,8 +461,8 @@ function terrainRaster(map: IslandMap, waterClass: Uint8Array): HTMLCanvasElemen
 }
 
 const keyOf = (o: MapObject) => `${o.kind}:${o.id}`;
-/** Kinds the game turns by their yaw. Buildings face the camera (ACNH); nature takes its turn from its seed. */
-const TURNS = (o: MapObject) => ["bench", "rock", "fence", "bridge", "study", "missions"].includes(o.kind) || (o.kind === "landmark" && o.id === "wharf");
+/** Kinds the game turns by their yaw (buildings too, since 2026-10-10); nature takes its turn from its seed. */
+const TURNS = (o: MapObject) => ["bench", "rock", "fence", "bridge", "study", "missions", "landmark"].includes(o.kind);
 const deg = (rad = 0) => Math.round((rad * 180) / Math.PI * 10) / 10;
 
 /** Local outline (before yaw) of an object's footprint, for drawing and hit tests; null = drawn as a dot. */
@@ -487,10 +505,15 @@ export default function MapLab() {
   const [selected, setSelected] = useState<string | null>(null);
   const [health, setHealth] = useState<VillageHealth | null>(null);
   const [version, setVersion] = useState(0);
+  /** The world map's load and save (`?fixture=v2`): where it is, and when the file last took a Save. */
+  const [worldStatus, setWorldStatus] = useState<"none" | "loading" | "ready" | "error">("none");
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const painting = useRef(false);
   const lastCell = useRef<{ x: number; z: number } | null>(null);
   const lasso = useRef<[number, number][]>([]);
-  const moving = useRef<{ key: string; dx: number; dz: number; committed: boolean } | null>(null);
+  const moving = useRef<{ key: string; dx: number; dz: number; committed: boolean; moved: boolean; fresh: boolean } | null>(null);
   /**
    * The authoritative drag origin.
    *
@@ -545,12 +568,45 @@ export default function MapLab() {
   useEffect(() => {
     // `?fixture=terrain`: the natural-terrain test island (never the shipped one), for trying the brushes.
     const fixture = new URLSearchParams(window.location.search).get("fixture");
-    if (fixture === "terrain" || fixture === "v2") {
-      // `v2`: David's drawn world-map draft (terrain sizing pass, 2026-10-09).
-      WORLD = fromDoc(fixture === "v2" ? terrainV2DraftDoc() : terrainFixtureDoc(), "village");
+    if (fixture === "terrain") {
+      WORLD = fromDoc(terrainFixtureDoc(), "village");
       setLoadFocus(WORLD);
       setVersion((v) => v + 1);
       return;
+    }
+    if (fixture === "v2") {
+      // The world map: the file, or this browser's unsaved edits to that same file.
+      let live = true;
+      setWorldStatus("loading");
+      fetch("/api/lab/world-map", { cache: "no-store" })
+        .then((r) => (r.ok ? r.text() : Promise.reject(new Error(`${r.status}`))))
+        .then((text) => {
+          if (!live) return;
+          BASIS = textHash(text);
+          let doc = JSON.parse(text) as VillageDoc, restored = false;
+          try {
+            const raw = window.localStorage.getItem(WORLD_DRAFT_KEY);
+            const draft = raw ? (JSON.parse(raw) as { basis: string; doc: VillageDoc; at?: string }) : null;
+            if (draft?.basis === BASIS) { doc = draft.doc; restored = true; }
+            else if (draft) {
+              // Edits made on an older file: keep them as a named draft rather than lose them.
+              const lib = readLibrary();
+              lib[`world (unsaved ${draft.at ?? "earlier"})`] = draft.doc;
+              writeLibrary(lib);
+              setLibrary(Object.keys(lib).sort());
+              window.localStorage.removeItem(WORLD_DRAFT_KEY);
+            }
+          } catch { /* no storage: the file alone */ }
+          TARGET = "world";
+          WORLD = fromDoc(doc, "village");
+          UNDO.length = 0; REDO = [];
+          setLoadFocus(WORLD);
+          setEdited(restored);
+          setWorldStatus("ready");
+          setVersion((v) => v + 1);
+        })
+        .catch(() => { if (live) setWorldStatus("error"); });
+      return () => { live = false; };
     }
     let saved: string | null = null;
     try {
@@ -578,9 +634,33 @@ export default function MapLab() {
 
   const saveNow = useCallback(() => {
     try {
-      window.localStorage.setItem(PAINTER_DRAFT_KEY, JSON.stringify(draftDoc(world())));
+      if (TARGET === "world") window.localStorage.setItem(WORLD_DRAFT_KEY, JSON.stringify({ basis: BASIS, doc: draftDoc(world()), at: new Date().toLocaleString() }));
+      else window.localStorage.setItem(PAINTER_DRAFT_KEY, JSON.stringify(draftDoc(world())));
     } catch {
       /* quota or private mode: autosave is a convenience, not a guarantee */
+    }
+  }, []);
+
+  /** Save the world map to web/data/world-map.json (dev only). The file is then the basis; the autosave is spent. */
+  const saveWorld = useCallback(async (): Promise<boolean> => {
+    if (TARGET !== "world") return false;
+    setSaving(true);
+    setSaveError(null);
+    const doc = draftDoc(world());
+    try {
+      const r = await fetch("/api/lab/world-map", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(doc) });
+      const body = (await r.json().catch(() => ({}))) as { error?: string };
+      if (!r.ok) throw new Error(body.error ?? `save failed (${r.status})`);
+      BASIS = textHash(villageJson(doc));
+      try { window.localStorage.removeItem(WORLD_DRAFT_KEY); } catch { /* nothing to clear */ }
+      setEdited(false);
+      setSavedAt(new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
+      return true;
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "save failed");
+      return false;
+    } finally {
+      setSaving(false);
     }
   }, []);
 
@@ -672,12 +752,24 @@ export default function MapLab() {
 
   /** Snap a world point for an object of this kind (buildings: footprint edges on cell edges). */
   const snapFor = useCallback(
-    (kind: ObjectKind, id: string, x: number, z: number): [number, number] => {
-      const half = kind === "landmark" && snap > 0 ? LANDMARK_INFO[id as LandmarkId]?.half : undefined;
+    (kind: ObjectKind, id: string, x: number, z: number, yaw?: number, scale?: number): [number, number] => {
+      // The footprint as it stands (turned and scaled), so its edges are what land on cell edges.
+      const half = kind === "landmark" && snap > 0 ? landmarkHalf(id as LandmarkId, yaw, scale) : null;
       return snapPlacement(x, z, snap, half && half[0] > 1 ? half : undefined);
     },
     [snap]
   );
+
+  /** Level the ground under a building where it now stands (`padUnder`). Part of the edit that moved it: no commit. */
+  const padObject = useCallback((key: string) => {
+    const w = world(), o = w.objects.find((ob) => keyOf(ob) === key);
+    const f = o && PADDED(o) ? objectFootprint(o) : null;
+    if (!o || !f) return;
+    const b = padUnder(w.map, o, f);
+    if (!b) return;
+    touch(...b);
+    bump();
+  }, [bump]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -692,13 +784,14 @@ export default function MapLab() {
         if (o) {
           if (e.key === "Escape") setSelected(null);
           if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); deleteObject(selected!); }
-          if (e.key.toLowerCase() === "r" && TURNS(o)) updateObject(selected!, { yaw: ((o.yaw ?? 0) + (e.shiftKey ? Math.PI / 12 : Math.PI / 2)) % (Math.PI * 2) });
+          if (e.key.toLowerCase() === "r" && TURNS(o)) { updateObject(selected!, { yaw: ((o.yaw ?? 0) + (e.shiftKey ? Math.PI / 12 : Math.PI / 2)) % (Math.PI * 2) }); padObject(selected!); }
           const step = snap || 0.1, flip = view === "game" ? -1 : 1;
           const arrows: Record<string, [number, number]> = { ArrowLeft: [-flip * step, 0], ArrowRight: [flip * step, 0], ArrowUp: [0, -flip * step], ArrowDown: [0, flip * step] };
           if (arrows[e.key]) { e.preventDefault(); updateObject(selected!, { x: Math.round((o.x + arrows[e.key][0]) * 1e6) / 1e6, z: Math.round((o.z + arrows[e.key][1]) * 1e6) / 1e6 }); }
         }
         return;
       }
+      if (e.key.toLowerCase() === "s" && TARGET === "world") { e.preventDefault(); void saveWorld(); return; }
       if (e.key.toLowerCase() !== "z" && e.key.toLowerCase() !== "y") return;
       e.preventDefault();
       if (e.key.toLowerCase() === "y" || e.shiftKey) redo();
@@ -706,7 +799,7 @@ export default function MapLab() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [undo, redo, selected, deleteObject, updateObject, snap, view]);
+  }, [undo, redo, selected, deleteObject, updateObject, snap, view, padObject, saveWorld]);
 
   const flip = view === "game";
   /** The canvas's scroll viewport; a freshly loaded map centres its FOCUS in it (the fixture's first screen was open sea). */
@@ -909,7 +1002,7 @@ export default function MapLab() {
         for (const [which, c] of [["door", "#ffffff"], ["exit", "#4ad8ff"]] as const) {
           const off = info?.[which];
           if (!off) continue;
-          const [dx, dz] = turn(off[0], off[1], o.yaw);
+          const k = o.scale ?? 1, [dx, dz] = turn(off[0] * k, off[1] * k, o.yaw);
           ctx.beginPath();
           ctx.arc(cellU(o.x + dx), cellV(o.z + dz), 0.22, 0, Math.PI * 2);
           ctx.fillStyle = c;
@@ -1299,7 +1392,8 @@ export default function MapLab() {
       if (kind === "fence") extra = { model: FENCE_MODELS.includes(placeModel) ? placeModel : FENCE_MODELS[0] };
       if (kind === "bug") extra = { model: BUG_BIOMES.includes(placeModel) ? placeModel : BUG_BIOMES[1] };
       if (kind === "bridge") extra = { yaw: Math.PI / 2 };
-      const [x, z] = snapFor(kind, id, wx, wz);
+      if (kind === "landmark" && TARGET === "world" && id !== "wharf" && (LANDMARK_INFO[id as LandmarkId]?.half?.[0] ?? 0) > 1) extra = { ...extra, scale: WORLD_BUILDING_SCALE };
+      const [x, z] = snapFor(kind, id, wx, wz, extra.yaw, extra.scale);
       commit();
       w.objects = [...w.objects, { id, kind, x, z, ...extra }];
       bump();
@@ -1341,7 +1435,7 @@ export default function MapLab() {
               const key = hit ? keyOf(hit) : placeObject(c.wx, c.wz);
               setSelected(key);
               const o = hit ?? (key ? world().objects.find((ob) => keyOf(ob) === key) : null);
-              moving.current = o && key ? { key, dx: o.x - c.wx, dz: o.z - c.wz, committed: !hit } : null;
+              moving.current = o && key ? { key, dx: o.x - c.wx, dz: o.z - c.wz, committed: !hit, moved: false, fresh: !hit } : null;
               return;
             }
             dragRef.current = c;
@@ -1368,7 +1462,9 @@ export default function MapLab() {
           onMouseUp={(e) => {
             const c = pointer(e);
             if (tool === "object") {
+              const m = moving.current;
               moving.current = null;
+              if (m && (m.moved || m.fresh)) padObject(m.key);
               return;
             }
             const from = dragRef.current;
@@ -1408,10 +1504,11 @@ export default function MapLab() {
             if (m && tool === "object" && e.buttons === 1) {
               const o = world().objects.find((ob) => keyOf(ob) === m.key);
               if (!o) return;
-              const [x, z] = snapFor(o.kind, o.id, c.wx + m.dx, c.wz + m.dz);
+              const [x, z] = snapFor(o.kind, o.id, c.wx + m.dx, c.wz + m.dz, o.yaw, o.scale);
               if (x === o.x && z === o.z) return;
               updateObject(m.key, { x, z }, !m.committed);
               m.committed = true;
+              m.moved = true;
               return;
             }
             if (painting.current && shape === "lasso") {
@@ -1429,9 +1526,21 @@ export default function MapLab() {
             the two things that must never be scrolled off a drafting tool. */}
         <div style={{ borderBottom: "1px solid #232a31", padding: "12px 14px", flexShrink: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ fontSize: 13, color: "#ffd166" }}>/lab/map · {source === "village" ? "village-map.json" : "legacy island-map.json"}</span>
-            <span style={{ color: edited ? "#7fd1c0" : "#5c6670" }}>{edited ? "draft autosaved" : "shipped"}</span>
+            <span style={{ fontSize: 13, color: "#ffd166" }}>/lab/map · {TARGET === "world" ? "world-map.json" : source === "village" ? "village-map.json" : "legacy island-map.json"}</span>
+            {TARGET === "world"
+              ? <span style={{ color: saveError ? "#ff6b6b" : edited ? "#ffd166" : "#7fd1c0" }}>{saveError ? "save failed" : edited ? "unsaved changes" : savedAt ? `saved ${savedAt}` : "saved"}</span>
+              : <span style={{ color: edited ? "#7fd1c0" : "#5c6670" }}>{worldStatus === "loading" ? "loading world map…" : worldStatus === "error" ? "world map failed to load" : edited ? "draft autosaved" : "shipped"}</span>}
           </div>
+          {TARGET === "world" && (
+            <div style={{ display: "flex", gap: 4, marginBottom: 6, alignItems: "center" }}>
+              <button onClick={() => void saveWorld()} disabled={saving || !edited}
+                style={btn(edited && !saving, { flex: 1, opacity: saving || !edited ? 0.45 : 1 })}
+                title="write web/data/world-map.json (Cmd/Ctrl+S). Commit it when the layout is locked.">
+                {saving ? "saving…" : "save to world-map.json"}
+              </button>
+            </div>
+          )}
+          {saveError && <div style={{ color: "#ff6b6b", marginBottom: 6, lineHeight: 1.4 }}>{saveError}</div>}
           <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
             <button onClick={undo} disabled={!UNDO.length} style={btn(false, { flex: 1, opacity: UNDO.length ? 1 : 0.35 })}>↶ undo</button>
             <button onClick={redo} disabled={!REDO.length} style={btn(false, { flex: 1, opacity: REDO.length ? 1 : 0.35 })}>↷ redo</button>
@@ -1468,7 +1577,16 @@ export default function MapLab() {
                 // An unedited fixture walks as the fixture: saving it first would
                 // overwrite the painter's own autosaved draft with the fixture.
                 const fixture = new URLSearchParams(window.location.search).get("fixture");
-                if ((fixture === "terrain" || fixture === "v2") && !edited) {
+                if (TARGET === "world") {
+                  // The walk reads the file, so the walk shows what is saved: save first.
+                  const tab = window.open("about:blank", "_blank");
+                  void (edited ? saveWorld() : Promise.resolve(true)).then((ok) => {
+                    if (ok && tab) tab.location.href = "/lab/island?fixture=v2";
+                    else tab?.close();
+                  });
+                  return;
+                }
+                if (fixture === "terrain" && !edited) {
                   window.open(`/lab/island?fixture=${fixture}`, "_blank");
                   return;
                 }
@@ -1945,10 +2063,12 @@ export default function MapLab() {
             }}
             style={btn(false, { width: "100%", padding: "9px 0", background: copied ? "#7fd1c0" : "#1c2126", color: copied ? "#12161a" : "#c8cfd4" })}
           >
-            {copied ? `copied — paste into data/${source === "village" ? "village" : "island"}-map.json` : "Export map → clipboard"}
+            {copied ? (TARGET === "world" ? "copied" : `copied — paste into data/${source === "village" ? "village" : "island"}-map.json`) : "Export map → clipboard"}
           </button>
           <div style={{ color: "#5c6670", marginTop: 8, lineHeight: 1.5 }}>
-            {source === "village" ? (
+            {TARGET === "world" ? (
+              <>Save (Cmd/Ctrl+S) writes <code>web/data/world-map.json</code>; it is committed when you lock the layout. Export only copies it, for sharing a draft.</>
+            ) : source === "village" ? (
               <>Paste over <code>web/data/village-map.json</code> (the coordinator commits it). Healthy above means the suite stays green.</>
             ) : (
               <>Legacy draft: paste over <code>web/data/island-map.json</code>. The game reads the village file.</>

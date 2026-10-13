@@ -17,7 +17,7 @@
  * every op that turns land into water writes that, and "water" below means
  * River or legacy Void.
  */
-import { CLIFF_LEVELS, DIR_OFFSETS, MAX_LEVEL, Surface, inBounds, isRamp, isWater, smoothstep, squaredDistanceTransform, valueNoise, type IslandMap } from "./grid";
+import { CLIFF_LEVELS, DIR_OFFSETS, MAX_LEVEL, Surface, cellToWorldX, cellToWorldZ, inBounds, isRamp, isWater, smoothstep, squaredDistanceTransform, valueNoise, worldToCellX, worldToCellZ, type IslandMap } from "./grid";
 import type { MapObject, ObjectKind } from "./villageMap";
 
 export interface CellSnapshot { levels: Uint8Array; surfaces: Uint8Array }
@@ -257,4 +257,38 @@ export function snapPlacement(x: number, z: number, step: number, half?: readonl
   const r = (v: number) => Math.round(v * 1e6) / 1e6;
   if (half) return [r(Math.round(x - half[0] - 0.5) + 0.5 + half[0]), r(Math.round(z - half[1] - 0.5) + 0.5 + half[1])];
   return step > 0 ? [r(Math.round(x / step) * step), r(Math.round(z / step) * step)] : [x, z];
+}
+
+/** A building's footprint in its own frame (before yaw): half width and depth, centred at (cx, cz). */
+export interface PadFootprint { hw: number; hd: number; cx: number; cz: number }
+
+/**
+ * The pad a building stands on (David, 2026-10-10: dropping a building on uneven ground levels it, so it never
+ * floats or sinks). Every land cell whose centre falls inside the turned footprint grown by `rim` cells takes the
+ * level of the cell under the building's centre: you put it where it stands. Water stays water (a building over the
+ * shore is the health checks' to flag), and a ramp inside the pad becomes plain grass. Returns the touched cell
+ * bounds for the painter's repaint, or null when the centre itself is water.
+ */
+export function padUnder(map: IslandMap, o: Pick<MapObject, "x" | "z" | "yaw">, f: PadFootprint, rim = 1): [number, number, number, number] | null {
+  const cx0 = worldToCellX(map, o.x), cz0 = worldToCellZ(map, o.z);
+  if (!inBounds(map, cx0, cz0) || isWater(map.surfaces[cz0 * map.width + cx0])) return null;
+  const level = map.levels[cz0 * map.width + cx0];
+  const c = Math.cos(o.yaw ?? 0), s = Math.sin(o.yaw ?? 0);
+  const hw = f.hw + rim, hd = f.hd + rim, reach = Math.ceil(Math.hypot(Math.abs(f.cx) + hw, Math.abs(f.cz) + hd));
+  let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
+  for (let z = cz0 - reach; z <= cz0 + reach; z++) {
+    for (let x = cx0 - reach; x <= cx0 + reach; x++) {
+      if (!inBounds(map, x, z)) continue;
+      // The cell centre in the building's own frame (the inverse of defaultIsland's `turn`).
+      const dx = cellToWorldX(map, x) - o.x, dz = cellToWorldZ(map, z) - o.z;
+      const lx = dx * c - dz * s, lz = dx * s + dz * c;
+      if (Math.abs(lx - f.cx) > hw || Math.abs(lz - f.cz) > hd) continue;
+      const i = z * map.width + x;
+      if (isWater(map.surfaces[i])) continue;
+      map.levels[i] = level;
+      if (isRamp(map.surfaces[i])) map.surfaces[i] = Surface.Grass;
+      x0 = Math.min(x0, x); z0 = Math.min(z0, z); x1 = Math.max(x1, x); z1 = Math.max(z1, z);
+    }
+  }
+  return x0 <= x1 ? [x0, z0, x1, z1] : null;
 }
