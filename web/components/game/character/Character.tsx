@@ -689,8 +689,9 @@ function HeldItem({ puppet, motion, view: { url, hold, fit }, remote }: { puppet
     poseHeld(model, puppet.current, grip, hold, age.current, delta);
     castItem(casters, !remote || !!motion.current?.itemShadow);
   });
-  // The rod carries its fishing: the bobber, the line and the catch of this avatar's own cast.
-  return hold === "rod" ? <FishingRig motion={motion} rod={model} hands={puppet.sockets} /> : null;
+  // The rod carries its fishing: the bobber, the line and the catch of this avatar's own cast. Not on another player's
+  // until remote casts are sent (specs/multiplayer.md follow-up): their rod shows alone, as it always has.
+  return hold === "rod" && !remote ? <FishingRig motion={motion} rod={model} hands={puppet.sockets} /> : null;
 }
 /** Module scope (the react compiler forbids writing through hook values): pop out, hide where put away, ease to the use grip. */
 function poseHeld(model: THREE.Object3D, clip: ClipName | null, grip: Grip, hold: HoldKind, age: number, delta: number) {
@@ -720,8 +721,8 @@ export interface CharacterProps {
   /** Detail by drawn size (lod.ts); off in the creator, which shows one character up close. */
   lod?: boolean;
   /**
-   * Another player (RemoteAvatar): what they hold casts a sun shadow only while `motion.itemShadow` (Full, near you;
-   * specs/perf/effects-cost.md).
+   * Another player (RemoteAvatar): their rod mounts no fishing rig (remote casts aren't sent yet), and what they hold
+   * casts a sun shadow only while `motion.itemShadow` (Full, near you; specs/perf/effects-cost.md).
    */
   remote?: boolean;
 }
