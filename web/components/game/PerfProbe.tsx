@@ -5,7 +5,9 @@
  * `window.__perf`. Between `begin()` and `end()` it records, per frame: draw calls and triangles (every pass: the shadow
  * maps, the scene, the post passes), character mixers stepped and skeletons uploaded (lib/game/perf/frameStats.ts), the
  * main thread's time from the first frame callback to the end of the scene render (`cpu`) and of the render alone
- * (`render`). `scene()` counts what the scene holds. Nothing runs in production.
+ * (`render`). `scene()` counts what the scene holds. Where the browser has EXT_disjoint_timer_query_webgl2 it also
+ * times the GPU's work for each whole frame (`gpu()`: every GL command between two frames' first callbacks; most
+ * desktop Chromes hide the extension, and then it reports nothing). Nothing runs in production.
  */
 import { useEffect, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
@@ -76,8 +78,38 @@ function sceneCounts(scene: THREE.Scene, gl: THREE.WebGLRenderer) {
   return { ...c, programs: gl.info.programs?.length ?? 0, geometries: gl.info.memory.geometries, textures: gl.info.memory.textures };
 }
 
+/** GPU time per frame from timer queries (EXT_disjoint_timer_query_webgl2), when the browser exposes it. */
+interface TimerExt { TIME_ELAPSED_EXT: number; GPU_DISJOINT_EXT: number }
+class GpuTimer {
+  private readonly ext: TimerExt | null;
+  private active: WebGLQuery | null = null;
+  private readonly pending: WebGLQuery[] = [];
+  readonly ms: number[] = [];
+  on = false;
+  constructor(private readonly gl: WebGL2RenderingContext) {
+    this.ext = gl.getExtension("EXT_disjoint_timer_query_webgl2") as TimerExt | null;
+  }
+  get available() { return !!this.ext; }
+  /** At each frame's start: close the last frame's query, open this one's, collect what has finished. */
+  frame() {
+    const { gl, ext } = this;
+    if (!ext) return;
+    if (this.active) { gl.endQuery(ext.TIME_ELAPSED_EXT); this.pending.push(this.active); this.active = null; }
+    while (this.pending.length && gl.getQueryParameter(this.pending[0], gl.QUERY_RESULT_AVAILABLE)) {
+      const q = this.pending.shift()!, ns = gl.getQueryParameter(q, gl.QUERY_RESULT) as number;
+      if (this.on && !gl.getParameter(ext.GPU_DISJOINT_EXT)) this.ms.push(ns / 1e6);
+      gl.deleteQuery(q);
+    }
+    if (this.on && this.pending.length < 8) { this.active = gl.createQuery(); if (this.active) gl.beginQuery(ext.TIME_ELAPSED_EXT, this.active); }
+  }
+  summary() {
+    const a = [...this.ms].sort((x, y) => x - y), q = (p: number) => (a.length ? a[Math.min(a.length - 1, Math.floor(p * a.length))] : 0);
+    return { available: this.available, frames: a.length, median: q(0.5), p95: q(0.95), mean: a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0 };
+  }
+}
+
 /** Time the scene's render and put the recorder on the window; returns the undo (module scope: hook values are never written in a component). */
-function attach(rec: Recorder, scene: THREE.Scene, gl: THREE.WebGLRenderer) {
+function attach(rec: Recorder, scene: THREE.Scene, gl: THREE.WebGLRenderer, gpu: GpuTimer) {
   countSkeletons();
   const before = scene.onBeforeRender, after = scene.onAfterRender;
   scene.onBeforeRender = (...args) => {
@@ -88,8 +120,8 @@ function attach(rec: Recorder, scene: THREE.Scene, gl: THREE.WebGLRenderer) {
   };
   scene.onAfterRender = (...args) => { after.apply(scene, args); rec.after = performance.now(); };
   Object.assign(window, { __perf: {
-    begin: () => { rec.n = 0; rec.on = true; },
-    end: () => { rec.on = false; return rec.summary(); },
+    begin: () => { rec.n = 0; rec.on = true; gpu.ms.length = 0; gpu.on = true; },
+    end: () => { rec.on = false; gpu.on = false; return { ...rec.summary(), gpu: gpu.summary() }; },
     scene: () => sceneCounts(scene, gl),
     /** Who renders the scene, over the next `frames` frames (call stacks). */
     callers: (frames = 1) => new Promise<string[]>(done => {
@@ -105,8 +137,9 @@ function attach(rec: Recorder, scene: THREE.Scene, gl: THREE.WebGLRenderer) {
 export default function PerfProbe() {
   const gl = useThree(s => s.gl), scene = useThree(s => s.scene);
   const rec = useMemo(() => new Recorder(), []);
-  useEffect(() => attach(rec, scene, gl), [gl, scene, rec]);
+  const gpu = useMemo(() => new GpuTimer(gl.getContext() as WebGL2RenderingContext), [gl]);
+  useEffect(() => attach(rec, scene, gl, gpu), [gl, scene, rec, gpu]);
   // First of all the frame's callbacks (the world's Performance probe resets gl.info at -100).
-  useFrame(({ gl }) => rec.close(gl.info), -1000);
+  useFrame(({ gl }) => { rec.close(gl.info); gpu.frame(); }, -1000);
   return null;
 }

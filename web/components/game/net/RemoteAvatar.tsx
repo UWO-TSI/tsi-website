@@ -19,6 +19,8 @@ import { WEAPONS } from "@/lib/game/combat/data";
 import { parseHeld } from "@/lib/net/protocol";
 import type { RemotePlayer } from "@/lib/net/types";
 import type { RemoteRig } from "./drive";
+import { FX_BENCH, useFxBench } from "@/lib/game/perf/fxBench";
+import { benchBack, benchHeld } from "./benchFx";
 
 /** The card's look JSON ("" the default look; anything unreadable falls back to it too). */
 export function remoteLook(json: string): CharacterLook {
@@ -52,12 +54,15 @@ export const RemoteAvatar = memo(function RemoteAvatar({ rig, player, walkSpeed,
 }) {
   const anchor = useCallback((g: THREE.Group | null) => attachAnchor(rig, g), [rig]);
   const look = useMemo(() => remoteLook(player.look), [player.look]);
-  const held = useMemo(() => remoteHeld(player.held), [player.held]);
-  const weapon = useMemo(() => remoteWeapon(player.held, player.armed ? player.weapon : ""), [player.held, player.armed, player.weapon]);
+  // Development (the effect bench): forced or switched-off items stand in for theirs.
+  const fx = useFxBench();
+  const heldKey = FX_BENCH ? benchHeld(fx, rig.sid, player.held) : player.held, back = player.armed ? (FX_BENCH ? benchBack(fx, player.weapon) : player.weapon) : "";
+  const held = useMemo(() => remoteHeld(heldKey), [heldKey]);
+  const weapon = useMemo(() => remoteWeapon(heldKey, back), [heldKey, back]);
   // Character's parent is the anchor: its contact shadow sits there, at the floor. Hidden until the driver places it.
   return <group ref={anchor} visible={false}>
     <Suspense fallback={null}>
-      <Character look={look} motion={rig.live as RefObject<CharacterMotion>} walkSpeed={walkSpeed} weapon={weapon} held={held} leaf />
+      <Character look={look} motion={rig.live as RefObject<CharacterMotion>} walkSpeed={walkSpeed} weapon={weapon} held={held} leaf={!FX_BENCH || !fx.off.has("leaf")} />
     </Suspense>
     {dust && <RemoteDust rig={rig} ground={ground} />}
   </group>;
