@@ -2,7 +2,8 @@
 // cost a frame, in the village and the terrain v2 world, and the title screen's frame.
 //   PORT=3158 node specs/perf/world-bench.mjs <out.jsonl> [scenes]
 //   scenes: comma list of village, v2, title (default all). Env: TIER=high|lite (the dome is High's only), REPS (4),
-//   SECONDS (4), SETTLE (1.5).
+//   SECONDS (4), SETTLE (1.5), PIXEL=0 (the pixel finish off: the canvas at full resolution) and W, H (the window,
+//   default 1280 × 800): with both, the GPU's share of the frame grows, as on a weaker GPU.
 // Each scene opens once (24 bots as in perf-bench.mjs, everything as shipped). Each variant is measured between two
 // shipped samples, as fx-bench.mjs does (pairs whose shipped samples disagree are rejected and retried):
 //   domeOff   the sky dome off: the flat gradient Light draws (lib/game/perf/fxBench.ts `skyDome`);
@@ -17,8 +18,9 @@ const require = createRequire("/opt/homebrew/lib/node_modules/");
 const { chromium } = require("playwright");
 const [OUT = "/tmp/world-bench.jsonl", ONLY = "village,v2,title"] = process.argv.slice(2);
 const PORT = process.env.PORT ?? 3158, REPS = Number(process.env.REPS ?? 4), SECONDS = Number(process.env.SECONDS ?? 4), SETTLE = Number(process.env.SETTLE ?? 1.5);
-const TIER_NAME = process.env.TIER ?? "high";
+const TIER_NAME = process.env.TIER ?? "high", W = Number(process.env.W ?? 1280), H = Number(process.env.H ?? 800);
 const TIER = { high: { "tsi.liteMode.v1": "false", "tsi.shadows.v1": "true" }, lite: { "tsi.liteMode.v1": "true", "tsi.shadows.v1": "false" } }[TIER_NAME];
+if (process.env.PIXEL === "0") TIER["tsi.pixelated.v1"] = "false";
 const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_curtain", back: "back_bob", top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: {} });
 const BASE = "time=day&weather=clear&season=summer";
 const URLS = { village: `/lab/island?${BASE}&bots=24`, v2: `/lab/island?${BASE}&fixture=v2&bots=24`, title: "/student?time=day" };
@@ -31,7 +33,7 @@ const SHIPPED = { off: [], tune: null };
 
 const browser = await chromium.launch({ headless: false, args: ["--mute-audio", "--window-position=2400,0", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-precise-memory-info", "--disable-gpu-vsync", "--disable-frame-rate-limit"] });
 for (const scene of ONLY.split(",")) {
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
+  const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
   await ctx.addInitScript(([look, store]) => { try {
     localStorage.setItem("tsi.look.v1", look); localStorage.setItem("tsi.hud.full.v1", "true");
     localStorage.setItem("tsi.camera.v1", JSON.stringify({ yaw: 1.05, pitch: 0.62, zoom: 1.12, mouseLook: false, autoFollow: false, sensitivity: 1, invertY: false }));
@@ -68,7 +70,7 @@ for (const scene of ONLY.split(",")) {
   if (!probe) {
     for (let rep = 1; rep <= REPS; rep++) {
       const s = await sample(null);
-      appendFileSync(OUT, JSON.stringify({ scene, tier: TIER_NAME, variant: "title", rep, valid: true, base: s, on: s, after: s, load: loadavg()[0], at: new Date().toISOString() }) + "\n");
+      appendFileSync(OUT, JSON.stringify({ scene, tier: TIER_NAME, size: `${W}x${H}`, pixel: process.env.PIXEL !== "0", variant: "title", rep, valid: true, base: s, on: s, after: s, load: loadavg()[0], at: new Date().toISOString() }) + "\n");
       console.log(`title rep ${rep}: frame ${s.frameMs.toFixed(2)} ms, p95 ${s.p95Ms.toFixed(2)}, main thread ${s.taskMs.toFixed(2)} ms | load ${loadavg()[0].toFixed(1)}`);
     }
     await ctx.close();
@@ -85,7 +87,7 @@ for (const scene of ONLY.split(",")) {
     const ok = Math.abs(after.frameMs - before.frameMs) <= 0.2 * Math.min(after.frameMs, before.frameMs) && Math.max(before.frameMs, after.frameMs) <= 1.5 * quiet;
     tries.set(name, tries.get(name) + 1);
     if (ok) valid.set(name, valid.get(name) + 1);
-    appendFileSync(OUT, JSON.stringify({ scene, tier: TIER_NAME, variant: name, rep, valid: ok, base: before, on, after, load: loadavg()[0], at: new Date().toISOString() }) + "\n");
+    appendFileSync(OUT, JSON.stringify({ scene, tier: TIER_NAME, size: `${W}x${H}`, pixel: process.env.PIXEL !== "0", variant: name, rep, valid: ok, base: before, on, after, load: loadavg()[0], at: new Date().toISOString() }) + "\n");
     const b = k => (before[k] + after[k]) / 2, d = k => (on[k] - b(k)).toFixed(k === "calls" || k === "triangles" ? 0 : 2);
     console.log(`${scene} ${name.padEnd(8)} rep ${rep}${ok ? "" : " (rejected)"}: shipped ${b("frameMs").toFixed(2)} → ${on.frameMs.toFixed(2)} ms (${d("frameMs")}), main thread ${d("taskMs")}, cpu ${d("cpuMs")}, calls ${d("calls")}, tris ${d("triangles")}, `
       + `gpu ${on.gpu?.available ? (on.gpu.median - (before.gpu.median + after.gpu.median) / 2).toFixed(2) : "n/a"} | load ${loadavg()[0].toFixed(1)}`);
