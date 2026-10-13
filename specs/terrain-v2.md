@@ -106,8 +106,16 @@ tsc, lint ceiling, build.
 
 ## Working rules
 
-- The generator (`art/terrain/draft_from_png.py`) is the terrain source of
-  truth until P2; iterate constants, never hand-edit the JSON.
+- FROZEN 2026-10-10 (David's call): `web/data/world-map.json` is the source
+  of truth, edited by hand in the painter (`/lab/map?fixture=v2`). Save
+  (Cmd/Ctrl+S) writes the file through the dev-only `/api/lab/world-map`;
+  it is committed when David says the layout is locked. Dropping, moving or
+  turning a building levels its pad (`padUnder`: footprint + one-cell rim to
+  the level under its centre; undo restores the ground).
+- The generator (`art/terrain/draft_from_png.py`) now writes
+  `art/terrain/out/world-map.generated.json` and never touches the frozen
+  map. A regional pass (the mountain stair, rivers) is merged into the
+  frozen map on purpose, region by region, never regenerated over it.
 - Draft tests guard invariants (climbable summit, flat plains zone, playable
   islets, waterfall + pond, legal levels). Add a test with every new invariant.
 - Residents must never crash on a partial map (residentRoutine guards, fixed

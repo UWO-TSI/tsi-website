@@ -12,6 +12,7 @@ import * as THREE from "three";
 import ContactShadows from "./ContactShadows";
 import Puddles from "./Puddles";
 import SkyDome from "./SkyDome";
+import { FX_BENCH, useFxBench } from "@/lib/game/perf/fxBench";
 import { setPuddles } from "@/lib/game/puddles";
 import { CloudShadows, MistBanks, TreeLeaves } from "./AmbienceFX";
 import { Fireflies } from "./AmbientLife";
@@ -110,10 +111,12 @@ export function IslandAtmosphere({ phase, light, look, weather, liteMode, castSh
   const puddleBlobs = useMemo(() => puddles.map(([x, z], i) => ({ x, z, y: ground(x, z) + 0.01, rx: 0.5 + (i % 3) * 0.18, rz: 0.32 + (i % 2) * 0.12, yaw: 0 })), [puddles, ground]);
   // Footsteps splash in them while it rains (lib/game/puddles.ts), whoever steps.
   useEffect(() => { setPuddles(weather === "rain" ? puddleBlobs : []); return () => setPuddles([]); }, [weather, puddleBlobs]);
+  // Development (the world bench, lib/game/perf/fxBench.ts): the dome off draws the gradient as Light does.
+  const fx = useFxBench(), flat = liteMode || (FX_BENCH && fx.off.has("skyDome"));
   return <>
     {/* The full tier flies the tuned dome (sun-phase colours, weather clouds, stars); Light keeps the flat gradient.
         The background colour stays behind both as the backstop past the dome's radius. */}
-    {liteMode
+    {flat
       ? light.skyTop ? <SkyGradient top={light.skyTop} horizon={light.sky} /> : <color attach="background" args={[light.sky]} />
       : <><color attach="background" args={[light.sky]} /><SkyDome light={light} weather={weather} /></>}
     <fog attach="fog" args={[light.fogColor, overview ? light.fogNear + 28 + overviewFog : light.fogNear, overview ? light.fogFar + 15 + overviewFog : light.fogFar]} />

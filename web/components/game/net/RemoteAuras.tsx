@@ -10,7 +10,8 @@ import { Suspense, useSyncExternalStore } from "react";
 import type * as THREE from "three";
 import FamilyAura from "../oracle/FamilyAura";
 import SubclassAura from "../oracle/SubclassAura";
-import { classKit, type ClassKit } from "@/lib/combat/classes";
+import { CLASS_KITS, classKit, type ClassKit } from "@/lib/combat/classes";
+import { FX_BENCH, useFxBench, type FxBenchState } from "@/lib/game/perf/fxBench";
 import { FAMILIES } from "@/lib/game/oracle/family";
 import type { RemotePlayer } from "@/lib/net/types";
 import type { RemoteRig } from "./drive";
@@ -49,8 +50,21 @@ export class AuraStore {
   readonly snapshot = () => this.list;
 }
 
-function Aura({ view }: { view: AuraView }) {
+/**
+ * Development (the effect bench): a forced kind for everyone (the subclass aura at full mastery, its worst case; the
+ * family's motes), or theirs less the kind switched off.
+ */
+const BENCH_KITS = CLASS_KITS.filter(k => !k.dev);
+function benchAura(fx: FxBenchState, view: AuraView): ReturnType<typeof auraOf> {
+  if (fx.force.has("auraSubclass")) return { kit: classKit(view.player.kit) ?? BENCH_KITS[view.sid % BENCH_KITS.length], mastery: 20, colour: null };
+  if (fx.force.has("auraFamily")) return { family: FAMILIES[view.player.family ?? "Arcane"].light };
   const a = auraOf(view.player);
+  return !a || fx.off.has("kit" in a ? "auraSubclass" : "auraFamily") ? null : a;
+}
+
+function Aura({ view }: { view: AuraView }) {
+  const fx = useFxBench();
+  const a = FX_BENCH ? benchAura(fx, view) : auraOf(view.player);
   if (!a) return null;
   return "kit" in a ? <SubclassAura player={view.feet} kit={a.kit} mastery={a.mastery} colour={a.colour} /> : <FamilyAura player={view.feet} color={a.family} />;
 }
