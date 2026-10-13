@@ -1,0 +1,98 @@
+{
+  "commit": "53c23490",
+  "date": "2026-10-13",
+  "machine": "Apple M4, 10 cores",
+  "runs": 3,
+  "note": "medians of perf-check runs; refresh with npm run perf:check -- --update (specs/perf/README.md)",
+  "load": 4.2,
+  "scenes": {
+    "village|high": {
+      "frameMs": 4,
+      "p95Ms": 5,
+      "cpuMs": 3.4,
+      "draws": 464,
+      "triangles": 421963,
+      "fps": 241.6,
+      "runs": 3,
+      "load": 4,
+      "spread": 0.05
+    },
+    "v2|high": {
+      "frameMs": 5.5,
+      "p95Ms": 6.7,
+      "cpuMs": 4.9,
+      "draws": 697,
+      "triangles": 1036568,
+      "fps": 176.3,
+      "runs": 3,
+      "load": 3.7,
+      "spread": 0.15
+    },
+    "cafe|high": {
+      "frameMs": 2.1,
+      "p95Ms": 3.2,
+      "cpuMs": 1.2,
+      "draws": 139,
+      "triangles": 70040,
+      "fps": 537.2,
+      "runs": 3,
+      "load": 3.7,
+      "spread": 0.05
+    },
+    "ruins-summoner|high": {
+      "frameMs": 3.1,
+      "p95Ms": 5.1,
+      "cpuMs": 2.5,
+      "draws": 417,
+      "triangles": 228021,
+      "fps": 291.9,
+      "runs": 3,
+      "load": 4.8,
+      "spread": 0.03
+    },
+    "village|lite": {
+      "frameMs": 2.2,
+      "p95Ms": 3.3,
+      "cpuMs": 1.9,
+      "draws": 336,
+      "triangles": 327371,
+      "fps": 426.9,
+      "runs": 3,
+      "load": 5,
+      "spread": 0.09
+    },
+    "v2|lite": {
+      "frameMs": 3,
+      "p95Ms": 3.6,
+      "cpuMs": 2.7,
+      "draws": 487,
+      "triangles": 818560,
+      "fps": 326.5,
+      "runs": 3,
+      "load": 4.3,
+      "spread": 0.07
+    },
+    "cafe|lite": {
+      "frameMs": 1.4,
+      "p95Ms": 2.5,
+      "cpuMs": 0.7,
+      "draws": 105,
+      "triangles": 67889,
+      "fps": 712.4,
+      "runs": 3,
+      "load": 4.1,
+      "spread": 0
+    },
+    "ruins-summoner|lite": {
+      "frameMs": 1.9,
+      "p95Ms": 4.4,
+      "cpuMs": 1.5,
+      "draws": 236,
+      "triangles": 165832,
+      "fps": 422.6,
+      "runs": 3,
+      "load": 4.2,
+      "spread": 0
+    }
+  }
+}
