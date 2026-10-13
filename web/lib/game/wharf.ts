@@ -73,7 +73,7 @@ export function mooredPose(out: BoatPose): BoatPose {
 }
 
 /** The swell's live settings (the water's uniforms). */
-export type Swell = { waveHeight: number; waveScale: number; waveSpeed: number };
+export type Swell = { waveHeight: number; waveScale: number; waveSpeed: number; swellHeight: number; swellLength: number; swellSpeed: number };
 /** How something sits on the water: the surface's height under it (world y; the model subtracts its own waterline), its pitch (rotation.x, bow up negative) and roll (rotation.z, port up positive), and a sway off the pier (the dock's +x). */
 export interface Float { y: number; pitch: number; roll: number; sway: number }
 export const newFloat = (): Float => ({ y: 0, pitch: 0, roll: 0, sway: 0 });

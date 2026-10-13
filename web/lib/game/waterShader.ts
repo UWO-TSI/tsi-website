@@ -86,6 +86,7 @@ export interface WaterParams {
   /** Alpha over the bed at the waterline, and out in open water. */
   shoreAlpha: number;
   opacity: number;
+  /** How much of the sky the water mirrors (Schlick's fresnel: little looking down into it, most toward the horizon), 0..1. */
   fresnel: number;
   /** Peak of the glare sheet (the sun off the ripples too small to draw). Past 1 clips to white. */
   glare: number;
@@ -98,6 +99,16 @@ export interface WaterParams {
   waveHeight: number;
   waveScale: number;
   waveSpeed: number;
+  /** The big slow swell under the waves (v1 water item 4): its height (world units, faded out over the shallows), length and phase speed (rad/s). */
+  swellHeight: number;
+  swellLength: number;
+  swellSpeed: number;
+  /** How much lighter its crests and darker its troughs (0 none). */
+  swellShade: number;
+  /** Horizon haze: how much the far water takes the horizon's colour, from `hazeFrom` to `hazeTo` world units off. */
+  haze: number;
+  hazeFrom: number;
+  hazeTo: number;
   /** Optional authored sea-normal detail, used by applicant ocean. */
   rippleStrength?: number;
 }
@@ -153,6 +164,7 @@ const WATER_KEYS = [
   "shelfDepth", "shelfFrom", "shelfTo",
   "foamWidth", "foamStrength", "foamSoft", "foamWave", "foamWaveSpeed", "foamPulse", "foamPulseReach", "foamPulseSpeed", "blobScale", "blobDarken", "blobSpeed", "ringWidth",
   "ringStrength", "shoreAlpha", "opacity", "fresnel", "glare", "roughness", "sunGlint", "sunSize", "waveHeight", "waveScale", "waveSpeed",
+  "swellHeight", "swellLength", "swellSpeed", "swellShade", "haze", "hazeFrom", "hazeTo",
 ] as const satisfies readonly (keyof WaterParams)[];
 const uniformOf = (k: string) => `u${k[0].toUpperCase()}${k.slice(1)}`;
 
@@ -165,6 +177,9 @@ export function waterUniforms(p: WaterParams) {
     uSunDir: { value: new THREE.Vector3(0, 1, 0) },
     /** The key light's colour, so the glint turns gold at golden hour and blue under the moon. */
     uSunColor: { value: new THREE.Color(1, 0.98, 0.92) },
+    /** The sky the water mirrors: overhead and at the horizon (the scene's sky, per phase and weather). */
+    uSkyZenith: { value: new THREE.Color(0x4fb6f5) },
+    uSkyHorizon: { value: new THREE.Color(0xa9dcf2) },
   };
 }
 
@@ -308,6 +323,8 @@ const UNIFORM_DECLS = /* glsl */ `
 uniform float uTime;
 uniform vec3 uSunDir;
 uniform vec3 uSunColor;
+uniform vec3 uSkyZenith;
+uniform vec3 uSkyHorizon;
 ${WATER_KEYS.map(k => `uniform ${k.endsWith("Color") ? "vec3" : "float"} ${uniformOf(k)};`).join("\n")}
 `;
 
@@ -376,18 +393,28 @@ ${WATER_OPTICS}${WATER_FOAM}`;
  * Driven by WORLD position so adjacent cells agree at their shared edge and the
  * sheet stays continuous even though each cell is its own four vertices.
  *
+ * Under them the big slow swell (v1 water item 4): one long wave rolling in off
+ * the open sea on its own clock. It dies away over the shallows (a swell lifts
+ * deep water; at the beach the waves' lap is the waterline), read off the water
+ * field's depth, so the foam stays on the shore it outlines.
+ *
  * The analytic gradient rides out as a varying: without it the swell would move
  * the surface without changing how it catches light, which reads as a sliding
  * texture rather than as water. Exported for the glint sprites
  * (GridOcean), which ride the same crests.
  */
-const SWELL = { d1: [1, 0.35], d2: [-0.42, 1], k2: 1.63, s2: 1.31, w1: 0.62, w2: 0.38 } as const;
+const SWELL = { d1: [1, 0.35], d2: [-0.42, 1], k2: 1.63, s2: 1.31, w1: 0.62, w2: 0.38, d3: [0.8, -0.6], fade: [0.15, 1.2] } as const;
 const f2 = (v: number) => v.toFixed(2);
 export const WATER_SWELL = /* glsl */ `
 uniform float uTime;
 uniform float uWaveHeight;
 uniform float uWaveScale;
 uniform float uWaveSpeed;
+uniform float uSwellHeight;
+uniform float uSwellLength;
+uniform float uSwellSpeed;
+uniform sampler2D uShoreMap;
+uniform vec4 uShoreRect;
 ${WATER_PHASE}
 float waterSwell(vec2 xz, out vec2 grad) {
   float k = 6.2831853 / max(uWaveScale, 0.001);
@@ -395,31 +422,46 @@ float waterSwell(vec2 xz, out vec2 grad) {
   vec2 d2 = normalize(vec2(${f2(SWELL.d2[0])}, ${f2(SWELL.d2[1])}));
   float a1 = dot(xz, d1) * k + waterPhase(uTime * uWaveSpeed);
   float a2 = dot(xz, d2) * k * ${f2(SWELL.k2)} + waterPhase(uTime * uWaveSpeed * ${f2(SWELL.s2)});
+  vec2 d3 = normalize(vec2(${f2(SWELL.d3[0])}, ${f2(SWELL.d3[1])}));
+  float k3 = 6.2831853 / max(uSwellLength, 0.001);
+  float a3 = dot(xz, d3) * k3 + waterPhase(uTime * uSwellSpeed);
+  float h3 = uSwellHeight * smoothstep(${f2(SWELL.fade[0])}, ${f2(SWELL.fade[1])}, texture2D(uShoreMap, (xz - uShoreRect.xy) / uShoreRect.zw).g);
   grad = d1 * (cos(a1) * ${f2(SWELL.w1)} * k * uWaveHeight)
-       + d2 * (cos(a2) * ${f2(SWELL.w2)} * k * ${f2(SWELL.k2)} * uWaveHeight);
-  return (sin(a1) * ${f2(SWELL.w1)} + sin(a2) * ${f2(SWELL.w2)}) * uWaveHeight;
+       + d2 * (cos(a2) * ${f2(SWELL.w2)} * k * ${f2(SWELL.k2)} * uWaveHeight)
+       + d3 * (cos(a3) * k3 * h3);
+  return (sin(a1) * ${f2(SWELL.w1)} + sin(a2) * ${f2(SWELL.w2)}) * uWaveHeight + sin(a3) * h3;
 }
 `;
+/** The live uniforms WATER_SWELL reads (the water's own: pass waterSurfaceUniforms()). */
+export const swellUniformsOf = (u: Record<string, THREE.IUniform>) => ({
+  uTime: u.uTime, uWaveHeight: u.uWaveHeight, uWaveScale: u.uWaveScale, uWaveSpeed: u.uWaveSpeed,
+  uSwellHeight: u.uSwellHeight, uSwellLength: u.uSwellLength, uSwellSpeed: u.uSwellSpeed, uShoreMap: u.uShoreMap, uShoreRect: u.uShoreRect,
+});
 
-const SW1 = Math.hypot(...SWELL.d1), SW2 = Math.hypot(...SWELL.d2);
-const D1X = SWELL.d1[0] / SW1, D1Z = SWELL.d1[1] / SW1, D2X = SWELL.d2[0] / SW2, D2Z = SWELL.d2[1] / SW2;
+const SW1 = Math.hypot(...SWELL.d1), SW2 = Math.hypot(...SWELL.d2), SW3 = Math.hypot(...SWELL.d3);
+const D1X = SWELL.d1[0] / SW1, D1Z = SWELL.d1[1] / SW1, D2X = SWELL.d2[0] / SW2, D2Z = SWELL.d2[1] / SW2, D3X = SWELL.d3[0] / SW3, D3Z = SWELL.d3[1] / SW3;
 const wrapPhase = (v: number) => v - 6.2831853 * Math.floor(v / 6.2831853);
+/** The share of the swell's height that reaches water `depth` deep (it dies away over the shallows). */
+export const swellFade = (depth: number) => smooth01(SWELL.fade[0], SWELL.fade[1], depth);
 /**
  * WATER_SWELL on the CPU, for what floats on the water (the boat, the buoys; arrival-wharf.md): the surface's rise at
  * world (x, z) at world time `t` (the shader's uTime), and its slope (∂h/∂x, ∂h/∂z) into `grad`. The same constants
  * print the shader, so the two cannot drift apart; read the live `p` from the water's uniforms
- * (components/game/grid/terrainMaterials.ts waterSurfaceUniforms) to ride the waves as drawn.
+ * (components/game/grid/terrainMaterials.ts waterSurfaceUniforms) to ride the waves as drawn. `depth`: the water's
+ * depth there (the swell fades over the shallows); floats ride deep water, so by default all of it.
  */
-export function waterSwellAt(x: number, z: number, t: number, p: Pick<WaterParams, "waveHeight" | "waveScale" | "waveSpeed">, grad?: { x: number; z: number }): number {
+export function waterSwellAt(x: number, z: number, t: number, p: Pick<WaterParams, "waveHeight" | "waveScale" | "waveSpeed" | "swellHeight" | "swellLength" | "swellSpeed">, grad?: { x: number; z: number }, depth = Infinity): number {
   const k = 6.2831853 / Math.max(p.waveScale, 0.001), h = p.waveHeight;
   const a1 = (x * D1X + z * D1Z) * k + wrapPhase(t * p.waveSpeed);
   const a2 = (x * D2X + z * D2Z) * k * SWELL.k2 + wrapPhase(t * p.waveSpeed * SWELL.s2);
+  const k3 = 6.2831853 / Math.max(p.swellLength, 0.001), h3 = p.swellHeight * swellFade(depth);
+  const a3 = (x * D3X + z * D3Z) * k3 + wrapPhase(t * p.swellSpeed);
   if (grad) {
-    const c1 = Math.cos(a1) * SWELL.w1 * k * h, c2 = Math.cos(a2) * SWELL.w2 * k * SWELL.k2 * h;
-    grad.x = D1X * c1 + D2X * c2;
-    grad.z = D1Z * c1 + D2Z * c2;
+    const c1 = Math.cos(a1) * SWELL.w1 * k * h, c2 = Math.cos(a2) * SWELL.w2 * k * SWELL.k2 * h, c3 = Math.cos(a3) * k3 * h3;
+    grad.x = D1X * c1 + D2X * c2 + D3X * c3;
+    grad.z = D1Z * c1 + D2Z * c2 + D3Z * c3;
   }
-  return (Math.sin(a1) * SWELL.w1 + Math.sin(a2) * SWELL.w2) * h;
+  return (Math.sin(a1) * SWELL.w1 + Math.sin(a2) * SWELL.w2) * h + Math.sin(a3) * h3;
 }
 
 const VERTEX_DECLS = /* glsl */ `
@@ -480,8 +522,17 @@ const FRAGMENT_BODY = /* glsl */ `
   // white. The sharp points inside it are the sparkle sprites (GridOcean).
   float glare = glareLobe(uSunDir, cameraPosition, vWaterWorld, N, uRoughness) * sunThroughClouds(vWaterWorld.xz);
 
-  float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0);
-  col += uRingColor * rim * uFresnel;
+  // The big swell's crests catch a little more light than its troughs (v1 water item 4).
+  col *= 1.0 + uSwellShade * clamp(vWaterRise / max(uWaveHeight + uSwellHeight, 1e-3), -1.0, 1.0);
+
+  // The sky in the water (v1 water item 4): Schlick's fresnel, so looking down
+  // into the shallows you see through them and toward the horizon the sea
+  // mirrors the sky, the zenith's colour where the reflection looks up.
+  float NdotV = clamp(dot(N, V), 0.0, 1.0);
+  float fres = 0.02 + 0.98 * pow(1.0 - NdotV, 5.0);
+  vec3 R = reflect(-V, N);
+  vec3 skyCol = mix(uSkyHorizon, uSkyZenith, smoothstep(0.0, 0.65, R.y));
+  col = mix(col, skyCol, clamp(fres * uFresnel, 0.0, 1.0));
 
   // FOAM. A solid collar (David, 2026-07-28), so the only blend is one pixel
   // wide unless uFoamSoft opens it up: fwidth gives how fast the distance
@@ -501,13 +552,18 @@ const FRAGMENT_BODY = /* glsl */ `
   col += uSunColor * glare * uGlare * (1.0 - foam);
   col = mix(col, uFoamColor, foam);
 
+  // Horizon haze: the far sea takes the horizon's colour before the scene's fog
+  // takes everything, so the sea meets the sky softly (v1 water item 4).
+  float haze = uHaze * smoothstep(uHazeFrom, uHazeTo, length(cameraPosition.xz - vWaterWorld.xz));
+  col = mix(col, uSkyHorizon, haze);
+
   diffuseColor.rgb = col;
   // Clear enough over the shallows to show the bed, opaque once the ramp has
   // done its work. This is the other half of selling absorption: a uniformly
   // translucent sheet reads as coloured glass. (The bed under it is fogged
   // toward the same ramp by its own depth, UNDERWATER, so the two agree.)
   diffuseColor.a = mix(uShoreAlpha, uOpacity, smoothstep(0.0, 0.8, t));
-  diffuseColor.a = mix(diffuseColor.a, 1.0, foam);
+  diffuseColor.a = mix(diffuseColor.a, 1.0, max(foam, haze));
 }
 `;
 

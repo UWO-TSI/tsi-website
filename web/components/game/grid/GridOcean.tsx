@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { type IslandMap, WATER_DROP, LEVEL_STEP, cellToWorldX, cellToWorldZ, isGroundAtWorld, isRiver, levelAt, surfaceAt } from "@/lib/game/grid";
-import { WATER_CHOP, WATER_CLOUDS, WATER_OPTICS, WATER_RIPPLE, WATER_SWELL, facetTilt } from "@/lib/game/waterShader";
+import { WATER_CHOP, WATER_CLOUDS, WATER_OPTICS, WATER_RIPPLE, WATER_SWELL, facetTilt, swellUniformsOf } from "@/lib/game/waterShader";
 import { terrainMaterial, waterSurfaceUniforms } from "./terrainMaterials";
 import { deepestSeabed } from "@/lib/game/seabed";
 
@@ -145,7 +145,7 @@ function WaterGlints({ map, lite, skip, radius }: { map: IslandMap; lite: boolea
     m.onBeforeCompile = (shader) => {
       const u = waterSurfaceUniforms();
       Object.assign(shader.uniforms, {
-        uTime: u.uTime, uWaveHeight: u.uWaveHeight, uWaveScale: u.uWaveScale, uWaveSpeed: u.uWaveSpeed, uRippleTexture: u.uRippleTexture, uRippleStrength: u.uRippleStrength,
+        ...swellUniformsOf(u), uRippleTexture: u.uRippleTexture, uRippleStrength: u.uRippleStrength,
         uSunDir: u.uSunDir, uSunColor: u.uSunColor, uSunGlint: u.uSunGlint, uSunSize: u.uSunSize, uRoughness: u.uRoughness,
         uCloudMap: u.uCloudMap, uCloudUv: u.uCloudUv, uCloudShade: u.uCloudShade,
       });

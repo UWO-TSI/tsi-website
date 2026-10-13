@@ -401,9 +401,10 @@ export function setShoreField(f: {
  * `sunWorld` is the scene's key-light direction (sun by day, moon by night), in
  * WORLD space and used as is: the water mirrors the real light, and each
  * viewer's own camera decides what reaches their eye (row 238). `sunColor`
- * tints it (a warm white by day, gold at golden hour).
+ * tints it (a warm white by day, gold at golden hour). `sky`: the scene's sky overhead and at the horizon, which the
+ * water mirrors (fresnel) and hazes into far off.
  */
-export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE.Vector3, sunColor?: THREE.Color): void {
+export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE.Vector3, sunColor?: THREE.Color, sky?: { zenith: THREE.Color; horizon: THREE.Color }): void {
   waterUniformBlock.uRippleStrength.value = cfg.rippleStrength ?? 0;
   if (cfg.rippleStrength && !waterUniformBlock.uRippleTexture.value) {
     waterUniformBlock.uRippleTexture.value = loadTexture(new THREE.TextureLoader(), "mSeaWater_Nrm.png", TEX_DIR, THREE.NoColorSpace);
@@ -414,6 +415,8 @@ export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE
   if (cfg !== written) writeWaterUniforms(waterUniformBlock, written = cfg);
   if (sunWorld) waterUniformBlock.uSunDir.value.copy(sunWorld).normalize();
   if (sunColor) waterUniformBlock.uSunColor.value.copy(sunColor).lerp(WHITE, 0.2);
+  // The sky the water mirrors and hazes into (v1 water item 4): the scene's own, per phase and weather.
+  if (sky) { waterUniformBlock.uSkyZenith.value.copy(sky.zenith); waterUniformBlock.uSkyHorizon.value.copy(sky.horizon); }
 }
 const WHITE = new THREE.Color(1, 1, 1);
 let written: WaterParams | null = null;

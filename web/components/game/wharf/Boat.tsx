@@ -31,12 +31,15 @@ const FLAG_VERTEX = /* glsl */ `
 `;
 
 /** The water's swell as the shader has it this frame (one object, rewritten). */
-export const liveSwell = { waveHeight: 0, waveScale: 7, waveSpeed: 0.7, t: 0 };
+export const liveSwell = { waveHeight: 0, waveScale: 7, waveSpeed: 0.7, swellHeight: 0, swellLength: 26, swellSpeed: 0.4, t: 0 };
 export function readSwell() {
   const u = waterSurfaceUniforms();
   liveSwell.waveHeight = u.uWaveHeight.value as number;
   liveSwell.waveScale = u.uWaveScale.value as number;
   liveSwell.waveSpeed = u.uWaveSpeed.value as number;
+  liveSwell.swellHeight = u.uSwellHeight.value as number;
+  liveSwell.swellLength = u.uSwellLength.value as number;
+  liveSwell.swellSpeed = u.uSwellSpeed.value as number;
   liveSwell.t = u.uTime.value as number;
   return liveSwell;
 }

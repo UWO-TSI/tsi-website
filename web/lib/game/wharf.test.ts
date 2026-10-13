@@ -37,7 +37,7 @@ describe("the wharf's boat and buoys float on the shared swell", () => {
   });
 
   it("dips toward the pier as someone steps aboard and rocks back, and rolls off the fenders when it comes alongside", () => {
-    const calm = { ...SEA, waveHeight: 0 }, f = newFloat(), pose = mooredPose(newBoatPose());
+    const calm = { ...SEA, waveHeight: 0, swellHeight: 0 }, f = newFloat(), pose = mooredPose(newBoatPose());
     floatBoat(VILLAGE, pose, 0, calm, f);
     const still = f.y;
     expect([f.pitch, f.roll, f.sway]).toEqual([0, 0, 0]);
@@ -51,7 +51,7 @@ describe("the wharf's boat and buoys float on the shared swell", () => {
   });
 
   it("noses up and skips over the chop when it is going", () => {
-    const calm = { ...SEA, waveHeight: 0 }, f = newFloat(), going = { ...mooredPose(newBoatPose()), speed: 7, throttle: 1 };
+    const calm = { ...SEA, waveHeight: 0, swellHeight: 0 }, f = newFloat(), going = { ...mooredPose(newBoatPose()), speed: 7, throttle: 1 };
     let nose = 0;
     for (let t = 0; t < 3; t += 0.05) { floatBoat(VILLAGE, going, t, calm, f); nose += f.pitch; }
     expect(nose / 60).toBeLessThan(-0.02); // bow up is negative rotation.x
@@ -62,7 +62,7 @@ describe("the wharf's boat and buoys float on the shared swell", () => {
     for (const [x, z] of BUOYS) {
       expect(Math.hypot(x - MOORED.x, z - MOORED.z)).toBeGreaterThan(3);
       floatBuoy(VILLAGE, x, z, 12, SEA, f);
-      expect(Math.abs(f.y - SEA_Y)).toBeLessThanOrEqual(SEA.waveHeight + 1e-9);
+      expect(Math.abs(f.y - SEA_Y)).toBeLessThanOrEqual(SEA.waveHeight + SEA.swellHeight + 1e-9);
       expect(Math.abs(f.pitch) + Math.abs(f.roll)).toBeLessThan(0.3);
     }
   });

@@ -179,6 +179,14 @@ export const TUNING_DEFAULTS: Tuning = {
     waveHeight: 0.035,
     waveScale: 7,
     waveSpeed: 0.7,
+    // v1 water pass: a long swell under the waves (period ~15 s), lighter on its crests; the far sea hazes into the horizon.
+    swellHeight: 0.06,
+    swellLength: 26,
+    swellSpeed: 0.42,
+    swellShade: 0.07,
+    haze: 0.4,
+    hazeFrom: 24,
+    hazeTo: 78,
   },
   // Sky defaults after the CPU-preview pass 2026-07-29. Coverage numbers are
   // whatever the WEATHER ENGINE pushes at runtime; these are only what the

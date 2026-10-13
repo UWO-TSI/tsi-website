@@ -28,6 +28,8 @@ const water = {
   // draw (roughness = their RMS slope on a calm day, Cox-Munk) and the sparkle sprites (GridOcean), each
   // a facet that flashes while the sun's disc (sunSize = its radius, degrees) sits in its mirror direction.
   glare: 0.2, roughness: 0.11, sunGlint: 2, sunSize: 5, rippleStrength: 0.12,
+  // The sky in the water (Schlick's fresnel, v1 water item 4): little looking down into it, most toward the horizon.
+  fresnel: 0.55,
 };
 export type IslandWater = typeof water;
 
