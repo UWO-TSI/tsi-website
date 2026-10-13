@@ -1765,7 +1765,7 @@
    "slot": "bangs",
    "name": "Hime side-locks",
    "glb": "hair/bangs/bangs_hime.glb",
-   "tris": 634,
+   "tris": 644,
    "materials": [
     {
      "name": "M_Hair",
@@ -2137,7 +2137,7 @@
    "slot": "back",
    "name": "Messy boy",
    "glb": "hair/full/hair_messy_boy.glb",
-   "tris": 921,
+   "tris": 969,
    "materials": [
     {
      "name": "M_Hair",
@@ -2163,7 +2163,7 @@
    "slot": "back",
    "name": "Short hime cut",
    "glb": "hair/full/hair_hime_short.glb",
-   "tris": 1735,
+   "tris": 1536,
    "materials": [
     {
      "name": "M_Hair",
@@ -2189,7 +2189,7 @@
    "slot": "back",
    "name": "Messy with visor",
    "glb": "hair/full/hair_visor_messy.glb",
-   "tris": 1735,
+   "tris": 1545,
    "materials": [
     {
      "name": "M_Hair",
@@ -2219,7 +2219,7 @@
    "slot": "back",
    "name": "Baby sprout",
    "glb": "hair/full/hair_baby_sprout.glb",
-   "tris": 1732,
+   "tris": 1534,
    "materials": [
     {
      "name": "M_Hair",
@@ -2244,7 +2244,7 @@
    "slot": "back",
    "name": "Long scruffy",
    "glb": "hair/full/hair_long_scruffy.glb",
-   "tris": 1735,
+   "tris": 1525,
    "materials": [
     {
      "name": "M_Hair",
@@ -2270,7 +2270,7 @@
    "slot": "back",
    "name": "Short with tufts",
    "glb": "hair/full/hair_short_tufts.glb",
-   "tris": 1735,
+   "tris": 1538,
    "materials": [
     {
      "name": "M_Hair",
@@ -2296,7 +2296,7 @@
    "slot": "back",
    "name": "Windy bob",
    "glb": "hair/full/hair_windy_bob.glb",
-   "tris": 1735,
+   "tris": 1539,
    "materials": [
     {
      "name": "M_Hair",
@@ -2322,7 +2322,7 @@
    "slot": "back",
    "name": "Wispy ponytail",
    "glb": "hair/full/hair_wispy_ponytail.glb",
-   "tris": 1728,
+   "tris": 1749,
    "materials": [
     {
      "name": "M_Hair",
@@ -2348,7 +2348,7 @@
    "slot": "back",
    "name": "Fluffy boy",
    "glb": "hair/full/hair_fluffy_boy.glb",
-   "tris": 1522,
+   "tris": 1648,
    "materials": [
     {
      "name": "M_Hair",
@@ -2371,7 +2371,7 @@
    "slot": "back",
    "name": "Messy wolf cut",
    "glb": "hair/full/hair_messy_wolf.glb",
-   "tris": 1735,
+   "tris": 1750,
    "materials": [
     {
      "name": "M_Hair",
@@ -2397,7 +2397,7 @@
    "slot": "back",
    "name": "Bowl cut",
    "glb": "hair/full/hair_bowl_cut.glb",
-   "tris": 1735,
+   "tris": 1536,
    "materials": [
     {
      "name": "M_Hair",
@@ -2423,7 +2423,7 @@
    "slot": "back",
    "name": "Layered shag",
    "glb": "hair/full/hair_layered_shag.glb",
-   "tris": 1734,
+   "tris": 1559,
    "materials": [
     {
      "name": "M_Hair",
@@ -2449,7 +2449,7 @@
    "slot": "back",
    "name": "Anime spikes",
    "glb": "hair/full/hair_anime_spikes.glb",
-   "tris": 1735,
+   "tris": 1610,
    "materials": [
     {
      "name": "M_Hair",
@@ -2475,7 +2475,7 @@
    "slot": "back",
    "name": "Messy low ponytail",
    "glb": "hair/full/hair_messy_low_pony.glb",
-   "tris": 1735,
+   "tris": 1517,
    "materials": [
     {
      "name": "M_Hair",
@@ -2505,7 +2505,7 @@
    "slot": "back",
    "name": "V-kei layers",
    "glb": "hair/full/hair_vkei.glb",
-   "tris": 1735,
+   "tris": 1442,
    "materials": [
     {
      "name": "M_Hair",
@@ -2531,7 +2531,7 @@
    "slot": "back",
    "name": "Swept fringe",
    "glb": "hair/full/hair_swept_fringe.glb",
-   "tris": 1735,
+   "tris": 1749,
    "materials": [
     {
      "name": "M_Hair",
@@ -2557,7 +2557,7 @@
    "slot": "back",
    "name": "Bob with a pigtail",
    "glb": "hair/full/hair_bob_pigtail.glb",
-   "tris": 1735,
+   "tris": 1734,
    "materials": [
     {
      "name": "M_Hair",
@@ -2583,7 +2583,7 @@
    "slot": "back",
    "name": "Long pigtails",
    "glb": "hair/full/hair_long_pigtails.glb",
-   "tris": 1735,
+   "tris": 1750,
    "materials": [
     {
      "name": "M_Hair",
@@ -2609,7 +2609,7 @@
    "slot": "back",
    "name": "Dreads with a cap",
    "glb": "hair/full/hair_dreads_cap.glb",
-   "tris": 1734,
+   "tris": 1750,
    "materials": [
     {
      "name": "M_Hair",
@@ -2643,7 +2643,7 @@
    "slot": "back",
    "name": "Waves with a fade",
    "glb": "hair/full/hair_waves.glb",
-   "tris": 1560,
+   "tris": 1660,
    "materials": [
     {
      "name": "M_Hair",
@@ -2673,7 +2673,7 @@
    "slot": "back",
    "name": "Messy dreads",
    "glb": "hair/full/hair_messy_dreads.glb",
-   "tris": 1735,
+   "tris": 1750,
    "materials": [
     {
      "name": "M_Hair",

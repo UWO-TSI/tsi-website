@@ -98,7 +98,7 @@ CLEARANCE = {
     "hat_poke_max": 0.002,      # hair through a hat
     "ear_top_lat": round(EAR_TOP, 2),   # no hat rim below this at the sides
     # m from `top`: the box a piece of each type stays in (Roblox's per-type accessory bounds; catches a mis-scaled import)
-    "reach": {"hair": {"up": 0.18, "down": 0.72, "front": 0.42, "back": 0.42, "side": 0.40},
+    "reach": {"hair": {"up": 0.18, "down": 0.72, "front": 0.46, "back": 0.46, "side": 0.44},   # a visor's brim, a pigtail
               "hat": {"up": 0.16, "down": 0.36, "front": 0.42, "back": 0.42, "side": 0.42}},
 }
 

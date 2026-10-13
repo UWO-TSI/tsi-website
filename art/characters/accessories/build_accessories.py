@@ -301,9 +301,9 @@ def flower_crown(pc):
 def crystal_circlet(pc):
     """A thin gold band across the brow, over the bangs, dipping to a crystal at the front with two small side stones."""
     pc.region = "head"
-    lat = lambda lon: 16 + 2 * math.cos(math.radians(lon)) - 3 * max(0.0, math.cos(math.radians(lon))) ** 8
-    off = lambda lon: max(max(0.008, hair_vol(lat(lon)) * 1.1) + 0.002,      # on the fringe at the front, the cap elsewhere,
-                          worn_top(lat(lon), lon, 1, 0.75 if abs(lon) < 30 else 1.5) + 0.001)   # on the ridges (avatar v7; head fit:
+    lat = lambda lon: 19 + 2 * math.cos(math.radians(lon)) - 3 * max(0.0, math.cos(math.radians(lon))) ** 8   # head fit: 3 deg higher, over the fringe's full roll
+    off = lambda lon: max(max(0.006, hair_vol(lat(lon)) * 1.1) + 0.002,      # on the fringe at the front, the cap elsewhere,
+                          worn_top(lat(lon), lon, 1, 0.75 if abs(lon) < 30 else 1.5) + (0.001 if abs(lon) < 30 else 0.0025))   # on the ridges (avatar v7; head fit:
     #                                                                           the fringe lies flatter on the v8 face)
     pc.tube([hair_point(lat(l), l, off(l)) for l in range(0, 360, 5)], [(0.0032, 0.0065)] * 72, sides=4, closed_loop=True)
     pc.mat = "M_Accent"

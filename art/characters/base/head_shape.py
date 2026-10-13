@@ -60,9 +60,12 @@ _R["y"] = _R["x"] * 0.87
 SKULL = {
     "A": 0.215,                   # half width (v7 0.218-0.223 at its widest; the box's corners carry the volume)
     "B_FRONT": 0.192, "B_BACK": 0.186,   # face plane and back of the skull from HC (v7 0.189-0.198 / 0.186)
-    "C_TOP": HRZT, "C_BOT": HRZB,        # crown and chin (unchanged)
-    "P_FRONT": 3.4, "P_BACK": 2.5,       # horizontal roundness: 2 = ellipse, higher = squarer (the flat face)
-    "Q_TOP": 2.3, "Q_BOT_BACK": 2.6, "Q_BOT_FRONT": 3.4,   # vertical: the crown dome, the jaw (fuller and flatter in front)
+    "C_TOP": HRZT, "C_BOT": HRZB,        # crown and chin (ref 18's)
+    "C_BOT_FRONT": HRZB + 0.03,          # the chin under the face 3 cm lower: flat room for mouths and drool down to the
+                                         # canvas's bottom edge (David's faces, row 305: W 0.999)
+    "P_FRONT": 4.0, "P_BACK": 2.5,       # horizontal roundness: 2 = ellipse, higher = squarer (the flat face, wide enough for
+                                         # David's widest eyes, row 305)
+    "Q_TOP": 2.3, "Q_BOT_BACK": 2.6, "Q_BOT_FRONT": 4.5,   # vertical: the crown dome, the jaw (fuller and flatter in front)
 }
 
 
@@ -80,7 +83,7 @@ def skull_radius(d):
     if d.z >= 0:
         C, Q = S["C_TOP"], S["Q_TOP"]
     else:
-        C, Q = S["C_BOT"], _lerp(S["Q_BOT_BACK"], S["Q_BOT_FRONT"], wf)
+        C, Q = _lerp(S["C_BOT"], S["C_BOT_FRONT"], wf), _lerp(S["Q_BOT_BACK"], S["Q_BOT_FRONT"], wf)
     h = abs(d.x / A) ** P + abs(d.y / B) ** P
     F = h ** (Q / P) + abs(d.z / C) ** Q
     return F ** (-1.0 / Q)

@@ -73,7 +73,8 @@ LIMITS = {
     "hat_poke_max": 0.002,         # hair showing through a hat
     "glasses_offset_max": 0.012,   # lens centre vs painted eye centre
     "face_stretch_max": 1.2,       # texture stretch where features are painted
-    "face_aniso_max": 1.25,
+    "face_aniso_max": 1.3,         # head fit: David's widest eyes (row 305) reach U 0.04-0.07, round the jaw's corner (1.29);
+                                   # the earlier parts stay under 1.05 on the v8 head
     "eye_reach_lon_max_deg": 55.0,
     "face_facing_max_deg": 52.0,   # head fit (row 304): no painted pixel of any eye, brow or mouth faces more than this
                                     # away from straight ahead. v7: eyes 46.9, mouth 61.2 (the widest grins wrapped under
@@ -247,6 +248,10 @@ def stats(a):
 atlas_img = bpy.data.images.load(os.path.join(HERE, "v7", "face", FACEV["atlas"]) if FACE_V7 else os.path.join(HERE, "base", FACEV["atlas"]))
 AW, AH = atlas_img.size
 ATLAS = np.array(atlas_img.pixels[:], np.float32).reshape(AH, AW, 4)[::-1]      # top row first
+ATLAS2 = None                                                                    # the second page (David's faces, row 305)
+if FACE_V7 and FACEV.get("atlas2"):
+    _a2 = bpy.data.images.load(os.path.join(HERE, "v7", "face", FACEV["atlas2"]))
+    ATLAS2 = np.array(_a2.pixels[:], np.float32).reshape(_a2.size[1], _a2.size[0], 4)[::-1]
 
 
 def item_alpha(layer, fid, res):
@@ -278,19 +283,30 @@ def item_alpha(layer, fid, res):
 def item_alpha_v7(layer, fid, res):
     L = FACEV["layers"][layer]
     it = L["items"][fid]
+    if layer == "eyes" and "left" in it and it["left"] is None:   # a pair drawn as one cell, on the centre line
+        return item_alpha_cell(it["open"], FACEV["anchors"]["eye_pair"], False, res)
+    if layer == "eyes" and "left" in it:   # a pair drawn as two cells (David's faces): each at its own anchor, unmirrored
+        a = item_alpha_cell(it["open"], FACEV["anchors"]["eye"], False, res)
+        return np.maximum(a, item_alpha_cell(it["left"], FACEV["anchors"]["eye_left"], False, res))
     if layer == "eyes":
         cell, anchor, mirror = it["open"], FACEV["anchors"][L["anchor"]], L["mirror"]
     elif layer == "extras":
         cell, anchor, mirror = it["cell"], FACEV["anchors"][it["anchor"]], it["mirror"]
     else:
         cell, anchor, mirror = it, FACEV["anchors"][L["anchor"]], L["mirror"]
-    x, y, w, h, ax, ay = cell
+    return item_alpha_cell(cell, anchor, mirror, res)
+
+
+def item_alpha_cell(cell, anchor, mirror, res):
+    x, y, w, h, ax, ay = cell[:6]
+    page = ATLAS2 if len(cell) > 6 and cell[6] == 1 and ATLAS2 is not None else ATLAS
+    ph, pw = page.shape[:2]
     k = res / FACEV["density"]
     canvas = np.zeros((res, res), np.float32)
     W_, H_ = max(1, int(round(w * k))), max(1, int(round(h * k)))
     ys = (np.arange(H_) + 0.5) / H_ * h
     xs = (np.arange(W_) + 0.5) / W_ * w
-    cellA = ATLAS[(y + ys.astype(int)).clip(0, AH - 1)][:, (x + xs.astype(int)).clip(0, AW - 1), 3]
+    cellA = page[(y + ys.astype(int)).clip(0, ph - 1)][:, (x + xs.astype(int)).clip(0, pw - 1), 3]
     for flip in ((False, True) if mirror else (False,)):
         au = 1 - anchor[0] if flip else anchor[0]
         X0 = int(round(au * res - ((w - ax) if flip else ax) * k))
@@ -411,7 +427,9 @@ for fid in FACEV["layers"]["eyes"]["items"]:
             U = float((xs[mask] + 0.5).dot(wgt) / wgt.sum() / RES)
             W = float((ys[mask] + 0.5).dot(wgt) / wgt.sum() / RES)
             cen[side] = locate(U, W)
-    eye_centres[fid] = cen
+    it = FACEV["layers"]["eyes"]["items"][fid]
+    if not (isinstance(it, dict) and "left" in it and it["left"] is None):   # a pair drawn as one cell across the
+        eye_centres[fid] = cen                                              # centre line has no per-eye centre
 
 # head fit (row 304): how far every painted layer turns away from straight ahead, over every pixel of every item: the
 # flat face area keeps the mouth and brows facing the camera, not wrapping under the chin or over the brow
@@ -429,6 +447,12 @@ brow = item_alpha("brows", FACEV["layers"]["brows"]["default"], RES)
 by, bx = np.nonzero(brow > 0.5)
 BROW_PTS = [p for p in (locate((bx[k] + 0.5) / RES, (by[k] + 0.5) / RES) for k in range(0, len(bx), 2)) if p is not None]
 dflt = eye_centres[FACEV["layers"]["eyes"]["default"]]
+
+
+def PAGE2_EYE(fid):
+    it = FACEV["layers"]["eyes"]["items"][fid]
+    cell = it["open"] if isinstance(it, dict) else it
+    return len(cell) > 6 and cell[6] == 1
 face = {"feature_tris": n_feat, "stretch_max": round(worst_stretch, 3), "aniso_max": round(worst_aniso, 3), "per_layer": per_layer,
         "stretch_worst_at": worst_at, "aniso_worst_at": aniso_at, "eye_reach_deg": round(eye_reach, 1), "eye_reach_lon_deg": round(eye_lon, 1), "facing_max_deg": facing_max,
         "default_eye_centre_lon_deg": round(abs(lon_of(dflt["L"])), 1) if dflt.get("L") else None,
@@ -683,8 +707,12 @@ for part in CAT["accessories"]:
             if not rim:
                 continue
             cx, cz = sum(v.x for v in rim) / len(rim), sum(v.z for v in rim) / len(rim)
-            offs = [math.hypot(c[side].x - cx, c[side].z - cz) for c in eye_centres.values() if c.get(side) is not None]
+            # the eye set the glasses are fitted to (the first atlas page); David's own eyes (page 2, row 305) sit where
+            # he drew them, some far from the common eye line: reported, not held to the lens
+            offs = [math.hypot(c[side].x - cx, c[side].z - cz) for f, c in eye_centres.items() if c.get(side) is not None and not PAGE2_EYE(f)]
+            offs2 = [math.hypot(c[side].x - cx, c[side].z - cz) for f, c in eye_centres.items() if c.get(side) is not None and PAGE2_EYE(f)]
             res[side] = {"lens_centre": [round(cx, 4), round(cz, 4)], "offset_max": round(max(offs), 4),
+                         "offset_max_page2": round(max(offs2), 4) if offs2 else None,
                          "offset_default": round(math.hypot(dflt[side].x - cx, dflt[side].z - cz), 4)}
         glasses[part["id"]] = {"open_edges": open_e,
                                "offset_max": max(r["offset_max"] for r in res.values()),

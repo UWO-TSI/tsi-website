@@ -49,8 +49,10 @@ LOD0_MAX = 1750          # the library's full looks (bangs + back) run 1,110-1,7
 DEEP = 0.03              # geometry more than this under the skin is hidden inside the head: it neither seats nor clips
 CLEAR = 0.004            # conform: the hair's inside at least this far over the skin (over the under-cap)
 SNUG = 0.006             # conform: and at most this far where it lies on the head
+CLEAR_FREE = 0.010       # conform: below the scalp line (the face, the cheeks, the jaw) hair keeps 1 cm off the skin
+SPLIT_RESERVE = 200      # triangles kept back from the budget for the cage step's edge splits
 CAP_H = 0.0025           # the matte under-cap over the scalp (the library's rule: no skin shows between the hair from any
-CAP_LONS = [15 * k - 180 for k in range(24)]   # angle); 15 deg columns sag under 2 mm between their edges
+                         # angle): the head's own faces above the scalp line, this far out
 CELL, COLS, ROWS = 512, 4, 2
 PAD = 8                  # px of each cell kept clear round the map (mip bleed)
 GAIN = 1.25              # shading maps store luminance / median / GAIN (the shader multiplies by GAIN)
@@ -288,7 +290,7 @@ def height(p):
     return d.length - skull_radius(d.normalized()) if d.length > 1e-6 else -1.0
 
 
-def conform(ob, rounds=3):
+def conform(ob, rounds=3, pulls=True, split_budget=0):
     """The cage step. Pulls: where hair lies on the head (on_head) and its inside stands more than SNUG off the scalp,
     whole columns move in (a blurred field over the skull's directions, so the hair keeps its thickness and nothing
     tears). Pushes: every vertex of a visible island under CLEAR over the skin goes up to CLEAR, the move spread to its
@@ -296,6 +298,7 @@ def conform(ob, rounds=3):
     vertex under the skin before the push, worst air before the pull, hidden faces deleted)."""
     me = ob.data
     stats = []
+    split = 0
     for rnd in range(rounds):
         gone = 0
         # pulls
@@ -312,7 +315,7 @@ def conform(ob, rounds=3):
                     continue
                 g = (loc - HC).length - r
                 wt[i, j] = 1.0
-                if g > SNUG and g < 0.06 and on_head(la, lo):
+                if pulls and g > SNUG and g < 0.06 and on_head(la, lo):
                     k = 1.0 if g < 0.025 else max(0.0, 1.0 - (g - 0.025) / 0.035)
                     delta[i, j] = -(g - SNUG) * k
                     worst_out = max(worst_out, g)
@@ -343,6 +346,28 @@ def conform(ob, rounds=3):
                   + delta[i0 + 1, j1] * ti * tj)
             fade = 1.0 if la >= -40 else max(0.0, 1.0 - (-40 - la) / 30.0)    # hanging lengths below the jaw keep still
             v.co = v.co + d.normalized() * dv * fade
+        # a long face whose middle cuts through the skin while its corners are out (big low-poly panels, collapse's
+        # long triangles) gets its long edges split, worst first, within the triangle budget; the push brings them out
+        if split_budget > 0:
+            bm = bmesh.new()
+            bm.from_mesh(me)
+            bad = sorted((f for f in bm.faces if f.material_index != 2 and max(e.calc_length() for e in f.edges) > 0.03
+                          and height(f.calc_center_median()) < -0.001), key=lambda f: height(f.calc_center_median()))
+            edges = []
+            for f in bad:                                   # each face's longest edge, the deepest faces first
+                e = max(f.edges, key=lambda e: e.calc_length())
+                if e not in edges:
+                    edges.append(e)
+            edges = edges[:split_budget // 2]
+            if edges:
+                n0 = len(bm.faces)
+                bmesh.ops.subdivide_edges(bm, edges=edges, cuts=1, use_grid_fill=False)
+                bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 3])
+                split_budget -= (len(bm.faces) - n0)
+                split += len(edges)
+            bm.to_mesh(me)
+            bm.free()
+            me.update()
         # pushes: per vertex, spread to the neighbours
         nbr = [[] for _ in me.vertices]
         for e in me.edges:
@@ -355,10 +380,24 @@ def conform(ob, rounds=3):
         # the ears, the jaw: where it would show) anything within 6 cm
         below = np.array([gcoords((v.co - HC).normalized())[0] < SK.scalp_line(gcoords((v.co - HC).normalized())[1]) - 2
                           if (v.co - HC).length > 1e-6 else False for v in me.vertices])
-        push = np.where((hs > -DEEP) | (below & (hs > -0.06)), np.maximum(0.0, CLEAR - hs), 0.0)
-        for _ in range(2):
-            spread = np.array([max([push[k]] + [push[n] * 0.6 for n in nbr[k]]) for k in range(len(push))])
-            push = spread
+        # below the line hair hangs free of the skin by CLEAR_FREE: a card's long faces over the cheek or the jaw sag
+        # between its vertices, and the extra centimetre keeps their middles out of the skin
+        push = np.where(below, np.maximum(0.0, CLEAR_FREE - hs),
+                        np.where(hs > -DEEP, np.maximum(0.0, CLEAR - hs), 0.0))
+        # a face whose middle is still under the skin (a long card face over a curve) lifts its corners by as much,
+        # so the middle comes out too: a local bulge, never a cut
+        for poly in me.polygons:
+            if poly.material_index == 2:
+                continue
+            c = sum((me.vertices[i].co for i in poly.vertices), Vector()) / len(poly.vertices)
+            hc = height(c)
+            if hc < CLEAR and hc > -DEEP:
+                need = CLEAR - hc
+                for i in poly.vertices:
+                    push[i] = max(push[i], need)
+        own = push.copy()
+        for _ in range(2):                  # a neighbour follows a little (no crease), never more than 1 cm beyond its own need
+            push = np.array([max([push[k]] + [min(push[n] * 0.6, own[k] + 0.01) for n in nbr[k]]) for k in range(len(push))])
         for v, pv in zip(me.vertices, push):
             if pv > 0:
                 d = (v.co - HC).normalized()
@@ -375,7 +414,7 @@ def conform(ob, rounds=3):
             bm.to_mesh(me)
             bm.free()
             me.update()
-        stats.append((round(worst_in, 4), round(worst_out, 4), gone))
+        stats.append((round(worst_in, 4), round(worst_out, 4), gone, split))
     return stats
 
 
@@ -535,6 +574,24 @@ def collapse(ob, max_tris, passes=4):
         bpy.ops.object.modifier_apply(modifier="Budget")
 
 
+def drop_slivers(ob, length=0.15, thin=0.004):
+    """Collapse leaves a few long slivers across the hair (an edge over 15 cm, under 4 mm wide): they add nothing to the
+    silhouette and cut chords through the head, so they go."""
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    bad = []
+    for f in bm.faces:
+        L = max(e.calc_length() for e in f.edges)
+        if L > length and 2 * f.calc_area() / L < thin:
+            bad.append(f)
+    bmesh.ops.delete(bm, geom=bad, context="FACES")
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+    bm.to_mesh(ob.data)
+    bm.free()
+    ob.data.update()
+    return len(bad)
+
+
 def decimate(ob, max_tris=LOD0_MAX):
     """Collapse to the budget on the welded mesh (strand cards keep their shape; collapsing them unwelded shreds them).
     Where cards meet three or more to an edge the collapse stalls: those edges are split, collapsed again, re-welded."""
@@ -579,26 +636,35 @@ def cap_bottom(lon):
     return SK.scalp_line(lon)
 
 
-def undercap(ob):
-    """The matte under-cap (material slot 2, M_HairCap): a shell CAP_H over the scalp from the hairline and the nape
-    up, under the hair, so no skin shows through a gap in it from any angle (the lock library's rule)."""
+def undercap(ob, head):
+    """The matte under-cap (material slot 2, M_HairCap): the head's own faces above the skull's scalp line, CAP_H out
+    along their normals, so it lies the same distance over the skin everywhere (a shell built on the analytic skull
+    sagged under the real head's tighter corners) and no skin shows through a gap in the hair from any angle (the
+    lock library's rule)."""
     me = ob.data
+    hb = bmesh.new()
+    hb.from_mesh(head.data)
+    hb.transform(head.matrix_world)
+    hb.normal_update()
+
+    def above(f):                   # any corner over the line (less 3 deg): the cap reaches the hairline fit points
+        for v in f.verts:
+            la, lo = gcoords((v.co - HC).normalized())
+            if la >= GEO_SCALP(lo) - 3:
+                return True
+        return False
+    keep = {f for f in hb.faces if above(f)}
     bm = bmesh.new()
     bm.from_mesh(me)
-    rows = 7
-    grid = []
-    for lon in CAP_LONS:
-        b = cap_bottom(lon)
-        grid.append([bm.verts.new(hair_point(b + (86 - b) * k / (rows - 1), lon, CAP_H)) for k in range(rows)])
-    apex = bm.verts.new(hair_point(90, 0, CAP_H))
+    vmap = {}
+    for f in keep:
+        for v in f.verts:
+            if v not in vmap:
+                vmap[v] = bm.verts.new(v.co + v.normal * CAP_H)
     n0 = len(bm.faces)
-    for i in range(len(CAP_LONS)):
-        a, b_ = grid[i], grid[(i + 1) % len(CAP_LONS)]
-        for k in range(rows - 1):
-            f = bm.faces.new([a[k], b_[k], b_[k + 1], a[k + 1]])
-            f.material_index = 2
-        f = bm.faces.new([a[-1], b_[-1], apex])
-        f.material_index = 2
+    for f in keep:
+        nf = bm.faces.new([vmap[v] for v in f.verts])
+        nf.material_index = 2
     bm.normal_update()
     for f in list(bm.faces)[n0:]:
         if f.normal.dot(f.calc_center_median() - HC) < 0:
@@ -607,8 +673,15 @@ def undercap(ob):
         me.materials.append(None)
     bm.to_mesh(me)
     bm.free()
+    hb.free()
     me.update()
     return sum(len(p.vertices) - 2 for p in me.polygons if p.material_index == 2)
+
+
+def GEO_SCALP(lon):
+    """The skull's scalp line as a geocentric latitude at geocentric lon (near enough: the two lons differ a little)."""
+    d = (SK.hs.head_point(SK.scalp_line(lon), lon) - HC).normalized()
+    return math.degrees(math.asin(max(-1.0, min(1.0, d.z))))
 
 
 # ================================================================ 6. maps
@@ -798,8 +871,12 @@ def main():
     head.matrix_world = Matrix.Identity(4)           # its vertices are the skull in world space
     for md in list(head.modifiers):
         head.modifiers.remove(md)
-    global BODY
+    global BODY, HEAD, CAP_TRIS
     BODY = body_tree()
+    HEAD = head
+    probe = bpy.data.objects.new("cap_probe", bpy.data.meshes.new("cap_probe"))
+    CAP_TRIS = undercap(probe, head)                 # the under-cap's cost, known before the budget
+    bpy.data.objects.remove(probe, do_unlink=True)
     cat_path = os.path.join(ART, "character_catalog.json")
     atlas = np.ones((ROWS * CELL, COLS * CELL, 3), np.float32) / GAIN
     if os.path.exists(ATLAS):
@@ -827,10 +904,11 @@ def main():
         img_px = pixels(img) if img is not None else None
         has_uv = bool(ob.data.uv_layers) and img is not None and np.ptp([d.uv.x for d in ob.data.uv_layers.active.data]) > 1e-4
         capped = "crown" in (spec.get("covers") or SK.COVERS["full"])
-        cap_tris = len(CAP_LONS) * 13 if capped else 0          # 6 quads + the apex triangle per column
+        cap_tris = (CAP_TRIS if capped else 0) + SPLIT_RESERVE
         weld(ob)
         dropped, n_cap = clean(ob, spec, img_px if has_uv else None)
         tris = decimate(ob, LOD0_MAX - cap_tris)
+        slivers = drop_slivers(ob)
         import time
         t0 = time.time()
         if spec.get("covers") == ["top"]:          # a tuft: its foot on the top fit point, sunk 3 mm, at the head scale
@@ -849,9 +927,12 @@ def main():
         t0 = time.time()
         stats = conform(ob) if spec.get("covers") != ["top"] else []
         lengths = fit_lengths(ob, BODY)
+        if spec.get("covers") != ["top"]:
+            room = LOD0_MAX - (CAP_TRIS if capped else 0) - kit.ntris(ob)
+            stats += conform(ob, rounds=7, pulls=False, split_budget=room)   # what the lengths drew in goes back out
         print("  time conform", round(time.time() - t0, 1))
         if capped:
-            undercap(ob)
+            undercap(ob, HEAD)
         cell, chans = slots[pid]
         mapped = has_uv
         if mapped:
@@ -893,7 +974,7 @@ def main():
         entries[pid] = e
         report.append(f"IMPORT {pid:22s} src_tris={src_tris} tris={e['tris']} scale={tuple(round(x, 4) for x in params[:3])} "
                       f"offset={tuple(round(x, 4) for x in params[3:])} yaw={yaw} facing={fa if fa is None else round(fa, 2)}/{fb if fb is None else round(fb, 2)} cost={c:.4f} conform(in,out,hidden)={stats} dropped={dropped} "
-                      f"cap_faces={n_cap} logo_texels={painted} below_chin(before,after,out_of_body)={lengths} map={'cell %d ch %s' % (cell, chans) if mapped else 'none'}")
+                      f"cap_faces={n_cap} slivers={slivers} logo_texels={painted} below_chin(before,after,out_of_body)={lengths} map={'cell %d ch %s' % (cell, chans) if mapped else 'none'}")
         print(report[-1])
         built.append(ob)
         if not RENDER:

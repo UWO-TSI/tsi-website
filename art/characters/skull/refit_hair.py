@@ -28,7 +28,15 @@ bpy.context.preferences.filepaths.save_version = 0
 
 
 # file -> {collection: (lat, lon, lift m)}: the hand pass after the move (fit_check's dive report pointed at these)
-TOUCH = {"hair_backs.blend": {"back_bun": (26, -70, 0.003)}}
+TOUCH = {"hair_backs.blend": {"back_bun": [(26, -70, 0.003)]},
+         # the hime side locks run down past the v8 jaw's tighter corner: more segments, so their faces follow it
+         # instead of cutting a chord through it
+         "hair_bangs.blend": {"bangs_hime": [(-42, -67, 0.0, 0.06, None, 1.0, 14), (-42, 67, 0.0, 0.06, None, 1.0, 14)]}}
+
+
+# collection -> segments for every lock but the named ones (bangs_hime: its fringe gives back the side locks' extra
+# segments, so the heaviest bangs stays within the 4,000-triangle look)
+SEGS = {"hair_bangs.blend": {"bangs_hime": (6, ("bangs_hime_07", "bangs_hime_08"))}}
 
 
 def height(p):
@@ -46,7 +54,7 @@ for fname in ("hair_bangs.blend", "hair_backs.blend"):
         continue
     n_pts = n_curves = 0
     moved = 0.0
-    added = 0
+    added = lifted = 0
     for ob in bpy.data.objects:
         if ob.type != "CURVE":
             continue
@@ -59,6 +67,16 @@ for fname in ("hair_bangs.blend", "hair_backs.blend"):
                 moved = max(moved, (q - p).length)
                 pts.append((q, pt.radius, pt.tilt))
                 n_pts += 1
+            # no lock's top under the skin anywhere along it (the v8 jaw is fuller): a point whose section would reach
+            # into the head rises until its top clears the skin by 3 mm (roots excepted: they are buried by design)
+            flat = float(ob.get("flat", 0.45))
+            for k in range(1, len(pts)):
+                q, r_, t_ = pts[k]
+                need = -r_ * flat + 0.003
+                if height(q) < need:
+                    d = (q - HC).normalized()
+                    pts[k] = (HC + d * (skull_radius(d) + need), r_, t_)
+                    lifted += 1
             out = [pts[0]]
             for (a, ra, ta), (b, rb, tb) in zip(pts[:-1], pts[1:]):
                 ha, hb = height(a), height(b)
@@ -76,17 +94,27 @@ for fname in ("hair_bangs.blend", "hair_backs.blend"):
                 pt.radius, pt.tilt = r, t
         n_curves += 1
     # hand pass: locks that still graze the new skin after the move, lifted where they pass nearest the given point
-    for coll, (lat, lon, lift) in TOUCH.get(fname, {}).items():
+    for coll, lat, lon, lift, *opt in [(c, *t) for c, ts in TOUCH.get(fname, {}).items() for t in ts]:
+        radius, hug_from, width, segs = (opt + [0.07, None, 1.0, None][len(opt):])[:4]
         target = head_point(lat, lon)
         cs = [o for o in bpy.data.collections[coll].objects if o.type == "CURVE"]
         ob = min(cs, key=lambda o: min((o.matrix_world @ Vector(p.co[:3]) - target).length for p in o.data.splines[0].points))
         for k, pt in enumerate(ob.data.splines[0].points):
             q = ob.matrix_world @ Vector(pt.co[:3])
-            w = max(0.0, 1.0 - (q - target).length / 0.09) if k else 0.0        # the root stays buried
+            w = max(0.0, 1.0 - (q - target).length / radius) if k else 0.0      # the root stays buried
             q = q + (q - HC).normalized() * lift * w
             c = ob.matrix_world.inverted() @ q
             pt.co = (c.x, c.y, c.z, 1.0)
-        print("REFIT touch", coll, ob.name, f"+{lift * 1000:.1f} mm near ({lat}, {lon})")
+            pt.radius *= 1.0 - (1.0 - width) * w
+        if hug_from:
+            ob["hug_from"] = hug_from
+        if segs:
+            ob["segs"] = segs
+        print("REFIT touch", coll, ob.name, f"+{lift * 1000:.1f} mm, width x{width} near ({lat}, {lon})")
+    for coll, (n, keep) in SEGS.get(fname, {}).items():
+        for ob in bpy.data.collections[coll].objects:
+            if ob.type == "CURVE" and ob.name not in keep:
+                ob["segs"] = n
     # the head the locks are swept against: V8_Head, in the old head's collection; the v7 head kept hidden for reference
     old = bpy.data.objects.get("V7_Head")
     colls = list(old.users_collection) if old else [sc.collection]
@@ -106,5 +134,5 @@ for fname in ("hair_bangs.blend", "hair_backs.blend"):
         old.hide_render = True
     sc["skull"] = VERSION
     bpy.ops.wm.save_as_mainfile(filepath=path, compress=True)
-    print(f"REFIT {fname}: {n_curves} locks, {n_pts} points, moved at most {moved * 1000:.1f} mm, {added} points added")
+    print(f"REFIT {fname}: {n_curves} locks, {n_pts} points, moved at most {moved * 1000:.1f} mm, {added} points added, {lifted} lifted clear of the skin")
 print("REFIT_OK")

@@ -267,6 +267,10 @@ def sweep(pc, ob, surf=None):
                 for j, (ac, up, _) in enumerate(sec):
                     if up <= 0 and w > 0 and surf.height(pts[j]) > -HUG_DEPTH:
                         pts[j] = pts[j].lerp(surf.at(pts[j], -HUG_DEPTH), w)
+                    elif up <= 0 and w > 0 and surf.height(pts[j]) < -HUG_DEPTH:
+                        # head fit: an edge swept into the head (a wide lock round the v8 jaw's corner) comes out
+                        # onto the skin, so its side faces never cut through it
+                        pts[j] = pts[j].lerp(surf.at(pts[j], -HUG_DEPTH), w)
         ring = [pc.v(q) for q in pts]
         rings.append((ring, p, v))
     tip_p, _, _, tip_v = sm[-1]
@@ -274,6 +278,8 @@ def sweep(pc, ob, surf=None):
         w = hug * _ss(hug_from, min(HUG_FULL, hug_from - 0.004), surf.height(tip_p))
         if w > 0 and surf.height(tip_p) > 0.0005:
             tip_p = tip_p.lerp(surf.at(tip_p, 0.0005), w)          # a tip lying on the head rests on the skin
+        elif surf.height(tip_p) < -HUG_DEPTH:
+            tip_p = surf.at(tip_p, 0.0005)                         # head fit: a tip swept into the jaw comes out onto it
     tip = pc.v(tip_p)
     k = len(sec)
     for (ra, pa, va), (rb, pb, vb) in zip(rings[:-1], rings[1:]):
