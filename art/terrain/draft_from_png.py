@@ -17,7 +17,10 @@ develops the terrain for the game's feel:
 Dark green is HEIGHT only inside the mountain ("Mountain, dark determine
 height"); elsewhere it is forest and stays ground (trees are an object pass).
 
-Output: web/data/terrain-v2-draft.json (+ a top-down preview PNG).
+Output: art/terrain/out/world-map.generated.json (+ a top-down preview PNG).
+FROZEN 2026-10-10: web/data/world-map.json is David's painted map and the
+source of truth. This script never writes it; a regional pass (the mountain
+stair, rivers) is merged into it on purpose, region by region.
 Tune the constants, re-run, re-look. python3 art/terrain/draft_from_png.py
 """
 import json
@@ -27,7 +30,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "specs/references/terrain/terrainv1.png"
-OUT = ROOT / "web/data/terrain-v2-draft.json"
+OUT = ROOT / "art/terrain/out/world-map.generated.json"
 PREVIEW = ROOT / "art/terrain/draft-preview.png"
 
 # Scale pass 3 (David: "could be more exaggerated and bigger"): 3x linear over
@@ -617,6 +620,7 @@ def main():
     head = ",\n".join(f'  "{k}": {json.dumps(doc[k])}' for k in ("width", "depth", "originX", "originZ", "tile", "levelStep"))
     body = f'  "levels": {rows(doc["levels"])},\n  "surfaces": {rows(doc["surfaces"])},\n' \
            f'  "annotations": {rows(doc["annotations"])},\n  "objects": {rows(doc["objects"])}'
+    OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text("{\n" + head + ",\n" + body + "\n}\n")
 
     # Top-down preview: class colours shaded by level, world-oriented like the drawing.
