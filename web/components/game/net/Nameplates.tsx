@@ -11,8 +11,9 @@
  *
  * The tags are plain elements beside drei's labels in the canvas's own box, stacked by distance on drei's scale, so a
  * nearer tag covers a farther one whichever kind they are. Small clean text with a soft shadow, no plate
- * (nameTags.module.css): the Tethos-blue dot for a TSI member (row 223), a small phone for someone resting on a phone
- * (row 299), dimmed while they're away (dropped, inside the reconnection grace). World names only (row 222).
+ * (nameTags.module.css): the Tethos-blue dot for a TSI member (row 223), a small heart for a friend (v1), a small phone
+ * for someone resting on a phone (row 299), dimmed while they're away (dropped, inside the reconnection grace). World
+ * names only (row 222).
  */
 import { useEffect } from "react";
 import { useThree } from "@react-three/fiber";
@@ -20,6 +21,7 @@ import { CHARACTER_HEIGHT } from "../character/Character";
 import { LABEL_PRIORITY, worldLabels, type LabelLayout, type LabelSpec } from "@/lib/game/labelLayout";
 import type { RemotePlayer } from "@/lib/net/types";
 import { chatStore } from "@/lib/net/chat";
+import { friendsStore } from "@/lib/net/friends";
 import type { RemoteRig } from "./drive";
 import { LOD } from "./lod";
 import styles from "./net.module.css";
@@ -51,11 +53,15 @@ export function plateZ(distance: number, near: number, far: number): number {
   return Math.round(a * distance - a * far);
 }
 
+/** A small heart by a friend's name (v1 friends), drawn, not an emoji. */
+const HEART = '<svg viewBox="0 0 12 11" width="10" height="9" aria-hidden="true"><path d="M6 10.2 1.4 5.7A2.9 2.9 0 0 1 6 2.1a2.9 2.9 0 0 1 4.6 3.6Z"/></svg>';
 /** A small phone, drawn in the paper kit's ink (not an emoji). */
 const PHONE = '<svg viewBox="0 0 10 15" width="10" height="15"><rect x="0.9" y="0.9" width="8.2" height="13.2" rx="2.3"/><path d="M3.7 3h2.6"/><circle cx="5" cy="11.5" r="0.95"/></svg>';
 
 interface Slot {
   root: HTMLDivElement; tag: HTMLDivElement; name: HTMLSpanElement; phone: HTMLSpanElement;
+  /** Shown as your friend (the heart by the name). */
+  friend: boolean;
   /** What it shows now, and what of theirs it was filled from. */
   player: RemotePlayer | null;
   x: number; y: number; z: number; shown: boolean; alpha: number;
@@ -72,9 +78,10 @@ function makeSlot(): Slot {
   root.setAttribute("aria-hidden", "true");
   root.style.display = "none";
   el("span", tags.dot, tag);
+  el("span", tags.friend, tag).innerHTML = HEART;
   const name = el("span", tags.name, tag), phone = el("span", styles.phone, tag);
   phone.innerHTML = PHONE;
-  return { root, tag, name, phone, player: null, x: NaN, y: NaN, z: NaN, shown: false, alpha: 1 };
+  return { root, tag, name, phone, friend: false, player: null, x: NaN, y: NaN, z: NaN, shown: false, alpha: 1 };
 }
 const flag = (e: HTMLElement, name: string, on: boolean) => { if (e.hasAttribute(name) !== on) e.toggleAttribute(name, on); };
 
@@ -123,6 +130,9 @@ export class PlatePool {
         if (!r || !here(r) || r.anchor.current?.visible !== true) return false;
         // While their speech bubble shows, it carries the name (SpeechBubbles.tsx).
         if (chatStore().bubble(r.sid, r.entry.player.uid)) return false;
+        // A friend's name wears a small heart (a Set lookup a frame; the DOM only when it changes).
+        const friend = friendsStore().isFriend(r.entry.player.uid);
+        if (friend !== s.friend) { s.friend = friend; flag(s.tag, "data-friend", friend); measure = true; }
         if (s.player !== r.entry.player) { fill(s, r.entry.player); measure = true; }
         if (this.debug && s.tag.dataset.tier !== TIER_TAG[r.lod.tier]) { s.tag.dataset.tier = TIER_TAG[r.lod.tier]; measure = true; }
         out.set(r.feet.current.x, plateY(r), r.feet.current.z);

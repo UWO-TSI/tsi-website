@@ -5,15 +5,22 @@
 // checks in ./chat and around blocks; sanctions reach a player's sessions through the
 // world (../world). Everything on the wire comes from the shared contract
 // (web/lib/net/protocol.ts, imported as @net/protocol).
+//
+// v1 friends (specs/v1-drop.md §3): each player's `friends` list (their friends on the
+// island, in any shard, never one who blocked them) is sent at join and whenever one of
+// them comes, moves or goes; `follow {uid}` reserves a seat in a friend's shard with
+// matchMaker.reserveSeatFor, which a soft-locked shard still takes below SHARD.max (only
+// joinById refuses `locked`), carrying the session's own card, blocks and friends, so
+// onAuth isn't run again.
 import { randomUUID } from "node:crypto";
-import { getMessageBytes, Protocol, Room, ServerError, definePlugins, type AuthContext, type Client } from "@colyseus/core";
+import { getMessageBytes, matchMaker, Protocol, Room, ServerError, definePlugins, type AuthContext, type Client } from "@colyseus/core";
 import { StateView } from "@colyseus/schema";
 import { UniqueSessionPlugin } from "colyseus/plugins/unique-session";
 import * as N from "@net/protocol";
 import { admit, checkToken, isRemoved, JoinRefused, type AuthServices } from "../auth/authenticate";
 import type { PlayerCard } from "../auth/card";
 import type { Identity } from "../auth/verify";
-import type { Blocks, SanctionPatch, World, WorldRoom } from "../world";
+import type { Blocks, Presence, SanctionPatch, World, WorldRoom } from "../world";
 import { checkChat, createChatMeter, recordChat, type ChatMeter, type ChatSender } from "./chat";
 import { limiters, type Limiter, type RateSpec } from "./limits";
 import { addStrike, checkPose, newTrack, resetBaseline, SANITY, type MotionTrack } from "./sanity";
@@ -30,9 +37,9 @@ const DEFERRED_CLOSE: Record<Deferred, number> = {
 };
 
 /** client.auth: `id` is the verified sub, the key UniqueSessionPlugin and the session index use. */
-export type IslandAuth = { id: string; identity: Identity; card?: PlayerCard; blocks?: Blocks; refusal?: Deferred };
+export type IslandAuth = { id: string; identity: Identity; card?: PlayerCard; blocks?: Blocks; friends?: string[]; refusal?: Deferred };
 
-type LimitKind = "p" | "s" | "area" | "events" | "emotes" | "refresh" | "ping" | "chat";
+type LimitKind = "p" | "s" | "area" | "events" | "emotes" | "refresh" | "ping" | "chat" | "follow";
 const RATES: Record<LimitKind, RateSpec> = {
   p: N.RATE_LIMITS.p,
   s: N.RATE_LIMITS.s,
@@ -43,6 +50,7 @@ const RATES: Record<LimitKind, RateSpec> = {
   ping: N.RATE_LIMITS.ping,
   // Raw chat messages, before the CHAT checks (which answer each with a line or a refusal): a flood is dropped unanswered.
   chat: { perSecond: 2, burst: 3 },
+  follow: { perSecond: 1000 / N.RATE_LIMITS.follow.everyMs, burst: 1 },
 };
 
 /** Per session, kept across a reconnection (Colyseus carries userData over). */
@@ -69,6 +77,9 @@ type Session = {
   /** Players this one blocked, and players who blocked this one: no chat lines or emotes between them. */
   blocks: Set<string>;
   blockedBy: Set<string>;
+  /** v1: their friends (member ids), and the card they joined with (a follow carries it to the next shard). */
+  friends: Set<string>;
+  card: PlayerCard;
 };
 
 /** Chat lines and emotes don't pass between a blocked pair, whichever of them blocked. */
@@ -167,8 +178,10 @@ export function createIslandRoom(o: IslandRoomOptions) {
         auth.refusal = "version";
         return auth;
       }
-      // The card and the player's blocks, side by side; without either the join waits for the database (4107).
-      const [card, blocks] = await Promise.allSettled([admit(o.services, identity), o.world.loadBlocks(identity)]);
+      // The card and the player's blocks, side by side; without either the join waits for the database (4107). Friends
+      // ride along: a list that can't be read is empty, never a refusal.
+      const [card, blocks, friends] = await Promise.allSettled([admit(o.services, identity), o.world.loadBlocks(identity), o.world.loadFriends(identity)]);
+      if (friends.status === "fulfilled") auth.friends = friends.value;
       if (card.status === "rejected") {
         const e = card.reason;
         if (!(e instanceof JoinRefused)) throw e;
@@ -202,6 +215,9 @@ export function createIslandRoom(o: IslandRoomOptions) {
         this.onRefresh(client).catch((e) => this.report(N.MSG.refresh, e));
       });
       this.onMessage(N.MSG.chat, this.guard(N.MSG.chat, (client: Client, message: unknown) => this.onChat(client, message)));
+      this.onMessage(N.MSG.follow, (client: Client, message: unknown) => {
+        this.onFollow(client, message).catch((e) => this.report(N.MSG.follow, e));
+      });
       o.world.register(this);
       this.clock.setInterval(this.guard("views", () => this.rebuildViews()), N.INTEREST.rebuildMs);
     }
@@ -271,12 +287,17 @@ export function createIslandRoom(o: IslandRoomOptions) {
         sender: senderOf(card),
         blocks: new Set(auth.blocks?.blocks ?? []),
         blockedBy: new Set(auth.blocks?.blockedBy ?? []),
+        friends: new Set(auth.friends ?? []),
+        card,
       };
       client.userData = session;
       this.sessions.set(client.sessionId, session);
       this.visible.set(client.sessionId, new Set());
       this.rebuildViews();
       this.applyShardCap();
+      // Their friends hear they're here; their own list once their handlers are in (the next tick).
+      o.world.moved(session.uid);
+      this.clock.setTimeout(this.guard("friends", () => { if (this.sessions.get(session.key) === session) this.sendFriends(session); }), 0);
     }
 
     onDrop(client: Client): void {
@@ -307,6 +328,7 @@ export function createIslandRoom(o: IslandRoomOptions) {
       this.state.roster.delete(s.key);
       s.view.dispose();
       this.applyShardCap();
+      o.world.moved(s.uid);
     }
 
     onDispose(): void {
@@ -420,7 +442,10 @@ export function createIslandRoom(o: IslandRoomOptions) {
       if (m.afk !== undefined) this.setFlag(s.key, N.FLAG.afk, m.afk);
       // v1: the "…" over someone writing a chat line.
       if (m.typing !== undefined) this.setFlag(s.key, N.FLAG.typing, m.typing);
-      if (m.area !== undefined) this.rebuildViews();
+      if (m.area !== undefined) {
+        this.rebuildViews();
+        o.world.moved(s.uid);
+      }
     }
 
     private onPing(client: Client, message: unknown): void {
@@ -447,6 +472,7 @@ export function createIslandRoom(o: IslandRoomOptions) {
       r.name = p.name;
       r.badge = p.badge;
       s.sender = senderOf(card);
+      s.card = card;
     }
 
     /**
@@ -495,6 +521,39 @@ export function createIslandRoom(o: IslandRoomOptions) {
       });
     }
 
+    /**
+     * `follow {uid}` (v1): a seat in a friend's shard. Refused as not_friend (no friendship), offline (not on the island,
+     * or a block between you, never said as such), here (already in their shard), full (at maxClients) or busy. The seat
+     * is reserved with the session's own card, blocks and friends and its area, mobile and class options.
+     */
+    private async onFollow(client: Client, message: unknown): Promise<void> {
+      const s = this.sessions.get(client.sessionId);
+      const p = this.state.players.get(client.sessionId);
+      if (!s || !p || this.shuttingDown || !s.limit.follow.take(Date.now())) return;
+      const ask = N.parseFollow(message);
+      if (!ask) return;
+      const answer = (a: N.FollowAnswer) => { if (this.sessions.get(s.key) === s) client.send(N.MSG.follow, a); };
+      const refuse = (refused: N.FollowRefusal) => answer({ uid: ask.uid, refused });
+      if (!s.friends.has(ask.uid)) return refuse("not_friend");
+      const where = s.blocks.has(ask.uid) || s.blockedBy.has(ask.uid) ? null : o.world.presence(ask.uid);
+      if (!where) return refuse("offline");
+      if (where.roomId === this.roomId) return refuse("here");
+      const auth: IslandAuth = {
+        id: s.uid, identity: s.identity, card: s.card, friends: [...s.friends], blocks: { blocks: [...s.blocks], blockedBy: [...s.blockedBy] },
+      };
+      const options: N.JoinOptions = { v: N.PROTOCOL, area: p.area, mobile: s.mobile, showClass: N.hasFlag(p.flags, N.FLAG.showClass) };
+      try {
+        const room = await matchMaker.getRoomById(where.roomId);
+        if (!room) return refuse("offline");
+        const seat = await matchMaker.reserveSeatFor(room, options, auth);
+        answer({ uid: ask.uid, seat: seat as N.SeatReservation });
+        o.log("follow", { uid: s.uid, to: ask.uid, shard: where.shard });
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        refuse(/full/i.test(message) ? "full" : "busy");
+      }
+    }
+
     // ── The world's calls ────────────────────────────────────────────
 
     /** A T1/T2 sanction (the admin routes or the poll): a mute takes effect on the next line, a removal closes now. */
@@ -524,16 +583,60 @@ export function createIslandRoom(o: IslandRoomOptions) {
       let n = 0;
       for (const s of this.sessions.values()) {
         if (s.uid === blocker) {
-          if (on) s.blocks.add(blocked);
+          if (on) { s.blocks.add(blocked); s.friends.delete(blocked); }
           else s.blocks.delete(blocked);
           n++;
         } else if (s.uid === blocked) {
-          if (on) s.blockedBy.add(blocker);
+          if (on) { s.blockedBy.add(blocker); s.friends.delete(blocker); }
           else s.blockedBy.delete(blocker);
           n++;
         }
       }
       return n;
+    }
+
+    applyFriend(a: string, b: string, on: boolean): number {
+      let n = 0;
+      for (const s of this.sessions.values()) {
+        const other = s.uid === a ? b : s.uid === b ? a : null;
+        if (!other) continue;
+        if (on && !s.blocks.has(other) && !s.blockedBy.has(other)) s.friends.add(other);
+        else if (!on) s.friends.delete(other);
+        n++;
+      }
+      return n;
+    }
+
+    presenceOf(uid: string): Presence | null {
+      for (const s of this.sessions.values()) {
+        if (s.uid !== uid || s.final !== undefined) continue;
+        const p = this.state.players.get(s.key);
+        if (p) return { shard: this.state.shard, area: p.area, roomId: this.roomId };
+      }
+      return null;
+    }
+
+    refreshFriends(uid: string): void {
+      for (const s of this.sessions.values()) if (s.uid === uid) this.sendFriends(s);
+    }
+
+    friendMoved(uid: string): void {
+      for (const s of this.sessions.values()) if (s.friends.has(uid)) this.sendFriends(s);
+    }
+
+    /** `friends`: their friends on the island now, in any shard, never one who blocked them (nor one they blocked). */
+    private sendFriends(s: Session): void {
+      const client = this.clients.getById(s.key);
+      if (!client || s.final !== undefined) return;
+      const list: N.FriendPresence[] = [];
+      for (const uid of s.friends) {
+        if (s.blockedBy.has(uid) || s.blocks.has(uid)) continue;
+        const where = o.world.presence(uid);
+        if (where) list.push({ uid, shard: where.shard, area: where.area });
+        if (list.length >= N.FRIENDS_MAX) break;
+      }
+      list.sort((x, y) => (x.uid < y.uid ? -1 : x.uid > y.uid ? 1 : 0));
+      client.send(N.MSG.friends, list);
     }
 
     memberIds(): string[] {

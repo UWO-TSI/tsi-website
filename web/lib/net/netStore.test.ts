@@ -10,6 +10,7 @@ import {
 import { BURST_GAP_MS } from "./clock";
 import { createLoopback } from "./loopback";
 import { ChatStore } from "./chat";
+import { FriendsStore } from "./friends";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -209,9 +210,10 @@ class FakeRoom {
 }
 
 /** The store on a fake SDK, a hand-driven wall clock and timers. */
-function roomRig(o: { joins?: (FakeRoom | { code: unknown })[]; token?: (refresh: boolean) => Promise<string | null>; devName?: string | null; chat?: ChatStore } = {}) {
+function roomRig(o: { joins?: (FakeRoom | { code: unknown })[]; token?: (refresh: boolean) => Promise<string | null>; devName?: string | null; chat?: ChatStore; friends?: FriendsStore } = {}) {
   let wall = 1_791_000_000_000;
   const timers: { at: number; fn: () => void }[] = [], clients: { options: unknown; credentials: unknown; token: unknown }[] = [], rooms: FakeRoom[] = [];
+  const seats: unknown[] = [];
   const windowFns = new Map<string, (e: Event) => void>(), applied: number[] = [], tokens: boolean[] = [];
   const joins = [...(o.joins ?? [])];
   const sdk: SdkModule = {
@@ -221,6 +223,13 @@ function roomRig(o: { joins?: (FakeRoom | { code: unknown })[]; token?: (refresh
       constructor(readonly url: string) {}
       async joinOrCreate(_name: string, options: unknown) {
         clients.push({ options, credentials: this.http.options.credentials, token: this.auth.token });
+        const next = joins.shift() ?? new FakeRoom();
+        if (!(next instanceof FakeRoom)) throw Object.assign(new Error("refused"), next);
+        rooms.push(next);
+        return next as unknown as SdkRoom;
+      }
+      async consumeSeatReservation(seat: unknown) {
+        seats.push({ seat, credentials: this.http.options.credentials, token: this.auth.token });
         const next = joins.shift() ?? new FakeRoom();
         if (!(next instanceof FakeRoom)) throw Object.assign(new Error("refused"), next);
         rooms.push(next);
@@ -240,6 +249,7 @@ function roomRig(o: { joins?: (FakeRoom | { code: unknown })[]; token?: (refresh
     previewActive: () => false,
     listen: (type, fn) => { windowFns.set(type, fn); return () => windowFns.delete(type); },
     chat: o.chat,
+    friends: o.friends,
   });
   const settle = () => act(async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); });
   /** Advance the wall clock, firing due timers (and answering pings: the server is 300 ms ahead, 20 ms away). */
@@ -267,7 +277,7 @@ function roomRig(o: { joins?: (FakeRoom | { code: unknown })[]; token?: (refresh
     pong(room);
     return room;
   };
-  return { store, src: store.source, clients, rooms, timers, windowFns, applied, tokens, settle, advance, join, pong, wall: () => wall };
+  return { store, src: store.source, clients, rooms, seats, timers, windowFns, applied, tokens, settle, advance, join, pong, wall: () => wall };
 }
 const player = (sid: number, over: Partial<NetPlayer> = {}): NetPlayer => ({
   sid, uid: `u-${sid}`, name: `Pebble ${sid}`, badge: 1, look: "", level: 3, family: 0, kit: "", mastery: 0, aura: "", frame: 0,
@@ -582,5 +592,71 @@ describe("world chat through the store (v1, specs/v1-drop.md §3)", () => {
     r.src.sendTyping(false);
     expect(room.sentOf("s")).toEqual([{ typing: true }, { typing: false }]);
     expect(r.src.roomId).toBe("room-1");
+  });
+});
+
+describe("friends and joining a friend's shard through the store (v1)", () => {
+  const BOB = "22222222-2222-4222-8222-222222222222";
+  const SEAT = { name: "island", sessionId: "s-2", roomId: "room-2", processId: "p" };
+  async function joined(joins: (FakeRoom | { code: unknown })[] = []) {
+    const friends = new FriendsStore(), r = roomRig({ friends, joins });
+    r.store.acquire();
+    await r.settle();
+    const room = await r.join();
+    return { r, room, friends };
+  }
+
+  it("feeds `friends` to the friends store; the first list after a join is quiet, later arrivals aren't", async () => {
+    const { room, friends } = await joined();
+    const came: string[][] = [];
+    friends.onArrive(u => came.push(u));
+    room.msg.get("friends")!([{ uid: BOB, shard: 2, area: 1 }]);
+    expect(friends.presence(BOB)).toEqual({ uid: BOB, shard: 2, area: 1 });
+    room.msg.get("friends")!([]);
+    room.msg.get("friends")!([{ uid: BOB, shard: 2, area: 0 }]);
+    expect(came).toEqual([[BOB]]);
+    room.msg.get("friends")!([{ uid: "nope", shard: 0, area: 0 }]);
+    expect(friends.presence(BOB)?.area).toBe(0);
+  });
+
+  it("follow: asks the room; with a seat it leaves for the friend's shard, its old room's close ignored, and is joined there", async () => {
+    const next = new FakeRoom();
+    next.sessionId = "s-2";
+    next.roomId = "room-2";
+    const { r, room } = await joined([new FakeRoom(), next]);
+    const asked = r.src.follow(BOB);
+    expect(room.sentOf("follow")).toEqual([{ uid: BOB }]);
+    r.store.setArea("cafe"); // a door between the ask and the seat
+    room.msg.get("follow")!({ uid: BOB, seat: SEAT });
+    await r.settle();
+    expect(r.seats).toEqual([{ seat: SEAT, credentials: "omit", token: "jwt" }]);
+    expect(await asked).toEqual({ ok: true });
+    // The old room is left; its close changes nothing (no backoff, no kick).
+    expect(r.src.status().kind).not.toBe("offline");
+    await r.join(next);
+    expect(r.src.status()).toEqual({ kind: "joined", shard: 1 });
+    expect(r.src.roomId).toBe("room-2");
+    // The area moved while the seat was made: the new room hears the latest.
+    expect(next.sentOf("s")).toContainEqual({ area: AREAS.indexOf("cafe") });
+    await r.advance(30_000);
+    expect(r.clients).toHaveLength(1); // no fresh joinOrCreate
+  });
+
+  it("a refusal or no answer says why and stays put; a seat that can't be taken falls back to a normal rejoin", async () => {
+    const { r, room } = await joined([new FakeRoom(), { code: 4002 }]);
+    const refused = r.src.follow(BOB);
+    room.msg.get("follow")!({ uid: BOB, refused: "full" });
+    expect(await refused).toEqual({ ok: false, reason: "full" });
+    const silent = r.src.follow(BOB);
+    await r.advance(10_000);
+    expect(await silent).toEqual({ ok: false, reason: "busy" });
+    expect(r.src.status().kind).toBe("joined");
+    const lost = r.src.follow(BOB);
+    room.msg.get("follow")!({ uid: BOB, seat: SEAT });
+    await r.settle();
+    expect(await lost).toEqual({ ok: false, reason: "busy" });
+    expect(r.src.status().kind).toBe("offline"); // backing off to a fresh join
+    await r.advance(2100);
+    expect(r.clients).toHaveLength(2);
   });
 });

@@ -42,6 +42,7 @@ const world = createWorld({
     if (b instanceof Error) throw b;
     return b ?? { blocks: [], blockedBy: [] };
   },
+  loadFriends: async () => [],
   pollSanctions: (uids) => pollAnswer(uids),
   log: (event, fields) => logs.push({ event, fields }),
 });

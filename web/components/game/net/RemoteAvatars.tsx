@@ -131,7 +131,7 @@ function driveAll(d: Driver, source: NetSource, world: GroundWorld, juice: Juice
     if (pool && r.lod.tier === FULL && (!FX_BENCH || fxOn("juice"))) remoteDashTrail(pool, r.fx, s, r.groundY, dt);
     r.lod.dist = Math.hypot(s.x - you.x, s.z - you.z);
     // Where they stand this frame, for what yields to people (the café's patrons).
-    if (n < LIVE_MAX) { liveRemotes.x[n] = s.x; liveRemotes.z[n] = s.z; n++; }
+    if (n < LIVE_MAX) { liveRemotes.x[n] = s.x; liveRemotes.z[n] = s.z; liveRemotes.sid[n] = r.sid; liveRemotes.uid[n] = r.entry.player.uid; n++; }
   }
   liveRemotes.n = n;
   d.left -= dt;

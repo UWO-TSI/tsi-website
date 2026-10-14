@@ -13,11 +13,15 @@
 .tag[data-away] { opacity: 0.55; }
 .dot { display: none; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--gui-tethos-blue); box-shadow: 0 0 0 1.5px #fffdf3, 0 1px 2px rgb(46 34 24 / 0.5); }
 .tag[data-member] .dot { display: block; }
+/* A friend (v1): a small coral heart before the name. */
+.friend { display: none; flex: none; line-height: 0; }
+.friend svg { display: block; fill: var(--gui-coral); stroke: #fffdf3; stroke-width: 1.2; filter: drop-shadow(0 1px 1px rgb(46 34 24 / 0.5)); }
+.tag[data-friend] .friend { display: block; }
 /* Squeezed out of a crowd (lib/game/labelLayout.ts): only a small dot until there's room for the name again. */
 .tag[data-dot] > * { display: none; }
 .tag[data-dot] .dot { display: block; background: #fffdf3; box-shadow: 0 1px 2px rgb(46 34 24 / 0.55); }
 .tag[data-dot][data-member] .dot { background: var(--gui-tethos-blue); box-shadow: 0 0 0 1.5px #fffdf3, 0 1px 2px rgb(46 34 24 / 0.5); }
-.tag[data-dot] .name { display: none; }
+.tag[data-dot] .name, .tag[data-dot] .friend { display: none; }
 .name { display: block; }
 
 :global(html[data-contrast="high"]) .tag { color: #ffffff; text-shadow: 0 0 2px #000000, 0 0 2px #000000, 1px 1px 0 #000000, -1px -1px 0 #000000, 1px -1px 0 #000000, -1px 1px 0 #000000; }

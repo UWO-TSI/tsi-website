@@ -1,15 +1,19 @@
 "use client";
 
 /**
- * A player's card (specs/v1-drop.md §3, specs/multiplayer.md §6): opened from a chat line's name or the people list.
- * Their world name (never a real one, row 222), the member dot, their level when they're in view, and what you can do:
+ * A player's card (specs/v1-drop.md §3, specs/multiplayer.md §6): opened by clicking someone in the world, a chat line's
+ * name, the people list or the friends list. Their world name (never a real one, row 222), the member dot, their level
+ * when they're in view, and what you can do: Add friend (or accept their request), Wave, and for a friend where they are
+ * and Join (into their shard);
  * mute (this session; their lines and bubbles stop), block (persistent, POST /api/world/blocks: no chat lines or
  * emotes between you, both ways; avatars still show) and report (POST /api/world/report: a line from the chat, or the
  * player, with a reason; it lands in the T1/T2 queue with the room's last lines).
  */
 import { useState, type ReactNode } from "react";
-import { Ban, Flag, Volume2, VolumeX } from "lucide-react";
-import { Button, ConfirmDialog, List, ListRow, Sheet, toast } from "@/components/gui";
+import { Ban, Flag, Hand, Heart, LogIn, UserPlus, Volume2, VolumeX } from "lucide-react";
+import { Badge, Button, ConfirmDialog, List, ListRow, Sheet, toast } from "@/components/gui";
+import { useNetStatus } from "@/lib/net/netStore";
+import { addFriend, answer, joinFriend, useFriends, waveAt, whereOf } from "./friendActions";
 import { chatStore } from "@/lib/net/chat";
 import { REPORT_REASONS, blockWorld, reportWorld } from "@/lib/world/api";
 import { activeNet } from "./active";
@@ -56,7 +60,29 @@ function Report({ t, onDone }: { t: CardTarget; onDone: () => void }) {
   </div>;
 }
 
-/** The card's own actions; v1 friends adds its row above them (`children`). */
+/** Friends (v1): add or accept, wave, and for a friend where they are and Join. */
+function FriendRow({ t }: { t: CardTarget }) {
+  const f = useFriends(), status = useNetStatus();
+  const [busy, setBusy] = useState(false);
+  const v = f.view, friend = !!v?.friends.some(x => x.member_id === t.uid);
+  const incoming = !!v?.incoming.some(x => x.member_id === t.uid), outgoing = !!v?.outgoing.some(x => x.member_id === t.uid);
+  const online = f.online.find(o => o.uid === t.uid);
+  const myShard = status.kind === "joined" ? status.shard : null;
+  const run = async (fn: () => Promise<unknown>) => { setBusy(true); await fn(); setBusy(false); };
+  return <>
+    {friend && <p className={s.status}><Heart size={12} aria-hidden /> Friends · {online ? whereOf(online.area) : "Not on the island right now"}</p>}
+    <div className={s.friendRow}>
+      {friend ? null
+        : incoming ? <Button size="sm" disabled={busy} onClick={() => run(() => answer(t.uid, t.name, true))}><UserPlus size={15} aria-hidden /> Accept friend</Button>
+        : outgoing ? <Badge tone="sage">Request sent</Badge>
+        : <Button size="sm" disabled={busy} onClick={() => run(() => addFriend({ member_id: t.uid }, t.name))}><UserPlus size={15} aria-hidden /> Add friend</Button>}
+      <Button size="sm" variant="secondary" onClick={() => waveAt(t.sid)}><Hand size={15} aria-hidden /> Wave</Button>
+      {friend && online && online.shard !== myShard && <Button size="sm" variant="secondary" disabled={busy} onClick={() => run(() => joinFriend(t.uid, t.name))}><LogIn size={15} aria-hidden /> Join</Button>}
+    </div>
+  </>;
+}
+
+/** The card. */
 export default function PlayerCard({ children }: { children?: (t: CardTarget) => ReactNode }) {
   const t = useCard();
   const chat = chatStore();
@@ -93,6 +119,7 @@ export default function PlayerCard({ children }: { children?: (t: CardTarget) =>
     <Sheet open={!!t && !confirmBlock} onClose={close} size="sm" testId="player-card" title={t?.name ?? ""}
       eyebrow={<span className={s.eyebrow}>{member && <span className={s.dot} role="img" aria-label="TSI member" title="TSI member" />}{member ? "TSI member" : "Islander"}{seen && seen.level > 0 ? ` · Lv ${seen.level}` : ""}</span>}>
       {t && (t.uid === me ? <p className={s.lead}>That&apos;s you!</p> : view === "report" ? <Report t={t} onDone={() => setView("main")} /> : <>
+        <FriendRow t={t} />
         {children?.(t)}
         <List label="Chat">
           <ListRow icon={muted ? <Volume2 size={18} /> : <VolumeX size={18} />} title={muted ? "Unmute" : "Mute"} detail={muted ? "See their chat again" : "Hide their chat until you leave"} onClick={toggleMute} />
@@ -103,7 +130,7 @@ export default function PlayerCard({ children }: { children?: (t: CardTarget) =>
     </Sheet>
     <ConfirmDialog open={!!t && confirmBlock} title={`Block ${t?.name ?? ""}?`} confirmLabel="Block" cancelLabel="Not now" danger busy={busy}
       onConfirm={block} onCancel={() => setConfirmBlock(false)}>
-      You won&apos;t see each other&apos;s chat or emotes.
+      You won&apos;t see each other&apos;s chat or emotes, and you won&apos;t be friends. You can unblock them from your friends list.
     </ConfirmDialog>
   </>;
 }
