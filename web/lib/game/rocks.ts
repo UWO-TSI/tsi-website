@@ -85,16 +85,17 @@ export function cliffBoulders(map: IslandMap, field: Float32Array = heightField(
 }
 
 /** Objects the accents keep clear of, and how far: buildings and the wharf by their size, everything else by a step. */
-const CLEAR: Partial<Record<MapObject["kind"], number>> = { landmark: 5, spawn: 3, bridge: 3.5, study: 2.5, fitting: 2.5, missions: 2.5, tree: 1.6 };
+const CLEAR: Partial<Record<MapObject["kind"], number>> = { landmark: 5, spawn: 3, bridge: 3.5, study: 2.5, fitting: 2.5, missions: 2.5, tree: 1.6, campfire: 3.5 };
 const PROPOSAL_SPACING = 2.2;
 const PROPOSAL_MAX = 320;
 
 /**
  * Accent rocks for David to review (/lab/map's proposal overlay): rock clusters on coastal points, a stone or two
  * where grass meets the beach, small rocks on cliff rims. On dry land or half in the water at the shore, never on a
- * path, never within a step of an object, a building's or the spawn's clearance, or another proposal. Ids are new.
+ * path, never within a step of an object, a building's or the spawn's clearance, a spot in `avoid` (the beach campfire's
+ * ring, which is not a map object until one is placed), or another proposal. Ids are new.
  */
-export function rockProposal(v: { map: IslandMap; objects: readonly MapObject[] }): MapObject[] {
+export function rockProposal(v: { map: IslandMap; objects: readonly MapObject[] }, avoid: readonly { x: number; z: number; r: number }[] = []): MapObject[] {
   const { map } = v;
   const water = (cx: number, cz: number) => !inBounds(map, cx, cz) || surfaceAt(map, cx, cz) === Surface.River || levelAt(map, cx, cz) < 0;
   const candidates: { x: number; z: number; model: RockModel; score: number; seed: number }[] = [];
@@ -126,6 +127,7 @@ export function rockProposal(v: { map: IslandMap; objects: readonly MapObject[] 
     if (out.length >= PROPOSAL_MAX) break;
     if (pavedAt(map, c.x, c.z)) continue;
     if (v.objects.some(o => Math.hypot(o.x - c.x, o.z - c.z) < (CLEAR[o.kind] ?? (o.kind === "puddle" || o.kind === "bug" ? 0 : 1.25)))) continue;
+    if (avoid.some(a => Math.hypot(a.x - c.x, a.z - c.z) < a.r)) continue;
     if (out.some(o => Math.hypot(o.x - c.x, o.z - c.z) < PROPOSAL_SPACING)) continue;
     let id: string;
     do id = `rock-proposed-${++n}`; while (used.has(id));

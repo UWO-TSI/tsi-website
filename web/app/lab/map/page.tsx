@@ -29,6 +29,7 @@
  */
 
 import { cliffBoulders, isRockModel, rockProposal, ROCK_SIZE } from "@/lib/game/rocks";
+import { campfireSite } from "@/lib/game/campfireSite";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import islandMapDoc from "@/data/island-map.json";
 import villageDoc from "@/data/village-map.json";
@@ -839,7 +840,12 @@ export default function MapLab() {
    */
   // The rock proposal: recomputed as the map is edited (`version`), only while the layer is on.
   const rockOverlay = useMemo(
-    () => (rockLayer ? { proposal: rockProposal({ map, objects }), feet: cliffBoulders(map) } : null),
+    () => {
+      if (!rockLayer) return null;
+      // Clear of the beach campfire's ring (the game finds open sand for it until one is placed).
+      const fire = campfireSite(villageOf(map, objects));
+      return { proposal: rockProposal({ map, objects }, fire ? [{ ...fire, r: 4 }] : []), feet: cliffBoulders(map) };
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the map is edited in place; `version` is its change counter
     [rockLayer, map, objects, version]
   );

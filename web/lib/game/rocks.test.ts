@@ -3,6 +3,7 @@ import { createMap, setCell, Surface, heightField, isGroundAtWorld, cellToWorldX
 import { ROCK_MODELS, ROCK_SIZE, cliffBoulders, rockProposal } from "./rocks";
 import { PROP_FOOTPRINT, PROP_TOP } from "./defaultIsland";
 import { village, villageSpawnPoint } from "./villageMap";
+import { campfireSite } from "./campfireSite";
 
 /** A 40 × 40 island: grass at level 0, a level-2 plateau (one full cliff) in the middle, sea round the edge. */
 function plateau(level = 2, seaSide = false) {
@@ -88,6 +89,12 @@ describe("the accent proposal: rock placements for David to review in /lab/map, 
   });
   it("is the same every load", () => {
     expect(rockProposal(village())).toEqual(rockProposal(village()));
+  });
+  it("keeps clear of spots the caller names (the beach campfire's ring)", () => {
+    const v = village(), fire = campfireSite(v);
+    expect(fire).not.toBeNull();
+    const near = (list: ReturnType<typeof rockProposal>) => list.filter(o => Math.hypot(o.x - fire!.x, o.z - fire!.z) < 4);
+    expect(near(rockProposal(v, [{ ...fire!, r: 4 }]))).toEqual([]);
   });
 });
 
