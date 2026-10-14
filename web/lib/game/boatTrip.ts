@@ -12,11 +12,12 @@
  * dock from the load on.
  */
 import { ASHORE, MOORED, STEP_AT, mooredPose, type BoatPose } from "./wharf";
+import { CROSSING_S } from "./arrival/sequence";
 
 export { newBoatPose, type BoatPose } from "./wharf";
 
 export type TripPlace = "village" | "home";
-export type TripPhase = "board" | "castoff" | "turn" | "sail" | "veil" | "load" | "arrive" | "dock" | "land" | "reveal" | "done";
+export type TripPhase = "board" | "castoff" | "turn" | "sail" | "veil" | "load" | "arrive" | "cross" | "dock" | "land" | "reveal" | "done";
 
 export interface BoatTrip {
   /** Whose trip: the travelling avatar ("me" for this player; a session id once others are shown). */
@@ -32,6 +33,11 @@ export interface BoatTrip {
   start: { x: number; z: number; yaw: number } | null;
   /** A press to skip: the phase it came in and how far into it (s). The quick veil plays on from there. */
   skip: { phase: TripPhase; t: number } | null;
+  /**
+   * A first login's crossing (specs/v1-drop.md §1.4, components/game/arrival): from far out at sea at a puttering pace,
+   * framed by the arrival's own shots; it lands you on the pier by the boat, where Bram's walk-along starts.
+   */
+  crossing?: boolean;
 }
 
 /** Times (s) and paces of the trip. */
@@ -84,6 +90,31 @@ const bezD = (u: number, k: number) => { const v = 1 - u; return 3 * v * v * (BE
 const ARC_N = 96, ARC = new Float64Array(ARC_N + 1);
 for (let i = 1; i <= ARC_N; i++) ARC[i] = ARC[i - 1] + Math.hypot(bez(i / ARC_N, 0) - bez((i - 1) / ARC_N, 0), bez(i / ARC_N, 1) - bez((i - 1) / ARC_N, 1));
 const IN_LEN = ARC[ARC_N], ARRIVE_T = (2 * IN_LEN) / (V_IN + V_ALONGSIDE);
+
+// ── A first login's crossing (specs/v1-drop.md §1.4) ──────────────────────────────────────────────────────────────
+/** Far out at sea, off the pier's boat side, heading in; it ends where the arrival's approach does (IN_TO), alongside. */
+const CROSS_FROM = { x: 14, z: -46, yaw: -0.24 };
+/** The crossing's time: with the docking, the arrival's five shots (sequence.ts CROSSING_S). */
+export const CROSS_TIME = CROSSING_S - TRIP.dock;
+/** It eases off over the last seconds to come alongside at the docking's pace. */
+const CROSS_EASE = 5.5;
+const C_SPAN = Math.hypot(IN_TO.x - CROSS_FROM.x, IN_TO.z - CROSS_FROM.z) / 2.6;
+const CBEZ = [CROSS_FROM.x, CROSS_FROM.z, CROSS_FROM.x + fwdX(CROSS_FROM.yaw) * C_SPAN, CROSS_FROM.z + fwdZ(CROSS_FROM.yaw) * C_SPAN,
+  IN_TO.x - fwdX(IN_TO.yaw) * C_SPAN, IN_TO.z - fwdZ(IN_TO.yaw) * C_SPAN, IN_TO.x, IN_TO.z];
+const cbez = (u: number, k: number) => { const v = 1 - u; return v * v * v * CBEZ[k] + 3 * v * v * u * CBEZ[k + 2] + 3 * v * u * u * CBEZ[k + 4] + u * u * u * CBEZ[k + 6]; };
+const cbezD = (u: number, k: number) => { const v = 1 - u; return 3 * v * v * (CBEZ[k + 2] - CBEZ[k]) + 6 * v * u * (CBEZ[k + 4] - CBEZ[k + 2]) + 3 * u * u * (CBEZ[k + 6] - CBEZ[k + 4]); };
+const CARC_N = 256, CARC = new Float64Array(CARC_N + 1);
+for (let i = 1; i <= CARC_N; i++) CARC[i] = CARC[i - 1] + Math.hypot(cbez(i / CARC_N, 0) - cbez((i - 1) / CARC_N, 0), cbez(i / CARC_N, 1) - cbez((i - 1) / CARC_N, 1));
+const CROSS_LEN = CARC[CARC_N];
+/** The cruising pace that covers the course in its time, easing off to come alongside at the end. */
+const V_CROSS = (CROSS_LEN - (V_ALONGSIDE * CROSS_EASE) / 2) / (CROSS_TIME - CROSS_EASE / 2);
+function crossU(s: number): number {
+  if (s <= 0) return 0;
+  if (s >= CROSS_LEN) return 1;
+  let lo = 0, hi = CARC_N;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (CARC[m] < s) lo = m; else hi = m; }
+  return (lo + (s - CARC[lo]) / (CARC[hi] - CARC[lo])) / CARC_N;
+}
 /** The Bézier's parameter at arc length s. */
 function arcU(s: number): number {
   if (s <= 0) return 0;
@@ -102,15 +133,22 @@ function boardTimes(start: BoatTrip["start"]) {
   return { walk, face: walk + TRIP.face, hop: walk + TRIP.face + TRIP.hop, total: walk + TRIP.face + TRIP.hop + TRIP.settle };
 }
 const LAND_WALK = strollTime(Math.hypot(ASHORE.x - STEP_AT.x, ASHORE.z - STEP_AT.z));
-const LAND = { rise: TRIP.rise, hop: TRIP.rise + TRIP.hop, walk: TRIP.rise + TRIP.hop + LAND_WALK, total: TRIP.rise + TRIP.hop + LAND_WALK + TRIP.stand };
+const LAND = { rise: TRIP.rise, hop: TRIP.rise + TRIP.hop, walk: TRIP.rise + TRIP.hop + LAND_WALK, total: TRIP.rise + TRIP.hop + LAND_WALK + TRIP.stand,
+  /** A crossing lands you beside the boat (the walk-along starts there): up, over the gunwale, a beat to turn inland. */
+  stay: TRIP.rise + TRIP.hop + TRIP.stand * 2 };
 
 // ── Steps ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 /** Ask for the boat at `from`'s pier: the trip starts with the walk to it. `start`: where you stand, in that dock's frame. */
 export function startTrip(who: string, from: TripPlace, to: TripPlace, start: BoatTrip["start"], now: number): BoatTrip {
   return { who, from, to, leg: "out", phase: "board", at: now, start, skip: null };
 }
-/** A first login's arrival (row 211): from out at sea to `to`'s pier. With the island already showing, a veil comes up first; under the loading screen it waits there. */
-export function arrivalTrip(who: string, to: TripPlace, now: number, showing: boolean): BoatTrip {
+/**
+ * A first login's arrival (row 211): from out at sea to `to`'s pier. With the island already showing, a veil comes up
+ * first; under the loading screen it waits there. `crossing`: the arrival's long golden-hour crossing instead (it waits
+ * in the load under the arrival's own mist, then crosses).
+ */
+export function arrivalTrip(who: string, to: TripPlace, now: number, showing: boolean, crossing = false): BoatTrip {
+  if (crossing) return { who, from: "sea", to, leg: "in", phase: "load", at: now, start: null, skip: null, crossing: true };
   return { who, from: "sea", to, leg: "in", phase: showing ? "veil" : "load", at: now, start: null, skip: null };
 }
 
@@ -123,8 +161,9 @@ export function phaseLength(trip: BoatTrip): number {
     case "sail": return TRIP.sail;
     case "veil": return quick(trip) ? TRIP.quickVeil : TRIP.veil;
     case "arrive": return ARRIVE_T;
+    case "cross": return CROSS_TIME;
     case "dock": return TRIP.dock;
-    case "land": return LAND.total;
+    case "land": return trip.crossing ? LAND.stay : LAND.total;
     case "reveal": return TRIP.reveal;
     default: return Infinity;
   }
@@ -132,7 +171,7 @@ export function phaseLength(trip: BoatTrip): number {
 /** The veil came up because of a press (not one that came during the veil or the load). */
 const quick = (trip: BoatTrip) => !!trip.skip && trip.skip.phase !== "veil" && trip.skip.phase !== "load";
 
-const NEXT: Partial<Record<TripPhase, TripPhase>> = { board: "castoff", castoff: "turn", turn: "sail", sail: "veil", veil: "load", arrive: "dock", dock: "land", land: "done", reveal: "done" };
+const NEXT: Partial<Record<TripPhase, TripPhase>> = { board: "castoff", castoff: "turn", turn: "sail", sail: "veil", veil: "load", arrive: "dock", cross: "dock", dock: "land", land: "done", reveal: "done" };
 /**
  * Move the traveller's trip on to `now` (world ms): each phase in turn as its time runs out; the load waits until the
  * next island has `loaded` (and a beat). Returns whether the phase changed. Only the traveller's own client calls this.
@@ -142,7 +181,7 @@ export function stepTrip(trip: BoatTrip, now: number, loaded: boolean): boolean 
   for (let guard = 0; guard < 16 && trip.phase !== "done"; guard++) {
     if (trip.phase === "load") {
       if (!loaded || now - trip.at < TRIP.minLoad * 1000) break;
-      trip.phase = trip.skip ? "reveal" : "arrive";
+      trip.phase = trip.skip ? "reveal" : trip.crossing ? "cross" : "arrive";
       trip.at = now;
       changed = true;
       continue;
@@ -165,6 +204,14 @@ export function skipTrip(trip: BoatTrip, now: number): boolean {
   return true;
 }
 
+/** A press during a crossing: the rest goes by under the arrival's mist and you are landing at the pier. Returns whether it did anything. */
+export function skipCrossing(trip: BoatTrip, now: number): boolean {
+  if (!trip.crossing || (trip.phase !== "load" && trip.phase !== "cross" && trip.phase !== "dock")) return false;
+  trip.phase = "land";
+  trip.at = now;
+  return true;
+}
+
 /** Which island's scene shows the trip now. */
 export const tripScene = (trip: BoatTrip): TripPlace => (trip.leg === "in" || trip.from === "sea" ? trip.to : trip.from);
 /** Whether the trip's boat has `place`'s berth (the moored boat there gives way to it). */
@@ -176,6 +223,8 @@ export function berthTaken(trip: BoatTrip | null, place: TripPlace): boolean {
 const since = (trip: BoatTrip, now: number) => Math.max(0, (now - trip.at) / 1000);
 /** Under a quick veil the boat and the rider play on from the moment of the press: the phase and time to draw. */
 function drawn(trip: BoatTrip, now: number): [TripPhase, number] {
+  // A crossing waiting in its load is out at sea where it will start.
+  if (trip.crossing && trip.phase === "load") return ["cross", 0];
   if (trip.phase === "veil" && trip.skip && quick(trip)) {
     const t = trip.skip.t + since(trip, now), phase = trip.skip.phase;
     return [phase, Math.min(t, phaseLength({ ...trip, phase, skip: null }))];
@@ -245,6 +294,18 @@ export function boatPose(trip: BoatTrip, now: number, out: BoatPose): BoatPose {
       out.lines = 0;
       return out;
     }
+    case "cross": {
+      // In from far out at a putter, easing off over the last seconds to come alongside where the docking begins.
+      const tt = Math.min(t, CROSS_TIME), cruise = CROSS_TIME - CROSS_EASE, e = Math.max(0, tt - cruise);
+      const s = V_CROSS * Math.min(tt, cruise) + V_CROSS * e + ((V_ALONGSIDE - V_CROSS) * e * e) / (2 * CROSS_EASE), u = crossU(s);
+      out.x = cbez(u, 0);
+      out.z = cbez(u, 1);
+      out.yaw = Math.atan2(cbezD(u, 0), cbezD(u, 1));
+      out.speed = V_CROSS + ((V_ALONGSIDE - V_CROSS) * e) / CROSS_EASE;
+      out.throttle = 0.55 - 0.35 * (e / CROSS_EASE);
+      out.lines = 0;
+      return out;
+    }
     case "dock": {
       // Alongside: drifting in the last of the way on a Hermite curve, the bow coming straight; the hull meets the fenders, the lines go over.
       const T = TRIP.dock, k = Math.min(1, t / T);
@@ -309,6 +370,7 @@ export function riderPlace(trip: BoatTrip, now: number, out: RiderPlace): RiderP
   }
   if (phase === "land") {
     const ashoreYaw = Math.atan2(ASHORE.x - STEP_AT.x, ASHORE.z - STEP_AT.z), away = -Math.PI / 2;
+    if (trip.crossing && t >= LAND.hop) return Object.assign(out, { aboard: 0, seated: false, x: STEP_AT.x, z: STEP_AT.z, yaw: lerpAngle(away, ashoreYaw, smooth(LAND.hop, LAND.stay, t)) });
     if (t < LAND.rise) return Object.assign(out, { aboard: 1, seated: t < 0.05, x: STEP_AT.x, z: STEP_AT.z, yaw: away });
     if (t < LAND.hop) {
       const k = (t - LAND.rise) / TRIP.hop;
@@ -322,7 +384,10 @@ export function riderPlace(trip: BoatTrip, now: number, out: RiderPlace): RiderP
     }
     return Object.assign(out, { aboard: 0, seated: false, x: ASHORE.x, z: ASHORE.z, yaw: lerpAngle(ashoreYaw, 0, smooth(LAND.walk, LAND.total, t)) });
   }
-  if (phase === "reveal" || phase === "done") return Object.assign(out, { aboard: 0, seated: false, x: ASHORE.x, z: ASHORE.z, yaw: 0 });
+  if (phase === "reveal" || phase === "done") {
+    const at = trip.crossing ? STEP_AT : ASHORE;
+    return Object.assign(out, { aboard: 0, seated: false, x: at.x, z: at.z, yaw: trip.crossing ? Math.atan2(ASHORE.x - STEP_AT.x, ASHORE.z - STEP_AT.z) : 0 });
+  }
   // Out at sea, sailing, waiting, coming in: on the bench.
   return Object.assign(out, { aboard: 1, seated: true, x: STEP_AT.x, z: STEP_AT.z, yaw: facing });
 }
@@ -344,7 +409,10 @@ export function tripFraming(trip: BoatTrip): TripFraming | null {
     case "veil": return trip.leg === "in" ? null : LEAVING;
     case "load": return trip.skip ? { ...ASHORE_VIEW, cut: true } : { ...COMING_IN, cut: true };
     case "arrive": return COMING_IN;
-    case "dock": case "land": return ASHORE_VIEW;
+    // A first login's crossing frames its own shots (components/game/arrival); its landing cuts to the walking view.
+    case "cross": return null;
+    case "dock": return trip.crossing ? null : ASHORE_VIEW;
+    case "land": return trip.crossing ? { ...ASHORE_VIEW, cut: true } : ASHORE_VIEW;
     case "reveal": return { ...ASHORE_VIEW, cut: true };
     default: return null;
   }

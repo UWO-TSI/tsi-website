@@ -1,0 +1,49 @@
+/* The arrival's page layer (Arrival.tsx): over the island and its HUD, under nothing. The golden mist the crossing comes
+   out of and goes into, the cinematic bars, the skip pill (the trip veil's), the tutorial's one-time keycap glyph and
+   its way out. */
+.arrival { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
+.arrival > * { pointer-events: auto; }
+.arrival[data-phase="tutorial"] { z-index: 25; }
+
+/* Golden-hour mist: warm cream at its heart, the morning haze round it. Opacity is driven by the sequence. */
+.mist { position: absolute; inset: 0; z-index: 80; pointer-events: none !important;
+  background: radial-gradient(ellipse 85% 70% at 50% 46%, #fff8e6 0%, #f8e7c4 40%, #e8d7b9 70%, #cfd6cc 100%); }
+
+/* Cinematic bars for the crossing, slid in from the edges. */
+.letterbox { position: absolute; inset: 0; z-index: 2; pointer-events: none !important; }
+.letterbox i { position: absolute; left: 0; right: 0; height: clamp(28px, 7vh, 64px); background: #1b1611; animation: bar 0.9s var(--gui-ease) both; }
+.letterbox i:first-child { top: 0; transform-origin: top; }
+.letterbox i:last-child { bottom: 0; transform-origin: bottom; }
+@keyframes bar { from { transform: scaleY(0); } }
+
+/* Skip: the HUD's cream pill with a round keycap, in the prompt's lane (the trip veil's). */
+.skip { position: absolute; left: 50%; bottom: calc(clamp(28px, 7vh, 64px) + 18px); z-index: 90; display: flex; align-items: center; gap: 9px; min-height: 44px;
+  padding: 8px 18px 8px 9px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper); color: var(--gui-ink-strong); font: inherit; font-family: var(--gui-font);
+  font-size: var(--gui-text-sm); font-weight: 800; box-shadow: var(--gui-shadow-md); cursor: pointer; transform: translateX(-50%); zoom: var(--tsi-text-scale, 1);
+  animation: hintIn 0.45s ease-out 0.9s both; opacity: 0.92; }
+.skip:hover { opacity: 1; }
+.skip:focus-visible { outline: 3px solid var(--gui-focus, #3e7fa6); outline-offset: 2px; }
+.skip[data-touch] { padding-left: 18px; }
+.arrival[data-phase="creator"] .skip { display: none; }
+@keyframes hintIn { from { opacity: 0; transform: translate(-50%, 8px); } }
+
+/* The one-time keycap glyph, above the prompt lane: it pulses once as it's needed, then fades. */
+.glyph { position: absolute; left: 50%; bottom: calc(var(--hud-lane-bottom, 132px) + 64px); display: flex; align-items: center; gap: 10px; padding: 8px 18px 8px 10px;
+  border-radius: var(--gui-r-pill); background: var(--gui-paper); color: var(--gui-ink-strong); font: 800 var(--gui-text-sm)/1.2 var(--gui-font); box-shadow: var(--gui-shadow-md);
+  transform: translateX(-50%); zoom: var(--tsi-text-scale, 1); pointer-events: none !important;
+  animation: glyphIn 0.35s var(--gui-spring) both, glyphPulse 0.7s ease-in-out 0.45s 1, glyphOut 0.5s ease-in calc(var(--glyph-ms, 4800ms) - 500ms) forwards; }
+.glyph svg { color: var(--gui-teal-ink); }
+@keyframes glyphIn { from { opacity: 0; transform: translate(-50%, 10px) scale(0.9); } }
+@keyframes glyphPulse { 50% { transform: translateX(-50%) scale(1.14); box-shadow: var(--gui-shadow-md), 0 0 0 6px rgb(255 204 0 / 0.45); } }
+@keyframes glyphOut { to { opacity: 0; transform: translate(-50%, 6px); } }
+
+/* Leaving the tour: small, out of the way at the top, one click. */
+.leave { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); min-height: 36px; padding: 6px 16px; border: 0;
+  border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.88); color: var(--gui-muted); font: 800 var(--gui-text-xs)/1 var(--gui-font); box-shadow: var(--gui-shadow-sm);
+  cursor: pointer; zoom: var(--tsi-text-scale, 1); }
+.leave:hover { color: var(--gui-ink-strong); background: var(--gui-paper); }
+.leave:focus-visible { outline: 3px solid var(--gui-focus, #3e7fa6); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .letterbox i, .skip, .glyph { animation: none; }
+}
