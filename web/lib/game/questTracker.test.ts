@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { questProgress, trackerRows, type TrackedQuest } from "./questTracker";
+import { chapterQuest, questProgress, trackerRows, type TrackedQuest } from "./questTracker";
 
 const quest = (done: number, n = 10, current?: string): TrackedQuest => ({
   id: "q", title: "Walk with Bram", kind: "tutorial", current,
@@ -33,5 +33,21 @@ describe("the quest tracker's rows", () => {
   it("takes a smaller window (a phone) and short quests whole", () => {
     expect(trackerRows(quest(1), 2).rows.map(x => x.id)).toEqual(["s0", "s1"]);
     expect(trackerRows(quest(0, 3)).rows.length).toBe(3);
+  });
+});
+
+describe("the chapter being worked on, as the HUD's tracker shows it", () => {
+  const steps = [{ key: "claim_plot", label: "Claim your plot", done: true }, { key: "first_catch", label: "Catch a fish", done: false, hint: "Take out your rod" }, { key: "report_hq", label: "Report to HQ", done: false }];
+  const chapters = [{ slug: "arrival", title: "Arrival", status: "completed", steps: [] }, { slug: "settle_in", title: "Settle in", status: "active", steps }];
+  it("is the active (or ready) chapter's steps, with the next step's hint", () => {
+    const q = chapterQuest(chapters, true)!;
+    expect(q).toMatchObject({ id: "chapter:settle_in", title: "Settle in", kind: "chapter", hint: "Take out your rod" });
+    expect(q.steps.map(s => [s.id, s.done])).toEqual([["claim_plot", true], ["first_catch", false], ["report_hq", false]]);
+    expect(trackerRows(q).rows.find(r => r.current)?.id).toBe("first_catch");
+    expect(chapterQuest([{ ...chapters[1], status: "ready" }], true)?.id).toBe("chapter:settle_in");
+  });
+  it("is nothing with no chapter on, or with the quests muted", () => {
+    expect(chapterQuest([chapters[0]], true)).toBeNull();
+    expect(chapterQuest(chapters, false)).toBeNull();
   });
 });

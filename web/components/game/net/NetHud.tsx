@@ -2,33 +2,27 @@
 
 /**
  * The multiplayer HUD (specs/multiplayer.md §5.7): a small status pill while you're not with the others (connecting,
- * reconnecting, offline, or replaced by another window with "Play here"), and the people button that opens the
- * presence list. Nothing at all while multiplayer is off (no source, or not joined yet): the page's status is "off".
- * World chat's dock (ChatDock.tsx: Enter, or the chat button on a touch screen), the player card (PlayerCard.tsx) and
- * the friends button and sheet (FriendsSheet.tsx: its badge counts requests waiting for you; it slides in for a moment
- * when one comes or a friend arrives, with a toast) live here too; a cinematic (`hidden`: a talk, the boat, photo mode)
- * puts the chat away.
- * The clean HUD (row 283) hides the button while you explore; it slides in for a moment when someone comes or goes,
- * and stays with the full HUD (its key held, the pause view, touch, or the setting).
+ * reconnecting, offline, or replaced by another window with "Play here"). Nothing at all while multiplayer is off (no
+ * source, or not joined yet): the page's status is "off". World chat's dock (ChatDock.tsx: Enter, or the chat button on
+ * a touch screen), the player card (PlayerCard.tsx), the presence list and the friends sheet (FriendsSheet.tsx) live
+ * here too; a cinematic (`hidden`: a talk, the boat, photo mode) puts the chat away.
+ * Playtest round 1 (decision 3): the people and friends buttons left the HUD for the Esc Menu's Friends and mail, which
+ * opens these sheets through `setNetSheet` (./sheets.ts). The friends sheet opens with multiplayer off too (it says
+ * when friends aren't available).
  */
-import { useEffect, useState, useSyncExternalStore } from "react";
-import { HeartHandshake, MessageCircle, Users } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { Badge, Button, IconButton } from "@/components/gui";
-import { FLASH_MS, fullHud, useAlwaysFullHud } from "@/lib/game/hudPrefs";
-import { readCapture, subscribeCapture } from "@/lib/game/orbitCamera";
 import { useCoarsePointer } from "@/lib/game/useMediaQuery";
-import { isTyping } from "@/lib/game/useWorldDialog";
-import { useWheelKeys } from "@/lib/game/movement/keys";
 import type { Area } from "@/lib/net/protocol";
 import type { NetStatus } from "@/lib/net/types";
 import * as netStore from "@/lib/net/netStore";
-import { useNetStatus, useRoster } from "@/lib/net/netStore";
-import { useFlash } from "../useFlash";
+import { useNetStatus } from "@/lib/net/netStore";
 import PresenceList from "./PresenceList";
 import ChatDock, { setChatOpen, useChatOpen } from "./ChatDock";
 import PlayerCard from "./PlayerCard";
 import FriendsSheet from "./FriendsSheet";
-import { useFriends, useFriendsSync } from "./friendActions";
+import { useFriendsSync } from "./friendActions";
+import { setNetSheet, useNetSheet } from "./sheets";
 import s from "./net.module.css";
 
 /** What the pill says, and the one thing you can do about it; null while you're with the others (or off). */
@@ -60,58 +54,34 @@ function act(action: "play" | "reload") {
   if (rejoin) rejoin(); else window.location.reload();
 }
 
-/** The full HUD or the clean one, read as DefaultIslandWorld reads it (the setting, the HUD key, touch, the mouse). */
-function useFullHud(): boolean {
-  const always = useAlwaysFullHud(), touch = useCoarsePointer(), key = useWheelKeys().hud;
-  const capture = useSyncExternalStore(subscribeCapture, readCapture, () => "off" as const);
-  const [held, setHeld] = useState(false);
-  useEffect(() => {
-    const down = (e: KeyboardEvent) => { if (e.key.toLowerCase() === key && !e.repeat && !isTyping(e.target as Element)) setHeld(true); };
-    const up = (e: KeyboardEvent) => { if (e.key.toLowerCase() === key) setHeld(false); };
-    const blur = () => setHeld(false);
-    window.addEventListener("keydown", down); window.addEventListener("keyup", up); window.addEventListener("blur", blur);
-    return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); window.removeEventListener("blur", blur); };
-  }, [key]);
-  return fullHud({ always, keyHeld: held, touch, capture });
-}
-
-function Hud({ area, status, hidden }: { area: Area; status: NetStatus; hidden: boolean }) {
-  const roster = useRoster(), full = useFullHud(), touch = useCoarsePointer(), chatting = useChatOpen();
-  const [open, setOpen] = useState(false), [friendsOpen, setFriendsOpen] = useState(false);
-  // Someone came or went: the button shows for a moment in the clean HUD.
-  const flash = useFlash(roster.length, FLASH_MS.mail);
-  // Friends: kept fresh while you're with the others; a request or a friend arriving flashes the button.
+function Hud({ area, status, hidden, expanded }: { area: Area; status: NetStatus; hidden: boolean; expanded: boolean }) {
+  const touch = useCoarsePointer(), chatting = useChatOpen(), sheet = useNetSheet();
+  // Friends: kept fresh while you're with the others (a request or a friend arriving toasts; the Menu shows the count).
   useFriendsSync(status.kind === "joined");
-  const friends = useFriends();
-  const friendFlash = useFlash(friends.asking * 1000 + friends.online.length, FLASH_MS.mail);
-  const line = statusLine(status), n = roster.length;
+  const line = statusLine(status);
   return <>
-    <div className={s.hud} data-clean={full ? undefined : ""}>
+    <div className={s.hud}>
       {line && <div className={s.status} role="status" data-busy={line.busy || undefined}>
         <Badge tone={line.tone}>{line.busy && <span className={s.beads} aria-hidden="true"><i /><i /><i /></span>}{line.text}</Badge>
         {line.action && <Button size="sm" variant="secondary" onClick={() => act(line.action!)}>{line.action === "play" ? "Play here" : "Reload"}</Button>}
       </div>}
-      {(full || flash || open) && n > 0 && <IconButton label="People on the island" badge={n} className={s.people} data-flash={full ? undefined : flash ?? undefined}
-        aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(o => !o)}>
-        <Users size={19} aria-hidden />
-      </IconButton>}
-      {(full || friendFlash || friendsOpen || friends.asking > 0) && <IconButton label="Friends" badge={friends.asking || undefined} className={s.people}
-        data-flash={full ? undefined : friendFlash ?? undefined} aria-haspopup="dialog" aria-expanded={friendsOpen} onClick={() => setFriendsOpen(o => !o)}>
-        <HeartHandshake size={19} aria-hidden />
-      </IconButton>}
       {/* A touch screen has no Enter: a small chat button opens the bar. */}
       {touch && !hidden && <IconButton label="Chat" aria-expanded={chatting} onClick={() => setChatOpen(!chatting)}><MessageCircle size={19} aria-hidden /></IconButton>}
     </div>
-    <PresenceList open={open} onClose={() => setOpen(false)} area={area} />
-    <FriendsSheet open={friendsOpen} onClose={() => setFriendsOpen(false)} />
-    <ChatDock hidden={hidden} />
-    <PlayerCard />
+    <PresenceList open={sheet === "people"} onClose={() => setNetSheet(null)} area={area} />
+    <ChatDock hidden={hidden} expanded={expanded} />
   </>;
 }
 
-export default function NetHud({ area, hidden = false }: { area: Area;
+export default function NetHud({ area, hidden = false, expanded = false }: { area: Area;
   /** A cinematic (a talk with a resident, the boat trip) or photo mode: the chat steps away. */
-  hidden?: boolean }) {
-  const status = useNetStatus();
-  return status.kind === "off" ? null : <Hud area={area} status={status} hidden={hidden} />;
+  hidden?: boolean;
+  /** The UI view (Esc 1): the chat's last lines stay up. */
+  expanded?: boolean }) {
+  const status = useNetStatus(), sheet = useNetSheet();
+  return <>
+    {status.kind !== "off" && <Hud area={area} status={status} hidden={hidden} expanded={expanded} />}
+    <FriendsSheet open={sheet === "friends"} onClose={() => setNetSheet(null)} />
+    <PlayerCard />
+  </>;
 }

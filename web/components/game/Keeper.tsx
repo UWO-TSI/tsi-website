@@ -185,7 +185,7 @@ export default function Keeper({ room, player, frozen, engaged = false, sayEvent
   };
   const hover = (on: boolean) => (e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); document.body.style.cursor = on ? "pointer" : "auto"; };
   return <group ref={group}>
-    <group onClick={click} onPointerOver={hover(true)} onPointerOut={hover(false)}>
+    <group userData={{ pick: persona.display_name }} onClick={click} onPointerOver={hover(true)} onPointerOut={hover(false)}>
       <Suspense fallback={null}><Character look={look} motion={motion} walkSpeed={OWNER_WALK} /></Suspense>
     </group>
     <Html calculatePosition={labelPoint} position={[0, CHARACTER_HEIGHT + 0.3, 0]} zIndexRange={[30, 0]} style={{ pointerEvents: "none" }}>

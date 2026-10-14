@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * MiniMap (game-feel wave G3, item 15) — a small corner map, toggled with the
- * account's map key (`toggleKey`, M by default; row 220 remaps).
+ * MiniMap (game-feel wave G3, item 15) — a small corner map, always on since playtest round 1 (bigger in the UI view),
+ * and the island map in a sheet on the account's map key (`toggleKey`, M by default; row 220 remaps).
  * Draws the island plot it is given, with a live player dot polled from
  * playerPosRef at 5Hz, and (v1 friends) a small coral marker for each friend
  * in view (the remotes' driver writes where they stand: net/active.ts). It turns with the orbit camera (specs/camera-orbit.md)
@@ -11,7 +11,8 @@
  */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { X } from "lucide-react";
+import { Map as MapIcon } from "lucide-react";
+import { Sheet } from "@/components/gui";
 import styles from "./MiniMap.module.css";
 import * as THREE from "three";
 import { keyName } from "@/lib/game/movement/keys";
@@ -44,15 +45,12 @@ export interface MiniMapPlot {
   mirrorX?: boolean;
 }
 
-export default function MiniMap({ playerPosRef, onClose, plot, toggleKey = "m" }: {
-  playerPosRef: React.RefObject<THREE.Vector3>; onClose: () => void; plot: MiniMapPlot; toggleKey?: string;
-}) {
+/** The plot, turning with the camera, with your dot and your friends' (polled at 5 Hz, straight to the DOM per frame for the turn). */
+function MapPlot({ playerPosRef, plot, className }: { playerPosRef: React.RefObject<THREE.Vector3>; plot: MiniMapPlot; className?: string }) {
   const [dot, setDot] = useState<[number, number] | null>(null);
   const [friends, setFriends] = useState<[number, number][]>([]);
-  const opener = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const tick = () => {
       const { x, z } = playerPosRef.current;
       if (!Number.isFinite(x) || !Number.isFinite(z)) return;
@@ -83,30 +81,44 @@ export default function MiniMap({ playerPosRef, onClose, plot, toggleKey = "m" }
     return () => cancelAnimationFrame(raf);
   }, [plot.mirrorX, plot.north, cx, cy]);
 
-  const close = () => { onClose(); if (opener.current?.isConnected) opener.current.focus(); };
   const sx = (x: number) => plot.mirrorX ? -x : x;
+  return <svg viewBox={plot.viewBox} className={className} role="img" aria-label={plot.label ?? "Island overview. The yellow marker shows your position; north is up."}>
+    <g ref={turned}>
+      {plot.content}
+      <text ref={north} x={plot.north[0]} y={plot.north[1]} textAnchor="middle" fill="#244855" fontSize={4} fontWeight="700">N</text>
+      {/* friends in view (v1) */}
+      {friends.map(([fx, fz], i) => <circle key={i} cx={sx(fx)} cy={-fz} r={0.95} fill="#E2826A" stroke="#FFFBE7" strokeWidth="0.55" />)}
+      {/* player */}
+      {dot ? <circle cx={sx(dot[0])} cy={-dot[1]} r={1.1} fill="#FFDD57" stroke="#7A5A00" strokeWidth="0.7" /> : null}
+    </g>
+  </svg>;
+}
 
-  return (
-    <section className={styles.map} aria-label="Island map">
-      <header className={styles.header}>
-        <span>Island map</span>
-        <button className={styles.close} aria-label="Close map" onClick={close} onKeyDown={(event) => {
-          if (event.key === "Escape" || (event.key.toLowerCase() === toggleKey && !event.metaKey && !event.ctrlKey && !event.altKey)) {
-            event.preventDefault(); event.stopPropagation(); if (!event.repeat) close();
-          }
-        }}><X size={17} aria-hidden /></button>
-      </header>
-      <svg viewBox={plot.viewBox} className={styles.plot} role="img" aria-label={plot.label ?? "Island overview. The yellow marker shows your position; north is up."}>
-        <g ref={turned}>
-          {plot.content}
-          <text ref={north} x={plot.north[0]} y={plot.north[1]} textAnchor="middle" fill="#244855" fontSize={4} fontWeight="700">N</text>
-          {/* friends in view (v1) */}
-          {friends.map(([fx, fz], i) => <circle key={i} cx={sx(fx)} cy={-fz} r={0.95} fill="#E2826A" stroke="#FFFBE7" strokeWidth="0.55" />)}
-          {/* player */}
-          {dot ? <circle cx={sx(dot[0])} cy={-dot[1]} r={1.1} fill="#FFDD57" stroke="#7A5A00" strokeWidth="0.7" /> : null}
-        </g>
-      </svg>
-      <footer className={styles.legend}><span className={styles.you}>You</span>{friends.length > 0 && <span className={styles.friends}>Friends</span>}<span>{keyName(toggleKey)} to hide</span></footer>
-    </section>
-  );
+/**
+ * The corner minimap (playtest round 1): always on in the village, small while you play, bigger in the UI view (Esc 1,
+ * `big`). A click opens the island map.
+ */
+export default function MiniMap({ playerPosRef, plot, big = false, onOpen }: {
+  playerPosRef: React.RefObject<THREE.Vector3>; plot: MiniMapPlot; big?: boolean; onOpen?: () => void;
+}) {
+  return <section className={styles.corner} data-big={big || undefined} aria-label="Minimap">
+    <MapPlot playerPosRef={playerPosRef} plot={plot} className={styles.plot} />
+    {onOpen && <button type="button" className={styles.open} onClick={onOpen} aria-label="Open the island map" tabIndex={big ? 0 : -1} />}
+  </section>;
+}
+
+/** The island map (M, or Map in the UI view's dock): the same plot, big, in a sheet. M closes it again. */
+export function MapSheet({ open, onClose, playerPosRef, plot, toggleKey = "m" }: {
+  open: boolean; onClose: () => void; playerPosRef: React.RefObject<THREE.Vector3>; plot: MiniMapPlot; toggleKey?: string;
+}) {
+  const [friendsHere, setFriendsHere] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const t = setInterval(() => setFriendsHere(friendSpots().length > 0), 500);
+    return () => clearInterval(t);
+  }, [open]);
+  return <Sheet open={open} onClose={onClose} title="Island map" icon={<MapIcon size={20} />} size="lg" keys={toggleKey} testId="map-sheet" bodyClassName={styles.sheetBody}>
+    {open && <MapPlot playerPosRef={playerPosRef} plot={plot} className={styles.bigPlot} />}
+    <footer className={styles.legend}><span className={styles.you}>You</span>{friendsHere && <span className={styles.friends}>Friends</span>}<span>{keyName(toggleKey)} to close</span></footer>
+  </Sheet>;
 }

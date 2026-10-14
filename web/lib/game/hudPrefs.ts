@@ -1,27 +1,27 @@
 "use client";
 
 /**
- * The minimal HUD (David, 2026-10-02, row 283): while exploring the screen is clean (the prompt, toasts, the held
- * item's use and the "click to look" hint); coins, XP, the clock and mail slide in when they change, then fade; the
- * full HUD shows while its key is held, in the pause view (the mouse let go: Esc, a sheet, the right-click cursor,
- * the cursor setting), on a touch screen, or always with "Show full HUD". Kept on this device.
+ * The minimal HUD (David, 2026-10-02, row 283; playtest round 1, decision 3): while you play the screen keeps to the
+ * quest tracker, the minimap and the time (and the prompt, toasts, the held item's use and the "click to look" hint);
+ * coins and XP slide in when they change, then fade. The fuller HUD (coins and level, the gear, the menu dock, the
+ * chat log, a bigger minimap) is the UI view: Esc 1 (lib/game/escMenu.ts), or the menu button on a touch screen. The
+ * coins and level also show while the HUD key is held, or always with "Keep coins and level on screen". Kept on this
+ * device.
  */
 import { useSyncExternalStore } from "react";
-import type { CaptureState } from "./orbitCamera";
 
 /**
- * The full HUD or the clean one, from the setting, the HUD key, the device and the mouse capture. A cinematic moment
- * (talking to a resident, the HQ lead's greeting, the boat trip; world audit item 7) lets the cursor go but is not the
- * pause view: the HUD stands back for it, leaving the dialogue or the trip's Skip.
+ * The fuller HUD or the minimal one, from the UI view, the HUD key and the setting. A cinematic moment (talking to a
+ * resident, the HQ lead's greeting, the boat trip; world audit item 7) stands the HUD back, leaving the dialogue or the
+ * trip's Skip.
  */
-export function fullHud(s: { always: boolean; keyHeld: boolean; touch: boolean; capture: CaptureState; cinematic?: boolean }): boolean {
-  return !s.cinematic && (s.always || s.keyHeld || s.touch || s.capture !== "captured");
+export function fullHud(s: { always: boolean; keyHeld: boolean; uiView: boolean; cinematic?: boolean }): boolean {
+  return !s.cinematic && (s.always || s.keyHeld || s.uiView);
 }
 
 /**
- * A phone's HUD (world audit item 11): a touch screen has no pause view, so it keeps the full HUD's buttons but folds
- * them: Bag, Collection and Map behind one menu button, the clock and coins flashing on change, the place name and the
- * touch hint flashing as a scene comes in. "Show full HUD" unfolds it.
+ * A phone's HUD (world audit item 11): a touch screen has no Esc, so one menu button top left opens the UI view, and the
+ * place name and the touch hint flash as a scene comes in. "Keep coins and level on screen" leaves the hint up.
  */
 export const compactTouchHud = (s: { touch: boolean; always: boolean }): boolean => s.touch && !s.always;
 

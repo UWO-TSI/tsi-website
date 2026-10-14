@@ -4,7 +4,7 @@ import { cameraRelative, getCameraForwardXZ } from "./cameraBasis";
 import { bendViewPoint } from "./worldProjection";
 import {
   DEFAULT_PITCH, FOLLOW_IDLE, FOLLOW_TURN, ORBIT_DISTANCE, PITCH_MAX, PITCH_MIN, ZOOM_MAX, ZOOM_MIN, ZOOM_OUT,
-  STEER_IDLE, autoFollow, crosshairAim, lookOrbit, loadOrbit, nextCapture, orbitOffset, saveOrbit, snapBack, steerOrbit, stepOrbit, toggleZoom, turnOffset, turnQuarter, wrapAngle, zoomOrbit,
+  AIM_Y, STEER_IDLE, autoFollow, crosshairAim, lockEndPauses, lookOrbit, loadOrbit, nextCapture, pickName, orbitOffset, saveOrbit, snapBack, steerOrbit, stepOrbit, toggleZoom, turnOffset, turnQuarter, wrapAngle, zoomOrbit,
   type CaptureEvent, type CaptureState, type OrbitAngles,
 } from "./orbitCamera";
 
@@ -235,6 +235,56 @@ describe("mouse capture", () => {
     expect(run("captured", ["disable"])).toEqual({ state: "off", requests: 0, exits: 1 });
     expect(run("off", ["click", "locked", "rightDown", "menuOpen"]).state).toBe("off");
     expect(run("off", ["disable", "enable"]).state).toBe("free");
+  });
+});
+
+describe("the end of the lock (playtest round 1: Esc opens the UI view)", () => {
+  it("pauses only when mouse-look ends without the game asking", () => {
+    expect(lockEndPauses("captured", false)).toBe(true); // Esc, or the window losing focus
+    expect(lockEndPauses("captured", true)).toBe(false); // a sheet, a player's card, the right-click cursor
+    for (const s of ["free", "cursor", "menu", "off"] as const) expect(lockEndPauses(s, false)).toBe(false);
+  });
+});
+
+describe("the aim dot (clicking under mouse-look)", () => {
+  /** The rig at a zoom: 0.7 up and 1.5 ahead of the player, as useFollowCamera poses it. */
+  const posed = (pitch: number, zoom: number) => {
+    const camera = new THREE.PerspectiveCamera(48, 16 / 9, 0.1, 120), look = new THREE.Vector3(0, 0.7, 1.5);
+    const [ox, oy, oz] = orbitOffset(0, pitch, ORBIT_DISTANCE * zoom);
+    camera.position.set(look.x + ox, look.y + oy, look.z + oz);
+    camera.lookAt(look);
+    camera.updateMatrixWorld();
+    return camera;
+  };
+  /** Whether the dot's ray passes through someone (the hit capsule: 0.42 wide, 1.5 tall) standing `d` ahead. */
+  const reaches = (camera: THREE.Camera, d: number) => {
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2(0, AIM_Y), camera);
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 1.5, 12));
+    body.position.set(0, 0.75, d);
+    body.updateMatrixWorld();
+    return ray.intersectObject(body).length > 0;
+  };
+  it("sits above your own head at every tilt and zoom (the screen centre is your head)", () => {
+    for (const pitch of [PITCH_MIN, DEFAULT_PITCH, PITCH_MAX]) for (const zoom of [ZOOM_MIN, 1, ZOOM_MAX]) {
+      const head = new THREE.Vector3(0, 1.4, 0).project(posed(pitch, zoom));
+      expect(head.y).toBeLessThan(AIM_Y - 0.08); // a dot's height and more, at the lowest, closest view
+    }
+  });
+  it("reaches someone standing a couple of steps to a few metres ahead at the default view", () => {
+    const camera = posed(DEFAULT_PITCH, 1);
+    for (const d of [2, 3, 4]) expect(reaches(camera, d)).toBe(true);
+    expect(reaches(camera, 9)).toBe(false);
+  });
+  it("names what is under it from its own or a parent's pick name", () => {
+    const group = new THREE.Group(), mesh = new THREE.Mesh();
+    group.add(mesh);
+    expect(pickName(mesh)).toBe("");
+    group.userData.pick = "Rosa";
+    expect(pickName(mesh)).toBe("Rosa");
+    mesh.userData.pick = "Juniper";
+    expect(pickName(mesh)).toBe("Juniper");
+    expect(pickName(null)).toBe(null);
   });
 });
 

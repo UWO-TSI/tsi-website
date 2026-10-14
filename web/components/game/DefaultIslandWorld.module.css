@@ -1,7 +1,8 @@
 /*
  * The bottom stack (row 284): one layout for everything along the foot of the screen, bottom up. The key bar sits on
  * the floor (one row); the lane above it holds the E prompt, or the fishing meter while you fish, or the combat HUD in
- * the ruins; the toasts stack above the lane; the minimap (left) and the decorate panel (right) start above the bar.
+ * the ruins; the toasts stack above the lane; the decorate panel (right) starts above the bar. The minimap, the time and
+ * the quest tracker stand top right (playtest round 1).
  * Corners keep clear of the phone's safe areas. Other HUD pieces read these instead of their own numbers.
  */
 .world {
@@ -14,8 +15,8 @@
   --hud-lane-bottom: calc(var(--hud-bar-bottom) + var(--hud-bar) + var(--hud-gap));
   --hud-side-bottom: var(--hud-lane-bottom);
   --game-toast-bottom: calc(var(--hud-lane-bottom) + var(--hud-lane) + var(--hud-gap));
-  /* The touch stick: beside the minimap, over the touch hint. */
-  --hud-stick-left: calc(var(--hud-edge) + 196px);
+  /* The touch stick (and the chat): the left edge, over the touch hint (the minimap moved top right, playtest round 1). */
+  --hud-stick-left: var(--hud-edge);
   --hud-stick-bottom: calc(var(--hud-floor) + 40px);
 }
 /* The island wears the GUI sheet (styles/game-tokens.css): the root also carries the global `gui` class. */
@@ -26,7 +27,10 @@
 .heading h1 { margin: 0; font: 800 clamp(22px, 2.6vw, 34px)/1.1 var(--gui-font); letter-spacing: -0.01em; }
 .heading p { margin-top: 4px; font-size: var(--gui-text-sm); font-weight: 700; }
 /* The development panel (dev only): paper like everything else. */
-.panel { position: absolute; right: 20px; top: 76px; width: 248px; max-height: calc(100% - 180px); z-index: 14; overflow-y: auto; padding: 16px; background: var(--gui-paper); border-radius: var(--gui-r-card); box-shadow: var(--gui-shadow-md); font-size: var(--gui-text-sm); }
+/* The dev panel (development only, shown from Settings' Dev tab): paper like everything else, on the left, clear of the minimap. */
+.panel { position: absolute; left: 16px; top: 110px; width: 260px; max-height: calc(100% - 200px); z-index: 14; overflow-y: auto; padding: 16px; background: var(--gui-paper); border-radius: var(--gui-r-card); box-shadow: var(--gui-shadow-md); font-size: var(--gui-text-sm); zoom: var(--tsi-text-scale, 1); }
+.panel[data-open="false"] { display: none; }
+.panel .segmented[data-wrap] { grid-template-columns: repeat(3, minmax(0, 1fr)); border-radius: 18px; margin-top: 6px; }
 .views { display: flex; gap: 4px; padding: 4px; background: var(--gui-paper-deep); border-radius: var(--gui-r-pill); margin-bottom: 16px; }
 .views button { min-height: 40px; flex: 1; border: 0; background: transparent; color: var(--gui-ink-2); padding: 8px 4px; border-radius: var(--gui-r-pill); font: inherit; font-weight: 800; cursor: pointer; }
 .views button[aria-pressed="true"] { background: var(--gui-butter); color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-sm); }
@@ -36,21 +40,20 @@
 .hint { font-size: var(--gui-text-xs); line-height: 1.5; margin: 6px 0 16px; color: var(--gui-muted); }
 .preset select { min-height: 44px; font: inherit; font-weight: 700; color: var(--gui-ink); background: var(--gui-paper-hi); border: 2px solid var(--gui-paper-line); padding: 6px 10px; border-radius: 14px; max-width: 150px; }
 .return { min-height: 44px; display: block; width: 100%; margin-top: 14px; padding: 9px 4px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper-warm); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge); font: inherit; font-weight: 800; color: var(--gui-ink); cursor: pointer; }
-.panel button:hover { filter: brightness(0.97); }
+.return:hover { filter: brightness(0.97); }
 .performance { border-top: 2px dashed var(--gui-paper-edge); margin-top: 16px; padding-top: 12px; color: var(--gui-ink-2); }
 .performance summary { min-height: 44px; align-content: center; cursor: pointer; font-size: var(--gui-text-xs); font-weight: 800; }
 .performance output { display: block; white-space: pre-line; font-size: var(--gui-text-xs); line-height: 1.7; margin-top: 8px; font-variant-numeric: tabular-nums; }
 .performance small { display: block; font-size: var(--gui-text-xs); line-height: 1.5; margin-top: 7px; }
 /* The kit's keycap, wherever the HUD names a key. */
-.interact kbd, .mapButton kbd, .decorateToggle kbd, .bagButton kbd, .decorate kbd, .hint kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; border-radius: var(--gui-r-pill); background: var(--gui-bark); color: var(--gui-paper); font: 800 var(--gui-text-xs)/1 var(--gui-font); }
+.interact kbd, .decorateToggle kbd, .bagButton kbd, .decorate kbd, .hint kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; border-radius: var(--gui-r-pill); background: var(--gui-bark); color: var(--gui-paper); font: 800 var(--gui-text-xs)/1 var(--gui-font); }
 .loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; gap: 10px; justify-items: center; background: var(--gui-paper); padding: 18px 24px; border-radius: var(--gui-r-card); box-shadow: var(--gui-shadow-md); font-size: var(--gui-text-sm); font-weight: 700; }
-@media (max-width: 700px) { .heading { top: 20px; left: 18px; } .heading p { display: none; } .panel { right: 12px; top: 112px; width: 208px; padding: 12px; } }
+@media (max-width: 700px) { .heading { top: 20px; left: 18px; } .heading p { display: none; } }
 
 .touchControls { display: none; }
 .performance .toggle { margin-top: 10px; font-size: var(--gui-text-xs); font-weight: 600; }
-.panel[data-open="false"] { display: none; }
 @media (pointer: coarse), (pointer: none) {
-  /* Touch: the hint line is the floor; the lane and the toasts go up over the stick, the minimap stands beside it. */
+  /* Touch: the hint line is the floor; the lane and the toasts go up over the stick. */
   .world { --hud-bar: 32px; --hud-lane-bottom: calc(var(--hud-stick-bottom) + var(--touch-stick, 132px) + var(--hud-gap)); --hud-side-bottom: var(--hud-stick-bottom); }
   .touchControls { display: block; position: absolute; bottom: var(--hud-floor); left: 50%; transform: translateX(-50%); margin: 0; padding: 8px 16px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.95); color: var(--gui-ink); white-space: nowrap; font-size: var(--gui-text-xs); font-weight: 700; box-shadow: var(--gui-shadow-sm); }
 }
@@ -69,25 +72,30 @@
 .cue[data-closed="true"] { background: var(--gui-paper-deep); color: var(--gui-warn); outline: 2px dashed rgb(138 90 18 / 0.45); outline-offset: -4px; }
 p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-warn); }
 
-.objective { margin: 6px 0 0; padding: 7px 12px; border-radius: var(--gui-r-card); background: rgb(255 251 231 / 0.96); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); font-weight: 800; line-height: 1.35; box-shadow: var(--gui-shadow-sm); }
-.objective span { color: var(--gui-coral-ink); }
-.minimap { position: absolute; left: var(--hud-edge); bottom: var(--hud-side-bottom); width: 180px; }
-.minimap > section { position: static; width: 100%; max-width: none; }
-/* The map closed: a pill in its place to bring it back (the objective stays under it). */
-.mapButton { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 16px 0 12px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper); color: var(--gui-ink-strong); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; box-shadow: var(--gui-shadow-md); cursor: pointer; }
-.mapButton:hover { background: var(--gui-paper-hi); }
+/* Top right (playtest round 1, decision 3): the UI view's coins, level and gear, then the column of the minimap, the time
+   and the quest tracker, with a slot kept under them for a mini health bar when combat drops. */
+.hudRight { position: absolute; top: max(16px, env(safe-area-inset-top)); right: var(--hud-edge); z-index: 14; display: flex; align-items: flex-start; gap: 10px; pointer-events: none; }
+.hudRight > * { pointer-events: auto; }
+.hudRight > .rightCluster { position: static; }
+.hudColumn { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; zoom: var(--tsi-text-scale, 1); }
+.healthSlot { display: none; }
+/* The quest tracker (QuestTracker.tsx) in the column, under the minimap and the time. */
+.hudColumn > .questSlot { position: static; }
+/* The UI view lifts the prompt and the toasts over the dock, and the chat log beside it. */
+.world[data-ui] { --hud-bar: 72px; --chat-bottom: calc(var(--hud-floor) + 84px); }
+@media (max-width: 700px) { .world[data-ui] { --hud-bar: 132px; --chat-bottom: calc(var(--hud-floor) + 140px); } }
 /* First login: the minimap and the chapter 1 objective arrive after the arrival's walk-along (specs/v1-drop.md §1). */
-.minimap[data-new] { animation: objectiveIn 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
-.minimap[data-new] .objective { animation: objectiveGlow 2.2s ease-out 0.5s both; }
+.hudColumn[data-new] { animation: objectiveIn 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.hudColumn[data-new] .questSlot { animation: objectiveGlow 2.2s ease-out 0.5s both; }
 @keyframes objectiveIn { from { opacity: 0; transform: translateY(14px) scale(0.96); } }
 @keyframes objectiveGlow { 0%, 100% { box-shadow: var(--gui-shadow-sm); } 30% { box-shadow: 0 0 0 4px #e2826a66, var(--gui-shadow-sm); } }
-@media (prefers-reduced-motion: reduce) { .minimap[data-new], .minimap[data-new] .objective { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .hudColumn[data-new], .hudColumn[data-new] .questSlot { animation: none; } }
 .objectiveMarker { animation: markerPulse 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes markerPulse { 50% { opacity: 0.45; } }
 @media (prefers-reduced-motion: reduce) { .objectiveMarker { animation: none; } }
 .confetti { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
 /* Narrow windows: the map goes up under the Collection button, so the prompt and the toast lane own the bottom; the key hints keep to one scrolling line. */
-@media (max-width: 700px) { .world { --hud-stick-left: var(--hud-edge); } .minimap { width: 130px; top: 198px; bottom: auto; } }
+@media (max-width: 700px) { .hudColumn { --minimap-size: 112px; --minimap-big: 150px; } }
 
 /* Decorate panel (homes): non-modal paper beside the room. */
 .decorate { position: absolute; right: var(--hud-edge); bottom: var(--hud-side-bottom); width: 290px; max-height: calc(100% - 180px); overflow-y: auto; padding: 16px; border-radius: var(--gui-r-card); background: var(--gui-paper); color: var(--gui-ink); box-shadow: var(--gui-shadow-md); font-size: var(--gui-text-sm); z-index: 12; zoom: var(--tsi-text-scale, 1); }
@@ -201,19 +209,23 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .settingsSheet fieldset { border: 0; border-top: 2px dashed var(--gui-paper-edge); padding: 14px 0 6px; margin: 0; min-width: 0; }
 .settingsSheet fieldset:first-of-type { border-top: 0; padding-top: 0; }
 .settingsSheet legend { padding: 0; margin-bottom: 8px; font-size: var(--gui-text-md); font-weight: 800; color: var(--gui-ink-strong); }
+/* The one Settings' tabs (playtest round 1): Graphics, Sound, Controls, Account, Dev. */
+.settingsTabs { margin-bottom: 16px; }
 .segmented { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: var(--gui-r-pill); background: var(--gui-paper-deep); }
 .segmented button { min-height: 40px; border: 0; border-radius: var(--gui-r-pill); background: transparent; font: inherit; font-size: var(--gui-text-sm); font-weight: 800; color: var(--gui-ink-2); cursor: pointer; white-space: nowrap; }
 .segmented button[aria-pressed="true"], .segmented button[aria-selected="true"] { background: var(--gui-butter); color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-sm); }
+/* A label and its pills on one row (Quality, Screen shake): the pills take the room left, up to a comfortable width. */
+.preset > .segmented { flex: 1 1 auto; max-width: 300px; }
 .keyList { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .keyList li { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 46px; font-weight: 700; }
 .keyList button { min-width: 112px; min-height: 40px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; color: var(--gui-ink); cursor: pointer; }
 .keyList button[aria-pressed="true"] { background: var(--gui-butter); box-shadow: inset 0 0 0 2px var(--gui-highlight); }
 .keyList kbd { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 8px; box-sizing: border-box; border-radius: var(--gui-r-pill); background: var(--gui-bark); color: var(--gui-paper); font: 800 var(--gui-text-xs)/1 var(--gui-font); }
 /* Text size (row 220): the HUD scales, the world doesn't. Sheets and dialogs scale through [data-gui-overlay]. */
-.world .interact, .world .panel, .world .bagButton, .world .heading, .world .decorateToggle, .world .minimap, .world .mapButton { zoom: var(--tsi-text-scale, 1); }
+.world .interact, .world .bagButton, .world .heading, .world .decorateToggle { zoom: var(--tsi-text-scale, 1); }
 /* High contrast (row 220) */
-:global(html[data-contrast="high"]) .world .panel, :global(html[data-contrast="high"]) .world .decorate { background: #ffffff; color: #000000; box-shadow: inset 0 0 0 2px #000000; }
-:global(html[data-contrast="high"]) .world .interact, :global(html[data-contrast="high"]) .world .bagButton, :global(html[data-contrast="high"]) .world .mapButton, :global(html[data-contrast="high"]) .world .cue { background: #000000; color: #ffffff; box-shadow: 0 0 0 2px #ffffff; }
+:global(html[data-contrast="high"]) .world .decorate { background: #ffffff; color: #000000; box-shadow: inset 0 0 0 2px #000000; }
+:global(html[data-contrast="high"]) .world .interact, :global(html[data-contrast="high"]) .world .bagButton, :global(html[data-contrast="high"]) .world .cue { background: #000000; color: #ffffff; box-shadow: 0 0 0 2px #ffffff; }
 :global(html[data-contrast="high"]) .world .interact kbd { background: #ffe14d; color: #000000; }
 :global(html[data-contrast="high"]) .world kbd { background: #ffffff; color: #000000; box-shadow: inset 0 0 0 1px #000000; }
 :global(html[data-contrast="high"]) .world .hint, :global(html[data-contrast="high"]) .world small { color: #000000; }
@@ -376,12 +388,15 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .lookHint { position: absolute; top: max(24px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 16px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.94); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); font-weight: 800; box-shadow: var(--gui-shadow-sm); pointer-events: none; white-space: nowrap; zoom: var(--tsi-text-scale, 1); }
 .crosshair { position: absolute; top: 50%; left: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; fill: none; stroke: #f8f3df; stroke-width: 1.4; filter: drop-shadow(0 0 1.2px #1b2a2acc); opacity: 0.85; }
 .crosshair circle + circle { fill: #f8f3df; stroke: none; }
+/* The aim dot (playtest round 1): a small cream dot above your head under mouse-look; a ring and their name over someone it can click. */
+.aimDot { position: absolute; left: 50%; width: 0; height: 0; pointer-events: none; z-index: 12; }
+.aimDot i { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: #f8f3df; box-shadow: 0 0 0 1px #1b2a2a73, 0 0 3px #1b2a2a66; opacity: 0.8; transition: all 0.12s ease-out; }
+.aimDot[data-on] i { left: -9px; top: -9px; width: 18px; height: 18px; background: transparent; box-shadow: inset 0 0 0 2px #f8f3df, 0 0 0 1px #1b2a2a59, inset 0 0 0 3px #1b2a2a40; opacity: 1; }
+.aimDot span { position: absolute; left: 16px; top: -12px; padding: 3px 10px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.94); color: var(--gui-ink-strong); font: 800 var(--gui-text-xs)/1.4 var(--gui-font); white-space: nowrap; box-shadow: var(--gui-shadow-sm); zoom: var(--tsi-text-scale, 1); }
+@media (prefers-reduced-motion: reduce) { .aimDot i { transition: none; } }
 /* The clean HUD (row 283): the objective slides in when it changes and fades after; the place name fades after a scene comes in. */
-.objective[data-flash] { animation: objectiveIn 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
-.objective[data-flash="out"] { animation: hudFade 0.32s ease-in forwards; }
 @keyframes hudFade { to { opacity: 0; transform: translateY(6px); } }
 .interact[data-use] kbd { background: var(--gui-wood); }
-@media (prefers-reduced-motion: reduce) { .objective[data-flash], .objective[data-flash="out"] { animation-duration: 0.01s; } }
 
 /* ── The GUI sheet over the ruins and the Oracle's path sheet (row 285) ─────────────────────────────────────────────
    Appended rather than edited in place, so the classes v2 kits can keep editing the rules above. Paper, the kit's
@@ -439,8 +454,8 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 /* A boat trip (arrival-wharf.md §3): the HUD's buttons stand back while it plays; the trip's own hint is the only prompt. */
 .world[data-trip] .bagButtons, .world[data-trip] .decorateToggle { opacity: 0; pointer-events: none; transition: opacity 0.4s ease; }
 /* Talking, the greeting and the trip (world audit item 7): everything but the dialogue or the trip's Skip stands back. */
-.world[data-cinematic] .bagButtons, .world[data-cinematic] .decorateToggle, .world[data-cinematic] .minimap, .netHud[data-hidden] { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.3s ease, visibility 0s linear 0.3s; }
-.bagButtons, .decorateToggle, .minimap, .netHud { transition: opacity 0.3s ease, visibility 0s; }
+.world[data-cinematic] .bagButtons, .world[data-cinematic] .decorateToggle, .hudRight[data-hidden], .netHud[data-hidden] { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.3s ease, visibility 0s linear 0.3s; }
+.bagButtons, .decorateToggle, .hudRight, .netHud { transition: opacity 0.3s ease, visibility 0s; }
 
 /* ── A phone's folded HUD (world audit item 11) ─────────────────────────────────────────────────────────────────────
    Touch keeps the full HUD's buttons but folds them: Bag, Collection and Map open from one menu button top left, the

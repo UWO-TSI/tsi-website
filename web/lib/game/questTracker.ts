@@ -41,3 +41,23 @@ export function trackerRows(quest: TrackedQuest, size = 5): { rows: TrackerRow[]
 
 /** How far along (done / all), for the tracker's small count. */
 export const questProgress = (q: TrackedQuest) => ({ done: q.steps.filter(s => s.done).length, of: q.steps.length });
+
+/** A chapter as the progression service hands it over (lib/progression/types.ts ChapterView, the fields used here). */
+export interface ChapterLike {
+  slug: string;
+  title: string;
+  status: string;
+  steps: readonly { key: string; label: string; done: boolean; hint?: string }[];
+}
+/**
+ * The chapter being worked on (active or ready) as a tracked quest for the HUD (game/hud-esc: the tracker's slot under
+ * the minimap): its steps, the first not done current, that step's hint under it. Null with no chapter on, or while the
+ * member has the HUD's quests muted (`shown` false: the objective is empty then).
+ */
+export function chapterQuest(chapters: readonly ChapterLike[], shown: boolean): TrackedQuest | null {
+  if (!shown) return null;
+  const chapter = chapters.find(c => c.status === "active" || c.status === "ready");
+  if (!chapter || !chapter.steps.length) return null;
+  const next = chapter.steps.find(s => !s.done);
+  return { id: `chapter:${chapter.slug}`, title: chapter.title, kind: "chapter", steps: chapter.steps.map(s => ({ id: s.key, label: s.label, done: s.done })), hint: next?.hint ?? null };
+}
