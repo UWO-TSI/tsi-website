@@ -15,7 +15,7 @@ village). Branch `game/v1-perf`.
 | e981a1d3, 53b89345, 4e08d123 | **The ground and the cliff kit by block** (`components/game/grid/terrainBlocks.ts`, `cliffBlocks.ts`). GridTerrain merges its per-chunk layers into blocks of 4 × 4 chunks per layer (the water's surface, bed and fringe, broad and light, 8 × 8). GridCliffs bakes every kit placement into world space and merges it per shared material per block: it was one InstancedMesh per kit file and sub-mesh, never culled (270 of the v2 world's 700 calls). The kit's grass top keeps the ground's world UVs as an attribute (the island grass shader's instancing branch did it in the shader). **Cull by block** (`lib/game/curvedCull.ts`): each frustum plane is tested on the block's box as three would; the bend only lowers points, so only the top plane allows for the most it can lower the box: nothing the curved world brings into view is culled (tested against every bent point of a sweep of boxes), with a one-frame camera margin. A culled block whose material nothing has drawn yet is shown once at load, so its shader never compiles mid-walk. |
 | 5a070228 | **Streetlamps** as one instanced model (`Lanterns`): a draw per sub-mesh for all of them; each lamp keeps its own pool of light, the globes ease together as before. The v2 world's 11 lamps: 56 → 5 calls. |
 | 065ed246 | **Lite thins the flowing grass with distance:** every tuft within 30 u of the camera, falling to a quarter past 45 u (each tuft's own hash says which, so the same ones stay as you walk); the instances are rewritten when the camera has moved 2 u. High draws them all. |
-| 8a31c3b4 | **Lite's render scale:** without the pixel finish the canvas renders at most 1 device pixel per CSS pixel on Lite (High: up to 1.5). The pixel finish stays the default on every tier, at 0.5. `lib/game/qualityTier.ts` lists everything Lite turns off. |
+| 8a31c3b4, 24abee4d | **Lite's render scale:** without the pixel finish a game canvas renders at most 1 device pixel per CSS pixel on Lite (`tierDpr`: the island up to 1.5 on High, the character creator and the arrival's reflection up to 2). The pixel finish stays the default on every tier, at 0.5. `lib/game/qualityTier.ts` lists everything Lite turns off. |
 | 71805a25, f8900dbc | **No shader compiles mid-play** (found by the A/B: 75–110 ms frames): a held item casts for its first three frames whoever holds it, so the shadow pass's shader compiles when it comes out; the leaping fish (AmbientFauna) draw once behind the camera at load until their program, look patch included, is compiled. The bench's probe (`progprobe`, every program linked after the scene settles, 12 s in v2 with 24 bots): 0 on High and Lite. |
 
 ## Numbers
@@ -25,26 +25,23 @@ measurement build (`measure-build.sh`).
 
 ### perf:check (the gate), against the baseline (53c23490)
 
-High (3 runs each, load 3.1–3.6; `main` is ff4016a9's own perf:check, the same day, load 3.2–3.6):
+The branch at 24abee4d (main 1f86a994 merged in), 3 runs each, load 3.1–3.9: **passed on both tiers**. `main` is
+ff4016a9's own perf:check (High only), the same day at load 3.2–3.6.
 
-| Scene | Frame ms: baseline / main / branch | Frame CPU ms | Draw calls: baseline / main / branch | Triangles: branch |
-|---|---|---|---|---|
-| Village | 4.0 / 4.2 / **4.0** | 3.4 / 3.6 / **3.4** | 464 / 464 / **392** | 504k (the water pass and the hairs: 491k on main 754c4a01) |
-| v2 world | 5.5 / 5.6 / **5.1** | 4.9 / 5.0 / **4.6** | 697 / 698 / **252** | 1.08M |
-| Café | 2.1 / 2.2 / **1.9** | 1.2 / 0.5 / **1.1** | 139 / 134 / **147** | 73k |
-| Ruins (Shadow Garden) | 3.1 / 3.2 / **2.7** | 2.5 / 2.6 / **2.1** | 417 / 416 / **300** | 230k |
+| Scene | Tier | Frame ms: baseline / main / branch | Frame CPU ms | Draw calls: baseline / main / branch | Triangles: branch |
+|---|---|---|---|---|---|
+| Village | High | 4.0 / 4.2 / **3.9** | 3.4 / 3.6 / **3.4** | 464 / 464 / **391** | 503k (the water pass and the hairs: 491k on main 754c4a01) |
+| v2 world | High | 5.5 / 5.6 / **5.1** | 4.9 / 5.0 / **4.6** | 697 / 698 / **252** | 1.08M |
+| Café | High | 2.1 / 2.2 / **2.0** | 1.2 / 0.5 / **1.1** | 139 / 134 / **146** | 73k |
+| Ruins (Shadow Garden) | High | 3.1 / 3.2 / **2.7** | 2.5 / 2.6 / **2.1** | 417 / 416 / **304** | 230k |
+| Village | Lite | 2.2 / – / **2.3** | 1.9 / – / **2.0** | 336 / – / **300** | 357k |
+| v2 world | Lite | 3.0 / – / **3.0** | 2.7 / – / **2.7** | 487 / – / **174** | 829k |
+| Café | Lite | 1.4 / – / **1.5** | 0.7 / – / **0.8** | 105 / – / **111** | 70k |
+| Ruins (Shadow Garden) | Lite | 1.9 / – / **1.8** | 1.5 / – / **1.4** | 236 / – / **165** | 169k |
 
-Lite (3 runs each, load 2.7–3.2):
-
-| Scene | Frame ms: baseline / branch | Frame CPU ms | Draw calls: baseline / branch | Triangles: branch |
-|---|---|---|---|---|
-| Village | 2.2 / **2.3** | 1.9 / **2.0** | 336 / **301** | 356k |
-| v2 world | 3.0 / **3.0** | 2.7 / **2.8** | 487 / **174** | 829k |
-| Café | 1.4 / **1.5** | 0.7 / **0.6** | 105 / **108** | 66k |
-| Ruins (Shadow Garden) | 1.9 / **1.8** | 1.5 / **1.4** | 236 / **153** | 169k |
-
-Both tiers pass. On Lite the M4 is not the machine Lite is for: without shadows and AO a third of the draws costs it
-almost nothing measurable; on a slow machine it does (below).
+On Lite the M4 is not the machine Lite is for: without shadows and AO, two thirds fewer calls cost it almost nothing
+measurable at these frame times (the village and café moves are within the run spread, 0–26%); on a slow machine they
+do (below). The shader probe on the same build: 0 programs compiled after the scene settles, on High and on Lite.
 
 ### Before and after, interleaved (main 754c4a01 against the branch at the same merge, one round)
 

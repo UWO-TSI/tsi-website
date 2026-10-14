@@ -91,3 +91,4 @@ switch for the new thing to `lib/game/perf/fxBench.ts` (`WORLD_KEYS`) or a tunin
 | `world-bench.mjs` | What the sky dome, the grass and the title screen cost |
 | `perf-bench.mjs`, `ab.sh`, `measure-build.sh`, `table.mjs` | The scene bench, interleaved before/after, the measurement build |
 | `2026-10-baseline.md`, `2026-10-results.md` | The first performance pass |
+| `2026-10-v1-results.md`, `lite-sim.mjs`, `draw-breakdown.mjs` | The v1 pass: held items, the fishing rig, the leaf, the world by block, Lite; a weaker laptop simulated; where a scene's draw calls go |
