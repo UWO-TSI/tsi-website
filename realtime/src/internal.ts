@@ -2,6 +2,7 @@
 // block routes tell the realtime server what changed, so it takes effect at once.
 //   POST /internal/sanction {member_id, muted_until?, removed_until?}
 //   POST /internal/block    {blocker_id, blocked_id, blocked}
+//   POST /internal/friend   {a_id, b_id, friends}   (v1: a friendship made or ended)
 // Each request is signed with the shared secret REALTIME_INTERNAL_SECRET:
 //   x-rt-time:      the sender's clock, ms since the epoch (within 30 s of ours)
 //   x-rt-nonce:     16–64 of [A-Za-z0-9_-], never reused (a replay inside the window is refused)
@@ -51,6 +52,9 @@ export const SanctionBody = z
   .strictObject({ member_id: z.uuid(), muted_until: when.optional(), removed_until: when.optional() })
   .refine((b) => b.muted_until !== undefined || b.removed_until !== undefined, "nothing to change");
 export const BlockBody = z.strictObject({ blocker_id: z.uuid(), blocked_id: z.uuid(), blocked: z.boolean() });
+export const FriendBody = z
+  .strictObject({ a_id: z.uuid(), b_id: z.uuid(), friends: z.boolean() })
+  .refine((b) => b.a_id.toLowerCase() !== b.b_id.toLowerCase(), "two different members");
 
 const STATUS: Record<Exclude<InternalCheck, "ok">, number> = { malformed: 401, stale: 401, bad_signature: 401, replay: 409 };
 
@@ -115,5 +119,12 @@ export function internalEndpoints(o: InternalOptions) {
     return json(200, { ok: true, sessions });
   });
 
-  return { sanction, block };
+  const friend = createEndpoint("/internal/friend", { method: "POST", disableBody: true }, async (ctx) => {
+    const b = await signed("/internal/friend", ctx.request, FriendBody);
+    if (b instanceof Response) return b;
+    const sessions = o.world.friend(b.a_id.toLowerCase(), b.b_id.toLowerCase(), b.friends);
+    return json(200, { ok: true, sessions });
+  });
+
+  return { sanction, block, friend };
 }
