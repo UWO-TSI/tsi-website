@@ -80,7 +80,7 @@ const summarise = rows => ({
 const base = existsSync(BASELINE) ? JSON.parse(readFileSync(BASELINE, "utf8")) : null;
 const budget = BUDGET ? (await import(join(web, "lib/game/perf/budget.ts"))).SCENE_BUDGET : null;
 const regressed = (now, was) => now.frameMs > was.frameMs * (1 + TOLERANCE) || now.draws > was.draws * (1 + TOLERANCE);
-const sceneOf = s => (s.startsWith("ruins") ? "ruins" : s);
+const sceneOf = s => (s.startsWith("ruins") ? "ruins" : s === "v2cells" ? "v2" : s);
 
 // Re-run what looks regressed, twice, before judging it.
 if (base && !UPDATE) for (const [k, rows] of runs) {

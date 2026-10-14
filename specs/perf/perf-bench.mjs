@@ -1,10 +1,12 @@
 // The performance pass's bench (specs/perf/2026-10-baseline.md, 2026-10-results.md): the same scenes before and after.
 //   PORT=3149 node specs/perf/perf-bench.mjs [scenes] [outFile]
-//   scenes: comma list of village, cafe, v2 (the terrain v2 world draft, 384 × 552, with 24 bots), ruins-<kit>
+//   scenes: comma list of village, cafe, v2 (the v2 world as the world editor's smooth heightfield, 384 × 552, with 24
+//   bots), v2cells (the same world as its old cell draft: the terrain swap priced in one build), ruins-<kit>
 //   (default: village,cafe and the four heavy ults' kits).
 //   Env: TIER=high|lite (default high), SECONDS (default 8), PROFILE=1 (a CPU profile after each run, top self time),
 //   UNCAPPED=0 (keep the display's frame pacing; default off so the frame rate shows the real cost), SHOTS=dir (a
-//   close-up and a wide screenshot per scene).
+//   close-up and a wide screenshot per scene), HEADLESS=1 (no window at all: for machines whose agents may only run
+//   headless; compare headless runs with headless runs, never with a headed baseline).
 // Headed Chromium off to the side (--window-position=2400,0), muted, the real GPU (ANGLE on Metal), never brought to
 // the front. Each scene runs on a fresh page, waits for the world to settle, then samples every frame for SECONDS
 // (requestAnimationFrame) with window.__perf (components/game/PerfProbe.tsx, development builds and the measurement
@@ -21,7 +23,7 @@ const PORT = process.env.PORT ?? 3149, W = 1280, H = 800, SECONDS = Number(proce
 const UNCAPPED = process.env.UNCAPPED !== "0", PROFILE = process.env.PROFILE === "1", SHOTS = process.env.SHOTS ?? "", HITCH = process.env.HITCH === "1";
 const args = ["--mute-audio", "--window-position=2400,0", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-precise-memory-info"];
 if (UNCAPPED) args.push("--disable-gpu-vsync", "--disable-frame-rate-limit");
-const browser = await chromium.launch({ headless: false, args });
+const browser = await chromium.launch({ headless: process.env.HEADLESS === "1", args });
 const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_curtain", back: "back_bob", top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: {} });
 const TIER = { high: { "tsi.liteMode.v1": "false", "tsi.shadows.v1": "true" }, lite: { "tsi.liteMode.v1": "true", "tsi.shadows.v1": "false" } }[TIER_NAME];
 const BASE = "time=day&weather=clear&season=summer";
@@ -157,7 +159,7 @@ for (const scene of SCENES.split(",")) {
     await fresh();
     const fight = scene.startsWith("ruins-"), kit = fight ? scene.slice(6) : null;
     const url = fight ? `/lab/island?${BASE}&ruins=1&combat=demo&classes=v2&subclass=${kit}&mastery=20&traits=all&tamed=all`
-      : scene === "cafe" ? `/lab/island?${BASE}&cafe=inside&bots=24` : scene === "v2" ? `/lab/island?${BASE}&fixture=v2&bots=24` : `/lab/island?${BASE}&bots=24`;
+      : scene === "cafe" ? `/lab/island?${BASE}&cafe=inside&bots=24` : scene === "v2" ? `/lab/island?${BASE}&fixture=v2&bots=24` : scene === "v2cells" ? `/lab/island?${BASE}&fixture=v2-cells&bots=24` : `/lab/island?${BASE}&bots=24`;
     await page.goto(`http://localhost:${PORT}${url}`, { waitUntil: "domcontentloaded" });
     await settle(fight ? ready.ruins : scene === "cafe" ? ready.world : ready.net);
     if (fight) await stage();
