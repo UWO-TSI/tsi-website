@@ -24,7 +24,7 @@ import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import type { Area } from "@/lib/net/protocol";
 import type { NetSource } from "@/lib/net/types";
 import { useMoveParticles, type MoveParticles } from "../movement/moveFx";
-import { FLAT_GROUND, castSunShadows, driveRig, gateMixer, type GroundWorld, type JuiceSink, type RemoteRig } from "./drive";
+import { FLAT_GROUND, castSunShadows, driveRig, gateMixer, itemShadow, type GroundWorld, type JuiceSink, type RemoteRig } from "./drive";
 import { moveAt, remoteDashTrail, remoteJuice, type FxGround } from "./fx";
 import { FULL, LOD, LOD_CAPS, assignLod, createLodScratch, type LodCaps, type LodEntry, type LodScratch } from "./lod";
 import { RemoteAvatar } from "./RemoteAvatar";
@@ -132,6 +132,7 @@ function driveAll(d: Driver, source: NetSource, world: GroundWorld, juice: Juice
     if (FX_BENCH) { forceMotion(r, i, now / 1000, dt); if (pool) forceJuice(pool, DRY, r, i, now / 1000, dt); }
     if (pool && r.lod.tier === FULL && (!FX_BENCH || fxOn("juice"))) remoteDashTrail(pool, r.fx, s, r.groundY, dt);
     r.lod.dist = Math.hypot(s.x - you.x, s.z - you.z);
+    r.motion.itemShadow = itemShadow(r);
     // Where they stand this frame, for what yields to people (the café's patrons).
     if (n < LIVE_MAX) { liveRemotes.x[n] = s.x; liveRemotes.z[n] = s.z; liveRemotes.sid[n] = r.sid; liveRemotes.uid[n] = r.entry.player.uid; n++; }
     // Who they are and what they're doing, for the group dance sync and the campfire (lib/game/danceField.ts).

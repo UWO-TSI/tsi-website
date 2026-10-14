@@ -23,6 +23,7 @@
  */
 
 import { useEffect, useMemo } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import {
   type IslandMap,
@@ -63,6 +64,8 @@ import {
   type ShoreSdf,
 } from "@/lib/game/grid";
 import { terrainMaterial, setShoreField } from "./terrainMaterials";
+import { TERRAIN_BLOCK, WATER_BLOCK, terrainBlocks } from "./terrainBlocks";
+import { CurvedCull, cullMeshes } from "@/lib/game/curvedCull";
 import { bakeWaterDepth, seabedDip, shoreFieldOf } from "@/lib/game/seabed";
 
 // Flat colours for the surfaces whose road-kit textures are not wired yet.
@@ -132,6 +135,8 @@ const FRINGE_OVERHANG = 0.06;
 // meant to run continuously across the terrain, not a per-tile decal.
 const UV_CELLS_PER_REPEAT = 2;
 const UV = 1 / (UV_CELLS_PER_REPEAT * TILE);
+/** The ground's world UVs per world unit (GridCliffs gives the kit's grass the same, as its instanced shader did). */
+export const GROUND_UV = UV;
 
 /** A layer's triangles, accumulated flat rather than as 11k BufferGeometries. */
 interface Mesh {
@@ -737,6 +742,9 @@ export function useTerrainMaterials(palette?: TerrainPalette): TerrainMaterials 
   return materials;
 }
 
+/** How many chunks a side a layer's blocks span: the water's surface, bed and fringe in wider ones (terrainBlocks.ts). */
+const blockFor = (surface: number) => (surface === Surface.River || surface === RIVER_BED || surface === WATER_FRINGE ? WATER_BLOCK : TERRAIN_BLOCK);
+
 /**
  * The ground's draw order: the see-through layers (rock, then sand, then soil) after the rest. Anything lying on the
  * ground that does not write depth (the snow prints, WeatherGround) draws after GROUND_TOP_ORDER, or a path paints over it.
@@ -759,7 +767,8 @@ export default function GridTerrain({ map, field: heights, materials }: { map: I
    */
   const chunks = useMemo(
     // Guarded on the constant: at CLIFF_LEVELS 1 every level change is a cliff and the blur has nothing to cross.
-    () => terrainChunks(map, CLIFF_LEVELS > 1 ? heights ?? heightField(map) : null, field),
+    // Drawn by block of 4 × 4 chunks per layer, 8 × 8 for the water's (terrainBlocks.ts): a call per block in view.
+    () => terrainBlocks(terrainChunks(map, CLIFF_LEVELS > 1 ? heights ?? heightField(map) : null, field), blockFor),
     [map, heights, field]
   );
 
@@ -770,12 +779,15 @@ export default function GridTerrain({ map, field: heights, materials }: { map: I
   }, [map, field]);
 
   useEffect(() => () => { chunks.forEach(({ geometry }) => geometry.dispose()); }, [chunks]);
+  // Rock, then sand, then soil: where a path meets the beach the soil is always the one on top. Each block is shown
+  // when the curved world can bring any of it into view (lib/game/curvedCull.ts), three's own test being blind to the bend.
+  const meshes = useMemo(() => chunks.map(c => Object.assign(new THREE.Mesh(c.geometry, materials.get(c.surface)),
+    { name: `terrain:${c.key}`, receiveShadow: true, renderOrder: groundRenderOrder(c.surface), frustumCulled: false })), [chunks, materials]);
+  const cull = useMemo(() => new CurvedCull(), []);
+  useFrame(({ camera }) => cullMeshes(cull.update(camera), meshes));
   return (
     <group>
-      {chunks.map((c) => (
-        // Rock, then sand, then soil: where a path meets the beach the soil is always the one on top.
-        <mesh key={c.key} geometry={c.geometry} material={materials.get(c.surface)} receiveShadow renderOrder={groundRenderOrder(c.surface)} />
-      ))}
+      {meshes.map((m) => <primitive key={m.name} object={m} />)}
     </group>
   );
 }

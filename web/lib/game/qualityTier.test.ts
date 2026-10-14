@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { medianFrameMs, tierForFrameMs } from "./qualityTier";
+import { medianFrameMs, tierForFrameMs, tierDpr } from "./qualityTier";
 
 describe("quality tier probe", () => {
   it("uses the median so a shader-compile hitch does not demote a fast device", () => {
@@ -11,5 +11,15 @@ describe("quality tier probe", () => {
     expect(tierForFrameMs(16.7)).toBe("high");
     expect(tierForFrameMs(25)).toBe("high");
     expect(tierForFrameMs(33)).toBe("light");
+  });
+});
+
+describe("a canvas's pixel ratio by tier", () => {
+  it("is as asked on High, never past 1 on Lite, and keeps the pixel finish's half", () => {
+    expect(tierDpr(false, [1, 2])).toEqual([1, 2]);
+    expect(tierDpr(true, [1, 2])).toEqual([1, 1]);
+    expect(tierDpr(true, [1, 1.5])).toEqual([1, 1]);
+    expect(tierDpr(true, 0.5)).toBe(0.5);
+    expect(tierDpr(false, 0.5)).toBe(0.5);
   });
 });

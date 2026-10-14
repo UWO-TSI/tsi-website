@@ -10,7 +10,8 @@
  *   the upper body so they don't float off the seat.
  * - The mixer's rate trick (Character.tsx: its frame returns early while `motion.current` is null and steps by
  *   `rate`): Reduced remotes step at 15 Hz by the time saved up, Hidden ones not at all, without touching Character.
- * - Sun shadows go through `userData.sunCaster` (SunShadows reads it before `castShadow`), off below Full.
+ * - Sun shadows go through `userData.sunCaster` (SunShadows reads it before `castShadow`), off below Full; what a Full
+ *   player holds casts only within HELD_SHADOW_RANGE of you (`motion.itemShadow`, Character `remote`).
  */
 import * as THREE from "three";
 import { WATER_DROP } from "@/lib/game/grid";
@@ -90,6 +91,17 @@ function floorUnder(r: RemoteRig, world: GroundWorld, x: number, z: number): num
     r.floorY = world.wet(x, z) ? top - WATER_DROP : top;
   }
   return r.floorY;
+}
+
+/**
+ * How near you (world units, on the ground) a Full player's held item, weapon or tool casts its sun shadow
+ * (specs/perf/effects-cost.md: each part of it was another draw in the shadow map on every Full player); 1 u of
+ * hysteresis past it. Their body's shadow is untouched.
+ */
+export const HELD_SHADOW_RANGE = 10;
+/** Whether a remote's held item casts this frame (module scope; `r.lod.dist` is this frame's). */
+export function itemShadow(r: RemoteRig): boolean {
+  return r.lod.tier === FULL && r.lod.dist < HELD_SHADOW_RANGE + (r.motion.itemShadow ? 1 : 0);
 }
 
 /** Called for each movement-juice event (Full tier only); `i` is its slot in the sample's events. */

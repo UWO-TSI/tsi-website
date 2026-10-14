@@ -24,6 +24,7 @@ import { ATTACK_CLIP, WEAPON_HAND, contactCrossed, crossfade, holdLayer, isLoop,
 import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } from "@/lib/game/character/rig";
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
+import { heldTemplate } from "@/lib/game/character/heldMesh";
 import { addContact } from "../ContactShadows";
 import { addGrassBender } from "@/lib/game/grassBenders";
 import { frameStats } from "@/lib/game/perf/frameStats";
@@ -207,6 +208,8 @@ class Puppet {
   private readonly layerTracks = new Map<string, { bone: THREE.Bone; at: THREE.Interpolant }[]>();
   /** Held items put away: they shrink into the hand before they go (never a pop). */
   private readonly retiring: { model: THREE.Object3D; t: number; from: number }[] = [];
+  /** Another player (Character `remote`): their afterimages are the body alone, from the LOD 1 mesh once it has loaded. */
+  remote = false;
 
   constructor(private readonly base: Gltf) {
     this.root = cloneSkinned(base.scene);
@@ -236,9 +239,9 @@ class Puppet {
     this.body = make(new THREE.BufferGeometry(), BODY_MATERIAL);
     this.face = make(facePrim.geometry, BODY_MATERIAL);
     this.decal = make(new THREE.BufferGeometry(), BODY_MATERIAL);
-    // A print on the shirt, inside the body's silhouette: not a caster.
-    this.decal.castShadow = false;
-    delete this.decal.userData.sunCaster;
+    // A print on the shirt, inside the body's silhouette: not a caster. Nor the face, a shell over the head
+    // (art/characters/build_lod.py) whose shadow falls inside the head's (specs/perf/effects-cost.md).
+    for (const m of [this.decal, this.face]) { m.castShadow = false; delete m.userData.sunCaster; }
     this.body.visible = this.face.visible = this.decal.visible = false; // until dress()
     this.sockets = { R: this.root.getObjectByName("Socket_R_Hand")!, L: this.root.getObjectByName("Socket_L_Hand")!, Back: this.root.getObjectByName("Socket_Back")! };
     this.skeleton = skeleton;
@@ -410,17 +413,26 @@ class Puppet {
     this.clip = name;
   }
 
+  /**
+   * What an afterimage freezes: the body and the face; another player's, the body alone at the lower detail (the LOD 1
+   * mesh once loaded: a faint copy for a fifth of a second, specs/perf/effects-cost.md).
+   */
+  private ghostGeometries() {
+    if (!this.remote) return [this.body.geometry, this.face.geometry];
+    return [this.lodGeometry && this.lodKey === `${this.bodyKey}|lod1` ? this.lodGeometry : this.body.geometry];
+  }
+
   /** Leave an afterimage of the last drawn pose (the oldest of two is reused). */
   private ghost() {
     this.prepareGhosts();
     const g = this.ghosts[this.ghostNext];
     this.ghostNext = (this.ghostNext + 1) % 2;
-    g.snap(this.skeleton, [this.body.geometry, this.face.geometry], this.body.matrixWorld);
+    g.snap(this.skeleton, this.ghostGeometries(), this.body.matrixWorld);
   }
 
   private prepareGhosts() {
     if (this.ghosts.length) return;
-    while (this.ghosts.length < 2) this.ghosts.push(new Ghost(this.skeleton, this.body.bindMatrix, this.ghostParent, [this.body.geometry, this.face.geometry]));
+    while (this.ghosts.length < 2) this.ghosts.push(new Ghost(this.skeleton, this.body.bindMatrix, this.ghostParent, this.ghostGeometries()));
     // The character that leaves afterimages draws after them (Ghost): over them where they overlap.
     this.body.renderOrder = this.face.renderOrder = this.decal.renderOrder = GHOST_ORDER + 1;
   }
@@ -541,9 +553,13 @@ const GRIP: Record<WeaponKind, WeaponGrip> = {
 };
 const gripQ = new THREE.Quaternion(), gripE = new THREE.Euler();
 
-function HeldWeapon({ puppet, motion, weapon: { kind, model: url, modelScale, inHand, grip, hand, pulse, paint } }: { puppet: Puppet; motion: RefObject<CharacterMotion>; weapon: WeaponView }) {
+function HeldWeapon({ puppet, motion, weapon: { kind, model: url, modelScale, inHand, grip, hand, pulse, paint }, remote }: { puppet: Puppet; motion: RefObject<CharacterMotion>; weapon: WeaponView; remote: boolean }) {
   const { scene } = useGLTF(url);
-  const model = useMemo(() => tagLookClasses(scene.clone(true), url), [scene, url]);
+  // One mesh per look class (heldMesh.ts), shared by every copy; a painted weapon (yours, classes v2) keeps its named
+  // parts, which the paint recolours one by one.
+  const painted = !!paint;
+  const model = useMemo(() => tagLookClasses((painted ? scene : heldTemplate(scene, url)).clone(true), url), [scene, url, painted]);
+  const casters = useMemo(() => meshesOf(model), [model]);
   // Painted weapons get their own copies of their named materials (the cached model's stay as authored); a tier-5
   // signature weapon's glow parts breathe (its painted copies, when it has them).
   const { paints, glows } = useMemo(() => {
@@ -573,10 +589,30 @@ function HeldWeapon({ puppet, motion, weapon: { kind, model: url, modelScale, in
       if (q.intensity !== undefined) m.emissiveIntensity = q.intensity;
     }
     breathe(glows, clock.elapsedTime, p);
+    castItem(casters, !remote || !!motion.current?.itemShadow);
     if (!inHand || !g.rest) return;
     model.quaternion.slerp(gripQ.setFromEuler(gripE.set(...(puppet.attacking ? g.hand : g.rest))), 1 - Math.exp(-delta * 24));
   });
   return null;
+}
+/** A held item's meshes (the off hand's too, wherever it is held), for its sun shadow. */
+function meshesOf(model: THREE.Object3D): THREE.Mesh[] {
+  const out: THREE.Mesh[] = [];
+  model.traverse(o => { if ((o as THREE.Mesh).isMesh) out.push(o as THREE.Mesh); });
+  return out;
+}
+/**
+ * Whether what a character holds casts its sun shadow this frame (SunShadows skips a caster marked `shadowCulled`):
+ * yours always; another player's only at Full within HELD_SHADOW_RANGE of you (`motion.itemShadow`, net/drive.ts).
+ * Every item casts for its first WARM_FRAMES frames whoever holds it, so the shadow pass's shader is compiled when the
+ * item comes out, never later when its holder walks up to you (a 75 ms frame in the bench).
+ */
+const WARM_FRAMES = 3;
+function castItem(meshes: THREE.Mesh[], on: boolean) {
+  for (const m of meshes) {
+    const u = m.userData, cast = on || (u.heldFrames = (u.heldFrames ?? 0) + 1) <= WARM_FRAMES;
+    if (u.shadowCulled !== !cast) u.shadowCulled = !cast;
+  }
 }
 /** A weapon's emissive materials, each with its authored intensity kept (they're shared by every copy of the model). */
 function glowMaterials(model: THREE.Object3D): THREE.MeshStandardMaterial[] {
@@ -627,12 +663,16 @@ const gripAt = new THREE.Vector3();
  * the head whatever the wrist does), sized by `motion.leaf` from the grip, so it grows out of the hand as it opens and
  * lifts a little as it pops past full size.
  */
-function HeldLeaf({ puppet, motion, scale }: { puppet: Puppet; motion: RefObject<CharacterMotion>; scale: number }) {
+function HeldLeaf({ puppet, motion, scale, remote }: { puppet: Puppet; motion: RefObject<CharacterMotion>; scale: number; remote: boolean }) {
   const { scene } = useGLTF(LEAF_URL);
-  const model = useMemo(() => tagLookClasses(scene.clone(true), LEAF_URL), [scene]);
-  useEffect(() => { model.traverse(o => { o.castShadow = true; o.userData.sunCaster = "dynamic"; }); }, [model]);
+  // One mesh (heldMesh.ts). Yours casts its sun shadow; another player's casts none (specs/perf/effects-cost.md).
+  const model = useMemo(() => tagLookClasses(heldTemplate(scene, LEAF_URL).clone(true), LEAF_URL), [scene]);
+  useEffect(() => leafCasts(model, !remote), [model, remote]);
   useFrame(() => placeLeaf(model, puppet.sockets.R, motion.current?.leaf ?? 0, scale));
   return <primitive object={model} />;
+}
+function leafCasts(model: THREE.Object3D, on: boolean) {
+  model.traverse(o => { o.castShadow = on; if (on) o.userData.sunCaster = "dynamic"; else delete o.userData.sunCaster; });
 }
 function placeLeaf(model: THREE.Object3D, hand: THREE.Object3D, open: number, scale: number) {
   model.visible = open > 0.01 && !!model.parent;
@@ -686,7 +726,7 @@ const holdQ = new THREE.Quaternion(), heldQ = new THREE.Quaternion(), heldE = ne
 
 /** Fit a model to `size` about its centre (something held in front: a fruit, a shell). */
 function fitted(scene: THREE.Object3D, url: string, size: number) {
-  const inner = tagLookClasses(scene.clone(true), url), box = new THREE.Box3().setFromObject(inner), dim = new THREE.Vector3(), mid = new THREE.Vector3();
+  const inner = tagLookClasses(heldTemplate(scene, url).clone(true), url), box = new THREE.Box3().setFromObject(inner), dim = new THREE.Vector3(), mid = new THREE.Vector3();
   box.getSize(dim); box.getCenter(mid);
   const k = size / Math.max(dim.x, dim.y, dim.z, 1e-3);
   inner.position.copy(mid).multiplyScalar(-k);
@@ -696,13 +736,15 @@ function fitted(scene: THREE.Object3D, url: string, size: number) {
   return outer;
 }
 
-function HeldItem({ puppet, motion, view: { url, hold, fit } }: { puppet: Puppet; motion: RefObject<CharacterMotion>; view: HeldView }) {
+function HeldItem({ puppet, motion, view: { url, hold, fit }, remote }: { puppet: Puppet; motion: RefObject<CharacterMotion>; view: HeldView; remote: boolean }) {
   const { scene } = useGLTF(url);
+  // One mesh per look class (heldMesh.ts): a rod, a net, a shovel is one draw, shared by every copy.
   const model = useMemo(() => {
-    const m = hold === "front" ? fitted(scene, url, fit ?? 0.1) : tagLookClasses(scene.clone(true), url);
+    const m = hold === "front" ? fitted(scene, url, fit ?? 0.1) : tagLookClasses(heldTemplate(scene, url).clone(true), url);
     m.traverse(o => { o.castShadow = true; o.userData.sunCaster = "dynamic"; });
     return m;
   }, [scene, url, hold, fit]);
+  const casters = useMemo(() => meshesOf(model), [model]);
   const grip = HELD_GRIPS[hold];
   const age = useRef(0);
   useEffect(() => {
@@ -710,9 +752,14 @@ function HeldItem({ puppet, motion, view: { url, hold, fit } }: { puppet: Puppet
     puppet.takeOut(model, grip);
     return () => puppet.putAway(model, grip);
   }, [model, puppet, grip]);
-  useFrame((_, delta) => { age.current += delta; poseHeld(model, puppet.current, grip, hold, age.current, delta); });
-  // The rod carries its fishing: the bobber, the line and the catch of this avatar's own cast.
-  return hold === "rod" ? <FishingRig motion={motion} rod={model} hands={puppet.sockets} /> : null;
+  useFrame((_, delta) => {
+    age.current += delta;
+    poseHeld(model, puppet.current, grip, hold, age.current, delta);
+    castItem(casters, !remote || !!motion.current?.itemShadow);
+  });
+  // The rod carries its fishing: the bobber, the line and the catch of this avatar's own cast. Not on another player's
+  // until remote casts are sent (specs/multiplayer.md follow-up): their rod shows alone, as it always has.
+  return hold === "rod" && !remote ? <FishingRig motion={motion} rod={model} hands={puppet.sockets} /> : null;
 }
 /** Module scope (the react compiler forbids writing through hook values): pop out, hide where put away, ease to the use grip. */
 function poseHeld(model: THREE.Object3D, clip: ClipName | null, grip: Grip, hold: HoldKind, age: number, delta: number) {
@@ -741,9 +788,15 @@ export interface CharacterProps {
   scale?: number;
   /** Detail by drawn size (lod.ts); off in the creator, which shows one character up close. */
   lod?: boolean;
+  /**
+   * Another player (RemoteAvatar): their rod mounts no fishing rig (remote casts aren't sent yet), their leaf casts no
+   * sun shadow, what else they hold casts one only while `motion.itemShadow` (Full, near you), and their afterimages
+   * are the body alone at the lower detail (specs/perf/effects-cost.md).
+   */
+  remote?: boolean;
 }
 
-export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, held = null, leaf = false, verbs = false, faceSize = 512, scale = CHARACTER_SCALE, lod = true }: CharacterProps) {
+export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, held = null, leaf = false, verbs = false, faceSize = 512, scale = CHARACTER_SCALE, lod = true, remote = false }: CharacterProps) {
   // While a newly chosen part loads, keep showing the previous look instead of suspending.
   const shown = useDeferredValue(look);
   const parts = useMemo(() => resolveParts(shown), [shown]);
@@ -756,6 +809,7 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
   useEffect(() => () => puppet.dispose(), [puppet]);
   // A verb asked for before the library loads plays the weapon's own attack clip.
   useEffect(() => setFallback(puppet, weapon?.kind), [puppet, weapon?.kind]);
+  useEffect(() => setRemote(puppet, remote), [puppet, remote]);
   useEffect(() => {
     dressPuppet(puppet, shown, parts, loaded.slice(1).map(g => g.scene), atlas, decalMap);
   }, [puppet, shown, parts, loaded, atlas, decalMap]);
@@ -790,15 +844,15 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
   }, -1);
   return <group ref={group}>
     <primitive object={puppet.root} scale={scale} dispose={null} />
-    {weapon && <HeldWeapon puppet={puppet} motion={motion} weapon={weapon} />}
+    {weapon && <HeldWeapon puppet={puppet} motion={motion} weapon={weapon} remote={remote} />}
     {/* Its own boundary: the LOD 1 GLBs load after the character shows, never suspending it. */}
     {lod && <Suspense fallback={null}><LodMesh puppet={puppet} look={shown} parts={parts} /></Suspense>}
     {/* Its own boundary: the ruins never wait for the verb library; a verb asked for meanwhile plays the attack clip. */}
     {verbs && <Suspense fallback={null}><VerbClips puppet={puppet} /></Suspense>}
     {/* Its own boundary: taking out a tool never suspends the scene while its model loads. */}
-    {held && <Suspense fallback={null}><HeldItem key={`${held.hold}:${held.url}`} puppet={puppet} motion={motion} view={held} /></Suspense>}
+    {held && <Suspense fallback={null}><HeldItem key={`${held.hold}:${held.url}`} puppet={puppet} motion={motion} view={held} remote={remote} /></Suspense>}
     {/* Its own boundary: crafting the glider mid-session must not suspend the scene while the leaf loads. */}
-    {leaf && <Suspense fallback={null}><HeldLeaf puppet={puppet} motion={motion} scale={scale} /></Suspense>}
+    {leaf && <Suspense fallback={null}><HeldLeaf puppet={puppet} motion={motion} scale={scale} remote={remote} /></Suspense>}
   </group>;
 }
 /** The verb library's actions (build_clips.py `-- verbs`): the same rig's tracks, merged into the puppet's clips. */
@@ -838,6 +892,7 @@ function VerbClips({ puppet }: { puppet: Puppet }) {
   return null;
 }
 function setFallback(puppet: Puppet, kind: WeaponKind | undefined) { puppet.fallback = ATTACK_CLIP[kind ?? "melee"]; }
+function setRemote(puppet: Puppet, remote: boolean) { puppet.remote = remote; }
 function dressPuppet(puppet: Puppet, look: CharacterLook, parts: ResolvedPart[], scenes: THREE.Object3D[], atlas: THREE.Texture, decalMap: THREE.Texture) {
   decalMap.flipY = false;
   decalMap.colorSpace = THREE.SRGBColorSpace;

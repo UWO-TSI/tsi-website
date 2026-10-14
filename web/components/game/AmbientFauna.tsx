@@ -192,8 +192,36 @@ function LeapingFish({ isSea, max }: { isSea: (x: number, z: number) => boolean;
   const leaps = useMemo(() => Array.from({ length: max }, (): Leap => ({ x: 0, z: 0, yaw: 0, u: 0, model: 0, t0: 0, id: 0 })), [max]);
   const splashed = useRef(new Map<number, number>());
   const fx = useMoveParticles();
-  useFrame(({ camera }) => tickFish(camera, bodies, leaps, isSea, splashed.current, fx.pool));
+  const warm = useRef({ frames: 0, done: false });
+  useEffect(() => { warm.current.frames = 0; warm.current.done = false; }, [bodies]);
+  useFrame(({ camera }) => { tickFish(camera, bodies, leaps, isSea, splashed.current, fx.pool); warmFish(camera, bodies, warm.current); });
   return <group ref={root} />;
+}
+/**
+ * The fish's shader compiles while the scene loads, not on the first leap (a 90 ms frame on Lite in the perf bench):
+ * each model's first body is drawn behind the camera, where nothing of it shows (unculled meanwhile), until it has
+ * been drawn with the look's material patch on (LookMaterials; its program key says so), then culled as before. It
+ * gives up after FISH_WARM_FRAMES frames. Runs after tickFish, which has hidden every body that isn't leaping.
+ * Module scope, as tickFish.
+ */
+const FISH_WARM_FRAMES = 600;
+const _behind = new THREE.Vector3();
+function warmFish(camera: THREE.Camera, bodies: readonly (readonly (THREE.Mesh | null)[])[], warm: { frames: number; done: boolean }) {
+  if (warm.done) return;
+  warm.done = ++warm.frames > FISH_WARM_FRAMES || bodies.every(set => !set[0] || set[0].userData.fishWarmed === true);
+  camera.getWorldDirection(_behind);
+  _behind.multiplyScalar(-5).add(camera.getWorldPosition(_focus));
+  for (const set of bodies) {
+    const b = set[0];
+    if (!b) continue;
+    if (warm.done) { b.frustumCulled = true; continue; }
+    if (b.visible) continue; // leaping: drawn where it is
+    b.frustumCulled = false;
+    b.visible = true;
+    b.position.copy(_behind);
+    // Drawn this frame with the patch on: warmed, and the next frame ends the warm-up.
+    if ((b.material as THREE.Material).customProgramCacheKey().includes("look-v1")) b.userData.fishWarmed = true;
+  }
 }
 const used = new Int8Array(FISH_MODELS.length);
 /** Module scope, as tickFlyers: the leaps on screen now, each fish on its arc, a splash out and back in. */

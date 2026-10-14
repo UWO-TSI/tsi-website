@@ -6,6 +6,13 @@ answer, per effect, measured on the other players at 1, 12 and 24 in the village
 and the title screen cost. Nothing about any look changed in this pass: every effect draws as it did; the cheaper
 versions are proposals for David.
 
+> **v1 pass (2026-10-14, `2026-10-v1-results.md`):** the four effects over their share below were fixed as proposed
+> here: held items merged per look class with shadows only from Full players within 10 u (a tool +68 → +19 draws at 24
+> players), no fishing rig on other players until casts replicate (+201 → +19), the leaf one mesh with no shadow on
+> other players' (+64 → +21), other players' afterimages the body alone at LOD 1, and no face shadow. The weapon is
+> still over (+84 → +49: a mesh per look class and glow) and hidden until v3. The tables below are the October
+> measurement, kept as it was.
+
 ## Headline
 
 **On the reference Mac mini (M4) a crowded village is limited by the main thread, and the main thread's cost is draw

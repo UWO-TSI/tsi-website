@@ -21,6 +21,8 @@ import { mentionsSignIn } from "@/lib/game/signIn";
 import { randomLook, STARTER_PARTS, type CharacterLook } from "@/lib/game/character/look";
 import { CATEGORIES, type Category } from "@/lib/game/character/creatorCategories";
 import { holdCreatorOpen } from "@/lib/game/character/creatorPresence";
+import { tierDpr } from "@/lib/game/qualityTier";
+import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import { CategoryRail, CreatorOptions, useNameCheck } from "./CreatorControls";
 import { FRAMES, Portrait, ThumbBaker } from "./CreatorStage";
 import styles from "./CharacterCreator.module.css";
@@ -45,6 +47,7 @@ const STARTERS: ReadonlySet<string> = new Set(STARTER_PARTS);
 const stay = () => {};
 
 export default function CharacterCreator({ initial, mode = "create", title, askName, owned = STARTERS, onShop, onDone, onClose, presence }: CreatorProps) {
+  const [graphics] = useGraphicsSettings();
   // A dialog (lib/game/useWorldDialog): the world's keys hold still under it (G no longer opens the emotes over it); Escape
   // closes the wardrobe, never the first-login creator. Closing, it lets go at once: focus goes back, the world moves.
   const root = useWorldDialog<HTMLElement>(presence !== "closing", onClose ?? stay, undefined, true);
@@ -93,7 +96,7 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
       onPointerMove={e => { const d = drag.current; if (!d || d.id !== e.pointerId) return; const dx = e.clientX - d.x; d.x = e.clientX; yaw.current.target += dx * 0.012; yaw.current.now = yaw.current.target; }}
       onPointerUp={e => { if (drag.current?.id === e.pointerId) drag.current = null; }} onPointerCancel={() => { drag.current = null; }}>
       <h1 id="creator-title" className={styles.heading}>{title ?? (mode === "wardrobe" ? "Your closet" : "Make your character")}</h1>
-      <Canvas className={styles.canvas} gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }} dpr={[1, 2]} camera={{ fov: FRAMES.face.fov, near: 0.05, far: 30 }}
+      <Canvas className={styles.canvas} gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }} dpr={tierDpr(graphics.liteMode, [1, 2])} camera={{ fov: FRAMES.face.fov, near: 0.05, far: 30 }}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace;
           if (process.env.NODE_ENV !== "production") (window as unknown as { __creatorGl?: THREE.WebGLRenderer }).__creatorGl = gl;

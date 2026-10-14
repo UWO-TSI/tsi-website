@@ -212,6 +212,11 @@ export interface CharacterMotion { speed: number; yaw: number; lift: number; pos
   /** How solid it draws (1 solid; classes v2: Escape Rabbits turns you translucent). */
   fade?: number;
   /**
+   * Another player's (Character `remote`): what they hold casts a sun shadow this frame. The remote driver sets it for
+   * a Full player within HELD_SHADOW_RANGE of you (net/drive.ts); unset, it casts none. Yours always cast.
+   */
+  itemShadow?: boolean;
+  /**
    * The shared dance clock (world seconds) while this character dances in a group (lib/game/danceSync.ts): its looping
    * pose eases onto that clock's phase, so everyone in the group is on one beat. Null or unset: it plays freely.
    */
