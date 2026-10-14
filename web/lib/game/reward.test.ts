@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { REWARD_EVENTS, rewardHold, rewardOf, rewardSound } from "./reward";
 
 describe("the shared reward card's event", () => {
-  it("listens to the world's own events: a find, a craft and a bottle's recipe", () => {
-    expect(REWARD_EVENTS).toEqual(["tsi:peaceful-got", "tsi:crafted", "tsi:recipe-learned"]);
+  it("listens to the world's own events: a find, a craft, a bottle's recipe and a resident's gift", () => {
+    expect(REWARD_EVENTS).toEqual(["tsi:peaceful-got", "tsi:crafted", "tsi:recipe-learned", "tsi:gift"]);
   });
 
   it("shows a forage find with its art, name, rarity and size", () => {
@@ -66,5 +66,13 @@ describe("the shared reward card's event", () => {
     const bottle = rewardOf("tsi:recipe-learned", { id: "rod-glass", name: "Glass rod" })!;
     expect(rewardHold(fresh)).toBeGreaterThan(rewardHold(plain));
     expect(rewardHold(bottle)).toBeGreaterThan(rewardHold(fresh));
+  });
+
+  it("cards a gift from a resident (Bram's old rod at the end of the walk-along)", () => {
+    const r = rewardOf("tsi:gift", { key: "rod_flimsy", name: "Bram's old rod", title: "From Bram", note: "It's yours now." });
+    expect(r).toMatchObject({ kind: "craft", key: "rod_flimsy", name: "Bram's old rod", title: "From Bram", note: "It's yours now.", rarity: null, isNew: true });
+    expect(r!.icon).toBeTruthy();
+    expect(rewardOf("tsi:gift", { name: "No key" })).toBeNull();
+    expect(REWARD_EVENTS).toContain("tsi:gift");
   });
 });
