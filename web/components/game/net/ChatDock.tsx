@@ -7,6 +7,8 @@
  * as you type. Closed, the last few lines fade at the bottom left. A refused line comes back kindly: a notice in the
  * log, and your words back in the bar next time it opens. A name opens that player's card (mute, block, report).
  * "Chat is logged for moderation" sits over the log (specs/multiplayer-questions.md default 4).
+ * The UI view (Esc 1, playtest round 1: `expanded`): the last lines stay up without fading, over a "Say something" bar
+ * that opens the chat.
  */
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Info, SendHorizontal } from "lucide-react";
@@ -66,7 +68,10 @@ function Recent({ entries }: { entries: readonly ChatEntry[] }) {
   </ol>;
 }
 
-export default function ChatDock({ hidden = false }: { hidden?: boolean }) {
+/** How many lines the UI view keeps up. */
+const KEPT_LINES = 8;
+
+export default function ChatDock({ hidden = false, expanded = false }: { hidden?: boolean; expanded?: boolean }) {
   const chat = chatStore();
   const entries = useSyncExternalStore(chat.subscribe, chat.entries, chat.entries);
   const open = useChatOpen() && !hidden;
@@ -139,6 +144,9 @@ export default function ChatDock({ hidden = false }: { hidden?: boolean }) {
         {left <= 40 && <span className={s.left} data-low={left <= 10 || undefined} aria-live="polite">{left}</span>}
         <button type="submit" className={s.send} aria-label="Send" disabled={!text.trim()}><SendHorizontal size={16} aria-hidden /></button>
       </form>
-    </div> : <Recent entries={entries} />}
+    </div> : expanded ? <>
+      {entries.length > 0 && <ol className={s.kept} aria-label="Recent chat">{entries.slice(-KEPT_LINES).map(e => <Line key={e.id} e={e} />)}</ol>}
+      <button type="button" className={s.bar} data-hint onClick={() => setChatOpen(true)}><span>Say something</span><kbd aria-hidden="true">Enter</kbd></button>
+    </> : <Recent entries={entries} />}
   </div>;
 }

@@ -25,6 +25,23 @@ David played v1 on the Mac mini using the Tethos v1 Playtest checklist. His note
    - **Second Esc.** Opens Settings and Log out.
    - **Settings.** The gear and wrench merge into one Settings. Sound lives in Settings.
    - **Photo.** Photo mode is a keybind (P), not a button.
+
+   **HUD and Esc, approved** (David, 2026-10-14, on the `game/hud-esc` plan): "world not dimmer for esc1. so in game basically has game with minimal ui, like the quest, minimap, and time sun. and maybe mini health bar later when combat drops. esc1 just shows gear, bigger mini map, level, chat line mail settings etc. and the esc is like menu for log out and settings and login"
+   - **In game (mouse locked):** only the quest tracker, the minimap and the time with its sun icon, top right. A slot under them is kept for a mini health bar when combat drops (nothing drawn yet).
+   - **Esc 1, the UI view:** no pause and no dimming. The world keeps running and the cursor is free; the fuller UI shows over the live game:
+     - a bigger minimap;
+     - coins and the level;
+     - the chat log;
+     - the gear (Settings);
+     - a dock of the menu entries: Map (M), Quests and journal (J), Bag (I) and Collection (B), Friends and Mail (L).
+     A click on the world goes back to the game.
+   - **Esc 2, the system menu:** Resume, Settings, and Log out (Sign in for a guest).
+   - **Esc 3:** back to the game.
+   - **Rooms:** Esc opens the same layers everywhere; you leave a room with E at its door.
+   - **Sheets:** a sheet opened from Esc 1 (or from the system menu) closes back to it; a sheet opened by its key closes straight back to the game.
+   - **Clicking someone under the lock:** a small dot sits centred just above your head. It turns into a ring with their name over a player or resident it can click: a player's card opens (the mouse is let go), a resident talks. E still interacts, and holding right click still frees a cursor.
+   - **Touch:** one menu button toggles the UI view; there's no lock.
+   - **Settings:** the gear and the wrench are one sheet, in tabs: Graphics, Sound, Controls, Account (Log out), and Dev (development builds only). The native dropdowns (Quality, Time) become the kit's segmented pills, and the title screen's Settings gets the same look.
 4. **Asset prune.** A picker page shows every eye, mouth, face accent, face, eyebrow and clothing item as a picture. David ticks keep or remove, and the unticked ones are deleted. Eyebrows are removed regardless.
 5. **Tutorial.** It's rebuilt as written in David's walk-along note, data-driven so it can move to the new map by swapping waypoints:
    - Bram walks to each stop with a "!" over his head. You talk to him (E), he tells you about the place, then he walks on.

@@ -13,12 +13,17 @@
  *
  * The controls list lives only here (specs/v1-drop.md §1.5: no movement UI on the island): every remappable key, then
  * the fixed ones (the emote wheel is with the movement keys). The dash and the glider say they wait for a Keeper until one teaches them (lib/game/moveUnlocks.ts).
+ *
+ * Playtest round 1 (decision 3): the one Settings, the gear and the wrench merged, opened from the UI view's gear (Esc 1)
+ * or the system menu (Esc 2). On the island it has tabs: Graphics, Sound, Controls, Account (Log out) and, in
+ * development builds only, Dev (`dev`: the old wrench panel). Quality is the kit's segmented pills, not a dropdown.
+ * The phone companion keeps one page: text size, contrast and sound.
  */
-import { useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore, type ReactNode } from "react";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import type { QualityTier } from "@/lib/game/qualityTier";
 import { ACTION_LABEL, MENU_ACTIONS, REMAPPABLE_ACTIONS, TEXT_SIZES, normalizeKey, type MenuAction, type TextSize } from "@/lib/identity/settings";
-import { Button, Select, SignInText, Slider, Toggle } from "@/components/gui";
+import { Button, SignInText, Slider, Tabs, Toggle } from "@/components/gui";
 import { saveSettings, setAuraVisible, useWorldIdentity } from "@/lib/game/identity";
 import { DROPS } from "@/lib/game/drops";
 import { ABILITIES, type AbilityId } from "@/lib/game/combat/runtime";
@@ -32,6 +37,7 @@ import { setFishingFlag, useFishingLine, useHoldUpCatch } from "@/lib/game/fishi
 import { useMoveUnlocks } from "@/lib/game/moveUnlocks";
 import { RESET_VIEW_KEY } from "../useOrbitInput";
 import IslandSheet from "../IslandSheet";
+import { logOut } from "../EscLayers";
 import styles from "../DefaultIslandWorld.module.css";
 
 const SIZE_NAMES: Record<TextSize, string> = { small: "Small", default: "Standard", large: "Large", xl: "Largest" };
@@ -40,8 +46,12 @@ const MOVE_ROW = MOVE_ACTIONS;
 /** The fixed controls (lib/identity/settings FIXED_KEYS and the mouse), listed so the island needs no key bar. */
 const FIXED_CONTROLS: { label: string; keys: string[] }[] = [
   { label: "Interact, talk, pick up", keys: ["E"] },
-  { label: "Use what you hold", keys: ["Click"] },
+  { label: "Use what you hold, or click who's under the dot", keys: ["Click"] },
   { label: "Look around", keys: ["Mouse", "←", "→"] },
+  { label: "A free cursor (hold)", keys: ["Right click"] },
+  { label: "Menu, then the system menu", keys: ["Esc"] },
+  { label: "Chat", keys: ["Enter"] },
+  { label: "Photo mode", keys: ["P"] },
   { label: "Reset the view", keys: [RESET_VIEW_KEY.toUpperCase()] },
   { label: "Zoom", keys: ["Z", "Wheel"] },
   { label: "Journal", keys: ["J"] },
@@ -54,11 +64,17 @@ const SOUND_SLIDERS: { key: keyof AudioVolumes; label: string }[] = [
   { key: "sfx", label: "Sound effects" },
 ];
 
-export default function SettingsSheet({ open, onClose, detectedTier = null, place = "island" }: { open: boolean; onClose: () => void; detectedTier?: QualityTier | null;
+type Tab = "graphics" | "sound" | "controls" | "account" | "dev";
+
+export default function SettingsSheet({ open, onClose, detectedTier = null, place = "island", dev }: { open: boolean; onClose: () => void; detectedTier?: QualityTier | null;
   /** The phone companion (reachability §4): what a phone can use, text size, contrast and sound; no graphics, camera or keys. */
-  place?: "island" | "phone" }) {
+  place?: "island" | "phone";
+  /** Development builds: the island's dev tools (camera view, time, return to the clearing, frame timing), in a Dev tab. */
+  dev?: ReactNode }) {
   const island = place === "island";
-  const { settings, signedIn, aura } = useWorldIdentity();
+  const [tab, setTab] = useState<Tab>("graphics");
+  const { settings, signedIn, aura, display_name: worldName } = useWorldIdentity();
+  const [leaving, setLeaving] = useState(false);
   const [graphics, graphicsActions] = useGraphicsSettings();
   // isExplicit isn't part of the store snapshot: re-render on a change so Auto shows as chosen.
   const [, rerender] = useState(0);
@@ -113,45 +129,12 @@ export default function SettingsSheet({ open, onClose, detectedTier = null, plac
       setNote(`${ACTION_LABEL[action]} is now ${keyName(key)}.${other ? ` ${ACTION_LABEL[other]} moved to ${keyName(settings.key_bindings[action])}.` : ""}`);
     });
   }, () => { setListening(null); setNote(null); });
-  return <IslandSheet open={open} title="Settings" onClose={onClose} className={styles.settingsSheet} testId="settings-sheet">
-    <fieldset>
+  const shows = (t: Tab) => !island || tab === t;
+  const textSize = <fieldset>
       <legend>Text size</legend>
       <div className={styles.segmented}>{TEXT_SIZES.map(s => <button key={s} aria-pressed={settings.text_size === s} onClick={() => void save({ text_size: s })}>{SIZE_NAMES[s]}</button>)}</div>
-    </fieldset>
-    {island && <fieldset>
-      <legend>Look and performance</legend>
-      <Toggle checked={graphics.pixelated} onChange={on => graphicsActions.setPixelated(on)} hint="The world stays the same. Choose its finish.">Pixel finish</Toggle>
-      <Select label="Quality" value={quality} onChange={e => setQuality(e.target.value)} data-testid="quality">
-        <option value="auto">Auto · {detectedTier ? (detectedTier === "light" ? "Light" : "High") : "measuring"}</option>
-        <option value="light">Light</option>
-        <option value="high">High</option>
-      </Select>
-      <Toggle checked={graphics.shadows} disabled={graphics.liteMode} onChange={on => graphicsActions.setShadows(on)}>Shadows</Toggle>
-      <Toggle checked={graphics.glassWater && !graphics.liteMode} disabled={graphics.liteMode} onChange={on => graphicsActions.setGlassWater(on)}>Glass water</Toggle>
-      {/* Row 283: the HUD stays out of the way while you explore; this keeps it on. */}
-      <Toggle checked={alwaysFullHud} onChange={setAlwaysFullHud}>Show full HUD</Toggle>
-      <p className={styles.hint}>Otherwise TC, XP, the clock and mail show when they change. Hold <kbd>{keyName(wheelKeys.hud)}</kbd>, or let go of the mouse, to see everything.</p>
-    </fieldset>}
-    {island && <fieldset>
-      <legend>Camera</legend>
-      <Toggle checked={camera.mouseLook} onChange={on => setOrbitPrefs({ mouseLook: on })}>Mouse look</Toggle>
-      <Slider label="Sensitivity" min={SENSITIVITY_MIN * 100} max={SENSITIVITY_MAX * 100} step={5} value={Math.round(camera.sensitivity * 100)}
-        format={v => `${v}%`} onChange={v => setOrbitPrefs({ sensitivity: v / 100 })} />
-      <Toggle checked={camera.invertY} onChange={on => setOrbitPrefs({ invertY: on })}>Invert up and down</Toggle>
-      <Toggle checked={camera.autoFollow} onChange={on => setOrbitPrefs({ autoFollow: on })}>Follow behind when you run</Toggle>
-      <p className={styles.hint}>{camera.mouseLook ? "Click the island to look around with the mouse. Hold right click for a cursor; Esc lets the mouse go." : "The cursor stays free."} Arrow keys turn and tilt, the wheel and Z zoom, V puts the camera back. Kept on this device.</p>
-    </fieldset>}
-    {island && <fieldset>
-      <legend>You on the island</legend>
-      {/* The classes and their auras are combat's drop (lib/game/drops.ts). */}
-      {DROPS.classes && <Toggle checked={showClass} onChange={setShowClass}>Show class on my nameplate</Toggle>}
-      {DROPS.classes && <Toggle checked={aura} onChange={setAuraVisible}>Show my aura</Toggle>}
-      {/* The fishing pass's flags (specs/polish/fishing-questions.md), both on until David decides. */}
-      <Toggle checked={fishingLine} onChange={on => setFishingFlag("line", on)}>Fishing line</Toggle>
-      <Toggle checked={holdUpCatch} onChange={on => setFishingFlag("holdUp", on)} hint="Show off a catch in both hands while its card is up.">Hold up my catch</Toggle>
-    </fieldset>}
-    {/* Design sheet §1.6: the ult's flash frame and every flash obey these; both start calm when the device asks for reduced motion. */}
-    <fieldset data-testid="accessibility">
+    </fieldset>;
+  const accessibility = <fieldset data-testid="accessibility">
       <legend>Accessibility</legend>
       <Toggle checked={settings.high_contrast} onChange={on => void save({ high_contrast: on })}>High contrast</Toggle>
       {island && <>
@@ -164,8 +147,8 @@ export default function SettingsSheet({ open, onClose, detectedTier = null, plac
       </div>
       <p className={styles.hint}>Kept on this device.</p>
       </>}
-    </fieldset>
-    <fieldset>
+    </fieldset>;
+  const sound = <fieldset>
       <legend>Sound</legend>
       {!audio.enabled && <Button size="sm" variant="secondary" onClick={() => AudioManager.enable()}>Turn on sound</Button>}
       <Toggle checked={audio.muted} onChange={on => AudioManager.setMuted(on)}>Mute</Toggle>
@@ -173,8 +156,47 @@ export default function SettingsSheet({ open, onClose, detectedTier = null, plac
         <Slider key={key} label={label} min={0} max={100} value={Math.round(audio.volumes[key] * 100)} format={v => `${v}%`}
           onChange={v => AudioManager.setVolumes({ [key]: v / 100 })} />
       ))}
+    </fieldset>;
+  const saved = <small className={styles.hint}>{signedIn ? "Saved to your account." : <SignInText text="Saved on this device. Sign in to keep them everywhere." />}</small>;
+  if (!island) return <IslandSheet open={open} title="Settings" onClose={onClose} className={styles.settingsSheet} testId="settings-sheet">
+    {textSize}{accessibility}{sound}{saved}
+  </IslandSheet>;
+  const tabs: { id: Tab; label: string }[] = [{ id: "graphics", label: "Graphics" }, { id: "sound", label: "Sound" }, { id: "controls", label: "Controls" }, { id: "account", label: "Account" },
+    ...(dev ? [{ id: "dev" as const, label: "Dev" }] : [])];
+  return <IslandSheet open={open} title="Settings" onClose={onClose} className={styles.settingsSheet} testId="settings-sheet">
+    <Tabs label="Settings" value={tab} onChange={setTab} tabs={tabs} keyHints={[keyName(settings.key_bindings.prevTab), keyName(settings.key_bindings.nextTab)]} className={styles.settingsTabs} />
+    {shows("graphics") && <>
+    <fieldset>
+      <legend>Look and performance</legend>
+      <div className={styles.preset}>
+        <span>Quality</span>
+        <div className={styles.segmented} role="group" aria-label="Quality" data-testid="quality">
+          {(["auto", "light", "high"] as const).map(q => <button key={q} aria-pressed={quality === q} onClick={() => setQuality(q)}>
+            {q === "auto" ? `Auto${detectedTier ? ` · ${detectedTier === "light" ? "Lite" : "High"}` : ""}` : q === "light" ? "Lite" : "High"}
+          </button>)}
+        </div>
+      </div>
+      <Toggle checked={graphics.pixelated} onChange={on => graphicsActions.setPixelated(on)} hint="The world stays the same. Choose its finish.">Pixel finish</Toggle>
+      <Toggle checked={graphics.shadows} disabled={graphics.liteMode} onChange={on => graphicsActions.setShadows(on)}>Shadows</Toggle>
+      <Toggle checked={graphics.glassWater && !graphics.liteMode} disabled={graphics.liteMode} onChange={on => graphicsActions.setGlassWater(on)}>Glass water</Toggle>
+      {/* Playtest round 1: the HUD keeps to the tracker, the minimap and the time while you play; this keeps coins and level up too. */}
+      <Toggle checked={alwaysFullHud} onChange={setAlwaysFullHud}>Keep coins and level on screen</Toggle>
+      <p className={styles.hint}>Otherwise they show when they change. Hold <kbd>{keyName(wheelKeys.hud)}</kbd>, or press <kbd>Esc</kbd>, to see everything.</p>
     </fieldset>
-    {island && <>
+    {textSize}
+    {accessibility}
+    </>}
+    {shows("sound") && sound}
+    {shows("controls") && <>
+    <fieldset>
+      <legend>Camera</legend>
+      <Toggle checked={camera.mouseLook} onChange={on => setOrbitPrefs({ mouseLook: on })}>Mouse look</Toggle>
+      <Slider label="Sensitivity" min={SENSITIVITY_MIN * 100} max={SENSITIVITY_MAX * 100} step={5} value={Math.round(camera.sensitivity * 100)}
+        format={v => `${v}%`} onChange={v => setOrbitPrefs({ sensitivity: v / 100 })} />
+      <Toggle checked={camera.invertY} onChange={on => setOrbitPrefs({ invertY: on })}>Invert up and down</Toggle>
+      <Toggle checked={camera.autoFollow} onChange={on => setOrbitPrefs({ autoFollow: on })}>Follow behind when you run</Toggle>
+      <p className={styles.hint}>{camera.mouseLook ? "Click the island to look around with the mouse. Hold right click for a cursor; Esc lets the mouse go and shows the menu." : "The cursor stays free."} Arrow keys turn and tilt, the wheel and Z zoom, V puts the camera back. Kept on this device.</p>
+    </fieldset>
     <fieldset>
       <legend>Menu keys</legend>
       <ul className={styles.keyList}>{REMAPPABLE_ACTIONS.map(a => <li key={a}>
@@ -197,7 +219,7 @@ export default function SettingsSheet({ open, onClose, detectedTier = null, plac
         {/* The tool wheel (specs/game-ui.md): hold to open, tap to swap back; the full HUD while held (row 283); the
             emote wheel (specs/v1-drop.md §3): hold to open, tap to play the last emote again. */}
         {(["wheel", "hud", "emote"] as const).map(a => <li key={a}>
-          <span>{a === "wheel" ? "Tool wheel (hold)" : a === "hud" ? "Full HUD (hold)" : "Emotes and dances (hold, tap repeats)"}</span>
+          <span>{a === "wheel" ? "Tool wheel (hold)" : a === "hud" ? "Coins and level (hold)" : "Emotes and dances (hold, tap repeats)"}</span>
           <button aria-pressed={wheelListen === a} onClick={() => { setWheelListen(a); setMoveNote("Press a key (Esc to cancel)."); }}>
             {wheelListen === a ? "Press a key…" : <kbd>{keyName(wheelKeys[a])}</kbd>}
           </button>
@@ -231,6 +253,25 @@ export default function SettingsSheet({ open, onClose, detectedTier = null, plac
       {abilityNote && <p className={styles.hint} role="status">{abilityNote}</p>}
     </fieldset>}
     </>}
-    <small className={styles.hint}>{signedIn ? "Saved to your account." : <SignInText text="Saved on this device. Sign in to keep them everywhere." />}</small>
+    {shows("account") && <>
+    <fieldset>
+      <legend>You on the island</legend>
+      {/* The classes and their auras are combat's drop (lib/game/drops.ts). */}
+      {DROPS.classes && <Toggle checked={showClass} onChange={setShowClass}>Show class on my nameplate</Toggle>}
+      {DROPS.classes && <Toggle checked={aura} onChange={setAuraVisible}>Show my aura</Toggle>}
+      {/* The fishing pass's flags (specs/polish/fishing-questions.md), both on until David decides. */}
+      <Toggle checked={fishingLine} onChange={on => setFishingFlag("line", on)}>Fishing line</Toggle>
+      <Toggle checked={holdUpCatch} onChange={on => setFishingFlag("holdUp", on)} hint="Show off a catch in both hands while its card is up.">Hold up my catch</Toggle>
+    </fieldset>
+    <fieldset data-testid="account">
+      <legend>Account</legend>
+      {signedIn ? <>
+        <p className={styles.hint}>Signed in as <b>{worldName}</b>.</p>
+        <Button size="sm" variant="secondary" disabled={leaving} onClick={() => { setLeaving(true); void logOut(); }}>{leaving ? "Logging out…" : "Log out"}</Button>
+      </> : <p className={styles.hint}><SignInText text="Playing as a guest. Sign in to keep your island, friends and settings." /></p>}
+    </fieldset>
+    </>}
+    {dev && tab === "dev" && <fieldset data-testid="dev-tools"><legend>Dev tools</legend>{dev}</fieldset>}
+    {saved}
   </IslandSheet>;
 }

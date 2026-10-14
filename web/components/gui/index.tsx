@@ -29,12 +29,14 @@ export type SheetSize = "sm" | "md" | "lg" | "xl";
  * held and the paper sound come from the dialog system (lib/game/useWorldDialog); it scales and fades in and out.
  * `modal` false: no scrim, the world stays bright behind it (the decorate panel). On a phone it is a bottom sheet.
  */
-export function Sheet({ open, onClose, title, eyebrow, icon, size = "md", tone, keys, modal = true, footer, headerExtra, testId, className, bodyClassName, children }: {
+export function Sheet({ open, onClose, onEscape, title, eyebrow, icon, size = "md", tone, keys, modal = true, footer, headerExtra, testId, className, bodyClassName, children }: {
   open: boolean; onClose: () => void; title: ReactNode; eyebrow?: ReactNode; icon?: ReactNode; size?: SheetSize; tone?: "butter" | "sage" | "oracle";
   keys?: string | readonly string[]; modal?: boolean; footer?: ReactNode; headerExtra?: ReactNode; testId?: string; className?: string; bodyClassName?: string; children: ReactNode;
+  /** What Escape (and `keys`) do, when it isn't closing: the game's Esc Menu steps on to Settings. The ✕ and the scrim still close. */
+  onEscape?: () => void;
 }) {
   const state = usePresence(open);
-  const ref = useWorldDialog<HTMLElement>(open, onClose, keys);
+  const ref = useWorldDialog<HTMLElement>(open, onEscape ?? onClose, keys);
   const titleId = useId();
   // Closing, it keeps what it last showed: callers often clear the item that filled it as they close it.
   const [kept, setKept] = useState({ title, eyebrow, icon, headerExtra, footer, children });

@@ -167,7 +167,7 @@ const CLEARANCE = 0.8;
  */
 export function useFollowCamera(focus: React.RefObject<THREE.Vector3>, zoom: number, overview: Overview | null, scene?: FollowScene) {
   const { camera } = useThree();
-  useOrbitInput();
+  useOrbitInput(!scene?.aim);
   const rig = useMemo(() => ({ ahead: LOOK_AHEAD, cut: 0, chest: new THREE.Vector3(), head: new THREE.Vector3(), last: new THREE.Vector3(NaN, 0, 0), vx: 0, vz: 0 }), []);
   useEffect(() => () => { CUTOUT.value.w = 0; CUTOUT_CROWN.value.x = 0; }, []);
   const baseFar = useRef<number | null>(null);

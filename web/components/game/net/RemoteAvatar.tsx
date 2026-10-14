@@ -10,7 +10,8 @@
  * tsi:fish-*), which are yours (spec §10).
  *
  * v1: a click or tap on them opens their card (PlayerCard.tsx: add friend, wave, join, mute, block, report), through
- * one invisible capsule each (never the skinned body: the pointer would raycast every bone-deformed triangle).
+ * one invisible capsule each (never the skinned body: the pointer would raycast every bone-deformed triangle). Under
+ * mouse-look the click comes from the aim dot (useOrbitInput), which names them by the capsule's `pick`.
  */
 import { Suspense, memo, useCallback, useMemo, type RefObject } from "react";
 import * as THREE from "three";
@@ -86,7 +87,7 @@ export const RemoteAvatar = memo(function RemoteAvatar({ rig, player, walkSpeed,
       <Character look={look} motion={rig.live as RefObject<CharacterMotion>} walkSpeed={walkSpeed} weapon={weapon} held={held} leaf={!FX_BENCH || !fx.off.has("leaf")} remote />
     </Suspense>
     {dust && <RemoteDust rig={rig} ground={ground} />}
-    <mesh geometry={HIT_GEO} material={HIT_MAT} position={[0, 0.75, 0]} onClick={e => cardFor(rig, e)}
+    <mesh geometry={HIT_GEO} material={HIT_MAT} position={[0, 0.75, 0]} userData={{ pick: player.name }} onClick={e => cardFor(rig, e)}
       onPointerOver={e => pointerOver(rig, true, e)} onPointerOut={e => pointerOver(rig, false, e)} />
   </group>;
 });

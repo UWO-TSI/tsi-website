@@ -170,10 +170,21 @@ export default function TitleScreen({ landing, account, open, initialView, when,
   );
 }
 
-/** Settings on the title: the game's own graphics settings and sound, kept on this device (the world reads the same). */
+/**
+ * Settings on the title: the game's own graphics settings and sound, kept on this device (the world reads the same).
+ * Quality is the kit's segmented pills, as in the game's Settings (David, playtest round 1: the dropdowns get the kit's look).
+ */
 function Settings({ onBack, onSignOut }: { onBack: () => void; onSignOut: (() => void) | null }) {
   const [graphics, actions] = useGraphicsSettings();
   const audio = useAudioState();
+  // isExplicit isn't part of the store snapshot: re-render on a change so Auto shows as chosen.
+  const [, rerender] = useState(0);
+  const quality = actions.isExplicit("liteMode") ? (graphics.liteMode ? "lite" : "high") : "auto";
+  const setQuality = (q: "auto" | "lite" | "high") => {
+    rerender(n => n + 1);
+    if (q === "auto") actions.unset("liteMode");
+    else { actions.setLiteMode(q === "lite"); if (q === "high") actions.setShadows(true); }
+  };
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === "Escape") onBack(); };
     window.addEventListener("keydown", onKey);
@@ -185,7 +196,13 @@ function Settings({ onBack, onSignOut }: { onBack: () => void; onSignOut: (() =>
         <button type="button" className={s.back} onClick={onBack} aria-label="Back" autoFocus>‹</button>
         <h2 id="title-settings">Settings</h2>
       </div>
-      <Toggle checked={graphics.liteMode} onChange={actions.setLiteMode} hint="For older laptops: lighter grass and no shadows">Lite graphics</Toggle>
+      <div className={s.setting}>
+        <span id="title-quality">Quality</span>
+        <div className={s.segmented} role="group" aria-labelledby="title-quality">
+          {(["auto", "lite", "high"] as const).map(q => <button key={q} type="button" aria-pressed={quality === q} onClick={() => setQuality(q)}>{q === "auto" ? "Auto" : q === "lite" ? "Lite" : "High"}</button>)}
+        </div>
+        <small>Lite is for older laptops: lighter grass and no shadows.</small>
+      </div>
       <Toggle checked={graphics.pixelated} onChange={actions.setPixelated} hint="The island's crisp pixel look">Pixel finish</Toggle>
       <Toggle checked={graphics.shadows && !graphics.liteMode} disabled={graphics.liteMode} onChange={actions.setShadows}>Sun shadows</Toggle>
       <Slider label="Volume" value={Math.round(audio.volumes.master * 100)} onChange={v => AudioManager.setVolumes({ master: v / 100 })} format={v => `${v}%`} />

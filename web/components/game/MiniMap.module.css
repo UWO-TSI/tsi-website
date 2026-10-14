@@ -1,15 +1,20 @@
-/* The island map in the GUI sheet: a paper frame round the plot. */
-.map { position: absolute; top: 60px; right: 16px; z-index: 50; width: 190px; max-width: calc(100% - 32px); border-radius: var(--gui-r-card); overflow: hidden; border: 0; background: var(--gui-paper); color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-md); animation: mapIn 0.22s ease-out; pointer-events: none; }
-.header { height: 44px; display: flex; align-items: center; justify-content: space-between; padding-left: 14px; font-size: var(--gui-text-sm); font-weight: 800; }
-.close { width: 44px; height: 44px; display: grid; place-items: center; pointer-events: auto; border: 0; background: transparent; color: inherit; cursor: pointer; border-radius: 50%; }
-.close:hover { background: var(--gui-paper-warm); }
-.close:focus-visible { outline: 3px solid var(--gui-focus); outline-offset: -4px; }
-.plot { display: block; width: 100%; aspect-ratio: 1; background: #76b4c6; }
-.legend { min-height: 28px; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 12px; font-size: var(--gui-text-xs); font-weight: 700; color: var(--gui-ink-2); }
+/* The corner minimap (playtest round 1): a paper-edged round-cornered square, small while you play, bigger in the UI view. */
+.corner { position: relative; width: var(--minimap-size, 156px); aspect-ratio: 1; border-radius: var(--gui-r-card); overflow: hidden; background: #76b4c6;
+  box-shadow: var(--gui-shadow-md), inset 0 0 0 3px rgb(255 251 231 / 0.92); transition: width 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.1); }
+.corner[data-big] { width: var(--minimap-big, 248px); }
+.corner .plot { display: block; width: 100%; height: 100%; }
+/* The whole map is the button to the island map (only in the UI view, where the cursor is free). */
+.open { position: absolute; inset: 0; border: 0; padding: 0; background: transparent; cursor: pointer; border-radius: inherit; }
+.corner:not([data-big]) .open { pointer-events: none; }
+.open:focus-visible { outline: 3px solid var(--gui-focus); outline-offset: -4px; }
+@media (prefers-reduced-motion: reduce) { .corner { transition: none; } }
+
+/* The island map in its sheet. */
+.sheetBody { padding-top: 16px; }
+.bigPlot { display: block; width: min(100%, 62dvh); margin: 0 auto; aspect-ratio: 1; border-radius: var(--gui-r-card); background: #76b4c6; }
+.legend { min-height: 32px; display: flex; align-items: center; justify-content: center; gap: 18px; padding-top: 10px; font-size: var(--gui-text-xs); font-weight: 700; color: var(--gui-ink-2); }
 .you { display: flex; align-items: center; gap: 5px; }
 .you::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--gui-highlight); border: 1.5px solid var(--gui-warn); }
 /* v1 friends: their markers. */
 .friends { display: flex; align-items: center; gap: 5px; }
 .friends::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--gui-coral); border: 1.5px solid var(--gui-paper); }
-@keyframes mapIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .map { animation: none; } }

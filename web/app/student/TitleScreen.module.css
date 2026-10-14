@@ -60,6 +60,14 @@
   font: 900 20px/1 var(--gui-font); cursor: pointer; }
 .back:hover { background: var(--gui-paper-edge); }
 .form button svg { flex: none; }
+/* A choice of a few (Quality): the kit's segmented pills, as in the game's Settings (playtest round 1). */
+.setting { display: grid; gap: 6px; }
+.setting > span { font: 800 14px/1.2 var(--gui-font); color: var(--gui-ink-strong); }
+.setting > small { font: 600 12px/1.4 var(--gui-font); color: var(--gui-muted); }
+.segmented { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 999px; background: var(--gui-paper-deep); }
+.form .segmented button[aria-pressed] { min-height: 38px; border: 0; border-radius: 999px !important; background: transparent; font: 800 14px/1 var(--gui-font); color: var(--gui-ink-2); cursor: pointer; }
+.form .segmented button[aria-pressed="true"] { background: var(--gui-butter); color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-sm); }
+.form .segmented button[aria-pressed]:focus-visible { outline: 3px solid var(--gui-focus); outline-offset: -3px; }
 .lead { margin: 0; font: 600 14px/1.5 var(--gui-font); color: var(--gui-ink-2); overflow-wrap: anywhere; }
 .or { display: flex; align-items: center; gap: 10px; font: 700 12px var(--gui-font); color: var(--gui-muted); }
 .or::before, .or::after { content: ""; flex: 1; height: 2px; border-radius: 2px; background: var(--gui-paper-edge); }

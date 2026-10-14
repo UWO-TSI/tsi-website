@@ -1,0 +1,34 @@
+/* The UI view's dock (Esc 1, playtest round 1): one paper strip at the bottom centre, its groups split by a dashed seam. */
+.dock { position: absolute; left: 50%; bottom: var(--hud-floor, 16px); transform: translateX(-50%); z-index: 13; display: flex; align-items: stretch; gap: 0;
+  max-width: calc(100% - 2 * var(--hud-edge, 16px)); padding: 6px; box-sizing: border-box; border-radius: 22px; background: rgb(255 251 231 / 0.96);
+  box-shadow: var(--gui-shadow-md); font-family: var(--gui-font); zoom: var(--tsi-text-scale, 1); animation: dockIn 0.24s cubic-bezier(0.2, 1.1, 0.4, 1) both; }
+.group { display: flex; gap: 2px; padding: 0 4px; }
+.group + .group { border-left: 2px dashed var(--gui-paper-edge); }
+.entry { position: relative; display: grid; justify-items: center; align-content: center; gap: 3px; min-width: 70px; min-height: 58px; padding: 6px 8px 5px;
+  border: 0; border-radius: 16px; background: transparent; color: var(--gui-ink-strong); font: inherit; cursor: pointer; transition: background-color 0.12s, transform 0.12s var(--gui-spring, ease-out); }
+.entry:hover:not(:disabled) { background: var(--gui-paper-warm); transform: translateY(-2px); }
+.entry:active:not(:disabled) { transform: translateY(1px); }
+.entry:focus-visible { outline: 3px solid var(--gui-focus); outline-offset: -3px; }
+.entry:disabled { opacity: 0.45; cursor: default; }
+.entryIcon { position: relative; display: grid; place-items: center; color: var(--gui-ink); }
+.entryLabel { font-size: var(--gui-text-xs); font-weight: 800; line-height: 1.15; white-space: nowrap; }
+.entry kbd { position: absolute; top: 4px; right: 5px; display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box;
+  border-radius: 99px; background: var(--gui-bark); color: var(--gui-paper); font: 800 10px/1 var(--gui-font); }
+.badge { position: absolute; top: -8px; right: -12px; }
+@keyframes dockIn { from { opacity: 0; transform: translate(-50%, 12px); } }
+@media (prefers-reduced-motion: reduce) { .dock { animation: none; } .entry { transition: none; } }
+/* Narrow: the labels go, the icons stay, and the strip scrolls sideways if it must. */
+@media (max-width: 700px) {
+  .dock { overflow-x: auto; scrollbar-width: none; }
+  .entry { min-width: 52px; min-height: 52px; padding: 6px; }
+  .entryLabel { font-size: 10px; }
+  .entry kbd { display: none; }
+}
+:global(html[data-contrast="high"]) .dock { background: #ffffff; box-shadow: inset 0 0 0 2px #000000; }
+:global(html[data-contrast="high"]) .entry { color: #000000; }
+
+/* Esc 2: the system menu's three choices. */
+.system { display: grid; gap: 10px; }
+.system > * { justify-content: center; }
+.hint { margin: 14px 0 0; text-align: center; font-size: var(--gui-text-xs); font-weight: 700; color: var(--gui-muted); }
+.hint kbd { display: inline-grid; place-items: center; min-width: 22px; height: 20px; padding: 0 6px; margin-right: 6px; border-radius: 99px; background: var(--gui-bark); color: var(--gui-paper); font: 800 10px/1 var(--gui-font); }

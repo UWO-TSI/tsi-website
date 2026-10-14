@@ -22,18 +22,19 @@ describe("doors wait for the room (interiors deliverable 5)", () => {
   });
 });
 
-describe("Escape leaves a room only when nothing is open (interiors deliverable 5)", () => {
-  const base = { captureEnded: false, fading: false, open: false, inside: true };
-  it("closes what's open first, then leaves by the door", () => {
+describe("Escape steps to the next Esc layer once nothing else is open (playtest round 1, decision 3)", () => {
+  const base = { captureEnded: false, locked: false, fading: false, open: false };
+  it("closes what's open first, then steps on, indoors and out (a room is left by its door)", () => {
     expect(escapeAction({ ...base, open: true })).toBe("close");
-    expect(escapeAction(base)).toBe("exit");
+    expect(escapeAction(base)).toBe("layer");
   });
-  it("does nothing mid-fade or when the browser's Escape just ended mouse-look", () => {
+  it("does nothing mid-fade, or when the browser's Escape just ended mouse-look (that opened the UI view already)", () => {
     expect(escapeAction({ ...base, fading: true })).toBe("none");
     expect(escapeAction({ ...base, captureEnded: true })).toBe("none");
+    expect(escapeAction({ ...base, captureEnded: true, open: true })).toBe("none");
   });
-  it("outdoors it only ever closes", () => {
-    expect(escapeAction({ ...base, inside: false })).toBe("close");
-    expect(escapeAction({ ...base, inside: false, open: true })).toBe("close");
+  it("steps on when an Escape reaches the page with the mouse still held (fullscreen with the keyboard locked)", () => {
+    expect(escapeAction({ ...base, captureEnded: true, locked: true })).toBe("layer");
+    expect(escapeAction({ ...base, locked: true, fading: true })).toBe("none");
   });
 });
