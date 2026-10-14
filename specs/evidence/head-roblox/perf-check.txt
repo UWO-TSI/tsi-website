@@ -1,0 +1,14 @@
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draw calls | Triangles | Runs | Spread | Load |
+|---|---|---|---|---|---|---|---|---|---|
+| village | high | 4.90 (3.90, +25.6%) | 6.20 (4.90, +26.5%) | 4.20 (3.40, +23.5%) | 373 (382, -2.4%) | 592191 (537560, +10.2%) | 5 | 6% | 5.6 |
+| cafe | high | 2.00 (2.10, -4.8%) | 5.00 (3.10, +61.3%) | 1.10 (0.60, +83.3%) | 143 (140, +2.1%) | 86903 (69455, +25.1%) | 3 | 5% | 5.8 |
+| village | lite | 2.80 (2.30, +21.7%) | 4.00 (3.40, +17.6%) | 2.40 (2.00, +20.0%) | 277 (288, -3.8%) | 381324 (353865, +7.8%) | 5 | 21% | 5.9 |
+| cafe | lite | 1.70 (1.50, +13.3%) | 5.20 (2.80, +85.7%) | 1.20 (0.70, +71.4%) | 110 (103, +6.8%) | 84782 (63874, +32.7%) | 5 | 12% | 5.7 |
+
+Median of 3+ runs each; in brackets the baseline (8809c517 2026-10-14) and the change. Load: the 1-minute load average.
+
+perf:check FAILED
+- village|high: median frame 4.9 ms, +25.6% on the baseline's 3.9
+- village|high: triangles 592191 over the budget's 560000 (web/lib/game/perf/budget.ts)
+- village|lite: median frame 2.8 ms, +21.7% on the baseline's 2.3
+- cafe|lite: median frame 1.7 ms, +13.3% on the baseline's 1.5

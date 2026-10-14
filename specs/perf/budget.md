@@ -64,14 +64,16 @@ measured at the display's pace (`perf-bench.mjs` `UNCAPPED=0`), not by perf:chec
 
 | Tier | When | Triangles (whole look) | Draws | Shadow draws | Materials | Bones | Mixer |
 |---|---|---|---|---|---|---|---|
-| Full | within 21 u, or a Full remote (nearest 12 / 8) | 5,200 | 3 (body, face, print) | 2 | 1 (shared) | 22 | every frame |
-| LOD 1 | past 21 u and under 72 px | 4,600 | 3 | 2 | 1 | 22 | 30 Hz past 28 u, 15 Hz past 40 u |
-| Reduced remote | the next 12 / 8 | 4,600 | 3 | 0 | 1 | 22 | 15 Hz |
+| Full | within 21 u, or a Full remote (nearest 12 / 8) | 7,800 | 3 (body, face, print) | 2 | 1 (shared) | 22 | every frame |
+| LOD 1 | past 21 u and under 72 px | 5,100 | 3 | 2 | 1 | 22 | 30 Hz past 28 u, 15 Hz past 40 u |
+| LOD 2 | past 40 u and under 28 px | 4,000 | 3 | 2 | 1 | 22 | 15 Hz |
+| Reduced remote | the next 12 / 8 (drawn at LOD 1 or 2 by distance) | 5,100 | 3 | 0 | 1 | 22 | 15 Hz |
 
-The heaviest wearable look today is 4,941 triangles full (every accessory slot filled) and 4,376 at LOD 1: LOD 1 only
-saves 11% because glasses, prints and layered pieces stay whole (`2026-10-results.md`). Its hair is bangs plus a back
-plus a band; a whole hairstyle replaces the bangs and the back, so `budget.test.ts` counts the heavier of the two
-(head fit: David's styles stay under the pair, at most 1,500 + the band at Full and 974 at LOD 1). The base is the
+**Head-roblox (2026-10-14, `specs/characters/head-roblox.md` §7):** the hair is David's 21 Roblox hairstyles, whole at
+Full (David: "hair should look good close up"), so the heaviest wearable look (every accessory slot filled) is 7,700
+triangles at Full, 5,014 at LOD 1 and 3,958 at LOD 2 (was ~5,070 and ~4,030 with the decimated styles). LOD 2 is the
+hair only (about 1,100 a style; David: "lower poly like 2400 triangles for hair when far"); every other part draws its
+LOD 1 there. `budget.test.ts` computes all three; a whole hairstyle replaces the bangs and the back. The base is the
 catalogue's clip base (`base/v8_clips.glb` since the head fit: the same 1,264 triangles of skin and face). Held items are budgeted as
 effects (below). The multiplayer spec's targets stay: at most 0.12 ms of CPU per Full remote and 3 ms for 24 drawn, at
 most +5 draws per drawn remote on High and +3 on Lite (`PER_PLAYER`).
@@ -112,7 +114,9 @@ wherever its node is drawn, and another in the shadow pass if it casts.
 
 | Category | Folders | Triangles | Primitives | Materials | Largest texture | Bones |
 |---|---|---|---|---|---|---|
-| Full hair | `characters/v6/hair/full` | 1,750 | 1 | 1 | none | 22 |
+| Full hair | `characters/v6/hair/full` | 4,400 | 1 | 1 | none | 22 |
+| LOD 1 hairstyle | `characters/v6/lod1/hair/full` | 2,400 | 1 | 1 | none | 22 |
+| LOD 2 hairstyle | `characters/v6/lod2` | 1,200 | 1 | 1 | none | 22 |
 | Hair | `characters/v6/hair` | 1,200 | 1 | 1 | none | 22 |
 | Accessory | `characters/v6/accessories` | 1,200 | 4 | 4 | 128 | 22 |
 | Outfit | `characters/v6/outfits` | 300 | 4 | 4 | 128 | 22 |
@@ -126,12 +130,12 @@ wherever its node is drawn, and another in the shadow pass if it casts.
 | Seabed and water life (v1 water, 2026-10-13) | `game/water` | 1,200 (the whole set) | 10 (one instanced draw each) | 6 | 256 | – |
 | Interior room | `game/cafe`, `game/interiors` | 12,000 | 24 | 24 | 1,024 | – |
 
-**Full hair** (head fit, `specs/characters/head-fit.md`): a whole hairstyle (David's set) replaces the bangs and the back
-together (`look.ts wornParts`), so it is held to the heaviest bangs-plus-back pair a look can already wear, 646 + 1,110 =
-1,756, rounded to 1,750; the look's budget below counts it in their place. Like every hair piece it is one primitive in
-one material: a cap or visor, a second colour and the under-cap are mask channels in the shared hair atlas and a UV
+**Full hair** (head-roblox, `specs/characters/head-roblox.md`): a whole hairstyle (David's set) replaces the bangs and the
+back together (`look.ts wornParts`). It is the original Roblox mesh (Roblox caps an accessory at 4,000 triangles) plus
+its under-cap, so it is held to 4,400; its LOD 1 to 2,400 and its LOD 2 to 1,200. Like every hair piece it is one
+primitive in one material: a second colour, a cap and the under-cap are mask channels in the shared hair atlas and a UV
 marker, never another material, so a full hairstyle costs the same draws as any other (none: it merges into the body).
-David's 21 run 935-1,500 at Full and 465-974 at LOD 1.
+David's 21 run 929-4,315 at Full, 929-2,156 at LOD 1 and 929-1,100 at LOD 2; their web copies are meshopt-compressed.
 
 Shipped before the budget and over it, each capped where it is today (`ASSET_EXCEPTIONS`; shrink, never raise): seven
 weapons with 9–12 parts (the twin tantos at 12, the shields, the hand wraps, the tier-4 and 5 tooth charms), the café

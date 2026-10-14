@@ -1,5 +1,10 @@
 # Head fit: the v8 head, the shared skull and the hair fit standard
 
+> **Hair superseded (head-roblox, 2026-10-14, `specs/characters/head-roblox.md`).** The per-hair refits, cage pulls and
+> fringe cuts below are reverted: every hairstyle now attaches at its Roblox HairAttachment on the v9 skull (Roblox's
+> classic head where hair sits, the v8 face kept), whole and undecimated at Full, with David's own per-hair overrides
+> only. The v8 face and its fit points stand.
+
 Ledger rows 264 (matte), 301 (no outside art), 304 (head and hair fit) and 305 (David's own hair set). Branch `game/head-fit`.
 
 David, 2026-10-08:

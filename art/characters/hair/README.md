@@ -1,5 +1,10 @@
 # Hair library (deliverable 2)
 
+> **Superseded for the game (head-roblox, 2026-10-14, `specs/characters/head-roblox.md`).** The bangs and backs below
+> (the generated library and the v7 sculpted locks) are gone from the catalogue, the creator and the web assets. The
+> game's hair is David's 21 Roblox hairstyles only, imported whole by `hair/import_hair.py` and attached the Roblox way
+> (`hair/roblox_attachments.json`), with LOD 1 and LOD 2 from `build_lod.py`. This file is history.
+
 Covers rows 135, 191 and 192: two independent slots, bangs and back.
 
 - **Bangs** come from the N sheet families.

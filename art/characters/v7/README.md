@@ -1,5 +1,9 @@
 # Avatar v7
 
+> **Hair superseded (head-roblox, 2026-10-14, `specs/characters/head-roblox.md`).** The sculpted-lock hair library (16
+> bangs, 12 backs) is removed; the hair is David's 21 Roblox hairstyles, whole meshes, in three detail tiers. The head
+> is v9 (the v8 face on Roblox's classic head where hair sits). The face system below still stands.
+
 Rows 242, 252 and 254. The spec is `specs/avatar-v7.md`. David's picks:
 - sculpted-lock hair
 - an animated painted face
