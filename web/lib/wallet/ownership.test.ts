@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_LOOK, FREE_HAIR_COLOURS, PALETTE, PARTS, STARTER_PARTS, randomLook, seeded, wear } from "@/lib/game/character/look";
 import { CATALOGUE as PIECES, EVENT_PIECE_IDS } from "@/lib/homes/catalogue";
 import { CRAFTED_ITEMS, RECIPES } from "@/lib/crafting/recipes";
+import { memoryCraftingStore } from "@/lib/crafting/memoryStore";
+import { craft, learnFromQuest } from "@/lib/crafting/service";
 import { defaultLayout, type HomeLayoutDoc } from "@/lib/homes/layout";
 import { memoryHomesStore } from "@/lib/homes-sync/memoryStore";
 import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS, STARTER_REFS } from "./catalogue";
@@ -140,7 +142,7 @@ describe("look save (PATCH /api/profile)", () => {
     expect(mock.userWrites).toEqual([]);
   });
   it("saves starters and anything bought, as the server", async () => {
-    expect((await saveLook(wear(DEFAULT_LOOK, "onepiece", "onepiece_raincape_hood"))).status).toBe(200);
+    expect((await saveLook(wear(wear(DEFAULT_LOOK, "top", "top_hoodie"), "bottom", "bottom_joggers"))).status).toBe(200);
     eco.fund(A, 1000);
     await buy(eco.store, A, { item_id: slug("wear-top-cardigan"), qty: 1, idempotency_key: "buy-card-1" }, noon);
     await buy(eco.store, A, { item_id: slug("dye-blossom-pink"), qty: 1, idempotency_key: "buy-dye-1" }, noon);
@@ -148,6 +150,42 @@ describe("look save (PATCH /api/profile)", () => {
     expect(mock.adminWrites).toHaveLength(2);
     expect(mock.adminWrites[1]).toMatchObject({ avatar_config: { look: { top: "top_cardigan", hair: 10 } } });
     expect(mock.userWrites.every((u) => !("avatar_config" in (u as object)))).toBe(true);
+  });
+});
+
+describe("craft-only parts (David's wardrobe cut, playtest round 1)", () => {
+  const CRAFT_ONLY = ["acc_flower_crown", "acc_shell_necklace", "outfit_koi_kimono", "outfit_monarch_cape", "outfit_silk_sweater"];
+
+  it("are no starters and no shop rows: each is its crafted item, with a recipe", () => {
+    for (const id of CRAFT_ONLY) {
+      expect(STARTER_PARTS.includes(id), id).toBe(false);
+      expect(OWNERSHIP_ITEMS.some((c) => c.catalogue_ref === id), id).toBe(false);
+      const item = CRAFTED_ITEMS.find((c) => c.catalogue_ref === id);
+      expect(item, id).toBeDefined();
+      expect(RECIPES.some((r) => r.output.key === item!.slug), id).toBe(true);
+    }
+  });
+  it("are crafted, owned and worn: the profile refuses one before it is made and saves it after", async () => {
+    const m = memoryCraftingStore(eco, () => noon);
+    const look = wear(wear(DEFAULT_LOOK, "accessory", "acc_flower_crown"), "onepiece", "outfit_koi_kimono");
+    const before = await saveLook(look);
+    expect(before.status).toBe(403);
+    expect((await before.json()).missing.sort()).toEqual(["acc_flower_crown", "outfit_koi_kimono"]);
+    for (const id of ["acc-flower-crown", "outfit-koi-kimono"]) {
+      const recipe = RECIPES.find((r) => r.id === id)!;
+      for (const [k, n] of Object.entries(recipe.ingredients)) eco.give(A, k, n);
+      await learnFromQuest(m.store, A, id);
+      expect(await craft(m.store, A, { recipe_id: id, idempotency_key: `craft-${id}` }), id).toMatchObject({ ok: true });
+    }
+    const owned = await ownedRefs(eco.store, A);
+    expect(owned.ok && ["acc_flower_crown", "outfit_koi_kimono"].every((ref) => owned.data.has(ref))).toBe(true);
+    expect((await saveLook(look)).status).toBe(200);
+    expect(mock.adminWrites.at(-1)).toMatchObject({ avatar_config: { look: { onepiece: "outfit_koi_kimono", acc: { head: "acc_flower_crown" } } } });
+  });
+  it("a saved look with removed parts saves as its parsed defaults (nothing to own)", async () => {
+    const res = await saveLook({ ...DEFAULT_LOOK, eyes: "E1.4", mouth: "M2.1", onepiece: "onepiece_raincape", top: null, bottom: null, acc: { head: "acc_beanie", neck: "acc_scarf" } });
+    expect(res.status).toBe(200);
+    expect(mock.adminWrites.at(-1)).toMatchObject({ avatar_config: { look: { eyes: DEFAULT_LOOK.eyes, mouth: DEFAULT_LOOK.mouth, onepiece: null, top: DEFAULT_LOOK.top, bottom: DEFAULT_LOOK.bottom, acc: {} } } });
   });
 });
 

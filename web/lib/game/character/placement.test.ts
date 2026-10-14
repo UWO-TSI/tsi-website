@@ -29,11 +29,11 @@ describe("face placement: the creator's sliders as look data", () => {
     expect(parseLook(JSON.parse(JSON.stringify(saved)))).toEqual(saved);
   });
   it("drops a saved look's eyebrows and their placement (eyebrows were removed): it loads, wearing the rest", () => {
-    const saved = { ...DEFAULT_LOOK, eyes: "E5.5", mouth: "G2.3", brows: "brow_flat", extras: ["blush"], place: { eyes: [1, 2, 0, 0], brows: [2, -1, -5, 3] } };
+    const saved = { ...DEFAULT_LOOK, eyes: "F1.2", mouth: "G3.3", brows: "brow_flat", extras: ["blush"], place: { eyes: [1, 2, 0, 0], brows: [2, -1, -5, 3] } };
     const l = parseLook(JSON.parse(JSON.stringify(saved)));
     expect("brows" in l).toBe(false);
     expect(l.place).toEqual({ eyes: [1, 2, 0, 0] });
-    expect([l.eyes, l.mouth, l.extras]).toEqual(["E5.5", "G2.3", ["blush"]]);
+    expect([l.eyes, l.mouth, l.extras]).toEqual(["F1.2", "G3.3", ["blush"]]);
     const browsOnly = parseLook({ ...DEFAULT_LOOK, brows: "brow_none", place: { brows: [1, 1, 1, 1] } });
     expect(browsOnly).toEqual(DEFAULT_LOOK);
     expect(slots(l)).toHaveLength(FACE_SLOT_COUNT);
@@ -43,7 +43,7 @@ describe("face placement: the creator's sliders as look data", () => {
 describe("old looks are unchanged", () => {
   const OLD = [
     DEFAULT_LOOK,
-    look({ eyes: "E5.5", mouth: "G2.3", extras: ["blush", "mole"], hair: 9 }),
+    look({ eyes: "F1.2", mouth: "G3.3", extras: ["blush", "mole"], hair: 9 }),
     ...Array.from({ length: 40 }, (_, i) => randomLook(seeded(i))),
   ];
   it("parse to exactly what they were: no placement field appears", () => {

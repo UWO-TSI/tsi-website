@@ -7,7 +7,7 @@
  * here), the swatch row follows the parts' tinted materials, and a catalogue slot no category names gets a category
  * of its own at the end of the rail.
  */
-import { FACE, PART_BY_ID, PARTS, partColor, wear, type AccGroup, type CharacterLook, type FaceLayer, type PartSlot, type PlacePart } from "./look";
+import { eventPartOpen, FACE, PART_BY_ID, PARTS, partColor, wear, type AccGroup, type CharacterLook, type FaceLayer, type PartSlot, type PlacePart } from "./look";
 
 /** How the portrait frames a category: the face up close, head and shoulders, from the waist up, or head to toe. */
 export type Framing = "face" | "head" | "upper" | "body";
@@ -86,6 +86,16 @@ export function optionName(section: Section, id: string | null): string {
   if ("slot" in section.source) return PART_BY_ID.get(id)?.name ?? id;
   return FACE.names[id] ?? ({ blush: "Blush", mole: "Mole", freckles: "Freckles" } as Record<string, string>)[id]
     ?? `${section.label}, style ${section.options.indexOf(id) + 1} of ${section.options.length}`;
+}
+
+/**
+ * The options a section shows. The starting creator (`create`) offers only what is owned, and never a crafted part
+ * (David's wardrobe cut: the flower crown, shell necklace, koi kimono, monarch cape and silk sweater are made at the
+ * workbench and worn from the closet). The wardrobe shows them all, the unowned ones locked. An event costume shows
+ * only while its tradition runs.
+ */
+export function shownOptions(section: Section, mode: "create" | "wardrobe", has: (id: string | null) => boolean): (string | null)[] {
+  return section.options.filter(id => (mode !== "create" || (has(id) && !(id && PART_BY_ID.get(id)?.item))) && (!id || eventPartOpen(id)));
 }
 
 /** Is this option what the look wears? */

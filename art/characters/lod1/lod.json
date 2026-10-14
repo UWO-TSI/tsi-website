@@ -3,10 +3,6 @@
   "tris": 228,
   "lod1": 228
  },
- "accessories/accessory/acc_beanie.glb": {
-  "tris": 944,
-  "lod1": 712
- },
  "accessories/accessory/acc_cap.glb": {
   "tris": 1032,
   "lod1": 762
@@ -31,14 +27,6 @@
   "tris": 256,
   "lod1": 220
  },
- "accessories/accessory/acc_pumpkin_head.glb": {
-  "tris": 678,
-  "lod1": 574
- },
- "accessories/accessory/acc_scarf.glb": {
-  "tris": 260,
-  "lod1": 260
- },
  "accessories/accessory/acc_shell_necklace.glb": {
   "tris": 234,
   "lod1": 234
@@ -54,10 +42,6 @@
  "accessories/accessory/acc_sunhat.glb": {
   "tris": 1196,
   "lod1": 880
- },
- "accessories/accessory/acc_vampire_cape.glb": {
-  "tris": 380,
-  "lod1": 304
  },
  "accessories/accessory/acc_witch_hat.glb": {
   "tris": 1184,
@@ -286,22 +270,6 @@
  "outfits/bottom/bottom_trousers.glb": {
   "tris": 258,
   "lod1": 168
- },
- "outfits/onepiece/onepiece_jumpsuit.glb": {
-  "tris": 354,
-  "lod1": 302
- },
- "outfits/onepiece/onepiece_raincape.glb": {
-  "tris": 291,
-  "lod1": 252
- },
- "outfits/onepiece/onepiece_raincape_hood.glb": {
-  "tris": 362,
-  "lod1": 362
- },
- "outfits/onepiece/onepiece_robe.glb": {
-  "tris": 340,
-  "lod1": 264
  },
  "outfits/onepiece/onepiece_sundress.glb": {
   "tris": 288,

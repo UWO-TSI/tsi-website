@@ -813,8 +813,9 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
   useEffect(() => {
     dressPuppet(puppet, shown, parts, loaded.slice(1).map(g => g.scene), atlas, decalMap);
   }, [puppet, shown, parts, loaded, atlas, decalMap]);
-  // The face atlas's second page loads only for a look that wears one of its parts, without suspending: until it
-  // arrives those parts are transparent. Everyone else never fetches it.
+  // The face atlas's second page loads for a look that wears one of its parts, or while the expressions and emote
+  // mouths use its cells (since the wardrobe cut, everyone; usesFacePage2), without suspending: until it arrives those
+  // parts are transparent. One shared texture.
   const page2 = usesFacePage2(shown) ? (faceSize >= 1024 ? FACE_ATLAS2_URLS.creator : FACE_ATLAS2_URLS.world) : null;
   useEffect(() => {
     if (!page2) return;

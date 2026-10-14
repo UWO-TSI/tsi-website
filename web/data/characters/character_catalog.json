@@ -438,57 +438,6 @@
    "hides": []
   },
   {
-   "id": "onepiece_raincape",
-   "slot": "onepiece",
-   "name": "Hooded rain-cape dress (#18)",
-   "glb": "outfits/onepiece/onepiece_raincape.glb",
-   "tris": 211,
-   "materials": [
-    {
-     "name": "M_Main",
-     "tint": "outfit",
-     "default": 10
-    },
-    {
-     "name": "M_Accent",
-     "tint": "outfit",
-     "default": 8
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [
-    "top",
-    "bottom"
-   ]
-  },
-  {
-   "id": "onepiece_raincape_hood",
-   "slot": "onepiece",
-   "name": "Hooded rain-cape dress, hood up (#18)",
-   "glb": "outfits/onepiece/onepiece_raincape_hood.glb",
-   "tris": 282,
-   "materials": [
-    {
-     "name": "M_Main",
-     "tint": "outfit",
-     "default": 10
-    },
-    {
-     "name": "M_Accent",
-     "tint": "outfit",
-     "default": 8
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": true,
-   "hides": [
-    "top",
-    "bottom"
-   ],
-   "variantOf": "onepiece_raincape"
-  },
-  {
    "id": "onepiece_sundress",
    "slot": "onepiece",
    "name": "Sundress",
@@ -504,61 +453,6 @@
      "name": "M_Accent",
      "tint": "outfit",
      "default": 1
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [
-    "top",
-    "bottom"
-   ]
-  },
-  {
-   "id": "onepiece_robe",
-   "slot": "onepiece",
-   "name": "Robe",
-   "glb": "outfits/onepiece/onepiece_robe.glb",
-   "tris": 260,
-   "materials": [
-    {
-     "name": "M_Main",
-     "tint": "outfit",
-     "default": 12
-    },
-    {
-     "name": "M_Accent",
-     "tint": "outfit",
-     "default": 0
-    },
-    {
-     "name": "M_Trim",
-     "tint": "outfit",
-     "default": 6
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [
-    "top",
-    "bottom"
-   ]
-  },
-  {
-   "id": "onepiece_jumpsuit",
-   "slot": "onepiece",
-   "name": "Jumpsuit",
-   "glb": "outfits/onepiece/onepiece_jumpsuit.glb",
-   "tris": 274,
-   "materials": [
-    {
-     "name": "M_Main",
-     "tint": "outfit",
-     "default": 3
-    },
-    {
-     "name": "M_Accent",
-     "tint": "outfit",
-     "default": 5
     }
    ],
    "decalSlot": null,
@@ -828,34 +722,6 @@
    "skull": "v8"
   },
   {
-   "id": "acc_beanie",
-   "slot": "accessory",
-   "name": "Beanie",
-   "glb": "accessories/accessory/acc_beanie.glb",
-   "tris": 864,
-   "materials": [
-    {
-     "name": "M_Main",
-     "tint": "outfit",
-     "default": 7
-    },
-    {
-     "name": "M_Accent",
-     "tint": "outfit",
-     "default": 0
-    },
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": true,
-   "hides": [],
-   "group": "head",
-   "skull": "v8"
-  },
-  {
    "id": "acc_sunhat",
    "slot": "accessory",
    "name": "Sun hat",
@@ -1052,24 +918,6 @@
    "group": "bag"
   },
   {
-   "id": "acc_scarf",
-   "slot": "accessory",
-   "name": "Scarf",
-   "glb": "accessories/accessory/acc_scarf.glb",
-   "tris": 180,
-   "materials": [
-    {
-     "name": "M_Main",
-     "tint": "outfit",
-     "default": 9
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "group": "neck"
-  },
-  {
    "id": "acc_shell_necklace",
    "slot": "accessory",
    "name": "Shell necklace",
@@ -1151,63 +999,6 @@
    "group": "head",
    "event": "halloween",
    "skull": "v8"
-  },
-  {
-   "id": "acc_pumpkin_head",
-   "slot": "accessory",
-   "name": "Pumpkin head",
-   "glb": "accessories/accessory/acc_pumpkin_head.glb",
-   "tris": 598,
-   "materials": [
-    {
-     "name": "M_Main",
-     "tint": "outfit",
-     "default": 7
-    },
-    {
-     "name": "M_Accent",
-     "tint": null,
-     "color": "#3B2114"
-    },
-    {
-     "name": "M_Trim",
-     "tint": "outfit",
-     "default": 3
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": true,
-   "hides": [
-    "bangs"
-   ],
-   "group": "head",
-   "event": "halloween",
-   "encloses": true,
-   "skull": "v8"
-  },
-  {
-   "id": "acc_vampire_cape",
-   "slot": "accessory",
-   "name": "Vampire cape",
-   "glb": "accessories/accessory/acc_vampire_cape.glb",
-   "tris": 300,
-   "materials": [
-    {
-     "name": "M_Main",
-     "tint": "outfit",
-     "default": 14
-    },
-    {
-     "name": "M_Accent",
-     "tint": null,
-     "color": "#8E2F3A"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "group": "neck",
-   "event": "halloween"
   }
  ],
  "base": {

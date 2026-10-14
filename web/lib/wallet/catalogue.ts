@@ -5,7 +5,7 @@
  * (lib/seedMigrations.ts, scripts/gen-seeds.mjs). Prices are play coins
  * (or Gems for merch). No real-money value appears anywhere.
  */
-import { dyeRef, FREE_HAIR_COLOURS, PARTS, STARTER_PARTS } from "@/lib/game/character/look";
+import { dyeRef, FREE_HAIR_COLOURS, PARTS, STARTER_PARTS, type PartSlot } from "@/lib/game/character/look";
 import { CATALOGUE as PIECES, EVENT_PIECE_IDS } from "@/lib/homes/catalogue";
 import { shopIcon } from "@/lib/icons/keys";
 
@@ -106,18 +106,36 @@ const pieceValue = (p: (typeof PIECES)[number]) => 60 + (p.mount === "rug" ? 15 
 pos = 199;
 
 /**
+ * Wearables David's wardrobe cut took out of the character catalogue (playtest round 1, row 309). Their shop rows stay
+ * where they were (`after`: the part they follow), retired: off sale, never a special, granted to no one. Owners keep
+ * their inventory rows; a saved look wearing one loads with that slot's default (parseLook).
+ */
+const CUT_WEARABLES: { id: string; name: string; slot: PartSlot; after: string }[] = [
+  { id: "onepiece_raincape", name: "Hooded rain-cape dress", slot: "onepiece", after: "bottom_long_skirt" },
+  { id: "onepiece_robe", name: "Robe", slot: "onepiece", after: "onepiece_sundress" },
+  { id: "onepiece_jumpsuit", name: "Jumpsuit", slot: "onepiece", after: "onepiece_robe" },
+  { id: "acc_beanie", name: "Beanie", slot: "accessory", after: "acc_glasses_square" },
+  { id: "acc_scarf", name: "Scarf", slot: "accessory", after: "acc_shoulder_bag" },
+];
+const wearSlug = (id: string) => `wear-${id.replace(/_/g, "-")}`;
+const WEARABLES: { id: string; name: string; slot: PartSlot; cut?: boolean }[] =
+  PARTS.filter((p) => p.slot !== "bangs" && p.slot !== "back" && !p.variantOf && !p.item && !p.event).map((p) => ({ id: p.id, name: p.name, slot: p.slot }));
+for (const c of CUT_WEARABLES) WEARABLES.splice(WEARABLES.findIndex((w) => w.id === c.after) + 1, 0, { ...c, cut: true });
+
+/**
  * Rows the ownership migration adds: every wearable part, the dyes, the homes pieces the shop lacked. Starter clothes are never sold.
  * Parts with an `item` are unlocked by that existing (crafted) item instead, so they get no shop row; event costumes (`event`)
- * are free while their tradition runs, never sold.
+ * are free while their tradition runs, never sold. The wardrobe cut's rows stay, retired (CUT_WEARABLES).
  */
 export const OWNERSHIP_ITEMS: CatalogueEntry[] = [
-  ...PARTS.filter((p) => p.slot !== "bangs" && p.slot !== "back" && !p.variantOf && !p.item && !p.event).map((p) =>
-    e(`wear-${p.id.replace(/_/g, "-")}`, p.name.replace(/ \(#\d+\)$/, ""), p.slot === "accessory" ? "accessory" : "outfit", WEAR_PRICE[p.slot], { catalogue_ref: p.id, special_pool: !STARTER_REFS.has(p.id) })),
+  ...WEARABLES.map((p) =>
+    e(wearSlug(p.id), p.name.replace(/ \(#\d+\)$/, ""), p.slot === "accessory" ? "accessory" : "outfit", WEAR_PRICE[p.slot], { catalogue_ref: p.id, special_pool: !p.cut && !STARTER_REFS.has(p.id) })),
   ...DYES.map((name, i) => e(`dye-${name.toLowerCase().replace(/ /g, "-")}`, `${name} hair dye`, "hair", 140, { catalogue_ref: dyeRef(FREE_HAIR_COLOURS + i), special_pool: true })),
   ...PIECES.filter((p) => !HAS_FURNITURE.has(p.id) && !EVENT_PIECE_IDS.has(p.id)).map((p) => furniture(p.id, p.label, pieceValue(p))),
 ];
-/** Pre-ownership outfit rows with no character part: off sale. */
-export const RETIRED = ["outfit-sage-overalls", "outfit-cream-knit", "outfit-wharf-raincoat", "outfit-club-tee", "hair-chestnut", "hair-sea-glass", "hair-sunset", "acc-straw-hat", "acc-round-glasses", "acc-bandana"];
+/** Shop rows with no character part: the pre-ownership outfits, and the wardrobe cut's (CUT_WEARABLES). Off sale. */
+export const RETIRED = ["outfit-sage-overalls", "outfit-cream-knit", "outfit-wharf-raincoat", "outfit-club-tee", "hair-chestnut", "hair-sea-glass", "hair-sunset", "acc-straw-hat", "acc-round-glasses", "acc-bandana",
+  ...CUT_WEARABLES.map((c) => wearSlug(c.id))];
 /** Sold, as opposed to only granted: starter clothes stay off sale. */
 export const onSale = (c: CatalogueEntry) => !RETIRED.includes(c.slug) && !(c.category !== "furniture" && c.catalogue_ref !== null && STARTER_REFS.has(c.catalogue_ref));
 

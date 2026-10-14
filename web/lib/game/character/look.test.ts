@@ -92,8 +92,8 @@ describe("character catalogue", () => {
 describe("looks", () => {
   it("parses garbage to the default and keeps valid fields", () => {
     expect(parseLook(null)).toEqual(DEFAULT_LOOK);
-    const look = parseLook({ skin: 5, hair: 99, eyes: "E5.5", mouth: "nope", bangs: "back_bob", top: "top_hoodie", acc: { head: "acc_cap", face: "acc_cap" }, colors: { top_hoodie: 3, bogus: 1 } });
-    expect(look).toMatchObject({ skin: 5, hair: DEFAULT_LOOK.hair, eyes: "E5.5", mouth: "M1.1", bangs: DEFAULT_LOOK.bangs, top: "top_hoodie", acc: { head: "acc_cap" }, colors: { top_hoodie: 3 } });
+    const look = parseLook({ skin: 5, hair: 99, eyes: "F1.2", mouth: "nope", bangs: "back_bob", top: "top_hoodie", acc: { head: "acc_cap", face: "acc_cap" }, colors: { top_hoodie: 3, bogus: 1 } });
+    expect(look).toMatchObject({ skin: 5, hair: DEFAULT_LOOK.hair, eyes: "F1.2", mouth: "M1.1", bangs: DEFAULT_LOOK.bangs, top: "top_hoodie", acc: { head: "acc_cap" }, colors: { top_hoodie: 3 } });
   });
   it("a one-piece replaces top and bottom, and a top brings the pair back", () => {
     const dress = wear(DEFAULT_LOOK, "onepiece", "onepiece_sundress");
@@ -102,20 +102,28 @@ describe("looks", () => {
     expect([back.top, back.bottom, back.onepiece]).toEqual(["top_cardigan", DEFAULT_LOOK.bottom, null]);
   });
   it("hats and hoods hide the back hair and replace each other (ruling 21)", () => {
-    const hat = wear(DEFAULT_LOOK, "accessory", "acc_beanie");
+    const hat = wear(DEFAULT_LOOK, "accessory", "acc_sunhat");
     expect(wornParts(hat).some(p => p.slot === "back")).toBe(false);
     expect(wornParts(DEFAULT_LOOK).some(p => p.slot === "back")).toBe(true);
-    const hood = wear(hat, "onepiece", "onepiece_raincape_hood");
-    expect(hood.acc.head).toBeUndefined();
-    expect(wornParts(hood).some(p => p.slot === "back")).toBe(false);
-    const hatAgain = wear(hood, "accessory", "acc_cap");
-    expect([hatAgain.onepiece, hatAgain.acc.head]).toEqual(["onepiece_raincape", "acc_cap"]);
-    expect(wear(hatAgain, "accessory", "acc_cap").acc.head).toBeUndefined(); // second tap takes it off
+    // The wardrobe cut took the only hood (the rain-cape's): a stand-in pair keeps the rule covered for the next one.
+    const dress = { ...PART_BY_ID.get("onepiece_sundress")! }, up = { ...dress, id: "test_hood_up", hidesBackHair: true, variantOf: "test_hood" };
+    PART_BY_ID.set("test_hood", { ...dress, id: "test_hood" }).set(up.id, up);
+    try {
+      const hood = wear(hat, "onepiece", up.id);
+      expect(hood.acc.head).toBeUndefined();
+      expect(wornParts(hood).some(p => p.slot === "back")).toBe(false);
+      const hatAgain = wear(hood, "accessory", "acc_cap");
+      expect([hatAgain.onepiece, hatAgain.acc.head]).toEqual(["test_hood", "acc_cap"]);
+      expect(wear(hatAgain, "accessory", "acc_cap").acc.head).toBeUndefined(); // second tap takes it off
+    } finally {
+      PART_BY_ID.delete("test_hood");
+      PART_BY_ID.delete(up.id);
+    }
   });
   it("tints each material from the palette: hair colour, chosen outfit colour, catalogue defaults", () => {
-    const look = { ...wear(DEFAULT_LOOK, "accessory", "acc_beanie"), hair: 4, colors: { acc_beanie: 12 } };
-    const beanie = resolveParts(look).find(p => p.id === "acc_beanie")!;
-    expect(beanie.tints).toEqual({ M_Main: PALETTE.outfit[12], M_Accent: PALETTE.outfit[0], M_Hair: PALETTE.hair[4] });
+    const look = { ...wear(DEFAULT_LOOK, "accessory", "acc_cap"), hair: 4, colors: { acc_cap: 12 } };
+    const cap = resolveParts(look).find(p => p.id === "acc_cap")!;
+    expect(cap.tints).toEqual({ M_Main: PALETTE.outfit[12], M_Accent: PALETTE.outfit[1], M_Hair: PALETTE.hair[4] });
     expect(resolveParts(look).find(p => p.id === "bangs_straight")!.tints).toEqual({ M_Hair: PALETTE.hair[4] });
     const crew = resolveParts(wear(DEFAULT_LOOK, "top", "top_tsi_crew")).find(p => p.id === "top_tsi_crew")!;
     expect(crew.decal).toMatch(/decal_tsi_mark\.png$/);
@@ -129,7 +137,7 @@ describe("looks", () => {
     expect(wornParts(look).map(p => p.slot).filter(s => s === "bangs" || s === "back")).toEqual(["back"]);
     const again = wear(look, "bangs", "bangs_curtain");
     expect([again.bangs, again.back]).toEqual(["bangs_curtain", DEFAULT_LOOK.back]);
-    expect(wornParts(wear(look, "accessory", "acc_beanie")).some(p => p.slot === "back" || p.slot === "bangs")).toBe(false); // under a hat: the tuck
+    expect(wornParts(wear(look, "accessory", "acc_cap")).some(p => p.slot === "back" || p.slot === "bangs")).toBe(false); // under a hat: the tuck
   });
   it("tints a mapped hairstyle from the palette and its accent from the look, the style's default or the skin (head fit)", () => {
     const two = PARTS.find(p => p.full && p.map?.accent !== undefined && typeof p.accent?.default === "number")!;
@@ -158,5 +166,47 @@ describe("looks", () => {
   it("random looks are always valid and seeded ones repeat", () => {
     for (let i = 0; i < 200; i++) { const look = randomLook(seeded(i)); expect(parseLook(JSON.parse(JSON.stringify(look)))).toEqual(look); }
     expect(randomLook(seeded(7))).toEqual(randomLook(seeded(7)));
+  });
+});
+
+describe("David's wardrobe cut (playtest round 1, 2026-10-14)", () => {
+  const CUT = {
+    eyes: ["E1.1", "E1.2", "E1.4", "E1.6", "E5.4", "E5.5", "E5.6", "E6.1", "E8.1", "E8.4", "F2.1", "F2.2"],
+    mouth: [...Array.from({ length: 63 }, (_, i) => `G${Math.floor(i / 7) + 1}.${(i % 7) + 1}`).filter(g => g !== "G3.3"),
+      "M2.1", "M3.2", "M4.2", "M4.3", "M5.2", "M5.3", "M6.1", "M6.3", "cat_w", "grin_curl"],
+    parts: ["onepiece_jumpsuit", "onepiece_raincape", "onepiece_raincape_hood", "onepiece_robe", "acc_beanie", "acc_pumpkin_head", "acc_scarf", "acc_vampire_cape"],
+  };
+  const CRAFT_ONLY = ["acc_flower_crown", "acc_shell_necklace", "outfit_koi_kimono", "outfit_monarch_cape", "outfit_silk_sweater"];
+
+  it("is gone from the face atlas and the catalogue, with its GLBs; the craft-only parts stay", () => {
+    for (const id of CUT.eyes) expect(FACE.layers.eyes.items[id], id).toBeUndefined();
+    for (const id of CUT.mouth) expect(FACE.layers.mouth.items[id], id).toBeUndefined();
+    for (const id of CUT.parts) {
+      expect(PART_BY_ID.has(id), id).toBe(false);
+      for (const dir of ["outfits/onepiece", "accessories/accessory"]) {
+        expect(existsSync(join(web, "public/assets/characters/v6", dir, `${id}.glb`)), id).toBe(false);
+        expect(existsSync(join(web, "public/assets/characters/v6/lod1", dir, `${id}.glb`)), id).toBe(false);
+      }
+    }
+    for (const id of CRAFT_ONLY) expect(PART_BY_ID.get(id)?.item, id).toBeTruthy();
+    expect([Object.keys(FACE.layers.eyes.items).length, Object.keys(FACE.layers.mouth.items).length]).toEqual([23, 25]);
+  });
+
+  it("loads a saved look wearing several removed parts with each slot's default, keeping the rest", () => {
+    const saved = {
+      ...DEFAULT_LOOK, skin: 7, hair: 3, bangs: "bangs_curtain", back: "back_high_pony",
+      eyes: "E1.4", mouth: "G2.1", extras: ["freckles"], top: null, bottom: null, onepiece: "onepiece_robe", shoes: "shoes_boots",
+      acc: { head: "acc_beanie", neck: "acc_scarf", face: "acc_glasses_round" }, colors: { onepiece_robe: 13, acc_scarf: 4, shoes_boots: 5 },
+      place: { eyes: [1, 0, 0, 0] },
+    };
+    const look = parseLook(JSON.parse(JSON.stringify(saved)));
+    expect(look).toEqual({
+      ...saved, eyes: DEFAULT_LOOK.eyes, mouth: DEFAULT_LOOK.mouth, onepiece: null, top: DEFAULT_LOOK.top, bottom: DEFAULT_LOOK.bottom,
+      acc: { face: "acc_glasses_round" }, colors: { shoes_boots: 5 },
+    });
+    expect(resolveParts(look).map(p => p.id).sort()).toEqual(["acc_glasses_round", "back_high_pony", "bangs_curtain", "bottom_shorts", "shoes_boots", "top_tee"]);
+    // a removed hood and a Halloween costume fall back too; a craft-only part still parses
+    expect(parseLook({ onepiece: "onepiece_raincape_hood", acc: { head: "acc_pumpkin_head", neck: "acc_vampire_cape" } })).toMatchObject({ onepiece: null, top: "top_tee", bottom: "bottom_shorts", acc: {} });
+    expect(parseLook({ ...DEFAULT_LOOK, onepiece: "outfit_koi_kimono", top: null, bottom: null, acc: { head: "acc_flower_crown" } })).toMatchObject({ onepiece: "outfit_koi_kimono", acc: { head: "acc_flower_crown" } });
   });
 });

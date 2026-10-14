@@ -174,12 +174,12 @@ elif MODE == "clips":
 elif MODE == "dressed":
     P = kit.PAL
     LOOKS = [  # parts, (bangs, back), skin index, hair colour index
-        (["onepiece_raincape_hood", "shoes_slipon"], ("bangs_straight", "back_bob"), 3, 2),
+        (["outfit_koi_kimono", "shoes_slipon"], ("bangs_straight", "back_bob"), 3, 2),
         (["top_tsi_crew", "bottom_trousers", "shoes_sneakers", "acc_glasses_round", "acc_backpack"],
          ("bangs_swept_l", "back_short_spiky"), 7, 0),
         (["onepiece_sundress", "shoes_sandals", "acc_sunhat"], ("bangs_curtain", "back_long"), 1, 6),
-        (["top_cardigan", "bottom_long_skirt", "shoes_boots", "acc_scarf"], ("bangs_hime", "back_twin_buns"), 9, 7),
-        (["top_sweater_vest", "bottom_pleated_skirt", "shoes_loafers", "acc_beanie", "acc_glasses_square"],
+        (["top_cardigan", "bottom_long_skirt", "shoes_boots", "acc_shell_necklace"], ("bangs_hime", "back_twin_buns"), 9, 7),
+        (["top_sweater_vest", "bottom_pleated_skirt", "shoes_loafers", "acc_straw_hat", "acc_glasses_square"],
          ("bangs_choppy", "back_bob"), 5, 4),
         (["top_stripe_ls", "bottom_overall_shorts", "shoes_rainboots", "acc_shoulder_bag", "acc_cap"],
          ("bangs_wispy", "back_pigtails"), 10, 3),

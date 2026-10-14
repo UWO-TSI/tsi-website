@@ -215,7 +215,9 @@ def main():
             continue
         report[p["glb"]] = build(os.path.join(HERE, p["glb"]), os.path.join(OUT, p["glb"]), merge=not p.get("full"), cards=bool(p.get("full")))
     path = os.path.join(OUT, "lod.json")
-    old = json.load(open(path)) if only and os.path.exists(path) else {}
+    live = {"base/skin.glb"} | {p["glb"] for p in parts}
+    # A part cut from the catalogue leaves the report on any run (delete its GLB in lod1/ by hand).
+    old = {k: v for k, v in json.load(open(path)).items() if k in live} if only and os.path.exists(path) else {}
     old.update({k: {"tris": v[0], "lod1": v[1]} for k, v in report.items()})
     json.dump(dict(sorted(old.items())), open(path, "w"), indent=1)
     total = sum(v[0] for v in report.values()), sum(v[1] for v in report.values())
