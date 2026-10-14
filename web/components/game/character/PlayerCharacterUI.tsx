@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * Member-game character UI: the creator at first login (row 142, skippable
- * with a random look) and the emote menu on G (content emote types → clips).
+ * Member-game character UI: the plain creator when there is no look and no arrival to make one in (row 142, skippable
+ * with a random look; a new member makes theirs in the water, components/game/arrival) and the emote menu on G
+ * (content emote types → clips).
  */
 import { useEffect, useState } from "react";
 import CharacterCreator from "./CharacterCreator";
@@ -14,7 +15,7 @@ import { worldKeysBlocked, isTyping } from "@/lib/game/useWorldDialog";
 import { toast } from "../ToastHub";
 
 /** Saves the name; a refusal or a dropped connection is said in a toast (it used to be swallowed). */
-async function saveName(name: string) {
+export async function saveName(name: string) {
   try {
     const res = await fetch("/api/identity/name", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
     if (res.ok) { await refreshIdentity(); return; }
@@ -25,7 +26,8 @@ async function saveName(name: string) {
   }
 }
 
-export default function PlayerCharacterUI() {
+/** `creator`: the plain creator may show (the first-login step says so); the arrival's reflection replaces it. */
+export default function PlayerCharacterUI({ creator = true }: { creator?: boolean }) {
   const mine = useMyLook();
   const identity = useWorldIdentity();
   const [emotes, setEmotes] = useState(false);
@@ -39,7 +41,7 @@ export default function PlayerCharacterUI() {
     return () => window.removeEventListener("keydown", key);
   }, []);
   return <>
-    {mine.loaded && !mine.saved && <CharacterCreator initial={mine.look} askName={identity.signedIn ? { current: identity.display_name } : undefined}
+    {creator && mine.loaded && !mine.saved && <CharacterCreator initial={mine.look} askName={identity.signedIn ? { current: identity.display_name } : undefined}
       onDone={async (look, name) => { await saveMyLook(look); if (name) await saveName(name); }} />}
     <EmoteMenu open={emotes} onClose={() => setEmotes(false)} onPick={emote => {
       const clip = EMOTE_CLIPS[emote.animation_key];
