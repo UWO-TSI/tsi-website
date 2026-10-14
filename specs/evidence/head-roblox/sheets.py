@@ -28,6 +28,15 @@ def preview_cell(pid):
     return P.crop((int(c * cw), int(r * ch), int((c + 1) * cw), int((r + 1) * ch))).resize((CELL, CELL), Image.LANCZOS)
 
 
+def fit(im):
+    """A frame in a CELL square, its aspect kept (the bench's body cells are 3:4), on the sheet's background."""
+    im = im.copy()
+    im.thumbnail((CELL, CELL), Image.LANCZOS)
+    c = Image.new("RGB", (CELL, CELL), BG)
+    c.paste(im, ((CELL - im.width) // 2, (CELL - im.height) // 2))
+    return c
+
+
 def hairs(frames, out, ids):
     if ids == ["all"]:
         ids = [h["id"] for h in json.load(open(os.path.join(SRC, "manifest.json")))["hairs"]]
@@ -46,7 +55,7 @@ def hairs(frames, out, ids):
         for j, v in enumerate(("front", "34", "side", "back")):
             p = os.path.join(frames, f"{pid}_{v}.png")
             if os.path.exists(p):
-                W.paste(Image.open(p).convert("RGB").resize((CELL, CELL), Image.LANCZOS), ((j + 1) * CELL, y + 34))
+                W.paste(fit(Image.open(p).convert("RGB")), ((j + 1) * CELL, y + 34))
     W.save(out, quality=88)
 
 

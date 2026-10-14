@@ -23,7 +23,8 @@
  *                  a row of front, 3/4, side and back (&views= to pick), on one skin and hair colour
  * ?sheet=david     David's 19 faces (face_set_305.py) as they came, eyes + mouth (+ accent), on three skins (&skins=)
  * ?sheet=mix       David's eyes, mouths and accents mixed with each other and with the earlier parts (&skins=)
- * &hair=<0-11>&skin=<0-11>&face=512 (the world atlas) &framing=head|body
+ * &hair=<0-11>&skin=<0-11>&face=512 (the world atlas) &framing=head|body &charlod=1|2 (every cell at LOD 1 or LOD 2)
+ * In ?sheet=roblox an id may carry a head accessory worn with it: &ids=hair_visor_messy+acc_visor (encode the + as %2B in a URL)
  */
 import { Suspense, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
@@ -40,6 +41,8 @@ const STYLES: Record<string, Pick<CharacterLook, "bangs" | "back">> = {
 };
 /** Head fit sheets: the three review views (the character faces the camera at yaw 0). */
 const VIEWS: Record<string, number> = { front: 0, "34": -0.6, side: -Math.PI / 2, back: Math.PI };
+/** `&charlod=1|2`: the cells load their LOD meshes and draw that tier (Character's SHOW_LOD). */
+const LOD_SHEET = typeof window !== "undefined" && !!new URLSearchParams(window.location.search).get("charlod");
 /** Kit sheets hold the eyes open (no blink lands mid-capture). */
 const OPEN: FaceOverride = { eyeFrame: "open" };
 interface Cell { label: string; look: CharacterLook; yaw: number; face?: FaceOverride | null; talk?: boolean }
@@ -52,7 +55,7 @@ function Stage({ cell, framing, faceSize }: { cell: Cell; framing: "head" | "bod
     <ambientLight intensity={1.1} color="#fff6e6" />
     <hemisphereLight args={["#fff8ec", "#b7c7a8", 0.9]} />
     <directionalLight position={[1.6, 2.6, 2.2]} intensity={1.7} color="#fff1d8" />
-    <Suspense fallback={null}><Character look={cell.look} motion={motion} scale={1} faceSize={faceSize} lod={false} /></Suspense>
+    <Suspense fallback={null}><Character look={cell.look} motion={motion} scale={1} faceSize={faceSize} lod={LOD_SHEET} /></Suspense>
   </>;
 }
 
@@ -100,7 +103,10 @@ function AvatarBench() {
     if (sheet === "roblox") {
       const ids = q.get("ids")?.split(",") ?? partsIn("back").filter(p => p.full).map(p => p.id);
       const views = (q.get("views") ?? "front,34,side,back").split(",");
-      return ids.flatMap(id => views.map(v => ({ label: `${id} ${v}`, look: { ...bob, back: id }, yaw: VIEWS[v] ?? 0, face: OPEN })));
+      return ids.flatMap(item => {
+        const [id, acc] = item.split("+");
+        return views.map(v => ({ label: `${item} ${v}`, look: { ...bob, back: id, acc: acc ? { head: acc } : {} }, yaw: VIEWS[v] ?? 0, face: OPEN }));
+      });
     }
     // David's faces: the second atlas page's eyes and mouths, in his order (face_set_305.FACES), with his two accents
     const davidEyes = Object.keys(FACE.layers.eyes.items).filter(id => FACE.layers.eyes.items[id].open[6] === 1);

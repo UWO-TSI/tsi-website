@@ -892,8 +892,8 @@ function LodMesh2({ puppet, look, parts }: { puppet: Puppet; look: CharacterLook
   useEffect(() => puppet.setLod2(look, parts, loaded[0].scene, loaded.slice(1).map(g => g.scene)), [puppet, look, parts, loaded]);
   return null;
 }
-/** Development (evidence): `?charlod=1` draws every character's LOD 1 mesh, so it can be looked at up close. */
-const SHOW_LOD = process.env.NODE_ENV !== "production" && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("charlod") === "1";
+/** Development (evidence): `?charlod=1` draws every character's LOD 1 mesh, `?charlod=2` its LOD 2, so it can be looked at up close. */
+const SHOW_LOD = process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("charlod") : null;
 const seen = new THREE.Vector3(), view = new THREE.Frustum(), viewProj = new THREE.Matrix4(), body = new THREE.Sphere(new THREE.Vector3(), 1);
 let viewAt = -1, viewCam: THREE.Camera | null = null;
 /**
@@ -903,7 +903,8 @@ let viewAt = -1, viewCam: THREE.Camera | null = null;
  */
 function viewCharacter(puppet: Puppet, g: THREE.Object3D, camera: THREE.Camera, viewportPx: number, scale: number, now: number) {
   for (let o: THREE.Object3D | null = g; o; o = o.parent) if (!o.visible) return puppet.view(Infinity, 0, false);
-  if (SHOW_LOD) return puppet.view(30, 50, true); // past `near`, under the mesh line, above the rest: LOD 1 alone
+  if (SHOW_LOD === "1") return puppet.view(30, 50, true); // past `near`, under the mesh line, above the rest: LOD 1 alone
+  if (SHOW_LOD === "2") return puppet.view(45, 20, true); // past the far line and under its height: LOD 2
   if (now !== viewAt || camera !== viewCam) {
     viewAt = now; viewCam = camera;
     view.setFromProjectionMatrix(viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
