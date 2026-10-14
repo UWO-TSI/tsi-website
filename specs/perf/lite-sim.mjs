@@ -12,7 +12,7 @@ const { chromium } = require("playwright");
 const [LABEL, OUT, CONFIGS = "v2:lite:1:1:1280x800,v2:lite:4:1:1280x800,v2:lite:4:0:1920x1200,village:lite:4:1:1280x800,village:lite:4:0:1920x1200"] = process.argv.slice(2);
 const PORT = process.env.PORT ?? 3158, SECONDS = Number(process.env.SECONDS ?? 8);
 const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_curtain", back: "back_bob", top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: {} });
-const browser = await chromium.launch({ headless: false, args: ["--mute-audio", "--window-position=2400,0", "--use-angle=metal", "--ignore-gpu-blocklist", "--disable-gpu-vsync", "--disable-frame-rate-limit"] });
+const browser = await chromium.launch({ headless: process.env.HEADED !== "1", args: ["--mute-audio", "--window-position=2400,0", "--use-angle=metal", "--ignore-gpu-blocklist", "--disable-gpu-vsync", "--disable-frame-rate-limit"] });
 for (const cfg of CONFIGS.split(",")) {
   const [scene, tier, throttle, pixel, size] = cfg.split(":"), [W, H] = size.split("x").map(Number);
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
