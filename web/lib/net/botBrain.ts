@@ -193,7 +193,7 @@ const EVENT_CLIP: Partial<Record<MoveEvent["kind"], ClipName>> = {
   slide: "SlideIn", dashslide: "SlideInDash", landslide: "SlideInDash", slidejump: "SlideJump",
 };
 const TAKEOFF = new Set<MoveEvent["kind"]>(["jump", "hop", "long", "dashjump"]);
-const EMOTES = EMOTE_CLIP_NAMES as readonly string[];
+const EMOTES = EMOTE_CLIP_NAMES.slice(0, 5) as readonly string[]; // the five clips every rig has today (the v1 wheel and dances append after)
 /** Pending events: kind, value, room time; a fixed ring so a long hop chain never grows it. */
 const JOURNAL = 32;
 
