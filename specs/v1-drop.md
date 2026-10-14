@@ -177,7 +177,7 @@ These are style targets: we rebuild the look in our own art and copy no assets.
 7. **The pixel filter stays the default look** (David).
 
 ## 9. Shipping v1
-**Launch: Halloween, Oct 31** (David, 2026-10-13: "Rush v1 for Halloween"). Halloween is the launch event, running Oct 25 to Nov 1. **New-world checkpoint Oct 24:** if the terrain v2 village isn't wired and smooth by then, launch on the current village and swap to the new world in November.
+**Launch: Halloween, Oct 31** (David, 2026-10-13: "Rush v1 for Halloween"). Halloween is the launch event, running Oct 25 to Nov 1. **Launch world (David, 2026-10-14, row 308):** v1 launches on the current village. The new world is rebuilt as smooth terrain in the new 3D world editor (`specs/world-editor.md`) and follows in November; the Oct 24 checkpoint no longer gates launch.
 
 **Must ship Oct 31:**
 - performance pass;

@@ -20,7 +20,7 @@
 | `game/v1-land` | grass shader, rock props and cliff faces, lighting and colour, the title screen |
 | `game/head-fit` | head, skull fit points, David's 21 hairs |
 
-**The world map data** (`web/data/*map*.json`, the v2 draft, `/lab/map`) **belongs to David and the painter session on the other device.** Coordinator lanes deliver barrier, rock and stargazing placements as **proposals** to accept in `/lab/map`, and never edit map data. If you're that session, the proposals will show in the painter as overlays.
+**Ownership change (David, 2026-10-14, row 308): the coordinator session on the Mac mini now owns the world editor, `/lab/map` and the world map files (`web/data/*map*.json`, the v2 draft).** The painter session on the other device stops: if you're that session, stop editing these, push nothing further to them, and tell David. The new world is being rebuilt as smooth terrain in a 3D editor (`specs/world-editor.md`); v1 launches Oct 31 on the current village.
 
 ## Game lore locked (2026-10-10)
 
