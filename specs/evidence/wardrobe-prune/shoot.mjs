@@ -5,6 +5,8 @@
 //   lab      /lab/avatar: every authored resident, the HQ lead and the café owner (head and body), the six expressions,
 //            each emote mouth's frames, and Jayden (the applicant guide, his look as ApplicantWorld.tsx has it)
 //   creator  the arrival's reflection creator (the starting creator): the Eyes, Mouth, Tops, Bottoms and Accessories tabs
+//   closet   the closet (wardrobe mode, a member with the starters only): Accessories, Tops and Bottoms, everything the
+//            catalogue holds, the unowned locked (the craft-only parts stay here, made at the workbench)
 import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
@@ -65,6 +67,26 @@ if (SCENES.includes("creator")) {
     const tiles = await page.$$eval('[role="tabpanel"] ul button', els => els.map(e => e.getAttribute("aria-label")));
     console.log("tiles", cat, tiles.length, JSON.stringify(tiles));
     await page.screenshot({ path: `${OUT}/${WHEN}-creator-${i + 1}-${cat}.png` });
+  }
+  await page.context().close();
+}
+
+if (SCENES.includes("closet")) {
+  const page = await page0(1440, 900);
+  const LOOK = { skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", extras: [], bangs: "bangs_straight", back: "back_bob", top: "top_tee", bottom: "bottom_shorts",
+    onepiece: null, shoes: "shoes_slipon", acc: {}, colors: {} };
+  await page.goto(`${HOST}/lab/island`, { waitUntil: "domcontentloaded" });
+  await page.evaluate(look => { localStorage.clear(); localStorage.setItem("tsi.gift.later", new Date().toISOString().slice(0, 10)); localStorage.setItem("tsi.look.v1", JSON.stringify(look)); }, LOOK);
+  await page.goto(`${HOST}/lab/island?sheet=closet&weather=clear&at=14:20`, { waitUntil: "domcontentloaded" });
+  await page.addStyleTag({ content: "#island-options, [aria-controls='island-options'], nextjs-portal, body > div > nav { display: none !important; }" }).catch(() => {});
+  await page.waitForSelector('[data-cat="accessories"]', { timeout: 300000 });
+  await sleep(6000);
+  for (const [i, cat] of ["accessories", "tops", "bottoms"].entries()) {
+    await page.click(`[data-cat="${cat}"]`);
+    await sleep(2500);
+    const tiles = await page.$$eval('[role="tabpanel"] ul button', els => els.map(e => e.getAttribute("aria-label")));
+    console.log("closet", cat, tiles.length, JSON.stringify(tiles));
+    await page.screenshot({ path: `${OUT}/${WHEN}-closet-${i + 1}-${cat}.png` });
   }
   await page.context().close();
 }
