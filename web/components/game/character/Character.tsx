@@ -557,9 +557,15 @@ function meshesOf(model: THREE.Object3D): THREE.Mesh[] {
 /**
  * Whether what a character holds casts its sun shadow this frame (SunShadows skips a caster marked `shadowCulled`):
  * yours always; another player's only at Full within HELD_SHADOW_RANGE of you (`motion.itemShadow`, net/drive.ts).
+ * Every item casts for its first WARM_FRAMES frames whoever holds it, so the shadow pass's shader is compiled when the
+ * item comes out, never later when its holder walks up to you (a 75 ms frame in the bench).
  */
+const WARM_FRAMES = 3;
 function castItem(meshes: THREE.Mesh[], on: boolean) {
-  for (const m of meshes) if (m.userData.shadowCulled !== !on) m.userData.shadowCulled = !on;
+  for (const m of meshes) {
+    const u = m.userData, cast = on || (u.heldFrames = (u.heldFrames ?? 0) + 1) <= WARM_FRAMES;
+    if (u.shadowCulled !== !cast) u.shadowCulled = !cast;
+  }
 }
 /** A weapon's emissive materials, each with its authored intensity kept (they're shared by every copy of the model). */
 function glowMaterials(model: THREE.Object3D): THREE.MeshStandardMaterial[] {
