@@ -67,13 +67,16 @@ export const SHARD = { players: 40, fullHigh: 12, fullLite: 8, drawnHigh: 24, dr
  * held item's.
  */
 export interface CharacterBudget { triangles: number; draws: number; shadowDraws: number; materials: number; bones: number; mixerHz: number }
-export const CHARACTER_BUDGET: Record<"full" | "lod1" | "reduced", CharacterBudget> = {
-  /** Within 21 u, or any Full remote: the whole look, every frame, the sun shadow. */
-  full: { triangles: 5200, draws: 3, shadowDraws: 2, materials: 1, bones: 22, mixerHz: 60 },
-  /** Past 21 u and under 72 px: LOD 1 parts (art/characters/build_lod.py). */
-  lod1: { triangles: 4600, draws: 3, shadowDraws: 2, materials: 1, bones: 22, mixerHz: 30 },
-  /** A Reduced remote: no sun shadow, the mixer at 15 Hz. */
-  reduced: { triangles: 4600, draws: 3, shadowDraws: 0, materials: 1, bones: 22, mixerHz: 15 },
+export const CHARACTER_BUDGET: Record<"full" | "lod1" | "lod2" | "reduced", CharacterBudget> = {
+  /** Within 21 u, or any Full remote: the whole look, every frame, the sun shadow. head-roblox: the hairstyles' original
+   * meshes (up to 4,315 with the under-cap) put the heaviest wearable look at 7,700. */
+  full: { triangles: 7800, draws: 3, shadowDraws: 2, materials: 1, bones: 22, mixerHz: 60 },
+  /** Past 21 u and under 72 px: LOD 1 parts (art/characters/build_lod.py), the hairstyles within 2,400: 5,014 at most. */
+  lod1: { triangles: 5100, draws: 3, shadowDraws: 2, materials: 1, bones: 22, mixerHz: 30 },
+  /** Past 40 u and under 28 px (lod.ts `far`): the hairstyles' LOD 2 (about 1,100), every other part its LOD 1: 3,958 at most. */
+  lod2: { triangles: 4000, draws: 3, shadowDraws: 2, materials: 1, bones: 22, mixerHz: 15 },
+  /** A Reduced remote: no sun shadow, the mixer at 15 Hz (drawn at LOD 1 or 2 by its distance). */
+  reduced: { triangles: 5100, draws: 3, shadowDraws: 0, materials: 1, bones: 22, mixerHz: 15 },
 };
 /** What one more player in view may add to a frame (specs/multiplayer.md §5.5 targets, kept). */
 export const PER_PLAYER = { fullCpuMs: 0.12, drawnCpuMsTotal24: 3, drawsHigh: 5, drawsLite: 3 } as const;
@@ -144,12 +147,17 @@ export const CHARACTER_EFFECT_FILES = [
 export interface AssetBudget { triangles: number; primitives: number; materials: number; texture: number; bones: number }
 export interface AssetCategory extends AssetBudget { name: string; prefixes: readonly string[] }
 export const ASSET_CATEGORIES: readonly AssetCategory[] = [
+  // head-roblox (David, 2026-10-14: "lower poly like 2400 triangles for hair when far ... but hair should look good close
+  // up"): a whole hairstyle's LOD 1 holds its curves within 2,400 and its far LOD 2 within 1,200 (art/characters/build_lod.py).
+  { name: "LOD 1 hairstyle", prefixes: ["characters/v6/lod1/hair/full/"], triangles: 2400, primitives: 1, materials: 1, texture: 0, bones: 22 },
+  { name: "LOD 2 hairstyle", prefixes: ["characters/v6/lod2/"], triangles: 1200, primitives: 1, materials: 1, texture: 0, bones: 22 },
   { name: "character LOD 1 part", prefixes: ["characters/v6/lod1/"], triangles: 1200, primitives: 4, materials: 4, texture: 256, bones: 22 },
   { name: "character base", prefixes: ["characters/v6/base/"], triangles: 2000, primitives: 8, materials: 6, texture: 1024, bones: 22 },
-  // A whole hairstyle (head fit: David's set, characters/v6/hair/full) replaces the bangs and the back together (look.ts
-  // wornParts), so it is held to the heaviest bangs-plus-back pair a look can wear today: 646 + 1,110 = 1,756, rounded
-  // to 1,750. Still one primitive and one material (its cap and second colour are mask channels in the shared atlas).
-  { name: "full hair", prefixes: ["characters/v6/hair/full/"], triangles: 1750, primitives: 1, materials: 1, texture: 0, bones: 22 },
+  // A whole hairstyle (David's set, characters/v6/hair/full) replaces the bangs and the back together (look.ts wornParts).
+  // head-roblox: Full is the original Roblox mesh, undecimated (Roblox caps an accessory at 4,000; David's run 609-4,000),
+  // plus the under-cap (up to ~320): 4,400. One primitive and one material (its cap and second colour are mask channels
+  // in the shared atlas).
+  { name: "full hair", prefixes: ["characters/v6/hair/full/"], triangles: 4400, primitives: 1, materials: 1, texture: 0, bones: 22 },
   { name: "hair", prefixes: ["characters/v6/hair/"], triangles: 1200, primitives: 1, materials: 1, texture: 0, bones: 22 },
   { name: "accessory", prefixes: ["characters/v6/accessories/"], triangles: 1200, primitives: 4, materials: 4, texture: 128, bones: 22 },
   { name: "outfit", prefixes: ["characters/v6/outfits/"], triangles: 300, primitives: 4, materials: 4, texture: 128, bones: 22 },

@@ -94,6 +94,11 @@ FH = HRZT
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 CAT = json.load(open(os.path.join(HERE, "character_catalog.json")))
+# head-roblox: a piece import_hair.py split off a hairstyle (manifest `split`: #8's visor) is listed after the hair but is
+# an accessory; it is checked as headwear, worn over the hairstyle it came off (it rests there in Roblox)
+SPLIT_FROM = {h["split"]["id"]: h["id"] for h in json.load(open(os.path.join(HERE, "hair", "source", "david", "manifest.json")))["hairs"] if h.get("split")}
+HAIR_PARTS = [h for h in CAT["hair"] if h["slot"] != "accessory"]
+HEAD_ACC = CAT["accessories"] + [h for h in CAT["hair"] if h["slot"] == "accessory"]
 V7_FACE = os.path.join(HERE, "v7", "face", "face_v7.json")
 FACE_V7 = os.path.exists(V7_FACE) and CAT["base"].get("head") in ("v7/head.blend", "skull/head.blend")   # the v7 face atlas on the v7 or v8 head
 FACEV = json.load(open(V7_FACE if FACE_V7 else os.path.join(HERE, "base", "face_variants.json")))
@@ -468,7 +473,7 @@ hair = {}
 tables = {}
 everys = {}
 groups_of = {}
-for part in CAT["hair"]:
+for part in HAIR_PARTS:
     groups, open_e, _ = load_glb(os.path.join(HERE, part["glb"]))
     bvh, _ = bvh_of(groups)
     inn, out, every = ray_table(bvh, keep_all=True)
@@ -709,7 +714,7 @@ seam = {"ledge_max": ledges[worst_pair] if worst_pair else 0.0, "worst_pair": wo
 
 # ================================================================ headwear + glasses
 headwear, glasses = {}, {}
-for part in CAT["accessories"]:
+for part in HEAD_ACC:
     if part.get("group") not in ("head", "face"):
         continue
     groups, open_e, _ = load_glb(os.path.join(HERE, part["glb"]))
@@ -733,7 +738,8 @@ for part in CAT["accessories"]:
                                "offset_default": max(r["offset_default"] for r in res.values()), "sides": res}
         print(f"GLASSES {part['id']:20s} offset max={glasses[part['id']]['offset_max']} default={glasses[part['id']]['offset_default']}")
         continue
-    hat_bvh, _ = bvh_of(groups, lambda n: n != "M_Hair")
+    split = part["id"] in SPLIT_FROM
+    hat_bvh, _ = bvh_of(groups, (lambda n: True) if split else (lambda n: n != "M_Hair"))
     tuck_bvh, _ = bvh_of(groups, lambda n: n == "M_Hair")
     hat = part["hidesBackHair"]
     # head-roblox: no hair is worn under them for the check: a hat hides the hair (and carries its own tuck), and a band
@@ -741,8 +747,10 @@ for part in CAT["accessories"]:
     # whatever hair is worn
     under = []
     h_in, h_out, h_every = ray_table(hat_bvh, keep_all=True)
-    if tuck_bvh:
+    if tuck_bvh and part["id"] not in SPLIT_FROM:   # (a split-off visor is drawn in M_Hair: all of it is the piece)
         under.append(ray_table(tuck_bvh))
+    if part["id"] in SPLIT_FROM:                    # worn over the hairstyle it came off, which it rests on in Roblox
+        under.append(tables[SPLIT_FROM[part["id"]]])
     if hat:                             # hats: the crown only (every hat's edge and brim lie below these latitudes)
         region = np.where(np.abs(LON) < 135, LAT >= 46, LAT >= 16)
     else:
@@ -823,7 +831,7 @@ REACH = SK.CLEARANCE["reach"]
 EAR_Z = head_point(SK.EAR_TOP, SK.EAR_LON).z
 skull_fit = {}
 V7_LOCKS = {h["id"] for h in CAT["hair"] if h.get("v7")}
-for part in CAT["hair"] + [a for a in CAT["accessories"] if kind_of(a) == "hat"]:
+for part in HAIR_PARTS + [a for a in CAT["accessories"] if kind_of(a) == "hat"]:
     pid, kind = part["id"], kind_of(part)
     if pid in groups_of:
         groups = groups_of[pid]
@@ -895,7 +903,9 @@ for pid, r in hair.items():
     check("gap_max", r["gap"]["max"], LIMITS["hair_gap_max"], pid)
     check("gap_median", r["gap"]["median"], LIMITS["hair_gap_median_full"] if pid in FULL_IDS else LIMITS["hair_gap_median"], pid)
     if r.get("skin_through") is not None and r["skin_through"] > LIMITS["hair_skin_through_max"]:
-        flags.append(f"{pid}: skin_through {r['skin_through']} (a shell piece of the older library; rebuilt as locks next)")
+        flags.append(f"{pid}: skin_through {r['skin_through']} at {r.get('skin_through_at')} " + (
+            "(the head's skin out through the hairstyle's shell below the hair zone, where our head is not Roblox's)"
+            if pid in FULL_IDS else "(a shell piece)"))
 V7_IDS = {h["id"] for h in CAT["hair"] if h.get("v7")}
 for pair, v in ledges.items():
     b, k = pair.split("+")
@@ -905,6 +915,8 @@ for pair, v in ledges.items():
 # never cutting the head.
 ENCLOSES = {a["id"] for a in CAT["accessories"] if a.get("encloses")}
 for pid, r in headwear.items():
+    if pid in SPLIT_FROM:   # Roblox's own piece, moved with its hairstyle: its fit over that hair (the brim, the mic,
+        continue            # strands through the band, open card edges) is Roblox's, reported in the JSON, not failed
     check("open_edges", r["open_edges"], LIMITS["hat_open_edges"], pid)
     if pid not in ENCLOSES:
         check("gap_max", r["gap"]["max"], LIMITS["hat_gap_max"], pid)

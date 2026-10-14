@@ -1,10 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { glbStats, readGlb } from "@/lib/game/perf/glbStats";
+import { CHARACTER_BUDGET } from "@/lib/game/perf/budget";
 import { BASE_URL, HAIR_MAPS_URL, OLD_HAIR, LOD_SKIN_URL, CLIPS, DEFAULT_LOOK, FACE, FACE_ATLAS2_URLS, FACE_ATLAS_URLS, PALETTE, PARTS, PART_BY_ID, parseLook, randomLook, resolveParts, seeded, wear, wornParts } from "./look";
 
 const web = join(__dirname, "../../..");
 const art = join(web, "../art/characters");
+/** A web copy that sync-character-assets.mjs meshopt-compressed: the same triangles and primitives as its art source. */
+function shipsCompressed(shipped: Buffer, source: Buffer, name: string) {
+  expect((readGlb(shipped).json as { extensionsRequired?: string[] }).extensionsRequired, name).toContain("EXT_meshopt_compression");
+  const [a, b] = [glbStats(shipped), glbStats(source)];
+  expect([a.triangles, a.primitives, a.materials, a.bones], name).toEqual([b.triangles, b.primitives, b.materials, b.bones]);
+}
 
 describe("character catalogue", () => {
   it("matches art/characters (re-run scripts/sync-character-assets.mjs after a character build)", () => {
@@ -22,12 +30,29 @@ describe("character catalogue", () => {
     const lod = JSON.parse(readFileSync(join(art, "lod1/lod.json"), "utf8")) as Record<string, { tris: number; lod1: number }>;
     for (const p of PARTS) {
       expect(lod[p.glb], p.glb).toBeDefined();
-      expect(readFileSync(join(web, "public/assets/characters/v6/lod1", p.glb)).equals(readFileSync(join(art, "lod1", p.glb))), p.glb).toBe(true);
+      const shipped = readFileSync(join(web, "public/assets/characters/v6/lod1", p.glb)), source = readFileSync(join(art, "lod1", p.glb));
+      if (p.full) shipsCompressed(shipped, source, `lod1/${p.glb}`);
+      else expect(shipped.equals(source), p.glb).toBe(true);
       expect(lod[p.glb].lod1, p.glb).toBeLessThanOrEqual(lod[p.glb].tris);
     }
     expect(existsSync(join(web, "public", LOD_SKIN_URL))).toBe(true);
     const all = Object.values(lod).reduce((s, v) => [s[0] + v.tris, s[1] + v.lod1], [0, 0]);
     expect(all[1] / all[0]).toBeLessThan(0.9); // shape-checked: hair and outfits lighten, glasses, prints and layered tops stay whole
+  });
+  it("ships the whole hairstyles meshopt-compressed in every tier, with a far LOD 2 within 1,200 (head-roblox)", () => {
+    const lod2 = JSON.parse(readFileSync(join(art, "lod2/lod.json"), "utf8")) as Record<string, { tris: number; lod2: number }>;
+    const hair = PARTS.filter(p => p.full);
+    expect(Object.keys(lod2).sort()).toEqual(hair.map(p => p.glb).sort());
+    for (const p of hair) {
+      shipsCompressed(readFileSync(join(web, "public/assets/characters/v6", p.glb)), readFileSync(join(art, p.glb)), p.glb);
+      const shipped = readFileSync(join(web, "public/assets/characters/v6/lod2", p.glb));
+      shipsCompressed(shipped, readFileSync(join(art, "lod2", p.glb)), `lod2/${p.glb}`);
+      expect(glbStats(shipped).triangles, `lod2/${p.glb}`).toBeLessThanOrEqual(1200);
+      expect(glbStats(shipped).triangles, `lod2/${p.glb}`).toBeLessThanOrEqual(glbStats(readFileSync(join(web, "public/assets/characters/v6/lod1", p.glb))).triangles);
+    }
+    const parts = resolveParts(DEFAULT_LOOK);
+    expect(parts.find(p => p.id === DEFAULT_LOOK.back)!.lod2).toMatch(/\/lod2\/hair\/full\//);
+    for (const p of parts.filter(q => q.id !== DEFAULT_LOOK.back)) expect(p.lod2, p.id).toBe(p.lod);   // the rest: their LOD 1
   });
   it("has unique ids, known slots, budgets, and the palette sizes of row 143", () => {
     expect(new Set(PARTS.map(p => p.id)).size).toBe(PARTS.length);
@@ -36,8 +61,8 @@ describe("character catalogue", () => {
       // Hair and headwear are closed solids (avatar-fit); a hat carries its own hair tuck and replaces the back hair.
       // Sculpted-lock hair (avatar v7) spends more per piece; the full look stays under ~4000 (next test).
       const lockHair = (p as { v7?: boolean }).v7;
-      // a full hairstyle (head fit) is the whole hair: within the library's bangs + back looks (1,110-1,756)
-      expect(p.tris, p.id).toBeLessThanOrEqual(p.full ? 1756 : lockHair ? 1200 : p.slot === "bangs" || p.slot === "back" ? 700 : p.group === "head" ? 1150 : 300);
+      // a whole hairstyle (head-roblox) is David's original Roblox mesh (Roblox's 4,000 cap) plus its under-cap
+      expect(p.tris, p.id).toBeLessThanOrEqual(p.full ? 4400 : lockHair ? 1200 : p.slot === "bangs" || p.slot === "back" ? 700 : p.group === "head" ? 1150 : 300);
       if (p.slot === "accessory") expect(["face", "head", "bag", "neck"]).toContain(p.group);
       if (p.variantOf) expect(PART_BY_ID.has(p.variantOf)).toBe(true);
       for (const m of p.materials) if (m.tint === "outfit") expect(m.default as number).toBeLessThan(PALETTE.outfit.length);
@@ -65,7 +90,7 @@ describe("character catalogue", () => {
       }
     }
   });
-  it("keeps a full look with sculpted-lock hair under ~4000 triangles (avatar v7)", () => {
+  it("keeps a full look within the character budget: a hat look under ~4000 triangles, a whole hairstyle's within CHARACTER_BUDGET.full", () => {
     // the base GLB's JSON chunk (its embedded face image does not decode under Node): what the engine keeps of the
     // base is the skin and the face
     const buf = readFileSync(join(web, "public", BASE_URL));
@@ -82,7 +107,8 @@ describe("character catalogue", () => {
     const bangs = Math.max(0, ...PARTS.filter(p => p.slot === "bangs").map(p => p.tris));
     const back = Math.max(...PARTS.filter(p => p.slot === "back" && !p.full).map(p => p.tris));
     const full = Math.max(...PARTS.filter(p => p.full).map(p => p.tris));   // a whole hairstyle replaces bangs and back
-    expect(base + full + outfit + glasses, "heaviest full hairstyle").toBeLessThanOrEqual(4000);
+    // head-roblox: David's hairstyles are their original Roblox meshes (up to 4,315 triangles): budget.ts prices them
+    expect(base + full + outfit + glasses, "heaviest full hairstyle").toBeLessThanOrEqual(CHARACTER_BUDGET.full.triangles);
     const hat = Math.max(...PARTS.filter(p => p.group === "head" && p.hidesBackHair).map(p => p.tris));
     expect(base + bangs + back + outfit + glasses, "heaviest bangs + back").toBeLessThanOrEqual(4000);
     expect(base + bangs + hat + outfit + glasses, "heaviest bangs + hat").toBeLessThanOrEqual(4000);
@@ -171,9 +197,21 @@ describe("looks", () => {
   it("draws every hairstyle as one primitive in one material: caps and second colours are mask channels (head fit)", () => {
     for (const p of PARTS.filter(p => p.slot === "bangs" || p.slot === "back")) expect(p.materials.map(m => m.name), p.id).toEqual(["M_Hair"]);
     const capped = PARTS.filter(p => p.map?.cap !== undefined).map(p => p.id).sort();
-    expect(capped).toEqual(["hair_dreads_cap", "hair_visor_messy"]);
-    const r = resolveParts({ ...wear(DEFAULT_LOOK, "back", "hair_visor_messy") }).find(p => p.id === "hair_visor_messy")!;
-    expect(r.map?.cap).toBe(PART_BY_ID.get("hair_visor_messy")!.map!.cap);
+    expect(capped).toEqual(["hair_dreads_cap"]);
+    const r = resolveParts(wear(DEFAULT_LOOK, "back", "hair_dreads_cap")).find(p => p.id === "hair_dreads_cap")!;
+    expect(r.map?.cap).toBe(PART_BY_ID.get("hair_dreads_cap")!.map!.cap);
+  });
+  it("splits #8's visor off its hair into a hat with a fixed grey and its own logo colour (head-roblox, David)", () => {
+    const hair = PART_BY_ID.get("hair_visor_messy")!, visor = PART_BY_ID.get("acc_visor")!;
+    expect(hair.map?.cap).toBeUndefined();
+    expect([visor.slot, visor.group, visor.hidesBackHair, !!visor.full]).toEqual(["accessory", "head", false, false]);
+    const look = { ...wear(wear(DEFAULT_LOOK, "back", "hair_visor_messy"), "accessory", "acc_visor"), hairAccent: 3 };
+    const parts = resolveParts(look);
+    expect(parts.map(p => p.id)).toEqual(expect.arrayContaining(["hair_visor_messy", "acc_visor"]));   // worn over the hair, not instead
+    const v = parts.find(p => p.id === "acc_visor")!;
+    expect(v.tints).toEqual({ M_Hair: "#2B2B33" });                 // no hair colour
+    expect(v.map?.accentHex).toBe("#E9B530");                        // the look's hair accent never recolours the logo
+    expect(v.lod2).toBe(v.lod);
   });
   it("ships the hair shading atlas the mapped styles sample", () => {
     expect(existsSync(join(web, "public", HAIR_MAPS_URL))).toBe(true);
