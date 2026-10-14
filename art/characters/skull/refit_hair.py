@@ -30,12 +30,14 @@ bpy.context.preferences.filepaths.save_version = 0
 # file -> {collection: (lat, lon, lift m)}: the hand pass after the move (fit_check's dive report pointed at these)
 TOUCH = {"hair_backs.blend": {"back_bun": [(26, -70, 0.003), (30, -176, 0.009, 0.1)],
                                # v9 (the classic head's rounded rim): locks that cut its curve lift, locks that bridge it sink
-                               "back_pigtails": [(45, -150, 0.0025)], "back_twin_buns": [(25, 153, 0.0025)],
-                               "back_high_pony": [(42, -180, -0.002, 0.1, None, 1.0, 7), (44, -170, -0.002, 0.1, None, 1.0, 7), (44, 170, -0.002, 0.1, None, 1.0, 7)]},
+                               "back_pigtails": [(45, -150, 0.0025), (39, -69, 0.007, 0.1)], "back_twin_buns": [(25, 153, 0.0025)],
+                               "back_high_pony": [(42, -180, -0.002, 0.1, None, 1.0, 7), (44, -170, -0.002, 0.1, None, 1.0, 7), (44, 170, -0.002, 0.1, None, 1.0, 7), (37, -112, 0.006, 0.08, None, 1.0, 8), (33, -117, 0.003, 0.06)]},
          # the hime side locks run down past the v8 jaw's tighter corner: more segments, so their faces follow it
          # instead of cutting a chord through it
-         "hair_bangs.blend": {"bangs_hime": [(-42, -67, 0.0, 0.06, None, 1.0, 14), (-42, 67, 0.0, 0.06, None, 1.0, 14)],
-                              "bangs_straight_long": [(13, 42, 0.004, 0.1, None, 0.9, 7), (14, 38, 0.003, 0.08, None, 0.9, 7)], "bangs_asym_block": [(20, -54, -0.002, 0.1, None, 1.0, 7)]}}
+         "hair_bangs.blend": {"bangs_hime": [(-42, -67, 0.0, 0.06, None, 1.0, 14), (-42, 67, 0.0, 0.06, None, 1.0, 14), (22, 48, -0.002, 0.05), (20, 67, -0.003, 0.06)],
+                              "bangs_straight_long": [(13, 42, 0.004, 0.1, None, 0.9, 7), (14, 38, 0.003, 0.08, None, 0.9, 7), (8, 69, -0.002, 0.06)], "bangs_asym_block": [(20, -54, -0.003, 0.06, None, 1.0, 7), (20, -68, -0.003, 0.06)],
+                              # the temples round into the classic head (the cheek rounding): side locks that bridge it sink
+                              "bangs_straight": [(16, 66, -0.002, 0.08, None, 0.85), (18, -60, -0.002, 0.08, None, 0.85)]}}
 
 
 # collection -> segments for every lock but the named ones (bangs_hime: its fringe gives back the side locks' extra

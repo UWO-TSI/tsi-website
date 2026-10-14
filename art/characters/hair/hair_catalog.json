@@ -188,7 +188,7 @@
    "id": "back_high_pony",
    "name": "High ponytail",
    "sheet_cell": "B6.5",
-   "tris": 902,
+   "tris": 918,
    "locks": 15,
    "file": "back/back_high_pony.glb",
    "source": "v7/hair_backs.blend"

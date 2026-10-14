@@ -945,7 +945,7 @@
    "slot": "accessory",
    "name": "Flower crown",
    "glb": "accessories/accessory/acc_flower_crown.glb",
-   "tris": 864,
+   "tris": 704,
    "materials": [
     {
      "name": "M_Main",
@@ -1132,7 +1132,7 @@
    "slot": "accessory",
    "name": "Cat ears",
    "glb": "accessories/accessory/acc_cat_ears.glb",
-   "tris": 344,
+   "tris": 184,
    "materials": [
     {
      "name": "M_Main",
@@ -2169,7 +2169,7 @@
    "slot": "back",
    "name": "High ponytail",
    "glb": "hair/back/back_high_pony.glb",
-   "tris": 902,
+   "tris": 918,
    "materials": [
     {
      "name": "M_Hair",

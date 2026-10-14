@@ -43,6 +43,9 @@ export interface CatalogPart {
   map?: { shade: number; accent?: number; cap?: number };
   /** A two-tone style's second colour: a hair palette index, or "skin" (a fade to the skin), unless the look picks one. */
   accent?: { default: number | "skin" };
+  /** Attached the Roblox way (head-roblox): by its own HairAttachment from hair/roblox_attachments.json; provisional: the
+   * attachment is a seat fit until David copies the real one from Studio. */
+  roblox?: { provisional: boolean };
   /** The economy item (crafted) that unlocks this part; its catalogue_ref is this part's id. Such parts are never sold. */
   item?: string;
   /**

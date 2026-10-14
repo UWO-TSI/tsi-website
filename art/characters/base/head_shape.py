@@ -117,9 +117,9 @@ HAIR_ATT = CLASSIC_C + Vector((0.0, 0.0, CLASSIC["H"] * STUD))                  
 # above the brows, below the hairline, so the bangs' roll and the hairline seam lie on the classic head). Below the nape line (hair hangs free there) the head tapers into the v8 jaw, nape and chin, which the
 # neck joins: from NECK_LAT[0] (lat -26 is the nape line at the back) to fully v8 at NECK_LAT[1], all round.
 FACE_KEEP = (0.04, 0.30, 0.96, 1.0)       # U0, W0 (above it the forehead rule), U1, W1
-FACE_LAT = (14.0, 34.0)
+FACE_LAT = (10.0, 44.0)
 FACE_MARGIN = 0.08
-FACE_RAMP = 0.12
+FACE_RAMP = 0.16
 NECK_LAT = (-20.0, -65.0)
 ZONE_STEP = 2.0          # deg: the face weight's grid (geocentric lat, |lon|), cached in skull/face_zone.json
 

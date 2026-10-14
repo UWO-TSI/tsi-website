@@ -118,10 +118,18 @@ def covered(ob, others):
     return False
 
 
+CARD_LOD_MAX = 1180     # a whole hairstyle's LOD 1 stays under the LOD 1 part budget (1,200, budget.ts) with a margin
+
+
 def decimate(ob, under, cards=False, snug=SNUG):
     """Decimate `ob` in place at the first ratio that keeps its shape (`under`: something lies on it); returns the
-    ratio, or None (kept whole)."""
-    for ratio in RATIOS:
+    ratio, or None (kept whole). Card hair (head-roblox: David's hairstyles at up to 1,700 triangles) only tries ratios
+    that land under CARD_LOD_MAX, and takes the largest of them when none keeps the shape: it is drawn small."""
+    n = ntris(ob)
+    ratios = RATIOS
+    if cards:
+        ratios = tuple(r for r in RATIOS if n * r <= CARD_LOD_MAX) or (CARD_LOD_MAX / n,)
+    for k, ratio in enumerate(ratios):
         trial = ob.copy()
         trial.data = ob.data.copy()
         bpy.context.scene.collection.objects.link(trial)
@@ -140,7 +148,8 @@ def decimate(ob, under, cards=False, snug=SNUG):
             print("LODDBG", ob.name, ratio, round(far, 4), round(out, 4), round(sink, 4), under)
         # cards: strand-card hair (thin open sheets over its own opaque under-cap) has no inside to sink into, so only
         # the shape tolerance holds it (the sign of a sheet's normal says nothing about sinking)
-        if far <= TOLERANCE and (cards or (sink <= snug and (out <= SNUG or not under))):
+        last_card = cards and k == len(ratios) - 1 and n > CARD_LOD_MAX
+        if (far <= TOLERANCE and (cards or (sink <= snug and (out <= SNUG or not under)))) or last_card:
             old = ob.data
             ob.data = trial.data
             bpy.data.objects.remove(trial)

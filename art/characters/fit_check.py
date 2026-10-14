@@ -44,7 +44,7 @@ from mathutils.bvhtree import BVHTree
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "base"))
-from head_shape import head_point, HC, CHIN, HRZT, hair_vol, hair_outer, hairline  # noqa: E402
+from head_shape import head_point, HC, CHIN, HRZT, hair_vol, hair_outer, hairline, classic_radius  # noqa: E402
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "skull"))
 import skull as SK  # noqa: E402  (head fit: the shared skull's fit points and clearances)
 
@@ -190,6 +190,11 @@ def hits(bvh, d, far=0.7, signed=False):
 
 
 R_SCALP = np.array([(hits(HEAD, d, 0.5) or [np.nan])[-1] for _, _, d in RAYS])   # the outermost head hit
+# head-roblox: Roblox's classic head along the same rays (the head David's hairs were made on): a hair attached the
+# Roblox way is held to what our head adds over Roblox's (extra air where ours is smaller, extra clipping where it is
+# bigger); Roblox's own air (a puffy dome, a flared rim, dreads hanging free) and its own clipping are the original's
+R_CLASSIC = np.array([classic_radius(d.normalized()) for _, _, d in RAYS])
+CAP_GAP = 0.003      # the under-cap's own height over the skin (import_hair CAP_H) and its chords
 
 
 def ray_table(bvh, keep_all=False):
@@ -354,7 +359,8 @@ def facing(p):
 
 RES = 256
 LAYER_MASK = {}
-for layer in ("eyes", "brows", "mouth"):
+FACE_LAYERS = ("eyes", "mouth")      # eyebrows are gone from the look (tutorial-v2, row 309): the face check skips them
+for layer in FACE_LAYERS:
     m = np.zeros((RES, RES), np.float32)
     for fid in FACEV["layers"][layer]["items"]:
         m = np.maximum(m, item_alpha(layer, fid, RES))
@@ -434,7 +440,7 @@ for fid in FACEV["layers"]["eyes"]["items"]:
 # head fit (row 304): how far every painted layer turns away from straight ahead, over every pixel of every item: the
 # flat face area keeps the mouth and brows facing the camera, not wrapping under the chin or over the brow
 facing_max = {}
-for layer in ("eyes", "brows", "mouth"):
+for layer in FACE_LAYERS:
     ys, xs = np.nonzero(LAYER_MASK[layer] > 0.5)
     worst = 0.0
     for k in range(0, len(xs), 4):
@@ -480,11 +486,20 @@ for part in CAT["hair"]:
         region = (LAT >= part.get("capFrom", -24)) & ~((np.abs(LON) < 61) & (LAT < HAIRLINE))
     on = region & ~np.isnan(inn) & (inn - R_SCALP <= 0.12) & (out - R_SCALP >= -0.005)   # (not a ray grazing a hidden fan)
     air = np.array([air_above(every[i], R_SCALP[i], open_e == 0) if on[i] else np.nan for i in range(len(RAYS))])
+    roblox_air = None
+    if part.get("roblox"):          # the air Roblox's own fit has on that ray, over its classic head: only the excess counts
+        air_c = np.array([air_above(every[i], R_CLASSIC[i], open_e == 0) if on[i] else np.nan for i in range(len(RAYS))])
+        roblox_air = stats(erode(air_c))
+        # where the hair rests on Roblox's head (its own air there within the gap limit) it must rest on ours; where it
+        # stands off Roblox's head (a dome, a rim, hanging dreads) that air is the hair's own shape
+        rests = ~np.isnan(air_c) & (air_c <= LIMITS["hair_gap_max"])
+        air = np.where(np.isnan(air), np.nan, np.where(rests, air, np.minimum(air, CAP_GAP)))
     gap = erode(air)
     # skin showing through the hair: where a shell piece covers the scalp its outer surface must stay above the skin
     # (a neighbour-confirmed dip; lock pieces bury their roots on purpose and are checked lock by lock instead)
     under = np.where(on & (inn - R_SCALP < 0.05), R_SCALP - out, np.nan)
     rec = {"slot": part["slot"], "tris": part["tris"], "open_edges": open_e, "gap": stats(gap),
+           **({"roblox_own_air": roblox_air} if roblox_air else {}),
            "on_scalp_share": round(float(np.mean(air[on] <= 5e-4)), 3) if on.any() else None,
            "outer_median": stats(np.where(on, out - R_SCALP, np.nan))["median"],
            **({} if part.get("v7") else (lambda st: {"skin_through": st["max"], "skin_through_at": st.get("worst_at")})(
@@ -760,7 +775,7 @@ def neighbours(k):
     return [ii * NLO + (j + dj) % NLO for ii in (i - 1, i, i + 1) if 0 <= ii < NLA for dj in (-1, 0, 1)]
 
 
-def clip_depth(groups, below=None):
+def clip_depth(groups, below=None, roblox=False):
     """Deepest point under the skin of any outward-facing face a viewer could see: faces whose centre is within 2 cm
     under the scalp (deeper is hidden closing geometry), facing out (normal . radial > 0.3); lock root zones are skipped
     by the caller's per-lock check, so here the v7 pieces skip faces within 1.5 cm of the scalp's root ring depth."""
@@ -775,6 +790,8 @@ def clip_depth(groups, below=None):
             dd = depth_in_head(c)
             if dd <= 0 or dd > 0.02:
                 continue
+            if roblox and (c - HC).length < classic_radius((c - HC).normalized()) - 0.002:
+                continue                     # under Roblox's classic head too: the original's clipping (reported apart)
             if below is not None:            # only where it would show: under the scalp line (the face, the ears)
                 d0 = (c - HC).normalized()
                 lat_g = math.degrees(math.asin(max(-1, min(1, d0.z))))
@@ -818,7 +835,10 @@ for part in CAT["hair"] + [a for a in CAT["accessories"] if kind_of(a) == "hat"]
     # clip: v7 lock pieces have their own lock-by-lock dive check (root zones are buried on purpose)
     # a full hairstyle's cards root under its own under-cap above the scalp line (hidden, like the locks' buried roots)
     rec["clip"], rec["clip_at"] = (None, None) if pid in V7_LOCKS else clip_depth(
-        {k: v for k, v in groups.items() if k != "M_HairCap"}, below=GEO_SCALP if kind == "full" else None)
+        {k: v for k, v in groups.items() if k != "M_HairCap"}, below=GEO_SCALP if kind == "full" else None,
+        roblox=bool(part.get("roblox")) and kind == "full")
+    if part.get("roblox") and kind == "full":         # every clip under our skin, the original's included (reported)
+        rec["clip_incl_original"] = clip_depth({k: v for k, v in groups.items() if k != "M_HairCap"}, below=GEO_SCALP)[0]
     floats, uncovered = {}, []
     if part.get("covers") == ["top"]:                 # a tuft on the crown: its foot on the top fit point
         top_tree, _ = bvh_of(groups)
@@ -878,7 +898,6 @@ V7_IDS = {h["id"] for h in CAT["hair"] if h.get("v7")}
 for pair, v in ledges.items():
     b, k = pair.split("+")
     check("ledge_max", v, LIMITS["seam_ledge_max_locks"] if b in V7_IDS and k in V7_IDS else LIMITS["seam_ledge_max"], pair)
-check("brow_cover", hair[DEFAULT_BANGS].get("brow_cover"), LIMITS["brow_cover_default"], DEFAULT_BANGS)
 # A costume that encloses the whole head (`encloses`: the Halloween pumpkin head) stands off the hair all round on
 # purpose: it is held to no gap, rise, float, reach or ear-rim limit, only to being closed, never cut by the hair and
 # never cutting the head.

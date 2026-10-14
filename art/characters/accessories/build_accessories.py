@@ -284,10 +284,11 @@ def blossom(pc, c, n, r=0.03, petals=5):
 def flower_crown(pc):
     """A green vine ring resting on the hair behind the hairline, with eight blossoms alternating pink and white."""
     pc.region = "head"
-    lat = lambda lon: 46 + 10 * math.cos(math.radians(lon))      # behind the bangs' roots, on the cap all round
-    off = lambda lon: max(hair_vol(lat(lon)) + 0.004, worn_top(lat(lon), lon, 1, 2) + 0.003)    # seated on the lock ridges
+    lat = lambda lon: 48 + 8 * math.cos(math.radians(lon))       # behind the bangs' roots, on the cap all round (v9: over
+                                                                  # the classic head's rim at the sides, not below it)
+    off = lambda lon: max(hair_vol(lat(lon)) + 0.002, worn_top(lat(lon), lon, 0.5, 1) + 0.0032)  # seated on the lock ridges
     pc.mat = "M_Trim"                                                       # (v9: a finer footprint and path over the rim)
-    pc.tube([hair_point(lat(l), l, off(l)) for l in range(0, 360, 6)], [(0.0065, 0.005)] * 60, sides=4, closed_loop=True)
+    pc.tube([hair_point(lat(l), l, off(l)) for l in range(0, 360, 9)], [(0.0065, 0.005)] * 40, sides=4, closed_loop=True)
     for k, l0 in enumerate(range(0, 360, 45)):
         pc.mat = "M_Main" if k % 2 == 0 else "M_Accent"
         l = max(range(l0 - 12, l0 + 13, 3), key=lambda x: worn_top(lat(x), x, 1, 2))   # each blossom sits on a lock
@@ -308,7 +309,7 @@ def crystal_circlet(pc):
     pc.tube([hair_point(lat(l), l, off(l)) for l in range(0, 360, 5)], [(0.0032, 0.0065)] * 72, sides=4, closed_loop=True)
     pc.mat = "M_Accent"
     for lon, h, wd in ((0, 0.05, 0.022), (-32, 0.022, 0.012), (32, 0.022, 0.012)):
-        c = hair_point(lat(lon) + (5 if lon == 0 else 0), lon, off(lon) + (0.012 if lon == 0 else 0.004))   # v9: clear of the fringe's roll
+        c = hair_point(lat(lon) + (5 if lon == 0 else 0), lon, off(lon) + (0.016 if lon == 0 else 0.004))   # v9: clear of the fringe's roll
         n = (c - HC).normalized()
         u = Vector((0, 0, 1)).cross(n).normalized()
         up = n.cross(u).normalized()
@@ -423,7 +424,7 @@ def cat_ears(pc):
     pc.region = "head"
     lat = lambda lon: 52 + 6 * math.cos(math.radians(lon))
     off = lambda lon: max(hair_vol(lat(lon)) + 0.003, worn_top(lat(lon), lon, 1, 2) + 0.002)
-    pc.tube([hair_point(lat(l), l, off(l)) for l in range(-100, 101, 5)], [(0.004, 0.006)] * 41, sides=4, tip=False)
+    pc.tube([hair_point(lat(l), l, off(l)) for l in range(-100, 101, 10)], [(0.004, 0.006)] * 21, sides=4, tip=False)
     for sx in (1, -1):
         lon = sx * 42
         base = hair_point(lat(lon), lon, off(lon))
