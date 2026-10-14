@@ -133,3 +133,16 @@ describe("world audio lifecycle", () => {
     sound.onended?.(); manager.setVolumes({ master: 0 }); expect(sound.volume).toBe(initial); manager.stop();
   });
 });
+
+describe("loop layers on the world clock (the campfire's drums)", () => {
+  it("start every client at the same point of the bar", async () => {
+    const { loopOffset } = await import("./audio");
+    expect(loopOffset(0, 8)).toBe(0);
+    expect(loopOffset(8_000, 8)).toBe(0);
+    expect(loopOffset(10_500, 8)).toBeCloseTo(2.5);
+    expect(loopOffset(10_500, 4)).toBeCloseTo(2.5);
+    expect(loopOffset(-500, 4)).toBeCloseTo(3.5);
+    // A 4 s layer and an 8 s layer started at any instant stay on the same bar.
+    for (const t of [1234, 98_765, 1_791_931_346_000]) expect(loopOffset(t, 8) % 4).toBeCloseTo(loopOffset(t, 4));
+  });
+});
