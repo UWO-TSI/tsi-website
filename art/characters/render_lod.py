@@ -11,6 +11,7 @@ ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 OUT = ARGS[0] if ARGS else "/tmp/lod-compare.png"
 PATTERN = ARGS[1] if len(ARGS) > 1 else "*"
 LOD = json.load(open(os.path.join(HERE, "lod1", "lod.json")))
+CAT_BASE = json.load(open(os.path.join(HERE, "character_catalog.json")))["base"]["clips_glb"]
 COLS = 8
 CELL = (1.5, 1.2)  # a pair's width and height (rig units)
 
@@ -44,7 +45,7 @@ def main():
     for i, rel in enumerate(names):
         cx, cy = (i % COLS) * CELL[0], -(i // COLS) * CELL[1]
         base = rel.startswith("base/")
-        full = os.path.join(HERE, "base/v7_clips.glb") if base else os.path.join(HERE, rel)
+        full = os.path.join(HERE, CAT_BASE) if base else os.path.join(HERE, rel)
         for k, (path, x) in enumerate(((full, cx - 0.33), (os.path.join(HERE, "lod1", rel), cx + 0.33))):
             for o in meshes_of(path, skin_only=base and k == 0):
                 o.location.x += x

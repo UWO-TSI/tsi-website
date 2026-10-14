@@ -23,6 +23,13 @@ GLB (base/v7_clips.glb: the hand-modeled v7 head; v6_clips.glb before avatar v7)
             skin along the lock (outward-facing faces inside the head, past the root zone), open edges; the gap and
             open-edge checks above apply to these pieces too, the gap only over the under-cap (hem locks flare
             free by design)
+  skull     (head fit, specs/characters/head-fit.md) every hair piece and hat against the shared skull and its fit points
+            (skull/skull.py): clip = how deep any outward-facing surface a viewer could see sinks under the skin (lock
+            root zones and hidden closing geometry more than 2 cm in excepted); float = at every fit point the piece
+            covers (bangs: hairline_C; backs: crown, top; full styles: all three; hats: top, crown, hat_C) the air
+            between the scalp (hats: the hair's outer surface) and the piece's underside, worst of the ray and its
+            neighbours, a miss counting as uncovered; reach = the piece inside its type's box from the top fit point;
+            ears = no hat rim below the ear zone's top at the sides
 Rays: directions head_point(lat, lon) - HC on a 2 x 3 degree grid; back pieces are measured above lat -24 (the caps;
 pigtails and lengths hanging below them are free by design; v7 lock pieces above their under-cap's hem, capFrom),
 bangs between lat -60 and the hairline (above it every back cap covers the scalp under them), only where the hair is
@@ -38,6 +45,8 @@ from mathutils.bvhtree import BVHTree
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "base"))
 from head_shape import head_point, HC, CHIN, HRZT, hair_vol, hair_outer, hairline  # noqa: E402
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "skull"))
+import skull as SK  # noqa: E402  (head fit: the shared skull's fit points and clearances)
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 if "--root" in ARGS:                  # measure another checkout's art/characters (e.g. the before state)
@@ -49,6 +58,7 @@ LIMITS = {
     "hair_open_edges": 0,          # closed shells only
     "hair_gap_max": 0.004,         # m of air under the hair anywhere on the scalp region
     "hair_gap_median": 0.001,
+    "hair_gap_median_full": 0.003,  # head fit: a full hairstyle's under-cap rides CAP_H (2.5 mm) over the scalp
     "hair_skin_through_max": 0.0,  # m the head's skin stands out of a covering shell piece (neighbour-confirmed);
                                    # reported as a FLAG: the older library's long side locks had it on v6 already
     "seam_ledge_max": 0.003,       # step where bangs and back cap meet over the crown (shell pieces)
@@ -63,11 +73,22 @@ LIMITS = {
     "hat_poke_max": 0.002,         # hair showing through a hat
     "glasses_offset_max": 0.012,   # lens centre vs painted eye centre
     "face_stretch_max": 1.2,       # texture stretch where features are painted
-    "face_aniso_max": 1.25,
-    "eye_reach_lon_max_deg": 55.0,  # how far round the head (azimuth) any eye pixel sits: ref 18's lid ends ~51 deg
+    "face_aniso_max": 1.3,         # head fit: David's widest eyes (row 305) reach U 0.04-0.07, round the jaw's corner (1.29);
+                                   # the earlier parts stay under 1.05 on the v8 head
+    "eye_reach_lon_max_deg": 55.0,
+    "face_facing_max_deg": 52.0,   # head fit (row 304): no painted pixel of any eye, brow or mouth faces more than this
+                                    # away from straight ahead. v7: eyes 46.9, mouth 61.2 (the widest grins wrapped under
+                                    # the chin); v8's flat face: eyes 36, brows 17, mouth 51 (only the lowest pixels of the
+                                    # widest grins, W > 0.93 on the canvas, reach the chin's turn)  # how far round the head (azimuth) any eye pixel sits: ref 18's lid ends ~51 deg
                                     # round, so both eyes stay on the face in 3/4 view (v6 shipped 63)
     "lock_roots_exposed": 0,       # lock root-ring vertices not buried in the head or other hair
     "lock_dive_max": 0.002,        # m: how deep a lock's outward-facing surface goes under the skin past its root zone
+    "skull_clip_max": SK.CLEARANCE["clip_max"],     # head fit: visible surface under the skin (any piece)
+    "skull_float_max": SK.CLEARANCE["float_max"],   # head fit: air under a piece at a fit point it covers
+    "skull_hat_float_max": SK.CLEARANCE["hat_gap_max"],
+    "skull_uncovered": 0,          # fit points a piece should cover but misses
+    "skull_reach_out": 0.0,        # m outside the piece type's box from the top fit point
+    "skull_ear_rim": 0.0,          # m a hat's rim dips below the ear zone's top at the sides
 }
 FH = HRZT
 DEFAULT_BANGS, DEFAULT_BACK = "bangs_straight", "back_bob"
@@ -75,7 +96,7 @@ DEFAULT_BANGS, DEFAULT_BACK = "bangs_straight", "back_bob"
 bpy.ops.wm.read_factory_settings(use_empty=True)
 CAT = json.load(open(os.path.join(HERE, "character_catalog.json")))
 V7_FACE = os.path.join(HERE, "v7", "face", "face_v7.json")
-FACE_V7 = os.path.exists(V7_FACE) and CAT["base"].get("head") == "v7/head.blend"
+FACE_V7 = os.path.exists(V7_FACE) and CAT["base"].get("head") in ("v7/head.blend", "skull/head.blend")   # the v7 face atlas on the v7 or v8 head
 FACEV = json.load(open(V7_FACE if FACE_V7 else os.path.join(HERE, "base", "face_variants.json")))
 
 
@@ -152,6 +173,7 @@ for la in LATS:
 LAT = np.array([r[0] for r in RAYS], float)
 LON = np.array([r[1] for r in RAYS], float)
 HAIRLINE = np.array([hairline(lo) for lo in LON])
+SCALP_LINE = np.array([SK.scalp_line(lo) for lo in LON])
 
 
 def hits(bvh, d, far=0.7, signed=False):
@@ -226,6 +248,10 @@ def stats(a):
 atlas_img = bpy.data.images.load(os.path.join(HERE, "v7", "face", FACEV["atlas"]) if FACE_V7 else os.path.join(HERE, "base", FACEV["atlas"]))
 AW, AH = atlas_img.size
 ATLAS = np.array(atlas_img.pixels[:], np.float32).reshape(AH, AW, 4)[::-1]      # top row first
+ATLAS2 = None                                                                    # the second page (David's faces, row 305)
+if FACE_V7 and FACEV.get("atlas2"):
+    _a2 = bpy.data.images.load(os.path.join(HERE, "v7", "face", FACEV["atlas2"]))
+    ATLAS2 = np.array(_a2.pixels[:], np.float32).reshape(_a2.size[1], _a2.size[0], 4)[::-1]
 
 
 def item_alpha(layer, fid, res):
@@ -257,19 +283,30 @@ def item_alpha(layer, fid, res):
 def item_alpha_v7(layer, fid, res):
     L = FACEV["layers"][layer]
     it = L["items"][fid]
+    if layer == "eyes" and "left" in it and it["left"] is None:   # a pair drawn as one cell, on the centre line
+        return item_alpha_cell(it["open"], FACEV["anchors"]["eye_pair"], False, res)
+    if layer == "eyes" and "left" in it:   # a pair drawn as two cells (David's faces): each at its own anchor, unmirrored
+        a = item_alpha_cell(it["open"], FACEV["anchors"]["eye"], False, res)
+        return np.maximum(a, item_alpha_cell(it["left"], FACEV["anchors"]["eye_left"], False, res))
     if layer == "eyes":
         cell, anchor, mirror = it["open"], FACEV["anchors"][L["anchor"]], L["mirror"]
     elif layer == "extras":
         cell, anchor, mirror = it["cell"], FACEV["anchors"][it["anchor"]], it["mirror"]
     else:
         cell, anchor, mirror = it, FACEV["anchors"][L["anchor"]], L["mirror"]
-    x, y, w, h, ax, ay = cell
+    return item_alpha_cell(cell, anchor, mirror, res)
+
+
+def item_alpha_cell(cell, anchor, mirror, res):
+    x, y, w, h, ax, ay = cell[:6]
+    page = ATLAS2 if len(cell) > 6 and cell[6] == 1 and ATLAS2 is not None else ATLAS
+    ph, pw = page.shape[:2]
     k = res / FACEV["density"]
     canvas = np.zeros((res, res), np.float32)
     W_, H_ = max(1, int(round(w * k))), max(1, int(round(h * k)))
     ys = (np.arange(H_) + 0.5) / H_ * h
     xs = (np.arange(W_) + 0.5) / W_ * w
-    cellA = ATLAS[(y + ys.astype(int)).clip(0, AH - 1)][:, (x + xs.astype(int)).clip(0, AW - 1), 3]
+    cellA = page[(y + ys.astype(int)).clip(0, ph - 1)][:, (x + xs.astype(int)).clip(0, pw - 1), 3]
     for flip in ((False, True) if mirror else (False,)):
         au = 1 - anchor[0] if flip else anchor[0]
         X0 = int(round(au * res - ((w - ax) if flip else ax) * k))
@@ -390,26 +427,54 @@ for fid in FACEV["layers"]["eyes"]["items"]:
             U = float((xs[mask] + 0.5).dot(wgt) / wgt.sum() / RES)
             W = float((ys[mask] + 0.5).dot(wgt) / wgt.sum() / RES)
             cen[side] = locate(U, W)
-    eye_centres[fid] = cen
+    it = FACEV["layers"]["eyes"]["items"][fid]
+    if not (isinstance(it, dict) and "left" in it and it["left"] is None):   # a pair drawn as one cell across the
+        eye_centres[fid] = cen                                              # centre line has no per-eye centre
+
+# head fit (row 304): how far every painted layer turns away from straight ahead, over every pixel of every item: the
+# flat face area keeps the mouth and brows facing the camera, not wrapping under the chin or over the brow
+facing_max = {}
+for layer in ("eyes", "brows", "mouth"):
+    ys, xs = np.nonzero(LAYER_MASK[layer] > 0.5)
+    worst = 0.0
+    for k in range(0, len(xs), 4):
+        p = locate((xs[k] + 0.5) / RES, (ys[k] + 0.5) / RES)
+        if p is not None:
+            worst = max(worst, facing(p))
+    facing_max[layer] = round(worst, 1)
 
 brow = item_alpha("brows", FACEV["layers"]["brows"]["default"], RES)
 by, bx = np.nonzero(brow > 0.5)
 BROW_PTS = [p for p in (locate((bx[k] + 0.5) / RES, (by[k] + 0.5) / RES) for k in range(0, len(bx), 2)) if p is not None]
 dflt = eye_centres[FACEV["layers"]["eyes"]["default"]]
+
+
+def PAGE2_EYE(fid):
+    it = FACEV["layers"]["eyes"]["items"][fid]
+    cell = it["open"] if isinstance(it, dict) else it
+    return len(cell) > 6 and cell[6] == 1
 face = {"feature_tris": n_feat, "stretch_max": round(worst_stretch, 3), "aniso_max": round(worst_aniso, 3), "per_layer": per_layer,
-        "stretch_worst_at": worst_at, "aniso_worst_at": aniso_at, "eye_reach_deg": round(eye_reach, 1), "eye_reach_lon_deg": round(eye_lon, 1),
+        "stretch_worst_at": worst_at, "aniso_worst_at": aniso_at, "eye_reach_deg": round(eye_reach, 1), "eye_reach_lon_deg": round(eye_lon, 1), "facing_max_deg": facing_max,
         "default_eye_centre_lon_deg": round(abs(lon_of(dflt["L"])), 1) if dflt.get("L") else None,
         "default_eye_centre_z": round(dflt["L"].z, 4) if dflt.get("L") else None}
 
 # ================================================================ hair
 hair = {}
 tables = {}
+everys = {}
+groups_of = {}
 for part in CAT["hair"]:
     groups, open_e, _ = load_glb(os.path.join(HERE, part["glb"]))
     bvh, _ = bvh_of(groups)
     inn, out, every = ray_table(bvh, keep_all=True)
     tables[part["id"]] = (inn, out)
-    if part["slot"] == "bangs":         # the forehead: above the hairline every back cap covers the scalp under them
+    everys[part["id"]] = (every, open_e == 0)
+    groups_of[part["id"]] = groups
+    if part.get("full"):                # head fit: a whole hairstyle covers the scalp above the skull's scalp line (its
+        region = LAT >= SCALP_LINE + 5  # under-cap runs to it, a polyline of 15 deg columns: 5 deg of margin); below it,
+        if part.get("covers") == ["top"]:   # side locks and fringes may hang free. A tuft covers no scalp (a bald style).
+            region = np.zeros(len(RAYS), bool)
+    elif part["slot"] == "bangs":       # the forehead: above the hairline every back cap covers the scalp under them
         region = (LAT >= -60) & (LAT <= HAIRLINE + 2)
     else:   # over the under-cap: from its hem up, outside the face window (no cap there by design: hair frames the face)
         region = (LAT >= part.get("capFrom", -24)) & ~((np.abs(LON) < 61) & (LAT < HAIRLINE))
@@ -520,7 +585,7 @@ def head_only_bvh(path):
     dg = bpy.context.evaluated_depsgraph_get()
     vs, ps = [], []
     for o in new:
-        if o.type == "MESH" and o.name.split(".")[0] in ("V7_Head", "V6_Head"):
+        if o.type == "MESH" and o.name.split(".")[0] in ("V8_Head", "V7_Head", "V6_Head"):
             e = o.evaluated_get(dg)
             me = e.to_mesh()
             base = len(vs)
@@ -620,7 +685,7 @@ ledges, ledge_at = {}, {}
 # a piece's surface under the scalp (buried lock roots, the hidden closing fan at the head centre) is no seam edge
 OUTER = {pid: np.where(o < R_SCALP - 0.006, np.nan, o) for pid, (_, o) in tables.items()}
 for b in (p["id"] for p in CAT["hair"] if p["slot"] == "bangs"):
-    for k in (p["id"] for p in CAT["hair"] if p["slot"] == "back"):
+    for k in (p["id"] for p in CAT["hair"] if p["slot"] == "back" and not p.get("full")):   # a full style has no bangs
         ledges[f"{b}+{k}"], ledge_at[f"{b}+{k}"] = seam_step(OUTER[b], OUTER[k])
 worst_pair = max(ledges, key=ledges.get)
 seam = {"ledge_max": ledges[worst_pair], "worst_pair": worst_pair, "worst_at": ledge_at.get(worst_pair),
@@ -642,8 +707,12 @@ for part in CAT["accessories"]:
             if not rim:
                 continue
             cx, cz = sum(v.x for v in rim) / len(rim), sum(v.z for v in rim) / len(rim)
-            offs = [math.hypot(c[side].x - cx, c[side].z - cz) for c in eye_centres.values() if c.get(side) is not None]
+            # the eye set the glasses are fitted to (the first atlas page); David's own eyes (page 2, row 305) sit where
+            # he drew them, some far from the common eye line: reported, not held to the lens
+            offs = [math.hypot(c[side].x - cx, c[side].z - cz) for f, c in eye_centres.items() if c.get(side) is not None and not PAGE2_EYE(f)]
+            offs2 = [math.hypot(c[side].x - cx, c[side].z - cz) for f, c in eye_centres.items() if c.get(side) is not None and PAGE2_EYE(f)]
             res[side] = {"lens_centre": [round(cx, 4), round(cz, 4)], "offset_max": round(max(offs), 4),
+                         "offset_max_page2": round(max(offs2), 4) if offs2 else None,
                          "offset_default": round(math.hypot(dflt[side].x - cx, dflt[side].z - cz), 4)}
         glasses[part["id"]] = {"open_edges": open_e,
                                "offset_max": max(r["offset_max"] for r in res.values()),
@@ -679,6 +748,109 @@ for part in CAT["accessories"]:
     print(f"HEADWEAR {part['id']:20s} open={open_e:3d} gap max={headwear[part['id']]['gap']['max']} "
           f"med={headwear[part['id']]['gap']['median']} rise max={headwear[part['id']]['rise']['max']} poke={headwear[part['id']]['poke_max']}")
 
+# ================================================================ the shared skull (head fit): clip, float, reach, ears
+def ray_index(lat, lon):
+    i = int(np.argmin(np.abs(np.array(LATS) - lat)))
+    j = int(np.argmin(np.abs(((np.array(LONS) - lon + 180) % 360) - 180)))
+    return i * NLO + j
+
+
+def neighbours(k):
+    i, j = divmod(k, NLO)
+    return [ii * NLO + (j + dj) % NLO for ii in (i - 1, i, i + 1) if 0 <= ii < NLA for dj in (-1, 0, 1)]
+
+
+def clip_depth(groups, below=None):
+    """Deepest point under the skin of any outward-facing face a viewer could see: faces whose centre is within 2 cm
+    under the scalp (deeper is hidden closing geometry), facing out (normal . radial > 0.3); lock root zones are skipped
+    by the caller's per-lock check, so here the v7 pieces skip faces within 1.5 cm of the scalp's root ring depth."""
+    worst, at = 0.0, None
+    for name, (vs, polys) in groups.items():
+        for poly in polys:
+            P = [vs[i] for i in poly]
+            c = sum(P, Vector()) / len(P)
+            nrm = (P[1] - P[0]).cross(P[2] - P[0])
+            if nrm.length < 1e-12 or nrm.normalized().dot((c - HC).normalized()) < 0.3:
+                continue
+            dd = depth_in_head(c)
+            if dd <= 0 or dd > 0.02:
+                continue
+            if below is not None:            # only where it would show: under the scalp line (the face, the ears)
+                d0 = (c - HC).normalized()
+                lat_g = math.degrees(math.asin(max(-1, min(1, d0.z))))
+                if lat_g >= below(lon_of(c)) - 2:
+                    continue
+            if dd > worst:
+                d = (c - HC).normalized()
+                worst, at = dd, [round(math.degrees(math.asin(max(-1, min(1, d.z))))), round(lon_of(c))]
+    return round(worst, 4), at
+
+
+def kind_of(part):
+    if part["slot"] == "accessory":
+        return "hat" if part.get("hidesBackHair") else None
+    return "full" if part.get("full") else part["slot"]
+
+
+def GEO_SCALP(lon):
+    """The scalp line as a geocentric latitude (clip_depth measures directions from the head centre)."""
+    d = (head_point(SK.scalp_line(lon), lon) - HC).normalized()
+    return math.degrees(math.asin(max(-1, min(1, d.z))))
+
+
+ANCHOR_RAYS = {n: ray_index(lat, lon) for n, (lat, lon, _, _) in SK.POINTS.items()}
+TOP = SK.point("top")
+REACH = SK.CLEARANCE["reach"]
+EAR_Z = head_point(SK.EAR_TOP, SK.EAR_LON).z
+skull_fit = {}
+V7_LOCKS = {h["id"] for h in CAT["hair"] if h.get("v7")}
+for part in CAT["hair"] + [a for a in CAT["accessories"] if kind_of(a) == "hat"]:
+    pid, kind = part["id"], kind_of(part)
+    if pid in groups_of:
+        groups = groups_of[pid]
+        every, closed = everys[pid]
+    else:
+        g, open_e, _ = load_glb(os.path.join(HERE, part["glb"]))
+        groups = {k: v for k, v in g.items() if k != "M_Hair"}         # the hat itself; its tuck is hair
+        hb, _ = bvh_of(groups)
+        every, closed = ray_table(hb, keep_all=True)[2], open_e == 0
+    rec = {"kind": kind}
+    # clip: v7 lock pieces have their own lock-by-lock dive check (root zones are buried on purpose)
+    # a full hairstyle's cards root under its own under-cap above the scalp line (hidden, like the locks' buried roots)
+    rec["clip"], rec["clip_at"] = (None, None) if pid in V7_LOCKS else clip_depth(
+        {k: v for k, v in groups.items() if k != "M_HairCap"}, below=GEO_SCALP if kind == "full" else None)
+    floats, uncovered = {}, []
+    if part.get("covers") == ["top"]:                 # a tuft on the crown: its foot on the top fit point
+        top_tree, _ = bvh_of(groups)
+        _, _, _, dist = top_tree.find_nearest(SK.point("top"))
+        floats["top"] = round(max(0.0, dist - 0.0), 4)
+    for name in ([] if part.get("covers") == ["top"] else part.get("covers") or SK.COVERS[kind]):
+        vals = []
+        for k in neighbours(ANCHOR_RAYS[name]):
+            base = R_SCALP[k] + (hair_outer(LAT[k]) if kind == "hat" else 0.0)
+            vals.append(air_above(every[k], base, closed))
+        ok = [v for v in vals if not np.isnan(v)]
+        if not ok:
+            uncovered.append(name)
+            continue
+        floats[name] = round(float(min(ok)), 4)
+    rec["float"], rec["uncovered"] = floats, uncovered
+    vs = [v for g in groups.values() for v in g[0]]
+    out, box = 0.0, REACH["hat" if kind == "hat" else "hair"]
+    for v in vs:
+        d = v - TOP
+        ox = max(0.0, abs(d.x) - box["side"])
+        oz = max(0.0, d.z - box["up"], -d.z - box["down"])
+        oy = max(0.0, -d.y - box["front"], d.y - box["back"])
+        out = max(out, ox, oy, oz)
+    rec["reach_out"] = round(out, 4)
+    if kind == "hat":
+        side = [v.z for v in vs if abs(v.x - HC.x) > 0.12 and abs(v.y - HC.y) < 0.08 and (v - HC).length < 0.32]
+        rec["ear_rim"] = round(max(0.0, EAR_Z - min(side)), 4) if side else 0.0
+    skull_fit[pid] = rec
+    print(f"SKULL {pid:20s} {kind:5s} clip={rec['clip']} float={floats} uncovered={uncovered} reach_out={rec['reach_out']}"
+          + (f" ear_rim={rec['ear_rim']}" if kind == "hat" else ""))
+
 # ================================================================ verdict
 fails, flags = [], []    # flags: findings reported for the next pass, not gate failures
 
@@ -688,10 +860,12 @@ def check(name, value, limit, what):
         fails.append(f"{what}: {name} {value} > {limit}")
 
 
+FULL_IDS = {h["id"] for h in CAT["hair"] if h.get("full")}
 for pid, r in hair.items():
-    check("open_edges", r["open_edges"], LIMITS["hair_open_edges"], pid)
+    if pid not in FULL_IDS:             # strand-card hair is open sheets by design (the body material is double-sided)
+        check("open_edges", r["open_edges"], LIMITS["hair_open_edges"], pid)
     check("gap_max", r["gap"]["max"], LIMITS["hair_gap_max"], pid)
-    check("gap_median", r["gap"]["median"], LIMITS["hair_gap_median"], pid)
+    check("gap_median", r["gap"]["median"], LIMITS["hair_gap_median_full"] if pid in FULL_IDS else LIMITS["hair_gap_median"], pid)
     if r.get("skin_through") is not None and r["skin_through"] > LIMITS["hair_skin_through_max"]:
         flags.append(f"{pid}: skin_through {r['skin_through']} (a shell piece of the older library; rebuilt as locks next)")
 V7_IDS = {h["id"] for h in CAT["hair"] if h.get("v7")}
@@ -709,11 +883,22 @@ for pid, r in glasses.items():
 for pid, r in lock_report.items():
     check("roots_exposed", r["roots_exposed"], LIMITS["lock_roots_exposed"], pid)
     check("dive_max", r["dive_max"], LIMITS["lock_dive_max"], pid)
+for pid, r in skull_fit.items():
+    if r["clip"] is not None:
+        check("skull clip", r["clip"], LIMITS["skull_clip_max"], pid)
+    for name, v in r["float"].items():
+        check(f"skull float at {name}", v, LIMITS["skull_hat_float_max"] if r["kind"] == "hat" else LIMITS["skull_float_max"], pid)
+    check("skull uncovered fit points " + ",".join(r["uncovered"]), len(r["uncovered"]), LIMITS["skull_uncovered"], pid)
+    check("skull reach_out", r["reach_out"], LIMITS["skull_reach_out"], pid)
+    if "ear_rim" in r:
+        check("skull ear_rim", r["ear_rim"], LIMITS["skull_ear_rim"], pid)
 check("stretch_max", face["stretch_max"], LIMITS["face_stretch_max"], "face")
 check("aniso_max", face["aniso_max"], LIMITS["face_aniso_max"], "face")
 check("eye_reach_lon_deg", face["eye_reach_lon_deg"], LIMITS["eye_reach_lon_max_deg"], "face")
+for layer, v in face["facing_max_deg"].items():
+    check(f"facing_max_deg {layer}", v, LIMITS["face_facing_max_deg"], "face")
 
-report = {"limits": LIMITS, "face": face, "seam": seam, "hair": hair, "locks": lock_report, "headwear": headwear,
+report = {"limits": LIMITS, "skull_version": SK.VERSION, "skull": skull_fit, "face": face, "seam": seam, "hair": hair, "locks": lock_report, "headwear": headwear,
           "glasses": glasses, "fails": fails, "flags": flags}
 print("FACE", json.dumps(face))
 print("SEAM", json.dumps(seam))

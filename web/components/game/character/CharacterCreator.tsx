@@ -19,7 +19,7 @@ import { SignInText } from "@/components/gui/SignIn";
 import { inTopDialog, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { mentionsSignIn } from "@/lib/game/signIn";
 import { iconUrl } from "@/lib/icons/keys";
-import { dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR_COLOURS, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, partRef, randomLook, STARTER_PARTS,
+import { dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR_COLOURS, hairAccentHex, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, partRef, randomLook, STARTER_PARTS,
   type CharacterLook, type FaceCell, type Placement } from "@/lib/game/character/look";
 import { CATEGORIES, choose, colourTarget, isOn, optionName, type Category, type Section } from "@/lib/game/character/creatorCategories";
 import { holdCreatorOpen } from "@/lib/game/character/creatorPresence";
@@ -124,6 +124,15 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
     });
   };
   const swatches = !cat.swatch ? [] : cat.swatch === "hair" && mode === "create" ? PALETTE.hair.slice(0, FREE_HAIR_COLOURS) : PALETTE[cat.swatch];
+  // head fit: a two-tone hairstyle's second colour (the accent mask of its shading map), picked from the same hair colours
+  const backPart = PART_BY_ID.get(look.back);
+  const accentPart = cat.id === "hair" && backPart?.full && backPart.accent ? backPart : null;
+  const accentHex = accentPart ? hairAccentHex(look, accentPart) : null;
+  const paintAccent = (i: number) => {
+    const locked = !hasHair(i);
+    setLockNote(locked ? "That colour is a hair dye from the shop." : null);
+    if (!locked) setLook(l => ({ ...l, hairAccent: i }));
+  };
   const swatchOn = (i: number) => cat.swatch === "skin" ? look.skin === i : cat.swatch === "hair" ? look.hair === i : target !== null && partColor(look, target) === i;
   const place = cat.place ? look.place?.[cat.place] ?? [0, 0, 0, 0] as Placement : null;
   const setPlace = (i: number, v: number) => setLook(l => {
@@ -230,6 +239,16 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
             })}
           </div>
           {cat.swatch === "outfit" && !target && <p className={styles.hint}>Wear something here to colour it.</p>}
+        </div>}
+        {accentPart && <div className={styles.swatchBlock}>
+          <h3>Second colour</h3>
+          <div className={styles.swatches} role="group" aria-label="accent colours" data-kind="hair">
+            {swatches.map((hex, i) => {
+              const locked = !hasHair(i);
+              return <button key={hex} type="button" style={{ "--swatch": hex } as CSSProperties} aria-pressed={accentHex === hex}
+                aria-label={`accent colour ${i + 1}${locked ? " (hair dye in the shop)" : ""}`} data-locked={locked || undefined} onClick={() => paintAccent(i)} />;
+            })}
+          </div>
         </div>}
         {lockNote && <p className={styles.lockNote} role="status">{lockNote}{onShop && <button type="button" onClick={onShop}>Visit the shop</button>}</p>}
       </div>

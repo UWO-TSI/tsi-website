@@ -119,11 +119,13 @@ const subscribe = (l: () => void) => { listeners.add(l); return () => { listener
 export function thumbJob(id: string, look: CharacterLook): Job {
   const part = PART_BY_ID.get(id);
   const slot = part?.slot;
-  const plain: CharacterLook = { ...DEFAULT_LOOK, skin: look.skin, hair: look.hair, colors: { ...look.colors } };
-  const view: ThumbView = slot === "back" ? "back" : slot === "bangs" || part?.group === "head" || part?.group === "face" ? "front" : "body";
+  const plain: CharacterLook = { ...DEFAULT_LOOK, skin: look.skin, hair: look.hair, colors: { ...look.colors }, ...(look.hairAccent !== undefined ? { hairAccent: look.hairAccent } : {}) };
+  // a whole hairstyle (head fit) is seen from the front, like a fringe
+  const view: ThumbView = slot === "back" && !part?.full ? "back" : slot === "bangs" || part?.full || part?.group === "head" || part?.group === "face" ? "front" : "body";
   const worn = slot ? wear(plain, slot, id) : plain;
   const colour = part?.materials.some(m => m.tint === "outfit") ? `|c${look.colors[id] ?? "-"}` : "";
-  return { key: `${view}|${id}|h${look.hair}|s${look.skin}${colour}`, look: worn, view };
+  const accent = part?.accent ? `|a${look.hairAccent ?? "-"}` : "";
+  return { key: `${view}|${id}|h${look.hair}|s${look.skin}${colour}${accent}`, look: worn, view };
 }
 /** The baked thumbnail for a job (queued on first ask), or undefined while it waits. */
 export function useThumb(job: Job | null): string | undefined {

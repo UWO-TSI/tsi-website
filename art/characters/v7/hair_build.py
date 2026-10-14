@@ -16,7 +16,7 @@ for p in (V7, os.path.join(V7, ".."), os.path.join(V7, "..", "base")):
 import kit  # noqa: E402
 import locks  # noqa: E402
 import hair_styles as hs  # noqa: E402
-from head_shape import CHIN, hair_point, hair_outer  # noqa: E402
+from head_shape import CHIN, hair_point, hair_outer, _ss  # noqa: E402
 
 SHARP = 40.0                 # lock side edges stay sharp (they read as separate locks), ridges and masses smooth
 ZRANGE = (CHIN, 1.05)        # the library's shared COLOR_0 gradient: no shade step where bangs meet the back
@@ -40,8 +40,11 @@ def piece(pid, rig, mat, name=None, head=None):
     pc = kit.Piece()
     if pid in hs.BACKS:
         tight = 0.008 if pid in hs.TIGHT else 0.0
-        outer = hs.OUTER.get(pid) or (lambda lat: hs.cap_outer(lat, tight))
-        pc, _, _ = kit.hair_cap(hs.BACKS[pid][3], outer=outer, hem=hs.CAP_FLOOR, lons=CAP_LONS)
+        outer = hs.OUTER.get(pid)
+        # head fit: pulled-back styles sit tighter only behind the ears; under the bangs' crown locks (the front half)
+        # the cap keeps the library's groove, so no bangs edge stands a full lock proud of it (the seam rule)
+        outer_ll = None if outer else (lambda lat, lon: hs.cap_outer(lat, tight * _ss(70, 110, abs(lon))))
+        pc, _, _ = kit.hair_cap(hs.BACKS[pid][3], outer=outer, outer_ll=outer_ll, hem=hs.CAP_FLOOR, lons=CAP_LONS)
         for f in pc.since(0):
             pc.fuv[f] = {v: (0.0, 0.5) for v in f.verts}        # matte: u 0 is off the lock ridges, no gloss band
         for lat, lon, r, h in hs.KNOTS.get(pid, []):
@@ -52,7 +55,7 @@ def piece(pid, rig, mat, name=None, head=None):
             lo, hi = min(zs), max(zs)
             for f in pc.since(n0):
                 pc.fuv[f] = {v: (0.5, 0.25 + 0.5 * (v.co.z - lo) / max(hi - lo, 1e-6)) for v in f.verts}
-    surf = locks.Surface(head or bpy.data.objects["V7_Head"])
+    surf = locks.Surface(head or bpy.data.objects.get("V8_Head") or bpy.data.objects["V7_Head"])   # head fit: the v8 skull
     coll = bpy.data.collections.get(pid)
     curves = [o for o in coll.objects if o.type == "CURVE" and not o.get("skip")] if coll else []
     if curves:

@@ -1,0 +1,31 @@
+perf:check on game/head-fit at cf5adea7 (main at ff4016a9 merged), 2026-10-14
+
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draw calls | Triangles | Runs | Spread | Load |
+|---|---|---|---|---|---|---|---|---|---|
+| village | high | 4.20 (4.00, +5.0%) | 5.30 (5.00, +6.0%) | 3.70 (3.40, +8.8%) | 462 (464, -0.4%) | 418837 (421963, -0.7%) | 3 | 12% | 3.9 |
+| v2 | high | 5.90 (5.50, +7.3%) | 7.60 (6.70, +13.4%) | 5.20 (4.90, +6.1%) | 698 (697, +0.1%) | 1040018 (1036568, +0.3%) | 3 | 17% | 3.5 |
+| cafe | high | 1.90 (2.10, -9.5%) | 3.20 (3.20, 0.0%) | 1.10 (1.20, -8.3%) | 147 (139, +5.8%) | 72704 (70040, +3.8%) | 3 | 11% | 3.6 |
+| ruins-summoner | high | 3.20 (3.10, +3.2%) | 5.40 (5.10, +5.9%) | 2.60 (2.50, +4.0%) | 418 (417, +0.2%) | 227360 (228021, -0.3%) | 3 | 16% | 4.1 |
+| village | lite | 2.40 (2.20, +9.1%) | 3.50 (3.30, +6.1%) | 2.10 (1.90, +10.5%) | 339 (336, +0.9%) | 329016 (327371, +0.5%) | 3 | 25% | 4.1 |
+| v2 | lite | 3.00 (3.00, 0.0%) | 3.70 (3.60, +2.8%) | 2.80 (2.70, +3.7%) | 488 (487, +0.2%) | 821708 (818560, +0.4%) | 3 | 13% | 4.4 |
+| cafe | lite | 1.50 (1.40, +7.1%) | 2.70 (2.50, +8.0%) | 0.80 (0.70, +14.3%) | 112 (105, +6.7%) | 70337 (67889, +3.6%) | 3 | 0% | 4.3 |
+| ruins-summoner | lite | 2.00 (1.90, +5.3%) | 4.40 (4.40, 0.0%) | 1.60 (1.50, +6.7%) | 236 (236, 0.0%) | 165902 (165832, +0.0%) | 3 | 15% | 4.4 |
+
+Median of 3+ runs each; in brackets the baseline (53c23490 2026-10-13) and the change. Load: the 1-minute load average.
+
+perf:check passed
+exit 0
+
+Cafe A/B, same session, two measurement builds of cf5adea7 that differ only in the bots' looks (RUNS=3):
+B leaves David's 21 full hairstyles out of randomLook's back pick (as on main); A is the branch as committed.
+
+| Bots' hair | Tier | Median frame ms | Draw calls | Triangles | Spread |
+|---|---|---|---|---|---|
+| without David's styles (B) | high | 1.70 | 145 | 77827 | 12% |
+| without David's styles (B) | lite | 1.50 | 108 | 72174 | 0% |
+| with them (A) | high | 1.90 | 140 | 69343 | 0% |
+| with them (A) | lite | 1.50 | 107 | 67068 | 0% |
+
+With David's styles in the mix the cafe draws 8,484 fewer triangles on high and 5,106 fewer on lite, and no more draw calls.
+Draw calls move by up to 7 between runs of the same build (A's 140 here against 147 in the full check above), as bots walk in and out of view.
+Frame time on high reads 1.9 ms with them against 1.7 ms without, both under the baseline's 2.1, and the same 1.5 ms on lite.

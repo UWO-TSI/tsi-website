@@ -146,6 +146,10 @@ export interface AssetCategory extends AssetBudget { name: string; prefixes: rea
 export const ASSET_CATEGORIES: readonly AssetCategory[] = [
   { name: "character LOD 1 part", prefixes: ["characters/v6/lod1/"], triangles: 1200, primitives: 4, materials: 4, texture: 256, bones: 22 },
   { name: "character base", prefixes: ["characters/v6/base/"], triangles: 2000, primitives: 8, materials: 6, texture: 1024, bones: 22 },
+  // A whole hairstyle (head fit: David's set, characters/v6/hair/full) replaces the bangs and the back together (look.ts
+  // wornParts), so it is held to the heaviest bangs-plus-back pair a look can wear today: 646 + 1,110 = 1,756, rounded
+  // to 1,750. Still one primitive and one material (its cap and second colour are mask channels in the shared atlas).
+  { name: "full hair", prefixes: ["characters/v6/hair/full/"], triangles: 1750, primitives: 1, materials: 1, texture: 0, bones: 22 },
   { name: "hair", prefixes: ["characters/v6/hair/"], triangles: 1200, primitives: 1, materials: 1, texture: 0, bones: 22 },
   { name: "accessory", prefixes: ["characters/v6/accessories/"], triangles: 1200, primitives: 4, materials: 4, texture: 128, bones: 22 },
   { name: "outfit", prefixes: ["characters/v6/outfits/"], triangles: 300, primitives: 4, materials: 4, texture: 128, bones: 22 },
