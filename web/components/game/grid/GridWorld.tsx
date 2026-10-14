@@ -27,6 +27,7 @@ import { setTerrainHeightProvider } from "../terrain";
 import GridTerrain, { CLIFF_FRINGE, TERRAIN_WET, useTerrainMaterials, type TerrainPalette } from "./GridTerrain";
 import GridCliffs from "./GridCliffs";
 import GrassField from "./GrassField";
+import GrassTufts from "./GrassTufts";
 import CliffBoulders from "./CliffBoulders";
 import { applyGrassNormalStrength, advanceWater, drawFoamRings, shadeWaterByClouds } from "./terrainMaterials";
 import { FOAM_RING_SLOTS } from "@/lib/game/foamRings";
@@ -36,6 +37,16 @@ import { useTuning } from "@/lib/game/tuning";
 import { useFrame } from "@react-three/fiber";
 import type { IslandLight } from "@/lib/game/islandLighting";
 import { worldTime } from "@/lib/game/worldClock";
+
+/**
+ * Which grass a world draws: the blade field (GrassField) only where the world names its obstacles (`clear`: the
+ * village, the v2 world, the title), so no blade grows through a building it can't see; every other world (the
+ * applicant island, live for recruits, the ruins, the home island) keeps the flowing tufts it drew on main, and no
+ * cliff-foot boulders.
+ */
+export function grassLayer(clear: ((x: number, z: number) => boolean) | undefined): "field" | "tufts" {
+  return clear ? "field" : "tufts";
+}
 
 /** The grass without a palette (the bench islands): the grid's own green. */
 const GRASS_HEX = `#${new THREE.Color(GRASS_COLOR).getHexString()}`;
@@ -92,9 +103,12 @@ export default function GridWorld({ map, field: suppliedField, light, palette, w
     <group>
       <GridTerrain map={map} field={suppliedField} materials={materials} />
       <GridCliffs map={map} grass={materials.get(Surface.Grass)} drape={materials.get(CLIFF_FRINGE)} />
-      {/* Its own boundary: the ground draws while the boulders' models stream in. */}
-      <Suspense fallback={null}><CliffBoulders map={map} field={suppliedField} /></Suspense>
-      <GrassField map={map} field={suppliedField} color={palette?.grass ?? GRASS_HEX} windScale={windScale} lite={lite} clear={clear} />
+      {/* The cliff-foot boulders go with the field: only a world that names its obstacles (they have no collision of their own).
+          Their own boundary: the ground draws while their models stream in. */}
+      {grassLayer(clear) === "field" && <Suspense fallback={null}><CliffBoulders map={map} field={suppliedField} /></Suspense>}
+      {grassLayer(clear) === "field"
+        ? <GrassField map={map} field={suppliedField} color={palette?.grass ?? GRASS_HEX} windScale={windScale} lite={lite} clear={clear} />
+        : <GrassTufts map={map} windScale={windScale} />}
     </group>
   );
 }

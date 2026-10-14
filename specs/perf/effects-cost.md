@@ -107,6 +107,11 @@ the rocks were rebuilt lighter) and flagged frame time over 10% on v2 High (6.3 
 2.2). Those include every lane merged since the baseline (water's own A/B: v2 High 5.6 → 5.95 ms); the lane's own
 share is the A/B above. The baseline wants `perf:check -- --update` on main once the v1 lanes are in.
 
+**The gate** (after these runs): the blade field and the cliff-foot boulders draw only in a world that passes its
+obstacle list (the village, the v2 world, the title). The applicant island (live for recruits), the ruins and the home
+island keep main's tufts and no boulders (GridWorld `grassLayer`), so the ruins rows above (field and boulders) are
+now back to main's; the village and v2 rows are unchanged.
+
 The grass's GPU share on the v2 world (0.6 ms at 1280 × 800 with the pixel finish) is its fragment overdraw: the first
 thing to trade on a weak GPU is High's near layer (2 cards → 1, about −0.3 ms GPU) or `grass.density`.
 

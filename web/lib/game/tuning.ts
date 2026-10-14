@@ -99,6 +99,15 @@ export interface Tuning {
     trail: number;
     /** How far blades lean away from a camera looking down at them (perspective correction; 0 = upright). */
     lean: number;
+    /**
+     * The old flowing tufts (GrassTufts), still drawn where a world names no obstacles (the applicant island, the
+     * ruins, the home island): 0 = procedural crossed cards, 1 = the low-poly blade pack; tufts per 100 grass cells;
+     * tuft height and how far its tip leans, world units.
+     */
+    model: number;
+    tuftDensity: number;
+    tuftHeight: number;
+    tuftSway: number;
   };
 }
 
@@ -225,6 +234,11 @@ export const TUNING_DEFAULTS: Tuning = {
     bend: 1,
     trail: 0.8,
     lean: 0.6,
+    // The tufts as main drew them (cinematic pass, 2026-10-10).
+    model: 1,
+    tuftDensity: 13,
+    tuftHeight: 0.42,
+    tuftSway: 0.13,
   },
 };
 
