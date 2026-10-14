@@ -70,13 +70,21 @@ export class CurvedCull {
   }
 }
 
-/** Show each mesh whose bounds `cull` sees (module scope for the frame loops: nothing allocated). */
+/** Materials a culled mesh has been drawn with: their shader program is compiled. */
+const compiled = new WeakSet<THREE.Material>();
+
+/**
+ * Show each mesh whose bounds `cull` sees (module scope for the frame loops: nothing allocated). A mesh whose material
+ * nothing culled here has drawn yet is shown once, wherever it is, so its program compiles while the scene loads and
+ * never on the frame a block first comes into view.
+ */
 export function cullMeshes(cull: CurvedCull, meshes: readonly (THREE.Mesh | null | undefined)[]): void {
   for (const m of meshes) {
     if (!m) continue;
-    const g = m.geometry;
+    const g = m.geometry, material = m.material as THREE.Material;
     if (!g.boundingBox) g.computeBoundingBox();
-    const on = cull.visibleBox(g.boundingBox!);
+    let on = cull.visibleBox(g.boundingBox!);
+    if (!compiled.has(material)) { compiled.add(material); on = true; }
     if (m.visible !== on) m.visible = on;
   }
 }

@@ -4,12 +4,14 @@
  * again in the sun's shadow map). Built once per GLB scene and shared: every copy is `template.clone(true)`, sharing
  * the geometry and materials.
  *
- * The item GLBs (art/props-enemies) are untextured parts that differ only in base colour, and in a glow on some: each
- * part's base colour is baked into its vertex colour (COLOR_0 × base colour, both linear, what three multiplies them
- * to) and its glow into an `aEmissive` attribute the merged material adds to its emission, so the parts of one look
- * class (props, metal, glass: LookMaterials patches those differently) with the same roughness and metalness draw as
- * one mesh. A tool, the leaf and the bobber are one mesh; a weapon one for its wood, cloth and glow and one for its
- * metal. A textured, transparent or cut-out part keeps its own material and merges only with parts that share it.
+ * The item GLBs (art/props-enemies) are untextured parts that differ only in base colour: each part's base colour is
+ * baked into its vertex colour (COLOR_0 × base colour, both linear, what three multiplies them to), so the parts of
+ * one look class (props, metal, glass: LookMaterials patches those differently) with the same roughness and metalness
+ * draw as one mesh, with a copy of their own material in white. The colour keeps COLOR_0's layout (its alpha too), so
+ * the merged mesh compiles to the same shader program the parts did: taking an item out never compiles a new one
+ * mid-play. A glowing part (a weapon's rune or crystal) keeps its own material, which a tier-5 weapon breathes, merged
+ * only with parts that share it; so does a textured, transparent or cut-out one. A tool, the leaf and the bobber are
+ * one mesh; a weapon one for its wood and cloth, one for its metal and one for each glow.
  *
  * `OffHand` (the classes v2 weapons' second part, which goes to the other hand) stays its own node with its own
  * merged meshes, so `holdOffHand` still finds and moves it. Anything skinned, morphed or multi-material is returned
@@ -23,9 +25,6 @@ import { lookClassFor } from "../modelMaterials";
 const BRANCH = "OffHand";
 const TEXTURES = ["map", "emissiveMap", "normalMap", "bumpMap", "alphaMap", "aoMap", "lightMap", "roughnessMap", "metalnessMap", "displacementMap"] as const;
 
-/** The breathing glow of a merged item's emissive parts (Character.tsx breathe): 1 at rest. Shared by every copy. */
-export interface HeldGlow { value: number }
-
 const templates = new WeakMap<THREE.Object3D, Map<string, THREE.Object3D>>();
 
 /** The merged template for a GLB scene (cached per scene and url); clone it with `clone(true)` per holder. */
@@ -37,14 +36,9 @@ export function heldTemplate(scene: THREE.Object3D, url: string): THREE.Object3D
   return t;
 }
 
-/** The merged meshes' glow uniforms under `model` (empty when nothing glows). */
-export function heldGlows(model: THREE.Object3D): HeldGlow[] {
-  const out = new Set<HeldGlow>();
-  model.traverse(o => { const g = ((o as THREE.Mesh).material as THREE.Material | undefined)?.userData?.heldGlow as HeldGlow | undefined; if (g) out.add(g); });
-  return [...out];
-}
-
-const plain = (m: THREE.Material) => !TEXTURES.some(k => (m as unknown as Record<string, unknown>)[k]) && !m.transparent && !(m.alphaTest > 0);
+const glows = (m: THREE.Material) => { const s = m as THREE.MeshStandardMaterial; return !!s.emissive && s.emissive.getHex() !== 0 && s.emissiveIntensity > 0; };
+/** A part whose look is its material's colour alone: baked into the vertices and merged with its look class. */
+const plain = (m: THREE.Material) => !TEXTURES.some(k => (m as unknown as Record<string, unknown>)[k]) && !m.transparent && !(m.alphaTest > 0) && !glows(m);
 
 /** Merge `scene` (not modified) into a new tree: the root and each OffHand node keep their transforms and hold merged meshes. */
 export function mergeHeld(scene: THREE.Object3D, url: string): THREE.Object3D {
@@ -87,7 +81,7 @@ export function mergeHeld(scene: THREE.Object3D, url: string): THREE.Object3D {
       const geometry = sameLayout(geometries) ? mergeGeometries(geometries) : null;
       if (!geometry) { for (const p of parts) { const c = p.clone(); rel(p, b.from).decompose(c.position, c.quaternion, c.scale); b.to.add(c); } continue; }
       geometry.computeBoundingSphere();
-      const mesh = new THREE.Mesh(geometry, baked ? bakedMaterial(material, url, parts) : material);
+      const mesh = new THREE.Mesh(geometry, baked ? bakedMaterial(material, url) : material);
       mesh.name = `${b.from.name || "held"}:${i++}`;
       b.to.add(mesh);
     }
@@ -103,17 +97,16 @@ function owner(o: THREE.Object3D, branches: { from: THREE.Object3D }[]) {
 /** `o`'s transform in `base`'s space. */
 const rel = (o: THREE.Object3D, base: THREE.Object3D) => new THREE.Matrix4().copy(base.matrixWorld).invert().multiply(o.matrixWorld);
 
-const emissiveOf = (m: THREE.Material) => {
-  const s = m as THREE.MeshStandardMaterial;
-  return s.emissive ? s.emissive.clone().multiplyScalar(s.emissiveIntensity ?? 1) : new THREE.Color(0, 0, 0);
-};
 /** Parts that can share one material once their colours are in the vertices: the look class and the shading. */
 function bakedKey(m: THREE.Material, url: string) {
   const s = m as THREE.MeshStandardMaterial;
-  return [m.type, lookClassFor(url, m.name), s.roughness, s.metalness, m.side, s.flatShading ? 1 : 0, s.envMapIntensity].join("|");
+  return [m.type, lookClassFor(url, m.name), s.roughness, s.metalness, m.side, s.flatShading ? 1 : 0, s.envMapIntensity, s.vertexColors ? 1 : 0].join("|");
 }
 
-/** A part's geometry in its branch's space; baked: position, normal, colour (COLOR_0 × base colour) and emission only. */
+/**
+ * A part's geometry in its branch's space; baked: position, normal and colour (COLOR_0 × base colour, as many
+ * components as COLOR_0 had, its alpha kept: three picks the shader by the colour's size) only.
+ */
 function partGeometry(mesh: THREE.Mesh, m: THREE.Matrix4, baked: boolean): THREE.BufferGeometry {
   const src = mesh.geometry;
   let g: THREE.BufferGeometry;
@@ -124,15 +117,14 @@ function partGeometry(mesh: THREE.Mesh, m: THREE.Matrix4, baked: boolean): THREE
     const nor = src.getAttribute("normal");
     if (nor) g.setAttribute("normal", nor.clone());
     const base = src.getAttribute("color"), tint = mat.color ?? new THREE.Color(1, 1, 1), useBase = !!base && !!mat.vertexColors;
-    const color = new Float32Array(n * 3), glow = new Float32Array(n * 3), e = emissiveOf(mat);
+    const size = base && base.itemSize === 4 ? 4 : 3, color = new Float32Array(n * size);
     for (let i = 0; i < n; i++) {
-      color[i * 3] = (useBase ? base.getX(i) : 1) * tint.r;
-      color[i * 3 + 1] = (useBase ? base.getY(i) : 1) * tint.g;
-      color[i * 3 + 2] = (useBase ? base.getZ(i) : 1) * tint.b;
-      glow[i * 3] = e.r; glow[i * 3 + 1] = e.g; glow[i * 3 + 2] = e.b;
+      color[i * size] = (useBase ? base.getX(i) : 1) * tint.r;
+      color[i * size + 1] = (useBase ? base.getY(i) : 1) * tint.g;
+      color[i * size + 2] = (useBase ? base.getZ(i) : 1) * tint.b;
+      if (size === 4) color[i * size + 3] = useBase ? base.getW(i) : 1;
     }
-    g.setAttribute("color", new THREE.BufferAttribute(color, 3));
-    g.setAttribute("aEmissive", new THREE.BufferAttribute(glow, 3));
+    g.setAttribute("color", new THREE.BufferAttribute(color, size));
     if (src.index) g.setIndex(src.index.clone());
   } else g = src.clone();
   if (!g.getAttribute("normal")) g.computeVertexNormals();
@@ -156,26 +148,13 @@ function sameLayout(gs: THREE.BufferGeometry[]): boolean {
 }
 
 /**
- * The merged parts' material: the first part's, white, its colour from the vertices; any glow from `aEmissive` (times
- * `heldGlow`, which the tier-5 weapons breathe). Named as that part (its look class follows the name, modelMaterials
- * lookClassFor) and tagged with the class directly.
+ * The merged parts' material: a copy of the first part's, white, its colour from the vertices. Named as that part (its
+ * look class follows the name, modelMaterials lookClassFor) and tagged with the class directly.
  */
-function bakedMaterial(first: THREE.Material, url: string, parts: THREE.Mesh[]): THREE.Material {
+function bakedMaterial(first: THREE.Material, url: string): THREE.Material {
   const m = first.clone() as THREE.MeshStandardMaterial;
   m.userData = { ...first.userData, lookClass: lookClassFor(url, first.name) };
   if (m.color) m.color.setRGB(1, 1, 1);
   m.vertexColors = true;
-  const glows = parts.some(p => emissiveOf(p.material as THREE.Material).getHex() !== 0);
-  if (m.emissive) { m.emissive.setRGB(0, 0, 0); m.emissiveIntensity = 1; }
-  if (glows) {
-    const glow: HeldGlow = { value: 1 };
-    m.userData.heldGlow = glow;
-    m.onBeforeCompile = shader => {
-      shader.uniforms.uHeldGlow = glow;
-      shader.vertexShader = "attribute vec3 aEmissive;\nvarying vec3 vHeldEmissive;\n" + shader.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vHeldEmissive = aEmissive;");
-      shader.fragmentShader = "uniform float uHeldGlow;\nvarying vec3 vHeldEmissive;\n" + shader.fragmentShader.replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\n  totalEmissiveRadiance += vHeldEmissive * uHeldGlow;");
-    };
-    m.customProgramCacheKey = () => "held-glow-v1";
-  }
   return m;
 }

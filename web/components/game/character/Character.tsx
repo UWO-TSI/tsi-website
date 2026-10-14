@@ -23,7 +23,7 @@ import { ATTACK_CLIP, WEAPON_HAND, contactCrossed, crossfade, holdLayer, isLoop,
 import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } from "@/lib/game/character/rig";
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
-import { heldGlows, heldTemplate, type HeldGlow } from "@/lib/game/character/heldMesh";
+import { heldTemplate } from "@/lib/game/character/heldMesh";
 import { addContact } from "../ContactShadows";
 import { frameStats } from "@/lib/game/perf/frameStats";
 import FishingRig from "./FishingRig";
@@ -520,7 +520,7 @@ function HeldWeapon({ puppet, motion, weapon: { kind, model: url, modelScale, in
       if (!own.has(src.name)) own.set(src.name, src.clone());
       mesh.material = own.get(src.name)!;
     });
-    return { paints: own, glows: pulse ? [...glowMaterials(model), ...heldGlows(model)] : [] };
+    return { paints: own, glows: pulse ? glowMaterials(model) : [] };
   }, [model, paint, pulse]);
   useEffect(() => {
     const main = hand ?? WEAPON_HAND[kind];
@@ -566,12 +566,9 @@ function glowMaterials(model: THREE.Object3D): THREE.MeshStandardMaterial[] {
   return [...out];
 }
 /** Module scope (hook values are never written in a component): the glow parts breathe, 65–100% of their intensity (a painted one's). */
-function breathe(glows: (THREE.MeshStandardMaterial | HeldGlow)[], t: number, paint?: WeaponPaint | null) {
+function breathe(glows: THREE.MeshStandardMaterial[], t: number, paint?: WeaponPaint | null) {
   const k = 0.65 + 0.35 * (0.5 + 0.5 * Math.sin(t * 3.2));
-  for (const m of glows) {
-    if ("value" in m) m.value = k; // a merged item's glow (heldMesh.ts)
-    else m.emissiveIntensity = (paint?.[m.name]?.intensity ?? (m.userData.glowBase as number)) * k;
-  }
+  for (const m of glows) m.emissiveIntensity = (paint?.[m.name]?.intensity ?? (m.userData.glowBase as number)) * k;
 }
 /** Ribbon trails sample the weapon in hand (CharacterMotion.weaponModel); returns the cleanup. Module scope: hook values are never written in a component. */
 function showWeapon(m: CharacterMotion | null, model: THREE.Object3D | null) {

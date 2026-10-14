@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { heldGlows, heldTemplate, mergeHeld } from "./heldMesh";
+import { heldTemplate, mergeHeld } from "./heldMesh";
 import { lookClassFor } from "../modelMaterials";
 
 const ASSETS = join(__dirname, "../../../public/assets/game");
@@ -59,18 +59,19 @@ describe("held items as one mesh per look class", () => {
         expect(new THREE.Vector3().setFromMatrixPosition(offMerged.matrixWorld).distanceTo(new THREE.Vector3().setFromMatrixPosition(off.matrixWorld)), f).toBeLessThan(1e-5);
       }
     }
-    expect(after).toBeLessThan(before * 0.4);
+    expect(after).toBeLessThan(before * 0.6);
   });
 
-  it("carries a glow part's emission in the vertices, breathing through one shared uniform", async () => {
-    const url = "/assets/game/weapons/sunstone-staff-5.glb", scene = await load("weapons/sunstone-staff-5.glb");
-    const merged = mergeHeld(scene, url), glows = heldGlows(merged);
-    expect(meshes(merged)).toHaveLength(1);
-    expect(glows).toHaveLength(1);
-    const e = meshes(merged)[0].geometry.getAttribute("aEmissive");
-    const lit = Array.from({ length: e.count }, (_, i) => e.getX(i) + e.getY(i) + e.getZ(i)).filter(v => v > 0).length;
-    expect(lit).toBeGreaterThan(0);
-    expect(lit).toBeLessThan(e.count);
+  it("keeps a glowing part on its own material, so the glow still breathes and the shader is the one it was", async () => {
+    const url = "/assets/game/weapons/sunstone-staff-5.glb", scene = await load("weapons/sunstone-staff-5.glb"), merged = mergeHeld(scene, url);
+    const glowing = (m: THREE.Material) => (m as THREE.MeshStandardMaterial).emissive.getHex() !== 0;
+    const before = new Set(meshes(scene).map(m => m.material as THREE.Material).filter(glowing));
+    const after = meshes(merged).map(m => m.material as THREE.Material);
+    for (const g of before) expect(after).toContain(g);
+    // The baked mesh: white, its colour in the vertices with COLOR_0's four components (three's vertex-alpha shader).
+    const baked = meshes(merged).find(m => !before.has(m.material as THREE.Material))!;
+    expect(baked.geometry.getAttribute("color").itemSize).toBe(meshes(scene)[0].geometry.getAttribute("color").itemSize);
+    expect(glowing(baked.material as THREE.Material)).toBe(false);
   });
 
   it("shares one template per scene and url", async () => {
