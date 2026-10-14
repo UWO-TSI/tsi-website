@@ -17,6 +17,8 @@ export const BASE_URL = `${CHARACTER_ROOT}${catalog.base.clips_glb}`;
 /** LOD 1 (art/characters/build_lod.py): every part decimated on the same rig, and the base's skin alone (the face, head and clips stay the base's). */
 export const LOD_ROOT = `${CHARACTER_ROOT}lod1/`;
 export const LOD_SKIN_URL = `${LOD_ROOT}base/skin.glb`;
+/** LOD 2 (head-roblox): the whole hairstyles at about 1,100 triangles for characters far and small; other parts use LOD 1. */
+export const LOD2_ROOT = `${CHARACTER_ROOT}lod2/`;
 /** The face layer atlas: 1024 px per face canvas in the creator, the 512 copy in the world (same layout). */
 export const FACE_ATLAS_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas}`, world: `${CHARACTER_ROOT}base/${faceV7.atlas_world}` };
 /** Head fit: the shared shading atlas of the mapped hairstyles (art/characters/hair/import_hair.py). */
@@ -41,8 +43,9 @@ export interface CatalogPart {
   full?: boolean;
   /** Its channels in the hair shading atlas: tinted by map, not by COLOR_0 alone. */
   map?: { shade: number; accent?: number; cap?: number };
-  /** A two-tone style's second colour: a hair palette index, or "skin" (a fade to the skin), unless the look picks one. */
-  accent?: { default: number | "skin" };
+  /** A two-tone style's second colour: a hair palette index, or "skin" (a fade to the skin), unless the look picks one;
+   * an sRGB hex is a fixed colour no look changes (a split-off visor's logo). */
+  accent?: { default: number | "skin" | string };
   /** Attached the Roblox way (head-roblox): by its own HairAttachment from hair/roblox_attachments.json; provisional: the
    * attachment is a seat fit until David copies the real one from Studio. */
   roblox?: { provisional: boolean };
@@ -297,14 +300,16 @@ export function wornParts(look: CharacterLook): CatalogPart[] {
   return parts.some(p => p.hidesBackHair) ? parts.filter(p => p.slot !== "back") : parts;
 }
 
-export interface ResolvedPart { id: string; url: string; /** Its LOD 1 GLB. */ lod: string; tints: Record<string, string>; decal: string | null;
+export interface ResolvedPart { id: string; url: string; /** Its LOD 1 GLB. */ lod: string; /** Its LOD 2 GLB (a whole hairstyle's own; else its LOD 1). */ lod2: string; tints: Record<string, string>; decal: string | null;
   /** A mapped hairstyle: its atlas channels and accent colour (sRGB hex). */
   map: { shade: number; accent?: number; cap?: number; accentHex?: string } | null }
 /** The accent colour of a two-tone hairstyle on a look: the look's pick, else the style's default (a palette colour or the skin). */
 export function hairAccentHex(look: CharacterLook, part: CatalogPart): string | undefined {
   if (!part.accent) return undefined;
+  const d = part.accent.default;
+  if (typeof d === "string" && d.startsWith("#")) return d;         // fixed: a visor's logo
   if (look.hairAccent !== undefined) return PALETTE.hair[look.hairAccent];
-  return part.accent.default === "skin" ? PALETTE.skin[look.skin] : PALETTE.hair[part.accent.default];
+  return d === "skin" ? PALETTE.skin[look.skin] : PALETTE.hair[d as number];
 }
 /** Parts with their GLB URL and one sRGB hex per tinted material; decal materials without art are dropped. */
 export function resolveParts(look: CharacterLook): ResolvedPart[] {
@@ -322,7 +327,7 @@ export function resolveParts(look: CharacterLook): ResolvedPart[] {
     }
     const map = part.map ? { shade: part.map.shade, ...(part.map.cap !== undefined ? { cap: part.map.cap } : {}),
       ...(part.map.accent !== undefined ? { accent: part.map.accent, accentHex: hairAccentHex(look, part) } : {}) } : null;
-    return { id: part.id, url: CHARACTER_ROOT + part.glb, lod: LOD_ROOT + part.glb, tints, decal, map };
+    return { id: part.id, url: CHARACTER_ROOT + part.glb, lod: LOD_ROOT + part.glb, lod2: (part.full ? LOD2_ROOT : LOD_ROOT) + part.glb, tints, decal, map };
   });
 }
 

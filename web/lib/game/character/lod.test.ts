@@ -20,6 +20,16 @@ describe("character detail by distance and drawn size", () => {
     expect(characterLod(createLodState(), 45, 0, false)).toMatchObject({ lod: true, hz: L.offHz, shadow: false });
     expect(characterLod(createLodState(), Infinity, 0, false)).toMatchObject({ lod: true, hz: L.offHz, shadow: false });
   });
+  it("draws the far hair (LOD 2) only past the far line and under its height, never nearer than LOD 1 (head-roblox)", () => {
+    expect(characterLod(createLodState(), 30, L.far.px - 1)).toMatchObject({ lod: true, lod2: false });
+    expect(characterLod(createLodState(), 45, L.far.px + 1)).toMatchObject({ lod: true, lod2: false });
+    expect(characterLod(createLodState(), 45, L.far.px - 1)).toMatchObject({ lod: true, lod2: true });
+    expect(characterLod(createLodState(), 60, 300)).toMatchObject({ lod: false, lod2: false });
+    const s = createLodState();
+    characterLod(s, 45, L.far.px - 1);
+    expect(characterLod(s, 45, L.far.px + 1).lod2).toBe(true);                       // hysteresis
+    expect(characterLod(s, 45, L.far.px * L.hysteresis + 1).lod2).toBe(false);
+  });
   it("never flickers on a line: it crosses back only past the hysteresis", () => {
     const s = createLodState();
     characterLod(s, L.near + 1, 40);
