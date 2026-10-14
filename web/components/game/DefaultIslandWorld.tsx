@@ -156,7 +156,7 @@ import { useDecorate } from "./home/useDecorate";
 import { useHomeLayout } from "@/lib/homes/useHomeLayout";
 import { catalogueItem } from "@/lib/homes/catalogue";
 import { ROOM_PRICE } from "@/lib/homes/layout";
-import { PROBE_FRAMES, PROBE_WARMUP, medianFrameMs, tierForFrameMs, type QualityTier } from "@/lib/game/qualityTier";
+import { PROBE_FRAMES, PROBE_WARMUP, medianFrameMs, tierDpr, tierForFrameMs, type QualityTier } from "@/lib/game/qualityTier";
 import { ISLAND_PHASES, type IslandPhase } from "@/lib/game/islandTime";
 import { HQ_CLOCK, HQ_LAYOUT, HQ_BOARD_APPROACH } from "@/lib/game/clubhouse";
 import CraftingSheet, { BeachBottle, Workbench, constrainWorkshop } from "./crafting/Workshop";
@@ -802,7 +802,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const liteMode = graphics.liteMode;
   // The canvas's resolution: half with the pixel finish; without it up to 1.5 device pixels per CSS pixel, but never
   // past 1 on Lite (the weaker GPUs Lite is for draw every extra pixel; v1 performance, specs/perf/2026-10-v1-results.md).
-  const canvasDpr: number | [number, number] = graphics.pixelated ? 0.5 : liteMode ? 1 : [1, 1.5];
+  const canvasDpr = tierDpr(liteMode, graphics.pixelated ? 0.5 : [1, 1.5]);
   const castShadows = graphics.shadows && !liteMode;
   // The creator and the wardrobe cover the screen: the island stops drawing under them (it resumes as they close).
   const creatorOpen = useCreatorOpen();

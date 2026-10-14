@@ -15,6 +15,15 @@
  * High: cached shadow maps, AO, bloom, wind sway, full ambient life, FXAA in smooth mode.
  */
 export type QualityTier = "light" | "high";
+
+/**
+ * A canvas's pixel ratio for the tier: as asked on High; on Lite never past 1 device pixel per CSS pixel (a pixel
+ * finish's 0.5 stays). Every game canvas reads it: the island, the creators, the arrival's reflection.
+ */
+export function tierDpr(liteMode: boolean, dpr: number | [number, number]): number | [number, number] {
+  if (!liteMode) return dpr;
+  return Array.isArray(dpr) ? [Math.min(dpr[0], 1), 1] : Math.min(dpr, 1);
+}
 /** Below ~40 FPS during the first settled frames, start in Light. */
 export const LIGHT_FRAME_MS = 25;
 export const PROBE_FRAMES = 90;

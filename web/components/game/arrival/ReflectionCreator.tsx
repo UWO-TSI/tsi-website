@@ -26,6 +26,8 @@ import { arrivalRun } from "@/lib/game/arrival/arrivalStore";
 import { BOAT_LINES, BRAM, YES_LABEL } from "@/lib/game/arrival/lines";
 import type { ArrivalPhase } from "@/lib/game/arrival/sequence";
 import { AudioManager } from "@/lib/game/audio";
+import { tierDpr } from "@/lib/game/qualityTier";
+import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import ReflectionScene, { faceOverWater, type Ripple } from "./ReflectionScene";
 import cc from "@/components/game/character/CharacterCreator.module.css";
 import s from "./ReflectionCreator.module.css";
@@ -44,6 +46,7 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
   onYes: (look: CharacterLook, name: string | null) => void;
 }) {
   const creating = phase === "creator";
+  const [graphics] = useGraphicsSettings();
   const root = useWorldDialog<HTMLElement>(true, () => {}, undefined, true);
   const [look, setLook] = useState(initial);
   // What the water shows: it follows the panel's look as each ripple passes over your face.
@@ -127,7 +130,7 @@ export default function ReflectionCreator({ phase, initial, askName, onYes }: {
     onYes(look, naming.wanted);
   };
   return <section ref={root} tabIndex={-1} className={s.root} role="dialog" aria-modal="true" aria-label="Your reflection in the water" data-phase={phase} data-testid="reflection-creator">
-    <Canvas className={s.canvas} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={[1, 2]} camera={{ fov: 40, near: 0.05, far: 200 }}
+    <Canvas className={s.canvas} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={tierDpr(graphics.liteMode, [1, 2])} camera={{ fov: 40, near: 0.05, far: 200 }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace;
         if (process.env.NODE_ENV !== "production") (window as unknown as { __reflectGl?: THREE.WebGLRenderer }).__reflectGl = gl;
