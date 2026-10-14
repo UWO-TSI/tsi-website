@@ -9,7 +9,7 @@ const require = createRequire("/opt/homebrew/lib/node_modules/");
 const { chromium } = require("playwright");
 const [DIR = "/tmp/shots", LABEL = "after", VIEWS = "near,far,ruins"] = process.argv.slice(2), PORT = process.env.PORT ?? 3149;
 mkdirSync(DIR, { recursive: true });
-const browser = await chromium.launch({ headless: false, args: ["--mute-audio", "--window-position=2400,0", "--use-angle=metal", "--ignore-gpu-blocklist"] });
+const browser = await chromium.launch({ headless: process.env.HEADED !== "1", args: ["--mute-audio", "--window-position=2400,0", "--use-angle=metal", "--ignore-gpu-blocklist"] });
 const BASE = "time=day&weather=clear&season=summer";
 const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_curtain", back: "back_bob", top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: {} });
 const URLS = {
