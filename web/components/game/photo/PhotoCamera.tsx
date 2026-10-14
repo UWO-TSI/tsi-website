@@ -5,13 +5,15 @@
  * so its frame runs after the follow camera's (both at the default priority, this one registered last) and takes the
  * camera over. It orbits round you: drag to orbit and tilt, scroll or pinch to zoom, the arrow keys too; the selfie
  * camera stands at arm's length in front of you, looking back at your face, and a drag swings it a little round you.
+ * The orbit stops short of a building in the way (the scene's occluders, a spring arm) and stays above your feet.
  * It writes the point the depth of field focuses on (photoRig.focus), and takes the snap straight after a frame is
  * drawn (photoRig.ask). It starts where the follow camera was, so opening doesn't jump.
  */
 import { useEffect, type RefObject } from "react";
 import { addAfterEffect, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import { clampOrbit, orbitPose, selfiePose } from "@/lib/game/photo";
+import { clampOrbit, firstHit, orbitPose, selfiePose } from "@/lib/game/photo";
+import { worldLabels } from "@/lib/game/labelLayout";
 import { photoRig, readPhoto } from "@/lib/game/photoMode";
 import { localAvatar } from "@/lib/net/localAvatar";
 
@@ -61,6 +63,10 @@ function frame(camera: THREE.Camera, you: THREE.Vector3, dt: number) {
   } else {
     at.set(you.x, you.y + CHEST, you.z);
     orbitPose(at, photoRig.yaw, photoRig.pitch, photoRig.dist, pos);
+    // A spring arm: stop short of a building between you and the camera, and keep above your feet.
+    const hit = firstHit(at, pos, worldLabels.occluderList);
+    if (hit < 1) pos.lerpVectors(at, pos, Math.max(0.12, hit - 0.35 / Math.max(photoRig.dist, 1e-3)));
+    pos.y = Math.max(pos.y, you.y + 0.25);
     look.copy(at);
     photoRig.focus.copy(at);
   }

@@ -7,6 +7,7 @@
  * vignette, the grain) are gradients both draw the same way.
  */
 import * as THREE from "three";
+import type { Occluder } from "./occluders";
 
 // ── Filters ───────────────────────────────────────────────────────
 
@@ -137,7 +138,7 @@ export function frameLayout(id: FrameId, w: number, h: number): FrameLayout {
 // ── The free camera ───────────────────────────────────────────────
 
 /** Orbit (radians, world units): a little below level to looking straight down, near to far. */
-export const PHOTO_CAMERA = { pitchMin: -0.12, pitchMax: 1.45, distMin: 1.6, distMax: 22, selfieDist: 1.75, selfieUp: 0.12, selfieSwingMax: 0.9 } as const;
+export const PHOTO_CAMERA = { pitchMin: -0.12, pitchMax: 1.45, distMin: 1.6, distMax: 22, selfieDist: 2.2, selfieUp: 0.3, selfieSwingMax: 0.9 } as const;
 export interface Orbit { yaw: number; pitch: number; dist: number }
 const wrap = (a: number) => a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
 export function clampOrbit(o: Orbit): Orbit {
@@ -154,12 +155,39 @@ export function orbitPose(at: THREE.Vector3, yaw: number, pitch: number, dist: n
 }
 /**
  * A selfie: the camera at arm's length in front of you (your `yaw` faces +z at 0, as the rig does), swung `swing`
- * radians round you, a touch above your eyes, looking back at your face.
+ * radians round you, held a little high, looking back at your face.
  */
 export function selfiePose(head: THREE.Vector3, yaw: number, swing: number, pos: THREE.Vector3, look: THREE.Vector3): void {
   const a = yaw + Math.max(-PHOTO_CAMERA.selfieSwingMax, Math.min(PHOTO_CAMERA.selfieSwingMax, swing));
   pos.set(head.x + Math.sin(a) * PHOTO_CAMERA.selfieDist, head.y + PHOTO_CAMERA.selfieUp, head.z + Math.cos(a) * PHOTO_CAMERA.selfieDist);
-  look.set(head.x, head.y - 0.05, head.z);
+  // A little above the eyes, so the face sits in the top half with the shoulders below it.
+  look.set(head.x, head.y + 0.12, head.z);
+}
+
+/**
+ * How far along at→pos the camera may go before a building (0..1; 1: nothing in the way): the first box the segment
+ * enters. Tree crowns (`canopy`) don't stop it. Allocates nothing.
+ */
+export function firstHit(at: THREE.Vector3Like, pos: THREE.Vector3Like, occluders: readonly Occluder[]): number {
+  const dx = pos.x - at.x, dy = pos.y - at.y, dz = pos.z - at.z;
+  let best = 1;
+  for (let i = 0; i < occluders.length; i++) {
+    const o = occluders[i];
+    if (o.canopy) continue;
+    let t0 = 0, t1 = 1, out = false;
+    for (let k = 0; k < 3 && !out; k++) {
+      const p = k === 0 ? at.x : k === 1 ? at.y : at.z, d = k === 0 ? dx : k === 1 ? dy : dz;
+      const lo = k === 0 ? o.x - o.hx : k === 1 ? o.y0 : o.z - o.hz, hi = k === 0 ? o.x + o.hx : k === 1 ? o.y1 : o.z + o.hz;
+      if (Math.abs(d) < 1e-9) { if (p < lo || p > hi) out = true; continue; }
+      let u = (lo - p) / d, v = (hi - p) / d;
+      if (u > v) { const w = u; u = v; v = w; }
+      if (u > t0) t0 = u;
+      if (v < t1) t1 = v;
+      if (t0 > t1) out = true;
+    }
+    if (!out && t0 < best) best = t0;
+  }
+  return best;
 }
 
 // ── The snap ──────────────────────────────────────────────────────

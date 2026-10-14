@@ -11,7 +11,7 @@
  * tint, glow, vignette and grain as overlays, and the same matrix and gradients over the snap's pixels (snap.ts).
  */
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { Aperture, Camera, Download, RotateCcw, Share2, X } from "lucide-react";
+import { Aperture, Camera, ChevronDown, ChevronUp, Download, RotateCcw, Share2, X } from "lucide-react";
 import { Button, IconButton, Slider } from "@/components/gui";
 import { useWorldDialog, worldKeysBlocked, isTyping } from "@/lib/game/useWorldDialog";
 import { AudioManager } from "@/lib/game/audio";
@@ -81,6 +81,8 @@ export default function PhotoMode({ allowed }: {
   const [shot, setShot] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState(0);
+  // The settings can fold away, leaving the view clear to frame (the shutter stays).
+  const [folded, setFolded] = useState(false);
   const close = () => setPhoto({ open: false, freeze: false });
   const panel = useWorldDialog<HTMLDivElement>(p.open, close, ["p"]);
   const root = useRef<HTMLDivElement>(null);
@@ -140,9 +142,12 @@ export default function PhotoMode({ allowed }: {
         <header className={s.top}>
           <p className={s.title}><Camera size={16} aria-hidden /> Photo mode</p>
           <p className={s.hint}>Drag to look around · scroll to zoom</p>
+          <IconButton label={folded ? "Show the settings" : "Fold the settings away"} size="sm" aria-expanded={!folded} onClick={() => setFolded(f => !f)}>
+            {folded ? <ChevronUp size={17} aria-hidden /> : <ChevronDown size={17} aria-hidden />}
+          </IconButton>
           <IconButton label="Close photo mode" size="sm" onClick={close}><X size={17} aria-hidden /></IconButton>
         </header>
-        <section className={s.dock} aria-label="Photo settings">
+        <section className={s.dock} aria-label="Photo settings" hidden={folded}>
           <div className={s.row}>
             <div className={s.seg} role="radiogroup" aria-label="Camera">
               {(["orbit", "selfie"] as const).map(c => <button key={c} type="button" role="radio" aria-checked={p.camera === c} onClick={() => { setPhoto({ camera: c }); photoRig.target.swing = 0; }}>{c === "orbit" ? "Orbit" : "Selfie"}</button>)}

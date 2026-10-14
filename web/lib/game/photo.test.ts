@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
 import {
-  PHOTO_CAMERA, PHOTO_FILTERS, PHOTO_FRAMES, applyMatrix, clampOrbit, composeMatrix, cssFilter, frameLayout, orbitPose, photoFileName, photoScale, selfiePose,
+  PHOTO_CAMERA, PHOTO_FILTERS, PHOTO_FRAMES, applyMatrix, clampOrbit, composeMatrix, cssFilter, firstHit, frameLayout, orbitPose, photoFileName, photoScale, selfiePose,
 } from "./photo";
 
 const px = (r: number, g: number, b: number) => new Uint8ClampedArray([r, g, b, 255]);
@@ -83,6 +83,16 @@ describe("the photo camera", () => {
     expect(o.dist).toBe(PHOTO_CAMERA.distMax);
     expect(o.yaw).toBeCloseTo(10 - 2 * Math.PI * Math.round(10 / (2 * Math.PI)));
     expect(clampOrbit({ yaw: 0, pitch: -5, dist: 0 })).toMatchObject({ pitch: PHOTO_CAMERA.pitchMin, dist: PHOTO_CAMERA.distMin });
+  });
+
+  it("stops short of a building between you and it (a spring arm), never inside one; a tree's crown doesn't count", () => {
+    const at = new THREE.Vector3(0, 1, 0), pos = new THREE.Vector3(0, 1, -10);
+    const house = { x: 0, z: -6, hx: 2, hz: 1, y0: 0, y1: 4 };
+    expect(firstHit(at, pos, [house])).toBeCloseTo(0.5);
+    expect(firstHit(at, pos, [])).toBe(1);
+    expect(firstHit(at, pos, [{ ...house, x: 10 }])).toBe(1);
+    expect(firstHit(at, pos, [{ ...house, canopy: true }])).toBe(1);
+    expect(firstHit(at, pos, [{ ...house, z: -3 }, house])).toBeCloseTo(0.2);
   });
 
   it("a selfie: in front of you at arm's length, at your eyes, looking back at your face", () => {

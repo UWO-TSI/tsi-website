@@ -20,7 +20,7 @@ export interface PhotoState {
   /** Your pose held still (the animation clock stopped). */
   freeze: boolean;
 }
-const INITIAL: PhotoState = { open: false, camera: "orbit", filter: "none", frame: "plain", focus: 0.45, freeze: false };
+const INITIAL: PhotoState = { open: false, camera: "orbit", filter: "none", frame: "plain", focus: 0.3, freeze: false };
 
 let state: PhotoState = INITIAL;
 const listeners = new Set<() => void>();
