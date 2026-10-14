@@ -15,8 +15,8 @@ type Aim = { boat: V3 } | { world: "island" | "wharf"; y: number } | { blend: [{
 export interface CrossingFrame { from: V3; to: V3; aim: Aim; aimTo?: Aim; fov: number; fovTo?: number }
 
 export const CROSSING_FRAMES: Record<CrossingShotId, CrossingFrame> = {
-  // High off the starboard quarter, pulling in: the island ahead in the middle of the frame, the boat small below it.
-  drone: { from: [5.5, 6.5, -10], to: [3.6, 4.8, -6.4], aim: { blend: [{ boat: [0, 0, 10] }, { world: "island", y: 0.5 }, 0.7] }, fov: 30, fovTo: 28 },
+  // High off the starboard beam, drifting in: the boat small in the foreground below, the island across the sea above it.
+  drone: { from: [12, 10, -4], to: [9, 8, -1], aim: { blend: [{ boat: [0, 0, 4] }, { world: "island", y: 0 }, 0.5] }, fov: 44, fovTo: 40 },
   // Low beside the bow, just over the water, looking ahead past the stem: the bow wave, the island across the sea.
   bow: { from: [1.35, 0.45, 0.2], to: [1.3, 0.42, 0.75], aim: { boat: [-0.6, 0.7, 24] }, fov: 52 },
   // In front of you on the bench, close: your face, wet hair, drops running off.
