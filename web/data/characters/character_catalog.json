@@ -1557,6 +1557,95 @@
     0.4,
     0.56
    ]
+  },
+  {
+   "name": "Clap",
+   "length": 1.6,
+   "loop": false,
+   "frames": 48,
+   "endsNeutral": true
+  },
+  {
+   "name": "Bow",
+   "length": 1.8,
+   "loop": false,
+   "frames": 54,
+   "endsNeutral": true
+  },
+  {
+   "name": "Shrug",
+   "length": 1.4,
+   "loop": false,
+   "frames": 42,
+   "endsNeutral": true
+  },
+  {
+   "name": "SitGround",
+   "length": 3.0,
+   "loop": true,
+   "frames": 90,
+   "seatHeight": 0.0
+  },
+  {
+   "name": "SitWarm",
+   "length": 3.0,
+   "loop": true,
+   "frames": 90,
+   "seatHeight": 0.0
+  },
+  {
+   "name": "DanceBounce",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
+  },
+  {
+   "name": "DanceSpin",
+   "length": 4.0,
+   "loop": true,
+   "frames": 120
+  },
+  {
+   "name": "DanceShuffle",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
+  },
+  {
+   "name": "DanceSway",
+   "length": 4.0,
+   "loop": true,
+   "frames": 120
+  },
+  {
+   "name": "DanceWiggle",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
+  },
+  {
+   "name": "DanceFlail",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
+  },
+  {
+   "name": "DanceRobot",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
+  },
+  {
+   "name": "DanceSprinkler",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
+  },
+  {
+   "name": "DanceStomp",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
   }
  ],
  "hair": [

@@ -21,6 +21,8 @@ import { BENCH_SEAT_TOP, BENCH_SLOTS, benchSlotKey, benchSlotPoint, villageIslan
 import { CHARACTER_SCALE } from "@/components/game/character/Character";
 import { objectsOf, village, villageSpawnPoint } from "@/lib/game/villageMap";
 import { airPhase, isLoop, seatLift, type ClipName } from "@/lib/game/character/clips";
+import { ringPoint, sitPoint, FIRE } from "@/lib/game/campfire";
+import { worldTimeAt } from "@/lib/game/worldClock";
 import { randomLook, seeded } from "@/lib/game/character/look";
 import { landKind } from "@/lib/game/movement/juice";
 import { CLASS_KITS } from "@/lib/combat/classes";
@@ -42,7 +44,7 @@ export const BENCH_SLOT = BENCH_SLOTS[1];
 const NAME_WORDS = ["Pebble", "Juniper", "Bramble", "Saffron", "Tidepool", "Marlow", "Thistle", "Clover", "Puffin", "Driftwood", "Sorrel", "Kelp",
   "Lantern", "Minnow", "Bracken", "Quill", "Hazel", "Sparrow", "Cobble", "Fennel", "Otter", "Nettle", "Cinder", "Moss"] as const;
 
-export type BotRole = "wander" | "rest" | "study";
+export type BotRole = "wander" | "rest" | "study" | "fireDance" | "fireSit";
 /** A bot's card and join: what the server's player card and the join options would hold. */
 export interface BotCard {
   name: string;
@@ -119,6 +121,12 @@ export interface BotWorld {
   cafeSeats: readonly StudySpot[];
   /** Seat keys bots hold now. */
   taken: Set<string>;
+  /**
+   * Development (`?bots=N&botfire=1`, evidence): the campfire and room time's zero as a wall-clock instant (the
+   * loopback's epoch), so the first bots join its rings as a client would (lib/game/emotePlay.ts): four dance the stomp
+   * round it on the world clock, two sit warming their hands.
+   */
+  fire?: { x: number; z: number; epoch: number };
 }
 
 let shared: Omit<BotWorld, "taken"> | null = null;
@@ -217,6 +225,10 @@ export class Bot {
   private plan: Plan;
   /** Seated: the seat's spot, facing and lift (null standing). */
   private seat: { x: number; y: number; z: number; yaw: number; lift: number; clip: ClipName } | null = null;
+  /** Dancing round the campfire: its place in the ring, which the world clock carries round (the seat follows it). */
+  private ring: number | null = null;
+  /** The ring's last place, for the velocity the sender measures. */
+  private ringX = 0; private ringZ = 0; private ringVX = 0; private ringVZ = 0;
   // PlayerAvatar's per-frame motion fields.
   private jumped = false;
   private vy0 = 6;
@@ -266,6 +278,24 @@ export class Bot {
     this.plan = { kind: "idle", until: startMs + 300 + this.r() * 1500 };
     if (card.role === "study") this.sitStudy();
     else if (card.role === "rest") this.sitBench(true);
+    else if (card.role === "fireDance" || card.role === "fireSit") this.joinFire(card.role);
+  }
+
+  /** Development: straight into a campfire ring (`BotWorld.fire`), held for good. */
+  private joinFire(role: "fireDance" | "fireSit") {
+    const f = this.w.fire;
+    if (!f) return;
+    const k = Number(this.card.name.slice(-2)) - 1, ground = this.w.ground(f.x, f.z);
+    if (role === "fireSit") {
+      const p = sitPoint(f, (k * 3 + 1) % FIRE.sitSlots);
+      this.seat = { x: p.x, y: this.w.ground(p.x, p.z), z: p.z, yaw: p.yaw, lift: 0, clip: "SitWarm" };
+    } else {
+      this.ring = (k * 2) % FIRE.danceSlots;
+      const p = ringPoint(f, this.ring, worldTimeAt(this.t + f.epoch));
+      this.ringX = p.x; this.ringZ = p.z;
+      this.seat = { x: p.x, y: ground, z: p.z, yaw: p.yaw, lift: 0, clip: "DanceStomp" };
+    }
+    this.plan = { kind: "seated", key: "", stand: [this.seat.x, this.seat.z], until: Infinity, nextEmote: Infinity };
   }
 
   /** Where the bot is now (world units). */
@@ -469,6 +499,13 @@ export class Bot {
   private seated(out: BotOutbox) {
     const p = this.plan, t = this.t;
     if (p.kind !== "seated") return;
+    const f = this.w.fire;
+    if (this.ring !== null && f && this.seat) {
+      const q = ringPoint(f, this.ring, worldTimeAt(t + f.epoch));
+      this.ringVX = (q.x - this.ringX) / STEP; this.ringVZ = (q.z - this.ringZ) / STEP;
+      this.ringX = q.x; this.ringZ = q.z;
+      Object.assign(this.seat, { x: q.x, z: q.z, yaw: q.yaw, y: this.w.ground(q.x, q.z) });
+    }
     if (t >= p.nextEmote) {
       // Phones and resters wave from the seat now and then (the renderer plays it over the upper body).
       const clip = EMOTES.filter(c => !isLoop(c as ClipName))[Math.floor(this.r() * 4)];
@@ -527,7 +564,7 @@ export class Bot {
   // ── The sender's cadence (SEND) ──
 
   private moving(): boolean {
-    if (this.seat) return false;
+    if (this.seat) return this.ring !== null; // the stomp ring carries a dancer round the fire
     const s = this.s;
     return Math.hypot(s.vx, s.vz) > 0.05 || Math.abs(s.vy) > 0.05 || this.moveIndex() !== 0
       || Math.abs(s.x - this.sentX) + Math.abs(s.y - this.sentY) + Math.abs(s.z - this.sentZ) > 0.002;
@@ -566,6 +603,7 @@ export class Bot {
     p.t = this.t;
     if (seat) {
       p.x = seat.x; p.y = seat.y; p.z = seat.z; p.vx = p.vy = p.vz = 0; p.yaw = seat.yaw; p.lift = seat.lift;
+      if (this.ring !== null) { p.vx = this.ringVX; p.vz = this.ringVZ; }
     } else {
       p.x = s.x; p.y = s.y; p.z = s.z; p.yaw = s.facing; p.lift = 0;
       // Velocity as the sender measures it, by difference over the last two steps (the kit's own across a teleport).
@@ -619,7 +657,12 @@ function hashName(name: string) {
 
 /** N bots from a seed, sharing one set of seat claims: cards by index, each with its own generator, all started at `startMs`. */
 export function createBots(n: number, seed: number, startMs = 0, world: BotWorld = botWorld()): Bot[] {
-  return Array.from({ length: n }, (_, i) => new Bot(world, botCard(seed, i), mix(seed, i, 0xb075), startMs));
+  return Array.from({ length: n }, (_, i) => new Bot(world, fireCard(world, botCard(seed, i), i), mix(seed, i, 0xb075), startMs));
+}
+/** Development (`BotWorld.fire`): the first four bots dance round the campfire, the next two sit by it, all in the village. */
+function fireCard(world: BotWorld, card: BotCard, i: number): BotCard {
+  if (!world.fire || i >= 6) return card;
+  return { ...card, role: i < 4 ? "fireDance" : "fireSit", area: "village", mobile: false };
 }
 
 /** AREAS index of a bot's area. */

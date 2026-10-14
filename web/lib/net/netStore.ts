@@ -636,9 +636,10 @@ function loadStore(): Promise<NetStore | null> {
   const m = netMode(search());
   if (m?.kind !== "bots") return Promise.resolve(peekStore());
   h.loading = import("./loopback").then(({ createLoopback }) => {
-    // `?botchat=S`: bots in view chat every S seconds or so (bubbles, the "…" and the talking without a server).
-    const chatEvery = Number(new URLSearchParams(search()).get("botchat")) || 0;
-    const lb = createLoopback({ bots: m.bots, seed: m.seed, netsim: DEV ? parseNetsim(search()) : null, chatEvery });
+    // `?botchat=S`: bots in view chat every S seconds or so (bubbles, the "…" and the talking without a server);
+    // `?botfire=1`: the first bots dance round the campfire and sit by it.
+    const q = new URLSearchParams(search()), chatEvery = Number(q.get("botchat")) || 0, fire = DEV && q.get("botfire") === "1";
+    const lb = createLoopback({ bots: m.bots, seed: m.seed, netsim: DEV ? parseNetsim(search()) : null, chatEvery, fire });
     const store = loopbackStore(lb);
     setStore(store);
     return store;
