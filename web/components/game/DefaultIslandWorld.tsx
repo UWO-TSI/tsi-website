@@ -165,6 +165,9 @@ import { boxOccluder, treeOccluder } from "@/lib/game/occluders";
 import type { Area } from "@/lib/net/protocol";
 import NetWorld from "./net/NetWorld";
 import NetHud from "./net/NetHud";
+import PhotoMode, { PhotoButton } from "./photo/PhotoMode";
+import PhotoCamera from "./photo/PhotoCamera";
+import { photoRig, usePhoto } from "@/lib/game/photoMode";
 import { remoteSeatTaken } from "./net/active";
 import LabelLayer from "./LabelLayer";
 import LandmarkTag from "./LandmarkTag";
@@ -347,6 +350,8 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   const v = village();
   const layout = useMemo(() => villageLayout(v), [v]);
   const { island, spawns, doors } = layout;
+  // Photo mode holds you still while you frame a photo.
+  const photoOpen = usePhoto().open;
   const { data: personas } = useNPCPersonas({ permanentOnly: true });
   const exitSpot = exitFrom === "museum" ? spawns.museum : exitFrom === "cafe" ? spawns.cafe : exitFrom === "oracle" ? spawns.oracle : exitFrom === "ruins" ? spawns.ruins : exitFrom === "shop" ? spawns.shop : null;
   const spawn = (devAt && !returned && !fromBoat && !exitFrom ? devAt : fromBoat ? spawns.boat : exitSpot ?? (returned ? spawns.returned : null)) ?? spawns.start;
@@ -429,7 +434,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
           While the HQ lead greets a first login on the wharf, her walking self stays out of sight: one Wren. */}
       <Residents personas={personas} phase={phase} ceremony={ceremony} player={player} island={island} v={v} away={lead ? HQ_LEAD_SLUG : null}
         playerName={identity.display_name !== "You" ? identity.display_name : null} />
-      <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={fishing || !!lead?.hold || talking}
+      <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={fishing || !!lead?.hold || talking || photoOpen}
         ride={myTrip.ride}
         world={island} groundHeight={island.ground} groundSurface={island.surface} camTarget={focus} glider={peaceful.glider} held={held} />
       <CharacterCrowd player={player} ground={island.ground} stepWorld={island} />
@@ -697,17 +702,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     const c = pathView?.classes, kit = classAura?.kit, f = c?.cosmetics.frame;
     setClassTag(kit && c ? { icon: kit.look.icon, title: c.title ?? kit.name, color: kit.look.ramp[1], frame: f === "mastery:bronze" ? "bronze" : f === "mastery:silver" ? "silver" : f === "mastery:gold" ? "gold" : null } : null);
   }, [pathView, classAura]);
-  // Classes v2 (§1.13): P opens the Path sheet anywhere (the subclass, its kit and mastery, stats).
-  const classesOn = !!pathView?.classes && !!pathView.family;
-  useEffect(() => {
-    if (!classesOn) return;
-    const on = (e: KeyboardEvent) => {
-      if (e.repeat || e.key.toLowerCase() !== "p" || worldKeysBlocked() || isTyping(e.target as Element)) return;
-      setPathTick(n => n + 1); setSheet(s => (s === "path" ? null : s === null ? "path" : s));
-    };
-    window.addEventListener("keydown", on);
-    return () => window.removeEventListener("keydown", on);
-  }, [classesOn]);
+  // Classes v2 (§1.13) opened the Path sheet with P; v1 gives P to photo mode (specs/v1-drop.md §9, David) while the
+  // classes wait for v3. The Path sheet stays a click away from the Oracle.
   // The tool wheel (specs/game-ui.md): what it holds, what you hold (this device's), your stock for the pins.
   const heldState = useHeld();
   const wheelKeys = useWheelKeys();
@@ -969,6 +965,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // Talking, the greeting and the boat trip are cinematic (world audit item 7): the HUD stands back, flashes included,
   // leaving the dialogue or the trip's Skip. They let the cursor go, but they aren't the pause view.
   const hudCinematic = cinematic || talking;
+  // Photo mode (v1): the HUD steps away and the camera is free; it may open while nothing else holds the world.
+  const photo = usePhoto();
+  const photoAllowed = ready && !fading && !hudCinematic && !fishing && !sheet && !bagOpen && !donateOpen && !decor.decorating && !trip.active;
   // Dev (screenshots without pointer lock): ?hud=clean shows the HUD as it is while exploring in mouse-look.
   const full = isFullHud({ always: alwaysFullHud, keyHeld: hudKey, touch, capture: devHome.get("hud") === "clean" ? "captured" : captured, cinematic: hudCinematic });
   // On a phone the full HUD folds: one menu button, the heading, chips and touch hint flash (world audit item 11).
@@ -1038,7 +1037,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     return () => window.removeEventListener("keydown", key);
   }, [act, near, inside, atHome, decor, identity.settings, greeting, nextLine, finishWelcome, site, abilityKeys, sheet, bagOpen, donateOpen, reveal, fading]);
   return (
-    <main className={`${styles.world} gui`} data-light={phase} data-inside={inside ?? undefined} data-site={site} data-trip={trip.active || undefined} data-cinematic={hudCinematic || undefined} data-compact={compact || undefined}>
+    <main className={`${styles.world} gui`} data-light={phase} data-inside={inside ?? undefined} data-site={site} data-trip={trip.active || undefined} data-cinematic={hudCinematic || undefined} data-compact={compact || undefined} data-photo={photo.open || undefined}>
       <Canvas ref={canvasRef} tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
         camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false} frameloop={creatorOpen ? "never" : "always"}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
@@ -1061,7 +1060,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           {/* Classes v2: the subclass's aura replaces the family's once its kit exists (§1.9). */}
           {identity.aura && (classAura ? <Suspense fallback={null}><SubclassAura player={player} kit={classAura.kit} mastery={classAura.mastery} colour={classAura.colour} /></Suspense>
             : identity.family && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>)}
-          <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={grade} fx={lookFx(lookPreset, !liteMode)} />
+          <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={grade} fx={lookFx(lookPreset, !liteMode)} dof={photo.open ? { at: photoRig.focus, strength: photo.focus } : null} />
           <LookMaterials preset={lookPreset} />
           <SunShadows />
           <Performance player={player} output={perfOutput} />
@@ -1074,6 +1073,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           <NetWorld area={area} player={player} ready={ready && !fading && netReady} />
           {!inside && !atHome && site !== "ruins" && near !== "enter" && hqDoor && <LandmarkTag position={[hqDoor[0], 2.9, hqDoor[1]]}>HQ</LandmarkTag>}
           <LabelLayer focus={player} />
+          {/* Last, so its frame follows the follow camera's: photo mode's free camera (v1). */}
+          {photo.open && <PhotoCamera player={player} />}
         </Suspense>
       </Canvas>
       <header className={styles.heading} data-fading={fading || !ready || hudCinematic || ((!full || compact) && headingFlash === null)} data-clean={full && !compact ? undefined : ""}>
@@ -1084,6 +1085,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <TopCluster full={full && !compact} buttons={full} hidden={hudCinematic} weather={weather} phase={phase} unread={progression.unreadLetters} mailKey={keyName(identity.settings.key_bindings.openMail)} onMail={() => setSheet("letters")}
         onWallet={() => setSheet(value => (value === "wallet" ? null : "wallet"))} walletKey={keyName(identity.settings.key_bindings.openWallet)}>
         <AudioController phase={ambientPhase} weather={weather} season={season.season} className={hudButton} />
+        <PhotoButton className={hudButton} disabled={!photoAllowed} />
         <button className={hudButton} onClick={() => setSheet(value => (value === "settings" ? null : "settings"))} aria-label="Settings" title="Settings: text, sound, keys, look"><Settings size={18} aria-hidden /></button>
         {/* Development only: camera, time of day, the clearing reset and frame timing (hud-first-login §4). */}
         {DEV && <button ref={optionsToggleRef} className={hudButton} aria-expanded={optionsOpen} aria-controls="island-options" onClick={() => setOptionsOpen((open) => !open)} aria-label="Developer view options" title="Developer view options"><Wrench size={17} aria-hidden /></button>}
@@ -1195,7 +1197,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {captured === "captured" && site === "ruins" && <svg className={styles.crosshair} viewBox="-10 -10 20 20" aria-hidden="true"><circle r="5.5" /><circle r="1.2" /></svg>}
       <div className={styles.fade} data-active={fading} aria-hidden="true" />
       {trip.active && <TripVeil phase={trip.phase} to={trip.to} firstLogin={trip.firstLogin} quick={trip.quick} haze={light.fogColor} touch={touch} onSkip={trip.skip} />}
-      <div className={styles.netHud} data-hidden={hudCinematic || undefined}><NetHud area={area} hidden={hudCinematic} /></div>
+      <div className={styles.netHud} data-hidden={hudCinematic || undefined}><NetHud area={area} hidden={hudCinematic || photo.open} /></div>
+      <PhotoMode allowed={photoAllowed} />
       <LoadingStatus ready={ready} />
     </main>
   );
