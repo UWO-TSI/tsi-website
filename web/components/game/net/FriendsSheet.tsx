@@ -85,9 +85,10 @@ export default function FriendsSheet({ open, onClose }: { open: boolean; onClose
       {!v && tab !== "blocked" ? <p className={s.small}>Friends aren&apos;t available right now.</p>
         : tab === "friends" ? (friends.length ? <List label="Friends">{friends.map(x => {
           const o = online.get(x.member_id);
-          return <ListRow key={x.member_id} title={x.world_name} detail={o ? whereOf(o.area) : "Not on the island"} data-away={o ? undefined : ""}
-            onClick={() => openCard({ uid: x.member_id, name: x.world_name })}
-            value={o && o.shard !== myShard ? <span role="presentation" onClick={e => e.stopPropagation()}><Button size="sm" variant="secondary" onClick={() => joinFriend(x.member_id, x.world_name)}><LogIn size={14} aria-hidden /> Join</Button></span> : o ? <span className={s.status}>Here</span> : undefined} />;
+          return <ListRow key={x.member_id} data-away={o ? undefined : ""}
+            title={<button type="button" className={s.nameButton} onClick={() => openCard({ uid: x.member_id, name: x.world_name })} aria-label={`${x.world_name}: open their card`}>{x.world_name}</button>}
+            detail={o ? whereOf(o.area) : "Not on the island"}
+            value={o && o.shard !== myShard ? <Button size="sm" variant="secondary" onClick={() => joinFriend(x.member_id, x.world_name)}><LogIn size={14} aria-hidden /> Join</Button> : o ? <span className={s.status}>Here</span> : undefined} />;
         })}</List> : <Empty icon={<HeartHandshake size={28} />} title="No friends yet">Click someone on the island to add them, or share your code.</Empty>)
         : tab === "requests" ? (v!.incoming.length || v!.outgoing.length ? <>
           {v!.incoming.length > 0 && <List label="Asking you">{v!.incoming.map(r => <ListRow key={r.member_id} title={r.world_name} detail="Wants to be friends"
