@@ -1,7 +1,24 @@
 # STATE.md — where things actually are
 
 > Read this before `AGENT_LOG.md`. It answers "which branch, what's live, what's next"
-> in one page. Update it whenever direction changes. Last updated **2026-10-10**.
+> in one page. Update it whenever direction changes. Last updated **2026-10-13**.
+
+## v1 "Arrival" build: lanes and ownership (2026-10-13, coordinator session on the Mac mini)
+
+**v1 ships Halloween, Oct 31.** The plan is `specs/v1-drop.md`, decided with David. New-world checkpoint: Oct 24. Sessions on other devices: read this before starting, pull `main` often, and push small merges. The coordinator merges with whatever lands on `main`.
+
+| Lane (branch) | Owns |
+|---|---|
+| `game/v1-perf` | rendering batching and LOD for the v2 world, held-item, rod and glider mesh merges, the Lite preset (rendering only, never map data) |
+| `game/v1-community` | name tags, chat UI, friends, friend codes, join shard, photo mode (`web/components/game/net/**`, `realtime/` friends, the friends migration) |
+| `game/v1-emotes` | emote wheel, 8 dance clips (`build_clips.py`), group sync, campfire and drum dance |
+| `game/v1-opening` | arrival sequence, reflection creator, Bram tutorial, controls bar removal, dash and glider unlock flags |
+| `game/v1-world` | drop flags (café closed, home island and combat hidden), barrier props, traditions calendar and Halloween |
+| `game/v1-water` | water shader (depth, seabed, foam, ripples, glass, decorative fish), the wharf model |
+| `game/v1-land` | grass shader, rock props and cliff faces, lighting and colour, the title screen |
+| `game/head-fit` | head, skull fit points, David's 21 hairs |
+
+**The world map data** (`web/data/*map*.json`, the v2 draft, `/lab/map`) **belongs to David and the painter session on the other device.** Coordinator lanes deliver barrier, rock and stargazing placements as **proposals** to accept in `/lab/map`, and never edit map data. If you're that session, the proposals will show in the painter as overlays.
 
 ## Game lore locked (2026-10-10)
 

@@ -17,6 +17,7 @@ import {
   STUDY_STATES, SYS_KINDS, SYS_TEXT_MAX, TIME_MAX, cardBadge, cardFamily, cardFrame, createPose, decodeEvent, decodePose, dequantAir, dequantLeaf,
   dequantLift, dequantPos, dequantVel, dequantYaw, encodeEvent, encodePose, estimateClockOffset, hasFlag, heldOf, inAreaBounds, isClipEv, isEmoteClip,
   isHeld, isPrivateArea, joinRefusal, moveIndex, parseChat, parseChatLine, parseHeld, parseJoinOptions, parsePing, parsePong, parseSlowState, parseSys,
+  FOLLOW_REFUSALS, FRIENDS_MAX, ROOM_NAME, parseFollow, parseFollowAnswer, parseFriends, type FollowAnswer, type FollowRefusal, type FriendPresence,
   pushEv, quantAir, quantLeaf, quantLift, quantPos, quantTime, nextTp, quantVel, quantYaw, roomTime, seqAfter, studyIndex, tpChanged,
   type CardFamily, type CardFrame, type ChatLine, type ChatRefusal, type ClockSample, type EvKind, type HeldKind, type MoveClip, type NetPlayer, type Pose,
   type PosePacket, type RosterEntry, type StudyState, type SysMessage,
@@ -79,8 +80,15 @@ describe("append-only tables (wire indexes: add at the end, never reorder, renam
     locked(SYS_KINDS, ["restart", "notice", "refused"]);
     locked(CHAT_REFUSALS, ["muted", "fast", "slow", "repeat", "long", "empty", "filtered", "url"]);
   });
+  it("follow refusal reasons (join a friend's shard)", () => {
+    locked(FOLLOW_REFUSALS, ["offline", "here", "full", "not_friend", "busy"]);
+  });
+  it("v1's one bump: PROTOCOL 2 (typing, follow, friends)", () => {
+    expect(PROTOCOL).toBe(2);
+  });
   it("message names (the server registers each client-to-server one; an unknown type closes with 4002)", () => {
-    expect(MSG).toEqual({ pose: "p", slow: "s", ping: "ping", refresh: "refresh", chat: "chat", event: "e", pong: "pong", sys: "sys", line: "line" });
+    expect(MSG).toEqual({ pose: "p", slow: "s", ping: "ping", refresh: "refresh", chat: "chat", event: "e", pong: "pong", sys: "sys", line: "line",
+      follow: "follow", friends: "friends" });
     expect(new Set(Object.values(MSG)).size).toBe(Object.keys(MSG).length);
   });
 });
@@ -101,7 +109,7 @@ describe("enum helpers", () => {
     expect(["mastery:bronze", "mastery:silver", "mastery:gold", "ranger-fletching", null].map(cardFrame)).toEqual([1, 2, 3, 0, 0]);
   });
   it("emotes are the emote menu's clips", () => {
-    expect(new Set(EMOTE_CLIP_NAMES)).toEqual(new Set(Object.values(EMOTE_CLIPS)));
+    for (const c of Object.values(EMOTE_CLIPS)) expect(EMOTE_CLIP_NAMES).toContain(c);
     expect(isEmoteClip("Wave")).toBe(true);
     expect(isEmoteClip("Jump")).toBe(false);
     expect(isEmoteClip(3)).toBe(false);
@@ -301,7 +309,7 @@ describe("decodePose rejects", () => {
 describe("slow state `s`", () => {
   it("accepts any non-empty subset of the known fields and copies only them", () => {
     expect(parseSlowState({ area: AREAS.indexOf("cafe") })).toEqual({ area: 1 });
-    const full = { area: 0, held: "rod:rod-2", weapon: "sword-driftwood", pose: "Sit", seat: "study:plaza-picnic#2", study: 2, studyEnds: 1_500_000, showClass: false, afk: true };
+    const full = { area: 0, held: "rod:rod-2", weapon: "sword-driftwood", pose: "Sit", seat: "study:plaza-picnic#2", study: 2, studyEnds: 1_500_000, showClass: false, afk: true, typing: true };
     expect(parseSlowState(full)).toEqual(full);
     expect(parseSlowState({ held: "", weapon: "", pose: "", seat: "" })).toEqual({ held: "", weapon: "", pose: "", seat: "" });
     expect(parseSlowState(full)).not.toBe(full);
@@ -312,7 +320,7 @@ describe("slow state `s`", () => {
       { held: "sword" }, { held: "rod:" }, { held: "glider:x" }, { held: 3 },
       { weapon: "a b" }, { weapon: "k".repeat(65) }, { pose: "1Sit" }, { pose: "S".repeat(49) }, { seat: "a b" }, { seat: "s".repeat(65) },
       { study: STUDY_STATES.length }, { study: -1 }, { studyEnds: -1 }, { studyEnds: 2 ** 32 }, { studyEnds: 1.5 },
-      { showClass: 1 }, { afk: "yes" }, { area: 0, extra: 1 }, { toString: 1 },
+      { showClass: 1 }, { afk: "yes" }, { typing: 1 }, { typing: "yes" }, { area: 0, extra: 1 }, { toString: 1 },
     ];
     for (const s of bad) expect(parseSlowState(s), JSON.stringify(s)).toBeNull();
   });
@@ -377,6 +385,40 @@ describe("other messages", () => {
     expect(encodeEvent({ sid: 1, t: 1, kind: EV_KINDS.length, value: 0 })).toBeNull();
     for (const x of [[65536, 0, 0, 0], [0, -1, 0, 0], [0, 0, EV_KINDS.length, 0], [0, 0, EV.play, 1], [0, 0, EV.land, "x"], [0, 0, EV.land, 0.5], [0, 0, 0], null])
       expect(decodeEvent(x), JSON.stringify(x)).toBeNull();
+  });
+  it("follow {uid}: ask for a seat in a friend's shard", () => {
+    const uid = "11111111-2222-4333-8444-555555555555";
+    expect(parseFollow({ uid })).toEqual({ uid });
+    expect(parseFollow({ uid: uid.toUpperCase() })).toEqual({ uid: uid.toLowerCase() });
+    for (const x of [null, uid, [uid], {}, { uid: "alice" }, { uid: 3 }, { uid, extra: 1 }]) expect(parseFollow(x), JSON.stringify(x)).toBeNull();
+  });
+  it("follow {uid, seat} | {uid, refused}: the server's answer", () => {
+    const uid = "11111111-2222-4333-8444-555555555555";
+    const seat = { name: ROOM_NAME, sessionId: "aB3_x-9Qz", roomId: "Rk2_8sQ", processId: "p-1" };
+    expect(parseFollowAnswer({ uid, seat })).toEqual({ uid, seat });
+    const remote = { ...seat, publicAddress: "tethos-rt.fly.dev", devMode: true };
+    expect(parseFollowAnswer({ uid, seat: remote })).toEqual({ uid, seat: remote });
+    for (const refused of FOLLOW_REFUSALS) expect(parseFollowAnswer({ uid, refused })).toEqual({ uid, refused });
+    const bad: unknown[] = [
+      null, {}, { uid }, { uid, refused: "rude" }, { uid, seat, refused: "full" }, { uid: "alice", refused: "full" },
+      { uid, seat: { ...seat, name: "ruins" } }, { uid, seat: { ...seat, sessionId: "" } }, { uid, seat: { ...seat, roomId: "a b" } },
+      { uid, seat: { ...seat, processId: "x".repeat(65) } }, { uid, seat: { ...seat, publicAddress: 3 } }, { uid, seat: { ...seat, devMode: "yes" } },
+      { uid, seat: { ...seat, extra: 1 } }, { uid, seat: { name: ROOM_NAME, sessionId: "a", roomId: "b" } }, { uid, refused: "full", extra: 1 },
+    ];
+    for (const x of bad) expect(parseFollowAnswer(x), JSON.stringify(x)).toBeNull();
+    expectTypeOf<Extract<FollowAnswer, { refused: unknown }>["refused"]>().toEqualTypeOf<FollowRefusal>();
+  });
+  it("friends [{uid, shard, area}]: your online friends, anywhere in the process", () => {
+    const a: FriendPresence = { uid: "11111111-2222-4333-8444-555555555555", shard: 2, area: AREAS.indexOf("cafe") };
+    const b: FriendPresence = { uid: "66666666-7777-4888-8999-aaaaaaaaaaaa", shard: 1, area: 0 };
+    expect(parseFriends([])).toEqual([]);
+    expect(parseFriends([a, b])).toEqual([a, b]);
+    expect(parseFriends(Array.from({ length: FRIENDS_MAX }, () => b))).toHaveLength(FRIENDS_MAX);
+    const bad: unknown[] = [
+      null, {}, [null], [{ ...a, uid: "alice" }], [{ ...a, shard: 0 }], [{ ...a, shard: 256 }], [{ ...a, area: AREAS.length }], [{ ...a, area: -1 }],
+      [{ ...a, extra: 1 }], [{ uid: a.uid, shard: 1 }], Array.from({ length: FRIENDS_MAX + 1 }, () => b),
+    ];
+    for (const x of bad) expect(parseFriends(x), JSON.stringify(x)?.slice(0, 80)).toBeNull();
   });
   it("join options", () => {
     expect(parseJoinOptions({ v: PROTOCOL, area: 1, mobile: true, showClass: false })).toEqual({ v: PROTOCOL, area: 1, mobile: true, showClass: false });
@@ -450,7 +492,8 @@ describe("limits", () => {
     expect(SHARD).toEqual({ lock: 30, unlock: 26, max: 40 });
     expect(RECONNECT_GRACE_S).toEqual({ desktop: 20, phone: 120 });
     expect(RATE_LIMITS).toEqual({ p: { perSecond: 20, burst: 30 }, s: { perSecond: 5 }, area: { perSecond: 3, perMinute: 30 }, events: { perSecond: 8 },
-      emotes: { perSecond: 1, perMinute: 20 }, refresh: { everyMs: 10_000 }, ping: { perSecond: 2 }, maxMessagesPerSecond: 60 });
+      emotes: { perSecond: 1, perMinute: 20 }, refresh: { everyMs: 10_000 }, ping: { perSecond: 2 }, follow: { everyMs: 3000 }, maxMessagesPerSecond: 60 });
+    expect(FRIENDS_MAX).toBe(200);
     expect(CHAT).toMatchObject({ maxLength: 200, perMinute: 6, perHour: 60, gapMs: 1500, repeatMs: 30_000 });
     expect(CLOCK).toEqual({ burst: 5, burstGapMs: 200, everyMs: 15_000, window: 16, best: 5, applyOverMs: 100 });
   });

@@ -31,12 +31,18 @@
  *    the sender's world name. A refused line gets `sys {kind: "refused", reason, text}` instead. Reports and blocks
  *    are HTTP routes (/api/world/report, /api/world/blocks), not messages. Added before anything was deployed, so
  *    PROTOCOL stayed 1; the server deploys before any client that sends `chat` (an unknown type closes with 4002).
+ * 10. v1 (PROTOCOL 2, the release's one bump; specs/v1-drop.md §3): `s {typing}` sets FLAG.typing (the "…" over someone
+ *    writing a line); `follow {uid}` asks for a seat in a friend's shard, answered by `follow {uid, seat}` (a Colyseus
+ *    seat reservation the server made with matchMaker.reserveSeatFor, which a soft-locked shard still takes below
+ *    SHARD.max) or `follow {uid, refused}`; and `friends [{uid, shard, area}]` lists your friends who are on the island,
+ *    pushed whenever one comes, goes or moves. A v2 client never meets a v1 server: the bump closes that pair with
+ *    CLOSE.version instead of an unknown message's 4002. Deploy order: the friends migration, the server, the web.
  */
 
 // ── Version and connecting ────────────────────────────────────────
 
 /** The join's `v`; a mismatch closes with CLOSE.version. */
-export const PROTOCOL = 1;
+export const PROTOCOL = 2;
 /**
  * The one room (§3). To connect: `const client = new Client(NEXT_PUBLIC_REALTIME_URL)`, then at once
  * `client.http.options.credentials = "omit"`: @colyseus/sdk sends the matchmake fetch with credentials included by
@@ -45,10 +51,12 @@ export const PROTOCOL = 1;
  */
 export const ROOM_NAME = "island";
 /**
- * Message types (§4.2). Client to server: p, s, ping, refresh, chat. Server to client: e, pong, sys, line (and state
- * patches).
+ * Message types (§4.2). Client to server: p, s, ping, refresh, chat, follow. Server to client: e, pong, sys, line, follow,
+ * friends (and state patches). `follow` goes both ways: the ask, then the answer.
  */
-export const MSG = { pose: "p", slow: "s", ping: "ping", refresh: "refresh", chat: "chat", event: "e", pong: "pong", sys: "sys", line: "line" } as const;
+export const MSG = {
+  pose: "p", slow: "s", ping: "ping", refresh: "refresh", chat: "chat", event: "e", pong: "pong", sys: "sys", line: "line", follow: "follow", friends: "friends",
+} as const;
 /** Dev tokens (`DEV_AUTH=1`, refused in production): `dev:<name>`, as `?mp=dev&as=Alice` and the bots send. */
 export const DEV_TOKEN_PREFIX = "dev:";
 /** The most a client message may weigh (the WebSocket transport's maxPayload). */
@@ -154,7 +162,8 @@ export function moveIndex(clip: string | null | undefined): number {
 
 /**
  * Player.flags and RosterEntry.flags (§4.1), all set by the server: away (onDrop, cleared onReconnect), afk (`s.afk`),
- * mobile (the join), showClass (the join, then `s.showClass`), typing (M2 chat), armed (`s.weapon` isn't empty).
+ * mobile (the join), showClass (the join, then `s.showClass`), typing (`s.typing`: writing a chat line), armed (`s.weapon`
+ * isn't empty).
  */
 export const FLAG = { away: 1, afk: 2, mobile: 4, showClass: 8, typing: 16, armed: 32 } as const;
 /** The pose packet's flags: TELEPORT snaps rather than interpolates (when the sender sets it: POSE_FIELDS). */
@@ -209,7 +218,7 @@ export const EV_DT_MAX_MS = 2000;
 /** Kinds whose value is a clip name. */
 export const isClipEv = (kind: number) => kind === EV.play || kind === EV.upper;
 /** The emote menu's clips (character/clips EMOTE_CLIPS): a play or upper event with one counts against RATE_LIMITS.emotes. */
-export const EMOTE_CLIP_NAMES = ["Wave", "Dance", "Laugh", "Cheer", "Sad"] as const;
+export const EMOTE_CLIP_NAMES = ["Wave", "Dance", "Laugh", "Cheer", "Sad", "Clap", "Bow", "Shrug", "DanceBounce", "DanceSpin", "DanceShuffle", "DanceSway", "DanceWiggle", "DanceFlail", "DanceRobot", "DanceSprinkler", "DanceStomp"] as const;
 export const isEmoteClip = (name: unknown) => typeof name === "string" && (EMOTE_CLIP_NAMES as readonly string[]).includes(name);
 
 // ── Strings on the wire ───────────────────────────────────────────
@@ -480,6 +489,8 @@ export interface SlowState {
   studyEnds?: number;
   showClass?: boolean;
   afk?: boolean;
+  /** Writing a chat line (FLAG.typing): sent on change, cleared on send, close or a quiet spell. */
+  typing?: boolean;
 }
 const SLOW_CHECK: Readonly<Record<keyof SlowState, (v: unknown) => boolean>> = {
   area: v => isIndex(v, AREAS.length),
@@ -491,6 +502,7 @@ const SLOW_CHECK: Readonly<Record<keyof SlowState, (v: unknown) => boolean>> = {
   studyEnds: v => isUint(v, TIME_MAX),
   showClass: v => typeof v === "boolean",
   afk: v => typeof v === "boolean",
+  typing: v => typeof v === "boolean",
 };
 const SLOW_KEYS = new Set(Object.keys(SLOW_CHECK));
 /** A copy of a valid `s` with only its known fields, or null (an unknown key or a bad value refuses the whole message). */
@@ -585,6 +597,68 @@ export function parseChatLine(x: unknown): ChatLine | null {
   return { id, sid, uid, name, area, text, t };
 }
 
+// ── Friends (v1, specs/v1-drop.md §3) ────────────────────────────
+
+/**
+ * Why a `follow` got no seat. Append-only.
+ * - offline: they aren't on the island (or a block stands between you, which is never said);
+ * - here: you're already in their shard;
+ * - full: their shard is at SHARD.max;
+ * - not_friend: you aren't friends (any more);
+ * - busy: the seat couldn't be made; try again.
+ */
+export const FOLLOW_REFUSALS = ["offline", "here", "full", "not_friend", "busy"] as const;
+export type FollowRefusal = (typeof FOLLOW_REFUSALS)[number];
+/** The most friends anyone has: the presence list never holds more. */
+export const FRIENDS_MAX = 200;
+
+/** `follow {uid}`: a seat in this friend's shard, please. */
+export interface FollowAsk { uid: string }
+export function parseFollow(x: unknown): FollowAsk | null {
+  return isRecord(x) && Object.keys(x).length === 1 && isUuid(x.uid) ? { uid: x.uid.toLowerCase() } : null;
+}
+
+/**
+ * A Colyseus seat reservation (ISeatReservation), as the server's matchMaker.reserveSeatFor made it: the client hands it
+ * to `client.consumeSeatReservation` within the room's seat timeout (15 s). `publicAddress` and `devMode` only when the
+ * server set them.
+ */
+export interface SeatReservation { name: string; sessionId: string; roomId: string; processId: string; publicAddress?: string; devMode?: boolean }
+const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+function parseSeat(x: unknown): SeatReservation | null {
+  if (!isRecord(x)) return null;
+  const { name, sessionId, roomId, processId, publicAddress, devMode, ...rest } = x;
+  if (Object.keys(rest).length || name !== ROOM_NAME) return null;
+  if (![sessionId, roomId, processId].every(v => typeof v === "string" && ID_RE.test(v))) return null;
+  if (publicAddress !== undefined && (typeof publicAddress !== "string" || publicAddress.length > 255)) return null;
+  if (devMode !== undefined && typeof devMode !== "boolean") return null;
+  const seat: SeatReservation = { name, sessionId: sessionId as string, roomId: roomId as string, processId: processId as string };
+  if (publicAddress !== undefined) seat.publicAddress = publicAddress;
+  if (devMode !== undefined) seat.devMode = devMode;
+  return seat;
+}
+/** The server's answer to `follow`: a seat in their shard, or why not. */
+export type FollowAnswer = { uid: string; seat: SeatReservation } | { uid: string; refused: FollowRefusal };
+export function parseFollowAnswer(x: unknown): FollowAnswer | null {
+  if (!isRecord(x) || Object.keys(x).length !== 2 || !isUuid(x.uid)) return null;
+  if ("refused" in x) return FOLLOW_REFUSALS.includes(x.refused as FollowRefusal) ? { uid: x.uid, refused: x.refused as FollowRefusal } : null;
+  const seat = parseSeat(x.seat);
+  return seat ? { uid: x.uid, seat } : null;
+}
+
+/** One friend on the island: their shard and the AREAS index of the scene they're in. */
+export interface FriendPresence { uid: string; shard: number; area: number }
+/** `friends [...]`: every friend of yours on the island now (anyone who blocked you is never in it). */
+export function parseFriends(x: unknown): FriendPresence[] | null {
+  if (!Array.isArray(x) || x.length > FRIENDS_MAX) return null;
+  const out: FriendPresence[] = [];
+  for (const f of x) {
+    if (!isRecord(f) || Object.keys(f).length !== 3 || !isUuid(f.uid) || !isInt(f.shard, 1, 255) || !isIndex(f.area, AREAS.length)) return null;
+    out.push({ uid: f.uid, shard: f.shard, area: f.area });
+  }
+  return out;
+}
+
 /**
  * `e [sid, t, kind, value]`: one event, sent only to clients whose view holds the player. Decoded: `t` is room time,
  * `value` a clip name or a length in world units.
@@ -668,6 +742,8 @@ export const RATE_LIMITS = {
   emotes: { perSecond: 1, perMinute: 20 },
   refresh: { everyMs: 10_000 },
   ping: { perSecond: 2 },
+  /** `follow`: one ask per 3 s. */
+  follow: { everyMs: 3000 },
   maxMessagesPerSecond: 60,
 } as const;
 
