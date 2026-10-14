@@ -7,9 +7,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { CLIFF_LEVELS, Surface, isWater, needsCliff, type IslandMap } from "../grid";
-import { landmarkHalf, type LandmarkId } from "../defaultIsland";
+import { landmarkHalf, turn, type LandmarkId } from "../defaultIsland";
 import { parseVillage, type VillageDoc } from "../villageMap";
-import { convertCells, shelf } from "./convert";
+import { berthWeight, convertCells, shelf } from "./convert";
 import type { World } from "./format";
 import { MAX_CLIMB, Paint, paintAt, sampleX, sampleZ, terrainHeight, terrainSteepness, type WorldTerrain } from "./terrain";
 
@@ -33,9 +33,11 @@ describe("converting the v2 world", () => {
 
   it("keeps the coast and the rivers: sea-level water stays water, land stays land (cell centres)", () => {
     let wrong = 0, water = 0;
+    const docks = world.objects.filter(o => o.kind === "landmark" && o.id === "wharf");
     for (let cz = 0; cz < old.depth; cz++) for (let cx = 0; cx < old.width; cx++) {
       const s = old.surfaces[cz * old.width + cx], lv = old.levels[cz * old.width + cx];
       if (isWater(s) && lv > 1) continue; // the waterfall's channel: dried to rock in v0
+      if (docks.some(d => berthWeight(d, ...centre(cx, cz)) > 0)) continue; // the wharf's berth, dug for the boats
       const h = terrainHeight(t, ...centre(cx, cz)), wet = isWater(s);
       if (wet) water++;
       if (wet !== h <= t.seaLevel) wrong++;
@@ -113,6 +115,35 @@ describe("converting the v2 world", () => {
     let deepest = 0;
     for (const h of t.heights) deepest = Math.max(deepest, t.seaLevel - h);
     expect(deepest).toBeCloseTo(4.2, 1);
+  });
+
+  it("raises a quay at the wharf: the bank at the deck's height, deep water under the jetty and the moorings (David, 2026-10-14)", () => {
+    const w = world.objects.find(o => o.kind === "landmark" && o.id === "wharf")!;
+    const at = (dx: number, dz: number) => { const [x, z] = turn(dx, dz, w.yaw); return terrainHeight(t, w.x + x, w.z + z); };
+    // The jetty's land end and the ground beside it stand at the deck (y 0), not down a beach.
+    for (const [dx, dz] of [[0, 1.1], [-1.5, 0.8], [1.5, 0.8], [0, 0.3]]) {
+      const h = at(dx, dz);
+      if (h > t.seaLevel) expect(h, `bank at ${dx},${dz}`).toBeGreaterThan(-0.01);
+    }
+    // The tip, the moored boat (lib/game/wharf.ts MOORED) and the rowboats along the finger float over deep water.
+    for (const [dx, dz] of [[0, -3.5], [2.32, -2.92], [-2.65, -3.97], [-3.75, -1.8]]) expect(t.seaLevel - at(dx, dz), `depth at ${dx},${dz}`).toBeGreaterThan(1.2);
+  });
+
+  it("keeps the gentle shelf on the beaches away from the wharf", () => {
+    // The beach landmark's shore: walk out from it until the water starts, then two units on, the sea is still shallow.
+    const b = world.objects.find(o => o.kind === "landmark" && o.id === "beach")!;
+    let shelves = 0;
+    for (let a = 0; a < 16; a++) {
+      const dx = Math.cos((a / 16) * Math.PI * 2), dz = Math.sin((a / 16) * Math.PI * 2);
+      let s = 0;
+      while (s < 40 && terrainHeight(t, b.x + dx * s, b.z + dz * s) > t.seaLevel) s += 0.1;
+      if (s >= 40) continue;
+      const depth = t.seaLevel - terrainHeight(t, b.x + dx * (s + 2), b.z + dz * (s + 2));
+      if (paintAt(t, b.x + dx * (s - 0.5), b.z + dz * (s - 0.5)) !== Paint.Sand) continue;
+      expect(depth).toBeLessThan(0.6);
+      shelves++;
+    }
+    expect(shelves).toBeGreaterThan(3);
   });
 
   it("carries the paths, the beach and the plaza's stone into the paint", () => {

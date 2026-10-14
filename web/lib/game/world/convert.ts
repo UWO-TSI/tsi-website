@@ -24,13 +24,16 @@
  * PADS. Every building (a landmark with a footprint) stands on ground levelled to its centre over its footprint and a
  * cell round it, easing back to the land over PAD_EASE.
  *
+ * THE WHARF (David, 2026-10-14). Beaches meet the water at sea level and ease in; at the wharf the land stands at the
+ * jetty deck's height to the water's edge and drops straight to water deep enough for boats (`wharfQuay`).
+ *
  * Elevated water (the peak waterfall's channel) has no water in v0 (water is at sea level): its cells become rock at
  * their level; its pond drops to a sea-level pond. Open question in the spec.
  */
 import {
-  LEVEL_STEP, MAX_LEVEL, Surface, isWater, overlayAt, sampleShore, sdfFromMask, shoreSdf, smoothstep, type IslandMap,
+  LEVEL_STEP, MAX_LEVEL, Surface, isWater, overlayAt, sampleShore, sdfFromMask, shoreSdf, smoothstep, type IslandMap, type ShoreSdf,
 } from "../grid";
-import { landmarkHalf, type LandmarkId } from "../defaultIsland";
+import { landmarkHalf, turn, type LandmarkId } from "../defaultIsland";
 import { parseVillage, type VillageDoc } from "../villageMap";
 import type { World } from "./format";
 import { Paint, createTerrain, sampleX, sampleZ, type WorldTerrain } from "./terrain";
@@ -55,6 +58,18 @@ export const CONVERT = {
   padEase: 2.5,
   /** The steepest any face may be (rise over run): where old tiers stack into one tall cliff, it leans back to this. */
   maxGrade: 3,
+  /**
+   * The wharf's quay (David, 2026-10-14): round the jetty the land stands at the deck's walk height (the pier model's
+   * deck top, y 0) right to the water and drops straight to water deep enough for boats. `reach`: the zone's radius
+   * round the pier's line (its land end to past the moorings, in the dock's frame), easing out over `ease`.
+   */
+  quay: { bank: 0, depth: 1.4, run: 0.6, from: 2, to: -5, reach: 5.5, ease: 4 },
+  /**
+   * The berth (the dock's frame, lib/game/wharf.ts): the water the jetty's tip, the finger pier, the moored boat and the
+   * rowboats need, dug to the quay's depth wherever the old map had land there (a grass ridge stood under two of the
+   * rowboats), its edge a quay face `edge` wide.
+   */
+  berth: { x0: -5.3, x1: 3.8, z0: -5.2, z1: -0.8, edge: 0.6 },
 } as const;
 
 /** The seabed's depth under the still sea `d` units out from the shore: a gentle shelf, then the drop to the open sea's floor (4.2, the water's own deepest). */
@@ -234,6 +249,45 @@ export function limitSteepness(t: WorldTerrain, maxGrade: number = CONVERT.maxGr
   return moved;
 }
 
+/**
+ * The wharf's quay (David, 2026-10-14; CONVERT.quay): within the zone round each wharf the land is raised to the
+ * jetty deck's height up to the shoreline, and the water drops within `run` of it to `depth`, so the pier stands over
+ * deep water and the boats moor alongside a bank, not over a beach. Every other coast keeps its own profile. `shore`
+ * is the map's organic shore field (positive over water, units).
+ */
+export function wharfQuay(t: WorldTerrain, objects: World["objects"], shore: ShoreSdf): number {
+  const q = CONVERT.quay;
+  let n = 0;
+  for (const o of objects) {
+    if (o.kind !== "landmark" || o.id !== "wharf") continue;
+    n++;
+    const yaw = o.yaw ?? 0, [ax, az] = turn(0, q.from, yaw), [bx, bz] = turn(0, q.to, yaw);
+    const a = [o.x + ax, o.z + az], b = [o.x + bx, o.z + bz], far = q.reach + q.ease;
+    const i0 = Math.max(0, Math.floor((Math.min(a[0], b[0]) - far - t.x0) * t.res)), i1 = Math.min(t.cols - 1, Math.ceil((Math.max(a[0], b[0]) + far - t.x0) * t.res));
+    const k0 = Math.max(0, Math.floor((Math.min(a[1], b[1]) - far - t.z0) * t.res)), k1 = Math.min(t.rows - 1, Math.ceil((Math.max(a[1], b[1]) + far - t.z0) * t.res));
+    const ux = b[0] - a[0], uz = b[1] - a[1], len2 = ux * ux + uz * uz;
+    for (let k = k0; k <= k1; k++) for (let i = i0; i <= i1; i++) {
+      const x = sampleX(t, i), z = sampleZ(t, k), s = Math.max(0, Math.min(1, ((x - a[0]) * ux + (z - a[1]) * uz) / len2));
+      const w = 1 - smoothstep(q.reach, far, Math.hypot(x - a[0] - ux * s, z - a[1] - uz * s));
+      if (w <= 0) continue;
+      const p = k * t.cols + i, out = sampleShore(shore, x, z);
+      const target = out <= 0 ? Math.max(t.heights[p], q.bank) : Math.min(t.heights[p], t.seaLevel - q.depth * smoothstep(0, q.run, out));
+      t.heights[p] += (target - t.heights[p]) * w;
+      // The berth: deep water wherever the boats and the finger pier stand.
+      const bw = berthWeight(o, x, z);
+      if (bw > 0) t.heights[p] += (Math.min(t.heights[p], t.seaLevel - q.depth) - t.heights[p]) * bw;
+    }
+  }
+  return n;
+}
+
+/** How much of a wharf's berth (CONVERT.berth, its dock frame) covers a world point: 1 inside, falling over its edge. */
+export function berthWeight(dock: { x: number; z: number; yaw?: number }, x: number, z: number): number {
+  const b = CONVERT.berth, [lx, lz] = turn(x - dock.x, z - dock.z, -(dock.yaw ?? 0));
+  const out = Math.hypot(Math.max(0, b.x0 - lx, lx - b.x1), Math.max(0, b.z0 - lz, lz - b.z1));
+  return 1 - smoothstep(0, b.edge, out);
+}
+
 /** Level the ground under every building: its footprint and a rim, at its centre's height, easing back over padEase. */
 export function padBuildings(t: WorldTerrain, objects: World["objects"]): number {
   let n = 0;
@@ -260,6 +314,8 @@ export interface ConvertReport {
   driedWater: number;
   pondCells: number;
   pads: number;
+  /** Wharves given a quay. */
+  quays: number;
   objects: number;
   annotations: number;
 }
@@ -280,7 +336,9 @@ export function convertCells(doc: VillageDoc, opts: { res?: number } = {}): { wo
   for (let c = 0; c < W * D; c++) if (isWater(map.surfaces[c])) levels[c] = 0;
   const t = createTerrain(W, D, map.originX, map.originZ, { res: opts.res ?? 2 });
   if (t.res % 2) throw new Error("the conversion needs an even resolution (cell centres on samples)");
-  heightsFromCells(map, t, levels);
+  const shore = shoreSdf(map);
+  heightsFromCells(map, t, levels, shore);
+  const quays = wharfQuay(t, objects, shore);
   limitSteepness(t);
   // Paint: the grid's organic overlays (built stone, worn paths, the beach), sand under the water, rock where water dried.
   for (let k = 0; k < t.rows; k++) for (let i = 0; i < t.cols; i++) {
@@ -296,6 +354,6 @@ export function convertCells(doc: VillageDoc, opts: { res?: number } = {}): { wo
   const pads = padBuildings(t, objects);
   return {
     world: { terrain: t, objects, annotations, source: "converted from web/data/world-map.json (scripts/convert-world.ts)" },
-    report: { driedWater, pondCells, pads, objects: objects.length, annotations: annotations.length },
+    report: { driedWater, pondCells, pads, quays, objects: objects.length, annotations: annotations.length },
   };
 }

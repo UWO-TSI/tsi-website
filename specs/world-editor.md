@@ -27,6 +27,10 @@ Decided with David on 2026-10-14, after he walked the terrain v2 world and said 
 8. **Look later.**
    - The editor ships with plain placeholder materials (grass, sand, dirt path, rock).
    - The look pass comes after, from references and texture packs David supplies. Never source references ourselves.
+9. **The coast at the wharf vs at beaches** (David, 2026-10-14).
+   - **At the wharf** the land stands higher than the water: a raised bank or quay edge, so the dock and pier make sense and boats moor alongside. The jetty deck sits at that bank height over water deep enough for boats. No sloping beach under the pier.
+   - **At beaches** the land meets the water at sea level and eases in: a gentle shelf from dry sand into shallows.
+   - Built into the conversion: the wharf zone (the `wharf` landmark, its jetty, finger pier and moorings, plus a radius) gets the bank and a short steep drop to deep water; every other sand coast keeps the gentle shelf. In the editor, flatten and level (with the hard edge) make it easy to raise a bank like that; paint can mark it as stone, or a timber edge later.
 
 ## v0: a usable editor (one lane)
 
