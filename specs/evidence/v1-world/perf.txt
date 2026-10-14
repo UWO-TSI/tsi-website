@@ -1,0 +1,21 @@
+perf:check on a2f30ef2 (measurement build, SKIP_BUILD=1 KEEP_BUILD=1), 2026-10-14
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draw calls | Triangles | Runs | Spread | Load |
+|---|---|---|---|---|---|---|---|---|---|
+| village | high | 4.00 (4.00, 0.0%) | 4.90 (5.00, -2.0%) | 3.40 (3.40, 0.0%) | 384 (464, -17.2%) | 536779 (421963, +27.2%) | 3 | 3% | 3.4 |
+| v2 | high | 5.50 (5.50, 0.0%) | 7.10 (6.70, +6.0%) | 5.00 (4.90, +2.0%) | 254 (697, -63.6%) | 912241 (1036568, -12.0%) | 3 | 2% | 3.1 |
+| cafe | high | 2.00 (2.10, -4.8%) | 3.20 (3.20, 0.0%) | 0.70 (1.20, -41.7%) | 137 (139, -1.4%) | 66039 (70040, -5.7%) | 3 | 0% | 3 |
+| ruins-summoner | high | 2.70 (3.10, -12.9%) | 4.70 (5.10, -7.8%) | 2.10 (2.50, -16.0%) | 310 (417, -25.7%) | 230721 (228021, +1.2%) | 3 | 4% | 3.2 |
+| village | lite | 2.30 (2.20, +4.5%) | 3.40 (3.30, +3.0%) | 2.00 (1.90, +5.3%) | 285 (336, -15.2%) | 352493 (327371, +7.7%) | 3 | 4% | 4.3 |
+| v2 | lite | 3.00 (3.00, 0.0%) | 3.60 (3.60, 0.0%) | 2.80 (2.70, +3.7%) | 172 (487, -64.7%) | 629051 (818560, -23.2%) | 3 | 0% | 3.4 |
+| cafe | lite | 1.50 (1.40, +7.1%) | 2.70 (2.50, +8.0%) | 0.70 (0.70, 0.0%) | 102 (105, -2.9%) | 63676 (67889, -6.2%) | 3 | 0% | 3.2 |
+| ruins-summoner | lite | 1.80 (1.90, -5.3%) | 4.10 (4.40, -6.8%) | 1.40 (1.50, -6.7%) | 157 (236, -33.5%) | 168917 (165832, +1.9%) | 3 | 6% | 3.7 |
+
+Halloween layer, High, night (tradition=none vs halloween), 2 reps each (perf-bench rows):
+village high: 243.4 FPS, 1% low 175.6, median 4 p95 5 worst 6 ms; first ult null second null | LOD 8, throttled 3, scenes 3 | calls 381 (p95 387), tris 543273, mixers 12, skeletons 16, cpu 3.4 (p95 3.9) render 2.4 ms | skinned 50, instanced 56, meshes 228, lights 9, programs 134 | heap 258 MB | load 4.20
+v2 high: 181.3 FPS, 1% low 121.1, median 5.3 p95 6.7 worst 10 ms; first ult null second null | LOD 2, throttled 2, scenes 3 | calls 254 (p95 258), tris 911207, mixers 1, skeletons 5, cpu 4.8 (p95 6.2) render 4.2 ms | skinned 33, instanced 24, meshes 159, lights 19, programs 92 | heap 529 MB | load 3.33
+village high: 228.8 FPS, 1% low 166.4, median 4.2 p95 5.2 worst 6.9 ms; first ult null second null | LOD 8, throttled 3, scenes 3 | calls 417 (p95 423), tris 555057, mixers 12, skeletons 16, cpu 3.7 (p95 4) render 2.6 ms | skinned 52, instanced 60, meshes 230, lights 9, programs 137 | heap 253 MB | load 3.27
+v2 high: 176.7 FPS, 1% low 121.6, median 5.5 p95 6.8 worst 9.2 ms; first ult null second null | LOD 2, throttled 2, scenes 3 | calls 288 (p95 290), tris 923849, mixers 1, skeletons 5, cpu 4.9 (p95 6.3) render 4.3 ms | skinned 33, instanced 28, meshes 158, lights 19, programs 93 | heap 520 MB | load 2.63
+village high: 246.6 FPS, 1% low 180, median 3.9 p95 4.9 worst 6 ms; first ult null second null | LOD 8, throttled 3, scenes 3 | calls 379 (p95 383), tris 541210, mixers 12, skeletons 16, cpu 3.4 (p95 3.8) render 2.4 ms | skinned 52, instanced 56, meshes 226, lights 9, programs 135 | heap 267 MB | load 2.71
+v2 high: 181 FPS, 1% low 118.6, median 5.3 p95 6.8 worst 10.2 ms; first ult null second null | LOD 2, throttled 2, scenes 3 | calls 254 (p95 258), tris 911191, mixers 1, skeletons 5, cpu 4.8 (p95 6.2) render 4.2 ms | skinned 33, instanced 24, meshes 158, lights 19, programs 92 | heap 530 MB | load 2.55
+village high: 231.9 FPS, 1% low 170.1, median 4.2 p95 5.2 worst 6.2 ms; first ult null second null | LOD 8, throttled 3, scenes 3 | calls 416 (p95 420), tris 557961, mixers 12, skeletons 16, cpu 3.6 (p95 4) render 2.5 ms | skinned 52, instanced 60, meshes 228, lights 9, programs 135 | heap 274 MB | load 2.73
+v2 high: 173.8 FPS, 1% low 123, median 5.7 p95 7.3 worst 11 ms; first ult null second null | LOD 2, throttled 2, scenes 3 | calls 289 (p95 293), tris 923545, mixers 1, skeletons 5, cpu 5.1 (p95 6.6) render 4.5 ms | skinned 33, instanced 28, meshes 158, lights 19, programs 93 | heap 510 MB | load 2.66
