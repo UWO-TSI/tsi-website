@@ -61,7 +61,8 @@ describe("converting the v2 world", () => {
   });
 
   it("keeps cliffs only where the old map drew kit cliffs (or a cliff meets the sea)", () => {
-    // Every land sample too steep to climb lies within 2.5 cells of an old kit cliff or an old level-2+ coast.
+    // Every land sample too steep to climb lies within 4 cells of an old kit cliff or an old level-2+ coast (the
+    // naturalize pass wanders a cliff's outline up to about 3 units either way).
     const near = new Uint8Array(old.width * old.depth);
     for (let cz = 0; cz < old.depth; cz++) for (let cx = 0; cx < old.width; cx++) {
       const c = cz * old.width + cx;
@@ -70,9 +71,9 @@ describe("converting the v2 world", () => {
         for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = (cz + dz) * old.width + cx + dx; if (isWater(old.surfaces[n])) mark = true; }
       }
       if (!mark) continue;
-      for (let dz = -3; dz <= 3; dz++) for (let dx = -3; dx <= 3; dx++) {
+      for (let dz = -4; dz <= 4; dz++) for (let dx = -4; dx <= 4; dx++) {
         const nx = cx + dx, nz = cz + dz;
-        if (nx >= 0 && nz >= 0 && nx < old.width && nz < old.depth && Math.hypot(dx, dz) <= 2.5) near[nz * old.width + nx] = 1;
+        if (nx >= 0 && nz >= 0 && nx < old.width && nz < old.depth && Math.hypot(dx, dz) <= 4) near[nz * old.width + nx] = 1;
       }
     }
     let steep = 0, stray = 0;

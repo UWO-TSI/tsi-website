@@ -15,7 +15,9 @@
  * - a TWO-or-more-level step (an old kit cliff) rises over ±W_CLIFF: a steep rock face (over 2 grade), unwalkable,
  *   read as rock by slope; so the mountain keeps its cliffs and nothing else gains one.
  * The mix follows the boundary (the share of cliff edges near each point), so a cliff tapers into a slope where the
- * old map did.
+ * old map did. Then the cliff bands are naturalized (CONVERT.natural): their outlines wander, their faces vary in
+ * steepness, their tops and feet round over, and steep ground gets rock relief, so a mountain reads as rock and slopes
+ * rather than walls.
  *
  * THE COAST. Land falls to the still sea exactly on the organic shoreline at a grade set by what meets the water:
  * a beach (old sand) shelves at G_SAND, a grass bank at G_BANK, a cliff coast (old level ≥ 2 at the water) at G_CLIFF.
@@ -31,7 +33,7 @@
  * their level; its pond drops to a sea-level pond. Open question in the spec.
  */
 import {
-  LEVEL_STEP, MAX_LEVEL, Surface, isWater, overlayAt, sampleShore, sdfFromMask, shoreSdf, smoothstep, type IslandMap, type ShoreSdf,
+  LEVEL_STEP, MAX_LEVEL, Surface, isWater, overlayAt, sampleShore, sdfFromMask, shoreSdf, smoothstep, valueNoise, type IslandMap, type ShoreSdf,
 } from "../grid";
 import { landmarkHalf, turn, type LandmarkId } from "../defaultIsland";
 import { parseVillage, type VillageDoc } from "../villageMap";
@@ -70,6 +72,14 @@ export const CONVERT = {
    * rowboats), its edge a quay face `edge` wide.
    */
   berth: { x0: -5.3, x1: 3.8, z0: -5.2, z1: -0.8, edge: 0.6 },
+  /**
+   * The naturalize pass (coordinator, 2026-10-14: the mountain read as long straight flat-topped walls): on the cliff
+   * bands only (a one-level slope is left as it is), the outline wanders `wander` units either way along its length
+   * (noise `wanderScale` units long), each face's width varies by `vary` either way (some steeper, some gentler, never
+   * walkable), a share `shoulder` of every cliff step rounds over three times its width at its top and foot, and steep
+   * ground gets rock relief `rock` units deep (`rockScale` units across). Layout and band heights stay.
+   */
+  natural: { wander: 2.2, wanderScale: 11, vary: 0.55, varyScale: 6, shoulder: 0.4, rock: 0.16, rockScale: 1.6 },
 } as const;
 
 /** The seabed's depth under the still sea `d` units out from the shore: a gentle shelf, then the drop to the open sea's floor (4.2, the water's own deepest). */
@@ -187,11 +197,18 @@ export function heightsFromCells(map: IslandMap, t: WorldTerrain, levels: Uint8A
       cliffs[a] += cliff; cliffs[b] += cliff;
     }
     const cb = blurToSamples(cliffs, W, D, res, CONVERT.characterSigma), eb = blurToSamples(edges, W, D, res, CONVERT.characterSigma);
-    const d = tierDistance(inside, W, D, res);
+    const d = tierDistance(inside, W, D, res), nat = CONVERT.natural;
     for (let p = 0; p < land.length; p++) {
       const share = eb[p] > 1e-3 ? Math.min(1, cb[p] / eb[p]) : 0;
       const w = CONVERT.slopeWidth + (CONVERT.cliffWidth - CONVERT.slopeWidth) * share;
-      land[p] += LEVEL_STEP * smoothstep(-1, 1, d[p] / w);
+      if (share <= 0) { land[p] += LEVEL_STEP * smoothstep(-1, 1, d[p] / w); continue; }
+      // A cliff band, naturalized: its outline wanders, its face's steepness varies, its top and foot round over.
+      const x = sampleX(t, p % cols), z = sampleZ(t, Math.floor(p / cols));
+      const wander = (valueNoise(x / nat.wanderScale, z / nat.wanderScale, 40 + L) - 0.5) + 0.4 * (valueNoise(x / (nat.wanderScale * 0.33), z / (nat.wanderScale * 0.33), 50 + L) - 0.5);
+      const dd = d[p] + share * nat.wander * 2 * wander;
+      const ww = w * (1 + share * nat.vary * 2 * (valueNoise(x / nat.varyScale, z / nat.varyScale, 60 + L) - 0.5));
+      const face = smoothstep(-1, 1, dd / ww), round = smoothstep(-1, 1, dd / (3 * ww));
+      land[p] += LEVEL_STEP * (face + share * nat.shoulder * (round - face));
     }
   }
   // How steeply land meets the sea, per land cell, blurred along the coast over the land cells only.
@@ -214,6 +231,23 @@ export function heightsFromCells(map: IslandMap, t: WorldTerrain, levels: Uint8A
     const g = gDen[p] > 1e-3 ? gNum[p] / gDen[p] : CONVERT.bank;
     t.heights[p] = t.seaLevel + softMin(land[p] - t.seaLevel, g * toShore);
   }
+}
+
+/**
+ * Rock relief on steep land (the naturalize pass, CONVERT.natural): two octaves of noise, deepest where the ground is
+ * steepest, nothing on walkable ground or within reach of the sea (the coast stays where it is).
+ */
+export function rockRelief(t: WorldTerrain): void {
+  const nat = CONVERT.natural, h = t.heights, c = t.cols, out = new Float32Array(h.length);
+  for (let k = 1; k < t.rows - 1; k++) for (let i = 1; i < c - 1; i++) {
+    const p = k * c + i;
+    if (h[p] < t.seaLevel + 0.4) continue;
+    const gx = (h[p + 1] - h[p - 1]) * t.res / 2, gz = (h[p + c] - h[p - c]) * t.res / 2, w = smoothstep(0.9, 1.8, Math.hypot(gx, gz));
+    if (w <= 0) continue;
+    const x = sampleX(t, i), z = sampleZ(t, k), s = nat.rockScale;
+    out[p] = w * nat.rock * 2 * ((valueNoise(x / s, z / s, 81) - 0.5) + 0.5 * (valueNoise(x / (s * 0.45), z / (s * 0.45), 82) - 0.5));
+  }
+  for (let p = 0; p < h.length; p++) h[p] += out[p];
 }
 
 /**
@@ -338,7 +372,9 @@ export function convertCells(doc: VillageDoc, opts: { res?: number } = {}): { wo
   if (t.res % 2) throw new Error("the conversion needs an even resolution (cell centres on samples)");
   const shore = shoreSdf(map);
   heightsFromCells(map, t, levels, shore);
+  rockRelief(t);
   const quays = wharfQuay(t, objects, shore);
+  const pads = padBuildings(t, objects);
   limitSteepness(t);
   // Paint: the grid's organic overlays (built stone, worn paths, the beach), sand under the water, rock where water dried.
   for (let k = 0; k < t.rows; k++) for (let i = 0; i < t.cols; i++) {
@@ -351,7 +387,6 @@ export function convertCells(doc: VillageDoc, opts: { res?: number } = {}): { wo
       : overlayAt(map, Surface.Sand, x, z) > 0.5 ? Paint.Sand
       : Paint.Grass;
   }
-  const pads = padBuildings(t, objects);
   return {
     world: { terrain: t, objects, annotations, source: "converted from web/data/world-map.json (scripts/convert-world.ts)" },
     report: { driedWater, pondCells, pads, quays, objects: objects.length, annotations: annotations.length },
