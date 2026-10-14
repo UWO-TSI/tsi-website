@@ -12,7 +12,8 @@
  * Bots step in lockstep, 1/120 s at a time, so a seed plays the same however the time is chunked. While started, a
  * timer steps them every TICK_MS; tests step by hand (`advance`).
  */
-import { botArea, createBots, type Bot } from "./botBrain";
+import { botArea, botWorld, createBots, type Bot } from "./botBrain";
+import { campfireSite } from "@/lib/game/campfireSite";
 import { RemoteBuffer, Remotes, type Netsim } from "./interp";
 import {
   AREAS, FLAG, PACKET_FLAG, decodeEvent, decodePose, encodeEvent, hasFlag, isPrivateArea, nextTp, parseSlowState, createPose,
@@ -35,6 +36,8 @@ export interface LoopbackOptions {
   clock?: () => number;
   /** Step with a timer while started (default true); tests call `advance`. */
   timer?: boolean;
+  /** Development (`?botfire=1`): the first bots dance round the campfire and sit by it (botBrain BotWorld.fire). */
+  fire?: boolean;
 }
 
 /** A bot as the room holds it. */
@@ -86,7 +89,10 @@ export function createLoopback(o: LoopbackOptions): Loopback {
   /** The bots' common clock: the next lockstep time. */
   let stepT = 0;
 
-  const bots = createBots(n, o.seed ?? 1, 0);
+  const world = botWorld();
+  const site = o.fire ? campfireSite() : null;
+  if (site) world.fire = { ...site, epoch };
+  const bots = createBots(n, o.seed ?? 1, 0, world);
   const peers: Peer[] = bots.map((bot, i) => {
     const c = bot.card;
     const player: NetPlayer = {

@@ -533,7 +533,8 @@ function loadStore(): Promise<NetStore | null> {
   const m = netMode(search());
   if (m?.kind !== "bots") return Promise.resolve(peekStore());
   h.loading = import("./loopback").then(({ createLoopback }) => {
-    const lb = createLoopback({ bots: m.bots, seed: m.seed, netsim: DEV ? parseNetsim(search()) : null });
+    const fire = DEV && new URLSearchParams(search()).get("botfire") === "1";
+    const lb = createLoopback({ bots: m.bots, seed: m.seed, netsim: DEV ? parseNetsim(search()) : null, fire });
     const store = loopbackStore(lb);
     setStore(store);
     return store;
