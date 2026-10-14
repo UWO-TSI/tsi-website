@@ -26,7 +26,7 @@ import { FX_BENCH, fxOn } from "@/lib/game/perf/fxBench";
 import { CHARACTER_HEIGHT, type CharacterMotion } from "../character/Character";
 
 /** A note off a dancer's head: rises and sways (the row's frames cycle), drifts with the wind a little. */
-export const NOTE: Recipe = { sprite: "note", count: [1, 1], life: [1.5, 1.9], size: [0.26, 0.32], grow: 1.1, speed: [0.05, 0.16], spread: Math.PI,
+export const NOTE: Recipe = { sprite: "note", count: [1, 1], life: [1.5, 1.9], size: [0.4, 0.48], grow: 1.1, speed: [0.05, 0.16], spread: Math.PI,
   up: [0.55, 0.7], gravity: 0, drag: 0.7, wind: 0.25, lift: 0.5, fps: 7, alpha: 1, face: FACE.billboard, jitter: 0.12, rise: [0.25, 0.35], fadeIn: 6 };
 /** The notes' colours, one per dancer in turn (warm cream, blush, mint, butter, sky). */
 const NOTE_TINTS = [0xfff1c9, 0xffc4d6, 0xc9f2dc, 0xffe28a, 0xc7e3ff] as const;

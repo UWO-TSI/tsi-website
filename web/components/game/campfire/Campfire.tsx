@@ -35,7 +35,7 @@ const STACK_URL = "/assets/acnh/props/campfire.glb", STACK_SCALE = 0.8;
 const SOLID_HALF = 0.62;
 const FIRE_RAMP: Ramp = ["#fff4d6", "#ffaa3c", "#d8441a"];
 /** A tongue of flame: licks up out of the stack and tears off (its flipbook plays once over its life). */
-const TONGUE: Recipe<CombatSprite> = { sprite: "flame", count: [1, 1], life: [0.55, 0.85], size: [0.62, 0.86], grow: 0.85, speed: [0.02, 0.08], spread: Math.PI,
+const TONGUE: Recipe<CombatSprite> = { sprite: "flame", count: [1, 1], life: [0.55, 0.85], size: [0.8, 1.1], grow: 0.85, speed: [0.02, 0.08], spread: Math.PI,
   up: [0.35, 0.55], gravity: 0, drag: 1.5, wind: 0.15, lift: 0.5, alpha: 0.95, face: FACE.standing, jitter: 0.2, rise: [0.05, 0.15], fadeIn: 8 };
 /** An ember: a spark that rises, wanders and fades. */
 const EMBER: Recipe<CombatSprite> = { sprite: "mote", count: [1, 1], life: [1.2, 2.0], size: [0.07, 0.1], grow: 0.4, speed: [0.05, 0.25], spread: Math.PI,
