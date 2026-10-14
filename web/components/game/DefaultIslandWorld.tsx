@@ -40,7 +40,7 @@ import JournalSheet from "@/components/progression/JournalSheet";
 import { useProgressionWorld, useCeremony, useChapterActions, type WorldGoalId } from "@/lib/game/progressionBridge";
 import confetti from "canvas-confetti";
 import type { InteriorStation } from "./interiorShared";
-import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmarkPoint, turn, wharfDeck, benchSeat, propFootprint, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
+import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmarkPoint, turn, wharfDecks, benchSeat, propFootprint, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
 import { village, objectsOf, type Village } from "@/lib/game/villageMap";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
@@ -242,7 +242,7 @@ function gullPerchSpots(v: Village, ground: (x: number, z: number) => number): [
  * Built once per loaded map; nothing here is placed relative to the local player.
  */
 function villageLayout(v: Village) {
-  const deck = wharfDeck(v);
+  const decks = wharfDecks(v);
   const fitting = objectsOf("fitting", v)[0], missions = objectsOf("missions", v)[0], marks = landmarks(v);
   const island = villageIsland(v), trees = objectsOf("tree", v).map((o): TreeSpot => ({ x: o.x, z: o.z, seed: o.seed ?? 0 }));
   const buildings = marks.filter(l => l.half && Math.max(...l.half) >= 1).map(l => boxOccluder(l.x, l.z, l.half![0], l.half![1], island.ground(l.x, l.z), 5));
@@ -276,10 +276,14 @@ function villageLayout(v: Village) {
     scale: villageScale(v),
     /** Ambient life (AmbientFauna): flowers for the butterflies, the water's kinds, gulls off the shores in view. */
     fauna: { site: { map: v.map, flowers: objectsOf("flower", v).map(xz), water: villageWater(v).classify }, gulls: gullAnchors(v.bounds), perches: gullPerchSpots(v, island.ground) },
-    /** The map's rocks (centre and footprint radius): the ones standing in the water wear a foam ring (WaterContacts). */
-    rocks: objectsOf("rock", v).flatMap(o => { const f = propFootprint(o); return f ? [{ x: o.x, z: o.z, r: Math.max(f[0], f[1]) }] : []; }),
-    /** No water glints under the wharf deck: it sits a few centimetres above the water and they would show through. */
-    underWharf: (x: number, z: number) => !!deck && x > deck.x0 - 0.4 && x < deck.x1 + 0.4 && z > deck.z0 - 0.4 && z < deck.z1 + 0.4,
+    /**
+     * The map's rocks (centre and footprint radius): the ones standing in the water wear a foam ring (WaterContacts). A
+     * rock model without a measured footprint (the accepted `boulder-*` proposals) rings at half a unit times its scale.
+     * Same shape as v1-land's cliff-foot boulders (`lib/game/rocks.ts` cliffBoulders, `wet` ones) once that lands.
+     */
+    rocks: objectsOf("rock", v).map(o => { const f = propFootprint(o); return { x: o.x, z: o.z, r: f ? Math.max(f[0], f[1]) : 0.5 * (o.scale ?? 1) }; }),
+    /** No water glints (nor seabed props, nor fish) under the wharf's decks: they sit a few centimetres above the water and they would show through. */
+    underWharf: (x: number, z: number) => decks.some(deck => x > deck.x0 - 0.4 && x < deck.x1 + 0.4 && z > deck.z0 - 0.4 && z < deck.z1 + 0.4),
   };
 }
 const SIGNS: Partial<Record<Landmark["id"], string>> = { museum: "Museum · Closed", ruins: "Ruins gate", notice: "Notices", catch: "Catch board", shop: "Shop", oracle: "Oracle temple" };
@@ -533,7 +537,7 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {notice && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(notice)} rotation={[0, Math.PI + (notice.yaw ?? 0), 0]} />}
     {board && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(board)} rotation={[0, Math.PI + (board.yaw ?? 0), 0]} />}
     {missions && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
-    {wharf && <Wharf dock={{ x: wharf.x, z: wharf.z, yaw: wharf.yaw ?? 0 }} light={light} place="village" />}
+    {wharf && <Wharf dock={{ x: wharf.x, z: wharf.z, yaw: wharf.yaw ?? 0 }} light={light} place="village" dressed />}
     {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <LandmarkTag key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} closed={!l.open}>
       {SIGNS[l.id]}
     </LandmarkTag>)}

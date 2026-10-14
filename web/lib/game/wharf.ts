@@ -50,6 +50,24 @@ export const ASHORE = { x: 0, z: 1.1 } as const;
 /** The prompt to take the boat: LANDMARK_INFO.wharf's door, by the gap. */
 export const BOARDING = { x: 0, z: -2.5, range: 1.6 } as const;
 
+/**
+ * The village wharf's dressing (v1 water item 7, art/wharf/build_wharf.py; references/look/2026-10-13/
+ * wharf-creatures-of-the-deep-ref.png): a finger pier off the tip on -x (the boat's side is +x), its posts standing up
+ * past the deck, two lantern poles, and small rowboats moored along the finger. In the dock's frame, as built.
+ */
+export const DRESSING_URL = "/assets/game/wharf/wharf-dressing.glb";
+export const ROWBOAT_URL = "/assets/game/wharf/rowboat.glb";
+export const FINGER = { x0: -4.7, x1: -0.95, z0: -3.5, z1: -2.25, postX: [-2.0, -3.3, -4.6], postR: 0.085, postTop: 0.3 } as const;
+/** The lantern poles (x, z): the finger's far corner and the jetty's land end. */
+export const LANTERNS: readonly (readonly [number, number])[] = [[-4.6, -3.53], [-1.25, 0.72]];
+/** A rowboat as built (rowboat.glb): its length and beam, how deep it sits, and where its painter (bow line) is made fast. */
+export const ROWBOAT = { length: 1.55, beam: 0.62, draft: 0.09, bowRing: [0, 0.24, 0.7] } as const;
+/** Where each rowboat lies moored (its middle; `yaw` turns its bow off +z) and the finger post its line goes to. */
+export const ROWBOATS: readonly { x: number; z: number; yaw: number; post: readonly [number, number] }[] = [
+  { x: -2.65, z: -3.97, yaw: -Math.PI / 2, post: [-2.0, -3.53] },
+  { x: -3.75, z: -1.8, yaw: -Math.PI / 2 + 0.16, post: [-3.3, -2.22] },
+];
+
 /** Two buoys flanking the boat's lane off the tip (the channel in and out), in the dock's frame. */
 export const BUOYS: readonly (readonly [number, number])[] = [[1.4, -8.6], [9.6, -10.2]];
 
@@ -131,6 +149,23 @@ export function floatBuoy(d: Dock, x: number, z: number, t: number, w: Swell, ou
   out.roll = Math.atan(grad.x * 3) + 0.05 * Math.sin(t * 1.3 + phase);
   out.pitch = -Math.atan(grad.z * 3) + 0.04 * Math.sin(t * 1.1 + phase * 1.7);
   out.sway = 0;
+  return out;
+}
+
+const _rb = { x: 0, z: 0 };
+/**
+ * A rowboat moored at `rb` on the shared swell at world time `t`: the surface's height under its middle, its pitch and
+ * roll from the swell under its bow, stern and sides (as floatBoat, a smaller hull), and a lazy tug at its line.
+ */
+export function floatRowboat(d: Dock, rb: { x: number; z: number; yaw: number }, t: number, w: Swell, out: Float): Float {
+  const c = Math.cos(rb.yaw), s = Math.sin(rb.yaw), half = ROWBOAT.length * 0.4, side = ROWBOAT.beam * 0.4;
+  const under = (bx: number, bz: number) => { dockToWorld(d, rb.x + bx * c + bz * s, rb.z - bx * s + bz * c, _rb); return waterSwellAt(_rb.x, _rb.z, t, w); };
+  const bow = under(0, half), stern = under(0, -half), port = under(side, 0), starboard = under(-side, 0);
+  const phase = rb.x * 0.73 + rb.z * 0.41;
+  out.y = SEA_Y + (bow + stern + port + starboard) / 4;
+  out.pitch = Math.atan2(stern - bow, 2 * half) + 0.012 * Math.sin(t * 0.8 + phase);
+  out.roll = Math.atan2(port - starboard, 2 * side) + 0.02 * Math.sin(t * 0.63 + phase * 1.7);
+  out.sway = 0.03 * Math.sin(t * 0.21 + phase);
   return out;
 }
 
