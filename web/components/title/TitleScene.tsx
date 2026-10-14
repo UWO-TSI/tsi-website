@@ -1,8 +1,10 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+// The game's atmospheric haze and aerial desaturation on the shared fog chunk (side effect, before materials compile).
+import "@/lib/game/aerialFog";
 import GridWorld from "@/components/game/grid/GridWorld";
 import GridOcean from "@/components/game/grid/GridOcean";
 import PostFX from "@/components/game/PostFX";
@@ -35,8 +37,10 @@ import { DEFAULT_NPC_PERSONAS } from "@/data/content-defaults";
  * `?px=0.5` sets the pixel scale.
  */
 
-const DRIFT_SECONDS = 48;
-const DRIFT_DISTANCE = 1.6;
+const DRIFT_SECONDS = 56;
+const DRIFT_DISTANCE = 1.2;
+/** The title's depth of field (specs/v1-drop.md §8b): the foreground grass and the far trees soft, the village sharp. */
+const TITLE_DOF = { enabled: true, blur: 0.24, taper: 0.32, offset: -0.03 };
 
 function parseShot(value: string | null): Partial<Shot> {
   const n = (value ?? "").split(",").map(Number);
@@ -45,25 +49,29 @@ function parseShot(value: string | null): Partial<Shot> {
     ? { x, z, ...(yaw !== undefined && { yaw }), ...(eye !== undefined && { eye }), ...(pitch !== undefined && { pitch }), ...(fov !== undefined && { fov }) } : {};
 }
 
+const _at = new THREE.Vector3(), _look = new THREE.Vector3();
+/**
+ * Gentle camera life: a slow ping-pong dolly across the view, eased at both ends, with a faint handheld breath in the
+ * aim (a fraction of a degree, under a tenth of a hertz). Held still under reduced motion. Module scope: the camera
+ * from a hook is never written in a component.
+ */
+function aim(camera: THREE.Camera, shot: Shot, t: number, still: boolean, ground: (x: number, z: number) => number) {
+  const phase = still ? 0.5 : 0.5 - 0.5 * Math.cos((t / DRIFT_SECONDS) * Math.PI * 2);
+  const breath = still ? 0 : 1;
+  const yaw = THREE.MathUtils.degToRad(shot.yaw + breath * (0.28 * Math.sin(t * 0.37) + 0.12 * Math.sin(t * 0.83 + 1.3)));
+  const pitch = THREE.MathUtils.degToRad(shot.pitch + breath * 0.16 * Math.sin(t * 0.29 + 0.6));
+  const side = (phase - 0.5) * (shot.drift ?? DRIFT_DISTANCE);
+  const x = shot.x + Math.cos(yaw) * side, z = shot.z - Math.sin(yaw) * side;
+  _at.set(x, ground(x, z) + shot.eye + breath * Math.sin(t * 0.45) * 0.012, z);
+  _look.set(x + Math.sin(yaw) * 10, _at.y + Math.tan(pitch) * 10, z + Math.cos(yaw) * 10);
+  camera.position.copy(_at);
+  camera.lookAt(_look);
+  if (camera instanceof THREE.PerspectiveCamera && camera.fov !== shot.fov) { camera.fov = shot.fov; camera.updateProjectionMatrix(); }
+}
+
 function CinematicCamera({ shot, ground }: { shot: Shot; ground: (x: number, z: number) => number }) {
-  const camera = useThree(s => s.camera);
   const still = useMemo(() => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches, []);
-  const at = useRef(new THREE.Vector3());
-  const look = useRef(new THREE.Vector3());
-  useFrame(({ clock }) => {
-    const t = clock.elapsedTime;
-    // A slow ping-pong dolly across the view, eased at both ends, with a faint breathing sway.
-    const phase = still ? 0.5 : 0.5 - 0.5 * Math.cos((t / DRIFT_SECONDS) * Math.PI * 2);
-    const yaw = THREE.MathUtils.degToRad(shot.yaw), pitch = THREE.MathUtils.degToRad(shot.pitch);
-    const side = (phase - 0.5) * (shot.drift ?? DRIFT_DISTANCE);
-    const x = shot.x + Math.cos(yaw) * side, z = shot.z - Math.sin(yaw) * side;
-    const sway = still ? 0 : Math.sin(t * 0.45) * 0.015;
-    at.current.set(x, ground(x, z) + shot.eye + sway, z);
-    look.current.set(x + Math.sin(yaw) * 10, at.current.y + Math.tan(pitch) * 10, z + Math.cos(yaw) * 10);
-    camera.position.copy(at.current);
-    camera.lookAt(look.current);
-    if (camera instanceof THREE.PerspectiveCamera && camera.fov !== shot.fov) { camera.fov = shot.fov; camera.updateProjectionMatrix(); }
-  });
+  useFrame(({ camera, clock }) => aim(camera, shot, clock.elapsedTime, still, ground));
   return null;
 }
 
@@ -80,6 +88,7 @@ function Scene() {
   const light = useMemo(() => withWeather(withSeason(islandLightAt(CURRENT, blend, sun), look), weather), [blend, look, weather, sun]);
   const scenery = useMemo(() => sceneryOf(v, island.ground, look.season), [v, island, look.season]);
   const terrain = useMemo(() => ({ ...ISLAND_TERRAIN, grass: look.grass }), [look.grass]);
+  const grassClear = useMemo(() => (x: number, z: number) => island.top(x, z) <= island.ground(x, z) + 0.01, [island]);
   const shot = useMemo(() => ({ ...stagedShot(phase, look.season, v, island), ...parseShot(new URLSearchParams(window.location.search).get("shot")) }),
     [v, island, phase, look.season]);
   const viewer = useRef(new THREE.Vector3(shot.x, 0, shot.z));
@@ -96,7 +105,7 @@ function Scene() {
       <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={false} castShadows ground={island.ground}
         puddles={objectsOf("puddle", v).map(o => [o.x, o.z] as [number, number])} cloudSize={scale.cloudSize} shadowExtent={scale.shadowExtent}
         fireflyAnchors={objectsOf("bush", v).map(o => [o.x, o.z] as [number, number])} trees={trees} fauna={fauna} />
-      <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={weather === "wind" ? 2.2 : 1.4} />
+      <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={weather === "wind" ? 2.2 : 1.4} clear={grassClear} />
       <GridOcean map={island.map} lite={false} radius={scale.glintRadius} />
       <InstancedModels items={scenery} />
       {/* Own boundaries: the base world draws (and the page fades in) while the buildings and residents stream in. */}
@@ -106,7 +115,7 @@ function Scene() {
       <Suspense fallback={null}>
         <Residents personas={DEFAULT_NPC_PERSONAS} phase={phase} ceremony={false} player={nobody} island={island} v={v} />
       </Suspense>
-      <PostFX antialias={false} grade={light.grade} fx={lookFx(CURRENT, true)} />
+      <PostFX antialias={false} grade={light.grade} fx={{ ...lookFx(CURRENT, true), tiltShift: TITLE_DOF }} />
       <SunShadows />
     </>
   );

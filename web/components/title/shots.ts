@@ -20,13 +20,16 @@ export type Shot = {
  */
 const SHOTS: Record<IslandPhase, Shot> = {
   /** The east beach: open sea with the sun's glint path, the wharf and the boat's pennant off right, sky for the wordmark. */
-  dawn: { x: 1, z: -12, yaw: 170, eye: 1.8, pitch: -2.5, fov: 44 },
-  /** The village avenue: the red carpet up to the HQ and its flag, the oracle temple peeking far right, residents passing. */
-  day: { x: 0, z: -14, yaw: 0, eye: 2.4, pitch: -3, fov: 36 },
-  /** Golden hour on the HQ in three-quarter view: lit windows, long shadows across the plaza, the lamp by the wordmark. */
-  evening: { x: 2, z: -6.5, yaw: 3, eye: 1.8, pitch: -2.5, fov: 38 },
+  dawn: { x: 1, z: -12, yaw: 170, eye: 1.4, pitch: -2, fov: 44 },
+  /**
+   * The v1 look (specs/v1-drop.md §8b, after title-piece-by-piece-ref.png): low in the lawn, close, the grass soft in
+   * front, the HQ and its flag sharp in the middle, the trees soft beyond; residents pass on the avenue.
+   */
+  day: { x: 3, z: -7.4, yaw: -8, eye: 0.9, pitch: -0.5, fov: 38 },
+  /** Golden hour on the HQ in three-quarter view from the lawn: lit windows, long shadows, the lamp by the wordmark. */
+  evening: { x: 3.2, z: -6.8, yaw: -12, eye: 0.95, pitch: -0.5, fov: 40 },
   /** The lantern glowing over the plaza, warm HQ windows, fireflies by the bushes; a tighter drift keeps the pool of light. */
-  night: { x: 2.5, z: -7.5, yaw: 6, eye: 1.8, pitch: -2, fov: 38, drift: 0.8 },
+  night: { x: 2.5, z: -7.5, yaw: 6, eye: 1.2, pitch: -1.5, fov: 40, drift: 0.8 },
 };
 
 const SEASON_SHOTS: Partial<Record<Season, Partial<Record<IslandPhase, Shot>>>> = {};
