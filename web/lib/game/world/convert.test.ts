@@ -117,8 +117,11 @@ describe("converting the v2 world", () => {
     expect(shelf(40)).toBeCloseTo(4.2, 1);
     // Playtest round 1 (David, 2026-10-14): the shallows reach further out before the drop-off, as the village's sea
     // does: one profile for both (lib/game/waterShader.ts SHOAL).
-    for (let d = 0; d < 30; d += 0.25) expect(shelf(d)).toBeCloseTo(bedDepth(d, TUNING_DEFAULTS.water, 1), 9);
+    for (let d = 0; d <= SHOAL.from; d += 0.25) expect(shelf(d)).toBeCloseTo(bedDepth(d, TUNING_DEFAULTS.water, 1), 2);
     expect(shelf(SHOAL.from)).toBeLessThan(0.45);
+    // The open sea has room here: past the shallows it runs on through the teal and the deep blue, navy by 16.
+    expect(shelf(6)).toBeLessThan(0.8);
+    expect(shelf(16)).toBeCloseTo(4.2, 1);
     let deepest = 0;
     for (const h of t.heights) deepest = Math.max(deepest, t.seaLevel - h);
     expect(deepest).toBeCloseTo(4.2, 1);

@@ -124,22 +124,23 @@ export interface WaterParams {
  * `open` (0..1) is how much of the open sea's wide shallows (SHOAL) the water takes instead: 1 on the village's open
  * sea, 0 in a river or on any other island, between at a river's mouth.
  */
-export function bedDepth(d: number, p: Pick<WaterParams, "bedDepth" | "bedSlope" | "shelfDepth" | "shelfFrom" | "shelfTo">, open = 0): number {
+export function bedDepth(d: number, p: Pick<WaterParams, "bedDepth" | "bedSlope" | "shelfDepth" | "shelfFrom" | "shelfTo">, open = 0, s: Shoal = SHOAL): number {
   const dd = Math.max(d, 0);
   const banks = p.bedDepth * (1 - Math.exp(-dd / Math.max(p.bedSlope, 0.01))) + p.shelfDepth * smooth01(p.shelfFrom, p.shelfTo, dd);
   if (open <= 0) return banks;
-  const shoal = SHOAL.depth * (1 - Math.exp(-dd / SHOAL.slope)) + (p.bedDepth + p.shelfDepth - SHOAL.depth) * smooth01(SHOAL.from, SHOAL.to, dd);
+  const shoal = s.depth * (1 - Math.exp(-dd / s.slope)) + (p.bedDepth + p.shelfDepth - s.depth) * smooth01(s.from, s.to, dd);
   return banks + (shoal - banks) * Math.min(open, 1);
 }
+export interface Shoal { depth: number; slope: number; from: number; to: number }
 /**
  * The open sea's wide shallows (David, playtest round 1, 2026-10-14: "make the shallow water bigger area around main
  * island"): off a beach the bed eases down over `slope` cells to `depth`, sand you can see through the water out to
  * `from` cells, then drops off to the teal and the navy and the same open-sea floor by `to`. The old profile (a river's
  * banks) was teal under a cell out. The village's sea (lib/game/seabed.ts setShoal) and the smooth world's
- * (lib/game/world/convert.ts shelf) take it; the village map's edge is 8.5 cells off its beaches and the sea past it
- * reads the edge, so the navy must be there by then.
+ * (lib/game/world/convert.ts shelf, with room for a longer drop-off) take it; the village map's edge is 8.5 cells
+ * off its beaches and the sea past it reads the edge, so the navy must be there by then.
  */
-export const SHOAL = { depth: 0.42, slope: 1.6, from: 4, to: 8.5 } as const;
+export const SHOAL: Shoal = { depth: 0.42, slope: 1.6, from: 4, to: 10 };
 function smooth01(a: number, b: number, x: number): number {
   const t = Math.min(1, Math.max(0, (x - a) / Math.max(b - a, 1e-6)));
   return t * t * (3 - 2 * t);

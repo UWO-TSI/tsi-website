@@ -57,7 +57,7 @@ export function setShoal(map: IslandMap, docks: readonly Dock[]): void {
   shoals.set(map, docks);
 }
 /** The berth's edge on the village, cells: softer than the smooth world's quay face (no quay stands over it here). */
-const BERTH_EDGE = 1.2;
+export const BERTH_EDGE = 2;
 /**
  * Open sea, not a river: a point is open when water at least OPEN_SEA cells from any shore lies within OPEN_LOOK cells
  * of it (a river's middle is about a cell from its banks; a beach's waterline is OPEN_LOOK from water that far out).

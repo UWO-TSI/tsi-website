@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildVillage, parseVillage, type VillageDoc } from "./villageMap";
 import frozen from "./fixtures/village-2026-09-28.json";
 import { coastDistance, isGroundAtWorld, sampleShore, shoreSdf } from "./grid";
-import { bakeWaterDepth, seabedDip } from "./seabed";
+import { BERTH_EDGE, bakeWaterDepth, seabedDip } from "./seabed";
 import { SHOAL, bedDepth } from "./waterShader";
 import { MOORED, ROWBOATS, berthWeight } from "./wharf";
 import { TUNING_DEFAULTS } from "./tuning";
@@ -70,7 +70,7 @@ describe("the main island's wide shallows", () => {
       while (r > 0 && !isGroundAtWorld(vmap, dx * r, dz * r)) r -= 0.05;
       if (r < 15) continue; // in along the river's mouth
       const out = (k: number) => [dx * (r + k), dz * (r + k)] as const;
-      if (berthWeight(dock, ...out(2)) > 0 || berthWeight(dock, ...out(4)) > 0) continue; // the wharf's berth
+      if (berthWeight(dock, ...out(2), BERTH_EDGE) > 0 || berthWeight(dock, ...out(4), BERTH_EDGE) > 0) continue; // the wharf's berth
       coasts++;
       // Three cells out the sand still shows (the ramp short of its teal); the old bed was 1.4 deep there.
       expect(dip(...out(3)), `3 out at ${a}`).toBeLessThan(SHOAL.depth + 0.02);

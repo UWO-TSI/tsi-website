@@ -37,7 +37,7 @@ import {
 } from "../grid";
 import { landmarkHalf, turn, type LandmarkId } from "../defaultIsland";
 import { TUNING_DEFAULTS } from "../tuning";
-import { bedDepth } from "../waterShader";
+import { SHOAL, bedDepth } from "../waterShader";
 import { BERTH, berthWeight } from "../wharf";
 import { parseVillage, type VillageDoc } from "../villageMap";
 import type { World } from "./format";
@@ -83,14 +83,20 @@ export const CONVERT = {
    * ground gets rock relief `rock` units deep (`rockScale` units across). Layout and band heights stay.
    */
   natural: { wander: 2.2, wanderScale: 11, vary: 0.55, varyScale: 6, shoulder: 0.4, rock: 0.16, rockScale: 1.6 },
+  /**
+   * Under the sea (playtest round 1, 2026-10-14): the village's wide shallows (lib/game/waterShader.ts SHOAL), sand in
+   * sight to 4 units out; the open sea here has room, so its drop-off runs on through the teal and deep blue to the
+   * navy at 16, as the shelf before it did.
+   */
+  shoal: { ...SHOAL, to: 16 },
 } as const;
 
 /**
- * The seabed's depth under the still sea `d` units out from the shore: the open sea's wide shallows (lib/game/waterShader.ts
- * SHOAL, as the village's sea), then the drop to the open sea's floor (4.2, the water's own deepest).
+ * The seabed's depth under the still sea `d` units out from the shore: the open sea's wide shallows (CONVERT.shoal, the
+ * village's), then the drop to the open sea's floor (4.2, the water's own deepest).
  */
 export function shelf(d: number): number {
-  return bedDepth(d, TUNING_DEFAULTS.water, 1);
+  return bedDepth(d, TUNING_DEFAULTS.water, 1, CONVERT.shoal);
 }
 
 /** A soft minimum of two positive numbers that is exactly 0 when either is 0 (the shore meets the sea level exactly). */
