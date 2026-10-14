@@ -1,5 +1,5 @@
 {
- "note": "David's own hairstyles (made by him for his Roblox shop; authorship confirmed by David on 2026-10-08 and re-confirmed 2026-10-14 after the catalog check), converted from Roblox meshes with mesh2glb (the mesh's own coordinates). art/characters/hair/import_hair.py attaches each one rigidly by its Roblox attachment (hair/roblox_attachments.json) to the skull's classic-head hair zone (specs/characters/head-roblox.md). covers: fit points it must lie on (default: the type's); accent: the second, recolourable colour (a mask from the texture's saturated parts; default = a hair palette index or 'skin'); cap: faces of a cap or visor that keep a fixed colour (rule) and have their logos painted out (logos); drop: geometry removed (face_plate: the hair's own face, which ours replaces); trim: face_window removes what hangs over the face below the hairline; undercap: false for a shell that is itself the scalp (#20's fade: a matte cap under its teeth shows through as dark blocks).",
+ "note": "David's own hairstyles (made by him for his Roblox shop; authorship confirmed by David on 2026-10-08 and re-confirmed 2026-10-14 after the catalog check), converted from Roblox meshes with mesh2glb (the mesh's own coordinates). art/characters/hair/import_hair.py attaches each one rigidly by its Roblox attachment (hair/roblox_attachments.json) to the skull's classic-head hair zone (specs/characters/head-roblox.md). covers: fit points it must lie on (default: the type's); accent: the second, recolourable colour (a mask from the texture's saturated parts; default = a hair palette index or 'skin'); cap: faces of a cap that keep a fixed colour (rule) and have their logos painted out (logos); split: faces (rule) split off into their own accessory (id, name, fixed colour; flip_logo: its logo mirrored to read upside down: #8's visor M as a W, David 2026-10-14); drop: geometry removed (face_plate: the hair's own face, which ours replaces); trim: face_window removes what hangs over the face below the hairline; undercap: false for a shell that is itself the scalp (#20's fade: a matte cap under its teeth shows through as dark blocks).",
  "source": "art/characters/hair/source/david",
  "hairs": [
   {
@@ -43,11 +43,13 @@
   {
    "file": "08-McDonalds-106903086636118.glb",
    "id": "hair_visor_messy",
-   "name": "Messy with visor",
-   "cap": {
+   "name": "Messy with headset",
+   "split": {
+    "id": "acc_visor",
+    "name": "Visor and headset",
     "rule": "flat_grey",
     "color": "#2B2B33",
-    "logos": "yellow"
+    "flip_logo": "vertical"
    }
   },
   {

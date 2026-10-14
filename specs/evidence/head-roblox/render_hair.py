@@ -21,7 +21,7 @@ RES = int(os.environ.get("RES", 420))
 os.makedirs(OUT, exist_ok=True)
 CAT = json.load(open(os.path.join(ART, "character_catalog.json")))
 PAL = json.load(open(os.path.join(ART, "palette.json")))
-HAIRS = {h["id"]: h for h in CAT["hair"]}
+HAIRS = {h["id"]: h for h in CAT["hair"]}          # David's hairstyles and the accessories split off them (#8's visor)
 MAPS = CAT["hairMaps"]
 
 
@@ -71,7 +71,8 @@ def hair_material(part, hair):
     nt = m.node_tree
     b = next(n for n in nt.nodes if n.type == "BSDF_PRINCIPLED")
     b.inputs["Roughness"].default_value = 0.85
-    tint = lin(PAL["hair"][hair])
+    fixed = part["materials"][0].get("color")           # a split-off accessory keeps its own colour
+    tint = lin(fixed) if fixed else lin(PAL["hair"][hair])
     uv = nt.nodes.new("ShaderNodeUVMap")
     tex = nt.nodes.new("ShaderNodeTexImage")
     tex.image = atlas
@@ -99,8 +100,9 @@ def hair_material(part, hair):
         nt.links.new(cur, mul.inputs["A"])
         nt.links.new(comb.outputs[0], mul.inputs["B"])
         cur = mul.outputs["Result"]
-        for key, hexs in (("accent", (PAL["skin"][SKIN] if (part.get("accent") or {}).get("default") == "skin"
-                                      else PAL["hair"][(part.get("accent") or {}).get("default", 0)] if part.get("accent") else None)),
+        adef = (part.get("accent") or {}).get("default")
+        for key, hexs in (("accent", (PAL["skin"][SKIN] if adef == "skin" else adef if isinstance(adef, str)
+                                      else PAL["hair"][adef] if part.get("accent") else None)),
                           ("cap", MAPS["cap"])):
             if key in mp and hexs:
                 mix = nt.nodes.new("ShaderNodeMix")
@@ -179,13 +181,17 @@ cam.data.type = "ORTHO"
 cam.data.ortho_scale = float(os.environ.get("FRAME", 0.95))
 VIEWS = (("front", 0), ("34", 35), ("side", 90), ("back", 180))
 for item in ITEMS:
+    item, *extra = item.split("+")                      # id[:hair][+accessory id ...]
     pid, _, hair = item.partition(":")
-    part = HAIRS[pid]
-    obs = load_part(part["glb"])
-    mat = hair_material(part, int(hair or 0))
-    for o in obs:
-        o.data.materials.clear()
-        o.data.materials.append(mat)
+    obs = []
+    for k in [pid] + extra:
+        part = HAIRS[k]
+        mat = hair_material(part, int(hair or 0))
+        for o in load_part(part["glb"]):
+            o.data.materials.clear()
+            o.data.materials.append(mat)
+            obs.append(o)
+    tag = "+".join([pid] + extra)
     for name, yaw in VIEWS:
         a = math.radians(yaw)
         target = HC + Vector((0, 0, float(os.environ.get("DZ", -0.12))))
@@ -193,8 +199,8 @@ for item in ITEMS:
         d = target - cam.location
         cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler()
         sun.rotation_euler = (math.radians(55), 0, -a + math.radians(-35))
-        sc.render.filepath = os.path.join(OUT, f"{pid}_{name}.png")
+        sc.render.filepath = os.path.join(OUT, f"{tag}_{name}.png")
         bpy.ops.render.render(write_still=True)
     for o in obs:
         bpy.data.objects.remove(o, do_unlink=True)
-    print("RENDERED", pid)
+    print("RENDERED", tag)

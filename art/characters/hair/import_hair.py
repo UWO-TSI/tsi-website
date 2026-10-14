@@ -16,8 +16,8 @@ GLBs keep the mesh's coordinates). For every hairstyle listed in hair/source/<wh
   1. import    the meshes joined, transforms applied, coincident vertices welded (UVs are per corner, so they survive)
   2. clean     manifest rules: a face plate dropped (#15's own face); cap or visor faces marked (a mask channel, step 7)
   3. attach    the shared transform above: no per-hair scale, offset, warp, length change or cut
-  4. budget    decimated (collapse, UVs kept) to LOD0_MAX triangles less the under-cap it will get; faces the collapse
-               flung across the gaps between cards (more than STRAY off the source) and stray slivers dropped
+  4. detail    the original mesh as Roblox draws it, every triangle (David, 2026-10-14: "shouldnt be so low poly and
+               blocky"; Roblox holds hair to 4,000), welded and smooth-shaded; LOD 1 and LOD 2 are build_lod.py's
   5. face      one rule for every hair, where our face stands out of Roblox's: the classic head is round in front and our
                face plate is flat, so its corners (and the jaw) stand up to 4 cm out of where Roblox's face was. Hair
                there moves out along the ray from the head centre by exactly that much (plus FACE_CLEAR), fading over the
@@ -149,8 +149,19 @@ def attach_matrix(att):
     return Matrix([list(L[0]) + [t[0]], list(L[1]) + [t[1]], list(L[2]) + [t[2]], [0, 0, 0, 1]])
 
 
+def override_matrix(att):
+    """David's per-hair correction after the shared transform (roblox_attachments.json `override`): `rotation` (degrees,
+    Roblox's Orientation order, about Roblox's axes) turns the hair about HAIR_ATT, then `offset` (studs, Roblox's axes:
+    +y up, +z back) moves it. Identity when absent."""
+    o = att.get("override") or {}
+    to_blender = np.array([[-1, 0, 0], [0, 0, 1], [0, 1, 0]], float)
+    R = to_blender @ rot_orientation(o.get("rotation", [0, 0, 0])) @ to_blender.T
+    t = np.array(HAIR_ATT[:]) - R @ np.array(HAIR_ATT[:]) + STUD * to_blender @ np.asarray(o.get("offset", [0, 0, 0]), float)
+    return Matrix([list(R[0]) + [t[0]], list(R[1]) + [t[1]], list(R[2]) + [t[2]], [0, 0, 0, 1]])
+
+
 def attach(ob, att):
-    ob.data.transform(attach_matrix(att))          # a rotation and a uniform scale: no mirror, normals stay out
+    ob.data.transform(override_matrix(att) @ attach_matrix(att))   # rotations and a uniform scale: no mirror
     ob.data.update()
 
 
@@ -323,11 +334,20 @@ def clean(ob, spec, img_px):
                 dropped += len(isl)
     bm.faces.index_update()
     caps = set()
-    if spec.get("cap") and img_px is not None:
+    rule = (spec.get("cap") or spec.get("split") or {}).get("rule")
+    if rule and img_px is not None:
         for f in bm.faces:
             uvc = face_uv_centroid(bm, uvl, f)
-            if cap_face(spec["cap"]["rule"], texel(img_px, uvc), uvc):
+            if cap_face(rule, texel(img_px, uvc), uvc):
                 caps.add(f.index)
+        if spec.get("split"):           # a part split off goes whole: every island mostly of its faces (a brim's dark rim)
+            bm.faces.index_update()
+            for isl in islands(bm):
+                ids = {f.index for f in isl}
+                if len(ids & caps) >= 0.4 * len(ids):
+                    caps |= ids
+                else:
+                    caps -= ids
     bm.to_mesh(me)
     bm.free()
     me.update()
@@ -565,6 +585,126 @@ def GEO_SCALP(lon):
     return math.degrees(math.asin(max(-1.0, min(1.0, d.z))))
 
 
+def split_off(ob):
+    """The faces marked as a cap (material slot 1) as a new object; the hair keeps the rest (manifest `split`: a visor
+    worn as its own accessory)."""
+    part = ob.copy()
+    part.data = ob.data.copy()
+    bpy.context.scene.collection.objects.link(part)
+    for o, keep in ((part, 1), (ob, 0)):
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if (f.material_index == 1) != (keep == 1)], context="FACES")
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+        for f in bm.faces:
+            f.material_index = 0
+        bm.to_mesh(o.data)
+        bm.free()
+        o.data.update()
+    return part
+
+
+def write_cell(atlas, cell, chans, shade, accent, capmask):
+    cx, cy = cell % COLS, cell // COLS
+    inner = CELL - 2 * PAD
+    block = np.full((CELL, CELL), 1.0 / GAIN, np.float32)
+    s_ = resample(shade, inner)
+    block[PAD:PAD + inner, PAD:PAD + inner] = s_
+    block[:PAD, PAD:PAD + inner] = s_[0]
+    block[PAD + inner:, PAD:PAD + inner] = s_[-1]
+    block[:, :PAD] = block[:, PAD:PAD + 1]
+    block[:, PAD + inner:] = block[:, PAD + inner - 1:PAD + inner]
+    atlas[cy * CELL:(cy + 1) * CELL, cx * CELL:(cx + 1) * CELL, chans[0]] = block
+    if accent is not None:
+        ablock = np.zeros((CELL, CELL), np.float32)
+        ablock[PAD:PAD + inner, PAD:PAD + inner] = resample(accent, inner)
+        atlas[cy * CELL:(cy + 1) * CELL, cx * CELL:(cx + 1) * CELL, chans[1]] = ablock
+    if capmask is not None:                  # the cap's texels: its fixed colour (one material)
+        cblock = np.zeros((CELL, CELL), np.float32)
+        cblock[PAD:PAD + inner, PAD:PAD + inner] = resample(capmask.astype(np.float32), inner)
+        atlas[cy * CELL:(cy + 1) * CELL, cx * CELL:(cx + 1) * CELL, chans[-1]] = cblock
+
+
+def logo_colour(px, me, accent):
+    """The median colour (sRGB hex) of the accent texels the part samples: a split-off visor's logo keeps its colour."""
+    hh, ww = px.shape[:2]
+    m = coverage(me, ww, hh) & (accent >= 0.5)
+    if not m.any():
+        return "#FFFFFF"
+    c = np.median(px[m][:, :3], axis=0)
+    return "#" + "".join(f"{int(round(float(x) * 255)):02X}" for x in np.clip(c, 0, 1))
+
+
+def flip_logos(px, me, vertical=True):
+    """Each logo (a compact island of the yellow logo texels) mirrored in place along the texture axis that runs up the
+    model there, so it reads upside down on the part (David, 2026-10-14: the visor's M turned into a W). Long trims stay.
+    Returns the logos flipped."""
+    h_, s_, v_ = np.vectorize(lambda r, g, b: colorsys.rgb_to_hsv(r, g, b), otypes=[float, float, float])(px[..., 0], px[..., 1], px[..., 2])
+    yellow = (h_ > 0.08) & (h_ < 0.2) & (s_ > 0.45) & (v_ > 0.35)
+    hh, ww = yellow.shape
+    seen = np.zeros_like(yellow)
+    uv = me.uv_layers.active.data
+    flipped = 0
+    for y0, x0 in zip(*np.nonzero(yellow)):
+        if seen[y0, x0]:
+            continue
+        stack, pts = [(y0, x0)], []
+        seen[y0, x0] = True
+        while stack:
+            y, x = stack.pop()
+            pts.append((y, x))
+            for dy in (-2, -1, 0, 1, 2):
+                for dx in (-2, -1, 0, 1, 2):
+                    yy, xx = y + dy, x + dx
+                    if 0 <= yy < hh and 0 <= xx < ww and yellow[yy, xx] and not seen[yy, xx]:
+                        seen[yy, xx] = True
+                        stack.append((yy, xx))
+        ys, xs = np.array([p[0] for p in pts]), np.array([p[1] for p in pts])
+        ya, yb, xa, xb = ys.min(), ys.max(), xs.min(), xs.max()
+        bh, bw = yb - ya + 1, xb - xa + 1
+        if len(pts) < 40 or max(bh, bw) > 3 * min(bh, bw):
+            continue                                       # a trim stripe, or a speck
+        # which texture axis runs up the model here: z against u and v over the faces sampling this box
+        rows = []
+        for poly in me.polygons:
+            for li in poly.loop_indices:
+                u_, v_ = uv[li].uv
+                X, Y = u_ * ww, (1 - v_) * hh
+                if xa - 4 <= X <= xb + 4 and ya - 4 <= Y <= yb + 4:
+                    rows.append((X, Y, me.vertices[me.loops[li].vertex_index].co.z))
+        if len(rows) < 3:
+            continue
+        A = np.array([[r[0], r[1], 1.0] for r in rows])
+        gz = np.linalg.lstsq(A, np.array([r[2] for r in rows]), rcond=None)[0]
+        # only the logo moves: its texels (and a 2 px rim of their anti-aliased edge) take the box's own background,
+        # then the mirrored logo is painted over it
+        pad = 3
+        ya, yb, xa, xb = max(0, ya - pad), min(hh - 1, yb + pad), max(0, xa - pad), min(ww - 1, xb + pad)
+        box = px[ya:yb + 1, xa:xb + 1].copy()
+        mine = np.zeros((yb - ya + 1, xb - xa + 1), bool)
+        mine[ys - ya, xs - xa] = True
+        grown = mine.copy()
+        for _ in range(2):
+            g = grown.copy()
+            g[1:] |= grown[:-1]
+            g[:-1] |= grown[1:]
+            g[:, 1:] |= grown[:, :-1]
+            g[:, :-1] |= grown[:, 1:]
+            grown = g
+        bg = np.median(box[~grown][:, :3], axis=0) if (~grown).any() else box[..., :3].mean((0, 1))
+        flip = (lambda a: a[:, ::-1]) if abs(gz[0]) > abs(gz[1]) else (lambda a: a[::-1, :])   # u or v runs up the model
+        out = box.copy()
+        out[grown, :3] = bg
+        fm, fg, fb = flip(mine), flip(grown), flip(box)
+        out[fg & ~fm, :3] = bg
+        out[fm] = fb[fm]
+        edge = fg & ~fm                                  # the mirrored rim keeps its anti-aliased blend
+        out[edge] = fb[edge]
+        px[ya:yb + 1, xa:xb + 1] = out
+        flipped += 1
+    return flipped
+
+
 # ================================================================ 7. maps
 def pixels(img):
     w, h = img.size
@@ -616,9 +756,9 @@ def paint_out(px, region, logos):
     return int(bad.sum())
 
 
-def shade_map(img, me, spec):
-    """(shade [h, w] in 0..1, accent mask [h, w] or None, logos painted, cap mask) from the source texture."""
-    px = pixels(img).copy()
+def shade_map(img, me, spec, px=None):
+    """(shade [h, w] in 0..1, accent mask [h, w] or None, logos painted, cap mask) from the source texture (or `px`)."""
+    px = pixels(img).copy() if px is None else px.copy()
     hh, ww = px.shape[:2]
     cov = coverage(me, ww, hh)
     cap_region = np.zeros((hh, ww), bool)
@@ -763,11 +903,11 @@ def main():
     # channel slots: 3 per cell; a two-tone hair takes two channels of one cell. Slots follow the manifest order, so
     # re-importing one hair keeps everyone's place in the atlas.
     slots, used = {}, 0
-    for spec in MANIFEST["hairs"]:
-        need = 1 + bool(spec.get("accent")) + bool(spec.get("cap"))
+    for key, need in [(h["id"], 1 + bool(h.get("accent")) + bool(h.get("cap"))) for h in MANIFEST["hairs"]] + \
+            [(h["split"]["id"], 2) for h in MANIFEST["hairs"] if h.get("split")]:
         if (used % 3) + need > 3:
             used += 3 - used % 3
-        slots[spec["id"]] = (used // 3, [used % 3 + k for k in range(need)])
+        slots[key] = (used // 3, [used % 3 + k for k in range(need)])
         used += need
     assert used <= COLS * ROWS * 3, "the hair atlas is full: add a row of cells"
     entries, report = {}, []
@@ -785,44 +925,41 @@ def main():
         weld(ob)
         dropped, n_cap = clean(ob, spec, img_px if has_uv else None)
         attach(ob, att)
-        src = BVHTree.FromPolygons([v.co.copy() for v in ob.data.vertices], [list(p.vertices) for p in ob.data.polygons])
-        cap = undercap_faces(HEAD, ob) if capped else []          # under the full-detail hair: its cost known up front
-        decimate(ob, LOD0_MAX - cap_tris(HEAD, cap), area_max=1.2e-3 * STUD * STUD)
-        strays = drop_strays(ob, src)
-        slivers = drop_slivers(ob)
         trimmed = trim_face_window(ob) if spec.get("trim") == "face_window" else 0
         face = face_rule(ob) if not os.environ.get("NO_FACE_RULE") else (0, 0.0)
         boxed = keep_in_box(ob)
         body = body_clip(ob, BODY)
+        visor = split_off(ob) if spec.get("split") else None
         if capped:
-            undercap(ob, HEAD, cap)
+            undercap(ob, HEAD, undercap_faces(HEAD, ob))
         cell, chans = slots[pid]
         mapped = has_uv
+        painted = 0
         if mapped:
             shade, accent, painted, capmask = shade_map(img, ob.data, spec)
-            cx, cy = cell % COLS, cell // COLS
-            inner = CELL - 2 * PAD
-            block = np.full((CELL, CELL), 1.0 / GAIN, np.float32)
-            s_ = resample(shade, inner)
-            block[PAD:PAD + inner, PAD:PAD + inner] = s_
-            block[:PAD, PAD:PAD + inner] = s_[0]
-            block[PAD + inner:, PAD:PAD + inner] = s_[-1]
-            block[:, :PAD] = block[:, PAD:PAD + 1]
-            block[:, PAD + inner:] = block[:, PAD + inner - 1:PAD + inner]
-            atlas[cy * CELL:(cy + 1) * CELL, cx * CELL:(cx + 1) * CELL, chans[0]] = block
-            if accent is not None:
-                ablock = np.zeros((CELL, CELL), np.float32)
-                a_ = resample(accent, inner)
-                ablock[PAD:PAD + inner, PAD:PAD + inner] = a_
-                atlas[cy * CELL:(cy + 1) * CELL, cx * CELL:(cx + 1) * CELL, chans[1]] = ablock
-            if capmask is not None:                  # the cap's or visor's texels: its fixed colour (one material)
-                cblock = np.zeros((CELL, CELL), np.float32)
-                c_ = resample(capmask.astype(np.float32), inner)
-                cblock[PAD:PAD + inner, PAD:PAD + inner] = c_
-                atlas[cy * CELL:(cy + 1) * CELL, cx * CELL:(cx + 1) * CELL, chans[-1]] = cblock
+            write_cell(atlas, cell, chans, shade, accent, capmask)
             remap_uvs(ob.data, cell)
-        else:
-            painted = 0
+        if visor is not None:                  # its own accessory: the hair can be worn without it (David, 2026-10-14)
+            sp = spec["split"]
+            vpx = pixels(img).copy()
+            nflip = flip_logos(vpx, visor.data) if sp.get("flip_logo") else 0
+            vshade, vaccent, _, _ = shade_map(img, visor.data, {"accent": {"default": 0}}, px=vpx)
+            vcell, vchans = slots[sp["id"]]
+            write_cell(atlas, vcell, vchans, vshade, vaccent, None)
+            logo = logo_colour(vpx, visor.data, vaccent)
+            print(f"  {sp['id']}: logos flipped {nflip}")
+            remap_uvs(visor.data, vcell)
+            visor.data.validate()
+            visor = finish(visor, rig, sp["id"])
+            vrel = f"accessories/accessory/{sp['id']}.glb"
+            kit.export(visor, rig, os.path.join(ART, vrel))
+            entries[sp["id"]] = {"id": sp["id"], "slot": "accessory", "name": sp["name"], "glb": vrel, "tris": kit.ntris(visor),
+                                 "materials": [{"name": "M_Hair", "tint": None, "color": sp["color"]}], "decalSlot": None,
+                                 "hidesBackHair": False, "hides": [], "group": "head", "skull": SK.VERSION,
+                                 "source": f"hair/source/{WHO}/{spec['file']} (split from {pid})",
+                                 "map": {"shade": vchans[0], "accent": vchans[1]}, "accent": {"default": logo}}
+            print(f"SPLIT {sp['id']} from {pid}: {kit.ntris(visor)} tris, logo {logo}")
+            bpy.data.objects.remove(visor, do_unlink=True)
         ob.data.validate()                       # the sources carry degenerate faces (zero area, repeats)
         ob = finish(ob, rig, pid)
         rel = f"hair/full/{pid}.glb"
@@ -838,8 +975,8 @@ def main():
              **({"accent": {"default": acc["default"]}} if acc and mapped else {})}
         entries[pid] = e
         report.append(f"IMPORT {pid:22s} src_tris={src_tris} tris={e['tris']} attach={'provisional' if att['provisional'] else 'Roblox'} "
-                      f"position={att['position']} orientation={att['orientation']} scale={att['mesh_scale']} face_rule(moved,max m)={face} "
-                      f"dropped={dropped} cap_faces={n_cap} strays={strays} slivers={slivers} trimmed={trimmed} out_of_box={boxed} "
+                      f"position={att['position']} orientation={att['orientation']} scale={att['mesh_scale']} override={att.get('override')} "
+                      f"face_rule(moved,max m)={face} dropped={dropped} cap_faces={n_cap} trimmed={trimmed} out_of_box={boxed} "
                       f"body_clip(verts,deepest m)={body} logo_texels={painted} map={'cell %d ch %s' % (cell, chans) if mapped else 'none'}")
         print(report[-1])
         built.append(ob)
@@ -858,7 +995,8 @@ def main():
     cat = json.load(open(cat_path))
     # the catalogue's hair is exactly the manifest's hairstyles, in its order (head-roblox: David's 21 are all the hair)
     old = {h["id"]: h for h in cat["hair"]}
-    cat["hair"] = [entries.get(h["id"]) or old[h["id"]] for h in MANIFEST["hairs"] if h["id"] in entries or h["id"] in old]
+    order = [h["id"] for h in MANIFEST["hairs"]] + [h["split"]["id"] for h in MANIFEST["hairs"] if h.get("split")]
+    cat["hair"] = [entries.get(k) or old[k] for k in order if k in entries or k in old]
     cat["hairMaps"] = {"atlas": "hair/hair_maps.png", "gain": GAIN, "cells": [COLS, ROWS], "cell": CELL, "cap": CAP_COLOR,
                        "note": "Shading maps of the full hairstyles (hair/import_hair.py): one channel per hair, its accent and "
                                "cap masks in the next channels of the same cell; luminance / median / gain. The engine "

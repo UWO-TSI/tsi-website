@@ -3,7 +3,8 @@
   "Roblox's own attachment for each of David's hairs (specs/characters/head-roblox.md). import_hair.py attaches every hair with it, and re-running import_hair.py refits, re-maps, rebuilds LOD 1 and syncs everything; no other step.",
   "To fill an entry from Roblox Studio: insert the accessory (Toolbox > Inventory, or Avatar > Accessories), expand it, select Handle > HairAttachment, and copy its Position (x, y, z, studs) and Orientation (x, y, z, degrees) from the Properties window into 'position' and 'orientation'.",
   "mesh_scale: if the Handle has a SpecialMesh child, its Scale (x, y, z). If the Handle is a MeshPart, Size divided by MeshSize: in the command bar, print(game.Selection:Get()[1].Size / game.Selection:Get()[1].MeshSize) with the Handle selected.",
-  "Then set 'provisional' to false and 'source' to 'Studio'. Entries with provisional true are estimates: hair/seat_fit.py rewrites their position from the hair's shape (it never touches an entry with provisional false)."
+  "Then set 'provisional' to false and 'source' to 'Studio'. Entries with provisional true are estimates: hair/seat_fit.py rewrites their position from the hair's shape (it never touches an entry with provisional false).",
+  "override (optional, David's own corrections, kept when the Roblox values are filled in): rotation (x, y, z degrees, Roblox's Orientation order and axes) turns the hair about the HairAttachment after the shared transform, then offset (x, y, z studs, Roblox's axes: +y up, +z back) moves it."
  ],
  "frame": "Roblox units and axes (studs; the HairAttachment's Position and Orientation in its Handle, as Studio shows them). The head side is Roblox's classic head, whose HairAttachment is its top centre (head_shape.HAIR_ATT); 1 stud = head_shape.STUD m.",
  "hairs": [
@@ -110,13 +111,13 @@
    "name": "Black Hime Short Straight Hair Cut",
    "file": "05-Black-Hime-Short-Straight-Hair-Cut-13856173456.glb",
    "position": [
-    -0.01625,
-    0.55178,
-    -0.04
+    -0.03,
+    0.52678,
+    -0.00125
    ],
    "orientation": [
     0,
-    0,
+    90,
     0
    ],
    "mesh_scale": [
@@ -125,7 +126,7 @@
     1
    ],
    "provisional": true,
-   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the hime fringe to the front (David 2026-10-14: it sat sideways; the preview shows its side)"
   },
   {
    "n": 6,
@@ -245,7 +246,15 @@
     1
    ],
    "provisional": true,
-   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview",
+   "override": {
+    "offset": [
+     0,
+     -0.06,
+     0
+    ],
+    "why": "David 2026-10-14: slightly lower on the head"
+   }
   },
   {
    "n": 11,
@@ -269,7 +278,15 @@
     1
    ],
    "provisional": false,
-   "source": "the accessory file (Handle: Part + SpecialMesh, Scale 1, 1, 1)"
+   "source": "the accessory file (Handle: Part + SpecialMesh, Scale 1, 1, 1)",
+   "override": {
+    "offset": [
+     0,
+     -0.06,
+     0
+    ],
+    "why": "David 2026-10-14: slightly lower on the head"
+   }
   },
   {
    "n": 12,
@@ -365,7 +382,15 @@
     1
    ],
    "provisional": true,
-   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face plate to the front as in David's preview"
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face plate to the front as in David's preview",
+   "override": {
+    "offset": [
+     0,
+     -0.06,
+     0
+    ],
+    "why": "David 2026-10-14: lower on the head"
+   }
   },
   {
    "n": 16,
@@ -389,7 +414,15 @@
     1
    ],
    "provisional": true,
-   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview",
+   "override": {
+    "offset": [
+     0,
+     -0.06,
+     0
+    ],
+    "why": "David 2026-10-14: lower on the head"
+   }
   },
   {
    "n": 17,
@@ -461,7 +494,15 @@
     1
    ],
    "provisional": true,
-   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the cap's brim and logo to the front as in David's preview (its dreads hang over the face)"
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the cap's brim and logo to the front as in David's preview (its dreads hang over the face)",
+   "override": {
+    "rotation": [
+     0,
+     180,
+     0
+    ],
+    "why": "David 2026-10-14: a cap worn backwards (brim at the back)"
+   }
   },
   {
    "n": 20,
@@ -485,7 +526,15 @@
     1
    ],
    "provisional": true,
-   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview",
+   "override": {
+    "offset": [
+     0,
+     -0.14,
+     0
+    ],
+    "why": "David 2026-10-14: too high on the head"
+   }
   },
   {
    "n": 21,
