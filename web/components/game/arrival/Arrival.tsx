@@ -11,7 +11,7 @@
  * showing; the crossing skips to the landing under a quick mist; the tour can be left in one click (principle 7).
  */
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
-import { Fish, Backpack } from "lucide-react";
+import { Fish, BookOpen } from "lucide-react";
 import { Keycap } from "@/components/gui";
 import { holdCreatorOpen } from "@/lib/game/character/creatorPresence";
 import type { CharacterLook } from "@/lib/game/character/look";
@@ -21,7 +21,8 @@ import { worldNow } from "@/lib/game/worldClock";
 import { myTrip, tripChanged } from "@/lib/game/myTrip";
 import { TRIP, skipCrossing } from "@/lib/game/boatTrip";
 import { ARRIVAL_TIMES, skipArrival, startArrival, stepArrival, type ArrivalPhase } from "@/lib/game/arrival/sequence";
-import { arrivalChanged, arrivalRun, readArrival, resetArrival, subscribeArrival } from "@/lib/game/arrival/arrivalStore";
+import { arrivalChanged, arrivalRun, readArrival, resetArrival, subscribeArrival, useTutorialQuest } from "@/lib/game/arrival/arrivalStore";
+import QuestTracker from "@/components/game/QuestTracker";
 import ReflectionCreator from "./ReflectionCreator";
 import s from "./Arrival.module.css";
 
@@ -61,6 +62,8 @@ export default function Arrival({ play, look, askName, touch, keys, onCross, onS
 }) {
   const key = useSyncExternalStore(subscribeArrival, readArrival, () => "");
   const phase = key ? (key.split("|")[0] as ArrivalPhase) : null;
+  // The walk-along's to-do list, top right (the HUD's quest tracker carries it once the slim HUD lands: game/hud-esc).
+  const quest = useTutorialQuest({ bag: keys.bag, touch });
   const mist = useRef<HTMLDivElement>(null);
   const skipAt = useRef<number | null>(null);
   const crossed = useRef(false);
@@ -136,7 +139,7 @@ export default function Arrival({ play, look, askName, touch, keys, onCross, onS
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
     Object.assign(window, { __arrival: {
-      state: () => { const a = arrivalRun.current, t = myTrip.current; return a && { phase: a.phase, t: (performance.now() - a.at) / 1000, choices: a.choices, step: arrivalRun.tutorial?.step ?? null, trip: t && { phase: t.phase, t: (worldNow() - t.at) / 1000 } }; },
+      state: () => { const a = arrivalRun.current, t = myTrip.current; return a && { phase: a.phase, t: (performance.now() - a.at) / 1000, choices: a.choices, tutorial: arrivalRun.tutorial && { stop: arrivalRun.tutorial.stop, stage: arrivalRun.tutorial.stage, done: arrivalRun.tutorial.done }, trip: t && { phase: t.phase, t: (worldNow() - t.at) / 1000 } }; },
       skip: () => skipRef.current(),
       /** How many choices made (each sharpens the world): tuning the creator's look at a given clarity. */
       choices: (n: number) => { if (arrivalRun.current) arrivalRun.current.choices = n; },
@@ -170,9 +173,10 @@ export default function Arrival({ play, look, askName, touch, keys, onCross, onS
     </button>}
     {phase === "tutorial" && glyph && <div key={glyph.at} className={s.glyph} role="status" data-glyph={glyph.key} style={{ "--glyph-ms": `${GLYPH_MS}ms` } as CSSProperties}>
       {touch ? null : <Keycap>{glyph.key === "wheel" ? keys.wheel : keys.bag}</Keycap>}
-      {glyph.key === "wheel" ? <Fish size={18} aria-hidden /> : <Backpack size={18} aria-hidden />}
-      <span>{glyph.key === "wheel" ? (touch ? "Your tools: pick the rod" : "Hold for your tools") : (touch ? "Your bag" : "Your bag")}</span>
+      {glyph.key === "wheel" ? <Fish size={18} aria-hidden /> : <BookOpen size={18} aria-hidden />}
+      <span>{glyph.key === "wheel" ? (touch ? "Your tools: pick the rod" : "Hold for your tools") : "What you've collected"}</span>
     </div>}
+    {phase === "tutorial" && <QuestTracker quest={quest} />}
     {phase === "tutorial" && <button type="button" className={s.leave} onClick={() => { arrivalRun.signals.toured = true; }} data-testid="arrival-leave-tour">Skip the walk</button>}
   </div>;
 }

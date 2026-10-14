@@ -117,8 +117,10 @@ import { emptyTalkView, requestTalk, subscribeTalk, talkStore, talkView } from "
 import DailyGift from "./DailyGift";
 import { markWelcomed, welcomeStep } from "@/lib/game/welcome";
 import Arrival from "./arrival/Arrival";
-import ArrivalWorld, { withCrate } from "./arrival/ArrivalWorld";
-import { arrivalEvent, useArrivalPhase } from "@/lib/game/arrival/arrivalStore";
+import ArrivalWorld, { crateSpots, placeWorld, withCrates } from "./arrival/ArrivalWorld";
+import { arrivalEvent, bramNear, bramPrompt, useArrivalPhase, useArrivalTools } from "@/lib/game/arrival/arrivalStore";
+import { routeFor } from "@/lib/game/arrival/routes";
+import { gateWheel } from "@/lib/game/arrival/tools";
 import { postArrival, useArrivalFlag } from "@/lib/game/arrival/arrivalFlag";
 import { BRAM, TUTORIAL_REWARD, type HintKeys } from "@/lib/game/arrival/lines";
 import { useMoveUnlocks } from "@/lib/game/moveUnlocks";
@@ -196,7 +198,7 @@ import { isSeatedPose, seatPrompt } from "@/lib/game/seatPrompt";
 import { roomHeading } from "@/lib/game/roomHeading";
 import styles from "./DefaultIslandWorld.module.css";
 
-type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | null;
+type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | null;
 type Sheet = "counter" | "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | null;
 const DEV = process.env.NODE_ENV !== "production";
 const DEV_SHEETS: readonly Sheet[] = ["counter", "notice", "letters", "journal", "trophies", "showcase", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest"];
@@ -226,6 +228,8 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   shop_enter: "Enter the shop", counter: "Buy and sell at the counter",
   // The resident in reach says their own name (TalkPrompt).
   talk: "Talk",
+  // Bram on the walk-along (lib/game/arrival): talk to him, or on to his next line (bramPrompt).
+  bram: "Talk to Bram",
 };
 const CLOSED: Near[] = ["museum", "monument"];
 /** The door in reach for trick-or-treat (components/game/Halloween.tsx): IslandScene writes it each frame, E knocks. */
@@ -411,7 +415,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   // The arrival (components/game/arrival): Bram walks you through, the fish crate on the pier until the tour is over.
   const arrivalPhase = useArrivalPhase();
   const dock = useMemo(() => { const w = landmark("wharf", v); return w ? { x: w.x, z: w.z, yaw: w.yaw ?? 0 } : null; }, [v]);
-  const crated = useMemo(() => (dock ? withCrate(island, dock) : null), [island, dock]);
+  const crated = useMemo(() => (dock ? withCrates(island, crateSpots(routeFor("village"), placeWorld(dock, v))) : null), [island, dock, v]);
   const walkOn = crated && (arrivalPhase === "crossing" || arrivalPhase === "landing" || arrivalPhase === "tutorial") ? crated : island;
   const spots = useMemo(() => eventSpots(event?.decor ?? null), [event]);
   const cafeAt = useMemo(() => { const c = layout.landmarks.find(l => l.id === "cafe"); return c ? { x: c.x, z: c.z, yaw: c.yaw ?? 0, scale: c.scale ?? 1 } : null; }, [layout]);
@@ -465,6 +469,8 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     const tn = talkStore.near;
     if (tn.id && !fishing && tn.d < nextD) next = "talk";
     if (studyHoldsPrompt() || talking) next = null;
+    // Bram waiting at his stop on the walk-along (or talking): E is his.
+    else if (!fishing && bramNear(px, pz)) next = "bram";
     else if (!fishing && (next === null || next === "talk")) {
       const peace = peacefulNear(island.map, layout.water, px, pz, fishSpot);
       // A flower or shell nearer than the resident is picked up first. Water, a bug or a dig spot keep the prompt only
@@ -872,8 +878,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const atHome = site === "home";
   const heading = roomHeading({ site, inside, atHome, event: islandEvent?.goal.title ?? null });
   const wheelSite: WheelSite = site === "ruins" ? "ruins" : atHome ? "home" : "village";
-  const wheelItems = useMemo(() => wheelContents({ site: wheelSite, owned: peaceful.owned, chosen: heldState.chosen, weapons: weaponList.split(","), defaultWeapon, armed, pins: heldState.pins, stock }),
-    [wheelSite, peaceful.owned, heldState.chosen, weaponList, defaultWeapon, armed, heldState.pins, stock]);
+  // A first arrival starts with an empty tool bag: the wheel holds only what Bram has handed over (lib/game/arrival/tools.ts).
+  const arrivalTools = useArrivalTools();
+  const wheelItems = useMemo(() => gateWheel(wheelContents({ site: wheelSite, owned: peaceful.owned, chosen: heldState.chosen, weapons: weaponList.split(","), defaultWeapon, armed, pins: heldState.pins, stock }), arrivalTools),
+    [wheelSite, peaceful.owned, heldState.chosen, weaponList, defaultWeapon, armed, heldState.pins, stock, arrivalTools]);
   // Indoors you walk with empty hands (the wheel is outdoors and in the ruins).
   const held = inside ? null : heldItem(heldState, wheelItems);
   const [eating, setEating] = useState(false);
@@ -886,6 +894,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (action === "cafe") { setSheet("cafe"); return; }
     if (action === "owner") { window.dispatchEvent(new CustomEvent("tsi:cafe-owner-talk")); return; }
     if (action === "talk") { requestTalk(talkStore.near.id); return; }
+    if (action === "bram") { arrivalEvent("talked"); return; }
     if (action === "knock") { if (knockSpot.current) void knockAt(knockSpot.current); return; }
     // The catch board's clues are the collection journal's.
     if (action === "catch") { setBagOpen(true); return; }
@@ -1071,7 +1080,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // In the clean HUD the place name shows as a scene comes in, the objective when it changes.
   const headingFlash = useFlash(ready ? sceneShown + 1 : 0, FLASH_MS.heading);
   const objectiveFlash = useFlash(progression.objective.text ?? null, FLASH_MS.objective);
-  const needTool = toolNear ? toolNeeded(held, reach) : null;
+  // Only a tool you have on the wheel (a first arrival's bag is empty until Bram hands over his rod).
+  const wantTool = toolNear ? toolNeeded(held, reach) : null;
+  const needTool = wantTool && wheelItems.some(i => i.kind === wantTool) ? wantTool : null;
   // Decorating, the dev panel and the arrival work with the cursor: mouse-look lets go while they are up.
   useEffect(() => { holdCursor("decorate", decor.decorating); holdCursor("greeting", welcoming); holdCursor("talk", talking); holdCursor("options", optionsOpen); }, [decor.decorating, welcoming, talking, optionsOpen]);
   useEffect(() => () => { holdCursor("decorate", false); holdCursor("greeting", false); holdCursor("talk", false); holdCursor("options", false); }, []);
@@ -1202,7 +1213,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       </section>}
       {near && !toolNear && !sheet && !cinematic && !talking && !(reveal && inside === "oracle") && (CLOSED.includes(near)
         ? <p className={styles.interact} data-closed="true" role="status">{NEAR_LABELS[near]}</p>
-        : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>{touch ? "Tap" : "E"}</kbd>{near === "forage" ? targetLabel ?? NEAR_LABELS[near] : near === "talk" && talkNow.nearName ? `Talk to ${talkNow.nearName}` : near === "bench" || near === "bed" ? seatPrompt(NEAR_LABELS[near], seated) : NEAR_LABELS[near]}</button>)}
+        : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>{touch ? "Tap" : "E"}</kbd>{near === "forage" ? targetLabel ?? NEAR_LABELS[near] : near === "talk" && talkNow.nearName ? `Talk to ${talkNow.nearName}` : near === "bram" ? bramPrompt() : near === "bench" || near === "bed" ? seatPrompt(NEAR_LABELS[near], seated) : NEAR_LABELS[near]}</button>)}
       {/* The held item's use (specs/game-ui.md §2): what left click does with it here, or the tool something in reach wants. Touch presses the prompt. */}
       {!sheet && !cinematic && !talking && !fishing && !inside && site !== "ruins" && (toolAction && (toolAction.target && (toolNear || toolAction.verb === "eat"))
         ? <button className={styles.interact} data-use onPointerDown={e => { if (e.pointerType !== "mouse" || capture.state !== "captured") applyTool(); }}><kbd>{touch ? "Tap" : "Click"}</kbd>{toolAction.label}</button>

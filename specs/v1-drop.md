@@ -37,7 +37,8 @@ One continuous sequence after the title screen. It plays once on first login and
    - the wharf coming up.
    
    You step into real island time on the dock.
-5. **The tutorial (approved).** Walk-along, learn by doing, minimal: players figure it out.
+5. **The tutorial (approved; rebuilt as v2 after playtest round 1, decision 5).** Walk-along, learn by doing, minimal: players figure it out.
+   - **v2 (David's walk-along note, built 2026-10-14):** Bram walks to each stop with a "!" over his head and waits; reaching him moves nothing on, you talk to him (E), he tells you about the place and walks on. The stops: the dock (talk, then hop the crate after him), the museum, shop, HQ and café fronts, the beach (his rod, then a catch), then he points you at B for what you've collected, the wharf fish market (the wharf shack) for fish, the museum for rare finds and the shop for everything else. A tracker top right lists the steps (`components/game/QuestTracker.tsx`). New players start with an empty tool bag until the beach. The route is data per world (`web/lib/game/arrival/routes/`) and the lines are drafts in `web/lib/game/arrival/lines.ts`. The step list below is the v1 original.
    - **No movement UI anywhere.** The controls list lives only in Settings, with rebinding.
    - If a player stalls for about 10 s, Bram says a gentle hint in a speech bubble.
    - The Tab wheel and the bag each get a one-time keycap glyph at the moment they're needed.
