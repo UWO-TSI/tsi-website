@@ -6,6 +6,7 @@ import { validateRecipeDraft } from "@/lib/crafting/recipes";
 import { validateChapterDraft } from "@/lib/progression/chapters";
 import { validateGoalDraft } from "@/lib/progression/goals";
 import { validateResidentDraft } from "./residents";
+import { validateTraditionDraft } from "./traditions";
 import { CONTENT_ROUTES } from "./types";
 
 /** The versioned tables (CONTENT_ROUTES) and the emotes, which have no history page. */
@@ -16,4 +17,5 @@ export const DRAFT_VALIDATORS: Record<string, (d: Record<string, unknown>) => st
   quest_chapters: validateChapterDraft,
   club_goals: validateGoalDraft,
   crafting_recipes: validateRecipeDraft,
+  traditions: validateTraditionDraft,
 };

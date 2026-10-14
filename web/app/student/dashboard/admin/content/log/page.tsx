@@ -24,6 +24,7 @@ const TABLE_NAMES: Record<string, string> = {
   quest_chapters: "Main quest",
   club_goals: "Club goals",
   crafting_recipes: "Recipes",
+  traditions: "Traditions",
 };
 const TABLE_OPTIONS: { value: TableFilter; label: string }[] = [
   { value: "all", label: "Everything" },

@@ -18,6 +18,7 @@ const AREAS = [
   { title: "Club goals", what: "Story goals: targets, weights, caps, letters", table: "club_goals", seasonal: false, href: `${A}/content/goals` },
   { title: "Seasonal events", what: "Yearly goals: window, target, unlocks", table: "club_goals", seasonal: true, href: `${A}/content/seasonal` },
   { title: "Recipes", what: "Workbench recipes, ingredients, where learned", table: "crafting_recipes", href: `${A}/content/recipes` },
+  { title: "Traditions", what: "Yearly days: pumpkins, costumes, trick-or-treat, fog nights", table: "traditions", href: `${A}/content/traditions` },
   { title: "Shop catalogue", what: "Items, prices, specials pool, merch stock", table: "shop_items", href: `${A}/content/shop` },
   { title: "Seasonal palettes", what: "Island colours per season", table: "seasonal_palettes", href: `${A}/content/palettes` },
   { title: "Emotes", what: "Emote types and unlocks", table: "emote_types", href: `${A}/content/emotes` },

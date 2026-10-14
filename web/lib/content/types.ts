@@ -11,6 +11,7 @@ export const CONTENT_ROUTES = {
   quest_chapters: `${ADMIN}/chapters`,
   club_goals: `${ADMIN}/goals`,
   crafting_recipes: `${ADMIN}/recipes`,
+  traditions: `${ADMIN}/traditions`,
 } as const;
 export type VersionedTable = keyof typeof CONTENT_ROUTES;
 
