@@ -84,7 +84,7 @@ import type { Family } from "@/lib/oracle/engine";
 import type { ResultView } from "@/lib/oracle/service";
 import { setFamily, useWorldIdentity, type WorldIdentity } from "@/lib/game/identity";
 import { actionForKey } from "@/lib/identity/settings";
-import { keyName, useAbilityKeys } from "@/lib/game/movement/keys";
+import { keyName, useAbilityKeys, useMoveKeys } from "@/lib/game/movement/keys";
 import { useCoarsePointer } from "@/lib/game/useMediaQuery";
 import TouchControls from "./movement/TouchControls";
 import MuseumInterior from "./peaceful/MuseumInterior";
@@ -102,18 +102,21 @@ import TrophyCase from "./TrophyCase";
 import ShopInterior from "./ShopInterior";
 import ShopCounter from "./ShopCounter";
 import IslandLoading from "./IslandLoading";
-import HQLead from "./HQLead";
 import TalkBox from "./TalkBox";
 import { emptyTalkView, requestTalk, subscribeTalk, talkStore, talkView } from "@/lib/game/residentTalk";
 import DailyGift from "./DailyGift";
-import { NPCDialogue } from "@/components/recruit/ui";
-import { HQ_LEAD, LEAD_OFFSET, markWelcomed, readWelcomed, welcomeStep } from "@/lib/game/welcome";
-/** The roster's HQ lead (residentRoster.ts) is the first-login greeter (HQ_LEAD). */
-const HQ_LEAD_SLUG = "wren";
-import { useMyLook } from "@/lib/game/character/lookStore";
+import { markWelcomed, welcomeStep } from "@/lib/game/welcome";
+import Arrival from "./arrival/Arrival";
+import ArrivalWorld, { withCrate } from "./arrival/ArrivalWorld";
+import { arrivalEvent, useArrivalPhase } from "@/lib/game/arrival/arrivalStore";
+import { postArrival, useArrivalFlag } from "@/lib/game/arrival/arrivalFlag";
+import { BRAM, TUTORIAL_REWARD, type HintKeys } from "@/lib/game/arrival/lines";
 import { useMoveUnlocks } from "@/lib/game/moveUnlocks";
+import { phaseInstant, solarPosition } from "@/lib/game/sunPath";
+import type { WeatherBlend } from "@/lib/game/islandWeather";
+import { saveName } from "./character/PlayerCharacterUI";
+import { saveMyLook, useMyLook } from "@/lib/game/character/lookStore";
 import { useProgression } from "@/lib/progression/useProgression";
-import { anchorAt } from "@/lib/content/residents";
 import { WarmupProbe } from "./LoadGate";
 import { escapeAction } from "@/lib/game/sceneGate";
 import TopCluster, { hudButton } from "./TopCluster";
@@ -331,14 +334,16 @@ function Performance({ player, output }: { player: React.RefObject<THREE.Vector3
   return null;
 }
 
-function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpot, fishing, chapter, phase, light, look, weather, overview, zoom, reset, returned, fromBoat, liteMode, castShadows, player, onNear, progression, ceremony, event, lead, dash, talking }: {
+function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpot, fishing, chapter, phase, light, look, weather, overview, zoom, reset, returned, fromBoat, liteMode, castShadows, player, onNear, progression, ceremony, event, arriving, hintKeys, dash, talking }: {
   /** What the player holds from the tool wheel (specs/game-ui.md), drawn in the hand. */
   held: WheelItem | null;
   /** Talking with a resident (TalkBox): you stand still and face them. */
   talking: boolean;
   progression: { stage: number; opened: readonly WorldGoalId[] }; ceremony: boolean; fromBoat: boolean; event: IslandEvent | null;
-  /** The HQ lead on the wharf for a first login (`line`: the one she is saying; the player holds still while she talks). */
-  lead: { line: number | null; hold: boolean } | null;
+  /** The arrival before its walk-along (specs/v1-drop.md §1): the player holds still (the crossing's boat carries them). */
+  arriving: boolean;
+  /** The keys Bram's hints name (the player's own bindings, or touch wording). */
+  hintKeys: HintKeys;
   /** The dash is yours (a Keeper teaches it, lib/game/moveUnlocks.ts). */
   dash: boolean;
   chapter: { claim: boolean; donate: boolean; report: boolean };
@@ -356,7 +361,11 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   const scenery = useMemo(() => sceneryOf(v, island.ground, look.season), [v, island, look.season]);
   const near = useRef<Near>(null);
   const fauna = useMemo(() => ({ ...layout.fauna, ground: island.ground, standable: island.standable, surface: island.surface, top: island.top, player }), [layout, island, player]);
-  const leadAt = useMemo((): [number, number] | null => (spawns.boat ? [spawns.boat[0] + LEAD_OFFSET[0], spawns.boat[2] + LEAD_OFFSET[1]] : anchorAt("wharf", v)), [v, spawns.boat]);
+  // The arrival (components/game/arrival): Bram walks you through, the fish crate on the pier until the tour is over.
+  const arrivalPhase = useArrivalPhase();
+  const dock = useMemo(() => { const w = landmark("wharf", v); return w ? { x: w.x, z: w.z, yaw: w.yaw ?? 0 } : null; }, [v]);
+  const crated = useMemo(() => (dock ? withCrate(island, dock) : null), [island, dock]);
+  const walkOn = crated && (arrivalPhase === "crossing" || arrivalPhase === "landing" || arrivalPhase === "tutorial") ? crated : island;
   const spots = useMemo(() => eventSpots(event?.decor ?? null), [event]);
   useEffect(() => { player.current.set(...spawn); }, [reset, spawn, player]);
   useEffect(() => { worldLabels.setOccluders(layout.buildings); return () => worldLabels.setOccluders([]); }, [layout]);
@@ -418,7 +427,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <PeacefulLayer map={island.map} nodes={layout.nodes} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} treeModels={SEASON_TREES[look.season]} />
       <BeachBottle player={player} ground={island.ground} />
       {/* After the first leaf glider is made: a marked edge and a ring to land in (the guided first glide). */}
-      <GlideGuide map={island.map} ground={island.ground} player={player} owned={peaceful.glider} active={!fishing && !lead?.hold} blocked={layout.underBuilding} />
+      <GlideGuide map={island.map} ground={island.ground} player={player} owned={peaceful.glider} active={!fishing && !arriving} blocked={layout.underBuilding} />
       <StudySeats area="village" player={player} ground={island.ground} />
       <VillageLandmarks layout={layout} ground={island.ground} opened={progression.opened} stage={progression.stage} ceremony={ceremony} light={light} />
       {layout.fitting && <FittingRoom at={layout.fitting} ground={island.ground} player={player} />}
@@ -428,14 +437,14 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
       <InstancedModels items={scenery} />
       {/* Residents walk their routines on the world clock (residentRoutine.ts); during a ceremony they gather at the monument and cheer.
-          While the HQ lead greets a first login on the wharf, her walking self stays out of sight: one Wren. */}
-      <Residents personas={personas} phase={phase} ceremony={ceremony} player={player} island={island} v={v} away={lead ? HQ_LEAD_SLUG : null}
+          While Bram brings a new arrival in and walks them round, his walking self stays out of sight: one Bram. */}
+      <Residents personas={personas} phase={phase} ceremony={ceremony} player={player} island={island} v={v} away={arrivalPhase ? BRAM.slug : null}
         playerName={identity.display_name !== "You" ? identity.display_name : null} />
-      <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={fishing || !!lead?.hold || talking}
+      <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={fishing || arriving || talking}
         showNameplate={!talking} ride={myTrip.ride}
-        world={island} groundHeight={island.ground} groundSurface={island.surface} camTarget={focus} glider={peaceful.glider} dash={dash} held={held} />
+        world={walkOn} groundHeight={island.ground} groundSurface={island.surface} camTarget={focus} glider={peaceful.glider} dash={dash} held={held} />
       <CharacterCrowd player={player} ground={island.ground} stepWorld={island} />
-      {lead && leadAt && <HQLead at={leadAt} ground={island.ground} player={player} line={lead.line} />}
+      {dock && <ArrivalWorld v={v} island={island} player={player} dock={dock} held={held} keys={hintKeys} />}
     </>
   );
 }
@@ -639,12 +648,11 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const plot = useDefaultIslandPlot(progression.completedGoals);
   const ceremony = useCeremony(progression.ceremonyGoal, progression.forceCeremony);
   const chapterActions = useChapterActions();
-  // First login (row 211, hud-first-login §6): creator → arrival at the wharf → the HQ lead's greeting → the chapter 1 objective.
+  // First login (row 211; specs/v1-drop.md §1): the arrival, once per account (underwater, Bram's boat, the reflection
+  // creator, the crossing, the walk-along), then the chapter 1 objective. Dev: ?arrival=1 replays it.
   const mine = useMyLook();
   const progressionLoaded = useProgression().loaded;
-  const [welcomed, setWelcomed] = useState(() => readWelcomed() && devHome.get("welcome") !== "1");
-  // idle → arriving (the dock fade) → the lead's line → done (greeted; she waits on the wharf) → gone (the scene changed).
-  const [welcome, setWelcome] = useState<"idle" | "arriving" | number | "done" | "gone">("idle");
+  const [arrived, setArrived] = useState(false);
   const [objectiveNew, setObjectiveNew] = useState(false);
   const chapterFlags = useMemo(() => ({ claim: chapterActions.claim, donate: chapterActions.donate, report: chapterActions.report }),
     [chapterActions.claim, chapterActions.donate, chapterActions.report]);
@@ -662,11 +670,15 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [fishing, setFishing] = useState(false);
   const [bagOpen, setBagOpen] = useState(() => devHome.get("sheet") === "bag");
   const identity = useWorldIdentity();
-  const step = welcomeStep({ lookLoaded: mine.loaded, lookSaved: mine.saved, signedIn: identity.signedIn || devHome.get("welcome") === "1", progressionLoaded, chapterFresh: chapterActions.claim, welcomed });
-  const greeting = typeof welcome === "number" ? welcome : null;
-  // Arriving or being greeted: the player holds still, so no prompt and no key hints.
-  const welcoming = welcome === "arriving" || greeting !== null;
-  // Talking with a resident (lib/game/residentTalk.ts): this viewer's own, like the greeting; who's in reach names the prompt.
+  const arrivalFlag = useArrivalFlag(identity.signedIn);
+  const step = welcomeStep({ lookLoaded: mine.loaded, lookSaved: mine.saved, signedIn: identity.signedIn, progressionLoaded, chapterFresh: chapterActions.claim,
+    arrived: arrived || arrivalFlag.arrived, replay: DEV && !arrived && devHome.get("arrival") === "1" });
+  const arrivalPhase = useArrivalPhase();
+  // Arriving (before the walk-along): the player holds still, so no prompt and no key hints; the HUD stands back.
+  const welcoming = arrivalPhase !== null && arrivalPhase !== "tutorial";
+  // Golden hour for the crossing, whatever the real time (specs/v1-drop.md §1.4): the light, the sun and a clear sky.
+  const golden = arrivalPhase === "clearing" || arrivalPhase === "crossing";
+  // Talking with a resident (lib/game/residentTalk.ts): this viewer's own; who's in reach names the prompt.
   const talkNow = useSyncExternalStore(subscribeTalk, talkView, emptyTalkView);
   const talking = talkNow.activeId !== null;
   // The boat between the village and your island, and a first login's arrival by it (arrival-wharf.md §3).
@@ -676,12 +688,11 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     setSite(place); setInside(null); setReturned(false); setExitFrom(null); setFromBoat(place === "village");
     setSceneShown(n => n + 1); // a fresh scene gate: the boat comes in once the island has loaded and warmed up
   }, []);
-  const onTripDone = useCallback((t: { from: string }) => { if (t.from === "sea") setWelcome(w => (w === "arriving" ? 0 : w)); }, []);
-  const trip = useTripControl({ dockOf, goTo, site, ready, onDone: onTripDone });
+  const trip = useTripControl({ dockOf, goTo, site, ready });
   const { start: startTrip, arrive: arriveByBoat } = trip;
-  // A trip or the greeting: the world's prompts, tools and hints stand back.
+  // A trip or the arrival: the world's prompts, tools and hints stand back.
   const cinematic = welcoming || trip.active;
-  const abilityKeys = useAbilityKeys();
+  const moveKeys = useMoveKeys(), abilityKeys = useAbilityKeys();
   const touch = useCoarsePointer() || devHome.get("touch") === "1";
   // Mouse-look (specs/camera-orbit.md): the hint while the mouse is free, the crosshair while it looks in the ruins.
   const captured = useSyncExternalStore(subscribeCapture, readCapture, () => "off" as const);
@@ -715,6 +726,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // The tool wheel (specs/game-ui.md): what it holds, what you hold (this device's), your stock for the pins.
   const heldState = useHeld();
   const wheelKeys = useWheelKeys();
+  // Bram's hints name your own keys (or say it for a touch screen).
+  const hintKeys = useMemo<HintKeys>(() => ({ move: [moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(keyName).join(" "), jump: keyName(moveKeys.jump),
+    wheel: keyName(wheelKeys.wheel), bag: keyName(identity.settings.key_bindings.openJournal), touch }), [moveKeys, wheelKeys.wheel, identity.settings.key_bindings.openJournal, touch]);
   const armed = useCombatValue(() => combat.rt.player.armed);
   const weaponList = useCombatValue(() => combat.rt.player.owned.join(","));
   const runtimeWeapon = useCombatValue(() => combat.rt.player.weapon);
@@ -774,11 +788,16 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by value: the blend object is rebuilt every render.
   const look = useMemo(() => seasonLook(season, paletteBySeason(seasonRows)), [seasonKey, seasonRows]);
   const lookPreset = preset ?? CURRENT;
-  // The key light follows the real sun (row 239); /lab/look's edited preset keeps its own sun sliders.
-  const sun = preset ? null : conditions.sun;
+  // The key light follows the real sun (row 239); /lab/look's edited preset keeps its own sun sliders. The arrival's
+  // crossing is always dawn's golden light under a clear sky; you step into real island time on the dock.
+  const dawnStep = golden ? Math.floor(conditions.now / 600_000) : 0;
+  const dawnSun = useMemo(() => solarPosition(phaseInstant("dawn", new Date(dawnStep * 600_000))), [dawnStep]);
+  const sun = preset ? null : golden ? dawnSun : conditions.sun;
   // Across a phase boundary the light blends continuously from one phase's look to the next (living-village §5).
-  const blend = conditions.blend;
-  const weatherBlend = conditions.weatherBlend;
+  const blend = useMemo(() => (golden ? { from: "dawn" as IslandPhase, to: "dawn" as IslandPhase, t: 0 } : conditions.blend), [golden, conditions.blend]);
+  const weatherBlend = useMemo((): WeatherBlend => (golden ? { from: "clear", to: "clear", t: 1 } : conditions.weatherBlend), [golden, conditions.weatherBlend]);
+  const sceneWeather: IslandWeather = golden ? "clear" : weather;
+  const scenePhase: IslandPhase = golden ? "dawn" : phase;
   const light = useMemo(() => weatherLight(withSeason(islandLightAt(lookPreset, blend, sun), look), weatherBlend), [blend, look, weatherBlend, lookPreset, sun]);
   const conditionsLabel = `${season.season[0].toUpperCase()}${season.season.slice(1)}${Object.values(season.weights).some(w => w > 0 && w < 1) ? " (changing)" : ""} · ${weather[0].toUpperCase()}${weather.slice(1)}`;
   const grade = inside === "cafe" ? { ...CLUBHOUSE_LIGHTING[phase].grade, ...CAFE_GRADE } : inside ? CLUBHOUSE_LIGHTING[phase].grade : light.grade;
@@ -871,38 +890,25 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       setSceneShown(n => n + 1);
     }, 320);
   }, [fading, chapterActions, homeActions, inside, gate, layout, startTrip, atHome]);
-  // Arrive by boat at the wharf (row 211): under the loading screen while it is up, otherwise through the trip's veil.
-  // The HQ lead waits on the wharf and starts talking once you are ashore (onTripDone).
-  useEffect(() => {
-    if (step !== "welcome" || welcome !== "idle" || inside || site !== "village") return;
-    setWelcome("arriving");
-    arriveByBoat("village", ready);
-  }, [step, welcome, inside, site, ready, arriveByBoat]);
-  // Her voice on each line: three dialogue blips, as the café owner talks.
-  useEffect(() => {
-    if (greeting === null) return;
-    AudioManager.playBlip();
-    const blips = [140, 300].map(ms => window.setTimeout(() => AudioManager.playBlip(), ms));
-    return () => blips.forEach(window.clearTimeout);
-  }, [greeting]);
-  // She stays on the wharf after the greeting until the scene changes under a fade.
-  useEffect(() => {
-    if (welcome === "done" && (inside || site !== "village")) setWelcome("gone");
-  }, [welcome, inside, site]);
+  // The arrival (components/game/arrival): it starts once the island is up on the village; the crossing is the boat's.
+  const arrivalPlays = step === "arrival" && ready && !inside && site === "village";
+  const startCrossing = useCallback(() => arriveByBoat("village", true, true), [arriveByBoat]);
+  const keepLook = useCallback((look: Parameters<typeof saveMyLook>[0], name: string | null) => {
+    void saveMyLook(look).then(() => (name ? saveName(name) : undefined));
+  }, []);
+  // Arrived: the account's flag and Bram's reward (once), his old rod's card, the chapter 1 objective.
+  const finishArrival = useCallback(() => {
+    markWelcomed(); setArrived(true); arrivalFlag.markArrived(); setObjectiveNew(true);
+    window.dispatchEvent(new CustomEvent("tsi:gift", { detail: { key: TUTORIAL_REWARD.rod, name: TUTORIAL_REWARD.name, title: TUTORIAL_REWARD.title, note: TUTORIAL_REWARD.note } }));
+    void postArrival().then(r => { if (r) setHudCoins(r.balance); });
+  }, [arrivalFlag]);
+  // The walk-along waits for the bag (the Collection, B) to be opened once.
+  useEffect(() => { if (bagOpen) arrivalEvent("bagOpened"); }, [bagOpen]);
   useEffect(() => {
     if (!objectiveNew) return;
     const t = window.setTimeout(() => setObjectiveNew(false), 2600);
     return () => window.clearTimeout(t);
   }, [objectiveNew]);
-  const finishWelcome = useCallback(() => {
-    markWelcomed(); setWelcomed(true); setWelcome("done"); setObjectiveNew(true);
-    AudioManager.playSFX("confirm");
-  }, []);
-  const nextLine = useCallback(() => {
-    if (greeting === null) return;
-    if (greeting + 1 < HQ_LEAD.lines.length) setWelcome(greeting + 1);
-    else finishWelcome();
-  }, [greeting, finishWelcome]);
   // The forage/net prompt names the nearest node, re-read when it changes (it used to keep the first node's name).
   const targetLabel = useSyncExternalStore(subscribePeacefulLabel, peacefulLabel, () => null);
   // ── The tool wheel (specs/game-ui.md) ──
@@ -970,7 +976,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     return () => el.removeEventListener("pointerdown", down);
   }, [applyTool]);
   const toolNear = near === "fish" || near === "net" || near === "dig";
-  // Talking, the greeting and the boat trip are cinematic (world audit item 7): the HUD stands back, flashes included,
+  // Talking, the arrival and the boat trip are cinematic (world audit item 7): the HUD stands back, flashes included,
   // leaving the dialogue or the trip's Skip. They let the cursor go, but they aren't the pause view.
   const hudCinematic = cinematic || talking;
   // Dev (screenshots without pointer lock): ?hud=clean shows the HUD as it is while exploring in mouse-look.
@@ -991,19 +997,14 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const headingFlash = useFlash(ready ? sceneShown + 1 : 0, FLASH_MS.heading);
   const objectiveFlash = useFlash(progression.objective.text ?? null, FLASH_MS.objective);
   const needTool = toolNear ? toolNeeded(held, reach) : null;
-  // Decorating, the dev panel and the greeting work with the cursor: mouse-look lets go while they are up.
+  // Decorating, the dev panel and the arrival work with the cursor: mouse-look lets go while they are up.
   useEffect(() => { holdCursor("decorate", decor.decorating); holdCursor("greeting", welcoming); holdCursor("talk", talking); holdCursor("options", optionsOpen); }, [decor.decorating, welcoming, talking, optionsOpen]);
   useEffect(() => () => { holdCursor("decorate", false); holdCursor("greeting", false); holdCursor("talk", false); holdCursor("options", false); }, []);
-  const greetingName = identity.display_name !== "You" ? identity.display_name : null;
-  const holdObjective = step === "creator" || step === "welcome" || welcome === "arriving" || greeting !== null || trip.active;
+  const holdObjective = step === "creator" || step === "arrival" || arrivalPhase !== null || trip.active;
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
-      // The greeting box takes E, Enter and Space to go on, Escape to skip (principle 7: skippable in one press).
-      if (greeting !== null && !event.repeat) {
-        if (["e", "enter", " "].includes(event.key.toLowerCase())) { event.preventDefault(); nextLine(); }
-        else if (event.key === "Escape") finishWelcome();
-        return;
-      }
+      // Arriving, the keys are the arrival's (components/game/arrival: a press skips the beat showing).
+      if (welcoming) return;
       // On a boat trip the keys are the trip's (a press skips it: useTripControl); nothing opens over it.
       if (myTrip.current) return;
       // Menus follow the account's key bindings (row 220); Escape is fixed.
@@ -1040,7 +1041,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [act, near, inside, atHome, decor, identity.settings, greeting, nextLine, finishWelcome, site, abilityKeys, sheet, bagOpen, donateOpen, reveal, fading]);
+  }, [act, near, inside, atHome, decor, identity.settings, welcoming, site, abilityKeys, sheet, bagOpen, donateOpen, reveal, fading]);
   return (
     <main className={`${styles.world} gui`} data-light={phase} data-inside={inside ?? undefined} data-site={site} data-trip={trip.active || undefined} data-cinematic={hudCinematic || undefined} data-compact={compact || undefined}>
       <Canvas ref={canvasRef} tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
@@ -1061,7 +1062,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
               overview={overview} returned={returned} player={player} onNear={(n: HomeNear) => setNear(n)} outdoor={layout.outdoor}
               decorating={decor.decorating} selected={decor.selected} onPlace={item => decor.place("outdoor", item)} onPickUp={item => decor.pickUp("outdoor", item)} />
             : <IslandScene held={eating || trip.active ? null : held} identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent}
-              lead={welcoming || welcome === "done" ? { line: greeting, hold: welcoming } : null} dash={unlocks.dash} talking={talking} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} />}
+              arriving={welcoming} hintKeys={hintKeys} dash={unlocks.dash} talking={talking} phase={scenePhase} light={light} look={look} weather={sceneWeather} overview={overview} zoom={devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} />}
           {/* Classes v2: the subclass's aura replaces the family's once its kit exists (§1.9). */}
           {identity.aura && (classAura ? <Suspense fallback={null}><SubclassAura player={player} kit={classAura.kit} mastery={classAura.mastery} colour={classAura.colour} /></Suspense>
             : identity.family && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>)}
@@ -1139,12 +1140,6 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <DailyGift ready={ready && !fading && !holdObjective && !sheet && !talking && site !== "ruins"} />
       {/* Talking with a resident: the dialogue box (its own keys; the world holds still under it). */}
       <TalkBox />
-      {greeting !== null && <div className={styles.greeting} data-welcome>
-        <NPCDialogue key={greeting} speaker={`${HQ_LEAD.name} · ${HQ_LEAD.post}`} onContinue={nextLine} continueLabel={greeting + 1 < HQ_LEAD.lines.length ? "Next" : "Let’s go"}>
-          <p>{HQ_LEAD.lines[greeting].replace(", {name}", greetingName ? `, ${greetingName}` : "")}</p>
-        </NPCDialogue>
-        <button className={styles.greetingSkip} onClick={finishWelcome}>Skip</button>
-      </div>}
       {/* Study tables are in the village and the café only: the HUD (its polling and session) lives there. */}
       {(inside === "cafe" || (!inside && site === "village")) && <StudyHud />}
       <CraftingSheet />
@@ -1174,7 +1169,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <ChestSheet open={sheet === "chest"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       <WalletSheet open={sheet === "wallet"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openWallet} />
       <WardrobeSheet open={sheet === "closet" || sheet === "fitting"} place={sheet === "closet" ? "closet" : "fitting"} onClose={() => { if (sheet === "fitting") window.dispatchEvent(new CustomEvent("tsi:fitting")); setSheet(null); }} onShop={() => { setSheet(null); toShop("More clothes"); }} />
-      <PlayerCharacterUI />
+      <PlayerCharacterUI creator={step === "creator"} />
       <JournalSheet open={sheet === "journal"} onClose={() => setSheet(null)} keys="j" />
       <OracleQuizSheet open={sheet === "oracle"} onClose={() => setSheet(null)} onResult={onOracleResult} onPath={pathView?.family ? () => { setPathTick(n => n + 1); setSheet("path"); } : undefined} />
       {pathView && <PathSheet open={sheet === "path"} view={pathView} onClose={() => setSheet(null)} onChanged={() => setPathTick(n => n + 1)} />}
@@ -1194,7 +1189,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {captured === "free" && !touch && !hudCinematic && <p className={styles.lookHint} role="status">Click to look around</p>}
       {captured === "captured" && site === "ruins" && <svg className={styles.crosshair} viewBox="-10 -10 20 20" aria-hidden="true"><circle r="5.5" /><circle r="1.2" /></svg>}
       <div className={styles.fade} data-active={fading} aria-hidden="true" />
-      {trip.active && <TripVeil phase={trip.phase} to={trip.to} firstLogin={trip.firstLogin} quick={trip.quick} haze={light.fogColor} touch={touch} onSkip={trip.skip} />}
+      {trip.active && !trip.crossing && <TripVeil phase={trip.phase} to={trip.to} firstLogin={trip.firstLogin} quick={trip.quick} haze={light.fogColor} touch={touch} onSkip={trip.skip} />}
+      {/* The arrival (specs/v1-drop.md §1): over everything while it plays, its glyphs and way out during the walk-along. */}
+      <Arrival play={arrivalPlays} look={mine.look} askName={identity.signedIn ? { current: identity.display_name } : undefined} touch={touch}
+        keys={{ wheel: keyName(wheelKeys.wheel), bag: keyName(identity.settings.key_bindings.openJournal) }} onCross={startCrossing} onSaveLook={keepLook} onDone={finishArrival} />
       <div className={styles.netHud} data-hidden={hudCinematic || undefined}><NetHud area={area} /></div>
       <LoadingStatus ready={ready} />
     </main>
