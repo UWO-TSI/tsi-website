@@ -1214,17 +1214,19 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         {heading.subtitle && <p>{heading.subtitle}</p>}
       </header>
       <AudioController phase={ambientPhase} weather={weather} season={season.season} />
-      {/* Top right (playtest round 1, decision 3): while you play, the minimap, the time and the quest tracker; the UI view
-          (Esc 1) grows the minimap and adds coins, the level and the gear beside them. */}
+      {/* Top right (playtest round 1, decision 3): while you play, the quest line left of the minimap, the time under it;
+          the UI view (Esc 1) grows the minimap and adds coins, the level and the gear left of the quest line. */}
       <div className={styles.hudRight} data-hidden={hudCinematic || undefined}>
-        <TopCluster className={styles.rightCluster} full={full} buttons={uiView} hidden={hudCinematic}
-          onWallet={() => setSheet(value => (value === "wallet" ? null : "wallet"))} walletKey={keyName(identity.settings.key_bindings.openWallet)}>
-          <button className={hudButton} onClick={() => setSheet("settings")} aria-label="Settings" title="Settings"><Settings size={18} aria-hidden /></button>
-        </TopCluster>
+        <div className={styles.hudLead} data-new={objectiveNew || undefined}>
+          <TopCluster className={styles.rightCluster} full={full} buttons={uiView} hidden={hudCinematic}
+            onWallet={() => setSheet(value => (value === "wallet" ? null : "wallet"))} walletKey={keyName(identity.settings.key_bindings.openWallet)}>
+            <button className={hudButton} onClick={() => setSheet("settings")} aria-label="Settings" title="Settings"><Settings size={18} aria-hidden /></button>
+          </TopCluster>
+          <QuestTracker className={styles.questSlot} quest={tutorialQuest ?? trackedChapter} hidden={tutorialQuest ? false : holdObjective} onOpen={() => setSheet("journal")} />
+        </div>
         <div className={styles.hudColumn} data-minimap data-new={objectiveNew || undefined}>
           {mapHere && !holdObjective && <MiniMap playerPosRef={player} plot={objectivePlot} big={uiView} onOpen={() => setMapOpen(true)} />}
           <HudClock weather={weather} phase={phase} />
-          <QuestTracker className={styles.questSlot} quest={tutorialQuest ?? trackedChapter} hidden={tutorialQuest ? false : holdObjective} onOpen={() => setSheet("journal")} />
           {/* Kept for a mini health bar when combat drops (playtest round 1); nothing drawn yet. */}
           <div className={styles.healthSlot} data-slot="health" aria-hidden="true" />
         </div>

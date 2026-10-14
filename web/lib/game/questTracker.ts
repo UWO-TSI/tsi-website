@@ -1,7 +1,7 @@
 /**
- * The quest tracker's model (components/game/QuestTracker.tsx): a small to-do list top right of the HUD. Generic: the
- * walk-along's steps today (lib/game/arrival/tutorial.ts tutorialQuest), quests and chapters later; whatever feeds it
- * hands over a TrackedQuest. Pure: which rows show (a window round the step being worked on) and how many are hidden.
+ * The quest tracker's model (components/game/QuestTracker.tsx): one compact line left of the minimap, the name of the
+ * task being worked on (David, 2026-10-14). Generic: the walk-along's steps today (lib/game/arrival/tutorial.ts
+ * tutorialQuest), quests and chapters later; whatever feeds it hands over a TrackedQuest. Pure: which step is current.
  */
 export type QuestKind = "tutorial" | "quest" | "chapter";
 export interface QuestStep {
@@ -18,28 +18,22 @@ export interface TrackedQuest {
   steps: readonly QuestStep[];
   /** The step being worked on; absent: the first not done. */
   current?: string | null;
-  /** A short line under the current step ("Press E to talk"), or none. */
+  /** A short line about the current step ("Press E to talk"), or none. Carried, not drawn: the HUD line is the name only. */
   hint?: string | null;
 }
 
-export interface TrackerRow extends QuestStep { current: boolean }
 /**
- * The rows to show: up to `size` of them round the current step (one step before it for context, then what's next),
- * with how many steps are folded away above (done, as a rule) and how many more wait below.
+ * The step being worked on (the explicit `current`, else the first not done), or null once every step is ticked
+ * (`complete`): the one task the HUD's line names.
  */
-export function trackerRows(quest: TrackedQuest, size = 5): { rows: TrackerRow[]; above: number; below: number; complete: boolean } {
+export function currentStep(quest: TrackedQuest): { step: QuestStep | null; complete: boolean } {
   const steps = quest.steps;
   const complete = steps.length > 0 && steps.every(s => s.done);
-  let at = quest.current ? steps.findIndex(s => s.id === quest.current) : -1;
-  if (at < 0) at = steps.findIndex(s => !s.done);
-  if (at < 0) at = steps.length; // everything done: show the last few, ticked
-  const n = Math.max(1, size);
-  const from = Math.max(0, Math.min(at - 1, steps.length - n)), to = Math.min(steps.length, from + n);
-  const rows = steps.slice(from, to).map((s, i) => ({ ...s, current: from + i === at }));
-  return { rows, above: from, below: steps.length - to, complete };
+  const step = (quest.current ? steps.find(s => s.id === quest.current) : undefined) ?? steps.find(s => !s.done) ?? null;
+  return { step, complete };
 }
 
-/** How far along (done / all), for the tracker's small count. */
+/** How far along (done / all), for the tracker's tooltip and its screen-reader name. */
 export const questProgress = (q: TrackedQuest) => ({ done: q.steps.filter(s => s.done).length, of: q.steps.length });
 
 /** A chapter as the progression service hands it over (lib/progression/types.ts ChapterView, the fields used here). */
@@ -50,9 +44,9 @@ export interface ChapterLike {
   steps: readonly { key: string; label: string; done: boolean; hint?: string }[];
 }
 /**
- * The chapter being worked on (active or ready) as a tracked quest for the HUD (game/hud-esc: the tracker's slot under
- * the minimap): its steps, the first not done current, that step's hint under it. Null with no chapter on, or while the
- * member has the HUD's quests muted (`shown` false: the objective is empty then).
+ * The chapter being worked on (active or ready) as a tracked quest for the HUD (the tracker's line left of the
+ * minimap): its steps, the first not done current, that step's hint. Null with no chapter on, or while the member has
+ * the HUD's quests muted (`shown` false: the objective is empty then).
  */
 export function chapterQuest(chapters: readonly ChapterLike[], shown: boolean): TrackedQuest | null {
   if (!shown) return null;
