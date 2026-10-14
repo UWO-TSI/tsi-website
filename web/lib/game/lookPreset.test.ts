@@ -44,16 +44,23 @@ describe("look presets: serialisation", () => {
 });
 
 describe("the game look (row 236, §5)", () => {
-  it("is Open-air sun: the picked preset's sun side and colour, blue fill, cool shadows, sky, AO and bloom", () => {
+  it("is Open-air sun: the picked preset's sun side, blue fill, cool shadows, sky, AO and bloom", () => {
     const picked = LOOK_PRESETS.find(p => p.id === "open-air")!;
     expect(sunFromCamera(CURRENT.light.sunPosition)).toBeCloseTo(sunFromCamera(picked.light.sunPosition), 0);
-    expect(CURRENT.light.sunColor).toBe(picked.light.sunColor);
-    expect(CURRENT.light.fillSky).toBe(picked.light.fillSky);
     expect(CURRENT.shadows).toEqual(picked.shadows);
     expect(CURRENT.sky.top).toBe(picked.sky.top);
-    expect(CURRENT.ao).toEqual(picked.ao);
+    expect(CURRENT.ao.enabled).toBe(true);
     expect(CURRENT.post.bloom.enabled && !CURRENT.post.tiltShift.enabled).toBe(true);
     expect(CURRENT.sky.fogNear).toBeGreaterThan(picked.sky.fogNear);
+  });
+  it("v1 land pass (§8c item 4): a warmer key and a cooler fill than the picked look, AO tighter into the crevices", () => {
+    const picked = LOOK_PRESETS.find(p => p.id === "open-air")!;
+    const rgb = (hex: string) => new Color(hex);
+    const warmth = (hex: string) => rgb(hex).r / rgb(hex).b;
+    expect(warmth(CURRENT.light.sunColor)).toBeGreaterThan(warmth(picked.light.sunColor) * 1.08);
+    expect(warmth(CURRENT.light.fillSky)).toBeLessThan(warmth(picked.light.fillSky) * 0.95);
+    expect(CURRENT.ao.radius).toBeLessThan(picked.ao.radius);
+    expect(CURRENT.ao.intensity).toBeGreaterThan(picked.ao.intensity);
   });
   it("holds key:fill near 4:1 and lit:shadow well above the shipped 2:1", () => {
     const r = keyFill(CURRENT);

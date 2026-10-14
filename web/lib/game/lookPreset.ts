@@ -69,13 +69,16 @@ const MATTE: ClassLook = { saturation: 1, value: 1, roughness: 1, gloss: 0 };
  */
 export const CURRENT: LookPreset = {
   id: "current", name: "Current",
+  // v1 land pass (specs/v1-drop.md §8c item 4, ref water-clarity-palette-ref.png): the key warmer (#ffe9c4 →
+  // #ffe0b4) and the sky fill cooler (#9cc8f0 → #92c2f6), key:fill still near 4:1; AO tighter and a little
+  // stronger (radius 1 → 0.7, 1.2 → 1.5) so it gathers in crevices and under eaves rather than washing walls.
   light: {
-    sunColor: "#ffe9c4", sunIntensity: 3.8, sunPosition: [20, 22, -11],
-    fillSky: "#9cc8f0", fillGround: "#b5a77a", hemisphere: 0.58, ambient: 0.05, envIntensity: 0.13,
+    sunColor: "#ffe0b4", sunIntensity: 3.8, sunPosition: [20, 22, -11],
+    fillSky: "#92c2f6", fillGround: "#b5a77a", hemisphere: 0.58, ambient: 0.05, envIntensity: 0.13,
     rimColor: "#ffffff", rimIntensity: 0,
   },
   shadows: { radius: 1.5, intensity: 0.92, tint: "#2a4078" },
-  ao: { enabled: true, radius: 1, intensity: 1.2 },
+  ao: { enabled: true, radius: 0.7, intensity: 1.5 },
   materials: {
     terrain: { saturation: 1.05, value: 1, roughness: 1, gloss: 0 },
     props: { saturation: 1.08, value: 1, roughness: 1, gloss: 0.25 },
