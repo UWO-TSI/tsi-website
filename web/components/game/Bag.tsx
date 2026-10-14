@@ -22,6 +22,7 @@ import { togglePin, useHeld } from "@/lib/game/heldStore";
 import { AudioManager } from "@/lib/game/audio";
 import { ApiError } from "@/lib/apiClient";
 import { bagWrite, loadBag, saveOrder, seeBag, sortBag, stockOf, swapSlots, useBag } from "@/lib/game/bagStore";
+import { DROPS } from "@/lib/game/drops";
 import s from "./Bag.module.css";
 
 const KIND: Record<string, string> = { fish: "Fish", sea: "Sea creature", bug: "Bug", fruit: "Fruit", mineral: "Material", flower: "Flower", shell: "Shell", mushroom: "Mushroom", wood: "Material" };
@@ -131,8 +132,8 @@ function Pockets() {
       </Button>
     </div>
     {over ? <p className={s.warn} role="status">Over by {view.used - view.capacity}: you keep everything, but you can&apos;t pick anything up until you make room.</p>
-      : view.used >= view.capacity && view.items.length > 0 && <p className={s.warn} role="status">Full: only what tops up a stack you have still fits. Sell, drop or store something in the chest at home, or get a bigger pocket at the shop.</p>}
-    {bag.local && <p className={s.hint}><SignInText text="Saved on this device. Sign in to keep a backpack and a storage chest." /></p>}
+      : view.used >= view.capacity && view.items.length > 0 && <p className={s.warn} role="status">{DROPS.homeIsland ? "Full: only what tops up a stack you have still fits. Sell, drop or store something in the chest at home, or get a bigger pocket at the shop." : "Full: only what tops up a stack you have still fits. Sell or drop something, or get a bigger pocket at the shop."}</p>}
+    {bag.local && <p className={s.hint}><SignInText text={DROPS.homeIsland ? "Saved on this device. Sign in to keep a backpack and a storage chest." : "Saved on this device. Sign in to keep a backpack."} /></p>}
     <Pins stock={stock} onNote={setNote} />
     <div className={s.layout}>
       <div className={s.pocket}>

@@ -25,6 +25,7 @@ import type { RemotePlayer } from "@/lib/net/types";
 import type { RemoteRig } from "./drive";
 import { LOD } from "./lod";
 import styles from "./net.module.css";
+import { DROPS } from "@/lib/game/drops";
 
 /** Over the head as yours is (PlayerAvatar: the character's height and 0.28; the leaf's open height clears an open leaf). */
 export function plateY(r: RemoteRig): number {
@@ -91,14 +92,15 @@ function fill(s: Slot, p: RemotePlayer) {
   s.phone.hidden = !p.mobile;
   flag(s.plate, "data-member", p.member);
   flag(s.plate, "data-away", p.away);
-  const kit = p.showClass ? classKit(p.kit) : null;
+  // Class tags are combat's drop (lib/game/drops.ts).
+  const kit = DROPS.classes && p.showClass ? classKit(p.kit) : null;
   s.cls.hidden = !kit;
   if (kit) {
     if (s.icon.getAttribute("src") !== kit.look.icon) s.icon.src = kit.look.icon;
     s.icon.style.boxShadow = `0 0 0 1.5px ${kit.look.ramp[1]}`;
     s.title.textContent = masteryTitle(kit.name, p.mastery);
   }
-  const frame = p.showClass ? p.frame : null;
+  const frame = DROPS.classes && p.showClass ? p.frame : null;
   if (frame) s.plate.dataset.frame = frame; else delete s.plate.dataset.frame;
 }
 

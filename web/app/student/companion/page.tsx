@@ -13,6 +13,7 @@ import { Loading, useSignInHref } from "@/components/gui";
 import { ApiError, apiCall } from "@/lib/apiClient";
 import { useCoarsePointer, useSearch } from "@/lib/game/useMediaQuery";
 import StudyTab from "@/components/companion/StudyTab";
+import { DROPS } from "@/lib/game/drops";
 import ClubTab from "@/components/companion/ClubTab";
 import MeTab from "@/components/companion/MeTab";
 import CompanionHeader from "@/components/companion/CompanionHeader";
@@ -20,17 +21,18 @@ import s from "@/components/study/companion.module.css";
 
 type Tab = "study" | "club" | "me";
 /** Each section a rounded tile in its colour, like the phone apps in David's kit (they were emoji). */
-const TABS: { key: Tab; label: string; icon: LucideIcon; tile: string }[] = [
+/** Study waits for the study tables' drop (the café's, lib/game/drops.ts). */
+const TABS: { key: Tab; label: string; icon: LucideIcon; tile: string }[] = ([
   { key: "study", label: "Study", icon: BookOpen, tile: "#82d5bb" },
   { key: "club", label: "Club", icon: Flag, tile: "#889df0" },
   { key: "me", label: "Me", icon: Smile, tile: "#f8a6b2" },
-];
+] as const).filter((t) => t.key !== "study" || DROPS.cafe);
 
 type Gate = "checking" | "signed_out" | "ok";
 
 export default function CompanionPage() {
   const [gate, setGate] = useState<Gate>("checking");
-  const [tab, setTab] = useState<Tab>("study");
+  const [tab, setTab] = useState<Tab>(TABS[0].key);
   // useSyncExternalStore under the hood: matches the SSR/hydration snapshot
   // first, then reconciles to the real value before paint, so this never
   // flashes the desktop notice at a phone.
@@ -91,7 +93,7 @@ function SignInGate() {
   return (
     <section className={s.card}>
       <h2>Sign in to open the club</h2>
-      <p className={s.muted}>Study with the table, check bounties and events, and see your profile from your phone.</p>
+      <p className={s.muted}>{DROPS.cafe ? "Study with the table, check bounties and events, and see your profile from your phone." : "Check bounties and events, and see your profile from your phone."}</p>
       <div className={s.row} style={{ marginTop: 12 }}>
         <a className={s.btn} href={href} style={{ display: "grid", placeItems: "center", textDecoration: "none" }}>
           Sign in

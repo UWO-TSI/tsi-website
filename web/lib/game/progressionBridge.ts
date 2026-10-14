@@ -75,16 +75,23 @@ export function useProgressionWorld(): WorldProgressionView {
   };
 }
 
-/** Chapter 1 (Settle in) world actions: which prompts to show and how to run them (row 101). */
-export interface ChapterActions { claim: boolean; donate: boolean; report: boolean; run: (action: "claim_plot" | "donate_catch" | "report_hq") => Promise<string | null> }
+/**
+ * Chapter 1 (Settle in) world actions: which prompts to show and how to run them (row 101). A step the drop hides
+ * (claiming your plot before the home island's: lib/game/drops.ts) isn't in the chapter, so it is never offered and
+ * never waited on. `fresh`: chapter 1 is open with neither the plot claimed nor a catch donated (a new member: the
+ * first-login greeting).
+ */
+export interface ChapterActions { claim: boolean; donate: boolean; report: boolean; fresh: boolean; run: (action: "claim_plot" | "donate_catch" | "report_hq") => Promise<string | null> }
 export function chapterOneActions(chapters: readonly { slug: string; status: string; steps: readonly { key: string; done: boolean }[] }[]) {
   const settle = chapters.find(c => c.slug === "settle-in");
   const open = settle && (settle.status === "active" || settle.status === "ready");
+  const has = (key: string) => !!settle?.steps.some(s => s.key === key);
   const done = (key: string) => !!settle?.steps.find(s => s.key === key)?.done;
   return {
-    claim: !!open && !done("claim_plot"),
-    donate: !!open && done("claim_plot") && !done("donate_catch"),
+    claim: !!open && has("claim_plot") && !done("claim_plot"),
+    donate: !!open && (!has("claim_plot") || done("claim_plot")) && !done("donate_catch"),
     report: !!settle && settle.status === "ready",
+    fresh: !!open && settle.status === "active" && !done("claim_plot") && !done("donate_catch"),
   };
 }
 export function useChapterActions(): ChapterActions {

@@ -9,22 +9,28 @@ import { normalizeGoal } from "./goals";
 import { raisePg } from "@/lib/result";
 import { StoreError, type CommitInput, type ProgressionStore, type RealActivity } from "./store";
 import type { LetterView, MemberChapterProgress } from "./types";
+import { DROPS, releasedChapters, releasedGoals, type DropFlags } from "@/lib/game/drops";
 
 const raise = (error: { code?: string; message?: string } | null | undefined): never => raisePg(error, ["cap_exceeded", "insufficient"]);
 
 type Row = Record<string, unknown>;
 
-export function supabaseProgressionStore(db: SupabaseClient): ProgressionStore {
+/**
+ * `flags`: the live drop (lib/game/drops.ts). Goals and chapters that open a region of a later drop aren't listed (their
+ * rows and everyone's progress stay as they are), and chapter steps that need one are hidden, so nothing a member is
+ * offered, credited or told to do points at a place that isn't open yet.
+ */
+export function supabaseProgressionStore(db: SupabaseClient, flags: DropFlags = DROPS): ProgressionStore {
   return {
     async listGoals() {
       const { data, error } = await db.from("club_goals").select("*").eq("active", true).order("position");
       if (error) raise(error);
-      return ((data ?? []) as Row[]).map(normalizeGoal);
+      return releasedGoals(((data ?? []) as Row[]).map(normalizeGoal), flags);
     },
     async listChapters() {
       const { data, error } = await db.from("quest_chapters").select("*").eq("active", true).order("position");
       if (error) raise(error);
-      return ((data ?? []) as Row[]).map(normalizeChapter);
+      return releasedChapters(((data ?? []) as Row[]).map(normalizeChapter), flags);
     },
     async memberProgress(memberId) {
       const { data, error } = await db

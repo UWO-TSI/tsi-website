@@ -99,7 +99,8 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
     slug: "settle-in",
     position: 1,
     title: "Settle in",
-    summary: "Claim your plot, make your first catch and donate it, then report to HQ.",
+    // Claiming your plot is the home island's drop (lib/game/drops.ts STEP_FEATURE): the summary leaves it out until then.
+    summary: "Make your first catch and donate it to the museum, then report to HQ.",
     requirement: "settle_in",
     goal_slug: null,
     step_copy: {

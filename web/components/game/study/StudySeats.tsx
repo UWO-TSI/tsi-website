@@ -107,7 +107,23 @@ function MyOverhead({ player }: { player: React.RefObject<THREE.Vector3> }) {
   </group>;
 }
 
-export default function StudySeats({ area, player, ground = flat, board }: {
+/**
+ * `open` false (the village before the café's drop, lib/game/drops.ts: study tables wait for v2): the tables stand as
+ * furniture, solid as ever, with no seat prompt, no seat-mates and no timers.
+ */
+export default function StudySeats({ open = true, ...props }: {
+  area: SeatArea; player: React.RefObject<THREE.Vector3>; ground?: (x: number, z: number) => number; board?: [number, number]; open?: boolean;
+}) {
+  if (!open) return <Furniture area={props.area} ground={props.ground ?? flat} />;
+  return <Seats {...props} />;
+}
+
+function Furniture({ area, ground }: { area: SeatArea; ground: (x: number, z: number) => number }) {
+  const layouts = useMemo(() => studyLayout().filter(t => t.area === area), [area]);
+  return <>{layouts.map(t => <Suspense key={t.anchor} fallback={null}><TableFurniture t={t} ground={ground} /></Suspense>)}</>;
+}
+
+function Seats({ area, player, ground = flat, board }: {
   area: SeatArea; player: React.RefObject<THREE.Vector3>; ground?: (x: number, z: number) => number; board?: [number, number];
 }) {
   const layouts = useMemo(() => studyLayout().filter(t => t.area === area), [area]);

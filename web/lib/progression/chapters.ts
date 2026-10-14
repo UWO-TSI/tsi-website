@@ -83,9 +83,9 @@ function stepDone(key: string, chapter: QuestChapter, progress: MemberChapterPro
   }
 }
 
-/** Steps that must be done before the chapter's final action is allowed. */
+/** Steps that must be done before the chapter's final action is allowed (a step this drop hides counts as done). */
 function readyToFinish(chapter: QuestChapter, steps: ChapterStepView[]): boolean {
-  const need = (k: string) => steps.find((s) => s.key === k)?.done ?? false;
+  const need = (k: string) => steps.find((s) => s.key === k)?.done ?? !!chapter.hidden_steps?.includes(k);
   switch (chapter.requirement) {
     case "settle_in":
       return need("claim_plot") && need("first_catch") && need("donate_catch");
@@ -107,7 +107,7 @@ export function evaluateChapters(
   let previousDone = true;
   return ordered.map((chapter) => {
     const progress = byChapter.get(chapter.id);
-    const steps: ChapterStepView[] = STEP_KEYS[chapter.requirement].map((key) => {
+    const steps: ChapterStepView[] = STEP_KEYS[chapter.requirement].filter((key) => !chapter.hidden_steps?.includes(key)).map((key) => {
       const copy = chapter.step_copy[key] ?? FALLBACK_COPY[key];
       return { key, label: copy.label, hint: copy.hint, done: stepDone(key, chapter, progress, facts), anchor: STEP_ANCHOR[key] ?? "hq" };
     });
@@ -169,6 +169,7 @@ export function validateAdvance(
       return { ok: true, next: { status: "skipped", steps_done: steps, donated_item_key: donated }, completedChapter: true };
     case "claim_plot":
       if (!settle) return { ok: false, status: 422, error: "Not a step of this chapter." };
+      if (chapter.hidden_steps?.includes("claim_plot")) return { ok: false, status: 422, error: "That isn't open yet." };
       if (steps.claim_plot) return { ok: false, status: 409, error: "Plot already claimed." };
       steps.claim_plot = at;
       return { ok: true, next: { status: "active", steps_done: steps, donated_item_key: donated }, completedChapter: false };
@@ -181,7 +182,7 @@ export function validateAdvance(
       return { ok: true, next: { status: "active", steps_done: steps, donated_item_key: facts.firstCatchKey }, completedChapter: false };
     case "report_hq":
       if (!settle) return { ok: false, status: 422, error: "Not a step of this chapter." };
-      if (view.status !== "ready") return { ok: false, status: 409, error: "Claim your plot and donate a catch first." };
+      if (view.status !== "ready") return { ok: false, status: 409, error: chapter.hidden_steps?.includes("claim_plot") ? "Donate a catch first." : "Claim your plot and donate a catch first." };
       steps.report_hq = at;
       return { ok: true, next: { status: "completed", steps_done: steps, donated_item_key: donated }, completedChapter: true };
     case "complete":

@@ -17,6 +17,7 @@ import type { QualityTier } from "@/lib/game/qualityTier";
 import { ACTION_LABEL, MENU_ACTIONS, REMAPPABLE_ACTIONS, TEXT_SIZES, normalizeKey, type MenuAction, type TextSize } from "@/lib/identity/settings";
 import { Button, Select, SignInText, Slider, Toggle } from "@/components/gui";
 import { saveSettings, setAuraVisible, useWorldIdentity } from "@/lib/game/identity";
+import { DROPS } from "@/lib/game/drops";
 import { ABILITIES, type AbilityId } from "@/lib/game/combat/runtime";
 import { IS_MAC, MOVE_ACTIONS, abilityPreset, canLockKeyboard, crouchKey, keyName, playFullscreenWithCtrl, presetAbilities, remapAbility, remapMove, remapWheel, useAbilityKeys, useKeyboardLocked, useMoveKeys, useNextKey, useWheelKeys, type MoveAction } from "@/lib/game/movement/keys";
 import { AudioManager, type AudioVolumes } from "@/lib/game/audio";
@@ -126,8 +127,9 @@ export default function SettingsSheet({ open, onClose, detectedTier = null, plac
     </fieldset>}
     {island && <fieldset>
       <legend>You on the island</legend>
-      <Toggle checked={showClass} onChange={setShowClass}>Show class on my nameplate</Toggle>
-      <Toggle checked={aura} onChange={setAuraVisible}>Show my aura</Toggle>
+      {/* The classes and their auras are combat's drop (lib/game/drops.ts). */}
+      {DROPS.classes && <Toggle checked={showClass} onChange={setShowClass}>Show class on my nameplate</Toggle>}
+      {DROPS.classes && <Toggle checked={aura} onChange={setAuraVisible}>Show my aura</Toggle>}
       {/* The fishing pass's flags (specs/polish/fishing-questions.md), both on until David decides. */}
       <Toggle checked={fishingLine} onChange={on => setFishingFlag("line", on)}>Fishing line</Toggle>
       <Toggle checked={holdUpCatch} onChange={on => setFishingFlag("holdUp", on)} hint="Show off a catch in both hands while its card is up.">Hold up my catch</Toggle>
@@ -189,7 +191,7 @@ export default function SettingsSheet({ open, onClose, detectedTier = null, plac
       </p>}
       {moveNote && <p className={styles.hint} role="status">{moveNote}</p>}
     </fieldset>
-    <fieldset>
+    {DROPS.combat && <fieldset>
       <legend>Ability keys (ruins)</legend>
       {/* Row 279: the slots on the number row or under the left hand; in the ruins they win over zoom (Z) and the camera reset (V). */}
       <div className={styles.segmented} role="group" aria-label="Ability key preset">
@@ -204,7 +206,7 @@ export default function SettingsSheet({ open, onClose, detectedTier = null, plac
         </button>
       </li>)}</ul>
       {abilityNote && <p className={styles.hint} role="status">{abilityNote}</p>}
-    </fieldset>
+    </fieldset>}
     </>}
     <small className={styles.hint}>{signedIn ? "Saved to your account." : <SignInText text="Saved on this device. Sign in to keep them everywhere." />}</small>
   </IslandSheet>;

@@ -8,6 +8,8 @@
  * isn't claimed) and hasn't been greeted on this device. A hired applicant whose look
  * carried over skips the creator but still arrives and is greeted.
  */
+import { DROPS } from "./drops";
+
 export type WelcomeStep = "wait" | "creator" | "welcome" | "none";
 
 export function welcomeStep(s: { lookLoaded: boolean; lookSaved: boolean; signedIn: boolean; progressionLoaded: boolean; chapterFresh: boolean; welcomed: boolean }): WelcomeStep {
@@ -42,13 +44,20 @@ export const HQ_LEAD = {
     bangs: "bangs_curtain", back: "back_high_pony", top: "top_tsi_crew", bottom: "bottom_trousers", onepiece: null, shoes: "shoes_boots",
     acc: { bag: "acc_shoulder_bag" }, colors: { bottom_trousers: 4, shoes_boots: 5, acc_shoulder_bag: 3 },
   },
-  /** The greeting, one box each; `{name}` is the member's island name. */
-  lines: [
+  /**
+   * The greeting, one box each; `{name}` is the member's island name. Before the home island's drop (lib/game/drops.ts)
+   * there is no plot to claim: she points you at the water and the museum, chapter 1's first steps then.
+   */
+  lines: DROPS.homeIsland ? [
     "You made it! Welcome to Tethos Island, {name}. I'm Wren. I keep HQ running, more or less.",
     "Everyone who joins gets a plot of their own out past the pier. Yours is waiting. We just need to make it official.",
     "Come up to HQ and claim it. It's the big house at the top of the path. I'll have the paperwork ready!",
+  ] : [
+    "You made it! Welcome to Tethos Island, {name}. I'm Wren. I keep HQ running, more or less.",
+    "Take your time. Fish off the wharf, poke around the village, say hi to everyone.",
+    "Catch anything, show the museum. And HQ's the big house at the top of the path if you need me!",
   ],
-} as const;
+};
 
 /** Where Wren waits: a step up the wharf from the arrival spot and to its right on screen (+x is screen left), facing it. */
 export const LEAD_OFFSET: [number, number] = [-1.1, 1.7];

@@ -2,6 +2,7 @@
 
 import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "@/components/game/ACNHBuilding";
 import CafeBuilding from "@/components/game/study/CafeBuilding";
+import { DROPS } from "@/lib/game/drops";
 import Wharf from "@/components/game/wharf/Wharf";
 import { FadeLight, Lantern } from "@/components/game/AmbientProps";
 import { landmarks, turn, type Landmark, type VillageIsland } from "@/lib/game/defaultIsland";
@@ -27,7 +28,7 @@ export default function TitleVillage({ v, island, light }: { v: Village; island:
     </>}
     {shop && <group position={at(shop)} rotation={[0, shop.yaw ?? 0, 0]} scale={shop.scale ?? 1}><ACNHBuilding id="shop" lit={windowLit(light)} /></group>}
     {oracle && <group position={at(oracle)} rotation={[0, oracle.yaw ?? 0, 0]} scale={oracle.scale ?? 1}><ACNHBuilding id="oracle" lit={windowLit(light)} /></group>}
-    {cafe && <group position={at(cafe)} rotation={[0, cafe.yaw ?? 0, 0]} scale={cafe.scale ?? 1}><CafeBuilding open light={light} /></group>}
+    {cafe && <group position={at(cafe)} rotation={[0, cafe.yaw ?? 0, 0]} scale={cafe.scale ?? 1}><CafeBuilding state={DROPS.cafe ? "open" : "soon"} light={light} /></group>}
     {museum && <group position={at(museum)} rotation={[0, museum.yaw ?? 0, 0]} scale={museum.scale ?? 1}><ACNHParts parts={CHALET_VARIANTS.red} lit={windowLit(light)} /></group>}
     {wharf && <Wharf dock={{ x: wharf.x, z: wharf.z, yaw: wharf.yaw ?? 0 }} light={light} place="village" />}
     {objectsOf("lamp", v).map(l => <Lantern key={l.id} position={[l.x, ground(l.x, l.z), l.z]} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />)}

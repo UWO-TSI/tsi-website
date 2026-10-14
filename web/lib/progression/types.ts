@@ -80,6 +80,8 @@ export interface QuestChapter {
   /** Play coins paid once when the chapter is completed (not skipped). 20260926150600_economy.sql. */
   reward_coins: number;
   active: boolean;
+  /** Steps this drop can't take yet (lib/game/drops.ts releasedChapters): not shown, and done as far as finishing goes. */
+  hidden_steps?: string[];
 }
 
 export type StoredChapterStatus = "active" | "completed" | "skipped";

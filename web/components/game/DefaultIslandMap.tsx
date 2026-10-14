@@ -6,6 +6,10 @@ import { landmarks, villageScale, wharfDeck } from "@/lib/game/defaultIsland";
 import { WATER_CLASS, villageWater } from "@/lib/game/fishingSpots";
 import { village } from "@/lib/game/villageMap";
 import type { MiniMapPlot } from "./MiniMap";
+import { DROPS } from "@/lib/game/drops";
+
+/** Places a later drop opens aren't on the map yet (lib/game/drops.ts): the ruins gate, the Oracle temple. */
+const UNLISTED = new Set([...(DROPS.combat ? [] : ["ruins"]), ...(DROPS.oracle ? [] : ["oracle"])]);
 
 const FILL: Partial<Record<number, string>> = {
   [Surface.Grass]: "#7EC167", [Surface.Sand]: "#E4CD96", [Surface.Soil]: "#D9B380",
@@ -41,7 +45,7 @@ export function useDefaultIslandPlot(opened: readonly string[] = []): MiniMapPlo
     const content = <g transform="scale(-1 1)">
       {runs.map((r, i) => <rect key={i} x={r.x} y={-(r.z + 0.5)} width={r.w} height={1.02} fill={r.fill} />)}
       {deck && <rect x={deck.x0} y={-deck.z1} width={deck.x1 - deck.x0} height={deck.z1 - deck.z0} fill="#B98C60" />}
-      {landmarks(v, openedKey.split(",")).filter(l => l.half).map(l => <rect key={l.id} x={l.x - l.half![0]} y={-l.z - l.half![1]} width={l.half![0] * 2} height={l.half![1] * 2} rx={0.5}
+      {landmarks(v, openedKey.split(",")).filter(l => l.half && !UNLISTED.has(l.id)).map(l => <rect key={l.id} x={l.x - l.half![0]} y={-l.z - l.half![1]} width={l.half![0] * 2} height={l.half![1] * 2} rx={0.5}
         fill={l.color} opacity={l.open ? 1 : 0.55} stroke={l.open ? "rgba(0,0,0,0.3)" : "#3b2f25"} strokeWidth={0.35} strokeDasharray={l.open ? undefined : "0.8 0.6"}>
         <title>{l.open ? l.label : `${l.label} (closed)`}</title></rect>)}
     </g>;

@@ -53,7 +53,7 @@ export const CAFE_OWNER = {
   ],
 };
 
-export type OwnerClip = "Idle" | "Walk" | "Forage" | "Trace";
+export type OwnerClip = "Idle" | "Walk" | "Forage" | "Trace" | "Sweep";
 /** Where the owner works behind the bar, in walking order: x, z, the way she faces while there, how long she stays, and what she does. */
 export interface OwnerStation { at: [number, number]; yaw: number; stay: number; clip: OwnerClip }
 export const OWNER_STATIONS: OwnerStation[] = [
@@ -99,6 +99,28 @@ export function ownerAt(t: number, stations: readonly OwnerStation[] = OWNER_STA
   }
   return pose(out, stations[0].at[0], stations[0].at[1], stations[0].yaw, stations[0].clip, false, 0);
 }
+
+/**
+ * Rosa out front while the café gets ready (v1, specs/v1-drop.md §2: built but closed, "Rosa's still sweeping"), in
+ * the café's own frame (its footprint centre, the front toward −z: the door at z −2.8, the A-frame chalkboard at x
+ * −1.35): sweeping the step and the path on the side away from the chalkboard, now and then a look up the street.
+ * Dawn to evening; at night she is inside.
+ */
+export const SWEEP_STATIONS: OwnerStation[] = [
+  { at: [0.75, -3.4], yaw: Math.PI, stay: 9, clip: "Sweep" },          // the step
+  { at: [1.85, -3.55], yaw: -Math.PI / 2, stay: 8, clip: "Sweep" },    // along the front, toward the door
+  { at: [2.25, -4.35], yaw: Math.PI, stay: 7, clip: "Sweep" },         // the path's edge
+  { at: [1.2, -4.6], yaw: Math.PI * 0.85, stay: 4, clip: "Idle" },     // leaning on the broom, looking up the street
+];
+/** How close you stand to talk to her out front. */
+export const SWEEPER_TALK = 1.7;
+/** Her lines out front (drafts for David): the café is built, not open, and she is glad of the company. */
+export const SWEEPER_LINES = [
+  "Morning! Not open yet. Soon, I promise.",
+  "Every board in there is new. I just keep sweeping the same three leaves.",
+  "When we open, the window stools are yours. The light's best there.",
+  "[happy] The chalkboard? I wrote it myself. Took three tries.",
+];
 
 /** Where you can stand in the café: inside the walls, clear of the room's furniture and the study tables. */
 export function cafeWalkable(x: number, z: number, pad = 0): boolean {

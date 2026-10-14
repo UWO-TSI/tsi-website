@@ -20,6 +20,7 @@ import type { InventoryView, SellEntry, ShopEntry, ShopView, WalletView } from "
 import { ApiError, newKey } from "@/lib/apiClient";
 import { httpEconomyTransport, type EconomyTransport, type MerchView } from "@/lib/wallet/transport";
 import ProgressionPanel, { type ProgressionSheetProps } from "@/components/progression/ProgressionPanel";
+import { DROPS } from "@/lib/game/drops";
 import p from "@/components/progression/progression.module.css";
 import s from "./economy.module.css";
 
@@ -340,7 +341,8 @@ export function WalletBody({ transport = httpEconomyTransport }: { transport?: E
       <Tabs label="Recent moves" value={tab} onChange={setTab} className={s.walletTabs}
         tabs={[{ id: "earned", label: <>Earned <span className={s.tabTotal}>+{model.totals.earned.toLocaleString()}</span></> }, { id: "spent", label: <>Spent <span className={s.tabTotal}>−{model.totals.spent.toLocaleString()}</span></> }]} />
       {days.length === 0 ? <Empty icon={<ReceiptText size={32} />} title={tab === "earned" ? "Nothing earned yet" : "Nothing spent yet"}>
-        {tab === "earned" ? "Sell a catch at the shop, study at the café or check in at a club event." : "The shop, a new room and the club goals take TC."}
+        {tab === "earned" ? (DROPS.cafe ? "Sell a catch at the shop, study at the café or check in at a club event." : "Sell a catch at the shop or check in at a club event.")
+          : DROPS.homeIsland ? "The shop, a new room and the club goals take TC." : "The shop and the club goals take TC."}
       </Empty> : days.map(d => <section key={d.label} className={s.day} aria-label={d.label}>
         <h3>{d.label}</h3>
         <List label={d.label}>{d.lines.map(l => {

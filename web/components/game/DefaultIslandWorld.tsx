@@ -152,6 +152,9 @@ import StudyHud from "./study/StudyHud";
 import CafeInterior from "./study/CafeInterior";
 import CafeGoalSheet from "./study/CafeGoalSheet";
 import CafeBuilding from "./study/CafeBuilding";
+import CafeSweeper, { cafeSweeper } from "./study/CafeSweeper";
+import { SWEEPER_TALK } from "@/lib/game/cafe";
+import { DROPS } from "@/lib/game/drops";
 import { CAFE_GRADE, CAFE_OWNER } from "@/lib/game/cafe";
 import { studyHoldsPrompt } from "@/lib/study/worldStore";
 import "@/lib/game/aerialFog";
@@ -266,7 +269,8 @@ function villageLayout(v: Village) {
     /** Fitting room beside the shop; ruins mission board beside the cliff gate (combat-foundation.md §6). */
     fitting: fitting ? xz(fitting) : null,
     missions: missions ? { at: xz(missions), yaw: missions.yaw ?? 0 } : null,
-    prompts: marks.filter(l => PROMPT_IDS.includes(l.id)),
+    // The ruins gate is combat's (lib/game/drops.ts): before its drop the gate is fallen rubble, nothing to press.
+    prompts: marks.filter(l => PROMPT_IDS.includes(l.id) && (l.id !== "ruins" || DROPS.combat)),
     nodes: villageNodes(v),
     water: villageWater(v).classify,
     scale: villageScale(v),
@@ -276,7 +280,9 @@ function villageLayout(v: Village) {
     underWharf: (x: number, z: number) => !!deck && x > deck.x0 - 0.4 && x < deck.x1 + 0.4 && z > deck.z0 - 0.4 && z < deck.z1 + 0.4,
   };
 }
-const SIGNS: Partial<Record<Landmark["id"], string>> = { museum: "Museum · Closed", ruins: "Ruins gate", notice: "Notices", catch: "Catch board", shop: "Shop", oracle: "Oracle temple" };
+/** Floating names; the ruins gate and the Oracle temple only once their drops are out (lib/game/drops.ts). */
+const SIGNS: Partial<Record<Landmark["id"], string>> = { museum: "Museum · Closed", notice: "Notices", catch: "Catch board", shop: "Shop",
+  ...(DROPS.combat ? { ruins: "Ruins gate" } : {}), ...(DROPS.oracle ? { oracle: "Oracle temple" } : {}) };
 const BOTANICAL_TEXTURES = ["/assets/acnh/icons/flower_rose.png", "/assets/acnh/icons/flower_cosmos.png"];
 useTexture.preload(BOTANICAL_TEXTURES);
 useTexture.preload("/assets/acnh/interior/hq-parquet-albedo.png");
@@ -356,6 +362,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   const fauna = useMemo(() => ({ ...layout.fauna, ground: island.ground, standable: island.standable, surface: island.surface, top: island.top, player }), [layout, island, player]);
   const leadAt = useMemo((): [number, number] | null => (spawns.boat ? [spawns.boat[0] + LEAD_OFFSET[0], spawns.boat[2] + LEAD_OFFSET[1]] : anchorAt("wharf", v)), [v, spawns.boat]);
   const spots = useMemo(() => eventSpots(event?.decor ?? null), [event]);
+  const cafeAt = useMemo(() => { const c = layout.landmarks.find(l => l.id === "cafe"); return c ? { x: c.x, z: c.z, yaw: c.yaw ?? 0, scale: c.scale ?? 1 } : null; }, [layout]);
   useEffect(() => { player.current.set(...spawn); }, [reset, spawn, player]);
   useEffect(() => { worldLabels.setOccluders(layout.buildings); return () => worldLabels.setOccluders([]); }, [layout]);
   const focus = useRef(new THREE.Vector3(...spawn));
@@ -365,14 +372,18 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     const px = player.current.x, pz = player.current.z;
     const gap = (p: [number, number] | null) => (p ? Math.hypot(px - p[0], pz - p[1]) : Infinity);
     const within = (p: [number, number] | null, r: number) => gap(p) < r;
-    // Chapter 1 at the clubhouse door: claim the plot first, report back when ready, otherwise enter.
+    // Chapter 1 at the clubhouse door: claim the plot first, report back when ready, otherwise enter. Doors to what a
+    // later drop opens (lib/game/drops.ts) offer nothing yet: the boat home, the Oracle temple, the café, the mission board.
+    // Before the café's drop Rosa sweeps out front: the café's prompt is hers.
+    const sweeper: [number, number] | null = !DROPS.cafe && cafeSweeper.on ? [cafeSweeper.x, cafeSweeper.z] : null;
     const door: [Near, [number, number] | null] = within(doors.hq, 2) ? [chapter.claim ? "claim" : chapter.report ? "report" : "enter", doors.hq]
-      : within(doors.boat, 1.6) ? ["home", doors.boat]
+      : DROPS.homeIsland && within(doors.boat, 1.6) ? ["home", doors.boat]
       : within(layout.fitting, 1.5) ? ["fitting", layout.fitting]
-      : within(doors.oracle, 1.6) ? ["oracle_enter", doors.oracle]
+      : DROPS.oracle && within(doors.oracle, 1.6) ? ["oracle_enter", doors.oracle]
       : within(doors.shop, 1.6) ? ["shop_enter", doors.shop]
-      : within(doors.cafe, CAFE_DOOR_RANGE) ? [progression.opened.includes("cafe") ? "cafe_enter" : "cafe", doors.cafe]
-      : within(layout.missions?.at ?? null, 1.5) ? ["missions", layout.missions!.at] : [null, null];
+      : DROPS.cafe && within(doors.cafe, CAFE_DOOR_RANGE) ? [progression.opened.includes("cafe") ? "cafe_enter" : "cafe", doors.cafe]
+      : within(sweeper, SWEEPER_TALK) ? ["owner", sweeper]
+      : DROPS.combat && within(layout.missions?.at ?? null, 1.5) ? ["missions", layout.missions!.at] : [null, null];
     let next: Near = door[0], nextD = gap(door[1]);
     const b = benchSeat(px, pz, 1.3, v, layout.benches, remoteSeatTaken);
     benchSpot.current = b && { ...b, seatY: island.ground(b.x, b.z) + BENCH_SEAT_TOP };
@@ -417,8 +428,9 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <BeachBottle player={player} ground={island.ground} />
       {/* After the first leaf glider is made: a marked edge and a ring to land in (the guided first glide). */}
       <GlideGuide map={island.map} ground={island.ground} player={player} owned={peaceful.glider} active={!fishing && !lead?.hold} blocked={layout.underBuilding} />
-      <StudySeats area="village" player={player} ground={island.ground} />
+      <StudySeats area="village" player={player} ground={island.ground} open={DROPS.cafe} />
       <VillageLandmarks layout={layout} ground={island.ground} opened={progression.opened} stage={progression.stage} ceremony={ceremony} light={light} />
+      {!DROPS.cafe && cafeAt && <CafeSweeper cafe={cafeAt} ground={island.ground} player={player} night={phase === "night"} />}
       {layout.fitting && <FittingRoom at={layout.fitting} ground={island.ground} player={player} />}
       <EventDecor event={event} ground={island.ground} light={light} weather={weather} />
       {layout.bridges.map(b => <GLBProp key={b.id} url="/assets/acnh/props/bridge-wooden.glb" position={[b.x, b.y, b.z]} rotation={[0, b.yaw ?? 0, 0]} />)}
@@ -511,7 +523,8 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     </>}
     {shop && <group position={at(shop)} rotation={[0, shop.yaw ?? 0, 0]} scale={shop.scale ?? 1}><ACNHBuilding id="shop" lit={windowLit(light)} /></group>}
     {oracle && <group position={at(oracle)} rotation={[0, oracle.yaw ?? 0, 0]} scale={oracle.scale ?? 1}><ACNHBuilding id="oracle" lit={windowLit(light)} /></group>}
-    {cafe && <group position={at(cafe)} rotation={[0, cafe.yaw ?? 0, 0]} scale={cafe.scale ?? 1}><CafeBuilding open={opened.includes("cafe")} light={light} /></group>}
+    {/* Before its drop the café is built but not open (lib/game/drops.ts): warm, an "Opening soon" chalkboard, no door. */}
+    {cafe && <group position={at(cafe)} rotation={[0, cafe.yaw ?? 0, 0]} scale={cafe.scale ?? 1}><CafeBuilding state={!DROPS.cafe ? "soon" : opened.includes("cafe") ? "open" : "boarded"} light={light} /></group>}
     {museum && <group position={at(museum)} rotation={[0, museum.yaw ?? 0, 0]} scale={museum.scale ?? 1}><ACNHParts parts={CHALET_VARIANTS.red} lit={windowLit(light)} /></group>}
     {/* Boarded doors: the existing log fence across the museum's entrance (the café boards its own, CafeBuilding). */}
     {[museum].filter(l => l && !opened.includes(l.id as WorldGoalId)).map(l => [-0.6, 0.6].map(dx => <NatureFence key={`${l!.id}${dx}`} position={[l!.x + dx, ground(l!.x, l!.z), front(l!) - 0.35]} variant={1} />))}
@@ -522,7 +535,7 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {/* The board model's notices face +z; the plaza boards stand in front of the HQ, so they turn to face the plaza (a painter yaw adds on). */}
     {notice && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(notice)} rotation={[0, Math.PI + (notice.yaw ?? 0), 0]} />}
     {board && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(board)} rotation={[0, Math.PI + (board.yaw ?? 0), 0]} />}
-    {missions && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
+    {missions && DROPS.combat && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
     {wharf && <Wharf dock={{ x: wharf.x, z: wharf.z, yaw: wharf.yaw ?? 0 }} light={light} place="village" />}
     {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <LandmarkTag key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} closed={!l.open}>
       {SIGNS[l.id]}
@@ -657,7 +670,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [fishing, setFishing] = useState(false);
   const [bagOpen, setBagOpen] = useState(() => devHome.get("sheet") === "bag");
   const identity = useWorldIdentity();
-  const step = welcomeStep({ lookLoaded: mine.loaded, lookSaved: mine.saved, signedIn: identity.signedIn || devHome.get("welcome") === "1", progressionLoaded, chapterFresh: chapterActions.claim, welcomed });
+  const step = welcomeStep({ lookLoaded: mine.loaded, lookSaved: mine.saved, signedIn: identity.signedIn || devHome.get("welcome") === "1", progressionLoaded, chapterFresh: chapterActions.fresh, welcomed });
   const greeting = typeof welcome === "number" ? welcome : null;
   // Arriving or being greeted: the player holds still, so no prompt and no key hints.
   const welcoming = welcome === "arriving" || greeting !== null;
@@ -694,11 +707,11 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     return kit && c ? { kit, mastery: c.mastery.mastery, colour: c.cosmetics.aura === "mastery:colour" ? kit.look.ramp[0] : null } : null;
   }, [pathView]);
   useEffect(() => {
-    const c = pathView?.classes, kit = classAura?.kit, f = c?.cosmetics.frame;
+    const c = DROPS.classes ? pathView?.classes : null, kit = classAura?.kit, f = c?.cosmetics.frame;
     setClassTag(kit && c ? { icon: kit.look.icon, title: c.title ?? kit.name, color: kit.look.ramp[1], frame: f === "mastery:bronze" ? "bronze" : f === "mastery:silver" ? "silver" : f === "mastery:gold" ? "gold" : null } : null);
   }, [pathView, classAura]);
   // Classes v2 (§1.13): P opens the Path sheet anywhere (the subclass, its kit and mastery, stats).
-  const classesOn = !!pathView?.classes && !!pathView.family;
+  const classesOn = DROPS.classes && !!pathView?.classes && !!pathView.family;
   useEffect(() => {
     if (!classesOn) return;
     const on = (e: KeyboardEvent) => {
@@ -725,7 +738,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (g.view) setHudXp(g.view.xp);
     // Progression feeds the encounter: stats, max HP, the subclass kit and loadout, weapon durability.
     const p = combat.rt.player;
-    p.armed = g.gateOpen;
+    // Weapons across your back and on the wheel are combat's drop (lib/game/drops.ts).
+    p.armed = g.gateOpen && DROPS.weapons;
     if (g.stats) p.stats = g.stats;
     p.level = g.level;
     if (g.maxHp) { p.maxHp = g.maxHp; p.hp = Math.min(p.hp, g.maxHp); }
@@ -787,6 +801,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const held = inside ? null : heldItem(heldState, wheelItems);
   const [eating, setEating] = useState(false);
   const act = useCallback((action: Near) => {
+    // What a later drop opens never acts, whatever asks (lib/game/drops.ts).
+    if ((!DROPS.homeIsland && (action === "home" || action === "claim")) || (!DROPS.combat && (action === "ruins" || action === "missions"))
+      || (!DROPS.oracle && action === "oracle_enter") || (!DROPS.cafe && (action === "cafe" || action === "cafe_enter"))) return;
     if (action === "notice") { setSheet("notice"); return; }
     if (action === "counter") { setSheet("counter"); return; }
     if (action === "cafe") { setSheet("cafe"); return; }
@@ -1059,7 +1076,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
             : <IslandScene held={eating || trip.active ? null : held} identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent}
               lead={welcoming || welcome === "done" ? { line: greeting, hold: welcoming } : null} talking={talking} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} />}
           {/* Classes v2: the subclass's aura replaces the family's once its kit exists (§1.9). */}
-          {identity.aura && (classAura ? <Suspense fallback={null}><SubclassAura player={player} kit={classAura.kit} mastery={classAura.mastery} colour={classAura.colour} /></Suspense>
+          {DROPS.classes && identity.aura && (classAura ? <Suspense fallback={null}><SubclassAura player={player} kit={classAura.kit} mastery={classAura.mastery} colour={classAura.colour} /></Suspense>
             : identity.family && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>)}
           <PostFX antialias={!graphics.liteMode && !graphics.pixelated} grade={grade} fx={lookFx(lookPreset, !liteMode)} />
           <LookMaterials preset={lookPreset} />
@@ -1142,7 +1159,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         <button className={styles.greetingSkip} onClick={finishWelcome}>Skip</button>
       </div>}
       {/* Study tables are in the village and the café only: the HUD (its polling and session) lives there. */}
-      {(inside === "cafe" || (!inside && site === "village")) && <StudyHud />}
+      {(inside === "cafe" || (!inside && site === "village" && DROPS.cafe)) && <StudyHud />}
       <CraftingSheet />
       <CollectionBook open={bagOpen} onClose={() => setBagOpen(false)} keys={identity.settings.key_bindings.openJournal} />
       {/* The Bag (I) shows in the clean HUD only as a pickup flies into it; the Collection (B) with the full HUD. */}
@@ -1173,7 +1190,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <PlayerCharacterUI />
       <JournalSheet open={sheet === "journal"} onClose={() => setSheet(null)} keys="j" />
       <OracleQuizSheet open={sheet === "oracle"} onClose={() => setSheet(null)} onResult={onOracleResult} onPath={pathView?.family ? () => { setPathTick(n => n + 1); setSheet("path"); } : undefined} />
-      {pathView && <PathSheet open={sheet === "path"} view={pathView} onClose={() => setSheet(null)} onChanged={() => setPathTick(n => n + 1)} />}
+      {pathView && DROPS.classes && <PathSheet open={sheet === "path"} view={pathView} onClose={() => setSheet(null)} onChanged={() => setPathTick(n => n + 1)} />}
       <SettingsSheet open={sheet === "settings"} onClose={() => setSheet(null)} detectedTier={detectedTier} />
       <FamilyReveal open={!!reveal && inside === "oracle"} family={reveal?.family ?? null} type={reveal?.type ?? ""} onContinue={() => setReveal(null)} />
       <TrophySheet open={sheet === "trophies"} onClose={() => setSheet(null)} />

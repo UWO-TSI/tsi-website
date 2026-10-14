@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { previewState } from "./client";
 import { applyGoalOverride, parseGoalOverride } from "./devOverride";
 import { toWorldProgression } from "./worldBridge";
+import { dropFlags } from "@/lib/game/drops";
+
+/** Every drop's content (these contracts are about the bridge, not the drop). */
+const ALL = dropFlags(4);
 
 const resolve = (a: string) => (a === "hq" ? ([0, 6.3] as [number, number]) : null);
 
@@ -13,20 +17,25 @@ describe("?goal= dev override", () => {
     expect(parseGoalOverride("?goal=0.6", true)).toBeNull();
   });
   it("sets the active goal's points, percent and monument stage", () => {
-    const s = applyGoalOverride(previewState(), { slug: null, fraction: 0.6 });
+    const s = applyGoalOverride(previewState(undefined, ALL), { slug: null, fraction: 0.6 });
     expect(s.goals[0]).toMatchObject({ slug: "reopen-cafe", points: 9000, percent: 60, stage: 2, completed: false });
   });
 });
 
 describe("world bridge contract", () => {
   it("maps state into the island's WorldProgression shape", () => {
-    const w = toWorldProgression(previewState(), resolve);
+    const w = toWorldProgression(previewState(undefined, ALL), resolve);
     expect(w.activeGoal).toEqual({ id: "cafe", label: "Reopen the cafe", progress: 0, stage: 0, completed: false });
     expect(w.objective).toEqual({ text: "Claim your plot at HQ", target: [0, 6.3], anchor: "hq" });
     expect(w.completedGoals).toEqual([]);
   });
+  it("v1 (lib/game/drops.ts): the museum fund is the monument's goal and the first step is a catch, never a plot", () => {
+    const w = toWorldProgression(previewState(undefined, dropFlags(1)), resolve);
+    expect(w.activeGoal).toMatchObject({ id: "museum", label: "Fund the museum" });
+    expect(w.objective.text).toBe("Make your first catch");
+  });
   it("keeps a just-completed goal on the monument so the ceremony can play", () => {
-    const done = applyGoalOverride(previewState(), { slug: "reopen-cafe", fraction: 1 });
+    const done = applyGoalOverride(previewState(undefined, ALL), { slug: "reopen-cafe", fraction: 1 });
     const w = toWorldProgression({ ...done, goals: done.goals.map((g) => (g.slug === "fund-museum" ? { ...g, open: false } : g)) }, resolve);
     expect(w.activeGoal).toMatchObject({ id: "cafe", progress: 1, stage: 4, completed: true });
     expect(w.completedGoals).toEqual(["cafe"]);
