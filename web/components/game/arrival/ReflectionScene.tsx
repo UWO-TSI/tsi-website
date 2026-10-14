@@ -42,8 +42,12 @@ export interface Ripple { x: number; z: number; t: number; strength: number }
  * Bram stands, the two camera framings. Tuned by eye against David's sketch (dev: window.__reflect).
  */
 export const SET = {
-  /** Your hips' pivot: kneeling on the floor by the gunwale, facing out (-x); how far you lean over. */
-  you: { x: -0.36, y: BOAT.floor - BOAT.draft, z: 0.15, lean: 0.95, crouch: true },
+  /**
+   * Your feet by the gunwale, facing out (-x), and how far you lean over it (radians). Upright, not crouched: the
+   * crouch bows the head, and the water then sees the face from the forehead side, where David's fringes cover the
+   * eyes (checked on all 21 hairstyles, specs/evidence/v1-opening/07-hairstyles-reflection.webp).
+   */
+  you: { x: -0.45, y: BOAT.floor - BOAT.draft, z: 0.15, lean: 0.75, crouch: false },
   /** Bram at the stern by the motor, facing you. */
   bram: { x: 0.28, y: BOAT.floor - BOAT.draft, z: -0.62, yaw: -0.9 },
   /** Aboard, looking up at Bram from where you were laid down (your eyes). */
