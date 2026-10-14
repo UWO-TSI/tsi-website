@@ -25,8 +25,8 @@
 import type { NPCPersona } from "./types";
 
 type Look = Record<string, unknown>;
-const look = (l: { skin: number; hair: number; eyes?: string; mouth?: string; brows?: string; extras?: string[]; bangs: string; back: string; top?: string | null; bottom?: string | null; onepiece?: string | null; shoes: string; acc?: Record<string, string>; colors?: Record<string, number> }): Look =>
-  ({ eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], top: null, bottom: null, onepiece: null, acc: {}, colors: {}, ...l });
+const look = (l: { skin: number; hair: number; eyes?: string; mouth?: string; extras?: string[]; bangs: string; back: string; top?: string | null; bottom?: string | null; onepiece?: string | null; shoes: string; acc?: Record<string, string>; colors?: Record<string, number> }): Look =>
+  ({ eyes: "F1.1", mouth: "M1.1", extras: [], top: null, bottom: null, onepiece: null, acc: {}, colors: {}, ...l });
 
 /** Authored looks by slug (character catalogue part ids, palette indices). */
 export const RESIDENT_LOOKS: Record<string, Look> = {
@@ -37,13 +37,13 @@ export const RESIDENT_LOOKS: Record<string, Look> = {
   mayor: look({ skin: 2, hair: 9, eyes: "F1.2", bangs: "bangs_swept_back", back: "back_bun", top: "top_cardigan", bottom: "bottom_long_skirt", shoes: "shoes_loafers",
     acc: { face: "acc_glasses_round", neck: "acc_scarf" }, colors: { top_cardigan: 13, bottom_long_skirt: 5, shoes_loafers: 5, acc_scarf: 4 } }),
   // Shopkeeper: deadpan, tidy. Square glasses, a sage sweater vest, charcoal trousers, work boots.
-  shopkeeper: look({ skin: 8, hair: 0, brows: "brow_flat", mouth: "M2.1", bangs: "bangs_choppy", back: "back_short_spiky", top: "top_sweater_vest", bottom: "bottom_trousers", shoes: "shoes_boots",
+  shopkeeper: look({ skin: 8, hair: 0, mouth: "M2.1", bangs: "bangs_choppy", back: "back_short_spiky", top: "top_sweater_vest", bottom: "bottom_trousers", shoes: "shoes_boots",
     acc: { face: "acc_glasses_square" }, colors: { top_sweater_vest: 3, bottom_trousers: 14, shoes_boots: 5 } }),
   // Museum curator: precise and owlish. Braided crown, round glasses, a cream collar shirt over a navy pleated skirt.
   curator: look({ skin: 0, hair: 3, eyes: "E1.2", bangs: "bangs_hime", back: "back_braid_crown", top: "top_collar_shirt", bottom: "bottom_pleated_skirt", shoes: "shoes_loafers",
     acc: { face: "acc_glasses_round" }, colors: { top_collar_shirt: 0, bottom_pleated_skirt: 12, shoes_loafers: 5 } }),
   // Wharf keeper: weathered and chatty about tides. Navy beanie, a blue striped top, yellow rain boots.
-  "wharf-keeper": look({ skin: 6, hair: 9, brows: "brow_flat", extras: ["freckles"], bangs: "bangs_swept_r", back: "back_short_spiky", top: "top_stripe_ls", bottom: "bottom_trousers", shoes: "shoes_rainboots",
+  "wharf-keeper": look({ skin: 6, hair: 9, extras: ["freckles"], bangs: "bangs_swept_r", back: "back_short_spiky", top: "top_stripe_ls", bottom: "bottom_trousers", shoes: "shoes_rainboots",
     acc: { head: "acc_beanie" }, colors: { top_stripe_ls: 11, bottom_trousers: 12, shoes_rainboots: 6, acc_beanie: 12 } }),
   // Oracle keeper: quiet, speaks in riddles. A lavender robe, long dark hair, sandals.
   "oracle-keeper": look({ skin: 10, hair: 0, eyes: "E5.4", bangs: "bangs_curtain_long", back: "back_long", onepiece: "onepiece_robe", shoes: "shoes_sandals",

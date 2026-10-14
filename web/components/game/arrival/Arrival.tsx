@@ -3,7 +3,7 @@
 /**
  * The arrival (specs/v1-drop.md §1): one continuous sequence after the title screen, once per account. This is its
  * page side: it runs the sequence (lib/game/arrival/sequence.ts) on its own clock (the island's canvas is paused under
- * the creator), shows the underwater beat and the reflection creator, starts the crossing's boat and veils its ends in
+ * the creator), fades in on Bram's boat, shows the reflection creator, starts the crossing's boat and veils its ends in
  * golden mist, takes the skip keys, and shows the tutorial's one-time keycap glyphs and its way out. Inside the island's
  * canvas, ArrivalWorld frames the crossing and walks Bram through the tutorial.
  *
@@ -11,7 +11,7 @@
  * showing; the crossing skips to the landing under a quick mist; the tour can be left in one click (principle 7).
  */
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
-import { Fish, Backpack } from "lucide-react";
+import { Fish, BookOpen } from "lucide-react";
 import { Keycap } from "@/components/gui";
 import { holdCreatorOpen } from "@/lib/game/character/creatorPresence";
 import type { CharacterLook } from "@/lib/game/character/look";
@@ -22,15 +22,13 @@ import { myTrip, tripChanged } from "@/lib/game/myTrip";
 import { TRIP, skipCrossing } from "@/lib/game/boatTrip";
 import { ARRIVAL_TIMES, skipArrival, startArrival, stepArrival, type ArrivalPhase } from "@/lib/game/arrival/sequence";
 import { arrivalChanged, arrivalRun, readArrival, resetArrival, subscribeArrival } from "@/lib/game/arrival/arrivalStore";
-import { resetMuffle } from "@/lib/game/arrival/arrivalSound";
-import Underwater from "./Underwater";
 import ReflectionCreator from "./ReflectionCreator";
 import s from "./Arrival.module.css";
 
 const SKIP_KEYS = [" ", "enter", "e", "escape"];
-const SKIPPABLE: ReadonlySet<ArrivalPhase> = new Set(["underwater", "aboard", "clearing", "crossing"]);
+const SKIPPABLE: ReadonlySet<ArrivalPhase> = new Set(["aboard", "clearing", "crossing"]);
 /** The beats the creator's canvas covers the island in (it pauses the island's drawing). */
-const COVERED: ReadonlySet<ArrivalPhase> = new Set(["underwater", "aboard", "creator", "clearing"]);
+const COVERED: ReadonlySet<ArrivalPhase> = new Set(["aboard", "creator", "clearing"]);
 const GLYPH_MS = 4800;
 const smooth = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
@@ -66,7 +64,6 @@ export default function Arrival({ play, look, askName, touch, keys, onCross, onS
   const mist = useRef<HTMLDivElement>(null);
   const skipAt = useRef<number | null>(null);
   const crossed = useRef(false);
-  const [underwaterAt, setUnderwaterAt] = useState<number | null>(null);
   const [glyph, setGlyph] = useState<{ key: "wheel" | "bag"; at: number } | null>(null);
   const onDoneRef = useRef(onDone), onCrossRef = useRef(onCross);
   useEffect(() => { onDoneRef.current = onDone; onCrossRef.current = onCross; }, [onDone, onCross]);
@@ -74,10 +71,8 @@ export default function Arrival({ play, look, askName, touch, keys, onCross, onS
   // Start once.
   useEffect(() => {
     if (!play || arrivalRun.current) return;
-    resetMuffle();
     crossed.current = false;
     arrivalRun.current = startArrival(performance.now());
-    setUnderwaterAt(arrivalRun.current.at);
     arrivalChanged();
   }, [play]);
 
@@ -141,7 +136,7 @@ export default function Arrival({ play, look, askName, touch, keys, onCross, onS
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
     Object.assign(window, { __arrival: {
-      state: () => { const a = arrivalRun.current, t = myTrip.current; return a && { phase: a.phase, t: (performance.now() - a.at) / 1000, choices: a.choices, step: arrivalRun.tutorial?.step ?? null, trip: t && { phase: t.phase, t: (worldNow() - t.at) / 1000 } }; },
+      state: () => { const a = arrivalRun.current, t = myTrip.current; return a && { phase: a.phase, t: (performance.now() - a.at) / 1000, choices: a.choices, tutorial: arrivalRun.tutorial && { stop: arrivalRun.tutorial.stop, stage: arrivalRun.tutorial.stage, done: arrivalRun.tutorial.done }, trip: t && { phase: t.phase, t: (worldNow() - t.at) / 1000 } }; },
       skip: () => skipRef.current(),
       /** How many choices made (each sharpens the world): tuning the creator's look at a given clarity. */
       choices: (n: number) => { if (arrivalRun.current) arrivalRun.current.choices = n; },
@@ -162,11 +157,12 @@ export default function Arrival({ play, look, askName, touch, keys, onCross, onS
   }, [phase]);
 
   if (!phase || phase === "done") return null;
-  const creator = phase === "underwater" || phase === "aboard" || phase === "creator" || phase === "clearing";
+  const creator = phase === "aboard" || phase === "creator" || phase === "clearing";
   const cinematic = phase === "crossing" || phase === "landing";
   return <div className={`${s.arrival} gui`} data-phase={phase} data-testid="arrival">
     {creator && <ReflectionCreator phase={phase} initial={look} askName={askName} onYes={(l, name) => { onSaveLook(l, name); arrivalRun.signals.yes = true; }} />}
-    {underwaterAt !== null && (phase === "underwater" || phase === "aboard") && <Underwater startedAt={underwaterAt} look={look} done={phase !== "underwater"} />}
+    {/* The opening: black lifting off Bram's boat. */}
+    {phase === "aboard" && <div className={s.fadeIn} aria-hidden="true" style={{ "--fade-ms": `${ARRIVAL_TIMES.fadeIn * 1000}ms` } as CSSProperties} />}
     {cinematic && <div className={s.letterbox} aria-hidden="true"><i /><i /></div>}
     <div ref={mist} className={s.mist} aria-hidden="true" style={{ opacity: 0 }} />
     {SKIPPABLE.has(phase) && <button type="button" key={phase} className={s.skip} data-touch={touch || undefined} onClick={skip} data-testid="arrival-skip">
@@ -174,8 +170,8 @@ export default function Arrival({ play, look, askName, touch, keys, onCross, onS
     </button>}
     {phase === "tutorial" && glyph && <div key={glyph.at} className={s.glyph} role="status" data-glyph={glyph.key} style={{ "--glyph-ms": `${GLYPH_MS}ms` } as CSSProperties}>
       {touch ? null : <Keycap>{glyph.key === "wheel" ? keys.wheel : keys.bag}</Keycap>}
-      {glyph.key === "wheel" ? <Fish size={18} aria-hidden /> : <Backpack size={18} aria-hidden />}
-      <span>{glyph.key === "wheel" ? (touch ? "Your tools: pick the rod" : "Hold for your tools") : (touch ? "Your bag" : "Your bag")}</span>
+      {glyph.key === "wheel" ? <Fish size={18} aria-hidden /> : <BookOpen size={18} aria-hidden />}
+      <span>{glyph.key === "wheel" ? (touch ? "Your tools: pick the rod" : "Hold for your tools") : "What you've collected"}</span>
     </div>}
     {phase === "tutorial" && <button type="button" className={s.leave} onClick={() => { arrivalRun.signals.toured = true; }} data-testid="arrival-leave-tour">Skip the walk</button>}
   </div>;

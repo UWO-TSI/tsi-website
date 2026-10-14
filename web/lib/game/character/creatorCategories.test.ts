@@ -5,22 +5,26 @@ import { DEFAULT_LOOK, FACE, PARTS, wear } from "./look";
 const cat = (id: string) => CATEGORIES.find(c => c.id === id)!;
 
 describe("creator categories (read from the catalogue)", () => {
-  it("are David's ten, in the rail's order", () => {
-    expect(CATEGORIES.slice(0, 10).map(c => c.id)).toEqual(["head", "hair", "eyes", "brows", "mouth", "extras", "accessories", "tops", "bottoms", "shoes"]);
+  it("are David's nine, in the rail's order (eyebrows removed, playtest round 1)", () => {
+    expect(CATEGORIES.slice(0, 9).map(c => c.id)).toEqual(["head", "hair", "eyes", "mouth", "extras", "accessories", "tops", "bottoms", "shoes"]);
+  });
+  it("offer no eyebrows anywhere: no category, no face section", () => {
+    expect(CATEGORIES.some(c => c.id === "brows" || (c.icon as string) === "brows" || (c.place as string) === "brows")).toBe(false);
+    expect(CATEGORIES.flatMap(c => c.sections).some(s => "face" in s.source && (s.source.face as string) === "brows")).toBe(false);
   });
   it("offer every catalogue part and every face cell, so new hair and clothes show without an edit", () => {
     const offered = new Set(CATEGORIES.flatMap(c => c.sections.flatMap(s => ("slot" in s.source ? s.options : []))));
     for (const p of PARTS) expect(offered.has(p.id), p.id).toBe(true);
-    for (const layer of ["eyes", "brows", "mouth", "extras"] as const) expect(cat(layer === "extras" ? "extras" : layer).sections[0].options).toEqual(Object.keys(FACE.layers[layer].items));
+    for (const layer of ["eyes", "mouth", "extras"] as const) expect(cat(layer === "extras" ? "extras" : layer).sections[0].options).toEqual(Object.keys(FACE.layers[layer].items));
   });
-  it("show a swatch where the part takes a colour: skin, hair (and the hair-tinted brows), clothes; the sliders on eyes, brows and mouth", () => {
-    expect(CATEGORIES.slice(0, 10).map(c => [c.id, c.swatch, c.place ?? null])).toEqual([
-      ["head", "skin", null], ["hair", "hair", null], ["eyes", null, "eyes"], ["brows", "hair", "brows"], ["mouth", null, "mouth"], ["extras", null, null],
+  it("show a swatch where the part takes a colour: skin, hair, clothes; the sliders on eyes and mouth", () => {
+    expect(CATEGORIES.slice(0, 9).map(c => [c.id, c.swatch, c.place ?? null])).toEqual([
+      ["head", "skin", null], ["hair", "hair", null], ["eyes", null, "eyes"], ["mouth", null, "mouth"], ["extras", null, null],
       ["accessories", "outfit", null], ["tops", "outfit", null], ["bottoms", "outfit", null], ["shoes", "outfit", null],
     ]);
   });
   it("frame the face for face parts and the body for clothes; the wardrobe gets hair and clothes", () => {
-    expect(CATEGORIES.filter(c => c.framing === "face").map(c => c.id)).toEqual(["head", "eyes", "brows", "mouth", "extras"]);
+    expect(CATEGORIES.filter(c => c.framing === "face").map(c => c.id)).toEqual(["head", "eyes", "mouth", "extras"]);
     expect(cat("shoes").framing).toBe("body");
     expect(CATEGORIES.filter(c => c.wardrobe).map(c => c.id)).toEqual(["hair", "accessories", "tops", "bottoms", "shoes"]);
   });

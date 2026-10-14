@@ -42,7 +42,7 @@ export const CAFE_OWNER = {
   slug: "cafe-owner",
   name: "Rosa",
   look: {
-    skin: 6, hair: 1, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [],
+    skin: 6, hair: 1, eyes: "F1.1", mouth: "M1.1", extras: [],
     bangs: "bangs_curtain", back: "back_bun", top: "top_collar_shirt", bottom: "bottom_overall_shorts", onepiece: null, shoes: "shoes_loafers",
     acc: { face: "acc_glasses_round" }, colors: { top_collar_shirt: 0, bottom_overall_shorts: 5, shoes_loafers: 14, acc_glasses_round: 5 },
   },

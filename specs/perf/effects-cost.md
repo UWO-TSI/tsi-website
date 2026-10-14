@@ -298,3 +298,8 @@ draws a player.
   Node's V8 (`lib/net/interp.ts`, 24 players × 20,000 frames); every player in view is sampled every frame, drawn or
   not. The loopback's bots also step their own movement on the page's main thread (36 ms a second for 24, about
   0.18 ms a frame): a cost of the bench, in every sample alike, that real players don't put on you.
+- **Walk-along v2 and the reflection creator (game/tutorial-v2, 2026-10-14).** No new GPU effect. Bram's "!" and the
+  quest tracker are DOM (the "!" toggled through `hidden` from the frame loop, the tracker re-rendered only when a step
+  changes). The face shader draws one slot fewer (eyebrows removed). The creator's new framing is the same scene and
+  passes: 16 draws a frame in its canvas, 16.7 ms a frame headless at 1440x900, as before. The route's crate is the
+  one crate model the pier already drew.
