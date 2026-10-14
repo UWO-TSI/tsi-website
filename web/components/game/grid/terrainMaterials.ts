@@ -27,7 +27,7 @@ import * as THREE from "three";
 import { addCutout } from "@/lib/game/occluders";
 import { getGrassTexture } from "@/lib/game/grassTexture";
 import { GRASS_COLOR, WATER_DROP } from "@/lib/game/grid";
-import { FOAM_RING_MAX, SHORE_FROM_FIELD, UNDERWATER, UNDERWATER_UNIFORMS, WATER_DEPTH_RAMP, bedDepth, waterMaterial, waterUniforms, writeWaterUniforms, type WaterParams } from "@/lib/game/waterShader";
+import { FOAM_RING_MAX, GLASS_WATER, SHORE_FROM_FIELD, UNDERWATER, UNDERWATER_UNIFORMS, WATER_DEPTH_RAMP, WATER_RIPPLE, bedDepth, waterMaterial, waterUniforms, writeWaterUniforms, type WaterParams } from "@/lib/game/waterShader";
 import { foamRings } from "@/lib/game/foamRings";
 import { TUNING_DEFAULTS } from "@/lib/game/tuning";
 
@@ -274,8 +274,12 @@ export function terrainMaterial(name: string): THREE.Material | null {
  */
 function seenThroughWater(mat: THREE.MeshStandardMaterial) {
   mat.onBeforeCompile = (shader) => addUnderwater(shader, "field");
-  mat.customProgramCacheKey = () => "seabed-underwater-v1";
+  mat.customProgramCacheKey = () => "seabed-underwater-v2";
 }
+/** Glass water (v1 water item 5): 1 draws the refraction wobble under the surface, 0 none (Lite, or the toggle off). */
+export const GLASS_ON = { value: 0 };
+/** The bed's texture repeats every four world units (the ground's UVs every two, the sand's repeat 0.5): world to uv. */
+const BED_UV_PER_UNIT = 0.25;
 
 /**
  * Patch a lit built-in material so what it draws is seen through the water over it (UNDERWATER): the bed itself
@@ -287,17 +291,34 @@ export function addUnderwater(shader: THREE.WebGLProgramParametersWithUniforms, 
   Object.assign(shader.uniforms, {
     uShoreMap: u.uShoreMap, uShoreRect: u.uShoreRect, uDepthFalloff: u.uDepthFalloff, uUnderwaterFog: UNDERWATER_FOG,
     uBedColor: u.uBedColor, uShallowColor: u.uShallowColor, uMidColor: u.uMidColor, uDeepColor: u.uDeepColor, uNavyColor: u.uNavyColor,
+    uTime: u.uTime, uRippleTexture: u.uRippleTexture, uRippleStrength: u.uRippleStrength, uGlass: GLASS_ON,
   });
-  shader.vertexShader = "varying vec3 vSeaWorld;\n" + shader.vertexShader.replace("#include <project_vertex>", `#include <project_vertex>
+  const glass = "uniform float uTime;\n" + WATER_RIPPLE + GLASS_WATER;
+  // Glass water: a prop standing in the sea shifts its own vertices by the surface's refraction where they are (its
+  // instance's turn and scale undone, so neighbours wobble together).
+  const wobble = depth === "sea" ? `
+    #ifdef USE_INSTANCING
+      vec3 glassAt = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
+      vec2 glassBy = glassShift(glassAt.xz, max(${(-WATER_DROP).toFixed(4)} - glassAt.y, 0.0));
+      transformed += inverse(mat3(instanceMatrix)) * vec3(glassBy.x, 0.0, glassBy.y);
+    #endif
+    #include <project_vertex>` : "#include <project_vertex>";
+  shader.vertexShader = "varying vec3 vSeaWorld;\n" + (depth === "sea" ? glass : "") + shader.vertexShader.replace("#include <project_vertex>", `${wobble}
     #ifdef USE_INSTANCING
       vSeaWorld = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
     #else
       vSeaWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;
     #endif`);
   const at = depth === "field" ? "waterDepthAt(vSeaWorld.xz)" : `max(${(-WATER_DROP).toFixed(4)} - vSeaWorld.y, 0.0)`;
-  shader.fragmentShader = "varying vec3 vSeaWorld;\n" + UNDERWATER_UNIFORMS + SHORE_FROM_FIELD + WATER_DEPTH_RAMP + UNDERWATER + shader.fragmentShader
+  shader.fragmentShader = "varying vec3 vSeaWorld;\n" + UNDERWATER_UNIFORMS + SHORE_FROM_FIELD + WATER_DEPTH_RAMP + UNDERWATER + (depth === "field" ? glass : "") + shader.fragmentShader
     .replace("#include <opaque_fragment>", `outgoingLight = underwater(outgoingLight, ${at});
     #include <opaque_fragment>`);
+  // Glass water on the bed: its sand looked up where the moving surface bends the view to.
+  if (depth === "field") shader.fragmentShader = shader.fragmentShader.replace("#include <map_fragment>", `
+    #ifdef USE_MAP
+      vec4 sampledDiffuseColor = texture2D(map, vMapUv + glassShift(vSeaWorld.xz, waterDepthAt(vSeaWorld.xz)) * ${BED_UV_PER_UNIT.toFixed(2)});
+      diffuseColor *= sampledDiffuseColor;
+    #endif`);
 }
 /** How strongly what lies under the water fogs toward the water's colour by its depth (0 off). Shared: the bed, the seabed props, the fish. */
 export const UNDERWATER_FOG = { value: 0.85 };

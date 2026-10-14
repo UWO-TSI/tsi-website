@@ -4,17 +4,22 @@ export interface GraphicsSettings {
   shadows: boolean;
   ghostsEnabled: boolean;
   pixelated: boolean;
+  /** Glass water (v1 water item 5): what lies under the water wobbles as the surface refracts it. High only. */
+  glassWater: boolean;
 }
 
 export const GRAPHICS_KEYS: Record<keyof GraphicsSettings, string> = {
   liteMode: "tsi.liteMode.v1", bloom: "tsi.bloom.v1", shadows: "tsi.shadows.v1",
-  ghostsEnabled: "tsi.ghosts.enabled", pixelated: "tsi.pixelated.v1",
+  ghostsEnabled: "tsi.ghosts.enabled", pixelated: "tsi.pixelated.v1", glassWater: "tsi.glassWater.v1",
 };
 
 export function automaticGraphics(memory?: number): GraphicsSettings {
   const liteMode = typeof memory === "number" && Number.isFinite(memory) && memory > 0 && memory <= 4;
-  return { liteMode, bloom: false, shadows: !liteMode, ghostsEnabled: true, pixelated: true };
+  return { liteMode, bloom: false, shadows: !liteMode, ghostsEnabled: true, pixelated: true, glassWater: true };
 }
+
+/** Glass water draws on High only: the toggle is the player's, Lite never pays for it. */
+export const glassWaterOn = (g: Pick<GraphicsSettings, "liteMode" | "glassWater">) => !g.liteMode && g.glassWater;
 
 const SERVER_SETTINGS = Object.freeze(automaticGraphics());
 const fields = Object.keys(GRAPHICS_KEYS) as (keyof GraphicsSettings)[];

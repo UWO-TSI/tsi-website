@@ -641,6 +641,22 @@ vec3 underwater(vec3 lit, float depth) {
   return mix(lit, waterRamp(depth), clamp(t * uUnderwaterFog, 0.0, 1.0));
 }
 `;
+/**
+ * Glass water (v1 water item 5, High only): what lies under the surface wobbles as the moving surface refracts it.
+ * No copy of the frame and no extra pass: the bed shifts its own texture lookup, and the props and fish their own
+ * vertices, by the surface's slope where they are (the ripple normal the water draws, plus a short refraction wave on
+ * the world clock), more the deeper they lie. Needs `uniform float uTime` and WATER_RIPPLE before it. `uGlass` 0
+ * turns it off (Lite, or the player's toggle) at the cost of one uniform branch.
+ */
+export const GLASS_WATER = /* glsl */ `
+uniform float uGlass;
+vec2 glassShift(vec2 xz, float depth) {
+  if (uGlass <= 0.0) return vec2(0.0);
+  vec2 n = waterDetailNormal(xz);
+  vec2 w = vec2(sin(xz.y * 2.3 + mod(uTime * 1.7, 6.2831853)), sin(xz.x * 2.1 + 1.3 - mod(uTime * 1.3, 6.2831853))) * 0.05;
+  return (n * 0.8 + w) * min(depth, 1.5) * 0.35 * uGlass;
+}
+`;
 /** The uniforms UNDERWATER reads, declared (the live values are the water's: waterSurfaceUniforms). */
 export const UNDERWATER_UNIFORMS = /* glsl */ `
 uniform float uDepthFalloff;

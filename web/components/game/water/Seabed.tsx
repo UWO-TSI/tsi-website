@@ -16,7 +16,7 @@ import { shoreFieldOf } from "@/lib/game/seabed";
 import { SEABED_KINDS, seabedProps, type SeabedKind } from "@/lib/game/seabedProps";
 import { fxOn } from "@/lib/game/perf/fxBench";
 import { foamRings } from "@/lib/game/foamRings";
-import { addUnderwater, waterSurfaceUniforms } from "../grid/terrainMaterials";
+import { addUnderwater } from "../grid/terrainMaterials";
 
 export const SEABED_URL = "/assets/game/water/seabed.glb";
 useGLTF.preload(SEABED_URL);
@@ -34,9 +34,9 @@ function seabedMaterial(src: THREE.Material, kind: SeabedKind): THREE.MeshStanda
   m.onBeforeCompile = (shader) => {
     addUnderwater(shader, "sea");
     if (!kind.sway) return;
-    shader.uniforms.uTime = waterSurfaceUniforms().uTime;
     // Bends over with height (its tip the most), on the world clock, each plant at its own phase by where it stands.
-    shader.vertexShader = "uniform float uTime;\n" + shader.vertexShader.replace("#include <begin_vertex>", `#include <begin_vertex>
+    // uTime: declared by addUnderwater (the glass water's clock is the world's).
+    shader.vertexShader = shader.vertexShader.replace("#include <begin_vertex>", `#include <begin_vertex>
       {
         vec3 swayAt = (instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
         float k = clamp(position.y / ${kind.height.toFixed(2)}, 0.0, 1.0);
@@ -45,7 +45,7 @@ function seabedMaterial(src: THREE.Material, kind: SeabedKind): THREE.MeshStanda
         transformed.xz += vec2(a, cos(mod(uTime * 0.7, 6.2831853) + ph)) * ${(0.07).toFixed(2)} * k * k;
       }`);
   };
-  m.customProgramCacheKey = () => `seabed-v1-${kind.sway ? "sway" : "still"}`;
+  m.customProgramCacheKey = () => `seabed-v2-${kind.sway ? "sway" : "still"}`;
   return m;
 }
 

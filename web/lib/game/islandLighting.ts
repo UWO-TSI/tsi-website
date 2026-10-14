@@ -23,7 +23,7 @@ const water = {
   bedColor: 0xf0e2c6, shallowColor: 0xa6dccb, midColor: 0x3fb4bf, deepColor: 0x2a7eae, navyColor: 0x1c4583, depthFalloff: 1.15,
   // Foam (v1 water item 3): a solid white edge round every shore, and a band pulsing in toward the beach.
   foamWidth: 0.18, foamStrength: 0.72, foamSoft: 0.1, foamWave: 0.07, foamWaveSpeed: 0.85, foamPulse: 0.75, foamPulseReach: 1.05, foamPulseSpeed: 0.15,
-  blobScale: 1.35, blobDarken: 0.96, blobSpeed: 0.16, ringWidth: 0.12, ringStrength: 0.035,
+  blobScale: 1.35, blobDarken: 0.96, blobSpeed: 0.16, ringWidth: 0.12, ringStrength: 0.018,
   // The real sun on the water (row 238, look spec §7.4): a glare sheet from the ripples too small to
   // draw (roughness = their RMS slope on a calm day, Cox-Munk) and the sparkle sprites (GridOcean), each
   // a facet that flashes while the sun's disc (sunSize = its radius, degrees) sits in its mirror direction.
