@@ -84,3 +84,4 @@
 .kept { display: flex; flex-direction: column; gap: 3px; margin: 0; padding: 0; list-style: none; }
 .bar[data-hint] { width: 100%; border: 0; cursor: text; font: 700 var(--gui-text-sm)/1 var(--gui-font); color: var(--gui-muted); justify-content: space-between; padding-right: 8px; }
 .bar[data-hint] kbd { display: inline-grid; place-items: center; height: 24px; padding: 0 9px; border-radius: 99px; background: var(--gui-bark); color: var(--gui-paper); font: 800 var(--gui-text-xs)/1 var(--gui-font); }
+@media (pointer: coarse) { .bar[data-hint] kbd { display: none; } }

@@ -83,6 +83,7 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .hudColumn > .questSlot { position: static; }
 /* The UI view lifts the prompt and the toasts over the dock, and the chat log beside it. */
 .world[data-ui] { --hud-bar: 72px; --chat-bottom: calc(var(--hud-floor) + 84px); }
+@media (max-width: 700px) { .world[data-ui] { --hud-bar: 132px; --chat-bottom: calc(var(--hud-floor) + 140px); } }
 /* First login: the minimap and the chapter 1 objective arrive after the arrival's walk-along (specs/v1-drop.md §1). */
 .hudColumn[data-new] { animation: objectiveIn 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
 .hudColumn[data-new] .questSlot { animation: objectiveGlow 2.2s ease-out 0.5s both; }
@@ -213,6 +214,8 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .segmented { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: var(--gui-r-pill); background: var(--gui-paper-deep); }
 .segmented button { min-height: 40px; border: 0; border-radius: var(--gui-r-pill); background: transparent; font: inherit; font-size: var(--gui-text-sm); font-weight: 800; color: var(--gui-ink-2); cursor: pointer; white-space: nowrap; }
 .segmented button[aria-pressed="true"], .segmented button[aria-selected="true"] { background: var(--gui-butter); color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-sm); }
+/* A label and its pills on one row (Quality, Screen shake): the pills take the room left, up to a comfortable width. */
+.preset > .segmented { flex: 1 1 auto; max-width: 300px; }
 .keyList { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .keyList li { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 46px; font-weight: 700; }
 .keyList button { min-width: 112px; min-height: 40px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; color: var(--gui-ink); cursor: pointer; }

@@ -1,7 +1,8 @@
 // HUD and Esc evidence (specs/playtest-round1.md decision 3, "HUD and Esc, approved"): the minimal HUD under mouse-look,
 // Esc 1 (the UI view over the live game), Esc 2 (the system menu), the one Settings, each sheet opened from the UI view's
 // dock (and back to it), a player's card opened from the aim dot under pointer lock, the phone width, and the title's
-// Settings. Headless Chromium on the GPU, muted; the dev server with the Supabase env blanked; the browser lock held.
+// Settings. Headless Chromium on the GPU, muted (Pointer Lock stood in for: see POINTER_LOCK); the dev server with the
+// Supabase env blanked; the browser lock held.
 //   node specs/evidence/hud-esc/shoot.mjs <out_dir> <scene> [<scene> ...]
 // Scenes: hud, sheets, card, phone, title.
 import { createRequire } from "node:module";
@@ -16,10 +17,26 @@ const rad = d => (Number(d) * Math.PI) / 180;
 
 const browser = await chromium.launch({ headless: true, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"] });
 
+/**
+ * Headless Chromium has no Pointer Lock (WrongDocumentError: no focused window), and the lane rules keep every run
+ * headless. So the page gets a stand-in with Chrome's behaviour: requestPointerLock locks and fires pointerlockchange,
+ * exitPointerLock unlocks, and Escape while locked ends the lock without reaching the page (Chrome keeps that Esc).
+ * The game's own code runs unchanged on top of it.
+ */
+const POINTER_LOCK = () => {
+  let locked = null;
+  const change = () => queueMicrotask(() => document.dispatchEvent(new Event("pointerlockchange")));
+  Object.defineProperty(Document.prototype, "pointerLockElement", { configurable: true, get() { return locked; } });
+  Element.prototype.requestPointerLock = function () { locked = this; change(); return Promise.resolve(); };
+  Document.prototype.exitPointerLock = function () { if (!locked) return; locked = null; change(); };
+  window.addEventListener("keydown", e => { if (e.key === "Escape" && locked) { e.stopImmediatePropagation(); e.preventDefault(); document.exitPointerLock(); } }, true);
+};
+
 /** A fresh device on the island (a saved look skips the creator; greeted; no gift), camera at yaw/pitch (degrees). */
 async function client(query, { cam = [0, 34], size = { width: 1280, height: 800 } } = {}) {
   const ctx = await browser.newContext({ viewport: size, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
+  await page.addInitScript(POINTER_LOCK);
   page.on("pageerror", e => console.log("pageerror", e.message.slice(0, 300)));
   page.on("console", m => { if (m.type() === "error" && !/Failed to load resource|supabase|401|503|404|500|127\.0\.0\.1:9|ERR_CONNECTION/i.test(m.text())) console.log("console", m.text().slice(0, 300)); });
   await page.goto(`${HOST}/lab/island`, { waitUntil: "domcontentloaded" });

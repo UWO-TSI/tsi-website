@@ -17,18 +17,18 @@
 .badge { position: absolute; top: -8px; right: -12px; }
 @keyframes dockIn { from { opacity: 0; transform: translate(-50%, 12px); } }
 @media (prefers-reduced-motion: reduce) { .dock { animation: none; } .entry { transition: none; } }
-/* Narrow: the labels go, the icons stay, and the strip scrolls sideways if it must. */
+/* Narrow (a phone): smaller entries, labels may take two lines, no keycaps, and the groups wrap onto a second row. */
 @media (max-width: 700px) {
-  .dock { overflow-x: auto; scrollbar-width: none; }
-  .entry { min-width: 52px; min-height: 52px; padding: 6px; }
-  .entryLabel { font-size: 10px; }
+  .dock { flex-wrap: wrap; justify-content: center; row-gap: 4px; width: calc(100% - 2 * var(--hud-edge, 16px)); }
+  .entry { min-width: 50px; max-width: 74px; min-height: 52px; padding: 5px 4px; }
+  .entryLabel { font-size: 10px; white-space: normal; text-align: center; }
   .entry kbd { display: none; }
 }
 :global(html[data-contrast="high"]) .dock { background: #ffffff; box-shadow: inset 0 0 0 2px #000000; }
 :global(html[data-contrast="high"]) .entry { color: #000000; }
 
 /* Esc 2: the system menu's three choices. */
-.system { display: grid; gap: 10px; }
-.system > * { justify-content: center; }
+.system { display: grid; justify-items: center; gap: 10px; }
+.system > * { min-width: 220px; justify-content: center; }
 .hint { margin: 14px 0 0; text-align: center; font-size: var(--gui-text-xs); font-weight: 700; color: var(--gui-muted); }
 .hint kbd { display: inline-grid; place-items: center; min-width: 22px; height: 20px; padding: 0 6px; margin-right: 6px; border-radius: 99px; background: var(--gui-bark); color: var(--gui-paper); font: 800 10px/1 var(--gui-font); }
