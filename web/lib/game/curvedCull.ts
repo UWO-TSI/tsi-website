@@ -1,14 +1,16 @@
 /**
- * Frustum culling for the curved world (lib/game/curvedWorld.ts). The vertex shader sinks everything by its view
- * depth squared, so three's own test (on the unbent bounds) can drop a far block the bend brings into view at the top
- * of the screen; that is why the world's instanced meshes skip culling altogether. This tests a bounding sphere where
- * the bend puts it, grown by how much the bend can differ across the sphere, so a block is drawn whenever any of it
- * might show: never culled early, and the batched world (GridTerrain's and GridCliffs' blocks) can still skip what is
- * behind the camera, off to the sides or past the far plane.
+ * Frustum culling for the curved world (lib/game/curvedWorld.ts). The vertex shader lowers everything by its view
+ * depth squared (z²·bend + x²·side, in view space), so three's own test on the unbent bounds can drop a far block the
+ * bend brings down into view at the top of the screen; that is why the world's instanced meshes skip culling
+ * altogether. The bend only ever moves a point down, so it can only matter for the top of the view: the sides, the
+ * near and far planes have no up in them, and the bottom plane only sees a point pushed further out. Each plane is
+ * tested on the box's corners as three would, and the top plane allows for the most the bend can lower any of it:
+ * never culled early, and the batched world (GridTerrain's and GridCliffs' blocks) still skips what is behind the
+ * camera, off to the sides, below the view or past the far plane.
  *
  * The frame loops that call it run before the follow camera moves for the frame (children subscribe first), so the
- * test uses last frame's camera: every sphere is also grown by a margin that covers one frame of the camera's travel
- * (MARGIN: 1.5 u, plus about 3 degrees of turn at its distance).
+ * test uses last frame's camera: every test also keeps a margin that covers one frame of the camera's travel (MARGIN:
+ * 1.5 u, plus about 3 degrees of turn at the block's distance).
  */
 import * as THREE from "three";
 import { ACTIVE_WORLD_BEND, ACTIVE_WORLD_BEND_SIDE } from "./curvedWorld";
@@ -18,8 +20,8 @@ const MARGIN = { base: 1.5, perUnit: 0.05 };
 export class CurvedCull {
   private readonly frustum = new THREE.Frustum();
   private readonly view = new THREE.Matrix4();
-  private readonly c = new THREE.Vector3();
-  private readonly s = new THREE.Sphere();
+  private readonly v = new THREE.Vector3();
+  private readonly corners = new Float32Array(24);
 
   constructor(private readonly bend = ACTIVE_WORLD_BEND, private readonly side = ACTIVE_WORLD_BEND_SIDE) {}
 
@@ -27,20 +29,44 @@ export class CurvedCull {
   update(camera: THREE.Camera): this {
     camera.updateMatrixWorld();
     this.view.copy(camera.matrixWorldInverse);
-    // The frustum in view space: the bend is applied there.
+    // The frustum in view space, where the bend is applied; three's planes face inward.
     this.frustum.setFromProjectionMatrix(camera.projectionMatrix);
     return this;
   }
 
-  /** Whether any of the world-space `sphere` can be in view once bent. */
+  /** Whether any of the world-space `box` can be in view once bent. */
+  visibleBox(box: THREE.Box3): boolean {
+    const k = this.corners, v = this.v;
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (let i = 0; i < 8; i++) {
+      v.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z).applyMatrix4(this.view);
+      k[i * 3] = v.x; k[i * 3 + 1] = v.y; k[i * 3 + 2] = v.z;
+      x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); z0 = Math.min(z0, v.z); z1 = Math.max(z1, v.z);
+    }
+    // The most the bend lowers any point of the box, and the margin at its distance.
+    const drop = this.bend * Math.max(z0 * z0, z1 * z1) + this.side * Math.max(x0 * x0, x1 * x1);
+    const margin = MARGIN.base + MARGIN.perUnit * Math.hypot((x0 + x1) / 2, (z0 + z1) / 2);
+    for (const p of this.frustum.planes) {
+      let most = -Infinity;
+      for (let i = 0; i < 8; i++) most = Math.max(most, p.normal.x * k[i * 3] + p.normal.y * k[i * 3 + 1] + p.normal.z * k[i * 3 + 2] + p.constant);
+      // Lowered by up to `drop`: further in past a plane facing down (the top), never in past one facing up.
+      if (p.normal.y < 0) most -= p.normal.y * drop;
+      if (most < -margin) return false;
+    }
+    return true;
+  }
+
+  /** The same for a world-space sphere. */
   visible(sphere: THREE.Sphere): boolean {
-    const c = this.c.copy(sphere.center).applyMatrix4(this.view), r = sphere.radius;
-    // The drop is z²·bend + x²·side; across the sphere it differs from the centre's by at most (2|z|r + r²) per term.
-    const spread = this.bend * (2 * Math.abs(c.z) * r + r * r) + this.side * (2 * Math.abs(c.x) * r + r * r);
-    c.y -= c.z * c.z * this.bend + c.x * c.x * this.side;
-    this.s.center.copy(c);
-    this.s.radius = r + spread + MARGIN.base + MARGIN.perUnit * Math.hypot(c.x, c.z);
-    return this.frustum.intersectsSphere(this.s);
+    const c = this.v.copy(sphere.center).applyMatrix4(this.view), r = sphere.radius;
+    const drop = this.bend * (Math.abs(c.z) + r) ** 2 + this.side * (Math.abs(c.x) + r) ** 2;
+    const margin = MARGIN.base + MARGIN.perUnit * Math.hypot(c.x, c.z);
+    for (const p of this.frustum.planes) {
+      let most = p.distanceToPoint(c) + r;
+      if (p.normal.y < 0) most -= p.normal.y * drop;
+      if (most < -margin) return false;
+    }
+    return true;
   }
 }
 
@@ -49,8 +75,8 @@ export function cullMeshes(cull: CurvedCull, meshes: readonly (THREE.Mesh | null
   for (const m of meshes) {
     if (!m) continue;
     const g = m.geometry;
-    if (!g.boundingSphere) g.computeBoundingSphere();
-    const on = cull.visible(g.boundingSphere!);
+    if (!g.boundingBox) g.computeBoundingBox();
+    const on = cull.visibleBox(g.boundingBox!);
     if (m.visible !== on) m.visible = on;
   }
 }

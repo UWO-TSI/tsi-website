@@ -96,6 +96,28 @@ describe("culling in the curved world", () => {
     expect(cull.visible(sphere(0, 0, -200, 4))).toBe(false);
   });
 
+  it("tests a box as three would off the top of the view, and never culls what the bend can bring into it", () => {
+    const box = (x: number, y: number, z: number, h: number) => new THREE.Box3(new THREE.Vector3(x - h, y - 0.5, z - h), new THREE.Vector3(x + h, y + 0.5, z + h));
+    expect(cull.visibleBox(box(0, 0, 0, 8))).toBe(true);
+    expect(cull.visibleBox(box(0, 0, 60, 8))).toBe(false); // behind the camera
+    expect(cull.visibleBox(box(200, 0, 0, 8))).toBe(false); // far off to the side
+    expect(cull.visibleBox(box(0, -60, 0, 8))).toBe(false); // below the view
+    expect(flat.visibleBox(box(0, 10, -60, 1))).toBe(false);
+    expect(cull.visibleBox(box(0, 10, -60, 1))).toBe(true);
+    // Every point of the box, bent, against the frustum: whenever any is in view, the box is kept.
+    const f = new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+    const p = new THREE.Vector3();
+    for (let y = -10; y <= 40; y += 5) for (let z = -110; z <= 10; z += 10) {
+      let seen = false;
+      for (let i = 0; i <= 4 && !seen; i++) for (let j = 0; j <= 4 && !seen; j++) {
+        p.set(-4 + 2 * i, y, z - 4 + 2 * j).applyMatrix4(camera.matrixWorldInverse);
+        p.y -= p.z * p.z * 0.0032 + p.x * p.x * 0.0011;
+        seen = f.containsPoint(p.applyMatrix4(camera.matrixWorld));
+      }
+      if (seen) expect(cull.visibleBox(new THREE.Box3(new THREE.Vector3(-4, y, z - 4), new THREE.Vector3(4, y, z + 4))), `${y},${z}`).toBe(true);
+    }
+  });
+
   it("keeps a far block above the view that the bend brings down into it", () => {
     // Above the top of the view 78 u out: outside the flat frustum (margin and all), sunk into view by the bend.
     const s = sphere(0, 10, -60, 1);
