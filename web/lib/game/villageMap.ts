@@ -25,6 +25,7 @@ import {
   type IslandMap, type IslandMapDoc, type MapAnnotation, type PlacedProp,
 } from "./grid";
 import type { WorldTerrain } from "./world/terrain";
+import { setShoal } from "./seabed";
 
 /** Object vocabulary. Append only: kinds are persisted in the map file. */
 export const OBJECT_KINDS = [
@@ -153,8 +154,9 @@ export function buildVillage(doc: VillageDoc): Village {
   return villageOf(map, objects);
 }
 
-/** A village from a map already in memory (the painter's draft). */
+/** A village from a map already in memory (the painter's draft). Its sea gets the wide shallows, its wharves' berths kept deep. */
 export function villageOf(map: IslandMap, objects: readonly MapObject[]): Village {
+  setShoal(map, objects.filter(o => o.kind === "landmark" && o.id === "wharf").map(o => ({ x: o.x, z: o.z, yaw: o.yaw ?? 0 })));
   return { map, field: heightField(map), objects, bounds: landBounds(map) };
 }
 

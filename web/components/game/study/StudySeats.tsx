@@ -86,7 +86,7 @@ export function MateFigure({ mate, seat, floor = 0, remaining = null, asOf = 0, 
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: seat.facing, lift, pose: clip, play: null });
   useEffect(() => { Object.assign(motion.current, { yaw: seat.facing, lift, pose: clip }); }, [seat.facing, lift, clip]);
   return <group position={[seat.x, floor, seat.z]}>
-    {body && <Character look={look} motion={motion} />}
+    {body && <Character look={look} motion={motion} keepFace />}
     {overhead && <Html calculatePosition={calculateCurvedHtmlPosition} position={[0, seat.y - floor + 1.25, 0]} center zIndexRange={[35, 0]} style={{ pointerEvents: "none" }}>
       <MateOverhead name={mate.name.split(" ")[0]} phase={mate.phase} remaining={remaining} asOf={asOf} />
     </Html>}

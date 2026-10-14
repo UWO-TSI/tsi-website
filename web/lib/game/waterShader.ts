@@ -120,11 +120,26 @@ export interface WaterParams {
  *
  * The seabed mesh is built on this (lib/game/seabed.ts seabedDip) and the same values are baked into the water's
  * field (the depth channel), which is what the colour reads: one seabed, no second copy in GLSL to drift.
+ *
+ * `open` (0..1) is how much of the open sea's wide shallows (SHOAL) the water takes instead: 1 on the village's open
+ * sea, 0 in a river or on any other island, between at a river's mouth.
  */
-export function bedDepth(d: number, p: Pick<WaterParams, "bedDepth" | "bedSlope" | "shelfDepth" | "shelfFrom" | "shelfTo">): number {
+export function bedDepth(d: number, p: Pick<WaterParams, "bedDepth" | "bedSlope" | "shelfDepth" | "shelfFrom" | "shelfTo">, open = 0): number {
   const dd = Math.max(d, 0);
-  return p.bedDepth * (1 - Math.exp(-dd / Math.max(p.bedSlope, 0.01))) + p.shelfDepth * smooth01(p.shelfFrom, p.shelfTo, dd);
+  const banks = p.bedDepth * (1 - Math.exp(-dd / Math.max(p.bedSlope, 0.01))) + p.shelfDepth * smooth01(p.shelfFrom, p.shelfTo, dd);
+  if (open <= 0) return banks;
+  const shoal = SHOAL.depth * (1 - Math.exp(-dd / SHOAL.slope)) + (p.bedDepth + p.shelfDepth - SHOAL.depth) * smooth01(SHOAL.from, SHOAL.to, dd);
+  return banks + (shoal - banks) * Math.min(open, 1);
 }
+/**
+ * The open sea's wide shallows (David, playtest round 1, 2026-10-14: "make the shallow water bigger area around main
+ * island"): off a beach the bed eases down over `slope` cells to `depth`, sand you can see through the water out to
+ * `from` cells, then drops off to the teal and the navy and the same open-sea floor by `to`. The old profile (a river's
+ * banks) was teal under a cell out. The village's sea (lib/game/seabed.ts setShoal) and the smooth world's
+ * (lib/game/world/convert.ts shelf) take it; the village map's edge is 8.5 cells off its beaches and the sea past it
+ * reads the edge, so the navy must be there by then.
+ */
+export const SHOAL = { depth: 0.42, slope: 1.6, from: 4, to: 8.5 } as const;
 function smooth01(a: number, b: number, x: number): number {
   const t = Math.min(1, Math.max(0, (x - a) / Math.max(b - a, 1e-6)));
   return t * t * (3 - 2 * t);
@@ -301,6 +316,36 @@ vec2 chopSlope(vec2 xz, float t) {
   vec2 s = vec2(0.0), d;
 ${CHOP.map(([x, z, k, w]) => `  d = vec2(${x}, ${z}); s += d * cos(${k.toFixed(5)} * dot(xz, d) - waterPhase(${w.toFixed(5)} * t));`).join("\n")}
   return s * ${CHOP_SLOPE.toFixed(2)};
+}
+`;
+
+/**
+ * ── THE BENT SEA'S FOLD (David, playtest round 1, 2026-10-14) ──
+ * "the sparkles in the distance sometimes gets folded in and you see 2x the sparkles". The world's bend
+ * (curvedWorld.ts) sinks every point by its view-space distance squared, so far enough out the sea curves over the
+ * horizon and faces away from the camera, and past that it projects back DOWN the screen, over the sea in front of it.
+ * The water mesh there is a back face and is culled, but a sparkle is a point with no side, so the flat-sea optics
+ * lit it again: a second row of sparkles folded under the first. So a sparkle fades as the bent sea under it turns
+ * edge-on to the eye and is gone past the fold.
+ *
+ * `bentFacing`: at view-space point `v` (already bent, as project_vertex leaves it) on water whose flat normal is `up`
+ * (world up in view space), the cosine between the bent surface's normal and the direction to the eye: the bend is
+ * y -= bend·z² + side·x², so its normal is up tipped by the bend's slope (2·bend·z, 2·side·x). 0 on the fold, below 0
+ * past it. MIRRORED in GLSL (`WATER_FOLD`).
+ */
+export const FOLD_FADE = 0.05;
+export function bentFacing(v: Vec3, up: Vec3, bend: number, side: number): number {
+  const n = unit([up[0] + 2 * side * v[0] * up[1], up[1], up[2] + 2 * bend * v[2] * up[1]]);
+  return dot(n, unit([-v[0], -v[1], -v[2]]));
+}
+/** A sparkle's share left at that facing: none past the fold, all of it once the sea faces the eye by FOLD_FADE. */
+export const foldFade = (facing: number) => smooth01(0, FOLD_FADE, facing);
+/** `foldFade(bentFacing(mv, world up, bend, side))` for a vertex shader (viewMatrix is three's), with the bend in force. */
+export const WATER_FOLD = (bend: number, side: number) => /* glsl */ `
+float foldFade(vec3 mv) {
+  vec3 up = (viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz;
+  vec3 n = vec3(up.x + ${(2 * side).toFixed(6)} * mv.x * up.y, up.y, up.z + ${(2 * bend).toFixed(6)} * mv.z * up.y);
+  return smoothstep(0.0, ${FOLD_FADE.toFixed(3)}, dot(normalize(n), normalize(-mv)));
 }
 `;
 

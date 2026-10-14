@@ -3,7 +3,8 @@
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { type IslandMap, WATER_DROP, LEVEL_STEP, cellToWorldX, cellToWorldZ, isGroundAtWorld, isRiver, levelAt, surfaceAt } from "@/lib/game/grid";
-import { WATER_CHOP, WATER_CLOUDS, WATER_OPTICS, WATER_RIPPLE, WATER_SWELL, facetTilt, swellUniformsOf } from "@/lib/game/waterShader";
+import { WATER_CHOP, WATER_CLOUDS, WATER_FOLD, WATER_OPTICS, WATER_RIPPLE, WATER_SWELL, facetTilt, swellUniformsOf } from "@/lib/game/waterShader";
+import { ACTIVE_WORLD_BEND, ACTIVE_WORLD_BEND_SIDE } from "@/lib/game/curvedWorld";
 import { terrainMaterial, waterSurfaceUniforms } from "./terrainMaterials";
 import { deepestSeabed } from "@/lib/game/seabed";
 
@@ -129,7 +130,9 @@ const GLINT_URL = "/assets/acnh/textures/sea-glint.png";
  * alignment and because the viewer moves. Sun intensity and colour come from
  * the phase and weather (zero sunGlint under rain, snow and fog), dimmed under
  * a passing cloud shadow. HDR white-gold, so bloom catches the brightest cores
- * on High.
+ * on High. Under the world's bend each fades as the bent sea under it turns
+ * edge-on, and none draws past the fold (`WATER_FOLD`: playtest round 1, the
+ * far sparkles folded back under the horizon and showed twice).
  */
 function WaterGlints({ map, lite, skip, radius }: { map: IslandMap; lite: boolean; skip?: (x: number, z: number) => boolean; radius?: number }) {
   const [geometry, material] = useMemo(() => {
@@ -149,7 +152,7 @@ function WaterGlints({ map, lite, skip, radius }: { map: IslandMap; lite: boolea
         uSunDir: u.uSunDir, uSunColor: u.uSunColor, uSunGlint: u.uSunGlint, uSunSize: u.uSunSize, uRoughness: u.uRoughness,
         uCloudMap: u.uCloudMap, uCloudUv: u.uCloudUv, uCloudShade: u.uCloudShade,
       });
-      shader.vertexShader = "attribute vec2 aTilt;\nuniform vec3 uSunDir;\nuniform float uSunGlint;\nuniform float uSunSize;\nuniform float uRoughness;\nvarying float vGlint;\n" + WATER_SWELL + WATER_RIPPLE + WATER_CHOP + WATER_CLOUDS + WATER_OPTICS + shader.vertexShader
+      shader.vertexShader = "attribute vec2 aTilt;\nuniform vec3 uSunDir;\nuniform float uSunGlint;\nuniform float uSunSize;\nuniform float uRoughness;\nvarying float vGlint;\n" + WATER_SWELL + WATER_RIPPLE + WATER_CHOP + WATER_CLOUDS + WATER_OPTICS + WATER_FOLD(ACTIVE_WORLD_BEND, ACTIVE_WORLD_BEND_SIDE) + shader.vertexShader
         .replace("#include <begin_vertex>", `#include <begin_vertex>
           vec3 glintAt = (modelMatrix * vec4(transformed, 1.0)).xyz;
           vec2 swellGrad;
@@ -160,6 +163,8 @@ function WaterGlints({ map, lite, skip, radius }: { map: IslandMap; lite: boolea
           float lit = facetGlint(uSunDir, cameraPosition, glintAt, vec3(slope.x, 1.0, slope.y), uSunSize);
           vGlint = lit * uSunGlint * sunThroughClouds(glintAt.xz);`)
         .replace("#include <logdepthbuf_vertex>", `
+          // mvPosition is bent here (project_vertex): nothing past the fold, a fade as the sea turns edge-on before it.
+          vGlint *= foldFade(mvPosition.xyz);
           gl_PointSize *= 0.5 + 0.7 * lit;
           gl_PointSize = vGlint < 0.01 ? 0.0 : max(gl_PointSize, 3.0);
           // Nudged toward the camera so the water just in front cannot clip the core; a pier deck above still hides it.

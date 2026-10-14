@@ -36,6 +36,9 @@ import {
   LEVEL_STEP, MAX_LEVEL, Surface, isWater, overlayAt, sampleShore, sdfFromMask, shoreSdf, smoothstep, valueNoise, type IslandMap, type ShoreSdf,
 } from "../grid";
 import { landmarkHalf, turn, type LandmarkId } from "../defaultIsland";
+import { TUNING_DEFAULTS } from "../tuning";
+import { bedDepth } from "../waterShader";
+import { BERTH, berthWeight } from "../wharf";
 import { parseVillage, type VillageDoc } from "../villageMap";
 import type { World } from "./format";
 import { Paint, createTerrain, sampleX, sampleZ, type WorldTerrain } from "./terrain";
@@ -67,11 +70,11 @@ export const CONVERT = {
    */
   quay: { bank: 0, depth: 1.4, run: 0.6, from: 2, to: -5, reach: 5.5, ease: 4 },
   /**
-   * The berth (the dock's frame, lib/game/wharf.ts): the water the jetty's tip, the finger pier, the moored boat and the
-   * rowboats need, dug to the quay's depth wherever the old map had land there (a grass ridge stood under two of the
-   * rowboats), its edge a quay face `edge` wide.
+   * The berth (lib/game/wharf.ts BERTH, the dock's frame): the water the jetty's tip, the finger pier, the moored boat
+   * and the rowboats need, dug to the quay's depth wherever the old map had land there (a grass ridge stood under two
+   * of the rowboats), its edge a quay face `edge` wide.
    */
-  berth: { x0: -5.3, x1: 3.8, z0: -5.2, z1: -0.8, edge: 0.6 },
+  berth: BERTH,
   /**
    * The naturalize pass (coordinator, 2026-10-14: the mountain read as long straight flat-topped walls): on the cliff
    * bands only (a one-level slope is left as it is), the outline wanders `wander` units either way along its length
@@ -82,10 +85,12 @@ export const CONVERT = {
   natural: { wander: 2.2, wanderScale: 11, vary: 0.55, varyScale: 6, shoulder: 0.4, rock: 0.16, rockScale: 1.6 },
 } as const;
 
-/** The seabed's depth under the still sea `d` units out from the shore: a gentle shelf, then the drop to the open sea's floor (4.2, the water's own deepest). */
+/**
+ * The seabed's depth under the still sea `d` units out from the shore: the open sea's wide shallows (lib/game/waterShader.ts
+ * SHOAL, as the village's sea), then the drop to the open sea's floor (4.2, the water's own deepest).
+ */
 export function shelf(d: number): number {
-  const x = Math.max(0, d);
-  return 1.6 * (1 - Math.exp(-x / 6)) + 2.6 * smoothstep(6, 16, x);
+  return bedDepth(d, TUNING_DEFAULTS.water, 1);
 }
 
 /** A soft minimum of two positive numbers that is exactly 0 when either is 0 (the shore meets the sea level exactly). */
@@ -315,12 +320,7 @@ export function wharfQuay(t: WorldTerrain, objects: World["objects"], shore: Sho
   return n;
 }
 
-/** How much of a wharf's berth (CONVERT.berth, its dock frame) covers a world point: 1 inside, falling over its edge. */
-export function berthWeight(dock: { x: number; z: number; yaw?: number }, x: number, z: number): number {
-  const b = CONVERT.berth, [lx, lz] = turn(x - dock.x, z - dock.z, -(dock.yaw ?? 0));
-  const out = Math.hypot(Math.max(0, b.x0 - lx, lx - b.x1), Math.max(0, b.z0 - lz, lz - b.z1));
-  return 1 - smoothstep(0, b.edge, out);
-}
+export { berthWeight };
 
 /** Level the ground under every building: its footprint and a rim, at its centre's height, easing back over padEase. */
 export function padBuildings(t: WorldTerrain, objects: World["objects"]): number {

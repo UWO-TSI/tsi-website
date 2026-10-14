@@ -10,6 +10,8 @@ import { CLIFF_LEVELS, Surface, isWater, needsCliff, type IslandMap } from "../g
 import { landmarkHalf, turn, type LandmarkId } from "../defaultIsland";
 import { parseVillage, type VillageDoc } from "../villageMap";
 import { berthWeight, convertCells, shelf } from "./convert";
+import { SHOAL, bedDepth } from "../waterShader";
+import { TUNING_DEFAULTS } from "../tuning";
 import type { World } from "./format";
 import { MAX_CLIMB, Paint, paintAt, sampleX, sampleZ, terrainHeight, terrainSteepness, type WorldTerrain } from "./terrain";
 
@@ -113,6 +115,10 @@ describe("converting the v2 world", () => {
     expect(shelf(1)).toBeLessThan(0.3);
     expect(shelf(2)).toBeLessThan(0.5);
     expect(shelf(40)).toBeCloseTo(4.2, 1);
+    // Playtest round 1 (David, 2026-10-14): the shallows reach further out before the drop-off, as the village's sea
+    // does: one profile for both (lib/game/waterShader.ts SHOAL).
+    for (let d = 0; d < 30; d += 0.25) expect(shelf(d)).toBeCloseTo(bedDepth(d, TUNING_DEFAULTS.water, 1), 9);
+    expect(shelf(SHOAL.from)).toBeLessThan(0.45);
     let deepest = 0;
     for (const h of t.heights) deepest = Math.max(deepest, t.seaLevel - h);
     expect(deepest).toBeCloseTo(4.2, 1);
