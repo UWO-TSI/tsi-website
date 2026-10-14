@@ -101,6 +101,8 @@ export const EFFECT_BUDGET: Record<string, EffectBudget> = {
   shadows: { drawsPerPlayer: 2, cpuMs: 0.25, particles: 0, lights: 0 },
   emotes: { drawsPerPlayer: 0, cpuMs: 0.15, particles: 0, lights: 0 },
   interp: { drawsPerPlayer: 0, cpuMs: 0.1, particles: 0, lights: 0 },
+  /** Group dancing (components/game/dance/DanceSync.tsx): the beat sync and a note every other beat from the shared movement pool. */
+  dance: { drawsPerPlayer: 0, cpuMs: 0.15, particles: 2, lights: 0 },
 };
 
 /**
@@ -114,6 +116,7 @@ export const PARTICLE_POOLS: Record<string, number> = {
   "components/game/combat/CombatFx.tsx": 1040, // glow 768, ink 256, decals 16 (fx/combat.ts FX_POOLS)
   "components/game/combat/MobFx.tsx": 360,
   "components/game/oracle/CandleFire.tsx": 48,
+  "components/game/campfire/Campfire.tsx": 64, // the beach fire's tongues and embers (about 40 alive with eight dancers)
 };
 /** Particles one movement event may throw (one avatar, juice amount 1): the heaviest today is a heavy landing on grass, 19. */
 export const JUICE_EVENT_PARTICLES = 24;
@@ -130,7 +133,7 @@ export const CHARACTER_EFFECT_FILES = [
   "components/game/oracle/FamilyAura.tsx", "components/game/oracle/SubclassAura.tsx", "components/game/movement/moveFx.ts",
   "components/game/character/Character.tsx", "components/game/character/FishingRig.tsx", "components/game/net/RemoteAvatars.tsx",
   "components/game/net/RemoteAvatar.tsx", "components/game/net/RemoteAuras.tsx", "components/game/net/Nameplates.tsx", "components/game/net/fx.ts",
-  "components/game/PlayerAvatar.tsx",
+  "components/game/PlayerAvatar.tsx", "components/game/dance/DanceSync.tsx",
 ] as const;
 
 /**

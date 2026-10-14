@@ -14,7 +14,16 @@ export const EXPRESSIONS: readonly Expression[] = ["neutral", "happy", "surprise
 /** Ruling 23: clip → expression; everything else is neutral (with blinks). */
 export const CLIP_EXPRESSION: Record<string, Expression> = {
   Laugh: "happy", Cheer: "happy", Stretch: "happy", Dance: "happy", Sad: "sad", Defeat: "sad", Hit: "surprised", Sleep: "sleepy",
+  // The v1 emote wheel (specs/v1-drop.md §3): the dances, the claps and the campfire are happy; a bow closes the eyes.
+  Clap: "happy", DanceBounce: "happy", DanceSpin: "happy", DanceShuffle: "happy", DanceSway: "happy", DanceWiggle: "happy", DanceFlail: "happy",
+  DanceSprinkler: "happy", DanceStomp: "happy", SitWarm: "happy", Bow: "sleepy",
   AttackMelee: "angry", AttackBow: "angry", AttackCast: "angry",
+};
+
+/** Clips that borrow another clip's emote mouth (the face art has Laugh's, Cheer's and Dance's). */
+const EMOTE_MOUTH_AS: Record<string, string> = {
+  Clap: "Cheer", DanceBounce: "Dance", DanceSpin: "Dance", DanceShuffle: "Dance", DanceSway: "Dance", DanceWiggle: "Dance", DanceFlail: "Laugh",
+  DanceSprinkler: "Dance", DanceStomp: "Cheer",
 };
 
 /** What one frame of the face shows. brow = [dy (canvas units, + down), tilt (degrees, + raises the inner end)]. */
@@ -83,7 +92,7 @@ export class FaceAnimator {
     }
     if (override?.eyeFrame && eyeCells(pose.eyes)[override.eyeFrame]) pose.eyeFrame = override.eyeFrame;
 
-    const emote = clip ? FACE.emoteMouth[clip] : undefined;
+    const emote = clip ? FACE.emoteMouth[clip] ?? FACE.emoteMouth[EMOTE_MOUTH_AS[clip]] : undefined;
     const cycle = (override?.talking ?? talking) ? "talk" : emote ? `emote:${clip}` : null;
     if (cycle !== this.mouthCycle) { this.mouthCycle = cycle; this.mouthNow = null; this.mouthUntil = this.t; this.mouthIndex = 0; }
     if (cycle === "talk") {

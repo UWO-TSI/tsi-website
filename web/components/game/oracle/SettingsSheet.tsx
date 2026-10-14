@@ -12,7 +12,7 @@
  * Outside macOS, Ctrl crouches only in fullscreen with the keyboard locked.
  *
  * The controls list lives only here (specs/v1-drop.md §1.5: no movement UI on the island): every remappable key, then
- * the fixed ones. The dash and the glider say they wait for a Keeper until one teaches them (lib/game/moveUnlocks.ts).
+ * the fixed ones (the emote wheel is with the movement keys). The dash and the glider say they wait for a Keeper until one teaches them (lib/game/moveUnlocks.ts).
  */
 import { useState, useSyncExternalStore } from "react";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
@@ -44,7 +44,6 @@ const FIXED_CONTROLS: { label: string; keys: string[] }[] = [
   { label: "Reset the view", keys: [RESET_VIEW_KEY.toUpperCase()] },
   { label: "Zoom", keys: ["Z", "Wheel"] },
   { label: "Journal", keys: ["J"] },
-  { label: "Emotes", keys: ["G"] },
   { label: "Decorate (at home)", keys: ["F"] },
 ];
 const SOUND_SLIDERS: { key: keyof AudioVolumes; label: string }[] = [
@@ -82,7 +81,7 @@ export default function SettingsSheet({ open, onClose, detectedTier = null, plac
   const alwaysFullHud = useAlwaysFullHud();
   const comfort = useComfort(), showClass = useShowClass();
   const fishingLine = useFishingLine(), holdUpCatch = useHoldUpCatch();
-  const [wheelListen, setWheelListen] = useState<"wheel" | "hud" | null>(null);
+  const [wheelListen, setWheelListen] = useState<"wheel" | "hud" | "emote" | null>(null);
   useNextKey(wheelListen !== null, key => {
     const r = remapWheel(wheelKeys, wheelListen!, key);
     setMoveNote(r.ok ? null : r.error);
@@ -192,9 +191,10 @@ export default function SettingsSheet({ open, onClose, detectedTier = null, plac
         </button>
       </li>)}
         <li><span>Glide{!unlocks.glider && <small className={styles.hint}> · a Keeper teaches it</small>}</span><span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air</span></li>
-        {/* The tool wheel (specs/game-ui.md): hold to open, tap to swap back; the full HUD while held (row 283). */}
-        {(["wheel", "hud"] as const).map(a => <li key={a}>
-          <span>{a === "wheel" ? "Tool wheel (hold)" : "Full HUD (hold)"}</span>
+        {/* The tool wheel (specs/game-ui.md): hold to open, tap to swap back; the full HUD while held (row 283); the
+            emote wheel (specs/v1-drop.md §3): hold to open, tap to play the last emote again. */}
+        {(["wheel", "hud", "emote"] as const).map(a => <li key={a}>
+          <span>{a === "wheel" ? "Tool wheel (hold)" : a === "hud" ? "Full HUD (hold)" : "Emotes and dances (hold, tap repeats)"}</span>
           <button aria-pressed={wheelListen === a} onClick={() => { setWheelListen(a); setMoveNote("Press a key (Esc to cancel)."); }}>
             {wheelListen === a ? "Press a key…" : <kbd>{keyName(wheelKeys[a])}</kbd>}
           </button>

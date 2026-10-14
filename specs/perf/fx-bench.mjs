@@ -21,7 +21,7 @@ const { chromium } = require("playwright");
 const [OUT = "/tmp/fx-bench.jsonl", ONLY = ""] = process.argv.slice(2);
 const PORT = process.env.PORT ?? 3158, N = Number(process.env.N ?? 12), REPS = Number(process.env.REPS ?? 3), SECONDS = Number(process.env.SECONDS ?? 4);
 const SETTLE = Number(process.env.SETTLE ?? 1.5), TIER_NAME = process.env.TIER ?? "high", UNCAPPED = process.env.UNCAPPED !== "0", SHOTS = process.env.SHOTS ?? "";
-const KEYS = ["auraFamily", "auraSubclass", "dust", "juice", "ghost", "leaf", "held", "weapon", "rod", "fishing", "plates", "shadows", "emotes", "interp"];
+const KEYS = ["auraFamily", "auraSubclass", "dust", "juice", "ghost", "leaf", "held", "weapon", "rod", "fishing", "plates", "shadows", "emotes", "interp", "dance"];
 /** Effects that can't be forced (they follow what the players do, or are always there): measured as merely switched on. */
 const NATURAL_ONLY = new Set(["dust", "plates", "shadows", "interp"]);
 const EFFECTS = ONLY ? ONLY.split(",") : [...KEYS, "natural", "stacked"];
