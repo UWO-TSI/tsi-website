@@ -24,7 +24,10 @@ import { KEEPER_BUBBLE_S, KEEPER_ENTRY_S, KEEPER_NOTICE, KEEPER_POSTS, KEEPER_QU
 import { PROPOSED_RESIDENTS, RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import { untimed } from "@/lib/content/lineTime";
 import { useNPCPersonas } from "@/lib/content/loader";
+import { worldLabels } from "@/lib/game/labelLayout";
+import { residentTag } from "@/lib/game/nameTags";
 import s from "./residents.module.css";
+import tags from "./nameTags.module.css";
 
 /** The bubble stack never sits lower than this above the bottom edge: the prompt lives there (as the residents'). */
 const PROMPT_CLEAR = 132;
@@ -48,6 +51,8 @@ interface Runtime {
   /** The work routine's pose (reused every frame) and the station they last stopped at (-1 walking). */
   at: OwnerPose; station: number;
   x: number; z: number; ready: boolean; idleBeat: number; shown: number; line: string; timers: number[];
+  /** Their name tag may show (lib/game/nameTags.ts: within 8 steps of you): not while their bubble carries the name. */
+  tag: boolean;
 }
 
 /** When each keeper (by slug) may say hello again: kept across visits, so walking out and back in isn't greeted twice. */
@@ -108,20 +113,28 @@ function step(r: Runtime, room: KeeperRoom, m: CharacterMotion, g: THREE.Group |
   g?.position.set(r.x, 0, r.z);
   // Which overhead pieces show, as bits (bubble, a brief "!" as they notice you, nameplate): the DOM is touched only when they change.
   const bubble = now < r.bubbleUntil;
-  const state = (bubble ? 1 : 0) | (near && !bubble && now - r.noticedAt < NOTICE_S ? 2 : 0) | (near || bubble || engaged ? 4 : 0);
-  if (state !== r.shown && ui.plate.current) {
+  const state = (bubble ? 1 : 0) | (near && !bubble && now - r.noticedAt < NOTICE_S ? 2 : 0);
+  // The name (v1 name tags): within 8 steps, placed by the label layout; their bubble carries it while it shows.
+  r.tag = !bubble;
+  if (state !== r.shown && ui.bubble.current) {
     r.shown = state;
     if (bubble && ui.text.current && ui.text.current.textContent !== r.line) ui.text.current.textContent = r.line;
-    show(ui.bubble.current, bubble); show(ui.notice.current, (state & 2) > 0); show(ui.plate.current, (state & 4) > 0);
+    show(ui.bubble.current, bubble); show(ui.notice.current, (state & 2) > 0);
   }
 }
 function show(el: HTMLElement | null, on: boolean) { if (el && el.hidden === on) el.hidden = !on; }
+/** Where a keeper's name sits: over the head, as drei puts the stack (module scope). */
+function tagPoint(r: Runtime, g: THREE.Group | null, out: THREE.Vector3): boolean {
+  if (!r.tag || !r.ready || !g) return false;
+  out.set(g.position.x, g.position.y + CHARACTER_HEIGHT + 0.3, g.position.z);
+  return true;
+}
 /** Module scope: a line from outside the frame loop (a click, the room's event) waits for the next frame. */
 function queue(r: Runtime | null, line: string | null, wave: boolean, clip: ClipName | null = null) { if (r && line) { r.pending = line; r.wave = wave; r.clip = clip; } }
 function newRuntime(slug: string, lines: readonly string[]): Runtime {
   return { slug, seed: hashSeed(slug), lines, next: 0, pending: null, wave: false, clip: null, lag: 0, talkUntil: 0, bubbleUntil: 0, quietUntil: quietBySlug.get(slug) ?? 0,
     entryAt: null, entered: false, near: false, noticedAt: 0, engaged: false, at: { x: 0, z: 0, yaw: 0, clip: "Idle", moving: false, station: 0 }, station: -1,
-    x: 0, z: 0, ready: false, idleBeat: -1, shown: -1, line: "", timers: [] };
+    x: 0, z: 0, ready: false, idleBeat: -1, shown: -1, line: "", timers: [], tag: false };
 }
 /** A persona edit (the Residents editor) changes what they say, not where they are. */
 function relines(r: Runtime | null, slug: string, lines: readonly string[]) { if (r && r.slug === slug) r.lines = lines; }
@@ -152,7 +165,9 @@ export default function Keeper({ room, player, frozen, engaged = false, sayEvent
   useEffect(() => {
     const r = newRuntime(persona.slug, linesRef.current);
     runtime.current = r;
-    return () => { r.timers.forEach(window.clearTimeout); runtime.current = null; };
+    // Their name over the head (lib/game/nameTags.ts), where drei puts the stack.
+    const offTag = worldLabels.add(residentTag(out => tagPoint(r, group.current, out), () => plate.current));
+    return () => { offTag(); r.timers.forEach(window.clearTimeout); runtime.current = null; };
   }, [persona.slug]);
   useEffect(() => { linesRef.current = lines; relines(runtime.current, persona.slug, lines); }, [persona.slug, lines]);
   useEffect(() => {
@@ -177,7 +192,7 @@ export default function Keeper({ room, player, frozen, engaged = false, sayEvent
       <div className={s.stack}>
         <div ref={bubble} className={s.bubble} hidden><b>{persona.display_name}</b><span ref={text} /></div>
         <div ref={notice} className={s.notice} hidden aria-hidden="true">!</div>
-        <div ref={plate} className={s.plate} hidden>{persona.display_name}<small>{post.title}</small></div>
+        <div ref={plate} className={tags.tag} data-resident hidden><span className={tags.name}>{persona.display_name}</span></div>
       </div>
     </Html>
   </group>;

@@ -4,9 +4,16 @@
 // player's sessions at once; a 60 s poll of the connected players' sanctions is the
 // safety net. Either way the latest word is also held for a while over the player card,
 // so a removed player can't slip back in on a card cached before the removal.
+//
+// v1 friends (specs/v1-drop.md §3): each player's friends are read at join (a read that
+// fails only leaves the list empty), and the world answers where anyone is in any room of
+// this process, so every player's `friends` list follows their friends coming, moving
+// shard or area, and going. A friendship made or ended (POST /internal/friend) and a block
+// change the lists at once.
 import type { Identity } from "./auth/verify";
 import type { PlayerCard } from "./auth/card";
 import { createChatLog, type ChatLog, type WriteChat } from "./chatLog";
+import { FRIENDS_MAX } from "@net/protocol";
 
 /** A sanction change: a field that's present replaces the old value (ISO time, or null for none). */
 export type SanctionPatch = { muted_until?: string | null; removed_until?: string | null };
@@ -22,11 +29,24 @@ export interface WorldRoom {
   applyBlock(blocker: string, blocked: string, on: boolean): number;
   /** The member ids with a session here. */
   memberIds(): string[];
+  /** Where this member is, if they have a session here (one still in its reconnection grace counts). */
+  presenceOf(uid: string): Presence | null;
+  /** A friendship made (on) or ended between two members: their sessions here update their lists' members. */
+  applyFriend(a: string, b: string, on: boolean): number;
+  /** Send their friends lists to this member's sessions here. */
+  refreshFriends(uid: string): void;
+  /** This member came, went or moved: send their friends here (whoever lists them) their lists again. */
+  friendMoved(uid: string): void;
 }
+
+/** Where a player is: the shard, the AREAS index, and the room (a `follow`'s target). */
+export type Presence = { shard: number; area: number; roomId: string };
 
 export type WorldSources = {
   writeChat: WriteChat;
   loadBlocks: (uid: string, signal: AbortSignal) => Promise<Blocks>;
+  /** The member ids this one is friends with (world_friends, either side). */
+  loadFriends: (uid: string, signal: AbortSignal) => Promise<string[]>;
   pollSanctions: (uids: string[], signal: AbortSignal) => Promise<SanctionRow[]>;
 };
 
@@ -49,6 +69,14 @@ export type World = {
   unregister(room: WorldRoom): void;
   /** A joining player's blocks (refuse the join if this throws: the database is down). */
   loadBlocks(identity: Identity): Promise<Blocks>;
+  /** A joining player's friends; never throws (a failed read is logged and lists none). */
+  loadFriends(identity: Identity): Promise<string[]>;
+  /** Where a member is in any room, or null. */
+  presence(uid: string): Presence | null;
+  /** A member came, went or moved: their friends' lists follow. */
+  moved(uid: string): void;
+  /** A friendship made or ended (the web's friends routes): both lists change now. */
+  friend(a: string, b: string, on: boolean): number;
   /** The card with any sanction news newer than it laid over. */
   overlayCard(uid: string, card: PlayerCard): PlayerCard;
   /** A sanction from the admin routes or the poll: held over cards and applied to every session. */
@@ -115,6 +143,38 @@ export function createWorld(o: WorldOptions): World {
       return { blocks: [...new Set(b.blocks)], blockedBy: [...new Set(b.blockedBy)] };
     },
 
+    async loadFriends(identity) {
+      try {
+        const ids = await withTimeout(timeoutMs, (signal) => o.loadFriends(identity.uid, signal));
+        return [...new Set(ids.map((id) => id.toLowerCase()))].filter((id) => id !== identity.uid).slice(0, FRIENDS_MAX);
+      } catch (e) {
+        o.log("friends_load_failed", { uid: identity.uid, message: e instanceof Error ? e.message : String(e) });
+        return [];
+      }
+    },
+
+    presence(uid) {
+      for (const r of rooms) {
+        const p = r.presenceOf(uid);
+        if (p) return p;
+      }
+      return null;
+    },
+
+    moved(uid) {
+      for (const r of rooms) r.friendMoved(uid);
+    },
+
+    friend(a, b, on) {
+      let n = 0;
+      for (const r of rooms) n += r.applyFriend(a, b, on);
+      for (const r of rooms) {
+        r.refreshFriends(a);
+        r.refreshFriends(b);
+      }
+      return n;
+    },
+
     overlayCard(uid, card) {
       const h = held.get(uid);
       if (!h || now() - h.at >= holdMs) return card;
@@ -129,6 +189,11 @@ export function createWorld(o: WorldOptions): World {
     block(blocker, blocked, on) {
       let n = 0;
       for (const r of rooms) n += r.applyBlock(blocker, blocked, on);
+      // A block ends a friendship (the database's trigger does the same) and hides either from the other's list.
+      for (const r of rooms) {
+        r.refreshFriends(blocker);
+        r.refreshFriends(blocked);
+      }
       return n;
     },
 

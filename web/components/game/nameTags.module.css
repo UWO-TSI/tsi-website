@@ -1,0 +1,28 @@
+/*
+ * Name tags (specs/v1-drop.md §3; lib/game/nameTags.ts): small clean text with a soft shadow, no plate, over the other
+ * players and the residents within about 8 steps. A member's name has a tiny Tethos-blue dot (row 223); residents'
+ * names are warmer, so real people read as people. They follow the text-size setting.
+ */
+.tag { display: inline-flex; align-items: center; justify-content: center; gap: 4px; width: max-content; white-space: nowrap; pointer-events: none; user-select: none;
+  font: 800 13px/1.15 var(--gui-font); letter-spacing: 0.01em; color: #fffdf3; zoom: var(--tsi-text-scale, 1);
+  text-shadow: 0 1px 1px rgb(46 34 24 / 0.62), 0 0 3px rgb(46 34 24 / 0.5), 0 0 9px rgb(46 34 24 / 0.3); }
+.tag[hidden] { display: none !important; }
+/* Residents: a warm butter-peach. */
+.tag[data-resident] { color: #ffdba8; }
+/* Dropped and inside the reconnection grace: still here, dimmed. */
+.tag[data-away] { opacity: 0.55; }
+.dot { display: none; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--gui-tethos-blue); box-shadow: 0 0 0 1.5px #fffdf3, 0 1px 2px rgb(46 34 24 / 0.5); }
+.tag[data-member] .dot { display: block; }
+/* A friend (v1): a small coral heart before the name. */
+.friend { display: none; flex: none; line-height: 0; }
+.friend svg { display: block; fill: var(--gui-coral); stroke: #fffdf3; stroke-width: 1.2; filter: drop-shadow(0 1px 1px rgb(46 34 24 / 0.5)); }
+.tag[data-friend] .friend { display: block; }
+/* Squeezed out of a crowd (lib/game/labelLayout.ts): only a small dot until there's room for the name again. */
+.tag[data-dot] > * { display: none; }
+.tag[data-dot] .dot { display: block; background: #fffdf3; box-shadow: 0 1px 2px rgb(46 34 24 / 0.55); }
+.tag[data-dot][data-member] .dot { background: var(--gui-tethos-blue); box-shadow: 0 0 0 1.5px #fffdf3, 0 1px 2px rgb(46 34 24 / 0.5); }
+.tag[data-dot] .name, .tag[data-dot] .friend { display: none; }
+.name { display: block; }
+
+:global(html[data-contrast="high"]) .tag { color: #ffffff; text-shadow: 0 0 2px #000000, 0 0 2px #000000, 1px 1px 0 #000000, -1px -1px 0 #000000, 1px -1px 0 #000000, -1px 1px 0 #000000; }
+:global(html[data-contrast="high"]) .tag[data-resident] { color: #ffe9c4; }

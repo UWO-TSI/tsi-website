@@ -147,3 +147,25 @@ describe("the loopback NetSource", () => {
     expect(out.events).toBe(events);
   });
 });
+
+describe("chat on the loopback (v1)", () => {
+  it("echoes what you say as your line, and chatting bots in view type a moment, then say a line", async () => {
+    const { ChatStore } = await import("./chat");
+    const chat = new ChatStore();
+    let now = 0;
+    const lb = createLoopback({ bots: 3, timer: false, clock: () => now, chatEvery: 4, chat });
+    expect(lb.sendChat!("early")).toBe(false);
+    lb.start("village");
+    expect(lb.sendChat!("  hello  ")).toBe(true);
+    expect(chat.entries().map(e => e.kind === "line" && [e.text, e.mine])).toEqual([["hello", true]]);
+    let typed = false;
+    for (now = 0; now < 12_000; now += 50) {
+      lb.advance(now);
+      for (let i = 0; i < lb.remotes.size; i++) if (lb.remotes.at(i).player.typing) typed = true;
+    }
+    expect(typed).toBe(true);
+    const bots = chat.entries().filter(e => e.kind === "line" && !e.mine);
+    expect(bots.length).toBeGreaterThanOrEqual(3);
+    lb.stop();
+  });
+});
