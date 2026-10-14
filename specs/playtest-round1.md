@@ -40,3 +40,21 @@ David played v1 on the Mac mini using the Tethos v1 Playtest checklist. His note
 | `game/hud-esc` | pointer-lock mouse camera; the Esc menu layers; the HUD down to the quest tracker and minimap; merged Settings; photo on P; title and dropdown polish |
 | `game/head-roblox` | the Roblox-compatible head (hair zone), hair attachment at Roblox's point and scale, per-hair edits reverted |
 | `game/asset-thumbs` | thumbnails and a manifest of every face part, eyebrow and clothing item for the picker page |
+
+## Wardrobe cut (David's picks in the Wardrobe Cut page, 2026-10-14)
+The source is the artifact db at https://claude.ai/artifact/WfyWSpLEjV6Ekp7DCyNUTU (collection `picks`). The manifest and thumbnails are on branch `game/asset-thumbs` (`specs/picker/`).
+
+**Cut:**
+- **eyes:** E1.1, E1.2, E1.4, E1.6, E5.4, E5.5, E5.6, E6.1, E8.1, E8.4, F2.1, F2.2
+- **mouths:** G1.1–G1.7, G2.1–G2.7, G3.1, G3.2, G3.4–G3.7, G4.1–G4.7, G5.1–G5.7, G6.1–G6.7, G7.1–G7.7, G8.1–G8.7, G9.1–G9.7, M2.1, M3.2, M4.2, M4.3, M5.2, M5.3, M6.1, M6.3, cat_w, grin_curl
+- **tops:** outfit_silk_sweater (stays craft-only, see below)
+- **bottoms:** onepiece_jumpsuit, onepiece_raincape, onepiece_raincape_hood, onepiece_robe, outfit_koi_kimono and outfit_monarch_cape (the last two stay craft-only)
+- **accessories:** acc_beanie, acc_flower_crown (craft-only), acc_pumpkin_head, acc_scarf, acc_shell_necklace (craft-only), acc_vampire_cape
+- **hair:** all 28 older bangs and backs. Hair is David's 21 only. ("hair honestly just import the new set and get rid of the old ones, refine head logic so it fits roblox hair logic but still looks like our style")
+- **faces:** none cut. Accents: none cut.
+
+**Follow-ups David decided:**
+- **Halloween:** the pumpkin head and vampire cape are cut. "cut them ill import halloween clothing assets later". The closet keeps the witch hat and cat ears until his assets arrive.
+- **Crafted items:** acc_flower_crown, acc_shell_necklace, outfit_koi_kimono, outfit_monarch_cape and outfit_silk_sweater stay craft-only. They leave the starting creator, but crafting and wearing them still work.
+- **Jayden**, the applicant guide, gets new parts from the kept set. David explicitly OK'd this one edit to the recruitment island.
+- **Residents, defaults and expressions** that used cut parts are re-assigned to kept parts, preferring David's new set. That covers the expressions sleepy, happy, sad and surprised, and the emote mouths for laugh, dance and cheer.
