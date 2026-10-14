@@ -210,6 +210,8 @@ class Puppet {
   private readonly retiring: { model: THREE.Object3D; t: number; from: number }[] = [];
   /** Another player (Character `remote`): their afterimages are the body alone, from the LOD 1 mesh once it has loaded. */
   remote = false;
+  /** A player's face stays as they set it through every clip (Character `keepFace`; face.ts FaceAnimator.keep). */
+  set keepFace(on: boolean) { this.faceAnim.keep = on; }
 
   constructor(private readonly base: Gltf) {
     this.root = cloneSkinned(base.scene);
@@ -794,9 +796,14 @@ export interface CharacterProps {
    * are the body alone at the lower detail (specs/perf/effects-cost.md).
    */
   remote?: boolean;
+  /**
+   * A player (you, another player, a seat-mate, your clones): their face stays exactly as they set it through every
+   * emote, dance, sit, sleep and attack (David, playtest round 1, 2026-10-14). Residents keep the clip's expression.
+   */
+  keepFace?: boolean;
 }
 
-export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, held = null, leaf = false, verbs = false, faceSize = 512, scale = CHARACTER_SCALE, lod = true, remote = false }: CharacterProps) {
+export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, held = null, leaf = false, verbs = false, faceSize = 512, scale = CHARACTER_SCALE, lod = true, remote = false, keepFace = false }: CharacterProps) {
   // While a newly chosen part loads, keep showing the previous look instead of suspending.
   const shown = useDeferredValue(look);
   const parts = useMemo(() => resolveParts(shown), [shown]);
@@ -810,6 +817,7 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
   // A verb asked for before the library loads plays the weapon's own attack clip.
   useEffect(() => setFallback(puppet, weapon?.kind), [puppet, weapon?.kind]);
   useEffect(() => setRemote(puppet, remote), [puppet, remote]);
+  useEffect(() => setKeepFace(puppet, keepFace), [puppet, keepFace]);
   useEffect(() => {
     dressPuppet(puppet, shown, parts, loaded.slice(1).map(g => g.scene), atlas, decalMap);
   }, [puppet, shown, parts, loaded, atlas, decalMap]);
@@ -894,6 +902,7 @@ function VerbClips({ puppet }: { puppet: Puppet }) {
 }
 function setFallback(puppet: Puppet, kind: WeaponKind | undefined) { puppet.fallback = ATTACK_CLIP[kind ?? "melee"]; }
 function setRemote(puppet: Puppet, remote: boolean) { puppet.remote = remote; }
+function setKeepFace(puppet: Puppet, keep: boolean) { puppet.keepFace = keep; }
 function dressPuppet(puppet: Puppet, look: CharacterLook, parts: ResolvedPart[], scenes: THREE.Object3D[], atlas: THREE.Texture, decalMap: THREE.Texture) {
   decalMap.flipY = false;
   decalMap.colorSpace = THREE.SRGBColorSpace;

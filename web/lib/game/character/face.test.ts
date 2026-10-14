@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { EXPRESSIONS, FACE_SLOT_COUNT, FaceAnimator, blinkFrame, canBlink, faceSlots, restPose } from "./face";
+import { CLIP_EXPRESSION, EXPRESSIONS, FACE_SLOT_COUNT, FaceAnimator, blinkFrame, canBlink, faceSlots, restPose } from "./face";
+import { DANCE_RING, EMOTE_RING } from "../emoteWheel";
 import { DEFAULT_LOOK, FACE, FACE_ATLAS_URLS, PALETTE, parseLook, randomLook, seeded, usesFacePage2, type CharacterLook, type FaceCell } from "./look";
 
 const look = (x: Partial<CharacterLook> = {}): CharacterLook => ({ ...DEFAULT_LOOK, ...x });
@@ -94,6 +95,45 @@ describe("face animation", () => {
     const anim = new FaceAnimator(seeded(2));
     const pose = anim.update(0.016, DEFAULT_LOOK, "Idle", false, { expression: "angry", eyeFrame: "half", mouth: "G3.3" });
     expect([pose.eyeFrame, pose.mouth]).toEqual(["half", "G3.3"]);
+  });
+});
+
+// Playtest round 1 (David, 2026-10-14): "dont change the face when doing animations, keep it the same". A player's face
+// (yours and everyone else's) is the one they set: no clip swaps its expression or its mouth. Blinks carry on, as at rest.
+describe("a player's face through every animation", () => {
+  const WHEEL = [...EMOTE_RING, ...DANCE_RING].map(e => e.clip);
+  const ANIMATIONS = [...new Set([...WHEEL, "SitWarm", "DanceStomp", ...Object.keys(CLIP_EXPRESSION)])];
+  const LOOKS = [DEFAULT_LOOK, look({ eyes: "sleepy_lash", mouth: "kitty" }), randomLook(seeded(11)), randomLook(seeded(29))];
+
+  it("stays exactly as set through each emote, dance, sit and sleep", () => {
+    for (const l of LOOKS) {
+      const rest = restPose(l, "neutral");
+      for (const clip of ANIMATIONS) {
+        const anim = new FaceAnimator(seeded(7));
+        anim.keep = true;
+        for (const f of run(anim, 3, l, clip)) {
+          expect([f.eyes, f.mouth], `${clip} on ${l.eyes}/${l.mouth}`).toEqual([rest.eyes, rest.mouth]);
+          // Only a blink closes the eyes, as at rest.
+          if (f.eyeFrame !== rest.eyeFrame) expect(canBlink(rest.eyes)).toBe(true);
+        }
+      }
+    }
+  });
+  it("blinks exactly as it would standing still", () => {
+    const still = new FaceAnimator(seeded(9)), dancing = new FaceAnimator(seeded(9));
+    dancing.keep = true;
+    expect(run(dancing, 20, DEFAULT_LOOK, "DanceBounce")).toEqual(run(still, 20, DEFAULT_LOOK));
+  });
+  it("still talks, and still takes a forced face", () => {
+    const anim = new FaceAnimator(seeded(3));
+    anim.keep = true;
+    expect(new Set(run(anim, 2, DEFAULT_LOOK, "Cheer", true).map(f => f.mouth)).size).toBeGreaterThan(2);
+    const forced = anim.update(0.016, DEFAULT_LOOK, "Cheer", false, { expression: "happy" });
+    expect([forced.eyes, forced.mouth]).toEqual(["relieved", "open_smile"]);
+  });
+  it("leaves the residents' faces to their clips", () => {
+    const frames = run(new FaceAnimator(seeded(1)), 1, DEFAULT_LOOK, "Cheer");
+    expect(frames.every(f => f.eyes === "relieved")).toBe(true);
   });
 });
 

@@ -60,6 +60,12 @@ export function blinkFrame(t: number): EyeFrame | null {
  * (Laugh, Cheer, Dance) that alternate their cells, and the clip's expression. One per character.
  */
 export class FaceAnimator {
+  /**
+   * A player's face (yours, another player's): it stays as they set it through every animation, so no clip swaps its
+   * expression or its mouth (David, playtest round 1, 2026-10-14: "dont change the face when doing animations, keep it
+   * the same"). Blinks, talking and a forced face carry on. Residents and other characters keep the clip's face.
+   */
+  keep = false;
   private t = 0;
   private nextBlink: number;
   private blinkStart = -1;
@@ -80,6 +86,7 @@ export class FaceAnimator {
   /** Advance `dt` seconds and return the frame to draw. */
   update(dt: number, look: CharacterLook, clip: string | null, talking: boolean, override?: FaceOverride | null): FacePose {
     this.t += dt;
+    if (this.keep) clip = null;
     const expression = override?.expression ?? (clip ? CLIP_EXPRESSION[clip] : undefined) ?? "neutral";
     const pose = restPose(look, expression);
 

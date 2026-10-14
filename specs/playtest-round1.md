@@ -58,3 +58,16 @@ The source is the artifact db at https://claude.ai/artifact/WfyWSpLEjV6Ekp7DCyNU
 - **Crafted items:** acc_flower_crown, acc_shell_necklace, outfit_koi_kimono, outfit_monarch_cape and outfit_silk_sweater stay craft-only. They leave the starting creator, but crafting and wearing them still work.
 - **Jayden**, the applicant guide, gets new parts from the kept set. David explicitly OK'd this one edit to the recruitment island.
 - **Residents, defaults and expressions** that used cut parts are re-assigned to kept parts, preferring David's new set. That covers the expressions sleepy, happy, sad and surprised, and the emote mouths for laugh, dance and cheer.
+
+## Hair review and fidelity (David, 2026-10-14)
+- **Fidelity (art direction):** "overall a lot of the hair shouldnt be so low poly and blocky, like should look closer to the reference rather than the game lowpoly model we were talking about, same with accessories and clothes, it should be simple but not completely low poly". In practice:
+  - Hair: Full LOD keeps each original mesh with smooth normals, and only the distance LODs are decimated.
+  - Clothes and accessories: smoothed the same way, with rounder silhouettes and smooth shading, while staying simple. That's a lane after the wardrobe cut.
+- **Per-hair notes:**
+  - #04 doesn't match the photo.
+  - #05 sits sideways.
+  - #08's visor splits off into its own accessory, with the "M" kept on it.
+  - #10, #11, #15 and #16 sit slightly lower; #20 sits lower.
+  - #12, #14, #17 and #18 are blocky and need to be curvy and smooth.
+  - #19 is a cap worn backwards.
+- Long hair length stays.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Color } from "three";
-import { DEPTH_RAMP, WATER_DEPTH_RAMP, bedDepth, waterRampAt } from "./waterShader";
+import { DEPTH_RAMP, SHOAL, WATER_DEPTH_RAMP, bedDepth, waterRampAt } from "./waterShader";
 import { TUNING_DEFAULTS } from "./tuning";
 import { ISLAND_LIGHTING } from "./islandLighting";
 
@@ -28,6 +28,51 @@ describe("the seabed's depth profile", () => {
     // A river (at most a few cells from a bank) never reaches the drop-off.
     expect(bedDepth(p.shelfFrom, p)).toBeLessThanOrEqual(p.bedDepth + 1e-9);
     expect(bedDepth(p.shelfTo + 4, p)).toBeGreaterThan(p.bedDepth + p.shelfDepth * 0.95);
+  });
+});
+
+// Playtest round 1 (David, 2026-10-14): "make the shallow water bigger area around main island". The open sea round the
+// village shelves out as sand you can see before it drops to the teal and the navy; a river keeps its banks.
+describe("the open sea's wide shallows", () => {
+  const p = TUNING_DEFAULTS.water;
+  const sea = (d: number) => bedDepth(d, p, 1);
+  /** How far out the water first reaches `depth`. */
+  const reach = (f: (d: number) => number, depth: number) => { let d = 0; while (d < 40 && f(d) < depth) d += 0.01; return d; };
+  /** The ramp's teal: where the shallow sand-teal has given way to the mid stop. */
+  const TEAL = 0.62;
+  it("starts at the waterline, eases in off the beach and only ever gets deeper", () => {
+    expect(sea(0)).toBe(0);
+    expect(sea(0.5)).toBeLessThan(0.15);
+    let last = 0;
+    for (let d = 0.05; d < 40; d += 0.05) {
+      const now = sea(d);
+      expect(now).toBeGreaterThanOrEqual(last);
+      // Beaches ease in: over the shallows the bed falls under 0.3 a cell (the old bed fell 1.1 in its first).
+      if (d <= SHOAL.from) expect(now - last).toBeLessThan(0.3 * 0.05 + 1e-9);
+      last = now;
+    }
+  });
+  it("keeps the sand in sight much further out than the river's banks do", () => {
+    // Sand under a thin film (the ramp short of its teal) to SHOAL.from cells out, where the old profile was teal in under one.
+    expect(reach(d => bedDepth(d, p), TEAL)).toBeLessThan(1);
+    expect(reach(sea, TEAL)).toBeGreaterThan(4);
+    expect(sea(SHOAL.from)).toBeLessThan(SHOAL.depth + 1e-9);
+    expect(waterRampAt(sea(3), DAY)[0]).toBeGreaterThan(waterRampAt(TEAL, DAY)[0]);
+  });
+  it("drops off to the teal and the navy past the shallows, at the same open-sea floor", () => {
+    expect(sea(SHOAL.from + 1.5)).toBeGreaterThan(TEAL);
+    // The village map's edge is 8.5 cells off its beaches, and the open sea past it reads the edge: navy there already.
+    expect(dist(waterRampAt(sea(8.5), DAY), lin(DAY.navyColor))).toBeLessThan(0.03);
+    expect(sea(1e4)).toBeCloseTo(bedDepth(1e4, p), 9);
+  });
+  it("leaves a river, or any water not marked open, exactly as it was", () => {
+    for (let d = 0; d < 20; d += 0.25) expect(bedDepth(d, p, 0)).toBe(bedDepth(d, p));
+    // Part way open (a river's mouth) lies between the two.
+    for (let d = 0.5; d < 12; d += 0.5) {
+      const half = bedDepth(d, p, 0.5);
+      expect(half).toBeGreaterThanOrEqual(Math.min(sea(d), bedDepth(d, p)) - 1e-9);
+      expect(half).toBeLessThanOrEqual(Math.max(sea(d), bedDepth(d, p)) + 1e-9);
+    }
   });
 });
 

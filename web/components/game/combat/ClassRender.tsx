@@ -56,7 +56,7 @@ function CloneBody({ id, ground }: { id: number; ground: Ground }) {
     m.speed = Math.hypot(ai.vx, ai.vz); m.yaw = m.speed > 1.5 && ai.mimic <= 0 ? Math.atan2(ai.vx, ai.vz) : ai.facing;
     if (ai.clip) { m.upper = ai.clip as ClipName; ai.clip = null; }
   });
-  return <group ref={group}><Character look={look} motion={motion} weapon={weapon} verbs /></group>;
+  return <group ref={group}><Character look={look} motion={motion} weapon={weapon} verbs keepFace /></group>;
 }
 
 // ── The Joker: a huge mirror sweeping the field; behind it the ground is inverted until it shatters ──
