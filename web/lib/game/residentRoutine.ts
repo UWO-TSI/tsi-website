@@ -140,6 +140,8 @@ export class NavGrid {
   cellFree(cx: number, cz: number): boolean { return this.cell(cx, cz) === 1; }
   /** The walker's level rule (defaultIsland canStep): a ramp follows its slope, elsewhere under two levels. */
   step(x: number, z: number, nx: number, nz: number): boolean {
+    // The smooth world: the slope decides (no walking up ground too steep to climb).
+    if (this.island.climb) return this.island.climb(x, z, nx, nz);
     const map = this.island.map, ground = this.island.ground;
     const a = worldToCellX(map, x), b = worldToCellZ(map, z), c = worldToCellX(map, nx), d = worldToCellZ(map, nz);
     if (a === c && b === d) return true;

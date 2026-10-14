@@ -29,6 +29,13 @@
 export interface MoveWorld {
   top(x: number, z: number): number;
   wet(x: number, z: number): boolean;
+  /**
+   * The smooth world only (specs/world-editor.md; lib/game/defaultIsland.ts): may a foot step go from (x, z) to
+   * (nx, nz)? False up onto ground too steep to climb. Absent everywhere else, where the cells' walls do that job.
+   */
+  climb?(x: number, z: number, nx: number, nz: number): boolean;
+  /** The smooth world only: ground too steep to stand on, where a jump cannot start (no hopping up a cliff). */
+  steep?(x: number, z: number): boolean;
 }
 
 /** Every feel value, in world units (1 tile) and seconds; /lab/move tunes them live. */
@@ -200,7 +207,7 @@ function slide(s: MoveState, w: MoveWorld, t: MoveTuning, dx: number, dz: number
   let hitX = false, hitZ = false;
   for (let i = 0; i < n; i++) {
     const foot = onFoot(s), here = overlap(w, s.x, s.z, s.y, foot, t);
-    const fits = (x: number, z: number) => !inside(w, x, z, s.y, foot, t) && overlap(w, x, z, s.y, foot, t, here) <= here;
+    const fits = (x: number, z: number) => !inside(w, x, z, s.y, foot, t) && overlap(w, x, z, s.y, foot, t, here) <= here && (!foot || !w.climb || w.climb(s.x, s.z, x, z));
     if (fits(s.x + sx, s.z + sz)) { s.x += sx; s.z += sz; }
     else if (sx && fits(s.x + sx, s.z)) { s.x += sx; hitZ = true; }
     else if (sz && fits(s.x, s.z + sz)) { s.z += sz; hitX = true; }
@@ -314,7 +321,7 @@ function jump(s: MoveState, t: MoveTuning, input: MoveInput, chained: boolean, c
   emit(s, dashing ? "dashjump" : s.slideJump ? "slidejump" : hop ? "hop" : s.long ? "long" : "jump");
 }
 
-function land(s: MoveState, t: MoveTuning, input: MoveInput, y: number) {
+function land(s: MoveState, t: MoveTuning, input: MoveInput, y: number, steep = false) {
   s.slid = false;
   if (s.mode === "glide") {
     // The leaf sets you down: never a roll, a recovery or a hop, from any height.
@@ -328,7 +335,7 @@ function land(s: MoveState, t: MoveTuning, input: MoveInput, y: number) {
   emit(s, "land", drop);
   // Space held while sprinting (or carrying momentum): the next hop goes off on the landing step (the bunny-hop). A press just before touching down is a plain jump.
   const hop = input.jump && t.hopChainMax > 0 && ((input.sprint && speed >= t.walkSpeed * 0.9) || speed > t.walkSpeed * t.slideEnterAt);
-  if ((hop || s.buffer > 0) && drop < t.recoverDrop) { setMode(s, "ground"); jump(s, t, input, hop); return; }
+  if ((hop || s.buffer > 0) && drop < t.recoverDrop && !steep) { setMode(s, "ground"); jump(s, t, input, hop); return; }
   s.hops = 0;
   // The crouch key held at speed: straight into a slide that keeps the landing's speed (no roll, no recovery).
   if (input.sneak && speed > t.walkSpeed * t.slideEnterAt) { startSlide(s, "landslide", Math.min(speed + t.techBoost, Math.max(speed, t.momentumCeiling))); return; }
@@ -361,7 +368,7 @@ function timeToGround(s: MoveState, w: MoveWorld, t: MoveTuning, held: boolean) 
 /** Fall to `y`: land on what is under the centre, catch a bank or ledge just missed, or splash. */
 function descend(s: MoveState, w: MoveWorld, t: MoveTuning, input: MoveInput, y: number) {
   const wet = w.wet(s.x, s.z), floor = w.top(s.x, s.z), speed = hypot(s.vx, s.vz);
-  if (!wet && y <= floor) { land(s, t, input, floor); return; }
+  if (!wet && y <= floor) { land(s, t, input, floor, w.steep?.(s.x, s.z)); return; }
   if (y < s.y && speed > 0.5 && (wet || floor < y - 0.3)) {
     // Coming down past a surface just ahead: land on it (the "almost made it" catch).
     for (const r of [0.12, 0.22, 0.32]) for (let a = 0; a < 8; a++) {
@@ -370,7 +377,7 @@ function descend(s: MoveState, w: MoveWorld, t: MoveTuning, input: MoveInput, y:
       const x = s.x + ox, z = s.z + oz;
       if (w.wet(x, z)) continue;
       const top = w.top(x, z);
-      if (top <= s.y + AIR_STEP && top >= y - 0.02 && overlap(w, x, z, top, true, t, 0) === 0) { s.x = x; s.z = z; land(s, t, input, top); return; }
+      if (top <= s.y + AIR_STEP && top >= y - 0.02 && overlap(w, x, z, top, true, t, 0) === 0) { s.x = x; s.z = z; land(s, t, input, top, w.steep?.(x, z)); return; }
     }
   }
   if (wet && y <= floor) {
@@ -446,7 +453,7 @@ export function stepMove(prev: MoveState, input: MoveInput, dt: number, w: MoveW
   }
 
   // ── Jump: from the ground, a skid, a roll, a slide, or within coyote time ─
-  if (s.buffer > 0 && ((onFoot(s) && s.mode !== "recover") || (s.mode === "air" && s.coyote > 0))) jump(s, t, input, false, onFoot(s) ? ceilingAt(w, t, s.x, s.z, s.vx, s.vz) : t.momentumCeiling);
+  if (s.buffer > 0 && ((onFoot(s) && s.mode !== "recover" && !w.steep?.(s.x, s.z)) || (s.mode === "air" && s.coyote > 0))) jump(s, t, input, false, onFoot(s) ? ceilingAt(w, t, s.x, s.z, s.vx, s.vz) : t.momentumCeiling);
 
   // ── Glider: a fresh press while falling opens the leaf, unless you would land within the jump buffer anyway ──
   if (t.glider > 0 && input.jumpPressed && s.mode === "air" && s.vy <= 0 && s.dashT <= 0 && timeToGround(s, w, t, input.jump) > t.jumpBuffer) {

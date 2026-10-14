@@ -5,6 +5,7 @@ import { ROCK_MODELS, ROCK_SIZE } from "./rocks";
 import { FURNITURE, studySolid, type Furniture } from "@/lib/study/seats";
 import { objectsOf, village, villageSpawnPoint, type MapObject, type Village } from "./villageMap";
 import { barrierBoxes, barrierFootprint, barrierPlacements, inBarrier } from "./barriers";
+import { MAX_CLIMB, terrainHeight, terrainSteepness, terrainSurface } from "./world/terrain";
 
 /**
  * Default island: the village core (ledger rows 155, 156), loaded from the
@@ -277,14 +278,27 @@ export interface VillageIsland {
   wet: (x: number, z: number) => boolean;
   /** The highest thing at a point: ground, a prop's top, Infinity for a building, trunk or study furniture (movement's `top`). */
   top: (x: number, z: number) => number;
+  /**
+   * The smooth world only (v.terrain; specs/world-editor.md): whether a step may go from (x, z) to (nx, nz) by the
+   * slope (false up onto ground steeper than MAX_CLIMB), and whether ground is too steep to stand and jump on. The
+   * movement sim and the residents' paths ask these; a cell world has neither (its levels decide).
+   */
+  climb?: (x: number, z: number, nx: number, nz: number) => boolean;
+  steep?: (x: number, z: number) => boolean;
 }
+
+/** The jetty deck's walk height on the smooth world (the pier model's deck top): the quay stands at it (lib/game/world/convert.ts). */
+export const DECK_Y = 0;
 
 /** Walking on a village: ground height, solids and the stepping rule, from its map and objects. */
 export function islandOf(v: Village): VillageIsland {
-  const { map, field } = v;
-  const ground = (x: number, z: number) => sampleGroundHeight(map, field, x, z);
-  const surface = (x: number, z: number) => drawnSurfaceAt(map, x, z);
+  const { map, field, terrain } = v;
   const decks = [...wharfDecks(v), ...bridgeDecks(v)];
+  // The smooth world walks its heightfield (the drawn ground); a deck over its water is walked at the deck's height.
+  const ground = terrain
+    ? (x: number, z: number) => { const h = terrainHeight(terrain, x, z); return h < DECK_Y && decks.some(d => inRect(x, z, d)) ? DECK_Y : h; }
+    : (x: number, z: number) => sampleGroundHeight(map, field, x, z);
+  const surface = terrain ? (x: number, z: number) => terrainSurface(terrain, x, z) : (x: number, z: number) => drawnSurfaceAt(map, x, z);
   const rails = bridgeRails(v);
   const solids = landmarks(v).filter(l => l.half);
   // The natural barriers standing at this drop (lib/game/barriers.ts): solid like a building, never jumped.
@@ -304,7 +318,12 @@ export function islandOf(v: Village): VillageIsland {
   };
   const propGrid = buckets(props), treeGrid = buckets(objectsOf("tree", v));
   const onDeck = (x: number, z: number) => decks.some(d => inRect(x, z, d));
-  const wet = (x: number, z: number) => !onDeck(x, z) && !isGroundAtWorld(map, x, z);
+  const wet = terrain
+    ? (x: number, z: number) => !onDeck(x, z) && terrainHeight(terrain, x, z) <= terrain.seaLevel
+    : (x: number, z: number) => !onDeck(x, z) && !isGroundAtWorld(map, x, z);
+  /** The smooth world's slope rule: no step up onto ground too steep to climb. */
+  const steep = terrain ? (x: number, z: number) => !onDeck(x, z) && terrainSteepness(terrain, x, z) > MAX_CLIMB : undefined;
+  const climb = steep ? (x: number, z: number, nx: number, nz: number) => !(ground(nx, nz) > ground(x, z) + 1e-4 && steep(nx, nz)) : undefined;
   /** Top of the solid at a point: a prop's measured top, Infinity for buildings, study furniture and trunks, -Infinity for none. */
   const solidTop = (x: number, z: number) => {
     if (solids.some(l => Math.abs(x - l.x) < l.half![0] && Math.abs(z - l.z) < l.half![1]) || eventSolids.some(r => inRect(x, z, r)) || rails.some(r => inRect(x, z, r))
@@ -330,6 +349,7 @@ export function islandOf(v: Village): VillageIsland {
     // Never lose clearance: out in the open every step must fit; sitting on a bench leaves you inside
     // its footprint, and from there any step that frees as much or more of you walks you off it.
     if (clearance(nx, nz) < clearance(x, z)) return false;
+    if (climb) return climb(x, z, nx, nz);
     const cx = worldToCellX(map, x), cz = worldToCellZ(map, z), ncx = worldToCellX(map, nx), ncz = worldToCellZ(map, nz);
     // A ramp climbs a full cliff: on or onto one, follow its slope rather than the level rule (not up its side).
     if (rampRun(map, cx, cz) || rampRun(map, ncx, ncz)) return Math.abs(ground(nx, nz) - ground(x, z)) < 0.5;
@@ -348,7 +368,7 @@ export function islandOf(v: Village): VillageIsland {
     return [x, z];
   };
   const top = (x: number, z: number) => Math.max(ground(x, z), solidTop(x, z));
-  return { map, ground, surface, standable, move, wet, top };
+  return terrain ? { map, ground, surface, standable, move, wet, top, climb, steep } : { map, ground, surface, standable, move, wet, top };
 }
 
 const islands = new WeakMap<Village, VillageIsland>();

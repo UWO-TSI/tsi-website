@@ -31,6 +31,13 @@ Decided with David on 2026-10-14, after he walked the terrain v2 world and said 
    - **At the wharf** the land stands higher than the water: a raised bank or quay edge, so the dock and pier make sense and boats moor alongside. The jetty deck sits at that bank height over water deep enough for boats. No sloping beach under the pier.
    - **At beaches** the land meets the water at sea level and eases in: a gentle shelf from dry sand into shallows.
    - Built into the conversion: the wharf zone (the `wharf` landmark, its jetty, finger pier and moorings, plus a radius) gets the bank and a short steep drop to deep water; every other sand coast keeps the gentle shelf. In the editor, flatten and level (with the hard edge) make it easy to raise a bank like that; paint can mark it as stone, or a timber edge later.
+10. **Minecraft creative mode, cells and brushes, buildings and roads** (David, 2026-10-14: "I want the minecraft creative mode esque editor so i can increase each cell or brush mode i can increase height and place buildings and lay down road and stuff").
+    - **Two terrain modes**, toggled with B and shown on the HUD.
+      - **Cell mode** snaps to the 1 u grid. Left-click lowers and right-click raises the targeted cell (or an N × N square, with scroll for N) by one step, like breaking and placing blocks. Hold and drag to keep going. The step is configurable, defaulting to the old 0.75 level step. The raised square has a slight edge rounding, so the result isn't jagged slabs. A cell reads as the samples it covers.
+      - **Brush mode** is the soft round raise, lower, smooth, flatten and level.
+    - **Buildings** sit in the hotbar palette: the museum, HQ, shop, café, Oracle temple, houses and the other existing building models. Placing one shows a ghost with its footprint; a click places it, R rotates it, and it flattens its own pad. Placed buildings can be selected, moved, rotated and deleted.
+    - **Roads:** a road tool you drag, or click point to point. It paints the path surface at a set width and grades the ground under it smoothly, with no steps and gentle ramps on slopes. Bridges stay objects for now.
+    - **Hotbar:** Minecraft-like, slots 1–9 plus a palette (E opens it, as the creative inventory does) to choose what goes in each slot.
 
 ## v0: a usable editor (one lane)
 
