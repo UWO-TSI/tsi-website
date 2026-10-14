@@ -198,6 +198,42 @@ bare, 404 -> 265 plants, on the order of 8k triangles back).
 Evidence: `specs/evidence/look-fixes/` (shallows before and after on both worlds, from the game camera, from above
 and at each wharf, and as depth maps; the 16:30 sparkle shots; the emote faces).
 
+## The waves: Gerstner seas, boats on a fitted plane (game/waves, 2026-10-14)
+
+`game/waves` (David, 2026-10-14: "make more water waves in the game ... have the boat rock based on water waves").
+One `perf:check` (headless, the measurement build at 3eec66a6, 3 runs a tier, split by tier to keep each call under
+ten minutes, load 3.3–4.3) against the 10-14 baseline (8809c517, in brackets): every scene passed and held
+SCENE_BUDGET.
+
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draws | Triangles | SCENE_BUDGET |
+|---|---|---|---|---|---|---|---|
+| village | High | 3.90 (3.90) | 5.00 (4.90) | 3.50 (3.40) | 370 (382) | **548k** (538k) | 560k: **12k of headroom** (look-fixes left 4k) |
+| village | Lite | 2.40 (2.30) | 3.90 (3.40) | 2.10 (2.00) | 276 (288) | 357k (354k) | 420k: within |
+| v2 | High | 3.80 (5.40) | 5.30 (6.80) | 3.40 (5.00) | 206 (254) | 600k (912k) | within |
+| v2 | Lite | 2.60 (3.00) | 3.50 (3.70) | 2.50 (2.80) | 144 (172) | 324k (629k) | within |
+
+Against look-fixes' run of the same scenes (the section above): village High 3.90 → 3.90 ms, 556k →
+548k triangles; Lite 2.30 → 2.40 ms (inside its spread; p95 3.4 → 3.9 on a run at load 3.6); v2 High 3.70 → 3.80 ms,
+608k → 600k; v2 Lite 2.70 → 2.60 ms. The draw-call drop (−12) is from lanes merged since, not the water: the waves add
+no draw.
+
+**Each piece:**
+
+| Piece | Cost |
+|---|---|
+| Waves in the water's vertex shader (lib/game/waves.ts WAVE_FN): 4 Gerstner trains (Lite 2), each a sin, a cos and ~15 ALU, and 2 texture reads (the field's depth, the calm) | Per water vertex only; the water's vertex count is unchanged on the island (a quad a cell already gives the shortest train, 3.2 long, three vertices a wave). Nothing measurable. |
+| The same sum per water pixel for the normal, the sun-facing slope shade and the whitecaps (4 more sines for their break-up) | About 120 ALU and 2 texture reads a water pixel. Nothing measurable at 1280 × 800 with the pixel finish (village High 3.90 ms either side). The first thing to drop on a weak GPU: the whitecaps (`waveFoam` 0 hides them, but the shader still evaluates them; a define would skip the work). |
+| The open sea's mesh (GridOcean): stitched rings round the map instead of four graded strips, each vertex carrying its spacing (`aWaveLod`, one float) | **Fewer triangles**: village 9,480 → 5,920 (−3.6k), v2 27,912 → 23,920 (−4.0k); a 32 × 32 islet 6,144 → 7,280 (+1.1k, its unit-spaced inner loops dominate). Finer where the waves show (a unit at the map's edge, 6 units out to 40 for the swell where the crossing starts), coarser at the horizon. No seagrass trade needed. |
+| The waves' calm (seabed.ts bakeWaveCalm), an 8-bit texture a unit a texel | 4.4 KB and 2.4 ms once at load on the village (67 × 67); 215 KB and 16.7 ms on v2 (387 × 555). |
+| What floats (wharf.ts): the boat, 2 rowboats, 2 buoys, each its hull's points sampled (4, 4, 3) and a plane fitted, a spring a frame | 18 surface samples a frame, each three fixed-point steps of the 4-train sum: a few microseconds. |
+| Sparkles and the particles on the water (GridOcean glints, moveFx FACE.water) | The sum once per sprite (was the old swell's three sines), two steps per water particle: nothing measurable. |
+
+The applicant island (live for recruits) shares the water's code (GridWorld, GridOcean), so it draws the same waves.
+
+Evidence: `specs/evidence/waves/` (each strip 4 frames, half a second apart: the wharf, open water, the boats rocking
+and a close crop, the north beach's shallows, Lite's open water and boats, the arrival's crossing at sea and off the
+bow; the HUD with the quest line left of the minimap and Esc 1).
+
 ## How it was measured
 
 - **Builds:** the measurement build (`measure-build.sh`: production `next build`, the development gates lifted). The
