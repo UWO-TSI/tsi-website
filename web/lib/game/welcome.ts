@@ -52,6 +52,3 @@ export const HQ_LEAD = {
     "Come up to HQ and claim it. It's the big house at the top of the path. I'll have the paperwork ready!",
   ],
 } as const;
-
-/** Where Wren waits: a step up the wharf from the arrival spot and to its right on screen (+x is screen left), facing it. */
-export const LEAD_OFFSET: [number, number] = [-1.1, 1.7];

@@ -37,7 +37,10 @@ import { crossingCamera, type CameraOut, type CrossingPoints } from "@/lib/game/
 import { TUTORIAL_ORDER, newTutorial, stepTutorial, type TutorialStepId, type TutorialTargets } from "@/lib/game/arrival/tutorial";
 import { BRAM, ROD_HANDOVER, hintLine, type HintKeys } from "@/lib/game/arrival/lines";
 import type { WheelItem } from "@/lib/game/toolWheel";
+import { worldLabels } from "@/lib/game/labelLayout";
+import { residentTag } from "@/lib/game/nameTags";
 import rs from "../residents.module.css";
+import tags from "../nameTags.module.css";
 
 const CRATE_URL = "/assets/game/wharf/crate.glb";
 useGLTF.preload(CRATE_URL);
@@ -278,7 +281,7 @@ function guideFrame(f: GuideFrame, dt: number) {
 function BramGuide({ v, island, player, dock, keys }: { v: Village; island: VillageIsland; player: React.RefObject<THREE.Vector3>; dock: Dock; keys: HintKeys }) {
   const group = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null });
-  const bubble = useRef<HTMLDivElement>(null), text = useRef<HTMLSpanElement>(null);
+  const bubble = useRef<HTMLDivElement>(null), text = useRef<HTMLSpanElement>(null), plate = useRef<HTMLDivElement>(null);
   const nav = useMemo(() => navGrid(island, v), [island, v]);
   const keysRef = useRef(keys);
   useEffect(() => { keysRef.current = keys; }, [keys]);
@@ -290,6 +293,8 @@ function BramGuide({ v, island, player, dock, keys }: { v: Village; island: Vill
     for (const id of ["museum", "shop", "hq", "cafe"] as const) targets[id] = front(id) ?? undefined;
     return { targets, pier: { landing: d(BRAM_PIER.landing), before: d(BRAM_PIER.beforeCrate), after: d(BRAM_PIER.afterCrate), fishing: d(BRAM_PIER.fishing) } };
   }, [dock, v]);
+  // His name over his head, as every resident's (lib/game/nameTags.ts), through the label layout.
+  useEffect(() => worldLabels.add(residentTag(out => { const g = group.current; if (!g) return false; out.set(g.position.x, g.position.y + CHARACTER_HEIGHT + 0.3, g.position.z); return true; }, () => plate.current)), []);
   // Dev (evidence scripts): where the steps want you.
   useEffect(() => { if (process.env.NODE_ENV !== "production") Object.assign(window, { __arrivalTargets: () => world.targets }); }, [world]);
   const g = useMemo<Guide>(() => ({ x: world.pier.landing.x, z: world.pier.landing.z, y: 0, path: [], leg: 0, goal: "", hop: null, from: { x: 0, z: 0 }, line: "", until: 0, shown: "", handed: false, started: false }), [world]);
@@ -300,7 +305,7 @@ function BramGuide({ v, island, player, dock, keys }: { v: Village; island: Vill
     <Html calculatePosition={labelPoint} position={[0, CHARACTER_HEIGHT + 0.3, 0]} zIndexRange={[30, 0]} style={{ pointerEvents: "none" }}>
       <div className={rs.stack} data-testid="bram-bubble">
         <div ref={bubble} className={rs.bubble} hidden><b>{BRAM.name}</b><span ref={text} /></div>
-        <div className={rs.plate}>{BRAM.name}<small>{BRAM.title}</small></div>
+        <div ref={plate} className={tags.tag} data-resident hidden><span className={tags.name}>{BRAM.name}</span></div>
       </div>
     </Html>
   </group>;
