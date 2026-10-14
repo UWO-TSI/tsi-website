@@ -9,6 +9,7 @@
  */
 import { EVENT_SPECIES, LAUNCH_ROSTER, REEL_FISH } from "@/lib/collections/roster";
 import { MATERIALS } from "@/lib/crafting/recipes";
+import { TREATS } from "@/lib/collections/treats";
 import { WEAPONS } from "@/lib/combat/weapons";
 import { FISH } from "@/lib/game/fishing";
 import { TOOLS } from "@/lib/game/tools";
@@ -92,7 +93,7 @@ const partSpec = (id: string): IconSpec | null => {
 export function iconSpecs(shop: readonly Pick<CatalogueEntry, "slug" | "catalogue_ref" | "category">[]): IconSpec[] {
   const out = new Map<string, IconSpec>();
   const add = (s: IconSpec | null) => { if (s && !out.has(s.key)) out.set(s.key, s); };
-  for (const sp of [...LAUNCH_ROSTER, ...EVENT_SPECIES, ...REEL_FISH, ...MATERIALS]) add(speciesSpec(sp.key, sp));
+  for (const sp of [...LAUNCH_ROSTER, ...EVENT_SPECIES, ...REEL_FISH, ...MATERIALS, ...TREATS]) add(speciesSpec(sp.key, sp));
   for (const t of TOOLS) add({ key: t.key, view: "diagonal", url: t.model });
   for (const w of WEAPONS) add(WEAPON_MODEL[w.key] ? { key: w.key, view: w.key === "shield-buckler" || w.key === "totem-cedar" || w.key === "wraps-cloth" || w.key === "tome-spirits" || w.key === "tome-warden" ? "three-quarter" : "diagonal", url: WEAPON_MODEL[w.key] } : null);
   add({ key: "glider_leaf", view: "three-quarter", url: "/assets/game/props/leaf-glider.glb" });

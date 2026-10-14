@@ -5,6 +5,7 @@ import {
 } from "./logic";
 import { castWater, fishRoll, forageSize, nodeAt, nodeRoll } from "./rolls";
 import { CATEGORIES, ROSTER, type Category } from "./roster";
+import { TREATS } from "./treats";
 import { toFailure, type Result } from "@/lib/result";
 import { hourKey } from "@/lib/game/peaceful";
 import { rodByTier } from "@/lib/game/rods";
@@ -107,7 +108,7 @@ const EatRequest = z.object({ item: z.string().max(64) });
 export async function eat(store: CollectionsStore, memberId: string, body: unknown): Promise<Result<{ item_key: string; count: number }>> {
   const parsed = EatRequest.safeParse(body);
   if (!parsed.success) return { ok: false, status: 400, code: "invalid", error: "Invalid request" };
-  const sp = ROSTER.find((s) => s.key === parsed.data.item);
+  const sp = [...ROSTER, ...TREATS].find((s) => s.key === parsed.data.item);
   if (sp?.category !== "fruit") return { ok: false, status: 422, code: "not_edible", error: "That isn't something to eat." };
   try {
     return { ok: true, data: { item_key: sp.key, ...(await store.eat(memberId, sp.key)) } };

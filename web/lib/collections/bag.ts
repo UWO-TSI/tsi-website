@@ -6,6 +6,7 @@
  * furniture take none (row 280). The arrangement of the grid is this device's.
  */
 import { MATERIALS } from "@/lib/crafting/recipes";
+import { TREATS } from "./treats";
 import { RARITY_RANK, ROSTER, type Category, type Species } from "./roster";
 
 /** A new member's bag. Pocket upgrades are shop rows whose catalogue_ref is `bag:<slots>` (proposal 23: 30, then 40). */
@@ -13,7 +14,7 @@ export const BAG_START = 20;
 /** The home storage chest: the same stacks, many more slots. */
 export const CHEST_SLOTS = 200;
 
-const SPECIES = new Map<string, Species>([...ROSTER, ...MATERIALS].map(s => [s.key, s]));
+const SPECIES = new Map<string, Species>([...ROSTER, ...MATERIALS, ...TREATS].map(s => [s.key, s]));
 const TYPE_ORDER: readonly Category[] = ["fish", "sea", "bug", "fruit", "nature", "mineral"];
 /** An item's roster entry (name, category, rarity), or null for a key the roster doesn't know. */
 export const itemInfo = (key: string): Species | null => SPECIES.get(key) ?? null;

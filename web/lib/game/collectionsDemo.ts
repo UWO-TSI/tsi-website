@@ -14,6 +14,7 @@ import { memoryEconomyStore } from "@/lib/wallet/memoryStore";
 import { buy, getShop } from "@/lib/wallet/service";
 import { ROSTER } from "@/lib/collections/roster";
 import { MATERIALS } from "@/lib/crafting/recipes";
+import { TREATS } from "@/lib/collections/treats";
 import { slotsUsed } from "@/lib/collections/bag";
 import { DEFAULT_GOALS } from "@/lib/progression/defaults";
 import { latestTourney } from "@/lib/progression/seasonal";
@@ -91,7 +92,7 @@ export function installCollectionsDemo(): void {
             const rows = (await m.store.bag(ME)).items.flatMap(r => {
               const cls = speciesClass(r.item_key), price = cls ? sellPrice(cls.category, cls.rarity) : null;
               if (!cls || !price || r.count < 1) return [];
-              const name = [...ROSTER, ...MATERIALS].find(sp => sp.key === r.item_key)?.name ?? r.item_key;
+              const name = [...ROSTER, ...MATERIALS, ...TREATS].find(sp => sp.key === r.item_key)?.name ?? r.item_key;
               return [{ item_key: r.item_key, name, category: cls.category, rarity: cls.rarity, count: r.count, price_each: price, locked: r.locked === true }];
             }).sort((a, b) => b.price_each - a.price_each || a.name.localeCompare(b.name));
             return reply({ ok: true, data: rows }, "sellable");

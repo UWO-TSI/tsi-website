@@ -10,6 +10,7 @@
  */
 import { ROSTER } from "@/lib/collections/roster";
 import { MATERIALS } from "@/lib/crafting/recipes";
+import { TREATS } from "@/lib/collections/treats";
 import { WEAPONS } from "@/lib/combat/weapons";
 import { GLIDER_REF } from "./glider";
 import { TOOLS, bestTool, ownsTool, type Tool, type ToolKind } from "./tools";
@@ -21,7 +22,7 @@ export const MAX_PINS = 2;
 export type WheelSite = "village" | "home" | "ruins";
 
 export const itemIcon = (key: string) => `/assets/icons/${key}.webp`;
-const SPECIES = new Map([...ROSTER, ...MATERIALS].map(s => [s.key, s]));
+const SPECIES = new Map([...ROSTER, ...MATERIALS, ...TREATS].map(s => [s.key, s]));
 const WEAPON = new Map(WEAPONS.map(w => [w.key, w]));
 /** The order weapon types sit on the wheel. */
 const TYPE_ORDER = ["sword", "bow", "staff", "tome", "revolver", "fists", "shield", "totem"];
@@ -123,7 +124,7 @@ export function flick(v: [number, number], dx: number, dy: number, max: number):
 export interface Reach { water: boolean; bug: string | null; dig: string | null }
 export type ClickVerb = "cast" | "swing" | "dig" | "attack" | "eat";
 export interface ClickAction { verb: ClickVerb; label: string; /** Something in reach takes it (a catch, a dig); otherwise it's the motion alone. */ target: boolean }
-const EDIBLE = new Set(ROSTER.filter(s => s.category === "fruit").map(s => s.key));
+const EDIBLE = new Set([...ROSTER, ...TREATS].filter(s => s.category === "fruit").map(s => s.key));
 export const edible = (key: string) => EDIBLE.has(key);
 
 /** What left click does with what you hold (null: nothing, e.g. empty hands, or the rod with no water in reach). */

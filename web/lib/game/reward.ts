@@ -9,6 +9,7 @@
 import type { SFXName } from "./audio";
 import { ROSTER, type Rarity } from "@/lib/collections/roster";
 import { CRAFTED_ITEMS, MATERIALS, RECIPES } from "@/lib/crafting/recipes";
+import { TREATS } from "@/lib/collections/treats";
 import { CATALOGUE } from "@/lib/wallet/catalogue";
 import { WEAPONS } from "@/lib/combat/weapons";
 import { iconUrl, shopIcon } from "@/lib/icons/keys";
@@ -34,7 +35,7 @@ export interface Reward {
   ingredients?: RewardIngredient[];
 }
 
-const SPECIES = new Map([...ROSTER, ...MATERIALS].map(s => [s.key, s]));
+const SPECIES = new Map([...ROSTER, ...MATERIALS, ...TREATS].map(s => [s.key, s]));
 const ICON = new Map<string, string>([...CATALOGUE, ...CRAFTED_ITEMS].map(c => [c.slug, c.sprite_url ?? shopIcon(c)]));
 for (const w of WEAPONS) ICON.set(w.key, iconUrl(w.key));
 /** A made thing's art: its shop row's icon (furniture, tools, clothes) or the weapon's. */
