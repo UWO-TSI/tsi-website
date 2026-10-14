@@ -166,6 +166,38 @@ touches. Radius 5 costs 1.05 ms and radius 20 costs 2.8 ms a frame (the stroke a
 re-bake for the stroke's region when it ends costs 2–4.5 ms. Headless at 60 Hz it held 60 FPS throughout, worst frame
 17.7 ms. The HUD shows the worst frame and the edit time live.
 
+## Look fixes from playtest round 1: wide shallows, far sparkles, the kept face (2026-10-14)
+
+`game/look-fixes` (specs/playtest-round1.md). One `perf:check` (headless, the measurement build at 106c0690, 3 runs a
+tier, load 3.9-4.3; split by tier only to keep each call under ten minutes), against the 10-14 baseline (8809c517,
+headed): every scene passed and held SCENE_BUDGET.
+
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draws | Triangles | SCENE_BUDGET |
+|---|---|---|---|---|---|---|---|
+| village | High | 3.90 (3.90) | 4.90 (4.90) | 3.40 (3.40) | 382 (382) | **556k** (538k, +3.4%) | 560k: **4k of headroom** |
+| village | Lite | 2.30 (2.30) | 3.40 (3.40) | 2.10 (2.00) | 284 (288) | 359k (354k) | 420k: within |
+| v2 | High | 3.70 (5.40) | 4.80 (6.80) | 3.20 (5.00) | 206 (254) | 608k (912k) | within |
+| v2 | Lite | 2.70 (3.00) | 3.40 (3.70) | 2.40 (2.80) | 144 (172) | 328k (629k) | within |
+
+The v2 rows' drop against the baseline is the world editor's smooth terrain (merged after it), not this lane.
+
+**Each piece:**
+
+| Piece | Cost |
+|---|---|
+| Wide shallows, village (seabed.ts setShoal) | No new draws. The seabed's props follow the depth, so more of them grow on the wider shelf: 618 -> 901 instances on High (seagrass 84 -> 404; rocks breaking the surface, with foam collars, 12 -> 24, still inside the 32 foam-ring slots), 145 -> 295 on Lite. In the same dev session at the bench's framing (world only): draws 328 -> 332, triangles 486k -> 509k. The bake at load: 2-3.5 ms -> 8-14 ms (the open-water max filter, once a field). Fish: 12 schools, 92 -> 97 fish. |
+| Wide shallows, v2 (convert.ts shelf, height.png regenerated) | Geometry only: the same mesh, its seabed heights changed. Dev session, the bench's framing: draws 230 -> 226, triangles 656k -> 660k (its props follow the depth too). |
+| Sparkle fold fade (waterShader.ts WATER_FOLD) | About a dozen ALU in the sprites' vertex shader (one view-matrix column, two normalizes, a dot, a smoothstep), on the glint points only; sprites past the fold are now size 0. Nothing measurable. |
+| Sparkle fog (GridOcean GLINT_FOG) | Replaces the fog chunk's mix with a multiply in the sprites' fragment shader: free. It is what removed the band of pale dots under the horizon (dot pixels in the 30 rows under the horizon on the 16:30 low shot: 922 -> 56 at zoom 1.6, 836 -> 3 at zoom 1). |
+| Kept face (face.ts FaceAnimator.keep) | One boolean a frame: none. |
+
+The village's High triangles are the one to watch: 556k of 560k. If the next look change needs room, the cheapest
+trade is the seagrass on the shelf (`seabedProps.ts` seagrass_a's depth floor 0.14 -> 0.35 keeps the sandy band
+bare, 404 -> 265 plants, on the order of 8k triangles back).
+
+Evidence: `specs/evidence/look-fixes/` (shallows before and after on both worlds, from the game camera, from above
+and at each wharf, and as depth maps; the 16:30 sparkle shots; the emote faces).
+
 ## How it was measured
 
 - **Builds:** the measurement build (`measure-build.sh`: production `next build`, the development gates lifted). The
