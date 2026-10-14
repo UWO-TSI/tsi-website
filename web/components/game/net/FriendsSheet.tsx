@@ -71,7 +71,14 @@ function AddByCode({ code }: { code: string | null }) {
 export default function FriendsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const f = useFriends(), status = useNetStatus();
   const [tab, setTab] = useState<Tab>("friends");
-  useEffect(() => { if (open) void refreshFriends(); }, [open]);
+  // Opening reads the list again and starts on your friends (or on the requests, when someone is asking).
+  const asking = f.asking > 0;
+  useEffect(() => {
+    if (!open) return;
+    void refreshFriends();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- each opening starts on the tab that matters now
+    setTab(asking ? "requests" : "friends");
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps -- only when it opens, not as requests come in while it's open
   const v = f.view, myShard = status.kind === "joined" ? status.shard : null;
   const online = new Map(f.online.map(o => [o.uid, o]));
   const friends = [...(v?.friends ?? [])].sort((a, b) => Number(online.has(b.member_id)) - Number(online.has(a.member_id)) || a.world_name.localeCompare(b.world_name));

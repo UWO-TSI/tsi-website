@@ -11,8 +11,8 @@
 .reason:focus-visible { outline: 2px solid var(--gui-sage); outline-offset: 2px; }
 .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 .friendRow { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
-.status { margin: 0 0 10px; font-size: var(--gui-text-xs); font-weight: 800; color: var(--gui-sage); }
-.status svg { vertical-align: -1px; color: var(--gui-coral); }
+.status { display: flex; align-items: center; gap: 5px; margin: 0 0 10px; font-size: var(--gui-text-xs); font-weight: 800; color: var(--gui-sage); }
+.status svg { flex: none; color: var(--gui-coral); }
 /* The friends sheet. */
 .tabBody { margin-top: 12px; }
 .rowActions { display: inline-flex; gap: 6px; }
