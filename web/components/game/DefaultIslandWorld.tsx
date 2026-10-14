@@ -56,8 +56,10 @@ import { bagRoom } from "@/lib/game/bagStore";
 import { isTyping, worldKeysBlocked } from "@/lib/game/useWorldDialog";
 import { apiCall } from "@/lib/apiClient";
 import PlayerCharacterUI from "./character/PlayerCharacterUI";
+import EmoteWheel from "./emotes/EmoteWheel";
 import Campfire from "./campfire/Campfire";
 import DanceSync from "./dance/DanceSync";
+import { playWheelEntry } from "@/lib/game/emotePlay";
 import { campfireSite } from "@/lib/game/campfireSite";
 import { useCreatorOpen } from "@/lib/game/character/creatorPresence";
 import CharacterCrowd from "./character/CharacterCrowd";
@@ -1133,6 +1135,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <FishingOverlay rod={held?.kind === "rod" && held.tier ? rodByTier(held.tier) : peaceful.rod} onActiveChange={setFishing} />
       <ToolWheel items={wheelItems} held={heldState.held} wheelKey={wheelKeys.wheel} touch={touch} onEquip={holdItem} onSwap={() => swapHeld(wheelItems)}
         enabled={ready && !inside && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating} />
+      <EmoteWheel emoteKey={wheelKeys.emote} touch={touch} onPlay={entry => playWheelEntry(entry, player.current)}
+        enabled={ready && site !== "ruins" && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating} />
       <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} onDonated={loadMuseum} />
       <ToastHub />
       {/* What a catch, a find, a craft or a bottle gave you: one card with its art, beside the Bag's fly-in. */}

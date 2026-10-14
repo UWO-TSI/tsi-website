@@ -1,0 +1,46 @@
+/* The emote wheel (specs/v1-drop.md §3) in the tool wheel's language (ToolWheel.module.css; row 283, David's Animal
+   Crossing UI kit): cream circles for petals round a small centre, the chosen one grows and turns butter yellow, the
+   name in a teal pill beside it, round brown keycaps. Matte, restrained shadows. Motion: the petals pop out from the
+   centre one after another; flipping to the dances swings the new ring in with a little turn; the chosen petal bobs. */
+.wheel { --cream: #fffae6; --butter: var(--gui-butter); --teal: var(--gui-teal); --pill: var(--gui-teal-pill); --ink: var(--gui-bark);
+  position: absolute; inset: 0; z-index: 35; display: grid; place-items: center; pointer-events: none; font-family: var(--gui-font); }
+.wheel::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, #1c2a2a10 0, #1c2a2a30 75%); opacity: 0; transition: opacity 0.16s ease; }
+.wheel[data-shown]::before { opacity: 1; }
+.flower { position: relative; width: 0; height: 0; opacity: 0; transform: scale(0.72) rotate(-8deg); transition: opacity 0.14s ease, transform 0.26s cubic-bezier(0.2, 1.4, 0.4, 1); zoom: var(--tsi-text-scale, 1); }
+.wheel[data-shown] .flower, .flower[data-shown] { opacity: 1; transform: none; pointer-events: auto; }
+.flower[data-ring="dances"] { animation: ringIn 0.32s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+@keyframes ringIn { from { transform: rotate(-30deg) scale(0.86); } }
+.petal { position: absolute; left: 0; top: 0; width: 76px; height: 76px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 50%; cursor: pointer;
+  background: var(--cream); color: var(--ink); box-shadow: 0 3px 0 #725c4e1f, 0 6px 16px #2946411f;
+  transform: translate(-50%, -50%) translate(var(--x), var(--y)) scale(var(--s, 1)); transition: transform 0.16s cubic-bezier(0.2, 1.6, 0.4, 1), background 0.12s, color 0.12s;
+  animation: petalIn 0.28s cubic-bezier(0.2, 1.4, 0.4, 1) both; animation-delay: calc(var(--i) * 20ms); }
+@keyframes petalIn { from { opacity: 0; transform: translate(-50%, -50%) translate(calc(var(--x) * 0.3), calc(var(--y) * 0.3)) scale(0.4); } }
+.flower[data-ring="dances"] .petal { background: #fff3e8; }
+.petal[data-chosen] { --s: 1.22; z-index: 2; background: var(--butter); box-shadow: 0 4px 0 #725c4e26, 0 10px 22px #29464130; }
+.petal[data-chosen] .icon { animation: bob 0.5s ease-in-out infinite alternate; }
+@keyframes bob { from { transform: translateY(1px) rotate(-6deg); } to { transform: translateY(-2px) rotate(6deg); } }
+/* What a tap plays again: a small teal dot on its petal. */
+.petal[data-last]::after { content: ""; position: absolute; top: 5px; right: 7px; width: 9px; height: 9px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 2px var(--cream); }
+.petal:focus-visible, .centre:focus-visible { outline: 3px solid var(--teal); outline-offset: 3px; }
+.icon { pointer-events: none; }
+.centre { position: absolute; left: -28px; top: -28px; width: 56px; height: 56px; display: grid; place-items: center; border: 0; border-radius: 50%; background: #80807c; color: #fffae6; cursor: pointer;
+  box-shadow: 0 3px 0 #725c4e26; transition: transform 0.16s cubic-bezier(0.2, 1.6, 0.4, 1), background 0.12s; }
+.centre[data-chosen] { transform: scale(1.14); background: var(--teal); color: #fffbe7; }
+.name { position: absolute; left: var(--lx); top: calc(var(--ly) + 58px); transform: translateX(-50%); margin: 0; display: flex; flex-direction: column; align-items: center; min-width: 96px; padding: 7px 20px 8px;
+  border-radius: 44% 48% 42% 46% / 52% 50% 48% 50%; background: var(--pill); color: var(--gui-ink-strong); white-space: nowrap; pointer-events: none; z-index: 3; transition: left 0.12s ease, top 0.12s ease; }
+.name::before { content: ""; position: absolute; left: 50%; top: -8px; width: 16px; height: 10px; transform: translateX(-50%); background: var(--pill); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.name[data-above] { top: calc(var(--ly) - 58px); transform: translate(-50%, -100%); }
+.name[data-above]::before { top: auto; bottom: -8px; clip-path: polygon(0 0, 100% 0, 50% 100%); }
+.name[data-centre] { top: calc(var(--ly) + 34px); }
+.name b { font-size: 17px; font-weight: 800; letter-spacing: 0.2px; }
+.name small { font-size: var(--gui-text-xs); font-weight: 800; opacity: 0.8; }
+.hint { position: absolute; right: 22px; bottom: 22px; margin: 0; display: flex; gap: 10px; opacity: 0; transition: opacity 0.14s; zoom: var(--tsi-text-scale, 1); }
+.wheel[data-shown] .hint { opacity: 1; }
+.hint span { display: flex; align-items: center; gap: 7px; padding: 5px 14px 5px 5px; border-radius: 999px; background: var(--cream); color: var(--gui-ink-strong); font-size: var(--gui-text-sm); font-weight: 800; box-shadow: 0 2px 0 #725c4e1f; }
+.hint kbd { min-width: 28px; height: 28px; padding: 0 8px; box-sizing: border-box; display: grid; place-items: center; border-radius: 999px; background: var(--ink); color: var(--cream); font: inherit; font-size: var(--gui-text-xs); }
+/* Touch: the emote button, beside the tool wheel's (bottom right, above the stick's corner). */
+.touchButton { position: absolute; right: calc(max(18px, var(--hud-edge, 0px)) + 72px); bottom: calc(var(--hud-stick-bottom, 56px) + 84px * var(--touch-scale, 1) + 10px); z-index: 12; width: 62px; height: 62px;
+  display: grid; place-items: center; border: 0; border-radius: 50%; background: #fffae6; color: #725c4e; box-shadow: 0 3px 0 #725c4e26, 0 6px 16px #2946411f; }
+.touchButton:active { transform: scale(0.94); }
+@media (max-height: 640px) { .flower { zoom: 0.8; } }
+@media (prefers-reduced-motion: reduce) { .flower, .petal, .centre, .name, .wheel::before, .petal[data-chosen] .icon { transition: none; animation: none; } }
