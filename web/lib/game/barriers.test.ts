@@ -53,6 +53,12 @@ describe("natural barriers (specs/v1-drop.md §2, lib/game/barriers.ts)", () => 
     // Open ground either side still walks.
     expect(island.standable(0, -6)).toBe(true);
     expect(island.standable(0, 6)).toBe(true);
+    // The blade grass's `clear` list (GridWorld, DefaultIslandWorld grassClear: nothing taller than the ground stands
+    // there) keeps grass out of a barrier, the same rule as every other solid.
+    const grassClear = (x: number, z: number) => island.top(x, z) <= island.ground(x, z) + 0.01;
+    expect(grassClear(0, 0)).toBe(false);
+    expect(grassClear(1.5, 0.5)).toBe(false);
+    expect(grassClear(0, -6)).toBe(true);
   });
 
   it("is gone, prop and solid, once its drop is out", () => {

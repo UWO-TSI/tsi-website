@@ -61,6 +61,10 @@ describe("ownership catalogue", () => {
         expect(byRef(p.id).filter((i) => i.active), p.id).toHaveLength(0);
         continue;
       }
+      if (p.event) { // event costumes (the traditions calendar): free while their tradition runs, never a shop row
+        expect(byRef(p.id), p.id).toHaveLength(0);
+        continue;
+      }
       expect(byRef(p.id), p.id).toHaveLength(1);
       expect(byRef(p.id)[0].active, p.id).toBe(!STARTER_PARTS.includes(p.id));
     }
@@ -105,6 +109,27 @@ describe("free starters", () => {
 });
 
 describe("look save (PATCH /api/profile)", () => {
+  it("lets anyone wear a running tradition's costumes, and still refuses every other part they don't own", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      // Halloween (Oct 25 to Nov 1, Toronto; the seeded tradition, the table being unreadable here): the witch hat is free.
+      vi.setSystemTime(new Date("2026-10-31T16:00:00Z"));
+      const hat = wear(DEFAULT_LOOK, "accessory", "acc_witch_hat");
+      expect((await saveLook(hat)).status).toBe(200);
+      // A non-event part they don't own still 403s, and only it is missing (the costume is not).
+      const both = await saveLook(wear(hat, "top", "top_cardigan"));
+      expect(both.status).toBe(403);
+      expect(await both.json()).toMatchObject({ code: "not_owned", missing: ["top_cardigan"] });
+      // After Halloween the costume is a part like any other: not owned, refused.
+      vi.setSystemTime(new Date("2026-11-05T16:00:00Z"));
+      const after = await saveLook(hat);
+      expect(after.status).toBe(403);
+      expect(await after.json()).toMatchObject({ code: "not_owned", missing: ["acc_witch_hat"] });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("refuses a part or dye the member doesn't own, server-side", async () => {
     const cardigan = await saveLook(wear(DEFAULT_LOOK, "top", "top_cardigan"));
     expect(cardigan.status).toBe(403);

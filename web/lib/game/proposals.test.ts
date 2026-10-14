@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { PROPOSALS, acceptProposed, pendingOf } from "./proposals";
-import type { MapObject } from "./villageMap";
+import { buildVillage, villageOf, type MapObject, type VillageDoc } from "./villageMap";
+import { islandOf } from "./defaultIsland";
+import worldDoc from "@/data/world-map.json";
 
 describe("placement proposals (lib/game/proposals.ts)", () => {
   const p = PROPOSALS.find(x => x.title === "v1 natural barriers")!;
@@ -22,6 +24,13 @@ describe("placement proposals (lib/game/proposals.ts)", () => {
     expect(all).toHaveLength(1 + p.objects.length);
     expect(pendingOf(p, all)).toEqual([]);
     expect(acceptProposed(all, p.objects)).toHaveLength(all.length);
+  });
+  it("proposes the beach campfire on the v2 world, on dry land, clear of the barriers", () => {
+    const c = PROPOSALS.find(x => x.title === "v1 beach campfire")!;
+    expect(c.target).toBe("world-map");
+    expect(c.objects).toEqual([expect.objectContaining({ id: "campfire", kind: "campfire", x: -15, z: 112 })]);
+    const world = buildVillage(worldDoc as unknown as VillageDoc), island = islandOf(villageOf(world.map, acceptProposed(world.objects, p.objects)));
+    expect(island.standable(-15, 112)).toBe(true);
   });
   it("leaves an object David already placed or moved under that id as his", () => {
     const moved: MapObject = { ...p.objects[0], x: 1, z: 2 };

@@ -5,6 +5,7 @@
  * (undoable); David's Save writes the map. Pure: the painter and the tests share it.
  */
 import v1Barriers from "@/data/proposals/v1-barriers.json";
+import v1Campfire from "@/data/proposals/v1-campfire.json";
 import type { MapObject, ObjectKind } from "./villageMap";
 
 export interface ProposedObject extends MapObject { note?: string }
@@ -17,7 +18,7 @@ export interface Proposal {
   objects: ProposedObject[];
 }
 
-export const PROPOSALS: readonly Proposal[] = [v1Barriers as Proposal];
+export const PROPOSALS: readonly Proposal[] = [v1Barriers as Proposal, v1Campfire as Proposal];
 
 const keyOf = (o: Pick<MapObject, "kind" | "id">) => `${o.kind}:${o.id}`;
 

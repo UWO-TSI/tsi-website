@@ -1,0 +1,9 @@
+{
+  "title": "v1 beach campfire",
+  "target": "world-map",
+  "spec": "specs/v1-drop.md §3",
+  "about": "The campfire drum dance's fire on the v2 world's beach (coordinator, 2026-10-14). Accepting adds it to the painter's document; Save writes web/data/world-map.json. Until it is placed, lib/game/campfireSite.ts picks open sand by the beach landmark.",
+  "objects": [
+    {"id": "campfire", "kind": "campfire", "x": -15, "z": 112, "note": "On the beach, by the beach landmark: the fire, the sitting ring and the dance ring round it."}
+  ]
+}
