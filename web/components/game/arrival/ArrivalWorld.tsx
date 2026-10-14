@@ -3,9 +3,10 @@
 /**
  * The arrival inside the island's canvas (specs/v1-drop.md §1.4-1.5): the crossing's director (the five golden-hour
  * shots on the boat as it comes in from far out, reusing the world, the wharf's boat and its trip), Bram at the tiller,
- * the drops running off you in the close-up; then on the pier the walk-along tutorial: Bram walking you up the pier,
- * over the fish crate, to the fishing spot, down the main street to each building's front and to the plaza, saying his
- * lines and, when you stall, a gentle hint in his speech bubble (lib/game/arrival/tutorial.ts).
+ * the drops running off you in the close-up; then on the pier the walk-along v2 (playtest round 1): Bram walks the
+ * world's route (lib/game/arrival/routes) stop by stop with a "!" over his head and waits; you talk to him (E), he tells
+ * you about the place and walks on: the dock and its crate, the museum, the shop, HQ, the café, the beach (his rod, a
+ * catch), then what you've collected. When you stall, a gentle hint in his speech bubble (lib/game/arrival/tutorial.ts).
  *
  * Reads the arrival's runtime (arrivalStore) each frame; nothing here sets React state in the frame loop (the bubble is
  * toggled through refs, as the residents').
@@ -25,7 +26,7 @@ import { AudioManager } from "@/lib/game/audio";
 import { worldNow } from "@/lib/game/worldClock";
 import { myTrip } from "@/lib/game/myTrip";
 import { CROSS_TIME, boatPose, newBoatPose } from "@/lib/game/boatTrip";
-import { BOAT, dockToWorld, floatBoat, newFloat, worldToDock, type Dock } from "@/lib/game/wharf";
+import { BOAT, dockToWorld, floatBoat, newFloat, type Dock } from "@/lib/game/wharf";
 import { landmark, landmarkPoint, type VillageIsland } from "@/lib/game/defaultIsland";
 import type { Village } from "@/lib/game/villageMap";
 import { navGrid } from "@/lib/game/residentRoutine";
@@ -35,47 +36,72 @@ import { arrivalChanged, arrivalEvent, arrivalRun, useArrivalPhase } from "@/lib
 import { crossingShot } from "@/lib/game/arrival/sequence";
 import { crossingCamera, type CameraOut, type CrossingPoints } from "@/lib/game/arrival/crossing";
 import { ACTIVE_WORLD_BEND } from "@/lib/game/curvedWorld";
-import { TUTORIAL_ORDER, newTutorial, stepTutorial, type TutorialStepId, type TutorialTargets } from "@/lib/game/arrival/tutorial";
-import { BRAM, ROD_HANDOVER, hintLine, type HintKeys } from "@/lib/game/arrival/lines";
+import { awaitsTalk, newTutorial, stepTutorial } from "@/lib/game/arrival/tutorial";
+import { resolvePlace, resolveRoute, type PlaceWorld, type ResolvedStop, type TutorialRoute, type XZ } from "@/lib/game/arrival/route";
+import { routeFor } from "@/lib/game/arrival/routes";
+import { BRAM, fillKeys, hintLine, type HintKeys } from "@/lib/game/arrival/lines";
 import type { WheelItem } from "@/lib/game/toolWheel";
 import { worldLabels } from "@/lib/game/labelLayout";
 import { residentTag } from "@/lib/game/nameTags";
 import rs from "../residents.module.css";
 import tags from "../nameTags.module.css";
+import aw from "./ArrivalWorld.module.css";
 
 const CRATE_URL = "/assets/game/wharf/crate.glb";
 useGLTF.preload(CRATE_URL);
 /**
- * The fish crate across the pier (art/wharf/build_crate.py), in the dock's frame: it fills the deck between the rails,
- * so the way up the pier is over it. Its solid footprint spans the whole deck (WHARF_DECK_LOCAL x ±0.9) and its lid is
- * `h` up: over the step-up (0.3), under a jump (1.28).
+ * A fish crate (art/wharf/build_crate.py) where the route puts one (lib/game/arrival/routes: the village's fills the
+ * pier's deck between the rails, so the way up the pier is over it). Its solid footprint, half extents across and
+ * along, and its lid `h` up: over the step-up (0.3), under a jump (1.28).
  */
-export const CRATE = { x: 0, z: -0.95, hw: 0.97, hd: 0.3, h: 0.5 } as const;
-/** Where the walk-along stands its marks, in the dock's frame: past the crate, the fishing spot at the pier's land end. */
-const PIER_MARKS = { pastCrate: { x: 0.05, z: CRATE.z + 0.62 }, fish: { x: -0.4, z: 0.6 } };
-/** Bram on the pier: beside the boat as you land, his way up the pier (over the crate), where he waits to fish. */
-const BRAM_PIER = { landing: { x: -0.5, z: -1.95 }, beforeCrate: { x: 0.05, z: CRATE.z - 0.6 }, afterCrate: { x: 0.05, z: CRATE.z + 0.55 }, fishing: { x: 0.42, z: 0.95 } };
+export const CRATE = { hw: 0.97, hd: 0.3, h: 0.5 } as const;
 /** At the tiller during the crossing (the boat's frame). */
 const BRAM_ABOARD = { x: 0.08, z: -0.62 };
 
-/** The island's walking with the crate on the pier: its lid is the top there. */
-export function withCrate(island: VillageIsland, dock: Dock): VillageIsland {
-  const at = { x: 0, z: 0 };
-  const inCrate = (x: number, z: number) => { worldToDock(dock, x, z, at); return Math.abs(at.x - CRATE.x) < CRATE.hw && Math.abs(at.z - CRATE.z) < CRATE.hd; };
+/** The places a world resolves the route's against: its wharf (the dock frame) and its landmarks' points. */
+export function placeWorld(dock: Dock | null, v: Village): PlaceWorld {
+  return {
+    dock: dock && { x: dock.x, z: dock.z, yaw: dock.yaw },
+    landmark: (id, point) => {
+      if (point) { const p = landmarkPoint(id, point, v); return p ? { x: p[0], z: p[1] } : null; }
+      const l = landmark(id, v);
+      return l ? { x: l.x, z: l.z } : null;
+    },
+  };
+}
+/** The route's crates in world XZ, each with its turn (a dock-frame crate turns with the dock). */
+export function crateSpots(route: TutorialRoute, w: PlaceWorld): (XZ & { yaw: number })[] {
+  return route.crates.flatMap(c => {
+    const at = resolvePlace(c.at, w);
+    return at ? [{ ...at, yaw: (c.yaw ?? 0) + ("dock" in c.at && w.dock ? w.dock.yaw : 0) }] : [];
+  });
+}
+/** The island's walking with the route's crates on it: each crate's lid is the top there. */
+export function withCrates(island: VillageIsland, crates: readonly (XZ & { yaw: number })[]): VillageIsland {
+  if (!crates.length) return island;
+  const inCrate = (x: number, z: number) => crates.some(c => {
+    const dx = x - c.x, dz = z - c.z, cs = Math.cos(c.yaw), sn = Math.sin(c.yaw);
+    return Math.abs(dx * cs - dz * sn) < CRATE.hw && Math.abs(dx * sn + dz * cs) < CRATE.hd;
+  });
   return { ...island, top: (x, z) => (inCrate(x, z) ? island.top(x, z) + CRATE.h : island.top(x, z)) };
 }
 
 const BRAM_LOOK = parseLook(RESIDENT_LOOKS["wharf-keeper"]);
 const PROMPT_CLEAR = 132;
+/** Bram's bubble stays on screen: never under the prompt lane, and on a narrow screen never off its sides (it's up to 230 px wide). */
+const BUBBLE_HALF = 120;
 const labelPoint = (object: THREE.Object3D, camera: THREE.Camera, size: { width: number; height: number }) => {
   const p = calculateCurvedHtmlPosition(object, camera, size);
   if (p[1] <= size.height) p[1] = Math.min(p[1], size.height - PROMPT_CLEAR);
+  if (p[0] > -BUBBLE_HALF && p[0] < size.width + BUBBLE_HALF) p[0] = Math.min(Math.max(p[0], BUBBLE_HALF), size.width - BUBBLE_HALF);
   return p;
 };
 
-export default function ArrivalWorld({ v, island, player, dock, held, keys }: {
+export default function ArrivalWorld({ v, island, player, dock, held, keys, world = "village" }: {
   v: Village; island: VillageIsland; player: React.RefObject<THREE.Vector3>; dock: Dock;
   held: WheelItem | null; keys: HintKeys;
+  /** Whose route Bram walks (lib/game/arrival/routes). */
+  world?: string;
 }) {
   const phase = useArrivalPhase();
   // The rod out (the fishing step's hint changes), a cast, a catch: what the tutorial waits for.
@@ -87,14 +113,17 @@ export default function ArrivalWorld({ v, island, player, dock, held, keys }: {
     window.addEventListener("tsi:fish-caught", caught);
     return () => { window.removeEventListener("tsi:fish-cast", cast); window.removeEventListener("tsi:fish-caught", caught); };
   }, []);
+  const route = routeFor(world);
+  const pw = useMemo(() => placeWorld(dock, v), [dock, v]);
+  const crates = useMemo(() => crateSpots(route, pw), [route, pw]);
   if (!phase) return null;
   const crossing = phase === "clearing" || phase === "crossing";
   const ashore = phase === "landing" || phase === "tutorial";
   return <>
     {crossing && <CrossingDirector dock={dock} player={player} />}
     {crossing && <BramAboard dock={dock} />}
-    {(crossing || ashore) && <Suspense fallback={null}><PierCrate dock={dock} /></Suspense>}
-    {ashore && <BramGuide v={v} island={island} player={player} dock={dock} keys={keys} />}
+    {(crossing || ashore) && <Suspense fallback={null}><Crates spots={crates} /></Suspense>}
+    {ashore && <BramGuide v={v} island={island} player={player} dock={dock} keys={keys} route={route} places={pw} />}
   </>;
 }
 
@@ -167,97 +196,109 @@ function BramAboard({ dock }: { dock: Dock }) {
   return <group ref={group} matrixAutoUpdate={false}><Suspense fallback={null}><Character look={BRAM_LOOK} motion={motion} /></Suspense></group>;
 }
 
-/** The fish crate on the pier. */
-function PierCrate({ dock }: { dock: Dock }) {
+/** The route's fish crates. */
+function Crates({ spots }: { spots: readonly (XZ & { yaw: number })[] }) {
   const { scene } = useGLTF(CRATE_URL);
-  const model = useMemo(() => prepareModel(scene, CRATE_URL, undefined, "solid"), [scene]);
-  useEffect(() => () => disposeModelMaterials(model), [model]);
-  return <group position={[dock.x, 0, dock.z]} rotation={[0, dock.yaw, 0]}>
-    <primitive object={model} position={[CRATE.x, 0, CRATE.z]} rotation={[0, 0.03, 0]} />
-  </group>;
+  const models = useMemo(() => spots.map(() => prepareModel(scene, CRATE_URL, undefined, "solid")), [scene, spots]);
+  useEffect(() => () => models.forEach(disposeModelMaterials), [models]);
+  return <>{spots.map((c, i) => <primitive key={i} object={models[i]} position={[c.x, 0, c.z]} rotation={[0, c.yaw, 0]} />)}</>;
 }
 
 // ── The walk-along ────────────────────────────────────────────────────────────────────────────────────────────────
 interface Guide {
   x: number; z: number; y: number;
-  /** The way he's walking: points (world) and which leg he's on; a leg flagged `hop` is the crate. */
-  path: { x: number; z: number; hop?: boolean }[]; leg: number; goal: string;
-  hop: number | null; from: { x: number; z: number };
+  /** The way he's walking: points (world) and which leg he's on; a leg flagged `hop` is over a crate. */
+  path: (XZ & { hop?: boolean })[]; leg: number; goal: string;
+  hop: number | null; from: XZ;
   /** His bubble: the line, until when (performance.now s). */
   line: string; until: number; shown: string;
-  /** The rod handed over (the fishing step). */
-  handed: boolean;
-  started: boolean;
+  /** The "!" shown now. */
+  mark: boolean;
+  /** The walk is over: his last word waits for your collection to close, then he waves and it ends. */
+  ending: boolean; waved: boolean;
 }
 const BRAM_WALK = 3.1, BRAM_JOG = 6.2, HOP_S = 0.6;
+/** He leads; this far behind him you've lost him, and he waits for you to catch up. */
+const WAIT_GAP = 9;
+/** At his stand (or past the last leg): within this he's there and can be talked to. */
+const THERE = 0.6;
 const lineSeconds = (line: string) => Math.max(3.2, 1.4 + line.length * 0.05);
 
-type GuideWorld = { targets: TutorialTargets; pier: Record<"landing" | "before" | "after" | "fishing", { x: number; z: number }> };
 interface GuideFrame {
-  g: Guide; m: CharacterMotion; p: THREE.Vector3; world: GuideWorld; nav: ReturnType<typeof navGrid>; island: VillageIsland; dock: Dock; keys: HintKeys;
-  group: THREE.Group | null; bubble: HTMLDivElement | null; text: HTMLSpanElement | null;
+  g: Guide; m: CharacterMotion; p: THREE.Vector3; stops: ResolvedStop[]; nav: ReturnType<typeof navGrid>; island: VillageIsland; keys: HintKeys;
+  group: THREE.Group | null; bubble: HTMLDivElement | null; text: HTMLSpanElement | null; mark: HTMLDivElement | null;
+}
+/** The way to a goal: its fixed waypoints, then round every solid to the end (a straight line where the grid has none). */
+function wayTo(g: Guide, nav: ReturnType<typeof navGrid>, via: readonly (XZ & { hop?: boolean })[], to: XZ | null) {
+  const path: (XZ & { hop?: boolean })[] = [...via];
+  if (to) {
+    const from = path.at(-1) ?? g;
+    const way = nav.path(from.x, from.z, to.x, to.z);
+    path.push(...(way ? way.slice(1).map(([x, z]) => ({ x, z })) : []), to);
+  }
+  return path;
 }
 /**
  * One frame of the walk-along, module scope (the react compiler forbids writing through hook values): the tutorial's
- * step (its cues), where Bram is going for it and his walk there, his bubble.
+ * frame (its cues), where Bram is going for the stop and stage, his walk there, his bubble and his "!".
  */
 function guideFrame(f: GuideFrame, dt: number) {
-  const { g, m, p, world, nav, island, dock } = f, now = performance.now() / 1000, a = arrivalRun.current;
+  const { g, m, p, stops, nav, island } = f, now = performance.now() / 1000, a = arrivalRun.current;
   if (!a) return;
   const say = (line: string) => {
-    g.line = line; g.until = now + lineSeconds(line);
-    m.talk = Math.min(3.2, 0.8 + line.length * 0.045);
+    g.line = fillKeys(line, f.keys); g.until = now + lineSeconds(g.line);
+    m.talk = Math.min(3.2, 0.8 + g.line.length * 0.045);
     AudioManager.playBlip();
     window.setTimeout(() => AudioManager.playBlip(), 150);
     window.setTimeout(() => AudioManager.playBlip(), 310);
   };
-  // The tutorial's own frame: its lines, hints, glyphs and end.
+  // The tutorial's own frame: its lines, hints, the hand-over, glyphs and the end.
   if (a.phase === "tutorial") {
-    if (!arrivalRun.tutorial) arrivalRun.tutorial = newTutorial(now, { x: p.x, z: p.z });
+    if (!arrivalRun.tutorial) arrivalRun.tutorial = newTutorial(now);
     const s = arrivalRun.tutorial;
-    const before = s.step;
-    for (const cue of stepTutorial(s, { now, player: { x: p.x, z: p.z }, targets: world.targets, events: arrivalRun.events.splice(0) })) {
-      if (cue.kind === "say") {
-        if (cue.step === "fish" && !g.handed) { g.handed = true; m.play = "HoldUp"; say(`${ROD_HANDOVER} ${cue.line}`); }
-        else say(cue.line);
-      } else if (cue.kind === "hint") say(hintLine(cue, f.keys));
-      else if (cue.kind === "glyph") { arrivalRun.glyph = { key: cue.glyph, at: performance.now() }; arrivalChanged(); }
-      else if (cue.kind === "done") { arrivalRun.signals.toured = true; m.play = "Wave"; }
+    const before = `${s.stop}:${s.stage}`;
+    for (const cue of stepTutorial(s, { now, player: { x: p.x, z: p.z }, bram: g, stops, events: arrivalRun.events.splice(0) })) {
+      if (cue.kind === "say") say(cue.line);
+      else if (cue.kind === "hint") say(hintLine(cue, f.keys));
+      else if (cue.kind === "give") m.play = "HoldUp";
+      else if (cue.kind === "glyph") arrivalRun.glyph = { key: cue.glyph, at: performance.now() };
+      else if (cue.kind === "done") g.ending = true;
+      if (cue.kind === "give" || cue.kind === "glyph") arrivalChanged();
     }
-    if (s.step !== before) arrivalChanged();
+    if (`${s.stop}:${s.stage}` !== before) arrivalChanged();
   }
-  // Where he's going for this step: beside the boat until you start walking, up the pier and over the crate, the
-  // fishing spot, then each building's front and the plaza, on a path round every solid.
-  const tut = arrivalRun.tutorial;
-  const step: TutorialStepId = a.phase === "tutorial" && tut ? TUTORIAL_ORDER[Math.min(tut.step, TUTORIAL_ORDER.length - 1)] : "dock";
-  if (step === "dock" && tut && Math.hypot(p.x - tut.start.x, p.z - tut.start.z) > 0.4) g.started = true;
-  const goalKey = step === "dock" ? (g.started ? "pier-up" : "landing") : step === "crate" ? "pier-up" : step === "fish" || step === "bag" ? "fishing" : step;
-  if (goalKey !== g.goal) {
-    g.goal = goalKey; g.leg = 0;
-    const W = world.pier, below = worldToDock(dock, g.x, g.z, { x: 0, z: 0 }).z < CRATE.z + CRATE.hd;
-    if (goalKey === "landing") g.path = [W.landing];
-    else if (goalKey === "pier-up") g.path = below ? [W.before, { ...W.after, hop: true }] : [W.after];
-    else if (goalKey === "fishing") g.path = [...(below ? [W.before, { ...W.after, hop: true }] : []), W.fishing];
+  // The end: his last word holds while your collection (or any sheet) is open; once it's closed he says it, waves, and
+  // when it's been said the walk is over (the reward, the flag).
+  if (g.ending) {
+    if (document.querySelector('[role="dialog"]')) g.until = now + lineSeconds(g.line);
     else {
-      const t = world.targets[step as keyof TutorialTargets];
-      const to = t ? { x: t.x + 1.2, z: t.z - 0.6 } : { x: g.x, z: g.z };
-      const way = nav.path(g.x, g.z, to.x, to.z);
-      g.path = way ? way.slice(1).map(([x, z]) => ({ x, z })) : [to];
+      if (!g.waved) { g.waved = true; m.play = "Wave"; }
+      if (now >= g.until) { g.ending = false; arrivalRun.signals.toured = true; }
     }
   }
-  // Walk the way: he keeps up when you run ahead and waits when you fall far behind; the crate is a hop over its lid.
+  // Where he's going: his stop's stand (via its waypoints) while he waits to be talked to; a reach task's wait (the
+  // crate's hop); otherwise he stays where he is.
+  const tut = arrivalRun.tutorial, i = Math.min(tut?.stop ?? 0, stops.length - 1), stop = stops[i], stage = tut?.done ? "done" : tut?.stage ?? "await";
+  const goalKey = `${i}:${stage === "task" ? "task" : stage === "await" ? "stand" : "stay"}`;
+  if (goalKey !== g.goal && stop) {
+    g.goal = goalKey; g.leg = 0;
+    if (stage === "await") g.path = wayTo(g, nav, stop.via, stop.stand);
+    else if (stage === "task" && stop.task?.kind === "reach") g.path = wayTo(g, nav, stop.task.wait, null);
+    else g.path = [];
+  }
+  // Walk the way: he leads and waits when you fall far behind; a hop is over a crate's lid.
   let speed = 0;
-  const next = g.path[g.leg];
-  if (g.hop !== null) {
+  const next = g.path[g.leg], gap = Math.hypot(p.x - g.x, p.z - g.z);
+  if (g.hop !== null && next) {
     g.hop = Math.min(1, g.hop + dt / HOP_S);
     const k = g.hop;
     g.x = g.from.x + (next.x - g.from.x) * k; g.z = g.from.z + (next.z - g.from.z) * k;
     m.lift = Math.sin(Math.PI * k) * (CRATE.h + 0.3);
     if (k >= 1) { g.hop = null; g.leg++; m.lift = 0; }
   } else if (next) {
-    const goal = g.path[g.path.length - 1], gap = Math.hypot(p.x - g.x, p.z - g.z);
+    const goal = g.path[g.path.length - 1];
     const ahead = Math.hypot(p.x - goal.x, p.z - goal.z) < Math.hypot(g.x - goal.x, g.z - goal.z);
-    speed = ahead && gap > 3.5 ? BRAM_JOG : gap > 6.5 ? 0 : BRAM_WALK;
+    speed = ahead && gap > 3.5 ? BRAM_JOG : gap > WAIT_GAP ? 0 : BRAM_WALK;
     if (next.hop) { g.hop = 0; g.from = { x: g.x, z: g.z }; m.play = "Jump"; m.yaw = Math.atan2(next.x - g.x, next.z - g.z); speed = 0; }
     else {
       const dx = next.x - g.x, dz = next.z - g.z, d = Math.hypot(dx, dz);
@@ -266,45 +307,52 @@ function guideFrame(f: GuideFrame, dt: number) {
     }
   }
   m.speed = g.hop !== null ? 0 : speed;
-  // Standing: facing you (or the water while you fish).
+  // Standing: facing you.
   if (speed === 0 && g.hop === null) m.yaw = easeFacing(m.yaw, Math.atan2(p.x - g.x, p.z - g.z), 6, dt);
   g.y = island.top(g.x, g.z);
   f.group?.position.set(g.x, g.y, g.z);
-  // The bubble: shown while a line is up; the DOM touched only when it changes.
+  // E talks to him once he's at his stop with the "!" (and moves his lines on while he talks).
+  const there = !!stop && g.leg >= g.path.length && g.hop === null && Math.hypot(g.x - stop.stand.x, g.z - stop.stand.z) <= THERE;
+  arrivalRun.bram.x = g.x; arrivalRun.bram.z = g.z;
+  arrivalRun.bram.talkable = a.phase === "tutorial" && ((awaitsTalk(tut) && there) || stage === "talk");
+  // The bubble and the "!": the DOM touched only when they change; the "!" steps aside while he speaks.
   const line = now < g.until ? g.line : "";
   if (line !== g.shown) {
     g.shown = line;
     if (f.text) f.text.textContent = line;
     if (f.bubble) f.bubble.hidden = !line;
   }
+  const mark = a.phase === "tutorial" && awaitsTalk(tut) && !line;
+  if (mark !== g.mark) { g.mark = mark; if (f.mark) f.mark.hidden = !mark; }
 }
 
-function BramGuide({ v, island, player, dock, keys }: { v: Village; island: VillageIsland; player: React.RefObject<THREE.Vector3>; dock: Dock; keys: HintKeys }) {
+function BramGuide({ v, island, player, dock, keys, route, places }: {
+  v: Village; island: VillageIsland; player: React.RefObject<THREE.Vector3>; dock: Dock; keys: HintKeys; route: TutorialRoute; places: PlaceWorld;
+}) {
   const group = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null });
-  const bubble = useRef<HTMLDivElement>(null), text = useRef<HTMLSpanElement>(null), plate = useRef<HTMLDivElement>(null);
+  const bubble = useRef<HTMLDivElement>(null), text = useRef<HTMLSpanElement>(null), plate = useRef<HTMLDivElement>(null), mark = useRef<HTMLDivElement>(null);
   const nav = useMemo(() => navGrid(island, v), [island, v]);
   const keysRef = useRef(keys);
   useEffect(() => { keysRef.current = keys; }, [keys]);
-  const world = useMemo(() => {
-    const d = (p: { x: number; z: number }) => dockToWorld(dock, p.x, p.z, { x: 0, z: 0 });
-    const front = (id: "museum" | "shop" | "hq" | "cafe") => { const p = landmarkPoint(id, "exit", v); return p ? { x: p[0], z: p[1] } : null; };
-    const plaza = landmark("plaza", v);
-    const targets: TutorialTargets = { crate: d(PIER_MARKS.pastCrate), fish: d(PIER_MARKS.fish), plaza: plaza ? { x: plaza.x, z: plaza.z } : undefined };
-    for (const id of ["museum", "shop", "hq", "cafe"] as const) targets[id] = front(id) ?? undefined;
-    return { targets, pier: { landing: d(BRAM_PIER.landing), before: d(BRAM_PIER.beforeCrate), after: d(BRAM_PIER.afterCrate), fishing: d(BRAM_PIER.fishing) } };
-  }, [dock, v]);
+  // The route in this world's places (he starts at the first stop: beside the boat as you land).
+  const stops = useMemo(() => resolveRoute(route, places, { x: dock.x, z: dock.z }), [route, places, dock]);
+  useEffect(() => { arrivalRun.stops = stops; arrivalChanged(); }, [stops]);
   // His name over his head, as every resident's (lib/game/nameTags.ts), through the label layout.
   useEffect(() => worldLabels.add(residentTag(out => { const g = group.current; if (!g) return false; out.set(g.position.x, g.position.y + CHARACTER_HEIGHT + 0.3, g.position.z); return true; }, () => plate.current)), []);
-  // Dev (evidence scripts): where the steps want you.
-  useEffect(() => { if (process.env.NODE_ENV !== "production") Object.assign(window, { __arrivalTargets: () => world.targets }); }, [world]);
-  const g = useMemo<Guide>(() => ({ x: world.pier.landing.x, z: world.pier.landing.z, y: 0, path: [], leg: 0, goal: "", hop: null, from: { x: 0, z: 0 }, line: "", until: 0, shown: "", handed: false, started: false }), [world]);
+  // Dev (evidence scripts): the resolved stops, where Bram is, the tutorial's state.
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    Object.assign(window, { __arrivalStops: () => stops, __bram: () => ({ ...arrivalRun.bram }), __tutorial: () => (arrivalRun.tutorial ? { ...arrivalRun.tutorial } : null) });
+  }, [stops]);
+  const g = useMemo<Guide>(() => ({ x: stops[0]?.stand.x ?? dock.x, z: stops[0]?.stand.z ?? dock.z, y: 0, path: [], leg: 0, goal: "", hop: null, from: { x: 0, z: 0 }, line: "", until: 0, shown: "", mark: false, ending: false, waved: false }), [stops, dock]);
 
-  useFrame((_, raw) => guideFrame({ g, m: motion.current, p: player.current, world, nav, island, dock, keys: keysRef.current, group: group.current, bubble: bubble.current, text: text.current }, Math.min(raw, 0.1)), -2);
+  useFrame((_, raw) => guideFrame({ g, m: motion.current, p: player.current, stops, nav, island, keys: keysRef.current, group: group.current, bubble: bubble.current, text: text.current, mark: mark.current }, Math.min(raw, 0.1)), -2);
   return <group ref={group}>
     <Suspense fallback={null}><Character look={BRAM_LOOK} motion={motion} /></Suspense>
     <Html calculatePosition={labelPoint} position={[0, CHARACTER_HEIGHT + 0.3, 0]} zIndexRange={[30, 0]} style={{ pointerEvents: "none" }}>
       <div className={rs.stack} data-testid="bram-bubble">
+        <div ref={mark} className={aw.quest} hidden aria-hidden="true" data-testid="bram-quest-mark">!</div>
         <div ref={bubble} className={rs.bubble} hidden><b>{BRAM.name}</b><span ref={text} /></div>
         <div ref={plate} className={tags.tag} data-resident hidden><span className={tags.name}>{BRAM.name}</span></div>
       </div>

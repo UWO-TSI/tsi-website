@@ -1,18 +1,19 @@
 /**
  * The arrival (specs/v1-drop.md §1, decided with David 2026-10-13): one continuous sequence after the title screen, once
- * per account. Underwater, Bram's hand at the surface, aboard his boat with the world blurred (your memories are gone),
- * your reflection in the water as the creator (each choice sharpens it, Yes clears it), the golden-hour crossing in five
- * shots, the landing, then the walk-along tutorial with Bram.
+ * per account. It opens aboard Bram's boat with a short fade in, the world blurred (your memories are gone), then your
+ * reflection in the water as the creator (each choice sharpens it, Yes clears it), the golden-hour crossing in five
+ * shots, the landing, then the walk-along tutorial with Bram. The underwater opening was removed for v1 (playtest
+ * round 1, decision 2): it comes back later, rebuilt from David's assets.
  *
  * Pure: the beats' times, the state machine, the crossing's shot table and how clear the world is. The timed beats
  * skip one press at a time; the creator only moves on at Yes; the crossing's skip is its boat's (lib/game/boatTrip.ts)
  * and the sequence waits for the landing it reports.
  */
 
-export type ArrivalPhase = "underwater" | "aboard" | "creator" | "clearing" | "crossing" | "landing" | "tutorial" | "done";
+export type ArrivalPhase = "aboard" | "creator" | "clearing" | "crossing" | "landing" | "tutorial" | "done";
 
-/** The timed beats (s). Underwater is 4-6 s by the spec; `clearing` is the reflection going fully clear after Yes. */
-export const ARRIVAL_TIMES = { underwater: 5.4, aboard: 4.6, clearing: 1.8 } as const;
+/** The timed beats (s): `fadeIn` is the black lifting off the boat at the start of `aboard`; `clearing` is the reflection going fully clear after Yes. */
+export const ARRIVAL_TIMES = { fadeIn: 1.6, aboard: 4.6, clearing: 1.8 } as const;
 
 export interface Arrival {
   phase: ArrivalPhase;
@@ -25,10 +26,9 @@ export interface Arrival {
 /** What moves the untimed beats on: Yes in the creator, the boat at the pier, you ashore, the tutorial done. */
 export interface ArrivalSignals { yes?: boolean; landed?: boolean; ashore?: boolean; toured?: boolean }
 
-export const startArrival = (now: number): Arrival => ({ phase: "underwater", at: now, choices: 0 });
+export const startArrival = (now: number): Arrival => ({ phase: "aboard", at: now, choices: 0 });
 
 const TIMED: Partial<Record<ArrivalPhase, [number, ArrivalPhase]>> = {
-  underwater: [ARRIVAL_TIMES.underwater, "aboard"],
   aboard: [ARRIVAL_TIMES.aboard, "creator"],
   clearing: [ARRIVAL_TIMES.clearing, "crossing"],
 };
@@ -70,22 +70,6 @@ export function skipArrival(a: Arrival, now: number): boolean {
   return true;
 }
 
-// ── Underwater ─────────────────────────────────────────────────────────────────────────────────────────────────────
-export type UnderwaterBeat = "dark" | "rise" | "surface" | "hand";
-/** Black with the heartbeat; the dim blue water and the light shafts as you drift up; the gasp at the surface; Bram's hand on your wrist. */
-const BEATS: readonly [UnderwaterBeat, number][] = [["dark", 0.7], ["rise", 3.4], ["surface", 4.05], ["hand", ARRIVAL_TIMES.underwater]];
-/** Which underwater beat `t` (s) is in, and how far through it (0..1). */
-export function underwaterBeat(t: number): { beat: UnderwaterBeat; k: number } {
-  let from = 0;
-  for (const [beat, until] of BEATS) {
-    if (t < until) return { beat, k: Math.max(0, (t - from) / (until - from)) };
-    from = until;
-  }
-  return { beat: "hand", k: 1 };
-}
-/** When the surface breaks (s): the gasp. */
-export const SURFACE_AT = BEATS[1][1];
-
 // ── The crossing ───────────────────────────────────────────────────────────────────────────────────────────────────
 export type CrossingShotId = "drone" | "bow" | "closeup" | "wake" | "wharf";
 /** The five shots, in order, each its length (s): about 25 s in all, always golden hour. */
@@ -116,7 +100,7 @@ export const clarityOf = (choices: number) => Math.min(CLARITY.max, CLARITY.star
 const smooth = (k: number) => { const t = Math.min(1, Math.max(0, k)); return t * t * (3 - 2 * t); };
 /** How clear the world and the reflection are at `now`: 0 a blur, 1 sharp. */
 export function clarityAt(a: Arrival, now: number): number {
-  if (a.phase === "underwater" || a.phase === "aboard") return CLARITY.start;
+  if (a.phase === "aboard") return CLARITY.start;
   const c = clarityOf(a.choices);
   if (a.phase === "creator") return c;
   if (a.phase === "clearing") return c + (1 - c) * smooth((now - a.at) / (ARRIVAL_TIMES.clearing * 1000 * 0.85));

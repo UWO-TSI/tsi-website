@@ -280,7 +280,7 @@ class Puppet {
     if (this.faceAtlas2) this.faceMat.setAtlas2(this.faceAtlas2);
     this.face.material = this.faceMat.material;
     this.look = look;
-    this.faceLookKey = JSON.stringify([look.skin, look.hair, look.brows, look.eyes, look.mouth, look.extras, look.place ?? null]);
+    this.faceLookKey = JSON.stringify([look.skin, look.eyes, look.mouth, look.extras, look.place ?? null]);
     this.shownFace = "";
   }
 

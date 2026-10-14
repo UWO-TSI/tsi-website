@@ -156,7 +156,7 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
     {cat.sections.length > 0 && shownTiles.length === 0 && <p className={styles.empty}>
       Nothing here yet. These come from the shop and the workbench; once you have some, try them on in your closet.</p>}
     {swatches.length > 0 && (cat.swatch !== "outfit" || shownTiles.length > 0) && <div className={styles.swatchBlock}>
-      <h3>{cat.swatch === "skin" ? "Skin" : cat.swatch === "hair" ? (cat.id === "brows" ? "Brow and hair colour" : "Hair colour") : target ? `${PART_BY_ID.get(target)?.name ?? "Its"} colour` : "Colour"}</h3>
+      <h3>{cat.swatch === "skin" ? "Skin" : cat.swatch === "hair" ? "Hair colour" : target ? `${PART_BY_ID.get(target)?.name ?? "Its"} colour` : "Colour"}</h3>
       <div className={styles.swatches} role="group" aria-label={`${cat.swatch} colours`} data-kind={cat.swatch}>
         {swatches.map((hex, i) => {
           const locked = cat.swatch === "hair" && !hasHair(i);
@@ -218,9 +218,9 @@ function PartArt({ id, look }: { id: string; look: CharacterLook }) {
 }
 
 /** The least of the face a tile shows (canvas units), so a mole or a freckle keeps its size against the face. */
-const MIN_SPAN = { eyes: 0.5, brows: 0.5, mouth: 0.3, extras: 0.62 } as const;
+const MIN_SPAN = { eyes: 0.5, mouth: 0.3, extras: 0.62 } as const;
 /** A face part as it sits on the face: its atlas cells at their anchors (both sides for paired parts), on the skin. */
-function FaceArt({ layer, id, look }: { layer: "eyes" | "brows" | "mouth" | "extras"; id: string; look: CharacterLook }) {
+function FaceArt({ layer, id, look }: { layer: "eyes" | "mouth" | "extras"; id: string; look: CharacterLook }) {
   const L = FACE.layers, A = FACE.anchors;
   const pieces: { cell: FaceCell; anchor: [number, number]; mirror: boolean }[] = [];
   if (layer === "eyes") {
@@ -230,7 +230,6 @@ function FaceArt({ layer, id, look }: { layer: "eyes" | "brows" | "mouth" | "ext
     else if (it?.left) pieces.push({ cell: it.open, anchor: A.eye, mirror: false }, { cell: it.left, anchor: A.eye_left, mirror: false });
     else if (it) pieces.push({ cell: it.open, anchor: A.eye, mirror: true });
   }
-  else if (layer === "brows") { const c = L.brows.items[id]; if (c?.[2]) pieces.push({ cell: c, anchor: A.brow, mirror: true }); }   // brow_none: an empty cell
   else if (layer === "mouth") { const c = L.mouth.items[id]; if (c) pieces.push({ cell: c, anchor: A.mouth, mirror: false }); }
   else { const it = L.extras.items[id]; if (it) pieces.push({ cell: it.cell, anchor: A[it.anchor], mirror: it.mirror }); }
   const k = 1 / FACE.density;
@@ -243,7 +242,6 @@ function FaceArt({ layer, id, look }: { layer: "eyes" | "brows" | "mouth" | "ext
   const u0 = Math.min(...rects.map(r => r.u0)), u1 = Math.max(...rects.map(r => r.u1)), w0 = Math.min(...rects.map(r => r.w0)), w1 = Math.max(...rects.map(r => r.w1));
   const span = Math.max(u1 - u0, w1 - w0, MIN_SPAN[layer]) * 1.18, cu = (u0 + u1) / 2, cw = (w0 + w1) / 2;
   const pct = (v: number) => `${(v * 100).toFixed(3)}%`;
-  const tint = layer === "brows" && L.brows.tint === "hair" ? PALETTE.hair[look.hair] : null;
   return <span className={styles.face} style={{ "--skin": PALETTE.skin[look.skin] } as CSSProperties}>
     {rects.map((r, i) => {
       const [x, y, w, h, , , page] = r.cell, [W, H] = page ? FACE.atlas2_size : FACE.atlas_size;
@@ -253,9 +251,7 @@ function FaceArt({ layer, id, look }: { layer: "eyes" | "brows" | "mouth" | "ext
         transform: r.flip ? "scaleX(-1)" : undefined,
       };
       const art = `url(${page ? FACE_ATLAS2_URLS.world : FACE_ATLAS_URLS.world})`, size = `${(W / w) * 100}% ${(H / h) * 100}%`, at = `${(x / (W - w)) * 100}% ${(y / (H - h)) * 100}%`;
-      return <i key={i} style={{ ...box, ...(tint
-        ? { backgroundColor: tint, maskImage: art, WebkitMaskImage: art, maskSize: size, WebkitMaskSize: size, maskPosition: at, WebkitMaskPosition: at, maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat" }
-        : { backgroundImage: art, backgroundSize: size, backgroundPosition: at }) }} />;
+      return <i key={i} style={{ ...box, backgroundImage: art, backgroundSize: size, backgroundPosition: at }} />;
     })}
   </span>;
 }

@@ -15,11 +15,11 @@
  * ?sheet=hats      the four hats (they hide the back hair and carry a lock tuck), front and back 3/4
  * ?sheet=faces     row 301's face set (sleepy and dot eyes, cat and curled-grin mouths, the blush band) on three skins (&skins=)
  * ?sheet=facekit   head fit (specs/characters/head-fit.md): every face option once, on one skin and view (&view=front|34|side):
- *                  one cell per mouth, with the eyes, brows and extras cycling through all of theirs alongside
+ *                  one cell per mouth, with the eyes and extras cycling through all of theirs alongside
  * ?sheet=hairkit   head fit: every bangs (over the bob), every back (under the straight cut), every hat, band and glasses,
  *                  on one skin and view (&view=front|34|side|back)
  * ?sheet=fullkit   head fit: every whole hairstyle (David's set) on one skin, hair colour (&hair=) and view
- * ?sheet=david     David's 19 faces (face_set_305.py) as they came, eyes + mouth (+ accent), no brows, on three skins (&skins=)
+ * ?sheet=david     David's 19 faces (face_set_305.py) as they came, eyes + mouth (+ accent), on three skins (&skins=)
  * ?sheet=mix       David's eyes, mouths and accents mixed with each other and with the earlier parts (&skins=)
  * &hair=<0-11>&skin=<0-11>&face=512 (the world atlas) &framing=head|body
  */
@@ -84,10 +84,10 @@ function AvatarBench() {
     ] as [string, string, string[], number][]).map(([eyes, mouth, extras, y]) => ({
       label: `skin ${skin} ${eyes} ${mouth}${extras.length ? " +band" : ""}${y ? " 3/4" : ""}`, look: { ...bob, skin, eyes, mouth, extras }, yaw: y })));
     if (sheet === "facekit") {
-      const eyes = Object.keys(FACE.layers.eyes.items), brows = Object.keys(FACE.layers.brows.items);
+      const eyes = Object.keys(FACE.layers.eyes.items);
       const extras = [[], ...Object.keys(FACE.layers.extras.items).map(e => [e])];
       return Object.keys(FACE.layers.mouth.items).map((mouth, i) => {
-        const look = { ...bob, mouth, eyes: eyes[i % eyes.length], brows: brows[i % brows.length], extras: extras[i % extras.length] };
+        const look = { ...bob, mouth, eyes: eyes[i % eyes.length], extras: extras[i % extras.length] };
         return { label: `${look.eyes} ${mouth}${look.extras.length ? ` +${look.extras[0]}` : ""}`, look, yaw: view, face: OPEN };
       });
     }
@@ -101,18 +101,18 @@ function AvatarBench() {
     // David's faces: the second atlas page's eyes and mouths, in his order (face_set_305.FACES), with his two accents
     const davidEyes = Object.keys(FACE.layers.eyes.items).filter(id => FACE.layers.eyes.items[id].open[6] === 1);
     const davidMouths = Object.keys(FACE.layers.mouth.items).filter(id => FACE.layers.mouth.items[id][6] === 1);
-    const open = { ...bob, bangs: "bangs_swept_back", back: "back_bun", brows: "brow_none" };   // a clear forehead, his own brows
+    const open = { ...bob, bangs: "bangs_swept_back", back: "back_bun" };   // a clear forehead
     const skins = (q.get("skins") ?? "1,5,10").split(",").map(Number);
     if (sheet === "david") return skins.flatMap(skin => davidEyes.map((eyes, i) => ({
       label: `${skin}: ${i + 1} ${FACE.names[eyes]} / ${FACE.names[davidMouths[i]]}`,
       look: { ...open, skin, eyes, mouth: davidMouths[i], extras: i === 5 ? ["nose_blush"] : i === 13 ? ["sweat_drop"] : [] }, yaw: 0 })));
     if (sheet === "mix") return skins.flatMap(skin => ([
-      ["swirl", "drool", ["sweat_drop"], "brow_none", 0], ["bean", "kitty", ["nose_blush"], "brow_none", 0], ["sleepy", "gritted", [], "brow_none", 0],
-      ["F1.1", "drumstick", [], "brow_soft", 0], ["doll_lash", "M1.1", ["blush_band"], "brow_none", 0], ["dot", "nervous_laugh", ["sweat_drop"], "brow_soft", 0],
-      ["teary", "buck_tooth", [], "brow_none", 0], ["chill", "cat_w", ["nose_blush"], "brow_none", yaw],
-    ] as [string, string, string[], string, number][]).map(([eyes, mouth, extras, brows, y]) => ({
+      ["swirl", "drool", ["sweat_drop"], 0], ["bean", "kitty", ["nose_blush"], 0], ["sleepy", "gritted", [], 0],
+      ["F1.1", "drumstick", [], 0], ["doll_lash", "M1.1", ["blush_band"], 0], ["dot", "nervous_laugh", ["sweat_drop"], 0],
+      ["teary", "buck_tooth", [], 0], ["chill", "cat_w", ["nose_blush"], yaw],
+    ] as [string, string, string[], number][]).map(([eyes, mouth, extras, y]) => ({
       label: `${skin}: ${FACE.names[eyes] ?? eyes} / ${FACE.names[mouth] ?? mouth}${extras.length ? ` + ${FACE.names[extras[0]] ?? extras[0]}` : ""}${y ? " 3/4" : ""}`,
-      look: { ...open, skin, eyes, mouth, extras, brows }, yaw: y })));
+      look: { ...open, skin, eyes, mouth, extras }, yaw: y })));
     return Object.keys(STYLES).flatMap(s => [{ label: `${s} front`, look: style(s), yaw: 0 }, { label: `${s} 3/4`, look: style(s), yaw: -0.6 }]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheet, yaw, q]);
