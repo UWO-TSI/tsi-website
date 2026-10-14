@@ -23,7 +23,19 @@ type VillageClip = "Idle" | "Walk" | "Run" | "Sit" | "Study" | "Sleep" | "Fish" 
   | "CastWindup" | "CastSwing" | "HookYank" | "Reel" | "HoldUp"
   // Foraging and crafting (specs/polish/forage-craft-museum.md): picking something off the ground, shaking a tree,
   // striking a rock with the shovel, hammering at the workbench. Their contacts are the catalogue's `hits`.
-  | "Pickup" | "Shake" | "Strike" | "Craft";
+  | "Pickup" | "Shake" | "Strike" | "Craft"
+  // The v1 emote wheel (specs/v1-drop.md §3): the ring's new one-shots, sitting on the ground (by the campfire, the hands
+  // to the fire), and the eight dances and the campfire's stomp, each looping on whole bars of the shared beat.
+  | "Clap" | "Bow" | "Shrug" | "SitGround" | "SitWarm" | DanceClip;
+/** The dances (build_clips.py, v1 emotes and dances): loops on whole bars of 120 BPM, so the world clock's beat lines them up. */
+export const DANCE_CLIPS = ["DanceBounce", "DanceSpin", "DanceShuffle", "DanceSway", "DanceWiggle", "DanceFlail", "DanceRobot", "DanceSprinkler", "DanceStomp", "Dance"] as const;
+export type DanceClip = (typeof DANCE_CLIPS)[number];
+/**
+ * Clips held on a seat or on the ground (a bench, a study seat, a bed, the sand, the campfire ring), and the stomp
+ * dance round the fire, which the ring carries round like a seat: the body is placed and posed, it never walks. A
+ * remote holding one stands still on the wire's `lift` (drive.ts), and a one-shot plays over its upper body.
+ */
+export const SEAT_CLIPS: ReadonlySet<string> = new Set<string>(["Sit", "Study", "Stretch", "Sleep", "SitGround", "SitWarm", "DanceStomp"]);
 
 /**
  * The verb library (classes v2, design sheet §1.8): sixteen shared verbs, each authored once per grip family in
@@ -95,10 +107,12 @@ const FAMILY: Record<VillageClip, Family> = {
   Jump: "air", Air: "air", Fall: "air", Glide: "air", SlideJump: "air",
   Land: "land", LandHeavy: "land", Roll: "land", Mantle: "land",
   Dash: "move", Skid: "move", DodgeRoll: "move", Slide: "move", SlideIn: "move", SlideInDash: "move", SlideUp: "move", SlideStand: "move", SlideBonk: "move",
-  Sit: "seat", Study: "seat", Stretch: "seat", Sleep: "seat",
+  Sit: "seat", Study: "seat", Stretch: "seat", Sleep: "seat", SitGround: "seat", SitWarm: "seat",
   Fish: "act", FishHold: "act", Forage: "act", Dig: "act", Net: "act", Wave: "act", Cheer: "act", Laugh: "act", Sad: "act", Dance: "act", Trace: "act",
   LookAround: "act", StretchUp: "act", Chat: "act", Eat: "act", Pickup: "act", Shake: "act", Strike: "act", Craft: "act",
   CastWindup: "act", CastSwing: "act", HookYank: "act", Reel: "act", HoldUp: "act",
+  Clap: "act", Bow: "act", Shrug: "act", DanceBounce: "act", DanceSpin: "act", DanceShuffle: "act", DanceSway: "act", DanceWiggle: "act",
+  DanceFlail: "act", DanceRobot: "act", DanceSprinkler: "act", DanceStomp: "act",
   HoldRod: "loco", HoldTool: "loco", HoldFront: "loco",
   AttackMelee: "combat", AttackBow: "combat", AttackCast: "combat", Hit: "combat", Defeat: "combat",
 };
@@ -196,7 +210,12 @@ export interface CharacterMotion { speed: number; yaw: number; lift: number; pos
   /** This character leaves afterimages (the player): they are made and compiled up front, so the first dash never hitches. */
   afterimages?: boolean;
   /** How solid it draws (1 solid; classes v2: Escape Rabbits turns you translucent). */
-  fade?: number }
+  fade?: number;
+  /**
+   * The shared dance clock (world seconds) while this character dances in a group (lib/game/danceSync.ts): its looping
+   * pose eases onto that clock's phase, so everyone in the group is on one beat. Null or unset: it plays freely.
+   */
+  beat?: number | null }
 
 export const isLoop = (clip: ClipName) => (CLIP_BY_NAME.get(clip) ?? VERB_BY_NAME.get(clip))?.loop ?? true;
 

@@ -16,6 +16,7 @@ import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { BASE_URL, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, LOD_SKIN_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, usesFacePage2, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
 import { characterLod, createLodState, drawnHeight, mixerStep } from "@/lib/game/character/lod";
+import { beatRate } from "@/lib/game/danceSync";
 import { quality } from "@/lib/game/perf/governor";
 import { FaceAnimator, faceSlots, poseKey } from "@/lib/game/character/face";
 import { createFaceMaterial, loadFacePage, MATTE, prepareFaceAtlas, type FaceMaterial } from "@/lib/game/character/faceMaterial";
@@ -437,6 +438,8 @@ class Puppet {
       action.setEffectiveTimeScale(0);
       action.time = Math.min(1, Math.max(0, (want === "Air" ? motion.air : motion.scrub) ?? 0)) * length * 0.999;
     } else action.setEffectiveTimeScale(want === this.oneShot ? this.oneShotRate : want === motion.pose && motion.poseRate ? motion.poseRate : tempo(want, motion.speed, walkSpeed));
+    // Dancing in a group: the loop eases onto the shared beat (each keeping their own move).
+    if (motion.beat != null && want === motion.pose && !changed && isLoop(want)) action.setEffectiveTimeScale(beatRate(action.time, motion.beat, length, delta));
     this.animateFace(delta, want, motion);
     // Walk and Run count each foot's contact as the playhead passes it (footsteps come from the feet, not a timer).
     const contacts = changed ? undefined : CLIP_BY_NAME.get(want)?.contacts, before = action.time / length;

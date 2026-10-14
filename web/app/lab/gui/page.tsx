@@ -12,20 +12,16 @@ import { Backpack, BookOpen, Coins, Fish, Mail, MapIcon, PackageOpen, Settings, 
 import FishReveal from "@/components/game/FishReveal";
 import { FamilyReveal } from "@/components/game/oracle/OracleSheetEmbed";
 import IncantationOverlay from "@/components/game/combat/IncantationOverlay";
-import { EmoteMenuView } from "@/components/game/EmoteMenu";
+import { EmoteWheelView } from "@/components/game/emotes/EmoteWheel";
+import { DANCE_RING } from "@/lib/game/emoteWheel";
 import ToastHub, { toast } from "@/components/game/ToastHub";
 import { Amount } from "@/components/economy/Amount";
 import { Badge, Banner, Button, Card, ConfirmDialog, Counter, Dialogue, Empty, ErrorNote, Field, IconButton, ItemTile, Keycap, List, ListRow, Loading, NameTag, Panel, Progress, Select,
   Sheet, Slider, Tabs, TextArea, Toggle, Tooltip } from "@/components/gui";
 import { FISH } from "@/lib/game/fishing";
 import { iconUrl } from "@/lib/icons/keys";
-import type { EmoteType } from "@/lib/content/types";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import s from "./showroom.module.css";
-
-const EMOTES: EmoteType[] = ["wave", "dance", "laugh", "point", "sit"].map(slug => ({
-  id: slug, slug, display_name: slug[0].toUpperCase() + slug.slice(1), animation_key: slug, icon_url: null, unlock_condition: null, active: true, created_at: "",
-}));
 
 /** Re-mounts its child every `ms` (an overlay that finishes and closes itself stays on show). */
 function Loop({ ms, children }: { ms: number; children: (done: () => void) => ReactNode }) {
@@ -38,8 +34,17 @@ const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
   { id: "fish-reveal", title: "Fish reveal", render: () => <Loop ms={9000}>{done => <FishReveal fish={FISH.find(f => f.rarity === "rare") ?? FISH[0]} sizeCm={42} onDone={done} />}</Loop> },
   { id: "oracle-reveal", title: "Oracle reveal card", render: () => <FamilyReveal family="Warden" type="INFP" onContinue={() => {}} /> },
   { id: "rune", title: "Rune overlay", render: () => <Loop ms={30000}>{done => <IncantationOverlay runeId="cross" title="Cross" effect="A warding cross" onDone={done} onCancel={done} />}</Loop> },
-  { id: "emotes", title: "Emote menu", render: () => <EmoteMenuView open emotes={EMOTES} onClose={() => {}} onPick={() => {}} /> },
+  { id: "emotes", title: "Emote wheel", render: () => <EmoteWheelShow /> },
 ];
+
+/** The emote wheel open (specs/v1-drop.md §3): the emotes with Clap chosen, then the dances, flipping every few seconds. */
+function EmoteWheelShow() {
+  const [dances, setDances] = useState(false);
+  useEffect(() => { const t = window.setInterval(() => setDances(d => !d), 4000); return () => window.clearInterval(t); }, []);
+  return <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}>
+    <EmoteWheelView standalone ring={dances ? "dances" : "emotes"} choice={dances ? 6 : 2} last={DANCE_RING[0]} onFlip={() => setDances(d => !d)} />
+  </div>;
+}
 
 /** A world-ish backdrop that also contains fixed-position overlays (the transform makes it their containing block). */
 function Stage({ children, tall }: { children: ReactNode; tall?: boolean }) {
