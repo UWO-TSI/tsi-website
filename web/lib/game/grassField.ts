@@ -103,6 +103,20 @@ export class GrassData {
     return true;
   }
 
+  /** Resample every texel in the window (the ground under it was edited: the world editor). True when there was a window. */
+  refill(): boolean {
+    const w = this.window;
+    if (!Number.isFinite(w.i0)) return false;
+    forEntered(w, { cols: [], rows: [], all: true }, (I, K) => {
+      const [h, d] = this.sampler(I * w.texel, K * w.texel), i = w.index(I, K) * 2;
+      this.values[i] = h;
+      this.values[i + 1] = d;
+      this.half[i] = DataUtils.toHalfFloat(h * d);
+      this.half[i + 1] = DataUtils.toHalfFloat(d);
+    });
+    return true;
+  }
+
   /** The nearest texel's (height, density); (0, 0) outside the window. */
   sample(x: number, z: number): [number, number] {
     const w = this.window;

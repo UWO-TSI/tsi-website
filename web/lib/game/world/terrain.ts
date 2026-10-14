@@ -223,5 +223,24 @@ export function refreshShoreField(t: WorldTerrain, f: ShoreSdf & { depth: Float3
   }
 }
 
+/**
+ * Where the grass blades grow on the smooth world (components/game/grid/GrassField.tsx's sampler): the ground's height,
+ * and a density that is 0 under the sea, on the paints that are not grass (faded across their soft edge), on ground
+ * steep enough to turn to rock, and where `clear` says a solid stands.
+ */
+export function terrainGrassSampler(t: WorldTerrain, clear?: (x: number, z: number) => boolean): (x: number, z: number) => readonly [number, number] {
+  return (x, z) => {
+    const h = terrainHeight(t, x, z);
+    if (h <= t.seaLevel + 0.03) return [h, 0];
+    let cover = 0;
+    for (const p of [Paint.Sand, Paint.Path, Paint.Rock, Paint.Stone]) cover = Math.max(cover, paintWeight(t, p, x, z));
+    let density = 1 - smoothstep(0.15, 0.6, cover);
+    if (density <= 0) return [h, 0];
+    density *= 1 - smoothstep(ROCK_SLOPE.from * 0.8, ROCK_SLOPE.to, terrainSteepness(t, x, z));
+    if (density > 0 && clear && !clear(x, z)) density = 0;
+    return [h, density];
+  };
+}
+
 /** The seabed's depth under the still surface at a point (0 on land): what the seabed props and the fish stand on. */
 export const seabedDepth = (t: WorldTerrain, x: number, z: number) => Math.max(0, t.seaLevel - terrainHeight(t, x, z));

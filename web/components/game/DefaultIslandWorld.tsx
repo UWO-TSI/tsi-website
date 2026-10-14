@@ -307,7 +307,8 @@ function villageLayout(v: Village) {
      */
     rocks: [
       ...objectsOf("rock", v).map(o => { const f = propFootprint(o); return { x: o.x, z: o.z, r: f ? Math.max(f[0], f[1]) : 0.5 * (o.scale ?? 1) }; }),
-      ...cliffBoulders(v.map, v.field).filter(r => r.wet).map(r => ({ x: r.x, z: r.z, r: Math.max(...ROCK_SIZE[r.model].half) * r.scale })),
+      // (The smooth world has no kit cliffs, so no cliff-foot boulders: specs/world-editor.md.)
+      ...(v.terrain ? [] : cliffBoulders(v.map, v.field).filter(r => r.wet).map(r => ({ x: r.x, z: r.z, r: Math.max(...ROCK_SIZE[r.model].half) * r.scale }))),
     ],
     /** No water glints (nor seabed props, nor fish) under the wharf's decks: they sit a few centimetres above the water and they would show through. */
     underWharf: (x: number, z: number) => decks.some(deck => x > deck.x0 - 0.4 && x < deck.x1 + 0.4 && z > deck.z0 - 0.4 && z < deck.z1 + 0.4),
@@ -475,7 +476,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     <>
       <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} overview={overview} overviewFog={layout.scale.overviewFog}
         ground={island.ground} puddles={layout.puddles} cloudSize={layout.scale.cloudSize} shadowExtent={layout.scale.shadowExtent} fireflyAnchors={layout.fireflies} trees={layout.trees} fauna={fauna} />
-      <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} lite={liteMode} clear={grassClear} />
+      <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} lite={liteMode} clear={grassClear} terrain={v.terrain} />
       <GridOcean map={island.map} lite={liteMode} skip={layout.underWharf} radius={layout.scale.glintRadius} />
       <Suspense fallback={null}><Seabed map={island.map} lite={liteMode} skip={layout.underWharf} /></Suspense>
       <WaterContacts map={island.map} player={player} ground={island.ground} rocks={layout.rocks} />

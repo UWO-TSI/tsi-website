@@ -36,6 +36,10 @@ import { cloudLayer } from "../AmbienceFX";
 import { useTuning } from "@/lib/game/tuning";
 import { useFrame } from "@react-three/fiber";
 import type { IslandLight } from "@/lib/game/islandLighting";
+import type { ShoreSdf } from "@/lib/game/grid";
+import type { WorldTerrain } from "@/lib/game/world/terrain";
+import { shoreFieldOf } from "@/lib/game/seabed";
+import SmoothTerrain from "../world/SmoothTerrain";
 import { worldTime } from "@/lib/game/worldClock";
 
 /**
@@ -51,10 +55,49 @@ export function grassLayer(clear: ((x: number, z: number) => boolean) | undefine
 /** The grass without a palette (the bench islands): the grid's own green. */
 const GRASS_HEX = `#${new THREE.Color(GRASS_COLOR).getHexString()}`;
 
+type GridWorldProps = {
+  map: IslandMap; field?: Float32Array; light: Pick<IslandLight, "water" | "sunPosition" | "sun" | "wet" | "sky" | "skyTop">; palette?: TerrainPalette; windScale?: number; lite?: boolean;
+  clear?: (x: number, z: number) => boolean;
+  /** The smooth world's heightfield (specs/world-editor.md): drawn and walked in place of the cells. Only the v2 world from the editor's files has one. */
+  terrain?: WorldTerrain;
+};
+
+/** Which ground GridWorld draws: the smooth heightfield when the world has one, else the cells (every other world, as on main). */
+export function worldGround(props: Pick<GridWorldProps, "terrain">): "heightfield" | "cells" {
+  return props.terrain ? "heightfield" : "cells";
+}
+
 /** `field`: the map's height field when the caller already built it (the village builds it once). */
 /** `light`: the scene's IslandLight; the water mirrors its key light (sun by day, moon by night) in its colour. */
 /** `lite`: Lite's thinner grass and cheaper water (fewer foam rings drawn). `clear`: false where a solid stands, so no blades grow through it (keep it stable). */
-export default function GridWorld({ map, field: suppliedField, light, palette, windScale, lite = false, clear }: { map: IslandMap; field?: Float32Array; light: Pick<IslandLight, "water" | "sunPosition" | "sun" | "wet" | "sky" | "skyTop">; palette?: TerrainPalette; windScale?: number; lite?: boolean; clear?: (x: number, z: number) => boolean }) {
+export default function GridWorld(props: GridWorldProps) {
+  return worldGround(props) === "heightfield" ? <SmoothWorld {...props} terrain={props.terrain!} /> : <CellWorld {...props} />;
+}
+
+/** The smooth world: the heightfield, its water and its grass (components/game/world/SmoothTerrain.tsx), the water's frame as the cells have it. */
+function SmoothWorld({ map, light, palette, windScale, lite = false, clear, terrain }: GridWorldProps & { terrain: WorldTerrain }) {
+  useEffect(() => { TERRAIN_WET.value = light.wet ?? 0; }, [light.wet]);
+  useEffect(() => () => { TERRAIN_WET.value = 0; }, []);
+  useWaterFrame(light, lite);
+  // The village registered its water for the derived cell map (lib/game/world/village.ts): the same field the fish read.
+  const shore = useMemo(() => shoreFieldOf(map) as ShoreSdf & { depth?: Float32Array }, [map]);
+  return <SmoothTerrain terrain={terrain} shore={shore} grass={palette?.grass} windScale={windScale} lite={lite} clear={clear} />;
+}
+
+/** The river flows, swells and catches the sun; the foam rings round what stands in it. One uniform block per frame. */
+function useWaterFrame(light: GridWorldProps["light"], lite: boolean) {
+  const sunDir = useMemo(() => new THREE.Vector3(...light.sunPosition), [light.sunPosition]);
+  const sunColor = useMemo(() => new THREE.Color(light.sun), [light.sun]);
+  const sky = useMemo(() => ({ zenith: new THREE.Color(light.skyTop ?? light.sky), horizon: new THREE.Color(light.sky) }), [light.sky, light.skyTop]);
+  useFrame(({ camera }) => {
+    advanceWater(worldTime(), light.water, sunDir, sunColor, sky);
+    shadeWaterByClouds(cloudLayer.map, cloudLayer.uv);
+    drawFoamRings(camera, lite ? FOAM_RING_SLOTS.lite : FOAM_RING_SLOTS.high, fxOn("foamRings"));
+  });
+}
+
+/** The cell world (every world but the smooth one), exactly as it was. */
+function CellWorld({ map, field: suppliedField, light, palette, windScale, lite = false, clear }: GridWorldProps) {
   const t = useTuning();
   const materials = useTerrainMaterials(palette);
   // The ground's wetness is the light's (it eases with the weather); dry when the scene goes.

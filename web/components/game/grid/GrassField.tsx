@@ -282,14 +282,18 @@ const _dir = new THREE.Vector3(), _at = new THREE.Vector3(), _focus = { x: 0, z:
  * `color`: the island's grass (the seasonal palette's). `windScale` multiplies the sway (0 holds it still). `clear`:
  * false where a solid stands (buildings, trunks, rocks), so no blades grow through it.
  */
-export default function GrassField({ map, field: suppliedField, color, windScale = 1, lite = false, clear }: {
-  map: IslandMap; field?: Float32Array; color: string; windScale?: number; lite?: boolean; clear?: (x: number, z: number) => boolean;
+export default function GrassField({ map, field: suppliedField, color, windScale = 1, lite = false, clear, sampler, revision = 0 }: {
+  map?: IslandMap; field?: Float32Array; color: string; windScale?: number; lite?: boolean; clear?: (x: number, z: number) => boolean;
+  /** Where grass grows and the ground under it, when the world is not a cell map (the smooth world: lib/game/world/terrain.ts). */
+  sampler?: GrassSampler;
+  /** Bump after editing the ground in place (the world editor): every texel in view is resampled. */
+  revision?: number;
 }) {
   const t = useTuning();
   const tier = lite ? GRASS_TIERS.lite : GRASS_TIERS.high;
-  const field = useMemo(() => suppliedField ?? heightField(map), [map, suppliedField]);
+  const field = useMemo(() => (sampler || !map ? null : suppliedField ?? heightField(map)), [map, suppliedField, sampler]);
   const state = useMemo(() => {
-    const data = new GrassData(tier.data, DATA_TEXEL, grassSampler(map, field, clear));
+    const data = new GrassData(tier.data, DATA_TEXEL, sampler ?? grassSampler(map!, field!, clear));
     const dataTex = new THREE.DataTexture(data.half, tier.data, tier.data, THREE.RGFormat, THREE.HalfFloatType);
     const bend = new BendField(BEND_N, BEND_TEXEL, 0.8);
     const bendTex = new THREE.DataTexture(bend.bytes, BEND_N, BEND_N, THREE.RGFormat);
@@ -307,7 +311,8 @@ export default function GrassField({ map, field: suppliedField, color, windScale
       return { layer, grid, ring, material: grassMaterial({ ...shared, uGrid: grid, uRing: ring, uLayerH: { value: layer.height } }), geometry: grassCard(layer.cards, n * n) };
     });
     return { data, dataTex, bend, bendTex, uniforms: shared, layers };
-  }, [map, field, clear, tier]);
+  }, [map, field, clear, tier, sampler]);
+  useEffect(() => { if (revision) refill(state); }, [state, revision]);
   useEffect(() => () => {
     state.dataTex.dispose(); state.bendTex.dispose();
     for (const l of state.layers) { l.material.dispose(); l.geometry.dispose(); }
@@ -326,6 +331,11 @@ type FieldState = {
   layers: { layer: GrassLayer; grid: { value: THREE.Vector4 }; ring: { value: THREE.Vector4 } }[];
 };
 type Grass = ReturnType<typeof useTuning>["grass"];
+
+/** The ground under the window changed: resample it all (module scope: hook values are never written in a component). */
+function refill(s: FieldState) {
+  if (s.data.refill()) s.dataTex.needsUpdate = true;
+}
 
 /** One frame: follow the view, take the presses, spring back, push the uniforms. Module scope: hook values are never written in a component. */
 function advance(s: FieldState, camera: THREE.Camera, delta: number, g: Grass, windScale: number, tier: (typeof GRASS_TIERS)["high"]) {
