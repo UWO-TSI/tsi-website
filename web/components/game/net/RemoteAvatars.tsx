@@ -32,6 +32,7 @@ import RemoteAuras, { AuraStore, showsAura } from "./RemoteAuras";
 import Nameplates, { PlatePool } from "./Nameplates";
 import { projectCurved } from "./projection";
 import { RigStore } from "./rigs";
+import { clearRemoteField, noteRemote } from "@/lib/game/danceField";
 import { FX_BENCH, fxForced, fxFormation, fxOn, useFxBench } from "@/lib/game/perf/fxBench";
 import type { RemoteSample } from "@/lib/net/types";
 import { forceJuice, forceMotion, placeInFormation, resetFormation } from "./benchFx";
@@ -114,6 +115,7 @@ const benchPlace = (s: RemoteSample) => placeInFormation(s, bench.i, bench.you!,
 function driveAll(d: Driver, source: NetSource, world: GroundWorld, juice: JuiceSink, you: THREE.Vector3, camera: THREE.Camera, caps: LodCaps, delta: number) {
   const { store } = d, reg = source.remotes, now = source.now(), dt = Math.min(delta, 0.1), pool = d.particles.current?.pool;
   let n = 0;
+  clearRemoteField();
   const formation = FX_BENCH && fxFormation();
   if (formation) { bench.you = you; bench.camera = camera; bench.world = world; }
   for (let i = 0; i < reg.size; i++) {
@@ -127,6 +129,8 @@ function driveAll(d: Driver, source: NetSource, world: GroundWorld, juice: Juice
     r.lod.dist = Math.hypot(s.x - you.x, s.z - you.z);
     // Where they stand this frame, for what yields to people (the café's patrons).
     if (n < LIVE_MAX) { liveRemotes.x[n] = s.x; liveRemotes.z[n] = s.z; n++; }
+    // Who they are and what they're doing, for the group dance sync and the campfire (lib/game/danceField.ts).
+    noteRemote(s.x, r.groundY, s.z, r.motion);
   }
   liveRemotes.n = n;
   d.left -= dt;
@@ -166,6 +170,7 @@ export default function RemoteAvatars({ source, area, player }: { source: NetSou
     } });
     return () => { delete (window as { __net?: unknown }).__net; };
   }, [driver, get]);
+  useEffect(() => () => clearRemoteField(), []);
   useFrame(({ camera }, delta) => driveAll(driver, source, world, juice, player.current, camera, caps, delta), -3);
   const walk = INDOORS.has(area) ? INDOOR_WALK : WALK;
   // Development (the effect bench): the plates on or off; a new block each time the formation turns on.
