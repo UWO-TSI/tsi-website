@@ -114,14 +114,15 @@ describe("clamping: placed parts never leave the face area", () => {
       const plain = look({ [c.field]: id });
       // David's pairs drawn as two cells move and clamp as one: their reach is both cells' (the other one reflected)
       const two = c.part === "eyes" && !!FACE.layers.eyes.items[id].left;
-      const rest = (l: CharacterLook) => two ? union(slotBounds(slots(l)[EYE]), reflect(slotBounds(slots(l)[EYE_MIRROR]))) : slotBounds(slots(l)[c.slot]);
-      const area = allowedBounds(rest(plain));
+      const rest = (l: CharacterLook, e: (typeof EXPRESSIONS)[number] = "neutral") =>
+        two ? union(slotBounds(slots(l, e)[EYE]), reflect(slotBounds(slots(l, e)[EYE_MIRROR]))) : slotBounds(slots(l, e)[c.slot]);
       // a pair stays on its own side of the centre line; David's pairs drawn as one cell (left: null) span it
       const side = c.part === "eyes" && FACE.layers.eyes.items[id].left === null ? Infinity : Math.max(0.5, rest(plain)[2]);
       for (const p of all) for (const e of ["neutral", "surprised", "sad"] as const) {
         const l = parseLook({ ...plain, place: { [c.part]: p } });
         const b = two ? union(slotBounds(slots(l, e)[EYE]), reflect(slotBounds(slots(l, e)[EYE_MIRROR]))) : slotBounds(slots(l, e)[c.slot]);
-        within(b, area, `${id} ${p} ${e}`);
+        // what the expression draws may be its own part (since the wardrobe cut, David's): its own default reach counts
+        within(b, allowedBounds(rest(plain, e)), `${id} ${p} ${e}`);
         if (c.pair) expect(b[2], `${id} ${p} crosses the centre line`).toBeLessThanOrEqual(side + 1e-9);
       }
     }

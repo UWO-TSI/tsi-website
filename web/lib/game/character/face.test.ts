@@ -234,10 +234,10 @@ describe("David's 19 faces (face set 305, art/characters/v7/face_set_305.py)", (
       layers: Object.fromEntries(Object.entries(FACE.layers).map(([l, v]) => [l, keep(v.items as Record<string, unknown>)])),
     };
     // the earlier layers after the wardrobe cut repacked the first page (playtest round 1; the set's own cells unchanged)
-    expect(createHash("sha256").update(JSON.stringify(legacy)).digest("hex")).toBe("b0476a46c7e2c6cd768eeb609ffa7fc392afc0860caf22ef44c2f8d992163eae");
+    expect(createHash("sha256").update(JSON.stringify(legacy)).digest("hex")).toBe("270719a91c09c0a0d2225454ef04db02c9d003f7d551b13017f6e9fa406056cd");
     const atlas = (f: string) => createHash("sha256").update(readFileSync(join(__dirname, "../../../public", f))).digest("hex");
-    expect(atlas(FACE_ATLAS_URLS.creator)).toBe("b8775fbb0a2a71ee64166f98e8eaa57344ade3821f892fd8855bce047c2fbb66");
-    expect(atlas(FACE_ATLAS_URLS.world)).toBe("27b1215373cbc6bed6cc188ec4a05504414959d8690889c688442996d10db7dc");
+    expect(atlas(FACE_ATLAS_URLS.creator)).toBe("211ea82a9da577f555f9cb8b5e4527e44824c503f683279e1a2899c5fa9f67a8");
+    expect(atlas(FACE_ATLAS_URLS.world)).toBe("b78f199b24d5b6ea02fb56db25efab28cc4250ca004a35a467c0b949162bbd54");
     // an old look's own slots all read the first page; every character still loads the second for its expressions
     const old = look({ eyes: "F1.2", mouth: "G3.3", extras: ["blush", "mole", "blush_band", "freckles"] });
     expect(faceSlots(old, restPose(old, "neutral")).every(s => s.page === 0)).toBe(true);

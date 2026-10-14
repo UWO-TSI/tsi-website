@@ -13,7 +13,8 @@ DO $$ BEGIN
   ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE slug IN ('outfit-club-tee', 'hair-sunset', 'acc-bandana') AND active), 'ownership: partless outfits off sale';
   ASSERT (SELECT NOT active FROM shop_items WHERE slug = 'wear-top-tee'), 'ownership: starter clothes never sold';
   ASSERT (SELECT active FROM shop_items WHERE slug = 'wear-top-cardigan'), 'ownership: other clothes sold';
-  ASSERT (SELECT count(*) FROM shop_items WHERE starter_qty > 0) = 23, 'ownership: 9 clothes + 14 furniture starters, got ' || (SELECT count(*) FROM shop_items WHERE starter_qty > 0);
+  -- 8 clothes since the wardrobe cut (20261014220430: the rain-cape is no longer a starter)
+  ASSERT (SELECT count(*) FROM shop_items WHERE starter_qty > 0) = 22, 'ownership: 8 clothes + 14 furniture starters, got ' || (SELECT count(*) FROM shop_items WHERE starter_qty > 0);
   ASSERT (SELECT starter_qty FROM shop_items WHERE slug = 'furn-floor-lamp') = 1, 'ownership: existing furniture row marked';
   ASSERT NOT has_function_privilege('authenticated', 'public.economy_grant_starters(uuid)', 'EXECUTE'), 'ownership: grant is service-role only';
   RAISE NOTICE 'ownership catalogue ok';
@@ -46,7 +47,7 @@ BEGIN
   PERFORM dblink_disconnect('first');
   PERFORM dblink_disconnect('retry');
   ASSERT a AND NOT b, format('ownership race: first %s, retry %s', a, b);
-  ASSERT (SELECT count(*) FROM member_inventory WHERE member_id = D) = 23, 'ownership race: 23 starter rows';
+  ASSERT (SELECT count(*) FROM member_inventory WHERE member_id = D) = 22, 'ownership race: 22 starter rows';
   ASSERT (SELECT bool_and(qty = 1) FROM member_inventory WHERE member_id = D), 'ownership race: each starter once';
   ASSERT NOT (SELECT granted FROM economy_grant_starters(D)), 'ownership: a later call grants nothing';
   RAISE NOTICE 'ownership starters once ok';
