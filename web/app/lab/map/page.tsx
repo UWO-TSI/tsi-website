@@ -28,6 +28,7 @@
  * The raw view keeps cell (0, 0) at the top left.
  */
 
+import { cliffBoulders, isRockModel, rockProposal, ROCK_SIZE } from "@/lib/game/rocks";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import islandMapDoc from "@/data/island-map.json";
 import villageDoc from "@/data/village-map.json";
@@ -187,7 +188,7 @@ const OBJECT_STYLE: Record<ObjectKind, { color: string; r: number; label: string
 };
 /** Placement palette order. */
 const PALETTE: readonly ObjectKind[] = ["landmark", "tree", "bush", "flower", "rock", "bench", "fence", "lamp", "bridge", "study", "anchor", "gather", "spawn", "fitting", "missions", "puddle", "bug", "shell", "bottle"];
-const ROCK_MODELS = Object.keys(PROP_FOOTPRINT).filter((m) => m.startsWith("rock-"));
+const ROCK_MODELS = Object.keys(PROP_FOOTPRINT).filter((m) => m.startsWith("rock-") || m.startsWith("boulder-"));
 const FENCE_MODELS = Object.keys(PROP_FOOTPRINT).filter((m) => m.startsWith("fence-"));
 const BUG_BIOMES = ["water_edge", "ground"];
 const TREE_NAMES = ["oak", "oak (b)", "blossom", "cedar"];
@@ -510,6 +511,9 @@ export default function MapLab() {
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  /** The v1 land pass's rock proposal (specs/v1-drop.md §8c): accents to review, and the automatic cliff-foot boulders. */
+  const [rockLayer, setRockLayer] = useState(false);
+  const [rockCopied, setRockCopied] = useState(false);
   const painting = useRef(false);
   const lastCell = useRef<{ x: number; z: number } | null>(null);
   const lasso = useRef<[number, number][]>([]);
@@ -832,6 +836,12 @@ export default function MapLab() {
    * one blit. Everything draws in cell space under one transform, so the game
    * view is a flip of the same drawing; text is placed with `toPx`, unflipped.
    */
+  // The rock proposal: recomputed as the map is edited (`version`), only while the layer is on.
+  const rockOverlay = useMemo(
+    () => (rockLayer ? { proposal: rockProposal({ map, objects }), feet: cliffBoulders(map) } : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the map is edited in place; `version` is its change counter
+    [rockLayer, map, objects, version]
+  );
   const repaint = useCallback(() => {
     const W = map.width;
     const D = map.depth;
@@ -1024,6 +1034,33 @@ export default function MapLab() {
       if (named || isSel) text(o.kind === "anchor" ? `⚑ ${o.id}` : o.id.replace(/^study:/, ""), u, v - (outline ? 0 : 0.9), isSel ? "#ffd166" : "#fff");
     }
 
+    // The rock proposal: accents dashed orange (theirs to accept), the automatic cliff-foot boulders solid grey.
+    if (rockOverlay) {
+      for (const r of rockOverlay.feet) {
+        const [hw, hd] = ROCK_SIZE[r.model].half;
+        ctx.beginPath();
+        ctx.ellipse(cellU(r.x), cellV(r.z), hw * r.scale, hd * r.scale, -r.yaw, 0, Math.PI * 2);
+        ctx.fillStyle = r.wet ? "rgba(120,140,155,0.85)" : "rgba(160,172,180,0.95)";
+        ctx.fill();
+        ctx.lineWidth = px(1);
+        ctx.strokeStyle = "rgba(20,24,28,0.7)";
+        ctx.stroke();
+      }
+      ctx.setLineDash([px(4), px(3)]);
+      for (const o of rockOverlay.proposal) {
+        if (!isRockModel(o.model)) continue;
+        const [hw, hd] = ROCK_SIZE[o.model].half, k = o.scale ?? 1;
+        ctx.beginPath();
+        ctx.ellipse(cellU(o.x), cellV(o.z), hw * k, hd * k, -(o.yaw ?? 0), 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,166,43,0.45)";
+        ctx.fill();
+        ctx.lineWidth = px(2);
+        ctx.strokeStyle = "#ffa62b";
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
+
     // Compass: north is −x. In the game view that is the right edge, as on the minimap.
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.font = `bold 13px ${mono}`;
@@ -1033,7 +1070,7 @@ export default function MapLab() {
     ctx.fillText(flip ? "N ▶" : "◀ N", flip ? W * zoom - 6 : 6, (D * zoom) / 2);
     ctx.textAlign = "center";
     ctx.fillText(flip ? "▲ W (camera forward)" : "▼ W", (W * zoom) / 2, flip ? 12 : D * zoom - 12);
-  }, [map, props, annotations, objects, zoom, flip, toPx, waterClass, selected, health]);
+  }, [map, props, annotations, objects, zoom, flip, toPx, waterClass, selected, health, rockOverlay]);
 
   const blit = useCallback(() => {
     const cv = canvasRef.current;
@@ -1977,6 +2014,30 @@ export default function MapLab() {
             {problems.map(([check, what]) => (
               <Row key={check} k={check} v={what.length > 3 ? `${what.slice(0, 3).join(", ")} +${what.length - 3}` : what.join(", ")} warn />
             ))}
+            <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid #2a3036" }}>
+              <div style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 4 }}>
+                <button onClick={() => setRockLayer((on) => !on)} style={btn(rockLayer, { flex: 1 })}
+                  title="v1 land pass: accent rocks proposed for this map (dashed orange) and the cliff-foot boulders the game adds by itself (grey)">
+                  {rockLayer ? "hide rock proposal" : "show rock proposal"}
+                </button>
+              </div>
+              {rockOverlay && (
+                <>
+                  <Row k="proposed accents" v={String(rockOverlay.proposal.length)} />
+                  <Row k="cliff-foot boulders (automatic)" v={String(rockOverlay.feet.length)} />
+                  <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                    <button style={btn(false, { flex: 1 })} title="the proposal as rock objects, for review or a paste into the map's objects"
+                      onClick={() => { void navigator.clipboard.writeText(JSON.stringify(rockOverlay.proposal, null, 1)); setRockCopied(true); setTimeout(() => setRockCopied(false), 1500); }}>
+                      {rockCopied ? "copied" : "copy proposal"}
+                    </button>
+                    <button style={btn(false, { flex: 1 })} title="add every proposed rock to this draft as rock objects (undo takes them back; nothing is saved until you save)"
+                      onClick={() => { commit(); const w = world(); w.objects = [...w.objects, ...rockOverlay.proposal]; bump(); }}>
+                      add to draft
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
             {health && (
               <>
                 <Row k="reachable from spawn" v={`${health.terrain.reachable}/${health.terrain.walkable}`} warn={health.terrain.stranded > 0} />

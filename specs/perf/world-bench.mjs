@@ -8,7 +8,8 @@
 // shipped samples, as fx-bench.mjs does (pairs whose shipped samples disagree are rejected and retried):
 //   domeOff   the sky dome off: the flat gradient Light draws (lib/game/perf/fxBench.ts `skyDome`);
 //   grassHalf the blade field at half its clumps (GrassField, tuning grass.density 0.5; shipped 1);
-//   grass0    no blades at all.
+//   grass0    no blades at all;
+//   rocksOff  the cliff-foot boulders off (lib/game/perf/fxBench.ts `cliffBoulders`; the v1 land pass).
 // The title has no probe and no switches: its frame and main-thread time are sampled alone (`title`).
 // Headed, off to the side, muted, never brought to the front; the real GPU; uncapped.
 import { createRequire } from "node:module";
@@ -28,6 +29,7 @@ const VARIANTS = {
   domeOff: { off: ["skyDome"], tune: null },
   grassHalf: { off: [], tune: ["grass", "density", 0.5] },
   grass0: { off: [], tune: ["grass", "density", 0] },
+  rocksOff: { off: ["cliffBoulders"], tune: null },
 };
 const SHIPPED = { off: [], tune: null };
 

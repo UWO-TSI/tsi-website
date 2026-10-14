@@ -11,7 +11,7 @@
  * The default URL is unchanged until David approves the slice.
  */
 
-import { useEffect, useMemo } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import * as THREE from "three";
 import {
   Surface,
@@ -27,6 +27,7 @@ import { setTerrainHeightProvider } from "../terrain";
 import GridTerrain, { CLIFF_FRINGE, TERRAIN_WET, useTerrainMaterials, type TerrainPalette } from "./GridTerrain";
 import GridCliffs from "./GridCliffs";
 import GrassField from "./GrassField";
+import CliffBoulders from "./CliffBoulders";
 import { applyGrassNormalStrength, advanceWater, shadeWaterByClouds } from "./terrainMaterials";
 import { cloudLayer } from "../AmbienceFX";
 import { useTuning } from "@/lib/game/tuning";
@@ -87,6 +88,8 @@ export default function GridWorld({ map, field: suppliedField, light, palette, w
     <group>
       <GridTerrain map={map} field={suppliedField} materials={materials} />
       <GridCliffs map={map} grass={materials.get(Surface.Grass)} drape={materials.get(CLIFF_FRINGE)} />
+      {/* Its own boundary: the ground draws while the boulders' models stream in. */}
+      <Suspense fallback={null}><CliffBoulders map={map} field={suppliedField} /></Suspense>
       <GrassField map={map} field={suppliedField} color={palette?.grass ?? GRASS_HEX} windScale={windScale} lite={lite} clear={clear} />
     </group>
   );

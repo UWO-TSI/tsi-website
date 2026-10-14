@@ -25,6 +25,7 @@
 
 import * as THREE from "three";
 import { addCutout } from "@/lib/game/occluders";
+import { addCliffStone } from "@/lib/game/cliffStone";
 import { getGrassTexture } from "@/lib/game/grassTexture";
 import { GRASS_COLOR } from "@/lib/game/grid";
 import { waterMaterial, waterUniforms, writeWaterUniforms, type WaterParams } from "@/lib/game/waterShader";
@@ -254,6 +255,11 @@ export function terrainMaterial(name: string): THREE.Material | null {
         THREE.ShaderChunk.map_fragment.replace("diffuseColor *= sampledDiffuseColor;", "diffuseColor.a *= sampledDiffuseColor.a;"));
     };
     mat.customProgramCacheKey = () => "terrain-fringe-alpha-v1";
+  }
+  if (key === "mCliff") {
+    // The walls as faceted stone, not the kit's painted strata (v1 land pass, lib/game/cliffStone.ts).
+    mat.onBeforeCompile = (shader) => addCliffStone(shader);
+    mat.customProgramCacheKey = () => "terrain-cliff-stone-v1";
   }
   mat.name = `terrain:${key}`;
   cache.set(key, withCutout(mat));

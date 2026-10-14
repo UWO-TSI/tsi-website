@@ -1,6 +1,7 @@
 import {
   CLIFF_LEVELS, drawnSurfaceAt, isGroundAtWorld, levelAt, rampRun, sampleGroundHeight, worldToCellX, worldToCellZ,
 } from "./grid";
+import { ROCK_MODELS, ROCK_SIZE } from "./rocks";
 import { FURNITURE, studySolid, type Furniture } from "@/lib/study/seats";
 import { objectsOf, village, villageSpawnPoint, type MapObject, type Village } from "./villageMap";
 
@@ -76,10 +77,13 @@ export const BRIDGE_RAIL_OUT = 1.65;
 export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   "bench-wood": [0.98, 0.27], "rock-a": [0.48, 0.45], "rock-b": [0.46, 0.42], "rock-c": [0.5, 0.5],
   "fence-country-a": [0.5, 0.16], "fence-country-b": [0.5, 0.16],
+  // The faceted boulders (lib/game/rocks.ts, art/rocks/build_rocks.py).
+  ...Object.fromEntries(ROCK_MODELS.map(m => [m, ROCK_SIZE[m].half])),
 };
 /** Prop tops before scale, measured from the GLB bounds: what a jump clears or lands on (lib/game/movement). */
 export const PROP_TOP: Record<string, number> = {
   "bench-wood": 0.51, "rock-a": 0.61, "rock-b": 0.59, "rock-c": 0.52, "fence-country-a": 0.7, "fence-country-b": 0.69,
+  ...Object.fromEntries(ROCK_MODELS.map(m => [m, ROCK_SIZE[m].top])),
 };
 /** A tree trunk blocks this far from its centre. */
 export const TREE_TRUNK = 0.65;

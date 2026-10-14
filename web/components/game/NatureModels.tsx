@@ -1,5 +1,6 @@
 "use client";
 
+import { isRockModel, rockUrl } from "@/lib/game/rocks";
 import { Suspense, useEffect, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import { prepareModel, disposeModelMaterials, applyModelTextures } from "@/lib/game/modelMaterials";
@@ -59,7 +60,7 @@ export function sceneryOf(v: Village, ground: (x: number, z: number) => number, 
     ...at("tree", seed => treeParts(seed, SEASON_TREES[season])),
     ...at("bush", seed => bushParts(seed, SEASON_BUSHES[season])),
     ...(SEASON_FLOWERS[season].length ? at("flower", seed => flowerParts(seed, SEASON_FLOWERS[season])) : []),
-    ...propsOf(v).filter(o => o.model).map((p): ModelPlacement => ({ url: `/assets/acnh/props/${p.model}.glb`, position: [p.x, ground(p.x, p.z), p.z], rotation: p.yaw ?? 0, scale: p.scale ?? 1 })),
+    ...propsOf(v).filter(o => o.model).map((p): ModelPlacement => ({ url: isRockModel(p.model) ? rockUrl(p.model) : `/assets/acnh/props/${p.model}.glb`, position: [p.x, ground(p.x, p.z), p.z], rotation: p.yaw ?? 0, scale: p.scale ?? 1 })),
   ];
 }
 
