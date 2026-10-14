@@ -873,10 +873,15 @@ for pair, v in ledges.items():
     b, k = pair.split("+")
     check("ledge_max", v, LIMITS["seam_ledge_max_locks"] if b in V7_IDS and k in V7_IDS else LIMITS["seam_ledge_max"], pair)
 check("brow_cover", hair[DEFAULT_BANGS].get("brow_cover"), LIMITS["brow_cover_default"], DEFAULT_BANGS)
+# A costume that encloses the whole head (`encloses`: the Halloween pumpkin head) stands off the hair all round on
+# purpose: it is held to no gap, rise, float, reach or ear-rim limit, only to being closed, never cut by the hair and
+# never cutting the head.
+ENCLOSES = {a["id"] for a in CAT["accessories"] if a.get("encloses")}
 for pid, r in headwear.items():
     check("open_edges", r["open_edges"], LIMITS["hat_open_edges"], pid)
-    check("gap_max", r["gap"]["max"], LIMITS["hat_gap_max"], pid)
-    check("rise_median", r["rise"]["median"], LIMITS["hat_rise_median"], pid)
+    if pid not in ENCLOSES:
+        check("gap_max", r["gap"]["max"], LIMITS["hat_gap_max"], pid)
+        check("rise_median", r["rise"]["median"], LIMITS["hat_rise_median"], pid)
     check("poke_max", r["poke_max"], LIMITS["hat_poke_max"], pid)
 for pid, r in glasses.items():
     check("offset_max", r["offset_max"], LIMITS["glasses_offset_max"], pid)
@@ -886,6 +891,8 @@ for pid, r in lock_report.items():
 for pid, r in skull_fit.items():
     if r["clip"] is not None:
         check("skull clip", r["clip"], LIMITS["skull_clip_max"], pid)
+    if pid in ENCLOSES:
+        continue
     for name, v in r["float"].items():
         check(f"skull float at {name}", v, LIMITS["skull_hat_float_max"] if r["kind"] == "hat" else LIMITS["skull_float_max"], pid)
     check("skull uncovered fit points " + ",".join(r["uncovered"]), len(r["uncovered"]), LIMITS["skull_uncovered"], pid)

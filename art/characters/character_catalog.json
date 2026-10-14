@@ -1103,7 +1103,7 @@
    "slot": "accessory",
    "name": "Witch hat",
    "glb": "accessories/accessory/acc_witch_hat.glb",
-   "tris": 1117,
+   "tris": 1104,
    "materials": [
     {
      "name": "M_Main",
@@ -1124,7 +1124,8 @@
    "hidesBackHair": true,
    "hides": [],
    "group": "head",
-   "event": "halloween"
+   "event": "halloween",
+   "skull": "v8"
   },
   {
    "id": "acc_cat_ears",
@@ -1148,14 +1149,15 @@
    "hidesBackHair": false,
    "hides": [],
    "group": "head",
-   "event": "halloween"
+   "event": "halloween",
+   "skull": "v8"
   },
   {
    "id": "acc_pumpkin_head",
    "slot": "accessory",
    "name": "Pumpkin head",
    "glb": "accessories/accessory/acc_pumpkin_head.glb",
-   "tris": 554,
+   "tris": 598,
    "materials": [
     {
      "name": "M_Main",
@@ -1179,7 +1181,9 @@
     "bangs"
    ],
    "group": "head",
-   "event": "halloween"
+   "event": "halloween",
+   "encloses": true,
+   "skull": "v8"
   },
   {
    "id": "acc_vampire_cape",

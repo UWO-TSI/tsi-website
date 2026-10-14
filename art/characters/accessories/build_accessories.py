@@ -409,12 +409,11 @@ def witch_hat(pc):
               [p + outward(p) * 0.15 - Vector((0, 0, 0.03)) for p in rim]])
     top = hair_point(90, 0, hat_in(90) + 0.005)
     pc.region = "head"
-    pc.mat = "M_Accent"
-    pc.tube([top - Vector((0, 0, 0.03)), top + Vector((0, 0.002, 0.025))], [0.083, 0.079], sides=7, tip=False, cap=False)
-    pc.mat = "M_Main"
-    # A hat stays within the headwear share of a look's ~4000 triangles (look.test.ts): seven sides, three rings.
-    path = [top + Vector((0, 0.002, 0.02)), top + Vector((0, 0.028, 0.125)), top + Vector((0, 0.085, 0.205))]
-    pc.tube(path, [0.078, 0.036, 0.004], sides=7, tip=True, cap=False)
+    # The band and the cone as one closed solid: the band's ring in M_Accent, six sides, bent back to a point. A hat stays
+    # within the headwear share of a look's ~4000 triangles (look.test.ts) and the skull's hat box (fit_check.py).
+    ring = lambda c, r: [c + Vector((math.cos(math.tau * k / 6) * r, math.sin(math.tau * k / 6) * r, 0)) for k in range(6)]
+    rings = [ring(top - Vector((0, 0, 0.03)), 0.083), ring(top + Vector((0, 0.002, 0.025)), 0.079), ring(top + Vector((0, 0.022, 0.08)), 0.036)]
+    pc.band(rings, caps=(top - Vector((0, 0, 0.032)), top + Vector((0, 0.056, 0.104))), mat=lambda i, k: "M_Accent" if i == 0 else None)
     tuck(pc, edge)
 
 
@@ -423,7 +422,7 @@ def cat_ears(pc):
     """A thin band over the crown, resting on the hair, with two pointed ears: dark outside, pink inside."""
     pc.region = "head"
     lat = lambda lon: 52 + 6 * math.cos(math.radians(lon))
-    off = lambda lon: max(hair_vol(lat(lon)) + 0.004, worn_top(lat(lon), lon, 2, 4) + 0.003)
+    off = lambda lon: max(hair_vol(lat(lon)) + 0.003, worn_top(lat(lon), lon, 2, 4) + 0.002)
     pc.tube([hair_point(lat(l), l, off(l)) for l in range(-100, 101, 10)], [(0.004, 0.006)] * 21, sides=4, tip=False)
     for sx in (1, -1):
         lon = sx * 42
@@ -446,7 +445,7 @@ def cat_ears(pc):
 
 
 @part("acc_pumpkin_head", "accessory", "Pumpkin head", {"M_Main": ("outfit", 7), "M_Accent": ("fixed", "#3B2114"), "M_Trim": ("outfit", 3)},
-      sharp=40, hidesBackHair=True, hides=["bangs"], group="head", event="halloween")
+      sharp=40, hidesBackHair=True, hides=["bangs"], group="head", event="halloween", encloses=True)
 def pumpkin_head(pc):
     """A carved pumpkin over the whole head, ribbed, a stem on top, the face cut in dark on the front; open under the chin."""
     pc.region = "head"
@@ -463,12 +462,14 @@ def pumpkin_head(pc):
             ring.append(HC + Vector((math.sin(lo) * math.cos(la) * rx * rib, -math.cos(lo) * math.cos(la) * rx * rib, math.sin(la) * rz - 0.01)))
         rings.append(ring)
     n0 = pc.mark()
-    pc.band(rings, caps=(None, HC + Vector((0, 0, rz * 0.97))))
+    # Closed under the chin too (round the neck, inside the shell): no open edge.
+    pc.band(rings, caps=(HC + Vector((0, 0, math.sin(math.radians(-62)) * rz)), HC + Vector((0, 0, rz * 0.97))))
     pc.thicken(pc.since(n0), lambda v: HC + (v.co - HC) * 0.97)
     pc.mat = "M_Trim"
     stem = HC + Vector((0, 0, rz * 0.95))
     pc.tube([stem, stem + Vector((0.006, 0.004, 0.04)), stem + Vector((0.016, 0.01, 0.06))], [0.016, 0.013, 0.01], sides=5, tip=False)
     pc.mat = "M_Accent"
+    n_face = pc.mark()
     front = lambda x, z: HC + Vector((x, -math.sqrt(max(rx * rx * (1 - (z / rz) ** 2) - x * x, 1e-6)) - 0.003, z))
     for sx in (1, -1):
         tri = [front(sx * 0.02, 0.012), front(sx * 0.07, 0.012), front(sx * 0.045, 0.05)]
@@ -479,6 +480,7 @@ def pumpkin_head(pc):
     vs = [pc.v(p) for p in grin]
     for k in range(len(vs)):
         pc.f([vs[k], vs[(k + 1) % len(vs)], mid], HC)
+    pc.thicken(pc.since(n_face), lambda v: HC + (v.co - HC) * 0.994)       # the carving as thin closed solids
     pc.mat = "M_Main"
 
 
