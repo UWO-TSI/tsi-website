@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
 const { chromium } = require("playwright");
 const [KIT = "summoner", TIER = "high"] = process.argv.slice(2), PORT = process.env.PORT ?? 3149;
-const browser = await chromium.launch({ headless: false, args: ["--mute-audio", "--window-position=2400,0", "--use-angle=metal", "--ignore-gpu-blocklist", ...(process.env.UNCAPPED === "1" ? ["--disable-gpu-vsync", "--disable-frame-rate-limit"] : [])] });
+const browser = await chromium.launch({ headless: process.env.HEADED !== "1", args: ["--mute-audio", "--window-position=2400,0", "--use-angle=metal", "--ignore-gpu-blocklist", ...(process.env.UNCAPPED === "1" ? ["--disable-gpu-vsync", "--disable-frame-rate-limit"] : [])] });
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
 await ctx.addInitScript(lite => { try {
   localStorage.setItem("tsi.liteMode.v1", String(lite)); localStorage.setItem("tsi.shadows.v1", String(!lite)); localStorage.setItem("tsi.hud.full.v1", "true");

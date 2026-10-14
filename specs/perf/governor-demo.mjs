@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
 const { chromium } = require("playwright");
 const PORT = process.env.PORT ?? 3149, RATE = Number(process.env.RATE ?? 6);
-const browser = await chromium.launch({ headless: false, args: ["--mute-audio", "--window-position=2400,0", "--use-angle=metal", "--ignore-gpu-blocklist"] });
+const browser = await chromium.launch({ headless: process.env.HEADED !== "1", args: ["--mute-audio", "--window-position=2400,0", "--use-angle=metal", "--ignore-gpu-blocklist"] });
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
 await ctx.addInitScript(() => { try { localStorage.setItem("tsi.liteMode.v1", "false"); localStorage.setItem("tsi.shadows.v1", "true"); } catch {} });
 const page = await ctx.newPage();
