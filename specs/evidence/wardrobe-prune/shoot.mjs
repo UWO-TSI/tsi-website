@@ -53,7 +53,7 @@ if (SCENES.includes("lab")) {
 if (SCENES.includes("creator")) {
   // The starting creator is the arrival's reflection (tutorial-v2): skip the aboard beat, wait for the creator, open
   // each category. A new account owns the starters only, so these tabs are exactly what a new member can pick.
-  const page = await page0(1440, 900);
+  const page = await page0(1440, Number(process.env.H ?? 900));
   await page.goto(`${HOST}/lab/island`, { waitUntil: "domcontentloaded" });
   await page.evaluate(() => { localStorage.clear(); localStorage.setItem("tsi.gift.later", new Date().toISOString().slice(0, 10)); });
   await page.goto(`${HOST}/lab/island?arrival=1&weather=clear&at=14:20`, { waitUntil: "domcontentloaded" });
@@ -72,7 +72,7 @@ if (SCENES.includes("creator")) {
 }
 
 if (SCENES.includes("closet")) {
-  const page = await page0(1440, 900);
+  const page = await page0(1440, Number(process.env.H ?? 900));
   const LOOK = { skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", extras: [], bangs: "bangs_straight", back: "back_bob", top: "top_tee", bottom: "bottom_shorts",
     onepiece: null, shoes: "shoes_slipon", acc: {}, colors: {} };
   await page.goto(`${HOST}/lab/island`, { waitUntil: "domcontentloaded" });

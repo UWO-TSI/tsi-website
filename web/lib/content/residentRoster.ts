@@ -40,7 +40,7 @@ export const RESIDENT_LOOKS: Record<string, Look> = {
   shopkeeper: look({ skin: 8, hair: 0, mouth: "tiny_smirk", bangs: "bangs_choppy", back: "back_short_spiky", top: "top_sweater_vest", bottom: "bottom_trousers", shoes: "shoes_boots",
     acc: { face: "acc_glasses_square" }, colors: { top_sweater_vest: 3, bottom_trousers: 14, shoes_boots: 5 } }),
   // Museum curator: precise and owlish. Braided crown, round glasses, a cream collar shirt over a navy pleated skirt.
-  curator: look({ skin: 0, hair: 3, eyes: "unimpressed", bangs: "bangs_hime", back: "back_braid_crown", top: "top_collar_shirt", bottom: "bottom_pleated_skirt", shoes: "shoes_loafers",
+  curator: look({ skin: 0, hair: 3, eyes: "bean", bangs: "bangs_hime", back: "back_braid_crown", top: "top_collar_shirt", bottom: "bottom_pleated_skirt", shoes: "shoes_loafers",
     acc: { face: "acc_glasses_round" }, colors: { top_collar_shirt: 0, bottom_pleated_skirt: 12, shoes_loafers: 5 } }),
   // Wharf keeper: weathered and chatty about tides. Navy cap, a blue striped top, yellow rain boots.
   "wharf-keeper": look({ skin: 6, hair: 9, extras: ["freckles"], bangs: "bangs_swept_r", back: "back_short_spiky", top: "top_stripe_ls", bottom: "bottom_trousers", shoes: "shoes_rainboots",
