@@ -26,49 +26,12 @@ import hair_styles  # noqa: E402
 bpy.ops.wm.read_factory_settings(use_empty=True)
 
 
-def _worn_hair():
-    """BVH of the default hair (bangs_straight + back_bob GLBs, rest pose). avatar v7: those are sculpted locks with
-    ridges ~7 mm over the library's hair volume, so bands rest on the worn hair, not on hair_vol."""
-    from mathutils.bvhtree import BVHTree
-    vs, ps = [], []
-    for rel in ("hair/bangs/bangs_straight.glb", "hair/back/back_bob.glb"):
-        before = set(bpy.data.objects)
-        bpy.ops.import_scene.gltf(filepath=os.path.join(HERE, "..", rel))
-        new = [o for o in bpy.data.objects if o not in before]
-        for o in new:
-            if o.type == "MESH" and o.modifiers:
-                base = len(vs)
-                vs.extend(o.matrix_world @ v.co for v in o.data.vertices)
-                ps.extend([base + i for i in pl.vertices] for pl in o.data.polygons)
-        for o in new:
-            bpy.data.objects.remove(o, do_unlink=True)
-    for coll in (bpy.data.meshes, bpy.data.materials, bpy.data.armatures, bpy.data.images, bpy.data.actions):
-        for d in list(coll):          # nothing imported may stay: the parts' materials must keep their exact names
-            coll.remove(d)
-    return BVHTree.FromPolygons(vs, ps)
-
-
-WORN = _worn_hair()
-
-
-def worn_top(lat, lon, dlat=3, dlon=8):
-    """Height over the scalp of the worn default hair's outer surface, the highest within +-dlat, +-dlon (a band's
-    footprint), so a band laid at that height clears every lock ridge under it."""
-    top = 0.0
-    for la in (lat - dlat, lat, lat + dlat):
-        for lo in (lon - dlon, lon - dlon / 2, lon, lon + dlon / 2, lon + dlon):
-            q = head_point(la, lo)
-            d = (q - HC).normalized()
-            t, far, o = None, 0.3, HC.copy()
-            while True:
-                loc, _, _, dist = WORN.ray_cast(o, d, far)
-                if loc is None:
-                    break
-                t = (loc - HC).length
-                o = loc + d * 1e-4
-            if t is not None:
-                top = max(top, t - (q - HC).length)
-    return top
+def band_off(lat, extra=0.0):
+    """Height over the scalp a band rests at (head-roblox, row 309: the hair is David's whole Roblox styles, from a bald
+    sprout to a 10 cm dome, so no band can rest on every one): the hair volume's outer shell, hair_outer, the height the
+    hats are fitted to as well. On a given style a band sits as a Roblox accessory does on its attachment: over the
+    hair, or in it."""
+    return hair_outer(lat) + 0.003 + extra
 
 
 rig = kit.load_rig(bpy.context.scene)
@@ -286,12 +249,12 @@ def flower_crown(pc):
     pc.region = "head"
     lat = lambda lon: 48 + 8 * math.cos(math.radians(lon))       # behind the bangs' roots, on the cap all round (v9: over
                                                                   # the classic head's rim at the sides, not below it)
-    off = lambda lon: max(hair_vol(lat(lon)) + 0.002, worn_top(lat(lon), lon, 0.5, 1) + 0.0032)  # seated on the lock ridges
+    off = lambda lon: band_off(lat(lon))                          # on the hair volume's outer shell
     pc.mat = "M_Trim"                                                       # (v9: a finer footprint and path over the rim)
     pc.tube([hair_point(lat(l), l, off(l)) for l in range(0, 360, 9)], [(0.0065, 0.005)] * 40, sides=4, closed_loop=True)
     for k, l0 in enumerate(range(0, 360, 45)):
         pc.mat = "M_Main" if k % 2 == 0 else "M_Accent"
-        l = max(range(l0 - 12, l0 + 13, 3), key=lambda x: worn_top(lat(x), x, 1, 2))   # each blossom sits on a lock
+        l = l0
         c = hair_point(lat(l), l, off(l))
         blossom(pc, c, (c - HC).normalized(), r=0.026)
     pc.mat = "M_Main"
@@ -303,9 +266,7 @@ def crystal_circlet(pc):
     """A thin gold band across the brow, over the bangs, dipping to a crystal at the front with two small side stones."""
     pc.region = "head"
     lat = lambda lon: 19 + 2 * math.cos(math.radians(lon)) - 3 * max(0.0, math.cos(math.radians(lon))) ** 8   # head fit: 3 deg higher, over the fringe's full roll
-    off = lambda lon: max(max(0.006, hair_vol(lat(lon)) * 1.1) + 0.002,      # on the fringe at the front, the cap elsewhere,
-                          worn_top(lat(lon), lon, 1, 0.75 if abs(lon) < 30 else 1.5) + (0.001 if abs(lon) < 30 else 0.0025))   # on the ridges (avatar v7; head fit:
-    #                                                                           the fringe lies flatter on the v8 face)
+    off = lambda lon: band_off(lat(lon))                          # on the hair volume's outer shell, as the hats
     pc.tube([hair_point(lat(l), l, off(l)) for l in range(0, 360, 5)], [(0.0032, 0.0065)] * 72, sides=4, closed_loop=True)
     pc.mat = "M_Accent"
     for lon, h, wd in ((0, 0.05, 0.022), (-32, 0.022, 0.012), (32, 0.022, 0.012)):
@@ -423,7 +384,7 @@ def cat_ears(pc):
     """A thin band over the crown, resting on the hair, with two pointed ears: dark outside, pink inside."""
     pc.region = "head"
     lat = lambda lon: 52 + 6 * math.cos(math.radians(lon))
-    off = lambda lon: max(hair_vol(lat(lon)) + 0.003, worn_top(lat(lon), lon, 1, 2) + 0.002)
+    off = lambda lon: band_off(lat(lon))
     pc.tube([hair_point(lat(l), l, off(l)) for l in range(-100, 101, 10)], [(0.004, 0.006)] * 21, sides=4, tip=False)
     for sx in (1, -1):
         lon = sx * 42

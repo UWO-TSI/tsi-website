@@ -91,7 +91,6 @@ LIMITS = {
     "skull_ear_rim": 0.0,          # m a hat's rim dips below the ear zone's top at the sides
 }
 FH = HRZT
-DEFAULT_BANGS, DEFAULT_BACK = "bangs_straight", "back_bob"
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 CAT = json.load(open(os.path.join(HERE, "character_catalog.json")))
@@ -702,10 +701,10 @@ OUTER = {pid: np.where(o < R_SCALP - 0.006, np.nan, o) for pid, (_, o) in tables
 for b in (p["id"] for p in CAT["hair"] if p["slot"] == "bangs"):
     for k in (p["id"] for p in CAT["hair"] if p["slot"] == "back" and not p.get("full")):   # a full style has no bangs
         ledges[f"{b}+{k}"], ledge_at[f"{b}+{k}"] = seam_step(OUTER[b], OUTER[k])
-worst_pair = max(ledges, key=ledges.get)
-seam = {"ledge_max": ledges[worst_pair], "worst_pair": worst_pair, "worst_at": ledge_at.get(worst_pair),
-        "default_pair": ledges[f"{DEFAULT_BANGS}+{DEFAULT_BACK}"],
-        "median_over_pairs": round(float(np.median(list(ledges.values()))), 4),
+# head-roblox: the hair is whole styles only (no bangs + back pairs), so there is no seam unless a library comes back
+worst_pair = max(ledges, key=ledges.get) if ledges else None
+seam = {"ledge_max": ledges[worst_pair] if worst_pair else 0.0, "worst_pair": worst_pair, "worst_at": ledge_at.get(worst_pair),
+        "pairs": len(ledges), "median_over_pairs": round(float(np.median(list(ledges.values()))), 4) if ledges else 0.0,
         "over": {k: [v, ledge_at.get(k)] for k, v in sorted(ledges.items(), key=lambda kv: -kv[1]) if v > LIMITS["seam_ledge_max"]}}
 
 # ================================================================ headwear + glasses
@@ -737,7 +736,10 @@ for part in CAT["accessories"]:
     hat_bvh, _ = bvh_of(groups, lambda n: n != "M_Hair")
     tuck_bvh, _ = bvh_of(groups, lambda n: n == "M_Hair")
     hat = part["hidesBackHair"]
-    under = [tables[DEFAULT_BANGS]] + ([] if hat else [tables[DEFAULT_BACK]])
+    # head-roblox: no hair is worn under them for the check: a hat hides the hair (and carries its own tuck), and a band
+    # rests on the hair volume's outer shell (build_accessories.band_off), as a Roblox accessory rests on its attachment
+    # whatever hair is worn
+    under = []
     h_in, h_out, h_every = ray_table(hat_bvh, keep_all=True)
     if tuck_bvh:
         under.append(ray_table(tuck_bvh))
@@ -750,7 +752,7 @@ for part in CAT["accessories"]:
     for i in np.nonzero(on)[0]:
         # the hair the piece rests on: worn hair where there is some, else (hats) the hair volume they are fitted to
         # (avatar v7: the fuller lock hair's outer surface, hair_outer)
-        top = max([R_SCALP[i] + (hair_outer(LAT[i]) if hat else 0.0)] + [o[i] for _, o in under if not np.isnan(o[i])])
+        top = max([R_SCALP[i] + hair_outer(LAT[i])] + [o[i] for _, o in under if not np.isnan(o[i])])
         gap[i] = air_above(h_every[i], top, open_e == 0)
         rise[i] = h_out[i] - top
         poke[i] = max(0.0, top - h_out[i])

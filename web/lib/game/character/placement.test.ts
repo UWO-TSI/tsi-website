@@ -144,7 +144,7 @@ describe("the look stays within the multiplayer card's 2 KB (realtime_player_car
     return look({
       skin: PALETTE.skin.length - 1, hair: PALETTE.hair.length - 1,
       eyes: longest(Object.keys(FACE.layers.eyes.items)), mouth: longest(Object.keys(FACE.layers.mouth.items)),
-      extras: Object.keys(FACE.layers.extras.items), bangs: longest(PARTS.filter(p => p.slot === "bangs").map(p => p.id)), back: longest(PARTS.filter(p => p.slot === "back").map(p => p.id)),
+      extras: Object.keys(FACE.layers.extras.items), bangs: "", back: longest(PARTS.filter(p => p.slot === "back").map(p => p.id)),
       top: longest(PARTS.filter(p => p.slot === "top").map(p => p.id)), bottom: longest(PARTS.filter(p => p.slot === "bottom").map(p => p.id)),
       shoes: longest(PARTS.filter(p => p.slot === "shoes").map(p => p.id)), acc: accs,
       colors: Object.fromEntries(outfitTinted.map(p => [p.id, PALETTE.outfit.length - 1])),

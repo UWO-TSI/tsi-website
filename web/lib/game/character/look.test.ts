@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { BASE_URL, HAIR_MAPS_URL, LOD_SKIN_URL, CLIPS, DEFAULT_LOOK, FACE, FACE_ATLAS2_URLS, FACE_ATLAS_URLS, PALETTE, PARTS, PART_BY_ID, parseLook, randomLook, resolveParts, seeded, wear, wornParts } from "./look";
+import { BASE_URL, HAIR_MAPS_URL, OLD_HAIR, LOD_SKIN_URL, CLIPS, DEFAULT_LOOK, FACE, FACE_ATLAS2_URLS, FACE_ATLAS_URLS, PALETTE, PARTS, PART_BY_ID, parseLook, randomLook, resolveParts, seeded, wear, wornParts } from "./look";
 
 const web = join(__dirname, "../../..");
 const art = join(web, "../art/characters");
@@ -78,8 +78,8 @@ describe("character catalogue", () => {
     const heaviest = (slot: string) => Math.max(...PARTS.filter(p => p.slot === slot).map(p => p.tris));
     const outfit = heaviest("top") + heaviest("bottom") + heaviest("shoes");
     const glasses = Math.max(...PARTS.filter(p => p.group === "face").map(p => p.tris));
-    // every bangs with every back, or with a hat (which replaces the back hair and carries its own tuck)
-    const bangs = Math.max(...PARTS.filter(p => p.slot === "bangs").map(p => p.tris));
+    // head-roblox: the hair is one whole hairstyle, or a hat (which replaces it and carries its own tuck)
+    const bangs = Math.max(0, ...PARTS.filter(p => p.slot === "bangs").map(p => p.tris));
     const back = Math.max(...PARTS.filter(p => p.slot === "back" && !p.full).map(p => p.tris));
     const full = Math.max(...PARTS.filter(p => p.full).map(p => p.tris));   // a whole hairstyle replaces bangs and back
     expect(base + full + outfit + glasses, "heaviest full hairstyle").toBeLessThanOrEqual(4000);
@@ -116,20 +116,43 @@ describe("looks", () => {
     const look = { ...wear(DEFAULT_LOOK, "accessory", "acc_beanie"), hair: 4, colors: { acc_beanie: 12 } };
     const beanie = resolveParts(look).find(p => p.id === "acc_beanie")!;
     expect(beanie.tints).toEqual({ M_Main: PALETTE.outfit[12], M_Accent: PALETTE.outfit[0], M_Hair: PALETTE.hair[4] });
-    expect(resolveParts(look).find(p => p.id === "bangs_straight")!.tints).toEqual({ M_Hair: PALETTE.hair[4] });
+    const unhatted = { ...DEFAULT_LOOK, hair: 4 };
+    expect(resolveParts(unhatted).find(p => p.id === DEFAULT_LOOK.back)!.tints).toEqual({ M_Hair: PALETTE.hair[4] });
     const crew = resolveParts(wear(DEFAULT_LOOK, "top", "top_tsi_crew")).find(p => p.id === "top_tsi_crew")!;
     expect(crew.decal).toMatch(/decal_tsi_mark\.png$/);
     expect(resolveParts(DEFAULT_LOOK).find(p => p.id === "top_tee")!.decal).toBeNull();
     expect(resolveParts(DEFAULT_LOOK).find(p => p.id === "shoes_slipon")!.tints.M_Sole).toBe("#C9A63A");
   });
-  it("a full hairstyle replaces the bangs, and picking bangs brings a two-piece back (head fit)", () => {
-    const full = PARTS.find(p => p.slot === "back" && p.full)!;
-    expect(full).toBeDefined();
-    const look = wear(DEFAULT_LOOK, "back", full.id);
-    expect(wornParts(look).map(p => p.slot).filter(s => s === "bangs" || s === "back")).toEqual(["back"]);
-    const again = wear(look, "bangs", "bangs_curtain");
-    expect([again.bangs, again.back]).toEqual(["bangs_curtain", DEFAULT_LOOK.back]);
-    expect(wornParts(wear(look, "accessory", "acc_beanie")).some(p => p.slot === "back" || p.slot === "bangs")).toBe(false); // under a hat: the tuck
+  it("wears the hair as one of David's 21 whole hairstyles, hidden under a hat or hood (head-roblox)", () => {
+    const hair = PARTS.filter(p => p.slot === "bangs" || p.slot === "back");
+    expect(hair).toHaveLength(21);
+    expect(hair.every(p => p.slot === "back" && p.full && p.roblox)).toBe(true);
+    expect(DEFAULT_LOOK.bangs).toBe("");
+    expect(PART_BY_ID.get(DEFAULT_LOOK.back)?.full).toBe(true);
+    const look = wear(DEFAULT_LOOK, "back", hair[3].id);
+    expect(wornParts(look).filter(p => p.slot === "bangs" || p.slot === "back").map(p => p.id)).toEqual([hair[3].id]);
+    // a hat or a hood hides the hairstyle; the hat carries its own tuck
+    expect(wornParts(wear(look, "accessory", "acc_beanie")).some(p => p.slot === "back")).toBe(false);
+    expect(wornParts(wear(look, "onepiece", "onepiece_raincape_hood")).some(p => p.slot === "back")).toBe(false);
+    // a band does not
+    expect(wornParts(wear(look, "accessory", "acc_flower_crown")).some(p => p.id === hair[3].id)).toBe(true);
+  });
+  it("loads a saved look's old fringe and back as the nearest of the 21 (head-roblox)", () => {
+    const old = ["bangs_straight", "bangs_straight_long", "bangs_bowl", "bangs_wispy", "bangs_swept_l", "bangs_swept_r", "bangs_curtain",
+      "bangs_curtain_long", "bangs_centre_split", "bangs_spiky", "bangs_hime", "bangs_choppy", "bangs_swept_back", "bangs_single_strand",
+      "bangs_wavy", "bangs_asym_block", "back_bob", "back_wolf", "back_long", "back_wavy_long", "back_high_pony", "back_pigtails",
+      "back_twin_buns", "back_bun", "back_braid_crown", "back_short_spiky", "back_undercut", "back_bowl"];
+    for (const id of old) {
+      expect(PART_BY_ID.has(id), id).toBe(false);
+      expect(PART_BY_ID.get(OLD_HAIR[id])?.full, id).toBe(true);
+    }
+    // the back decides; a lone old fringe next; the bangs field is always empty now
+    expect(parseLook({ bangs: "bangs_curtain", back: "back_high_pony" })).toMatchObject({ bangs: "", back: "hair_wispy_ponytail" });
+    expect(parseLook({ bangs: "bangs_bowl" })).toMatchObject({ bangs: "", back: "hair_bowl_cut" });
+    expect(parseLook({ back: "back_pigtails", hair: 6 })).toMatchObject({ back: "hair_long_pigtails", hair: 6 });
+    // unknown hair falls back to the default; a current hairstyle stays
+    expect(parseLook({ back: "back_mohawk" }).back).toBe(DEFAULT_LOOK.back);
+    expect(parseLook({ back: "hair_waves", bangs: "bangs_bowl" }).back).toBe("hair_waves");
   });
   it("tints a mapped hairstyle from the palette and its accent from the look, the style's default or the skin (head fit)", () => {
     const two = PARTS.find(p => p.full && p.map?.accent !== undefined && typeof p.accent?.default === "number")!;
@@ -142,7 +165,8 @@ describe("looks", () => {
     expect(resolveParts({ ...wear(DEFAULT_LOOK, "back", fade.id), skin: 7 }).find(p => p.id === fade.id)!.map!.accentHex).toBe(PALETTE.skin[7]);
     expect(parseLook({ hairAccent: 3 }).hairAccent).toBe(3);
     expect(parseLook({ hairAccent: 99 }).hairAccent).toBeUndefined();
-    expect(resolveParts(DEFAULT_LOOK).find(p => p.id === "back_bob")!.map).toBeNull();
+    expect(resolveParts(DEFAULT_LOOK).find(p => p.id === DEFAULT_LOOK.back)!.map).not.toBeNull();     // every style but #9 is mapped
+    expect(PART_BY_ID.get("hair_fluffy_boy")!.map).toBeUndefined();
   });
   it("draws every hairstyle as one primitive in one material: caps and second colours are mask channels (head fit)", () => {
     for (const p of PARTS.filter(p => p.slot === "bangs" || p.slot === "back")) expect(p.materials.map(m => m.name), p.id).toEqual(["M_Hair"]);

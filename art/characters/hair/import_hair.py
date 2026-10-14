@@ -781,7 +781,7 @@ def main():
         src_tris = kit.ntris(ob)
         img_px = pixels(img) if img is not None else None
         has_uv = bool(ob.data.uv_layers) and img is not None and np.ptp([d.uv.x for d in ob.data.uv_layers.active.data]) > 1e-4
-        capped = "crown" in (spec.get("covers") or SK.COVERS["full"])
+        capped = "crown" in (spec.get("covers") or SK.COVERS["full"]) and spec.get("undercap", True)
         weld(ob)
         dropped, n_cap = clean(ob, spec, img_px if has_uv else None)
         attach(ob, att)
@@ -856,7 +856,9 @@ def main():
     im.file_format = "PNG"
     im.save()
     cat = json.load(open(cat_path))
-    cat["hair"] = [entries.get(h["id"], h) for h in cat["hair"]] + [e for k, e in entries.items() if k not in {h["id"] for h in cat["hair"]}]
+    # the catalogue's hair is exactly the manifest's hairstyles, in its order (head-roblox: David's 21 are all the hair)
+    old = {h["id"]: h for h in cat["hair"]}
+    cat["hair"] = [entries.get(h["id"]) or old[h["id"]] for h in MANIFEST["hairs"] if h["id"] in entries or h["id"] in old]
     cat["hairMaps"] = {"atlas": "hair/hair_maps.png", "gain": GAIN, "cells": [COLS, ROWS], "cell": CELL, "cap": CAP_COLOR,
                        "note": "Shading maps of the full hairstyles (hair/import_hair.py): one channel per hair, its accent and "
                                "cap masks in the next channels of the same cell; luminance / median / gain. The engine "

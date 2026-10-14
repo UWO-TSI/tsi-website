@@ -1761,654 +1761,6 @@
  ],
  "hair": [
   {
-   "id": "bangs_straight",
-   "slot": "bangs",
-   "name": "Straight cut",
-   "glb": "hair/bangs/bangs_straight.glb",
-   "tris": 586,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "N4.2",
-   "locks": 9,
-   "v7": true,
-   "skull": "v9"
-  },
-  {
-   "id": "bangs_straight_long",
-   "slot": "bangs",
-   "name": "Straight cut, long",
-   "glb": "hair/bangs/bangs_straight_long.glb",
-   "tris": 586,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "N3.3",
-   "locks": 9,
-   "v7": true,
-   "skull": "v9"
-  },
-  {
-   "id": "bangs_bowl",
-   "slot": "bangs",
-   "name": "Rounded bowl",
-   "glb": "hair/bangs/bangs_bowl.glb",
-   "tris": 630,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "N4.1",
-   "locks": 9,
-   "v7": true,
-   "skull": "v9"
-  },
-  {
-   "id": "bangs_wispy",
-   "slot": "bangs",
-   "name": "See-through wispy",
-   "glb": "hair/bangs/bangs_wispy.glb",
-   "tris": 646,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "N6.1",
-   "locks": 14,
-   "v7": true,
-   "skull": "v9"
-  },
-  {
-   "id": "bangs_swept_l",
-   "slot": "bangs",
-   "name": "Side-swept left",
-   "glb": "hair/bangs/bangs_swept_l.glb",
-   "tris": 586,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "N2.2",
-   "locks": 9,
-   "v7": true,
-   "skull": "v9"
-  },
-  {
-   "id": "bangs_swept_r",
-   "slot": "bangs",
-   "name": "Side-swept right",
-   "glb": "hair/bangs/bangs_swept_r.glb",
-   "tris": 586,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "N6.4",
-   "locks": 9,
-   "v7": true,
-   "skull": "v9"
-  },
-  {
-   "id": "bangs_curtain",
-   "slot": "bangs",
-   "name": "Curtain",
-   "glb": "hair/bangs/bangs_curtain.glb",
-   "tris": 560,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "N3.2",
-   "locks": 8,
-   "v7": true,
-   "skull": "v9"
-  },
-  {
-   "id": "bangs_curtain_long",
-   "slot": "bangs",
-   "name": "Curtain, long",
-   "glb": "hair/bangs/bangs_curtain_long.glb",
-   "tris": 420,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "N6.2",
-   "locks": 6,
-   "v7": true,
-   "skull": "v9"
-  },
-  {
-   "id": "bangs_centre_split",
-   "slot": "bangs",
-   "name": "Centre split",
-   "glb": "hair/bangs/bangs_centre_split.glb",
-   "tris": 516,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "N1.4",
-   "locks": 8,
-   "v7": true,
-   "skull": "v9"
-  },
-  {
-   "id": "bangs_spiky",
-   "slot": "bangs",
-   "name": "Spiky tufts",
-   "glb": "hair/bangs/bangs_spiky.glb",
-   "tris": 516,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "B6.2",
-   "locks": 8,
-   "v7": true,
-   "skull": "v9"
-  },
-  {
-   "id": "bangs_hime",
-   "slot": "bangs",
-   "name": "Hime side-locks",
-   "glb": "hair/bangs/bangs_hime.glb",
-   "tris": 644,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "N6.3",
-   "locks": 9,
-   "v7": true,
-   "skull": "v9"
-  },
-  {
-   "id": "bangs_choppy",
-   "slot": "bangs",
-   "name": "Short choppy",
-   "glb": "hair/bangs/bangs_choppy.glb",
-   "tris": 576,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "N1.5",
-   "locks": 10,
-   "v7": true,
-   "skull": "v9"
-  },
-  {
-   "id": "bangs_swept_back",
-   "slot": "bangs",
-   "name": "Swept back",
-   "glb": "hair/bangs/bangs_swept_back.glb",
-   "tris": 490,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "N5.4",
-   "locks": 7,
-   "v7": true,
-   "skull": "v9"
-  },
-  {
-   "id": "bangs_single_strand",
-   "slot": "bangs",
-   "name": "Short with one long strand",
-   "glb": "hair/bangs/bangs_single_strand.glb",
-   "tris": 586,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "N5.3",
-   "locks": 10,
-   "v7": true,
-   "skull": "v9"
-  },
-  {
-   "id": "bangs_wavy",
-   "slot": "bangs",
-   "name": "Wavy swept",
-   "glb": "hair/bangs/bangs_wavy.glb",
-   "tris": 586,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "N3.1",
-   "locks": 9,
-   "v7": true,
-   "skull": "v9"
-  },
-  {
-   "id": "bangs_asym_block",
-   "slot": "bangs",
-   "name": "Asymmetric block",
-   "glb": "hair/bangs/bangs_asym_block.glb",
-   "tris": 586,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "N6.5",
-   "locks": 9,
-   "v7": true,
-   "skull": "v9"
-  },
-  {
-   "id": "back_bob",
-   "slot": "back",
-   "name": "Bob",
-   "glb": "hair/back/back_bob.glb",
-   "tris": 990,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "B2.1",
-   "locks": 9,
-   "v7": true,
-   "skull": "v9",
-   "capFrom": -28
-  },
-  {
-   "id": "back_wolf",
-   "slot": "back",
-   "name": "Wolf cut",
-   "glb": "hair/back/back_wolf.glb",
-   "tris": 1086,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "B4.4",
-   "locks": 15,
-   "v7": true,
-   "skull": "v9",
-   "capFrom": -26
-  },
-  {
-   "id": "back_long",
-   "slot": "back",
-   "name": "Long straight",
-   "glb": "hair/back/back_long.glb",
-   "tris": 918,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "B3.1",
-   "locks": 9,
-   "v7": true,
-   "skull": "v9",
-   "capFrom": -34
-  },
-  {
-   "id": "back_wavy_long",
-   "slot": "back",
-   "name": "Wavy long",
-   "glb": "hair/back/back_wavy_long.glb",
-   "tris": 918,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "B4.5",
-   "locks": 9,
-   "v7": true,
-   "skull": "v9",
-   "capFrom": -34
-  },
-  {
-   "id": "back_high_pony",
-   "slot": "back",
-   "name": "High ponytail",
-   "glb": "hair/back/back_high_pony.glb",
-   "tris": 918,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "B6.5",
-   "locks": 15,
-   "v7": true,
-   "skull": "v9",
-   "capFrom": -20
-  },
-  {
-   "id": "back_pigtails",
-   "slot": "back",
-   "name": "Low pigtails",
-   "glb": "hair/back/back_pigtails.glb",
-   "tris": 1070,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "B3.2",
-   "locks": 18,
-   "v7": true,
-   "skull": "v9",
-   "capFrom": -24
-  },
-  {
-   "id": "back_twin_buns",
-   "slot": "back",
-   "name": "Twin buns",
-   "glb": "hair/back/back_twin_buns.glb",
-   "tris": 942,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "B2.5",
-   "locks": 14,
-   "v7": true,
-   "skull": "v9",
-   "capFrom": -28
-  },
-  {
-   "id": "back_bun",
-   "slot": "back",
-   "name": "Single top bun",
-   "glb": "hair/back/back_bun.glb",
-   "tris": 798,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "B1.1",
-   "locks": 11,
-   "v7": true,
-   "skull": "v9",
-   "capFrom": -32
-  },
-  {
-   "id": "back_braid_crown",
-   "slot": "back",
-   "name": "Braided crown",
-   "glb": "hair/back/back_braid_crown.glb",
-   "tris": 1110,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "B7.2",
-   "locks": 23,
-   "v7": true,
-   "skull": "v9",
-   "capFrom": -32
-  },
-  {
-   "id": "back_short_spiky",
-   "slot": "back",
-   "name": "Short layered",
-   "glb": "hair/back/back_short_spiky.glb",
-   "tris": 964,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "B6.2",
-   "locks": 11,
-   "v7": true,
-   "skull": "v9",
-   "capFrom": -6
-  },
-  {
-   "id": "back_undercut",
-   "slot": "back",
-   "name": "Undercut",
-   "glb": "hair/back/back_undercut.glb",
-   "tris": 690,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "B3.5",
-   "locks": 7,
-   "v7": true,
-   "skull": "v9",
-   "capFrom": -6.0
-  },
-  {
-   "id": "back_bowl",
-   "slot": "back",
-   "name": "Bowl",
-   "glb": "hair/back/back_bowl.glb",
-   "tris": 990,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "sheetCell": "B1.5",
-   "locks": 9,
-   "v7": true,
-   "skull": "v9",
-   "capFrom": -6
-  },
-  {
-   "id": "hair_messy_boy",
-   "slot": "back",
-   "name": "Messy boy",
-   "glb": "hair/full/hair_messy_boy.glb",
-   "tris": 927,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "full": true,
-   "skull": "v9",
-   "source": "hair/source/david/02-Low-Poly-Messy-Boy-Hair-Black-128971224541817.glb",
-   "roblox": {
-    "provisional": true
-   },
-   "map": {
-    "shade": 1
-   }
-  },
-  {
-   "id": "hair_hime_short",
-   "slot": "back",
-   "name": "Short hime cut",
-   "glb": "hair/full/hair_hime_short.glb",
-   "tris": 1671,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "full": true,
-   "skull": "v9",
-   "source": "hair/source/david/05-Black-Hime-Short-Straight-Hair-Cut-13856173456.glb",
-   "roblox": {
-    "provisional": true
-   },
-   "map": {
-    "shade": 1
-   }
-  },
-  {
-   "id": "hair_visor_messy",
-   "slot": "back",
-   "name": "Messy with visor",
-   "glb": "hair/full/hair_visor_messy.glb",
-   "tris": 1685,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "full": true,
-   "skull": "v9",
-   "source": "hair/source/david/08-McDonalds-106903086636118.glb",
-   "roblox": {
-    "provisional": true
-   },
-   "map": {
-    "shade": 1,
-    "cap": 2
-   }
-  },
-  {
    "id": "hair_baby_sprout",
    "slot": "back",
    "name": "Baby sprout",
@@ -2434,6 +1786,31 @@
    ],
    "map": {
     "shade": 0
+   }
+  },
+  {
+   "id": "hair_messy_boy",
+   "slot": "back",
+   "name": "Messy boy",
+   "glb": "hair/full/hair_messy_boy.glb",
+   "tris": 927,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v9",
+   "source": "hair/source/david/02-Low-Poly-Messy-Boy-Hair-Black-128971224541817.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "map": {
+    "shade": 1
    }
   },
   {
@@ -2487,6 +1864,31 @@
    }
   },
   {
+   "id": "hair_hime_short",
+   "slot": "back",
+   "name": "Short hime cut",
+   "glb": "hair/full/hair_hime_short.glb",
+   "tris": 1671,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v9",
+   "source": "hair/source/david/05-Black-Hime-Short-Straight-Hair-Cut-13856173456.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "map": {
+    "shade": 1
+   }
+  },
+  {
    "id": "hair_windy_bob",
    "slot": "back",
    "name": "Windy bob",
@@ -2534,6 +1936,32 @@
    },
    "map": {
     "shade": 0
+   }
+  },
+  {
+   "id": "hair_visor_messy",
+   "slot": "back",
+   "name": "Messy with visor",
+   "glb": "hair/full/hair_visor_messy.glb",
+   "tris": 1685,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v9",
+   "source": "hair/source/david/08-McDonalds-106903086636118.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "map": {
+    "shade": 1,
+    "cap": 2
    }
   },
   {
@@ -2822,7 +2250,7 @@
    "slot": "back",
    "name": "Waves with a fade",
    "glb": "hair/full/hair_waves.glb",
-   "tris": 1524,
+   "tris": 1248,
    "materials": [
     {
      "name": "M_Hair",
