@@ -155,6 +155,9 @@ import CafeBuilding from "./study/CafeBuilding";
 import CafeSweeper, { cafeSweeper } from "./study/CafeSweeper";
 import { SWEEPER_TALK } from "@/lib/game/cafe";
 import { DROPS } from "@/lib/game/drops";
+import HalloweenLayer, { knockAt, knockNear } from "./Halloween";
+import { useTraditions, type TraditionsNow } from "@/lib/game/useTraditions";
+import { fogNightLight, type KnockDoor } from "@/lib/game/halloween";
 import { CAFE_GRADE, CAFE_OWNER } from "@/lib/game/cafe";
 import { studyHoldsPrompt } from "@/lib/study/worldStore";
 import "@/lib/game/aerialFog";
@@ -177,7 +180,7 @@ import { isSeatedPose, seatPrompt } from "@/lib/game/seatPrompt";
 import { roomHeading } from "@/lib/game/roomHeading";
 import styles from "./DefaultIslandWorld.module.css";
 
-type Near = "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | null;
+type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | null;
 type Sheet = "counter" | "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | null;
 const DEV = process.env.NODE_ENV !== "production";
 const DEV_SHEETS: readonly Sheet[] = ["counter", "notice", "letters", "journal", "trophies", "showcase", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest"];
@@ -202,12 +205,15 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   cafe: "Boarded up · help reopen it at the monument", museum: "Museum · Closed for now", ruins: "Enter the ruins", missions: "Read the mission board", ruins_exit: "Back to the village", lantern: "Pick it up",
   bench: "Sit on the bench", bed: "Sleep in your bed", chest: "Open your storage chest",
   trophy: "Read the tourney board", posters: "Look at the GENESIS posters", cocoa: "Get a hot cocoa", picnic: "Join the picnic",
+  knock: "Knock: trick or treat",
   owner: `Talk to ${CAFE_OWNER.name}`,
   shop_enter: "Enter the shop", counter: "Buy and sell at the counter",
   // The resident in reach says their own name (TalkPrompt).
   talk: "Talk",
 };
 const CLOSED: Near[] = ["museum", "monument"];
+/** The door in reach for trick-or-treat (components/game/Halloween.tsx): IslandScene writes it each frame, E knocks. */
+const knockSpot: { current: KnockDoor | null } = { current: null };
 /** The village bench in reach as a `tsi:sit` detail: IslandScene writes it each frame, E sits (or stands) there. */
 const benchSpot: { current: { x: number; z: number; yaw: number; seatY: number } | null } = { current: null };
 /** Distance from a point to a landmark's footprint edge. */
@@ -337,7 +343,9 @@ function Performance({ player, output }: { player: React.RefObject<THREE.Vector3
   return null;
 }
 
-function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpot, fishing, chapter, phase, light, look, weather, overview, zoom, reset, returned, fromBoat, liteMode, castShadows, player, onNear, progression, ceremony, event, lead, talking }: {
+function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpot, fishing, chapter, phase, light, look, weather, overview, zoom, reset, returned, fromBoat, liteMode, castShadows, player, onNear, progression, ceremony, event, lead, talking, traditions, fogNight }: {
+  /** The traditions running now (lib/game/useTraditions.ts) and the fog night's strength (0 to 1): Halloween's layer. */
+  traditions: TraditionsNow; fogNight: number;
   /** What the player holds from the tool wheel (specs/game-ui.md), drawn in the hand. */
   held: WheelItem | null;
   /** Talking with a resident (TalkBox): you stand still and face them. */
@@ -391,6 +399,10 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     const ev = spots.find(s => within([s.x, s.z], s.range)), seat = benchSpot.current;
     const nearer = (p: { x: number; z: number }) => Math.hypot(px - p.x, pz - p.z);
     if (!next && (ev || seat)) { const e = ev && (!seat || nearer(ev) < nearer(seat)); next = e ? ev!.near : "bench"; nextD = nearer(e ? ev! : seat!); }
+    // Trick-or-treat: the door's pumpkin in reach (someone behind it hasn't answered you tonight) beats the door itself.
+    const kd = knockNear(px, pz);
+    knockSpot.current = kd;
+    if (kd && (!next || nearer(kd) < nextD)) { next = "knock"; nextD = nearer(kd); }
     if (!next) {
       let best = 1.4;
       for (const l of layout.prompts) {
@@ -433,6 +445,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       {!DROPS.cafe && cafeAt && <CafeSweeper cafe={cafeAt} ground={island.ground} player={player} night={phase === "night"} />}
       {layout.fitting && <FittingRoom at={layout.fitting} ground={island.ground} player={player} />}
       <EventDecor event={event} ground={island.ground} light={light} weather={weather} />
+      <HalloweenLayer content={traditions.content} v={v} island={island} light={light} night={phase === "night"} fog={fogNight} weather={weather} residents={personas} />
       {layout.bridges.map(b => <GLBProp key={b.id} url="/assets/acnh/props/bridge-wooden.glb" position={[b.x, b.y, b.z]} rotation={[0, b.yaw ?? 0, 0]} />)}
       {layout.lamps.map(l => <Lantern key={l.id} position={[l.x, island.ground(l.x, l.z), l.z]} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />)}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
@@ -594,6 +607,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [graphics, actions] = useGraphicsSettings();
   const conditions = useIslandConditions();
   const islandEvent = useIslandEvent(conditions.now);
+  // The traditions calendar (lib/content/traditions.ts): Halloween's pumpkins, costumes, trick-or-treat and fog nights.
+  const traditions = useTraditions(conditions.now);
   const { phase, forcedPhase: forced, setForcedPhase: setForced, weather, season } = conditions;
   const [optionsOpen, setOptionsOpen] = useState(false);
   const optionsToggleRef = useRef<HTMLButtonElement>(null);
@@ -790,7 +805,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // Across a phase boundary the light blends continuously from one phase's look to the next (living-village §5).
   const blend = conditions.blend;
   const weatherBlend = conditions.weatherBlend;
-  const light = useMemo(() => weatherLight(withSeason(islandLightAt(lookPreset, blend, sun), look), weatherBlend), [blend, look, weatherBlend, lookPreset, sun]);
+  const dayLight = useMemo(() => weatherLight(withSeason(islandLightAt(lookPreset, blend, sun), look), weatherBlend), [blend, look, weatherBlend, lookPreset, sun]);
+  // A fog night eases in with the dark (the porch-light curve) while a tradition has fog nights on.
+  const fogNight = traditions.content.fog_nights && !inside ? windowLit(dayLight) : 0;
+  const light = useMemo(() => fogNightLight(dayLight, fogNight), [dayLight, fogNight]);
   const conditionsLabel = `${season.season[0].toUpperCase()}${season.season.slice(1)}${Object.values(season.weights).some(w => w > 0 && w < 1) ? " (changing)" : ""} · ${weather[0].toUpperCase()}${weather.slice(1)}`;
   const grade = inside === "cafe" ? { ...CLUBHOUSE_LIGHTING[phase].grade, ...CAFE_GRADE } : inside ? CLUBHOUSE_LIGHTING[phase].grade : light.grade;
   const atHome = site === "home";
@@ -810,6 +828,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (action === "cafe") { setSheet("cafe"); return; }
     if (action === "owner") { window.dispatchEvent(new CustomEvent("tsi:cafe-owner-talk")); return; }
     if (action === "talk") { requestTalk(talkStore.near.id); return; }
+    if (action === "knock") { if (knockSpot.current) void knockAt(knockSpot.current); return; }
     // The catch board's clues are the collection journal's.
     if (action === "catch") { setBagOpen(true); return; }
     if (action === "mailbox") { setSheet("letters"); return; }
@@ -1074,7 +1093,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
             : atHome ? <HomeIslandScene held={eating || trip.active ? null : held} identity={identity} level={level} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={devZoom}
               overview={overview} returned={returned} player={player} onNear={(n: HomeNear) => setNear(n)} outdoor={layout.outdoor}
               decorating={decor.decorating} selected={decor.selected} onPlace={item => decor.place("outdoor", item)} onPickUp={item => decor.pickUp("outdoor", item)} />
-            : <IslandScene held={eating || trip.active ? null : held} identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent}
+            : <IslandScene held={eating || trip.active ? null : held} identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent} traditions={traditions} fogNight={fogNight}
               lead={welcoming || welcome === "done" ? { line: greeting, hold: welcoming } : null} talking={talking} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} />}
           {/* Classes v2: the subclass's aura replaces the family's once its kit exists (§1.9). */}
           {DROPS.classes && identity.aura && (classAura ? <Suspense fallback={null}><SubclassAura player={player} kit={classAura.kit} mastery={classAura.mastery} colour={classAura.colour} /></Suspense>
