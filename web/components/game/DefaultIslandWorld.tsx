@@ -63,7 +63,7 @@ import RuinsScene from "./combat/RuinsScene";
 import CombatHud from "./combat/CombatHud";
 import { PlaytestControls, PlaytestHud } from "./combat/Playtest";
 import MissionBoardSheet from "./combat/MissionBoardSheet";
-import { SLOT_IDS, V2_SLOT_IDS, attachProgressId, combat, publishCombat, setMission, setOwnedWeapons, useCombatValue } from "@/lib/game/combat/runtime";
+import { attachProgressId, combat, publishCombat, setMission, setOwnedWeapons, useCombatValue } from "@/lib/game/combat/runtime";
 import { missionEvent } from "@/lib/game/combat/abilities";
 import { combatProgression, postWear, startMissionRemote, type ProgressionView } from "@/lib/game/combat/progression";
 import { equipKit } from "@/lib/game/combat/abilities";
@@ -84,7 +84,7 @@ import type { Family } from "@/lib/oracle/engine";
 import type { ResultView } from "@/lib/oracle/service";
 import { setFamily, useWorldIdentity, type WorldIdentity } from "@/lib/game/identity";
 import { actionForKey } from "@/lib/identity/settings";
-import { crouchKey, keyName, useAbilityKeys, useKeyboardLocked, useMoveKeys } from "@/lib/game/movement/keys";
+import { keyName, useAbilityKeys } from "@/lib/game/movement/keys";
 import { useCoarsePointer } from "@/lib/game/useMediaQuery";
 import TouchControls from "./movement/TouchControls";
 import MuseumInterior from "./peaceful/MuseumInterior";
@@ -111,6 +111,7 @@ import { HQ_LEAD, LEAD_OFFSET, markWelcomed, readWelcomed, welcomeStep } from "@
 /** The roster's HQ lead (residentRoster.ts) is the first-login greeter (HQ_LEAD). */
 const HQ_LEAD_SLUG = "wren";
 import { useMyLook } from "@/lib/game/character/lookStore";
+import { useMoveUnlocks } from "@/lib/game/moveUnlocks";
 import { useProgression } from "@/lib/progression/useProgression";
 import { anchorAt } from "@/lib/content/residents";
 import { WarmupProbe } from "./LoadGate";
@@ -159,8 +160,7 @@ import { CURRENT, lookFx, type LookPreset } from "@/lib/game/lookPreset";
 import LookMaterials from "./LookMaterials";
 import { EventDecor, eventSpots, PostersSheet, TourneySheet } from "./SeasonalEvents";
 import { useIslandEvent, type IslandEvent } from "@/lib/game/seasonalEvents";
-import { escapeEndedCapture, holdCursor, orbit, readCapture, readOrbitPrefs, saveOrbit, subscribeCapture, subscribeOrbitPrefs, toggleZoom } from "@/lib/game/orbitCamera";
-import { RESET_VIEW_KEY } from "./useOrbitInput";
+import { escapeEndedCapture, holdCursor, readCapture, saveOrbit, subscribeCapture, toggleZoom } from "@/lib/game/orbitCamera";
 import { boxOccluder, treeOccluder } from "@/lib/game/occluders";
 import type { Area } from "@/lib/net/protocol";
 import NetWorld from "./net/NetWorld";
@@ -331,7 +331,7 @@ function Performance({ player, output }: { player: React.RefObject<THREE.Vector3
   return null;
 }
 
-function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpot, fishing, chapter, phase, light, look, weather, overview, zoom, reset, returned, fromBoat, liteMode, castShadows, player, onNear, progression, ceremony, event, lead, talking }: {
+function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpot, fishing, chapter, phase, light, look, weather, overview, zoom, reset, returned, fromBoat, liteMode, castShadows, player, onNear, progression, ceremony, event, lead, dash, talking }: {
   /** What the player holds from the tool wheel (specs/game-ui.md), drawn in the hand. */
   held: WheelItem | null;
   /** Talking with a resident (TalkBox): you stand still and face them. */
@@ -339,6 +339,8 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   progression: { stage: number; opened: readonly WorldGoalId[] }; ceremony: boolean; fromBoat: boolean; event: IslandEvent | null;
   /** The HQ lead on the wharf for a first login (`line`: the one she is saying; the player holds still while she talks). */
   lead: { line: number | null; hold: boolean } | null;
+  /** The dash is yours (a Keeper teaches it, lib/game/moveUnlocks.ts). */
+  dash: boolean;
   chapter: { claim: boolean; donate: boolean; report: boolean };
   peaceful: { moment: WorldMoment; member: string; glider: boolean }; fishSpot: { current: FishingSpot | null }; fishing: boolean; exitFrom: "museum" | "oracle" | "ruins" | "cafe" | "shop" | null; devAt: [number, number, number] | null; identity: WorldIdentity; level?: number;
   phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; overview: boolean; zoom: number; reset: number; returned: boolean; liteMode: boolean; castShadows: boolean;
@@ -431,7 +433,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
         playerName={identity.display_name !== "You" ? identity.display_name : null} />
       <PlayerAvatar key={`${reset}-${returned}-${fromBoat}-${exitFrom}`} spawnPosition={spawn} playerName={identity.display_name} playerLevel={level} member={identity.member} player={player} frozen={fishing || !!lead?.hold || talking}
         showNameplate={!talking} ride={myTrip.ride}
-        world={island} groundHeight={island.ground} groundSurface={island.surface} camTarget={focus} glider={peaceful.glider} held={held} />
+        world={island} groundHeight={island.ground} groundSurface={island.surface} camTarget={focus} glider={peaceful.glider} dash={dash} held={held} />
       <CharacterCrowd player={player} ground={island.ground} stepWorld={island} />
       {lead && leadAt && <HQLead at={leadAt} ground={island.ground} player={player} line={lead.line} />}
     </>
@@ -647,7 +649,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const chapterFlags = useMemo(() => ({ claim: chapterActions.claim, donate: chapterActions.donate, report: chapterActions.report }),
     [chapterActions.claim, chapterActions.donate, chapterActions.report]);
   useEffect(() => { if (inside === "museum" && !loadMuseumRef.current) { loadMuseumRef.current = true; loadMuseum(); } if (inside !== "museum") loadMuseumRef.current = false; }, [inside, loadMuseum]);
-  const peaceful = usePeacefulContext(weather, conditions.now);
+  // The dash and the glider wait for a Keeper to teach them (lib/game/moveUnlocks.ts).
+  const unlocks = useMoveUnlocks();
+  const peacefulRaw = usePeacefulContext(weather, conditions.now);
+  const peaceful = useMemo(() => ({ ...peacefulRaw, glider: peacefulRaw.glider && unlocks.glider }), [peacefulRaw, unlocks.glider]);
   // Audio pass (row 169 / polish-ownership item 9): the hourly music player
   // follows the real clock everywhere on this island; cafe and other
   // interiors override the outdoor block with their own bed.
@@ -676,11 +681,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const { start: startTrip, arrive: arriveByBoat } = trip;
   // A trip or the greeting: the world's prompts, tools and hints stand back.
   const cinematic = welcoming || trip.active;
-  const moveKeys = useMoveKeys(), abilityKeys = useAbilityKeys(), crouch = crouchKey(moveKeys, useKeyboardLocked());
+  const abilityKeys = useAbilityKeys();
   const touch = useCoarsePointer() || devHome.get("touch") === "1";
   // Mouse-look (specs/camera-orbit.md): the hint while the mouse is free, the crosshair while it looks in the ruins.
   const captured = useSyncExternalStore(subscribeCapture, readCapture, () => "off" as const);
-  const { mouseLook } = useSyncExternalStore(subscribeOrbitPrefs, readOrbitPrefs, () => orbit.prefs);
   // The clean HUD (row 283): the full one while its key is held, in the pause view, on touch, or always by the setting.
   const alwaysFullHud = useAlwaysFullHud();
   const [hudKey, setHudKey] = useState(false);
@@ -1057,7 +1061,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
               overview={overview} returned={returned} player={player} onNear={(n: HomeNear) => setNear(n)} outdoor={layout.outdoor}
               decorating={decor.decorating} selected={decor.selected} onPlace={item => decor.place("outdoor", item)} onPickUp={item => decor.pickUp("outdoor", item)} />
             : <IslandScene held={eating || trip.active ? null : held} identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent}
-              lead={welcoming || welcome === "done" ? { line: greeting, hold: welcoming } : null} talking={talking} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} />}
+              lead={welcoming || welcome === "done" ? { line: greeting, hold: welcoming } : null} dash={unlocks.dash} talking={talking} phase={phase} light={light} look={look} weather={weather} overview={overview} zoom={devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} />}
           {/* Classes v2: the subclass's aura replaces the family's once its kit exists (§1.9). */}
           {identity.aura && (classAura ? <Suspense fallback={null}><SubclassAura player={player} kit={classAura.kit} mastery={classAura.mastery} colour={classAura.colour} /></Suspense>
             : identity.family && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>)}
@@ -1184,12 +1188,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <CafeGoalSheet open={sheet === "cafe"} onClose={() => setSheet(null)} />
       {site === "ruins" && <CombatHud player={player} />}
       {DEV && site === "ruins" && <PlaytestHud />}
-      {cinematic || talking || !full ? null : site === "ruins" ? <div className={styles.controls} data-combat><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Move</span><span>{mouseLook ? "Mouse Look and aim" : "Mouse Aim"}</span><span>Click Attack</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>←</kbd><kbd>→</kbd> Turn</span><span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span><span><kbd>{keyName(moveKeys.dash)}</kbd> Dodge</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Slide</span>}<span>{(combat.rt.v2 ? V2_SLOT_IDS : SLOT_IDS).map(s => <kbd key={s}>{keyName(abilityKeys[s])}</kbd>)} Abilities</span>{combat.rt.v2 && <span><kbd>{keyName(abilityKeys.ult)}</kbd> Ultimate</span>}<span><kbd>{keyName(wheelKeys.wheel)}</kbd> Weapons</span><span><kbd>{keyName(abilityKeys.swap)}</kbd> Previous weapon</span><span><kbd>E</kbd> Interact</span></div>
-      // Indoors you walk (cafe-polish §4): no run, jump, dash, zoom or map.
-      : inside ? <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>E</kbd> Interact</span><span><kbd>J</kbd> Journal</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>{keyName(identity.settings.key_bindings.openBag)}</kbd> Bag</span></div>
-      : <div className={styles.controls}><span>{[moveKeys.forward, moveKeys.left, moveKeys.back, moveKeys.right].map(k => <kbd key={k}>{keyName(k)}</kbd>)} Walk</span><span><kbd>{keyName(moveKeys.sprint)}</kbd> Run</span><span><kbd>{keyName(moveKeys.jump)}</kbd> Jump</span>{peaceful.glider && <span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air Glide</span>}<span><kbd>{keyName(moveKeys.dash)}</kbd> Dash</span><span><kbd>E</kbd> Interact</span><span><kbd>{keyName(wheelKeys.wheel)}</kbd> Tools</span><span>Click Use</span><span>{mouseLook ? "Mouse or " : ""}<kbd>←</kbd><kbd>→</kbd> Look</span>{mouseLook && <span>Hold right-click Cursor</span>}<span><kbd>{keyName(RESET_VIEW_KEY)}</kbd> Reset view</span><span><kbd>Z</kbd> Zoom</span><span><kbd>{keyName(identity.settings.key_bindings.openMap)}</kbd> Map</span><span><kbd>J</kbd> Journal</span><span><kbd>{keyName(identity.settings.key_bindings.openJournal)}</kbd> Collection</span><span><kbd>{keyName(identity.settings.key_bindings.openBag)}</kbd> Bag</span>{crouch && <span><kbd>{keyName(crouch)}</kbd> Crouch, at speed slide</span>}</div>}
       {/* Clear of the minimap (left) and the audio widget (bottom right). */}
-      {touch && !hudCinematic && (!inside || inside === "cafe") && <TouchControls left="var(--hud-stick-left)" bottom="var(--hud-stick-bottom)" walkOnly={inside === "cafe"} />}
+      {touch && !hudCinematic && (!inside || inside === "cafe") && <TouchControls left="var(--hud-stick-left)" bottom="var(--hud-stick-bottom)" walkOnly={inside === "cafe"} dash={unlocks.dash || site === "ruins"} />}
       {(!compact || (headingFlash !== null && !hudCinematic)) && <p className={styles.touchControls} data-flash={compact ? headingFlash ?? undefined : undefined}>Tap the ground to move · two fingers turn the camera</p>}
       {captured === "free" && !touch && !hudCinematic && <p className={styles.lookHint} role="status">Click to look around</p>}
       {captured === "captured" && site === "ruins" && <svg className={styles.crosshair} viewBox="-10 -10 20 20" aria-hidden="true"><circle r="5.5" /><circle r="1.2" /></svg>}
