@@ -58,6 +58,21 @@ Decided with David on 2026-10-14, after he walked the terrain v2 world and said 
    - The editor itself has no budget beyond staying smooth while brushing on the Mac mini.
 7. **Evidence.** Before and after shots at the spawn, the plaza, the mountain and the coast. Show the holes and jagged edges gone and a brush stroke in progress.
 
+## Data format (built 2026-10-14, `game/world-editor`)
+
+Three files in `web/data/world/`. One loader reads them for the game, the editor, the dev save route, the conversion script and the tests: `decodeWorld` / `encodeWorld` in `web/lib/game/world/format.ts` (the browser fetches the images in `world/load.ts`; Node reads them in `world/disk.ts`). The old `web/data/world-map.json` stays until David accepts the new world.
+
+| File | What it holds |
+|---|---|
+| `world.json` | The document: `format: "tethos-world"`, `version: 1`; the grid (`width` × `depth` cells of 1 u, `originX`/`originZ` the centre of cell (0, 0), as in `world-map.json`); `resolution` (samples per unit, 2); `heightRange` (the heightmap's 0 and 65535 in world units, `[-12, 36]`); `seaLevel` (the still water, −0.078, where the old sea and rivers sat); `surfaces` (the paint names by id); the two image file names; then `annotations` and `objects`, one per line, in the village file's object vocabulary (`lib/game/villageMap.ts`). |
+| `height.png` | 16-bit greyscale, (width·2 + 1) × (depth·2 + 1) samples, a sample every half unit, row 0 at the low z edge, sample (0, 0) on the map's outer corner (originX − 0.5, originZ − 0.5). Value q is the height `heightRange[0] + q·(heightRange[1] − heightRange[0])/65535`: a step of 0.73 mm. |
+| `surface.png` | 8-bit indexed, the same grid: each pixel a paint id (0 grass, 1 sand, 2 path, 3 rock, 4 stone; append only). The palette is only how it previews, so the file reads as a colour map in a diff viewer. |
+
+- **Lossless.** Heights are quantised to the 16-bit step on save and read back to exactly the value they stand for, so load → save is byte-identical and save → load → save is stable (`format.test.ts`, and `world.test.ts` on the committed files). The PNG writer is deterministic (per-row minimum-sum filter, zlib level 9), so an unchanged save leaves git clean.
+- **Commits sanely.** About 290 KB of heights, 7 KB of paint and 215 KB of JSON (most of it the annotations' cell lists) for the 384 × 552 world. Both images preview in a diff viewer.
+- **The ground is the mesh's.** Each quad of samples is two triangles split from its (i, k) corner to its (i + 1, k + 1) corner. `terrainHeight` interpolates on those same triangles, so walking, placement and the drawn surface agree exactly at full detail (`world/terrain.ts`).
+- **The old systems' view.** Fishing water, forage and bug nodes, the glide guide and the campfire's sand still read cells. `cellMapOf` derives a cell map: water where a cell's centre is under the sea, a level of `round(h / 0.75)`, a surface from the paint. Walking and drawing never read it. The water (its colour, the seabed props, the fish) reads the real seabed (`seabed.ts setWaterSource`).
+
 ## Open questions for David (ask as they come up; don't block on them)
 
 - The island size: keep 384 × 552, or let him resize it in the editor.

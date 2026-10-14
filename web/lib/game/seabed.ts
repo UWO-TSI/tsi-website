@@ -22,6 +22,8 @@ type BedParams = Pick<WaterParams, "bedDepth" | "bedSlope" | "shelfDepth" | "she
  * Reads the SHIPPED tuning by default, not the live bench value: this is geometry.
  */
 export function seabedDip(map: IslandMap, shore: ShoreSdf, x: number, z: number, p: BedParams = TUNING_DEFAULTS.water): number {
+  const own = sources.get(map);
+  if (own) return own.dip(x, z);
   const far = sampleShore(shore, x, z), k = smoothstep(0.6, 1.2, far);
   const d = k >= 1 ? far : -coastDistance(map, x, z) * (1 - k) + far * k;
   const bed = bedDepth(d, p);
@@ -54,6 +56,18 @@ const fields = new WeakMap<IslandMap, ShoreSdf>();
 /** A map's shore field, made once and shared (the terrain, the water's bake, the seabed's props, the fish). */
 export function shoreFieldOf(map: IslandMap): ShoreSdf {
   let f = fields.get(map);
-  if (!f) fields.set(map, f = shoreSdf(map));
+  if (!f) fields.set(map, f = sources.get(map)?.shore() ?? shoreSdf(map));
   return f;
+}
+
+/**
+ * A world whose seabed is real geometry (the smooth world, lib/game/world/village.ts) says so here for its derived cell
+ * map: the seabed's depth at a point and the water's field come from its heights, not from the cells' coast. Every
+ * other map has none and keeps the rules above.
+ */
+export interface WaterSource { dip: (x: number, z: number) => number; shore: () => ShoreSdf }
+const sources = new WeakMap<IslandMap, WaterSource>();
+export function setWaterSource(map: IslandMap, source: WaterSource): void {
+  sources.set(map, source);
+  fields.delete(map);
 }

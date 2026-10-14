@@ -24,6 +24,7 @@ import {
   heightField, isVoid, isWater, parseIslandMap, serialiseIslandMap, surfaceAt, Surface,
   type IslandMap, type IslandMapDoc, type MapAnnotation, type PlacedProp,
 } from "./grid";
+import type { WorldTerrain } from "./world/terrain";
 
 /** Object vocabulary. Append only: kinds are persisted in the map file. */
 export const OBJECT_KINDS = [
@@ -77,8 +78,13 @@ export function normaliseSea(map: IslandMap): number {
 export function parseVillage(doc: VillageDoc): { map: IslandMap; objects: MapObject[]; annotations: MapAnnotation[]; props: PlacedProp[] } {
   const { map, annotations, props } = parseIslandMap(doc);
   normaliseSea(map);
+  return { map, objects: parseObjects(doc.objects), annotations, props };
+}
+
+/** The object layer of a document: unknown kinds and objects without an id or a finite place dropped, defaults omitted. Shared with the world files (lib/game/world/format.ts). */
+export function parseObjects(list: VillageDoc["objects"]): MapObject[] {
   const objects: MapObject[] = [];
-  for (const o of doc.objects ?? []) {
+  for (const o of list ?? []) {
     if (!o || !KINDS.has(o.kind) || typeof o.id !== "string" || !Number.isFinite(o.x) || !Number.isFinite(o.z)) continue;
     objects.push({
       id: o.id, kind: o.kind as ObjectKind, x: o.x, z: o.z,
@@ -88,7 +94,7 @@ export function parseVillage(doc: VillageDoc): { map: IslandMap; objects: MapObj
       ...(typeof o.model === "string" ? { model: o.model } : {}),
     });
   }
-  return { map, objects, annotations, props };
+  return objects;
 }
 
 /** The whole document, as the painter exports it. Legacy cell markers are not carried. */
@@ -132,6 +138,12 @@ export interface Village {
   field: Float32Array;
   objects: readonly MapObject[];
   bounds: Bounds;
+  /**
+   * The smooth world's heightfield (specs/world-editor.md; lib/game/world/village.ts). Only a world from the editor's
+   * files has one: the renderer and the walker then take the heightfield path, and `map` is its derived cell view.
+   * Every other world (the village, the applicant island, the ruins, the home island, the title) has none.
+   */
+  terrain?: WorldTerrain;
 }
 
 export function buildVillage(doc: VillageDoc): Village {
@@ -159,6 +171,11 @@ export function village(): Village {
 export function setVillageDoc(doc: VillageDoc): void {
   source = doc;
   current = null;
+}
+
+/** Replace the village outright (the smooth world, loaded asynchronously: lib/game/world). Call before the world mounts. */
+export function setVillage(v: Village): void {
+  current = v;
 }
 
 /** Objects of one kind, in file order. */

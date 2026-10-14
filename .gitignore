@@ -16,6 +16,8 @@
 # The tile map IS the world. The blanket *.json above was silently keeping it
 # out of every commit, so the grid island existed only on one machine.
 !web/data/island-map.json
+# The smooth world's document (specs/world-editor.md); its two PNGs sit beside it.
+!web/data/world/world.json
 !web/data/characters/*.json
 
 # The multiplayer server package (specs/multiplayer.md §1.1). Its manifests,
