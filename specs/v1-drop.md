@@ -190,7 +190,7 @@ These are style targets: we rebuild the look in our own art and copy no assets.
 - the Halloween event (pumpkin lanterns, costume closet, trick-or-treat at resident doors, spooky fog nights);
 - natural barriers, the café closed, the home island and combat hidden;
 - moderation ready;
-- Supabase Pro (David pays);
+- Supabase Pro (David pays; done 2026-10-14);
 - the member world opens.
 
 **v1.1 (November):**
