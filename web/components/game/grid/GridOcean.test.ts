@@ -8,7 +8,8 @@ import { sunFromAngles } from "@/lib/game/lookPreset";
 import { buildVillage, type VillageDoc } from "@/lib/game/villageMap";
 import frozen from "@/lib/game/fixtures/village-2026-09-28.json";
 import { WATER_DROP, createCenteredMap, isRiver, surfaceAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
-import { glintPoints, oceanGeometry } from "./GridOcean";
+import { GLINT_FOG, glintPoints, oceanGeometry } from "./GridOcean";
+import { readFileSync } from "node:fs";
 
 // Water optics on a frozen copy of the 2026-09-28 village (camera spots and the deck below are its geometry).
 const { map } = buildVillage(frozen as VillageDoc);
@@ -223,6 +224,18 @@ describe("sparkles under the world's bend", () => {
         expect(d.fade, `${label} at ${r}`).toBe(1);
       }
     }
+  });
+
+  it("fades a far sparkle into the fog instead of lighting it with the fog's colour", () => {
+    // The sprites add their light (additive blending): three's fog mixes a fragment toward the fog's colour, which on
+    // an additive sprite ADDS the pale fog colour, so every faintly lit sprite far out drew as a pale dot, packed into
+    // the band the bend squeezes the far sea into (found on the playtest's afternoon shot: the dots under the horizon
+    // were the sprites, whatever colour the sprite itself was). In fog a sprite's light fades to nothing instead.
+    expect(GLINT_FOG).not.toContain("fogColor");
+    expect(GLINT_FOG).toContain("gl_FragColor.rgb *= 1.0 - fogFactor;");
+    expect(GLINT_FOG).toContain("smoothstep( fogNear, fogFar, vFogDepth )");
+    const src = readFileSync(new URL("./GridOcean.tsx", import.meta.url), "utf8");
+    expect(src).toContain(`.replace("#include <fog_fragment>", GLINT_FOG)`);
   });
 
   it("prints the same fade into the sprites' shader", () => {
