@@ -66,7 +66,7 @@ import {
 import { terrainMaterial, setShoreField } from "./terrainMaterials";
 import { TERRAIN_BLOCK, WATER_BLOCK, terrainBlocks } from "./terrainBlocks";
 import { CurvedCull, cullMeshes } from "@/lib/game/curvedCull";
-import { bakeWaterDepth, seabedDip, shoreFieldOf } from "@/lib/game/seabed";
+import { bakeWaterDepth, bakeWaveCalm, seabedDip, shoreFieldOf } from "@/lib/game/seabed";
 
 // Flat colours for the surfaces whose road-kit textures are not wired yet.
 const SURFACE_COLOR: Record<number, string> = {
@@ -775,7 +775,7 @@ export default function GridTerrain({ map, field: heights, materials }: { map: I
   // The water reads its distance to the shore and the seabed's depth from a baked field rather than from anything on
   // the mesh, so this is a one-shot upload, not geometry.
   useEffect(() => {
-    setShoreField({ ...field, depth: bakeWaterDepth(map, field) });
+    setShoreField({ ...field, depth: bakeWaterDepth(map, field), calm: bakeWaveCalm(field, map) });
   }, [map, field]);
 
   useEffect(() => () => { chunks.forEach(({ geometry }) => geometry.dispose()); }, [chunks]);

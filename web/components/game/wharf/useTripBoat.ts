@@ -12,7 +12,8 @@ import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { boatPose, newRiderPlace, riderPlace, stepTrip, tripFraming, type BoatTrip, type RiderPlace } from "@/lib/game/boatTrip";
 import { myTrip, tripChanged } from "@/lib/game/myTrip";
-import { BOAT, SEA_Y, dockToWorld, mooredPose, type BoatPose, type Dock, type Float } from "@/lib/game/wharf";
+import { BOAT, SEA_Y, dockToWorld, mooredPose, newFloat, type BoatPose, type Dock, type Float } from "@/lib/game/wharf";
+import { liveWaves } from "@/lib/game/waves";
 import { boatRings, boatWake, newWake, type Wake } from "@/lib/game/boatFx";
 import { seatLift } from "@/lib/game/character/clips";
 import { steerOrbit } from "@/lib/game/orbitCamera";
@@ -22,12 +23,19 @@ import type { IslandLight } from "@/lib/game/islandLighting";
 import type { ParticlePool } from "@/lib/game/fx/particles";
 import { CHARACTER_SCALE } from "../character/Character";
 import { useMoveParticles } from "../movement/moveFx";
-import { liveSwell, type OnPlaced, type PoseAt } from "./Boat";
+import type { OnPlaced, PoseAt } from "./Boat";
 
 /** Sitting on the bench: the Sit clip's seat lifted to its top over the boat's floor. */
 const SIT_LIFT = seatLift("Sit", BOAT.seat - BOAT.floor, CHARACTER_SCALE);
 /** The camera follows the boat's course this high over the water while you are aboard (not its bob). */
 const FOCUS_ABOARD = SEA_Y + 0.5;
+
+/**
+ * The trip's boat as last placed: how it floats (its ride on the waves, spring and all) and the world ms it was placed
+ * at. The crossing's camera frames the boat from it (components/game/arrival/ArrivalWorld.tsx boatWorld), so the shot
+ * holds on the boat as drawn rather than on the bare plane under it.
+ */
+export const tripBoatFloat = { float: newFloat(), at: -Infinity };
 
 interface TripState { rider: RiderPlace; wake: Wake; hop: boolean; dip: number; bump: number }
 const _seat = new THREE.Vector3(), _w = { x: 0, z: 0 }, _b = { x: 0, z: 0 };
@@ -36,6 +44,8 @@ const lerpAngle = (a: number, b: number, t: number) => a + Math.atan2(Math.sin(b
 /** Module scope (the react compiler forbids writing through hook values): one frame of a trip on its boat, as placed. */
 function tripFrame(trip: BoatTrip, own: boolean, dock: Dock, pose: BoatPose, float: Float, group: THREE.Group, now: number, dt: number,
   ride: AvatarRide, st: TripState, pool: ParticlePool, tint: number) {
+  Object.assign(tripBoatFloat.float, float);
+  tripBoatFloat.at = now;
   const r = riderPlace(trip, now, st.rider), a = r.aboard;
   // The bench, wherever the boat is and however it leans; the step on the pier; and between them, mid-step, the arc.
   _seat.set(BOAT.seatAt[0], BOAT.floor, BOAT.seatAt[1]).applyMatrix4(group.matrix);
@@ -58,8 +68,8 @@ function tripFrame(trip: BoatTrip, own: boolean, dock: Dock, pose: BoatPose, flo
   // A first login's veil coming up over the island: the avatar stays where it stands until the veil hides the move aboard.
   ride.active = trip.phase !== "done" && !(trip.from === "sea" && trip.phase === "veil");
   // The wake and spray off it; rings where it dips under a step or bumps the fenders (its starboard side, the pier's).
-  boatWake(pool, st.wake, dt, _b.x, _b.z, boatYaw, pose.speed, pose.throttle, tint, liveSwell.t);
-  if ((pose.dip >= 0 && st.dip < 0) || (pose.bump >= 0 && st.bump < 0)) boatRings(pool, _b.x, _b.z, boatYaw, -1, tint, liveSwell.t);
+  boatWake(pool, st.wake, dt, _b.x, _b.z, boatYaw, pose.speed, pose.throttle, tint, liveWaves.t);
+  if ((pose.dip >= 0 && st.dip < 0) || (pose.bump >= 0 && st.bump < 0)) boatRings(pool, _b.x, _b.z, boatYaw, -1, tint, liveWaves.t);
   st.dip = pose.dip; st.bump = pose.bump;
   // The traveller's own camera: the trip's shot (the player's own tilt and zoom where it gives none).
   if (own) {

@@ -38,7 +38,7 @@ import { useFrame } from "@react-three/fiber";
 import type { IslandLight } from "@/lib/game/islandLighting";
 import type { ShoreSdf } from "@/lib/game/grid";
 import type { WorldTerrain } from "@/lib/game/world/terrain";
-import { shoreFieldOf } from "@/lib/game/seabed";
+import { bakeWaveCalm, shoreFieldOf } from "@/lib/game/seabed";
 import SmoothTerrain from "../world/SmoothTerrain";
 import { worldTime } from "@/lib/game/worldClock";
 
@@ -79,18 +79,19 @@ function SmoothWorld({ map, light, palette, windScale, lite = false, clear, terr
   useEffect(() => { TERRAIN_WET.value = light.wet ?? 0; }, [light.wet]);
   useEffect(() => () => { TERRAIN_WET.value = 0; }, []);
   useWaterFrame(light, lite);
-  // The village registered its water for the derived cell map (lib/game/world/village.ts): the same field the fish read.
-  const shore = useMemo(() => shoreFieldOf(map) as ShoreSdf & { depth?: Float32Array }, [map]);
+  // The village registered its water for the derived cell map (lib/game/world/village.ts): the same field the fish read,
+  // and the waves' calm over it (its rivers and its wharf's berth).
+  const shore = useMemo(() => { const f = shoreFieldOf(map) as ShoreSdf & { depth?: Float32Array }; return { ...f, calm: bakeWaveCalm(f, map) }; }, [map]);
   return <SmoothTerrain terrain={terrain} shore={shore} grass={palette?.grass} windScale={windScale} lite={lite} clear={clear} />;
 }
 
-/** The river flows, swells and catches the sun; the foam rings round what stands in it. One uniform block per frame. */
+/** The water's waves run (Lite fewer trains), it catches the sun; the foam rings round what stands in it. One uniform block per frame. */
 export function useWaterFrame(light: GridWorldProps["light"], lite: boolean) {
   const sunDir = useMemo(() => new THREE.Vector3(...light.sunPosition), [light.sunPosition]);
   const sunColor = useMemo(() => new THREE.Color(light.sun), [light.sun]);
   const sky = useMemo(() => ({ zenith: new THREE.Color(light.skyTop ?? light.sky), horizon: new THREE.Color(light.sky) }), [light.sky, light.skyTop]);
   useFrame(({ camera }) => {
-    advanceWater(worldTime(), light.water, sunDir, sunColor, sky);
+    advanceWater(worldTime(), light.water, sunDir, sunColor, sky, lite);
     shadeWaterByClouds(cloudLayer.map, cloudLayer.uv);
     drawFoamRings(camera, lite ? FOAM_RING_SLOTS.lite : FOAM_RING_SLOTS.high, fxOn("foamRings"));
   });
@@ -132,12 +133,12 @@ function CellWorld({ map, field: suppliedField, light, palette, windScale, lite 
     return () => setTerrainHeightProvider(null);
   }, [map, suppliedField]);
 
-  // The river flows, swells and catches the sun. One uniform block per frame.
+  // The water's waves run (Lite fewer trains) and it catches the sun. One uniform block per frame.
   const sunDir = useMemo(() => new THREE.Vector3(...light.sunPosition), [light.sunPosition]);
   const sunColor = useMemo(() => new THREE.Color(light.sun), [light.sun]);
   const sky = useMemo(() => ({ zenith: new THREE.Color(light.skyTop ?? light.sky), horizon: new THREE.Color(light.sky) }), [light.sky, light.skyTop]);
   useFrame(({ camera }) => {
-    advanceWater(worldTime(), light.water, sunDir, sunColor, sky);
+    advanceWater(worldTime(), light.water, sunDir, sunColor, sky, lite);
     shadeWaterByClouds(cloudLayer.map, cloudLayer.uv);
     drawFoamRings(camera, lite ? FOAM_RING_SLOTS.lite : FOAM_RING_SLOTS.high, fxOn("foamRings"));
   });
