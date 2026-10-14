@@ -8,9 +8,14 @@
  *
  * Never PlayerAvatar, InteriorPlayer or useWorldClips here: those listen to the window's events (tsi:sit, tsi:emote,
  * tsi:fish-*), which are yours (spec §10).
+ *
+ * v1: a click or tap on them opens their card (PlayerCard.tsx: add friend, wave, join, mute, block, report), through
+ * one invisible capsule each (never the skinned body: the pointer would raycast every bone-deformed triangle).
  */
 import { Suspense, memo, useCallback, useMemo, type RefObject } from "react";
-import type * as THREE from "three";
+import * as THREE from "three";
+import type { ThreeEvent } from "@react-three/fiber";
+import { openCard } from "./cards";
 import Character, { type CharacterMotion, type HeldView, type WeaponView } from "../character/Character";
 import { heldView } from "../PlayerAvatar";
 import { RESIDENT_STEPS, useStepDust, type StepWorld } from "../movement/moveFx";
@@ -44,6 +49,22 @@ function RemoteDust({ rig, ground }: { rig: RemoteRig; ground?: StepWorld }) {
   return null;
 }
 
+/** The hit capsule every remote shares: about their height, drawn by nothing (an invisible material is never rendered). */
+const HIT_GEO = new THREE.CylinderGeometry(0.42, 0.42, 1.5, 8), HIT_MAT = new THREE.MeshBasicMaterial({ visible: false });
+/** A click on someone drawn opens their card (module scope). */
+function cardFor(rig: RemoteRig, e: ThreeEvent<MouseEvent>) {
+  if (rig.anchor.current?.visible !== true) return;
+  e.stopPropagation();
+  e.nativeEvent.preventDefault();
+  const p = rig.entry.player;
+  openCard({ uid: p.uid, name: p.name, sid: p.sid, member: p.member });
+}
+function pointerOver(rig: RemoteRig, on: boolean, e: ThreeEvent<PointerEvent>) {
+  if (on && rig.anchor.current?.visible !== true) return;
+  e.stopPropagation();
+  document.body.style.cursor = on ? "pointer" : "auto";
+}
+
 /** The anchor is the driver's to move (module scope: the react compiler forbids writing through props). */
 function attachAnchor(rig: RemoteRig, group: THREE.Group | null) { rig.anchor.current = group; }
 
@@ -65,5 +86,7 @@ export const RemoteAvatar = memo(function RemoteAvatar({ rig, player, walkSpeed,
       <Character look={look} motion={rig.live as RefObject<CharacterMotion>} walkSpeed={walkSpeed} weapon={weapon} held={held} leaf={!FX_BENCH || !fx.off.has("leaf")} />
     </Suspense>
     {dust && <RemoteDust rig={rig} ground={ground} />}
+    <mesh geometry={HIT_GEO} material={HIT_MAT} position={[0, 0.75, 0]} onClick={e => cardFor(rig, e)}
+      onPointerOver={e => pointerOver(rig, true, e)} onPointerOut={e => pointerOver(rig, false, e)} />
   </group>;
 });

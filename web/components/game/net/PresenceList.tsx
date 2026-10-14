@@ -3,8 +3,8 @@
 /**
  * Who's on the island (specs/multiplayer.md §5.7): the whole shard's roster, grouped by where they are (the village,
  * the café, HQ, the museum, the Oracle, in the ruins, on their own island), each with the member dot, a phone for
- * someone on their phone, and their level when they're in view. Read-only in M1 (mute, block and report come in M2,
- * parties in M3, visits in M4). A paper sheet through the one dialog system, so the world's keys hold still while it's
+ * someone on their phone, and their level when they're in view. A name opens that player's card (PlayerCard.tsx: mute,
+ * block, report; v1 friends). A paper sheet through the one dialog system, so the world's keys hold still while it's
  * open. World names only (row 222).
  */
 import { useMemo } from "react";
@@ -14,6 +14,8 @@ import { AREAS, FLAG, hasFlag, type Area, type RosterEntry } from "@/lib/net/pro
 import { useRoster } from "@/lib/net/netStore";
 import type { NetSource } from "@/lib/net/types";
 import { activeNet, useRemoteUids } from "./active";
+import { openCard } from "./cards";
+import { chatStore } from "@/lib/net/chat";
 import s from "./net.module.css";
 
 /** The roster's groups, in this order; ruins and homes are private (nobody sees them) but stay listed. */
@@ -48,7 +50,9 @@ export function PhoneIcon({ label }: { label?: string }) {
 
 function Person({ p, level }: { p: RosterEntry; level?: number }) {
   const member = p.badge === 1, phone = hasFlag(p.flags, FLAG.mobile), away = hasFlag(p.flags, FLAG.away);
-  return <ListRow className={s.person} data-away={away || undefined}
+  // Anyone but you opens their card (mute, block, report; friends).
+  const you = p.uid === chatStore().selfUid || p.uid === "local";
+  return <ListRow className={s.person} data-away={away || undefined} onClick={you ? undefined : () => openCard({ uid: p.uid, name: p.name, member })}
     title={<span className={s.personName}>
       {member && <span className={s.memberDot} role="img" aria-label="TSI member" title="TSI member" />}
       {p.name}
