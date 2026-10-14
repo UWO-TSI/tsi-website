@@ -26,8 +26,9 @@
 import * as THREE from "three";
 import { addCutout } from "@/lib/game/occluders";
 import { getGrassTexture } from "@/lib/game/grassTexture";
-import { GRASS_COLOR } from "@/lib/game/grid";
-import { waterMaterial, waterUniforms, writeWaterUniforms, type WaterParams } from "@/lib/game/waterShader";
+import { GRASS_COLOR, WATER_DROP } from "@/lib/game/grid";
+import { FOAM_RING_MAX, GLASS_WATER, SHORE_FROM_FIELD, UNDERWATER, UNDERWATER_UNIFORMS, WATER_DEPTH_RAMP, WATER_RIPPLE, bedDepth, waterMaterial, waterUniforms, writeWaterUniforms, type WaterParams } from "@/lib/game/waterShader";
+import { foamRings } from "@/lib/game/foamRings";
 import { TUNING_DEFAULTS } from "@/lib/game/tuning";
 
 const TEX_DIR = "/assets/acnh/terrain/";
@@ -71,7 +72,8 @@ const TEXTURE_FOR: Record<string, string> = {
   // composites the pair into one RGBA file with these names.
   mGrassCliffXlu: "mGrassCliffXlu.png",
   mGrassRiverXlu: "mGrassRiverXlu.png",
-  mRiverBed: "mRiverBed_Alb.png",
+  // Our own seabed sand (art/water/build_seabed.py, v1 water item 2): ripple marks seen through the shallows.
+  mRiverBed: "seabed-sand.webp",
   mSand: "mSand_Alb.png",
 };
 
@@ -138,9 +140,9 @@ export function applyGrassNormalStrength(strength: number, worldUnitsPerRepeat: 
 
 const ROAD_DIR = "/assets/acnh/road/";
 
-/** Road materials ship in road/, the rest in terrain/. */
+/** Road materials ship in road/, the seabed's sand in game/water/, the rest in terrain/. */
 function dirFor(name: string): string {
-  return name.startsWith("mRoad") ? ROAD_DIR : TEX_DIR;
+  return name.startsWith("mRoad") ? ROAD_DIR : name === "mRiverBed" ? "/assets/game/water/" : TEX_DIR;
 }
 
 function loadTexture(loader: THREE.TextureLoader, file: string, dir = TEX_DIR, colorSpace: THREE.ColorSpace = THREE.SRGBColorSpace): THREE.Texture {
@@ -255,10 +257,71 @@ export function terrainMaterial(name: string): THREE.Material | null {
     };
     mat.customProgramCacheKey = () => "terrain-fringe-alpha-v1";
   }
+  if (key === "mRiverBed") {
+    // One repeat of the sand per four cells (the ground's UVs repeat every two).
+    mat.map!.repeat.setScalar(0.5);
+    seenThroughWater(mat);
+  }
   mat.name = `terrain:${key}`;
   cache.set(key, withCutout(mat));
   return mat;
 }
+
+/**
+ * The seabed is seen through the water over it (v1 water item 1): its lit colour fogs toward the water's own depth
+ * ramp by the depth the water field bakes for that point (the bed lies exactly at that depth), so sand under a hand
+ * of water is sand, and it goes teal and then blue as the bed drops away. One texture read, no extra pass.
+ */
+function seenThroughWater(mat: THREE.MeshStandardMaterial) {
+  mat.onBeforeCompile = (shader) => addUnderwater(shader, "field");
+  mat.customProgramCacheKey = () => "seabed-underwater-v2";
+}
+/** Glass water (v1 water item 5): 1 draws the refraction wobble under the surface, 0 none (Lite, or the toggle off). */
+export const GLASS_ON = { value: 0 };
+/** The bed's texture repeats every four world units (the ground's UVs every two, the sand's repeat 0.5): world to uv. */
+const BED_UV_PER_UNIT = 0.25;
+
+/**
+ * Patch a lit built-in material so what it draws is seen through the water over it (UNDERWATER): the bed itself
+ * (`field`: it lies at the depth the field bakes) or something standing in the sea (`sea`: its depth under the sea's
+ * still surface, level 0), instanced or not. Shares the water's live uniforms, so the fog follows the phase and weather.
+ */
+export function addUnderwater(shader: THREE.WebGLProgramParametersWithUniforms, depth: "field" | "sea") {
+  const u = waterUniformBlock as Record<string, THREE.IUniform>;
+  Object.assign(shader.uniforms, {
+    uShoreMap: u.uShoreMap, uShoreRect: u.uShoreRect, uDepthFalloff: u.uDepthFalloff, uUnderwaterFog: UNDERWATER_FOG,
+    uBedColor: u.uBedColor, uShallowColor: u.uShallowColor, uMidColor: u.uMidColor, uDeepColor: u.uDeepColor, uNavyColor: u.uNavyColor,
+    uTime: u.uTime, uRippleTexture: u.uRippleTexture, uRippleStrength: u.uRippleStrength, uGlass: GLASS_ON,
+  });
+  const glass = "uniform float uTime;\n" + WATER_RIPPLE + GLASS_WATER;
+  // Glass water: a prop standing in the sea shifts its own vertices by the surface's refraction where they are (its
+  // instance's turn and scale undone, so neighbours wobble together).
+  const wobble = depth === "sea" ? `
+    #ifdef USE_INSTANCING
+      vec3 glassAt = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
+      vec2 glassBy = glassShift(glassAt.xz, max(${(-WATER_DROP).toFixed(4)} - glassAt.y, 0.0));
+      transformed += inverse(mat3(instanceMatrix)) * vec3(glassBy.x, 0.0, glassBy.y);
+    #endif
+    #include <project_vertex>` : "#include <project_vertex>";
+  shader.vertexShader = "varying vec3 vSeaWorld;\n" + (depth === "sea" ? glass : "") + shader.vertexShader.replace("#include <project_vertex>", `${wobble}
+    #ifdef USE_INSTANCING
+      vSeaWorld = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
+    #else
+      vSeaWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;
+    #endif`);
+  const at = depth === "field" ? "waterDepthAt(vSeaWorld.xz)" : `max(${(-WATER_DROP).toFixed(4)} - vSeaWorld.y, 0.0)`;
+  shader.fragmentShader = "varying vec3 vSeaWorld;\n" + UNDERWATER_UNIFORMS + SHORE_FROM_FIELD + WATER_DEPTH_RAMP + UNDERWATER + (depth === "field" ? glass : "") + shader.fragmentShader
+    .replace("#include <opaque_fragment>", `outgoingLight = underwater(outgoingLight, ${at});
+    #include <opaque_fragment>`);
+  // Glass water on the bed: its sand looked up where the moving surface bends the view to.
+  if (depth === "field") shader.fragmentShader = shader.fragmentShader.replace("#include <map_fragment>", `
+    #ifdef USE_MAP
+      vec4 sampledDiffuseColor = texture2D(map, vMapUv + glassShift(vSeaWorld.xz, waterDepthAt(vSeaWorld.xz)) * ${BED_UV_PER_UNIT.toFixed(2)});
+      diffuseColor *= sampledDiffuseColor;
+    #endif`);
+}
+/** How strongly what lies under the water fogs toward the water's colour by its depth (0 off). Shared: the bed, the seabed props, the fish. */
+export const UNDERWATER_FOG = { value: 0.85 };
 
 /**
  * The terrain fades round the player where a hill or a cliff stands between them and the orbit camera
@@ -286,7 +349,23 @@ const waterUniformBlock = {
   uCloudMap: { value: null as THREE.Texture | null },
   uCloudUv: { value: new THREE.Vector4() },
   uCloudShade: { value: 0 },
+  /** The foam rings drawn this frame (x, z, radius, strength each; lib/game/foamRings.ts), and how many. */
+  uFoamRings: { value: new Float32Array(FOAM_RING_MAX * 4) },
+  uFoamRingCount: { value: 0 },
 };
+
+const _eye = new THREE.Vector3(), _dir = new THREE.Vector3();
+/**
+ * Hand the water the foam rings nearest the view's focus (where its ray meets the sea), at most `slots` (Lite fewer).
+ * Called once per frame from GridWorld; `on` false (the world bench's switch) draws none.
+ */
+export function drawFoamRings(camera: THREE.Camera, slots: number, on = true): void {
+  if (!on) { waterUniformBlock.uFoamRingCount.value = 0; return; }
+  camera.getWorldPosition(_eye);
+  camera.getWorldDirection(_dir);
+  const t = _dir.y < -0.05 ? Math.min(-_eye.y / _dir.y, 60) : 60;
+  waterUniformBlock.uFoamRingCount.value = foamRings.nearest(_eye.x + _dir.x * t, _eye.z + _dir.z * t, Math.min(slots, FOAM_RING_MAX), waterUniformBlock.uFoamRings.value, 70);
+}
 
 /**
  * The cloud layer CloudShadows draws (its texture and world-to-uv transform),
@@ -300,14 +379,16 @@ export function shadeWaterByClouds(map: THREE.Texture | null, uv: THREE.Vector4)
 }
 
 /**
- * Hand the water shader its distance field.
+ * Hand the water shader its field: the distance to the shore and the seabed's depth.
  *
  * Half-float so the waterline stays exactly where `shoreSdf` put it — an 8-bit
- * texture would quantise the crossing and contour the foam edge. R16F is core
+ * texture would quantise the crossing and contour the foam edge. RG16F is core
  * WebGL2 and linearly filterable without an extension.
  */
 export function setShoreField(f: {
   data: Float32Array;
+  /** The seabed's depth at each sample (lib/game/seabed.ts bakeWaterDepth); without it, the profile of the distance alone. */
+  depth?: Float32Array;
   width: number;
   height: number;
   minX: number;
@@ -315,9 +396,13 @@ export function setShoreField(f: {
   sizeX: number;
   sizeZ: number;
 }): void {
-  const half = new Uint16Array(f.data.length);
-  for (let i = 0; i < f.data.length; i++) half[i] = THREE.DataUtils.toHalfFloat(f.data[i]);
-  const tex = new THREE.DataTexture(half, f.width, f.height, THREE.RedFormat, THREE.HalfFloatType);
+  // Two channels: red the distance to the shore, green how deep the seabed lies (the water's colour reads it).
+  const half = new Uint16Array(f.data.length * 2);
+  for (let i = 0; i < f.data.length; i++) {
+    half[i * 2] = THREE.DataUtils.toHalfFloat(f.data[i]);
+    half[i * 2 + 1] = THREE.DataUtils.toHalfFloat(f.depth ? f.depth[i] : f.data[i] > 0 ? bedDepth(f.data[i], TUNING_DEFAULTS.water) : 0);
+  }
+  const tex = new THREE.DataTexture(half, f.width, f.height, THREE.RGFormat, THREE.HalfFloatType);
   tex.minFilter = THREE.LinearFilter;
   tex.magFilter = THREE.LinearFilter;
   // Clamp, not repeat: sampling past the map edge must read the last shoreline
@@ -337,9 +422,10 @@ export function setShoreField(f: {
  * `sunWorld` is the scene's key-light direction (sun by day, moon by night), in
  * WORLD space and used as is: the water mirrors the real light, and each
  * viewer's own camera decides what reaches their eye (row 238). `sunColor`
- * tints it (a warm white by day, gold at golden hour).
+ * tints it (a warm white by day, gold at golden hour). `sky`: the scene's sky overhead and at the horizon, which the
+ * water mirrors (fresnel) and hazes into far off.
  */
-export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE.Vector3, sunColor?: THREE.Color): void {
+export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE.Vector3, sunColor?: THREE.Color, sky?: { zenith: THREE.Color; horizon: THREE.Color }): void {
   waterUniformBlock.uRippleStrength.value = cfg.rippleStrength ?? 0;
   if (cfg.rippleStrength && !waterUniformBlock.uRippleTexture.value) {
     waterUniformBlock.uRippleTexture.value = loadTexture(new THREE.TextureLoader(), "mSeaWater_Nrm.png", TEX_DIR, THREE.NoColorSpace);
@@ -350,6 +436,8 @@ export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE
   if (cfg !== written) writeWaterUniforms(waterUniformBlock, written = cfg);
   if (sunWorld) waterUniformBlock.uSunDir.value.copy(sunWorld).normalize();
   if (sunColor) waterUniformBlock.uSunColor.value.copy(sunColor).lerp(WHITE, 0.2);
+  // The sky the water mirrors and hazes into (v1 water item 4): the scene's own, per phase and weather.
+  if (sky) { waterUniformBlock.uSkyZenith.value.copy(sky.zenith); waterUniformBlock.uSkyHorizon.value.copy(sky.horizon); }
 }
 const WHITE = new THREE.Color(1, 1, 1);
 let written: WaterParams | null = null;

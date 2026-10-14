@@ -16,7 +16,7 @@ import { ParticlePool } from "@/lib/game/fx/particles";
 import { liveIslandWeather } from "@/lib/game/islandWeather";
 import type { MoveEvent } from "@/lib/game/movement/sim";
 import { worldWind, type WorldWind } from "@/lib/game/worldFx";
-import { WATER_SWELL } from "@/lib/game/waterShader";
+import { WATER_SWELL, swellUniformsOf } from "@/lib/game/waterShader";
 import { waterSurfaceUniforms } from "../grid/terrainMaterials";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 
@@ -131,7 +131,7 @@ function moveParticleMaterial(): THREE.MeshStandardMaterial {
   m.onBeforeCompile = shader => {
     // On the water (FACE.water) a particle rides the swell the water draws: the same function, the same live uniforms.
     const u = waterSurfaceUniforms();
-    Object.assign(shader.uniforms, { uTime: u.uTime, uWaveHeight: u.uWaveHeight, uWaveScale: u.uWaveScale, uWaveSpeed: u.uWaveSpeed });
+    Object.assign(shader.uniforms, swellUniformsOf(u));
     shader.vertexShader = VERTEX_PARS + WATER_SWELL + shader.vertexShader
       .replace("#include <uv_vertex>", `#include <uv_vertex>\n${PICK_FRAME}`)
       .replace("#include <beginnormal_vertex>", PLACE_NORMAL)
