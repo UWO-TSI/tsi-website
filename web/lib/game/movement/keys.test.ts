@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_ABILITY_KEYS, DEFAULT_MOVE_KEYS, abilityPreset, crouchKey, moveDefaults, presetAbilities, readAbilityKeys, readMoveKeys, readWheelKeys, remapMove, remapWheel } from "./keys";
+import { DEFAULT_ABILITY_KEYS, DEFAULT_MOVE_KEYS, abilityPreset, crouchKey, moveDefaults, presetAbilities, readAbilityKeys, readMoveKeys, readWheelKeys, remapAbility, remapMove, remapWheel } from "./keys";
 
 const saved = new Map<string, string>();
 beforeEach(() => { saved.clear(); vi.stubGlobal("localStorage", { getItem: (k: string) => saved.get(k) ?? null, setItem: (k: string, v: string) => { saved.set(k, v); } }); });
@@ -42,15 +42,24 @@ describe("movement keys", () => {
     expect(crouchKey(other, false, false)).toBe("c");
   });
   it("holds the tool wheel on Tab (row 279): remappable, and Tab stays the wheel's alone", () => {
-    expect(readWheelKeys()).toEqual({ wheel: "tab", hud: "h" });
+    expect(readWheelKeys()).toEqual({ wheel: "tab", hud: "h", emote: "g" });
     expect(remapMove(DEFAULT_MOVE_KEYS, "sprint", "Tab")).toMatchObject({ ok: false });
-    expect(remapWheel({ wheel: "tab", hud: "h" }, "wheel", "y")).toMatchObject({ ok: true, keys: { wheel: "y" } });
+    expect(remapWheel({ wheel: "tab", hud: "h", emote: "g" }, "wheel", "y")).toMatchObject({ ok: true, keys: { wheel: "y" } });
     expect(readWheelKeys().wheel).toBe("y");
     expect(remapMove(DEFAULT_MOVE_KEYS, "sprint", "y")).toMatchObject({ ok: false }); // the wheel has it now
-    expect(remapWheel({ wheel: "y", hud: "h" }, "wheel", "Tab")).toMatchObject({ ok: true, keys: { wheel: "tab" } });
-    for (const key of ["w", "1", "e", "b"]) expect(remapWheel({ wheel: "tab", hud: "h" }, "wheel", key)).toMatchObject({ ok: false });
+    expect(remapWheel({ wheel: "y", hud: "h", emote: "g" }, "wheel", "Tab")).toMatchObject({ ok: true, keys: { wheel: "tab" } });
+    for (const key of ["w", "1", "e", "b"]) expect(remapWheel({ wheel: "tab", hud: "h", emote: "g" }, "wheel", key)).toMatchObject({ ok: false });
     // The full HUD's key sits in the same map: taking it swaps the two.
-    expect(remapWheel({ wheel: "tab", hud: "h" }, "hud", "Tab")).toMatchObject({ ok: true, keys: { hud: "tab", wheel: "h" } });
+    expect(remapWheel({ wheel: "tab", hud: "h", emote: "g" }, "hud", "Tab")).toMatchObject({ ok: true, keys: { hud: "tab", wheel: "h" } });
+  });
+  it("holds the emote wheel on G (specs/v1-drop.md §3): rebindable, and its key is nobody else's", () => {
+    expect(readWheelKeys().emote).toBe("g");
+    expect(remapWheel({ wheel: "tab", hud: "h", emote: "g" }, "emote", "y")).toMatchObject({ ok: true, keys: { emote: "y", wheel: "tab" } });
+    expect(readWheelKeys().emote).toBe("y");
+    expect(remapMove(DEFAULT_MOVE_KEYS, "sprint", "y")).toMatchObject({ ok: false }); // the emote wheel has it now
+    expect(remapAbility(DEFAULT_ABILITY_KEYS, "slot1", "y")).toMatchObject({ ok: false });
+    expect(remapWheel({ wheel: "tab", hud: "h", emote: "y" }, "emote", "G")).toMatchObject({ ok: true, keys: { emote: "g" } });
+    for (const key of ["w", "1", "e"]) expect(remapWheel({ wheel: "tab", hud: "h", emote: "g" }, "emote", key)).toMatchObject({ ok: false });
   });
   it("puts the ability slots on Z X C V as a preset, where C isn't the crouch", () => {
     expect(abilityPreset(readAbilityKeys())).toBe("numbers");

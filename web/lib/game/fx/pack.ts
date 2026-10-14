@@ -2,7 +2,7 @@
 /** Our particle pack (specs/movement-feel.md deliverable 1): one row of 8 frames per sprite, 128 px cells. */
 export const PACK_URL = "/assets/fx/move-pack.webp";
 export const PACK_COLS = 8;
-export const PACK_ROWS = 27;
+export const PACK_ROWS = 28;
 export const PACK = {
   dust: { row: 0, frames: 8 } /* dust puff */,
   dustLow: { row: 1, frames: 8 } /* low dust burst (hugs the ground) */,
@@ -31,5 +31,6 @@ export const PACK = {
   glint: { row: 24, frames: 8 } /* finishing sparkle */,
   leafBits: { row: 25, frames: 8 } /* leaves shaken loose */,
   glow: { row: 26, frames: 8 } /* firefly glow (additive) */,
+  note: { row: 27, frames: 8 } /* music note (swaying) */,
 } as const;
 export type SpriteName = keyof typeof PACK;

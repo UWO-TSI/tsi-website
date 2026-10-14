@@ -95,26 +95,29 @@ export const DEFAULT_ABILITY_KEYS: Record<AbilityId, string> = { slot1: "1", slo
 /** The ability slots' presets (row 279): the number row, or Z X C V under the left hand (key 5 on T, the free key beside R and F). */
 export const ABILITY_PRESETS = { numbers: ["1", "2", "3", "4", "5"], zxcv: ["z", "x", "c", "v", "t"] } as const;
 export type AbilityPreset = keyof typeof ABILITY_PRESETS;
-/** The tool wheel (specs/game-ui.md): hold to open, tap to swap back to the last item; and the full HUD, shown while held (row 283). */
-export type WheelAction = "wheel" | "hud";
-export const DEFAULT_WHEEL_KEYS: Record<WheelAction, string> = { wheel: "tab", hud: "h" };
+/**
+ * The tool wheel (specs/game-ui.md): hold to open, tap to swap back to the last item; the full HUD, shown while held
+ * (row 283); and the emote wheel (specs/v1-drop.md §3): hold to open, tap to play the last emote again.
+ */
+export type WheelAction = "wheel" | "hud" | "emote";
+export const DEFAULT_WHEEL_KEYS: Record<WheelAction, string> = { wheel: "tab", hud: "h", emote: "g" };
 
 const move = keyStore<MoveAction>("tsi.moveKeys.v1", DEFAULT_MOVE_KEYS, {
   // The arrows turn the camera (specs/camera-orbit.md), so no movement key may take one.
   valid: (k, id) => !/^(meta|alt|capslock|dead|unidentified|arrow(up|down|left|right))$/.test(k) && (k !== "control" || id === "crouch"),
-  taken: (): string[] => [...Object.values(readAbilityKeys()), ...menuKeys(), readWheelKeys().wheel],
+  taken: (): string[] => [...Object.values(readAbilityKeys()), ...menuKeys(), readWheelKeys().wheel, readWheelKeys().emote],
 });
 const ability = keyStore<AbilityId>("tsi.combatKeys.v3", DEFAULT_ABILITY_KEYS, { // v1 bound the prototype runes, not slots; v3 adds key 5 and the ult
   legacy: "tsi.combatKeys.v2",
   valid: (k, id) => k.length === 1 && (k !== "f" || id === "ult"), // F is the ult's alone (it decorates at home)
   // Z (zoom), X (put away, at home), V (the camera reset) and F (decorate, at home) are fixed elsewhere; only the ruins read ability keys, where they win.
   allow: ["z", "x", "v", "f"],
-  taken: (): string[] => [...Object.values(readMoveKeys()), ...menuKeys(), readWheelKeys().wheel],
+  taken: (): string[] => [...Object.values(readMoveKeys()), ...menuKeys(), readWheelKeys().wheel, readWheelKeys().emote],
   readTaken: (): string[] => Object.values(readMoveKeys()),
 });
 const wheel = keyStore<WheelAction>("tsi.wheelKey.v1", DEFAULT_WHEEL_KEYS, {
   valid: k => k.length === 1 || k === "tab",
-  allow: ["tab"],
+  allow: ["tab", "g"], // G is fixed for the emote wheel (lib/identity/settings FIXED_KEYS)
   taken: (): string[] => [...Object.values(readMoveKeys()), ...Object.values(readAbilityKeys()), ...menuKeys()],
   readTaken: (): string[] => [...Object.values(readMoveKeys()), ...Object.values(readAbilityKeys())],
 });

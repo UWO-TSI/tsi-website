@@ -132,6 +132,8 @@ export class LabelLayout {
 
   /** The scene's buildings (boxes from the ground up); [] where nothing hides a label. */
   setOccluders(list: readonly Occluder[]) { this.occluders = list; }
+  /** The scene's buildings as set (photo mode's camera stops short of them). */
+  get occluderList(): readonly Occluder[] { return this.occluders; }
 
   get size() { return this.entries.length; }
 

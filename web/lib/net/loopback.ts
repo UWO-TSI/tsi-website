@@ -9,17 +9,23 @@
  * - views: a bot is in yours while it shares your area and that area isn't private; the roster has everyone, you too.
  * `?netsim=lat:120,jit:60,loss:0.03` delays and loses what arrives (interp.ts).
  *
+ * Chat: what you say comes straight back as your line (the page's chat store, lib/net/chat.ts). With `chatEvery`
+ * (`?botchat=S`), each bot in view says a line every S seconds or so, typing for a moment first (FLAG.typing), so the
+ * bubbles, the "…" and the talking can be seen without a server.
+ *
  * Bots step in lockstep, 1/120 s at a time, so a seed plays the same however the time is chunked. While started, a
  * timer steps them every TICK_MS; tests step by hand (`advance`).
  */
-import { botArea, createBots, type Bot } from "./botBrain";
+import { botArea, botWorld, createBots, type Bot } from "./botBrain";
+import { campfireSite } from "@/lib/game/campfireSite";
 import { RemoteBuffer, Remotes, type Netsim } from "./interp";
 import {
-  AREAS, FLAG, PACKET_FLAG, decodeEvent, decodePose, encodeEvent, hasFlag, isPrivateArea, nextTp, parseSlowState, createPose,
+  AREAS, CHAT, FLAG, PACKET_FLAG, decodeEvent, decodePose, encodeEvent, hasFlag, isPrivateArea, nextTp, parseSlowState, createPose,
   type Area, type NetPlayer, type PosePacket, type RosterEntry, type SlowState,
 } from "./protocol";
 import { toRemotePlayer, type NetSource, type NetStatus } from "./types";
 import { MAX_BOTS } from "./netStore";
+import { chatStore, type ChatStore } from "./chat";
 
 /** How often a started loopback steps its bots (ms). */
 export const TICK_MS = 33;
@@ -35,7 +41,18 @@ export interface LoopbackOptions {
   clock?: () => number;
   /** Step with a timer while started (default true); tests call `advance`. */
   timer?: boolean;
+  /** Development (`?botfire=1`): the first bots dance round the campfire and sit by it (botBrain BotWorld.fire). */
+  fire?: boolean;
+  /** Bots in view say a line about this often (seconds); 0 or unset: they don't chat. */
+  chatEvery?: number;
+  /** Where lines go (the page's chat store by default). */
+  chat?: ChatStore;
 }
+/** What chatting bots say: small talk, never a real person's words. */
+export const BOT_LINES = ["hi!", "nice day out", "anyone fishing?", "the café smells so good", "brb", "see you at the plaza",
+  "ooh a butterfly", "how do I get to the museum?", "love the lanterns", "this music is so cozy"] as const;
+/** A bot types for this long before its line. */
+const BOT_TYPING_MS = 1500;
 
 /** A bot as the room holds it. */
 interface Peer {
@@ -46,6 +63,8 @@ interface Peer {
   /** It has sent a pose: `player` holds real motion. */
   live: boolean;
   entry: RemoteBuffer | null;
+  /** Room time of its next line (Infinity: it doesn't chat). */
+  sayAt: number;
 }
 
 /** The loopback NetSource, and what netStore drives it with. */
@@ -85,8 +104,14 @@ export function createLoopback(o: LoopbackOptions): Loopback {
   let roster: readonly RosterEntry[] = [];
   /** The bots' common clock: the next lockstep time. */
   let stepT = 0;
+  const chat = o.chat ?? chatStore();
+  const chatEvery = Math.max(0, o.chatEvery ?? 0) * 1000;
+  let said = 0;
 
-  const bots = createBots(n, o.seed ?? 1, 0);
+  const world = botWorld();
+  const site = o.fire ? campfireSite() : null;
+  if (site) world.fire = { ...site, epoch };
+  const bots = createBots(n, o.seed ?? 1, 0, world);
   const peers: Peer[] = bots.map((bot, i) => {
     const c = bot.card;
     const player: NetPlayer = {
@@ -95,7 +120,7 @@ export function createLoopback(o: LoopbackOptions): Loopback {
       area: botArea(c), flags: (c.mobile ? FLAG.mobile : 0) | (c.showClass ? FLAG.showClass : 0), held: "", weapon: "", pose: "", seat: "", study: 0, studyEnds: 0,
       t: 0, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, yaw: 0, move: 0, air: 0, leaf: 0, lift: 0, tp: 0,
     };
-    return { bot, sid: i + 1, uid: player.uid, player, live: false, entry: null };
+    return { bot, sid: i + 1, uid: player.uid, player, live: false, entry: null, sayAt: chatEvery ? chatEvery * (0.3 + (i * 0.37) % 1) : Infinity };
   });
 
   const emit = () => { for (const l of listeners) l(); };
@@ -157,6 +182,7 @@ export function createLoopback(o: LoopbackOptions): Loopback {
     if (m.studyEnds !== undefined) pl.studyEnds = m.studyEnds;
     if (m.showClass !== undefined) { pl.flags = m.showClass ? pl.flags | FLAG.showClass : pl.flags & ~FLAG.showClass; rosterChanged = true; }
     if (m.afk !== undefined) { pl.flags = m.afk ? pl.flags | FLAG.afk : pl.flags & ~FLAG.afk; rosterChanged = true; }
+    if (m.typing !== undefined) pl.flags = m.typing ? pl.flags | FLAG.typing : pl.flags & ~FLAG.typing;
     if (p.entry) {
       p.entry.setPlayer(toRemotePlayer(pl, epoch), clock());
       remotes.changed(p.entry);
@@ -165,6 +191,18 @@ export function createLoopback(o: LoopbackOptions): Loopback {
     if (rosterChanged) { rebuildRoster(); emit(); }
   };
   const outboxes = peers.map(p => ({ pose: (packet: PosePacket) => onPose(p, packet), slow: (patch: SlowState) => onSlow(p, patch) }));
+  /** Chatting bots: typing a moment, then the line, as the room would deliver it. */
+  const chatter = (now: number) => {
+    for (const p of peers) {
+      if (!p.entry || now < p.sayAt - BOT_TYPING_MS) continue;
+      const typing = now < p.sayAt;
+      if (typing !== hasFlag(p.player.flags, FLAG.typing)) onSlow(p, { typing });
+      if (typing) continue;
+      chat.receive({ id: `00000000-0000-4000-8000-${String(++said).padStart(12, "0")}`, sid: p.sid, uid: p.uid, name: p.player.name, area: p.player.area,
+        text: BOT_LINES[(p.sid * 3 + said) % BOT_LINES.length], t: Math.round(now) });
+      p.sayAt = now + chatEvery * (0.75 + ((p.sid * 0.61 + said * 0.29) % 1) * 0.5);
+    }
+  };
 
   const advance = (toMs = clock()) => {
     if (toMs - stepT > CATCH_UP_MS) stepT = toMs - STEP_MS; // a slept tab: skip ahead, don't replay
@@ -174,6 +212,7 @@ export function createLoopback(o: LoopbackOptions): Loopback {
       if (b.time + CATCH_UP_MS < stepT) b.skipTo(stepT);
       b.advance(stepT + STEP_MS, outboxes[i]);
     }
+    if (chatEvery && started) chatter(toMs);
   };
 
   const source: Loopback = {
@@ -196,6 +235,15 @@ export function createLoopback(o: LoopbackOptions): Loopback {
       if (m.area !== undefined) source.setArea(AREAS[m.area]);
     },
     leave() { source.stop(); },
+    sendChat(text) {
+      const t = text.trim().slice(0, CHAT.maxLength);
+      if (!t || status.kind !== "joined") return false;
+      chat.setSelf("local");
+      chat.sent(t);
+      chat.receive({ id: `00000000-0000-4000-9000-${String(++said).padStart(12, "0")}`, sid: 0, uid: "local", name: "You", area: AREAS.indexOf(area), text: t, t: Math.round(clock()) });
+      return true;
+    },
+    sendTyping() {},
     start(next) {
       area = next;
       if (started) { source.setArea(next); return; }

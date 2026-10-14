@@ -888,6 +888,26 @@ def glow(t):
     return A, colour(np.full_like(U, 1.0), 0.8)
 
 
+def note(t):
+    """A music note rising off dancers (specs/v1-drop.md §3): a painted eighth note, its head a tilted oval, a brushed
+    stem and a curling flag, with a darker rim so it reads on a bright sky. The frames are one sway, left and right and
+    back (the engine cycles them), so a note bobs as it floats up."""
+    rot = 0.2 * math.sin(t * math.tau)
+    ca, sa = math.cos(rot), math.sin(rot)
+    x, y = U * ca + V * sa, -U * sa + V * ca
+    hx, hy = (x + 0.16) * math.cos(0.42) + (y + 0.42) * math.sin(0.42), -(x + 0.16) * math.sin(0.42) + (y + 0.42) * math.cos(0.42)
+    head = ss(1.0, 1.0 - 6 * PX, np.hypot(hx / 0.24, hy / 0.165))
+    stem = ss(0.045, 0.045 - PX * 1.6, np.abs(x - 0.06)) * (y > -0.42) * (y < 0.62)
+    stem = stem * ss(0.62, 0.6, y)
+    fa, fv = stroke([(0.06, 0.6), (0.22, 0.44), (0.34, 0.24), (0.3, 0.04)], [0.075, 0.07, 0.055, 0.03], 3131, value=1.0, dry=0.06, taper_soft=1.5, grain=0.03)
+    fa = np.where((x - 0.06) > -0.01, fa, 0)
+    A = np.clip(np.maximum.reduce([head, stem, fa]), 0, 1)
+    # A darker rim where the coverage falls off, so the edge reads on a bright sky; a soft light on the head.
+    inner = np.clip((A - 0.5) * 2, 0, 1)
+    v = 0.72 + 0.28 * ss(0.2, 0.95, inner) + 0.08 * ss(0.06, -0.12, hy) * (head > 0.5)
+    return A, colour(np.clip(v, 0, 1), 0.5)
+
+
 # ---------------------------------------------------------------- the pack
 # name, painter, what it is (one row each, FRAMES frames). Append only: rows are indices in the engine.
 SPRITES = [
@@ -918,6 +938,7 @@ SPRITES = [
     ("glint", glint, "finishing sparkle"),
     ("leafBits", leaf_bits, "leaves shaken loose"),
     ("glow", glow, "firefly glow (additive)"),
+    ("note", note, "music note (swaying)"),
 ]
 
 # How the sheet shows each row: the tint the engine gives it and the ground behind it.
@@ -934,6 +955,7 @@ SHEET = {
     "petal": ("#f5a9c4", "#8fa16c"), "chip": ("#a9a39a", "#8c8577"), "crack": ("#7d6a52", "#c9b089"),
     "hole": ("#9a8462", "#d8bd85"), "sandBurst": ("#e2cb93", "#d8bd85"), "hammerPuff": ("#e3d2b4", "#8a6a4a"),
     "glint": ("#fff3c4", "#5f7a55"), "leafBits": ("#8fbf6a", "#5f7a55"), "glow": ("#ffe98a", "#1d2531"),
+    "note": ("#fff1c9", "#7aa0b8"),
 }
 
 
