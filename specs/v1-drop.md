@@ -18,7 +18,7 @@
 
 ## 1. Opening: the arrival (decided with David 2026-10-13)
 One continuous sequence after the title screen. It plays once on first login and is skippable.
-1. **Underwater, 4–6 s.** Black, then dim blue water with light shafts above, a muffled heartbeat and bubbles. You drift up and gasp at the surface. A weathered hand grabs your wrist: **Bram**, the wharf resident, becomes the fisherman Keeper (lore: the one who pulls you out).
+1. ~~**Underwater, 4–6 s.**~~ **Removed for v1** (playtest round 1, decision 2): the opening starts aboard Bram's boat with a short fade in. It gets rebuilt later from real assets or references David supplies. **Bram**, the wharf resident, is still the fisherman Keeper who pulled you out (lore).
 2. **Aboard Bram's small wooden fishing boat** (the one moored at the wharf: one-person cabin, nets, lantern). The world is **heavily blurred and washed out**, because your memories are gone. No Root in v1; sudo pets come later.
 3. **The reflection is the creator** (David's sketch: `references/ui/creator/2026-10-13-reflection-creator-sketch.png`).
    - Layout:
@@ -37,7 +37,8 @@ One continuous sequence after the title screen. It plays once on first login and
    - the wharf coming up.
    
    You step into real island time on the dock.
-5. **The tutorial (approved).** Walk-along, learn by doing, minimal: players figure it out.
+5. **The tutorial (approved; rebuilt as v2 after playtest round 1, decision 5).** Walk-along, learn by doing, minimal: players figure it out.
+   - **v2 (David's walk-along note, built 2026-10-14):** Bram walks to each stop with a "!" over his head and waits; reaching him moves nothing on, you talk to him (E), he tells you about the place and walks on. The stops: the dock (talk, then hop the crate after him), the museum, shop, HQ and café fronts, the beach (his rod, then a catch), then he points you at B for what you've collected, the wharf fish market (the wharf shack) for fish, the museum for rare finds and the shop for everything else. A tracker top right lists the steps (`components/game/QuestTracker.tsx`). New players start with an empty tool bag until the beach. The route is data per world (`web/lib/game/arrival/routes/`) and the lines are drafts in `web/lib/game/arrival/lines.ts`. The step list below is the v1 original.
    - **No movement UI anywhere.** The controls list lives only in Settings, with rebinding.
    - If a player stalls for about 10 s, Bram says a gentle hint in a speech bubble.
    - The Tab wheel and the bag each get a one-time keycap glyph at the moment they're needed.

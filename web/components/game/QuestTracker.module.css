@@ -1,0 +1,47 @@
+/* The quest tracker (QuestTracker.tsx): a small paper to-do list top right, under the HUD's top cluster. A host moves
+   it with --quest-top / --quest-right or its own class. */
+.tracker { position: absolute; top: var(--quest-top, calc(var(--island-top, 40px) + max(12px, env(safe-area-inset-top)) + 58px)); right: var(--quest-right, max(14px, env(safe-area-inset-right)));
+  z-index: 24; width: min(268px, calc(100vw - 28px)); box-sizing: border-box; padding: 10px 12px 9px; border-radius: var(--gui-r-card);
+  background: rgb(255 251 231 / 0.94); color: var(--gui-ink); box-shadow: 0 3px 0 rgb(114 92 78 / 0.14), 0 10px 24px rgb(60 45 20 / 0.16), inset 0 0 0 1.5px var(--gui-paper-edge);
+  font: var(--gui-weight) var(--gui-text-sm)/1.35 var(--gui-font); zoom: var(--tsi-text-scale, 1); pointer-events: auto;
+  transition: opacity 0.35s ease, transform 0.35s var(--gui-ease); animation: trackerIn 0.45s var(--gui-spring) both; }
+.tracker[data-hidden] { opacity: 0; transform: translateY(-6px); pointer-events: none; }
+@keyframes trackerIn { from { opacity: 0; transform: translateY(-8px) scale(0.97); } }
+
+.head { display: flex; align-items: center; gap: 7px; width: 100%; margin: 0 0 6px; padding: 0; border: 0; background: none; color: var(--gui-teal-ink);
+  font: inherit; text-align: left; }
+button.head { cursor: pointer; border-radius: var(--gui-r-sm); }
+button.head:focus-visible { outline: 3px solid var(--gui-focus, #3e7fa6); outline-offset: 2px; }
+.title { flex: 1; min-width: 0; color: var(--gui-ink-strong); font-weight: 800; font-size: var(--gui-text-sm); letter-spacing: 0.01em; }
+.count { padding: 1px 7px; border-radius: var(--gui-r-pill); background: var(--gui-paper-deep); color: var(--gui-muted); font-size: var(--gui-text-xs); font-weight: 800; }
+
+.list { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; }
+.row { position: relative; display: grid; grid-template-columns: 18px minmax(0, 1fr); column-gap: 7px; align-items: start; padding: 3px 6px 3px 2px;
+  border-radius: 10px; color: var(--gui-muted); }
+.mark { display: grid; place-items: center; width: 15px; height: 15px; margin-top: 1px; border-radius: 50%; box-shadow: inset 0 0 0 1.8px var(--gui-paper-line);
+  color: #fffbe7; background: transparent; }
+.label { min-width: 0; }
+.row[data-done] { color: var(--gui-taupe); }
+.row[data-done] .label { text-decoration: line-through; text-decoration-color: rgb(138 123 102 / 0.55); text-decoration-thickness: 1.5px; }
+.row[data-done] .mark { background: var(--gui-teal); box-shadow: none; }
+.row[data-current] { color: var(--gui-ink-strong); font-weight: 800; background: rgb(255 238 160 / 0.7); }
+.row[data-current] .mark { box-shadow: inset 0 0 0 2px var(--gui-amber); background: radial-gradient(circle, var(--gui-amber) 0 3px, transparent 3.5px); }
+.hint { grid-column: 2; margin-top: 1px; color: var(--gui-muted); font-weight: 700; font-size: var(--gui-text-xs); }
+.row[data-ticked] .mark { animation: tick 0.6s var(--gui-spring) both; }
+.row[data-ticked] { animation: ticked 1s ease-out both; }
+@keyframes tick { 0% { transform: scale(0.4); } 60% { transform: scale(1.35); } 100% { transform: scale(1); } }
+@keyframes ticked { 0% { background: rgb(4 175 166 / 0.22); } 100% { background: transparent; } }
+
+.fold { margin: 2px 0 0 27px; color: var(--gui-muted); font-size: var(--gui-text-xs); font-weight: 700; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+:global(html[data-contrast="high"]) .row, :global(html[data-contrast="high"]) .fold, :global(html[data-contrast="high"]) .hint { color: #000000; }
+
+/* A phone: narrower, and only the current step and the next one listed. */
+@media (max-width: 640px) {
+  .tracker { width: min(210px, calc(100vw - 120px)); padding: 8px 10px 7px; font-size: var(--gui-text-xs); }
+  .row[data-later] { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tracker, .row[data-ticked], .row[data-ticked] .mark { animation: none; transition: opacity 0.2s ease; }
+}

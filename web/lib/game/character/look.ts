@@ -89,10 +89,9 @@ export type EyeFrame = "open" | "half" | "closed";
 export const FACE = faceV7 as unknown as {
   density: number; atlas_size: [number, number]; atlas2_size: [number, number];
   /** eye_left: the eye anchor mirrored, where an eye's own `left` cell sits; an accent of set 305 sits on its own. */
-  anchors: Record<"eye" | "eye_left" | "eye_pair" | "brow" | "mouth" | "cheek" | "mole" | "blush", [number, number]> & Record<string, [number, number]>;
+  anchors: Record<"eye" | "eye_left" | "eye_pair" | "mouth" | "cheek" | "mole" | "blush", [number, number]> & Record<string, [number, number]>;
   layers: {
     extras: { default: null; multi: true; tint: null; items: Record<string, { anchor: string; mirror: boolean; cell: FaceCell }> };
-    brows: { default: string; anchor: "brow"; mirror: true; tint: "hair"; items: Record<string, FaceCell> };
     /** `left`: the canvas-right eye drawn on its own (set 305's asymmetric pairs); `left: null`: `open` is the whole
      * pair, at eye_pair, drawn once; absent: `open` is one eye, mirrored. */
     eyes: { default: string; anchor: "eye"; mirror: true; tint: null; items: Record<string, Partial<Record<EyeFrame, FaceCell>> & { open: FaceCell; left?: FaceCell | null }> };
@@ -100,7 +99,7 @@ export const FACE = faceV7 as unknown as {
     /** Larger open mouths shown only while talking (not creator options). */
     talk: { default: null; anchor: "mouth"; mirror: false; tint: null; items: Record<string, FaceCell> };
   };
-  expressions: Record<string, { eyes: string | null; eyeFrame: EyeFrame; mouth: string | null; brow: [number, number] }>;
+  expressions: Record<string, { eyes: string | null; eyeFrame: EyeFrame; mouth: string | null }>;
   blink: { interval: [number, number]; frames: [EyeFrame, number][] };
   talk: { frames: string[]; rate: number };
   emoteMouth: Record<string, { frames: string[]; rate: number }>;
@@ -113,7 +112,9 @@ export function usesFacePage2(look: CharacterLook): boolean {
   const cells = [...Object.values(eyes.items[look.eyes] ?? {}), mouth.items[look.mouth], ...look.extras.map(x => extras.items[x]?.cell)];
   return cells.some(c => c?.[6] === 1);
 }
-export type FaceLayer = "extras" | "brows" | "eyes" | "mouth";
+/** The face's layers. Eyebrows were removed (playtest round 1, David 2026-10-14): the atlas still holds their cells
+ * (art/characters/v7/build_face.py), but no look wears them, no category offers them and the face draws none. */
+export type FaceLayer = "extras" | "eyes" | "mouth";
 export const partsIn = (slot: PartSlot) => PARTS.filter(p => p.slot === slot);
 
 /**
@@ -122,15 +123,15 @@ export const partsIn = (slot: PartSlot) => PARTS.filter(p => p.slot === slot);
  * part left where it was is absent, so a look without placement is today's face exactly. face.ts turns the steps
  * into the face shader's slot rects and tilt, clamped to the face area.
  */
-export type PlacePart = "eyes" | "brows" | "mouth";
+export type PlacePart = "eyes" | "mouth";
 export type Placement = [up: number, apart: number, rotate: number, size: number];
 export const PLACE_STEPS = 10;
 /** Which sliders each part has: the mouth sits on the centre line, so it has no spacing. */
-export const PLACE_PARTS: Record<PlacePart, { apart: boolean }> = { eyes: { apart: true }, brows: { apart: true }, mouth: { apart: false } };
+export const PLACE_PARTS: Record<PlacePart, { apart: boolean }> = { eyes: { apart: true }, mouth: { apart: false } };
 
 export interface CharacterLook {
   skin: number; hair: number;
-  eyes: string; mouth: string; brows: string; extras: string[];
+  eyes: string; mouth: string; extras: string[];
   bangs: string; back: string;
   top: string | null; bottom: string | null; onepiece: string | null; shoes: string | null;
   acc: Partial<Record<AccGroup, string>>;
@@ -144,7 +145,7 @@ export interface CharacterLook {
 
 export const DEFAULT_LOOK: CharacterLook = {
   skin: palette.base_body_defaults.skin, hair: palette.ref_girl_defaults.hair,
-  eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [],
+  eyes: "F1.1", mouth: "M1.1", extras: [],
   bangs: "bangs_straight", back: "back_bob",
   top: "top_tee", bottom: "bottom_shorts", onepiece: null, shoes: "shoes_slipon", acc: {}, colors: {},
 };
@@ -168,7 +169,8 @@ export function parseLook(raw: unknown): CharacterLook {
   if (r.colors && typeof r.colors === "object") for (const [id, v] of Object.entries(r.colors)) if (PART_BY_ID.has(id)) colors[id] = index(v, PALETTE.outfit.length, 0);
   const look: CharacterLook = {
     skin: index(r.skin, PALETTE.skin.length, d.skin), hair: index(r.hair, PALETTE.hair.length, d.hair),
-    eyes: faceItem("eyes", r.eyes, d.eyes), mouth: faceItem("mouth", r.mouth, d.mouth), brows: faceItem("brows", r.brows, d.brows),
+    // A saved look's `brows` (and its brows placement) is dropped: eyebrows were removed.
+    eyes: faceItem("eyes", r.eyes, d.eyes), mouth: faceItem("mouth", r.mouth, d.mouth),
     extras: Array.isArray(r.extras) ? [...new Set(r.extras.filter((e): e is string => typeof e === "string" && e in FACE.layers.extras.items))] : [],
     bangs: inSlot(r.bangs, "bangs") ? r.bangs : d.bangs, back: inSlot(r.back, "back") ? r.back : d.back,
     top: onepiece ? null : inSlot(r.top, "top") ? r.top : d.top,
