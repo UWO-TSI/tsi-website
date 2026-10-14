@@ -35,7 +35,13 @@ These rules are hard. The coordinator merges and pushes; lanes never push.
 - Never fetch or use art references or textures you found yourself. David supplies all references.
   - The exception is official technical templates David has OK'd, such as Roblox's creator reference avatar and head for fitting.
 - Real names never show in game (world names only). Never reveal the TC to CAD rate.
-- `npm run perf:check` and the budgets apply to every visual change. Report the cost of every new effect in `specs/perf/effects-cost.md`.
+- **Performance checks (David, 2026-10-14: stop the pop-ups and the wasted runs):**
+  - Every bench and screenshot script is headless by default, so no window ever opens on David's screen. Never pass `HEADED=1`.
+  - Run `perf:check` only if your lane changes what renders, and only once, at the end. Never rerun it for noise.
+  - Bench only the scenes your change touches (`SCENES=village,v2` for world and look work). Add `cafe` or `ruins-summoner` only if you change characters or combat.
+  - UI-only and data-only lanes don't run `perf:check` at all.
+  - The coordinator runs one combined check after each merge batch.
+  - Price new effects in `specs/perf/effects-cost.md` from that one run.
 
 ## Reporting
 - Write tests first where there's logic. Gates are tsc, vitest and eslint on changed files.

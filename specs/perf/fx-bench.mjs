@@ -30,7 +30,7 @@ if (UNCAPPED) args.push("--disable-gpu-vsync", "--disable-frame-rate-limit");
 const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_curtain", back: "back_bob", top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: {} });
 const TIER = { high: { "tsi.liteMode.v1": "false", "tsi.shadows.v1": "true" }, lite: { "tsi.liteMode.v1": "true", "tsi.shadows.v1": "false" } }[TIER_NAME];
 
-const browser = await chromium.launch({ headless: false, args });
+const browser = await chromium.launch({ headless: process.env.HEADED !== "1", args });
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
 await ctx.addInitScript(([look, store]) => { try {
   localStorage.setItem("tsi.look.v1", look); localStorage.setItem("tsi.hud.full.v1", "true");
