@@ -6,6 +6,7 @@ import { prepareModel, disposeModelMaterials, applyModelTextures } from "@/lib/g
 import { shadowClassFor, type ShadowClass } from "@/lib/game/shadows";
 import { modelContact, useContactShadow } from "./ContactShadows";
 import { propsOf } from "@/lib/game/defaultIsland";
+import { BARRIERS, barrierPlacements } from "@/lib/game/barriers";
 import { BUSH_MODELS, FLOWER_MODELS, TREE_MODELS, bushParts, flowerParts, treeParts, type NaturePart } from "@/lib/game/natureParts";
 import { SEASON_BUSHES, SEASON_FLOWERS, SEASON_TREES } from "@/lib/game/seasonalLook";
 import type { Season } from "@/lib/game/season";
@@ -60,6 +61,8 @@ export function sceneryOf(v: Village, ground: (x: number, z: number) => number, 
     ...at("bush", seed => bushParts(seed, SEASON_BUSHES[season])),
     ...(SEASON_FLOWERS[season].length ? at("flower", seed => flowerParts(seed, SEASON_FLOWERS[season])) : []),
     ...propsOf(v).filter(o => o.model).map((p): ModelPlacement => ({ url: `/assets/acnh/props/${p.model}.glb`, position: [p.x, ground(p.x, p.z), p.z], rotation: p.yaw ?? 0, scale: p.scale ?? 1 })),
+    // The natural barriers standing at this drop (lib/game/barriers.ts), where the walker blocks them.
+    ...barrierPlacements(v).map((b): ModelPlacement => ({ url: BARRIERS[b.model].url, position: [b.x, ground(b.x, b.z), b.z], rotation: b.yaw, scale: b.scale })),
   ];
 }
 

@@ -528,8 +528,9 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {museum && <group position={at(museum)} rotation={[0, museum.yaw ?? 0, 0]} scale={museum.scale ?? 1}><ACNHParts parts={CHALET_VARIANTS.red} lit={windowLit(light)} /></group>}
     {/* Boarded doors: the existing log fence across the museum's entrance (the café boards its own, CafeBuilding). */}
     {[museum].filter(l => l && !opened.includes(l.id as WorldGoalId)).map(l => [-0.6, 0.6].map(dx => <NatureFence key={`${l!.id}${dx}`} position={[l!.x + dx, ground(l!.x, l!.z), front(l!) - 0.35]} variant={1} />))}
-    {ruins && [-1.2, 0, 1.2].map(dz => <group key={dz} position={[ruins.x, ground(ruins.x, ruins.z + dz), ruins.z + dz]} rotation={[0, Math.PI / 2, 0]}><NatureFence position={[0, 0, 0]} variant={1} /></group>)}
-    {ruins && [-1.9, 1.9].map(dz => <GLBProp key={dz} url="/assets/acnh/props/stone-lantern.glb" position={[ruins.x, ground(ruins.x, ruins.z + dz), ruins.z + dz]} />)}
+    {/* The ruins gate once the ruins open; before, fallen stones and roots block it (lib/game/barriers.ts GATE_RUBBLE, in the scenery). */}
+    {ruins && DROPS.ruins && [-1.2, 0, 1.2].map(dz => <group key={dz} position={[ruins.x, ground(ruins.x, ruins.z + dz), ruins.z + dz]} rotation={[0, Math.PI / 2, 0]}><NatureFence position={[0, 0, 0]} variant={1} /></group>)}
+    {ruins && DROPS.ruins && [-1.9, 1.9].map(dz => <GLBProp key={dz} url="/assets/acnh/props/stone-lantern.glb" position={[ruins.x, ground(ruins.x, ruins.z + dz), ruins.z + dz]} />)}
     {monument && <ClubMonument position={at(monument)} stage={stage} ceremony={ceremony} />}
     {mailbox && <GLBProp url="/assets/acnh/furniture/mailbox.glb" position={at(mailbox)} scale={0.1} />}
     {/* The board model's notices face +z; the plaza boards stand in front of the HQ, so they turn to face the plaza (a painter yaw adds on). */}

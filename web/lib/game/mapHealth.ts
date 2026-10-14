@@ -255,6 +255,8 @@ export function villageHealth(v: Village): VillageHealth {
   const boxes = v.objects.flatMap(o => { const f = footprintOf(o); return f ? [{ o, f }] : []; });
   for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
     const a = boxes[i], b = boxes[j], gap = a.f.building && b.f.building ? 1 : 0;
+    // Barrier segments overlap on purpose: a forest edge is a row of them with no gap a body fits through.
+    if (a.o.kind === "barrier" && b.o.kind === "barrier") continue;
     if (a.f.x0 < b.f.x1 + gap && b.f.x0 < a.f.x1 + gap && a.f.z0 < b.f.z1 + gap && b.f.z0 < a.f.z1 + gap) warnings.push(`${a.o.kind}:${a.o.id} overlaps ${b.o.kind}:${b.o.id}${gap ? " (buildings keep a 1-tile gap)" : ""}`);
   }
   return { terrain, problems, warnings };

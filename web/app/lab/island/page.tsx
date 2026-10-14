@@ -3,7 +3,8 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { PAINTER_DRAFT_KEY, setVillageDoc, type VillageDoc } from "@/lib/game/villageMap";
+import { PAINTER_DRAFT_KEY, parseVillage, setVillageDoc, type VillageDoc } from "@/lib/game/villageMap";
+import { PROPOSALS, acceptProposed } from "@/lib/game/proposals";
 import { terrainFixtureDoc } from "@/lib/game/fixtures/terrainFixture";
 import { terrainV2DraftDoc } from "@/lib/game/fixtures/terrainV2Draft";
 import { saveOrbit, snapBack, turnQuarter } from "@/lib/game/orbitCamera";
@@ -34,8 +35,12 @@ export default function IslandBench() {
       const query = new URLSearchParams(window.location.search);
       // The natural-terrain test island (lib/game/fixtures/terrainFixture.ts), never the shipped one.
       if (query.get("fixture") === "terrain") setVillageDoc(terrainFixtureDoc());
-      // David's drawn world-map draft (terrain sizing pass, 2026-10-09).
-      else if (query.get("fixture") === "v2") setVillageDoc(terrainV2DraftDoc());
+      // David's drawn world-map draft (terrain sizing pass, 2026-10-09). `&proposals=1` walks it with the placement
+      // proposals accepted (lib/game/proposals.ts), as they would stand once David accepts them in /lab/map.
+      else if (query.get("fixture") === "v2") {
+        const doc = terrainV2DraftDoc();
+        setVillageDoc(query.get("proposals") === "1" ? { ...doc, objects: acceptProposed(parseVillage(doc).objects, PROPOSALS.filter(p => p.target === "world-map").flatMap(p => p.objects)) } : doc);
+      }
       else if (query.get("draft") === "1") {
         const raw = window.localStorage.getItem(PAINTER_DRAFT_KEY);
         if (raw) setVillageDoc(JSON.parse(raw) as VillageDoc);

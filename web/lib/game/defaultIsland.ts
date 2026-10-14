@@ -3,6 +3,7 @@ import {
 } from "./grid";
 import { FURNITURE, studySolid, type Furniture } from "@/lib/study/seats";
 import { objectsOf, village, villageSpawnPoint, type MapObject, type Village } from "./villageMap";
+import { barrierBoxes, barrierFootprint, barrierPlacements, inBarrier } from "./barriers";
 
 /**
  * Default island: the village core (ledger rows 155, 156), loaded from the
@@ -189,6 +190,7 @@ export function objectFootprint(o: MapObject): { hw: number; hd: number; cx: num
     return half ? { hw: half[0] * k, hd: half[1] * k, cx: 0, cz: 0 } : null;
   }
   if (o.kind === "bridge") return { hw: BRIDGE_DECK_HALF[0], hd: BRIDGE_DECK_HALF[1], cx: 0, cz: 0 };
+  if (o.kind === "barrier") return barrierFootprint(o.model, o.scale ?? 1);
   if (o.kind === "study" && o.model && o.model in FURNITURE) {
     const [cx, cz, hw, hd] = FURNITURE[o.model as Furniture].solid[0];
     return { hw, hd, cx, cz };
@@ -274,6 +276,8 @@ export function islandOf(v: Village): VillageIsland {
   const decks = [wharfDeck(v), ...bridgeDecks(v)].filter(d => d !== null);
   const rails = bridgeRails(v);
   const solids = landmarks(v).filter(l => l.half);
+  // The natural barriers standing at this drop (lib/game/barriers.ts): solid like a building, never jumped.
+  const barriers = barrierBoxes(barrierPlacements(v));
   const props = propsOf(v).flatMap(o => {
     const f = propFootprint(o);
     return f ? [{ x: o.x, z: o.z, yaw: o.yaw ?? 0, hw: f[0], hd: f[1], top: (PROP_TOP[o.model!] ?? Infinity) * (o.scale ?? 1) }] : [];
@@ -292,7 +296,8 @@ export function islandOf(v: Village): VillageIsland {
   const wet = (x: number, z: number) => !onDeck(x, z) && !isGroundAtWorld(map, x, z);
   /** Top of the solid at a point: a prop's measured top, Infinity for buildings, study furniture and trunks, -Infinity for none. */
   const solidTop = (x: number, z: number) => {
-    if (solids.some(l => Math.abs(x - l.x) < l.half![0] && Math.abs(z - l.z) < l.half![1]) || eventSolids.some(r => inRect(x, z, r)) || rails.some(r => inRect(x, z, r))) return Infinity;
+    if (solids.some(l => Math.abs(x - l.x) < l.half![0] && Math.abs(z - l.z) < l.half![1]) || eventSolids.some(r => inRect(x, z, r)) || rails.some(r => inRect(x, z, r))
+      || inBarrier(barriers, x, z)) return Infinity;
     let top = -Infinity, trunk = false;
     const bx = Math.floor(x / 4), bz = Math.floor(z / 4);
     for (let oz = -1; oz <= 1; oz++) for (let ox = -1; ox <= 1; ox++) {

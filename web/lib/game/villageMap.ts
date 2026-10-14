@@ -29,6 +29,8 @@ import {
 export const OBJECT_KINDS = [
   "spawn", "landmark", "fitting", "missions", "bridge", "lamp", "fence", "bench", "rock",
   "tree", "bush", "flower", "study", "anchor", "gather", "puddle", "bug", "shell", "bottle",
+  // A natural barrier (lib/game/barriers.ts): `model` names which; it stands, solid, until its drop opens the way.
+  "barrier",
 ] as const;
 export type ObjectKind = (typeof OBJECT_KINDS)[number];
 

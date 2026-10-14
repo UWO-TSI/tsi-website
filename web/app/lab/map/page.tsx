@@ -79,6 +79,8 @@ import { classifyWater, WATER_CLASS } from "@/lib/game/fishingSpots";
 import { SLOPE_RUN, cellsInPolygon, cliffDab, nextObjectId, organicCell, padUnder, slopeDab, snapPlacement, snapshotCells, softDab, waterDistance, type CellSnapshot, type OrganicOp } from "@/lib/game/painterTools";
 import { RESIDENT_ANCHORS, SHARED_SPACING } from "@/lib/content/residents";
 import { FURNITURE, type Furniture } from "@/lib/study/seats";
+import { BARRIERS, BARRIER_MODELS, isBarrierModel } from "@/lib/game/barriers";
+import { PROPOSALS, acceptProposed, pendingOf, type ProposedObject } from "@/lib/game/proposals";
 import { DEFAULT_TABLES } from "@/lib/study/tables";
 
 const mono = "ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -184,9 +186,10 @@ const OBJECT_STYLE: Record<ObjectKind, { color: string; r: number; label: string
   bug: { color: "#f0e36c", r: 0.22, label: "bug spot" },
   shell: { color: "#fff5e0", r: 0.22, label: "shell" },
   bottle: { color: "#7fe0d8", r: 0.25, label: "bottle spot" },
+  barrier: { color: "#6b5a4a", r: 0.6, label: "natural barrier" },
 };
 /** Placement palette order. */
-const PALETTE: readonly ObjectKind[] = ["landmark", "tree", "bush", "flower", "rock", "bench", "fence", "lamp", "bridge", "study", "anchor", "gather", "spawn", "fitting", "missions", "puddle", "bug", "shell", "bottle"];
+const PALETTE: readonly ObjectKind[] = ["landmark", "tree", "bush", "flower", "rock", "bench", "fence", "lamp", "bridge", "barrier", "study", "anchor", "gather", "spawn", "fitting", "missions", "puddle", "bug", "shell", "bottle"];
 const ROCK_MODELS = Object.keys(PROP_FOOTPRINT).filter((m) => m.startsWith("rock-"));
 const FENCE_MODELS = Object.keys(PROP_FOOTPRINT).filter((m) => m.startsWith("fence-"));
 const BUG_BIOMES = ["water_edge", "ground"];
@@ -462,7 +465,10 @@ function terrainRaster(map: IslandMap, waterClass: Uint8Array): HTMLCanvasElemen
 
 const keyOf = (o: MapObject) => `${o.kind}:${o.id}`;
 /** Kinds the game turns by their yaw (buildings too, since 2026-10-10); nature takes its turn from its seed. */
-const TURNS = (o: MapObject) => ["bench", "rock", "fence", "bridge", "study", "missions", "landmark"].includes(o.kind);
+const TURNS = (o: MapObject) => ["bench", "rock", "fence", "bridge", "study", "missions", "landmark", "barrier"].includes(o.kind);
+/** Proposals (lib/game/proposals.ts) for the map this painter edits: shown ghosted, accepted into the document. */
+const PROPOSALS_HERE = () => PROPOSALS.filter((p) => p.target === (TARGET === "world" ? "world-map" : "village-map"));
+const PROPOSAL_COLOR = "#7fd1c0";
 const deg = (rad = 0) => Math.round((rad * 180) / Math.PI * 10) / 10;
 
 /** Local outline (before yaw) of an object's footprint, for drawing and hit tests; null = drawn as a dot. */
@@ -539,6 +545,20 @@ export default function MapLab() {
   }, []);
 
   const selectedObject = objects.find((o) => keyOf(o) === selected) ?? null;
+
+  // Proposals for this map (lib/game/proposals.ts): what isn't in the document yet, ghosted until accepted.
+  const [proposalShown, setProposalShown] = useState(true);
+  const proposals = PROPOSALS_HERE().map((p) => ({ p, items: pendingOf(p, objects) })).filter((x) => x.items.length);
+  const ghostKey = proposals.map((x) => x.items.map(keyOf).join()).join("|");
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by value: rebuilt every render.
+  const ghosts = useMemo(() => (proposalShown ? proposals.flatMap((x) => x.items) : []), [ghostKey, proposalShown]);
+  /** Accept proposed objects into the document (undoable; Save writes them). */
+  const acceptItems = useCallback((items: readonly ProposedObject[]) => {
+    commit();
+    const w = world();
+    w.objects = acceptProposed(w.objects, items);
+    bump();
+  }, [bump]);
 
   // Health, the budget and the sea/river/pond classes: a beat after the last edit (a 256² map takes a moment),
   // not on every brush step. `version` stands for mutations inside `map`'s typed arrays, which the linter cannot see.
@@ -1024,6 +1044,37 @@ export default function MapLab() {
       if (named || isSel) text(o.kind === "anchor" ? `⚑ ${o.id}` : o.id.replace(/^study:/, ""), u, v - (outline ? 0 : 0.9), isSel ? "#ffd166" : "#fff");
     }
 
+    // Proposed objects, ghosted: a dashed outline and "+ id", until accepted (the panel's Proposal box).
+    ctx.save();
+    ctx.setLineDash([px(5), px(4)]);
+    for (const o of ghosts) {
+      const outline = objectOutline(o);
+      if (outline) {
+        outlinePath(o, outline);
+        ctx.fillStyle = PROPOSAL_COLOR;
+        ctx.globalAlpha = 0.22;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.lineWidth = px(2);
+        ctx.strokeStyle = PROPOSAL_COLOR;
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.arc(cellU(o.x), cellV(o.z), 0.5, 0, Math.PI * 2);
+        ctx.strokeStyle = PROPOSAL_COLOR;
+        ctx.lineWidth = px(2);
+        ctx.stroke();
+      }
+      // Its front (the model's −z), so the facing reads before accepting.
+      const [fx, fz] = turn(0, -(objectFootprint(o)?.hd ?? 0.6) - 0.4, o.yaw);
+      ctx.beginPath();
+      ctx.moveTo(cellU(o.x), cellV(o.z));
+      ctx.lineTo(cellU(o.x + fx), cellV(o.z + fz));
+      ctx.stroke();
+      text(`+ ${o.id.replace(/^barrier-/, "")}`, cellU(o.x), cellV(o.z), PROPOSAL_COLOR);
+    }
+    ctx.restore();
+
     // Compass: north is −x. In the game view that is the right edge, as on the minimap.
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.font = `bold 13px ${mono}`;
@@ -1033,7 +1084,7 @@ export default function MapLab() {
     ctx.fillText(flip ? "N ▶" : "◀ N", flip ? W * zoom - 6 : 6, (D * zoom) / 2);
     ctx.textAlign = "center";
     ctx.fillText(flip ? "▲ W (camera forward)" : "▼ W", (W * zoom) / 2, flip ? 12 : D * zoom - 12);
-  }, [map, props, annotations, objects, zoom, flip, toPx, waterClass, selected, health]);
+  }, [map, props, annotations, objects, zoom, flip, toPx, waterClass, selected, health, ghosts]);
 
   const blit = useCallback(() => {
     const cv = canvasRef.current;
@@ -1391,6 +1442,7 @@ export default function MapLab() {
       if (kind === "bench") extra = { model: "bench-wood" };
       if (kind === "fence") extra = { model: FENCE_MODELS.includes(placeModel) ? placeModel : FENCE_MODELS[0] };
       if (kind === "bug") extra = { model: BUG_BIOMES.includes(placeModel) ? placeModel : BUG_BIOMES[1] };
+      if (kind === "barrier") extra = { model: isBarrierModel(placeModel) ? placeModel : "forest-edge" };
       if (kind === "bridge") extra = { yaw: Math.PI / 2 };
       if (kind === "landmark" && TARGET === "world" && id !== "wharf" && (LANDMARK_INFO[id as LandmarkId]?.half?.[0] ?? 0) > 1) extra = { ...extra, scale: WORLD_BUILDING_SCALE };
       const [x, z] = snapFor(kind, id, wx, wz, extra.yaw, extra.scale);
@@ -1541,6 +1593,25 @@ export default function MapLab() {
             </div>
           )}
           {saveError && <div style={{ color: "#ff6b6b", marginBottom: 6, lineHeight: 1.4 }}>{saveError}</div>}
+          {proposals.map(({ p, items }) => (
+            <div key={p.title} style={{ border: `1px dashed ${PROPOSAL_COLOR}`, borderRadius: 4, padding: 8, marginBottom: 6 }}>
+              <div style={{ color: PROPOSAL_COLOR, marginBottom: 4 }}>proposal · {p.title} · {items.length} to accept</div>
+              {p.about && <div style={{ color: "#7d868e", lineHeight: 1.4, marginBottom: 6 }}>{p.about}</div>}
+              <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+                <button onClick={() => setProposalShown((v) => !v)} style={btn(proposalShown, { flex: 1 })}>{proposalShown ? "hide" : "show"}</button>
+                <button onClick={() => acceptItems(items)} style={btn(false, { flex: 1, borderColor: PROPOSAL_COLOR, color: PROPOSAL_COLOR })}>accept all</button>
+              </div>
+              <details>
+                <summary style={{ cursor: "pointer", color: "#7d868e" }}>one by one</summary>
+                {items.map((o) => (
+                  <div key={keyOf(o)} title={o.note} style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 3 }}>
+                    <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o.id.replace(/^barrier-/, "")} <span style={{ color: "#5c6670" }}>{o.model}</span></span>
+                    <button onClick={() => acceptItems([o])} style={btn(false, { padding: "2px 8px", color: PROPOSAL_COLOR })}>accept</button>
+                  </div>
+                ))}
+              </details>
+            </div>
+          ))}
           <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
             <button onClick={undo} disabled={!UNDO.length} style={btn(false, { flex: 1, opacity: UNDO.length ? 1 : 0.35 })}>↶ undo</button>
             <button onClick={redo} disabled={!REDO.length} style={btn(false, { flex: 1, opacity: REDO.length ? 1 : 0.35 })}>↷ redo</button>
@@ -1790,9 +1861,9 @@ export default function MapLab() {
                   )) : <option value="">all placed</option>}
                 </select>
               )}
-              {(placeKind === "tree" || placeKind === "rock" || placeKind === "fence" || placeKind === "bug") && (
+              {(placeKind === "tree" || placeKind === "rock" || placeKind === "fence" || placeKind === "bug" || placeKind === "barrier") && (
                 <select value={placeModel} onChange={(e) => setPlaceModel(e.target.value)} style={{ ...field, width: "100%", marginBottom: 6 }}>
-                  {(placeKind === "tree" ? TREE_NAMES.map((n, i) => [String(i), n]) : (placeKind === "rock" ? ROCK_MODELS : placeKind === "fence" ? FENCE_MODELS : BUG_BIOMES).map((m) => [m, m])).map(([v, n]) => (
+                  {(placeKind === "tree" ? TREE_NAMES.map((n, i) => [String(i), n]) : placeKind === "barrier" ? BARRIER_MODELS.map((m) => [m, BARRIERS[m].label]) : (placeKind === "rock" ? ROCK_MODELS : placeKind === "fence" ? FENCE_MODELS : BUG_BIOMES).map((m) => [m, m])).map(([v, n]) => (
                     <option key={v} value={v}>{n}</option>
                   ))}
                 </select>
@@ -1819,7 +1890,7 @@ export default function MapLab() {
                     <input type="number" step={0.1} value={selectedObject.z} onChange={(e) => updateObject(selected!, { z: Number(e.target.value) })} style={field} />
                     {TURNS(selectedObject) ? <><span>yaw°</span>
                       <input type="number" step={15} value={deg(selectedObject.yaw)} onChange={(e) => updateObject(selected!, { yaw: (Number(e.target.value) * Math.PI) / 180 })} style={field} /></> : <><span /><span style={{ color: "#5c6670" }}>faces the camera</span></>}
-                    {selectedObject.kind === "rock" ? <><span>scale</span><input type="number" step={0.1} min={0.3} max={3} value={selectedObject.scale ?? 1} onChange={(e) => updateObject(selected!, { scale: Number(e.target.value) })} style={field} /></> : <><span /><span /></>}
+                    {selectedObject.kind === "rock" || selectedObject.kind === "barrier" ? <><span>scale</span><input type="number" step={0.1} min={0.3} max={3} value={selectedObject.scale ?? 1} onChange={(e) => updateObject(selected!, { scale: Number(e.target.value) })} style={field} /></> : <><span /><span /></>}
                     {(selectedObject.kind === "tree" || selectedObject.kind === "bush" || selectedObject.kind === "flower") && (
                       <>
                         <span>seed</span>
@@ -1829,9 +1900,9 @@ export default function MapLab() {
                       </>
                     )}
                   </div>
-                  {(selectedObject.kind === "rock" || selectedObject.kind === "fence" || selectedObject.kind === "bug") && (
+                  {(selectedObject.kind === "rock" || selectedObject.kind === "fence" || selectedObject.kind === "bug" || selectedObject.kind === "barrier") && (
                     <select value={selectedObject.model ?? ""} onChange={(e) => updateObject(selected!, { model: e.target.value })} style={{ ...field, width: "100%", marginTop: 6 }}>
-                      {(selectedObject.kind === "rock" ? ROCK_MODELS : selectedObject.kind === "fence" ? FENCE_MODELS : BUG_BIOMES).map((m) => <option key={m} value={m}>{m}</option>)}
+                      {(selectedObject.kind === "rock" ? ROCK_MODELS : selectedObject.kind === "fence" ? FENCE_MODELS : selectedObject.kind === "barrier" ? BARRIER_MODELS : BUG_BIOMES).map((m) => <option key={m} value={m}>{m}</option>)}
                     </select>
                   )}
                   <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
