@@ -36,6 +36,8 @@ for (const shot of SHOTS) {
   } catch {} }, [JSON.stringify(LOOK), cam && [rad(cam[0]), rad(cam[1]), cam[2]], opt.lite === "1" ? "true" : "false", opt.smooth === "1"]);
   const page = await ctx.newPage();
   page.on("pageerror", e => console.log("pageerror", name, e.message.slice(0, 300)));
+  // Shader compile and link failures, and any other console error the frame raises (the network's are left out).
+  page.on("console", m => { if ((m.type() === "error" || /THREE\.WebGL|Shader Error|ERROR: 0:/.test(m.text())) && !/Failed to load resource|supabase|401|403|404|503/i.test(m.text())) console.log("console", m.type(), name, m.text().slice(0, 400)); });
   await page.goto(`${HOST}${url}`, { waitUntil: "domcontentloaded", timeout: 300000 });
   await page.waitForSelector("canvas", { timeout: 300000 });
   if (url.startsWith("/lab/island") || url.startsWith("/student/dashboard")) {
