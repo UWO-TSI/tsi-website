@@ -1,9 +1,11 @@
 # STATE.md — where things actually are
 
 > Read this before `AGENT_LOG.md`. It answers "which branch, what's live, what's next"
-> in one page. Update it whenever direction changes. Last updated **2026-10-13**.
+> in one page. Update it whenever direction changes. Last updated **2026-10-14**.
 
 ## v1 "Arrival" build: lanes and ownership (2026-10-13, coordinator session on the Mac mini)
+
+**All eight v1 lanes are merged to `main` (2026-10-14, 8809c517; perf baseline reset at 0fd7d615).** Prod has the `v1_drop_copy` and `traditions` migrations. Waiting on David: Supabase Pro, accepting the proposals in `/lab/map` (`web/data/proposals/v1-barriers.json`, `v1-campfire.json`, the rock layer), and the draft lines (Bram, Rosa, Wren, the door answers).
 
 **v1 ships Halloween, Oct 31.** The plan is `specs/v1-drop.md`, decided with David. New-world checkpoint: Oct 24. Sessions on other devices: read this before starting, pull `main` often, and push small merges. The coordinator merges with whatever lands on `main`.
 
