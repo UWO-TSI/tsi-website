@@ -1,0 +1,157 @@
+"use client";
+
+/**
+ * The reflection creator (specs/v1-drop.md §1.3; David's sketch, references/ui/creator/2026-10-13-reflection-creator-sketch.png):
+ * the left two-thirds is the scene (the boat's edge on a diagonal, the back of your head leaning over it, your reflection
+ * in the water), the options panel sits right of it, the category rail runs down the far right edge, and a "Yes" pill
+ * floats on the water at the bottom. On a phone the scene is on top with the pill on its water, the options under it and
+ * the rail a tab row along the bottom.
+ *
+ * The creator's data and controls are the Li'l Lads creator's (CreatorControls: the catalogue's categories, tiles,
+ * swatches and face sliders). Each change sends a ripple across the water that rewrites that feature (the scene's look
+ * catches up as the ripple passes your face), and counts as a choice: each sharpens the world a little (the sequence's
+ * clarity), Yes clears it. The same canvas shows the aboard beat before it, the panels out of the way.
+ */
+import { useEffect, useRef, useState } from "react";
+import { Canvas } from "@react-three/fiber";
+import * as THREE from "three";
+import { Field } from "@/components/gui";
+import { SignInText } from "@/components/gui/SignIn";
+import { mentionsSignIn } from "@/lib/game/signIn";
+import { inTopDialog, useWorldDialog } from "@/lib/game/useWorldDialog";
+import { STARTER_PARTS, type CharacterLook } from "@/lib/game/character/look";
+import { CATEGORIES, type Category } from "@/lib/game/character/creatorCategories";
+import { CategoryRail, CreatorOptions, useNameCheck } from "@/components/game/character/CreatorControls";
+import { arrivalRun } from "@/lib/game/arrival/arrivalStore";
+import { BOAT_LINES, BRAM, YES_LABEL } from "@/lib/game/arrival/lines";
+import type { ArrivalPhase } from "@/lib/game/arrival/sequence";
+import { AudioManager } from "@/lib/game/audio";
+import ReflectionScene, { faceOverWater, type Ripple } from "./ReflectionScene";
+import cc from "@/components/game/character/CharacterCreator.module.css";
+import s from "./ReflectionCreator.module.css";
+
+const STARTERS: ReadonlySet<string> = new Set(STARTER_PARTS);
+/** The ripple reaches your face's reflection this long after a change: the scene's look is rewritten then. */
+const REWRITE_MS = 190;
+/** Slider drags count as one choice per this long. */
+const CHOICE_EVERY_MS = 700;
+
+export default function ReflectionCreator({ phase, initial, askName, onYes }: {
+  phase: ArrivalPhase;
+  initial: CharacterLook;
+  askName?: { current: string };
+  /** Yes: the look (and the name, if typed) to keep. */
+  onYes: (look: CharacterLook, name: string | null) => void;
+}) {
+  const creating = phase === "creator";
+  const root = useWorldDialog<HTMLElement>(true, () => {}, undefined, true);
+  const [look, setLook] = useState(initial);
+  // What the water shows: it follows the panel's look as each ripple passes over your face.
+  const [shown, setShown] = useState(initial);
+  const [catId, setCatId] = useState(CATEGORIES[0].id);
+  const cat = CATEGORIES.find(c => c.id === catId)!;
+  const naming = useNameCheck(askName);
+  const ripples = useRef<Ripple[]>([]);
+  const clock = useRef(0);
+  const lastChoice = useRef(0);
+  const sceneRef = useRef<HTMLDivElement>(null);
+  const view = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [yes, setYes] = useState(false);
+
+  // Where the scene shows once the panels are in: the scene column's rect within the canvas (which fills the screen).
+  useEffect(() => {
+    const measure = () => {
+      const el = sceneRef.current, host = root.current;
+      if (!el || !host) return;
+      const a = el.getBoundingClientRect(), b = host.getBoundingClientRect();
+      view.current = { x: a.left - b.left, y: a.top - b.top, w: a.width, h: a.height };
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (sceneRef.current) ro.observe(sceneRef.current);
+    return () => ro.disconnect();
+  }, [root]);
+
+  // Bram's words over the scene: aboard his two lines, then the prompt as you lean over, a word as it comes back, Yes.
+  const [second, setSecond] = useState(false), [coming, setComing] = useState(false);
+  useEffect(() => {
+    if (phase !== "aboard") return;
+    const t = window.setTimeout(() => setSecond(true), 1900);
+    return () => window.clearTimeout(t);
+  }, [phase]);
+  const said = phase === "aboard" ? BOAT_LINES.aboard[second ? 1 : 0] : phase === "creator" ? (coming ? BOAT_LINES.coming : BOAT_LINES.reflection) : phase === "clearing" ? BOAT_LINES.yes : null;
+  useEffect(() => {
+    if (!said) return;
+    AudioManager.playBlip();
+    const blips = [140, 300].map(ms => window.setTimeout(() => AudioManager.playBlip(), ms));
+    return () => blips.forEach(window.clearTimeout);
+  }, [said]);
+
+  // A change: a drop off your chin lands on your face's reflection, the ring runs out, the water rewrites you as it passes.
+  const change = () => {
+    const a = arrivalRun.current, nowMs = performance.now();
+    if (a && nowMs - lastChoice.current > CHOICE_EVERY_MS) {
+      lastChoice.current = nowMs;
+      a.choices++;
+      if (a.choices === 3) setComing(true);
+    }
+    const face = faceOverWater();
+    ripples.current.push({ x: face.x + (Math.random() - 0.5) * 0.08, z: face.z + (Math.random() - 0.5) * 0.08, t: clock.current, strength: 1 });
+    if (ripples.current.length > 6) ripples.current.shift();
+    AudioManager.playSFX("blip2", { rate: 0.55 + Math.random() * 0.1, gain: 0.35 });
+  };
+  useEffect(() => {
+    if (look === shown) return;
+    const t = window.setTimeout(() => setShown(look), REWRITE_MS);
+    return () => window.clearTimeout(t);
+  }, [look, shown]);
+
+  const openCat = (c: Category, focus = false) => {
+    setCatId(c.id);
+    if (focus) root.current?.querySelector<HTMLElement>(`[data-cat="${c.id}"]`)?.focus();
+  };
+  const step = (by: number) => openCat(CATEGORIES[(CATEGORIES.indexOf(cat) + by + CATEGORIES.length) % CATEGORIES.length], true);
+  const live = useRef(step);
+  useEffect(() => { live.current = step; });
+  useEffect(() => {
+    const on = (e: Event) => { if (inTopDialog(root.current)) live.current((e as CustomEvent<{ step: number }>).detail.step); };
+    window.addEventListener("tsi:menu-tab", on);
+    return () => window.removeEventListener("tsi:menu-tab", on);
+  }, [root]);
+
+  const confirm = () => {
+    if (yes) return;
+    setYes(true);
+    setShown(look);
+    AudioManager.playSFX("confirm");
+    onYes(look, naming.wanted);
+  };
+  return <section ref={root} tabIndex={-1} className={s.root} role="dialog" aria-modal="true" aria-label="Your reflection in the water" data-phase={phase} data-testid="reflection-creator">
+    <Canvas className={s.canvas} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={[1, 2]} camera={{ fov: 40, near: 0.05, far: 200 }}
+      onCreated={({ gl }) => {
+        gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace;
+        if (process.env.NODE_ENV !== "production") (window as unknown as { __reflectGl?: THREE.WebGLRenderer }).__reflectGl = gl;
+      }}>
+      <ReflectionScene look={shown} ripples={ripples} clock={clock} view={view} />
+    </Canvas>
+    <div ref={sceneRef} className={s.scene}>
+      {said && <p key={said} className={s.bubble} role="status"><b>{BRAM.name}</b><span>{said}</span></p>}
+      {creating && <button type="button" className={s.yes} onClick={confirm} disabled={yes} data-testid="reflection-yes">{YES_LABEL}</button>}
+    </div>
+    <div className={`${cc.panel} ${s.panel}`} role="tabpanel" id="creator-panel" aria-labelledby={`creator-tab-${cat.id}`} aria-hidden={!creating} inert={!creating}>
+      <header className={cc.panelHead}><h2 className={cc.title}>{cat.label}</h2></header>
+      <div className={cc.body}>
+        <CreatorOptions cat={cat} look={look} setLook={setLook} mode="create" owned={STARTERS} onChange={change} />
+      </div>
+      {askName && <footer className={cc.foot}>
+        <Field label="Your name on the island" hint="Letters and numbers; everyone in the world sees it." value={naming.name} maxLength={24}
+          onChange={e => naming.type(e.target.value)} error={naming.nameNote && !naming.nameNote.ok && !mentionsSignIn(naming.nameNote.text) ? naming.nameNote.text : undefined} className={cc.name} />
+        {naming.nameNote?.ok && <p className={cc.nameOk} role="status">{naming.nameNote.text}</p>}
+        {naming.nameNote && !naming.nameNote.ok && mentionsSignIn(naming.nameNote.text) && <p className={cc.nameOk} role="status"><SignInText text={naming.nameNote.text} /></p>}
+      </footer>}
+    </div>
+    <div className={s.railWrap} aria-hidden={!creating} inert={!creating}>
+      <CategoryRail cats={CATEGORIES} cat={cat} onOpen={openCat} className={`${cc.rail} ${s.rail}`} />
+    </div>
+  </section>;
+}

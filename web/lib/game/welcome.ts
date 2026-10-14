@@ -1,22 +1,25 @@
 /**
- * First login (row 211, hud-first-login §6): the character creator, the
- * arrival at the wharf, the HQ lead's greeting in a dialogue box, then chapter
- * 1's objective. The boat trip itself is arrival-wharf.md's; until it lands
- * the arrival is a short dock fade.
+ * First login (row 211; specs/v1-drop.md §1): the arrival, once per account. Underwater, Bram's boat, your reflection in
+ * the water as the creator, the golden-hour crossing and the walk-along tutorial (components/game/arrival), then
+ * chapter 1's objective.
  *
- * Who gets it: a signed-in member who hasn't started chapter 1 (the plot
- * isn't claimed) and hasn't been greeted on this device. A hired applicant whose look
- * carried over skips the creator but still arrives and is greeted.
+ * Who gets it: a signed-in member whose account hasn't arrived (lib/game/arrival/arrivalFlag.ts) and who hasn't started
+ * chapter 1 (the plot isn't claimed). A hired applicant whose look carried over still arrives and sees it in the
+ * water. Anyone else without a look gets the plain creator. `replay` (dev, `?arrival=1`) plays it regardless.
  */
-export type WelcomeStep = "wait" | "creator" | "welcome" | "none";
+export type WelcomeStep = "wait" | "creator" | "arrival" | "none";
 
-export function welcomeStep(s: { lookLoaded: boolean; lookSaved: boolean; signedIn: boolean; progressionLoaded: boolean; chapterFresh: boolean; welcomed: boolean }): WelcomeStep {
+export function welcomeStep(s: { lookLoaded: boolean; lookSaved: boolean; signedIn: boolean; progressionLoaded: boolean; chapterFresh: boolean;
+  /** The account's arrival flag: null while it loads (or signed out). */
+  arrived: boolean | null; replay?: boolean }): WelcomeStep {
   if (!s.lookLoaded) return "wait";
-  if (!s.lookSaved) return "creator";
+  if (s.replay) return "arrival";
   // Members only (the island needs a sign-in in production; signed-out benches skip it).
-  if (s.welcomed || !s.signedIn) return "none";
-  if (!s.progressionLoaded) return "wait";
-  return s.chapterFresh ? "welcome" : "none";
+  if (s.signedIn) {
+    if (!s.progressionLoaded || s.arrived === null) return "wait";
+    if (!s.arrived && s.chapterFresh) return "arrival";
+  }
+  return s.lookSaved ? "none" : "creator";
 }
 
 const WELCOMED = "tsi.welcomed.v1";
@@ -49,6 +52,3 @@ export const HQ_LEAD = {
     "Come up to HQ and claim it. It's the big house at the top of the path. I'll have the paperwork ready!",
   ],
 } as const;
-
-/** Where Wren waits: a step up the wharf from the arrival spot and to its right on screen (+x is screen left), facing it. */
-export const LEAD_OFFSET: [number, number] = [-1.1, 1.7];
