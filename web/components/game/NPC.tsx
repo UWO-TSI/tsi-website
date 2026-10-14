@@ -540,7 +540,7 @@ function Figure({ persona, day, look, gather, home, seed, registry, island }: {
     requestTalk(persona.id, true);
   };
   return <group ref={group}>
-    <group ref={visual} onClick={click} onPointerOver={hover(true)} onPointerOut={hover(false)}>
+    <group ref={visual} userData={{ pick: persona.display_name }} onClick={click} onPointerOver={hover(true)} onPointerOut={hover(false)}>
       <Suspense fallback={null}><Character look={look} motion={motion} walkSpeed={RESIDENT_STRIDE} /></Suspense>
     </group>
     <Html calculatePosition={labelPoint} position={[0, CHARACTER_HEIGHT + 0.3, 0]} zIndexRange={[30, 0]} style={{ pointerEvents: "none" }}>

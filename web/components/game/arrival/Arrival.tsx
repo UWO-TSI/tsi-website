@@ -21,8 +21,7 @@ import { worldNow } from "@/lib/game/worldClock";
 import { myTrip, tripChanged } from "@/lib/game/myTrip";
 import { TRIP, skipCrossing } from "@/lib/game/boatTrip";
 import { ARRIVAL_TIMES, skipArrival, startArrival, stepArrival, type ArrivalPhase } from "@/lib/game/arrival/sequence";
-import { arrivalChanged, arrivalRun, readArrival, resetArrival, subscribeArrival, useTutorialQuest } from "@/lib/game/arrival/arrivalStore";
-import QuestTracker from "@/components/game/QuestTracker";
+import { arrivalChanged, arrivalRun, readArrival, resetArrival, subscribeArrival } from "@/lib/game/arrival/arrivalStore";
 import ReflectionCreator from "./ReflectionCreator";
 import s from "./Arrival.module.css";
 
@@ -62,8 +61,6 @@ export default function Arrival({ play, look, askName, touch, keys, onCross, onS
 }) {
   const key = useSyncExternalStore(subscribeArrival, readArrival, () => "");
   const phase = key ? (key.split("|")[0] as ArrivalPhase) : null;
-  // The walk-along's to-do list, top right (the HUD's quest tracker carries it once the slim HUD lands: game/hud-esc).
-  const quest = useTutorialQuest({ bag: keys.bag, touch });
   const mist = useRef<HTMLDivElement>(null);
   const skipAt = useRef<number | null>(null);
   const crossed = useRef(false);
@@ -176,7 +173,6 @@ export default function Arrival({ play, look, askName, touch, keys, onCross, onS
       {glyph.key === "wheel" ? <Fish size={18} aria-hidden /> : <BookOpen size={18} aria-hidden />}
       <span>{glyph.key === "wheel" ? (touch ? "Your tools: pick the rod" : "Hold for your tools") : "What you've collected"}</span>
     </div>}
-    {phase === "tutorial" && <QuestTracker quest={quest} />}
     {phase === "tutorial" && <button type="button" className={s.leave} onClick={() => { arrivalRun.signals.toured = true; }} data-testid="arrival-leave-tour">Skip the walk</button>}
   </div>;
 }

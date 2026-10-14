@@ -182,6 +182,50 @@ export const readCapture = () => capture.state;
 /** The Esc that ended the lock is the browser's; it closes nothing in the game (a later Esc does). */
 export const escapeEndedCapture = (now = performance.now()) => capture.state === "captured" || now - capture.unlockedAt < 250;
 
+/**
+ * Whether the end of the lock opens the UI view (Esc 1, lib/game/escMenu.ts): mouse-look ended by the
+ * browser (Esc, the window losing focus), never a release the game asked for (`selfExit`: a sheet or a player's card
+ * opening, the right-click cursor, the setting).
+ */
+export const lockEndPauses = (prev: CaptureState, selfExit: boolean) => prev === "captured" && !selfExit;
+
+// ── The aim dot ────────────────────────────────────────────────────────
+/**
+ * Where a click under mouse-look aims outside combat (playtest round 1, decision 3), in normalised device y: centred
+ * across and a little above the screen centre, which is your own head (the rig looks 1.5 ahead of you at chest
+ * height). Its ray reaches someone standing about 2 to 5 units ahead at the default view; tilting the camera up or
+ * zooming out reaches further. The ruins keep the centred crosshair (`crosshairAim`).
+ */
+export const AIM_Y = 0.15;
+/** The name a clickable thing carries (`userData.pick`: a player's hit capsule, a resident's body), from it or a parent; "" for none, null for nothing. */
+export function pickName(o: THREE.Object3D | null): string | null {
+  if (!o) return null;
+  for (let at: THREE.Object3D | null = o; at; at = at.parent) if (typeof at.userData.pick === "string") return at.userData.pick;
+  return "";
+}
+/** What's under the aim dot now: a name, "" for something clickable without one, null for nothing (the HUD's dot reads it). */
+let aimed: string | null = null;
+const aimListeners = new Set<() => void>();
+export function setAimTarget(target: string | null) {
+  if (aimed === target) return;
+  aimed = target;
+  aimListeners.forEach(l => l());
+}
+export const readAimTarget = () => aimed;
+export function subscribeAim(listener: () => void) {
+  aimListeners.add(listener);
+  return () => { aimListeners.delete(listener); };
+}
+
+/**
+ * Resume (the system menu's button): the lock is asked for again once the menu has gone,
+ * within the click's user activation. useOrbitInput reads it.
+ */
+export const resume = { at: -Infinity };
+export function requestResume() { resume.at = performance.now(); }
+/** How long after Resume the lock is still asked for (the closing sheets' exit animation, well inside Chrome's 5 s of user activation). */
+export const RESUME_MS = 1500;
+
 /** A drawn shape under mouse-look (classes v2): while set, the locked mouse's movement traces the shape instead of turning the camera. */
 export const pen: { move: ((dx: number, dy: number) => void) | null } = { move: null };
 

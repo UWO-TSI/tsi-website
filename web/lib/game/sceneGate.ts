@@ -1,6 +1,6 @@
 /**
  * Going through a door (specs/polish/interiors.md deliverable 5): the fade lifts only when the room behind it is
- * ready, and Escape steps back out of a room once nothing else is open. Pure, so the order is tested.
+ * ready, and what Escape does (the next Esc layer once nothing else is open). Pure, so the order is tested.
  */
 
 /** Frames the new scene renders, loaded, under the fade before it lifts (shaders compile, textures upload). */
@@ -17,14 +17,17 @@ export function warmupFrame(frames: number, loaded: boolean, timedOut: boolean):
 }
 export const warmedUp = (frames: number) => frames >= WARMUP_FRAMES;
 
-export type EscapeAction = "none" | "close" | "exit";
+export type EscapeAction = "none" | "close" | "layer";
 /**
- * What Escape does, in order: nothing while the browser's own Escape ended mouse-look or a door is mid-fade; close
- * what's open (a sheet or dialog, a decorating selection, the reveal card); and only in a room with nothing open,
- * leave it by its door.
+ * What an Escape keydown does, in order: nothing while a door is mid-fade, or when the browser's own Escape just ended
+ * mouse-look (the end of the lock opened the UI view: lib/game/escMenu.ts); close what's open (a decorating selection,
+ * the reveal card; a sheet or dialog takes its own Escape); otherwise step to the next Esc layer, indoors as well
+ * (David, playtest round 1: a room is left by its door). An Escape that reaches the page with the mouse still held
+ * (fullscreen with the keyboard locked) steps on too.
  */
-export function escapeAction(s: { captureEnded: boolean; fading: boolean; open: boolean; inside: boolean }): EscapeAction {
-  if (s.captureEnded || s.fading) return "none";
-  if (s.open) return "close";
-  return s.inside ? "exit" : "close";
+export function escapeAction(s: { captureEnded: boolean; locked: boolean; fading: boolean; open: boolean }): EscapeAction {
+  if (s.fading) return "none";
+  if (s.locked) return "layer";
+  if (s.captureEnded) return "none";
+  return s.open ? "close" : "layer";
 }

@@ -1,25 +1,22 @@
 "use client";
 
 /**
- * The cream top cluster (hud-first-login §2, row 124): play coins, level and
- * XP, the island clock and weather, the mailbox, then the caller's buttons
- * (sound, settings). Coins count up and XP fills instead of jumping; a gain
- * pings. Coins only, never an exchange rate (lib/economy.ts).
+ * The cream top cluster (hud-first-login §2, row 124): play coins and the level
+ * with its XP, then the caller's buttons (the gear). Coins count up and XP fills
+ * instead of jumping; a gain pings. Coins only, never an exchange rate
+ * (lib/economy.ts).
  *
- * The clean HUD (`full` false, row 283): nothing shows while exploring; coins
- * slide in when they change, XP on a gain, the clock on the hour and mail when a
- * letter arrives, then fade. The full HUD (the key held, the pause view, the
- * setting) shows everything. The caller's buttons stay mounted while hidden: the
- * sound button is the ambience's owner (useAmbience stops all sound on unmount).
- *
- * `buttons` (default `full`): the mail and the caller's buttons stay while the
- * chips flash, for a phone's folded HUD (world audit item 11).
+ * The minimal HUD (`full` false; rows 283 and playtest round 1): nothing shows
+ * while you play; coins slide in when they change and XP on a gain, then fade.
+ * The full one (the UI view, Esc 1; the HUD key held; the setting) shows them,
+ * and the caller's buttons (`buttons`, default `full`). The island clock is
+ * `HudClock`, under the minimap; mail is in the UI view's dock.
  *
  * `hidden`: a cinematic moment (talking, the greeting, the boat trip; world
  * audit item 7), where the whole cluster fades out, flashes included.
  */
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { CloudFog, CloudRain, Mail, Moon, Snowflake, Sun, Sunrise, Sunset, Wind } from "lucide-react";
+import { CloudFog, CloudRain, Moon, Snowflake, Sun, Sunrise, Sunset, Wind } from "lucide-react";
 import { COINS } from "@/lib/economy";
 import { levelProgress } from "@/lib/combat/progression";
 import { useHud } from "@/lib/game/hudStore";
@@ -94,10 +91,22 @@ const TIME = new Intl.DateTimeFormat("en-US", { timeZone: "America/Toronto", hou
 const DATE = new Intl.DateTimeFormat("en-US", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric" });
 
 const up = (a: unknown, b: unknown) => (b as number) > (a as number);
-const onTheHour = (_: unknown, b: unknown) => (b as number) % 60 === 0;
 
-export default function TopCluster({ weather, phase, unread, mailKey, onMail, onWallet, walletKey, full = true, buttons = full, hidden = false, children }: {
-  weather: IslandWeather; phase: IslandPhase; unread: number; mailKey: string; onMail: () => void; full?: boolean; buttons?: boolean; hidden?: boolean; children?: ReactNode;
+/**
+ * The island's time and its sky (playtest round 1: "time sun"), always on under the minimap: the hour on the world
+ * clock and the weather or the sun's place in the day, the date on hover.
+ */
+export function HudClock({ weather, phase, className }: { weather: IslandWeather; phase: IslandPhase; className?: string }) {
+  const minute = useSyncExternalStore(subscribeMinute, minuteNow, () => 0);
+  if (minute <= 0) return null;
+  const when = new Date(minute * 60_000);
+  return <p className={className ?? styles.time} title={`${DATE.format(when)} · ${WEATHER_NAME[weather]}, ${PHASE_NAME[phase]} on the island`}>
+    <WeatherIcon weather={weather} phase={phase} /><b>{TIME.format(when)}</b><span className={styles.srOnly}>{WEATHER_NAME[weather]}</span>
+  </p>;
+}
+
+export default function TopCluster({ onWallet, walletKey, full = true, buttons = full, hidden = false, className, children }: {
+  full?: boolean; buttons?: boolean; hidden?: boolean; className?: string; children?: ReactNode;
   /** The coins open the wallet (reachability §2), its key shown on the tooltip. */
   onWallet?: () => void; walletKey?: string;
 }) {
@@ -107,16 +116,14 @@ export default function TopCluster({ weather, phase, unread, mailKey, onMail, on
   const levelUp = useGain(progress?.level ?? null);
   useEffect(() => { if (coinGain) AudioManager.playSFX("blip2", { rate: 1.5, gain: 0.6 }); }, [coinGain]);
   useEffect(() => { if (levelUp) AudioManager.playSFX("confirm"); }, [levelUp]);
-  const minute = useSyncExternalStore(subscribeMinute, minuteNow, () => 0);
-  const when = new Date(minute * 60_000);
   const fill = progress ? (progress.needed ? progress.into / progress.needed : 1) : 0;
-  const flash = { coins: useFlash(hud.coins, FLASH_MS.coins), xp: useFlash(hud.xp, FLASH_MS.xp, up), clock: useFlash(minute, FLASH_MS.clock, onTheHour), mail: useFlash(unread, FLASH_MS.mail, up) };
-  /** In the clean HUD a part shows only while its change is (its flash state for the slide in and out). */
-  const shows = (f: "in" | "out" | null, all = full) => (all ? { show: true, at: undefined } : { show: f !== null, at: f ?? undefined });
-  const coins = shows(flash.coins), xp = shows(flash.xp), clock = shows(flash.clock), mail = shows(flash.mail, buttons);
+  const flash = { coins: useFlash(hud.coins, FLASH_MS.coins), xp: useFlash(hud.xp, FLASH_MS.xp, up) };
+  /** In the minimal HUD a part shows only while its change is (its flash state for the slide in and out). */
+  const shows = (f: "in" | "out" | null) => (full ? { show: true, at: undefined } : { show: f !== null, at: f ?? undefined });
+  const coins = shows(flash.coins), xp = shows(flash.xp);
 
   return (
-    <div className={styles.cluster} data-clean={full ? undefined : ""} data-hidden={hidden || undefined} aria-hidden={hidden || undefined}>
+    <div className={className ? `${styles.cluster} ${className}` : styles.cluster} data-clean={full ? undefined : ""} data-hidden={hidden || undefined} aria-hidden={hidden || undefined}>
       <div className={styles.chips}>
         {hud.coins !== null && coins.show && (() => {
           const label = `${hud.coins.toLocaleString()} ${COINS.name}`, face = <>
@@ -134,18 +141,8 @@ export default function TopCluster({ weather, phase, unread, mailKey, onMail, on
           <span className={styles.xpBar} aria-hidden="true"><i style={{ transform: `scaleX(${fill})` }} /></span>
           {xpGain && <em key={xpGain.id} className={styles.gain} aria-hidden="true">{levelUp ? "Level up!" : `+${xpGain.amount.toLocaleString()} XP`}</em>}
         </span>}
-        {minute > 0 && clock.show && <span className={styles.chip} data-flash={clock.at} title={`${WEATHER_NAME[weather]}, ${PHASE_NAME[phase]} on the island`}>
-          <WeatherIcon weather={weather} phase={phase} />
-          <span className={styles.clock}><b>{TIME.format(when)}</b><small>{DATE.format(when)}</small></span>
-          <span className={styles.srOnly}>{WEATHER_NAME[weather]}</span>
-        </span>}
       </div>
-      <div className={styles.buttons}>
-        {mail.show && <button className={styles.button} data-flash={mail.at} onClick={onMail} aria-label={unread ? `Mail, ${unread} unread` : "Mail"} title={`Mail (${mailKey})`}>
-          <Mail size={18} aria-hidden />{unread > 0 && <span className={styles.badge} aria-hidden="true">{unread > 9 ? "9+" : unread}</span>}
-        </button>}
-        <span className={styles.more} data-hidden={buttons ? undefined : ""}>{children}</span>
-      </div>
+      {buttons && children && <div className={styles.buttons}>{children}</div>}
     </div>
   );
 }
