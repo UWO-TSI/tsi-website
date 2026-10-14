@@ -565,7 +565,7 @@ def build_parts(parts, rig, section, subdir, images=None, max_tris=300):
                           for n, (k, v) in spec["mats"].items() if n in used],
             "decalSlot": {"material": "M_Decal", "uv": [0, 0, 1, 1], "alphaMode": "MASK"} if m.get("decal") else None,
             "hidesBackHair": m.get("hidesBackHair", False), "hides": list(m.get("hides", [])),
-            **{key: m[key] for key in ("group", "variantOf", "item") if key in m},
+            **{key: m[key] for key in ("group", "variantOf", "item", "event") if key in m},
         })
         unused = set(spec["mats"]) - set(used)
         limit = HEADWEAR_TRIS if m.get("group") == "head" else max_tris

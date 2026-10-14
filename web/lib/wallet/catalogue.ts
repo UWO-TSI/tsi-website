@@ -107,10 +107,11 @@ pos = 199;
 
 /**
  * Rows the ownership migration adds: every wearable part, the dyes, the homes pieces the shop lacked. Starter clothes are never sold.
- * Parts with an `item` are unlocked by that existing (crafted) item instead, so they get no shop row.
+ * Parts with an `item` are unlocked by that existing (crafted) item instead, so they get no shop row; event costumes (`event`)
+ * are free while their tradition runs, never sold.
  */
 export const OWNERSHIP_ITEMS: CatalogueEntry[] = [
-  ...PARTS.filter((p) => p.slot !== "bangs" && p.slot !== "back" && !p.variantOf && !p.item).map((p) =>
+  ...PARTS.filter((p) => p.slot !== "bangs" && p.slot !== "back" && !p.variantOf && !p.item && !p.event).map((p) =>
     e(`wear-${p.id.replace(/_/g, "-")}`, p.name.replace(/ \(#\d+\)$/, ""), p.slot === "accessory" ? "accessory" : "outfit", WEAR_PRICE[p.slot], { catalogue_ref: p.id, special_pool: !STARTER_REFS.has(p.id) })),
   ...DYES.map((name, i) => e(`dye-${name.toLowerCase().replace(/ /g, "-")}`, `${name} hair dye`, "hair", 140, { catalogue_ref: dyeRef(FREE_HAIR_COLOURS + i), special_pool: true })),
   ...PIECES.filter((p) => !HAS_FURNITURE.has(p.id) && !EVENT_PIECE_IDS.has(p.id)).map((p) => furniture(p.id, p.label, pieceValue(p))),

@@ -33,6 +33,11 @@ export interface CatalogPart {
   hidesBackHair: boolean; hides: string[]; variantOf?: string; group?: AccGroup;
   /** The economy item (crafted) that unlocks this part; its catalogue_ref is this part's id. Such parts are never sold. */
   item?: string;
+  /**
+   * An event costume (the traditions calendar, lib/content/traditions.ts): the tradition whose costume closet makes it
+   * free to wear while it runs. Never sold; offered, worn and drawn only then (eventPartOpen).
+   */
+  event?: string;
 }
 export interface ClipInfo { name: string; length: number; loop: boolean; endsNeutral?: boolean; endsOn?: string; seatHeight?: number; deskHeight?: number; hand?: "L" | "R";
   /** Locomotion loops: where each foot comes down, as phases [left, right] (build_clips.py measures them). */
@@ -239,7 +244,8 @@ export function wear(look: CharacterLook, slot: PartSlot, id: string | null): Ch
 /** Every part a look wears, in draw order. */
 export function wornParts(look: CharacterLook): CatalogPart[] {
   const ids = [look.bangs, look.back, look.onepiece ?? look.top, look.onepiece ? null : look.bottom, look.shoes, ...Object.values(look.acc)];
-  const parts = ids.filter((id): id is string => !!id).map(id => PART_BY_ID.get(id)!).filter(Boolean);
+  // An event costume comes off when its tradition ends (it stays in the saved look for next year).
+  const parts = ids.filter((id): id is string => !!id && eventPartOpen(id)).map(id => PART_BY_ID.get(id)!).filter(Boolean);
   // Hats and hoods hide the back hair (they carry their own tuck, ruling 20).
   return parts.some(p => p.hidesBackHair) ? parts.filter(p => p.slot !== "back") : parts;
 }
@@ -284,6 +290,18 @@ export function seeded(seed: number): () => number {
   };
 }
 export const hashSeed = (s: string) => Array.from(s).reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 7);
+
+// ── Event costumes (the traditions calendar, lib/content/traditions.ts) ─────
+let EVENTS_OPEN: ReadonlySet<string> = new Set();
+/** The traditions whose costume closets are open now (lib/game/useTraditions.ts sets it from the world clock). */
+export function setEventsOpen(events: ReadonlySet<string>): void { EVENTS_OPEN = events; }
+/** Shown, worn and drawn: every part, except an event costume outside its tradition. */
+export function eventPartOpen(id: string, open: ReadonlySet<string> = EVENTS_OPEN): boolean {
+  const event = PART_BY_ID.get(id)?.event;
+  return !event || open.has(event);
+}
+/** The event costumes free to wear now: the wardrobe counts them as owned, the server lets a look wear them. */
+export const openEventParts = (open: ReadonlySet<string> = EVENTS_OPEN): string[] => PARTS.filter(p => p.event && open.has(p.event)).map(p => p.id);
 
 // ── Ownership (coordinator ruling on audit item 22) ─────────────────────────
 /** Identity is free: skin, face, every hair style and the first six hair colours. The other six are shop dyes. */

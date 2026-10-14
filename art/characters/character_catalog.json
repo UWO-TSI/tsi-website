@@ -1089,6 +1089,113 @@
    "hides": [],
    "group": "neck",
    "item": "acc-shell-necklace"
+  },
+  {
+   "id": "acc_witch_hat",
+   "slot": "accessory",
+   "name": "Witch hat",
+   "glb": "accessories/accessory/acc_witch_hat.glb",
+   "tris": 1117,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 12
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 7
+    },
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": true,
+   "hides": [],
+   "group": "head",
+   "event": "halloween"
+  },
+  {
+   "id": "acc_cat_ears",
+   "slot": "accessory",
+   "name": "Cat ears",
+   "glb": "accessories/accessory/acc_cat_ears.glb",
+   "tris": 184,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 14
+    },
+    {
+     "name": "M_Accent",
+     "tint": "outfit",
+     "default": 9
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "head",
+   "event": "halloween"
+  },
+  {
+   "id": "acc_pumpkin_head",
+   "slot": "accessory",
+   "name": "Pumpkin head",
+   "glb": "accessories/accessory/acc_pumpkin_head.glb",
+   "tris": 554,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 7
+    },
+    {
+     "name": "M_Accent",
+     "tint": null,
+     "color": "#3B2114"
+    },
+    {
+     "name": "M_Trim",
+     "tint": "outfit",
+     "default": 3
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": true,
+   "hides": [
+    "bangs"
+   ],
+   "group": "head",
+   "event": "halloween"
+  },
+  {
+   "id": "acc_vampire_cape",
+   "slot": "accessory",
+   "name": "Vampire cape",
+   "glb": "accessories/accessory/acc_vampire_cape.glb",
+   "tris": 300,
+   "materials": [
+    {
+     "name": "M_Main",
+     "tint": "outfit",
+     "default": 14
+    },
+    {
+     "name": "M_Accent",
+     "tint": null,
+     "color": "#8E2F3A"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "neck",
+   "event": "halloween"
   }
  ],
  "base": {

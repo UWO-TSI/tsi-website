@@ -11,6 +11,10 @@
   "tris": 1032,
   "lod1": 764
  },
+ "accessories/accessory/acc_cat_ears.glb": {
+  "tris": 264,
+  "lod1": 228
+ },
  "accessories/accessory/acc_crystal_circlet.glb": {
   "tris": 680,
   "lod1": 392
@@ -26,6 +30,10 @@
  "accessories/accessory/acc_glasses_square.glb": {
   "tris": 256,
   "lod1": 220
+ },
+ "accessories/accessory/acc_pumpkin_head.glb": {
+  "tris": 634,
+  "lod1": 530
  },
  "accessories/accessory/acc_scarf.glb": {
   "tris": 260,
@@ -46,6 +54,14 @@
  "accessories/accessory/acc_sunhat.glb": {
   "tris": 1196,
   "lod1": 980
+ },
+ "accessories/accessory/acc_vampire_cape.glb": {
+  "tris": 380,
+  "lod1": 304
+ },
+ "accessories/accessory/acc_witch_hat.glb": {
+  "tris": 1197,
+  "lod1": 974
  },
  "base/skin.glb": {
   "tris": 864,

@@ -19,7 +19,7 @@ import { SignInText } from "@/components/gui/SignIn";
 import { inTopDialog, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { mentionsSignIn } from "@/lib/game/signIn";
 import { iconUrl } from "@/lib/icons/keys";
-import { dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR_COLOURS, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, partRef, randomLook, STARTER_PARTS,
+import { eventPartOpen, dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR_COLOURS, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, partRef, randomLook, STARTER_PARTS,
   type CharacterLook, type FaceCell, type Placement } from "@/lib/game/character/look";
 import { CATEGORIES, choose, colourTarget, isOn, optionName, type Category, type Section } from "@/lib/game/character/creatorCategories";
 import { holdCreatorOpen } from "@/lib/game/character/creatorPresence";
@@ -148,7 +148,8 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
   // Drag the portrait to turn the character.
   const drag = useRef<{ x: number; id: number } | null>(null);
   const turnBy = (rad: number) => { yaw.current.target += rad; };
-  const shownTiles = cat.sections.flatMap(s => s.options.filter(id => mode !== "create" || has(id)));
+  // An event costume shows only while its tradition runs (look.ts eventPartOpen).
+  const shownTiles = cat.sections.flatMap(s => s.options.filter(id => (mode !== "create" || has(id)) && (!id || eventPartOpen(id))));
   const thumbKeys = new Set(shownTiles.flatMap(id => (id && needsBake(id) ? [thumbJob(id, look).key] : [])));
   useEffect(() => { prioritiseThumbs(thumbKeys); });
 
@@ -198,7 +199,7 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
           })}>Reset</Button>
         </div>}
         {cat.sections.map(section => {
-          const options = section.options.filter(id => mode !== "create" || has(id));
+          const options = section.options.filter(id => (mode !== "create" || has(id)) && (!id || eventPartOpen(id)));
           if (!options.length) return null;
           return <section key={section.id} className={styles.section} aria-label={section.label}>
             {cat.sections.length > 1 && <h3>{section.label}</h3>}
