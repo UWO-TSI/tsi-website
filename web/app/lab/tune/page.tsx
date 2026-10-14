@@ -34,7 +34,7 @@ import {
   useTuning,
   type Tuning,
 } from "@/lib/game/tuning";
-import { patchWind, tuftGeometry } from "@/components/game/grid/GrassTufts";
+import GrassField from "@/components/game/grid/GrassField";
 import { gullPose, type GullParams } from "@/lib/game/gullPath";
 import {
   cellPieces,
@@ -128,52 +128,18 @@ function GullSpecimen() {
 }
 
 /**
- * A patch of ground with the real grass material and the real tuft shader, so
- * sway and normal strength are judged against each other rather than in
- * isolation. Deliberately NOT the island: a 12x12 patch fills the frame.
+ * A patch of ground with the real grass material and the real blade field (GrassField), so sway, bend and the
+ * ground's detail are judged against each other rather than in isolation. Deliberately NOT the island: a 12x12
+ * patch fills the frame. The SAME component the world mounts, on a bench map: a bench that tunes a copy lies.
  */
+const GRASS_BENCH = (() => {
+  const m = createMap(16, 16, -7.5, -7.5);
+  for (let cz = 0; cz < 16; cz++) for (let cx = 0; cx < 16; cx++) setCell(m, cx, cz, 0, Surface.Grass);
+  return m;
+})();
+
 function GrassSpecimen() {
   const t = useTuning();
-  // Refs, matching the pattern Ocean.tsx already uses for its animated
-  // uniforms: the react-compiler lint forbids mutating a useMemo result, and a
-  // uniform object exists precisely to be mutated every frame.
-  const uTime = useRef({ value: 0 });
-  const uWind = useRef({ value: new THREE.Vector4(0.09, 1.1, 9, 0.34) });
-
-  const useModel = t.grass.model >= 0.5;
-  const { scene: packScene } = useGLTF("/assets/nature/grass-tufts.glb");
-  const packGeo = useMemo(() => {
-    let g: THREE.BufferGeometry | null = null;
-    packScene.traverse((o) => {
-      const m = o as THREE.Mesh;
-      if (!g && m.isMesh && m.geometry) g = m.geometry;
-    });
-    return g;
-  }, [packScene]);
-  // Same geometry the world uses on whichever path is selected.
-  const cardGeo = useMemo(() => tuftGeometry(t.grass.tuftHeight), [t.grass.tuftHeight]);
-  const geometry = useModel && packGeo ? packGeo : cardGeo;
-  const bladeScale = useModel ? t.grass.tuftHeight : 1;
-
-  const material = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: useModel ? 0xffffff : 0x86b862,
-        vertexColors: useModel,
-        roughness: 0.95,
-        metalness: 0,
-        side: THREE.DoubleSide,
-      }),
-    [useModel]
-  );
-
-  // The SAME patch the world uses, not a copy of it — see GrassTufts.
-  useEffect(() => {
-    patchWind(material, uTime.current, uWind.current);
-  }, [material]);
-
-  const count = Math.max(1, Math.round(t.grass.tuftDensity * 24));
-
   /**
    * The bench floor uses the WORLD's shared grass material, with world-scale
    * UVs rewritten onto the plane the same way GridTerrain does. Without this the
@@ -195,40 +161,10 @@ function GrassSpecimen() {
     applyGrassNormalStrength(t.grass.normalStrength, t.grass.normalScale);
   }, [t.grass.normalStrength, t.grass.normalScale]);
 
-  useFrame((state) => {
-    uTime.current.value = state.clock.elapsedTime;
-    uWind.current.value.set(t.grass.swayAmount, t.grass.swaySpeed, t.grass.gustLength, t.grass.tuftHeight);
-  });
-
   return (
     <group>
       <mesh geometry={floor} material={floorMat ?? undefined} receiveShadow />
-      <instancedMesh
-        key={`${count}-${t.grass.tuftHeight}-${useModel}`}
-        args={[geometry, material, count]}
-        frustumCulled={false}
-        ref={(inst) => {
-          if (!inst) return;
-          const m = new THREE.Matrix4();
-          const q = new THREE.Quaternion();
-          const e = new THREE.Euler();
-          const p = new THREE.Vector3();
-          const s = new THREE.Vector3();
-          for (let i = 0; i < count; i++) {
-            // Deterministic scatter, so a density change does not reshuffle
-            // the whole patch under the reviewer.
-            const a = (i * 2.399963) % (Math.PI * 2);
-            const r = Math.sqrt((i + 0.5) / count) * 5.6;
-            e.set(0, a * 3, 0);
-            q.setFromEuler(e);
-            p.set(Math.cos(a) * r, 0, Math.sin(a) * r);
-            s.setScalar((0.75 + ((i * 37) % 10) / 20) * bladeScale);
-            m.compose(p, q, s);
-            inst.setMatrixAt(i, m);
-          }
-          inst.instanceMatrix.needsUpdate = true;
-        }}
-      />
+      <GrassField map={GRASS_BENCH} color="#91b47f" />
     </group>
   );
 }
@@ -582,14 +518,16 @@ const ROWS: Record<Specimen, Row[]> = {
     { group: "sky", key: "horizon", label: "sky at skyline", min: 0, max: 0, step: 0, kind: "color", note: "in the game this is the time-of-day fog colour" },
   ],
   grass: [
-    { group: "grass", key: "model", label: "blade model", min: 0, max: 1, step: 1, note: "0 = procedural cards (4 tri), 1 = imported pack (42 tri)" },
     { group: "grass", key: "normalStrength", label: "ground detail", min: 0, max: 3, step: 0.05, note: "ACNH mGrass_Nrm strength — 0 is the flat green" },
     { group: "grass", key: "normalScale", label: "detail scale", min: 0.5, max: 12, step: 0.25, note: "world units per repeat" },
-    { group: "grass", key: "tuftDensity", label: "tuft density", min: 0, max: 40, step: 1, note: "tufts per 100 grass cells — this is the perf knob" },
-    { group: "grass", key: "tuftHeight", label: "tuft height", min: 0.08, max: 1.2, step: 0.02, note: "world units" },
-    { group: "grass", key: "swayAmount", label: "sway amount", min: 0, max: 0.5, step: 0.01, note: "how far the tip leans" },
-    { group: "grass", key: "swaySpeed", label: "sway speed", min: 0, max: 6, step: 0.05, note: "oscillations/sec" },
+    { group: "grass", key: "density", label: "blade density", min: 0, max: 1, step: 0.05, note: "share of the field's clumps drawn — this is the perf knob" },
+    { group: "grass", key: "bladeHeight", label: "blade height", min: 0.08, max: 1, step: 0.02, note: "world units" },
+    { group: "grass", key: "swayAmount", label: "sway amount", min: 0, max: 1, step: 0.01, note: "how far the tip leans, as a share of the blade" },
+    { group: "grass", key: "swaySpeed", label: "sway speed", min: 0, max: 4, step: 0.05, note: "how fast the gusts cross the field" },
     { group: "grass", key: "gustLength", label: "gust length", min: 1, max: 40, step: 0.5, note: "wavelength of the wave crossing the field" },
+    { group: "grass", key: "bend", label: "step bend", min: 0, max: 1.5, step: 0.05, note: "how hard a character's feet press the blades" },
+    { group: "grass", key: "trail", label: "trail", min: 0.1, max: 3, step: 0.05, note: "seconds a pressed blade takes to spring back" },
+    { group: "grass", key: "lean", label: "view lean", min: 0, max: 1.2, step: 0.05, note: "perspective correction: lean away from a camera looking down" },
   ],
 };
 

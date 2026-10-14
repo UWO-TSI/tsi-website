@@ -79,22 +79,26 @@ export interface Tuning {
     night: number;
   };
   grass: {
-    /** 0 = procedural crossed cards, 1 = the low-poly blade pack. */
-    model: number;
     /** Strength of the ACNH normal map on the ground. 0 = the flat green. */
     normalStrength: number;
     /** World units one repeat of the detail normal covers. */
     normalScale: number;
-    /** Tufts per 100 cells of grass. 0 disables the whole system. */
-    tuftDensity: number;
-    /** Tuft card height, world units. */
-    tuftHeight: number;
-    /** How far the tip of a tuft leans in the wind, world units. */
+    /** Share of the blade field's clumps drawn (GrassField). 0 = no blades at all: the perf knob. */
+    density: number;
+    /** Blade height, world units. */
+    bladeHeight: number;
+    /** How far the tip leans in the wind, as a share of the blade's height. */
     swayAmount: number;
-    /** Wind oscillations per second. */
+    /** Wind speed: how fast the gusts cross the field. */
     swaySpeed: number;
     /** Wavelength of the gust travelling across the field, world units. */
     gustLength: number;
+    /** How hard a character's feet press the blades down (0 = not at all). */
+    bend: number;
+    /** Seconds a pressed blade takes to spring most of the way back: the trail's length. */
+    trail: number;
+    /** How far blades lean away from a camera looking down at them (perspective correction; 0 = upright). */
+    lean: number;
   };
 }
 
@@ -191,16 +195,19 @@ export const TUNING_DEFAULTS: Tuning = {
     night: 0,
   },
   // Cinematic pass (David, 2026-10-10: "grass needs texture and flowing
-  // grass"): denser, taller tufts with a longer lean, and a stronger quilt.
+  // grass"): a stronger quilt. The v1 land pass (specs/v1-drop.md §8b/§8c)
+  // replaced the tufts with the blade field (GrassField).
   grass: {
-    model: 1,
     normalStrength: 0.72,
     normalScale: 2,
-    tuftDensity: 13,
-    tuftHeight: 0.42,
-    swayAmount: 0.13,
+    density: 1,
+    bladeHeight: 0.3,
+    swayAmount: 0.32,
     swaySpeed: 1.0,
     gustLength: 9,
+    bend: 1,
+    trail: 0.8,
+    lean: 0.6,
   },
 };
 

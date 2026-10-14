@@ -1,5 +1,5 @@
-// The world bench (specs/perf/effects-cost.md "World costs"): what the cinematic pass's sky dome and flowing grass
-// cost a frame, in the village and the terrain v2 world, and the title screen's frame.
+// The world bench (specs/perf/effects-cost.md "World costs"): what the cinematic pass's sky dome and the blade field
+// (v1 land pass) cost a frame, in the village and the terrain v2 world, and the title screen's frame.
 //   PORT=3158 node specs/perf/world-bench.mjs <out.jsonl> [scenes]
 //   scenes: comma list of village, v2, title (default all). Env: TIER=high|lite (the dome is High's only), REPS (4),
 //   SECONDS (4), SETTLE (1.5), PIXEL=0 (the pixel finish off: the canvas at full resolution) and W, H (the window,
@@ -7,8 +7,8 @@
 // Each scene opens once (24 bots as in perf-bench.mjs, everything as shipped). Each variant is measured between two
 // shipped samples, as fx-bench.mjs does (pairs whose shipped samples disagree are rejected and retried):
 //   domeOff   the sky dome off: the flat gradient Light draws (lib/game/perf/fxBench.ts `skyDome`);
-//   grass6    the grass at the density before the cinematic pass (6 tufts per 100 grass cells, shipped 13);
-//   grass0    no grass tufts at all.
+//   grassHalf the blade field at half its clumps (GrassField, tuning grass.density 0.5; shipped 1);
+//   grass0    no blades at all.
 // The title has no probe and no switches: its frame and main-thread time are sampled alone (`title`).
 // Headed, off to the side, muted, never brought to the front; the real GPU; uncapped.
 import { createRequire } from "node:module";
@@ -26,8 +26,8 @@ const BASE = "time=day&weather=clear&season=summer";
 const URLS = { village: `/lab/island?${BASE}&bots=24`, v2: `/lab/island?${BASE}&fixture=v2&bots=24`, title: "/student?time=day" };
 const VARIANTS = {
   domeOff: { off: ["skyDome"], tune: null },
-  grass6: { off: [], tune: ["grass", "tuftDensity", 6] },
-  grass0: { off: [], tune: ["grass", "tuftDensity", 0] },
+  grassHalf: { off: [], tune: ["grass", "density", 0.5] },
+  grass0: { off: [], tune: ["grass", "density", 0] },
 };
 const SHIPPED = { off: [], tune: null };
 

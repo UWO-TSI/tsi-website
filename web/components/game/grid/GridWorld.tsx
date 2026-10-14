@@ -21,11 +21,12 @@ import {
   sampleGroundHeight,
   rampHeightAt,
   type IslandMap,
+  GRASS_COLOR,
 } from "@/lib/game/grid";
 import { setTerrainHeightProvider } from "../terrain";
 import GridTerrain, { CLIFF_FRINGE, TERRAIN_WET, useTerrainMaterials, type TerrainPalette } from "./GridTerrain";
 import GridCliffs from "./GridCliffs";
-import GrassTufts from "./GrassTufts";
+import GrassField from "./GrassField";
 import { applyGrassNormalStrength, advanceWater, shadeWaterByClouds } from "./terrainMaterials";
 import { cloudLayer } from "../AmbienceFX";
 import { useTuning } from "@/lib/game/tuning";
@@ -33,9 +34,13 @@ import { useFrame } from "@react-three/fiber";
 import type { IslandLight } from "@/lib/game/islandLighting";
 import { worldTime } from "@/lib/game/worldClock";
 
+/** The grass without a palette (the bench islands): the grid's own green. */
+const GRASS_HEX = `#${new THREE.Color(GRASS_COLOR).getHexString()}`;
+
 /** `field`: the map's height field when the caller already built it (the village builds it once). */
 /** `light`: the scene's IslandLight; the water mirrors its key light (sun by day, moon by night) in its colour. */
-export default function GridWorld({ map, field: suppliedField, light, palette, windScale }: { map: IslandMap; field?: Float32Array; light: Pick<IslandLight, "water" | "sunPosition" | "sun" | "wet">; palette?: TerrainPalette; windScale?: number }) {
+/** `lite`: the Lite tier's thinner grass. `clear`: false where a solid stands, so no blades grow through it (keep it stable). */
+export default function GridWorld({ map, field: suppliedField, light, palette, windScale, lite, clear }: { map: IslandMap; field?: Float32Array; light: Pick<IslandLight, "water" | "sunPosition" | "sun" | "wet">; palette?: TerrainPalette; windScale?: number; lite?: boolean; clear?: (x: number, z: number) => boolean }) {
   const t = useTuning();
   const materials = useTerrainMaterials(palette);
   // The ground's wetness is the light's (it eases with the weather); dry when the scene goes.
@@ -82,7 +87,7 @@ export default function GridWorld({ map, field: suppliedField, light, palette, w
     <group>
       <GridTerrain map={map} field={suppliedField} materials={materials} />
       <GridCliffs map={map} grass={materials.get(Surface.Grass)} drape={materials.get(CLIFF_FRINGE)} />
-      <GrassTufts map={map} windScale={windScale} />
+      <GrassField map={map} field={suppliedField} color={palette?.grass ?? GRASS_HEX} windScale={windScale} lite={lite} clear={clear} />
     </group>
   );
 }

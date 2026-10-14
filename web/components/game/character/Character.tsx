@@ -24,6 +24,7 @@ import { adoptPrimitive, materialName, mergeLook, refCache, skinnedPrimitives } 
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
 import { addContact } from "../ContactShadows";
+import { addGrassBender } from "@/lib/game/grassBenders";
 import { frameStats } from "@/lib/game/perf/frameStats";
 import FishingRig from "./FishingRig";
 
@@ -724,6 +725,8 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
     const anchor = group.current?.parent;
     return anchor ? addContact(scene, anchor, CONTACT) : undefined;
   }, [scene]);
+  // Every character presses the lawn's blades (GrassField), from the lifted group: a hop or a seat leaves it standing.
+  useEffect(() => (group.current ? addGrassBender(group.current) : undefined), []);
   // Before the default frame work (-1): what reads this frame's pose (the held rod's tip, step dust) sees it. Detail by
   // drawn size (lod.ts): small characters draw LOD 1 and step their mixer less often; the creator's never change.
   useFrame(({ camera, size, gl, clock }, delta) => {

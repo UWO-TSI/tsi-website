@@ -351,6 +351,8 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   const exitSpot = exitFrom === "museum" ? spawns.museum : exitFrom === "cafe" ? spawns.cafe : exitFrom === "oracle" ? spawns.oracle : exitFrom === "ruins" ? spawns.ruins : exitFrom === "shop" ? spawns.shop : null;
   const spawn = (devAt && !returned && !fromBoat && !exitFrom ? devAt : fromBoat ? spawns.boat : exitSpot ?? (returned ? spawns.returned : null)) ?? spawns.start;
   const terrain = useMemo(() => ({ ...ISLAND_TERRAIN, grass: look.grass }), [look.grass]);
+  // No blades through a building, a trunk or a rock: where something solid stands, its top is above the ground.
+  const grassClear = useMemo(() => (x: number, z: number) => island.top(x, z) <= island.ground(x, z) + 0.01, [island]);
   const scenery = useMemo(() => sceneryOf(v, island.ground, look.season), [v, island, look.season]);
   const near = useRef<Near>(null);
   const fauna = useMemo(() => ({ ...layout.fauna, ground: island.ground, standable: island.standable, surface: island.surface, top: island.top, player }), [layout, island, player]);
@@ -411,7 +413,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     <>
       <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} overview={overview} overviewFog={layout.scale.overviewFog}
         ground={island.ground} puddles={layout.puddles} cloudSize={layout.scale.cloudSize} shadowExtent={layout.scale.shadowExtent} fireflyAnchors={layout.fireflies} trees={layout.trees} fauna={fauna} />
-      <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} />
+      <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} lite={liteMode} clear={grassClear} />
       <GridOcean map={island.map} lite={liteMode} skip={layout.underWharf} radius={layout.scale.glintRadius} />
       <PeacefulLayer map={island.map} nodes={layout.nodes} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} treeModels={SEASON_TREES[look.season]} />
       <BeachBottle player={player} ground={island.ground} />

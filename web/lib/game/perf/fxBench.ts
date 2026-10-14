@@ -70,7 +70,7 @@ if (FX_BENCH && typeof window !== "undefined") {
     keys: FX_KEYS,
     set: (next: Parameters<typeof setFxBench>[0]) => { const s = setFxBench(next); return { off: [...s.off], force: [...s.force], formation: s.formation }; },
     state: () => ({ off: [...state.off], force: [...state.force], formation: state.formation }),
-    /** A tuning value as /lab/tune sets it (`tune("grass", "tuftDensity", 6)`); `tune()` puts the shipped values back. */
+    /** A tuning value as /lab/tune sets it (`tune("grass", "density", 0.5)`); `tune()` puts the shipped values back. */
     tune: (group?: keyof Tuning, key?: string, value?: number) => { if (group && key && value !== undefined) setTuning(group, key as never, value); else resetTuning(); },
   } });
 }
