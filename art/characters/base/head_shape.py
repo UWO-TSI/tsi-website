@@ -1,5 +1,13 @@
-"""Shared head surface for hair/accessory generators (same maths as build_v6.py `head_point`), plus what fits to it:
-the hair volume and hairline (avatar-fit) and the face chart and measured feature placement (face_on_head).
+"""Shared head surface for hair/accessory generators, plus what fits to it: the hair volume and hairline (avatar-fit)
+and the face chart and measured feature placement (face_on_head).
+
+Head fit (specs/characters/head-fit.md, ledger row 304; David 2026-10-08: "rounder, flatter face"). The head is the v8
+SKULL: a rounded box with a flat, even face area. Its coordinates stay the v7 head's: (lat, lon) names the ray from
+the head centre HC through head_point_v7(lat, lon), and head_point(lat, lon) is where that ray meets the rounded box.
+So every lat/lon in the library (hair seeds, hairline, hat edges, anchors, the fit checker's rays) means the same
+direction on both heads, and a point fitted to the v7 head moves to the v8 head by the change in skull radius along
+its ray (refit_v7_to_v8). The face canvas (face_v7.json anchors, the atlas) is unchanged; the eye and mouth lat/lon
+are solved on the new surface from those anchors.
 
 Measurements come from ref18_measurements.json, so re-measuring or tweaking the head here regenerates every
 piece that is built against it. Keep in sync with build_v6.py (v6 has its own copy so its build stays frozen
@@ -22,8 +30,9 @@ def _ss(a, b, x):
     return t * t * (3 - 2 * t)
 
 
-def head_point(lat, lon):
-    """lat/lon in degrees; lon 0 = front (-Y), + toward the character's left (+X)."""
+def head_point_v7(lat, lon):
+    """The v7 head (avatar v7 to 2026-10-08): lat/lon in degrees; lon 0 = front (-Y), + toward the character's left
+    (+X). Kept as the skull's coordinate system and to refit pieces built on the v7 head."""
     la, lo = math.radians(lat), math.radians(lon)
     cl, sl = math.cos(la), math.sin(la)
     x = cl * math.sin(lo) * _R["x"]
@@ -39,9 +48,92 @@ def head_point(lat, lon):
     return HC + Vector((x, y, z))
 
 
-_w = max(abs(head_point(la, 90).x - HC.x) for la in range(-89, 90))
+_w = max(abs(head_point_v7(la, 90).x - HC.x) for la in range(-89, 90))
 _R["x"] = M["head_width"] / 2 / _w
 _R["y"] = _R["x"] * 0.87
+
+
+# ---------------------------------------------------------------- the v8 skull: a rounded box with a flat face
+# A superellipsoid whose shape varies smoothly from back to front: |x/A|^P + |y/B|^P gives the horizontal section (a
+# rounded square, flatter in front: P_FRONT), raised to Q/P and added to |z/C|^Q for the vertical profile (a round
+# crown, a fuller, flatter jaw in front: Q_BOT_FRONT). Width, crown and chin stay the measured ref-18 head.
+SKULL = {
+    "A": 0.215,                   # half width (v7 0.218-0.223 at its widest; the box's corners carry the volume)
+    "B_FRONT": 0.192, "B_BACK": 0.186,   # face plane and back of the skull from HC (v7 0.189-0.198 / 0.186)
+    "C_TOP": HRZT, "C_BOT": HRZB,        # crown and chin (ref 18's)
+    "C_BOT_FRONT": HRZB + 0.03,          # the chin under the face 3 cm lower: flat room for mouths and drool down to the
+                                         # canvas's bottom edge (David's faces, row 305: W 0.999)
+    "P_FRONT": 4.0, "P_BACK": 2.5,       # horizontal roundness: 2 = ellipse, higher = squarer (the flat face, wide enough for
+                                         # David's widest eyes, row 305)
+    "Q_TOP": 2.3, "Q_BOT_BACK": 2.6, "Q_BOT_FRONT": 4.5,   # vertical: the crown dome, the jaw (fuller and flatter in front)
+}
+
+
+def _lerp(a, b, t):
+    return a + (b - a) * t
+
+
+def skull_radius(d):
+    """Distance from HC to the skull along the unit direction d (the superellipsoid's radial function)."""
+    S = SKULL
+    wf = _ss(0.35, -0.55, d.y)                  # 0 at the back, 1 over the face
+    A = S["A"]
+    B = _lerp(S["B_BACK"], S["B_FRONT"], wf)
+    P = _lerp(S["P_BACK"], S["P_FRONT"], wf)
+    if d.z >= 0:
+        C, Q = S["C_TOP"], S["Q_TOP"]
+    else:
+        C, Q = _lerp(S["C_BOT"], S["C_BOT_FRONT"], wf), _lerp(S["Q_BOT_BACK"], S["Q_BOT_FRONT"], wf)
+    h = abs(d.x / A) ** P + abs(d.y / B) ** P
+    F = h ** (Q / P) + abs(d.z / C) ** Q
+    return F ** (-1.0 / Q)
+
+
+def ray(lat, lon):
+    """The skull coordinate (lat, lon) as a unit direction from HC (the v7 head's parameterisation)."""
+    return (head_point_v7(lat, lon) - HC).normalized()
+
+
+def head_point(lat, lon):
+    """The v8 head: the skull surface on the ray (lat, lon); lon 0 = front (-Y), + toward the character's left (+X)."""
+    d = ray(lat, lon)
+    return HC + d * skull_radius(d)
+
+
+def skull_delta(p):
+    """How far the skull moved outward (v7 -> v8) on p's ray from HC: a point fitted to the v7 head moves this far."""
+    d = (p - HC)
+    if d.length < 1e-9:
+        return 0.0
+    d = d.normalized()
+    return skull_radius(d) - _v7_radius(d)
+
+
+_V7_TREE = None
+
+
+def _v7_radius(d):
+    """Radius of the v7 analytic head along d (ray cast against a 2-degree mesh of head_point_v7)."""
+    global _V7_TREE
+    if _V7_TREE is None:
+        from mathutils.bvhtree import BVHTree
+        lats = [-90 + 2 * i for i in range(91)]
+        lons = [-180 + 2 * j for j in range(180)]
+        vs = [head_point_v7(la, lo) for la in lats for lo in lons]
+        n = len(lons)
+        polys = [[i * n + j, i * n + (j + 1) % n, (i + 1) * n + (j + 1) % n, (i + 1) * n + j]
+                 for i in range(len(lats) - 1) for j in range(n)]
+        _V7_TREE = BVHTree.FromPolygons(vs, polys)
+    loc, _, _, _ = _V7_TREE.ray_cast(HC, d, 1.0)
+    return (loc - HC).length if loc is not None else skull_radius(d)
+
+
+def refit_v7_to_v8(p):
+    """A point fitted to the v7 head, moved onto the v8 skull: along its ray from HC by the change in skull radius."""
+    d = p - HC
+    if d.length < 1e-9:
+        return p.copy()
+    return p + d.normalized() * skull_delta(p)
 
 
 def hair_point(lat, lon, off):
@@ -79,7 +171,8 @@ def hairline(lon):
 # ---------------------------------------------------------------- the face chart (UVs of the painted face)
 FH = HRZT             # the face canvas spans 2 FH metres of arc each way (unchanged canvas size)
 _FACE = json.load(open(os.path.join(HERE, "ref18_measurements.json")))["face_on_head"]
-EYE_LAT, EYE_LON, MOUTH_LAT = _FACE["eye_lat_deg"], _FACE["eye_lon_deg"], _FACE["mouth_lat_deg"]
+_V7_FACE = os.path.join(HERE, "..", "v7", "face", "face_v7.json")
+FACE_ANCHORS = json.load(open(_V7_FACE))["anchors"]     # canvas points of the painted face (frozen with the atlas)
 
 
 def _arc(fn, a, b, n):
@@ -99,3 +192,28 @@ def face_chart(lat, lon, n=32):
     su = _arc(lambda t: head_point(lat, t), 0.0, lon, n) if lon else 0.0
     sw = _arc(lambda t: head_point(t, lon), 0.0, lat, n) if lat else 0.0
     return 0.5 + su / (2 * FH), 0.5 - sw / (2 * FH)
+
+
+def chart_inv(u, w, guess):
+    """(lat, lon) whose face_chart is (u, w): Newton from a nearby guess."""
+    la, lo = guess
+    for _ in range(16):
+        u0, w0 = face_chart(la, lo, 16)
+        if abs(u0 - u) < 1e-6 and abs(w0 - w) < 1e-6:
+            break
+        h = 0.05
+        ua, wa = face_chart(la + h, lo, 16)
+        ub, wb = face_chart(la, lo + h, 16)
+        j = ((ua - u0) / h, (ub - u0) / h, (wa - w0) / h, (wb - w0) / h)
+        det = j[0] * j[3] - j[1] * j[2]
+        du, dw = u - u0, w - w0
+        la += (j[3] * du - j[1] * dw) / det
+        lo += (-j[2] * du + j[0] * dw) / det
+    return la, lo
+
+
+# The painted features' centres on this head, solved from the canvas anchors (the atlas is unchanged): the eye anchor
+# is the canvas-left eye (the character's right, -lon); EYE_LON is its mirror.
+EYE_LAT, _eye_lon = chart_inv(1 - FACE_ANCHORS["eye"][0], FACE_ANCHORS["eye"][1], (_FACE["eye_lat_deg"], _FACE["eye_lon_deg"]))
+EYE_LON = abs(_eye_lon)
+MOUTH_LAT = chart_inv(0.5, FACE_ANCHORS["mouth"][1], (_FACE["mouth_lat_deg"], 0.0))[0]

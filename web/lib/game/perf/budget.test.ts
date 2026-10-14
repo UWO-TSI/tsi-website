@@ -13,7 +13,7 @@ import { glbStats, imageSize, type GlbStats } from "./glbStats";
 import {
   ASSET_CATEGORIES, ASSET_EXCEPTIONS, CHARACTER_BUDGET, CHARACTER_EFFECT_FILES, EFFECT_BUDGET, JUICE_EVENT_PARTICLES, NETWORK_BUDGET, PARTICLE_POOLS, SHARD, type AssetBudget,
 } from "./budget";
-import { PARTS, type CatalogPart } from "@/lib/game/character/look";
+import { BASE_URL, PARTS, type CatalogPart } from "@/lib/game/character/look";
 import { FX_KEYS } from "./fxBench";
 import { ParticlePool } from "@/lib/game/fx/particles";
 import { FX, FX_BUDGET, FX_POOLS, recipeCost } from "@/lib/game/fx/combat";
@@ -68,9 +68,11 @@ describe("asset budgets (budget.ts ASSET_CATEGORIES)", () => {
 describe("character budget (budget.ts CHARACTER_BUDGET)", () => {
   const lodOf = (p: CatalogPart) => `characters/v6/lod1/${p.glb}`;
   const fullOf = (p: CatalogPart) => `characters/v6/${p.glb}`;
+  /** The base the engine loads (the catalogue's clip base), under public/assets. */
+  const BASE_REL = BASE_URL.replace(/^\/assets\//, "");
   /** The base's skin and face (what the engine keeps of the base GLB), and the LOD 1 skin. */
   const base = (() => {
-    const buf = readFileSync(join(assets, "characters/v6/base/v7_clips.glb"));
+    const buf = readFileSync(join(assets, BASE_REL));
     const gltf = JSON.parse(buf.subarray(20, 20 + buf.readUInt32LE(12)).toString("utf8")) as {
       meshes: { primitives: { indices: number; material: number }[] }[]; materials: { name: string }[]; accessors: { count: number }[];
     };
@@ -79,7 +81,7 @@ describe("character budget (budget.ts CHARACTER_BUDGET)", () => {
     return tris;
   })();
   const face = (() => {
-    const buf = readFileSync(join(assets, "characters/v6/base/v7_clips.glb"));
+    const buf = readFileSync(join(assets, BASE_REL));
     const gltf = JSON.parse(buf.subarray(20, 20 + buf.readUInt32LE(12)).toString("utf8")) as { meshes: { primitives: { indices: number; material: number }[] }[]; materials: { name: string }[]; accessors: { count: number }[] };
     let tris = 0;
     for (const m of gltf.meshes) for (const p of m.primitives) if (gltf.materials[p.material].name === "M_Face") tris += gltf.accessors[p.indices].count / 3;
@@ -90,8 +92,12 @@ describe("character budget (budget.ts CHARACTER_BUDGET)", () => {
     const most = (f: (p: CatalogPart) => boolean) => Math.max(0, ...PARTS.filter(f).map(tris));
     const outfit = Math.max(most(p => p.slot === "top") + most(p => p.slot === "bottom"), most(p => p.slot === "onepiece"));
     const accessories = (["face", "bag", "neck"] as const).reduce((s, g) => s + most(p => p.group === g), 0);
-    const head = Math.max(most(p => p.slot === "back") + most(p => p.group === "head" && !p.hidesBackHair), most(p => p.group === "head" && !!p.hidesBackHair));
-    return most(p => p.slot === "bangs") + head + outfit + most(p => p.slot === "shoes") + accessories;
+    // the hair: bangs with a back (and a band over it), or a whole hairstyle that replaces both (look.ts wornParts), or
+    // a hat (which replaces the back and keeps the bangs)
+    const band = most(p => p.group === "head" && !p.hidesBackHair);
+    const hair = Math.max(most(p => p.slot === "bangs") + most(p => p.slot === "back" && !p.full) + band,
+      most(p => p.slot === "back" && !!p.full) + band, most(p => p.slot === "bangs") + most(p => p.group === "head" && !!p.hidesBackHair));
+    return hair + outfit + most(p => p.slot === "shoes") + accessories;
   }
 
   it("ships a LOD 1 for every part, no heavier than the full part", () => {
@@ -110,7 +116,7 @@ describe("character budget (budget.ts CHARACTER_BUDGET)", () => {
     expect(full, `the heaviest full look: ${full} triangles`).toBeLessThanOrEqual(CHARACTER_BUDGET.full.triangles);
     expect(lod1, `the heaviest LOD 1 look: ${lod1} triangles`).toBeLessThanOrEqual(CHARACTER_BUDGET.lod1.triangles);
     for (const p of PARTS) expect(statsOf(fullOf(p)).bones, p.glb).toBeLessThanOrEqual(CHARACTER_BUDGET.full.bones);
-    expect(statsOf("characters/v6/base/v7_clips.glb").bones).toBe(CHARACTER_BUDGET.full.bones);
+    expect(statsOf(BASE_REL).bones).toBe(CHARACTER_BUDGET.full.bones);
   });
 });
 

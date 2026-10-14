@@ -44,4 +44,12 @@ describe("creator categories (read from the catalogue)", () => {
     expect(colourTarget(cat("accessories"), two, "acc_scarf")).toBe("acc_scarf");
     expect(colourTarget(cat("eyes"), two, null)).toBeNull();
   });
+  it("give the whole hairstyles their own row in Hair, apart from the backs (head fit)", () => {
+    const hair = cat("hair");
+    const full = hair.sections.find(s => s.id === "hairstyles")!;
+    expect(full.options.length).toBe(PARTS.filter(p => p.full).length);
+    expect(hair.sections.find(s => s.id === "back")!.options.some(id => id && PARTS.find(p => p.id === id)?.full)).toBe(false);
+    const l = choose(DEFAULT_LOOK, full, full.options[0]);
+    expect([l.back, isOn(l, full, full.options[0])]).toEqual([full.options[0], true]);
+  });
 });

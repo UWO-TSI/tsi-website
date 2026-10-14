@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Lock } from "lucide-react";
 import { Button, Slider } from "@/components/gui";
 import { iconUrl } from "@/lib/icons/keys";
-import { dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR_COLOURS, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, partRef,
+import { dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR_COLOURS, hairAccentHex, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, partRef,
   type CharacterLook, type FaceCell, type Placement } from "@/lib/game/character/look";
 import { choose, colourTarget, isOn, optionName, type Category, type Section } from "@/lib/game/character/creatorCategories";
 import { PLACE_RANGE } from "@/lib/game/character/face";
@@ -90,6 +90,17 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
     onChange?.("colour");
   };
   const swatches = !cat.swatch ? [] : cat.swatch === "hair" && mode === "create" ? PALETTE.hair.slice(0, FREE_HAIR_COLOURS) : PALETTE[cat.swatch];
+  // head fit: a two-tone hairstyle's second colour (the accent mask of its shading map), picked from the same hair colours
+  const backPart = look.back ? PART_BY_ID.get(look.back) : undefined;
+  const accentPart = cat.id === "hair" && backPart?.full && backPart.accent ? backPart : null;
+  const accentHex = accentPart ? hairAccentHex(look, accentPart) : null;
+  const paintAccent = (i: number) => {
+    const locked = !hasHair(i);
+    say(locked ? "That colour is a hair dye from the shop." : null);
+    if (locked) return;
+    setLook(l => ({ ...l, hairAccent: i }));
+    onChange?.("colour");
+  };
   const swatchOn = (i: number) => cat.swatch === "skin" ? look.skin === i : cat.swatch === "hair" ? look.hair === i : target !== null && partColor(look, target) === i;
   const place = cat.place ? look.place?.[cat.place] ?? [0, 0, 0, 0] as Placement : null;
   const setPlace = (i: number, v: number) => {
@@ -154,6 +165,16 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
         })}
       </div>
       {cat.swatch === "outfit" && !target && <p className={styles.hint}>Wear something here to colour it.</p>}
+    </div>}
+    {accentPart && <div className={styles.swatchBlock}>
+      <h3>Second colour</h3>
+      <div className={styles.swatches} role="group" aria-label="accent colours" data-kind="hair">
+        {swatches.map((hex, i) => {
+          const locked = !hasHair(i);
+          return <button key={hex} type="button" style={{ "--swatch": hex } as CSSProperties} aria-pressed={accentHex === hex}
+            aria-label={`accent colour ${i + 1}${locked ? " (hair dye in the shop)" : ""}`} data-locked={locked || undefined} onClick={() => paintAccent(i)} />;
+        })}
+      </div>
     </div>}
     {note && <p className={styles.lockNote} role="status">{note}{onShop && <button type="button" onClick={onShop}>Visit the shop</button>}</p>}
   </>;

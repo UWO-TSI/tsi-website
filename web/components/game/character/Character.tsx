@@ -14,7 +14,7 @@ import { useGLTF } from "@react-three/drei";
 import type { WeaponPaint } from "@/lib/game/combat/primitives";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { BASE_URL, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, LOD_SKIN_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, usesFacePage2, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
+import { BASE_URL, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, HAIR_CAP_COLOR, HAIR_MAP_GAIN, HAIR_MAPS_URL, LOD_SKIN_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, usesFacePage2, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
 import { characterLod, createLodState, drawnHeight, mixerStep } from "@/lib/game/character/lod";
 import { beatRate } from "@/lib/game/danceSync";
 import { quality } from "@/lib/game/perf/governor";
@@ -39,6 +39,52 @@ type Gltf = { scene: THREE.Object3D; animations: THREE.AnimationClip[] };
 // Double-sided: clothes, hoods and capes are open shells whose insides show (hair and hats are closed solids, whose
 // tucked undersides stay behind the head). The shadow pass keeps back faces only, as for a front-sided material.
 const BODY_MATERIAL = new THREE.MeshPhysicalMaterial({ name: "CharacterBody", vertexColors: true, ...MATTE, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
+/**
+ * Mapped hairstyles (head fit, specs/characters/head-fit.md): one shared atlas of shading maps, one channel per style
+ * (rig.ts `hairMap` names it, 0: no map). The palette tint (the vertex colour) times map x gain; a two-tone style mixes
+ * its accent colour in by the accent channel. Matte like every character surface. Loaded the first time a mapped style
+ * is worn; until then a white texel (the tint alone).
+ */
+const HAIR_ATLAS: { value: THREE.Texture } = { value: new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1) };
+HAIR_ATLAS.value.needsUpdate = true;
+let hairAtlasLoading = false;
+function ensureHairAtlas() {
+  if (hairAtlasLoading) return;
+  hairAtlasLoading = true;
+  new THREE.TextureLoader().load(HAIR_MAPS_URL, tex => {
+    tex.flipY = false;                       // glTF UVs (top-left origin), as the face atlas
+    tex.colorSpace = THREE.NoColorSpace;     // data: luminance ratios, not colour
+    tex.generateMipmaps = true;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.anisotropy = 4;
+    tex.needsUpdate = true;
+    HAIR_ATLAS.value = tex;
+  });
+}
+const HAIR_CHANNEL = /* glsl */ `float hairChannel(vec3 t, float c) { return c < 1.5 ? t.r : (c < 2.5 ? t.g : t.b); }`;
+const CAP = new THREE.Color(HAIR_CAP_COLOR);       // linear: a cap or visor's fixed colour, by its mask channel
+const glsl = (c: THREE.Color) => `vec3(${c.r.toFixed(5)}, ${c.g.toFixed(5)}, ${c.b.toFixed(5)})`;
+BODY_MATERIAL.onBeforeCompile = shader => {
+  shader.uniforms.uHairAtlas = HAIR_ATLAS;
+  shader.vertexShader = shader.vertexShader
+    .replace("#include <uv_pars_vertex>", "#include <uv_pars_vertex>\nattribute vec3 hairMap;\nattribute vec3 hairAccent;\nvarying vec2 vHairUv;\nvarying vec3 vHairMap;\nvarying vec3 vHairAccent;")
+    .replace("#include <uv_vertex>", "#include <uv_vertex>\nvHairUv = uv;\nvHairMap = hairMap;\nvHairAccent = hairAccent;");
+  shader.fragmentShader = shader.fragmentShader
+    .replace("#include <uv_pars_fragment>", `#include <uv_pars_fragment>\nuniform sampler2D uHairAtlas;\nvarying vec2 vHairUv;\nvarying vec3 vHairMap;\nvarying vec3 vHairAccent;\n${HAIR_CHANNEL}`)
+    // before the vertex colour (the tint) is applied, so the look's saturation and value act on the result as on any surface
+    // u < 0: the under-cap (no map: its COLOR_0 and the tint). Else tint x shade, the accent and the cap's fixed colour
+    // mixed in by their masks, all before the vertex colour multiplies in (hence the division by it)
+    .replace("#include <color_fragment>", `if (vHairMap.x > 0.5 && vHairUv.x >= 0.0) {
+      vec3 t = texture2D(uHairAtlas, vHairUv).rgb;
+      float s = hairChannel(t, vHairMap.x) * ${HAIR_MAP_GAIN.toFixed(4)};
+      float a = vHairMap.y > 0.5 ? hairChannel(t, vHairMap.y) : 0.0;
+      float c = vHairMap.z > 0.5 ? hairChannel(t, vHairMap.z) : 0.0;
+      vec3 inv = 1.0 / max(vColor, vec3(1e-4));
+      diffuseColor.rgb *= s * mix(mix(vec3(1.0), vHairAccent * inv, a), ${glsl(CAP)} * inv, c);
+    }
+    #include <color_fragment>`);
+};
+BODY_MATERIAL.customProgramCacheKey = () => "character-body-hairmap-v2";
 let decalMaterial: THREE.MeshPhysicalMaterial | null = null;
 const bodies = refCache<THREE.BufferGeometry>();
 const decals = new Map<string, THREE.BufferGeometry>();
@@ -104,7 +150,7 @@ function localBoneTransform(this: THREE.SkinnedMesh, index: number, target: THRE
 /** What a look merges (rig.ts mergeLook): the base's skin in the look's skin colour, then each part but its print. */
 function lookPieces(look: CharacterLook, parts: ResolvedPart[], base: THREE.Object3D, scenes: THREE.Object3D[]) {
   return [{ root: base, tints: { M_Skin: PALETTE.skin[look.skin] }, keep: (m: string) => m === "M_Skin" },
-    ...parts.map((p, i) => ({ root: scenes[i], tints: p.tints, keep: (m: string) => m !== "M_Decal" }))];
+    ...parts.map((p, i) => ({ root: scenes[i], tints: p.tints, keep: (m: string) => m !== "M_Decal", map: p.map }))];
 }
 
 /** One character instance: its own bones and mixer, shared geometry/materials. */
@@ -700,6 +746,7 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
   // While a newly chosen part loads, keep showing the previous look instead of suspending.
   const shown = useDeferredValue(look);
   const parts = useMemo(() => resolveParts(shown), [shown]);
+  useEffect(() => { if (parts.some(p => p.map)) ensureHairAtlas(); }, [parts]);   // the first mapped hairstyle loads the shared atlas
   const loaded = useGLTF([BASE_URL, ...parts.map(p => p.url)]) as unknown as Gltf[];
   const atlas = useLoader(THREE.TextureLoader, faceSize >= 1024 ? FACE_ATLAS_URLS.creator : FACE_ATLAS_URLS.world);
   const decalMap = useLoader(THREE.TextureLoader, TSI_DECAL_URL);
