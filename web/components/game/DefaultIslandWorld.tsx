@@ -10,6 +10,7 @@ import GridOcean from "./grid/GridOcean";
 import Seabed from "./water/Seabed";
 import WaterContacts from "./water/WaterContacts";
 import GlassWater from "./water/GlassWater";
+import DecorativeFish from "./water/DecorativeFish";
 import PlayerAvatar from "./PlayerAvatar";
 import Residents from "./NPC";
 import GameSceneBoundary from "./GameSceneBoundary";
@@ -421,6 +422,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <Suspense fallback={null}><Seabed map={island.map} lite={liteMode} skip={layout.underWharf} /></Suspense>
       <WaterContacts map={island.map} player={player} ground={island.ground} rocks={layout.rocks} />
       <GlassWater />
+      <Suspense fallback={null}><DecorativeFish map={island.map} lite={liteMode} skip={layout.underWharf} /></Suspense>
       <PeacefulLayer map={island.map} nodes={layout.nodes} moment={peaceful.moment} member={peaceful.member} player={player} ground={island.ground} highTier={!liteMode} active={!fishing} treeModels={SEASON_TREES[look.season]} />
       <BeachBottle player={player} ground={island.ground} />
       {/* After the first leaf glider is made: a marked edge and a ring to land in (the guided first glide). */}
