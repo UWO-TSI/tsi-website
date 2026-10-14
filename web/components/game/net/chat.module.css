@@ -5,7 +5,7 @@
  */
 
 /* ── The dock: beside the minimap's column on a desktop, the left edge on a phone ── */
-.dock { position: absolute; left: var(--hud-stick-left, 212px); bottom: var(--hud-floor, 16px); z-index: 12; width: min(400px, calc(100% - var(--hud-stick-left, 212px) - 16px));
+.dock { position: absolute; left: var(--hud-stick-left, 212px); bottom: var(--hud-floor, 16px); z-index: 12; width: min(360px, calc(100% - var(--hud-stick-left, 212px) - 16px));
   display: flex; flex-direction: column; gap: 6px; pointer-events: none; zoom: var(--tsi-text-scale, 1); font-family: var(--gui-font); }
 .dock > * { pointer-events: auto; }
 .dock[data-hidden] { opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0s linear 0.3s; }

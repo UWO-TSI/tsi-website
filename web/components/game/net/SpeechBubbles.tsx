@@ -28,7 +28,7 @@ import s from "./chat.module.css";
 /** Bubbles at once (yours included). */
 export const BUBBLES = 8;
 /** Over the head: a line's tail just above it; the "…" above the name tag. */
-const LINE_LIFT = -0.05, TYPING_LIFT = 0.32;
+const LINE_LIFT = -0.05, TYPING_LIFT = 0.6;
 const SELF = "self";
 
 type Speaker = RemoteRig | typeof SELF;
@@ -145,8 +145,10 @@ export class BubblePool {
       place: o => {
         if (o.shown !== slot.shown) { slot.shown = o.shown; slot.root.style.display = o.shown ? "" : "none"; }
         if (!o.shown) return;
-        // Its box once its words are in; told twice its height (it's drawn with its tail at the anchor), so the others keep clear of all of it.
-        if (slot.measure) { slot.measure = false; const b = slot.bubble.getBoundingClientRect(); size.w = b.width; size.h = b.height * 2; }
+        // Its box once its words are in. A line is told twice its height (it's drawn with its tail at the anchor, and the
+        // speaker's tag steps aside for it), so the others keep clear of all of it; the "…" sits higher, clear of the
+        // writer's own name tag, and is told its own height.
+        if (slot.measure) { slot.measure = false; const b = slot.bubble.getBoundingClientRect(); size.w = b.width; size.h = slot.typing ? b.height : b.height * 2; }
         const y = o.y + o.dy;
         if (!(Math.abs(o.x - slot.x) <= 0.5 && Math.abs(y - slot.y) <= 0.5)) {
           slot.x = o.x; slot.y = y;

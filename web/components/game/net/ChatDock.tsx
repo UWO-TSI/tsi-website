@@ -133,7 +133,8 @@ export default function ChatDock({ hidden = false }: { hidden?: boolean }) {
           : <p className={s.empty}>Nothing said yet. Say hello!</p>}
       </section>
       <form className={s.bar} onSubmit={send} style={{ marginTop: 6 }}>
-        <input ref={input} value={text} maxLength={CHAT_MAX} onChange={e => change(e.target.value)} onKeyDown={keys}
+        {/* Focused as it mounts: a letter typed right after Enter lands in the bar, not on the world. */}
+        <input ref={input} autoFocus value={text} maxLength={CHAT_MAX} onChange={e => change(e.target.value)} onKeyDown={keys}
           placeholder="Say something nice" aria-label="Chat message" autoComplete="off" spellCheck enterKeyHint="send" />
         {left <= 40 && <span className={s.left} data-low={left <= 10 || undefined} aria-live="polite">{left}</span>}
         <button type="submit" className={s.send} aria-label="Send" disabled={!text.trim()}><SendHorizontal size={16} aria-hidden /></button>
