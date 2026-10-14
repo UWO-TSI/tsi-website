@@ -10,7 +10,9 @@
  * - wind: the trees and the flowing grass stand still;
  * - half the water's glints, 8 fireflies (High: two a bush), lighter fog banks, fewer critters;
  * - other players: 8 at full detail and 16 drawn (High: 12 and 24);
- * - the flowing grass thins with distance (all within 30 u of the camera, a quarter past 45 u: GrassTufts THIN);
+ * - the grass is lighter: the blade field (village, v2 world, title) one sparser layer with its fade pulled in
+ *   (GrassField GRASS_TIERS.lite); the old tufts elsewhere thin with distance (all within 30 u, a quarter past 45 u:
+ *   GrassTufts THIN);
  * - without the pixel finish, the canvas at most 1 device pixel per CSS pixel (High: up to 1.5).
  * High: cached shadow maps, AO, bloom, wind sway, full ambient life, FXAA in smooth mode.
  */
