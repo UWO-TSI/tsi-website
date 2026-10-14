@@ -9,9 +9,10 @@
 .mist { position: absolute; inset: 0; z-index: 80; pointer-events: none !important;
   background: radial-gradient(ellipse 85% 70% at 50% 46%, #fff8e6 0%, #f8e7c4 40%, #e8d7b9 70%, #cfd6cc 100%); }
 
-/* The opening's fade in: black lifting off Bram's boat, once. */
-.fadeIn { position: absolute; inset: 0; z-index: 85; background: #0d0b09; pointer-events: none !important; animation: fadeIn var(--fade-ms, 1200ms) ease-out both; }
-@keyframes fadeIn { from { opacity: 1; } to { opacity: 0; } }
+/* The opening's fade in: black a moment (the loading card leaves over it, Bram's first words in the dark), then lifting
+   off his boat, once. */
+.fadeIn { position: absolute; inset: 0; z-index: 85; background: #0d0b09; pointer-events: none !important; animation: fadeIn var(--fade-ms, 1600ms) linear both; }
+@keyframes fadeIn { 0%, 40% { opacity: 1; animation-timing-function: ease-out; } 100% { opacity: 0; } }
 
 /* Cinematic bars for the crossing, slid in from the edges. */
 .letterbox { position: absolute; inset: 0; z-index: 2; pointer-events: none !important; }

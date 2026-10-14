@@ -45,18 +45,23 @@ export const SET = {
   /**
    * Your feet by the gunwale, facing out (-x), and how far you lean over it (radians). Upright, not crouched: the
    * crouch bows the head, and the water then sees the face from the forehead side, where David's fringes cover the
-   * eyes (checked on all 21 hairstyles, specs/evidence/v1-opening/07-hairstyles-reflection.webp).
+   * eyes (checked on all 21 hairstyles, specs/evidence/v1-opening/07-hairstyles-reflection.webp). Leaning past 45
+   * degrees the camera sees the back of your head, not your face, and your chest is out over the water: its
+   * reflection (your shirt) shows under your face's.
    */
-  you: { x: -0.45, y: BOAT.floor - BOAT.draft, z: 0.15, lean: 0.75, crouch: false },
+  you: { x: -0.6, y: BOAT.floor - BOAT.draft, z: 0.15, lean: 1.0, crouch: false },
   /** Bram at the stern by the motor, facing you. */
   bram: { x: 0.28, y: BOAT.floor - BOAT.draft, z: -0.62, yaw: -0.9 },
   /** Aboard, looking up at Bram from where you were laid down (your eyes). */
   aboard: { pos: [-0.62, 0.62, 0.55] as const, look: [0.28, 1.25, -0.62] as const, fov: 46, roll: -0.08 },
   /**
-   * Leaning over (the sketch): out over the water off the bow quarter, looking back and down at the boat's side, rolled
-   * so the gunwale runs up the frame on a diagonal with the back of your head on it and your face in the water beside it.
+   * Leaning over (playtest round 1: the reflection reads upright, the shirt in frame): the camera orbits a point on your
+   * reflection, `aim` of the way from its face (0) down to its chest (1), at `dist`, `azimuth` round from inboard (+x)
+   * toward the bow (+z) and `elevation` above the sea. Its up is the reflection's own up, so the face in the water is
+   * always upright on screen; `roll` turns the frame from there. Out over the water off the stern quarter: the back of
+   * your head bottom left, the gunwale on a diagonal under it, your reflection face and shirt in the middle (the sketch).
    */
-  creator: { pos: [-3.2, 2.4, 1.6] as const, look: [-1.3, 0.0, 0.0] as const, fov: 32, roll: -1.1 },
+  creator: { aim: 0.8, dist: 5.5, azimuth: 4.0, elevation: 0.98, fov: 24, roll: 0 },
 };
 /** The sea's colours at golden hour (the deep, the shallower tint, the sky the reflection shows round you). */
 const SEA = { deep: "#2a6c80", shallow: "#4b9aa6", sky: "#dfe9e4", haze: "#f3e6cf", sun: "#fff1cf" };
@@ -206,10 +211,34 @@ function resizeGpu(gpu: Gpu, w: number, h: number) { gpu.frame.setSize(Math.max(
 
 interface Frame {
   gl: THREE.WebGLRenderer; scene: THREE.Scene; camera: THREE.PerspectiveCamera; size: { width: number; height: number }; gpu: Gpu;
-  tmp: { a: THREE.Vector3; b: THREE.Vector3; up: THREE.Vector3; head: THREE.Vector3; fwd: THREE.Vector3 };
+  tmp: { a: THREE.Vector3; b: THREE.Vector3; up: THREE.Vector3; head: THREE.Vector3; fwd: THREE.Vector3; eye: THREE.Vector3; aim: THREE.Vector3; qa: THREE.Quaternion; qc: THREE.Quaternion };
   clock: React.RefObject<number>; ripples: React.RefObject<Ripple[]>; view: React.RefObject<{ x: number; y: number; w: number; h: number } | null>;
   you: THREE.Group | null; bram: THREE.Group | null; boat: THREE.Group | null; water: THREE.Mesh | null; youMotion: CharacterMotion; bramMotion: CharacterMotion;
 }
+const Y = new THREE.Vector3(0, 1, 0), _m = new THREE.Matrix4();
+/** A camera at `eye` looking at `at` with `up`, turned `roll` about its view axis, as a quaternion. */
+function lookQuat(eye: THREE.Vector3, at: THREE.Vector3, up: THREE.Vector3, roll: number, out: THREE.Quaternion) {
+  _m.lookAt(eye, at, up);
+  out.setFromRotationMatrix(_m);
+  if (roll) out.multiply(_rq.setFromAxisAngle(_z, roll));
+  return out;
+}
+const _rq = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
+/**
+ * The creator's framing (SET.creator) for your lean now: where the camera is (`eye`), the point on your reflection it
+ * looks at (`aim`) and its up (`up`), the reflection's: your head's up mirrored in the sea, so the face reads upright.
+ */
+export function creatorView(C: typeof SET.creator, out: { eye: THREE.Vector3; aim: THREE.Vector3; up: THREE.Vector3 }) {
+  const lean = SET.you.lean, s = Math.sin(lean), c = Math.cos(lean), y0 = SET.you.y;
+  // Your face and chest leaning out over the side (the lean turns you about your feet), mirrored in the sea.
+  const face = FACE_UP, chest = FACE_UP * 0.58, h = face + (chest - face) * C.aim;
+  out.aim.set(SET.you.x - h * s, -(y0 + h * c), SET.you.z);
+  out.up.set(-s, -c, 0);
+  const ce = Math.cos(C.elevation);
+  out.eye.set(out.aim.x + C.dist * ce * Math.cos(C.azimuth), out.aim.y + C.dist * Math.sin(C.elevation), out.aim.z + C.dist * ce * Math.sin(C.azimuth));
+  return out;
+}
+
 /**
  * One frame of the boat scene, module scope (the react compiler forbids writing through hook values): the swell, where
  * you and Bram are, the camera's move from aboard to over your shoulder, the mirror camera, the uniforms; then the
@@ -235,15 +264,16 @@ function drawReflection(f: Frame, dt: number) {
   f.bram?.position.set(SET.bram.x, SET.bram.y + bob, SET.bram.z);
   // Bram watches you, and looks out at the water with you once you lean over.
   f.bramMotion.yaw = THREE.MathUtils.lerp(SET.bram.yaw, -Math.PI / 2 - 0.2, lean);
-  // The camera: aboard, your eyes on him; then up and back over your shoulder, down at the water.
+  // The camera: aboard, your eyes on him; then up behind you, down at your reflection, turned so it reads upright.
   const A = SET.aboard, C = SET.creator, k = smooth(0, 1, lean);
-  tmp.a.set(...A.pos).lerp(tmp.b.set(...C.pos), k);
+  creatorView(C, tmp);
+  tmp.a.set(...A.pos).lerp(tmp.eye, k);
   tmp.a.y += bob + Math.sin(t * 0.8) * 0.01;
   cam.position.copy(tmp.a);
-  tmp.b.set(...A.look).lerp(tmp.up.set(...C.look), k);
-  cam.up.set(0, 1, 0);
-  cam.lookAt(tmp.b);
-  cam.rotateZ(THREE.MathUtils.lerp(A.roll, C.roll, k) + roll * 0.5);
+  lookQuat(tmp.a, tmp.b.set(...A.look), Y, A.roll, tmp.qa);
+  lookQuat(tmp.a, tmp.aim, tmp.up, C.roll, tmp.qc);
+  cam.quaternion.slerpQuaternions(tmp.qa, tmp.qc, k);
+  cam.rotateZ(roll * 0.5);
   cam.fov = THREE.MathUtils.lerp(A.fov, C.fov, k);
   // Framed in the scene's part of the canvas as the panels come in (the whole canvas aboard): the lens's frame is that
   // part (its size and shape, a phone's square or a desktop's two-thirds), and the canvas a window round it.
@@ -280,15 +310,10 @@ function drawReflection(f: Frame, dt: number) {
   c.uWash.value = (1 - clarity) * 0.8;
   c.uFocusOn.value = lean;
   c.uRes.value.set(gpu.frame.width, gpu.frame.height);
-  // Your face's reflection: the head mirrored in the sea, on screen.
-  if (f.you) {
-    f.you.updateMatrixWorld();
-    tmp.head.set(0, FACE_UP, 0).applyMatrix4(f.you.matrixWorld);
-    tmp.head.y = -tmp.head.y;
-    tmp.head.project(cam);
-    c.uFocus.value.set(tmp.head.x * 0.5 + 0.5, tmp.head.y * 0.5 + 0.5);
-    c.uFocusR.value.set(0.25 * Math.min(1, H / W), 0.25);
-  }
+  // Your reflection, face and shirt (the creator's aim), on screen: the blur keeps off it.
+  tmp.head.copy(tmp.aim).project(cam);
+  c.uFocus.value.set(tmp.head.x * 0.5 + 0.5, tmp.head.y * 0.5 + 0.5);
+  c.uFocusR.value.set(0.3 * Math.min(1, H / W), 0.3);
 
   if (f.water) f.water.visible = false;
   gl.setRenderTarget(gpu.refl);
@@ -327,7 +352,8 @@ export default function ReflectionScene({ look, ripples, clock, view }: {
   useEffect(() => () => disposeGpu(gpu), [gpu]);
   useEffect(() => resizeGpu(gpu, size.width * gl.getPixelRatio(), size.height * gl.getPixelRatio()), [gpu, size, gl]);
   const waterMesh = useRef<THREE.Mesh>(null);
-  const tmp = useMemo(() => ({ a: new THREE.Vector3(), b: new THREE.Vector3(), up: new THREE.Vector3(), head: new THREE.Vector3(), fwd: new THREE.Vector3() }), []);
+  const tmp = useMemo(() => ({ a: new THREE.Vector3(), b: new THREE.Vector3(), up: new THREE.Vector3(), head: new THREE.Vector3(), fwd: new THREE.Vector3(), eye: new THREE.Vector3(),
+    aim: new THREE.Vector3(), qa: new THREE.Quaternion(), qc: new THREE.Quaternion() }), []);
   // Takes over the canvas's rendering (priority 1): the mirror, the frame, the composite. The thumbnail baker (priority 0) reads back before it.
   useFrame((_, raw) => drawReflection({ gl, scene, camera: camera as THREE.PerspectiveCamera, size, gpu, tmp, clock, ripples, view, you: you.current, bram: bram.current,
     boat: boatGroup.current, water: waterMesh.current, youMotion: youMotion.current, bramMotion: bramMotion.current }, Math.min(raw, 0.1)), 1);

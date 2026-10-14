@@ -13,7 +13,7 @@
 export type ArrivalPhase = "aboard" | "creator" | "clearing" | "crossing" | "landing" | "tutorial" | "done";
 
 /** The timed beats (s): `fadeIn` is the black lifting off the boat at the start of `aboard`; `clearing` is the reflection going fully clear after Yes. */
-export const ARRIVAL_TIMES = { fadeIn: 1.2, aboard: 4.6, clearing: 1.8 } as const;
+export const ARRIVAL_TIMES = { fadeIn: 1.6, aboard: 4.6, clearing: 1.8 } as const;
 
 export interface Arrival {
   phase: ArrivalPhase;
