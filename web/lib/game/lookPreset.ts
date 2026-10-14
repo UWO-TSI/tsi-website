@@ -286,7 +286,7 @@ function waterLook(water: IslandWater, look: ClassLook): IslandWater {
   if (look.saturation === 1 && look.value === 1 && look.gloss === 0) return water;
   return {
     ...water,
-    deepColor: adjust(water.deepColor, look), midColor: adjust(water.midColor, look), shallowColor: adjust(water.shallowColor, look),
+    navyColor: adjust(water.navyColor, look), deepColor: adjust(water.deepColor, look), midColor: adjust(water.midColor, look), shallowColor: adjust(water.shallowColor, look),
     glare: water.glare * (1 + look.gloss), sunGlint: water.sunGlint * (1 + look.gloss),
   };
 }

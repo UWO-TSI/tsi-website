@@ -12,12 +12,15 @@ function glslSwell(x: number, z: number, t: number, p = SEA) {
   const phase = (v: number) => v - 6.2831853 * Math.floor(v / 6.2831853);
   const a1 = (x * d1[0] + z * d1[1]) * k + phase(t * p.waveSpeed);
   const a2 = (x * d2[0] + z * d2[1]) * k * 1.63 + phase(t * p.waveSpeed * 1.31);
-  return (Math.sin(a1) * 0.62 + Math.sin(a2) * 0.38) * p.waveHeight;
+  // The big slow swell (v1 water item 4): one long wave rolling in off the open sea, on its own clock.
+  const n3 = Math.hypot(0.8, -0.6), d3 = [0.8 / n3, -0.6 / n3], k3 = 6.2831853 / Math.max(p.swellLength, 0.001);
+  const a3 = (x * d3[0] + z * d3[1]) * k3 + phase(t * p.swellSpeed);
+  return (Math.sin(a1) * 0.62 + Math.sin(a2) * 0.38) * p.waveHeight + Math.sin(a3) * p.swellHeight;
 }
 
 describe("the shared swell on the CPU (what the boat and the buoys float on)", () => {
   it("prints the same waves into the shader that it computes", () => {
-    for (const piece of ["vec2(1.00, 0.35)", "vec2(-0.42, 1.00)", "1.63", "1.31", "0.62", "0.38"]) expect(WATER_SWELL).toContain(piece);
+    for (const piece of ["vec2(1.00, 0.35)", "vec2(-0.42, 1.00)", "1.63", "1.31", "0.62", "0.38", "vec2(0.80, -0.60)", "uSwellLength", "uSwellSpeed", "uSwellHeight"]) expect(WATER_SWELL).toContain(piece);
   });
 
   it("matches the shader's swell everywhere on the island, at any hour", () => {
@@ -26,11 +29,18 @@ describe("the shared swell on the CPU (what the boat and the buoys float on)", (
         expect(waterSwellAt(x, z, t, SEA)).toBeCloseTo(glslSwell(x, z, t), 6);
   });
 
-  it("never rises or falls past the wave height", () => {
+  it("never rises or falls past the waves' and the swell's heights together", () => {
     let most = 0;
-    for (let i = 0; i < 2000; i++) most = Math.max(most, Math.abs(waterSwellAt(i * 0.37 - 300, i * 0.91 - 700, i * 1.3, SEA)));
-    expect(most).toBeLessThanOrEqual(SEA.waveHeight + 1e-9);
-    expect(most).toBeGreaterThan(SEA.waveHeight * 0.8);
+    for (let i = 0; i < 4000; i++) most = Math.max(most, Math.abs(waterSwellAt(i * 0.37 - 300, i * 0.91 - 700, i * 1.3, SEA)));
+    expect(most).toBeLessThanOrEqual(SEA.waveHeight + SEA.swellHeight + 1e-9);
+    expect(most).toBeGreaterThan((SEA.waveHeight + SEA.swellHeight) * 0.8);
+  });
+  it("rolls a big slow swell under the short waves: long, and slower than they are", () => {
+    expect(SEA.swellLength).toBeGreaterThan(SEA.waveScale * 2.5);
+    expect(SEA.swellHeight).toBeGreaterThan(SEA.waveHeight);
+    // Its period (s): a wave length over its phase speed.
+    const swellPeriod = (2 * Math.PI) / SEA.swellSpeed, wavePeriod = (2 * Math.PI) / SEA.waveSpeed;
+    expect(swellPeriod).toBeGreaterThan(wavePeriod);
   });
 
   it("gives the slope of the surface it describes", () => {

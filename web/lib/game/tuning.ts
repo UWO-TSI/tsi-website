@@ -128,6 +128,7 @@ export const TUNING_DEFAULTS: Tuning = {
   // they can be called his again. roughness is his glare spread (a specular
   // power of 26) as the RMS slope with the same width (row 238).
   water: {
+    navyColor: 0x1d4a86,
     deepColor: 0x3098b3,
     midColor: 0x5bc5cb,
     shallowColor: 0xcadcbc,
@@ -150,11 +151,19 @@ export const TUNING_DEFAULTS: Tuning = {
      * banks; the sea has a beach.
      */
     bedSlope: 1.45,
+    // v1 water pass (2026-10-13): past the shallows the bed drops off to the open sea, so the sea goes navy
+    // (references/look/2026-10-13/water-foam-shallows-ref.png). A river stays inside shelfFrom of its banks.
+    shelfDepth: 2.6,
+    shelfFrom: 3.5,
+    shelfTo: 10,
     foamWidth: 0.85,
     foamStrength: 0.9,
     foamSoft: 0.06,
     foamWave: 0.12,
     foamWaveSpeed: 1.4,
+    foamPulse: 0.8,
+    foamPulseReach: 1.1,
+    foamPulseSpeed: 0.16,
     blobScale: 3.2,
     blobDarken: 0.88,
     blobSpeed: 0.35,
@@ -170,6 +179,14 @@ export const TUNING_DEFAULTS: Tuning = {
     waveHeight: 0.035,
     waveScale: 7,
     waveSpeed: 0.7,
+    // v1 water pass: a long swell under the waves (period ~15 s), lighter on its crests; the far sea hazes into the horizon.
+    swellHeight: 0.06,
+    swellLength: 26,
+    swellSpeed: 0.42,
+    swellShade: 0.07,
+    haze: 0.4,
+    hazeFrom: 24,
+    hazeTo: 78,
   },
   // Sky defaults after the CPU-preview pass 2026-07-29. Coverage numbers are
   // whatever the WEATHER ENGINE pushes at runtime; these are only what the

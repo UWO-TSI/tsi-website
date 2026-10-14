@@ -16,6 +16,7 @@ export interface GraphicsSettingsActions {
   setShadows: (v: boolean) => void;
   setGhostsEnabled: (v: boolean) => void;
   setPixelated: (v: boolean) => void;
+  setGlassWater: (v: boolean) => void;
   resetToAuto: () => void;
   detect: (values: Partial<GraphicsSettings>) => void;
   isExplicit: (key: keyof GraphicsSettings) => boolean;
@@ -28,6 +29,7 @@ const actions: GraphicsSettingsActions = {
   setShadows: (v) => store.set("shadows", v),
   setGhostsEnabled: (v) => store.set("ghostsEnabled", v),
   setPixelated: (v) => store.set("pixelated", v),
+  setGlassWater: (v) => store.set("glassWater", v),
   resetToAuto: store.reset,
   detect: store.detect,
   isExplicit: store.isExplicit,

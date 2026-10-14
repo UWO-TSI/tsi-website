@@ -126,6 +126,7 @@ export default function SettingsSheet({ open, onClose, detectedTier = null, plac
         <option value="high">High</option>
       </Select>
       <Toggle checked={graphics.shadows} disabled={graphics.liteMode} onChange={on => graphicsActions.setShadows(on)}>Shadows</Toggle>
+      <Toggle checked={graphics.glassWater && !graphics.liteMode} disabled={graphics.liteMode} onChange={on => graphicsActions.setGlassWater(on)}>Glass water</Toggle>
       {/* Row 283: the HUD stays out of the way while you explore; this keeps it on. */}
       <Toggle checked={alwaysFullHud} onChange={setAlwaysFullHud}>Show full HUD</Toggle>
       <p className={styles.hint}>Otherwise TC, XP, the clock and mail show when they change. Hold <kbd>{keyName(wheelKeys.hud)}</kbd>, or let go of the mouse, to see everything.</p>
