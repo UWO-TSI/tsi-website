@@ -183,3 +183,19 @@ export function worldToDock(d: Dock, x: number, z: number, out: { x: number; z: 
   out.z = dx * s + dz * c;
   return out;
 }
+
+/**
+ * The berth, in the dock's frame: the water the jetty's tip, the finger pier, the moored boat and the rowboats need,
+ * kept `depth` deep, its edge `edge` wide. The smooth world digs it into its heights (lib/game/world/convert.ts
+ * wharfQuay); the village's seabed keeps it out of the sea's wide shallows (lib/game/seabed.ts setShoal).
+ */
+export const BERTH = { x0: -5.3, x1: 3.8, z0: -5.2, z1: -0.8, edge: 0.6, depth: 1.4 } as const;
+const inDock = { x: 0, z: 0 };
+/** How much of a dock's berth covers a world point: 1 inside, falling to 0 over `edge`. */
+export function berthWeight(dock: { x: number; z: number; yaw?: number }, x: number, z: number, edge: number = BERTH.edge): number {
+  const { x: lx, z: lz } = worldToDock({ x: dock.x, z: dock.z, yaw: dock.yaw ?? 0 }, x, z, inDock);
+  const out = Math.hypot(Math.max(0, BERTH.x0 - lx, lx - BERTH.x1), Math.max(0, BERTH.z0 - lz, lz - BERTH.z1));
+  if (out >= edge) return 0;
+  const t = out / edge;
+  return 1 - t * t * (3 - 2 * t);
+}

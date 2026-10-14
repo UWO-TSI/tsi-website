@@ -1,12 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PerspectiveCamera, Vector3 } from "three";
-import { chopSlope, facetGlint, facetTilt, glareLobe, halfVector, type Vec3 } from "@/lib/game/waterShader";
+import { FOLD_FADE, WATER_FOLD, bentFacing, chopSlope, facetGlint, facetTilt, foldFade, glareLobe, halfVector, type Vec3 } from "@/lib/game/waterShader";
+import { WORLD_BEND, WORLD_BEND_SIDE } from "@/lib/game/curvedWorld";
+import { DEFAULT_PITCH, ORBIT_DISTANCE, PITCH_MIN, orbitOffset } from "@/lib/game/orbitCamera";
 import { ISLAND_LIGHTING, withWeather } from "@/lib/game/islandLighting";
 import { sunFromAngles } from "@/lib/game/lookPreset";
 import { buildVillage, type VillageDoc } from "@/lib/game/villageMap";
 import frozen from "@/lib/game/fixtures/village-2026-09-28.json";
 import { WATER_DROP, createCenteredMap, isRiver, surfaceAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
-import { glintPoints, oceanGeometry } from "./GridOcean";
+import { GLINT_FOG, glintPoints, oceanGeometry } from "./GridOcean";
+import { readFileSync } from "node:fs";
 
 // Water optics on a frozen copy of the 2026-09-28 village (camera spots and the deck below are its geometry).
 const { map } = buildVillage(frozen as VillageDoc);
@@ -139,6 +142,107 @@ describe("sun on the water is optics (row 238, look spec §7.4)", () => {
     expect(litFrames / 361).toBeGreaterThan(5);
     expect(median).toBeLessThan(0.35);
     expect(median).toBeGreaterThan(0.05);
+  });
+});
+
+// Playtest round 1 (David, 2026-10-14): "the sparkles in the distance sometimes gets folded in and you see 2x the
+// sparkles". The world's bend (curvedWorld.ts) sinks everything by view distance squared, so far enough out the sea
+// curves over and faces away: the water there is culled with its back face, but a sparkle is a point, and it drew
+// again folded back under the horizon over the near ones. The sparkles fade out as the bent sea turns edge-on.
+describe("sparkles under the world's bend", () => {
+  const AFTERNOON_YAW = 0.62; // the sun at 16:30 on 2026-10-14 (?at=16:30): the camera looking into it
+  /** The orbit camera as useFollowCamera places it: ORBIT_DISTANCE × zoom back from a point 0.7 up and 1.5 ahead of the player. */
+  function orbitCam(player: [number, number], yaw: number, pitch: number, zoom: number, aspect = 16 / 9) {
+    const camera = new PerspectiveCamera(48, aspect, 0.1, 200);
+    const look = new Vector3(player[0] + Math.sin(yaw) * 1.5, 0.7, player[1] + Math.cos(yaw) * 1.5);
+    const [ox, oy, oz] = orbitOffset(yaw, pitch, ORBIT_DISTANCE * zoom);
+    camera.position.set(look.x + ox, look.y + oy, look.z + oz);
+    camera.lookAt(look);
+    camera.updateMatrixWorld();
+    camera.updateProjectionMatrix();
+    return camera;
+  }
+  /** A world point as the bent world draws it (project_vertex): its view position sunk by the bend, and where on screen. */
+  function drawn(camera: PerspectiveCamera, p: Vec3) {
+    const v = new Vector3(...p).applyMatrix4(camera.matrixWorldInverse);
+    v.y -= v.z * v.z * WORLD_BEND + v.x * v.x * WORLD_BEND_SIDE;
+    const mv: Vec3 = [v.x, v.y, v.z], ndc = v.clone().applyMatrix4(camera.projectionMatrix);
+    return { mv, ndc, fade: foldFade(bentFacing(mv, upInView(camera), WORLD_BEND, WORLD_BEND_SIDE)) };
+  }
+  const upInView = (camera: PerspectiveCamera): Vec3 => { const u = new Vector3(0, 1, 0).transformDirection(camera.matrixWorldInverse); return [u.x, u.y, u.z]; };
+  const CAMERAS: [string, PerspectiveCamera][] = [
+    ["the lowest camera at the afternoon sun", orbitCam([12.5, 17.5], AFTERNOON_YAW, PITCH_MIN, 1.6)],
+    ["the lowest camera, closer", orbitCam([12.5, 17.5], AFTERNOON_YAW, PITCH_MIN, 1)],
+    ["the shipped camera", orbitCam([0, 14], 0, DEFAULT_PITCH, 1)],
+    ["the lowest camera on a phone", orbitCam([12.5, 17.5], AFTERNOON_YAW, PITCH_MIN, 1.6, 9 / 16)],
+  ];
+
+  it("reads the bent surface's own facing (finite differences of the bend)", () => {
+    const camera = CAMERAS[0][1], up = upInView(camera);
+    for (const [x, z] of [[20, 30], [40, 60], [-10, 80], [60, 20], [30, 110]]) {
+      const at = (dx: number, dz: number) => new Vector3(...drawn(camera, [x + dx, -WATER_DROP, z + dz]).mv);
+      const p = at(0, 0), n = at(0, 0.01).sub(p).cross(at(0.01, 0).sub(p)).normalize();
+      expect(bentFacing([p.x, p.y, p.z], up, WORLD_BEND, WORLD_BEND_SIDE)).toBeCloseTo(n.dot(p.clone().negate().normalize()), 3);
+    }
+  });
+
+  for (const [label, camera] of CAMERAS) {
+    it(`draws no sparkle twice: ${label}`, () => {
+      // Lines of sight out across the water, every 3 degrees across the view: along each, the sea rises up the screen
+      // to the bent horizon, then folds back down. Nothing past the fold is drawn, and what is drawn rises with distance.
+      const eye = camera.position, fwd = new Vector3(); camera.getWorldDirection(fwd);
+      const heading = Math.atan2(fwd.x, fwd.z);
+      let folds = 0, kept = 0;
+      for (let a = -36; a <= 36; a += 3) {
+        const h = heading + (a * Math.PI) / 180, row: { r: number; y: number; fade: number; onScreen: boolean }[] = [];
+        for (let r = 2; r <= 140; r += 0.5) {
+          const d = drawn(camera, [eye.x + Math.sin(h) * r, -WATER_DROP, eye.z + Math.cos(h) * r]);
+          row.push({ r, y: d.ndc.y, fade: d.fade, onScreen: Math.abs(d.ndc.x) <= 1 && Math.abs(d.ndc.y) <= 1 });
+        }
+        const top = row.reduce((m, s, i) => (s.y > row[m].y ? i : m), 0);
+        if (top < row.length - 1 && row[top].r < 90 && row.slice(top).some(s => s.onScreen)) folds++;
+        let highest = -Infinity;
+        for (let i = 0; i < row.length; i++) {
+          // Two units past the fold nothing is drawn; what is drawn never comes back down the screen (a second row).
+          if (i > top + 4) expect(row[i].fade, `past the fold at ${row[i].r}`).toBe(0);
+          if (row[i].fade <= 0) continue;
+          expect(row[i].y, `drawn again lower at ${row[i].r}`).toBeGreaterThan(highest - 0.003);
+          highest = Math.max(highest, row[i].y);
+          if (row[i].onScreen) kept++;
+        }
+      }
+      expect(kept).toBeGreaterThan(100);
+      if (label.startsWith("the lowest")) expect(folds, "the fold is inside the sparkles' reach and on screen").toBeGreaterThan(5);
+    });
+  }
+
+  it("leaves the sparkles round the player untouched", () => {
+    for (const [label, camera] of CAMERAS) {
+      const eye = camera.position, fwd = new Vector3(); camera.getWorldDirection(fwd);
+      for (let r = 2; r <= 24; r += 1) {
+        const d = drawn(camera, [eye.x + fwd.x / Math.hypot(fwd.x, fwd.z) * r, -WATER_DROP, eye.z + fwd.z / Math.hypot(fwd.x, fwd.z) * r]);
+        expect(d.fade, `${label} at ${r}`).toBe(1);
+      }
+    }
+  });
+
+  it("fades a far sparkle into the fog instead of lighting it with the fog's colour", () => {
+    // The sprites add their light (additive blending): three's fog mixes a fragment toward the fog's colour, which on
+    // an additive sprite ADDS the pale fog colour, so every faintly lit sprite far out drew as a pale dot, packed into
+    // the band the bend squeezes the far sea into (found on the playtest's afternoon shot: the dots under the horizon
+    // were the sprites, whatever colour the sprite itself was). In fog a sprite's light fades to nothing instead.
+    expect(GLINT_FOG).not.toContain("fogColor");
+    expect(GLINT_FOG).toContain("gl_FragColor.rgb *= 1.0 - fogFactor;");
+    expect(GLINT_FOG).toContain("smoothstep( fogNear, fogFar, vFogDepth )");
+    const src = readFileSync(new URL("./GridOcean.tsx", import.meta.url), "utf8");
+    expect(src).toContain(`.replace("#include <fog_fragment>", GLINT_FOG)`);
+  });
+
+  it("prints the same fade into the sprites' shader", () => {
+    const glsl = WATER_FOLD(WORLD_BEND, WORLD_BEND_SIDE);
+    expect(glsl).toContain(`smoothstep(0.0, ${FOLD_FADE.toFixed(3)}`);
+    expect(glsl).toContain((2 * WORLD_BEND).toFixed(6));
+    expect(glsl).toContain((2 * WORLD_BEND_SIDE).toFixed(6));
   });
 });
 

@@ -84,7 +84,7 @@ export const RemoteAvatar = memo(function RemoteAvatar({ rig, player, walkSpeed,
   // Character's parent is the anchor: its contact shadow sits there, at the floor. Hidden until the driver places it.
   return <group ref={anchor} visible={false}>
     <Suspense fallback={null}>
-      <Character look={look} motion={rig.live as RefObject<CharacterMotion>} walkSpeed={walkSpeed} weapon={weapon} held={held} leaf={!FX_BENCH || !fx.off.has("leaf")} remote />
+      <Character look={look} motion={rig.live as RefObject<CharacterMotion>} walkSpeed={walkSpeed} weapon={weapon} held={held} leaf={!FX_BENCH || !fx.off.has("leaf")} remote keepFace />
     </Suspense>
     {dust && <RemoteDust rig={rig} ground={ground} />}
     <mesh geometry={HIT_GEO} material={HIT_MAT} position={[0, 0.75, 0]} userData={{ pick: player.name }} onClick={e => cardFor(rig, e)}
