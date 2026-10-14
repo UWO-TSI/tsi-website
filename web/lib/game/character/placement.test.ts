@@ -5,8 +5,8 @@ import { LOOK_MAX_BYTES } from "@/lib/net/protocol";
 
 const look = (x: Partial<CharacterLook> = {}): CharacterLook => ({ ...DEFAULT_LOOK, ...x });
 const slots = (l: CharacterLook, expression: (typeof EXPRESSIONS)[number] = "neutral") => faceSlots(l, restPose(l, expression));
-/** Slot indices, after one slot per extra: brows, the right eye (canvas left), its mirror (or own left cell), the mouth. */
-const BROWS = FACE_SLOT_COUNT - 4, EYE = FACE_SLOT_COUNT - 3, EYE_MIRROR = FACE_SLOT_COUNT - 2, MOUTH = FACE_SLOT_COUNT - 1;
+/** Slot indices, after one slot per extra: the right eye (canvas left), its mirror (or own left cell), the mouth. */
+const EYE = FACE_SLOT_COUNT - 3, EYE_MIRROR = FACE_SLOT_COUNT - 2, MOUTH = FACE_SLOT_COUNT - 1;
 const S = PLACE_STEPS;
 type Box = [number, number, number, number];
 const union = (a: Box, b: Box): Box => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])];
@@ -15,8 +15,8 @@ const reflect = (b: Box): Box => [1 - b[2], b[1], 1 - b[0], b[3]];
 
 describe("face placement: the creator's sliders as look data", () => {
   it("parses placement per part as whole steps, clamped to the slider range; the mouth has no spacing", () => {
-    const l = parseLook({ ...DEFAULT_LOOK, place: { eyes: [3, -2, 4.4, 99], brows: [-99, 7, 0, -3], mouth: [2, 9, -1, 1] } });
-    expect(l.place).toEqual({ eyes: [3, -2, 4, S], brows: [-S, 7, 0, -3], mouth: [2, 0, -1, 1] });
+    const l = parseLook({ ...DEFAULT_LOOK, place: { eyes: [3, -2, 4.4, 99], mouth: [2, 9, -1, 1] } });
+    expect(l.place).toEqual({ eyes: [3, -2, 4, S], mouth: [2, 0, -1, 1] });
   });
   it("drops garbage and parts left where they were, so a look only carries what moved", () => {
     expect(parseLook({ ...DEFAULT_LOOK, place: { eyes: [0, 0, 0, 0], brows: "up", mouth: [1, 2], nose: [1, 1, 1, 1] } }).place).toBeUndefined();
@@ -25,15 +25,25 @@ describe("face placement: the creator's sliders as look data", () => {
     expect(parseLook({ ...DEFAULT_LOOK, place: { eyes: ["1", null, NaN, Infinity] } }).place).toBeUndefined();
   });
   it("survives a save round trip", () => {
-    const saved = look({ place: { eyes: [-4, 3, 2, -1], brows: [2, -1, -5, 3], mouth: [-2, 0, 1, 4] } });
+    const saved = look({ place: { eyes: [-4, 3, 2, -1], mouth: [-2, 0, 1, 4] } });
     expect(parseLook(JSON.parse(JSON.stringify(saved)))).toEqual(saved);
+  });
+  it("drops a saved look's eyebrows and their placement (eyebrows were removed): it loads, wearing the rest", () => {
+    const saved = { ...DEFAULT_LOOK, eyes: "E5.5", mouth: "G2.3", brows: "brow_flat", extras: ["blush"], place: { eyes: [1, 2, 0, 0], brows: [2, -1, -5, 3] } };
+    const l = parseLook(JSON.parse(JSON.stringify(saved)));
+    expect("brows" in l).toBe(false);
+    expect(l.place).toEqual({ eyes: [1, 2, 0, 0] });
+    expect([l.eyes, l.mouth, l.extras]).toEqual(["E5.5", "G2.3", ["blush"]]);
+    const browsOnly = parseLook({ ...DEFAULT_LOOK, brows: "brow_none", place: { brows: [1, 1, 1, 1] } });
+    expect(browsOnly).toEqual(DEFAULT_LOOK);
+    expect(slots(l)).toHaveLength(FACE_SLOT_COUNT);
   });
 });
 
 describe("old looks are unchanged", () => {
   const OLD = [
     DEFAULT_LOOK,
-    look({ eyes: "E5.5", mouth: "G2.3", brows: "brow_flat", extras: ["blush", "mole"], hair: 9 }),
+    look({ eyes: "E5.5", mouth: "G2.3", extras: ["blush", "mole"], hair: 9 }),
     ...Array.from({ length: 40 }, (_, i) => randomLook(seeded(i))),
   ];
   it("parse to exactly what they were: no placement field appears", () => {
@@ -46,10 +56,10 @@ describe("old looks are unchanged", () => {
   });
   it("draw the face exactly as before: no placement and zero placement give the same slots, for every expression", () => {
     for (const old of OLD) for (const e of EXPRESSIONS) {
-      expect(slots(look({ ...old, place: { eyes: [0, 0, 0, 0], brows: [0, 0, 0, 0], mouth: [0, 0, 0, 0] } }), e)).toEqual(slots(old, e));
+      expect(slots(look({ ...old, place: { eyes: [0, 0, 0, 0], mouth: [0, 0, 0, 0] } }), e)).toEqual(slots(old, e));
     }
   });
-  it("keep today's anchors: the default eye, brow and mouth sit on face_v7.json's anchors at its density", () => {
+  it("keep today's anchors: the default eye and mouth sit on face_v7.json's anchors at its density", () => {
     const s = slots(DEFAULT_LOOK), k = 1 / FACE.density;
     const [, , w, h, ax, ay] = FACE.layers.eyes.items["F1.1"].open;
     const [u0, w0] = [FACE.anchors.eye[0] - ax * k, FACE.anchors.eye[1] - ay * k];
@@ -69,20 +79,18 @@ describe("placement moves each part in the face shader's own slot data (no new u
     expect(s[EYE].src).toEqual(base[EYE].src);
   });
   it("Left–Right spaces the pair: the drawn eye moves out from the centre line and its mirror follows", () => {
-    const s = slots(look({ place: { eyes: [0, 5, 0, 0], brows: [0, -5, 0, 0] } }));
+    const s = slots(look({ place: { eyes: [0, 5, 0, 0] } }));
     expect(centre(s[EYE].dst)[0]).toBeCloseTo(centre(base[EYE].dst)[0] - (5 / S) * PLACE_RANGE.apart);
     expect([s[EYE].mirror, s[EYE_MIRROR].mirror]).toEqual([0, 2]);
     expect(s[EYE_MIRROR].dst).toEqual(s[EYE].dst); // the shader mirrors the same rect
-    expect(centre(s[BROWS].dst)[0]).toBeCloseTo(centre(base[BROWS].dst)[0] + (5 / S) * PLACE_RANGE.apart);
   });
-  it("Smaller–Bigger scales the cell about its anchor; Rotate adds to the tilt (the brows keep their expression)", () => {
-    const s = slots(look({ place: { mouth: [0, 0, 0, S], brows: [0, 0, 3, 0] } }));
+  it("Smaller–Bigger scales the cell about its anchor; Rotate adds to the tilt", () => {
+    const s = slots(look({ place: { mouth: [0, 0, 0, S], eyes: [0, 0, 3, 0] } }));
     const width = (d: FaceSlot["dst"]) => d[2] - d[0];
     expect(width(s[MOUTH].dst) / width(base[MOUTH].dst)).toBeCloseTo(PLACE_RANGE.size);
     expect(s[MOUTH].pose.slice(0, 2)).toEqual(base[MOUTH].pose.slice(0, 2));
-    const sad = slots(look({ place: { brows: [0, 0, 3, 0] } }), "sad"), sadBase = slots(DEFAULT_LOOK, "sad");
-    expect(sad[BROWS].pose[3] - sadBase[BROWS].pose[3]).toBeCloseTo(((3 / S) * PLACE_RANGE.rotate * Math.PI) / 180);
-    expect(sad[BROWS].pose[2]).toBe(sadBase[BROWS].pose[2]);
+    expect(s[EYE].pose[3] - base[EYE].pose[3]).toBeCloseTo(((3 / S) * PLACE_RANGE.rotate * Math.PI) / 180);
+    expect(s[EYE].pose[2]).toBe(base[EYE].pose[2]);
   });
 });
 
@@ -97,9 +105,8 @@ describe("clamping: placed parts never leave the face area", () => {
   };
   /** The area a part may use: the face area, or wider where today's default already reaches (it never moves an old look). */
   const allowedBounds = (d: number[]) => [Math.min(FACE_AREA[0], d[0]), Math.min(FACE_AREA[1], d[1]), Math.max(FACE_AREA[2], d[2]), Math.max(FACE_AREA[3], d[3])];
-  const cases: { part: PlacePart; ids: string[]; slot: number; field: "eyes" | "brows" | "mouth"; pair: boolean }[] = [
+  const cases: { part: PlacePart; ids: string[]; slot: number; field: "eyes" | "mouth"; pair: boolean }[] = [
     { part: "eyes", ids: Object.keys(FACE.layers.eyes.items), slot: EYE, field: "eyes", pair: true },
-    { part: "brows", ids: Object.keys(FACE.layers.brows.items), slot: BROWS, field: "brows", pair: true },
     { part: "mouth", ids: Object.keys(FACE.layers.mouth.items), slot: MOUTH, field: "mouth", pair: false },
   ];
   for (const c of cases) it(`${c.part}: every style at every slider extreme stays on the face${c.pair ? ", each side of the centre line" : ""}`, () => {
@@ -122,8 +129,8 @@ describe("clamping: placed parts never leave the face area", () => {
   it("talking mouths (bigger cells) are clamped too", () => {
     const l = look({ place: { mouth: [-S, 0, S, S] } });
     for (const t of Object.keys(FACE.layers.talk.items)) {
-      const s = faceSlots(l, { eyes: l.eyes, eyeFrame: "open", mouth: t, brow: [0, 0] })[MOUTH];
-      within(slotBounds(s), [FACE_AREA[0], FACE_AREA[1], FACE_AREA[2], Math.max(FACE_AREA[3], slotBounds(faceSlots(DEFAULT_LOOK, { eyes: "F1.1", eyeFrame: "open", mouth: t, brow: [0, 0] })[MOUTH])[3])], t);
+      const s = faceSlots(l, { eyes: l.eyes, eyeFrame: "open", mouth: t })[MOUTH];
+      within(slotBounds(s), [FACE_AREA[0], FACE_AREA[1], FACE_AREA[2], Math.max(FACE_AREA[3], slotBounds(faceSlots(DEFAULT_LOOK, { eyes: "F1.1", eyeFrame: "open", mouth: t })[MOUTH])[3])], t);
     }
   });
 });
@@ -136,12 +143,12 @@ describe("the look stays within the multiplayer card's 2 KB (realtime_player_car
     const accs = Object.fromEntries((["face", "head", "bag", "neck"] as const).map(g => [g, longest(PARTS.filter(p => p.group === g).map(p => p.id))]));
     return look({
       skin: PALETTE.skin.length - 1, hair: PALETTE.hair.length - 1,
-      eyes: longest(Object.keys(FACE.layers.eyes.items)), mouth: longest(Object.keys(FACE.layers.mouth.items)), brows: longest(Object.keys(FACE.layers.brows.items)),
+      eyes: longest(Object.keys(FACE.layers.eyes.items)), mouth: longest(Object.keys(FACE.layers.mouth.items)),
       extras: Object.keys(FACE.layers.extras.items), bangs: longest(PARTS.filter(p => p.slot === "bangs").map(p => p.id)), back: longest(PARTS.filter(p => p.slot === "back").map(p => p.id)),
       top: longest(PARTS.filter(p => p.slot === "top").map(p => p.id)), bottom: longest(PARTS.filter(p => p.slot === "bottom").map(p => p.id)),
       shoes: longest(PARTS.filter(p => p.slot === "shoes").map(p => p.id)), acc: accs,
       colors: Object.fromEntries(outfitTinted.map(p => [p.id, PALETTE.outfit.length - 1])),
-      place: { eyes: [-S, -S, -S, -S], brows: [-S, -S, -S, -S], mouth: [-S, 0, -S, -S] },
+      place: { eyes: [-S, -S, -S, -S], mouth: [-S, 0, -S, -S] },
     });
   };
   it("measures the size the card measures: jsonb text, with its spaces", () => {

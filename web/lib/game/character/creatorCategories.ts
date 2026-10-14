@@ -13,7 +13,7 @@ import { FACE, PART_BY_ID, PARTS, partColor, wear, type AccGroup, type Character
 export type Framing = "face" | "head" | "upper" | "body";
 export type SwatchKind = "skin" | "hair" | "outfit";
 /** The rail's icons (CreatorIcon draws ours; `item:` uses a real item icon). */
-export type IconKey = "head" | "hair" | "eyes" | "brows" | "mouth" | "extras" | "part";
+export type IconKey = "head" | "hair" | "eyes" | "mouth" | "extras" | "part";
 
 export interface Section {
   id: string;
@@ -63,7 +63,6 @@ function build(): Category[] {
     { id: "head", label: "Head & skin", icon: "head", framing: "face", swatch: "skin", sections: [], wardrobe: false },
     { id: "hair", label: "Hair", icon: "hair", framing: "head", swatch: partSwatch(hair), sections: hair, wardrobe: true },
     { id: "eyes", label: "Eyes", icon: "eyes", framing: "face", swatch: null, place: "eyes", sections: [faceSection("eyes", "Eyes")], wardrobe: false },
-    { id: "brows", label: "Brows", icon: "brows", framing: "face", swatch: FACE.layers.brows.tint === "hair" ? "hair" : null, place: "brows", sections: [faceSection("brows", "Brows")], wardrobe: false },
     { id: "mouth", label: "Mouth", icon: "mouth", framing: "face", swatch: null, place: "mouth", sections: [faceSection("mouth", "Mouth")], wardrobe: false },
     { id: "extras", label: "Blush & extras", icon: "extras", framing: "face", swatch: null, sections: [faceSection("extras", "Extras")], wardrobe: false },
     { id: "accessories", label: "Accessories & glasses", icon: "part", itemIcon: "acc_glasses_round", framing: "head", swatch: partSwatch(acc), sections: acc, wardrobe: true },
@@ -85,7 +84,7 @@ export const CATEGORIES: readonly Category[] = build();
 export function optionName(section: Section, id: string | null): string {
   if (id === null) return "None";
   if ("slot" in section.source) return PART_BY_ID.get(id)?.name ?? id;
-  return FACE.names[id] ?? ({ brow_soft: "Soft brows", brow_flat: "Flat brows", blush: "Blush", mole: "Mole", freckles: "Freckles" } as Record<string, string>)[id]
+  return FACE.names[id] ?? ({ blush: "Blush", mole: "Mole", freckles: "Freckles" } as Record<string, string>)[id]
     ?? `${section.label}, style ${section.options.indexOf(id) + 1} of ${section.options.length}`;
 }
 

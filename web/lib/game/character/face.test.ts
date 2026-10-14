@@ -15,21 +15,22 @@ function run(anim: FaceAnimator, secs: number, l: CharacterLook, clip: string | 
 }
 
 describe("face layers (avatar v7)", () => {
-  it("draws the default face from the atlas: hair-tinted mirrored brows, F1.1 both sides, M1.1", () => {
+  it("draws the default face from the atlas: F1.1 both sides, M1.1, no brows", () => {
     const l = look({ hair: 9 });
     const s = faceSlots(l, restPose(l, "neutral"));
     expect(s).toHaveLength(FACE_SLOT_COUNT);
-    const extras = FACE_SLOT_COUNT - 4;   // one slot per extra, then brows, the eyes and the mouth
+    const extras = FACE_SLOT_COUNT - 3;   // one slot per extra, then the eyes and the mouth
     expect(s.slice(0, extras).every(x => x.src === null)).toBe(true); // no extras on the default look
-    const [brows, eyeR, eyeL, mouth] = s.slice(extras);
-    expect([brows.mirror, brows.tint]).toEqual([1, PALETTE.hair[9]]);
+    const [eyeR, eyeL, mouth] = s.slice(extras);
+    // nothing on the face takes the hair colour any more (that was the brows)
+    expect(s.some(x => x.tint === PALETTE.hair[9])).toBe(false);
     expect([eyeR.mirror, eyeL.mirror]).toEqual([0, 2]); // the right eye as drawn, the left its mirror image
     expect(eyeR.src).toEqual(eyeL.src);
     const [x, y, w, h] = FACE.layers.eyes.items["F1.1"].open, [W, H] = FACE.atlas_size;
     expect(eyeR.src).toEqual([x / W, y / H, w / W, h / H]);
     expect(mouth.src![0]).toBeCloseTo(FACE.layers.mouth.items["M1.1"][0] / W);
     // each cell is placed so its anchor point sits on the measured anchor
-    for (const [sl, a] of [[eyeR, FACE.anchors.eye], [mouth, FACE.anchors.mouth], [brows, FACE.anchors.brow]] as const) {
+    for (const [sl, a] of [[eyeR, FACE.anchors.eye], [mouth, FACE.anchors.mouth]] as const) {
       expect(sl.dst[0] < a[0] && a[0] < sl.dst[2] && sl.dst[1] < a[1] && a[1] < sl.dst[3]).toBe(true);
     }
   });
@@ -37,13 +38,13 @@ describe("face layers (avatar v7)", () => {
     const s = faceSlots(look({ extras: ["blush", "mole", "freckles"] }), restPose(DEFAULT_LOOK, "neutral"));
     expect(s.slice(0, 4).map(x => [x.src !== null, x.mirror])).toEqual([[false, 0], [true, 1], [true, 1], [true, 0]]);
   });
-  it("gives each of the six expressions its eyes, mouth and brow pose from David's picks", () => {
+  it("gives each of the six expressions its eyes and mouth from David's picks", () => {
     const got = Object.fromEntries(EXPRESSIONS.map(e => [e, restPose(DEFAULT_LOOK, e)]));
-    expect(got.neutral).toEqual({ eyes: "F1.1", eyeFrame: "open", mouth: "M1.1", brow: [0, 0] });
+    expect(got.neutral).toEqual({ eyes: "F1.1", eyeFrame: "open", mouth: "M1.1" });
     expect([got.happy.eyes, got.happy.mouth]).toEqual(["E8.1", "M2.1"]);
-    expect([got.surprised.eyes, got.surprised.mouth, got.surprised.brow[0] < 0]).toEqual(["F1.1", "M6.1", true]);
-    expect([got.sad.eyeFrame, got.sad.mouth, got.sad.brow[1] > 0]).toEqual(["half", "M4.3", true]); // inner ends up
-    expect([got.angry.mouth, got.angry.brow[1] < 0]).toEqual(["M2.2", true]);                         // inner ends down
+    expect([got.surprised.eyes, got.surprised.mouth]).toEqual(["F1.1", "M6.1"]);
+    expect([got.sad.eyeFrame, got.sad.mouth]).toEqual(["half", "M4.3"]);
+    expect(got.angry.mouth).toBe("M2.2");
     expect([got.sleepy.eyes, got.sleepy.mouth]).toEqual(["E1.6", "M3.1"]);
     for (const e of EXPRESSIONS) for (const sl of faceSlots(DEFAULT_LOOK, got[e])) if (sl.src) {
       expect(sl.src[0] + sl.src[2] <= 1 && sl.src[1] + sl.src[3] <= 1).toBe(true);
@@ -92,7 +93,7 @@ describe("face animation", () => {
   it("takes a forced face (portraits, the avatar bench)", () => {
     const anim = new FaceAnimator(seeded(2));
     const pose = anim.update(0.016, DEFAULT_LOOK, "Idle", false, { expression: "angry", eyeFrame: "half", mouth: "G1.1" });
-    expect([pose.eyeFrame, pose.mouth, pose.brow[1] < 0]).toEqual(["half", "G1.1", true]);
+    expect([pose.eyeFrame, pose.mouth]).toEqual(["half", "G1.1"]);
   });
 });
 
@@ -108,7 +109,7 @@ describe("row 301 face set (face_set_301.py: sleepy and dot eyes, cat and curled
     const set = new Set([...EYES, ...MOUTHS, ...EXTRAS]);
     const cells = [
       ...Object.entries(FACE.layers.eyes.items).flatMap(([id, f]) => Object.values(f).filter(c => c).map(c => [id, c!] as const)),
-      ...Object.entries(FACE.layers.mouth.items), ...Object.entries(FACE.layers.talk.items), ...Object.entries(FACE.layers.brows.items),
+      ...Object.entries(FACE.layers.mouth.items), ...Object.entries(FACE.layers.talk.items),
       ...Object.entries(FACE.layers.extras.items).map(([id, it]) => [id, it.cell] as const),
     ];
     const legacyBottom = Math.max(...cells.filter(([id, c]) => !set.has(id) && !c[6]).map(([, c]) => c[1] + c[3]));   // first page
@@ -244,13 +245,13 @@ describe("David's 19 faces (face set 305, art/characters/v7/face_set_305.py)", (
     expect(happy.slice(-3).map(x => x.page)).toEqual([0, 0, 0]);
   });
 
-  it("come with a no-brows choice (their eyes carry their own brows) that draws nothing", () => {
-    const l = look({ eyes: "swirl", mouth: "gritted", brows: "brow_none" });
-    expect(parseLook(JSON.parse(JSON.stringify(l))).brows).toBe("brow_none");
-    expect(FACE.names.brow_none).toBe("No brows");
+  it("draw with their own eyes and mouth, no brows over them (eyebrows were removed)", () => {
+    const l = look({ eyes: "swirl", mouth: "gritted" });
     const s = faceSlots(l, restPose(l, "neutral"));
-    expect(s.at(-4)!.src).toBeNull();
-    expect(faceSlots(DEFAULT_LOOK, restPose(DEFAULT_LOOK, "neutral")).at(-4)!.src).not.toBeNull();
+    expect(s).toHaveLength(FACE_SLOT_COUNT);
+    // the eyes (one cell or two) and the mouth draw; before them only the extras' slots, all off on this look
+    expect(s.slice(0, FACE_SLOT_COUNT - 3).every(x => x.src === null)).toBe(true);
+    expect([s.at(-3)!.src, s.at(-1)!.src].every(Boolean)).toBe(true);
   });
 
   it("are never rolled for random looks, so residents and bots keep their faces", () => {

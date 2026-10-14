@@ -1,12 +1,13 @@
 /**
  * Animated painted face (avatar v7, rows 132, 144, 192, 254): an ACNH-style face the engine animates without
  * redrawing a canvas. The face atlas (art/characters/v7/build_face.py) holds every feature once; the face shader
- * draws the skin colour plus a layer slot per extra (blush band, blush, freckles, mole, set 305's accents), brows, the two eyes and the mouth, each an atlas
+ * draws the skin colour plus a layer slot per extra (blush band, blush, freckles, mole, set 305's accents), the two eyes and the mouth, each an atlas
  * cell placed at its anchor on the face canvas (the head's UVs), mirrored for the other side where the layer is.
- * Blinking, talking and the six expressions only change which cell each slot shows and the brows' pose.
+ * Blinking, talking and the six expressions only change which cell each slot shows. No eyebrows (removed in playtest
+ * round 1, David 2026-10-14).
  * Pure: FaceAnimator picks the frame, faceSlots turns it into slot data, faceMaterial.ts uploads it.
  */
-import { FACE, PALETTE, PLACE_STEPS, type CharacterLook, type EyeFrame, type FaceCell, type Placement } from "./look";
+import { FACE, PLACE_STEPS, type CharacterLook, type EyeFrame, type FaceCell, type Placement } from "./look";
 
 export type Expression = "neutral" | "happy" | "surprised" | "sad" | "angry" | "sleepy";
 export const EXPRESSIONS: readonly Expression[] = ["neutral", "happy", "surprised", "sad", "angry", "sleepy"];
@@ -26,8 +27,8 @@ const EMOTE_MOUTH_AS: Record<string, string> = {
   DanceSprinkler: "Dance", DanceStomp: "Cheer",
 };
 
-/** What one frame of the face shows. brow = [dy (canvas units, + down), tilt (degrees, + raises the inner end)]. */
-export interface FacePose { eyes: string; eyeFrame: EyeFrame; mouth: string; brow: [number, number] }
+/** What one frame of the face shows. */
+export interface FacePose { eyes: string; eyeFrame: EyeFrame; mouth: string }
 /** Forced parts of the face (dialogue portraits, the avatar bench, evidence captures). */
 export interface FaceOverride { expression?: Expression; eyeFrame?: EyeFrame; mouth?: string; talking?: boolean }
 
@@ -36,11 +37,11 @@ const eyeCells = (id: string) => FACE.layers.eyes.items[id] ?? FACE.layers.eyes.
 /** An eye style that has blink frames (lidded eyes; the shut ones like E8.1 and "> <" E6.1 do not). */
 export const canBlink = (eyes: string) => !!eyeCells(eyes).closed;
 
-/** The resting face of an expression on a look: its eyes (or the look's), frame, mouth and brow pose. */
+/** The resting face of an expression on a look: its eyes (or the look's), frame and mouth. */
 export function restPose(look: CharacterLook, expression: Expression): FacePose {
   const e = FACE.expressions[expression] ?? FACE.expressions.neutral;
   const eyes = e.eyes ?? look.eyes;
-  return { eyes, eyeFrame: eyeCells(eyes)[e.eyeFrame] ? e.eyeFrame : "open", mouth: e.mouth ?? look.mouth, brow: [e.brow[0], e.brow[1]] };
+  return { eyes, eyeFrame: eyeCells(eyes)[e.eyeFrame] ? e.eyeFrame : "open", mouth: e.mouth ?? look.mouth };
 }
 
 /** The blink's frame `t` seconds after it started, or null once it is over (half, closed, half: ~0.15 s). */
@@ -116,19 +117,19 @@ export class FaceAnimator {
 
 /** A layer slot for the shader. src = atlas rect as UV fractions [x, y, w, h] (top-left origin); dst = where the
  * cell lands on the face canvas [u0, w0, u1, w1] for the canvas-left side; mirror: 0 as placed, 1 also mirrored to
- * the other side, 2 only the mirrored copy; tint = hex multiplied into white art (brows: the hair colour);
+ * the other side, 2 only the mirrored copy; tint = hex multiplied into white art;
  * pose = [pivot u, pivot w, dy, tilt in radians] rotating the cell about its anchor. src null = the slot is off. */
 export interface FaceSlot { src: [number, number, number, number] | null; dst: [number, number, number, number]; mirror: 0 | 1 | 2; tint: string | null; pose: [number, number, number, number]; page: 0 | 1 }
 /** Extras in draw order: the earlier four as they always drew, then every later accent in catalogue order. */
 const EXTRA_ORDER = [...new Set(["blush_band", "blush", "freckles", "mole", ...Object.keys(FACE.layers.extras.items)])];
-/** One slot per extra, then brows, the two eyes and the mouth. */
-export const FACE_SLOT_COUNT = EXTRA_ORDER.length + 4;
+/** One slot per extra, then the two eyes and the mouth. */
+export const FACE_SLOT_COUNT = EXTRA_ORDER.length + 3;
 const OFF: FaceSlot = { src: null, dst: [0, 0, 0, 0], mirror: 0, tint: null, pose: [0, 0, 0, 0], page: 0 };
 
-function slot(cell: FaceCell, anchor: [number, number], mirror: 0 | 1 | 2, tint: string | null = null, brow: [number, number] = [0, 0], place?: Placement, paired?: boolean): FaceSlot {
+function slot(cell: FaceCell, anchor: [number, number], mirror: 0 | 1 | 2, tint: string | null = null, place?: Placement, paired?: boolean): FaceSlot {
   const [x, y, w, h, ax, ay, page = 0] = cell, [W, H] = page ? FACE.atlas2_size : FACE.atlas_size, k = 1 / FACE.density;
   const u0 = anchor[0] - ax * k, w0 = anchor[1] - ay * k;
-  const s: FaceSlot = { src: [x / W, y / H, w / W, h / H], dst: [u0, w0, u0 + w * k, w0 + h * k], mirror, tint, pose: [anchor[0], anchor[1], brow[0], (brow[1] * Math.PI) / 180], page };
+  const s: FaceSlot = { src: [x / W, y / H, w / W, h / H], dst: [u0, w0, u0 + w * k, w0 + h * k], mirror, tint, pose: [anchor[0], anchor[1], 0, 0], page };
   return place && place.some(v => v !== 0) ? placed(s, cell, place, paired) : s;
 }
 
@@ -154,7 +155,7 @@ function slotPair(right: FaceCell, left: FaceCell, place?: Placement): [FaceSlot
 export const FACE_AREA: readonly [number, number, number, number] = [0.07, 0.3, 0.93, 0.985];
 /** The sliders at full travel: up (canvas units), apart (canvas units), rotate (degrees), size (factor at the top). */
 export const PLACE_RANGE = { up: 0.07, apart: 0.05, rotate: 25, size: 1.4 } as const;
-/** Paired parts (eyes, brows) keep this far from the centre line. */
+/** Paired parts (the eyes) keep this far from the centre line. */
 const CENTRE_GAP = 0.004;
 
 /**
@@ -213,27 +214,25 @@ function placedTogether(parts: [FaceSlot, FaceCell][], [up, apart, rotate, size]
  */
 function eyeSlots(eye: ReturnType<typeof eyeCells>, cell: FaceCell, place?: Placement): [FaceSlot, FaceSlot] {
   const A = FACE.anchors;
-  if (eye.left === null) return [slot(cell, A.eye_pair, 0, null, undefined, place, false), OFF];
+  if (eye.left === null) return [slot(cell, A.eye_pair, 0, null, place, false), OFF];
   if (eye.left) return slotPair(cell, eye.left, place);
-  return [slot(cell, A.eye, 0, null, undefined, place), slot(cell, A.eye, 2, null, undefined, place)];
+  return [slot(cell, A.eye, 0, null, place), slot(cell, A.eye, 2, null, place)];
 }
 
-/** The slots (each extra, brows, right eye, left eye, mouth) for a look showing `pose`. */
+/** The slots (each extra, right eye, left eye, mouth) for a look showing `pose`. */
 export function faceSlots(look: CharacterLook, pose: FacePose): FaceSlot[] {
-  const { extras, brows, mouth } = FACE.layers, A = FACE.anchors, P = look.place;
+  const { extras, mouth } = FACE.layers, A = FACE.anchors, P = look.place;
   const extra = (id: string) => {
     const it = extras.items[id];
     return look.extras.includes(id) && it ? slot(it.cell, A[it.anchor], it.mirror ? 1 : 0) : OFF;
   };
   const eye = eyeCells(pose.eyes), eyeCell = eye[pose.eyeFrame] ?? eye.open;
-  const browCell = brows.items[look.brows] ?? brows.items[brows.default];
   return [
     ...EXTRA_ORDER.map(extra),
-    browCell[2] ? slot(browCell, A.brow, 1, PALETTE.hair[look.hair], pose.brow, P?.brows) : OFF,   // an empty cell: no brows
     ...eyeSlots(eye, eyeCell, P?.eyes),
-    slot(mouth.items[pose.mouth] ?? FACE.layers.talk.items[pose.mouth] ?? mouth.items[mouth.default], A.mouth, 0, null, undefined, P?.mouth),
+    slot(mouth.items[pose.mouth] ?? FACE.layers.talk.items[pose.mouth] ?? mouth.items[mouth.default], A.mouth, 0, null, P?.mouth),
   ];
 }
 
 /** A key for a pose (skip uniform uploads when nothing changed). */
-export const poseKey = (p: FacePose) => `${p.eyes}|${p.eyeFrame}|${p.mouth}|${p.brow[0]}|${p.brow[1]}`;
+export const poseKey = (p: FacePose) => `${p.eyes}|${p.eyeFrame}|${p.mouth}`;

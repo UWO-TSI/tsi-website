@@ -49,13 +49,12 @@ describe("character catalogue", () => {
       ...Object.entries(FACE.layers.eyes.items).flatMap(([id, frames]) => Object.entries(frames).filter(([, c]) => c).map(([f, c]) =>
         [`${id}/${f}`, c, f === "left" ? A.eye_left : frames.left === null ? A.eye_pair : A.eye] as [string, number[], [number, number]])),
       ...[...Object.entries(FACE.layers.mouth.items), ...Object.entries(FACE.layers.talk.items)].map(([id, c]) => [id, c, A.mouth] as [string, number[], [number, number]]),
-      ...Object.entries(FACE.layers.brows.items).map(([id, c]) => [id, c, A.brow] as [string, number[], [number, number]]),
       ...Object.entries(FACE.layers.extras.items).map(([id, it]) => [id, it.cell, A[it.anchor]] as [string, number[], [number, number]]),
     ];
     for (const [id, [x, y, w, h, ax, ay, page], [au, aw]] of cells) {
       const [W, H] = page ? FACE.atlas2_size : FACE.atlas_size;   // a 7th value 1: the second page
       expect(x + w <= W && y + h <= H, id).toBe(true);
-      if (!w) continue;   // brow_none: an empty cell
+      if (!w) continue;   // an empty cell
       if (page) {
         // David's faces sit where they sat on their own heads: placed at the anchor, the cell lies on the face canvas
         const u0 = au - ax / FACE.density, w0 = aw - ay / FACE.density;
