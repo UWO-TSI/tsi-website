@@ -1,6 +1,7 @@
 import {
   CLIFF_LEVELS, drawnSurfaceAt, isGroundAtWorld, levelAt, rampRun, sampleGroundHeight, worldToCellX, worldToCellZ,
 } from "./grid";
+import { ROCK_MODELS, ROCK_SIZE } from "./rocks";
 import { FURNITURE, studySolid, type Furniture } from "@/lib/study/seats";
 import { objectsOf, village, villageSpawnPoint, type MapObject, type Village } from "./villageMap";
 import { barrierBoxes, barrierFootprint, barrierPlacements, inBarrier } from "./barriers";
@@ -66,6 +67,8 @@ export const LANDMARK_IDS = Object.keys(LANDMARK_INFO) as LandmarkId[];
 
 /** Wharf stub deck (walkable over the water), relative to the wharf before its yaw. */
 export const WHARF_DECK_LOCAL = { x0: -0.9, x1: 0.9, z0: -3.5, z1: 2 };
+/** The finger pier off the wharf's tip (v1 water, lib/game/wharf.ts FINGER), walkable inside its posts, relative before its yaw. */
+export const WHARF_FINGER_LOCAL = { x0: -4.62, x1: -0.85, z0: -3.4, z1: -2.35 };
 /**
  * Wooden bridge deck, relative, before its yaw: the model spans ±1.9 along x, its rails at ±1.45 across. The deck
  * stops 1.0 out so a body (0.2 probes, about 0.3 wide) walks clear of the rails.
@@ -77,10 +80,13 @@ export const BRIDGE_RAIL_OUT = 1.65;
 export const PROP_FOOTPRINT: Record<string, [number, number]> = {
   "bench-wood": [0.98, 0.27], "rock-a": [0.48, 0.45], "rock-b": [0.46, 0.42], "rock-c": [0.5, 0.5],
   "fence-country-a": [0.5, 0.16], "fence-country-b": [0.5, 0.16],
+  // The faceted boulders (lib/game/rocks.ts, art/rocks/build_rocks.py).
+  ...Object.fromEntries(ROCK_MODELS.map(m => [m, ROCK_SIZE[m].half])),
 };
 /** Prop tops before scale, measured from the GLB bounds: what a jump clears or lands on (lib/game/movement). */
 export const PROP_TOP: Record<string, number> = {
   "bench-wood": 0.51, "rock-a": 0.61, "rock-b": 0.59, "rock-c": 0.52, "fence-country-a": 0.7, "fence-country-b": 0.69,
+  ...Object.fromEntries(ROCK_MODELS.map(m => [m, ROCK_SIZE[m].top])),
 };
 /** A tree trunk blocks this far from its centre. */
 export const TREE_TRUNK = 0.65;
@@ -139,6 +145,11 @@ function turnedRect(x: number, z: number, r: { x0: number; x1: number; z0: numbe
 export function wharfDeck(v: Village = village()) {
   const w = landmark("wharf", v);
   return w ? turnedRect(w.x, w.z, WHARF_DECK_LOCAL, w.yaw) : null;
+}
+/** Every walkable deck of the wharf in world XZ: the jetty and its finger pier. */
+export function wharfDecks(v: Village = village()) {
+  const w = landmark("wharf", v);
+  return w ? [WHARF_DECK_LOCAL, WHARF_FINGER_LOCAL].map(r => turnedRect(w.x, w.z, r, w.yaw)) : [];
 }
 
 /** Walkable bridge decks in world XZ. */
@@ -273,7 +284,7 @@ export function islandOf(v: Village): VillageIsland {
   const { map, field } = v;
   const ground = (x: number, z: number) => sampleGroundHeight(map, field, x, z);
   const surface = (x: number, z: number) => drawnSurfaceAt(map, x, z);
-  const decks = [wharfDeck(v), ...bridgeDecks(v)].filter(d => d !== null);
+  const decks = [...wharfDecks(v), ...bridgeDecks(v)];
   const rails = bridgeRails(v);
   const solids = landmarks(v).filter(l => l.half);
   // The natural barriers standing at this drop (lib/game/barriers.ts): solid like a building, never jumped.

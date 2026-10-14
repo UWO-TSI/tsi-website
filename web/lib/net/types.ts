@@ -4,7 +4,7 @@
  * only; the wire itself is ./protocol.
  */
 import { AREAS, CARD_FAMILIES, CARD_FRAMES, FLAG, STUDY_STATES, hasFlag } from "./protocol";
-import type { Area, CardFamily, CardFrame, EvKind, MoveClip, NetPlayer, PosePacket, RefusalKind, RosterEntry, SlowState, StudyState } from "./protocol";
+import type { Area, CardFamily, CardFrame, EvKind, FollowRefusal, MoveClip, NetPlayer, PosePacket, RefusalKind, RosterEntry, SlowState, StudyState } from "./protocol";
 
 /**
  * A remote player's card and slow state, dequantized. Rebuilt when they change, never per frame. Motion (`t` to `lift`,
@@ -164,4 +164,15 @@ export interface NetSource {
   sendSlow(patch: SlowState): void;
   /** Leave the room and stop. */
   leave(): void;
+  /**
+   * World chat (lib/net/chat.ts): say a line (trimmed, at most CHAT.maxLength; false when it can't go). The line comes
+   * back through the page's chat store as everyone's does. The `?bots` loopback echoes it.
+   */
+  sendChat?(text: string): boolean;
+  /** The "…" over you while you write a line (`s {typing}`). */
+  sendTyping?(on: boolean): void;
+  /** v1: join a friend's shard (`follow`): resolves once you're on your way there, or with why not. */
+  follow?(uid: string): Promise<FollowResult>;
 }
+/** A `follow`'s outcome: on your way to their shard, or the room's reason (busy also when it didn't answer in time). */
+export type FollowResult = { ok: true } | { ok: false; reason: FollowRefusal };

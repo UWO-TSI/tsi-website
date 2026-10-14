@@ -1,21 +1,27 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
-import { Button, Field, Keycap } from "@/components/gui";
+import { Button, Field, Slider, Toggle } from "@/components/gui";
 import TsiLogo from "@/components/ui/TsiLogo";
 import { createClient } from "@/lib/supabase/client";
+import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
+import { useAudioState } from "@/lib/game/useAudio";
+import { AudioManager } from "@/lib/game/audio";
+import TitleMenu, { TITLE_MENU, type TitleAction } from "./TitleMenu";
 import s from "./TitleScreen.module.css";
 
 const TitleScene = dynamic(() => import("@/components/title/TitleScene"), { ssr: false });
 
-export type TitleView = "menu" | "signin" | "signup" | "forgot" | "check";
-type MenuItem = { label: string; onSelect: () => void };
+export type TitleView = "menu" | "signin" | "signup" | "forgot" | "check" | "settings";
 
 /**
- * The student portal's title screen (David, 2026-10-03; references: Piece by Piece, HOA, Breath of the Wild):
- * the live island behind a white wordmark, and a cream menu card (the GUI sheet) for signing in, creating an
- * account or continuing. Arrow keys move the selection, Enter picks, Escape steps back. After any sign-in,
+ * The student portal's title screen (David, 2026-10-03; the v1 look, specs/v1-drop.md §8b after
+ * `references/look/2026-10-13/title-piece-by-piece-ref.png`): the live village close up with depth of field, the
+ * logo top-left, a cream card with a dashed border holding Let's Play, Settings and Exit (a soft pill under the
+ * chosen one), and a small input hint bottom-right. Arrow keys (or W/S) move, Enter picks, Escape steps back.
+ * Let's Play continues a signed-in member and asks anyone else to sign in (creating an account and Google from
+ * there); Settings holds the graphics and sound (and signing out); Exit goes back to tethos.ca. After any sign-in,
  * `landing` (/student/go, carrying a safe ?next=) decides where the member goes.
  */
 export default function TitleScreen({ landing, account, open, initialView, when, siteHome }: {
@@ -23,6 +29,8 @@ export default function TitleScreen({ landing, account, open, initialView, when,
 }) {
   const [ready, setReady] = useState(false);
   const [view, setView] = useState<TitleView>(initialView);
+  /** The menu's selection, kept while a sub-view is open so Back lands where you left. */
+  const [chosen, setChosen] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -32,14 +40,13 @@ export default function TitleScreen({ landing, account, open, initialView, when,
   const go = (next: TitleView) => { setView(next); setError(null); setNotice(null); };
   const leave = (href: string) => { window.location.href = href; };
 
-  const menu: MenuItem[] = account
-    ? [{ label: "Continue", onSelect: () => leave(landing) },
-       { label: "Sign out", onSelect: async () => { await createClient().auth.signOut(); window.location.reload(); } },
-       { label: "Back to tethos.ca", onSelect: () => leave(siteHome) }]
-    : [{ label: "Sign in", onSelect: () => go("signin") },
-       { label: "Create account", onSelect: () => go("signup") },
-       { label: "Apply to TSI", onSelect: () => leave(`${siteHome.replace(/\/$/, "")}/student/apply`) },
-       { label: "Back to tethos.ca", onSelect: () => leave(siteHome) }];
+  const pick = (id: TitleAction) => {
+    if (id === "play") { if (account) leave(landing); else go("signin"); }
+    else if (id === "settings") go("settings");
+    else leave(siteHome);
+  };
+  const signOut = async () => { await createClient().auth.signOut(); window.location.reload(); };
+  const apply = `${siteHome.replace(/\/$/, "")}/student/apply`;
 
   const google = async () => {
     setBusy(true); setError(null);
@@ -103,12 +110,14 @@ export default function TitleScreen({ landing, account, open, initialView, when,
 
       <section className={s.column}>
         <header className={s.brand}>
-          <TsiLogo width={64} height={64} className={s.logo} />
+          <TsiLogo width={56} height={56} className={s.logo} />
           <h1 className={s.wordmark}>Tethos<span>Student Portal</span></h1>
         </header>
 
         <div className={s.card} data-view={view}>
-          {view === "menu" && <Menu items={menu} caption={account ? `Signed in as ${account.name}` : null} />}
+          {view === "menu" && <TitleMenu items={TITLE_MENU} selected={chosen} onSelected={setChosen} onPick={pick} caption={account ? `Signed in as ${account.name}` : null} />}
+
+          {view === "settings" && <Settings onBack={() => go("menu")} onSignOut={account ? signOut : null} />}
 
           {view === "signin" && <Form title="Sign in" onBack={() => go("menu")} onSubmit={signIn}>
             <GoogleButton onClick={google} disabled={busy}>Continue with Google</GoogleButton>
@@ -149,42 +158,39 @@ export default function TitleScreen({ landing, account, open, initialView, when,
       </section>
 
       <footer className={s.footer}>
-        <span className={s.when}>{when}{!open && <em className={s.soon}>The island opens soon</em>}</span>
-        <span className={s.keys}>
-          {view === "menu" ? <><Keycap>↑↓</Keycap> Move <Keycap>Enter</Keycap> Select</> : <><Keycap>Esc</Keycap> Back</>}
+        <span className={s.when}>
+          {when}{!open && <em className={s.soon}>The island opens soon</em>}
+          {!account && <a className={s.apply} href={apply}>Apply to TSI</a>}
+        </span>
+        <span className={s.hint} aria-hidden>
+          {view === "menu" ? <><kbd>↵</kbd>Select</> : <><kbd>Esc</kbd>Back</>}
         </span>
       </footer>
     </main>
   );
 }
 
-function Menu({ items, caption }: { items: MenuItem[]; caption: string | null }) {
-  const [selected, setSelected] = useState(0);
-  const refs = useRef<(HTMLButtonElement | null)[]>([]);
-  useEffect(() => { refs.current[0]?.focus({ preventScroll: true }); }, []);
-  const move = (by: number) => {
-    const next = (selected + by + items.length) % items.length;
-    setSelected(next);
-    refs.current[next]?.focus();
-  };
-  const onKey = (e: KeyboardEvent) => {
-    if (e.key === "ArrowDown") { e.preventDefault(); move(1); }
-    if (e.key === "ArrowUp") { e.preventDefault(); move(-1); }
-  };
+/** Settings on the title: the game's own graphics settings and sound, kept on this device (the world reads the same). */
+function Settings({ onBack, onSignOut }: { onBack: () => void; onSignOut: (() => void) | null }) {
+  const [graphics, actions] = useGraphicsSettings();
+  const audio = useAudioState();
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === "Escape") onBack(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onBack]);
   return (
-    <nav aria-label="Main menu" onKeyDown={onKey}>
-      {caption && <p className={s.caption}>{caption}</p>}
-      <ul className={s.menu}>
-        {items.map((item, i) => (
-          <li key={item.label}>
-            <button ref={el => { refs.current[i] = el; }} type="button" data-selected={i === selected || undefined}
-              onMouseEnter={() => setSelected(i)} onFocus={() => setSelected(i)} onClick={item.onSelect}>
-              {item.label}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </nav>
+    <div className={s.form} role="group" aria-labelledby="title-settings">
+      <div className={s.formHead}>
+        <button type="button" className={s.back} onClick={onBack} aria-label="Back" autoFocus>‹</button>
+        <h2 id="title-settings">Settings</h2>
+      </div>
+      <Toggle checked={graphics.liteMode} onChange={actions.setLiteMode} hint="For older laptops: lighter grass and no shadows">Lite graphics</Toggle>
+      <Toggle checked={graphics.pixelated} onChange={actions.setPixelated} hint="The island's crisp pixel look">Pixel finish</Toggle>
+      <Toggle checked={graphics.shadows && !graphics.liteMode} disabled={graphics.liteMode} onChange={actions.setShadows}>Sun shadows</Toggle>
+      <Slider label="Volume" value={Math.round(audio.volumes.master * 100)} onChange={v => AudioManager.setVolumes({ master: v / 100 })} format={v => `${v}%`} />
+      {onSignOut && <Button variant="secondary" onClick={onSignOut}>Sign out</Button>}
+    </div>
   );
 }
 

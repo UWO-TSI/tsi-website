@@ -1,0 +1,30 @@
+{
+ "note": "David's own hairstyles (made by him for his Roblox shop; authorship confirmed by David on 2026-10-08), converted from Roblox meshes with mesh2glb. art/characters/hair/import_hair.py fits each file to the shared skull (specs/characters/head-fit.md). kind: full = a whole hairstyle in the back slot (hides the bangs); covers: fit points it must lie on (default: the type's); accent: the second, recolourable colour (a mask from the texture's saturated parts; default = a hair palette index or 'skin'); cap: faces of a cap or visor that keep a fixed colour (rule) and have their logos painted out (logos); drop: geometry removed (a face plate); trim: face_window removes what hangs over the face below the hairline (a fade shell); yaw: the source's turn to face front, as reviewed in the bench (the importer's own guess is only a fallback); fringe: a fringe that hid the eyes from the front, cut shorter so they read through it (keep: the share of its length below the brows that stays), for David to tune.",
+ "source": "art/characters/hair/source/david",
+ "hairs": [
+  {"file": "01-Baby-Hair-87848056624320.glb", "id": "hair_baby_sprout", "name": "Baby sprout", "yaw": 0, "covers": ["top"]},
+  {"file": "02-Low-Poly-Messy-Boy-Hair-Black-128971224541817.glb", "id": "hair_messy_boy", "name": "Messy boy", "yaw": 0, "fringe": {"keep": 0.25, "open_face": true}},
+  {"file": "03-cute-messy-long-scruffy-black-hair-136727109636132.glb", "id": "hair_long_scruffy", "name": "Long scruffy", "yaw": 180},
+  {"file": "04-messy-cute-short-hair-with-tufts-in-black-83295904708963.glb", "id": "hair_short_tufts", "name": "Short with tufts", "yaw": 0},
+  {"file": "05-Black-Hime-Short-Straight-Hair-Cut-13856173456.glb", "id": "hair_hime_short", "name": "Short hime cut", "yaw": 180},
+  {"file": "06-Black-Anime-Windy-Bob-78364092542791.glb", "id": "hair_windy_bob", "name": "Windy bob", "yaw": 180},
+  {"file": "07-Short-Anime-Wispy-Ponytail-Black-87974376605658.glb", "id": "hair_wispy_ponytail", "name": "Wispy ponytail", "yaw": 0},
+  {"file": "08-McDonalds-106903086636118.glb", "id": "hair_visor_messy", "name": "Messy with visor", "yaw": 0,
+   "cap": {"rule": "flat_grey", "color": "#2B2B33", "logos": "yellow"}},
+  {"file": "09-Low-Poly-Fluffy-Messy-Boy-Hair-Brown-86495776285585.glb", "id": "hair_fluffy_boy", "name": "Fluffy boy", "yaw": 180},
+  {"file": "10-Black-Messy-Wolfcut-98528599025378.glb", "id": "hair_messy_wolf", "name": "Messy wolf cut", "yaw": 0, "fringe": {"keep": 0.25, "open_face": true}},
+  {"file": "11-Blonde-Bowl-Cut-11103880280.glb", "id": "hair_bowl_cut", "name": "Bowl cut", "yaw": 180},
+  {"file": "12-Ryo-137412726411371.glb", "id": "hair_layered_shag", "name": "Layered shag", "yaw": 180},
+  {"file": "13-Ben-10-Anime-Hair-125540259305979.glb", "id": "hair_anime_spikes", "name": "Anime spikes", "yaw": 180},
+  {"file": "14-White-Blue-Short-Messy-w-Low-Ponytail-119601543909065.glb", "id": "hair_messy_low_pony", "name": "Messy low ponytail", "yaw": 0,
+   "accent": {"default": 11}},
+  {"file": "15-Vkei-Moe-Boy-Face-Hair-137700402637392.glb", "id": "hair_vkei", "name": "V-kei layers", "yaw": 0, "drop": "face_plate"},
+  {"file": "16-Isagi-17727987910.glb", "id": "hair_swept_fringe", "name": "Swept fringe", "yaw": 180},
+  {"file": "17-cutesy-bob-with-adorable-pigtail-in-brown-118937471732434.glb", "id": "hair_bob_pigtail", "name": "Bob with a pigtail", "yaw": 0, "fringe": {"keep": 0.25, "open_face": true}},
+  {"file": "18-long-pretty-black-pigtails-117422689311117.glb", "id": "hair_long_pigtails", "name": "Long pigtails", "yaw": 0},
+  {"file": "19-OTF-Von-Dreads-w-Hat-89998678118416.glb", "id": "hair_dreads_cap", "name": "Dreads with a cap", "yaw": 180,
+   "accent": {"default": 3}, "cap": {"rule": "uv_not_dreads", "color": "#26262A", "logos": "light_or_vivid"}},
+  {"file": "20-360-Waves-in-Black-113478080627568.glb", "id": "hair_waves", "name": "Waves with a fade", "yaw": 180, "accent": {"default": "skin"}, "trim": "face_window"},
+  {"file": "21-M11-Messy-Dreads-Black-86633981568887.glb", "id": "hair_messy_dreads", "name": "Messy dreads", "yaw": 180}
+ ]
+}

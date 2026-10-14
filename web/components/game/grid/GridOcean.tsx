@@ -3,9 +3,9 @@
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { type IslandMap, WATER_DROP, LEVEL_STEP, cellToWorldX, cellToWorldZ, isGroundAtWorld, isRiver, levelAt, surfaceAt } from "@/lib/game/grid";
-import { WATER_CHOP, WATER_CLOUDS, WATER_OPTICS, WATER_RIPPLE, WATER_SWELL, facetTilt } from "@/lib/game/waterShader";
+import { WATER_CHOP, WATER_CLOUDS, WATER_OPTICS, WATER_RIPPLE, WATER_SWELL, facetTilt, swellUniformsOf } from "@/lib/game/waterShader";
 import { terrainMaterial, waterSurfaceUniforms } from "./terrainMaterials";
-import { TUNING_DEFAULTS } from "@/lib/game/tuning";
+import { deepestSeabed } from "@/lib/game/seabed";
 
 /**
  * Continue the grid's water outside its editable rectangle to the horizon, with its glint sprites
@@ -18,11 +18,11 @@ export default function GridOcean({ map, lite = false, skip, radius }: { map: Is
   const geometry = useMemo(() => oceanGeometry(map), [map]);
   const floor = useMemo(() => seaBedGeometry(), []);
   useEffect(() => () => { geometry.dispose(); floor.dispose(); }, [geometry, floor]);
-  // The deep bed goes on under the open sea, a little below where it lies at the map's edge (the map's own bed covers
-  // it inside), so the little you see through deep water is the same sand inside and out, not the sky behind it.
+  // The deep bed goes on under the open sea, a little below the deepest the map's own bed gets (past the drop-off; the
+  // map's bed covers it inside), so the little you see through deep water is the same seabed inside and out.
   return <group>
     <mesh position={[0, -WATER_DROP, 0]} geometry={geometry} material={material} />
-    <mesh position={[0, -WATER_DROP - TUNING_DEFAULTS.water.bedDepth - 0.15, 0]} geometry={floor} material={bed} />
+    <mesh position={[0, -WATER_DROP - deepestSeabed() - 0.15, 0]} geometry={floor} material={bed} />
     <WaterGlints map={map} lite={lite} skip={skip} radius={radius} />
   </group>;
 }
@@ -145,7 +145,7 @@ function WaterGlints({ map, lite, skip, radius }: { map: IslandMap; lite: boolea
     m.onBeforeCompile = (shader) => {
       const u = waterSurfaceUniforms();
       Object.assign(shader.uniforms, {
-        uTime: u.uTime, uWaveHeight: u.uWaveHeight, uWaveScale: u.uWaveScale, uWaveSpeed: u.uWaveSpeed, uRippleTexture: u.uRippleTexture, uRippleStrength: u.uRippleStrength,
+        ...swellUniformsOf(u), uRippleTexture: u.uRippleTexture, uRippleStrength: u.uRippleStrength,
         uSunDir: u.uSunDir, uSunColor: u.uSunColor, uSunGlint: u.uSunGlint, uSunSize: u.uSunSize, uRoughness: u.uRoughness,
         uCloudMap: u.uCloudMap, uCloudUv: u.uCloudUv, uCloudShade: u.uCloudShade,
       });

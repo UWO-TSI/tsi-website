@@ -8,7 +8,10 @@ to lean on while you fish, rope fenders and two iron cleats on the boat side, an
 alongside the tip on +x, where the rope rail leaves a gap to step aboard. Matte throughout: roughness 1, no metal but the
 cleats.
 
-  /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/wharf/build_wharf.py
+  /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/wharf/build_wharf.py [-- pier dressing rowboat]
+
+Also writes the village wharf's dressing (v1 water item 7, the reference wharf-creatures-of-the-deep-ref.png): the finger
+pier off the tip with its posts and the lantern poles (wharf-dressing.glb), and the small moored rowboat (rowboat.glb).
 
 Writes web/public/assets/game/wharf/pier.glb. Frame: the wharf landmark's own (lib/game/defaultIsland.ts LANDMARK_INFO
 .wharf), before its yaw: x across (+x the boat side), y up, z along it (the tip at z −3.5 out over the sea, the land end
@@ -37,7 +40,7 @@ POST_X = 1.06                   # the guide piles stand just outside the board e
 POST_R = 0.085
 POST_TOP = 0.78
 RAIL_Z = (-3.42, -1.62, -0.28, 1.0)      # the piles that stand up through the deck, both sides
-GAP = (-3.42, -1.62)            # on +x the rope leaves this span open: the step aboard
+GAP = (-3.42, -1.62)            # the rope leaves this span open: on +x the step aboard, on -x the way onto the finger pier
 ROPE_Y, ROPE_SAG, ROPE_R = 0.62, 0.13, 0.021
 PILE_Y0 = -1.7                  # into the bed
 CLEATS = ((0.8, -3.06), (0.8, -1.98))      # on the deck, the boat's lines tie here
@@ -427,12 +430,13 @@ def build():
     p.beam((-POST_X - 0.07, 0.56, rz), (POST_X + 0.07, 0.56, rz), 0.07, 0.085, deck, 3)
     p.beam((-POST_X - 0.03, 0.27, rz), (POST_X + 0.03, 0.27, rz), 0.05, 0.065, deck, 5)
 
-    # ── the rope rail: hung pile to pile on both sides, wound round each; on +x the step aboard is left open ───────
+    # ── the rope rail: hung pile to pile on both sides, wound round each; at the tip it is left open both sides (+x the
+    #    step aboard, -x the way onto the finger pier, v1 water) ─────────────────────────────────────────────────
     v = 0.0
     for side in (-1, 1):
         for k in range(len(RAIL_Z) - 1):
             za, zb = RAIL_Z[k], RAIL_Z[k + 1]
-            if side == 1 and (za, zb) == GAP:
+            if (za, zb) == GAP:
                 continue
             (ax, az, _), (bx, bz, _) = tops[(side, k)], tops[(side, k + 1)]
             off = POST_R * 1.05 + ROPE_R
@@ -441,14 +445,15 @@ def build():
             sag = ROPE_SAG * (zb - za) / 1.6 + rng.uniform(-0.01, 0.01)
             v += p.tube(catenary(a, b, sag), ROPE_R, rope, v0=v) / 0.13
         for k, z in enumerate(RAIL_Z):
-            open_end = side == 1 and z in GAP
+            open_end = z in GAP
             (cx, cz, _) = tops[(side, k)]
             p.tube(wrap(None, cx, cz, ROPE_Y, turns=1.3 if open_end else 1.7, start=rng.uniform(0, TAU)), ROPE_R * 0.95, rope, caps=True)
-    # The ends of the rope at the gap: a tail hanging off each post.
-    for z, s in ((GAP[0], 1), (GAP[1], -1)):
-        cx, cz, _ = tops[(1, RAIL_Z.index(z))]
-        tail = [(cx + 0.02, ROPE_Y - 0.01, cz + s * (POST_R + ROPE_R)), (cx + 0.05, ROPE_Y - 0.12, cz + s * (POST_R + 0.03)), (cx + 0.06, ROPE_Y - 0.24, cz + s * (POST_R + 0.025))]
-        p.tube(catenary(tail[0], tail[2], -0.02, n=6), ROPE_R * 0.9, rope, caps=True)
+    # The ends of the rope at the gaps: a tail hanging off each post, outboard.
+    for side in (1, -1):
+        for z, s in ((GAP[0], 1), (GAP[1], -1)):
+            cx, cz, _ = tops[(side, RAIL_Z.index(z))]
+            tail = [(cx + side * 0.02, ROPE_Y - 0.01, cz + s * (POST_R + ROPE_R)), (cx + side * 0.05, ROPE_Y - 0.12, cz + s * (POST_R + 0.03)), (cx + side * 0.06, ROPE_Y - 0.24, cz + s * (POST_R + 0.025))]
+            p.tube(catenary(tail[0], tail[2], -0.02, n=6), ROPE_R * 0.9, rope, caps=True)
 
     # ── rope fenders on the boat side, hung from the piles at the gap ─────────────────────────────────────────────
     for z in GAP:
@@ -481,5 +486,150 @@ def build():
     return path
 
 
+# ================================================================ the village wharf's dressing (v1 water item 7)
+# Style target (David, references/look/2026-10-13/wharf-creatures-of-the-deep-ref.png): plank piers on posts that stand
+# up past the deck, lantern poles at the pier ends, small rowboats moored alongside. Our own, built here. In the dock's
+# frame, like the pier; mirrored in lib/game/wharf.ts (FINGER, LANTERNS, ROWBOATS).
+FINGER = {"x0": -4.7, "x1": -0.95, "z0": -3.5, "z1": -2.25}     # the finger pier off the tip, on -x (the boat is on +x)
+FINGER_POSTS = (-2.0, -3.3, -4.6)                              # its posts along it (x), both sides
+LANTERNS = ((-4.6, -3.53, math.pi), (-1.25, 0.72, -math.pi / 2))    # lantern poles: x, z, which way the arm reaches
+
+
+def lantern_pole(p, x, z, arm_yaw, deck, iron, glass, height=1.62):
+    """A gallows lantern pole: a squared post, an arm out the top with a brace, an iron lantern hung off its end (its
+    glass lit at night by the engine)."""
+    p.beam((x, PILE_Y0, z), (x, height, z), 0.085, 0.085, deck, 2, up=(0, 0, 1))
+    ax, az = math.cos(arm_yaw), -math.sin(arm_yaw)
+    end = (x + ax * 0.46, height - 0.06, z + az * 0.46)
+    p.beam((x - ax * 0.04, height - 0.06, z - az * 0.04), end, 0.06, 0.07, deck, 4)
+    p.beam((x + ax * 0.03, height - 0.42, z + az * 0.03), (x + ax * 0.27, height - 0.1, z + az * 0.27), 0.045, 0.045, deck, 6)
+    hx, hz = end[0] - ax * 0.04, end[2] - az * 0.04
+    p.tube([(hx, height - 0.09, hz), (hx, height - 0.2, hz)], 0.008, iron, sides=4, caps=True)
+    # The lantern: a cap, four corner bars round the glass, a base.
+    top, bot = height - 0.22, height - 0.46
+    p.lathe((hx, top, hz), [(0.0, 0.0), (0.05, -0.012), (0.085, -0.04), (0.07, -0.05)], iron, sides=8)
+    p.lathe((hx, bot, hz), [(0.06, 0.0), (0.075, -0.015), (0.04, -0.035), (0.0, -0.04)], iron, sides=8)
+    p.lathe((hx, top - 0.05, hz), [(0.05, 0.0), (0.056, -0.06), (0.056, -0.13), (0.05, -0.19)], glass, sides=8)
+    for k in range(4):
+        a = TAU * (k + 0.5) / 4
+        cx, cz = hx + math.cos(a) * 0.058, hz + math.sin(a) * 0.058
+        p.tube([(cx, top - 0.04, cz), (cx, bot + 0.005, cz)], 0.007, iron, sides=4)
+
+
+def build_dressing():
+    """The finger pier (boards across it, stringers, posts standing up past the deck at its corners and along it, piles
+    under it) and the lantern poles. One mesh: the deck's, the piles' and the iron's materials, and the lanterns' glass."""
+    K.reset()
+    deck = Mat("M_Deck", "#a77d55", 1.0, K.image("wharf_deck", plank_atlas()), tile=1.0)
+    post = Mat("M_Pile", "#7d5f43", 1.0, K.image("wharf_pile", post_texture()), tile=1.0)
+    iron = Mat("M_Iron", "#3b3734", 0.7)
+    glass = Mat("M_LanternGlass", "#f7d9a0", 0.6)
+    p = Pier()
+    r = np.random.default_rng(2027)
+    f = FINGER
+    # Boards across the finger (each spans z), laid along x from the joint out.
+    n = 15
+    pitch = (f["x1"] - f["x0"]) / n
+    strips = list(r.permutation(8)) + list(r.permutation(8))
+    half = (f["z1"] - f["z0"]) / 2
+    zc = (f["z0"] + f["z1"]) / 2
+    for i in range(n):
+        x1 = f["x1"] - i * pitch - 0.012 + r.uniform(-0.004, 0.004)
+        x0 = f["x1"] - (i + 1) * pitch + 0.012 + r.uniform(-0.004, 0.004)
+        if i == n - 1:
+            x0 = f["x0"]
+        # Pier.board lays a board across x; this one runs across z, so build it in a frame turned a quarter.
+        start = len(p.bm.verts)
+        p.board(-half + r.uniform(-0.015, 0.01), half + r.uniform(-0.015, 0.01), -x1, -x0, -r.uniform(0.0, 0.004), PLANK_T, deck, int(strips[i]), bool(r.integers(0, 2)), float(r.uniform(0, 0.02)), tex_len=1.4)
+        p.bm.verts.ensure_lookup_table()
+        for v in p.bm.verts[start:]:
+            gx, gy, gz = v.co.x, v.co.z, -v.co.y           # Blender to game
+            v.co = G(-gz, gy, zc + gx)                      # a quarter turn: across → along z, along → along -x
+    for zz in (f["z0"] + 0.12, zc, f["z1"] - 0.12):
+        p.beam((f["x1"] + 0.02, -0.1, zz), (f["x0"] + 0.04, -0.1, zz), 0.07, 0.11, deck, int(r.integers(0, 8)))
+    # Posts that stand up past the deck, both sides, along it (the reference's), and the piles between under it.
+    for k, x in enumerate(FINGER_POSTS):
+        for side, zz in ((0, f["z0"] - 0.03), (1, f["z1"] + 0.03)):
+            if any(abs(x - lx) < 0.05 and abs(zz - lz) < 0.05 for lx, lz, _ in LANTERNS):
+                continue    # the lantern pole stands at that corner
+            p.post(x, zz, PILE_Y0, 0.3 + r.uniform(-0.03, 0.03), POST_R * r.uniform(0.95, 1.08), post, 900 + k * 2 + side)
+        p.beam((x, -0.1, f["z0"] - 0.04), (x, -0.1, f["z1"] + 0.04), 0.09, 0.08, deck, int(r.integers(0, 8)))
+    # Lantern poles: one at the finger's far corner, one at the jetty's land end.
+    for x, z, yaw in LANTERNS:
+        lantern_pole(p, x, z, yaw, deck, iron, glass)
+    ob = p.finish("wharf_dressing")
+    path = K.export([ob], "wharf-dressing")
+    print("DRESSING", {"finger": FINGER, "posts": FINGER_POSTS, "lanterns": LANTERNS})
+    return path
+
+
+ROWBOAT_LEN, ROWBOAT_BEAM, ROWBOAT_DEPTH = 1.55, 0.62, 0.26
+
+
+def build_rowboat():
+    """A small rowboat, the reference's: a pale painted clinker hull (a band of plank lines), a pointed bow and a flat
+    transom, a wooden gunwale, two thwarts to sit on and the floorboards inside. Nose along +z, its keel at y 0.
+    Two materials: the paint and the wood."""
+    K.reset()
+    paint = Mat("M_BoatPaint", "#ece6d8", 1.0)
+    wood = Mat("M_BoatWood", "#a26d45", 1.0)
+    p = Pier()
+    L, B, D = ROWBOAT_LEN, ROWBOAT_BEAM, ROWBOAT_DEPTH
+    sides = 9
+    zs = np.linspace(-L / 2, L / 2, 9)
+    rings_out, rings_in = [], []
+    for z in zs:
+        t = (z + L / 2) / L                                   # 0 at the transom, 1 at the bow
+        w = B / 2 * (1 - (max(0.0, t - 0.55) / 0.45) ** 1.8) * (0.86 + 0.14 * math.sin(math.pi * min(1, t * 1.6)))
+        w = max(w, 0.012)
+        sheer = D + 0.05 * max(0.0, t - 0.6) / 0.4           # the bow rises a little
+        keel = 0.03 * max(0.0, t - 0.75) / 0.25               # and its foot lifts
+        out, inn = [], []
+        for j in range(sides):
+            a = math.pi * j / (sides - 1)                     # round the bottom from one gunwale to the other
+            x, y = -math.cos(a) * w, keel + (1 - math.sin(a)) * (sheer - keel) * 0.98 + (math.sin(a)) * 0.0
+            out.append((x, y, z))
+            inn.append((x * 0.9, keel + 0.03 + (y - keel) * 0.94, z))
+        rings_out.append(out)
+        rings_in.append(inn)
+    uv = [[(0.5, 0.5)] * sides for _ in zs]
+    p.ring_grid(rings_out, uv, paint, closed=False)
+    # Inside: the top strakes painted like the hull (the white rim you see from above), the rest bare wood.
+    vin = [[p.vert(q) for q in ring] for ring in rings_in]
+    for i in range(len(zs) - 1):
+        for j in range(sides - 1):
+            m = paint if j < 2 or j >= sides - 3 else wood
+            p.face([vin[i + 1][j], vin[i + 1][j + 1], vin[i][j + 1], vin[i][j]], [(0.5, 0.5)] * 4, m)
+    # The transom: flat across the stern, out to in.
+    st_o, st_i = rings_out[0], rings_in[0]
+    vs_o = [p.vert(q) for q in st_o]
+    vs_i = [p.vert(q) for q in st_i]
+    for j in range(sides - 1):
+        p.face([vs_o[j], vs_i[j], vs_i[j + 1], vs_o[j + 1]], [(0.5, 0.5)] * 4, paint)
+    # The gunwale: a painted capping along both sheers, joining the outside to the inside.
+    for j in (0, sides - 1):
+        a = [p.vert(r[j]) for r in rings_out]
+        b = [p.vert(r[j]) for r in rings_in]
+        for i in range(len(zs) - 1):
+            p.face([a[i], a[i + 1], b[i + 1], b[i]], [(0.5, 0.5)] * 4, paint)
+    # Two thwarts across, the floorboards along the bottom.
+    for z in (-0.2, 0.28):
+        k = int(round((z + L / 2) / L * (len(zs) - 1)))
+        w = abs(rings_in[k][0][0]) - 0.01
+        p.beam((-w, D * 0.62, z), (w, D * 0.62, z), 0.13, 0.025, wood, 0)
+    for x in (-0.09, 0.0, 0.09):
+        p.beam((x, 0.05, -L / 2 + 0.12), (x, 0.05, L / 2 - 0.35), 0.075, 0.015, wood, 0)
+    ob = p.finish("rowboat", smooth_deg=40)
+    path = K.export([ob], "rowboat")
+    print("ROWBOAT", {"length": L, "beam": B, "depth": D})
+    return path
+
+
 if __name__ == "__main__":
-    build()
+    which = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["pier", "dressing", "rowboat"]
+    if "pier" in which:
+        build()
+    if "dressing" in which:
+        build_dressing()
+    if "rowboat" in which:
+        build_rowboat()

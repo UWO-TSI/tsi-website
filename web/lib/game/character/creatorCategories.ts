@@ -52,7 +52,11 @@ const ACC_GROUPS: [AccGroup, string][] = [["face", "Glasses"], ["head", "Hats"],
 const SLOT_LABEL: Partial<Record<string, string>> = { bangs: "Fringe", back: "Back", top: "Tops", bottom: "Bottoms", onepiece: "One-pieces", shoes: "Shoes" };
 
 function build(): Category[] {
-  const hair = [slotSection("bangs", "Fringe", "bangs"), slotSection("back", "Back", "back")];
+  // head fit: whole hairstyles (the back slot's `full` parts, David's set) get their own row; they take the bangs off
+  const back = slotSection("back", "Back", "back");
+  const full: Section = { id: "hairstyles", label: "Hairstyles", source: { slot: "back" }, options: back.options.filter(id => id && PART_BY_ID.get(id)?.full) };
+  back.options = back.options.filter(id => !id || !PART_BY_ID.get(id)?.full);
+  const hair = [slotSection("bangs", "Fringe", "bangs"), back, ...(full.options.length ? [full] : [])];
   const acc = ACC_GROUPS.map(([g, label]) => slotSection(`acc-${g}`, label, "accessory", [], g)).filter(s => s.options.length);
   const bottoms = [slotSection("bottom", "Bottoms", "bottom"), slotSection("onepiece", "One-pieces", "onepiece")];
   const cats: Category[] = [

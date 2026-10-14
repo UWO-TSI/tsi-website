@@ -11,7 +11,7 @@
  * The default URL is unchanged until David approves the slice.
  */
 
-import { useEffect, useMemo } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import * as THREE from "three";
 import {
   Surface,
@@ -21,21 +21,40 @@ import {
   sampleGroundHeight,
   rampHeightAt,
   type IslandMap,
+  GRASS_COLOR,
 } from "@/lib/game/grid";
 import { setTerrainHeightProvider } from "../terrain";
 import GridTerrain, { CLIFF_FRINGE, TERRAIN_WET, useTerrainMaterials, type TerrainPalette } from "./GridTerrain";
 import GridCliffs from "./GridCliffs";
+import GrassField from "./GrassField";
 import GrassTufts from "./GrassTufts";
-import { applyGrassNormalStrength, advanceWater, shadeWaterByClouds } from "./terrainMaterials";
+import CliffBoulders from "./CliffBoulders";
+import { applyGrassNormalStrength, advanceWater, drawFoamRings, shadeWaterByClouds } from "./terrainMaterials";
+import { FOAM_RING_SLOTS } from "@/lib/game/foamRings";
+import { fxOn } from "@/lib/game/perf/fxBench";
 import { cloudLayer } from "../AmbienceFX";
 import { useTuning } from "@/lib/game/tuning";
 import { useFrame } from "@react-three/fiber";
 import type { IslandLight } from "@/lib/game/islandLighting";
 import { worldTime } from "@/lib/game/worldClock";
 
+/**
+ * Which grass a world draws: the blade field (GrassField) only where the world names its obstacles (`clear`: the
+ * village, the v2 world, the title), so no blade grows through a building it can't see; every other world (the
+ * applicant island, live for recruits, the ruins, the home island) keeps the flowing tufts it drew on main, and no
+ * cliff-foot boulders.
+ */
+export function grassLayer(clear: ((x: number, z: number) => boolean) | undefined): "field" | "tufts" {
+  return clear ? "field" : "tufts";
+}
+
+/** The grass without a palette (the bench islands): the grid's own green. */
+const GRASS_HEX = `#${new THREE.Color(GRASS_COLOR).getHexString()}`;
+
 /** `field`: the map's height field when the caller already built it (the village builds it once). */
 /** `light`: the scene's IslandLight; the water mirrors its key light (sun by day, moon by night) in its colour. */
-export default function GridWorld({ map, field: suppliedField, light, palette, windScale }: { map: IslandMap; field?: Float32Array; light: Pick<IslandLight, "water" | "sunPosition" | "sun" | "wet">; palette?: TerrainPalette; windScale?: number }) {
+/** `lite`: Lite's thinner grass and cheaper water (fewer foam rings drawn). `clear`: false where a solid stands, so no blades grow through it (keep it stable). */
+export default function GridWorld({ map, field: suppliedField, light, palette, windScale, lite = false, clear }: { map: IslandMap; field?: Float32Array; light: Pick<IslandLight, "water" | "sunPosition" | "sun" | "wet" | "sky" | "skyTop">; palette?: TerrainPalette; windScale?: number; lite?: boolean; clear?: (x: number, z: number) => boolean }) {
   const t = useTuning();
   const materials = useTerrainMaterials(palette);
   // The ground's wetness is the light's (it eases with the weather); dry when the scene goes.
@@ -73,16 +92,23 @@ export default function GridWorld({ map, field: suppliedField, light, palette, w
   // The river flows, swells and catches the sun. One uniform block per frame.
   const sunDir = useMemo(() => new THREE.Vector3(...light.sunPosition), [light.sunPosition]);
   const sunColor = useMemo(() => new THREE.Color(light.sun), [light.sun]);
-  useFrame(() => {
-    advanceWater(worldTime(), light.water, sunDir, sunColor);
+  const sky = useMemo(() => ({ zenith: new THREE.Color(light.skyTop ?? light.sky), horizon: new THREE.Color(light.sky) }), [light.sky, light.skyTop]);
+  useFrame(({ camera }) => {
+    advanceWater(worldTime(), light.water, sunDir, sunColor, sky);
     shadeWaterByClouds(cloudLayer.map, cloudLayer.uv);
+    drawFoamRings(camera, lite ? FOAM_RING_SLOTS.lite : FOAM_RING_SLOTS.high, fxOn("foamRings"));
   });
 
   return (
     <group>
       <GridTerrain map={map} field={suppliedField} materials={materials} />
       <GridCliffs map={map} grass={materials.get(Surface.Grass)} drape={materials.get(CLIFF_FRINGE)} />
-      <GrassTufts map={map} windScale={windScale} />
+      {/* The cliff-foot boulders go with the field: only a world that names its obstacles (they have no collision of their own).
+          Their own boundary: the ground draws while their models stream in. */}
+      {grassLayer(clear) === "field" && <Suspense fallback={null}><CliffBoulders map={map} field={suppliedField} /></Suspense>}
+      {grassLayer(clear) === "field"
+        ? <GrassField map={map} field={suppliedField} color={palette?.grass ?? GRASS_HEX} windScale={windScale} lite={lite} clear={clear} />
+        : <GrassTufts map={map} windScale={windScale} />}
     </group>
   );
 }

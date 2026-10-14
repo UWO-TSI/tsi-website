@@ -20,11 +20,14 @@
  * HOME_S).
  *
  * Character mounts this inside the rod's held item and steps the puppet first (priority -1), so the tip read here is
- * this frame's. It only reads the cast; refs only in the frame loop, nothing allocated per frame.
+ * this frame's. It only reads the cast; refs only in the frame loop, nothing allocated per frame. Only your own rod
+ * carries it until remote casts are sent (Character `remote`). The bobber is one mesh (heldMesh.ts) and casts no sun
+ * shadow; the bite's "!" is a label in the world's label layout (lib/game/labelLayout.ts), not a drei `<Html>` with its
+ * own React root and projection every frame (specs/perf/effects-cost.md).
  */
 import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Html, useGLTF } from "@react-three/drei";
+import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
@@ -35,6 +38,8 @@ import { readFishingLine } from "@/lib/game/fishingPrefs";
 import { bobberBobs, bobberLands, bobberNibbled, fishBites, fishFlees, fishLeaps, reelWake } from "@/lib/game/fx/fishingFx";
 import type { ParticlePool } from "@/lib/game/fx/particles";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
+import { heldTemplate } from "@/lib/game/character/heldMesh";
+import { LABEL_PRIORITY, worldLabels } from "@/lib/game/labelLayout";
 import { liveWind, useMoveParticles } from "../movement/moveFx";
 
 export const BOBBER_URL = "/assets/game/tools/bobber.glb";
@@ -76,6 +81,8 @@ interface Rig {
   fish: THREE.Group; fishUrl: string | null; fishModel: THREE.Object3D | null; fishLength: number; fishFrom: THREE.Vector3; fishTo: THREE.Vector3; fishQ: THREE.Quaternion;
   /** The catch is out of the water (shown, until it is tucked away). */
   fishOut: boolean;
+  /** The bite's "!" (mountBang), once mounted. */
+  bang: HTMLDivElement | null;
 }
 
 const fishLoader = new GLTFLoader();
@@ -143,15 +150,16 @@ function makeLine() {
 
 export default function FishingRig({ motion, rod, hands }: { motion: RefObject<CharacterMotion>; rod: THREE.Object3D; hands: { R: THREE.Object3D; L: THREE.Object3D } }) {
   const scene = useThree(s => s.scene);
+  const box = useThree(s => s.gl.domElement.parentElement);
   const { scene: model } = useGLTF(BOBBER_URL);
   const particles = useMoveParticles();
   const tipLocal = useMemo(() => rodTip(rod), [rod]);
-  const bangRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<THREE.Group>(null);
   const rig = useMemo<Rig>(() => {
-    const bobber = tagLookClasses(model.clone(true), BOBBER_URL);
+    // One mesh, no sun shadow: a float on the water a few centimetres across.
+    const bobber = tagLookClasses(heldTemplate(model, BOBBER_URL).clone(true), BOBBER_URL);
     bobber.name = "Bobber";
-    bobber.traverse(o => { o.castShadow = true; o.userData.sunCaster = "dynamic"; });
+    bobber.traverse(o => { o.castShadow = false; });
     bobber.visible = false;
     const { line, pos, nor } = makeLine();
     return { bobber, line, linePos: pos, lineNormal: nor, curve: new Float32Array(LINE_POINTS * 3),
@@ -162,8 +170,10 @@ export default function FishingRig({ motion, rod, hands }: { motion: RefObject<C
       look: { sag: 0.02, sway: 0, wave: 0, hum: 0 }, want: { sag: 0.02, sway: 0, wave: 0, hum: 0 },
       axis: new THREE.Vector3(), lean: new THREE.Quaternion(), wobble: new THREE.Quaternion(), euler: new THREE.Euler(),
       fish: Object.assign(new THREE.Group(), { name: "Catch", visible: false }), fishUrl: null, fishModel: null, fishLength: 1,
-      fishFrom: new THREE.Vector3(), fishTo: new THREE.Vector3(), fishQ: new THREE.Quaternion(), fishOut: false };
+      fishFrom: new THREE.Vector3(), fishTo: new THREE.Vector3(), fishQ: new THREE.Quaternion(), fishOut: false, bang: null };
   }, [model]);
+  // The bite's "!": one element in the canvas's box, placed by the label layout over this avatar's head while it shows.
+  useEffect(() => (box ? mountBang(rig, box, headRef) : undefined), [rig, box]);
   useEffect(() => {
     scene.add(rig.bobber, rig.line, rig.fish);
     return () => {
@@ -174,16 +184,44 @@ export default function FishingRig({ motion, rod, hands }: { motion: RefObject<C
   }, [scene, rig]);
   useFrame((state, dt) => {
     const now = performance.now();
-    step(rig, motion.current, rod, tipLocal, bangRef.current, particles.pool, state.camera, state.gl.domElement.height, Math.min(dt, 0.1), now);
+    step(rig, motion.current, rod, tipLocal, rig.bang, particles.pool, state.camera, state.gl.domElement.height, Math.min(dt, 0.1), now);
     showCatch(rig, motion.current, hands, headRef.current, now);
   });
-  return <group ref={headRef} position={[0, BANG_Y, 0]}>
-    {/* The bite's "!" over this avatar in the paper kit (components/gui): shown and popped from the frame loop, no React. */}
-    <Html center zIndexRange={[30, 0]} style={{ pointerEvents: "none" }}>
-      <div ref={bangRef} aria-hidden style={BANG_STYLE}>!</div>
-    </Html>
-  </group>;
+  return <group ref={headRef} position={[0, BANG_Y, 0]} />;
 }
+
+/**
+ * The bite's "!" as a label (lib/game/labelLayout.ts; LabelLayer runs the solve after each frame): anchored over the
+ * head while the bite shows, nudged above a nameplate it would cover, moved only when it moves. Returns the removal.
+ * Module scope: the react compiler forbids writing through hook values.
+ */
+function mountBang(r: Rig, box: HTMLElement, head: RefObject<THREE.Group | null>) {
+  const at = document.createElement("div"), bang = document.createElement("div");
+  at.setAttribute("aria-hidden", "true");
+  Object.assign(at.style, { position: "absolute", left: "0", top: "0", pointerEvents: "none", display: "none", zIndex: "30" });
+  bang.style.cssText = `${cssText(BANG_STYLE)};display:block;margin:-22px 0 0 -22px`;
+  bang.textContent = "!";
+  at.appendChild(bang);
+  box.appendChild(at);
+  r.bang = bang;
+  let shown = false, x = NaN, y = NaN;
+  const off = worldLabels.add({
+    priority: LABEL_PRIORITY.speech, size: { w: 44, h: 44 }, occlude: false,
+    anchor: out => { const g = head.current; if (!r.bangShown || !g) return false; g.getWorldPosition(out); return true; },
+    place: o => {
+      if (o.shown !== shown) { shown = o.shown; at.style.display = shown ? "" : "none"; }
+      if (!shown) return;
+      const ny = o.y + o.dy;
+      if (!(Math.abs(o.x - x) <= 0.5 && Math.abs(ny - y) <= 0.5)) { x = o.x; y = ny; at.style.transform = `translate3d(${x}px,${y}px,0)`; }
+      at.style.opacity = o.alpha < 1 ? String(Math.round(o.alpha * 50) / 50) : "";
+    },
+  });
+  return () => { off(); at.remove(); if (r.bang === bang) r.bang = null; };
+}
+
+/** React's style object as a style attribute (numbers in px, but for the unitless weight). */
+const cssText = (style: React.CSSProperties) => Object.entries(style)
+  .map(([k, v]) => `${k.replace(/[A-Z]/g, c => `-${c.toLowerCase()}`)}:${typeof v === "number" && k !== "fontWeight" ? `${v}px` : v}`).join(";");
 
 /** The bite's "!": a paper bubble with a coral mark (the GUI sheet's tokens, plain values outside its scope). */
 export const BANG_STYLE: React.CSSProperties = {
@@ -199,7 +237,7 @@ function step(r: Rig, m: Readonly<CharacterMotion> | null, rod: THREE.Object3D, 
   camera: THREE.Camera, bufferHeight: number, dt: number, now: number) {
   const f = m?.fishing ?? null;
   const bang = f?.phase === "bite";
-  if (bangEl && bang !== r.bangShown) { r.bangShown = bang; bangEl.style.display = bang ? "" : "none"; if (bang) bangEl.animate(BANG_POP, BANG_TIMING); }
+  if (bang !== r.bangShown) { r.bangShown = bang; if (bang) bangEl?.animate(BANG_POP, BANG_TIMING); }
   if (!f) { r.bobber.visible = false; r.line.visible = false; r.cast = null; return; }
   const lineOn = readFishingLine();
   // This frame's tip: the puppet has stepped (Character's frame runs first); bring the rod's matrix up to date.

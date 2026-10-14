@@ -7,7 +7,10 @@
  * `fxForced` always false, whatever the URL says.
  *
  * World switches for the world bench (specs/perf/world-bench.mjs): `skyDome` off draws the flat gradient on High as
- * Lite does, and `window.__fx.tune(group, key, value)` sets a tuning value (the grass's density) as /lab/tune does.
+ * Lite does, `cliffBoulders` off leaves the cliff feet bare (the v1 land pass's rocks), `seabed` off hides the seabed's
+ * props and `foamRings` the foam rings round what stands in the water, `glassWater` the refraction wobble under it,
+ * `fish` the decorative fish (v1 water), and `window.__fx.tune(group, key, value)` sets a tuning value (the grass's
+ * density) as /lab/tune does.
  */
 import { useSyncExternalStore } from "react";
 import { resetTuning, setTuning, type Tuning } from "@/lib/game/tuning";
@@ -15,10 +18,10 @@ import { resetTuning, setTuning, type Tuning } from "@/lib/game/tuning";
 export const FX_BENCH = process.env.NODE_ENV !== "production";
 
 /** The effects the bench switches, on the other players (specs/perf/effects-cost.md has what each one covers). */
-export const FX_KEYS = ["auraFamily", "auraSubclass", "dust", "juice", "ghost", "leaf", "held", "weapon", "rod", "fishing", "plates", "shadows", "emotes", "interp"] as const;
+export const FX_KEYS = ["auraFamily", "auraSubclass", "dust", "juice", "ghost", "leaf", "held", "weapon", "rod", "fishing", "plates", "shadows", "emotes", "interp", "dance"] as const;
 export type FxKey = (typeof FX_KEYS)[number];
 /** World costs the bench can switch off (not other players' effects: `fxoff=all` leaves these on). */
-export const WORLD_KEYS = ["skyDome"] as const;
+export const WORLD_KEYS = ["skyDome", "cliffBoulders", "seabed", "foamRings", "glassWater", "fish"] as const;
 export type WorldKey = (typeof WORLD_KEYS)[number];
 type BenchKey = FxKey | WorldKey;
 
@@ -70,7 +73,7 @@ if (FX_BENCH && typeof window !== "undefined") {
     keys: FX_KEYS,
     set: (next: Parameters<typeof setFxBench>[0]) => { const s = setFxBench(next); return { off: [...s.off], force: [...s.force], formation: s.formation }; },
     state: () => ({ off: [...state.off], force: [...state.force], formation: state.formation }),
-    /** A tuning value as /lab/tune sets it (`tune("grass", "tuftDensity", 6)`); `tune()` puts the shipped values back. */
+    /** A tuning value as /lab/tune sets it (`tune("grass", "density", 0.5)`); `tune()` puts the shipped values back. */
     tune: (group?: keyof Tuning, key?: string, value?: number) => { if (group && key && value !== undefined) setTuning(group, key as never, value); else resetTuning(); },
   } });
 }

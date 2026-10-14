@@ -41,19 +41,10 @@
 .performance summary { min-height: 44px; align-content: center; cursor: pointer; font-size: var(--gui-text-xs); font-weight: 800; }
 .performance output { display: block; white-space: pre-line; font-size: var(--gui-text-xs); line-height: 1.7; margin-top: 8px; font-variant-numeric: tabular-nums; }
 .performance small { display: block; font-size: var(--gui-text-xs); line-height: 1.5; margin-top: 7px; }
-/* The key bar: a paper pill of the kit's round brown keycaps. */
-.controls { position: absolute; bottom: var(--hud-bar-bottom); left: 50%; transform: translateX(-50%); display: flex; flex-wrap: nowrap; align-items: center; justify-content: center; width: max-content; max-width: calc(100% - 24px); height: var(--hud-bar); box-sizing: border-box; gap: 16px; padding: 0 18px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.95); color: var(--gui-ink); white-space: nowrap; font-size: var(--gui-text-xs); font-weight: 700; box-shadow: var(--gui-shadow-md); }
-.controls span { display: flex; align-items: center; gap: 5px; }
-/* One row: the first six keys; a "?" says there are more, and pointing at the bar (or tabbing into it) shows them all. */
-.controls > span:nth-of-type(n+7) { display: none; }
-.controls:has(> span:nth-of-type(7))::after { content: "?"; display: grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--gui-paper-deep); color: var(--gui-ink-2); font-weight: 900; }
-.controls:hover, .controls:focus-within { height: auto; min-height: var(--hud-bar); flex-wrap: wrap; padding: 10px 18px; row-gap: 8px; z-index: 30; border-radius: var(--gui-r-card); }
-.controls:hover > span, .controls:focus-within > span { display: flex; }
-.controls:hover::after, .controls:focus-within::after { display: none; }
 /* The kit's keycap, wherever the HUD names a key. */
-.controls kbd, .interact kbd, .mapButton kbd, .decorateToggle kbd, .bagButton kbd, .decorate kbd, .hint kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; border-radius: var(--gui-r-pill); background: var(--gui-bark); color: var(--gui-paper); font: 800 var(--gui-text-xs)/1 var(--gui-font); }
+.interact kbd, .mapButton kbd, .decorateToggle kbd, .bagButton kbd, .decorate kbd, .hint kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; border-radius: var(--gui-r-pill); background: var(--gui-bark); color: var(--gui-paper); font: 800 var(--gui-text-xs)/1 var(--gui-font); }
 .loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; gap: 10px; justify-items: center; background: var(--gui-paper); padding: 18px 24px; border-radius: var(--gui-r-card); box-shadow: var(--gui-shadow-md); font-size: var(--gui-text-sm); font-weight: 700; }
-@media (max-width: 700px) { .heading { top: 20px; left: 18px; } .heading p { display: none; } .panel { right: 12px; top: 112px; width: 208px; padding: 12px; } .controls { gap: 10px; padding: 0 12px; } }
+@media (max-width: 700px) { .heading { top: 20px; left: 18px; } .heading p { display: none; } .panel { right: 12px; top: 112px; width: 208px; padding: 12px; } }
 
 .touchControls { display: none; }
 .performance .toggle { margin-top: 10px; font-size: var(--gui-text-xs); font-weight: 600; }
@@ -61,7 +52,6 @@
 @media (pointer: coarse), (pointer: none) {
   /* Touch: the hint line is the floor; the lane and the toasts go up over the stick, the minimap stands beside it. */
   .world { --hud-bar: 32px; --hud-lane-bottom: calc(var(--hud-stick-bottom) + var(--touch-stick, 132px) + var(--hud-gap)); --hud-side-bottom: var(--hud-stick-bottom); }
-  .controls { display: none; }
   .touchControls { display: block; position: absolute; bottom: var(--hud-floor); left: 50%; transform: translateX(-50%); margin: 0; padding: 8px 16px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.95); color: var(--gui-ink); white-space: nowrap; font-size: var(--gui-text-xs); font-weight: 700; box-shadow: var(--gui-shadow-sm); }
 }
 
@@ -86,22 +76,18 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 /* The map closed: a pill in its place to bring it back (the objective stays under it). */
 .mapButton { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 16px 0 12px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper); color: var(--gui-ink-strong); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; box-shadow: var(--gui-shadow-md); cursor: pointer; }
 .mapButton:hover { background: var(--gui-paper-hi); }
-/* First login: the minimap and the chapter 1 objective arrive after the HQ lead's greeting (hud-first-login §6). */
+/* First login: the minimap and the chapter 1 objective arrive after the arrival's walk-along (specs/v1-drop.md §1). */
 .minimap[data-new] { animation: objectiveIn 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
 .minimap[data-new] .objective { animation: objectiveGlow 2.2s ease-out 0.5s both; }
 @keyframes objectiveIn { from { opacity: 0; transform: translateY(14px) scale(0.96); } }
 @keyframes objectiveGlow { 0%, 100% { box-shadow: var(--gui-shadow-sm); } 30% { box-shadow: 0 0 0 4px #e2826a66, var(--gui-shadow-sm); } }
-/* The HQ lead's greeting box (the recruit kit's NPCDialogue, in this sheet's paper and coral tag) at the foot of the screen. */
-.greeting { position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); width: min(720px, calc(100% - 32px)); z-index: 30; animation: greetingIn 0.35s ease-out both; zoom: var(--tsi-text-scale, 1); }
-.greetingSkip { position: absolute; top: -14px; right: 26px; min-height: 36px; padding: 0 16px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper-hi); color: var(--gui-ink-2); font: 800 var(--gui-text-xs) var(--gui-font); cursor: pointer; box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge); }
-@keyframes greetingIn { from { opacity: 0; transform: translate(-50%, 16px); } }
-@media (prefers-reduced-motion: reduce) { .minimap[data-new], .minimap[data-new] .objective, .greeting { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .minimap[data-new], .minimap[data-new] .objective { animation: none; } }
 .objectiveMarker { animation: markerPulse 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes markerPulse { 50% { opacity: 0.45; } }
 @media (prefers-reduced-motion: reduce) { .objectiveMarker { animation: none; } }
 .confetti { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
 /* Narrow windows: the map goes up under the Collection button, so the prompt and the toast lane own the bottom; the key hints keep to one scrolling line. */
-@media (max-width: 700px) { .world { --hud-stick-left: var(--hud-edge); } .minimap { width: 130px; top: 198px; bottom: auto; } .controls { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; } }
+@media (max-width: 700px) { .world { --hud-stick-left: var(--hud-edge); } .minimap { width: 130px; top: 198px; bottom: auto; } }
 
 /* Decorate panel (homes): non-modal paper beside the room. */
 .decorate { position: absolute; right: var(--hud-edge); bottom: var(--hud-side-bottom); width: 290px; max-height: calc(100% - 180px); overflow-y: auto; padding: 16px; border-radius: var(--gui-r-card); background: var(--gui-paper); color: var(--gui-ink); box-shadow: var(--gui-shadow-md); font-size: var(--gui-text-sm); z-index: 12; zoom: var(--tsi-text-scale, 1); }
@@ -224,9 +210,9 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .keyList button[aria-pressed="true"] { background: var(--gui-butter); box-shadow: inset 0 0 0 2px var(--gui-highlight); }
 .keyList kbd { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 8px; box-sizing: border-box; border-radius: var(--gui-r-pill); background: var(--gui-bark); color: var(--gui-paper); font: 800 var(--gui-text-xs)/1 var(--gui-font); }
 /* Text size (row 220): the HUD scales, the world doesn't. Sheets and dialogs scale through [data-gui-overlay]. */
-.world .interact, .world .controls, .world .panel, .world .bagButton, .world .heading, .world .decorateToggle, .world .minimap, .world .mapButton { zoom: var(--tsi-text-scale, 1); }
+.world .interact, .world .panel, .world .bagButton, .world .heading, .world .decorateToggle, .world .minimap, .world .mapButton { zoom: var(--tsi-text-scale, 1); }
 /* High contrast (row 220) */
-:global(html[data-contrast="high"]) .world .panel, :global(html[data-contrast="high"]) .world .controls, :global(html[data-contrast="high"]) .world .decorate { background: #ffffff; color: #000000; box-shadow: inset 0 0 0 2px #000000; }
+:global(html[data-contrast="high"]) .world .panel, :global(html[data-contrast="high"]) .world .decorate { background: #ffffff; color: #000000; box-shadow: inset 0 0 0 2px #000000; }
 :global(html[data-contrast="high"]) .world .interact, :global(html[data-contrast="high"]) .world .bagButton, :global(html[data-contrast="high"]) .world .mapButton, :global(html[data-contrast="high"]) .world .cue { background: #000000; color: #ffffff; box-shadow: 0 0 0 2px #ffffff; }
 :global(html[data-contrast="high"]) .world .interact kbd { background: #ffe14d; color: #000000; }
 :global(html[data-contrast="high"]) .world kbd { background: #ffffff; color: #000000; box-shadow: inset 0 0 0 1px #000000; }
@@ -476,3 +462,8 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
   .world[data-compact] .heading p { display: none; }
 }
 
+/* Photo mode (v1, components/game/photo): the HUD steps away and the labels with it (a photo holds no name tags); the
+   canvas wears the chosen filter (the page's --photo-filter, set by PhotoMode). */
+.world[data-photo] > :not(:has(canvas[data-engine])):not([data-photo-ui]) { visibility: hidden !important; }
+.world[data-photo] canvas[data-engine] ~ * { visibility: hidden !important; }
+.world[data-photo] canvas[data-engine] { filter: var(--photo-filter, none); }

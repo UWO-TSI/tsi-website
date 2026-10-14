@@ -4,6 +4,7 @@
  *   tsi:peaceful-got   { key, name, rarity, one_liner, size, isNew, kind | bug }  a bug, a forage find, a dig, a tree's drop
  *   tsi:crafted        { id, name, kind }                                          a workbench craft (Workshop)
  *   tsi:recipe-learned { id, name }                                                a message bottle's recipe (BeachBottle)
+ *   tsi:gift           { key, name, title, note }                                  a resident's gift (Bram's old rod, the arrival)
  * The pickup's fly-in into the Bag (BagButton) is the bag's; the card sits beside it and says what it was.
  */
 import type { SFXName } from "./audio";
@@ -14,7 +15,7 @@ import { CATALOGUE } from "@/lib/wallet/catalogue";
 import { WEAPONS } from "@/lib/combat/weapons";
 import { iconUrl, shopIcon } from "@/lib/icons/keys";
 
-export const REWARD_EVENTS = ["tsi:peaceful-got", "tsi:crafted", "tsi:recipe-learned"] as const;
+export const REWARD_EVENTS = ["tsi:peaceful-got", "tsi:crafted", "tsi:recipe-learned", "tsi:gift"] as const;
 export type RewardKind = "bug" | "forage" | "dig" | "craft" | "bottle";
 export interface RewardIngredient { key: string; name: string; icon: string; count: number }
 export interface Reward {
@@ -72,6 +73,11 @@ export function rewardOf(type: string, detail: unknown): Reward | null {
     // The leaf glider is the first movement unlock (specs/glider.md): its card says what's new, the guided first glide follows.
     const unlock = id === "glider-leaf";
     return { kind: "craft", key: id, name, icon: madeIcon(id), rarity: null, size: null, isNew: unlock, title: unlock ? "New: you can glide" : "Crafted", note: made(id, d.kind) };
+  }
+  if (type === "tsi:gift") {
+    const key = str(d.key, 64), name = str(d.name);
+    if (!key || !name) return null;
+    return { kind: "craft", key, name, icon: madeIcon(key), rarity: null, size: null, isNew: true, title: str(d.title, 60) ?? "A gift", note: str(d.note, 200) ?? "" };
   }
   if (type === "tsi:recipe-learned") {
     const id = str(d.id, 64), name = str(d.name);

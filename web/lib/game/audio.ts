@@ -30,11 +30,14 @@
  *   AudioManager.setMusic({ block, season, override }) — crossfade the hourly music bed
  *   AudioManager.playSFX(name, { rate, gain })   — one-shot, overlapping safe; `rate` re-pitches it (the combat cues)
  *   AudioManager.playBlip()                      — random dialogue voice blip
+ *   AudioManager.setLoop(src, gain)              — a looping layer on the world clock's bar (the campfire's drums, the
+ *                                                  soft beat near dancers): Web Audio, faded to `gain`, 0 lets it go
  *   AudioManager.subscribe(listener)             — for React UI sync
  *   AudioManager.getState()
  */
 
 import { buildMusicSrcList, type MusicBlock, type MusicOverride } from "./musicSchedule";
+import { worldNow } from "./worldClock";
 import type { IslandWeather } from "./islandWeather";
 import type { Season } from "./season";
 
@@ -111,6 +114,21 @@ interface StoredPrefs {
 
 export const DEFAULT_VOLUMES: AudioVolumes = { master: 0.7, ambient: 0.6, music: 0.55, sfx: 0.8 };
 
+/**
+ * Where a loop of `lengthS` seconds is at the world-clock instant `worldMs` (s into it): every client starting a layer
+ * there hears the same bar (the drum loops are whole bars at 120 BPM, as the dances are: lib/game/danceSync.ts).
+ */
+export function loopOffset(worldMs: number, lengthS: number): number {
+  const len = lengthS * 1000, t = worldMs % len;
+  return (t < 0 ? t + len : t) / 1000;
+}
+/** A loop layer: its buffer once decoded, its source while playing, its gain node and where its gain is heading. */
+interface LoopLayer { buffer: AudioBuffer | null; loading: boolean; failed: boolean; source: AudioBufferSourceNode | null; gain: GainNode; target: number; idleAt: number }
+/** How fast a layer fades in or out (s, the time constant). */
+const LOOP_FADE_S = 0.35;
+/** A layer silent this long stops its source (ms). */
+const LOOP_IDLE_MS = 4000;
+
 function readStoredPrefs(): StoredPrefs {
   if (typeof window === "undefined") {
     return { volumes: { ...DEFAULT_VOLUMES }, muted: false };
@@ -170,6 +188,10 @@ export class AudioManagerImpl {
   private oneShots = new Map<HTMLAudioElement, { name: SFXName; gain: number }>();
 
   private missingFiles = new Set<string>();
+  /** Looping layers (setLoop): one AudioContext, its bus at master × music (silent when muted). */
+  private ctx: AudioContext | null = null;
+  private loopBus: GainNode | null = null;
+  private loops = new Map<string, LoopLayer>();
   private warnedMissing = false;
   private listeners = new Set<Listener>();
   private cachedSnapshot: AudioState;
@@ -256,6 +278,83 @@ export class AudioManagerImpl {
       if (ch.next) ch.next.volume = target * ch.fadeProgress;
     }
     for (const [sound, { name, gain }] of this.oneShots) sound.volume = Math.min(1, this.sfxTargetVolume(name) * gain);
+    if (this.ctx && this.loopBus) this.loopBus.gain.setTargetAtTime(this.targetVolume("music"), this.ctx.currentTime, 0.05);
+  }
+
+  /**
+   * A looping layer on the world clock's bar (the campfire's drum song, the soft beat near dancers), faded toward
+   * `gain` (0 lets it go; a layer silent a few seconds stops). It loads once, on first asking, and starts at the bar's
+   * phase every client shares (loopOffset). Mute and the sliders apply through the bus (master × music). Call it as
+   * often as you like: nothing happens unless the gain moved.
+   */
+  setLoop(src: string, gain: number): void {
+    if (!this.enabled || typeof window === "undefined" || this.missingFiles.has(src)) return;
+    const ctx = this.loopContext();
+    if (!ctx || !this.loopBus) return;
+    let layer = this.loops.get(src);
+    const target = Math.max(0, Math.min(1, gain));
+    if (!layer) {
+      if (target <= 0) return;
+      const g = ctx.createGain();
+      g.gain.value = 0;
+      g.connect(this.loopBus);
+      layer = { buffer: null, loading: false, failed: false, source: null, gain: g, target: 0, idleAt: 0 };
+      this.loops.set(src, layer);
+    }
+    const now = performance.now();
+    if (Math.abs(target - layer.target) > 0.005) {
+      layer.target = target;
+      layer.gain.gain.setTargetAtTime(target, ctx.currentTime, LOOP_FADE_S);
+    }
+    if (target > 0) {
+      layer.idleAt = 0;
+      if (!layer.buffer) { this.loadLoop(src, layer); return; }
+      if (!layer.source) this.startLoop(layer);
+    } else if (layer.source) {
+      if (!layer.idleAt) layer.idleAt = now;
+      else if (now - layer.idleAt > LOOP_IDLE_MS) { try { layer.source.stop(); } catch { /* already stopped */ } layer.source = null; }
+    }
+  }
+
+  private loopContext(): AudioContext | null {
+    if (this.ctx) {
+      if (this.ctx.state === "suspended") void this.ctx.resume().catch(() => {});
+      return this.ctx;
+    }
+    const AC = (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).AudioContext
+      ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AC) return null;
+    try {
+      this.ctx = new AC();
+      this.loopBus = this.ctx.createGain();
+      this.loopBus.gain.value = this.targetVolume("music");
+      this.loopBus.connect(this.ctx.destination);
+    } catch { this.ctx = null; this.loopBus = null; }
+    return this.ctx;
+  }
+
+  private loadLoop(src: string, layer: LoopLayer): void {
+    if (layer.loading || layer.failed || !this.ctx) return;
+    layer.loading = true;
+    const ctx = this.ctx;
+    fetch(src).then(r => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(String(r.status)))))
+      .then(data => ctx.decodeAudioData(data))
+      .then(buffer => {
+        layer.buffer = buffer; layer.loading = false;
+        if (layer.target > 0 && !layer.source) this.startLoop(layer);
+      })
+      .catch(() => { layer.loading = false; layer.failed = true; this.markMissing(src); });
+  }
+
+  private startLoop(layer: LoopLayer): void {
+    const ctx = this.ctx;
+    if (!ctx || !layer.buffer) return;
+    const lead = 0.05, source = ctx.createBufferSource();
+    source.buffer = layer.buffer;
+    source.loop = true;
+    source.connect(layer.gain);
+    source.start(ctx.currentTime + lead, loopOffset(worldNow() + lead * 1000, layer.buffer.duration));
+    layer.source = source;
   }
 
   private mutedGain(): number {
@@ -458,6 +557,10 @@ export class AudioManagerImpl {
     }
     for (const sound of this.oneShots.keys()) sound.pause();
     this.oneShots.clear();
+    for (const layer of this.loops.values()) {
+      try { layer.source?.stop(); } catch { /* already stopped */ }
+      layer.source = null; layer.target = 0; layer.gain.gain.value = 0;
+    }
   }
 
   private markMissing(src: string): void {

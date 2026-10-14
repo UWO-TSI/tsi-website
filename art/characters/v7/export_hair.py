@@ -16,6 +16,7 @@ for p in (V7, ART, os.path.join(ART, "base")):
 import kit  # noqa: E402
 import hair_build  # noqa: E402
 import hair_styles as hs  # noqa: E402
+from skull import VERSION as SKULL_VERSION  # noqa: E402  (kit put art/characters/skull on the path)
 
 entries = {}
 for slot, fname, table in (("bangs", "hair_bangs.blend", hs.BANGS), ("back", "hair_backs.blend", hs.BACKS)):
@@ -36,7 +37,7 @@ for slot, fname, table in (("bangs", "hair_bangs.blend", hs.BANGS), ("back", "ha
         rel = f"hair/{slot}/{pid}.glb"
         kit.export(ob, rig, os.path.join(ART, rel))
         e = {"id": pid, "slot": slot, "name": spec[0], "glb": rel, "tris": tris, "materials": [{"name": "M_Hair", "tint": "hair"}],
-             "decalSlot": None, "hidesBackHair": False, "hides": [], "sheetCell": spec[1], "locks": int(ob["locks"]), "v7": True}
+             "decalSlot": None, "hidesBackHair": False, "hides": [], "sheetCell": spec[1], "locks": int(ob["locks"]), "v7": True, "skull": SKULL_VERSION}
         if slot == "back":   # fit_check measures the air gap over the under-cap only (hem locks flare free by design)
             e["capFrom"] = max(spec[3](lon) for lon in range(-180, 180, 5)) + 2
         entries[pid] = e
@@ -45,7 +46,7 @@ for slot, fname, table in (("bangs", "hair_bangs.blend", hs.BANGS), ("back", "ha
 
 cat_path = os.path.join(ART, "character_catalog.json")
 cat = json.load(open(cat_path))
-cat["hair"] = [entries[h["id"]] for h in cat["hair"]] + [e for pid, e in entries.items() if pid not in {h["id"] for h in cat["hair"]}]
+cat["hair"] = [entries.get(h["id"], h) for h in cat["hair"]] + [e for pid, e in entries.items() if pid not in {h["id"] for h in cat["hair"]}]   # other sources' hair (import_hair.py) kept
 json.dump(cat, open(cat_path, "w"), indent=1)
 hc_path = os.path.join(ART, "hair", "hair_catalog.json")
 hc = json.load(open(hc_path))

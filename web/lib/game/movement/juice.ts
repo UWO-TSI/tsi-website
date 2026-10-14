@@ -9,6 +9,15 @@ import type { SFXName } from "@/lib/game/audio";
 import { FACE, seedAt, type ParticlePool, type Recipe } from "@/lib/game/fx/particles";
 import { Surface } from "@/lib/game/grid";
 import { puddleAt } from "@/lib/game/puddles";
+import { swashFoam } from "@/lib/game/foamRings";
+import { stepRing } from "@/lib/game/waterRipples";
+
+/**
+ * The scene's water edge, for steps in the shallows (v1 water item 3; components/game/water/WaterContacts.tsx sets
+ * it): cells from the waterline at a world point, positive over the water. None: no shallows to step in.
+ */
+let swashProbe: ((x: number, z: number) => number) | null = null;
+export function setSwashProbe(probe: ((x: number, z: number) => number) | null) { swashProbe = probe; }
 
 // ── The ground under the feet ────────────────────────────────────────
 export type GroundKind = "grass" | "sand" | "wetSand" | "soil" | "stone" | "wood" | "snow" | "water";
@@ -95,6 +104,11 @@ export function footstep(pool: ParticlePool, g: GroundKind, x: number, y: number
   }
   if (amount > 0) {
     for (let k = 0; k < fx.step.length; k++) pool.burst(fx.step[k], x, y, z, y, -vx, -vz, scale, fx.stepTint, seedAt(x, z, SALT.step + k * 31));
+    // A step in the shallows, where the waves wash over the sand: a ring spreads from the foot.
+    if (swashProbe && (g === "wetSand" || g === "sand")) {
+      const swash = swashFoam(swashProbe(x, z));
+      if (swash > 0.35) stepRing(pool, x, y, z, amount * swash);
+    }
     if (rain && g !== "wood") {
       pool.burst(RAIN_RIPPLE, x, y + 0.02, z, y, 0, 0, amount, 0xe4f4fb, seedAt(x, z, SALT.rain));
       pool.burst(RAIN_DROPS, x, y, z, y, -vx, -vz, amount, 0xd4ecf7, seedAt(x, z, SALT.rain + 1));

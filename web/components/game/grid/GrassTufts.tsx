@@ -1,6 +1,10 @@
 "use client";
 
 /**
+ * GrassTufts: the cinematic pass's flowing tufts, kept for the worlds that don't name their obstacles (the applicant
+ * island, the ruins, the home island, the movement lab: GridWorld's `grassLayer`), so they render as they did. The
+ * village, the v2 world and the title draw the blade field (GrassField) instead.
+ *
  * GrassTufts — the moving layer on the ground (David, 2026-07-28: "ground is too
  * 2d static, needs some swaying grass and stuff while keeping performance").
  *
@@ -18,6 +22,12 @@
  *
  * Tufts are placed on a deterministic hash of the cell, so they do not shimmer
  * between loads and do not need to be stored in the map.
+ *
+ * ON LITE THEY THIN WITH DISTANCE (v1 performance). The v2 world's grass is a
+ * quarter of its triangles; past THIN.near of the camera only a share of the
+ * tufts stands, falling to THIN.keep past THIN.far (each tuft's own hash says
+ * which, so the same ones stay as you walk). Far tufts are a pixel or two on
+ * Lite's half-resolution canvas. High draws them all, as before.
  */
 
 import { useEffect, useMemo, useRef } from "react";
@@ -41,6 +51,7 @@ import {
   NATURAL_SURFACES,
 } from "@/lib/game/grid";
 import { useTuning } from "@/lib/game/tuning";
+import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import { worldTime } from "@/lib/game/worldClock";
 import { meshShadow, shadowClassFor } from "@/lib/game/shadows";
 
@@ -48,6 +59,16 @@ const PACK_URL = "/assets/nature/grass-tufts.glb";
 useGLTF.preload(PACK_URL);
 /** Tufts are the Small shadow class: no sun shadow, they receive. */
 const TUFT_SHADOW = meshShadow(shadowClassFor(PACK_URL), "tuft");
+
+/**
+ * Lite's thinning: every tuft within `near` u of the camera (on the ground), `keep` of them past `far`, a straight ramp
+ * between; the instances are rewritten when the camera has moved `step` u since the last time.
+ */
+export const THIN = { near: 30, far: 45, keep: 0.25, step: 2 };
+/** The share of tufts standing `d` u from the camera on Lite. */
+export function thinShare(d: number): number {
+  return d <= THIN.near ? 1 : d >= THIN.far ? THIN.keep : 1 - ((d - THIN.near) / (THIN.far - THIN.near)) * (1 - THIN.keep);
+}
 
 /** How much likelier a tuft is on grass beside a soil path or the beach. */
 const EDGE_TUFTS = 3;
@@ -148,9 +169,45 @@ export function patchWind(
   mat.needsUpdate = true;
 }
 
+interface Tuft { x: number; y: number; z: number; rot: number; s: number; v: number; rank: number }
+
+/** Each variant's placements and their matrices (16 floats each), built once. */
+interface Variant { mesh: THREE.InstancedMesh | null; tufts: Tuft[]; matrices: Float32Array }
+
+/** Lite: rewrite each variant's instances for the camera at (x, z): the tufts its thinning keeps. Module scope (frame loop). */
+function thinTo(variants: Variant[], x: number, z: number) {
+  for (const v of variants) {
+    const inst = v.mesh;
+    if (!inst) continue;
+    const out = inst.instanceMatrix.array as Float32Array;
+    let k = 0;
+    for (let i = 0; i < v.tufts.length; i++) {
+      const p = v.tufts[i];
+      if (p.rank >= thinShare(Math.hypot(p.x - x, p.z - z))) continue;
+      out.set(v.matrices.subarray(i * 16, i * 16 + 16), k * 16);
+      k++;
+    }
+    inst.count = k;
+    inst.instanceMatrix.needsUpdate = true;
+  }
+}
+
+/** Every variant's instances: all its tufts (High, and Lite until the first thinning). */
+function showAll(variants: Variant[]) {
+  for (const v of variants) {
+    const inst = v.mesh;
+    if (!inst) continue;
+    (inst.instanceMatrix.array as Float32Array).set(v.matrices);
+    inst.count = v.tufts.length;
+    inst.instanceMatrix.needsUpdate = true;
+  }
+}
+
 /** `windScale` multiplies sway: 0 for the Light tier, >1 on windy days. */
 export default function GrassTufts({ map, windScale = 1 }: { map: IslandMap; windScale?: number }) {
   const t = useTuning();
+  const [graphics] = useGraphicsSettings();
+  const thin = graphics.liteMode;
   // Plain memo, not a ref: these objects are handed to the shader once and then
   // mutated per frame, and reading a ref during render to build the material is
   // exactly what the react-compiler lint rule forbids.
@@ -163,7 +220,7 @@ export default function GrassTufts({ map, windScale = 1 }: { map: IslandMap; win
   // Placements depend only on density, so a sway tweak does not rebuild them.
   const groundField = useMemo(() => heightField(map), [map]);
   const placements = useMemo(() => {
-    const out: { x: number; y: number; z: number; rot: number; s: number; v: number }[] = [];
+    const out: Tuft[] = [];
     if (t.grass.tuftDensity <= 0) return out;
     const chance = t.grass.tuftDensity / 100;
     for (let cz = 0; cz < map.depth; cz++) {
@@ -184,6 +241,7 @@ export default function GrassTufts({ map, windScale = 1 }: { map: IslandMap; win
           rot: hash01(cx, cz, 4) * Math.PI * 2,
           s: 0.75 + hash01(cx, cz, 5) * 0.5,
           v: Math.floor(hash01(cx, cz, 6) * 64) % 64,
+          rank: hash01(cx, cz, 7),
         });
       }
     }
@@ -238,30 +296,40 @@ export default function GrassTufts({ map, windScale = 1 }: { map: IslandMap; win
   }, [material]);
   useEffect(() => () => cardGeometry.dispose(), [cardGeometry]);
 
-  useFrame(() => {
-    uTime.current.value = worldTime();
-    uWind.current.value.set(t.grass.swayAmount * windScale, t.grass.swaySpeed, t.grass.gustLength, t.grass.tuftHeight);
-  });
+  // Each variant's tufts and matrices, built once; the instanced meshes take them (all of them, or Lite's thinned share).
+  const variantCount = useModel && variants.length > 0 ? variants.length : 1;
+  const sets = useMemo((): Variant[] => {
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc = new THREE.Vector3();
+    return Array.from({ length: variantCount }, (_, variant) => {
+      const tufts = placements.filter(pl => variantCount === 1 || pl.v % variantCount === variant);
+      const matrices = new Float32Array(tufts.length * 16);
+      tufts.forEach((pl, i) => {
+        e.set(0, pl.rot, 0);
+        q.setFromEuler(e);
+        p.set(pl.x, pl.y, pl.z);
+        sc.setScalar(pl.s * scaleFor);
+        m.compose(p, q, sc).toArray(matrices, i * 16);
+      });
+      return { mesh: null, tufts, matrices };
+    });
+  }, [placements, variantCount, scaleFor]);
+  const thinnedAt = useRef({ x: NaN, z: NaN });
 
-  const setMatricesFor = (variant: number, total: number) => (inst: THREE.InstancedMesh | null) => {
-    if (!inst) return;
-    const m = new THREE.Matrix4();
-    const q = new THREE.Quaternion();
-    const e = new THREE.Euler();
-    const p = new THREE.Vector3();
-    const sc = new THREE.Vector3();
-    let k = 0;
-    for (const pl of placements) {
-      if (total > 1 && pl.v % total !== variant) continue;
-      e.set(0, pl.rot, 0);
-      q.setFromEuler(e);
-      p.set(pl.x, pl.y, pl.z);
-      sc.setScalar(pl.s * scaleFor);
-      m.compose(p, q, sc);
-      inst.setMatrixAt(k++, m);
-    }
-    inst.count = k;
-    inst.instanceMatrix.needsUpdate = true;
+  useFrame(({ camera }) => {
+    uTime.current.value = worldTime();
+    uWind.current.value.set(t.grass.tuftSway * windScale, t.grass.swaySpeed, t.grass.gustLength, t.grass.tuftHeight);
+    if (!thin) return;
+    const at = thinnedAt.current;
+    if (Math.hypot(camera.position.x - at.x, camera.position.z - at.z) < THIN.step) return;
+    at.x = camera.position.x; at.z = camera.position.z;
+    thinTo(sets, at.x, at.z);
+  });
+  // A new set of instances, or Lite turned on or off: all of them, then (on Lite) the thinning from the next frame.
+  useEffect(() => { thinnedAt.current.x = NaN; showAll(sets); }, [sets, thin]);
+
+  const setMatricesFor = (variant: number) => (inst: THREE.InstancedMesh | null) => {
+    sets[variant].mesh = inst;
+    showAll(sets);
   };
 
   if (placements.length === 0) return null;
@@ -275,7 +343,7 @@ export default function GrassTufts({ map, windScale = 1 }: { map: IslandMap; win
         {variants.map((geo, i) => (
           <instancedMesh
             key={i}
-            ref={setMatricesFor(i, variants.length)}
+            ref={setMatricesFor(i)}
             args={[geo, material, placements.length]}
             frustumCulled={false}
             castShadow={TUFT_SHADOW.cast}
@@ -288,7 +356,7 @@ export default function GrassTufts({ map, windScale = 1 }: { map: IslandMap; win
 
   return (
     <instancedMesh
-      ref={setMatricesFor(0, 1)}
+      ref={setMatricesFor(0)}
       args={[cardGeometry, material, placements.length]}
       frustumCulled={false}
       castShadow={TUFT_SHADOW.cast}

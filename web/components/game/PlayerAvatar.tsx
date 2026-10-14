@@ -20,7 +20,8 @@ import { timeScale as worldSpeed } from "@/lib/game/slowMotion";
 import type { WheelItem } from "@/lib/game/toolWheel";
 import type { CharacterLook } from "@/lib/game/character/look";
 import { useMyLook } from "@/lib/game/character/lookStore";
-import { airPhase, combatClip, gripFor, GRIP_HAND, seatLift, VERBS, verbClip, verbInfo, type CombatView, type Verb } from "@/lib/game/character/clips";
+import { airPhase, combatClip, gripFor, GRIP_HAND, SEAT_CLIPS, seatLift, VERBS, verbClip, verbInfo, type CombatView, type Verb } from "@/lib/game/character/clips";
+import type { SeatDrive } from "@/lib/game/emotePlay";
 import { useWorldClips } from "./character/useWorldClips";
 import { useLocalAvatarTap } from "@/lib/net/localAvatar";
 import { combat, useCombatValue } from "@/lib/game/combat/runtime";
@@ -77,6 +78,7 @@ interface PlayerAvatarProps {
   /** Written every frame: where the follow camera looks (IslandAtmosphere useFollowCamera). */
   camTarget?: React.RefObject<THREE.Vector3>;
   playerName?: string;
+  /** Your own name over your head: off by default (v1 name tags, specs/v1-drop.md §3: your own name is hidden). */
   showNameplate?: boolean;
   /** The member's level (combat progression); the nameplate leaves it out until known. */
   playerLevel?: number;
@@ -96,6 +98,8 @@ interface PlayerAvatarProps {
   timeScale?: number;
   telemetry?: React.RefObject<MoveTelemetry>;
   walkSpeed?: number;
+  /** The dash (Q) is yours: a Keeper teaches it (lib/game/moveUnlocks.ts); until then Q does nothing. The ruins' dodge is the encounter's. */
+  dash?: boolean;
   /** Walk only (the café, cafe-polish §4): no running, jumping or dashing. */
   walkOnly?: boolean;
   /** What this player holds from the tool wheel (specs/game-ui.md): drawn in the hand. In an encounter the weapon is the runtime's. */
@@ -169,13 +173,15 @@ function rideFrame(r: AvatarRide, g: THREE.Group, bd: THREE.Group, hd: THREE.Gro
   f.pan.set(0, 0);
 }
 
-/** Clips that hold while seated; the seat branch owns them. */
-const SEAT_CLIPS = new Set<ClipName>(["Sit", "Study", "Stretch", "Sleep"]);
 /** Space let go within this long in the air is a tap (an air-jump class's Air Step); held longer, the glider. */
 const AIR_TAP = 0.18;
-type Seat = { x: number; z: number; clip: ClipName; lift: number; yaw: number };
+/**
+ * Where you sit (or lie, or dance round the campfire): `ground` is a spot on the ground rather than furniture (getting
+ * up leaves you standing there); `drive` moves it each frame (the campfire's stomp ring carries you round the fire).
+ */
+type Seat = { x: number; z: number; clip: ClipName; lift: number; yaw: number; ground?: boolean; drive?: SeatDrive };
 
-export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = true, playerLevel, member = false, combat: inCombat = false, respawn = 0, glider = false, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed, walkOnly = false, held = null, ride }: PlayerAvatarProps) {
+export default function PlayerAvatar({ spawnPosition, player, world, groundHeight, groundSurface, camTarget, playerName = "Player", showNameplate = false, playerLevel, member = false, combat: inCombat = false, respawn = 0, glider = false, dash = true, frozen = false, desktopClickToMove = false, tuning, juice, timeScale, telemetry, walkSpeed = MOVE_TUNING.walkSpeed, walkOnly = false, held = null, ride }: PlayerAvatarProps) {
   const anchor = useRef<THREE.Group>(null), body = useRef<THREE.Group>(null), head = useRef<THREE.Group>(null);
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null, move: null, afterimages: true });
   const { look } = useMyLook();
@@ -262,7 +268,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     if (!s) return;
     seat.current = null;
     motion.current.pose = null;
-    const [x, z] = clearSpot(world, s.x, s.z, groundHeight(s.x, s.z), s.yaw);
+    // Off the ground (a sit on the sand, the campfire's rings) you get up where you are; off furniture, beside it.
+    const [x, z] = s.ground ? [s.x, s.z] : clearSpot(world, s.x, s.z, groundHeight(s.x, s.z), s.yaw);
     sim.current = createMoveSim(createMoveState(x, z, world, s.yaw));
     fx.current.rise.set(s.x - x, s.z - z);
     fx.current.sqv += 3;
@@ -275,9 +282,9 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   // faces the seat's front (default: the camera).
   useEffect(() => {
     const onSit = (e: Event) => {
-      const { x, z, clip, seatY, yaw = Math.PI } = (e as CustomEvent<{ x: number; z: number; clip?: ClipName; seatY?: number; yaw?: number }>).detail;
+      const { x, z, clip, seatY, yaw = Math.PI, ground, drive } = (e as CustomEvent<{ x: number; z: number; clip?: ClipName; seatY?: number; yaw?: number; ground?: boolean; drive?: SeatDrive }>).detail;
       const cur = seat.current, same = !!cur && cur.x === x && cur.z === z;
-      const at = (c: ClipName): Seat => ({ x, z, clip: c, yaw, lift: seatY === undefined ? 0 : seatLift(c, seatY - groundHeight(x, z), CHARACTER_SCALE) });
+      const at = (c: ClipName): Seat => ({ x, z, clip: c, yaw, lift: seatY === undefined ? 0 : seatLift(c, seatY - groundHeight(x, z), CHARACTER_SCALE), ground, drive });
       if (same && clip) { seat.current = at(clip); return; }
       if (same) { leaveSeat(); return; }
       seat.current = at(clip ?? "Sit");
@@ -288,9 +295,27 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       if (sitNoteTimer.current) window.clearTimeout(sitNoteTimer.current);
       sitNoteTimer.current = window.setTimeout(() => setSitNote(false), 1700);
     };
+    // The emote wheel (lib/game/emotePlay.ts): sit or lie down on the ground where you stand (the same again gets you
+    // up), or get up before a dance.
+    const onHere = (e: Event) => {
+      const clip = (e as CustomEvent<{ clip?: ClipName }>).detail?.clip, st = sim.current?.state;
+      if (!clip || !st) return;
+      if (seat.current?.clip === clip) { leaveSeat(); return; }
+      if (seat.current) leaveSeat();
+      const s = sim.current!.state;
+      seat.current = { x: s.x, z: s.z, clip, yaw: s.facing, lift: 0, ground: true };
+      motion.current.pose = clip;
+      target.current = null;
+      puffRing(particles.pool, groundAt(groundSurface, world, s.x, s.z), s.x, groundHeight(s.x, s.z), s.z);
+    };
+    const onStand = () => leaveSeat();
     window.addEventListener("tsi:sit", onSit);
+    window.addEventListener("tsi:sit-here", onHere);
+    window.addEventListener("tsi:stand", onStand);
     return () => {
       window.removeEventListener("tsi:sit", onSit);
+      window.removeEventListener("tsi:sit-here", onHere);
+      window.removeEventListener("tsi:stand", onStand);
       if (sitNoteTimer.current) window.clearTimeout(sitNoteTimer.current);
     };
   }, [groundHeight, groundSurface, world, leaveSeat, particles]);
@@ -380,13 +405,15 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     let ix = (k[b.right] ? 1 : 0) - (k[b.left] ? 1 : 0), iz = (k[b.forward] ? 1 : 0) - (k[b.back] ? 1 : 0);
     const keyed = Math.hypot(ix, iz), tilt = Math.hypot(st.x, st.z);
     if (keyed) { ix /= keyed; iz /= keyed; } else { ix = st.x; iz = st.z; }
-    const jumpPressed = !walkOnly && (presses.current.jump || st.jumpPressed), dashPressed = !walkOnly && (presses.current.dash || st.dashPressed);
+    const jumpPressed = !walkOnly && (presses.current.jump || st.jumpPressed), dashPressed = !walkOnly && (dash || inCombat) && (presses.current.dash || st.dashPressed);
     presses.current.jump = presses.current.dash = false;
     st.jumpPressed = st.dashPressed = false;
     if (frozen || keyed || tilt > 0.05) target.current = null;
     if (seat.current && !frozen && (keyed || tilt > 0.2 || target.current || jumpPressed || dashPressed)) leaveSeat();
 
     const s = sim.current!, sitting = seat.current, push = inCombat ? combatPush(p) : undefined;
+    // A seat that moves (the campfire's stomp ring) places you before you're drawn.
+    sitting?.drive?.(sitting);
     let events: MoveEvent[] = [];
     if (!sitting) {
       if (m.pose && SEAT_CLIPS.has(m.pose)) m.pose = null;

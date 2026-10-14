@@ -97,10 +97,16 @@ export function remoteSeatTaken(key: string): boolean {
 /** Room for every player a shard holds (SHARD.max is 40). */
 export const LIVE_MAX = 64;
 /**
- * Where the remotes in view stand this frame (feet, world space), written by the driver at priority -3; `n` of them.
- * The café's patrons yield to these as they do to you.
+ * Where the remotes in view stand this frame (feet, world space), written by the driver at priority -3; `n` of them,
+ * with their sid and uid (the same strings each frame: nothing allocated). The café's patrons yield to these as they do
+ * to you; a wave turns to one; the minimap marks your friends among them.
  */
-export const liveRemotes = { n: 0, x: new Float64Array(LIVE_MAX), z: new Float64Array(LIVE_MAX) };
+export const liveRemotes = { n: 0, x: new Float64Array(LIVE_MAX), z: new Float64Array(LIVE_MAX), sid: new Int32Array(LIVE_MAX), uid: new Array<string>(LIVE_MAX).fill("") };
+/** Where remote `sid` stands this frame, or null when they aren't in view. */
+export function remoteAt(sid: number): [number, number] | null {
+  for (let i = 0; i < liveRemotes.n; i++) if (liveRemotes.sid[i] === sid) return [liveRemotes.x[i], liveRemotes.z[i]];
+  return null;
+}
 /** Is any remote in view within `r` of (x, z)? */
 export function remoteNear(x: number, z: number, r: number): boolean {
   for (let i = 0; i < liveRemotes.n; i++) if (Math.hypot(liveRemotes.x[i] - x, liveRemotes.z[i] - z) < r) return true;

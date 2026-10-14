@@ -805,7 +805,8 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "group": "face"
+   "group": "face",
+   "skull": "v8"
   },
   {
    "id": "acc_glasses_square",
@@ -823,7 +824,8 @@
    "decalSlot": null,
    "hidesBackHair": false,
    "hides": [],
-   "group": "face"
+   "group": "face",
+   "skull": "v8"
   },
   {
    "id": "acc_beanie",
@@ -850,7 +852,8 @@
    "decalSlot": null,
    "hidesBackHair": true,
    "hides": [],
-   "group": "head"
+   "group": "head",
+   "skull": "v8"
   },
   {
    "id": "acc_sunhat",
@@ -877,7 +880,8 @@
    "decalSlot": null,
    "hidesBackHair": true,
    "hides": [],
-   "group": "head"
+   "group": "head",
+   "skull": "v8"
   },
   {
    "id": "acc_cap",
@@ -904,7 +908,8 @@
    "decalSlot": null,
    "hidesBackHair": true,
    "hides": [],
-   "group": "head"
+   "group": "head",
+   "skull": "v8"
   },
   {
    "id": "acc_straw_hat",
@@ -932,7 +937,8 @@
    "hidesBackHair": true,
    "hides": [],
    "group": "head",
-   "item": "acc-straw-hat"
+   "item": "acc-straw-hat",
+   "skull": "v8"
   },
   {
    "id": "acc_flower_crown",
@@ -966,7 +972,8 @@
    "hidesBackHair": false,
    "hides": [],
    "group": "head",
-   "item": "acc-flower-crown"
+   "item": "acc-flower-crown",
+   "skull": "v8"
   },
   {
    "id": "acc_crystal_circlet",
@@ -990,7 +997,8 @@
    "hidesBackHair": false,
    "hides": [],
    "group": "head",
-   "item": "acc-crystal-circlet"
+   "item": "acc-crystal-circlet",
+   "skull": "v8"
   },
   {
    "id": "acc_backpack",
@@ -1200,10 +1208,10 @@
  ],
  "base": {
   "glb": "base/v6.glb",
-  "clips_glb": "base/v7_clips.glb",
+  "clips_glb": "base/v8_clips.glb",
   "fps": 30,
-  "head": "v7/head.blend",
-  "note": "v7_clips.glb = the v6 base body (tee + shorts + default hair) with every clip, and the hand-modeled v7 head (avatar v7). Sit/Study sit on a seat at seatHeight; Sleep/Defeat lie on the back with the head toward the character's back (+Y Blender, -Z glTF). hand = the socket that holds the weapon."
+  "head": "skull/head.blend",
+  "note": "v8_clips.glb = the v6 base body (tee + shorts + default hair) with every clip, and the v8 head: a rounded head with a flat face area on the shared skull (head fit). Sit/Study sit on a seat at seatHeight; Sleep/Defeat lie on the back with the head toward the character's back (+Y Blender, -Z glTF). hand = the socket that holds the weapon."
  },
  "clips": [
   {
@@ -1656,6 +1664,95 @@
     0.4,
     0.56
    ]
+  },
+  {
+   "name": "Clap",
+   "length": 1.6,
+   "loop": false,
+   "frames": 48,
+   "endsNeutral": true
+  },
+  {
+   "name": "Bow",
+   "length": 1.8,
+   "loop": false,
+   "frames": 54,
+   "endsNeutral": true
+  },
+  {
+   "name": "Shrug",
+   "length": 1.4,
+   "loop": false,
+   "frames": 42,
+   "endsNeutral": true
+  },
+  {
+   "name": "SitGround",
+   "length": 3.0,
+   "loop": true,
+   "frames": 90,
+   "seatHeight": 0.0
+  },
+  {
+   "name": "SitWarm",
+   "length": 3.0,
+   "loop": true,
+   "frames": 90,
+   "seatHeight": 0.0
+  },
+  {
+   "name": "DanceBounce",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
+  },
+  {
+   "name": "DanceSpin",
+   "length": 4.0,
+   "loop": true,
+   "frames": 120
+  },
+  {
+   "name": "DanceShuffle",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
+  },
+  {
+   "name": "DanceSway",
+   "length": 4.0,
+   "loop": true,
+   "frames": 120
+  },
+  {
+   "name": "DanceWiggle",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
+  },
+  {
+   "name": "DanceFlail",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
+  },
+  {
+   "name": "DanceRobot",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
+  },
+  {
+   "name": "DanceSprinkler",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
+  },
+  {
+   "name": "DanceStomp",
+   "length": 2.0,
+   "loop": true,
+   "frames": 60
   }
  ],
  "hair": [
@@ -1676,7 +1773,8 @@
    "hides": [],
    "sheetCell": "N4.2",
    "locks": 9,
-   "v7": true
+   "v7": true,
+   "skull": "v8"
   },
   {
    "id": "bangs_straight_long",
@@ -1695,7 +1793,8 @@
    "hides": [],
    "sheetCell": "N3.3",
    "locks": 9,
-   "v7": true
+   "v7": true,
+   "skull": "v8"
   },
   {
    "id": "bangs_bowl",
@@ -1714,7 +1813,8 @@
    "hides": [],
    "sheetCell": "N4.1",
    "locks": 9,
-   "v7": true
+   "v7": true,
+   "skull": "v8"
   },
   {
    "id": "bangs_wispy",
@@ -1733,7 +1833,8 @@
    "hides": [],
    "sheetCell": "N6.1",
    "locks": 14,
-   "v7": true
+   "v7": true,
+   "skull": "v8"
   },
   {
    "id": "bangs_swept_l",
@@ -1752,7 +1853,8 @@
    "hides": [],
    "sheetCell": "N2.2",
    "locks": 9,
-   "v7": true
+   "v7": true,
+   "skull": "v8"
   },
   {
    "id": "bangs_swept_r",
@@ -1771,7 +1873,8 @@
    "hides": [],
    "sheetCell": "N6.4",
    "locks": 9,
-   "v7": true
+   "v7": true,
+   "skull": "v8"
   },
   {
    "id": "bangs_curtain",
@@ -1790,7 +1893,8 @@
    "hides": [],
    "sheetCell": "N3.2",
    "locks": 8,
-   "v7": true
+   "v7": true,
+   "skull": "v8"
   },
   {
    "id": "bangs_curtain_long",
@@ -1809,7 +1913,8 @@
    "hides": [],
    "sheetCell": "N6.2",
    "locks": 6,
-   "v7": true
+   "v7": true,
+   "skull": "v8"
   },
   {
    "id": "bangs_centre_split",
@@ -1828,7 +1933,8 @@
    "hides": [],
    "sheetCell": "N1.4",
    "locks": 8,
-   "v7": true
+   "v7": true,
+   "skull": "v8"
   },
   {
    "id": "bangs_spiky",
@@ -1847,14 +1953,15 @@
    "hides": [],
    "sheetCell": "B6.2",
    "locks": 8,
-   "v7": true
+   "v7": true,
+   "skull": "v8"
   },
   {
    "id": "bangs_hime",
    "slot": "bangs",
    "name": "Hime side-locks",
    "glb": "hair/bangs/bangs_hime.glb",
-   "tris": 634,
+   "tris": 644,
    "materials": [
     {
      "name": "M_Hair",
@@ -1866,7 +1973,8 @@
    "hides": [],
    "sheetCell": "N6.3",
    "locks": 9,
-   "v7": true
+   "v7": true,
+   "skull": "v8"
   },
   {
    "id": "bangs_choppy",
@@ -1885,7 +1993,8 @@
    "hides": [],
    "sheetCell": "N1.5",
    "locks": 10,
-   "v7": true
+   "v7": true,
+   "skull": "v8"
   },
   {
    "id": "bangs_swept_back",
@@ -1904,7 +2013,8 @@
    "hides": [],
    "sheetCell": "N5.4",
    "locks": 7,
-   "v7": true
+   "v7": true,
+   "skull": "v8"
   },
   {
    "id": "bangs_single_strand",
@@ -1923,7 +2033,8 @@
    "hides": [],
    "sheetCell": "N5.3",
    "locks": 10,
-   "v7": true
+   "v7": true,
+   "skull": "v8"
   },
   {
    "id": "bangs_wavy",
@@ -1942,7 +2053,8 @@
    "hides": [],
    "sheetCell": "N3.1",
    "locks": 9,
-   "v7": true
+   "v7": true,
+   "skull": "v8"
   },
   {
    "id": "bangs_asym_block",
@@ -1961,7 +2073,8 @@
    "hides": [],
    "sheetCell": "N6.5",
    "locks": 9,
-   "v7": true
+   "v7": true,
+   "skull": "v8"
   },
   {
    "id": "back_bob",
@@ -1981,6 +2094,7 @@
    "sheetCell": "B2.1",
    "locks": 9,
    "v7": true,
+   "skull": "v8",
    "capFrom": -28
   },
   {
@@ -2001,6 +2115,7 @@
    "sheetCell": "B4.4",
    "locks": 15,
    "v7": true,
+   "skull": "v8",
    "capFrom": -26
   },
   {
@@ -2021,6 +2136,7 @@
    "sheetCell": "B3.1",
    "locks": 9,
    "v7": true,
+   "skull": "v8",
    "capFrom": -34
   },
   {
@@ -2041,6 +2157,7 @@
    "sheetCell": "B4.5",
    "locks": 9,
    "v7": true,
+   "skull": "v8",
    "capFrom": -34
   },
   {
@@ -2061,6 +2178,7 @@
    "sheetCell": "B6.5",
    "locks": 15,
    "v7": true,
+   "skull": "v8",
    "capFrom": -20
   },
   {
@@ -2081,6 +2199,7 @@
    "sheetCell": "B3.2",
    "locks": 18,
    "v7": true,
+   "skull": "v8",
    "capFrom": -24
   },
   {
@@ -2101,6 +2220,7 @@
    "sheetCell": "B2.5",
    "locks": 14,
    "v7": true,
+   "skull": "v8",
    "capFrom": -28
   },
   {
@@ -2121,6 +2241,7 @@
    "sheetCell": "B1.1",
    "locks": 11,
    "v7": true,
+   "skull": "v8",
    "capFrom": -32
   },
   {
@@ -2141,6 +2262,7 @@
    "sheetCell": "B7.2",
    "locks": 23,
    "v7": true,
+   "skull": "v8",
    "capFrom": -32
   },
   {
@@ -2161,6 +2283,7 @@
    "sheetCell": "B6.2",
    "locks": 11,
    "v7": true,
+   "skull": "v8",
    "capFrom": -6
   },
   {
@@ -2181,6 +2304,7 @@
    "sheetCell": "B3.5",
    "locks": 7,
    "v7": true,
+   "skull": "v8",
    "capFrom": -6.0
   },
   {
@@ -2201,7 +2325,484 @@
    "sheetCell": "B1.5",
    "locks": 9,
    "v7": true,
+   "skull": "v8",
    "capFrom": -6
+  },
+  {
+   "id": "hair_messy_boy",
+   "slot": "back",
+   "name": "Messy boy",
+   "glb": "hair/full/hair_messy_boy.glb",
+   "tris": 935,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/02-Low-Poly-Messy-Boy-Hair-Black-128971224541817.glb",
+   "map": {
+    "shade": 1
+   }
+  },
+  {
+   "id": "hair_hime_short",
+   "slot": "back",
+   "name": "Short hime cut",
+   "glb": "hair/full/hair_hime_short.glb",
+   "tris": 1305,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/05-Black-Hime-Short-Straight-Hair-Cut-13856173456.glb",
+   "map": {
+    "shade": 1
+   }
+  },
+  {
+   "id": "hair_visor_messy",
+   "slot": "back",
+   "name": "Messy with visor",
+   "glb": "hair/full/hair_visor_messy.glb",
+   "tris": 1296,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/08-McDonalds-106903086636118.glb",
+   "map": {
+    "shade": 1,
+    "cap": 2
+   }
+  },
+  {
+   "id": "hair_baby_sprout",
+   "slot": "back",
+   "name": "Baby sprout",
+   "glb": "hair/full/hair_baby_sprout.glb",
+   "tris": 1286,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/01-Baby-Hair-87848056624320.glb",
+   "covers": [
+    "top"
+   ],
+   "map": {
+    "shade": 0
+   }
+  },
+  {
+   "id": "hair_long_scruffy",
+   "slot": "back",
+   "name": "Long scruffy",
+   "glb": "hair/full/hair_long_scruffy.glb",
+   "tris": 1261,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/03-cute-messy-long-scruffy-black-hair-136727109636132.glb",
+   "map": {
+    "shade": 2
+   }
+  },
+  {
+   "id": "hair_short_tufts",
+   "slot": "back",
+   "name": "Short with tufts",
+   "glb": "hair/full/hair_short_tufts.glb",
+   "tris": 1294,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/04-messy-cute-short-hair-with-tufts-in-black-83295904708963.glb",
+   "map": {
+    "shade": 0
+   }
+  },
+  {
+   "id": "hair_windy_bob",
+   "slot": "back",
+   "name": "Windy bob",
+   "glb": "hair/full/hair_windy_bob.glb",
+   "tris": 1296,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/06-Black-Anime-Windy-Bob-78364092542791.glb",
+   "map": {
+    "shade": 2
+   }
+  },
+  {
+   "id": "hair_wispy_ponytail",
+   "slot": "back",
+   "name": "Wispy ponytail",
+   "glb": "hair/full/hair_wispy_ponytail.glb",
+   "tris": 1500,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/07-Short-Anime-Wispy-Ponytail-Black-87974376605658.glb",
+   "map": {
+    "shade": 0
+   }
+  },
+  {
+   "id": "hair_fluffy_boy",
+   "slot": "back",
+   "name": "Fluffy boy",
+   "glb": "hair/full/hair_fluffy_boy.glb",
+   "tris": 1339,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/09-Low-Poly-Fluffy-Messy-Boy-Hair-Brown-86495776285585.glb"
+  },
+  {
+   "id": "hair_messy_wolf",
+   "slot": "back",
+   "name": "Messy wolf cut",
+   "glb": "hair/full/hair_messy_wolf.glb",
+   "tris": 1372,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/10-Black-Messy-Wolfcut-98528599025378.glb",
+   "map": {
+    "shade": 1
+   }
+  },
+  {
+   "id": "hair_bowl_cut",
+   "slot": "back",
+   "name": "Bowl cut",
+   "glb": "hair/full/hair_bowl_cut.glb",
+   "tris": 1290,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/11-Blonde-Bowl-Cut-11103880280.glb",
+   "map": {
+    "shade": 2
+   }
+  },
+  {
+   "id": "hair_layered_shag",
+   "slot": "back",
+   "name": "Layered shag",
+   "glb": "hair/full/hair_layered_shag.glb",
+   "tris": 1327,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/12-Ryo-137412726411371.glb",
+   "map": {
+    "shade": 0
+   }
+  },
+  {
+   "id": "hair_anime_spikes",
+   "slot": "back",
+   "name": "Anime spikes",
+   "glb": "hair/full/hair_anime_spikes.glb",
+   "tris": 1350,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/13-Ben-10-Anime-Hair-125540259305979.glb",
+   "map": {
+    "shade": 1
+   }
+  },
+  {
+   "id": "hair_messy_low_pony",
+   "slot": "back",
+   "name": "Messy low ponytail",
+   "glb": "hair/full/hair_messy_low_pony.glb",
+   "tris": 1224,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/14-White-Blue-Short-Messy-w-Low-Ponytail-119601543909065.glb",
+   "map": {
+    "shade": 0,
+    "accent": 1
+   },
+   "accent": {
+    "default": 11
+   }
+  },
+  {
+   "id": "hair_vkei",
+   "slot": "back",
+   "name": "V-kei layers",
+   "glb": "hair/full/hair_vkei.glb",
+   "tris": 1198,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/15-Vkei-Moe-Boy-Face-Hair-137700402637392.glb",
+   "map": {
+    "shade": 2
+   }
+  },
+  {
+   "id": "hair_swept_fringe",
+   "slot": "back",
+   "name": "Swept fringe",
+   "glb": "hair/full/hair_swept_fringe.glb",
+   "tris": 1500,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/16-Isagi-17727987910.glb",
+   "map": {
+    "shade": 0
+   }
+  },
+  {
+   "id": "hair_bob_pigtail",
+   "slot": "back",
+   "name": "Bob with a pigtail",
+   "glb": "hair/full/hair_bob_pigtail.glb",
+   "tris": 1359,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/17-cutesy-bob-with-adorable-pigtail-in-brown-118937471732434.glb",
+   "map": {
+    "shade": 1
+   }
+  },
+  {
+   "id": "hair_long_pigtails",
+   "slot": "back",
+   "name": "Long pigtails",
+   "glb": "hair/full/hair_long_pigtails.glb",
+   "tris": 1500,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/18-long-pretty-black-pigtails-117422689311117.glb",
+   "map": {
+    "shade": 2
+   }
+  },
+  {
+   "id": "hair_dreads_cap",
+   "slot": "back",
+   "name": "Dreads with a cap",
+   "glb": "hair/full/hair_dreads_cap.glb",
+   "tris": 1499,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/19-OTF-Von-Dreads-w-Hat-89998678118416.glb",
+   "map": {
+    "shade": 0,
+    "accent": 1,
+    "cap": 2
+   },
+   "accent": {
+    "default": 3
+   }
+  },
+  {
+   "id": "hair_waves",
+   "slot": "back",
+   "name": "Waves with a fade",
+   "glb": "hair/full/hair_waves.glb",
+   "tris": 1116,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/20-360-Waves-in-Black-113478080627568.glb",
+   "map": {
+    "shade": 0,
+    "accent": 1
+   },
+   "accent": {
+    "default": "skin"
+   }
+  },
+  {
+   "id": "hair_messy_dreads",
+   "slot": "back",
+   "name": "Messy dreads",
+   "glb": "hair/full/hair_messy_dreads.glb",
+   "tris": 1500,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v8",
+   "source": "hair/source/david/21-M11-Messy-Dreads-Black-86633981568887.glb",
+   "map": {
+    "shade": 2
+   }
   }
  ],
  "verbs": {
@@ -4136,5 +4737,16 @@
     "impact": 0.3
    }
   ]
+ },
+ "hairMaps": {
+  "atlas": "hair/hair_maps.png",
+  "gain": 1.25,
+  "cells": [
+   5,
+   2
+  ],
+  "cell": 512,
+  "cap": "#28282E",
+  "note": "Shading maps of the full hairstyles (hair/import_hair.py): one channel per hair, its accent and cap masks in the next channels of the same cell; luminance / median / gain. The engine multiplies the palette tint by map x gain, mixes the accent colour and the fixed cap colour in by their masks, and leaves u < 0 (the under-cap) to the tint (rig.ts, Character.tsx). Every hairstyle is one primitive in one material."
  }
 }

@@ -19,6 +19,12 @@ export const LOD_ROOT = `${CHARACTER_ROOT}lod1/`;
 export const LOD_SKIN_URL = `${LOD_ROOT}base/skin.glb`;
 /** The face layer atlas: 1024 px per face canvas in the creator, the 512 copy in the world (same layout). */
 export const FACE_ATLAS_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas}`, world: `${CHARACTER_ROOT}base/${faceV7.atlas_world}` };
+/** Head fit: the shared shading atlas of the mapped hairstyles (art/characters/hair/import_hair.py). */
+export const HAIR_MAPS_URL = `${CHARACTER_ROOT}${catalog.hairMaps.atlas}`;
+/** A map stores luminance / median / gain: the shader multiplies the tint by map x gain. */
+export const HAIR_MAP_GAIN = catalog.hairMaps.gain;
+/** The fixed colour a hairstyle's cap or visor takes through its cap mask (never the hair tint). */
+export const HAIR_CAP_COLOR = catalog.hairMaps.cap;
 /** Its second page (David's 19 faces, face_set_305.py), loaded only for a look that wears one of them. */
 export const FACE_ATLAS2_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas2}`, world: `${CHARACTER_ROOT}base/${faceV7.atlas2_world}` };
 /** Ruling 24: the crewneck carries the site's own TSI mark (public/logo.svg, rasterised by the sync script). */
@@ -31,6 +37,12 @@ export interface PartMaterial { name: string; tint?: "outfit" | "hair" | null; d
 export interface CatalogPart {
   id: string; slot: PartSlot; name: string; glb: string; tris: number; materials: PartMaterial[];
   hidesBackHair: boolean; hides: string[]; variantOf?: string; group?: AccGroup;
+  /** A whole hairstyle in the back slot (head fit): the bangs are not worn with it. */
+  full?: boolean;
+  /** Its channels in the hair shading atlas: tinted by map, not by COLOR_0 alone. */
+  map?: { shade: number; accent?: number; cap?: number };
+  /** A two-tone style's second colour: a hair palette index, or "skin" (a fade to the skin), unless the look picks one. */
+  accent?: { default: number | "skin" };
   /** The economy item (crafted) that unlocks this part; its catalogue_ref is this part's id. Such parts are never sold. */
   item?: string;
   /**
@@ -124,6 +136,8 @@ export interface CharacterLook {
   acc: Partial<Record<AccGroup, string>>;
   /** Outfit palette index per part id for its first outfit-tinted material; others keep catalogue defaults. */
   colors: Record<string, number>;
+  /** A two-tone hairstyle's accent (hair palette index); absent: the style's own default. */
+  hairAccent?: number;
   /** Face placement from the creator's sliders; absent is today's placement. */
   place?: Partial<Record<PlacePart, Placement>>;
 }
@@ -161,6 +175,7 @@ export function parseLook(raw: unknown): CharacterLook {
     bottom: onepiece ? null : inSlot(r.bottom, "bottom") ? r.bottom : d.bottom,
     onepiece, shoes: r.shoes === null ? null : inSlot(r.shoes, "shoes") ? r.shoes : d.shoes, acc, colors,
   };
+  if (Number.isInteger(r.hairAccent) && (r.hairAccent as number) >= 0 && (r.hairAccent as number) < PALETTE.hair.length) look.hairAccent = r.hairAccent as number;
   if (hood(look)) delete look.acc.head; // a hood and a hat never stack
   const place = parsePlace(r.place);
   if (place) look.place = place;
@@ -238,6 +253,8 @@ export function wear(look: CharacterLook, slot: PartSlot, id: string | null): Ch
   }
   if (slot === "shoes") { next.shoes = id; return next; }
   if (id) next[slot] = id;
+  // bangs go with a two-piece back: picking them over a full hairstyle brings the default back (head fit)
+  if (slot === "bangs" && id && PART_BY_ID.get(next.back)?.full) next.back = DEFAULT_LOOK.back;
   return next;
 }
 
@@ -245,12 +262,22 @@ export function wear(look: CharacterLook, slot: PartSlot, id: string | null): Ch
 export function wornParts(look: CharacterLook): CatalogPart[] {
   const ids = [look.bangs, look.back, look.onepiece ?? look.top, look.onepiece ? null : look.bottom, look.shoes, ...Object.values(look.acc)];
   // An event costume comes off when its tradition ends (it stays in the saved look for next year).
-  const parts = ids.filter((id): id is string => !!id && eventPartOpen(id)).map(id => PART_BY_ID.get(id)!).filter(Boolean);
+  let parts = ids.filter((id): id is string => !!id && eventPartOpen(id)).map(id => PART_BY_ID.get(id)!).filter(Boolean);
+  // A full hairstyle (head fit) is the whole hair: no bangs with it.
+  if (parts.some(p => p.slot === "back" && p.full)) parts = parts.filter(p => p.slot !== "bangs");
   // Hats and hoods hide the back hair (they carry their own tuck, ruling 20).
   return parts.some(p => p.hidesBackHair) ? parts.filter(p => p.slot !== "back") : parts;
 }
 
-export interface ResolvedPart { id: string; url: string; /** Its LOD 1 GLB. */ lod: string; tints: Record<string, string>; decal: string | null }
+export interface ResolvedPart { id: string; url: string; /** Its LOD 1 GLB. */ lod: string; tints: Record<string, string>; decal: string | null;
+  /** A mapped hairstyle: its atlas channels and accent colour (sRGB hex). */
+  map: { shade: number; accent?: number; cap?: number; accentHex?: string } | null }
+/** The accent colour of a two-tone hairstyle on a look: the look's pick, else the style's default (a palette colour or the skin). */
+export function hairAccentHex(look: CharacterLook, part: CatalogPart): string | undefined {
+  if (!part.accent) return undefined;
+  if (look.hairAccent !== undefined) return PALETTE.hair[look.hairAccent];
+  return part.accent.default === "skin" ? PALETTE.skin[look.skin] : PALETTE.hair[part.accent.default];
+}
 /** Parts with their GLB URL and one sRGB hex per tinted material; decal materials without art are dropped. */
 export function resolveParts(look: CharacterLook): ResolvedPart[] {
   return wornParts(look).map(part => {
@@ -265,7 +292,9 @@ export function resolveParts(look: CharacterLook): ResolvedPart[] {
         first = false;
       } else if (m.color) tints[m.name] = m.color;
     }
-    return { id: part.id, url: CHARACTER_ROOT + part.glb, lod: LOD_ROOT + part.glb, tints, decal };
+    const map = part.map ? { shade: part.map.shade, ...(part.map.cap !== undefined ? { cap: part.map.cap } : {}),
+      ...(part.map.accent !== undefined ? { accent: part.map.accent, accentHex: hairAccentHex(look, part) } : {}) } : null;
+    return { id: part.id, url: CHARACTER_ROOT + part.glb, lod: LOD_ROOT + part.glb, tints, decal, map };
   });
 }
 
@@ -276,7 +305,7 @@ export function partColor(look: CharacterLook, id: string): number | null {
 }
 
 /** Cache key for the merged body mesh (face and pose excluded). */
-export const bodyKey = (look: CharacterLook) => JSON.stringify([look.skin, look.hair, resolveParts(look).map(p => [p.id, p.tints, p.decal])]);
+export const bodyKey = (look: CharacterLook) => JSON.stringify([look.skin, look.hair, resolveParts(look).map(p => [p.id, p.tints, p.decal, p.map?.accentHex ?? null])]);
 
 /** Small seeded PRNG (mulberry32) so residents get the same random look every visit. */
 export function seeded(seed: number): () => number {
@@ -318,7 +347,8 @@ export function partRef(id: string): string | null {
 /** Every inventory ref a look needs: worn clothes and a dyed hair colour. */
 export function lookRefs(look: CharacterLook): string[] {
   const refs = [look.top, look.bottom, look.onepiece, look.shoes, ...Object.values(look.acc)].flatMap(id => (id && partRef(id)) || []);
-  return look.hair >= FREE_HAIR_COLOURS ? [...refs, dyeRef(look.hair)] : refs;
+  const dyes = [look.hair, ...(look.hairAccent !== undefined ? [look.hairAccent] : [])].filter(i => i >= FREE_HAIR_COLOURS);
+  return [...refs, ...[...new Set(dyes)].map(dyeRef)];
 }
 
 /**

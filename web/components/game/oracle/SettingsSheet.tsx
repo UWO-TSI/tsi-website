@@ -7,9 +7,12 @@
  * (useGraphicsSettings, hud-first-login §4). Remap listens for the next
  * key; taking another menu's key swaps the two; reserved keys are refused
  * with the systems rule's reason. Saved to the account when signed in,
- * otherwise kept on this device. The movement keys (jump, dash, sprint,
- * crouch/slide) and the ruins' ability keys are remapped on this device.
+ * otherwise kept on this device. The movement keys (walking, jump, dash,
+ * sprint, crouch/slide) and the ruins' ability keys are remapped on this device.
  * Outside macOS, Ctrl crouches only in fullscreen with the keyboard locked.
+ *
+ * The controls list lives only here (specs/v1-drop.md §1.5: no movement UI on the island): every remappable key, then
+ * the fixed ones (the emote wheel is with the movement keys). The dash and the glider say they wait for a Keeper until one teaches them (lib/game/moveUnlocks.ts).
  */
 import { useState, useSyncExternalStore } from "react";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
@@ -26,12 +29,24 @@ import { orbit, readOrbitPrefs, setOrbitPrefs, subscribeOrbitPrefs, SENSITIVITY_
 import { setAlwaysFullHud, setShowClass, useAlwaysFullHud, useShowClass } from "@/lib/game/hudPrefs";
 import { setComfort, useComfort, type ShakeLevel } from "@/lib/game/comfortSettings";
 import { setFishingFlag, useFishingLine, useHoldUpCatch } from "@/lib/game/fishingPrefs";
+import { useMoveUnlocks } from "@/lib/game/moveUnlocks";
+import { RESET_VIEW_KEY } from "../useOrbitInput";
 import IslandSheet from "../IslandSheet";
 import styles from "../DefaultIslandWorld.module.css";
 
 const SIZE_NAMES: Record<TextSize, string> = { small: "Small", default: "Standard", large: "Large", xl: "Largest" };
-/** The movement keys row (specs/movement.md): Space jump, Q dash, Shift sprint, crouch/slide (Ctrl on macOS, C elsewhere). */
-const MOVE_ROW = MOVE_ACTIONS.filter(a => a.id === "jump" || a.id === "dash" || a.id === "sprint" || a.id === "crouch");
+/** The movement keys (specs/movement.md): WASD, Space jump, Q dash, Shift sprint, crouch/slide (Ctrl on macOS, C elsewhere). */
+const MOVE_ROW = MOVE_ACTIONS;
+/** The fixed controls (lib/identity/settings FIXED_KEYS and the mouse), listed so the island needs no key bar. */
+const FIXED_CONTROLS: { label: string; keys: string[] }[] = [
+  { label: "Interact, talk, pick up", keys: ["E"] },
+  { label: "Use what you hold", keys: ["Click"] },
+  { label: "Look around", keys: ["Mouse", "←", "→"] },
+  { label: "Reset the view", keys: [RESET_VIEW_KEY.toUpperCase()] },
+  { label: "Zoom", keys: ["Z", "Wheel"] },
+  { label: "Journal", keys: ["J"] },
+  { label: "Decorate (at home)", keys: ["F"] },
+];
 const SOUND_SLIDERS: { key: keyof AudioVolumes; label: string }[] = [
   { key: "master", label: "Master" },
   { key: "music", label: "Music" },
@@ -60,14 +75,14 @@ export default function SettingsSheet({ open, onClose, detectedTier = null, plac
   const abilityKeys = useAbilityKeys();
   const [abilityListen, setAbilityListen] = useState<AbilityId | null>(null);
   const [abilityNote, setAbilityNote] = useState<string | null>(null);
-  const moveKeys = useMoveKeys(), keyLock = useKeyboardLocked();
+  const moveKeys = useMoveKeys(), keyLock = useKeyboardLocked(), unlocks = useMoveUnlocks();
   const [moveListen, setMoveListen] = useState<MoveAction | null>(null);
   const [moveNote, setMoveNote] = useState<string | null>(null);
   const wheelKeys = useWheelKeys();
   const alwaysFullHud = useAlwaysFullHud();
   const comfort = useComfort(), showClass = useShowClass();
   const fishingLine = useFishingLine(), holdUpCatch = useHoldUpCatch();
-  const [wheelListen, setWheelListen] = useState<"wheel" | "hud" | null>(null);
+  const [wheelListen, setWheelListen] = useState<"wheel" | "hud" | "emote" | null>(null);
   useNextKey(wheelListen !== null, key => {
     const r = remapWheel(wheelKeys, wheelListen!, key);
     setMoveNote(r.ok ? null : r.error);
@@ -112,6 +127,7 @@ export default function SettingsSheet({ open, onClose, detectedTier = null, plac
         <option value="high">High</option>
       </Select>
       <Toggle checked={graphics.shadows} disabled={graphics.liteMode} onChange={on => graphicsActions.setShadows(on)}>Shadows</Toggle>
+      <Toggle checked={graphics.glassWater && !graphics.liteMode} disabled={graphics.liteMode} onChange={on => graphicsActions.setGlassWater(on)}>Glass water</Toggle>
       {/* Row 283: the HUD stays out of the way while you explore; this keeps it on. */}
       <Toggle checked={alwaysFullHud} onChange={setAlwaysFullHud}>Show full HUD</Toggle>
       <p className={styles.hint}>Otherwise TC, XP, the clock and mail show when they change. Hold <kbd>{keyName(wheelKeys.hud)}</kbd>, or let go of the mouse, to see everything.</p>
@@ -172,14 +188,16 @@ export default function SettingsSheet({ open, onClose, detectedTier = null, plac
     <fieldset>
       <legend>Movement keys</legend>
       <ul className={styles.keyList}>{MOVE_ROW.map(a => <li key={a.id}>
-        <span>{a.name}</span>
+        <span>{a.name}{a.id === "dash" && !unlocks.dash && <small className={styles.hint}> · a Keeper teaches it</small>}</span>
         <button aria-pressed={moveListen === a.id} onClick={() => { setMoveListen(a.id); setMoveNote("Press a key (Esc to cancel)."); }}>
           {moveListen === a.id ? "Press a key…" : <kbd>{keyName(moveKeys[a.id])}</kbd>}
         </button>
       </li>)}
-        {/* The tool wheel (specs/game-ui.md): hold to open, tap to swap back; the full HUD while held (row 283). */}
-        {(["wheel", "hud"] as const).map(a => <li key={a}>
-          <span>{a === "wheel" ? "Tool wheel (hold)" : "Full HUD (hold)"}</span>
+        <li><span>Glide{!unlocks.glider && <small className={styles.hint}> · a Keeper teaches it</small>}</span><span><kbd>{keyName(moveKeys.jump)}</kbd> again in the air</span></li>
+        {/* The tool wheel (specs/game-ui.md): hold to open, tap to swap back; the full HUD while held (row 283); the
+            emote wheel (specs/v1-drop.md §3): hold to open, tap to play the last emote again. */}
+        {(["wheel", "hud", "emote"] as const).map(a => <li key={a}>
+          <span>{a === "wheel" ? "Tool wheel (hold)" : a === "hud" ? "Full HUD (hold)" : "Emotes and dances (hold, tap repeats)"}</span>
           <button aria-pressed={wheelListen === a} onClick={() => { setWheelListen(a); setMoveNote("Press a key (Esc to cancel)."); }}>
             {wheelListen === a ? "Press a key…" : <kbd>{keyName(wheelKeys[a])}</kbd>}
           </button>
@@ -190,6 +208,11 @@ export default function SettingsSheet({ open, onClose, detectedTier = null, plac
         <Button size="sm" variant="quiet" onClick={() => { void playFullscreenWithCtrl(moveKeys).then(e => setMoveNote(e)); }}>Play fullscreen with Ctrl</Button>
       </p>}
       {moveNote && <p className={styles.hint} role="status">{moveNote}</p>}
+    </fieldset>
+    <fieldset data-testid="controls">
+      <legend>Other controls</legend>
+      <ul className={styles.keyList}>{FIXED_CONTROLS.map(c => <li key={c.label}><span>{c.label}</span><span>{c.keys.map(k => <kbd key={k}>{k}</kbd>)}</span></li>)}</ul>
+      <p className={styles.hint}>On a touch screen: the stick walks (push it to the rim to run), tap the ground to go there, two fingers turn the camera.</p>
     </fieldset>
     {DROPS.combat && <fieldset>
       <legend>Ability keys (ruins)</legend>

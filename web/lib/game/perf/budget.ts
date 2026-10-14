@@ -101,6 +101,8 @@ export const EFFECT_BUDGET: Record<string, EffectBudget> = {
   shadows: { drawsPerPlayer: 2, cpuMs: 0.25, particles: 0, lights: 0 },
   emotes: { drawsPerPlayer: 0, cpuMs: 0.15, particles: 0, lights: 0 },
   interp: { drawsPerPlayer: 0, cpuMs: 0.1, particles: 0, lights: 0 },
+  /** Group dancing (components/game/dance/DanceSync.tsx): the beat sync and a note every other beat from the shared movement pool. */
+  dance: { drawsPerPlayer: 0, cpuMs: 0.15, particles: 2, lights: 0 },
 };
 
 /**
@@ -114,6 +116,7 @@ export const PARTICLE_POOLS: Record<string, number> = {
   "components/game/combat/CombatFx.tsx": 1040, // glow 768, ink 256, decals 16 (fx/combat.ts FX_POOLS)
   "components/game/combat/MobFx.tsx": 360,
   "components/game/oracle/CandleFire.tsx": 48,
+  "components/game/campfire/Campfire.tsx": 64, // the beach fire's tongues and embers (about 40 alive with eight dancers)
 };
 /** Particles one movement event may throw (one avatar, juice amount 1): the heaviest today is a heavy landing on grass, 19. */
 export const JUICE_EVENT_PARTICLES = 24;
@@ -130,7 +133,7 @@ export const CHARACTER_EFFECT_FILES = [
   "components/game/oracle/FamilyAura.tsx", "components/game/oracle/SubclassAura.tsx", "components/game/movement/moveFx.ts",
   "components/game/character/Character.tsx", "components/game/character/FishingRig.tsx", "components/game/net/RemoteAvatars.tsx",
   "components/game/net/RemoteAvatar.tsx", "components/game/net/RemoteAuras.tsx", "components/game/net/Nameplates.tsx", "components/game/net/fx.ts",
-  "components/game/PlayerAvatar.tsx",
+  "components/game/PlayerAvatar.tsx", "components/game/dance/DanceSync.tsx",
 ] as const;
 
 /**
@@ -143,6 +146,10 @@ export interface AssetCategory extends AssetBudget { name: string; prefixes: rea
 export const ASSET_CATEGORIES: readonly AssetCategory[] = [
   { name: "character LOD 1 part", prefixes: ["characters/v6/lod1/"], triangles: 1200, primitives: 4, materials: 4, texture: 256, bones: 22 },
   { name: "character base", prefixes: ["characters/v6/base/"], triangles: 2000, primitives: 8, materials: 6, texture: 1024, bones: 22 },
+  // A whole hairstyle (head fit: David's set, characters/v6/hair/full) replaces the bangs and the back together (look.ts
+  // wornParts), so it is held to the heaviest bangs-plus-back pair a look can wear today: 646 + 1,110 = 1,756, rounded
+  // to 1,750. Still one primitive and one material (its cap and second colour are mask channels in the shared atlas).
+  { name: "full hair", prefixes: ["characters/v6/hair/full/"], triangles: 1750, primitives: 1, materials: 1, texture: 0, bones: 22 },
   { name: "hair", prefixes: ["characters/v6/hair/"], triangles: 1200, primitives: 1, materials: 1, texture: 0, bones: 22 },
   { name: "accessory", prefixes: ["characters/v6/accessories/"], triangles: 1200, primitives: 4, materials: 4, texture: 128, bones: 22 },
   { name: "outfit", prefixes: ["characters/v6/outfits/"], triangles: 300, primitives: 4, materials: 4, texture: 128, bones: 22 },
@@ -152,6 +159,9 @@ export const ASSET_CATEGORIES: readonly AssetCategory[] = [
   { name: "enemy", prefixes: ["game/enemies/"], triangles: 1500, primitives: 16, materials: 8, texture: 512, bones: 0 },
   { name: "interior room", prefixes: ["game/cafe/", "game/interiors/"], triangles: 12_000, primitives: 24, materials: 24, texture: 1024, bones: 0 },
   { name: "building", prefixes: ["acnh/buildings/", "buildings/", "game/buildings/", "game/wharf/"], triangles: 12_000, primitives: 10, materials: 10, texture: 1024, bones: 0 },
+  // v1 water (2026-10-13): the seabed's kinds and the decorative fish, each node drawn instanced (one draw per kind
+  // however many lie in reach), so primitives are the scene's draws for the whole seabed.
+  { name: "seabed and water life", prefixes: ["game/water/"], triangles: 1200, primitives: 10, materials: 6, texture: 256, bones: 0 },
 ];
 /** Shipped before the budget, over their category: each capped where it is today. Shrink, never raise. */
 export const ASSET_EXCEPTIONS: Record<string, Partial<AssetBudget> & { why: string }> = {

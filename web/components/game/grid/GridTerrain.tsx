@@ -23,6 +23,7 @@
  */
 
 import { useEffect, useMemo } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import {
   type IslandMap,
@@ -52,21 +53,20 @@ import {
   clampToCell,
   beachDropAt,
   shoreSdf,
-  sampleShore,
   terrainOf,
   cellPieces,
   latticeAt,
   overlayAlpha,
   smoothstep,
   coastDistance,
-  overlayAt,
   ROCK,
   WET,
   type ShoreSdf,
 } from "@/lib/game/grid";
 import { terrainMaterial, setShoreField } from "./terrainMaterials";
-import { TUNING_DEFAULTS } from "@/lib/game/tuning";
-import { bedDepth } from "@/lib/game/waterShader";
+import { TERRAIN_BLOCK, WATER_BLOCK, terrainBlocks } from "./terrainBlocks";
+import { CurvedCull, cullMeshes } from "@/lib/game/curvedCull";
+import { bakeWaterDepth, seabedDip, shoreFieldOf } from "@/lib/game/seabed";
 
 // Flat colours for the surfaces whose road-kit textures are not wired yet.
 const SURFACE_COLOR: Record<number, string> = {
@@ -135,6 +135,8 @@ const FRINGE_OVERHANG = 0.06;
 // meant to run continuously across the terrain, not a per-tile decal.
 const UV_CELLS_PER_REPEAT = 2;
 const UV = 1 / (UV_CELLS_PER_REPEAT * TILE);
+/** The ground's world UVs per world unit (GridCliffs gives the kit's grass the same, as its instanced shader did). */
+export const GROUND_UV = UV;
 
 /** A layer's triangles, accumulated flat rather than as 11k BufferGeometries. */
 interface Mesh {
@@ -150,9 +152,6 @@ const emptyMesh = (): Mesh => ({ pos: [], uv: [], nrm: [], idx: [], color: [] })
 
 type Height = (x: number, z: number) => number;
 
-
-/** How far the bed drops below a grass bank's water at once: the river channel's edge. */
-const BANK_DIP = 0.12;
 
 /** How steep a height function is at a point, rise over run. */
 function steepness(h: Height, x: number, z: number): number {
@@ -345,23 +344,10 @@ export function terrainChunks(map: IslandMap, heights: Float32Array | null, shor
   const { coast } = terrain;
   const S = LATTICE, LW = map.width * S + 1;
 
-  // How far the bed drops below the surface at a given point. Reads the
-  // SHIPPED tuning, not the live bench value: this is geometry, and rebuilding
-  // 128x128 cells of it on every slider frame would stall the tab. Moving
-  // `bedDepth` or `bedSlope` on the bench changes the colour instantly and the
-  // bed shape on reload.
-  const water = TUNING_DEFAULTS.water;
-  /**
-   * The bed under a beach starts AT the waterline and carries the sand's slope on
-   * down (a grass bank keeps its 0.12 channel edge). Near the coast the distance is
-   * the coast field's own (smooth, so the sand and the bed meet without a step);
-   * past a cell the shore field takes over.
-   */
-  const dipAt = (px: number, pz: number) => {
-    const far = sampleShore(shore, px, pz), k = smoothstep(0.6, 1.2, far);
-    const d = -coastDistance(map, px, pz) * (1 - k) + far * k;
-    return Math.max(BANK_DIP * (1 - overlayAt(map, Surface.Sand, px, pz)), bedDepth(d, water));
-  };
+  // How far the bed drops below the surface at a given point (lib/game/seabed.ts): the same seabed the water's colour
+  // reads from its bake. Reads the SHIPPED tuning, not the live bench value: this is geometry, and rebuilding 128x128
+  // cells of it on every slider frame would stall the tab.
+  const dipAt = (px: number, pz: number) => seabedDip(map, shore, px, pz);
 
   /**
    * The ground a cell draws: the level field clamped to what this cell can
@@ -440,8 +426,8 @@ export function terrainChunks(map: IslandMap, heights: Float32Array | null, shor
           // bathymetry 2026-07-29: the reference colour ramp ends in the
           // SEABED colour, so there has to be a seabed and it has to get
           // further away as the water deepens, or the ramp has nothing to
-          // ramp over. Depth comes from `bedDepth`, the same function the
-          // shader mirrors in GLSL.
+          // ramp over. Depth comes from `seabedDip`, the same function the
+          // water's depth bake is made from.
           const bedH: Height = (px, pz) => waterY - dipAt(px, pz);
           addPolygons(bed, wet === "full" ? cellSquares(map, cx, cz, 1) : wet, (px, pz) => vertex(bed, bedH, px, pz));
         }
@@ -756,6 +742,9 @@ export function useTerrainMaterials(palette?: TerrainPalette): TerrainMaterials 
   return materials;
 }
 
+/** How many chunks a side a layer's blocks span: the water's surface, bed and fringe in wider ones (terrainBlocks.ts). */
+const blockFor = (surface: number) => (surface === Surface.River || surface === RIVER_BED || surface === WATER_FRINGE ? WATER_BLOCK : TERRAIN_BLOCK);
+
 /**
  * The ground's draw order: the see-through layers (rock, then sand, then soil) after the rest. Anything lying on the
  * ground that does not write depth (the snow prints, WeatherGround) draws after GROUND_TOP_ORDER, or a path paints over it.
@@ -768,7 +757,7 @@ export const GROUND_TOP_ORDER = 3;
 export default function GridTerrain({ map, field: heights, materials }: { map: IslandMap; field?: Float32Array; materials: TerrainMaterials }) {
   // ONE field, read twice: the seabed geometry samples it on the CPU, the water
   // shader samples it on the GPU. Two bakes would be two shorelines.
-  const field = useMemo(() => shoreSdf(map), [map]);
+  const field = useMemo(() => shoreFieldOf(map), [map]);
 
   /**
    * The continuous ground height. One field, read by the mesh here and by the
@@ -778,23 +767,27 @@ export default function GridTerrain({ map, field: heights, materials }: { map: I
    */
   const chunks = useMemo(
     // Guarded on the constant: at CLIFF_LEVELS 1 every level change is a cliff and the blur has nothing to cross.
-    () => terrainChunks(map, CLIFF_LEVELS > 1 ? heights ?? heightField(map) : null, field),
+    // Drawn by block of 4 × 4 chunks per layer, 8 × 8 for the water's (terrainBlocks.ts): a call per block in view.
+    () => terrainBlocks(terrainChunks(map, CLIFF_LEVELS > 1 ? heights ?? heightField(map) : null, field), blockFor),
     [map, heights, field]
   );
 
-  // The water reads its distance to the shore from a baked field rather than
-  // from anything on the mesh, so this is a one-shot upload, not geometry.
+  // The water reads its distance to the shore and the seabed's depth from a baked field rather than from anything on
+  // the mesh, so this is a one-shot upload, not geometry.
   useEffect(() => {
-    setShoreField(field);
-  }, [field]);
+    setShoreField({ ...field, depth: bakeWaterDepth(map, field) });
+  }, [map, field]);
 
   useEffect(() => () => { chunks.forEach(({ geometry }) => geometry.dispose()); }, [chunks]);
+  // Rock, then sand, then soil: where a path meets the beach the soil is always the one on top. Each block is shown
+  // when the curved world can bring any of it into view (lib/game/curvedCull.ts), three's own test being blind to the bend.
+  const meshes = useMemo(() => chunks.map(c => Object.assign(new THREE.Mesh(c.geometry, materials.get(c.surface)),
+    { name: `terrain:${c.key}`, receiveShadow: true, renderOrder: groundRenderOrder(c.surface), frustumCulled: false })), [chunks, materials]);
+  const cull = useMemo(() => new CurvedCull(), []);
+  useFrame(({ camera }) => cullMeshes(cull.update(camera), meshes));
   return (
     <group>
-      {chunks.map((c) => (
-        // Rock, then sand, then soil: where a path meets the beach the soil is always the one on top.
-        <mesh key={c.key} geometry={c.geometry} material={materials.get(c.surface)} receiveShadow renderOrder={groundRenderOrder(c.surface)} />
-      ))}
+      {meshes.map((m) => <primitive key={m.name} object={m} />)}
     </group>
   );
 }

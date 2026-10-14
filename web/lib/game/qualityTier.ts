@@ -1,9 +1,31 @@
 /**
- * Quality tiers (ledger rows 145, 147). Light: contact and sun-directed shadows only (no shadow map), no wind sway,
- * fewer critters, colour grade kept but no FXAA/bloom. High: cached shadow maps, wind sway, full
- * ambient life, FXAA in smooth mode. Stored as the existing `liteMode` setting.
+ * Quality tiers (ledger rows 145, 147). Stored as the existing `liteMode` setting; chosen for the device by the first
+ * settled frames (below) or by the player.
+ *
+ * Lite (the weaker laptops: 30+ FPS on integrated graphics with 24 players near, specs/perf/2026-10-v1-results.md)
+ * turns off, against High:
+ * - the sun's shadow maps (contact and sun-directed shadows only) and the ambient occlusion;
+ * - bloom, tilt-shift and FXAA (the colour grade stays);
+ * - the sky dome (the flat gradient), the cloud shadows and the seasonal leaf fall;
+ * - wind: the trees and the flowing grass stand still;
+ * - half the water's glints, 8 fireflies (High: two a bush), lighter fog banks, fewer critters;
+ * - other players: 8 at full detail and 16 drawn (High: 12 and 24);
+ * - the grass is lighter: the blade field (village, v2 world, title) one sparser layer with its fade pulled in
+ *   (GrassField GRASS_TIERS.lite); the old tufts elsewhere thin with distance (all within 30 u, a quarter past 45 u:
+ *   GrassTufts THIN);
+ * - without the pixel finish, the canvas at most 1 device pixel per CSS pixel (High: up to 1.5).
+ * High: cached shadow maps, AO, bloom, wind sway, full ambient life, FXAA in smooth mode.
  */
 export type QualityTier = "light" | "high";
+
+/**
+ * A canvas's pixel ratio for the tier: as asked on High; on Lite never past 1 device pixel per CSS pixel (a pixel
+ * finish's 0.5 stays). Every game canvas reads it: the island, the creators, the arrival's reflection.
+ */
+export function tierDpr(liteMode: boolean, dpr: number | [number, number]): number | [number, number] {
+  if (!liteMode) return dpr;
+  return Array.isArray(dpr) ? [Math.min(dpr[0], 1), 1] : Math.min(dpr, 1);
+}
 /** Below ~40 FPS during the first settled frames, start in Light. */
 export const LIGHT_FRAME_MS = 25;
 export const PROBE_FRAMES = 90;

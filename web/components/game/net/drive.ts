@@ -10,12 +10,13 @@
  *   the upper body so they don't float off the seat.
  * - The mixer's rate trick (Character.tsx: its frame returns early while `motion.current` is null and steps by
  *   `rate`): Reduced remotes step at 15 Hz by the time saved up, Hidden ones not at all, without touching Character.
- * - Sun shadows go through `userData.sunCaster` (SunShadows reads it before `castShadow`), off below Full.
+ * - Sun shadows go through `userData.sunCaster` (SunShadows reads it before `castShadow`), off below Full; what a Full
+ *   player holds casts only within HELD_SHADOW_RANGE of you (`motion.itemShadow`, Character `remote`).
  */
 import * as THREE from "three";
 import { WATER_DROP } from "@/lib/game/grid";
 import { CLIP_BY_NAME, VERB_BY_NAME } from "@/lib/game/character/look";
-import type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
+import { SEAT_CLIPS, type CharacterMotion, type ClipName } from "@/lib/game/character/clips";
 import { createRemoteSample, type RemoteEntry, type RemoteEvent, type RemoteSample } from "@/lib/net/types";
 import { FULL, HIDDEN, LOD, createLodEntry, type LodEntry } from "./lod";
 import { createFxState, type FxState } from "./fx";
@@ -26,8 +27,12 @@ import { isEmoteClip } from "@/lib/net/protocol";
 export interface GroundWorld { top(x: number, z: number): number; wet(x: number, z: number): boolean }
 export const FLAT_GROUND: GroundWorld = { top: () => 0, wet: () => false };
 
-/** Clips a seat holds (PlayerAvatar SEAT_CLIPS): there the wire's `lift` is the seat's, and a one-shot goes to the upper body. */
-export const SEAT_CLIPS: ReadonlySet<string> = new Set(["Sit", "Study", "Stretch", "Sleep"]);
+/**
+ * Clips a seat holds (lib/game/character/clips SEAT_CLIPS: a bench, a bed, the ground, the campfire's rings): there the
+ * wire's `lift` is the seat's, they stand still in it however the seat moves (the stomp ring carries a dancer round
+ * the fire), and a one-shot goes to the upper body.
+ */
+export { SEAT_CLIPS };
 /** Movement states on the ground: their speed paces the clip (any other plays at speed 0, as PlayerAvatar has it). */
 const GROUND_MOVES: ReadonlySet<string> = new Set(["CrouchWalk", "CrouchIdle"]);
 /** A clip this rig has (the village set or the verb library). */
@@ -86,6 +91,17 @@ function floorUnder(r: RemoteRig, world: GroundWorld, x: number, z: number): num
     r.floorY = world.wet(x, z) ? top - WATER_DROP : top;
   }
   return r.floorY;
+}
+
+/**
+ * How near you (world units, on the ground) a Full player's held item, weapon or tool casts its sun shadow
+ * (specs/perf/effects-cost.md: each part of it was another draw in the shadow map on every Full player); 1 u of
+ * hysteresis past it. Their body's shadow is untouched.
+ */
+export const HELD_SHADOW_RANGE = 10;
+/** Whether a remote's held item casts this frame (module scope; `r.lod.dist` is this frame's). */
+export function itemShadow(r: RemoteRig): boolean {
+  return r.lod.tier === FULL && r.lod.dist < HELD_SHADOW_RANGE + (r.motion.itemShadow ? 1 : 0);
 }
 
 /** Called for each movement-juice event (Full tier only); `i` is its slot in the sample's events. */

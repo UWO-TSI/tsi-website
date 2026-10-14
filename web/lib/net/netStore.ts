@@ -30,10 +30,13 @@ import { useShowClass } from "@/lib/game/hudPrefs";
 import { setWorldClockOffset } from "@/lib/game/worldClock";
 import { parseClockOverride } from "@/lib/game/islandTime";
 import {
-  AREAS, DEV_TOKEN_PREFIX, MSG, NET_PLAYER_FIELDS, PROTOCOL, RECONNECT_GRACE_S, REJOIN_BACKOFF_S, RESTART_JITTER_MS, ROOM_NAME, decodeEvent, isPrivateArea,
-  joinRefusal, parsePong, parseSys, type Area, type NetPlayer, type PosePacket, type RosterEntry, type SlowState, type SysMessage,
+  AREAS, CHAT, DEV_TOKEN_PREFIX, MSG, NET_PLAYER_FIELDS, PROTOCOL, RECONNECT_GRACE_S, REJOIN_BACKOFF_S, RESTART_JITTER_MS, ROOM_NAME, decodeEvent, isPrivateArea,
+  joinRefusal, parseChatLine, parseFollowAnswer, parseFriends, parsePong, parseSys, type Area, type FollowRefusal, type NetPlayer, type PosePacket, type RosterEntry,
+  type SeatReservation, type SlowState, type SysMessage,
 } from "./protocol";
-import { toRemotePlayer, type KickReason, type NetSource, type NetStatus } from "./types";
+import { chatStore, type ChatStore } from "./chat";
+import { friendsStore, type FriendsStore } from "./friends";
+import { toRemotePlayer, type FollowResult, type KickReason, type NetSource, type NetStatus } from "./types";
 import { RemoteBuffer, Remotes, parseNetsim, type Netsim } from "./interp";
 import { NetClock } from "./clock";
 
@@ -134,6 +137,7 @@ export function loopbackStore(lb: { start(area: Area): void; stop(): void; setAr
 /** The parts of @colyseus/sdk the store uses (tests give it a fake). */
 export interface SdkRoom {
   readonly sessionId: string;
+  readonly roomId: string;
   readonly state: unknown;
   reconnection: { enabled: boolean; maxRetries: number };
   send(type: string, payload?: unknown): void;
@@ -148,6 +152,8 @@ export interface SdkClient {
   http: { options: { credentials?: RequestCredentials } };
   auth: { token: string | undefined };
   joinOrCreate(name: string, options: unknown): Promise<SdkRoom>;
+  /** A seat the server reserved (v1: a friend's shard). */
+  consumeSeatReservation(seat: SeatReservation): Promise<SdkRoom>;
 }
 /** The schema's callbacks (Callbacks.get(room)). */
 export interface SdkCallbacks {
@@ -184,15 +190,31 @@ export interface RoomStoreOptions {
   previewActive?: () => boolean;
   /** Listen on the window; returns the unlisten. */
   listen?: (type: string, fn: (e: Event) => void) => () => void;
+  /** Where `line`s and refusals go (the page's chat store by default). */
+  chat?: ChatStore;
+  /** Where the friends' presence goes (the page's friends store by default). */
+  friends?: FriendsStore;
 }
+/** How long a `follow` waits for the room's answer before giving up (busy). */
+export const FOLLOW_WAIT_MS = 8000;
 
-/** The room's NetSource, with the sender's hints (sender.ts SenderHints) and the last `sys` notice. */
+/** The room's NetSource, with the sender's hints (sender.ts SenderHints), the last restart notice and the chat. */
 export interface RoomSource extends NetSource {
   readonly remotes: Remotes;
   readonly joinSeq: number;
   readonly areaSeq: number;
   readonly epoch: number;
-  readonly sys: SysMessage | null;
+  /** The last `sys` that isn't a chat refusal (a restart's notice), for the HUD. Refusals go to the chat store. */
+  readonly sys: Exclude<SysMessage, { kind: "refused" }> | null;
+  /** Your room's id (a report's context), null while not in one. */
+  readonly roomId: string | null;
+  readonly chat: ChatStore;
+  /** Say a line (trimmed, at most CHAT.maxLength): false when there's nothing to say or no room to say it in. */
+  sendChat(text: string): boolean;
+  /** The "…" over you while you write (`s {typing}`). */
+  sendTyping(on: boolean): void;
+  /** Join a friend's shard: the room reserves a seat there, and the store moves you into it. */
+  follow(uid: string): Promise<FollowResult>;
 }
 
 /** The slow and card fields of a schema player: a change among them replaces the remote's `player`. */
@@ -230,6 +252,10 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
   const later = o.later ?? ((fn: () => void, ms: number) => { const id = setTimeout(fn, ms); return () => clearTimeout(id); });
   const random = o.random ?? Math.random;
   const listen = o.listen ?? windowListen;
+  const chat = o.chat ?? chatStore();
+  const friends = o.friends ?? friendsStore();
+  /** The `follow` waiting for its answer, by uid. */
+  const asking = new Map<string, { done: (r: FollowResult) => void; cancel: () => void; area: Area }>();
   const remotes = new Remotes();
   const listeners = new Set<() => void>();
   let status: NetStatus = { kind: "off" };
@@ -250,7 +276,7 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
     previewActive: o.previewActive ?? (() => DEV && typeof window !== "undefined" && parseClockOverride(new URLSearchParams(window.location.search)) !== null),
     later,
   });
-  let lastSys: SysMessage | null = null;
+  let lastSys: Exclude<SysMessage, { kind: "refused" }> | null = null;
 
   const emit = () => { for (const l of listeners) l(); };
   const setStatus = (next: NetStatus) => { status = next; emit(); };
@@ -258,7 +284,11 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
 
   function rebuildRoster(state: StateLike) {
     const list: RosterEntry[] = [];
-    state.roster?.forEach(e => list.push({ uid: e.uid, name: e.name, badge: e.badge, area: e.area, flags: e.flags }));
+    state.roster?.forEach((e, key) => {
+      list.push({ uid: e.uid, name: e.name, badge: e.badge, area: e.area, flags: e.flags });
+      // Your own entry (keyed by your session): your lines are yours in the chat.
+      if (key === room?.sessionId) chat.setSelf(e.uid);
+    });
     roster = list;
     emit();
   }
@@ -352,7 +382,26 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
       if (e) remotes.get(e.sid)?.pushEvent(e.t, e.kind, e.value, roomNow());
     });
     r.onMessage(MSG.pong, msg => { const p = parsePong(msg); if (p) clock.onPong(p); });
-    r.onMessage(MSG.sys, msg => { lastSys = parseSys(msg); });
+    // v1 friends: who's on the island (the first list after this join is quiet), and the answer to a `follow`.
+    friends.connected();
+    r.onMessage(MSG.friends, msg => { const list = parseFriends(msg); if (list && gen === generation) friends.setOnline(list); });
+    r.onMessage(MSG.follow, msg => {
+      const a = parseFollowAnswer(msg);
+      if (!a || gen !== generation) return;
+      const wait = asking.get(a.uid);
+      if (!wait) return;
+      asking.delete(a.uid);
+      wait.cancel();
+      if ("refused" in a) wait.done({ ok: false, reason: a.refused });
+      else void move(sdk, a.seat, wait.area).then(ok => wait.done(ok ? { ok: true } : { ok: false, reason: "busy" }));
+    });
+    // A chat line (yours too: your copy is the acceptance) and a refused one go to the chat; a restart's notice stays here.
+    r.onMessage(MSG.line, msg => { const l = parseChatLine(msg); if (l) chat.receive(l); });
+    r.onMessage(MSG.sys, msg => {
+      const m = parseSys(msg);
+      if (m?.kind === "refused") chat.refused(m.reason, m.text);
+      else if (m) lastSys = m;
+    });
     r.onDrop(code => {
       if (gen !== generation) return;
       // A restart (4010): the SDK would try the old process; rejoin after jitter instead (joinRefusal "restart").
@@ -371,11 +420,12 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
     joinedIfReady(state);
   }
 
-  /** Drop the room's state: views, roster, clock. */
+  /** Drop the room's state: views, roster, clock, friends' presence. */
   function detach() {
     generation++;
     room = null;
     clock.stop();
+    friends.offline();
     for (const rec of players.values()) rec.off();
     for (const off of rosterWatch.values()) off();
     players.clear();
@@ -417,6 +467,39 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
     cancelRetry?.();
     setStatus({ kind: "offline", retryAt: Date.now() + ms });
     cancelRetry = later(() => { cancelRetry = null; void connect(); }, ms);
+  }
+
+  /**
+   * Into a friend's shard (v1): leave this room (its close is ignored: a new generation) and take the reserved seat with
+   * a fresh client. A seat that can't be taken falls back to the usual refusal handling (backoff, then a fresh join).
+   */
+  async function move(sdk: SdkModule, seat: SeatReservation, seatArea: Area): Promise<boolean> {
+    const old = room;
+    if (!old || connecting) return false;
+    detach();
+    connecting = true;
+    setStatus({ kind: "connecting" });
+    void old.leave();
+    try {
+      const t = await token(false);
+      if (!t || !wanted || pageGone) { connecting = false; setStatus({ kind: "off" }); return false; }
+      const client = new sdk.Client(o.url);
+      client.http.options.credentials = "omit";
+      client.auth.token = t;
+      const joinedShowClass = showClass;
+      const r = await client.consumeSeatReservation(seat);
+      connecting = false;
+      if (!wanted || pageGone) { void r.leave(); setStatus({ kind: "off" }); return false; }
+      // The seat was made with the area you were in when you asked (the server's copy of your options): a later door
+      // goes out once joined; the class setting rides the seat too.
+      attach(r, sdk, seatArea, joinedShowClass);
+      return true;
+    } catch (e) {
+      connecting = false;
+      const code = (e as { code?: unknown }).code;
+      refused(typeof code === "number" ? code : 0, false);
+      return false;
+    }
   }
 
   async function connect(): Promise<void> {
@@ -478,8 +561,28 @@ export function roomStore(o: RoomStoreOptions): RoomStore {
       if (room && status.kind === "joined") room.send(MSG.slow, patch);
     },
     leave() { wanted = false; leaveRoom(); },
-    /** The last `sys` notice (a restart's), for the HUD. */
     get sys() { return lastSys; },
+    get roomId() { return room?.roomId ?? null; },
+    chat,
+    sendChat(text: string) {
+      const t = text.trim().slice(0, CHAT.maxLength);
+      if (!t || !room || status.kind !== "joined") return false;
+      room.send(MSG.chat, { text: t });
+      chat.sent(t);
+      return true;
+    },
+    sendTyping(on: boolean) {
+      if (room && status.kind === "joined") room.send(MSG.slow, { typing: on } satisfies SlowState);
+    },
+    follow(uid: string) {
+      return new Promise<FollowResult>(done => {
+        if (!room || status.kind !== "joined") { done({ ok: false, reason: "busy" as FollowRefusal }); return; }
+        asking.get(uid)?.done({ ok: false, reason: "busy" });
+        const cancel = later(() => { if (asking.get(uid)?.done === done) { asking.delete(uid); done({ ok: false, reason: "busy" }); } }, FOLLOW_WAIT_MS);
+        asking.set(uid, { done, cancel, area });
+        room.send(MSG.follow, { uid });
+      });
+    },
   };
   return {
     source,
@@ -533,7 +636,10 @@ function loadStore(): Promise<NetStore | null> {
   const m = netMode(search());
   if (m?.kind !== "bots") return Promise.resolve(peekStore());
   h.loading = import("./loopback").then(({ createLoopback }) => {
-    const lb = createLoopback({ bots: m.bots, seed: m.seed, netsim: DEV ? parseNetsim(search()) : null });
+    // `?botchat=S`: bots in view chat every S seconds or so (bubbles, the "…" and the talking without a server);
+    // `?botfire=1`: the first bots dance round the campfire and sit by it.
+    const q = new URLSearchParams(search()), chatEvery = Number(q.get("botchat")) || 0, fire = DEV && q.get("botfire") === "1";
+    const lb = createLoopback({ bots: m.bots, seed: m.seed, netsim: DEV ? parseNetsim(search()) : null, chatEvery, fire });
     const store = loopbackStore(lb);
     setStore(store);
     return store;
