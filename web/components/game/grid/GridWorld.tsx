@@ -85,7 +85,7 @@ function SmoothWorld({ map, light, palette, windScale, lite = false, clear, terr
 }
 
 /** The river flows, swells and catches the sun; the foam rings round what stands in it. One uniform block per frame. */
-function useWaterFrame(light: GridWorldProps["light"], lite: boolean) {
+export function useWaterFrame(light: GridWorldProps["light"], lite: boolean) {
   const sunDir = useMemo(() => new THREE.Vector3(...light.sunPosition), [light.sunPosition]);
   const sunColor = useMemo(() => new THREE.Color(light.sun), [light.sun]);
   const sky = useMemo(() => ({ zenith: new THREE.Color(light.skyTop ?? light.sky), horizon: new THREE.Color(light.sky) }), [light.sky, light.skyTop]);

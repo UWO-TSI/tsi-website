@@ -34,6 +34,8 @@ export const OBJECT_KINDS = [
   "campfire",
   // A natural barrier (lib/game/barriers.ts): `model` names which; it stands, solid, until its drop opens the way.
   "barrier",
+  // A resident's house (specs/world-editor.md decision 10): `model` names the chalet (lib/game/defaultIsland.ts HOUSE_MODELS).
+  "house",
 ] as const;
 export type ObjectKind = (typeof OBJECT_KINDS)[number];
 

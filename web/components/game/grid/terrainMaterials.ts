@@ -422,6 +422,23 @@ export function setShoreField(f: {
 }
 
 /**
+ * After an edit (the world editor, specs/world-editor.md): rewrite rows j0..j1 of the field already up (the same size
+ * as `f`) and upload it again, rather than building a new texture. False when there is none of that size.
+ */
+export function patchShoreField(f: { data: Float32Array; depth: Float32Array; width: number; height: number }, j0: number, j1: number): boolean {
+  const tex = waterUniformBlock.uShoreMap.value as THREE.DataTexture | null;
+  if (!tex || tex.image.width !== f.width || tex.image.height !== f.height) return false;
+  const half = tex.image.data as Uint16Array;
+  for (let j = Math.max(0, j0); j <= Math.min(f.height - 1, j1); j++) for (let i = 0; i < f.width; i++) {
+    const k = j * f.width + i;
+    half[k * 2] = THREE.DataUtils.toHalfFloat(f.data[k]);
+    half[k * 2 + 1] = THREE.DataUtils.toHalfFloat(f.depth[k]);
+  }
+  tex.needsUpdate = true;
+  return true;
+}
+
+/**
  * Apply the bench's water settings and advance the clock. Called once per frame
  * from GridWorld, and from the bench.
  *

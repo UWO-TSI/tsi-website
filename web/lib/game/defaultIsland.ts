@@ -89,6 +89,20 @@ export const PROP_TOP: Record<string, number> = {
   "bench-wood": 0.51, "rock-a": 0.61, "rock-b": 0.59, "rock-c": 0.52, "fence-country-a": 0.7, "fence-country-b": 0.69,
   ...Object.fromEntries(ROCK_MODELS.map(m => [m, ROCK_SIZE[m].top])),
 };
+/**
+ * Residents' houses (the `house` kind, specs/world-editor.md decision 10): the chalet in its three colourways, the
+ * museum's model, standing on its footprint like a building. `model` picks the colourway (brown by default).
+ */
+export const HOUSE_MODELS = ["chalet-brown", "chalet-red", "chalet-yellow"] as const;
+export type HouseModel = (typeof HOUSE_MODELS)[number];
+export const HOUSE_HALF: [number, number] = [2.5, 2.1];
+export const houseModel = (model?: string): HouseModel => (HOUSE_MODELS as readonly string[]).includes(model ?? "") ? model as HouseModel : "chalet-brown";
+/** A house's solid footprint as world-axis half extents after its turn and scale (as landmarkHalf). */
+export function houseHalf(yaw = 0, scale = 1): [number, number] {
+  const c = Math.abs(Math.cos(yaw)), n = Math.abs(Math.sin(yaw));
+  return [(HOUSE_HALF[0] * c + HOUSE_HALF[1] * n) * scale, (HOUSE_HALF[0] * n + HOUSE_HALF[1] * c) * scale];
+}
+
 /** A tree trunk blocks this far from its centre. */
 export const TREE_TRUNK = 0.65;
 export const TREE_SEEDS = [0, 3, 2, 5, 7, 8, 1, 3];
@@ -202,6 +216,7 @@ export function objectFootprint(o: MapObject): { hw: number; hd: number; cx: num
     return half ? { hw: half[0] * k, hd: half[1] * k, cx: 0, cz: 0 } : null;
   }
   if (o.kind === "bridge") return { hw: BRIDGE_DECK_HALF[0], hd: BRIDGE_DECK_HALF[1], cx: 0, cz: 0 };
+  if (o.kind === "house") return { hw: HOUSE_HALF[0] * (o.scale ?? 1), hd: HOUSE_HALF[1] * (o.scale ?? 1), cx: 0, cz: 0 };
   if (o.kind === "barrier") return barrierFootprint(o.model, o.scale ?? 1);
   if (o.kind === "study" && o.model && o.model in FURNITURE) {
     const [cx, cz, hw, hd] = FURNITURE[o.model as Furniture].solid[0];
@@ -300,7 +315,8 @@ export function islandOf(v: Village): VillageIsland {
     : (x: number, z: number) => sampleGroundHeight(map, field, x, z);
   const surface = terrain ? (x: number, z: number) => terrainSurface(terrain, x, z) : (x: number, z: number) => drawnSurfaceAt(map, x, z);
   const rails = bridgeRails(v);
-  const solids = landmarks(v).filter(l => l.half);
+  // Buildings: the landmarks with a footprint and the residents' houses.
+  const solids: { x: number; z: number; half?: [number, number] }[] = [...landmarks(v).filter(l => l.half), ...objectsOf("house", v).map(o => ({ x: o.x, z: o.z, half: houseHalf(o.yaw, o.scale) }))];
   // The natural barriers standing at this drop (lib/game/barriers.ts): solid like a building, never jumped.
   const barriers = barrierBoxes(barrierPlacements(v));
   const props = propsOf(v).flatMap(o => {

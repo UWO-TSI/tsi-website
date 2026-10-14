@@ -75,8 +75,17 @@ export class TerrainView {
     this.rebuildWater(true);
   }
 
+  /** Main-thread time the last frame's work took (ms): the editor's HUD shows it while brushing. */
+  lastMs = 0;
+
   /** Per frame: pick each chunk's level by its distance, build what is missing (nearest first), cull, flush edits. */
   frame(camera: THREE.Camera): void {
+    const started = performance.now();
+    this.frameWork(camera);
+    this.lastMs = performance.now() - started;
+  }
+
+  private frameWork(camera: THREE.Camera): void {
     this.flush();
     this.cull.update(camera);
     camera.getWorldPosition(_p);

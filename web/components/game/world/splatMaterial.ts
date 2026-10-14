@@ -7,7 +7,8 @@
  * its real depth (the water lane's `addUnderwater`). Seasons, snow and rain use the uniforms the old ground reads, and
  * the see-through cut round the player is the terrain's (occluders.ts).
  *
- * Its cost: one draw per chunk in view, one texture read and a little arithmetic a pixel; no per-chunk material.
+ * Its cost: one draw per chunk in view, four reads of one small texture and a little arithmetic a pixel; no per-chunk
+ * material.
  */
 import * as THREE from "three";
 import { addCutout } from "@/lib/game/occluders";
@@ -65,8 +66,11 @@ float splatNoise(vec2 p) {
 `;
 
 const BODY = /* glsl */ `
-  vec2 paintUv = ((vTerrainWorld.xz - uPaintXform.xy) * uPaintXform.z + 0.5) / uPaintSize;
-  vec4 paintW = texture2D(uPaintMap, paintUv);
+  // Four bilinear reads half a sample apart: a 2 × 2 box over the bilinear weights, so a paint's outline is a smooth
+  // curve rather than the sample grid's staircase.
+  vec2 paintUv = ((vTerrainWorld.xz - uPaintXform.xy) * uPaintXform.z + 0.5) / uPaintSize, paintH = 0.5 / uPaintSize;
+  vec4 paintW = 0.25 * (texture2D(uPaintMap, paintUv + vec2(-paintH.x, -paintH.y)) + texture2D(uPaintMap, paintUv + vec2(paintH.x, -paintH.y))
+    + texture2D(uPaintMap, paintUv + vec2(-paintH.x, paintH.y)) + texture2D(uPaintMap, paintUv + vec2(paintH.x, paintH.y)));
   float edgeN = splatNoise(vTerrainWorld.xz * 1.7) * 0.65 + splatNoise(vTerrainWorld.xz * 4.3) * 0.35;
   // A worn edge: the soft weights pushed past a noisy threshold.
   paintW = smoothstep(vec4(0.3), vec4(0.7), paintW + (edgeN - 0.5) * 0.35);
@@ -108,6 +112,6 @@ export function splatMaterial(t: WorldTerrain, paint: THREE.DataTexture, grass?:
     addUnderwater(shader, "sea");
     addCutout(shader);
   };
-  m.customProgramCacheKey = () => "terrain-smooth-splat-v1";
+  m.customProgramCacheKey = () => "terrain-smooth-splat-v2";
   return m;
 }

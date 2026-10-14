@@ -41,7 +41,7 @@ import JournalSheet from "@/components/progression/JournalSheet";
 import { useProgressionWorld, useCeremony, useChapterActions, type WorldGoalId } from "@/lib/game/progressionBridge";
 import confetti from "canvas-confetti";
 import type { InteriorStation } from "./interiorShared";
-import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmarkPoint, turn, wharfDecks, benchSeat, propFootprint, BENCH_SEAT_TOP, type Landmark } from "@/lib/game/defaultIsland";
+import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmarkPoint, turn, wharfDecks, benchSeat, propFootprint, BENCH_SEAT_TOP, houseHalf, houseModel, type Landmark } from "@/lib/game/defaultIsland";
 import { village, objectsOf, type Village } from "@/lib/game/villageMap";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
@@ -266,7 +266,9 @@ function villageLayout(v: Village) {
   const decks = wharfDecks(v);
   const fitting = objectsOf("fitting", v)[0], missions = objectsOf("missions", v)[0], marks = landmarks(v);
   const island = villageIsland(v), trees = objectsOf("tree", v).map((o): TreeSpot => ({ x: o.x, z: o.z, seed: o.seed ?? 0 }));
-  const buildings = marks.filter(l => l.half && Math.max(...l.half) >= 1).map(l => boxOccluder(l.x, l.z, l.half![0], l.half![1], island.ground(l.x, l.z), 5));
+  // The residents' houses (the `house` kind; none on a map that places none) stand like the landmarks.
+  const houses = objectsOf("house", v), houseBoxes = houses.map(o => ({ x: o.x, z: o.z, half: houseHalf(o.yaw, o.scale) }));
+  const buildings = [...marks.filter(l => l.half && Math.max(...l.half) >= 1), ...houseBoxes].map(l => boxOccluder(l.x, l.z, l.half![0], l.half![1], island.ground(l.x, l.z), 5));
   return {
     island,
     landmarks: marks,
@@ -276,7 +278,8 @@ function villageLayout(v: Village) {
     /** What hides a label (lib/game/labelLayout.ts): the buildings only, a canopy is see-through enough. */
     buildings,
     /** Inside a building's footprint, with a step's margin (the glide guide never marks a ledge behind one). */
-    underBuilding: (x: number, z: number) => marks.some(l => !!l.half && Math.abs(x - l.x) < l.half[0] + 0.5 && Math.abs(z - l.z) < l.half[1] + 0.5),
+    underBuilding: (x: number, z: number) => [...marks, ...houseBoxes].some(l => !!l.half && Math.abs(x - l.x) < l.half[0] + 0.5 && Math.abs(z - l.z) < l.half[1] + 0.5),
+    houses,
     fireflies: objectsOf("bush", v).map(xz),
     /** The beach campfire (specs/v1-drop.md §3): the map's, or open sand by the beach until one is placed. */
     campfire: campfireSite(v),
@@ -586,6 +589,8 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {/* Before its drop the café is built but not open (lib/game/drops.ts): warm, an "Opening soon" chalkboard, no door. */}
     {cafe && <group position={at(cafe)} rotation={[0, cafe.yaw ?? 0, 0]} scale={cafe.scale ?? 1}><CafeBuilding state={!DROPS.cafe ? "soon" : opened.includes("cafe") ? "open" : "boarded"} light={light} /></group>}
     {museum && <group position={at(museum)} rotation={[0, museum.yaw ?? 0, 0]} scale={museum.scale ?? 1}><ACNHParts parts={CHALET_VARIANTS.red} lit={windowLit(light)} /></group>}
+    {/* The residents' houses: the chalet in the colourway its model names. */}
+    {layout.houses.map(h => <group key={h.id} position={[h.x, ground(h.x, h.z), h.z]} rotation={[0, h.yaw ?? 0, 0]} scale={h.scale ?? 1}><ACNHParts parts={CHALET_VARIANTS[houseModel(h.model).slice(7) as keyof typeof CHALET_VARIANTS]} lit={windowLit(light)} /></group>)}
     {/* Boarded doors: the existing log fence across the museum's entrance (the café boards its own, CafeBuilding). */}
     {[museum].filter(l => l && !opened.includes(l.id as WorldGoalId)).map(l => [-0.6, 0.6].map(dx => <NatureFence key={`${l!.id}${dx}`} position={[l!.x + dx, ground(l!.x, l!.z), front(l!) - 0.35]} variant={1} />))}
     {/* The ruins gate once the ruins open; before, fallen stones and roots block it (lib/game/barriers.ts GATE_RUBBLE, in the scenery). */}

@@ -96,6 +96,49 @@ Three files in `web/data/world/`. One loader reads them for the game, the editor
 - **Objects and annotations** are copied unchanged. The proposals stay in `web/data/proposals/`; the editor shows them for David to accept.
 - **Elevated water** (the peak waterfall): water is at sea level in v0. The fall's channel (26 cells) is rock, and its level-1 pond (81 cells) is a sea-level pond.
 
+## Renderer and gameplay (built 2026-10-14)
+
+- **Gate.** `GridWorld` draws the heightfield only for a village with `terrain` (`lib/game/world/village.ts villageOfWorld`), which only the editor's files produce. `/lab/island?fixture=v2` loads them (`?fixture=v2-cells` is the old cell draft). Every other world stays on the cell path, unchanged (`components/game/grid/groundGate.test.ts`).
+- **Ground.** Chunks of 32 × 32 cells, each at one of four levels of detail by camera distance (every 1st, 2nd, 4th or 8th sample; hand-overs at 56, 112 and 224 u with 8 u of hysteresis). Normals come from the full-detail ground. Skirts hang twice each edge's worst level-of-detail error below it, so no level pairing leaves a gap (`world/mesh.test.ts`, every pair). Chunks are culled for the curved world. A chunk lying entirely at the open sea's floor is not drawn.
+- **Material.** One placeholder splat (`components/game/world/splatMaterial.ts`): grass (the season's colour), sand, path, rock and stone from the paint map, read as a 2 × 2 box so outlines curve, with a noisy worn edge. Rock comes in by slope from 0.6 grade and is solid by 1.0, the walking limit. Sand and grass darken just above the sea (the wet band). The seabed fogs into the water's colour by its real depth.
+- **Water.** A quad per cell at sea level wherever the ground dips under it, in blocks of 128 cells. Its colour reads a shore field baked from the heights (distance to the drawn shoreline, the seabed's real depth). The seabed props and the fish read the same seabed.
+- **Grass.** The blade field grows where the paint is grass, never on steep rock or under the sea, and stays clear of solids (`terrainGrassSampler`).
+- **Walking.** The walker stands on the mesh's own triangles and walks the jetty at its deck height. A step up onto ground steeper than 45° (`MAX_CLIMB`) is refused for the player and for residents' paths, and no jump starts on steep ground, so cliffs can't be hopped. The movement sim gained two optional world queries (`climb`, `steep`) that only the smooth world answers. Buildings stand on flat pads. Objects, barriers, the campfire and residents' stops stand on the surface (`world/walk.test.ts`).
+- **Houses.** A new object kind, `house` (the chalet in brown, red or yellow), drawn by the game and solid like a building. It appears only where a map places one.
+
+## Editor (built 2026-10-14): `/lab/world`
+
+Dev only (404 in production). It loads and saves `web/data/world/` through `/api/lab/world`, which decodes a save in full before writing anything. The view is the game's own terrain, water, grass, buildings, nature and props. The world is drawn flat (no curved-world bend) so the crosshair and the overhead view are exact; `/lab/island?fixture=v2` shows it bent.
+
+| Control | Does |
+|---|---|
+| Click the view | Fly (pointer lock); Esc lets go |
+| WASD, Space, Shift, hold Q | Fly; up; down; faster (not Ctrl: Ctrl+W closes the tab) |
+| Left click (hold) | Lower, dig, cut, paint grass, remove an object, end a road |
+| Right click (hold) | Raise, fill, paint, place, lay a road point (or drag one), drag the selection |
+| 1–9 | Hotbar slot |
+| E | Palette: choose what the slot holds (terrain tools, paints, roads, buildings and houses, nature, props, markers, select) |
+| B | Cell mode ⇄ brush mode (on the HUD) |
+| Scroll | Brush size; in cell mode, the N × N square |
+| Shift + scroll | Strength; in cell mode, the step (0.75 by default) |
+| H | Hard edge ⇄ soft (a bank, a quay) |
+| Alt + click, middle click | Sample the height the level tool uses |
+| R, Shift + R | Turn the placement ghost or the selection by 15° |
+| + / − | Scale the selection |
+| Delete, Backspace, X | Delete the selection |
+| Ctrl+Z, Ctrl+Shift+Z (Ctrl+Y) | Undo, redo (a stroke at a time, 200 deep) |
+| O, Tab | Overhead view (WASD pans, Space and Shift change the height) |
+| Ctrl+S | Save to `web/data/world/` |
+| P | Walk it: the game, at the camera, with what is on screen (saved or not) |
+| ? | The controls |
+
+- **Brush mode:** raise, lower, smooth, flatten (to the height where the stroke began), level (to a sampled height), roughen (small natural noise) and erode (softens edges, pulls material downslope). Each has a soft or hard edge. Flatten and level cut with the left button and fill with the right.
+- **Cell mode:** raise, lower, flatten and level act on whole cells. A press sets the N × N square a step up or down onto the step grid, holding steps again every 0.35 s, and dragging carries that level on. Squares get a rounded lip, and squares at one level side by side merge flat. Paint in cell mode paints whole cells.
+- **Buildings** (HQ, shop, café, museum, Oracle temple, monument, the boards, the mailbox and three house colours): a ghost shows the model and its footprint, snapped so the footprint's edges sit on cell edges. A placed or moved building flattens its pad. A landmark already on the map moves rather than duplicating.
+- **Roads:** right-click point to point, or drag. The road paints the path (or stone) 2.4 u wide and grades the ground under it to a smooth profile, level across and no steeper than 0.18, easing into the land over a 1.6 u shoulder.
+- **Proposals:** pending ones (`web/data/proposals/`) are listed with Accept (undoable).
+- **Cost while brushing:** only the touched chunks are rewritten in place, along with the paint rows and the water blocks. The shore field is re-baked for the stroke's region when it ends, and the grass refills four times a second. A radius-20 brush costs about 3 ms a frame on the Mac mini (stroke and chunk rewrite together).
+
 ## Open questions for David (ask as they come up; don't block on them)
 
 - The island size: keep 384 × 552, or let him resize it in the editor.

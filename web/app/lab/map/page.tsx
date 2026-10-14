@@ -190,6 +190,7 @@ const OBJECT_STYLE: Record<ObjectKind, { color: string; r: number; label: string
   bottle: { color: "#7fe0d8", r: 0.25, label: "bottle spot" },
   campfire: { color: "#ff6a2a", r: 0.8, label: "campfire" },
   barrier: { color: "#6b5a4a", r: 0.6, label: "natural barrier" },
+  house: { color: "#d9a05b", r: 0.6, label: "house" },
 };
 /** Placement palette order. */
 const PALETTE: readonly ObjectKind[] = ["landmark", "tree", "bush", "flower", "rock", "bench", "fence", "lamp", "bridge", "barrier", "study", "anchor", "gather", "spawn", "fitting", "missions", "puddle", "bug", "shell", "bottle", "campfire"];
