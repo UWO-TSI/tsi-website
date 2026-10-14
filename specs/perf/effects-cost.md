@@ -122,6 +122,50 @@ now back to main's; the village and v2 rows are unchanged.
 The grass's GPU share on the v2 world (0.6 ms at 1280 × 800 with the pixel finish) is its fragment overdraw: the first
 thing to trade on a weak GPU is High's near layer (2 cards → 1, about −0.3 ms GPU) or `grass.density`.
 
+## The smooth world's terrain (world editor, 2026-10-14)
+
+`game/world-editor` (specs/world-editor.md). The v2 world's ground is now the smooth heightfield, which replaces the cell
+terrain, the cliff kit and the cliff-foot boulders for that world only. These are headless runs (`HEADLESS=1`, the
+agents' browser rule on the shared Mac mini) of the measurement build at da8a7bc9, 24 bots, 3 runs per tier, load
+4–6, so the numbers are soft. The cell draft is benched in the same build as `v2cells` (`?fixture=v2-cells`), so the
+swap is priced like for like. Compare headless with headless: the same build's village reads 5.2 ms on High against
+main's headed 3.9.
+
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draws | Triangles | Spread | SCENE_BUDGET v2 (frame / p95 / CPU / draws / tris) |
+|---|---|---|---|---|---|---|---|---|
+| v2 smooth | High | **5.70** | 9.10 | 5.10 | **208** | **613k** | 25% | 6.5 / 10 / 6 / 760 / 1.2M: within |
+| v2 cells (before) | High | 8.50 | 11.70 | 7.80 | 252 | 912k | 35% | over on this busy machine (headed baseline 5.4 / 6.8 / 5.0) |
+| village | High | 5.20 | 6.60 | 4.40 | 381 | 537k | 29% | 6 / 9 / 5 / 560 / 560k: within (unchanged path) |
+| v2 smooth | Lite | **2.80** | 3.40 | 2.60 | **147** | **327k** | 0% | 4 / 6 / 3.5 / 560 / 950k: within |
+| v2 cells (before) | Lite | 2.90 | 3.30 | 2.70 | 173 | 629k | 0% | within |
+| village | Lite | 2.30 | 3.40 | 2.00 | 288 | 353k | 0% | 4 / 6 / 3.5 / 420 / 420k: within (identical to main's 2.3 / 288 / 354k) |
+
+In each High run the smooth world was faster than its cell draft (4.8 vs 8.5, 6.2 vs 8.8, 5.7 vs 5.8 ms), with 45 fewer
+draws and 300k fewer triangles. On Lite they tie on frame time, with 26 fewer draws and 300k fewer triangles.
+
+**Each piece** (draws and triangles from a `renderBufferDirect` tally over 30 frames at the spawn, the scene pass; CPU
+in Node on the M4 from the same code the game runs):
+
+| Piece | High | Lite | CPU |
+|---|---|---|---|
+| Ground chunks (32 × 32 cells, 4 levels of detail, skirts) | 17 draws, 79k tris | 17 draws, 79k tris | 0.02 ms a frame (level choice and culling); first build of what's in view 29 ms spread over the first frames, 6 chunks a frame at most; worst frame flying across the island 0.85 ms |
+| Water over the land's dips (a quad a cell, 128-cell blocks) | 10 draws, 219k tris | 5 draws, 110k tris | built once at load, 48 ms with the view |
+| Splat material (paint, rock by slope, wet band, seabed fog) | in the chunks' draws | same | 4 reads of an 850k-texel RGBA paint map a pixel; no texture else |
+| Shore field (the water's colour and foam, from the heights) | none | none | 238 ms once at load (the cell world baked its own from the cells) |
+| Loading the files | none | none | 23 ms to decode the two PNGs, 5 ms for the derived cell map, 58 ms for the village |
+| Grass blades | 2 draws, 40k tris | 1 draw, 8k tris | unchanged from the v1 land pass (its sampler now reads the paint) |
+| Cell terrain before (ground, overlays, rock, water, bed, fringe) | 45 draws, 557k tris | 27 draws, 403k tris | none now on v2 |
+| Cliff kit and boulders before | 19 + 8 draws | 13 + 6 draws | none now on v2 |
+
+The water is the heaviest piece in triangles (a quad per wet cell in view, as the cell world drew it). If a weak GPU
+needs it, the first trade is merging open-water cells far from any shore into bigger quads, but the swell is per
+vertex, so keep cell-sized quads along the shore and the map's edge.
+
+**The editor** (`/lab/world`, dev only, no budget beyond staying smooth): a brush frame rewrites only the chunks it
+touches. Radius 5 costs 1.05 ms and radius 20 costs 2.8 ms a frame (the stroke and the rewrite), and the shore field's
+re-bake for the stroke's region when it ends costs 2–4.5 ms. Headless at 60 Hz it held 60 FPS throughout, worst frame
+17.7 ms. The HUD shows the worst frame and the edit time live.
+
 ## How it was measured
 
 - **Builds:** the measurement build (`measure-build.sh`: production `next build`, the development gates lifted). The

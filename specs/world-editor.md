@@ -140,8 +140,25 @@ Dev only (404 in production). It loads and saves `web/data/world/` through `/api
 - **Proposals:** pending ones (`web/data/proposals/`) are listed with Accept (undoable).
 - **Cost while brushing:** only the touched chunks are rewritten in place, along with the paint rows and the water blocks. The shore field is re-baked for the stroke's region when it ends, and the grass refills four times a second. A radius-20 brush costs about 3 ms a frame on the Mac mini (stroke and chunk rewrite together).
 
+## Performance and evidence (2026-10-14)
+
+- **perf:check**, headless (the agents' browser rule; `HEADLESS=1` on the bench), 3 runs per tier. The smooth v2 world is within SCENE_BUDGET on High (5.7 ms, p95 9.1, 208 draws, 613k triangles) and Lite (2.8 ms, 147 draws, 327k). It is cheaper than its own cell draft in the same build (High 8.5 ms, 252 draws, 912k; Lite 2.9 ms, 173 draws, 629k). The village is unchanged. Each piece is priced in `specs/perf/effects-cost.md` ("The smooth world's terrain"); the raw runs are in `specs/evidence/world-editor/perf/`.
+- **Shots** in `specs/evidence/world-editor/`, each pair before (the cell draft) over after (the smooth world), same camera:
+  - `01` the spawn (jagged slab banks gone);
+  - `02` the plaza;
+  - `03`, `04` the mountain, near and far: the old kit's holes and stacked slabs gone, cliffs now rock and slopes after the naturalize pass;
+  - `05` the coast;
+  - `06` the wharf: the quay at deck height, the jetty over the deep berth, the boat and rowboats moored alongside;
+  - `07` the beach shelf.
+- **Editor shots:** `09` start, `10` a brush stroke mid-edit, `11` cell mode mid-edit, `12` a house placed on its own pad, `13` a road, `14` and `15` the overhead view (the beach's shelf in the shallows), `16` walk it.
+
 ## Open questions for David (ask as they come up; don't block on them)
 
-- The island size: keep 384 × 552, or let him resize it in the editor.
-- Whether the village (default island) later moves to the same editor and format.
-- The surface paint list beyond grass, sand, path and rock (flowers, snow, mud).
+- **The island size.** Kept at 384 × 552. The format allows any size up to 2048 a side; the editor has no resize in v0.
+- **The village (default island).** Whether it later moves to this editor and format. For now `/lab/map` stays its painter, and the village renders exactly as on main.
+- **The paint list.** v0 has grass, sand, path, rock and stone (ids append only). Flowers, snow, mud or a timber quay edge are a new id and a swatch each.
+- **Water above the sea.** v0 water is at sea level only, so the peak waterfall's channel is rock and its pond sits at sea level. A water-level layer (ponds and falls up the mountain) is the next format addition if David wants them.
+- **The quay's height.** The bank stands at the jetty deck's walk height (y 0), 8 cm over the still water, because the pier model and the boat trip are built on that deck. A taller quay means raising the deck with it, a change to the wharf model and the boat trip.
+- **Bend in the editor.** The editor draws the world flat so aiming and the overhead view are exact. The game (and walk it) keep the curved-world look.
+- **Houses.** Placed houses are solid and drawn, but they have no door or interior yet, and no resident is wired to one.
+- **The old files.** `web/data/world-map.json` and `/lab/map?fixture=v2` stay until David accepts the new world; the proposals still target it by name and the editor lists them.
