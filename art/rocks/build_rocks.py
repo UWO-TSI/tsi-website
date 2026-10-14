@@ -40,7 +40,7 @@ def smooth(a, b, x):
 
 
 def chunk(bm, size, seed, centre=(0.0, 0.0, 0.0), squash=0.0):
-    """A convex chunk in `bm`: corners and edge midpoints of a box (game size sx, sy, sz) pulled in and jittered."""
+    """A convex chunk in `bm`: corners and some edge midpoints of a box (game size sx, sy, sz) pulled in and jittered."""
     rng = np.random.default_rng(seed)
     sx, sy, sz = size
     pts = []
@@ -50,15 +50,16 @@ def chunk(bm, size, seed, centre=(0.0, 0.0, 0.0), squash=0.0):
                 # Corners pulled toward the middle by a random amount: the chamfered, rounded-box silhouette.
                 pull = rng.uniform(0.18, 0.42)
                 pts.append((cx * (1 - pull * rng.uniform(0.6, 1.2)), cy * (1 - pull * (1 - squash)), cz * (1 - pull * rng.uniform(0.6, 1.2))))
+    # Two of each axis's four edges get a midpoint: enough to break the box, few enough to keep the facets broad (and
+    # the triangle count low: the ruins and the v2 world draw hundreds of these).
     for axis in range(3):
-        for a in (-1, 1):
-            for b in (-1, 1):
-                p = [0.0, 0.0, 0.0]
-                p[axis] = rng.uniform(-0.35, 0.35)
-                p[(axis + 1) % 3] = a * rng.uniform(0.82, 1.0)
-                p[(axis + 2) % 3] = b * rng.uniform(0.82, 1.0)
-                pts.append(tuple(p))
-    for _ in range(6):
+        for a, b in [(-1, -1), (1, 1)] if rng.uniform() < 0.5 else [(-1, 1), (1, -1)]:
+            p = [0.0, 0.0, 0.0]
+            p[axis] = rng.uniform(-0.35, 0.35)
+            p[(axis + 1) % 3] = a * rng.uniform(0.82, 1.0)
+            p[(axis + 2) % 3] = b * rng.uniform(0.82, 1.0)
+            pts.append(tuple(p))
+    for _ in range(2):
         v = rng.normal(size=3)
         v /= np.linalg.norm(v)
         pts.append(tuple(v * rng.uniform(0.9, 1.05)))
@@ -72,7 +73,7 @@ def chunk(bm, size, seed, centre=(0.0, 0.0, 0.0), squash=0.0):
         bmesh.ops.delete(bm, geom=unused, context="VERTS")
 
 
-def build(name, parts, dissolve=10, bevel=0.035, seed=0):
+def build(name, parts, dissolve=14, bevel=0.035, seed=0):
     """`parts`: [(size, seed, centre)] chunks merged into one rock; returns the object."""
     bm = bmesh.new()
     for size, s, centre in parts:

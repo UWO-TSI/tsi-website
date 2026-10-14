@@ -22,7 +22,7 @@
  * THE COST. One draw call a layer (no shadow pass), a fixed number of instances whatever the island's size: the clumps
  * live on a world-anchored grid recycled around the view focus (slot i holds the world column nearest the focus with
  * index ≡ i mod n), so nothing swims as the camera moves and the v2 world costs what the village does. High: 2 draws,
- * about 40k triangles (6.2k near clumps of 2 cards, 7.7k far of 1); Lite: 1 draw, about 10k. The ground height and
+ * about 40k triangles (6.2k near clumps of 2 cards, 7.7k far of 1); Lite: 1 draw, about 8k. The ground height and
  * where grass grows come from a small texture refilled a column at a time as the view moves (`GrassData`); the
  * presses from another (`BendField`).
  */
@@ -59,12 +59,13 @@ export const GRASS_TIERS: Record<"high" | "lite", { layers: readonly GrassLayer[
     ],
     fadeIn: 6, fadeOut: 15, data: 96, focus: 13,
   },
-  lite: { layers: [{ spacing: 0.42, half: 15, cards: 1, width: 0.46, height: 1, until: null }], fadeIn: 2, fadeOut: 9, data: 64, focus: 9 },
+  lite: { layers: [{ spacing: 0.44, half: 14, cards: 1, width: 0.48, height: 1, until: null }], fadeIn: 2, fadeOut: 8, data: 64, focus: 8 },
 };
 /** The handover between two layers is dithered across this many units of camera distance. */
 const HANDOVER = 1.5;
 const DATA_TEXEL = 0.5;
-const BEND_N = 128, BEND_TEXEL = 0.25;
+/** The press window: 96 texels of 0.25 u (24 u across, the near grass), RG bytes. */
+const BEND_N = 96, BEND_TEXEL = 0.25;
 /** A character's footprint in the grass, and how high off the ground they still press it. */
 const FOOT_RADIUS = 0.42, FOOT_LIFT = 0.3;
 /** The ground's world UV (GridTerrain UV, 2 cells a repeat) times the grass map's repeat, for the hue patches. */
@@ -289,7 +290,8 @@ export default function GrassField({ map, field: suppliedField, color, windScale
     const data = new GrassData(tier.data, DATA_TEXEL, grassSampler(map, field, clear));
     const dataTex = new THREE.DataTexture(data.half, tier.data, tier.data, THREE.RGFormat, THREE.HalfFloatType);
     const bend = new BendField(BEND_N, BEND_TEXEL, 0.8);
-    const bendTex = new THREE.DataTexture(bend.bytes, BEND_N, BEND_N, THREE.RGBAFormat);
+    const bendTex = new THREE.DataTexture(bend.bytes, BEND_N, BEND_N, THREE.RGFormat);
+    bendTex.unpackAlignment = 2;
     for (const tex of [dataTex, bendTex]) {
       tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
       tex.magFilter = tex.minFilter = THREE.LinearFilter;
@@ -336,7 +338,8 @@ function advance(s: FieldState, camera: THREE.Camera, delta: number, g: Grass, w
   bend.recentre(_focus.x, _focus.z);
   bend.decay(Math.min(delta, 0.1));
   if (g.bend > 0) for (const o of GRASS_BENDERS) {
-    o.getWorldPosition(_at);
+    // Last frame's world matrix: no walk up the parents for each character.
+    _at.setFromMatrixPosition(o.matrixWorld);
     // On the ground, not mid-hop or seated up on something; a press where no grass grows is harmless.
     if (_at.y - s.data.sample(_at.x, _at.z)[0] < FOOT_LIFT) bend.press(_at.x, _at.z, FOOT_RADIUS);
   }

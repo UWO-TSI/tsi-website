@@ -21,12 +21,12 @@ export const rockUrl = (m: RockModel) => `/assets/game/rocks/${m}.glb`;
 
 /** Footprint half extents at the ground (x, z) and the top above it, before scale: printed by the build script. */
 export const ROCK_SIZE: Record<RockModel, { half: [number, number]; top: number }> = {
-  "boulder-round": { half: [0.57, 0.45], top: 0.68 },
-  "boulder-tall": { half: [0.42, 0.39], top: 1.07 },
-  "boulder-slab": { half: [0.71, 0.5], top: 0.41 },
+  "boulder-round": { half: [0.51, 0.48], top: 0.66 },
+  "boulder-tall": { half: [0.39, 0.38], top: 1.06 },
+  "boulder-slab": { half: [0.69, 0.47], top: 0.37 },
   "boulder-small": { half: [0.28, 0.25], top: 0.34 },
-  "boulder-pillar": { half: [0.39, 0.35], top: 2.05 },
-  "boulder-cluster": { half: [1.01, 0.66], top: 0.81 },
+  "boulder-pillar": { half: [0.38, 0.37], top: 1.82 },
+  "boulder-cluster": { half: [1.01, 0.65], top: 0.79 },
 };
 
 export interface RockPlacement { model: RockModel; x: number; z: number; y: number; yaw: number; scale: number; wet: boolean }
@@ -44,8 +44,11 @@ const FOOT_CHANCE = 0.32;
 /** Paths, the plaza and the beach's built edges keep their feet clear. */
 const PAVED = new Set<number>([Surface.Stone, Surface.Wood, Surface.Brick, Surface.Soil]);
 const pavedAt = (map: IslandMap, x: number, z: number) => OVERLAY_SURFACES.some(o => PAVED.has(o) && overlayAt(map, o, x, z) > 0.2);
-/** Walls of two cliffs or more (3 u) take the tall rocks; one cliff takes the low ones. */
-const LOW: readonly RockModel[] = ["boulder-round", "boulder-slab", "boulder-small", "boulder-round", "boulder-cluster"];
+/**
+ * Walls of two cliffs or more (3 u) take the tall rocks and the clusters; one cliff takes the low single rocks (the
+ * clusters are three rocks' triangles, and one-cliff walls are the common ones).
+ */
+const LOW: readonly RockModel[] = ["boulder-round", "boulder-slab", "boulder-small", "boulder-round", "boulder-slab"];
 const HIGH: readonly RockModel[] = ["boulder-tall", "boulder-pillar", "boulder-round", "boulder-cluster", "boulder-tall"];
 
 /** Whether the wall on side `k` of cell (cx, cz) is chosen for a boulder (before the spacing and ground checks). */

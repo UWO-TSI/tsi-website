@@ -118,14 +118,13 @@ export class BendField {
   readonly window: ToroidalWindow;
   /** The push per slot (x, z), length ≤ 1. */
   readonly vec: Float32Array;
-  /** The texture's RGBA bytes: the push at 128 ± 127. */
+  /** The texture's RG bytes: the push at 128 ± 127 (two bytes a texel: half the upload of RGBA). */
   readonly bytes: Uint8Array;
   private live = false;
   constructor(n: number, texel: number, private tau: number) {
     this.window = new ToroidalWindow(n, texel);
     this.vec = new Float32Array(n * n * 2);
-    this.bytes = new Uint8Array(n * n * 4).fill(128);
-    for (let i = 3; i < this.bytes.length; i += 4) this.bytes[i] = 255;
+    this.bytes = new Uint8Array(n * n * 2).fill(128);
   }
 
   /** How fast a trail springs back (seconds to fall to 1/e). */
@@ -183,10 +182,7 @@ export class BendField {
     const v = this.vec, b = this.bytes, was = this.dirty;
     this.dirty = this.live;
     if (!this.live && !was) return false;
-    for (let s = 0, o = 0; s < v.length; s += 2, o += 4) {
-      b[o] = Math.round(128 + v[s] * 127);
-      b[o + 1] = Math.round(128 + v[s + 1] * 127);
-    }
+    for (let i = 0; i < v.length; i++) b[i] = Math.round(128 + v[i] * 127);
     return this.live || was;
   }
   /** Bytes written last time held a press (one more write clears them). */

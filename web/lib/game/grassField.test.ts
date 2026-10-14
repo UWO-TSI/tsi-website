@@ -79,14 +79,15 @@ describe("the bend field: grass pressed under characters, with short trails", ()
     expect(mag(f.sample(-10 + 32, 0.25))).toBe(0);
     expect(mag(f.sample(15.25, 0))).toBeGreaterThan(0.3);
   });
-  it("encodes the push into the texture's bytes around a neutral 128", () => {
+  it("encodes the push into the texture's two bytes a texel (RG) around a neutral 128", () => {
     const f = new BendField(16, 0.25, 0.9);
     f.recentre(0, 0);
+    expect(f.bytes.length).toBe(16 * 16 * 2);
     expect(f.encode()).toBe(false);
     expect(f.bytes[0]).toBe(128);
     f.press(0, 0, 0.5);
     expect(f.encode()).toBe(true);
-    const i = f.window.index(Math.round(0.25 / 0.25), 0) * 4;
+    const i = f.window.index(Math.round(0.25 / 0.25), 0) * 2;
     expect(f.bytes[i]).toBeGreaterThan(160);
     expect(Math.abs(f.bytes[i + 1] - 128)).toBeLessThan(4);
   });
