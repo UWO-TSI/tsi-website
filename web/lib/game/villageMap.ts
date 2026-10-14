@@ -29,6 +29,8 @@ import {
 export const OBJECT_KINDS = [
   "spawn", "landmark", "fitting", "missions", "bridge", "lamp", "fence", "bench", "rock",
   "tree", "bush", "flower", "study", "anchor", "gather", "puddle", "bug", "shell", "bottle",
+  // The beach campfire (specs/v1-drop.md §3; lib/game/campfireSite.ts finds open sand by the beach until one is placed).
+  "campfire",
 ] as const;
 export type ObjectKind = (typeof OBJECT_KINDS)[number];
 

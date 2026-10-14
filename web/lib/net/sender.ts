@@ -33,6 +33,7 @@ import {
   moveIndex, roomTime, studyIndex, type PosePacket, type SlowState,
 } from "./protocol";
 import type { NetSource } from "./types";
+import { SEAT_CLIPS } from "@/lib/game/character/clips";
 
 /** A position jump this big in one frame is a teleport, whatever caused it. */
 export const TELEPORT_FRAME = 2.5;
@@ -54,7 +55,6 @@ const FLAG_SLACK_MS = 250;
 const FAR_TELEPORT = 3;
 /** The longest a teleport waits for the budget before going plain anyway (ms). */
 const FLAG_WAIT_MS = 3000;
-const SEAT_CLIPS = new Set<string>(["Sit", "Study", "Stretch", "Sleep"]);
 /** Juice the room may drop first when the events budget is short. */
 const LOW_PRIORITY = new Set<number>([EV.ghost, EV.skid, EV.stand, EV.furl, EV.bonk]);
 const PENDING = 32;

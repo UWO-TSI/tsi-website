@@ -56,6 +56,11 @@ import { bagRoom } from "@/lib/game/bagStore";
 import { isTyping, worldKeysBlocked } from "@/lib/game/useWorldDialog";
 import { apiCall } from "@/lib/apiClient";
 import PlayerCharacterUI from "./character/PlayerCharacterUI";
+import EmoteWheel from "./emotes/EmoteWheel";
+import Campfire from "./campfire/Campfire";
+import DanceSync from "./dance/DanceSync";
+import { playWheelEntry } from "@/lib/game/emotePlay";
+import { campfireSite } from "@/lib/game/campfireSite";
 import { useCreatorOpen } from "@/lib/game/character/creatorPresence";
 import CharacterCrowd from "./character/CharacterCrowd";
 import OracleTemple from "./oracle/OracleTemple";
@@ -256,6 +261,8 @@ function villageLayout(v: Village) {
     /** Inside a building's footprint, with a step's margin (the glide guide never marks a ledge behind one). */
     underBuilding: (x: number, z: number) => marks.some(l => !!l.half && Math.abs(x - l.x) < l.half[0] + 0.5 && Math.abs(z - l.z) < l.half[1] + 0.5),
     fireflies: objectsOf("bush", v).map(xz),
+    /** The beach campfire (specs/v1-drop.md §3): the map's, or open sand by the beach until one is placed. */
+    campfire: campfireSite(v),
     puddles: objectsOf("puddle", v).map(xz),
     benches: objectsOf("bench", v),
     lamps: objectsOf("lamp", v),
@@ -429,6 +436,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       <EventDecor event={event} ground={island.ground} light={light} weather={weather} />
       {layout.bridges.map(b => <GLBProp key={b.id} url="/assets/acnh/props/bridge-wooden.glb" position={[b.x, b.y, b.z]} rotation={[0, b.yaw ?? 0, 0]} />)}
       <Lanterns positions={lampSpots} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />
+      {layout.campfire && <Campfire site={layout.campfire} ground={island.ground} phase={phase} player={player} />}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
       <InstancedModels items={scenery} />
       {/* Residents walk their routines on the world clock (residentRoutine.ts); during a ceremony they gather at the monument and cheer.
@@ -1075,6 +1083,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           <WarmupProbe key={sceneShown} onReady={onSceneReady} />
           {children}
           <NetWorld area={area} player={player} ready={ready && !fading && netReady} />
+          <DanceSync player={player} />
           {!inside && !atHome && site !== "ruins" && near !== "enter" && hqDoor && <LandmarkTag position={[hqDoor[0], 2.9, hqDoor[1]]}>HQ</LandmarkTag>}
           <LabelLayer focus={player} />
           {/* Last, so its frame follows the follow camera's: photo mode's free camera (v1). */}
@@ -1132,6 +1141,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <FishingOverlay rod={held?.kind === "rod" && held.tier ? rodByTier(held.tier) : peaceful.rod} onActiveChange={setFishing} />
       <ToolWheel items={wheelItems} held={heldState.held} wheelKey={wheelKeys.wheel} touch={touch} onEquip={holdItem} onSwap={() => swapHeld(wheelItems)}
         enabled={ready && !inside && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating} />
+      <EmoteWheel emoteKey={wheelKeys.emote} touch={touch} onPlay={entry => playWheelEntry(entry, player.current)}
+        enabled={ready && site !== "ruins" && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating} />
       <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} onDonated={loadMuseum} />
       <ToastHub />
       {/* What a catch, a find, a craft or a bottle gave you: one card with its art, beside the Bag's fly-in. */}

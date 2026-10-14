@@ -5,7 +5,7 @@
  * - The formation: every remote stands in a block in front of you (rows of six, 1.5 u apart, from 3.5 u out), so 1, 12
  *   or 24 of them are in view and near whatever the bots are doing. Their own motion still plays on the spot.
  * - Forced effects, staggered by player so they never all fire on one frame: an afterimage every 0.4 s (`ghost`), an
- *   emote every 3 s (`emotes`), the leaf open (`leaf`), a rod in hand with its rig idle (`rod`), the rod with a cast
+ *   emote every 3 s (`emotes`), everyone dancing in one group (`dance`), the leaf open (`leaf`), a rod in hand with its rig idle (`rod`), the rod with a cast
  *   floating 4 u ahead (`fishing`) and a movement
  *   event every 0.5 s cycling through the take-off, landing, dash, slide, glide and splash (`juice`).
  */
@@ -15,7 +15,7 @@ import { fxForced } from "@/lib/game/perf/fxBench";
 import type { FishingState } from "@/lib/game/fishingRig";
 import { EMOTE_CLIP_NAMES, type EvKind } from "@/lib/net/protocol";
 import type { RemoteSample } from "@/lib/net/types";
-import type { ClipName } from "@/lib/game/character/clips";
+import { DANCE_CLIPS, type ClipName } from "@/lib/game/character/clips";
 import type { GroundWorld, RemoteRig } from "./drive";
 import { remoteJuice, type FxGround } from "./fx";
 import { FULL } from "./lod";
@@ -48,6 +48,8 @@ export function placeInFormation(s: RemoteSample, i: number, you: THREE.Vector3,
 /** The bench's forced one-shots and holds on a Full remote this frame (`t` room seconds, `i` its rank). */
 /** The five emote clips every rig has today; the v1 wheel and dances append to EMOTE_CLIP_NAMES as their clips land. */
 const BENCH_EMOTES = EMOTE_CLIP_NAMES.slice(0, 5) as readonly ClipName[];
+/** The eight dances of the wheel (DANCE_CLIPS' first eight), one per player in turn. */
+const BENCH_DANCES = DANCE_CLIPS.slice(0, 8);
 
 export function forceMotion(r: RemoteRig, i: number, t: number, dt: number) {
   const m = r.motion, full = r.lod.tier === FULL, phase = (t + i * 0.137) % 1e6;
@@ -57,6 +59,8 @@ export function forceMotion(r: RemoteRig, i: number, t: number, dt: number) {
   if (!full) return;
   if (fxForced("ghost") && crossed(phase, dt, 0.4)) m.ghost = true;
   if (fxForced("emotes") && crossed(phase, dt, 3)) m.play = BENCH_EMOTES[Math.floor(phase / 3) % BENCH_EMOTES.length];
+  // Everyone dancing, each their own move, in one group (the block is well within 6 u): the beat sync and the notes.
+  if (fxForced("dance")) { m.pose = BENCH_DANCES[i % BENCH_DANCES.length]; m.speed = 0; m.move = null; }
   if (fxForced("fishing")) m.fishing = castFor(r);
 }
 

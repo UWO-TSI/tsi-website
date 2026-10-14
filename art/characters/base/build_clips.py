@@ -1330,6 +1330,329 @@ def craft(p):
     return plant(keys(p, CRAFT))
 
 
+# ================================================================ v1 emotes and dances (specs/v1-drop.md §3)
+# The emote wheel's ring (Clap, Bow, Shrug beside Wave, Cheer, Laugh; Sit and Sleep on the ground), the eight dances
+# and the campfire's stomp. Every dance loops on whole bars of 4/4 at 120 BPM (a beat is half a second), so the world
+# clock's beat (web/lib/game/danceSync.ts) lines up any two dancers whatever their move: a 2 s loop is one bar, a 4 s
+# loop two. Phases below: in a one-bar loop the beats fall at p = 0, 1/4, 1/2, 3/4.
+def thump(p, n, sharp=2.0):
+    """1 on each of `n` beats across the loop (p = k/n), easing to 0 between them: the dip on the beat."""
+    return (0.5 + 0.5 * math.cos(TAU * n * p)) ** sharp
+
+
+def hump(p, a, b):
+    """0 outside [a, b], a smooth rise and fall to 1 in the middle (a lifted foot's arc)."""
+    if p <= a or p >= b:
+        return 0.0
+    return math.sin(math.pi * (p - a) / (b - a)) ** 2
+
+
+def spun(v, deg):
+    """A direction in armature space turned about the vertical by `deg` (a dance that turns the whole body)."""
+    return rz(deg) @ Vector(v)
+
+
+def plant_at(P, ankles, turn=0.0, knees_out=0.25):
+    """Both feet flat on the ground at `ankles` (per side), turned about the vertical by `turn` deg with the body."""
+    q = rz(turn)
+    for s, sx in SIDES:
+        P.ik(f"{s}UpLeg", f"{s}Leg", ankles[s], q @ V(sx * knees_out, -1, 0))
+        P.world(f"{s}Foot", q)
+        P.R[f"{s}ToeBase"] = Quaternion()
+    return P
+
+
+def steps(lift=None, out=None, turn=0.0):
+    """Ankle points: each side's rest ankle moved by `out[side]` (x, y), raised by `lift[side]`, turned by `turn` deg."""
+    q = rz(turn)
+    res = {}
+    for s, _ in SIDES:
+        dx, dy = (out or {}).get(s, (0.0, 0.0))
+        a = ANKLE[s] + V(dx, dy, 0)
+        res[s] = q @ V(a.x, a.y, 0) + V(0, 0, a.z + (lift or {}).get(s, 0.0))
+    return res
+
+
+def chest_hands(P, r, l):
+    """Hands (the wrists) at chest-relative spots that lean and turn with the body: (x, y, z) offsets from Spine2's head."""
+    base, q = P.head("Spine2"), P.acc("Spine2")
+    hand(P, "Right", base + q @ V(*r))
+    hand(P, "Left", base + q @ V(*l))
+    return P
+
+
+CLAP_OPEN = ((-0.085, -0.125, 0.02), (0.085, -0.125, 0.02))
+CLAP_SHUT = ((-0.028, -0.15, 0.025), (0.028, -0.15, 0.025))
+
+
+@clip("Clap", 1.6, False)
+def clap(p):
+    """Four claps at the chest, a little bounce on each, the head nodding along; back to Idle."""
+    env = ss(0.06, 0.2, p) * (1 - ss(0.8, 0.96, p))
+    hits = (0.28, 0.42, 0.56, 0.7)
+    shut = max((math.exp(-((p - h) / 0.035) ** 2) for h in hits), default=0.0)
+    P = body(lean=4 * env, nod=(4 + 5 * shut) * env, crouch=(0.006 + 0.012 * shut) * env)
+    if env > 0.001:
+        Q = P.copy()
+        r = [o + (c - o) * shut for o, c in zip(CLAP_OPEN[0], CLAP_SHUT[0])]
+        l = [o + (c - o) * shut for o, c in zip(CLAP_OPEN[1], CLAP_SHUT[1])]
+        P = mix(P, chest_hands(Q, r, l), env)
+    return plant(P)
+
+
+def bow_keys():
+    down = body(lean=30, nod=14, crouch=0.01, shift=(0, 0.01))
+    down.rot("RightArm", Quaternion()).rot("LeftArm", Quaternion())
+    chest_hands(down, (-0.02, -0.11, -0.07), (0.07, 0.06, -0.08))          # a hand to the tummy, the other behind the back
+    up = body(lean=4, nod=2)
+    return [(0, N, "lin"), (0.3, down, "io"), (0.62, down, "lin"), (0.88, up, "io"), (1.0, N, "io")]
+
+
+BOW = bow_keys()
+
+
+@clip("Bow", 1.8, False)
+def bow(p):
+    return plant(keys(p, BOW))
+
+
+def shrug_pose(k=1.0):
+    P = body(tilt=-10 * k, nod=-3 * k, lean=-2 * k)
+    for s, sx in SIDES:
+        P.rot(f"{s}Shoulder", ry(-sx * 16 * k))
+        arm(P, s, V(sx * 0.55, -0.25, -0.8), V(sx * 0.75, -0.62, 0.25))     # elbows by the sides, forearms out, palms up
+        wrist(P, s, rx(-60 * k))
+    return P
+
+
+SHRUG = [(0, N, "lin"), (0.28, shrug_pose(), "back"), (0.68, shrug_pose(0.9), "lin"), (1.0, N, "io")]
+
+
+@clip("Shrug", 1.4, False)
+def shrug(p):
+    return plant(keys(p, SHRUG))
+
+
+GROUND_SEAT = 0.0                               # on the ground itself (a sit on the sand, the campfire ring): no seat
+
+
+def ground_sit(lean=0.0, nod=0.0, breath=0.0):
+    """Sitting on the ground, knees up: the hips down near the floor, thighs forward and up, shins down to the feet."""
+    P = body(lean=lean - 6, nod=nod, crouch=0.19)
+    P.rot("Spine1", rx(-breath * 2)).rot("Spine2", rx(-breath * 1.5))
+    for s, sx in SIDES:
+        P.aim(f"{s}UpLeg", V(sx * 0.32, -1, 0.42)).aim(f"{s}Leg", V(sx * 0.04, -0.3, -1))
+        P.world(f"{s}Foot", rx(-8))
+    return P
+
+
+@clip("SitGround", 3.0, True, ground="const", seatHeight=GROUND_SEAT)
+def sit_ground(p):
+    """Sat on the ground with the knees up, hands resting on them, breathing, looking about a little."""
+    b = math.sin(TAU * p)
+    P = ground_sit(lean=1.5 * b, nod=3 * math.sin(TAU * p + 1), breath=b)
+    P.rot("Head", rz(8 * math.sin(TAU * p + 0.6)))
+    for s, sx in SIDES:
+        knee = P.head(f"{s}Leg")
+        hand(P, s, knee + V(sx * 0.012, -0.012, 0.03))
+    return P
+
+
+@clip("SitWarm", 3.0, True, ground="const", seatHeight=GROUND_SEAT)
+def sit_warm(p):
+    """At the campfire: sat on the ground leaning in, both hands held out to the fire, rubbing them now and then."""
+    b = math.sin(TAU * p)
+    rub = math.sin(TAU * 2 * p) * hump(p, 0.45, 0.95)
+    P = ground_sit(lean=10 + 1.5 * b, nod=6 + 2 * math.sin(TAU * p + 1), breath=b)
+    chest_hands(P, (-0.06 + 0.02 * rub, -0.2, 0.0 + 0.01 * b), (0.06 + 0.02 * rub, -0.2, 0.0 + 0.01 * b))
+    for s, sx in SIDES:
+        wrist(P, s, rx(-50) @ ry(sx * 15))                              # palms to the warmth
+    return P
+
+
+@clip("DanceBounce", 2.0, True)
+def dance_bounce(p):
+    """Happy bounce: a springy dip on every beat and a little hop on two and four, fists pumping at the chest in turn,
+    swaying side to side across the bar, the head bobbing."""
+    d = thump(p, 4)
+    hop = 0.026 * max(0.0, math.sin(TAU * 4 * p)) * (1.0 if int(p * 4) % 2 == 1 else 0.0)
+    sway = math.sin(TAU * p)
+    P = body(lean=5, side=5 * sway, crouch=0.028 * d - 0.006, shift=(0.008 * sway, 0), nod=7 * d - 2, tilt=-4 * sway)
+    P.loc.z += hop
+    pump = math.sin(TAU * 2 * p)
+    chest_hands(P, (-0.085, -0.11, 0.03 + 0.045 * pump), (0.085, -0.11, 0.03 - 0.045 * pump))
+    return plant(P, lift=hop)
+
+
+SPIN_AT, SPIN_END = 0.5, 0.8125                 # the turn: from beat 1 of the second bar over two and a half beats
+
+
+@clip("DanceSpin", 4.0, True)
+def dance_spin(p):
+    """Little spin: a bar of swaying side to side with the hands up by the shoulders, then a full turn on tiptoe with
+    the arms out, a ta-da with both arms up, and back."""
+    u = min(1.0, max(0.0, (p - SPIN_AT) / (SPIN_END - SPIN_AT)))
+    a = 360.0 * u * u * (3 - 2 * u)
+    turning = hump(p, SPIN_AT - 0.03, SPIN_END + 0.03)
+    tada = hump(p, SPIN_END - 0.02, 1.0)
+    sway = math.sin(TAU * 4 * p) * (1 - ss(0.4, 0.5, p)) * ss(0.0, 0.06, p) + math.sin(TAU * 4 * p) * ss(0.94, 1.0, p)
+    d = thump(p, 8)
+    P = body(hips=rz(a), side=6 * sway, crouch=0.02 * d * (1 - turning) - 0.012 * turning, shift=(0.008 * sway, 0), tilt=-6 * sway,
+             nod=-6 * tada + 4 * d * (1 - turning))
+    P.loc.z += 0.012 * turning
+    for s, sx in SIDES:
+        sides_up = (V(sx * 0.62, -0.1, -0.35), V(sx * 0.2, -0.45, 0.85))        # hands up by the shoulders, swaying
+        wide = (V(sx * 1, -0.05, -0.08), V(sx * 1, 0.1, 0.08))                  # out wide for the turn
+        up = (V(sx * 0.66, -0.18, 0.72), V(sx * 0.45, -0.25, 0.86))             # ta-da
+        w_turn, w_up = turning * (1 - tada), tada
+        w_side = max(0.0, 1 - w_turn - w_up)
+        upper = sides_up[0] * w_side + wide[0] * w_turn + up[0] * w_up
+        fore = sides_up[1] * w_side + wide[1] * w_turn + up[1] * w_up
+        arm(P, s, spun(upper, a), spun(fore, a))
+    tip = 0.02 * turning
+    return plant_at(P, steps(lift={"Left": tip + 0.02 * hump(p, 0.55, 0.65) + 0.02 * hump(p, 0.68, 0.78),
+                                    "Right": tip + 0.02 * hump(p, 0.6, 0.7)}, turn=a), turn=a)
+
+
+@clip("DanceShuffle", 2.0, True)
+def dance_shuffle(p):
+    """Shuffle: the left foot steps out and back on one and two, the right on three and four; the hips follow the
+    weight, the shoulders twist against the step, bent arms swinging."""
+    lo, ro = hump(p, 0.0, 0.25), hump(p, 0.5, 0.75)
+    lift = {"Left": 0.03 * hump(p, 0.0, 0.12) + 0.03 * hump(p, 0.13, 0.25), "Right": 0.03 * hump(p, 0.5, 0.62) + 0.03 * hump(p, 0.63, 0.75)}
+    out = {"Left": (0.05 * lo, -0.01 * lo), "Right": (-0.05 * ro, -0.01 * ro)}
+    shift = 0.018 * (lo - ro)
+    d = thump(p, 4)
+    twist = 14 * (ro - lo)
+    P = body(twist=twist, shift=(shift, 0), crouch=0.022 * d + 0.004, side=-4 * (lo - ro), lean=6, nod=5 * d, turn=-twist * 0.6)
+    swing = math.sin(TAU * 2 * p)
+    for s, sx in SIDES:
+        arm(P, s, spun(V(sx * 0.42, 0.25 * swing * sx, -0.87), twist), spun(V(sx * 0.2, -0.9, 0.25 * swing * sx + 0.1), twist))
+    return plant_at(P, steps(lift=lift, out=out))
+
+
+@clip("DanceSway", 4.0, True)
+def dance_sway(p):
+    """Sway: slow and side to side, two beats each way, both arms up in a V waving with the lean, a soft dip on every
+    beat, the head tilting with it."""
+    sway = math.sin(TAU * p)
+    d = thump(p, 8, 1.5)
+    P = body(side=9 * sway, shift=(0.014 * sway, 0), crouch=0.016 * d + 0.004, tilt=8 * sway, nod=-4 + 3 * d, lean=-2)
+    for s, sx in SIDES:
+        wave = 0.12 * math.sin(TAU * 2 * p + sx)
+        arm(P, s, ry(9 * sway) @ V(sx * 0.8, -0.15, 0.58), ry(12 * sway) @ V(sx * (0.66 + wave), -0.2, 0.74))
+    return plant(P)
+
+
+@clip("DanceWiggle", 2.0, True)
+def dance_wiggle(p):
+    """Wiggle: knees bent, the hips wiggling side to side on every beat, jazz hands up by the shoulders shaking, the
+    head tilting the other way."""
+    w = math.sin(TAU * 4 * p)
+    P = body(hips=rz(12 * w) @ ry(5 * w), shift=(0.016 * w, 0), crouch=0.03 + 0.008 * thump(p, 8), tilt=-7 * w, lean=8, side=-4 * w, nod=3)
+    shake = math.sin(TAU * 8 * p)
+    for s, sx in SIDES:
+        arm(P, s, V(sx * 0.7, -0.3, -0.25), V(sx * 0.25, -0.35, 0.9))
+        wrist(P, s, ry(sx * 25 * shake))
+    return plant(P, knees_out=0.45)
+
+
+@clip("DanceFlail", 2.0, True)
+def dance_flail(p):
+    """Goofy flail: both arms windmilling in big loose circles out of step with each other, the body bouncing and
+    twisting, the head wobbling side to side."""
+    d = thump(p, 4)
+    tw = math.sin(TAU * 2 * p)
+    P = body(twist=12 * tw, crouch=0.024 * d, side=4 * math.sin(TAU * 4 * p + 0.5), tilt=12 * math.sin(TAU * 2 * p + 1.2), lean=4, nod=6 * d - 3)
+    for s, sx in SIDES:
+        th = TAU * 2 * p + (0.0 if s == "Right" else math.pi)
+        upper = V(sx * 0.62, -0.62 * math.cos(th) - 0.12, 0.62 * math.sin(th))
+        lag = th - 0.9
+        fore = V(sx * 0.5, -0.7 * math.cos(lag) - 0.15, 0.7 * math.sin(lag))
+        arm(P, s, spun(upper, 12 * tw), spun(fore, 12 * tw))
+    return plant(P)
+
+
+def robot_pose(k):
+    """One of the robot's eight held poses, snapped to on each half beat."""
+    turn, twist, dip = [(0, 0, 1), (0, 0, 0), (28, 10, 1), (-28, -10, 0), (0, -8, 1), (0, 8, 0), (14, 0, 1), (0, 0, 0)][k]
+    P = body(turn=turn, twist=twist, crouch=0.012 + 0.012 * dip, lean=2)
+    up, down, fwd = V(0, -0.05, 1), V(0, -0.05, -1), V(0, -1, 0.05)
+    for s, sx in SIDES:
+        side = V(sx, 0, 0)
+        if k in (0, 1):                                          # forearms up and down, swapping
+            first = (s == "Right") == (k == 0)
+            arm(P, s, side, up if first else down)
+        elif k in (2, 3):                                        # both forearms forward, elbows by the sides
+            arm(P, s, V(sx * 0.2, 0, -1), fwd)
+        elif k in (4, 5):                                        # one arm straight out in front, the other bent up
+            if (s == "Right") == (k == 4):
+                arm(P, s, spun(V(sx * 0.15, -1, 0.05), twist), spun(V(sx * 0.15, -1, 0.05), twist))
+            else:
+                arm(P, s, side, up)
+        elif k == 6:                                             # both up, bent at the elbows
+            arm(P, s, side, up)
+        else:                                                    # arms stiff at the sides, a little out
+            arm(P, s, V(sx * 0.3, 0, -1), V(sx * 0.3, 0, -1))
+    return P
+
+
+ROBOT = [robot_pose(k) for k in range(8)]
+
+
+@clip("DanceRobot", 2.0, True)
+def dance_robot(p):
+    """Robot: eight stiff held poses, snapped to on every half beat (arms at right angles, the head and torso turning
+    in jerks), a small dip with each snap."""
+    x = p * 8
+    k = int(x) % 8
+    f = x - int(x)
+    u = ss(0.0, 0.28, f)
+    P = mix(ROBOT[(k - 1) % 8], ROBOT[k], u)
+    P.loc.z -= 0.006 * math.exp(-((f - 0.2) / 0.12) ** 2)
+    return plant(P)
+
+
+def sprinkler_twist(p):
+    """Six ticks across the first three beats (snapped, held), then one sweep back on beat four."""
+    if p < 0.75:
+        x = p / 0.125
+        k, f = int(x), x - int(x)
+        return -40 + 16 * (k + ss(0.0, 0.3, f))
+    u = (p - 0.75) / 0.25
+    return 56 - 96 * (u * u * (3 - 2 * u))
+
+
+@clip("DanceSprinkler", 2.0, True)
+def dance_sprinkler(p):
+    """Sprinkler: the left hand up by the side of the head, the right arm straight out in front ticking round in six
+    snaps across the first three beats, then sweeping back on four; a knee dip with every tick."""
+    t = sprinkler_twist(p)
+    tick = 0.0 if p >= 0.75 else math.exp(-(((p / 0.125) % 1 - 0.15) / 0.15) ** 2)
+    P = body(twist=t * 0.8, crouch=0.01 + 0.014 * tick, lean=4, turn=t * 0.25, nod=2)
+    arm(P, "Right", spun(V(-0.2, -1, 0.08), t), spun(V(-0.12, -1, 0.1), t))
+    hand(P, "Left", P.head("Spine2") + P.acc("Spine2") @ V(0.2, -0.02, 0.19), V(0.6, 0.6, 0.2))
+    return plant(P)
+
+
+@clip("DanceStomp", 2.0, True)
+def dance_stomp(p):
+    """The campfire's liberation stomp: a foot lifted high and stomped down on every beat (the left on one and three,
+    the right on two and four), both arms thrown up in a V and pumping with the stomps, chest out, head back, joyful."""
+    lift, out = {}, {}
+    for s, beats in (("Left", (0.0, 0.5)), ("Right", (0.25, 0.75))):
+        h = sum(hump((p - b + 0.2) % 1.0, 0.0, 0.2) for b in beats)          # up through the fifth of a bar before its beat
+        lift[s] = 0.075 * h
+        out[s] = (0.0, -0.025 * h)
+    d = thump(p, 4, 3.0)
+    lean = lift["Left"] - lift["Right"]
+    P = body(lean=-7, nod=-12 + 6 * d, crouch=0.03 * d + 0.006, side=-40 * lean, shift=(-0.25 * lean, 0), tilt=30 * lean)
+    for s, sx in SIDES:
+        pump = 0.12 * d
+        arm(P, s, V(sx * 0.8, -0.18, 0.56 - pump), V(sx * 0.66, -0.26, 0.72))
+    return plant_at(P, steps(lift=lift, out=out), knees_out=0.35)
+
+
 # ================================================================ verb library (classes v2, design sheet §1.8)
 # Sixteen shared verbs, each authored once right-handed (the lead hand is the right) as key poses, and six grip
 # adapters: where the off hand sits, and a mirror for the grips held in the left hand (the bow, the pistol), so the
@@ -2913,6 +3236,67 @@ def render_verb_evidence(cat):
     print("wrote", EVIDENCE)
 
 
+V1_CLIPS = ("Clap", "Bow", "Shrug", "SitGround", "SitWarm", "DanceBounce", "DanceSpin", "DanceShuffle", "DanceSway", "DanceWiggle",
+            "DanceFlail", "DanceRobot", "DanceSprinkler", "DanceStomp")
+V1_EVIDENCE = os.path.join(HERE, "..", "..", "..", "specs", "evidence", "v1-emotes", "clips-sheet.webp")
+
+
+def render_v1_clips(out, names=V1_CLIPS):
+    """The v1 emotes and dances (specs/v1-drop.md §3), each at six phases, front three-quarter, on the body this build
+    loaded (`-- head v7 v1-evidence`; `v1-preview` bakes only these, exports nothing and writes /tmp/v1-clips.webp)."""
+    import subprocess, tempfile
+    tmp = tempfile.mkdtemp(prefix="v1_clips_")
+    try:
+        sc.render.engine = "BLENDER_EEVEE"
+    except TypeError:
+        pass
+    sc.view_settings.view_transform = "Standard"
+    sc.render.resolution_x = sc.render.resolution_y = int(os.environ.get("V1_RES", "200"))
+    sc.render.film_transparent = False
+    w = bpy.data.worlds.new("W")
+    sc.world = w
+    w.use_nodes = True
+    bg = next(n for n in w.node_tree.nodes if n.type == "BACKGROUND")
+    bg.inputs[0].default_value, bg.inputs[1].default_value = (0.86, 0.84, 0.76, 1), 0.9
+    sun = bpy.data.objects.new("Sun", bpy.data.lights.new("Sun", "SUN"))
+    sun.data.energy = 3.2
+    sun.rotation_euler = (math.radians(50), 0, math.radians(30))
+    sc.collection.objects.link(sun)
+    cam = bpy.data.objects.new("Cam", bpy.data.cameras.new("Cam"))
+    cam.data.type, cam.data.ortho_scale = "ORTHO", 1.45
+    cam.location = Vector((1.35, -2.1, 0.62))
+    cam.rotation_euler = (Vector((0, 0, 0.47)) - cam.location).to_track_quat("-Z", "Y").to_euler()
+    sc.collection.objects.link(cam)
+    sc.camera = cam
+    kit.show_vertex_colors(sc)
+    by = {c["name"]: c for c in CLIPS}
+    files = []
+    for name in names:
+        c = by[name]
+        for phase in (0.0, 0.17, 0.33, 0.5, 0.67, 0.83):
+            rig.animation_data.action = bpy.data.actions[name]
+            sc.frame_set(round(phase * c["frames"]))
+            sc.render.filepath = os.path.join(tmp, f"{name}_{phase:.2f}.png")
+            bpy.ops.render.render(write_still=True)
+            files += ["-label", f"{name} {phase:.2f}", sc.render.filepath]
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    sheet = os.path.join(tmp, "sheet.png")
+    subprocess.run(["magick", "montage", *files, "-tile", "6x", "-geometry", "+3+3", "-background", "#1b1f27", "-fill", "#f1ffff",
+                    "-pointsize", "12", "-font", "/System/Library/Fonts/Supplemental/Arial.ttf", sheet], check=True)
+    subprocess.run(["magick", sheet, "-quality", "86", out], check=True)
+    print("wrote", out)
+
+
+if "v1-preview" in ARGS:
+    only = ARGS[ARGS.index("v1-preview") + 1].split(",") if len(ARGS) > ARGS.index("v1-preview") + 1 else list(V1_CLIPS)
+    for c in CLIPS:
+        if c["name"] in only:
+            bake(c)
+            worst, lowest = check(c["name"], c["frames"])
+            print(f"CLIP {c['name']:14s} head_intrusion={worst:5.3f} min_z={lowest:+.3f}")
+    render_v1_clips(os.environ.get("V1_PREVIEW_OUT", "/tmp/v1-clips.webp"), [n for n in V1_CLIPS if n in only])
+    raise SystemExit(0)
+
 if VERBS_MODE:
     verbs = verb_clips()
     cat = []
@@ -2977,3 +3361,5 @@ else:
                                         "character's back (+Y Blender, -Z glTF). hand = the socket that holds the weapon."})
     kit.update_catalog("clips", catalog)
     print("CLIPS_OK", len(catalog))
+    if "v1-evidence" in ARGS:
+        render_v1_clips(V1_EVIDENCE)

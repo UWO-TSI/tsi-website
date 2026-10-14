@@ -6,7 +6,7 @@ import { CLIP_BY_NAME } from "@/lib/game/character/look";
 import { getPeacefulTarget } from "@/lib/game/peacefulNear";
 import { HOME_S, castBeat, live, newCast, throwCast, type FishingState } from "@/lib/game/fishingRig";
 import { readHoldUpCatch } from "@/lib/game/fishingPrefs";
-import type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
+import { SEAT_CLIPS, isLoop, type CharacterMotion, type ClipName } from "@/lib/game/character/clips";
 
 /**
  * World interactions → player clips (row 111), shared by the outdoor and
@@ -24,7 +24,7 @@ import type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
  *     bug, Dig at a shovel find, otherwise Forage;
  *   tsi:flower-pick → Forage; tsi:critter-catch → Net
  *   tsi:act {clip, at?} → that clip, turned to face `at` (the workbench's Craft, the bottle's Pickup)
- *   tsi:emote {clip} → any catalogue clip as a one-shot (emote menu, study, admin tools)
+ *   tsi:emote {clip} → any catalogue clip as a one-shot (the emote wheel, study, admin tools); over the upper body while seated
  */
 const ACT_CLIP = { bug: "Net", dig: "Dig", forage: "Forage" } as const;
 /** The held poses a cast leaves you in; the cast's end lets them go. */
@@ -96,7 +96,12 @@ export function useWorldClips(motion: RefObject<CharacterMotion>, face: (x: numb
         set({ play: d.clip });
       },
       "tsi:critter-catch": () => set({ play: "Net" }),
-      "tsi:emote": e => { const clip = (e as CustomEvent<{ clip: ClipName }>).detail?.clip; if (clip && CLIP_BY_NAME.has(clip)) set({ play: clip }); },
+      // Seated (a bench, the ground, the campfire's rings), a one-shot plays over the upper body, as a remote shows it.
+      "tsi:emote": e => {
+        const clip = (e as CustomEvent<{ clip: ClipName }>).detail?.clip, pose = motion.current.pose;
+        if (!clip || !CLIP_BY_NAME.has(clip)) return;
+        set(pose && SEAT_CLIPS.has(pose) && !isLoop(clip) ? { upper: clip } : { play: clip });
+      },
     };
     for (const [name, fn] of Object.entries(on)) window.addEventListener(name, fn);
     return () => { for (const [name, fn] of Object.entries(on)) window.removeEventListener(name, fn); };
