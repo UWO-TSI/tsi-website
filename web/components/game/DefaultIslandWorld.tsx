@@ -759,6 +759,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     actions.detect({ liteMode: tier === "light" });
   }, [actions]);
   const liteMode = graphics.liteMode;
+  // The canvas's resolution: half with the pixel finish; without it up to 1.5 device pixels per CSS pixel, but never
+  // past 1 on Lite (the weaker GPUs Lite is for draw every extra pixel; v1 performance, specs/perf/2026-10-v1-results.md).
+  const canvasDpr: number | [number, number] = graphics.pixelated ? 0.5 : liteMode ? 1 : [1, 1.5];
   const castShadows = graphics.shadows && !liteMode;
   // The creator and the wardrobe cover the screen: the island stops drawing under them (it resumes as they close).
   const creatorOpen = useCreatorOpen();
@@ -1039,7 +1042,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   }, [act, near, inside, atHome, decor, identity.settings, greeting, nextLine, finishWelcome, site, abilityKeys, sheet, bagOpen, donateOpen, reveal, fading]);
   return (
     <main className={`${styles.world} gui`} data-light={phase} data-inside={inside ?? undefined} data-site={site} data-trip={trip.active || undefined} data-cinematic={hudCinematic || undefined} data-compact={compact || undefined} data-photo={photo.open || undefined}>
-      <Canvas ref={canvasRef} tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={graphics.pixelated ? 0.5 : [1, 1.5]}
+      <Canvas ref={canvasRef} tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={canvasDpr}
         camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false} frameloop={creatorOpen ? "never" : "always"}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
         <Suspense fallback={null}>
@@ -1066,7 +1069,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           <SunShadows />
           <Performance player={player} output={perfOutput} />
           {DEV && <PerfProbe />}
-          <QualityGovernor dpr={graphics.pixelated ? 0.5 : [1, 1.5]} scene={`${site}:${inside ?? ""}`} />
+          <QualityGovernor dpr={canvasDpr} scene={`${site}:${inside ?? ""}`} />
           <QualityProbe onTier={onTier} />
           <SeatWatch onChange={setSeated} />
           <WarmupProbe key={sceneShown} onReady={onSceneReady} />
