@@ -15,7 +15,7 @@
 import * as THREE from "three";
 import { WATER_DROP } from "@/lib/game/grid";
 import { CLIP_BY_NAME, VERB_BY_NAME } from "@/lib/game/character/look";
-import type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
+import { SEAT_CLIPS, type CharacterMotion, type ClipName } from "@/lib/game/character/clips";
 import { createRemoteSample, type RemoteEntry, type RemoteEvent, type RemoteSample } from "@/lib/net/types";
 import { FULL, HIDDEN, LOD, createLodEntry, type LodEntry } from "./lod";
 import { createFxState, type FxState } from "./fx";
@@ -26,8 +26,12 @@ import { isEmoteClip } from "@/lib/net/protocol";
 export interface GroundWorld { top(x: number, z: number): number; wet(x: number, z: number): boolean }
 export const FLAT_GROUND: GroundWorld = { top: () => 0, wet: () => false };
 
-/** Clips a seat holds (PlayerAvatar SEAT_CLIPS): there the wire's `lift` is the seat's, and a one-shot goes to the upper body. */
-export const SEAT_CLIPS: ReadonlySet<string> = new Set(["Sit", "Study", "Stretch", "Sleep"]);
+/**
+ * Clips a seat holds (lib/game/character/clips SEAT_CLIPS: a bench, a bed, the ground, the campfire's rings): there the
+ * wire's `lift` is the seat's, they stand still in it however the seat moves (the stomp ring carries a dancer round
+ * the fire), and a one-shot goes to the upper body.
+ */
+export { SEAT_CLIPS };
 /** Movement states on the ground: their speed paces the clip (any other plays at speed 0, as PlayerAvatar has it). */
 const GROUND_MOVES: ReadonlySet<string> = new Set(["CrouchWalk", "CrouchIdle"]);
 /** A clip this rig has (the village set or the verb library). */

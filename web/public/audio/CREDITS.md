@@ -9,6 +9,25 @@ The applicant music has separate terms documented beneath the table.
 | `sfx/footstep.ogg`, `sfx/enter.ogg`, `sfx/exit.ogg` | [Kenney RPG Audio](https://kenney.nl/assets/rpg-audio) | CC0 |
 | `sfx/click.ogg`, `sfx/confirm.ogg` | [Kenney Interface Sounds](https://kenney.nl/assets/interface-sounds) | CC0 |
 
+## Campfire drums (CC0)
+
+The campfire's drum song (`lib/game/campfire.ts` DRUM_LAYERS, one layer per dancer, six for the full song) and the
+soft beat near a group of dancers (SOFT_BEAT). Each source's Freesound page states **Creative Commons 0**
+(https://creativecommons.org/publicdomain/zero/1.0/), checked 2026-10-13; David approved CC0 drum loops for v1. Each
+was taken from its page's high-quality preview, cut to whole bars at 120 BPM from its start (the shaker 33 ms in, onto
+the grid), levelled (EBU R128) and encoded as Ogg Opus 96 kbps, 48 kHz stereo, with a soft limiter. No credit is
+required; it is kept here so the source of every file stays known.
+
+| File | Source | Author | Licence | Cut |
+|---|---|---|---|---|
+| `drums/taiko.ogg` | [Taiko Drumloop 001 (120)](https://freesound.org/people/Xinematix/sounds/491277/) | Xinematix | CC0 | 4 bars, 8.000 s, −18 LUFS |
+| `drums/djembe.ogg` | [Djembe Loop 11 - 120 BPM.wav](https://freesound.org/people/Ancient.Sounds/sounds/485401/) | Ancient.Sounds | CC0 | 2 bars, 4.000 s, −20 LUFS |
+| `drums/bongos.ogg` | [120bpm_tumbao_on_bongos_1.flac](https://freesound.org/people/KJose/sounds/610356/) | KJose | CC0 | 2 bars, 4.000 s, −20 LUFS |
+| `drums/doumbek.ogg` | [Syncopated1-120.wav](https://freesound.org/people/hollandm/sounds/691767/) | hollandm | CC0 | 2 bars, 4.000 s, −21 LUFS |
+| `drums/shaker.ogg` | [Shaker_pattern_1_120bpm.wav](https://freesound.org/people/leonseptavaux/sounds/707188/) | leonseptavaux | CC0 | 4 bars from 0.033 s, 8.000 s, −22 LUFS |
+| `drums/tambourine.ogg` | [Tambourine_Loop_120bpm.wav](https://freesound.org/people/radiopassiveboy/sounds/219255/) | radiopassiveboy | CC0 | 4 bars, 8.000 s, −22 LUFS |
+| `drums/softbeat.ogg` | [Tap-Crotchets-120.wav](https://freesound.org/people/hollandm/sounds/691769/) | hollandm | CC0 | 2 bars, 4.000 s, −24 LUFS |
+
 ## Applicant music: Stream Cafe
 
 Music by **Stream Cafe**: https://youtu.be/TQvXEza4fPc

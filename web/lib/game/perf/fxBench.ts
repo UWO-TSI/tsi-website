@@ -15,7 +15,7 @@ import { resetTuning, setTuning, type Tuning } from "@/lib/game/tuning";
 export const FX_BENCH = process.env.NODE_ENV !== "production";
 
 /** The effects the bench switches, on the other players (specs/perf/effects-cost.md has what each one covers). */
-export const FX_KEYS = ["auraFamily", "auraSubclass", "dust", "juice", "ghost", "leaf", "held", "weapon", "rod", "fishing", "plates", "shadows", "emotes", "interp"] as const;
+export const FX_KEYS = ["auraFamily", "auraSubclass", "dust", "juice", "ghost", "leaf", "held", "weapon", "rod", "fishing", "plates", "shadows", "emotes", "interp", "dance"] as const;
 export type FxKey = (typeof FX_KEYS)[number];
 /** World costs the bench can switch off (not other players' effects: `fxoff=all` leaves these on). */
 export const WORLD_KEYS = ["skyDome"] as const;

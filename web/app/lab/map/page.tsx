@@ -184,9 +184,10 @@ const OBJECT_STYLE: Record<ObjectKind, { color: string; r: number; label: string
   bug: { color: "#f0e36c", r: 0.22, label: "bug spot" },
   shell: { color: "#fff5e0", r: 0.22, label: "shell" },
   bottle: { color: "#7fe0d8", r: 0.25, label: "bottle spot" },
+  campfire: { color: "#ff6a2a", r: 0.8, label: "campfire" },
 };
 /** Placement palette order. */
-const PALETTE: readonly ObjectKind[] = ["landmark", "tree", "bush", "flower", "rock", "bench", "fence", "lamp", "bridge", "study", "anchor", "gather", "spawn", "fitting", "missions", "puddle", "bug", "shell", "bottle"];
+const PALETTE: readonly ObjectKind[] = ["landmark", "tree", "bush", "flower", "rock", "bench", "fence", "lamp", "bridge", "study", "anchor", "gather", "spawn", "fitting", "missions", "puddle", "bug", "shell", "bottle", "campfire"];
 const ROCK_MODELS = Object.keys(PROP_FOOTPRINT).filter((m) => m.startsWith("rock-"));
 const FENCE_MODELS = Object.keys(PROP_FOOTPRINT).filter((m) => m.startsWith("fence-"));
 const BUG_BIOMES = ["water_edge", "ground"];
