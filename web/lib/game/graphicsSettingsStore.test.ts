@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { automaticGraphics, createGraphicsSettingsStore, GRAPHICS_KEYS } from "./graphicsSettingsStore";
+import { automaticGraphics, createGraphicsSettingsStore, glassWaterOn, GRAPHICS_KEYS } from "./graphicsSettingsStore";
 
 function fixture(memory = 8) {
   const saved = new Map<string, string>();
@@ -29,7 +29,7 @@ describe("shared graphics settings", () => {
   it("reads existing keys without overwriting them and ignores malformed boolean values", () => {
     const { store, saved } = fixture(4);
     saved.set(GRAPHICS_KEYS.liteMode, "false"); saved.set(GRAPHICS_KEYS.bloom, "true"); saved.set(GRAPHICS_KEYS.pixelated, "garbage");
-    expect(store.getSnapshot()).toEqual({ liteMode: false, bloom: true, shadows: false, ghostsEnabled: true, pixelated: true });
+    expect(store.getSnapshot()).toEqual({ liteMode: false, bloom: true, shadows: false, ghostsEnabled: true, pixelated: true, glassWater: true });
     expect(saved.size).toBe(3);
   });
   it("handles updates and clear events from another tab, ignoring unrelated keys", () => {
@@ -93,5 +93,21 @@ describe("shared graphics settings", () => {
     store.unset("liteMode");
     expect(store.isExplicit("liteMode")).toBe(false);
     expect(store.getSnapshot().liteMode).toBe(true);
+  });
+});
+
+// v1 water item 5: glass water (the refraction wobble under the surface) is High's only, on by default, with a toggle.
+describe("glass water", () => {
+  it("is on by default on High and stays off on Lite whatever the toggle says", () => {
+    expect(automaticGraphics(8).glassWater).toBe(true);
+    expect(glassWaterOn({ liteMode: false, glassWater: true })).toBe(true);
+    expect(glassWaterOn({ liteMode: false, glassWater: false })).toBe(false);
+    expect(glassWaterOn({ liteMode: true, glassWater: true })).toBe(false);
+  });
+  it("keeps the player's choice", () => {
+    const { store, saved } = fixture();
+    store.set("glassWater", false);
+    expect(saved.get(GRAPHICS_KEYS.glassWater)).toBe("false");
+    expect(store.getSnapshot().glassWater).toBe(false);
   });
 });

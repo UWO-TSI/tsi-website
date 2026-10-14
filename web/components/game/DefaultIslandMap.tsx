@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { Surface, surfaceAt } from "@/lib/game/grid";
-import { landmarks, villageScale, wharfDeck } from "@/lib/game/defaultIsland";
+import { landmarks, villageScale, wharfDecks } from "@/lib/game/defaultIsland";
 import { WATER_CLASS, villageWater } from "@/lib/game/fishingSpots";
 import { village } from "@/lib/game/villageMap";
 import type { MiniMapPlot } from "./MiniMap";
@@ -37,10 +37,10 @@ export function useDefaultIslandPlot(opened: readonly string[] = []): MiniMapPlo
         }
       }
     }
-    const { x0, x1, z0, z1 } = villageScale(v).minimap, deck = wharfDeck(v);
+    const { x0, x1, z0, z1 } = villageScale(v).minimap, decks = wharfDecks(v);
     const content = <g transform="scale(-1 1)">
       {runs.map((r, i) => <rect key={i} x={r.x} y={-(r.z + 0.5)} width={r.w} height={1.02} fill={r.fill} />)}
-      {deck && <rect x={deck.x0} y={-deck.z1} width={deck.x1 - deck.x0} height={deck.z1 - deck.z0} fill="#B98C60" />}
+      {decks.map((deck, i) => <rect key={i} x={deck.x0} y={-deck.z1} width={deck.x1 - deck.x0} height={deck.z1 - deck.z0} fill="#B98C60" />)}
       {landmarks(v, openedKey.split(",")).filter(l => l.half).map(l => <rect key={l.id} x={l.x - l.half![0]} y={-l.z - l.half![1]} width={l.half![0] * 2} height={l.half![1] * 2} rx={0.5}
         fill={l.color} opacity={l.open ? 1 : 0.55} stroke={l.open ? "rgba(0,0,0,0.3)" : "#3b2f25"} strokeWidth={0.35} strokeDasharray={l.open ? undefined : "0.8 0.6"}>
         <title>{l.open ? l.label : `${l.label} (closed)`}</title></rect>)}

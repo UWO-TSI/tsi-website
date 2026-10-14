@@ -66,6 +66,8 @@ export const LANDMARK_IDS = Object.keys(LANDMARK_INFO) as LandmarkId[];
 
 /** Wharf stub deck (walkable over the water), relative to the wharf before its yaw. */
 export const WHARF_DECK_LOCAL = { x0: -0.9, x1: 0.9, z0: -3.5, z1: 2 };
+/** The finger pier off the wharf's tip (v1 water, lib/game/wharf.ts FINGER), walkable inside its posts, relative before its yaw. */
+export const WHARF_FINGER_LOCAL = { x0: -4.62, x1: -0.85, z0: -3.4, z1: -2.35 };
 /**
  * Wooden bridge deck, relative, before its yaw: the model spans ±1.9 along x, its rails at ±1.45 across. The deck
  * stops 1.0 out so a body (0.2 probes, about 0.3 wide) walks clear of the rails.
@@ -142,6 +144,11 @@ function turnedRect(x: number, z: number, r: { x0: number; x1: number; z0: numbe
 export function wharfDeck(v: Village = village()) {
   const w = landmark("wharf", v);
   return w ? turnedRect(w.x, w.z, WHARF_DECK_LOCAL, w.yaw) : null;
+}
+/** Every walkable deck of the wharf in world XZ: the jetty and its finger pier. */
+export function wharfDecks(v: Village = village()) {
+  const w = landmark("wharf", v);
+  return w ? [WHARF_DECK_LOCAL, WHARF_FINGER_LOCAL].map(r => turnedRect(w.x, w.z, r, w.yaw)) : [];
 }
 
 /** Walkable bridge decks in world XZ. */
@@ -275,7 +282,7 @@ export function islandOf(v: Village): VillageIsland {
   const { map, field } = v;
   const ground = (x: number, z: number) => sampleGroundHeight(map, field, x, z);
   const surface = (x: number, z: number) => drawnSurfaceAt(map, x, z);
-  const decks = [wharfDeck(v), ...bridgeDecks(v)].filter(d => d !== null);
+  const decks = [...wharfDecks(v), ...bridgeDecks(v)];
   const rails = bridgeRails(v);
   const solids = landmarks(v).filter(l => l.half);
   const props = propsOf(v).flatMap(o => {

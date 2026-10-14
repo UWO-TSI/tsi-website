@@ -10,6 +10,9 @@
 //   grassHalf the blade field at half its clumps (GrassField, tuning grass.density 0.5; shipped 1);
 //   grass0    no blades at all;
 //   rocksOff  the cliff-foot boulders off (lib/game/perf/fxBench.ts `cliffBoulders`; the v1 land pass).
+// v1 water (VARIANTS=water): each piece of the water pass off against the water as shipped:
+//   seabedOff the seabed's props; foamOff the foam rings; glassOff glass water (High's refraction wobble); fishOff the
+//   decorative fish (lib/game/perf/fxBench.ts WORLD_KEYS).
 // The title has no probe and no switches: its frame and main-thread time are sampled alone (`title`).
 // Headed, off to the side, muted, never brought to the front; the real GPU; uncapped.
 import { createRequire } from "node:module";
@@ -25,12 +28,18 @@ if (process.env.PIXEL === "0") TIER["tsi.pixelated.v1"] = "false";
 const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_curtain", back: "back_bob", top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: {} });
 const BASE = "time=day&weather=clear&season=summer";
 const URLS = { village: `/lab/island?${BASE}&bots=24`, v2: `/lab/island?${BASE}&fixture=v2&bots=24`, title: "/student?time=day" };
-const VARIANTS = {
+const ALL_VARIANTS = {
   domeOff: { off: ["skyDome"], tune: null },
   grassHalf: { off: [], tune: ["grass", "density", 0.5] },
   grass0: { off: [], tune: ["grass", "density", 0] },
   rocksOff: { off: ["cliffBoulders"], tune: null },
+  seabedOff: { off: ["seabed"], tune: null },
+  foamOff: { off: ["foamRings"], tune: null },
+  glassOff: { off: ["glassWater"], tune: null },
+  fishOff: { off: ["fish"], tune: null },
 };
+const SETS = { world: ["domeOff", "grassHalf", "grass0", "rocksOff"], water: ["seabedOff", "foamOff", "glassOff", "fishOff"] };
+const VARIANTS = Object.fromEntries((SETS[process.env.VARIANTS ?? "world"] ?? (process.env.VARIANTS ?? "").split(",")).map(k => [k, ALL_VARIANTS[k]]));
 const SHIPPED = { off: [], tune: null };
 
 const browser = await chromium.launch({ headless: false, args: ["--mute-audio", "--window-position=2400,0", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-precise-memory-info", "--disable-gpu-vsync", "--disable-frame-rate-limit"] });

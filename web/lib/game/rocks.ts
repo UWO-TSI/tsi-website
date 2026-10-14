@@ -1,6 +1,6 @@
 import {
   type IslandMap, CLIFF_LEVELS, ORTHOGONAL, OVERLAY_SURFACES, Surface, WATER_DROP, cellToWorldX, cellToWorldZ, dropTo, heightField, inBounds,
-  isGroundAtWorld, isRamp, levelAt, needsCliff, overlayAt, sampleGroundHeight, surfaceAt,
+  isGroundAtWorld, isRamp, levelAt, needsCliff, overlayAt, sampleGroundHeight, surfaceAt, terrainOf,
 } from "./grid";
 import type { MapObject } from "./villageMap";
 
@@ -58,8 +58,22 @@ function footChosen(map: IslandMap, cx: number, cz: number, k: number): boolean 
   return dropTo(map, cx, cz, cx + dx, cz + dz) >= CLIFF_LEVELS && rand(cx, cz, k) < FOOT_CHANCE;
 }
 
+/**
+ * Each map's boulders, kept with its derived terrain: a cell edit (`setCell` forgets the terrain) recomputes them, and
+ * the renderer and the water's foam rings share one list.
+ */
+const BOULDERS = new WeakMap<object, RockPlacement[]>();
+
 /** The boulders at the foot of every cliff wall, as the map's cliff cells imply them. */
-export function cliffBoulders(map: IslandMap, field: Float32Array = heightField(map)): RockPlacement[] {
+export function cliffBoulders(map: IslandMap, field?: Float32Array): RockPlacement[] {
+  const key = terrainOf(map), hit = BOULDERS.get(key);
+  if (hit) return hit;
+  const out = placeBoulders(map, field ?? heightField(map));
+  BOULDERS.set(key, out);
+  return out;
+}
+
+function placeBoulders(map: IslandMap, field: Float32Array): RockPlacement[] {
   const out: RockPlacement[] = [];
   for (let cz = 0; cz < map.depth; cz++) for (let cx = 0; cx < map.width; cx++) {
     if (!needsCliff(map, cx, cz)) continue;
