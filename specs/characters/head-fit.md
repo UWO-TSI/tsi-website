@@ -279,9 +279,11 @@ LOD 1 is about half: `build_lod.py` welds the cards, splits their three-way junc
 | Shadow draws per character | the same | the same |
 | Materials per character | the shared body + its own face | the same |
 | Vertex attributes per vertex | 6 floats (unused lock sheen) | 5 floats (hair map channels and accent) |
-| New shared texture | none | hair atlas, about 11 MB, only once a mapped style is worn |
+| New shared texture | none | hair atlas, about 14 MB on the GPU with mipmaps, only once a mapped style is worn |
 
 **LOD 1 coverage:** every catalogue part has one (`look.test.ts`).
+
+**Measured** (`npm run perf:check`, `specs/evidence/head-fit/perf-check.txt`): passed on all eight scene and tier pairs. Draw calls and triangles stay within 1% of the baseline in the village, v2 and ruins scenes. A cafe A/B with 24 bots, run as two builds that differ only in whether the bots may wear David's styles, comes out at 140 and 145 draws and 69,343 and 77,827 triangles (with and without them).
 
 **LOD 0 changes:**
 - `bangs_hime` went from 634 to 644 triangles: its side locks need more segments over the jaw.
