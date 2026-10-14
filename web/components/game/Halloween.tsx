@@ -69,7 +69,7 @@ function PumpkinLanterns({ spots, ground, light }: { spots: readonly PumpkinSpot
   }, [world, anchors, contact]);
   // Dim by day (a candle in daylight), bright after dark: the porch-light curve the windows follow.
   useFrame((_, raw) => {
-    const target = 0.25 + 2.4 * windowLit(light), dt = Math.min(raw, 0.1);
+    const target = 0.3 + 3.4 * windowLit(light), dt = Math.min(raw, 0.1);
     easeGlow(glow, target, dt);
   });
   return <>

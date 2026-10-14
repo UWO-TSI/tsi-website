@@ -11,7 +11,8 @@ import { objectsOf, type Village } from "./villageMap";
 import type { IslandLight } from "./islandLighting";
 
 export const PUMPKIN_URL = "/assets/game/props/pumpkin-lantern.glb";
-/** A pumpkin's body (its footprint): placements keep this clear of each other. */
+/** A pumpkin's body (its footprint): placements keep this clear of each other. Its carved face is the model's −z, so a
+ * yaw of 0 turns it to the game's camera (which looks along +z). */
 const PUMPKIN_R = 0.3;
 
 export interface PumpkinSpot { x: number; z: number; yaw: number; scale: number; /** What it stands by. */ by: string }
@@ -54,13 +55,13 @@ export function pumpkinSpots(v: Village, standable: (x: number, z: number) => bo
   };
   for (const l of objectsOf("lamp", v)) {
     const a = hash01(l.id) * Math.PI * 2;
-    add(l.x + Math.cos(a) * 0.5, l.z + Math.sin(a) * 0.5, Math.PI, `lamp:${l.id}`);
+    add(l.x + Math.cos(a) * 0.5, l.z + Math.sin(a) * 0.5, 0, `lamp:${l.id}`);
   }
   for (const l of landmarks(v).filter(m => DOOR_HOMES.includes(m.id))) {
-    const facing = (l.yaw ?? 0) + Math.PI; // the door looks out along the building's −z
+    const facing = l.yaw ?? 0; // the carved face (the model's −z) looks out the way the door does, the building's −z
     for (const side of [KNOCK_SIDE, -KNOCK_SIDE]) add(...besideDoor(l, side, KNOCK_OUT), facing, `door:${l.id}`);
   }
-  for (const a of objectsOf("anchor", v)) for (const [dx, dz] of [[-1.3, 0.5], [1.3, -0.4]]) add(a.x + dx, a.z + dz, Math.PI, `anchor:${a.id}`);
+  for (const a of objectsOf("anchor", v)) for (const [dx, dz] of [[-1.3, 0.5], [1.3, -0.4]]) add(a.x + dx, a.z + dz, 0, `anchor:${a.id}`);
   return out;
 }
 
