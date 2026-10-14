@@ -22,12 +22,30 @@
 
 import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { EffectComposer, Bloom, FXAA, N8AO, TiltShift2, ToneMapping, Vignette } from "@react-three/postprocessing";
+import { EffectComposer, Bloom, DepthOfField, FXAA, N8AO, TiltShift2, ToneMapping, Vignette } from "@react-three/postprocessing";
 import { createGraphicsContextStore } from "@/lib/game/graphicsContext";
 import type { Grade } from "@/lib/game/grading";
 import type { LookFx, ToneMap } from "@/lib/game/lookPreset";
-import { BlendFunction, Effect, ToneMappingMode } from "postprocessing";
+import { BlendFunction, Effect, ToneMappingMode, type DepthOfFieldEffect } from "postprocessing";
 import { Uniform, Vector3, type Scene } from "three";
+
+/**
+ * Photo mode's depth of field (v1, components/game/photo): only while photo mode is open with Focus above 0, so it costs
+ * nothing otherwise. It focuses on `at` (you, written by the photo camera each frame) and blurs by how far things are
+ * from it; `strength` 0..1 sets the bokeh.
+ */
+function PhotoFocus({ at, strength }: { at: Vector3; strength: number }) {
+  const ref = useRef<DepthOfFieldEffect>(null);
+  // The strength through the effect's own setters (a prop change would rebuild it and compile its shaders again).
+  useFrame(() => {
+    const e = ref.current;
+    if (!e) return;
+    e.target?.copy(at);
+    e.bokehScale = 1 + strength * 5;
+    e.cocMaterial.focusRange = 1.4 + (1 - strength) * 6;
+  });
+  return <DepthOfField ref={ref} target={[0, 0, 0]} focusRange={4} bokehScale={2} />;
+}
 
 // Pastel master grade (AC-reference calibration, 2026-07-14 — David's
 // snapshots in specs/references/acnh measure mean outdoor saturation
@@ -125,11 +143,13 @@ interface PostFXProps {
   grade: Grade;
   /** Look preset post (lookPreset.ts). */
   fx: LookFx;
+  /** Photo mode's depth of field (v1): its focus point and strength; null or a strength of 0 is off. */
+  dof?: { at: Vector3; strength: number } | null;
 }
 
 const TONE_MAPPING: Record<ToneMap, ToneMappingMode> = { neutral: ToneMappingMode.NEUTRAL, aces: ToneMappingMode.ACES_FILMIC, agx: ToneMappingMode.AGX };
 
-export default function PostFX({ antialias = false, grade: g, fx }: PostFXProps) {
+export default function PostFX({ antialias = false, grade: g, fx, dof = null }: PostFXProps) {
   const pastel = useMemo(() => new PastelEffect(), []);
   const gl = useThree((s) => s.gl);
   const context = useMemo(() => createGraphicsContextStore(gl.getContext(), gl.domElement), [gl]);
@@ -158,6 +178,7 @@ export default function PostFX({ antialias = false, grade: g, fx }: PostFXProps)
       {/* FXAA samples neighboring input pixels. Run it before the merged grade
           so its center and neighbor samples use the same color space. */}
       {antialias ? <FXAA /> : <></>}
+      {dof && dof.strength > 0 ? <PhotoFocus at={dof.at} strength={dof.strength} /> : <></>}
       <Vignette
         offset={0.32}
         darkness={g.vignette ?? 0.4}

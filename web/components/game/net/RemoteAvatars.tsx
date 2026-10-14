@@ -11,8 +11,9 @@
  *
  * Effects belong to the avatar that acted (look spec §7.1), at Full only: their footsteps' dust (the village and the
  * café), the juice of each move they made (fx.ts, 0.7 of yours), the dash's afterimage, and their class aura (at most
- * 8). Never a sound, a camera kick, a flash or slow motion for someone else's move. Nameplates come from one pool of 12
- * (Nameplates.tsx), handed out at each re-tier.
+ * 8). Never a sound, a camera kick, a flash or slow motion for someone else's move. Name tags come from one pool of 12
+ * (Nameplates.tsx), handed out at each re-tier; speech bubbles from another (SpeechBubbles.tsx), and a speaker talks
+ * while theirs shows (talk.ts: the mouth, small gestures, a hop now and then).
  */
 import { useEffect, useMemo, useSyncExternalStore, type RefObject } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
@@ -30,6 +31,9 @@ import { RemoteAvatar } from "./RemoteAvatar";
 import { LIVE_MAX, liveRemotes } from "./active";
 import RemoteAuras, { AuraStore, showsAura } from "./RemoteAuras";
 import Nameplates, { PlatePool } from "./Nameplates";
+import SpeechBubbles from "./SpeechBubbles";
+import { driveTalk } from "./talk";
+import { chatStore, type ChatStore } from "@/lib/net/chat";
 import { projectCurved } from "./projection";
 import { RigStore } from "./rigs";
 import { FX_BENCH, fxForced, fxFormation, fxOn, useFxBench } from "@/lib/game/perf/fxBench";
@@ -111,7 +115,7 @@ const bench = { i: 0, you: null as THREE.Vector3 | null, camera: null as THREE.C
 const benchPlace = (s: RemoteSample) => placeInFormation(s, bench.i, bench.you!, bench.camera!, bench.world!);
 
 /** The frame (module scope: the react compiler forbids writing through hook values). */
-function driveAll(d: Driver, source: NetSource, world: GroundWorld, juice: JuiceSink, you: THREE.Vector3, camera: THREE.Camera, caps: LodCaps, delta: number) {
+function driveAll(d: Driver, source: NetSource, world: GroundWorld, juice: JuiceSink, you: THREE.Vector3, camera: THREE.Camera, caps: LodCaps, chat: ChatStore, delta: number) {
   const { store } = d, reg = source.remotes, now = source.now(), dt = Math.min(delta, 0.1), pool = d.particles.current?.pool;
   let n = 0;
   const formation = FX_BENCH && fxFormation();
@@ -122,12 +126,13 @@ function driveAll(d: Driver, source: NetSource, world: GroundWorld, juice: Juice
     r.entry = e;
     bench.i = i;
     const s = driveRig(r, now, world, juice, formation ? benchPlace : null);
+    driveTalk(r, chat);
     if (FX_BENCH) { forceMotion(r, i, now / 1000, dt); if (pool) forceJuice(pool, DRY, r, i, now / 1000, dt); }
     if (pool && r.lod.tier === FULL && (!FX_BENCH || fxOn("juice"))) remoteDashTrail(pool, r.fx, s, r.groundY, dt);
     r.lod.dist = Math.hypot(s.x - you.x, s.z - you.z);
     r.motion.itemShadow = itemShadow(r);
     // Where they stand this frame, for what yields to people (the café's patrons).
-    if (n < LIVE_MAX) { liveRemotes.x[n] = s.x; liveRemotes.z[n] = s.z; n++; }
+    if (n < LIVE_MAX) { liveRemotes.x[n] = s.x; liveRemotes.z[n] = s.z; liveRemotes.sid[n] = r.sid; liveRemotes.uid[n] = r.entry.player.uid; n++; }
   }
   liveRemotes.n = n;
   d.left -= dt;
@@ -167,7 +172,8 @@ export default function RemoteAvatars({ source, area, player }: { source: NetSou
     } });
     return () => { delete (window as { __net?: unknown }).__net; };
   }, [driver, get]);
-  useFrame(({ camera }, delta) => driveAll(driver, source, world, juice, player.current, camera, caps, delta), -3);
+  const chat = chatStore();
+  useFrame(({ camera }, delta) => driveAll(driver, source, world, juice, player.current, camera, caps, chat, delta), -3);
   const walk = INDOORS.has(area) ? INDOOR_WALK : WALK;
   // Development (the effect bench): the plates on or off; a new block each time the formation turns on.
   const fx = useFxBench();
@@ -177,5 +183,6 @@ export default function RemoteAvatars({ source, area, player }: { source: NetSou
     {dusty && <FxHost into={driver.particles} />}
     <RemoteAuras store={driver.auras} />
     {(!FX_BENCH || !fx.off.has("plates")) && <Nameplates pool={driver.plates} here={driver.here} />}
+    <SpeechBubbles store={driver.store} you={player} />
   </>;
 }

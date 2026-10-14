@@ -30,7 +30,10 @@ import { useStepDust } from "./movement/moveFx";
 import type { NPCPersona } from "@/lib/content/types";
 import { remoteNear, remoteSeatTaken, useOthersIn } from "./net/active";
 import { residentsHome } from "./net/thinning";
+import { worldLabels } from "@/lib/game/labelLayout";
+import { residentTag } from "@/lib/game/nameTags";
 import s from "./residents.module.css";
+import tags from "./nameTags.module.css";
 
 /**
  * The village's residents (specs/polish/living-village.md deliverables 1-2; rows 85, 105, 122) on the shared
@@ -76,10 +79,6 @@ const FILLER_LINES = [
   "New folks keep arriving. It's good to see.", "The fireflies come out by the water at night.", "If you're building something, the HQ's the place.",
   "The flowers grow back if you're patient.", "Pull up a bench, stay a while.", "Quiet mornings are my favourite kind.",
 ];
-const POST_LABEL: Record<string, string> = {
-  hq_lead: "HQ", shopkeeper: "Shopkeeper", cafe_owner: "Café owner", museum_curator: "Museum curator",
-  wharf_keeper: "Wharf keeper", oracle_keeper: "Oracle keeper", workshop_crafter: "Workshop", villager: "Villager",
-};
 
 /** Over the head, lifted clear of the prompt band; a resident below the bottom edge (off screen) takes the label with them. */
 const labelPoint = (object: THREE.Object3D, camera: THREE.Camera, size: { width: number; height: number }) => {
@@ -106,6 +105,8 @@ interface Runtime {
   /** The way they'd face before you or a chat turn them. */
   want: number;
   noticed: boolean; bubbleUntil: number; bubbleNext: number; shown: number;
+  /** Their name tag may show (lib/game/nameTags.ts: the layout shows it within 8 steps of you): not in a talk, not under their own bubble, not out of sight. */
+  tag: boolean;
   /** The line being said (written into the bubble whenever it shows: drei's Html may mount after the greeting). */
   line: string;
   idleKey: number; idleVisit: number; laughBeat: number; chat: Runtime | null; hopT: number; hopNext: number; greetAt: number; hovered: boolean;
@@ -420,11 +421,13 @@ function tick(list: readonly Runtime[], c: Clock, dt: number, p: THREE.Vector3, 
     const bubble = r.bubbleUntil > now && !r.hidden, crowded = speaking && !bubble && dist(r.x, r.z, sx, sz) < 2.5;
     const first = r === nearest;
     const state = talking ? (talk!.phase === "turning" ? 2 : 0) : talkingId ? 0
-      : (bubble ? 1 : 0) | (noticed && first && !bubble && !crowded ? 2 : 0) | (((noticed && first) || r.hovered) && !r.hidden && !crowded ? 4 : 0);
-    if (state !== r.shown && r.ui.plate.current) {
+      : (bubble ? 1 : 0) | (noticed && first && !bubble && !crowded ? 2 : 0);
+    // The name (v1 name tags): any resident within 8 steps, the label layout says where; its bubble carries the name.
+    r.tag = !talkingId && !r.hidden && !bubble && !crowded;
+    if (state !== r.shown && r.ui.bubble.current) {
       r.shown = state;
       if ((state & 1) && r.ui.text.current && r.ui.text.current.textContent !== r.line) r.ui.text.current.textContent = r.line;
-      show(r.ui.bubble.current, (state & 1) > 0); show(r.ui.notice.current, (state & 2) > 0); show(r.ui.plate.current, (state & 4) > 0);
+      show(r.ui.bubble.current, (state & 1) > 0); show(r.ui.notice.current, (state & 2) > 0);
     }
   }
 }
@@ -434,6 +437,13 @@ function unenroll(reg: Registry, r: Runtime) { if (reg.map.get(r.id) === r) reg.
 
 function show(el: HTMLElement | null, on: boolean) {
   if (el && el.hidden === on) el.hidden = !on;
+}
+/** Where a resident's name sits: over the head, as drei puts the stack (module scope: no closure per frame). */
+function tagPoint(r: Runtime, out: THREE.Vector3): boolean {
+  const g = r.group.current;
+  if (!r.tag || !g) return false;
+  out.set(g.position.x, g.position.y + CHARACTER_HEIGHT + 0.3, g.position.z);
+  return true;
 }
 
 export default function Residents({ personas, phase, ceremony, player, island, v, away = null, playerName = null }: {
@@ -507,13 +517,15 @@ function Figure({ persona, day, look, gather, home, seed, registry, island }: {
       name: persona.display_name, post: persona.post ?? null, persona, talking: false, talkAt: "", face: { expression: "neutral" },
       pose: newPose(), motion, group, visual, ui: { bubble, text, notice, plate },
       ready: false, x: 0, z: 0, speed: 0, ox: 0, oz: 0, hidden: false, lift: 0, lag: 0, detour: null, detourAt: 0, detourGoal: [0, 0],
-      want: 0, line: "", noticed: false, bubbleUntil: 0, bubbleNext: 0, shown: -1, idleKey: -1, idleVisit: -1, laughBeat: -1, chat: null, hopT: -1, hopNext: 0, greetAt: 0, hovered: false, timers: [],
+      want: 0, line: "", noticed: false, bubbleUntil: 0, bubbleNext: 0, shown: -1, tag: false, idleKey: -1, idleVisit: -1, laughBeat: -1, chat: null, hopT: -1, hopNext: 0, greetAt: 0, hovered: false, timers: [],
       seatKey: "", seatPick: 0, seatVisit: -1, roomX: 0, roomZ: 0, roomVisit: -1, roomSince: 0, roomAt: 0,
     };
     runtime.current = r;
     const reg = registry.current;
     enroll(reg, r);
-    return () => { r.timers.forEach(window.clearTimeout); unenroll(reg, r); runtime.current = null; };
+    // Their name over the head (lib/game/nameTags.ts), where drei puts the stack.
+    const offTag = worldLabels.add(residentTag(out => tagPoint(r, out), () => plate.current));
+    return () => { offTag(); r.timers.forEach(window.clearTimeout); unenroll(reg, r); runtime.current = null; };
   }, [persona, day, gather, home, seed, registry]);
 
   const hover = (on: boolean) => (e: ThreeEvent<PointerEvent>) => {
@@ -535,7 +547,7 @@ function Figure({ persona, day, look, gather, home, seed, registry, island }: {
       <div className={s.stack}>
         <div ref={bubble} className={s.bubble} hidden><b>{persona.display_name}</b><span ref={text} /></div>
         <div ref={notice} className={s.notice} hidden aria-hidden="true">!</div>
-        <div ref={plate} className={s.plate} hidden>{persona.display_name}{persona.post && POST_LABEL[persona.post] && <small>{POST_LABEL[persona.post]}</small>}</div>
+        <div ref={plate} className={tags.tag} data-resident hidden><span className={tags.name}>{persona.display_name}</span></div>
       </div>
     </Html>
   </group>;
