@@ -26,7 +26,8 @@
 /* The boat over you: small and far at first, filling the top of the frame as you come up under it. */
 .hull { position: absolute; left: 50%; top: calc(12% - var(--rise) * 14%); width: min(70vw, 760px); height: auto;
   transform: translate(-50%, 0) rotate(-8deg) scale(calc(0.32 + var(--rise) * var(--rise) * 1.35));
-  transform-origin: 50% 50%; opacity: calc(0.35 + var(--rise) * 0.65); filter: blur(calc((1 - var(--rise)) * 3px)); }
+  transform-origin: 50% 50%; opacity: calc(0.35 + var(--rise) * 0.65);
+  filter: blur(calc((1 - var(--rise)) * 3px)) drop-shadow(0 0 14px rgb(255 246 214 / 0.55)) drop-shadow(0 0 40px rgb(200 236 236 / 0.35)); }
 
 /* Light shafts down from the surface, slanting, swaying, thinning toward the deep. */
 .shafts { position: absolute; inset: -10% -20% 0; mix-blend-mode: screen; opacity: calc(0.35 + var(--rise) * 0.55); }

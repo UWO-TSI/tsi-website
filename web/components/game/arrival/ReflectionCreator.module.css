@@ -1,7 +1,7 @@
 /* The reflection creator (David's sketch, 2026-10-13): the scene the left two-thirds, the options panel right of it, the
    category rail down the far right edge, the "Yes" pill on the water. The canvas fills the screen under them; the camera
    centres the scene in its column (ReflectionScene `view`). Aboard (before you lean over) the panels wait off screen. */
-.root { position: fixed; inset: 0; z-index: 72; display: grid; overflow: hidden;
+.root { --cr-tile: 76px; --cr-rail: 76px; position: fixed; inset: 0; z-index: 72; display: grid; overflow: hidden;
   grid-template-columns: minmax(0, 1fr) clamp(320px, 27vw, 440px) 88px; grid-template-rows: minmax(0, 1fr); grid-template-areas: "scene panel rail";
   gap: clamp(10px, 1.2vw, 16px); padding: clamp(10px, 1.2vw, 16px);
   color: var(--gui-ink); font-family: var(--gui-font); font-weight: var(--gui-weight); line-height: var(--gui-leading); background: #cfdad3; color-scheme: light; }

@@ -35,4 +35,12 @@ describe("the crossing's shots", () => {
     const wharf = crossingCamera("wharf", 1, near, pts, out());
     expect(Math.hypot(wharf.look[0] - pts.wharf.x, wharf.look[2] - pts.wharf.z)).toBeLessThan(Math.hypot(near.x - pts.wharf.x, near.z - pts.wharf.z));
   });
+  it("drops the aim with the curved world's bend, by the distance squared", () => {
+    const boat = { x: 20, y: 0, z: -60, yaw: 0 };
+    const flat = crossingCamera("drone", 0.5, boat, pts, out());
+    const bent = crossingCamera("drone", 0.5, boat, pts, out(), 0.0032);
+    const d2 = (flat.look[0] - flat.pos[0]) ** 2 + (flat.look[2] - flat.pos[2]) ** 2;
+    expect(bent.look[1]).toBeCloseTo(flat.look[1] - d2 * 0.0032);
+    expect(bent.pos).toEqual(flat.pos);
+  });
 });

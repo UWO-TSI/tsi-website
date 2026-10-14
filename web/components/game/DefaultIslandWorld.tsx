@@ -383,7 +383,8 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     const within = (p: [number, number] | null, r: number) => gap(p) < r;
     // Chapter 1 at the clubhouse door: claim the plot first, report back when ready, otherwise enter.
     const door: [Near, [number, number] | null] = within(doors.hq, 2) ? [chapter.claim ? "claim" : chapter.report ? "report" : "enter", doors.hq]
-      : within(doors.boat, 1.6) ? ["home", doors.boat]
+      // Not while Bram brings you in and walks you round (the arrival): the boat home waits for after.
+      : within(doors.boat, 1.6) && !arrivalPhase ? ["home", doors.boat]
       : within(layout.fitting, 1.5) ? ["fitting", layout.fitting]
       : within(doors.oracle, 1.6) ? ["oracle_enter", doors.oracle]
       : within(doors.shop, 1.6) ? ["shop_enter", doors.shop]

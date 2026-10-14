@@ -143,6 +143,8 @@ export default function Arrival({ play, look, askName, touch, keys, onCross, onS
     Object.assign(window, { __arrival: {
       state: () => { const a = arrivalRun.current, t = myTrip.current; return a && { phase: a.phase, t: (performance.now() - a.at) / 1000, choices: a.choices, step: arrivalRun.tutorial?.step ?? null, trip: t && { phase: t.phase, t: (worldNow() - t.at) / 1000 } }; },
       skip: () => skipRef.current(),
+      /** How many choices made (each sharpens the world): tuning the creator's look at a given clarity. */
+      choices: (n: number) => { if (arrivalRun.current) arrivalRun.current.choices = n; },
     } });
   }, []);
   useEffect(() => {

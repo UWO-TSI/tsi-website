@@ -34,6 +34,7 @@ import { FACE as PFACE, type ParticlePool, type Recipe } from "@/lib/game/fx/par
 import { arrivalChanged, arrivalEvent, arrivalRun, useArrivalPhase } from "@/lib/game/arrival/arrivalStore";
 import { crossingShot } from "@/lib/game/arrival/sequence";
 import { crossingCamera, type CameraOut, type CrossingPoints } from "@/lib/game/arrival/crossing";
+import { ACTIVE_WORLD_BEND } from "@/lib/game/curvedWorld";
 import { TUTORIAL_ORDER, newTutorial, stepTutorial, type TutorialStepId, type TutorialTargets } from "@/lib/game/arrival/tutorial";
 import { BRAM, ROD_HANDOVER, hintLine, type HintKeys } from "@/lib/game/arrival/lines";
 import type { WheelItem } from "@/lib/game/toolWheel";
@@ -124,7 +125,7 @@ function directShot(cam: THREE.PerspectiveCamera, dock: Dock, points: CrossingPo
   if (!boatWorld(dock, st.boat)) return;
   const t = trip.phase === "cross" ? (worldNow() - trip.at) / 1000 : trip.phase === "dock" ? CROSS_TIME + (worldNow() - trip.at) / 1000 : 0;
   const shot = crossingShot(t);
-  crossingCamera(shot.id, shot.k, st.boat, points, st.cam);
+  crossingCamera(shot.id, shot.k, st.boat, points, st.cam, ACTIVE_WORLD_BEND);
   cam.position.set(st.cam.pos[0], st.cam.pos[1], st.cam.pos[2]);
   cam.lookAt(st.cam.look[0], st.cam.look[1], st.cam.look[2]);
   if (Math.abs(cam.fov - st.cam.fov) > 1e-3) { cam.fov = st.cam.fov; cam.updateProjectionMatrix(); }

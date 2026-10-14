@@ -18,8 +18,8 @@ export type TutorialTargets = Partial<Record<Exclude<TutorialStepId, "dock" | "b
 
 export const HINT_AFTER_S = 10;
 export const HINT_AGAIN_S = 20;
-/** How far you walk from the boat for the dock step to count as following him. */
-const WALKED = 1.2;
+/** How far you walk from the boat for the dock step to count as following him (the crate is only a step or so up the pier). */
+const WALKED = 0.6;
 /** Reaching a target: the crate's far side is a tight spot on the pier (the crate fills the deck); a front is a step or two. */
 const REACH: Partial<Record<TutorialStepId, number>> = { crate: 0.45, plaza: 2.6 };
 const FRONT_R = 2.2;

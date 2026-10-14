@@ -71,17 +71,11 @@ export default function Underwater({ startedAt, look, done }: {
       <div className={s.caustics} />
       <svg className={s.hull} viewBox="0 0 400 160" preserveAspectRatio="xMidYMid meet">
         <defs>
-          <radialGradient id="uw-rim" cx="50%" cy="50%" r="60%">
-            <stop offset="55%" stopColor="#fff6d6" stopOpacity="0" />
-            <stop offset="80%" stopColor="#fff6d6" stopOpacity="0.55" />
-            <stop offset="100%" stopColor="#fff6d6" stopOpacity="0" />
-          </radialGradient>
           <linearGradient id="uw-keel" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="#1d3442" />
             <stop offset="1" stopColor="#0f222e" />
           </linearGradient>
         </defs>
-        <ellipse cx="200" cy="80" rx="190" ry="70" fill="url(#uw-rim)" />
         {/* The hull from below: a long lens, its keel down the middle, the transom square at one end, the propeller's shadow. */}
         <path d="M44 80 C 80 34, 270 26, 352 58 L 360 80 L 352 102 C 270 134, 80 126, 44 80 Z" fill="url(#uw-keel)" />
         <path d="M60 80 C 140 76, 270 76, 350 80" stroke="#0a1820" strokeWidth="5" strokeLinecap="round" fill="none" opacity="0.8" />

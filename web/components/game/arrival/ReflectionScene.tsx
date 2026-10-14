@@ -43,13 +43,16 @@ export interface Ripple { x: number; z: number; t: number; strength: number }
  */
 export const SET = {
   /** Your hips' pivot: kneeling on the floor by the gunwale, facing out (-x); how far you lean over. */
-  you: { x: -0.36, y: BOAT.floor - BOAT.draft, z: 0.15, lean: 1.12, crouch: true },
+  you: { x: -0.36, y: BOAT.floor - BOAT.draft, z: 0.15, lean: 0.95, crouch: true },
   /** Bram at the stern by the motor, facing you. */
   bram: { x: 0.28, y: BOAT.floor - BOAT.draft, z: -0.62, yaw: -0.9 },
   /** Aboard, looking up at Bram from where you were laid down (your eyes). */
   aboard: { pos: [-0.62, 0.62, 0.55] as const, look: [0.28, 1.25, -0.62] as const, fov: 46, roll: -0.08 },
-  /** Leaning over: behind and above your head, down past it at the water, the gunwale on a diagonal. */
-  creator: { pos: [0.55, 2.35, -0.95] as const, look: [-1.55, 0.0, 0.62] as const, fov: 34, roll: 0.42 },
+  /**
+   * Leaning over (the sketch): out over the water off the bow quarter, looking back and down at the boat's side, rolled
+   * so the gunwale runs up the frame on a diagonal with the back of your head on it and your face in the water beside it.
+   */
+  creator: { pos: [-3.2, 2.4, 1.6] as const, look: [-1.3, 0.0, 0.0] as const, fov: 32, roll: -1.1 },
 };
 /** The sea's colours at golden hour (the deep, the shallower tint, the sky the reflection shows round you). */
 const SEA = { deep: "#2a6c80", shallow: "#4b9aa6", sky: "#dfe9e4", haze: "#f3e6cf", sun: "#fff1cf" };
@@ -105,7 +108,7 @@ void main() {
   float fres = pow(1.0 - clamp(V.y, 0.0, 1.0), 4.0);
   // The water's own colour, a little brighter where the swell faces the light.
   vec3 water = mix(uDeep, uShallow, clamp(0.45 + dot(g, vec2(1.6, 1.0)) * 3.0, 0.0, 1.0));
-  vec3 col = mix(water, refl, 0.64 + 0.3 * fres);
+  vec3 col = mix(water, refl, 0.8 + 0.15 * fres);
   // Light on the rings and sparkles off the chop, only once the world is clearing.
   col += uSun * (ring * 0.12 + smoothstep(0.07, 0.1, length(g)) * 0.25 * uClarity);
   gl_FragColor = vec4(col, 1.0);
@@ -238,10 +241,12 @@ function drawReflection(f: Frame, dt: number) {
   cam.lookAt(tmp.b);
   cam.rotateZ(THREE.MathUtils.lerp(A.roll, C.roll, k) + roll * 0.5);
   cam.fov = THREE.MathUtils.lerp(A.fov, C.fov, k);
-  // Centred in the scene's part of the canvas as the panels come in (the whole canvas aboard).
+  // Framed in the scene's part of the canvas as the panels come in (the whole canvas aboard): the lens's frame is that
+  // part (its size and shape, a phone's square or a desktop's two-thirds), and the canvas a window round it.
   const v = f.view.current, W = size.width, H = size.height;
-  const dx = v ? (W / 2 - (v.x + v.w / 2)) * k : 0, dy = v ? (H / 2 - (v.y + v.h / 2)) * k : 0;
-  if (Math.abs(dx) + Math.abs(dy) > 0.5) cam.setViewOffset(W, H, dx, dy, W, H); else cam.clearViewOffset();
+  const fw = v ? W + (v.w - W) * k : W, fh = v ? H + (v.h - H) * k : H, ox = v ? -v.x * k : 0, oy = v ? -v.y * k : 0;
+  cam.aspect = fw / fh;
+  cam.setViewOffset(fw, fh, ox, oy, W, H);
   cam.updateProjectionMatrix();
   cam.updateMatrixWorld();
 
@@ -327,6 +332,8 @@ export default function ReflectionScene({ look, ripples, clock, view }: {
     <hemisphereLight args={["#fff2dc", "#7f9c9a", 1.05]} />
     <directionalLight position={[6, 4.5, 7]} intensity={2.3} color="#ffe6bf" />
     <directionalLight position={[-5, 3, -4]} intensity={0.5} color="#cfe0ee" />
+    {/* The light off the water onto a face leaning over it: what lets the reflection read. */}
+    <directionalLight position={[-1.5, -4, 0.5]} intensity={1.6} color="#f3ead8" />
     <mesh material={gpu.sky} renderOrder={-10}><sphereGeometry args={[80, 32, 16]} /></mesh>
     <mesh ref={waterMesh} material={gpu.water} rotation-x={-Math.PI / 2}><planeGeometry args={[160, 160, 1, 1]} /></mesh>
     <group ref={boatGroup}><primitive object={boat} scale={BOAT.scale} /></group>

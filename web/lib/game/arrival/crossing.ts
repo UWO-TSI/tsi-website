@@ -16,11 +16,11 @@ export interface CrossingFrame { from: V3; to: V3; aim: Aim; aimTo?: Aim; fov: n
 
 export const CROSSING_FRAMES: Record<CrossingShotId, CrossingFrame> = {
   // High off the starboard quarter, pulling in: the island ahead in the middle of the frame, the boat small below it.
-  drone: { from: [9, 11.5, -15], to: [6, 8.2, -9.5], aim: { blend: [{ boat: [0, 0, 14] }, { world: "island", y: 1.5 }, 0.55] }, fov: 40, fovTo: 38 },
+  drone: { from: [5.5, 6.5, -10], to: [3.6, 4.8, -6.4], aim: { blend: [{ boat: [0, 0, 10] }, { world: "island", y: 0.5 }, 0.7] }, fov: 30, fovTo: 28 },
   // Low beside the bow, just over the water, looking ahead past the stem: the bow wave, the island across the sea.
-  bow: { from: [1.15, 0.42, 1.05], to: [1.1, 0.4, 1.75], aim: { boat: [-0.9, 0.85, 26] }, fov: 54 },
+  bow: { from: [1.35, 0.45, 0.2], to: [1.3, 0.42, 0.75], aim: { boat: [-0.6, 0.7, 24] }, fov: 52 },
   // In front of you on the bench, close: your face, wet hair, drops running off.
-  closeup: { from: [0.32, 1.28, 1.95], to: [0.2, 1.24, 1.72], aim: { boat: [0, 1.18, 0.58] }, fov: 30, fovTo: 28 },
+  closeup: { from: [0.38, 1.3, 2.45], to: [0.26, 1.26, 2.2], aim: { boat: [0, 1.12, 0.58] }, fov: 34, fovTo: 32 },
   // Up behind the stern, looking back: the wake spreading out to the horizon, Bram at the tiller below.
   wake: { from: [1.7, 2.5, -0.9], to: [2.1, 3.0, -1.6], aim: { boat: [0, 0, -13] }, fov: 46 },
   // Over Bram's shoulder at the stern, ahead: the wharf coming up, the boat sliding in alongside.
@@ -53,8 +53,12 @@ function aimAt(a: Aim, b: BoatWorld, pts: CrossingPoints, out: [number, number, 
   return out;
 }
 
-/** The camera for shot `id`, `k` (0..1) through it, with the boat where it is now. */
-export function crossingCamera(id: CrossingShotId, k: number, boat: BoatWorld, pts: CrossingPoints, out: CameraOut): CameraOut {
+/**
+ * The camera for shot `id`, `k` (0..1) through it, with the boat where it is now. `bend`: the curved world's drop per
+ * unit squared (lib/game/curvedWorld.ts): the island far off sits that much lower on screen, so the aim drops with it
+ * (the drone shot keeps the island in the middle of the frame, not sunk below it).
+ */
+export function crossingCamera(id: CrossingShotId, k: number, boat: BoatWorld, pts: CrossingPoints, out: CameraOut, bend = 0): CameraOut {
   const f = CROSSING_FRAMES[id], e = ease(Math.min(1, Math.max(0, k)));
   local(boat, [f.from[0] + (f.to[0] - f.from[0]) * e, f.from[1] + (f.to[1] - f.from[1]) * e, f.from[2] + (f.to[2] - f.from[2]) * e], out.pos);
   aimAt(f.aim, boat, pts, out.look);
@@ -63,5 +67,7 @@ export function crossingCamera(id: CrossingShotId, k: number, boat: BoatWorld, p
     for (let i = 0; i < 3; i++) out.look[i] += (_b[i] - out.look[i]) * e;
   }
   out.fov = f.fov + ((f.fovTo ?? f.fov) - f.fov) * e;
+  const d2 = (out.look[0] - out.pos[0]) ** 2 + (out.look[2] - out.pos[2]) ** 2;
+  out.look[1] -= d2 * bend;
   return out;
 }
