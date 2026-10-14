@@ -850,5 +850,5 @@ function PlayerCharacter({ look, motion, inCombat, walkSpeed, leaf, held }: { lo
     return w?.model && (shown || heldWeapon) ? { kind: w.kind, model: w.model, modelScale: w.modelScale, inHand: inCombat || !!heldWeapon, grip: w.grip, hand, pulse: w.pulse, paint: v2 && inCombat ? signaturePaint : undefined } : null;
   }, [key, heldWeapon, shown, inCombat, v2]);
   const item = useMemo(() => (inCombat ? null : heldView(held)), [inCombat, held]);
-  return <Character look={look} motion={motion} walkSpeed={walkSpeed} weapon={weapon} held={item} leaf={leaf} verbs={inCombat && v2} />;
+  return <Character look={look} motion={motion} walkSpeed={walkSpeed} weapon={weapon} held={item} leaf={leaf} verbs={inCombat && v2} keepFace />;
 }

@@ -7,6 +7,7 @@
 import { Surface, coastDistance, overlayAt, sampleShore, shoreSdf, smoothstep, type IslandMap, type ShoreSdf } from "./grid";
 import { bedDepth, type WaterParams } from "./waterShader";
 import { TUNING_DEFAULTS } from "./tuning";
+import { BERTH, berthWeight, type Dock } from "./wharf";
 
 /** How far the bed drops below a grass bank's water at once: the river channel's edge. */
 export const BANK_DIP = 0.12;
@@ -19,16 +20,69 @@ type BedParams = Pick<WaterParams, "bedDepth" | "bedSlope" | "shelfDepth" | "she
  * distance is the coast field's own (smooth, so the sand and the bed meet without a step); past a cell the shore
  * field takes over, and past the shallows the drop-off to the open sea (`bedDepth`).
  *
+ * On the village (`setShoal`) the open sea shelves out as the wide shallows and the wharf's berth stays deep.
+ *
  * Reads the SHIPPED tuning by default, not the live bench value: this is geometry.
  */
 export function seabedDip(map: IslandMap, shore: ShoreSdf, x: number, z: number, p: BedParams = TUNING_DEFAULTS.water): number {
   const own = sources.get(map);
   if (own) return own.dip(x, z);
   const far = sampleShore(shore, x, z), k = smoothstep(0.6, 1.2, far);
-  const d = k >= 1 ? far : -coastDistance(map, x, z) * (1 - k) + far * k;
-  const bed = bedDepth(d, p);
+  return dipAt(map, shore, x, z, k >= 1 ? far : -coastDistance(map, x, z) * (1 - k) + far * k, p);
+}
+
+/** The seabed `d` cells out from the coast at (x, z): the profile, a grass bank's dip, the village's shallows and berths. */
+function dipAt(map: IslandMap, shore: ShoreSdf, x: number, z: number, d: number, p: BedParams): number {
+  const docks = shoals.get(map);
+  let bed = bedDepth(d, p, docks ? sampleShore(openField(shore), x, z) : 0);
   // The bank's dip only ever matters where the bed is still shallower than it.
-  return bed >= BANK_DIP ? bed : Math.max(BANK_DIP * (1 - overlayAt(map, Surface.Sand, x, z)), bed);
+  if (bed < BANK_DIP) bed = Math.max(BANK_DIP * (1 - overlayAt(map, Surface.Sand, x, z)), bed);
+  // The berth: at least BERTH.depth inside, easing back to the bed over its edge and in from the waterline (the beach
+  // under the jetty still meets the water at 0). An ease, not a max, so the bed has no crease for the bake to round off.
+  if (docks) for (const dock of docks) {
+    const w = berthWeight(dock, x, z, BERTH_EDGE);
+    if (w > 0) bed += (Math.max(bed, BERTH.depth) - bed) * w * smoothstep(0, 1, d);
+  }
+  return bed;
+}
+
+/**
+ * The village's sea (David, playtest round 1, 2026-10-14: "make the shallow water bigger area around main island"):
+ * its open water shelves out as the wide shallows (lib/game/waterShader.ts SHOAL) where a river keeps its banks, and
+ * each wharf's berth (lib/game/wharf.ts BERTH) stays deep for the boats moored there. Set by the village
+ * (lib/game/villageMap.ts villageOf) with its wharves; every other island keeps its seabed as it was.
+ */
+const shoals = new WeakMap<IslandMap, readonly Dock[]>();
+export function setShoal(map: IslandMap, docks: readonly Dock[]): void {
+  shoals.set(map, docks);
+}
+/** The berth's edge on the village, cells: softer than the smooth world's quay face (no quay stands over it here). */
+export const BERTH_EDGE = 2;
+/**
+ * Open sea, not a river: a point is open when water at least OPEN_SEA cells from any shore lies within OPEN_LOOK cells
+ * of it (a river's middle is about a cell from its banks; a beach's waterline is OPEN_LOOK from water that far out).
+ */
+const OPEN_LOOK = 4, OPEN_SEA = [2, 3.5] as const;
+const opens = new WeakMap<ShoreSdf, ShoreSdf>();
+/** How open the water is at each sample of a shore field (0 a river or a pond, 1 the sea), as a field read like it. */
+function openField(shore: ShoreSdf): ShoreSdf {
+  let f = opens.get(shore);
+  if (f) return f;
+  const { width: W, height: H, data } = shore, r = Math.round(OPEN_LOOK * shore.scale);
+  const along = new Float32Array(W * H), open = new Float32Array(W * H);
+  // The farthest from a shore within the square round each sample: the most along x, then the most of that along z.
+  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+    let m = -Infinity;
+    for (let k = Math.max(0, i - r), e = Math.min(W - 1, i + r); k <= e; k++) if (data[j * W + k] > m) m = data[j * W + k];
+    along[j * W + i] = m;
+  }
+  for (let i = 0; i < W; i++) for (let j = 0; j < H; j++) {
+    let m = -Infinity;
+    for (let k = Math.max(0, j - r), e = Math.min(H - 1, j + r); k <= e; k++) if (along[k * W + i] > m) m = along[k * W + i];
+    open[j * W + i] = smoothstep(OPEN_SEA[0], OPEN_SEA[1], m);
+  }
+  opens.set(shore, f = { ...shore, data: open });
+  return f;
 }
 
 /**
@@ -43,7 +97,8 @@ export function bakeWaterDepth(map: IslandMap, shore: ShoreSdf, p: BedParams = T
       const k = j * shore.width + i, r = shore.data[k];
       if (r <= 0) continue;
       // Past the coast's own reach the dip is the profile of the field's distance alone (no lattice lookups).
-      out[k] = r >= 1.2 ? Math.max(bedDepth(r, p), 1e-4) : Math.max(seabedDip(map, shore, shore.minX + (i + 0.5) / shore.scale, z, p), 1e-4);
+      const x = shore.minX + (i + 0.5) / shore.scale;
+      out[k] = Math.max(r >= 1.2 ? dipAt(map, shore, x, z, r, p) : seabedDip(map, shore, x, z, p), 1e-4);
     }
   }
   return out;

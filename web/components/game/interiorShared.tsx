@@ -213,7 +213,7 @@ export function InteriorPlayer({
 
   return (
     <group ref={groupRef} position={[bounds.spawn[0], 0, bounds.spawn[1]]}>
-      <Character look={look} motion={motion} walkSpeed={PLAYER_SPEED} held={actHeld} />
+      <Character look={look} motion={motion} walkSpeed={PLAYER_SPEED} held={actHeld} keepFace />
       <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.42, 20]} />
         <meshBasicMaterial color="#000000" transparent opacity={0.18} depthWrite={false} />

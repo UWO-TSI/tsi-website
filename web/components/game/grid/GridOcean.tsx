@@ -3,7 +3,8 @@
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { type IslandMap, WATER_DROP, LEVEL_STEP, cellToWorldX, cellToWorldZ, isGroundAtWorld, isRiver, levelAt, surfaceAt } from "@/lib/game/grid";
-import { WATER_CHOP, WATER_CLOUDS, WATER_OPTICS, WATER_RIPPLE, WATER_SWELL, facetTilt, swellUniformsOf } from "@/lib/game/waterShader";
+import { WATER_CHOP, WATER_CLOUDS, WATER_FOLD, WATER_OPTICS, WATER_RIPPLE, WATER_SWELL, facetTilt, swellUniformsOf } from "@/lib/game/waterShader";
+import { ACTIVE_WORLD_BEND, ACTIVE_WORLD_BEND_SIDE } from "@/lib/game/curvedWorld";
 import { terrainMaterial, waterSurfaceUniforms } from "./terrainMaterials";
 import { deepestSeabed } from "@/lib/game/seabed";
 
@@ -115,6 +116,23 @@ export function glintPoints(map: IslandMap, skip?: (x: number, z: number) => boo
   return new Float32Array(pts.flat());
 }
 
+/**
+ * The sprites' fog. They add their light (additive blending), and three's fog mixes a fragment toward the fog's colour,
+ * which on an additive sprite ADDS that pale colour: every faintly lit sprite far out drew as a pale dot, packed into
+ * the band the world's bend squeezes the far sea into (playtest round 1, "the sparkles in the distance"). In fog a
+ * sprite's light fades to nothing instead, as the sea under it fades to the fog.
+ */
+export const GLINT_FOG = /* glsl */ `
+#ifdef USE_FOG
+  #ifdef FOG_EXP2
+    float fogFactor = 1.0 - exp( - fogDensity * fogDensity * vFogDepth * vFogDepth );
+  #else
+    float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
+  #endif
+  gl_FragColor.rgb *= 1.0 - fogFactor;
+#endif
+`;
+
 /** The dump's sea-sparkle sprite (the July sea glints, Ocean.tsx), used as each sparkle's soft mask. */
 const GLINT_URL = "/assets/acnh/textures/sea-glint.png";
 
@@ -129,7 +147,10 @@ const GLINT_URL = "/assets/acnh/textures/sea-glint.png";
  * alignment and because the viewer moves. Sun intensity and colour come from
  * the phase and weather (zero sunGlint under rain, snow and fog), dimmed under
  * a passing cloud shadow. HDR white-gold, so bloom catches the brightest cores
- * on High.
+ * on High. Under the world's bend each fades as the bent sea under it turns
+ * edge-on, and none draws past the fold (`WATER_FOLD`: playtest round 1, the
+ * far sparkles folded back under the horizon and showed twice); in fog they
+ * fade out rather than turn the fog's colour (`GLINT_FOG`).
  */
 function WaterGlints({ map, lite, skip, radius }: { map: IslandMap; lite: boolean; skip?: (x: number, z: number) => boolean; radius?: number }) {
   const [geometry, material] = useMemo(() => {
@@ -149,7 +170,7 @@ function WaterGlints({ map, lite, skip, radius }: { map: IslandMap; lite: boolea
         uSunDir: u.uSunDir, uSunColor: u.uSunColor, uSunGlint: u.uSunGlint, uSunSize: u.uSunSize, uRoughness: u.uRoughness,
         uCloudMap: u.uCloudMap, uCloudUv: u.uCloudUv, uCloudShade: u.uCloudShade,
       });
-      shader.vertexShader = "attribute vec2 aTilt;\nuniform vec3 uSunDir;\nuniform float uSunGlint;\nuniform float uSunSize;\nuniform float uRoughness;\nvarying float vGlint;\n" + WATER_SWELL + WATER_RIPPLE + WATER_CHOP + WATER_CLOUDS + WATER_OPTICS + shader.vertexShader
+      shader.vertexShader = "attribute vec2 aTilt;\nuniform vec3 uSunDir;\nuniform float uSunGlint;\nuniform float uSunSize;\nuniform float uRoughness;\nvarying float vGlint;\n" + WATER_SWELL + WATER_RIPPLE + WATER_CHOP + WATER_CLOUDS + WATER_OPTICS + WATER_FOLD(ACTIVE_WORLD_BEND, ACTIVE_WORLD_BEND_SIDE) + shader.vertexShader
         .replace("#include <begin_vertex>", `#include <begin_vertex>
           vec3 glintAt = (modelMatrix * vec4(transformed, 1.0)).xyz;
           vec2 swellGrad;
@@ -160,6 +181,8 @@ function WaterGlints({ map, lite, skip, radius }: { map: IslandMap; lite: boolea
           float lit = facetGlint(uSunDir, cameraPosition, glintAt, vec3(slope.x, 1.0, slope.y), uSunSize);
           vGlint = lit * uSunGlint * sunThroughClouds(glintAt.xz);`)
         .replace("#include <logdepthbuf_vertex>", `
+          // mvPosition is bent here (project_vertex): nothing past the fold, a fade as the sea turns edge-on before it.
+          vGlint *= foldFade(mvPosition.xyz);
           gl_PointSize *= 0.5 + 0.7 * lit;
           gl_PointSize = vGlint < 0.01 ? 0.0 : max(gl_PointSize, 3.0);
           // Nudged toward the camera so the water just in front cannot clip the core; a pier deck above still hides it.
@@ -170,7 +193,8 @@ function WaterGlints({ map, lite, skip, radius }: { map: IslandMap; lite: boolea
           // Four-point star: a hot core and two thin flares.
           vec2 q = gl_PointCoord * 2.0 - 1.0;
           float star = exp(-dot(q, q) * 16.0) + 0.6 * (exp(-abs(q.x) * 16.0 - abs(q.y) * 2.8) + exp(-abs(q.y) * 16.0 - abs(q.x) * 2.8));
-          diffuseColor.rgb = uSunColor * vGlint * star * 1.2;`);
+          diffuseColor.rgb = uSunColor * vGlint * star * 1.2;`)
+        .replace("#include <fog_fragment>", GLINT_FOG);
     };
     return [g, m];
   }, [map, lite, skip, radius]);
