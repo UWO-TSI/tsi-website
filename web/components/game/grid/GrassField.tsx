@@ -247,8 +247,10 @@ function grassMaterial(uniforms: Record<string, THREE.IUniform>): THREE.MeshStan
       .replace("#include <map_fragment>", FRAGMENT_MAP)
       // Lit like the ground from either side: a card seen from behind keeps its upward normal (three would flip it down).
       .replace("#include <normal_fragment_begin>", "#include <normal_fragment_begin>\n  normal = normalize( vNormal );");
-    // The terrain's see-through cut round the player (occluders.ts); it also defines tsiBayer for the fade.
+    // The terrain's see-through cut round the player (occluders.ts); it also defines tsiBayer for the fade. A blade is cut
+    // by its root's height, as the ground under it is: by its own, a blade cut where the ground is not left a bald disc.
     addCutout(shader);
+    shader.vertexShader = shader.vertexShader.replace("vCutY = (modelMatrix * vec4(transformed, 1.0)).y;", "vCutY = gGround;");
   };
   m.customProgramCacheKey = () => "grass-field-v1";
   return m;

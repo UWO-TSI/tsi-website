@@ -72,6 +72,44 @@ the stacked case from +280 to about +150 draws (−0.65 ms on this machine, abou
 - **The title screen** is light (2.5 ms) and has no probe; it is not in perf:check (its files belong to the play
   subdomain session).
 
+## The v1 land pass: the grass field, the rocks, the light, the title (2026-10-14)
+
+`game/v1-land` (specs/v1-drop.md §8b/§8c). Three measurements, all on the M4 with 24 bots:
+
+**The lane against main** (`ab.sh`, interleaved, 2 rounds, load 3.4–7.2: soft), main 754c4a01 → v1-land fbef77ac, so
+only this lane differs:
+
+| Scene | Frame ms | Frame CPU ms | Draws | Triangles |
+|---|---|---|---|---|
+| Village, High | 4.5, 5.1 → 5.2, 5.1 | 3.9, 4.4 → 4.5, 4.3 | 489 → 481–484 | 492k → 522–525k |
+| v2 world, High | 7.0, 6.9 → 7.4, 6.8 | 6.4, 6.2 → 6.8, 6.1 | 728–730 → 732 | **1.10M → 930k** |
+| Village, Lite | 2.8, 2.8 → 2.9, 2.5 | 2.4, 2.4 → 2.6, 2.2 | 351 → 348 | 344k → 344–346k |
+| v2 world, Lite | 3.8, 3.1 → 3.7, 3.2 | 3.5, 2.9 → 3.4, 3.0 | 509 → 510 | **833k → 634k** |
+
+Lite is unchanged within the noise; High is about +0.15–0.3 ms of frame on these busy runs. Draws are flat (the old
+tufts' 3 draws for the field's 2 and the boulders' 6). The v2 world sheds about 170k triangles on High and 200k on
+Lite: the field costs the same whatever the island's size, where the tufts were per grass cell.
+
+**Each piece** (`world-bench.mjs`, the piece off against the build as shipped, 3 valid pairs each, load 2.6–3.7):
+
+| Piece | Village, High | v2 world, High | Village, Lite | v2 world, Lite |
+|---|---|---|---|---|
+| Grass field (`grass0`) | 0.00 ms (±0.08), 2 draws, 42k tris, GPU 0.06 | **0.15 ms** (±0.07), 3 draws, 40k tris, **GPU 0.59** | 0.10 ms (±0.05), 8k tris | 0.10 ms (±0.05), 8k tris |
+| Cliff-foot boulders (`rocksOff`) | none (no cliffs) | 0.05 ms (±0.10), 8 draws, 61k tris | none | 0.10 ms (±0.05), 6 draws, 60k tris |
+
+The title: **2.8 ms frame, p95 3.7 ms, 1.8 ms main thread** (was 2.5 / 3.5 / 1.8): the tilt-shift's two passes and
+the close lawn. The light and haze are constants in shaders that already ran (a warmer and cooler colour, AO's radius,
+a few ALU in the fog chunk): no separate switch, inside the lane's A/B above.
+
+**perf:check** on the final merged tree (ea7f6adb, main ccb2c818 merged; 2026-10-14 05:37, load 3.2–3.8) against the 10-13 baseline
+held every SCENE_BUDGET (village High 518k of 560k triangles, ruins High 267k of 280k, ruins Lite 206k of 210k after
+the rocks were rebuilt lighter) and flagged frame time over 10% on v2 High (6.3 vs 5.5 ms) and village Lite (2.6 vs
+2.2). Those include every lane merged since the baseline (water's own A/B: v2 High 5.6 → 5.95 ms); the lane's own
+share is the A/B above. The baseline wants `perf:check -- --update` on main once the v1 lanes are in.
+
+The grass's GPU share on the v2 world (0.6 ms at 1280 × 800 with the pixel finish) is its fragment overdraw: the first
+thing to trade on a weak GPU is High's near layer (2 cards → 1, about −0.3 ms GPU) or `grass.density`.
+
 ## How it was measured
 
 - **Builds:** the measurement build (`measure-build.sh`: production `next build`, the development gates lifted). The
