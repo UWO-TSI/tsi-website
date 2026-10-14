@@ -56,6 +56,7 @@ import { bagRoom } from "@/lib/game/bagStore";
 import { isTyping, worldKeysBlocked } from "@/lib/game/useWorldDialog";
 import { apiCall } from "@/lib/apiClient";
 import PlayerCharacterUI from "./character/PlayerCharacterUI";
+import DanceSync from "./dance/DanceSync";
 import { useCreatorOpen } from "@/lib/game/character/creatorPresence";
 import CharacterCrowd from "./character/CharacterCrowd";
 import OracleTemple from "./oracle/OracleTemple";
@@ -1072,6 +1073,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           <WarmupProbe key={sceneShown} onReady={onSceneReady} />
           {children}
           <NetWorld area={area} player={player} ready={ready && !fading && netReady} />
+          <DanceSync player={player} />
           {!inside && !atHome && site !== "ruins" && near !== "enter" && hqDoor && <LandmarkTag position={[hqDoor[0], 2.9, hqDoor[1]]}>HQ</LandmarkTag>}
           <LabelLayer focus={player} />
         </Suspense>

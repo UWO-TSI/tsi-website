@@ -101,6 +101,8 @@ export const EFFECT_BUDGET: Record<string, EffectBudget> = {
   shadows: { drawsPerPlayer: 2, cpuMs: 0.25, particles: 0, lights: 0 },
   emotes: { drawsPerPlayer: 0, cpuMs: 0.15, particles: 0, lights: 0 },
   interp: { drawsPerPlayer: 0, cpuMs: 0.1, particles: 0, lights: 0 },
+  /** Group dancing (components/game/dance/DanceSync.tsx): the beat sync and a note every other beat from the shared movement pool. */
+  dance: { drawsPerPlayer: 0, cpuMs: 0.15, particles: 2, lights: 0 },
 };
 
 /**
@@ -130,7 +132,7 @@ export const CHARACTER_EFFECT_FILES = [
   "components/game/oracle/FamilyAura.tsx", "components/game/oracle/SubclassAura.tsx", "components/game/movement/moveFx.ts",
   "components/game/character/Character.tsx", "components/game/character/FishingRig.tsx", "components/game/net/RemoteAvatars.tsx",
   "components/game/net/RemoteAvatar.tsx", "components/game/net/RemoteAuras.tsx", "components/game/net/Nameplates.tsx", "components/game/net/fx.ts",
-  "components/game/PlayerAvatar.tsx",
+  "components/game/PlayerAvatar.tsx", "components/game/dance/DanceSync.tsx",
 ] as const;
 
 /**
