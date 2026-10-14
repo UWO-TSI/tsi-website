@@ -66,7 +66,7 @@ import {
   type ShoreSdf,
 } from "@/lib/game/grid";
 import { terrainMaterial, setShoreField } from "./terrainMaterials";
-import { terrainBlocks } from "./terrainBlocks";
+import { TERRAIN_BLOCK, WATER_BLOCK, terrainBlocks } from "./terrainBlocks";
 import { CurvedCull, cullMeshes } from "@/lib/game/curvedCull";
 import { TUNING_DEFAULTS } from "@/lib/game/tuning";
 import { bedDepth } from "@/lib/game/waterShader";
@@ -761,6 +761,9 @@ export function useTerrainMaterials(palette?: TerrainPalette): TerrainMaterials 
   return materials;
 }
 
+/** How many chunks a side a layer's blocks span: the water's surface, bed and fringe in wider ones (terrainBlocks.ts). */
+const blockFor = (surface: number) => (surface === Surface.River || surface === RIVER_BED || surface === WATER_FRINGE ? WATER_BLOCK : TERRAIN_BLOCK);
+
 /**
  * The ground's draw order: the see-through layers (rock, then sand, then soil) after the rest. Anything lying on the
  * ground that does not write depth (the snow prints, WeatherGround) draws after GROUND_TOP_ORDER, or a path paints over it.
@@ -783,8 +786,8 @@ export default function GridTerrain({ map, field: heights, materials }: { map: I
    */
   const chunks = useMemo(
     // Guarded on the constant: at CLIFF_LEVELS 1 every level change is a cliff and the blur has nothing to cross.
-    // Drawn by block of 4 × 4 chunks per layer (terrainBlocks.ts): a call per block in view, not per chunk.
-    () => terrainBlocks(terrainChunks(map, CLIFF_LEVELS > 1 ? heights ?? heightField(map) : null, field)),
+    // Drawn by block of 4 × 4 chunks per layer, 8 × 8 for the water's (terrainBlocks.ts): a call per block in view.
+    () => terrainBlocks(terrainChunks(map, CLIFF_LEVELS > 1 ? heights ?? heightField(map) : null, field), blockFor),
     [map, heights, field]
   );
 
