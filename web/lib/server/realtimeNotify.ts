@@ -1,5 +1,5 @@
 /**
- * Tell the realtime server about a sanction or a block at once (specs/multiplayer.md §2.3, M2), so a T1/T2 mute or
+ * Tell the realtime server about a sanction, a block or (v1) a friendship at once (specs/multiplayer.md §2.3, M2), so a T1/T2 mute or
  * removal reaches a player in the island within a second and a block stops chat between the pair without a rejoin.
  * Server-only: REALTIME_INTERNAL_URL (e.g. https://tethos-rt.fly.dev) and REALTIME_INTERNAL_SECRET (the same 32+
  * characters as the Fly secret). Either unset (local development): skipped, silently. A failure never fails the
@@ -16,6 +16,8 @@ export const REALTIME_NOTIFY_TIMEOUT_MS = 2000;
 
 export type SanctionNotice = { member_id: string; muted_until?: string | null; removed_until?: string | null };
 export type BlockNotice = { blocker_id: string; blocked_id: string; blocked: boolean };
+/** v1 friends: a friendship made (true) or ended (false). */
+export type FriendNotice = { a_id: string; b_id: string; friends: boolean };
 /** applied: the server took it (its players' sessions changed now); skipped: not configured; failed: the poll catches up. */
 export type RealtimeNotice = "applied" | "skipped" | "failed";
 
@@ -32,7 +34,8 @@ export interface NotifyOptions {
 
 export function notifyRealtime(path: "/internal/sanction", payload: SanctionNotice, o?: NotifyOptions): Promise<RealtimeNotice>;
 export function notifyRealtime(path: "/internal/block", payload: BlockNotice, o?: NotifyOptions): Promise<RealtimeNotice>;
-export async function notifyRealtime(path: string, payload: SanctionNotice | BlockNotice, o: NotifyOptions = {}): Promise<RealtimeNotice> {
+export function notifyRealtime(path: "/internal/friend", payload: FriendNotice, o?: NotifyOptions): Promise<RealtimeNotice>;
+export async function notifyRealtime(path: string, payload: SanctionNotice | BlockNotice | FriendNotice, o: NotifyOptions = {}): Promise<RealtimeNotice> {
   const env = o.env ?? process.env;
   const base = env.REALTIME_INTERNAL_URL, secret = env.REALTIME_INTERNAL_SECRET;
   if (!base || !secret) return "skipped";

@@ -99,7 +99,7 @@ export function createApp(options: AppOptions = {}): ConfigOptions {
     options: { greet: false },
     // §3: joinOrCreate fills the fullest open shard.
     rooms: { [ROOM_NAME]: defineRoom(IslandRoom).sortBy({ clients: -1 }) },
-    routes: createRouter({ health, sanction: internal.sanction, block: internal.block }),
+    routes: createRouter({ health, sanction: internal.sanction, block: internal.block, friend: internal.friend }),
     // Last chat lines to the log before the process exits.
     initializeGameServer: (server) => server.onShutdown(() => world.stop()),
     initializeTransport: (opts) =>
