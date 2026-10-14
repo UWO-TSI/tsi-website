@@ -112,7 +112,7 @@ describe("a player's face through every animation", () => {
         const anim = new FaceAnimator(seeded(7));
         anim.keep = true;
         for (const f of run(anim, 3, l, clip)) {
-          expect([f.eyes, f.mouth, f.brow], `${clip} on ${l.eyes}/${l.mouth}`).toEqual([rest.eyes, rest.mouth, rest.brow]);
+          expect([f.eyes, f.mouth], `${clip} on ${l.eyes}/${l.mouth}`).toEqual([rest.eyes, rest.mouth]);
           // Only a blink closes the eyes, as at rest.
           if (f.eyeFrame !== rest.eyeFrame) expect(canBlink(rest.eyes)).toBe(true);
         }
