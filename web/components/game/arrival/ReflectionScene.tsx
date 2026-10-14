@@ -24,6 +24,7 @@ import { parseLook, type CharacterLook } from "@/lib/game/character/look";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import { arrivalRun } from "@/lib/game/arrival/arrivalStore";
 import { ARRIVAL_TIMES, clarityAt } from "@/lib/game/arrival/sequence";
+import { mirrorCamera, renderReflection } from "@/lib/game/arrival/reflectionPasses";
 
 useGLTF.preload(BOAT.url);
 
@@ -211,7 +212,7 @@ function resizeGpu(gpu: Gpu, w: number, h: number) { gpu.frame.setSize(Math.max(
 
 interface Frame {
   gl: THREE.WebGLRenderer; scene: THREE.Scene; camera: THREE.PerspectiveCamera; size: { width: number; height: number }; gpu: Gpu;
-  tmp: { a: THREE.Vector3; b: THREE.Vector3; up: THREE.Vector3; head: THREE.Vector3; fwd: THREE.Vector3; eye: THREE.Vector3; aim: THREE.Vector3; qa: THREE.Quaternion; qc: THREE.Quaternion };
+  tmp: { a: THREE.Vector3; b: THREE.Vector3; up: THREE.Vector3; head: THREE.Vector3; eye: THREE.Vector3; aim: THREE.Vector3; qa: THREE.Quaternion; qc: THREE.Quaternion };
   clock: React.RefObject<number>; ripples: React.RefObject<Ripple[]>; view: React.RefObject<{ x: number; y: number; w: number; h: number } | null>;
   you: THREE.Group | null; bram: THREE.Group | null; boat: THREE.Group | null; water: THREE.Mesh | null; youMotion: CharacterMotion; bramMotion: CharacterMotion;
 }
@@ -284,20 +285,8 @@ function drawReflection(f: Frame, dt: number) {
   cam.updateProjectionMatrix();
   cam.updateMatrixWorld();
 
-  // The mirror: the camera reflected in the sea (y 0), drawing only what is above it. A wider lens than the camera's:
-  // it still covers what the camera sees when its view is offset into the scene's part.
-  const m = gpu.mirror;
-  m.fov = Math.min(100, cam.fov * 1.5); m.near = cam.near; m.far = cam.far; m.aspect = cam.aspect;
-  m.position.set(cam.position.x, -cam.position.y, cam.position.z);
-  cam.getWorldDirection(tmp.fwd);
-  tmp.head.copy(cam.position).add(tmp.fwd);
-  tmp.head.y = -tmp.head.y;
-  tmp.up.set(0, 1, 0).applyQuaternion(cam.quaternion);
-  m.up.set(tmp.up.x, -tmp.up.y, tmp.up.z);
-  m.lookAt(tmp.head);
-  m.updateProjectionMatrix();
-  m.updateMatrixWorld();
-  gpu.texMatrix.set(0.5, 0, 0, 0.5, 0, 0.5, 0, 0.5, 0, 0, 0.5, 0.5, 0, 0, 0, 1).multiply(m.projectionMatrix).multiply(m.matrixWorldInverse);
+  // The mirror: the camera reflected in the sea (y 0), drawing only what is above it (lib/game/arrival/reflectionPasses.ts).
+  mirrorCamera(cam, gpu.mirror, gpu.texMatrix);
 
   // Uniforms: time, ripples, how clear you are, where your face's reflection is on screen.
   const w = gpu.water.uniforms;
@@ -315,14 +304,8 @@ function drawReflection(f: Frame, dt: number) {
   c.uFocus.value.set(tmp.head.x * 0.5 + 0.5, tmp.head.y * 0.5 + 0.5);
   c.uFocusR.value.set(0.3 * Math.min(1, H / W), 0.3);
 
-  if (f.water) f.water.visible = false;
-  gl.setRenderTarget(gpu.refl);
-  gl.clippingPlanes = [gpu.clip];
-  gl.render(scene, m);
-  gl.clippingPlanes = [];
-  if (f.water) f.water.visible = true;
-  gl.setRenderTarget(gpu.frame);
-  gl.render(scene, cam);
+  // The mirror pass and the frame, of the one scene: the you over the side and the you in the water are the same character.
+  renderReflection(gl, scene, f.water, cam, gpu.mirror, gpu, gpu.clip);
   gl.setRenderTarget(null);
   gl.render(gpu.post, gpu.postCam);
 }
@@ -352,7 +335,7 @@ export default function ReflectionScene({ look, ripples, clock, view }: {
   useEffect(() => () => disposeGpu(gpu), [gpu]);
   useEffect(() => resizeGpu(gpu, size.width * gl.getPixelRatio(), size.height * gl.getPixelRatio()), [gpu, size, gl]);
   const waterMesh = useRef<THREE.Mesh>(null);
-  const tmp = useMemo(() => ({ a: new THREE.Vector3(), b: new THREE.Vector3(), up: new THREE.Vector3(), head: new THREE.Vector3(), fwd: new THREE.Vector3(), eye: new THREE.Vector3(),
+  const tmp = useMemo(() => ({ a: new THREE.Vector3(), b: new THREE.Vector3(), up: new THREE.Vector3(), head: new THREE.Vector3(), eye: new THREE.Vector3(),
     aim: new THREE.Vector3(), qa: new THREE.Quaternion(), qc: new THREE.Quaternion() }), []);
   // Takes over the canvas's rendering (priority 1): the mirror, the frame, the composite. The thumbnail baker (priority 0) reads back before it.
   useFrame((_, raw) => drawReflection({ gl, scene, camera: camera as THREE.PerspectiveCamera, size, gpu, tmp, clock, ripples, view, you: you.current, bram: bram.current,

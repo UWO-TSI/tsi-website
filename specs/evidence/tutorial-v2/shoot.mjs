@@ -4,7 +4,7 @@
 // end to end at desktop and phone sizes. Headless Chromium (WebGL on the GPU through Metal), muted; signed out against the
 // dev server with the Supabase env blanked, the shared browser lock held. `?arrival=1` replays the arrival.
 //   node specs/evidence/tutorial-v2/shoot.mjs <out_dir> <scene> [<scene> ...]
-// Scenes: opening, creator, brows, phone-creator, tour (desktop, end to end), tour-phone (390x844, touch, end to end).
+// Scenes: opening, creator, match, brows, phone-creator, tour (desktop, end to end), tour-phone (390x844, touch, end to end).
 import { createRequire } from "node:module";
 import { mkdirSync, writeFileSync } from "node:fs";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
@@ -110,6 +110,18 @@ if (SCENES.includes("creator")) {
   await page.click('[data-testid="reflection-yes"]', { force: true });
   for (const t of [0.5, 1.4]) { await at(page, "clearing", t); await shot(page, `02-creator-yes-${t.toFixed(1)}`); }
   await page.context().close();
+}
+
+if (SCENES.includes("match")) {
+  // The back of your head over the side and your reflection are one character from one look: a loud hair colour and a
+  // distinct style make it plain (coordinator check, 2026-10-14).
+  for (const [name, hair, back] of [["pink-pigtails", 10, "back_pigtails"], ["blue-high-pony", 11, "back_high_pony"]]) {
+    const { page } = await open({ width: 1440, height: 900 }, { look: { ...OLD_LOOK, brows: undefined, place: undefined, hair, back, bangs: "bangs_straight" } });
+    await toCreator(page);
+    await sleep(600);
+    await shot(page, `02m-reflection-matches-${name}`);
+    await page.context().close();
+  }
 }
 
 if (SCENES.includes("phone-creator")) {

@@ -48,6 +48,7 @@ pngs = sorted(f for f in os.listdir(SHOTS) if f.endswith(".png"))
 groups = [
     ("01-opening-aboard.webp", "The opening: no underwater; black a moment, then the fade in aboard Bram's boat, leaning over into the creator", ("01-",), 4, 480),
     ("02-reflection-creator.webp", "The reflection creator, 1440x900: the face in the water upright, the shirt in frame; Tops on the rail, a new top and colour rewritten by the ripple", ("02-",), 3, 640),
+    ("02m-reflection-matches-you.webp", "One character, one look: the back of your head over the side and your reflection, loud hair (pink pigtails, blue high pony)", ("02m-",), 2, 720),
     ("03-reflection-creator-phone.webp", "Phone 390x844: the creator, a new top", ("03-",), 2, 390),
     ("04-no-eyebrows.webp", "Eyebrows removed: an old saved look with brows and a brows placement loads cleanly; no Brows category on the rail", ("04-",), 2, 720),
     ("05-tour-desktop.webp", "Bram's walk-along v2, 1440x900: the \"!\" stops, each talk, the tracker ticking, the beach, the rod, fishing, the B and market lines", ("05-",), 3, 640),
