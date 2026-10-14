@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { ASHORE, MOORED, STEP_AT } from "./wharf";
 import {
-  TRIP, arrivalTrip, berthTaken, boatPose, newBoatPose, newRiderPlace, phaseLength, riderPlace, skipTrip, startTrip, stepTrip,
-  tripScene, type BoatTrip, type TripPhase,
+  CROSS_TIME, TRIP, arrivalTrip, berthTaken, boatPose, newBoatPose, newRiderPlace, phaseLength, riderPlace, skipCrossing, skipTrip, startTrip, stepTrip,
+  tripFraming, tripScene, type BoatTrip, type TripPhase,
 } from "./boatTrip";
+import { CROSSING_S } from "./arrival/sequence";
 
 const T0 = 1_790_000_000_000;
 /** Run a trip forward in 1/60 s frames until done (or `seconds`); the destination loads `loadAfter` s into the load; one press at `skipAt` s. */
@@ -169,5 +170,53 @@ describe("the boat trip (specs/polish/arrival-wharf.md deliverable 3)", () => {
       expect(b).toEqual(a);
       expect(rb).toEqual(ra);
     }
+  });
+
+  it("crosses a first login in from far out at sea, about 25 s with the docking, and lands them on the pier by the boat", () => {
+    const trip = arrivalTrip("me", "village", T0, true, true);
+    expect(trip.phase).toBe("load");
+    expect(CROSS_TIME + TRIP.dock).toBeCloseTo(CROSSING_S);
+    const { phases } = run(trip, { seconds: 80, loadAfter: 0.4 });
+    expect(phases).toEqual(["load", "cross", "dock", "land", "done"]);
+    // Landed beside the boat, where the tutorial starts (not walked up to the land end).
+    const r = riderPlace(trip, T0 + 1e6, newRiderPlace());
+    expect(r.aboard).toBe(0);
+    expect(Math.hypot(r.x - STEP_AT.x, r.z - STEP_AT.z)).toBeLessThan(0.05);
+    // The arrival frames its own shots while it crosses: the trip's camera stays out of it.
+    expect(tripFraming({ ...trip, phase: "cross" })).toBeNull();
+  });
+
+  it("starts the crossing far out, comes in steadily without a jump, and meets the docking where it begins", () => {
+    const trip = arrivalTrip("me", "village", T0, true, true);
+    const pose = newBoatPose(), prev = newBoatPose();
+    const [start, t0] = at({ ...trip, crossing: true } as BoatTrip, "cross", 0);
+    boatPose(start, t0, pose);
+    expect(Math.hypot(pose.x - MOORED.x, pose.z - MOORED.z)).toBeGreaterThan(30);
+    expect(pose.z).toBeLessThan(-25); // out to sea (-z in the dock's frame)
+    let worst = 0;
+    for (let k = 0; k <= 1.0001; k += 1 / 600) {
+      Object.assign(prev, pose);
+      const [t, now] = at({ ...trip, crossing: true } as BoatTrip, "cross", Math.min(1, k));
+      boatPose(t, now, pose);
+      worst = Math.max(worst, Math.hypot(pose.x - prev.x, pose.z - prev.z));
+    }
+    expect(worst).toBeLessThan(0.2);
+    const [dock, d0] = at({ ...trip, crossing: true } as BoatTrip, "dock", 0);
+    const docking = boatPose(dock, d0, newBoatPose());
+    expect(Math.hypot(pose.x - docking.x, pose.z - docking.z)).toBeLessThan(0.02);
+    expect(Math.abs(pose.yaw - docking.yaw)).toBeLessThan(0.02);
+    expect(Math.abs(pose.speed - docking.speed)).toBeLessThan(0.15);
+  });
+
+  it("skips the rest of a crossing straight to the landing at the pier", () => {
+    const trip = arrivalTrip("me", "village", T0, true, true);
+    run(trip, { seconds: 3, loadAfter: 0.2 });
+    expect(trip.phase).toBe("cross");
+    expect(skipCrossing(trip, T0 + 4000)).toBe(true);
+    expect(trip.phase).toBe("land");
+    const moored = boatPose(trip, T0 + 4000, newBoatPose());
+    expect(Math.hypot(moored.x - MOORED.x, moored.z - MOORED.z)).toBeLessThan(1e-6);
+    expect(skipCrossing(trip, T0 + 4100)).toBe(false);
+    expect(skipCrossing(startTrip("me", "village", "home", null, T0), T0)).toBe(false);
   });
 });

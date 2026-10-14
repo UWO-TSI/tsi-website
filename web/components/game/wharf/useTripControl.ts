@@ -34,10 +34,12 @@ function skip() {
 
 export interface TripControl {
   active: boolean; phase: TripPhase | null; to: TripPlace; firstLogin: boolean; quick: boolean;
+  /** A first login's crossing (components/game/arrival): the arrival frames it, veils it and takes its skip. */
+  crossing: boolean;
   /** Take the boat from `from`'s pier to `to`, from where the avatar stands. */
   start: (from: TripPlace, to: TripPlace) => void;
-  /** A first login's arrival at `to` (the island already `showing`, or still under the loading screen). */
-  arrive: (to: TripPlace, showing: boolean) => void;
+  /** A first login's arrival at `to` (the island already `showing`, or still under the loading screen); `crossing`: the arrival's long crossing. */
+  arrive: (to: TripPlace, showing: boolean, crossing?: boolean) => void;
   skip: () => void;
 }
 
@@ -62,9 +64,9 @@ export function useTripControl({ dockOf, goTo, site, ready, onDone }: {
     myTrip.camera = { pitch: orbit.target.pitch, zoom: orbit.target.zoom };
     tripChanged();
   }, [dockOf]);
-  const arrive = useCallback((to: TripPlace, showing: boolean) => {
+  const arrive = useCallback((to: TripPlace, showing: boolean, crossing = false) => {
     if (myTrip.current) return;
-    myTrip.current = arrivalTrip("me", to, worldNow(), showing);
+    myTrip.current = arrivalTrip("me", to, worldNow(), showing, crossing);
     myTrip.loaded = false;
     myTrip.camera = { pitch: orbit.target.pitch, zoom: orbit.target.zoom };
     tripChanged();
@@ -101,17 +103,19 @@ export function useTripControl({ dockOf, goTo, site, ready, onDone }: {
     if (!active) return;
     const press = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
+      // A crossing's skip is the arrival's (a mist first, then the pier).
+      if (myTrip.current?.crossing) return;
       if (e.repeat || !SKIP_KEYS.includes(k) || isTyping(e.target as Element)) return;
       if (k === "escape" && escapeEndedCapture()) return;
       e.preventDefault();
       e.stopImmediatePropagation();
       skip();
     };
-    const tap = (e: PointerEvent) => { if (e.pointerType === "touch" && !(e.target as Element | null)?.closest?.("button")) skip(); };
+    const tap = (e: PointerEvent) => { if (e.pointerType === "touch" && !myTrip.current?.crossing && !(e.target as Element | null)?.closest?.("button")) skip(); };
     window.addEventListener("keydown", press, true);
     window.addEventListener("pointerdown", tap, true);
     return () => { window.removeEventListener("keydown", press, true); window.removeEventListener("pointerdown", tap, true); };
   }, [active]);
 
-  return { active, phase, to: trip?.to ?? "village", firstLogin: trip?.from === "sea", quick: !!trip?.skip && trip.skip.phase !== "veil" && trip.skip.phase !== "load", start, arrive, skip };
+  return { active, phase, to: trip?.to ?? "village", firstLogin: trip?.from === "sea", quick: !!trip?.skip && trip.skip.phase !== "veil" && trip.skip.phase !== "load", crossing: !!trip?.crossing, start, arrive, skip };
 }
