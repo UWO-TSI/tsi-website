@@ -73,6 +73,18 @@ Three files in `web/data/world/`. One loader reads them for the game, the editor
 - **The ground is the mesh's.** Each quad of samples is two triangles split from its (i, k) corner to its (i + 1, k + 1) corner. `terrainHeight` interpolates on those same triangles, so walking, placement and the drawn surface agree exactly at full detail (`world/terrain.ts`).
 - **The old systems' view.** Fishing water, forage and bug nodes, the glide guide and the campfire's sand still read cells. `cellMapOf` derives a cell map: water where a cell's centre is under the sea, a level of `round(h / 0.75)`, a surface from the paint. Walking and drawing never read it. The water (its colour, the seabed props, the fish) reads the real seabed (`seabed.ts setWaterSource`).
 
+## Conversion (built 2026-10-14)
+
+`cd web && npx vite-node -c vitest.config.ts scripts/convert-world.ts` turns `web/data/world-map.json` into `web/data/world/` in about 3 s (`lib/game/world/convert.ts`). Running it again overwrites David's sculpting, so it is only for a fresh start.
+
+- **Coast, rivers, bays, islets:** the grid's own organic coast (`shoreSdf`). Every old sea-level water cell centre stays under the sea and every land cell centre stays dry (tested on all 212k cells).
+- **Heights:** the level map as a stack of tiers. Each tier's outline is rounded in plan, every cell centre held on its own side so one-cell trail steps survive. It rises 0.75 u over ±1.6 u where the old map had a one-level step (a walkable slope, under 0.8 grade) and over ±0.35 u where it had a kit cliff (a rock face). Where several tiers stacked into one wall, the face leans back to grade 3 at most. Steep ground ends up only where the old map drew cliffs (tested: under 2% strays).
+- **Coast profile:** land meets the sea exactly on the shoreline. A beach shelves at 0.12 grade, a grass bank at 0.35, a cliff coast at 2.5. Under water the seabed shelves gently (0.45 deep two units out, where the old bed was 1.2) down to the open sea's floor at 4.2.
+- **Paint:** the grid's organic overlays (paths, beach, plaza stone), sand under water. Rock comes from slope in the renderer.
+- **Pads:** every building with a footprint stands on ground levelled to its centre over the footprint plus a cell, easing back over 2.5 u.
+- **Objects and annotations** are copied unchanged. The proposals stay in `web/data/proposals/`; the editor shows them for David to accept.
+- **Elevated water** (the peak waterfall): water is at sea level in v0. The fall's channel (26 cells) is rock, and its level-1 pond (81 cells) is a sea-level pond.
+
 ## Open questions for David (ask as they come up; don't block on them)
 
 - The island size: keep 384 × 552, or let him resize it in the editor.
