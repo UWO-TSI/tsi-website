@@ -1,5 +1,5 @@
 /**
- * First login (row 211; specs/v1-drop.md §1): the arrival, once per account. Underwater, Bram's boat, your reflection in
+ * First login (row 211; specs/v1-drop.md §1): the arrival, once per account. Bram's boat, your reflection in
  * the water as the creator, the golden-hour crossing and the walk-along tutorial (components/game/arrival), then
  * chapter 1's objective.
  *

@@ -18,7 +18,7 @@
 
 ## 1. Opening: the arrival (decided with David 2026-10-13)
 One continuous sequence after the title screen. It plays once on first login and is skippable.
-1. **Underwater, 4–6 s.** Black, then dim blue water with light shafts above, a muffled heartbeat and bubbles. You drift up and gasp at the surface. A weathered hand grabs your wrist: **Bram**, the wharf resident, becomes the fisherman Keeper (lore: the one who pulls you out).
+1. ~~**Underwater, 4–6 s.**~~ **Removed for v1** (playtest round 1, decision 2): the opening starts aboard Bram's boat with a short fade in. It gets rebuilt later from real assets or references David supplies. **Bram**, the wharf resident, is still the fisherman Keeper who pulled you out (lore).
 2. **Aboard Bram's small wooden fishing boat** (the one moored at the wharf: one-person cabin, nets, lantern). The world is **heavily blurred and washed out**, because your memories are gone. No Root in v1; sudo pets come later.
 3. **The reflection is the creator** (David's sketch: `references/ui/creator/2026-10-13-reflection-creator-sketch.png`).
    - Layout:

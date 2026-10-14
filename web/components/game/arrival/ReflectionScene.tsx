@@ -220,7 +220,7 @@ function drawReflection(f: Frame, dt: number) {
   const t = (f.clock.current += dt), now = performance.now();
   const phase = a?.phase ?? "creator", since = a ? (now - a.at) / 1000 : 10;
   // The lean: aboard you are laid down looking up at Bram; near the end you come up onto your knees and lean out.
-  const lean = phase === "aboard" || phase === "underwater" ? smooth(LEAN_AT, ARRIVAL_TIMES.aboard, since) : 1;
+  const lean = phase === "aboard" ? smooth(LEAN_AT, ARRIVAL_TIMES.aboard, since) : 1;
   const clarity = a ? clarityAt(a, now) : 1;
   // The boat rides a gentle swell; everything aboard rides with it.
   const bob = Math.sin(t * 0.9) * 0.025, roll = Math.sin(t * 0.7 + 1) * 0.022, pitch = Math.sin(t * 0.55) * 0.015;

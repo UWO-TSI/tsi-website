@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { ARRIVAL_TIMES, CLARITY, CROSSING_SHOTS, CROSSING_S, clarityAt, crossingShot, skipArrival, startArrival, stepArrival, underwaterBeat } from "./sequence";
+import { ARRIVAL_TIMES, CLARITY, CROSSING_SHOTS, CROSSING_S, clarityAt, crossingShot, skipArrival, startArrival, stepArrival } from "./sequence";
 
 const s = (n: number) => n * 1000;
 
 describe("the arrival's sequence", () => {
-  it("runs underwater, then aboard, then waits in the creator for Yes", () => {
+  it("opens aboard Bram's boat (no underwater beat), then waits in the creator for Yes", () => {
     const a = startArrival(0);
-    expect(a.phase).toBe("underwater");
-    expect(ARRIVAL_TIMES.underwater).toBeGreaterThanOrEqual(4);
-    expect(ARRIVAL_TIMES.underwater).toBeLessThanOrEqual(6);
-    expect(stepArrival(a, s(ARRIVAL_TIMES.underwater - 0.1), {})).toBe(false);
-    expect(stepArrival(a, s(ARRIVAL_TIMES.underwater), {})).toBe(true);
     expect(a.phase).toBe("aboard");
-    stepArrival(a, s(ARRIVAL_TIMES.underwater + ARRIVAL_TIMES.aboard), {});
+    expect("underwater" in ARRIVAL_TIMES).toBe(false);
+    // The fade in from black is short and inside the aboard beat.
+    expect(ARRIVAL_TIMES.fadeIn).toBeGreaterThan(0);
+    expect(ARRIVAL_TIMES.fadeIn).toBeLessThan(ARRIVAL_TIMES.aboard / 2);
+    expect(stepArrival(a, s(ARRIVAL_TIMES.aboard - 0.1), {})).toBe(false);
+    expect(stepArrival(a, s(ARRIVAL_TIMES.aboard), {})).toBe(true);
     expect(a.phase).toBe("creator");
     // The creator never times out: only Yes moves it on.
     expect(stepArrival(a, s(600), {})).toBe(false);
@@ -42,18 +42,16 @@ describe("the arrival's sequence", () => {
 
   it("catches up several beats in one step after a long frame", () => {
     const a = startArrival(0);
-    stepArrival(a, s(ARRIVAL_TIMES.underwater + ARRIVAL_TIMES.aboard + 5), {});
+    stepArrival(a, s(ARRIVAL_TIMES.aboard + 5), {});
     expect(a.phase).toBe("creator");
-    expect(a.at).toBe(s(ARRIVAL_TIMES.underwater + ARRIVAL_TIMES.aboard));
+    expect(a.at).toBe(s(ARRIVAL_TIMES.aboard));
   });
 
   it("skips the timed beats one press at a time, never the choice", () => {
     const a = startArrival(0);
-    expect(skipArrival(a, s(1))).toBe(true);
-    expect(a.phase).toBe("aboard");
-    expect(a.at).toBe(s(1));
     expect(skipArrival(a, s(2))).toBe(true);
     expect(a.phase).toBe("creator");
+    expect(a.at).toBe(s(2));
     expect(skipArrival(a, s(3))).toBe(false);
     expect(a.phase).toBe("creator");
     stepArrival(a, s(4), { yes: true });
@@ -61,19 +59,6 @@ describe("the arrival's sequence", () => {
     expect(a.phase).toBe("crossing");
     // The crossing's skip belongs to its boat (the trip): the sequence waits for the landing.
     expect(skipArrival(a, s(5))).toBe(false);
-  });
-
-  it("splits the underwater beat into the dark, the rise, the surface and the hand", () => {
-    expect(underwaterBeat(0).beat).toBe("dark");
-    expect(underwaterBeat(2).beat).toBe("rise");
-    const surface = underwaterBeat(ARRIVAL_TIMES.underwater - 1.0);
-    expect(["surface", "hand"]).toContain(surface.beat);
-    expect(underwaterBeat(ARRIVAL_TIMES.underwater - 0.01).beat).toBe("hand");
-    for (const t of [0, 0.5, 1.7, 3.9, 5.3]) {
-      const b = underwaterBeat(t);
-      expect(b.k).toBeGreaterThanOrEqual(0);
-      expect(b.k).toBeLessThanOrEqual(1);
-    }
   });
 
   it("frames the crossing in five shots over about 25 seconds, in order", () => {

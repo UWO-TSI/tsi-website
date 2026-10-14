@@ -718,7 +718,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const plot = useDefaultIslandPlot(progression.completedGoals);
   const ceremony = useCeremony(progression.ceremonyGoal, progression.forceCeremony);
   const chapterActions = useChapterActions();
-  // First login (row 211; specs/v1-drop.md §1): the arrival, once per account (underwater, Bram's boat, the reflection
+  // First login (row 211; specs/v1-drop.md §1): the arrival, once per account (Bram's boat, the reflection
   // creator, the crossing, the walk-along), then the chapter 1 objective. Dev: ?arrival=1 replays it.
   const mine = useMyLook();
   const progressionLoaded = useProgression().loaded;

@@ -9,6 +9,10 @@
 .mist { position: absolute; inset: 0; z-index: 80; pointer-events: none !important;
   background: radial-gradient(ellipse 85% 70% at 50% 46%, #fff8e6 0%, #f8e7c4 40%, #e8d7b9 70%, #cfd6cc 100%); }
 
+/* The opening's fade in: black lifting off Bram's boat, once. */
+.fadeIn { position: absolute; inset: 0; z-index: 85; background: #0d0b09; pointer-events: none !important; animation: fadeIn var(--fade-ms, 1200ms) ease-out both; }
+@keyframes fadeIn { from { opacity: 1; } to { opacity: 0; } }
+
 /* Cinematic bars for the crossing, slid in from the edges. */
 .letterbox { position: absolute; inset: 0; z-index: 2; pointer-events: none !important; }
 .letterbox i { position: absolute; left: 0; right: 0; height: clamp(28px, 7vh, 64px); background: #1b1611; animation: bar 0.9s var(--gui-ease) both; }
@@ -46,4 +50,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   .letterbox i, .skip, .glyph { animation: none; }
+  .fadeIn { animation-duration: 1ms; }
 }
