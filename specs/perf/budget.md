@@ -68,8 +68,11 @@ measured at the display's pace (`perf-bench.mjs` `UNCAPPED=0`), not by perf:chec
 | LOD 1 | past 21 u and under 72 px | 4,600 | 3 | 2 | 1 | 22 | 30 Hz past 28 u, 15 Hz past 40 u |
 | Reduced remote | the next 12 / 8 | 4,600 | 3 | 0 | 1 | 22 | 15 Hz |
 
-The heaviest wearable look today is 4,941 triangles full (every accessory slot filled) and 4,339 at LOD 1: LOD 1 only
-saves 12% because glasses, prints and layered pieces stay whole (`2026-10-results.md`). Held items are budgeted as
+The heaviest wearable look today is 4,941 triangles full (every accessory slot filled) and 4,376 at LOD 1: LOD 1 only
+saves 11% because glasses, prints and layered pieces stay whole (`2026-10-results.md`). Its hair is bangs plus a back
+plus a band; a whole hairstyle replaces the bangs and the back, so `budget.test.ts` counts the heavier of the two
+(head fit: David's styles stay under the pair, at most 1,500 + the band at Full and 974 at LOD 1). The base is the
+catalogue's clip base (`base/v8_clips.glb` since the head fit: the same 1,264 triangles of skin and face). Held items are budgeted as
 effects (below). The multiplayer spec's targets stay: at most 0.12 ms of CPU per Full remote and 3 ms for 24 drawn, at
 most +5 draws per drawn remote on High and +3 on Lite (`PER_PLAYER`).
 
@@ -109,6 +112,7 @@ wherever its node is drawn, and another in the shadow pass if it casts.
 
 | Category | Folders | Triangles | Primitives | Materials | Largest texture | Bones |
 |---|---|---|---|---|---|---|
+| Full hair | `characters/v6/hair/full` | 1,750 | 1 | 1 | none | 22 |
 | Hair | `characters/v6/hair` | 1,200 | 1 | 1 | none | 22 |
 | Accessory | `characters/v6/accessories` | 1,200 | 4 | 4 | 128 | 22 |
 | Outfit | `characters/v6/outfits` | 300 | 4 | 4 | 128 | 22 |
@@ -121,6 +125,13 @@ wherever its node is drawn, and another in the shadow pass if it casts.
 | Building | `acnh/buildings`, `buildings`, `game/buildings`, `game/wharf` | 12,000 | 10 | 10 | 1,024 | – |
 | Seabed and water life (v1 water, 2026-10-13) | `game/water` | 1,200 (the whole set) | 10 (one instanced draw each) | 6 | 256 | – |
 | Interior room | `game/cafe`, `game/interiors` | 12,000 | 24 | 24 | 1,024 | – |
+
+**Full hair** (head fit, `specs/characters/head-fit.md`): a whole hairstyle (David's set) replaces the bangs and the back
+together (`look.ts wornParts`), so it is held to the heaviest bangs-plus-back pair a look can already wear, 646 + 1,110 =
+1,756, rounded to 1,750; the look's budget below counts it in their place. Like every hair piece it is one primitive in
+one material: a cap or visor, a second colour and the under-cap are mask channels in the shared hair atlas and a UV
+marker, never another material, so a full hairstyle costs the same draws as any other (none: it merges into the body).
+David's 21 run 935-1,500 at Full and 465-974 at LOD 1.
 
 Shipped before the budget and over it, each capped where it is today (`ASSET_EXCEPTIONS`; shrink, never raise): seven
 weapons with 9–12 parts (the twin tantos at 12, the shields, the hand wraps, the tier-4 and 5 tooth charms), the café

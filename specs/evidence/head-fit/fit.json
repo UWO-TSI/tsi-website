@@ -1,0 +1,2951 @@
+{
+ "limits": {
+  "hair_open_edges": 0,
+  "hair_gap_max": 0.004,
+  "hair_gap_median": 0.001,
+  "hair_gap_median_full": 0.003,
+  "hair_skin_through_max": 0.0,
+  "seam_ledge_max": 0.003,
+  "seam_ledge_max_locks": 0.014,
+  "brow_cover_default": 0.05,
+  "hat_open_edges": 0,
+  "hat_gap_max": 0.01,
+  "hat_rise_median": 0.014,
+  "hat_poke_max": 0.002,
+  "glasses_offset_max": 0.012,
+  "face_stretch_max": 1.2,
+  "face_aniso_max": 1.3,
+  "eye_reach_lon_max_deg": 55.0,
+  "face_facing_max_deg": 52.0,
+  "lock_roots_exposed": 0,
+  "lock_dive_max": 0.002,
+  "skull_clip_max": 0.002,
+  "skull_float_max": 0.006,
+  "skull_hat_float_max": 0.01,
+  "skull_uncovered": 0,
+  "skull_reach_out": 0.0,
+  "skull_ear_rim": 0.0
+ },
+ "skull_version": "v8",
+ "skull": {
+  "bangs_straight": {
+   "kind": "bangs",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "hairline_C": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "bangs_straight_long": {
+   "kind": "bangs",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "hairline_C": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "bangs_bowl": {
+   "kind": "bangs",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "hairline_C": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "bangs_wispy": {
+   "kind": "bangs",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "hairline_C": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "bangs_swept_l": {
+   "kind": "bangs",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "hairline_C": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "bangs_swept_r": {
+   "kind": "bangs",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "hairline_C": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "bangs_curtain": {
+   "kind": "bangs",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "hairline_C": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "bangs_curtain_long": {
+   "kind": "bangs",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "hairline_C": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "bangs_centre_split": {
+   "kind": "bangs",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "hairline_C": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "bangs_spiky": {
+   "kind": "bangs",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "hairline_C": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "bangs_hime": {
+   "kind": "bangs",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "hairline_C": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "bangs_choppy": {
+   "kind": "bangs",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "hairline_C": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "bangs_swept_back": {
+   "kind": "bangs",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "hairline_C": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "bangs_single_strand": {
+   "kind": "bangs",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "hairline_C": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "bangs_wavy": {
+   "kind": "bangs",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "hairline_C": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "bangs_asym_block": {
+   "kind": "bangs",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "hairline_C": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "back_bob": {
+   "kind": "back",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0,
+    "top": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "back_wolf": {
+   "kind": "back",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0,
+    "top": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "back_long": {
+   "kind": "back",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0,
+    "top": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "back_wavy_long": {
+   "kind": "back",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0,
+    "top": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "back_high_pony": {
+   "kind": "back",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0,
+    "top": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "back_pigtails": {
+   "kind": "back",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0,
+    "top": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "back_twin_buns": {
+   "kind": "back",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0,
+    "top": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "back_bun": {
+   "kind": "back",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0,
+    "top": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "back_braid_crown": {
+   "kind": "back",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0,
+    "top": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "back_short_spiky": {
+   "kind": "back",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0,
+    "top": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "back_undercut": {
+   "kind": "back",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0,
+    "top": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "back_bowl": {
+   "kind": "back",
+   "clip": null,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0,
+    "top": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_messy_boy": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0025,
+    "top": 0.0025,
+    "hairline_C": 0.0025
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_hime_short": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0025,
+    "top": 0.0025,
+    "hairline_C": 0.0025
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_visor_messy": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0025,
+    "top": 0.0025,
+    "hairline_C": 0.0025
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_baby_sprout": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "top": 0.0011
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_long_scruffy": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0025,
+    "top": 0.0025,
+    "hairline_C": 0.0025
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_short_tufts": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0025,
+    "top": 0.0025,
+    "hairline_C": 0.0025
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_windy_bob": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0025,
+    "top": 0.0025,
+    "hairline_C": 0.0025
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_wispy_ponytail": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0025,
+    "top": 0.0025,
+    "hairline_C": 0.0025
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_fluffy_boy": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0025,
+    "top": 0.0025,
+    "hairline_C": 0.0025
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_messy_wolf": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0025,
+    "top": 0.0025,
+    "hairline_C": 0.0025
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_bowl_cut": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0025,
+    "top": 0.0025,
+    "hairline_C": 0.0025
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_layered_shag": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0025,
+    "top": 0.0025,
+    "hairline_C": 0.0015
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_anime_spikes": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0025,
+    "top": 0.0025,
+    "hairline_C": 0.0025
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_messy_low_pony": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0025,
+    "top": 0.0025,
+    "hairline_C": 0.0025
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_vkei": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0025,
+    "top": 0.0025,
+    "hairline_C": 0.0025
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_swept_fringe": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0003,
+    "top": 0.0025,
+    "hairline_C": 0.0012
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_bob_pigtail": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0025,
+    "top": 0.0025,
+    "hairline_C": 0.0025
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_long_pigtails": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0025,
+    "top": 0.0025,
+    "hairline_C": 0.0011
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_dreads_cap": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0025,
+    "top": 0.0025,
+    "hairline_C": 0.0025
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_waves": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0025,
+    "top": 0.0025,
+    "hairline_C": 0.0025
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "hair_messy_dreads": {
+   "kind": "full",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "crown": 0.0025,
+    "top": 0.0025,
+    "hairline_C": 0.0025
+   },
+   "uncovered": [],
+   "reach_out": 0.0
+  },
+  "acc_beanie": {
+   "kind": "hat",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "top": 0.0,
+    "crown": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0,
+   "ear_rim": 0.0
+  },
+  "acc_sunhat": {
+   "kind": "hat",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "top": 0.0,
+    "crown": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0,
+   "ear_rim": 0.0
+  },
+  "acc_cap": {
+   "kind": "hat",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "top": 0.0,
+    "crown": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0,
+   "ear_rim": 0.0
+  },
+  "acc_straw_hat": {
+   "kind": "hat",
+   "clip": 0.0,
+   "clip_at": null,
+   "float": {
+    "top": 0.0,
+    "crown": 0.0
+   },
+   "uncovered": [],
+   "reach_out": 0.0,
+   "ear_rim": 0.0
+  }
+ },
+ "face": {
+  "feature_tris": 262,
+  "stretch_max": 1.136,
+  "aniso_max": 1.288,
+  "per_layer": {
+   "eyes": {
+    "stretch": 1.136,
+    "aniso": 1.288
+   },
+   "brows": {
+    "stretch": 1.009,
+    "aniso": 1.011
+   },
+   "mouth": {
+    "stretch": 1.136,
+    "aniso": 1.181
+   }
+  },
+  "stretch_worst_at": [
+   "eyes",
+   -51,
+   0.594
+  ],
+  "aniso_worst_at": [
+   "eyes",
+   [
+    0.077,
+    0.907
+   ]
+  ],
+  "eye_reach_deg": 51.2,
+  "eye_reach_lon_deg": 53.6,
+  "facing_max_deg": {
+   "eyes": 51.2,
+   "brows": 13.3,
+   "mouth": 45.1
+  },
+  "default_eye_centre_lon_deg": 32.6,
+  "default_eye_centre_z": 0.7276
+ },
+ "seam": {
+  "ledge_max": 0.0093,
+  "worst_pair": "bangs_wispy+back_bob",
+  "worst_at": [
+   44,
+   -12
+  ],
+  "default_pair": 0.0002,
+  "median_over_pairs": 0.0042,
+  "over": {
+   "bangs_wispy+back_bob": [
+    0.0093,
+    [
+     44,
+     -12
+    ]
+   ],
+   "bangs_wispy+back_wolf": [
+    0.0093,
+    [
+     44,
+     -12
+    ]
+   ],
+   "bangs_wispy+back_long": [
+    0.0093,
+    [
+     44,
+     -12
+    ]
+   ],
+   "bangs_wispy+back_wavy_long": [
+    0.0093,
+    [
+     44,
+     -12
+    ]
+   ],
+   "bangs_wispy+back_high_pony": [
+    0.0093,
+    [
+     44,
+     -12
+    ]
+   ],
+   "bangs_wispy+back_pigtails": [
+    0.0093,
+    [
+     44,
+     -12
+    ]
+   ],
+   "bangs_wispy+back_twin_buns": [
+    0.0093,
+    [
+     44,
+     -12
+    ]
+   ],
+   "bangs_wispy+back_bun": [
+    0.0093,
+    [
+     44,
+     -12
+    ]
+   ],
+   "bangs_wispy+back_braid_crown": [
+    0.0093,
+    [
+     44,
+     -12
+    ]
+   ],
+   "bangs_wispy+back_short_spiky": [
+    0.0093,
+    [
+     44,
+     -12
+    ]
+   ],
+   "bangs_wispy+back_undercut": [
+    0.0093,
+    [
+     44,
+     -12
+    ]
+   ],
+   "bangs_wispy+back_bowl": [
+    0.0093,
+    [
+     44,
+     -12
+    ]
+   ],
+   "bangs_swept_l+back_bob": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_swept_l+back_wolf": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_swept_l+back_long": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_swept_l+back_wavy_long": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_swept_l+back_high_pony": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_swept_l+back_pigtails": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_swept_l+back_bun": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_swept_l+back_braid_crown": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_swept_l+back_short_spiky": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_swept_l+back_undercut": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_swept_l+back_bowl": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_single_strand+back_bob": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_single_strand+back_wolf": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_single_strand+back_long": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_single_strand+back_wavy_long": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_single_strand+back_high_pony": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_single_strand+back_pigtails": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_single_strand+back_bun": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_single_strand+back_braid_crown": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_single_strand+back_short_spiky": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_single_strand+back_undercut": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_single_strand+back_bowl": [
+    0.0083,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_choppy+back_bob": [
+    0.0075,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_choppy+back_wolf": [
+    0.0075,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_choppy+back_long": [
+    0.0075,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_choppy+back_wavy_long": [
+    0.0075,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_choppy+back_high_pony": [
+    0.0075,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_choppy+back_pigtails": [
+    0.0075,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_choppy+back_bun": [
+    0.0075,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_choppy+back_braid_crown": [
+    0.0075,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_choppy+back_short_spiky": [
+    0.0075,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_choppy+back_undercut": [
+    0.0075,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_choppy+back_bowl": [
+    0.0075,
+    [
+     56,
+     -57
+    ]
+   ],
+   "bangs_centre_split+back_bob": [
+    0.0072,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_centre_split+back_wolf": [
+    0.0072,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_centre_split+back_long": [
+    0.0072,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_centre_split+back_wavy_long": [
+    0.0072,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_centre_split+back_high_pony": [
+    0.0072,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_centre_split+back_pigtails": [
+    0.0072,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_centre_split+back_twin_buns": [
+    0.0072,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_centre_split+back_bun": [
+    0.0072,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_centre_split+back_short_spiky": [
+    0.0072,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_centre_split+back_undercut": [
+    0.0072,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_centre_split+back_bowl": [
+    0.0072,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_swept_r+back_bob": [
+    0.006,
+    [
+     56,
+     57
+    ]
+   ],
+   "bangs_swept_r+back_wolf": [
+    0.006,
+    [
+     56,
+     57
+    ]
+   ],
+   "bangs_swept_r+back_long": [
+    0.006,
+    [
+     56,
+     57
+    ]
+   ],
+   "bangs_swept_r+back_wavy_long": [
+    0.006,
+    [
+     56,
+     57
+    ]
+   ],
+   "bangs_swept_r+back_high_pony": [
+    0.006,
+    [
+     56,
+     57
+    ]
+   ],
+   "bangs_swept_r+back_pigtails": [
+    0.006,
+    [
+     56,
+     57
+    ]
+   ],
+   "bangs_swept_r+back_bun": [
+    0.006,
+    [
+     56,
+     57
+    ]
+   ],
+   "bangs_swept_r+back_braid_crown": [
+    0.006,
+    [
+     56,
+     57
+    ]
+   ],
+   "bangs_swept_r+back_short_spiky": [
+    0.006,
+    [
+     56,
+     57
+    ]
+   ],
+   "bangs_swept_r+back_undercut": [
+    0.006,
+    [
+     56,
+     57
+    ]
+   ],
+   "bangs_swept_r+back_bowl": [
+    0.006,
+    [
+     56,
+     57
+    ]
+   ],
+   "bangs_spiky+back_bob": [
+    0.0049,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_spiky+back_wolf": [
+    0.0049,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_spiky+back_long": [
+    0.0049,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_spiky+back_wavy_long": [
+    0.0049,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_spiky+back_high_pony": [
+    0.0049,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_spiky+back_pigtails": [
+    0.0049,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_spiky+back_twin_buns": [
+    0.0049,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_spiky+back_bun": [
+    0.0049,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_spiky+back_short_spiky": [
+    0.0049,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_spiky+back_undercut": [
+    0.0049,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_spiky+back_bowl": [
+    0.0049,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_asym_block+back_bob": [
+    0.0046,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_asym_block+back_wolf": [
+    0.0046,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_asym_block+back_long": [
+    0.0046,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_asym_block+back_wavy_long": [
+    0.0046,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_asym_block+back_high_pony": [
+    0.0046,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_asym_block+back_pigtails": [
+    0.0046,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_asym_block+back_twin_buns": [
+    0.0046,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_asym_block+back_bun": [
+    0.0046,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_asym_block+back_short_spiky": [
+    0.0046,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_asym_block+back_undercut": [
+    0.0046,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_asym_block+back_bowl": [
+    0.0046,
+    [
+     26,
+     57
+    ]
+   ],
+   "bangs_asym_block+back_braid_crown": [
+    0.0044,
+    [
+     56,
+     57
+    ]
+   ],
+   "bangs_curtain_long+back_bob": [
+    0.0042,
+    [
+     44,
+     3
+    ]
+   ],
+   "bangs_curtain_long+back_wolf": [
+    0.0042,
+    [
+     44,
+     3
+    ]
+   ],
+   "bangs_curtain_long+back_long": [
+    0.0042,
+    [
+     44,
+     3
+    ]
+   ],
+   "bangs_curtain_long+back_wavy_long": [
+    0.0042,
+    [
+     44,
+     3
+    ]
+   ],
+   "bangs_curtain_long+back_high_pony": [
+    0.0042,
+    [
+     44,
+     3
+    ]
+   ],
+   "bangs_curtain_long+back_pigtails": [
+    0.0042,
+    [
+     44,
+     3
+    ]
+   ],
+   "bangs_curtain_long+back_twin_buns": [
+    0.0042,
+    [
+     44,
+     3
+    ]
+   ],
+   "bangs_curtain_long+back_bun": [
+    0.0042,
+    [
+     44,
+     3
+    ]
+   ],
+   "bangs_curtain_long+back_braid_crown": [
+    0.0042,
+    [
+     44,
+     3
+    ]
+   ],
+   "bangs_curtain_long+back_short_spiky": [
+    0.0042,
+    [
+     44,
+     3
+    ]
+   ],
+   "bangs_curtain_long+back_undercut": [
+    0.0042,
+    [
+     44,
+     3
+    ]
+   ],
+   "bangs_curtain_long+back_bowl": [
+    0.0042,
+    [
+     44,
+     3
+    ]
+   ],
+   "bangs_centre_split+back_braid_crown": [
+    0.0036,
+    [
+     62,
+     60
+    ]
+   ],
+   "bangs_wavy+back_bob": [
+    0.0036,
+    [
+     62,
+     60
+    ]
+   ],
+   "bangs_wavy+back_wolf": [
+    0.0036,
+    [
+     62,
+     60
+    ]
+   ],
+   "bangs_wavy+back_long": [
+    0.0036,
+    [
+     62,
+     60
+    ]
+   ],
+   "bangs_wavy+back_wavy_long": [
+    0.0036,
+    [
+     62,
+     60
+    ]
+   ],
+   "bangs_wavy+back_high_pony": [
+    0.0036,
+    [
+     62,
+     60
+    ]
+   ],
+   "bangs_wavy+back_pigtails": [
+    0.0036,
+    [
+     62,
+     60
+    ]
+   ],
+   "bangs_wavy+back_bun": [
+    0.0036,
+    [
+     62,
+     60
+    ]
+   ],
+   "bangs_wavy+back_braid_crown": [
+    0.0036,
+    [
+     62,
+     60
+    ]
+   ],
+   "bangs_wavy+back_short_spiky": [
+    0.0036,
+    [
+     62,
+     60
+    ]
+   ],
+   "bangs_wavy+back_undercut": [
+    0.0036,
+    [
+     62,
+     60
+    ]
+   ],
+   "bangs_wavy+back_bowl": [
+    0.0036,
+    [
+     62,
+     60
+    ]
+   ]
+  }
+ },
+ "hair": {
+  "bangs_straight": {
+   "slot": "bangs",
+   "tris": 586,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.001,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 674,
+    "worst_at": [
+     14,
+     66
+    ]
+   },
+   "on_scalp_share": 0.945,
+   "outer_median": 0.0198,
+   "brow_cover": 0.0
+  },
+  "bangs_straight_long": {
+   "slot": "bangs",
+   "tris": 586,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0019,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 821,
+    "worst_at": [
+     6,
+     69
+    ]
+   },
+   "on_scalp_share": 0.908,
+   "outer_median": 0.0188,
+   "brow_cover": 0.26
+  },
+  "bangs_bowl": {
+   "slot": "bangs",
+   "tris": 630,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0008,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 557,
+    "worst_at": [
+     44,
+     15
+    ]
+   },
+   "on_scalp_share": 0.923,
+   "outer_median": 0.0225,
+   "brow_cover": 0.0
+  },
+  "bangs_wispy": {
+   "slot": "bangs",
+   "tris": 646,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0026,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 252,
+    "worst_at": [
+     40,
+     30
+    ]
+   },
+   "on_scalp_share": 0.905,
+   "outer_median": 0.007,
+   "brow_cover": 0.0
+  },
+  "bangs_swept_l": {
+   "slot": "bangs",
+   "tris": 586,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0007,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 447,
+    "worst_at": [
+     26,
+     -57
+    ]
+   },
+   "on_scalp_share": 0.961,
+   "outer_median": 0.0223,
+   "brow_cover": 0.0
+  },
+  "bangs_swept_r": {
+   "slot": "bangs",
+   "tris": 586,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0002,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 447,
+    "worst_at": [
+     24,
+     60
+    ]
+   },
+   "on_scalp_share": 0.974,
+   "outer_median": 0.0222,
+   "brow_cover": 0.0
+  },
+  "bangs_curtain": {
+   "slot": "bangs",
+   "tris": 560,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 741,
+    "worst_at": [
+     -22,
+     -78
+    ]
+   },
+   "on_scalp_share": 0.975,
+   "outer_median": 0.0223,
+   "brow_cover": 0.0
+  },
+  "bangs_curtain_long": {
+   "slot": "bangs",
+   "tris": 420,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 665,
+    "worst_at": [
+     -34,
+     -66
+    ]
+   },
+   "on_scalp_share": 0.961,
+   "outer_median": 0.0221,
+   "brow_cover": 0.0
+  },
+  "bangs_centre_split": {
+   "slot": "bangs",
+   "tris": 516,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0008,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 684,
+    "worst_at": [
+     28,
+     -57
+    ]
+   },
+   "on_scalp_share": 0.967,
+   "outer_median": 0.02,
+   "brow_cover": 0.0
+  },
+  "bangs_spiky": {
+   "slot": "bangs",
+   "tris": 516,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 569,
+    "worst_at": [
+     0,
+     -66
+    ]
+   },
+   "on_scalp_share": 0.966,
+   "outer_median": 0.0194,
+   "brow_cover": 0.0
+  },
+  "bangs_hime": {
+   "slot": "bangs",
+   "tris": 644,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0009,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 819,
+    "worst_at": [
+     -10,
+     -72
+    ]
+   },
+   "on_scalp_share": 0.941,
+   "outer_median": 0.018,
+   "brow_cover": 0.0
+  },
+  "bangs_choppy": {
+   "slot": "bangs",
+   "tris": 576,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0012,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 210,
+    "worst_at": [
+     26,
+     -57
+    ]
+   },
+   "on_scalp_share": 0.953,
+   "outer_median": 0.0221,
+   "brow_cover": 0.0
+  },
+  "bangs_swept_back": {
+   "slot": "bangs",
+   "tris": 490,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 105,
+    "worst_at": [
+     28,
+     -57
+    ]
+   },
+   "on_scalp_share": 0.82,
+   "outer_median": 0.02,
+   "brow_cover": 0.0
+  },
+  "bangs_single_strand": {
+   "slot": "bangs",
+   "tris": 586,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0007,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 289,
+    "worst_at": [
+     26,
+     -57
+    ]
+   },
+   "on_scalp_share": 0.956,
+   "outer_median": 0.0197,
+   "brow_cover": 0.0
+  },
+  "bangs_wavy": {
+   "slot": "bangs",
+   "tris": 586,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0012,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 529,
+    "worst_at": [
+     8,
+     45
+    ]
+   },
+   "on_scalp_share": 0.958,
+   "outer_median": 0.0199,
+   "brow_cover": 0.0
+  },
+  "bangs_asym_block": {
+   "slot": "bangs",
+   "tris": 586,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0008,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 563,
+    "worst_at": [
+     2,
+     -72
+    ]
+   },
+   "on_scalp_share": 0.953,
+   "outer_median": 0.0193,
+   "brow_cover": 0.0
+  },
+  "back_bob": {
+   "slot": "back",
+   "tris": 990,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 5711,
+    "worst_at": [
+     -28,
+     -180
+    ]
+   },
+   "on_scalp_share": 0.991,
+   "outer_median": 0.0281
+  },
+  "back_wolf": {
+   "slot": "back",
+   "tris": 1086,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 5631,
+    "worst_at": [
+     -26,
+     -180
+    ]
+   },
+   "on_scalp_share": 0.99,
+   "outer_median": 0.0275
+  },
+  "back_long": {
+   "slot": "back",
+   "tris": 918,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 5948,
+    "worst_at": [
+     -34,
+     -180
+    ]
+   },
+   "on_scalp_share": 0.992,
+   "outer_median": 0.0253
+  },
+  "back_wavy_long": {
+   "slot": "back",
+   "tris": 918,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 5947,
+    "worst_at": [
+     -34,
+     -180
+    ]
+   },
+   "on_scalp_share": 0.994,
+   "outer_median": 0.0253
+  },
+  "back_high_pony": {
+   "slot": "back",
+   "tris": 886,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 5395,
+    "worst_at": [
+     -20,
+     -180
+    ]
+   },
+   "on_scalp_share": 0.996,
+   "outer_median": 0.017
+  },
+  "back_pigtails": {
+   "slot": "back",
+   "tris": 1070,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 5553,
+    "worst_at": [
+     -24,
+     -180
+    ]
+   },
+   "on_scalp_share": 0.999,
+   "outer_median": 0.0165
+  },
+  "back_twin_buns": {
+   "slot": "back",
+   "tris": 942,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 5711,
+    "worst_at": [
+     -28,
+     -180
+    ]
+   },
+   "on_scalp_share": 0.997,
+   "outer_median": 0.0139
+  },
+  "back_bun": {
+   "slot": "back",
+   "tris": 798,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 5869,
+    "worst_at": [
+     -32,
+     -180
+    ]
+   },
+   "on_scalp_share": 0.997,
+   "outer_median": 0.0148
+  },
+  "back_braid_crown": {
+   "slot": "back",
+   "tris": 1110,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 5869,
+    "worst_at": [
+     -32,
+     -180
+    ]
+   },
+   "on_scalp_share": 0.989,
+   "outer_median": 0.0264
+  },
+  "back_short_spiky": {
+   "slot": "back",
+   "tris": 964,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 4842,
+    "worst_at": [
+     -6,
+     -180
+    ]
+   },
+   "on_scalp_share": 0.992,
+   "outer_median": 0.0278
+  },
+  "back_undercut": {
+   "slot": "back",
+   "tris": 690,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 4842,
+    "worst_at": [
+     -6,
+     -180
+    ]
+   },
+   "on_scalp_share": 0.988,
+   "outer_median": 0.0259
+  },
+  "back_bowl": {
+   "slot": "back",
+   "tris": 990,
+   "open_edges": 0,
+   "gap": {
+    "max": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 4842,
+    "worst_at": [
+     -6,
+     -180
+    ]
+   },
+   "on_scalp_share": 0.991,
+   "outer_median": 0.0274
+  },
+  "hair_messy_boy": {
+   "slot": "back",
+   "tris": 995,
+   "open_edges": 49,
+   "gap": {
+    "max": 0.0027,
+    "median": 0.0025,
+    "p95": 0.0025,
+    "n": 4975,
+    "worst_at": [
+     -20,
+     -162
+    ]
+   },
+   "on_scalp_share": 0.001,
+   "outer_median": 0.0174,
+   "skin_through": -0.0023,
+   "skin_through_at": [
+    62,
+    27
+   ]
+  },
+  "hair_hime_short": {
+   "slot": "back",
+   "tris": 1528,
+   "open_edges": 170,
+   "gap": {
+    "max": 0.0027,
+    "median": 0.0025,
+    "p95": 0.0025,
+    "n": 4975,
+    "worst_at": [
+     -20,
+     -162
+    ]
+   },
+   "on_scalp_share": 0.002,
+   "outer_median": 0.0261,
+   "skin_through": -0.0025,
+   "skin_through_at": [
+    -8,
+    120
+   ]
+  },
+  "hair_visor_messy": {
+   "slot": "back",
+   "tris": 1545,
+   "open_edges": 117,
+   "gap": {
+    "max": 0.0027,
+    "median": 0.0025,
+    "p95": 0.0025,
+    "n": 4975,
+    "worst_at": [
+     -20,
+     -162
+    ]
+   },
+   "on_scalp_share": 0.0,
+   "outer_median": 0.012,
+   "skin_through": -0.0024,
+   "skin_through_at": [
+    38,
+    63
+   ]
+  },
+  "hair_baby_sprout": {
+   "slot": "back",
+   "tris": 1534,
+   "open_edges": 64,
+   "gap": {
+    "max": null,
+    "median": null,
+    "p95": null,
+    "n": 0
+   },
+   "on_scalp_share": null,
+   "outer_median": null,
+   "skin_through": -1.0,
+   "skin_through_at": [
+    -70,
+    -180
+   ]
+  },
+  "hair_long_scruffy": {
+   "slot": "back",
+   "tris": 1525,
+   "open_edges": 92,
+   "gap": {
+    "max": 0.0027,
+    "median": 0.0025,
+    "p95": 0.0025,
+    "n": 4975,
+    "worst_at": [
+     -20,
+     -162
+    ]
+   },
+   "on_scalp_share": 0.001,
+   "outer_median": 0.0264,
+   "skin_through": -0.0091,
+   "skin_through_at": [
+    36,
+    -51
+   ]
+  },
+  "hair_short_tufts": {
+   "slot": "back",
+   "tris": 1544,
+   "open_edges": 478,
+   "gap": {
+    "max": 0.0027,
+    "median": 0.0025,
+    "p95": 0.0025,
+    "n": 4975,
+    "worst_at": [
+     -20,
+     -162
+    ]
+   },
+   "on_scalp_share": 0.001,
+   "outer_median": 0.0348,
+   "skin_through": -0.0025,
+   "skin_through_at": [
+    -2,
+    -93
+   ]
+  },
+  "hair_windy_bob": {
+   "slot": "back",
+   "tris": 1546,
+   "open_edges": 450,
+   "gap": {
+    "max": 0.0027,
+    "median": 0.0025,
+    "p95": 0.0025,
+    "n": 4975,
+    "worst_at": [
+     -20,
+     -162
+    ]
+   },
+   "on_scalp_share": 0.001,
+   "outer_median": 0.0239,
+   "skin_through": -0.0025,
+   "skin_through_at": [
+    -16,
+    135
+   ]
+  },
+  "hair_wispy_ponytail": {
+   "slot": "back",
+   "tris": 1749,
+   "open_edges": 379,
+   "gap": {
+    "max": 0.0027,
+    "median": 0.0025,
+    "p95": 0.0025,
+    "n": 4975,
+    "worst_at": [
+     -20,
+     -162
+    ]
+   },
+   "on_scalp_share": 0.0,
+   "outer_median": 0.0175,
+   "skin_through": -0.0047,
+   "skin_through_at": [
+    32,
+    117
+   ]
+  },
+  "hair_fluffy_boy": {
+   "slot": "back",
+   "tris": 1648,
+   "open_edges": 84,
+   "gap": {
+    "max": 0.0027,
+    "median": 0.0025,
+    "p95": 0.0025,
+    "n": 4975,
+    "worst_at": [
+     -20,
+     -162
+    ]
+   },
+   "on_scalp_share": 0.0,
+   "outer_median": 0.0397,
+   "skin_through": -0.0108,
+   "skin_through_at": [
+    62,
+    -39
+   ]
+  },
+  "hair_messy_wolf": {
+   "slot": "back",
+   "tris": 1750,
+   "open_edges": 429,
+   "gap": {
+    "max": 0.0027,
+    "median": 0.0025,
+    "p95": 0.0025,
+    "n": 4975,
+    "worst_at": [
+     -20,
+     -162
+    ]
+   },
+   "on_scalp_share": 0.014,
+   "outer_median": 0.047,
+   "skin_through": -0.0025,
+   "skin_through_at": [
+    -8,
+    -156
+   ]
+  },
+  "hair_bowl_cut": {
+   "slot": "back",
+   "tris": 1536,
+   "open_edges": 36,
+   "gap": {
+    "max": 0.0027,
+    "median": 0.0025,
+    "p95": 0.0025,
+    "n": 4975,
+    "worst_at": [
+     -20,
+     -162
+    ]
+   },
+   "on_scalp_share": 0.0,
+   "outer_median": 0.01,
+   "skin_through": -0.0024,
+   "skin_through_at": [
+    -8,
+    126
+   ]
+  },
+  "hair_layered_shag": {
+   "slot": "back",
+   "tris": 1559,
+   "open_edges": 164,
+   "gap": {
+    "max": 0.0027,
+    "median": 0.0025,
+    "p95": 0.0025,
+    "n": 4975,
+    "worst_at": [
+     -20,
+     -162
+    ]
+   },
+   "on_scalp_share": 0.0,
+   "outer_median": 0.0573,
+   "skin_through": -0.0026,
+   "skin_through_at": [
+    -20,
+    -105
+   ]
+  },
+  "hair_anime_spikes": {
+   "slot": "back",
+   "tris": 1610,
+   "open_edges": 54,
+   "gap": {
+    "max": 0.0027,
+    "median": 0.0025,
+    "p95": 0.0025,
+    "n": 4975,
+    "worst_at": [
+     -20,
+     -162
+    ]
+   },
+   "on_scalp_share": 0.0,
+   "outer_median": 0.0121,
+   "skin_through": -0.0024,
+   "skin_through_at": [
+    46,
+    -39
+   ]
+  },
+  "hair_messy_low_pony": {
+   "slot": "back",
+   "tris": 1517,
+   "open_edges": 389,
+   "gap": {
+    "max": 0.0027,
+    "median": 0.0025,
+    "p95": 0.0025,
+    "n": 4975,
+    "worst_at": [
+     -20,
+     162
+    ]
+   },
+   "on_scalp_share": 0.007,
+   "outer_median": 0.0429,
+   "skin_through": -0.0025,
+   "skin_through_at": [
+    72,
+    0
+   ]
+  },
+  "hair_vkei": {
+   "slot": "back",
+   "tris": 1445,
+   "open_edges": 388,
+   "gap": {
+    "max": 0.0027,
+    "median": 0.0025,
+    "p95": 0.0025,
+    "n": 4975,
+    "worst_at": [
+     -20,
+     -162
+    ]
+   },
+   "on_scalp_share": 0.003,
+   "outer_median": 0.0384,
+   "skin_through": -0.0025,
+   "skin_through_at": [
+    -8,
+    -90
+   ]
+  },
+  "hair_swept_fringe": {
+   "slot": "back",
+   "tris": 1749,
+   "open_edges": 727,
+   "gap": {
+    "max": 0.0027,
+    "median": 0.0025,
+    "p95": 0.0025,
+    "n": 4975,
+    "worst_at": [
+     -20,
+     -162
+    ]
+   },
+   "on_scalp_share": 0.003,
+   "outer_median": 0.0387,
+   "skin_through": -0.0025,
+   "skin_through_at": [
+    -8,
+    -87
+   ]
+  },
+  "hair_bob_pigtail": {
+   "slot": "back",
+   "tris": 1734,
+   "open_edges": 544,
+   "gap": {
+    "max": 0.0027,
+    "median": 0.0025,
+    "p95": 0.0025,
+    "n": 4975,
+    "worst_at": [
+     -20,
+     -162
+    ]
+   },
+   "on_scalp_share": 0.005,
+   "outer_median": 0.0303,
+   "skin_through": -0.0023,
+   "skin_through_at": [
+    58,
+    -135
+   ]
+  },
+  "hair_long_pigtails": {
+   "slot": "back",
+   "tris": 1750,
+   "open_edges": 199,
+   "gap": {
+    "max": 0.0027,
+    "median": 0.0025,
+    "p95": 0.0025,
+    "n": 4975,
+    "worst_at": [
+     -20,
+     -162
+    ]
+   },
+   "on_scalp_share": 0.0,
+   "outer_median": 0.0089,
+   "skin_through": -0.0034,
+   "skin_through_at": [
+    20,
+    -114
+   ]
+  },
+  "hair_dreads_cap": {
+   "slot": "back",
+   "tris": 1750,
+   "open_edges": 220,
+   "gap": {
+    "max": 0.0027,
+    "median": 0.0025,
+    "p95": 0.0025,
+    "n": 4975,
+    "worst_at": [
+     -20,
+     -162
+    ]
+   },
+   "on_scalp_share": 0.001,
+   "outer_median": 0.0157,
+   "skin_through": -0.0024,
+   "skin_through_at": [
+    60,
+    39
+   ]
+  },
+  "hair_waves": {
+   "slot": "back",
+   "tris": 1316,
+   "open_edges": 84,
+   "gap": {
+    "max": 0.0027,
+    "median": 0.0025,
+    "p95": 0.0025,
+    "n": 4975,
+    "worst_at": [
+     -20,
+     -162
+    ]
+   },
+   "on_scalp_share": 0.0,
+   "outer_median": 0.0061,
+   "skin_through": -0.0025,
+   "skin_through_at": [
+    8,
+    -117
+   ]
+  },
+  "hair_messy_dreads": {
+   "slot": "back",
+   "tris": 1750,
+   "open_edges": 128,
+   "gap": {
+    "max": 0.0027,
+    "median": 0.0025,
+    "p95": 0.0025,
+    "n": 4975,
+    "worst_at": [
+     -20,
+     -162
+    ]
+   },
+   "on_scalp_share": 0.0,
+   "outer_median": 0.023,
+   "skin_through": -0.0025,
+   "skin_through_at": [
+    -8,
+    -87
+   ]
+  }
+ },
+ "locks": {
+  "bangs_straight": {
+   "style": null,
+   "slot": "bangs",
+   "locks": 9,
+   "tris": 586,
+   "root_verts": 52,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "bangs_straight_long": {
+   "style": null,
+   "slot": "bangs",
+   "locks": 9,
+   "tris": 586,
+   "root_verts": 52,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "bangs_bowl": {
+   "style": null,
+   "slot": "bangs",
+   "locks": 9,
+   "tris": 630,
+   "root_verts": 54,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "bangs_wispy": {
+   "style": null,
+   "slot": "bangs",
+   "locks": 14,
+   "tris": 646,
+   "root_verts": 77,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "bangs_swept_l": {
+   "style": null,
+   "slot": "bangs",
+   "locks": 9,
+   "tris": 586,
+   "root_verts": 52,
+   "roots_exposed": 0,
+   "dive_max": 0.0014,
+   "dive_at": [
+    34,
+    -48
+   ]
+  },
+  "bangs_swept_r": {
+   "style": null,
+   "slot": "bangs",
+   "locks": 9,
+   "tris": 586,
+   "root_verts": 52,
+   "roots_exposed": 0,
+   "dive_max": 0.0007,
+   "dive_at": [
+    35,
+    50
+   ]
+  },
+  "bangs_curtain": {
+   "style": null,
+   "slot": "bangs",
+   "locks": 8,
+   "tris": 560,
+   "root_verts": 48,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "bangs_curtain_long": {
+   "style": null,
+   "slot": "bangs",
+   "locks": 6,
+   "tris": 420,
+   "root_verts": 36,
+   "roots_exposed": 0,
+   "dive_max": 0.0003,
+   "dive_at": [
+    -34,
+    -63
+   ]
+  },
+  "bangs_centre_split": {
+   "style": null,
+   "slot": "bangs",
+   "locks": 8,
+   "tris": 516,
+   "root_verts": 46,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "bangs_spiky": {
+   "style": null,
+   "slot": "bangs",
+   "locks": 8,
+   "tris": 516,
+   "root_verts": 46,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "bangs_hime": {
+   "style": null,
+   "slot": "bangs",
+   "locks": 9,
+   "tris": 644,
+   "root_verts": 52,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "bangs_choppy": {
+   "style": null,
+   "slot": "bangs",
+   "locks": 10,
+   "tris": 576,
+   "root_verts": 58,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "bangs_swept_back": {
+   "style": null,
+   "slot": "bangs",
+   "locks": 7,
+   "tris": 490,
+   "root_verts": 42,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "bangs_single_strand": {
+   "style": null,
+   "slot": "bangs",
+   "locks": 10,
+   "tris": 586,
+   "root_verts": 58,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "bangs_wavy": {
+   "style": null,
+   "slot": "bangs",
+   "locks": 9,
+   "tris": 586,
+   "root_verts": 52,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "bangs_asym_block": {
+   "style": null,
+   "slot": "bangs",
+   "locks": 9,
+   "tris": 586,
+   "root_verts": 52,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "back_bob": {
+   "style": null,
+   "slot": "back",
+   "locks": 9,
+   "tris": 990,
+   "root_verts": 54,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "back_wolf": {
+   "style": null,
+   "slot": "back",
+   "locks": 15,
+   "tris": 1086,
+   "root_verts": 75,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "back_long": {
+   "style": null,
+   "slot": "back",
+   "locks": 9,
+   "tris": 918,
+   "root_verts": 45,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "back_wavy_long": {
+   "style": null,
+   "slot": "back",
+   "locks": 9,
+   "tris": 918,
+   "root_verts": 45,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "back_high_pony": {
+   "style": null,
+   "slot": "back",
+   "locks": 7,
+   "tris": 886,
+   "root_verts": 75,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "back_pigtails": {
+   "style": null,
+   "slot": "back",
+   "locks": 10,
+   "tris": 1070,
+   "root_verts": 90,
+   "roots_exposed": 0,
+   "dive_max": 0.0009,
+   "dive_at": [
+    21,
+    131
+   ]
+  },
+  "back_twin_buns": {
+   "style": null,
+   "slot": "back",
+   "locks": 10,
+   "tris": 942,
+   "root_verts": 70,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "back_bun": {
+   "style": null,
+   "slot": "back",
+   "locks": 5,
+   "tris": 798,
+   "root_verts": 55,
+   "roots_exposed": 0,
+   "dive_max": 0.0017,
+   "dive_at": [
+    26,
+    -70
+   ]
+  },
+  "back_braid_crown": {
+   "style": null,
+   "slot": "back",
+   "locks": 23,
+   "tris": 1110,
+   "root_verts": 115,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "back_short_spiky": {
+   "style": null,
+   "slot": "back",
+   "locks": 11,
+   "tris": 964,
+   "root_verts": 64,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "back_undercut": {
+   "style": null,
+   "slot": "back",
+   "locks": 7,
+   "tris": 690,
+   "root_verts": 42,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  },
+  "back_bowl": {
+   "style": null,
+   "slot": "back",
+   "locks": 9,
+   "tris": 990,
+   "root_verts": 54,
+   "roots_exposed": 0,
+   "dive_max": 0.0,
+   "dive_at": null
+  }
+ },
+ "headwear": {
+  "acc_beanie": {
+   "open_edges": 0,
+   "hides_back_hair": true,
+   "gap": {
+    "max": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 3105,
+    "worst_at": [
+     16,
+     -180
+    ]
+   },
+   "rise": {
+    "max": 0.0523,
+    "median": 0.0112,
+    "p95": 0.0465,
+    "n": 3105,
+    "worst_at": [
+     88,
+     -153
+    ]
+   },
+   "poke_max": 0.0,
+   "poke_at": [
+    16,
+    -180
+   ]
+  },
+  "acc_sunhat": {
+   "open_edges": 0,
+   "hides_back_hair": true,
+   "gap": {
+    "max": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 3105,
+    "worst_at": [
+     16,
+     -180
+    ]
+   },
+   "rise": {
+    "max": 0.0116,
+    "median": 0.0084,
+    "p95": 0.0093,
+    "n": 3105,
+    "worst_at": [
+     16,
+     -150
+    ]
+   },
+   "poke_max": 0.0,
+   "poke_at": [
+    16,
+    -180
+   ]
+  },
+  "acc_cap": {
+   "open_edges": 0,
+   "hides_back_hair": true,
+   "gap": {
+    "max": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 3105,
+    "worst_at": [
+     16,
+     -180
+    ]
+   },
+   "rise": {
+    "max": 0.0184,
+    "median": 0.0085,
+    "p95": 0.01,
+    "n": 3105,
+    "worst_at": [
+     88,
+     165
+    ]
+   },
+   "poke_max": 0.0,
+   "poke_at": [
+    16,
+    -180
+   ]
+  },
+  "acc_straw_hat": {
+   "open_edges": 0,
+   "hides_back_hair": true,
+   "gap": {
+    "max": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "n": 3105,
+    "worst_at": [
+     16,
+     -180
+    ]
+   },
+   "rise": {
+    "max": 0.0126,
+    "median": 0.0093,
+    "p95": 0.0103,
+    "n": 3105,
+    "worst_at": [
+     16,
+     -150
+    ]
+   },
+   "poke_max": 0.0,
+   "poke_at": [
+    16,
+    -180
+   ]
+  },
+  "acc_flower_crown": {
+   "open_edges": 0,
+   "hides_back_hair": false,
+   "gap": {
+    "max": 0.0091,
+    "median": 0.0,
+    "p95": 0.0054,
+    "n": 214,
+    "worst_at": [
+     34,
+     -138
+    ]
+   },
+   "rise": {
+    "max": 0.0198,
+    "median": 0.0088,
+    "p95": 0.0162,
+    "n": 214,
+    "worst_at": [
+     42,
+     111
+    ]
+   },
+   "poke_max": 0.0,
+   "poke_at": [
+    32,
+    174
+   ]
+  },
+  "acc_crystal_circlet": {
+   "open_edges": 0,
+   "hides_back_hair": false,
+   "gap": {
+    "max": 0.008,
+    "median": 0.0006,
+    "p95": 0.0037,
+    "n": 155,
+    "worst_at": [
+     18,
+     9
+    ]
+   },
+   "rise": {
+    "max": 0.0212,
+    "median": 0.0065,
+    "p95": 0.0155,
+    "n": 158,
+    "worst_at": [
+     20,
+     57
+    ]
+   },
+   "poke_max": 0.0011,
+   "poke_at": [
+    16,
+    162
+   ]
+  }
+ },
+ "glasses": {
+  "acc_glasses_round": {
+   "open_edges": 24,
+   "offset_max": 0.0081,
+   "offset_default": 0.0045,
+   "sides": {
+    "L": {
+     "lens_centre": [
+      0.117,
+      0.7241
+     ],
+     "offset_max": 0.0081,
+     "offset_max_page2": 0.0975,
+     "offset_default": 0.0045
+    },
+    "R": {
+     "lens_centre": [
+      -0.117,
+      0.7241
+     ],
+     "offset_max": 0.0068,
+     "offset_max_page2": 0.0909,
+     "offset_default": 0.0045
+    }
+   }
+  },
+  "acc_glasses_square": {
+   "open_edges": 24,
+   "offset_max": 0.0081,
+   "offset_default": 0.0045,
+   "sides": {
+    "L": {
+     "lens_centre": [
+      0.117,
+      0.7241
+     ],
+     "offset_max": 0.0081,
+     "offset_max_page2": 0.0975,
+     "offset_default": 0.0045
+    },
+    "R": {
+     "lens_centre": [
+      -0.117,
+      0.7241
+     ],
+     "offset_max": 0.0068,
+     "offset_max_page2": 0.0909,
+     "offset_default": 0.0045
+    }
+   }
+  }
+ },
+ "fails": [],
+ "flags": []
+}

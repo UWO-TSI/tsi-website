@@ -96,7 +96,7 @@
    "id": "bangs_hime",
    "name": "Hime side-locks",
    "sheet_cell": "N6.3",
-   "tris": 634,
+   "tris": 644,
    "locks": 9,
    "file": "bangs/bangs_hime.glb",
    "source": "v7/hair_bangs.blend"
