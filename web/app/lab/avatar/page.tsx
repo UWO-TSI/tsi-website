@@ -19,6 +19,8 @@
  * ?sheet=hairkit   head fit: every bangs (over the bob), every back (under the straight cut), every hat, band and glasses,
  *                  on one skin and view (&view=front|34|side|back)
  * ?sheet=fullkit   head fit: every whole hairstyle (David's set) on one skin, hair colour (&hair=) and view
+ * ?sheet=roblox    head-roblox (specs/characters/head-roblox.md): the whole hairstyles listed in &ids= (default all), each in
+ *                  a row of front, 3/4, side and back (&views= to pick), on one skin and hair colour
  * ?sheet=david     David's 19 faces (face_set_305.py) as they came, eyes + mouth (+ accent), no brows, on three skins (&skins=)
  * ?sheet=mix       David's eyes, mouths and accents mixed with each other and with the earlier parts (&skins=)
  * &hair=<0-11>&skin=<0-11>&face=512 (the world atlas) &framing=head|body
@@ -98,6 +100,11 @@ function AvatarBench() {
     ];
     // head fit: the whole hairstyles (David's set), each alone
     if (sheet === "fullkit") return partsIn("back").filter(p => p.full).map(p => ({ label: p.id, look: { ...bob, back: p.id }, yaw: view, face: OPEN }));
+    if (sheet === "roblox") {
+      const ids = q.get("ids")?.split(",") ?? partsIn("back").filter(p => p.full).map(p => p.id);
+      const views = (q.get("views") ?? "front,34,side,back").split(",");
+      return ids.flatMap(id => views.map(v => ({ label: `${id} ${v}`, look: { ...bob, back: id }, yaw: VIEWS[v] ?? 0, face: OPEN })));
+    }
     // David's faces: the second atlas page's eyes and mouths, in his order (face_set_305.FACES), with his two accents
     const davidEyes = Object.keys(FACE.layers.eyes.items).filter(id => FACE.layers.eyes.items[id].open[6] === 1);
     const davidMouths = Object.keys(FACE.layers.mouth.items).filter(id => FACE.layers.mouth.items[id][6] === 1);
@@ -117,7 +124,7 @@ function AvatarBench() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheet, yaw, q]);
   const root = useRef<HTMLDivElement>(null);
-  const cols = sheet === "facekit" ? 13 : sheet === "hairkit" ? 10 : sheet === "fullkit" ? 7 : sheet === "styles" || sheet === "backs" || sheet === "faces" ? 6 : sheet === "bangs" || sheet === "hats" || sheet === "mix" ? 8 : sheet === "david" ? 10 : cells.length;
+  const cols = sheet === "roblox" ? (q.get("views") ?? "front,34,side,back").split(",").length : sheet === "facekit" ? 13 : sheet === "hairkit" ? 10 : sheet === "fullkit" ? 7 : sheet === "styles" || sheet === "backs" || sheet === "faces" ? 6 : sheet === "bangs" || sheet === "hats" || sheet === "mix" ? 8 : sheet === "david" ? 10 : cells.length;
   return <div ref={root} style={{ position: "relative", paddingTop: 48, minHeight: "100vh", background: "#efe7d6" }}>
     <div data-sheet={sheet} style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, ${cols === 1 ? "420px" : "1fr"})`, gap: 8, padding: 8 }}>
       {cells.map(c => <figure key={c.label} style={{ margin: 0 }}>

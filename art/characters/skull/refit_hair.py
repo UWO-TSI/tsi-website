@@ -20,7 +20,7 @@ from mathutils import Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 ART = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ART, "base"))
-from head_shape import refit_v7_to_v8, HC, skull_radius, head_point  # noqa: E402
+from head_shape import refit_v7, HC, skull_radius, head_point  # noqa: E402
 sys.path.insert(0, HERE)
 from skull import VERSION  # noqa: E402
 
@@ -28,10 +28,14 @@ bpy.context.preferences.filepaths.save_version = 0
 
 
 # file -> {collection: (lat, lon, lift m)}: the hand pass after the move (fit_check's dive report pointed at these)
-TOUCH = {"hair_backs.blend": {"back_bun": [(26, -70, 0.003)]},
+TOUCH = {"hair_backs.blend": {"back_bun": [(26, -70, 0.003), (30, -176, 0.009, 0.1)],
+                               # v9 (the classic head's rounded rim): locks that cut its curve lift, locks that bridge it sink
+                               "back_pigtails": [(45, -150, 0.0025)], "back_twin_buns": [(25, 153, 0.0025)],
+                               "back_high_pony": [(42, -180, -0.002, 0.1, None, 1.0, 7), (44, -170, -0.002, 0.1, None, 1.0, 7), (44, 170, -0.002, 0.1, None, 1.0, 7)]},
          # the hime side locks run down past the v8 jaw's tighter corner: more segments, so their faces follow it
          # instead of cutting a chord through it
-         "hair_bangs.blend": {"bangs_hime": [(-42, -67, 0.0, 0.06, None, 1.0, 14), (-42, 67, 0.0, 0.06, None, 1.0, 14)]}}
+         "hair_bangs.blend": {"bangs_hime": [(-42, -67, 0.0, 0.06, None, 1.0, 14), (-42, 67, 0.0, 0.06, None, 1.0, 14)],
+                              "bangs_straight_long": [(13, 42, 0.004, 0.1, None, 0.9, 7), (14, 38, 0.003, 0.08, None, 0.9, 7)], "bangs_asym_block": [(20, -54, -0.002, 0.1, None, 1.0, 7)]}}
 
 
 # collection -> segments for every lock but the named ones (bangs_hime: its fringe gives back the side locks' extra
@@ -63,7 +67,7 @@ for fname in ("hair_bangs.blend", "hair_backs.blend"):
             pts = []
             for pt in sp.points:
                 p = mw @ Vector(pt.co[:3])
-                q = refit_v7_to_v8(p)
+                q = refit_v7(p)
                 moved = max(moved, (q - p).length)
                 pts.append((q, pt.radius, pt.tilt))
                 n_pts += 1

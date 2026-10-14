@@ -2404,7 +2404,7 @@
    "slot": "back",
    "name": "Baby sprout",
    "glb": "hair/full/hair_baby_sprout.glb",
-   "tris": 1286,
+   "tris": 1484,
    "materials": [
     {
      "name": "M_Hair",
@@ -2415,7 +2415,7 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/01-Baby-Hair-87848056624320.glb",
    "covers": [
     "top"
@@ -2473,7 +2473,7 @@
    "slot": "back",
    "name": "Windy bob",
    "glb": "hair/full/hair_windy_bob.glb",
-   "tris": 1296,
+   "tris": 1420,
    "materials": [
     {
      "name": "M_Hair",
@@ -2484,7 +2484,7 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/06-Black-Anime-Windy-Bob-78364092542791.glb",
    "map": {
     "shade": 2
@@ -2558,7 +2558,7 @@
    "slot": "back",
    "name": "Bowl cut",
    "glb": "hair/full/hair_bowl_cut.glb",
-   "tris": 1290,
+   "tris": 1364,
    "materials": [
     {
      "name": "M_Hair",
@@ -2569,7 +2569,7 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/11-Blonde-Bowl-Cut-11103880280.glb",
    "map": {
     "shade": 2

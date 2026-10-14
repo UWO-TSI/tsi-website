@@ -6,8 +6,14 @@ SKULL: a rounded box with a flat, even face area. Its coordinates stay the v7 he
 the head centre HC through head_point_v7(lat, lon), and head_point(lat, lon) is where that ray meets the rounded box.
 So every lat/lon in the library (hair seeds, hairline, hat edges, anchors, the fit checker's rays) means the same
 direction on both heads, and a point fitted to the v7 head moves to the v8 head by the change in skull radius along
-its ray (refit_v7_to_v8). The face canvas (face_v7.json anchors, the atlas) is unchanged; the eye and mouth lat/lon
+its ray (refit_v7). The face canvas (face_v7.json anchors, the atlas) is unchanged; the eye and mouth lat/lon
 are solved on the new surface from those anchors.
+
+Roblox hair zone (v9, specs/characters/head-roblox.md, ledger row 309; David 2026-10-14): where hair sits (the top,
+the crown, the back, the sides and the forehead above the brows) the skull is Roblox's classic head (Roblox's official
+R15 reference rig: a 1.2-stud rounded cylinder) at STUD metres per stud; the face area (the brows to the chin, the face
+plate and its corners) stays the v8 skull, so the painted face keeps its placement. skull_radius blends the two by
+face_weight. Hair made for the classic head then attaches rigidly at HAIR_ATT, the classic head's HairAttachment.
 
 Measurements come from ref18_measurements.json, so re-measuring or tweaking the head here regenerates every
 piece that is built against it. Keep in sync with build_v6.py (v6 has its own copy so its build stays frozen
@@ -73,8 +79,9 @@ def _lerp(a, b, t):
     return a + (b - a) * t
 
 
-def skull_radius(d):
-    """Distance from HC to the skull along the unit direction d (the superellipsoid's radial function)."""
+def v8_radius(d):
+    """Distance from HC to the v8 skull along the unit direction d (the superellipsoid's radial function): the face
+    area of the v9 skull, and the head the v8 hair was fitted to."""
     S = SKULL
     wf = _ss(0.35, -0.55, d.y)                  # 0 at the back, 1 over the face
     A = S["A"]
@@ -89,6 +96,167 @@ def skull_radius(d):
     return F ** (-1.0 / Q)
 
 
+# ---------------------------------------------------------------- v9: Roblox's classic head where hair sits
+# Roblox's classic head (Roblox/avatar, Legacy/rigs/R15_Block.fbx, Head_Geo; the same head in LC_ClassicMale/Female):
+# a cylinder of radius R studs and half height H whose rims are rounded with radius F, its HairAttachment (and
+# HatAttachment) at the top centre. Measured from the reference mesh: R 0.599, H 0.600, fillet 0.30 (the mesh's chords
+# sit inside by at most 0.01 stud).
+CLASSIC = {"R": 0.6, "H": 0.6, "F": 0.3}
+STUD = SKULL["A"] / CLASSIC["R"]          # metres per stud: the classic head as wide as ours (0.358 m)
+CLASSIC_DY = 0.012                        # its axis this far behind HC: the forehead stands about 1 cm proud of the
+                                          # face plane on the centre line, the face corners stand out of the round
+                                          # sides as little as that allows
+CLASSIC_C = HC + Vector((0.0, CLASSIC_DY, SKULL["C_TOP"] - CLASSIC["H"] * STUD))    # its top is our crown
+HAIR_ATT = CLASSIC_C + Vector((0.0, 0.0, CLASSIC["H"] * STUD))                       # Roblox's HairAttachment
+# Where the skull keeps the v8 face (weight 1) and where it is the classic head (0). David, 2026-10-14: "round the
+# cheeks": sideways and downward the v8 face is kept exactly where a painted part can sit, measured on the face canvas
+# of the v8 skull: the creator's placement area (web/lib/game/character/face.ts FACE_AREA: U 0.07-0.93, down to W
+# 0.985) widened to the widest default parts (David's eyes reach U 0.04, his drool W 1.0), FACE_MARGIN of canvas beyond
+# it (so the mesh triangles under paint keep v8 corners); over the next FACE_RAMP the cheeks and the jaw corners round
+# into the classic head. Upward the forehead turns into the classic head between FACE_LAT[0] and FACE_LAT[1] (lat, deg:
+# above the brows, below the hairline, so the bangs' roll and the hairline seam lie on the classic head). Below the nape line (hair hangs free there) the head tapers into the v8 jaw, nape and chin, which the
+# neck joins: from NECK_LAT[0] (lat -26 is the nape line at the back) to fully v8 at NECK_LAT[1], all round.
+FACE_KEEP = (0.04, 0.30, 0.96, 1.0)       # U0, W0 (above it the forehead rule), U1, W1
+FACE_LAT = (14.0, 34.0)
+FACE_MARGIN = 0.08
+FACE_RAMP = 0.12
+NECK_LAT = (-20.0, -65.0)
+ZONE_STEP = 2.0          # deg: the face weight's grid (geocentric lat, |lon|), cached in skull/face_zone.json
+
+
+def _classic_sdf(x, y, z):
+    """Signed distance (m) from the classic head at STUD scale, relative to its centre."""
+    a, b, f = (CLASSIC["R"] - CLASSIC["F"]) * STUD, (CLASSIC["H"] - CLASSIC["F"]) * STUD, CLASSIC["F"] * STUD
+    dx = math.hypot(x, y) - a
+    dz = abs(z) - b
+    return math.hypot(max(dx, 0.0), max(dz, 0.0)) + min(max(dx, dz), 0.0) - f
+
+
+def classic_radius(d):
+    """Distance from HC to the classic head along the unit direction d: Newton from the exit of its bounding cylinder
+    (beyond the surface; the head is convex, so the iteration closes in from outside)."""
+    o = HC - CLASSIC_C
+    R, H = CLASSIC["R"] * STUD, CLASSIC["H"] * STUD
+    t = 1.0
+    a_ = d.x * d.x + d.y * d.y
+    if a_ > 1e-12:
+        b_ = o.x * d.x + o.y * d.y
+        c_ = o.x * o.x + o.y * o.y - R * R
+        t = min(t, (-b_ + math.sqrt(max(0.0, b_ * b_ - a_ * c_))) / a_)
+    if abs(d.z) > 1e-12:
+        t = min(t, ((H if d.z > 0 else -H) - o.z) / d.z)
+    for _ in range(12):
+        f = _classic_sdf(o.x + d.x * t, o.y + d.y * t, o.z + d.z * t)
+        if abs(f) < 1e-7:
+            break
+        h = 1e-5
+        g = (_classic_sdf(o.x + d.x * (t + h), o.y + d.y * (t + h), o.z + d.z * (t + h)) - f) / h
+        t -= f / max(g, 0.05)
+    return t
+
+
+def _v8_point(lat, lon):
+    d = ray(lat, lon)
+    return HC + d * v8_radius(d)
+
+
+def _v8_chart(lat, lon, n=12):
+    """face_chart on the v8 skull (the canvas the paint was placed on)."""
+    su = _arc(lambda t: _v8_point(lat, t), 0.0, lon, n) if lon else 0.0
+    sw = _arc(lambda t: _v8_point(t, lon), 0.0, lat, n) if lat else 0.0
+    return 0.5 + su / (2 * FH), 0.5 - sw / (2 * FH)
+
+
+def _ray_coords(d):
+    """The ray coordinates (lat, lon) whose ray is the unit direction d (Newton from the geocentric angles)."""
+    la = math.degrees(math.asin(max(-1.0, min(1.0, d.z))))
+    lo = math.degrees(math.atan2(d.x, -d.y))
+    for _ in range(8):
+        r = ray(la, lo)
+        e = r - d
+        if e.length < 1e-7:
+            break
+        h = 0.01
+        ja, jo = (ray(la + h, lo) - r) / h, (ray(la, lo + h) - r) / h
+        # least squares on the 3-vector residual: [ja jo] [dla dlo] = -e
+        a11, a12, a22 = ja.dot(ja), ja.dot(jo), jo.dot(jo)
+        b1, b2 = -ja.dot(e), -jo.dot(e)
+        det = a11 * a22 - a12 * a12
+        if abs(det) < 1e-12:
+            break
+        la = max(-89.9, min(89.9, la + (a22 * b1 - a12 * b2) / det))
+        lo += (a11 * b2 - a12 * b1) / det
+    return la, lo
+
+
+_ZONE = None
+_ZONE_PATH = os.path.join(HERE, "..", "skull", "face_zone.json")
+
+
+def _zone_params():
+    return {"keep": list(FACE_KEEP), "margin": FACE_MARGIN, "ramp": FACE_RAMP, "step": ZONE_STEP, "rule": "sideways and down",
+            "v8": {k: round(v, 6) for k, v in SKULL.items()}}
+
+
+def _zone():
+    """The face weight on the (geocentric lat, |lon|) grid: from the v8 canvas distance to FACE_KEEP. Cached on disk
+    (it takes a few seconds), rebuilt whenever its parameters change."""
+    global _ZONE
+    if _ZONE is not None:
+        return _ZONE
+    try:
+        doc = json.load(open(_ZONE_PATH))
+        if doc.get("params") == json.loads(json.dumps(_zone_params())):
+            _ZONE = doc["w"]
+            return _ZONE
+    except (OSError, ValueError):
+        pass
+    u0, w0, u1, w1 = FACE_KEEP
+    lats = [-90 + ZONE_STEP * i for i in range(int(180 / ZONE_STEP) + 1)]
+    lons = [ZONE_STEP * j for j in range(int(180 / ZONE_STEP) + 1)]
+    grid = []
+    for la in lats:
+        row = []
+        for lo in lons:
+            a, b = math.radians(la), math.radians(lo)
+            d = Vector((math.cos(a) * math.sin(b), -math.cos(a) * math.cos(b), math.sin(a)))
+            if abs(la) > 89.5 or lo > 135:          # the poles and the back: far off the canvas
+                row.append(0.0)
+                continue
+            rl, ro = _ray_coords(d)
+            u, w = _v8_chart(rl, ro)
+            dist = math.hypot(max(u0 - u, 0.0, u - u1), max(0.0, w - w1))         # sideways and down only
+            row.append(round(1.0 - _ss(FACE_MARGIN, FACE_MARGIN + FACE_RAMP, dist), 5))
+        grid.append(row)
+    _ZONE = grid
+    try:
+        json.dump({"note": "head_shape._zone(): the v8 face kept (1) round the painted face, the classic head (0) elsewhere; "
+                           "rows geocentric lat -90..90, columns |lon| 0..180, ZONE_STEP deg. Generated: delete to rebuild.",
+                   "params": _zone_params(), "w": grid}, open(_ZONE_PATH, "w"))
+    except OSError:
+        pass
+    return _ZONE
+
+
+def face_weight(d):
+    """1 where the skull is the v8 face, 0 where it is the classic head (the hair zone): bilinear on the cached grid."""
+    g = _zone()
+    la = math.degrees(math.asin(max(-1.0, min(1.0, d.z))))
+    lo = abs(math.degrees(math.atan2(d.x, -d.y)))
+    fi, fj = (la + 90.0) / ZONE_STEP, lo / ZONE_STEP
+    i0, j0 = min(int(fi), len(g) - 2), min(int(fj), len(g[0]) - 2)
+    ti, tj = fi - i0, fj - j0
+    w = (g[i0][j0] * (1 - ti) * (1 - tj) + g[i0 + 1][j0] * ti * (1 - tj) + g[i0][j0 + 1] * (1 - ti) * tj
+         + g[i0 + 1][j0 + 1] * ti * tj)
+    return max(min(w, _ss(FACE_LAT[1], FACE_LAT[0], la)), _ss(NECK_LAT[0], NECK_LAT[1], la))
+
+
+def skull_radius(d):
+    """Distance from HC to the skull (v9) along the unit direction d: the classic head blended into the v8 face."""
+    rc = classic_radius(d)
+    return rc + face_weight(d) * (v8_radius(d) - rc)
+
+
 def ray(lat, lon):
     """The skull coordinate (lat, lon) as a unit direction from HC (the v7 head's parameterisation)."""
     return (head_point_v7(lat, lon) - HC).normalized()
@@ -101,7 +269,7 @@ def head_point(lat, lon):
 
 
 def skull_delta(p):
-    """How far the skull moved outward (v7 -> v8) on p's ray from HC: a point fitted to the v7 head moves this far."""
+    """How far the skull moved outward (v7 -> now) on p's ray from HC: a point fitted to the v7 head moves this far."""
     d = (p - HC)
     if d.length < 1e-9:
         return 0.0
@@ -128,8 +296,8 @@ def _v7_radius(d):
     return (loc - HC).length if loc is not None else skull_radius(d)
 
 
-def refit_v7_to_v8(p):
-    """A point fitted to the v7 head, moved onto the v8 skull: along its ray from HC by the change in skull radius."""
+def refit_v7(p):
+    """A point fitted to the v7 head, moved onto the skull: along its ray from HC by the change in skull radius."""
     d = p - HC
     if d.length < 1e-9:
         return p.copy()

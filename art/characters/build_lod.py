@@ -191,6 +191,9 @@ def build(src, dst, skin_only=False, merge=True, cards=False):
                      snug=SNUG_HAIR if material_of(ob) == "M_Hair" else SNUG)
         after += ntris(ob)
         kept.append(ob)
+    if cards:                       # David's hairstyles: the collapse leaves a few degenerate faces in the card sheets
+        for ob in kept:
+            ob.data.validate()
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     bpy.ops.object.select_all(action="DESELECT")
     rig.select_set(True)

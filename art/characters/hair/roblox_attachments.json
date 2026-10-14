@@ -1,0 +1,515 @@
+{
+ "_how_to_fill": [
+  "Roblox's own attachment for each of David's hairs (specs/characters/head-roblox.md). import_hair.py attaches every hair with it, and re-running import_hair.py refits, re-maps, rebuilds LOD 1 and syncs everything; no other step.",
+  "To fill an entry from Roblox Studio: insert the accessory (Toolbox > Inventory, or Avatar > Accessories), expand it, select Handle > HairAttachment, and copy its Position (x, y, z, studs) and Orientation (x, y, z, degrees) from the Properties window into 'position' and 'orientation'.",
+  "mesh_scale: if the Handle has a SpecialMesh child, its Scale (x, y, z). If the Handle is a MeshPart, Size divided by MeshSize: in the command bar, print(game.Selection:Get()[1].Size / game.Selection:Get()[1].MeshSize) with the Handle selected.",
+  "Then set 'provisional' to false and 'source' to 'Studio'. Entries with provisional true are estimates: hair/seat_fit.py rewrites their position from the hair's shape (it never touches an entry with provisional false)."
+ ],
+ "frame": "Roblox units and axes (studs; the HairAttachment's Position and Orientation in its Handle, as Studio shows them). The head side is Roblox's classic head, whose HairAttachment is its top centre (head_shape.HAIR_ATT); 1 stud = head_shape.STUD m.",
+ "hairs": [
+  {
+   "n": 1,
+   "id": "hair_baby_sprout",
+   "asset_id": 87848056624320,
+   "name": "Baby Hair",
+   "file": "01-Baby-Hair-87848056624320.glb",
+   "position": [
+    -0.024886,
+    -0.244919,
+    -0.004616
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": false,
+   "source": "the accessory file (Handle: Part + SpecialMesh, Scale 1, 1, 1)"
+  },
+  {
+   "n": 2,
+   "id": "hair_messy_boy",
+   "asset_id": 128971224541817,
+   "name": "Low Poly Messy Boy Hair Black",
+   "file": "02-Low-Poly-Messy-Boy-Hair-Black-128971224541817.glb",
+   "position": [
+    -0.0075,
+    0.44096,
+    -0.06
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+  },
+  {
+   "n": 3,
+   "id": "hair_long_scruffy",
+   "asset_id": 136727109636132,
+   "name": "cute messy long scruffy black hair",
+   "file": "03-cute-messy-long-scruffy-black-hair-136727109636132.glb",
+   "position": [
+    -0.0,
+    1.20835,
+    -0.105
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+  },
+  {
+   "n": 4,
+   "id": "hair_short_tufts",
+   "asset_id": 83295904708963,
+   "name": "messy cute short hair with tufts in black",
+   "file": "04-messy-cute-short-hair-with-tufts-in-black-83295904708963.glb",
+   "position": [
+    0.005,
+    0.93875,
+    -0.0025
+   ],
+   "orientation": [
+    0,
+    180,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+  },
+  {
+   "n": 5,
+   "id": "hair_hime_short",
+   "asset_id": 13856173456,
+   "name": "Black Hime Short Straight Hair Cut",
+   "file": "05-Black-Hime-Short-Straight-Hair-Cut-13856173456.glb",
+   "position": [
+    -0.01625,
+    0.55178,
+    -0.04
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+  },
+  {
+   "n": 6,
+   "id": "hair_windy_bob",
+   "asset_id": 78364092542791,
+   "name": "Black Anime Windy Bob",
+   "file": "06-Black-Anime-Windy-Bob-78364092542791.glb",
+   "position": [
+    -0.125948,
+    0.546202,
+    -0.008761
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": false,
+   "source": "the accessory file (Handle: Part + SpecialMesh, Scale 1, 1, 1)"
+  },
+  {
+   "n": 7,
+   "id": "hair_wispy_ponytail",
+   "asset_id": 87974376605658,
+   "name": "Short Anime Wispy Ponytail (Black)",
+   "file": "07-Short-Anime-Wispy-Ponytail-Black-87974376605658.glb",
+   "position": [
+    0.0375,
+    0.39849,
+    0.165
+   ],
+   "orientation": [
+    0,
+    180,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+  },
+  {
+   "n": 8,
+   "id": "hair_visor_messy",
+   "asset_id": 106903086636118,
+   "name": "McDonalds",
+   "file": "08-McDonalds-106903086636118.glb",
+   "position": [
+    0.03125,
+    0.50407,
+    -0.275
+   ],
+   "orientation": [
+    0,
+    180,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+  },
+  {
+   "n": 9,
+   "id": "hair_fluffy_boy",
+   "asset_id": 86495776285585,
+   "name": "Low Poly Fluffy Messy Boy Hair Brown",
+   "file": "09-Low-Poly-Fluffy-Messy-Boy-Hair-Brown-86495776285585.glb",
+   "position": [
+    0.02625,
+    0.38581,
+    -0.0
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+  },
+  {
+   "n": 10,
+   "id": "hair_messy_wolf",
+   "asset_id": 98528599025378,
+   "name": "Black Messy Wolfcut",
+   "file": "10-Black-Messy-Wolfcut-98528599025378.glb",
+   "position": [
+    -0.01,
+    0.41233,
+    0.065
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+  },
+  {
+   "n": 11,
+   "id": "hair_bowl_cut",
+   "asset_id": 11103880280,
+   "name": "Blonde Bowl Cut",
+   "file": "11-Blonde-Bowl-Cut-11103880280.glb",
+   "position": [
+    -0.0,
+    0.167126,
+    -0.043148
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": false,
+   "source": "the accessory file (Handle: Part + SpecialMesh, Scale 1, 1, 1)"
+  },
+  {
+   "n": 12,
+   "id": "hair_layered_shag",
+   "asset_id": 137412726411371,
+   "name": "Ryo",
+   "file": "12-Ryo-137412726411371.glb",
+   "position": [
+    0.01625,
+    0.59462,
+    -0.0375
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+  },
+  {
+   "n": 13,
+   "id": "hair_anime_spikes",
+   "asset_id": 125540259305979,
+   "name": "Ben 10 Anime Hair",
+   "file": "13-Ben-10-Anime-Hair-125540259305979.glb",
+   "position": [
+    0.03875,
+    0.44304,
+    0.18
+   ],
+   "orientation": [
+    0,
+    180,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+  },
+  {
+   "n": 14,
+   "id": "hair_messy_low_pony",
+   "asset_id": 119601543909065,
+   "name": "White-Blue Short Messy w Low Ponytail",
+   "file": "14-White-Blue-Short-Messy-w-Low-Ponytail-119601543909065.glb",
+   "position": [
+    -0.0,
+    0.53134,
+    0.2
+   ],
+   "orientation": [
+    0,
+    180,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+  },
+  {
+   "n": 15,
+   "id": "hair_vkei",
+   "asset_id": 137700402637392,
+   "name": "Vkei Moe Boy Face + Hair",
+   "file": "15-Vkei-Moe-Boy-Face-Hair-137700402637392.glb",
+   "position": [
+    0.0075,
+    0.45896,
+    -0.025
+   ],
+   "orientation": [
+    0,
+    180,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face plate to the front as in David's preview"
+  },
+  {
+   "n": 16,
+   "id": "hair_swept_fringe",
+   "asset_id": 17727987910,
+   "name": "Isagi",
+   "file": "16-Isagi-17727987910.glb",
+   "position": [
+    -0.0025,
+    0.29187,
+    0.0475
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+  },
+  {
+   "n": 17,
+   "id": "hair_bob_pigtail",
+   "asset_id": 118937471732434,
+   "name": "cutesy bob with adorable pigtail in brown",
+   "file": "17-cutesy-bob-with-adorable-pigtail-in-brown-118937471732434.glb",
+   "position": [
+    0.0275,
+    0.73083,
+    -0.065
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+  },
+  {
+   "n": 18,
+   "id": "hair_long_pigtails",
+   "asset_id": 117422689311117,
+   "name": "long pretty black pigtails",
+   "file": "18-long-pretty-black-pigtails-117422689311117.glb",
+   "position": [
+    -0.0025,
+    1.24798,
+    -0.0075
+   ],
+   "orientation": [
+    0,
+    180,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+  },
+  {
+   "n": 19,
+   "id": "hair_dreads_cap",
+   "asset_id": 89998678118416,
+   "name": "OTF Von Dreads w/ Hat",
+   "file": "19-OTF-Von-Dreads-w-Hat-89998678118416.glb",
+   "position": [
+    0.0075,
+    0.58543,
+    -0.225
+   ],
+   "orientation": [
+    0,
+    180,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the cap's brim and logo to the front as in David's preview (its dreads hang over the face)"
+  },
+  {
+   "n": 20,
+   "id": "hair_waves",
+   "asset_id": 113478080627568,
+   "name": "360 Waves in Black",
+   "file": "20-360-Waves-in-Black-113478080627568.glb",
+   "position": [
+    0.00125,
+    0.26315,
+    -0.04
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+  },
+  {
+   "n": 21,
+   "id": "hair_messy_dreads",
+   "asset_id": 86633981568887,
+   "name": "M11! - Messy Dreads [Black]",
+   "file": "21-M11-Messy-Dreads-Black-86633981568887.glb",
+   "position": [
+    -0.0025,
+    0.47052,
+    -0.015
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+  }
+ ]
+}

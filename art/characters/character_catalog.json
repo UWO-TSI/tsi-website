@@ -806,7 +806,7 @@
    "hidesBackHair": false,
    "hides": [],
    "group": "face",
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "acc_glasses_square",
@@ -825,7 +825,7 @@
    "hidesBackHair": false,
    "hides": [],
    "group": "face",
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "acc_beanie",
@@ -853,7 +853,7 @@
    "hidesBackHair": true,
    "hides": [],
    "group": "head",
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "acc_sunhat",
@@ -881,7 +881,7 @@
    "hidesBackHair": true,
    "hides": [],
    "group": "head",
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "acc_cap",
@@ -909,7 +909,7 @@
    "hidesBackHair": true,
    "hides": [],
    "group": "head",
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "acc_straw_hat",
@@ -938,14 +938,14 @@
    "hides": [],
    "group": "head",
    "item": "acc-straw-hat",
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "acc_flower_crown",
    "slot": "accessory",
    "name": "Flower crown",
    "glb": "accessories/accessory/acc_flower_crown.glb",
-   "tris": 624,
+   "tris": 864,
    "materials": [
     {
      "name": "M_Main",
@@ -973,7 +973,7 @@
    "hides": [],
    "group": "head",
    "item": "acc-flower-crown",
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "acc_crystal_circlet",
@@ -998,7 +998,7 @@
    "hides": [],
    "group": "head",
    "item": "acc-crystal-circlet",
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "acc_backpack",
@@ -1125,14 +1125,14 @@
    "hides": [],
    "group": "head",
    "event": "halloween",
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "acc_cat_ears",
    "slot": "accessory",
    "name": "Cat ears",
    "glb": "accessories/accessory/acc_cat_ears.glb",
-   "tris": 184,
+   "tris": 344,
    "materials": [
     {
      "name": "M_Main",
@@ -1150,7 +1150,7 @@
    "hides": [],
    "group": "head",
    "event": "halloween",
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "acc_pumpkin_head",
@@ -1183,7 +1183,7 @@
    "group": "head",
    "event": "halloween",
    "encloses": true,
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "acc_vampire_cape",
@@ -1778,7 +1778,7 @@
    "sheetCell": "N4.2",
    "locks": 9,
    "v7": true,
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "bangs_straight_long",
@@ -1798,7 +1798,7 @@
    "sheetCell": "N3.3",
    "locks": 9,
    "v7": true,
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "bangs_bowl",
@@ -1818,7 +1818,7 @@
    "sheetCell": "N4.1",
    "locks": 9,
    "v7": true,
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "bangs_wispy",
@@ -1838,7 +1838,7 @@
    "sheetCell": "N6.1",
    "locks": 14,
    "v7": true,
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "bangs_swept_l",
@@ -1858,7 +1858,7 @@
    "sheetCell": "N2.2",
    "locks": 9,
    "v7": true,
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "bangs_swept_r",
@@ -1878,7 +1878,7 @@
    "sheetCell": "N6.4",
    "locks": 9,
    "v7": true,
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "bangs_curtain",
@@ -1898,7 +1898,7 @@
    "sheetCell": "N3.2",
    "locks": 8,
    "v7": true,
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "bangs_curtain_long",
@@ -1918,7 +1918,7 @@
    "sheetCell": "N6.2",
    "locks": 6,
    "v7": true,
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "bangs_centre_split",
@@ -1938,7 +1938,7 @@
    "sheetCell": "N1.4",
    "locks": 8,
    "v7": true,
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "bangs_spiky",
@@ -1958,7 +1958,7 @@
    "sheetCell": "B6.2",
    "locks": 8,
    "v7": true,
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "bangs_hime",
@@ -1978,7 +1978,7 @@
    "sheetCell": "N6.3",
    "locks": 9,
    "v7": true,
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "bangs_choppy",
@@ -1998,7 +1998,7 @@
    "sheetCell": "N1.5",
    "locks": 10,
    "v7": true,
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "bangs_swept_back",
@@ -2018,7 +2018,7 @@
    "sheetCell": "N5.4",
    "locks": 7,
    "v7": true,
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "bangs_single_strand",
@@ -2038,7 +2038,7 @@
    "sheetCell": "N5.3",
    "locks": 10,
    "v7": true,
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "bangs_wavy",
@@ -2058,7 +2058,7 @@
    "sheetCell": "N3.1",
    "locks": 9,
    "v7": true,
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "bangs_asym_block",
@@ -2078,7 +2078,7 @@
    "sheetCell": "N6.5",
    "locks": 9,
    "v7": true,
-   "skull": "v8"
+   "skull": "v9"
   },
   {
    "id": "back_bob",
@@ -2098,7 +2098,7 @@
    "sheetCell": "B2.1",
    "locks": 9,
    "v7": true,
-   "skull": "v8",
+   "skull": "v9",
    "capFrom": -28
   },
   {
@@ -2119,7 +2119,7 @@
    "sheetCell": "B4.4",
    "locks": 15,
    "v7": true,
-   "skull": "v8",
+   "skull": "v9",
    "capFrom": -26
   },
   {
@@ -2140,7 +2140,7 @@
    "sheetCell": "B3.1",
    "locks": 9,
    "v7": true,
-   "skull": "v8",
+   "skull": "v9",
    "capFrom": -34
   },
   {
@@ -2161,7 +2161,7 @@
    "sheetCell": "B4.5",
    "locks": 9,
    "v7": true,
-   "skull": "v8",
+   "skull": "v9",
    "capFrom": -34
   },
   {
@@ -2169,7 +2169,7 @@
    "slot": "back",
    "name": "High ponytail",
    "glb": "hair/back/back_high_pony.glb",
-   "tris": 886,
+   "tris": 902,
    "materials": [
     {
      "name": "M_Hair",
@@ -2182,7 +2182,7 @@
    "sheetCell": "B6.5",
    "locks": 15,
    "v7": true,
-   "skull": "v8",
+   "skull": "v9",
    "capFrom": -20
   },
   {
@@ -2203,7 +2203,7 @@
    "sheetCell": "B3.2",
    "locks": 18,
    "v7": true,
-   "skull": "v8",
+   "skull": "v9",
    "capFrom": -24
   },
   {
@@ -2224,7 +2224,7 @@
    "sheetCell": "B2.5",
    "locks": 14,
    "v7": true,
-   "skull": "v8",
+   "skull": "v9",
    "capFrom": -28
   },
   {
@@ -2245,7 +2245,7 @@
    "sheetCell": "B1.1",
    "locks": 11,
    "v7": true,
-   "skull": "v8",
+   "skull": "v9",
    "capFrom": -32
   },
   {
@@ -2266,7 +2266,7 @@
    "sheetCell": "B7.2",
    "locks": 23,
    "v7": true,
-   "skull": "v8",
+   "skull": "v9",
    "capFrom": -32
   },
   {
@@ -2287,7 +2287,7 @@
    "sheetCell": "B6.2",
    "locks": 11,
    "v7": true,
-   "skull": "v8",
+   "skull": "v9",
    "capFrom": -6
   },
   {
@@ -2308,7 +2308,7 @@
    "sheetCell": "B3.5",
    "locks": 7,
    "v7": true,
-   "skull": "v8",
+   "skull": "v9",
    "capFrom": -6.0
   },
   {
@@ -2329,7 +2329,7 @@
    "sheetCell": "B1.5",
    "locks": 9,
    "v7": true,
-   "skull": "v8",
+   "skull": "v9",
    "capFrom": -6
   },
   {
@@ -2337,7 +2337,7 @@
    "slot": "back",
    "name": "Messy boy",
    "glb": "hair/full/hair_messy_boy.glb",
-   "tris": 935,
+   "tris": 927,
    "materials": [
     {
      "name": "M_Hair",
@@ -2348,8 +2348,11 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/02-Low-Poly-Messy-Boy-Hair-Black-128971224541817.glb",
+   "roblox": {
+    "provisional": true
+   },
    "map": {
     "shade": 1
    }
@@ -2359,7 +2362,7 @@
    "slot": "back",
    "name": "Short hime cut",
    "glb": "hair/full/hair_hime_short.glb",
-   "tris": 1305,
+   "tris": 1671,
    "materials": [
     {
      "name": "M_Hair",
@@ -2370,8 +2373,11 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/05-Black-Hime-Short-Straight-Hair-Cut-13856173456.glb",
+   "roblox": {
+    "provisional": true
+   },
    "map": {
     "shade": 1
    }
@@ -2381,7 +2387,7 @@
    "slot": "back",
    "name": "Messy with visor",
    "glb": "hair/full/hair_visor_messy.glb",
-   "tris": 1296,
+   "tris": 1685,
    "materials": [
     {
      "name": "M_Hair",
@@ -2392,8 +2398,11 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/08-McDonalds-106903086636118.glb",
+   "roblox": {
+    "provisional": true
+   },
    "map": {
     "shade": 1,
     "cap": 2
@@ -2404,7 +2413,7 @@
    "slot": "back",
    "name": "Baby sprout",
    "glb": "hair/full/hair_baby_sprout.glb",
-   "tris": 1286,
+   "tris": 1682,
    "materials": [
     {
      "name": "M_Hair",
@@ -2415,8 +2424,11 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/01-Baby-Hair-87848056624320.glb",
+   "roblox": {
+    "provisional": false
+   },
    "covers": [
     "top"
    ],
@@ -2429,7 +2441,7 @@
    "slot": "back",
    "name": "Long scruffy",
    "glb": "hair/full/hair_long_scruffy.glb",
-   "tris": 1261,
+   "tris": 1585,
    "materials": [
     {
      "name": "M_Hair",
@@ -2440,8 +2452,11 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/03-cute-messy-long-scruffy-black-hair-136727109636132.glb",
+   "roblox": {
+    "provisional": true
+   },
    "map": {
     "shade": 2
    }
@@ -2451,7 +2466,7 @@
    "slot": "back",
    "name": "Short with tufts",
    "glb": "hair/full/hair_short_tufts.glb",
-   "tris": 1294,
+   "tris": 1537,
    "materials": [
     {
      "name": "M_Hair",
@@ -2462,8 +2477,11 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/04-messy-cute-short-hair-with-tufts-in-black-83295904708963.glb",
+   "roblox": {
+    "provisional": true
+   },
    "map": {
     "shade": 0
    }
@@ -2473,7 +2491,7 @@
    "slot": "back",
    "name": "Windy bob",
    "glb": "hair/full/hair_windy_bob.glb",
-   "tris": 1296,
+   "tris": 1668,
    "materials": [
     {
      "name": "M_Hair",
@@ -2484,8 +2502,11 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/06-Black-Anime-Windy-Bob-78364092542791.glb",
+   "roblox": {
+    "provisional": false
+   },
    "map": {
     "shade": 2
    }
@@ -2495,7 +2516,7 @@
    "slot": "back",
    "name": "Wispy ponytail",
    "glb": "hair/full/hair_wispy_ponytail.glb",
-   "tris": 1500,
+   "tris": 1680,
    "materials": [
     {
      "name": "M_Hair",
@@ -2506,8 +2527,11 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/07-Short-Anime-Wispy-Ponytail-Black-87974376605658.glb",
+   "roblox": {
+    "provisional": true
+   },
    "map": {
     "shade": 0
    }
@@ -2517,7 +2541,7 @@
    "slot": "back",
    "name": "Fluffy boy",
    "glb": "hair/full/hair_fluffy_boy.glb",
-   "tris": 1339,
+   "tris": 1522,
    "materials": [
     {
      "name": "M_Hair",
@@ -2528,15 +2552,18 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
-   "source": "hair/source/david/09-Low-Poly-Fluffy-Messy-Boy-Hair-Brown-86495776285585.glb"
+   "skull": "v9",
+   "source": "hair/source/david/09-Low-Poly-Fluffy-Messy-Boy-Hair-Brown-86495776285585.glb",
+   "roblox": {
+    "provisional": true
+   }
   },
   {
    "id": "hair_messy_wolf",
    "slot": "back",
    "name": "Messy wolf cut",
    "glb": "hair/full/hair_messy_wolf.glb",
-   "tris": 1372,
+   "tris": 1684,
    "materials": [
     {
      "name": "M_Hair",
@@ -2547,8 +2574,11 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/10-Black-Messy-Wolfcut-98528599025378.glb",
+   "roblox": {
+    "provisional": true
+   },
    "map": {
     "shade": 1
    }
@@ -2558,7 +2588,7 @@
    "slot": "back",
    "name": "Bowl cut",
    "glb": "hair/full/hair_bowl_cut.glb",
-   "tris": 1290,
+   "tris": 1684,
    "materials": [
     {
      "name": "M_Hair",
@@ -2569,8 +2599,11 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/11-Blonde-Bowl-Cut-11103880280.glb",
+   "roblox": {
+    "provisional": false
+   },
    "map": {
     "shade": 2
    }
@@ -2580,7 +2613,7 @@
    "slot": "back",
    "name": "Layered shag",
    "glb": "hair/full/hair_layered_shag.glb",
-   "tris": 1327,
+   "tris": 1621,
    "materials": [
     {
      "name": "M_Hair",
@@ -2591,8 +2624,11 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/12-Ryo-137412726411371.glb",
+   "roblox": {
+    "provisional": true
+   },
    "map": {
     "shade": 0
    }
@@ -2602,7 +2638,7 @@
    "slot": "back",
    "name": "Anime spikes",
    "glb": "hair/full/hair_anime_spikes.glb",
-   "tris": 1350,
+   "tris": 1686,
    "materials": [
     {
      "name": "M_Hair",
@@ -2613,8 +2649,11 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/13-Ben-10-Anime-Hair-125540259305979.glb",
+   "roblox": {
+    "provisional": true
+   },
    "map": {
     "shade": 1
    }
@@ -2624,7 +2663,7 @@
    "slot": "back",
    "name": "Messy low ponytail",
    "glb": "hair/full/hair_messy_low_pony.glb",
-   "tris": 1224,
+   "tris": 1670,
    "materials": [
     {
      "name": "M_Hair",
@@ -2635,8 +2674,11 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/14-White-Blue-Short-Messy-w-Low-Ponytail-119601543909065.glb",
+   "roblox": {
+    "provisional": true
+   },
    "map": {
     "shade": 0,
     "accent": 1
@@ -2650,7 +2692,7 @@
    "slot": "back",
    "name": "V-kei layers",
    "glb": "hair/full/hair_vkei.glb",
-   "tris": 1198,
+   "tris": 1615,
    "materials": [
     {
      "name": "M_Hair",
@@ -2661,8 +2703,11 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/15-Vkei-Moe-Boy-Face-Hair-137700402637392.glb",
+   "roblox": {
+    "provisional": true
+   },
    "map": {
     "shade": 2
    }
@@ -2672,7 +2717,7 @@
    "slot": "back",
    "name": "Swept fringe",
    "glb": "hair/full/hair_swept_fringe.glb",
-   "tris": 1500,
+   "tris": 1655,
    "materials": [
     {
      "name": "M_Hair",
@@ -2683,8 +2728,11 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/16-Isagi-17727987910.glb",
+   "roblox": {
+    "provisional": true
+   },
    "map": {
     "shade": 0
    }
@@ -2694,7 +2742,7 @@
    "slot": "back",
    "name": "Bob with a pigtail",
    "glb": "hair/full/hair_bob_pigtail.glb",
-   "tris": 1359,
+   "tris": 1557,
    "materials": [
     {
      "name": "M_Hair",
@@ -2705,8 +2753,11 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/17-cutesy-bob-with-adorable-pigtail-in-brown-118937471732434.glb",
+   "roblox": {
+    "provisional": true
+   },
    "map": {
     "shade": 1
    }
@@ -2716,7 +2767,7 @@
    "slot": "back",
    "name": "Long pigtails",
    "glb": "hair/full/hair_long_pigtails.glb",
-   "tris": 1500,
+   "tris": 1658,
    "materials": [
     {
      "name": "M_Hair",
@@ -2727,8 +2778,11 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/18-long-pretty-black-pigtails-117422689311117.glb",
+   "roblox": {
+    "provisional": true
+   },
    "map": {
     "shade": 2
    }
@@ -2738,7 +2792,7 @@
    "slot": "back",
    "name": "Dreads with a cap",
    "glb": "hair/full/hair_dreads_cap.glb",
-   "tris": 1499,
+   "tris": 1685,
    "materials": [
     {
      "name": "M_Hair",
@@ -2749,8 +2803,11 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/19-OTF-Von-Dreads-w-Hat-89998678118416.glb",
+   "roblox": {
+    "provisional": true
+   },
    "map": {
     "shade": 0,
     "accent": 1,
@@ -2765,7 +2822,7 @@
    "slot": "back",
    "name": "Waves with a fade",
    "glb": "hair/full/hair_waves.glb",
-   "tris": 1116,
+   "tris": 1524,
    "materials": [
     {
      "name": "M_Hair",
@@ -2776,8 +2833,11 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/20-360-Waves-in-Black-113478080627568.glb",
+   "roblox": {
+    "provisional": true
+   },
    "map": {
     "shade": 0,
     "accent": 1
@@ -2791,7 +2851,7 @@
    "slot": "back",
    "name": "Messy dreads",
    "glb": "hair/full/hair_messy_dreads.glb",
-   "tris": 1500,
+   "tris": 1651,
    "materials": [
     {
      "name": "M_Hair",
@@ -2802,8 +2862,11 @@
    "hidesBackHair": false,
    "hides": [],
    "full": true,
-   "skull": "v8",
+   "skull": "v9",
    "source": "hair/source/david/21-M11-Messy-Dreads-Black-86633981568887.glb",
+   "roblox": {
+    "provisional": true
+   },
    "map": {
     "shade": 2
    }

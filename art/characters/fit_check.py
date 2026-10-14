@@ -824,7 +824,10 @@ for part in CAT["hair"] + [a for a in CAT["accessories"] if kind_of(a) == "hat"]
         top_tree, _ = bvh_of(groups)
         _, _, _, dist = top_tree.find_nearest(SK.point("top"))
         floats["top"] = round(max(0.0, dist - 0.0), 4)
-    for name in ([] if part.get("covers") == ["top"] else part.get("covers") or SK.COVERS[kind]):
+    # a hairstyle attached the Roblox way keeps its own hairline: it covers the top and the crown (no bald patch on the
+    # scalp), and the front hairline only if it reaches it (a fade or a swept style stops higher than ours)
+    default = SK.COVERS["roblox_full"] if part.get("roblox") and kind == "full" else SK.COVERS[kind]
+    for name in ([] if part.get("covers") == ["top"] else part.get("covers") or default):
         vals = []
         for k in neighbours(ANCHOR_RAYS[name]):
             base = R_SCALP[k] + (hair_outer(LAT[k]) if kind == "hat" else 0.0)
@@ -836,9 +839,12 @@ for part in CAT["hair"] + [a for a in CAT["accessories"] if kind_of(a) == "hat"]
         floats[name] = round(float(min(ok)), 4)
     rec["float"], rec["uncovered"] = floats, uncovered
     vs = [v for g in groups.values() for v in g[0]]
-    out, box = 0.0, REACH["hat" if kind == "hat" else "hair"]
+    # a hairstyle attached the Roblox way is held to Roblox's own hair box, from its HairAttachment (head-roblox)
+    roblox = bool(part.get("roblox")) and kind == "full"
+    out, box = 0.0, REACH["roblox_hair" if roblox else "hat" if kind == "hat" else "hair"]
+    origin = SK.point("hair_att") if roblox else TOP
     for v in vs:
-        d = v - TOP
+        d = v - origin
         ox = max(0.0, abs(d.x) - box["side"])
         oz = max(0.0, d.z - box["up"], -d.z - box["down"])
         oy = max(0.0, -d.y - box["front"], d.y - box["back"])
