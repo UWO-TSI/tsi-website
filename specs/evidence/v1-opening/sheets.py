@@ -52,6 +52,7 @@ groups = [
     ("02-reflection-creator-desktop.webp", "The reflection creator, 1440x900: the scene, the options, the rail, Yes on the water; ripples rewrite you", ("03-", "04-", "05-", "06-", "07-", "08-"), 3),
     ("03-crossing.webp", "The crossing, golden hour: drone out of the mist, bow, close-up dripping, the wake, the wharf; the landing", ("09-", "10-", "11-"), 4),
     ("04-walk-along.webp", "The walk-along with Bram: the dock, hints, the crate, the Tab and B glyphs, the street, the plaza", ("12-", "13-", "14-", "15-", "16-", "17-", "18-", "19-", "20-"), 4),
+    ("06-reflection-rail.webp", "Every category in the reflection's rail (hair with David's hairstyles, faces, clothes), a hairstyle and a face worn", ("r",), 4),
     ("05-phone.webp", "Phone, 390x844: underwater, aboard, the creator and its ripple, the crossing, the dock", ("p",), 4),
 ]
 for out, title, prefixes, cols in groups:

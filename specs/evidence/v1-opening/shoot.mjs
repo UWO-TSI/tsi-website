@@ -120,6 +120,50 @@ async function tour(page) {
   writeFileSync(`${OUT}/frames.json`, JSON.stringify(log, null, 1));
 }
 
+/** Every category in the reflection's rail: each opened (its tile count logged), a whole hairstyle and a face worn. */
+if (SCENES.includes("rail")) {
+  const { page } = await open({ width: 1440, height: 900 });
+  await at(page, "underwater", 0.3);
+  await page.evaluate(() => { window.__arrival.skip(); window.__arrival.skip(); window.__arrival.choices(40); });
+  await at(page, "creator", 2.5);
+  const cats = await page.$$eval('[role="tablist"] [data-cat]', els => els.map(e => e.getAttribute("data-cat")));
+  for (const [i, cat] of cats.entries()) {
+    await page.click(`[data-cat="${cat}"]`);
+    await sleep(1500);
+    const sections = await page.$$eval('[role="tabpanel"] section', els => els.map(e => [e.getAttribute("aria-label"), e.querySelectorAll("li").length]));
+    const swatches = await page.$$eval('[role="tabpanel"] [role="group"] button', els => els.length);
+    log.push({ rail: cat, sections, swatches });
+    console.log("rail", cat, JSON.stringify(sections), swatches);
+    await shot(page, `r${String(i).padStart(2, "0")}-${cat}`);
+  }
+  // A whole hairstyle (David's set) and a face, worn: the ripple rewrites them in the water.
+  await page.click('[data-cat="hair"]'); await sleep(600);
+  const styles = await page.$$('[role="tabpanel"] section[aria-label="Hairstyles"] button');
+  if (styles[4]) { await styles[4].click(); await sleep(1600); await shot(page, "r90-hairstyle-worn"); }
+  await page.click('[data-cat="eyes"]'); await sleep(600);
+  const eyes = await page.$$('[role="tabpanel"] ul button');
+  if (eyes[9]) { await eyes[9].click(); await sleep(1600); await shot(page, "r91-face-worn"); }
+  writeFileSync(`${OUT}/frames-rail.json`, JSON.stringify(log, null, 1));
+  await page.context().close();
+}
+
+/** Every whole hairstyle in the water (David's set): is the face still readable in each reflection? */
+if (SCENES.includes("hairstyles")) {
+  const { page } = await open({ width: 1440, height: 900 });
+  await at(page, "underwater", 0.3);
+  await page.evaluate(() => { window.__arrival.skip(); window.__arrival.skip(); window.__arrival.choices(40); });
+  await at(page, "creator", 2.5);
+  await page.click('[data-cat="hair"]'); await sleep(800);
+  const n = await page.$$eval('[role="tabpanel"] section[aria-label="Hairstyles"] button', els => els.length);
+  for (let i = 0; i < n; i++) {
+    await page.$$eval('[role="tabpanel"] section[aria-label="Hairstyles"] button', (els, k) => els[k].click(), i);
+    await sleep(1700);
+    await page.screenshot({ path: `${OUT}/h${String(i).padStart(2, "0")}.png`, clip: { x: 0, y: 0, width: 920, height: 900 } });
+    console.log("hairstyle", i);
+  }
+  await page.context().close();
+}
+
 if (SCENES.includes("phone")) {
   const { page } = await open({ width: 390, height: 844 }, true);
   await at(page, "underwater", 3.0); await shot(page, "p1-underwater");
