@@ -88,3 +88,17 @@ The source is the artifact db at https://claude.ai/artifact/WfyWSpLEjV6Ekp7DCyNU
   - #12, #14, #17 and #18 are blocky and need to be curvy and smooth.
   - #19 is a cap worn backwards.
 - Long hair length stays.
+
+## Head, detail tiers and hair colour (David, 2026-10-14, after trying the 21 in the creator)
+- **Detail by situation, not only by distance:** "i want high def when close up like for photo mode or clicking into profile, a medium when close in in combat and a low when zoomed out."
+  - Full detail is used in photo mode, the profile and player card, and the creator.
+  - Medium (LOD 1) is used in normal play, combat included.
+  - Low (LOD 2) is used when the camera is zoomed out.
+- **The head still doesn't fit the Roblox hair:** "hair dips weird, weird spots of scalp is showing, headshape overall a little weird, face doesnt have to be flat, a little to rectangley".
+  - David keeps our own head ("Keep tuning our head") but wants it rounder and less rectangular, with a face that isn't flat.
+  - No hair should dip oddly, and no scalp should show through the partings.
+- **Hair colour:** "needs more choices like color wheel picker, doesnt need to reset all hair color option cuz it lags whenever changing hair color, also some hair color is glitching and being weird".
+  - Add a colour wheel for custom colours next to the presets.
+  - Changing the colour must not re-render every hair thumbnail, and must not lag.
+  - Fix the glitchy colours: the near-black source textures turn into high-contrast streaks.
+- Also seen in his screenshots: hair thumbnails load slowly as blank tiles, and the hair still looks faceted at full detail in the creator.
