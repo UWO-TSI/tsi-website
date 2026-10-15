@@ -165,9 +165,9 @@ export default function HQInterior({
         <Piece shadows={clubhouse} name="plant-yucca" position={clubhouse ? HQ_LAYOUT.yucca.position : [7.2, 0, 5.2]} />
       </Suspense>
 
-      {/* Exit: TSI-yellow message mat at the south lip */}
+      {/* Exit: the welcome mat at the south lip, reading from the door (art/props/build_welcome_mat.py) */}
       <Suspense fallback={null}>
-        <Piece name="yellow-message-mat" rotX={clubhouse ? Math.PI : 0} rotY={clubhouse ? Math.PI : 0} position={[0, 0.015, -5.2]} scale={0.14} />
+        <Piece name="yellow-message-mat" position={[0, 0.002, -5.2]} scale={0.14} />
       </Suspense>
 
       {/* The HQ lead behind the front desk (lib/game/keepers.ts). */}

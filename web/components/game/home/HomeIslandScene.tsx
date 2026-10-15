@@ -16,6 +16,7 @@ import PlayerAvatar from "../PlayerAvatar";
 import type { WheelItem } from "@/lib/game/toolWheel";
 import { ACNHParts, CHALET_VARIANTS } from "../ACNHBuilding";
 import { GLBProp, NatureTree, NatureBush, NatureFlowerCluster } from "../NatureModels";
+import { MAILBOX_URL } from "@/lib/game/propModels";
 import { IslandAtmosphere, useFollowCamera, type TreeSpot } from "../IslandAtmosphere";
 import { PlacementLayer, type GridMapping } from "./PlacementLayer";
 import { createHomeIsland, homeBoatPrompt, underHomePier, HOME_SPAWN, HOUSE, HOME_MAILBOX, HOME_PIER, HOME_TREES, HOME_TREE_SEEDS, HOME_BUSHES, HOME_FLOWERS, HOME_RADII } from "@/lib/game/homeIsland";
@@ -101,7 +102,7 @@ export default function HomeIslandScene({ held = null, identity, level, peaceful
     {/* The dump's chalet house (5 × 4.2 cells, same model family as the village café/museum). */}
     <group position={[HOUSE.x, 0, HOUSE.z]}><ACNHParts parts={CHALET_VARIANTS.brown} lit={windowLit(light)} /></group>
     <FadeLight position={[HOUSE.door[0], 1.4, HOUSE.door[1] - 0.2]} color="#ffd68b" intensity={light.lampsOn ? light.lamp * 1.2 : 0} distance={4} />
-    <GLBProp url="/assets/acnh/furniture/mailbox.glb" position={[HOME_MAILBOX[0], home.ground(...HOME_MAILBOX), HOME_MAILBOX[1]]} scale={0.1} />
+    <GLBProp url={MAILBOX_URL} position={[HOME_MAILBOX[0], home.ground(...HOME_MAILBOX), HOME_MAILBOX[1]]} />
     <Wharf dock={HOME_PIER} light={light} place="home" />
     <Html position={[HOUSE.x, 4.2, HOUSE.z - HOUSE.halfD]} center distanceFactor={10} zIndexRange={[3, 0]}><div className={styles.cue}>Your house</div></Html>
     {TREES.map(({ x, z, seed }, i) => <NatureTree key={i} position={[x, home.ground(x, z), z]} seed={seed} models={SEASON_TREES[look.season]} />)}

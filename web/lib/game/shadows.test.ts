@@ -8,13 +8,15 @@ describe("shadow classification (look spec §9.2)", () => {
     const table: Record<string, string[]> = {
       solid: ["buildings/hq-office.glb", "buildings/chalet-wall-a.glb", "props/streetlamp.glb", "props/bench-wood.glb", "props/fence-rope-a.glb",
         "props/fence-country-b.glb", "props/bridge-wooden.glb", "props/rock-c.glb", "props/stone-lantern.glb", "props/bulletin-board.glb",
-        "furniture/mailbox.glb", "furniture/ruins-pillar.glb", "furniture/study-chair.glb", "furniture/monument-rock.glb"].map(u => A + u)
-        .concat(["/assets/game/props/workbench.glb", "/assets/game/weapons/sword-iron.glb"]),
+        "furniture/ruins-pillar.glb", "furniture/study-chair.glb", "furniture/monument-rock.glb"].map(u => A + u)
+        .concat(["/assets/game/props/workbench.glb", "/assets/game/weapons/sword-iron.glb"])
+        // Our remodelled props (lib/game/propModels.ts).
+        .concat(["campfire", "mailbox", "streetlamp", "museum-door-fence", "study-table-long", "study-table", "hq-floor-lamp", "hq-pendant", "buoy"].map(p => `/assets/game/props/${p}.glb`)),
       foliage: ["tree-hardwood-a", "tree-hardwood-b", "tree-blossom", "tree-hardwood-snow", "tree-cedar", "tree-cedar-snow", "bush-holly", "bush-azalea", "bush-holly-snow"]
         .map(p => `${A}plants/${p}.glb`),
       small: [`${A}plants/flower-rose.glb`, `${A}props/shell-scallop.glb`, `${A}furniture/lounge-book.glb`, "/assets/nature/grass-tufts.glb",
-        "/assets/nature/rock_smallA.glb", "/assets/nature/mushroom_red.glb", "/assets/game/props/branch.glb", "/assets/game/props/message-bottle.glb", `${A}fruit/coconut.glb`],
-      none: [`${A}critters/firefly.glb`, `${A}critters/common-butterfly.glb`, `${A}furniture/lounge-rug.glb`, `${A}furniture/yellow-message-mat.glb`, `${A}props/distant-view-01.glb`],
+        "/assets/nature/rock_smallA.glb", "/assets/nature/mushroom_red.glb", "/assets/game/props/branch.glb", "/assets/game/props/message-bottle.glb", `${A}fruit/coconut.glb`, "/assets/game/props/study-book.glb"],
+      none: [`${A}critters/firefly.glb`, `${A}critters/common-butterfly.glb`, `${A}furniture/lounge-rug.glb`, `${A}furniture/yellow-message-mat.glb`, `${A}props/distant-view-01.glb`, "/assets/game/props/welcome-mat.glb"],
     };
     for (const [cls, urls] of Object.entries(table)) for (const url of urls) expect(shadowClassFor(url), url).toBe(cls);
   });

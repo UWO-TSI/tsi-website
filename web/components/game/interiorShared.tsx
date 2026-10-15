@@ -12,6 +12,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import { bindGameKeys } from "@/lib/game/keyboardInput";
 import { PIECE_TINTS, type Tint } from "@/lib/game/furniturePalettes";
+import { remodelledPiece } from "@/lib/game/propModels";
 import * as THREE from "three";
 import Character, { CHARACTER_SCALE, type CharacterMotion, type ClipName, type HeldView } from "./character/Character";
 import { useWorldClips } from "./character/useWorldClips";
@@ -224,7 +225,11 @@ export function InteriorPlayer({
 
 const FURNITURE_BASE = "/assets/acnh/furniture";
 const RESTORED_PIECES = new Set(["study-desk", "study-chair", "bookshelf", "wooden-chest", "bulletinboard", "antique-clock", "plant-monstera", "plant-yucca", "reading-table"]);
-export const pieceUrl = (name: string) => `${FURNITURE_BASE}/${name}.glb${name === "clubhouse-pendant" ? "?v=white-20260917" : RESTORED_PIECES.has(name) ? "?v=hq-textures-20260917" : ""}`;
+/** A piece's model: our own where it has been remodelled (lib/game/propModels.ts), else the dump's. */
+export const pieceUrl = (name: string) => remodelledPiece(name, 1)?.url
+  ?? `${FURNITURE_BASE}/${name}.glb${RESTORED_PIECES.has(name) ? "?v=hq-textures-20260917" : ""}`;
+/** What a piece's model is drawn at for its call site's (dump) scale: ours are authored at the dump's size at 0.1. */
+export const pieceScale = (name: string, scale: number) => remodelledPiece(name, scale)?.scale ?? scale;
 
 /**
  * Recolor pipeline (2026-07-25): tint the clone's materials by name.
@@ -287,7 +292,8 @@ export function Piece({ name, position, rotY = 0, rotX = 0, scale = 0.1, tint, g
     }
     return c;
   }, [scene, name, tint, rotX, glassMaterial, shadows]);
-  return <primitive object={clone} position={position} rotation={[0, rotY, 0]} scale={[scale, scale, scale]} />;
+  const k = pieceScale(name, scale);
+  return <primitive object={clone} position={position} rotation={[0, rotY, 0]} scale={[k, k, k]} />;
 }
 
 export function preloadPieces(names: string[]): void {

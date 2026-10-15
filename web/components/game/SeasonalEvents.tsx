@@ -16,7 +16,8 @@ import { GLBProp } from "./NatureModels";
 import IslandSheet from "./IslandSheet";
 import { TreeLeaves } from "./AmbienceFX";
 import { eventSolids, landmark, type LandmarkId } from "@/lib/game/defaultIsland";
-import { Lantern } from "./AmbientProps";
+import { Lanterns } from "./AmbientProps";
+import { STREETLAMP_URL } from "@/lib/game/propModels";
 import { sheddingTrees, worldWind } from "@/lib/game/worldFx";
 import type { IslandEvent } from "@/lib/game/seasonalEvents";
 import type { IslandLight } from "@/lib/game/islandLighting";
@@ -50,7 +51,7 @@ const STAGE_TOP = 0.36;
 const POSTER_BOARD: At = lawn(-0.84, 1.43);
 /** Every event hangs its garland arch over the path in from the bridge; its guy lines run out to the map's lamp (east) and a lamp of the event's own (west). */
 const garland = (url: string): Piece[] => [
-  { at: ["plaza", -2.9, -1.5], url: `${P}streetlamp.glb`, lamp: true, solid: [0.25, 0.25] },
+  { at: ["plaza", -2.9, -1.5], url: STREETLAMP_URL, lamp: true, solid: [0.25, 0.25] },
   { at: ["plaza", 1.6, -1.3], url, scale: 0.09, yaw: -0.044 },
 ];
 
@@ -81,8 +82,8 @@ const DECOR: Record<string, { pieces: Piece[]; spots: Spot[]; lights?: At[] }> =
     pieces: [
       ...garland(`${S}carnival-garland.glb`),
       { at: lawn(0, 0.2), url: `${P}bridge-wooden.glb`, yaw: Math.PI / 2, solid: [1.45, 1.9] },
-      { at: lawn(-1.9, -1.4), url: `${P}streetlamp.glb`, lamp: true, solid: [0.25, 0.25] },
-      { at: lawn(1.9, -1.4), url: `${P}streetlamp.glb`, lamp: true, solid: [0.25, 0.25] },
+      { at: lawn(-1.9, -1.4), url: STREETLAMP_URL, lamp: true, solid: [0.25, 0.25] },
+      { at: lawn(1.9, -1.4), url: STREETLAMP_URL, lamp: true, solid: [0.25, 0.25] },
       { at: lawn(-1.3, 1.5), url: `${F}monument-banner.glb`, scale: 0.1, lift: STAGE_TOP },
       { at: lawn(1.3, 1.5), url: `${F}monument-banner.glb`, scale: 0.1, lift: STAGE_TOP },
       { at: POSTER_BOARD, url: `${P}bulletin-board.glb`, lift: STAGE_TOP },
@@ -131,14 +132,15 @@ export function EventDecor({ event, ground, light, weather }: { event: IslandEve
     eventSolids.push(...rects);
     return () => { eventSolids.splice(0, eventSolids.length); };
   }, [pieces]);
+  const lamps = useMemo(() => pieces.filter(p => p.lamp).map(p => p.position), [pieces]);
   const blossoms = useMemo(() => sheddingTrees(pieces.filter(p => p.url.endsWith("tree-blossom.glb")).map(p => ({ x: p.position[0], y: p.position[1], z: p.position[2], model: p.url, scale: 1 })), "spring"), [pieces]);
   // The one world wind (row 238), as IslandAtmosphere's leaves and mist use it.
   const wind = useMemo(() => worldWind(weather), [weather]);
   if (!event || !set) return null;
   return <Suspense fallback={null}>
-    {pieces.map(p => p.lamp
-      ? <Lantern key={p.key} position={p.position} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />
-      : <GLBProp key={p.key} url={p.url} position={p.position} rotation={[0, p.yaw ?? 0, 0]} scale={p.scale ?? 1} />)}
+    {/* The event's own lamps, one instanced set (AmbientProps Lanterns). */}
+    {lamps.length > 0 && <Lanterns positions={lamps} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />}
+    {pieces.filter(p => !p.lamp).map(p => <GLBProp key={p.key} url={p.url} position={p.position} rotation={[0, p.yaw ?? 0, 0]} scale={p.scale ?? 1} />)}
     {(set.lights ?? []).map(at => { const p = place(at); return p && <pointLight key={at.join()} position={[p[0], ground(p[0], p[1]) + 1.6, p[1]]} color="#ffcf8a" intensity={light.lampsOn ? light.lamp * 1.4 : 0} distance={5} />; })}
     {blossoms.length > 0 && <TreeLeaves trees={blossoms} mode="petals" wind={wind} ground={ground} />}
     {event.decor === "fall-tourney" && <TrophyCue ground={ground} />}

@@ -1,0 +1,42 @@
+{
+ "/assets/acnh/furniture/clubhouse-pendant.glb": [
+  "531|2322|mReBody"
+ ],
+ "/assets/acnh/furniture/floor-lamp.glb": [
+  "500|1848|mReBody",
+  "322|1320|mReFabric"
+ ],
+ "/assets/acnh/furniture/lounge-book.glb": [
+  "490|1776|mReBody"
+ ],
+ "/assets/acnh/furniture/mailbox.glb": [
+  "795|2463|mBody",
+  "154|462|mLight"
+ ],
+ "/assets/acnh/furniture/reading-table.glb": [
+  "200|612|mReBody",
+  "270|1248|mReFabric"
+ ],
+ "/assets/acnh/furniture/yellow-message-mat.glb": [
+  "248|1233|RugOtherMessageS02_mat0"
+ ],
+ "/assets/acnh/props/buoy.glb": [
+  "261|798|FldBuoyMain__FldBuoyMain_mat0"
+ ],
+ "/assets/acnh/props/campfire.glb": [
+  "2144|9426|EvtobjCampfire_mat0"
+ ],
+ "/assets/acnh/props/fence-country-b.glb": [
+  "270|978|FenceLog__FenceLog_B_mat0",
+  "224|1212|FenceLog__FenceLog_B_mat1"
+ ],
+ "/assets/acnh/props/streetlamp.glb": [
+  "479|1788|mReBody",
+  "186|912|mGlassF",
+  "169|816|mGlassR"
+ ],
+ "/assets/game/wharf/rowboat.glb": [
+  "186|720|M_BoatPaint",
+  "166|372|M_BoatWood"
+ ]
+}

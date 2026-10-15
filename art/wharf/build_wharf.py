@@ -8,10 +8,11 @@ to lean on while you fish, rope fenders and two iron cleats on the boat side, an
 alongside the tip on +x, where the rope rail leaves a gap to step aboard. Matte throughout: roughness 1, no metal but the
 cleats.
 
-  /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/wharf/build_wharf.py [-- pier dressing rowboat]
+  /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/wharf/build_wharf.py [-- pier dressing]
 
 Also writes the village wharf's dressing (v1 water item 7, the reference wharf-creatures-of-the-deep-ref.png): the finger
-pier off the tip with its posts and the lantern poles (wharf-dressing.glb), and the small moored rowboat (rowboat.glb).
+pier off the tip with its posts and the lantern poles (wharf-dressing.glb). The small moored rowboat (rowboat.glb) is
+art/props/build_rowboat.py's.
 
 Writes web/public/assets/game/wharf/pier.glb. Frame: the wharf landmark's own (lib/game/defaultIsland.ts LANDMARK_INFO
 .wharf), before its yaw: x across (+x the boat side), y up, z along it (the tip at z −3.5 out over the sea, the land end
@@ -563,73 +564,13 @@ def build_dressing():
     return path
 
 
-ROWBOAT_LEN, ROWBOAT_BEAM, ROWBOAT_DEPTH = 1.55, 0.62, 0.26
-
-
-def build_rowboat():
-    """A small rowboat, the reference's: a pale painted clinker hull (a band of plank lines), a pointed bow and a flat
-    transom, a wooden gunwale, two thwarts to sit on and the floorboards inside. Nose along +z, its keel at y 0.
-    Two materials: the paint and the wood."""
-    K.reset()
-    paint = Mat("M_BoatPaint", "#ece6d8", 1.0)
-    wood = Mat("M_BoatWood", "#a26d45", 1.0)
-    p = Pier()
-    L, B, D = ROWBOAT_LEN, ROWBOAT_BEAM, ROWBOAT_DEPTH
-    sides = 9
-    zs = np.linspace(-L / 2, L / 2, 9)
-    rings_out, rings_in = [], []
-    for z in zs:
-        t = (z + L / 2) / L                                   # 0 at the transom, 1 at the bow
-        w = B / 2 * (1 - (max(0.0, t - 0.55) / 0.45) ** 1.8) * (0.86 + 0.14 * math.sin(math.pi * min(1, t * 1.6)))
-        w = max(w, 0.012)
-        sheer = D + 0.05 * max(0.0, t - 0.6) / 0.4           # the bow rises a little
-        keel = 0.03 * max(0.0, t - 0.75) / 0.25               # and its foot lifts
-        out, inn = [], []
-        for j in range(sides):
-            a = math.pi * j / (sides - 1)                     # round the bottom from one gunwale to the other
-            x, y = -math.cos(a) * w, keel + (1 - math.sin(a)) * (sheer - keel) * 0.98 + (math.sin(a)) * 0.0
-            out.append((x, y, z))
-            inn.append((x * 0.9, keel + 0.03 + (y - keel) * 0.94, z))
-        rings_out.append(out)
-        rings_in.append(inn)
-    uv = [[(0.5, 0.5)] * sides for _ in zs]
-    p.ring_grid(rings_out, uv, paint, closed=False)
-    # Inside: the top strakes painted like the hull (the white rim you see from above), the rest bare wood.
-    vin = [[p.vert(q) for q in ring] for ring in rings_in]
-    for i in range(len(zs) - 1):
-        for j in range(sides - 1):
-            m = paint if j < 2 or j >= sides - 3 else wood
-            p.face([vin[i + 1][j], vin[i + 1][j + 1], vin[i][j + 1], vin[i][j]], [(0.5, 0.5)] * 4, m)
-    # The transom: flat across the stern, out to in.
-    st_o, st_i = rings_out[0], rings_in[0]
-    vs_o = [p.vert(q) for q in st_o]
-    vs_i = [p.vert(q) for q in st_i]
-    for j in range(sides - 1):
-        p.face([vs_o[j], vs_i[j], vs_i[j + 1], vs_o[j + 1]], [(0.5, 0.5)] * 4, paint)
-    # The gunwale: a painted capping along both sheers, joining the outside to the inside.
-    for j in (0, sides - 1):
-        a = [p.vert(r[j]) for r in rings_out]
-        b = [p.vert(r[j]) for r in rings_in]
-        for i in range(len(zs) - 1):
-            p.face([a[i], a[i + 1], b[i + 1], b[i]], [(0.5, 0.5)] * 4, paint)
-    # Two thwarts across, the floorboards along the bottom.
-    for z in (-0.2, 0.28):
-        k = int(round((z + L / 2) / L * (len(zs) - 1)))
-        w = abs(rings_in[k][0][0]) - 0.01
-        p.beam((-w, D * 0.62, z), (w, D * 0.62, z), 0.13, 0.025, wood, 0)
-    for x in (-0.09, 0.0, 0.09):
-        p.beam((x, 0.05, -L / 2 + 0.12), (x, 0.05, L / 2 - 0.35), 0.075, 0.015, wood, 0)
-    ob = p.finish("rowboat", smooth_deg=40)
-    path = K.export([ob], "rowboat")
-    print("ROWBOAT", {"length": L, "beam": B, "depth": D})
-    return path
+# The moored rowboats (rowboat.glb) are built by art/props/build_rowboat.py (game/remodel-props: clinker strakes, oars,
+# a painted-plank texture), on the same length, beam, draft and bow ring as lib/game/wharf.ts ROWBOAT.
 
 
 if __name__ == "__main__":
-    which = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["pier", "dressing", "rowboat"]
+    which = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else ["pier", "dressing"]
     if "pier" in which:
         build()
     if "dressing" in which:
         build_dressing()
-    if "rowboat" in which:
-        build_rowboat()

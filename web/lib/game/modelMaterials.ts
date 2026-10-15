@@ -130,19 +130,19 @@ export function keepOutOfBloom(shader: WebGLProgramParametersWithUniforms) {
 const GLASS = /^(m(Window\w*|SideWindow|RoofWindow|Glass\w*|Mirror)|M_Glass)$/;
 const METAL = /^M_(Blade|Brass|Steel|Iron|Drum)$/;
 /** Painted-metal atlases: the whole body is metal (LookMaterials keeps light paint, e.g. a clock face, dielectric). */
-const METAL_BODY = /\/(props\/streetlamp|props\/park-clock|furniture\/mailbox)\.glb:m(ReBody|Body)$/;
+const METAL_BODY = /\/(props\/streetlamp|props\/park-clock)\.glb:m(ReBody|Body)$/;
 
 /**
  * Look class of a GLB material (lookPreset.ts, LookMaterials). Glass and metal
  * (row 237) are named materials on outdoor props, buildings and weapons.
- * Furniture is interior dressing (interiors are deferred) except the mailbox
- * and the fitting room that stand outside; the driftwood sword is wood.
+ * Furniture is interior dressing (interiors are deferred) except the fitting
+ * room that stands outside; the driftwood sword is wood.
  * Characters never come through here: their materials are "Character*".
  */
 export function lookClassFor(url: string, name: string): "foliage" | "props" | "glass" | "metal" {
   if (url.includes("/plants/")) return "foliage";
   // The café (cafe-polish §7) and the modelled rooms (interiors polish) are the interiors with the look's glass and metal.
-  const outdoor = /\/(props|buildings|weapons|cafe|interiors)\//.test(url) || /\/furniture\/(fitting-room|mailbox)\.glb$/.test(url);
+  const outdoor = /\/(props|buildings|weapons|cafe|interiors)\//.test(url) || /\/furniture\/fitting-room\.glb$/.test(url);
   if (!outdoor || url.includes("driftwood")) return "props";
   if (GLASS.test(name)) return "glass";
   return METAL.test(name) || METAL_BODY.test(`${url}:${name}`) ? "metal" : "props";

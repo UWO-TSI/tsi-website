@@ -1,0 +1,41 @@
+/**
+ * Our own village props (game/remodel-props; art/props/build_*.py), replacing the ACNH dump's (specs/asset-audit). Each
+ * is authored in game units and drawn at scale 1 unless its note says otherwise.
+ */
+const P = "/assets/game/props/";
+
+/** The beach campfire's stack: stone ring, log teepee, ember bed (components/game/campfire/Campfire.tsx). */
+export const CAMPFIRE_URL = `${P}campfire.glb`;
+/** The plaza mailbox and the home island's: a painted timber post box, its door toward +z. */
+export const MAILBOX_URL = `${P}mailbox.glb`;
+/** The street lamp (AmbientProps Lanterns, instanced): 2.67 to its finial, the lantern's glass round the light at 2.4. */
+export const STREETLAMP_URL = `${P}streetlamp.glb`;
+/** The log rail boarding the museum's door until its goal opens it (DefaultIslandWorld), 2.3 across, facing -z. */
+export const MUSEUM_DOOR_FENCE_URL = `${P}museum-door-fence.glb`;
+/** The wharf's channel buoys (wharf/Wharf.tsx): the float meets the water BUOY_WATERLINE up its model. */
+export const BUOY_URL = `${P}buoy.glb`;
+export const BUOY_WATERLINE = 0.66;
+/** The outdoor study tables (study/StudySeats.tsx): the picnic table (2 long) and the pier's (1 long), tops at 0.84. */
+export const STUDY_TABLE_LONG_URL = `${P}study-table-long.glb`;
+export const STUDY_TABLE_URL = `${P}study-table.glb`;
+/** An open book, authored at the dump book's size at 0.1 (so drawn at the dump scale × 10). */
+export const STUDY_BOOK_URL = `${P}study-book.glb`;
+
+/**
+ * Interior pieces (interiorShared Piece, by the dump's furniture name) now drawn from our own model. Each is authored at
+ * the size the dump piece shows at scale 0.1 (one cell = 1 u), so a Piece keeps its dump scale and draws ours at × 10:
+ * every room's layout, footprint and light stays as it was.
+ */
+export const REMODELLED_PIECES: Readonly<Record<string, string>> = {
+  "floor-lamp": `${P}hq-floor-lamp.glb`,
+  "clubhouse-pendant": `${P}hq-pendant.glb`,
+  "yellow-message-mat": `${P}welcome-mat.glb`,
+  "lounge-book": STUDY_BOOK_URL,
+};
+/** What a remodelled piece's model is drawn at, for a dump scale. */
+export const REMODELLED_PIECE_SCALE = 10;
+/** A piece's own model and its scale at a call site's dump scale, or null while it is still the dump's. */
+export function remodelledPiece(name: string, dumpScale: number): { url: string; scale: number } | null {
+  const url = REMODELLED_PIECES[name];
+  return url ? { url, scale: dumpScale * REMODELLED_PIECE_SCALE } : null;
+}

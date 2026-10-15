@@ -12,6 +12,7 @@ import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import type * as THREE from "three";
 import { GLBProp } from "../NatureModels";
+import { STUDY_BOOK_URL, STUDY_TABLE_LONG_URL, STUDY_TABLE_URL } from "@/lib/game/propModels";
 import { CafeModel } from "./CafeModel";
 import type { ContactSize } from "@/lib/game/shadows";
 import Character, { CHARACTER_SCALE, type CharacterMotion } from "../character/Character";
@@ -25,7 +26,7 @@ import { formatClock, liveRemaining, useSecond } from "@/lib/study/useStudySessi
 import { useRemoteUids } from "../net/active";
 import s from "./study.module.css";
 
-const F = "/assets/acnh/furniture/", P = "/assets/acnh/props/";
+const P = "/assets/acnh/props/";
 const flat = () => 0;
 /** Without a clip, PlayerAvatar's tsi:sit at the seat you're in stands you up. */
 const standUp = (seat: WorldSeat) => window.dispatchEvent(new CustomEvent("tsi:sit", { detail: { x: seat.x, z: seat.z } }));
@@ -43,8 +44,8 @@ const CAFE_SET: Partial<Record<TableLayout["furniture"], ContactSize>> = {
 };
 
 /**
- * Furniture per kind: the café's hand-modeled sets, and outdoors the village
- * benches and parasol. Exported for the phone companion's isolated table scene
+ * Furniture per kind: the café's hand-modeled sets, and outdoors our picnic and pier tables (art/props/
+ * build_study_table.py) with the village benches and parasol. Exported for the phone companion's isolated table scene
  * (specs/companion.md deliverable 2), which places one table at the origin.
  */
 export function TableFurniture({ t, ground }: { t: TableLayout; ground: (x: number, z: number) => number }) {
@@ -53,11 +54,12 @@ export function TableFurniture({ t, ground }: { t: TableLayout; ground: (x: numb
   const set = CAFE_SET[t.furniture];
   if (set) return <CafeModel name="cafe-kit" node={`set_${t.furniture}`} position={[t.at[0], y, t.at[1]]} yaw={t.yaw} contact={set} />;
   return <group position={[t.at[0], y, t.at[1]]} rotation={[0, t.yaw, 0]}>
-    {t.furniture === "picnic" && [0.49, -0.49].map(x => <GLBProp key={x} url={`${F}reading-table.glb`} position={[x, 0, 0]} scale={0.1} />)}
+    {t.furniture === "picnic" && <GLBProp url={STUDY_TABLE_LONG_URL} />}
     {[...new Set(seats.map(([, z]) => z))].map(z => <GLBProp key={z} url={`${P}bench-wood.glb`} position={[0, 0, z]} />)}
     {t.furniture === "pier" && <GLBProp url={`${P}beach-parasol.glb`} position={[-2.4, 0, 0.3]} />}
-    {t.furniture === "pier" && <GLBProp url={`${F}reading-table.glb`} position={[0, 0, 0]} scale={0.1} />}
-    <GLBProp url={`${F}lounge-book.glb`} position={[0.15, 0.84, 0]} scale={0.065} rotation={[0, 0.3, 0]} />
+    {t.furniture === "pier" && <GLBProp url={STUDY_TABLE_URL} />}
+    {/* The open book on the runner (authored at the dump book's size at 0.1: its old 0.065 x 10). */}
+    <GLBProp url={STUDY_BOOK_URL} position={[0.15, 0.848, 0]} scale={0.65} rotation={[0, 0.3, 0]} />
   </group>;
 }
 

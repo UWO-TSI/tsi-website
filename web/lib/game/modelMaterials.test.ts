@@ -136,16 +136,19 @@ it("classes outdoor glass and metal for reflections (row 237) and leaves charact
   // Glass: building windows, lamp globes, the clock dome, the outdoor fitting-room mirror, the message bottle.
   for (const [url, name] of [[`${A}buildings/hq-office.glb`, "mWindowL"], [`${A}buildings/hq-office.glb`, "mSideWindow"], [`${A}buildings/chalet-wall-a.glb`, "mWindowGlass"],
     [`${A}buildings/shop-market.glb`, "mRoofWindow"], [`${A}buildings/shop-market-door.glb`, "mWindow"], [`${A}props/streetlamp.glb`, "mGlassF"], [`${A}props/park-clock.glb`, "mGlass"],
-    [`${A}furniture/fitting-room.glb`, "mMirror"], [`${G}props/message-bottle.glb`, "M_Glass"], [`${G}cafe/cafe-room.glb`, "M_Glass"]]) expect(lookClassFor(url, name), `${url} ${name}`).toBe("glass");
-  // Metal: lamp post, clock post, mailbox, workbench fittings, the weapons' blades and brass.
-  for (const [url, name] of [[`${A}props/streetlamp.glb`, "mReBody"], [`${A}props/park-clock.glb`, "mReBody"], [`${A}furniture/mailbox.glb`, "mBody"],
+    [`${A}furniture/fitting-room.glb`, "mMirror"], [`${G}props/message-bottle.glb`, "M_Glass"], [`${G}cafe/cafe-room.glb`, "M_Glass"],
+    [`${G}props/streetlamp.glb`, "M_Glass"]]) expect(lookClassFor(url, name), `${url} ${name}`).toBe("glass");
+  // Metal: lamp posts, clock post, the mailbox's brass and the buoy's iron, workbench fittings, the weapons' blades and brass.
+  for (const [url, name] of [[`${A}props/streetlamp.glb`, "mReBody"], [`${A}props/park-clock.glb`, "mReBody"], [`${G}props/streetlamp.glb`, "M_Iron"],
+    [`${G}props/mailbox.glb`, "M_Brass"], [`${G}props/buoy.glb`, "M_Iron"],
     [`${G}props/workbench.glb`, "M_Iron"], [`${G}props/workbench.glb`, "M_Steel"], [`${G}weapons/sword-iron.glb`, "M_Blade"], [`${G}weapons/sword-iron.glb`, "M_Brass"],
     [`${G}weapons/revolver-brass.glb`, "M_Drum"], [`${G}weapons/staff-rune.glb`, "M_Brass"], [`${G}cafe/cafe-room.glb`, "M_Steel"], [`${G}cafe/patron-props.glb`, "M_Steel"]]) expect(lookClassFor(url, name), `${url} ${name}`).toBe("metal");
   // Unchanged: walls, wood, fabric, grips, the driftwood sword, interior furniture glass, character accessories and outfits.
   for (const [url, name] of [[`${A}buildings/hq-office.glb`, "mWall"], [`${A}props/bench-park.glb`, "mReBody"], [`${A}furniture/fitting-room.glb`, "mReFabric"],
     [`${G}weapons/sword-iron.glb`, "M_Grip"], [`${G}weapons/sword-driftwood.glb`, "M_Blade"], [`${A}furniture/museum-case.glb`, "mGlass"], [`${A}furniture/wall-clock.glb`, "mGlass"],
     [`${A}furniture/weapon-sword.glb`, "mReBody"], ["/assets/characters/v6/accessories/accessory/acc_glasses_round.glb", "M_Main"],
-    ["/assets/characters/v6/outfits/onepiece/outfit_koi_kimono.glb", "M_Gold"], [`${G}cafe/cafe-room.glb`, "M_Oak"]]) expect(lookClassFor(url, name), `${url} ${name}`).toBe("props");
+    ["/assets/characters/v6/outfits/onepiece/outfit_koi_kimono.glb", "M_Gold"], [`${G}cafe/cafe-room.glb`, "M_Oak"],
+    [`${G}props/mailbox.glb`, "M_MailPaint"], [`${G}props/campfire.glb`, "M_Log"], [`${G}props/campfire.glb`, "M_Stone"]]) expect(lookClassFor(url, name), `${url} ${name}`).toBe("props");
   expect(lookClassFor(`${A}plants/tree-hardwood-a.glb`, "mGlass")).toBe("foliage");
 });
 

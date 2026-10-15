@@ -200,7 +200,7 @@ export default function OracleInterior({
         {CANDLES.map(c => <Piece key={c.x} name="candle" position={[c.x, 0, c.z]} rotY={c.rotY} rotX={Math.PI} scale={c.scale} />)}
         <CandleFire wicks={WICKS} pools={CANDLE_POOLS} poolIntensity={10} />
         {/* exit mat */}
-        <Piece name="yellow-message-mat" rotX={Math.PI} rotY={Math.PI} position={[0, 0.015, -5.3]} scale={0.12} />
+        <Piece name="yellow-message-mat" position={[0, 0.002, -5.3]} scale={0.12} />
       </Suspense>
 
       {/* The Oracle keeper beside the altar (lib/game/keepers.ts); the quiz's reactions are hers to say. */}

@@ -4,7 +4,8 @@
  * The wharf, and the home island's pier to match (specs/polish/arrival-wharf.md deliverables 1 and 2): the timber
  * jetty modelled in Blender (art/wharf/build_wharf.py: weathered boards, piles with their wet band and weed, a rope
  * rail hung pile to pile, the end rail at the tip to lean on and fish, fenders, cleats, a coil of line), the boat
- * moored alongside the tip on its lines, and two buoys marking its lane, everything riding the waves. Placed
+ * moored alongside the tip on its lines, and two painted buoys marking its lane (art/props/build_buoy.py), everything
+ * riding the waves. Placed
  * on a dock (the wharf landmark's spot and yaw, or the home island's HOME_PIER), in that dock's frame.
  */
 import { useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react";
@@ -17,15 +18,14 @@ import { BUOYS, DRESSING_URL, FINGER, LANTERNS, PIER, PIER_URL, ROWBOAT, ROWBOAT
 import { liveWaves } from "@/lib/game/waves";
 import { windowLit } from "@/lib/game/islandLighting";
 import { RopeLine } from "./ropeLine";
+import { BUOY_URL, BUOY_WATERLINE } from "@/lib/game/propModels";
 import { foamRings } from "@/lib/game/foamRings";
 import { berthTaken, type TripPlace } from "@/lib/game/boatTrip";
 import { myTrip, readMyTrip, subscribeMyTrip } from "@/lib/game/myTrip";
 import Boat from "./Boat";
 import { useTripBoat } from "./useTripBoat";
 
-const BUOY_URL = "/assets/acnh/props/buoy.glb";
-/** The buoy at the dump's scale, a touch smaller than ACNH's swimming line (a channel marker); its float meets the water this far up its model (its weighted stem hangs below). */
-const BUOY_SCALE = 0.085, BUOY_WATERLINE = 0.66;
+/** Our buoy (art/props/build_buoy.py) at scale 1: its float meets the water BUOY_WATERLINE up its model (its weighted stem hangs below). */
 useGLTF.preload(PIER_URL);
 useGLTF.preload(BUOY_URL);
 useGLTF.preload(DRESSING_URL);
@@ -39,7 +39,7 @@ function Buoy({ dock, x, z }: { dock: Dock; x: number; z: number }) {
   const group = useRef<THREE.Group>(null);
   const float = useMemo(() => ({ float: newFloat(), ride: newRide() }), []);
   useFrame((_, raw) => rideBuoy(group.current, dock, x, z, float, Math.min(raw, 0.1)));
-  return <group ref={group}><primitive object={model} scale={BUOY_SCALE} /></group>;
+  return <group ref={group}><primitive object={model} /></group>;
 }
 
 /** Module scope (the react compiler forbids writing through hook values): one frame of a buoy, turned its own way, leaning on the plane of the water under it. */
@@ -145,7 +145,8 @@ export default function Wharf({ dock, light, place, dressed = false, children }:
       for (const z of PIER.railZ) { dockToWorld(d, side * PIER.postX, z, at); handles.push(foamRings.add(at.x, at.z, PIER.postR * 1.05, 0.95)); }
       for (const z of PIER.underZ) { dockToWorld(d, side * PIER.underX, z, at); handles.push(foamRings.add(at.x, at.z, PIER.postR * 0.9, 0.85)); }
     }
-    for (const [x, z] of BUOYS) { dockToWorld(d, x, z, at); handles.push(foamRings.add(at.x, at.z, 0.14, 0.7)); }
+    // The buoy's float is 0.61 across where it meets the water: the foam laps just outside it.
+    for (const [x, z] of BUOYS) { dockToWorld(d, x, z, at); handles.push(foamRings.add(at.x, at.z, 0.33, 0.7)); }
     return () => handles.forEach(h => foamRings.remove(h));
   }, [dockX, dockZ, dockYaw]);
   return <group position={[dock.x, 0, dock.z]} rotation={[0, dock.yaw, 0]}>

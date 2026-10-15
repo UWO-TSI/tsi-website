@@ -6,7 +6,10 @@
  * (lib/game/emotePlay.ts); here it burns, and every dancer in the ring makes it bigger and brighter and adds a drum
  * layer (six play the full song, lib/game/campfire.ts).
  *
- * Cost (specs/perf/budget.md): the stack is one GLB primitive; the flames and embers are one pooled particle system in
+ * The stack is our own (art/props/build_campfire.py, David 2026-10-14 "do stone ringed"): a ring of river stones, a bark
+ * log teepee over an ember bed whose glow (M_Embers' emissive map) eases with the fire's light, dark by day.
+ *
+ * Cost (specs/perf/budget.md): the stack is one GLB in three primitives; the flames and embers are one pooled particle system in
  * one draw (the combat pack's fire tongue and light mote through a fire ramp, additive), seeded from the world clock
  * so everyone sees the same flicker, nothing allocated per frame; the glow is ONE point light, mounted with the scene
  * and eased (dark by day), never added or removed, so no material recompiles and no light per character. The drums are
@@ -15,7 +18,11 @@
 import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { GLBProp } from "../NatureModels";
+import { useGLTF } from "@react-three/drei";
+import { prepareModel, disposeModelMaterials } from "@/lib/game/modelMaterials";
+import { shadowClassFor } from "@/lib/game/shadows";
+import { CAMPFIRE_URL } from "@/lib/game/propModels";
+import { modelContact, useContactShadow } from "../ContactShadows";
 import { FACE, ParticlePool, seedAt, type Recipe } from "@/lib/game/fx/particles";
 import { COMBAT_PACK, COMBAT_PACK_URL, type CombatSprite } from "@/lib/game/fx/combatPack";
 import { RampTable, sharedRamps, type Ramp } from "@/lib/game/fx/combat";
@@ -29,10 +36,13 @@ import { AudioManager } from "@/lib/game/audio";
 import { localAvatar } from "@/lib/net/localAvatar";
 import type { IslandPhase } from "@/lib/game/islandTime";
 
-/** The stack's model and its size here (the ACNH bonfire, 1.66 × 1.25 u at 1). */
-const STACK_URL = "/assets/acnh/props/campfire.glb", STACK_SCALE = 0.8;
-/** Half the stack's footprint: you walk round it, never through. */
-const SOLID_HALF = 0.62;
+/** The stack's model (1.4 across its stone ring, the teepee 0.85 tall), drawn at its own size. */
+const STACK_URL = CAMPFIRE_URL;
+/** The ember bed's glow at the fire's full light (its emissive map, eased with the light). */
+const EMBER_GLOW = 1.6;
+useGLTF.preload(STACK_URL);
+/** Half the stack's footprint: you walk round its stone ring (0.8 out), never through. */
+const SOLID_HALF = 0.72;
 const FIRE_RAMP: Ramp = ["#fff4d6", "#ffaa3c", "#d8441a"];
 /** A tongue of flame: licks up out of the stack and tears off (its flipbook plays once over its life). */
 const TONGUE: Recipe<CombatSprite> = { sprite: "flame", count: [1, 1], life: [0.55, 0.85], size: [0.8, 1.1], grow: 0.85, speed: [0.02, 0.08], spread: Math.PI,
@@ -105,7 +115,7 @@ const camPos = new THREE.Vector3(), camDir = new THREE.Vector3();
 interface Burn { size: number; light: number; dancers: number }
 
 /** The frame (module scope: the react compiler forbids writing through hook values). */
-function burn(b: Burn, sys: FireSystem, light: THREE.PointLight | null, site: Spot & { y: number }, lit: boolean, you: THREE.Vector3, camera: THREE.Camera, raw: number) {
+function burn(b: Burn, sys: FireSystem, light: THREE.PointLight | null, embers: THREE.MeshStandardMaterial | null, site: Spot & { y: number }, lit: boolean, you: THREE.Vector3, camera: THREE.Camera, raw: number) {
   const dt = Math.min(raw, 0.1);
   // Dancers in the ring: the remotes holding the stomp near the fire, and you.
   const mine = localAvatar()?.motion.current?.pose === "DanceStomp" && Math.hypot(you.x - site.x, you.z - site.z) < FIRE.joinRadius;
@@ -121,6 +131,7 @@ function burn(b: Burn, sys: FireSystem, light: THREE.PointLight | null, site: Sp
     light.intensity = LIGHT.intensity * b.light * (0.88 + 0.08 * Math.sin(t * 13.1) + 0.04 * Math.sin(t * 7.7));
     light.distance = LIGHT.distance * (0.8 + 0.2 * b.size);
   }
+  if (embers) embers.emissiveIntensity = EMBER_GLOW * b.light * (0.85 + 0.15 * Math.sin(worldTime() * 2.3));
   // The drum song: a layer per dancer, faded by how far you are from the fire.
   const near = lit ? drumDistanceGain(Math.hypot(you.x - site.x, you.z - site.z)) : 0, layers = drumLayers(dancers);
   for (let i = 0; i < DRUM_LAYERS.length; i++) AudioManager.setLoop(DRUM_LAYERS[i].src, i < layers ? DRUM_LAYERS[i].gain * near : 0);
@@ -139,6 +150,16 @@ export default function Campfire({ site, ground, phase, player }: {
   useEffect(() => () => system.dispose(), [system]);
   const light = useRef<THREE.PointLight>(null);
   const state = useRef<Burn>({ size: 1, light: 0, dancers: 0 });
+  // The stack, prepared as GLBProp would (its shadow class and contact), keeping the ember bed's material to light.
+  const { scene } = useGLTF(STACK_URL);
+  const stack = useMemo(() => {
+    const model = prepareModel(scene, STACK_URL, 0);
+    let embers: THREE.MeshStandardMaterial | null = null;
+    model.traverse(o => { const m = (o as THREE.Mesh).material; if (m instanceof THREE.MeshStandardMaterial && m.name === "M_Embers") embers = m; });
+    return { model, embers: embers as THREE.MeshStandardMaterial | null };
+  }, [scene]);
+  useEffect(() => () => disposeModelMaterials(stack.model), [stack]);
+  useContactShadow(stack.model, useMemo(() => modelContact(stack.model, STACK_URL, shadowClassFor(STACK_URL)), [stack]));
   // The stack is solid: you walk round it.
   useEffect(() => {
     const r = { x0: at.x - SOLID_HALF, x1: at.x + SOLID_HALF, z0: at.z - SOLID_HALF, z1: at.z + SOLID_HALF };
@@ -157,9 +178,9 @@ export default function Campfire({ site, ground, phase, player }: {
     Object.assign(window, { __campfire: { site: at, lit: () => campfireLive.lit, dancers: () => state.current.dancers, size: () => state.current.size, light: () => light.current?.intensity ?? 0, particles: () => system.pool.alive } });
     return () => { delete (window as { __campfire?: unknown }).__campfire; };
   }, [at, system]);
-  useFrame(({ camera }, raw) => burn(state.current, system, light.current, at, lit, player.current, camera, raw));
+  useFrame(({ camera }, raw) => burn(state.current, system, light.current, stack.embers, at, lit, player.current, camera, raw));
   return <group position={[at.x, at.y, at.z]}>
-    <GLBProp url={STACK_URL} scale={STACK_SCALE} />
+    <primitive object={stack.model} />
     <primitive object={system.mesh} />
     <pointLight ref={light} color="#ffad5c" intensity={0} distance={LIGHT.distance} decay={LIGHT.decay} position={[0, LIGHT.height, 0]} />
   </group>;

@@ -5,6 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { GLBProp } from "./NatureModels";
 import InstancedGLB from "./InstancedNature";
+import { STREETLAMP_URL } from "@/lib/game/propModels";
 
 /** Seconds-ish a lamp takes to come up to full (or go out): an ease, never a switch (living-village §5). */
 const LAMP_RATE = 0.9;
@@ -27,6 +28,9 @@ function easeLight(light: THREE.PointLight, target: number, dt: number) {
 // Model is ~2.7u tall with the globe at the top; the warm point light sits
 // in the globe so night pools read like the W7 cozy lamps. The globe and its
 // pool fade up over a few seconds when the lamps come on, and down again.
+// Only the applicant island (components/recruit, live and outside the game's lanes) still draws this one lamp at a
+// time; the game's scenes draw our own lamp, instanced (Lanterns).
+const ACNH_LAMP_URL = "/assets/acnh/props/streetlamp.glb";
 export function Lantern({ position, lampsOn = true, intensity, glow }: { position: [number, number, number]; lampsOn?: boolean; intensity?: number; glow?: number }) {
   const model = useRef<THREE.Group>(null), light = useRef<THREE.PointLight>(null);
   const glowTarget = glow ?? (lampsOn ? 2.2 : 0), lightTarget = intensity ?? (lampsOn ? 0.4 : 0);
@@ -38,13 +42,14 @@ export function Lantern({ position, lampsOn = true, intensity, glow }: { positio
   return (
     <group position={position}>
       {/* The globe starts dark and eases to its target (a fixed prepared intensity, so the model is never rebuilt). */}
-      <group ref={model}><GLBProp url="/assets/acnh/props/streetlamp.glb" emissiveIntensity={0} /></group>
+      <group ref={model}><GLBProp url={ACNH_LAMP_URL} emissiveIntensity={0} /></group>
       <pointLight ref={light} color="#FFA040" intensity={0} distance={5} position={[0, 2.4, 0]} />
     </group>
   );
 }
 
-const LAMP_URL = "/assets/acnh/props/streetlamp.glb";
+/** Our street lamp (art/props/build_streetlamp.py): the same height and light point as the ACNH one. */
+const LAMP_URL = STREETLAMP_URL;
 /** The frame a shared globe material was last eased in (each eases once a frame, however many meshes share it). */
 let lampFrame = 0;
 function easeGlowOnce(group: THREE.Object3D, target: number, dt: number) {
@@ -61,8 +66,8 @@ function easeGlowOnce(group: THREE.Object3D, target: number, dt: number) {
 }
 
 /**
- * Every streetlamp of a scene as one instanced model (v1 performance): a draw per sub-mesh for all of them (the body
- * and the two glass halves, each glass drawn twice as a two-sided see-through), where each Lantern drew its own five.
+ * Every streetlamp of a scene as one instanced model (v1 performance): a draw per material for all of them (the iron and
+ * the frosted panes), where each Lantern drew its own five.
  * The globes share their materials, so they ease up and down together as the Lanterns' did; each lamp keeps its own
  * pool of light.
  */

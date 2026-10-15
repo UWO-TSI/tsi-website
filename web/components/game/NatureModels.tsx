@@ -12,6 +12,7 @@ import { BUSH_MODELS, FLOWER_MODELS, TREE_MODELS, bushParts, flowerParts, treePa
 import { SEASON_BUSHES, SEASON_FLOWERS, SEASON_TREES } from "@/lib/game/seasonalLook";
 import type { Season } from "@/lib/game/season";
 import { objectsOf, type Village } from "@/lib/game/villageMap";
+import { CAMPFIRE_URL, STREETLAMP_URL } from "@/lib/game/propModels";
 import type { ModelPlacement } from "./InstancedNature";
 
 /**
@@ -121,13 +122,13 @@ const PRELOAD = [
   ...BUSH_MODELS,
   ...FLOWER_MODELS,
   "/assets/acnh/plants/stump.glb",
-  "/assets/acnh/props/streetlamp.glb",
+  STREETLAMP_URL,
   "/assets/acnh/props/bench-wood.glb",
   "/assets/acnh/props/bench-park.glb",
   "/assets/acnh/props/fountain.glb",
   "/assets/acnh/props/park-clock.glb",
   "/assets/acnh/props/stone-lantern.glb",
-  "/assets/acnh/props/campfire.glb",
+  CAMPFIRE_URL,
   "/assets/acnh/props/bulletin-board.glb",
   "/assets/acnh/props/bridge-wooden.glb",
   "/assets/acnh/props/fence-country-a.glb",
