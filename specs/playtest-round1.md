@@ -102,3 +102,16 @@ The source is the artifact db at https://claude.ai/artifact/WfyWSpLEjV6Ekp7DCyNU
   - Changing the colour must not re-render every hair thumbnail, and must not lag.
   - Fix the glitchy colours: the near-black source textures turn into high-contrast streaks.
 - Also seen in his screenshots: hair thumbnails load slowly as blank tiles, and the hair still looks faceted at full detail in the creator.
+
+## New wardrobe batch (David, 2026-10-15)
+- **Source:** `~/Downloads/hair-2.zip` (hairs #22–27), `faces-2.zip` (faces #20–25, split into full, face, eyes and mouth), and `accessories.zip` plus `accessories-2.zip` (accessories #01–24, in head, face, neck and front folders). Each zip has preview sheets. Like the earlier sets, these are David's own Roblox items.
+- **Pricing source:** https://claude.ai/artifact/CF6UkwMmmMR5L1DSBu32Sw, collection `pricing`. Each item is `{mode: free | coins | gems | skip, price}`.
+  - David picked the modes.
+  - The prices are the coordinator's suggestions, which David can adjust there: accessories 60–180 coins next to the shop's 80, hair styles 200–260 coins next to dyes at 140, gem items 200–900.
+  - Hairs #23–26 were unset, so their modes are suggestions too.
+  - Skipped: #16, the sci-fi visor.
+- **Flagged to David** (his call, kept): #04 McDonald's visor, #15 Cartier shades, #18 Chopper hat, #20 Finn hood and #24 Luffy hat are third-party brands or characters.
+- **Import:** "make the creator for all faces and accessories". Every non-skipped face and accessory, plus the hairs, joins the creator or the shop at its price.
+  - It's fitted on the v10 head with the Roblox attachment logic: HatAttachment, FaceFrontAttachment, NeckAttachment and so on.
+  - Full, LOD 1 and LOD 2 tiers apply, per the detail-tier rule.
+  - It runs after `game/head-v10` merges.
