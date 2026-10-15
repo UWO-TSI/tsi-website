@@ -1,3 +1,4 @@
+fit_check.py on 717cad36's art (art/characters/fit_check.py; the JSON beside the run, untracked):
 BlenderMCP addon registered
 BlenderMCP addon unregistered
 23:23:57 | INFO: Data are loaded, start creating Blender stuff
