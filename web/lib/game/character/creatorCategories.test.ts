@@ -28,10 +28,10 @@ describe("creator categories (read from the catalogue)", () => {
     expect(cat("shoes").framing).toBe("body");
     expect(CATEGORIES.filter(c => c.wardrobe).map(c => c.id)).toEqual(["hair", "accessories", "tops", "bottoms", "shoes"]);
   });
-  it("choose and show what's worn: a fringe, a toggled extra, shoes off, an accessory's second tap", () => {
+  it("choose and show what's worn: a hairstyle, a toggled extra, shoes off, an accessory's second tap", () => {
     const hair = cat("hair");
-    let l = choose(DEFAULT_LOOK, hair.sections[0], "bangs_bowl");
-    expect([l.bangs, isOn(l, hair.sections[0], "bangs_bowl")]).toEqual(["bangs_bowl", true]);
+    let l = choose(DEFAULT_LOOK, hair.sections[0], "hair_bowl_cut");
+    expect([l.back, isOn(l, hair.sections[0], "hair_bowl_cut")]).toEqual(["hair_bowl_cut", true]);
     l = choose(l, cat("extras").sections[0], "blush");
     expect(l.extras).toEqual(["blush"]);
     expect(choose(l, cat("extras").sections[0], "blush").extras).toEqual([]);
@@ -48,11 +48,13 @@ describe("creator categories (read from the catalogue)", () => {
     expect(colourTarget(cat("accessories"), two, "acc_shoulder_bag")).toBe("acc_shoulder_bag");
     expect(colourTarget(cat("eyes"), two, null)).toBeNull();
   });
-  it("give the whole hairstyles their own row in Hair, apart from the backs (head fit)", () => {
+  it("offer David's 21 whole hairstyles as Hair's only row, recolourable (head-roblox)", () => {
     const hair = cat("hair");
-    const full = hair.sections.find(s => s.id === "hairstyles")!;
-    expect(full.options.length).toBe(PARTS.filter(p => p.full).length);
-    expect(hair.sections.find(s => s.id === "back")!.options.some(id => id && PARTS.find(p => p.id === id)?.full)).toBe(false);
+    expect(hair.sections.map(s => s.id)).toEqual(["hairstyles"]);
+    expect(hair.sections[0].options).toEqual(PARTS.filter(p => p.full).map(p => p.id));
+    expect(hair.sections[0].options).toHaveLength(21);
+    expect(hair.swatch).toBe("hair");
+    const full = hair.sections[0];
     const l = choose(DEFAULT_LOOK, full, full.options[0]);
     expect([l.back, isOn(l, full, full.options[0])]).toEqual([full.options[0], true]);
   });

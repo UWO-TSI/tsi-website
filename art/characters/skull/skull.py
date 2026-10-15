@@ -19,8 +19,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "base"))
 import head_shape as hs  # noqa: E402
 from head_shape import HC, head_point, hair_point, hair_vol, hair_outer, hairline, INNER, SKULL, EYE_LAT, EYE_LON, MOUTH_LAT  # noqa: E402
+from head_shape import CLASSIC, CLASSIC_C, CLASSIC_DY, STUD, HAIR_ATT, FACE_KEEP, FACE_LAT, FACE_MARGIN, FACE_RAMP, NECK_LAT  # noqa: E402
 
-VERSION = "v8"
+# v9 (head-roblox, row 309): Roblox's classic head where hair sits, the v8 face area kept (head_shape.skull_radius)
+VERSION = "v9"
 
 # ---------------------------------------------------------------- shells over the scalp (metres above the skull)
 HAT_CLEAR = 0.004           # a hat's inside sits this far over the hair's outer surface
@@ -81,11 +83,15 @@ POINTS = {
     "mouth": (MOUTH_LAT, 0.0, 0.0, "the mouth (face canvas anchor): masks, scarves stay below"),
     "neck": (-90.0, 0.0, 0.0, "under the chin, the head bone's base: neck pieces"),
 }
+# Roblox's HairAttachment (and HatAttachment): the classic head's top centre. Hair made for Roblox's classic head
+# attaches here rigidly, at STUD metres per stud (hair/import_hair.py, hair/roblox_attachments.json).
+EXTRA_POINTS = {"hair_att": (HAIR_ATT, "Roblox's HairAttachment: the classic head's top centre; Roblox hair attaches here at STUD m per stud")}
 # a piece that covers a fit point lies on the skull there: its underside within FLOAT_MAX of the scalp
 COVERS = {
     "bangs": ("hairline_C",),
     "back": ("crown", "top"),
     "full": ("crown", "top", "hairline_C"),
+    "roblox_full": ("crown", "top"),   # a hairstyle attached the Roblox way keeps its own hairline (import_hair.py)
     "hat": ("top", "crown"),      # rims sit on or above the hat line, so a hat covers the line's front only if it is low
 }
 
@@ -99,11 +105,17 @@ CLEARANCE = {
     "ear_top_lat": round(EAR_TOP, 2),   # no hat rim below this at the sides
     # m from `top`: the box a piece of each type stays in (Roblox's per-type accessory bounds; catches a mis-scaled import)
     "reach": {"hair": {"up": 0.18, "down": 0.72, "front": 0.46, "back": 0.46, "side": 0.44},   # a visor's brim, a pigtail
-              "hat": {"up": 0.16, "down": 0.36, "front": 0.42, "back": 0.42, "side": 0.42}},
+              "hat": {"up": 0.16, "down": 0.36, "front": 0.42, "back": 0.42, "side": 0.42},
+              # Roblox's own hair bounds for the Classic body scale (studs from the HairAttachment: 3 wide, 2 up and
+              # 3 down, 1.5 in front and 2 behind; create.roblox.com rigid accessory specifications) at STUD, from hair_att
+              "roblox_hair": {"up": round(2 * STUD, 4), "down": round(3 * STUD, 4), "front": round(1.5 * STUD, 4),
+                              "back": round(2 * STUD, 4), "side": round(1.5 * STUD, 4)}},
 }
 
 
 def point(name):
+    if name in EXTRA_POINTS:
+        return EXTRA_POINTS[name][0].copy()
     lat, lon, off, _ = POINTS[name]
     return hair_point(lat, lon, off) if off else head_point(lat, lon)
 
@@ -151,6 +163,11 @@ def export(path=os.path.join(HERE, "skull.json")):
     for name, (lat, lon, off, use) in POINTS.items():
         p, q = gltf_frame(frame(name))
         anchors[name] = {"lat": round(lat, 3), "lon": round(lon, 3), "p": p, "q": q, "use": use}
+    for name, (pos, use) in EXTRA_POINTS.items():          # the top's frame (z up the head axis), at its own position
+        m = frame("top")
+        m.translation = pos
+        p, q = gltf_frame(m)
+        anchors[name] = {"lat": 90.0, "lon": 0.0, "p": p, "q": q, "use": use}
     lons = list(range(-180, 181, 15))
     doc = {
         "version": VERSION,
@@ -159,6 +176,9 @@ def export(path=os.path.join(HERE, "skull.json")):
                 "glTF space (Y up, the face toward +Z), the part GLBs' space; a frame's z is the skull's outward normal.",
         "centre": [round(x, 5) for x in to_gltf(HC)],
         "skull": {k: round(v, 4) for k, v in SKULL.items()},
+        "roblox": {"classic_head_studs": CLASSIC, "stud_m": round(STUD, 6), "classic_centre": [round(x, 5) for x in to_gltf(CLASSIC_C)],
+                   "classic_dy": CLASSIC_DY, "face_keep_canvas": list(FACE_KEEP), "face_lat": list(FACE_LAT), "face_margin": FACE_MARGIN, "face_ramp": FACE_RAMP, "neck_lat": list(NECK_LAT),
+                   "source": "Roblox's official R15 reference rig (github.com/Roblox/avatar Legacy/rigs/R15_Block.fbx, Head_Geo, Hair_Att)"},
         "anchors": anchors,
         "lines": {
             "hairline": [[lo, round(hairline(lo), 2)] for lo in range(-60, 61, 15)],

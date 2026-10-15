@@ -118,10 +118,25 @@ def covered(ob, others):
     return False
 
 
-def decimate(ob, under, cards=False, snug=SNUG):
+# David's hairstyles by tier (head-roblox, David 2026-10-14: "lower poly like 2400 triangles for hair when far ... but hair
+# should look good close up"): Full is the original Roblox mesh; LOD 1 (mid) at most CARD_MAX["lod1"], its shape kept
+# where a ratio under that keeps it; LOD 2 (far, lod2/) about CARD_MAX["lod2"]
+CARD_MAX = {"lod1": 2400, "lod2": 1100}
+OUT2 = os.path.join(HERE, "lod2")
+
+
+def decimate(ob, under, cards=False, snug=SNUG, tier="lod1"):
     """Decimate `ob` in place at the first ratio that keeps its shape (`under`: something lies on it); returns the
-    ratio, or None (kept whole)."""
-    for ratio in RATIOS:
+    ratio, or None (kept whole). Card hair only tries ratios that land under its tier's CARD_MAX, and takes the
+    largest of them when none keeps the shape (LOD 2 always: it is drawn far and small)."""
+    n = ntris(ob)
+    ratios = RATIOS
+    card_max = CARD_MAX[tier]
+    if cards:
+        ratios = (card_max / n,) if tier == "lod2" else tuple(r for r in RATIOS if n * r <= card_max) or (card_max / n,)
+        if n <= card_max * 1.02 and tier == "lod1":
+            return None                                      # already within the mid tier: kept whole
+    for k, ratio in enumerate(ratios):
         trial = ob.copy()
         trial.data = ob.data.copy()
         bpy.context.scene.collection.objects.link(trial)
@@ -140,7 +155,8 @@ def decimate(ob, under, cards=False, snug=SNUG):
             print("LODDBG", ob.name, ratio, round(far, 4), round(out, 4), round(sink, 4), under)
         # cards: strand-card hair (thin open sheets over its own opaque under-cap) has no inside to sink into, so only
         # the shape tolerance holds it (the sign of a sheet's normal says nothing about sinking)
-        if far <= TOLERANCE and (cards or (sink <= snug and (out <= SNUG or not under))):
+        last_card = cards and k == len(ratios) - 1 and n > card_max
+        if (far <= TOLERANCE and (cards or (sink <= snug and (out <= SNUG or not under)))) or last_card:
             old = ob.data
             ob.data = trial.data
             bpy.data.objects.remove(trial)
@@ -153,7 +169,7 @@ def decimate(ob, under, cards=False, snug=SNUG):
     return None
 
 
-def build(src, dst, skin_only=False, merge=True, cards=False):
+def build(src, dst, skin_only=False, merge=True, cards=False, tier="lod1"):
     """cards (head fit: import_hair.py's full styles, imported unmerged): welded here with the non-manifold junctions
     split, so the collapse can reduce them without shredding the cards."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -188,9 +204,12 @@ def build(src, dst, skin_only=False, merge=True, cards=False):
         before += n
         if not whole and n >= KEEP:
             decimate(ob, under[ob.name], cards=cards and material_of(ob) == "M_Hair",
-                     snug=SNUG_HAIR if material_of(ob) == "M_Hair" else SNUG)
+                     snug=SNUG_HAIR if material_of(ob) == "M_Hair" else SNUG, tier=tier)
         after += ntris(ob)
         kept.append(ob)
+    if cards:                       # David's hairstyles: the collapse leaves a few degenerate faces in the card sheets
+        for ob in kept:
+            ob.data.validate()
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     bpy.ops.object.select_all(action="DESELECT")
     rig.select_set(True)
@@ -210,18 +229,24 @@ def main():
     report = {}
     if not only or "base" in only:
         report["base/skin.glb"] = build(os.path.join(HERE, CAT["base"]["clips_glb"]), os.path.join(OUT, "base", "skin.glb"), skin_only=True)
+    report2 = {}
     for p in parts:
         if only and p["id"] not in only:
             continue
         report[p["glb"]] = build(os.path.join(HERE, p["glb"]), os.path.join(OUT, p["glb"]), merge=not p.get("full"), cards=bool(p.get("full")))
-    path = os.path.join(OUT, "lod.json")
+        if p.get("full"):           # the far tier: whole hairstyles only (everything else draws its LOD 1 there)
+            report2[p["glb"]] = build(os.path.join(HERE, p["glb"]), os.path.join(OUT2, p["glb"]), merge=False, cards=True, tier="lod2")
     live = {"base/skin.glb"} | {p["glb"] for p in parts}
-    # A part cut from the catalogue leaves the report on any run (delete its GLB in lod1/ by hand).
-    old = {k: v for k, v in json.load(open(path)).items() if k in live} if only and os.path.exists(path) else {}
-    old.update({k: {"tris": v[0], "lod1": v[1]} for k, v in report.items()})
-    json.dump(dict(sorted(old.items())), open(path, "w"), indent=1)
+    for out, rep, key in ((OUT, report, "lod1"), (OUT2, report2, "lod2")):
+        path = os.path.join(out, "lod.json")
+        # A part cut from the catalogue leaves the report on any run (delete its GLB in lod1/ by hand).
+        old = {k: v for k, v in json.load(open(path)).items() if k in live} if only and os.path.exists(path) else {}
+        old.update({k: {"tris": v[0], key: v[1]} for k, v in rep.items()})
+        json.dump(dict(sorted(old.items())), open(path, "w"), indent=1)
     total = sum(v[0] for v in report.values()), sum(v[1] for v in report.values())
     print(f"LOD1: {len(report)} GLBs, {total[0]} -> {total[1]} triangles")
+    if report2:
+        print(f"LOD2: {len(report2)} GLBs, {sum(v[0] for v in report2.values())} -> {sum(v[1] for v in report2.values())} triangles")
 
 
 main()

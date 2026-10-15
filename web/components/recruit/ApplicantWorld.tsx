@@ -57,7 +57,7 @@ ROOM_TEXTURES.forEach(url => useTexture.preload(url));
 const BOTANICAL_TEXTURES = ROOM_TEXTURES.slice(1);
 useTexture.preload(BOTANICAL_TEXTURES);
 /** Jayden, the applicant guide, on the shared rig. */
-const JAYDEN: CharacterLook = { ...DEFAULT_LOOK, skin: 6, hair: 0, eyes: "bean", mouth: "little_v", bangs: "bangs_swept_r", back: "back_short_spiky", top: "top_tsi_crew", bottom: "bottom_trousers", shoes: "shoes_sneakers" };
+const JAYDEN: CharacterLook = { ...DEFAULT_LOOK, skin: 6, hair: 0, eyes: "bean", mouth: "little_v", back: "hair_fluffy_boy", top: "top_tsi_crew", bottom: "bottom_trousers", shoes: "shoes_sneakers" };
 const GULL_ANCHORS: [number, number][] = [[-16, 0], [12, 10], [0, 16]];
 const fishingWaterHeight = () => -WATER_DROP;
 const RETURN_SPAWN: [number, number, number] = [0, 0, 5.4];

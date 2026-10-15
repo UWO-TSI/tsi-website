@@ -14,17 +14,20 @@
  * ?sheet=blink     one blink: open, half, closed, half, open
  * ?sheet=talk      the talk frames: the look's mouth, then each talk cell
  * ?sheet=live      one character at a time, the face on its own clock (blinks, &talk=1 talks); &style=, &yaw=
- * ?sheet=bangs     every bangs style over a back (&back=, back_bob); ?sheet=backs every back under a bangs (&bangs=)
+ * ?sheet=backs     every hairstyle (head-roblox: David's whole styles), turned
  * ?sheet=hats      the hats (they hide the back hair and carry a lock tuck), front and back 3/4
  * ?sheet=faces     row 301's face set (sleepy and dot eyes, the blush band; its mouths were cut) on three skins (&skins=)
  * ?sheet=facekit   head fit (specs/characters/head-fit.md): every face option once, on one skin and view (&view=front|34|side):
  *                  one cell per mouth, with the eyes and extras cycling through all of theirs alongside
- * ?sheet=hairkit   head fit: every bangs (over the bob), every back (under the straight cut), every hat, band and glasses,
+ * ?sheet=hairkit   head fit: every hat, band and glasses (head-roblox: the hairstyles are ?sheet=fullkit and ?sheet=roblox),
  *                  on one skin and view (&view=front|34|side|back)
  * ?sheet=fullkit   head fit: every whole hairstyle (David's set) on one skin, hair colour (&hair=) and view
+ * ?sheet=roblox    head-roblox (specs/characters/head-roblox.md): the whole hairstyles listed in &ids= (default all), each in
+ *                  a row of front, 3/4, side and back (&views= to pick), on one skin and hair colour
  * ?sheet=david     David's 19 faces (face_set_305.py) as they came, eyes + mouth (+ accent), on three skins (&skins=)
  * ?sheet=mix       David's eyes, mouths and accents mixed with each other and with the earlier parts (&skins=)
- * &hair=<0-11>&skin=<0-11>&face=512 (the world atlas) &framing=head|body
+ * &hair=<0-11>&skin=<0-11>&face=512 (the world atlas) &framing=head|body &charlod=1|2 (every cell at LOD 1 or LOD 2)
+ * In ?sheet=roblox an id may carry a head accessory worn with it: &ids=hair_visor_messy+acc_visor (encode the + as %2B in a URL)
  */
 import { Suspense, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
@@ -38,12 +41,14 @@ import { CAFE_OWNER } from "@/lib/game/cafe";
 import { EXPRESSIONS, type FaceOverride } from "@/lib/game/character/face";
 
 const STYLES: Record<string, Pick<CharacterLook, "bangs" | "back">> = {
-  short: { bangs: "bangs_spiky", back: "back_short_spiky" },
-  bob: { bangs: "bangs_straight", back: "back_bob" },
-  long: { bangs: "bangs_curtain", back: "back_long" },
+  short: { bangs: "", back: "hair_anime_spikes" },
+  bob: { bangs: "", back: "hair_bob_pigtail" },
+  long: { bangs: "", back: "hair_long_scruffy" },
 };
 /** Head fit sheets: the three review views (the character faces the camera at yaw 0). */
 const VIEWS: Record<string, number> = { front: 0, "34": -0.6, side: -Math.PI / 2, back: Math.PI };
+/** `&charlod=1|2`: the cells load their LOD meshes and draw that tier (Character's SHOW_LOD). */
+const LOD_SHEET = typeof window !== "undefined" && !!new URLSearchParams(window.location.search).get("charlod");
 /** Kit sheets hold the eyes open (no blink lands mid-capture). */
 const OPEN: FaceOverride = { eyeFrame: "open" };
 interface Cell { label: string; look: CharacterLook; yaw: number; face?: FaceOverride | null; talk?: boolean }
@@ -56,7 +61,7 @@ function Stage({ cell, framing, faceSize }: { cell: Cell; framing: "head" | "bod
     <ambientLight intensity={1.1} color="#fff6e6" />
     <hemisphereLight args={["#fff8ec", "#b7c7a8", 0.9]} />
     <directionalLight position={[1.6, 2.6, 2.2]} intensity={1.7} color="#fff1d8" />
-    <Suspense fallback={null}><Character look={cell.look} motion={motion} scale={1} faceSize={faceSize} lod={false} /></Suspense>
+    <Suspense fallback={null}><Character look={cell.look} motion={motion} scale={1} faceSize={faceSize} lod={LOD_SHEET} /></Suspense>
   </>;
 }
 
@@ -87,9 +92,8 @@ function AvatarBench() {
       return [{ label: `${q.get("label") ?? "look"} front`, look, yaw: 0, face: OPEN }, { label: `${q.get("label") ?? "look"} 3/4`, look, yaw: -0.6, face: OPEN }];
     }
     if (sheet === "live") return [{ label: q.get("style") ?? "bob", look: bob, yaw, talk: q.get("talk") === "1" }];
-    // the whole library on the v7 head: every bangs over the bob back, every back under the straight fringe
-    if (sheet === "bangs") return partsIn("bangs").map(p => ({ label: p.id, look: { ...bob, bangs: p.id, back: q.get("back") ?? "back_bob" }, yaw }));
-    if (sheet === "backs") return partsIn("back").map(p => ({ label: p.id, look: { ...bob, bangs: q.get("bangs") ?? "bangs_straight", back: p.id }, yaw: yaw - 0.9 }));
+    // head-roblox: the hair is David's whole hairstyles (no bangs or backs); every one, turned
+    if (sheet === "backs") return partsIn("back").map(p => ({ label: p.id, look: { ...bob, back: p.id }, yaw: yaw - 0.9 }));
     if (sheet === "hats") return ["acc_sunhat", "acc_cap", "acc_straw_hat"].flatMap(h => [
       { label: `${h} front`, look: { ...bob, acc: { head: h } }, yaw }, { label: `${h} back`, look: { ...bob, acc: { head: h } }, yaw: yaw + 2.6 }]);
     if (sheet === "faces") return (q.get("skins") ?? "1,5,10").split(",").map(Number).flatMap(skin => ([
@@ -106,16 +110,22 @@ function AvatarBench() {
       });
     }
     if (sheet === "hairkit") return [
-      ...partsIn("bangs").map(p => ({ label: p.id, look: { ...bob, bangs: p.id, back: "back_bob" }, yaw: view, face: OPEN })),
-      ...partsIn("back").filter(p => !p.full).map(p => ({ label: p.id, look: { ...bob, bangs: "bangs_straight", back: p.id }, yaw: view, face: OPEN })),
       ...partsIn("accessory").filter(p => p.group === "head" || p.group === "face").map(p => ({ label: p.id, look: { ...bob, acc: { [p.group!]: p.id } }, yaw: view, face: OPEN })),
     ];
     // head fit: the whole hairstyles (David's set), each alone
     if (sheet === "fullkit") return partsIn("back").filter(p => p.full).map(p => ({ label: p.id, look: { ...bob, back: p.id }, yaw: view, face: OPEN }));
+    if (sheet === "roblox") {
+      const ids = q.get("ids")?.split(",") ?? partsIn("back").filter(p => p.full).map(p => p.id);
+      const views = (q.get("views") ?? "front,34,side,back").split(",");
+      return ids.flatMap(item => {
+        const [id, acc] = item.split("+");
+        return views.map(v => ({ label: `${item} ${v}`, look: { ...bob, back: id, acc: acc ? { head: acc } : {} }, yaw: VIEWS[v] ?? 0, face: OPEN }));
+      });
+    }
     // David's faces: the second atlas page's eyes and mouths, in his order (face_set_305.FACES), with his two accents
     const davidEyes = Object.keys(FACE.layers.eyes.items).filter(id => FACE.layers.eyes.items[id].open[6] === 1);
     const davidMouths = Object.keys(FACE.layers.mouth.items).filter(id => FACE.layers.mouth.items[id][6] === 1);
-    const open = { ...bob, bangs: "bangs_swept_back", back: "back_bun" };   // a clear forehead
+    const open = { ...bob, back: "hair_waves" };   // a clear forehead
     const skins = (q.get("skins") ?? "1,5,10").split(",").map(Number);
     if (sheet === "david") return skins.flatMap(skin => davidEyes.map((eyes, i) => ({
       label: `${skin}: ${i + 1} ${FACE.names[eyes]} / ${FACE.names[davidMouths[i]]}`,
@@ -131,7 +141,7 @@ function AvatarBench() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheet, yaw, q]);
   const root = useRef<HTMLDivElement>(null);
-  const cols = sheet === "facekit" ? 13 : sheet === "hairkit" ? 10 : sheet === "fullkit" ? 7 : sheet === "styles" || sheet === "backs" || sheet === "faces" || sheet === "residents" || sheet === "emote" ? 6 : sheet === "bangs" || sheet === "hats" || sheet === "mix" ? 8 : sheet === "david" ? 10 : cells.length;
+  const cols = sheet === "roblox" ? (q.get("views") ?? "front,34,side,back").split(",").length : sheet === "facekit" ? 13 : sheet === "hairkit" ? 10 : sheet === "fullkit" ? 7 : sheet === "styles" || sheet === "backs" || sheet === "faces" || sheet === "residents" || sheet === "emote" ? 6 : sheet === "hats" || sheet === "mix" ? 8 : sheet === "david" ? 10 : cells.length;
   return <div ref={root} style={{ position: "relative", paddingTop: 48, minHeight: "100vh", background: "#efe7d6" }}>
     <div data-sheet={sheet} style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, ${cols === 1 ? "420px" : "1fr"})`, gap: 8, padding: 8 }}>
       {cells.map(c => <figure key={c.label} style={{ margin: 0 }}>

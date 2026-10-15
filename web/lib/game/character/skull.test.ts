@@ -29,7 +29,7 @@ describe("the shared skull", () => {
   });
   it("keeps the fit points in head order: top over crown over hairline over eyes over mouth, the nape low at the back", () => {
     const y = (n: string) => skullAnchor(n).p[1], z = (n: string) => skullAnchor(n).p[2];
-    expect(y("top")).toBeGreaterThan(y("crown"));
+    expect(y("top")).toBeGreaterThanOrEqual(y("crown"));   // v9: the crown sits on the classic head's flat top
     expect(y("crown")).toBeGreaterThan(y("hairline_C"));
     expect(y("hairline_C")).toBeGreaterThan(y("eye_L"));
     expect(y("eye_L")).toBeGreaterThan(y("mouth"));
@@ -48,6 +48,34 @@ describe("the shared skull", () => {
   it("lays the shells outward: hair undersides under the scalp, lock tops over the hair volume", () => {
     expect(SKULL.shells.inner).toBeLessThan(0);
     SKULL.shells.hair_outer.forEach(([lat, off], i) => expect(off, `lat ${lat}`).toBeGreaterThan(SKULL.shells.hair_vol[i][1]));
+  });
+  it("puts Roblox's HairAttachment on the classic head's top centre, over the crown (head-roblox, v9)", () => {
+    const att = skullAnchor("hair_att"), top = skullAnchor("top");
+    expect(att.p[1]).toBeCloseTo(top.p[1], 3);               // the classic head's flat top is our crown
+    expect(Math.abs(att.p[0])).toBeLessThan(1e-4);             // on the centre line
+    expect(att.p[2]).toBeLessThan(0);                          // a little behind the head centre (CLASSIC_DY)
+    const r = (SKULL as unknown as { roblox: { stud_m: number; classic_head_studs: { R: number } } }).roblox;
+    expect(r.stud_m * 2 * r.classic_head_studs.R).toBeCloseTo(2 * (SKULL as unknown as { skull: { A: number } }).skull.A, 4);   // as wide as ours
+  });
+  it("attaches every one of David's hairstyles by a complete Roblox attachment (hair/roblox_attachments.json)", () => {
+    const data = JSON.parse(readFileSync(join(web, "../art/characters/hair/roblox_attachments.json"), "utf8")) as {
+      hairs: { id: string; asset_id: number; position: number[]; orientation: number[]; mesh_scale: number[]; provisional: boolean }[] };
+    const roblox = PARTS.filter(p => p.roblox);
+    expect(roblox.length).toBe(21);
+    const byId = new Map(data.hairs.map(h => [h.id, h]));
+    for (const p of roblox) {
+      const h = byId.get(p.id);
+      expect(h, p.id).toBeDefined();
+      for (const v of [h!.position, h!.orientation, h!.mesh_scale]) {
+        expect(v, p.id).toHaveLength(3);
+        expect(v.every(Number.isFinite), p.id).toBe(true);
+      }
+      expect(h!.mesh_scale.every(x => x > 0), p.id).toBe(true);
+      expect(typeof h!.provisional, p.id).toBe("boolean");
+      expect(p.roblox!.provisional, p.id).toBe(h!.provisional);
+    }
+    // the three read from Roblox's own accessory files
+    expect(data.hairs.filter(h => !h.provisional).map(h => h.id).sort()).toEqual(["hair_baby_sprout", "hair_bowl_cut", "hair_windy_bob"]);
   });
   it("has every hairstyle, hat and face accessory fitted to this skull (refit them after a skull change)", () => {
     const onHead = PARTS.filter(p => p.slot === "bangs" || p.slot === "back" || p.group === "head" || p.group === "face");

@@ -172,6 +172,9 @@ class Puppet {
   private full: THREE.BufferGeometry | null = null;
   private lodGeometry: THREE.BufferGeometry | null = null;
   private lodKey = "";
+  /** LOD 2 (lod.ts: far and small): the whole hairstyle's far mesh, every other part's LOD 1. */
+  private lod2Geometry: THREE.BufferGeometry | null = null;
+  private lod2Key = "";
   /** Detail by screen size this frame (lod.ts). */
   readonly lod = createLodState();
   private look: CharacterLook | null = null;
@@ -293,6 +296,15 @@ class Puppet {
     this.lodKey = key;
   }
 
+  /** The look's LOD 2 (Character's LodMesh2): as setLod, from each part's far GLB. */
+  setLod2(look: CharacterLook, parts: ResolvedPart[], skin: THREE.Object3D, scenes: THREE.Object3D[]) {
+    const key = `${bodyKey(look)}|lod2`;
+    if (key === this.lod2Key) return;
+    this.lod2Geometry = bodies.acquire(key, () => mergeLook(lookPieces(look, parts, skin, scenes), this.bones));
+    if (this.lod2Key) bodies.release(this.lod2Key);
+    this.lod2Key = key;
+  }
+
   /**
    * Where the character is this frame (lod.ts: `d` from the camera, `px` drawn tall, in view or not): the LOD 1 mesh
    * when far and small (for this look only), and no sun shadow when tiny (SunShadows skips a caster marked
@@ -300,9 +312,11 @@ class Puppet {
    */
   view(d: number, px: number, visible: boolean) {
     const s = characterLod(this.lod, d, px, visible);
-    const g = s.lod && this.lodGeometry && this.lodKey === `${this.bodyKey}|lod1` ? this.lodGeometry : this.full;
+    const lod1 = s.lod && this.lodGeometry && this.lodKey === `${this.bodyKey}|lod1` ? this.lodGeometry : null;
+    const lod2 = s.lod2 && this.lod2Geometry && this.lod2Key === `${this.bodyKey}|lod2` ? this.lod2Geometry : null;
+    const g = lod2 ?? lod1 ?? this.full;
     if (g && this.body.geometry !== g) this.body.geometry = g;
-    if (g === this.lodGeometry) frameStats.lodMeshes++;
+    if (g === this.lodGeometry || g === this.lod2Geometry) frameStats.lodMeshes++;
     if (s.hz !== Infinity) frameStats.throttled++;
     this.body.userData.shadowCulled = this.face.userData.shadowCulled = !s.shadow;
   }
@@ -524,7 +538,8 @@ class Puppet {
     this.action = null; this.clip = null; this.oneShot = null; this.upperClip = null;
     if (this.bodyKey) bodies.release(this.bodyKey);
     if (this.lodKey) bodies.release(this.lodKey);
-    this.full = this.lodGeometry = null; this.lodKey = "";
+    if (this.lod2Key) bodies.release(this.lod2Key);
+    this.full = this.lodGeometry = this.lod2Geometry = null; this.lodKey = this.lod2Key = "";
     this.faceMat?.dispose();
     this.faceMat = null;
     // Its bone texture (three makes one per skeleton on first draw): every character that left used to keep one on the GPU.
@@ -856,6 +871,7 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
     {weapon && <HeldWeapon puppet={puppet} motion={motion} weapon={weapon} remote={remote} />}
     {/* Its own boundary: the LOD 1 GLBs load after the character shows, never suspending it. */}
     {lod && <Suspense fallback={null}><LodMesh puppet={puppet} look={shown} parts={parts} /></Suspense>}
+    {lod && <Suspense fallback={null}><LodMesh2 puppet={puppet} look={shown} parts={parts} /></Suspense>}
     {/* Its own boundary: the ruins never wait for the verb library; a verb asked for meanwhile plays the attack clip. */}
     {verbs && <Suspense fallback={null}><VerbClips puppet={puppet} /></Suspense>}
     {/* Its own boundary: taking out a tool never suspends the scene while its model loads. */}
@@ -871,8 +887,14 @@ function LodMesh({ puppet, look, parts }: { puppet: Puppet; look: CharacterLook;
   useEffect(() => puppet.setLod(look, parts, loaded[0].scene, loaded.slice(1).map(g => g.scene)), [puppet, look, parts, loaded]);
   return null;
 }
-/** Development (evidence): `?charlod=1` draws every character's LOD 1 mesh, so it can be looked at up close. */
-const SHOW_LOD = process.env.NODE_ENV !== "production" && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("charlod") === "1";
+/** The look's LOD 2 (head-roblox: the far hair), loaded after LOD 1 and merged once per look like it. */
+function LodMesh2({ puppet, look, parts }: { puppet: Puppet; look: CharacterLook; parts: ResolvedPart[] }) {
+  const loaded = useGLTF([LOD_SKIN_URL, ...parts.map(p => p.lod2)]) as unknown as Gltf[];
+  useEffect(() => puppet.setLod2(look, parts, loaded[0].scene, loaded.slice(1).map(g => g.scene)), [puppet, look, parts, loaded]);
+  return null;
+}
+/** Development (evidence): `?charlod=1` draws every character's LOD 1 mesh, `?charlod=2` its LOD 2, so it can be looked at up close. */
+const SHOW_LOD = process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("charlod") : null;
 const seen = new THREE.Vector3(), view = new THREE.Frustum(), viewProj = new THREE.Matrix4(), body = new THREE.Sphere(new THREE.Vector3(), 1);
 let viewAt = -1, viewCam: THREE.Camera | null = null;
 /**
@@ -882,7 +904,8 @@ let viewAt = -1, viewCam: THREE.Camera | null = null;
  */
 function viewCharacter(puppet: Puppet, g: THREE.Object3D, camera: THREE.Camera, viewportPx: number, scale: number, now: number) {
   for (let o: THREE.Object3D | null = g; o; o = o.parent) if (!o.visible) return puppet.view(Infinity, 0, false);
-  if (SHOW_LOD) return puppet.view(30, 50, true); // past `near`, under the mesh line, above the rest: LOD 1 alone
+  if (SHOW_LOD === "1") return puppet.view(30, 50, true); // past `near`, under the mesh line, above the rest: LOD 1 alone
+  if (SHOW_LOD === "2") return puppet.view(45, 20, true); // past the far line and under its height: LOD 2
   if (now !== viewAt || camera !== viewCam) {
     viewAt = now; viewCam = camera;
     view.setFromProjectionMatrix(viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));

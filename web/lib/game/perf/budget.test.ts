@@ -67,6 +67,8 @@ describe("asset budgets (budget.ts ASSET_CATEGORIES)", () => {
 
 describe("character budget (budget.ts CHARACTER_BUDGET)", () => {
   const lodOf = (p: CatalogPart) => `characters/v6/lod1/${p.glb}`;
+  /** LOD 2 (head-roblox): a whole hairstyle's far mesh; every other part draws its LOD 1 there (look.ts resolveParts). */
+  const lod2Of = (p: CatalogPart) => (p.full ? `characters/v6/lod2/${p.glb}` : lodOf(p));
   const fullOf = (p: CatalogPart) => `characters/v6/${p.glb}`;
   /** The base the engine loads (the catalogue's clip base), under public/assets. */
   const BASE_REL = BASE_URL.replace(/^\/assets\//, "");
@@ -110,11 +112,22 @@ describe("character budget (budget.ts CHARACTER_BUDGET)", () => {
       expect(PARTS.some(p => p.glb === rel), `lod1/${rel} has no catalogue part`).toBe(true);
     }
   });
-  it("keeps the heaviest look within the Full and LOD 1 tiers' triangles, on the 22-bone rig", () => {
+  it("ships a LOD 2 for every whole hairstyle, no heavier than its LOD 1, and nothing else (head-roblox)", () => {
+    for (const p of PARTS.filter(q => q.full)) {
+      expect(existsSync(join(assets, lod2Of(p))), `${p.glb} has no LOD 2 (art/characters/build_lod.py)`).toBe(true);
+      expect(statsOf(lod2Of(p)).triangles, `${p.glb}'s LOD 2`).toBeLessThanOrEqual(statsOf(lodOf(p)).triangles);
+    }
+    for (const rel of walk(join(assets, "characters/v6/lod2")).filter(f => f.endsWith(".glb")).map(f => relative(join(assets, "characters/v6/lod2"), f)))
+      expect(PARTS.some(p => p.full && p.glb === rel), `lod2/${rel} is not a whole hairstyle`).toBe(true);
+  });
+  it("keeps the heaviest look within the Full, LOD 1 and LOD 2 tiers' triangles, on the 22-bone rig", () => {
     const full = base + heaviest(p => statsOf(fullOf(p)).triangles);
-    const lod1 = statsOf("characters/v6/lod1/base/skin.glb").triangles + face + heaviest(p => statsOf(lodOf(p)).triangles);
+    const lodSkin = statsOf("characters/v6/lod1/base/skin.glb").triangles + face;
+    const lod1 = lodSkin + heaviest(p => statsOf(lodOf(p)).triangles);
+    const lod2 = lodSkin + heaviest(p => statsOf(lod2Of(p)).triangles);
     expect(full, `the heaviest full look: ${full} triangles`).toBeLessThanOrEqual(CHARACTER_BUDGET.full.triangles);
     expect(lod1, `the heaviest LOD 1 look: ${lod1} triangles`).toBeLessThanOrEqual(CHARACTER_BUDGET.lod1.triangles);
+    expect(lod2, `the heaviest LOD 2 look: ${lod2} triangles`).toBeLessThanOrEqual(CHARACTER_BUDGET.lod2.triangles);
     for (const p of PARTS) expect(statsOf(fullOf(p)).bones, p.glb).toBeLessThanOrEqual(CHARACTER_BUDGET.full.bones);
     expect(statsOf(BASE_REL).bones).toBe(CHARACTER_BUDGET.full.bones);
   });

@@ -25,40 +25,40 @@
 import type { NPCPersona } from "./types";
 
 type Look = Record<string, unknown>;
-const look = (l: { skin: number; hair: number; eyes?: string; mouth?: string; extras?: string[]; bangs: string; back: string; top?: string | null; bottom?: string | null; onepiece?: string | null; shoes: string; acc?: Record<string, string>; colors?: Record<string, number> }): Look =>
-  ({ eyes: "F1.1", mouth: "M1.1", extras: [], top: null, bottom: null, onepiece: null, acc: {}, colors: {}, ...l });
+const look = (l: { skin: number; hair: number; eyes?: string; mouth?: string; extras?: string[]; bangs?: string; back: string; top?: string | null; bottom?: string | null; onepiece?: string | null; shoes: string; acc?: Record<string, string>; colors?: Record<string, number> }): Look =>
+  ({ eyes: "F1.1", mouth: "M1.1", extras: [], bangs: "", top: null, bottom: null, onepiece: null, acc: {}, colors: {}, ...l });
 
 /** Authored looks by slug (character catalogue part ids, palette indices). */
 export const RESIDENT_LOOKS: Record<string, Look> = {
-  // The HQ lead, as the first-login greeting proposes her (lib/game/welcome.ts HQ_LEAD on main): the club crew tee, a high ponytail.
-  wren: look({ skin: 3, hair: 2, eyes: "mochi", mouth: "open_smile", extras: ["freckles"], bangs: "bangs_curtain", back: "back_high_pony", top: "top_tsi_crew", bottom: "bottom_trousers", shoes: "shoes_boots",
+  // The HQ lead, as the first-login greeting proposes her (lib/game/welcome.ts HQ_LEAD on main): the club crew tee, a ponytail (head-roblox: one of David's whole hairstyles).
+  wren: look({ skin: 3, hair: 2, eyes: "mochi", mouth: "open_smile", extras: ["freckles"], back: "hair_wispy_ponytail", top: "top_tsi_crew", bottom: "bottom_trousers", shoes: "shoes_boots",
     acc: { bag: "acc_shoulder_bag" }, colors: { bottom_trousers: 4, shoes_boots: 5, acc_shoulder_bag: 3 } }),
   // The mayor: the club's warm historian. Grey bun, round glasses, a lavender cardigan and a long brown skirt.
-  mayor: look({ skin: 2, hair: 9, eyes: "F1.2", bangs: "bangs_swept_back", back: "back_bun", top: "top_cardigan", bottom: "bottom_long_skirt", shoes: "shoes_loafers",
+  mayor: look({ skin: 2, hair: 9, eyes: "F1.2", back: "hair_messy_low_pony", top: "top_cardigan", bottom: "bottom_long_skirt", shoes: "shoes_loafers",
     acc: { face: "acc_glasses_round" }, colors: { top_cardigan: 13, bottom_long_skirt: 5, shoes_loafers: 5 } }),
   // Shopkeeper: deadpan, tidy. Square glasses, a sage sweater vest, charcoal trousers, work boots.
-  shopkeeper: look({ skin: 8, hair: 0, mouth: "tiny_smirk", bangs: "bangs_choppy", back: "back_short_spiky", top: "top_sweater_vest", bottom: "bottom_trousers", shoes: "shoes_boots",
+  shopkeeper: look({ skin: 8, hair: 0, mouth: "tiny_smirk", back: "hair_messy_boy", top: "top_sweater_vest", bottom: "bottom_trousers", shoes: "shoes_boots",
     acc: { face: "acc_glasses_square" }, colors: { top_sweater_vest: 3, bottom_trousers: 14, shoes_boots: 5 } }),
   // Museum curator: precise and owlish. Braided crown, round glasses, a cream collar shirt over a navy pleated skirt.
-  curator: look({ skin: 0, hair: 3, eyes: "bean", bangs: "bangs_hime", back: "back_braid_crown", top: "top_collar_shirt", bottom: "bottom_pleated_skirt", shoes: "shoes_loafers",
+  curator: look({ skin: 0, hair: 3, eyes: "bean", back: "hair_hime_short", top: "top_collar_shirt", bottom: "bottom_pleated_skirt", shoes: "shoes_loafers",
     acc: { face: "acc_glasses_round" }, colors: { top_collar_shirt: 0, bottom_pleated_skirt: 12, shoes_loafers: 5 } }),
   // Wharf keeper: weathered and chatty about tides. Navy cap, a blue striped top, yellow rain boots.
-  "wharf-keeper": look({ skin: 6, hair: 9, extras: ["freckles"], bangs: "bangs_swept_r", back: "back_short_spiky", top: "top_stripe_ls", bottom: "bottom_trousers", shoes: "shoes_rainboots",
+  "wharf-keeper": look({ skin: 6, hair: 9, extras: ["freckles"], back: "hair_swept_fringe", top: "top_stripe_ls", bottom: "bottom_trousers", shoes: "shoes_rainboots",
     acc: { head: "acc_cap" }, colors: { top_stripe_ls: 11, bottom_trousers: 12, shoes_rainboots: 6, acc_cap: 12 } }),
   // Oracle keeper: quiet, speaks in riddles. A lavender kimono, long dark hair, sandals.
-  "oracle-keeper": look({ skin: 10, hair: 0, eyes: "half_lid", bangs: "bangs_curtain_long", back: "back_long", onepiece: "outfit_koi_kimono", shoes: "shoes_sandals",
+  "oracle-keeper": look({ skin: 10, hair: 0, eyes: "half_lid", back: "hair_long_scruffy", onepiece: "outfit_koi_kimono", shoes: "shoes_sandals",
     acc: { neck: "acc_shell_necklace" }, colors: { outfit_koi_kimono: 13 } }),
   // Workshop crafter: a tinkerer with a cap on backwards. Wood-brown overalls over a cream tee, backpack of tools.
-  crafter: look({ skin: 4, hair: 7, extras: ["blush"], bangs: "bangs_spiky", back: "back_short_spiky", top: "top_tee", bottom: "bottom_overall_shorts", shoes: "shoes_boots",
+  crafter: look({ skin: 4, hair: 7, extras: ["blush"], back: "hair_anime_spikes", top: "top_tee", bottom: "bottom_overall_shorts", shoes: "shoes_boots",
     acc: { head: "acc_cap", bag: "acc_backpack" }, colors: { bottom_overall_shorts: 4, shoes_boots: 5, acc_cap: 7 } }),
   // Flavour: an early riser who runs the beach at dawn. High ponytail, teal tee, joggers.
-  juniper: look({ skin: 3, hair: 8, bangs: "bangs_wispy", back: "back_high_pony", top: "top_tee", bottom: "bottom_joggers", shoes: "shoes_sneakers",
+  juniper: look({ skin: 3, hair: 8, back: "hair_long_pigtails", top: "top_tee", bottom: "bottom_joggers", shoes: "shoes_sneakers",
     colors: { top_tee: 15, bottom_joggers: 14, shoes_sneakers: 1 } }),
   // Flavour: sketches the island from the benches. Straw hat, pink hoodie, a shoulder bag of pencils.
-  marlo: look({ skin: 5, hair: 1, eyes: "chill", bangs: "bangs_bowl", back: "back_bowl", top: "top_hoodie", bottom: "bottom_shorts", shoes: "shoes_slipon",
+  marlo: look({ skin: 5, hair: 1, eyes: "chill", back: "hair_bowl_cut", top: "top_hoodie", bottom: "bottom_shorts", shoes: "shoes_slipon",
     acc: { head: "acc_straw_hat", bag: "acc_shoulder_bag" }, colors: { top_hoodie: 9, bottom_shorts: 2 } }),
   // Flavour: the night owl who watches the stars from the lamp bench. Navy cardigan, a long lavender skirt.
-  nell: look({ skin: 1, hair: 4, extras: ["freckles"], bangs: "bangs_centre_split", back: "back_wavy_long", top: "top_cardigan", bottom: "bottom_long_skirt", shoes: "shoes_boots",
+  nell: look({ skin: 1, hair: 4, extras: ["freckles"], back: "hair_windy_bob", top: "top_cardigan", bottom: "bottom_long_skirt", shoes: "shoes_boots",
     colors: { top_cardigan: 12, bottom_long_skirt: 13 } }),
 };
 

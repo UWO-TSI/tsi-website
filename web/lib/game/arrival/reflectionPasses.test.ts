@@ -23,7 +23,7 @@ function recorder() {
  * The creator's set as the scene holds it: you (one character, built from the look the creator shows: a stand-in mesh
  * carrying that look object, as Character's meshes are built from its `look` prop), leaning out over the sea, and the water.
  */
-function set(look = parseLook({ ...DEFAULT_LOOK, hair: 7, back: "back_high_pony" })) {
+function set(look = parseLook({ ...DEFAULT_LOOK, hair: 7, back: "hair_wispy_ponytail" })) {
   const scene = new THREE.Scene();
   const you = new THREE.Group();
   you.name = "you";

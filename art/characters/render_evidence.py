@@ -67,11 +67,11 @@ def shot(path, yaw, view="body", res=(300, 366)):
     bpy.ops.render.render(write_still=True)
 
 
-DEFAULT_HAIR = ("bangs_straight", "back_bob")      # the engine's DEFAULT_LOOK hair (v6's own hair is never shown)
+DEFAULT_HAIR = ("hair_bob_pigtail",)      # the engine's DEFAULT_LOOK hairstyle (v6's own hair is never shown)
 
 
 def wear(ids, hair=DEFAULT_HAIR):
-    """Import parts by catalogue id and the hair GLBs (bangs, back); hide what they replace. Returns new objects.
+    """Import parts by catalogue id and the hairstyle GLB (head-roblox: a whole style); hide what they replace.
     Always the library hair the engine wears, so the sheets show what the game shows (avatar-fit)."""
     objs = []
     hidden = set()
@@ -84,15 +84,15 @@ def wear(ids, hair=DEFAULT_HAIR):
         if p.get("hidesBackHair"):
             hidden.add("back")
     if hair:
-        for slot, hid in zip(("bangs", "back"), hair):
-            objs += kit.bind_glb(os.path.join(HERE, "hair", slot, f"{hid}.glb"), rig)
+        for hid in hair:
+            objs += kit.bind_glb(os.path.join(HERE, "hair", "full", f"{hid}.glb"), rig)
         hidden |= {"base_bangs", "base_back"}
     BASE["V6_Top"].hide_render = "top" in hidden
     BASE["V6_Bottom"].hide_render = "bottom" in hidden
     BASE["V6_HairBangs"].hide_render = BASE["V6_HairBack"].hide_render = True
     if hair and "back" in hidden:
         for o in objs:
-            if o.name.startswith(hair[1]):
+            if o.name.startswith(hair[0]):
                 o.hide_render = True
     kit.show_vertex_colors(sc)
     return objs
@@ -173,16 +173,16 @@ elif MODE == "clips":
 
 elif MODE == "dressed":
     P = kit.PAL
-    LOOKS = [  # parts, (bangs, back), skin index, hair colour index
-        (["outfit_koi_kimono", "shoes_slipon"], ("bangs_straight", "back_bob"), 3, 2),
+    LOOKS = [  # parts, (hairstyle,), skin index, hair colour index
+        (["outfit_koi_kimono", "shoes_slipon"], ("hair_bob_pigtail",), 3, 2),
         (["top_tsi_crew", "bottom_trousers", "shoes_sneakers", "acc_glasses_round", "acc_backpack"],
-         ("bangs_swept_l", "back_short_spiky"), 7, 0),
-        (["onepiece_sundress", "shoes_sandals", "acc_sunhat"], ("bangs_curtain", "back_long"), 1, 6),
-        (["top_cardigan", "bottom_long_skirt", "shoes_boots", "acc_shell_necklace"], ("bangs_hime", "back_twin_buns"), 9, 7),
+         ("hair_fluffy_boy",), 7, 0),
+        (["onepiece_sundress", "shoes_sandals", "acc_sunhat"], ("hair_long_scruffy",), 1, 6),
+        (["top_cardigan", "bottom_long_skirt", "shoes_boots", "acc_shell_necklace"], ("hair_long_pigtails",), 9, 7),
         (["top_sweater_vest", "bottom_pleated_skirt", "shoes_loafers", "acc_straw_hat", "acc_glasses_square"],
-         ("bangs_choppy", "back_bob"), 5, 4),
+         ("hair_windy_bob",), 5, 4),
         (["top_stripe_ls", "bottom_overall_shorts", "shoes_rainboots", "acc_shoulder_bag", "acc_cap"],
-         ("bangs_wispy", "back_pigtails"), 10, 3),
+         ("hair_wispy_ponytail",), 10, 3),
     ]
     for li, (ids, hair, sk, hc) in enumerate(LOOKS):
         objs = wear(ids, hair)
