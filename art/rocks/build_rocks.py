@@ -182,7 +182,7 @@ def noise3(p, scale, seed):
     return noise.noise(Vector((p.x * scale + seed * 3.1, p.y * scale - seed * 1.7, p.z * scale + seed * 2.3)))
 
 
-def pebble(bm, size, seed, centre=(0.0, 0.0, 0.0), n=22):
+def pebble(bm, size, seed, centre=(0.0, 0.0, 0.0), n=18):
     """A rounder convex chunk than `chunk`: jittered points spread over an ellipsoid (a flattened underside), hulled."""
     rng = np.random.default_rng(seed)
     sx, sy, sz = size
@@ -212,7 +212,7 @@ def stone(name, parts, size, seed, moss=0.0, tris=None):
     bmesh.ops.dissolve_limit(bm, angle_limit=math.radians(12), verts=bm.verts[:], edges=bm.edges[:])
     bm.normal_update()
     span = max(sz[i] for sz, _, _ in parts for i in range(3))
-    bmesh.ops.bevel(bm, geom=bm.edges[:], offset=0.1 * span, segments=3, affect="EDGES", profile=0.5, clamp_overlap=True)
+    bmesh.ops.bevel(bm, geom=bm.edges[:], offset=0.1 * span, segments=2, affect="EDGES", profile=0.5, clamp_overlap=True)
     bmesh.ops.triangulate(bm, faces=bm.faces[:])
     bm.normal_update()
     me = bpy.data.meshes.new(name)

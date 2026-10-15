@@ -95,10 +95,10 @@ def polygon_outline(pts):
 def scallop():
     """A fan from the umbo: columns follow the ribs (three per rib, so every rib is a crisp round ridge), rows run out
     to the rim; a top and a bottom surface meet all round the edge. Two ears at the hinge, small closed lenses."""
-    R, d, amax, ribs_n, per = 0.15, 0.62, math.radians(72), 13, 3
+    R, d, amax, ribs_n, per = 0.15, 0.62, math.radians(72), 13, 2
     H, Hb, A = 0.034, 0.012, 0.0085
     ncol = ribs_n * per
-    nrow = 6
+    nrow = 5
     bm = bmesh.new()
     info = {}
 
@@ -175,7 +175,7 @@ def asari():
 
     def rings(rho):
         return 0.0016 * math.sin(rho * 46)
-    ob, info = lens("shell-asari", outline, lambda rho: 0.038 * (1 - rho ** 2.0) + 0.003, lambda rho: 0.026 * (1 - rho ** 2.2), None, rings, nr=6, nphi=32)
+    ob, info = lens("shell-asari", outline, lambda rho: 0.038 * (1 - rho ** 2.0) + 0.003, lambda rho: 0.026 * (1 - rho ** 2.2), None, rings, nr=5, nphi=28)
     return ob, info, outline
 
 
@@ -315,7 +315,7 @@ def lay(ob, rot, size=None):
 
 
 def turban():
-    ob, info = spiral("shell-turban", turns=3.4, r0=0.01, growth=math.log(2.1), rise=0.0085, tube=0.0074, spikes=7, spike_r=0.0026, per_turn=12, sides=12, seed=3)
+    ob, info = spiral("shell-turban", turns=3.4, r0=0.01, growth=math.log(2.1), rise=0.0085, tube=0.0074, spikes=7, spike_r=0.0026, per_turn=10, sides=10, seed=3)
     paint_spiral(ob, info, 3.4, "#776d44", "#cdbf96", 3, "#d9cfb6", "#e2d5bd", seed=3)
     # Resting on its body whorl: the spire up and a little over, the mouth to the side.
     lay(ob, (math.radians(18), math.radians(-10), math.radians(30)), size=0.32)
@@ -323,7 +323,7 @@ def turban():
 
 
 def whelk():
-    ob, info = spiral("shell-whelk", turns=4.4, r0=0.006, growth=math.log(1.75), rise=0.012, tube=0.0047, canal=0.045, per_turn=12, sides=12, seed=5)
+    ob, info = spiral("shell-whelk", turns=4.4, r0=0.006, growth=math.log(1.75), rise=0.012, tube=0.0047, canal=0.045, per_turn=10, sides=10, seed=5)
     paint_spiral(ob, info, 4.4, "#ead9b6", "#9a6a3e", 4, "#f2e6cf", "#f4c9a6", seed=5)
     # On its side: the spire across the view, a little raised off the sand.
     lay(ob, (0, math.radians(78), math.radians(8)), size=0.36)

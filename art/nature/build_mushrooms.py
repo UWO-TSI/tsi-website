@@ -63,7 +63,7 @@ def mushroom(bm, at, cap_r, cap_h, stem_h, stem_r, flat=False, lean=(0.0, 0.0), 
             nrm = Vector((p.x / cap_r, p.y / cap_r, (p.z - stem_h - cap_h * 0.3) / (cap_h * 0.7) * 0.9)).normalized()
             q = Vector((0, 0, 1)).rotation_difference(nrm)
             r = cap_r * rng.uniform(0.11, 0.16)
-            fs = K.uv_sphere(bm, (0, 0, 0), (r, r, r * 0.35), segs=8, rings=3)
+            fs = K.uv_sphere(bm, (0, 0, 0), (r, r, r * 0.35), segs=6, rings=3)
             for v in {v for f in fs for v in f.verts}:
                 v.co = p + q @ v.co
     v3 = len(bm.verts)
@@ -76,16 +76,16 @@ def mushroom(bm, at, cap_r, cap_h, stem_h, stem_r, flat=False, lean=(0.0, 0.0), 
 
 BUILD = {
     "round": lambda bm, marks: (
-        mushroom(bm, (0.0, 0.0, 0.0), 0.11, 0.1, 0.085, 0.034, lean=(0.06, -0.04), yaw=0.3, n=16, spots=6, seed=1, marks=marks),
-        mushroom(bm, (0.12, -0.07, 0.0), 0.065, 0.06, 0.05, 0.022, lean=(-0.12, 0.18), yaw=1.1, n=12, spots=3, seed=2, marks=marks),
+        mushroom(bm, (0.0, 0.0, 0.0), 0.11, 0.1, 0.085, 0.034, lean=(0.06, -0.04), yaw=0.3, n=12, spots=6, seed=1, marks=marks),
+        mushroom(bm, (0.12, -0.07, 0.0), 0.065, 0.06, 0.05, 0.022, lean=(-0.12, 0.18), yaw=1.1, n=10, spots=3, seed=2, marks=marks),
     ),
     "flat": lambda bm, marks: (
-        mushroom(bm, (0.0, 0.02, 0.0), 0.13, 0.064, 0.075, 0.03, flat=True, lean=(0.05, 0.05), yaw=0.2, n=16, marks=marks),
-        mushroom(bm, (0.13, -0.07, 0.0), 0.085, 0.046, 0.045, 0.022, flat=True, lean=(-0.1, 0.2), yaw=0.9, n=14, marks=marks),
-        mushroom(bm, (-0.1, -0.09, 0.0), 0.06, 0.036, 0.03, 0.017, flat=True, lean=(0.15, -0.2), yaw=2.0, n=12, marks=marks),
+        mushroom(bm, (0.0, 0.02, 0.0), 0.13, 0.064, 0.075, 0.03, flat=True, lean=(0.05, 0.05), yaw=0.2, n=12, marks=marks),
+        mushroom(bm, (0.13, -0.07, 0.0), 0.085, 0.046, 0.045, 0.022, flat=True, lean=(-0.1, 0.2), yaw=0.9, n=10, marks=marks),
+        mushroom(bm, (-0.1, -0.09, 0.0), 0.06, 0.036, 0.03, 0.017, flat=True, lean=(0.15, -0.2), yaw=2.0, n=10, marks=marks),
     ),
     "skinny": lambda bm, marks: [
-        mushroom(bm, (x, y, 0.0), r, r * 0.85, h, sr, lean=lean, yaw=k * 1.7, n=10, marks=marks)
+        mushroom(bm, (x, y, 0.0), r, r * 0.85, h, sr, lean=lean, yaw=k * 1.7, n=8, marks=marks)
         for k, (x, y, r, h, sr, lean) in enumerate([
             (0.0, 0.0, 0.042, 0.2, 0.012, (0.05, 0.0)),
             (0.045, -0.03, 0.036, 0.16, 0.011, (-0.1, 0.16)),

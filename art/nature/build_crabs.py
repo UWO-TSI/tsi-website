@@ -48,7 +48,7 @@ class Parts:
         return None
 
 
-def leg(P, tag, pts, r0, r1, sides=6):
+def leg(P, tag, pts, r0, r1, sides=5):
     radii = [r0 + (r1 - r0) * i / (len(pts) - 1) for i in range(len(pts))]
     P.add(tag, K.tube, pts, radii, sides=sides)
 
@@ -57,7 +57,7 @@ def claw(P, tag, tip_tag, base, palm, d, size, open_=0.25, side=1):
     """A cheliped: the arm from the body to the palm, a round palm, a fixed finger and a moving one."""
     leg(P, tag, [base, (base + palm) / 2 + Vector((0, 0, size * 0.25)), palm], size * 0.32, size * 0.42)
     q = Vector((0, -1, 0)).rotation_difference(d)
-    fs = P.add(tag, K.uv_sphere, (0, 0, 0), (size * 0.62, size, size * 0.55), segs=12, rings=7)
+    fs = P.add(tag, K.uv_sphere, (0, 0, 0), (size * 0.62, size, size * 0.55), segs=10, rings=6)
     for v in {v for f in fs for v in f.verts}:
         v.co = palm + q @ v.co
     tip = palm + d * size * 0.9
@@ -66,7 +66,7 @@ def claw(P, tag, tip_tag, base, palm, d, size, open_=0.25, side=1):
         p0 = tip + Vector((0, 0, lift * 0.5)) + side_v * size * 0.1 * (1 if k else -1)
         p1 = p0 + d * size * 0.65 + side_v * size * spread * (1 if k else -1) * 0.6 + Vector((0, 0, lift * 0.3))
         p2 = p1 + d * size * 0.35 - side_v * size * 0.12 * (1 if k else -1)
-        P.add(tip_tag, K.tube, [p0, p1, p2], [size * 0.26, size * 0.17, size * 0.07], sides=7)
+        P.add(tip_tag, K.tube, [p0, p1, p2], [size * 0.26, size * 0.17, size * 0.07], sides=5)
 
 
 def gazami():
@@ -74,7 +74,7 @@ def gazami():
     bm = P.bm
     # The carapace: a squashed sphere, its widest point drawn out into a lateral point each side.
     rx, ry, rz = 0.135, 0.085, 0.035
-    fs = P.add("shell", K.uv_sphere, (0, 0, 0.07), (rx, ry, rz), segs=20, rings=10)
+    fs = P.add("shell", K.uv_sphere, (0, 0, 0.07), (rx, ry, rz), segs=18, rings=8)
     for v in {v for f in fs for v in f.verts}:
         x, y, z = v.co.x, v.co.y, v.co.z - 0.07
         f = smooth(0.55, 1.0, abs(x) / rx) * math.exp(-((y + 0.012) / 0.04) ** 2)
@@ -117,7 +117,7 @@ def hermit():
     bm = P.bm
     # The borrowed shell: a swept spiral, turned so its mouth faces forward and down and its spire points back and up.
     v0 = len(bm.verts)
-    sh, info = S.spiral("tmp-shell", turns=3.6, r0=0.01, growth=math.log(1.9), rise=0.014, tube=0.0074, per_turn=11, sides=10, seed=9)
+    sh, info = S.spiral("tmp-shell", turns=3.6, r0=0.01, growth=math.log(1.9), rise=0.014, tube=0.0074, per_turn=9, sides=8, seed=9)
     S.paint_spiral(sh, info, 3.6, "#dcd0c2", "#b49fb1", 3, "#ece4da", None, seed=9)
     end, facing = info["end"], info["facing"]
     target = Vector((0, -1, -0.35)).normalized()
@@ -153,7 +153,7 @@ def hermit():
     bpy.data.objects.remove(sh)
     # The crab, out of the mouth: a big right claw, a small left one, two walking legs a side, eyes on stalks.
     body = mouth + Vector((0, -0.02, -0.025))
-    P.add("body", K.uv_sphere, body, (0.045, 0.04, 0.03), segs=12, rings=7)
+    P.add("body", K.uv_sphere, body, (0.045, 0.04, 0.03), segs=10, rings=6)
     claw(P, "body", "tip", body + Vector((-0.03, -0.02, 0.0)), body + Vector((-0.05, -0.065, -0.005)), Vector((0.1, -1, -0.1)).normalized(), 0.032, open_=0.15, side=-1)
     claw(P, "body", "tip", body + Vector((0.03, -0.02, 0.0)), body + Vector((0.042, -0.06, -0.012)), Vector((-0.1, -1, -0.15)).normalized(), 0.021, open_=0.2, side=1)
     for s in (-1, 1):

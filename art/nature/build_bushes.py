@@ -32,7 +32,7 @@ from nature_kit import lin, smooth  # noqa: E402
 OUT = os.path.join(K.ASSETS, "plants")
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 SEASONS = ("spring", "summer", "autumn", "winter")
-TRIS = {0: 1000, 1: 320}
+TRIS = {0: 800, 1: 260}
 SINK = 0.04
 
 # Leaf clump colours per season (sRGB), picked per clump by seed; `accent` decorations sit in the skin.
@@ -44,7 +44,7 @@ PALETTE = {
 }
 SNOW, SNOW_SHADE = "#f3f6f9", "#cfdbe8"
 ACCENTS = {
-    "spring": {"n": 16, "r": 0.058, "cols": ["#f29bbb", "#f7c8d8", "#fbf0ea", "#e7769f"], "centre": "#f8e3a0"},
+    "spring": {"n": 13, "r": 0.06, "cols": ["#f29bbb", "#f7c8d8", "#fbf0ea", "#e7769f"], "centre": "#f8e3a0"},
     "summer": {"n": 6, "r": 0.1, "cols": ["#7f9fdf", "#a28ad6", "#8bb2ea", "#b49ae0"], "centre": None},
     "autumn": {"n": 0},
     "winter": {"n": 9, "r": 0.036, "cols": ["#c4303a", "#d43f3f", "#b2262f"], "centre": None},
@@ -156,11 +156,11 @@ def accents(ob, season, lod, seed):
         if season == "summer":
             # A hydrangea head: a squashed ball of florets, two thirds out of the leaves.
             c = p + nrm * r * 0.3
-            oriented_blob(bm, c, nrm, r, 0.8, *((9, 6) if lod == 0 else (6, 4)))
+            oriented_blob(bm, c, nrm, r, 0.8, *((8, 5) if lod == 0 else (6, 4)))
         elif season == "spring":
             # An azalea blossom: a flat round flower lying on the leaves.
             c = p + nrm * r * 0.18
-            oriented_blob(bm, c, nrm, r, 0.42, *((8, 4) if lod == 0 else (5, 3)))
+            oriented_blob(bm, c, nrm, r, 0.42, *((7, 3) if lod == 0 else (5, 3)))
         else:
             c = p + nrm * r * 0.55
             oriented_blob(bm, c, nrm, r, 1.0, *((6, 4) if lod == 0 else (5, 3)))
