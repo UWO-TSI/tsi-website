@@ -24,6 +24,8 @@ These rules are hard. The coordinator merges and pushes; lanes never push.
   - To take the lock, mkdir it and write the owner file as `game/<lane> <time>`. Take it only when it's free and you're the first line.
   - To release, rmdir the lock and delete your queue line. Never force-create the lock.
 - **Memory:** no second browser. Don't build while a browser is open. Swap runs high on this machine.
+  - **Blender lock:** only one Blender at a time, machine-wide. Use `/private/tmp/claude-501/uwotsi-blender.lock`: mkdir it, write the owner file as `game/<lane> <time>`, and rmdir it when Blender exits. Close Blender after each export batch.
+  - **High swap:** while `sysctl -n vm.swapusage` shows more than 9 GB used, the heavy, browser and Blender locks are mutually exclusive. Hold at most one of them, and wait for the others to be free before taking yours.
 
 ## Commands
 - Run every long step as its own foreground Bash call with a timeout of at most 600000 ms.
