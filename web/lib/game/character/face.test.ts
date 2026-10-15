@@ -39,14 +39,14 @@ describe("face layers (avatar v7)", () => {
     const s = faceSlots(look({ extras: ["blush", "mole", "freckles"] }), restPose(DEFAULT_LOOK, "neutral"));
     expect(s.slice(0, 4).map(x => [x.src !== null, x.mirror])).toEqual([[false, 0], [true, 1], [true, 1], [true, 0]]);
   });
-  it("gives each of the six expressions its eyes and mouth from David's picks", () => {
+  it("gives each of the six expressions its eyes and mouth, David's set since the wardrobe cut", () => {
     const got = Object.fromEntries(EXPRESSIONS.map(e => [e, restPose(DEFAULT_LOOK, e)]));
     expect(got.neutral).toEqual({ eyes: "F1.1", eyeFrame: "open", mouth: "M1.1" });
-    expect([got.happy.eyes, got.happy.mouth]).toEqual(["E8.1", "M2.1"]);
-    expect([got.surprised.eyes, got.surprised.mouth]).toEqual(["F1.1", "M6.1"]);
-    expect([got.sad.eyeFrame, got.sad.mouth]).toEqual(["half", "M4.3"]);
+    expect([got.happy.eyes, got.happy.mouth]).toEqual(["relieved", "open_smile"]);   // his face 7
+    expect([got.surprised.eyes, got.surprised.mouth]).toEqual(["F1.1", "gasp"]);
+    expect([got.sad.eyeFrame, got.sad.mouth]).toEqual(["half", "small_frown"]);
     expect(got.angry.mouth).toBe("M2.2");
-    expect([got.sleepy.eyes, got.sleepy.mouth]).toEqual(["E1.6", "M3.1"]);
+    expect([got.sleepy.eyes, got.sleepy.mouth]).toEqual(["sleepy", "M3.1"]);
     for (const e of EXPRESSIONS) for (const sl of faceSlots(DEFAULT_LOOK, got[e])) if (sl.src) {
       expect(sl.src[0] + sl.src[2] <= 1 && sl.src[1] + sl.src[3] <= 1).toBe(true);
     }
@@ -66,8 +66,8 @@ describe("face animation", () => {
     expect(frames.some(f => f.eyeFrame === "closed")).toBe(true);
   });
   it("only blinks eyes that have lids to close: shut and flat styles stay as drawn", () => {
-    expect([canBlink("F1.1"), canBlink("E5.5"), canBlink("E8.1"), canBlink("E6.1")]).toEqual([true, true, false, false]);
-    const frames = run(new FaceAnimator(seeded(5)), 20, look({ eyes: "E6.1" }));
+    expect([canBlink("F1.1"), canBlink("F1.2"), canBlink("sleepy_lash"), canBlink("relieved")]).toEqual([true, true, false, false]);
+    const frames = run(new FaceAnimator(seeded(5)), 20, look({ eyes: "relieved" }));
     expect(frames.every(f => f.eyeFrame === "open")).toBe(true);
   });
   it("moves the mouth while talking, never the same cell twice running, and rests after", () => {
@@ -89,12 +89,12 @@ describe("face animation", () => {
   it("laughs with the emote's mouths and the clip's expression", () => {
     const frames = run(new FaceAnimator(seeded(1)), 1, DEFAULT_LOOK, "Laugh");
     expect(new Set(frames.map(f => f.mouth))).toEqual(new Set(FACE.emoteMouth.Laugh.frames));
-    expect(frames.every(f => f.eyes === "E8.1")).toBe(true);
+    expect(frames.every(f => f.eyes === "relieved")).toBe(true);
   });
   it("takes a forced face (portraits, the avatar bench)", () => {
     const anim = new FaceAnimator(seeded(2));
-    const pose = anim.update(0.016, DEFAULT_LOOK, "Idle", false, { expression: "angry", eyeFrame: "half", mouth: "G1.1" });
-    expect([pose.eyeFrame, pose.mouth]).toEqual(["half", "G1.1"]);
+    const pose = anim.update(0.016, DEFAULT_LOOK, "Idle", false, { expression: "angry", eyeFrame: "half", mouth: "G3.3" });
+    expect([pose.eyeFrame, pose.mouth]).toEqual(["half", "G3.3"]);
   });
 });
 
@@ -103,7 +103,7 @@ describe("face animation", () => {
 describe("a player's face through every animation", () => {
   const WHEEL = [...EMOTE_RING, ...DANCE_RING].map(e => e.clip);
   const ANIMATIONS = [...new Set([...WHEEL, "SitWarm", "DanceStomp", ...Object.keys(CLIP_EXPRESSION)])];
-  const LOOKS = [DEFAULT_LOOK, look({ eyes: "E6.1", mouth: "grin_curl" }), randomLook(seeded(11)), randomLook(seeded(29))];
+  const LOOKS = [DEFAULT_LOOK, look({ eyes: "sleepy_lash", mouth: "kitty" }), randomLook(seeded(11)), randomLook(seeded(29))];
 
   it("stays exactly as set through each emote, dance, sit and sleep", () => {
     for (const l of LOOKS) {
@@ -129,32 +129,31 @@ describe("a player's face through every animation", () => {
     anim.keep = true;
     expect(new Set(run(anim, 2, DEFAULT_LOOK, "Cheer", true).map(f => f.mouth)).size).toBeGreaterThan(2);
     const forced = anim.update(0.016, DEFAULT_LOOK, "Cheer", false, { expression: "happy" });
-    expect([forced.eyes, forced.mouth]).toEqual(["E8.1", "M2.1"]);
+    expect([forced.eyes, forced.mouth]).toEqual(["relieved", "open_smile"]);
   });
   it("leaves the residents' faces to their clips", () => {
     const frames = run(new FaceAnimator(seeded(1)), 1, DEFAULT_LOOK, "Cheer");
-    expect(frames.every(f => f.eyes === "E8.1")).toBe(true);
+    expect(frames.every(f => f.eyes === "relieved")).toBe(true);
   });
 });
 
-describe("row 301 face set (face_set_301.py: sleepy and dot eyes, cat and curled-grin mouths, the blush band)", () => {
-  const EYES = ["sleepy_lash", "dot"], MOUTHS = ["cat_w", "grin_curl"], EXTRAS = ["blush_band"];
+describe("row 301 face set (face_set_301.py: sleepy and dot eyes, the blush band; its two mouths were cut)", () => {
+  const EYES = ["sleepy_lash", "dot"], MOUTHS = ["M3.3", "G3.3"], EXTRAS = ["blush_band"];   // older mouths to wear with them
   const src = (c: FaceCell) => { const [W, H] = FACE.atlas_size; return [c[0] / W, c[1] / H, c[2] / W, c[3] / H]; };
 
-  it("are creator options with names, packed below every earlier cell so old rects and pixels stay as they were", () => {
+  it("are creator options with names, packed in a band below every earlier cell", () => {
     for (const id of EYES) expect(Object.keys(FACE.layers.eyes.items[id]), id).toEqual(["open"]); // static: no blink frames
-    for (const id of MOUTHS) expect(FACE.layers.mouth.items[id], id).toBeDefined();
     for (const id of EXTRAS) expect(FACE.layers.extras.items[id], id).toMatchObject({ anchor: "blush", mirror: false });
-    for (const id of [...EYES, ...MOUTHS, ...EXTRAS]) expect(FACE.names[id], id).toBeDefined();
-    const set = new Set([...EYES, ...MOUTHS, ...EXTRAS]);
+    for (const id of [...EYES, ...EXTRAS]) expect(FACE.names[id], id).toBeDefined();
+    expect(["cat_w", "grin_curl"].some(id => id in FACE.layers.mouth.items || id in FACE.names)).toBe(false);
+    const set = new Set([...EYES, ...EXTRAS]);
     const cells = [
       ...Object.entries(FACE.layers.eyes.items).flatMap(([id, f]) => Object.values(f).filter(c => c).map(c => [id, c!] as const)),
       ...Object.entries(FACE.layers.mouth.items), ...Object.entries(FACE.layers.talk.items),
       ...Object.entries(FACE.layers.extras.items).map(([id, it]) => [id, it.cell] as const),
     ];
     const legacyBottom = Math.max(...cells.filter(([id, c]) => !set.has(id) && !c[6]).map(([, c]) => c[1] + c[3]));   // first page
-    expect(legacyBottom).toBeLessThanOrEqual(1152); // the atlas height before the set
-    for (const [id, c] of cells) if (set.has(id)) expect(c[1], id).toBeGreaterThan(1152);
+    for (const [id, c] of cells) if (set.has(id)) expect(c[1], id).toBeGreaterThan(legacyBottom);
   });
 
   it("parse and survive a save round trip; old looks are unchanged", () => {
@@ -164,39 +163,39 @@ describe("row 301 face set (face_set_301.py: sleepy and dot eyes, cat and curled
       expect(look).toEqual(saved);
       expect(parseLook(JSON.parse(JSON.stringify(look)))).toEqual(look);
     }
-    const old = { ...DEFAULT_LOOK, eyes: "E5.5", mouth: "G2.3", extras: ["blush", "mole"] };
+    const old = { ...DEFAULT_LOOK, eyes: "F1.2", mouth: "G3.3", extras: ["blush", "mole"] };
     expect(parseLook(JSON.parse(JSON.stringify(old)))).toEqual(old);
   });
 
   it("render their own cells: each id lands in its slot at its anchor", () => {
-    const l = look({ eyes: "sleepy_lash", mouth: "cat_w", extras: ["blush_band"] });
+    const l = look({ eyes: "sleepy_lash", mouth: "M3.3", extras: ["blush_band"] });
     const s = faceSlots(l, restPose(l, "neutral"));
     const band = s[0], [eyeR, eyeL, mouth] = s.slice(-3);
     expect(band.src).toEqual(src(FACE.layers.extras.items.blush_band.cell));
     expect(band.mirror).toBe(0); // one centred band across both cheeks
     expect(eyeR.src).toEqual(src(FACE.layers.eyes.items.sleepy_lash.open));
     expect([eyeR.mirror, eyeL.mirror, eyeL.src]).toEqual([0, 2, eyeR.src]);
-    expect(mouth.src).toEqual(src(FACE.layers.mouth.items.cat_w));
+    expect(mouth.src).toEqual(src(FACE.layers.mouth.items["M3.3"]));
     const a = FACE.anchors.blush;
     expect(band.dst[0] < a[0] && a[0] < band.dst[2] && band.dst[1] < a[1] && a[1] < band.dst[3]).toBe(true);
     expect(band.dst[0] < FACE.anchors.eye[0] && band.dst[2] > 1 - FACE.anchors.eye[0]).toBe(true); // reaches under both eyes
-    const d = faceSlots(look({ eyes: "dot", mouth: "grin_curl" }), restPose(look({ eyes: "dot", mouth: "grin_curl" }), "neutral"));
-    expect([d.at(-3)!.src, d.at(-1)!.src]).toEqual([src(FACE.layers.eyes.items.dot.open), src(FACE.layers.mouth.items.grin_curl)]);
+    const d = faceSlots(look({ eyes: "dot", mouth: "G3.3" }), restPose(look({ eyes: "dot", mouth: "G3.3" }), "neutral"));
+    expect([d.at(-3)!.src, d.at(-1)!.src]).toEqual([src(FACE.layers.eyes.items.dot.open), src(FACE.layers.mouth.items["G3.3"])]);
   });
 
   it("stay static: the new eyes never blink and an idle face keeps its mouth", () => {
     for (const eyes of EYES) {
       expect(canBlink(eyes), eyes).toBe(false);
-      const frames = run(new FaceAnimator(seeded(4)), 20, look({ eyes, mouth: "grin_curl" }));
-      expect(frames.every(f => f.eyes === eyes && f.eyeFrame === "open" && f.mouth === "grin_curl")).toBe(true);
+      const frames = run(new FaceAnimator(seeded(4)), 20, look({ eyes, mouth: "G3.3" }));
+      expect(frames.every(f => f.eyes === eyes && f.eyeFrame === "open" && f.mouth === "G3.3")).toBe(true);
     }
   });
 
   it("are never rolled for random looks, so seeded residents keep the faces they had", () => {
-    const set = new Set([...EYES, ...MOUTHS, ...EXTRAS]);
+    const set = new Set([...EYES, ...EXTRAS]);
     for (let i = 0; i < 300; i++) {
       const l = randomLook(seeded(i));
-      expect(set.has(l.eyes) || set.has(l.mouth) || l.extras.some(x => set.has(x)), String(i)).toBe(false);
+      expect(set.has(l.eyes) || l.extras.some(x => set.has(x)), String(i)).toBe(false);
     }
   });
 });
@@ -227,22 +226,22 @@ describe("David's 19 faces (face set 305, art/characters/v7/face_set_305.py)", (
     for (const [W, H] of [FACE.atlas_size, FACE.atlas2_size]) expect(W <= 2048 && H <= 4096).toBe(true);
   });
 
-  it("keep every earlier cell, anchor and the first page as they were (old looks draw the same)", () => {
+  it("keep every earlier cell, anchor and the first page as the wardrobe cut left them (kept looks draw the same)", () => {
     const keep = <T,>(items: Record<string, T>) => Object.fromEntries(Object.entries(items).filter(([id]) => !NEW.has(id)));
     const legacy = {
       anchors: Object.fromEntries((["eye", "brow", "mouth", "cheek", "mole", "blush"] as const).map(k => [k, FACE.anchors[k]])),
       atlas_size: FACE.atlas_size, density: FACE.density,
       layers: Object.fromEntries(Object.entries(FACE.layers).map(([l, v]) => [l, keep(v.items as Record<string, unknown>)])),
     };
-    // the earlier layers on main before the set (b8775fbb atlas, row 301 included)
-    expect(createHash("sha256").update(JSON.stringify(legacy)).digest("hex")).toBe("b0476a46c7e2c6cd768eeb609ffa7fc392afc0860caf22ef44c2f8d992163eae");
+    // the earlier layers after the wardrobe cut repacked the first page (playtest round 1; the set's own cells unchanged)
+    expect(createHash("sha256").update(JSON.stringify(legacy)).digest("hex")).toBe("270719a91c09c0a0d2225454ef04db02c9d003f7d551b13017f6e9fa406056cd");
     const atlas = (f: string) => createHash("sha256").update(readFileSync(join(__dirname, "../../../public", f))).digest("hex");
-    expect(atlas(FACE_ATLAS_URLS.creator)).toBe("b8775fbb0a2a71ee64166f98e8eaa57344ade3821f892fd8855bce047c2fbb66");
-    expect(atlas(FACE_ATLAS_URLS.world)).toBe("27b1215373cbc6bed6cc188ec4a05504414959d8690889c688442996d10db7dc");
-    // an old look's slots all read the first page, and it never asks for the second
-    const old = look({ eyes: "E5.5", mouth: "G2.3", extras: ["blush", "mole", "blush_band", "freckles"] });
+    expect(atlas(FACE_ATLAS_URLS.creator)).toBe("211ea82a9da577f555f9cb8b5e4527e44824c503f683279e1a2899c5fa9f67a8");
+    expect(atlas(FACE_ATLAS_URLS.world)).toBe("b78f199b24d5b6ea02fb56db25efab28cc4250ca004a35a467c0b949162bbd54");
+    // an old look's own slots all read the first page; every character still loads the second for its expressions
+    const old = look({ eyes: "F1.2", mouth: "G3.3", extras: ["blush", "mole", "blush_band", "freckles"] });
     expect(faceSlots(old, restPose(old, "neutral")).every(s => s.page === 0)).toBe(true);
-    expect([usesFacePage2(old), usesFacePage2(DEFAULT_LOOK)]).toEqual([false, false]);
+    expect([usesFacePage2(old), usesFacePage2(DEFAULT_LOOK)]).toEqual([true, true]);
   });
 
   it("parse and survive a save round trip, mixing with any eyes, mouth and accent", () => {
@@ -279,10 +278,11 @@ describe("David's 19 faces (face set 305, art/characters/v7/face_set_305.py)", (
     }
     // the canvas-right eye sits at the mirrored eye anchor
     expect(FACE.anchors.eye_left).toEqual([1 - FACE.anchors.eye[0], FACE.anchors.eye[1]]);
-    // expressions and talking still use the earlier cells, on the first page
+    // since the wardrobe cut the expressions are David's too (the second page); talking keeps the first page's talk cells
     const l = look({ eyes: "swirl", mouth: "drool" });
     const happy = faceSlots(l, restPose(l, "happy"));
-    expect(happy.slice(-3).map(x => x.page)).toEqual([0, 0, 0]);
+    expect(happy.slice(-3).map(x => x.page)).toEqual([1, 1, 1]);
+    for (const t of FACE.talk.frames) expect(FACE.layers.talk.items[t][6] ?? 0, t).toBe(0);
   });
 
   it("draw with their own eyes and mouth, no brows over them (eyebrows were removed)", () => {
@@ -299,5 +299,20 @@ describe("David's 19 faces (face set 305, art/characters/v7/face_set_305.py)", (
       const l = randomLook(seeded(i));
       expect(SET.has(l.eyes) || SET.has(l.mouth) || l.extras.some(x => SET.has(x)), String(i)).toBe(false);
     }
+  });
+});
+
+describe("expressions and emote mouths after the wardrobe cut (playtest round 1)", () => {
+  it("keep their mood in David's set: Laugh and Cheer open wide, Dance bops to a little v", () => {
+    expect(FACE.emoteMouth.Laugh.frames).toEqual(["open_smile", "gasp"]);
+    expect(FACE.emoteMouth.Cheer.frames).toEqual(["open_smile", "gasp"]);
+    expect(FACE.emoteMouth.Dance.frames).toEqual(["open_smile", "little_v"]);
+    for (const [clip, m] of Object.entries(FACE.emoteMouth)) for (const f of m.frames) expect(FACE.layers.mouth.items[f]?.[6], `${clip} ${f}`).toBe(1);
+    const dance = run(new FaceAnimator(seeded(6)), 2, DEFAULT_LOOK, "Dance");
+    expect(new Set(dance.map(f => f.mouth))).toEqual(new Set(["open_smile", "little_v"]));
+  });
+  it("load the second page for every character, so a laugh never shows an empty mouth", () => {
+    for (let i = 0; i < 20; i++) expect(usesFacePage2(randomLook(seeded(i))), String(i)).toBe(true);
+    for (const e of EXPRESSIONS) for (const sl of faceSlots(DEFAULT_LOOK, restPose(DEFAULT_LOOK, e))) if (sl.page === 1) expect(sl.src).not.toBeNull();
   });
 });

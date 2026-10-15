@@ -106,11 +106,20 @@ export const FACE = faceV7 as unknown as {
   /** Creator names of the parts that have no sheet code (face_set_301.py, face_set_305.py). */
   names: Record<string, string>;
 };
-/** Whether a look wears a part from the second atlas page (so its character loads that page). */
+/**
+ * The cells every character can show whatever it wears: the expressions' forced eyes and mouths and the emote mouths.
+ * Since the wardrobe cut (playtest round 1) they are David's, on the second page.
+ */
+const sharedCells = (): (FaceCell | null | undefined)[] => [
+  ...Object.values(FACE.expressions).flatMap(e => [...(e.eyes ? Object.values(FACE.layers.eyes.items[e.eyes] ?? {}) : []), e.mouth ? FACE.layers.mouth.items[e.mouth] : undefined]),
+  ...Object.values(FACE.emoteMouth).flatMap(m => m.frames.map(f => FACE.layers.mouth.items[f])),
+];
+const SHARED_PAGE2 = sharedCells().some(c => c?.[6] === 1);
+/** Whether a character loads the second atlas page: its look wears a part there, or an expression or emote shows one. */
 export function usesFacePage2(look: CharacterLook): boolean {
   const { eyes, mouth, extras } = FACE.layers;
   const cells = [...Object.values(eyes.items[look.eyes] ?? {}), mouth.items[look.mouth], ...look.extras.map(x => extras.items[x]?.cell)];
-  return cells.some(c => c?.[6] === 1);
+  return SHARED_PAGE2 || cells.some(c => c?.[6] === 1);
 }
 /** The face's layers. Eyebrows were removed (playtest round 1, David 2026-10-14): the atlas still holds their cells
  * (art/characters/v7/build_face.py), but no look wears them, no category offers them and the face draws none. */
@@ -337,8 +346,9 @@ export const openEventParts = (open: ReadonlySet<string> = EVENTS_OPEN): string[
 // ── Ownership (coordinator ruling on audit item 22) ─────────────────────────
 /** Identity is free: skin, face, every hair style and the first six hair colours. The other six are shop dyes. */
 export const FREE_HAIR_COLOURS = 6;
-/** Clothes every account starts with, granted once through the inventory (20260926180000_ownership.sql). */
-export const STARTER_PARTS: readonly string[] = ["top_tee", "top_hoodie", "top_stripe_ls", "bottom_shorts", "bottom_trousers", "bottom_joggers", "onepiece_raincape", "shoes_slipon", "shoes_sneakers"];
+/** Clothes every account starts with, granted once through the inventory (20260926180000_ownership.sql; the rain-cape
+ * left with David's wardrobe cut). */
+export const STARTER_PARTS: readonly string[] = ["top_tee", "top_hoodie", "top_stripe_ls", "bottom_shorts", "bottom_trousers", "bottom_joggers", "shoes_slipon", "shoes_sneakers"];
 /** Inventory `catalogue_ref` of a hair dye. */
 export const dyeRef = (hair: number) => `hair:${hair}`;
 /** Inventory ref that unlocks a part (a variant counts as its base part); null for free hair styles and face items. */
@@ -363,11 +373,11 @@ export function randomLook(rand: () => number = Math.random, owned?: ReadonlySet
   let look: CharacterLook = {
     ...DEFAULT_LOOK,
     skin: Math.floor(rand() * PALETTE.skin.length), hair: Math.floor(rand() * (owned ? FREE_HAIR_COLOURS : PALETTE.hair.length)),
-    // sheet-coded styles only (E/F eyes, M mouths): later sets stay creator picks, so seeded residents keep their faces
+    // sheet-coded styles only (F eyes, M mouths, what the wardrobe cut kept of them): later sets stay creator picks
     eyes: pick(Object.keys(FACE.layers.eyes.items).filter(e => /^[EF]\d/.test(e))), mouth: pick(Object.keys(FACE.layers.mouth.items).filter(m => m.startsWith("M"))),
     extras: rand() < 0.3 ? ["blush"] : [], bangs: pick(ids("bangs")), back: pick(ids("back")), shoes: pick(ids("shoes")), acc: {}, colors: {},
   };
-  look = rand() < 0.2 ? wear(look, "onepiece", pick(ids("onepiece"))) : wear(wear(look, "top", pick(ids("top"))), "bottom", pick(ids("bottom")));
+  look = rand() < 0.2 && ids("onepiece").length ? wear(look, "onepiece", pick(ids("onepiece"))) : wear(wear(look, "top", pick(ids("top"))), "bottom", pick(ids("bottom")));
   for (const id of [look.top, look.bottom, look.onepiece]) if (id && rand() < 0.6) look.colors[id] = Math.floor(rand() * PALETTE.outfit.length);
   if (rand() < 0.45 && ids("accessory").length) look = wear(look, "accessory", pick(ids("accessory")));
   return look;

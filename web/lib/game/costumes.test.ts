@@ -7,8 +7,8 @@ import { traditionsAt } from "./useTraditions";
 const COSTUMES = PARTS.filter((p) => p.event === "halloween");
 
 describe("the costume closet (traditions calendar: Halloween costumes)", () => {
-  it("has four Halloween costumes in the wardrobe's accessories, none of them sold", () => {
-    expect(COSTUMES.map((p) => p.id).sort()).toEqual(["acc_cat_ears", "acc_pumpkin_head", "acc_vampire_cape", "acc_witch_hat"]);
+  it("has two Halloween costumes in the wardrobe's accessories, none of them sold (the pumpkin head and vampire cape were cut)", () => {
+    expect(COSTUMES.map((p) => p.id).sort()).toEqual(["acc_cat_ears", "acc_witch_hat"]);
     for (const p of COSTUMES) expect(p.slot).toBe("accessory");
     expect(OWNERSHIP_ITEMS.some((e) => COSTUMES.some((p) => e.catalogue_ref === p.id))).toBe(false);
   });
@@ -19,7 +19,7 @@ describe("the costume closet (traditions calendar: Halloween costumes)", () => {
     expect(openEventParts(after)).toEqual([]);
     expect(eventPartOpen("acc_witch_hat", during)).toBe(true);
     expect(eventPartOpen("acc_witch_hat", after)).toBe(false);
-    expect(eventPartOpen("acc_beanie", after)).toBe(true); // everything else, always
+    expect(eventPartOpen("acc_cap", after)).toBe(true); // everything else, always
     const look = wear(DEFAULT_LOOK, "accessory", "acc_witch_hat");
     try {
       setEventsOpen(during);

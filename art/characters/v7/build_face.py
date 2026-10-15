@@ -3,9 +3,9 @@
   /Applications/Blender.app/Contents/MacOS/Blender -b -P art/characters/v7/build_face.py [-- compose <out_dir>]
 
 v6 composed one face canvas per look and expression and swapped whole textures (a blink was a texture swap to E8.1,
-and nothing talked). v7 keeps v6's measured drawings (David's picks, row 192: F1.1-F2.2, E1.1 E1.2 E1.4 E1.6 E5.4
-E5.5 E5.6 E6.1 E8.1 E8.4, M1.1-M6.3 and the whole G grid) and its placement on reference 18 (face_on_head), but
-draws every feature ONCE into its own atlas cell, around an anchor:
+and nothing talked). v7 keeps v6's measured drawings (David's picks, row 192) and its placement on reference 18
+(face_on_head), but draws every feature ONCE into its own atlas cell, around an anchor. David's wardrobe cut (playtest
+round 1, 2026-10-14) kept F1.1 and F1.2 of the eyes and M1.1 M1.2 M2.2 M3.1 M3.3 G3.3 of the mouths; the rest are gone:
 
   eyes    one eye (the character's right, canvas left), mirrored for the other side by the shader; every lidded eye
           also gets `half` and `closed` frames for the blink (the lid slides down over the iris, then a lid line)
@@ -82,6 +82,11 @@ ANCHOR["brow"] = (ANCHOR["eye"][0], ANCHOR["eye"][1] - 0.14)
 ANCHOR["mouth"] = (0.5, face_chart(MOUTH_LAT, 0)[1])
 ANCHOR["cheek"] = face_chart(-24, -36)
 ANCHOR["mole"] = face_chart(-44, 16)
+# The anchors are frozen with the atlas: head_shape reads them back (FACE_ANCHORS) and the v8 head solves its eye and
+# mouth from them, so a rebuild keeps the shipped ones rather than re-measuring the cheek and mole on the new head.
+_SHIPPED = os.path.join(OUT, "face_v7.json")
+if os.path.exists(_SHIPPED):
+    ANCHOR.update({k: tuple(v) for k, v in json.load(open(_SHIPPED))["anchors"].items() if k in ANCHOR})
 K = {"eye": 1.2, "brow": 1.0, "mouth": 1.3, "cheek": 1.0, "mole": 1.0}
 AUTH = {"eye": (EYE_L, EYE_Y), "brow": (EYE_L, BROW_Y), "mouth": (MX, MY), "cheek": ANCHOR["cheek"], "mole": ANCHOR["mole"]}
 BOX = {"eye": (0.17, 0.15), "brow": (0.09, 0.05), "mouth": (0.12, 0.09), "cheek": (0.12, 0.08), "mole": (0.02, 0.02)}
@@ -204,48 +209,11 @@ def f11_deco(L, d, frame):
     L.paint(L.stroke(c, taper(len(c), 0.002, 0.004, 0.002)), C_CREASE, 0.8)
 
 
-def lashes(ticks):
-    def draw(L, d, frame):
-        if frame == "closed":
-            return
-        for (x0, y0), (x1, y1) in ticks:
-            L.paint(L.stroke([P(x0, y0 + d), P(x1, y1 + d)], 0.0038), C_LID)
-    return draw
-
-
-def hl(r=0.018, dx=-0.024, dy=-0.022):
-    return (r, dx, dy)
-
-
 EYE_SPECS = {
     "F1.1": dict(iris=lambda L: L.ellipse(*P(0.004, 0.004), 0.06, 0.07), col=C_EYE, lid=F11_LID, lr=(0.004, 0.013, 0.008),
                  cut=True, deco=f11_deco, iris_c=0.004),
     "F1.2": dict(iris=lambda L: L.squircle(*P(-0.004, 0.006), 0.056, 3.2), col=C_EYE,
                  lid=[(-0.07, -0.03), (-0.03, -0.074), (0.06, -0.07), (0.084, 0.03)], lr=(0.004, 0.012, 0.005), cut=True, iris_c=0.006),
-    "F2.1": dict(iris=lambda L: L.ellipse(*P(0.0, 0.012), 0.058, 0.045), col=C_EYE,
-                 lid=[(-0.075, -0.004), (-0.02, -0.03), (0.05, -0.03), (0.098, 0.0)], lr=(0.004, 0.011, 0.004), cut=True, iris_c=0.012),
-    "F2.2": dict(iris=lambda L: L.ellipse(*P(0.0, 0.014), 0.056, 0.05), col=C_EYE,
-                 lid=[(-0.075, 0.012), (-0.03, -0.04), (0.05, -0.04), (0.098, -0.012)], lr=(0.004, 0.012, 0.004), cut=True, iris_c=0.014),
-    "E1.1": dict(iris=lambda L: L.ellipse(*P(0.0, 0.006), 0.062, 0.066), col=C_DOLL,
-                 lid=[(-0.06, -0.032), (-0.02, -0.07), (0.04, -0.07), (0.07, -0.03)], lr=(0.003, 0.009, 0.004), cut=False,
-                 deco=lashes([((0.058, -0.04), (0.085, -0.05)), ((0.062, -0.032), (0.089, -0.038))]), hl=hl(), iris_c=0.006),
-    "E1.2": dict(iris=lambda L: L.ellipse(*P(0.0, 0.0), 0.062, 0.058) & (L.V > EYE_Y - 0.012), col=C_DOLL,
-                 lid=[(-0.07, -0.014), (-0.02, -0.014), (0.03, -0.014), (0.075, -0.014)], lr=(0.006, 0.006, 0.006), cut=True,
-                 hl=hl(0.014, -0.02, 0.008), iris_c=0.02),
-    "E1.4": dict(iris=lambda L: L.ellipse(*P(0.0, 0.01), 0.058, 0.062), col=C_DOLL,
-                 lid=[(-0.075, -0.02), (-0.03, -0.068), (0.05, -0.068), (0.085, -0.02)], lr=(0.004, 0.011, 0.004), cut=False,
-                 deco=lashes([((0.07, -0.045), (0.095, -0.05)), ((0.082, -0.027), (0.107, -0.03))]), hl=hl(0.016), iris_c=0.01),
-    "E1.6": dict(iris=lambda L: L.ellipse(*P(0.0, -0.01), 0.042, 0.04) & (L.V > EYE_Y - 0.01), col=C_DOLL,
-                 lid=[(-0.07, -0.01), (-0.02, -0.011), (0.03, -0.013), (0.07, -0.014)], lr=(0.009, 0.009, 0.009), cut=True, iris_c=0.012),
-    "E5.4": dict(iris=lambda L: L.ellipse(*P(0.0, 0.012), 0.046), col=C_DOLL,
-                 lid=[(-0.07, -0.02), (-0.0233, -0.0633), (0.025, -0.065), (0.075, -0.025)], lr=(0.003, 0.007, 0.003), cut=False,
-                 hl=hl(0.013, -0.015, -0.005), iris_c=0.012),
-    "E5.5": dict(iris=lambda L: L.ellipse(*P(0.0, 0.012), 0.056), col=C_DOLL,
-                 lid=[(-0.07, -0.012), (-0.03, -0.064), (0.0217, -0.0667), (0.085, -0.02)], lr=(0.003, 0.009, 0.004), cut=False,
-                 hl=hl(0.015, -0.02, -0.01), iris_c=0.012),
-    "E8.4": dict(iris=lambda L: (L.ellipse(*P(0, 0), 0.062) & ~L.ellipse(*P(0, 0), 0.05)), col=C_DOLL,
-                 lid=[(-0.06, -0.008), (-0.02, -0.008), (0.02, -0.008), (0.06, -0.008)], lr=(0.006, 0.006, 0.006), cut=False,
-                 inner=lambda L: L.ellipse(*P(0.0, 0.018), 0.03) & L.ellipse(*P(0, 0), 0.05), iris_c=0.0),
 }
 
 
@@ -280,24 +248,8 @@ def draw_spec(L, spec, frame):
         L.paint(m, C_WHITE)
 
 
-def e5_6(L):     # "U" shield: an outline cup with a flat top and a pupil
-    c = bez([P(-0.052, -0.045), P(-0.056, 0.07), P(0.056, 0.07), P(0.052, -0.045)], 20)
-    L.paint(L.stroke(c, 0.009), C_DOLL)
-    L.paint(L.stroke([P(-0.058, -0.045), P(0.058, -0.045)], 0.008), C_DOLL)
-    L.paint(L.ellipse(*P(0.0, 0.022), 0.022), C_DOLL)
-
-
-def e6_1(L):     # ">" (the canvas-left eye; mirrored it is "<")
-    L.paint(L.stroke([P(0.045, -0.042), P(-0.04, 0.0), P(0.045, 0.042)], 0.012), C_DOLL)
-
-
-def e8_1(L):     # a thick bowed stroke: a shut, smiling eye
-    c = bez([P(-0.06, 0.012), P(0.0, -0.012), P(0.062, 0.006)])
-    L.paint(L.stroke(c, taper(len(c), 0.008, 0.014, 0.007)), C_DOLL)
-
-
-EYE_PLAIN = {"E5.6": e5_6, "E6.1": e6_1, "E8.1": e8_1}
-EYE_ORDER = ["F1.1", "F1.2", "F2.1", "F2.2", "E1.1", "E1.2", "E1.4", "E1.6", "E5.4", "E5.5", "E5.6", "E6.1", "E8.1", "E8.4"]
+EYE_PLAIN = {}
+EYE_ORDER = ["F1.1", "F1.2"]
 
 
 # ================================================================ mouths (centred at MX, MY) : v6's drawings
@@ -329,15 +281,6 @@ def m_open(L, hw, h, top=0.0, teeth=True, fangs=False, dark=False, tongue=True, 
     L.paint(L.stroke(top_pts + bot_pts[1:], 0.0042), C_LINE)
 
 
-def m_grin(L, hw, h, top=0.0):
-    top_pts = bez([P0(-hw, -h * 0.4), P0(0, -h * 0.4 + top), P0(hw, -h * 0.4)], 12)
-    bot_pts = bez([P0(hw, -h * 0.4), P0(hw * 0.85, h * 0.7), P0(-hw * 0.85, h * 0.7), P0(-hw, -h * 0.4)], 20)
-    shape = L.poly(top_pts + bot_pts[1:-1])
-    L.paint(shape, C_WHITE)
-    L.paint(L.stroke(bez([P0(-hw * 0.8, h * 0.05), P0(0, h * 0.2), P0(hw * 0.8, h * 0.05)]), 0.0028), C_LINE)
-    L.paint(L.stroke(top_pts + bot_pts[1:], 0.0045), C_LINE)
-
-
 def m_oval(L, rx, ry, dark=False, dy=0.0):
     e = L.ellipse(*P0(0, dy), rx, ry)
     L.paint(e, C_DARKM if dark else C_PINK)
@@ -351,20 +294,6 @@ def m_poly(L, pts):
     L.paint(L.stroke(p + [p[0]], 0.004), C_LINE)
 
 
-def m_lips(L, hw, hh, line=True):
-    e = L.ellipse(*P0(0, 0), hw, hh)
-    L.paint(e, C_PINK)
-    L.paint(e & ~L.ellipse(*P0(0, 0), hw - 0.004, hh - 0.004), C_LINE)
-    if line:
-        L.paint(L.stroke([P0(-hw * 0.8, 0), P0(hw * 0.8, 0)], 0.0028), C_LINE)
-
-
-def m_tongue(L, tx, ty, rx=0.014, ry=0.011, rot=0.5):
-    e = L.ellipse(*P0(tx, ty), rx, ry, rot)
-    L.paint(e, C_TONGUE)
-    L.paint(e & ~L.ellipse(*P0(tx, ty), rx - 0.0035, ry - 0.0035, rot), C_LINE)
-
-
 def wave(x0, x1, amp, periods, n=24, dy=0.0):
     return [(x0 + (x1 - x0) * i / n, dy + amp * math.sin(i / n * periods * math.tau)) for i in range(n + 1)]
 
@@ -375,79 +304,11 @@ MOUTHS = {
                        m_line(L, [(0.044, -0.012), (0.041, 0.014)], 0.0048, False)),
     "M1.2": lambda L: (m_line(L, [(0.008, -0.02), (-0.02, -0.02), (-0.002, -0.001)]),
                        m_line(L, [(-0.002, -0.001), (-0.02, 0.016), (0.008, 0.018)])),
-    "M2.1": lambda L: m_open(L, 0.05, 0.042, 0.004),
     "M2.2": lambda L: m_poly(L, [(-0.028, -0.02), (0.036, 0.006), (-0.018, 0.02)]),
     "M3.1": lambda L: m_oval(L, 0.018, 0.024),
-    "M3.2": lambda L: (m_line(L, [(-0.03, 0.0), (0.005, 0.009), (0.04, 0.006)]),
-                       m_line(L, [(-0.03, 0.0), (-0.037, -0.014)], 0.0045, False)),
     "M3.3": lambda L: m_line(L, wave(-0.045, 0.045, 0.004, 2)),
-    "M4.2": lambda L: m_line(L, [(-0.045, -0.004), (0, 0.009), (0.045, -0.004)]),
-    "M4.3": lambda L: m_line(L, [(-0.04, 0.007), (0, -0.009), (0.04, 0.007)]),
-    "M5.2": lambda L: (m_tongue(L, 0.03, 0.01), m_line(L, [(-0.045, -0.002), (0, 0.005), (0.035, 0.0)])),
-    "M5.3": lambda L: m_line(L, wave(-0.05, 0.05, 0.0035, 1.0)),
-    "M6.1": lambda L: (m_oval(L, 0.024, 0.028), L.paint(L.ellipse(*P0(0, 0), 0.0195, 0.0235) & (L.V < MY - 0.01), C_WHITE)),
-    "M6.3": lambda L: m_line(L, [(-0.04, -0.007), (0.0, 0.004), (0.042, 0.009)]),
+    "G3.3": lambda L: m_line(L, [(-0.05, -0.006), (0, 0.009), (0.05, -0.006)]),     # the one G-grid mouth kept
 }
-_G = {
-    1: lambda c: lambda L: m_open(L, [.05, .05, .035, .045, .05, .04, .045][c], [.04, .035, .03, .035, .018, .034, .02][c],
-                                  [.004, .006, .004, .002, 0, .003, 0][c], teeth=c != 3, dark=c in (3, 6), fangs=c == 5),
-    2: lambda c: lambda L: m_open(L, [.045, .04, .035, .045, .045, .04, .045][c], [.045, .04, .02, .042, .035, .05, .045][c],
-                                  0.0, teeth=c in (2, 3, 6), fangs=c in (0, 1, 4)),
-    3: lambda c: lambda L: [
-        lambda: m_line(L, [(-0.035, -0.003), (0, 0.005), (0.035, -0.003)]),
-        lambda: m_line(L, [(-0.035, -0.004), (-0.018, 0.005), (0, -0.002), (0.018, 0.005), (0.035, -0.004)]),
-        lambda: m_line(L, [(-0.05, -0.006), (0, 0.009), (0.05, -0.006)]),
-        lambda: (m_line(L, [(-0.035, 0), (0.035, 0)], 0.005, False), m_line(L, [(-0.035, 0), (-0.04, -0.008)], 0.004, False),
-                 m_line(L, [(0.035, 0), (0.04, -0.008)], 0.004, False)),
-        lambda: m_line(L, wave(-0.03, 0.03, 0.004, 1.5)),
-        lambda: m_line(L, [(-0.009, 0.004), (0, -0.004), (0.009, 0.004)], 0.004, False),
-        lambda: m_line(L, wave(-0.045, 0.045, 0.005, 2.5)),
-    ][c](),
-    4: lambda c: lambda L: m_grin(L, [.05, .05, .04, .045, .05, .05, .045][c], [.03, .028, .022, .025, .028, .03, .028][c],
-                                  [.004, .006, .002, 0, .006, .004, 0][c]),
-    5: lambda c: lambda L: m_oval(L, [.016, .01, .009, .009, .016, .01, .011][c], [.02, .012, .012, .012, .02, .014, .015][c],
-                                  dark=c in (2, 3)),
-    6: lambda c: lambda L: [
-        lambda: m_lips(L, 0.03, 0.012),
-        lambda: L.paint(L.ellipse(*P0(0, 0), 0.007) & ~L.ellipse(*P0(0, 0), 0.0035), C_LINE),
-        lambda: m_poly(L, [(-0.009, 0.006), (0.009, 0.006), (0, -0.008)]),
-        lambda: m_poly(L, [(-0.018, 0.012), (0.018, 0.012), (0, -0.016)]),
-        lambda: m_lips(L, 0.016, 0.005, False),
-        lambda: (m_oval(L, 0.018, 0.018, dark=True), m_tongue(L, 0.004, 0.018, 0.012, 0.01, 0.0)),
-        lambda: m_lips(L, 0.05, 0.022),
-    ][c](),
-    7: lambda c: lambda L: [
-        lambda: m_lips(L, 0.05, 0.026),
-        lambda: m_lips(L, 0.04, 0.014),
-        lambda: m_lips(L, 0.03, 0.01),
-        lambda: (m_line(L, [(-0.012, 0), (0.012, 0)], 0.004, False), m_tongue(L, 0, 0.01, 0.009, 0.009, 0)),
-        lambda: m_tongue(L, 0, 0.004, 0.007, 0.007, 0),
-        lambda: (m_line(L, [(-0.04, -0.004), (0, 0.006), (0.03, 0.0)]), m_tongue(L, 0.03, 0.01)),
-        lambda: (m_line(L, [(-0.035, 0.006), (0, -0.004), (0.035, 0.006)]), m_tongue(L, 0.0, 0.006, 0.01, 0.01, 0)),
-    ][c](),
-    8: lambda c: lambda L: [
-        lambda: m_line(L, [(-0.03, 0.0), (-0.012, 0.006), (0.005, -0.002), (0.02, 0.006), (0.03, 0.0)]),
-        lambda: (L.paint(L.ellipse(*P0(0, 0), 0.022, 0.007), C_WHITE),
-                 L.paint(L.ellipse(*P0(0, 0), 0.022, 0.007) & ~L.ellipse(*P0(0, 0), 0.018, 0.0035), C_LINE)),
-        lambda: m_line(L, [(-0.012, -0.004), (0, 0.006), (0.012, -0.004)]),
-        lambda: (m_lips(L, 0.02, 0.007, False), m_line(L, [(0.02, 0), (0.026, -0.006)], 0.004, False)),
-        lambda: m_lips(L, 0.018, 0.006, True),
-        lambda: m_line(L, [(-0.02, 0.0), (0.02, 0.002)]),
-        lambda: m_line(L, [(-0.008, 0.0), (0.008, 0.0)], 0.004, False),
-    ][c](),
-    9: lambda c: lambda L: [
-        lambda: m_line(L, [(-0.007, 0.003), (0, -0.003), (0.007, 0.003)], 0.0038, False),
-        lambda: (m_line(L, [(-0.012, 0.002), (0.012, -0.001)], 0.004, False), m_line(L, [(0.008, -0.008), (0.006, 0.008)], 0.0035, False)),
-        lambda: m_line(L, [(-0.01, -0.006), (0, 0.004), (0.004, -0.008)], 0.0038, False),
-        lambda: m_line(L, [(-0.012, -0.004), (-0.004, 0.004), (0, -0.002), (0.004, 0.004), (0.012, -0.004)], 0.0035, False),
-        lambda: (m_line(L, [(-0.02, 0.0), (0.006, 0.0)], 0.004, False), m_line(L, [(0.01, -0.006), (0.018, 0.004)], 0.0035, False)),
-        lambda: m_line(L, [(-0.009, -0.004), (0, 0.005), (0.009, -0.004)], 0.0038, False),
-        lambda: m_line(L, wave(-0.018, 0.018, 0.0025, 2)),
-    ][c](),
-}
-for r in range(1, 10):
-    for c in range(7):
-        MOUTHS[f"G{r}.{c + 1}"] = _G[r](c)
 
 
 # talk frames (David, 2026-09-30: "Bigger talk shapes"): larger open mouths while talking, in the picks' own style
@@ -486,21 +347,24 @@ EXTRAS = {   # kind, mirrored
 # ================================================================ expressions, blink, talk (engine data)
 # Expression = which eye / mouth cell it forces (null = the look's own) + the brow pose: dy (canvas units, + down)
 # and tilt (degrees, + raises the inner end, toward the nose). Six per row 144, eyes and mouths from the picks.
+# After the wardrobe cut the forced parts are David's (set 305, the atlas's second page): happy is his face 7 (relieved
+# shut eyes, open smile), surprised gasps, sad wears his small frown, sleepy his sleepy eyes.
 EXPRESSIONS = {
     "neutral": {"eyes": None, "eyeFrame": "open", "mouth": None, "brow": [0.0, 0.0]},
-    "happy": {"eyes": "E8.1", "eyeFrame": "open", "mouth": "M2.1", "brow": [-0.014, 0.0]},
-    "surprised": {"eyes": None, "eyeFrame": "open", "mouth": "M6.1", "brow": [-0.03, 0.0]},
-    "sad": {"eyes": None, "eyeFrame": "half", "mouth": "M4.3", "brow": [-0.006, 14.0]},
+    "happy": {"eyes": "relieved", "eyeFrame": "open", "mouth": "open_smile", "brow": [-0.014, 0.0]},
+    "surprised": {"eyes": None, "eyeFrame": "open", "mouth": "gasp", "brow": [-0.03, 0.0]},
+    "sad": {"eyes": None, "eyeFrame": "half", "mouth": "small_frown", "brow": [-0.006, 14.0]},
     "angry": {"eyes": None, "eyeFrame": "open", "mouth": "M2.2", "brow": [0.012, -18.0]},
-    "sleepy": {"eyes": "E1.6", "eyeFrame": "open", "mouth": "M3.1", "brow": [0.008, 4.0]},
+    "sleepy": {"eyes": "sleepy", "eyeFrame": "open", "mouth": "M3.1", "brow": [0.008, 4.0]},
 }
 BLINK = {"interval": [2.0, 6.0], "frames": [["half", 0.04], ["closed", 0.07], ["half", 0.04]]}
 TALK = {"frames": list(TALK_CELLS), "rate": 9.0,
         "note": "while talking the mouth steps through these cells (layers.talk, larger open mouths) and the look's own "
                 "resting mouth about 9 times a second, picked at random so it never loops visibly; chat bubbles and "
                 "resident dialogue drive it"}
-EMOTE_MOUTH = {"Laugh": {"frames": ["M2.1", "G1.1"], "rate": 7.0}, "Cheer": {"frames": ["M2.1", "G2.1"], "rate": 4.0},
-               "Dance": {"frames": ["M2.1", "G1.3"], "rate": 3.0}}
+# Laugh and Cheer open wide (David's open smile and gasp), Dance bops between the open smile and his little v.
+EMOTE_MOUTH = {"Laugh": {"frames": ["open_smile", "gasp"], "rate": 7.0}, "Cheer": {"frames": ["open_smile", "gasp"], "rate": 4.0},
+               "Dance": {"frames": ["open_smile", "little_v"], "rate": 3.0}}
 
 # ================================================================ row 301 set (face_set_301.py): appended, packed apart
 import face_set_301  # noqa: E402
@@ -538,7 +402,7 @@ for eid in EYE_ORDER:
 for bid, fn in BROWS.items():
     cells[("brows", bid, None)] = render("brow", fn)
 for mid, fn in MOUTHS.items():
-    cells[("mouth", mid, None)] = render("mouth_wide" if mid in SET_MOUTHS else "mouth", fn)
+    cells[("mouth", mid, None)] = render("mouth", fn)
 for tid, fn in TALK_CELLS.items():
     cells[("talk", tid, None)] = render("mouth", fn)
 for xid, (kind, _, fn) in EXTRAS.items():
@@ -639,6 +503,12 @@ for key in P2_KEYS:
 atlas2 = bleed(atlas2, GUTTER)
 save_png("V7FaceAtlas2", atlas2, os.path.join(OUT, "v7_face_atlas_2.png"))
 save_png("V7FaceAtlas2_512", half_size(atlas2), os.path.join(OUT, "v7_face_atlas_2_512.png"))
+
+
+_MOUTHS = {k[1] for k in cells if k[0] == "mouth"}
+_EYES = {k[1] for k in cells if k[0] == "eyes"}
+assert all((e["eyes"] is None or e["eyes"] in _EYES) and (e["mouth"] is None or e["mouth"] in _MOUTHS) for e in EXPRESSIONS.values())
+assert all(f in _MOUTHS for m in EMOTE_MOUTH.values() for f in m["frames"])
 
 
 def rect(key):

@@ -34,7 +34,7 @@ export interface FaceOverride { expression?: Expression; eyeFrame?: EyeFrame; mo
 
 const DEPTH: Record<EyeFrame, number> = { open: 0, half: 1, closed: 2 };
 const eyeCells = (id: string) => FACE.layers.eyes.items[id] ?? FACE.layers.eyes.items[FACE.layers.eyes.default];
-/** An eye style that has blink frames (lidded eyes; the shut ones like E8.1 and "> <" E6.1 do not). */
+/** An eye style that has blink frames (the lidded F eyes; the shut and drawn ones like sleepy_lash and David's do not). */
 export const canBlink = (eyes: string) => !!eyeCells(eyes).closed;
 
 /** The resting face of an expression on a look: its eyes (or the look's), frame and mouth. */

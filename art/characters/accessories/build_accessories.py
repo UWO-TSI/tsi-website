@@ -1,5 +1,7 @@
-"""Accessory library (deliverable 3): round + square glasses, beanie, sun hat, cap, backpack, shoulder bag, scarf;
-pass 2: the crafted straw hat, flower crown, crystal circlet and shell necklace (`item` = their economy slug).
+"""Accessory library (deliverable 3): round + square glasses, sun hat, cap, backpack, shoulder bag;
+pass 2: the crafted straw hat, flower crown, crystal circlet and shell necklace (`item` = their economy slug); the
+Halloween costume closet's witch hat and cat ears. The beanie, scarf, pumpkin head and vampire cape were cut (David's
+wardrobe cut, playtest round 1, 2026-10-14).
 
   /Applications/Blender.app/Contents/MacOS/Blender -b -P art/characters/accessories/build_accessories.py
 
@@ -203,20 +205,6 @@ def hat_rows(edge, *band, span=15.0, low=None):
     return rows
 
 
-@part("acc_beanie", "accessory", "Beanie", {"M_Main": ("outfit", 7), "M_Accent": ("outfit", 0), "M_Hair": ("hair", None)},
-      sharp=45, hidesBackHair=True, group="head")
-def beanie(pc):
-    """Snug knit cap pulled down over the hair: a folded brim standing 1 cm proud of a crown that hugs the hair,
-    small pompom."""
-    edge = lambda lon: 10 + 12 * math.cos(math.radians(lon))
-    fold = lambda lat, lon, ri: 0.016 if ri < 2 else 0.008
-    dome(pc, edge, hat_rows(edge, 13, 15, low=-2), fold)
-    pc.mat = "M_Accent"
-    pc.blob(hair_point(90, 0, hat_in(90) + 0.008) + Vector((0, 0, 0.018)), 0.026, segs=6, rings=4)
-    pc.mat = "M_Main"
-    tuck(pc, edge)
-
-
 @part("acc_sunhat", "accessory", "Sun hat", {"M_Main": ("outfit", 0), "M_Accent": ("outfit", 8), "M_Hair": ("hair", None)},
       sharp=40, hidesBackHair=True, group="head")
 def sunhat(pc):
@@ -359,16 +347,6 @@ def shoulder_bag(pc):
     pc.mat = "M_Main"
 
 
-@part("acc_scarf", "accessory", "Scarf", {"M_Main": ("outfit", 9)}, sharp=50, group="neck")
-def scarf(pc):
-    pc.region = "torso"
-    loop = [Vector((math.sin(a) * 0.118, 0.004 - math.cos(a) * 0.098, 0.526 - 0.008 * math.cos(a)))
-            for a in (math.tau * k / 10 for k in range(10))]
-    pc.tube(loop, [(0.024, 0.018)] * 10, sides=6, closed_loop=True, up=Vector((0, 0, 1)))
-    pc.blob(T(22, 0.512, CL + 0.035), (0.03, 0.022, 0.026), segs=6, rings=4)
-    pc.tube([T(24, 0.5, CL + 0.03), T(27, 0.455, CL + 0.024), T(29, 0.405, CL + 0.02)], [(0.007, 0.024)] * 3, sides=4, tip=False)
-
-
 @part("acc_shell_necklace", "accessory", "Shell necklace", {"M_Main": ("outfit", 9), "M_Accent": ("outfit", 5), "M_Trim": ("outfit", 15)},
       sharp=50, group="neck", item="acc-shell-necklace")
 def shell_necklace(pc):
@@ -441,72 +419,6 @@ def cat_ears(pc):
             cen = (a + b + c0 + t) / 4                     # a closed little pyramid: every face looks away from its middle
             for tri in ([va, vb, vt], [vb, vc, vt], [vc, va, vt], [va, vc, vb]):
                 pc.f(tri, cen)
-    pc.mat = "M_Main"
-
-
-@part("acc_pumpkin_head", "accessory", "Pumpkin head", {"M_Main": ("outfit", 7), "M_Accent": ("fixed", "#3B2114"), "M_Trim": ("outfit", 3)},
-      sharp=40, hidesBackHair=True, hides=["bangs"], group="head", event="halloween", encloses=True)
-def pumpkin_head(pc):
-    """A carved pumpkin over the whole head, ribbed, a stem on top, the face cut in dark on the front; open under the chin."""
-    pc.region = "head"
-    reach = max((hair_point(la, lo, hair_vol(la) + 0.012) - HC).length for la in range(-60, 91, 10) for lo in range(0, 360, 30))
-    rx, rz = reach * 1.06, reach * 1.0
-    n = 16
-    rings = []
-    for k, lat in enumerate((-58, -40, -20, 0, 20, 40, 60, 78)):
-        la = math.radians(lat)
-        ring = []
-        for j in range(n):
-            lo = math.tau * j / n
-            rib = 1 - 0.06 * (0.5 + 0.5 * math.cos(lo * 8))
-            ring.append(HC + Vector((math.sin(lo) * math.cos(la) * rx * rib, -math.cos(lo) * math.cos(la) * rx * rib, math.sin(la) * rz - 0.01)))
-        rings.append(ring)
-    n0 = pc.mark()
-    # Closed under the chin too (round the neck, inside the shell): no open edge.
-    pc.band(rings, caps=(HC + Vector((0, 0, math.sin(math.radians(-62)) * rz)), HC + Vector((0, 0, rz * 0.97))))
-    pc.thicken(pc.since(n0), lambda v: HC + (v.co - HC) * 0.97)
-    pc.mat = "M_Trim"
-    stem = HC + Vector((0, 0, rz * 0.95))
-    pc.tube([stem, stem + Vector((0.006, 0.004, 0.04)), stem + Vector((0.016, 0.01, 0.06))], [0.016, 0.013, 0.01], sides=5, tip=False)
-    pc.mat = "M_Accent"
-    n_face = pc.mark()
-    front = lambda x, z: HC + Vector((x, -math.sqrt(max(rx * rx * (1 - (z / rz) ** 2) - x * x, 1e-6)) - 0.003, z))
-    for sx in (1, -1):
-        tri = [front(sx * 0.02, 0.012), front(sx * 0.07, 0.012), front(sx * 0.045, 0.05)]
-        pc.f([pc.v(p) for p in (tri if sx > 0 else tri[::-1])], HC)
-    grin = [front(x, z) for x, z in ((-0.075, -0.03), (-0.04, -0.05), (-0.02, -0.04), (0.0, -0.055), (0.02, -0.04), (0.04, -0.05),
-                                     (0.075, -0.03), (0.035, -0.075), (0.0, -0.082), (-0.035, -0.075))]
-    mid = pc.v(front(0.0, -0.06))
-    vs = [pc.v(p) for p in grin]
-    for k in range(len(vs)):
-        pc.f([vs[k], vs[(k + 1) % len(vs)], mid], HC)
-    pc.thicken(pc.since(n_face), lambda v: HC + (v.co - HC) * 0.994)       # the carving as thin closed solids
-    pc.mat = "M_Main"
-
-
-@part("acc_vampire_cape", "accessory", "Vampire cape", {"M_Main": ("outfit", 14), "M_Accent": ("fixed", "#8E2F3A")}, sharp=45, group="neck",
-      event="halloween")
-def vampire_cape(pc):
-    """A high stiff collar standing up round the back of the neck, red inside, and a short black cape down the back to
-    the waist, flaring a little (short, so a running leg never swings through it)."""
-    pc.region = "torso"
-    lons = list(range(80, 281, 20))
-    # the cape: rows from the shoulders down the back, flaring out
-    rows = []
-    for k, z in enumerate((0.535, 0.49, 0.44, 0.39, 0.35)):
-        flare = 0.012 + 0.03 * k / 4
-        rows.append([T(l, z, CL + flare) for l in lons])
-    zs = (0.535, 0.49, 0.44, 0.39, 0.35)
-    n0 = pc.mark()
-    pc.band(rows, closed=False, refs=[Vector((0, 0, (zs[i] + zs[i + 1]) / 2)) for i in range(len(rows) - 1)])   # outward, off the body
-    pc.thicken(pc.since(n0), lambda v: v.co - kit.torso_out(v.co) * 0.006)
-    # the collar: two rows standing up and out behind the neck
-    pc.mat = "M_Accent"
-    clons = list(range(110, 251, 14))
-    collar = [[T(l, 0.54, CL + 0.012) for l in clons], [T(l, 0.6, CL + 0.03) + kit.torso_out(T(l, 0.6, CL)) * 0.02 for l in clons]]
-    n1 = pc.mark()
-    pc.band(collar, closed=False, refs=[Vector((0, 0, 0.57))])
-    pc.thicken(pc.since(n1), lambda v: v.co - kit.torso_out(v.co) * 0.005)
     pc.mat = "M_Main"
 
 
