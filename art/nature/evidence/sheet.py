@@ -8,13 +8,14 @@
 
 The in-game dir holds before/ and after/ (<target>.<season>.png). Writes <out-dir>/<asset id>.webp.
 """
-import json, os, struct, sys
+import json, os, struct, subprocess, sys
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
 PUB = os.path.join(ROOT, "web", "public")
 TT_OLD, TT_NEW, IG, OUT = sys.argv[1:5]
 T = 230  # tile
+BEFORE = "216632dd"  # the commit the remodel started from
 BG, INK, MUTED, RULE = (244, 239, 227), (52, 44, 36), (120, 108, 92), (214, 202, 178)
 
 
@@ -29,7 +30,9 @@ F_T, F_H, F_L = font(26, True), font(18, True), font(14)
 
 
 def stats(url):
-    b = open(os.path.join(PUB, url.lstrip("/")), "rb").read()
+    path = os.path.join(PUB, url.lstrip("/"))
+    # A dump file this lane removed is read from before the remodel.
+    b = open(path, "rb").read() if os.path.exists(path) else subprocess.run(["git", "-C", ROOT, "show", f"{BEFORE}:web/public/{url.lstrip('/')}"], capture_output=True, check=True).stdout
     jl = struct.unpack_from("<I", b, 12)[0]
     g = json.loads(b[20:20 + jl])
     tris = prims = 0
@@ -74,7 +77,7 @@ class Sheet:
 
     def row(self, tiles, gap=6, label=None):
         h = max(t.height for t in tiles)
-        lw = 120 if label is not None else 0
+        lw = 170 if label is not None else 0
         im = Image.new("RGB", (self.w, h + gap), BG)
         if label:
             d = ImageDraw.Draw(im)
@@ -131,7 +134,7 @@ old = [f"/assets/acnh/plants/{OLD_BUSH[s][i]}.glb" for s in SEASONS for i in (0,
 new = [f"/assets/game/plants/bush-{sh}-{s}.glb" for s in SEASONS for sh in ("a", "b")]
 far = [u.replace(".glb", ".lod1.glb") for u in new]
 names = [f"{s} {sh}" for s in SEASONS for sh in ("a", "b")]
-sh = Sheet(16 + 120 + 8 * (T + 6) + 16)
+sh = Sheet(16 + 170 + 8 * (T + 6) + 16)
 sh.text("Bushes: closed rounded volume, four seasons (ours) vs the dump's one-sided leaf shells", F_T)
 sh.text(cost_line(old, new) + f"  Far LOD: {min(stats(u)[0] for u in far)}-{max(stats(u)[0] for u in far)} tris.", F_L, colour=MUTED)
 sh.text("Each column is the model a bush with that seed draws in that season (shape a: round dome, b: low wide mound; the dump repeated one model).", F_L, colour=MUTED)
@@ -152,7 +155,7 @@ if "bushes-only" in sys.argv:
 # ---------------------------------------------------------------- rocks
 old = [f"/assets/acnh/props/rock-{k}.glb" for k in "abcde"]
 new = [f"/assets/game/rocks/stone-{k}.glb" for k in "abcde"]
-sh = Sheet(16 + 120 + 5 * (T + 6) + 16 + 200)
+sh = Sheet(16 + 170 + 5 * (T + 6) + 16 + 200)
 sh.text("ACNH boulders (rock-a to rock-e): our worn stones, sized to the same footprints", F_T)
 sh.text(cost_line(old, new), F_L, colour=MUTED)
 turntable_rows(sh, old, new, [f"rock-{k}" for k in "abcde"], [f"stone-{k}" for k in "abcde"])
@@ -163,7 +166,7 @@ sh.save(os.path.join(OUT, "acnh-boulders.webp"))
 # ---------------------------------------------------------------- mushrooms
 old = ["/assets/nature/mushroom_red.glb", "/assets/nature/mushroom_tan.glb", "/assets/nature/mushroom_red.glb"]
 new = [f"/assets/game/forage/mushroom-{k}.glb" for k in ("round", "flat", "skinny")]
-sh = Sheet(16 + 120 + 3 * (T + 6) + 16 + 400)
+sh = Sheet(16 + 170 + 3 * (T + 6) + 16 + 400)
 sh.text("Forage mushrooms: rounded clusters, one per species, in place of the Kenney cones", F_T)
 sh.text(cost_line(old[:2], new) + "  Shown at 0.5 before, at true size now.", F_L, colour=MUTED)
 sh.text("Before, a node showed red or tan by its position, whatever the species; now each species shows its own (the bag item's colours).", F_L, colour=MUTED)
@@ -176,7 +179,7 @@ sh.save(os.path.join(OUT, "forage-mushrooms.webp"))
 keys = ("asari", "scallop", "turban", "whelk")
 old = [f"/assets/acnh/props/shell-{k}.glb" for k in keys]
 new = [f"/assets/game/forage/shell-{k}.glb" for k in keys]
-sh = Sheet(16 + 120 + 4 * (T + 6) + 16 + 200)
+sh = Sheet(16 + 170 + 4 * (T + 6) + 16 + 200)
 sh.text("Beach shells: our own clam, scallop, turban and whelk", F_T)
 sh.text(cost_line(old, new), F_L, colour=MUTED)
 turntable_rows(sh, old, new, list(keys), list(keys))
@@ -188,7 +191,7 @@ sh.save(os.path.join(OUT, "shells.webp"))
 keys = ("gazami", "hermit")
 old = [f"/assets/acnh/props/crab-{k}.glb" for k in keys]
 new = [f"/assets/game/shore/crab-{k}.glb" for k in keys]
-sh = Sheet(16 + 120 + 2 * (T + 6) + 16 + 500)
+sh = Sheet(16 + 170 + 2 * (T + 6) + 16 + 500)
 sh.text("Beach crabs: our gazami and hermit crab, same frame, size and behaviour", F_T)
 sh.text(cost_line(old, new), F_L, colour=MUTED)
 turntable_rows(sh, old, new, list(keys), list(keys))
