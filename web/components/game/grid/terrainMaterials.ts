@@ -28,9 +28,13 @@ import { addCutout } from "@/lib/game/occluders";
 import { addCliffStone } from "@/lib/game/cliffStone";
 import { getGrassTexture } from "@/lib/game/grassTexture";
 import { GRASS_COLOR, WATER_DROP } from "@/lib/game/grid";
-import { FOAM_RING_MAX, GLASS_WATER, SHORE_FROM_FIELD, UNDERWATER, UNDERWATER_UNIFORMS, WATER_DEPTH_RAMP, WATER_RIPPLE, bedDepth, waterMaterial, waterUniforms, writeWaterUniforms, type WaterParams } from "@/lib/game/waterShader";
+import { FOAM_RING_MAX, GLASS_WATER, SHORE_FROM_FIELD, SWELL_TUNING, UNDERWATER, UNDERWATER_UNIFORMS, WATER_DEPTH_RAMP, WATER_RIPPLE, bedDepth, waterMaterial, waterUniforms, writeWaterUniforms, type SeaKind, type WaterParams } from "@/lib/game/waterShader";
 import { foamRings } from "@/lib/game/foamRings";
 import { TUNING_DEFAULTS } from "@/lib/game/tuning";
+import { WAVE_LITE, WAVE_MAX, advanceWaves } from "@/lib/game/waves";
+import { mirrorWaterField, mirroredDepth, type FieldGrid } from "@/lib/game/waterField";
+import { bakeWaveCalm } from "@/lib/game/seabed";
+import type { ShoreSdf } from "@/lib/game/grid";
 
 const TEX_DIR = "/assets/acnh/terrain/";
 
@@ -175,6 +179,22 @@ const MATCH_KEYS = [...Object.keys(TEXTURE_FOR), ...PROCEDURAL].sort((a, b) => b
 
 function matchKey(name: string): string | null {
   return MATCH_KEYS.find((k) => name.includes(k)) ?? null;
+}
+
+/**
+ * The water's material for a sea (lib/game/waterShader.ts SeaKind): the waves' is the shared "mRiver" one; main's swell,
+ * for every world that doesn't opt in to the waves (the applicant island first), its own, cached beside it.
+ */
+export function waterSurfaceMaterial(sea: SeaKind): THREE.Material {
+  if (sea === "waves") return terrainMaterial("mRiver")!;
+  if (!cache) cache = new Map();
+  let mat = cache.get("mRiver:swell");
+  if (!mat) {
+    mat = waterMaterial(waterUniformBlock, "swell");
+    mat.name = "terrain:mRiver:swell";
+    cache.set("mRiver:swell", mat);
+  }
+  return mat;
 }
 
 export function terrainMaterial(name: string): THREE.Material | null {
@@ -352,6 +372,9 @@ const waterUniformBlock = {
   uShoreMap: { value: null as THREE.Texture | null },
   /** World rect the field covers: (minX, minZ, sizeX, sizeZ). */
   uShoreRect: { value: new THREE.Vector4(0, 0, 1, 1) },
+  /** The waves' calm (lib/game/seabed.ts bakeWaveCalm), a unit a texel, and the world rect it covers. */
+  uCalmMap: { value: null as THREE.Texture | null },
+  uCalmRect: { value: new THREE.Vector4(0, 0, 1, 1) },
   uCloudMap: { value: null as THREE.Texture | null },
   uCloudUv: { value: new THREE.Vector4() },
   uCloudShade: { value: 0 },
@@ -395,6 +418,8 @@ export function setShoreField(f: {
   data: Float32Array;
   /** The seabed's depth at each sample (lib/game/seabed.ts bakeWaterDepth); without it, the profile of the distance alone. */
   depth?: Float32Array;
+  /** The waves' calm (lib/game/seabed.ts bakeWaveCalm, with the map's berths); without it, the open sea and the rivers alone. */
+  calm?: FieldGrid;
   width: number;
   height: number;
   minX: number;
@@ -402,12 +427,17 @@ export function setShoreField(f: {
   sizeX: number;
   sizeZ: number;
 }): void {
-  // Two channels: red the distance to the shore, green how deep the seabed lies (the water's colour reads it).
-  const half = new Uint16Array(f.data.length * 2);
+  // Two channels: red the distance to the shore, green how deep the seabed lies (the water's colour and the waves read it).
+  const half = new Uint16Array(f.data.length * 2), depth = new Float32Array(f.data.length);
   for (let i = 0; i < f.data.length; i++) {
     half[i * 2] = THREE.DataUtils.toHalfFloat(f.data[i]);
     half[i * 2 + 1] = THREE.DataUtils.toHalfFloat(f.depth ? f.depth[i] : f.data[i] > 0 ? bedDepth(f.data[i], TUNING_DEFAULTS.water) : 0);
+    // The CPU's copy as the GPU holds it (half floats), for what floats on the waves (lib/game/waterField.ts).
+    depth[i] = THREE.DataUtils.fromHalfFloat(half[i * 2 + 1]);
   }
+  const calm = f.calm ?? bakeWaveCalm({ ...f, scale: f.width / f.sizeX } as ShoreSdf);
+  setCalmField(calm);
+  mirrorWaterField({ data: depth, width: f.width, height: f.height, minX: f.minX, minZ: f.minZ, sizeX: f.sizeX, sizeZ: f.sizeZ }, calmMirror);
   const tex = new THREE.DataTexture(half, f.width, f.height, THREE.RGFormat, THREE.HalfFloatType);
   tex.minFilter = THREE.LinearFilter;
   tex.magFilter = THREE.LinearFilter;
@@ -421,18 +451,38 @@ export function setShoreField(f: {
   waterUniformBlock.uShoreRect.value.set(f.minX, f.minZ, f.sizeX, f.sizeZ);
 }
 
+/** The waves' calm as an 8-bit texture (it is smooth and 0..1), and the CPU's copy of what the GPU reads from it. */
+let calmMirror: FieldGrid | null = null;
+function setCalmField(c: FieldGrid): void {
+  const bytes = new Uint8Array(c.data.length), seen = new Float32Array(c.data.length);
+  for (let i = 0; i < c.data.length; i++) { bytes[i] = Math.round(Math.min(1, Math.max(0, c.data[i])) * 255); seen[i] = bytes[i] / 255; }
+  const tex = new THREE.DataTexture(bytes, c.width, c.height, THREE.RedFormat, THREE.UnsignedByteType);
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.unpackAlignment = 1;
+  tex.needsUpdate = true;
+  waterUniformBlock.uCalmMap.value?.dispose();
+  waterUniformBlock.uCalmMap.value = tex;
+  waterUniformBlock.uCalmRect.value.set(c.minX, c.minZ, c.sizeX, c.sizeZ);
+  calmMirror = { ...c, data: seen };
+}
+
 /**
  * After an edit (the world editor, specs/world-editor.md): rewrite rows j0..j1 of the field already up (the same size
- * as `f`) and upload it again, rather than building a new texture. False when there is none of that size.
+ * as `f`) and upload it again, rather than building a new texture. False when there is none of that size. The waves'
+ * calm keeps what it was baked with (a brush stroke rarely opens a river to the sea).
  */
 export function patchShoreField(f: { data: Float32Array; depth: Float32Array; width: number; height: number }, j0: number, j1: number): boolean {
   const tex = waterUniformBlock.uShoreMap.value as THREE.DataTexture | null;
   if (!tex || tex.image.width !== f.width || tex.image.height !== f.height) return false;
-  const half = tex.image.data as Uint16Array;
+  const half = tex.image.data as Uint16Array, mirror = mirroredDepth();
   for (let j = Math.max(0, j0); j <= Math.min(f.height - 1, j1); j++) for (let i = 0; i < f.width; i++) {
     const k = j * f.width + i;
     half[k * 2] = THREE.DataUtils.toHalfFloat(f.data[k]);
     half[k * 2 + 1] = THREE.DataUtils.toHalfFloat(f.depth[k]);
+    if (mirror && mirror.data.length === f.data.length) mirror.data[k] = THREE.DataUtils.fromHalfFloat(half[k * 2 + 1]);
   }
   tex.needsUpdate = true;
   return true;
@@ -446,9 +496,18 @@ export function patchShoreField(f: { data: Float32Array; depth: Float32Array; wi
  * WORLD space and used as is: the water mirrors the real light, and each
  * viewer's own camera decides what reaches their eye (row 238). `sunColor`
  * tints it (a warm white by day, gold at golden hour). `sky`: the scene's sky overhead and at the horizon, which the
- * water mirrors (fresnel) and hazes into far off.
+ * water mirrors (fresnel) and hazes into far off. `lite`: Lite's fewer wave trains (lib/game/waves.ts WAVE_LITE).
+ * `sea`: the world's sea (waterShader.ts SeaKind); main's swell runs on main's tuning (SWELL_TUNING) and no wave table.
  */
-export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE.Vector3, sunColor?: THREE.Color, sky?: { zenith: THREE.Color; horizon: THREE.Color }): void {
+export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE.Vector3, sunColor?: THREE.Color, sky?: { zenith: THREE.Color; horizon: THREE.Color }, lite = false, sea: SeaKind = "waves"): void {
+  seaNow = sea;
+  if (sea === "waves") {
+    // The waves' table this frame, from the world clock: the CPU's (liveWaves, what floats reads) and the shader's, the same numbers.
+    const waves = advanceWaves(cfg, elapsed, lite ? WAVE_LITE : WAVE_MAX);
+    const a = waterUniformBlock.uWaveA.value, b = waterUniformBlock.uWaveB.value, tb = waves.table;
+    for (let i = 0; i < WAVE_MAX; i++) { a[i].fromArray(tb, i * 8); b[i].fromArray(tb, i * 8 + 4); }
+    waterUniformBlock.uWaveCount.value = waves.count;
+  } else waterUniformBlock.uWaveCount.value = 0;
   waterUniformBlock.uRippleStrength.value = cfg.rippleStrength ?? 0;
   if (cfg.rippleStrength && !waterUniformBlock.uRippleTexture.value) {
     waterUniformBlock.uRippleTexture.value = loadTexture(new THREE.TextureLoader(), "mSeaWater_Nrm.png", TEX_DIR, THREE.NoColorSpace);
@@ -456,7 +515,11 @@ export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE
   }
   waterUniformBlock.uTime.value = elapsed;
   // cfg changes with phase, weather or season; the bench hands a fresh copy per frame.
-  if (cfg !== written) writeWaterUniforms(waterUniformBlock, written = cfg);
+  if (cfg !== written || sea !== writtenSea) {
+    writeWaterUniforms(waterUniformBlock, sea === "swell" ? { ...cfg, ...SWELL_TUNING } : cfg);
+    written = cfg;
+    writtenSea = sea;
+  }
   if (sunWorld) waterUniformBlock.uSunDir.value.copy(sunWorld).normalize();
   if (sunColor) waterUniformBlock.uSunColor.value.copy(sunColor).lerp(WHITE, 0.2);
   // The sky the water mirrors and hazes into (v1 water item 4): the scene's own, per phase and weather.
@@ -464,6 +527,10 @@ export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE
 }
 const WHITE = new THREE.Color(1, 1, 1);
 let written: WaterParams | null = null;
+let writtenSea: SeaKind = "waves";
+/** The sea the water was last advanced as (advanceWater, every frame): what rides it picks its shader by it (moveFx). */
+let seaNow: SeaKind = "waves";
+export const activeSea = (): SeaKind => seaNow;
 
 /** The live water uniforms, for layers that ride the same surface and sun (the glint sprites). */
 export const waterSurfaceUniforms = (): Record<string, THREE.IUniform> => waterUniformBlock;

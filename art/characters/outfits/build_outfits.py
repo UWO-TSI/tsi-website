@@ -1,5 +1,6 @@
-"""Outfit library (deliverable 3): 8 tops, 6 bottoms, 4 one-pieces (+ the hood-up variant) and 6 shoes; pass 2: the
-crafted silk sweater (top), monarch cape and koi kimono (one-pieces), `item` = their economy slug.
+"""Outfit library (deliverable 3): 8 tops, 6 bottoms, the sundress and 6 shoes; pass 2: the crafted silk sweater (top),
+monarch cape and koi kimono (one-pieces), `item` = their economy slug. The rain-cape, robe and jumpsuit were cut
+(David's wardrobe cut, playtest round 1, 2026-10-14).
 
   /Applications/Blender.app/Contents/MacOS/Blender -b -P art/characters/outfits/build_outfits.py
 
@@ -342,57 +343,6 @@ def long_skirt(pc):
 
 
 # ================================================================ one-pieces
-HOOD_L = [0, 35, 70, 105, 140, 180, -140, -105, -70, -35, 0]
-HOOD_ROWS = [-62, -25, 8, 34, 64]           # the face opening runs up to lat 34, so the brim sits on the bangs
-
-
-def raincape(pc, hood_up):
-    """#18 hooded rain-cape dress: a bell in eight big panels, wide sleeves, pink underskirt, hood up or down."""
-    pc.region = "skirt"
-    prof = [(Z_NECK + 0.006, 0.105, 0.082, 0.006), (Z_SH - 0.004, 0.148, 0.114, 0.004), (0.4, 0.157, 0.136, 0.0),
-            (0.31, 0.163, 0.162, 0.0), (0.205, 0.198, 0.2, 0.0)]
-    rings = [[oval(l, z, rx, ry, cy) for l in P8] for z, rx, ry, cy in prof]
-    rings[-1] = [p + Vector((0, 0, 0.008 * (-1) ** k)) for k, p in enumerate(rings[-1])]
-    pc.band(rings)
-    pc.mat = "M_Accent"
-    pc.band([[oval(l, z, rx, ry) for l in P8] for z, rx, ry in ((0.222, 0.172, 0.16), (0.186, 0.182, 0.17))])
-    pc.mat = "M_Main"
-    sleeves(pc, [X0 * 0.85, X0 + 0.05, 0.215, 0.256], [0.018, 0.022, 0.02, 0.014])
-    if not hood_up:
-        hood_down(pc, CL + 0.03)
-        return
-    pc.region = "hood"
-    offs = (0.066, 0.078, 0.084, 0.086, 0.086)
-    pc.patch(HOOD_L, lambda lon: HOOD_ROWS, lambda lat, lon, ri: offs[ri],
-             skip=lambda i, r: max(abs(HOOD_L[i]), abs(HOOD_L[i + 1])) <= 70 and r < 3)
-    # rim lip: the face opening's edge folds inward, so the hood reads thick like #18
-    edge = [(r, 70) for r in HOOD_ROWS[:4]] + [(HOOD_ROWS[3], l) for l in (35, 0, -35)] + [(r, -70) for r in HOOD_ROWS[3::-1]]
-    ri = {r: i for i, r in enumerate(HOOD_ROWS)}
-    pc.band([[kit.hair_point(la, lo, offs[ri[la]]) for la, lo in edge], [kit.hair_point(la, lo, offs[ri[la]] - 0.022) for la, lo in edge]],
-            closed=False, refs=[kit.HC + Vector((0, 0.3, 0))])
-    top = [kit.hair_point(HOOD_ROWS[-1], l, offs[-1]) for l in HOOD_L[:-1]]
-    apex = kit.hair_point(84, 180, 0.12)
-    vs = [pc.v(p) for p in top]
-    a = pc.v(apex)
-    for k in range(len(vs)):
-        pc.f([vs[k], vs[(k + 1) % len(vs)], a], kit.HC)
-    trunk(pc, [Z_NECK - 0.006, Z_NECK + 0.024], [CL + 0.022, CL + 0.014], region="hood")
-
-
-CAPE_MATS = {"M_Main": ("outfit", 10), "M_Accent": ("outfit", 8)}
-
-
-@part("onepiece_raincape", "onepiece", "Hooded rain-cape dress (#18)", CAPE_MATS, sharp=34, grad=(0.72, 1.0), hides=("top", "bottom"))
-def raincape_down(pc):
-    raincape(pc, False)
-
-
-@part("onepiece_raincape_hood", "onepiece", "Hooded rain-cape dress, hood up (#18)", CAPE_MATS, sharp=30, grad=(0.72, 1.0),
-      hides=("top", "bottom"), hidesBackHair=True, variantOf="onepiece_raincape")
-def raincape_up(pc):
-    raincape(pc, True)
-
-
 @part("onepiece_sundress", "onepiece", "Sundress", {"M_Main": ("outfit", 9), "M_Accent": ("outfit", 1)}, hides=("top", "bottom"))
 def sundress(pc):
     trunk(pc, [B.WAIST - 0.006, 0.4, 0.452], [CL + 0.001, CL, CL])
@@ -407,37 +357,6 @@ def sundress(pc):
     for s in (1, -1):
         path = [(30, 0.448), (36, 0.49), (46, 0.522), (90, 0.532), (134, 0.522), (144, 0.49), (150, 0.448)]
         strip(pc, [T(s * l, z, CL + 0.002) for l, z in path], 0.014)
-
-
-@part("onepiece_robe", "onepiece", "Robe", {"M_Main": ("outfit", 12), "M_Accent": ("outfit", 0), "M_Trim": ("outfit", 6)},
-      hides=("top", "bottom"))
-def robe(pc):
-    low = {0.06: (0.2, 0.172), 0.17: (0.178, 0.152), 0.28: (0.152, 0.13)}
-    offs = {B.WAIST: CL + 0.012, Z_CHEST: CL + 0.012, Z_SH: CL + 0.011, Z_NECK: CL + 0.009}
-    pt = lambda l, z: oval(l, z, *low[z]) if z in low else T(l, z, offs[z])
-    zs = [0.06, 0.17, 0.28, B.WAIST, Z_CHEST, Z_SH, Z_NECK]
-    pc.mat, pc.region = "M_Accent", "torso"
-    pc.band([[T(l, z, CL) for l in (-28, -14, 0, 14, 28)] for z in (0.37, 0.42, Z_SH, Z_NECK)], closed=False)
-    pc.mat = "M_Main"
-    open_front(pc, pt, zs, lambda z: 0.0 if z <= 0.37 else 26 * ((z - 0.37) / (Z_NECK - 0.37)) ** 0.8, region="skirt")
-    pc.mat = "M_Trim"
-    trunk(pc, [0.312, 0.35], CL + 0.017)
-    pc.mat = "M_Main"
-    sleeves(pc, [X0 * 0.8, X0 + 0.03, 0.2, 0.25], [0.02, 0.022, 0.032, 0.044])
-
-
-@part("onepiece_jumpsuit", "onepiece", "Jumpsuit", {"M_Main": ("outfit", 3), "M_Accent": ("outfit", 5)}, hides=("top", "bottom"))
-def jumpsuit(pc):
-    trunk(pc, [B.WAIST - 0.012, Z_CHEST, Z_SH, Z_NECK], [CL + 0.006, CL + 0.006, CL + 0.005, CL + 0.004])
-    seat(pc, B.WAIST - 0.012, (CL + 0.004, CL + 0.007, CL + 0.006))
-    legs(pc, [0.045, 0.12, 0.2, B.CROTCH + 0.02], [CL + 0.01, CL + 0.008, CL + 0.007, CL + 0.002])
-    sleeves(pc, [X0 * 0.8, X0 + 0.055], [0.014, CL + 0.004])
-    pc.mat = "M_Accent"
-    trunk(pc, [B.WAIST - 0.02, B.WAIST + 0.004], CL + 0.011)
-    pc.mat, pc.region = "M_Main", "torso"
-    lons = [14, 60, 100, 140, 180, 220, 260, 300, 346]
-    pc.band([[T(l, Z_NECK + 0.004, CL + 0.004) for l in lons], [T(l, Z_NECK - 0.024, CL + 0.026) for l in lons]],
-            closed=False, refs=[B.torso_at(Z_NECK, 0)[0]])
 
 
 P12 = [15 + 30 * k for k in range(12)]

@@ -3,20 +3,23 @@
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { type IslandMap, WATER_DROP, LEVEL_STEP, cellToWorldX, cellToWorldZ, isGroundAtWorld, isRiver, levelAt, surfaceAt } from "@/lib/game/grid";
-import { WATER_CHOP, WATER_CLOUDS, WATER_FOLD, WATER_OPTICS, WATER_RIPPLE, WATER_SWELL, facetTilt, swellUniformsOf } from "@/lib/game/waterShader";
+import { WATER_CHOP, WATER_CLOUDS, WATER_FOLD, WATER_OPTICS, WATER_RIPPLE, WATER_SWELL, WATER_WAVES, facetTilt, seaOf, swellUniformsOf, waveUniformsOf, type SeaKind } from "@/lib/game/waterShader";
 import { ACTIVE_WORLD_BEND, ACTIVE_WORLD_BEND_SIDE } from "@/lib/game/curvedWorld";
-import { terrainMaterial, waterSurfaceUniforms } from "./terrainMaterials";
+import { terrainMaterial, waterSurfaceMaterial, waterSurfaceUniforms } from "./terrainMaterials";
 import { deepestSeabed } from "@/lib/game/seabed";
 
 /**
  * Continue the grid's water outside its editable rectangle to the horizon, with its glint sprites
  * (`lite`: half of them; `skip`: water under a deck, where a sparkle would show through the planks;
- * `radius`: how far from the map's centre they reach, which grows with the map).
+ * `radius`: how far from the map's centre they reach, which grows with the map). `waves`: the new waves (game/waves)
+ * where the world opts in, as its GridWorld does (lib/game/waterShader.ts seaOf); without it, main's sea exactly: the
+ * swell, the graded strips and main's sparkles (the applicant island, live for recruits, first).
  */
-export default function GridOcean({ map, lite = false, skip, radius }: { map: IslandMap; lite?: boolean; skip?: (x: number, z: number) => boolean; radius?: number }) {
-  const material = useMemo(() => terrainMaterial("mRiver")!, []);
+export default function GridOcean({ map, lite = false, skip, radius, waves }: { map: IslandMap; lite?: boolean; skip?: (x: number, z: number) => boolean; radius?: number; waves?: boolean }) {
+  const sea = seaOf(waves);
+  const material = useMemo(() => waterSurfaceMaterial(sea), [sea]);
   const bed = useMemo(() => terrainMaterial("mRiverBed")!, []);
-  const geometry = useMemo(() => oceanGeometry(map), [map]);
+  const geometry = useMemo(() => (sea === "waves" ? oceanGeometry(map) : stripOceanGeometry(map)), [map, sea]);
   const floor = useMemo(() => seaBedGeometry(), []);
   useEffect(() => () => { geometry.dispose(); floor.dispose(); }, [geometry, floor]);
   // The deep bed goes on under the open sea, a little below the deepest the map's own bed gets (past the drop-off; the
@@ -24,8 +27,78 @@ export default function GridOcean({ map, lite = false, skip, radius }: { map: Is
   return <group>
     <mesh position={[0, -WATER_DROP, 0]} geometry={geometry} material={material} />
     <mesh position={[0, -WATER_DROP - deepestSeabed() - 0.15, 0]} geometry={floor} material={bed} />
-    <WaterGlints map={map} lite={lite} skip={skip} radius={radius} />
+    <WaterGlints map={map} lite={lite} skip={skip} radius={radius} sea={sea} />
   </group>;
+}
+
+/**
+ * The rings of open sea round the map, by how far out from its edge each runs: a unit apart at first, the gaps growing
+ * to 6 units by 22 out and held there to 40 (the waves, lib/game/waves.ts: a mesh shows a wave only a few vertices
+ * long, so the wind waves move it for the first dozen units and the swell, 26 long, out past where the arrival's
+ * crossing starts), then widening to every 24 units out to the horizon (the curved world bends the sea down by distance
+ * squared, and a longer span would cut the curve short).
+ */
+export const RINGS = [0, 1, 2, 3, 5, 7, 10, 13, 17, 22, 28, 34, 40, 48, 58, 72, 90, ...Array.from({ length: 40 }, (_, i) => 114 + 24 * i)];
+/**
+ * The open sea round a map's rectangle, out to `reach` every way, as one mesh in the world's frame (y 0). The map draws
+ * its own water a quad per cell and the waves are evaluated per vertex, so the sea must have a vertex at every cell
+ * corner along the map's edge or the two surfaces part as the waves run (a dark crack along the map's edge, seen as
+ * soon as a boat or the camera goes out to sea).
+ *
+ * So the sea is rings: loops round the map's rectangle grown by each of RINGS (the last the reach's square), each loop's
+ * vertices as far apart along it as the gap to its neighbour ring (a unit on the map's edge, its cell corners), and each
+ * band between two loops stitched side by side, the inner loop's vertices to the outer's in order along the side (a
+ * zipper). A loop's vertices are the same for the band inside it and the band outside, so no edge ever meets a coarser
+ * one, and the far sea is no finer than it can show. Each vertex carries its spacing (`aWaveLod`, the wider of its
+ * loop's spacing and its gap to the rings either side), so the waves move it only as far as the mesh can draw them.
+ */
+export function oceanGeometry(map: IslandMap, reach = 300): THREE.BufferGeometry {
+  const minX = map.originX - 0.5, minZ = map.originZ - 0.5;
+  const maxX = minX + map.width, maxZ = minZ + map.depth;
+  const room = Math.min(minX + reach, reach - maxX, minZ + reach, reach - maxZ);
+  const rings = RINGS.filter(d => d < room - 0.5);
+  // Each loop's corners (anticlockwise from above: -x-z, +x-z, +x+z, -x+z), the last the reach's square.
+  const loops = [...rings.map(d => [minX - d, minZ - d, maxX + d, maxZ + d]), [-reach, -reach, reach, reach]];
+  // How far out each loop runs (the reach's square: as far as its nearest side).
+  const dist = [...rings, room];
+  const position: number[] = [], lod: number[] = [], index: number[] = [];
+  /** A loop's vertices side by side (each side from its corner to the next, both corners in), and their spacing. */
+  const sides = loops.map(([x0, z0, x1, z1], k) => {
+    const inward = k > 0 ? dist[k] - dist[k - 1] : 1;
+    const outward = k + 1 < loops.length ? dist[k + 1] - dist[k] : inward;
+    const step = k === 0 ? 1 : Math.max(1, Math.round(Math.min(inward, outward)));
+    const corners = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
+    const ids = corners.map(([x, z]) => { position.push(x, 0, z); return position.length / 3 - 1; });
+    return corners.map(([ax, az], i) => {
+      const [bx, bz] = corners[(i + 1) % 4], n = Math.max(1, Math.round(Math.hypot(bx - ax, bz - az) / step)), side = [ids[i]];
+      for (let j = 1; j < n; j++) { position.push(ax + ((bx - ax) * j) / n, 0, az + ((bz - az) * j) / n); side.push(position.length / 3 - 1); }
+      side.push(ids[(i + 1) % 4]);
+      return { side, spacing: Math.max(Math.hypot(bx - ax, bz - az) / n, inward, outward) };
+    });
+  });
+  // Spacing per vertex: a corner is on two sides, so the wider.
+  lod.length = position.length / 3;
+  lod.fill(0);
+  for (const loop of sides) for (const { side, spacing } of loop) for (const v of side) lod[v] = Math.max(lod[v], spacing);
+  const up = (a: number, b: number, c: number) => {
+    const ux = position[b * 3] - position[a * 3], uz = position[b * 3 + 2] - position[a * 3 + 2];
+    const vx = position[c * 3] - position[a * 3], vz = position[c * 3 + 2] - position[a * 3 + 2];
+    if (uz * vx - ux * vz > 0) index.push(a, b, c); else index.push(a, c, b); // facing up
+  };
+  for (let k = 0; k + 1 < sides.length; k++) for (let i = 0; i < 4; i++) {
+    const a = sides[k][i].side, b = sides[k + 1][i].side;
+    // Zip the two sides by how far along each its vertices are.
+    let p = 0, q = 0;
+    while (p + 1 < a.length || q + 1 < b.length) {
+      if (q + 1 >= b.length || (p + 1 < a.length && (p + 1) / (a.length - 1) <= (q + 1) / (b.length - 1))) { up(a[p], a[p + 1], b[q]); p++; }
+      else { up(a[p], b[q + 1], b[q]); q++; }
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(position, 3));
+  g.setAttribute("aWaveLod", new THREE.Float32BufferAttribute(lod, 1));
+  g.setIndex(index);
+  return g;
 }
 
 /**
@@ -41,8 +114,9 @@ const graded = (span: number) => [...GRADED.filter(d => d < span - 0.5), span];
  * soon as a boat or the camera goes out to sea). So: west and east strips the full depth, their rows a unit apart
  * beside the map and graded beyond it; north and south strips the map's width, their columns a unit apart; each strip
  * a whole grid (its rows and columns run right across), graded outward from the map, so no edge meets a coarser one.
+ * Main's open sea, kept for the swell's worlds (GridOcean without `waves`); the waves' worlds draw oceanGeometry's rings.
  */
-export function oceanGeometry(map: IslandMap, reach = 300): THREE.BufferGeometry {
+export function stripOceanGeometry(map: IslandMap, reach = 300): THREE.BufferGeometry {
   const minX = map.originX - 0.5, minZ = map.originZ - 0.5;
   const maxX = minX + map.width, maxZ = minZ + map.depth;
   const units = (a: number, b: number) => Array.from({ length: Math.round(b - a) + 1 }, (_, i) => a + i);
@@ -137,9 +211,60 @@ export const GLINT_FOG = /* glsl */ `
 const GLINT_URL = "/assets/acnh/textures/sea-glint.png";
 
 /**
+ * How a sparkle rides its sea: on the waves, a point of the surface that moves with it and leans on its slope; on
+ * main's swell (the worlds that don't opt in), lifted by the swell as main drew it.
+ */
+const GLINT_RIDE: Record<SeaKind, string> = {
+  waves: `
+          // A sparkle is a point of the surface: it moves with it, and its facet leans on the waves' slope there.
+          vec2 glintField = waveField(glintAt.xz);
+          vec3 glintMove;
+          vec2 swellGrad;
+          waterWaves(glintAt.x, glintAt.z, glintField.x, glintField.y, 1.0, glintMove, swellGrad);
+          transformed += glintMove;
+          glintAt += glintMove;`,
+  swell: `
+          vec2 swellGrad;
+          float swell = waterSwell(glintAt.xz, swellGrad);
+          transformed.y += swell;
+          glintAt.y += swell;`,
+};
+
+/** The sparkles' shader on a sea (WaterGlints): the water's live uniforms, its ride (GLINT_RIDE), the glint and the fold. */
+export function glintShader(sea: SeaKind, shader: { uniforms: Record<string, THREE.IUniform>; vertexShader: string; fragmentShader: string }): void {
+  const u = waterSurfaceUniforms();
+  Object.assign(shader.uniforms, {
+    ...(sea === "waves" ? waveUniformsOf(u) : swellUniformsOf(u)), uRippleTexture: u.uRippleTexture, uRippleStrength: u.uRippleStrength,
+    uSunDir: u.uSunDir, uSunColor: u.uSunColor, uSunGlint: u.uSunGlint, uSunSize: u.uSunSize, uRoughness: u.uRoughness,
+    uCloudMap: u.uCloudMap, uCloudUv: u.uCloudUv, uCloudShade: u.uCloudShade,
+  });
+  shader.vertexShader = "attribute vec2 aTilt;\nuniform vec3 uSunDir;\nuniform float uSunGlint;\nuniform float uSunSize;\nuniform float uRoughness;\nvarying float vGlint;\n" + (sea === "waves" ? WATER_WAVES : WATER_SWELL) + WATER_RIPPLE + WATER_CHOP + WATER_CLOUDS + WATER_OPTICS + WATER_FOLD(ACTIVE_WORLD_BEND, ACTIVE_WORLD_BEND_SIDE) + shader.vertexShader
+    .replace("#include <begin_vertex>", `#include <begin_vertex>
+          vec3 glintAt = (modelMatrix * vec4(transformed, 1.0)).xyz;${GLINT_RIDE[sea]}
+          vec2 slope = waterDetailNormal(glintAt.xz) - swellGrad + (aTilt + chopSlope(glintAt.xz, uTime)) * uRoughness;
+          float lit = facetGlint(uSunDir, cameraPosition, glintAt, vec3(slope.x, 1.0, slope.y), uSunSize);
+          vGlint = lit * uSunGlint * sunThroughClouds(glintAt.xz);`)
+    .replace("#include <logdepthbuf_vertex>", `
+          // mvPosition is bent here (project_vertex): nothing past the fold, a fade as the sea turns edge-on before it.
+          vGlint *= foldFade(mvPosition.xyz);
+          gl_PointSize *= 0.5 + 0.7 * lit;
+          gl_PointSize = vGlint < 0.01 ? 0.0 : max(gl_PointSize, 3.0);
+          // Nudged toward the camera so the water just in front cannot clip the core; a pier deck above still hides it.
+          gl_Position = projectionMatrix * vec4(mvPosition.xyz + normalize(-mvPosition.xyz) * 0.12, 1.0);
+          #include <logdepthbuf_vertex>`);
+  shader.fragmentShader = "uniform vec3 uSunColor;\nvarying float vGlint;\n" + shader.fragmentShader
+    .replace("#include <map_particle_fragment>", `#include <map_particle_fragment>
+          // Four-point star: a hot core and two thin flares.
+          vec2 q = gl_PointCoord * 2.0 - 1.0;
+          float star = exp(-dot(q, q) * 16.0) + 0.6 * (exp(-abs(q.x) * 16.0 - abs(q.y) * 2.8) + exp(-abs(q.y) * 16.0 - abs(q.x) * 2.8));
+          diffuseColor.rgb = uSunColor * vGlint * star * 1.2;`)
+    .replace("#include <fog_fragment>", GLINT_FOG);
+}
+
+/**
  * Sparkles (row 238, specs/look-development.md §7.4): each sprite is one
- * ripple too small to draw, at a fixed world point riding the swell. Its
- * normal is the water's own (swell + ripple texture, as the surface draws it)
+ * ripple too small to draw, a point of the surface riding the waves. Its
+ * normal is the water's own (waves + ripple texture, as the surface draws it)
  * plus a fixed tilt of its own (`facetTilt`) and the short fast waves passing
  * it (`chopSlope`), both spread by the water's roughness, and it flashes only
  * while that normal mirrors the real sun into this camera (`facetGlint`). No
@@ -152,7 +277,7 @@ const GLINT_URL = "/assets/acnh/textures/sea-glint.png";
  * far sparkles folded back under the horizon and showed twice); in fog they
  * fade out rather than turn the fog's colour (`GLINT_FOG`).
  */
-function WaterGlints({ map, lite, skip, radius }: { map: IslandMap; lite: boolean; skip?: (x: number, z: number) => boolean; radius?: number }) {
+function WaterGlints({ map, lite, skip, radius, sea }: { map: IslandMap; lite: boolean; skip?: (x: number, z: number) => boolean; radius?: number; sea: SeaKind }) {
   const [geometry, material] = useMemo(() => {
     const position = glintPoints(map, skip, radius), n = position.length / 3, tilt = new Float32Array(n * 2);
     for (let i = 0; i < n; i++) tilt.set(facetTilt(position[i * 3], position[i * 3 + 2]), i * 2);
@@ -163,41 +288,10 @@ function WaterGlints({ map, lite, skip, radius }: { map: IslandMap; lite: boolea
     const map_ = new THREE.TextureLoader().load(GLINT_URL);
     map_.colorSpace = THREE.SRGBColorSpace;
     const m = new THREE.PointsMaterial({ map: map_, size: 0.5, sizeAttenuation: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
-    m.onBeforeCompile = (shader) => {
-      const u = waterSurfaceUniforms();
-      Object.assign(shader.uniforms, {
-        ...swellUniformsOf(u), uRippleTexture: u.uRippleTexture, uRippleStrength: u.uRippleStrength,
-        uSunDir: u.uSunDir, uSunColor: u.uSunColor, uSunGlint: u.uSunGlint, uSunSize: u.uSunSize, uRoughness: u.uRoughness,
-        uCloudMap: u.uCloudMap, uCloudUv: u.uCloudUv, uCloudShade: u.uCloudShade,
-      });
-      shader.vertexShader = "attribute vec2 aTilt;\nuniform vec3 uSunDir;\nuniform float uSunGlint;\nuniform float uSunSize;\nuniform float uRoughness;\nvarying float vGlint;\n" + WATER_SWELL + WATER_RIPPLE + WATER_CHOP + WATER_CLOUDS + WATER_OPTICS + WATER_FOLD(ACTIVE_WORLD_BEND, ACTIVE_WORLD_BEND_SIDE) + shader.vertexShader
-        .replace("#include <begin_vertex>", `#include <begin_vertex>
-          vec3 glintAt = (modelMatrix * vec4(transformed, 1.0)).xyz;
-          vec2 swellGrad;
-          float swell = waterSwell(glintAt.xz, swellGrad);
-          transformed.y += swell;
-          glintAt.y += swell;
-          vec2 slope = waterDetailNormal(glintAt.xz) - swellGrad + (aTilt + chopSlope(glintAt.xz, uTime)) * uRoughness;
-          float lit = facetGlint(uSunDir, cameraPosition, glintAt, vec3(slope.x, 1.0, slope.y), uSunSize);
-          vGlint = lit * uSunGlint * sunThroughClouds(glintAt.xz);`)
-        .replace("#include <logdepthbuf_vertex>", `
-          // mvPosition is bent here (project_vertex): nothing past the fold, a fade as the sea turns edge-on before it.
-          vGlint *= foldFade(mvPosition.xyz);
-          gl_PointSize *= 0.5 + 0.7 * lit;
-          gl_PointSize = vGlint < 0.01 ? 0.0 : max(gl_PointSize, 3.0);
-          // Nudged toward the camera so the water just in front cannot clip the core; a pier deck above still hides it.
-          gl_Position = projectionMatrix * vec4(mvPosition.xyz + normalize(-mvPosition.xyz) * 0.12, 1.0);
-          #include <logdepthbuf_vertex>`);
-      shader.fragmentShader = "uniform vec3 uSunColor;\nvarying float vGlint;\n" + shader.fragmentShader
-        .replace("#include <map_particle_fragment>", `#include <map_particle_fragment>
-          // Four-point star: a hot core and two thin flares.
-          vec2 q = gl_PointCoord * 2.0 - 1.0;
-          float star = exp(-dot(q, q) * 16.0) + 0.6 * (exp(-abs(q.x) * 16.0 - abs(q.y) * 2.8) + exp(-abs(q.y) * 16.0 - abs(q.x) * 2.8));
-          diffuseColor.rgb = uSunColor * vGlint * star * 1.2;`)
-        .replace("#include <fog_fragment>", GLINT_FOG);
-    };
+    m.onBeforeCompile = (shader) => glintShader(sea, shader);
+    m.customProgramCacheKey = () => `water-glints-${sea}`;
     return [g, m];
-  }, [map, lite, skip, radius]);
+  }, [map, lite, skip, radius, sea]);
   useEffect(() => () => { geometry.dispose(); material.map?.dispose(); material.dispose(); }, [geometry, material]);
   return <points geometry={geometry} material={material} frustumCulled={false} />;
 }

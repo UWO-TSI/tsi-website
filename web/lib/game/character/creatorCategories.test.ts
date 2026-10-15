@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { CATEGORIES, choose, colourTarget, isOn } from "./creatorCategories";
-import { DEFAULT_LOOK, FACE, PARTS, wear } from "./look";
+import { CATEGORIES, choose, colourTarget, isOn, shownOptions } from "./creatorCategories";
+import { DEFAULT_LOOK, FACE, PARTS, STARTER_PARTS, openEventParts, partRef, setEventsOpen, wear } from "./look";
 
 const cat = (id: string) => CATEGORIES.find(c => c.id === id)!;
 
@@ -28,10 +28,10 @@ describe("creator categories (read from the catalogue)", () => {
     expect(cat("shoes").framing).toBe("body");
     expect(CATEGORIES.filter(c => c.wardrobe).map(c => c.id)).toEqual(["hair", "accessories", "tops", "bottoms", "shoes"]);
   });
-  it("choose and show what's worn: a fringe, a toggled extra, shoes off, an accessory's second tap", () => {
+  it("choose and show what's worn: a hairstyle, a toggled extra, shoes off, an accessory's second tap", () => {
     const hair = cat("hair");
-    let l = choose(DEFAULT_LOOK, hair.sections[0], "bangs_bowl");
-    expect([l.bangs, isOn(l, hair.sections[0], "bangs_bowl")]).toEqual(["bangs_bowl", true]);
+    let l = choose(DEFAULT_LOOK, hair.sections[0], "hair_bowl_cut");
+    expect([l.back, isOn(l, hair.sections[0], "hair_bowl_cut")]).toEqual(["hair_bowl_cut", true]);
     l = choose(l, cat("extras").sections[0], "blush");
     expect(l.extras).toEqual(["blush"]);
     expect(choose(l, cat("extras").sections[0], "blush").extras).toEqual([]);
@@ -44,16 +44,50 @@ describe("creator categories (read from the catalogue)", () => {
   });
   it("colour the worn part of the category (the accessory chosen last)", () => {
     expect(colourTarget(cat("tops"), DEFAULT_LOOK, null)).toBe(DEFAULT_LOOK.top);
-    const two = wear(wear(DEFAULT_LOOK, "accessory", "acc_scarf"), "accessory", "acc_cap");
-    expect(colourTarget(cat("accessories"), two, "acc_scarf")).toBe("acc_scarf");
+    const two = wear(wear(DEFAULT_LOOK, "accessory", "acc_shoulder_bag"), "accessory", "acc_cap");
+    expect(colourTarget(cat("accessories"), two, "acc_shoulder_bag")).toBe("acc_shoulder_bag");
     expect(colourTarget(cat("eyes"), two, null)).toBeNull();
   });
-  it("give the whole hairstyles their own row in Hair, apart from the backs (head fit)", () => {
+  it("offer David's 21 whole hairstyles as Hair's only row, recolourable (head-roblox)", () => {
     const hair = cat("hair");
-    const full = hair.sections.find(s => s.id === "hairstyles")!;
-    expect(full.options.length).toBe(PARTS.filter(p => p.full).length);
-    expect(hair.sections.find(s => s.id === "back")!.options.some(id => id && PARTS.find(p => p.id === id)?.full)).toBe(false);
+    expect(hair.sections.map(s => s.id)).toEqual(["hairstyles"]);
+    expect(hair.sections[0].options).toEqual(PARTS.filter(p => p.full).map(p => p.id));
+    expect(hair.sections[0].options).toHaveLength(21);
+    expect(hair.swatch).toBe("hair");
+    const full = hair.sections[0];
     const l = choose(DEFAULT_LOOK, full, full.options[0]);
     expect([l.back, isOn(l, full, full.options[0])]).toEqual([full.options[0], true]);
+  });
+});
+
+describe("the starting creator after the wardrobe cut (playtest round 1)", () => {
+  const CRAFT_ONLY = ["acc_flower_crown", "acc_shell_necklace", "outfit_koi_kimono", "outfit_monarch_cape", "outfit_silk_sweater"];
+  const shown = (mode: "create" | "wardrobe", owned: ReadonlySet<string>) => new Set(CATEGORIES.flatMap(c => c.sections.flatMap(s =>
+    shownOptions(s, mode, id => { const ref = id && partRef(id); return !ref || owned.has(ref); }))));
+
+  it("offers the starters and never a crafted part, even one already owned", () => {
+    const starters = shown("create", new Set(STARTER_PARTS));
+    for (const id of STARTER_PARTS) expect(starters.has(id), id).toBe(true);
+    const crafted = shown("create", new Set([...STARTER_PARTS, ...CRAFT_ONLY]));
+    for (const id of CRAFT_ONLY) expect(crafted.has(id), id).toBe(false);
+  });
+  it("leaves them in the closet: locked until crafted, then worn", () => {
+    const closet = shown("wardrobe", new Set(STARTER_PARTS));
+    for (const id of CRAFT_ONLY) expect(closet.has(id), id).toBe(true);
+    const tops = cat("tops").sections[0];
+    const l = choose(DEFAULT_LOOK, tops, "outfit_silk_sweater");
+    expect(isOn(l, tops, "outfit_silk_sweater")).toBe(true);
+  });
+  it("keeps the Halloween closet to the witch hat and cat ears, shown only while it runs", () => {
+    try {
+      setEventsOpen(new Set(["halloween"]));
+      expect(openEventParts().sort()).toEqual(["acc_cat_ears", "acc_witch_hat"]);
+      const during = shown("wardrobe", new Set(openEventParts()));
+      expect(["acc_witch_hat", "acc_cat_ears"].every(id => during.has(id))).toBe(true);
+      setEventsOpen(new Set());
+      expect(shown("wardrobe", new Set()).has("acc_witch_hat")).toBe(false);
+    } finally {
+      setEventsOpen(new Set());
+    }
   });
 });

@@ -8,6 +8,7 @@ import { Surface, coastDistance, overlayAt, sampleShore, shoreSdf, smoothstep, t
 import { bedDepth, type WaterParams } from "./waterShader";
 import { TUNING_DEFAULTS } from "./tuning";
 import { BERTH, berthWeight, type Dock } from "./wharf";
+import type { FieldGrid } from "./waterField";
 
 /** How far the bed drops below a grass bank's water at once: the river channel's edge. */
 export const BANK_DIP = 0.12;
@@ -56,6 +57,12 @@ const shoals = new WeakMap<IslandMap, readonly Dock[]>();
 export function setShoal(map: IslandMap, docks: readonly Dock[]): void {
   shoals.set(map, docks);
 }
+/** A world whose seabed is its own (the smooth world) names its wharves here for the waves' calm berths only (no shoal). */
+const berths = new WeakMap<IslandMap, readonly Dock[]>();
+export function setBerths(map: IslandMap, docks: readonly Dock[]): void {
+  berths.set(map, docks);
+}
+const docksOf = (map: IslandMap | null): readonly Dock[] => (map && (shoals.get(map) ?? berths.get(map))) || [];
 /** The berth's edge on the village, cells: softer than the smooth world's quay face (no quay stands over it here). */
 export const BERTH_EDGE = 2;
 /**
@@ -125,4 +132,42 @@ const sources = new WeakMap<IslandMap, WaterSource>();
 export function setWaterSource(map: IslandMap, source: WaterSource): void {
   sources.set(map, source);
   fields.delete(map);
+}
+
+/**
+ * The waves' calm (lib/game/waves.ts): how much of the sea's waves reach each point. 1 on the open sea, RIVER_CALM in a
+ * river or a pond (water with no open sea within OPEN_LOOK cells: the same test as the shallows' `openField`), and in a
+ * wharf's berth (lib/game/wharf.ts BERTH, eased over BERTH_EDGE) BERTH_CALM less, so the moored boats rock gently. A
+ * grid a world unit apart over the shore field's rect and a unit round it (that ring held at 1, so the open sea past the
+ * map's edge reads open whatever the edge cells are); the shader samples it bilinearly, the CPU the same (waterField.ts).
+ */
+export const RIVER_CALM = 0.25, BERTH_CALM = 0.7;
+export function bakeWaveCalm(shore: ShoreSdf, map: IslandMap | null = null): FieldGrid {
+  const minX = Math.floor(shore.minX) - 1, minZ = Math.floor(shore.minZ) - 1;
+  const width = Math.ceil(shore.minX + shore.sizeX) + 1 - minX, height = Math.ceil(shore.minZ + shore.sizeZ) + 1 - minZ;
+  const far = new Float32Array(width * height), along = new Float32Array(width * height), data = new Float32Array(width * height);
+  for (let j = 0; j < height; j++) for (let i = 0; i < width; i++) far[j * width + i] = sampleShore(shore, minX + i + 0.5, minZ + j + 0.5);
+  // The farthest from a shore within OPEN_LOOK cells: along x, then along z (a separable max).
+  for (let j = 0; j < height; j++) for (let i = 0; i < width; i++) {
+    let m = -Infinity;
+    for (let k = Math.max(0, i - OPEN_LOOK), e = Math.min(width - 1, i + OPEN_LOOK); k <= e; k++) m = Math.max(m, far[j * width + k]);
+    along[j * width + i] = m;
+  }
+  for (let i = 0; i < width; i++) for (let j = 0; j < height; j++) {
+    let m = -Infinity;
+    for (let k = Math.max(0, j - OPEN_LOOK), e = Math.min(height - 1, j + OPEN_LOOK); k <= e; k++) m = Math.max(m, along[k * width + i]);
+    data[j * width + i] = RIVER_CALM + (1 - RIVER_CALM) * smoothstep(OPEN_SEA[0], OPEN_SEA[1], m);
+  }
+  const reach = Math.hypot(BERTH.x1 - BERTH.x0, BERTH.z1 - BERTH.z0) + BERTH_EDGE;
+  for (const dock of docksOf(map)) {
+    const i0 = Math.max(0, Math.floor(dock.x - reach - minX)), i1 = Math.min(width - 1, Math.ceil(dock.x + reach - minX));
+    const j0 = Math.max(0, Math.floor(dock.z - reach - minZ)), j1 = Math.min(height - 1, Math.ceil(dock.z + reach - minZ));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const w = berthWeight(dock, minX + i + 0.5, minZ + j + 0.5, BERTH_EDGE);
+      if (w > 0) data[j * width + i] *= 1 - BERTH_CALM * w;
+    }
+  }
+  for (let i = 0; i < width; i++) { data[i] = 1; data[(height - 1) * width + i] = 1; }
+  for (let j = 0; j < height; j++) { data[j * width] = 1; data[j * width + width - 1] = 1; }
+  return { data, width, height, minX, minZ, sizeX: width, sizeZ: height };
 }

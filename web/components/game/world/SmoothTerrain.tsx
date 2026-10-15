@@ -15,8 +15,9 @@ import GrassField from "../grid/GrassField";
 import { setShoreField } from "../grid/terrainMaterials";
 import { SPLAT_COLORS } from "./splatMaterial";
 import { TerrainView } from "./terrainView";
+import type { SeaKind } from "@/lib/game/waterShader";
 
-export default function SmoothTerrain({ terrain, shore, grass, windScale, lite = false, clear, onView, revision = 0, grassOn = true }: {
+export default function SmoothTerrain({ terrain, shore, grass, windScale, lite = false, clear, onView, revision = 0, grassOn = true, sea = "waves" }: {
   terrain: WorldTerrain;
   /** The water's field (the village's, shared with the fish and the seabed props); baked here when absent. */
   shore?: ShoreSdf & { depth?: Float32Array };
@@ -30,10 +31,12 @@ export default function SmoothTerrain({ terrain, shore, grass, windScale, lite =
   /** Bumped by an editor after editing: the grass resamples. */
   revision?: number;
   grassOn?: boolean;
+  /** The world's sea (lib/game/waterShader.ts SeaKind): the v2 world and its editor opt in to the waves. */
+  sea?: SeaKind;
 }) {
   // Built with the placeholder grass; the season's colour is pushed below, never a rebuild.
   const editable = !!onView;
-  const view = useMemo(() => new TerrainView(terrain, { editable }), [terrain, editable]);
+  const view = useMemo(() => new TerrainView(terrain, { editable, sea }), [terrain, editable, sea]);
   useEffect(() => () => view.dispose(), [view]);
   useEffect(() => { onView?.(view); return () => onView?.(null); }, [view, onView]);
   useEffect(() => { (view.material.userData.splat.uGrassC.value as { set: (c: string) => void }).set(grass ?? SPLAT_COLORS.grass); }, [view, grass]);

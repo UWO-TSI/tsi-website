@@ -9,9 +9,12 @@
  * |-----------------------------|-----------------|-------|--------------------|-------------------------------|
  * | 21 u                        | 72 px           | LOD 1 | every frame        | yes                           |
  * | 28 u                        | 48 px           | LOD 1 | 30 Hz              | yes                           |
- * | 40 u                        | 28 px           | LOD 1 | 15 Hz              | yes                           |
- * | 40 u                        | 10 px           | LOD 1 | 15 Hz              | no (its contact shadow stays) |
+ * | 40 u                        | 28 px           | LOD 2 | 15 Hz              | yes                           |
+ * | 40 u                        | 10 px           | LOD 2 | 15 Hz              | no (its contact shadow stays) |
  * | 21 u, out of view; hidden   |                 | LOD 1 | 5 Hz (state keeps) | no                            |
+ *
+ * LOD 2 (head-roblox, David 2026-10-14: "lower poly ... for hair when far"): the whole hairstyles at about 1,100 triangles
+ * (art/characters/build_lod.py lod2/); every other part draws its LOD 1 there.
  *
  * Each line has hysteresis (15% on both measures): a character crosses back only past it, so one standing on a line
  * never flickers. Pure: Character calls `characterLod` once a frame with what it measured.
@@ -25,6 +28,8 @@ export const CHARACTER_LOD = {
   half: { distance: 28, px: 48 },
   /** Animation at 15 Hz past this distance and under this height. */
   quarter: { distance: 40, px: 28 },
+  /** The LOD 2 mesh (the far hair) past this distance and under this height: the quarter line. */
+  far: { distance: 40, px: 28 },
   /** No sun shadow past the quarter line's distance and under this height: a speck whose shadow is a speck. (A long
    * afternoon shadow reads from much further than the figure that casts it, so it goes last.) */
   shadowPx: 10,
@@ -37,6 +42,8 @@ export const CHARACTER_LOD = {
 export interface LodState {
   /** Drawing the LOD 1 mesh. */
   lod: boolean;
+  /** Drawing the LOD 2 mesh (implies `lod`). */
+  lod2: boolean;
   /** Mixer steps a second (Infinity: every frame). */
   hz: number;
   /** Casts the sun shadow. */
@@ -44,7 +51,7 @@ export interface LodState {
   /** Animation time saved up since the mixer last stepped (seconds). */
   saved: number;
 }
-export const createLodState = (): LodState => ({ lod: false, hz: Infinity, shadow: true, saved: 0 });
+export const createLodState = (): LodState => ({ lod: false, lod2: false, hz: Infinity, shadow: true, saved: 0 });
 
 /** Past `distance` and under `px` now: staying in needs only (distance / h, px x h), so leaving takes a 15% margin. */
 function reduced(d: number, px: number, distance: number, line: number, was: boolean) {
@@ -59,8 +66,9 @@ function reduced(d: number, px: number, distance: number, line: number, was: boo
 export function characterLod(s: LodState, d: number, px: number, visible = true): LodState {
   const L = CHARACTER_LOD;
   // Out of view (or hidden: `d` Infinity) past `near`: nothing to see. Nearer, its sun shadow can still fall in view: full.
-  if (!visible) { const far = d > L.near; s.lod = far; s.hz = far ? L.offHz : Infinity; s.shadow = !far; return s; }
+  if (!visible) { const far = d > L.near; s.lod = far; s.lod2 = d > L.far.distance; s.hz = far ? L.offHz : Infinity; s.shadow = !far; return s; }
   s.lod = reduced(d, px, L.near, L.mesh, s.lod);
+  s.lod2 = s.lod && reduced(d, px, L.far.distance, L.far.px, s.lod2);
   const half = reduced(d, px, L.half.distance, L.half.px, s.hz <= 30), quarter = reduced(d, px, L.quarter.distance, L.quarter.px, s.hz <= 15);
   s.hz = quarter ? 15 : half ? 30 : Infinity;
   s.shadow = !reduced(d, px, L.quarter.distance, L.shadowPx, !s.shadow);

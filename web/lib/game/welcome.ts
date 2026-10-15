@@ -41,8 +41,8 @@ export const HQ_LEAD = {
   name: "Wren",
   post: "HQ lead",
   look: {
-    skin: 3, hair: 2, eyes: "E1.4", mouth: "M2.1", extras: ["freckles"],
-    bangs: "bangs_curtain", back: "back_high_pony", top: "top_tsi_crew", bottom: "bottom_trousers", onepiece: null, shoes: "shoes_boots",
+    skin: 3, hair: 2, eyes: "mochi", mouth: "open_smile", extras: ["freckles"],
+    bangs: "", back: "hair_wispy_ponytail", top: "top_tsi_crew", bottom: "bottom_trousers", onepiece: null, shoes: "shoes_boots",
     acc: { bag: "acc_shoulder_bag" }, colors: { bottom_trousers: 4, shoes_boots: 5, acc_shoulder_bag: 3 },
   },
   /** The greeting, one box each; `{name}` is the member's island name. */

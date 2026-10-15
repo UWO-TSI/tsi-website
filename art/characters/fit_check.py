@@ -44,7 +44,7 @@ from mathutils.bvhtree import BVHTree
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "base"))
-from head_shape import head_point, HC, CHIN, HRZT, hair_vol, hair_outer, hairline  # noqa: E402
+from head_shape import head_point, HC, CHIN, HRZT, hair_vol, hair_outer, hairline, classic_radius  # noqa: E402
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "skull"))
 import skull as SK  # noqa: E402  (head fit: the shared skull's fit points and clearances)
 
@@ -91,10 +91,14 @@ LIMITS = {
     "skull_ear_rim": 0.0,          # m a hat's rim dips below the ear zone's top at the sides
 }
 FH = HRZT
-DEFAULT_BANGS, DEFAULT_BACK = "bangs_straight", "back_bob"
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 CAT = json.load(open(os.path.join(HERE, "character_catalog.json")))
+# head-roblox: a piece import_hair.py split off a hairstyle (manifest `split`: #8's visor) is listed after the hair but is
+# an accessory; it is checked as headwear, worn over the hairstyle it came off (it rests there in Roblox)
+SPLIT_FROM = {h["split"]["id"]: h["id"] for h in json.load(open(os.path.join(HERE, "hair", "source", "david", "manifest.json")))["hairs"] if h.get("split")}
+HAIR_PARTS = [h for h in CAT["hair"] if h["slot"] != "accessory"]
+HEAD_ACC = CAT["accessories"] + [h for h in CAT["hair"] if h["slot"] == "accessory"]
 V7_FACE = os.path.join(HERE, "v7", "face", "face_v7.json")
 FACE_V7 = os.path.exists(V7_FACE) and CAT["base"].get("head") in ("v7/head.blend", "skull/head.blend")   # the v7 face atlas on the v7 or v8 head
 FACEV = json.load(open(V7_FACE if FACE_V7 else os.path.join(HERE, "base", "face_variants.json")))
@@ -190,6 +194,11 @@ def hits(bvh, d, far=0.7, signed=False):
 
 
 R_SCALP = np.array([(hits(HEAD, d, 0.5) or [np.nan])[-1] for _, _, d in RAYS])   # the outermost head hit
+# head-roblox: Roblox's classic head along the same rays (the head David's hairs were made on): a hair attached the
+# Roblox way is held to what our head adds over Roblox's (extra air where ours is smaller, extra clipping where it is
+# bigger); Roblox's own air (a puffy dome, a flared rim, dreads hanging free) and its own clipping are the original's
+R_CLASSIC = np.array([classic_radius(d.normalized()) for _, _, d in RAYS])
+CAP_GAP = 0.003      # the under-cap's own height over the skin (import_hair CAP_H) and its chords
 
 
 def ray_table(bvh, keep_all=False):
@@ -354,7 +363,8 @@ def facing(p):
 
 RES = 256
 LAYER_MASK = {}
-for layer in ("eyes", "brows", "mouth"):
+FACE_LAYERS = ("eyes", "mouth")      # eyebrows are gone from the look (tutorial-v2, row 309): the face check skips them
+for layer in FACE_LAYERS:
     m = np.zeros((RES, RES), np.float32)
     for fid in FACEV["layers"][layer]["items"]:
         m = np.maximum(m, item_alpha(layer, fid, RES))
@@ -434,7 +444,7 @@ for fid in FACEV["layers"]["eyes"]["items"]:
 # head fit (row 304): how far every painted layer turns away from straight ahead, over every pixel of every item: the
 # flat face area keeps the mouth and brows facing the camera, not wrapping under the chin or over the brow
 facing_max = {}
-for layer in ("eyes", "brows", "mouth"):
+for layer in FACE_LAYERS:
     ys, xs = np.nonzero(LAYER_MASK[layer] > 0.5)
     worst = 0.0
     for k in range(0, len(xs), 4):
@@ -463,7 +473,7 @@ hair = {}
 tables = {}
 everys = {}
 groups_of = {}
-for part in CAT["hair"]:
+for part in HAIR_PARTS:
     groups, open_e, _ = load_glb(os.path.join(HERE, part["glb"]))
     bvh, _ = bvh_of(groups)
     inn, out, every = ray_table(bvh, keep_all=True)
@@ -480,11 +490,20 @@ for part in CAT["hair"]:
         region = (LAT >= part.get("capFrom", -24)) & ~((np.abs(LON) < 61) & (LAT < HAIRLINE))
     on = region & ~np.isnan(inn) & (inn - R_SCALP <= 0.12) & (out - R_SCALP >= -0.005)   # (not a ray grazing a hidden fan)
     air = np.array([air_above(every[i], R_SCALP[i], open_e == 0) if on[i] else np.nan for i in range(len(RAYS))])
+    roblox_air = None
+    if part.get("roblox"):          # the air Roblox's own fit has on that ray, over its classic head: only the excess counts
+        air_c = np.array([air_above(every[i], R_CLASSIC[i], open_e == 0) if on[i] else np.nan for i in range(len(RAYS))])
+        roblox_air = stats(erode(air_c))
+        # where the hair rests on Roblox's head (its own air there within the gap limit) it must rest on ours; where it
+        # stands off Roblox's head (a dome, a rim, hanging dreads) that air is the hair's own shape
+        rests = ~np.isnan(air_c) & (air_c <= LIMITS["hair_gap_max"])
+        air = np.where(np.isnan(air), np.nan, np.where(rests, air, np.minimum(air, CAP_GAP)))
     gap = erode(air)
     # skin showing through the hair: where a shell piece covers the scalp its outer surface must stay above the skin
     # (a neighbour-confirmed dip; lock pieces bury their roots on purpose and are checked lock by lock instead)
     under = np.where(on & (inn - R_SCALP < 0.05), R_SCALP - out, np.nan)
     rec = {"slot": part["slot"], "tris": part["tris"], "open_edges": open_e, "gap": stats(gap),
+           **({"roblox_own_air": roblox_air} if roblox_air else {}),
            "on_scalp_share": round(float(np.mean(air[on] <= 5e-4)), 3) if on.any() else None,
            "outer_median": stats(np.where(on, out - R_SCALP, np.nan))["median"],
            **({} if part.get("v7") else (lambda st: {"skin_through": st["max"], "skin_through_at": st.get("worst_at")})(
@@ -687,15 +706,15 @@ OUTER = {pid: np.where(o < R_SCALP - 0.006, np.nan, o) for pid, (_, o) in tables
 for b in (p["id"] for p in CAT["hair"] if p["slot"] == "bangs"):
     for k in (p["id"] for p in CAT["hair"] if p["slot"] == "back" and not p.get("full")):   # a full style has no bangs
         ledges[f"{b}+{k}"], ledge_at[f"{b}+{k}"] = seam_step(OUTER[b], OUTER[k])
-worst_pair = max(ledges, key=ledges.get)
-seam = {"ledge_max": ledges[worst_pair], "worst_pair": worst_pair, "worst_at": ledge_at.get(worst_pair),
-        "default_pair": ledges[f"{DEFAULT_BANGS}+{DEFAULT_BACK}"],
-        "median_over_pairs": round(float(np.median(list(ledges.values()))), 4),
+# head-roblox: the hair is whole styles only (no bangs + back pairs), so there is no seam unless a library comes back
+worst_pair = max(ledges, key=ledges.get) if ledges else None
+seam = {"ledge_max": ledges[worst_pair] if worst_pair else 0.0, "worst_pair": worst_pair, "worst_at": ledge_at.get(worst_pair),
+        "pairs": len(ledges), "median_over_pairs": round(float(np.median(list(ledges.values()))), 4) if ledges else 0.0,
         "over": {k: [v, ledge_at.get(k)] for k, v in sorted(ledges.items(), key=lambda kv: -kv[1]) if v > LIMITS["seam_ledge_max"]}}
 
 # ================================================================ headwear + glasses
 headwear, glasses = {}, {}
-for part in CAT["accessories"]:
+for part in HEAD_ACC:
     if part.get("group") not in ("head", "face"):
         continue
     groups, open_e, _ = load_glb(os.path.join(HERE, part["glb"]))
@@ -719,13 +738,19 @@ for part in CAT["accessories"]:
                                "offset_default": max(r["offset_default"] for r in res.values()), "sides": res}
         print(f"GLASSES {part['id']:20s} offset max={glasses[part['id']]['offset_max']} default={glasses[part['id']]['offset_default']}")
         continue
-    hat_bvh, _ = bvh_of(groups, lambda n: n != "M_Hair")
+    split = part["id"] in SPLIT_FROM
+    hat_bvh, _ = bvh_of(groups, (lambda n: True) if split else (lambda n: n != "M_Hair"))
     tuck_bvh, _ = bvh_of(groups, lambda n: n == "M_Hair")
     hat = part["hidesBackHair"]
-    under = [tables[DEFAULT_BANGS]] + ([] if hat else [tables[DEFAULT_BACK]])
+    # head-roblox: no hair is worn under them for the check: a hat hides the hair (and carries its own tuck), and a band
+    # rests on the hair volume's outer shell (build_accessories.band_off), as a Roblox accessory rests on its attachment
+    # whatever hair is worn
+    under = []
     h_in, h_out, h_every = ray_table(hat_bvh, keep_all=True)
-    if tuck_bvh:
+    if tuck_bvh and part["id"] not in SPLIT_FROM:   # (a split-off visor is drawn in M_Hair: all of it is the piece)
         under.append(ray_table(tuck_bvh))
+    if part["id"] in SPLIT_FROM:                    # worn over the hairstyle it came off, which it rests on in Roblox
+        under.append(tables[SPLIT_FROM[part["id"]]])
     if hat:                             # hats: the crown only (every hat's edge and brim lie below these latitudes)
         region = np.where(np.abs(LON) < 135, LAT >= 46, LAT >= 16)
     else:
@@ -735,7 +760,7 @@ for part in CAT["accessories"]:
     for i in np.nonzero(on)[0]:
         # the hair the piece rests on: worn hair where there is some, else (hats) the hair volume they are fitted to
         # (avatar v7: the fuller lock hair's outer surface, hair_outer)
-        top = max([R_SCALP[i] + (hair_outer(LAT[i]) if hat else 0.0)] + [o[i] for _, o in under if not np.isnan(o[i])])
+        top = max([R_SCALP[i] + hair_outer(LAT[i])] + [o[i] for _, o in under if not np.isnan(o[i])])
         gap[i] = air_above(h_every[i], top, open_e == 0)
         rise[i] = h_out[i] - top
         poke[i] = max(0.0, top - h_out[i])
@@ -760,7 +785,7 @@ def neighbours(k):
     return [ii * NLO + (j + dj) % NLO for ii in (i - 1, i, i + 1) if 0 <= ii < NLA for dj in (-1, 0, 1)]
 
 
-def clip_depth(groups, below=None):
+def clip_depth(groups, below=None, roblox=False):
     """Deepest point under the skin of any outward-facing face a viewer could see: faces whose centre is within 2 cm
     under the scalp (deeper is hidden closing geometry), facing out (normal . radial > 0.3); lock root zones are skipped
     by the caller's per-lock check, so here the v7 pieces skip faces within 1.5 cm of the scalp's root ring depth."""
@@ -775,6 +800,8 @@ def clip_depth(groups, below=None):
             dd = depth_in_head(c)
             if dd <= 0 or dd > 0.02:
                 continue
+            if roblox and (c - HC).length < classic_radius((c - HC).normalized()) - 0.002:
+                continue                     # under Roblox's classic head too: the original's clipping (reported apart)
             if below is not None:            # only where it would show: under the scalp line (the face, the ears)
                 d0 = (c - HC).normalized()
                 lat_g = math.degrees(math.asin(max(-1, min(1, d0.z))))
@@ -804,7 +831,7 @@ REACH = SK.CLEARANCE["reach"]
 EAR_Z = head_point(SK.EAR_TOP, SK.EAR_LON).z
 skull_fit = {}
 V7_LOCKS = {h["id"] for h in CAT["hair"] if h.get("v7")}
-for part in CAT["hair"] + [a for a in CAT["accessories"] if kind_of(a) == "hat"]:
+for part in HAIR_PARTS + [a for a in CAT["accessories"] if kind_of(a) == "hat"]:
     pid, kind = part["id"], kind_of(part)
     if pid in groups_of:
         groups = groups_of[pid]
@@ -818,13 +845,19 @@ for part in CAT["hair"] + [a for a in CAT["accessories"] if kind_of(a) == "hat"]
     # clip: v7 lock pieces have their own lock-by-lock dive check (root zones are buried on purpose)
     # a full hairstyle's cards root under its own under-cap above the scalp line (hidden, like the locks' buried roots)
     rec["clip"], rec["clip_at"] = (None, None) if pid in V7_LOCKS else clip_depth(
-        {k: v for k, v in groups.items() if k != "M_HairCap"}, below=GEO_SCALP if kind == "full" else None)
+        {k: v for k, v in groups.items() if k != "M_HairCap"}, below=GEO_SCALP if kind == "full" else None,
+        roblox=bool(part.get("roblox")) and kind == "full")
+    if part.get("roblox") and kind == "full":         # every clip under our skin, the original's included (reported)
+        rec["clip_incl_original"] = clip_depth({k: v for k, v in groups.items() if k != "M_HairCap"}, below=GEO_SCALP)[0]
     floats, uncovered = {}, []
     if part.get("covers") == ["top"]:                 # a tuft on the crown: its foot on the top fit point
         top_tree, _ = bvh_of(groups)
         _, _, _, dist = top_tree.find_nearest(SK.point("top"))
         floats["top"] = round(max(0.0, dist - 0.0), 4)
-    for name in ([] if part.get("covers") == ["top"] else part.get("covers") or SK.COVERS[kind]):
+    # a hairstyle attached the Roblox way keeps its own hairline: it covers the top and the crown (no bald patch on the
+    # scalp), and the front hairline only if it reaches it (a fade or a swept style stops higher than ours)
+    default = SK.COVERS["roblox_full"] if part.get("roblox") and kind == "full" else SK.COVERS[kind]
+    for name in ([] if part.get("covers") == ["top"] else part.get("covers") or default):
         vals = []
         for k in neighbours(ANCHOR_RAYS[name]):
             base = R_SCALP[k] + (hair_outer(LAT[k]) if kind == "hat" else 0.0)
@@ -836,9 +869,12 @@ for part in CAT["hair"] + [a for a in CAT["accessories"] if kind_of(a) == "hat"]
         floats[name] = round(float(min(ok)), 4)
     rec["float"], rec["uncovered"] = floats, uncovered
     vs = [v for g in groups.values() for v in g[0]]
-    out, box = 0.0, REACH["hat" if kind == "hat" else "hair"]
+    # a hairstyle attached the Roblox way is held to Roblox's own hair box, from its HairAttachment (head-roblox)
+    roblox = bool(part.get("roblox")) and kind == "full"
+    out, box = 0.0, REACH["roblox_hair" if roblox else "hat" if kind == "hat" else "hair"]
+    origin = SK.point("hair_att") if roblox else TOP
     for v in vs:
-        d = v - TOP
+        d = v - origin
         ox = max(0.0, abs(d.x) - box["side"])
         oz = max(0.0, d.z - box["up"], -d.z - box["down"])
         oy = max(0.0, -d.y - box["front"], d.y - box["back"])
@@ -867,17 +903,20 @@ for pid, r in hair.items():
     check("gap_max", r["gap"]["max"], LIMITS["hair_gap_max"], pid)
     check("gap_median", r["gap"]["median"], LIMITS["hair_gap_median_full"] if pid in FULL_IDS else LIMITS["hair_gap_median"], pid)
     if r.get("skin_through") is not None and r["skin_through"] > LIMITS["hair_skin_through_max"]:
-        flags.append(f"{pid}: skin_through {r['skin_through']} (a shell piece of the older library; rebuilt as locks next)")
+        flags.append(f"{pid}: skin_through {r['skin_through']} at {r.get('skin_through_at')} " + (
+            "(the head's skin out through the hairstyle's shell below the hair zone, where our head is not Roblox's)"
+            if pid in FULL_IDS else "(a shell piece)"))
 V7_IDS = {h["id"] for h in CAT["hair"] if h.get("v7")}
 for pair, v in ledges.items():
     b, k = pair.split("+")
     check("ledge_max", v, LIMITS["seam_ledge_max_locks"] if b in V7_IDS and k in V7_IDS else LIMITS["seam_ledge_max"], pair)
-check("brow_cover", hair[DEFAULT_BANGS].get("brow_cover"), LIMITS["brow_cover_default"], DEFAULT_BANGS)
 # A costume that encloses the whole head (`encloses`: the Halloween pumpkin head) stands off the hair all round on
 # purpose: it is held to no gap, rise, float, reach or ear-rim limit, only to being closed, never cut by the hair and
 # never cutting the head.
 ENCLOSES = {a["id"] for a in CAT["accessories"] if a.get("encloses")}
 for pid, r in headwear.items():
+    if pid in SPLIT_FROM:   # Roblox's own piece, moved with its hairstyle: its fit over that hair (the brim, the mic,
+        continue            # strands through the band, open card edges) is Roblox's, reported in the JSON, not failed
     check("open_edges", r["open_edges"], LIMITS["hat_open_edges"], pid)
     if pid not in ENCLOSES:
         check("gap_max", r["gap"]["max"], LIMITS["hat_gap_max"], pid)

@@ -11,9 +11,9 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Lock } from "lucide-react";
 import { Button, Slider } from "@/components/gui";
 import { iconUrl } from "@/lib/icons/keys";
-import { eventPartOpen, dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR_COLOURS, hairAccentHex, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, partRef,
+import { dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR_COLOURS, hairAccentHex, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, partRef,
   type CharacterLook, type FaceCell, type Placement } from "@/lib/game/character/look";
-import { choose, colourTarget, isOn, optionName, type Category, type Section } from "@/lib/game/character/creatorCategories";
+import { choose, colourTarget, isOn, optionName, shownOptions, type Category, type Section } from "@/lib/game/character/creatorCategories";
 import { PLACE_RANGE } from "@/lib/game/character/face";
 import CreatorIcon from "./CreatorIcon";
 import { prioritiseThumbs, thumbJob, useThumb } from "./CreatorStage";
@@ -116,8 +116,8 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
     });
     onChange?.("place");
   };
-  // An event costume shows only while its tradition runs (look.ts eventPartOpen).
-  const shownTiles = cat.sections.flatMap(s => s.options.filter(id => (mode !== "create" || has(id)) && (!id || eventPartOpen(id))));
+  // The starting creator: owned and never crafted; an event costume only while its tradition runs (shownOptions).
+  const shownTiles = cat.sections.flatMap(s => shownOptions(s, mode, has));
   const thumbKeys = new Set(shownTiles.flatMap(id => (id && needsBake(id) ? [thumbJob(id, look).key] : [])));
   useEffect(() => { prioritiseThumbs(thumbKeys); });
 
@@ -134,7 +134,7 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
       }}>Reset</Button>
     </div>}
     {cat.sections.map(section => {
-      const options = section.options.filter(id => (mode !== "create" || has(id)) && (!id || eventPartOpen(id)));
+      const options = shownOptions(section, mode, has);
       if (!options.length) return null;
       return <section key={section.id} className={styles.section} aria-label={section.label}>
         {cat.sections.length > 1 && <h3>{section.label}</h3>}

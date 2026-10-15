@@ -30,6 +30,7 @@ import GrassField from "./GrassField";
 import GrassTufts from "./GrassTufts";
 import CliffBoulders from "./CliffBoulders";
 import { applyGrassNormalStrength, advanceWater, drawFoamRings, shadeWaterByClouds } from "./terrainMaterials";
+import { seaOf, type SeaKind } from "@/lib/game/waterShader";
 import { FOAM_RING_SLOTS } from "@/lib/game/foamRings";
 import { fxOn } from "@/lib/game/perf/fxBench";
 import { cloudLayer } from "../AmbienceFX";
@@ -38,7 +39,7 @@ import { useFrame } from "@react-three/fiber";
 import type { IslandLight } from "@/lib/game/islandLighting";
 import type { ShoreSdf } from "@/lib/game/grid";
 import type { WorldTerrain } from "@/lib/game/world/terrain";
-import { shoreFieldOf } from "@/lib/game/seabed";
+import { bakeWaveCalm, shoreFieldOf } from "@/lib/game/seabed";
 import SmoothTerrain from "../world/SmoothTerrain";
 import { worldTime } from "@/lib/game/worldClock";
 
@@ -58,6 +59,12 @@ const GRASS_HEX = `#${new THREE.Color(GRASS_COLOR).getHexString()}`;
 type GridWorldProps = {
   map: IslandMap; field?: Float32Array; light: Pick<IslandLight, "water" | "sunPosition" | "sun" | "wet" | "sky" | "skyTop">; palette?: TerrainPalette; windScale?: number; lite?: boolean;
   clear?: (x: number, z: number) => boolean;
+  /**
+   * The new waves (game/waves) instead of main's swell: only the worlds that opt in (lib/game/waterShader.ts seaOf: the
+   * village, the v2 world, the title over the village, the arrival and its crossing, the home island). The applicant
+   * island (live for recruits) and every other world keep main's water exactly. Hand GridOcean the same.
+   */
+  waves?: boolean;
   /** The smooth world's heightfield (specs/world-editor.md): drawn and walked in place of the cells. Only the v2 world from the editor's files has one. */
   terrain?: WorldTerrain;
 };
@@ -75,31 +82,37 @@ export default function GridWorld(props: GridWorldProps) {
 }
 
 /** The smooth world: the heightfield, its water and its grass (components/game/world/SmoothTerrain.tsx), the water's frame as the cells have it. */
-function SmoothWorld({ map, light, palette, windScale, lite = false, clear, terrain }: GridWorldProps & { terrain: WorldTerrain }) {
+function SmoothWorld({ map, light, palette, windScale, lite = false, clear, terrain, waves }: GridWorldProps & { terrain: WorldTerrain }) {
+  const sea = seaOf(waves);
   useEffect(() => { TERRAIN_WET.value = light.wet ?? 0; }, [light.wet]);
   useEffect(() => () => { TERRAIN_WET.value = 0; }, []);
-  useWaterFrame(light, lite);
-  // The village registered its water for the derived cell map (lib/game/world/village.ts): the same field the fish read.
-  const shore = useMemo(() => shoreFieldOf(map) as ShoreSdf & { depth?: Float32Array }, [map]);
-  return <SmoothTerrain terrain={terrain} shore={shore} grass={palette?.grass} windScale={windScale} lite={lite} clear={clear} />;
+  useWaterFrame(light, lite, sea);
+  // The village registered its water for the derived cell map (lib/game/world/village.ts): the same field the fish read,
+  // and the waves' calm over it (its rivers and its wharf's berth).
+  const shore = useMemo(() => { const f = shoreFieldOf(map) as ShoreSdf & { depth?: Float32Array }; return { ...f, calm: bakeWaveCalm(f, map) }; }, [map]);
+  return <SmoothTerrain terrain={terrain} shore={shore} grass={palette?.grass} windScale={windScale} lite={lite} clear={clear} sea={sea} />;
 }
 
-/** The river flows, swells and catches the sun; the foam rings round what stands in it. One uniform block per frame. */
-export function useWaterFrame(light: GridWorldProps["light"], lite: boolean) {
+/**
+ * The water's waves run (Lite fewer trains), or main's swell (`sea`, lib/game/waterShader.ts SeaKind), it catches the
+ * sun; the foam rings round what stands in it. One uniform block per frame.
+ */
+export function useWaterFrame(light: GridWorldProps["light"], lite: boolean, sea: SeaKind) {
   const sunDir = useMemo(() => new THREE.Vector3(...light.sunPosition), [light.sunPosition]);
   const sunColor = useMemo(() => new THREE.Color(light.sun), [light.sun]);
   const sky = useMemo(() => ({ zenith: new THREE.Color(light.skyTop ?? light.sky), horizon: new THREE.Color(light.sky) }), [light.sky, light.skyTop]);
   useFrame(({ camera }) => {
-    advanceWater(worldTime(), light.water, sunDir, sunColor, sky);
+    advanceWater(worldTime(), light.water, sunDir, sunColor, sky, lite, sea);
     shadeWaterByClouds(cloudLayer.map, cloudLayer.uv);
     drawFoamRings(camera, lite ? FOAM_RING_SLOTS.lite : FOAM_RING_SLOTS.high, fxOn("foamRings"));
   });
 }
 
 /** The cell world (every world but the smooth one), exactly as it was. */
-function CellWorld({ map, field: suppliedField, light, palette, windScale, lite = false, clear }: GridWorldProps) {
+function CellWorld({ map, field: suppliedField, light, palette, windScale, lite = false, clear, waves }: GridWorldProps) {
   const t = useTuning();
-  const materials = useTerrainMaterials(palette);
+  const sea = seaOf(waves);
+  const materials = useTerrainMaterials(palette, sea);
   // The ground's wetness is the light's (it eases with the weather); dry when the scene goes.
   useEffect(() => { TERRAIN_WET.value = light.wet ?? 0; }, [light.wet]);
   useEffect(() => () => { TERRAIN_WET.value = 0; }, []);
@@ -132,12 +145,12 @@ function CellWorld({ map, field: suppliedField, light, palette, windScale, lite 
     return () => setTerrainHeightProvider(null);
   }, [map, suppliedField]);
 
-  // The river flows, swells and catches the sun. One uniform block per frame.
+  // The water's waves run (Lite fewer trains), or main's swell, and it catches the sun. One uniform block per frame.
   const sunDir = useMemo(() => new THREE.Vector3(...light.sunPosition), [light.sunPosition]);
   const sunColor = useMemo(() => new THREE.Color(light.sun), [light.sun]);
   const sky = useMemo(() => ({ zenith: new THREE.Color(light.skyTop ?? light.sky), horizon: new THREE.Color(light.sky) }), [light.sky, light.skyTop]);
   useFrame(({ camera }) => {
-    advanceWater(worldTime(), light.water, sunDir, sunColor, sky);
+    advanceWater(worldTime(), light.water, sunDir, sunColor, sky, lite, sea);
     shadeWaterByClouds(cloudLayer.map, cloudLayer.uv);
     drawFoamRings(camera, lite ? FOAM_RING_SLOTS.lite : FOAM_RING_SLOTS.high, fxOn("foamRings"));
   });

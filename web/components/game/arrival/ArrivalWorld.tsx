@@ -16,7 +16,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Html, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import Character, { CHARACTER_HEIGHT, type CharacterMotion } from "../character/Character";
-import { readSwell } from "../wharf/Boat";
+import { tripBoatFloat } from "../wharf/useTripBoat";
 import { useMoveParticles } from "../movement/moveFx";
 import { parseLook } from "@/lib/game/character/look";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
@@ -27,6 +27,7 @@ import { worldNow } from "@/lib/game/worldClock";
 import { myTrip } from "@/lib/game/myTrip";
 import { CROSS_TIME, boatPose, newBoatPose } from "@/lib/game/boatTrip";
 import { BOAT, dockToWorld, floatBoat, newFloat, type Dock } from "@/lib/game/wharf";
+import { liveWaves } from "@/lib/game/waves";
 import { landmark, landmarkPoint, type VillageIsland } from "@/lib/game/defaultIsland";
 import type { Village } from "@/lib/game/villageMap";
 import { navGrid } from "@/lib/game/residentRoutine";
@@ -132,17 +133,17 @@ export default function ArrivalWorld({ v, island, player, dock, held, keys, worl
 const DRIP: Recipe = { sprite: "droplets", count: [1, 1], life: [0.5, 0.65], size: [0.07, 0.1], grow: 0.85, speed: [0, 0.04], spread: Math.PI, up: [-0.25, -0.05], gravity: 7,
   drag: 0, wind: 0, alpha: 0.9, face: PFACE.billboard, jitter: 0.11 };
 
-/** Where the crossing's boat floats now (world), from the trip and the shared swell, as the boat draws it. */
+/** Where the crossing's boat floats now (world), from the trip and the waves, as the boat draws it (its ride as last placed). */
 const _pose = newBoatPose(), _float = newFloat(), _w = { x: 0, z: 0 }, _at = new THREE.Vector3(), _q = new THREE.Quaternion(), _e = new THREE.Euler(0, 0, 0, "YXZ"), _one = new THREE.Vector3(1, 1, 1);
 function boatWorld(dock: Dock, out: { x: number; y: number; z: number; yaw: number; matrix: THREE.Matrix4 }) {
   const trip = myTrip.current;
   if (!trip?.crossing) return false;
-  boatPose(trip, worldNow(), _pose);
-  const swell = readSwell();
-  floatBoat(dock, _pose, swell.t, swell, _float);
-  dockToWorld(dock, _pose.x + _float.sway, _pose.z, _w);
-  out.x = _w.x; out.z = _w.z; out.y = _float.y; out.yaw = _pose.yaw + dock.yaw;
-  out.matrix.compose(_at.set(_w.x, _float.y - BOAT.draft, _w.z), _q.setFromEuler(_e.set(_float.pitch, out.yaw, _float.roll, "YXZ")), _one);
+  const now = worldNow();
+  boatPose(trip, now, _pose);
+  const f = tripBoatFloat.at > now - 250 ? tripBoatFloat.float : floatBoat(dock, _pose, liveWaves, _float);
+  dockToWorld(dock, _pose.x + f.sway, _pose.z, _w);
+  out.x = _w.x; out.z = _w.z; out.y = f.y; out.yaw = _pose.yaw + dock.yaw;
+  out.matrix.compose(_at.set(_w.x, f.y - BOAT.draft, _w.z), _q.setFromEuler(_e.set(f.pitch, out.yaw, f.roll, "YXZ")), _one);
   return true;
 }
 

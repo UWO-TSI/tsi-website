@@ -4,7 +4,7 @@
  * The wharf, and the home island's pier to match (specs/polish/arrival-wharf.md deliverables 1 and 2): the timber
  * jetty modelled in Blender (art/wharf/build_wharf.py: weathered boards, piles with their wet band and weed, a rope
  * rail hung pile to pile, the end rail at the tip to lean on and fish, fenders, cleats, a coil of line), the boat
- * moored alongside the tip on its lines, and two buoys marking its lane, everything riding the shared swell. Placed
+ * moored alongside the tip on its lines, and two buoys marking its lane, everything riding the waves. Placed
  * on a dock (the wharf landmark's spot and yaw, or the home island's HOME_PIER), in that dock's frame.
  */
 import { useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from "react";
@@ -13,13 +13,14 @@ import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import type { IslandLight } from "@/lib/game/islandLighting";
-import { BUOYS, DRESSING_URL, FINGER, LANTERNS, PIER, PIER_URL, ROWBOAT, ROWBOATS, ROWBOAT_URL, dockToWorld, floatBuoy, floatRowboat, newFloat, type Dock, type Float } from "@/lib/game/wharf";
+import { BUOYS, DRESSING_URL, FINGER, LANTERNS, PIER, PIER_URL, ROWBOAT, ROWBOATS, ROWBOAT_URL, dockToWorld, floatBuoy, floatRowboat, newFloat, newRide, type Dock, type Float, type Ride } from "@/lib/game/wharf";
+import { liveWaves } from "@/lib/game/waves";
 import { windowLit } from "@/lib/game/islandLighting";
 import { RopeLine } from "./ropeLine";
 import { foamRings } from "@/lib/game/foamRings";
 import { berthTaken, type TripPlace } from "@/lib/game/boatTrip";
 import { myTrip, readMyTrip, subscribeMyTrip } from "@/lib/game/myTrip";
-import Boat, { readSwell } from "./Boat";
+import Boat from "./Boat";
 import { useTripBoat } from "./useTripBoat";
 
 const BUOY_URL = "/assets/acnh/props/buoy.glb";
@@ -30,36 +31,38 @@ useGLTF.preload(BUOY_URL);
 useGLTF.preload(DRESSING_URL);
 useGLTF.preload(ROWBOAT_URL);
 
-/** One buoy on the swell at (x, z) in the dock's frame. Its shadow would fall on the water, which takes none: it casts none. */
+/** One buoy on the waves at (x, z) in the dock's frame. Its shadow would fall on the water, which takes none: it casts none. */
 function Buoy({ dock, x, z }: { dock: Dock; x: number; z: number }) {
   const { scene } = useGLTF(BUOY_URL);
   const model = useMemo(() => prepareModel(scene, BUOY_URL, undefined, "none"), [scene]);
   useEffect(() => () => disposeModelMaterials(model), [model]);
   const group = useRef<THREE.Group>(null);
-  const float = useMemo(() => newFloat(), []);
-  useFrame(() => {
-    const g = group.current;
-    if (!g) return;
-    const swell = readSwell();
-    floatBuoy(dock, x, z, swell.t, swell, float);
-    g.position.set(x, float.y - BUOY_WATERLINE, z);
-    g.rotation.set(float.pitch, (x * 1.7 + z) % (Math.PI * 2), float.roll, "YXZ");
-  });
+  const float = useMemo(() => ({ float: newFloat(), ride: newRide() }), []);
+  useFrame((_, raw) => rideBuoy(group.current, dock, x, z, float, Math.min(raw, 0.1)));
   return <group ref={group}><primitive object={model} scale={BUOY_SCALE} /></group>;
 }
 
-type Moored = { line: RopeLine | null; float: Float };
+/** Module scope (the react compiler forbids writing through hook values): one frame of a buoy, turned its own way, leaning on the plane of the water under it. */
+function rideBuoy(g: THREE.Group | null, dock: Dock, x: number, z: number, b: { float: Float; ride: Ride }, dt: number) {
+  if (!g) return;
+  const yaw = (x * 1.7 + z) % (Math.PI * 2);
+  floatBuoy(dock, x, z, liveWaves, b.float, b.ride, dt, yaw);
+  g.position.set(x, b.float.y - BUOY_WATERLINE, z);
+  g.rotation.set(b.float.pitch, yaw, b.float.roll, "YXZ");
+}
+
+type Moored = { line: RopeLine | null; float: Float; ride: Ride };
 const _post = new THREE.Vector3(), _bow = new THREE.Vector3(), BOW_RING = new THREE.Vector3(...ROWBOAT.bowRing);
 /**
  * One frame of the moored rowboats (module scope: the react compiler forbids writing through hook values): each on the
- * swell, its line from its post to its bow, the foam where its hull meets the water.
+ * waves, its line from its post to its bow, the foam where its hull meets the water.
  */
-function rideMoored(boats: readonly Moored[], groups: readonly (THREE.Group | null)[], rings: readonly (readonly number[])[], dock: Dock) {
-  const swell = readSwell(), at = { x: 0, z: 0 };
+function rideMoored(boats: readonly Moored[], groups: readonly (THREE.Group | null)[], rings: readonly (readonly number[])[], dock: Dock, dt: number) {
+  const at = { x: 0, z: 0 };
   boats.forEach((b, i) => {
     const rb = ROWBOATS[i], g = groups[i];
     if (!g) return;
-    floatRowboat(dock, rb, swell.t, swell, b.float);
+    floatRowboat(dock, rb, liveWaves, b.float, b.ride, dt);
     g.position.set(rb.x + b.float.sway, b.float.y - ROWBOAT.draft, rb.z);
     g.rotation.set(b.float.pitch, rb.yaw, b.float.roll, "YXZ");
     g.updateMatrix();
@@ -75,7 +78,7 @@ function rideMoored(boats: readonly Moored[], groups: readonly (THREE.Group | nu
 /**
  * The village wharf's dressing (v1 water item 7; references/look/2026-10-13/wharf-creatures-of-the-deep-ref.png): the
  * finger pier off the tip with its posts, the lantern poles (their glass lit with the windows at dusk and night), and
- * the small rowboats moored along the finger, riding the swell on their lines. Foam rings where the posts and hulls
+ * the small rowboats moored along the finger, riding the waves on their lines. Foam rings where the posts and hulls
  * meet the water.
  */
 function Dressing({ dock, light, rope }: { dock: Dock; light: IslandLight; rope: THREE.Material | null }) {
@@ -91,10 +94,10 @@ function Dressing({ dock, light, rope }: { dock: Dock; light: IslandLight; rope:
   useEffect(() => lightLanterns(dressing.glass, glow), [dressing, glow]);
   const boats = useMemo(() => ROWBOATS.map(() => prepareModel(rowboat.clone(), ROWBOAT_URL, undefined, "solid")), [rowboat]);
   useEffect(() => () => boats.forEach(b => disposeModelMaterials(b)), [boats]);
-  const moored = useMemo((): Moored[] => ROWBOATS.map(() => ({ line: rope ? new RopeLine(rope, 10, 6, 0.016, 0.13, 0.9) : null, float: newFloat() })), [rope]);
+  const moored = useMemo((): Moored[] => ROWBOATS.map(() => ({ line: rope ? new RopeLine(rope, 10, 6, 0.016, 0.13, 0.9) : null, float: newFloat(), ride: newRide() })), [rope]);
   const groups = useRef<(THREE.Group | null)[]>([]), rings = useRef<number[][]>([]);
   useEffect(() => () => moored.forEach(m => m.line?.dispose()), [moored]);
-  // Foam round the finger's posts and the lantern poles (fixed), and round each rowboat's hull (it rides the swell).
+  // Foam round the finger's posts and the lantern poles (fixed), and round each rowboat's hull (it rides the waves).
   const { x: dockX, z: dockZ, yaw: dockYaw } = dock;
   useEffect(() => {
     const d = { x: dockX, z: dockZ, yaw: dockYaw }, at = { x: 0, z: 0 }, handles: number[] = [];
@@ -103,7 +106,7 @@ function Dressing({ dock, light, rope }: { dock: Dock; light: IslandLight; rope:
     rings.current = ROWBOATS.map(() => [0, 1].map(() => { const h = foamRings.add(0, 0, ROWBOAT.beam * 0.62, 0.8); handles.push(h); return h; }));
     return () => { handles.forEach(h => foamRings.remove(h)); rings.current = []; };
   }, [dockX, dockZ, dockYaw]);
-  useFrame(() => rideMoored(moored, groups.current, rings.current, dock));
+  useFrame((_, raw) => rideMoored(moored, groups.current, rings.current, dock, Math.min(raw, 0.1)));
   return <>
     <primitive object={dressing.model} />
     {boats.map((b, i) => <group key={i} ref={g => { groups.current[i] = g; }} matrixAutoUpdate={false}><primitive object={b} /></group>)}

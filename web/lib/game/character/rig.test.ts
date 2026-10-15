@@ -3,8 +3,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { adoptPrimitive, mergeLook, refCache, skinnedPrimitives } from "./rig";
-import { PART_BY_ID } from "./look";
 
 function skinned(boneNames: string[], joints: number[], color?: number[]) {
   const bones = boneNames.map(n => Object.assign(new THREE.Bone(), { name: n }));
@@ -22,7 +22,8 @@ function skinned(boneNames: string[], joints: number[], color?: number[]) {
 
 const load = (file: string) => new Promise<THREE.Object3D>((resolve, reject) => {
   const buf = readFileSync(join(__dirname, "../../../public/assets/characters/v6", file));
-  new GLTFLoader().parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength), "", g => resolve(g.scene), reject);
+  // David's hairstyles ship meshopt-compressed (scripts/sync-character-assets.mjs), as the game's useGLTF decodes them
+  new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength), "", g => resolve(g.scene), reject);
 });
 
 describe("character rig assembly", () => {
@@ -39,16 +40,18 @@ describe("character rig assembly", () => {
     expect(() => adoptPrimitive(part, new Map([["mixamorigHips", 0]]), null)).toThrow(/mixamorigTail/);
   });
   it("merges real hair GLBs into one geometry on one skeleton", async () => {
-    const [bangs, back] = await Promise.all([load("hair/bangs/bangs_straight.glb"), load("hair/back/back_bob.glb")]);
+    // head-roblox: two of David's whole hairstyles (a look wears one; two prove the merge across GLBs)
+    const [bangs, back] = await Promise.all([load("hair/full/hair_bob_pigtail.glb"), load("hair/full/hair_bowl_cut.glb")]);
     const bones = skinnedPrimitives(bangs)[0].skeleton.bones;
     expect(bones).toHaveLength(22);
     const merged = mergeLook([{ root: bangs, tints: { M_Hair: "#8C5E3C" } }, { root: back, tints: { M_Hair: "#8C5E3C" } }], bones);
     const tris = (merged.index!.count) / 3;
-    expect(tris).toBe(PART_BY_ID.get("bangs_straight")!.tris + PART_BY_ID.get("back_bob")!.tris);
+    const glbTris = (r: THREE.Object3D) => skinnedPrimitives(r).reduce((n, m) => n + m.geometry.index!.count / 3, 0);
+    expect(tris).toBe(glbTris(bangs) + glbTris(back));
     const head = bones.findIndex(b => b.name === "mixamorigHead");
     const idx = merged.getAttribute("skinIndex"), w = merged.getAttribute("skinWeight");
     for (let i = 0; i < idx.count; i++) if (w.getX(i) > 0.99) expect(idx.getX(i)).toBe(head); // hair is skinned 100% to the head
-    // lock hair has no shading map: its hairMap is zero
+    // merged without a map (mergeLook's map argument): every hairMap is zero
     expect(Array.from(merged.getAttribute("hairMap").array).every(x => x === 0)).toBe(true);
   });
   it("marks a mapped hair's vertices with its atlas channels and carries the accent colour (head fit)", () => {

@@ -1,0 +1,61 @@
+fit_check.py on ed003ecd (art/characters/fit_check.py; the JSON is fit.json beside this, untracked):
+HAIR hair_baby_sprout     open= 64 gap max=None at=None med=None on_scalp=None outer=None
+HAIR hair_messy_boy       open= 49 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0729
+HAIR hair_long_scruffy    open= 36 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0569
+HAIR hair_short_tufts     open= 36 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0668
+HAIR hair_hime_short      open=243 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.001 outer=0.0751
+HAIR hair_windy_bob       open=843 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0749
+HAIR hair_wispy_ponytail  open=588 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.001 outer=0.0875
+HAIR hair_visor_messy     open=118 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.002 outer=0.069
+HAIR hair_fluffy_boy      open= 82 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.003 outer=0.0635
+HAIR hair_messy_wolf      open=456 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.006 outer=0.1029
+HAIR hair_bowl_cut        open= 30 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0604
+HAIR hair_layered_shag    open=113 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0876
+HAIR hair_anime_spikes    open= 54 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.085
+HAIR hair_messy_low_pony  open=357 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.005 outer=0.0865
+HAIR hair_vkei            open=530 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.007 outer=0.0993
+HAIR hair_swept_fringe    open=875 gap max=0.003 at=[-8, -126] med=0.0025 on_scalp=0.003 outer=0.0818
+HAIR hair_bob_pigtail     open= 86 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0601
+HAIR hair_long_pigtails   open=190 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.001 outer=0.0555
+HAIR hair_dreads_cap      open=280 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.003 outer=0.0588
+HAIR hair_waves           open=  0 gap max=0.0 at=[-20, -132] med=0.0 on_scalp=0.996 outer=0.0197
+HAIR hair_messy_dreads    open=154 gap max=0.003 at=[-10, 90] med=0.0025 on_scalp=0.002 outer=0.0881
+HEADWEAR acc_beanie           open=  0 gap max=0.0 med=0.0 rise max=0.0523 poke=0.0
+HEADWEAR acc_sunhat           open=  0 gap max=0.0 med=0.0 rise max=0.0125 poke=0.0
+HEADWEAR acc_cap              open=  0 gap max=0.0 med=0.0 rise max=0.0184 poke=0.0017
+HEADWEAR acc_straw_hat        open=  0 gap max=0.0 med=0.0 rise max=0.0137 poke=0.0
+HEADWEAR acc_flower_crown     open=  0 gap max=0.0082 med=0.0007 rise max=0.0131 poke=0.0
+HEADWEAR acc_crystal_circlet  open=  0 gap max=0.0065 med=0.0 rise max=0.0272 poke=0.0006
+HEADWEAR acc_witch_hat        open=  0 gap max=0.0 med=0.0 rise max=0.1129 poke=0.0
+HEADWEAR acc_cat_ears         open=  0 gap max=0.0038 med=0.0009 rise max=0.0751 poke=0.0
+HEADWEAR acc_pumpkin_head     open=  0 gap max=0.0485 med=0.0143 rise max=0.1036 poke=0.0
+HEADWEAR acc_visor            open= 10 gap max=0.1103 med=0.0057 rise max=0.1763 poke=0.126
+SKULL hair_baby_sprout     full  clip=0.0 float={'top': 0.0038} uncovered=[] reach_out=0.0
+SKULL hair_messy_boy       full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_long_scruffy    full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_short_tufts     full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_hime_short      full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_windy_bob       full  clip=0.0004 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_wispy_ponytail  full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_visor_messy     full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_fluffy_boy      full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_messy_wolf      full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_bowl_cut        full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_layered_shag    full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_anime_spikes    full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_messy_low_pony  full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_vkei            full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_swept_fringe    full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_bob_pigtail     full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_long_pigtails   full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_dreads_cap      full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_waves           full  clip=0.0 float={'crown': 0.0, 'top': 0.0} uncovered=[] reach_out=0.0
+SKULL hair_messy_dreads    full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL acc_beanie           hat   clip=0.0 float={'top': 0.0, 'crown': 0.0} uncovered=[] reach_out=0.0 ear_rim=0.0
+SKULL acc_sunhat           hat   clip=0.0 float={'top': 0.0, 'crown': 0.0} uncovered=[] reach_out=0.0 ear_rim=0.0
+SKULL acc_cap              hat   clip=0.0 float={'top': 0.0, 'crown': 0.0} uncovered=[] reach_out=0.0 ear_rim=0.0
+SKULL acc_straw_hat        hat   clip=0.0 float={'top': 0.0, 'crown': 0.0} uncovered=[] reach_out=0.0 ear_rim=0.0
+SKULL acc_witch_hat        hat   clip=0.0 float={'top': 0.0, 'crown': 0.0} uncovered=[] reach_out=0.0 ear_rim=0.0
+SKULL acc_pumpkin_head     hat   clip=0.0 float={'top': 0.0, 'crown': 0.0255} uncovered=[] reach_out=0.1494 ear_rim=0.1481
+FIT_CHECK PASS (0 over the limits)
+  FLAG hair_waves: skin_through 0.0047 at [-22, 144] (the head's skin out through the hairstyle's shell below the hair zone, where our head is not Roblox's)

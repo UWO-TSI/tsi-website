@@ -29,11 +29,11 @@ describe("face placement: the creator's sliders as look data", () => {
     expect(parseLook(JSON.parse(JSON.stringify(saved)))).toEqual(saved);
   });
   it("drops a saved look's eyebrows and their placement (eyebrows were removed): it loads, wearing the rest", () => {
-    const saved = { ...DEFAULT_LOOK, eyes: "E5.5", mouth: "G2.3", brows: "brow_flat", extras: ["blush"], place: { eyes: [1, 2, 0, 0], brows: [2, -1, -5, 3] } };
+    const saved = { ...DEFAULT_LOOK, eyes: "F1.2", mouth: "G3.3", brows: "brow_flat", extras: ["blush"], place: { eyes: [1, 2, 0, 0], brows: [2, -1, -5, 3] } };
     const l = parseLook(JSON.parse(JSON.stringify(saved)));
     expect("brows" in l).toBe(false);
     expect(l.place).toEqual({ eyes: [1, 2, 0, 0] });
-    expect([l.eyes, l.mouth, l.extras]).toEqual(["E5.5", "G2.3", ["blush"]]);
+    expect([l.eyes, l.mouth, l.extras]).toEqual(["F1.2", "G3.3", ["blush"]]);
     const browsOnly = parseLook({ ...DEFAULT_LOOK, brows: "brow_none", place: { brows: [1, 1, 1, 1] } });
     expect(browsOnly).toEqual(DEFAULT_LOOK);
     expect(slots(l)).toHaveLength(FACE_SLOT_COUNT);
@@ -43,7 +43,7 @@ describe("face placement: the creator's sliders as look data", () => {
 describe("old looks are unchanged", () => {
   const OLD = [
     DEFAULT_LOOK,
-    look({ eyes: "E5.5", mouth: "G2.3", extras: ["blush", "mole"], hair: 9 }),
+    look({ eyes: "F1.2", mouth: "G3.3", extras: ["blush", "mole"], hair: 9 }),
     ...Array.from({ length: 40 }, (_, i) => randomLook(seeded(i))),
   ];
   it("parse to exactly what they were: no placement field appears", () => {
@@ -114,14 +114,15 @@ describe("clamping: placed parts never leave the face area", () => {
       const plain = look({ [c.field]: id });
       // David's pairs drawn as two cells move and clamp as one: their reach is both cells' (the other one reflected)
       const two = c.part === "eyes" && !!FACE.layers.eyes.items[id].left;
-      const rest = (l: CharacterLook) => two ? union(slotBounds(slots(l)[EYE]), reflect(slotBounds(slots(l)[EYE_MIRROR]))) : slotBounds(slots(l)[c.slot]);
-      const area = allowedBounds(rest(plain));
+      const rest = (l: CharacterLook, e: (typeof EXPRESSIONS)[number] = "neutral") =>
+        two ? union(slotBounds(slots(l, e)[EYE]), reflect(slotBounds(slots(l, e)[EYE_MIRROR]))) : slotBounds(slots(l, e)[c.slot]);
       // a pair stays on its own side of the centre line; David's pairs drawn as one cell (left: null) span it
       const side = c.part === "eyes" && FACE.layers.eyes.items[id].left === null ? Infinity : Math.max(0.5, rest(plain)[2]);
       for (const p of all) for (const e of ["neutral", "surprised", "sad"] as const) {
         const l = parseLook({ ...plain, place: { [c.part]: p } });
         const b = two ? union(slotBounds(slots(l, e)[EYE]), reflect(slotBounds(slots(l, e)[EYE_MIRROR]))) : slotBounds(slots(l, e)[c.slot]);
-        within(b, area, `${id} ${p} ${e}`);
+        // what the expression draws may be its own part (since the wardrobe cut, David's): its own default reach counts
+        within(b, allowedBounds(rest(plain, e)), `${id} ${p} ${e}`);
         if (c.pair) expect(b[2], `${id} ${p} crosses the centre line`).toBeLessThanOrEqual(side + 1e-9);
       }
     }
@@ -144,7 +145,7 @@ describe("the look stays within the multiplayer card's 2 KB (realtime_player_car
     return look({
       skin: PALETTE.skin.length - 1, hair: PALETTE.hair.length - 1,
       eyes: longest(Object.keys(FACE.layers.eyes.items)), mouth: longest(Object.keys(FACE.layers.mouth.items)),
-      extras: Object.keys(FACE.layers.extras.items), bangs: longest(PARTS.filter(p => p.slot === "bangs").map(p => p.id)), back: longest(PARTS.filter(p => p.slot === "back").map(p => p.id)),
+      extras: Object.keys(FACE.layers.extras.items), bangs: "", back: longest(PARTS.filter(p => p.slot === "back").map(p => p.id)),
       top: longest(PARTS.filter(p => p.slot === "top").map(p => p.id)), bottom: longest(PARTS.filter(p => p.slot === "bottom").map(p => p.id)),
       shoes: longest(PARTS.filter(p => p.slot === "shoes").map(p => p.id)), acc: accs,
       colors: Object.fromEntries(outfitTinted.map(p => [p.id, PALETTE.outfit.length - 1])),

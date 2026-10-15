@@ -5,7 +5,8 @@
  * at −3.5), y up with the deck's top at 0 (the walk height on WHARF_DECK_LOCAL) and the sea a hand lower.
  */
 import { WATER_DROP } from "./grid";
-import { waterSwellAt } from "./waterShader";
+import { waterWaveAt, type WaveState } from "./waves";
+import { waterFieldAt } from "./waterField";
 
 /** Where a dock stands in the world: the pier's origin and its turn about +y (radians, three's rotation.y). */
 export interface Dock { x: number; z: number; yaw: number }
@@ -90,36 +91,91 @@ export function mooredPose(out: BoatPose): BoatPose {
   return out;
 }
 
-/** The swell's live settings (the water's uniforms). */
-export type Swell = { waveHeight: number; waveScale: number; waveSpeed: number; swellHeight: number; swellLength: number; swellSpeed: number };
+/** The sea's waves as the water draws them this frame (lib/game/waves.ts liveWaves; a test's waveState). */
+export type Swell = WaveState;
 /** How something sits on the water: the surface's height under it (world y; the model subtracts its own waterline), its pitch (rotation.x, bow up negative) and roll (rotation.z, port up positive), and a sway off the pier (the dock's +x). */
 export interface Float { y: number; pitch: number; roll: number; sway: number }
 export const newFloat = (): Float => ({ y: 0, pitch: 0, roll: 0, sway: 0 });
 
-/** Where the hull meets the water, in the boat's frame: its middle along z, the bow and stern samples, the beam's. */
-const HULL = { mid: 0.4, bow: 1.5, stern: -0.7, side: 0.9 };
-const HULL_LEN = HULL.bow - HULL.stern, HULL_BEAM = 2 * HULL.side;
-const at = { x: 0, z: 0 };
-/** The swell at a point of the boat's frame. Module scope, no closures: called four times a frame per boat. */
-function swellUnder(d: Dock, p: BoatPose, c: number, s: number, bx: number, bz: number, t: number, w: Swell) {
-  dockToWorld(d, p.x + bx * c + bz * s, p.z - bx * s + bz * c, at);
-  return waterSwellAt(at.x, at.z, t, w);
+/**
+ * A hull's ride on the waves: where it is and how fast it moves toward the plane the water under it makes. It follows
+ * that plane on a spring a touch under critical damping, so it rocks with the waves, lags them by a fraction of a
+ * second and settles instead of snapping to each sample (`RIDE`). Per boat, carried frame to frame.
+ */
+export interface Ride { y: number; vy: number; pitch: number; vp: number; roll: number; vr: number; on: boolean }
+export const newRide = (): Ride => ({ y: 0, vy: 0, pitch: 0, vp: 0, roll: 0, vr: 0, on: false });
+/** The spring: heave and tilt rates (rad/s; a boat heaves quicker than it tips) and the damping ratio. */
+export const RIDE = { heave: 5, tilt: 3.6, damping: 0.72 } as const;
+const STEP = 1 / 120;
+/** One frame of a ride toward the plane `to` (dt seconds, sub-stepped so a long frame stays stable). */
+export function followPlane(r: Ride, to: { y: number; pitch: number; roll: number }, dt: number): Ride {
+  if (!r.on || dt <= 0 || dt > 1) {
+    // First frame, or back from a long pause: on the water where it is, at rest.
+    r.y = to.y; r.pitch = to.pitch; r.roll = to.roll; r.vy = r.vp = r.vr = 0; r.on = true;
+    return r;
+  }
+  for (let left = dt; left > 1e-6; left -= STEP) {
+    const h = Math.min(STEP, left), hw = RIDE.heave, tw = RIDE.tilt, z = RIDE.damping;
+    r.vy += (hw * hw * (to.y - r.y) - 2 * z * hw * r.vy) * h; r.y += r.vy * h;
+    r.vp += (tw * tw * (to.pitch - r.pitch) - 2 * z * tw * r.vp) * h; r.pitch += r.vp * h;
+    r.vr += (tw * tw * (to.roll - r.roll) - 2 * z * tw * r.vr) * h; r.roll += r.vr * h;
+  }
+  return r;
 }
+
+/** Least-squares plane h = a + b·u + c·v through `n` points (u along across, v along the length), into `out`. */
+export function fitPlane(u: ArrayLike<number>, v: ArrayLike<number>, h: ArrayLike<number>, n: number, out: { a: number; b: number; c: number }) {
+  let su = 0, sv = 0, sh = 0, suu = 0, svv = 0, suv = 0, suh = 0, svh = 0;
+  for (let i = 0; i < n; i++) {
+    su += u[i]; sv += v[i]; sh += h[i]; suu += u[i] * u[i]; svv += v[i] * v[i]; suv += u[i] * v[i]; suh += u[i] * h[i]; svh += v[i] * h[i];
+  }
+  // Centred, the a term drops out of the 2 × 2 for the slopes.
+  const mu = su / n, mv = sv / n, mh = sh / n;
+  const cuu = suu - n * mu * mu, cvv = svv - n * mv * mv, cuv = suv - n * mu * mv, cuh = suh - n * mu * mh, cvh = svh - n * mv * mh;
+  const det = cuu * cvv - cuv * cuv;
+  out.b = Math.abs(det) > 1e-12 ? (cuh * cvv - cvh * cuv) / det : 0;
+  out.c = Math.abs(det) > 1e-12 ? (cvh * cuu - cuh * cuv) / det : 0;
+  out.a = mh - out.b * mu - out.c * mv;
+  return out;
+}
+
+/** Where the hull meets the water, in the boat's frame (x across, + port; z along, + the bow): bow, stern, port, starboard. */
+const HULL = { mid: 0.4, bow: 1.5, stern: -0.7, side: 0.9 };
+const HULL_U = [0, 0, HULL.side, -HULL.side], HULL_V = [HULL.bow, HULL.stern, HULL.mid, HULL.mid];
+const _h = new Float64Array(4), _plane = { a: 0, b: 0, c: 0 }, _to = { y: 0, pitch: 0, roll: 0 }, at = { x: 0, z: 0 }, _g = { x: 0, z: 0 };
+/**
+ * The plane the water makes under a hull at (x, z, yaw) in a dock's frame: the waves' height (lib/game/waves.ts
+ * waterWaveAt, on the field the shader reads) at each of its points (u across, v along), fitted by least squares; its
+ * height at the hull's origin, its pitch and roll, into `_to`.
+ */
+function planeUnder(d: Dock, x: number, z: number, yaw: number, u: readonly number[], v: readonly number[], w: Swell) {
+  const c = Math.cos(yaw), s = Math.sin(yaw);
+  for (let i = 0; i < u.length; i++) {
+    dockToWorld(d, x + u[i] * c + v[i] * s, z - u[i] * s + v[i] * c, at);
+    _h[i] = waterWaveAt(at.x, at.z, w, _g, waterFieldAt);
+  }
+  fitPlane(u, v, _h, u.length, _plane);
+  _to.y = SEA_Y + _plane.a;
+  _to.pitch = -Math.atan(_plane.c);
+  _to.roll = Math.atan(_plane.b);
+  return _to;
+}
+
 const TAU = Math.PI * 2;
 /**
- * A boat on the shared swell (the same waves the water draws, lib/game/waterShader.ts waterSwellAt) at world time `t`
- * (s, the water's uTime): its height from the water under four points of the hull, its pitch and roll from their
- * differences. On top, the reactions, each a damped swing that starts from rest: a dip toward the pier as someone
- * steps aboard or ashore, a roll and push off the fenders as it comes alongside; going, it noses up and skips over the
- * chop, backing out its stern squats. All a function of the pose and time, so every client floats it the same.
+ * A boat on the waves (the ones the water draws, lib/game/waves.ts) at the waves' time: the plane the water makes under
+ * its bow, stern and sides sets its height, pitch and roll, followed on a spring (`ride`, carried frame to frame, `dt`
+ * the frame; none: on the plane exactly). On top, the reactions, each a damped swing that starts from rest: a dip toward
+ * the pier as someone steps aboard or ashore, a roll and push off the fenders as it comes alongside; going, it noses up
+ * and skips over the chop, backing out its stern squats. The waves and the pose are the world clock's, so every client
+ * floats it the same.
  */
-export function floatBoat(d: Dock, pose: BoatPose, t: number, w: Swell, out: Float): Float {
-  const c = Math.cos(pose.yaw), s = Math.sin(pose.yaw);
-  const bow = swellUnder(d, pose, c, s, 0, HULL.bow, t, w), stern = swellUnder(d, pose, c, s, 0, HULL.stern, t, w);
-  const port = swellUnder(d, pose, c, s, HULL.side, HULL.mid, t, w), starboard = swellUnder(d, pose, c, s, -HULL.side, HULL.mid, t, w);
-  out.y = SEA_Y + (bow + stern + port + starboard) / 4;
-  out.pitch = Math.atan2(stern - bow, HULL_LEN);
-  out.roll = Math.atan2(port - starboard, HULL_BEAM);
+export function floatBoat(d: Dock, pose: BoatPose, w: Swell, out: Float, ride?: Ride, dt = 0): Float {
+  const t = w.t;
+  const to = planeUnder(d, pose.x, pose.z, pose.yaw, HULL_U, HULL_V, w);
+  if (ride) followPlane(ride, to, dt);
+  const r = ride ?? to;
+  out.y = r.y; out.pitch = r.pitch; out.roll = r.roll;
   out.sway = 0;
   if (pose.dip >= 0) {
     const e = Math.exp(-2.6 * pose.dip);
@@ -140,31 +196,42 @@ export function floatBoat(d: Dock, pose: BoatPose, t: number, w: Swell, out: Flo
   return out;
 }
 
-const grad = { x: 0, z: 0 };
-/** A buoy at (x, z) in a dock's frame: the surface under it, and it leans with the water's slope (a small float rides it hard) and wobbles lazily. */
-export function floatBuoy(d: Dock, x: number, z: number, t: number, w: Swell, out: Float): Float {
-  dockToWorld(d, x, z, at);
-  out.y = SEA_Y + waterSwellAt(at.x, at.z, t, w, grad);
-  const phase = at.x * 0.37 + at.z * 0.61;
-  out.roll = Math.atan(grad.x * 3) + 0.05 * Math.sin(t * 1.3 + phase);
-  out.pitch = -Math.atan(grad.z * 3) + 0.04 * Math.sin(t * 1.1 + phase * 1.7);
+/** A buoy's float: three points round it (a small float rides the water hard: its lean is the plane's, doubled). */
+const BUOY_R = 0.2, BUOY_U = [0, BUOY_R * 0.866, -BUOY_R * 0.866], BUOY_V = [BUOY_R, -BUOY_R * 0.5, -BUOY_R * 0.5], BUOY_LEAN = 2.2;
+/**
+ * A buoy at (x, z) in a dock's frame, turned `yaw` about its stem: on the plane the water makes under it, leaning with
+ * it (pitch and roll in its own frame), and wobbling lazily.
+ */
+export function floatBuoy(d: Dock, x: number, z: number, w: Swell, out: Float, ride?: Ride, dt = 0, yaw = 0): Float {
+  const t = w.t;
+  const to = planeUnder(d, x, z, yaw, BUOY_U, BUOY_V, w);
+  to.pitch *= BUOY_LEAN; to.roll *= BUOY_LEAN;
+  if (ride) followPlane(ride, to, dt);
+  const r = ride ?? to;
+  const phase = x * 0.37 + z * 0.61;
+  out.y = r.y;
+  out.roll = r.roll + 0.05 * Math.sin(t * 1.3 + phase);
+  out.pitch = r.pitch + 0.04 * Math.sin(t * 1.1 + phase * 1.7);
   out.sway = 0;
   return out;
 }
 
-const _rb = { x: 0, z: 0 };
+/** A rowboat's hull points (as floatBoat's, its own length and beam). */
+const ROW_HALF = ROWBOAT.length * 0.4, ROW_SIDE = ROWBOAT.beam * 0.4;
+const ROW_U = [0, 0, ROW_SIDE, -ROW_SIDE], ROW_V = [ROW_HALF, -ROW_HALF, 0, 0];
 /**
- * A rowboat moored at `rb` on the shared swell at world time `t`: the surface's height under its middle, its pitch and
- * roll from the swell under its bow, stern and sides (as floatBoat, a smaller hull), and a lazy tug at its line.
+ * A rowboat moored at `rb` on the waves: on the plane the water makes under its bow, stern and sides (as floatBoat, a
+ * smaller hull, on its own `ride`), and a lazy tug at its line.
  */
-export function floatRowboat(d: Dock, rb: { x: number; z: number; yaw: number }, t: number, w: Swell, out: Float): Float {
-  const c = Math.cos(rb.yaw), s = Math.sin(rb.yaw), half = ROWBOAT.length * 0.4, side = ROWBOAT.beam * 0.4;
-  const under = (bx: number, bz: number) => { dockToWorld(d, rb.x + bx * c + bz * s, rb.z - bx * s + bz * c, _rb); return waterSwellAt(_rb.x, _rb.z, t, w); };
-  const bow = under(0, half), stern = under(0, -half), port = under(side, 0), starboard = under(-side, 0);
+export function floatRowboat(d: Dock, rb: { x: number; z: number; yaw: number }, w: Swell, out: Float, ride?: Ride, dt = 0): Float {
+  const t = w.t;
+  const to = planeUnder(d, rb.x, rb.z, rb.yaw, ROW_U, ROW_V, w);
+  if (ride) followPlane(ride, to, dt);
+  const r = ride ?? to;
   const phase = rb.x * 0.73 + rb.z * 0.41;
-  out.y = SEA_Y + (bow + stern + port + starboard) / 4;
-  out.pitch = Math.atan2(stern - bow, 2 * half) + 0.012 * Math.sin(t * 0.8 + phase);
-  out.roll = Math.atan2(port - starboard, 2 * side) + 0.02 * Math.sin(t * 0.63 + phase * 1.7);
+  out.y = r.y;
+  out.pitch = r.pitch + 0.012 * Math.sin(t * 0.8 + phase);
+  out.roll = r.roll + 0.02 * Math.sin(t * 0.63 + phase * 1.7);
   out.sway = 0.03 * Math.sin(t * 0.21 + phase);
   return out;
 }

@@ -1,0 +1,181 @@
+21:43:19 | INFO: Data are loaded, start creating Blender stuff
+21:43:19 | INFO: Blender create Mesh node V6_Body
+21:43:19 | INFO: Blender create Mesh node V6_Bottom
+21:43:19 | INFO: Blender create Mesh node V6_HairBack
+21:43:19 | INFO: Blender create Mesh node V6_HairBangs
+21:43:19 | INFO: Blender create Mesh node V6_Top
+21:43:19 | INFO: Blender create Mesh node V8_Head
+21:43:19 | INFO: glTF import finished in 0.22s
+21:43:23 | INFO: Data are loaded, start creating Blender stuff
+21:43:24 | INFO: Blender create Mesh node hair_baby_sprout
+21:43:24 | INFO: glTF import finished in 0.01s
+HAIR hair_baby_sprout     open= 64 gap max=None at=None med=None on_scalp=None outer=None
+21:43:24 | INFO: Data are loaded, start creating Blender stuff
+21:43:24 | INFO: Blender create Mesh node hair_messy_boy
+21:43:24 | INFO: glTF import finished in 0.00s
+HAIR hair_messy_boy       open= 49 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0729
+21:43:24 | INFO: Data are loaded, start creating Blender stuff
+21:43:24 | INFO: Blender create Mesh node hair_long_scruffy
+21:43:24 | INFO: glTF import finished in 0.01s
+HAIR hair_long_scruffy    open= 36 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0569
+21:43:24 | INFO: Data are loaded, start creating Blender stuff
+21:43:24 | INFO: Blender create Mesh node hair_short_tufts
+21:43:24 | INFO: glTF import finished in 0.01s
+HAIR hair_short_tufts     open= 36 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0668
+21:43:24 | INFO: Data are loaded, start creating Blender stuff
+21:43:24 | INFO: Blender create Mesh node hair_hime_short
+21:43:24 | INFO: glTF import finished in 0.01s
+HAIR hair_hime_short      open=243 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.001 outer=0.0751
+21:43:24 | INFO: Data are loaded, start creating Blender stuff
+21:43:24 | INFO: Blender create Mesh node hair_windy_bob
+21:43:24 | INFO: glTF import finished in 0.01s
+HAIR hair_windy_bob       open=843 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0749
+21:43:24 | INFO: Data are loaded, start creating Blender stuff
+21:43:24 | INFO: Blender create Mesh node hair_wispy_ponytail
+21:43:24 | INFO: glTF import finished in 0.01s
+HAIR hair_wispy_ponytail  open=588 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.001 outer=0.0875
+21:43:24 | INFO: Data are loaded, start creating Blender stuff
+21:43:24 | INFO: Blender create Mesh node hair_visor_messy
+21:43:24 | INFO: glTF import finished in 0.01s
+HAIR hair_visor_messy     open=118 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.002 outer=0.069
+21:43:24 | INFO: Data are loaded, start creating Blender stuff
+21:43:24 | INFO: Blender create Mesh node hair_fluffy_boy
+21:43:24 | INFO: glTF import finished in 0.00s
+HAIR hair_fluffy_boy      open= 82 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.003 outer=0.0635
+21:43:24 | INFO: Data are loaded, start creating Blender stuff
+21:43:24 | INFO: Blender create Mesh node hair_messy_wolf
+21:43:24 | INFO: glTF import finished in 0.01s
+HAIR hair_messy_wolf      open=456 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.006 outer=0.1029
+21:43:24 | INFO: Data are loaded, start creating Blender stuff
+21:43:24 | INFO: Blender create Mesh node hair_bowl_cut
+21:43:24 | INFO: glTF import finished in 0.01s
+HAIR hair_bowl_cut        open= 30 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0604
+21:43:24 | INFO: Data are loaded, start creating Blender stuff
+21:43:24 | INFO: Blender create Mesh node hair_layered_shag
+21:43:24 | INFO: glTF import finished in 0.01s
+HAIR hair_layered_shag    open=113 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0876
+21:43:24 | INFO: Data are loaded, start creating Blender stuff
+21:43:24 | INFO: Blender create Mesh node hair_anime_spikes
+21:43:24 | INFO: glTF import finished in 0.01s
+HAIR hair_anime_spikes    open= 54 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.085
+21:43:24 | INFO: Data are loaded, start creating Blender stuff
+21:43:24 | INFO: Blender create Mesh node hair_messy_low_pony
+21:43:24 | INFO: glTF import finished in 0.01s
+HAIR hair_messy_low_pony  open=357 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.005 outer=0.0865
+21:43:24 | INFO: Data are loaded, start creating Blender stuff
+21:43:24 | INFO: Blender create Mesh node hair_vkei
+21:43:24 | INFO: glTF import finished in 0.01s
+HAIR hair_vkei            open=530 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.007 outer=0.0993
+21:43:24 | INFO: Data are loaded, start creating Blender stuff
+21:43:24 | INFO: Blender create Mesh node hair_swept_fringe
+21:43:24 | INFO: glTF import finished in 0.01s
+HAIR hair_swept_fringe    open=875 gap max=0.003 at=[-8, -126] med=0.0025 on_scalp=0.003 outer=0.0818
+21:43:24 | INFO: Data are loaded, start creating Blender stuff
+21:43:24 | INFO: Blender create Mesh node hair_bob_pigtail
+21:43:24 | INFO: glTF import finished in 0.01s
+HAIR hair_bob_pigtail     open= 86 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0601
+21:43:24 | INFO: Data are loaded, start creating Blender stuff
+21:43:24 | INFO: Blender create Mesh node hair_long_pigtails
+21:43:24 | INFO: glTF import finished in 0.01s
+HAIR hair_long_pigtails   open=190 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.001 outer=0.0555
+21:43:24 | INFO: Data are loaded, start creating Blender stuff
+21:43:24 | INFO: Blender create Mesh node hair_dreads_cap
+21:43:24 | INFO: glTF import finished in 0.01s
+HAIR hair_dreads_cap      open=280 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.003 outer=0.0588
+21:43:25 | INFO: Data are loaded, start creating Blender stuff
+21:43:25 | INFO: Blender create Mesh node hair_waves
+21:43:25 | INFO: glTF import finished in 0.00s
+HAIR hair_waves           open=  0 gap max=0.0 at=[-20, -132] med=0.0 on_scalp=0.996 outer=0.0197
+21:43:25 | INFO: Data are loaded, start creating Blender stuff
+21:43:25 | INFO: Blender create Mesh node hair_messy_dreads
+21:43:25 | INFO: glTF import finished in 0.01s
+HAIR hair_messy_dreads    open=154 gap max=0.003 at=[-10, 90] med=0.0025 on_scalp=0.002 outer=0.0881
+21:43:25 | INFO: Data are loaded, start creating Blender stuff
+21:43:25 | INFO: Blender create Mesh node V6_Body
+21:43:25 | INFO: Blender create Mesh node V6_Bottom
+21:43:25 | INFO: Blender create Mesh node V6_HairBack
+21:43:25 | INFO: Blender create Mesh node V6_HairBangs
+21:43:25 | INFO: Blender create Mesh node V6_Top
+21:43:25 | INFO: Blender create Mesh node V8_Head
+21:43:25 | INFO: glTF import finished in 0.21s
+21:43:25 | INFO: Data are loaded, start creating Blender stuff
+21:43:25 | INFO: Blender create Mesh node acc_glasses_round
+21:43:25 | INFO: glTF import finished in 0.00s
+GLASSES acc_glasses_round    offset max=0.0081 default=0.0045
+21:43:25 | INFO: Data are loaded, start creating Blender stuff
+21:43:25 | INFO: Blender create Mesh node acc_glasses_square
+21:43:25 | INFO: glTF import finished in 0.00s
+GLASSES acc_glasses_square   offset max=0.0081 default=0.0045
+21:43:25 | INFO: Data are loaded, start creating Blender stuff
+21:43:25 | INFO: Blender create Mesh node acc_sunhat
+21:43:25 | INFO: glTF import finished in 0.00s
+HEADWEAR acc_sunhat           open=  0 gap max=0.0 med=0.0 rise max=0.0125 poke=0.0
+21:43:25 | INFO: Data are loaded, start creating Blender stuff
+21:43:25 | INFO: Blender create Mesh node acc_cap
+21:43:25 | INFO: glTF import finished in 0.00s
+HEADWEAR acc_cap              open=  0 gap max=0.0 med=0.0 rise max=0.0184 poke=0.0017
+21:43:25 | INFO: Data are loaded, start creating Blender stuff
+21:43:25 | INFO: Blender create Mesh node acc_straw_hat
+21:43:25 | INFO: glTF import finished in 0.00s
+HEADWEAR acc_straw_hat        open=  0 gap max=0.0 med=0.0 rise max=0.0137 poke=0.0
+21:43:25 | INFO: Data are loaded, start creating Blender stuff
+21:43:25 | INFO: Blender create Mesh node acc_flower_crown
+21:43:25 | INFO: glTF import finished in 0.00s
+HEADWEAR acc_flower_crown     open=  0 gap max=0.0082 med=0.0007 rise max=0.0131 poke=0.0
+21:43:25 | INFO: Data are loaded, start creating Blender stuff
+21:43:25 | INFO: Blender create Mesh node acc_crystal_circlet
+21:43:25 | INFO: glTF import finished in 0.00s
+HEADWEAR acc_crystal_circlet  open=  0 gap max=0.0065 med=0.0 rise max=0.0272 poke=0.0006
+21:43:25 | INFO: Data are loaded, start creating Blender stuff
+21:43:25 | INFO: Blender create Mesh node acc_witch_hat
+21:43:25 | INFO: glTF import finished in 0.00s
+HEADWEAR acc_witch_hat        open=  0 gap max=0.0 med=0.0 rise max=0.1129 poke=0.0
+21:43:25 | INFO: Data are loaded, start creating Blender stuff
+21:43:25 | INFO: Blender create Mesh node acc_cat_ears
+21:43:25 | INFO: glTF import finished in 0.00s
+HEADWEAR acc_cat_ears         open=  0 gap max=0.0038 med=0.0009 rise max=0.0751 poke=0.0
+21:43:25 | INFO: Data are loaded, start creating Blender stuff
+21:43:25 | INFO: Blender create Mesh node acc_visor
+21:43:25 | INFO: glTF import finished in 0.00s
+HEADWEAR acc_visor            open= 10 gap max=0.1103 med=0.0057 rise max=0.1763 poke=0.126
+SKULL hair_baby_sprout     full  clip=0.0 float={'top': 0.0038} uncovered=[] reach_out=0.0
+SKULL hair_messy_boy       full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_long_scruffy    full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_short_tufts     full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_hime_short      full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_windy_bob       full  clip=0.0004 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_wispy_ponytail  full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_visor_messy     full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_fluffy_boy      full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_messy_wolf      full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_bowl_cut        full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_layered_shag    full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_anime_spikes    full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_messy_low_pony  full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_vkei            full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_swept_fringe    full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_bob_pigtail     full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_long_pigtails   full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_dreads_cap      full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_waves           full  clip=0.0 float={'crown': 0.0, 'top': 0.0} uncovered=[] reach_out=0.0
+SKULL hair_messy_dreads    full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+21:43:25 | INFO: Data are loaded, start creating Blender stuff
+21:43:25 | INFO: Blender create Mesh node acc_sunhat
+21:43:25 | INFO: glTF import finished in 0.00s
+SKULL acc_sunhat           hat   clip=0.0 float={'top': 0.0, 'crown': 0.0} uncovered=[] reach_out=0.0 ear_rim=0.0
+21:43:25 | INFO: Data are loaded, start creating Blender stuff
+21:43:25 | INFO: Blender create Mesh node acc_cap
+21:43:25 | INFO: glTF import finished in 0.00s
+SKULL acc_cap              hat   clip=0.0 float={'top': 0.0, 'crown': 0.0} uncovered=[] reach_out=0.0 ear_rim=0.0
+21:43:25 | INFO: Data are loaded, start creating Blender stuff
+21:43:25 | INFO: Blender create Mesh node acc_straw_hat
+21:43:25 | INFO: glTF import finished in 0.00s
+SKULL acc_straw_hat        hat   clip=0.0 float={'top': 0.0, 'crown': 0.0} uncovered=[] reach_out=0.0 ear_rim=0.0
+21:43:26 | INFO: Data are loaded, start creating Blender stuff
+21:43:26 | INFO: Blender create Mesh node acc_witch_hat
+21:43:26 | INFO: glTF import finished in 0.00s
+SKULL acc_witch_hat        hat   clip=0.0 float={'top': 0.0, 'crown': 0.0} uncovered=[] reach_out=0.0 ear_rim=0.0
+FACE {"feature_tris": 252, "stretch_max": 1.139, "aniso_max": 1.292, "per_layer": {"eyes": {"stretch": 1.139, "aniso": 1.292}, "mouth": {"stretch": 1.135, "aniso": 1.18}}, "stretch_worst_at": ["eyes", 47, 0.593], "aniso_worst_at": ["eyes", [0.077, 0.907]], "eye_reach_deg": 48.8, "eye_reach_lon_deg": 53.6, "facing_max_deg": {"eyes": 48.8, "mouth": 45.2}, "default_eye_centre_lon_deg": 32.6, "default_eye_centre_z": 0.7276}
+SEAM {"ledge_max": 0.0, "worst_pair": null, "worst_at": null, "pairs": 0, "median_over_pairs": 0.0, "over": {}}
+FIT_CHECK PASS (0 over the limits)
+  FLAG hair_waves: skin_through 0.0047 at [-22, 144] (the head's skin out through the hairstyle's shell below the hair zone, where our head is not Roblox's)

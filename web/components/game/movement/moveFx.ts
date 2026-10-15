@@ -16,8 +16,8 @@ import { ParticlePool } from "@/lib/game/fx/particles";
 import { liveIslandWeather } from "@/lib/game/islandWeather";
 import type { MoveEvent } from "@/lib/game/movement/sim";
 import { worldWind, type WorldWind } from "@/lib/game/worldFx";
-import { WATER_SWELL, swellUniformsOf } from "@/lib/game/waterShader";
-import { waterSurfaceUniforms } from "../grid/terrainMaterials";
+import { WATER_SWELL, WATER_WAVES, swellUniformsOf, waveUniformsOf, type SeaKind } from "@/lib/game/waterShader";
+import { activeSea, waterSurfaceUniforms } from "../grid/terrainMaterials";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 
 /** Feel values on the renderer's side, tuned next to the sim's in /lab/move. */
@@ -123,26 +123,31 @@ export const PICK_FRAME = `{
   vMapUv = vec2((pCol + uv.x) / ${PACK_COLS.toFixed(1)}, 1.0 - (pRow + 1.0 - uv.y) / ${PACK_ROWS.toFixed(1)});
 }`;
 
-let particleMaterial: THREE.MeshStandardMaterial | null = null;
-/** Matte and lit like the world's own surfaces (it gets the sun, the sky, the environment and the look grade). */
-function moveParticleMaterial(): THREE.MeshStandardMaterial {
-  if (particleMaterial) return particleMaterial;
+const particleMaterials: Partial<Record<SeaKind, THREE.MeshStandardMaterial>> = {};
+/**
+ * Matte and lit like the world's own surfaces (it gets the sun, the sky, the environment and the look grade). On the
+ * water (FACE.water) a particle rides what the water draws: the waves where the world opts in, main's swell elsewhere
+ * (lib/game/waterShader.ts SeaKind), the same function and the same live uniforms.
+ */
+export function moveParticleMaterial(sea: SeaKind): THREE.MeshStandardMaterial {
+  const hit = particleMaterials[sea];
+  if (hit) return hit;
   const m = new THREE.MeshStandardMaterial({ name: "MoveParticles", map: packMap(), roughness: 1, metalness: 0, transparent: true, depthWrite: false });
+  const waves = sea === "waves";
   m.onBeforeCompile = shader => {
-    // On the water (FACE.water) a particle rides the swell the water draws: the same function, the same live uniforms.
     const u = waterSurfaceUniforms();
-    Object.assign(shader.uniforms, swellUniformsOf(u));
-    shader.vertexShader = VERTEX_PARS + WATER_SWELL + shader.vertexShader
+    Object.assign(shader.uniforms, waves ? waveUniformsOf(u) : swellUniformsOf(u));
+    shader.vertexShader = VERTEX_PARS + (waves ? WATER_WAVES : WATER_SWELL) + shader.vertexShader
       .replace("#include <uv_vertex>", `#include <uv_vertex>\n${PICK_FRAME}`)
       .replace("#include <beginnormal_vertex>", PLACE_NORMAL)
-      .replace("#include <begin_vertex>", `${PLACE_VERTEX}\nif (face > 3.5) { vec2 swellSlope; transformed.y += waterSwell(transformed.xz, swellSlope); }`);
+      .replace("#include <begin_vertex>", `${PLACE_VERTEX}\n${waves ? "if (face > 3.5) transformed.y += waterHeightAt(transformed.xz);" : "if (face > 3.5) { vec2 swellSlope; transformed.y += waterSwell(transformed.xz, swellSlope); }"}`);
     shader.fragmentShader = "varying vec4 vTint;\nvarying float vAbove;\n" + shader.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
   diffuseColor *= vTint;
   diffuseColor.a *= smoothstep(0.0, ${SOFT.toFixed(2)}, vAbove);
   if (diffuseColor.a < 0.003) discard;`);
   };
-  m.customProgramCacheKey = () => "move-particles-v2";
-  return (particleMaterial = m);
+  m.customProgramCacheKey = () => (waves ? "move-particles-waves" : "move-particles-v2");
+  return (particleMaterials[sea] = m);
 }
 
 const camPos = new THREE.Vector3(), camDir = new THREE.Vector3();
@@ -163,7 +168,7 @@ class PoolMesh {
       return attr;
     });
     this.geometry.instanceCount = 0;
-    this.mesh = new THREE.Mesh(this.geometry, moveParticleMaterial());
+    this.mesh = new THREE.Mesh(this.geometry, moveParticleMaterial(activeSea()));
     this.mesh.name = label;
     this.mesh.frustumCulled = false; // placed in the shader; the pool is small
     this.mesh.receiveShadow = true;
@@ -171,6 +176,10 @@ class PoolMesh {
     this.mesh.onAfterRender = () => { this.warm = true; };
   }
   step(dt: number, wind: { x: number; z: number }) {
+    // The sea the world's water was last advanced as (its first frame decides, before any particle shows); a new sea
+    // draws once empty again, so its shader compiles then and not on the first puff.
+    const material = moveParticleMaterial(activeSea());
+    if (this.mesh.material !== material) { this.mesh.material = material; this.warm = false; }
     this.pool.update(dt, wind.x, wind.z);
     const n = this.pool.write(camPos.x, camPos.y, camPos.z, camDir.x, camDir.y, camDir.z);
     this.geometry.instanceCount = n;

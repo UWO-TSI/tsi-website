@@ -63,10 +63,11 @@ import {
   WET,
   type ShoreSdf,
 } from "@/lib/game/grid";
-import { terrainMaterial, setShoreField } from "./terrainMaterials";
+import { terrainMaterial, setShoreField, waterSurfaceMaterial } from "./terrainMaterials";
+import type { SeaKind } from "@/lib/game/waterShader";
 import { TERRAIN_BLOCK, WATER_BLOCK, terrainBlocks } from "./terrainBlocks";
 import { CurvedCull, cullMeshes } from "@/lib/game/curvedCull";
-import { bakeWaterDepth, seabedDip, shoreFieldOf } from "@/lib/game/seabed";
+import { bakeWaterDepth, bakeWaveCalm, seabedDip, shoreFieldOf } from "@/lib/game/seabed";
 
 // Flat colours for the surfaces whose road-kit textures are not wired yet.
 const SURFACE_COLOR: Record<number, string> = {
@@ -544,7 +545,8 @@ export type TerrainMaterials = Map<number, THREE.Material>;
  * the same instances to the ground and to the cliff kit, so a cliff's top grass
  * and its drape are the island's grass, not a second green.
  */
-export function useTerrainMaterials(palette?: TerrainPalette): TerrainMaterials {
+/** `sea`: the world's water (lib/game/waterShader.ts SeaKind): the waves only where the world opts in, else main's swell. */
+export function useTerrainMaterials(palette?: TerrainPalette, sea: SeaKind = "swell"): TerrainMaterials {
   const materials = useMemo(() => {
     // Names, not files — terrainMaterial() decides whether a surface gets an
     // ACNH texture or a procedural one, because two of the ACNH files are not
@@ -580,7 +582,7 @@ export function useTerrainMaterials(palette?: TerrainPalette): TerrainMaterials 
       ...OVERLAY_SURFACES,
     ]) {
       const sharedName = SHARED[s];
-      const shared = sharedName ? terrainMaterial(sharedName) : null;
+      const shared = s === Surface.River ? waterSurfaceMaterial(sea) : sharedName ? terrainMaterial(sharedName) : null;
       if (shared && palette && s === Surface.Stone) {
         // Island stone (plaza) keeps its shared look and gains winter snow cover.
         const stone = shared.clone() as THREE.MeshStandardMaterial;
@@ -722,7 +724,7 @@ export function useTerrainMaterials(palette?: TerrainPalette): TerrainMaterials 
     rock.color.set(ROCK.color);
     m.set(ROCK_LAYER, rock);
     return m;
-  }, [palette]);
+  }, [palette, sea]);
 
   useEffect(() => () => {
     if (palette) for (const surface of [Surface.Grass, Surface.Soil, Surface.Sand]) {
@@ -775,7 +777,7 @@ export default function GridTerrain({ map, field: heights, materials }: { map: I
   // The water reads its distance to the shore and the seabed's depth from a baked field rather than from anything on
   // the mesh, so this is a one-shot upload, not geometry.
   useEffect(() => {
-    setShoreField({ ...field, depth: bakeWaterDepth(map, field) });
+    setShoreField({ ...field, depth: bakeWaterDepth(map, field), calm: bakeWaveCalm(field, map) });
   }, [map, field]);
 
   useEffect(() => () => { chunks.forEach(({ geometry }) => geometry.dispose()); }, [chunks]);

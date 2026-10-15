@@ -19,6 +19,7 @@ import head_model as hm  # noqa: E402
 from head_shape import SKULL, EYE_LAT, EYE_LON, MOUTH_LAT  # noqa: E402
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+RIM_ROWS = ()
 
 bpy.ops.wm.open_mainfile(filepath=os.path.join(ART, "v7", "head.blend"))
 rig = bpy.data.objects["CharacterRig"]
@@ -40,6 +41,10 @@ if old:
 if "M_Face" not in bpy.data.materials:
     bpy.data.materials.new("M_Face")
 
+# v9 (head-roblox): the v7 rows already cross the classic head's rim (ray lat 28-64) every 14 deg (2 mm chords); room
+# for more (RIM_ROWS) would cost 40 triangles a row, and the heaviest look sits 11 under its 4,000 (look.test.ts)
+hm.ROWS = sorted(set(hm.ROWS) | set(RIM_ROWS))
+hm.BLOCKS = {k: (hm.ROWS.index(EYE_LAT if k != "mouth" else MOUTH_LAT), c, n) for k, (_, c, n) in hm.BLOCKS.items()}
 h = hm.Head()
 hm.step_grid(h)
 hm.step_loops(h)

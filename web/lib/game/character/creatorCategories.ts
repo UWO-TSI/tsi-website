@@ -7,7 +7,7 @@
  * here), the swatch row follows the parts' tinted materials, and a catalogue slot no category names gets a category
  * of its own at the end of the rail.
  */
-import { FACE, PART_BY_ID, PARTS, partColor, wear, type AccGroup, type CharacterLook, type FaceLayer, type PartSlot, type PlacePart } from "./look";
+import { eventPartOpen, FACE, PART_BY_ID, PARTS, partColor, wear, type AccGroup, type CharacterLook, type FaceLayer, type PartSlot, type PlacePart } from "./look";
 
 /** How the portrait frames a category: the face up close, head and shoulders, from the waist up, or head to toe. */
 export type Framing = "face" | "head" | "upper" | "body";
@@ -52,11 +52,8 @@ const ACC_GROUPS: [AccGroup, string][] = [["face", "Glasses"], ["head", "Hats"],
 const SLOT_LABEL: Partial<Record<string, string>> = { bangs: "Fringe", back: "Back", top: "Tops", bottom: "Bottoms", onepiece: "One-pieces", shoes: "Shoes" };
 
 function build(): Category[] {
-  // head fit: whole hairstyles (the back slot's `full` parts, David's set) get their own row; they take the bangs off
-  const back = slotSection("back", "Back", "back");
-  const full: Section = { id: "hairstyles", label: "Hairstyles", source: { slot: "back" }, options: back.options.filter(id => id && PART_BY_ID.get(id)?.full) };
-  back.options = back.options.filter(id => !id || !PART_BY_ID.get(id)?.full);
-  const hair = [slotSection("bangs", "Fringe", "bangs"), back, ...(full.options.length ? [full] : [])];
+  // head-roblox (David, 2026-10-14): the hair is David's whole hairstyles only (the back slot's `full` parts), one row
+  const hair: Section[] = [{ id: "hairstyles", label: "Hairstyles", source: { slot: "back" }, options: parts("back") }];
   const acc = ACC_GROUPS.map(([g, label]) => slotSection(`acc-${g}`, label, "accessory", [], g)).filter(s => s.options.length);
   const bottoms = [slotSection("bottom", "Bottoms", "bottom"), slotSection("onepiece", "One-pieces", "onepiece")];
   const cats: Category[] = [
@@ -86,6 +83,16 @@ export function optionName(section: Section, id: string | null): string {
   if ("slot" in section.source) return PART_BY_ID.get(id)?.name ?? id;
   return FACE.names[id] ?? ({ blush: "Blush", mole: "Mole", freckles: "Freckles" } as Record<string, string>)[id]
     ?? `${section.label}, style ${section.options.indexOf(id) + 1} of ${section.options.length}`;
+}
+
+/**
+ * The options a section shows. The starting creator (`create`) offers only what is owned, and never a crafted part
+ * (David's wardrobe cut: the flower crown, shell necklace, koi kimono, monarch cape and silk sweater are made at the
+ * workbench and worn from the closet). The wardrobe shows them all, the unowned ones locked. An event costume shows
+ * only while its tradition runs.
+ */
+export function shownOptions(section: Section, mode: "create" | "wardrobe", has: (id: string | null) => boolean): (string | null)[] {
+  return section.options.filter(id => (mode !== "create" || (has(id) && !(id && PART_BY_ID.get(id)?.item))) && (!id || eventPartOpen(id)));
 }
 
 /** Is this option what the look wears? */

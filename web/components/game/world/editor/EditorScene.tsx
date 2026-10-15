@@ -171,7 +171,7 @@ function GhostTicker() {
 
 function Scene({ terrain, ocean }: { terrain: WorldTerrain; ocean: IslandMap }) {
   useEditor();
-  useWaterFrame(LIGHT, false);
+  useWaterFrame(LIGHT, false, "waves");
   const onView = useCallback((v: TerrainView | null) => { ed.view = v; if (v) v.forceLod = null; }, []);
   // No blades under a building or a trunk.
   const objects = ed.objects;
@@ -190,7 +190,7 @@ function Scene({ terrain, ocean }: { terrain: WorldTerrain; ocean: IslandMap }) 
     <ambientLight color={LIGHT.fill} intensity={LIGHT.ambient} />
     <directionalLight color={LIGHT.sun} intensity={LIGHT.sunIntensity} position={LIGHT.sunPosition} />
     <SmoothTerrain terrain={terrain} shore={ed.shore ?? undefined} onView={onView} revision={ed.grassRevision} clear={clear} grassOn={!ed.overhead} />
-    <GridOcean map={ocean} lite={false} />
+    <GridOcean map={ocean} lite={false} waves />
     <Objects terrain={terrain} />
     <Cursor />
     <GhostTicker />

@@ -1,5 +1,9 @@
 # Avatar v7
 
+> **Hair superseded (head-roblox, 2026-10-14, `specs/characters/head-roblox.md`).** The sculpted-lock hair library (16
+> bangs, 12 backs) is removed; the hair is David's 21 Roblox hairstyles, whole meshes, in three detail tiers. The head
+> is v9 (the v8 face on Roblox's classic head where hair sits). The face system below still stands.
+
 Rows 242, 252 and 254. The spec is `specs/avatar-v7.md`. David's picks:
 - sculpted-lock hair
 - an animated painted face
@@ -104,13 +108,13 @@ Gathered styles (pony, pigtails, buns) take their locks from the crown for low t
 `build_face.py` redraws v6's measured drawings of David's picks (row 192), one side per cell. The engine mirrors eyes, brows, blush and freckles.
 
 **Atlas contents:**
-- 35 eye styles; every lidded eye has `open`, `half` and `closed` frames. David's 19 have none (static).
+- 23 eye styles since David's wardrobe cut (playtest round 1, 2026-10-14): F1.1 and F1.2 have `open`, `half` and `closed` frames; row 301's two and David's 19 have none (static).
 - 2 brows (white, tinted with the hair colour), and `brow_none` (an empty cell: no brows).
-- 97 mouths (M picks, the whole G grid, row 301's two and David's 19).
+- 25 mouths: M1.1 M1.2 M2.2 M3.1 M3.3, G3.3 and David's 19. The expressions and the emote mouths use David's set (the second page).
 - 4 talk cells (`layers.talk`, T1-T4).
 - 6 extras.
 
-**Atlas format:** page 1 is 2048×1344 px at 1024 px per face canvas, with 16 px gutters whose colour is bled outward for mipmaps. The world loads the 512 copy. A cell is `[x, y, w, h, ax, ay]`, where `(ax, ay)` sits on the layer's anchor measured on reference 18: eye, brow, mouth, cheek, mole (plus `blush`, the band's point on the centre line between the eyes and the cheeks).
+**Atlas format:** page 1 is 2048×576 px (2048×1344 before the wardrobe cut) at 1024 px per face canvas, with 16 px gutters whose colour is bled outward for mipmaps. The world loads the 512 copy. A cell is `[x, y, w, h, ax, ay]`, where `(ax, ay)` sits on the layer's anchor measured on reference 18: eye, brow, mouth, cheek, mole (plus `blush`, the band's point on the centre line between the eyes and the cheeks).
 
 **Engine** (`web/lib/game/character/face.ts`, `faceMaterial.ts`):
 - The face draws the skin colour plus a slot per extra (blush band, blush, freckles, mole, then later accents), brows, right eye, left eye (the right eye mirrored, or its own `left` cell) and mouth: 10 slots now.

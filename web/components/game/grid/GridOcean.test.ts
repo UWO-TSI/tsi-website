@@ -9,6 +9,7 @@ import { buildVillage, type VillageDoc } from "@/lib/game/villageMap";
 import frozen from "@/lib/game/fixtures/village-2026-09-28.json";
 import { WATER_DROP, createCenteredMap, isRiver, surfaceAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { GLINT_FOG, glintPoints, oceanGeometry } from "./GridOcean";
+import { waveSlopeBound } from "@/lib/game/waves";
 import { readFileSync } from "node:fs";
 
 // Water optics on a frozen copy of the 2026-09-28 village (camera spots and the deck below are its geometry).
@@ -51,11 +52,11 @@ function mirrorPoint(sun: Vec3, eye: Vec3): [number, number] {
 }
 
 /**
- * The steepest the water gets: the swell's slope bound, the ripple texture's
- * (mSeaWater_Nrm's largest |rg| is 0.704, two layers at 1 + 0.5), and a facet's
- * own slope (fixed tilt + chop, at most 1.5 roughness).
+ * The steepest the water gets: the waves' slope bound (lib/game/waves.ts, the crests' sharpening in it), the ripple
+ * texture's (mSeaWater_Nrm's largest |rg| is 0.704, two layers at 1 + 0.5), and a facet's own slope (fixed tilt +
+ * chop, at most 1.5 roughness).
  */
-const steepest = (p = WATER) => 2 * Math.PI / p.waveScale * p.waveHeight * (0.62 + 0.38 * 1.63) + 0.705 * 1.5 * (p.rippleStrength ?? 0) + 1.5 * p.roughness;
+const steepest = (p = WATER) => waveSlopeBound(p) + 0.705 * 1.5 * (p.rippleStrength ?? 0) + 1.5 * p.roughness;
 /** The facet, tilted as far as the water allows toward mirroring the sun: the best any point can do. */
 function bestFacet(sun: Vec3, eye: Vec3, point: Vec3, slope: number): Vec3 {
   const h = halfVector(sun, eye, point), side = Math.hypot(h[0], h[2]) || 1, need = side / h[1];
@@ -302,6 +303,29 @@ describe("the open sea meets the island's water without a seam (arrival-wharf.md
         expect(uz * vx - ux * vz, `triangle ${t / 3}`).toBeGreaterThan(0); // the cross product's y
       }
       expect(idx.count / 3).toBeLessThan(10000);
+      // Every edge met by exactly two triangles inside the sea (one on its rim): no crack, no T-junction anywhere.
+      const edges = new Map<string, number>();
+      for (let t = 0; t < idx.count; t += 3) for (let e = 0; e < 3; e++) {
+        const a = idx.getX(t + e), b = idx.getX(t + (e + 1) % 3), key = a < b ? `${a},${b}` : `${b},${a}`;
+        edges.set(key, (edges.get(key) ?? 0) + 1);
+      }
+      const rim = (i: number) => { const x = p.getX(i), z = p.getZ(i); return Math.abs(Math.abs(x) - 300) < 1e-4 || Math.abs(Math.abs(z) - 300) < 1e-4 || (x >= minX - 1e-4 && x <= maxX + 1e-4 && z >= minZ - 1e-4 && z <= maxZ + 1e-4); };
+      for (const [key, n] of edges) {
+        const [a, b] = key.split(",").map(Number);
+        expect(n, key).toBe(rim(a) && rim(b) ? 1 : 2);
+      }
+    });
+    it(`moves ${label}'s sea only as far as its mesh can draw a wave: a unit at the map's edge, wider out`, () => {
+      const g = oceanGeometry(m), p = g.getAttribute("position"), lod = g.getAttribute("aWaveLod");
+      const minX = m.originX - 0.5, minZ = m.originZ - 0.5, maxX = minX + m.width, maxZ = minZ + m.depth;
+      const out = (i: number) => Math.max(minX - p.getX(i), p.getX(i) - maxX, minZ - p.getZ(i), p.getZ(i) - maxZ);
+      for (let i = 0; i < p.count; i++) {
+        if (out(i) < 1e-4) expect(lod.getX(i)).toBe(1);
+        if (out(i) > 2 && out(i) < 13) expect(lod.getX(i)).toBeLessThanOrEqual(4);
+        // The swell (26 long) shows out past where the crossing starts (33 off the village's south edge).
+        if (out(i) < 40) expect(lod.getX(i), `${p.getX(i)}, ${p.getZ(i)}`).toBeLessThanOrEqual(8);
+        expect(lod.getX(i)).toBeLessThanOrEqual(64);
+      }
     });
   }
 });
