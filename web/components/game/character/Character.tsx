@@ -15,7 +15,10 @@ import type { WeaponPaint } from "@/lib/game/combat/primitives";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { BASE_URL, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, HAIR_CAP_COLOR, HAIR_MAP_GAIN, HAIR_MAPS_URL, LOD_SKIN_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, usesFacePage2, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
-import { characterLod, createLodState, drawnHeight, mixerStep } from "@/lib/game/character/lod";
+import { characterLod, createLodState, detailSituation, drawnHeight, mixerStep, type DetailSituation } from "@/lib/game/character/lod";
+import { isDetailFocus } from "@/lib/game/character/detailFocus";
+import { readPhoto } from "@/lib/game/photoMode";
+import { orbit } from "@/lib/game/orbitCamera";
 import { beatRate } from "@/lib/game/danceSync";
 import { quality } from "@/lib/game/perf/governor";
 import { FaceAnimator, faceSlots, poseKey } from "@/lib/game/character/face";
@@ -73,20 +76,23 @@ BODY_MATERIAL.onBeforeCompile = shader => {
     .replace("#include <uv_vertex>", "#include <uv_vertex>\nvHairUv = uv;\nvHairMap = hairMap;\nvHairAccent = hairAccent;");
   shader.fragmentShader = shader.fragmentShader
     .replace("#include <uv_pars_fragment>", `#include <uv_pars_fragment>\nuniform sampler2D uHairAtlas;\nvarying vec2 vHairUv;\nvarying vec3 vHairMap;\nvarying vec3 vHairAccent;\n${HAIR_CHANNEL}`)
-    // before the vertex colour (the tint) is applied, so the look's saturation and value act on the result as on any surface
-    // u < 0: the under-cap (no map: its COLOR_0 and the tint). Else tint x shade, the accent and the cap's fixed colour
-    // mixed in by their masks, all before the vertex colour multiplies in (hence the division by it)
-    .replace("#include <color_fragment>", `if (vHairMap.x > 0.5 && vHairUv.x >= 0.0) {
+    // in place of the vertex colour's multiply: u < 0, the under-cap (no map: its COLOR_0 and the tint) and every other
+    // surface take the vertex colour; a mapped hairstyle takes the tint (its vertex colour) mixed with the accent and the
+    // cap's fixed colour by their masks, times the shade. (head-v10: it used to divide the vertex colour back out, which
+    // blew up a tint with a near-zero channel into the accent's mask noise: the "glitching" colours.)
+    .replace("#include <color_fragment>", `#ifdef USE_COLOR
+    if (vHairMap.x > 0.5 && vHairUv.x >= 0.0) {
       vec3 t = texture2D(uHairAtlas, vHairUv).rgb;
       float s = hairChannel(t, vHairMap.x) * ${HAIR_MAP_GAIN.toFixed(4)};
       float a = vHairMap.y > 0.5 ? hairChannel(t, vHairMap.y) : 0.0;
       float c = vHairMap.z > 0.5 ? hairChannel(t, vHairMap.z) : 0.0;
-      vec3 inv = 1.0 / max(vColor, vec3(1e-4));
-      diffuseColor.rgb *= s * mix(mix(vec3(1.0), vHairAccent * inv, a), ${glsl(CAP)} * inv, c);
+      diffuseColor.rgb *= s * mix(mix(vColor, vHairAccent, a), ${glsl(CAP)}, c);
+    } else {
+      diffuseColor.rgb *= vColor;
     }
-    #include <color_fragment>`);
+    #endif`);
 };
-BODY_MATERIAL.customProgramCacheKey = () => "character-body-hairmap-v2";
+BODY_MATERIAL.customProgramCacheKey = () => "character-body-hairmap-v3";
 let decalMaterial: THREE.MeshPhysicalMaterial | null = null;
 const bodies = refCache<THREE.BufferGeometry>();
 const decals = new Map<string, THREE.BufferGeometry>();
@@ -305,18 +311,23 @@ class Puppet {
     this.lod2Key = key;
   }
 
+  /** A player's id (Character `id`): drawn at Full while their card is open (detailFocus.ts). */
+  id: string | undefined;
+
   /**
-   * Where the character is this frame (lod.ts: `d` from the camera, `px` drawn tall, in view or not): the LOD 1 mesh
-   * when far and small (for this look only), and no sun shadow when tiny (SunShadows skips a caster marked
-   * `shadowCulled`; its contact shadow stays).
+   * Where the character is this frame (lod.ts: `d` from the camera, `px` drawn tall, in view or not, in situation
+   * `at`): LOD 1 in play, LOD 2 zoomed out or far, Full up close in photo mode or on an open card (for this look
+   * only), and no sun shadow when tiny (SunShadows skips a caster marked `shadowCulled`; its contact shadow stays).
    */
-  view(d: number, px: number, visible: boolean) {
-    const s = characterLod(this.lod, d, px, visible);
+  view(d: number, px: number, visible: boolean, at?: DetailSituation) {
+    const s = characterLod(this.lod, d, px, visible, at);
     const lod1 = s.lod && this.lodGeometry && this.lodKey === `${this.bodyKey}|lod1` ? this.lodGeometry : null;
     const lod2 = s.lod2 && this.lod2Geometry && this.lod2Key === `${this.bodyKey}|lod2` ? this.lod2Geometry : null;
     const g = lod2 ?? lod1 ?? this.full;
     if (g && this.body.geometry !== g) this.body.geometry = g;
     if (g === this.lodGeometry || g === this.lod2Geometry) frameStats.lodMeshes++;
+    if (g === this.lod2Geometry) frameStats.lod2Meshes++;
+    else if (g === this.full && visible) frameStats.fullMeshes++;
     if (s.hz !== Infinity) frameStats.throttled++;
     this.body.userData.shadowCulled = this.face.userData.shadowCulled = !s.shadow;
   }
@@ -803,8 +814,10 @@ export interface CharacterProps {
   /** Face atlas density: 512 px per face canvas in the world (sharp at village distance), 1024 in the creator. */
   faceSize?: number;
   scale?: number;
-  /** Detail by drawn size (lod.ts); off in the creator, which shows one character up close. */
+  /** Detail by situation and drawn size (lod.ts); off (Full always) in the creator, the closet and the reflection creator. */
   lod?: boolean;
+  /** A player's id: they draw at Full while their card is open (lib/game/character/detailFocus.ts). */
+  id?: string;
   /**
    * Another player (RemoteAvatar): their rod mounts no fishing rig (remote casts aren't sent yet), their leaf casts no
    * sun shadow, what else they hold casts one only while `motion.itemShadow` (Full, near you), and their afterimages
@@ -818,7 +831,7 @@ export interface CharacterProps {
   keepFace?: boolean;
 }
 
-export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, held = null, leaf = false, verbs = false, faceSize = 512, scale = CHARACTER_SCALE, lod = true, remote = false, keepFace = false }: CharacterProps) {
+export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, held = null, leaf = false, verbs = false, faceSize = 512, scale = CHARACTER_SCALE, lod = true, remote = false, keepFace = false, id }: CharacterProps) {
   // While a newly chosen part loads, keep showing the previous look instead of suspending.
   const shown = useDeferredValue(look);
   const parts = useMemo(() => resolveParts(shown), [shown]);
@@ -833,6 +846,7 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
   useEffect(() => setFallback(puppet, weapon?.kind), [puppet, weapon?.kind]);
   useEffect(() => setRemote(puppet, remote), [puppet, remote]);
   useEffect(() => setKeepFace(puppet, keepFace), [puppet, keepFace]);
+  useEffect(() => setId(puppet, id), [puppet, id]);
   useEffect(() => {
     dressPuppet(puppet, shown, parts, loaded.slice(1).map(g => g.scene), atlas, decalMap);
   }, [puppet, shown, parts, loaded, atlas, decalMap]);
@@ -856,7 +870,7 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
   // Every character presses the lawn's blades (GrassField), from the lifted group: a hop or a seat leaves it standing.
   useEffect(() => (group.current ? addGrassBender(group.current) : undefined), []);
   // Before the default frame work (-1): what reads this frame's pose (the held rod's tip, step dust) sees it. Detail by
-  // drawn size (lod.ts): small characters draw LOD 1 and step their mixer less often; the creator's never change.
+  // situation and drawn size (lod.ts): LOD 1 in play, small characters step their mixer less often; the creator's never change.
   useFrame(({ camera, size, gl, clock }, delta) => {
     const m = motion.current, g = group.current;
     if (!m || !g) return;
@@ -893,7 +907,7 @@ function LodMesh2({ puppet, look, parts }: { puppet: Puppet; look: CharacterLook
   useEffect(() => puppet.setLod2(look, parts, loaded[0].scene, loaded.slice(1).map(g => g.scene)), [puppet, look, parts, loaded]);
   return null;
 }
-/** Development (evidence): `?charlod=1` draws every character's LOD 1 mesh, `?charlod=2` its LOD 2, so it can be looked at up close. */
+/** Development (evidence): `?charlod=0` draws every character at Full, `?charlod=1` its LOD 1 mesh, `?charlod=2` its LOD 2, so it can be looked at up close. */
 const SHOW_LOD = process.env.NODE_ENV !== "production" && typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("charlod") : null;
 const seen = new THREE.Vector3(), view = new THREE.Frustum(), viewProj = new THREE.Matrix4(), body = new THREE.Sphere(new THREE.Vector3(), 1);
 let viewAt = -1, viewCam: THREE.Camera | null = null;
@@ -904,6 +918,7 @@ let viewAt = -1, viewCam: THREE.Camera | null = null;
  */
 function viewCharacter(puppet: Puppet, g: THREE.Object3D, camera: THREE.Camera, viewportPx: number, scale: number, now: number) {
   for (let o: THREE.Object3D | null = g; o; o = o.parent) if (!o.visible) return puppet.view(Infinity, 0, false);
+  if (SHOW_LOD === "0") return puppet.view(5, 500, true); // up close in photo mode: Full
   if (SHOW_LOD === "1") return puppet.view(30, 50, true); // past `near`, under the mesh line, above the rest: LOD 1 alone
   if (SHOW_LOD === "2") return puppet.view(45, 20, true); // past the far line and under its height: LOD 2
   if (now !== viewAt || camera !== viewCam) {
@@ -916,7 +931,9 @@ function viewCharacter(puppet: Puppet, g: THREE.Object3D, camera: THREE.Camera, 
   body.radius = height * 0.75;
   const fov = (camera as THREE.PerspectiveCamera).isPerspectiveCamera ? (camera as THREE.PerspectiveCamera).getEffectiveFOV() : 30;
   // Adaptive quality (governor.ts) can have small characters reach their lighter tiers sooner (never nearer than `near`).
-  puppet.view(d, drawnHeight(height, d, fov, viewportPx) / quality.knobs.lodBias, view.intersectsSphere(body));
+  // The situation (head-v10): photo mode or this player's open card draws Full up close; play LOD 1, zoomed out LOD 2.
+  const at = detailSituation({ photo: readPhoto().open, focused: isDetailFocus(puppet.id), zoom: orbit.view.zoom });
+  puppet.view(d, drawnHeight(height, d, fov, viewportPx) / quality.knobs.lodBias, view.intersectsSphere(body), at);
 }
 function VerbClips({ puppet }: { puppet: Puppet }) {
   const { animations } = useGLTF(VERBS_URL) as unknown as Gltf;
@@ -926,6 +943,7 @@ function VerbClips({ puppet }: { puppet: Puppet }) {
 function setFallback(puppet: Puppet, kind: WeaponKind | undefined) { puppet.fallback = ATTACK_CLIP[kind ?? "melee"]; }
 function setRemote(puppet: Puppet, remote: boolean) { puppet.remote = remote; }
 function setKeepFace(puppet: Puppet, keep: boolean) { puppet.keepFace = keep; }
+function setId(puppet: Puppet, id: string | undefined) { puppet.id = id; }
 function dressPuppet(puppet: Puppet, look: CharacterLook, parts: ResolvedPart[], scenes: THREE.Object3D[], atlas: THREE.Texture, decalMap: THREE.Texture) {
   decalMap.flipY = false;
   decalMap.colorSpace = THREE.SRGBColorSpace;

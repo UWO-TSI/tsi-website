@@ -67,26 +67,36 @@ def reshade(ob):
 
 
 def card_normals(ob, full):
-    """Strand-card hair (head-v10, row 311: "check that LOD 1 isn't faceted"): the decimated cards take the full mesh's
-    smooth normals (nearest face, interpolated), then any corner left split is welded (kit.weld_normals), instead of
-    reshade's sharp edges over 40 degrees, which faceted every card the collapse bent."""
-    src = bpy.data.objects.new("LOD_normals_src", full)
-    bpy.context.scene.collection.objects.link(src)
-    src.matrix_world = ob.matrix_world
-    bpy.ops.object.select_all(action="DESELECT")
-    ob.select_set(True)
-    bpy.context.view_layer.objects.active = ob
-    md = ob.modifiers.new("Normals", "DATA_TRANSFER")
-    md.object = src
-    md.use_loop_data = True
-    md.data_types_loops = {"CUSTOM_NORMAL"}
-    md.loop_mapping = "POLYINTERP_NEAREST"
-    bpy.ops.object.modifier_move_to_index(modifier="Normals", index=0)
-    bpy.ops.object.modifier_apply(modifier="Normals")
-    bpy.data.objects.remove(src)
-    for p in ob.data.polygons:
+    """Strand-card hair (head-v10, row 311: "check that LOD 1 isn't faceted"): each decimated corner takes the smooth
+    normal of the nearest full corner on the same side of its card (a full corner whose normal turns away from the
+    LOD face is the card's other side, or the under-cap below it: skipped), then any corner left split is welded
+    (kit.weld_normals). Not reshade's sharp edges over 40 degrees, which faceted every card the collapse bent."""
+    from mathutils.kdtree import KDTree
+    fl = full.loops
+    fn = [tuple(full.corner_normals[i].vector) for i in range(len(fl))]
+    kd = KDTree(len(fl))
+    for i, lp in enumerate(fl):
+        kd.insert(full.vertices[lp.vertex_index].co, i)
+    kd.balance()
+    me = ob.data
+    for p in me.polygons:
         p.use_smooth = True
-    kit.weld_normals(ob.data)
+    out = []
+    for p in me.polygons:
+        n = p.normal
+        for li in p.loop_indices:
+            co = me.vertices[me.loops[li].vertex_index].co
+            pick = tuple(n)
+            for _, i, _ in kd.find_n(co, 16):
+                if n.dot(fn[i]) > 0.2:
+                    pick = fn[i]
+                    break
+            out.append((li, pick))
+    ln = [None] * len(me.loops)
+    for li, v in out:
+        ln[li] = v
+    me.normals_split_custom_set(ln)
+    kit.weld_normals(me)
 
 
 def tree(ob):
