@@ -26,7 +26,7 @@ DRAFT = 0.09
 BOW_RING = (0.0, 0.24, 0.7)
 STRAKES, LAP, THICK = 4, 0.012, 0.022
 CREAM, RUST, BOTTOM, WOOD, VARNISH, IRON = "#efe7d6", "#b4583a", "#6a3a2c", "#c9a273", "#b07d4e", "#3b3a37"
-STATIONS = 15
+STATIONS = 11
 
 
 def smooth01(x):
@@ -67,8 +67,8 @@ def outer_profile(t):
     out = []
     for k in range(STRAKES):
         s0, s1 = k / STRAKES, (k + 1) / STRAKES
-        for j, s in enumerate(np.linspace(s0, s1, 3)):
-            off = LAP * j / 2
+        for j, s in enumerate(np.linspace(s0, s1, 2 if k < STRAKES - 1 else 3)):
+            off = LAP * j / (1 if k < STRAKES - 1 else 2)
             out.append((section(t, s) + normal2(t, s) * off, s, k))
     return out
 
@@ -113,7 +113,7 @@ def build():
     for t in t_in:
         z = -L / 2 + L * t + (0.025 if t == 0 else 0.0)
         port = []
-        for s in np.linspace(0, 1, 9):
+        for s in np.linspace(0, 1, 7):
             p = section(t, s) - normal2(t, s) * THICK
             port.append(Vector((max(0.0, p.x), max(p.y, keel(t) + THICK))))
         pts = port + [Vector((-p.x, p.y)) for p in reversed(port)][1:]
@@ -141,8 +141,8 @@ def build():
                    uvs=((0.1, a[2]), (0.1, b[2]), (0.2, c[2]), (0.2, d[2])))
             for p, q in ((a, b), (d, c)):
                 k.quad([p, q, (q[0], q[1] + lift, q[2]), (p[0], p[1] + lift, p[2])], M["paint"], CREAM, uvs=((0.3, p[2]), (0.3, q[2]), (0.33, q[2]), (0.33, p[2])))
-        rub = [(side * (half_width(t) + 0.012), sheer(t) - 0.03, -L / 2 + L * t) for t in np.linspace(0.0, 0.97, 12)]
-        k.tube(rub, 0.017, M["wood"], VARNISH, n=7, v_len=0.9, caps=True, u_tiles=0.3)
+        rub = [(side * (half_width(t) + 0.012), sheer(t) - 0.03, -L / 2 + L * t) for t in np.linspace(0.0, 0.97, 9)]
+        k.tube(rub, 0.017, M["wood"], VARNISH, n=6, v_len=0.9, caps=True, u_tiles=0.3)
     # ---- transom: the stern board, outside and in, its top capped
     port0 = outer_profile(0.0)
     tpts = [(p.x, p.y) for p, _, _ in port0] + [(-p.x, p.y) for p, _, _ in reversed(port0)][1:]
@@ -159,7 +159,7 @@ def build():
     k.beam((-half_width(0) + 0.01, sheer(0) - 0.01, z0 - 0.004), (half_width(0) - 0.01, sheer(0) - 0.01, z0 - 0.004), 0.024, 0.03, 0.008, M["wood"], VARNISH)
     # ---- stem post, keel strip, breasthook and its ring
     k.beam((0, keel(1.0) - 0.006, L / 2 - 0.02), (0, sheer(1.0) + 0.02, L / 2 + 0.012), 0.034, 0.03, 0.01, M["wood"], VARNISH, up=(0, 0, 1))
-    k.tube([(0, keel(t) - 0.008, -L / 2 + L * t) for t in np.linspace(0.02, 0.97, 10)], 0.016, M["wood"], VARNISH, n=7, v_len=0.9, caps=True, u_tiles=0.3)
+    k.tube([(0, keel(t) - 0.008, -L / 2 + L * t) for t in np.linspace(0.02, 0.97, 8)], 0.016, M["wood"], VARNISH, n=6, v_len=0.9, caps=True, u_tiles=0.3)
     hook_z0 = 0.56
     # The breasthook: a knee of wood across the bow between the gunwales, its sides following the hull in.
     hz = np.linspace(hook_z0, L / 2 - 0.035, 6)
@@ -187,8 +187,8 @@ def build():
         k.tube([(x, y + 0.008, 0.02), (x, y + 0.03, 0.02), (x, y + 0.038, 0.04), (x, y + 0.03, 0.06), (x, y + 0.008, 0.06)], 0.0065, M["iron"], IRON, n=6)
     for side in (1, -1):
         x, y = side * 0.05, D * 0.62 + 0.03
-        k.tube([(x, y, -0.56), (x, y + 0.004, 0.25)], 0.0135, M["wood"], WOOD, n=8, v_len=0.9, caps=True, u_tiles=0.3)
-        k.tube([(x, y, -0.6), (x, y, -0.52)], 0.019, M["wood"], VARNISH, n=8, v_len=0.9, caps=True, u_tiles=0.3)
+        k.tube([(x, y, -0.56), (x, y + 0.004, 0.25)], 0.0135, M["wood"], WOOD, n=6, v_len=0.9, caps=True, u_tiles=0.3)
+        k.tube([(x, y, -0.6), (x, y, -0.52)], 0.019, M["wood"], VARNISH, n=6, v_len=0.9, caps=True, u_tiles=0.3)
         k.rbox((x, y + 0.004, 0.4), (0.08, 0.012, 0.3), 0.005, M["wood"], WOOD, uv_off=(0.3, 0.1))
     k.tint_gradient(0.86, 1.0, 0.0, D + 0.06)
     ob = k.finish(smooth_deg=50)

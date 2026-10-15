@@ -92,7 +92,8 @@ function Dressing({ dock, light, rope }: { dock: Dock; light: IslandLight; rope:
   useEffect(() => () => disposeModelMaterials(dressing.model), [dressing]);
   const glow = windowLit(light);
   useEffect(() => lightLanterns(dressing.glass, glow), [dressing, glow]);
-  const boats = useMemo(() => ROWBOATS.map(() => prepareModel(rowboat.clone(), ROWBOAT_URL, undefined, "solid")), [rowboat]);
+  // On the water, which takes no shadow: the rowboats cast none (no shadow-pass draw), and still take the pier's.
+  const boats = useMemo(() => ROWBOATS.map(() => prepareModel(rowboat.clone(), ROWBOAT_URL, undefined, "small")), [rowboat]);
   useEffect(() => () => boats.forEach(b => disposeModelMaterials(b)), [boats]);
   const moored = useMemo((): Moored[] => ROWBOATS.map(() => ({ line: rope ? new RopeLine(rope, 10, 6, 0.016, 0.13, 0.9) : null, float: newFloat(), ride: newRide() })), [rope]);
   const groups = useRef<(THREE.Group | null)[]>([]), rings = useRef<number[][]>([]);

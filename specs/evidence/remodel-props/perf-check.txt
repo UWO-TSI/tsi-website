@@ -1,0 +1,24 @@
+perf:check, SCENES=village, measurement build at 95806400 (headless, 3 runs a tier, village High rerun to 5), load 4.9-5.1
+
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draw calls | Triangles | Runs | Spread | Load |
+|---|---|---|---|---|---|---|---|---|---|
+| village | high | 4.40 (3.90, +12.8%) | 5.50 (4.90, +12.2%) | 3.80 (3.40, +11.8%) | 377 (382, -1.3%) | 603456 (537560, +12.3%) | 5 | 2% | 4.9 |
+| village | lite | 2.40 (2.30, +4.3%) | 3.60 (3.40, +5.9%) | 2.20 (2.00, +10.0%) | 280 (288, -2.8%) | 382644 (353865, +8.1%) | 3 | 4% | 5.1 |
+
+Median of 3+ runs each; in brackets the baseline (8809c517 2026-10-14) and the change. Load: the 1-minute load average.
+
+perf:check FAILED
+- village|high: median frame 4.4 ms, +12.8% on the baseline's 3.9
+- village|high: triangles 603456 over the budget's 560000 (web/lib/game/perf/budget.ts)
+RELEASED devserver
+
+Context: head-roblox's run before this lane (d6ea9d74, specs/evidence/head-roblox/perf-check.txt) already had village
+High at 592,191 triangles (over the 560k budget), 373 draws, 4.9 ms at load 5.6. This run: 603,456 / 377 / 4.4 ms, so
+this lane's share at 95806400 was about +11k triangles and +4 draws on High.
+
+After the run (the next commit; not re-benched, per the lane rules), from the GLB counts:
+- the moored rowboats cast no shadow (they lie on water, which takes none): -2 shadow draws and their shadow-pass triangles;
+- rowboat 3,284 -> 2,534 triangles, buoy 1,522 -> 1,142.
+Village High delta of the 9 props against the old models, scene + shadow pass, now about +8k triangles:
+rowboats +4.3k (scene), -0.7k (shadow); buoys +1.8k (no shadow either side); mailbox +2.0k; tables +2.5k; lamp +0.4k;
+campfire -1.4k; museum fence -1.0k.

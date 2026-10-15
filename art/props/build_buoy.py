@@ -48,9 +48,9 @@ def build():
     low = [(0.0, 0.42), (0.07, 0.425), (0.16, 0.46), (0.25, 0.53), (0.315, 0.62), (0.338, 0.68), (0.342, 0.74)]
     band = [(0.342, 0.74), (0.336, 0.79), (0.318, 0.84)]
     cap = [(0.318, 0.84), (0.27, 0.9), (0.19, 0.945), (0.1, 0.966), (0.0, 0.97)]
-    k.lathe((0, 0, 0), low, M["paint"], RUST, n=22, u_tiles=2, v_len=0.5)
-    k.lathe((0, 0, 0), band, M["paint"], CREAM, n=22, u_tiles=2, v_len=0.5)
-    k.lathe((0, 0, 0), cap, M["paint"], RUST, n=22, u_tiles=2, v_len=0.5)
+    k.lathe((0, 0, 0), low, M["paint"], RUST, n=16, u_tiles=2, v_len=0.5)
+    k.lathe((0, 0, 0), band, M["paint"], CREAM, n=16, u_tiles=2, v_len=0.5)
+    k.lathe((0, 0, 0), cap, M["paint"], RUST, n=16, u_tiles=2, v_len=0.5)
     # A weed line where the water laps: the paint darkens and greens just about the waterline.
     for f in k.bm.faces:
         for lp in f.loops:
@@ -60,13 +60,13 @@ def build():
             wv = K.lin(WEED)
             lp[k.col] = tuple(c[i] * (1 - t) + wv[i] * t for i in range(3)) + (1.0,)
     # The rope ring round its waist, and four short lashings up to the top.
-    ring = [(0.352 * math.sin(a), 0.74, 0.352 * math.cos(a)) for a in np.linspace(0, math.tau, 33)[:-1]]
-    k.tube(ring, 0.024, M["rope"], "#ffffff", n=8, v_len=0.12, closed_path=True)
+    ring = [(0.352 * math.sin(a), 0.74, 0.352 * math.cos(a)) for a in np.linspace(0, math.tau, 25)[:-1]]
+    k.tube(ring, 0.024, M["rope"], "#ffffff", n=6, v_len=0.12, closed_path=True)
     for j in range(4):
         a = math.tau * j / 4 + 0.4
         pts = [(0.35 * math.sin(a), 0.74, 0.35 * math.cos(a)), (0.335 * math.sin(a), 0.82, 0.335 * math.cos(a)),
                (0.25 * math.sin(a), 0.93, 0.25 * math.cos(a)), (0.07 * math.sin(a), 0.985, 0.07 * math.cos(a))]
-        k.tube(pts, 0.011, M["rope"], "#e6dccb", n=6, v_len=0.12)
+        k.tube(pts, 0.011, M["rope"], "#e6dccb", n=5, v_len=0.12)
     # The mast and its ring, and the weighted stem under the water.
     k.lathe((0, 0, 0), [(0.055, 0.962), (0.048, 0.98), (0.03, 1.0), (0.024, 1.07), (0.032, 1.08), (0.0, 1.085)], M["iron"], IRON, n=10)
     k.tube([(0.042 * math.sin(a), 1.125 + 0.042 * math.cos(a), 0.0) for a in np.linspace(0, math.tau, 17)[:-1]], 0.009, M["iron"], IRON, n=6, closed_path=True)
