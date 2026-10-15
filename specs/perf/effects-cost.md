@@ -228,7 +228,12 @@ no draw.
 | What floats (wharf.ts): the boat, 2 rowboats, 2 buoys, each its hull's points sampled (4, 4, 3) and a plane fitted, a spring a frame | 18 surface samples a frame, each three fixed-point steps of the 4-train sum: a few microseconds. |
 | Sparkles and the particles on the water (GridOcean glints, moveFx FACE.water) | The sum once per sprite (was the old swell's three sines), two steps per water particle: nothing measurable. |
 
-The applicant island (live for recruits) shares the water's code (GridWorld, GridOcean), so it draws the same waves.
+**Gated (v1-integrate, 2026-10-14):** only the worlds that opt in draw the waves (GridWorld's and GridOcean's `waves`,
+lib/game/waterShader.ts `seaOf`): the village, the v2 world and its editor, the title over the village, the arrival
+and its crossing, the home island. The applicant island (live for recruits, never shot with the waves), the ruins and
+the movement lab keep main's sea byte for byte: the swell shader, main's tuning (`SWELL_TUNING`), the graded strips and
+main's sparkles and particles (`components/game/grid/seaGate.test.ts` hashes each against main's own modules). Its cost
+there is main's.
 
 Evidence: `specs/evidence/waves/` (each strip 4 frames, half a second apart: the wharf, open water, the boats rocking
 and a close crop, the north beach's shallows, Lite's open water and boats, the arrival's crossing at sea and off the

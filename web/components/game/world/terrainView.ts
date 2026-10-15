@@ -16,7 +16,8 @@ import {
   type ChunkRef,
 } from "@/lib/game/world/mesh";
 import type { WorldTerrain } from "@/lib/game/world/terrain";
-import { terrainMaterial } from "../grid/terrainMaterials";
+import { waterSurfaceMaterial } from "../grid/terrainMaterials";
+import type { SeaKind } from "@/lib/game/waterShader";
 import { paintTexture, splatMaterial, writePaint } from "./splatMaterial";
 
 /** Geometry builds a frame at most (a chunk at full detail is about a millisecond). */
@@ -54,11 +55,12 @@ export class TerrainView {
   /** Draw every chunk at this level whatever its distance (the editor's overhead view, the tests); null: by distance. */
   forceLod: number | null = null;
 
-  constructor(readonly terrain: WorldTerrain, opts: { grass?: string; editable?: boolean } = {}) {
+  /** `sea`: the world's sea (lib/game/waterShader.ts SeaKind); a heightfield is the v2 world's, which opts in to the waves. */
+  constructor(readonly terrain: WorldTerrain, opts: { grass?: string; editable?: boolean; sea?: SeaKind } = {}) {
     this.group.name = "smooth-terrain";
     this.paint = paintTexture(terrain);
     this.material = splatMaterial(terrain, this.paint, opts.grass);
-    this.waterMaterial = terrainMaterial("mRiver")!;
+    this.waterMaterial = waterSurfaceMaterial(opts.sea ?? "waves");
     // The open sea's floor (GridOcean draws it under the whole map, a little below the deepest seabed): a chunk lying
     // all on it adds nothing through the deep water.
     this.floor = terrain.seaLevel - deepestSeabed() + 0.05;

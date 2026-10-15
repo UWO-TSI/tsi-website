@@ -28,7 +28,7 @@ import { addCutout } from "@/lib/game/occluders";
 import { addCliffStone } from "@/lib/game/cliffStone";
 import { getGrassTexture } from "@/lib/game/grassTexture";
 import { GRASS_COLOR, WATER_DROP } from "@/lib/game/grid";
-import { FOAM_RING_MAX, GLASS_WATER, SHORE_FROM_FIELD, UNDERWATER, UNDERWATER_UNIFORMS, WATER_DEPTH_RAMP, WATER_RIPPLE, bedDepth, waterMaterial, waterUniforms, writeWaterUniforms, type WaterParams } from "@/lib/game/waterShader";
+import { FOAM_RING_MAX, GLASS_WATER, SHORE_FROM_FIELD, SWELL_TUNING, UNDERWATER, UNDERWATER_UNIFORMS, WATER_DEPTH_RAMP, WATER_RIPPLE, bedDepth, waterMaterial, waterUniforms, writeWaterUniforms, type SeaKind, type WaterParams } from "@/lib/game/waterShader";
 import { foamRings } from "@/lib/game/foamRings";
 import { TUNING_DEFAULTS } from "@/lib/game/tuning";
 import { WAVE_LITE, WAVE_MAX, advanceWaves } from "@/lib/game/waves";
@@ -179,6 +179,22 @@ const MATCH_KEYS = [...Object.keys(TEXTURE_FOR), ...PROCEDURAL].sort((a, b) => b
 
 function matchKey(name: string): string | null {
   return MATCH_KEYS.find((k) => name.includes(k)) ?? null;
+}
+
+/**
+ * The water's material for a sea (lib/game/waterShader.ts SeaKind): the waves' is the shared "mRiver" one; main's swell,
+ * for every world that doesn't opt in to the waves (the applicant island first), its own, cached beside it.
+ */
+export function waterSurfaceMaterial(sea: SeaKind): THREE.Material {
+  if (sea === "waves") return terrainMaterial("mRiver")!;
+  if (!cache) cache = new Map();
+  let mat = cache.get("mRiver:swell");
+  if (!mat) {
+    mat = waterMaterial(waterUniformBlock, "swell");
+    mat.name = "terrain:mRiver:swell";
+    cache.set("mRiver:swell", mat);
+  }
+  return mat;
 }
 
 export function terrainMaterial(name: string): THREE.Material | null {
@@ -481,13 +497,17 @@ export function patchShoreField(f: { data: Float32Array; depth: Float32Array; wi
  * viewer's own camera decides what reaches their eye (row 238). `sunColor`
  * tints it (a warm white by day, gold at golden hour). `sky`: the scene's sky overhead and at the horizon, which the
  * water mirrors (fresnel) and hazes into far off. `lite`: Lite's fewer wave trains (lib/game/waves.ts WAVE_LITE).
+ * `sea`: the world's sea (waterShader.ts SeaKind); main's swell runs on main's tuning (SWELL_TUNING) and no wave table.
  */
-export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE.Vector3, sunColor?: THREE.Color, sky?: { zenith: THREE.Color; horizon: THREE.Color }, lite = false): void {
-  // The waves' table this frame, from the world clock: the CPU's (liveWaves, what floats reads) and the shader's, the same numbers.
-  const waves = advanceWaves(cfg, elapsed, lite ? WAVE_LITE : WAVE_MAX);
-  const a = waterUniformBlock.uWaveA.value, b = waterUniformBlock.uWaveB.value, tb = waves.table;
-  for (let i = 0; i < WAVE_MAX; i++) { a[i].fromArray(tb, i * 8); b[i].fromArray(tb, i * 8 + 4); }
-  waterUniformBlock.uWaveCount.value = waves.count;
+export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE.Vector3, sunColor?: THREE.Color, sky?: { zenith: THREE.Color; horizon: THREE.Color }, lite = false, sea: SeaKind = "waves"): void {
+  seaNow = sea;
+  if (sea === "waves") {
+    // The waves' table this frame, from the world clock: the CPU's (liveWaves, what floats reads) and the shader's, the same numbers.
+    const waves = advanceWaves(cfg, elapsed, lite ? WAVE_LITE : WAVE_MAX);
+    const a = waterUniformBlock.uWaveA.value, b = waterUniformBlock.uWaveB.value, tb = waves.table;
+    for (let i = 0; i < WAVE_MAX; i++) { a[i].fromArray(tb, i * 8); b[i].fromArray(tb, i * 8 + 4); }
+    waterUniformBlock.uWaveCount.value = waves.count;
+  } else waterUniformBlock.uWaveCount.value = 0;
   waterUniformBlock.uRippleStrength.value = cfg.rippleStrength ?? 0;
   if (cfg.rippleStrength && !waterUniformBlock.uRippleTexture.value) {
     waterUniformBlock.uRippleTexture.value = loadTexture(new THREE.TextureLoader(), "mSeaWater_Nrm.png", TEX_DIR, THREE.NoColorSpace);
@@ -495,7 +515,11 @@ export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE
   }
   waterUniformBlock.uTime.value = elapsed;
   // cfg changes with phase, weather or season; the bench hands a fresh copy per frame.
-  if (cfg !== written) writeWaterUniforms(waterUniformBlock, written = cfg);
+  if (cfg !== written || sea !== writtenSea) {
+    writeWaterUniforms(waterUniformBlock, sea === "swell" ? { ...cfg, ...SWELL_TUNING } : cfg);
+    written = cfg;
+    writtenSea = sea;
+  }
   if (sunWorld) waterUniformBlock.uSunDir.value.copy(sunWorld).normalize();
   if (sunColor) waterUniformBlock.uSunColor.value.copy(sunColor).lerp(WHITE, 0.2);
   // The sky the water mirrors and hazes into (v1 water item 4): the scene's own, per phase and weather.
@@ -503,6 +527,10 @@ export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE
 }
 const WHITE = new THREE.Color(1, 1, 1);
 let written: WaterParams | null = null;
+let writtenSea: SeaKind = "waves";
+/** The sea the water was last advanced as (advanceWater, every frame): what rides it picks its shader by it (moveFx). */
+let seaNow: SeaKind = "waves";
+export const activeSea = (): SeaKind => seaNow;
 
 /** The live water uniforms, for layers that ride the same surface and sun (the glint sprites). */
 export const waterSurfaceUniforms = (): Record<string, THREE.IUniform> => waterUniformBlock;

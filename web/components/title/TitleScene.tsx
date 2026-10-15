@@ -105,8 +105,8 @@ function Scene() {
       <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={false} castShadows ground={island.ground}
         puddles={objectsOf("puddle", v).map(o => [o.x, o.z] as [number, number])} cloudSize={scale.cloudSize} shadowExtent={scale.shadowExtent}
         fireflyAnchors={objectsOf("bush", v).map(o => [o.x, o.z] as [number, number])} trees={trees} fauna={fauna} />
-      <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={weather === "wind" ? 2.2 : 1.4} clear={grassClear} />
-      <GridOcean map={island.map} lite={false} radius={scale.glintRadius} />
+      <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={weather === "wind" ? 2.2 : 1.4} clear={grassClear} waves />
+      <GridOcean map={island.map} lite={false} radius={scale.glintRadius} waves />
       <InstancedModels items={scenery} />
       {/* Own boundaries: the base world draws (and the page fades in) while the buildings and residents stream in. */}
       <Suspense fallback={null}>
