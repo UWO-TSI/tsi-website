@@ -234,7 +234,7 @@ three of the four. The hair detail is not cut back (the coordinator's ruling); t
   the skin comes through by up to 4.7 mm in places (`fit_check` flags it; the fade there is skin-coloured).
 - #8's visor is Roblox's own piece: over its hair it stands off (the brim, the mic) and strands come through it, as in
   Roblox; `fit_check` reports it and does not fail it. Over other styles it floats or sinks like a band.
-- The visor is sold like every accessory (80 coins, `wear-acc-visor`; migration `20261014221953_catalogue_seed`). Its
+- The visor is sold like every accessory (80 coins, `wear-acc-visor`; migration `20261015042854_catalogue_seed`, after the wardrobe cut's `20261014220430_wardrobe_cut`; v1-integrate). Its
   shop icon is the plain grey piece: the icon renderer does not read the hair atlas, so the W is not on it.
 - The hairstyles' shading follows their textures: the near-black sources (#8, #1) stay high-contrast in a light colour.
 

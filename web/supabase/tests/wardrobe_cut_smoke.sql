@@ -58,3 +58,24 @@ BEGIN
                      AND (active OR special_pool OR starter_qty > 0)), 'still retired after a second run';
   RAISE NOTICE 'wardrobe cut ok';
 END $$;
+
+-- head-roblox's visor (20261015042854_catalogue_seed, generated after the cut; v1-integrate): sold at 80 coins and in the
+-- specials pool, while the cut rows stay retired, the rain-cape stays off the starters and the craft-only parts stay
+-- unsold, after it and after a second run. Fails with head-roblox's 20261014221953 seed (made before the cut): it put the
+-- rain-cape back on the starters.
+\ir ../migrations/20261015042854_catalogue_seed.sql
+DO $$
+BEGIN
+  ASSERT (SELECT price_coins = 80 AND active AND special_pool AND coalesce(starter_qty, 0) = 0 AND catalogue_ref = 'acc_visor' AND position = 232
+            AND sprite_url = '/assets/icons/acc_visor.webp' FROM shop_items WHERE slug = 'wear-acc-visor'), 'the visor is sold at 80 coins';
+  ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE slug IN ('wear-onepiece-raincape', 'wear-onepiece-robe', 'wear-onepiece-jumpsuit', 'wear-acc-beanie', 'wear-acc-scarf')
+                     AND (active OR special_pool OR starter_qty > 0)), 'the cut rows still retired after the visor seed';
+  ASSERT (SELECT count(*) FROM shop_items WHERE starter_qty > 0 AND slug LIKE 'wear-%') = 8, 'still eight starter clothes';
+  ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE slug IN ('acc-flower-crown', 'acc-shell-necklace', 'outfit-koi-kimono', 'outfit-monarch-cape', 'outfit-silk-sweater') AND active),
+    'the craft-only parts still unsold';
+  ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE catalogue_ref IN ('acc_flower_crown', 'acc_shell_necklace', 'outfit_koi_kimono', 'outfit_monarch_cape', 'outfit_silk_sweater')
+                     AND slug LIKE 'wear-%'), 'no shop row sells a craft-only part';
+  ASSERT (SELECT position FROM shop_items WHERE slug = 'dye-wheat-blonde') = 233 AND (SELECT position FROM shop_items WHERE slug = 'furn-beach-towel') = 272,
+    'the dyes and furniture one place on';
+  RAISE NOTICE 'visor seed ok';
+END $$;
