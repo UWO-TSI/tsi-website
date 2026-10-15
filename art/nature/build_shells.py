@@ -201,6 +201,9 @@ def paint_clam(ob, info, kind):
             c = K.mixc(c, lin("#6e5a4a"), 0.5 * smooth(0.35, 0.0, rho)) if side > 0 else c
             if side < 0:
                 c = c * 0.92
+            if side == 0:
+                # The seam where the two valves meet.
+                c = lin("#5a4636")
         c = c * (0.7 + 0.3 * ao[v.index])
         vcols.append(c)
     K.paint(ob, lambda vi, _p: vcols[vi])
@@ -314,7 +317,8 @@ def lay(ob, rot, size=None):
 def turban():
     ob, info = spiral("shell-turban", turns=3.4, r0=0.01, growth=math.log(2.1), rise=0.0085, tube=0.0074, spikes=7, spike_r=0.0026, per_turn=12, sides=12, seed=3)
     paint_spiral(ob, info, 3.4, "#776d44", "#cdbf96", 3, "#d9cfb6", "#e2d5bd", seed=3)
-    lay(ob, (math.radians(70), 0, math.radians(20)), size=0.34)
+    # Resting on its body whorl: the spire up and a little over, the mouth to the side.
+    lay(ob, (math.radians(18), math.radians(-10), math.radians(30)), size=0.32)
     return ob
 
 
