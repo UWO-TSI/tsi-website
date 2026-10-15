@@ -5,7 +5,7 @@
  * the heightfield path. Its water (the seabed props, the fish, the water's colour) reads the real seabed.
  */
 import { heightField } from "../grid";
-import { setWaterSource } from "../seabed";
+import { setBerths, setWaterSource } from "../seabed";
 import { landBounds, type MapObject, type Village } from "../villageMap";
 import { cellMapOf, seabedDepth, terrainShoreField, type WorldTerrain } from "./terrain";
 
@@ -19,5 +19,7 @@ export function villageOfWorld(w: { terrain: WorldTerrain; objects: readonly Map
   const t = w.terrain, map = cellMapOf(t);
   let shore: ReturnType<typeof terrainShoreField> | null = null;
   setWaterSource(map, { dip: (x, z) => seabedDepth(t, x, z), shore: () => (shore ??= terrainShoreField(t)) });
+  // Its wharves' berths stay calm-ish for the moored boats (the waves' calm, lib/game/seabed.ts bakeWaveCalm).
+  setBerths(map, w.objects.filter(o => o.kind === "landmark" && o.id === "wharf").map(o => ({ x: o.x, z: o.z, yaw: o.yaw ?? 0 })));
   return { map, field: heightField(map), objects: w.objects, bounds: landBounds(map), terrain: t };
 }

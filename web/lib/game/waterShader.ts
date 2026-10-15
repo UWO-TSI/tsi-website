@@ -42,6 +42,7 @@
  */
 
 import * as THREE from "three";
+import { WAVE_FN, WAVE_MAX } from "./waves";
 
 /** Everything the bench can move. Sea and river get their own set. */
 export interface WaterParams {
@@ -96,13 +97,21 @@ export interface WaterParams {
   sunGlint: number;
   /** The sun's apparent radius, degrees: a facet flashes while the sun's disc sits in its mirror direction. */
   sunSize: number;
+  /** The wind waves (lib/game/waves.ts): the main one's height (world units) and length; the shorter ones scale off it. */
   waveHeight: number;
   waveScale: number;
+  /** The main wind wave's angular speed (rad/s); the shorter ones run slower by deep-water dispersion (ω ∝ √k). */
   waveSpeed: number;
-  /** The big slow swell under the waves (v1 water item 4): its height (world units, faded out over the shallows), length and phase speed (rad/s). */
+  /** The long slow swell under them (v1 water item 4): its height (world units), length and angular speed (rad/s). */
   swellHeight: number;
   swellLength: number;
   swellSpeed: number;
+  /** Crest sharpening: the wind waves' Gerstner q (horizontal over vertical motion; 1 is a real trochoid, 0 a sine). */
+  waveSteepness: number;
+  /** Shallow water slows the waves: the most they lag the deep sea's phase where the bed has calmed them (s). */
+  waveShoalLag: number;
+  /** Foam on the wind waves' sharpest crests (0 none), open sea only. */
+  waveFoam: number;
   /** How much lighter its crests and darker its troughs (0 none). */
   swellShade: number;
   /** Horizon haze: how much the far water takes the horizon's colour, from `hazeFrom` to `hazeTo` world units off. */
@@ -180,7 +189,7 @@ const WATER_KEYS = [
   "shelfDepth", "shelfFrom", "shelfTo",
   "foamWidth", "foamStrength", "foamSoft", "foamWave", "foamWaveSpeed", "foamPulse", "foamPulseReach", "foamPulseSpeed", "blobScale", "blobDarken", "blobSpeed", "ringWidth",
   "ringStrength", "shoreAlpha", "opacity", "fresnel", "glare", "roughness", "sunGlint", "sunSize", "waveHeight", "waveScale", "waveSpeed",
-  "swellHeight", "swellLength", "swellSpeed", "swellShade", "haze", "hazeFrom", "hazeTo",
+  "swellHeight", "swellLength", "swellSpeed", "waveSteepness", "waveShoalLag", "waveFoam", "swellShade", "haze", "hazeFrom", "hazeTo",
 ] as const satisfies readonly (keyof WaterParams)[];
 const uniformOf = (k: string) => `u${k[0].toUpperCase()}${k.slice(1)}`;
 
@@ -190,6 +199,10 @@ export function waterUniforms(p: WaterParams) {
   return {
     ...block,
     uTime: { value: 0 },
+    /** The wave trains this frame (lib/game/waves.ts waveTable, written by advanceWater) and how many the tier draws. */
+    uWaveA: { value: Array.from({ length: WAVE_MAX }, () => new THREE.Vector4()) },
+    uWaveB: { value: Array.from({ length: WAVE_MAX }, () => new THREE.Vector4()) },
+    uWaveCount: { value: 0 },
     uSunDir: { value: new THREE.Vector3(0, 1, 0) },
     /** The key light's colour, so the glint turns gold at golden hour and blue under the moon. */
     uSunColor: { value: new THREE.Color(1, 0.98, 0.92) },
@@ -213,7 +226,7 @@ export function writeWaterUniforms(u: Record<string, THREE.IUniform>, p: WaterPa
  * Water shows the sun only where a bit of surface is tilted to mirror the real
  * key light into this eye: its normal must lie along the half vector between
  * the sun and the eye. With the sun behind the follow camera that needs 29°+
- * of tilt; the drawn surface (swell + ripple texture) gives about 9° and the
+ * of tilt; the drawn surface (the waves, lib/game/waves.ts waveSlopeBound) gives at most 12° and the
  * ripples below it at most 1.5 roughness more, so nothing lights. With the
  * sun ahead the light sits around the mirror point and slides as the eye moves.
  *
@@ -311,7 +324,7 @@ const WATER_PHASE = /* glsl */ `
 float waterPhase(float x) { return mod(x, 6.2831853); }
 `;
 
-/** Mirrors chopSlope. Needs waterPhase (WATER_SWELL brings it). */
+/** Mirrors chopSlope. Needs waterPhase (WATER_WAVES brings it). */
 export const WATER_CHOP = /* glsl */ `
 vec2 chopSlope(vec2 xz, float t) {
   vec2 s = vec2(0.0), d;
@@ -434,96 +447,73 @@ float blobField(vec2 p, float t) {
 ${WATER_OPTICS}${WATER_FOAM}`;
 
 /**
- * Swell. Two waves at different angles and incommensurate frequencies, so the
- * surface is never uniformly up or down (David: "waves that aren't uniform").
- * Driven by WORLD position so adjacent cells agree at their shared edge and the
- * sheet stays continuous even though each cell is its own four vertices.
- *
- * Under them the big slow swell (v1 water item 4): one long wave rolling in off
- * the open sea on its own clock. It dies away over the shallows (a swell lifts
- * deep water; at the beach the waves' lap is the waterline), read off the water
- * field's depth, so the foam stays on the shore it outlines.
- *
- * The analytic gradient rides out as a varying: without it the swell would move
- * the surface without changing how it catches light, which reads as a sliding
- * texture rather than as water. Exported for the glint sprites
- * (GridOcean), which ride the same crests.
+ * The waves (lib/game/waves.ts): their uniforms, the field they read (the bed's depth from the shore map, the calm from
+ * its own grid) and the one function. The table is the CPU's (waveTable, written per frame), so the GPU and what floats
+ * on the water evaluate the same numbers.
  */
-const SWELL = { d1: [1, 0.35], d2: [-0.42, 1], k2: 1.63, s2: 1.31, w1: 0.62, w2: 0.38, d3: [0.8, -0.6], fade: [0.15, 1.2] } as const;
-const f2 = (v: number) => v.toFixed(2);
-export const WATER_SWELL = /* glsl */ `
-uniform float uTime;
-uniform float uWaveHeight;
-uniform float uWaveScale;
-uniform float uWaveSpeed;
-uniform float uSwellHeight;
-uniform float uSwellLength;
-uniform float uSwellSpeed;
-uniform sampler2D uShoreMap;
-uniform vec4 uShoreRect;
-${WATER_PHASE}
-float waterSwell(vec2 xz, out vec2 grad) {
-  float k = 6.2831853 / max(uWaveScale, 0.001);
-  vec2 d1 = normalize(vec2(${f2(SWELL.d1[0])}, ${f2(SWELL.d1[1])}));
-  vec2 d2 = normalize(vec2(${f2(SWELL.d2[0])}, ${f2(SWELL.d2[1])}));
-  float a1 = dot(xz, d1) * k + waterPhase(uTime * uWaveSpeed);
-  float a2 = dot(xz, d2) * k * ${f2(SWELL.k2)} + waterPhase(uTime * uWaveSpeed * ${f2(SWELL.s2)});
-  vec2 d3 = normalize(vec2(${f2(SWELL.d3[0])}, ${f2(SWELL.d3[1])}));
-  float k3 = 6.2831853 / max(uSwellLength, 0.001);
-  float a3 = dot(xz, d3) * k3 + waterPhase(uTime * uSwellSpeed);
-  float h3 = uSwellHeight * smoothstep(${f2(SWELL.fade[0])}, ${f2(SWELL.fade[1])}, texture2D(uShoreMap, (xz - uShoreRect.xy) / uShoreRect.zw).g);
-  grad = d1 * (cos(a1) * ${f2(SWELL.w1)} * k * uWaveHeight)
-       + d2 * (cos(a2) * ${f2(SWELL.w2)} * k * ${f2(SWELL.k2)} * uWaveHeight)
-       + d3 * (cos(a3) * k3 * h3);
-  return (sin(a1) * ${f2(SWELL.w1)} + sin(a2) * ${f2(SWELL.w2)}) * uWaveHeight + sin(a3) * h3;
+const WAVE_DECLS = /* glsl */ `
+uniform vec4 uWaveA[${WAVE_MAX}];
+uniform vec4 uWaveB[${WAVE_MAX}];
+uniform float uWaveCount;
+uniform sampler2D uCalmMap;
+uniform vec4 uCalmRect;
+`;
+/** The bed's depth under the still surface and the calm at a rest point (x, z). Needs uShoreMap and uShoreRect. */
+const WAVE_FIELD = /* glsl */ `
+vec2 waveField(vec2 xz) {
+  return vec2(texture2D(uShoreMap, (xz - uShoreRect.xy) / uShoreRect.zw).g, texture2D(uCalmMap, (xz - uCalmRect.xy) / uCalmRect.zw).r);
 }
 `;
-/** The live uniforms WATER_SWELL reads (the water's own: pass waterSurfaceUniforms()). */
-export const swellUniformsOf = (u: Record<string, THREE.IUniform>) => ({
-  uTime: u.uTime, uWaveHeight: u.uWaveHeight, uWaveScale: u.uWaveScale, uWaveSpeed: u.uWaveSpeed,
-  uSwellHeight: u.uSwellHeight, uSwellLength: u.uSwellLength, uSwellSpeed: u.uSwellSpeed, uShoreMap: u.uShoreMap, uShoreRect: u.uShoreRect,
+/**
+ * For a vertex shader that rides the waves (the water, the sparkles, the particles on the water): the uniforms, the
+ * field, `waterWaves` (a rest point's displacement and slope) and `waterHeightAt` (the surface's height over a world
+ * point: one step back to its rest point; the CPU's waterWaveAt takes three).
+ */
+export const WATER_WAVES = /* glsl */ `
+uniform float uTime;
+uniform sampler2D uShoreMap;
+uniform vec4 uShoreRect;
+${WAVE_DECLS}${WATER_PHASE}${WAVE_FIELD}${WAVE_FN}
+float waterHeightAt(vec2 p) {
+  vec2 f = waveField(p);
+  vec3 d;
+  vec2 g;
+  waterWaves(p.x, p.y, f.x, f.y, 1.0, d, g);
+  vec2 r = p - d.xz;
+  f = waveField(r);
+  waterWaves(r.x, r.y, f.x, f.y, 1.0, d, g);
+  return d.y;
+}
+`;
+/** The live uniforms WATER_WAVES reads (the water's own: pass waterSurfaceUniforms()). */
+export const waveUniformsOf = (u: Record<string, THREE.IUniform>) => ({
+  uTime: u.uTime, uWaveA: u.uWaveA, uWaveB: u.uWaveB, uWaveCount: u.uWaveCount,
+  uShoreMap: u.uShoreMap, uShoreRect: u.uShoreRect, uCalmMap: u.uCalmMap, uCalmRect: u.uCalmRect,
 });
 
-const SW1 = Math.hypot(...SWELL.d1), SW2 = Math.hypot(...SWELL.d2), SW3 = Math.hypot(...SWELL.d3);
-const D1X = SWELL.d1[0] / SW1, D1Z = SWELL.d1[1] / SW1, D2X = SWELL.d2[0] / SW2, D2Z = SWELL.d2[1] / SW2, D3X = SWELL.d3[0] / SW3, D3Z = SWELL.d3[1] / SW3;
-const wrapPhase = (v: number) => v - 6.2831853 * Math.floor(v / 6.2831853);
-/** The share of the swell's height that reaches water `depth` deep (it dies away over the shallows). */
-export const swellFade = (depth: number) => smooth01(SWELL.fade[0], SWELL.fade[1], depth);
 /**
- * WATER_SWELL on the CPU, for what floats on the water (the boat, the buoys; arrival-wharf.md): the surface's rise at
- * world (x, z) at world time `t` (the shader's uTime), and its slope (∂h/∂x, ∂h/∂z) into `grad`. The same constants
- * print the shader, so the two cannot drift apart; read the live `p` from the water's uniforms
- * (components/game/grid/terrainMaterials.ts waterSurfaceUniforms) to ride the waves as drawn. `depth`: the water's
- * depth there (the swell fades over the shallows); floats ride deep water, so by default all of it.
+ * `aWaveLod`: the mesh's vertex spacing there (the open sea's graded rings, GridOcean); a mesh without it reads 0, and
+ * anything under a unit is the island's own cell-sized mesh. Water meshes carry no rotation or scale, so the world
+ * displacement adds to the object position as it is.
  */
-export function waterSwellAt(x: number, z: number, t: number, p: Pick<WaterParams, "waveHeight" | "waveScale" | "waveSpeed" | "swellHeight" | "swellLength" | "swellSpeed">, grad?: { x: number; z: number }, depth = Infinity): number {
-  const k = 6.2831853 / Math.max(p.waveScale, 0.001), h = p.waveHeight;
-  const a1 = (x * D1X + z * D1Z) * k + wrapPhase(t * p.waveSpeed);
-  const a2 = (x * D2X + z * D2Z) * k * SWELL.k2 + wrapPhase(t * p.waveSpeed * SWELL.s2);
-  const k3 = 6.2831853 / Math.max(p.swellLength, 0.001), h3 = p.swellHeight * swellFade(depth);
-  const a3 = (x * D3X + z * D3Z) * k3 + wrapPhase(t * p.swellSpeed);
-  if (grad) {
-    const c1 = Math.cos(a1) * SWELL.w1 * k * h, c2 = Math.cos(a2) * SWELL.w2 * k * SWELL.k2 * h, c3 = Math.cos(a3) * k3 * h3;
-    grad.x = D1X * c1 + D2X * c2 + D3X * c3;
-    grad.z = D1Z * c1 + D2Z * c2 + D3Z * c3;
-  }
-  return (Math.sin(a1) * SWELL.w1 + Math.sin(a2) * SWELL.w2) * h + Math.sin(a3) * h3;
-}
-
 const VERTEX_DECLS = /* glsl */ `
+attribute float aWaveLod;
 varying vec3 vWaterWorld;
-varying vec2 vWaterGrad;
+varying vec2 vWaterRest;
 varying float vWaterRise;
-${WATER_SWELL}`;
+${WATER_WAVES}`;
 
 const VERTEX_BODY = /* glsl */ `
 {
   vec3 wp = (modelMatrix * vec4(transformed, 1.0)).xyz;
-  float h = waterSwell(wp.xz, vWaterGrad);
-  transformed.y += h;
-  vWaterWorld = wp;
-  vWaterWorld.y += h;
-  vWaterRise = h;
+  vec2 wf = waveField(wp.xz);
+  vec3 wd;
+  vec2 wg;
+  waterWaves(wp.x, wp.z, wf.x, wf.y, max(aWaveLod, 1.0), wd, wg);
+  transformed += wd;
+  vWaterRest = wp.xz;
+  vWaterWorld = wp + wd;
+  vWaterRise = wd.y;
 }
 `;
 
@@ -557,10 +547,15 @@ const FRAGMENT_BODY = /* glsl */ `
   float ringB = 1.0 - smoothstep(0.0, w * 2.2, abs(field + 0.30));
   col += uRingColor * (ringA * uRingStrength + ringB * uRingStrength * 0.45);
 
-  // Surface normal from the swell gradient and the ripple texture, in world
-  // space. cameraPosition is a built-in, so no view-space bookkeeping.
+  // Surface normal from the waves, evaluated here per pixel (the same sum the vertices moved by, each train faded once
+  // it is shorter than the pixel can show, so the far sea neither shimmers nor goes flat where its mesh is coarse),
+  // and the ripple texture, in world space. cameraPosition is a built-in, so no view-space bookkeeping.
+  vec2 wf = waveField(vWaterRest);
+  vec3 wd;
+  vec2 wg;
+  float squeeze = waterWaves(vWaterRest.x, vWaterRest.y, wf.x, wf.y, length(fwidth(vWaterRest)), wd, wg);
   vec2 detailNormal = waterDetailNormal(vWaterWorld.xz);
-  vec3 N = normalize(vec3(-vWaterGrad.x + detailNormal.x, 1.0, -vWaterGrad.y + detailNormal.y));
+  vec3 N = normalize(vec3(-wg.x + detailNormal.x, 1.0, -wg.y + detailNormal.y));
   vec3 V = normalize(cameraPosition - vWaterWorld);
 
   // The real sun off the ripples too small to draw (glareLobe, see WATER_OPTICS
@@ -568,8 +563,12 @@ const FRAGMENT_BODY = /* glsl */ `
   // white. The sharp points inside it are the sparkle sprites (GridOcean).
   float glare = glareLobe(uSunDir, cameraPosition, vWaterWorld, N, uRoughness) * sunThroughClouds(vWaterWorld.xz);
 
-  // The big swell's crests catch a little more light than its troughs (v1 water item 4).
-  col *= 1.0 + uSwellShade * clamp(vWaterRise / max(uWaveHeight + uSwellHeight, 1e-3), -1.0, 1.0);
+  // The big swell's crests catch a little more light than its troughs (v1 water item 4), and each wave's face turned
+  // toward the sun a little more than its back (the water is unlit: without this the waves show only in the sky's
+  // sheen and the glare). The slope is the per-pixel one, so the far sea's short waves show where its mesh is coarse.
+  vec2 sunFlat = uSunDir.xz / max(length(uSunDir.xz), 1e-3);
+  col *= 1.0 + uSwellShade * clamp(vWaterRise / max(uWaveHeight + uSwellHeight, 1e-3), -1.0, 1.0)
+             + uSwellShade * 8.0 * clamp(-dot(wg, sunFlat), -0.25, 0.25);
 
   // The sky in the water (v1 water item 4): Schlick's fresnel, so looking down
   // into the shallows you see through them and toward the horizon the sea
@@ -594,6 +593,10 @@ const FRAGMENT_BODY = /* glsl */ `
   float px = max(length(fwidth(vWaterWorld.xz)), 1e-4) * 0.7;
   foam = max(foam, shorePulse(shore, vWaterWorld.xz, px) * uFoamStrength);
   foam = max(foam, ringFoam(vWaterWorld.xz, px));
+  // Whitecaps: where the wind waves' crests bunch hardest (their Gerstner squeeze), broken up by the blobs, on deep
+  // open water only (the shallows, the river and the berth never get them).
+  float caps = smoothstep(0.12, 0.4, blobField(vWaterRest * 2.3 + 17.0, uTime * 0.9)) * smoothstep(0.0, 0.3, field + 0.1);
+  foam = max(foam, uWaveFoam * smoothstep(0.28, 0.34, squeeze) * caps * smoothstep(1.2, 2.6, wf.x) * smoothstep(0.7, 1.0, wf.y));
 
   col += uSunColor * glare * uGlare * (1.0 - foam);
   col = mix(col, uFoamColor, foam);
@@ -646,16 +649,19 @@ export function waterMaterial(uniforms: Record<string, THREE.IUniform>): THREE.M
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
-        "#include <common>\nvarying vec3 vWaterWorld;\nvarying vec2 vWaterGrad;\nvarying float vWaterRise;\n" +
+        "#include <common>\nvarying vec3 vWaterWorld;\nvarying vec2 vWaterRest;\nvarying float vWaterRise;\n" +
           UNIFORM_DECLS +
           WATER_CLOUDS +
           SHORE_FROM_FIELD +
+          WAVE_DECLS +
+          WAVE_FIELD +
+          WAVE_FN +
           WATER_RIPPLE +
           WATER_FUNCTIONS
       )
       .replace("#include <color_fragment>", "#include <color_fragment>\n" + FRAGMENT_BODY);
   };
-  mat.customProgramCacheKey = () => "water";
+  mat.customProgramCacheKey = () => "water-waves";
   return mat;
 }
 

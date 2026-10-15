@@ -72,24 +72,33 @@
 .cue[data-closed="true"] { background: var(--gui-paper-deep); color: var(--gui-warn); outline: 2px dashed rgb(138 90 18 / 0.45); outline-offset: -4px; }
 p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-warn); }
 
-/* Top right (playtest round 1, decision 3): the UI view's coins, level and gear, then the column of the minimap, the time
-   and the quest tracker, with a slot kept under them for a mini health bar when combat drops. */
+/* Top right (playtest round 1, decision 3): the UI view's coins, level and gear, then the quest line (David, 2026-10-14:
+   "the quest on the left side of the mini map"), then the column of the minimap and the time, with a slot kept under
+   them for a mini health bar when combat drops. */
 .hudRight { position: absolute; top: max(16px, env(safe-area-inset-top)); right: var(--hud-edge); z-index: 14; display: flex; align-items: flex-start; gap: 10px; pointer-events: none; }
-.hudRight > * { pointer-events: auto; }
-.hudRight > .rightCluster { position: static; }
+.hudRight > .hudColumn { pointer-events: auto; }
+.hudLead { display: flex; align-items: flex-start; gap: 10px; }
+.hudLead > * { pointer-events: auto; }
+.hudLead > .rightCluster { position: static; }
 .hudColumn { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; zoom: var(--tsi-text-scale, 1); }
 .healthSlot { display: none; }
-/* The quest tracker (QuestTracker.tsx) in the column, under the minimap and the time. */
-.hudColumn > .questSlot { position: static; }
+/* The quest tracker (QuestTracker.tsx), one line on the minimap's top row, centred on the 44px chips beside it. */
+.hudLead > .questSlot { position: static; margin-top: 4px; }
+/* A phone: no room for the gear, the line and the big map in one row, so the line keeps the top and the cluster drops
+   under it, clear of the menu button and the heading on the left. */
+@media (max-width: 700px) {
+  .hudLead { flex-direction: column-reverse; align-items: flex-end; gap: 8px; }
+  .hudLead > .questSlot { margin-top: 0; max-width: calc(100vw - 244px); }
+}
 /* The UI view lifts the prompt and the toasts over the dock, and the chat log beside it. */
 .world[data-ui] { --hud-bar: 72px; --chat-bottom: calc(var(--hud-floor) + 84px); }
 @media (max-width: 700px) { .world[data-ui] { --hud-bar: 132px; --chat-bottom: calc(var(--hud-floor) + 140px); } }
 /* First login: the minimap and the chapter 1 objective arrive after the arrival's walk-along (specs/v1-drop.md §1). */
 .hudColumn[data-new] { animation: objectiveIn 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
-.hudColumn[data-new] .questSlot { animation: objectiveGlow 2.2s ease-out 0.5s both; }
+.hudLead[data-new] > .questSlot { animation: objectiveIn 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) both, objectiveGlow 2.2s ease-out 0.5s both; }
 @keyframes objectiveIn { from { opacity: 0; transform: translateY(14px) scale(0.96); } }
 @keyframes objectiveGlow { 0%, 100% { box-shadow: var(--gui-shadow-sm); } 30% { box-shadow: 0 0 0 4px #e2826a66, var(--gui-shadow-sm); } }
-@media (prefers-reduced-motion: reduce) { .hudColumn[data-new], .hudColumn[data-new] .questSlot { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .hudColumn[data-new], .hudLead[data-new] > .questSlot { animation: none; } }
 .objectiveMarker { animation: markerPulse 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes markerPulse { 50% { opacity: 0.45; } }
 @media (prefers-reduced-motion: reduce) { .objectiveMarker { animation: none; } }

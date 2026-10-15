@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * The boat (specs/polish/arrival-wharf.md): ACNH's little motor boat at a pose in its dock's frame, riding the shared
- * swell (lib/game/wharf.ts floatBoat: the waves the water draws, the dip as someone steps aboard, the bump off the
- * fenders, the nose-up when it goes). Its flag streams downwind (the shared wind, and the wind of its own going) and
+ * The boat (specs/polish/arrival-wharf.md): ACNH's little motor boat at a pose in its dock's frame, riding the waves
+ * (lib/game/wharf.ts floatBoat: the plane the water the shader draws makes under its hull, the dip as someone steps
+ * aboard, the bump off the fenders, the nose-up when it goes). Its flag streams downwind (the shared wind, and the wind of its own going) and
  * flutters; its lantern is lit at dusk and through the night; moored, its bow and stern lines run to the pier and
  * tighten and slacken as it rides, and they come off (and go back over) when it leaves (and comes alongside).
  */
@@ -14,9 +14,9 @@ import * as THREE from "three";
 import { disposeModelMaterials, prepareModel } from "@/lib/game/modelMaterials";
 import { windowLit, type IslandLight } from "@/lib/game/islandLighting";
 import { worldNow } from "@/lib/game/worldClock";
-import { BOAT, MOORED, PIER, SEA_Y, dockToWorld, floatBoat, newBoatPose, newFloat, type BoatPose, type Dock, type Float } from "@/lib/game/wharf";
+import { BOAT, MOORED, PIER, SEA_Y, dockToWorld, floatBoat, newBoatPose, newFloat, newRide, type BoatPose, type Dock, type Float, type Ride } from "@/lib/game/wharf";
+import { liveWaves } from "@/lib/game/waves";
 import { foamRings } from "@/lib/game/foamRings";
-import { waterSurfaceUniforms } from "../grid/terrainMaterials";
 import { liveWind } from "../movement/moveFx";
 import { RopeLine } from "./ropeLine";
 
@@ -29,20 +29,6 @@ const FLAG_VERTEX = /* glsl */ `
   transformed.x += flagW * uFlag.y * sin(6.2831853 * flagW * 1.25 - uFlag.x * 7.5) + flagW * flagW * uFlag.y * 0.35 * sin(uFlag.x * 3.1 + flagW * 4.0);
   transformed.y -= flagW * flagW * uFlag.z;
 `;
-
-/** The water's swell as the shader has it this frame (one object, rewritten). */
-export const liveSwell = { waveHeight: 0, waveScale: 7, waveSpeed: 0.7, swellHeight: 0, swellLength: 26, swellSpeed: 0.4, t: 0 };
-export function readSwell() {
-  const u = waterSurfaceUniforms();
-  liveSwell.waveHeight = u.uWaveHeight.value as number;
-  liveSwell.waveScale = u.uWaveScale.value as number;
-  liveSwell.waveSpeed = u.uWaveSpeed.value as number;
-  liveSwell.swellHeight = u.uSwellHeight.value as number;
-  liveSwell.swellLength = u.uSwellLength.value as number;
-  liveSwell.swellSpeed = u.uSwellSpeed.value as number;
-  liveSwell.t = u.uTime.value as number;
-  return liveSwell;
-}
 
 /** Where the boat lies at world ms `now`, into `out` (moored, or a trip's course). */
 export type PoseAt = (now: number, out: BoatPose) => void;
@@ -67,10 +53,10 @@ function hangLine(line: RopeLine, pier: THREE.Vector3, boatPoint: THREE.Vector3,
 
 type BoatParts = { model: THREE.Object3D; lantern: THREE.MeshStandardMaterial | null; pivot: THREE.Group; uniform: { value: THREE.Vector3 } };
 type BoatLines = { bow: RopeLine; stern: RopeLine; bowRest: number; sternRest: number } | null;
-type BoatState = { pose: BoatPose; float: Float; glow: number; flagYaw: number; lastX: number; lastZ: number; time: number };
+type BoatState = { pose: BoatPose; float: Float; ride: Ride; glow: number; flagYaw: number; lastX: number; lastZ: number; time: number };
 /**
  * Module scope (the react compiler forbids writing through hook values): one frame of the boat. Its pose at world now,
- * floated on the swell; the lantern easing with the windows; the flag streaming down the wind it feels (the island's,
+ * floated on the waves; the lantern easing with the windows; the flag streaming down the wind it feels (the island's,
  * less the boat's own way) and fluttering harder in more of it; its lines to the pier; then whatever rides it.
  */
 /**
@@ -90,9 +76,10 @@ function ringHull(rings: readonly number[], dock: Dock, pose: BoatPose) {
 
 function placeBoat(g: THREE.Group | null, dock: Dock, light: IslandLight, poseAt: PoseAt, onPlaced: OnPlaced | undefined, parts: BoatParts, lines: BoatLines, s: BoatState, dt: number, rings: readonly number[] | null) {
   if (!g) return;
-  const now = worldNow(), swell = readSwell();
+  const now = worldNow();
   poseAt(now, s.pose);
-  floatBoat(dock, s.pose, swell.t, swell, s.float);
+  // On the plane the waves make under its hull, rocking on its spring (lib/game/wharf.ts floatBoat).
+  floatBoat(dock, s.pose, liveWaves, s.float, s.ride, dt);
   g.position.set(s.pose.x + s.float.sway, s.float.y - BOAT.draft, s.pose.z);
   g.rotation.set(s.float.pitch, s.pose.yaw, s.float.roll, "YXZ");
   g.updateMatrix();
@@ -174,7 +161,7 @@ export default function Boat({ dock, light, rope, poseAt, onPlaced }: {
   useEffect(() => () => { lines?.bow.dispose(); lines?.stern.dispose(); }, [lines]);
 
   const group = useRef<THREE.Group>(null);
-  const state = useMemo((): BoatState => ({ pose: newBoatPose(), float: newFloat(), glow: 0, flagYaw: 0, lastX: 0, lastZ: 0, time: 0 }), []);
+  const state = useMemo((): BoatState => ({ pose: newBoatPose(), float: newFloat(), ride: newRide(), glow: 0, flagYaw: 0, lastX: 0, lastZ: 0, time: 0 }), []);
   const rings = useRef<number[] | null>(null);
   useEffect(() => {
     const handles = HULL_RINGS.map(() => foamRings.add(0, 0, 0.5, 0));

@@ -16,7 +16,7 @@ import { ParticlePool } from "@/lib/game/fx/particles";
 import { liveIslandWeather } from "@/lib/game/islandWeather";
 import type { MoveEvent } from "@/lib/game/movement/sim";
 import { worldWind, type WorldWind } from "@/lib/game/worldFx";
-import { WATER_SWELL, swellUniformsOf } from "@/lib/game/waterShader";
+import { WATER_WAVES, waveUniformsOf } from "@/lib/game/waterShader";
 import { waterSurfaceUniforms } from "../grid/terrainMaterials";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 
@@ -129,19 +129,19 @@ function moveParticleMaterial(): THREE.MeshStandardMaterial {
   if (particleMaterial) return particleMaterial;
   const m = new THREE.MeshStandardMaterial({ name: "MoveParticles", map: packMap(), roughness: 1, metalness: 0, transparent: true, depthWrite: false });
   m.onBeforeCompile = shader => {
-    // On the water (FACE.water) a particle rides the swell the water draws: the same function, the same live uniforms.
+    // On the water (FACE.water) a particle rides the waves the water draws: the same function, the same live uniforms.
     const u = waterSurfaceUniforms();
-    Object.assign(shader.uniforms, swellUniformsOf(u));
-    shader.vertexShader = VERTEX_PARS + WATER_SWELL + shader.vertexShader
+    Object.assign(shader.uniforms, waveUniformsOf(u));
+    shader.vertexShader = VERTEX_PARS + WATER_WAVES + shader.vertexShader
       .replace("#include <uv_vertex>", `#include <uv_vertex>\n${PICK_FRAME}`)
       .replace("#include <beginnormal_vertex>", PLACE_NORMAL)
-      .replace("#include <begin_vertex>", `${PLACE_VERTEX}\nif (face > 3.5) { vec2 swellSlope; transformed.y += waterSwell(transformed.xz, swellSlope); }`);
+      .replace("#include <begin_vertex>", `${PLACE_VERTEX}\nif (face > 3.5) transformed.y += waterHeightAt(transformed.xz);`);
     shader.fragmentShader = "varying vec4 vTint;\nvarying float vAbove;\n" + shader.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
   diffuseColor *= vTint;
   diffuseColor.a *= smoothstep(0.0, ${SOFT.toFixed(2)}, vAbove);
   if (diffuseColor.a < 0.003) discard;`);
   };
-  m.customProgramCacheKey = () => "move-particles-v2";
+  m.customProgramCacheKey = () => "move-particles-waves";
   return (particleMaterial = m);
 }
 
