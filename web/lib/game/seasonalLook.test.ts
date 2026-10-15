@@ -49,7 +49,8 @@ describe("seasonal look", () => {
     expect(SEASON_TREES.summer.some(url => url.includes("blossom"))).toBe(false);
     expect(SEASON_TREES.winter.every(url => url.includes("snow"))).toBe(true);
     expect(SEASON_FLOWERS.winter).toEqual([]);
-    expect(SEASON_BUSHES.winter.every(url => url.includes("snow"))).toBe(true);
+    // Our bushes: the same two shapes every season, dressed for it (the winter pair under snow).
+    for (const s of ["spring", "summer", "autumn", "winter"] as const) expect(SEASON_BUSHES[s]).toEqual([`/assets/game/plants/bush-a-${s}.glb`, `/assets/game/plants/bush-b-${s}.glb`]);
   });
   it("leans a sky hue without changing its lightness", () => {
     const night = "#344963";

@@ -5,7 +5,7 @@
  * Seeded from what the worktree already ships: fish rarity/size come from
  * lib/game/fishing.ts (FISH), bugs/shore crabs from components/game/Critters.tsx,
  * flowers from FlowerPickFX, fruit from CollectionBook, shells from
- * public/assets/acnh/props/shell-*.glb. Species without a model yet are
+ * public/assets/game/forage/shell-*.glb (art/nature/build_shells.py). Species without a model yet are
  * `asset_ready: false` (listed so the journal and museum have their slots).
  * Seeded from here (lib/seedMigrations.ts: after a change run
  * scripts/gen-seeds.mjs); seedMigrations.test.ts keeps them in sync.
@@ -174,10 +174,10 @@ const NATURE_ROWS: Row[] = [
   ["flower_tulip", "Orange Tulip", "flowers", "common", null, null, { sub: "flower", months: [4, 5] }],
   ["flower_pansy", "Purple Pansy", "flowers", "common", null, null, { sub: "flower", months: [3, 4, 5, 9, 10] }],
   ["flower_windflower", "Windflower", "flowers", "rare", null, null, { sub: "flower", months: [3, 4, 10, 11] }],
-  ["shell_asari", "Asari Clam", "beach", "common", [3, 6], null, { sub: "shell", tool: "shovel", model: "/assets/acnh/props/shell-asari.glb" }],
-  ["shell_scallop", "Scallop Shell", "beach", "common", [6, 12], null, { sub: "shell", model: "/assets/acnh/props/shell-scallop.glb" }],
-  ["shell_turban", "Turban Shell", "beach", "uncommon", [5, 10], null, { sub: "shell", model: "/assets/acnh/props/shell-turban.glb" }],
-  ["shell_whelk", "Whelk Shell", "beach", "rare", [8, 16], null, { sub: "shell", model: "/assets/acnh/props/shell-whelk.glb" }],
+  ["shell_asari", "Asari Clam", "beach", "common", [3, 6], null, { sub: "shell", tool: "shovel", model: "/assets/game/forage/shell-asari.glb" }],
+  ["shell_scallop", "Scallop Shell", "beach", "common", [6, 12], null, { sub: "shell", model: "/assets/game/forage/shell-scallop.glb" }],
+  ["shell_turban", "Turban Shell", "beach", "uncommon", [5, 10], null, { sub: "shell", model: "/assets/game/forage/shell-turban.glb" }],
+  ["shell_whelk", "Whelk Shell", "beach", "rare", [8, 16], null, { sub: "shell", model: "/assets/game/forage/shell-whelk.glb" }],
   ["mushroom_round", "Round Mushroom", "woods", "common", null, null, { sub: "mushroom", months: AUTUMN, assetReady: false }],
   ["mushroom_flat", "Flat Mushroom", "woods", "uncommon", null, null, { sub: "mushroom", months: AUTUMN, assetReady: false }],
   ["mushroom_skinny", "Skinny Mushroom", "woods", "rare", null, null, { sub: "mushroom", months: [11], assetReady: false }],

@@ -156,7 +156,7 @@ function NodeVisual({ sp, canopy }: { sp: Species; canopy?: boolean }) {
     return canopy || !url ? null : <GLBProp url={url} position={[0, -0.02, 0]} rotation={[0.35, sp.position * 2.1, 0.2]} scale={0.55} />;
   }
   if (sp.sub === "wood") return null; // still up in the tree until it's shaken
-  if (sp.sub === "mushroom") return <NatureMushroom position={[0, 0, 0]} seed={sp.position} />;
+  if (sp.sub === "mushroom") return <NatureMushroom position={[0, 0, 0]} species={sp.key} seed={sp.position} />;
   // Rocks are their Outcrop and a buried find its DigSpot: neither goes into the hand itself.
   if (buried(sp) || sp.category === "mineral") return null;
   if (sp.model) return <GLBProp url={sp.model} position={[0, 0.02, 0]} scale={1} />;

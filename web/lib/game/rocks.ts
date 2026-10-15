@@ -19,6 +19,16 @@ export type RockModel = (typeof ROCK_MODELS)[number];
 export const isRockModel = (m: string | undefined): m is RockModel => !!m && (ROCK_MODELS as readonly string[]).includes(m);
 export const rockUrl = (m: RockModel) => `/assets/game/rocks/${m}.glb`;
 
+/**
+ * The village's accent stones (game/remodel-nature): maps still name the dump's rocks (`rock-a` to `rock-e`), and each
+ * now draws our worn stone of the same size (`art/rocks/build_rocks.py -- stones`), so its footprint and top
+ * (defaultIsland PROP_FOOTPRINT, PROP_TOP) hold.
+ */
+export const STONE_OF: Record<string, string> = { "rock-a": "stone-a", "rock-b": "stone-b", "rock-c": "stone-c", "rock-d": "stone-d", "rock-e": "stone-e" };
+/** A map prop's model file: our boulders and stones, else the dump prop of that name. */
+export const propUrl = (model: string): string =>
+  isRockModel(model) ? rockUrl(model) : STONE_OF[model] ? `/assets/game/rocks/${STONE_OF[model]}.glb` : `/assets/acnh/props/${model}.glb`;
+
 /** Footprint half extents at the ground (x, z) and the top above it, before scale: printed by the build script. */
 export const ROCK_SIZE: Record<RockModel, { half: [number, number]; top: number }> = {
   "boulder-round": { half: [0.51, 0.48], top: 0.66 },
