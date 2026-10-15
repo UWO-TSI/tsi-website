@@ -1,5 +1,5 @@
 {
- "version": "v9",
+ "version": "v10",
  "note": "The shared skull (art/characters/skull/skull.py; specs/characters/head-fit.md). Every hair piece, hat and head accessory is fitted to this skull and its fit points, never to another piece. Positions and frames are glTF space (Y up, the face toward +Z), the part GLBs' space; a frame's z is the skull's outward normal.",
  "centre": [
   0.0,
@@ -32,22 +32,12 @@
    -0.012
   ],
   "classic_dy": 0.012,
-  "face_keep_canvas": [
-   0.04,
-   0.3,
-   0.96,
-   1.0
-  ],
-  "face_lat": [
-   10.0,
-   44.0
-  ],
-  "face_margin": 0.08,
-  "face_ramp": 0.16,
-  "neck_lat": [
-   -20.0,
-   -65.0
-  ],
+  "jaw": {
+   "depth": 0.235,
+   "front": 0.04,
+   "q": 2.4,
+   "q_front": 4.0
+  },
   "source": "Roblox's official R15 reference rig (github.com/Roblox/avatar Legacy/rigs/R15_Block.fbx, Head_Geo, Hair_Att)"
  },
  "anchors": {
@@ -108,10 +98,10 @@
     0.14137
    ],
    "q": [
-    0.429417,
-    0.289473,
-    -0.147518,
-    0.842642
+    0.429107,
+    0.289554,
+    -0.147427,
+    0.842787
    ],
    "use": "hairline over the left brow"
   },
@@ -124,10 +114,10 @@
     0.14137
    ],
    "q": [
-    0.429417,
-    -0.289473,
-    0.147518,
-    0.842642
+    0.429107,
+    -0.289554,
+    0.147427,
+    0.842787
    ],
    "use": "hairline over the right brow"
   },
@@ -135,15 +125,15 @@
    "lat": 22.0,
    "lon": 62.0,
    "p": [
-    0.1931,
-    0.87773,
-    0.08786
+    0.19092,
+    0.87658,
+    0.08687
    ],
    "q": [
-    0.490117,
-    0.471091,
-    -0.361998,
-    0.637821
+    0.604121,
+    0.367475,
+    -0.367475,
+    0.604121
    ],
    "use": "the left temple: the hairline turns down to the sideburn"
   },
@@ -151,47 +141,47 @@
    "lat": 22.0,
    "lon": -62.0,
    "p": [
-    -0.1931,
-    0.87773,
-    0.08786
+    -0.19092,
+    0.87658,
+    0.08687
    ],
    "q": [
-    0.490117,
-    -0.471091,
-    0.361998,
-    0.637821
+    0.604121,
+    -0.367475,
+    0.367475,
+    0.604121
    ],
    "use": "the right temple"
   },
   "ear_L": {
-   "lat": -21.942,
+   "lat": -21.494,
    "lon": 92.0,
    "p": [
-    0.21249,
-    0.65791,
-    -0.006
+    0.19724,
+    0.668,
+    -0.00557
    ],
    "q": [
-    0.555197,
-    0.43964,
-    -0.547392,
-    0.445909
+    0.578089,
+    0.403312,
+    -0.588289,
+    0.396319
    ],
    "use": "left ear clearance centre: glasses temples rest here; hat rims stay above EAR_TOP"
   },
   "ear_R": {
-   "lat": -21.942,
+   "lat": -21.494,
    "lon": -92.0,
    "p": [
-    -0.21249,
-    0.65791,
-    -0.006
+    -0.19724,
+    0.668,
+    -0.00557
    ],
    "q": [
-    0.555197,
-    -0.43964,
-    0.547392,
-    0.445909
+    0.578089,
+    -0.403312,
+    0.588289,
+    0.396319
    ],
    "use": "right ear clearance centre"
   },
@@ -200,13 +190,13 @@
    "lon": 180.0,
    "p": [
     0.0,
-    0.60625,
-    -0.16294
+    0.60235,
+    -0.16669
    ],
    "q": [
     0.0,
-    -0.256808,
-    0.966462,
+    -0.37827,
+    0.925695,
     0.0
    ],
    "use": "the nape: where back hair meets the neck"
@@ -216,14 +206,14 @@
    "lon": 0.0,
    "p": [
     0.0,
-    0.92477,
-    0.19442
+    0.92699,
+    0.19732
    ],
    "q": [
-    0.65793,
+    0.582765,
     0.0,
     0.0,
-    0.753079
+    0.812641
    ],
    "use": "the hat line in front (hat rims sit on hat_in over it)"
   },
@@ -244,66 +234,66 @@
    "use": "the hat line at the back"
   },
   "face_front": {
-   "lat": -4.473,
+   "lat": -5.081,
    "lon": 0.0,
    "p": [
     0.0,
-    0.72935,
-    0.19198
+    0.72284,
+    0.20286
    ],
    "q": [
-    0.707784,
+    0.710295,
     0.0,
     0.0,
-    0.706429
+    0.703904
    ],
    "use": "the face plane between the eyes (Roblox's FaceFrontAttachment): glasses bridge"
   },
   "eye_L": {
-   "lat": -4.473,
-   "lon": 27.834,
+   "lat": -5.081,
+   "lon": 28.764,
    "p": [
-    0.11571,
+    0.11047,
     0.72414,
-    0.18781
+    0.1723
    ],
    "q": [
-    0.706217,
-    0.052103,
-    -0.052257,
-    0.704139
+    0.684378,
+    0.187789,
+    -0.189389,
+    0.678597
    ],
    "use": "the left eye centre (face canvas anchor): glasses lenses"
   },
   "eye_R": {
-   "lat": -4.473,
-   "lon": -27.834,
+   "lat": -5.081,
+   "lon": -28.764,
    "p": [
-    -0.11571,
+    -0.11047,
     0.72414,
-    0.18781
+    0.1723
    ],
    "q": [
-    0.706217,
-    -0.052103,
-    0.052257,
-    0.704139
+    0.684378,
+    -0.187789,
+    0.189389,
+    0.678597
    ],
    "use": "the right eye centre"
   },
   "mouth": {
-   "lat": -39.411,
+   "lat": -37.907,
    "lon": 0.0,
    "p": [
     0.0,
-    0.59483,
-    0.182
+    0.59523,
+    0.18961
    ],
    "q": [
-    0.795176,
+    0.805482,
     0.0,
     0.0,
-    0.606379
+    0.59262
    ],
    "use": "the mouth (face canvas anchor): masks, scarves stay below"
   },
@@ -312,7 +302,7 @@
    "lon": 0.0,
    "p": [
     0.0,
-    0.54092,
+    0.54953,
     0.0
    ],
    "q": [
@@ -642,10 +632,10 @@
    ]
   ],
   "ear": {
-   "lat": -21.94,
+   "lat": -21.49,
    "lon": 92.0,
    "radius_deg": 14.0,
-   "top_lat": -7.94
+   "top_lat": -7.49
   }
  },
  "shells": {
@@ -772,7 +762,7 @@
   "gap_max": 0.004,
   "hat_gap_max": 0.01,
   "hat_poke_max": 0.002,
-  "ear_top_lat": -7.94,
+  "ear_top_lat": -7.49,
   "reach": {
    "hair": {
     "up": 0.18,

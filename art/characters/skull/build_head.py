@@ -1,8 +1,10 @@
-"""The v8 head (head fit, specs/characters/head-fit.md; ledger row 304, David 2026-10-08: "rounder, flatter face").
+"""The head (head fit, specs/characters/head-fit.md, row 304; v9 head-roblox, row 309; v10 head-v10, row 311: our own
+head, rounder, a round face and chin under the classic head's hair zone, base/head_shape.py JAW). The object keeps
+its v8 name (V8_Head) and the engine's base file its name (base/v8_clips.glb).
 
   /Applications/Blender.app/Contents/MacOS/Blender -b -P art/characters/skull/build_head.py [-- render <dir>]
 
-Builds V8_Head on head_shape's v8 skull (a rounded box with a flat face area) with the v7 head's topology steps
+Builds V8_Head on head_shape's skull (skull_radius) with the v7 head's topology steps
 (v7/head_model.py: feature rows and columns through the solved eye and mouth centres, concentric loops round each
 eye and the mouth, face-chart UVs, 100% on mixamorig:Head, then the straddle pass), and saves skull/head.blend:
 CharacterRig, V8_Head, and the v7 head for comparison (collection v7_reference, hidden). Then:
@@ -16,7 +18,7 @@ ART = os.path.dirname(HERE)
 for p in (os.path.join(ART, "v7"), ART, os.path.join(ART, "base")):
     sys.path.insert(0, p)
 import head_model as hm  # noqa: E402
-from head_shape import SKULL, EYE_LAT, EYE_LON, MOUTH_LAT  # noqa: E402
+from head_shape import JAW, EYE_LAT, EYE_LON, MOUTH_LAT  # noqa: E402
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 RIM_ROWS = ()
@@ -56,7 +58,7 @@ hm.step_straddle(ob)
 dev = hm.deviation(ob)
 tris = sum(len(p.vertices) - 2 for p in ob.data.polygons)
 print("HEAD_V8", "tris", tris, "verts", len(ob.data.vertices), "deviation", dev, "eye", round(EYE_LAT, 2), round(EYE_LON, 2),
-      "mouth", round(MOUTH_LAT, 2), "skull", SKULL)
+      "mouth", round(MOUTH_LAT, 2), "jaw", JAW)
 for lc in bpy.context.view_layer.layer_collection.children:
     if lc.name in ("v6_reference", "v7_reference"):
         lc.exclude = False

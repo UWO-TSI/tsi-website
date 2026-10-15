@@ -8,7 +8,8 @@ weights. The engine binds parts by bone name (lib/game/character/rig.ts), so a L
 Writes art/characters/lod1/<the part's own path> and lod1/base/skin.glb (the base's M_Skin only: the face, the head
 and the clips stay the full base's). Per piece (one material of a part): an edge-collapse decimate to the first of
 RATIOS whose shape stays within TOLERANCE of the full piece (otherwise the piece stays whole), the skin weights
-interpolated with it, then the part's own shading again (kit.py finish: smooth faces, sharp edges over 40 degrees).
+interpolated with it, then the part's own shading again (kit.py finish: smooth faces, sharp edges over 40 degrees; a
+strand-card hairstyle keeps its full mesh's smooth normals, card_normals).
 Pieces under KEEP triangles, the painted face (M_Face), the head it lies on and the shirt print (M_Decal) are kept as
 they are. Writes lod1/lod.json: the triangles before and after per GLB. render_lod.py draws every pair side by side.
 """
@@ -16,6 +17,8 @@ import bpy, bmesh, json, math, os, sys
 from mathutils.bvhtree import BVHTree
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import kit  # noqa: E402  (weld_normals: the hairstyles' smooth normals)
 OUT = os.path.join(HERE, "lod1")
 CAT = json.load(open(os.path.join(HERE, "character_catalog.json")))
 RATIOS = (0.5, 0.65, 0.8)
@@ -61,6 +64,29 @@ def reshade(ob):
     for e in me.edges:
         fs = edge_faces.get(e.key, [])
         e.use_edge_sharp = len(fs) != 2 or me.polygons[fs[0]].normal.angle(me.polygons[fs[1]].normal, 0.0) > SHARP
+
+
+def card_normals(ob, full):
+    """Strand-card hair (head-v10, row 311: "check that LOD 1 isn't faceted"): the decimated cards take the full mesh's
+    smooth normals (nearest face, interpolated), then any corner left split is welded (kit.weld_normals), instead of
+    reshade's sharp edges over 40 degrees, which faceted every card the collapse bent."""
+    src = bpy.data.objects.new("LOD_normals_src", full)
+    bpy.context.scene.collection.objects.link(src)
+    src.matrix_world = ob.matrix_world
+    bpy.ops.object.select_all(action="DESELECT")
+    ob.select_set(True)
+    bpy.context.view_layer.objects.active = ob
+    md = ob.modifiers.new("Normals", "DATA_TRANSFER")
+    md.object = src
+    md.use_loop_data = True
+    md.data_types_loops = {"CUSTOM_NORMAL"}
+    md.loop_mapping = "POLYINTERP_NEAREST"
+    bpy.ops.object.modifier_move_to_index(modifier="Normals", index=0)
+    bpy.ops.object.modifier_apply(modifier="Normals")
+    bpy.data.objects.remove(src)
+    for p in ob.data.polygons:
+        p.use_smooth = True
+    kit.weld_normals(ob.data)
 
 
 def tree(ob):
@@ -160,8 +186,11 @@ def decimate(ob, under, cards=False, snug=SNUG, tier="lod1"):
             old = ob.data
             ob.data = trial.data
             bpy.data.objects.remove(trial)
+            if cards:
+                card_normals(ob, old)
+            else:
+                reshade(ob)
             bpy.data.meshes.remove(old)
-            reshade(ob)
             return ratio
         mesh = trial.data
         bpy.data.objects.remove(trial)

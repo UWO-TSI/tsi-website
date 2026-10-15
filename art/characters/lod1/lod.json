@@ -25,7 +25,7 @@
  },
  "accessories/accessory/acc_glasses_square.glb": {
   "tris": 256,
-  "lod1": 220
+  "lod1": 256
  },
  "accessories/accessory/acc_shell_necklace.glb": {
   "tris": 234,
@@ -56,8 +56,8 @@
   "lod1": 760
  },
  "hair/full/hair_anime_spikes.glb": {
-  "tris": 2210,
-  "lod1": 2210
+  "tris": 2214,
+  "lod1": 2214
  },
  "hair/full/hair_baby_sprout.glb": {
   "tris": 2960,
@@ -65,7 +65,7 @@
  },
  "hair/full/hair_bob_pigtail.glb": {
   "tris": 4258,
-  "lod1": 2168
+  "lod1": 2169
  },
  "hair/full/hair_bowl_cut.glb": {
   "tris": 2628,
@@ -73,7 +73,7 @@
  },
  "hair/full/hair_dreads_cap.glb": {
   "tris": 4082,
-  "lod1": 2081
+  "lod1": 2080
  },
  "hair/full/hair_fluffy_boy.glb": {
   "tris": 1602,
@@ -85,11 +85,11 @@
  },
  "hair/full/hair_layered_shag.glb": {
   "tris": 4327,
-  "lod1": 2202
+  "lod1": 2203
  },
  "hair/full/hair_long_pigtails.glb": {
-  "tris": 3312,
-  "lod1": 1696
+  "tris": 3308,
+  "lod1": 1693
  },
  "hair/full/hair_long_scruffy.glb": {
   "tris": 4350,
@@ -100,8 +100,8 @@
   "lod1": 1009
  },
  "hair/full/hair_messy_dreads.glb": {
-  "tris": 4342,
-  "lod1": 2211
+  "tris": 4338,
+  "lod1": 2208
  },
  "hair/full/hair_messy_low_pony.glb": {
   "tris": 4167,
@@ -124,8 +124,8 @@
   "lod1": 2211
  },
  "hair/full/hair_vkei.glb": {
-  "tris": 3795,
-  "lod1": 1936
+  "tris": 3793,
+  "lod1": 1935
  },
  "hair/full/hair_waves.glb": {
   "tris": 1328,
@@ -133,11 +133,11 @@
  },
  "hair/full/hair_windy_bob.glb": {
   "tris": 4395,
-  "lod1": 2236
+  "lod1": 2237
  },
  "hair/full/hair_wispy_ponytail.glb": {
   "tris": 4232,
-  "lod1": 2156
+  "lod1": 2155
  },
  "outfits/bottom/bottom_joggers.glb": {
   "tris": 314,
