@@ -197,9 +197,9 @@ describe("seeded hashes stay identical across callers", () => {
     // the pool lost the wardrobe cut's four retired rows and gained the visor (2026-10-14), so the day's shuffle moved with it
     expect(dailySpecials(seedItems(), "2026-09-26").map((i) => i.slug)).toMatchInlineSnapshot(`
       [
-        "furn-bookshelf",
-        "furn-yellow-message-mat",
-        "wear-shoes-loafers",
+        "wear-shoes-sandals",
+        "furn-bulletinboard",
+        "furn-study-desk",
       ]
     `);
     expect(itemOrder("x").slice(0, 8)).toMatchInlineSnapshot(`
