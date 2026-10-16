@@ -34,13 +34,17 @@ export const SEASON_TREES: Record<Season, readonly string[]> = {
   autumn: [`${P}tree-hardwood-a.glb`, `${P}tree-hardwood-b.glb`, `${P}tree-hardwood-b.glb`, `${P}tree-cedar.glb`],
   winter: [`${P}tree-hardwood-snow.glb`, `${P}tree-hardwood-snow.glb`, `${P}tree-hardwood-snow.glb`, `${P}tree-cedar-snow.glb`],
 };
-/** ACNH bushes flower by season: azalea spring, hydrangea/hibiscus summer, holly winter. */
+/**
+ * The dump's leafy bushes, closed all round and in season colours (art/nature/close_bushes.py, game/remodel-r2): the
+ * azalea and a fresh-green hydrangea in spring, the hydrangea and hibiscus in their own deep greens in summer, the holly
+ * in rust and the hydrangea in amber in autumn, the dump's snow-covered holly (PltBushHolly4Snow) in winter.
+ */
+const B = "/assets/game/plants/";
 export const SEASON_BUSHES: Record<Season, string[]> = {
-  spring: [`${P}bush-azalea.glb`],
-  summer: [`${P}bush-hydrangea.glb`, `${P}bush-hibiscus.glb`],
-  autumn: [`${P}bush-holly.glb`, `${P}bush-hydrangea.glb`],
-  // The dump's own snow-covered holly (PltBushHolly4Snow), ACNH's winter bush.
-  winter: [`${P}bush-holly-snow.glb`],
+  spring: [`${B}bush-azalea-spring.glb`, `${B}bush-hydrangea-spring.glb`],
+  summer: [`${B}bush-hydrangea-summer.glb`, `${B}bush-hibiscus-summer.glb`],
+  autumn: [`${B}bush-holly-autumn.glb`, `${B}bush-hydrangea-autumn.glb`],
+  winter: [`${B}bush-holly-winter.glb`],
 };
 /** Seasonal flower sets. Winter is empty: no blooms standing in the snow. */
 export const SEASON_FLOWERS: Record<Season, string[]> = {

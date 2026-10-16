@@ -12,7 +12,7 @@ import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import type * as THREE from "three";
 import { GLBProp } from "../NatureModels";
-import { STUDY_BOOK_URL, STUDY_TABLE_LONG_URL, STUDY_TABLE_URL } from "@/lib/game/propModels";
+import { STUDY_BOOK_URL, STUDY_TABLE_CLASSIC_LONG_URL, STUDY_TABLE_CLASSIC_URL, STUDY_TABLE_LONG_URL, STUDY_TABLE_URL } from "@/lib/game/propModels";
 import { CafeModel } from "./CafeModel";
 import type { ContactSize } from "@/lib/game/shadows";
 import Character, { CHARACTER_SCALE, type CharacterMotion } from "../character/Character";
@@ -43,8 +43,13 @@ const CAFE_SET: Partial<Record<TableLayout["furniture"], ContactSize>> = {
   communal: { cx: 0, cz: 0, rx: 1.45, rz: 1.1, height: 0, strength: 0.55 },
 };
 
+/** The outdoor tables' models (art/props/build_study_table.py): ours with the runner, and the classic with the green cloth. */
+const OUTDOOR_TABLE: Partial<Record<TableLayout["furniture"], string>> = {
+  picnic: STUDY_TABLE_LONG_URL, pier: STUDY_TABLE_URL, "picnic-classic": STUDY_TABLE_CLASSIC_LONG_URL, "pier-classic": STUDY_TABLE_CLASSIC_URL,
+};
+
 /**
- * Furniture per kind: the café's hand-modeled sets, and outdoors our picnic and pier tables (art/props/
+ * Furniture per kind: the café's hand-modeled sets, and outdoors our picnic and pier tables in either look (art/props/
  * build_study_table.py) with the village benches and parasol. Exported for the phone companion's isolated table scene
  * (specs/companion.md deliverable 2), which places one table at the origin.
  */
@@ -54,10 +59,9 @@ export function TableFurniture({ t, ground }: { t: TableLayout; ground: (x: numb
   const set = CAFE_SET[t.furniture];
   if (set) return <CafeModel name="cafe-kit" node={`set_${t.furniture}`} position={[t.at[0], y, t.at[1]]} yaw={t.yaw} contact={set} />;
   return <group position={[t.at[0], y, t.at[1]]} rotation={[0, t.yaw, 0]}>
-    {t.furniture === "picnic" && <GLBProp url={STUDY_TABLE_LONG_URL} />}
+    {OUTDOOR_TABLE[t.furniture] && <GLBProp url={OUTDOOR_TABLE[t.furniture]!} />}
     {[...new Set(seats.map(([, z]) => z))].map(z => <GLBProp key={z} url={`${P}bench-wood.glb`} position={[0, 0, z]} />)}
-    {t.furniture === "pier" && <GLBProp url={`${P}beach-parasol.glb`} position={[-2.4, 0, 0.3]} />}
-    {t.furniture === "pier" && <GLBProp url={STUDY_TABLE_URL} />}
+    {(t.furniture === "pier" || t.furniture === "pier-classic") && <GLBProp url={`${P}beach-parasol.glb`} position={[-2.4, 0, 0.3]} />}
     {/* The open book on the runner (authored at the dump book's size at 0.1: its old 0.065 x 10). */}
     <GLBProp url={STUDY_BOOK_URL} position={[0.15, 0.848, 0]} scale={0.65} rotation={[0, 0.3, 0]} />
   </group>;

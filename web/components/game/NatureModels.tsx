@@ -13,7 +13,8 @@ import { SEASON_BUSHES, SEASON_FLOWERS, SEASON_TREES } from "@/lib/game/seasonal
 import type { Season } from "@/lib/game/season";
 import { objectsOf, type Village } from "@/lib/game/villageMap";
 import { CAMPFIRE_URL, STREETLAMP_URL } from "@/lib/game/propModels";
-import type { ModelPlacement } from "./InstancedNature";
+import { FENCE_POST_URL, FENCE_RAIL_URL, fencePlacements, isJoinedFence } from "@/lib/game/fences";
+import { InstancedModels, type ModelPlacement } from "./InstancedNature";
 
 /**
  * GLB model loader (Kenney kits + ACNH pack).
@@ -62,7 +63,9 @@ export function sceneryOf(v: Village, ground: (x: number, z: number) => number, 
     ...at("tree", seed => treeParts(seed, SEASON_TREES[season])),
     ...at("bush", seed => bushParts(seed, SEASON_BUSHES[season])),
     ...(SEASON_FLOWERS[season].length ? at("flower", seed => flowerParts(seed, SEASON_FLOWERS[season])) : []),
-    ...propsOf(v).filter(o => o.model).map((p): ModelPlacement => ({ url: isRockModel(p.model) ? rockUrl(p.model) : `/assets/acnh/props/${p.model}.glb`, position: [p.x, ground(p.x, p.z), p.z], rotation: p.yaw ?? 0, scale: p.scale ?? 1 })),
+    ...propsOf(v).filter(o => o.model && !isJoinedFence(o)).map((p): ModelPlacement => ({ url: isRockModel(p.model) ? rockUrl(p.model) : `/assets/acnh/props/${p.model}.glb`, position: [p.x, ground(p.x, p.z), p.z], rotation: p.yaw ?? 0, scale: p.scale ?? 1 })),
+    // The connectable fences: a post on each, rails to the posts beside it (lib/game/fences.ts).
+    ...fencePlacements(objectsOf("fence", v).filter(isJoinedFence), ground),
     // The natural barriers standing at this drop (lib/game/barriers.ts), where the walker blocks them.
     ...barrierPlacements(v).map((b): ModelPlacement => ({ url: BARRIERS[b.model].url, position: [b.x, ground(b.x, b.z), b.z], rotation: b.yaw, scale: b.scale })),
   ];
@@ -104,6 +107,16 @@ export function NatureFence({ position, variant }: { position: [number, number, 
   );
 }
 
+/**
+ * A straight run of the connectable fence (lib/game/fences.ts) placed in code, not on the map: n posts from (x0, z0)
+ * a cell apart along (dx, dz), joined by their rails. Drawn only (the walker doesn't know it), as the dump fence it
+ * replaces was: the museum's boarded door and the ruins gate.
+ */
+export function FenceLine({ x0, z0, dx, dz, n, ground }: { x0: number; z0: number; dx: number; dz: number; n: number; ground: (x: number, z: number) => number }) {
+  const items = useMemo(() => fencePlacements(Array.from({ length: n }, (_, i) => ({ x: x0 + dx * i, z: z0 + dz * i })), ground), [x0, z0, dx, dz, n, ground]);
+  return <InstancedModels items={items} />;
+}
+
 // ─── Mushroom ───────────────────────────────────────────────────
 /** A woods forage node's mushrooms: its species' own cluster (art/nature/build_mushrooms.py), turned by seed. */
 export function NatureMushroom({ position, species, seed }: { position: [number, number, number]; species: string; seed: number }) {
@@ -120,6 +133,8 @@ export function NatureMushroom({ position, species, seed }: { position: [number,
 const PRELOAD = [
   ...TREE_MODELS,
   ...BUSH_MODELS,
+  // The village's closed bushes, every season's (about 360 KB in all), so a season change doesn't pop them in.
+  ...Object.values(SEASON_BUSHES).flat(),
   ...FLOWER_MODELS,
   "/assets/acnh/plants/stump.glb",
   STREETLAMP_URL,
@@ -132,6 +147,8 @@ const PRELOAD = [
   "/assets/acnh/props/bulletin-board.glb",
   "/assets/acnh/props/bridge-wooden.glb",
   "/assets/acnh/props/fence-country-a.glb",
+  FENCE_POST_URL,
+  FENCE_RAIL_URL,
   "/assets/acnh/props/fence-log-a.glb",
 ];
 for (const url of PRELOAD) useGLTF.preload(url);

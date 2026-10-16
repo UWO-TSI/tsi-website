@@ -64,7 +64,8 @@ export const CATALOGUE: readonly CatalogueItem[] = [
   o("campfire", "Campfire", [2, 2]),
   o("beach-parasol", "Parasol", [2, 2]),
   o("beach-bed", "Beach chair", [2, 1]),
-  o("bush-azalea", "Azalea bush", [1, 1], `${PL}bush-azalea.glb`),
+  // The dump's azalea closed all round (art/nature/close_bushes.py), as the village's spring bushes.
+  o("bush-azalea", "Azalea bush", [1, 1], "/assets/game/plants/bush-azalea-spring.glb"),
   o("flower-tulip", "Tulips", [1, 1], `${PL}flower-tulip.glb`),
   o("flower-rose", "Roses", [1, 1], `${PL}flower-rose.glb`),
   o("tree-hardwood-a", "Tree", [1, 1], `${PL}tree-hardwood-a.glb`),

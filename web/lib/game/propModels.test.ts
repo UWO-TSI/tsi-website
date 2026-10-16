@@ -27,7 +27,7 @@ function bounds(url: string) {
 
 describe("remodelled props (propModels.ts)", () => {
   const urls = [Props.CAMPFIRE_URL, Props.MAILBOX_URL, Props.STREETLAMP_URL, Props.BUOY_URL,
-    Props.STUDY_TABLE_LONG_URL, Props.STUDY_TABLE_URL, Props.STUDY_BOOK_URL];
+    Props.STUDY_TABLE_LONG_URL, Props.STUDY_TABLE_URL, Props.STUDY_BOOK_URL, Props.STUDY_TABLE_CLASSIC_LONG_URL, Props.STUDY_TABLE_CLASSIC_URL];
   it("ships every model it names", () => {
     expect(urls.length).toBeGreaterThan(6);
     for (const url of [...urls, ...Object.values(Props.REMODELLED_PIECES)]) expect(existsSync(fileOf(url)), url).toBe(true);
@@ -62,8 +62,9 @@ describe("remodelled props (propModels.ts)", () => {
     expect(b.min[1]).toBeGreaterThan(-0.04);
     expect(ROWBOAT.bowRing[2]).toBeLessThan(b.max[2]);
   });
-  it("sizes the study tables to their solid footprints with the top at the book's height", () => {
-    for (const [url, kind] of [[Props.STUDY_TABLE_LONG_URL, "picnic"], [Props.STUDY_TABLE_URL, "pier"]] as const) {
+  it("sizes the study tables, both looks, to their solid footprints with the top at the book's height", () => {
+    for (const [url, kind] of [[Props.STUDY_TABLE_LONG_URL, "picnic"], [Props.STUDY_TABLE_URL, "pier"], [Props.STUDY_TABLE_CLASSIC_LONG_URL, "picnic-classic"],
+      [Props.STUDY_TABLE_CLASSIC_URL, "pier-classic"]] as const) {
       const b = bounds(url), [, , hw, hd] = FURNITURE[kind].solid[0];
       expect(b.max[0] - b.min[0], url).toBeLessThanOrEqual(2 * hw + 0.02);
       expect(b.max[2] - b.min[2], url).toBeLessThanOrEqual(2 * hd + 0.06);

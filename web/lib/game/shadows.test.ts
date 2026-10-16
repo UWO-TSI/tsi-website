@@ -12,9 +12,10 @@ describe("shadow classification (look spec §9.2)", () => {
         .concat(["/assets/game/props/workbench.glb", "/assets/game/weapons/sword-iron.glb", "/assets/game/rocks/boulder-round.glb",
           "/assets/game/forage/outcrop-rock_stone.glb"])
         // Our remodelled props (lib/game/propModels.ts).
-        .concat(["campfire", "mailbox", "streetlamp", "study-table-long", "study-table", "hq-floor-lamp", "hq-pendant", "buoy"].map(p => `/assets/game/props/${p}.glb`)),
+        .concat(["campfire", "mailbox", "streetlamp", "study-table-long", "study-table", "hq-floor-lamp", "hq-pendant", "buoy", "fence-post", "fence-rail",
+          "study-table-classic-long", "study-table-classic"].map(p => `/assets/game/props/${p}.glb`)),
       foliage: ["tree-hardwood-a", "tree-hardwood-b", "tree-blossom", "tree-hardwood-snow", "tree-cedar", "tree-cedar-snow", "bush-holly", "bush-azalea", "bush-holly-snow"]
-        .map(p => `${A}plants/${p}.glb`),
+        .map(p => `${A}plants/${p}.glb`).concat(["/assets/game/plants/bush-azalea-spring.glb", "/assets/game/plants/bush-holly-winter.glb"]),
       small: [`${A}plants/flower-rose.glb`, `${A}props/shell-scallop.glb`, `${A}furniture/lounge-book.glb`, "/assets/nature/grass-tufts.glb",
         "/assets/nature/rock_smallA.glb", "/assets/nature/mushroom_red.glb", "/assets/game/props/branch.glb", "/assets/game/props/message-bottle.glb", `${A}fruit/coconut.glb`, "/assets/game/props/study-book.glb",
         "/assets/game/forage/shell-whelk.glb", "/assets/game/forage/mushroom-round.glb"],

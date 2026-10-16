@@ -5,7 +5,8 @@
  * Pure: the editor's UI and the tests share it.
  */
 import { BARRIERS, BARRIER_MODELS } from "../barriers";
-import { HOUSE_MODELS, LANDMARK_INFO, PROP_FOOTPRINT, TREE_SLOTS, type LandmarkId } from "../defaultIsland";
+import { HOUSE_MODELS, LANDMARK_INFO, TREE_SLOTS, type LandmarkId } from "../defaultIsland";
+import { JOINED_FENCE } from "../fences";
 import { ROCK_MODELS } from "../rocks";
 import type { MapObject, ObjectKind } from "../villageMap";
 import type { BrushTool } from "./brushes";
@@ -48,8 +49,10 @@ export const PALETTE: readonly { group: string; items: readonly EditorItem[] }[]
     group: "Props",
     items: [
       place("bench", "Bench", { model: "bench-wood" }), place("lamp", "Lamp"),
-      ...Object.keys(PROP_FOOTPRINT).filter(m => m.startsWith("fence-")).map(m => place("fence", `Fence ${m.slice(-1)}`, { model: m })),
+      // The connectable fence: posts on whole cells join the posts beside them (lib/game/fences.ts).
+      place("fence", "Fence", { model: JOINED_FENCE }),
       place("bridge", "Bridge"), place("campfire", "Campfire"), place("study", "Study table", { model: "picnic" }),
+      place("study", "Study table (classic)", { model: "picnic-classic" }),
       ...BARRIER_MODELS.map(m => place("barrier", `Barrier: ${BARRIERS[m].label}`, { model: m })),
     ],
   },
