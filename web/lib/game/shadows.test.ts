@@ -9,13 +9,15 @@ describe("shadow classification (look spec §9.2)", () => {
       solid: ["buildings/hq-office.glb", "buildings/chalet-wall-a.glb", "props/streetlamp.glb", "props/bench-wood.glb", "props/fence-rope-a.glb",
         "props/fence-country-b.glb", "props/bridge-wooden.glb", "props/rock-c.glb", "props/stone-lantern.glb", "props/bulletin-board.glb",
         "furniture/ruins-pillar.glb", "furniture/study-chair.glb", "furniture/monument-rock.glb"].map(u => A + u)
-        .concat(["/assets/game/props/workbench.glb", "/assets/game/weapons/sword-iron.glb"])
+        .concat(["/assets/game/props/workbench.glb", "/assets/game/weapons/sword-iron.glb", "/assets/game/rocks/stone-a.glb", "/assets/game/rocks/boulder-round.glb",
+          "/assets/game/forage/outcrop-rock_stone.glb"])
         // Our remodelled props (lib/game/propModels.ts).
         .concat(["campfire", "mailbox", "streetlamp", "museum-door-fence", "study-table-long", "study-table", "hq-floor-lamp", "hq-pendant", "buoy"].map(p => `/assets/game/props/${p}.glb`)),
       foliage: ["tree-hardwood-a", "tree-hardwood-b", "tree-blossom", "tree-hardwood-snow", "tree-cedar", "tree-cedar-snow", "bush-holly", "bush-azalea", "bush-holly-snow"]
-        .map(p => `${A}plants/${p}.glb`),
+        .map(p => `${A}plants/${p}.glb`).concat(["/assets/game/plants/bush-a-autumn.glb", "/assets/game/plants/bush-b-winter.lod1.glb"]),
       small: [`${A}plants/flower-rose.glb`, `${A}props/shell-scallop.glb`, `${A}furniture/lounge-book.glb`, "/assets/nature/grass-tufts.glb",
-        "/assets/nature/rock_smallA.glb", "/assets/nature/mushroom_red.glb", "/assets/game/props/branch.glb", "/assets/game/props/message-bottle.glb", `${A}fruit/coconut.glb`, "/assets/game/props/study-book.glb"],
+        "/assets/nature/rock_smallA.glb", "/assets/nature/mushroom_red.glb", "/assets/game/props/branch.glb", "/assets/game/props/message-bottle.glb", `${A}fruit/coconut.glb`, "/assets/game/props/study-book.glb",
+        "/assets/game/forage/shell-whelk.glb", "/assets/game/forage/mushroom-round.glb", "/assets/game/shore/crab-gazami.glb"],
       none: [`${A}critters/firefly.glb`, `${A}critters/common-butterfly.glb`, `${A}furniture/lounge-rug.glb`, `${A}furniture/yellow-message-mat.glb`, `${A}props/distant-view-01.glb`, "/assets/game/props/welcome-mat.glb"],
     };
     for (const [cls, urls] of Object.entries(table)) for (const url of urls) expect(shadowClassFor(url), url).toBe(cls);

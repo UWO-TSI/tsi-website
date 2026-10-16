@@ -2,7 +2,7 @@
 
 /**
  * Critter species (gameplay pillar: critters & collection, v1 — 2026-07-12):
- * the ACNH bug and shore-crab models the island's peaceful loop spawns
+ * the ACNH bug models and our shore crabs the island's peaceful loop spawns
  * (peaceful/VillageLife). Collection is persisted via POST /api/collections.
  */
 
@@ -40,8 +40,8 @@ export const SPECIES: Species[] = [
   { key: "bug_mantis", label: "a Mantis", model: "/assets/acnh/critters/mantis.glb", motion: "crawl", scale: 0.11, baseY: 0.06, phases: ["day"], weight: 1 },
   { key: "bug_grasshopper", label: "a Grasshopper", model: "/assets/acnh/critters/grasshopper.glb", motion: "crawl", scale: 0.11, baseY: 0.06, phases: ["day"], weight: 2 },
   // Shore critters v1 (2026-07-15): catchable crabs on the beach band —
-  // models ship PRE-scaled from the beach pipeline (scale 1 here).
-  { key: "shore_gazami_crab", label: "a Gazami Crab", model: "/assets/acnh/props/crab-gazami.glb", motion: "crawl", scale: 1, baseY: 0.03, phases: ["day"], weight: 2, zone: "beach" },
-  { key: "shore_hermit_crab", label: "a Hermit Crab", model: "/assets/acnh/props/crab-hermit.glb", motion: "crawl", scale: 1, baseY: 0.03, phases: ["day", "night"], weight: 2, zone: "beach" },
+  // our own (art/nature/build_crabs.py), at true size (scale 1 here).
+  { key: "shore_gazami_crab", label: "a Gazami Crab", model: "/assets/game/shore/crab-gazami.glb", motion: "crawl", scale: 1, baseY: 0.03, phases: ["day"], weight: 2, zone: "beach" },
+  { key: "shore_hermit_crab", label: "a Hermit Crab", model: "/assets/game/shore/crab-hermit.glb", motion: "crawl", scale: 1, baseY: 0.03, phases: ["day", "night"], weight: 2, zone: "beach" },
 ];
 SPECIES.forEach((s) => useGLTF.preload(s.model));

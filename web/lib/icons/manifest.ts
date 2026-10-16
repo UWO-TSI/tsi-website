@@ -63,8 +63,8 @@ function speciesSpec(key: string, sp?: { category: string; model: string | null 
   const fish = FISH_BY_KEY.get(key);
   if (fish?.model) return { key, view: "profile", url: fish.model, raw: !!fish.raw };
   if (CRITTER_MODELS[key]) return { key, view: "above", url: `/assets/acnh/critters/${CRITTER_MODELS[key]}.glb` };
-  if (key === "shore_gazami_crab") return { key, view: "above", url: "/assets/acnh/props/crab-gazami.glb" };
-  if (key === "shore_hermit_crab") return { key, view: "three-quarter", url: "/assets/acnh/props/crab-hermit.glb" };
+  if (key === "shore_gazami_crab") return { key, view: "above", url: "/assets/game/shore/crab-gazami.glb" };
+  if (key === "shore_hermit_crab") return { key, view: "three-quarter", url: "/assets/game/shore/crab-hermit.glb" };
   if (key.startsWith("flower_")) return { key, view: "three-quarter", url: `/assets/acnh/plants/flower-${key.slice(7)}.glb` };
   if (key === "wood_branch") return { key, view: "diagonal", url: "/assets/game/props/branch.glb" };
   if (sp?.model) return { key, view: "three-quarter", url: sp.model };

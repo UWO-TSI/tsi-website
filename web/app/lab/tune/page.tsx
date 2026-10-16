@@ -192,9 +192,9 @@ function GrassSpecimen() {
 const BENCH_CELLS = 16;
 const LAND_Y = 0.34;
 const ROCKS: { url: string; x: number; z: number; r: number; rot: number }[] = [
-  { url: "/assets/acnh/props/rock-a.glb", x: -2.6, z: 1.4, r: 0.52, rot: 0.7 },
-  { url: "/assets/acnh/props/rock-c.glb", x: 1.4, z: -3.4, r: 0.55, rot: 2.1 },
-  { url: "/assets/acnh/props/rock-e.glb", x: -4.2, z: -2.2, r: 0.55, rot: 4.0 },
+  { url: "/assets/game/rocks/stone-a.glb", x: -2.6, z: 1.4, r: 0.52, rot: 0.7 },
+  { url: "/assets/game/rocks/stone-c.glb", x: 1.4, z: -3.4, r: 0.55, rot: 2.1 },
+  { url: "/assets/game/rocks/stone-e.glb", x: -4.2, z: -2.2, r: 0.55, rot: 4.0 },
 ];
 
 /** Bench-local cell index -> world coordinate. 1 cell = 1 world unit. */

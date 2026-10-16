@@ -13,6 +13,7 @@ import { Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { GLBProp } from "./NatureModels";
+import { bushUrl } from "@/lib/game/natureParts";
 import IslandSheet from "./IslandSheet";
 import { TreeLeaves } from "./AmbienceFX";
 import { eventSolids, landmark, type LandmarkId } from "@/lib/game/defaultIsland";
@@ -70,8 +71,8 @@ const DECOR: Record<string, { pieces: Piece[]; spots: Spot[]; lights?: At[] }> =
       { at: lawn(0, 0), url: `${PL}tree-cedar-snow.glb`, scale: 1.3, solid: [0.5, 0.5] },
       { at: lawn(-1.5, -1), url: `${P}stone-lantern.glb`, solid: [0.4, 0.4] },
       { at: lawn(1.5, -1), url: `${P}stone-lantern.glb`, solid: [0.4, 0.4] },
-      { at: lawn(-1.4, 1.2), url: `${PL}bush-holly-snow.glb` },
-      { at: lawn(1.5, 1.1), url: `${PL}bush-holly-snow.glb` },
+      { at: lawn(-1.4, 1.2), url: bushUrl("a", "winter") },
+      { at: lawn(1.5, 1.1), url: bushUrl("b", "winter") },
       // The cart model's origin is off its body (x 1.75–3.77, z −0.34–1.03): turned π, the body sits 2.76 west, 0.35 south.
       { at: ["cafe", -0.14, -2.45], url: `${P}market-cart.glb`, yaw: Math.PI, solid: [1.05, 0.45], solidAt: [-2.76, -0.35] },
     ],

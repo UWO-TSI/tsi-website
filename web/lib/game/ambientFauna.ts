@@ -139,7 +139,8 @@ export function flyersFor(site: FaunaSite, season: Season, count = { butterflies
   return out;
 }
 
-export const CRAB_MODELS = ["/assets/acnh/props/crab-gazami.glb", "/assets/acnh/props/crab-hermit.glb"];
+/** Our crabs (art/nature/build_crabs.py), in the frame and size of the dump ones they replace. */
+export const CRAB_MODELS = ["/assets/game/shore/crab-gazami.glb", "/assets/game/shore/crab-hermit.glb"];
 /** Crabs along the beach, spread out (no two within 3 units). */
 export function crabsFor(site: FaunaSite, count = 6): Crab[] {
   const cells = beachCells(site), out: Crab[] = [];
