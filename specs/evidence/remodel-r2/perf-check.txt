@@ -1,0 +1,22 @@
+perf:check, SCENES=village, measurement build at 5d5ee742 (headless, SKIP_BUILD after measure-build.sh, 3 runs a tier,
+both tiers rerun to 5 as "looks regressed"), load 5.9-7.1 (the machine was busy; frame times are noisy, not rerun)
+
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draw calls | Triangles | Runs | Spread | Load |
+|---|---|---|---|---|---|---|---|---|---|
+| village | high | 5.20 (3.90, +33.3%) | 6.50 (4.90, +32.7%) | 4.40 (3.40, +29.4%) | 362 (382, -5.2%) | 600818 (537560, +11.8%) | 5 | 8% | 7.1 |
+| village | lite | 3.10 (2.30, +34.8%) | 4.10 (3.40, +20.6%) | 2.60 (2.00, +30.0%) | 272 (288, -5.6%) | 386361 (353865, +9.2%) | 5 | 13% | 5.9 |
+
+Median of 3+ runs each; in brackets the baseline (8809c517 2026-10-14) and the change. Load: the 1-minute load average.
+
+perf:check FAILED
+- village|high: median frame 5.2 ms, +33.3% on the baseline's 3.9
+- village|high: triangles 600818 over the budget's 560000 (web/lib/game/perf/budget.ts)
+- village|lite: median frame 3.1 ms, +34.8% on the baseline's 2.3
+
+Context: round 1 (remodel-props at 95806400) had village High at 603,456 triangles / 377 draws / 4.4 ms at load 4.9, and
+head-roblox before both lanes 592,191 / 373 / 4.9 ms at load 5.6: the triangle budget was already over before this lane.
+This run: 600,818 / 362 / 5.2 ms at load 7.1. Draws fell 15 on round 1 (the rejected bushes' near and far meshes, the
+stones). The bench's season is summer: the closed hydrangea (590) and hibiscus (688) stand where the dump's (223, 272)
+did, about +6k triangles in the scene for the sixteen bushes plus their shadow-pass share; the museum door's fence is
+-0.7k (three posts and two rails, 788, for two country fences, 1,460). Frame times rose with the load average (7.1
+against round 1's 4.9) on fewer draws; not rerun for noise (lane rules).
