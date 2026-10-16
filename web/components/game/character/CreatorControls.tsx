@@ -12,7 +12,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { Lock } from "lucide-react";
 import { Button, Slider } from "@/components/gui";
 import { iconUrl } from "@/lib/icons/keys";
-import { customHairUnlocked, dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR_COLOURS, HAIR_THUMB_URL, hairAccentHex, hairHex, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, partRef,
+import { customHairUnlocked, dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR_COLOURS, HAIR_THUMB_URL, hairAccentHex, hairHex, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, unlockRef,
   type CharacterLook, type FaceCell, type Placement } from "@/lib/game/character/look";
 import { choose, colourTarget, isOn, optionName, shownOptions, type Category, type Section } from "@/lib/game/character/creatorCategories";
 import { PLACE_RANGE } from "@/lib/game/character/face";
@@ -67,8 +67,9 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
   const [lockNote, setLockNote] = useState<{ cat: string; text: string } | null>(null);
   const note = lockNote?.cat === cat.id ? lockNote.text : null;
   const say = (text: string | null) => setLockNote(text ? { cat: cat.id, text } : null);
-  // Identity (face, hair styles, the free colours) is always free; clothes and dyes are owned (ruling on audit item 22).
-  const has = (id: string | null) => { const ref = id && partRef(id); return !ref || owned.has(ref); };
+  // Identity (face, hair styles, the free colours) is free; clothes and dyes are owned (ruling on audit item 22), and so
+  // are wardrobe batch 2's priced hairstyles, accessories and whole faces (a face's parts: unlockRef).
+  const has = (id: string | null) => { const ref = id && unlockRef(id); return !ref || owned.has(ref); };
   const hasHair = (i: number) => i < FREE_HAIR_COLOURS || owned.has(dyeRef(i));
   const crafted = (id: string | null) => !!id && !!PART_BY_ID.get(id)?.item; // unlocked by a crafted item, never sold
   const target = colourTarget(cat, look, lastAccessory);

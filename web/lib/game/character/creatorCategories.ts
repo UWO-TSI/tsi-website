@@ -34,7 +34,8 @@ export interface Category {
   /** The face sliders this category shows. */
   place?: PlacePart;
   sections: Section[];
-  /** Offered in the closet and fitting room (hair and clothes; the face is the creator's alone). */
+  /** Offered in the closet and fitting room: hair, clothes and (wardrobe batch 2, whose whole faces are sold in the shop)
+   * the face parts; the head and skin stay the creator's alone. */
   wardrobe: boolean;
 }
 
@@ -48,7 +49,7 @@ function partSwatch(sections: Section[]): SwatchKind | null {
   const tints = new Set(sections.flatMap(s => s.options.flatMap(id => (id ? PART_BY_ID.get(id)?.materials.map(m => m.tint) ?? [] : []))));
   return tints.has("outfit") ? "outfit" : tints.has("hair") ? "hair" : null;
 }
-const ACC_GROUPS: [AccGroup, string][] = [["face", "Glasses"], ["head", "Hats"], ["neck", "Neck"], ["bag", "Bags"]];
+const ACC_GROUPS: [AccGroup, string][] = [["face", "Glasses"], ["head", "Hats"], ["neck", "Neck"], ["front", "Front"], ["bag", "Bags"]];
 const SLOT_LABEL: Partial<Record<string, string>> = { bangs: "Fringe", back: "Back", top: "Tops", bottom: "Bottoms", onepiece: "One-pieces", shoes: "Shoes" };
 
 function build(): Category[] {
@@ -59,9 +60,9 @@ function build(): Category[] {
   const cats: Category[] = [
     { id: "head", label: "Head & skin", icon: "head", framing: "face", swatch: "skin", sections: [], wardrobe: false },
     { id: "hair", label: "Hair", icon: "hair", framing: "head", swatch: partSwatch(hair), sections: hair, wardrobe: true },
-    { id: "eyes", label: "Eyes", icon: "eyes", framing: "face", swatch: null, place: "eyes", sections: [faceSection("eyes", "Eyes")], wardrobe: false },
-    { id: "mouth", label: "Mouth", icon: "mouth", framing: "face", swatch: null, place: "mouth", sections: [faceSection("mouth", "Mouth")], wardrobe: false },
-    { id: "extras", label: "Blush & extras", icon: "extras", framing: "face", swatch: null, sections: [faceSection("extras", "Extras")], wardrobe: false },
+    { id: "eyes", label: "Eyes", icon: "eyes", framing: "face", swatch: null, place: "eyes", sections: [faceSection("eyes", "Eyes")], wardrobe: true },
+    { id: "mouth", label: "Mouth", icon: "mouth", framing: "face", swatch: null, place: "mouth", sections: [faceSection("mouth", "Mouth")], wardrobe: true },
+    { id: "extras", label: "Blush & extras", icon: "extras", framing: "face", swatch: null, sections: [faceSection("extras", "Extras")], wardrobe: true },
     { id: "accessories", label: "Accessories & glasses", icon: "part", itemIcon: "acc_glasses_round", framing: "head", swatch: partSwatch(acc), sections: acc, wardrobe: true },
     { id: "tops", label: "Tops", icon: "part", itemIcon: "top_tee", framing: "upper", swatch: partSwatch([slotSection("top", "Tops", "top")]), sections: [slotSection("top", "Tops", "top")], wardrobe: true },
     { id: "bottoms", label: "Bottoms", icon: "part", itemIcon: "bottom_trousers", framing: "body", swatch: partSwatch(bottoms), sections: bottoms.filter(s => s.options.length), wardrobe: true },

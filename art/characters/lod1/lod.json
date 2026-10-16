@@ -51,6 +51,98 @@
   "tris": 1184,
   "lod1": 964
  },
+ "accessories/roblox/acc_apple_stem.glb": {
+  "tris": 640,
+  "lod1": 444
+ },
+ "accessories/roblox/acc_bandage_blindfold.glb": {
+  "tris": 1256,
+  "lod1": 668
+ },
+ "accessories/roblox/acc_bear_hood.glb": {
+  "tris": 1256,
+  "lod1": 668
+ },
+ "accessories/roblox/acc_cowboy_hat.glb": {
+  "tris": 1256,
+  "lod1": 668
+ },
+ "accessories/roblox/acc_crew_visor.glb": {
+  "tris": 1256,
+  "lod1": 668
+ },
+ "accessories/roblox/acc_drawn_top_hat.glb": {
+  "tris": 1256,
+  "lod1": 668
+ },
+ "accessories/roblox/acc_gold_monocle.glb": {
+  "tris": 1256,
+  "lod1": 962
+ },
+ "accessories/roblox/acc_gold_rimless_shades.glb": {
+  "tris": 1256,
+  "lod1": 668
+ },
+ "accessories/roblox/acc_green_sprout.glb": {
+  "tris": 1256,
+  "lod1": 668
+ },
+ "accessories/roblox/acc_half_rim_glasses.glb": {
+  "tris": 1256,
+  "lod1": 668
+ },
+ "accessories/roblox/acc_monkey_ears.glb": {
+  "tris": 1256,
+  "lod1": 668
+ },
+ "accessories/roblox/acc_paper_bowtie.glb": {
+  "tris": 244,
+  "lod1": 162
+ },
+ "accessories/roblox/acc_paper_horns.glb": {
+  "tris": 168,
+  "lod1": 168
+ },
+ "accessories/roblox/acc_paper_tie.glb": {
+  "tris": 160,
+  "lod1": 160
+ },
+ "accessories/roblox/acc_plaid_scarf.glb": {
+  "tris": 1256,
+  "lod1": 667
+ },
+ "accessories/roblox/acc_propeller_cap.glb": {
+  "tris": 1256,
+  "lod1": 668
+ },
+ "accessories/roblox/acc_red_band_straw_hat.glb": {
+  "tris": 498,
+  "lod1": 498
+ },
+ "accessories/roblox/acc_round_wire_glasses.glb": {
+  "tris": 1256,
+  "lod1": 667
+ },
+ "accessories/roblox/acc_square_shades.glb": {
+  "tris": 1256,
+  "lod1": 668
+ },
+ "accessories/roblox/acc_thin_glasses.glb": {
+  "tris": 960,
+  "lod1": 520
+ },
+ "accessories/roblox/acc_wheat_sprig.glb": {
+  "tris": 582,
+  "lod1": 330
+ },
+ "accessories/roblox/acc_wheat_stalk.glb": {
+  "tris": 1256,
+  "lod1": 668
+ },
+ "accessories/roblox/acc_woven_hat.glb": {
+  "tris": 1175,
+  "lod1": 627
+ },
  "base/skin.glb": {
   "tris": 864,
   "lod1": 760
@@ -71,13 +163,29 @@
   "tris": 2640,
   "lod1": 1360
  },
+ "hair/full/hair_curly_pigtails.glb": {
+  "tris": 4208,
+  "lod1": 2144
+ },
+ "hair/full/hair_double_buns.glb": {
+  "tris": 4368,
+  "lod1": 2223
+ },
  "hair/full/hair_dreads_cap.glb": {
   "tris": 4094,
   "lod1": 2087
  },
+ "hair/full/hair_emo_layers.glb": {
+  "tris": 4393,
+  "lod1": 2236
+ },
  "hair/full/hair_fluffy_boy.glb": {
   "tris": 1614,
   "lod1": 1614
+ },
+ "hair/full/hair_goggle_ushanka.glb": {
+  "tris": 4307,
+  "lod1": 2193
  },
  "hair/full/hair_hime_short.glb": {
   "tris": 4385,
@@ -111,6 +219,10 @@
   "tris": 4381,
   "lod1": 2229
  },
+ "hair/full/hair_ribbon_bob.glb": {
+  "tris": 4291,
+  "lod1": 2185
+ },
  "hair/full/hair_short_tufts.glb": {
   "tris": 4370,
   "lod1": 2225
@@ -130,6 +242,10 @@
  "hair/full/hair_waves.glb": {
   "tris": 1328,
   "lod1": 1328
+ },
+ "hair/full/hair_wavy_half_up.glb": {
+  "tris": 4399,
+  "lod1": 2239
  },
  "hair/full/hair_windy_bob.glb": {
   "tris": 4403,

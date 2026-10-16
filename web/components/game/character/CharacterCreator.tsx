@@ -4,7 +4,7 @@
  * Character creator (rows 141, 142, 191, 210; layout from David's Li'l Lads reference, 2026-10-08): an icon rail of
  * categories on the left, a big lit 3D portrait that frames the face for face parts and the whole body for clothes,
  * and a paper panel with the category's title, its face sliders, its option tiles and its colour swatches.
- * `mode="wardrobe"` is the same sheet limited to hair and clothes (closet and fitting room). On a phone the rail is a
+ * `mode="wardrobe"` is the same sheet limited to hair, the face parts and clothes (closet and fitting room). On a phone the rail is a
  * tab row along the bottom, the portrait on top and the options between.
  *
  * Categories, options and swatches come from the catalogue (lib/game/character/creatorCategories.ts). Tiles are

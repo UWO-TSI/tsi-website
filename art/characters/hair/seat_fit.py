@@ -1,7 +1,7 @@
 """Provisional Roblox attachments: where each of David's hairs sits on Roblox's classic head, estimated from its shape
 (specs/characters/head-roblox.md).
 
-  /Applications/Blender.app/Contents/MacOS/Blender -b -P art/characters/hair/seat_fit.py [-- --write]
+  /Applications/Blender.app/Contents/MacOS/Blender -b -P art/characters/hair/seat_fit.py [-- --write] [--only id,id]
 
 Roblox attaches a hair by its own HairAttachment (Position and Orientation in its Handle) to the head's HairAttachment,
 the classic head's top centre. Three of David's accessory files were readable (#1, #6, #11: hair/roblox_attachments.json,
@@ -30,8 +30,10 @@ from head_shape import CLASSIC  # noqa: E402
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 DATA = os.path.join(HERE, "roblox_attachments.json")
-SRC = os.path.join(HERE, "source", "david")
-MANIFEST = {h["id"]: h for h in json.load(open(os.path.join(SRC, "manifest.json")))["hairs"]}
+SETS = ("david", "david-b2")              # David's hair sets (wardrobe batch 2 added david-b2)
+MANIFEST = {h["id"]: dict(h, _dir=os.path.join(HERE, "source", who)) for who in SETS
+            for h in json.load(open(os.path.join(HERE, "source", who, "manifest.json")))["hairs"]}
+ONLY = set(ARGS[ARGS.index("--only") + 1].split(",")) if "--only" in ARGS else None
 LIFT = 0.196            # stud: #6 and #11 stand 0.192 and 0.200 above their seats in Roblox
 HC = np.array([0.0, 0.0, -CLASSIC["H"]])          # the classic head's centre, studs below its HairAttachment
 
@@ -158,7 +160,7 @@ def lift(t):
 
 
 def estimate(e):
-    v, F = load_glb(os.path.join(SRC, e["file"]))
+    v, F = load_glb(os.path.join(MANIFEST[e["id"]]["_dir"], e["file"]))
     R = rot_orientation(e["orientation"])
     w = (np.asarray(e["mesh_scale"], float) * v) @ R          # R^T applied to row vectors
     vb = to_blender(w)
@@ -179,7 +181,7 @@ def main():
             err = np.linalg.norm(p - np.array(e["position"]))
             print(f"CALIBRATION #{e['n']:02d} {e['id']:22s} estimate {np.round(p, 3)} real {np.round(e['position'], 3)} error {err:.3f} stud")
     for e in doc["hairs"]:
-        if e["provisional"]:
+        if e["provisional"] and (not ONLY or e["id"] in ONLY):
             p = estimate(e)
             print(f"PROVISIONAL #{e['n']:02d} {e['id']:22s} position {np.round(p, 4)} orientation {e['orientation']}")
             if "--write" in ARGS:
@@ -189,4 +191,5 @@ def main():
         print("SEAT_FIT_WRITTEN", DATA)
 
 
-main()
+if __name__ == "__main__":       # art/characters/accessories/import_roblox.py imports seat() from here
+    main()

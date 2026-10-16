@@ -559,6 +559,150 @@
    ],
    "provisional": true,
    "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the side that leaves the face open on the classic head, checked against David's preview"
+  },
+  {
+   "n": 22,
+   "id": "hair_goggle_ushanka",
+   "asset_id": 87890006358128,
+   "name": "Green Cool Messy Boy Hair w Y2K Goggles Ushanka",
+   "file": "22-Green-Cool-Messy-Boy-Hair-w-Y2K-Goggles-Ushanka-87890006358128.glb",
+   "position": [
+    0.14,
+    0.66483,
+    0.0225
+   ],
+   "orientation": [
+    0,
+    90,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the green fringe and the goggles (the hat's front) lie toward the raw mesh's -X, the hair's nape toward +X (wardrobe batch 2)"
+  },
+  {
+   "n": 23,
+   "id": "hair_ribbon_bob",
+   "asset_id": 85192073992593,
+   "name": "sweet cutecore moe messy short bob dark ash",
+   "file": "23-sweet-cutecore-moe-messy-short-bob-dark-ash-85192073992593.glb",
+   "position": [
+    -0.005,
+    0.53003,
+    -0.08
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the fringe is on the raw mesh's -Z side, as David's preview's first row (wardrobe batch 2)"
+  },
+  {
+   "n": 24,
+   "id": "hair_wavy_half_up",
+   "asset_id": 100884389158278,
+   "name": "Messy Wavy IT Girl Hair",
+   "file": "24-Messy-Wavy-IT-Girl-Hair-100884389158278.glb",
+   "position": [
+    -0.125,
+    1.28768,
+    -0.0175
+   ],
+   "orientation": [
+    0,
+    90,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face opening lies toward the raw mesh's -X (as #22), checked on the classic head (wardrobe batch 2)"
+  },
+  {
+   "n": 25,
+   "id": "hair_curly_pigtails",
+   "asset_id": 87890777934843,
+   "name": "Cute Igaru Girl w Curly Hair Blue n Black",
+   "file": "25-Cute-Igaru-Girl-w-Curly-Hair-Blue-n-Black-87890777934843.glb",
+   "position": [
+    0.0025,
+    1.23069,
+    0.03
+   ],
+   "orientation": [
+    0,
+    180,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face opening (the black triangle of David's preview's first row) is on the raw mesh's +Z side (wardrobe batch 2)"
+  },
+  {
+   "n": 26,
+   "id": "hair_emo_layers",
+   "asset_id": 114354951912876,
+   "name": "cute fluffy emo girl hair y2k",
+   "file": "26-cute-fluffy-emo-girl-hair-y2k-114354951912876.glb",
+   "position": [
+    -0.00125,
+    1.22635,
+    0.035
+   ],
+   "orientation": [
+    0,
+    180,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the fringe is on the raw mesh's +Z side, as David's preview's first row (wardrobe batch 2)"
+  },
+  {
+   "n": 27,
+   "id": "hair_double_buns",
+   "asset_id": 139556608863162,
+   "name": "Y2K It Girl Double Buns Hair Dark Teal",
+   "file": "27-Y2K-It-Girl-Double-Buns-Hair-Dark-Teal-139556608863162.glb",
+   "position": [
+    -0.00875,
+    0.55352,
+    -0.0225
+   ],
+   "orientation": [
+    0,
+    180,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the fringe and face opening are on the raw mesh's +Z side, checked on the classic head (wardrobe batch 2)"
   }
  ]
 }
