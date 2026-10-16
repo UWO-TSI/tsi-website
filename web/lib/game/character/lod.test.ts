@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CHARACTER_LOD as L, characterLod, createLodState, drawnHeight, mixerStep } from "./lod";
+import { CHARACTER_LOD as L, ZOOMED_OUT, characterLod, createLodState, detailSituation, drawnHeight, mixerStep } from "./lod";
 
 describe("character detail by distance and drawn size", () => {
   it("up close nothing changes, however small the canvas draws it", () => {
@@ -57,5 +57,41 @@ describe("character detail by distance and drawn size", () => {
     // You at the default follow distance on an 800 px window with the pixel finish (half resolution): ~47 px.
     expect(drawnHeight(1.36, 13.1, 48, 400)).toBeGreaterThan(45);
     expect(drawnHeight(1.36, 13.1, 48, 400)).toBeLessThan(50);
+  });
+});
+
+describe("character detail by situation (head-v10, row 311)", () => {
+  const PLAY = { close: false, zoom: 1 }, OUT = { close: false, zoom: ZOOMED_OUT + 0.1 }, CLOSE = { close: true, zoom: 1 };
+  it("draws LOD 1 in normal play however near, you and combat included", () => {
+    expect(characterLod(createLodState(), 6, 400, true, PLAY)).toMatchObject({ lod: true, lod2: false, hz: Infinity, shadow: true });
+    expect(characterLod(createLodState(), 13, 60, true, PLAY)).toMatchObject({ lod: true, lod2: false });
+    expect(characterLod(createLodState(), 30, 90, true, PLAY)).toMatchObject({ lod: true, lod2: false });
+  });
+  it("draws LOD 2 when the follow camera is zoomed out, or past the far line", () => {
+    expect(characterLod(createLodState(), 6, 400, true, OUT)).toMatchObject({ lod: true, lod2: true });
+    expect(characterLod(createLodState(), 45, L.far.px - 1, true, PLAY)).toMatchObject({ lod: true, lod2: true });
+    expect(characterLod(createLodState(), 45, L.far.px + 1, true, PLAY)).toMatchObject({ lod: true, lod2: false });
+    expect(characterLod(createLodState(), 10, 0, false, OUT)).toMatchObject({ lod: true, lod2: true });      // out of view too
+  });
+  it("crosses the zoomed-out line back only past its hysteresis", () => {
+    const s = createLodState();
+    characterLod(s, 10, 200, true, { close: false, zoom: ZOOMED_OUT + 0.01 });
+    expect(characterLod(s, 10, 200, true, { close: false, zoom: ZOOMED_OUT - 0.01 }).lod2).toBe(true);
+    expect(characterLod(s, 10, 200, true, { close: false, zoom: ZOOMED_OUT / L.hysteresis - 0.01 }).lod2).toBe(false);
+  });
+  it("draws Full up close in photo mode and for a player whose card is open, the size rule further out", () => {
+    expect(characterLod(createLodState(), 6, 400, true, CLOSE)).toMatchObject({ lod: false, lod2: false });
+    expect(characterLod(createLodState(), 6, 400, true, { close: true, zoom: ZOOMED_OUT + 0.2 })).toMatchObject({ lod: false, lod2: false });
+    expect(characterLod(createLodState(), 45, L.far.px - 1, true, CLOSE)).toMatchObject({ lod: true, lod2: true });
+  });
+  it("reads the situation from photo mode, the open card and the follow camera's zoom", () => {
+    expect(detailSituation({ photo: true, focused: false, zoom: 1.5 })).toEqual({ close: true, zoom: 1.5 });
+    expect(detailSituation({ photo: false, focused: true, zoom: 1 })).toEqual({ close: true, zoom: 1 });
+    expect(detailSituation({ photo: false, focused: false, zoom: 1.5 })).toEqual({ close: false, zoom: 1.5 });
+  });
+  it("animates and shadows by size in every situation", () => {
+    expect(characterLod(createLodState(), 45, L.quarter.px - 1, true, PLAY)).toMatchObject({ hz: 15 });
+    expect(characterLod(createLodState(), 60, L.shadowPx - 1, true, PLAY)).toMatchObject({ shadow: false });
+    expect(characterLod(createLodState(), 45, 0, false, PLAY)).toMatchObject({ lod: true, hz: L.offHz, shadow: false });
   });
 });

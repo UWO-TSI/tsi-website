@@ -17,15 +17,16 @@ GLBs keep the mesh's coordinates). For every hairstyle listed in hair/source/<wh
   2. clean     manifest rules: a face plate dropped (#15's own face); cap or visor faces marked (a mask channel, step 7)
   3. attach    the shared transform above: no per-hair scale, offset, warp, length change or cut
   4. detail    the original mesh as Roblox draws it, every triangle (David, 2026-10-14: "shouldnt be so low poly and
-               blocky"; Roblox holds hair to 4,000), welded and smooth-shaded; LOD 1 and LOD 2 are build_lod.py's
-  5. face      one rule for every hair, where our face stands out of Roblox's: the classic head is round in front and our
-               face plate is flat, so its corners (and the jaw) stand up to 4 cm out of where Roblox's face was. Hair
-               there moves out along the ray from the head centre by exactly that much (plus FACE_CLEAR), fading over the
-               height above the head; hair over the hair zone (where the two heads are the same) does not move at all
+               blocky"; Roblox holds hair to 4,000), welded, its stray hard edges welded smooth (kit.weld_normals, head-v10);
+               LOD 1 and LOD 2 are build_lod.py's
+  5. jaw       one rule for every hair, only where the v10 head is not Roblox's (below the classic centre: the round jaw
+               inside its straight sides, our chin under its underside): hair resting there follows our head, hair near
+               the chin moves out over it, fading with height; above the centre (the hair zone) nothing moves. A hair
+               that is itself the scalp (#20's fade) is lifted SHELL_CLEAR off the head mesh (lift_shell)
   6. under-cap the head's own faces above the scalp line that the hair covers, CAP_H out: a matte shell in the hair's
                shadow tone, so no skin shows through the gaps between strands
-  7. maps      each texture becomes a shading map (luminance over the median of the part it shades, glossy bands pressed
-               down: matte, row 264), plus an accent mask for two-tone styles and a cap mask; logos painted out (#8, #19);
+  7. maps      each texture becomes a shading map (its lightness against the median of the part it shades, normalised by
+               the spread, so dark and light sources recolour alike: matte, row 264), plus an accent mask for two-tone styles and a cap mask; logos painted out (#8, #19);
                one channel each in the shared atlas hair/hair_maps.png, so one material tints every hairstyle
   8. export    hair/full/<id>.glb: the 22-bone rig and one mesh, one material, on mixamorig:Head; the catalogue entry
   9. LOD, sync build_lod.py for the hairs built, then web/scripts/sync-character-assets.mjs (unless --no-lod, --no-sync)
@@ -58,15 +59,25 @@ LOD0_MAX = 1700          # the library's full looks (bangs + back) run 1,110-1,7
                          # 1,750 (specs/perf/budget.md); a rigid Roblox hair keeps its shape only with most of that
                          # (at 1,500 the collapse flung card faces across the gaps), under-cap included
 DEEP = 0.03              # geometry more than this under the skin is hidden inside the head (strand roots): left alone
-FACE_CLEAR = 0.003       # face rule: hair over our face stands at least this far off it where the face stands out of Roblox's
+FACE_CLEAR = 0.003       # jaw rule: hair over our chin stands at least this far off it where it stands out of Roblox's head
 FACE_FADE = 0.03         # and the move fades out over this much more height (at least twice the move: no folds)
+REST_H = 0.006           # jaw rule: hair this close to Roblox's head (resting on it) follows ours where ours is inside it
+REST_FADE = 0.02         # and that move fades out over this much more height (hair hanging free stays put)
+SHELL_CLEAR = 0.005      # a scalp shell (undercap false) lies at least this far over the head mesh (lift_shell: no depth fight)
 COVER_REACH = 0.25       # the under-cap goes where the hair is within this of the skin (a dome may stand 10 cm proud)
+FRINGE_LAT = 16.0        # deg (geocentric): the under-cap reaches down the forehead to here, under a fringe that covers it
+FRINGE_LON = 70.0        # deg either side of the face's centre line
+FRINGE_REACH = 0.08      # m: a fringe hangs within this of the forehead
 CAP_H = 0.0025           # the matte under-cap over the scalp (the library's rule: no skin shows between the hair from any
                          # angle): the head's own faces above the scalp line, this far out
 CELL, COLS, ROWS = 512, 5, 2    # 10 cells x 3 channels: 21 shading maps, 3 accent masks, 2 cap masks
 CAP_COLOR = "#28282E"            # a cap's or visor's fixed colour (its mask channel; one material, never a second one)
 PAD = 8                  # px of each cell kept clear round the map (mip bleed)
-GAIN = 1.25              # shading maps store luminance / median / GAIN (the shader multiplies by GAIN)
+GAIN = 1.25              # shading maps store the shade gain / GAIN (the shader multiplies by GAIN)
+SHADE_DARK = 0.5         # shade normalisation (shade_map): the deepest gap between strands x exp(-0.5) = 0.61
+SHADE_LIGHT = 0.1        # and the brightest highlight x exp(0.1) = 1.11 (matte, row 264: no glossy bands)
+SHADE_IQR_MIN = 6.0      # L* units: a near-flat texture's noise is never stretched past this spread
+ACCENT_SPECK = 3         # px (source texture): accent-mask blobs narrower than 2 x this + 1 are noise, not a second colour
 ATLAS = os.path.join(HERE, "hair_maps.png")
 
 
@@ -174,15 +185,19 @@ def height(p):
     return d.length - skull_radius(d.normalized()) if d.length > 1e-6 else -1.0
 
 
-# ================================================================ 5. face: where our face stands out of Roblox's
-def face_rule(ob):
-    """One rule for every hair: along each ray from the head centre our skull stands `out` = skull - classic in front
-    of the classic head (the flat face plate's corners and the jaw; 0 over the hair zone, where the heads are one).
-    Hair on that ray within reach of the head moves out by out + FACE_CLEAR, fading to nothing over FACE_FADE (at least
-    twice the move, so layers never cross) of height above the classic head; hair that lay in Roblox's face (a strand
-    tucked into the cheek) comes out onto ours; hair hidden deeper than DEEP inside the classic head (roots) stays.
-    Returns (vertices moved, largest move in m)."""
-    moved, worst = 0, 0.0
+# ================================================================ 5. jaw: where our head is not Roblox's
+def jaw_rule(ob):
+    """One rule for every hair, only where the v10 head differs from Roblox's classic head (head_shape: below the classic
+    centre; everywhere above it the two are one and no hair moves). Along each ray from the head centre our skull is
+    `delta` = skull - classic off Roblox's:
+      - out (delta > 0: our chin, below the classic head's underside in front): hair within reach moves out by
+        delta + FACE_CLEAR, fading to nothing over FACE_FADE (at least twice the move, so layers never cross) of height
+        above the classic head; hair that lay in Roblox's head there comes out onto ours;
+      - in (delta < 0: the round jaw inside the classic head's straight sides, at the cheeks and the nape): hair resting
+        on Roblox's head (within REST_H of it, or in it) follows ours in, fading over REST_FADE, so a fade or a nape line
+        keeps hugging the head; hair hanging free stays where Roblox hangs it.
+    Hair hidden deeper than DEEP inside the classic head (roots) stays. Returns (vertices moved, largest move out, in, m)."""
+    moved, worst_out, worst_in = 0, 0.0, 0.0
     for v in ob.data.vertices:
         d = v.co - HC
         r = d.length
@@ -190,24 +205,24 @@ def face_rule(ob):
             continue
         u = d / r
         rc = classic_radius(u)
-        out = skull_radius(u) - rc
-        if out <= 1e-5:
+        delta = skull_radius(u) - rc
+        if abs(delta) <= 1e-4:
             continue
         h = r - rc                                  # height over Roblox's classic head
         if h < -DEEP:
             continue
-        need = out + FACE_CLEAR
-        fade = max(FACE_FADE, 2 * need)
-        # over the face: what lay on or in Roblox's face (a strand tucked into the cheek) comes out onto ours; above it
-        # the move fades
-        m = need * (1.0 - _ss(need, need + fade, h)) if h > need else need - min(h, 0.0)
-        if m > 1e-5:
+        if delta > 0:
+            need = delta + FACE_CLEAR
+            fade = max(FACE_FADE, 2 * need)
+            m = need * (1.0 - _ss(need, need + fade, h)) if h > need else need - min(h, 0.0)
+        else:
+            m = delta * (1.0 - _ss(REST_H, REST_H + REST_FADE, h))
+        if abs(m) > 1e-5:
             v.co = v.co + u * m
             moved += 1
-            worst = max(worst, m)
-    # a long card face over the face's curve sags between its corners: where its middle still lies under the skin
-    # (FACE_CLEAR), its corners lift by as much, a few rounds (the old cage step's rule, here only where our face
-    # stands out of Roblox's)
+            worst_out, worst_in = max(worst_out, m), min(worst_in, m)
+    # a long card face over the chin's curve sags between its corners: where its middle still lies under the skin
+    # (FACE_CLEAR), its corners lift by as much, a few rounds (only where our head stands out of Roblox's)
     me = ob.data
     for _ in range(4):
         lift = {}
@@ -215,7 +230,7 @@ def face_rule(ob):
             c = sum((me.vertices[i].co for i in poly.vertices), Vector()) / len(poly.vertices)
             d = c - HC
             u = d.normalized()
-            if skull_radius(u) - classic_radius(u) <= 1e-5:
+            if skull_radius(u) - classic_radius(u) <= 1e-4:
                 continue
             h = d.length - skull_radius(u)
             if -DEEP < h < FACE_CLEAR:
@@ -226,8 +241,37 @@ def face_rule(ob):
         for i, m in lift.items():
             v = me.vertices[i]
             v.co = v.co + (v.co - HC).normalized() * m
-            worst = max(worst, m)
+            worst_out = max(worst_out, m)
     me.update()
+    return moved, round(worst_out, 4), round(worst_in, 4)
+
+
+def lift_shell(ob, head):
+    """A hairstyle that is itself the scalp (manifest `undercap: false`: #20's fade, lowered 5 cm by David's override)
+    lies on the head, so anywhere our skin comes up through it (spots of skin on the crown, a lip at the nape: "weird
+    spots of scalp is showing", row 311) its surface moves out to SHELL_CLEAR over the head's mesh (whose flat faces
+    straddle the skull: up to 5 mm proud of it between vertices). Returns (vertices moved, largest move m)."""
+    hb = bmesh.new()
+    hb.from_mesh(head.data)
+    hb.transform(head.matrix_world)
+    tree = BVHTree.FromBMesh(hb)
+    hb.free()
+    moved, worst = 0, 0.0
+    for v in ob.data.vertices:
+        d = v.co - HC
+        r = d.length
+        if r < 1e-6:
+            continue
+        u = d / r
+        hit = tree.ray_cast(HC + u * 0.4, -u, 0.4)[0]          # the head mesh's outermost point on this ray
+        if hit is None:
+            continue
+        h = r - (hit - HC).length
+        if -DEEP < h < SHELL_CLEAR:
+            v.co = v.co + u * (SHELL_CLEAR - h)
+            moved += 1
+            worst = max(worst, SHELL_CLEAR - h)
+    ob.data.update()
     return moved, round(worst, 4)
 
 
@@ -519,16 +563,29 @@ def undercap_faces(head, hair=None):
                 return True
         return False
     keep = {f for f in hb.faces if above(f)}
+
+    def forehead(f):
+        """Under a fringe (head-v10: "weird spots of scalp is showing" through the partings): in front, between the
+        scalp line and FRINGE_LAT."""
+        for v in f.verts:
+            la, lo = gcoords((v.co - HC).normalized())
+            if abs(lo) > FRINGE_LON or la < FRINGE_LAT:
+                return False
+        return True
+    fringe = {f for f in hb.faces if f not in keep and forehead(f)} if hair is not None else set()
     if hair is not None:
         me = hair.data
         tree = BVHTree.FromPolygons([v.co.copy() for v in me.vertices], [list(p.vertices) for p in me.polygons])
 
-        def hit(co):
+        def hit(co, reach=COVER_REACH):
             d = (co - HC).normalized()
-            return tree.ray_cast(co - d * 0.01, d, COVER_REACH)[0] is not None
+            return tree.ray_cast(co - d * 0.01, d, reach)[0] is not None
         # two of its five samples (centre and corners) meet the hair: strand cards leave gaps a single ray slips
-        # through; a face only half under a rim's edge stays bare
+        # through; a face only half under a rim's edge stays bare. On the forehead all five, within FRINGE_REACH: only
+        # what a fringe hangs over (a part between its locks), never a band below its edge
         near = {f for f in keep if sum(hit(c) for c in [f.calc_center_median()] + [v.co for v in f.verts]) >= 2}
+        near |= {f for f in fringe if all(hit(c, FRINGE_REACH) for c in [f.calc_center_median()] + [v.co for v in f.verts])}
+        keep |= fringe
         grown = set(near)
         for _ in range(2):
             grown |= {g for f in grown for e in f.edges for g in e.link_faces}
@@ -775,6 +832,7 @@ def shade_map(img, me, spec, px=None):
     accent = None
     if spec.get("accent"):
         accent = np.clip((hsv_s / np.maximum(hsv_v, 1e-3) - 0.28) / 0.2, 0, 1) * np.clip((hsv_v - 0.12) / 0.12, 0, 1)
+        accent = opening(accent, spec["accent"].get("speck", ACCENT_SPECK))   # head-v10: a dark source's noise specks go
         accent[cap_region] = 0.0
     shade = np.ones((hh, ww), np.float32)
     regions = [(cov & ~cap_region, None)]
@@ -782,16 +840,35 @@ def shade_map(img, me, spec, px=None):
         regions = [(cov & ~cap_region & (accent < 0.5), "base"), (cov & ~cap_region & (accent >= 0.5), "accent")]
     if cap_region.any():
         regions.append((cap_region & cov, "cap"))
-    ref_all = np.median(L[cov]) if cov.any() else 1.0
+    # head-v10 (row 311, David: "some hair color is glitching"): the shade is normalised per hair in perceptual lightness
+    # (CIE L*), not as a luminance ratio. A ratio over a near-black source's tiny median turned its noise and painted
+    # highlights into 2-10x streaks that clipped bright in a light colour. Now each texel's lightness against the part's
+    # median, over its spread (the interquartile range, at least SHADE_IQR_MIN), is squashed (tanh) into a gain from
+    # exp(-SHADE_DARK) in the gaps between strands to exp(SHADE_LIGHT) on a highlight: every source, dark or light,
+    # recolours to the same clean range, the median texel exactly the chosen colour.
+    Ls = np.where(L > 0.008856, 116.0 * np.cbrt(L) - 16.0, 903.3 * L)
     out = np.zeros((hh, ww), np.float32)
     for reg, name in regions:
-        ref = np.median(L[reg]) if reg.sum() > 50 else ref_all
-        r = (L / max(ref, 1e-4)) ** 0.6                           # strands kept, a near-black source's noise softened
-        r = np.where(r > 1.0, 1.0 + (r - 1.0) * 0.35, r)          # glossy bands pressed down: matte
-        r = np.clip(r, 0.06, GAIN)
+        vals = Ls[reg] if reg.sum() > 50 else Ls[cov]
+        m, q1, q3 = (np.percentile(vals, q) for q in (50, 25, 75)) if vals.size else (50.0, 45.0, 55.0)
+        t = np.tanh((Ls - m) / max(q3 - q1, SHADE_IQR_MIN))
+        r = np.exp(np.where(t < 0, SHADE_DARK, SHADE_LIGHT) * t)
         out = np.where(reg, r / GAIN, out)
     out = np.where(cov, out, 1.0 / GAIN)
     return out, accent, painted, (cap_region & cov) if cap_region.any() else None
+
+
+def opening(a, r):
+    """Grey-scale opening (a min then a max filter over a (2r+1)^2 window): blobs narrower than the window go, wider
+    regions keep their shape and soft edges."""
+    def filt(x, f):
+        p = np.pad(x, r, mode="edge")
+        out = x.copy()
+        for dy in range(2 * r + 1):
+            for dx in range(2 * r + 1):
+                out = f(out, p[dy:dy + x.shape[0], dx:dx + x.shape[1]])
+        return out
+    return filt(filt(a, np.minimum), np.maximum)
 
 
 def coverage_only(me, w, h, mat_index):
@@ -816,7 +893,8 @@ def resample(a, size):
 def finish(ob, rig, pid):
     """The fitted mesh as a catalogue part: one material (M_Hair, one primitive, one draw): a cap or visor is a mask
     channel in the atlas, and the under-cap (material slot 2 until now) is marked by u < 0, shaded by its COLOR_0
-    (0.55, the hair's shadow) and the tint alone. Smooth by angle, 100% on the head bone."""
+    (0.55, the hair's shadow) and the tint alone. Smooth: one normal per vertex and side (kit.weld_normals), 100% on
+    the head bone."""
     me = ob.data
     hair = bpy.data.materials.get("M_Hair") or kit.material("M_Hair", kit.PAL["hair"][kit.PAL["ref_girl_defaults"]["hair"]])
     undercap = [p.material_index == 2 for p in me.polygons]
@@ -836,6 +914,7 @@ def finish(ob, rig, pid):
                 uv[li].uv = (-1.0, -1.0)
     me.color_attributes.active_color = col
     me.color_attributes.render_color_index = me.color_attributes.active_color_index
+    ob["normals_welded"] = kit.weld_normals(me)      # smooth: the source's stray hard edges welded (head-v10)
     ob.name = pid
     me.name = pid
     ob.parent = rig
@@ -926,7 +1005,8 @@ def main():
         dropped, n_cap = clean(ob, spec, img_px if has_uv else None)
         attach(ob, att)
         trimmed = trim_face_window(ob) if spec.get("trim") == "face_window" else 0
-        face = face_rule(ob) if not os.environ.get("NO_FACE_RULE") else (0, 0.0)
+        jaw = jaw_rule(ob)
+        shell = lift_shell(ob, HEAD) if not spec.get("undercap", True) else None
         boxed = keep_in_box(ob)
         body = body_clip(ob, BODY)
         visor = split_off(ob) if spec.get("split") else None
@@ -943,7 +1023,7 @@ def main():
             sp = spec["split"]
             vpx = pixels(img).copy()
             nflip = flip_logos(vpx, visor.data) if sp.get("flip_logo") else 0
-            vshade, vaccent, _, _ = shade_map(img, visor.data, {"accent": {"default": 0}}, px=vpx)
+            vshade, vaccent, _, _ = shade_map(img, visor.data, {"accent": {"default": 0, "speck": 0}}, px=vpx)   # the logo whole
             vcell, vchans = slots[sp["id"]]
             write_cell(atlas, vcell, vchans, vshade, vaccent, None)
             logo = logo_colour(vpx, visor.data, vaccent)
@@ -976,7 +1056,7 @@ def main():
         entries[pid] = e
         report.append(f"IMPORT {pid:22s} src_tris={src_tris} tris={e['tris']} attach={'provisional' if att['provisional'] else 'Roblox'} "
                       f"position={att['position']} orientation={att['orientation']} scale={att['mesh_scale']} override={att.get('override')} "
-                      f"face_rule(moved,max m)={face} dropped={dropped} cap_faces={n_cap} trimmed={trimmed} out_of_box={boxed} "
+                      f"jaw_rule(moved,out m,in m)={jaw}{f' lift_shell(moved,m)={shell}' if shell else ''} normals_welded={ob.get('normals_welded')} dropped={dropped} cap_faces={n_cap} trimmed={trimmed} out_of_box={boxed} "
                       f"body_clip(verts,deepest m)={body} logo_texels={painted} map={'cell %d ch %s' % (cell, chans) if mapped else 'none'}")
         print(report[-1])
         built.append(ob)

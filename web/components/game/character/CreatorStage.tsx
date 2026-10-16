@@ -7,9 +7,10 @@
  * the right, a rim from behind, a soft contact shadow, all matte (row 264). The camera eases between framings (the
  * face up close for face parts, head to toe for clothes); the character turns by drag and by the two buttons.
  *
- * Thumbnails: hair (and any part without an item icon) is drawn once per hair colour and skin, off to the side of the
- * same canvas in the frame before the portrait draws over it, read back and kept as an image for the session. Never a
- * live 3D view per tile.
+ * Thumbnails: a part without an item icon is drawn once per hair colour and skin, off to the side of the same canvas in
+ * the frame before the portrait draws over it, read back and kept as an image for the session. Never a live 3D view
+ * per tile. The whole hairstyles' tiles are static pictures baked with this same baker at build time (head-v10:
+ * app/lab/hairthumbs, scripts/bake-hair-thumbs.mjs), so a colour change redraws none of them.
  */
 import { Suspense, useEffect, useMemo, useRef, useSyncExternalStore, type RefObject } from "react";
 import { createPortal, useFrame } from "@react-three/fiber";
@@ -119,13 +120,14 @@ const subscribe = (l: () => void) => { listeners.add(l); return () => { listener
 export function thumbJob(id: string, look: CharacterLook): Job {
   const part = PART_BY_ID.get(id);
   const slot = part?.slot;
-  const plain: CharacterLook = { ...DEFAULT_LOOK, skin: look.skin, hair: look.hair, colors: { ...look.colors }, ...(look.hairAccent !== undefined ? { hairAccent: look.hairAccent } : {}) };
+  const plain: CharacterLook = { ...DEFAULT_LOOK, skin: look.skin, hair: look.hair, colors: { ...look.colors }, ...(look.hairAccent !== undefined ? { hairAccent: look.hairAccent } : {}),
+    ...(look.hairColor ? { hairColor: look.hairColor } : {}) };
   // a whole hairstyle (head fit) is seen from the front, like a fringe
   const view: ThumbView = slot === "back" && !part?.full ? "back" : slot === "bangs" || part?.full || part?.group === "head" || part?.group === "face" ? "front" : "body";
   const worn = slot ? wear(plain, slot, id) : plain;
   const colour = part?.materials.some(m => m.tint === "outfit") ? `|c${look.colors[id] ?? "-"}` : "";
   const accent = part?.accent ? `|a${look.hairAccent ?? "-"}` : "";
-  return { key: `${view}|${id}|h${look.hair}|s${look.skin}${colour}${accent}`, look: worn, view };
+  return { key: `${view}|${id}|h${look.hairColor ?? look.hair}|s${look.skin}${colour}${accent}`, look: worn, view };
 }
 /** The baked thumbnail for a job (queued on first ask), or undefined while it waits. */
 export function useThumb(job: Job | null): string | undefined {

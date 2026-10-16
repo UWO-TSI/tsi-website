@@ -3,18 +3,20 @@
 /**
  * The creator's controls, shared by the studio creator (CharacterCreator: the first look on the applicant island, the
  * closet and the fitting room) and the arrival's reflection creator (components/game/arrival): the category rail, and a
- * category's options (its face sliders, its tiles, its colour swatches, the lock note), all from the catalogue
- * (lib/game/character/creatorCategories.ts). Tiles are pictures, never live 3D: face parts are their atlas cells,
- * clothes their item icons, hair a thumbnail baked once (CreatorStage). The name field's availability check too.
+ * category's options (its face sliders, its tiles, its colour swatches and the hair's colour wheel, the lock note), all
+ * from the catalogue (lib/game/character/creatorCategories.ts). Tiles are pictures, never live 3D: face parts are their
+ * atlas cells, clothes their item icons, hair its static thumbnail (baked at build time, head-v10: a colour change never
+ * redraws them). The name field's availability check too.
  */
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Lock } from "lucide-react";
 import { Button, Slider } from "@/components/gui";
 import { iconUrl } from "@/lib/icons/keys";
-import { dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR_COLOURS, hairAccentHex, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, partRef,
+import { customHairUnlocked, dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR_COLOURS, HAIR_THUMB_URL, hairAccentHex, hairHex, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, partRef,
   type CharacterLook, type FaceCell, type Placement } from "@/lib/game/character/look";
 import { choose, colourTarget, isOn, optionName, shownOptions, type Category, type Section } from "@/lib/game/character/creatorCategories";
 import { PLACE_RANGE } from "@/lib/game/character/face";
+import ColourWheel from "./ColourWheel";
 import CreatorIcon from "./CreatorIcon";
 import { prioritiseThumbs, thumbJob, useThumb } from "./CreatorStage";
 import styles from "./CharacterCreator.module.css";
@@ -84,10 +86,18 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
     if (locked) return;
     setLook(l => {
       if (cat.swatch === "skin") return { ...l, skin: i };
-      if (cat.swatch === "hair") return { ...l, hair: i };
+      if (cat.swatch === "hair") { const next = { ...l, hair: i }; delete next.hairColor; return next; }   // a preset replaces the wheel's colour
       return target ? { ...l, colors: { ...l.colors, [target]: i } } : l;
     });
     onChange?.("colour");
+  };
+  // head-v10: the colour wheel (any colour; unlocked by owning any shop dye); a drag counts as a change at most every WHEEL_MS
+  const wheelAt = useRef(0);
+  const wheel = (hex: string) => {
+    setLook(l => ({ ...l, hairColor: hex }));
+    say(null);
+    const now = performance.now();
+    if (now - wheelAt.current > WHEEL_MS) { wheelAt.current = now; onChange?.("colour"); }
   };
   const swatches = !cat.swatch ? [] : cat.swatch === "hair" && mode === "create" ? PALETTE.hair.slice(0, FREE_HAIR_COLOURS) : PALETTE[cat.swatch];
   // head fit: a two-tone hairstyle's second colour (the accent mask of its shading map), picked from the same hair colours
@@ -101,7 +111,7 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
     setLook(l => ({ ...l, hairAccent: i }));
     onChange?.("colour");
   };
-  const swatchOn = (i: number) => cat.swatch === "skin" ? look.skin === i : cat.swatch === "hair" ? look.hair === i : target !== null && partColor(look, target) === i;
+  const swatchOn = (i: number) => cat.swatch === "skin" ? look.skin === i : cat.swatch === "hair" ? look.hair === i && !look.hairColor : target !== null && partColor(look, target) === i;
   const place = cat.place ? look.place?.[cat.place] ?? [0, 0, 0, 0] as Placement : null;
   const setPlace = (i: number, v: number) => {
     setLook(l => {
@@ -165,6 +175,7 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
             disabled={cat.swatch === "outfit" && !target} onClick={() => paint(i)} />;
         })}
       </div>
+      {cat.swatch === "hair" && <ColourWheel value={hairHex(look)} active={!!look.hairColor} locked={!customHairUnlocked(owned)} onChange={wheel} />}
       {cat.swatch === "outfit" && !target && <p className={styles.hint}>Wear something here to colour it.</p>}
     </div>}
     {accentPart && <div className={styles.swatchBlock}>
@@ -203,16 +214,26 @@ export function useNameCheck(askName: { current: string } | undefined) {
   return useMemo(() => ({ name, nameNote, wanted, type: (v: string) => { setName(v); setNameNote(null); } }), [name, nameNote, wanted]);
 }
 
-/** Hair has no item icon: its tile is a baked thumbnail. So is any part whose item icon is missing. */
-const needsBake = (id: string) => { const slot = PART_BY_ID.get(id)?.slot; return slot === "bangs" || slot === "back"; };
+/** A whole hairstyle's tile is its static thumbnail (head-v10: baked at build time, in a neutral colour). */
+const staticHair = (id: string) => { const p = PART_BY_ID.get(id); return p?.slot === "back" && !!p.full; };
+/** A piece of the old lock hair has no item icon: its tile is baked in the creator. So is any part whose item icon is missing. */
+const needsBake = (id: string) => { const slot = PART_BY_ID.get(id)?.slot; return !staticHair(id) && (slot === "bangs" || slot === "back"); };
+/** A colour drag counts as a change (the reflection creator's ripple) at most this often. */
+const WHEEL_MS = 160;
 
 function PartArt({ id, look }: { id: string; look: CharacterLook }) {
   const [iconFailed, setIconFailed] = useState(false);
+  // eslint-disable-next-line @next/next/no-img-element
+  if (staticHair(id)) return <img src={HAIR_THUMB_URL(id)} alt="" width={80} height={80} draggable={false} decoding="async" />;
+  return <BakedArt id={id} look={look} iconFailed={iconFailed} onIconFail={() => setIconFailed(true)} />;
+}
+
+function BakedArt({ id, look, iconFailed, onIconFail }: { id: string; look: CharacterLook; iconFailed: boolean; onIconFail: () => void }) {
   const bake = needsBake(id) || iconFailed;
   const job = useMemo(() => (bake ? thumbJob(id, look) : null), [bake, id, look]);
   const src = useThumb(job);
   // eslint-disable-next-line @next/next/no-img-element
-  if (!bake) return <img src={iconUrl(id)} alt="" width={64} height={64} draggable={false} onError={() => setIconFailed(true)} />;
+  if (!bake) return <img src={iconUrl(id)} alt="" width={64} height={64} draggable={false} onError={onIconFail} />;
   // eslint-disable-next-line @next/next/no-img-element
   return src ? <img src={src} alt="" width={80} height={80} draggable={false} /> : <span className={styles.baking} aria-hidden="true" />;
 }

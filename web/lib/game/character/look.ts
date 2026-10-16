@@ -29,6 +29,9 @@ export const HAIR_MAP_GAIN = catalog.hairMaps.gain;
 export const HAIR_CAP_COLOR = catalog.hairMaps.cap;
 /** Its second page (David's 19 faces, face_set_305.py), loaded only for a look that wears one of them. */
 export const FACE_ATLAS2_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas2}`, world: `${CHARACTER_ROOT}base/${faceV7.atlas2_world}` };
+/** head-v10 (row 311): each whole hairstyle's creator tile, baked once at build time (scripts/bake-hair-thumbs.mjs) in a
+ * neutral colour on the default head: the tiles never redraw when the colour changes, and show at once. */
+export const HAIR_THUMB_URL = (id: string) => `${CHARACTER_ROOT}hair/thumbs/${id}.webp`;
 /** Ruling 24: the crewneck carries the site's own TSI mark (public/logo.svg, rasterised by the sync script). */
 export const TSI_DECAL_URL = `${CHARACTER_ROOT}decal_tsi_mark.png`;
 
@@ -154,6 +157,9 @@ export interface CharacterLook {
   colors: Record<string, number>;
   /** A two-tone hairstyle's accent (hair palette index); absent: the style's own default. */
   hairAccent?: number;
+  /** A custom hair colour from the creator's colour wheel (sRGB "#RRGGBB", head-v10): it tints the hair over the palette
+   * index `hair`; absent (every look saved before it): the palette colour. Unlocked by owning any shop dye (ownsRef). */
+  hairColor?: string;
   /** Face placement from the creator's sliders; absent is today's placement. */
   place?: Partial<Record<PlacePart, Placement>>;
 }
@@ -188,6 +194,7 @@ function hairOf(r: Record<string, unknown>): string {
   return old && inSlot(old, "back") ? old : DEFAULT_LOOK.back;
 }
 
+const HEX = /^#[0-9a-fA-F]{6}$/;
 const inSlot = (id: unknown, slot: PartSlot): id is string => typeof id === "string" && PART_BY_ID.get(id)?.slot === slot;
 const index = (v: unknown, n: number, fallback: number) => Number.isInteger(v) && (v as number) >= 0 && (v as number) < n ? v as number : fallback;
 const faceItem = (layer: FaceLayer, v: unknown, fallback: string) => typeof v === "string" && v in FACE.layers[layer].items ? v : fallback;
@@ -216,6 +223,7 @@ export function parseLook(raw: unknown): CharacterLook {
     onepiece, shoes: r.shoes === null ? null : inSlot(r.shoes, "shoes") ? r.shoes : d.shoes, acc, colors,
   };
   if (Number.isInteger(r.hairAccent) && (r.hairAccent as number) >= 0 && (r.hairAccent as number) < PALETTE.hair.length) look.hairAccent = r.hairAccent as number;
+  if (typeof r.hairColor === "string" && HEX.test(r.hairColor)) look.hairColor = r.hairColor.toUpperCase();
   if (hood(look)) delete look.acc.head; // a hood and a hat never stack
   const place = parsePlace(r.place);
   if (place) look.place = place;
@@ -312,6 +320,8 @@ export function wornParts(look: CharacterLook): CatalogPart[] {
 export interface ResolvedPart { id: string; url: string; /** Its LOD 1 GLB. */ lod: string; /** Its LOD 2 GLB (a whole hairstyle's own; else its LOD 1). */ lod2: string; tints: Record<string, string>; decal: string | null;
   /** A mapped hairstyle: its atlas channels and accent colour (sRGB hex). */
   map: { shade: number; accent?: number; cap?: number; accentHex?: string } | null }
+/** The hair's colour on a look (sRGB hex): the colour wheel's pick, else the palette colour. */
+export const hairHex = (look: CharacterLook) => look.hairColor ?? PALETTE.hair[look.hair];
 /** The accent colour of a two-tone hairstyle on a look: the look's pick, else the style's default (a palette colour or the skin). */
 export function hairAccentHex(look: CharacterLook, part: CatalogPart): string | undefined {
   if (!part.accent) return undefined;
@@ -328,7 +338,7 @@ export function resolveParts(look: CharacterLook): ResolvedPart[] {
     let first = true;
     for (const m of part.materials) {
       if (m.decal) { if (m.default) decal = TSI_DECAL_URL; continue; }
-      if (m.tint === "hair") tints[m.name] = PALETTE.hair[look.hair];
+      if (m.tint === "hair") tints[m.name] = hairHex(look);
       else if (m.tint === "outfit") {
         tints[m.name] = PALETTE.outfit[first && part.id in look.colors ? look.colors[part.id] : (m.default as number)];
         first = false;
@@ -387,11 +397,26 @@ export function partRef(id: string): string | null {
   const p = PART_BY_ID.get(id);
   return !p || p.slot === "bangs" || p.slot === "back" ? null : p.variantOf ?? p.id;
 }
-/** Every inventory ref a look needs: worn clothes and a dyed hair colour. */
+/**
+ * The colour wheel (head-v10; David, 2026-10-14: "Unlock by buying a dye"): a custom hair colour is unlocked by owning
+ * any of the shop dyes. Free when true (one switch).
+ */
+export const CUSTOM_HAIR_FREE = false;
+/** The ref a look with a custom hair colour needs: any shop dye satisfies it (ownsRef). Never an inventory row. */
+export const CUSTOM_HAIR_REF = "hair:custom";
+/** The shop dyes (the palette colours past the free ones). */
+export const DYE_REFS: readonly string[] = PALETTE.hair.slice(FREE_HAIR_COLOURS).map((_, i) => dyeRef(FREE_HAIR_COLOURS + i));
+/** Inventory refs owned: a set, or the server's counts by ref. */
+type Owned = { has(ref: string): boolean };
+/** Whether the colour wheel is open to a member owning `owned` (inventory refs). */
+export const customHairUnlocked = (owned: Owned) => CUSTOM_HAIR_FREE || DYE_REFS.some(r => owned.has(r));
+/** Whether `owned` covers a ref lookRefs asks for (CUSTOM_HAIR_REF: any dye). */
+export const ownsRef = (owned: Owned, ref: string) => (ref === CUSTOM_HAIR_REF ? customHairUnlocked(owned) : owned.has(ref));
+/** Every inventory ref a look needs: worn clothes, a dyed hair colour, and any dye for a custom one (ownsRef). */
 export function lookRefs(look: CharacterLook): string[] {
   const refs = [look.top, look.bottom, look.onepiece, look.shoes, ...Object.values(look.acc)].flatMap(id => (id && partRef(id)) || []);
   const dyes = [look.hair, ...(look.hairAccent !== undefined ? [look.hairAccent] : [])].filter(i => i >= FREE_HAIR_COLOURS);
-  return [...refs, ...[...new Set(dyes)].map(dyeRef)];
+  return [...refs, ...[...new Set(dyes)].map(dyeRef), ...(look.hairColor && !CUSTOM_HAIR_FREE ? [CUSTOM_HAIR_REF] : [])];
 }
 
 /**

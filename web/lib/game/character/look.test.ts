@@ -3,7 +3,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { glbStats, readGlb } from "@/lib/game/perf/glbStats";
 import { CHARACTER_BUDGET } from "@/lib/game/perf/budget";
-import { BASE_URL, HAIR_MAPS_URL, OLD_HAIR, LOD_SKIN_URL, CLIPS, DEFAULT_LOOK, FACE, FACE_ATLAS2_URLS, FACE_ATLAS_URLS, PALETTE, PARTS, PART_BY_ID, parseLook, randomLook, resolveParts, seeded, wear, wornParts } from "./look";
+import { BASE_URL, CUSTOM_HAIR_REF, HAIR_MAPS_URL, HAIR_THUMB_URL, OLD_HAIR, LOD_SKIN_URL, CLIPS, DEFAULT_LOOK, FACE, FACE_ATLAS2_URLS, FACE_ATLAS_URLS, PALETTE, PARTS, PART_BY_ID, bodyKey, hairHex, lookBytes, lookRefs, parseLook, randomLook, resolveParts, seeded, wear, wornParts } from "./look";
+import { LOOK_MAX_BYTES } from "@/lib/net/protocol";
 
 const web = join(__dirname, "../../..");
 const art = join(web, "../art/characters");
@@ -227,6 +228,39 @@ describe("looks", () => {
   it("random looks are always valid and seeded ones repeat", () => {
     for (let i = 0; i < 200; i++) { const look = randomLook(seeded(i)); expect(parseLook(JSON.parse(JSON.stringify(look)))).toEqual(look); }
     expect(randomLook(seeded(7))).toEqual(randomLook(seeded(7)));
+  });
+});
+
+describe("a custom hair colour from the colour wheel (head-v10, row 311)", () => {
+  it("keeps a valid sRGB hex (normalised) and drops anything else, so old looks load unchanged", () => {
+    expect(parseLook({ ...DEFAULT_LOOK, hairColor: "#a1b2c3" }).hairColor).toBe("#A1B2C3");
+    for (const bad of ["red", "#12345", "#1234567", "#GGGGGG", 12, null, "#12 456", "javascript:alert(1)"]) expect(parseLook({ ...DEFAULT_LOOK, hairColor: bad }).hairColor, String(bad)).toBeUndefined();
+    expect("hairColor" in parseLook(DEFAULT_LOOK)).toBe(false);
+  });
+  it("tints the hair with it over the palette index, and only the hair", () => {
+    const look = parseLook({ ...DEFAULT_LOOK, hairColor: "#33CC99" });
+    expect(hairHex(look)).toBe("#33CC99");
+    expect(hairHex(DEFAULT_LOOK)).toBe(PALETTE.hair[DEFAULT_LOOK.hair]);
+    const hair = resolveParts(look).find(p => p.id === look.back)!;
+    expect(Object.values(hair.tints)).toEqual(["#33CC99"]);
+    const top = resolveParts(look).find(p => p.id === look.top)!;
+    expect(top.tints).toEqual(resolveParts(DEFAULT_LOOK).find(p => p.id === look.top)!.tints);
+    expect(bodyKey(look)).not.toBe(bodyKey(DEFAULT_LOOK));
+  });
+  it("needs a dye (David: \"Unlock by buying a dye\"; lookRefs asks for any one), and fits the multiplayer card", () => {
+    expect(lookRefs({ ...DEFAULT_LOOK, hairColor: "#123456" })).toEqual([...lookRefs(DEFAULT_LOOK), CUSTOM_HAIR_REF]);
+    const heavy = randomLook(seeded(7));
+    expect(lookBytes({ ...heavy, hairColor: "#ABCDEF" })).toBeLessThan(LOOK_MAX_BYTES);
+  });
+});
+
+describe("hair tiles (head-v10, row 311: \"it lags whenever changing hair color\")", () => {
+  it("ships a static thumbnail for every whole hairstyle, baked at build time", () => {
+    for (const p of PARTS.filter(q => q.slot === "back" && q.full)) {
+      const file = join(web, "public", HAIR_THUMB_URL(p.id));
+      expect(existsSync(file), `${p.id} has no thumbnail (scripts/bake-hair-thumbs.mjs)`).toBe(true);
+      expect(readFileSync(file).subarray(8, 12).toString("ascii"), p.id).toBe("WEBP");
+    }
   });
 });
 

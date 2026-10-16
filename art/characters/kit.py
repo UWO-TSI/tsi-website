@@ -503,6 +503,50 @@ def strip(pc, pts, width, region="torso", out=torso_out):
     pc.band([L, R], closed=False, refs=[inside])
 
 
+def weld_normals(me, max_angle=75.0):
+    """Smooth vertex normals on a welded mesh, keeping the directions it has (head-v10, row 311: David's hair looked
+    faceted at full detail). Where a vertex's corners carry different normals (a hard edge the source split by mistake,
+    or the flat corners a decimation leaves), the corners whose normals lie within `max_angle` of each other take their
+    mean; corners further apart (the two sides of a card folded back on itself, a spike's tip) stay apart. Writes custom
+    normals; returns the vertices that had a split welded."""
+    n_loops = len(me.loops)
+    ln = np.zeros(n_loops * 3)
+    me.corner_normals.foreach_get("vector", ln)
+    ln = ln.reshape(-1, 3)
+    lv = np.zeros(n_loops, int)
+    me.loops.foreach_get("vertex_index", lv)
+    order = np.argsort(lv, kind="stable")
+    starts = np.flatnonzero(np.r_[True, lv[order][1:] != lv[order][:-1]])
+    ends = np.r_[starts[1:], n_loops]
+    out = ln.copy()
+    cos = math.cos(math.radians(max_angle))
+    welded = 0
+    for s, e in zip(starts, ends):
+        idx = order[s:e]
+        if len(idx) < 2:
+            continue
+        nn = ln[idx]
+        if (nn @ nn[0]).min() > 0.99999 and np.ptp(nn, axis=0).max() < 1e-5:
+            continue
+        left = list(range(len(idx)))
+        split = False
+        while left:
+            seed = nn[left[0]]
+            group = [left[0]] + [k for k in left[1:] if nn[k] @ seed > cos]     # the seed always (a degenerate corner)
+            m = nn[group].sum(0)
+            m /= max(np.linalg.norm(m), 1e-9)
+            if any(nn[k] @ m < 0.99999 for k in group):
+                split = True
+            out[idx[group]] = m
+            left = [k for k in left if k not in group]
+        welded += split
+    for name in ("sharp_edge", "sharp_face"):       # no flat faces or hard edges under the normals set here
+        if name in me.attributes:
+            me.attributes.remove(me.attributes[name])
+    me.normals_split_custom_set([tuple(v) for v in out])
+    return welded
+
+
 def ntris(ob):
     return sum(len(p.vertices) - 2 for p in ob.data.polygons)
 

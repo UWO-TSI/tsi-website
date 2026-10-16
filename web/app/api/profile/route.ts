@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
 import type { Profile } from "@/lib/supabase/types";
-import { PART_BY_ID, eventPartOpen, lookRefs, parseLook } from "@/lib/game/character/look";
+import { PART_BY_ID, eventPartOpen, lookRefs, ownsRef, parseLook } from "@/lib/game/character/look";
 import { DEFAULT_TRADITIONS, costumeEvents } from "@/lib/content/traditions";
 import { supabaseTraditionsStore } from "@/lib/traditions/supabaseStore";
 import { supabaseEconomyStore } from "@/lib/wallet/supabaseStore";
@@ -129,7 +129,8 @@ export async function PATCH(request: Request) {
     if (!owned.ok) return NextResponse.json({ error: owned.error, code: owned.code }, { status: owned.status });
     // A running tradition's costumes are free to wear (the costume closet, lib/content/traditions.ts).
     const events = costumeEvents(await supabaseTraditionsStore(admin).traditions().catch(() => [...DEFAULT_TRADITIONS]), Date.now());
-    const missing = lookRefs(avatar_config.look).filter((ref) => !owned.data.has(ref) && !(PART_BY_ID.get(ref)?.event && eventPartOpen(ref, events)));
+    // A custom hair colour (the colour wheel, head-v10) needs any shop dye (ownsRef).
+    const missing = lookRefs(avatar_config.look).filter((ref) => !ownsRef(owned.data, ref) && !(PART_BY_ID.get(ref)?.event && eventPartOpen(ref, events)));
     if (missing.length) return NextResponse.json({ error: "You don't own everything in that look.", code: "not_owned", missing }, { status: 403 });
   }
 

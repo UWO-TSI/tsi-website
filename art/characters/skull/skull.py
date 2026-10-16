@@ -19,10 +19,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "base"))
 import head_shape as hs  # noqa: E402
 from head_shape import HC, head_point, hair_point, hair_vol, hair_outer, hairline, INNER, SKULL, EYE_LAT, EYE_LON, MOUTH_LAT  # noqa: E402
-from head_shape import CLASSIC, CLASSIC_C, CLASSIC_DY, STUD, HAIR_ATT, FACE_KEEP, FACE_LAT, FACE_MARGIN, FACE_RAMP, NECK_LAT  # noqa: E402
+from head_shape import CLASSIC, CLASSIC_C, CLASSIC_DY, STUD, HAIR_ATT, JAW  # noqa: E402
 
-# v9 (head-roblox, row 309): Roblox's classic head where hair sits, the v8 face area kept (head_shape.skull_radius)
-VERSION = "v9"
+# v10 (head-v10, row 311): our own head, rounder: the classic head where hair sits, a round face and chin (head_shape)
+VERSION = "v10"
 
 # ---------------------------------------------------------------- shells over the scalp (metres above the skull)
 HAT_CLEAR = 0.004           # a hat's inside sits this far over the hair's outer surface
@@ -177,7 +177,7 @@ def export(path=os.path.join(HERE, "skull.json")):
         "centre": [round(x, 5) for x in to_gltf(HC)],
         "skull": {k: round(v, 4) for k, v in SKULL.items()},
         "roblox": {"classic_head_studs": CLASSIC, "stud_m": round(STUD, 6), "classic_centre": [round(x, 5) for x in to_gltf(CLASSIC_C)],
-                   "classic_dy": CLASSIC_DY, "face_keep_canvas": list(FACE_KEEP), "face_lat": list(FACE_LAT), "face_margin": FACE_MARGIN, "face_ramp": FACE_RAMP, "neck_lat": list(NECK_LAT),
+                   "classic_dy": CLASSIC_DY, "jaw": JAW,
                    "source": "Roblox's official R15 reference rig (github.com/Roblox/avatar Legacy/rigs/R15_Block.fbx, Head_Geo, Hair_Att)"},
         "anchors": anchors,
         "lines": {

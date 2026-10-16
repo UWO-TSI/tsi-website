@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_LOOK, FREE_HAIR_COLOURS, PALETTE, PARTS, STARTER_PARTS, randomLook, seeded, wear } from "@/lib/game/character/look";
+import { CUSTOM_HAIR_REF, DEFAULT_LOOK, FREE_HAIR_COLOURS, PALETTE, PARTS, STARTER_PARTS, customHairUnlocked, dyeRef, randomLook, seeded, wear } from "@/lib/game/character/look";
 import { CATALOGUE as PIECES, EVENT_PIECE_IDS } from "@/lib/homes/catalogue";
 import { CRAFTED_ITEMS, RECIPES } from "@/lib/crafting/recipes";
 import { memoryCraftingStore } from "@/lib/crafting/memoryStore";
@@ -150,6 +150,26 @@ describe("look save (PATCH /api/profile)", () => {
     expect(mock.adminWrites).toHaveLength(2);
     expect(mock.adminWrites[1]).toMatchObject({ avatar_config: { look: { top: "top_cardigan", hair: 10 } } });
     expect(mock.userWrites.every((u) => !("avatar_config" in (u as object)))).toBe(true);
+  });
+});
+
+describe("the hair colour wheel (head-v10; David: \"Unlock by buying a dye\")", () => {
+  it("is unlocked by owning any of the shop dyes, never by the free presets alone", () => {
+    expect(customHairUnlocked(new Set(STARTER_PARTS))).toBe(false);
+    expect(customHairUnlocked(new Set(Array.from({ length: FREE_HAIR_COLOURS }, (_, i) => dyeRef(i))))).toBe(false);
+    for (let h = FREE_HAIR_COLOURS; h < PALETTE.hair.length; h++) expect(customHairUnlocked(new Set([dyeRef(h)])), `dye ${h}`).toBe(true);
+  });
+  it("refuses a custom colour in a saved look without a dye, server-side", async () => {
+    const res = await saveLook({ ...DEFAULT_LOOK, hairColor: "#33CC99" });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toMatchObject({ code: "not_owned", missing: [CUSTOM_HAIR_REF] });
+    expect(mock.adminWrites).toEqual([]);
+  });
+  it("saves a custom colour once the member owns any dye", async () => {
+    eco.fund(A, 1000);
+    await buy(eco.store, A, { item_id: slug("dye-blossom-pink"), qty: 1, idempotency_key: "buy-dye-wheel" }, noon);
+    expect((await saveLook({ ...DEFAULT_LOOK, hairColor: "#33cc99" })).status).toBe(200);
+    expect(mock.adminWrites.at(-1)).toMatchObject({ avatar_config: { look: { hairColor: "#33CC99" } } });
   });
 });
 

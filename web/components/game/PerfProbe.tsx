@@ -15,7 +15,7 @@ import * as THREE from "three";
 import { frameStats } from "@/lib/game/perf/frameStats";
 
 const CAP = 8192;
-const FIELDS = ["calls", "triangles", "mixers", "skeletons", "cpu", "render", "scenes", "lodMeshes", "throttled"] as const;
+const FIELDS = ["calls", "triangles", "mixers", "skeletons", "cpu", "render", "scenes", "lodMeshes", "throttled", "fullMeshes", "lod2Meshes"] as const;
 type Field = (typeof FIELDS)[number];
 
 class Recorder {
@@ -35,10 +35,11 @@ class Recorder {
       const r = this.rows, i = this.n++;
       r.calls[i] = info.render.calls; r.triangles[i] = info.render.triangles;
       r.mixers[i] = frameStats.mixers; r.skeletons[i] = frameStats.skeletons; r.lodMeshes[i] = frameStats.lodMeshes; r.throttled[i] = frameStats.throttled;
+      r.fullMeshes[i] = frameStats.fullMeshes; r.lod2Meshes[i] = frameStats.lod2Meshes;
       r.cpu[i] = this.after - this.start; r.render[i] = this.before >= 0 ? this.after - this.before : 0; r.scenes[i] = this.scenes;
     }
     this.scenes = 0;
-    frameStats.mixers = 0; frameStats.skeletons = 0; frameStats.lodMeshes = 0; frameStats.throttled = 0;
+    frameStats.mixers = 0; frameStats.skeletons = 0; frameStats.lodMeshes = 0; frameStats.throttled = 0; frameStats.fullMeshes = 0; frameStats.lod2Meshes = 0;
     this.start = performance.now(); this.before = -1; this.after = -1;
   }
   summary() {

@@ -72,15 +72,18 @@ LIMITS = {
                                    # pompoms, crystals and blossoms stand up on purpose)
     "hat_poke_max": 0.002,         # hair showing through a hat
     "glasses_offset_max": 0.012,   # lens centre vs painted eye centre
-    "face_stretch_max": 1.2,       # texture stretch where features are painted
-    "face_aniso_max": 1.3,         # head fit: David's widest eyes (row 305) reach U 0.04-0.07, round the jaw's corner (1.29);
-                                   # the earlier parts stay under 1.05 on the v8 head
-    "eye_reach_lon_max_deg": 55.0,
-    "face_facing_max_deg": 52.0,   # head fit (row 304): no painted pixel of any eye, brow or mouth faces more than this
-                                    # away from straight ahead. v7: eyes 46.9, mouth 61.2 (the widest grins wrapped under
-                                    # the chin); v8's flat face: eyes 36, brows 17, mouth 51 (only the lowest pixels of the
-                                    # widest grins, W > 0.93 on the canvas, reach the chin's turn)  # how far round the head (azimuth) any eye pixel sits: ref 18's lid ends ~51 deg
-                                    # round, so both eyes stay on the face in 3/4 view (v6 shipped 63)
+    # head-v10 (row 311; David 2026-10-14: "face doesnt have to be flat, a little to rectangley"): the face is round now, so
+    # every painted part turns further round it than on v8's flat plate (stretch 1.2, aniso 1.3, reach 55, facing 52
+    # there). The whole set is held to what the round face does with David's widest and lowest parts (the swirl,
+    # doll_lash and offset eyes at U 0.04-0.12 and down to W 0.88, the drool mouths to W 1.0), a little over v10's
+    # measure (stretch 1.64, aniso 2.27 on the jaw-corner faces under the lowest eyes; eyes reach 58.6 deg round and face
+    # 62.8 away, the mouths 58.5); the default parts keep the flat face's limit (face_default_facing_max_deg). Renders
+    # of those parts on v10: specs/evidence/head-v10/ (extreme faces).
+    "face_stretch_max": 1.7,       # texture stretch where features are painted
+    "face_aniso_max": 2.35,
+    "eye_reach_lon_max_deg": 60.0,  # how far round the head (azimuth) any eye pixel sits (v8 55: ref 18's lid ends ~51)
+    "face_facing_max_deg": 64.0,   # no painted pixel of any eye or mouth faces more than this away from straight ahead
+    "face_default_facing_max_deg": 52.0,   # the default eyes and mouth (FACEV defaults): the flat face's limit, kept
     "lock_roots_exposed": 0,       # lock root-ring vertices not buried in the head or other hair
     "lock_dive_max": 0.002,        # m: how deep a lock's outward-facing surface goes under the skin past its root zone
     "skull_clip_max": SK.CLEARANCE["clip_max"],     # head fit: visible surface under the skin (any piece)
@@ -453,6 +456,14 @@ for layer in FACE_LAYERS:
             worst = max(worst, facing(p))
     facing_max[layer] = round(worst, 1)
 
+# head-v10: the default parts (what every new character wears) held to the flat face's facing limit
+default_facing = {}
+for layer in FACE_LAYERS:
+    a = item_alpha(layer, FACEV["layers"][layer]["default"], RES)
+    ys, xs = np.nonzero(a > 0.5)
+    pts = [locate((xs[k] + 0.5) / RES, (ys[k] + 0.5) / RES) for k in range(0, len(xs), 2)]
+    default_facing[layer] = round(max([facing(p) for p in pts if p is not None] or [0.0]), 1)
+
 brow = item_alpha("brows", FACEV["layers"]["brows"]["default"], RES)
 by, bx = np.nonzero(brow > 0.5)
 BROW_PTS = [p for p in (locate((bx[k] + 0.5) / RES, (by[k] + 0.5) / RES) for k in range(0, len(bx), 2)) if p is not None]
@@ -465,6 +476,7 @@ def PAGE2_EYE(fid):
     return len(cell) > 6 and cell[6] == 1
 face = {"feature_tris": n_feat, "stretch_max": round(worst_stretch, 3), "aniso_max": round(worst_aniso, 3), "per_layer": per_layer,
         "stretch_worst_at": worst_at, "aniso_worst_at": aniso_at, "eye_reach_deg": round(eye_reach, 1), "eye_reach_lon_deg": round(eye_lon, 1), "facing_max_deg": facing_max,
+        "default_facing_deg": default_facing,
         "default_eye_centre_lon_deg": round(abs(lon_of(dflt["L"])), 1) if dflt.get("L") else None,
         "default_eye_centre_z": round(dflt["L"].z, 4) if dflt.get("L") else None}
 
@@ -943,6 +955,8 @@ check("aniso_max", face["aniso_max"], LIMITS["face_aniso_max"], "face")
 check("eye_reach_lon_deg", face["eye_reach_lon_deg"], LIMITS["eye_reach_lon_max_deg"], "face")
 for layer, v in face["facing_max_deg"].items():
     check(f"facing_max_deg {layer}", v, LIMITS["face_facing_max_deg"], "face")
+for layer, v in face["default_facing_deg"].items():
+    check(f"default_facing_deg {layer}", v, LIMITS["face_default_facing_max_deg"], "face")
 
 report = {"limits": LIMITS, "skull_version": SK.VERSION, "skull": skull_fit, "face": face, "seam": seam, "hair": hair, "locks": lock_report, "headwear": headwear,
           "glasses": glasses, "fails": fails, "flags": flags}

@@ -1,0 +1,23 @@
+perf:check on 717cad36 (SCENES=village,cafe, SKIP_BUILD after one measure-build.sh, TIERS run one after the other; the machine's 1-minute load 5.3-6.0 with other lanes working). One run of the gate, not repeated for noise.
+
+High:
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draw calls | Triangles | Runs | Spread | Load |
+|---|---|---|---|---|---|---|---|---|---|
+| village | high | 5.30 (3.90, +35.9%) | 6.60 (4.90, +34.7%) | 4.50 (3.40, +32.4%) | 370 (382, -3.1%) | 554820 (537560, +3.2%) | 5 | 15% | 5.3 |
+| cafe | high | 2.10 (2.10, 0.0%) | 7.00 (3.10, +125.8%) | 1.30 (0.60, +116.7%) | 144 (140, +2.9%) | 77834 (69455, +12.1%) | 3 | 0% | 5.3 |
+
+Median of 3+ runs each; in brackets the baseline (8809c517 2026-10-14) and the change. Load: the 1-minute load average.
+
+Lite:
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draw calls | Triangles | Runs | Spread | Load |
+|---|---|---|---|---|---|---|---|---|---|
+| village | lite | 3.10 (2.30, +34.8%) | 4.10 (3.40, +20.6%) | 2.70 (2.00, +35.0%) | 276 (288, -4.2%) | 360088 (353865, +1.8%) | 5 | 16% | 5.6 |
+| cafe | lite | 1.80 (1.50, +20.0%) | 3.00 (2.80, +7.1%) | 1.30 (0.70, +85.7%) | 110 (103, +6.8%) | 75487 (63874, +18.2%) | 5 | 6% | 6 |
+
+Median of 3+ runs each; in brackets the baseline (8809c517 2026-10-14) and the change. Load: the 1-minute load average.
+
+perf:check FAILED
+- village|high: median frame 5.3 ms, +35.9% on the baseline's 3.9
+perf:check FAILED
+- village|lite: median frame 3.1 ms, +34.8% on the baseline's 2.3
+- cafe|lite: median frame 1.8 ms, +20.0% on the baseline's 1.5

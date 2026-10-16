@@ -10,4 +10,7 @@ export const frameStats = {
   /** Characters drawing their LOD 1 mesh this frame, and those whose mixer runs below every frame (lod.ts). */
   lodMeshes: 0,
   throttled: 0,
+  /** Of the characters drawn (head-v10, lod.ts by situation): at Full, and at LOD 2 (also counted in lodMeshes). */
+  fullMeshes: 0,
+  lod2Meshes: 0,
 };
