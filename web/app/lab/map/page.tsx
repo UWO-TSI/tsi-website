@@ -80,7 +80,8 @@ import { mapBudget } from "@/lib/game/mapBudget";
 import { classifyWater, WATER_CLASS } from "@/lib/game/fishingSpots";
 import { SLOPE_RUN, cellsInPolygon, cliffDab, nextObjectId, organicCell, padUnder, slopeDab, snapPlacement, snapshotCells, softDab, waterDistance, type CellSnapshot, type OrganicOp } from "@/lib/game/painterTools";
 import { RESIDENT_ANCHORS, SHARED_SPACING } from "@/lib/content/residents";
-import { FURNITURE, type Furniture } from "@/lib/study/seats";
+import { FURNITURE, OUTDOOR_LOOKS, type Furniture } from "@/lib/study/seats";
+import { FENCE_MODELS, fenceLayout, isJoinedFence } from "@/lib/game/fences";
 import { BARRIERS, BARRIER_MODELS, isBarrierModel } from "@/lib/game/barriers";
 import { PROPOSALS, acceptProposed, pendingOf, type ProposedObject } from "@/lib/game/proposals";
 import { DEFAULT_TABLES } from "@/lib/study/tables";
@@ -195,7 +196,13 @@ const OBJECT_STYLE: Record<ObjectKind, { color: string; r: number; label: string
 /** Placement palette order. */
 const PALETTE: readonly ObjectKind[] = ["landmark", "tree", "bush", "flower", "rock", "bench", "fence", "lamp", "bridge", "barrier", "study", "anchor", "gather", "spawn", "fitting", "missions", "puddle", "bug", "shell", "bottle", "campfire"];
 const ROCK_MODELS = Object.keys(PROP_FOOTPRINT).filter((m) => m.startsWith("rock-") || m.startsWith("boulder-"));
-const FENCE_MODELS = Object.keys(PROP_FOOTPRINT).filter((m) => m.startsWith("fence-"));
+/** A study table's look (lib/study/seats.ts OUTDOOR_LOOKS): ours with the runner, or the classic with the green cloth. */
+const TABLE_LOOKS = [["", "ours (striped runner)"], ["classic", "classic (green cloth)"]] as const;
+const lookOf = (model?: string) => (model?.endsWith("-classic") ? "classic" : "");
+const withLook = (model: string, look: string): Furniture => {
+  const base = (model.replace(/-classic$/, "") as keyof typeof OUTDOOR_LOOKS);
+  return OUTDOOR_LOOKS[base]?.[look === "classic" ? 1 : 0] ?? (model as Furniture);
+};
 const BUG_BIOMES = ["water_edge", "ground"];
 const TREE_NAMES = ["oak", "oak (b)", "blossom", "cedar"];
 /** Outdoor study tables the backend expects (`study_tables.anchor`). */
@@ -511,6 +518,7 @@ export default function MapLab() {
   const [placeKind, setPlaceKind] = useState<ObjectKind | "select">("select");
   const [placeId, setPlaceId] = useState("");
   const [placeModel, setPlaceModel] = useState("");
+  const [placeLook, setPlaceLook] = useState("");
   const [snap, setSnap] = useState(0.5);
   const [selected, setSelected] = useState<string | null>(null);
   const [health, setHealth] = useState<VillageHealth | null>(null);
@@ -779,7 +787,9 @@ export default function MapLab() {
 
   /** Snap a world point for an object of this kind (buildings: footprint edges on cell edges). */
   const snapFor = useCallback(
-    (kind: ObjectKind, id: string, x: number, z: number, yaw?: number, scale?: number): [number, number] => {
+    (kind: ObjectKind, id: string, x: number, z: number, yaw?: number, scale?: number, model?: string): [number, number] => {
+      // A connectable fence post sits on a whole cell, so the posts beside it join (lib/game/fences.ts).
+      if (isJoinedFence({ kind, model })) return snapPlacement(x, z, 1);
       // The footprint as it stands (turned and scaled), so its edges are what land on cell edges.
       const half = kind === "landmark" && snap > 0 ? landmarkHalf(id as LandmarkId, yaw, scale) : null;
       return snapPlacement(x, z, snap, half && half[0] > 1 ? half : undefined);
@@ -1002,6 +1012,17 @@ export default function MapLab() {
       });
       ctx.closePath();
     };
+    // Connectable fences: the rails between posts side by side (lib/game/fences.ts), under the posts' dots.
+    const fenceRun = fenceLayout(objects.filter(isJoinedFence));
+    ctx.strokeStyle = OBJECT_STYLE.fence.color;
+    ctx.lineWidth = 0.18;
+    for (const r of fenceRun.rails) {
+      const [p, q] = [fenceRun.posts[r.a], fenceRun.posts[r.b]];
+      ctx.beginPath();
+      ctx.moveTo(cellU(p.x), cellV(p.z));
+      ctx.lineTo(cellU(q.x), cellV(q.z));
+      ctx.stroke();
+    }
     for (const o of objects) {
       const st = OBJECT_STYLE[o.kind];
       const color = o.kind === "landmark" ? LANDMARK_INFO[o.id as LandmarkId]?.color ?? st.color : st.color;
@@ -1472,7 +1493,8 @@ export default function MapLab() {
         if (!id) return null;
         if (kind === "study") {
           const seats = OUTDOOR_TABLES.find((t) => t.anchor === id)?.seats ?? 4;
-          extra = { model: (Object.keys(FURNITURE) as Furniture[]).find((f) => FURNITURE[f].seats.length === seats && ["picnic", "pier"].includes(f)) ?? "picnic" };
+          const base = (Object.keys(FURNITURE) as Furniture[]).find((f) => FURNITURE[f].seats.length === seats && ["picnic", "pier"].includes(f)) ?? "picnic";
+          extra = { model: withLook(base, placeLook) };
         }
       } else if (kind === "spawn") {
         id = w.objects.some((o) => o.kind === "spawn" && o.id === "default") ? nextObjectId(kind, w.objects) : "default";
@@ -1489,13 +1511,13 @@ export default function MapLab() {
       if (kind === "barrier") extra = { model: isBarrierModel(placeModel) ? placeModel : "forest-edge" };
       if (kind === "bridge") extra = { yaw: Math.PI / 2 };
       if (kind === "landmark" && TARGET === "world" && id !== "wharf" && (LANDMARK_INFO[id as LandmarkId]?.half?.[0] ?? 0) > 1) extra = { ...extra, scale: WORLD_BUILDING_SCALE };
-      const [x, z] = snapFor(kind, id, wx, wz, extra.yaw, extra.scale);
+      const [x, z] = snapFor(kind, id, wx, wz, extra.yaw, extra.scale, extra.model);
       commit();
       w.objects = [...w.objects, { id, kind, x, z, ...extra }];
       bump();
       return `${kind}:${id}`;
     },
-    [placeKind, placeId, placeModel, freeIds, snapFor, bump]
+    [placeKind, placeId, placeModel, placeLook, freeIds, snapFor, bump]
   );
 
   const btn = (active: boolean, extra?: React.CSSProperties) => ({
@@ -1600,7 +1622,7 @@ export default function MapLab() {
             if (m && tool === "object" && e.buttons === 1) {
               const o = world().objects.find((ob) => keyOf(ob) === m.key);
               if (!o) return;
-              const [x, z] = snapFor(o.kind, o.id, c.wx + m.dx, c.wz + m.dz, o.yaw, o.scale);
+              const [x, z] = snapFor(o.kind, o.id, c.wx + m.dx, c.wz + m.dz, o.yaw, o.scale, o.model);
               if (x === o.x && z === o.z) return;
               updateObject(m.key, { x, z }, !m.committed);
               m.committed = true;
@@ -1905,6 +1927,11 @@ export default function MapLab() {
                   )) : <option value="">all placed</option>}
                 </select>
               )}
+              {placeKind === "study" && (
+                <select value={placeLook} onChange={(e) => setPlaceLook(e.target.value)} style={{ ...field, width: "100%", marginBottom: 6 }}>
+                  {TABLE_LOOKS.map(([v, n]) => <option key={v} value={v}>{n}</option>)}
+                </select>
+              )}
               {(placeKind === "tree" || placeKind === "rock" || placeKind === "fence" || placeKind === "bug" || placeKind === "barrier") && (
                 <select value={placeModel} onChange={(e) => setPlaceModel(e.target.value)} style={{ ...field, width: "100%", marginBottom: 6 }}>
                   {(placeKind === "tree" ? TREE_NAMES.map((n, i) => [String(i), n]) : placeKind === "barrier" ? BARRIER_MODELS.map((m) => [m, BARRIERS[m].label]) : (placeKind === "rock" ? ROCK_MODELS : placeKind === "fence" ? FENCE_MODELS : BUG_BIOMES).map((m) => [m, m])).map(([v, n]) => (
@@ -1946,7 +1973,12 @@ export default function MapLab() {
                   </div>
                   {(selectedObject.kind === "rock" || selectedObject.kind === "fence" || selectedObject.kind === "bug" || selectedObject.kind === "barrier") && (
                     <select value={selectedObject.model ?? ""} onChange={(e) => updateObject(selected!, { model: e.target.value })} style={{ ...field, width: "100%", marginTop: 6 }}>
-                      {(selectedObject.kind === "rock" ? ROCK_MODELS : selectedObject.kind === "fence" ? FENCE_MODELS : selectedObject.kind === "barrier" ? BARRIER_MODELS : BUG_BIOMES).map((m) => <option key={m} value={m}>{m}</option>)}
+                      {(selectedObject.kind === "rock" ? ROCK_MODELS : selectedObject.kind === "fence" ? [...new Set([...FENCE_MODELS, selectedObject.model ?? ""])].filter(Boolean) : selectedObject.kind === "barrier" ? BARRIER_MODELS : BUG_BIOMES).map((m) => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  )}
+                  {selectedObject.kind === "study" && selectedObject.model && ["picnic", "pier"].includes(selectedObject.model.replace(/-classic$/, "")) && (
+                    <select value={lookOf(selectedObject.model)} onChange={(e) => updateObject(selected!, { model: withLook(selectedObject.model!, e.target.value) })} style={{ ...field, width: "100%", marginTop: 6 }}>
+                      {TABLE_LOOKS.map(([v, n]) => <option key={v} value={v}>{n}</option>)}
                     </select>
                   )}
                   <div style={{ display: "flex", gap: 4, marginTop: 6 }}>

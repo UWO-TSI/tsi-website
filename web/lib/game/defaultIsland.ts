@@ -5,6 +5,7 @@ import { ROCK_MODELS, ROCK_SIZE } from "./rocks";
 import { FURNITURE, studySolid, type Furniture } from "@/lib/study/seats";
 import { objectsOf, village, villageSpawnPoint, type MapObject, type Village } from "./villageMap";
 import { barrierBoxes, barrierFootprint, barrierPlacements, inBarrier } from "./barriers";
+import { FENCE_POST_HALF, fenceSolids, isJoinedFence } from "./fences";
 import { MAX_CLIMB, terrainHeight, terrainSteepness, terrainSurface } from "./world/terrain";
 
 /**
@@ -218,6 +219,8 @@ export function objectFootprint(o: MapObject): { hw: number; hd: number; cx: num
   if (o.kind === "bridge") return { hw: BRIDGE_DECK_HALF[0], hd: BRIDGE_DECK_HALF[1], cx: 0, cz: 0 };
   if (o.kind === "house") return { hw: HOUSE_HALF[0] * (o.scale ?? 1), hd: HOUSE_HALF[1] * (o.scale ?? 1), cx: 0, cz: 0 };
   if (o.kind === "barrier") return barrierFootprint(o.model, o.scale ?? 1);
+  // A connectable fence's post (its rails run to whatever stands beside it: lib/game/fences.ts).
+  if (isJoinedFence(o)) return { hw: FENCE_POST_HALF, hd: FENCE_POST_HALF, cx: 0, cz: 0 };
   if (o.kind === "study" && o.model && o.model in FURNITURE) {
     const [cx, cz, hw, hd] = FURNITURE[o.model as Furniture].solid[0];
     return { hw, hd, cx, cz };
@@ -319,10 +322,10 @@ export function islandOf(v: Village): VillageIsland {
   const solids: { x: number; z: number; half?: [number, number] }[] = [...landmarks(v).filter(l => l.half), ...objectsOf("house", v).map(o => ({ x: o.x, z: o.z, half: houseHalf(o.yaw, o.scale) }))];
   // The natural barriers standing at this drop (lib/game/barriers.ts): solid like a building, never jumped.
   const barriers = barrierBoxes(barrierPlacements(v));
-  const props = propsOf(v).flatMap(o => {
+  const props = [...propsOf(v).flatMap(o => {
     const f = propFootprint(o);
     return f ? [{ x: o.x, z: o.z, yaw: o.yaw ?? 0, hw: f[0], hd: f[1], top: (PROP_TOP[o.model!] ?? Infinity) * (o.scale ?? 1) }] : [];
-  });
+  }), ...fenceSolids(objectsOf("fence", v).filter(isJoinedFence))];
   // Trees and props by 4-unit bucket (numeric keys), so a painted island with hundreds of them walks as cheaply as a small one.
   const buckets = <T extends { x: number; z: number }>(items: readonly T[]) => {
     const grid = new Map<number, T[]>();

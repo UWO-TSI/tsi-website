@@ -16,6 +16,9 @@ export const BUOY_WATERLINE = 0.66;
 /** The outdoor study tables (study/StudySeats.tsx): the picnic table (2 long) and the pier's (1 long), tops at 0.84. */
 export const STUDY_TABLE_LONG_URL = `${P}study-table-long.glb`;
 export const STUDY_TABLE_URL = `${P}study-table.glb`;
+/** The classic look of both (game/remodel-r2): the original reading table's shape and green cloth, rebuilt as ours. */
+export const STUDY_TABLE_CLASSIC_LONG_URL = `${P}study-table-classic-long.glb`;
+export const STUDY_TABLE_CLASSIC_URL = `${P}study-table-classic.glb`;
 /** An open book, authored at the dump book's size at 0.1 (so drawn at the dump scale × 10). */
 export const STUDY_BOOK_URL = `${P}study-book.glb`;
 

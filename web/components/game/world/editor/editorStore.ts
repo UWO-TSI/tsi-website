@@ -7,6 +7,7 @@
 import { useSyncExternalStore } from "react";
 import { LEVEL_STEP } from "@/lib/game/grid";
 import { objectFootprint } from "@/lib/game/defaultIsland";
+import { isJoinedFence } from "@/lib/game/fences";
 import { snapPlacement } from "@/lib/game/painterTools";
 import { PROPOSALS, acceptProposed, pendingOf } from "@/lib/game/proposals";
 import type { MapObject } from "@/lib/game/villageMap";
@@ -285,7 +286,8 @@ function placeOrRemove(it: Extract<EditorItem, { type: "place" }>, dir: 1 | -1, 
   // Buildings sit their footprint's edges on cell edges (ACNH grid law, as /lab/map snaps them); the rest on half cells.
   const probe = { id: it.object.id ?? "x", kind: it.object.kind, x: 0, z: 0, model: it.object.model, yaw: ed.ghostYaw, scale: it.object.kind === "landmark" && it.building ? 1.15 : 1 } as MapObject;
   const f = it.building ? objectFootprint(probe) : null;
-  const [x, z] = f ? snapPlacement(hit.x, hit.z, 0, [f.hw, f.hd]) : snapPlacement(hit.x, hit.z, 0.5);
+  // A connectable fence post on a whole cell, so the posts beside it join (lib/game/fences.ts).
+  const [x, z] = f ? snapPlacement(hit.x, hit.z, 0, [f.hw, f.hd]) : snapPlacement(hit.x, hit.z, isJoinedFence(probe) ? 1 : 0.5);
   const next = placeItem(it, ed.objects, x, z, ed.ghostYaw);
   const placed = next.find(o => !ed.objects.includes(o)) ?? null;
   setObjects(next);
@@ -301,7 +303,7 @@ function pick(hit: RayHit) {
 function moveSelected(hit: RayHit) {
   const o = selectedObject();
   if (!o) return;
-  const r = (v: number) => Math.round(v * 1000) / 1000;
+  const r = (v: number) => (isJoinedFence(o) ? Math.round(v) : Math.round(v * 1000) / 1000);
   setObjects(ed.objects.map(x => (x === o ? { ...o, x: r(hit.x), z: r(hit.z) } : x)));
 }
 

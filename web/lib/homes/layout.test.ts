@@ -8,12 +8,12 @@ import {
 const room = (items: PlacedItem[], mount: "floor" | "rug" | "wall" = "floor") => ({ items, inside: roomInside(mount), wallLength: roomWallLength });
 
 describe("catalogue", () => {
-  it("has about 30 dump pieces with sane footprints and unique ids", () => {
+  it("has about 30 pieces (the dump's, and our own where they're remodelled) with sane footprints and unique ids", () => {
     expect(CATALOGUE.length).toBeGreaterThanOrEqual(30);
     expect(new Set(CATALOGUE.map(i => i.id)).size).toBe(CATALOGUE.length);
     for (const item of CATALOGUE) {
       expect(item.size[0], item.id).toBeGreaterThan(0);
-      expect(item.url).toMatch(/^\/assets\/acnh\/.+\.glb$/);
+      expect(item.url).toMatch(/^\/assets\/(acnh|game)\/.+\.glb$/);
     }
     expect(CATALOGUE.some(i => i.mount === "wall")).toBe(true);
     expect(CATALOGUE.some(i => i.where === "outdoor")).toBe(true);

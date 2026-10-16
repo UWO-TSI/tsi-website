@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Color } from "three";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { DEFAULT_PALETTES } from "@/data/content-defaults";
 import { leanHue, paletteBySeason, seasonLook, SEASON_TREES, SEASON_FLOWERS, SEASON_BUSHES } from "./seasonalLook";
 import { seasonBlend } from "./season";
@@ -49,7 +51,12 @@ describe("seasonal look", () => {
     expect(SEASON_TREES.summer.some(url => url.includes("blossom"))).toBe(false);
     expect(SEASON_TREES.winter.every(url => url.includes("snow"))).toBe(true);
     expect(SEASON_FLOWERS.winter).toEqual([]);
-    expect(SEASON_BUSHES.winter.every(url => url.includes("snow"))).toBe(true);
+    // The closed bushes (art/nature/close_bushes.py): each season's own, winter's the dump's snow holly closed.
+    for (const s of ["spring", "summer", "autumn", "winter"] as const) for (const url of SEASON_BUSHES[s]) {
+      expect(url).toMatch(new RegExp(`^/assets/game/plants/bush-[a-z]+-${s}\\.glb$`));
+      expect(existsSync(join(__dirname, "../../public", url)), url).toBe(true);
+    }
+    expect(SEASON_BUSHES.winter).toEqual(["/assets/game/plants/bush-holly-winter.glb"]);
   });
   it("leans a sky hue without changing its lightness", () => {
     const night = "#344963";

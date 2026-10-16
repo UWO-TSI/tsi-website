@@ -18,8 +18,11 @@
 import { objectsOf, village, type Village } from "@/lib/game/villageMap";
 
 export type SeatArea = "cafe" | "village";
-/** Café: window bar stools, tables for two and four, the booth, the communal table. Outdoors: picnic table, pier bench. */
-export type Furniture = "bar" | "two" | "four" | "booth" | "communal" | "picnic" | "pier";
+/**
+ * Café: window bar stools, tables for two and four, the booth, the communal table. Outdoors: picnic table, pier bench,
+ * each in two looks (game/remodel-r2): ours with the striped runner, and the classic with the green cloth.
+ */
+export type Furniture = "bar" | "two" | "four" | "booth" | "communal" | "picnic" | "pier" | "picnic-classic" | "pier-classic";
 export interface TableLayout { anchor: string; area: SeatArea; at: [number, number]; yaw: number; furniture: Furniture }
 /** `y` is the seat top in world y (floor height at the seat + the furniture's seatY). */
 export interface WorldSeat { anchor: string; seat: number; x: number; z: number; facing: number; y: number }
@@ -27,6 +30,9 @@ export interface WorldSeat { anchor: string; seat: number; x: number; z: number;
 const PI = Math.PI;
 /** Seat tops: café chairs, booth and banquette cushions 0.4, window stools 0.6 (each a Study-clip desk, 0.2, under its table or counter), bench-wood slats 0.5. */
 const CHAIR = 0.4, STOOL = 0.6, BENCH = 0.5;
+/** The outdoor picnic table and pier bench: both looks of each share its seats and footprint. */
+const PICNIC = { seats: [[0.5, -0.8, 0], [-0.5, -0.8, 0], [0.5, 0.8, PI], [-0.5, 0.8, PI]] as [number, number, number][], seatY: BENCH, solid: [[0, 0, 1, 0.42]] as [number, number, number, number][] };
+const PIER = { seats: [[0.45, 0.8, PI], [-0.45, 0.8, PI]] as [number, number, number][], seatY: BENCH, solid: [[0, 0, 0.5, 0.42]] as [number, number, number, number][] };
 /** Seats, seat top and solid rects ([cx, cz, halfW, halfD]) relative to the table, before `yaw`. Chairs and stools are not solid. */
 /** `top`: the table top a sitter works at; `reach`: how far in front of the seat their cup or laptop goes on it (café patrons). */
 export const FURNITURE: Record<Furniture, { seats: [number, number, number][]; seatY: number; solid: [number, number, number, number][]; top?: number; reach?: number }> = {
@@ -35,9 +41,13 @@ export const FURNITURE: Record<Furniture, { seats: [number, number, number][]; s
   four: { seats: [[0.42, -0.7, 0], [-0.42, -0.7, 0], [0.42, 0.7, PI], [-0.42, 0.7, PI]], seatY: CHAIR, solid: [[0, 0, 0.52, 0.34]], top: 0.6, reach: 0.45 },
   booth: { seats: [[0.42, -0.72, 0], [-0.42, -0.72, 0], [0.42, 0.72, PI], [-0.42, 0.72, PI]], seatY: CHAIR, solid: [[0, 0, 0.55, 0.3], [0, -0.99, 0.68, 0.06], [0, 0.99, 0.68, 0.06]], top: 0.6, reach: 0.5 },
   communal: { seats: [[0.55, -0.68, 0], [-0.55, -0.68, 0], [0.55, 0.68, PI], [-0.55, 0.68, PI]], seatY: CHAIR, solid: [[0, 0, 1.1, 0.33], [0, 0.95, 1.15, 0.06]], top: 0.6, reach: 0.42 },
-  picnic: { seats: [[0.5, -0.8, 0], [-0.5, -0.8, 0], [0.5, 0.8, PI], [-0.5, 0.8, PI]], seatY: BENCH, solid: [[0, 0, 1, 0.42]] },
-  pier: { seats: [[0.45, 0.8, PI], [-0.45, 0.8, PI]], seatY: BENCH, solid: [[0, 0, 0.5, 0.42]] },
+  picnic: PICNIC,
+  pier: PIER,
+  "picnic-classic": PICNIC,
+  "pier-classic": PIER,
 };
+/** The outdoor tables' two looks: each kind and its classic (the same seats and footprint, another table on them). */
+export const OUTDOOR_LOOKS: Readonly<Record<"picnic" | "pier", readonly [Furniture, Furniture]>> = { picnic: ["picnic", "picnic-classic"], pier: ["pier", "pier-classic"] };
 
 /** The café (row 270): 20 seats — four window stools, two tables for two, a four-top, a four-seat booth and a small communal table. */
 const CAFE_LAYOUT: TableLayout[] = [

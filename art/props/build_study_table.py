@@ -13,6 +13,15 @@ lying open, the origin under its spine.
 The tables: a top of five rounded boards across battens, splayed trestle legs at each end tied by a stretcher, a linen
 runner in a rust and cream stripe across the middle hanging over both long edges. Two materials: M_TableWood (grain,
 COLOR_0 per board), M_Cloth. The book: cloth-bound covers and two curved page blocks: M_BookCover, M_Paper.
+
+The classic tables (game/remodel-r2; David, 2026-10-16: "looks good but make a second version similar to the original
+design"): the original reading table's shape, rebuilt as ours: a thick honey-wood top with rounded edges on four
+chunky tapered legs, a square cloth laid corner-on so a green point hangs over the middle of each edge and the
+table's corners show, the cloth in four greens (deep, olive, olive, pale) under a fine weave with a darker hem. The
+picnic's is two side by side, as the original was: study-table-classic-long.glb (2 long) and study-table-classic.glb
+(the pier's, 1 long), the same footprints and top as the others. Materials: M_ClassicWood, M_ClassicCloth.
+
+  ... build_study_table.py -- classic        (only the classic ones)
 """
 import math, os, sys
 import numpy as np
@@ -147,9 +156,99 @@ def book():
     return ob
 
 
+CLASSIC_HALF = (0.47, 0.39)          # the top's half extents (x, z) per table
+CLASSIC_DROP = 0.24                  # how far a cloth point hangs below the top's edge
+HONEY, HONEY_LEG = "#e3ab63", "#dba25b"
+
+
+def classic_cloth_tex():
+    """Four greens in the cloth's own (corner-on) frame, a fine weave, a darker hem round its edge."""
+    h = w = 128
+    U, V = K.grid(h, w)
+    q = (U >= 0.5).astype(int) + 2 * (V >= 0.5).astype(int)
+    pal = np.array([K.arr("#1e8a57"), K.arr("#9ca63b"), K.arr("#a4ab3d"), K.arr("#c8d48e")])
+    col = pal[q]
+    weave = K.linen(h, w, 181, "#ffffff", threads=40)
+    hem = smooth(0.045, 0.02, np.minimum(np.minimum(U, 1 - U), np.minimum(V, 1 - V)))
+    col = col * (1 - 0.28 * hem[..., None])
+    return np.clip(col * weave / 0.9, 0, 1)
+
+
+def classic_unit(k, M, ux):
+    """One classic table centred at x = ux: top, four legs, the corner-on cloth."""
+    hx, hz = CLASSIC_HALF
+    k.rbox((ux, TOP - 0.04, 0), (2 * hx, 0.08, 2 * hz), 0.03, M["wood"], HONEY, uv_len=1.2, uv_off=(0.11 * ux, 0.3))
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            x, z = ux + sx * (hx - 0.1), sz * (hz - 0.1)
+            k.beam((x, TOP - 0.07, z), (x, 0.0, z), 0.1, 0.1, 0.022, M["wood"], HONEY_LEG, up=(1, 0, 0))
+    # The apron under the top, all round between the legs.
+    for sz in (-1, 1):
+        k.rbox((ux, TOP - 0.11, sz * (hz - 0.1)), (2 * hx - 0.26, 0.07, 0.04), 0.012, M["wood"], HONEY_LEG)
+    for sx in (-1, 1):
+        k.rbox((ux + sx * (hx - 0.1), TOP - 0.11, 0), (0.04, 0.07, 2 * hz - 0.26), 0.012, M["wood"], HONEY_LEG)
+    # The cloth: a square laid corner-on, its four points hanging over the middles of the edges.
+    a, b = hx + CLASSIC_DROP, hz + CLASSIC_DROP
+    uv = lambda x, z: ((x / a + z / b + 1) / 2, (x / a - z / b + 1) / 2)
+    y0 = TOP + 0.004
+    zr, xt = b * (1 - hx / a), a * (1 - hz / b)
+    # The part lying on the top: the square clipped by the table's edges (each edge's middle too, where a flap's
+    # middle column starts).
+    flat = [(hx, -zr), (hx, 0), (hx, zr), (xt, hz), (0, hz), (-xt, hz), (-hx, zr), (-hx, 0), (-hx, -zr), (-xt, -hz), (0, -hz), (xt, -hz)]
+    c = k.vert((ux, y0 + 0.002, 0))
+    vs = [k.vert((ux + x, y0, z)) for x, z in flat]
+    for i in range(len(flat)):
+        j = (i + 1) % len(flat)
+        k.face([c, vs[j], vs[i]], [uv(0, 0), uv(*flat[j]), uv(*flat[i])], M["cloth"])
+    # The flaps: over the rounded edge and down to the point. t: how far past the edge along the unfolded cloth.
+    roll = [(0.0, 0.0, 0.0), (0.012, 0.008, -0.006), (0.03, 0.013, -0.022)]
+    for axis in ("x", "z"):
+        for sgn in (-1, 1):
+            half_e, run, other = (hx, a, b) if axis == "x" else (hz, b, a)
+            rows = []
+            for t, dx, dy in roll + [(CLASSIC_DROP * f, 0.013, None) for f in (0.35, 0.7, 1.0)]:
+                wdt = other * (1 - (half_e + t) / run)
+                out_ = half_e + dx
+                y = y0 + dy if dy is not None else y0 - 0.02 - (t - 0.03)
+                cols = [0.0] if wdt < 1e-4 else [-wdt, 0.0, wdt]
+                row = []
+                for c_ in cols:
+                    fx, fz = (sgn * (half_e + t), c_) if axis == "x" else (c_, sgn * (half_e + t))
+                    gx, gz = (sgn * out_, c_) if axis == "x" else (c_, sgn * out_)
+                    row.append((k.vert((ux + gx, y, gz)), uv(fx, fz)))
+                rows.append(row)
+            for r0, r1 in zip(rows[:-1], rows[1:]):
+                if len(r1) == 1:
+                    for i in range(len(r0) - 1):
+                        k.face([r0[i][0], r0[i + 1][0], r1[0][0]], [r0[i][1], r0[i + 1][1], r1[0][1]], M["cloth"])
+                    continue
+                for i in range(len(r0) - 1):
+                    k.face([r0[i][0], r0[i + 1][0], r1[i + 1][0], r1[i][0]], [r0[i][1], r0[i + 1][1], r1[i + 1][1], r1[i][1]], M["cloth"])
+
+
+def classic(name, units):
+    K.reset()
+    M = {
+        "wood": K.Mat("M_ClassicWood", tex=K.image("classic_grain", K.grain(256, 256, 183, "#ffffff", knots=2, contrast=0.14)), rough=0.85),
+        "cloth": K.Mat("M_ClassicCloth", tex=K.image("classic_cloth", classic_cloth_tex()), rough=1.0),
+    }
+    k = K.Kit(name)
+    for ux in units:
+        classic_unit(k, M, ux)
+    k.tint_gradient(0.8, 1.0, 0.0, TOP)
+    ob = k.finish(smooth_deg=50)
+    K.export([ob], f"game/props/{name}.glb")
+    print("CLASSIC", {"name": name, "units": units, "top": TOP})
+    return ob
+
+
 if __name__ == "__main__":
     out = ARGS[ARGS.index("review") + 1] if "review" in ARGS else None
-    for nm, make in (("study-table-long", lambda: table("study-table-long", 2.0, (0.0,))), ("study-table", lambda: table("study-table", 1.0, (0.0,))), ("study-book", book)):
+    builds = [("study-table-long", lambda: table("study-table-long", 2.0, (0.0,))), ("study-table", lambda: table("study-table", 1.0, (0.0,))), ("study-book", book),
+              ("study-table-classic-long", lambda: classic("study-table-classic-long", (-0.49, 0.49))), ("study-table-classic", lambda: classic("study-table-classic", (0.0,)))]
+    if "classic" in ARGS:
+        builds = [b for b in builds if "classic" in b[0]]
+    for nm, make in builds:
         ob = make()
         if out:
             K.review([ob], os.path.join(out, f"{nm}.png"))
