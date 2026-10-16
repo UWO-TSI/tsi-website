@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { BoxGeometry, FrontSide, Frustum, Group, Matrix4, Mesh, MeshBasicMaterial, MeshStandardMaterial, PerspectiveCamera, Texture, Vector3 } from "three";
+import { BoxGeometry, FrontSide, Frustum, Group, Matrix4, Mesh, MeshBasicMaterial, MeshStandardMaterial, PerspectiveCamera, Texture, Vector3, type WebGLProgramParametersWithUniforms, type WebGLRenderer } from "three";
 import { disposeModelMaterials, lightHQWindows, lookClassFor, prepareModel, tagLookClasses } from "./modelMaterials";
 import { bendViewPoint } from "./worldProjection";
 
@@ -129,6 +129,24 @@ it("applies the shadow class: ACNH tree casters cast depth only, leaf cards stop
   const lantern = prepareModel(part("mReBody"), "/assets/acnh/props/stone-lantern.glb", undefined, "none");
   expect(lantern.castShadow).toBe(false);
   for (const m of [bush, flower, lantern]) disposeModelMaterials(m);
+});
+
+it("shades a closed bush's leaf cards by their outward normals on both faces, so no card reads as a dark sliver", () => {
+  const source = new Mesh(new BoxGeometry(), new MeshStandardMaterial({ name: "PltBushAzalea__PltBushAzalea4_mat0" }));
+  const fragment = (url: string) => {
+    const m = prepareModel(source, url) as Mesh<BoxGeometry, MeshStandardMaterial>;
+    const shader = { vertexShader: "#include <begin_vertex>", fragmentShader: "#include <normal_fragment_begin>\n#include <map_fragment>", uniforms: {} } as unknown as WebGLProgramParametersWithUniforms;
+    m.material.onBeforeCompile(shader, {} as WebGLRenderer);
+    const key = m.material.customProgramCacheKey();
+    disposeModelMaterials(m);
+    return { glsl: shader.fragmentShader, key };
+  };
+  const closed = fragment("/assets/game/plants/bush-azalea-spring.glb"), dump = fragment("/assets/acnh/plants/bush-azalea.glb");
+  expect(closed.glsl).toContain("float faceDirection");
+  expect(closed.glsl).not.toContain("normal *= faceDirection");
+  expect(dump.glsl).toContain("#include <normal_fragment_begin>");
+  expect(closed.key).not.toBe(dump.key);
+  source.geometry.dispose(); (source.material as MeshStandardMaterial).dispose();
 });
 
 it("classes outdoor glass and metal for reflections (row 237) and leaves characters, interiors, wood and fabric alone", () => {

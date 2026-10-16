@@ -1,4 +1,4 @@
-import { Color, DoubleSide, FrontSide, Material, Mesh, MeshBasicMaterial, MeshDepthMaterial, MeshStandardMaterial, Object3D, SRGBColorSpace, Texture, TextureLoader, Vector2, type WebGLProgramParametersWithUniforms } from "three";
+import { Color, DoubleSide, FrontSide, Material, Mesh, MeshBasicMaterial, MeshDepthMaterial, MeshStandardMaterial, Object3D, SRGBColorSpace, ShaderChunk, Texture, TextureLoader, Vector2, type WebGLProgramParametersWithUniforms } from "three";
 import { CASTER_MATERIAL, meshShadow, shadowClassFor, type ShadowClass } from "./shadows";
 import { addCutout } from "./occluders";
 import { SHAKE, SHAKE_RADIUS, SHAKE_SLOTS, TREE_SHAKE } from "./treeShake";
@@ -90,6 +90,14 @@ function addTreeSway(shader: WebGLProgramParametersWithUniforms) {
       }
     }`);
 }
+
+/**
+ * The closed bushes (art/nature/close_bushes.py): their normals point out of the bush, and every card is drawn from both
+ * sides. Three lights a card's back face with its normal turned over, so a card seen from behind (at the silhouette, or
+ * through a gap) read as a dark sliver; here both faces keep the bush's outward normal, and it shades as one soft mass.
+ */
+const CLOSED_BUSH = /\/game\/plants\/bush-/;
+const BOTH_FACES_OUT = ShaderChunk.normal_fragment_begin.replace("normal *= faceDirection;", "");
 
 /** The shadow pass of ACNH's swaying canopy caster (mShadowShake): the leaves' own wind, so shadow and canopy move together. */
 const SWAY_DEPTH = new MeshDepthMaterial();
@@ -234,6 +242,14 @@ export function prepareModel(source: Object3D, url: string, emissiveIntensity?: 
           addSnowCap(shader);
         };
         material.customProgramCacheKey = () => "snow-cap-v1";
+      }
+      if (CLOSED_BUSH.test(url)) {
+        const base = material.onBeforeCompile;
+        material.onBeforeCompile = (shader, renderer) => {
+          base.call(material, shader, renderer);
+          shader.fragmentShader = shader.fragmentShader.replace("#include <normal_fragment_begin>", BOTH_FACES_OUT);
+        };
+        material.customProgramCacheKey = () => "closed-bush";
       }
       if (/\/plants\/tree-/.test(url)) {
         const base = material.onBeforeCompile;

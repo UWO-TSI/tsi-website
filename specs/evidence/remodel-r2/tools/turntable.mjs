@@ -83,7 +83,11 @@ async function group(parts) {
       if (!o.isMesh) return;
       const mats = Array.isArray(o.material) ? o.material : [o.material];
       if (mats.some(x => /shadow/i.test(x.name))) { o.visible = false; return; }
-      for (const x of mats) { x.side = THREE.DoubleSide; if (x.emissiveMap) x.emissiveIntensity = 0; }
+      for (const x of mats) {
+        x.side = THREE.DoubleSide; if (x.emissiveMap) x.emissiveIntensity = 0;
+        // The closed bushes shade both faces by their outward normals, as lib/game/modelMaterials.ts draws them.
+        if (p.url.includes("/game/plants/bush-")) x.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace("#include <normal_fragment_begin>", THREE.ShaderChunk.normal_fragment_begin.replace("normal *= faceDirection;", "")); };
+      }
     });
     const holder = new THREE.Group();
     holder.add(m);

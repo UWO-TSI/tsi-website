@@ -68,7 +68,7 @@ CORE_UV = {
     "holly": (0.0, 0.47, 0.48, 1.0),
     "holly-snow": (0.04, 0.2, 0.62, 0.86),
 }
-CORE_SHADE = 0.62       # the inner ball, in shade
+CORE_SHADE = 0.88       # the inner ball, in shade (a gap between cards reads as leaves behind, never a hole)
 LOW_SHADE = 0.8         # the cards at the ground (1.0 at the top)
 
 
@@ -157,8 +157,8 @@ def close(ob, centre, turn_deg, seed):
     half = Matrix.Translation((centre.x, centre.y, 0)) @ Matrix.Rotation(math.pi + math.radians(turn_deg), 4, "Z") @ Matrix.Translation((-centre.x, -centre.y, 0))
     for comp in cards(bm):
         verts, c, n = card_frame(comp)
-        roll = Matrix.Rotation(rng.uniform(-0.45, 0.45), 4, n)
-        m = half @ Matrix.Translation(c) @ roll @ Matrix.Scale(rng.uniform(0.9, 1.1), 4) @ Matrix.Translation(-c)
+        roll = Matrix.Rotation(rng.uniform(-0.3, 0.3), 4, n)
+        m = half @ Matrix.Translation(c) @ roll @ Matrix.Scale(rng.uniform(0.92, 1.06), 4) @ Matrix.Translation(-c)
         for v in verts:
             v.co = m @ v.co
     bm.normal_update()
@@ -295,10 +295,10 @@ def build(name, species, tint_spec, turn):
     lo = Vector((min(v.x for v in vs), min(v.y for v in vs), min(v.z for v in vs)))
     hi = Vector((max(v.x for v in vs), max(v.y for v in vs), max(v.z for v in vs)))
     radii = Vector(((hi.x - lo.x) / 2, (hi.y - lo.y) / 2, (hi.z - lo.z) / 2))
-    # The inner ball: inside the near quarter of the cards' reach, so it never pokes through them.
+    # The inner ball: just inside the nearer cards (their reach's lower third), so a gap shows leaves close behind.
     reach = sorted((v - centre).length for v in vs)
-    k = reach[int(0.2 * (len(reach) - 1))] / max(radii)
-    core = core_ball(Vector((0, 0, max(centre.z, radii.z * 0.8))), Vector((radii.x * k * 0.92, radii.y * k * 0.92, radii.z * k * 0.9)), "Core", CORE_UV[species])
+    k = reach[int(0.3 * (len(reach) - 1))] / max(radii)
+    core = core_ball(Vector((0, 0, max(centre.z, radii.z * 0.8))), Vector((radii.x * k * 0.98, radii.y * k * 0.98, radii.z * k * 0.95)), "Core", CORE_UV[species])
     core.data.materials.append(shell.data.materials[0])
     ncore = len(core.data.polygons)
     bush = join([shell, core], name)
