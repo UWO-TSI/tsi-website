@@ -26,10 +26,10 @@ function bounds(url: string) {
 }
 
 describe("remodelled props (propModels.ts)", () => {
-  const urls = [Props.CAMPFIRE_URL, Props.MAILBOX_URL, Props.STREETLAMP_URL, Props.MUSEUM_DOOR_FENCE_URL, Props.BUOY_URL,
+  const urls = [Props.CAMPFIRE_URL, Props.MAILBOX_URL, Props.STREETLAMP_URL, Props.BUOY_URL,
     Props.STUDY_TABLE_LONG_URL, Props.STUDY_TABLE_URL, Props.STUDY_BOOK_URL];
   it("ships every model it names", () => {
-    expect(urls.length).toBeGreaterThan(7);
+    expect(urls.length).toBeGreaterThan(6);
     for (const url of [...urls, ...Object.values(Props.REMODELLED_PIECES)]) expect(existsSync(fileOf(url)), url).toBe(true);
   });
   it("draws a remodelled interior piece from our model at its dump scale x 10, and leaves the rest to the dump", () => {

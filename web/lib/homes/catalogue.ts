@@ -64,8 +64,7 @@ export const CATALOGUE: readonly CatalogueItem[] = [
   o("campfire", "Campfire", [2, 2]),
   o("beach-parasol", "Parasol", [2, 2]),
   o("beach-bed", "Beach chair", [2, 1]),
-  // Our spring bush (azalea blossoms), art/nature/build_bushes.py (lib/game/natureParts bushUrl("a", "spring")).
-  o("bush-azalea", "Azalea bush", [1, 1], "/assets/game/plants/bush-a-spring.glb"),
+  o("bush-azalea", "Azalea bush", [1, 1], `${PL}bush-azalea.glb`),
   o("flower-tulip", "Tulips", [1, 1], `${PL}flower-tulip.glb`),
   o("flower-rose", "Roses", [1, 1], `${PL}flower-rose.glb`),
   o("tree-hardwood-a", "Tree", [1, 1], `${PL}tree-hardwood-a.glb`),

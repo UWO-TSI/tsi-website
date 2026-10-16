@@ -4,7 +4,6 @@
  * trees (VillageLife) all read these, so they match exactly. ACNH models ship world-scale (2026-07 revamp).
  */
 import { isCedar } from "./defaultIsland";
-import type { Season } from "./season";
 
 export interface NaturePart { url: string; offset: [number, number, number]; yaw: number; scale: number }
 
@@ -14,15 +13,6 @@ export const TREE_MODELS = [
   "/assets/acnh/plants/tree-blossom.glb",
   "/assets/acnh/plants/tree-cedar.glb",
 ];
-/**
- * The island's own bushes (art/nature/build_bushes.py, game/remodel-nature): one closed rounded volume of leaf puffs in
- * two shapes (a: a round dome, b: a low wide mound), dressed for each season on the same silhouette, each with a far
- * model for the distance LOD (lib/game/natureLod.ts). SEASON_BUSHES (seasonalLook.ts) picks the season's pair.
- */
-export const BUSH_SHAPES = ["a", "b"] as const;
-export type BushShape = (typeof BUSH_SHAPES)[number];
-export const bushUrl = (shape: BushShape, season: Season, lod: 0 | 1 = 0) => `/assets/game/plants/bush-${shape}-${season}${lod ? ".lod1" : ""}.glb`;
-/** The dump's bushes: the default for callers that pass no season (the applicant island keeps them). */
 export const BUSH_MODELS = [
   "/assets/acnh/plants/bush-azalea.glb",
   "/assets/acnh/plants/bush-hydrangea.glb",

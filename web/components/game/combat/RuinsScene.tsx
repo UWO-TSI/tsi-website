@@ -19,7 +19,6 @@ import PlayerAvatar from "../PlayerAvatar";
 import Character, { type CharacterMotion } from "../character/Character";
 import { hashSeed, randomLook, seeded } from "@/lib/game/character/look";
 import { GLBProp } from "../NatureModels";
-import { propUrl } from "@/lib/game/rocks";
 import { IslandAtmosphere, useFollowCamera } from "../IslandAtmosphere";
 import MobFx from "./MobFx";
 import CombatFx from "./CombatFx";
@@ -466,7 +465,7 @@ export default function RuinsScene({ level, phase, light, look, weather, liteMod
       <GLBProp url={`${F}ruins-arch.glb`} position={[0, ruins.ground(0, 1.2), 1.2]} scale={0.1} />
       {RUINS_BROKEN_ARCHES.map((a, i) => <GLBProp key={i} url={`${F}ruins-arch-broken.glb`} position={[a.x, ruins.ground(a.x, a.z), a.z]} rotation={[0, a.yaw, 0]} scale={0.1} />)}
       {RUINS_PILLARS.map((p, i) => <GLBProp key={i} url={`${F}ruins-pillar.glb`} position={[p.x, ruins.ground(p.x, p.z), p.z]} rotation={[0, i * 1.3, 0]} scale={0.09} />)}
-      {RUINS_ROCKS.map((r, i) => <GLBProp key={i} url={propUrl(r.model)} position={[r.x, ruins.ground(r.x, r.z), r.z]} rotation={[0, r.yaw, 0]} />)}
+      {RUINS_ROCKS.map((r, i) => <GLBProp key={i} url={`/assets/acnh/props/${r.model}.glb`} position={[r.x, ruins.ground(r.x, r.z), r.z]} rotation={[0, r.yaw, 0]} />)}
       {RUINS_MOAI.map((m, i) => <GLBProp key={i} url={`${F}ruins-moai.glb`} position={[m.x, ruins.ground(m.x, m.z), m.z]} rotation={[0, Math.PI, 0]} scale={0.07} />)}
       {RUINS_TORCHES.map((t, i) => <GLBProp key={i} url={`${F}ruins-torch.glb`} position={[t.x, ruins.ground(t.x, t.z), t.z]} scale={0.1} />)}
       <pointLight position={[BOSS_CENTER.x, 3, BOSS_CENTER.z]} color="#ffb366" intensity={light.lampsOn ? 18 : 6} distance={12} />

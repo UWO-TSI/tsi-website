@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { bushParts, flowerParts, mushroomUrl } from "./natureParts";
-import { SEASON_BUSHES } from "./seasonalLook";
+import { flowerParts, mushroomUrl } from "./natureParts";
 import { LAUNCH_ROSTER } from "@/lib/collections/roster";
 
 /** The widest ACNH flower (the pansy) is 1.08 across at scale 1 (measured from the GLBs). */
@@ -19,12 +18,6 @@ describe("nature parts", () => {
       }
       // Three different blooms, side by side, not stacked.
       expect(new Set(parts.map(p => p.offset[0])).size).toBe(3);
-    }
-  });
-  it("keeps a bush's shape all year: its seed picks the same shape in every season", () => {
-    for (let seed = 0; seed < 16; seed++) {
-      const shapes = Object.values(SEASON_BUSHES).map(models => bushParts(seed, models)[0].url.match(/bush-([ab])-/)?.[1]);
-      expect(new Set(shapes).size, `seed ${seed}`).toBe(1);
     }
   });
   it("gives every woods mushroom species its own forage model", () => {

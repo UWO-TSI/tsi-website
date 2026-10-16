@@ -2,7 +2,6 @@ import { Color } from "three";
 import type { PaletteColors, SeasonalPalette } from "@/lib/content/types";
 import type { Season, SeasonBlend } from "./season";
 import { SEASONS } from "./season";
-import { BUSH_SHAPES, bushUrl } from "./natureParts";
 
 /**
  * Seasonal dressing for the member island (decisions 99, 161, 176): tints are
@@ -35,12 +34,14 @@ export const SEASON_TREES: Record<Season, readonly string[]> = {
   autumn: [`${P}tree-hardwood-a.glb`, `${P}tree-hardwood-b.glb`, `${P}tree-hardwood-b.glb`, `${P}tree-cedar.glb`],
   winter: [`${P}tree-hardwood-snow.glb`, `${P}tree-hardwood-snow.glb`, `${P}tree-hardwood-snow.glb`, `${P}tree-cedar-snow.glb`],
 };
-/**
- * Our bushes dress for the season on the same two silhouettes (art/nature/build_bushes.py): azalea blossoms in spring,
- * hydrangea heads in summer, the autumn palette's orange and rust, a holly under snow with red berries in winter. A
- * bush's seed picks its shape (natureParts.bushParts), so it keeps its shape all year.
- */
-export const SEASON_BUSHES: Record<Season, string[]> = Object.fromEntries(SEASONS.map(season => [season, BUSH_SHAPES.map(shape => bushUrl(shape, season))])) as Record<Season, string[]>;
+/** ACNH bushes flower by season: azalea spring, hydrangea/hibiscus summer, holly winter. */
+export const SEASON_BUSHES: Record<Season, string[]> = {
+  spring: [`${P}bush-azalea.glb`],
+  summer: [`${P}bush-hydrangea.glb`, `${P}bush-hibiscus.glb`],
+  autumn: [`${P}bush-holly.glb`, `${P}bush-hydrangea.glb`],
+  // The dump's own snow-covered holly (PltBushHolly4Snow), ACNH's winter bush.
+  winter: [`${P}bush-holly-snow.glb`],
+};
 /** Seasonal flower sets. Winter is empty: no blooms standing in the snow. */
 export const SEASON_FLOWERS: Record<Season, string[]> = {
   spring: ["tulip", "pansy", "hyacinth", "windflower"].map(f => `${P}flower-${f}.glb`),

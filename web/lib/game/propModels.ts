@@ -10,8 +10,6 @@ export const CAMPFIRE_URL = `${P}campfire.glb`;
 export const MAILBOX_URL = `${P}mailbox.glb`;
 /** The street lamp (AmbientProps Lanterns, instanced): 2.67 to its finial, the lantern's glass round the light at 2.4. */
 export const STREETLAMP_URL = `${P}streetlamp.glb`;
-/** The log rail boarding the museum's door until its goal opens it (DefaultIslandWorld), 2.3 across, facing -z. */
-export const MUSEUM_DOOR_FENCE_URL = `${P}museum-door-fence.glb`;
 /** The wharf's channel buoys (wharf/Wharf.tsx): the float meets the water BUOY_WATERLINE up its model. */
 export const BUOY_URL = `${P}buoy.glb`;
 export const BUOY_WATERLINE = 0.66;

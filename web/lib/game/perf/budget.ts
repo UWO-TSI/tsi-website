@@ -170,10 +170,8 @@ export const ASSET_CATEGORIES: readonly AssetCategory[] = [
   // v1 water (2026-10-13): the seabed's kinds and the decorative fish, each node drawn instanced (one draw per kind
   // however many lie in reach), so primitives are the scene's draws for the whole seabed.
   { name: "seabed and water life", prefixes: ["game/water/"], triangles: 1200, primitives: 10, materials: 6, texture: 256, bones: 0 },
-  // game/remodel-nature (art/nature, art/rocks): our bushes (a near and a far model each), boulders and stones, drawn
-  // instanced, and the beach and woods pickups and crabs: each one closed smooth mesh, one vertex-coloured material.
-  { name: "nature", prefixes: ["game/plants/", "game/rocks/"], triangles: 2000, primitives: 1, materials: 1, texture: 0, bones: 0 },
-  { name: "shore and forage", prefixes: ["game/shore/", "game/forage/mushroom-", "game/forage/shell-"], triangles: 2000, primitives: 1, materials: 1, texture: 0, bones: 0 },
+  // game/remodel-nature (art/nature): the beach and woods pickups, each one closed smooth mesh, one vertex-coloured material.
+  { name: "shore and forage", prefixes: ["game/forage/mushroom-", "game/forage/shell-"], triangles: 2000, primitives: 1, materials: 1, texture: 0, bones: 0 },
 ];
 /** Shipped before the budget, over their category: each capped where it is today. Shrink, never raise. */
 export const ASSET_EXCEPTIONS: Record<string, Partial<AssetBudget> & { why: string }> = {

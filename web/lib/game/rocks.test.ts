@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createMap, setCell, Surface, heightField, isGroundAtWorld, cellToWorldX, cellToWorldZ, levelAt, worldToCellX, worldToCellZ, WATER_DROP } from "./grid";
-import { ROCK_MODELS, ROCK_SIZE, STONE_OF, cliffBoulders, propUrl, rockProposal } from "./rocks";
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { ROCK_MODELS, ROCK_SIZE, cliffBoulders, rockProposal } from "./rocks";
 import { PROP_FOOTPRINT, PROP_TOP } from "./defaultIsland";
 import { village, villageSpawnPoint } from "./villageMap";
 import { campfireSite } from "./campfireSite";
@@ -111,37 +109,5 @@ describe("the rock models", () => {
     const map = plateau();
     expect(cellToWorldX(map, 14)).toBe(-6);
     expect(cellToWorldZ(map, 25)).toBe(5);
-  });
-});
-
-describe("the village's accent stones (game/remodel-nature: our worn stones in place of the dump's rock-a..e)", () => {
-  const pub = join(__dirname, "../../public");
-  /** POSITION accessors' bounds over every primitive (glTF y up). */
-  function bounds(url: string) {
-    const buf = readFileSync(join(pub, url));
-    const gltf = JSON.parse(buf.subarray(20, 20 + buf.readUInt32LE(12)).toString("utf8")) as { meshes: { primitives: { attributes: { POSITION: number } }[] }[]; accessors: { min: number[]; max: number[] }[] };
-    const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
-    for (const m of gltf.meshes) for (const p of m.primitives) {
-      const a = gltf.accessors[p.attributes.POSITION];
-      for (let i = 0; i < 3; i++) { lo[i] = Math.min(lo[i], a.min[i]); hi[i] = Math.max(hi[i], a.max[i]); }
-    }
-    return { lo, hi };
-  }
-  it("draws every legacy rock id as our stone, and the boulders and other props as before", () => {
-    for (const [rock, stone] of Object.entries(STONE_OF)) {
-      expect(propUrl(rock)).toBe(`/assets/game/rocks/${stone}.glb`);
-      expect(existsSync(join(pub, propUrl(rock))), stone).toBe(true);
-    }
-    expect(propUrl("boulder-round")).toBe("/assets/game/rocks/boulder-round.glb");
-    expect(propUrl("bench-wood")).toBe("/assets/acnh/props/bench-wood.glb");
-  });
-  it("keeps the footprint and top the map's walking uses for the rocks it replaces", () => {
-    for (const rock of ["rock-a", "rock-b", "rock-c"]) {
-      const { lo, hi } = bounds(propUrl(rock));
-      const [hx, hz] = PROP_FOOTPRINT[rock];
-      expect(Math.max(-lo[0], hi[0]), `${rock} half x`).toBeCloseTo(hx, 1);
-      expect(Math.max(-lo[2], hi[2]), `${rock} half z`).toBeCloseTo(hz, 1);
-      expect(hi[1], `${rock} top`).toBeCloseTo(PROP_TOP[rock], 1);
-    }
   });
 });

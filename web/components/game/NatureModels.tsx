@@ -1,6 +1,6 @@
 "use client";
 
-import { propUrl } from "@/lib/game/rocks";
+import { isRockModel, rockUrl } from "@/lib/game/rocks";
 import { Suspense, useEffect, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import { prepareModel, disposeModelMaterials, applyModelTextures } from "@/lib/game/modelMaterials";
@@ -9,7 +9,6 @@ import { modelContact, useContactShadow } from "./ContactShadows";
 import { propsOf } from "@/lib/game/defaultIsland";
 import { BARRIERS, barrierPlacements } from "@/lib/game/barriers";
 import { BUSH_MODELS, FLOWER_MODELS, TREE_MODELS, bushParts, flowerParts, mushroomUrl, treeParts, type NaturePart } from "@/lib/game/natureParts";
-import { lodOf } from "@/lib/game/natureLod";
 import { SEASON_BUSHES, SEASON_FLOWERS, SEASON_TREES } from "@/lib/game/seasonalLook";
 import type { Season } from "@/lib/game/season";
 import { objectsOf, type Village } from "@/lib/game/villageMap";
@@ -63,7 +62,7 @@ export function sceneryOf(v: Village, ground: (x: number, z: number) => number, 
     ...at("tree", seed => treeParts(seed, SEASON_TREES[season])),
     ...at("bush", seed => bushParts(seed, SEASON_BUSHES[season])),
     ...(SEASON_FLOWERS[season].length ? at("flower", seed => flowerParts(seed, SEASON_FLOWERS[season])) : []),
-    ...propsOf(v).filter(o => o.model).map((p): ModelPlacement => ({ url: propUrl(p.model!), position: [p.x, ground(p.x, p.z), p.z], rotation: p.yaw ?? 0, scale: p.scale ?? 1 })),
+    ...propsOf(v).filter(o => o.model).map((p): ModelPlacement => ({ url: isRockModel(p.model) ? rockUrl(p.model) : `/assets/acnh/props/${p.model}.glb`, position: [p.x, ground(p.x, p.z), p.z], rotation: p.yaw ?? 0, scale: p.scale ?? 1 })),
     // The natural barriers standing at this drop (lib/game/barriers.ts), where the walker blocks them.
     ...barrierPlacements(v).map((b): ModelPlacement => ({ url: BARRIERS[b.model].url, position: [b.x, ground(b.x, b.z), b.z], rotation: b.yaw, scale: b.scale })),
   ];
@@ -121,8 +120,6 @@ export function NatureMushroom({ position, species, seed }: { position: [number,
 const PRELOAD = [
   ...TREE_MODELS,
   ...BUSH_MODELS,
-  // Our bushes, every season with its far model (about 270 KB in all), so a season change doesn't pop them in.
-  ...Object.values(SEASON_BUSHES).flat().flatMap(url => [url, lodOf(url)!]),
   ...FLOWER_MODELS,
   "/assets/acnh/plants/stump.glb",
   STREETLAMP_URL,

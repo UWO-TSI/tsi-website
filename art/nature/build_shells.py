@@ -7,7 +7,7 @@
 
 The clams are one closed lens (a top and a bottom surface over the same outline). The spirals are a tube swept up a
 logarithmic helix, its whorls fused into one closed skin (a voxel remesh, softened, decimated). Smooth normals, one
-matte vertex-coloured material: one primitive each. `spiral()` also gives the hermit crab its shell (build_crabs.py).
+matte vertex-coloured material: one primitive each.
 
   /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/nature/build_shells.py [-- preview <png>]
 
