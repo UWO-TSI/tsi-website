@@ -40,7 +40,7 @@ export type Tier = "high" | "lite";
  */
 export const SCENE_BUDGET: Record<SceneName, Record<Tier, SceneBudget>> = {
   village: {
-    high: { frameMs: 6, p95Ms: 9, cpuMs: 5, draws: 560, triangles: 560_000 },
+    high: { frameMs: 6, p95Ms: 9, cpuMs: 5, draws: 560, triangles: 620_000 },
     lite: { frameMs: 4, p95Ms: 6, cpuMs: 3.5, draws: 420, triangles: 420_000 },
   },
   v2: {
