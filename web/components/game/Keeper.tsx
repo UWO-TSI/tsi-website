@@ -71,7 +71,8 @@ function step(r: Runtime, room: KeeperRoom, m: CharacterMotion, g: THREE.Group |
   const at = ownerAt(now - r.lag, KEEPER_POSTS[room].stations, r.at);
   if (!r.ready || !busy) { r.x = at.x; r.z = at.z; }
   if (!r.ready) { r.ready = true; m.yaw = at.yaw; }
-  const near = Math.hypot(p.x - r.x, p.z - r.z) < KEEPER_NOTICE;
+  // Keepers stand on the ground floor: someone on the floor above (the shop's merch floor) isn't near them.
+  const near = Math.hypot(p.x - r.x, p.z - r.z) < KEEPER_NOTICE && p.y < 1.5;
   const entry = !r.entered && r.entryAt !== null && now >= r.entryAt && now >= (quietBySlug.get(r.slug) ?? 0);
   if (r.pending === null && keeperGreets(entry, near, r.near, now, r.quietUntil, busy)) {
     r.pending = r.lines[r.next++ % r.lines.length]; r.wave = true;

@@ -20,33 +20,79 @@ Interiors are reworked one room at a time, from David's references. The shop is 
 - **Real merch models:** placeholders until David supplies merch photos or models.
 
 ## Phase 1: the layout (greybox, 2026-10-17, for David's approval)
-Every number is in `web/lib/game/shopLayout.ts`; the room draws it as matte blocks (`ShopGreybox`), with walking, the counter station and the shopkeeper's post on the same numbers. Shots: `specs/evidence/shop-interior/phase1/`.
+Every number is in `web/lib/game/shopLayout.ts`, and the room draws it as matte blocks (`ShopGreybox`). The walking, the stair, the counter station and the shopkeeper's post use the same numbers. Shots are in `specs/evidence/shop-interior/phase1/`.
 
-- **Room:** 12 x 10, up from the old 10 x 10. Two separate sections with an aisle between, and walking room round every table, didn't fit at 10 wide without packing the floor, which fights "minimal". The door stays centred in the cut-away near wall, and the whole room is in view from the door.
-- **Aisle:** 2.4+ wide, straight from the door to the cashier counter. The counter closes it at the back: glazed tile with a timber top, the till on it, the shopkeeper behind it, the linear pendant over it, and a glazed tile wall behind. The counter is hip-high (0.74), as in ref 2, so the shopkeeper shows from the chest up; at 0.88 only their head showed. Crates and a potted plant close its ends, as in ref 2, so nobody walks round behind it.
-- **In-game items (left, +x, on herringbone oak):**
-  - seasonal: three stepped concrete plinths by the curtained window, the first thing on the left as you come in;
-  - clothes: a metal rail, face-out;
-  - tools: a concrete table;
-  - dyes and accessories: metal shelving on the wall;
-  - furniture: a low concrete showroom dais against the back wall, laid out as a little room.
-- **Club merch (right, −x, on polished concrete; ref 1):**
-  - the pegboard wall wraps the right wall and the back corner, over a long metal counter with drawers;
-  - tees and hoodies hang at the front, totes at the back;
-  - stickers, pins and caps sit in crates on the counter;
-  - posters and a "club merch" sign go on the back corner's pegboard, face-on from the door;
-  - the newest drop sits on two concrete plinths in the middle of the section.
-- **Lights:** edge strips under the merch counter's lip and the pegboard shelves, along every shelving lip, round the tools table's top, and as a floor glow along the dais and the plinths. The linear pendant hangs over the counter. In phase 2, recessed downlights give the even fill.
-- **Walking path:** the aisle, a loop through each section, and a cut between the clothes rail and the tools table. Tests walk every leg of it and check that every displayed item has a spot within the tag range (1.6) where you can stand.
-- **Shots** (`specs/evidence/shop-interior/phase1/`, made by `shots.mjs` there, headless):
-  - `01-plan-top-down`: the plan, with a numbered key and a colour legend;
-  - `02-door-view`: the walking camera from the door;
-  - `03-items-walk` and `04-items-across`: the in-game items section;
-  - `05-merch-walk` and `06-merch-across`: the merch section;
-  - `07-counter-walk` and `08-counter-low`: the counter.
+**Round 2, two floors (David, 2026-10-17):** "real merch is upstairs and in game merch is down stairs". The size can be 12 x 10 or larger. Kept from round 1, as David approved: oak downstairs and concrete upstairs, accessories sharing the dyes' shelving, and seasonal items first, by the front window.
+
+- **Room:** 12 x 10 on both floors, floor to floor 3.2 (a 0.2 slab). Each floor's walls are 3.2 high. The door stays centred in the cut-away near wall.
+- **Seeing two floors:**
+  - while you're downstairs, the upper floor is cut away, so the camera sees the floor you're on;
+  - the camera rises with you up the stair;
+  - past 60% of the climb the upper floor shows, and it hides again below 40% on the way down, so it never flickers;
+  - upstairs, the stairwell looks down onto the ground floor.
+- **Stair:** a straight concrete flight up the right wall (−x), from beside the door toward the back:
+  - 16 steps, 1.8 wide, with a handrail on its open side;
+  - it's the first thing on the right from the door;
+  - a "Club merch upstairs" sign stands at its foot;
+  - upstairs, a glass railing runs round the stairwell, and you arrive at the back right, facing the merch wall.
+- **Ground floor (herringbone oak): in-game items and the counter.**
+  - The aisle (2.4+ wide) runs straight from the door to the cashier counter. The counter is hip-high glazed tile with a timber top and the till; the shopkeeper stands behind it, the linear pendant hangs over it, and a tile wall is behind. Crates and a plant close its ends.
+  - Left side:
+    - seasonal: stepped concrete plinths by the curtained window;
+    - tools: a concrete table;
+    - dyes and accessories: metal shelving on the wall;
+    - furniture: a concrete showroom dais against the back wall.
+  - Right side, beside the stair:
+    - clothes: a face-out metal rail;
+    - wallpaper and flooring: sample panels on the back wall with tiles on a low plinth. These are in the shop's catalogue but had no place before.
+- **Upper floor (polished concrete): club merch (ref 1).**
+  - The pegboard wall runs across the back, face-on as you arrive, and round the left corner, over a long metal counter with drawers.
+  - On the back wall: tees and hoodies hung, totes, posters over a metal shelf, the "club merch" sign, and stickers, pins and caps in crates on the counter.
+  - Down the left side: more garments hung, and folded stacks.
+  - The featured drop sits on two concrete plinths in the middle. A window is at the front left.
+  - The front of the upper floor is open floor for now, room for the range to grow.
+- **Lights:**
+  - ground floor: edge strips along the shelving lips, round the tools table, and as floor glow on the dais, plinths and samples; the linear pendant hangs over the counter;
+  - upper floor: strips under the merch counter's lip and the pegboard shelf, and floor glow at the plinths.
+- **Walking path:**
+  - the aisle;
+  - the way to the stair and up it;
+  - the items loop and a cut past the tools table;
+  - a loop round the clothes rail, with a spur to the samples;
+  - upstairs, the merch loop.
+- **Tests:** `shopLayout.test.ts` checks that:
+  - every leg of the path can be walked;
+  - every item has a spot within the tag range (1.6) on its own floor;
+  - the walker climbs from the door to the merch wall and back, and the upper floor shows and hides without flickering;
+  - you can't walk under or beside the flight, or into the stairwell;
+  - nobody can get behind the counter;
+  - the shopkeeper can be seen over the counter.
+- **Shopkeeper's dialogue (proposal for phase 2):** "Club merch" opens the shop UI straight on the merch category, with a line pointing upstairs: "It's all upstairs if you want to see it in person." Buying never needs the trip upstairs; the upper floor is there to look round. Keepers now ignore anyone on the floor above, so the shopkeeper doesn't greet you through the ceiling.
+- **The exterior can't hold two floors as it is.** It's the ACNH market, `shop-market.glb`, a single storey. In world units:
+  - walls 3.35 high;
+  - roof 3.54 high;
+  - sign top 3.93;
+  - a 1.88 door, against a 1.36 character.
+
+  To read as two floors it needs, roughly:
+  - a second storey of facade, walls to about 6;
+  - a row of upper windows on the front, which could show the merch inside;
+  - the roof raised to sit on top;
+  - the sign moved between the floors or onto the upper facade.
+
+  The footprint can stay. This belongs with the separate exterior remodel.
+- **Shots** (`specs/evidence/shop-interior/phase1/`, made headless by `shots.mjs` there):
+  - `01-plan-ground` and `02-plan-upstairs`: the plans, each with a numbered key;
+  - `03-door-view`;
+  - `04-items-walk` and `05-items-across`;
+  - `06-counter-walk` and `07-counter-low`;
+  - `08-stair-view`;
+  - `09-on-the-stair`: the climb, as the upper floor appears;
+  - `10-top-of-stairs`;
+  - `11-merch-walk` and `12-merch-across`.
 - **Open for David:**
-  - the 12 x 10 size;
-  - the merch on the right and the items on the left;
-  - the two floors;
-  - accessories sharing the dyes' shelving;
-  - a seasonal display at the front by the window.
+  - the stair's side and direction: the right wall, rising away from the door;
+  - the clothes rail moving to the right, beside the stair;
+  - the wallpaper and flooring samples corner;
+  - whether the open front of the upper floor should get more merch fixtures, or the upper floor become a 12 x 6 mezzanine at the back overlooking the entrance;
+  - the dialogue proposal above.

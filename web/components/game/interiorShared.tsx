@@ -78,14 +78,15 @@ const focusWeight = (now: number) => {
   const k = Math.min(1, (now - focus.start) / 500, (focus.until - now) / 650);
   return k * k * (3 - 2 * k);
 };
-export function followInteriorCamera(camera: THREE.Camera, px: number, pz: number, delta: number) {
+/** `py`: the height of the floor you're on (a room with an upstairs: the shop), so the camera rises and falls with you. */
+export function followInteriorCamera(camera: THREE.Camera, px: number, pz: number, delta: number, py = 0) {
   // Partway toward what's to be seen, so you stay in the picture.
   const w = focusWeight(performance.now()) * 0.62;
   const tx = px + (focus.x - px) * w, tz = pz + (focus.z - pz) * w;
   camera.position.x = THREE.MathUtils.damp(camera.position.x, tx, 6, delta);
-  camera.position.y = THREE.MathUtils.damp(camera.position.y, 8.4, 6, delta);
+  camera.position.y = THREE.MathUtils.damp(camera.position.y, py + 8.4, 6, delta);
   camera.position.z = THREE.MathUtils.damp(camera.position.z, tz - 7.2, 6, delta);
-  camera.lookAt(tx, 0.7, tz + 1.2);
+  camera.lookAt(tx, py + 0.7, tz + 1.2);
 }
 
 /**
@@ -98,12 +99,15 @@ export function InteriorPlayer({
   playerPosRef,
   onMove,
   constrainMove,
+  heightAt,
 }: {
   frozen: boolean;
   bounds: RoomBounds;
   playerPosRef: React.MutableRefObject<THREE.Vector3>;
   onMove: (x: number, z: number) => void;
   constrainMove?: (x: number, z: number, nx: number, nz: number) => [number, number];
+  /** The height of your feet now, read after each step (a room with a stair: its walker's); level floor when absent. */
+  heightAt?: () => number;
 }) {
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: 0, lift: 0, pose: null, play: null });
   useLocalAvatarTap(motion);
@@ -202,14 +206,15 @@ export function InteriorPlayer({
       const nz = THREE.MathUtils.clamp(p.z + vz * PLAYER_SPEED * delta, -bounds.halfD + WALK_MARGIN, bounds.halfD - WALK_MARGIN);
       if (constrainMove) { const c = constrainMove(p.x, p.z, nx, nz); p.x = c[0]; p.z = c[1]; } else { p.x = nx; p.z = nz; }
       onMove(p.x, p.z);
-      playerPosRef.current.set(p.x, 0, p.z);
+      playerPosRef.current.set(p.x, heightAt?.() ?? 0, p.z);
     }
 
-    if (groupRef.current) groupRef.current.position.set(p.x, 0, p.z);
+    const y = heightAt?.() ?? 0;
+    if (groupRef.current) groupRef.current.position.set(p.x, y, p.z);
     motion.current.lift = 0;
     motion.current.speed = delta > 0 ? Math.hypot(p.x - previousX, p.z - previousZ) / delta : 0;
     if (moving) motion.current.yaw = easeFacing(motion.current.yaw, Math.atan2(vx, vz), 10, delta);
-    followInteriorCamera(camera, p.x, p.z, delta);
+    followInteriorCamera(camera, p.x, p.z, delta, y);
   });
 
   return (

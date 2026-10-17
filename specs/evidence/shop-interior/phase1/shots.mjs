@@ -1,11 +1,13 @@
-// Shop interior, phase 1 evidence (specs/interiors/shop.md): the greybox layout in the game's own frame, headless and
+// Shop interior, phase 1 evidence (specs/interiors/shop.md): the two-floor greybox in the game's own frame, headless and
 // muted, against a dev server with the Supabase env blanked. Run from web/:
 //   PORT=3189 node ../specs/evidence/shop-interior/phase1/shots.mjs <out-dir> [name,name,...]
 // (PNGs; the committed shots are those converted with `cwebp -q 88`.)
-// Shots: a top-down plan with labels and a legend, the view from the door (the walking camera), each section and the
-// counter (the walking camera with you standing there, and a lower look across it). Labels are projected from the
-// layout module the room draws from (lib/game/shopLayout.ts, exposed in dev as window.__shopLayout). The main pass is
-// handed a camera through three's devtools hook (the asset audit's technique), so no game code changes for the shots.
+// Shots: a top-down plan of each floor with a numbered key and a legend, the view from the door (the walking camera),
+// the in-game items, the counter, the stair, climbing it, the top of the stairs and the merch floor. The player walks
+// there with the room's own click-to-walk event (up the stair by its walker). Labels are projected from the layout
+// module the room draws from (lib/game/shopLayout.ts, exposed in dev as window.__shopLayout), bent like the curved
+// world; the plans load with ?aerial=1 (no bend). The main pass is handed a camera through three's devtools hook (the
+// asset audit's technique), so no game code changes for the shots.
 import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -140,118 +142,121 @@ async function load(aerial) {
 await load(false);
 const L = await page.evaluate(() => {
   const s = window.__shopLayout;
-  return { fixtures: s.SHOP_FIXTURES, slots: s.SHOP_SLOTS, kinds: s.ITEM_KINDS, pendant: s.SHOP_PENDANT, spot: s.SHOP_COUNTER_SPOT, spawn: s.SHOP_SPAWN };
+  return { fixtures: s.SHOP_FIXTURES, slots: s.SHOP_SLOTS, kinds: s.ITEM_KINDS, pendant: s.SHOP_PENDANT, spot: s.SHOP_COUNTER_SPOT, spawn: s.SHOP_SPAWN,
+    F: s.SHOP_FLOOR_HEIGHT, stair: s.SHOP_STAIR, lane: s.STAIR_LANE };
 });
+const F = L.F, LANE = (L.lane[0] + L.lane[1]) / 2, HEAD = [LANE, L.stair.z1 + 0.6];
+/** Routes: from the counter or the door to the stair's foot by the aisle, then up it; off it at the landing. */
+const TO_FOOT = [[0, -2.0], [LANE, -3.6]], UP = [...TO_FOOT, HEAD];
 
-// ── Labels from the layout ──
+// ── Labels from the layout (world points; upstairs is F higher) ──
 const top = f => {
   const xs = f.blocks.flatMap(b => [b.at[0] - b.size[0] / 2, b.at[0] + b.size[0] / 2]), zs = f.blocks.flatMap(b => [b.at[2] - b.size[2] / 2, b.at[2] + b.size[2] / 2]);
-  return [(Math.min(...xs) + Math.max(...xs)) / 2, Math.max(...f.blocks.map(b => b.at[1] + b.size[1])), (Math.min(...zs) + Math.max(...zs)) / 2];
+  return [(Math.min(...xs) + Math.max(...xs)) / 2, f.level * F + Math.max(...f.blocks.map(b => b.at[1] + b.size[1])), (Math.min(...zs) + Math.max(...zs)) / 2];
 };
-/** Where a fixture's label sits when its box centre is the wrong spot (an L, a wall). */
-const ANCHOR = { pegboard: [-5.7, 2.9, -3.4], "merch-counter": [-5.5, 0.85, -2.0], "merch-shelf": [-5.7, 1.6, 1.0], "tile-wall": [1.2, 3.0, 4.9], curtains: [5.9, 2.9, -2.9], shelving: [5.6, 2.2, 0.2] };
-const fixtureLabels = (ids, opts = {}) => L.fixtures.filter(f => !ids || ids.includes(f.id)).map(f => ({ text: f.label, at: ANCHOR[f.id] ?? top(f), ...(opts[f.id] ?? {}) }));
+/** Where a fixture's label sits when its box centre is the wrong spot (an L, a wall, the flight). */
+const ANCHOR = { pegboard: [5.97, F + 2.8, -0.6], "merch-counter": [5.66, F + 0.85, -0.3], "stairwell-rail": [-4.18, F + 1.0, -1.5], "tile-wall": [1.2, 2.9, 4.9],
+  curtains: [5.9, 2.8, -2.9], shelving: [5.6, 2.2, 0.2], stair: [-5.1, 2.0, -0.4], finishes: [-4.1, 0.1, 4.0] };
+const fixtureLabels = (ids, opts = {}) => L.fixtures.filter(f => ids.includes(f.id)).map(f => ({ text: f.label, at: ANCHOR[f.id] ?? top(f), ...(opts[f.id] ?? {}) }));
 const kindAt = kind => {
   const ss = L.slots.filter(s => s.kind === kind), n = ss.length;
-  return [ss.reduce((a, s) => a + s.at[0], 0) / n, Math.max(...ss.map(s => s.at[1] + s.size[1])), ss.reduce((a, s) => a + s.at[2], 0) / n];
+  return [ss.reduce((a, s) => a + s.at[0], 0) / n, ss[0].level * F + Math.max(...ss.map(s => s.at[1] + s.size[1])), ss.reduce((a, s) => a + s.at[2], 0) / n];
 };
 const kindLabels = (kinds, opts = {}) => kinds.map(k => ({ text: L.kinds[k].label, at: kindAt(k), ...(opts[k] ?? {}) }));
-const KIND_TONE = { seasonal: "#e2873a", clothes: "#2fa39e", accessories: "#86cfc8", tools: "#68a85a", dyes: "#d3639a", furniture: "#c99a4c", merch: "#2f55d4" };
+const KIND_TONE = { seasonal: "#e2873a", clothes: "#2fa39e", accessories: "#86cfc8", tools: "#68a85a", dyes: "#d3639a", furniture: "#c99a4c", finishes: "#9b7fd0", merch: "#2f55d4" };
 const LEGEND = [
-  { head: "In-game items" },
-  ...["seasonal", "clothes", "accessories", "tools", "dyes", "furniture"].map(k => ({ text: L.kinds[k].label, colour: KIND_TONE[k] })),
-  { head: "Club merch" },
+  { head: "In-game items (ground floor)" },
+  ...["seasonal", "clothes", "accessories", "tools", "dyes", "furniture", "finishes"].map(k => ({ text: L.kinds[k].label, colour: KIND_TONE[k] })),
+  { head: "Club merch (upper floor)" },
   { text: "Every merch item", colour: KIND_TONE.merch },
   { head: "Fixtures" },
-  { text: "Concrete", colour: "#b9b5ae" }, { text: "Metal", colour: "#8e959c" }, { text: "Pegboard", colour: "#c8cacb" },
-  { text: "Glazed tile", colour: "#9dbcae" }, { text: "Timber top", colour: "#b38a5d" },
+  { text: "Concrete", colour: "#b9b5ae" }, { text: "Metal", colour: "#8e959c" }, { text: "Pegboard", colour: "#bcc0c3" },
+  { text: "Glazed tile", colour: "#9dbcae" }, { text: "Timber top", colour: "#b38a5d" }, { text: "Glass railing", colour: "#cddfe5" },
   { head: "Floor, light, path" },
-  { text: "Herringbone oak", colour: "#caa67c" }, { text: "Polished concrete", colour: "#a7a6a2" },
+  { text: "Herringbone oak (ground)", colour: "#caa67c" }, { text: "Polished concrete (upper)", colour: "#a7a6a2" },
   { text: "Edge light / pendant", colour: "#fff3d6", thin: true }, { text: "Walking path", colour: "#f2c94c", thin: true },
-];
-const SECTIONS = [
-  { text: "IN-GAME ITEMS", at: [3.6, 0, -4.55], style: "section" },
-  { text: "CLUB MERCH", at: [-3.6, 0, -4.55], style: "section" },
 ];
 const pendantLabel = { text: "Linear pendant", at: [L.pendant.x1, L.pendant.y, L.pendant.z] };
 const keeperLabel = { text: "Shopkeeper", at: [0.1, 1.45, 4.25] };
+const stairLabel = { text: "Stair up to the club merch", at: [-5.1, 2.0, -0.4] };
 
-/** The plan's numbered key: number, what, and where its badge sits. */
-const PLAN_KEY = [
-  [1, "Counter: glazed tile, timber top", [0.9, 0.9, 3.0]],
-  [2, "Glazed tile wall", [-1.0, 3.5, 4.96]],
+/** The plans' numbered keys: number, what, and where its badge sits. */
+const KEY_GROUND = [
+  [1, "Counter: glazed tile, timber top", [0.9, 0.8, 3.0]],
+  [2, "Glazed tile wall", [-1.0, 3.0, 4.96]],
   [3, "Crates (close the counter's end)", [2.05, 1.05, 3.9]],
   [4, "Plant (closes the other end)", [-2.05, 1.35, 3.9]],
   [5, "Shopkeeper, behind the counter", [0.75, 1.4, 4.4]],
-  [6, "Linear pendant", [-1.3, 2.7, 3.3]],
-  [7, "Pegboard wall, round the corner", [-5.97, 3.2, -3.9]],
-  [8, "Metal counter with drawers", [-5.66, 0.85, -3.0]],
-  [9, "Metal shelves on the pegboard", [-5.82, 1.6, 0.6]],
-  [10, "Club merch sign", [-4.05, 3.3, 4.93]],
-  [11, "Featured drop: concrete plinths", [-3.6, 0.75, -0.1]],
-  [12, "Window, sheer curtains", [5.95, 3.1, -2.9]],
-  [13, "Seasonal: stepped plinths", [3.85, 0.8, -3.35]],
-  [14, "Clothes: metal rail, face-out", [3.5, 1.6, -0.9]],
-  [15, "Tools: concrete table", [3.5, 0.72, 1.3]],
-  [16, "Dyes, accessories: shelving", [5.75, 2.4, 1.15]],
-  [17, "Furniture: showroom dais", [3.0, 0.2, 3.6]],
-  [18, "Edge light (e.g. counter lip)", [-5.34, 0.8, 2.0]],
-  [19, "Walking path", [0, 0, -0.6]],
+  [6, "Linear pendant", [-1.3, 2.6, 3.3]],
+  [7, "Stair up to the merch floor", [-5.1, 1.8, -0.6]],
+  [8, "\"Club merch upstairs\" sign", [-3.6, 1.3, -2.5]],
+  [9, "Window, sheer curtains", [5.95, 2.9, -2.9]],
+  [10, "Seasonal: stepped plinths", [3.85, 0.8, -3.35]],
+  [11, "Tools: concrete table", [3.5, 0.72, 0.6]],
+  [12, "Dyes, accessories: shelving", [5.75, 2.4, 1.15]],
+  [13, "Furniture: showroom dais", [3.0, 0.2, 3.6]],
+  [14, "Clothes: metal rail, face-out", [-2.6, 1.6, -0.2]],
+  [15, "Wallpaper, flooring samples", [-4.1, 0.1, 4.0]],
+  [16, "Edge light (e.g. shelf lips)", [5.49, 1.0, -0.3]],
+  [17, "Walking path", [0, 0, -0.6]],
 ];
+const KEY_UPPER = [
+  [1, "Stairwell, glass railing round it", [-5.1, F + 1.0, -1.2]],
+  [2, "Top of the stair: you arrive here", [LANE, F, 2.4]],
+  [3, "Pegboard wall, round the back corner", [5.97, F + 3.0, -0.8]],
+  [4, "Long metal counter with drawers", [5.66, F + 0.85, 0.3]],
+  [5, "Metal shelf on the pegboard", [-0.7, F + 1.6, 4.75]],
+  [6, "Club merch sign", [1.7, F + 2.95, 4.93]],
+  [7, "Featured drop: concrete plinths", [0.4, F + 0.75, 0.2]],
+  [8, "Window", [5.95, F + 2.4, -2.9]],
+  [9, "Edge light (counter lip, shelf)", [-2.0, F + 0.8, 4.34]],
+  [10, "Walking path (merch loop)", [-0.5, F, -1.4]],
+  [11, "Tees and hoodies (hung, folded)", [3.5, F + 2.1, 4.88]],
+  [12, "Totes", [-2.2, F + 2.05, 4.9]],
+  [13, "Stickers, pins, caps (on the counter)", [0.6, F + 1.03, 4.45]],
+  [14, "Posters", [0.4, F + 2.57, 4.91]],
+];
+const plan = (level, key, extra) => ({
+  cam: { pos: [0, 60 + level * F, 0.15], target: [0, level * F, 0.15], up: [0, 0, 1], fov: 13.6 },
+  labels: [...(level === 0 ? [{ text: "Door", at: [0, 0, -5.15] }] : []), ...key.map(([n, , at]) => ({ text: String(n), at, style: "badge" })), ...extra],
+  key: key.map(([n, text]) => [n, text]), legend: LEGEND,
+});
+
 const SHOTS = [
-  {
-    id: "01-plan-top-down", title: "Shop layout, top down (12 x 10; door at the bottom)", aerial: true,
-    cam: { pos: [0, 60, 0.15], target: [0, 0, 0.15], up: [0, 0, 1], fov: 13.6 },
-    labels: [
-      ...SECTIONS.map(s => ({ ...s, at: [s.at[0], 0, -5.85] })),
-      { text: "Door", at: [0, 0, -5.15], dy: 0 },
-      { text: "You (spawn)", at: [L.spawn[0], 1.4, L.spawn[1]], dx: 62 },
-      ...PLAN_KEY.map(([n, , at]) => ({ text: String(n), at, style: "badge" })),
-      { text: "Herringbone oak", at: [1.0, 0, -4.2], style: "floor" }, { text: "Polished concrete", at: [-2.4, 0, -4.2], style: "floor" },
-    ],
-    key: PLAN_KEY.map(([n, text]) => [n, text]),
-    legend: LEGEND,
+  { id: "01-plan-ground", title: "Ground floor, top down (12 x 10; door at the bottom): in-game items", aerial: true,
+    ...plan(0, KEY_GROUND, [{ text: "You (spawn)", at: [L.spawn[0], 1.4, L.spawn[1]], dx: 62 }, { text: "Herringbone oak", at: [1.4, 0, -4.2], style: "floor" }]) },
+  { id: "02-plan-upstairs", title: "Upper floor, top down (same footprint; the door side at the bottom): club merch", aerial: true,
+    upstairs: true, ...plan(1, KEY_UPPER, [{ text: "Polished concrete", at: [1.4, F, -4.2], style: "floor" }]) },
+  { id: "03-door-view", title: "From the door (the walking camera): the stair is on the right", cam: null,
+    labels: [{ text: "GROUND FLOOR: IN-GAME ITEMS", at: [2.6, 0, -4.45], style: "section" },
+      ...kindLabels(["seasonal", "clothes", "tools", "dyes", "furniture", "finishes"]), stairLabel, { text: "\"Club merch upstairs\" sign", at: [-3.6, 1.3, -2.5] },
+      { text: "Cashier counter", at: [0, 0.76, 2.95] }, pendantLabel, keeperLabel],
   },
-  {
-    id: "02-door-view", title: "From the door (the walking camera)", cam: null,
-    labels: [
-      ...SECTIONS.map(s => ({ ...s, at: [s.at[0], 0, -4.45] })),
-      ...kindLabels(["seasonal", "clothes", "tools", "dyes", "furniture", "merch-wear", "merch-bags", "merch-prints", "merch-featured"]),
-      { text: "Stickers, pins", at: [-5.6, 1.03, 0.6] }, { text: "Caps, mugs", at: [-4.1, 1.07, 4.66], dy: -12 },
-      { text: "Cashier counter", at: [0, 0.76, 2.95] }, pendantLabel, keeperLabel,
-    ],
-  },
-  {
-    id: "03-items-walk", title: "In-game items (walking camera, standing in the section)", walk: [3.0, -1.9], cam: null,
-    labels: [...kindLabels(["seasonal", "clothes", "tools", "dyes", "accessories", "furniture"], { accessories: { dy: -16 }, dyes: { dy: 16 } }),
-      { text: "Edge lights", at: [5.49, 1.56, 2.6], dx: -70 }],
-  },
-  {
-    id: "04-items-across", title: "In-game items, across from the aisle", cam: { pos: [-0.9, 3.4, -3.9], target: [3.9, 0.7, 1.2], fov: 52 },
-    labels: [...fixtureLabels(["seasonal-plinths", "rail", "tools-table", "shelving", "dais", "curtains"], { "seasonal-plinths": { dy: 30 }, rail: { dy: -26 }, "tools-table": { dy: 30 }, dais: { at: [3.4, 0.2, 3.5], dy: 18 }, curtains: { dx: 90 } }),
-      ...kindLabels(["seasonal", "clothes", "tools", "dyes", "accessories", "furniture"], { seasonal: { dy: -22 }, clothes: { dy: 10 }, tools: { dy: -18 }, dyes: { dx: -40 }, accessories: { dx: -40 }, furniture: { dy: -18 } })],
-  },
-  {
-    id: "05-merch-walk", title: "Club merch (walking camera, standing in the section)", walk: [-3.0, -1.9], cam: null,
-    labels: [...kindLabels(["merch-wear", "merch-bags", "merch-prints", "merch-featured"]),
-      { text: "Stickers, pins", at: [-5.6, 1.03, 0.6] }, { text: "Caps, mugs", at: [-4.1, 1.07, 4.66], dy: -12 }, { text: "Edge light under the counter lip", at: [-5.34, 0.8, -3.0], dx: -120 }],
-  },
-  {
-    id: "06-merch-across", title: "Club merch, across from the aisle", cam: { pos: [0.9, 3.4, -3.9], target: [-4.1, 0.9, 1.2], fov: 52 },
-    labels: [...fixtureLabels(["pegboard", "merch-counter", "merch-shelf", "merch-plinths", "merch-sign"], { pegboard: { at: [-5.95, 2.9, -2.4] }, "merch-plinths": { dy: 30 }, "merch-sign": { dy: -14 } }),
-      ...kindLabels(["merch-wear", "merch-bags", "merch-prints"]),
-      { text: "Stickers, pins", at: [-5.6, 1.03, 0.6] }, { text: "Caps, mugs", at: [-4.1, 1.07, 4.66], dy: -12 }],
-  },
-  {
-    id: "07-counter-walk", title: "At the counter (walking camera)", walk: "spot", cam: null,
+  { id: "04-items-walk", title: "In-game items (walking camera, standing among them)", route: [[3.0, -1.9]], cam: null,
+    labels: [...kindLabels(["seasonal", "tools", "dyes", "accessories", "furniture", "clothes"], { accessories: { dy: -16 }, dyes: { dy: 16 } }), { text: "Edge lights", at: [5.49, 1.56, 2.6], dx: -70 }] },
+  { id: "05-items-across", title: "In-game items, across from the aisle", cam: { pos: [-0.9, 3.4, -3.9], target: [3.9, 0.7, 1.2], fov: 52 },
+    labels: [...fixtureLabels(["seasonal-plinths", "tools-table", "shelving", "dais", "curtains"], { "seasonal-plinths": { dy: 30 }, "tools-table": { dy: 30 }, dais: { at: [3.4, 0.2, 3.5], dy: 18 }, curtains: { dx: 90 } }),
+      ...kindLabels(["seasonal", "tools", "dyes", "accessories", "furniture"], { seasonal: { dy: -22 }, tools: { dy: -18 }, dyes: { dx: -40 }, accessories: { dx: -40 }, furniture: { dy: -18 } })] },
+  { id: "06-counter-walk", title: "At the counter (walking camera)", route: [[0, -1.0], L.spot], cam: null,
     labels: [{ text: "Cashier counter: glazed tile, timber top", at: [0, 0.4, 2.93] }, pendantLabel, keeperLabel, { text: "Glazed tile wall", at: [-1.4, 2.6, 4.92] },
-      { text: "Crate stack", at: [2.05, 1.05, 3.9] }, { text: "Plant", at: [-2.05, 1.35, 3.9] }],
-  },
-  {
-    id: "08-counter-low", title: "The counter, lower", cam: { pos: [0.6, 1.9, 0.0], target: [0, 1.3, 4.0], fov: 55 },
+      { text: "Crate stack", at: [2.05, 1.05, 3.9] }, { text: "Plant", at: [-2.05, 1.35, 3.9] }, stairLabel] },
+  { id: "07-counter-low", title: "The counter, lower", cam: { pos: [0.6, 1.9, 0.0], target: [0, 1.3, 4.0], fov: 55 },
     labels: [{ text: "Tiled counter", at: [0.9, 0.45, 2.93] }, { text: "Timber top", at: [-1.2, 0.74, 2.9] }, { text: "Till", at: [-0.55, 0.98, 3.4] },
-      { ...pendantLabel, dy: -14 }, keeperLabel, { text: "Glazed tile wall", at: [1.5, 2.6, 4.92] }],
-  },
+      { ...pendantLabel, dy: -14 }, keeperLabel, { text: "Glazed tile wall", at: [1.5, 2.6, 4.92] }] },
+  { id: "08-stair-view", title: "The stair, from the aisle (the upper floor is cut away while you're downstairs)", cam: { pos: [0.8, 3.4, -4.6], target: [-4.4, 1.2, 0.2], fov: 55 },
+    labels: [...fixtureLabels(["stair", "upstairs-sign", "rail", "finishes"], { stair: { dy: -20 } }), ...kindLabels(["clothes", "finishes"], { clothes: { dy: 18 }, finishes: { dy: -18 } }),
+      { text: "Handrail", at: [-4.24, 2.4, 0.6] }] },
+  { id: "09-on-the-stair", title: "Climbing (walking camera): past 60% of the climb the merch floor shows", route: [...TO_FOOT, [LANE, L.stair.z0 + 3.4]], cam: null,
+    labels: [{ text: "You, on the stair", at: [LANE, 2.27 + 1.5, L.stair.z0 + 3.4], dx: 80 }, { text: "Stairwell", at: [-5.1, F, -2.0] },
+      { text: "Merch floor", at: [1.5, F, 0], style: "section" }, ...kindLabels(["merch-wear", "merch-featured"])] },
+  { id: "10-top-of-stairs", title: "From the top of the stairs (walking camera)", upstairs: true, route: [HEAD], cam: null,
+    labels: [{ text: "UPPER FLOOR: CLUB MERCH", at: [-1.2, F, 1.4], style: "section" }, ...kindLabels(["merch-wear", "merch-bags", "merch-small", "merch-prints", "merch-featured"]),
+      { text: "Railing round the stairwell", at: [-4.18, F + 1.0, 1.2], dx: -110 }] },
+  { id: "11-merch-walk", title: "Club merch (walking camera, standing at the merch wall)", upstairs: true, route: [[1.5, 2.6]], cam: null,
+    labels: [...kindLabels(["merch-wear", "merch-bags", "merch-small", "merch-prints", "merch-featured"]), { text: "Edge light under the counter lip", at: [-2.4, F + 0.8, 4.34], dy: 18 }] },
+  { id: "12-merch-across", title: "Club merch, across the floor", upstairs: true, cam: { pos: [-3.4, F + 3.2, -3.6], target: [2.6, F + 1.0, 3.6], fov: 55 },
+    labels: [...fixtureLabels(["pegboard", "merch-counter", "merch-shelf", "merch-plinths", "merch-sign", "stairwell-rail"], { "merch-plinths": { dy: 30 }, "merch-sign": { dy: -14 } }),
+      ...kindLabels(["merch-wear", "merch-bags", "merch-small", "merch-prints"], { "merch-small": { dy: 16 } })] },
 ].filter(s => !only || only.split(",").includes(s.id));
 
 const rect = await page.evaluate(() => { const c = window.__audit.renderers[0].domElement.getBoundingClientRect(); return { x: c.x, y: c.y, width: c.width, height: c.height }; });
@@ -259,12 +264,19 @@ let at = L.spawn, aerial = false;
 for (const s of [...SHOTS].sort((p, q) => Number(!!p.aerial) - Number(!!q.aerial))) {
   if (!!s.aerial !== aerial) { aerial = !!s.aerial; await load(aerial); at = L.spawn; }
   await page.evaluate(() => document.getElementById("shop-labels")?.remove());
-  const to = s.walk === "spot" ? L.spot : s.walk ?? L.spawn;
-  if (to[0] !== at[0] || to[1] !== at[1]) {
+  // An upstairs shot from downstairs (run on its own, or after a reload): up the stair first.
+  const zone = await page.evaluate(() => window.__shopWalker.zone);
+  const route = s.upstairs && zone === "ground" ? [...UP, ...(s.route ?? [])] : s.route;
+  if (route) {
     await page.evaluate(AIM, null);
-    await page.evaluate(([x, z]) => window.dispatchEvent(new CustomEvent("tsi:interior-move", { detail: { x, z } })), to);
-    await page.waitForTimeout(Math.hypot(to[0] - at[0], to[1] - at[1]) / 4.6 * 1000 + 2500);
-    at = to;
+    for (const to of route) {
+      await page.evaluate(([x, z]) => window.dispatchEvent(new CustomEvent("tsi:interior-move", { detail: { x, z } })), to);
+      await page.waitForTimeout(Math.hypot(to[0] - at[0], to[1] - at[1]) / 4.6 * 1000 + 900);
+      at = to;
+    }
+    await page.waitForTimeout(1600);
+    const w = await page.evaluate(() => ({ zone: window.__shopWalker.zone, height: window.__shopWalker.height }));
+    console.log("at", s.id, at.join(","), w.zone, w.height.toFixed(2));
   }
   await page.evaluate(AIM, s.cam);
   await settle(page);

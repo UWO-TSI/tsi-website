@@ -2,30 +2,32 @@
 
 /**
  * The shop's greybox (specs/interiors/shop.md, phase 1): the layout in matte, untextured blocks for David's review,
- * every number from lib/game/shopLayout.ts. Fixtures in their material's flat tone (concrete, metal, pegboard, tile,
- * timber), each displayed item as a block in its kind's colour, the edge lights and the linear pendant as plain bright
- * strips, and the walking path taped on the floor. Phase 2 puts the models on the same numbers.
+ * every number from lib/game/shopLayout.ts. Two floors: the ground floor always, the upper floor (on its slab, with the
+ * stairwell cut out) only while the walker says it shows, so the camera sees the floor you're on. Fixtures in their
+ * material's flat tone (concrete, metal, pegboard, tile, timber), each displayed item as a block in its kind's colour,
+ * the edge lights and the linear pendant as plain bright strips, and the walking path taped on the floor. Phase 2 puts
+ * the models on the same numbers.
  */
-import { useEffect } from "react";
-import type { ThreeEvent } from "@react-three/fiber";
+import { useEffect, useRef } from "react";
+import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { AudioManager } from "@/lib/game/audio";
 import * as layout from "@/lib/game/shopLayout";
 import {
-  SHOP_DOOR, SHOP_FIXTURES, SHOP_FLOORS, SHOP_PATHS, SHOP_PENDANT, SHOP_ROOM, SHOP_SLOTS, SHOP_STRIPS, SHOP_WINDOW,
-  type Finish, type ItemKind,
+  SHOP_DOOR, SHOP_FIXTURES, SHOP_FLOOR_HEIGHT, SHOP_PATHS, SHOP_PENDANT, SHOP_ROOM, SHOP_SLAB, SHOP_SLOTS, SHOP_STAIR, SHOP_STRIPS, SHOP_WINDOWS,
+  type Finish, type ItemKind, type Level, type ShopWalker,
 } from "@/lib/game/shopLayout";
 
 export const FINISH_TONE: Record<Finish, string> = {
   concrete: "#b9b5ae", metal: "#8e959c", pegboard: "#bcc0c3", tile: "#9dbcae", timber: "#b38a5d",
-  fabric: "#f1eee7", crate: "#e8e8e4", plant: "#6e8e60", sign: "#3b4048",
+  fabric: "#f1eee7", crate: "#e8e8e4", plant: "#6e8e60", sign: "#3b4048", glass: "#cddfe5",
 };
 /** Each kind of displayed item's placeholder colour (the plan's legend): in-game kinds each their own, merch all cobalt. */
 export const KIND_TONE: Record<ItemKind, string> = {
-  seasonal: "#e2873a", clothes: "#2fa39e", accessories: "#86cfc8", tools: "#68a85a", dyes: "#d3639a", furniture: "#c99a4c",
+  seasonal: "#e2873a", clothes: "#2fa39e", accessories: "#86cfc8", tools: "#68a85a", dyes: "#d3639a", furniture: "#c99a4c", finishes: "#9b7fd0",
   "merch-wear": "#2f55d4", "merch-bags": "#2f55d4", "merch-small": "#2f55d4", "merch-prints": "#2f55d4", "merch-featured": "#2f55d4",
 };
-const FLOOR_TONE: Record<(typeof SHOP_FLOORS)[number]["id"], string> = { oak: "#caa67c", concrete: "#a7a6a2" };
+const FLOOR_TONE: Record<Level, string> = { 0: "#caa67c", 1: "#a7a6a2" };
 const WALL_TONE = "#e3e0da";
 
 const BOX = new THREE.BoxGeometry(1, 1, 1);
@@ -58,45 +60,68 @@ const walk = (e: ThreeEvent<MouseEvent>) => {
   AudioManager.playSFX("click");
 };
 
-export default function ShopGreybox() {
-  // The layout's numbers, for the evidence script's labels (dev only).
+const { halfW: W, halfD: D, wall: T, lip } = SHOP_ROOM;
+const F = SHOP_FLOOR_HEIGHT, S = SHOP_STAIR;
+
+/** One floor's shell: its walls (the +x wall round its window), and the cut-away near wall's lip (the door's gap downstairs). */
+function Walls({ level }: { level: Level }) {
+  const wall = matte(WALL_TONE), w = SHOP_WINDOWS[level];
+  const lips = level === 0 ? [[-W - T, SHOP_DOOR.x - SHOP_DOOR.half], [SHOP_DOOR.x + SHOP_DOOR.half, W + T]] : [[-W - T, W + T]];
+  return <>
+    <Block at={[0, 0, D + T / 2]} size={[2 * W + 2 * T, F, T]} material={wall} />
+    <Block at={[-W - T / 2, 0, 0]} size={[T, F, 2 * D + 2 * T]} material={wall} />
+    <Block at={[W + T / 2, 0, (-D - T + w.z0) / 2]} size={[T, F, w.z0 + D + T]} material={wall} />
+    <Block at={[W + T / 2, 0, (w.z0 + w.z1) / 2]} size={[T, w.y0, w.z1 - w.z0]} material={wall} />
+    <Block at={[W + T / 2, w.y1, (w.z0 + w.z1) / 2]} size={[T, F - w.y1, w.z1 - w.z0]} material={wall} />
+    <Block at={[W + T / 2, 0, (w.z1 + D + T) / 2]} size={[T, F, D + T - w.z1]} material={wall} />
+    <Block at={[W + T / 2, w.y0, (w.z0 + w.z1) / 2]} size={[0.04, w.y1 - w.y0, w.z1 - w.z0]} material={GLASS} />
+    {lips.map(([x0, x1]) => <Block key={x0} at={[(x0 + x1) / 2, 0, -D - T / 2]} size={[x1 - x0, lip, T]} material={wall} />)}
+  </>;
+}
+
+/** What stands on one floor: fixtures, displayed items, edge lights and the taped path. */
+function Contents({ level }: { level: Level }) {
+  return <>
+    {SHOP_FIXTURES.filter(f => f.level === level).flatMap(f => f.blocks.map((b, i) => <Block key={`${f.id}-${i}`} at={b.at} size={b.size} material={matte(FINISH_TONE[b.finish])} />))}
+    {SHOP_SLOTS.filter(s => s.level === level).map(s => <Block key={s.id} at={s.at} size={s.size} material={matte(KIND_TONE[s.kind])} />)}
+    {SHOP_STRIPS.filter(s => s.level === level).map((s, i) => <Bar key={i} from={s.from} to={s.to} thick={[0.025, 0.04]} material={GLOW} />)}
+    {SHOP_PATHS.filter(p => p.level === level).flatMap(p => p.points.slice(1).map((q, k) =>
+      <Bar key={`${p.id}-${k}`} from={[p.points[k][0], 0.004, p.points[k][1]]} to={[q[0], 0.004, q[1]]} thick={[0.004, 0.07]} material={TAPE} />))}
+  </>;
+}
+
+export default function ShopGreybox({ walker }: { walker: ShopWalker }) {
+  // The layout's numbers and the walker, for the evidence script's labels and routes (dev only).
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
-    Object.assign(window, { __shopLayout: layout });
-    return () => { delete (window as { __shopLayout?: unknown }).__shopLayout; };
-  }, []);
-  const { halfW: W, halfD: D, height: H, wall: T, lip } = SHOP_ROOM;
-  const wall = matte(WALL_TONE);
-  const w = SHOP_WINDOW;
+    Object.assign(window, { __shopLayout: layout, __shopWalker: walker });
+    return () => { delete (window as { __shopLayout?: unknown }).__shopLayout; delete (window as { __shopWalker?: unknown }).__shopWalker; };
+  }, [walker]);
+  const upper = useRef<THREE.Group>(null);
+  useFrame(() => { if (upper.current) upper.current.visible = walker.upperShown; });
+  const concrete = matte(FLOOR_TONE[1]);
+  // The handrail up the flight's open side, from the first step to the landing.
+  const rail0: V3 = [S.x1 - 0.04, F / S.steps + 0.95, S.z0 + 0.15], rail1: V3 = [S.x1 - 0.04, F + 0.95, S.z1 - 0.15];
+  const railLen = Math.hypot(rail1[1] - rail0[1], rail1[2] - rail0[2]);
   return <group>
-    {/* Floors: herringbone oak and polished concrete (flat tones); a click walks you there. */}
-    {SHOP_FLOORS.map(f => <mesh key={f.id} rotation={[-Math.PI / 2, 0, 0]} position={[(f.x0 + f.x1) / 2, 0, (f.z0 + f.z1) / 2]} receiveShadow onClick={walk}
-      material={matte(FLOOR_TONE[f.id])}><planeGeometry args={[f.x1 - f.x0, f.z1 - f.z0]} /></mesh>)}
-
-    {/* Walls: the back, the −x side, the +x side round its window, and the cut-away near wall's lip either side of the door. */}
-    <Block at={[0, 0, D + T / 2]} size={[2 * W + 2 * T, H, T]} material={wall} />
-    <Block at={[-W - T / 2, 0, 0]} size={[T, H, 2 * D + 2 * T]} material={wall} />
-    <Block at={[W + T / 2, 0, (-D - T + w.z0) / 2]} size={[T, H, w.z0 + D + T]} material={wall} />
-    <Block at={[W + T / 2, 0, (w.z0 + w.z1) / 2]} size={[T, w.y0, w.z1 - w.z0]} material={wall} />
-    <Block at={[W + T / 2, w.y1, (w.z0 + w.z1) / 2]} size={[T, H - w.y1, w.z1 - w.z0]} material={wall} />
-    <Block at={[W + T / 2, 0, (w.z1 + D + T) / 2]} size={[T, H, D + T - w.z1]} material={wall} />
-    <Block at={[W + T / 2, w.y0, (w.z0 + w.z1) / 2]} size={[0.04, w.y1 - w.y0, w.z1 - w.z0]} material={GLASS} />
-    {[[-W - T, SHOP_DOOR.x - SHOP_DOOR.half], [SHOP_DOOR.x + SHOP_DOOR.half, W + T]].map(([x0, x1]) =>
-      <Block key={x0} at={[(x0 + x1) / 2, 0, -D - T / 2]} size={[x1 - x0, lip, T]} material={wall} />)}
-
-    {/* Fixtures, in their finishes' flat tones. */}
-    {SHOP_FIXTURES.flatMap(f => f.blocks.map((b, i) => <Block key={`${f.id}-${i}`} at={b.at} size={b.size} material={matte(FINISH_TONE[b.finish])} />))}
-
-    {/* What's displayed: one block per item, in its kind's colour. */}
-    {SHOP_SLOTS.map(s => <Block key={s.id} at={s.at} size={s.size} material={matte(KIND_TONE[s.kind])} />)}
-
-    {/* The edge lights, and the linear pendant over the counter on its two wires. */}
-    {SHOP_STRIPS.map((s, i) => <Bar key={i} from={s.from} to={s.to} thick={[0.025, 0.04]} material={GLOW} />)}
+    {/* ── Ground floor: herringbone oak (a flat tone); a click walks you there. ── */}
+    <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow onClick={walk} material={matte(FLOOR_TONE[0])}><planeGeometry args={[2 * W, 2 * D]} /></mesh>
+    <Walls level={0} />
+    <Contents level={0} />
+    <mesh geometry={BOX} material={matte(FINISH_TONE.metal)} position={[(rail0[0] + rail1[0]) / 2, (rail0[1] + rail1[1]) / 2, (rail0[2] + rail1[2]) / 2]}
+      rotation={[-Math.atan2(rail1[1] - rail0[1], rail1[2] - rail0[2]), 0, 0]} scale={[0.05, 0.05, railLen]} />
+    {/* The linear pendant over the counter, on its two wires. */}
     <Block at={[(SHOP_PENDANT.x0 + SHOP_PENDANT.x1) / 2, SHOP_PENDANT.y, SHOP_PENDANT.z]} size={[SHOP_PENDANT.x1 - SHOP_PENDANT.x0, 0.05, 0.09]} material={matte("#3d4249")} />
     <Bar from={[SHOP_PENDANT.x0 + 0.04, SHOP_PENDANT.y - 0.006, SHOP_PENDANT.z]} to={[SHOP_PENDANT.x1 - 0.04, SHOP_PENDANT.y - 0.006, SHOP_PENDANT.z]} thick={[0.012, 0.06]} material={GLOW} />
-    {SHOP_PENDANT.wires.map(x => <Block key={x} at={[x, SHOP_PENDANT.y + 0.05, SHOP_PENDANT.z]} size={[0.012, H - SHOP_PENDANT.y - 0.05, 0.012]} material={matte("#2c3036")} />)}
+    {SHOP_PENDANT.wires.map(x => <Block key={x} at={[x, SHOP_PENDANT.y + 0.05, SHOP_PENDANT.z]} size={[0.012, F - SHOP_SLAB - SHOP_PENDANT.y - 0.05, 0.012]} material={matte("#2c3036")} />)}
 
-    {/* The walking path, taped on the floor. */}
-    {SHOP_PATHS.flatMap(p => p.points.slice(1).map((q, k) => <Bar key={`${p.id}-${k}`} from={[p.points[k][0], 0.004, p.points[k][1]]} to={[q[0], 0.004, q[1]]} thick={[0.004, 0.07]} material={TAPE} />))}
+    {/* ── Upper floor: on its slab with the stairwell cut out, polished concrete; shown while the walker says so. ── */}
+    <group ref={upper} position={[0, F, 0]} visible={false}>
+      {([[S.x1, W, -D, D], [-W, S.x1, -D, S.z0], [-W, S.x1, S.z1, D]] as const).map(([x0, x1, z0, z1]) =>
+        <mesh key={`${x0},${z0}`} geometry={BOX} material={concrete} position={[(x0 + x1) / 2, -SHOP_SLAB / 2, (z0 + z1) / 2]} scale={[x1 - x0, SHOP_SLAB, z1 - z0]}
+          receiveShadow castShadow onClick={walk} />)}
+      <Walls level={1} />
+      <Contents level={1} />
+    </group>
   </group>;
 }
