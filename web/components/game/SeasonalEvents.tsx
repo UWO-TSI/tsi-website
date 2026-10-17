@@ -50,7 +50,7 @@ const TROPHY: At = ["catch", 0.8, -1.0];
 /**
  * GENESIS: the stage is the footbridge's plank deck laid on the lawn (its top BRIDGE_DECK_TOP up, its log rails along
  * both sides at ±1.33), with the poster board at the back (the board model's origin is its left end) and the banners
- * on the deck inside the rails.
+ * standing on the lawn either side, outside the rails.
  */
 const STAGE_TOP = BRIDGE_DECK_TOP;
 const POSTER_BOARD: At = lawn(-0.84, 1.43);
@@ -89,8 +89,8 @@ const DECOR: Record<string, { pieces: Piece[]; spots: Spot[]; lights?: At[] }> =
       { at: lawn(0, 0.2), url: BRIDGE_URL, yaw: Math.PI / 2, solid: [1.45, 1.9] },
       { at: lawn(-1.9, -1.4), url: STREETLAMP_URL, lamp: true, solid: [0.25, 0.25] },
       { at: lawn(1.9, -1.4), url: STREETLAMP_URL, lamp: true, solid: [0.25, 0.25] },
-      { at: lawn(-1.0, 1.5), url: `${F}monument-banner.glb`, scale: 0.1, lift: STAGE_TOP },
-      { at: lawn(1.0, 1.5), url: `${F}monument-banner.glb`, scale: 0.1, lift: STAGE_TOP },
+      { at: lawn(-1.85, 1.5), url: `${F}monument-banner.glb`, scale: 0.1 },
+      { at: lawn(1.85, 1.5), url: `${F}monument-banner.glb`, scale: 0.1 },
       { at: POSTER_BOARD, url: NOTICE_BOARD_URL, lift: STAGE_TOP },
     ],
     spots: [{ near: "posters", at: lawn(0, -2.0), range: 2.2 }],
