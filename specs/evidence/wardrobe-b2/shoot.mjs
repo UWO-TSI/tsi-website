@@ -3,7 +3,7 @@
 //   HOST=http://localhost:3184 node specs/evidence/wardrobe-b2/shoot.mjs <out_dir> <scene> [<scene> ...]
 // Scenes:
 //   lab      /lab/avatar: the six hairs (front, 3/4, side, back), every accessory worn (head and face on the head, neck and
-//            front on the body), the six whole faces on the head and a mix row
+//            front on the body), the hats over the thinnest and thickest hairstyles, the six whole faces and a mix row
 //   closet   the closet (wardrobe mode): the inventory answers with the starters plus #22's hair, the cowboy hat and the
 //            vampire face, as an account that bought them; its Hair (the colour wheel locked: its hint points at the
 //            shop's Hair colour wheel), Eyes and Accessories tabs (owned and locked)
@@ -33,14 +33,20 @@ const DEFAULT = { skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", extras: [], ban
 const STARTERS = ["top_tee", "top_hoodie", "top_stripe_ls", "bottom_shorts", "bottom_trousers", "bottom_joggers", "shoes_slipon", "shoes_sneakers"];
 const HAIRS = "hair_goggle_ushanka,hair_ribbon_bob,hair_wavy_half_up,hair_curly_pigtails,hair_emo_layers,hair_double_buns";
 
-/** Screenshot the open creator's panel, scrolled through: one shot per screenful of the tab. */
-async function tab(page, cat, name) {
+/** Open a creator tab (and wear `pick`, a tile's name), then screenshot it, and again scrolled to the bottom of the panel. */
+async function tab(page, cat, name, pick) {
   await page.click(`[data-cat="${cat}"]`);
-  await sleep(3500);
+  await sleep(3000);
+  if (pick) { await page.click(`[role="tabpanel"] ul button[aria-label="${pick}"]`); await sleep(3500); }
   await page.screenshot({ path: `${OUT}/${name}-1.png` });
-  const more = await page.evaluate(() => { const p = document.querySelector('[role="tabpanel"]'); if (!p) return 0; p.scrollTop = p.scrollHeight; return p.scrollHeight - p.clientHeight; });
+  const more = await page.evaluate(() => {
+    const el = [...document.querySelectorAll('section[role="dialog"] *')].find(e => e.scrollHeight > e.clientHeight + 40 && /auto|scroll/.test(getComputedStyle(e).overflowY));
+    if (!el) return 0;
+    el.scrollTop = el.scrollHeight;
+    return el.scrollHeight - el.clientHeight;
+  });
   if (more > 40) { await sleep(1500); await page.screenshot({ path: `${OUT}/${name}-2.png` }); }
-  console.log("tab", cat, await page.$$eval('[role="tabpanel"] ul button', els => els.length), "tiles,", await page.$$eval('[role="tabpanel"] ul button[data-locked], [role="tabpanel"] ul button [class*="lock"]', els => els.length), "locked");
+  console.log("tab", cat, await page.$$eval('[role="tabpanel"] ul button', els => els.length), "tiles,", await page.$$eval('[role="tabpanel"] ul button[data-locked]', els => els.length), "locked");
 }
 
 for (const scene of SCENES) {
@@ -57,8 +63,11 @@ for (const scene of SCENES) {
     const hairs = HAIRS.split(",");
     await bench("hairs-1", `sheet=roblox&framing=head&skin=3&hair=2&views=front,34,side,back&ids=${hairs.slice(0, 3).join(",")}`, 20000);
     await bench("hairs-2", `sheet=roblox&framing=head&skin=3&hair=2&views=front,34,side,back&ids=${hairs.slice(3).join(",")}`, 20000);
-    await bench("acc-head", "sheet=b2acc&groups=head,face&framing=head&skin=3&hair=1", 22000);
+    await bench("acc-head", "sheet=b2acc&groups=head,face&framing=hat&skin=3&hair=1", 22000);
     await bench("acc-body", "sheet=b2acc&groups=neck,front&framing=body&skin=3&hair=1", 14000);
+    // hats over the hair, on the thinnest and the thickest of David's hairstyles (the fit is for the median)
+    await bench("hats-thin-hair", "sheet=b2acc&groups=head&framing=hat&skin=3&hair=1&style=hair_waves", 18000);
+    await bench("hats-thick-hair", "sheet=b2acc&groups=head&framing=hat&skin=3&hair=1&style=hair_messy_wolf", 18000);
     await bench("faces", "sheet=b2faces&framing=head&skins=3&hair=1", 14000);
     await page.context().close();
   }
@@ -73,9 +82,9 @@ for (const scene of SCENES) {
     await c.addStyleTag({ content: HIDE }).catch(() => {});
     await c.waitForSelector('[data-cat="hair"]', { timeout: 300000 });
     await sleep(8000);
-    await tab(c, "hair", "closet-hair");
-    await tab(c, "eyes", "closet-eyes");
-    await tab(c, "accessories", "closet-accessories");
+    await tab(c, "hair", "closet-hair", "Ushanka and goggles");
+    await tab(c, "eyes", "closet-eyes", "Caret and hash");
+    await tab(c, "accessories", "closet-accessories", "Cowboy hat");
     await c.context().close();
   }
   if (scene === "creator") {

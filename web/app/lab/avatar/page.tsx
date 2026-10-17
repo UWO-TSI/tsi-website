@@ -26,7 +26,7 @@
  *                  a row of front, 3/4, side and back (&views= to pick), on one skin and hair colour
  * ?sheet=david     David's 19 faces (face_set_305.py) as they came, eyes + mouth (+ accent), on three skins (&skins=)
  * ?sheet=mix       David's eyes, mouths and accents mixed with each other and with the earlier parts (&skins=)
- * &hair=<0-11>&skin=<0-11>&face=512 (the world atlas) &framing=head|body &charlod=1|2 (every cell at LOD 1 or LOD 2)
+ * &hair=<0-11>&skin=<0-11>&face=512 (the world atlas) &framing=head|hat|body &charlod=1|2 (every cell at LOD 1 or LOD 2)
  * In ?sheet=roblox an id may carry a head accessory worn with it: &ids=hair_visor_messy+acc_visor (encode the + as %2B in a URL)
  * ?sheet=b2acc    wardrobe batch 2: David's Roblox accessories, each worn over a hairstyle (&style=, default the ribbon bob),
  *                  front and 3/4; &groups=head,face (default all) &framing=body for the neck and front ones
@@ -56,11 +56,14 @@ const LOD_SHEET = typeof window !== "undefined" && !!new URLSearchParams(window.
 const OPEN: FaceOverride = { eyeFrame: "open" };
 interface Cell { label: string; look: CharacterLook; yaw: number; face?: FaceOverride | null; talk?: boolean }
 
-function Stage({ cell, framing, faceSize }: { cell: Cell; framing: "head" | "body"; faceSize: number }) {
+/** The camera by framing: the head, the head with room above it for a hat (wardrobe batch 2), the whole body. */
+const FRAMING = { head: { at: [0, 0.86, 1.3], look: 0.8 }, hat: { at: [0, 0.98, 1.7], look: 0.9 }, body: { at: [0.15, 0.6, 2.05], look: 0.5 } } as const;
+
+function Stage({ cell, framing, faceSize }: { cell: Cell; framing: keyof typeof FRAMING; faceSize: number }) {
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: cell.yaw, lift: 0, pose: null, play: null, face: cell.face ?? null, talk: cell.talk ? 1e9 : 0 });
-  const head = framing === "head";
+  const f = FRAMING[framing] ?? FRAMING.head;
   return <>
-    <PerspectiveCamera makeDefault fov={30} position={head ? [0, 0.86, 1.3] : [0.15, 0.6, 2.05]} onUpdate={c => c.lookAt(0, head ? 0.8 : 0.5, 0)} />
+    <PerspectiveCamera makeDefault fov={30} position={[...f.at]} onUpdate={c => c.lookAt(0, f.look, 0)} />
     <ambientLight intensity={1.1} color="#fff6e6" />
     <hemisphereLight args={["#fff8ec", "#b7c7a8", 0.9]} />
     <directionalLight position={[1.6, 2.6, 2.2]} intensity={1.7} color="#fff1d8" />
@@ -76,7 +79,7 @@ function AvatarBench() {
   const q = useSearchParams();
   const sheet = q.get("sheet") ?? "styles";
   const faceSize = q.get("face") === "512" ? 512 : 1024;
-  const framing = (q.get("framing") as "head" | "body") ?? "head";
+  const framing = (q.get("framing") as keyof typeof FRAMING) ?? "head";
   const base: CharacterLook = { ...DEFAULT_LOOK, hair: Number(q.get("hair") ?? 2), skin: Number(q.get("skin") ?? 3) };
   const style = (s: string) => ({ ...base, ...STYLES[s] });
   const yaw = Number(q.get("yaw") ?? -0.5);
@@ -166,7 +169,7 @@ function AvatarBench() {
   return <div ref={root} style={{ position: "relative", paddingTop: 48, minHeight: "100vh", background: "#efe7d6" }}>
     <div data-sheet={sheet} style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, ${cols === 1 ? "420px" : "1fr"})`, gap: 8, padding: 8 }}>
       {cells.map(c => <figure key={c.label} style={{ margin: 0 }}>
-        <View style={{ width: "100%", aspectRatio: framing === "head" ? "1 / 1" : "3 / 4", background: "#f6efe0", borderRadius: 10 }}>
+        <View style={{ width: "100%", aspectRatio: framing === "body" ? "3 / 4" : "1 / 1", background: "#f6efe0", borderRadius: 10 }}>
           <Stage cell={c} framing={framing} faceSize={faceSize} />
         </View>
         <figcaption style={{ font: "12px 'IBM Plex Mono', monospace", color: "#5b4a36", textAlign: "center", paddingTop: 4 }}>{c.label}</figcaption>
