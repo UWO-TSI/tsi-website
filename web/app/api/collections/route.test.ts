@@ -376,6 +376,42 @@ describe("POST /api/collections: the held tool (row 279, specs/game-ui.md)", () 
   });
 });
 
+describe("POST /api/collections: tools come from people after the tour (row 312, specs/hq-onboarding.md)", () => {
+  const bug = () => node("bug-flower-"), rock = () => node("rock-");
+  const net = () => post({ action: "harvest", node: bug().id, at: [bug().x, bug().z], tool: NET });
+  const dig = () => post({ action: "harvest", node: rock().id, at: [rock().x, rock().z], tool: SHOVEL });
+  beforeEach(() => { clock = new Date("2026-01-16T03:00:00Z"); }); // 22:00: the night butterflies are out
+
+  it("refuses a new arrival's starter net and shovel until a resident has handed them over", async () => {
+    m.teach(A);
+    expect(await net()).toMatchObject({ status: 403, body: { code: "tool_not_owned" } });
+    expect(await dig()).toMatchObject({ status: 403, body: { code: "tool_not_owned" } });
+    expect(await m.store.memberItems(A)).toEqual([]);
+    // Odile's net (lib/game/arrival/hq/grant.ts puts it in the inventory): now it nets; the shovel still waits for Pim.
+    m.own(A, ["net-basic"]);
+    expect((await net()).status).toBe(200);
+    expect(await dig()).toMatchObject({ status: 403, body: { code: "tool_not_owned" } });
+    m.own(A, ["net-basic", "shovel-basic"]);
+    expect((await dig()).status).toBe(200);
+  });
+
+  it("lets existing players keep the tools they already had", async () => {
+    // B arrived before row 312 (or never arrived): the starters are theirs, as they always were.
+    as(B);
+    expect((await net()).status).toBe(200);
+    expect((await dig()).status).toBe(200);
+    // A new arrival who owns a better tier outright has it whatever the rule.
+    as(A); m.teach(A); m.own(A, ["net-mid"]);
+    later(3_600_000);
+    expect((await post({ action: "harvest", node: bug().id, at: [bug().x, bug().z], tool: "net-mid" })).status).toBe(200);
+  });
+
+  it("never gates the rod: Bram's rod is everyone's", async () => {
+    m.teach(A);
+    expect((await post({ action: "cast", site: "village", at: SHORE, power: 1, tool: ROD })).status).toBe(200);
+  });
+});
+
 describe("POST /api/collections: a full backpack refuses the pickup (rows 279–283, specs/game-ui.md §5)", () => {
   // Exactly twenty slots: nineteen fish (a slot each) and a partial stack of 29 branches.
   const FISH19 = ROSTER.filter((s) => s.category === "fish").slice(0, 19).map((s) => s.key);

@@ -174,10 +174,12 @@ function startRequested(list: readonly Runtime[], c: Clock, p: THREE.Vector3, no
   if (d > (req.click ? TALK_CLICK_RANGE : TALK_RANGE + 0.6)) { if (req.click) r.greetAt = now; return; }
   const n = talksBySlug.get(r.slug) ?? 0;
   talksBySlug.set(r.slug, n + 1);
-  // What they'd say now (a morning conversation only in the morning).
-  const talk = talkFor(r.persona, { phase, hour: torontoHour(new Date(t * 1000)) });
-  const conv = talk[pickConversation(talk.length, r.slug, c.span?.key ?? "", n)] ?? [];
-  startTalk(beginTalk({ id: r.id, slug: r.slug, name: r.name, post: r.post, seed: r.seed }, conv.map(l => ({ text: fillName(l.text, playerName), face: l.face })), performance.now() / 1000));
+  // What they'd say now (a morning conversation only in the morning), unless the island has them say something else (a
+  // tool's resident handing it over, row 312).
+  const scripted = talkStore.script?.(r.slug) ?? null;
+  const talk = scripted ? [] : talkFor(r.persona, { phase, hour: torontoHour(new Date(t * 1000)) });
+  const conv = scripted ? scripted.lines : talk[pickConversation(talk.length, r.slug, c.span?.key ?? "", n)] ?? [];
+  startTalk(beginTalk({ id: r.id, slug: r.slug, name: r.name, post: r.post, seed: r.seed }, conv.map(l => ({ text: fillName(l.text, playerName), face: l.face })), performance.now() / 1000, scripted?.script));
   talkStore.cameraYaw = orbit.target.yaw; talkStore.cameraPitch = orbit.target.pitch; talkStore.cameraZoom = orbit.target.zoom;
   orbit.target.yaw = talkCameraYaw(p.x, p.z, r.x, r.z, orbit.target.yaw);
   orbit.target.pitch = Math.min(orbit.target.pitch, TALK_PITCH);

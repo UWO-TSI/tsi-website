@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ARRIVAL_KEY, finishArrival, hasArrived, type ArrivalLedger } from "./arrivalService";
+import { ARRIVAL_KEY, ARRIVAL_TAUGHT_KEY, arrivalStatus, finishArrival, hasArrived, type ArrivalLedger } from "./arrivalService";
 import { TUTORIAL_REWARD } from "./lines";
 
 function ledger(): ArrivalLedger & { rows: { m: string; key: string; amount: number }[] } {
@@ -19,10 +19,27 @@ describe("the arrival flag", () => {
   it("is set once per account by the tutorial's reward, which is paid once", async () => {
     const l = ledger();
     expect(await hasArrived(l, "a")).toBe(false);
-    expect(await finishArrival(l, "a")).toEqual({ coins: TUTORIAL_REWARD.coins, balance: TUTORIAL_REWARD.coins, granted: true });
+    expect(await finishArrival(l, "a")).toEqual({ coins: TUTORIAL_REWARD.coins, balance: TUTORIAL_REWARD.coins, granted: true, taught: true });
     expect(await hasArrived(l, "a")).toBe(true);
     expect(await hasArrived(l, "b")).toBe(false);
-    expect(await finishArrival(l, "a")).toEqual({ coins: 0, balance: TUTORIAL_REWARD.coins, granted: false });
-    expect(l.rows).toEqual([{ m: "a", key: ARRIVAL_KEY, amount: TUTORIAL_REWARD.coins }]);
+    expect(await finishArrival(l, "a")).toEqual({ coins: 0, balance: TUTORIAL_REWARD.coins, granted: false, taught: true });
+    expect(l.rows).toEqual([{ m: "a", key: ARRIVAL_TAUGHT_KEY, amount: TUTORIAL_REWARD.coins }]);
+  });
+
+  it("marks a new arrival's tools as taught by people (row 312)", async () => {
+    const l = ledger();
+    expect(await arrivalStatus(l, "a")).toEqual({ arrived: false, taught: false });
+    await finishArrival(l, "a");
+    expect(await arrivalStatus(l, "a")).toEqual({ arrived: true, taught: true });
+  });
+
+  it("leaves an account that arrived before row 312 as it was: arrived, its starter tools kept, nothing paid again", async () => {
+    const l = ledger();
+    l.rows.push({ m: "old", key: ARRIVAL_KEY, amount: TUTORIAL_REWARD.coins });
+    expect(await arrivalStatus(l, "old")).toEqual({ arrived: true, taught: false });
+    // A replay of the opening (dev ?arrival=1) on that account pays nothing and teaches nothing.
+    expect(await finishArrival(l, "old")).toEqual({ coins: 0, balance: TUTORIAL_REWARD.coins, granted: false, taught: false });
+    expect(await arrivalStatus(l, "old")).toEqual({ arrived: true, taught: false });
+    expect(l.rows).toHaveLength(1);
   });
 });
