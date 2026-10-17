@@ -92,7 +92,7 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
     });
     onChange?.("colour");
   };
-  // head-v10: the colour wheel (any colour; unlocked by owning any shop dye); a drag counts as a change at most every WHEEL_MS
+  // head-v10: the colour wheel (any colour; unlocked by buying the colour wheel in the shop); a drag counts as a change at most every WHEEL_MS
   const wheelAt = useRef(0);
   const wheel = (hex: string) => {
     setLook(l => ({ ...l, hairColor: hex }));
@@ -176,7 +176,7 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
             disabled={cat.swatch === "outfit" && !target} onClick={() => paint(i)} />;
         })}
       </div>
-      {cat.swatch === "hair" && <ColourWheel value={hairHex(look)} active={!!look.hairColor} locked={!customHairUnlocked(owned)} onChange={wheel} />}
+      {cat.swatch === "hair" && <ColourWheel value={hairHex(look)} active={!!look.hairColor} locked={!customHairUnlocked(owned)} onShop={onShop} onChange={wheel} />}
       {cat.swatch === "outfit" && !target && <p className={styles.hint}>Wear something here to colour it.</p>}
     </div>}
     {accentPart && <div className={styles.swatchBlock}>

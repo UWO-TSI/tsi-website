@@ -93,7 +93,8 @@ describe("character budget (budget.ts CHARACTER_BUDGET)", () => {
   function heaviest(tris: (p: CatalogPart) => number) {
     const most = (f: (p: CatalogPart) => boolean) => Math.max(0, ...PARTS.filter(f).map(tris));
     const outfit = Math.max(most(p => p.slot === "top") + most(p => p.slot === "bottom"), most(p => p.slot === "onepiece"));
-    const accessories = (["face", "bag", "neck"] as const).reduce((s, g) => s + most(p => p.group === g), 0);
+    // wardrobe batch 2 added the front slot (a paper tie on the chest)
+    const accessories = (["face", "bag", "neck", "front"] as const).reduce((s, g) => s + most(p => p.group === g), 0);
     // the hair: bangs with a back (and a band over it), or a whole hairstyle that replaces both (look.ts wornParts), or
     // a hat (which replaces the back and keeps the bangs)
     const band = most(p => p.group === "head" && !p.hidesBackHair);

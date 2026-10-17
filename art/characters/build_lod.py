@@ -160,8 +160,47 @@ def covered(ob, others):
 CARD_MAX = {"lod1": 2400, "lod2": 1100}
 OUT2 = os.path.join(HERE, "lod2")
 # David's Roblox accessories (wardrobe batch 2, accessories/import_roblox.py): Full holds the accessory budget (1,200);
-# LOD 1 at most ACC_LOD1_MAX, its shape kept where a ratio under that keeps it, else the ratio that lands there
-ACC_LOD1_MAX = 600
+# LOD 1 (a character under 72 px) at most ACC_LOD1_MAX, its shape kept where a ratio under that keeps it, else collapsed
+# until it lands there; where the collapse stalls (loose parts each already minimal), the smallest parts go (shed). A hat, glasses,
+# a neck and a front item at once keep the heaviest look within LOD 1's and LOD 2's budgets (budget.ts CHARACTER_BUDGET).
+ACC_LOD1_MAX = 300
+
+
+def shed(ob, cap):
+    """A capped piece the collapse stalled on (each loose part already minimal: a monocle's chain links, a woven hat's
+    tassels) sheds its smallest loose parts, a pixel or less on a character under 72 px, until it is within the cap.
+    The largest part always stays."""
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    bm.faces.ensure_lookup_table()
+    key = {v.index: tuple(round(c / 1e-5) for c in v.co) for v in bm.verts}
+    parent = {}
+
+    def find(k):
+        while parent.setdefault(k, k) != k:
+            parent[k] = parent[parent[k]]
+            k = parent[k]
+        return k
+    for f in bm.faces:
+        ks = [key[v.index] for v in f.verts]
+        for k in ks[1:]:
+            a, b = find(ks[0]), find(k)
+            if a != b:
+                parent[b] = a
+    parts = {}
+    for f in bm.faces:
+        parts.setdefault(find(key[f.verts[0].index]), []).append(f)
+    total = sum(len(f.verts) - 2 for f in bm.faces)
+    drop = []
+    for faces in sorted(parts.values(), key=len)[:-1]:
+        if total <= cap:
+            break
+        drop += faces
+        total -= sum(len(f.verts) - 2 for f in faces)
+    bmesh.ops.delete(bm, geom=drop, context="FACES")
+    bm.to_mesh(ob.data)
+    bm.free()
+    ob.data.update()
 
 
 def decimate(ob, under, cards=False, snug=SNUG, tier="lod1", cap=None):
@@ -191,6 +230,18 @@ def decimate(ob, under, cards=False, snug=SNUG, tier="lod1", cap=None):
         # Above the armature: the rest shape is decimated, not the posed one.
         bpy.ops.object.modifier_move_to_index(modifier="LOD", index=0)
         bpy.ops.object.modifier_apply(modifier="LOD")
+        for _ in range(6 if cap is not None and n > cap else 0):     # a capped piece: more passes until within the cap
+            m = ntris(trial)
+            if m <= cap:
+                break
+            mod = trial.modifiers.new("LOD", "DECIMATE")
+            mod.decimate_type = "COLLAPSE"
+            mod.ratio = cap / m * 0.98
+            mod.use_collapse_triangulate = True
+            bpy.ops.object.modifier_move_to_index(modifier="LOD", index=0)
+            bpy.ops.object.modifier_apply(modifier="LOD")
+        if cap is not None and n > cap and ntris(trial) > cap:
+            shed(trial, cap)
         far, out, sink = deviation(ob, trial, CARD_QUANTILE if cards else None)
         if os.environ.get("LOD_DEBUG"):
             print("LODDBG", ob.name, ratio, round(far, 4), round(out, 4), round(sink, 4), under)

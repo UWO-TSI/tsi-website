@@ -1,0 +1,740 @@
+{
+ "_how_to_fill": [
+  "Roblox's own attachment for each of David's accessories (wardrobe batch 2). import_roblox.py places every item with it, the way Roblox does: vertex = ATTACHMENT + scale x to_blender(R^T (mesh_scale * raw - position)), ATTACHMENT the item's Roblox attachment on our head or body (`attachment`), scale STUD (the head) or BODY_STUD (the neck and the front).",
+  "To fill an entry from Roblox Studio: insert the accessory, expand it, select Handle > its Attachment (HatAttachment, FaceFrontAttachment, NeckAttachment, ...), and copy its Position and Orientation into 'position' and 'orientation'; mesh_scale is the SpecialMesh's Scale, or Size / MeshSize for a MeshPart. Then set 'provisional' to false. Entries with provisional true are estimates: import_roblox.py rewrites their position from the item's shape (rule `fit`) on every run.",
+  "group: the creator slot (head: Hats, face: Glasses, neck: Neck, front: Front); #07 is a hat-type item in Roblox (the head folder) that is a pair of glasses: it sits at the eyes and is worn in the Glasses slot. key: the item's key in specs/wardrobe/batch2-pricing.json (#16, the sci-fi visor, is skipped there and not imported).",
+  "override (optional): offset (studs, Roblox's axes: +y up, +z back) applied after the fit, and scale (each piece shrunk by it toward where it meets the head, import_roblox.py shrink), kept when the Roblox values are filled in."
+ ],
+ "source": "art/characters/accessories/source/roblox-b2 (~/Downloads/accessories.zip and accessories-2.zip; David's own Roblox items, confirmed by him)",
+ "items": [
+  {
+   "n": 1,
+   "key": "acc-01",
+   "id": "acc_propeller_cap",
+   "name": "Propeller cap",
+   "asset_id": 82367619524356,
+   "title": "propeller hat",
+   "file": "head/01-propeller-hat-82367619524356.glb",
+   "attachment": "HatAttachment",
+   "group": "head",
+   "fit": "seat",
+   "hidesBackHair": false,
+   "position": [
+    0.0275,
+    -0.05109,
+    0.155
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+  },
+  {
+   "n": 2,
+   "key": "acc-02",
+   "id": "acc_green_sprout",
+   "name": "Green sprout",
+   "asset_id": 81401971947398,
+   "title": "fresh green sprout in sunlight",
+   "file": "head/02-fresh-green-sprout-in-sunlight-81401971947398.glb",
+   "attachment": "HatAttachment",
+   "group": "head",
+   "fit": "top",
+   "hidesBackHair": false,
+   "position": [
+    -0.0,
+    -0.44977,
+    -0.0
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
+   "override": {
+    "scale": 0.5,
+    "scale_why": "David (2026-10-16): shrunk to suit our chibi head instead of Roblox's size; each piece toward where it meets the head"
+   }
+  },
+  {
+   "n": 3,
+   "key": "acc-03",
+   "id": "acc_paper_tie",
+   "name": "Paper tie",
+   "asset_id": 12533982343,
+   "title": "cute paper tie",
+   "file": "front/03-cute-paper-tie-12533982343.glb",
+   "attachment": "BodyFrontAttachment",
+   "group": "front",
+   "fit": "chest",
+   "hidesBackHair": false,
+   "position": [
+    -0.0,
+    0.13341,
+    0.10276
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+  },
+  {
+   "n": 4,
+   "key": "acc-04",
+   "id": "acc_crew_visor",
+   "name": "Crew visor",
+   "asset_id": 96753684530964,
+   "title": "Mcdonalds",
+   "file": "head/04-Mcdonalds-96753684530964.glb",
+   "attachment": "HatAttachment",
+   "group": "head",
+   "fit": "seat",
+   "hidesBackHair": false,
+   "position": [
+    -0.05,
+    -0.0719,
+    0.5225
+   ],
+   "orientation": [
+    0,
+    180,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+  },
+  {
+   "n": 5,
+   "key": "acc-05",
+   "id": "acc_plaid_scarf",
+   "name": "Plaid scarf",
+   "asset_id": 117926016222909,
+   "title": "Black Plaid Scarf",
+   "file": "neck/05-Black-Plaid-Scarf-117926016222909.glb",
+   "attachment": "NeckAttachment",
+   "group": "neck",
+   "fit": "neck",
+   "hidesBackHair": false,
+   "position": [
+    -0.0,
+    0.60839,
+    -0.0
+   ],
+   "orientation": [
+    0,
+    180,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+  },
+  {
+   "n": 6,
+   "key": "acc-06",
+   "id": "acc_thin_glasses",
+   "name": "Thin glasses",
+   "asset_id": 135223549735037,
+   "title": "glasses",
+   "file": "face/06-glasses-135223549735037.glb",
+   "attachment": "FaceFrontAttachment",
+   "group": "face",
+   "fit": "eyes",
+   "hidesBackHair": false,
+   "position": [
+    0.38272,
+    0.17346,
+    -0.0
+   ],
+   "orientation": [
+    0,
+    -90,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+  },
+  {
+   "n": 7,
+   "key": "acc-07",
+   "id": "acc_half_rim_glasses",
+   "name": "Half-rim glasses",
+   "asset_id": 140483245207161,
+   "title": "Glasses",
+   "file": "head/07-Glasses-140483245207161.glb",
+   "attachment": "HatAttachment",
+   "group": "face",
+   "fit": "eyes",
+   "hidesBackHair": false,
+   "position": [
+    -0.0,
+    0.77346,
+    0.27228
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
+   "override": {
+    "offset": [
+     0,
+     0.06,
+     0
+    ],
+    "why": "half-rim reading glasses: the rims run under the eye, so the frame sits a little higher than its middle"
+   }
+  },
+  {
+   "n": 8,
+   "key": "acc-08",
+   "id": "acc_paper_bowtie",
+   "name": "Paper bow tie",
+   "asset_id": 12460327531,
+   "title": "cute paper bowtie",
+   "file": "neck/08-cute-paper-bowtie-12460327531.glb",
+   "attachment": "NeckAttachment",
+   "group": "neck",
+   "fit": "collar",
+   "hidesBackHair": false,
+   "position": [
+    -0.0,
+    0.36641,
+    0.56412
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+  },
+  {
+   "n": 9,
+   "key": "acc-09",
+   "id": "acc_square_shades",
+   "name": "Square shades",
+   "asset_id": 12395517308,
+   "title": "Black and Silver Square Sunglasses",
+   "file": "face/09-Black-and-Silver-Square-Sunglasses-12395517308.glb",
+   "attachment": "FaceFrontAttachment",
+   "group": "face",
+   "fit": "eyes",
+   "hidesBackHair": false,
+   "position": [
+    -0.0,
+    0.17346,
+    -0.27645
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+  },
+  {
+   "n": 10,
+   "key": "acc-10",
+   "id": "acc_wheat_stalk",
+   "name": "Wheat stalk",
+   "asset_id": 95636038834319,
+   "title": "Wheat",
+   "file": "face/10-Wheat-95636038834319.glb",
+   "attachment": "FaceFrontAttachment",
+   "group": "face",
+   "fit": "mouth",
+   "hidesBackHair": false,
+   "position": [
+    0.45629,
+    0.68913,
+    0.18961
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+  },
+  {
+   "n": 11,
+   "key": "acc-11",
+   "id": "acc_gold_monocle",
+   "name": "Gold monocle",
+   "asset_id": 102048301262678,
+   "title": "Gold Monocle",
+   "file": "face/11-Gold-Monocle-102048301262678.glb",
+   "attachment": "FaceFrontAttachment",
+   "group": "face",
+   "fit": "eye_r",
+   "hidesBackHair": false,
+   "position": [
+    0.30828,
+    0.277,
+    -0.34416
+   ],
+   "orientation": [
+    0,
+    180,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+  },
+  {
+   "n": 12,
+   "key": "acc-12",
+   "id": "acc_wheat_sprig",
+   "name": "Wheat sprig",
+   "asset_id": 13207311986,
+   "title": "Wheat",
+   "file": "face/12-Wheat-13207311986.glb",
+   "attachment": "FaceFrontAttachment",
+   "group": "face",
+   "fit": "mouth",
+   "hidesBackHair": false,
+   "position": [
+    0.27102,
+    0.62377,
+    -0.22267
+   ],
+   "orientation": [
+    0,
+    180,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+  },
+  {
+   "n": 13,
+   "key": "acc-13",
+   "id": "acc_round_wire_glasses",
+   "name": "Round wire glasses",
+   "asset_id": 15284805647,
+   "title": "Glasses",
+   "file": "face/13-Glasses-15284805647.glb",
+   "attachment": "FaceFrontAttachment",
+   "group": "face",
+   "fit": "eyes",
+   "hidesBackHair": false,
+   "position": [
+    0.00693,
+    0.17346,
+    0.39499
+   ],
+   "orientation": [
+    0,
+    180,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+  },
+  {
+   "n": 14,
+   "key": "acc-14",
+   "id": "acc_bandage_blindfold",
+   "name": "Bandage blindfold",
+   "asset_id": 115599627815687,
+   "title": "Face Bandages Blindfold White",
+   "file": "face/14-Face-Bandages-Blindfold-White-115599627815687.glb",
+   "attachment": "FaceCenterAttachment",
+   "group": "face",
+   "fit": "band",
+   "hidesBackHair": false,
+   "position": [
+    -0.0,
+    0.16985,
+    -0.0
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+  },
+  {
+   "n": 15,
+   "key": "acc-15",
+   "id": "acc_gold_rimless_shades",
+   "name": "Gold rimless shades",
+   "asset_id": 134040741374406,
+   "title": "Gold Clear Cartier Shades",
+   "file": "face/15-Gold-Clear-Cartier-Shades-134040741374406.glb",
+   "attachment": "FaceFrontAttachment",
+   "group": "face",
+   "fit": "eyes",
+   "hidesBackHair": false,
+   "position": [
+    -0.0,
+    0.17346,
+    -0.3501
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+  },
+  {
+   "n": 17,
+   "key": "acc-17",
+   "id": "acc_apple_stem",
+   "name": "Apple stem",
+   "asset_id": 129135999557186,
+   "title": "Apple Stem",
+   "file": "head/17-Apple-Stem-129135999557186.glb",
+   "attachment": "HatAttachment",
+   "group": "head",
+   "fit": "top",
+   "hidesBackHair": false,
+   "position": [
+    -0.0,
+    -0.43115,
+    -0.0
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
+   "override": {
+    "scale": 0.5,
+    "scale_why": "David (2026-10-16): shrunk to suit our chibi head instead of Roblox's size; each piece toward where it meets the head"
+   }
+  },
+  {
+   "n": 18,
+   "key": "acc-18",
+   "id": "acc_drawn_top_hat",
+   "name": "Drawn top hat",
+   "asset_id": 139123581689251,
+   "title": "Chopper Hat 2D",
+   "file": "head/18-Chopper-Hat-2D-139123581689251.glb",
+   "attachment": "HatAttachment",
+   "group": "head",
+   "fit": "seat",
+   "hidesBackHair": false,
+   "position": [
+    0.025,
+    0.31148,
+    0.02022
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
+   "recalc_normals": true,
+   "recalc_why": "its faces wind every which way (half against the file's own normals): wound outward on import",
+   "drop_outline": [
+    0.125,
+    0.0,
+    0.155,
+    0.025
+   ],
+   "drop_outline_why": "its cartoon outline is an inverted hull on a black swatch (UV 0.13-0.149, 0.004-0.021), which our two-sided body drew over the whole hat: dropped"
+  },
+  {
+   "n": 19,
+   "key": "acc-19",
+   "id": "acc_paper_horns",
+   "name": "Paper horns",
+   "asset_id": 12460135621,
+   "title": "cute paper horns",
+   "file": "head/19-cute-paper-horns-12460135621.glb",
+   "attachment": "HatAttachment",
+   "group": "head",
+   "fit": "top",
+   "hidesBackHair": false,
+   "position": [
+    -0.0,
+    -0.39436,
+    -0.0
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
+   "override": {
+    "offset": [
+     0,
+     -0.2,
+     0
+    ],
+    "why": "the horns stand at the head's rounded top edge, not level with its flat top",
+    "scale": 0.55,
+    "scale_why": "David (2026-10-16): shrunk to suit our chibi head instead of Roblox's size; each piece toward where it meets the head"
+   }
+  },
+  {
+   "n": 20,
+   "key": "acc-20",
+   "id": "acc_bear_hood",
+   "name": "White bear hood",
+   "asset_id": 120273922172131,
+   "title": "Finn The Human White Hood Beanie",
+   "file": "head/20-Finn-The-Human-White-Hood-Beanie-120273922172131.glb",
+   "attachment": "HatAttachment",
+   "group": "head",
+   "fit": "seat",
+   "hidesBackHair": true,
+   "position": [
+    0.0,
+    0.68767,
+    -0.13
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+  },
+  {
+   "n": 21,
+   "key": "acc-21",
+   "id": "acc_cowboy_hat",
+   "name": "Cowboy hat",
+   "asset_id": 110883226886153,
+   "title": "Cowboy Hat PBR",
+   "file": "head/21-Cowboy-Hat-PBR-110883226886153.glb",
+   "attachment": "HatAttachment",
+   "group": "head",
+   "fit": "seat",
+   "hidesBackHair": false,
+   "position": [
+    -0.0,
+    0.18,
+    0.1975
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+  },
+  {
+   "n": 22,
+   "key": "acc-22",
+   "id": "acc_woven_hat",
+   "name": "Woven tassel hat",
+   "asset_id": 95852706400551,
+   "title": "Samurai Ninja Straw Hat",
+   "file": "head/22-Samurai-Ninja-Straw-Hat-95852706400551.glb",
+   "attachment": "HatAttachment",
+   "group": "head",
+   "fit": "seat",
+   "hidesBackHair": false,
+   "position": [
+    0.00875,
+    0.39736,
+    0.08
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+  },
+  {
+   "n": 23,
+   "key": "acc-23",
+   "id": "acc_monkey_ears",
+   "name": "Monkey ears",
+   "asset_id": 121179481037374,
+   "title": "Monkey Ears with banana",
+   "file": "head/23-Monkey-Ears-with-banana-121179481037374.glb",
+   "attachment": "HatAttachment",
+   "group": "head",
+   "fit": "ears",
+   "hidesBackHair": false,
+   "position": [
+    -0.0,
+    0.30136,
+    0.01374
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
+   "override": {
+    "scale": 0.65,
+    "scale_why": "David (2026-10-16): shrunk to suit our chibi head instead of Roblox's size; each piece toward where it meets the head"
+   }
+  },
+  {
+   "n": 24,
+   "key": "acc-24",
+   "id": "acc_red_band_straw_hat",
+   "name": "Red-band straw hat",
+   "asset_id": 133383352568469,
+   "title": "Luffy Hat",
+   "file": "head/24-Luffy-Hat-133383352568469.glb",
+   "attachment": "HatAttachment",
+   "group": "head",
+   "fit": "seat",
+   "hidesBackHair": false,
+   "position": [
+    0.005,
+    0.34081,
+    0.0175
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+  }
+ ]
+}

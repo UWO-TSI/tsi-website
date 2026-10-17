@@ -5,7 +5,7 @@
  * (lib/seedMigrations.ts, scripts/gen-seeds.mjs). Prices are play coins
  * (or Gems for merch). No real-money value appears anywhere.
  */
-import { dyeRef, FACE, faceRef, FREE_HAIR_COLOURS, PARTS, priceOf, STARTER_PARTS, type Batch2Price, type PartSlot } from "@/lib/game/character/look";
+import { CUSTOM_HAIR_REF, dyeRef, FACE, faceRef, FREE_HAIR_COLOURS, PARTS, priceOf, STARTER_PARTS, type Batch2Price, type PartSlot } from "@/lib/game/character/look";
 import { CATALOGUE as PIECES, EVENT_PIECE_IDS } from "@/lib/homes/catalogue";
 import { shopIcon } from "@/lib/icons/keys";
 
@@ -142,6 +142,15 @@ export const WARDROBE_B2_ITEMS: CatalogueEntry[] = [
     .map(([key, f], i) => b2Row(`face-${f.id.replace(/_/g, "-")}`, f.name, "face", priceOf(key)!, faceRef(f.id), 100 + i)));
 
 /**
+ * The hair colour wheel (David, 2026-10-17): a one-time 250-Gem unlock for any hair colour (look.ts CUSTOM_HAIR_REF), in
+ * place of "owning any dye unlocks it"; the dyes stay preset colours. After the batch-2 rows; never a daily special.
+ */
+export const COLOUR_WHEEL_ITEM: CatalogueEntry = withIcon({
+  slug: "hair-colour-wheel", display_name: "Hair colour wheel", category: "hair", description: "", price_coins: null, price_gems: 250,
+  tier: null, slot: null, special_pool: false, stackable: false, stock: null, catalogue_ref: CUSTOM_HAIR_REF, sprite_url: null, position: 800,
+});
+
+/**
  * Rows the ownership migration adds: every wearable part, the dyes, the homes pieces the shop lacked. Starter clothes are never sold.
  * Parts with an `item` are unlocked by that existing (crafted) item instead, so they get no shop row; event costumes (`event`)
  * are free while their tradition runs, never sold. The wardrobe cut's rows stay, retired (CUT_WEARABLES).
@@ -152,6 +161,7 @@ export const OWNERSHIP_ITEMS: CatalogueEntry[] = [
   ...DYES.map((name, i) => e(`dye-${name.toLowerCase().replace(/ /g, "-")}`, `${name} hair dye`, "hair", 140, { catalogue_ref: dyeRef(FREE_HAIR_COLOURS + i), special_pool: true })),
   ...PIECES.filter((p) => !HAS_FURNITURE.has(p.id) && !EVENT_PIECE_IDS.has(p.id)).map((p) => furniture(p.id, p.label, pieceValue(p))),
   ...WARDROBE_B2_ITEMS,
+  COLOUR_WHEEL_ITEM,
 ];
 /** Shop rows with no character part: the pre-ownership outfits, and the wardrobe cut's (CUT_WEARABLES). Off sale. */
 export const RETIRED = ["outfit-sage-overalls", "outfit-cream-knit", "outfit-wharf-raincoat", "outfit-club-tee", "hair-chestnut", "hair-sea-glass", "hair-sunset", "acc-straw-hat", "acc-round-glasses", "acc-bandana",

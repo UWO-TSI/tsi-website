@@ -17,8 +17,10 @@ is fitted here from the item's shape by its `fit` rule (FITS) and written back, 
 with no other step. For each item:
 
   1. import    the raw mesh as Roblox has it (mesh2glb keeps its coordinates), split at its UV seams
-  2. place     the shared transform above, after the provisional fit; flat paper items (the tie, the bow tie) bend onto
-               the chest they lie on
+  2. place     the shared transform above, after the provisional fit (hats over the hair: HAIR_OVER, over_hair); flat
+               paper items (the tie, the bow tie) bend onto the chest they lie on; an entry's override.scale shrinks each
+               piece toward where it meets the head (David: the apple stem, sprout, paper horns and monkey ears at
+               Roblox's size were too big for our chibi head)
   3. detail    within the per-asset budget (budget.ts `accessory`, FULL_MAX): an edge collapse that keeps the UV seams,
                then welded and smooth-shaded (kit.weld_normals); LOD 1 is build_lod.py's
   4. colour    its texture, cropped to what the mesh samples, into its tile of the fixed-colour atlas (colour_atlas.py);
@@ -52,6 +54,13 @@ SRC = os.path.join(HERE, "source", "roblox-b2")
 SECTION = "robloxAccessories"
 
 FULL_MAX = 1200          # budget.ts ASSET_CATEGORIES "accessory": an accessory's Full mesh
+# Hats over the hair (David): David's 27 hairstyles stand a median 0.246 stud over our head at the crown (lat 60-90) and
+# 0.167 at the sides (lat 20-60), measured 2026-10-17 (rays from the head centre, the hair's outer surface less the head
+# mesh). A hat that leaves the hair on (not the bear hood) is seated on the classic head grown by HAIR_OVER, and a piece
+# standing on the head (a sprout, a stem, a horn, an ear) moves out by the hair at its foot: it rests on a typical
+# hairstyle instead of inside it. Part of the provisional fit.
+HAIR_TOP, HAIR_SIDE = 0.246, 0.167
+HAIR_OVER = 0.2
 FACE_CLEAR = 0.008       # m: glasses and a monocle stand this far in front of the face at the eye line
 CHEST_CLEAR = 0.006      # m: a paper tie or bow tie lies this far over the chest (clothes stand CL = 7 mm proud)
 
@@ -130,11 +139,11 @@ def fit_shift(vb, e):
     W = A + k * vb                                   # world (m) with no position: the shift is (target - here) / k
     lo, hi = vb.min(0), vb.max(0)
     rule = e["fit"]
-    if rule == "seat":                               # a hat: its cavity seated on the classic head, as the hairs' seat fit
-        from mathutils.bvhtree import BVHTree
+    if rule == "seat":                               # a hat: its cavity seated on the classic head, as the hairs' seat fit,
+        from mathutils.bvhtree import BVHTree         # grown by the hair it is worn over (HAIR_OVER; the hood hides it)
         F = [list(p.vertices) for p in FIT_OB.data.polygons]
         tree = BVHTree.FromPolygons([Vector(x) for x in vb], F)
-        return SF.seat(tree, vb)
+        return SF.seat(tree, vb, grow=0.0 if e["hidesBackHair"] else HAIR_OVER)
     if rule == "top":                                # a sprig or stem: its lowest point on the top centre
         return np.array([-(lo[0] + hi[0]) / 2, -(lo[1] + hi[1]) / 2, -lo[2]])
     if rule == "ears":                               # ears with a banana: the middle piece's foot on the top centre
@@ -191,6 +200,108 @@ def fit(ob, e):
     return [round(float(x), 5) for x in -(R @ (TO_BL @ t))]
 
 
+def drop_outline(ob, box):
+    """A cartoon item's outline shell (#18's drawn hat: an inverted hull a little outside the hat, every face on one black
+    swatch of the texture, wound inward so Roblox culls it but at the silhouette) goes: our body draws both sides, so it
+    would cover the hat in black. box: that swatch, [u0, v0, u1, v1] in the source's glTF UVs (top-left origin)."""
+    u0, v0, u1, v1 = box
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    uv = bm.loops.layers.uv.active
+    drop = [f for f in bm.faces if all(u0 <= l[uv].uv.x <= u1 and v0 <= 1.0 - l[uv].uv.y <= v1 for l in f.loops)]
+    bmesh.ops.delete(bm, geom=drop, context="FACES")
+    bm.to_mesh(ob.data)
+    bm.free()
+    ob.data.update()
+    print(f"OUTLINE {ob.name}: {len(drop)} faces dropped")
+
+
+def pieces(ob, gap=0.006):
+    """The item's pieces: its connected parts (welded by position), parts closer than `gap` (m) joined into one (a leaf
+    on its stem). A list of vertex index arrays."""
+    me = ob.data
+    co = np.array([v.co[:] for v in me.vertices], float)
+    parent = np.arange(len(co))
+
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[rb] = ra
+
+    seen = {}
+    for i, k in enumerate(map(tuple, np.round(co / 1e-5).astype(np.int64))):
+        if k in seen:
+            union(seen[k], i)
+        else:
+            seen[k] = i
+    for p in me.polygons:
+        vs = list(p.vertices)
+        for v in vs[1:]:
+            union(vs[0], v)
+    roots = np.array([find(i) for i in range(len(co))])
+    parts = [np.nonzero(roots == r)[0] for r in np.unique(roots)]
+    from mathutils.kdtree import KDTree
+    trees = []
+    for idx in parts:
+        t = KDTree(len(idx))
+        for j, i in enumerate(idx):
+            t.insert(Vector(co[i]), j)
+        t.balance()
+        trees.append(t)
+    group = list(range(len(parts)))
+
+    def gfind(i):
+        while group[i] != i:
+            i = group[i]
+        return i
+    for a in range(len(parts)):
+        for b in range(a + 1, len(parts)):
+            if gfind(a) != gfind(b) and any(trees[b].find(Vector(co[i]))[2] < gap for i in parts[a]):
+                group[gfind(b)] = gfind(a)
+    out = {}
+    for k, idx in enumerate(parts):
+        out.setdefault(gfind(k), []).append(idx)
+    return [np.concatenate(v) for v in out.values()]
+
+
+def shrink(ob, s):
+    """David (2026-10-16): the apple stem, the sprout, the paper horns and the monkey ears at Roblox's size read too big
+    on our chibi head. Each piece (an ear, the banana, a horn, the stem with its leaf) shrinks by s toward where it meets
+    the head: the middle of its points nearest the head's centre, so it stays seated where it was fitted."""
+    co = np.array([v.co[:] for v in ob.data.vertices], float)
+    centre = np.array(HC[:])
+    for idx in pieces(ob):
+        d = np.linalg.norm(co[idx] - centre, axis=1)
+        foot = co[idx][d <= d.min() + 0.1 * (d.max() - d.min())].mean(0)
+        co[idx] = foot + s * (co[idx] - foot)
+    for v, c in zip(ob.data.vertices, co):
+        v.co = c
+    ob.data.update()
+
+
+def over_hair(ob):
+    """Hats over the hair: each piece standing on the head moves out from the head centre, through its foot (as shrink
+    finds it), by the hair a typical hairstyle has there (HAIR_SIDE at the sides to HAIR_TOP over the crown)."""
+    co = np.array([v.co[:] for v in ob.data.vertices], float)
+    centre = np.array(HC[:])
+    for idx in pieces(ob):
+        d = np.linalg.norm(co[idx] - centre, axis=1)
+        foot = co[idx][d <= d.min() + 0.1 * (d.max() - d.min())].mean(0)
+        n = (foot - centre) / np.linalg.norm(foot - centre)
+        lat = math.degrees(math.asin(max(-1.0, min(1.0, n[2]))))
+        t = min(1.0, max(0.0, (lat - 20.0) / 40.0))
+        co[idx] += n * (HAIR_SIDE + t * (HAIR_TOP - HAIR_SIDE)) * STUD
+    for v, c in zip(ob.data.vertices, co):
+        v.co = c
+    ob.data.update()
+
+
 def bend_onto_chest(ob):
     """A flat paper item lies on the chest: each vertex moves to CHEST_CLEAR over the torso's front at its x and z."""
     back = max(v.co.y for v in ob.data.vertices)          # the side toward the chest (the paper keeps its thickness)
@@ -200,12 +311,21 @@ def bend_onto_chest(ob):
 
 
 # ================================================================ 3. detail
-def decimate(ob, max_tris):
+def decimate(ob, max_tris, recalc=False):
     """Edge collapse to max_tris on the welded mesh (the importer splits every corner; collapsing that shreds thin rims
-    and tears the texture): the collapse keeps the UV seams, which stay per corner."""
+    and tears the texture): the collapse keeps the UV seams, which stay per corner. recalc (an entry's
+    `recalc_normals`): a source whose faces wind every which way (#18's drawn hat: half of them against its own normals)
+    is wound outward consistently, its own normals dropped for the faces'."""
+    if recalc:
+        bpy.ops.object.select_all(action="DESELECT")
+        ob.select_set(True)
+        bpy.context.view_layer.objects.active = ob
+        bpy.ops.mesh.customdata_custom_splitnormals_clear()
     bm = bmesh.new()
     bm.from_mesh(ob.data)
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    if recalc:
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     bm.to_mesh(ob.data)
     bm.free()
     ob.data.update()
@@ -277,12 +397,12 @@ def render(out, ob, e, head, body, img):
         sc.collection.objects.link(cam)
     cam.data.type = "ORTHO"
     body_item = e["group"] in ("neck", "front")
-    cam.data.ortho_scale = 0.75 if body_item else (0.42 if e["group"] == "face" else 0.8)
+    cam.data.ortho_scale = 0.75 if body_item else (0.42 if e["group"] == "face" else 0.95)
     sc.camera = cam
     shown = (ob, head, cam, *(body if body_item else []))
     for o in sc.objects:
         o.hide_render = o not in shown
-    centre = (HC + NECK) / 2 if body_item else head_point(EYE_LAT, 0.0) * 0 + Vector((0, 0, head_point(EYE_LAT, 0.0).z)) if e["group"] == "face" else HC + Vector((0, 0, 0.04))
+    centre = (HC + NECK) / 2 if body_item else head_point(EYE_LAT, 0.0) * 0 + Vector((0, 0, head_point(EYE_LAT, 0.0).z)) if e["group"] == "face" else HC + Vector((0, 0, 0.12))
     for name, yaw in (("front", 0), ("34", 40)):
         a = math.radians(yaw)
         cam.location = centre + Vector((-math.sin(a) * 3, -math.cos(a) * 3, 0.0))
@@ -335,13 +455,19 @@ def main():
             continue
         ob, img = import_raw(os.path.join(SRC, e["file"]))
         src_tris = kit.ntris(ob)
+        if e.get("drop_outline"):
+            drop_outline(ob, e["drop_outline"])
         if e["provisional"]:
             e["position"] = fit(ob, e)
         ob.data.transform(place_matrix(e))
         ob.data.update()
         if e["fit"] in ("collar", "chest"):
             bend_onto_chest(ob)
-        tris = decimate(ob, FULL_MAX)
+        if (e.get("override") or {}).get("scale"):
+            shrink(ob, float(e["override"]["scale"]))
+        if e["provisional"] and e["fit"] in ("top", "ears"):
+            over_hair(ob)
+        tris = decimate(ob, FULL_MAX, recalc=bool(e.get("recalc_normals")))
         co = np.array([v.co[:] for v in ob.data.vertices])
         e_box = (np.round(co.min(0), 3).tolist(), np.round(co.max(0), 3).tolist())
         if RENDER:

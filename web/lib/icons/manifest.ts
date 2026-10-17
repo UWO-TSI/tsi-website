@@ -14,7 +14,7 @@ import { WEAPONS } from "@/lib/combat/weapons";
 import { FISH } from "@/lib/game/fishing";
 import { TOOLS } from "@/lib/game/tools";
 import { RETIRED_DYE, iconKey } from "./keys";
-import { COLOUR_ATLAS_URL, PALETTE, PART_BY_ID, PARTS } from "@/lib/game/character/look";
+import { COLOUR_ATLAS_URL, CUSTOM_HAIR_REF, PALETTE, PART_BY_ID, PARTS } from "@/lib/game/character/look";
 import { CATALOGUE as PIECES } from "@/lib/homes/catalogue";
 import { FLOORINGS, WALLPAPERS } from "@/lib/homes/layout";
 import type { CatalogueEntry } from "@/lib/wallet/catalogue";
@@ -108,8 +108,8 @@ export function iconSpecs(shop: readonly Pick<CatalogueEntry, "slug" | "catalogu
     if (out.has(key)) continue;
     if (key === "recipe_card" || key === "bobber-lucky" || key.startsWith("merch-")) add({ key, view: "three-quarter", url: `${ITEMS}${key === "recipe_card" ? "recipe_card" : e.slug}.glb` });
     // wardrobe batch 2: a hairstyle's icon is its creator tile (scripts/bake-hair-thumbs.mjs), a whole face's its parts on
-    // the skin (art/characters/v7/face_icons.py): neither is rendered here
-    else if ((e.category === "hair" && PART_BY_ID.has(ref)) || e.category === "face") continue;
+    // the skin (art/characters/v7/face_icons.py), the colour wheel's the wheel (face_icons.py too): none is rendered here
+    else if ((e.category === "hair" && (PART_BY_ID.has(ref) || ref === CUSTOM_HAIR_REF)) || e.category === "face") continue;
     else if (e.category === "hair") add({ key, view: "three-quarter", url: `${ITEMS}dye_bottle.glb`, tints: { Dye: ref.startsWith("hair:") ? PALETTE.hair[Number(ref.slice(5))] : RETIRED_DYE[e.slug] ?? "#B9B9B9" } });
     else if (e.category === "wallpaper") add({ key, view: "roll", url: `/assets/acnh/interior/wall-${ref}.png` });
     else if (e.category === "flooring") add({ key, view: "tile", url: `/assets/acnh/interior/floor-${ref}.png` });

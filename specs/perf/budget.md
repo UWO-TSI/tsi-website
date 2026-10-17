@@ -64,10 +64,10 @@ measured at the display's pace (`perf-bench.mjs` `UNCAPPED=0`), not by perf:chec
 
 | Tier | When | Triangles (whole look) | Draws | Shadow draws | Materials | Bones | Mixer |
 |---|---|---|---|---|---|---|---|
-| Full | within 21 u, or a Full remote (nearest 12 / 8) | 7,800 | 3 (body, face, print) | 2 | 1 (shared) | 22 | every frame |
-| LOD 1 | past 21 u and under 72 px | 5,100 | 3 | 2 | 1 | 22 | 30 Hz past 28 u, 15 Hz past 40 u |
-| LOD 2 | past 40 u and under 28 px | 4,000 | 3 | 2 | 1 | 22 | 15 Hz |
-| Reduced remote | the next 12 / 8 (drawn at LOD 1 or 2 by distance) | 5,100 | 3 | 0 | 1 | 22 | 15 Hz |
+| Full | within 21 u, or a Full remote (nearest 12 / 8) | 10,200 (7,800 before wardrobe batch 2) | 3 (body, face, print) | 2 | 1 (shared) | 22 | every frame |
+| LOD 1 | past 21 u and under 72 px | 5,400 (5,100 before wardrobe batch 2) | 3 | 2 | 1 | 22 | 30 Hz past 28 u, 15 Hz past 40 u |
+| LOD 2 | past 40 u and under 28 px | 4,300 (4,000 before wardrobe batch 2) | 3 | 2 | 1 | 22 | 15 Hz |
+| Reduced remote | the next 12 / 8 (drawn at LOD 1 or 2 by distance) | 5,400 | 3 | 0 | 1 | 22 | 15 Hz |
 
 **Head-roblox (2026-10-14, `specs/characters/head-roblox.md` §7):** the hair is David's 21 Roblox hairstyles, whole at
 Full (David: "hair should look good close up"), so the heaviest wearable look (every accessory slot filled) is 7,700
@@ -77,6 +77,15 @@ LOD 1 there. `budget.test.ts` computes all three; a whole hairstyle replaces the
 catalogue's clip base (`base/v8_clips.glb` since the head fit: the same 1,264 triangles of skin and face). Held items are budgeted as
 effects (below). The multiplayer spec's targets stay: at most 0.12 ms of CPU per Full remote and 3 ms for 24 drawn, at
 most +5 draws per drawn remote on High and +3 on Lite (`PER_PLAYER`).
+
+**Wardrobe batch 2 (2026-10-16, `specs/playtest-round1.md` "New wardrobe batch"):** David's 23 Roblox accessories are up to
+1,200 triangles at Full (the `accessory` category) and 300 at LOD 1 (`build_lod.py` `ACC_LOD1_MAX`; a part the collapse
+stalls on sheds its smallest loose parts: the monocle's chain, the woven hat's tassels). Hats sit over the hair (David),
+and a glasses, neck and front item can be worn with one, so the heaviest wearable look is 10,104 triangles at Full,
+5,332 at LOD 1 and 4,271 at LOD 2 (budgets raised from 7,800 / 5,100 / 4,000 to 10,200 / 5,400 / 4,300). Residents and
+bots never roll a batch-2 item (`randomLook`), so the scene benches don't see it; 12 Full characters on High in the
+heaviest look add about 28k scene triangles over the old envelope. Needs David's OK; the alternative is a lower Full cap
+for the glasses, neck and front items (600: about -1,150 at Full).
 
 ## Effects on characters (`EFFECT_BUDGET`)
 

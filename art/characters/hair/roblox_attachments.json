@@ -630,7 +630,15 @@
     1
    ],
    "provisional": true,
-   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face opening lies toward the raw mesh's -X (as #22), checked on the classic head (wardrobe batch 2)"
+   "source": "provisional: position from the seat fit on the classic head (hair/seat_fit.py); orientation: the face opening lies toward the raw mesh's -X (as #22), checked on the classic head (wardrobe batch 2)",
+   "override": {
+    "offset": [
+     0,
+     0,
+     -0.006
+    ],
+    "why": "wardrobe batch 2: about 2 mm forward; the fringe stood 2.4 mm into the forehead (fit_check skull clip, limit 2 mm)"
+   }
   },
   {
    "n": 25,

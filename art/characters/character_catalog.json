@@ -4648,7 +4648,7 @@
    "slot": "accessory",
    "name": "Drawn top hat",
    "glb": "accessories/roblox/acc_drawn_top_hat.glb",
-   "tris": 1176,
+   "tris": 892,
    "materials": [
     {
      "name": "M_Acc",
@@ -4726,7 +4726,7 @@
    "slot": "accessory",
    "name": "Cowboy hat",
    "glb": "accessories/roblox/acc_cowboy_hat.glb",
-   "tris": 1176,
+   "tris": 1175,
    "materials": [
     {
      "name": "M_Acc",
@@ -4752,7 +4752,7 @@
    "slot": "accessory",
    "name": "Woven tassel hat",
    "glb": "accessories/roblox/acc_woven_hat.glb",
-   "tris": 1095,
+   "tris": 1096,
    "materials": [
     {
      "name": "M_Acc",

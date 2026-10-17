@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CUSTOM_HAIR_REF, DEFAULT_LOOK, FREE_HAIR_COLOURS, PALETTE, PARTS, STARTER_PARTS, customHairUnlocked, dyeRef, randomLook, seeded, wear } from "@/lib/game/character/look";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { BATCH2_PRICES, CUSTOM_HAIR_REF, DEFAULT_LOOK, FACE, FREE_HAIR_COLOURS, PALETTE, PARTS, STARTER_PARTS, customHairUnlocked, dyeRef, faceRef, randomLook, seeded, wear } from "@/lib/game/character/look";
 import { CATALOGUE as PIECES, EVENT_PIECE_IDS } from "@/lib/homes/catalogue";
 import { CRAFTED_ITEMS, RECIPES } from "@/lib/crafting/recipes";
 import { memoryCraftingStore } from "@/lib/crafting/memoryStore";
 import { craft, learnFromQuest } from "@/lib/crafting/service";
 import { defaultLayout, type HomeLayoutDoc } from "@/lib/homes/layout";
 import { memoryHomesStore } from "@/lib/homes-sync/memoryStore";
-import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS, STARTER_REFS } from "./catalogue";
+import { CATALOGUE, COLOUR_WHEEL_ITEM, EVENT_ITEMS, OWNERSHIP_ITEMS, STARTER_REFS, WARDROBE_B2_ITEMS } from "./catalogue";
 import { memoryEconomyStore } from "./memoryStore";
 import { seedItems } from "./rules";
 import { buy, getInventory, ownedRefs } from "./service";
@@ -67,6 +69,7 @@ describe("ownership catalogue", () => {
         expect(byRef(p.id), p.id).toHaveLength(0);
         continue;
       }
+      if (p.key) continue; // wardrobe batch 2: sold at David's price or free (below)
       expect(byRef(p.id), p.id).toHaveLength(1);
       expect(byRef(p.id)[0].active, p.id).toBe(!STARTER_PARTS.includes(p.id));
     }
@@ -74,7 +77,7 @@ describe("ownership catalogue", () => {
     const crafted = [...CATALOGUE, ...CRAFTED_ITEMS].filter((c) => (c.category === "outfit" || c.category === "accessory") && RECIPES.some((r) => r.output.key === c.slug));
     expect(crafted.map((c) => c.slug).sort()).toEqual(PARTS.flatMap((p) => p.item ?? []).sort());
     for (let h = FREE_HAIR_COLOURS; h < PALETTE.hair.length; h++) expect(byRef(`hair:${h}`)[0]?.active, `dye ${h}`).toBe(true);
-    expect(items.filter((i) => i.category === "hair" && i.active)).toHaveLength(6);
+    expect(items.filter((i) => i.category === "hair" && i.active && i.catalogue_ref?.startsWith("hair:"))).toHaveLength(6);
     // Seasonal event furniture is only given by its event, never sold.
     for (const p of PIECES) expect(byRef(p.id).filter((i) => i.category === "furniture" && i.active), p.id).toHaveLength(EVENT_PIECE_IDS.has(p.id) ? 0 : 1);
     expect(EVENT_ITEMS.map((c) => c.catalogue_ref).sort()).toEqual([...EVENT_PIECE_IDS].sort());
@@ -153,11 +156,91 @@ describe("look save (PATCH /api/profile)", () => {
   });
 });
 
-describe("the hair colour wheel (head-v10; David: \"Unlock by buying a dye\")", () => {
-  it("is unlocked by owning any of the shop dyes, never by the free presets alone", () => {
+describe("wardrobe batch 2 (David's modes and prices, specs/wardrobe/batch2-pricing.json)", () => {
+  /** Every item David priced: its key, the shop row's catalogue_ref and category. */
+  const priced = [
+    ...PARTS.filter((p) => p.key).map((p) => ({ key: p.key!, ref: p.id, category: p.slot === "accessory" ? "accessory" : "hair" })),
+    ...Object.entries(FACE.faces).map(([key, f]) => ({ key, ref: faceRef(f.id), category: "face" })),
+  ];
+  const rowOf = (ref: string) => seedItems().filter((i) => i.catalogue_ref === ref);
+
+  it("sells each item exactly as priced: coins in price_coins, Gems in tc_price (price_gems); free and skipped ones unsold", () => {
+    expect(priced).toHaveLength(35);
+    for (const { key, ref, category } of priced) {
+      const { mode, price } = BATCH2_PRICES[key];
+      const rows = rowOf(ref);
+      if (mode === "free") { expect(rows, key).toHaveLength(0); continue; }
+      expect(rows, key).toHaveLength(1);
+      expect(rows[0], key).toMatchObject({ category, active: true, price_coins: mode === "coins" ? price : null, price_gems: mode === "gems" ? price : null, special_pool: mode === "coins", sprite_url: expect.stringMatching(/^\/assets\/icons\/.+\.webp$/) });
+    }
+    expect(WARDROBE_B2_ITEMS).toHaveLength(priced.filter((x) => BATCH2_PRICES[x.key].mode !== "free").length);
+    expect(WARDROBE_B2_ITEMS.filter((r) => r.price_gems !== null)).toHaveLength(Object.values(BATCH2_PRICES).filter((x) => x.mode === "gems").length);
+    expect(OWNERSHIP_ITEMS.some((r) => /visor-blue|sci-fi/.test(r.slug))).toBe(false); // #16 skipped
+    for (const r of WARDROBE_B2_ITEMS) expect(STARTER_REFS.has(r.catalogue_ref!), r.slug).toBe(false);
+  });
+  it("ships every row's icon: the hairstyles' creator tiles, the accessories' renders, the faces' parts on the skin", () => {
+    for (const r of WARDROBE_B2_ITEMS) expect(existsSync(join(__dirname, "../../public", r.sprite_url!)), r.sprite_url!).toBe(true);
+    for (const p of PARTS.filter((q) => q.key && q.slot === "accessory")) expect(existsSync(join(__dirname, "../../public/assets/icons", `${p.id}.webp`)), p.id).toBe(true);
+  });
+  it("keeps every earlier row where it was: the batch's positions follow them", () => {
+    const earlier = [...CATALOGUE, ...OWNERSHIP_ITEMS, ...EVENT_ITEMS].filter((r) => !WARDROBE_B2_ITEMS.includes(r) && r !== COLOUR_WHEEL_ITEM);
+    const first = Math.min(...WARDROBE_B2_ITEMS.map((r) => r.position));
+    expect(Math.max(...earlier.map((r) => r.position))).toBeLessThan(first);
+    expect(new Set(WARDROBE_B2_ITEMS.map((r) => r.position)).size).toBe(WARDROBE_B2_ITEMS.length);
+  });
+});
+
+describe("look save with wardrobe batch 2 (PATCH /api/profile: priced items are owned, free ones anyone's)", () => {
+  const cowboy = () => wear(wear(DEFAULT_LOOK, "back", "hair_goggle_ushanka"), "accessory", "acc_cowboy_hat");
+  const vampire = { eyes: "caret_hash", mouth: "fangs", extras: ["stitches"] };
+
+  it("refuses a priced hairstyle, accessory or whole face's part the member doesn't own, naming each", async () => {
+    const res = await saveLook(cowboy());
+    expect(res.status).toBe(403);
+    expect((await res.json()).missing.sort()).toEqual(["acc_cowboy_hat", "hair_goggle_ushanka"]);
+    // a whole face's eyes alone, or its accent mixed with free parts, needs that face
+    const eyes = await saveLook({ ...DEFAULT_LOOK, eyes: "caret_hash" });
+    expect(await eyes.json()).toMatchObject({ code: "not_owned", missing: ["face:vampire"] });
+    const accent = await saveLook({ ...DEFAULT_LOOK, extras: ["stitches", "blush"] });
+    expect(await accent.json()).toMatchObject({ code: "not_owned", missing: ["face:vampire"] });
+    expect(mock.adminWrites).toEqual([]);
+  });
+  it("saves the free ones with nothing owned: glasses #06 and #13, faces #21 and #22", async () => {
+    const free = wear({ ...DEFAULT_LOOK, eyes: "squint", mouth: "tongue_out", extras: ["nose_shade"] }, "accessory", "acc_round_wire_glasses");
+    expect((await saveLook(free)).status).toBe(200);
+    expect((await saveLook(wear(DEFAULT_LOOK, "accessory", "acc_thin_glasses"))).status).toBe(200);
+    expect(mock.adminWrites.at(-1)).toMatchObject({ avatar_config: { look: { acc: { face: "acc_thin_glasses" } } } });
+  });
+  it("saves them once bought, in coins or in Gems; one whole face unlocks all its parts", async () => {
+    eco.fund(A, 1000, 400);
+    for (const s of ["wear-hair-goggle-ushanka", "wear-acc-cowboy-hat", "face-vampire"]) {
+      expect(await buy(eco.store, A, { item_id: slug(s), qty: 1, idempotency_key: `buy-${s}` }, noon), s).toMatchObject({ ok: true });
+    }
+    // Gems at David's price; coins at it, or a coin row's daily-special discount
+    expect(eco.gemsOf(A)).toBe(400 - 300);
+    expect(eco.coinsOf(A)).toBeGreaterThanOrEqual(1000 - 150 - 250);
+    expect(eco.coinsOf(A)).toBeLessThan(1000 - (150 + 250) / 2);
+    expect((await saveLook(cowboy())).status).toBe(200);
+    expect((await saveLook({ ...cowboy(), ...vampire })).status).toBe(200);
+    expect(mock.adminWrites.at(-1)).toMatchObject({ avatar_config: { look: { back: "hair_goggle_ushanka", eyes: "caret_hash", mouth: "fangs", extras: ["stitches"], acc: { head: "acc_cowboy_hat" } } } });
+    // another face's part still needs its own face
+    expect(await (await saveLook({ ...DEFAULT_LOOK, ...vampire, eyes: "cat_wide" })).json()).toMatchObject({ code: "not_owned", missing: ["face:silly_cat"] });
+  });
+});
+
+describe("the hair colour wheel (head-v10; David, 2026-10-17: a one-time 250-Gem shop item, no longer any dye)", () => {
+  it("is its own 250-Gem shop row, sold once, never a special", () => {
+    const rows = seedItems().filter((i) => i.catalogue_ref === CUSTOM_HAIR_REF);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ slug: "hair-colour-wheel", category: "hair", price_coins: null, price_gems: 250, active: true, special_pool: false, stackable: false, sprite_url: "/assets/icons/colour-wheel.webp" });
+    expect(existsSync(join(__dirname, "../../public/assets/icons/colour-wheel.webp"))).toBe(true);
+    expect(STARTER_REFS.has(CUSTOM_HAIR_REF)).toBe(false);
+  });
+  it("is unlocked by owning the wheel, never by a dye or the free presets", () => {
     expect(customHairUnlocked(new Set(STARTER_PARTS))).toBe(false);
     expect(customHairUnlocked(new Set(Array.from({ length: FREE_HAIR_COLOURS }, (_, i) => dyeRef(i))))).toBe(false);
-    for (let h = FREE_HAIR_COLOURS; h < PALETTE.hair.length; h++) expect(customHairUnlocked(new Set([dyeRef(h)])), `dye ${h}`).toBe(true);
+    for (let h = FREE_HAIR_COLOURS; h < PALETTE.hair.length; h++) expect(customHairUnlocked(new Set([dyeRef(h)])), `dye ${h}`).toBe(false);
+    expect(customHairUnlocked(new Set([CUSTOM_HAIR_REF]))).toBe(true);
   });
   it("refuses a custom colour in a saved look without a dye, server-side", async () => {
     const res = await saveLook({ ...DEFAULT_LOOK, hairColor: "#33CC99" });
@@ -165,11 +248,19 @@ describe("the hair colour wheel (head-v10; David: \"Unlock by buying a dye\")", 
     expect(await res.json()).toMatchObject({ code: "not_owned", missing: [CUSTOM_HAIR_REF] });
     expect(mock.adminWrites).toEqual([]);
   });
-  it("saves a custom colour once the member owns any dye", async () => {
-    eco.fund(A, 1000);
+  it("still refuses it with a dye, and saves it once the member has bought the wheel; the dyes stay preset colours", async () => {
+    eco.fund(A, 1000, 300);
     await buy(eco.store, A, { item_id: slug("dye-blossom-pink"), qty: 1, idempotency_key: "buy-dye-wheel" }, noon);
+    const dyed = await saveLook({ ...DEFAULT_LOOK, hairColor: "#33cc99" });
+    expect(dyed.status).toBe(403);
+    expect(await dyed.json()).toMatchObject({ code: "not_owned", missing: [CUSTOM_HAIR_REF] });
+    expect((await saveLook({ ...DEFAULT_LOOK, hair: 10 })).status).toBe(200);   // the dye is a preset colour
+    expect(await buy(eco.store, A, { item_id: slug("hair-colour-wheel"), qty: 1, idempotency_key: "buy-wheel-1" }, noon)).toMatchObject({ ok: true });
+    expect(eco.gemsOf(A)).toBe(300 - 250);
     expect((await saveLook({ ...DEFAULT_LOOK, hairColor: "#33cc99" })).status).toBe(200);
     expect(mock.adminWrites.at(-1)).toMatchObject({ avatar_config: { look: { hairColor: "#33CC99" } } });
+    // a one-time unlock: a second purchase is refused
+    expect(await buy(eco.store, A, { item_id: slug("hair-colour-wheel"), qty: 1, idempotency_key: "buy-wheel-2" }, noon)).toMatchObject({ ok: false });
   });
 });
 

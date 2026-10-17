@@ -60,8 +60,8 @@ describe("the shared skull", () => {
   it("attaches every one of David's hairstyles by a complete Roblox attachment (hair/roblox_attachments.json)", () => {
     const data = JSON.parse(readFileSync(join(web, "../art/characters/hair/roblox_attachments.json"), "utf8")) as {
       hairs: { id: string; asset_id: number; position: number[]; orientation: number[]; mesh_scale: number[]; provisional: boolean }[] };
-    const roblox = PARTS.filter(p => p.roblox);
-    expect(roblox.length).toBe(21);
+    const roblox = PARTS.filter(p => p.roblox && p.full);
+    expect(roblox.length).toBe(27);   // 21, then wardrobe batch 2's six
     const byId = new Map(data.hairs.map(h => [h.id, h]));
     for (const p of roblox) {
       const h = byId.get(p.id);
@@ -76,6 +76,25 @@ describe("the shared skull", () => {
     }
     // the three read from Roblox's own accessory files
     expect(data.hairs.filter(h => !h.provisional).map(h => h.id).sort()).toEqual(["hair_baby_sprout", "hair_bowl_cut", "hair_windy_bob"]);
+  });
+  it("attaches every one of David's batch-2 accessories by a complete Roblox attachment, the four too big for our head shrunk (accessories/roblox_attachments.json)", () => {
+    type Entry = { id: string; key: string; attachment: string; position: number[]; orientation: number[]; mesh_scale: number[]; provisional: boolean; override?: { scale?: number } };
+    const data = JSON.parse(readFileSync(join(web, "../art/characters/accessories/roblox_attachments.json"), "utf8")) as { items: Entry[] };
+    const roblox = PARTS.filter(p => p.roblox?.attachment);
+    expect(roblox.length).toBe(23);
+    const byId = new Map(data.items.map(e => [e.id, e]));
+    for (const p of roblox) {
+      const e = byId.get(p.id)!;
+      expect(e, p.id).toBeDefined();
+      expect([e.key, e.attachment, e.provisional], p.id).toEqual([p.key, p.roblox!.attachment, p.roblox!.provisional]);
+      for (const v of [e.position, e.orientation, e.mesh_scale]) expect(v.length === 3 && v.every(Number.isFinite), p.id).toBe(true);
+    }
+    // David (2026-10-16): the apple stem, the sprout, the paper horns and the monkey ears shrunk to suit our chibi head
+    const shrunk = data.items.filter(e => e.override?.scale).map(e => [e.key, e.override!.scale!] as const);
+    expect(shrunk.map(([k]) => k).sort()).toEqual(["acc-02", "acc-17", "acc-19", "acc-23"]);
+    for (const [k, sc] of shrunk) expect(sc > 0.3 && sc < 1, k).toBe(true);
+    // #16 (the sci-fi visor) is skipped
+    expect(data.items.some(e => e.key === "acc-16") || roblox.some(p => p.key === "acc-16")).toBe(false);
   });
   it("has every hairstyle, hat and face accessory fitted to this skull (refit them after a skull change)", () => {
     const onHead = PARTS.filter(p => p.slot === "bangs" || p.slot === "back" || p.group === "head" || p.group === "face");

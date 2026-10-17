@@ -169,7 +169,7 @@ export interface CharacterLook {
   /** A two-tone hairstyle's accent (hair palette index); absent: the style's own default. */
   hairAccent?: number;
   /** A custom hair colour from the creator's colour wheel (sRGB "#RRGGBB", head-v10): it tints the hair over the palette
-   * index `hair`; absent (every look saved before it): the palette colour. Unlocked by owning any shop dye (ownsRef). */
+   * index `hair`; absent (every look saved before it): the palette colour. Unlocked by buying the colour wheel (ownsRef). */
   hairColor?: string;
   /** Face placement from the creator's sliders; absent is today's placement. */
   place?: Partial<Record<PlacePart, Placement>>;
@@ -432,22 +432,21 @@ export const facePartRef = (id: string): string | null => FACE_PART_REF.get(id) 
 /** The ref that unlocks any creator option: a part's (partRef) or a face part's (facePartRef). */
 export const unlockRef = (id: string): string | null => partRef(id) ?? facePartRef(id);
 /**
- * The colour wheel (head-v10; David, 2026-10-14: "Unlock by buying a dye"): a custom hair colour is unlocked by owning
- * any of the shop dyes. Free when true (one switch).
+ * The colour wheel (head-v10): a custom hair colour. David, 2026-10-17: a one-time 250-Gem unlock, its own shop row
+ * (lib/wallet/catalogue.ts COLOUR_WHEEL_ITEM), in place of "owning any dye unlocks it" (2026-10-14); the dyes stay
+ * preset colours. Free when true (one switch).
  */
 export const CUSTOM_HAIR_FREE = false;
-/** The ref a look with a custom hair colour needs: any shop dye satisfies it (ownsRef). Never an inventory row. */
-export const CUSTOM_HAIR_REF = "hair:custom";
-/** The shop dyes (the palette colours past the free ones). */
-export const DYE_REFS: readonly string[] = PALETTE.hair.slice(FREE_HAIR_COLOURS).map((_, i) => dyeRef(FREE_HAIR_COLOURS + i));
+/** The colour wheel's shop row's catalogue_ref: what a look with a custom hair colour needs (lookRefs, ownsRef). */
+export const CUSTOM_HAIR_REF = "colour-wheel";
 /** Inventory refs owned: a set, or the server's counts by ref. */
 type Owned = { has(ref: string): boolean };
-/** Whether the colour wheel is open to a member owning `owned` (inventory refs). */
-export const customHairUnlocked = (owned: Owned) => CUSTOM_HAIR_FREE || DYE_REFS.some(r => owned.has(r));
-/** Whether `owned` covers a ref lookRefs asks for (CUSTOM_HAIR_REF: any dye). */
+/** Whether the colour wheel is open to a member owning `owned` (inventory refs): the wheel bought, never a dye. */
+export const customHairUnlocked = (owned: Owned) => CUSTOM_HAIR_FREE || owned.has(CUSTOM_HAIR_REF);
+/** Whether `owned` covers a ref lookRefs asks for (CUSTOM_HAIR_REF: the wheel). */
 export const ownsRef = (owned: Owned, ref: string) => (ref === CUSTOM_HAIR_REF ? customHairUnlocked(owned) : owned.has(ref));
 /** Every inventory ref a look needs: worn clothes, a priced hairstyle (wardrobe batch 2), a priced face's parts, a dyed
- * hair colour, and any dye for a custom one (ownsRef). */
+ * hair colour, and the colour wheel for a custom one (ownsRef). */
 export function lookRefs(look: CharacterLook): string[] {
   const refs = [...new Set([look.top, look.bottom, look.onepiece, look.shoes, look.back, ...Object.values(look.acc)].flatMap(id => (id && partRef(id)) || [])
     .concat([look.eyes, look.mouth, ...look.extras].flatMap(id => facePartRef(id) ?? [])))];

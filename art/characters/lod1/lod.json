@@ -53,47 +53,47 @@
  },
  "accessories/roblox/acc_apple_stem.glb": {
   "tris": 640,
-  "lod1": 444
+  "lod1": 360
  },
  "accessories/roblox/acc_bandage_blindfold.glb": {
   "tris": 1256,
-  "lod1": 668
+  "lod1": 379
  },
  "accessories/roblox/acc_bear_hood.glb": {
   "tris": 1256,
-  "lod1": 668
+  "lod1": 380
  },
  "accessories/roblox/acc_cowboy_hat.glb": {
-  "tris": 1256,
-  "lod1": 668
+  "tris": 1255,
+  "lod1": 379
  },
  "accessories/roblox/acc_crew_visor.glb": {
   "tris": 1256,
-  "lod1": 668
+  "lod1": 380
  },
  "accessories/roblox/acc_drawn_top_hat.glb": {
-  "tris": 1256,
-  "lod1": 668
+  "tris": 972,
+  "lod1": 380
  },
  "accessories/roblox/acc_gold_monocle.glb": {
   "tris": 1256,
-  "lod1": 962
+  "lod1": 370
  },
  "accessories/roblox/acc_gold_rimless_shades.glb": {
   "tris": 1256,
-  "lod1": 668
+  "lod1": 380
  },
  "accessories/roblox/acc_green_sprout.glb": {
   "tris": 1256,
-  "lod1": 668
+  "lod1": 380
  },
  "accessories/roblox/acc_half_rim_glasses.glb": {
   "tris": 1256,
-  "lod1": 668
+  "lod1": 380
  },
  "accessories/roblox/acc_monkey_ears.glb": {
   "tris": 1256,
-  "lod1": 668
+  "lod1": 380
  },
  "accessories/roblox/acc_paper_bowtie.glb": {
   "tris": 244,
@@ -109,27 +109,27 @@
  },
  "accessories/roblox/acc_plaid_scarf.glb": {
   "tris": 1256,
-  "lod1": 667
+  "lod1": 380
  },
  "accessories/roblox/acc_propeller_cap.glb": {
   "tris": 1256,
-  "lod1": 668
+  "lod1": 379
  },
  "accessories/roblox/acc_red_band_straw_hat.glb": {
   "tris": 498,
-  "lod1": 498
+  "lod1": 350
  },
  "accessories/roblox/acc_round_wire_glasses.glb": {
   "tris": 1256,
-  "lod1": 667
+  "lod1": 379
  },
  "accessories/roblox/acc_square_shades.glb": {
   "tris": 1256,
-  "lod1": 668
+  "lod1": 380
  },
  "accessories/roblox/acc_thin_glasses.glb": {
   "tris": 960,
-  "lod1": 520
+  "lod1": 380
  },
  "accessories/roblox/acc_wheat_sprig.glb": {
   "tris": 582,
@@ -137,11 +137,11 @@
  },
  "accessories/roblox/acc_wheat_stalk.glb": {
   "tris": 1256,
-  "lod1": 668
+  "lod1": 380
  },
  "accessories/roblox/acc_woven_hat.glb": {
-  "tris": 1175,
-  "lod1": 627
+  "tris": 1176,
+  "lod1": 379
  },
  "base/skin.glb": {
   "tris": 864,

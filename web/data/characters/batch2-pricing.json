@@ -1,5 +1,5 @@
 {
- "source": "David's picks in the Tethos New Wardrobe Pricing page, final 2026-10-15",
+ "source": "David's picks in the Tethos New Wardrobe Pricing page, final 2026-10-15; Gem prices x10 (David, 2026-10-17: 5 -> 50, 10 -> 100, 20 -> 200, hair #22 30 -> 300)",
  "items": {
   "acc-01": {
    "mode": "coins",
@@ -11,7 +11,7 @@
   },
   "acc-03": {
    "mode": "gems",
-   "price": 5
+   "price": 50
   },
   "acc-04": {
    "mode": "coins",
@@ -31,7 +31,7 @@
   },
   "acc-08": {
    "mode": "gems",
-   "price": 5
+   "price": 50
   },
   "acc-09": {
    "mode": "coins",
@@ -55,7 +55,7 @@
   },
   "acc-14": {
    "mode": "gems",
-   "price": 10
+   "price": 100
   },
   "acc-15": {
    "mode": "coins",
@@ -67,19 +67,19 @@
   },
   "acc-17": {
    "mode": "gems",
-   "price": 10
+   "price": 100
   },
   "acc-18": {
    "mode": "gems",
-   "price": 20
+   "price": 200
   },
   "acc-19": {
    "mode": "gems",
-   "price": 5
+   "price": 50
   },
   "acc-20": {
    "mode": "gems",
-   "price": 10
+   "price": 100
   },
   "acc-21": {
    "mode": "coins",
@@ -87,7 +87,7 @@
   },
   "acc-22": {
    "mode": "gems",
-   "price": 20
+   "price": 200
   },
   "acc-23": {
    "mode": "coins",
@@ -95,7 +95,7 @@
   },
   "acc-24": {
    "mode": "gems",
-   "price": 20
+   "price": 200
   },
   "face-20": {
    "mode": "coins",
@@ -123,7 +123,7 @@
   },
   "hair-22": {
    "mode": "gems",
-   "price": 30
+   "price": 300
   },
   "hair-23": {
    "mode": "coins",
@@ -135,11 +135,11 @@
   },
   "hair-25": {
    "mode": "gems",
-   "price": 20
+   "price": 200
   },
   "hair-26": {
    "mode": "gems",
-   "price": 20
+   "price": 200
   },
   "hair-27": {
    "mode": "coins",

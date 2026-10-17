@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CATEGORIES, choose, colourTarget, isOn, shownOptions } from "./creatorCategories";
-import { DEFAULT_LOOK, FACE, PARTS, STARTER_PARTS, openEventParts, partRef, setEventsOpen, wear } from "./look";
+import { BATCH2_PRICES, DEFAULT_LOOK, FACE, PARTS, STARTER_PARTS, faceRef, openEventParts, partRef, setEventsOpen, unlockRef, wear } from "./look";
 
 const cat = (id: string) => CATEGORIES.find(c => c.id === id)!;
 
@@ -23,10 +23,11 @@ describe("creator categories (read from the catalogue)", () => {
       ["accessories", "outfit", null], ["tops", "outfit", null], ["bottoms", "outfit", null], ["shoes", "outfit", null],
     ]);
   });
-  it("frame the face for face parts and the body for clothes; the wardrobe gets hair and clothes", () => {
+  it("frame the face for face parts and the body for clothes; the wardrobe gets hair, the face parts and clothes", () => {
     expect(CATEGORIES.filter(c => c.framing === "face").map(c => c.id)).toEqual(["head", "eyes", "mouth", "extras"]);
     expect(cat("shoes").framing).toBe("body");
-    expect(CATEGORIES.filter(c => c.wardrobe).map(c => c.id)).toEqual(["hair", "accessories", "tops", "bottoms", "shoes"]);
+    // wardrobe batch 2: a whole face is sold in the shop, so the closet wears the face parts too; head and skin stay the creator's
+    expect(CATEGORIES.filter(c => c.wardrobe).map(c => c.id)).toEqual(["hair", "eyes", "mouth", "extras", "accessories", "tops", "bottoms", "shoes"]);
   });
   it("choose and show what's worn: a hairstyle, a toggled extra, shoes off, an accessory's second tap", () => {
     const hair = cat("hair");
@@ -48,11 +49,11 @@ describe("creator categories (read from the catalogue)", () => {
     expect(colourTarget(cat("accessories"), two, "acc_shoulder_bag")).toBe("acc_shoulder_bag");
     expect(colourTarget(cat("eyes"), two, null)).toBeNull();
   });
-  it("offer David's 21 whole hairstyles as Hair's only row, recolourable (head-roblox)", () => {
+  it("offer David's 27 whole hairstyles (wardrobe batch 2 added six) as Hair's only row, recolourable (head-roblox)", () => {
     const hair = cat("hair");
     expect(hair.sections.map(s => s.id)).toEqual(["hairstyles"]);
     expect(hair.sections[0].options).toEqual(PARTS.filter(p => p.full).map(p => p.id));
-    expect(hair.sections[0].options).toHaveLength(21);
+    expect(hair.sections[0].options).toHaveLength(27);
     expect(hair.swatch).toBe("hair");
     const full = hair.sections[0];
     const l = choose(DEFAULT_LOOK, full, full.options[0]);
@@ -89,5 +90,43 @@ describe("the starting creator after the wardrobe cut (playtest round 1)", () =>
     } finally {
       setEventsOpen(new Set());
     }
+  });
+});
+
+describe("wardrobe batch 2 in the creator and the closet (David's prices, specs/wardrobe/batch2-pricing.json)", () => {
+  const offered = (mode: "create" | "wardrobe", owned: ReadonlySet<string>) => new Set(CATEGORIES.flatMap(c => c.sections.flatMap(s =>
+    shownOptions(s, mode, id => { const ref = id && unlockRef(id); return !ref || owned.has(ref); }))));
+  const b2 = PARTS.filter(p => p.key);
+  const free = (key: string) => BATCH2_PRICES[key].mode === "free";
+  const faceParts = (key: string) => { const f = FACE.faces[key]; return [f.eyes, f.mouth, ...f.extras].filter((x): x is string => !!x); };
+
+  it("gives the accessories their Roblox slots: Glasses, Hats, Neck and the new Front, beside the earlier ones", () => {
+    const acc = cat("accessories").sections;
+    expect(acc.map(s => s.label)).toEqual(["Glasses", "Hats", "Neck", "Front", "Bags"]);
+    const of = (label: string) => acc.find(s => s.label === label)!.options;
+    for (const p of b2.filter(q => q.slot === "accessory")) expect(of({ face: "Glasses", head: "Hats", neck: "Neck", front: "Front" }[p.group as string]!), p.id).toContain(p.id);
+    expect(of("Front")).toEqual(["acc_paper_tie"]);
+    expect(of("Glasses")).toContain("acc_half_rim_glasses");          // #07: a hat in Roblox, a pair of glasses here
+  });
+  it("offers the free items in the starting creator, and a priced one only once it is owned", () => {
+    const start = offered("create", new Set(STARTER_PARTS));
+    for (const p of b2) expect(start.has(p.id), p.id).toBe(free(p.key!));
+    for (const key of Object.keys(FACE.faces)) for (const id of faceParts(key)) expect(start.has(id), id).toBe(free(key));
+    const bought = offered("create", new Set([...STARTER_PARTS, "hair_goggle_ushanka", "acc_cowboy_hat", faceRef("vampire")]));
+    for (const id of ["hair_goggle_ushanka", "acc_cowboy_hat", ...faceParts("face-25")]) expect(bought.has(id), id).toBe(true);
+    expect(bought.has("cat_wide")).toBe(false);
+  });
+  it("shows everything in the closet, the priced ones locked behind their shop row", () => {
+    const closet = offered("wardrobe", new Set(STARTER_PARTS));
+    for (const p of b2) expect(closet.has(p.id), p.id).toBe(true);
+    for (const key of Object.keys(FACE.faces)) for (const id of faceParts(key)) expect(closet.has(id), id).toBe(true);
+    for (const p of b2) expect(unlockRef(p.id), p.id).toBe(free(p.key!) ? null : partRef(p.id));
+  });
+  it("chooses a whole face's parts like any other: eyes, a mouth and a toggled accent", () => {
+    const f = FACE.faces["face-25"];
+    let l = choose(DEFAULT_LOOK, cat("eyes").sections[0], f.eyes);
+    l = choose(l, cat("mouth").sections[0], f.mouth!);
+    l = choose(l, cat("extras").sections[0], f.extras[0]);
+    expect([l.eyes, l.mouth, l.extras]).toEqual([f.eyes, f.mouth, f.extras]);
   });
 });

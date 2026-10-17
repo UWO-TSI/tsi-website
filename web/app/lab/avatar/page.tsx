@@ -28,6 +28,9 @@
  * ?sheet=mix       David's eyes, mouths and accents mixed with each other and with the earlier parts (&skins=)
  * &hair=<0-11>&skin=<0-11>&face=512 (the world atlas) &framing=head|body &charlod=1|2 (every cell at LOD 1 or LOD 2)
  * In ?sheet=roblox an id may carry a head accessory worn with it: &ids=hair_visor_messy+acc_visor (encode the + as %2B in a URL)
+ * ?sheet=b2acc    wardrobe batch 2: David's Roblox accessories, each worn over a hairstyle (&style=, default the ribbon bob),
+ *                  front and 3/4; &groups=head,face (default all) &framing=body for the neck and front ones
+ * ?sheet=b2faces  wardrobe batch 2: David's whole faces #20-25 on the head, front and 3/4 (&skins=, default 3), then a mix row
  */
 import { Suspense, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
@@ -122,6 +125,24 @@ function AvatarBench() {
         return views.map(v => ({ label: `${item} ${v}`, look: { ...bob, back: id, acc: acc ? { head: acc } : {} }, yaw: VIEWS[v] ?? 0, face: OPEN }));
       });
     }
+    // wardrobe batch 2: David's Roblox accessories over a hairstyle, and his whole faces #20-25
+    if (sheet === "b2acc") {
+      const groups = (q.get("groups") ?? "head,face,neck,front").split(",");
+      const hair = { ...base, back: q.get("style") ?? "hair_ribbon_bob" };
+      return partsIn("accessory").filter(p => p.key && groups.includes(p.group!)).flatMap(p => [
+        { label: `${p.key} ${p.name}`, look: { ...hair, acc: { [p.group!]: p.id } }, yaw: 0, face: OPEN },
+        { label: `${p.key} 3/4`, look: { ...hair, acc: { [p.group!]: p.id } }, yaw: -0.6, face: OPEN }]);
+    }
+    if (sheet === "b2faces") {
+      const hair = { ...base, back: q.get("style") ?? "hair_waves" };
+      const faces = Object.entries(FACE.faces);
+      return (q.get("skins") ?? "3").split(",").map(Number).flatMap(skin => faces.flatMap(([key, f]) => [0, -0.6].map(y => ({
+        label: `${skin}: ${key} ${f.name}${y ? " 3/4" : ""}`, look: { ...hair, skin, eyes: f.eyes, mouth: f.mouth ?? "M1.1", extras: f.extras }, yaw: y, face: OPEN }))))
+        .concat(([["cat_wide", "fangs", ["stitches"]], ["caret_hash", "cat_fang", []], ["weird_eyes", "wide_w", ["nose_shade"]], ["squint_blush", "M1.1", ["blush"]],
+          ["F1.1", "tongue_out", []], ["tired_lines", "kitty", ["sweat_drop"]]] as [string, string, string[]][]).map(([eyes, mouth, extras]) => ({
+          label: `mix: ${FACE.names[eyes] ?? eyes} / ${FACE.names[mouth] ?? mouth}${extras.length ? ` + ${FACE.names[extras[0]] ?? extras[0]}` : ""}`,
+          look: { ...hair, eyes, mouth, extras }, yaw: 0, face: OPEN })));
+    }
     // David's faces: the second atlas page's eyes and mouths, in his order (face_set_305.FACES), with his two accents
     const davidEyes = Object.keys(FACE.layers.eyes.items).filter(id => FACE.layers.eyes.items[id].open[6] === 1);
     const davidMouths = Object.keys(FACE.layers.mouth.items).filter(id => FACE.layers.mouth.items[id][6] === 1);
@@ -141,7 +162,7 @@ function AvatarBench() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheet, yaw, q]);
   const root = useRef<HTMLDivElement>(null);
-  const cols = sheet === "roblox" ? (q.get("views") ?? "front,34,side,back").split(",").length : sheet === "facekit" ? 13 : sheet === "hairkit" ? 10 : sheet === "fullkit" ? 7 : sheet === "styles" || sheet === "backs" || sheet === "faces" || sheet === "residents" || sheet === "emote" ? 6 : sheet === "hats" || sheet === "mix" ? 8 : sheet === "david" ? 10 : cells.length;
+  const cols = sheet === "b2acc" ? 8 : sheet === "b2faces" ? 6 : sheet === "roblox" ? (q.get("views") ?? "front,34,side,back").split(",").length : sheet === "facekit" ? 13 : sheet === "hairkit" ? 10 : sheet === "fullkit" ? 7 : sheet === "styles" || sheet === "backs" || sheet === "faces" || sheet === "residents" || sheet === "emote" ? 6 : sheet === "hats" || sheet === "mix" ? 8 : sheet === "david" ? 10 : cells.length;
   return <div ref={root} style={{ position: "relative", paddingTop: 48, minHeight: "100vh", background: "#efe7d6" }}>
     <div data-sheet={sheet} style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, ${cols === 1 ? "420px" : "1fr"})`, gap: 8, padding: 8 }}>
       {cells.map(c => <figure key={c.label} style={{ margin: 0 }}>

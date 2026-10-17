@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { iconSpecs, type IconSpec } from "@/lib/icons/manifest";
 import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS } from "@/lib/wallet/catalogue";
@@ -121,7 +122,8 @@ function frame(camera: THREE.OrthographicCamera, subject: THREE.Object3D, view: 
   camera.updateProjectionMatrix();
 }
 
-const loader = new GLTFLoader();
+// the whole hairstyles and the Roblox accessories (wardrobe batch 2) ship meshopt-compressed (sync-character-assets.mjs)
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 const textures = new THREE.TextureLoader();
 async function subjectFor(spec: IconSpec): Promise<THREE.Object3D> {
   if (spec.view === "roll" || spec.view === "tile") return finish(await textures.loadAsync(spec.url), spec.view);

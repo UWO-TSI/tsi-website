@@ -1,0 +1,45 @@
+{
+ "note": "David's second hair set (wardrobe batch 2, hairs #22-27, ~/Downloads/hair-2.zip; his own Roblox items, confirmed by him; specs/playtest-round1.md \"New wardrobe batch\"). Same pipeline and options as source/david/manifest.json (art/characters/hair/import_hair.py), plus: own_colour: faces that keep their own texture (rule), drawn from the shared fixed-colour atlas (colour_atlas.py) and never tinted (#22's ushanka and goggles stay part of the hair, as the coordinator asked); accent.rule light: the accent mask is the texture's light parts, not its saturated ones (#25's pale blue curls under a black top); key: the item's key in specs/wardrobe/batch2-pricing.json.",
+ "source": "art/characters/hair/source/david-b2",
+ "hairs": [
+  {
+   "file": "22-Green-Cool-Messy-Boy-Hair-w-Y2K-Goggles-Ushanka-87890006358128.glb",
+   "id": "hair_goggle_ushanka",
+   "name": "Ushanka and goggles",
+   "key": "hair-22",
+   "own_colour": {"rule": "not_green", "tile": "hair_goggle_ushanka"}
+  },
+  {
+   "file": "23-sweet-cutecore-moe-messy-short-bob-dark-ash-85192073992593.glb",
+   "id": "hair_ribbon_bob",
+   "name": "Ribbon bob",
+   "key": "hair-23",
+   "accent": {"default": 10}
+  },
+  {
+   "file": "24-Messy-Wavy-IT-Girl-Hair-100884389158278.glb",
+   "id": "hair_wavy_half_up",
+   "name": "Wavy half-up",
+   "key": "hair-24"
+  },
+  {
+   "file": "25-Cute-Igaru-Girl-w-Curly-Hair-Blue-n-Black-87890777934843.glb",
+   "id": "hair_curly_pigtails",
+   "name": "Curly pigtails",
+   "key": "hair-25",
+   "accent": {"default": 11, "rule": "light"}
+  },
+  {
+   "file": "26-cute-fluffy-emo-girl-hair-y2k-114354951912876.glb",
+   "id": "hair_emo_layers",
+   "name": "Emo layers",
+   "key": "hair-26"
+  },
+  {
+   "file": "27-Y2K-It-Girl-Double-Buns-Hair-Dark-Teal-139556608863162.glb",
+   "id": "hair_double_buns",
+   "name": "Double buns",
+   "key": "hair-27"
+  }
+ ]
+}

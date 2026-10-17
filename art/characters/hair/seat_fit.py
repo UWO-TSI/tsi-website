@@ -108,22 +108,24 @@ def surf_r(d):
 SR = np.array([surf_r(d) for _, d in RAYS])
 
 
-def gaps(tree, t):
-    """Air between the classic head and the hair's inside on each ray (NaN: no hair), the hair moved by t."""
+def gaps(tree, t, grow=0.0):
+    """Air between the classic head (grown by `grow` studs) and the hair's inside on each ray (NaN: no hair), the hair
+    moved by t."""
     out = np.full(len(RAYS), np.nan)
     for i, (_, d) in enumerate(RAYS):
-        loc, _, _, _ = tree.ray_cast(Vector(HC + d * (SR[i] - 0.06) - t), Vector(d), 2.0)
+        loc, _, _, _ = tree.ray_cast(Vector(HC + d * (SR[i] + grow - 0.06) - t), Vector(d), 2.0)
         if loc is not None:
-            out[i] = np.dot(np.array(loc) + t - HC, d) - SR[i]
+            out[i] = np.dot(np.array(loc) + t - HC, d) - SR[i] - grow
     return out
 
 
-def seat(tree, vb):
-    """1. The translation seating the hair's inside on the head."""
+def seat(tree, vb, grow=0.0):
+    """1. The translation seating the hair's inside on the head; `grow` (studs): on the head grown by that much (wardrobe
+    batch 2: a hat seated over the hair, accessories/import_roblox.py)."""
     top = LATS >= 55
 
     def cost(t):
-        g = gaps(tree, t)
+        g = gaps(tree, t, grow)
         ok = ~np.isnan(g)
         if ok.sum() < 20:
             return 10.0
