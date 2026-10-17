@@ -195,12 +195,12 @@ describe("weatherSystem", () => {
 describe("seeded hashes stay identical across callers", () => {
   it("specials, Oracle item order, pickup codes and node rolls", () => {
     // the pool lost the wardrobe cut's four retired rows and gained the visor (2026-10-14), then wardrobe batch 2's coin
-    // rows (2026-10-16), so the day's shuffle moved with it
+    // rows (2026-10-16; #12 deleted 2026-10-17, and main retired the tier-1 net and shovel), so the day's shuffle moved
     expect(dailySpecials(seedItems(), "2026-09-26").map((i) => i.slug)).toMatchInlineSnapshot(`
       [
-        "face-tired",
-        "furn-barrel",
-        "furn-stone-lantern",
+        "wear-top-sweater-vest",
+        "face-silly-cat",
+        "furn-closet",
       ]
     `);
     expect(itemOrder("x").slice(0, 8)).toMatchInlineSnapshot(`

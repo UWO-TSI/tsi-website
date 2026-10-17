@@ -1,4 +1,5 @@
-# zsh specs/evidence/launch-fixes/sql-smoke.sh (throwaway Postgres 16, every migration; never Supabase), 2026-10-17 00:27
+# zsh specs/evidence/launch-fixes/sql-smoke.sh (throwaway Postgres 16, every migration through 20261017172740_catalogue_seed; never Supabase), 2026-10-17 13:29
+# Two failures are main's own and fail the same with the batch-2 migration skipped: admin_pass_smoke 'mayor keeps the path' (20261017020000_resident_roster moves the mayor) and taught_tools_off_sale_smoke 'an owner keeps theirs' (nothing in this chain gives member e1 a bug net). Main had not added its three new migrations to the chain.
 chain ok (game)
 ── 029-031_smoke.sql
 NOTICE:  029 ok
@@ -38,9 +39,7 @@ NOTICE:  combat kits ok
 NOTICE:  combat kits: loadout not callable by members ok
 NOTICE:  combat kits: kills not callable by members ok
 ── admin_pass_smoke.sql
-NOTICE:  admin 1 residents ok
-NOTICE:  admin 2 text-keyed versioning ok
-NOTICE:  admin 3 drafts T1/T2 only ok
+ERROR:  mayor keeps the path
 ── phase1_regressions.sql
 NOTICE:  phase1 1 letters ok
 NOTICE:  phase1 2 attendance ok
@@ -157,6 +156,16 @@ NOTICE:  traditions ok
 ── wardrobe_cut_smoke.sql
 NOTICE:  wardrobe cut ok
 NOTICE:  visor seed ok
+── hq_onboarding_copy_smoke.sql
+NOTICE:  hq onboarding copy 1 seeded copy renamed ok
+NOTICE:  hq onboarding copy 2 admin edits kept ok
+NOTICE:  hq onboarding copy 3 idempotent ok
+── resident_roster_smoke.sql
+NOTICE:  resident roster 1 seeded ok
+NOTICE:  resident roster 2 admin edits kept ok
+NOTICE:  resident roster 3 idempotent ok
+── taught_tools_off_sale_smoke.sql
+ERROR:  an owner keeps theirs
 ── wardrobe_b2_smoke.sql
 NOTICE:  wardrobe b2 ok
 chain ok (guard)
@@ -166,6 +175,6 @@ NOTICE:  ok: server saves the look
 NOTICE:  ok: another member reads the look
 avatar_config smoke ok
 
-# fail-first: zsh specs/evidence/launch-fixes/sql-smoke.sh 20261017072411 (the batch-2 migration skipped)
+# fail-first: zsh specs/evidence/launch-fixes/sql-smoke.sh 20261017172740 (the batch-2 migration skipped)
 ── wardrobe_b2_smoke.sql
-ERROR:  thirty-one batch-2 rows
+ERROR:  thirty batch-2 rows

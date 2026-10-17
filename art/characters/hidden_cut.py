@@ -9,14 +9,16 @@ Modes (each rewrites the GLBs in place: the triangles and vertex arrays it keeps
            (Full, LOD 1) that no view from outside can reach is dropped: from each of SAMPLES points on it, no ray in any
            of DIRS directions (the whole sphere: the body draws both sides) gets out past the head, the base body and the
            asset itself. The rest are kept as they are; unused vertices go.
-  hatcut   The hair under a hat. A whole hairstyle's vertex that, with any covering hat on (catalogue `coversHair`: the
-           propeller cap, the drawn top hat, the cowboy, woven and straw hats), no view from outside reaches (each ray hits
-           that hat, the head, the body or the hair's own outer layers) is marked in a `_HATCUT` attribute (1 or 0), per
-           tier on its own mesh. A look wearing a covering hat draws none of the hair's triangles whose three vertices are
-           marked (rig.ts adoptPrimitive). Only what no view reaches goes, so the look is the same.
+  hatcut   The hair under a hat. For each covering hat (catalogue `coversHair`: the propeller cap, the drawn top hat, the
+           cowboy, woven and straw hats, bit i = its place in that list, `hatCut` in the catalogue), a whole hairstyle's
+           vertex that no view from outside reaches with that hat on (each ray hits the hat, the head, the body or the
+           hair's own outer layers) carries the bit in a `_HATCUT` attribute (the sum of 2^i), per tier on its own mesh. A
+           look wearing hat i draws none of the hair's triangles whose three vertices carry bit i (rig.ts cutIndex). Only
+           what no view reaches goes, so the look is the same.
   hoodcut  The head under the hood: the base skin's vertices (the clip base and the LOD 1 skin) the bear hood hides from
            every direction, marked `_HOODCUT`; a look wearing it draws none of the head triangles all marked.
   measure  The heaviest wearable look at Full, LOD 1 and LOD 2 (budget.test.ts's rule, with the hat cut), printed.
+  tris     The catalogue's `tris` from the Full GLBs (hidden runs it).
 Run hidden first (it changes the meshes), then hatcut and hoodcut (marks on the final meshes); rerun after any hair,
 hat or base rebuild (import_hair.py, import_roblox.py, build_lod.py).
 """
@@ -234,12 +236,23 @@ def selected(parts):
     return [p for p in parts if not ONLY or p["id"] in ONLY]
 
 
+SCALP_KEEP = 0.012       # m: a hairstyle keeps every triangle this close to the head (its under-cap or scalp shell, which
+                         # fill the gaps between strands where a ray could slip through unsampled; fit_check measures them)
+
+
+# a hairstyle that is itself the scalp (manifest `undercap: false`: #20's waves) keeps its whole shell: it is the layer
+# the gaps would show through (fit_check measures it), and light (1,248)
+SHELL_HAIRS = {h["id"] for who in ("david", "david-b2") for h in json.load(open(os.path.join(HERE, "hair", "source", who, "manifest.json")))["hairs"]
+               if h.get("undercap") is False}
+
+
 def hidden():
     """Drop the triangles no outside view reaches (the head, the base body and the asset occlude)."""
     base = bvh(BASE)
+    head = bvh(tris_of(os.path.join(HERE, CAT["base"]["clips_glb"]), lambda p, j: next(m for m in j["meshes"] if p in m["primitives"])["name"] == "V8_Head"))
     w = np.array([[1 / 3, 1 / 3, 1 / 3], [0.6, 0.2, 0.2], [0.2, 0.6, 0.2], [0.2, 0.2, 0.6]])   # the samples on a triangle
-    jobs = [(p["id"], path) for p in selected([h for h in CAT["hair"] if h.get("full")]) for path in hair_paths(p)]
-    jobs += [(p["id"], path) for p in selected(CAT.get("robloxAccessories", [])) for path in acc_paths(p)]
+    jobs = [(p["id"], path) for p in selected([h for h in CAT["hair"] if h.get("full") and h["id"] not in SHELL_HAIRS]) for path in hair_paths(p)]
+    jobs += [(p["id"], path) for p in selected(CAT.get("robloxAccessories", []) + [h for h in CAT["hair"] if not h.get("full")]) for path in acc_paths(p)]
     total = [0, 0]
     for pid, path in jobs:
         j, arrays = load_all(path)
@@ -251,6 +264,9 @@ def hidden():
             t = arrays[p["attributes"]["POSITION"]].astype(float)[arrays[p["indices"]].reshape(-1, 3)]
             pts = np.einsum("sk,nkd->nsd", w, t).reshape(-1, 3)
             vis = escapes(trees, pts).reshape(len(t), len(w)).any(1)
+            if "/hair/full/" in path:
+                c = t.mean(1)
+                vis |= np.array([head.find_nearest(Vector(x))[3] < SCALP_KEEP for x in c])
             before, after = before + len(t), after + int(vis.sum())
             if not vis.all():
                 keep_triangles(j, arrays, p, vis)
@@ -259,33 +275,34 @@ def hidden():
         total[1] += after
         print(f"HIDDEN {pid:24s} {os.path.relpath(path, HERE):48s} {before} -> {after} ({before - after} hidden)")
     print("HIDDEN_OK", total[0], "->", total[1])
+    tris()
 
 
 def covering_hats():
-    return [p for p in CAT.get("robloxAccessories", []) if p.get("coversHair")]
+    """The covering hats in bit order: the Roblox accessories', then the ones split off a hairstyle (#22's ushanka)."""
+    return [p for p in CAT.get("robloxAccessories", []) + CAT["hair"] if p.get("coversHair")]
 
 
 def mark(path, trees, name, prim_ok=lambda p, j: True, own=True):
-    """Mark `name` on the vertices every direction hides, for each tree set in `trees` (all of them: the intersection);
-    own: the asset occludes too (its outer layers hide its inner ones, so what the hat leaves of it is drawn whole)."""
+    """`name` on each vertex: the sum of 2^i over the tree sets trees[i] that hide it from every direction. own: the asset
+    occludes too (its outer layers hide its inner ones, so what is left of it is drawn whole). Returns, per set, the
+    triangles all three of whose vertices it hides, and the triangles."""
     j, arrays = load_all(path)
     if own:
         mine = bvh(np.concatenate([arrays[p["attributes"]["POSITION"]].astype(float)[arrays[p["indices"]].reshape(-1, 3)] for p in primitives(j)]))
         trees = [t + [mine] for t in trees]
-    cut = n = 0
+    cut, n = [0] * len(trees), 0
     for p in primitives(j):
         if not prim_ok(p, j):
             continue
         pos = arrays[p["attributes"]["POSITION"]].astype(float)
-        hid = np.ones(len(pos), bool)
-        for t in trees:                                  # hidden under every hat: each alone (with the head and body)
-            idx = np.nonzero(hid)[0]
-            if not len(idx):
-                break
-            hid[idx] = hidden_everywhere(t, pos[idx])
-        set_mask(j, arrays, p, name, hid)
+        bits = np.zeros(len(pos), np.int64)
         tri = arrays[p["indices"]].reshape(-1, 3)
-        cut += int(hid[tri].all(1).sum())
+        for i, t in enumerate(trees):
+            hid = hidden_everywhere(t, pos)
+            bits |= hid.astype(np.int64) << i
+            cut[i] += int(hid[tri].all(1).sum())
+        set_mask(j, arrays, p, name, bits)
         n += len(tri)
     save(path, j, arrays)
     return cut, n
@@ -294,11 +311,12 @@ def mark(path, trees, name, prim_ok=lambda p, j: True, own=True):
 def hatcut():
     base = bvh(BASE)
     hats = [[base, bvh(tris_of(os.path.join(HERE, h["glb"])))] for h in covering_hats()]
-    print("HATS", [h["id"] for h in covering_hats()])
+    print("HATS", [(h["id"], h.get("hatCut")) for h in covering_hats()])
+    assert [h.get("hatCut") for h in covering_hats()] == list(range(len(hats))), "each covering hat's hatCut is its bit"
     for p in selected([h for h in CAT["hair"] if h.get("full")]):
         for path in hair_paths(p):
             cut, n = mark(path, hats, "_HATCUT")
-            print(f"HATCUT {p['id']:24s} {os.path.relpath(path, HERE):48s} {cut} of {n} triangles under every covering hat")
+            print(f"HATCUT {p['id']:24s} {os.path.relpath(path, HERE):48s} of {n}: {cut} under each covering hat")
     print("HATCUT_OK")
 
 
@@ -312,17 +330,19 @@ def hoodcut():
         return j["materials"][p["material"]]["name"] == "M_Skin" and "Head" in mesh["name"]
     for path in (os.path.join(HERE, CAT["base"]["clips_glb"]), os.path.join(HERE, "lod1", "base", "skin.glb")):
         cut, n = mark(path, trees, "_HOODCUT", head_skin, own=False)
-        print(f"HOODCUT {os.path.relpath(path, HERE):48s} {cut} of {n} head triangles under the hood")
+        print(f"HOODCUT {os.path.relpath(path, HERE):48s} {cut[0]} of {n} head triangles under the hood")
     print("HOODCUT_OK")
 
 
-def tri_count(path, cut=None):
+def tri_count(path, cut=None, bit=0):
+    """Triangles drawn; with cut (an attribute) and bit, those all three of whose vertices carry the bit left out."""
     j, arrays = load_all(path)
     n = 0
     for p in primitives(j):
         tri = arrays[p["indices"]].reshape(-1, 3)
         if cut and cut in p["attributes"]:
-            n += int((~(arrays[p["attributes"][cut]][:, 0] > 0.5)[tri].all(1)).sum())
+            m = (np.rint(arrays[p["attributes"][cut]][:, 0]).astype(np.int64) >> bit) & 1
+            n += int((~(m[tri] == 1).all(1)).sum())
         else:
             n += len(tri)
     return n
@@ -347,13 +367,36 @@ def measure():
         band = most(lambda p: p.get("group") == "head" and not p.get("hidesBackHair") and not p.get("coversHair"))
         hat = most(lambda p: p.get("coversHair"))
         full = [p for p in parts if p["slot"] == "back" and p.get("full")]
+        hats = [p for p in parts if p.get("coversHair")]
+        hatted = {(h["id"], c["id"]): tri_count(path(h), "_HATCUT", c["hatCut"]) + tris[c["id"]] for h in full for c in hats}
         hair = max([most(lambda p: p["slot"] == "bangs") + most(lambda p: p["slot"] == "back" and not p.get("full")) + band]
-                   + [tris[p["id"]] + band for p in full] + [tri_count(path(p), "_HATCUT") + hat for p in full]
+                   + [tris[p["id"]] + band for p in full] + list(hatted.values())
                    + [most(lambda p: p["slot"] == "bangs") + most(lambda p: p.get("group") == "head" and p.get("hidesBackHair"))])
         total = (skin + face if tier == "full" else lodskin) + hair + outfit + most(lambda p: p["slot"] == "shoes") + acc
+        if "--detail" in ARGS:
+            (hh, cc), top = max(hatted.items(), key=lambda kv: kv[1])
+            print(f"  {tier}: uncut hair + non-covering head {max(tris[p['id']] for p in full) + band}; hatted hair + its hat at most "
+                  f"{top} ({hh} under {cc}: {tris[hh]} -> {top - tris[cc]}, the hat {tris[cc]})")
+            for g in ("head", "face", "neck", "front", "bag"):
+                top = sorted(((tris[p["id"]], p["id"]) for p in parts if p.get("group") == g), reverse=True)[:6]
+                print(f"  {tier} {g}: {top}")
         print(f"MEASURE {tier}: {total} (base {skin + face if tier == 'full' else lodskin}, hair+head {hair}, outfit {outfit}, "
               f"shoes {most(lambda p: p['slot'] == 'shoes')}, face/bag/neck/front {[most(lambda p, g=g: p.get('group') == g) for g in ('face', 'bag', 'neck', 'front')]}, "
               f"heaviest uncut hair {max(tris[p['id']] for p in full)}, non-covering head {band}, covering hat {hat})")
+
+
+def tris():
+    """The catalogue's `tris` of every part: its Full GLB's triangles as shipped (after the hidden cut)."""
+    raw = open(CAT_PATH).read()
+    cat = json.loads(raw)
+    n = 0
+    for sec in ("outfits", "accessories", "hair", "robloxAccessories"):
+        for p in cat.get(sec, []):
+            t = tri_count(os.path.join(HERE, p["glb"]))
+            n += t != p["tris"]
+            p["tris"] = t
+    json.dump(cat, open(CAT_PATH, "w"), indent=1)
+    print("TRIS_OK", n, "changed")
 
 
 def roundtrip():
@@ -366,4 +409,4 @@ def roundtrip():
 
 if MODE in ("hidden", "hatcut", "hoodcut"):
     BASE = base_tris()
-{"hidden": hidden, "hatcut": hatcut, "hoodcut": hoodcut, "measure": measure, "roundtrip": roundtrip}[MODE]()
+{"hidden": hidden, "hatcut": hatcut, "hoodcut": hoodcut, "measure": measure, "tris": tris, "roundtrip": roundtrip}[MODE]()

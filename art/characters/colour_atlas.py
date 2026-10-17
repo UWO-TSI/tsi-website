@@ -27,7 +27,7 @@ TILES = {
     "acc_gold_monocle": 256, "acc_bandage_blindfold": 256, "acc_paper_horns": 256, "acc_bear_hood": 256, "acc_cowboy_hat": 256,
     "acc_woven_hat": 256, "acc_monkey_ears": 256,
     "acc_green_sprout": 128, "acc_thin_glasses": 128, "acc_half_rim_glasses": 128, "acc_square_shades": 128,
-    "acc_wheat_sprig": 128, "acc_round_wire_glasses": 128, "acc_gold_rimless_shades": 128, "acc_apple_stem": 128,
+    "acc_gold_rimless_shades": 128, "acc_apple_stem": 128,
 }
 
 

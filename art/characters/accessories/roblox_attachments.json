@@ -4,7 +4,8 @@
   "To fill an entry from Roblox Studio: insert the accessory, expand it, select Handle > its Attachment (HatAttachment, FaceFrontAttachment, NeckAttachment, ...), and copy its Position and Orientation into 'position' and 'orientation'; mesh_scale is the SpecialMesh's Scale, or Size / MeshSize for a MeshPart. Then set 'provisional' to false. Entries with provisional true are estimates: import_roblox.py rewrites their position from the item's shape (rule `fit`) on every run.",
   "group: the creator slot (head: Hats, face: Glasses, neck: Neck, front: Front); #07 is a hat-type item in Roblox (the head folder) that is a pair of glasses: it sits at the eyes and is worn in the Glasses slot. key: the item's key in specs/wardrobe/batch2-pricing.json (#16, the sci-fi visor, is skipped there and not imported).",
   "override (optional): offset (studs, Roblox's axes: +y up, +z back) applied after the fit, and scale (each piece shrunk by it toward where it meets the head, import_roblox.py shrink), kept when the Roblox values are filled in.",
-  "coversHair (optional): a hat whose crown closes over the hair (not a visor, a sprout or ears): a look wearing it draws none of the hair it hides (hidden_cut.py hatcut, rig.ts)."
+  "coversHair (optional): a hat whose crown closes over the hair (not a visor, a sprout or ears): a look wearing it draws none of the hair it hides (hidden_cut.py hatcut, rig.ts).",
+  "coversHead (optional): the bear hood: a look wearing it draws none of the head skin it hides (hidden_cut.py hoodcut)."
  ],
  "source": "art/characters/accessories/source/roblox-b2 (~/Downloads/accessories.zip and accessories-2.zip; David's own Roblox items, confirmed by him)",
  "items": [
@@ -21,9 +22,9 @@
    "fit": "seat",
    "hidesBackHair": false,
    "position": [
-    0.0275,
-    -0.05109,
-    0.155
+    0.0075,
+    0.09459,
+    0.2875
    ],
    "orientation": [
     0,
@@ -37,7 +38,11 @@
    ],
    "provisional": true,
    "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
-   "coversHair": true
+   "coversHair": true,
+   "override": {
+    "scale": 1.3,
+    "why": "David, 2026-10-17: bigger, covering the hair"
+   }
   },
   {
    "n": 2,
@@ -52,13 +57,13 @@
    "fit": "top",
    "hidesBackHair": false,
    "position": [
-    -0.0,
+    0.00056,
     -0.44977,
-    -0.0
+    -0.00045
    ],
    "orientation": [
     0,
-    0,
+    -45,
     0
    ],
    "mesh_scale": [
@@ -68,10 +73,7 @@
    ],
    "provisional": true,
    "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
-   "override": {
-    "scale": 0.5,
-    "scale_why": "David (2026-10-16): shrunk to suit our chibi head instead of Roblox's size; each piece toward where it meets the head"
-   }
+   "orientation_why": "David, 2026-10-17: turned so the leaves face the camera"
   },
   {
    "n": 3,
@@ -113,12 +115,12 @@
    "file": "head/04-Mcdonalds-96753684530964.glb",
    "attachment": "HatAttachment",
    "group": "head",
-   "fit": "seat",
+   "fit": "visor",
    "hidesBackHair": false,
    "position": [
-    -0.05,
-    -0.0719,
-    0.5225
+    0.0169,
+    0.79504,
+    0.14331
    ],
    "orientation": [
     0,
@@ -131,7 +133,11 @@
     1
    ],
    "provisional": true,
-   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
+   "override": {
+    "scale": 1.3,
+    "why": "David, 2026-10-17: properly on the head: a band round the hair"
+   }
   },
   {
    "n": 5,
@@ -208,7 +214,7 @@
    "position": [
     -0.0,
     0.77346,
-    0.27228
+    0.32499
    ],
    "orientation": [
     0,
@@ -223,12 +229,13 @@
    "provisional": true,
    "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
    "override": {
+    "scale": 0.85,
     "offset": [
      0,
-     0.06,
+     0.0,
      0
     ],
-    "why": "half-rim reading glasses: the rims run under the eye, so the frame sits a little higher than its middle"
+    "why": "David, 2026-10-17: smaller and lower (it sat 0.06 stud high)"
    }
   },
   {
@@ -304,9 +311,9 @@
    "fit": "mouth",
    "hidesBackHair": false,
    "position": [
-    0.45629,
-    0.68913,
-    0.18961
+    0.41662,
+    0.68831,
+    0.19765
    ],
    "orientation": [
     0,
@@ -319,7 +326,9 @@
     1
    ],
    "provisional": true,
-   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
+   "mouth_lon": 9.0,
+   "mouth_lon_why": "David, 2026-10-17: a little more centred (13 deg before)"
   },
   {
    "n": 11,
@@ -334,9 +343,9 @@
    "fit": "eye_r",
    "hidesBackHair": false,
    "position": [
-    0.30828,
-    0.277,
-    -0.34416
+    0.16553,
+    0.28503,
+    0.30457
    ],
    "orientation": [
     0,
@@ -349,67 +358,8 @@
     1
    ],
    "provisional": true,
-   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
-  },
-  {
-   "n": 12,
-   "key": "acc-12",
-   "id": "acc_wheat_sprig",
-   "name": "Wheat sprig",
-   "asset_id": 13207311986,
-   "title": "Wheat",
-   "file": "face/12-Wheat-13207311986.glb",
-   "attachment": "FaceFrontAttachment",
-   "group": "face",
-   "fit": "mouth",
-   "hidesBackHair": false,
-   "position": [
-    0.27102,
-    0.62377,
-    -0.22267
-   ],
-   "orientation": [
-    0,
-    180,
-    0
-   ],
-   "mesh_scale": [
-    1,
-    1,
-    1
-   ],
-   "provisional": true,
-   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
-  },
-  {
-   "n": 13,
-   "key": "acc-13",
-   "id": "acc_round_wire_glasses",
-   "name": "Round wire glasses",
-   "asset_id": 15284805647,
-   "title": "Glasses",
-   "file": "face/13-Glasses-15284805647.glb",
-   "attachment": "FaceFrontAttachment",
-   "group": "face",
-   "fit": "eyes",
-   "hidesBackHair": false,
-   "position": [
-    0.00693,
-    0.17346,
-    0.39499
-   ],
-   "orientation": [
-    0,
-    180,
-    0
-   ],
-   "mesh_scale": [
-    1,
-    1,
-    1
-   ],
-   "provisional": true,
-   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
+   "fit_why": "David, 2026-10-17: on the eye (the ring is the largest piece; its top part took the chain's clip and stood 27 cm off)"
   },
   {
    "n": 14,
@@ -439,7 +389,15 @@
     1
    ],
    "provisional": true,
-   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
+   "override": {
+    "offset": [
+     0,
+     -0.08,
+     0
+    ],
+    "why": "David, 2026-10-17: lower"
+   }
   },
   {
    "n": 15,
@@ -499,11 +457,7 @@
     1
    ],
    "provisional": true,
-   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
-   "override": {
-    "scale": 0.5,
-    "scale_why": "David (2026-10-16): shrunk to suit our chibi head instead of Roblox's size; each piece toward where it meets the head"
-   }
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
   },
   {
    "n": 18,
@@ -518,9 +472,9 @@
    "fit": "seat",
    "hidesBackHair": false,
    "position": [
-    0.025,
-    0.31148,
-    0.02022
+    0.06125,
+    0.65764,
+    -0.09968
    ],
    "orientation": [
     0,
@@ -543,7 +497,16 @@
     0.025
    ],
    "drop_outline_why": "its cartoon outline is an inverted hull on a black swatch (UV 0.13-0.149, 0.004-0.021), which our two-sided body drew over the whole hat: dropped",
-   "coversHair": true
+   "coversHair": true,
+   "override": {
+    "scale": 1.45,
+    "offset": [
+     0,
+     0.3,
+     0
+    ],
+    "why": "David, 2026-10-17: bigger and higher (it blended into the hair)"
+   }
   },
   {
    "n": 19,
@@ -577,12 +540,10 @@
    "override": {
     "offset": [
      0,
-     -0.2,
+     -0.3,
      0
     ],
-    "why": "the horns stand at the head's rounded top edge, not level with its flat top",
-    "scale": 0.55,
-    "scale_why": "David (2026-10-16): shrunk to suit our chibi head instead of Roblox's size; each piece toward where it meets the head"
+    "why": "David, 2026-10-17: lower (they stood at the head's rounded top edge, 0.2 stud down, before)"
    }
   },
   {
@@ -613,7 +574,8 @@
     1
    ],
    "provisional": true,
-   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
+   "coversHead": true
   },
   {
    "n": 21,
@@ -628,9 +590,9 @@
    "fit": "seat",
    "hidesBackHair": false,
    "position": [
-    -0.0,
-    0.18,
-    0.1975
+    0.00125,
+    0.315,
+    0.1725
    ],
    "orientation": [
     0,
@@ -644,7 +606,11 @@
    ],
    "provisional": true,
    "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
-   "coversHair": true
+   "coversHair": true,
+   "override": {
+    "scale": 1.25,
+    "why": "David, 2026-10-17: sized to cover the hair"
+   }
   },
   {
    "n": 22,
@@ -659,9 +625,9 @@
    "fit": "seat",
    "hidesBackHair": false,
    "position": [
-    0.00875,
-    0.39736,
-    0.08
+    -0.0,
+    0.54583,
+    0.06
    ],
    "orientation": [
     0,
@@ -675,7 +641,11 @@
    ],
    "provisional": true,
    "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
-   "coversHair": true
+   "coversHair": true,
+   "override": {
+    "scale": 1.2,
+    "why": "David, 2026-10-17: sized to cover the hair"
+   }
   },
   {
    "n": 23,
@@ -705,11 +675,7 @@
     1
    ],
    "provisional": true,
-   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
-   "override": {
-    "scale": 0.65,
-    "scale_why": "David (2026-10-16): shrunk to suit our chibi head instead of Roblox's size; each piece toward where it meets the head"
-   }
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
   },
   {
    "n": 24,
@@ -724,9 +690,9 @@
    "fit": "seat",
    "hidesBackHair": false,
    "position": [
-    0.005,
-    0.34081,
-    0.0175
+    0.01375,
+    0.55297,
+    -0.06
    ],
    "orientation": [
     0,
@@ -740,7 +706,11 @@
    ],
    "provisional": true,
    "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
-   "coversHair": true
+   "coversHair": true,
+   "override": {
+    "scale": 1.2,
+    "why": "David, 2026-10-17: sized to cover the hair (it poked out)"
+   }
   }
  ]
 }

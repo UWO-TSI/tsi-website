@@ -14,7 +14,7 @@ import { useGLTF } from "@react-three/drei";
 import type { WeaponPaint } from "@/lib/game/combat/primitives";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { BASE_URL, COLOUR_ATLAS_URL, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, HAIR_CAP_COLOR, HAIR_MAP_GAIN, HAIR_MAPS_URL, LOD_SKIN_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, usesFacePage2, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
+import { BASE_URL, COLOUR_ATLAS_URL, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, HAIR_CAP_COLOR, HAIR_MAP_DL, HAIR_MAPS_URL, PART_BY_ID, LOD_SKIN_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, usesFacePage2, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
 import { characterLod, createLodState, detailSituation, drawnHeight, mixerStep, type DetailSituation } from "@/lib/game/character/lod";
 import { isDetailFocus } from "@/lib/game/character/detailFocus";
 import { readPhoto } from "@/lib/game/photoMode";
@@ -87,6 +87,8 @@ function ensureColourAtlas() {
     COLOUR_ATLAS.value = tex;
   });
 }
+/** Row 314: the hair's soft gloss (David: "matte with subtle gloss"): its roughness, F0 and grazing reflectance. */
+const HAIR_GLOSS = { roughness: 0.5, f0: 0.035, f90: 0.45 };
 const HAIR_CHANNEL = /* glsl */ `float hairChannel(vec3 t, float c) { return c < 1.5 ? t.r : (c < 2.5 ? t.g : t.b); }`;
 const CAP = new THREE.Color(HAIR_CAP_COLOR);       // linear: a cap or visor's fixed colour, by its mask channel
 const glsl = (c: THREE.Color) => `vec3(${c.r.toFixed(5)}, ${c.g.toFixed(5)}, ${c.b.toFixed(5)})`;
@@ -107,17 +109,32 @@ BODY_MATERIAL.onBeforeCompile = shader => {
     if (vHairUv.x > 1.5) {
       diffuseColor.rgb *= texture2D(uColourAtlas, vec2(vHairUv.x - 2.0, vHairUv.y)).rgb;
     } else if (vHairMap.x > 0.5 && vHairUv.x >= 0.0) {
+      // row 314 (David: "the matte with subtle gloss they have"): the map's lightness offset added to the colour's own
+      // CIE L*, the colour scaled to that luminance: every colour keeps the source's strands (a luminance-preserving tint)
       vec3 t = texture2D(uHairAtlas, vHairUv).rgb;
-      float s = hairChannel(t, vHairMap.x) * ${HAIR_MAP_GAIN.toFixed(4)};
+      float dl = hairChannel(t, vHairMap.x) * ${(HAIR_MAP_DL[1] - HAIR_MAP_DL[0]).toFixed(2)} + ${HAIR_MAP_DL[0].toFixed(2)};
       float a = vHairMap.y > 0.5 ? hairChannel(t, vHairMap.y) : 0.0;
       float c = vHairMap.z > 0.5 ? hairChannel(t, vHairMap.z) : 0.0;
-      diffuseColor.rgb *= s * mix(mix(vColor, vHairAccent, a), ${glsl(CAP)}, c);
+      vec3 tint = mix(mix(vColor, vHairAccent, a), ${glsl(CAP)}, c);
+      float y = dot(tint, vec3(0.2126, 0.7152, 0.0722));
+      float l = y > 0.008856 ? 116.0 * pow(y, 1.0 / 3.0) - 16.0 : 903.3 * y;
+      float l2 = clamp(l + dl, 0.0, 100.0);
+      float y2 = l2 > 8.0 ? pow((l2 + 16.0) / 116.0, 3.0) : l2 / 903.3;
+      diffuseColor.rgb *= tint * (y2 / max(y, 1e-5));
     } else {
       diffuseColor.rgb *= vColor;
     }
-    #endif`);
+    #endif`)
+    // row 314: a soft, subtle gloss on the hair alone (the body stays matte): rougher than skin's would be, a faint F0
+    .replace("#include <lights_physical_fragment>", `#include <lights_physical_fragment>
+    if (vHairMap.x > 0.5 && vHairUv.x >= 0.0 && vHairUv.x < 1.5) {
+      material.roughness = ${HAIR_GLOSS.roughness.toFixed(2)};
+      material.specularColor = vec3(${HAIR_GLOSS.f0.toFixed(3)});
+      material.specularColorBlended = material.specularColor;
+      material.specularF90 = ${HAIR_GLOSS.f90.toFixed(2)};
+    }`);
 };
-BODY_MATERIAL.customProgramCacheKey = () => "character-body-hairmap-v4";
+BODY_MATERIAL.customProgramCacheKey = () => "character-body-hairmap-v5";
 let decalMaterial: THREE.MeshPhysicalMaterial | null = null;
 const bodies = refCache<THREE.BufferGeometry>();
 const decals = new Map<string, THREE.BufferGeometry>();
@@ -180,10 +197,16 @@ function localBoneTransform(this: THREE.SkinnedMesh, index: number, target: THRE
   return target.applyMatrix4(toLocal.copy(this.matrixWorld).invert());
 }
 
-/** What a look merges (rig.ts mergeLook): the base's skin in the look's skin colour, then each part but its print. */
+/**
+ * What a look merges (rig.ts mergeLook): the base's skin in the look's skin colour, then each part but its print. A
+ * covering hat leaves out the hair it hides, the hood the head it hides (hidden_cut.py's marks, rig.ts cutIndex).
+ */
 function lookPieces(look: CharacterLook, parts: ResolvedPart[], base: THREE.Object3D, scenes: THREE.Object3D[]) {
-  return [{ root: base, tints: { M_Skin: PALETTE.skin[look.skin] }, keep: (m: string) => m === "M_Skin" },
-    ...parts.map((p, i) => ({ root: scenes[i], tints: p.tints, keep: (m: string) => m !== "M_Decal", map: p.map }))];
+  const hat = parts.map(p => PART_BY_ID.get(p.id)).find(p => p?.coversHair && p.hatCut !== undefined);
+  const hooded = parts.some(p => PART_BY_ID.get(p.id)?.coversHead);
+  return [{ root: base, tints: { M_Skin: PALETTE.skin[look.skin] }, keep: (m: string) => m === "M_Skin", cut: hooded ? { name: "_HOODCUT", bit: 0 } : null },
+    ...parts.map((p, i) => ({ root: scenes[i], tints: p.tints, keep: (m: string) => m !== "M_Decal", map: p.map,
+      cut: hat && PART_BY_ID.get(p.id)?.full ? { name: "_HATCUT", bit: hat.hatCut! } : null }))];
 }
 
 /** One character instance: its own bones and mixer, shared geometry/materials. */

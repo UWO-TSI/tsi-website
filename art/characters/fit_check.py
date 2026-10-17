@@ -101,7 +101,9 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 CAT = json.load(open(os.path.join(HERE, "character_catalog.json")))
 # head-roblox: a piece import_hair.py split off a hairstyle (manifest `split`: #8's visor) is listed after the hair but is
 # an accessory; it is checked as headwear, worn over the hairstyle it came off (it rests there in Roblox)
-SPLIT_FROM = {h["split"]["id"]: h["id"] for h in json.load(open(os.path.join(HERE, "hair", "source", "david", "manifest.json")))["hairs"] if h.get("split")}
+# the accessories split off a hairstyle (#8's visor; row 314: #22's ushanka and goggles), each worn over its own hair
+SPLIT_FROM = {h[k]["id"]: h["id"] for who in ("david", "david-b2") for h in json.load(open(os.path.join(HERE, "hair", "source", who, "manifest.json")))["hairs"]
+              for k in ("split", "split_own") if h.get(k)}
 HAIR_PARTS = [h for h in CAT["hair"] if h["slot"] != "accessory"]
 HEAD_ACC = CAT["accessories"] + [h for h in CAT["hair"] if h["slot"] == "accessory"]
 V7_FACE = os.path.join(HERE, "v7", "face", "face_v7.json")

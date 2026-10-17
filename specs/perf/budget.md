@@ -64,10 +64,10 @@ measured at the display's pace (`perf-bench.mjs` `UNCAPPED=0`), not by perf:chec
 
 | Tier | When | Triangles (whole look) | Draws | Shadow draws | Materials | Bones | Mixer |
 |---|---|---|---|---|---|---|---|
-| Full | within 21 u, or a Full remote (nearest 12 / 8) | 10,200 (7,800 before wardrobe batch 2) | 3 (body, face, print) | 2 | 1 (shared) | 22 | every frame |
-| LOD 1 | past 21 u and under 72 px | 5,400 (5,100 before wardrobe batch 2) | 3 | 2 | 1 | 22 | 30 Hz past 28 u, 15 Hz past 40 u |
-| LOD 2 | past 40 u and under 28 px | 4,300 (4,000 before wardrobe batch 2) | 3 | 2 | 1 | 22 | 15 Hz |
-| Reduced remote | the next 12 / 8 (drawn at LOD 1 or 2 by distance) | 5,400 | 3 | 0 | 1 | 22 | 15 Hz |
+| Full | within 21 u, or a Full remote (nearest 12 / 8) | 7,800 | 3 (body, face, print) | 2 | 1 (shared) | 22 | every frame |
+| LOD 1 | past 21 u and under 72 px | 5,100 | 3 | 2 | 1 | 22 | 30 Hz past 28 u, 15 Hz past 40 u |
+| LOD 2 | past 40 u and under 28 px | 4,000 | 3 | 2 | 1 | 22 | 15 Hz |
+| Reduced remote | the next 12 / 8 (drawn at LOD 1 or 2 by distance) | 5,100 | 3 | 0 | 1 | 22 | 15 Hz |
 
 **Head-roblox (2026-10-14, `specs/characters/head-roblox.md` §7):** the hair is David's 21 Roblox hairstyles, whole at
 Full (David: "hair should look good close up"), so the heaviest wearable look (every accessory slot filled) is 7,700
@@ -78,14 +78,21 @@ catalogue's clip base (`base/v8_clips.glb` since the head fit: the same 1,264 tr
 effects (below). The multiplayer spec's targets stay: at most 0.12 ms of CPU per Full remote and 3 ms for 24 drawn, at
 most +5 draws per drawn remote on High and +3 on Lite (`PER_PLAYER`).
 
-**Wardrobe batch 2 (2026-10-16, `specs/playtest-round1.md` "New wardrobe batch"):** David's 23 Roblox accessories are up to
-1,200 triangles at Full (the `accessory` category) and 300 at LOD 1 (`build_lod.py` `ACC_LOD1_MAX`; a part the collapse
-stalls on sheds its smallest loose parts: the monocle's chain, the woven hat's tassels). Hats sit over the hair (David),
-and a glasses, neck and front item can be worn with one, so the heaviest wearable look is 10,104 triangles at Full,
-5,332 at LOD 1 and 4,271 at LOD 2 (budgets raised from 7,800 / 5,100 / 4,000 to 10,200 / 5,400 / 4,300). Residents and
-bots never roll a batch-2 item (`randomLook`), so the scene benches don't see it; 12 Full characters on High in the
-heaviest look add about 28k scene triangles over the old envelope. Needs David's OK; the alternative is a lower Full cap
-for the glasses, neck and front items (600: about -1,150 at Full).
+**Wardrobe batch 2 (2026-10-17, David: the budget stays; "find ways to not render part of hair or smth or find ways to
+lower triangles that aren't displayed"):** David's Roblox accessories over a whole hairstyle first put the heaviest look
+at 10,116 / 5,267 / 4,206 (Full / LOD 1 / LOD 2). `art/characters/hidden_cut.py` cuts what no view reaches, in place:
+1. **Hat cut.** Each covering hat (the propeller cap, the drawn top hat, the cowboy, woven and straw hats) has a bit in
+   the hair's `_HATCUT` marks, per hairstyle and tier: a vertex no outside view reaches with that hat on (the hat, the
+   head, the body or the hair's outer layers stop every ray). A hatted look leaves out the hair's triangles all three of
+   whose vertices carry the worn hat's bit (`rig.ts` cutIndex); the bear hood does the same for the head skin
+   (`_HOODCUT`, 188 of the head's 344). Alone it moved nothing (the heaviest look wears a sprout, which covers nothing).
+2. **Hidden inner geometry.** Every triangle of a hairstyle (three tiers) and an accessory (two) that no ray from it
+   leaves the head, the body and the asset (256 directions from four points on it) is dropped: 121,220 to 102,539 hair
+   triangles, 27,669 to 24,159 accessory ones. 9,313 / 5,041 / 4,025.
+3. **Full no heavier than what shows** (`import_roblox.py` full_cap): the glasses, monocle, wheat and blindfold and the
+   neck items at most 350 (they ran to 1,176 on a few hundred pixels), a front item 300, a covering hat 800, any other
+   head item 780 (the sprout's 1,176), the hood 1,200; the glasses' LOD 1 at 250 (`build_lod.py`).
+Now 7,567 / 4,963 / 3,947. Residents and bots never wear a batch-2 item (`randomLook`).
 
 ## Effects on characters (`EFFECT_BUDGET`)
 

@@ -32,10 +32,11 @@ export interface HairMapUse { shade: number; accent?: number; cap?: number; acce
  * the accent and the fixed cap colour by their masks (Character.tsx), and
  * leaves a vertex with u < 0 (the under-cap) to its COLOR_0 and tint alone.
  */
-export function adoptPrimitive(mesh: THREE.SkinnedMesh, boneIndex: ReadonlyMap<string, number>, tint: THREE.Color | null, map: HairMapUse | null = null): THREE.BufferGeometry {
+export function adoptPrimitive(mesh: THREE.SkinnedMesh, boneIndex: ReadonlyMap<string, number>, tint: THREE.Color | null, map: HairMapUse | null = null,
+  cut: PieceCut | null = null): THREE.BufferGeometry {
   const src = mesh.geometry, n = src.getAttribute("position").count;
   const g = new THREE.BufferGeometry();
-  if (src.index) g.setIndex(Array.from(src.index.array as ArrayLike<number>));
+  if (src.index) g.setIndex(cutIndex(src, cut));
   g.setAttribute("position", src.getAttribute("position"));
   g.setAttribute("normal", src.getAttribute("normal"));
   const uv = src.getAttribute("uv");
@@ -73,7 +74,34 @@ export function adoptPrimitive(mesh: THREE.SkinnedMesh, boneIndex: ReadonlyMap<s
   return g;
 }
 
+/**
+ * What a look never shows (art/characters/hidden_cut.py; David, 2026-10-17: "find ways to not render part of hair"):
+ * covering hat i hides the hair whose `_HATCUT` marks carry bit i (the sum of 2^i over the hats that hide a vertex), the
+ * hood the head skin its `_HOODCUT` marks (bit 0). A triangle all three of whose vertices carry the bit is left out of
+ * the merged index; nothing else changes. CUTS.on false (the avatar bench's `&cut=0`) draws everything, for the
+ * before-and-after sheets.
+ */
+export const CUTS = { on: true };
+/** A piece's cut: the GLB attribute (`_HATCUT`, `_HOODCUT`) and the bit to test. */
+export interface PieceCut { name: string; bit: number }
+/** Whether a mark (a float holding a sum of powers of two) carries bit. */
+export const hasBit = (mark: number, bit: number) => Math.floor(Math.round(mark) / 2 ** bit) % 2 === 1;
+function cutIndex(src: THREE.BufferGeometry, cut: PieceCut | null): number[] {
+  const index = Array.from(src.index!.array as ArrayLike<number>);
+  const mark = cut && CUTS.on ? src.getAttribute(cut.name.toLowerCase()) : undefined;
+  if (!mark || !cut) return index;
+  const out: number[] = [];
+  for (let i = 0; i < index.length; i += 3) {
+    const a = index[i], b = index[i + 1], c = index[i + 2];
+    if (hasBit(mark.getX(a), cut.bit) && hasBit(mark.getX(b), cut.bit) && hasBit(mark.getX(c), cut.bit)) continue;
+    out.push(a, b, c);
+  }
+  return out;
+}
+
 export interface PieceSource { root: THREE.Object3D; tints: Record<string, string>; keep?: (materialName: string) => boolean;
+  /** A vertex mark and bit (`_HATCUT` and the worn hat's, `_HOODCUT` and 0): triangles all three of whose vertices carry it are not drawn. */
+  cut?: PieceCut | null;
   /** A mapped hairstyle (head fit): its hair and cap primitives sample the hair atlas. */
   map?: { shade: number; accent?: number; cap?: number; accentHex?: string } | null }
 /**
@@ -93,7 +121,7 @@ export function mergeLook(pieces: PieceSource[], bones: readonly THREE.Bone[]): 
     const m = piece.map && name === "M_Hair"
       ? { shade: piece.map.shade, accent: piece.map.accent, cap: piece.map.cap, accentColor: piece.map.accentHex ? new THREE.Color(piece.map.accentHex) : undefined }
       : null;
-    parts.push(adoptPrimitive(mesh, boneIndex, hex ? new THREE.Color(hex) : own.color ?? null, m));
+    parts.push(adoptPrimitive(mesh, boneIndex, hex ? new THREE.Color(hex) : own.color ?? null, m, piece.cut ?? null));
   }
   // The intermediate pieces share attributes with the loaded GLBs and were never uploaded: no dispose, the GC takes them.
   const merged = mergeGeometries(parts, false);

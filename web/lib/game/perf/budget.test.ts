@@ -9,7 +9,8 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { pack } from "msgpackr";
-import { glbStats, imageSize, type GlbStats } from "./glbStats";
+import { glbStats, imageSize, readGlb, type GlbStats } from "./glbStats";
+import { hasBit } from "@/lib/game/character/rig";
 import {
   ASSET_CATEGORIES, ASSET_EXCEPTIONS, CHARACTER_BUDGET, CHARACTER_EFFECT_FILES, EFFECT_BUDGET, JUICE_EVENT_PARTICLES, NETWORK_BUDGET, PARTICLE_POOLS, SHARD, type AssetBudget,
 } from "./budget";
@@ -89,17 +90,43 @@ describe("character budget (budget.ts CHARACTER_BUDGET)", () => {
     for (const m of gltf.meshes) for (const p of m.primitives) if (gltf.materials[p.material].name === "M_Face") tris += gltf.accessors[p.indices].count / 3;
     return tris;
   })();
-  /** The heaviest look a member can wear, by any one measure (each slot's heaviest part; a hat or hood replaces the back hair). */
-  function heaviest(tris: (p: CatalogPart) => number) {
+  /**
+   * A whole hairstyle's triangles a look draws under covering hat `bit` (wardrobe batch 2: hidden_cut.py hatcut leaves out
+   * those all three of whose vertices carry the bit; rig.ts cutIndex), read from the uncompressed art copy of `rel`.
+   */
+  function hatted(rel: string, bit: number) {
+    const { json, bin } = readGlb(readFileSync(join(web, "../art/characters", rel.replace(/^characters\/v6\//, ""))));
+    const j = json as unknown as { meshes: { primitives: { attributes: Record<string, number>; indices: number }[] }[]; accessors: { bufferView: number; byteOffset?: number; count: number; componentType: number }[]; bufferViews: { byteOffset?: number }[] };
+    const read = (i: number) => {
+      const a = j.accessors[i], at = (j.bufferViews[a.bufferView].byteOffset ?? 0) + (a.byteOffset ?? 0);
+      const bytes = Uint8Array.from(bin!.subarray(at, at + a.count * (a.componentType === 5126 || a.componentType === 5125 ? 4 : 2))).buffer;
+      return a.componentType === 5126 ? new Float32Array(bytes) : a.componentType === 5125 ? new Uint32Array(bytes) : new Uint16Array(bytes);
+    };
+    let n = 0;
+    for (const p of j.meshes.flatMap(m => m.primitives)) {
+      const index = read(p.indices), mark = p.attributes._HATCUT === undefined ? null : read(p.attributes._HATCUT);
+      for (let i = 0; i < index.length; i += 3)
+        if (!mark || ![index[i], index[i + 1], index[i + 2]].every(v => hasBit(mark[v], bit))) n++;
+    }
+    return n;
+  }
+  /**
+   * The heaviest look a member can wear, by any one measure (each slot's heaviest part; a hat or hood replaces the back
+   * hair). Wardrobe batch 2: a hat over a whole hairstyle; a covering hat (coversHair) draws none of the hair it hides,
+   * so each hairstyle counts under each such hat with its own cut (`cut`: the hair's tier path).
+   */
+  function heaviest(tris: (p: CatalogPart) => number, cut: (p: CatalogPart) => string) {
     const most = (f: (p: CatalogPart) => boolean) => Math.max(0, ...PARTS.filter(f).map(tris));
     const outfit = Math.max(most(p => p.slot === "top") + most(p => p.slot === "bottom"), most(p => p.slot === "onepiece"));
     // wardrobe batch 2 added the front slot (a paper tie on the chest)
     const accessories = (["face", "bag", "neck", "front"] as const).reduce((s, g) => s + most(p => p.group === g), 0);
-    // the hair: bangs with a back (and a band over it), or a whole hairstyle that replaces both (look.ts wornParts), or
-    // a hat (which replaces the back and keeps the bangs)
-    const band = most(p => p.group === "head" && !p.hidesBackHair);
+    // the hair: bangs with a back (and a band over it), or a whole hairstyle that replaces both (look.ts wornParts) with
+    // a band over it, or under a covering hat (cut), or a hat that replaces the back and keeps the bangs
+    const band = most(p => p.group === "head" && !p.hidesBackHair && !p.coversHair);
+    const full = PARTS.filter(p => p.slot === "back" && !!p.full), hats = PARTS.filter(p => p.coversHair);
+    const under = Math.max(0, ...full.flatMap(h => hats.map(c => hatted(cut(h), c.hatCut!) + tris(c))));
     const hair = Math.max(most(p => p.slot === "bangs") + most(p => p.slot === "back" && !p.full) + band,
-      most(p => p.slot === "back" && !!p.full) + band, most(p => p.slot === "bangs") + most(p => p.group === "head" && !!p.hidesBackHair));
+      most(p => p.slot === "back" && !!p.full) + band, under, most(p => p.slot === "bangs") + most(p => p.group === "head" && !!p.hidesBackHair));
     return hair + outfit + most(p => p.slot === "shoes") + accessories;
   }
 
@@ -122,10 +149,10 @@ describe("character budget (budget.ts CHARACTER_BUDGET)", () => {
       expect(PARTS.some(p => p.full && p.glb === rel), `lod2/${rel} is not a whole hairstyle`).toBe(true);
   });
   it("keeps the heaviest look within the Full, LOD 1 and LOD 2 tiers' triangles, on the 22-bone rig", () => {
-    const full = base + heaviest(p => statsOf(fullOf(p)).triangles);
+    const full = base + heaviest(p => statsOf(fullOf(p)).triangles, fullOf);
     const lodSkin = statsOf("characters/v6/lod1/base/skin.glb").triangles + face;
-    const lod1 = lodSkin + heaviest(p => statsOf(lodOf(p)).triangles);
-    const lod2 = lodSkin + heaviest(p => statsOf(lod2Of(p)).triangles);
+    const lod1 = lodSkin + heaviest(p => statsOf(lodOf(p)).triangles, lodOf);
+    const lod2 = lodSkin + heaviest(p => statsOf(lod2Of(p)).triangles, lod2Of);
     expect(full, `the heaviest full look: ${full} triangles`).toBeLessThanOrEqual(CHARACTER_BUDGET.full.triangles);
     expect(lod1, `the heaviest LOD 1 look: ${lod1} triangles`).toBeLessThanOrEqual(CHARACTER_BUDGET.lod1.triangles);
     expect(lod2, `the heaviest LOD 2 look: ${lod2} triangles`).toBeLessThanOrEqual(CHARACTER_BUDGET.lod2.triangles);

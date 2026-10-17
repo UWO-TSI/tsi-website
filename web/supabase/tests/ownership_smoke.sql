@@ -9,7 +9,7 @@ ON CONFLICT DO NOTHING;
 
 -- ─── Catalogue ───────────────────────────────────────────────────────────────
 DO $$ BEGIN
-  -- the dyes (wardrobe batch 2's hairstyles are hair rows too: 20261017072411)
+  -- the dyes (wardrobe batch 2's hairstyles are hair rows too: 20261017172740)
   ASSERT (SELECT count(*) FROM shop_items WHERE category = 'hair' AND catalogue_ref LIKE 'hair:%' AND active) = 6, 'ownership: six dyes on sale';
   ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE slug IN ('outfit-club-tee', 'hair-sunset', 'acc-bandana') AND active), 'ownership: partless outfits off sale';
   ASSERT (SELECT NOT active FROM shop_items WHERE slug = 'wear-top-tee'), 'ownership: starter clothes never sold';

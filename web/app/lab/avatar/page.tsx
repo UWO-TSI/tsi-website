@@ -27,6 +27,7 @@
  * ?sheet=david     David's 19 faces (face_set_305.py) as they came, eyes + mouth (+ accent), on three skins (&skins=)
  * ?sheet=mix       David's eyes, mouths and accents mixed with each other and with the earlier parts (&skins=)
  * &hair=<0-11>&skin=<0-11>&face=512 (the world atlas) &framing=head|hat|body &charlod=1|2 (every cell at LOD 1 or LOD 2)
+ * &cut=0 (draw what a hat or hood hides: hidden_cut.py's marks ignored)
  * In ?sheet=roblox an id may carry a head accessory worn with it: &ids=hair_visor_messy+acc_visor (encode the + as %2B in a URL)
  * ?sheet=b2acc    wardrobe batch 2: David's Roblox accessories, each worn over a hairstyle (&style=, default the ribbon bob),
  *                  front and 3/4; &groups=head,face (default all) &framing=body for the neck and front ones
@@ -37,6 +38,7 @@ import { useSearchParams } from "next/navigation";
 import { Canvas } from "@react-three/fiber";
 import { PerspectiveCamera, View } from "@react-three/drei";
 import Character, { type CharacterMotion } from "@/components/game/character/Character";
+import { CUTS } from "@/lib/game/character/rig";
 import { DEFAULT_LOOK, FACE, parseLook, partsIn, type CharacterLook, type EyeFrame } from "@/lib/game/character/look";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import { HQ_LEAD } from "@/lib/game/welcome";
@@ -50,6 +52,8 @@ const STYLES: Record<string, Pick<CharacterLook, "bangs" | "back">> = {
 };
 /** Head fit sheets: the three review views (the character faces the camera at yaw 0). */
 const VIEWS: Record<string, number> = { front: 0, "34": -0.6, side: -Math.PI / 2, back: Math.PI };
+/** `&cut=0`: every hidden triangle drawn (rig.ts CUTS), for the hat cut's before-and-after sheet. */
+if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("cut") === "0") CUTS.on = false;
 /** `&charlod=1|2`: the cells load their LOD meshes and draw that tier (Character's SHOW_LOD). */
 const LOD_SHEET = typeof window !== "undefined" && !!new URLSearchParams(window.location.search).get("charlod");
 /** Kit sheets hold the eyes open (no blink lands mid-capture). */

@@ -1,5 +1,5 @@
 {
- "source": "David's picks in the Tethos New Wardrobe Pricing page, final 2026-10-15; Gem prices x10 (David, 2026-10-17: 5 -> 50, 10 -> 100, 20 -> 200, hair #22 30 -> 300)",
+ "source": "David's picks in the Tethos New Wardrobe Pricing page, final 2026-10-15; Gem prices x10 (David, 2026-10-17: 5 -> 50, 10 -> 100, 20 -> 200, hair #22 30 -> 300); #12 and #13 deleted (David, 2026-10-17: duplicates of #10 and #07)",
  "items": {
   "acc-01": {
    "mode": "coins",
@@ -44,14 +44,6 @@
   "acc-11": {
    "mode": "coins",
    "price": 150
-  },
-  "acc-12": {
-   "mode": "coins",
-   "price": 100
-  },
-  "acc-13": {
-   "mode": "free",
-   "price": null
   },
   "acc-14": {
    "mode": "gems",

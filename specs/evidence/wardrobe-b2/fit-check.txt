@@ -1,30 +1,30 @@
-HAIR hair_baby_sprout     open= 64 gap max=None at=None med=None on_scalp=None outer=None
-HAIR hair_messy_boy       open= 47 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0731
-HAIR hair_long_scruffy    open= 36 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0593
-HAIR hair_short_tufts     open= 36 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0674
-HAIR hair_hime_short      open=243 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0766
-HAIR hair_windy_bob       open=843 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0757
-HAIR hair_wispy_ponytail  open=588 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.001 outer=0.0882
-HAIR hair_visor_messy     open=116 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.003 outer=0.0701
-HAIR hair_fluffy_boy      open= 80 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.002 outer=0.0637
-HAIR hair_messy_wolf      open=456 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.007 outer=0.1026
-HAIR hair_bowl_cut        open= 28 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0604
-HAIR hair_layered_shag    open=113 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0878
-HAIR hair_anime_spikes    open= 52 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0859
-HAIR hair_messy_low_pony  open=357 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.006 outer=0.0866
-HAIR hair_vkei            open=530 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.006 outer=0.099
-HAIR hair_swept_fringe    open=875 gap max=0.003 at=[-8, -126] med=0.0025 on_scalp=0.004 outer=0.0816
-HAIR hair_bob_pigtail     open= 84 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0624
-HAIR hair_long_pigtails   open=190 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.001 outer=0.0555
-HAIR hair_dreads_cap      open=278 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.003 outer=0.0599
+HAIR hair_baby_sprout     open=224 gap max=None at=None med=None on_scalp=None outer=None
+HAIR hair_messy_boy       open=134 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0731
+HAIR hair_long_scruffy    open=101 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0593
+HAIR hair_short_tufts     open=257 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0674
+HAIR hair_hime_short      open=324 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0766
+HAIR hair_windy_bob       open=885 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0757
+HAIR hair_wispy_ponytail  open=697 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0882
+HAIR hair_visor_messy     open=138 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.003 outer=0.0701
+HAIR hair_fluffy_boy      open=197 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.001 outer=0.0637
+HAIR hair_messy_wolf      open=838 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.007 outer=0.1023
+HAIR hair_bowl_cut        open=132 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0604
+HAIR hair_layered_shag    open=301 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0878
+HAIR hair_anime_spikes    open=122 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0859
+HAIR hair_messy_low_pony  open=995 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.006 outer=0.0864
+HAIR hair_vkei            open=1131 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.006 outer=0.0988
+HAIR hair_swept_fringe    open=972 gap max=0.003 at=[-8, -126] med=0.0025 on_scalp=0.003 outer=0.0816
+HAIR hair_bob_pigtail     open=203 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0624
+HAIR hair_long_pigtails   open=451 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0555
+HAIR hair_dreads_cap      open=397 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.003 outer=0.0599
 HAIR hair_waves           open=  0 gap max=0.0 at=[-20, -135] med=0.0 on_scalp=0.997 outer=0.02
-HAIR hair_messy_dreads    open=156 gap max=0.003 at=[-10, -105] med=0.0025 on_scalp=0.003 outer=0.0892
-HAIR hair_goggle_ushanka  open=1463 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.001 outer=0.0733
-HAIR hair_ribbon_bob      open=482 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0708
-HAIR hair_wavy_half_up    open=877 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0646
-HAIR hair_curly_pigtails  open=1404 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0704
-HAIR hair_emo_layers      open=655 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.001 outer=0.0588
-HAIR hair_double_buns     open=1240 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0595
+HAIR hair_messy_dreads    open=605 gap max=0.003 at=[-10, -105] med=0.0025 on_scalp=0.002 outer=0.0891
+HAIR hair_goggle_ushanka  open=836 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.001 outer=0.0026
+HAIR hair_ribbon_bob      open=577 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0708
+HAIR hair_wavy_half_up    open=884 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0552
+HAIR hair_curly_pigtails  open=1443 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0704
+HAIR hair_emo_layers      open=708 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.001 outer=0.0588
+HAIR hair_double_buns     open=1321 gap max=0.0027 at=[52, -180] med=0.0025 on_scalp=0.0 outer=0.0595
 GLASSES acc_glasses_round    offset max=0.0053 default=0.0037
 GLASSES acc_glasses_square   offset max=0.0053 default=0.0037
 HEADWEAR acc_sunhat           open=  0 gap max=0.0 med=0.0 rise max=0.0125 poke=0.0
@@ -34,7 +34,8 @@ HEADWEAR acc_flower_crown     open=  0 gap max=0.0082 med=0.0006 rise max=0.0131
 HEADWEAR acc_crystal_circlet  open=  0 gap max=0.0072 med=0.0 rise max=0.0257 poke=0.0008
 HEADWEAR acc_witch_hat        open=  0 gap max=0.0 med=0.0 rise max=0.1129 poke=0.0
 HEADWEAR acc_cat_ears         open=  0 gap max=0.0037 med=0.0009 rise max=0.0751 poke=0.0
-HEADWEAR acc_visor            open= 10 gap max=0.1115 med=0.0082 rise max=0.1699 poke=0.1265
+HEADWEAR acc_visor            open= 19 gap max=0.1115 med=0.0082 rise max=0.1699 poke=0.1265
+HEADWEAR acc_ushanka_goggles  open=436 gap max=0.1273 med=0.0329 rise max=0.1901 poke=0.1085
 SKULL hair_baby_sprout     full  clip=0.0 float={'top': 0.0038} uncovered=[] reach_out=0.0
 SKULL hair_messy_boy       full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
 SKULL hair_long_scruffy    full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
@@ -58,7 +59,7 @@ SKULL hair_waves           full  clip=0.0 float={'crown': 0.0, 'top': 0.0} uncov
 SKULL hair_messy_dreads    full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
 SKULL hair_goggle_ushanka  full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
 SKULL hair_ribbon_bob      full  clip=0.0017 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
-SKULL hair_wavy_half_up    full  clip=0.0019 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
+SKULL hair_wavy_half_up    full  clip=0.0016 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
 SKULL hair_curly_pigtails  full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
 SKULL hair_emo_layers      full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0
 SKULL hair_double_buns     full  clip=0.0 float={'crown': 0.0026, 'top': 0.0025} uncovered=[] reach_out=0.0

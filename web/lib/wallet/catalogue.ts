@@ -119,7 +119,7 @@ const CUT_WEARABLES: { id: string; name: string; slot: PartSlot; after: string }
 ];
 const wearSlug = (id: string) => `wear-${id.replace(/_/g, "-")}`;
 const WEARABLES: { id: string; name: string; slot: PartSlot; cut?: boolean }[] =
-  PARTS.filter((p) => p.slot !== "bangs" && p.slot !== "back" && !p.variantOf && !p.item && !p.event && !p.key).map((p) => ({ id: p.id, name: p.name, slot: p.slot }));
+  PARTS.filter((p) => p.slot !== "bangs" && p.slot !== "back" && !p.variantOf && !p.item && !p.event && !p.key && !p.grantedBy).map((p) => ({ id: p.id, name: p.name, slot: p.slot }));
 for (const c of CUT_WEARABLES) WEARABLES.splice(WEARABLES.findIndex((w) => w.id === c.after) + 1, 0, { ...c, cut: true });
 
 /**
@@ -135,9 +135,14 @@ const b2Row = (slug: string, name: string, category: ShopCategory, price: Batch2
   tier: null, slot: null, special_pool: price.mode === "coins", stackable: false, stock: null, catalogue_ref: ref, sprite_url: null, position: B2_POS + i,
 });
 const isSold = (p: Batch2Price | null): p is Batch2Price => p?.mode === "coins" || p?.mode === "gems";
+/** A row's name, with what owning it grants (row 314: hair #22 and its ushanka and goggles). */
+const withGranted = (p: { id: string; name: string }) => {
+  const g = PARTS.find((q) => q.grantedBy === p.id);
+  return g ? `${p.name}, with the ${g.name.toLowerCase()}` : p.name;
+};
 export const WARDROBE_B2_ITEMS: CatalogueEntry[] = [
   ...PARTS.filter((p) => p.key && isSold(priceOf(p.key))).map((p) => ({ p, cat: (p.slot === "accessory" ? "accessory" : "hair") as ShopCategory })),
-].map(({ p, cat }, i) => b2Row(wearSlug(p.id), p.name, cat, priceOf(p.key)!, p.id, i))
+].map(({ p, cat }, i) => b2Row(wearSlug(p.id), withGranted(p), cat, priceOf(p.key)!, p.id, i))
   .concat(Object.entries(FACE.faces).filter(([key]) => isSold(priceOf(key)))
     .map(([key, f], i) => b2Row(`face-${f.id.replace(/_/g, "-")}`, f.name, "face", priceOf(key)!, faceRef(f.id), 100 + i)));
 

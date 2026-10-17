@@ -79,10 +79,15 @@ CAP_H = 0.0025           # the matte under-cap over the scalp (the library's rul
 CELL, COLS, ROWS = 512, 5, 3    # 15 cells x 3 channels: 27 shading maps, accent and cap masks (batch 2 added a row)
 CAP_COLOR = "#28282E"            # a cap's or visor's fixed colour (its mask channel; one material, never a second one)
 PAD = 8                  # px of each cell kept clear round the map (mip bleed)
-GAIN = 1.25              # shading maps store the shade gain / GAIN (the shader multiplies by GAIN)
-SHADE_DARK = 0.5         # shade normalisation (shade_map): the deepest gap between strands x exp(-0.5) = 0.61
-SHADE_LIGHT = 0.1        # and the brightest highlight x exp(0.1) = 1.11 (matte, row 264: no glossy bands)
-SHADE_IQR_MIN = 6.0      # L* units: a near-flat texture's noise is never stretched past this spread
+# Row 314 (David, 2026-10-17: "I like the matte with subtle gloss they have while our version looks like 1 3d model"):
+# a shading map holds each texel's lightness offset from its part's median (CIE L*), DL_K of it, within DL_LO..DL_HI,
+# stored as (offset - DL_LO) / (DL_HI - DL_LO); the engine adds it to the chosen colour's own L* (a luminance-preserving
+# tint, Character.tsx), so every colour keeps the source's strands and value variation. (It was the gain against the
+# median, squashed into 0.61..1.11 over the spread: every hair the same flat range.) The gloss is the shader's.
+DL_LO, DL_HI = -40.0, 40.0
+ACC_FULL_MAX = 780       # a split-off hat's Full mesh (#22's ushanka; accessories/import_roblox.py full_cap: a head item)
+DL_K = 0.9
+DL_NEUTRAL = -DL_LO / (DL_HI - DL_LO)      # no offset: a texel no face samples, the cell's padding
 ACCENT_SPECK = 3         # px (source texture): accent-mask blobs narrower than 2 x this + 1 are noise, not a second colour
 ATLAS = os.path.join(HERE, "hair_maps.png")
 OWN_CLAIMED = []
@@ -679,10 +684,30 @@ def split_off(ob):
     return part
 
 
+def split_own(ob):
+    """Row 314 (David, 2026-10-17: #22's hat becomes a separate accessory): the faces that keep their own texture
+    (material slot 3) as a new object; the hair keeps the rest, every other slot as it was."""
+    part = ob.copy()
+    part.data = ob.data.copy()
+    bpy.context.scene.collection.objects.link(part)
+    for o, own in ((part, True), (ob, False)):
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if (f.material_index == 3) != own], context="FACES")
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+        if own:
+            for f in bm.faces:
+                f.material_index = 0
+        bm.to_mesh(o.data)
+        bm.free()
+        o.data.update()
+    return part
+
+
 def write_cell(atlas, cell, chans, shade, accent, capmask):
     cx, cy = cell % COLS, cell // COLS
     inner = CELL - 2 * PAD
-    block = np.full((CELL, CELL), 1.0 / GAIN, np.float32)
+    block = np.full((CELL, CELL), DL_NEUTRAL, np.float32)
     s_ = resample(shade, inner)
     block[PAD:PAD + inner, PAD:PAD + inner] = s_
     block[:PAD, PAD:PAD + inner] = s_[0]
@@ -872,21 +897,17 @@ def shade_map(img, me, spec, px=None):
         regions = [(cov & ~cap_region & (accent < 0.5), "base"), (cov & ~cap_region & (accent >= 0.5), "accent")]
     if cap_region.any():
         regions.append((cap_region & cov, "cap"))
-    # head-v10 (row 311, David: "some hair color is glitching"): the shade is normalised per hair in perceptual lightness
-    # (CIE L*), not as a luminance ratio. A ratio over a near-black source's tiny median turned its noise and painted
-    # highlights into 2-10x streaks that clipped bright in a light colour. Now each texel's lightness against the part's
-    # median, over its spread (the interquartile range, at least SHADE_IQR_MIN), is squashed (tanh) into a gain from
-    # exp(-SHADE_DARK) in the gaps between strands to exp(SHADE_LIGHT) on a highlight: every source, dark or light,
-    # recolours to the same clean range, the median texel exactly the chosen colour.
+    # In perceptual lightness (CIE L*), an offset from the part's median, never a ratio (head-v10, row 311: a ratio over
+    # a near-black source's tiny median turned its noise into streaks that clipped bright in a light colour). Row 314:
+    # the offset itself is kept (DL_K of it), so the strands keep their contrast; the median texel is the chosen colour.
     Ls = np.where(L > 0.008856, 116.0 * np.cbrt(L) - 16.0, 903.3 * L)
     out = np.zeros((hh, ww), np.float32)
     for reg, name in regions:
         vals = Ls[reg] if reg.sum() > 50 else Ls[cov]
-        m, q1, q3 = (np.percentile(vals, q) for q in (50, 25, 75)) if vals.size else (50.0, 45.0, 55.0)
-        t = np.tanh((Ls - m) / max(q3 - q1, SHADE_IQR_MIN))
-        r = np.exp(np.where(t < 0, SHADE_DARK, SHADE_LIGHT) * t)
-        out = np.where(reg, r / GAIN, out)
-    out = np.where(cov, out, 1.0 / GAIN)
+        m = float(np.percentile(vals, 50)) if vals.size else 50.0
+        d = np.clip((Ls - m) * DL_K, DL_LO, DL_HI)
+        out = np.where(reg, (d - DL_LO) / (DL_HI - DL_LO), out)
+    out = np.where(cov, out, DL_NEUTRAL)
     return out, accent, painted, (cap_region & cov) if cap_region.any() else None
 
 
@@ -1009,7 +1030,7 @@ def main():
     BODY = body_tree()
     HEAD = head
     cat_path = os.path.join(ART, "character_catalog.json")
-    atlas = np.ones((ROWS * CELL, COLS * CELL, 3), np.float32) / GAIN
+    atlas = np.full((ROWS * CELL, COLS * CELL, 3), DL_NEUTRAL, np.float32)
     if os.path.exists(ATLAS):
         im = bpy.data.images.load(ATLAS)
         w, h = im.size
@@ -1047,8 +1068,9 @@ def main():
         boxed = keep_in_box(ob)
         body = body_clip(ob, BODY)
         visor = split_off(ob) if spec.get("split") else None
-        if capped:
-            undercap(ob, HEAD, undercap_faces(HEAD, ob))
+        own_part = split_own(ob) if spec.get("split_own") else None
+        if capped:                  # row 314: #22 without its hat keeps a whole under-cap (its crown was the hat)
+            undercap(ob, HEAD, undercap_faces(HEAD, None if spec.get("undercap") == "full" else ob))
         cell, chans = slots[pid]
         mapped = has_uv
         painted = 0
@@ -1071,6 +1093,29 @@ def main():
                 colour_atlas.remap(ob.data, tile, box, (ww, hh), own_loops)
                 OWN_CLAIMED.append(tile)
             remap_uvs(ob.data, cell)
+        if own_part is not None:               # row 314: #22's ushanka and goggles, worn as a hat; owning the hair grants it
+            sp = spec["split_own"]
+            tile = spec["own_colour"]["tile"]
+            hh, ww = img_px.shape[:2]
+            box = colour_atlas.crop_of(own_part.data, ww, hh)
+            colour_atlas.claim(tile, img_px[box[1]:box[3], box[0]:box[2]])
+            colour_atlas.remap(own_part.data, tile, box, (ww, hh))
+            OWN_CLAIMED.append(tile)
+            src = kit.ntris(own_part)
+            if src > ACC_FULL_MAX:
+                collapse(own_part, ACC_FULL_MAX)
+            own_part.data.validate()
+            own_part = finish(own_part, rig, sp["id"])
+            orel = f"accessories/accessory/{sp['id']}.glb"
+            kit.export(own_part, rig, os.path.join(ART, orel))
+            entries[sp["id"]] = {"id": sp["id"], "slot": "accessory", "name": sp["name"], "glb": orel, "tris": kit.ntris(own_part),
+                                 "materials": [{"name": "M_Hair", "tint": None, "color": "#FFFFFF"}], "decalSlot": None,
+                                 "hidesBackHair": False, "hides": [], "group": "head", "skull": SK.VERSION,
+                                 "source": f"hair/source/{spec['_who']}/{spec['file']} (split from {pid})",
+                                 "colourAtlas": True, "grantedBy": pid,
+                                 **({"coversHair": True, "hatCut": sp["hatCut"]} if sp.get("hatCut") is not None else {})}
+            print(f"SPLIT_OWN {sp['id']} from {pid}: {src} -> {kit.ntris(own_part)} tris, granted by {pid}")
+            bpy.data.objects.remove(own_part, do_unlink=True)
         if visor is not None:                  # its own accessory: the hair can be worn without it (David, 2026-10-14)
             sp = spec["split"]
             vpx = pixels(img).copy()
@@ -1103,7 +1148,7 @@ def main():
              "source": f"hair/source/{spec['_who']}/{spec['file']}",
              "roblox": {"provisional": bool(att["provisional"])},
              **({"key": spec["key"]} if spec.get("key") else {}),           # its price: specs/wardrobe/batch2-pricing.json
-             **({"colourAtlas": True} if spec.get("own_colour") and mapped else {}),   # its hat's own texture (colour_atlas.py)
+             **({"colourAtlas": True} if spec.get("own_colour") and mapped and not spec.get("split_own") else {}),   # its hat's own texture (colour_atlas.py)
              **({"covers": spec["covers"]} if spec.get("covers") else {}),
              **({"map": {"shade": chans[0], **({"accent": chans[1]} if acc else {}), **({"cap": chans[-1]} if spec.get("cap") else {})}} if mapped else {}),
              **({"accent": {"default": acc["default"]}} if acc and mapped else {})}
@@ -1131,14 +1176,16 @@ def main():
     cat = json.load(open(cat_path))
     # the catalogue's hair is exactly the manifest's hairstyles, in its order (head-roblox: David's 21 are all the hair)
     old = {h["id"]: h for h in cat["hair"]}
-    order = [k for _w, m in SETS for k in [h["id"] for h in m["hairs"]] + [h["split"]["id"] for h in m["hairs"] if h.get("split")]]
+    order = [k for _w, m in SETS for k in [h["id"] for h in m["hairs"]] + [h["split"]["id"] for h in m["hairs"] if h.get("split")]
+             + [h["split_own"]["id"] for h in m["hairs"] if h.get("split_own")]]
     cat["hair"] = [entries.get(k) or old[k] for k in order if k in entries or k in old]
-    cat["hairMaps"] = {"atlas": "hair/hair_maps.png", "gain": GAIN, "cells": [COLS, ROWS], "cell": CELL, "cap": CAP_COLOR,
+    cat["hairMaps"] = {"atlas": "hair/hair_maps.png", "dl": [DL_LO, DL_HI], "cells": [COLS, ROWS], "cell": CELL, "cap": CAP_COLOR,
                        "note": "Shading maps of the full hairstyles (hair/import_hair.py): one channel per hair, its accent and "
-                               "cap masks in the next channels of the same cell; luminance / median / gain. The engine "
-                               "multiplies the palette tint by map x gain, mixes the accent colour and the fixed cap colour "
-                               "in by their masks, and leaves u < 0 (the under-cap) to the tint (rig.ts, Character.tsx). "
-                               "Every hairstyle is one primitive in one material."}
+                               "cap masks in the next channels of the same cell; each texel's lightness offset from its part's "
+                               "median (CIE L*), stored as (offset - dl[0]) / (dl[1] - dl[0]). The engine mixes the palette "
+                               "tint, the accent colour and the fixed cap colour by their masks, adds the offset to that "
+                               "colour's L* (a luminance-preserving tint, row 314) with a soft gloss, and leaves u < 0 (the "
+                               "under-cap) to the tint (rig.ts, Character.tsx). Every hairstyle is one primitive in one material."}
     json.dump(cat, open(cat_path, "w"), indent=1)
     print("IMPORT_HAIR_OK", len(entries))
     # 9. LOD 1 for the hairs built, then the web copies: nothing else to run after new attachments

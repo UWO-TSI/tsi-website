@@ -1,4 +1,4 @@
--- Wardrobe batch 2 and David's pricing of 2026-10-17 (20261017072411_catalogue_seed; specs/wardrobe/batch2-pricing.json,
+-- Wardrobe batch 2 and David's pricing of 2026-10-17 (20261017172740_catalogue_seed; specs/wardrobe/batch2-pricing.json,
 -- Gem prices x10; the colour wheel a 250-Gem row; the avatar effect at 250). Throwaway local Postgres after every
 -- migration (supabase_stub.sql first), after wardrobe_cut_smoke.sql. Never Supabase. Fails before the migration: no
 -- batch-2 row exists, and a whole face cannot be a shop row (the category check refuses 'face').
@@ -9,10 +9,10 @@ INSERT INTO auth.users (id, email) VALUES
 
 DO $$
 BEGIN
-  -- Every priced item is one row at David's price: 6 hairstyles, 21 accessories, 4 whole faces.
-  ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 600 AND 799) = 31, 'thirty-one batch-2 rows';
+  -- Every priced item is one row at David's price: 6 hairstyles, 20 accessories, 4 whole faces (#12 and #13 deleted).
+  ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 600 AND 799) = 30, 'thirty batch-2 rows';
   ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 600 AND 799 AND category = 'hair' AND slug LIKE 'wear-hair-%') = 6, 'six hairstyles';
-  ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 600 AND 799 AND category = 'accessory') = 21, 'twenty-one accessories';
+  ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 600 AND 799 AND category = 'accessory') = 20, 'twenty accessories';
   ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 600 AND 799 AND category = 'face' AND catalogue_ref LIKE 'face:%') = 4, 'four whole faces';
   ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE position BETWEEN 600 AND 799 AND (NOT active OR coalesce(starter_qty, 0) > 0)), 'all sold, none a starter';
   -- One price each: coins in price_coins, Gems in tc_price (shop_items_one_price).
@@ -28,7 +28,10 @@ BEGIN
   ASSERT (SELECT bool_and(tc_price IN (50, 100, 200, 300)) FROM shop_items WHERE position BETWEEN 600 AND 799 AND tc_price IS NOT NULL), 'Gem prices x10';
   ASSERT (SELECT price_coins = 250 AND catalogue_ref = 'face:silly_cat' FROM shop_items WHERE slug = 'face-silly-cat'), 'face #20 is 250 coins';
   -- Free items have no row (the starting creator offers them); #16 is skipped; coin rows can be a daily special, Gem rows not.
-  ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE catalogue_ref IN ('acc_thin_glasses', 'acc_round_wire_glasses', 'face:silly', 'face:silly_smile')), 'free items unsold';
+  ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE catalogue_ref IN ('acc_thin_glasses', 'face:silly', 'face:silly_smile')), 'free items unsold';
+  ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE catalogue_ref IN ('acc_wheat_sprig', 'acc_round_wire_glasses', 'acc_ushanka_goggles')), '#12 and #13 deleted; #22''s hat comes with the hair';
+  ASSERT (SELECT display_name FROM shop_items WHERE slug = 'wear-hair-goggle-ushanka') = 'Green messy hair, with the ushanka and goggles', 'hair #22 names its hat';
+  ASSERT NOT (SELECT active FROM shop_items WHERE slug = 'net-basic') AND NOT (SELECT active FROM shop_items WHERE slug = 'shovel-basic'), 'the tier-1 net and shovel stay retired';
   ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE slug LIKE '%visor-blue%' OR slug LIKE '%sci-fi%'), 'the sci-fi visor skipped';
   ASSERT NOT EXISTS (SELECT 1 FROM shop_items WHERE position BETWEEN 600 AND 799 AND special_pool <> (price_coins IS NOT NULL)), 'specials: coin rows only';
   -- Every row has its icon; earlier rows did not move.
@@ -77,10 +80,10 @@ BEGIN
 END $$;
 
 -- Idempotent: the migration again changes nothing.
-\ir ../migrations/20261017072411_catalogue_seed.sql
+\ir ../migrations/20261017172740_catalogue_seed.sql
 DO $$
 BEGIN
-  ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 600 AND 799) = 31, 'still thirty-one rows';
+  ASSERT (SELECT count(*) FROM shop_items WHERE position BETWEEN 600 AND 799) = 30, 'still thirty rows';
   ASSERT EXISTS (SELECT 1 FROM member_inventory i JOIN shop_items s ON s.id = i.item_id WHERE s.slug = 'face-silly-cat'), 'the buyer keeps the face';
   ASSERT (SELECT tc_price FROM shop_items WHERE slug = 'glitch-aura') = 250, 'still 250 Gems';
   RAISE NOTICE 'wardrobe b2 ok';

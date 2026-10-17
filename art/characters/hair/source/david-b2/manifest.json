@@ -5,16 +5,28 @@
   {
    "file": "22-Green-Cool-Messy-Boy-Hair-w-Y2K-Goggles-Ushanka-87890006358128.glb",
    "id": "hair_goggle_ushanka",
-   "name": "Ushanka and goggles",
+   "name": "Green messy hair",
    "key": "hair-22",
-   "own_colour": {"rule": "not_green", "tile": "hair_goggle_ushanka"}
+   "own_colour": {
+    "rule": "not_green",
+    "tile": "hair_goggle_ushanka"
+   },
+   "split_own": {
+    "id": "acc_ushanka_goggles",
+    "name": "Ushanka and goggles",
+    "why": "David, 2026-10-17 (row 314): the hat is its own accessory; owning the hair grants it",
+    "hatCut": 5
+   },
+   "undercap": "full"
   },
   {
    "file": "23-sweet-cutecore-moe-messy-short-bob-dark-ash-85192073992593.glb",
    "id": "hair_ribbon_bob",
    "name": "Ribbon bob",
    "key": "hair-23",
-   "accent": {"default": 10}
+   "accent": {
+    "default": 10
+   }
   },
   {
    "file": "24-Messy-Wavy-IT-Girl-Hair-100884389158278.glb",
@@ -27,7 +39,10 @@
    "id": "hair_curly_pigtails",
    "name": "Curly pigtails",
    "key": "hair-25",
-   "accent": {"default": 11, "rule": "light"}
+   "accent": {
+    "default": 11,
+    "rule": "light"
+   }
   },
   {
    "file": "26-cute-fluffy-emo-girl-hair-y2k-114354951912876.glb",

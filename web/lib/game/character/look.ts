@@ -25,7 +25,9 @@ export const FACE_ATLAS_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas}
 /** Head fit: the shared shading atlas of the mapped hairstyles (art/characters/hair/import_hair.py). */
 export const HAIR_MAPS_URL = `${CHARACTER_ROOT}${catalog.hairMaps.atlas}`;
 /** A map stores luminance / median / gain: the shader multiplies the tint by map x gain. */
-export const HAIR_MAP_GAIN = catalog.hairMaps.gain;
+/** Row 314: the shading maps hold a lightness offset (CIE L*) from each part's median, stored over this range
+ * (hair/import_hair.py): the engine adds it to the colour's own L* (Character.tsx), keeping the source's strands. */
+export const HAIR_MAP_DL = catalog.hairMaps.dl as [number, number];
 /** The fixed colour a hairstyle's cap or visor takes through its cap mask (never the hair tint). */
 export const HAIR_CAP_COLOR = catalog.hairMaps.cap;
 /** Its second page (David's 19 faces, face_set_305.py), loaded only for a look that wears one of them. */
@@ -61,6 +63,15 @@ export interface CatalogPart {
   key?: string;
   /** Some of its texels come from the fixed-colour atlas (COLOUR_ATLAS_URL): a Roblox accessory, #22's hat. */
   colourAtlas?: boolean;
+  /** A hat whose crown closes over the hair: a look wearing it draws none of the hair it hides (the hair's `_HATCUT`
+   * marks, art/characters/hidden_cut.py; rig.ts). */
+  coversHair?: boolean;
+  /** Its bit in the hair's `_HATCUT` marks (hidden_cut.py hatcut). */
+  hatCut?: number;
+  /** The bear hood: a look wearing it draws none of the head skin it hides (the base's `_HOODCUT` marks). */
+  coversHead?: boolean;
+  /** Owned with that part, never sold alone (row 314: #22's ushanka and goggles come with hair #22). */
+  grantedBy?: string;
   /** The economy item (crafted) that unlocks this part; its catalogue_ref is this part's id. Such parts are never sold. */
   item?: string;
   /**
@@ -419,6 +430,7 @@ const sold = (key: string | undefined) => { const m = priceOf(key)?.mode; return
 export function partRef(id: string): string | null {
   const p = PART_BY_ID.get(id);
   if (!p) return null;
+  if (p.grantedBy) return partRef(p.grantedBy);           // row 314: #22's hat comes with the hair
   if (priceOf(p.key)) return sold(p.key) ? p.variantOf ?? p.id : null;
   return p.slot === "bangs" || p.slot === "back" ? null : p.variantOf ?? p.id;
 }
@@ -461,7 +473,7 @@ export function lookRefs(look: CharacterLook): string[] {
 export function randomLook(rand: () => number = Math.random, owned?: ReadonlySet<string>): CharacterLook {
   const pick = <T,>(xs: readonly T[]) => xs[Math.floor(rand() * xs.length)];
   // wardrobe batch 2 (p.key) stays a creator and shop pick: residents and bots keep the looks they had
-  const ids = (slot: PartSlot) => partsIn(slot).filter(p => !p.variantOf && !p.key && (!owned || !partRef(p.id) || owned.has(p.id))).map(p => p.id);
+  const ids = (slot: PartSlot) => partsIn(slot).filter(p => !p.variantOf && !p.key && !p.grantedBy && (!owned || !partRef(p.id) || owned.has(p.id))).map(p => p.id);
   let look: CharacterLook = {
     ...DEFAULT_LOOK,
     skin: Math.floor(rand() * PALETTE.skin.length), hair: Math.floor(rand() * (owned ? FREE_HAIR_COLOURS : PALETTE.hair.length)),

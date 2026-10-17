@@ -69,18 +69,19 @@ export const SHARD = { players: 40, fullHigh: 12, fullLite: 8, drawnHigh: 24, dr
 export interface CharacterBudget { triangles: number; draws: number; shadowDraws: number; materials: number; bones: number; mixerHz: number }
 export const CHARACTER_BUDGET: Record<"full" | "lod1" | "lod2" | "reduced", CharacterBudget> = {
   /** Within 21 u, or any Full remote: the whole look, every frame, the sun shadow. head-roblox: the hairstyles' original
-   * meshes (up to 4,315 with the under-cap) put the heaviest wearable look at 7,700. Wardrobe batch 2 (2026-10-16): David's
-   * Roblox accessories (up to 1,200 each, worn over a whole hairstyle, with a glasses, neck and front item at once) put it
-   * at 10,104. */
-  full: { triangles: 10200, draws: 3, shadowDraws: 2, materials: 1, bones: 22, mixerHz: 60 },
+   * meshes (up to 4,315 with the under-cap) put the heaviest wearable look at 7,700. Wardrobe batch 2 (David, 2026-10-17:
+   * the budget stays; "find ways to lower triangles that aren't displayed"): hidden inner geometry cut from every
+   * hairstyle and Roblox accessory, a covering hat drawing none of the hair it hides, and the accessories' Full meshes
+   * no heavier than what shows (art/characters/hidden_cut.py, import_roblox.py full_cap) keep it at 7,567. */
+  full: { triangles: 7800, draws: 3, shadowDraws: 2, materials: 1, bones: 22, mixerHz: 60 },
   /** Past 21 u and under 72 px: LOD 1 parts (art/characters/build_lod.py), the hairstyles within 2,400: 5,014 at most. */
-  /** Wardrobe batch 2: the Roblox accessories' LOD 1 (300 each: a glasses, neck and front item with a band) put it at 5,332. */
-  lod1: { triangles: 5400, draws: 3, shadowDraws: 2, materials: 1, bones: 22, mixerHz: 30 },
+  /** Wardrobe batch 2: 4,963 (the Roblox accessories' LOD 1 at 300, the glasses' at 250, hidden geometry cut). */
+  lod1: { triangles: 5100, draws: 3, shadowDraws: 2, materials: 1, bones: 22, mixerHz: 30 },
   /** Past 40 u and under 28 px (lod.ts `far`): the hairstyles' LOD 2 (about 1,100), every other part its LOD 1: 3,958 at most. */
-  /** Wardrobe batch 2: the same accessories (their LOD 1) put it at 4,271. */
-  lod2: { triangles: 4300, draws: 3, shadowDraws: 2, materials: 1, bones: 22, mixerHz: 15 },
+  /** Wardrobe batch 2: 3,947. */
+  lod2: { triangles: 4000, draws: 3, shadowDraws: 2, materials: 1, bones: 22, mixerHz: 15 },
   /** A Reduced remote: no sun shadow, the mixer at 15 Hz (drawn at LOD 1 or 2 by its distance). */
-  reduced: { triangles: 5400, draws: 3, shadowDraws: 0, materials: 1, bones: 22, mixerHz: 15 },
+  reduced: { triangles: 5100, draws: 3, shadowDraws: 0, materials: 1, bones: 22, mixerHz: 15 },
 };
 /** What one more player in view may add to a frame (specs/multiplayer.md §5.5 targets, kept). */
 export const PER_PLAYER = { fullCpuMs: 0.12, drawnCpuMsTotal24: 3, drawsHigh: 5, drawsLite: 3 } as const;

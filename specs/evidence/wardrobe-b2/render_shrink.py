@@ -4,7 +4,8 @@ own texture from the fixed-colour atlas (u - 2: the image repeats), the hair in 
 the same camera for both.
 
   /Applications/Blender.app/Contents/MacOS/Blender -b -P specs/evidence/wardrobe-b2/render_shrink.py -- <out_dir> <label>=<glb> ...
-  HAIR=<hair id> (default hair_ribbon_bob); the "before" GLBs come from git (git show eba8e59b:art/characters/...)
+  HAIR=<hair id> (default hair_ribbon_bob); the "before" GLBs come from git (git show eba8e59b:art/characters/...);
+  ORTHO (frame width, m; 0.95), DZ (the frame's centre over the head centre, m; 0.12); YAW=a,b (views, degrees; 0,40)
 """
 import bpy, json, math, os, sys
 from mathutils import Vector
@@ -68,9 +69,9 @@ sc.render.film_transparent = False
 cam = bpy.data.objects.new("Cam", bpy.data.cameras.new("Cam"))
 sc.collection.objects.link(cam)
 cam.data.type = "ORTHO"
-cam.data.ortho_scale = 0.95
+cam.data.ortho_scale = float(os.environ.get("ORTHO", 0.95))
 sc.camera = cam
-centre = HC + Vector((0, 0, 0.12))
+centre = HC + Vector((0, 0, float(os.environ.get("DZ", 0.12))))
 for label, path in ITEMS:
     meshes, new = load(path)
     for o in meshes:
@@ -84,7 +85,7 @@ for label, path in ITEMS:
         m.node_tree.nodes.active = tex
         o.data.materials.clear()
         o.data.materials.append(m)
-    for name, yaw in (("front", 0), ("34", 40)):
+    for name, yaw in [(("front", "34")[k] if k < 2 else f"y{v}", float(v)) for k, v in enumerate(os.environ.get("YAW", "0,40").split(","))]:
         a = math.radians(yaw)
         cam.location = centre + Vector((-math.sin(a) * 3, -math.cos(a) * 3, 0.0))
         cam.rotation_euler = (math.radians(90), 0, -a)

@@ -158,12 +158,16 @@ def covered(ob, others):
 # should look good close up"): Full is the original Roblox mesh; LOD 1 (mid) at most CARD_MAX["lod1"], its shape kept
 # where a ratio under that keeps it; LOD 2 (far, lod2/) about CARD_MAX["lod2"]
 CARD_MAX = {"lod1": 2400, "lod2": 1100}
+# a hairstyle at most this heavy keeps its whole mesh at LOD 1 (wardrobe batch 2: #22 without its hat, 2,348, was kept
+# whole under the old line, CARD_MAX's 2,448, and put the heaviest LOD 1 look over 5,100)
+LOD1_WHOLE = 2000
 OUT2 = os.path.join(HERE, "lod2")
 # David's Roblox accessories (wardrobe batch 2, accessories/import_roblox.py): Full holds the accessory budget (1,200);
 # LOD 1 (a character under 72 px) at most ACC_LOD1_MAX, its shape kept where a ratio under that keeps it, else collapsed
 # until it lands there; where the collapse stalls (loose parts each already minimal), the smallest parts go (shed). A hat, glasses,
 # a neck and a front item at once keep the heaviest look within LOD 1's and LOD 2's budgets (budget.ts CHARACTER_BUDGET).
 ACC_LOD1_MAX = 300
+ACC_LOD1_FACE = 250      # the glasses, monocle, wheat and blindfold: a LOD 1 look with them stays within LOD 2's 4,000
 
 
 def shed(ob, cap):
@@ -212,10 +216,10 @@ def decimate(ob, under, cards=False, snug=SNUG, tier="lod1", cap=None):
     card_max = CARD_MAX[tier]
     if cap is not None and n > cap:            # a capped piece (a Roblox accessory): ratios under the cap, else the cap
         ratios = tuple(r for r in RATIOS if n * r <= cap) or (cap / n,)
-    if cards:
-        ratios = (card_max / n,) if tier == "lod2" else tuple(r for r in RATIOS if n * r <= card_max) or (card_max / n,)
-        if n <= card_max * 1.02 and tier == "lod1":
-            return None                                      # already within the mid tier: kept whole
+    if cards:   # LOD 2 lighter than LOD 1 even for a light hairstyle (LOD 1 halves one past LOD1_WHOLE)
+        ratios = (min(card_max, 0.45 * n) / n,) if tier == "lod2" else tuple(r for r in RATIOS if n * r <= card_max) or (card_max / n,)
+        if n <= LOD1_WHOLE and tier == "lod1":
+            return None                                      # already light: kept whole
     for k, ratio in enumerate(ratios):
         trial = ob.copy()
         trial.data = ob.data.copy()
@@ -329,7 +333,8 @@ def main():
         if only and p["id"] not in only:
             continue
         report[p["glb"]] = build(os.path.join(HERE, p["glb"]), os.path.join(OUT, p["glb"]), merge=not p.get("full"), cards=bool(p.get("full")),
-                                 cap=ACC_LOD1_MAX if p["glb"].startswith("accessories/roblox/") else None)
+                                 cap=(ACC_LOD1_FACE if p.get("group") == "face" else ACC_LOD1_MAX)
+                                 if p["glb"].startswith("accessories/roblox/") or p.get("grantedBy") else None)
         if p.get("full"):           # the far tier: whole hairstyles only (everything else draws its LOD 1 there)
             report2[p["glb"]] = build(os.path.join(HERE, p["glb"]), os.path.join(OUT2, p["glb"]), merge=False, cards=True, tier="lod2")
     live = {"base/skin.glb"} | {p["glb"] for p in parts}

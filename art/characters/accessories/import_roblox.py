@@ -18,9 +18,8 @@ with no other step. For each item:
 
   1. import    the raw mesh as Roblox has it (mesh2glb keeps its coordinates), split at its UV seams
   2. place     the shared transform above, after the provisional fit (hats over the hair: HAIR_OVER, over_hair); flat
-               paper items (the tie, the bow tie) bend onto the chest they lie on; an entry's override.scale shrinks each
-               piece toward where it meets the head (David: the apple stem, sprout, paper horns and monkey ears at
-               Roblox's size were too big for our chibi head)
+               paper items (the tie, the bow tie) bend onto the chest they lie on; an entry's override.scale scales the
+               mesh before the fit (David, 2026-10-17: the hats bigger, covering the hair)
   3. detail    within the per-asset budget (budget.ts `accessory`, FULL_MAX): an edge collapse that keeps the UV seams,
                then welded and smooth-shaded (kit.weld_normals); LOD 1 is build_lod.py's
   4. colour    its texture, cropped to what the mesh samples, into its tile of the fixed-colour atlas (colour_atlas.py);
@@ -54,6 +53,20 @@ SRC = os.path.join(HERE, "source", "roblox-b2")
 SECTION = "robloxAccessories"
 
 FULL_MAX = 1200          # budget.ts ASSET_CATEGORIES "accessory": an accessory's Full mesh
+
+
+def full_cap(e):
+    """An item's Full triangles (David, 2026-10-17: the character budget stays 7,800, so no more than what shows): the
+    glasses, the monocle, the wheat and the blindfold, and the neck items, 350 (their source meshes ran to 1,176 on a
+    few hundred pixels); a front item 300; a hat that covers the hair 800 and anything else on the head 780 (the sprout's
+    1,176 drew on a few dozen); the hood, which replaces the hair, the full 1,200."""
+    if e["group"] in ("face", "neck"):
+        return 350
+    if e["group"] == "front":
+        return 300
+    if e.get("hidesBackHair"):
+        return FULL_MAX
+    return 800 if e.get("coversHair") else 780
 # Hats over the hair (David): David's 27 hairstyles stand a median 0.246 stud over our head at the crown (lat 60-90) and
 # 0.167 at the sides (lat 20-60), measured 2026-10-17 (rays from the head centre, the hair's outer surface less the head
 # mesh). A hat that leaves the hair on (not the bear hood) is seated on the classic head grown by HAIR_OVER, and a piece
@@ -61,6 +74,7 @@ FULL_MAX = 1200          # budget.ts ASSET_CATEGORIES "accessory": an accessory'
 # hairstyle instead of inside it. Part of the provisional fit.
 HAIR_TOP, HAIR_SIDE = 0.246, 0.167
 HAIR_OVER = 0.2
+VISOR_TOP = 0.05         # stud: a visor's band top this far under the classic head's top (over the hair, at the crown's edge)
 FACE_CLEAR = 0.008       # m: glasses and a monocle stand this far in front of the face at the eye line
 CHEST_CLEAR = 0.006      # m: a paper tie or bow tie lies this far over the chest (clothes stand CL = 7 mm proud)
 
@@ -107,10 +121,16 @@ def pixels(img):
 
 
 # ================================================================ 2. place
+def item_scale(e):
+    """The mesh scale: Roblox's (mesh_scale) times the entry's override.scale (David, 2026-10-17: the hats bigger, so they
+    cover the hair; #07 smaller)."""
+    return np.diag([float(c) for c in e["mesh_scale"]]) * float((e.get("override") or {}).get("scale", 1.0))
+
+
 def raw_studs(ob, e):
     """The item in Blender axes and studs before its position: to_blender(R^T (mesh_scale * raw)), one row a vertex."""
     R = SF.rot_orientation(e["orientation"])
-    S = np.diag([float(c) for c in e["mesh_scale"]])
+    S = item_scale(e)
     co = np.array([v.co[:] for v in ob.data.vertices], float)
     return (TO_BL @ R.T @ S @ FROM_IMPORT @ co.T).T
 
@@ -118,7 +138,7 @@ def raw_studs(ob, e):
 def place_matrix(e):
     """The 4x4 from the imported mesh to our character: the shared transform with the entry's position (and override)."""
     R = SF.rot_orientation(e["orientation"])
-    S = np.diag([float(c) for c in e["mesh_scale"]])
+    S = item_scale(e)
     att, k = ATT[e["attachment"]]
     L = k * TO_BL @ R.T @ S @ FROM_IMPORT
     off = np.asarray((e.get("override") or {}).get("offset", [0, 0, 0]), float)
@@ -151,8 +171,9 @@ def fit_shift(vb, e):
         return np.array([-(lo[0] + hi[0]) / 2, -(vb[mid, 1].min() + vb[mid, 1].max()) / 2, -vb[mid, 2].min()])
     if rule in ("eyes", "eye_r"):
         front = vb[:, 1] < lo[1] + 0.12               # the lenses or the ring: the frontmost slab
-        if rule == "eye_r":                           # the ring: the monocle's top part (its chain hangs below it)
-            front = vb[:, 2] > hi[2] - 0.34
+        if rule == "eye_r":                           # the ring: the monocle's largest piece (David, 2026-10-17: its top
+            front = np.zeros(len(vb), bool)            # part took the chain's clip too, and stood 27 cm off the eye)
+            front[max(pieces(FIT_OB, gap=0.0), key=len)] = True
         P = W[front]
         cx, cz = (P[:, 0].min() + P[:, 0].max()) / 2, (P[:, 2].min() + P[:, 2].max()) / 2
         eye = head_point(EYE_LAT, -EYE_LON if rule == "eye_r" else 0.0)
@@ -175,8 +196,12 @@ def fit_shift(vb, e):
         near = lambda p: (np.linalg.norm(vb - p, axis=1) < 0.08).sum()
         end, tip = (a, b) if near(a) < near(b) else (b, a)
         side = 1.0 if tip[0] > end[0] else -1.0
-        corner = head_point(MOUTH_LAT + 2.0, side * 13.0)
+        corner = head_point(MOUTH_LAT + 2.0, side * float(e.get("mouth_lon", 13.0)))      # #10: a little more centred
         return (np.array(corner[:]) + np.array([0, -0.004, 0]) - (A + k * end)) / k
+    if rule == "visor":                              # a visor (#04): its band round the hair, its top rim at VISOR_TOP
+        rim = vb[:, 2] > hi[2] - 0.25 * (hi[2] - lo[2])
+        c = np.array([(vb[rim, 0].min() + vb[rim, 0].max()) / 2, (vb[rim, 1].min() + vb[rim, 1].max()) / 2, hi[2]])
+        return (np.array([CLASSIC_C.x, CLASSIC_C.y, HAIR_ATT.z - VISOR_TOP * STUD]) - (A + k * c)) / k
     if rule == "band":                               # a band round the head: on its axis, its middle at the eye line
         eye = head_point(EYE_LAT, EYE_LON)
         c = np.array([(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2])
@@ -262,7 +287,7 @@ def pieces(ob, gap=0.006):
         return i
     for a in range(len(parts)):
         for b in range(a + 1, len(parts)):
-            if gfind(a) != gfind(b) and any(trees[b].find(Vector(co[i]))[2] < gap for i in parts[a]):
+            if gap > 0 and gfind(a) != gfind(b) and any(trees[b].find(Vector(co[i]))[2] < gap for i in parts[a]):
                 group[gfind(b)] = gfind(a)
     out = {}
     for k, idx in enumerate(parts):
@@ -270,24 +295,10 @@ def pieces(ob, gap=0.006):
     return [np.concatenate(v) for v in out.values()]
 
 
-def shrink(ob, s):
-    """David (2026-10-16): the apple stem, the sprout, the paper horns and the monkey ears at Roblox's size read too big
-    on our chibi head. Each piece (an ear, the banana, a horn, the stem with its leaf) shrinks by s toward where it meets
-    the head: the middle of its points nearest the head's centre, so it stays seated where it was fitted."""
-    co = np.array([v.co[:] for v in ob.data.vertices], float)
-    centre = np.array(HC[:])
-    for idx in pieces(ob):
-        d = np.linalg.norm(co[idx] - centre, axis=1)
-        foot = co[idx][d <= d.min() + 0.1 * (d.max() - d.min())].mean(0)
-        co[idx] = foot + s * (co[idx] - foot)
-    for v, c in zip(ob.data.vertices, co):
-        v.co = c
-    ob.data.update()
-
-
 def over_hair(ob):
-    """Hats over the hair: each piece standing on the head moves out from the head centre, through its foot (as shrink
-    finds it), by the hair a typical hairstyle has there (HAIR_SIDE at the sides to HAIR_TOP over the crown)."""
+    """Hats over the hair: each piece standing on the head moves out from the head centre, through its foot (the middle of
+    its points nearest the head's centre), by the hair a typical hairstyle has there (HAIR_SIDE at the sides to HAIR_TOP
+    over the crown)."""
     co = np.array([v.co[:] for v in ob.data.vertices], float)
     centre = np.array(HC[:])
     for idx in pieces(ob):
@@ -463,11 +474,9 @@ def main():
         ob.data.update()
         if e["fit"] in ("collar", "chest"):
             bend_onto_chest(ob)
-        if (e.get("override") or {}).get("scale"):
-            shrink(ob, float(e["override"]["scale"]))
         if e["provisional"] and e["fit"] in ("top", "ears"):
             over_hair(ob)
-        tris = decimate(ob, FULL_MAX, recalc=bool(e.get("recalc_normals")))
+        tris = decimate(ob, full_cap(e), recalc=bool(e.get("recalc_normals")))
         co = np.array([v.co[:] for v in ob.data.vertices])
         e_box = (np.round(co.min(0), 3).tolist(), np.round(co.max(0), 3).tolist())
         if RENDER:
@@ -486,7 +495,8 @@ def main():
             "hidesBackHair": bool(e["hidesBackHair"]), "hides": [], "group": e["group"], "skull": SK.VERSION,
             "key": e["key"], "source": f"accessories/source/roblox-b2/{e['file']}",
             "roblox": {"provisional": bool(e["provisional"]), "attachment": e["attachment"]}, "colourAtlas": True,
-            **({"coversHair": True} if e.get("coversHair") else {}),
+            **({"coversHair": True, "hatCut": [x["key"] for x in DATA["items"] if x.get("coversHair")].index(e["key"])} if e.get("coversHair") else {}),
+            **({"coversHead": True} if e.get("coversHead") else {}),
         }
         report.append(f"IMPORT {e['id']:24s} src_tris={src_tris} tris={kit.ntris(ob)} {e['attachment']} fit={e['fit']} "
                       f"position={e['position']} orientation={e['orientation']} box={e_box} tile={colour_atlas.LAYOUT[e['id']]} crop={box}")

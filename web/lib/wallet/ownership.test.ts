@@ -70,6 +70,7 @@ describe("ownership catalogue", () => {
         continue;
       }
       if (p.key) continue; // wardrobe batch 2: sold at David's price or free (below)
+      if (p.grantedBy) { expect(byRef(p.id), p.id).toHaveLength(0); continue; } // row 314: #22's hat comes with the hair
       expect(byRef(p.id), p.id).toHaveLength(1);
       expect(byRef(p.id)[0].active, p.id).toBe(!STARTER_PARTS.includes(p.id));
     }
@@ -165,7 +166,8 @@ describe("wardrobe batch 2 (David's modes and prices, specs/wardrobe/batch2-pric
   const rowOf = (ref: string) => seedItems().filter((i) => i.catalogue_ref === ref);
 
   it("sells each item exactly as priced: coins in price_coins, Gems in tc_price (price_gems); free and skipped ones unsold", () => {
-    expect(priced).toHaveLength(35);
+    expect(priced).toHaveLength(Object.values(BATCH2_PRICES).filter((x) => x.mode !== "skip").length);
+    expect(priced).toHaveLength(33);
     for (const { key, ref, category } of priced) {
       const { mode, price } = BATCH2_PRICES[key];
       const rows = rowOf(ref);
@@ -203,10 +205,13 @@ describe("look save with wardrobe batch 2 (PATCH /api/profile: priced items are 
     expect(await eyes.json()).toMatchObject({ code: "not_owned", missing: ["face:vampire"] });
     const accent = await saveLook({ ...DEFAULT_LOOK, extras: ["stitches", "blush"] });
     expect(await accent.json()).toMatchObject({ code: "not_owned", missing: ["face:vampire"] });
+    // row 314: #22's ushanka and goggles need hair #22
+    const hat = await saveLook(wear(DEFAULT_LOOK, "accessory", "acc_ushanka_goggles"));
+    expect(await hat.json()).toMatchObject({ code: "not_owned", missing: ["hair_goggle_ushanka"] });
     expect(mock.adminWrites).toEqual([]);
   });
-  it("saves the free ones with nothing owned: glasses #06 and #13, faces #21 and #22", async () => {
-    const free = wear({ ...DEFAULT_LOOK, eyes: "squint", mouth: "tongue_out", extras: ["nose_shade"] }, "accessory", "acc_round_wire_glasses");
+  it("saves the free ones with nothing owned: glasses #06, faces #21 and #22", async () => {
+    const free = wear({ ...DEFAULT_LOOK, eyes: "squint", mouth: "tongue_out", extras: ["nose_shade"] }, "accessory", "acc_thin_glasses");
     expect((await saveLook(free)).status).toBe(200);
     expect((await saveLook(wear(DEFAULT_LOOK, "accessory", "acc_thin_glasses"))).status).toBe(200);
     expect(mock.adminWrites.at(-1)).toMatchObject({ avatar_config: { look: { acc: { face: "acc_thin_glasses" } } } });
@@ -223,6 +228,8 @@ describe("look save with wardrobe batch 2 (PATCH /api/profile: priced items are 
     expect((await saveLook(cowboy())).status).toBe(200);
     expect((await saveLook({ ...cowboy(), ...vampire })).status).toBe(200);
     expect(mock.adminWrites.at(-1)).toMatchObject({ avatar_config: { look: { back: "hair_goggle_ushanka", eyes: "caret_hash", mouth: "fangs", extras: ["stitches"], acc: { head: "acc_cowboy_hat" } } } });
+    // row 314: owning hair #22 grants its ushanka and goggles
+    expect((await saveLook(wear(cowboy(), "accessory", "acc_ushanka_goggles"))).status).toBe(200);
     // another face's part still needs its own face
     expect(await (await saveLook({ ...DEFAULT_LOOK, ...vampire, eyes: "cat_wide" })).json()).toMatchObject({ code: "not_owned", missing: ["face:silly_cat"] });
   });
