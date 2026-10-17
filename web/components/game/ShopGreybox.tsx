@@ -2,8 +2,8 @@
 
 /**
  * The shop's greybox (specs/interiors/shop.md, phase 1): the layout in matte, untextured blocks for David's review,
- * every number from lib/game/shopLayout.ts. Two floors: the ground floor always, the upper floor (on its slab, with the
- * stairwell cut out) only while the walker says it shows, so the camera sees the floor you're on. Fixtures in their
+ * every number from lib/game/shopLayout.ts. Two floors: the ground floor always, the mezzanine over the back (on its
+ * slab, open over the stair) while the walker says it shows: from the door, not once you're under it. Fixtures in their
  * material's flat tone (concrete, metal, pegboard, tile, timber), each displayed item as a block in its kind's colour,
  * the edge lights and the linear pendant as plain bright strips, and the walking path taped on the floor. Phase 2 puts
  * the models on the same numbers.
@@ -14,7 +14,7 @@ import * as THREE from "three";
 import { AudioManager } from "@/lib/game/audio";
 import * as layout from "@/lib/game/shopLayout";
 import {
-  SHOP_DOOR, SHOP_FIXTURES, SHOP_FLOOR_HEIGHT, SHOP_PATHS, SHOP_PENDANT, SHOP_ROOM, SHOP_SLAB, SHOP_SLOTS, SHOP_STAIR, SHOP_STRIPS, SHOP_WINDOWS,
+  SHOP_DOOR, SHOP_FIXTURES, SHOP_FLOOR_HEIGHT, SHOP_MEZZ, SHOP_PATHS, SHOP_PENDANT, SHOP_ROOM, SHOP_SLAB, SHOP_SLOTS, SHOP_STAIR, SHOP_STRIPS, SHOP_WINDOWS,
   type Finish, type ItemKind, type Level, type ShopWalker,
 } from "@/lib/game/shopLayout";
 
@@ -40,6 +40,8 @@ const matte = (hex: string) => {
 const GLOW = new THREE.MeshBasicMaterial({ color: "#fff3d6", toneMapped: false });
 const TAPE = new THREE.MeshBasicMaterial({ color: "#f2c94c" });
 const GLASS = new THREE.MeshBasicMaterial({ color: "#d4e6ef" });
+/** The railings' and the mirror's glass: see-through, so the merch shows from below. */
+const SEE_THROUGH = new THREE.MeshStandardMaterial({ color: "#cfe4ec", roughness: 0.2, metalness: 0, transparent: true, opacity: 0.28, depthWrite: false });
 
 type V3 = [number, number, number];
 /** A block standing on `at` (the centre of its base). */
@@ -63,10 +65,10 @@ const walk = (e: ThreeEvent<MouseEvent>) => {
 const { halfW: W, halfD: D, wall: T, lip } = SHOP_ROOM;
 const F = SHOP_FLOOR_HEIGHT, S = SHOP_STAIR;
 
-/** One floor's shell: its walls (the +x wall round its window), and the cut-away near wall's lip (the door's gap downstairs). */
+/** One storey of the shell: its walls (the +x wall round its window), and downstairs the cut-away near wall's lip either side of the door. */
 function Walls({ level }: { level: Level }) {
   const wall = matte(WALL_TONE), w = SHOP_WINDOWS[level];
-  const lips = level === 0 ? [[-W - T, SHOP_DOOR.x - SHOP_DOOR.half], [SHOP_DOOR.x + SHOP_DOOR.half, W + T]] : [[-W - T, W + T]];
+  const lips = level === 0 ? [[-W - T, SHOP_DOOR.x - SHOP_DOOR.half], [SHOP_DOOR.x + SHOP_DOOR.half, W + T]] : [];
   return <>
     <Block at={[0, 0, D + T / 2]} size={[2 * W + 2 * T, F, T]} material={wall} />
     <Block at={[-W - T / 2, 0, 0]} size={[T, F, 2 * D + 2 * T]} material={wall} />
@@ -82,7 +84,7 @@ function Walls({ level }: { level: Level }) {
 /** What stands on one floor: fixtures, displayed items, edge lights and the taped path. */
 function Contents({ level }: { level: Level }) {
   return <>
-    {SHOP_FIXTURES.filter(f => f.level === level).flatMap(f => f.blocks.map((b, i) => <Block key={`${f.id}-${i}`} at={b.at} size={b.size} material={matte(FINISH_TONE[b.finish])} />))}
+    {SHOP_FIXTURES.filter(f => f.level === level).flatMap(f => f.blocks.map((b, i) => <Block key={`${f.id}-${i}`} at={b.at} size={b.size} material={b.finish === "glass" ? SEE_THROUGH : matte(FINISH_TONE[b.finish])} />))}
     {SHOP_SLOTS.filter(s => s.level === level).map(s => <Block key={s.id} at={s.at} size={s.size} material={matte(KIND_TONE[s.kind])} />)}
     {SHOP_STRIPS.filter(s => s.level === level).map((s, i) => <Bar key={i} from={s.from} to={s.to} thick={[0.025, 0.04]} material={GLOW} />)}
     {SHOP_PATHS.filter(p => p.level === level).flatMap(p => p.points.slice(1).map((q, k) =>
@@ -115,9 +117,9 @@ export default function ShopGreybox({ walker }: { walker: ShopWalker }) {
     <Bar from={[SHOP_PENDANT.x0 + 0.04, SHOP_PENDANT.y - 0.006, SHOP_PENDANT.z]} to={[SHOP_PENDANT.x1 - 0.04, SHOP_PENDANT.y - 0.006, SHOP_PENDANT.z]} thick={[0.012, 0.06]} material={GLOW} />
     {SHOP_PENDANT.wires.map(x => <Block key={x} at={[x, SHOP_PENDANT.y + 0.05, SHOP_PENDANT.z]} size={[0.012, F - SHOP_SLAB - SHOP_PENDANT.y - 0.05, 0.012]} material={matte("#2c3036")} />)}
 
-    {/* ── Upper floor: on its slab with the stairwell cut out, polished concrete; shown while the walker says so. ── */}
-    <group ref={upper} position={[0, F, 0]} visible={false}>
-      {([[S.x1, W, -D, D], [-W, S.x1, -D, S.z0], [-W, S.x1, S.z1, D]] as const).map(([x0, x1, z0, z1]) =>
+    {/* ── The mezzanine over the back, open over the stair, polished concrete, and the upper storey of the walls; shown while the walker says so. ── */}
+    <group ref={upper} position={[0, F, 0]}>
+      {([[S.x1, W, SHOP_MEZZ.z0, D], [-W, S.x1, S.z1, D]] as const).map(([x0, x1, z0, z1]) =>
         <mesh key={`${x0},${z0}`} geometry={BOX} material={concrete} position={[(x0 + x1) / 2, -SHOP_SLAB / 2, (z0 + z1) / 2]} scale={[x1 - x0, SHOP_SLAB, z1 - z0]}
           receiveShadow castShadow onClick={walk} />)}
       <Walls level={1} />

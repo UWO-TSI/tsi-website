@@ -22,77 +22,89 @@ Interiors are reworked one room at a time, from David's references. The shop is 
 ## Phase 1: the layout (greybox, 2026-10-17, for David's approval)
 Every number is in `web/lib/game/shopLayout.ts`, and the room draws it as matte blocks (`ShopGreybox`). The walking, the stair, the counter station and the shopkeeper's post use the same numbers. Shots are in `specs/evidence/shop-interior/phase1/`.
 
-**Round 2, two floors (David, 2026-10-17):** "real merch is upstairs and in game merch is down stairs". The size can be 12 x 10 or larger. Kept from round 1, as David approved: oak downstairs and concrete upstairs, accessories sharing the dyes' shelving, and seasonal items first, by the front window.
+**Round 3: the mezzanine and the changing room (David, 2026-10-17).**
 
-- **Room:** 12 x 10 on both floors, floor to floor 3.2 (a 0.2 slab). Each floor's walls are 3.2 high. The door stays centred in the cut-away near wall.
-- **Seeing two floors:**
-  - while you're downstairs, the upper floor is cut away, so the camera sees the floor you're on;
-  - the camera rises with you up the stair;
-  - past 60% of the climb the upper floor shows, and it hides again below 40% on the way down, so it never flickers;
-  - upstairs, the stairwell looks down onto the ground floor.
-- **Stair:** a straight concrete flight up the right wall (−x), from beside the door toward the back:
-  - 16 steps, 1.8 wide, with a handrail on its open side;
-  - it's the first thing on the right from the door;
-  - a "Club merch upstairs" sign stands at its foot;
-  - upstairs, a glass railing runs round the stairwell, and you arrive at the back right, facing the merch wall.
-- **Ground floor (herringbone oak): in-game items and the counter.**
-  - The aisle (2.4+ wide) runs straight from the door to the cashier counter. The counter is hip-high glazed tile with a timber top and the till; the shopkeeper stands behind it, the linear pendant hangs over it, and a tile wall is behind. Crates and a plant close its ends.
-  - Left side:
-    - seasonal: stepped concrete plinths by the curtained window;
+The upper floor is now a mezzanine of about 12 x 6 over the back of the room, overlooking the entrance, so you see the merch level from the door. The open front is gone.
+
+Approved:
+- the stair on the right wall;
+- the clothes rail by the stair;
+- the samples corner;
+- "Club merch" opening the merch UI straight away, with the line "It's all upstairs if you want to see it in person."
+
+New: a changing room next to the clothes, using the village fitting room's behaviour.
+
+Kept from earlier rounds:
+- oak downstairs, concrete up;
+- accessories sharing the dyes' shelving;
+- seasonal items first, by the front window.
+
+- **Room:** 12 x 10.
+  - The front 4 (from the door to z −1) is double-height, with the two windows one over the other above the seasonal plinths.
+  - The mezzanine floor is at 3.2, from its glass-railed front edge at z −1 to the back wall. It's open over the stair.
+- **Seeing it:**
+  - From the door the mezzanine shows. Through the glass you see the featured drop at its front, and a "club merch" sign hangs on its edge, facing the door.
+  - Walk in under it, past z −1.5, and it's cut away so the camera sees the counter and the floor you're on. It shows again when you're back out front, past z −1.9.
+  - Between those two points it stays as it was, so it never flickers.
+  - It shows the whole time you're on the stair or up on it.
+  - Since the mezzanine is over the counter, the shopkeeper isn't visible from the door; the counter comes into view as you step in.
+- **Stair:**
+  - a straight concrete flight up the right wall, from beside the door toward the back: 16 steps, 1.8 wide, with a handrail;
+  - a "Club merch upstairs" sign at its foot;
+  - you arrive on the mezzanine at the back right, facing the merch wall.
+- **Ground floor (herringbone oak): in-game items, the changing room and the counter.**
+  - The aisle (2.4+ wide) runs from the door to the hip-high glazed-tile counter, which has a timber top and the till. The shopkeeper stands behind it, the linear pendant hangs over it, and there's a tile wall behind. Crates and a plant close its ends.
+  - Left:
+    - seasonal: stepped plinths by the window;
     - tools: a concrete table;
-    - dyes and accessories: metal shelving on the wall;
-    - furniture: a concrete showroom dais against the back wall.
-  - Right side, beside the stair:
+    - dyes and accessories: metal shelving;
+    - furniture: a showroom dais against the back wall.
+  - Right, beside the stair:
     - clothes: a face-out metal rail;
-    - wallpaper and flooring: sample panels on the back wall with tiles on a low plinth. These are in the shop's catalogue but had no place before.
-- **Upper floor (polished concrete): club merch (ref 1).**
-  - The pegboard wall runs across the back, face-on as you arrive, and round the left corner, over a long metal counter with drawers.
-  - On the back wall: tees and hoodies hung, totes, posters over a metal shelf, the "club merch" sign, and stickers, pins and caps in crates on the counter.
-  - Down the left side: more garments hung, and folded stacks.
-  - The featured drop sits on two concrete plinths in the middle. A window is at the front left.
-  - The front of the upper floor is open floor for now, room for the range to grow.
+    - the changing room next to it;
+    - wallpaper and flooring samples in the back corner.
+- **Changing room:**
+  - a free-standing booth beside the clothes rail, 1.5 x 1.1 and 2.2 high;
+  - its curtain faces the door and the walking camera, with a mirror and a bench inside;
+  - standing in front of it, the prompt is "Try on outfits";
+  - E does what the village fitting room does: `tsi:fitting`, then the wardrobe opens as "Fitting room".
+
+  The village's fitting room beside the shop now duplicates it. David lays out the village himself, so it stays until he removes it in the painter.
+- **Mezzanine (polished concrete): club merch (ref 1).**
+  - The pegboard wall runs across the back and round the left corner, over a long metal counter with drawers.
+  - On the back wall: tees and hoodies hung, totes, posters over a metal shelf, a sign, and stickers, pins and caps in crates on the counter.
+  - Down the left side: garments hung, and folded stacks.
+  - The featured drop sits on two concrete plinths at the front, behind the glass.
+  - A glass railing runs round the stairwell.
 - **Lights:**
-  - ground floor: edge strips along the shelving lips, round the tools table, and as floor glow on the dais, plinths and samples; the linear pendant hangs over the counter;
-  - upper floor: strips under the merch counter's lip and the pegboard shelf, and floor glow at the plinths.
+  - ground floor: edge strips along the shelving lips, round the tools table, and as floor glow on the dais, plinths and samples; the linear pendant over the counter;
+  - mezzanine: strips under the merch counter's lip and the pegboard shelf, and floor glow at the plinths.
 - **Walking path:**
   - the aisle;
   - the way to the stair and up it;
   - the items loop and a cut past the tools table;
-  - a loop round the clothes rail, with a spur to the samples;
-  - upstairs, the merch loop.
-- **Tests:** `shopLayout.test.ts` checks that:
+  - round the clothes rail, past the changing room to the samples;
+  - on the mezzanine, the merch loop.
+- **Tests** (`shopLayout.test.ts`, 12 tests):
   - every leg of the path can be walked;
-  - every item has a spot within the tag range (1.6) on its own floor;
-  - the walker climbs from the door to the merch wall and back, and the upper floor shows and hides without flickering;
-  - you can't walk under or beside the flight, or into the stairwell;
-  - nobody can get behind the counter;
-  - the shopkeeper can be seen over the counter.
-- **Shopkeeper's dialogue (proposal for phase 2):** "Club merch" opens the shop UI straight on the merch category, with a line pointing upstairs: "It's all upstairs if you want to see it in person." Buying never needs the trip upstairs; the upper floor is there to look round. Keepers now ignore anyone on the floor above, so the shopkeeper doesn't greet you through the ceiling.
-- **The exterior can't hold two floors as it is.** It's the ACNH market, `shop-market.glb`, a single storey. In world units:
-  - walls 3.35 high;
-  - roof 3.54 high;
-  - sign top 3.93;
-  - a 1.88 door, against a 1.36 character.
-
-  To read as two floors it needs, roughly:
-  - a second storey of facade, walls to about 6;
-  - a row of upper windows on the front, which could show the merch inside;
-  - the roof raised to sit on top;
-  - the sign moved between the floors or onto the upper facade.
-
-  The footprint can stay. This belongs with the separate exterior remodel.
+  - every item has a spot within the tag range (1.6) on its own floor, with the merch on the mezzanine;
+  - the climb from the door to the merch wall and back works;
+  - the mezzanine shows from the door and cuts away under it, without flickering;
+  - you can't walk under or beside the flight, into the stairwell, or off the mezzanine's edge;
+  - the changing room is beside the rail and usable from in front of its curtain;
+  - nobody can get behind the counter, and the shopkeeper can be seen over it.
+- **Exterior:** as before, `shop-market.glb` is single-storey: walls 3.35, roof 3.54, sign top 3.93, a 1.88 door. For the shop to read as two storeys, the exterior remodel needs a raised upper facade (walls to about 6) with windows, and the roof on top. The footprint can stay.
 - **Shots** (`specs/evidence/shop-interior/phase1/`, made headless by `shots.mjs` there):
-  - `01-plan-ground` and `02-plan-upstairs`: the plans, each with a numbered key;
+  - `01-plan-ground`: with the mezzanine cut away;
+  - `02-plan-mezzanine`;
   - `03-door-view`;
-  - `04-items-walk` and `05-items-across`;
-  - `06-counter-walk` and `07-counter-low`;
+  - `04-items-walk`;
+  - `05-counter-walk`;
+  - `06-changing-room`;
+  - `07-changing-room-open`: the wardrobe, opened there;
   - `08-stair-view`;
-  - `09-on-the-stair`: the climb, as the upper floor appears;
+  - `09-on-the-stair`;
   - `10-top-of-stairs`;
-  - `11-merch-walk` and `12-merch-across`.
-- **Open for David:**
-  - the stair's side and direction: the right wall, rising away from the door;
-  - the clothes rail moving to the right, beside the stair;
-  - the wallpaper and flooring samples corner;
-  - whether the open front of the upper floor should get more merch fixtures, or the upper floor become a 12 x 6 mezzanine at the back overlooking the entrance;
-  - the dialogue proposal above.
+  - `11-merch-walk`;
+  - `12-merch-across`;
+  - `13-mezzanine-edge`: over the glass to the entrance below.

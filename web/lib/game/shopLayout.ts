@@ -5,13 +5,14 @@
  * door in the cut-away near wall (−z), +x on screen left, the camera looking up +z.
  *
  * Two floors (David, 2026-10-17: "real merch is upstairs and in game merch is down stairs"). The ground floor, on
- * herringbone oak, holds the in-game items and the tiled cashier counter with the shopkeeper behind it, at the end of
- * an aisle from the door. A stair climbs the right wall (−x) away from the door to the upper floor, on polished
- * concrete, which holds the club merch round the pegboard wall. While you're downstairs the upper floor is cut away,
- * so the camera sees the floor you're on; it shows as you climb (createShopWalker).
+ * herringbone oak, holds the in-game items, a changing room by the clothes and the tiled cashier counter with the shopkeeper behind
+ * it, at the end of an aisle from the door. A stair climbs the right wall (−x) away from the door to a mezzanine over
+ * the back of the room, on polished concrete, which holds the club merch round the pegboard wall and overlooks the
+ * entrance. From the door you see the merch level; walk in under it and it's cut away, so the camera sees the counter
+ * and the floor you're on (createShopWalker).
  */
 
-/** 12 x 10 on both floors. */
+/** 12 x 10 downstairs; the mezzanine is the back 12 x 6. */
 export const SHOP_ROOM = { halfW: 6, halfD: 5, wall: 0.3, lip: 0.9 } as const;
 /** Floor to floor: the upper floor's level. Each floor's walls stand this high; the slab between is SHOP_SLAB thick. */
 export const SHOP_FLOOR_HEIGHT = 3.2;
@@ -39,6 +40,12 @@ export const SHOP_TAG_RANGE = 1.6;
 export const SHOP_STAIR = { x0: -6, x1: -4.2, z0: -3.0, z1: 1.8, steps: 16 } as const;
 /** Where you walk on it: off the wall by the walk margin, and clear of its railing. */
 export const STAIR_LANE: [number, number] = [-SHOP_ROOM.halfW + SHOP_WALK_MARGIN, SHOP_STAIR.x1 - SHOP_PAD];
+/**
+ * The mezzanine: the upper floor over the back of the room, from its railed front edge at z0 to the back wall, open
+ * over the stair. `edge`: how far off the railing you walk. Downstairs it shows while you're out front (z under
+ * `showBelow`) and is cut away once you go under it (z over `hideAbove`); between the two it stays as it was.
+ */
+export const SHOP_MEZZ = { z0: -1, edge: 0.35, showBelow: -1.9, hideAbove: -1.5 } as const;
 
 export type ShopZone = "items" | "merch" | "counter" | "stair";
 export type Finish = "concrete" | "metal" | "pegboard" | "tile" | "timber" | "fabric" | "crate" | "plant" | "sign" | "glass";
@@ -49,7 +56,14 @@ export type Footprint = [number, number, number, number];
 export interface ShopFixture { id: string; level: Level; zone: ShopZone; label: string; blocks: ShopBlock[]; footprint?: Footprint[] }
 
 const b = (at: [number, number, number], size: [number, number, number], finish: Finish): ShopBlock => ({ at, size, finish });
-const S = SHOP_STAIR, F = SHOP_FLOOR_HEIGHT, RUN = (S.z1 - S.z0) / S.steps, RISE = F / S.steps;
+const S = SHOP_STAIR, F = SHOP_FLOOR_HEIGHT, RUN = (S.z1 - S.z0) / S.steps, RISE = F / S.steps, M = SHOP_MEZZ;
+/**
+ * The changing room: a booth beside the clothes rail, its curtain facing the door (and the walking camera). `at` its
+ * centre, `size` its footprint (x, z), `height` its walls. You stand at `spot` to use it (the village fitting room's
+ * behaviour: E, the curtain sweeps, the wardrobe opens).
+ */
+export const SHOP_BOOTH = { at: [-3.0, 1.6] as [number, number], size: [1.5, 1.1] as [number, number], height: 2.2, spot: [-3.0, 0.55] as [number, number], range: 1.0 } as const;
+const BX = SHOP_BOOTH.at[0], BZ = SHOP_BOOTH.at[1], BW = SHOP_BOOTH.size[0], BD = SHOP_BOOTH.size[1], BH = SHOP_BOOTH.height;
 
 export const SHOP_FIXTURES: ShopFixture[] = [
   // ════ Ground floor: in-game items and the counter ════
@@ -99,25 +113,38 @@ export const SHOP_FIXTURES: ShopFixture[] = [
     ...[0.5, 7.5, 15.5].map(i => b([S.x1 - 0.04, ((i + 0.5) * RISE), S.z0 + i * RUN], [0.04, 0.95, 0.04], "metal")),
   ] },
 
-  // ════ Upper floor: club merch (ref 1) ════
+  { id: "changing-room", level: 0, zone: "items", label: "Changing room", footprint: [[BX, BZ, BW / 2, BD / 2]], blocks: [
+    b([BX, 0, BZ + BD / 2 - 0.03], [BW, BH, 0.06], "timber"),                                   // the back, with the mirror on it
+    b([BX - BW / 2 + 0.03, 0, BZ], [0.06, BH, BD], "timber"), b([BX + BW / 2 - 0.03, 0, BZ], [0.06, BH, BD], "timber"),
+    b([BX, 0.08, BZ - BD / 2 + 0.03], [BW - 0.12, BH - 0.18, 0.05], "fabric"),                // the curtain, facing the door
+    b([BX, BH - 0.07, BZ - BD / 2 + 0.03], [BW, 0.04, 0.04], "metal"),                        // its rail
+    b([BX, 0.2, BZ + BD / 2 - 0.08], [0.6, 1.6, 0.04], "glass"),                              // the mirror
+    b([BX + 0.45, 0, BZ + 0.15], [0.4, 0.45, 0.5], "concrete"),                               // a bench
+  ] },
+
+  // ════ The mezzanine: club merch (ref 1) ════
   { id: "stairwell-rail", level: 1, zone: "stair", label: "Railing round the stairwell", blocks: [
-    b([S.x1 + 0.02, 0, (S.z0 + S.z1) / 2], [0.04, 1.0, S.z1 - S.z0], "glass"),
-    b([(S.x0 + S.x1) / 2, 0, S.z0 - 0.02], [S.x1 - S.x0, 1.0, 0.04], "glass"),
+    b([S.x1 + 0.02, 0, (M.z0 + S.z1) / 2], [0.04, 1.0, S.z1 - M.z0], "glass"),
+  ] },
+  { id: "mezz-rail", level: 1, zone: "merch", label: "Glass railing along the mezzanine's edge", blocks: [
+    b([(S.x1 + SHOP_ROOM.halfW) / 2, 0, M.z0 + 0.02], [SHOP_ROOM.halfW - S.x1, 1.0, 0.04], "glass"),
   ] },
   { id: "pegboard", level: 1, zone: "merch", label: "Pegboard wall, round the back corner", blocks: [
     b([1.3, 0, 4.97], [9.4, 3.0, 0.06], "pegboard"),
     b([5.97, 0, 2.0], [0.06, 3.0, 6.0], "pegboard"),
   ] },
-  { id: "merch-counter", level: 1, zone: "merch", label: "Long metal counter with drawers", footprint: [[1.175, 4.66, 4.175, 0.31], [5.66, 2.185, 0.31, 2.785]], blocks: [
+  { id: "merch-counter", level: 1, zone: "merch", label: "Long metal counter with drawers", footprint: [[1.175, 4.66, 4.175, 0.31], [5.66, 2.485, 0.31, 2.485]], blocks: [
     b([1.175, 0, 4.66], [8.35, 0.85, 0.62], "metal"),
-    b([5.66, 0, 2.185], [0.62, 0.85, 5.57], "metal"),
+    b([5.66, 0, 2.485], [0.62, 0.85, 4.97], "metal"),
   ] },
   { id: "merch-shelf", level: 1, zone: "merch", label: "Metal shelf on the pegboard", blocks: [b([0.4, 1.55, 4.8], [2.6, 0.04, 0.3], "metal")] },
   { id: "merch-sign", level: 1, zone: "merch", label: "Club merch sign", blocks: [b([0.4, 2.62, 4.93], [2.6, 0.32, 0.04], "sign")] },
-  { id: "merch-plinths", level: 1, zone: "merch", label: "Featured drop: concrete plinths", footprint: [[0.4, 0.2, 0.45, 0.45], [1.25, 1.05, 0.325, 0.325]], blocks: [
-    b([0.4, 0, 0.2], [0.9, 0.75, 0.9], "concrete"),
-    b([1.25, 0, 1.05], [0.65, 0.4, 0.65], "concrete"),
+  // At the front, behind the glass: what you see of the merch level from the door.
+  { id: "merch-plinths", level: 1, zone: "merch", label: "Featured drop: concrete plinths", footprint: [[0, 0.35, 0.45, 0.45], [0.85, 1.15, 0.325, 0.325]], blocks: [
+    b([0, 0, 0.35], [0.9, 0.75, 0.9], "concrete"),
+    b([0.85, 0, 1.15], [0.65, 0.4, 0.65], "concrete"),
   ] },
+  { id: "edge-sign", level: 1, zone: "merch", label: "\"Club merch\" sign on the mezzanine's edge, facing the door", blocks: [b([0.9, -0.6, M.z0 - 0.04], [3.2, 0.38, 0.06], "sign")] },
 ];
 
 export type ItemKind = "seasonal" | "clothes" | "accessories" | "tools" | "dyes" | "furniture" | "finishes"
@@ -170,8 +197,8 @@ export const SHOP_SLOTS: DisplaySlot[] = [
   slot("merch-small-5", "merch-small", "merch-counter", [4.1, 0.85, 4.62], [0.45, 0.22, 0.4]),
   slot("merch-prints-1", "merch-prints", "pegboard", [-0.25, 1.72, 4.91], [1.0, 0.85, 0.04]),
   slot("merch-prints-2", "merch-prints", "pegboard", [1.05, 1.72, 4.91], [1.0, 0.85, 0.04]),
-  slot("merch-featured-1", "merch-featured", "merch-plinths", [0.4, 0.75, 0.2], [0.5, 0.9, 0.35]),
-  slot("merch-featured-2", "merch-featured", "merch-plinths", [1.25, 0.4, 1.05], [0.4, 0.3, 0.4]),
+  slot("merch-featured-1", "merch-featured", "merch-plinths", [0, 0.75, 0.35], [0.5, 0.9, 0.35]),
+  slot("merch-featured-2", "merch-featured", "merch-plinths", [0.85, 0.4, 1.15], [0.4, 0.3, 0.4]),
 ];
 
 /** A light strip along an edge (the edge lighting), on a floor, from one end to the other. */
@@ -189,20 +216,20 @@ export const SHOP_STRIPS: LightStrip[] = [
   strip(0, "finishes", [-5.3, 0.05, 3.89], [-2.9, 0.05, 3.89]),
   // Upper: under the merch counter's top lip and the pegboard shelf (ref 1), floor glow along the plinths.
   strip(1, "merch-counter", [-3.0, 0.8, 4.34], [5.35, 0.8, 4.34]),
-  strip(1, "merch-counter", [5.34, 0.8, -0.6], [5.34, 0.8, 4.34]),
+  strip(1, "merch-counter", [5.34, 0.8, 0.0], [5.34, 0.8, 4.34]),
   strip(1, "merch-shelf", [-0.9, 1.53, 4.7], [1.7, 1.53, 4.7]),
-  strip(1, "merch-plinths", [-0.05, 0.04, -0.26], [0.85, 0.04, -0.26]),
-  strip(1, "merch-plinths", [0.925, 0.04, 0.715], [1.575, 0.04, 0.715]),
+  strip(1, "merch-plinths", [-0.45, 0.04, -0.11], [0.45, 0.04, -0.11]),
+  strip(1, "merch-plinths", [0.525, 0.04, 0.815], [1.175, 0.04, 0.815]),
 ];
 /** The linear pendant over the counter (ref 2): a bar from x0 to x1 at height y, hung on two wires from the ceiling. */
 export const SHOP_PENDANT = { x0: -1.5, x1: 1.5, y: 2.6, z: 3.3, wires: [-1.3, 1.3] } as const;
 
-/** The floors: herringbone oak downstairs, polished concrete up. */
+/** The floors: herringbone oak downstairs, polished concrete on the mezzanine. */
 export const SHOP_FLOORS = [
   { level: 0, id: "oak", label: "Herringbone oak" },
   { level: 1, id: "concrete", label: "Polished concrete" },
 ] as const;
-/** The windows in the +x wall, one a floor (the ground floor's behind the seasonal plinths): z0..z1 along it, sill to head above the floor. */
+/** The windows in the +x wall, one over the other in the double-height front, behind the seasonal plinths: z0..z1 along it, sill to head above each floor. */
 export const SHOP_WINDOWS = [
   { level: 0, x: 6, z0: -4.0, z1: -1.8, y0: 0.9, y1: 2.8 },
   { level: 1, x: 6, z0: -4.0, z1: -1.8, y0: 0.8, y1: 2.4 },
@@ -215,9 +242,8 @@ export const SHOP_PATHS: { id: string; level: Level | "stair"; label: string; po
   { id: "stair", level: "stair", label: "Up the stair", points: [[-4.85, S.z0], [-4.85, S.z1]] },
   { id: "items-loop", level: 0, label: "Items loop", points: [[0.9, -1.9], [5.0, -1.9], [5.0, 2.55], [0.9, 2.55]] },
   { id: "items-cross", level: 0, label: "Past the tools table", points: [[0.9, -0.6], [5.0, -0.6]] },
-  { id: "right-loop", level: 0, label: "Round the clothes rail", points: [[-0.9, -1.2], [-3.75, -1.2], [-3.75, 2.5], [-0.9, 2.5]] },
-  { id: "finishes", level: 0, label: "To the samples", points: [[-3.75, 2.5], [-5.0, 2.5], [-5.0, 3.4]] },
-  { id: "merch-loop", level: 1, label: "Merch loop", points: [[-4.85, 2.3], [-4.85, 3.7], [4.85, 3.7], [4.85, -1.4], [-3.7, -1.4], [-3.7, 2.3], [-4.85, 2.3]] },
+  { id: "right-loop", level: 0, label: "Round the clothes rail, past the changing room to the samples", points: [[-0.9, -1.2], [-3.75, -1.2], [-3.75, 0.55], [-1.6, 0.55], [-1.6, 2.55], [-5.0, 2.55], [-5.0, 3.4]] },
+  { id: "merch-loop", level: 1, label: "Merch loop", points: [[-4.85, 2.3], [-4.85, 3.7], [4.85, 3.7], [4.85, -0.5], [-3.7, -0.5], [-3.7, 2.3], [-4.85, 2.3]] },
 ];
 
 export const SHOP_SOLIDS: Record<Level, Footprint[]> = {
@@ -232,12 +258,13 @@ export function shopSolidAt(level: Level, x: number, z: number, pad = SHOP_PAD):
 }
 /** The stair, from a floor: downstairs its flight (you can't walk under or beside it), upstairs the open stairwell. */
 export function stairBlocks(level: Level, x: number, z: number, pad = SHOP_PAD): boolean {
-  return x < S.x1 + pad && (level === 0 ? z > S.z0 && z < S.z1 + pad : z > S.z0 - pad && z < S.z1);
+  return x < S.x1 + pad && (level === 0 ? z > S.z0 && z < S.z1 + pad : z < S.z1);
 }
-/** Where you can stand on a floor: inside the walker's bounds, clear of everything solid and of the stair. */
+/** Where you can stand on a floor: inside the walker's bounds (the mezzanine's, upstairs), clear of everything solid and of the stair. */
 export function shopWalkable(level: Level, x: number, z: number, pad = SHOP_PAD): boolean {
   const mx = SHOP_ROOM.halfW - SHOP_WALK_MARGIN, mz = SHOP_ROOM.halfD - SHOP_WALK_MARGIN;
-  return Math.abs(x) <= mx + 1e-9 && Math.abs(z) <= mz + 1e-9 && !shopSolidAt(level, x, z, pad) && !stairBlocks(level, x, z, pad);
+  const front = level === 0 ? -mz : M.z0 + M.edge;
+  return Math.abs(x) <= mx + 1e-9 && z <= mz + 1e-9 && z >= front - 1e-9 && !shopSolidAt(level, x, z, pad) && !stairBlocks(level, x, z, pad);
 }
 /** Your feet's height on the flight at z. */
 export const stairHeight = (z: number) => F * Math.min(1, Math.max(0, (z - S.z0) / (S.z1 - S.z0)));
@@ -247,7 +274,7 @@ export type WalkZone = "ground" | "stair" | "upper";
 export interface ShopWalker {
   zone: WalkZone;
   height: number;
-  /** The upper floor is drawn: on it, or high enough up the stair (with a little hysteresis, so it never flickers). */
+  /** The mezzanine is drawn: on it or the stair, or downstairs out front; cut away once you're under it (with a little hysteresis, so it never flickers). */
   upperShown: boolean;
   /** The walker's constrainMove: one step from (x, z) toward (nx, nz), sliding along what it meets, up and down the stair. */
   constrain(x: number, z: number, nx: number, nz: number): [number, number];
@@ -259,7 +286,7 @@ const clampLane = (x: number) => Math.min(STAIR_LANE[1], Math.max(STAIR_LANE[0],
 export function createShopWalker(): ShopWalker {
   const out: [number, number] = [0, 0];
   const w: ShopWalker = {
-    zone: "ground", height: 0, upperShown: false,
+    zone: "ground", height: 0, upperShown: true,
     constrain(x, z, nx, nz) {
       const steps = Math.max(1, Math.ceil(Math.hypot(nx - x, nz - z) / 0.1));
       const dx = (nx - x) / steps, dz = (nz - z) / steps;
@@ -282,7 +309,7 @@ export function createShopWalker(): ShopWalker {
         else break;
       }
       w.height = w.zone === "ground" ? 0 : w.zone === "upper" ? F : stairHeight(z);
-      w.upperShown = w.zone === "upper" || (w.zone === "stair" && (w.upperShown ? w.height > F * 0.4 : w.height > F * 0.6));
+      w.upperShown = w.zone !== "ground" || (w.upperShown ? z < M.hideAbove : z < M.showBelow);
       out[0] = x; out[1] = z;
       return out;
     },

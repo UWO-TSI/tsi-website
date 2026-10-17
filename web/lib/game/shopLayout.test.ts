@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  ITEM_KINDS, SHOP_COUNTER_SPOT, SHOP_DOOR, SHOP_EXIT, SHOP_EXIT_RANGE, SHOP_FIXTURES, SHOP_FLOOR_HEIGHT, SHOP_PATHS, SHOP_PENDANT,
+  ITEM_KINDS, SHOP_BOOTH, SHOP_COUNTER_SPOT, SHOP_DOOR, SHOP_MEZZ, SHOP_EXIT, SHOP_EXIT_RANGE, SHOP_FIXTURES, SHOP_FLOOR_HEIGHT, SHOP_PATHS, SHOP_PENDANT,
   SHOP_ROOM, SHOP_SLAB, SHOP_SLOTS, SHOP_SOLIDS, SHOP_SPAWN, SHOP_STAIR, SHOP_STRIPS, SHOP_TAG_RANGE, SHOP_WALK_MARGIN, STAIR_LANE,
   createShopWalker, shopSolidAt, shopWalkable, stairHeight, type ItemKind, type Level, type ShopWalker,
 } from "./shopLayout";
@@ -55,7 +55,7 @@ function walk(w: ShopWalker, from: [number, number], ...to: [number, number][]):
   return [x, z];
 }
 
-describe("shop layout, two floors (specs/interiors/shop.md, phase 1)", () => {
+describe("shop layout, two floors: the ground floor and the mezzanine (specs/interiors/shop.md, phase 1)", () => {
   it("keeps every block inside the room and under its floor's ceiling", () => {
     for (const f of SHOP_FIXTURES) for (const { at, size } of f.blocks) {
       expect(Math.abs(at[0]) + size[0] / 2, f.id).toBeLessThanOrEqual(halfW + 1e-9);
@@ -95,38 +95,42 @@ describe("shop layout, two floors (specs/interiors/shop.md, phase 1)", () => {
     }
   });
 
-  it("climbs from the door to the merch floor and back down by the stair, and the floor shows as you climb", () => {
+  it("climbs from the door to the merch wall and back down by the stair", () => {
     const w = createShopWalker();
     const foot = walk(w, SHOP_SPAWN, [LANE_X, S.z0 - 0.5]);
     expect(w.zone).toBe("ground");
     expect(Math.hypot(foot[0] - LANE_X, foot[1] - (S.z0 - 0.5))).toBeLessThan(0.06);
-    // Halfway up: on the flight, at half height, the upper floor not yet shown.
+    // Halfway up: on the flight, at half height, the mezzanine showing.
     const mid = walk(w, foot, [LANE_X, (S.z0 + S.z1) / 2]);
     expect(w.zone).toBe("stair");
     expect(w.height).toBeCloseTo(stairHeight(mid[1]), 6);
     expect(w.height).toBeCloseTo(F / 2, 1);
+    expect(w.upperShown).toBe(true);
     const top = walk(w, mid, HEAD);
     expect(w.zone).toBe("upper");
     expect(w.height).toBe(F);
-    expect(w.upperShown).toBe(true);
     expect(Math.hypot(top[0] - HEAD[0], top[1] - HEAD[1])).toBeLessThan(0.06);
     // And on to the merch wall, then all the way back down to the door.
     walk(w, top, [3, 3.6]);
     expect(w.zone).toBe("upper");
+    expect(w.upperShown).toBe(true);
     const back = walk(w, [3, 3.6], HEAD, [LANE_X, S.z0 - 0.5], SHOP_SPAWN);
     expect(w.zone).toBe("ground");
     expect(w.height).toBe(0);
-    expect(w.upperShown).toBe(false);
     expect(Math.hypot(back[0] - SHOP_SPAWN[0], back[1] - SHOP_SPAWN[1])).toBeLessThan(0.06);
   });
 
-  it("never flickers the upper floor on the stair: it shows past 60% of the climb and hides below 40%", () => {
+  it("shows the merch level from the door, cuts it away once you're under it, and never flickers at its edge", () => {
     const w = createShopWalker();
-    let p = walk(w, SHOP_SPAWN, [LANE_X, S.z0 - 0.3]);
+    expect(w.upperShown).toBe(true);
+    let p = walk(w, SHOP_SPAWN, [0, -2.5]);
+    expect(w.upperShown).toBe(true);
     const shown: boolean[] = [];
-    for (const z of [S.z0 + 2.2, S.z0 + 3.2, S.z0 + 2.4, S.z0 + 2.0, S.z0 + 1.6]) { p = walk(w, p, [LANE_X, z]); shown.push(w.upperShown); }
-    // 2.2 of 4.8 (46%): not yet; 3.2 (67%): shown; back to 2.4 and 2.0 (50%, 42%): still shown; 1.6 (33%): hidden.
-    expect(shown).toEqual([false, true, true, true, false]);
+    for (const z of [-1.7, -1.3, -1.7, -2.1, SHOP_COUNTER_SPOT[1]]) { p = walk(w, p, [0, z]); shown.push(w.upperShown); }
+    // In the band between showBelow and hideAbove it stays as it was: shown on the way in, hidden on the way out.
+    expect(shown).toEqual([true, false, false, true, false]);
+    expect(SHOP_MEZZ.showBelow).toBeLessThan(SHOP_MEZZ.hideAbove);
+    expect(SHOP_MEZZ.hideAbove).toBeLessThan(SHOP_MEZZ.z0);
   });
 
   it("won't let you walk under or beside the flight downstairs, or into the stairwell upstairs", () => {
@@ -135,21 +139,37 @@ describe("shop layout, two floors (specs/interiors/shop.md, phase 1)", () => {
     const [x] = walk(w, [-3.7, 1.0], [-5.6, 1.0]);
     expect(w.zone).toBe("ground");
     expect(x).toBeGreaterThan(S.x1);
-    // Upstairs, toward the stairwell from the room side and from the front.
+    // Upstairs: toward the stairwell from the room side, and over the mezzanine's front edge.
     const up = createShopWalker();
     walk(up, SHOP_SPAWN, [LANE_X, S.z0 - 0.5], HEAD);
     const [ux] = walk(up, HEAD, [-3.6, 2.6], [-3.6, 0], [-5.6, 0]);
     expect(up.zone).toBe("upper");
     expect(ux).toBeGreaterThan(S.x1);
-    const [, uz] = walk(up, [-3.6, 0], [-3.6, -4], [LANE_X, -4], [LANE_X, -1]);
+    const [, uz] = walk(up, [ux, 0], [2, 0], [2, -4]);
     expect(up.zone).toBe("upper");
-    expect(uz).toBeLessThan(S.z0);
+    expect(uz).toBeCloseTo(SHOP_MEZZ.z0 + SHOP_MEZZ.edge, 1);
+  });
+
+  it("has a changing room beside the clothes rail, its curtain facing the door, used from in front of it", () => {
+    const rail = fixture("rail").blocks[0], [bx, bz] = SHOP_BOOTH.at, [bw, bd] = SHOP_BOOTH.size;
+    expect(Math.hypot(SHOP_BOOTH.spot[0] - rail.at[0], SHOP_BOOTH.spot[1] - rail.at[2])).toBeLessThan(1.5);
+    expect(shopWalkable(0, ...SHOP_BOOTH.spot)).toBe(true);
+    expect(nearestReach(0, ...SHOP_BOOTH.spot)).toBeLessThan(0.08);
+    // In front of its curtain (the −z face), within reach; nobody walks inside it.
+    expect(SHOP_BOOTH.spot[1]).toBeLessThan(bz - bd / 2);
+    expect(bz - bd / 2 - SHOP_BOOTH.spot[1]).toBeLessThan(SHOP_BOOTH.range);
+    expect(Math.abs(SHOP_BOOTH.spot[0] - bx)).toBeLessThan(bw / 2);
+    expect(reach[0].some(([x, z]) => Math.abs(x - bx) < bw / 2 && Math.abs(z - bz) < bd / 2)).toBe(false);
+    // Tall enough to stand in (a character is 1.36), and clear of the counter's station.
+    expect(SHOP_BOOTH.height).toBeGreaterThan(2);
+    expect(Math.hypot(SHOP_BOOTH.spot[0] - SHOP_COUNTER_SPOT[0], SHOP_BOOTH.spot[1] - SHOP_COUNTER_SPOT[1])).toBeGreaterThan(SHOP_BOOTH.range + 1.8);
   });
 
   it("puts the in-game items downstairs and the club merch upstairs, each where you can walk up to it", () => {
     for (const k of Object.keys(ITEM_KINDS) as ItemKind[]) expect(SHOP_SLOTS.some(s => s.kind === k), k).toBe(true);
     for (const s of SHOP_SLOTS) {
       expect(s.level, s.id).toBe(s.kind.startsWith("merch") ? 1 : 0);
+      if (s.level === 1) expect(s.at[2] - s.size[2] / 2, `${s.id} on the mezzanine`).toBeGreaterThan(SHOP_MEZZ.z0);
       expect(fixture(s.fixture).level, s.id).toBe(s.level);
       expect(nearestReach(s.level, s.at[0], s.at[2]), s.id).toBeLessThan(SHOP_TAG_RANGE);
     }

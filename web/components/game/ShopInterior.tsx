@@ -3,10 +3,11 @@
 /**
  * ShopInterior: the shop (specs/interiors/shop.md, row 313), reworked from David's references. Phase 1 is the layout
  * only, as a greybox for his approval (ShopGreybox, every number in lib/game/shopLayout.ts). Two floors: the in-game
- * items and the tiled counter downstairs, the shopkeeper behind it at the end of the aisle from the door; the club merch
- * upstairs, by the stair up the right wall. The room's walker (createShopWalker) carries you up and down the stair and
- * says which floor shows. The counter's station opens the counter (ShopCounter: buy and sell with the shopkeeper). The
- * village's shop door comes here (DefaultIslandWorld).
+ * items, the changing room and the tiled counter downstairs, the shopkeeper behind it at the end of the aisle from the
+ * door; the club merch on the mezzanine over the back, by the stair up the right wall. The room's walker
+ * (createShopWalker) carries you up and down the stair and says when the mezzanine shows. The counter's station opens
+ * the counter (ShopCounter: buy and sell with the shopkeeper); the changing room's opens the wardrobe, as the village
+ * fitting room does. The village's shop door comes here (DefaultIslandWorld).
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -14,7 +15,7 @@ import { useThree } from "@react-three/fiber";
 import { ISLAND_LIGHTING, type IslandLight } from "@/lib/game/islandLighting";
 import { interiorLight } from "@/lib/game/interiorLight";
 import {
-  SHOP_COUNTER_RANGE, SHOP_COUNTER_SPOT, SHOP_EXIT, SHOP_EXIT_RANGE, SHOP_FLOOR_HEIGHT, SHOP_PENDANT, SHOP_ROOM, SHOP_SPAWN, createShopWalker,
+  SHOP_BOOTH, SHOP_COUNTER_RANGE, SHOP_COUNTER_SPOT, SHOP_EXIT, SHOP_EXIT_RANGE, SHOP_FLOOR_HEIGHT, SHOP_PENDANT, SHOP_ROOM, SHOP_SPAWN, createShopWalker,
 } from "@/lib/game/shopLayout";
 import InteriorDaylight from "./InteriorDaylight";
 import {
@@ -29,6 +30,8 @@ const BOUNDS: RoomBounds = { halfW: SHOP_ROOM.halfW, halfD: SHOP_ROOM.halfD, spa
 export const SHOP_STATIONS: InteriorStation[] = [
   { id: "counter", name: "Counter", pos: SHOP_COUNTER_SPOT, action: "counter", range: SHOP_COUNTER_RANGE },
   { id: "exit", name: "Exit", pos: SHOP_EXIT, action: "exit", range: SHOP_EXIT_RANGE },
+  // The changing room under the stair: the village fitting room's behaviour (the curtain sweeps, the wardrobe opens).
+  { id: "fitting", name: "Changing room", pos: SHOP_BOOTH.spot, action: "fitting", range: SHOP_BOOTH.range },
 ];
 
 export default function ShopInterior({
@@ -52,7 +55,7 @@ export default function ShopInterior({
   // One walker a visit: you come in on the ground floor.
   const [walker] = useState(createShopWalker);
   const near = useNearestStation(SHOP_STATIONS, onNearestStation);
-  // The counter and the door are downstairs: nothing to use from the stair or the floor above them.
+  // The counter, the changing room and the door are downstairs: nothing to use from the stair or the mezzanine.
   const onMove = useCallback((x: number, z: number) => near(walker.zone === "ground" ? x : 1e6, z), [near, walker]);
   const height = useCallback(() => walker.height, [walker]);
 
