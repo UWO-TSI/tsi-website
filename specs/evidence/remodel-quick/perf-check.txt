@@ -1,0 +1,25 @@
+perf:check, SCENES=village, measurement build at feb9ff07 (headless, 3 runs a tier, both tiers rerun to 5 as flagged), load 5.9-6.1
+
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draw calls | Triangles | Runs | Spread | Load |
+|---|---|---|---|---|---|---|---|---|---|
+| village | high | 4.20 (3.90, +7.7%) | 5.30 (4.90, +8.2%) | 3.70 (3.40, +8.8%) | 374 (382, -2.1%) | 543741 (537560, +1.1%) | 5 | 21% | 5.9 |
+| village | lite | 2.70 (2.30, +17.4%) | 3.80 (3.40, +11.8%) | 2.40 (2.00, +20.0%) | 286 (288, -0.7%) | 354288 (353865, +0.1%) | 5 | 26% | 6.1 |
+
+Median of 3+ runs each; in brackets the baseline (8809c517 2026-10-14) and the change. Load: the 1-minute load average.
+
+perf:check FAILED
+- village|lite: median frame 2.7 ms, +17.4% on the baseline's 2.3
+
+Context: the machine was busy (other lanes' builds, browsers and Blender; 1-minute load 5.9-6.1 against 4.9-5.1 on the
+remodel-props run), and the runs spread 21-26%. Lite's triangles (+0.1%) and draws (-0.7%) are flat on the baseline and
+High's draws fell 382 -> 374, so the Lite frame flag reads as load, not as this lane's models (not re-benched, per the
+lane rules). Village High is 543,741 triangles, inside the 620k budget.
+
+What this lane changes in the village, from the GLB counts (scene + shadow pass where the class casts):
+- log bench 1,146 -> 368 tris, five in the village (two map benches, the picnic table's two, the pier's): about -7.8k;
+- parasol set 4,740 -> 1,752 (the dump's parasol and loungers vs ours with two deck chairs): about -6.0k;
+- tree fruit: ours 160-288 tris against the dump's 410-594, one merged draw per kind as before, no shadow: about
+  -15k to -20k over the 67 hanging (by the kinds rolled);
+- footbridge 3,072 -> 2,564 (3 materials, was 1): -1.0k, +2 draws and +2 shadow draws;
+- plaza boards 1,331 -> 1,244 each (3 materials, was 2): +1 draw and +1 shadow draw per board;
+- monument sign 332 -> 864 (3 materials, was 1), shown before the monument completes: +1.1k, +2 draws and +2 shadow draws.
