@@ -76,6 +76,10 @@ save(titled(stack([fit(fprev, faces.width), faces]), "Wardrobe batch 2: faces #2
 save(titled(stack([shot("acc-head.png"), shot("acc-body.png")]),
             "Wardrobe batch 2: all 23 accessories worn (engine). Hats sit over the hair; the bear hood hides it."), "04-accessories-worn.webp")
 
+save(titled(stack([titled(shot("hats-thin-hair.png"), "over the thinnest hairstyle (#20 360 waves): a little air", SMALL),
+                    titled(shot("hats-thick-hair.png"), "over the thickest (#10 messy wolfcut): the hair through the hats", SMALL)]),
+            "Hats over the hair are seated for David's median hairstyle (0.246 stud over the crown, 0.167 at the sides)"), "04b-hats-hair-extremes.webp")
+
 # 05: the four David asked to shrink, before and after, over the same hairstyle
 ids = ["acc_green_sprout", "acc_apple_stem", "acc_paper_horns", "acc_monkey_ears"]
 label = {"acc_green_sprout": "#02 sprout", "acc_apple_stem": "#17 apple stem", "acc_paper_horns": "#19 paper horns", "acc_monkey_ears": "#23 monkey ears"}

@@ -1,0 +1,13 @@
+# perf:check, SCENES=village then cafe (one measurement build, SKIP_BUILD for the bench; headless), 2026-10-17 04:12, game/wardrobe-b2
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draw calls | Triangles | Runs | Spread | Load |
+|---|---|---|---|---|---|---|---|---|---|
+| village | high | 3.90 (3.90, 0.0%) | 5.00 (4.90, +2.0%) | 3.40 (3.40, 0.0%) | 360 (382, -5.8%) | 566727 (537560, +5.4%) | 3 | 3% | 4 |
+| village | lite | 2.20 (2.30, -4.3%) | 3.30 (3.40, -2.9%) | 2.00 (2.00, 0.0%) | 273 (288, -5.2%) | 370828 (353865, +4.8%) | 3 | 0% | 4 |
+Median of 3+ runs each; in brackets the baseline (8809c517 2026-10-14) and the change. Load: the 1-minute load average.
+perf:check passed
+
+| cafe | high | 1.70 (2.10, -19.0%) | 3.10 (3.10, 0.0%) | 0.70 (0.60, +16.7%) | 142 (140, +1.4%) | 73921 (69455, +6.4%) | 3 | 0% | 4.3 |
+| cafe | lite | 1.40 (1.50, -6.7%) | 2.70 (2.80, -3.6%) | 0.70 (0.70, 0.0%) | 108 (103, +4.9%) | 71576 (63874, +12.1%) | 3 | 0% | 4.4 |
+perf:check passed
+
+Budgets: village High 6 / 9 / 5 ms, 560 draws, 620k triangles; residents and bots never wear a batch-2 item (randomLook), so the benches measure the scene, not the new heaviest look (budget.test.ts: 10,104 / 5,332 / 4,271).
