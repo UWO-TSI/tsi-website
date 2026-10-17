@@ -1,28 +1,25 @@
-"""The village greenery's painted textures (game/remodel-trees): leaf clusters, blossom, needles, bark and petals.
+"""The village greenery's painted textures (game/remodel-trees): leaf clumps, blossom, needle fringes, bark and petals.
 
 David, 2026-10-16: trees and plants are leaf cards with a real painted leaf texture over a closed volume, and every
-texture is our own (never one from the web). So each one is painted here, stroke by stroke, from seeded shapes:
+texture is our own (never one from the web). 2026-10-17: "recreate the leaf texture from the dump". So each texture is
+painted here from seeded shapes, its look studied from the ACNH atlases (never copied, traced or resampled):
 
-  - a leaf is a pointed oval with a curved midrib, lit on one half and shaded on the other, lighter toward its tip,
-    with a pale midrib, faint side veins and a darker painted rim; each casts a soft shadow on the leaves under it, and
-    the leaves are laid back to front, so a cluster reads as a little clump in its own light;
-  - a blossom is five rounded petals round a pink eye with pale stamens; needles are thin tapered strokes on twigs;
-    bark is vertical fibres and furrows; petals are soft gradients with fine veins;
-  - over everything, a slow value and hue drift (a painted wash), so no two leaves are the same colour.
+  - a leaf card is one big three-lobed clump (a centre lobe and two side lobes meeting at a pointed base), airbrushed:
+    darker at the base, lighter toward the lobes, a light rim along its top edges, a faint Y of veins, soft folds from
+    the notches, a little grain; every card its own shade (the dump's cells run dark to light);
+  - a cherry card is one five-petal blossom with notched petals, deep pink at its eye fading to pale tips; a winter
+    card the leaf frosted, a few with snow along their tops;
+  - a cedar card is a fringe: a strip hanging in rounded fingers, fine vertical grain, frosted over its top for snow;
+  - bark is vertical fibres and furrows (tiling); petals are soft gradients with fine veins.
 
 Painted at four times the size and filtered down; the transparent texels carry their neighbours' colour, so the
-cut-out edge never shows a dark or light halo once mipmapped.
+cut-out edge never shows a dark or light halo once mipmapped. Writes art/trees/textures/<name>.png:
 
-The cosy autumn palette (the closed bushes' rust and amber, the seasonal palette's leaf tints): summer is warm
-greens, autumn rust, amber, gold and a little olive, spring cherry pinks over fresh green, winter cold dark greens
-under snow. Writes art/trees/textures/<name>.png:
-
-  leaves-<season>.png   512 x 512: three cluster cards (cells 0-2, cut out) and a dense opaque leaf mass (cell 3,
-                        top half) over packed snow (cell 3, bottom half); season = summer, autumn, blossom, winter
-                        (winter's cell 2 is a cluster with snow on its upper leaves)
-  needles[-snow].png    512 x 512: three fir sprays (cells 0-2, cut out) and a dense needle mass over snow (cell 3)
+  leaves-<dress>.png    512 x 512: twelve card cells (4 x 3, 128 px) over a 128 px row of the cards' own paint as an
+                        opaque mass (left half) and packed snow (right); dress = summer, autumn, blossom, winter
+  needles[-snow].png    the same layout with fringes
   bark.png, bark-cedar.png  128 x 256, tiling
-  petals.png            512 x 512, the flowers' petals, stems and leaves (art/trees/build_flowers.py)
+  petals.png            512 x 512, the flowers' petals, leaves and centres (art/trees/flower_cells.py)
 
   python3 art/trees/paint_textures.py [name ...]
 """
@@ -149,221 +146,8 @@ def leaf_outline(L, W, n=16, belly=0.72, bend=0.0, asym=0.0, tip=1.0):
     return right + left[::-1], width, mid
 
 
-def paint_leaf(cv, x, y, ang, L, W, colour, rng, light=(-0.6, -0.8), bend=0.0, rim=0.8, vein=True, shadow=0.28,
-               belly=0.72, lit=0.12, dark=0.16, rib=0.1, tip=1.0):
-    """One leaf at canvas (x, y) (its base), pointing at angle `ang` (radians, 0 = up the canvas), length L, half width W."""
-    pts, width, mid = leaf_outline(L, W, bend=bend, asym=rng.uniform(-0.08, 0.08), belly=belly, tip=tip)
-    ca, sa = math.cos(ang), math.sin(ang)
-    # leaf (x across, y along) -> canvas: along = (sin, -cos) so ang 0 points up (canvas y down)
-    def tf(px, py):
-        return x + px * ca + py * sa, y + px * sa - py * ca
-    poly = [tf(px, py) for px, py in pts]
-    xs, ys = [p[0] for p in poly], [p[1] for p in poly]
-    m = int(max(L, W) * 0.25) + 4
-    x0, y0, x1, y1 = int(min(xs)) - m, int(min(ys)) - m, int(max(xs)) + m + 1, int(max(ys)) + m + 1
-    bw, bh = x1 - x0, y1 - y0
-    im = Image.new("L", (bw, bh), 0)
-    ImageDraw.Draw(im).polygon([(px - x0, py - y0) for px, py in poly], fill=255)
-    cov = np.asarray(im).astype(np.float64) / 255
-    if shadow > 0:
-        sh = np.asarray(im.filter(ImageFilter.GaussianBlur(max(2, W * 0.35)))).astype(np.float64) / 255
-        off = int(W * 0.25)
-        sh = np.roll(np.roll(sh, off, axis=0), off // 2, axis=1)
-        cv.shade_under(sh, x0, y0, shadow)
-    # leaf-local coordinates of every texel
-    gy, gx = np.mgrid[y0:y1, x0:x1].astype(np.float64) + 0.5
-    rx, ry = gx - x, gy - y
-    along = rx * sa - ry * ca
-    across = rx * ca + ry * sa
-    t = along / L
-    s = across - mid(np.clip(t, 0, 1))
-    w = np.maximum(width(t), 1e-3)
-    u = s / w
-    # light: which half faces it (in leaf space)
-    lx = light[0] * ca + light[1] * sa
-    side = np.tanh(-u * 2.5) * np.sign(lx if abs(lx) > 0.05 else 1)
-    val = 1 + lit * np.clip(side, 0, 1) - dark * np.clip(-side, 0, 1)
-    val *= 0.86 + 0.2 * smoothstep(0.0, 0.9, t)
-    if vein:
-        v = np.cos(2 * np.pi * (t * 5.5 - np.abs(u) * 0.55))
-        val *= 1 + 0.05 * smoothstep(0.85, 1.0, v) * (np.abs(u) < 0.85) * (t > 0.08) * (t < 0.9)
-    ribm = (np.abs(s) < max(1.2, W * 0.05)) * (t > 0.02) * (t < 0.88)
-    rgb = np.ones(cov.shape + (3,)) * colour
-    hi = warm(colour, 0.25)
-    sd = warm(colour, -0.18)
-    k = np.clip(side, -1, 1)[..., None]
-    rgb = np.where(k > 0, rgb + (hi - rgb) * k * 0.6, rgb + (sd - rgb) * (-k) * 0.6)
-    rgb = rgb * val[..., None]
-    rgb = np.where(ribm[..., None], rgb + (warm(colour, 0.35) - rgb) * rib * 4, rgb)
-    # painted rim: darker toward the edge
-    inner = np.asarray(im.filter(ImageFilter.MinFilter(5 if SS >= 4 else 3))).astype(np.float64) / 255
-    edge = np.clip(cov - inner, 0, 1)
-    rgb = rgb * (1 - (1 - rim) * edge)[..., None]
-    cv.put(np.clip(rgb, 0, 1), cov, x0, y0)
-
-
 # ================================================================ blossom
-def paint_blossom(cv, x, y, R, petal, eye, rng, light=(-0.6, -0.8), shadow=0.25, petals=5):
-    """A five-petal blossom of radius R at (x, y)."""
-    rot = rng.uniform(0, math.tau)
-    if shadow:
-        m = int(R * 1.6)
-        im = Image.new("L", (2 * m, 2 * m), 0)
-        ImageDraw.Draw(im).ellipse([m - R, m - R, m + R, m + R], fill=255)
-        sh = np.asarray(im.filter(ImageFilter.GaussianBlur(R * 0.25))).astype(np.float64) / 255
-        cv.shade_under(np.roll(np.roll(sh, int(R * 0.22), 0), int(R * 0.12), 1), int(x) - m, int(y) - m, shadow)
-    for i in range(petals):
-        a = rot + i * math.tau / petals + rng.uniform(-0.12, 0.12)
-        col = jitter(petal, rng, 0.01, 0.08, 0.05)
-        # a petal is a short, broad leaf with a notched tip: base at the eye
-        paint_leaf(cv, x + math.sin(a) * R * 0.1, y - math.cos(a) * R * 0.1, a, R * rng.uniform(0.92, 1.05), R * 0.46, col, rng,
-                   light, bend=0.0, rim=0.86, vein=False, shadow=0.0, belly=0.6, lit=0.1, dark=0.12, rib=0.0, tip=0.45)
-        # the notch: a little shaded nick at the tip
-        tx, ty = x + math.sin(a) * R * 0.98, y - math.cos(a) * R * 0.98
-        r = max(1.5, R * 0.07)
-        n = int(2 * r + 4)
-        im = Image.new("L", (n, n), 0)
-        ImageDraw.Draw(im).ellipse([2, 2, 2 + 2 * r, 2 + 2 * r], fill=255)
-        cv.shade_under(np.asarray(im).astype(np.float64) / 255 * 0.6, int(tx - r - 2), int(ty - r - 2), 0.35)
-    # the eye: a pink-red blush with pale stamens
-    m = int(R * 0.5)
-    gy, gx = np.mgrid[-m:m + 1, -m:m + 1].astype(np.float64)
-    d = np.hypot(gx, gy) / (R * 0.42)
-    cov = np.clip(1 - d, 0, 1) ** 0.6
-    rgb = np.ones(cov.shape + (3,)) * eye
-    cv.put(rgb, cov * 0.85, int(x) - m, int(y) - m)
-    for i in range(7):
-        a = rot + i * math.tau / 7 + rng.uniform(-0.2, 0.2)
-        rr = R * rng.uniform(0.18, 0.3)
-        sx, sy = x + math.sin(a) * rr, y - math.cos(a) * rr
-        r = max(1.2, R * 0.06)
-        gy, gx = np.mgrid[-3:4, -3:4].astype(np.float64) * (r / 2.5)
-        cov = np.clip(1.2 - np.hypot(gx, gy) / r, 0, 1)
-        cv.put(np.ones(cov.shape + (3,)) * hexc("#fff3c4"), cov, int(sx) - 3, int(sy) - 3)
-
-
 # ================================================================ needles
-def paint_twig(cv, pts, width, colour):
-    im = Image.new("L", (cv.w, cv.h), 0)
-    ImageDraw.Draw(im).line(pts, fill=255, width=max(1, int(width)), joint="curve")
-    cov = np.asarray(im).astype(np.float64) / 255
-    rgb = np.ones((cv.h, cv.w, 3)) * colour
-    cv.put(rgb, cov, 0, 0)
-
-
-def paint_needles_along(cv, pts, rng, colours, nlen, spacing, angle=0.75, width=None, droop=0.0):
-    """Needles on both sides of a polyline twig, angled toward its tip."""
-    width = width or max(2, nlen * 0.17)
-    im_layers = []
-    segs = list(zip(pts[:-1], pts[1:]))
-    total = sum(math.dist(a, b) for a, b in segs)
-    n = int(total / spacing)
-    for i in range(n):
-        f = (i + rng.uniform(0, 0.6)) / max(n, 1)
-        # point and direction at fraction f
-        d = f * total
-        for a, b in segs:
-            l = math.dist(a, b)
-            if d <= l:
-                px, py = a[0] + (b[0] - a[0]) * d / l, a[1] + (b[1] - a[1]) * d / l
-                dx, dy = (b[0] - a[0]) / l, (b[1] - a[1]) / l
-                break
-            d -= l
-        taper = 0.55 + 0.45 * math.sin(math.pi * min(1, f * 1.1 + 0.05))
-        for side in (-1, 1):
-            ang = side * (angle + rng.uniform(-0.15, 0.15))
-            ca, sa = math.cos(ang), math.sin(ang)
-            nx, ny = dx * ca - dy * sa, dx * sa + dy * ca
-            ny += droop
-            L = nlen * taper * rng.uniform(0.8, 1.1)
-            ex, ey = px + nx * L, py + ny * L
-            col = jitter(colours[rng.randrange(len(colours))], rng, 0.015, 0.08, 0.1)
-            # brighter toward the tip: two strokes
-            im_layers.append(((px, py, ex, ey), width, col))
-    for (x0, y0, x1, y1), w, col in im_layers:
-        bx0, by0 = int(min(x0, x1) - w - 2), int(min(y0, y1) - w - 2)
-        bx1, by1 = int(max(x0, x1) + w + 3), int(max(y0, y1) + w + 3)
-        im = Image.new("L", (bx1 - bx0, by1 - by0), 0)
-        dr = ImageDraw.Draw(im)
-        # a tapered needle: thick at the base, thin at the tip
-        steps = 4
-        for k in range(steps):
-            t0, t1 = k / steps, (k + 1) / steps
-            dr.line([(x0 + (x1 - x0) * t0 - bx0, y0 + (y1 - y0) * t0 - by0), (x0 + (x1 - x0) * t1 - bx0, y0 + (y1 - y0) * t1 - by0)],
-                    fill=255, width=max(1, int(w * (1 - 0.6 * t0))))
-        cov = np.asarray(im).astype(np.float64) / 255
-        gy, gx = np.mgrid[by0:by1, bx0:bx1].astype(np.float64)
-        L = max(math.hypot(x1 - x0, y1 - y0), 1)
-        t = ((gx - x0) * (x1 - x0) + (gy - y0) * (y1 - y0)) / (L * L)
-        rgb = np.ones(cov.shape + (3,)) * col
-        rgb = rgb * (0.78 + 0.34 * np.clip(t, 0, 1))[..., None]
-        cv.put(np.clip(rgb, 0, 1), cov, bx0, by0)
-
-
-def paint_spray(cv, cx, base_y, tip_y, half, rng, colours, twig, nlen, side_angle=0.95, snow=None, n_side=9):
-    """A fir spray, lush like a feather: a main twig up the cell, side twigs in pairs, dense needles on all of them,
-    the lower layer darker (it lies under the top one)."""
-    L = base_y - tip_y
-    main = [(cx + math.sin(k / 8 * 2.2) * half * 0.04, base_y - L * k / 8) for k in range(9)]
-    sides = []
-    for i in range(n_side):
-        f = 0.1 + 0.82 * i / n_side
-        px, py = cx, base_y - L * f
-        for side in (-1, 1):
-            ln = half * (1.0 - 0.62 * f) * rng.uniform(0.85, 1.05)
-            a = side * side_angle * rng.uniform(0.9, 1.08)
-            ex, ey = px + math.sin(a) * ln, py - math.cos(a) * ln
-            mx, my = (px + ex) / 2 + side * ln * 0.05, (py + ey) / 2 - ln * 0.06
-            sides.append([(px, py - side * L * 0.015), (mx, my), (ex, ey)])
-    dim = [c * 0.7 for c in colours]
-    for s in sides:
-        paint_needles_along(cv, s, rng, dim, nlen * 0.9, nlen * 0.2, angle=0.95)
-    for s in sides:
-        paint_twig(cv, s, nlen * 0.09, twig)
-        paint_needles_along(cv, s, rng, colours, nlen * 0.8, nlen * 0.2, angle=0.7)
-    paint_needles_along(cv, main, rng, dim, nlen * 1.1, nlen * 0.2, angle=0.9)
-    paint_twig(cv, main, nlen * 0.13, twig)
-    paint_needles_along(cv, main, rng, colours, nlen * 0.9, nlen * 0.2, angle=0.55)
-    if snow is not None:
-        # snow lies in a soft ridge along the main twig and in short ridges on the inner half of some side twigs
-        paint_snow_ridge(cv, [(x + rng.uniform(-0.15, 0.15) * nlen, y) for x, y in main[1:8]], nlen * 0.3, rng, snow)
-        for s in sides:
-            if rng.random() < 0.55:
-                (ax, ay), (bx, by) = s[0], s[1]
-                f = rng.uniform(0.3, 0.9)
-                paint_snow_lump(cv, ax + (bx - ax) * f, ay + (by - ay) * f - nlen * 0.1, nlen * rng.uniform(0.18, 0.34), rng, snow)
-
-
-def paint_snow_ridge(cv, pts, width, rng, snow):
-    """A soft ridge of snow along a polyline: wavy edges, white along its crest, cool where it rounds off."""
-    segs = list(zip(pts[:-1], pts[1:]))
-    left, right = [], []
-    n = 6 * len(segs)
-    for i in range(n + 1):
-        f = i / n
-        k = min(int(f * len(segs)), len(segs) - 1)
-        (ax, ay), (bx, by) = segs[k]
-        g = f * len(segs) - k
-        x, y = ax + (bx - ax) * g, ay + (by - ay) * g
-        l = math.hypot(bx - ax, by - ay) or 1
-        nx, ny = -(by - ay) / l, (bx - ax) / l
-        w = width * (0.35 + 0.65 * math.sin(math.pi * min(1, max(0, f))) ** 0.6) * rng.uniform(0.8, 1.15)
-        left.append((x + nx * w, y + ny * w))
-        right.append((x - nx * w, y - ny * w))
-    poly = left + right[::-1]
-    xs, ys = [p[0] for p in poly], [p[1] for p in poly]
-    m = int(width) + 4
-    x0, y0, x1, y1 = int(min(xs)) - m, int(min(ys)) - m, int(max(xs)) + m, int(max(ys)) + m
-    im = Image.new("L", (x1 - x0, y1 - y0), 0)
-    ImageDraw.Draw(im).polygon([(px - x0, py - y0) for px, py in poly], fill=255)
-    cov = np.asarray(im.filter(ImageFilter.GaussianBlur(max(1, width * 0.08)))).astype(np.float64) / 255
-    crest = np.asarray(im.filter(ImageFilter.GaussianBlur(width * 0.45))).astype(np.float64) / 255
-    rgb = np.ones(cov.shape + (3,)) * snow
-    edge = np.clip(1 - crest * 1.15, 0, 1)
-    rgb = rgb + (hexc("#b3c4dc") - rgb) * (0.6 * edge)[..., None]
-    cv.put(np.clip(rgb, 0, 1), np.clip(cov * 1.2, 0, 1), x0, y0)
-
-
 def paint_snow_lump(cv, x, y, R, rng, snow):
     """A soft lump of snow: white, cool-shaded at its lower edge."""
     m = int(R * 1.4) + 2
@@ -379,36 +163,6 @@ def paint_snow_lump(cv, x, y, R, rng, snow):
 
 # ================================================================ cells
 CELL = 256  # final cell size in an atlas
-
-
-def leaf_cluster(rng, palette, n=19, size=CELL, light=(-0.6, -0.8), lsize=(0.33, 0.45), snow=None, bend=0.3):
-    """A loose clump of leaves: each at a random spot in a round patch, turned outward and a little down (they hang),
-    back ones first and darker, front ones lighter and nearer the middle. The tips make its lobed outline."""
-    S = size * SS
-    cv = Canvas(S, S)
-    c = S / 2
-    leaves = []
-    for i in range(n):
-        depth = i / n  # 0 back .. 1 front
-        rr = math.sqrt(rng.random()) * S * (0.27 - 0.13 * depth)
-        a = rng.uniform(0, math.tau)
-        px, py = c + math.cos(a) * rr, c + math.sin(a) * rr * 0.92
-        out = math.atan2(px - c, -(py - c)) if rr > S * 0.02 else rng.uniform(0, math.tau)
-        # lean toward hanging down (angle pi), more for the leaves already pointing sideways
-        down = math.pi if math.sin(out) >= 0 else -math.pi
-        ang = out + (down - out) * 0.22 + rng.uniform(-0.85, 0.85)
-        L = S * rng.uniform(*lsize) * (1.05 - 0.12 * depth)
-        # its middle on the spot, its tip inside the cell
-        L = min(L, max(S * 0.12, 2 * (S * 0.47 - rr)))
-        W = L * rng.uniform(0.3, 0.38)
-        bx, by = px - math.sin(ang) * L * 0.5, py + math.cos(ang) * L * 0.5
-        col = palette(rng, depth) * (0.62 + 0.42 * depth)
-        leaves.append((bx, by, ang, L, W, col))
-    for bx, by, ang, L, W, col in leaves:
-        paint_leaf(cv, bx, by, ang, L, W, col, rng, light=light, bend=rng.uniform(-bend, bend))
-    if snow is not None:
-        paint_snow_cap(cv, rng, snow, S)
-    return cv
 
 
 def paint_snow_cap(cv, rng, snow, S):
@@ -432,69 +186,12 @@ def paint_snow_cap(cv, rng, snow, S):
     cv.put(rgb, np.clip(soft * 1.3, 0, 1), 0, 0)
 
 
-def leaf_mass(rng, palette, w=CELL, h=CELL // 2, n=46, light=(-0.6, -0.8), bg=None):
-    """Dense leaves filling the whole cell (opaque): the inside of a crown, seen through the gaps."""
-    S, H = w * SS, h * SS
-    cv = Canvas(S, H, bg=palette(rng, 0.0) * 0.6 if bg is None else bg)
-    for i in range(n):
-        depth = i / n
-        L = S * rng.uniform(0.16, 0.22)
-        bx, by = rng.uniform(-0.05, 1.05) * S, rng.uniform(-0.05, 1.05) * H
-        col = palette(rng, depth) * (0.75 + 0.3 * depth)
-        paint_leaf(cv, bx, by, rng.uniform(0, math.tau), L, L * 0.34, col, rng, light=light, bend=rng.uniform(-0.25, 0.25))
-    cv.a[:] = 1
-    return cv
-
-
 def snow_field(rng, w=CELL, h=CELL // 2, snow=hexc("#f4f7fb")):
     """Packed snow: soft lumps over a cool shade (opaque)."""
     S, H = w * SS, h * SS
     cv = Canvas(S, H, bg=hexc("#cfdbe9"))
     for i in range(140):
         paint_snow_lump(cv, rng.uniform(0, S), rng.uniform(0, H), S * rng.uniform(0.04, 0.08), rng, snow)
-    cv.a[:] = 1
-    return cv
-
-
-def blossom_cluster(rng, size=CELL, n=24, light=(-0.6, -0.8)):
-    """A clump of cherry blossom with a few fresh leaves behind."""
-    S = size * SS
-    cv = Canvas(S, S)
-    c = S / 2
-    for i in range(8):
-        a = rng.uniform(0, math.tau)
-        L = S * rng.uniform(0.24, 0.32)
-        paint_leaf(cv, c + math.cos(a) * S * 0.1, c + math.sin(a) * S * 0.1, a + math.pi / 2 + rng.uniform(-0.5, 0.5), L, L * 0.33,
-                   jitter(hexc("#7fae4c"), rng) * 0.85, rng, light=light, bend=rng.uniform(-0.2, 0.2))
-    petals = [hexc("#f4b3c7"), hexc("#ec97b3"), hexc("#f7c9d7"), hexc("#fadbe4"), hexc("#e584a5")]
-    for i in range(n):
-        depth = i / n
-        r = S * (0.33 - 0.2 * depth) * math.sqrt(rng.uniform(0.05, 1))
-        a = rng.uniform(0, math.tau)
-        x, y = c + math.cos(a) * r, c + math.sin(a) * r * 0.92
-        R = S * rng.uniform(0.095, 0.125)
-        col = petals[rng.randrange(len(petals))] * (0.82 + 0.2 * depth)
-        paint_blossom(cv, x, y, R, col, hexc("#d9628a") * (0.85 + 0.15 * depth), rng, light)
-    return cv
-
-
-def needle_spray(rng, colours, twig, size=CELL, snow=None):
-    S = size * SS
-    cv = Canvas(S, S)
-    paint_spray(cv, S / 2, S * 0.97, S * 0.06, S * 0.44, rng, colours, twig, S * 0.11, snow=snow)
-    return cv
-
-
-def needle_mass(rng, colours, twig, w=CELL, h=CELL // 2):
-    """Rows of sprays filling the cell (opaque): the inside of a tier, seen through the gaps."""
-    S, H = w * SS, h * SS
-    cv = Canvas(S, H, bg=colours[3] * 0.6)
-    for row in range(3):
-        for k in range(5):
-            x = (k + 0.5 * (row % 2) + rng.uniform(-0.1, 0.1)) / 4.5 * S
-            base = H * (0.45 + 0.4 * row) + rng.uniform(-0.05, 0.05) * H
-            shade = [c * (0.75 + 0.12 * row) for c in colours]
-            paint_spray(cv, x, base, base - H * 0.75, H * 0.38, rng, shade, twig, H * 0.075, n_side=5)
     cv.a[:] = 1
     return cv
 
