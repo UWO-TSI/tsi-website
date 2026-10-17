@@ -1,14 +1,16 @@
-perf:check, SCENES=village,v2, measurement build at e44584a4 (headless, measure-build.sh under the heavy lock, then SKIP_BUILD=1), 3 runs a tier, load 3.6-4.1
+perf:check, SCENES=village, measurement build at a85fdf11 (feat cfb27103 merged in: the seeded residents, remodel-ground), headless, measure-build.sh under the heavy lock, then SKIP_BUILD=1; 3 runs a tier, both rerun to 5 as "looks regressed"; load 4.3-4.7
 
 | Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draw calls | Triangles | Runs | Spread | Load |
 |---|---|---|---|---|---|---|---|---|---|
-| village | high | 4.10 (3.90, +5.1%) | 5.10 (4.90, +4.1%) | 3.60 (3.40, +5.9%) | 375 (382, -1.8%) | 514014 (537560, -4.4%) | 3 | 7% | 4.1 |
-| v2 | high | 3.60 (5.40, -33.3%) | 4.90 (6.80, -27.9%) | 3.30 (5.00, -34.0%) | 204 (254, -19.7%) | 600213 (912237, -34.2%) | 3 | 3% | 4.1 |
-| village | lite | 2.20 (2.30, -4.3%) | 3.30 (3.40, -2.9%) | 2.00 (2.00, 0.0%) | 265 (288, -8.0%) | 321267 (353865, -9.2%) | 3 | 0% | 3.6 |
-| v2 | lite | 2.50 (3.00, -16.7%) | 3.30 (3.70, -10.8%) | 2.40 (2.80, -14.3%) | 151 (172, -12.2%) | 331386 (629051, -47.3%) | 3 | 0% | 3.7 |
+| village | high | 4.60 (3.90, +17.9%) | 5.70 (4.90, +16.3%) | 4.10 (3.40, +20.6%) | 395 (382, +3.4%) | 538166 (537560, +0.1%) | 5 | 9% | 4.7 |
+| village | lite | 2.70 (2.30, +17.4%) | 3.70 (3.40, +8.8%) | 2.40 (2.00, +20.0%) | 293 (288, +1.7%) | 337558 (353865, -4.6%) | 5 | 7% | 4.3 |
 
-Median of 3 runs each; in brackets the baseline (8809c517 2026-10-14) and the change. Load: the 1-minute load average.
+Median of 3+ runs each; in brackets the baseline (8809c517 2026-10-14) and the change.
 
-perf:check passed
+perf:check FAILED on frame time against the Oct 14 baseline:
+- village|high: median frame 4.6 ms, +17.9% on the baseline's 3.9
+- village|lite: median frame 2.7 ms, +17.4% on the baseline's 2.3
 
-Context: the bench runs on today's date, so the village draws the autumn dress: our round, wide and tall trees (near within 24 u of the camera, far beyond), our cedar and the autumn flowers. Village High is 514,014 triangles and 375 draws against round 2's 600,818 / 362 (specs/evidence/remodel-r2/perf-check.txt) and the 620k budget: the trees' far models carry most of the saving (the dump's oaks drew 2,760-4,189 triangles each everywhere; ours draw 1,604-2,490 near and 540-909 far), and the near and far sets add about 13 draws (each of our tree models is two meshes in colour at each level that has a tree in it). v2 holds no trees; its fall since the baseline is not this lane's.
+Every budget line holds (web/lib/game/perf/budget.ts): High 4.6 of 6 ms, p95 5.7 of 9, CPU 4.1 of 5, 395 of 560 draws, 538,166 of 620,000 triangles; Lite 2.7 of 4 ms, 3.7 of 6, 2.4 of 3.5, 293 of 420, 337,558 of 420,000.
+
+Context: the baseline predates feat's own changes. feat's last village check (b4f27526, the seeded roster, hq-onboarding) measured High 4.30 ms / 391 draws / 594,603 triangles at load 2.8 and failed the same frame line (+10.3%); main's runs since were 5.2-5.3 ms. Against that, the remodelled trees take 56k triangles out (the dump-modelled crowns draw 2,390-2,716 triangles near, 906-1,106 far past 24 u, against the dump oaks' 2,760-4,189 everywhere) and add 4 draws (each of our tree models is two meshes in colour per level that has a tree in it); the frame is 0.3 ms over feat's, at a load of 4.7 against 2.8. Not rerun for noise (lane rules). The bench's season is today's: autumn.

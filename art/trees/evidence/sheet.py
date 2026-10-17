@@ -172,11 +172,11 @@ def ingame_rows(sh, target, seasons=SEASONS, size=330):
 
 os.makedirs(OUT, exist_ok=True)
 A, G = "/assets/acnh/plants/", "/assets/game/plants/"
-# What each slot drew before (SEASON_TREES at the start: slot 0 a/a, slot 1 b/b, slot 2 a/b in summer/autumn).
+# The dump tree each of ours is modelled after, per season (its blossom in spring, its snow oak in winter).
 OLD_SLOT = {
     "round": {"spring": "tree-blossom", "summer": "tree-hardwood-a", "autumn": "tree-hardwood-a", "winter": "tree-hardwood-snow"},
     "wide": {"spring": "tree-blossom", "summer": "tree-hardwood-b", "autumn": "tree-hardwood-b", "winter": "tree-hardwood-snow"},
-    "tall": {"spring": "tree-blossom", "summer": "tree-hardwood-a", "autumn": "tree-hardwood-b", "winter": "tree-hardwood-snow"},
+    "tall": {"spring": "tree-blossom", "summer": "tree-hardwood-b", "autumn": "tree-hardwood-b", "winter": "tree-hardwood-snow"},
 }
 DRESS = {"spring": "blossom", "summer": "summer", "autumn": "autumn", "winter": "winter"}
 
@@ -188,9 +188,11 @@ for shape in ("round", "wide", "tall"):
     far = [u.replace(".glb", ".lod1.glb") for u in new]
     group = lambda s, u: s if s in LEAF and ("hardwood-a" in u or "hardwood-b" in u) else "plain"
     sh = Sheet(16 + 170 + 8 * (T + 6) + 16)
-    sh.text(f"Broadleaf tree, {shape}: leaf cards over closed clumps on one trunk, four seasons (ours) vs the dump's oak and cherry", F_T)
-    sh.text(f"Before: {fmt(old)}.   After, near: {fmt(new)}.   Far (past 24 u): {fmt(far)}.", F_L, colour=MUTED)
-    sh.text("Leaf texture: the dump's (left of each pair, as the game tints it) and ours, painted afresh from it (art/trees/paint_textures.py): one three-lobed clump a card.", F_L, colour=MUTED)
+    after_what = {"round": "the dump's hardwood-a", "tall": "the dump's hardwood-b", "wide": "the dump's hardwood-b, its clover spread wider and lower"}[shape]
+    sh.text(f"Broadleaf tree, {shape}: modelled after {after_what} (row 314), side by side with it every season", F_T)
+    sh.text(f"Dump: {fmt(old)}.   Ours, near: {fmt(new)}.   Far (past 24 u): {fmt(far)}.", F_L, colour=MUTED)
+    sh.text("Measured from the dump's closed oaks: the clover's ball centres and radii, the shield-shaped card (0.45 across, its top bent out) shingled from 0.9 to 1.5 ball radii out", F_L, colour=MUTED)
+    sh.text("and pitched up about 32 degrees, the trunk's radius by height. Our painted leaf on every card; the trunk plain colour (lane rules: textures only where they show).", F_L, colour=MUTED)
     oak = texture_of(A + "tree-hardwood-a.glb", "mTreeOakLeaf")
     sh.row([on_bg(oak, tint=LEAF["summer"]), on_bg(Image.open(os.path.join(TEX, "leaves-summer.png"))),
             on_bg(oak, tint=LEAF["autumn"]), on_bg(Image.open(os.path.join(TEX, "leaves-autumn.png"))),
@@ -198,8 +200,10 @@ for shape in ("round", "wide", "tall"):
             on_bg(texture_of(A + "tree-hardwood-snow.glb", "mTreeOakLeafSnow")), on_bg(Image.open(os.path.join(TEX, "leaves-winter.png")))],
            label="Texture\ndump | ours\nsummer, autumn,\nblossom, winter")
     for v, vl in (("front", "front"), ("q", "3/4")):
-        sh.row([tile(tt(group(s, u), u, v), f"{s} {u.split('/')[-1][5:-4]}") for s, u in zip(SEASONS, old)]
-               + [tile(tt("after", u, v), f"{s} ours") for s, u in zip(SEASONS, new)], label=f"Before | after\n{vl}")
+        tiles = []
+        for s_, u, n in zip(SEASONS, old, new):
+            tiles += [tile(tt(group(s_, u), u, v), f"{s_} dump"), tile(tt("after", n, v), f"{s_} ours")]
+        sh.row(tiles, label=f"Dump | ours\n{vl}")
     sh.row([tile(tt("after", u, "q"), f"{s} far") for s, u in zip(SEASONS, far)], label="After\nfar LOD 3/4")
     sh.rule()
     sh.text(f"In game, the same camera before and after: the {shape} tree's spot ({'-6, -12' if shape == 'round' else '17, -7' if shape == 'wide' else '14, -12'}), every season", F_H)
