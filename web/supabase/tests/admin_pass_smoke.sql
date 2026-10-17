@@ -4,10 +4,15 @@
 \set ON_ERROR_STOP 1
 
 -- ─── 1. Residents: post, bio, tone, schedule; the seeded two keep their spots ─
+-- A phase is one stop ({"day": "path"}, this migration) or a routine walked in turn (lib/game/residentRoutine.ts
+-- routineKeys). Since 20261017020000_resident_roster (row 217; specs/hq-onboarding.md, row 312, "David's decisions"
+-- 1: "Seed the full roster") the two, where still as seeded, walk the roster's routine and bio: their day still
+-- starts at their spot, so the first stop of the day is what's held here, in either shape.
 DO $$ BEGIN
-  ASSERT (SELECT schedule ->> 'day' FROM npc_personas WHERE slug = 'mayor') = 'path', 'mayor keeps the path';
-  ASSERT (SELECT post || '/' || (schedule ->> 'day') FROM npc_personas WHERE slug = 'shopkeeper') = 'shopkeeper/shop', 'shopkeeper keeps the shop';
-  ASSERT (SELECT bio FROM npc_personas WHERE slug = 'mayor') = '', 'bio defaults empty';
+  ASSERT (SELECT coalesce(schedule -> 'day' ->> 0, schedule ->> 'day') FROM npc_personas WHERE slug = 'mayor') = 'path', 'mayor keeps the path';
+  ASSERT (SELECT post || '/' || coalesce(schedule -> 'day' ->> 0, schedule ->> 'day') FROM npc_personas WHERE slug = 'shopkeeper') = 'shopkeeper/shop', 'shopkeeper keeps the shop';
+  ASSERT (SELECT column_default || '|' || is_nullable FROM information_schema.columns
+           WHERE table_schema = 'public' AND table_name = 'npc_personas' AND column_name = 'bio') = '''''::text|NO', 'bio defaults empty';
   BEGIN
     UPDATE npc_personas SET post = 'wizard' WHERE slug = 'mayor';
     RAISE EXCEPTION 'unknown post accepted';
