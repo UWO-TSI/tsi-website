@@ -1,0 +1,13 @@
+remodel-ground perf:check, once, at the end (SKIP_BUILD=1 after sh specs/perf/measure-build.sh at 73a81c5d; SCENES=village,v2, TIERS high,lite, RUNS 3).
+The bench build carried OWN_SAND.gain 1.2; the lane ends on 1.38 (one constant in one shader: no cost change).
+
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draw calls | Triangles | Runs | Spread | Load |
+|---|---|---|---|---|---|---|---|---|---|
+| village | high | 4.00 (3.90, +2.6%) | 5.00 (4.90, +2.0%) | 3.50 (3.40, +2.9%) | 366 (382, -4.2%) | 568843 (537560, +5.8%) | 3 | 5% | 6.4 |
+| v2 | high | 3.60 (5.40, -33.3%) | 4.90 (6.80, -27.9%) | 3.30 (5.00, -34.0%) | 204 (254, -19.7%) | 600209 (912237, -34.2%) | 3 | 3% | 6.1 |
+| village | lite | 2.20 (2.30, -4.3%) | 3.20 (3.40, -5.9%) | 2.00 (2.00, 0.0%) | 274 (288, -4.9%) | 372393 (353865, +5.2%) | 3 | 5% | 6.1 |
+| v2 | lite | 2.40 (3.00, -20.0%) | 3.30 (3.70, -10.8%) | 2.30 (2.80, -17.9%) | 150 (172, -12.8%) | 331384 (629051, -47.3%) | 3 | 4% | 6.4 |
+
+Median of 3+ runs each; in brackets the baseline (8809c517 2026-10-14) and the change. Load: the 1-minute load average.
+
+perf:check passed

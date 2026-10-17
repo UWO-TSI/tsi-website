@@ -37,7 +37,7 @@ const FALLBACK_COPY: Record<string, StepCopy> = {
   claim_plot: { label: "Claim your plot at HQ" },
   first_catch: { label: "Make your first catch" },
   donate_catch: { label: "Donate your catch" },
-  report_hq: { label: "Report back to HQ" },
+  report_hq: { label: "Report back to Wren at HQ" },
   contribute: { label: "Contribute to the club goal" },
   goal_complete: { label: "Club goal reaches its target" },
   oracle_quiz: { label: "Complete the Oracle quiz" },

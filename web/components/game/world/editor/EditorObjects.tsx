@@ -11,6 +11,7 @@ import * as THREE from "three";
 import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "../../ACNHBuilding";
 import { InstancedModels } from "../../InstancedNature";
 import { GLBProp, sceneryOf } from "../../NatureModels";
+import { BRIDGE_URL } from "@/lib/game/propModels";
 import { Lanterns } from "../../AmbientProps";
 import CafeBuilding from "../../study/CafeBuilding";
 import Wharf from "../../wharf/Wharf";
@@ -71,7 +72,7 @@ export default function EditorObjects({ terrain, objects, light, ghost, selected
   return <>
     <InstancedModels items={scenery} />
     <Lanterns positions={lamps} intensity={0} glow={0} />
-    {objects.filter(o => o.kind === "bridge").map(o => <GLBProp key={o.id} url="/assets/acnh/props/bridge-wooden.glb" position={[o.x, ground(o.x, o.z) - 0.065, o.z]} rotation={[0, o.yaw ?? 0, 0]} />)}
+    {objects.filter(o => o.kind === "bridge").map(o => <GLBProp key={o.id} url={BRIDGE_URL} position={[o.x, ground(o.x, o.z) - 0.065, o.z]} rotation={[0, o.yaw ?? 0, 0]} />)}
     <Suspense fallback={null}>
       {objects.filter(MODELLED).map(o => <BuildingModel key={`${o.kind}:${o.id}`} o={o} y={ground(o.x, o.z)} light={light} />)}
     </Suspense>

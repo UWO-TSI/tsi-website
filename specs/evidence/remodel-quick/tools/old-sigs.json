@@ -1,0 +1,54 @@
+{
+ "/assets/acnh/furniture/monument-sign.glb": [
+  "504|996|mReBody"
+ ],
+ "/assets/acnh/props/bulletin-board.glb": [
+  "1211|3225|EvtobjBbs_mat0",
+  "148|768|EvtobjBbs_mat1"
+ ],
+ "/assets/acnh/furniture/bulletinboard.glb": [
+  "696|2388|FtrBulletinboard_mReBody",
+  "4|6|FtrBulletinboard_mReFabric"
+ ],
+ "/assets/acnh/props/bench-wood.glb": [
+  "640|3438|mReBody"
+ ],
+ "/assets/acnh/props/bridge-wooden.glb": [
+  "2072|9216|BridgeWood__BridgeWood03_mat0"
+ ],
+ "/assets/acnh/props/beach-parasol.glb": [
+  "3530|12396|FtrBeachparasol_mat0",
+  "496|1824|FtrBeachparasol_mat0"
+ ],
+ "/assets/acnh/furniture/shopping-cart.glb": [
+  "1050|3510|FtrShoppingCart_mat0",
+  "34|66|FtrShoppingCart_mat1"
+ ],
+ "/assets/acnh/props/beach-bed.glb": [
+  "1870|7104|FtrBeachbed_mat0"
+ ],
+ "/assets/acnh/props/market-cart.glb": [
+  "1350|3870|EvtobjCountdownStall_mat0",
+  "917|0|EvtobjCountdownStall_mat1",
+  "349|0|EvtobjCountdownStall_mat2",
+  "2605|648|EvtobjCountdownStall_mat3"
+ ],
+ "/assets/acnh/fruit/apple.glb": [
+  "241|1230|mPltFruitApple"
+ ],
+ "/assets/acnh/fruit/cherry.glb": [
+  "296|1440|mPltFruitCherry02"
+ ],
+ "/assets/acnh/fruit/coconut.glb": [
+  "356|1782|mUnitIconPltFruitCoconut01"
+ ],
+ "/assets/acnh/fruit/orange.glb": [
+  "394|1554|mPltFruitOrange02"
+ ],
+ "/assets/acnh/fruit/peach.glb": [
+  "300|1608|mPltFruitPeach"
+ ],
+ "/assets/acnh/fruit/pear.glb": [
+  "297|1566|mPear"
+ ]
+}

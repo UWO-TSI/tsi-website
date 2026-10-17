@@ -40,8 +40,10 @@ export function usePeacefulContext(weather: IslandWeather, now: number): { momen
     // Gear keys: rods and the glider by catalogue_ref, nets and shovels by slug (lib/game/tools.ts).
     const load = () => { httpEconomyTransport.inventory().then(inv => setOwned((inv.groups.tools ?? []).flatMap(r => [r.item.slug, r.item.catalogue_ref ?? []].flat())), () => {}); };
     load();
+    // A resident handed a tool over (row 312, POST /api/world/tools): it's in the inventory now.
     window.addEventListener("tsi:crafted", load);
-    return () => window.removeEventListener("tsi:crafted", load);
+    window.addEventListener("tsi:tools-changed", load);
+    return () => { window.removeEventListener("tsi:crafted", load); window.removeEventListener("tsi:tools-changed", load); };
   }, []);
   const rod = bestOwnedRod(owned), glider = ownsGlider(owned);
   // The same object for the whole hour (Toronto hours start on the UTC hour).
