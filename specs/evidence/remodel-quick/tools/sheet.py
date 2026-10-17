@@ -33,9 +33,9 @@ ASSETS = {
     "log-bench": ("Log bench", ["acnh/props/bench-wood.glb"], ["game/props/log-bench.glb"], ["log-bench"]),
     "bridge": ("Wooden bridge", ["acnh/props/bridge-wooden.glb"], ["game/props/bridge-plank.glb"], ["bridge", "genesis-stage"]),
     "hq-board": ("HQ notice board", ["acnh/furniture/bulletinboard.glb"], ["game/props/hq-notice-board.glb"], ["hq-board"]),
-    "parasol": ("Beach parasol and deck chairs", ["acnh/props/beach-parasol.glb"], ["game/props/beach-parasol.glb"], ["parasol"]),
+    "parasol": ("Beach parasol and loungers", ["acnh/props/beach-parasol.glb"], ["game/props/beach-parasol.glb"], ["parasol"]),
     "trolley": ("Shop trolley", ["acnh/furniture/shopping-cart.glb"], ["game/props/shop-cart.glb"], ["trolley"]),
-    "tree-fruit": ("Tree fruit", [f"acnh/fruit/{f}.glb" for f in F], [f"game/items/{f}.glb" for f in NF], ["tree-fruit"]),
+    # Tree fruit: back to the dump's (row 314), so no sheet.
 }
 stats = {r["file"]: r for r in json.load(open(STATS))}
 
