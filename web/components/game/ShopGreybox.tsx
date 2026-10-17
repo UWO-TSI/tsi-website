@@ -81,13 +81,13 @@ function Walls({ level }: { level: Level }) {
   </>;
 }
 
-/** What stands on one floor: fixtures, displayed items, edge lights and the taped path. */
-function Contents({ level }: { level: Level }) {
+/** What stands on one floor: fixtures, displayed items, edge lights and the taped path (`except`: fixtures modelled already; `paths` off for the furnished room). */
+export function Contents({ level, except = [], paths = true }: { level: Level; except?: readonly string[]; paths?: boolean }) {
   return <>
-    {SHOP_FIXTURES.filter(f => f.level === level).flatMap(f => f.blocks.map((b, i) => <Block key={`${f.id}-${i}`} at={b.at} size={b.size} material={b.finish === "glass" ? SEE_THROUGH : matte(FINISH_TONE[b.finish])} />))}
+    {SHOP_FIXTURES.filter(f => f.level === level && !except.includes(f.id)).flatMap(f => f.blocks.map((b, i) => <Block key={`${f.id}-${i}`} at={b.at} size={b.size} material={b.finish === "glass" ? SEE_THROUGH : matte(FINISH_TONE[b.finish])} />))}
     {SHOP_SLOTS.filter(s => s.level === level).map(s => <Block key={s.id} at={s.at} size={s.size} material={matte(KIND_TONE[s.kind])} />)}
-    {SHOP_STRIPS.filter(s => s.level === level).map((s, i) => <Bar key={i} from={s.from} to={s.to} thick={[0.025, 0.04]} material={GLOW} />)}
-    {SHOP_PATHS.filter(p => p.level === level).flatMap(p => p.points.slice(1).map((q, k) =>
+    {SHOP_STRIPS.filter(s => s.level === level && !except.includes(s.fixture)).map((s, i) => <Bar key={i} from={s.from} to={s.to} thick={[0.025, 0.04]} material={GLOW} />)}
+    {paths && SHOP_PATHS.filter(p => p.level === level).flatMap(p => p.points.slice(1).map((q, k) =>
       <Bar key={`${p.id}-${k}`} from={[p.points[k][0], 0.004, p.points[k][1]]} to={[q[0], 0.004, q[1]]} thick={[0.004, 0.07]} material={TAPE} />))}
   </>;
 }

@@ -31,7 +31,7 @@ export const SHOP_COUNTER_RANGE = 1.8;
 export const SHOP_WALK_MARGIN = 0.8;
 export const SHOP_PAD = 0.25;
 /** Phase 2's item tag shows within this distance of a displayed item. */
-export const SHOP_TAG_RANGE = 1.6;
+export const SHOP_TAG_RANGE = 1.7;
 
 /**
  * The stair: a straight flight up the right wall, from its first step at z0 to the upper floor at z1, `steps` risers
@@ -58,12 +58,18 @@ export interface ShopFixture { id: string; level: Level; zone: ShopZone; label: 
 const b = (at: [number, number, number], size: [number, number, number], finish: Finish): ShopBlock => ({ at, size, finish });
 const S = SHOP_STAIR, F = SHOP_FLOOR_HEIGHT, RUN = (S.z1 - S.z0) / S.steps, RISE = F / S.steps, M = SHOP_MEZZ;
 /**
- * The changing room: a booth beside the clothes rail, its curtain facing the door (and the walking camera). `at` its
- * centre, `size` its footprint (x, z), `height` its walls. You stand at `spot` to use it (the village fitting room's
- * behaviour: E, the curtain sweeps, the wardrobe opens).
+ * The changing rooms (David, 2026-10-17: "right behind the staircase... fill with 2-3 room change room"): `count`
+ * booths side by side along the back wall in the corner behind the stair, from x0 to x1, z0 (their curtains, facing the
+ * door and the walking camera) to the wall at z1, `height` tall. You stand `spotZ` in front of one to use it (the
+ * village fitting room's behaviour: E, the curtain sweeps, the wardrobe opens); each has a curtain, a mirror and a bench.
  */
-export const SHOP_BOOTH = { at: [-3.0, 1.6] as [number, number], size: [1.5, 1.1] as [number, number], height: 2.2, spot: [-3.0, 0.55] as [number, number], range: 1.0 } as const;
-const BX = SHOP_BOOTH.at[0], BZ = SHOP_BOOTH.at[1], BW = SHOP_BOOTH.size[0], BD = SHOP_BOOTH.size[1], BH = SHOP_BOOTH.height;
+export const SHOP_BOOTHS = { x0: -6, x1: -2.6, z0: 3.8, z1: 5, count: 3, height: 2.2, spotZ: 3.25, range: 0.75 } as const;
+const BW = (SHOP_BOOTHS.x1 - SHOP_BOOTHS.x0) / SHOP_BOOTHS.count, BD = SHOP_BOOTHS.z1 - SHOP_BOOTHS.z0, BH = SHOP_BOOTHS.height;
+/** Each booth: its centre (x, z) and where you stand to use it (in front of its curtain, inside the walker's bounds). */
+export const SHOP_BOOTH_LIST = Array.from({ length: SHOP_BOOTHS.count }, (_, i) => {
+  const x = SHOP_BOOTHS.x0 + BW * (i + 0.5);
+  return { id: `fitting-${i + 1}`, at: [x, (SHOP_BOOTHS.z0 + SHOP_BOOTHS.z1) / 2] as [number, number], spot: [Math.max(x, -SHOP_ROOM.halfW + SHOP_WALK_MARGIN), SHOP_BOOTHS.spotZ] as [number, number] };
+});
 
 export const SHOP_FIXTURES: ShopFixture[] = [
   // ════ Ground floor: in-game items and the counter ════
@@ -97,14 +103,16 @@ export const SHOP_FIXTURES: ShopFixture[] = [
     ...[-0.6, 1.15, 2.9].map(z => b([5.75, 0, z], [0.5, 2.4, 0.04], "metal")),
     ...[0.35, 0.95, 1.55, 2.15].map(y => b([5.75, y, 1.15], [0.5, 0.04, 3.5], "metal")),
   ] },
-  { id: "dais", level: 0, zone: "items", label: "Furniture showroom dais (concrete)", footprint: [[4.25, 4.2, 1.75, 0.8]], blocks: [b([4.25, 0, 4.2], [3.5, 0.16, 1.6], "concrete")] },
+  { id: "dais", level: 0, zone: "items", label: "Furniture showroom dais (concrete)", footprint: [[4.25, 4.3, 1.75, 0.7]], blocks: [b([4.25, 0, 4.3], [3.5, 0.16, 1.4], "concrete")] },
   { id: "rail", level: 0, zone: "items", label: "Clothes rail (metal, face-out)", footprint: [[-2.6, -0.2, 0.7, 0.25]], blocks: [
     b([-2.6, 0, -0.2], [1.4, 0.06, 0.5], "concrete"),
     b([-3.25, 0.06, -0.2], [0.05, 1.5, 0.05], "metal"), b([-1.95, 0.06, -0.2], [0.05, 1.5, 0.05], "metal"),
     b([-2.6, 1.52, -0.2], [1.35, 0.05, 0.05], "metal"),
   ] },
-  { id: "finishes", level: 0, zone: "items", label: "Wallpaper and flooring samples", footprint: [[-4.1, 4.25, 1.2, 0.35]], blocks: [
-    b([-4.1, 0, 4.25], [2.4, 0.08, 0.7], "concrete"),
+  // Where the changing room first stood, beside the rail: folded clothes on a low concrete table.
+  { id: "clothes-table", level: 0, zone: "items", label: "Folded clothes table (concrete)", footprint: [[-2.9, 1.5, 0.8, 0.35]], blocks: [
+    b([-2.9, 0.5, 1.5], [1.6, 0.1, 0.7], "concrete"),
+    b([-3.6, 0, 1.5], [0.12, 0.5, 0.6], "concrete"), b([-2.2, 0, 1.5], [0.12, 0.5, 0.6], "concrete"),
   ] },
   { id: "upstairs-sign", level: 0, zone: "stair", label: "\"Club merch upstairs\" sign", footprint: [[-3.6, -2.5, 0.25, 0.12]], blocks: [b([-3.6, 0, -2.5], [0.5, 1.3, 0.24], "sign")] },
   // The stair, solid concrete steps up the right wall, with a railing on its open side.
@@ -113,13 +121,17 @@ export const SHOP_FIXTURES: ShopFixture[] = [
     ...[0.5, 7.5, 15.5].map(i => b([S.x1 - 0.04, ((i + 0.5) * RISE), S.z0 + i * RUN], [0.04, 0.95, 0.04], "metal")),
   ] },
 
-  { id: "changing-room", level: 0, zone: "items", label: "Changing room", footprint: [[BX, BZ, BW / 2, BD / 2]], blocks: [
-    b([BX, 0, BZ + BD / 2 - 0.03], [BW, BH, 0.06], "timber"),                                   // the back, with the mirror on it
-    b([BX - BW / 2 + 0.03, 0, BZ], [0.06, BH, BD], "timber"), b([BX + BW / 2 - 0.03, 0, BZ], [0.06, BH, BD], "timber"),
-    b([BX, 0.08, BZ - BD / 2 + 0.03], [BW - 0.12, BH - 0.18, 0.05], "fabric"),                // the curtain, facing the door
-    b([BX, BH - 0.07, BZ - BD / 2 + 0.03], [BW, 0.04, 0.04], "metal"),                        // its rail
-    b([BX, 0.2, BZ + BD / 2 - 0.08], [0.6, 1.6, 0.04], "glass"),                              // the mirror
-    b([BX + 0.45, 0, BZ + 0.15], [0.4, 0.45, 0.5], "concrete"),                               // a bench
+  { id: "changing-rooms", level: 0, zone: "items", label: "Changing rooms, behind the stair",
+    footprint: [[(SHOP_BOOTHS.x0 + SHOP_BOOTHS.x1) / 2, (SHOP_BOOTHS.z0 + SHOP_BOOTHS.z1) / 2, (SHOP_BOOTHS.x1 - SHOP_BOOTHS.x0) / 2, BD / 2]], blocks: [
+    // Partitions between and either side of the booths, and over each: a curtain on its rail, a mirror on the back wall, a bench.
+    ...Array.from({ length: SHOP_BOOTHS.count + 1 }, (_, i) => b([SHOP_BOOTHS.x0 + BW * i + (i === 0 ? 0.03 : i === SHOP_BOOTHS.count ? -0.03 : 0), 0, (SHOP_BOOTHS.z0 + SHOP_BOOTHS.z1) / 2], [0.06, BH, BD], "timber")),
+    ...SHOP_BOOTH_LIST.flatMap(({ at: [x] }) => [
+      b([x, 0.08, SHOP_BOOTHS.z0 + 0.03], [BW - 0.1, BH - 0.18, 0.05], "fabric"),
+      b([x, BH - 0.07, SHOP_BOOTHS.z0 + 0.03], [BW, 0.04, 0.04], "metal"),
+      b([x, 0.25, SHOP_BOOTHS.z1 - 0.05], [0.5, 1.5, 0.03], "glass"),
+      b([x + BW / 2 - 0.3, 0, SHOP_BOOTHS.z1 - 0.4], [0.4, 0.42, 0.55], "concrete"),
+    ]),
+    b([(SHOP_BOOTHS.x0 + SHOP_BOOTHS.x1) / 2, BH, (SHOP_BOOTHS.z0 + SHOP_BOOTHS.z1) / 2], [SHOP_BOOTHS.x1 - SHOP_BOOTHS.x0, 0.06, BD], "timber"),  // their roof
   ] },
 
   // ════ The mezzanine: club merch (ref 1) ════
@@ -174,18 +186,21 @@ export const SHOP_SLOTS: DisplaySlot[] = [
   slot("seasonal-2", "seasonal", "seasonal-plinths", [3.85, 0.8, -3.35], [0.45, 0.5, 0.45]),
   slot("seasonal-3", "seasonal", "seasonal-plinths", [4.65, 0.3, -2.95], [0.35, 0.35, 0.35]),
   ...[-3.0, -2.6, -2.2].map((x, i) => slot(`clothes-${i + 1}`, "clothes", "rail", [x, 0.6, -0.2], [0.36, 0.85, 0.1])),
-  slot("tools-1", "tools", "tools-table", [3.25, 0.72, 0.45], [1.1, 0.05, 0.08]),     // a rod, laid along the table
-  slot("tools-2", "tools", "tools-table", [3.9, 0.72, 0.75], [0.35, 0.08, 0.5]),      // a net
-  slot("tools-3", "tools", "tools-table", [2.95, 0.72, 0.8], [0.6, 0.06, 0.18]),      // a shovel
-  slot("tools-4", "tools", "tools-table", [4.05, 0.72, 0.35], [0.3, 0.2, 0.25]),      // the bag upgrade
-  ...[0.95, 1.55].flatMap((y, l) => [-0.25, 0.25, 0.75].map((z, i) => slot(`dyes-${l * 3 + i + 1}`, "dyes", "shelving", [5.7, y + 0.04, z], [0.18, 0.28, 0.3]))),
-  ...[0.95, 1.55].flatMap((y, l) => [1.6, 2.4].map((z, i) => slot(`accessories-${l * 2 + i + 1}`, "accessories", "shelving", [5.7, y + 0.04, z], [0.3, 0.25, 0.3]))),
+  // Laid side by side along the table, each fitted by its length.
+  slot("tools-1", "tools", "tools-table", [3.35, 0.72, 0.32], [1.4, 0.06, 0.12]),     // a rod
+  slot("tools-2", "tools", "tools-table", [3.3, 0.72, 0.56], [1.1, 0.1, 0.2]),        // a net
+  slot("tools-3", "tools", "tools-table", [3.15, 0.72, 0.82], [0.9, 0.08, 0.16]),     // a shovel
+  slot("tools-4", "tools", "tools-table", [4.05, 0.72, 0.8], [0.35, 0.3, 0.3]),       // the bag upgrade
+  // Two shelves of each, the upper row staggered so every item has its own place along the shelf (and its own tag).
+  ...[[0.95, [-0.35, 0.15, 0.65]], [1.55, [-0.1, 0.4, 0.9]]].flatMap(([y, zs], l) => (zs as number[]).map((z, i) => slot(`dyes-${l * 3 + i + 1}`, "dyes", "shelving", [5.7, (y as number) + 0.04, z], [0.18, 0.28, 0.3]))),
+  ...[[0.95, [1.5, 2.3]], [1.55, [1.9, 2.7]]].flatMap(([y, zs], l) => (zs as number[]).map((z, i) => slot(`accessories-${l * 2 + i + 1}`, "accessories", "shelving", [5.7, (y as number) + 0.04, z], [0.3, 0.25, 0.3]))),
   slot("furniture-1", "furniture", "dais", [4.3, 0.16, 4.55], [1.6, 0.7, 0.65]),      // a sofa
   slot("furniture-2", "furniture", "dais", [5.6, 0.16, 4.6], [0.3, 1.4, 0.3]),        // a floor lamp
-  slot("furniture-3", "furniture", "dais", [3.1, 0.16, 4.2], [0.55, 0.5, 0.55]),      // a chair or side table
-  slot("furniture-4", "furniture", "dais", [4.2, 0.16, 3.85], [2.2, 0.02, 0.6]),      // a rug
-  ...[-5.25, -4.5, -3.75, -3.0].map((x, i) => slot(`wallpaper-${i + 1}`, "finishes", "finishes", [x, 0.6, 4.93], [0.6, 1.6, 0.04])),
-  ...[-4.9, -4.1, -3.3].map((x, i) => slot(`flooring-${i + 1}`, "finishes", "finishes", [x, 0.08, 4.25], [0.6, 0.02, 0.5])),
+  slot("furniture-3", "furniture", "dais", [2.95, 0.16, 4.45], [0.55, 0.5, 0.55]),     // a chair or side table
+  // The finishes, shown as a room would: wallpaper panels on the wall behind the sofa, flooring tiles on the dais in front.
+  ...[3.15, 4.25, 5.35].map((x, i) => slot(`wallpaper-${i + 1}`, "finishes", "dais", [x, 0.95, 4.93], [0.95, 1.45, 0.04])),
+  ...[3.6, 4.4, 5.2].map((x, i) => slot(`flooring-${i + 1}`, "finishes", "dais", [x, 0.16, 3.92], [0.7, 0.02, 0.4])),
+  ...[-3.4, -2.9, -2.4].map((x, i) => slot(`clothes-${i + 4}`, "clothes", "clothes-table", [x, 0.6, 1.5], [0.42, 0.28, 0.42])),   // shoes
   // Upper floor: club merch
   ...[2.5, 3.5, 4.5].map((x, i) => slot(`merch-wear-${i + 1}`, "merch-wear", "pegboard", [x, 1.2, 4.88], [0.75, 0.9, 0.12])),
   ...[0.4, 1.4].map((z, i) => slot(`merch-wear-${i + 4}`, "merch-wear", "pegboard", [5.88, 1.3, z], [0.12, 0.95, 0.75])),
@@ -209,11 +224,11 @@ export const SHOP_STRIPS: LightStrip[] = [
   ...[0.35, 0.95, 1.55, 2.15].map(y => strip(0, "shelving", [5.49, y + 0.01, -0.6], [5.49, y + 0.01, 2.9])),
   strip(0, "tools-table", [2.6, 0.6, 0.2], [4.4, 0.6, 0.2]), strip(0, "tools-table", [2.6, 0.6, 1.0], [4.4, 0.6, 1.0]),
   strip(0, "tools-table", [2.6, 0.6, 0.2], [2.6, 0.6, 1.0]), strip(0, "tools-table", [4.4, 0.6, 0.2], [4.4, 0.6, 1.0]),
-  strip(0, "dais", [2.5, 0.05, 3.39], [6.0, 0.05, 3.39]), strip(0, "dais", [2.49, 0.05, 3.4], [2.49, 0.05, 5.0]),
+  strip(0, "dais", [2.5, 0.05, 3.59], [6.0, 0.05, 3.59]), strip(0, "dais", [2.49, 0.05, 3.6], [2.49, 0.05, 5.0]),
   strip(0, "seasonal-plinths", [2.6, 0.04, -3.56], [3.4, 0.04, -3.56]),
   strip(0, "seasonal-plinths", [3.45, 0.04, -3.76], [4.25, 0.04, -3.76]),
   strip(0, "seasonal-plinths", [4.35, 0.04, -3.26], [4.95, 0.04, -3.26]),
-  strip(0, "finishes", [-5.3, 0.05, 3.89], [-2.9, 0.05, 3.89]),
+  strip(0, "clothes-table", [-3.7, 0.48, 1.15], [-2.1, 0.48, 1.15]),
   // Upper: under the merch counter's top lip and the pegboard shelf (ref 1), floor glow along the plinths.
   strip(1, "merch-counter", [-3.0, 0.8, 4.34], [5.35, 0.8, 4.34]),
   strip(1, "merch-counter", [5.34, 0.8, 0.0], [5.34, 0.8, 4.34]),
@@ -242,7 +257,7 @@ export const SHOP_PATHS: { id: string; level: Level | "stair"; label: string; po
   { id: "stair", level: "stair", label: "Up the stair", points: [[-4.85, S.z0], [-4.85, S.z1]] },
   { id: "items-loop", level: 0, label: "Items loop", points: [[0.9, -1.9], [5.0, -1.9], [5.0, 2.55], [0.9, 2.55]] },
   { id: "items-cross", level: 0, label: "Past the tools table", points: [[0.9, -0.6], [5.0, -0.6]] },
-  { id: "right-loop", level: 0, label: "Round the clothes rail, past the changing room to the samples", points: [[-0.9, -1.2], [-3.75, -1.2], [-3.75, 0.55], [-1.6, 0.55], [-1.6, 2.55], [-5.0, 2.55], [-5.0, 3.4]] },
+  { id: "right-loop", level: 0, label: "Round the clothes rail and table, to the changing rooms", points: [[-0.9, -1.2], [-3.75, -1.2], [-3.75, 0.6], [-1.6, 0.6], [-1.6, 2.4], [-5.0, 2.4], [-5.0, 3.2], [-2.9, 3.2]] },
   { id: "merch-loop", level: 1, label: "Merch loop", points: [[-4.85, 2.3], [-4.85, 3.7], [4.85, 3.7], [4.85, -0.5], [-3.7, -0.5], [-3.7, 2.3], [-4.85, 2.3]] },
 ];
 
@@ -315,4 +330,16 @@ export function createShopWalker(): ShopWalker {
     },
   };
   return w;
+}
+
+/**
+ * The layout as the model build reads it (art/interiors/build_shop.py reads art/interiors/shop_layout.json, written by
+ * scripts/shop-layout-json.mjs): every number the room's models stand on, so the models and the walking never drift.
+ */
+export function shopLayoutJson(): string {
+  return JSON.stringify({
+    room: SHOP_ROOM, floorHeight: SHOP_FLOOR_HEIGHT, slab: SHOP_SLAB, door: SHOP_DOOR, stair: SHOP_STAIR, mezz: SHOP_MEZZ,
+    booths: SHOP_BOOTHS, boothList: SHOP_BOOTH_LIST, pendant: SHOP_PENDANT, windows: SHOP_WINDOWS,
+    fixtures: SHOP_FIXTURES, slots: SHOP_SLOTS, strips: SHOP_STRIPS,
+  }, null, 1) + "\n";
 }

@@ -22,3 +22,15 @@ it("does not overwrite the new exterior attached before interior cleanup", () =>
   expect(scene.background).toBe(background);
   expect(scene.fog).toBe(fog);
 });
+
+it("clears to nothing for the branded layer behind the canvas, and restores the world after", () => {
+  const scene = new Scene();
+  const background = new Color("#c7e0df"), fog = new Fog(background, 15, 57);
+  scene.background = background; scene.fog = fog;
+  const close = applyInteriorBackdrop(scene, null);
+  expect(scene.background).toBeNull();
+  expect(scene.fog).toBeNull();
+  close();
+  expect(scene.background).toBe(background);
+  expect(scene.fog).toBe(fog);
+});

@@ -108,7 +108,7 @@ export default function CafeInterior({ phase, player, frozen, identity, level, o
   onNear: (near: "exit" | "owner" | null) => void;
 }) {
   const { scene, camera } = useThree();
-  useEffect(() => applyInteriorBackdrop(scene, "#1a120c"), [scene]);
+  useEffect(() => applyInteriorBackdrop(scene, null), [scene]);   // the branded dark behind the canvas (InteriorBackdrop)
   const devCam = useMemo(() => {
     if (process.env.NODE_ENV === "production" || typeof window === "undefined") return null;
     const q = new URLSearchParams(window.location.search), v = q.get("cafecam")?.split(",").map(Number);

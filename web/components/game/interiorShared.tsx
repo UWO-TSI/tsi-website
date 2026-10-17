@@ -45,10 +45,14 @@ const PLAYER_SPEED = 4.6;
 const keys: Record<string, boolean> = {};
 
 // Module escape hatches for imperative three mutations (react-compiler).
-export function applyInteriorBackdrop(scene: THREE.Scene, color = "#14100C"): () => void {
+/**
+ * A room's backdrop: a flat colour round it, or `null` for none, so the canvas clears to transparent round the room and
+ * the page's branded layer behind it shows (InteriorBackdrop). Returns the restore for when the room closes.
+ */
+export function applyInteriorBackdrop(scene: THREE.Scene, color: string | null = "#14100C"): () => void {
   const prevBg = scene.background;
   const prevFog = scene.fog;
-  const backdrop = new THREE.Color(color);
+  const backdrop = color === null ? null : new THREE.Color(color);
   scene.background = backdrop;
   scene.fog = null;
   return () => {

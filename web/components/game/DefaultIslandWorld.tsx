@@ -112,7 +112,9 @@ import RewardCard from "./RewardCard";
 import GlideGuide, { GlideGuideHint } from "./GlideGuide";
 import TrophyCase from "./TrophyCase";
 import ShopInterior from "./ShopInterior";
+import InteriorBackdrop from "./InteriorBackdrop";
 import ShopCounter from "./ShopCounter";
+import ShopkeeperChoice, { MERCH_LINE, type ShopSection } from "./ShopkeeperChoice";
 import IslandLoading from "./IslandLoading";
 import TalkBox from "./TalkBox";
 import { emptyTalkView, requestTalk, subscribeTalk, talkStore, talkView } from "@/lib/game/residentTalk";
@@ -213,9 +215,9 @@ import { roomHeading } from "@/lib/game/roomHeading";
 import styles from "./DefaultIslandWorld.module.css";
 
 type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | null;
-type Sheet = "counter" | "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | null;
+type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | null;
 const DEV = process.env.NODE_ENV !== "production";
-const DEV_SHEETS: readonly Sheet[] = ["counter", "notice", "letters", "journal", "trophies", "showcase", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest"];
+const DEV_SHEETS: readonly Sheet[] = ["counter", "shopkeeper", "notice", "letters", "journal", "trophies", "showcase", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest"];
 /** Sheets opened at a station with E: E closes them again (the dialog system's opening key). */
 const STATION_KEY = "e";
 const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight", evening: "Evening", night: "Night" };
@@ -667,7 +669,7 @@ function Clubhouse({ phase, light, player, frozen, talking, member, onNear }: { 
   useEffect(() => { player.current.set(0, 0, -4.2); camera.position.set(0, 8.4, -11.4); onNear(null); }, [camera, onNear, player]);
   const station = useCallback((s: InteriorStation | null) => onNear((s?.id as Near) ?? null), [onNear]);
   return <>
-    <HQInterior clubhouse trophyCase noticeBoard phase={phase} light={light} floorTexture={floor} frozen={frozen} talking={talking} playerPosRef={player} onNearestStation={station} stations={CLUBHOUSE_STATIONS} constrainMove={constrainFounder} />
+    <HQInterior clubhouse branded trophyCase noticeBoard phase={phase} light={light} floorTexture={floor} frozen={frozen} talking={talking} playerPosRef={player} onNearestStation={station} stations={CLUBHOUSE_STATIONS} constrainMove={constrainFounder} />
     <BotanicalFrames />
     <FounderDesk />
     <Workbench player={player} />
@@ -749,6 +751,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [seated, setSeated] = useState(false);
   // Dev (screenshots): `?sheet=<name>` opens that sheet (the Oracle path sheet once progression loads; donate, shop and bag too).
   const [sheet, setSheet] = useState<Sheet>(() => (DEV_SHEETS.includes(devHome.get("sheet") as Sheet) ? devHome.get("sheet") as Sheet : null));
+  // The shopkeeper's answer: the shop opens on the game's things or on the club merch.
+  const [shopSection, setShopSection] = useState<ShopSection>(() => (devHome.get("shopSection") === "merch" ? "merch" : "items"));
   // The island map (M, or Map in the UI view's dock); the minimap itself is always on in the village.
   const [mapOpen, setMapOpen] = useState(false);
   const progression = useProgressionWorld();
@@ -931,7 +935,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     // The plaza's board and HQ's own (the visit with Wren waits for you to read it there).
     if (action === "notice" || action === "board") { setSheet("notice"); if (action === "board") hqEvent("board"); return; }
     if (action === "founder") { setSheet("plaque"); return; }
-    if (action === "counter") { setSheet("counter"); return; }
+    // In the shop, the shopkeeper asks what you're after first (ShopkeeperChoice): the game's things, or the club merch.
+    if (action === "counter") { setSheet(inside === "shop" ? "shopkeeper" : "counter"); return; }
     if (action === "cafe") { setSheet("cafe"); return; }
     if (action === "owner") { window.dispatchEvent(new CustomEvent("tsi:cafe-owner-talk")); return; }
     if (action === "talk") { requestTalk(talkStore.near.id); return; }
@@ -1195,6 +1200,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   </> : undefined;
   return (
     <main className={`${styles.world} gui`} data-light={phase} data-inside={inside ?? undefined} data-site={site} data-trip={trip.active || undefined} data-cinematic={hudCinematic || undefined} data-compact={compact || undefined} data-ui={uiView || undefined} data-photo={photo.open || undefined}>
+      {/* The branded dark round the rooms that show the space outside them (InteriorBackdrop): behind the canvas. */}
+      {inside === "shop" || inside === "hq" || inside === "museum" || inside === "cafe" ? <InteriorBackdrop room={inside} /> : null}
       <Canvas ref={canvasRef} tabIndex={0} role="application" aria-label="Island walking area" style={{ zIndex: 0, imageRendering: graphics.pixelated ? "pixelated" : "auto" }} gl={{ antialias: false, powerPreference: "high-performance" }} dpr={canvasDpr}
         camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false} frameloop={creatorOpen ? "never" : "always"}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
@@ -1203,8 +1210,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
               onNear={n => setNear(n === "exit" ? "ruins_exit" : n)} onDefeat={onRuinsDefeat} start={ruinsRun <= 1 ? devAt : null} glider={peaceful.glider} />
             : inside === "oracle" ? <OracleTemple frozen={fading || sheet === "oracle"} talking={sheet === "oracle"} light={light} player={player} onNear={n => setNear(n)} ceremony={reveal} />
             : inside === "cafe" ? <CafeInterior phase={phase} player={player} frozen={fading || !!sheet} identity={identity} level={level} onNear={setNear} />
-            : inside === "shop" ? <ShopInterior frozen={fading || sheet === "counter" || sheet === "fitting"} talking={sheet === "counter"} light={light} playerPosRef={player}
-              onNearestStation={s => setNear(s?.id === "counter" ? "counter" : s?.id === "exit" ? "exit" : s?.id === "fitting" ? "fitting" : null)} />
+            : inside === "shop" ? <ShopInterior frozen={fading || sheet === "counter" || sheet === "shopkeeper" || sheet === "fitting"} talking={sheet === "counter" || sheet === "shopkeeper"} light={light} playerPosRef={player}
+              onNearestStation={s => setNear(s?.id === "counter" ? "counter" : s?.id === "exit" ? "exit" : s?.id.startsWith("fitting") ? "fitting" : null)} />
             : inside === "museum" ? <MuseumInterior wings={museumWings} frozen={fading || donateOpen} talking={donateOpen} light={light} player={player} onNear={n => setNear(n === "donate" ? "curator" : n)} />
             : inside === "hq" ? <Clubhouse phase={phase} light={light} player={player} frozen={fading} talking={sheet === "showcase" || hq.card !== null || (talking && talkNow.slug === WREN.slug)} member={peaceful.member} onNear={setNear} />
             : inside === "house" ? <HomeInterior layout={layout} phase={phase} light={light} frozen={fading} player={player} onNear={(n: HouseNear) => setNear(n)}
@@ -1331,7 +1338,12 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <RegisterCard open={hq.card === "register"} name={identity.signedIn ? identity.display_name : null} friendCode={friends.view?.code ?? null} letters={progression.unreadLetters ?? null} onDone={() => hqEvent("signed")} />
       <CheckInCard open={hq.card === "checkin"} onDone={() => hqEvent("checkin")} />
       <PlaqueCard open={sheet === "plaque"} onClose={() => { setSheet(null); hqEvent("founder"); }} />
-      <ShopCounter open={sheet === "counter"} onClose={() => setSheet(null)} />
+      <ShopkeeperChoice open={sheet === "shopkeeper"} onClose={() => setSheet(null)} onChoose={section => {
+        setShopSection(section);
+        if (section === "merch") window.dispatchEvent(new CustomEvent("tsi:shopkeeper-say", { detail: { line: MERCH_LINE, clip: "Chat" } }));
+        setSheet("counter");
+      }} />
+      <ShopCounter open={sheet === "counter"} section={inside === "shop" ? shopSection : undefined} onClose={() => setSheet(null)} />
       <LettersSheet open={sheet === "letters"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openMail} />
       <BagSheet open={sheet === "bag"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openBag} />
       <ChestSheet open={sheet === "chest"} onClose={() => setSheet(null)} keys={STATION_KEY} />

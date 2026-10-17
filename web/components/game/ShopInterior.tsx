@@ -10,12 +10,12 @@
  * fitting room does. The village's shop door comes here (DefaultIslandWorld).
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useThree } from "@react-three/fiber";
 import { ISLAND_LIGHTING, type IslandLight } from "@/lib/game/islandLighting";
 import { interiorLight } from "@/lib/game/interiorLight";
 import {
-  SHOP_BOOTH, SHOP_COUNTER_RANGE, SHOP_COUNTER_SPOT, SHOP_EXIT, SHOP_EXIT_RANGE, SHOP_FLOOR_HEIGHT, SHOP_PENDANT, SHOP_ROOM, SHOP_SPAWN, createShopWalker,
+  SHOP_BOOTHS, SHOP_BOOTH_LIST, SHOP_COUNTER_RANGE, SHOP_COUNTER_SPOT, SHOP_EXIT, SHOP_EXIT_RANGE, SHOP_FLOOR_HEIGHT, SHOP_PENDANT, SHOP_ROOM, SHOP_SPAWN, createShopWalker,
 } from "@/lib/game/shopLayout";
 import InteriorDaylight from "./InteriorDaylight";
 import {
@@ -23,16 +23,18 @@ import {
   type InteriorStation, type RoomBounds,
 } from "./interiorShared";
 import Keeper from "./Keeper";
-import ShopGreybox from "./ShopGreybox";
+import ShopRoom, { preloadShopRoom } from "./ShopRoom";
 
 const BOUNDS: RoomBounds = { halfW: SHOP_ROOM.halfW, halfD: SHOP_ROOM.halfD, spawn: SHOP_SPAWN };
 
 export const SHOP_STATIONS: InteriorStation[] = [
   { id: "counter", name: "Counter", pos: SHOP_COUNTER_SPOT, action: "counter", range: SHOP_COUNTER_RANGE },
   { id: "exit", name: "Exit", pos: SHOP_EXIT, action: "exit", range: SHOP_EXIT_RANGE },
-  // The changing room under the stair: the village fitting room's behaviour (the curtain sweeps, the wardrobe opens).
-  { id: "fitting", name: "Changing room", pos: SHOP_BOOTH.spot, action: "fitting", range: SHOP_BOOTH.range },
+  // The changing rooms behind the stair: the village fitting room's behaviour (the curtain sweeps, the wardrobe opens).
+  ...SHOP_BOOTH_LIST.map(({ id, spot }) => ({ id, name: "Changing room", pos: spot, action: "fitting", range: SHOP_BOOTHS.range })),
 ];
+
+preloadShopRoom();
 
 export default function ShopInterior({
   frozen,
@@ -50,7 +52,7 @@ export default function ShopInterior({
   onNearestStation: (s: InteriorStation | null) => void;
 }) {
   const { scene } = useThree();
-  useEffect(() => applyInteriorBackdrop(scene), [scene]);
+  useEffect(() => applyInteriorBackdrop(scene, null), [scene]);   // the branded dark behind the canvas (InteriorBackdrop)
   const lamps = interiorLight(light).lamps;
   // One walker a visit: you come in on the ground floor.
   const [walker] = useState(createShopWalker);
@@ -67,7 +69,7 @@ export default function ShopInterior({
       {[2.6, SHOP_FLOOR_HEIGHT + 2.6].map(y => <pointLight key={y} color="#fff1dc" intensity={22 * lamps} distance={18} position={[0, y, 0]} />)}
       <pointLight color="#ffe9c8" intensity={5} distance={4} position={[(SHOP_PENDANT.x0 + SHOP_PENDANT.x1) / 2, SHOP_PENDANT.y - 0.15, SHOP_PENDANT.z]} />
 
-      <ShopGreybox walker={walker} />
+      <Suspense fallback={null}><ShopRoom walker={walker} light={light} player={playerPosRef} frozen={frozen} /></Suspense>
 
       {/* The shopkeeper behind the counter (lib/game/keepers.ts): serves you at the counter and has a word about each sale. */}
       <Keeper room="shop" player={playerPosRef} frozen={frozen} engaged={talking} sayEvent="tsi:shopkeeper-say" />

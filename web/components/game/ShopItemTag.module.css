@@ -1,0 +1,26 @@
+/* The shop's item tag (ShopItemTag): a small cream card with the item's mini image and name, over the item. */
+.tag {
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  column-gap: 7px;
+  transform: translate(-50%, -100%);
+  width: max-content;
+  max-width: 220px;
+  padding: 4px 10px 4px 5px;
+  border-radius: 12px;
+  background: #fffaf0;
+  box-shadow: 0 0 0 1.5px rgb(46 34 24 / 0.16), 0 3px 10px rgb(46 34 24 / 0.22);
+  font: 800 13px/1.2 var(--gui-font);
+  color: var(--gui-ink-strong, #3b2f25);
+  pointer-events: none;
+  user-select: none;
+  zoom: var(--tsi-text-scale, 1);
+  animation: rise 0.18s ease-out;
+}
+.icon { grid-row: span 2; width: 30px; height: 30px; object-fit: contain; }
+.name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.special { font-size: 11px; font-weight: 700; color: var(--gui-coral, #d9694f); }
+@keyframes rise { from { opacity: 0; translate: 0 4px; } to { opacity: 1; translate: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .tag { animation: none; } }
+:global(html[data-contrast="high"]) .tag { box-shadow: 0 0 0 2px #000000; color: #000000; }

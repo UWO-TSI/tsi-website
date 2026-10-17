@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
-  ITEM_KINDS, SHOP_BOOTH, SHOP_COUNTER_SPOT, SHOP_DOOR, SHOP_MEZZ, SHOP_EXIT, SHOP_EXIT_RANGE, SHOP_FIXTURES, SHOP_FLOOR_HEIGHT, SHOP_PATHS, SHOP_PENDANT,
+  ITEM_KINDS, SHOP_BOOTHS, SHOP_BOOTH_LIST, SHOP_COUNTER_SPOT, SHOP_DOOR, SHOP_MEZZ, SHOP_EXIT, SHOP_EXIT_RANGE, SHOP_FIXTURES, SHOP_FLOOR_HEIGHT, SHOP_PATHS, SHOP_PENDANT,
   SHOP_ROOM, SHOP_SLAB, SHOP_SLOTS, SHOP_SOLIDS, SHOP_SPAWN, SHOP_STAIR, SHOP_STRIPS, SHOP_TAG_RANGE, SHOP_WALK_MARGIN, STAIR_LANE,
-  createShopWalker, shopSolidAt, shopWalkable, stairHeight, type ItemKind, type Level, type ShopWalker,
+  createShopWalker, shopLayoutJson, shopSolidAt, shopWalkable, stairHeight, type ItemKind, type Level, type ShopWalker,
 } from "./shopLayout";
 import { KEEPER_POSTS } from "./keepers";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 const { halfW, halfD } = SHOP_ROOM;
 const F = SHOP_FLOOR_HEIGHT, S = SHOP_STAIR;
@@ -150,19 +152,28 @@ describe("shop layout, two floors: the ground floor and the mezzanine (specs/int
     expect(uz).toBeCloseTo(SHOP_MEZZ.z0 + SHOP_MEZZ.edge, 1);
   });
 
-  it("has a changing room beside the clothes rail, its curtain facing the door, used from in front of it", () => {
-    const rail = fixture("rail").blocks[0], [bx, bz] = SHOP_BOOTH.at, [bw, bd] = SHOP_BOOTH.size;
-    expect(Math.hypot(SHOP_BOOTH.spot[0] - rail.at[0], SHOP_BOOTH.spot[1] - rail.at[2])).toBeLessThan(1.5);
-    expect(shopWalkable(0, ...SHOP_BOOTH.spot)).toBe(true);
-    expect(nearestReach(0, ...SHOP_BOOTH.spot)).toBeLessThan(0.08);
-    // In front of its curtain (the −z face), within reach; nobody walks inside it.
-    expect(SHOP_BOOTH.spot[1]).toBeLessThan(bz - bd / 2);
-    expect(bz - bd / 2 - SHOP_BOOTH.spot[1]).toBeLessThan(SHOP_BOOTH.range);
-    expect(Math.abs(SHOP_BOOTH.spot[0] - bx)).toBeLessThan(bw / 2);
-    expect(reach[0].some(([x, z]) => Math.abs(x - bx) < bw / 2 && Math.abs(z - bz) < bd / 2)).toBe(false);
-    // Tall enough to stand in (a character is 1.36), and clear of the counter's station.
-    expect(SHOP_BOOTH.height).toBeGreaterThan(2);
-    expect(Math.hypot(SHOP_BOOTH.spot[0] - SHOP_COUNTER_SPOT[0], SHOP_BOOTH.spot[1] - SHOP_COUNTER_SPOT[1])).toBeGreaterThan(SHOP_BOOTH.range + 1.8);
+  it("puts 2-3 changing rooms right behind the stair, each used from in front of its curtain", () => {
+    const { x0, x1, z0, z1, count, height, range } = SHOP_BOOTHS;
+    expect(count).toBeGreaterThanOrEqual(2);
+    expect(count).toBeLessThanOrEqual(3);
+    // Behind the stair: past its top end, against the right wall's corner.
+    expect(z0).toBeGreaterThan(S.z1);
+    expect(x0).toBe(-halfW);
+    expect(x1 - x0).toBeGreaterThan(count * 1.0);
+    expect(height).toBeGreaterThan(2);
+    for (const [i, b] of SHOP_BOOTH_LIST.entries()) {
+      expect(shopWalkable(0, ...b.spot), b.id).toBe(true);
+      expect(nearestReach(0, ...b.spot), b.id).toBeLessThan(0.08);
+      expect(b.spot[1]).toBeLessThan(z0);
+      expect(z0 - b.spot[1]).toBeLessThan(range);
+      expect(Math.abs(b.spot[0] - b.at[0])).toBeLessThan((x1 - x0) / count / 2);
+      // Each booth's spot is its own: the next one's is out of range.
+      if (i > 0) expect(Math.hypot(b.spot[0] - SHOP_BOOTH_LIST[i - 1].spot[0], b.spot[1] - SHOP_BOOTH_LIST[i - 1].spot[1])).toBeGreaterThan(range);
+    }
+    expect(reach[0].some(([x, z]) => x > x0 && x < x1 && z > z0 && z < z1)).toBe(false);
+    // The rail is still by the stair, and the old booth spot shows folded clothes.
+    expect(fixture("rail").blocks[0].at[0]).toBeLessThan(-1.2);
+    expect(SHOP_SLOTS.filter(s => s.fixture === "clothes-table" && s.kind === "clothes").length).toBeGreaterThanOrEqual(3);
   });
 
   it("puts the in-game items downstairs and the club merch upstairs, each where you can walk up to it", () => {
@@ -206,4 +217,8 @@ describe("shop layout, two floors: the ground floor and the mezzanine (specs/int
     expect(SHOP_PENDANT.y).toBeGreaterThan(2.4);
     expect(SHOP_PENDANT.y).toBeLessThan(F - SHOP_SLAB);
   });
+});
+
+it("the model build reads the layout the game walks (art/interiors/shop_layout.json is current: node scripts/shop-layout-json.mjs)", () => {
+  expect(readFileSync(join(process.cwd(), "..", "art", "interiors", "shop_layout.json"), "utf8")).toBe(shopLayoutJson());
 });
