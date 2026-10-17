@@ -95,7 +95,7 @@ Each resident's question is a proposal too: the roster has none yet (lore: "ever
 4. **The pairing, every line, the residents' questions and the plaque text.**
 
 ### Evidence (headless, `specs/evidence/hq-onboarding/`)
-- **How it was shot.** `shoot.mjs` plays the whole thing end to end in one session with `?arrival=1`, signed out against a dev server with the Supabase env blanked: Bram's tour, the HQ visit, then Odile's net quest. Its frame log is `frames-flow.json`.
+- **How it was shot.** `shoot.mjs` plays the whole thing end to end in one session with `?arrival=1`, signed out against a dev server with the Supabase env blanked: Bram's tour, the HQ visit, then Odile's net quest. It writes its frame log, `frames-flow.json`, beside the sheets; the repo ignores `*.json`, so the log isn't committed.
 - **The sheets:**
   - `01-handoff.webp`: the hand-off;
   - `02-register.webp`: the register;
