@@ -6,6 +6,8 @@
  * `mount`: floor items block cells; rugs lie under floor items; wall items hang
  * on the back or side walls. `where` limits a piece to the house or the island.
  */
+import { BEACH_PARASOL_URL, HQ_NOTICE_BOARD_URL, LOG_BENCH_URL, SHOP_CART_URL } from "@/lib/game/propModels";
+
 export type Mount = "floor" | "rug" | "wall";
 export type Where = "indoor" | "outdoor" | "both";
 export interface CatalogueItem {
@@ -45,7 +47,8 @@ export const CATALOGUE: readonly CatalogueItem[] = [
   f("antique-clock", "Grandfather clock", [1, 1]),
   f("altar", "Stone altar", [2, 2]),
   f("remains-pillar", "Ruin pillar", [1, 1]),
-  f("shopping-cart", "Shopping cart", [1, 1]),
+  // Our own pieces are authored at the dump piece's size at 0.1 (lib/game/propModels REMODELLED_PIECES): drawn at 1.
+  { ...f("shopping-cart", "Shopping cart", [1, 1]), url: SHOP_CART_URL, scale: 1 },
   f("windmill-retro", "Retro windmill", [2, 2]),
   f("gold-hha-trophy", "Gold trophy", [1, 1]),
   f("candle", "Candle", [1, 1]),
@@ -55,14 +58,14 @@ export const CATALOGUE: readonly CatalogueItem[] = [
   f("wall-clock", "Wall clock", [1, 1], "wall"),
   f("wall-frame", "Picture frame", [1, 1], "wall"),
   f("wall-driedflower", "Dried flowers", [2, 1], "wall"),
-  f("bulletinboard", "Bulletin board", [2, 1], "wall"),
-  o("bench-wood", "Log bench", [2, 1]),
+  { ...f("bulletinboard", "Bulletin board", [2, 1], "wall"), url: HQ_NOTICE_BOARD_URL, scale: 1 },
+  o("bench-wood", "Log bench", [2, 1], LOG_BENCH_URL),
   o("bench-park", "Park bench", [2, 1]),
   o("streetlamp", "Street lamp", [1, 1]),
   o("fence-country-a", "Fence", [1, 1]),
   o("stone-lantern", "Stone lantern", [1, 1]),
   o("campfire", "Campfire", [2, 2]),
-  o("beach-parasol", "Parasol", [2, 2]),
+  o("beach-parasol", "Parasol", [2, 2], BEACH_PARASOL_URL),
   o("beach-bed", "Beach chair", [2, 1]),
   // The dump's azalea closed all round (art/nature/close_bushes.py), as the village's spring bushes.
   o("bush-azalea", "Azalea bush", [1, 1], "/assets/game/plants/bush-azalea-spring.glb"),

@@ -7,17 +7,18 @@ describe("shadow classification (look spec §9.2)", () => {
   it("puts every asset the islands use in one class by its URL", () => {
     const table: Record<string, string[]> = {
       solid: ["buildings/hq-office.glb", "buildings/chalet-wall-a.glb", "props/streetlamp.glb", "props/bench-wood.glb", "props/fence-rope-a.glb",
-        "props/fence-country-b.glb", "props/bridge-wooden.glb", "props/rock-c.glb", "props/stone-lantern.glb", "props/bulletin-board.glb",
+        "props/fence-country-b.glb", "props/rock-c.glb", "props/stone-lantern.glb",
         "furniture/ruins-pillar.glb", "furniture/study-chair.glb", "furniture/monument-rock.glb"].map(u => A + u)
         .concat(["/assets/game/props/workbench.glb", "/assets/game/weapons/sword-iron.glb", "/assets/game/rocks/boulder-round.glb",
           "/assets/game/forage/outcrop-rock_stone.glb"])
         // Our remodelled props (lib/game/propModels.ts).
         .concat(["campfire", "mailbox", "streetlamp", "study-table-long", "study-table", "hq-floor-lamp", "hq-pendant", "buoy", "fence-post", "fence-rail",
-          "study-table-classic-long", "study-table-classic"].map(p => `/assets/game/props/${p}.glb`)),
+          "study-table-classic-long", "study-table-classic", "monument-sign", "notice-board", "catch-board", "log-bench", "bridge-plank",
+          "beach-parasol", "hq-notice-board", "shop-cart"].map(p => `/assets/game/props/${p}.glb`)),
       foliage: ["tree-hardwood-a", "tree-hardwood-b", "tree-blossom", "tree-hardwood-snow", "tree-cedar", "tree-cedar-snow", "bush-holly", "bush-azalea", "bush-holly-snow"]
         .map(p => `${A}plants/${p}.glb`).concat(["/assets/game/plants/bush-azalea-spring.glb", "/assets/game/plants/bush-holly-winter.glb"]),
       small: [`${A}plants/flower-rose.glb`, `${A}props/shell-scallop.glb`, `${A}furniture/lounge-book.glb`, "/assets/nature/grass-tufts.glb",
-        "/assets/nature/rock_smallA.glb", "/assets/nature/mushroom_red.glb", "/assets/game/props/branch.glb", "/assets/game/props/message-bottle.glb", `${A}fruit/coconut.glb`, "/assets/game/props/study-book.glb",
+        "/assets/nature/rock_smallA.glb", "/assets/nature/mushroom_red.glb", "/assets/game/props/branch.glb", "/assets/game/props/message-bottle.glb", "/assets/game/items/fruit_coconut.glb", "/assets/game/items/apple.glb", "/assets/game/props/study-book.glb",
         "/assets/game/forage/shell-whelk.glb", "/assets/game/forage/mushroom-round.glb"],
       none: [`${A}critters/firefly.glb`, `${A}critters/common-butterfly.glb`, `${A}furniture/lounge-rug.glb`, `${A}furniture/yellow-message-mat.glb`, `${A}props/distant-view-01.glb`, "/assets/game/props/welcome-mat.glb"],
     };
@@ -65,7 +66,7 @@ describe("contact size", () => {
     expect(flower.height).toBe(0);
     expect(flower.strength).toBeLessThan(1);
     expect(contactSize(`${A}critters/firefly.glb`, "none", box(-1, 1, -1, 1, 1))).toBeNull();
-    expect(contactSize(`${A}props/bridge-wooden.glb`, "solid", box(-3, 3, -1, 1, 1))).toBeNull();
+    expect(contactSize("/assets/game/props/bridge-plank.glb", "solid", box(-3, 3, -1, 1, 1))).toBeNull();
   });
 });
 

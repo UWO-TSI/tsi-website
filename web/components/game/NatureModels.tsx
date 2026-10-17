@@ -12,7 +12,7 @@ import { BUSH_MODELS, FLOWER_MODELS, TREE_MODELS, bushParts, flowerParts, mushro
 import { SEASON_BUSHES, SEASON_FLOWERS, SEASON_TREES } from "@/lib/game/seasonalLook";
 import type { Season } from "@/lib/game/season";
 import { objectsOf, type Village } from "@/lib/game/villageMap";
-import { CAMPFIRE_URL, STREETLAMP_URL } from "@/lib/game/propModels";
+import { BRIDGE_URL, CAMPFIRE_URL, LOG_BENCH_URL, NOTICE_BOARD_URL, STREETLAMP_URL, propUrl } from "@/lib/game/propModels";
 import { FENCE_POST_URL, FENCE_RAIL_URL, fencePlacements, isJoinedFence } from "@/lib/game/fences";
 import { InstancedModels, type ModelPlacement } from "./InstancedNature";
 
@@ -63,7 +63,7 @@ export function sceneryOf(v: Village, ground: (x: number, z: number) => number, 
     ...at("tree", seed => treeParts(seed, SEASON_TREES[season])),
     ...at("bush", seed => bushParts(seed, SEASON_BUSHES[season])),
     ...(SEASON_FLOWERS[season].length ? at("flower", seed => flowerParts(seed, SEASON_FLOWERS[season])) : []),
-    ...propsOf(v).filter(o => o.model && !isJoinedFence(o)).map((p): ModelPlacement => ({ url: isRockModel(p.model) ? rockUrl(p.model) : `/assets/acnh/props/${p.model}.glb`, position: [p.x, ground(p.x, p.z), p.z], rotation: p.yaw ?? 0, scale: p.scale ?? 1 })),
+    ...propsOf(v).filter(o => o.model && !isJoinedFence(o)).map((p): ModelPlacement => ({ url: isRockModel(p.model) ? rockUrl(p.model) : propUrl(p.model!), position: [p.x, ground(p.x, p.z), p.z], rotation: p.yaw ?? 0, scale: p.scale ?? 1 })),
     // The connectable fences: a post on each, rails to the posts beside it (lib/game/fences.ts).
     ...fencePlacements(objectsOf("fence", v).filter(isJoinedFence), ground),
     // The natural barriers standing at this drop (lib/game/barriers.ts), where the walker blocks them.
@@ -138,14 +138,14 @@ const PRELOAD = [
   ...FLOWER_MODELS,
   "/assets/acnh/plants/stump.glb",
   STREETLAMP_URL,
-  "/assets/acnh/props/bench-wood.glb",
+  LOG_BENCH_URL,
   "/assets/acnh/props/bench-park.glb",
   "/assets/acnh/props/fountain.glb",
   "/assets/acnh/props/park-clock.glb",
   "/assets/acnh/props/stone-lantern.glb",
   CAMPFIRE_URL,
-  "/assets/acnh/props/bulletin-board.glb",
-  "/assets/acnh/props/bridge-wooden.glb",
+  NOTICE_BOARD_URL,
+  BRIDGE_URL,
   "/assets/acnh/props/fence-country-a.glb",
   FENCE_POST_URL,
   FENCE_RAIL_URL,

@@ -22,6 +22,36 @@ export const STUDY_TABLE_CLASSIC_URL = `${P}study-table-classic.glb`;
 /** An open book, authored at the dump book's size at 0.1 (so drawn at the dump scale × 10). */
 export const STUDY_BOOK_URL = `${P}study-book.glb`;
 
+/** The club monument's "coming soon" sandwich board (DefaultIslandWorld ClubMonument, stages 0–3): 1.13 tall. */
+export const MONUMENT_SIGN_URL = `${P}monument-sign.glb`;
+/**
+ * The plaza's notice and catch boards (and the mission board, GENESIS's poster board), in the dump board's frame: the
+ * origin at the board's left end on the ground, the board 1.68 along +x, its cork facing +z. `back` is the backing's
+ * back face (z) and `cork` its cork face [x0, x1, y0, y1] (art/props/build_plaza_boards.py).
+ */
+export const NOTICE_BOARD_URL = `${P}notice-board.glb`;
+export const CATCH_BOARD_URL = `${P}catch-board.glb`;
+export const PLAZA_BOARD = { back: 0.37, cork: [0.17, 1.51, 0.57, 1.41] as const };
+/** The log bench: its seat top at 0.51 inside the old bench's footprint (defaultIsland PROP_TOP, PROP_FOOTPRINT "bench-wood"). */
+export const LOG_BENCH_URL = `${P}log-bench.glb`;
+
+/**
+ * The plank footbridge (the map's bridges, the editor's, GENESIS's stage deck), in the dump bridge's frame: spanning
+ * x ±1.9, its rails along z ±1.33 (inside defaultIsland's rail strips), the deck's top at BRIDGE_DECK_TOP.
+ */
+export const BRIDGE_URL = `${P}bridge-plank.glb`;
+export const BRIDGE_DECK_TOP = 0.075;
+/** The canvas parasol over two deck chairs by the pier table (and the homes' Parasol): the pole's foot at the origin. */
+export const BEACH_PARASOL_URL = `${P}beach-parasol.glb`;
+/** The member clubhouse's notice board (HQInterior `noticeBoard`), a remodelled piece by its own name (below). */
+export const HQ_NOTICE_BOARD_URL = `${P}hq-notice-board.glb`;
+/** The shop's trolley: a timber handcart with a wicker basket, the remodelled "shopping-cart" piece (below). */
+export const SHOP_CART_URL = `${P}shop-cart.glb`;
+
+/** Map props by the model the map stores (`bench-wood`): ours where remodelled, else the dump's. */
+export const REMODELLED_PROPS: Readonly<Record<string, string>> = { "bench-wood": LOG_BENCH_URL };
+export const propUrl = (model: string) => REMODELLED_PROPS[model] ?? `/assets/acnh/props/${model}.glb`;
+
 /**
  * Interior pieces (interiorShared Piece, by the dump's furniture name) now drawn from our own model. Each is authored at
  * the size the dump piece shows at scale 0.1 (one cell = 1 u), so a Piece keeps its dump scale and draws ours at × 10:
@@ -32,6 +62,9 @@ export const REMODELLED_PIECES: Readonly<Record<string, string>> = {
   "clubhouse-pendant": `${P}hq-pendant.glb`,
   "yellow-message-mat": `${P}welcome-mat.glb`,
   "lounge-book": STUDY_BOOK_URL,
+  "shopping-cart": SHOP_CART_URL,
+  // Not a dump name: the member clubhouse asks for it (the applicant island's clubhouse keeps the dump's "bulletinboard").
+  "hq-notice-board": HQ_NOTICE_BOARD_URL,
 };
 /** What a remodelled piece's model is drawn at, for a dump scale. */
 export const REMODELLED_PIECE_SCALE = 10;
