@@ -1,7 +1,7 @@
 """The plaza's notice board and catch board (DefaultIslandWorld VillageLandmarks: notice, catch, the mission board after
 the combat drop; SeasonalEvents' GENESIS poster board): the dump's board kept, build and texture (David, 2026-10-17,
 row 314: "I like the old bulletin board, no cork, just plain, more notes on it, the subtle lighter texture and build of
-the old board"), lightly retouched: the cork painted plain (a light sage a shade under the frame's green), four more of
+the old board"), lightly retouched: the cork painted plain (a deep sage, darker than the frame, so the notes pop out), four more of
 its own notes pinned on (copies of the six it has, smaller, turned a little, each with its pin), and no baked snow.
 
   /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/props/derive_plaza_boards.py [-- review <dir>]
@@ -24,7 +24,7 @@ from propkit import fbm  # noqa: E402
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 CORK_PX = (0, 181, 0, 226)            # the cork's block in the 512 px texture (rows, cols; row 0 at the top)
-PLAIN = "#aab48f"                     # light sage, a shade under the frame
+PLAIN = "#4a5a40"                     # a deep sage, darker than the frame, so the notes stand out
 FACE = (0.142, 1.508, 0.299, 1.302)   # the board's face, game x0, x1, y0, y1 (z 0.45)
 # The extra notes: (which of the board's own notes to copy, by its centre; its new centre; turn; scale).
 EXTRA = {
