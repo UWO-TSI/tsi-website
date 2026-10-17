@@ -35,7 +35,7 @@ import type { WorldMoment } from "@/lib/collections/logic";
 import type { ClipName } from "@/lib/game/character/clips";
 import { worldTime } from "@/lib/game/worldClock";
 import { FLEE_TIME, WARY_HOP, carryBugs, fleeAt, waryHop, type FleePose } from "@/lib/game/bugFlee";
-import { FRUIT_MODEL, fruitScale, fruitTree, hangAt, nearestHang, type Point, type TreeSpot } from "@/lib/game/treeFruit";
+import { FRUIT_MODEL, fruitTree, hangAt, nearestHang, type Point, type TreeSpot } from "@/lib/game/treeFruit";
 import { SHAKE, WORLD_SHAKES, fallAt, restPoint, type Fall } from "@/lib/game/treeShake";
 import { contactDelay, hitDelays, landAt } from "@/lib/game/actTiming";
 import { addDrop, addHole, dropsFor, dropsVersion, fallenOf, holeFrame, holeOpacity, holesNow, pruneHoles, removeDrop, setFallen, subscribeDrops, type Drop, type Hole } from "@/lib/game/forageWorld";
@@ -153,7 +153,7 @@ function NodeVisual({ sp, canopy }: { sp: Species; canopy?: boolean }) {
     // Up in a crown it is TreeFruit's; on the ground (a coconut on the sand) it lies there, a little tipped over.
     // Fruit with no model (the berries) grows on no node yet.
     const url = FRUIT_MODEL[sp.key];
-    return canopy || !url ? null : <GLBProp url={url} position={[0, -0.02, 0]} rotation={[0.35, sp.position * 2.1, 0.2]} scale={fruitScale(sp.key) * 0.76} />;
+    return canopy || !url ? null : <GLBProp url={url} position={[0, -0.02, 0]} rotation={[0.35, sp.position * 2.1, 0.2]} scale={0.55} />;
   }
   if (sp.sub === "wood") return null; // still up in the tree until it's shaken
   if (sp.sub === "mushroom") return <NatureMushroom position={[0, 0, 0]} species={sp.key} seed={sp.position} />;

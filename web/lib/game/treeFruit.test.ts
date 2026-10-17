@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import { FRUIT_MODEL, fruitScale, fruitTree, hangAt, nearestHang, type Point } from "./treeFruit";
-import { readGlb } from "./perf/glbStats";
+import { FRUIT_MODEL, fruitTree, hangAt, nearestHang, type Point } from "./treeFruit";
 import { Shakes } from "./treeShake";
 import { TREE_HANG } from "./treeHang";
 import { treeParts } from "./natureParts";
@@ -80,26 +77,5 @@ describe("fruit on the trees", () => {
 
   it("has a model for every fruit a tree or the beach grows", () => {
     for (const s of ROSTER.filter(s => s.category === "fruit" && (s.biome === "trees" || s.biome === "beach"))) expect(FRUIT_MODEL[s.key], s.key).toBeTruthy();
-  });
-
-  it("hangs our own fruit (the held items' models), each about as big on the tree as the dump's fruit hung", () => {
-    for (const [key, url] of Object.entries(FRUIT_MODEL)) {
-      expect(url, key).toMatch(/^\/assets\/game\/items\//);
-      const file = join(__dirname, "../../public", url);
-      expect(existsSync(file), url).toBe(true);
-      const gltf = readGlb(new Uint8Array(readFileSync(file))).json as unknown as {
-        accessors: { min?: number[]; max?: number[] }[]; meshes: { primitives: { attributes: Record<string, number> }[] }[];
-      };
-      let lo = Infinity, hi = -Infinity, wide = 0;
-      for (const mesh of gltf.meshes) for (const prim of mesh.primitives) {
-        const a = gltf.accessors[prim.attributes.POSITION];
-        lo = Math.min(lo, a.min![1]); hi = Math.max(hi, a.max![1]); wide = Math.max(wide, a.max![0] - a.min![0]);
-      }
-      // The dump's hung 0.27–0.39 tall and about 0.3 across (at its 0.72).
-      expect((hi - lo) * fruitScale(key), key).toBeGreaterThan(0.25);
-      expect((hi - lo) * fruitScale(key), key).toBeLessThan(0.42);
-      expect(wide * fruitScale(key), key).toBeGreaterThan(0.24);
-      expect(wide * fruitScale(key), key).toBeLessThan(0.36);
-    }
   });
 });

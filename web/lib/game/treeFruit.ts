@@ -9,15 +9,17 @@ import { TREE_HANG } from "./treeHang";
 import { treeParts } from "./natureParts";
 import { WORLD_SHAKES, type Shakes } from "./treeShake";
 
-/** Our own fruit (art/props-enemies/build_items.py): the game/items models a fruit is held as, hung on the trees. */
-export const FRUIT_MODEL: Readonly<Record<string, string>> = Object.fromEntries(
-  ["apple", "peach", "fruit_pear", "fruit_orange", "fruit_cherry", "fruit_coconut"].map(key => [key, `/assets/game/items/${key}.glb`]));
-/**
- * The held models are a fist, about 0.1 across; on a tree a fruit is about 0.3 across, as big as the dump's fruit hung
- * (game/remodel-quick), so each hangs at its own scale (the coconut, the biggest model, a little less).
- */
-export const FRUIT_SCALES: Readonly<Record<string, number>> = { apple: 2.9, peach: 2.9, fruit_pear: 2.8, fruit_orange: 2.9, fruit_cherry: 2.8, fruit_coconut: 2.6 };
-export const fruitScale = (key: string) => FRUIT_SCALES[key] ?? 2.9;
+/** ACNH's own fruit (the dump's UnitIconPltFruit models, extracted like the rest of the kit). */
+export const FRUIT_MODEL: Readonly<Record<string, string>> = {
+  apple: "/assets/acnh/fruit/apple.glb",
+  peach: "/assets/acnh/fruit/peach.glb",
+  fruit_pear: "/assets/acnh/fruit/pear.glb",
+  fruit_orange: "/assets/acnh/fruit/orange.glb",
+  fruit_cherry: "/assets/acnh/fruit/cherry.glb",
+  fruit_coconut: "/assets/acnh/fruit/coconut.glb",
+};
+/** The models are icon-sized (about 0.45 tall); on a tree a fruit is about 0.32, as big as it reads in ACNH. */
+export const FRUIT_SCALE = 0.72;
 
 export interface TreeSpot { x: number; z: number; seed: number }
 export interface Point { x: number; y: number; z: number }
