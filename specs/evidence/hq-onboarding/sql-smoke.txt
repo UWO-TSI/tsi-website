@@ -1,0 +1,11 @@
+chain ok: 57 migrations after the legacy set
+--- before 20261017010000_hq_onboarding_copy.sql (must fail):
+ERROR:  the report step names Wren
+--- after 20261017010000_hq_onboarding_copy.sql:
+NOTICE:  hq onboarding copy 1 seeded copy renamed ok
+NOTICE:  hq onboarding copy 2 admin edits kept ok
+NOTICE:  hq onboarding copy 3 idempotent ok
+--- the v1 drop copy smoke over it:
+NOTICE:  v1 drop copy ok
+--- settle-in now:
+Make your first catch and donate it to the museum, then report back to Wren at HQ. | Report back to Wren at HQ
