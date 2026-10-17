@@ -20,7 +20,7 @@ export interface CatalogueItem {
   where: Where;
 }
 
-const F = "/assets/acnh/furniture/", P = "/assets/acnh/props/", PL = "/assets/acnh/plants/";
+const F = "/assets/acnh/furniture/", P = "/assets/acnh/props/";
 const f = (id: string, label: string, size: [number, number], mount: Mount = "floor", scale = 0.1): CatalogueItem =>
   ({ id, label, url: `${F}${id}.glb`, scale, size, mount, where: "indoor" });
 const o = (id: string, label: string, size: [number, number], url = `${P}${id}.glb`): CatalogueItem =>
@@ -66,13 +66,16 @@ export const CATALOGUE: readonly CatalogueItem[] = [
   o("beach-bed", "Beach chair", [2, 1]),
   // The dump's azalea closed all round (art/nature/close_bushes.py), as the village's spring bushes.
   o("bush-azalea", "Azalea bush", [1, 1], "/assets/game/plants/bush-azalea-spring.glb"),
-  o("flower-tulip", "Tulips", [1, 1], `${PL}flower-tulip.glb`),
-  o("flower-rose", "Roses", [1, 1], `${PL}flower-rose.glb`),
-  o("tree-hardwood-a", "Tree", [1, 1], `${PL}tree-hardwood-a.glb`),
+  // Our flowers (art/trees/build_flowers.py), as the village's.
+  o("flower-tulip", "Tulips", [1, 1], "/assets/game/plants/flower-tulip.glb"),
+  o("flower-rose", "Roses", [1, 1], "/assets/game/plants/flower-rose.glb"),
+  // Our round tree in its summer leaves (art/trees/build_broadleaf.py), as the village's (the id is the shop's).
+  o("tree-hardwood-a", "Tree", [1, 1], "/assets/game/plants/tree-round-summer.glb"),
   // Seasonal event furniture (EVENT_PIECE_IDS).
   f("silver-hha-trophy", "Tourney cup", [1, 1]),
   f("lounge-tea", "Cocoa set", [1, 1]),
-  o("tree-cedar-snow", "Festive fir", [1, 1], `${PL}tree-cedar-snow.glb`),
+  // Our snow cedar (art/trees/build_conifers.py), as the village's in winter.
+  o("tree-cedar-snow", "Festive fir", [1, 1], "/assets/game/plants/conifer-cedar-snow.glb"),
   { ...o("monument-banner", "Showcase banner", [1, 1], `${F}monument-banner.glb`), scale: 0.1 },
   { ...o("beach-towel", "Picnic blanket", [2, 1]), mount: "rug" },
 ];

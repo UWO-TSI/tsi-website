@@ -15,7 +15,8 @@ describe("shadow classification (look spec §9.2)", () => {
         .concat(["campfire", "mailbox", "streetlamp", "study-table-long", "study-table", "hq-floor-lamp", "hq-pendant", "buoy", "fence-post", "fence-rail",
           "study-table-classic-long", "study-table-classic"].map(p => `/assets/game/props/${p}.glb`)),
       foliage: ["tree-hardwood-a", "tree-hardwood-b", "tree-blossom", "tree-hardwood-snow", "tree-cedar", "tree-cedar-snow", "bush-holly", "bush-azalea", "bush-holly-snow"]
-        .map(p => `${A}plants/${p}.glb`).concat(["/assets/game/plants/bush-azalea-spring.glb", "/assets/game/plants/bush-holly-winter.glb"]),
+        .map(p => `${A}plants/${p}.glb`).concat(["/assets/game/plants/bush-azalea-spring.glb", "/assets/game/plants/bush-holly-winter.glb",
+          "/assets/game/plants/tree-round-summer.glb", "/assets/game/plants/tree-wide-winter.lod1.glb"]),
       small: [`${A}plants/flower-rose.glb`, `${A}props/shell-scallop.glb`, `${A}furniture/lounge-book.glb`, "/assets/nature/grass-tufts.glb",
         "/assets/nature/rock_smallA.glb", "/assets/nature/mushroom_red.glb", "/assets/game/props/branch.glb", "/assets/game/props/message-bottle.glb", `${A}fruit/coconut.glb`, "/assets/game/props/study-book.glb",
         "/assets/game/forage/shell-whelk.glb", "/assets/game/forage/mushroom-round.glb"],
@@ -32,6 +33,9 @@ describe("shadow classification (look spec §9.2)", () => {
       expect(meshShadow("foliage", leaf, oak), leaf).toEqual({ cast: false, receive: false });
     // The hull covers the trunk: it receives (the canopy shades it) but does not cast twice.
     expect(meshShadow("foliage", "mPltTreeOakTrunk", oak)).toEqual({ cast: false, receive: true });
+    // Ours (art/trees/greenery_kit.py) carry the same casters: the leaf cards and their volume cast nothing, the bark receives.
+    expect(meshShadow("foliage", "mTreeLeaves", oak)).toEqual({ cast: false, receive: false });
+    expect(meshShadow("foliage", "mTreeTrunk", oak)).toEqual({ cast: false, receive: true });
   });
 
   it("casts foliage without ACNH casters from its light-facing faces, never onto itself", () => {

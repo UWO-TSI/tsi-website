@@ -19,6 +19,7 @@ import { eventSolids, landmark, type LandmarkId } from "@/lib/game/defaultIsland
 import { Lanterns } from "./AmbientProps";
 import { STREETLAMP_URL } from "@/lib/game/propModels";
 import { SEASON_BUSHES } from "@/lib/game/seasonalLook";
+import { CEDAR_SNOW_URL, treeUrl } from "@/lib/game/natureParts";
 import { sheddingTrees, worldWind } from "@/lib/game/worldFx";
 import type { IslandEvent } from "@/lib/game/seasonalEvents";
 import type { IslandLight } from "@/lib/game/islandLighting";
@@ -29,7 +30,7 @@ import { Trophy as TrophyIcon } from "lucide-react";
 import { Empty, ErrorNote, List, ListRow, Loading, SignInLink } from "@/components/gui";
 import styles from "./DefaultIslandWorld.module.css";
 
-const P = "/assets/acnh/props/", F = "/assets/acnh/furniture/", PL = "/assets/acnh/plants/", S = "/assets/acnh/seasonal/";
+const P = "/assets/acnh/props/", F = "/assets/acnh/furniture/", S = "/assets/acnh/seasonal/";
 
 /**
  * A decoration: its landmark and offset (world units), model, yaw, scale, lift
@@ -68,7 +69,7 @@ const DECOR: Record<string, { pieces: Piece[]; spots: Spot[]; lights?: At[] }> =
   "winter-lights": {
     pieces: [
       ...garland(`${S}christmas-garland.glb`),
-      { at: lawn(0, 0), url: `${PL}tree-cedar-snow.glb`, scale: 1.3, solid: [0.5, 0.5] },
+      { at: lawn(0, 0), url: CEDAR_SNOW_URL, scale: 1.3, solid: [0.5, 0.5] },
       { at: lawn(-1.5, -1), url: `${P}stone-lantern.glb`, solid: [0.4, 0.4] },
       { at: lawn(1.5, -1), url: `${P}stone-lantern.glb`, solid: [0.4, 0.4] },
       { at: lawn(-1.4, 1.2), url: SEASON_BUSHES.winter[0] },
@@ -98,8 +99,8 @@ const DECOR: Record<string, { pieces: Piece[]; spots: Spot[]; lights?: At[] }> =
       { at: lawn(0.9, 0.8), url: `${P}beach-towel.glb`, yaw: -0.3 },
       { at: lawn(-0.9, -0.6), url: `${F}lounge-tea.glb`, scale: 0.07, lift: 0.11 },
       { at: lawn(0.9, 0.8), url: `${F}lounge-tea.glb`, scale: 0.07, lift: 0.11 },
-      { at: lawn(2.3, -1.6), url: `${PL}tree-blossom.glb`, solid: [0.35, 0.35] },
-      { at: lawn(-2.0, 1.9), url: `${PL}tree-blossom.glb`, solid: [0.35, 0.35] },
+      { at: lawn(2.3, -1.6), url: treeUrl("round", "spring"), solid: [0.35, 0.35] },
+      { at: lawn(-2.0, 1.9), url: treeUrl("round", "spring"), solid: [0.35, 0.35] },
     ],
     spots: [{ near: "picnic", at: lawn(0, 0.1), range: 1.9 }],
   },
@@ -134,7 +135,7 @@ export function EventDecor({ event, ground, light, weather }: { event: IslandEve
     return () => { eventSolids.splice(0, eventSolids.length); };
   }, [pieces]);
   const lamps = useMemo(() => pieces.filter(p => p.lamp).map(p => p.position), [pieces]);
-  const blossoms = useMemo(() => sheddingTrees(pieces.filter(p => p.url.endsWith("tree-blossom.glb")).map(p => ({ x: p.position[0], y: p.position[1], z: p.position[2], model: p.url, scale: 1 })), "spring"), [pieces]);
+  const blossoms = useMemo(() => sheddingTrees(pieces.filter(p => p.url.endsWith("-blossom.glb")).map(p => ({ x: p.position[0], y: p.position[1], z: p.position[2], model: p.url, scale: 1 })), "spring"), [pieces]);
   // The one world wind (row 238), as IslandAtmosphere's leaves and mist use it.
   const wind = useMemo(() => worldWind(weather), [weather]);
   if (!event || !set) return null;

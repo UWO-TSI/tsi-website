@@ -5,7 +5,9 @@
 //   PORT=3183 node ../art/nature/evidence/turntable.mjs <out-dir> <list.txt>   (one /assets/... path per line)
 // Writes <out-dir>/<slug>.front.png and <slug>.q.png (480 px, cream ground, a tan disc at the model's origin so
 // floating and sinking read), where slug is the path under /assets with "/" turned to "__". FIT=<units> frames every
-// model at that size instead of its own (so a family keeps its relative sizes).
+// model at that size instead of its own (so a family keeps its relative sizes). LEAF=<hex> tints the ACNH oaks' grey
+// leaves and trunk as the game does (lib/game/modelMaterials.ts: the season's leaf colour x 1.6, the atlas contrast
+// compressed), so a "before" oak shows its in-game colour.
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -15,6 +17,7 @@ const require = createRequire("/opt/homebrew/lib/node_modules/");
 const { chromium } = require("playwright");
 const [outDir, listFile] = process.argv.slice(2);
 const PORT = Number(process.env.PORT ?? 3183), SIZE = Number(process.env.SIZE ?? 480), FIT = Number(process.env.FIT ?? 0);
+const LEAF = JSON.stringify(process.env.LEAF ?? "");
 const WEB = process.cwd();
 const list = readFileSync(listFile, "utf8").split("\n").map(s => s.trim()).filter(Boolean);
 mkdirSync(outDir, { recursive: true });
@@ -24,7 +27,7 @@ const PAGE = `<!doctype html><meta charset="utf-8"><body style="margin:0;backgro
 <script type="module">
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-const SIZE = ${SIZE}, FIT = ${FIT};
+const SIZE = ${SIZE}, FIT = ${FIT}, LEAF = ${LEAF};
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(1); renderer.setSize(SIZE, SIZE);
 renderer.toneMapping = THREE.NeutralToneMapping; renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -47,7 +50,14 @@ window.__tt = async (url) => {
     const mats = Array.isArray(o.material) ? o.material : [o.material];
     // The game hides shadow-caster hulls and draws every face double sided (lib/game/modelMaterials.ts).
     if (mats.some(m => /shadow/i.test(m.name))) { o.visible = false; return; }
-    for (const m of mats) m.side = THREE.DoubleSide;
+    for (const m of mats) {
+      m.side = THREE.DoubleSide;
+      if (LEAF && /OakLeaf/.test(m.name) && !/Snow/.test(m.name)) {
+        m.color.set(LEAF).multiplyScalar(1.6);
+        m.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>\n#ifdef USE_MAP\ndiffuseColor.rgb = diffuse * (0.065 + 0.9 * sampledDiffuseColor.rgb);\n#endif"); };
+      }
+      if (LEAF && /OakTrunk/.test(m.name)) m.color.set("#b88c58").multiplyScalar(1.7);
+    }
   });
   model.updateMatrixWorld(true);
   const box = new THREE.Box3();
