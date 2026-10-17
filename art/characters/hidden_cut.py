@@ -283,7 +283,11 @@ def covering_hats():
     return [p for p in CAT.get("robloxAccessories", []) + CAT["hair"] if p.get("coversHair")]
 
 
-def mark(path, trees, name, prim_ok=lambda p, j: True, own=True):
+HAT_DEPTH = 0.015          # m: a hair vertex counts as under a hat only if it is still hidden this far further out (from the
+                           # head centre): hair poking up to the hat's surface keeps its triangles, whose middles show
+
+
+def mark(path, trees, name, prim_ok=lambda p, j: True, own=True, depth=0.0):
     """`name` on each vertex: the sum of 2^i over the tree sets trees[i] that hide it from every direction. own: the asset
     occludes too (its outer layers hide its inner ones, so what is left of it is drawn whole). Returns, per set, the
     triangles all three of whose vertices it hides, and the triangles."""
@@ -298,8 +302,12 @@ def mark(path, trees, name, prim_ok=lambda p, j: True, own=True):
         pos = arrays[p["attributes"]["POSITION"]].astype(float)
         bits = np.zeros(len(pos), np.int64)
         tri = arrays[p["indices"]].reshape(-1, 3)
+        out = (pos - HC) / np.linalg.norm(pos - HC, axis=1, keepdims=True)
         for i, t in enumerate(trees):
             hid = hidden_everywhere(t, pos)
+            if depth > 0:
+                idx = np.nonzero(hid)[0]
+                hid[idx] = hidden_everywhere(t, pos[idx] + out[idx] * depth)
             bits |= hid.astype(np.int64) << i
             cut[i] += int(hid[tri].all(1).sum())
         set_mask(j, arrays, p, name, bits)
@@ -315,7 +323,7 @@ def hatcut():
     assert [h.get("hatCut") for h in covering_hats()] == list(range(len(hats))), "each covering hat's hatCut is its bit"
     for p in selected([h for h in CAT["hair"] if h.get("full")]):
         for path in hair_paths(p):
-            cut, n = mark(path, hats, "_HATCUT")
+            cut, n = mark(path, hats, "_HATCUT", depth=HAT_DEPTH)
             print(f"HATCUT {p['id']:24s} {os.path.relpath(path, HERE):48s} of {n}: {cut} under each covering hat")
     print("HATCUT_OK")
 
