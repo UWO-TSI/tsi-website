@@ -120,4 +120,8 @@ The pairing is approved. Each resident's question is still a draft: the roster h
   - `07-phone.webp`: phone size;
   - `08-tracker-each-step.webp`: the tracker at every step.
 - **SQL smoke.** `sql-smoke.sh` and its output, `sql-smoke.txt`. All three migrations run in apply order; each smoke fails before its migration and passes after it.
+- **The roster's cost in the village.** `perf-check.txt`: one `perf:check` with `SCENES=village`, headless, on a measurement build that walks the 10 seeded residents (`measure-build.sh` now rewrites `lib/content/loader.ts` too).
+  - High: 4.30 ms, 391 draws, 594,603 of the 620k triangles.
+  - Lite: 2.50 ms, 297 draws, 388,063 of 420k triangles.
+  - Both are inside every budget line. The only failure is the regression gate: High's frame is +10.3% on the stale Oct 14 baseline.
 - **Cost.** The Founder's desk is the only rendering change, in HQ's interior only. It's 3 existing furniture pieces: +5 draw calls in the main pass, +3 in the shadow pass and about 3.6k triangles. Measured with it: HQ draws 135 calls and 47k triangles, at 6.9 ms a frame. No perf bench covers HQ, so there was no perf:check.

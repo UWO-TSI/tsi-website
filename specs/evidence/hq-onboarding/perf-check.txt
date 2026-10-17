@@ -1,0 +1,38 @@
+perf:check, SCENES=village, headless. Measurement build at 5e3fddd6: measure-build.sh, now with lib/content/loader.ts
+in its rewritten files, so the bench's no-database fallback is the seeded roster's 10 residents, as production will
+have them once 20261017020000_resident_roster lands. Before this change the bench had 2. Built under the heavy lock,
+then SKIP_BUILD=1 under the browser lock; 3 runs a tier, High rerun to 5 as "looks regressed". 1-minute load 2.8-3.2.
+
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draw calls | Triangles | Runs | Spread | Load |
+|---|---|---|---|---|---|---|---|---|---|
+| village | high | 4.30 (3.90, +10.3%) | 5.40 (4.90, +10.2%) | 3.80 (3.40, +11.8%) | 391 (382, +2.4%) | 594603 (537560, +10.6%) | 5 | 12% | 2.8 |
+| village | lite | 2.50 (2.30, +8.7%) | 3.60 (3.40, +5.9%) | 2.30 (2.00, +15.0%) | 297 (288, +3.1%) | 388063 (353865, +9.7%) | 3 | 20% | 3.2 |
+
+Median of 3+ runs each; in brackets the baseline (8809c517 2026-10-14) and the change.
+
+perf:check FAILED
+- village|high: median frame 4.3 ms, +10.3% on the baseline's 3.9
+
+Against the budget (web/lib/game/perf/budget.ts), everything is within it, on both tiers:
+
+| Tier | Frame ms | p95 ms | Frame CPU ms | Draws | Triangles |
+|---|---|---|---|---|---|
+| High | 4.30 of 6 | 5.40 of 9 | 3.80 of 5 | 391 of 560 | 594,603 of 620,000 (25.4k, 4%, left) |
+| Lite | 2.50 of 4 | 3.60 of 6 | 2.30 of 3.5 | 297 of 420 | 388,063 of 420,000 (31.9k, 8%, left) |
+
+The one failure is the regression gate: High's median frame is 0.1 ms over the 10% the Oct 14 baseline allows, and
+this run's spread was 12%. The baseline is stale. Main's own village runs since, which had the old 2 residents, were
+slower than this one at a higher load:
+- remodel-r2 (5d5ee742): 5.2 ms, 362 draws, 600,818 triangles High, load 7.1;
+- head-v10 (717cad36): 5.3 ms, 370 draws, 554,820 triangles, load 5.3.
+
+So the frame time can't be pinned on the residents from these runs.
+
+The residents' cost that does show is draw calls: +29 on High against remodel-r2's 362 (+25 on Lite against 272),
+about 3 to 4 per added resident (the body and its parts, plus the shadow pass). Triangles are flat against
+remodel-r2: most residents stand far from the spawn, on the LOD 1 and LOD 2 meshes.
+
+If the roster ever needs trimming (not done, not needed today), the cheapest options:
+1. Residents cast no sun shadow past CHARACTER_LOD.near (21 u), keeping their contact shadow. That drops their
+   shadow-pass draws and triangles. Players keep theirs.
+2. Residents switch to the LOD 1 mesh sooner (CHARACTER_LOD.mesh, 72 px, raised for residents only).
