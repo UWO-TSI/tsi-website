@@ -45,7 +45,7 @@ main street, terrain v2, sky dome, flowing grass; median of 3 runs, load 3.7–5
 
 | Scene | Tier | Budget: frame / p95 / frame CPU ms | Budget: draws / triangles | Today: frame / p95 / CPU ms | Today: draws / triangles |
 |---|---|---|---|---|---|
-| Village, 24 players | High | 6 / 9 / 5 | 560 / 560k | 4.0 / 5.0 / 3.4 | 464 / 422k |
+| Village, 24 players | High | 6 / 9 / 5 | 560 / 620k (raised from 560k by David, 2026-10-16) | 4.0 / 5.0 / 3.4 | 464 / 422k |
 | Village, 24 players | Lite | 4 / 6 / 3.5 | 420 / 420k | 2.2 / 3.3 / 1.9 | 336 / 327k |
 | v2 world draft, 24 players | High | 6.5 / 10 / 6 | 760 / 1.2M | 5.5 / 6.7 / 4.9 | **697 / 1.04M** |
 | v2 world draft, 24 players | Lite | 4 / 6 / 3.5 | 560 / 950k | 3.0 / 3.6 / 2.7 | 487 / 819k |
