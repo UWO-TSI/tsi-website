@@ -22,8 +22,8 @@ ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 # Tiers bottom to top: (hem height, top height, rim radius). The dump's cedar stands 3.95 high and 1.08 round.
 TIERS = [(0.95, 1.74, 1.06), (1.38, 2.18, 0.9), (1.8, 2.6, 0.72), (2.28, 3.02, 0.54), (2.72, 3.44, 0.38), (3.12, 3.92, 0.22)]
 LODS = {
-    0: dict(rings=2, spacing=0.36, segs=12, rows=4, sides=8, tex=None),
-    1: dict(rings=1, spacing=0.5, segs=7, rows=2, sides=5, tex=(256, 256)),
+    0: dict(rings=2, spacing=0.36, segs=12, rows=4, sides=8, tex=(256, 256)),
+    1: dict(rings=1, spacing=0.5, segs=7, rows=2, sides=5, tex=(128, 128)),
 }
 CORE_SHADE = 0.62
 
@@ -129,10 +129,12 @@ def build(snow, lod):
     path = [Vector((0, 0, -0.04)), Vector((0, 0, 0.3)), Vector((0.01, 0, 1.2)), Vector((0, 0.01, 2.4)), Vector((0, 0, top_z - 0.3))]
     radii = [0.2, 0.16, 0.13, 0.09, 0.04]
 
+    bark = K.lin("#6e4630")  # plain colour: the bark texture is lost at play distance (lane rules)
+
     def bark_col(p):
         k = 0.8 + 0.2 * min(1, p.z / 0.3)
         k *= 1 - 0.3 * min(1, max(0, (p.z - 0.6) / 0.6))
-        return (k, k, k)
+        return tuple(c * k for c in bark)
 
     K.tube(wood, path, radii, L["sides"], bark_col, v_scale=0.7)
     hull = K.Build()
@@ -143,7 +145,7 @@ def build(snow, lod):
 
     tex = "needles-snow" if snow else "needles"
     objs = [crown.object("Crown", K.material("mNeedles", K.image(tex, L["tex"]), alpha_clip=True)),
-            wood.object("Trunk", K.material("mTreeTrunk", K.image("bark-cedar", (64, 128) if lod else None))),
+            wood.object("Trunk", K.plain("mTreeTrunk")),
             hull.object("Hull", K.plain("mShadowShake")),
             stem.object("Stem", K.plain("mShadow"))]
     name = "conifer-cedar" + ("-snow" if snow else "") + (".lod1" if lod else "")

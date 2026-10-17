@@ -12,7 +12,7 @@
  */
 import fs from "fs";
 import path from "path";
-import { NodeIO } from "@gltf-transform/core";
+import { NodeIO, PropertyType } from "@gltf-transform/core";
 import { ALL_EXTENSIONS, EXTTextureWebP } from "@gltf-transform/extensions";
 import { prune, dedup } from "@gltf-transform/functions";
 import sharp from "sharp";
@@ -51,10 +51,13 @@ for (const file of process.argv.slice(2)) {
       // A caster is depth only: no colour, no texture coordinates.
       prim.setAttribute("COLOR_0", null).setAttribute("TEXCOORD_0", null);
     } else if (!prim.getAttribute("COLOR_0")) throw new Error(`${file}: ${name} has no COLOR_0`);
+    // A plain-colour part (a trunk: lane rules, textures only where they show) needs no texture coordinates.
+    if (!prim.getMaterial()?.getBaseColorTexture()) prim.setAttribute("TEXCOORD_0", null);
     const idx = prim.getIndices();
     lines.push(`${name}=${(idx ? idx.getCount() : prim.getAttribute("POSITION").getCount()) / 3}`);
   }
-  await doc.transform(dedup(), prune());
+  // Not materials: the casters and a plain trunk share one look but must keep their names (their shadow roles).
+  await doc.transform(dedup({ propertyTypes: [PropertyType.ACCESSOR, PropertyType.MESH, PropertyType.TEXTURE] }), prune());
   await io.write(file, doc);
   console.log(`finish-greenery ${path.basename(file)} ${(fs.statSync(file).size / 1024).toFixed(0)}KB ${lines.join(" ")}`);
 }

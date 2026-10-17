@@ -51,6 +51,12 @@ def srgb_to_lin(c):
     return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
 
 
+def lin(h):
+    """'#rrggbb' to linear RGB (vertex colours are linear in glTF)."""
+    h = h.lstrip("#")
+    return tuple(srgb_to_lin(int(h[i:i + 2], 16) / 255) for i in (0, 2, 4))
+
+
 # ================================================================ a mesh under construction
 class Build:
     """Faces with per-corner UVs and colours, written into one Blender mesh at the end."""

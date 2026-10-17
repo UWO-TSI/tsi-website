@@ -109,7 +109,7 @@ export function mistBank(k: number, t: number, wind: WorldWind, cx: number, cz: 
  * Crown of each shedding tree model at scale 1, from its GLB bounds: top, half-widths. The dump's (the closed crowns,
  * 2026-10-02) and ours (art/trees/build_broadleaf.py prints them), cherry petals in spring and leaves in autumn.
  */
-const OUR_CROWNS = { round: { top: 3.1, rx: 1.2, rz: 1.16 }, wide: { top: 2.94, rx: 1.54, rz: 1.42 }, tall: { top: 3.4, rx: 0.92, rz: 0.9 } } as const;
+const OUR_CROWNS = { round: { top: 2.64, rx: 1.12, rz: 0.96 }, wide: { top: 3.16, rx: 1.71, rz: 1.48 }, tall: { top: 3.38, rx: 1.44, rz: 1.25 } } as const;
 const CANOPIES: Record<string, { season: Season; top: number; rx: number; rz: number }> = {
   "tree-blossom": { season: "spring", top: 3.2, rx: 1.55, rz: 1.35 },
   "tree-hardwood-a": { season: "autumn", top: 2.55, rx: 1.2, rz: 1.05 },

@@ -1,4 +1,4 @@
-"""The village greenery's painted textures (game/remodel-trees): leaf clumps, blossom, needle fringes, bark and petals.
+"""The village greenery's painted textures (game/remodel-trees): leaf clumps, blossom, needle fringes and petals.
 
 David, 2026-10-16: trees and plants are leaf cards with a real painted leaf texture over a closed volume, and every
 texture is our own (never one from the web). 2026-10-17: "recreate the leaf texture from the dump". So each texture is
@@ -10,7 +10,7 @@ painted here from seeded shapes, its look studied from the ACNH atlases (never c
   - a cherry card is one five-petal blossom with notched petals, deep pink at its eye fading to pale tips; a winter
     card the leaf frosted, a few with snow along their tops;
   - a cedar card is a fringe: a strip hanging in rounded fingers, fine vertical grain, frosted over its top for snow;
-  - bark is vertical fibres and furrows (tiling); petals are soft gradients with fine veins.
+  - petals are soft gradients with fine veins. (Trunks are plain colour: lane rules, textures only where they show.)
 
 Painted at four times the size and filtered down; the transparent texels carry their neighbours' colour, so the
 cut-out edge never shows a dark or light halo once mipmapped. Writes art/trees/textures/<name>.png:
@@ -18,7 +18,6 @@ cut-out edge never shows a dark or light halo once mipmapped. Writes art/trees/t
   leaves-<dress>.png    512 x 512: twelve card cells (4 x 3, 128 px) over a 128 px row of the cards' own paint as an
                         opaque mass (left half) and packed snow (right); dress = summer, autumn, blossom, winter
   needles[-snow].png    the same layout with fringes
-  bark.png, bark-cedar.png  128 x 256, tiling
   petals.png            512 x 512, the flowers' petals, leaves and centres (art/trees/flower_cells.py)
 
   python3 art/trees/paint_textures.py [name ...]
@@ -260,16 +259,19 @@ def trefoil(rng, colour, size=128, frost=False, snow=None):
     left = [(1 - x + rng.uniform(-0.015, 0.015), y + rng.uniform(-0.015, 0.015)) for x, y in CLUMP[1:-1]][::-1]
     top = (0.5 + rng.uniform(-0.02, 0.02), CLUMP[-1][1] + rng.uniform(-0.01, 0.01))
     pts = [CLUMP[0]] + right + [top] + left
-    poly = [(x * S, y * S) for x, y in catmull(pts, 12)]
+    # drawn a little narrower than the cell: a card is the dump's shield-shaped hexagon over the cell's box, and the
+    # side lobes' tips must sit inside its upper corners
+    poly = [((0.5 + (x - 0.5) * 0.92) * S, y * S) for x, y in catmull(pts, 12)]
     union = poly_mask(S, poly)
     yy, xx = np.mgrid[0:S, 0:S].astype(np.float64)
     bx, by = CLUMP[0][0] * S, CLUMP[0][1] * S
     dB = np.hypot(xx - bx, yy - by) / S
-    val = 0.66 + 0.46 * smoothstep(0.04, 0.8, dB)
-    val *= 0.93 + 0.1 * (1 - yy / S)
+    # soft and low in contrast (David, row 314: "subtle, not strong; low-contrast detail and soft lines")
+    val = 0.76 + 0.32 * smoothstep(0.04, 0.8, dB)
+    val *= 0.95 + 0.07 * (1 - yy / S)
     d, up = soft_edge(union, S)
     rim = 1 - smoothstep(0.0, 0.05, d)
-    val += rim * (0.17 * np.clip(up, 0, 1) - 0.05 * np.clip(-up, 0, 1))
+    val += rim * (0.11 * np.clip(up, 0, 1) - 0.03 * np.clip(-up, 0, 1))
     # the veins: a faint Y from the base out to each lobe's tip
     vein = np.zeros_like(val)
     tips = [right[TIPS[0] - 1], top, left[len(left) - TIPS[0]]]
@@ -279,7 +281,7 @@ def trefoil(rng, colour, size=128, frost=False, snow=None):
         t = ((xx - bx) * vx + (yy - by) * vy) / (L * L)
         off = np.abs((xx - bx) * vy - (yy - by) * vx) / L
         vein = np.maximum(vein, np.exp(-(off / (S * 0.008)) ** 2) * smoothstep(0.03, 0.12, t) * (1 - smoothstep(0.5, 0.85, t)))
-    val *= 1 - 0.09 * vein
+    val *= 1 - 0.05 * vein
     # a soft fold of shade from each notch in toward the middle, so the clump reads as three leaves
     crease = np.zeros_like(val)
     for nx, ny in (right[NOTCH - 1], left[len(left) - NOTCH]):
@@ -289,7 +291,7 @@ def trefoil(rng, colour, size=128, frost=False, snow=None):
         t = ((xx - nx * S) * vx + (yy - ny * S) * vy) / (L * L)
         off = np.abs((xx - nx * S) * vy - (yy - ny * S) * vx) / L
         crease = np.maximum(crease, np.exp(-(off / (S * 0.04)) ** 2) * np.clip(1 - t, 0, 1) * (t > -0.05))
-    val *= 1 - 0.18 * crease
+    val *= 1 - 0.11 * crease
     val *= grain(val.shape, rng, sigma=SS * 0.9, amp=0.02)
     base = np.ones((S, S, 3)) * colour
     hi, lo = warm(colour, 0.22), warm(colour, -0.2)
@@ -429,8 +431,8 @@ def atlas(cards, mass, snow, seed):
 
 
 # ================================================================ palettes (a card each, light to dark like the dump's cells)
-SUMMER = ["#3f7838", "#4b853b", "#59913e", "#679c42", "#76a748", "#86b350", "#4a7d45", "#5f9a4a", "#7aa83f", "#93bb55", "#558a36", "#6b9e3c"]
-AUTUMN = ["#b4472a", "#c85d2a", "#d9772e", "#e39434", "#e8b03f", "#9b3a26", "#c99a3a", "#a9552b", "#e6c057", "#8d8634", "#d0662b", "#b93d30"]
+SUMMER = ["#336630", "#3d7234", "#477e38", "#528a3c", "#5c9440", "#689e44", "#78aa4c", "#427a36", "#386c32", "#4f8a3a", "#62983f", "#8cb658"]
+AUTUMN = ["#a8442a", "#bd552a", "#cc672c", "#d9802f", "#e39a36", "#e8b23f", "#eec45a", "#b85f2c", "#c99a3a", "#9a8e38", "#d27030", "#efcf72"]
 WINTER = ["#7f9e92", "#8eab9e", "#9cb8ab", "#6f8f84", "#86a598", "#a7c1b5", "#7a988a", "#93b0a3"]
 BLOSSOM = [("#fbe3ea", "#f08aa9"), ("#f9d3df", "#ea7a9c"), ("#f6c1d1", "#e06890"), ("#fde9ef", "#f29bb5"), ("#f4b5c8", "#d95f88")]
 NEEDLE = ["#3a6b3e", "#447744", "#4f8249", "#36603b", "#5a8c4d", "#3f7042"]
@@ -442,7 +444,7 @@ def leaves(season, seed=11):
     if season == "blossom":
         cards = [sakura(rng, hexc(BLOSSOM[i % len(BLOSSOM)][0]), hexc(BLOSSOM[i % len(BLOSSOM)][1])) for i in range(10)]
         cards += [trefoil(rng, hexc(c)) for c in ("#7fb24e", "#93c15a")]
-        mass = mass_of(lambda r, c, s: sakura(r, c, c * 0.8, s), [hexc(p) for p, _ in BLOSSOM], rng, bg=hexc("#8a6a6a"))
+        mass = mass_of(lambda r, c, s: sakura(r, c, c * 0.8, s), [hexc(p) for p, _ in BLOSSOM], rng, bg=hexc("#c98ea0"))
     elif season == "winter":
         cards = [trefoil(rng, hexc(WINTER[i % len(WINTER)]), frost=True) for i in range(8)]
         cards += [trefoil(rng, hexc(WINTER[i]), frost=True, snow=snow) for i in range(4)]
@@ -610,36 +612,6 @@ def petals_atlas(seed=31):
     return out
 
 
-def bark(base="#7a5337", dark="#4e3322", light="#a07650", seed=5, w=128, h=256):
-    """Tiling bark: vertical fibres, darker furrows, a lighter ridge on each plate's lit side."""
-    rng = np.random.default_rng(seed)
-    W, H = w * SS, h * SS
-    x = np.arange(W) / W
-    y = np.arange(H) / H
-    X, Y = np.meshgrid(x, y)
-    # furrows: wavy vertical lines (whole periods across and down, so it tiles)
-    f = np.zeros_like(X)
-    for k, amp in ((5, 1.0), (9, 0.5), (17, 0.25)):
-        ph = rng.uniform(0, math.tau)
-        wob = 0.03 * np.sin(math.tau * (2 * Y + rng.uniform(0, 1))) + 0.015 * np.sin(math.tau * (5 * Y + rng.uniform(0, 1)))
-        f += amp * np.cos(math.tau * k * (X + wob) + ph)
-    f /= 1.75
-    fib = gaussian_filter(rng.standard_normal((H, W)), sigma=(SS * 6, SS * 0.8), mode="wrap")
-    fib /= fib.std() + 1e-9
-    plates = gaussian_filter(rng.standard_normal((H, W)), sigma=(SS * 10, SS * 4), mode="wrap")
-    plates /= plates.std() + 1e-9
-    v = 0.5 + 0.35 * f + 0.08 * fib + 0.08 * plates
-    v = np.clip(v, 0, 1)
-    b, d, l = hexc(base), hexc(dark), hexc(light)
-    rgb = np.where(v[..., None] < 0.5, d + (b - d) * (v[..., None] / 0.5), b + (l - b) * ((v[..., None] - 0.5) / 0.5))
-    # ridge light on the plates' left (lit) side
-    ridge = np.clip(np.roll(f, -SS * 2, axis=1) - f, 0, 1)
-    rgb = rgb + (l - rgb) * (0.35 * ridge)[..., None]
-    cv = Canvas(W, H)
-    cv.rgb, cv.a = rgb, np.ones((H, W))
-    return finish(cv, (w, h), wash_amp=0.05, seed=seed, pad=False, wrap=True)
-
-
 def save(name, arr):
     os.makedirs(OUT, exist_ok=True)
     Image.fromarray(to_u8(arr), "RGBA" if arr.shape[2] == 4 else "RGB").save(os.path.join(OUT, name + ".png"), optimize=True)
@@ -653,8 +625,6 @@ JOBS = {
     "leaves-winter": lambda: leaves("winter", 14),
     "needles": lambda: needles(False, 23),
     "needles-snow": lambda: needles(True, 24),
-    "bark": lambda: bark(),
-    "bark-cedar": lambda: bark("#6a4130", "#3f271c", "#8f6048", seed=9),
     "petals": lambda: petals_atlas(),
 }
 

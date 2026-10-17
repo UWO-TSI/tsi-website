@@ -167,7 +167,8 @@ def build(name):
         a = math.tau * k / F["rosette"] + rng.uniform(-0.3, 0.3)
         out = Vector((math.cos(a), math.sin(a), 0))
         leaf_card(b, out * 0.02 + Vector((0, 0, 0.01)), out, 0.2 * rng.uniform(0.85, 1.1), FC.uv("leaf"), LEAF, rise=0.3, width=1.3)
-    ob = b.object("Flower", K.material("mPetals", K.image("petals"), alpha_clip=True))
+    # The atlas at 256 px: a flower is small at play distance (lane rules: textures only where they show).
+    ob = b.object("Flower", K.material("mPetals", K.image("petals", (256, 256)), alpha_clip=True))
     path = os.path.join(K.OUT, f"flower-{name}.glb")
     K.export([ob], path)
     print(f"FLOWER {name}: tris {K.tris(ob)}")
