@@ -56,9 +56,12 @@ def spread(balls, k, top_drop):
 # trunk: (fork height, scale of the dump's trunk profile)
 # trunk: (fork height, scale of the dump's trunk profile); cards: about how many (the dump's a has 436, b 520)
 SHAPES = {
-    "round": dict(balls=HARDWOOD_A, fork=1.0, trunk=1.0, cards=436),
+    # round (David, round 3: "still dense, add 10% more leaf, more voluminous"): the dump's clover grown and spread,
+    # a tenth more cards over a fifth more surface, so it reads airier
+    "round": dict(balls=[((c[0] * 1.14, c[1] * 1.14, c[2] + (0.12 if c[2] > 2 else 0.04)), r * 1.09) for c, r in HARDWOOD_A], fork=1.04, trunk=1.04, cards=480),
     "tall": dict(balls=HARDWOOD_B, fork=1.3, trunk=1.2, cards=500),
-    "wide": dict(balls=spread(HARDWOOD_B, 1.32, 0.3), fork=1.22, trunk=1.25, cards=470),
+    # wide (David, round 3: "the brown leaf should be more prominent and on the outside more"): dark_out
+    "wide": dict(balls=spread(HARDWOOD_B, 1.32, 0.3), fork=1.22, trunk=1.25, cards=470, dark_out=True),
 }
 # The dump's trunk radius by height (hardwood-a, without its roots): a short flare into a thick, slightly tapering
 # bole; the roots are feet round it.
@@ -74,7 +77,7 @@ LODS = {
     0: dict(share=0.9, reach=(0.92, 1.56), ball=(8, 5), sides=10, limb_sides=5, roots=4, hull=2, tex=(256, 256), bend=True),
     1: dict(share=0.27, reach=(1.0, 1.46), ball=(6, 4), sides=7, limb_sides=4, roots=0, hull=1, tex=(128, 128), bend=False, grow=1.45),
 }
-SNOW_LID = 1.34     # a winter ball's snow lid, of its radius (it sits among the cards)
+SNOW_LID = 1.6      # a winter ball's snow dome, of its radius (at the cards' outer reach: a few poke through)
 
 
 def build(shape, dress, lod):
@@ -124,8 +127,8 @@ def build(shape, dress, lod):
             # hidden in a neighbour's ball, or under the snow lid: skip
             if any(o is not c and (p - o).length < ro * 1.0 for o, ro in balls):
                 continue
-            if snowy and d.z > 0.72:
-                continue
+            if snowy and d.z > 0.55:
+                continue  # deep under the snow dome
             # the dump's shingles: pitched up off the radial (median 32 degrees, quartiles 14 and 50) and turned
             # sideways a little (quartiles -25 and 25), so the cards face up and out like tiles
             side = UP.cross(d)
@@ -139,8 +142,16 @@ def build(shape, dress, lod):
                                                                 else K.CELLS[rng.randrange(10 if dress == "blossom" else (8 if snowy else 12))])
             right, cup = K.card_frame(nrm, UP, rng.uniform(-0.26, 0.26))
             w = width * rng.uniform(0.92, 1.08)
-            # the dump's scattered darker leaves, on top as much as anywhere (more of them in autumn)
-            jit = rng.uniform(0.94, 1.05) * (rng.uniform(0.66, 0.78) if rng.random() < (0.2 if dress == "autumn" else 0.14) else 1.0)
+            # the dump's scattered darker leaves, on top as much as anywhere (more of them in autumn); with dark_out,
+            # more of them, darker, and mostly on the outer surface, wearing the darkest cells (brown in autumn)
+            outness = min(1, max(0, ((p - c).length / r - L["reach"][0]) / (L["reach"][1] - L["reach"][0])))
+            if cfg.get("dark_out") and dress in ("summer", "autumn"):
+                dark = rng.random() < 0.06 + 0.34 * outness ** 0.8
+                if dark:
+                    cell = K.CELLS[rng.choice((0, 7) if dress == "autumn" else (0, 8))]
+                jit = rng.uniform(0.94, 1.05) * (rng.uniform(0.58, 0.7) if dark else 1.0)
+            else:
+                jit = rng.uniform(0.94, 1.05) * (rng.uniform(0.66, 0.78) if rng.random() < (0.2 if dress == "autumn" else 0.14) else 1.0)
             flip = rng.random() < 0.5
             ids, cols = [], []
             for (x, y), bend in zip(SHIELD, BEND):
@@ -153,24 +164,17 @@ def build(shape, dress, lod):
             crown.face([ids[0], ids[5], ids[4], ids[3]], [uv[0], uv[5], uv[4], uv[3]], [cols[0], cols[5], cols[4], cols[3]])
             cards += 1
     if snowy:
+        # a smooth dome of snow over each ball's top (David, round 3: "snow could pile more and also be more softer
+        # smoother snow ... fully covered and smooth at the tip"), just outside the cards, rolled under at its rim
         for i, (c, r) in enumerate(balls):
-            lid = K.Build()
-            K.ellipsoid(lid, c + Vector((0, 0, r * 0.05)), Vector((r, r, r * 0.92)) * SNOW_LID, K.SNOW, lambda p: (1.0,) * 3,
-                        segs=L["ball"][0] + 2, rings=L["ball"][1] + 3, wobble=0.12, seed=i + 9, normal_of=lambda p: (normal_of(p) + UP).normalized())
-            line = c.z + r * 0.45
-            keep, remap = K.Build(), {}
-            for f, uv, col in zip(lid.faces, lid.uvs, lid.cols):
-                q = sum((lid.verts[k] for k in f), Vector()) / len(f) - c
-                a = math.atan2(q.y, q.x)
-                if min(lid.verts[k].z for k in f) < line + r * (0.14 * math.sin(a * 3 + i) + 0.07 * math.sin(a * 7 + 2 * i)):
-                    continue
-                ids = []
-                for k in f:
-                    if k not in remap:
-                        remap[k] = keep.vert(lid.verts[k], lid.normals[k])
-                    ids.append(remap[k])
-                keep.face(ids, uv, col)
-            crown.extend(keep)
+            R = r * SNOW_LID
+            prof = []
+            for th in (0.0, 0.45, 0.85, 1.1):
+                prof.append((R * math.sin(th), c.z + R * 0.9 * math.cos(th) ** 0.85, 0.12 * max(0, th - 0.6) / 0.5))
+            rho, z = prof[-1][0], prof[-1][1]
+            prof += [(rho * 1.01, z - r * 0.06, 0.5), (rho * 0.96, z - r * 0.12, 0.9)]
+            # its rim rises and falls round the ball (snow lies deeper in some places), so it never reads as a cap
+            K.snow_pillow(crown, c.x, c.y, prof, L["ball"][0] + 4, i, waves=0.1, zwave=r * 0.3)
 
     # ---- the trunk: a thick bole with a wide low flare, buttress roots, and a limb up into each ball
     s = cfg["trunk"]

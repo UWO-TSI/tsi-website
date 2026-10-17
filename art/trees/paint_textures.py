@@ -186,23 +186,15 @@ def paint_snow_cap(cv, rng, snow, S):
 
 
 def snow_field(rng, w=CELL, h=CELL // 2, snow=hexc("#f4f7fb")):
-    """Packed snow: soft lumps over a cool shade (opaque)."""
+    """Packed snow, soft and smooth (David, round 3): a faint drift of large, low lumps over white, nearly flat (the
+    pillows' own shading and their cool lips carry the form)."""
     S, H = w * SS, h * SS
-    cv = Canvas(S, H, bg=hexc("#cfdbe9"))
-    for i in range(140):
-        paint_snow_lump(cv, rng.uniform(0, S), rng.uniform(0, H), S * rng.uniform(0.04, 0.08), rng, snow)
+    cv = Canvas(S, H, bg=hexc("#e9eef5"))
+    for i in range(60):
+        paint_snow_lump(cv, rng.uniform(0, S), rng.uniform(0, H), S * rng.uniform(0.08, 0.14), rng, snow)
+    cv.rgb = 0.55 * cv.rgb + 0.45 * snow
     cv.a[:] = 1
     return cv
-
-
-# ================================================================ the dump's look, painted afresh
-# David, 2026-10-17: "recreate the leaf texture from the dump". Studied (never copied, traced or resampled) from the
-# ACNH oak, cherry and cedar atlases: an oak card is ONE big three-lobed leaf clump (a centre lobe and two side lobes
-# meeting at a pointed base), airbrushed: darker at the base, lighter toward the lobes, a soft light rim along the top
-# edges, a faint Y of veins, a little grain, and each card its own value (the dump's nine cells run from near black to
-# white under one tint). A cherry card is one big five-petal blossom with notched petals, deep pink at its eye fading
-# to pale tips. A cedar card is a fringe: a strip whose lower edge hangs in rounded fingers, fine vertical grain, the
-# tips catching the light. Painted here from those observations, in colour per season.
 
 def soft_edge(mask, S):
     """Distance inside a mask (0 at the edge) as a fraction of S, and how much each edge texel faces up (+1) or down."""

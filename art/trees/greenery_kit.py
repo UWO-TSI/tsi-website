@@ -307,3 +307,46 @@ def export(objs, path):
         bpy.ops.export_scene.gltf(**kw, export_vertex_color="ACTIVE", export_all_vertex_colors=False)
     except TypeError:
         bpy.ops.export_scene.gltf(**kw, export_colors=True)
+
+
+# ================================================================ snow
+SNOW_COOL = (0.76, 0.83, 0.93)  # where snow rounds off under its lip: a soft cool shade, never a hard white edge
+
+
+def snow_pillow(b, cx, cy, profile, segs, seed, waves=0.06, white=1.0, zwave=0.02):
+    """Smooth snow (David, round 3: "softer smoother snow ... fully covered and smooth at the tip"): a profile of
+    (distance out, height, coolness) rows from the middle out, turned round the upright axis at (cx, cy). The outer
+    rows wave a little round the axis (snow never ends on a circle); normals follow the profile's own curve, so the
+    pillow shades round and soft; colour runs from white on top to a cool shade where it rolls under."""
+    u0, v0, u1, v1 = SNOW
+    n = len(profile)
+    reach = max(p[0] for p in profile) or 1.0
+    grid = []
+    for j, (rho, z, cool) in enumerate(profile):
+        a0, a1 = profile[max(j - 1, 0)], profile[min(j + 1, n - 1)]
+        dr, dz = a1[0] - a0[0], a1[1] - a0[1]
+        nr, nz = dz, -dr                      # the profile's normal (out and up for a pillow running out and down)
+        if nz < 0 and j < n - 1:
+            nr, nz = -nr, -nz
+        L = math.hypot(nr, nz) or 1.0
+        nr, nz = nr / L, nz / L
+        row = []
+        for k in range(segs):
+            a = TAU * k / segs
+            out = min(1.0, rho / reach * 1.4)
+            w = 1 + waves * out * (0.6 * math.sin(a * 5 + seed * 1.7) + 0.4 * math.sin(a * 11 + seed))
+            ca, sa = math.cos(a), math.sin(a)
+            p = Vector((cx + ca * rho * w, cy + sa * rho * w, z + zwave * out ** 2 * (0.7 * math.sin(a * 3 + seed) + 0.3 * math.sin(a * 7 + 2 * seed))))
+            nrm = Vector((ca * nr, sa * nr, nz)).normalized() if rho > 1e-6 else UP.copy()
+            col = tuple(white + (s - white) * cool for s in SNOW_COOL)
+            uv = (u0 + INSET + (u1 - u0 - 2 * INSET) * tri_wave(k / segs * 4), v0 + INSET + (v1 - v0 - 2 * INSET) * tri_wave(j / max(n - 1, 1)))
+            row.append((b.vert(p, nrm), uv, col))
+        grid.append(row)
+    for j in range(n - 1):
+        for k in range(segs):
+            a, bb = grid[j][k], grid[j][(k + 1) % segs]
+            c, d = grid[j + 1][(k + 1) % segs], grid[j + 1][k]
+            if profile[j][0] < 1e-6:
+                b.face([a[0], d[0], c[0]], [a[1], d[1], c[1]], [a[2], d[2], c[2]])
+            else:
+                b.face([a[0], d[0], c[0], bb[0]], [a[1], d[1], c[1], bb[1]], [a[2], d[2], c[2], bb[2]])
