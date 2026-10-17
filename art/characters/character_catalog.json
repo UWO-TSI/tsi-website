@@ -4251,7 +4251,8 @@
     "provisional": true,
     "attachment": "HatAttachment"
    },
-   "colourAtlas": true
+   "colourAtlas": true,
+   "coversHair": true
   },
   {
    "id": "acc_green_sprout",
@@ -4667,7 +4668,8 @@
     "provisional": true,
     "attachment": "HatAttachment"
    },
-   "colourAtlas": true
+   "colourAtlas": true,
+   "coversHair": true
   },
   {
    "id": "acc_paper_horns",
@@ -4745,7 +4747,8 @@
     "provisional": true,
     "attachment": "HatAttachment"
    },
-   "colourAtlas": true
+   "colourAtlas": true,
+   "coversHair": true
   },
   {
    "id": "acc_woven_hat",
@@ -4771,7 +4774,8 @@
     "provisional": true,
     "attachment": "HatAttachment"
    },
-   "colourAtlas": true
+   "colourAtlas": true,
+   "coversHair": true
   },
   {
    "id": "acc_monkey_ears",
@@ -4823,7 +4827,8 @@
     "provisional": true,
     "attachment": "HatAttachment"
    },
-   "colourAtlas": true
+   "colourAtlas": true,
+   "coversHair": true
   }
  ]
 }

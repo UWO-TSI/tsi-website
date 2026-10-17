@@ -486,6 +486,7 @@ def main():
             "hidesBackHair": bool(e["hidesBackHair"]), "hides": [], "group": e["group"], "skull": SK.VERSION,
             "key": e["key"], "source": f"accessories/source/roblox-b2/{e['file']}",
             "roblox": {"provisional": bool(e["provisional"]), "attachment": e["attachment"]}, "colourAtlas": True,
+            **({"coversHair": True} if e.get("coversHair") else {}),
         }
         report.append(f"IMPORT {e['id']:24s} src_tris={src_tris} tris={kit.ntris(ob)} {e['attachment']} fit={e['fit']} "
                       f"position={e['position']} orientation={e['orientation']} box={e_box} tile={colour_atlas.LAYOUT[e['id']]} crop={box}")
