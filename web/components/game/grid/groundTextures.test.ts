@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { decodePng } from "@/lib/game/world/png";
-import { GROUND_FILES, groundOf, type GroundTexture } from "@/lib/game/groundTextures";
+import { GROUND_FILES, KEPT_DUMP, groundOf, type GroundTexture } from "@/lib/game/groundTextures";
 
 const web = fileURLToPath(new URL("../../../", import.meta.url));
 const read = (path: string) => readFileSync(join(web, path), "utf8");
@@ -49,12 +49,19 @@ describe("the ground gate (remodel-ground): our own textures only where the worl
     });
   });
 
-  it("draws nothing from the dump in our set, every file shipped, each no bigger than the file it replaces", () => {
+  it("keeps the dump's stone, cliff, planks and snow in our set (David, row 314), and nothing else of the dump", () => {
+    expect([...KEPT_DUMP].sort()).toEqual(["cliff", "snowGrain", "stone", "stoneNormal", "wood", "woodNormal"]);
+    for (const key of KEYS) {
+      if (KEPT_DUMP.includes(key)) expect(GROUND_FILES.own[key], key).toBe(GROUND_FILES.dump[key]);
+      else expect(GROUND_FILES.own[key], key).not.toMatch(/\/acnh\//);
+    }
+  });
+
+  it("ships every file of our set, each no bigger than the file it replaces", () => {
     expect(Object.keys(GROUND_FILES.own).sort()).toEqual([...KEYS].sort());
     for (const key of KEYS) {
       const own = GROUND_FILES.own[key], dump = GROUND_FILES.dump[key];
       expect(own, key).not.toBeNull();
-      expect(own, key).not.toMatch(/\/acnh\//);
       expect(existsSync(join(web, "public", own!)), own!).toBe(true);
       // The quilt it stands in for is a 256 px DataTexture.
       const [w0, h0] = dump ? size(dump) : [256, 256];

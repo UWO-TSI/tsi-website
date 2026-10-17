@@ -523,14 +523,14 @@ function getSnowGrain(set: GroundSet): THREE.Texture {
 /**
  * Paths keep a little of their colour through the snow; grass is covered. Wet ground (TERRAIN_WET) darkens by `wet`
  * and its roughness falls toward a damp sheen by `gloss`. Our set's ground (`set` "own") has real relief in its
- * normal maps (blades, crumbs, joints): the snow lies over it and softens it by as much as it covers.
+ * normal maps (blades, crumbs): the snow lies over it and softens it by as much as it covers, so winter reads as the old.
  */
 function addSnow(shader: THREE.WebGLProgramParametersWithUniforms, set: GroundSet, cover: number, wet = 0.2, gloss = 0.5) {
   if (set === "own") {
     const maps = shader.fragmentShader.includes("#include <normal_fragment_maps>")
       ? shader.fragmentShader.replace("#include <normal_fragment_maps>", THREE.ShaderChunk.normal_fragment_maps)
       : shader.fragmentShader;
-    shader.fragmentShader = maps.replace("mapN.xy *= normalScale;", `mapN.xy *= normalScale * (1.0 - uSnow * ${(cover * 0.8).toFixed(2)});`);
+    shader.fragmentShader = maps.replace("mapN.xy *= normalScale;", `mapN.xy *= normalScale * (1.0 - uSnow * ${cover.toFixed(2)});`);
   }
   shader.uniforms.uSnow = TERRAIN_SNOW;
   shader.uniforms.uSnowGrain = { value: getSnowGrain(set) };

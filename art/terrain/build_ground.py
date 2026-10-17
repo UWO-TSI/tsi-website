@@ -11,20 +11,18 @@ tile and every stamp wraps, so each one tiles without a seam. A rebuild writes t
 Writes web/public/assets/game/terrain/ (sizes as the dump files they replace, or smaller):
   grass-albedo.png     256  near-white multiplier over the season's grass (linear, like the quilt it stands in for)
   grass-normal.png     256  blades and clumps
-  sand-albedo.png      256  grain, wind ripples, a few shell bits (the beach; its luminance is the soil's grain too)
-  snow-grain.png       256  the snow cover's grain (luminance only)
+  sand-albedo.png      256  grain, wind ripples, a few shell bits (the beach)
   soil-albedo.png      1024 greyscale, tinted by the season's soil: packed earth, crumbs, pebbles, hairline cracks
   soil-normal.png      256  crumbs and pebbles
-  stone-albedo.png     512  the plaza: rounded flagstones, worn tops, cracks, pits, dirt in the joints
-  stone-normal.png     512
-  wood-albedo.png      256  boardwalk planks: grain, knots, nail holes, gaps
-  wood-normal.png      256
   brick-albedo.png     256  basket-weave pavers
   brick-normal.png     256
-  cliff-grain.png      512  rock grain for the cliff walls (lib/game/cliffStone.ts keeps its luminance)
   fringe.png           1024x32  the grass drape's blade mask (alpha only)
   sea-ripple.png       128  the water's ripple normal (max |rg| 0.69, under the 0.704 GridOcean.test.ts assumes)
   sea-glint.png        128  the sparkle sprite's soft mask
+
+The plaza and road stone, the cliff grain, the boardwalk planks and the snow grain stay the dump's (David, row 314,
+specs/art-direction-oct17.md: "I like the old subtle version"; lib/game/groundTextures.ts KEPT_DUMP): the painters
+that made ours for them are in this file's history (e9d167c0).
 
 Normal maps are OpenGL convention (green up), unit length, blue from the reconstructed z. Mean brightness of every
 texture whose brightness the shaders use as is is matched to the dump file it replaces, so a swap changes the surface
@@ -381,22 +379,6 @@ def sand(n=256, seed=11):
     return img
 
 
-# ================================================================ snow
-def snow(n=256, seed=23):
-    """The snow cover's grain (the shader keeps its luminance): wind-packed ridges that wander, soft pits where it has
-    settled, fine crystal grain and a few sparkling crystals."""
-    rng = np.random.default_rng(seed)
-    yy, xx = np.mgrid[0:n, 0:n].astype(np.float64)
-    phase = ((2 * xx + 9 * yy) / n + band(n, rng, 2, bw=0.4) * 0.3) % 1.0
-    ridge = np.sin(phase * TAU) * smoothstep(-0.4, 0.9, band(n, rng, 5, bw=0.4))
-    pits = blur(np.minimum(0, band(n, rng, 20, bw=0.4) + 1.2), 1.0)
-    grain = blur(rng.standard_normal((n, n)), 0.5)
-    v = 1 + 0.07 * ridge + 0.06 * pits / (np.abs(pits).max() + 1e-9) + 0.06 * grain / grain.std() + 0.03 * band(n, rng, 40)
-    img = np.repeat(v[..., None], 3, -1) * 0.75
-    speckle(img, rng, 220, [np.array([1.0, 1.0, 1.0])], (0.4, 0.8), (0.6, 1.0))  # sparkling crystals
-    return img
-
-
 # ================================================================ soil
 def pebble(rng, r):
     """A pebble's height (0 outside): a squashed dome with a lumpy outline, in a small square patch."""
@@ -462,173 +444,6 @@ def soil_normal(n=256, ss=2, seed=37):
     return downsample_normal(normal_map(h, 0.45), ss)
 
 
-# ================================================================ stone (the plaza)
-def lloyd(n, pts, iters=2):
-    """Relax blue-noise sites toward their cells' centroids (on the torus), so the flagstones come out even."""
-    for _ in range(iters):
-        idx, _, _ = voronoi(n, pts)
-        yy, xx = np.mgrid[0:n, 0:n].astype(np.float64) + 0.5
-        new = pts.copy()
-        for k in range(len(pts)):
-            m = idx == k
-            if not m.any():
-                continue
-            dxs = xx[m] - pts[k, 0]
-            dys = yy[m] - pts[k, 1]
-            dxs -= n * np.round(dxs / n)
-            dys -= n * np.round(dys / n)
-            new[k] = (pts[k] + [dxs.mean(), dys.mean()]) % n
-        pts = new
-    return pts
-
-
-def crack_line(n, rng, cx, cy, length, ang):
-    """A jagged crack: a random walk across a stone, as a polyline."""
-    pts = [(cx - np.cos(ang) * length / 2, cy - np.sin(ang) * length / 2)]
-    steps = 9
-    for _ in range(steps):
-        ang += rng.normal(0, 0.45)
-        x, y = pts[-1]
-        pts.append((x + np.cos(ang) * length / steps, y + np.sin(ang) * length / steps))
-    return np.array(pts)
-
-
-def draw_line(field, pts, width, value, mode="min"):
-    n = field.shape[0]
-    lo, hi = pts.min(0) - width - 2, pts.max(0) + width + 2
-    xs, ys, ix = region(n, lo[0], lo[1], hi[0], hi[1])
-    X, Y = np.meshgrid(xs + 0.5, ys + 0.5)
-    d, t = segments_distance(X, Y, pts)
-    w = width * (0.35 + 0.65 * np.sin(np.pi * t))  # thin at its ends
-    a = smoothstep(w + 0.6, w - 0.6, d)
-    if mode == "min":
-        field[ix] = np.minimum(field[ix], 1 - a * (1 - value))
-    else:
-        field[ix] = np.maximum(field[ix], a * value)
-
-
-def stone(n=512, seed=41):
-    """Plaza flagstones: rounded, a little irregular, each its own grey, worn paler on top; recessed joints with dirt
-    in them; chips at the edges; cracks across a quarter of the stones; pits and chisel grain. Returns sRGB albedo and
-    a height field for the normal map."""
-    rng = np.random.default_rng(seed)
-    pts = lloyd(n, poisson(n, rng, 94), 3)
-    dx, dy = band(n, rng, 8) * 2.6 + band(n, rng, 24) * 0.5, band(n, rng, 8) * 2.6 + band(n, rng, 24) * 0.5
-    idx, _, edge = voronoi(n, pts, dx, dy)
-    k = len(pts)
-    edge = edge + band(n, rng, 50) * 0.18
-    chips = np.zeros((n, n))
-    for _ in range(90):  # a bite out of an edge here and there
-        x, y = rng.random(2) * n
-        stamp_disc(chips, x, y, rng.uniform(2, 5), 1.0, mode="max", profile="flat")
-    edge = edge - chips * 3.0 * (edge < 8)
-    joint = 2.6
-    body = smoothstep(joint - 0.6, joint + 0.6, edge)  # 0 in the joint, 1 on a stone
-    pillow = smoothstep(joint, joint + 9, edge)  # rounded shoulders
-    tilt_x, tilt_y, lift, tone, warm = rng.normal(0, 0.02, k), rng.normal(0, 0.02, k), rng.uniform(-1.2, 1.2, k), rng.uniform(0.86, 1.14, k), rng.uniform(-1, 1, k)
-    yy, xx = np.mgrid[0:n, 0:n].astype(np.float64)
-    rel_x = xx - pts[idx, 0]
-    rel_y = yy - pts[idx, 1]
-    rel_x -= n * np.round(rel_x / n)
-    rel_y -= n * np.round(rel_y / n)
-    grain = blur(rng.standard_normal((n, n)), 0.6)
-    chisel = band(n, rng, 70, bw=0.5)
-    pits = np.zeros((n, n))
-    for _ in range(900):
-        x, y = rng.random(2) * n
-        stamp_disc(pits, x, y, rng.uniform(0.8, 2.2), 1.0, mode="max", profile="dome")
-    cracks = np.ones((n, n))
-    for s_ in range(k):
-        if rng.random() < 0.16:
-            draw_line(cracks, crack_line(n, rng, pts[s_, 0], pts[s_, 1], rng.uniform(30, 60), rng.random() * TAU), rng.uniform(0.7, 1.1), 0.0)
-    cracks = np.where(body > 0.5, cracks, 1.0)
-    h = (pillow * 6 + lift[idx] + tilt_x[idx] * rel_x + tilt_y[idx] * rel_y) * body + chisel * 0.2 + grain * 0.08 - pits * 0.8 - (1 - cracks) * 2.5
-    h = h + (1 - body) * (-1.5 + band(n, rng, 50) * 0.3)
-    # Colour: cool grey stones, each its own, a warm one now and then, paler where worn; earthy joints.
-    base = hexrgb("#7d878a")
-    warmc = hexrgb("#878580")
-    t = (warm[idx] > 0.7)[..., None]
-    col = np.where(t, warmc, base) * tone[idx][..., None]
-    wear = 1 + 0.1 * pillow - 0.06 * smoothstep(joint + 6, joint, edge)
-    col = col * (wear + 0.035 * chisel + 0.03 * grain / grain.std())[..., None]
-    col = col * (1 - 0.35 * pits)[..., None] * (0.55 + 0.45 * cracks)[..., None]
-    dirt = hexrgb("#625c51") * (0.9 + 0.1 * band(n, rng, 50))[..., None]
-    col = col * body[..., None] + dirt * (1 - body)[..., None]
-    return col, h
-
-
-# ================================================================ wood (boardwalks, bridges)
-def wood(n=256, seed=53, rows=6):
-    """Boardwalk planks across the tile in `rows` courses: butt joints staggered, each plank its own tone, grain
-    running along it with a knot here and there, nail heads at the ends, dark gaps between. Returns sRGB albedo and a
-    height field."""
-    rng = np.random.default_rng(seed)
-    w = n / rows  # a course's width (it need not be whole pixels: the courses still meet the tile's edge exactly)
-    yy = np.mgrid[0:n, 0:n][0].astype(np.float64) + 0.5
-    course = np.floor(yy[:, 0] / w).astype(int)
-    plank_id = np.zeros((n, n), dtype=int)
-    along = np.zeros((n, n))  # distance to the nearest butt joint, px
-    pid = 0
-    tones, grains = [], []
-    nails = []
-    knots = []
-    for r in range(rows):
-        cuts = [rng.uniform(0, n)]
-        while True:
-            nxt = cuts[-1] + rng.uniform(70, 150)
-            if nxt > cuts[0] + n - 50:
-                break
-            cuts.append(nxt)
-        cuts = np.array(cuts) % n
-        cuts.sort()
-        y0 = r * w
-        rsel = np.where(course == r)[0]
-        xr = np.arange(n) + 0.5
-        # Which plank each column is in, and its distance to the nearest cut (wrapping).
-        d = np.abs(xr[:, None] - cuts[None, :])
-        d = np.minimum(d, n - d)
-        seg = np.searchsorted(cuts, xr) % len(cuts)
-        plank_id[rsel, :] = pid + seg[None, :]
-        along[rsel, :] = d.min(1)[None, :]
-        for c in cuts:
-            for side in (-1, 1):
-                for fy in (0.3, 0.7):
-                    nails.append(((c + side * 5.5) % n, y0 + fy * w))
-        for j in range(len(cuts)):
-            tones.append(rng.uniform(0.84, 1.14))
-            grains.append(rng.uniform(0, 100))
-            if rng.random() < 0.35:
-                a, b = cuts[j], cuts[(j + 1) % len(cuts)]
-                span = (b - a) % n
-                knots.append(((a + rng.uniform(0.25, 0.75) * span) % n, y0 + rng.uniform(0.3, 0.7) * w, rng.uniform(3, 5.5)))
-        pid += len(cuts)
-    tones, grains = np.array(tones), np.array(grains)
-    across = np.minimum(yy % w, w - (yy % w))  # distance to the course's edge
-    gap = smoothstep(0.6, 1.6, across) * smoothstep(0.4, 1.4, along)
-    bevel = smoothstep(1.0, 4.0, across) * smoothstep(0.8, 3.5, along)
-    # Grain: long streaks along the plank, warped, with fine lines.
-    streak = band(n, rng, 40, bw=0.6, stretch=9) + 0.5 * band(n, rng, 90, bw=0.6, stretch=7)
-    rings = (yy / w * 7 + grains[plank_id] + band(n, rng, 3, stretch=4) * 0.9 + band(n, rng, 12, stretch=6) * 0.25) % 1.0
-    lines = -smoothstep(0.25, 0.0, np.abs(rings - 0.5))  # thin dark late-wood lines
-    knot_v = np.zeros((n, n))
-    for kx, ky, kr in knots:
-        xs, ys, ix = region(n, kx - kr * 4, ky - kr * 2, kx + kr * 4, ky + kr * 2)
-        X, Y = np.meshgrid(xs + 0.5, ys + 0.5)
-        dd = np.hypot((X - kx) / 2.2, Y - ky)
-        ring = np.exp(-(dd / kr) ** 2) * (0.6 + 0.4 * np.cos(dd * 1.6))
-        knot_v[ix] = np.maximum(knot_v[ix], ring)
-    nail_v = np.zeros((n, n))
-    for x, y in nails:
-        stamp_disc(nail_v, x, y, 1.1, 1.0, mode="max", profile="dome")
-    v = tones[plank_id] * (1 + 0.06 * streak + 0.12 * lines - 0.3 * knot_v) * (0.8 + 0.2 * bevel)
-    base = hexrgb("#8e4f30")
-    col = base * v[..., None]
-    col = col * (1 - 0.55 * nail_v)[..., None] + hexrgb("#3a3430") * (0.55 * nail_v)[..., None]
-    col = col * gap[..., None] + hexrgb("#2a1a12") * (1 - gap)[..., None]
-    h = bevel * 3 + 0.2 * streak + 0.25 * lines - 0.6 * knot_v - 0.5 * nail_v + (gap - 1) * 3 - 0.02 * (yy % w - w / 2) ** 2 / w
-    return col, h
-
-
 # ================================================================ brick (pavers)
 def brick(n=256, seed=61, b=32):
     """Basket-weave pavers: pairs of bricks (2b x b) laid in b*2 squares, the pairs turning a quarter each square, sandy
@@ -670,24 +485,6 @@ def brick(n=256, seed=61, b=32):
     col = col * body[..., None] + mortar * (1 - body)[..., None]
     h = shoulder * 2.4 + 0.25 * face + 0.1 * grain - 0.5 * pores + (body - 1) * 1.2 + rng.normal(0, 0.15, k)[ident] * body
     return col, h
-
-
-# ================================================================ cliff grain
-def cliff_grain(n=512, seed=71):
-    """Rock grain for the cliff walls (lib/game/cliffStone.ts keeps 30% of its luminance over its stacked blocks):
-    multi-scale grain, mineral flecks, pitting and faint hairline fractures."""
-    rng = np.random.default_rng(seed)
-    v = 1 + 0.12 * fbm(n, rng, 6, 5, gain=0.6) + 0.05 * blur(rng.standard_normal((n, n)), 0.6)
-    pits = np.zeros((n, n))
-    for _ in range(1500):
-        x, y = rng.random(2) * n
-        stamp_disc(pits, x, y, rng.uniform(0.6, 2.0), 1.0, mode="max", profile="dome")
-    _, _, edge = voronoi(n, poisson(n, rng, 90), band(n, rng, 8) * 8, band(n, rng, 8) * 8)
-    frac = smoothstep(1.2, 0.2, edge) * smoothstep(-0.2, 0.6, band(n, rng, 6, bw=0.4))
-    v = v * (1 - 0.25 * pits) * (1 - 0.25 * frac)
-    img = np.repeat(v[..., None], 3, -1) * 0.6
-    speckle(img, rng, 1800, [np.array([0.85] * 3), np.array([0.35] * 3)], (0.4, 0.9), (0.4, 0.8))
-    return img
 
 
 # ================================================================ the grass drape's mask
@@ -766,22 +563,14 @@ def main():
     save("grass-normal.png", encode_normal(nrm))
     # The beach shader reads the sand's luminance (GridTerrain island-sand-detail), the soil its grain: same exposure.
     save("sand-albedo.png", match_luma(sand(), mean_lin_luma(os.path.join(DUMP_TERRAIN, "mSand_Alb.png"))))
-    save("snow-grain.png", match_luma(snow(), mean_lin_luma(os.path.join(DUMP_TERRAIN, "mSandSnow_Alb.png")))[..., 0], "L")
     v = soil()
     soil_lin = to_lin(np.clip(v * 0.85, 0, 1))
     soil_lin *= mean_lin_rgb(os.path.join(DUMP_ROAD, "mRoadSoil_Alb.png")).mean() / soil_lin.mean()
     save("soil-albedo.png", to_srgb(soil_lin), "L")
     save("soil-normal.png", encode_normal(soil_normal()))
-    col, h = stone()
-    save("stone-albedo.png", match_rgb(col, mean_lin_rgb(os.path.join(DUMP_ROAD, "mRoadStone_Alb.png"))))
-    save("stone-normal.png", encode_normal(normal_map(h, 0.55)))
-    col, h = wood()
-    save("wood-albedo.png", match_rgb(col, mean_lin_rgb(os.path.join(DUMP_ROAD, "mRoadWood_Alb.png"))))
-    save("wood-normal.png", encode_normal(normal_map(h, 0.6)))
     col, h = brick()
     save("brick-albedo.png", match_rgb(col, mean_lin_rgb(os.path.join(DUMP_ROAD, "mRoadBrick_Alb.png"))))
     save("brick-normal.png", encode_normal(normal_map(h, 0.6)))
-    save("cliff-grain.png", match_luma(cliff_grain(), mean_lin_luma(os.path.join(DUMP_TERRAIN, "mCliff_Alb.png")))[..., 0], "L")
     save("fringe.png", fringe(), "RGBA")
     save("sea-ripple.png", encode_normal(sea_ripple()))
     save("sea-glint.png", sea_glint(), "RGBA")

@@ -7,6 +7,10 @@
  * The dump's files are Nintendo's, the largest surfaces on screen, and a takedown risk before the public launch. A world
  * draws our set when it opts in (`ownGround` on GridWorld and GridOcean, as `waves` opts in to the new sea); the
  * applicant island, live for recruits, keeps the dump's until David approves ours, and then one prop moves it over.
+ *
+ * Our set keeps some of the dump's files by David's call (row 314, specs/art-direction-oct17.md): the plaza and road
+ * stone and the cliff ("too dark and the lines are too dark... I like the old subtle version"), the bridge and
+ * boardwalk planks, and the snow ("with the pixel effect it's not noticeable"). KEPT_DUMP lists them.
  */
 export type GroundSet = "own" | "dump";
 export const groundOf = (own: boolean | undefined): GroundSet => (own ? "own" : "dump");
@@ -45,16 +49,16 @@ export const GROUND_FILES: Record<GroundSet, Record<GroundTexture, string | null
     grassAlbedo: `${OWN}grass-albedo.png`,
     grassNormal: `${OWN}grass-normal.png`,
     sand: `${OWN}sand-albedo.png`,
-    snowGrain: `${OWN}snow-grain.png`,
-    cliff: `${OWN}cliff-grain.png`,
+    snowGrain: `${ACNH}terrain/mSandSnow_Alb.png`,
+    cliff: `${ACNH}terrain/mCliff_Alb.png`,
     fringeCliff: `${OWN}fringe.png`,
     fringeRiver: `${OWN}fringe.png`,
     soil: `${OWN}soil-albedo.png`,
     soilNormal: `${OWN}soil-normal.png`,
-    stone: `${OWN}stone-albedo.png`,
-    stoneNormal: `${OWN}stone-normal.png`,
-    wood: `${OWN}wood-albedo.png`,
-    woodNormal: `${OWN}wood-normal.png`,
+    stone: `${ACNH}road/mRoadStone_Alb.png`,
+    stoneNormal: `${ACNH}road/mRoadStone_Nrm.png`,
+    wood: `${ACNH}road/mRoadWood_Alb.png`,
+    woodNormal: `${ACNH}road/mRoadWood_Nrm.png`,
     brick: `${OWN}brick-albedo.png`,
     brickNormal: `${OWN}brick-normal.png`,
     riverBed: "/assets/game/water/seabed-sand.webp",
@@ -62,5 +66,8 @@ export const GROUND_FILES: Record<GroundSet, Record<GroundTexture, string | null
     seaGlint: `${OWN}sea-glint.png`,
   },
 };
+
+/** The textures our set still takes from the dump (David, row 314): the stone, the cliff, the planks and the snow. */
+export const KEPT_DUMP: readonly GroundTexture[] = ["stone", "stoneNormal", "cliff", "wood", "woodNormal", "snowGrain"];
 
 export const groundFile = (set: GroundSet, texture: GroundTexture): string | null => GROUND_FILES[set][texture];
