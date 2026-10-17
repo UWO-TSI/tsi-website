@@ -75,6 +75,8 @@ export function voiceBlip(seed: number, text: string, i: number): { sfx: SFXName
 export interface Talker { id: string; slug: string; name: string; post: string | null; seed: number }
 export type TalkPhase = "turning" | "speaking" | "closing" | "ended";
 export interface Talk extends Talker {
+  /** A scripted conversation (a tool's resident, Wren at HQ; lib/game/arrival/hq): its id, told to `onTalkScript` as it ends. */
+  script?: string;
   lines: readonly TalkLine[];
   index: number;
   phase: TalkPhase;
@@ -86,8 +88,8 @@ export interface Talk extends Talker {
 }
 const HELLO: TalkLine[] = [{ text: "Oh, hello!", face: "happy" }];
 
-export function beginTalk(who: Talker, lines: readonly TalkLine[], now: number): Talk {
-  return { ...who, lines: lines.length ? lines : HELLO, index: 0, phase: "turning", since: now, lineAt: now, typed: 0 };
+export function beginTalk(who: Talker, lines: readonly TalkLine[], now: number, script?: string): Talk {
+  return { ...who, ...(script ? { script } : {}), lines: lines.length ? lines : HELLO, index: 0, phase: "turning", since: now, lineAt: now, typed: 0 };
 }
 
 export type TalkStep = "turned" | "typing" | "typed" | "ended" | null;
@@ -204,6 +206,11 @@ export const talkStore = {
   /** A talk asked for, by E (the one in reach) or a click or tap; the residents' frame starts it with their lines. */
   request: null as { id: string; click: boolean } | null,
   active: null as Talk | null,
+  /**
+   * What a resident says instead of their usual conversation (row 312: a tool's resident hands it over), by slug; null
+   * or a null answer: their own. The island sets it (lib/game/arrival/hq/teachers.ts teacherTalk).
+   */
+  script: null as ((slug: string) => { script: string; lines: readonly TalkLine[] } | null) | null,
   /** The camera's heading, tilt and zoom before the talk turned it, put back after. */
   cameraYaw: null as number | null,
   cameraPitch: null as number | null,
@@ -234,4 +241,11 @@ export function setTalkNear(id: string | null, name: string, d: number): void {
 }
 export function requestTalk(id: string | null, click = false): void { if (id && !talkStore.active) talkStore.request = { id, click }; }
 export function startTalk(t: Talk): void { talkStore.active = t; talkStore.request = null; talkChanged(); }
-export function endTalk(): void { talkStore.active = null; talkStore.request = null; talkChanged(); }
+export function endTalk(): void {
+  const t = talkStore.active;
+  talkStore.active = null; talkStore.request = null; talkChanged();
+  if (t?.script) scriptListeners.forEach(l => l(t.script!, t.slug));
+}
+const scriptListeners = new Set<(script: string, slug: string) => void>();
+/** A scripted conversation ended (said through, or left with Escape): its id and who said it. */
+export function onTalkScript(l: (script: string, slug: string) => void) { scriptListeners.add(l); return () => { scriptListeners.delete(l); }; }

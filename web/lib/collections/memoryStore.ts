@@ -22,6 +22,7 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
   const rolls = new Map<string, { member: string; key: string; size: number | null; trophy: boolean; at: number; landed: boolean }>();
   const harvests = new Set<string>(); // `${member}:${node}:${hourKey}`
   const gear = new Map<string, string[]>();
+  const taught = new Set<string>(); // members who arrived under row 312
   const locks = new Set<string>(); // `${member}:${key}`
   const chest = new Map<string, number>(); // `${member}:${key}`
   const moves = new Map<string, { action: string; item: string | null; qty: number }>(); // bag_log: `${member}:${key}`
@@ -140,6 +141,9 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
     async ownedGear(m) {
       return gear.get(m) ?? [];
     },
+    async toolsTaught(m) {
+      return taught.has(m);
+    },
     async tourneyEntries(goalId, cycle) {
       return [...entries.values()].filter((e) => e.goal === `${goalId}:${cycle}`).map(({ goal: _g, ...e }) => (void _g, { ...e, member_name: names.get(e.member_id) ?? "Member" }));
     },
@@ -215,6 +219,8 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
     stash: (m: string, key: string, n: number) => chest.set(`${m}:${key}`, (chest.get(`${m}:${key}`) ?? 0) + n),
     chestOf: (m: string, k: string) => chest.get(`${m}:${k}`) ?? 0,
     own: (m: string, refs: string[]) => gear.set(m, refs),
+    /** The member arrived under row 312: their net and shovel come from residents (lib/game/tools.ts TAUGHT_KINDS). */
+    teach: (m: string) => taught.add(m),
     /** Demo fixture: a tourney entry as seasonal_land would leave it. */
     enter,
   };

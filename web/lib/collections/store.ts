@@ -69,6 +69,8 @@ export interface CollectionsStore {
   eat(memberId: string, itemKey: string): Promise<{ count: number }>;
   /** The member's owned gear keys: catalogue refs and shop slugs (lib/game/tools.ts: rods by ref, nets and shovels by slug). */
   ownedGear(memberId: string): Promise<string[]>;
+  /** The member's tools are taught by people (row 312, lib/game/arrival/arrivalService.ts): the starter net and shovel only once given. */
+  toolsTaught(memberId: string): Promise<boolean>;
   /** Every entry of one tourney cycle, with names (service role: the route applies the board's privacy). */
   tourneyEntries(goalId: string, cycle: number): Promise<TourneyEntry[]>;
   showcase(memberId: string): Promise<(string | null)[]>;

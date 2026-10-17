@@ -3,6 +3,7 @@ import type { Donation, MemberItem, WeeklyBest } from "./logic";
 import { ROSTER, type Species } from "./roster";
 import { raisePg } from "@/lib/result";
 import type { CollectionsStore } from "./store";
+import { ledgerToolsTaught } from "@/lib/game/arrival/arrivalLedger";
 
 type Row = Record<string, unknown>;
 const raise = (error: { code?: string; message?: string } | null): never =>
@@ -111,6 +112,9 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       if (error) raise(error);
       return ((data ?? []) as Row[]).flatMap((r) => { const item = r.shop_items as Row | null; return [item?.slug, item?.catalogue_ref].filter((k): k is string => typeof k === "string"); });
     },
+    // Row 312: an account that arrived under the taught key (the wallet ledger's arrival flag) has its net and shovel
+    // from residents. A failed read fails the request, as ownedGear's does.
+    toolsTaught: (memberId) => ledgerToolsTaught(db, memberId),
     async tourneyEntries(goalId, cycle) {
       const { data, error } = await db.from("tourney_entries").select("member_id, category, item_key, size_cm, caught_at").eq("goal_id", goalId).eq("cycle", cycle);
       if (error) raise(error);
