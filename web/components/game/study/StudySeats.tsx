@@ -12,7 +12,7 @@ import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import type * as THREE from "three";
 import { GLBProp } from "../NatureModels";
-import { STUDY_BOOK_URL, STUDY_TABLE_CLASSIC_LONG_URL, STUDY_TABLE_CLASSIC_URL, STUDY_TABLE_LONG_URL, STUDY_TABLE_URL } from "@/lib/game/propModels";
+import { BEACH_PARASOL_URL, LOG_BENCH_URL, STUDY_BOOK_URL, STUDY_TABLE_CLASSIC_LONG_URL, STUDY_TABLE_CLASSIC_URL, STUDY_TABLE_LONG_URL, STUDY_TABLE_URL } from "@/lib/game/propModels";
 import { CafeModel } from "./CafeModel";
 import type { ContactSize } from "@/lib/game/shadows";
 import Character, { CHARACTER_SCALE, type CharacterMotion } from "../character/Character";
@@ -26,7 +26,6 @@ import { formatClock, liveRemaining, useSecond } from "@/lib/study/useStudySessi
 import { useRemoteUids } from "../net/active";
 import s from "./study.module.css";
 
-const P = "/assets/acnh/props/";
 const flat = () => 0;
 /** Without a clip, PlayerAvatar's tsi:sit at the seat you're in stands you up. */
 const standUp = (seat: WorldSeat) => window.dispatchEvent(new CustomEvent("tsi:sit", { detail: { x: seat.x, z: seat.z } }));
@@ -60,8 +59,8 @@ export function TableFurniture({ t, ground }: { t: TableLayout; ground: (x: numb
   if (set) return <CafeModel name="cafe-kit" node={`set_${t.furniture}`} position={[t.at[0], y, t.at[1]]} yaw={t.yaw} contact={set} />;
   return <group position={[t.at[0], y, t.at[1]]} rotation={[0, t.yaw, 0]}>
     {OUTDOOR_TABLE[t.furniture] && <GLBProp url={OUTDOOR_TABLE[t.furniture]!} />}
-    {[...new Set(seats.map(([, z]) => z))].map(z => <GLBProp key={z} url={`${P}bench-wood.glb`} position={[0, 0, z]} />)}
-    {(t.furniture === "pier" || t.furniture === "pier-classic") && <GLBProp url={`${P}beach-parasol.glb`} position={[-2.4, 0, 0.3]} />}
+    {[...new Set(seats.map(([, z]) => z))].map(z => <GLBProp key={z} url={LOG_BENCH_URL} position={[0, 0, z]} />)}
+    {(t.furniture === "pier" || t.furniture === "pier-classic") && <GLBProp url={BEACH_PARASOL_URL} position={[-2.4, 0, 0.3]} />}
     {/* The open book on the runner (authored at the dump book's size at 0.1: its old 0.065 x 10). */}
     <GLBProp url={STUDY_BOOK_URL} position={[0.15, 0.848, 0]} scale={0.65} rotation={[0, 0.3, 0]} />
   </group>;
