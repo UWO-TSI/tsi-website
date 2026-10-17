@@ -14,3 +14,8 @@ perf:check FAILED on frame time against the Oct 14 baseline:
 Every budget line holds (web/lib/game/perf/budget.ts): High 4.6 of 6 ms, p95 5.7 of 9, CPU 4.1 of 5, 395 of 560 draws, 538,166 of 620,000 triangles; Lite 2.7 of 4 ms, 3.7 of 6, 2.4 of 3.5, 293 of 420, 337,558 of 420,000.
 
 Context: the baseline predates feat's own changes. feat's last village check (b4f27526, the seeded roster, hq-onboarding) measured High 4.30 ms / 391 draws / 594,603 triangles at load 2.8 and failed the same frame line (+10.3%); main's runs since were 5.2-5.3 ms. Against that, the remodelled trees take 56k triangles out (the dump-modelled crowns draw 2,390-2,716 triangles near, 906-1,106 far past 24 u, against the dump oaks' 2,760-4,189 everywhere) and add 4 draws (each of our tree models is two meshes in colour per level that has a tree in it); the frame is 0.3 ms over feat's, at a load of 4.7 against 2.8. Not rerun for noise (lane rules). The bench's season is today's: autumn.
+
+Round 3 (bf63d632, David's notes on round 2): not re-benched. The broadleaf trees lost about a tenth of their cards
+(near 2,248-2,480 drawn triangles, from 2,390-2,716; far 870-1,060); the snow cedar's snow grew (near 2,104 drawn, from
+1,588; far 770, from 436), drawn only in winter, where its six far models add about 2k triangles to a village of
+538k. The autumn village the bench draws loses about 2k triangles; no scene moves by more than 1%.
