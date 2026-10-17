@@ -96,8 +96,8 @@ export default function HomeIslandScene({ held = null, identity, level, peaceful
   return <>
     <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} overview={overview}
       ground={home.ground} cloudSize={[HOME_RADII.x * 2 + 4, HOME_RADII.z * 2 + 4]} shadowExtent={16} fireflyAnchors={HOME_BUSHES} trees={TREES} fauna={fauna} />
-    <GridWorld map={home.map} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} waves />
-    <GridOcean map={home.map} lite={liteMode} skip={underHomePier} waves />
+    <GridWorld map={home.map} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} waves ownGround />
+    <GridOcean map={home.map} lite={liteMode} skip={underHomePier} waves ownGround />
     <PeacefulLayer map={home.map} nodes={HOME_NODES} moment={peaceful.moment} member={peaceful.member} player={player} ground={home.ground} highTier={!liteMode} active={!fishing && !decorating} treeModels={SEASON_TREES[look.season]} />
     {/* The dump's chalet house (5 × 4.2 cells, same model family as the village café/museum). */}
     <group position={[HOUSE.x, 0, HOUSE.z]}><ACNHParts parts={CHALET_VARIANTS.brown} lit={windowLit(light)} /></group>

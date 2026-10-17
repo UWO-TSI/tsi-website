@@ -35,11 +35,10 @@ import { WAVE_LITE, WAVE_MAX, advanceWaves } from "@/lib/game/waves";
 import { mirrorWaterField, mirroredDepth, type FieldGrid } from "@/lib/game/waterField";
 import { bakeWaveCalm } from "@/lib/game/seabed";
 import type { ShoreSdf } from "@/lib/game/grid";
-
-const TEX_DIR = "/assets/acnh/terrain/";
+import { groundFile, type GroundSet, type GroundTexture } from "@/lib/game/groundTextures";
 
 /**
- * ACNH texture names -> the file that actually carries their colour.
+ * ACNH material names -> the texture that actually carries their colour (its file per set: lib/game/groundTextures.ts).
  *
  * TWO OF THESE ARE NOT WHAT THEIR NAMES SUGGEST, and both were caught by
  * looking at the pixels rather than trusting the filename:
@@ -57,8 +56,8 @@ const TEX_DIR = "/assets/acnh/terrain/";
  *
  * mCliff_Alb (512x512 rock) and the *Xlu grass fringes are what they claim.
  */
-const TEXTURE_FOR: Record<string, string> = {
-  mCliff: "mCliff_Alb.png",
+const TEXTURE_FOR: Record<string, GroundTexture> = {
+  mCliff: "cliff",
   // The four road surfaces GridTerrain used to paint as flat hex constants.
   // NOTE the directory: these live in road/, not terrain/. And note the file
   // names -- every road material also ships a `_Grd`, and every one of those is
@@ -66,28 +65,28 @@ const TEXTURE_FOR: Record<string, string> = {
   // seasonal palette on as stripes, which is what mGrass_Grd did to the lawn.
   // scripts/extract-road-textures.mjs rejects anything under 80px for exactly
   // that reason.
-  mRoadSoil: "mRoadSoil_Alb.png",
-  mRoadStone: "mRoadStone_Alb.png",
-  mRoadWood: "mRoadWood_Alb.png",
-  mRoadBrick: "mRoadBrick_Alb.png",
+  mRoadSoil: "soil",
+  mRoadStone: "stone",
+  mRoadWood: "wood",
+  mRoadBrick: "brick",
   // NOT the _AlbGry files. ACNH splits these into _AlbGry (greyscale colour,
   // tinted at runtime) and _OP (the blade shapes). The _AlbGry alone has NO
   // usable alpha -- measured 0% opaque -- so with alphaTest 0.4 every fragment
   // was discarded and the card was invisible. scripts/extract-grass-fringe.mjs
   // composites the pair into one RGBA file with these names.
-  mGrassCliffXlu: "mGrassCliffXlu.png",
-  mGrassRiverXlu: "mGrassRiverXlu.png",
+  mGrassCliffXlu: "fringeCliff",
+  mGrassRiverXlu: "fringeRiver",
   // Our own seabed sand (art/water/build_seabed.py, v1 water item 2): ripple marks seen through the shallows.
-  mRiverBed: "seabed-sand.webp",
-  mSand: "mSand_Alb.png",
+  mRiverBed: "riverBed",
+  mSand: "sand",
 };
 
 /** Detail normals, where the kit ships one we can use. */
-const NORMAL_FOR: Record<string, string> = {
-  mRoadSoil: "mRoadSoil_Nrm.png",
-  mRoadStone: "mRoadStone_Nrm.png",
-  mRoadWood: "mRoadWood_Nrm.png",
-  mRoadBrick: "mRoadBrick_Nrm.png",
+const NORMAL_FOR: Record<string, GroundTexture> = {
+  mRoadSoil: "soilNormal",
+  mRoadStone: "stoneNormal",
+  mRoadWood: "woodNormal",
+  mRoadBrick: "brickNormal",
 };
 
 /** Names we handle without an ACNH file. */
@@ -109,7 +108,9 @@ const TINT_FOR: Record<string, number> = {
 const ALPHA_MATERIALS = new Set(["mGrassCliffXlu", "mGrassRiverXlu", "mProcGrass"]);
 
 let cache: Map<string, THREE.Material> | null = null;
-let grassNrm: THREE.Texture | null = null;
+const grassNrm: Partial<Record<GroundSet, THREE.Texture>> = {};
+/** A material's cache key: the dump set's as on main, our set's prefixed. */
+const keyOf = (set: GroundSet, key: string) => (set === "dump" ? key : `${set}|${key}`);
 
 /**
  * `mGrass_Nrm.png` — the detail that makes ACNH ground look like ground.
@@ -120,12 +121,32 @@ let grassNrm: THREE.Texture | null = null;
  * The grass material reconstructs positive Z before applying normalScale.
  * The bench controls the resulting detail strength.
  */
-function grassNormal(): THREE.Texture {
-  if (grassNrm) return grassNrm;
-  const t = new THREE.TextureLoader().load(TEX_DIR + "mGrass_Nrm.png");
+function grassNormal(set: GroundSet): THREE.Texture {
+  const hit = grassNrm[set];
+  if (hit) return hit;
+  const t = new THREE.TextureLoader().load(groundFile(set, "grassNormal")!);
   t.wrapS = THREE.RepeatWrapping;
   t.wrapT = THREE.RepeatWrapping;
-  grassNrm = t;
+  grassNrm[set] = t;
+  return t;
+}
+
+/**
+ * Our lawn's albedo (art/terrain/build_ground.py grass-albedo.png): a near-white multiplier the season's grass is drawn
+ * through, in linear light and repeated as the procedural quilt it stands in for is (lib/game/grassTexture.ts).
+ */
+let ownGrass: THREE.Texture | null = null;
+function grassAlbedo(set: GroundSet): THREE.Texture {
+  if (set === "dump") return getGrassTexture();
+  if (ownGrass) return ownGrass;
+  const t = new THREE.TextureLoader().load(groundFile(set, "grassAlbedo")!);
+  t.colorSpace = THREE.LinearSRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(10, 10);
+  t.magFilter = THREE.LinearFilter;
+  t.minFilter = THREE.LinearMipmapLinearFilter;
+  t.anisotropy = 4;
+  ownGrass = t;
   return t;
 }
 
@@ -134,24 +155,19 @@ function grassNormal(): THREE.Texture {
  * Called from the render tree so a slider move shows up without a remount.
  */
 export function applyGrassNormalStrength(strength: number, worldUnitsPerRepeat: number): void {
-  const mat = cache?.get("mGrass") as THREE.MeshStandardMaterial | undefined;
-  if (!mat || !mat.normalMap) return;
-  mat.normalScale.set(strength, strength);
-  // The ground's UVs are already world-continuous at UV_CELLS_PER_REPEAT, so
-  // this repeat is relative to that, not to the tile.
-  const r = Math.max(0.01, 2 / worldUnitsPerRepeat);
-  mat.normalMap.repeat.set(r, r);
+  for (const set of ["dump", "own"] as const) {
+    const mat = cache?.get(keyOf(set, "mGrass")) as THREE.MeshStandardMaterial | undefined;
+    if (!mat || !mat.normalMap) continue;
+    mat.normalScale.set(strength, strength);
+    // The ground's UVs are already world-continuous at UV_CELLS_PER_REPEAT, so
+    // this repeat is relative to that, not to the tile.
+    const r = Math.max(0.01, 2 / worldUnitsPerRepeat);
+    mat.normalMap.repeat.set(r, r);
+  }
 }
 
-const ROAD_DIR = "/assets/acnh/road/";
-
-/** Road materials ship in road/, the seabed's sand in game/water/, the rest in terrain/. */
-function dirFor(name: string): string {
-  return name.startsWith("mRoad") ? ROAD_DIR : name === "mRiverBed" ? "/assets/game/water/" : TEX_DIR;
-}
-
-function loadTexture(loader: THREE.TextureLoader, file: string, dir = TEX_DIR, colorSpace: THREE.ColorSpace = THREE.SRGBColorSpace): THREE.Texture {
-  const t = loader.load(dir + file);
+function loadTexture(loader: THREE.TextureLoader, url: string, colorSpace: THREE.ColorSpace = THREE.SRGBColorSpace): THREE.Texture {
+  const t = loader.load(url);
   t.colorSpace = colorSpace;
   t.wrapS = THREE.RepeatWrapping;
   t.wrapT = THREE.RepeatWrapping;
@@ -197,17 +213,19 @@ export function waterSurfaceMaterial(sea: SeaKind): THREE.Material {
   return mat;
 }
 
-export function terrainMaterial(name: string): THREE.Material | null {
+/** `set`: whose textures it wears (lib/game/groundTextures.ts): the dump's by default, as on main; ours where the world opts in. */
+export function terrainMaterial(name: string, set: GroundSet = "dump"): THREE.Material | null {
   if (!cache) cache = new Map();
 
   const key0 = matchKey(name);
   if (!key0) return null;
 
   // The ACNH file for grass is a colour ramp, not a texture, so grass and the
-  // proc-grass tufts use the project's own triangle-quilt instead.
+  // proc-grass tufts use the project's own triangle-quilt instead (our set: our painted lawn).
   const procKey = PROCEDURAL.has(key0) ? key0 : null;
   if (procKey) {
-    const hit = cache.get(procKey);
+    // The water has no texture of its own: one material for either set.
+    const hit = cache.get(procKey === "mRiver" ? procKey : keyOf(set, procKey));
     if (hit) return hit;
     if (procKey === "mRiver") {
       // Unlit, from lib/game/waterShader.ts: a lit material greys out the flat saturated cyan of David's references.
@@ -217,12 +235,12 @@ export function terrainMaterial(name: string): THREE.Material | null {
       return mat;
     }
     const mat = new THREE.MeshStandardMaterial({
-      map: getGrassTexture(),
+      map: grassAlbedo(set),
       // ACNH's grass has NO albedo texture — the colour comes from the ramp.
       // What gives its ground blade detail is `mGrass_Nrm`, a 256x256 tangent
       // normal map we were not using at all, which is why the lawn read as one
       // flat green. Strength is on the bench (`tuning.grass.normalStrength`).
-      normalMap: grassNormal(),
+      normalMap: grassNormal(set),
       normalScale: new THREE.Vector2(0, 0),
       color: GRASS_COLOR,
       roughness: 0.92,
@@ -235,17 +253,16 @@ export function terrainMaterial(name: string): THREE.Material | null {
     };
     mat.customProgramCacheKey = () => "terrain-grass-normal-rg-v1";
     mat.name = `terrain:${procKey}`;
-    cache.set(procKey, withCutout(mat));
+    cache.set(keyOf(set, procKey), withCutout(mat));
     return mat;
   }
 
   const key = key0;
-  const hit = cache.get(key);
+  const hit = cache.get(keyOf(set, key));
   if (hit) return hit;
 
   const loader = new THREE.TextureLoader();
   const isAlpha = ALPHA_MATERIALS.has(key);
-  const dir = dirFor(key);
   /**
    * Road surfaces get their detail normal too, and it is safe to bind because
    * the extractor already reconstructed Z. The source files are TWO-CHANNEL
@@ -254,10 +271,10 @@ export function terrainMaterial(name: string): THREE.Material | null {
    * it, which is how mGrass_Nrm rendered the whole ground black.
    */
   const nrm = NORMAL_FOR[key]
-    ? loadTexture(loader, NORMAL_FOR[key], dir, THREE.NoColorSpace)
+    ? loadTexture(loader, groundFile(set, NORMAL_FOR[key])!, THREE.NoColorSpace)
     : undefined;
   const mat = new THREE.MeshStandardMaterial({
-    map: loadTexture(loader, TEXTURE_FOR[key], dir),
+    map: loadTexture(loader, groundFile(set, TEXTURE_FOR[key])!),
     ...(nrm ? { normalMap: nrm, normalScale: new THREE.Vector2(0.5, 0.5) } : {}),
     color: TINT_FOR[key] ?? 0xffffff,
     roughness: 0.92,
@@ -289,7 +306,7 @@ export function terrainMaterial(name: string): THREE.Material | null {
     seenThroughWater(mat);
   }
   mat.name = `terrain:${key}`;
-  cache.set(key, withCutout(mat));
+  cache.set(keyOf(set, key), withCutout(mat));
   return mat;
 }
 
@@ -499,7 +516,7 @@ export function patchShoreField(f: { data: Float32Array; depth: Float32Array; wi
  * water mirrors (fresnel) and hazes into far off. `lite`: Lite's fewer wave trains (lib/game/waves.ts WAVE_LITE).
  * `sea`: the world's sea (waterShader.ts SeaKind); main's swell runs on main's tuning (SWELL_TUNING) and no wave table.
  */
-export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE.Vector3, sunColor?: THREE.Color, sky?: { zenith: THREE.Color; horizon: THREE.Color }, lite = false, sea: SeaKind = "waves"): void {
+export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE.Vector3, sunColor?: THREE.Color, sky?: { zenith: THREE.Color; horizon: THREE.Color }, lite = false, sea: SeaKind = "waves", ground: GroundSet = "dump"): void {
   seaNow = sea;
   if (sea === "waves") {
     // The waves' table this frame, from the world clock: the CPU's (liveWaves, what floats reads) and the shader's, the same numbers.
@@ -509,9 +526,14 @@ export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE
     waterUniformBlock.uWaveCount.value = waves.count;
   } else waterUniformBlock.uWaveCount.value = 0;
   waterUniformBlock.uRippleStrength.value = cfg.rippleStrength ?? 0;
-  if (cfg.rippleStrength && !waterUniformBlock.uRippleTexture.value) {
-    waterUniformBlock.uRippleTexture.value = loadTexture(new THREE.TextureLoader(), "mSeaWater_Nrm.png", TEX_DIR, THREE.NoColorSpace);
-    waterUniformBlock.uRippleTexture.value.magFilter = THREE.LinearFilter;
+  // The ripple normal of the world's ground set (`ground`: lib/game/groundTextures.ts), loaded once a set.
+  if (cfg.rippleStrength) {
+    let ripple = rippleTexture[ground];
+    if (!ripple) {
+      ripple = rippleTexture[ground] = loadTexture(new THREE.TextureLoader(), groundFile(ground, "seaRipple")!, THREE.NoColorSpace);
+      ripple.magFilter = THREE.LinearFilter;
+    }
+    waterUniformBlock.uRippleTexture.value = ripple;
   }
   waterUniformBlock.uTime.value = elapsed;
   // cfg changes with phase, weather or season; the bench hands a fresh copy per frame.
@@ -526,6 +548,7 @@ export function advanceWater(elapsed: number, cfg: WaterParams, sunWorld?: THREE
   if (sky) { waterUniformBlock.uSkyZenith.value.copy(sky.zenith); waterUniformBlock.uSkyHorizon.value.copy(sky.horizon); }
 }
 const WHITE = new THREE.Color(1, 1, 1);
+const rippleTexture: Partial<Record<GroundSet, THREE.Texture>> = {};
 let written: WaterParams | null = null;
 let writtenSea: SeaKind = "waves";
 /** The sea the water was last advanced as (advanceWater, every frame): what rides it picks its shader by it (moveFx). */
