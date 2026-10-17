@@ -48,6 +48,15 @@ These rules are hard. The coordinator merges and pushes; lanes never push.
   - Small, far-away or background objects get plain colour (vertex colour or flat materials) and share materials, so they can merge into fewer draw calls.
   - Textures are for things seen up close: the ground, big walls and floors, hero props, interiors, characters, hair and clothes.
   - The pixel finish hides fine texture anyway. Keep textures small (256 px or less unless it's seen up close).
+  - **Plain colour must still read as its material (David).** Instead of a texture, give each part a flat colour plus the light response of what it's made of. Use the material look classes in `lib/game/modelMaterials.ts` (`lookClassFor`), and extend them if needed:
+    - wood: rough, no metal;
+    - stone and concrete: rough, slightly varied;
+    - metal: metallic with a soft sheen;
+    - painted wood and plastic: a soft gloss;
+    - glass: clear and reflective;
+    - cloth: fully matte;
+    - foliage keeps its leaf texture.
+  - Share these presets so parts merge.
 
 ## Reporting
 - Write tests first where there's logic. Gates are tsc, vitest and eslint on changed files.
