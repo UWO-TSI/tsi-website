@@ -1,6 +1,5 @@
 """More painted surfaces and our own drawn lettering for the quick-win props (game/remodel-quick), on propkit's numpy
-helpers: cork, wooden shingles, striped canvas, paper, wicker, worn iron, and a brush-stroke alphabet (no font files, no
-downloads, no references). Every function returns an [h, w, 3] float sRGB array (row 0 at the top), seeded: a rebuild
+helpers: wicker, worn iron, a maple leaf, and a brush-stroke alphabet (no font files, no downloads, no references). Every function returns an [h, w, 3] float sRGB array (row 0 at the top), seeded: a rebuild
 paints the same texture.
 
 Lettering is drawn in the surface's own units (a face W wide and H tall, x right and y up from its bottom-left corner),
@@ -162,100 +161,6 @@ def text_strokes(text, cx, y, cap, seed=0, track=0.06, wobble=0.035, lean=0.0):
 
 
 # ================================================================ surfaces
-def cork(h, w, seed, tone="#c28d58"):
-    """Cork board: warm granules, lighter and darker flecks, a few pores and old pin holes."""
-    r = np.random.default_rng(seed)
-    base = 0.92 + 0.12 * (fbm(h, w, 5, seed, 3) - 0.5)
-    g1 = noise(h, w, max(8, w // 5), seed + 1)
-    g2 = noise(h, w, max(8, w // 3), seed + 2)
-    val = base + 0.12 * (smooth(0.55, 0.8, g1) - 0.3) - 0.14 * smooth(0.62, 0.86, g2)
-    out = val[..., None] * arr(tone)
-    light = smooth(0.7, 0.9, noise(h, w, max(8, w // 4), seed + 3))
-    out = out * (1 - 0.25 * light[..., None]) + arr("#e2bf8e") * 0.25 * light[..., None]
-    pores = smooth(0.84, 0.93, noise(h, w, max(8, w // 6), seed + 4))
-    out *= (1 - 0.3 * pores)[..., None]
-    U, V = grid(h, w)
-    for _ in range(int(h * w / 2600)):
-        u, v = r.random(), r.random()
-        d = np.hypot((U - u) * w, (V - v) * h)
-        out *= (1 - 0.55 * smooth(1.6, 0.4, d))[..., None]
-    return np.clip(out, 0, 1)
-
-
-def shingles(h, w, seed, rows=6, cols=4, tone="#ffffff"):
-    """Wooden shingles in staggered courses: rows run across u, each course lapping the one below it (v runs down the
-    roof), the shadow line under every lap, thin gaps between shingles, each shingle its own tone and grain, the odd
-    one cut short or split. Mid grey-white: the part's COLOR_0 gives the wood's colour. Tileable."""
-    r = np.random.default_rng(seed)
-    U, V = grid(h, w)
-    row = np.floor(V * rows).astype(int)
-    t = V * rows - row                                   # 0 at the course's top (under the lap) to 1 at its butt
-    shift = (row % 2) * 0.5 + (row % 3) * 0.13
-    cu = U * cols + shift
-    col = np.floor(cu).astype(int) % cols
-    s = cu - np.floor(cu)
-    ids = (row % rows) * 97 + col
-    tones = r.uniform(0.82, 1.06, rows * 97 + cols)
-    short = r.uniform(0.0, 0.12, rows * 97 + cols) * (r.random(rows * 97 + cols) < 0.35)
-    split = (r.random(rows * 97 + cols) < 0.18) * r.uniform(0.25, 0.75, rows * 97 + cols)
-    grainv = 0.5 + 0.5 * np.sin(TAU * (s * 9 + 2.3 * noise(h, w, cols * 3, seed + 1, rows * 2) + ids * 0.37))
-    fine = noise(h, w, cols * 24, seed + 2, rows * 3)
-    val = tones[ids] * (0.9 + 0.07 * (grainv - 0.5) + 0.06 * (fine - 0.5))
-    val -= 0.38 * smooth(0.22, 0.0, t)                     # the lap's shadow at the top of each course
-    butt = 1 - short[ids]
-    val -= 0.45 * smooth(butt - 0.05, butt, t) * smooth(1.0, 0.98, t + 0.0)  # the short ones show the course below
-    gap = smooth(0.03, 0.0, np.minimum(s, 1 - s))
-    val -= 0.42 * gap
-    crack = (split[ids] > 0) * smooth(0.012, 0.0, np.abs(s - split[ids])) * smooth(0.45, 0.9, t)
-    val -= 0.35 * crack
-    val += 0.08 * smooth(0.7, 1.0, t)                      # worn, sun-bleached butts
-    out = np.clip(val, 0, 1.1)[..., None] * arr(tone)
-    lichen = smooth(0.72, 0.84, fbm(h, w, 6, seed + 3, 3)) * smooth(0.3, 0.9, t)
-    out = out * (1 - 0.35 * lichen[..., None]) + arr("#b9b48a") * 0.35 * lichen[..., None]
-    return np.clip(out, 0, 1)
-
-
-def canvas(h, w, seed, stripes=("#c8714a", "#efe0c2"), n=8, fade=0.35, along_u=True):
-    """Striped canvas: `n` stripes across u (cycling `stripes`), a coarse basket weave, sun-faded in soft patches,
-    the stripe edges a little uneven. Tileable."""
-    U, V = grid(h, w)
-    wob = 0.004 * (noise(h, w, 6, seed + 5, 12) - 0.5)
-    x = (U if along_u else V) * n + wob * n
-    k = np.floor(x).astype(int) % len(stripes)
-    cols = np.stack([arr(c) for c in stripes])
-    out = cols[k]
-    # soften the stripe seams
-    f = x - np.floor(x)
-    nxt = cols[(k + 1) % len(stripes)]
-    prv = cols[(k - 1) % len(stripes)]
-    out = out * (1 - 0.5 * smooth(0.985, 1.0, f)[..., None]) + nxt * 0.5 * smooth(0.985, 1.0, f)[..., None]
-    out = out * (1 - 0.5 * smooth(0.015, 0.0, f)[..., None]) + prv * 0.5 * smooth(0.015, 0.0, f)[..., None]
-    threads = max(32, w // 3)
-    wu = 0.5 + 0.5 * np.sin(TAU * U * threads)
-    wv = 0.5 + 0.5 * np.sin(TAU * V * threads * h / w)
-    check = ((np.floor(U * threads * 0.5) + np.floor(V * threads * 0.5 * h / w)) % 2)
-    weave = np.where(check > 0, wu, wv)
-    slub = fbm(h, w, 8, seed, 2, 40)
-    val = 0.9 + 0.1 * (weave - 0.5) + 0.06 * (slub - 0.5)
-    out = out * val[..., None]
-    bleach = smooth(0.35, 0.8, fbm(h, w, 3, seed + 2, 2)) * fade
-    out = out * (1 - bleach[..., None]) + arr("#f1e6cf") * bleach[..., None] * val[..., None]
-    soil = smooth(0.62, 0.85, fbm(h, w, 5, seed + 3, 3)) * 0.12
-    out *= (1 - soil)[..., None]
-    return np.clip(out, 0, 1)
-
-
-def paper(h, w, seed, tone="#ffffff"):
-    """Paper: a soft off-white with fibres and a little foxing."""
-    base = 0.95 + 0.04 * (fbm(h, w, 4, seed, 2) - 0.5)
-    fib = noise(h, w, max(16, w // 2), seed + 1, max(4, h // 8))
-    val = base - 0.05 * smooth(0.7, 0.95, fib)
-    out = val[..., None] * arr(tone)
-    fox = smooth(0.78, 0.9, fbm(h, w, 6, seed + 2, 2))
-    out = out * (1 - 0.15 * fox[..., None]) + arr("#d7b98a") * 0.15 * fox[..., None]
-    return np.clip(out, 0, 1)
-
-
 def wicker(h, w, seed, rows=12, stakes=10, tone="#d2a868"):
     """Woven wicker: round weavers running across u over and under upright stakes, alternate rows the other way, so a
     weaver bump and a stake segment take turns like a checker; weavers shaded round across their height with fibres
@@ -318,20 +223,3 @@ def maple_veins(cx, cy, size, ang=0.0):
     c, s = math.cos(ang), math.sin(ang)
     P = lambda x, y: (cx + size * (x * c - y * s), cy + size * (x * s + y * c))
     return [[P(0, -0.7), P(0, 0.0), P(0, 0.85)], [P(0, 0.02), P(0.72, 0.4)], [P(0, 0.02), P(-0.72, 0.4)], [P(0, -0.02), P(0.42, -0.24)], [P(0, -0.02), P(-0.42, -0.24)]]
-
-
-def fish_poly(cx, cy, length, facing=1):
-    """A plump fish outline (face units), head toward +x when facing is 1: body, a forked tail."""
-    pts = []
-    L = length
-    for i in range(25):
-        t = math.pi * i / 24
-        pts.append((cx + facing * (L * 0.32 * math.cos(t)), cy + L * 0.2 * math.sin(t)))
-    tail = [(cx - facing * L * 0.36, cy + L * 0.02), (cx - facing * L * 0.52, cy + L * 0.17), (cx - facing * L * 0.47, cy),
-            (cx - facing * L * 0.52, cy - L * 0.17), (cx - facing * L * 0.36, cy - L * 0.02)]
-    for i in range(25):
-        t = math.pi + math.pi * i / 24
-        pts.append((cx + facing * (L * 0.32 * math.cos(t)), cy + L * 0.2 * math.sin(t)))
-        if i == 0:
-            pts.extend(tail)
-    return pts

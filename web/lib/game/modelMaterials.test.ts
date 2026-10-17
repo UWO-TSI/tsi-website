@@ -1,6 +1,6 @@
 import { expect, it, vi } from "vitest";
 import { BoxGeometry, FrontSide, Frustum, Group, Matrix4, Mesh, MeshBasicMaterial, MeshStandardMaterial, PerspectiveCamera, Texture, Vector3, type WebGLProgramParametersWithUniforms, type WebGLRenderer } from "three";
-import { disposeModelMaterials, lightHQWindows, lookClassFor, prepareModel, tagLookClasses } from "./modelMaterials";
+import { MATERIAL_PRESETS, disposeModelMaterials, lightHQWindows, lookClassFor, prepareModel, presetFor, tagLookClasses } from "./modelMaterials";
 import { bendViewPoint } from "./worldProjection";
 
 it("lights only instance-owned HQ glass while preserving frames and cached textures", () => {
@@ -168,6 +168,36 @@ it("classes outdoor glass and metal for reflections (row 237) and leaves charact
     ["/assets/characters/v6/outfits/onepiece/outfit_koi_kimono.glb", "M_Gold"], [`${G}cafe/cafe-room.glb`, "M_Oak"],
     [`${G}props/mailbox.glb`, "M_MailPaint"], [`${G}props/campfire.glb`, "M_Log"], [`${G}props/campfire.glb`, "M_Stone"]]) expect(lookClassFor(url, name), `${url} ${name}`).toBe("props");
   expect(lookClassFor(`${A}plants/tree-hardwood-a.glb`, "mGlass")).toBe("foliage");
+});
+
+it("reads a plain-colour part's preset from its P_ name, anywhere, and gives it the preset's look class (lane rules: plain colour keeps its material)", () => {
+  expect(presetFor("P_Wood")).toBe("wood");
+  expect(presetFor("P_Paint.001")).toBe("paint");
+  expect(presetFor("M_Wood")).toBeNull();
+  expect(presetFor("P_Lava")).toBeNull();
+  // A preset wins over the url: metal and glass reflect even on a furniture or character url, the rest are props.
+  expect(lookClassFor("/assets/acnh/furniture/x.glb", "P_Metal")).toBe("metal");
+  expect(lookClassFor("/assets/game/items/x.glb", "P_Glass")).toBe("glass");
+  for (const p of ["P_Wood", "P_Stone", "P_Paint", "P_Cloth"]) expect(lookClassFor("/assets/game/props/x.glb", p), p).toBe("props");
+  // Wood and stone rough, cloth fully matte, paint a soft gloss, metal metallic with a sheen, glass smooth; none of the rest metallic.
+  const P = MATERIAL_PRESETS;
+  expect(P.wood.roughness).toBeGreaterThanOrEqual(0.85);
+  expect(P.stone.roughness).toBeGreaterThanOrEqual(0.9);
+  expect(P.cloth.roughness).toBe(1);
+  expect(P.paint.roughness).toBeLessThan(0.6);
+  expect(P.paint.roughness).toBeGreaterThan(P.metal.roughness);
+  expect(P.metal.metalness).toBeGreaterThan(0.6);
+  expect(P.glass.roughness).toBeLessThan(0.15);
+  for (const k of ["wood", "stone", "paint", "cloth", "glass"] as const) expect(P[k].metalness).toBe(0);
+});
+
+it("gives a prepared preset part its preset's roughness and metalness, whatever it was authored with", () => {
+  const paint = new MeshStandardMaterial({ name: "P_Paint", roughness: 0.9, metalness: 0.3 }), metal = new MeshStandardMaterial({ name: "P_Metal", roughness: 1 });
+  const out = prepareModel(new Group().add(new Mesh(new BoxGeometry(), paint), new Mesh(new BoxGeometry(), metal)), "/assets/game/props/x.glb");
+  const mats = (out.children as Mesh[]).map(m => m.material as MeshStandardMaterial);
+  expect([mats[0].roughness, mats[0].metalness]).toEqual([MATERIAL_PRESETS.paint.roughness, 0]);
+  expect([mats[1].roughness, mats[1].metalness]).toEqual([MATERIAL_PRESETS.metal.roughness, MATERIAL_PRESETS.metal.metalness]);
+  expect(mats[1].userData.lookClass).toBe("metal");
 });
 
 it("tags prepared clones and held weapons with their look class", () => {

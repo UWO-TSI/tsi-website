@@ -110,10 +110,13 @@ def export(obs, path, fmt="JPEG"):
         o.select_set(True)
     bpy.context.view_layer.objects.active = obs[0]
     has_col = any(len(o.data.color_attributes) for o in obs)
-    bpy.ops.export_scene.gltf(filepath=full, export_format="GLB", use_selection=True, export_yup=True, export_normals=True,
-                              export_texcoords=True, export_vertex_color="ACTIVE" if has_col else "NONE",
-                              export_all_vertex_colors=False, export_skins=False, export_animations=False,
-                              export_image_format=fmt, export_jpeg_quality=90, export_materials="EXPORT")
+    opts = dict(filepath=full, export_format="GLB", use_selection=True, export_yup=True, export_normals=True,
+                export_texcoords=True, export_vertex_color="ACTIVE" if has_col else "NONE", export_all_vertex_colors=False,
+                export_skins=False, export_animations=False, export_jpeg_quality=90, export_materials="EXPORT")
+    try:
+        bpy.ops.export_scene.gltf(export_image_format=fmt, **opts)
+    except TypeError:                                   # an exporter without this image format: keep the source's
+        bpy.ops.export_scene.gltf(export_image_format="AUTO", **opts)
     tris = sum(len(p.vertices) - 2 for o in obs for p in o.data.polygons)
     print(f"EXPORT {path} tris={tris} mats={sorted({m.name for o in obs for m in o.data.materials if m})} bytes={os.path.getsize(full)}")
     return full

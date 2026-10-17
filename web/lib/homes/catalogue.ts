@@ -6,7 +6,7 @@
  * `mount`: floor items block cells; rugs lie under floor items; wall items hang
  * on the back or side walls. `where` limits a piece to the house or the island.
  */
-import { BEACH_PARASOL_URL, HQ_NOTICE_BOARD_URL, LOG_BENCH_URL, SHOP_CART_URL } from "@/lib/game/propModels";
+import { BEACH_PARASOL_URL, LOG_BENCH_URL, SHOP_CART_URL } from "@/lib/game/propModels";
 
 export type Mount = "floor" | "rug" | "wall";
 export type Where = "indoor" | "outdoor" | "both";
@@ -58,7 +58,7 @@ export const CATALOGUE: readonly CatalogueItem[] = [
   f("wall-clock", "Wall clock", [1, 1], "wall"),
   f("wall-frame", "Picture frame", [1, 1], "wall"),
   f("wall-driedflower", "Dried flowers", [2, 1], "wall"),
-  { ...f("bulletinboard", "Bulletin board", [2, 1], "wall"), url: HQ_NOTICE_BOARD_URL, scale: 1 },
+  f("bulletinboard", "Bulletin board", [2, 1], "wall"),
   o("bench-wood", "Log bench", [2, 1], LOG_BENCH_URL),
   o("bench-park", "Park bench", [2, 1]),
   o("streetlamp", "Street lamp", [1, 1]),

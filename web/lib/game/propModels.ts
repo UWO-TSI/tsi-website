@@ -25,25 +25,29 @@ export const STUDY_BOOK_URL = `${P}study-book.glb`;
 /** The club monument's "coming soon" sandwich board (DefaultIslandWorld ClubMonument, stages 0–3): 1.13 tall. */
 export const MONUMENT_SIGN_URL = `${P}monument-sign.glb`;
 /**
- * The plaza's notice and catch boards (and the mission board, GENESIS's poster board), in the dump board's frame: the
- * origin at the board's left end on the ground, the board 1.68 along +x, its cork facing +z. `back` is the backing's
- * back face (z) and `cork` its cork face [x0, x1, y0, y1] (art/props/build_plaza_boards.py).
+ * The plaza's notice and catch boards (and the mission board, GENESIS's poster board): the dump board kept and lightly
+ * retouched (art/props/derive_plaza_boards.py, row 314), so its frame is the dump's: the origin at the board's left end
+ * on the ground, the board 1.68 along +x, its notes facing +z. `back` is its back face (z), where GENESIS hangs posters.
  */
 export const NOTICE_BOARD_URL = `${P}notice-board.glb`;
 export const CATCH_BOARD_URL = `${P}catch-board.glb`;
-export const PLAZA_BOARD = { back: 0.37, cork: [0.17, 1.51, 0.57, 1.41] as const };
+export const PLAZA_BOARD = { back: 0.266 };
 /** The log bench: its seat top at 0.51 inside the old bench's footprint (defaultIsland PROP_TOP, PROP_FOOTPRINT "bench-wood"). */
 export const LOG_BENCH_URL = `${P}log-bench.glb`;
 
 /**
  * The plank footbridge (the map's bridges, the editor's, GENESIS's stage deck), in the dump bridge's frame: spanning
- * x ±1.9, its rails along z ±1.33 (inside defaultIsland's rail strips), the deck's top at BRIDGE_DECK_TOP.
+ * x ±1.9, its rail logs and corner stumps along z ±1.27 (inside defaultIsland's rail strips), the deck's top at
+ * BRIDGE_DECK_TOP.
  */
 export const BRIDGE_URL = `${P}bridge-plank.glb`;
 export const BRIDGE_DECK_TOP = 0.075;
-/** The canvas parasol over two deck chairs by the pier table (and the homes' Parasol): the pole's foot at the origin. */
+/** The dump's parasol and loungers by the pier table (and the homes' Parasol), recoloured (art/props/derive_parasol.py). */
 export const BEACH_PARASOL_URL = `${P}beach-parasol.glb`;
-/** The member clubhouse's notice board (HQInterior `noticeBoard`), a remodelled piece by its own name (below). */
+/**
+ * The member clubhouse's notice board (HQInterior `noticeBoard`): the dump's metal board, its printed notes made plain
+ * stickies until David's designs come (art/props/derive_hq_board.py); a remodelled piece by its own name (below).
+ */
 export const HQ_NOTICE_BOARD_URL = `${P}hq-notice-board.glb`;
 /** The shop's trolley: a timber handcart with a wicker basket, the remodelled "shopping-cart" piece (below). */
 export const SHOP_CART_URL = `${P}shop-cart.glb`;

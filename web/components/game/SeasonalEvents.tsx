@@ -48,8 +48,8 @@ const lawn = (dx: number, dz: number): At => ["plaza", 9.3 + dx, 0.4 + dz];
 /** The fall tourney's plaza trophy, in front of the catch board (clear of the bench beside it). */
 const TROPHY: At = ["catch", 0.8, -1.0];
 /**
- * GENESIS: the stage is the footbridge's plank deck laid on the lawn (its top BRIDGE_DECK_TOP up, its log rails along
- * both sides at ±1.33), with the poster board at the back (the board model's origin is its left end) and the banners
+ * GENESIS: the stage is the footbridge's plank deck laid on the lawn (its top BRIDGE_DECK_TOP up, its low log rails along
+ * both sides at ±1.27), with the poster board at the back (the board model's origin is its left end) and the banners
  * standing on the lawn either side, outside the rails.
  */
 const STAGE_TOP = BRIDGE_DECK_TOP;
@@ -193,9 +193,8 @@ function Posters({ titles, ground }: { titles: string[]; ground: (x: number, z: 
   useEffect(() => () => textures.forEach(t => t.dispose()), [textures]);
   const at = place(POSTER_BOARD);
   if (!at) return null;
-  // On the board's back (its south face, toward the stage's front), level with the cork and clear of the posts: one poster in the middle, two side by side.
-  const y = STAGE_TOP + (PLAZA_BOARD.cork[2] + PLAZA_BOARD.cork[3]) / 2 + 0.08;
-  return <>{textures.map((t, i) => <mesh key={i} position={[at[0] + (shown.length === 1 ? 0.84 : 0.43 + i * 0.82), ground(at[0], at[1]) + y, at[1] + PLAZA_BOARD.back - 0.03]} rotation={[0, Math.PI, 0]}>
+  // On the board's back (its south face, toward the stage's front): one poster in the middle, two side by side.
+  return <>{textures.map((t, i) => <mesh key={i} position={[at[0] + (shown.length === 1 ? 0.84 : 0.43 + i * 0.82), ground(at[0], at[1]) + STAGE_TOP + 1.12, at[1] + PLAZA_BOARD.back - 0.016]} rotation={[0, Math.PI, 0]}>
     <planeGeometry args={[0.74, 0.92]} />
     <meshStandardMaterial map={t} roughness={0.9} />
   </mesh>)}</>;

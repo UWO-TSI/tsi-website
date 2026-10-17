@@ -667,7 +667,7 @@ function Clubhouse({ phase, light, player, frozen, talking, member, onNear }: { 
   useEffect(() => { player.current.set(0, 0, -4.2); camera.position.set(0, 8.4, -11.4); onNear(null); }, [camera, onNear, player]);
   const station = useCallback((s: InteriorStation | null) => onNear((s?.id as Near) ?? null), [onNear]);
   return <>
-    <HQInterior clubhouse trophyCase phase={phase} light={light} floorTexture={floor} frozen={frozen} talking={talking} playerPosRef={player} onNearestStation={station} stations={CLUBHOUSE_STATIONS} constrainMove={constrainFounder} />
+    <HQInterior clubhouse trophyCase noticeBoard phase={phase} light={light} floorTexture={floor} frozen={frozen} talking={talking} playerPosRef={player} onNearestStation={station} stations={CLUBHOUSE_STATIONS} constrainMove={constrainFounder} />
     <BotanicalFrames />
     <FounderDesk />
     <Workbench player={player} />

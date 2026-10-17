@@ -77,29 +77,24 @@ describe("remodelled props (propModels.ts)", () => {
     expect(Math.max(-b.min[2], b.max[2])).toBeLessThanOrEqual(hd + 0.005);
     expect(b.min[1]).toBeGreaterThanOrEqual(-0.001);
   });
-  it("builds the plaza boards in the dump board's frame: 1.68 long from the origin, the backing's back where the posters hang", () => {
+  it("keeps the plaza boards in the dump board's frame: 1.68 long from the origin, its back where the posters hang, no snow", () => {
     for (const url of [Props.NOTICE_BOARD_URL, Props.CATCH_BOARD_URL]) {
       const b = bounds(url);
-      expect(b.min[1], url).toBeGreaterThanOrEqual(-0.001);
-      // The roof overhangs the posts a little each way; the posts stand at the old board's ends.
-      expect(b.min[0], url).toBeGreaterThan(-0.2);
-      expect(b.max[0], url).toBeLessThan(1.68 + 0.2);
-      expect(b.min[2], url).toBeLessThan(Props.PLAZA_BOARD.back);
-      expect(b.max[1], url).toBeLessThan(2.2);
+      expect(b.min[0], url).toBeCloseTo(-0.02, 1);
+      expect(b.max[0], url).toBeCloseTo(1.675, 1);
+      expect(b.min[2], url).toBeCloseTo(Props.PLAZA_BOARD.back, 2);
+      // The dump's snow cap went up to 1.78; the board itself stops at its lid.
+      expect(b.max[1], url).toBeLessThan(1.7);
     }
-    const [x0, x1, y0, y1] = Props.PLAZA_BOARD.cork;
-    expect(x0).toBeGreaterThan(0.12);
-    expect(x1).toBeLessThan(1.56);
-    expect(y1 - y0).toBeGreaterThan(0.7);
   });
   it("keeps the bridge's span and its rails on the rail line, inside the walk's rail strips", () => {
     const b = bounds(Props.BRIDGE_URL);
     expect(b.max[0] - b.min[0]).toBeCloseTo(3.8, 1);
-    expect(Math.max(-b.min[2], b.max[2])).toBeGreaterThan(BRIDGE_DECK_HALF[1] + 0.3);
+    expect(Math.max(-b.min[2], b.max[2])).toBeGreaterThan(BRIDGE_DECK_HALF[1] + 0.25);
     expect(Math.max(-b.min[2], b.max[2])).toBeLessThan(1.45 + 0.01);
     expect(Math.max(-b.min[2], b.max[2])).toBeLessThan(BRIDGE_RAIL_OUT);
     expect(b.min[1]).toBeCloseTo(-1.5, 1);
-    expect(b.max[1]).toBeLessThan(1);
+    expect(b.max[1]).toBeLessThan(0.6);
     expect(Props.BRIDGE_DECK_TOP).toBeCloseTo(0.075, 3);
   });
   it("keeps the parasol set inside the old one's square, the canopy as high", () => {
@@ -108,7 +103,7 @@ describe("remodelled props (propModels.ts)", () => {
     expect(b.max[1]).toBeGreaterThan(2.2);
     expect(b.max[1]).toBeLessThan(2.45);
   });
-  it("authors the HQ board and the trolley at the dump pieces' size at 0.1, and keeps the applicant's board the dump's", () => {
+  it("draws the HQ board and the trolley at the dump pieces' size at 0.1, and keeps the applicant's board the dump's", () => {
     const board = bounds(Props.HQ_NOTICE_BOARD_URL);
     expect(board.max[0] - board.min[0]).toBeCloseTo(1.554, 1);
     expect(board.max[1]).toBeCloseTo(0.92, 1);
