@@ -9,6 +9,7 @@
 //            shop's Hair colour wheel), Eyes and Accessories tabs (owned and locked)
 //   creator  the arrival's starting creator (create mode, nothing bought): its Eyes and Accessories tabs offer the free
 //            items only
+//   hatcut   /lab/avatar?sheet=hatcut: each covering hat over six hairstyles, with the hidden hair drawn (&cut=0) and cut
 import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
@@ -71,6 +72,17 @@ for (const scene of SCENES) {
     await bench("faces", "sheet=b2faces&framing=head&skins=3&hair=1", 14000);
     await page.context().close();
   }
+  if (scene === "hatcut") {
+    const page = await page0(1700, 2150);
+    for (const [name, qs] of [["hatcut-before", "&cut=0"], ["hatcut-after", ""]]) {
+      await page.goto(`${HOST}/lab/avatar?sheet=hatcut&framing=hat&skin=3&hair=1${qs}`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector("canvas", { timeout: 300000 });
+      await sleep(26000);
+      await page.locator("[data-sheet]").first().screenshot({ path: `${OUT}/${name}.png` });
+      console.log("shot", name);
+    }
+    await page.context().close();
+  }
   if (scene === "closet") {
     const c = await page0(1440, 900);
     const row = ref => ({ qty: 1, item: { catalogue_ref: ref, category: ref.startsWith("face:") ? "face" : ref.startsWith("hair") ? "hair" : "outfit" } });
@@ -82,9 +94,9 @@ for (const scene of SCENES) {
     await c.addStyleTag({ content: HIDE }).catch(() => {});
     await c.waitForSelector('[data-cat="hair"]', { timeout: 300000 });
     await sleep(8000);
-    await tab(c, "hair", "closet-hair", "Ushanka and goggles");
+    await tab(c, "hair", "closet-hair", "Green messy hair");
     await tab(c, "eyes", "closet-eyes", "Caret and hash");
-    await tab(c, "accessories", "closet-accessories", "Cowboy hat");
+    await tab(c, "accessories", "closet-accessories", "Ushanka and goggles");
     await c.context().close();
   }
   if (scene === "creator") {

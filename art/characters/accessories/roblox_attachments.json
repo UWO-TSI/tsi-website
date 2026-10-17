@@ -472,9 +472,9 @@
    "fit": "seat",
    "hidesBackHair": false,
    "position": [
-    0.06125,
-    0.65764,
-    -0.09968
+    -0.03375,
+    0.75636,
+    -0.09964
    ],
    "orientation": [
     0,
@@ -499,10 +499,10 @@
    "drop_outline_why": "its cartoon outline is an inverted hull on a black swatch (UV 0.13-0.149, 0.004-0.021), which our two-sided body drew over the whole hat: dropped",
    "coversHair": true,
    "override": {
-    "scale": 1.45,
+    "scale": 1.6,
     "offset": [
      0,
-     0.3,
+     0.22,
      0
     ],
     "why": "David, 2026-10-17: bigger and higher (it blended into the hair)"

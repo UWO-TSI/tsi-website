@@ -4624,7 +4624,7 @@
    "slot": "accessory",
    "name": "Drawn top hat",
    "glb": "accessories/roblox/acc_drawn_top_hat.glb",
-   "tris": 720,
+   "tris": 726,
    "materials": [
     {
      "name": "M_Acc",

@@ -32,6 +32,8 @@
  * ?sheet=b2acc    wardrobe batch 2: David's Roblox accessories, each worn over a hairstyle (&style=, default the ribbon bob),
  *                  front and 3/4; &groups=head,face (default all) &framing=body for the neck and front ones
  * ?sheet=b2faces  wardrobe batch 2: David's whole faces #20-25 on the head, front and 3/4 (&skins=, default 3), then a mix row
+ * ?sheet=hatcut   wardrobe batch 2: each covering hat over each hairstyle in &ids= (default six), &yaw= one view; with
+ *                  &cut=0 the hair the hat hides is drawn too (the hat cut's before and after)
  */
 import { Suspense, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
@@ -39,7 +41,7 @@ import { Canvas } from "@react-three/fiber";
 import { PerspectiveCamera, View } from "@react-three/drei";
 import Character, { type CharacterMotion } from "@/components/game/character/Character";
 import { CUTS } from "@/lib/game/character/rig";
-import { DEFAULT_LOOK, FACE, parseLook, partsIn, type CharacterLook, type EyeFrame } from "@/lib/game/character/look";
+import { DEFAULT_LOOK, FACE, PARTS, parseLook, partsIn, type CharacterLook, type EyeFrame } from "@/lib/game/character/look";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import { HQ_LEAD } from "@/lib/game/welcome";
 import { CAFE_OWNER } from "@/lib/game/cafe";
@@ -140,6 +142,11 @@ function AvatarBench() {
         { label: `${p.key} ${p.name}`, look: { ...hair, acc: { [p.group!]: p.id } }, yaw: 0, face: OPEN },
         { label: `${p.key} 3/4`, look: { ...hair, acc: { [p.group!]: p.id } }, yaw: -0.6, face: OPEN }]);
     }
+    if (sheet === "hatcut") {
+      const hairs = q.get("ids")?.split(",") ?? ["hair_ribbon_bob", "hair_windy_bob", "hair_messy_wolf", "hair_waves", "hair_double_buns", "hair_goggle_ushanka"];
+      const hats = PARTS.filter(p => p.coversHair).map(p => p.id);
+      return hairs.flatMap(h => hats.map(c => ({ label: `${h.replace("hair_", "")} + ${c.replace("acc_", "")}`, look: { ...base, back: h, acc: { head: c } }, yaw: Number(q.get("yaw") ?? -0.6), face: OPEN })));
+    }
     if (sheet === "b2faces") {
       const hair = { ...base, back: q.get("style") ?? "hair_waves" };
       const faces = Object.entries(FACE.faces);
@@ -169,7 +176,7 @@ function AvatarBench() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheet, yaw, q]);
   const root = useRef<HTMLDivElement>(null);
-  const cols = sheet === "b2acc" ? 8 : sheet === "b2faces" ? 6 : sheet === "roblox" ? (q.get("views") ?? "front,34,side,back").split(",").length : sheet === "facekit" ? 13 : sheet === "hairkit" ? 10 : sheet === "fullkit" ? 7 : sheet === "styles" || sheet === "backs" || sheet === "faces" || sheet === "residents" || sheet === "emote" ? 6 : sheet === "hats" || sheet === "mix" ? 8 : sheet === "david" ? 10 : cells.length;
+  const cols = sheet === "hatcut" ? 6 : sheet === "b2acc" ? 8 : sheet === "b2faces" ? 6 : sheet === "roblox" ? (q.get("views") ?? "front,34,side,back").split(",").length : sheet === "facekit" ? 13 : sheet === "hairkit" ? 10 : sheet === "fullkit" ? 7 : sheet === "styles" || sheet === "backs" || sheet === "faces" || sheet === "residents" || sheet === "emote" ? 6 : sheet === "hats" || sheet === "mix" ? 8 : sheet === "david" ? 10 : cells.length;
   return <div ref={root} style={{ position: "relative", paddingTop: 48, minHeight: "100vh", background: "#efe7d6" }}>
     <div data-sheet={sheet} style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, ${cols === 1 ? "420px" : "1fr"})`, gap: 8, padding: 8 }}>
       {cells.map(c => <figure key={c.label} style={{ margin: 0 }}>
