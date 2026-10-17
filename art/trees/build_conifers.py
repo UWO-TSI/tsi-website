@@ -20,7 +20,7 @@ import greenery_kit as K  # noqa: E402
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 
 # Tiers bottom to top: (hem height, top height, rim radius). The dump's cedar stands 3.95 high and 1.08 round.
-TIERS = [(0.8, 1.66, 1.08), (1.3, 2.15, 0.9), (1.8, 2.6, 0.72), (2.28, 3.02, 0.54), (2.72, 3.44, 0.38), (3.12, 3.92, 0.22)]
+TIERS = [(0.95, 1.74, 1.06), (1.38, 2.18, 0.9), (1.8, 2.6, 0.72), (2.28, 3.02, 0.54), (2.72, 3.44, 0.38), (3.12, 3.92, 0.22)]
 LODS = {
     0: dict(rings=2, spacing=0.36, segs=12, rows=4, sides=8, tex=None),
     1: dict(rings=1, spacing=0.5, segs=7, rows=2, sides=5, tex=(256, 256)),

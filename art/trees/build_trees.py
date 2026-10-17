@@ -51,9 +51,9 @@ TREES = {
     "tree-hardwood-a": dict(joints=OAK3, lobes=3, turn=9, core=1.0, ring=0.85, grow=1.18),
     "tree-hardwood-b": dict(joints=OAK4, lobes=3, turn=-8, core=1.0, ring=0.85, grow=1.18),
     "tree-blossom": dict(joints=OAK4, lobes=3, turn=10, core=0.95, ring=0.85),
-    "tree-hardwood-snow": dict(joints=OAK4, lobes=3, turn=-7, core=0.95, ring=0.85, grow=1.1),
-    "tree-cedar-snow": dict(cap="PltTreeCedarSnow.Nin_NX_NVN/PltTreeCedar4Snow.dae"),
 }
+# The snow oak and snow cedar it also closed are gone: the member world draws ours in winter (art/trees/build_broadleaf.py,
+# build_conifers.py, game/remodel-trees), and the applicant island never drew them.
 
 
 # ── Blender plumbing ─────────────────────────────────────────────────────

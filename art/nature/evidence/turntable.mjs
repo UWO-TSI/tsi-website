@@ -54,7 +54,7 @@ window.__tt = async (url) => {
       m.side = THREE.DoubleSide;
       if (LEAF && /OakLeaf/.test(m.name) && !/Snow/.test(m.name)) {
         m.color.set(LEAF).multiplyScalar(1.6);
-        m.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>\n#ifdef USE_MAP\ndiffuseColor.rgb = diffuse * (0.065 + 0.9 * sampledDiffuseColor.rgb);\n#endif"); };
+        m.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>\\n#ifdef USE_MAP\\ndiffuseColor.rgb = diffuse * (0.065 + 0.9 * sampledDiffuseColor.rgb);\\n#endif"); };
       }
       if (LEAF && /OakTrunk/.test(m.name)) m.color.set("#b88c58").multiplyScalar(1.7);
     }

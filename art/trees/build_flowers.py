@@ -21,6 +21,8 @@ import flower_cells as FC  # noqa: E402
 
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 UP = Vector((0, 0, 1))
+# Blooms are big for their plant, as the dump's are (a clump of three or four fills its tile): every head x this.
+HEAD = 1.45
 
 
 def petal_card(b, base, axis, around, tilt, length, cell, col, fold=0.0, curl=0.0, normal_bias=0.5):
@@ -56,6 +58,7 @@ def petal_card(b, base, axis, around, tilt, length, cell, col, fold=0.0, curl=0.
 
 def dome(b, centre, axis, radius, height, rect, col, segs=8):
     """A low domed disc (the flower's centre)."""
+    radius, height = radius * HEAD, height * HEAD
     ref = Vector((1, 0, 0)) if abs(axis.x) < 0.9 else Vector((0, 1, 0))
     s1 = axis.cross(ref).normalized()
     s2 = axis.cross(s1).normalized()
@@ -111,6 +114,7 @@ def head_frame(rng, tilt_out, spot):
 
 
 def ring(b, centre, axis, across, count, cell, length, tilt, col, phase=0.0, fold=0.0, curl=0.0, jit=0.1, rng=None, lift=0.0):
+    length, lift = length * HEAD, lift * HEAD
     for k in range(count):
         a = phase + math.tau * k / count + (rng.uniform(-jit, jit) if rng else 0)
         aro = (Matrix.Rotation(a, 3, axis) @ across).normalized()
@@ -154,7 +158,7 @@ def build(name):
             a = rng.uniform(0, math.tau)
             out = Vector((math.cos(a), math.sin(a), 0))
             at = foot + (top - foot) * rng.uniform(0.15, 0.5)
-            leaf_card(b, at, out, F.get("leaf_len", 0.14) * rng.uniform(0.85, 1.1), FC.uv("leaf"), LEAF, rise=0.45)
+            leaf_card(b, at, out, F.get("leaf_len", 0.15) * rng.uniform(0.85, 1.1), FC.uv("leaf"), LEAF, rise=0.45, width=1.2)
     for k in range(F.get("straps", 0)):
         a = math.tau * k / F["straps"] + rng.uniform(-0.3, 0.3)
         out = Vector((math.cos(a), math.sin(a), 0))
@@ -162,7 +166,7 @@ def build(name):
     for k in range(F.get("rosette", 0)):
         a = math.tau * k / F["rosette"] + rng.uniform(-0.3, 0.3)
         out = Vector((math.cos(a), math.sin(a), 0))
-        leaf_card(b, out * 0.02 + Vector((0, 0, 0.01)), out, 0.16 * rng.uniform(0.85, 1.1), FC.uv("leaf"), LEAF, rise=0.25)
+        leaf_card(b, out * 0.02 + Vector((0, 0, 0.01)), out, 0.2 * rng.uniform(0.85, 1.1), FC.uv("leaf"), LEAF, rise=0.3, width=1.3)
     ob = b.object("Flower", K.material("mPetals", K.image("petals"), alpha_clip=True))
     path = os.path.join(K.OUT, f"flower-{name}.glb")
     K.export([ob], path)
@@ -184,20 +188,20 @@ def mum(b, top, axis, across, rng, i):
 def cosmos(b, top, axis, across, rng, i):
     cell = "cosmos-white" if i % 3 == 2 else "cosmos-pink"
     ring(b, top, axis, across, 8, cell, 0.15, math.radians(78), W, rng=rng, jit=0.05)
-    dome(b, top + axis * 0.008, axis, 0.032, 0.022, FC.centre_uv("yellow"), W)
+    dome(b, top + axis * 0.008 * HEAD, axis, 0.032, 0.022, FC.centre_uv("yellow"), W)
 
 
 def rose(b, top, axis, across, rng, i):
     ring(b, top, axis, across, 5, "rose-red", 0.12, math.radians(72), W, fold=0.35, rng=rng)
     ring(b, top, axis, across, 5, "rose-red", 0.1, math.radians(42), W, phase=0.6, fold=0.45, rng=rng, lift=0.01)
     ring(b, top, axis, across, 4, "rose-red", 0.075, math.radians(18), (0.85, 0.85, 0.85), phase=0.2, fold=0.5, rng=rng, lift=0.02)
-    dome(b, top + axis * 0.03, axis, 0.022, 0.025, FC.centre_uv("bud"), W, segs=6)
+    dome(b, top + axis * 0.03 * HEAD, axis, 0.022, 0.025, FC.centre_uv("bud"), W, segs=6)
 
 
 def windflower(b, top, axis, across, rng, i):
     cell = "windflower-violet" if i % 2 else "windflower-white"
     ring(b, top, axis, across, 6, cell, 0.13, math.radians(70), W, fold=0.15, rng=rng, jit=0.06)
-    dome(b, top + axis * 0.01, axis, 0.03, 0.024, FC.centre_uv("dark"), W)
+    dome(b, top + axis * 0.01 * HEAD, axis, 0.03, 0.024, FC.centre_uv("dark"), W)
 
 
 def tulip(b, top, axis, across, rng, i):
@@ -210,7 +214,7 @@ def pansy(b, top, axis, across, rng, i):
     # four violet petals behind, the face petal in front, the whole head facing out and up
     for k, (cell, ang, ln) in enumerate((("pansy-violet", 2.4, 0.12), ("pansy-violet", -2.4, 0.12), ("pansy-violet", 1.2, 0.11), ("pansy-violet", -1.2, 0.11), ("pansy-face", 0.0, 0.12))):
         aro = (Matrix.Rotation(ang, 3, axis) @ across).normalized()
-        petal_card(b, top + axis * (0.004 * k), axis, aro, math.radians(84), ln, FC.uv(cell), W, fold=0.1)
+        petal_card(b, top + axis * (0.004 * k), axis, aro, math.radians(84), ln * HEAD, FC.uv(cell), W, fold=0.1)
 
 
 def hyacinth(b, top, axis, across, rng, i):
@@ -220,8 +224,8 @@ def hyacinth(b, top, axis, across, rng, i):
         f = k / (n - 1)
         a = k * 2.4
         aro = (Matrix.Rotation(a, 3, axis) @ across).normalized()
-        c = top + axis * (f * 0.2 - 0.02) + aro * 0.035 * (1 - 0.4 * f)
-        s = 0.075 * (1 - 0.35 * f)
+        c = top + axis * (f * 0.2 - 0.02) * HEAD + aro * 0.035 * HEAD * (1 - 0.4 * f)
+        s = 0.075 * HEAD * (1 - 0.35 * f)
         side = axis.cross(aro).normalized()
         n_ = aro
         up = axis
@@ -233,18 +237,18 @@ def hyacinth(b, top, axis, across, rng, i):
 
 def lily(b, top, axis, across, rng, i):
     ring(b, top, axis, across, 6, "lily-cream", 0.2, math.radians(48), W, fold=0.25, curl=0.7, rng=rng, jit=0.05)
-    dome(b, top + axis * 0.01, axis, 0.018, 0.05, FC.centre_uv("button"), W, segs=6)
+    dome(b, top + axis * 0.01 * HEAD, axis, 0.018, 0.05, FC.centre_uv("button"), W, segs=6)
 
 
 FLOWERS = {
-    "mum": dict(head=mum, stems=4, spread=0.26, height=(0.28, 0.4), leaves=2, rosette=5, face=0.3),
-    "cosmos": dict(head=cosmos, stems=5, spread=0.3, height=(0.34, 0.48), leaves=2, leaf_len=0.11, rosette=4, face=0.35),
-    "rose": dict(head=rose, stems=3, spread=0.24, height=(0.26, 0.36), leaves=3, rosette=5, face=0.3),
-    "windflower": dict(head=windflower, stems=4, spread=0.27, height=(0.24, 0.34), leaves=2, rosette=5, face=0.35),
-    "tulip": dict(head=tulip, stems=4, spread=0.24, height=(0.3, 0.4), leaves=0, straps=6, strap_len=0.28, face=0.12),
-    "pansy": dict(head=pansy, stems=5, spread=0.26, height=(0.14, 0.24), leaves=0, rosette=6, face=0.8, lean=0.2),
-    "hyacinth": dict(head=hyacinth, stems=3, spread=0.2, height=(0.2, 0.26), leaves=0, straps=6, strap_len=0.24, face=0.08, stem=0.012),
-    "lily": dict(head=lily, stems=3, spread=0.22, height=(0.4, 0.5), leaves=3, leaf_len=0.13, rosette=4, face=0.6),
+    "mum": dict(head=mum, stems=4, spread=0.22, height=(0.22, 0.32), leaves=2, rosette=7, face=0.3),
+    "cosmos": dict(head=cosmos, stems=5, spread=0.24, height=(0.28, 0.4), leaves=2, leaf_len=0.12, rosette=6, face=0.35),
+    "rose": dict(head=rose, stems=3, spread=0.2, height=(0.22, 0.3), leaves=3, rosette=7, face=0.3),
+    "windflower": dict(head=windflower, stems=4, spread=0.22, height=(0.2, 0.28), leaves=2, rosette=7, face=0.35),
+    "tulip": dict(head=tulip, stems=4, spread=0.2, height=(0.24, 0.32), leaves=0, straps=7, strap_len=0.26, face=0.12),
+    "pansy": dict(head=pansy, stems=5, spread=0.22, height=(0.1, 0.18), leaves=0, rosette=8, face=0.8, lean=0.2),
+    "hyacinth": dict(head=hyacinth, stems=3, spread=0.18, height=(0.14, 0.2), leaves=0, straps=7, strap_len=0.24, face=0.08, stem=0.012),
+    "lily": dict(head=lily, stems=3, spread=0.2, height=(0.34, 0.42), leaves=3, leaf_len=0.14, rosette=6, face=0.6),
 }
 
 

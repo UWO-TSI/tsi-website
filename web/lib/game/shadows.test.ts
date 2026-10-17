@@ -14,9 +14,9 @@ describe("shadow classification (look spec §9.2)", () => {
         // Our remodelled props (lib/game/propModels.ts).
         .concat(["campfire", "mailbox", "streetlamp", "study-table-long", "study-table", "hq-floor-lamp", "hq-pendant", "buoy", "fence-post", "fence-rail",
           "study-table-classic-long", "study-table-classic"].map(p => `/assets/game/props/${p}.glb`)),
-      foliage: ["tree-hardwood-a", "tree-hardwood-b", "tree-blossom", "tree-hardwood-snow", "tree-cedar", "tree-cedar-snow", "bush-holly", "bush-azalea", "bush-holly-snow"]
+      foliage: ["tree-hardwood-a", "tree-hardwood-b", "tree-blossom", "tree-cedar", "bush-holly", "bush-azalea", "bush-holly-snow"]
         .map(p => `${A}plants/${p}.glb`).concat(["/assets/game/plants/bush-azalea-spring.glb", "/assets/game/plants/bush-holly-winter.glb",
-          "/assets/game/plants/tree-round-summer.glb", "/assets/game/plants/tree-wide-winter.lod1.glb"]),
+          "/assets/game/plants/tree-round-summer.glb", "/assets/game/plants/tree-wide-winter.lod1.glb", "/assets/game/plants/conifer-cedar-snow.glb"]),
       small: [`${A}plants/flower-rose.glb`, `${A}props/shell-scallop.glb`, `${A}furniture/lounge-book.glb`, "/assets/nature/grass-tufts.glb",
         "/assets/nature/rock_smallA.glb", "/assets/nature/mushroom_red.glb", "/assets/game/props/branch.glb", "/assets/game/props/message-bottle.glb", `${A}fruit/coconut.glb`, "/assets/game/props/study-book.glb",
         "/assets/game/forage/shell-whelk.glb", "/assets/game/forage/mushroom-round.glb"],

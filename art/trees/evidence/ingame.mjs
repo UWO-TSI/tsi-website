@@ -30,10 +30,10 @@ const NEEDLES = /^(PltTreeCedar__PltTreeCedar4_mat0|mPltTreeCedarLeafSnow|mNeedl
 const FLOWERS = /^(PltFlw\w+_mat\d|mPetals|mFlowerLeaves)$/;
 const TARGETS = [
   { id: "tree-round", mat: LEAVES, near: [-6, -12], az: 20, el: 16, k: 1.0 },
-  { id: "tree-wide", mat: LEAVES, near: [17, -7], az: -60, el: 16, k: 1.0 },
+  { id: "tree-wide", mat: LEAVES, near: [17, -7], az: 180, el: 16, k: 1.0 },
   { id: "tree-tall", mat: LEAVES, near: [14, -12], az: -20, el: 16, k: 1.0 },
   { id: "cedar", mat: NEEDLES, near: [6, -14], az: 0, el: 16, k: 1.0 },
-  { id: "flowers", mat: FLOWERS, near: [-5, -7], az: 20, el: 34, k: 1.6, group: 1.2 },
+  { id: "flowers", mat: FLOWERS, near: [-5, -7], az: 60, el: 30, k: 1.2, group: 1.2 },
   { id: "village-west", game: { player: [-6, -6.5], yaw: Math.PI, zoom: 1 } },
   { id: "village-east", game: { player: [12, -5.5], yaw: Math.PI, zoom: 1 } },
 ];

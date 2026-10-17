@@ -186,7 +186,7 @@ for shape in ("round", "wide", "tall"):
     old = [A + OLD_SLOT[shape][s] + ".glb" for s in SEASONS]
     new = [G + f"tree-{shape}-{DRESS[s]}.glb" for s in SEASONS]
     far = [u.replace(".glb", ".lod1.glb") for u in new]
-    group = lambda s, u: LEAF.get(s, "plain") if "hardwood-a" in u or "hardwood-b" in u else "plain"
+    group = lambda s, u: s if s in LEAF and ("hardwood-a" in u or "hardwood-b" in u) else "plain"
     sh = Sheet(16 + 170 + 8 * (T + 6) + 16)
     sh.text(f"Broadleaf tree, {shape}: leaf cards over closed clumps on one trunk, four seasons (ours) vs the dump's oak and cherry", F_T)
     sh.text(f"Before: {fmt(old)}.   After, near: {fmt(new)}.   Far (past 24 u): {fmt(far)}.", F_L, colour=MUTED)
@@ -230,3 +230,24 @@ if not ONLY or "cedar" in ONLY:
     sh.text("In game, the same camera before and after: the cedar at (6, -14), every season (snowed on in winter)", F_H)
     ingame_rows(sh, "cedar")
     sh.save(os.path.join(OUT, "cedar.webp"))
+
+if not ONLY or "flowers" in ONLY:
+    kinds = ["mum", "cosmos", "rose", "windflower", "tulip", "pansy", "hyacinth", "lily"]
+    old = [A + f"flower-{k}.glb" for k in kinds]
+    new = [G + f"flower-{k}.glb" for k in kinds]
+    sh = Sheet(16 + 170 + 8 * (T + 6) + 16)
+    sh.text("Flowers: small clustered stems with soft painted petals (ours) vs the dump's; the autumn four first, then the rest", F_T)
+    sh.text(f"Before: {fmt(old)}.   After: {fmt(new)} (one material, one draw a kind).", F_L, colour=MUTED)
+    sh.text("Texture: the dump's petal textures for the autumn four (left) and our petal atlas (right; art/trees/paint_textures.py), every petal, leaf and centre painted afresh.", F_L, colour=MUTED)
+    dump = []
+    for k in kinds[:4]:
+        g, _ = parse(glb(A + f"flower-{k}.glb"))
+        dump.append(on_bg(texture_of(A + f"flower-{k}.glb", g["materials"][0]["name"])))
+    sh.row(dump + [on_bg(Image.open(os.path.join(TEX, "petals.png")), size=2 * T + 6)], label="Texture\ndump | ours")
+    for v, vl in (("front", "front"), ("q", "3/4")):
+        sh.row([tile(tt("plain", u, v), k) for u, k in zip(old, kinds)], label=f"Before\n{vl}")
+        sh.row([tile(tt("after", u, v), k) for u, k in zip(new, kinds)], label=f"After\n{vl}")
+    sh.rule()
+    sh.text("In game, the same camera before and after: the flower spot at (-5, -7), every season (winter has none; a picked flower node can show)", F_H)
+    ingame_rows(sh, "flowers")
+    sh.save(os.path.join(OUT, "flowers.webp"))
