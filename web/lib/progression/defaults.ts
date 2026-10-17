@@ -100,14 +100,15 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
     position: 1,
     title: "Settle in",
     // Claiming your plot is the home island's drop (lib/game/drops.ts STEP_FEATURE): the summary leaves it out until then.
-    summary: "Make your first catch and donate it to the museum, then report to HQ.",
+    // Wren is HQ's host after Bram's tour (row 312, 20261017010000_hq_onboarding_copy).
+    summary: "Make your first catch and donate it to the museum, then report back to Wren at HQ.",
     requirement: "settle_in",
     goal_slug: null,
     step_copy: {
       claim_plot: { label: "Claim your plot at HQ" },
       first_catch: { label: "Make your first catch", hint: "Any fish counts. Try the pier." },
       donate_catch: { label: "Donate your catch to the museum shell" },
-      report_hq: { label: "Report back to HQ" },
+      report_hq: { label: "Report back to Wren at HQ" },
     },
     unlocks_regions: ["village_core"],
     completion_letter: "Welcome to the island. The village is yours to explore.",

@@ -41,6 +41,8 @@ export interface WheelContext {
   /** Pinned item keys and how many of each you have (a pin you have none of leaves the wheel). */
   pins: readonly string[];
   stock: Readonly<Record<string, number>>;
+  /** This member's tools are taught (row 312): the tier-1 net and shovel only once a resident has given them (tools.ts). */
+  taught?: boolean;
 }
 
 const toolItem = (t: Tool): WheelItem => ({ id: `${t.kind}:${t.key}`, kind: t.kind, key: t.key, name: t.name, icon: t.icon, tier: t.tier });
@@ -48,10 +50,10 @@ const weaponItem = (key: string): WheelItem => ({ id: `weapon:${key}`, kind: "we
 export const pinItem = (key: string): WheelItem => ({ id: `pin:${key}`, kind: "pin", key, name: SPECIES.get(key)?.name ?? key, icon: itemIcon(key) });
 const GLIDER: WheelItem = { id: `glider:${GLIDER_REF}`, kind: "glider", key: GLIDER_REF, name: "Leaf glider", icon: itemIcon(GLIDER_REF) };
 
-/** The tool of a kind on the wheel: the one you set while you still own it, else the best. */
-export function wheelTool(kind: ToolKind, owned: readonly string[], chosen?: string): Tool {
+/** The tool of a kind on the wheel: the one you set while you still own it, else the best (null: none of that kind yet). */
+export function wheelTool(kind: ToolKind, owned: readonly string[], chosen?: string, taught = false): Tool | null {
   const set = TOOLS.find(t => t.kind === kind && t.key === chosen);
-  return set && ownsTool(set, owned) ? set : bestTool(kind, owned);
+  return set && ownsTool(set, owned, taught) ? set : bestTool(kind, owned, taught);
 }
 
 /** Weapons in wheel order: the default, the best of each other type, then (`all`) the rest, by type and tier. */
@@ -69,7 +71,7 @@ export function wheelWeapons(weapons: readonly string[], defaultWeapon: string |
 export function wheelContents(ctx: WheelContext): WheelItem[] {
   const pins = ctx.pins.filter(k => (ctx.stock[k] ?? 0) > 0).slice(0, MAX_PINS).map(pinItem);
   if (ctx.site === "ruins") return wheelWeapons(ctx.weapons, ctx.defaultWeapon, true).slice(0, WHEEL_SLOTS).map(weaponItem);
-  const tools = (["rod", "net", "shovel"] as const).map(k => toolItem(wheelTool(k, ctx.owned, ctx.chosen?.[k])));
+  const tools = (["rod", "net", "shovel"] as const).flatMap(k => { const t = wheelTool(k, ctx.owned, ctx.chosen?.[k], ctx.taught); return t ? [toolItem(t)] : []; });
   if (ctx.owned.includes(GLIDER_REF)) tools.push(GLIDER);
   const room = WHEEL_SLOTS - tools.length - pins.length;
   const weapons = ctx.armed ? wheelWeapons(ctx.weapons, ctx.defaultWeapon, false).slice(0, room).map(weaponItem) : [];

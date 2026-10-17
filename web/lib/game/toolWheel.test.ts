@@ -12,7 +12,17 @@ describe("the tool wheel's contents (specs/game-ui.md §1)", () => {
     expect(ids({})).toEqual(["rod:rod_flimsy", "net:net-basic", "shovel:shovel-basic"]);
     expect(ids({ owned: ["rod_glass", "rod_cedar", "net-mid", "shovel-gold"] })).toEqual(["rod:rod_glass", "net:net-mid", "shovel:shovel-gold"]);
     expect(TOOLS.filter(t => t.tier === 1).every(t => t.source === "starter")).toBe(true);
-    expect(bestTool("shovel", ["shovel-gold", "shovel-mid"]).tier).toBe(5);
+    expect(bestTool("shovel", ["shovel-gold", "shovel-mid"])?.tier).toBe(5);
+  });
+
+  it("holds a taught member's net and shovel only once a resident has given them (row 312)", () => {
+    expect(ids({ taught: true })).toEqual(["rod:rod_flimsy"]);
+    expect(ids({ taught: true, owned: ["net-basic"] })).toEqual(["rod:rod_flimsy", "net:net-basic"]);
+    expect(ids({ taught: true, owned: ["net-basic", "shovel-basic"] })).toEqual(["rod:rod_flimsy", "net:net-basic", "shovel:shovel-basic"]);
+    // A better tier bought or crafted is owned outright, taught or not; the rod is always everyone's.
+    expect(ids({ taught: true, owned: ["shovel-mid"] })).toEqual(["rod:rod_flimsy", "shovel:shovel-mid"]);
+    expect(bestTool("net", [], true)).toBeNull();
+    expect(bestTool("rod", [], true)?.key).toBe("rod_flimsy");
   });
 
   it("keeps the tier you set while you own it", () => {
