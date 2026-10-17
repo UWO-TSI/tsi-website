@@ -1,11 +1,23 @@
-chain ok: 57 migrations after the legacy set
---- before 20261017010000_hq_onboarding_copy.sql (must fail):
+chain ok: 57 migrations after the legacy set, then ours
+--- hq_onboarding_copy_smoke.sql before 20261017010000_hq_onboarding_copy.sql (must fail):
 ERROR:  the report step names Wren
 --- after 20261017010000_hq_onboarding_copy.sql:
 NOTICE:  hq onboarding copy 1 seeded copy renamed ok
 NOTICE:  hq onboarding copy 2 admin edits kept ok
 NOTICE:  hq onboarding copy 3 idempotent ok
---- the v1 drop copy smoke over it:
+--- resident_roster_smoke.sql before 20261017020000_resident_roster.sql (must fail):
+ERROR:  the roster walks: ten residents, got 2
+--- after 20261017020000_resident_roster.sql:
+NOTICE:  resident roster 1 seeded ok
+NOTICE:  resident roster 2 admin edits kept ok
+NOTICE:  resident roster 3 idempotent ok
+--- taught_tools_off_sale_smoke.sql before 20261017163142_catalogue_seed.sql (must fail):
+ERROR:  the bug net is off sale
+--- after 20261017163142_catalogue_seed.sql:
+NOTICE:  taught tools off sale ok
+--- the v1 drop copy smoke over them:
 NOTICE:  v1 drop copy ok
---- settle-in now:
-Make your first catch and donate it to the museum, then report back to Wren at HQ. | Report back to Wren at HQ
+--- now:
+settle-in: Make your first catch and donate it to the museum, then report back to Wren at HQ. | Report back to Wren at HQ
+residents: Bram, Juniper, Marlo, Mayor Eliza, Nell, Odile, Pim, Sable, Toren, Wren
+tools on sale: rod-basic, rod-cedar, rod-glass, bobber-lucky, net-mid, shovel-mid, bag-30, card-shovel-sturdy, card-acc-flower-crown, card-furn-bookshelf, card-furn-floor-lamp

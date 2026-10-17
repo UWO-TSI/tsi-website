@@ -133,9 +133,14 @@ export const OWNERSHIP_ITEMS: CatalogueEntry[] = [
   ...DYES.map((name, i) => e(`dye-${name.toLowerCase().replace(/ /g, "-")}`, `${name} hair dye`, "hair", 140, { catalogue_ref: dyeRef(FREE_HAIR_COLOURS + i), special_pool: true })),
   ...PIECES.filter((p) => !HAS_FURNITURE.has(p.id) && !EVENT_PIECE_IDS.has(p.id)).map((p) => furniture(p.id, p.label, pieceValue(p))),
 ];
-/** Shop rows with no character part: the pre-ownership outfits, and the wardrobe cut's (CUT_WEARABLES). Off sale. */
+/**
+ * The tier-1 bug net and shovel: a resident hands them over (row 312, lib/game/arrival/hq/teachers.ts; David
+ * 2026-10-17, "take them off sale"). Off sale; owners keep them, and the better tiers stay on the shelf.
+ */
+export const TAUGHT_TOOL_SLUGS = ["net-basic", "shovel-basic"];
+/** Shop rows with no character part: the pre-ownership outfits, the wardrobe cut's (CUT_WEARABLES), and the taught tools. Off sale. */
 export const RETIRED = ["outfit-sage-overalls", "outfit-cream-knit", "outfit-wharf-raincoat", "outfit-club-tee", "hair-chestnut", "hair-sea-glass", "hair-sunset", "acc-straw-hat", "acc-round-glasses", "acc-bandana",
-  ...CUT_WEARABLES.map((c) => wearSlug(c.id))];
+  ...CUT_WEARABLES.map((c) => wearSlug(c.id)), ...TAUGHT_TOOL_SLUGS];
 /** Sold, as opposed to only granted: starter clothes stay off sale. */
 export const onSale = (c: CatalogueEntry) => !RETIRED.includes(c.slug) && !(c.category !== "furniture" && c.catalogue_ref !== null && STARTER_REFS.has(c.catalogue_ref));
 

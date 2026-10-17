@@ -20,6 +20,7 @@ import { economySeedSql, eventItemsSeedSql, ownershipSeedSql, shopIconsSql } fro
 import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS } from "./wallet/catalogue";
 import { CRAFTED_ITEMS, RECIPE_CARDS } from "./crafting/recipes";
 import { studyTablesSeedSql } from "./study/seed";
+import { residentsSeedSql } from "./content/residentSeed";
 
 export const MIGRATIONS = join(__dirname, "../supabase/migrations");
 
@@ -38,6 +39,8 @@ export const SEEDS: readonly Seed[] = [
   { name: "study-tables", file: "20260926150500_study.sql", sql: studyTablesSeedSql },
   // Row 281: every shop row's icon (lib/icons), set by update so the rows' other columns keep any admin edit.
   { name: "shop-icons", file: "20261002052225_catalogue_seed.sql", sql: () => shopIconsSql([...CATALOGUE, ...OWNERSHIP_ITEMS, ...EVENT_ITEMS, ...CRAFTED_ITEMS, ...RECIPE_CARDS]) },
+  // Row 217 (David, 2026-10-17): the resident roster in production, as development has it (lib/content/residentSeed.ts).
+  { name: "residents", file: "20261017020000_resident_roster.sql", sql: residentsSeedSql },
 ];
 
 /** A generated block's first and last lines: its BEGIN and END markers. */

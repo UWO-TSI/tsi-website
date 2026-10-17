@@ -4,6 +4,7 @@ import { TOOL_LINES } from "./lines";
 import { PROPOSED_RESIDENTS } from "@/lib/content/residentRoster";
 import { toolByKey, TAUGHT_KINDS } from "@/lib/game/tools";
 import { wheelContents } from "@/lib/game/toolWheel";
+import { CATALOGUE, TAUGHT_TOOL_SLUGS, onSale } from "@/lib/wallet/catalogue";
 
 const fresh: TeachContext = { taught: true, owned: [], quests: {} };
 const wheelKinds = (c: TeachContext) => wheelContents({ site: "village", owned: [...c.owned, ...givenKeys(c.quests)], weapons: [], armed: false, pins: [], stock: {}, taught: c.taught }).map(i => i.kind);
@@ -64,6 +65,16 @@ describe("tools unlocked by people (row 312)", () => {
     expect(teacherTalk("crafter", { ...fresh, owned: ["net-basic"] })?.tool).toBe("shovel");
     expect(teacherTalk("wren", fresh)).toBeNull();
     expect(teacherTalk("mayor", fresh)).toBeNull(); // the axe row is a placeholder
+  });
+
+  it("keeps the taught tools off the shop's shelves (David, 2026-10-17), the better tiers on them", () => {
+    expect([...TAUGHT_TOOL_SLUGS].sort()).toEqual(TOOL_TEACHERS.filter(t => t.live).map(t => t.key).sort());
+    const sold = (slug: string) => onSale(CATALOGUE.find(c => c.slug === slug)!);
+    expect(sold("net-basic")).toBe(false);
+    expect(sold("shovel-basic")).toBe(false);
+    expect(sold("net-mid")).toBe(true);
+    expect(sold("shovel-mid")).toBe(true);
+    expect(sold("rod-basic")).toBe(true);
   });
 
   it("reads saved quests back safely", () => {

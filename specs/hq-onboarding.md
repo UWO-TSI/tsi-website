@@ -68,10 +68,10 @@ Everything below is a proposal or a draft for David unless it says otherwise.
 - **The quest.** Talking to the resident swaps their usual conversation for the offer (`talkStore.script`). At its end they hand the tool over, with a toast, and the tracker shows the little quest. The catch that finishes it gets a toast: the tool is yours.
 - The table is `TOOL_TEACHERS` in `web/lib/game/arrival/hq/teachers.ts`. Live rows: net and shovel. Placeholder rows: axe, dash, glider.
 
-### Who teaches which tool (proposal for David)
-Each resident's question is a proposal too: the roster has none yet (lore: "every resident gets exactly one question").
+### Who teaches which tool (approved by David, 2026-10-17)
+The pairing is approved. Each resident's question is still a draft: the roster has none yet (lore: "every resident gets exactly one question").
 
-| Tool | Resident | Their question (proposed) | Why | The quest |
+| Tool | Resident | Their question (draft) | Why | The quest |
 |---|---|---|---|---|
 | Bug net | **Odile**, the museum curator (`curator`) | "What deserves keeping?" | Wings, Latin names, the cases waiting to be filled; the Mouseion keeps rescued things | Catch any bug |
 | Shovel | **Pim**, the tinkerer (`crafter`) | "What's still good in what got thrown away?" | Combs the beach, "perfectly good!"; digging up the buried hull's salvage, said sideways | Dig up one buried thing |
@@ -88,11 +88,25 @@ Each resident's question is a proposal too: the roster has none yet (lore: "ever
 - It's smoke-tested on a throwaway Postgres: `specs/evidence/hq-onboarding/sql-smoke.sh` and `web/supabase/tests/hq_onboarding_copy_smoke.sql`.
 - It isn't applied anywhere.
 
-### Open for David
-1. **Production can't reach Odile and Pim yet.** They walk only in development. Production's outdoor residents are the seeded two (Mayor Eliza and Toren), until the roster seed (row 217) lands. So in production a new arrival can't get a net or a shovel until then. Seed the roster before launch, or pick other residents.
-2. **The shop still sells the tier-1 Bug net and Shovel at 100 coins each.** Buying one also unlocks it. Take them off sale (a seed migration)?
-3. **The visit and the tool quests' progress are kept on the device.** The ownership is the server's. On a second device a new arrival sees the chapter, not the visit, and their tools are as the server has them.
-4. **The pairing, every line, the residents' questions and the plaque text.**
+### David's decisions (2026-10-17)
+1. **"Seed the full roster."** `web/supabase/migrations/20261017020000_resident_roster.sql`, unapplied.
+   - The whole proposed roster becomes production residents, so Odile, Pim and the rest walk the production village as they do in development.
+   - It's generated from the TS (`web/lib/content/residentSeed.ts`) and registered with `lib/seedMigrations.ts`, so later roster edits go through `gen-seeds`.
+   - A resident is inserted only if its slug isn't there, so one an admin made or edited stays as it is.
+   - Mayor Eliza and Toren keep their names and lines. They gain the roster's post, bio, tone and routine, but only where those are still as seeded.
+2. **"Take them off sale."** `web/supabase/migrations/20261017163142_catalogue_seed.sql` (gen-seeds), unapplied.
+   - The tier-1 Bug net and Shovel shop rows are retired: `active = FALSE`, nothing deleted (`TAUGHT_TOOL_SLUGS` in `web/lib/wallet/catalogue.ts`).
+   - Owners keep theirs; the better tiers stay on sale.
+3. **The tool pairing is approved** (above). The residents' questions stay drafts.
+
+### Still open for David
+1. **The visit and the tool quests' progress are kept on the device.** The ownership is the server's. On a second device a new arrival sees the chapter, not the visit, and their tools are as the server has them.
+2. **Every line, the residents' questions and the plaque text.**
+
+### Migrations, in apply order (all unapplied; smoke: `specs/evidence/hq-onboarding/sql-smoke.sh`)
+1. `20261017010000_hq_onboarding_copy.sql`: chapter 1's report step names Wren.
+2. `20261017020000_resident_roster.sql`: the resident roster in production.
+3. `20261017163142_catalogue_seed.sql`: the tier-1 net and shovel off sale.
 
 ### Evidence (headless, `specs/evidence/hq-onboarding/`)
 - **How it was shot.** `shoot.mjs` plays the whole thing end to end in one session with `?arrival=1`, signed out against a dev server with the Supabase env blanked: Bram's tour, the HQ visit, then Odile's net quest. It writes its frame log, `frames-flow.json`, beside the sheets; the repo ignores `*.json`, so the log isn't committed.
@@ -105,5 +119,5 @@ Each resident's question is a proposal too: the roster has none yet (lore: "ever
   - `06-existing-vs-new.webp`: an existing player keeps the net and shovel;
   - `07-phone.webp`: phone size;
   - `08-tracker-each-step.webp`: the tracker at every step.
-- **SQL smoke.** `sql-smoke.sh` and its output, `sql-smoke.txt`.
+- **SQL smoke.** `sql-smoke.sh` and its output, `sql-smoke.txt`. All three migrations run in apply order; each smoke fails before its migration and passes after it.
 - **Cost.** The Founder's desk is the only rendering change, in HQ's interior only. It's 3 existing furniture pieces: +5 draw calls in the main pass, +3 in the shadow pass and about 3.6k triangles. Measured with it: HQ draws 135 calls and 47k triangles, at 6.9 ms a frame. No perf bench covers HQ, so there was no perf:check.

@@ -6,7 +6,7 @@
  *
  * The table is data: who teaches what (a resident's slug, lib/content/residentRoster.ts), the tier-1 tool their talk
  * hands over (lib/game/tools.ts) and what finishes the quest (the kind a `tsi:peaceful-got` catch reports). The pairing
- * is a proposal for David (specs/hq-onboarding.md "Who teaches which tool"); the later rows are placeholders, not built.
+ * is David's (approved 2026-10-17, specs/hq-onboarding.md "Who teaches which tool"); the later rows aren't built yet.
  *
  * Only for a member whose tools are taught (they arrived under row 312); everyone else keeps the starters and their
  * residents talk as they always did. Pure: the island keeps the quests' states (store.ts) and feeds them in.
