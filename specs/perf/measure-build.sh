@@ -7,7 +7,9 @@
 # Never deploy this build. Run it under the heavy lock (it is a full build).
 set -e
 cd "$(dirname "$0")/../../web"
-FILES=$(grep -rl 'process\.env\.NODE_ENV' app/lab components/game lib/game lib/net | grep -v '\.test\.ts$')
+# lib/content/loader.ts too: without a database its fallback is the resident roster, as production has it since
+# 20261017020000_resident_roster (row 217), not the two residents production had before; the bench measures them.
+FILES=$(grep -rl 'process\.env\.NODE_ENV' app/lab components/game lib/game lib/net lib/content/loader.ts | grep -v '\.test\.ts$')
 DIRTY=$(git status --porcelain -- $FILES)
 if [ -n "$DIRTY" ]; then echo "uncommitted changes in gated files; commit or stash them first:"; echo "$DIRTY"; exit 1; fi
 trap 'git checkout -- $FILES' EXIT
