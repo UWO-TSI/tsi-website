@@ -29,6 +29,7 @@ import { CurvedCull, cullMeshes } from "@/lib/game/curvedCull";
 import { terrainMaterial } from "./terrainMaterials";
 import { cliffBlocks, type CliffMaterial, type CliffPlacement } from "./cliffBlocks";
 import { GROUND_UV } from "./GridTerrain";
+import type { GroundSet } from "@/lib/game/groundTextures";
 
 const CLIFF_DIR = "/assets/acnh/cliff/";
 
@@ -62,20 +63,23 @@ function useCliffPlacements(map: IslandMap): Map<string, CliffPlacement[]> {
  * shared terrain set, matched by ACNH material name (terrainMaterials.ts). The kit's grass top and drape wear the
  * island's own grass, so a plateau is the same lawn as the ground; the grass top with the ground's world UVs.
  */
-function kitMaterial(own: THREE.Material | undefined, mesh: THREE.Mesh, grass?: THREE.Material, drape?: THREE.Material): CliffMaterial {
+function kitMaterial(own: THREE.Material | undefined, mesh: THREE.Mesh, ground: GroundSet, grass?: THREE.Material, drape?: THREE.Material): CliffMaterial {
   const name = own?.name ?? mesh.name ?? "";
   const island = name.includes("mGrassCliffXlu") ? drape : name.includes("mGrass") ? grass : undefined;
-  const material = island ?? terrainMaterial(name) ?? own!;
+  const material = island ?? terrainMaterial(name, ground) ?? own!;
   return { material, worldUv: !!grass && material === grass };
 }
 
-/** `grass`, `drape`: the island's grass and its drape (GridTerrain's materials), for the kit's grass top and lip. */
-export default function GridCliffs({ map, grass, drape }: { map: IslandMap; grass?: THREE.Material; drape?: THREE.Material }) {
+/**
+ * `grass`, `drape`: the island's grass and its drape (GridTerrain's materials), for the kit's grass top and lip.
+ * `ground`: whose textures the walls wear (lib/game/groundTextures.ts), the world's own as its ground has them.
+ */
+export default function GridCliffs({ map, grass, drape, ground = "dump" }: { map: IslandMap; grass?: THREE.Material; drape?: THREE.Material; ground?: GroundSet }) {
   const byFile = useCliffPlacements(map);
   const files = useMemo(() => [...byFile.keys()], [byFile]);
   const gltfs = useGLTF(files.map(f => CLIFF_DIR + f)) as unknown as { scene: THREE.Object3D }[];
-  const meshes = useMemo(() => cliffBlocks(map, files, gltfs.map(g => g.scene), byFile, (own, mesh) => kitMaterial(own, mesh, grass, drape), GROUND_UV),
-    [map, files, gltfs, byFile, grass, drape]);
+  const meshes = useMemo(() => cliffBlocks(map, files, gltfs.map(g => g.scene), byFile, (own, mesh) => kitMaterial(own, mesh, ground, grass, drape), GROUND_UV),
+    [map, files, gltfs, byFile, grass, drape, ground]);
   useEffect(() => () => meshes.forEach(m => m.geometry.dispose()), [meshes]);
   const cull = useMemo(() => new CurvedCull(), []);
   useFrame(({ camera }) => cullMeshes(cull.update(camera), meshes));

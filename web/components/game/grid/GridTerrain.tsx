@@ -65,6 +65,7 @@ import {
 } from "@/lib/game/grid";
 import { terrainMaterial, setShoreField, waterSurfaceMaterial } from "./terrainMaterials";
 import type { SeaKind } from "@/lib/game/waterShader";
+import { groundFile, type GroundSet } from "@/lib/game/groundTextures";
 import { TERRAIN_BLOCK, WATER_BLOCK, terrainBlocks } from "./terrainBlocks";
 import { CurvedCull, cullMeshes } from "@/lib/game/curvedCull";
 import { bakeWaterDepth, bakeWaveCalm, seabedDip, shoreFieldOf } from "@/lib/game/seabed";
@@ -498,7 +499,8 @@ export type TerrainPalette = { grass: string; soil: string; sand: string };
 /**
  * Winter snow cover on palette terrain (0..1), shared uniform so a daily
  * season blend does not rebuild materials. Grain (luminance only) is the
- * dump's own `mSandSnow_Alb` snow variant (FldUnit), on grass, paths and beach.
+ * ground set's snow grain (lib/game/groundTextures.ts: ours, or the dump's
+ * `mSandSnow_Alb` snow variant), on grass, paths and beach.
  */
 export const TERRAIN_SNOW = { value: 0 };
 /**
@@ -508,22 +510,30 @@ export const TERRAIN_SNOW = { value: 0 };
 export const TERRAIN_WET = { value: 0 };
 /** Grass detail and hue variation from the look preset (x = texture contrast kept, y = patch hue); LookMaterials writes it. */
 export const TERRAIN_GRASS = { value: new THREE.Vector2(0.38, 0) };
-let snowGrain: THREE.Texture | null = null;
-function getSnowGrain(): THREE.Texture {
-  if (!snowGrain) {
-    snowGrain = new THREE.TextureLoader().load("/assets/acnh/terrain/mSandSnow_Alb.png");
-    snowGrain.wrapS = snowGrain.wrapT = THREE.RepeatWrapping;
-    snowGrain.colorSpace = THREE.SRGBColorSpace;
+const snowGrain: Partial<Record<GroundSet, THREE.Texture>> = {};
+function getSnowGrain(set: GroundSet): THREE.Texture {
+  let t = snowGrain[set];
+  if (!t) {
+    t = snowGrain[set] = new THREE.TextureLoader().load(groundFile(set, "snowGrain")!);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.colorSpace = THREE.SRGBColorSpace;
   }
-  return snowGrain;
+  return t;
 }
 /**
  * Paths keep a little of their colour through the snow; grass is covered. Wet ground (TERRAIN_WET) darkens by `wet`
- * and its roughness falls toward a damp sheen by `gloss`.
+ * and its roughness falls toward a damp sheen by `gloss`. Our set's ground (`set` "own") has real relief in its
+ * normal maps (blades, crumbs): the snow lies over it and softens it by as much as it covers, so winter reads as the old.
  */
-function addSnow(shader: THREE.WebGLProgramParametersWithUniforms, cover: number, wet = 0.2, gloss = 0.5) {
+function addSnow(shader: THREE.WebGLProgramParametersWithUniforms, set: GroundSet, cover: number, wet = 0.2, gloss = 0.5) {
+  if (set === "own") {
+    const maps = shader.fragmentShader.includes("#include <normal_fragment_maps>")
+      ? shader.fragmentShader.replace("#include <normal_fragment_maps>", THREE.ShaderChunk.normal_fragment_maps)
+      : shader.fragmentShader;
+    shader.fragmentShader = maps.replace("mapN.xy *= normalScale;", `mapN.xy *= normalScale * (1.0 - uSnow * ${cover.toFixed(2)});`);
+  }
   shader.uniforms.uSnow = TERRAIN_SNOW;
-  shader.uniforms.uSnowGrain = { value: getSnowGrain() };
+  shader.uniforms.uSnowGrain = { value: getSnowGrain(set) };
   shader.uniforms.uWet = TERRAIN_WET;
   shader.fragmentShader = "uniform float uSnow;\nuniform sampler2D uSnowGrain;\nuniform float uWet;\n" + shader.fragmentShader.replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
     roughnessFactor = mix(roughnessFactor, 0.42, uWet * ${gloss.toFixed(2)});`).replace("#include <normal_fragment_begin>", `
@@ -537,6 +547,19 @@ function addSnow(shader: THREE.WebGLProgramParametersWithUniforms, cover: number
     #include <normal_fragment_begin>`);
 }
 
+/**
+ * Our sand's mean linear luminance (art/terrain/build_ground.py matches the dump's mSand_Alb to it), how much of its
+ * grain and ripple relief the beach shows (the dump's shader kept 0.32 of a texture that had little to keep), and its
+ * brightness over the dump beach's (David, 2026-10-17: "a little bit brighter"; a linear gain, so the hue holds).
+ */
+const OWN_SAND = { luma: 0.3478, contrast: 1.2, gain: 1.38 };
+/**
+ * Our path's shading: the albedo's mean (linear; build_ground.py matches the dump's mRoadSoil_Alb to it), how much of
+ * its detail shows over a flat `flat` (chosen so the mean shade is the dump path's 0.7831: mix(0.82, 0.7319, 0.18)
+ * times its sand grain's 0.974), how much its fine copy's grain moves it, and its relief's strength.
+ */
+const OWN_SOIL = { mean: 0.7307, detail: 0.72, flat: (0.7831 - 0.7307 * 0.72) / 0.28, grain: 0.4, normal: 0.3 };
+
 /** Every terrain layer's material, keyed by surface or render layer. Shared by the ground and the cliff kit. */
 export type TerrainMaterials = Map<number, THREE.Material>;
 
@@ -545,8 +568,11 @@ export type TerrainMaterials = Map<number, THREE.Material>;
  * the same instances to the ground and to the cliff kit, so a cliff's top grass
  * and its drape are the island's grass, not a second green.
  */
-/** `sea`: the world's water (lib/game/waterShader.ts SeaKind): the waves only where the world opts in, else main's swell. */
-export function useTerrainMaterials(palette?: TerrainPalette, sea: SeaKind = "swell"): TerrainMaterials {
+/**
+ * `sea`: the world's water (lib/game/waterShader.ts SeaKind): the waves only where the world opts in, else main's swell.
+ * `ground`: whose textures the ground wears (lib/game/groundTextures.ts): ours only where the world opts in, else the dump's.
+ */
+export function useTerrainMaterials(palette?: TerrainPalette, sea: SeaKind = "swell", ground: GroundSet = "dump"): TerrainMaterials {
   const materials = useMemo(() => {
     // Names, not files — terrainMaterial() decides whether a surface gets an
     // ACNH texture or a procedural one, because two of the ACNH files are not
@@ -582,12 +608,12 @@ export function useTerrainMaterials(palette?: TerrainPalette, sea: SeaKind = "sw
       ...OVERLAY_SURFACES,
     ]) {
       const sharedName = SHARED[s];
-      const shared = s === Surface.River ? waterSurfaceMaterial(sea) : sharedName ? terrainMaterial(sharedName) : null;
+      const shared = s === Surface.River ? waterSurfaceMaterial(sea) : sharedName ? terrainMaterial(sharedName, ground) : null;
       if (shared && palette && s === Surface.Stone) {
         // Island stone (plaza) keeps its shared look and gains winter snow cover.
         const stone = shared.clone() as THREE.MeshStandardMaterial;
-        stone.onBeforeCompile = (shader, renderer) => { shared.onBeforeCompile(shader, renderer); addSnow(shader, 0.8, 0.26, 0.75); };
-        stone.customProgramCacheKey = () => "island-stone-snow-v1";
+        stone.onBeforeCompile = (shader, renderer) => { shared.onBeforeCompile(shader, renderer); addSnow(shader, ground, 0.8, 0.26, 0.75); };
+        stone.customProgramCacheKey = () => (ground === "own" ? "island-stone-snow-own-v1" : "island-stone-snow-v1");
         m.set(s, stone);
         continue;
       }
@@ -618,7 +644,8 @@ export function useTerrainMaterials(palette?: TerrainPalette, sea: SeaKind = "sw
             }
             if (overlay.normalMap) {
               overlay.normalMap = overlay.normalMap.clone();
-              overlay.normalMap.repeat.setScalar(s === Surface.Grass ? 0.8 : 1.4);
+              // Our lawn's blades are painted into its albedo and its normal together: one repeat for both.
+              overlay.normalMap.repeat.setScalar(s === Surface.Grass ? (ground === "own" ? 0.85 : 0.8) : 1.4);
               overlay.normalMap.magFilter = THREE.LinearFilter;
               overlay.normalMap.needsUpdate = true;
             }
@@ -644,7 +671,7 @@ export function useTerrainMaterials(palette?: TerrainPalette, sea: SeaKind = "sw
                   diffuseColor.rgb = diffuse * mix(vec3(0.9, 0.96, 0.88), sampledDiffuseColor.rgb, uGrassLook.x) * grassShift;
                 #endif
               `);
-              addSnow(shader, 0.96, 0.14, 0.3);
+              addSnow(shader, ground, 0.96, 0.14, 0.3);
               // The cliff kit's grass is instanced and carries its own UVs: give it the ground's world
               // UVs, so a plateau top is the same lawn as the ground around it.
               shader.vertexShader = shader.vertexShader.replace("#include <uv_vertex>", `#include <uv_vertex>
@@ -658,15 +685,35 @@ export function useTerrainMaterials(palette?: TerrainPalette, sea: SeaKind = "sw
                   #endif
                 #endif`);
             };
-            overlay.customProgramCacheKey = () => "island-grass-detail-v5";
+            overlay.customProgramCacheKey = () => (ground === "own" ? "island-grass-detail-own-v1" : "island-grass-detail-v5");
           }
-          if (palette && s === Surface.Soil) {
+          if (palette && s === Surface.Soil && ground === "own") {
+            // Our path (art/terrain/build_ground.py soil-albedo.png) is painted to tile: its crumbs, pebbles and
+            // cracks show (OWN_SOIL), crossed with a turned copy of itself so no pebble marks the repeat, and its own
+            // finer copy for grain; the mean is the dump path's, so the path keeps its exposure.
+            overlay.normalScale.set(OWN_SOIL.normal, OWN_SOIL.normal);
+            overlay.onBeforeCompile = (shader, renderer) => {
+              shared.onBeforeCompile(shader, renderer);
+              shader.fragmentShader = shader.fragmentShader.replace("#include <map_fragment>", `
+                #include <map_fragment>
+                #ifdef USE_MAP
+                  vec3 crossedSoil = texture2D(map, vec2(-vMapUv.y, vMapUv.x) * 1.73 + 0.37).rgb;
+                  vec3 soilDetail = mix(sampledDiffuseColor.rgb, crossedSoil, 0.25);
+                  float grain = dot(texture2D(map, vec2(vMapUv.y, -vMapUv.x) * 3.7 + 0.61).rgb, vec3(0.2126, 0.7152, 0.0722));
+                  diffuseColor.rgb = diffuse * mix(vec3(${OWN_SOIL.flat.toFixed(4)}), soilDetail, ${OWN_SOIL.detail.toFixed(2)})
+                    * (${(1 - OWN_SOIL.grain * OWN_SOIL.mean).toFixed(4)} + grain * ${OWN_SOIL.grain.toFixed(2)});
+                #endif
+              `);
+              addSnow(shader, ground, 0.7, 0.3, 0.65);
+            };
+            overlay.customProgramCacheKey = () => "island-soil-detail-own-v1";
+          } else if (palette && s === Surface.Soil) {
             // The supplied soil albedo contains broad bright marks. Keep its
             // authored detail without repeating high-contrast spots down the path.
             overlay.normalScale.set(0.18, 0.18);
             overlay.onBeforeCompile = (shader, renderer) => {
               shared.onBeforeCompile(shader, renderer);
-              shader.uniforms.uSoilGrain = { value: (terrainMaterial("mSand") as THREE.MeshStandardMaterial).map };
+              shader.uniforms.uSoilGrain = { value: (terrainMaterial("mSand", ground) as THREE.MeshStandardMaterial).map };
               shader.fragmentShader = "uniform sampler2D uSoilGrain;\n" + shader.fragmentShader;
               shader.fragmentShader = shader.fragmentShader.replace("#include <map_fragment>", `
                 #include <map_fragment>
@@ -677,24 +724,28 @@ export function useTerrainMaterials(palette?: TerrainPalette, sea: SeaKind = "sw
                   diffuseColor.rgb = diffuse * mix(vec3(0.82), soilDetail, 0.18) * (0.8 + grain * 0.5);
                 #endif
               `);
-              addSnow(shader, 0.7, 0.3, 0.65);
+              addSnow(shader, ground, 0.7, 0.3, 0.65);
             };
             overlay.customProgramCacheKey = () => "island-soil-detail-v3";
           }
           if (palette && s === Surface.Sand) {
-            // Retain the supplied sand grain while reducing its baked orange cast.
+            // Retain the supplied sand grain while reducing its baked orange cast. Our sand (ground "own") lets its
+            // grain and ripples through, a little brighter than the dump's beach (OWN_SAND).
+            const sandShade = ground === "own"
+              ? `${OWN_SAND.gain.toFixed(2)} * (${(0.84 + (OWN_SAND.luma - 0.4) * 0.32).toFixed(4)} + (sandLuma - ${OWN_SAND.luma.toFixed(4)}) * ${OWN_SAND.contrast.toFixed(2)})`
+              : "0.84 + (sandLuma - 0.4) * 0.32";
             overlay.onBeforeCompile = (shader, renderer) => {
               shared.onBeforeCompile(shader, renderer);
               shader.fragmentShader = shader.fragmentShader.replace("#include <map_fragment>", `
                 #include <map_fragment>
                 #ifdef USE_MAP
                   float sandLuma = dot(sampledDiffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-                  diffuseColor.rgb = diffuse * (0.84 + (sandLuma - 0.4) * 0.32);
+                  diffuseColor.rgb = diffuse * (${sandShade});
                 #endif
               `);
-              addSnow(shader, 0.85, 0.28, 0.6);
+              addSnow(shader, ground, 0.85, 0.28, 0.6);
             };
-            overlay.customProgramCacheKey = () => "island-sand-detail-v3";
+            overlay.customProgramCacheKey = () => (ground === "own" ? "island-sand-detail-own-v2" : "island-sand-detail-v3");
           }
           m.set(s, overlay);
         } else m.set(s, shared);
@@ -724,7 +775,7 @@ export function useTerrainMaterials(palette?: TerrainPalette, sea: SeaKind = "sw
     rock.color.set(ROCK.color);
     m.set(ROCK_LAYER, rock);
     return m;
-  }, [palette, sea]);
+  }, [palette, sea, ground]);
 
   useEffect(() => () => {
     if (palette) for (const surface of [Surface.Grass, Surface.Soil, Surface.Sand]) {

@@ -53,7 +53,7 @@ describe("the sea gate (v1-integrate): the waves only where the world opts in", 
       for (const tag of worlds) expect(tag, path).toMatch(/\bwaves\b/);
     }
     expect(tags("components/game/world/editor/EditorScene.tsx", "GridOcean")[0]).toMatch(/\bwaves\b/);
-    expect(read("components/game/world/editor/EditorScene.tsx")).toContain('useWaterFrame(LIGHT, false, "waves")');
+    expect(read("components/game/world/editor/EditorScene.tsx")).toMatch(/useWaterFrame\(LIGHT, false, "waves"[,)]/);
   });
 
   it("floats boats only on a sea with waves (the wharf rides liveWaves, which only the waves advance)", () => {
