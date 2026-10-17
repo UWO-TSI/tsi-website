@@ -1,6 +1,7 @@
 // Shop interior, phase 1 evidence (specs/interiors/shop.md): the greybox layout in the game's own frame, headless and
 // muted, against a dev server with the Supabase env blanked. Run from web/:
 //   PORT=3189 node ../specs/evidence/shop-interior/phase1/shots.mjs <out-dir> [name,name,...]
+// (PNGs; the committed shots are those converted with `cwebp -q 88`.)
 // Shots: a top-down plan with labels and a legend, the view from the door (the walking camera), each section and the
 // counter (the walking camera with you standing there, and a lower look across it). Labels are projected from the
 // layout module the room draws from (lib/game/shopLayout.ts, exposed in dev as window.__shopLayout). The main pass is
@@ -55,7 +56,7 @@ const AIM = cam => {
 };
 
 /** In the page: labels at world points (projected through the camera drawing the room), and an optional legend. */
-const LABEL = ({ labels, legend, title }) => {
+const LABEL = ({ labels, legend, key, title, bend }) => {
   document.getElementById("shop-labels")?.remove();
   const A = window.__audit, cam = A.cam ?? A.gameCam, rect = A.renderers[0].domElement.getBoundingClientRect();
   const root = document.createElement("div");
@@ -63,17 +64,21 @@ const LABEL = ({ labels, legend, title }) => {
   root.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:99999;font:600 13px/1.25 -apple-system,system-ui,sans-serif";
   const v = cam.position.clone();
   for (const l of labels) {
-    v.set(...l.at).project(cam);
+    // The curved world sinks everything by its view-space distance (lib/game/worldProjection.ts bendViewPoint): so do the labels.
+    v.set(...l.at).applyMatrix4(cam.matrixWorldInverse);
+    v.y -= v.z * v.z * bend[0] + v.x * v.x * bend[1];
+    v.applyMatrix4(cam.projectionMatrix);
     if (v.z > 1) continue;
     const x = rect.left + (v.x + 1) / 2 * rect.width, y = rect.top + (1 - v.y) / 2 * rect.height;
     const el = document.createElement("div");
-    const big = l.style === "section", floor = l.style === "floor";
+    const big = l.style === "section", floor = l.style === "floor", badge = l.style === "badge";
     el.textContent = l.text;
     el.style.cssText = `position:absolute;left:${x + (l.dx ?? 0)}px;top:${y + (l.dy ?? 0)}px;transform:translate(-50%,-50%);white-space:nowrap;`
-      + (big ? "font-size:20px;letter-spacing:.08em;color:#111;background:rgba(255,255,255,.88);padding:4px 10px;border-radius:6px;border:2px solid #111"
+      + (badge ? "width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;color:#fff;background:#14161a;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.5)"
+        : big ? "font-size:20px;letter-spacing:.08em;color:#111;background:rgba(255,255,255,.88);padding:4px 10px;border-radius:6px;border:2px solid #111"
         : floor ? "font-size:12px;font-style:italic;font-weight:500;color:#2b2b2b;background:rgba(255,255,255,.6);padding:1px 6px;border-radius:4px"
           : "color:#fff;background:rgba(20,22,26,.86);padding:3px 8px;border-radius:5px");
-    if (l.dot !== false && !big && !floor) {
+    if (l.dot !== false && !big && !floor && !badge) {
       const dot = document.createElement("div");
       dot.style.cssText = `position:absolute;left:${x}px;top:${y}px;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:#fff;border:2px solid #14161a`;
       root.appendChild(dot);
@@ -83,12 +88,12 @@ const LABEL = ({ labels, legend, title }) => {
   if (title) {
     const t = document.createElement("div");
     t.textContent = title;
-    t.style.cssText = "position:absolute;left:18px;top:14px;font-size:18px;color:#fff;background:rgba(20,22,26,.86);padding:6px 12px;border-radius:6px";
+    t.style.cssText = `position:absolute;left:${rect.left + 16}px;top:${rect.top + 12}px;font-size:18px;color:#fff;background:rgba(20,22,26,.86);padding:6px 12px;border-radius:6px`;
     root.appendChild(t);
   }
   if (legend) {
     const box = document.createElement("div");
-    box.style.cssText = "position:absolute;right:16px;top:14px;background:rgba(20,22,26,.9);color:#fff;padding:12px 14px;border-radius:8px;font-size:13px;line-height:1.7";
+    box.style.cssText = `position:absolute;right:${innerWidth - rect.right + 16}px;top:${rect.top + 12}px;background:rgba(20,22,26,.9);color:#fff;padding:12px 14px;border-radius:8px;font-size:13px;line-height:1.7`;
     for (const row of legend) {
       const r = document.createElement("div");
       if (row.head) { r.textContent = row.head; r.style.cssText = "font-weight:700;margin-top:6px;opacity:.85"; }
@@ -97,6 +102,17 @@ const LABEL = ({ labels, legend, title }) => {
         sw.style.cssText = `display:inline-block;width:14px;height:${row.thin ? 4 : 14}px;margin:0 8px ${row.thin ? 4 : -2}px 0;border-radius:2px;background:${row.colour};border:1px solid rgba(255,255,255,.4)`;
         r.appendChild(sw); r.appendChild(document.createTextNode(row.text));
       }
+      box.appendChild(r);
+    }
+    root.appendChild(box);
+  }
+  if (key) {
+    const box = document.createElement("div");
+    box.style.cssText = `position:absolute;left:${rect.left + 16}px;top:${rect.top + 64}px;background:rgba(20,22,26,.9);color:#fff;padding:12px 14px;border-radius:8px;font-size:13px;line-height:1.75;white-space:nowrap`;
+    for (const [n, text] of key) {
+      const r = document.createElement("div");
+      r.innerHTML = `<b style="display:inline-block;width:22px;text-align:right;margin-right:8px">${n}</b>`;
+      r.appendChild(document.createTextNode(text));
       box.appendChild(r);
     }
     root.appendChild(box);
@@ -112,12 +128,16 @@ await ctx.addInitScript(INIT, { look: LOOK });
 const page = await ctx.newPage();
 page.on("pageerror", e => console.log("pageerror", e.message.slice(0, 200)));
 page.on("console", m => { if (m.type() === "error" && !/Failed to load resource|supabase|401|403|503|WebSocket|colyseus/i.test(m.text())) console.log("console", m.text().slice(0, 200)); });
-await page.goto(`http://localhost:${PORT}/lab/island?shop=inside&time=day&weather=clear&season=autumn`);
-await page.waitForFunction(() => !!window.__shopLayout && !!window.__audit?.main && !!window.__audit?.gameCam, null, { timeout: 420000 });
-await page.waitForTimeout(9000);
-await page.evaluate(() => { const g = window.__governor; if (g) { g.hold = 1e9; g.set(0); } });
-await page.waitForTimeout(1200);
-await page.addStyleTag({ content: "body *:not(canvas){visibility:hidden !important} canvas{visibility:visible !important} #shop-labels, #shop-labels *{visibility:visible !important}" });
+/** Into the shop (aerial: the curved world's bend off, for the plan), settled, with the page's DOM hidden but the labels. */
+async function load(aerial) {
+  await page.goto(`http://localhost:${PORT}/lab/island?shop=inside&time=day&weather=clear&season=autumn${aerial ? "&aerial=1" : ""}`);
+  await page.waitForFunction(() => !!window.__shopLayout && !!window.__audit?.main && !!window.__audit?.gameCam, null, { timeout: 420000 });
+  await page.waitForTimeout(9000);
+  await page.evaluate(() => { const g = window.__governor; if (g) { g.hold = 1e9; g.set(0); } });
+  await page.waitForTimeout(1200);
+  await page.addStyleTag({ content: "body *:not(canvas){visibility:hidden !important} canvas{visibility:visible !important} #shop-labels, #shop-labels *{visibility:visible !important}" });
+}
+await load(false);
 const L = await page.evaluate(() => {
   const s = window.__shopLayout;
   return { fixtures: s.SHOP_FIXTURES, slots: s.SHOP_SLOTS, kinds: s.ITEM_KINDS, pendant: s.SHOP_PENDANT, spot: s.SHOP_COUNTER_SPOT, spawn: s.SHOP_SPAWN };
@@ -156,53 +176,71 @@ const SECTIONS = [
 const pendantLabel = { text: "Linear pendant", at: [L.pendant.x1, L.pendant.y, L.pendant.z] };
 const keeperLabel = { text: "Shopkeeper", at: [0.1, 1.45, 4.25] };
 
+/** The plan's numbered key: number, what, and where its badge sits. */
+const PLAN_KEY = [
+  [1, "Counter: glazed tile, timber top", [0.9, 0.9, 3.0]],
+  [2, "Glazed tile wall", [-1.0, 3.5, 4.96]],
+  [3, "Crates (close the counter's end)", [2.05, 1.05, 3.9]],
+  [4, "Plant (closes the other end)", [-2.05, 1.35, 3.9]],
+  [5, "Shopkeeper, behind the counter", [0.75, 1.4, 4.4]],
+  [6, "Linear pendant", [-1.3, 2.7, 3.3]],
+  [7, "Pegboard wall, round the corner", [-5.97, 3.2, -3.9]],
+  [8, "Metal counter with drawers", [-5.66, 0.85, -3.0]],
+  [9, "Metal shelves on the pegboard", [-5.82, 1.6, 0.6]],
+  [10, "Club merch sign", [-4.05, 3.3, 4.93]],
+  [11, "Featured drop: concrete plinths", [-3.6, 0.75, -0.1]],
+  [12, "Window, sheer curtains", [5.95, 3.1, -2.9]],
+  [13, "Seasonal: stepped plinths", [3.85, 0.8, -3.35]],
+  [14, "Clothes: metal rail, face-out", [3.5, 1.6, -0.9]],
+  [15, "Tools: concrete table", [3.5, 0.72, 1.3]],
+  [16, "Dyes, accessories: shelving", [5.75, 2.4, 1.15]],
+  [17, "Furniture: showroom dais", [3.0, 0.2, 3.6]],
+  [18, "Edge light (e.g. counter lip)", [-5.34, 0.8, 2.0]],
+  [19, "Walking path", [0, 0, -0.6]],
+];
 const SHOTS = [
   {
-    id: "01-plan-top-down", title: "Shop layout, top down (12 x 10; door at the bottom)",
+    id: "01-plan-top-down", title: "Shop layout, top down (12 x 10; door at the bottom)", aerial: true,
     cam: { pos: [0, 60, 0.15], target: [0, 0, 0.15], up: [0, 0, 1], fov: 13.6 },
     labels: [
       ...SECTIONS.map(s => ({ ...s, at: [s.at[0], 0, -5.85] })),
       { text: "Door", at: [0, 0, -5.15], dy: 0 },
       { text: "You (spawn)", at: [L.spawn[0], 1.4, L.spawn[1]], dx: 62 },
-      ...fixtureLabels(null, {
-        counter: { dy: 22 }, "tile-wall": { at: [0, 3.5, 4.96], dy: -14 }, crates: { dx: 34, dy: -22 }, plant: { dx: -30, dy: -22 },
-        pegboard: { at: [-6.0, 3.2, -3.0], dx: 4 }, "merch-counter": { at: [-5.66, 0.85, -1.0] }, "merch-shelf": { at: [-5.82, 1.6, 1.2] },
-        "merch-sign": { at: [-4.05, 3.3, 4.93], dy: -10 }, "merch-plinths": { dy: 34 },
-        curtains: { at: [6.0, 3.1, -2.9] }, "seasonal-plinths": { dy: 30 }, rail: { dy: -22 }, "tools-table": { dy: 26 },
-        shelving: { at: [5.75, 2.4, 1.15], dx: -10 }, dais: { at: [4.25, 0.2, 3.5], dy: 8 },
-      }),
-      { ...pendantLabel, dx: 40, dy: -2 }, { ...keeperLabel, dx: -60 },
+      ...PLAN_KEY.map(([n, , at]) => ({ text: String(n), at, style: "badge" })),
       { text: "Herringbone oak", at: [1.0, 0, -4.2], style: "floor" }, { text: "Polished concrete", at: [-2.4, 0, -4.2], style: "floor" },
-      { text: "Walking path", at: [0, 0, -0.6], style: "floor", dx: 46 },
     ],
+    key: PLAN_KEY.map(([n, text]) => [n, text]),
     legend: LEGEND,
   },
   {
     id: "02-door-view", title: "From the door (the walking camera)", cam: null,
     labels: [
-      ...SECTIONS.map(s => ({ ...s, at: [s.at[0], 2.6, 0] })),
-      ...kindLabels(["seasonal", "clothes", "tools", "dyes", "furniture", "merch-wear", "merch-small", "merch-bags", "merch-prints", "merch-featured"]),
-      { text: "Cashier counter", at: [0, 0.9, 2.95] }, pendantLabel, keeperLabel,
+      ...SECTIONS.map(s => ({ ...s, at: [s.at[0], 0, -4.45] })),
+      ...kindLabels(["seasonal", "clothes", "tools", "dyes", "furniture", "merch-wear", "merch-bags", "merch-prints", "merch-featured"]),
+      { text: "Stickers, pins", at: [-5.6, 1.03, 0.6] }, { text: "Caps, mugs", at: [-4.1, 1.07, 4.66], dy: -12 },
+      { text: "Cashier counter", at: [0, 0.76, 2.95] }, pendantLabel, keeperLabel,
     ],
   },
   {
     id: "03-items-walk", title: "In-game items (walking camera, standing in the section)", walk: [3.0, -1.9], cam: null,
     labels: [...kindLabels(["seasonal", "clothes", "tools", "dyes", "accessories", "furniture"], { accessories: { dy: -16 }, dyes: { dy: 16 } }),
-      { text: "Edge lights", at: [3.5, 0.6, 0.9], dy: 22 }],
+      { text: "Edge lights", at: [5.49, 1.56, 2.6], dx: -70 }],
   },
   {
     id: "04-items-across", title: "In-game items, across from the aisle", cam: { pos: [-0.9, 3.4, -3.9], target: [3.9, 0.7, 1.2], fov: 52 },
-    labels: [...fixtureLabels(["seasonal-plinths", "rail", "tools-table", "shelving", "dais", "curtains"], { "seasonal-plinths": { dy: 30 }, rail: { dy: -26 }, "tools-table": { dy: 30 }, dais: { at: [3.4, 0.2, 3.5], dy: 18 } }),
+    labels: [...fixtureLabels(["seasonal-plinths", "rail", "tools-table", "shelving", "dais", "curtains"], { "seasonal-plinths": { dy: 30 }, rail: { dy: -26 }, "tools-table": { dy: 30 }, dais: { at: [3.4, 0.2, 3.5], dy: 18 }, curtains: { dx: 90 } }),
       ...kindLabels(["seasonal", "clothes", "tools", "dyes", "accessories", "furniture"], { seasonal: { dy: -22 }, clothes: { dy: 10 }, tools: { dy: -18 }, dyes: { dx: -40 }, accessories: { dx: -40 }, furniture: { dy: -18 } })],
   },
   {
     id: "05-merch-walk", title: "Club merch (walking camera, standing in the section)", walk: [-3.0, -1.9], cam: null,
-    labels: [...kindLabels(["merch-wear", "merch-small", "merch-bags", "merch-prints", "merch-featured"]), { text: "Edge light under the counter lip", at: [-5.34, 0.8, -0.8], dx: 80 }],
+    labels: [...kindLabels(["merch-wear", "merch-bags", "merch-prints", "merch-featured"]),
+      { text: "Stickers, pins", at: [-5.6, 1.03, 0.6] }, { text: "Caps, mugs", at: [-4.1, 1.07, 4.66], dy: -12 }, { text: "Edge light under the counter lip", at: [-5.34, 0.8, -3.0], dx: -120 }],
   },
   {
     id: "06-merch-across", title: "Club merch, across from the aisle", cam: { pos: [0.9, 3.4, -3.9], target: [-4.1, 0.9, 1.2], fov: 52 },
     labels: [...fixtureLabels(["pegboard", "merch-counter", "merch-shelf", "merch-plinths", "merch-sign"], { pegboard: { at: [-5.95, 2.9, -2.4] }, "merch-plinths": { dy: 30 }, "merch-sign": { dy: -14 } }),
-      ...kindLabels(["merch-wear", "merch-small", "merch-bags", "merch-prints", "merch-featured"], { "merch-featured": { dy: -16 }, "merch-small": { dy: -14 } })],
+      ...kindLabels(["merch-wear", "merch-bags", "merch-prints"]),
+      { text: "Stickers, pins", at: [-5.6, 1.03, 0.6] }, { text: "Caps, mugs", at: [-4.1, 1.07, 4.66], dy: -12 }],
   },
   {
     id: "07-counter-walk", title: "At the counter (walking camera)", walk: "spot", cam: null,
@@ -211,14 +249,15 @@ const SHOTS = [
   },
   {
     id: "08-counter-low", title: "The counter, lower", cam: { pos: [0.6, 1.9, 0.0], target: [0, 1.3, 4.0], fov: 55 },
-    labels: [{ text: "Tiled counter", at: [0.9, 0.45, 2.93] }, { text: "Timber top", at: [-1.2, 0.88, 2.9] }, { text: "Till", at: [-0.55, 1.12, 3.4] },
+    labels: [{ text: "Tiled counter", at: [0.9, 0.45, 2.93] }, { text: "Timber top", at: [-1.2, 0.74, 2.9] }, { text: "Till", at: [-0.55, 0.98, 3.4] },
       { ...pendantLabel, dy: -14 }, keeperLabel, { text: "Glazed tile wall", at: [1.5, 2.6, 4.92] }],
   },
 ].filter(s => !only || only.split(",").includes(s.id));
 
 const rect = await page.evaluate(() => { const c = window.__audit.renderers[0].domElement.getBoundingClientRect(); return { x: c.x, y: c.y, width: c.width, height: c.height }; });
-let at = L.spawn;
-for (const s of SHOTS) {
+let at = L.spawn, aerial = false;
+for (const s of [...SHOTS].sort((p, q) => Number(!!p.aerial) - Number(!!q.aerial))) {
+  if (!!s.aerial !== aerial) { aerial = !!s.aerial; await load(aerial); at = L.spawn; }
   await page.evaluate(() => document.getElementById("shop-labels")?.remove());
   const to = s.walk === "spot" ? L.spot : s.walk ?? L.spawn;
   if (to[0] !== at[0] || to[1] !== at[1]) {
@@ -230,7 +269,7 @@ for (const s of SHOTS) {
   await page.evaluate(AIM, s.cam);
   await settle(page);
   await page.waitForTimeout(500);
-  await page.evaluate(LABEL, { labels: s.labels, legend: s.legend, title: s.title });
+  await page.evaluate(LABEL, { labels: s.labels, legend: s.legend, key: s.key, title: s.title, bend: aerial ? [0, 0] : [0.0032, 0.0011] });
   await page.screenshot({ path: join(outDir, `${s.id}.png`), clip: rect });
   console.log("shot", s.id);
 }

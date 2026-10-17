@@ -39,9 +39,10 @@ const b = (at: [number, number, number], size: [number, number, number], finish:
 export const SHOP_FIXTURES: ShopFixture[] = [
   // ── The counter, closing the aisle at the back (ref 2) ──
   { id: "counter", zone: "counter", label: "Cashier counter: glazed tile, timber top", footprint: [[0, 3.3, 1.6, 0.375]], blocks: [
-    b([0, 0, 3.3], [3.2, 0.82, 0.75], "tile"),
-    b([0, 0.82, 3.3], [3.3, 0.06, 0.85], "timber"),
-    b([-0.55, 0.88, 3.4], [0.36, 0.24, 0.3], "metal"),       // the till
+    // Hip-high, as in ref 2: the shopkeeper shows from the chest up over it.
+    b([0, 0, 3.3], [3.2, 0.68, 0.75], "tile"),
+    b([0, 0.68, 3.3], [3.3, 0.06, 0.85], "timber"),
+    b([-0.55, 0.74, 3.4], [0.36, 0.24, 0.3], "metal"),       // the till
   ] },
   { id: "tile-wall", zone: "counter", label: "Glazed tile wall", blocks: [b([0, 0, 4.96], [4.0, 3.5, 0.08], "tile")] },
   // The counter's two ends are closed by the crates and the plant, so nobody walks round behind it.

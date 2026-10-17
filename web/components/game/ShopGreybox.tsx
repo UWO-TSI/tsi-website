@@ -17,7 +17,7 @@ import {
 } from "@/lib/game/shopLayout";
 
 export const FINISH_TONE: Record<Finish, string> = {
-  concrete: "#b9b5ae", metal: "#8e959c", pegboard: "#c8cacb", tile: "#9dbcae", timber: "#b38a5d",
+  concrete: "#b9b5ae", metal: "#8e959c", pegboard: "#bcc0c3", tile: "#9dbcae", timber: "#b38a5d",
   fabric: "#f1eee7", crate: "#e8e8e4", plant: "#6e8e60", sign: "#3b4048",
 };
 /** Each kind of displayed item's placeholder colour (the plan's legend): in-game kinds each their own, merch all cobalt. */
