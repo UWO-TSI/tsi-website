@@ -71,8 +71,8 @@ CARD = {"blossom": 0.39, "summer": 0.45, "autumn": 0.45, "winter": 0.45}   # the
 SHIELD = [(0.0, 0.344), (0.435, 0.259), (0.5, -0.19), (0.0, -0.487), (-0.5, -0.19), (-0.435, 0.259)]
 BEND = [0.07, 0.04, -0.02, -0.09, -0.02, 0.04]
 LODS = {
-    0: dict(share=1.0, reach=(0.9, 1.5), ball=(8, 5), sides=10, limb_sides=5, roots=4, hull=2, tex=(256, 256), bend=True),
-    1: dict(share=0.3, reach=(1.0, 1.42), ball=(6, 4), sides=7, limb_sides=4, roots=0, hull=1, tex=(128, 128), bend=False, grow=1.45),
+    0: dict(share=0.9, reach=(0.92, 1.56), ball=(8, 5), sides=10, limb_sides=5, roots=4, hull=2, tex=(256, 256), bend=True),
+    1: dict(share=0.27, reach=(1.0, 1.46), ball=(6, 4), sides=7, limb_sides=4, roots=0, hull=1, tex=(128, 128), bend=False, grow=1.45),
 }
 SNOW_LID = 1.34     # a winter ball's snow lid, of its radius (it sits among the cards)
 
@@ -99,14 +99,19 @@ def build(shape, dress, lod):
         return ((p - c).normalized() * 0.5 + (e.normalized() if e.length > 1e-9 else UP) * 0.15 + UP * 0.5).normalized()
 
     def shade(p, base=1.0):
+        """A soft gradient over the whole tree (David, round 2): darker low and inside, lighter on top and at the
+        outer edges, warmer where the light falls and cooler in the shade."""
         h = min(1, max(0, (p.z - lo.z) / max(hi.z - lo.z, 1e-3)))
-        k = base * (0.9 + 0.12 * h)
-        return (k, k, k)
+        c, r = nearest(p)
+        out = min(1, max(0, ((p - c).length / r - 0.85) / 0.7))
+        k = base * (0.78 + 0.2 * h) * (0.86 + 0.18 * out)
+        warmth = (k - 0.85) * 0.12
+        return (k * (1 + warmth), k, k * (1 - warmth))
 
     crown = K.Build()
     # the balls: the leaf mass, in shade
     for i, (c, r) in enumerate(balls):
-        K.ellipsoid(crown, c, Vector((r, r, r * 0.95)), K.MASS, lambda p: shade(p, 0.62), segs=L["ball"][0], rings=L["ball"][1],
+        K.ellipsoid(crown, c, Vector((r, r, r * 0.95)), K.MASS, lambda p: shade(p, 0.78), segs=L["ball"][0], rings=L["ball"][1],
                     wobble=0.08, seed=i, normal_of=normal_of)
     width = CARD[dress] * L.get("grow", 1.0)
     cards = 0
@@ -114,7 +119,7 @@ def build(shape, dress, lod):
     density = cfg["cards"] * L["share"] * 1.12 / sum(r * r for _, r in balls)   # 1.12: those hidden in a neighbour
     for i, (c, r) in enumerate(balls):
         n = round(density * r * r)
-        for d in K.fib_dirs(n, rng, jitter=0.6):
+        for d in K.fib_dirs(n, rng, jitter=0.95):
             p = c + d * r * rng.uniform(*L["reach"])
             # hidden in a neighbour's ball, or under the snow lid: skip
             if any(o is not c and (p - o).length < ro * 1.0 for o, ro in balls):
@@ -134,16 +139,18 @@ def build(shape, dress, lod):
                                                                 else K.CELLS[rng.randrange(10 if dress == "blossom" else (8 if snowy else 12))])
             right, cup = K.card_frame(nrm, UP, rng.uniform(-0.26, 0.26))
             w = width * rng.uniform(0.92, 1.08)
-            col = tuple(t * rng.uniform(0.94, 1.05) for t in shade(p))
+            # the dump's scattered darker leaves, on top as much as anywhere (more of them in autumn)
+            jit = rng.uniform(0.94, 1.05) * (rng.uniform(0.66, 0.78) if rng.random() < (0.2 if dress == "autumn" else 0.14) else 1.0)
             flip = rng.random() < 0.5
-            ids = []
+            ids, cols = [], []
             for (x, y), bend in zip(SHIELD, BEND):
                 q = p + right * (x * w) + cup * (y * w) + nrm * ((bend * w) if L["bend"] else 0)
                 ids.append(crown.vert(q, normal_of(q)))
+                cols.append(tuple(t * jit for t in shade(q)))
             uv = [K.cell_uv(cell, x * 2, (y + 0.487) / 0.831 * 2 - 1, flip) for x, y in SHIELD]
             # wound to face out (the shield runs clockwise seen from the front)
-            crown.face([ids[3], ids[2], ids[1], ids[0]], [uv[3], uv[2], uv[1], uv[0]], col)
-            crown.face([ids[0], ids[5], ids[4], ids[3]], [uv[0], uv[5], uv[4], uv[3]], col)
+            crown.face([ids[3], ids[2], ids[1], ids[0]], [uv[3], uv[2], uv[1], uv[0]], [cols[3], cols[2], cols[1], cols[0]])
+            crown.face([ids[0], ids[5], ids[4], ids[3]], [uv[0], uv[5], uv[4], uv[3]], [cols[0], cols[5], cols[4], cols[3]])
             cards += 1
     if snowy:
         for i, (c, r) in enumerate(balls):

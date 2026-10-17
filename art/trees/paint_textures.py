@@ -356,9 +356,10 @@ def sakura(rng, petal, eye, size=128):
     return cv
 
 
-def fringe(rng, colour, size=128, snow=None):
+def fringe(rng, colour, size=128, snow=None, deep=False):
     """A cedar fringe: a strip hanging in rounded fingers, darker at its top (inside the tier), lighter down the
-    fingers, fine vertical grain; with snow, frosted white over its top half, the green showing at the tips."""
+    fingers, fine vertical grain; with snow, frosted white over its top half, the green showing at the tips (deep: the
+    snow down to the fingertips, for the tree's snowed-over top)."""
     S = size * SS
     n = rng.choice([4, 5, 5, 6])
     x0, x1 = S * 0.04, S * 0.96
@@ -394,7 +395,7 @@ def fringe(rng, colour, size=128, snow=None):
     k = np.clip((val - 0.85) / 0.35, -1, 1)[..., None]
     rgb = np.where(k > 0, base + (warm(colour, 0.25) - base) * k, base + (warm(colour, -0.25) - base) * (-k))
     if snow is not None:
-        f = (1 - smoothstep(0.35, 0.75, t + 0.08 * np.sin(xx / w * math.pi * 2)))
+        f = (1 - smoothstep(0.75, 0.98, t + 0.05 * np.sin(xx / w * math.pi * 2))) if deep else (1 - smoothstep(0.35, 0.75, t + 0.08 * np.sin(xx / w * math.pi * 2)))
         frost = hexc("#e9eff3") * (0.9 + 0.1 * streak[..., None] / (streak.std() + 1e-9) * 0.5)
         rgb = rgb + (frost - rgb) * (f * 0.92)[..., None]
     cv = Canvas(S, S)
@@ -459,7 +460,8 @@ def leaves(season, seed=11):
 def needles(snow=False, seed=23):
     rng = random.Random(seed)
     s = hexc("#f6f8fc") if snow else None
-    cards = [fringe(rng, hexc(NEEDLE[i % len(NEEDLE)]), snow=s) for i in range(12)]
+    # with snow, cells 8-11 are snowed to the fingertips (the upper tiers: build_conifers.py)
+    cards = [fringe(rng, hexc(NEEDLE[i % len(NEEDLE)]), snow=s, deep=snow and i >= 8) for i in range(12)]
     mass = mass_of(lambda r, c, sz: fringe(r, c, sz, snow=s), [hexc(c) for c in NEEDLE], rng, bg=hexc(NEEDLE[3]) * 0.6)
     return atlas(cards, mass, snow_field(rng), seed)
 

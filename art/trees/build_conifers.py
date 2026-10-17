@@ -72,6 +72,50 @@ def cone(b, hem, top, r, rect, col_of, segs, normal_of, lid=False, i=0, rows=4):
         b.face([v(rows, k + 1), v(rows, k), hub], [uv(rows, k + 1), uv(rows, k), uv(rows - 1, k + 0.5)], [col_of(b.verts[x]) for x in (v(rows, k + 1), v(rows, k), hub)])
 
 
+SNOW_SHADE = (0.76, 0.83, 0.93)  # where the snow rounds off under its lip: a soft cool shade, never a hard white edge
+
+
+def snow_mound(b, t, hem, top, r, segs, i):
+    """Snow on a tier as the dump's snow cedar holds it (David, round 2: "the snow should collect and stack near the
+    top"): a pillow from the trunk out over the tier's upper slope, thicker and further out the higher the tier (t: 0
+    the lowest, 1 the top, where it covers the tier to its fingertips), its rim wavy and rolled under in a soft lip,
+    white on top and cool where it rounds off. The fringe's green fingers hang out below the lower tiers' snow."""
+    # the upper half of the tree is snowed over to its fingertips (the dump's snow cone); lower down, the snow sits
+    # on the tier's upper slope and the green fringe hangs out below it
+    cover = 0.82 + 0.4 * min(1, t / 0.6)                    # how far out it reaches, of the tier's radius
+    rim = hem + (top - hem) * 0.36 * max(0, 1 - t / 0.6) - 0.1 * max(0, (t - 0.6) / 0.4)
+    lift = 0.1 + 0.16 * t                                   # how thick it stacks at the trunk
+    u0, v0, u1, v1 = K.SNOW
+    apex_z = top + lift
+    # rows from the trunk out: (fraction out, drop below the slope, shade 0 white .. 1 cool)
+    rows = [(0.0, 0.0, 0.0), (0.3, 0.0, 0.0), (0.6, 0.0, 0.05), (0.85, 0.0, 0.15), (1.0, 0.02, 0.35), (1.04, 0.07, 0.65), (0.95, 0.13, 1.0)]
+    grid = []
+    for j, (f, drop, cool) in enumerate(rows):
+        row = []
+        for k in range(segs):
+            a = math.tau * k / segs
+            wav = 1 + (0.07 * math.sin(a * 5 + i * 1.7) + 0.035 * math.sin(a * 11 + i)) * min(1, f * 1.5)
+            rr = r * cover * f * wav
+            z = apex_z - (apex_z - rim) * min(f, 1.0) ** 1.15 - drop + (0.03 * math.sin(a * 3 + i) * min(1, f))
+            p = Vector((math.cos(a) * rr, math.sin(a) * rr, z))
+            out = Vector((math.cos(a), math.sin(a), 0))
+            nrm = (K.UP * (1.0 - 0.6 * cool) + out * (0.5 + 0.8 * cool) - K.UP * (0.9 if j == len(rows) - 1 else 0)).normalized()
+            white = 0.94 + 0.06 * t
+            col = tuple(white + (s_ - white) * cool for s_ in SNOW_SHADE)
+            uv = (u0 + K.INSET + (u1 - u0 - 2 * K.INSET) * K.tri_wave(k / segs * 4), v0 + K.INSET + (v1 - v0 - 2 * K.INSET) * K.tri_wave(j / (len(rows) - 1)))
+            row.append((b.vert(p, nrm), uv, col))
+        grid.append(row)
+    for j in range(len(rows) - 1):
+        for k in range(segs):
+            a, bb = grid[j][k], grid[j][(k + 1) % segs]
+            c, d = grid[j + 1][(k + 1) % segs], grid[j + 1][k]
+            if j == 0:
+                # the apex row is one point repeated: a fan
+                b.face([a[0], d[0], c[0]], [a[1], d[1], c[1]], [a[2], d[2], c[2]])
+            else:
+                b.face([a[0], d[0], c[0], bb[0]], [a[1], d[1], c[1], bb[1]], [a[2], d[2], c[2], bb[2]])
+
+
 def build(snow, lod):
     K.reset()
     L = LODS[lod]
@@ -111,7 +155,9 @@ def build(snow, lod):
                 pa, pb = d * ra + Vector((0, 0, za)), d * rb + Vector((0, 0, zb))
                 wa, wb = r * 0.18, math.tau * rb / n * (0.82 + 0.25 * ring) * rng.uniform(0.95, 1.1)
                 corners = [pb - t * wb, pb + t * wb, pa + t * wa, pa - t * wa]
-                cell = K.CELLS[rng.randrange(12)]
+                # with snow, the upper tiers wear the fringes snowed to their fingertips (cells 8-11)
+                deep = snow and i >= len(TIERS) * 0.5
+                cell = K.CELLS[8 + rng.randrange(4)] if deep else K.CELLS[rng.randrange(8 if snow else 12)]
                 flip = rng.random() < 0.5
                 uvs = [K.cell_uv(cell, -1, -1, flip), K.cell_uv(cell, 1, -1, flip), K.cell_uv(cell, 1, 1, flip), K.cell_uv(cell, -1, 1, flip)]
                 jit = rng.uniform(0.92, 1.06) * (0.92 + 0.08 * ring)
@@ -121,9 +167,9 @@ def build(snow, lod):
                 crown.face(ids, uvs, [tuple(min(1.2, c * (0.86 if j > 1 else 1.0)) for c in col) for j in range(4)])
                 cards += 1
     if snow:
+        n = len(TIERS)
         for i, (hem, top, r) in enumerate(TIERS):
-            cone(crown, hem + 0.1, top + 0.12, r * 1.0, K.SNOW, lambda p: (1.0, 1.0, 1.0), L["segs"] + (4 if lod == 0 else 0),
-                 lambda p: (normal_of(p) + K.UP).normalized(), lid=True, i=i, rows=L["rows"])
+            snow_mound(crown, i / (n - 1), hem, top, r, L["segs"] + (6 if lod == 0 else 0), i)
 
     wood = K.Build()
     path = [Vector((0, 0, -0.04)), Vector((0, 0, 0.3)), Vector((0.01, 0, 1.2)), Vector((0, 0.01, 2.4)), Vector((0, 0, top_z - 0.3))]
