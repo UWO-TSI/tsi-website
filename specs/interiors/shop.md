@@ -18,3 +18,23 @@ Interiors are reworked one room at a time, from David's references. The shop is 
 - **The shopkeeper:** talking to them opens dialogue with two options, "In-game items" and "Club merch". Each opens the full category in the shop UI.
 - **Shop UI:** browsing as now. For real club merch, the item's 3D model sits in the middle, rotating, with a pixel overlay effect (like the game's pixel finish).
 - **Real merch models:** placeholders until David supplies merch photos or models.
+
+## Phase 1: the layout (greybox, 2026-10-17, for David's approval)
+Every number is in `web/lib/game/shopLayout.ts`; the room draws it as matte blocks (`ShopGreybox`), with walking, the counter station and the shopkeeper's post on the same numbers. Shots: `specs/evidence/shop-interior/phase1/`.
+
+- **Room:** 12 x 10, up from the old 10 x 10. Two separate sections with an aisle between, and walking room round every table, didn't fit at 10 wide without packing the floor, which fights "minimal". The door stays centred in the cut-away near wall, and the whole room is in view from the door.
+- **Aisle:** 2.4+ wide, straight from the door to the cashier counter. The counter closes it at the back: glazed tile with a timber top, the till on it, the shopkeeper behind it, the linear pendant over it, and a glazed tile wall behind. Crates and a potted plant close its ends, as in ref 2, so nobody walks round behind it.
+- **In-game items (left, +x, on herringbone oak):**
+  - seasonal: three stepped concrete plinths by the curtained window, the first thing on the left as you come in;
+  - clothes: a metal rail, face-out;
+  - tools: a concrete table;
+  - dyes and accessories: metal shelving on the wall;
+  - furniture: a low concrete showroom dais against the back wall, laid out as a little room.
+- **Club merch (right, −x, on polished concrete; ref 1):**
+  - the pegboard wall wraps the right wall and the back corner, over a long metal counter with drawers;
+  - tees and hoodies hang at the front, totes at the back;
+  - stickers, pins and caps sit in crates on the counter;
+  - posters and a "club merch" sign go on the back corner's pegboard, face-on from the door;
+  - the newest drop sits on two concrete plinths in the middle of the section.
+- **Lights:** edge strips under the merch counter's lip and the pegboard shelves, along every shelving lip, round the tools table's top, and as a floor glow along the dais and the plinths. The linear pendant hangs over the counter. In phase 2, recessed downlights give the even fill.
+- **Walking path:** the aisle, a loop through each section, and a cut between the clothes rail and the tools table. Tests walk every leg of it and check that every displayed item has a spot within the tag range (1.6) where you can stand.

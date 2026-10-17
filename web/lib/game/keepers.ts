@@ -30,11 +30,11 @@ export const KEEPER_POSTS: Record<KeeperRoom, KeeperPost> = {
     { at: [-4.7, -1.78], yaw: ROOM, stay: 6.5, clip: "Trace" },   // the post tray
     { at: [-5.55, -1.78], yaw: ROOM, stay: 1.3, clip: "Forage" }, // under the counter
   ] },
-  // Shop: behind the counter and register (ShopInterior: counter at 0, 3.4, its back at z 3.9).
+  // Shop: behind the tiled counter (lib/game/shopLayout.ts: counter at 0, 3.3, its back at z 3.675, the till at x -0.55).
   shop: { post: "shopkeeper", slug: "shopkeeper", title: "Shopkeeper", stations: [
-    { at: [0.1, 4.3], yaw: ROOM, stay: 7, clip: "Idle" },
-    { at: [-0.3, 4.3], yaw: ROOM, stay: 6, clip: "Trace" },       // the register
-    { at: [0.45, 4.3], yaw: ROOM, stay: 1.3, clip: "Forage" },    // under the counter's end
+    { at: [0.1, 4.25], yaw: ROOM, stay: 7, clip: "Idle" },
+    { at: [-0.55, 4.25], yaw: ROOM, stay: 6, clip: "Trace" },     // the till
+    { at: [0.8, 4.25], yaw: ROOM, stay: 1.3, clip: "Forage" },    // under the counter's end
   ] },
   // Oracle: beside the altar (0, 2.6), tending the crystal and the candles.
   oracle: { post: "oracle_keeper", slug: "oracle-keeper", title: "Oracle keeper", stations: [
