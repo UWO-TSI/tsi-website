@@ -7,18 +7,20 @@ import { WATER_CHOP, WATER_CLOUDS, WATER_FOLD, WATER_OPTICS, WATER_RIPPLE, WATER
 import { ACTIVE_WORLD_BEND, ACTIVE_WORLD_BEND_SIDE } from "@/lib/game/curvedWorld";
 import { terrainMaterial, waterSurfaceMaterial, waterSurfaceUniforms } from "./terrainMaterials";
 import { deepestSeabed } from "@/lib/game/seabed";
+import { groundFile, groundOf, type GroundSet } from "@/lib/game/groundTextures";
 
 /**
  * Continue the grid's water outside its editable rectangle to the horizon, with its glint sprites
  * (`lite`: half of them; `skip`: water under a deck, where a sparkle would show through the planks;
  * `radius`: how far from the map's centre they reach, which grows with the map). `waves`: the new waves (game/waves)
  * where the world opts in, as its GridWorld does (lib/game/waterShader.ts seaOf); without it, main's sea exactly: the
- * swell, the graded strips and main's sparkles (the applicant island, live for recruits, first).
+ * swell, the graded strips and main's sparkles (the applicant island, live for recruits, first). `ownGround`: our own
+ * textures (lib/game/groundTextures.ts: the sparkle's mask) where the world opts in, as its GridWorld does.
  */
-export default function GridOcean({ map, lite = false, skip, radius, waves }: { map: IslandMap; lite?: boolean; skip?: (x: number, z: number) => boolean; radius?: number; waves?: boolean }) {
-  const sea = seaOf(waves);
+export default function GridOcean({ map, lite = false, skip, radius, waves, ownGround }: { map: IslandMap; lite?: boolean; skip?: (x: number, z: number) => boolean; radius?: number; waves?: boolean; ownGround?: boolean }) {
+  const sea = seaOf(waves), ground = groundOf(ownGround);
   const material = useMemo(() => waterSurfaceMaterial(sea), [sea]);
-  const bed = useMemo(() => terrainMaterial("mRiverBed")!, []);
+  const bed = useMemo(() => terrainMaterial("mRiverBed", ground)!, [ground]);
   const geometry = useMemo(() => (sea === "waves" ? oceanGeometry(map) : stripOceanGeometry(map)), [map, sea]);
   const floor = useMemo(() => seaBedGeometry(), []);
   useEffect(() => () => { geometry.dispose(); floor.dispose(); }, [geometry, floor]);
@@ -27,7 +29,7 @@ export default function GridOcean({ map, lite = false, skip, radius, waves }: { 
   return <group>
     <mesh position={[0, -WATER_DROP, 0]} geometry={geometry} material={material} />
     <mesh position={[0, -WATER_DROP - deepestSeabed() - 0.15, 0]} geometry={floor} material={bed} />
-    <WaterGlints map={map} lite={lite} skip={skip} radius={radius} sea={sea} />
+    <WaterGlints map={map} lite={lite} skip={skip} radius={radius} sea={sea} ground={ground} />
   </group>;
 }
 
@@ -207,8 +209,6 @@ export const GLINT_FOG = /* glsl */ `
 #endif
 `;
 
-/** The dump's sea-sparkle sprite (the July sea glints, Ocean.tsx), used as each sparkle's soft mask. */
-const GLINT_URL = "/assets/acnh/textures/sea-glint.png";
 
 /**
  * How a sparkle rides its sea: on the waves, a point of the surface that moves with it and leans on its slope; on
@@ -277,7 +277,8 @@ export function glintShader(sea: SeaKind, shader: { uniforms: Record<string, THR
  * far sparkles folded back under the horizon and showed twice); in fog they
  * fade out rather than turn the fog's colour (`GLINT_FOG`).
  */
-function WaterGlints({ map, lite, skip, radius, sea }: { map: IslandMap; lite: boolean; skip?: (x: number, z: number) => boolean; radius?: number; sea: SeaKind }) {
+/** `ground`: whose sparkle sprite masks each sparkle (lib/game/groundTextures.ts seaGlint: ours, or the dump's July sea glints). */
+function WaterGlints({ map, lite, skip, radius, sea, ground }: { map: IslandMap; lite: boolean; skip?: (x: number, z: number) => boolean; radius?: number; sea: SeaKind; ground: GroundSet }) {
   const [geometry, material] = useMemo(() => {
     const position = glintPoints(map, skip, radius), n = position.length / 3, tilt = new Float32Array(n * 2);
     for (let i = 0; i < n; i++) tilt.set(facetTilt(position[i * 3], position[i * 3 + 2]), i * 2);
@@ -285,13 +286,13 @@ function WaterGlints({ map, lite, skip, radius, sea }: { map: IslandMap; lite: b
     g.setAttribute("position", new THREE.BufferAttribute(position, 3));
     g.setAttribute("aTilt", new THREE.BufferAttribute(tilt, 2));
     g.setDrawRange(0, lite ? Math.floor(n / 2) : n);
-    const map_ = new THREE.TextureLoader().load(GLINT_URL);
+    const map_ = new THREE.TextureLoader().load(groundFile(ground, "seaGlint")!);
     map_.colorSpace = THREE.SRGBColorSpace;
     const m = new THREE.PointsMaterial({ map: map_, size: 0.5, sizeAttenuation: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
     m.onBeforeCompile = (shader) => glintShader(sea, shader);
     m.customProgramCacheKey = () => `water-glints-${sea}`;
     return [g, m];
-  }, [map, lite, skip, radius, sea]);
+  }, [map, lite, skip, radius, sea, ground]);
   useEffect(() => () => { geometry.dispose(); material.map?.dispose(); material.dispose(); }, [geometry, material]);
   return <points geometry={geometry} material={material} frustumCulled={false} />;
 }

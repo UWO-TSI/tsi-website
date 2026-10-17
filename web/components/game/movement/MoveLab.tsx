@@ -223,8 +223,8 @@ function CourseScene({ world, tuning, juice, spawn, telemetry, timeScale, lap, t
   return <>
     <IslandAtmosphere phase="day" light={LIGHT} look={LOOK} weather="clear" liteMode={lite} castShadows={shadows} ground={world.ground}
       cloudSize={[44, 52]} shadowExtent={30} fireflyAnchors={[]} trees={trees} />
-    <GridWorld map={v.map} field={v.field} light={LIGHT} palette={TERRAIN} windScale={lite ? 0 : 1} />
-    <GridOcean map={v.map} lite={lite} />
+    <GridWorld map={v.map} field={v.field} light={LIGHT} palette={TERRAIN} windScale={lite ? 0 : 1} ownGround />
+    <GridOcean map={v.map} lite={lite} ownGround />
     <InstancedModels items={scenery} />
     <group position={[cafe.x, 0, cafe.z]}><ACNHParts parts={CHALET_VARIANTS.brown} /></group>
     {signs && COURSE_SIGNS.map(s => <Html key={s.text} position={[s.x, world.ground(s.x, s.z) + 2.4, s.z]} center distanceFactor={12} zIndexRange={[3, 0]}>
