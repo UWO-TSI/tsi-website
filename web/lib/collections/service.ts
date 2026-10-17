@@ -81,7 +81,9 @@ export async function catchAction(
       const sp = nodeRoll(memberId, node, now, await weather());
       if (!sp) return { ok: false, status: 409, code: "nothing_here", error: "Nothing's out here right now." };
       if (sp.tool === "net" || sp.tool === "shovel") {
-        const held = checkHeld(req.tool, sp.tool, await store.ownedGear(memberId));
+        // Row 312: a member whose tools are taught holds the starter net or shovel only once a resident has given it.
+        const [owned, taught] = await Promise.all([store.ownedGear(memberId), store.toolsTaught(memberId)]);
+        const held = checkHeld(req.tool, sp.tool, owned, taught);
         if (!held.ok) return held;
       }
       const size = clampSize(ROSTER.find((s) => s.key === sp.key), forageSize(sp, random));

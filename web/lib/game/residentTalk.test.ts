@@ -4,7 +4,8 @@ import { village } from "./villageMap";
 import { PROPOSED_RESIDENTS } from "@/lib/content/residentRoster";
 import { RESIDENT_WALK, ResidentDay, daySpan, navGrid, newPose, planResidents } from "./residentRoutine";
 import {
-  CATCH_UP, TALK_CLOSE_S, TALK_PITCH, TALK_RANGE, TALK_SHOT, TALK_TURN_S, beginTalk, blipAt, leaveTalk, nearestTalker, pressTalk, routineLag, steerTalkShot, stepTalk, talkCameraYaw, talkTyping, typeMs, typedAt,
+  CATCH_UP, TALK_CLOSE_S, TALK_PITCH, TALK_RANGE, TALK_SHOT, TALK_TURN_S, beginTalk, blipAt, endTalk, leaveTalk, nearestTalker, onTalkScript, pressTalk, routineLag, startTalk, steerTalkShot, stepTalk, talkCameraYaw, talkStore,
+  talkTyping, typeMs, typedAt,
 } from "./residentTalk";
 
 const WREN = { id: "r-wren", slug: "wren", name: "Wren", post: "hq_lead", seed: 7 };
@@ -96,6 +97,23 @@ describe("talking to residents: E, the turn, the lines", () => {
     expect(blips[3]).toBe(false); // " "
     expect(blips.filter(Boolean).length).toBeGreaterThanOrEqual(3);
     expect(blips.filter(Boolean).length).toBeLessThan(text.length / 1.5);
+  });
+});
+
+describe("talking to residents: a scripted conversation (row 312)", () => {
+  it("tells the island its script as it ends, said through or left early; a usual talk tells nothing", () => {
+    const heard: string[] = [];
+    const off = onTalkScript((script, slug) => heard.push(`${slug}:${script}`));
+    startTalk(beginTalk(WREN, LINES, 0, "hq"));
+    expect(talkStore.active?.script).toBe("hq");
+    endTalk();
+    startTalk(beginTalk(WREN, LINES, 0));
+    endTalk();
+    const left = beginTalk({ ...WREN, slug: "curator" }, LINES, 0, "tool:net:offer");
+    startTalk(left); leaveTalk(left, 1); endTalk();
+    off();
+    startTalk(beginTalk(WREN, LINES, 0, "hq")); endTalk();
+    expect(heard).toEqual(["wren:hq", "curator:tool:net:offer"]);
   });
 });
 
