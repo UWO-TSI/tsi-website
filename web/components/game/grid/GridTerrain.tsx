@@ -552,7 +552,7 @@ function addSnow(shader: THREE.WebGLProgramParametersWithUniforms, set: GroundSe
  * grain and ripple relief the beach shows (the dump's shader kept 0.32 of a texture that had little to keep), and its
  * brightness over the dump beach's (David, 2026-10-17: "a little bit brighter"; a linear gain, so the hue holds).
  */
-const OWN_SAND = { luma: 0.3478, contrast: 1.2, gain: 1.2 };
+const OWN_SAND = { luma: 0.3478, contrast: 1.2, gain: 1.38 };
 /**
  * Our path's shading: the albedo's mean (linear; build_ground.py matches the dump's mRoadSoil_Alb to it), how much of
  * its detail shows over a flat `flat` (chosen so the mean shade is the dump path's 0.7831: mix(0.82, 0.7319, 0.18)
