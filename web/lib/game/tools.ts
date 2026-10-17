@@ -23,20 +23,27 @@ export const TOOLS: readonly Tool[] = [
 ];
 
 export const toolByKey = (key: unknown): Tool | null => TOOLS.find(t => t.key === key) ?? null;
-/** Owned gear keys (inventory catalogue_refs and slugs): tier 1 is everyone's. */
-export const ownsTool = (t: Tool, owned: readonly string[]) => t.source === "starter" || owned.includes(t.key);
+/**
+ * The kinds a resident teaches (row 312, specs/hq-onboarding.md): for a member whose tools are taught (`taught`: they
+ * arrived after row 312, lib/game/arrival/arrivalService.ts), the tier-1 net and shovel are theirs only once a resident
+ * has handed them over (an inventory row, lib/game/arrival/hq/grant.ts). Everyone else keeps them as starters.
+ */
+export const TAUGHT_KINDS: readonly ToolKind[] = ["net", "shovel"];
+/** Owned gear keys (inventory catalogue_refs and slugs): tier 1 is everyone's, but a taught kind's only once given. */
+export const ownsTool = (t: Tool, owned: readonly string[], taught = false) =>
+  owned.includes(t.key) || (t.source === "starter" && !(taught && TAUGHT_KINDS.includes(t.kind)));
 /** A kind's tools this member has, lowest tier first. */
-export const ownedTools = (kind: ToolKind, owned: readonly string[]) => TOOLS.filter(t => t.kind === kind && ownsTool(t, owned));
-/** The wheel's default for a kind: the best one owned. */
-export const bestTool = (kind: ToolKind, owned: readonly string[]): Tool => ownedTools(kind, owned).at(-1)!;
+export const ownedTools = (kind: ToolKind, owned: readonly string[], taught = false) => TOOLS.filter(t => t.kind === kind && ownsTool(t, owned, taught));
+/** The wheel's default for a kind: the best one owned (null: none yet, a taught kind no resident has given). */
+export const bestTool = (kind: ToolKind, owned: readonly string[], taught = false): Tool | null => ownedTools(kind, owned, taught).at(-1) ?? null;
 
 export type HeldCheck = { ok: true; tool: Tool } | { ok: false; status: number; code: "no_tool" | "wrong_tool" | "tool_not_owned"; error: string };
 const NEEDS: Record<ToolKind, string> = { rod: "Take out your rod first.", net: "You need a net for that.", shovel: "You need a shovel for that." };
 /** The held tool as the server takes it: a known `kind` tool the member owns (the client only names it). */
-export function checkHeld(key: unknown, kind: ToolKind, owned: readonly string[]): HeldCheck {
+export function checkHeld(key: unknown, kind: ToolKind, owned: readonly string[], taught = false): HeldCheck {
   if (key === undefined || key === null) return { ok: false, status: 422, code: "no_tool", error: NEEDS[kind] };
   const t = toolByKey(key);
   if (!t || t.kind !== kind) return { ok: false, status: 422, code: "wrong_tool", error: NEEDS[kind] };
-  if (!ownsTool(t, owned)) return { ok: false, status: 403, code: "tool_not_owned", error: `You don't have the ${t.name.toLowerCase()}.` };
+  if (!ownsTool(t, owned, taught)) return { ok: false, status: 403, code: "tool_not_owned", error: `You don't have the ${t.name.toLowerCase()}.` };
   return { ok: true, tool: t };
 }

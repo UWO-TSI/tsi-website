@@ -5,10 +5,10 @@
  * seeded mayor among them, as data: each is an npc_personas row (name, post, bio, tone, dialogue, and
  * a schedule of routines and a home) plus a look on the character rig.
  *
- * Names and traits are placeholders until David's list arrives (row 217); the
- * seed migration that puts them in npc_personas waits for his approval. Until
- * then they live in the dev fallback only (lib/content/loader.ts), so the
- * live island keeps its two seeded residents. Looks are keyed by slug and
+ * David approved seeding them (2026-10-17, "Seed the full roster"): the rows are
+ * 20261017020000_resident_roster.sql, generated from PROPOSED_RESIDENTS
+ * (lib/content/residentSeed.ts; later changes through gen-seeds). The dev
+ * fallback (lib/content/loader.ts) still carries them. Looks are keyed by slug and
  * worn wherever that resident appears; a resident an admin adds without one
  * gets a look seeded from its slug.
  *
