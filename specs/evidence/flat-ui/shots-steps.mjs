@@ -131,6 +131,10 @@ const SCENES = {
     await page.waitForTimeout(2000);
     await shot(page, "6c-collection-bugs");
   }),
+  "collection-applicant": () => harness("surface=collection-applicant", undefined, async page => {
+    await page.evaluate(() => { try { localStorage.setItem("tsi.collections.local.v1:applicant", JSON.stringify({ fish_dace: 2, flower_tulip: 3, apple: 1 })); } catch {} });
+    await page.reload(); await page.waitForTimeout(4000); await hideDev(page); await shot(page, "6e-collection-applicant");
+  }),
   "collection-phone": () => harness("surface=collection&collections=demo", PHONE, async page => { await page.waitForTimeout(2500); await shot(page, "6d-collection-phone"); }),
 };
 for (const [name, run] of Object.entries(SCENES)) {
