@@ -1,5 +1,5 @@
 """The review sheets (shop phase 2): the headless shots in a labelled grid, one WebP.
-  python3 sheet.py <raw-dir> <out.webp> [ground|merch|overlay|keychain|keychain2]"""
+  python3 sheet.py <raw-dir> <out.webp> [ground|merch|overlay|keychain|keychain2|upstairs]"""
 import sys
 from PIL import Image, ImageDraw, ImageFont
 
@@ -72,6 +72,10 @@ KEYCHAIN2 = [
     ("29-keychain-wall", "On the merch wall: the metal now polished silver, not white"),
     ("sprite", "The 2D sprite now keeps the acrylic block"),
 ]
+UPSTAIRS = [(f"{side}-{n}", f"{'Before' if side == 'b' else 'After'}: {cap}") for n, cap in (
+    ("u1-door", "from the door"), ("u2-top-of-stairs", "from the top of the stairs"), ("u3-merch-walk", "at the merch wall"),
+    ("u4-merch-across", "across the mezzanine"), ("u5-counter", "the counter and the pegboard"), ("u6-plinths", "the featured drop"),
+    ("u7-plan", "from above")) for side in ("b", "a")]
 TITLE = "Shop, phase 2: the furnished ground floor (headless, in-game)"
 if mode == "merch":
     CELLS, TITLE = MERCH, "Shop, phase 2: the club merch screen, after David's reference"
@@ -79,12 +83,14 @@ if mode == "overlay":
     CELLS, TITLE = OVERLAY, "Shop: the overlay redo after David's three references, and the window pass"
 if mode == "keychain":
     CELLS, TITLE = KEYCHAIN, "Shop: the TSI keycap keychain, from David's photos"
+if mode == "upstairs":
+    CELLS, TITLE = UPSTAIRS, "Shop upstairs: before (the layout's blocks) and after (furnished after ref 1)"
 if mode == "keychain2":
     CELLS, TITLE = KEYCHAIN2, "The keycap keychain: the clasp and keyring, keycap off and on, the bare switch (3,460 triangles)"
 W, H, PAD, CAP = 720, 450, 14, 34
 font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 17)
 title = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 26)
-cols = 2 if mode in ("merch", "keychain", "keychain2") else 3
+cols = 2 if mode in ("merch", "keychain", "keychain2", "upstairs") else 3
 rows = (len(CELLS) + cols - 1) // cols
 sheet = Image.new("RGB", (cols * (W + PAD) + PAD, rows * (H + CAP + PAD) + PAD + 50), "#1d1f22")
 d = ImageDraw.Draw(sheet)

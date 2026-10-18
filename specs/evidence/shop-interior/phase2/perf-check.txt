@@ -10,3 +10,17 @@ it has no baseline row and no budget yet (web/lib/game/perf/budget.ts), so the g
 For scale, the café's budget (the nearest interior): high 4 ms, 180 draws, 110k triangles; lite 2.5 ms, 140 draws.
 Most of the draws are the mezzanine's layout blocks (each a mesh) until upstairs is furnished.
 perf:check passed
+
+---
+Upstairs furnished (2026-10-18), the same check (SCENES=shop, measure build under the heavy lock, then SKIP_BUILD):
+
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draw calls | Triangles | Runs | Spread | Load |
+|---|---|---|---|---|---|---|---|---|---|
+| shop | high | 2.70 | 4.40 | 2.40 | 154 | 69259 | 3 | 4% | 5.2 |
+| shop | lite | 1.50 | 3.00 | 1.30 | 101 | 56571 | 3 | 27% | 5.1 |
+
+Draw calls 179 -> 154 (high), 126 -> 101 (lite): the mezzanine's layout blocks are now one merged model (a draw per
+material), and each floor's displayed items are merged into one mesh per look (ShopDisplays MergedItems). A run between
+(furnished, the displays not yet merged) read 204 / 151: the displayed merch upstairs had added a draw per mesh per
+item, twice with shadows; merging them is what brought it under the greybox. Triangles 52k -> 69k (the furnished
+mezzanine, 18k). perf:check passed.
