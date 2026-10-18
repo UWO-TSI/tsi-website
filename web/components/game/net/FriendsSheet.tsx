@@ -83,7 +83,7 @@ export default function FriendsSheet({ open, onClose }: { open: boolean; onClose
   const online = new Map(f.online.map(o => [o.uid, o]));
   const friends = [...(v?.friends ?? [])].sort((a, b) => Number(online.has(b.member_id)) - Number(online.has(a.member_id)) || a.world_name.localeCompare(b.world_name));
   const here = friends.filter(x => online.has(x.member_id)).length;
-  return <Sheet open={open} onClose={onClose} size="sm" icon={<HeartHandshake size={20} />} testId="friends-sheet" title="Friends"
+  return <Sheet open={open} onClose={onClose} size="sm" icon={<HeartHandshake size={20} />} testId="friends-sheet" variant="flat" title="Friends"
     eyebrow={v ? `${friends.length} friend${friends.length === 1 ? "" : "s"} · ${here} on the island` : "Your friends"}>
     <Tabs label="Friends" value={tab} onChange={setTab} tabs={[
       { id: "friends", label: "Friends" }, { id: "requests", label: "Requests", badge: f.asking || undefined }, { id: "add", label: "Add" }, { id: "blocked", label: "Blocked" },

@@ -1,6 +1,7 @@
 "use client";
 
 import type { GoalProgressView } from "@/lib/progression/types";
+import { Paper } from "@/components/gui";
 import { catalogueItem } from "@/lib/homes/catalogue";
 import s from "./progression.module.css";
 
@@ -14,7 +15,8 @@ export function rewardName(slug: string): string {
 export default function GoalCard({ goal, waitingOnTitle, onContribute }: { goal: GoalProgressView; waitingOnTitle?: string; onContribute?: (slug: string) => void }) {
   const myRoom = Math.max(0, goal.caps.member_total - goal.my_points);
   return (
-    <article className={s.card} aria-label={goal.title}>
+    // A club goal is a notice: paper, inside the flat notice board and journal (David, row 315).
+    <Paper as="article" className={s.card} aria-label={goal.title}>
       <div className={s.row}>
         <div>
           <div className={s.eyebrow}>{goal.goal_type === "story" ? "Club goal" : `Seasonal goal · ${goal.cycle}`}</div>
@@ -51,6 +53,6 @@ export default function GoalCard({ goal, waitingOnTitle, onContribute }: { goal:
           <span className={s.muted} style={{ alignSelf: "center" }}>Club event check-in: {goal.weights.event} pts</span>
         </div>
       ) : null}
-    </article>
+    </Paper>
   );
 }

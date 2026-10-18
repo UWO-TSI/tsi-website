@@ -13,6 +13,7 @@ import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Sparkles, X } from 
 import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import PixelImage from "@/components/economy/PixelImage";
+import { GuiVariantContext } from "../variant";
 import f from "./flat.module.css";
 
 /** The kit's class names, for the odd surface that lays out its own content in the flat style. */
@@ -46,16 +47,19 @@ export function FlatPanel({ open, onClose, title, purse, rail, keys, testId, emb
     <h2 className={f.heading}>{title}</h2>
     {onClose ? <button type="button" className={f.close} aria-label="Close" onClick={onClose}><X size={18} aria-hidden /></button> : <span />}
   </header>;
-  if (embedded) return <section aria-label={title} className={f.panel} data-testid={testId} data-rail={rail ? "" : undefined} data-embedded="">
+  // The GUI pieces inside wear the flat look too (components/gui/variant).
+  if (embedded) return <GuiVariantContext.Provider value="flat"><section aria-label={title} className={f.panel} data-testid={testId} data-rail={rail ? "" : undefined} data-embedded="" data-gui-flat="">
     {top}{rail}<div className={f.main}>{children}</div>
-  </section>;
+  </section></GuiVariantContext.Provider>;
   if (!state) return null;
   return <div className={f.layer} data-state={state}>
     <div className={f.scrim} onClick={onClose} aria-hidden="true" />
-    <section ref={panel} role="dialog" aria-modal aria-label={title} tabIndex={-1} data-gui-dialog data-gui-overlay className={f.panel} data-testid={testId} data-rail={rail ? "" : undefined}>
-      {top}
-      {rail}
-      <main className={f.main}>{children}</main>
+    <section ref={panel} role="dialog" aria-modal aria-label={title} tabIndex={-1} data-gui-dialog data-gui-overlay className={f.panel} data-testid={testId} data-rail={rail ? "" : undefined} data-gui-flat="">
+      <GuiVariantContext.Provider value="flat">
+        {top}
+        {rail}
+        <main className={f.main}>{children}</main>
+      </GuiVariantContext.Provider>
     </section>
   </div>;
 }

@@ -239,3 +239,56 @@ button.tile:hover { transform: translateY(-2px) scale(1.04); }
 .signInButton { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 22px; border-radius: var(--gui-r-pill); background: var(--gui-sage); color: var(--gui-paper); font-weight: 800; text-decoration: none; box-shadow: 0 3px 0 var(--gui-sage-deep); }
 .signInButton:hover { filter: brightness(1.06); }
 .signInButton:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--gui-sage-deep); }
+
+/* ── The flat variant (specs/polish/flat-ui.md step 7): the shop overlay's look for the game's menus ─────────────────
+   (Sheet variant="flat"; FlatPanel too for the pieces). The cream tokens are remapped on [data-gui-flat]
+   (styles/game-tokens.css); here, the frame and the pieces that change shape. */
+.layer[data-variant="flat"] .scrim { background: var(--flat-scrim); }
+.sheet[data-variant="flat"] { background: var(--flat-ground); color: var(--flat-ink); border-radius: 22px; box-shadow: var(--flat-shadow); }
+.sheet[data-variant="flat"]::before { display: none; }
+.sheet[data-variant="flat"] .head { --head: transparent; background: transparent; padding: 18px 18px 6px 24px; }
+.sheet[data-variant="flat"] .head::after { display: none; }
+.sheet[data-variant="flat"] .head h2 { color: var(--flat-ink); font: 600 20px/1.2 var(--gui-font); letter-spacing: 0; }
+.sheet[data-variant="flat"] .eyebrow { color: var(--flat-quiet); font-weight: 500; letter-spacing: 0; }
+.sheet[data-variant="flat"] .headIcon { width: 30px; height: 30px; background: none; box-shadow: none; color: var(--flat-ink); }
+.sheet[data-variant="flat"] .close { width: 36px; height: 36px; background: var(--flat-card); box-shadow: none; color: var(--flat-ink); }
+.sheet[data-variant="flat"] .close:hover:not(:disabled) { transform: none; background: var(--flat-card); }
+.sheet[data-variant="flat"] .body { padding-top: 12px; scrollbar-color: var(--flat-line) transparent; }
+.sheet[data-variant="flat"] .foot { border-top: 1px solid var(--flat-line); }
+@media (max-width: 560px) { .sheet[data-variant="flat"], .sheet[data-variant="flat"][data-size] { border-radius: 22px 22px 0 0; } }
+/* The kit's buttons (Button) as the shop's pills: the dark one, white ghosts, a quiet red for danger. */
+.sheet[data-variant="flat"] button[data-variant] { border: 0; border-radius: 999px; box-shadow: none; font-weight: 600; transform: none; }
+.sheet[data-variant="flat"] button[data-variant="primary"]:not(:disabled) { background: var(--flat-dark); color: #ffffff; }
+.sheet[data-variant="flat"] button[data-variant="primary"]:hover:not(:disabled) { background: var(--flat-dark-hover); }
+.sheet[data-variant="flat"] button[data-variant="secondary"]:not(:disabled), .sheet[data-variant="flat"] button[data-variant="quiet"]:not(:disabled) { background: var(--flat-card); color: var(--flat-ink); }
+.sheet[data-variant="flat"] button[data-variant="secondary"]:hover:not(:disabled), .sheet[data-variant="flat"] button[data-variant="quiet"]:hover:not(:disabled) { background: #fafafa; }
+.sheet[data-variant="flat"] button[data-variant="danger"]:not(:disabled) { background: var(--flat-card); color: var(--flat-error); }
+.sheet[data-variant="flat"] button[data-variant]:disabled { background: var(--flat-disabled); color: #ffffff; }
+.sheet[data-variant="flat"] button[data-variant]:active:not(:disabled) { transform: none; box-shadow: none; }
+.sheet[data-variant="flat"] [data-gui-paper] button[data-variant] { border-radius: 50% 48% 45% 47% / 48% 51% 45% 49%; }
+.sheet[data-variant="flat"] [data-gui-paper] button[data-variant="primary"]:not(:disabled) { background: var(--gui-sage); color: var(--gui-paper); box-shadow: 0 3px 0 var(--gui-sage-deep); }
+/* Text tabs: quiet words, the chosen one the dark pill. (Tabs with icons are an icon rail.) */
+.tabsWrap[data-flat] .tabs { padding: 0; gap: 6px; background: transparent; }
+.tabsWrap[data-flat] .tab { min-height: 36px; padding: 0 14px; color: var(--flat-quiet); font-weight: 600; }
+.tabsWrap[data-flat] .tab:hover:not([aria-selected="true"]):not(:disabled) { background: rgb(0 0 0 / 0.04); color: var(--flat-ink); }
+.tabsWrap[data-flat] .tab[aria-selected="true"] { background: var(--flat-dark); color: #ffffff; box-shadow: none; }
+.tabsWrap[data-flat] .tab[aria-selected="true"] .tabLabel { background: none; }
+.tabsWrap[data-flat] .tabKey { background: var(--flat-ink) !important; color: #ffffff !important; }
+/* Rows split by hairlines; the chosen one white, no stripes or glove. */
+.list[data-flat] > li + li::before { left: 2px; right: 2px; border-top: 1px solid var(--flat-line); }
+.row[data-flat] { margin: 0; padding: 12px 4px; border-radius: 0; }
+button.row[data-flat]:hover:not(:disabled):not([data-selected]) { background: rgb(0 0 0 / 0.03); }
+.row[data-flat][data-selected] { background: var(--flat-card); border-radius: 12px; padding-inline: 12px; color: var(--flat-ink); }
+.row[data-flat] .glove { display: none; }
+.row[data-flat] .rowTitle { font-weight: 600; }
+.row[data-flat] .leader { border-top: 1px solid var(--flat-line); }
+/* Item tiles as small white cards: the rarity a thin ring, the chosen one an ink ring. */
+.tile[data-flat] { border-radius: 14px; background: var(--flat-card); box-shadow: inset 0 0 0 2px var(--rarity, transparent); }
+button.tile[data-flat]:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 2px var(--rarity, transparent), 0 8px 22px rgb(0 0 0 / 0.07); }
+.tile[data-flat][data-selected] { background: var(--flat-card); transform: none; box-shadow: inset 0 0 0 2px var(--flat-ink); }
+.tile[data-flat][data-empty] { background: transparent; box-shadow: inset 0 0 0 1.5px var(--flat-line); }
+.tile[data-flat] .count { background: var(--flat-ink); color: #ffffff; box-shadow: none; }
+/* Tags as the shop's pills: the kit's gold call to action (Donate) the dark pill, the rest quiet grey. */
+.badge[data-flat] { border-radius: 8px; font-weight: 600; }
+.badge[data-flat][data-tone="gold"] { background: var(--flat-dark); color: #ffffff; }
+.badge[data-flat][data-tone="neutral"], .badge[data-flat][data-tone="sage"] { background: var(--flat-pill); color: var(--flat-pill-ink); }

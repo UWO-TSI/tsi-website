@@ -64,7 +64,7 @@ export function SystemMenu({ open, signedIn, name, onResume, onSettings, onClose
   onResume: () => void; onSettings: () => void; onClose: () => void;
 }) {
   const [leaving, setLeaving] = useState(false);
-  return <Sheet open={open} onClose={onClose} title="Menu" size="sm" testId="system-menu" eyebrow={signedIn ? `Signed in as ${name}` : "Playing as a guest"}>
+  return <Sheet open={open} onClose={onClose} title="Menu" size="sm" testId="system-menu" variant="flat" eyebrow={signedIn ? `Signed in as ${name}` : "Playing as a guest"}>
     <div className={styles.system}>
       <Button onClick={onResume}><Play size={17} aria-hidden /> Resume</Button>
       <Button variant="secondary" onClick={onSettings}><Settings size={17} aria-hidden /> Settings</Button>

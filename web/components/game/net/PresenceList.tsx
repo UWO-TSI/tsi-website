@@ -70,7 +70,7 @@ export default function PresenceList({ open, onClose, area }: { open: boolean; o
   // Their cards come with the view: read again when who's in view changes.
   const levels = useMemo(() => levelsInView(activeNet(), inView), [inView]);
   const alone = roster.length <= 1;
-  return <Sheet open={open} onClose={onClose} size="sm" icon={<Users size={20} />} testId="presence-list"
+  return <Sheet open={open} onClose={onClose} size="sm" icon={<Users size={20} />} testId="presence-list" variant="flat"
     title="People on the island" eyebrow={`${roster.length} on the island · you're ${YOU_ARE[area]}`}>
     {alone ? <Empty icon={<Users size={28} />} title="Just you for now">Others show up here as they come onto the island.</Empty>
       : groups.map(g => <section key={g.label} className={s.group} aria-label={g.label}>

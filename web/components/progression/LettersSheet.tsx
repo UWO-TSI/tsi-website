@@ -94,7 +94,8 @@ export function LettersBody({ transport = lettersTransport, systemOnly = false }
       <ul className={s.letters}>
         {shown.map((l) => (
           <li key={l.id}>
-            <button className={s.letter} data-unread={!l.outgoing && !l.read_at} onClick={() => open(l)}>
+            {/* A letter stays paper inside the flat mailbox (David, row 315). */}
+            <button className={s.letter} data-unread={!l.outgoing && !l.read_at} data-gui-paper="" onClick={() => open(l)}>
               <span className={s.row}>
                 <span className={s.from}>{l.outgoing ? `To ${l.recipient_name}` : l.sender_name}</span>
                 <span className={s.muted} style={{ margin: 0 }}>{when(l.created_at)}</span>
@@ -132,7 +133,7 @@ function LetterReader({ letter, transport, onBack, onReply }: { letter: LetterVi
         </div>
         <span className={s.muted}>{when(letter.created_at)}</span>
       </div>
-      <div className={s.paper}>{letter.body}</div>
+      <div className={s.paper} data-gui-paper="">{letter.body}</div>
       {error ? <p className={`${s.note} ${s.err}`}>{error}</p> : null}
       {reported ? <p className={`${s.note} ${s.info}`}>Reported. An admin will take a look.</p> : null}
       <div className={s.actions}>
