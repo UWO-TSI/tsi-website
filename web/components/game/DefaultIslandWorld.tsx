@@ -131,6 +131,7 @@ import { useMoveUnlocks } from "@/lib/game/moveUnlocks";
 import { useHqOnboarding } from "./hq/useHqOnboarding";
 import { CheckInCard, PlaqueCard, RegisterCard } from "./hq/HqCards";
 import FounderDesk, { FOUNDER_STATION, constrainFounder } from "./hq/FounderDesk";
+import HqLayoutInterior from "./hq/HqLayoutInterior";
 import { hqEvent } from "@/lib/game/arrival/hq/store";
 import { WREN } from "@/lib/game/arrival/hq/lines";
 import { phaseInstant, solarPosition } from "@/lib/game/sunPath";
@@ -716,6 +717,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const area: Area = site === "ruins" ? "ruins" : site === "home" ? (inside === "house" ? "house" : "home") : inside === "shop" ? "village" : inside ?? "village";
   const netReady = inside !== "shop";
   const [layout, setLayout, , homeActions] = useHomeLayout();
+  // HQ's new room, phase 1 (specs/interiors/hq.md): an option's walkable greybox, in development only, for David's pick.
+  const [hqLayout] = useState<"a" | "b" | null>(() => { const v = devHome.get("hqLayout"); return v === "a" || v === "b" ? v : null; });
   const decor = useDecorate(layout, setLayout, { on: devHome.get("decorate") === "1", piece: devHome.get("place") && catalogueItem(devHome.get("place")!) ? devHome.get("place") : null });
   const [returned, setReturned] = useState(false);
   const [fromBoat, setFromBoat] = useState(false);
@@ -1213,6 +1216,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
             : inside === "shop" ? <ShopInterior frozen={fading || sheet === "counter" || sheet === "shopkeeper" || sheet === "fitting"} talking={sheet === "counter" || sheet === "shopkeeper"} light={light} playerPosRef={player}
               onNearestStation={s => setNear(s?.id === "counter" ? "counter" : s?.id === "exit" ? "exit" : s?.id.startsWith("fitting") ? "fitting" : null)} />
             : inside === "museum" ? <MuseumInterior wings={museumWings} frozen={fading || donateOpen} talking={donateOpen} light={light} player={player} onNear={n => setNear(n === "donate" ? "curator" : n)} />
+            : inside === "hq" && hqLayout ? <HqLayoutInterior option={hqLayout} light={light} frozen={fading} playerPosRef={player} onNearestStation={s => setNear((s?.id as Near) ?? null)} />
             : inside === "hq" ? <Clubhouse phase={phase} light={light} player={player} frozen={fading} talking={sheet === "showcase" || hq.card !== null || (talking && talkNow.slug === WREN.slug)} member={peaceful.member} onNear={setNear} />
             : inside === "house" ? <HomeInterior layout={layout} phase={phase} light={light} frozen={fading} player={player} onNear={(n: HouseNear) => setNear(n)}
               decorating={decor.decorating} selected={decor.selected} onPlace={decor.place} onPickUp={decor.pickUp} />

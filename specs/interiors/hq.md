@@ -86,3 +86,107 @@ All of HQ's current functions stay and keep working.
   - run one perf:check at the end;
   - list the room's meshes against the interior budget, as the shop's exceptions are.
 - **Textures only where they show** (`specs/lane-rules.md`).
+
+## Phase 1: the layout (greybox, 2026-10-18, for David's pick)
+
+Every number is in `web/lib/game/hqLayout.ts`, for two options. The room draws an option as matte blocks
+(`components/game/hq/HqGreybox.tsx`) at `/lab/island?hq=inside&hqLayout=a` (or `b`), in development only. The live HQ
+is untouched until David picks. The walking, the stair and the stations use the same numbers. The shots are in
+`specs/evidence/hq-interior/phase1/`: `hq-layout-options.webp` shows A beside B, view by view, made headless by
+`shots.mjs` and `sheet.py` there.
+
+### The HQ as it is (measured)
+
+- **Room:** 16 x 12 (x ±8, z ±6), one storey.
+  - The door is in the middle of the front wall (z −6). You arrive at (0, −4.2) and the exit is at (0, −5.5).
+  - The walking camera follows from the door's side, so +x is screen left.
+- **Stations:**
+
+  | Station | Where | E opens |
+  |---|---|---|
+  | Front desk | (−5.2, −3.6) | Wren: the onboarding visit, the register, the profile showcase |
+  | Notice board | (0, 4.3) | The notice sheet and the club goals (onboarding step 6) |
+  | Trophy display | (−4.5, 4.2) | The tourney list (the 3D case stands at the display) |
+  | Bookshelf | (6.6, −1.3) | Quests |
+  | Clock | (−7, 4.75) | The island's time |
+  | Founder's desk | (2.27, 3.85) | The blank plaque (onboarding step 4) |
+  | Workbench | (−6.0, 1.0) | Crafting |
+  | Exit | (0, −5.5) | The island |
+
+- **Wren's post:** behind the front desk, at (−5.05, −1.78), in `lib/game/keepers.ts`.
+- **The onboarding script:** it's driven by these stations' events, not by positions (`lib/game/arrival/hq/script.ts`).
+  Moving the stations moves the onboarding with them.
+
+### The new room, both options
+
+- **Size:** 20 x 16, two storeys. The floors are 3.4 apart and the ceiling is at 6.8.
+- **Door and arrival:** the door stays in the middle of the front wall. You arrive at (0, −6.4) and the exit is at (0, −7.2).
+- **Aquarium:** two storeys tall (0.25 to 6.6), its water a single bright blue in the greybox.
+- **Ground floor:** Wren's front desk and the register by the door, plus the green marble coffee bar, the long walnut
+  co-working desk, the library wall, and the lamp-lit lounge in front of the aquarium.
+  - The notice board and club goals, the Founder's desk and plaque, the trophy case, the clock and the workbench each
+    get a station.
+- **Upstairs:**
+  - the big lounge (shag carpet, velvet sofas, beanbags by the rail, the arc lamp) under the walnut oval ceiling, which
+    covers this lounge only;
+  - two locked "Admins only" doors;
+  - six blank yearly banners.
+- **Cut-away:** the part of the upper floor you're under is cut away so the walking camera sees your floor. Each part
+  returns as you step out from under it, with hysteresis so it never flickers.
+- **Tests:** `hqLayout.test.ts`, 16 tests (8 per option).
+  - Every taped path can be walked.
+  - Every station sits where you can stand.
+  - You can climb from the door to the upper floor, walk its path, and come back down.
+  - You can't step off the upper floor's edge, or walk under or beside the flight.
+  - The aquarium is two storeys tall with the ground lounge in front of it.
+  - The cut-away works per part, without flicker.
+  - There's a banner per year and there are locked admin doors.
+
+### Option A: the back mezzanine (the shop's arrangement)
+
+- **The mezzanine:** over the back third (z 1.5 to 8), facing the door. The six banners hang from its front rail,
+  facing the entrance, so you see them as you walk in.
+- **The aquarium:** fills the left wall of the double-height front hall (z −5.4 to 1.2). The ground lounge sits in front
+  of it. Its top half is seen from the mezzanine's front-left corner.
+- **Ground floor:**
+  - Wren's desk faces the door on the right.
+  - The coffee bar stands in the hall.
+  - The work floor is under the mezzanine: co-working, the library wall across the back, the notice board and goals,
+    the clock, the Founder's desk, the trophy case and the workbench.
+- **Stair:** up the right wall, toward the back, arriving at the mezzanine's front-right corner.
+- **Upstairs:** the lounge in the middle and left, the admin doors at the back right.
+
+### Option B: the gallery (the aquarium straight ahead)
+
+- **The aquarium:** fills the back wall, 10 wide, straight ahead of the door. The ground lounge sits in the
+  double-height hall in front of it.
+- **The upper floor:** wraps the hall in a U.
+  - A bridge over the entrance holds the big lounge, which faces the tank head on.
+  - An arm runs down each side.
+  - The six banners hang from poles off the arms' rails, one after another toward the tank as you walk in.
+- **Ground floor:**
+  - The entry is under the bridge, with Wren's desk on the left and the coffee bar on the right.
+  - The library wall and co-working are under the left arm, with the Founder's desk and the trophy case at the back.
+  - The notice board is under the right arm by the stair, with the workbench at the back.
+- **Stair:** up the right wall, under the right arm, toward the back. You walk the arm to the bridge.
+- **Upstairs:** the admin doors are on the left arm.
+
+### The exterior (report only; not changed)
+
+- **The building as it is:** `hq-office.glb` stands 7.0 wide and about 5.3 deep (landmark half 3.5 x 2.65). Its walls
+  are about 3.5 tall, its roof peak 4.76, and its door 1.8 tall.
+- **Height:** the interior is two storeys whichever option is picked. For the outside to read as two storeys, the
+  facade needs a raised upper storey with windows, walls to about 6.8 (+3.3), and the roof on top (peak about 8.1).
+- **Footprint:** the interior was already more than twice the building's width (16 x 12 inside a 7 x 5.3 building),
+  the convention every village interior follows. It can stay.
+  - If David wants the outside to match the room's proportions, the building would grow to about 8.5 x 6.8, i.e. +1.5
+    wide and +1.5 deep, and that needs room around its landmark in the village.
+
+### Not in phase 1
+
+- Materials, models, the aquarium's water, fish and caustics.
+- Lamps and lighting by the time of day.
+- The coffee bar's, the aquarium's and the admin doors' prompts. The new stations are in the layout; the greybox
+  answers only the ones HQ has now.
+- Wren walking her new post.
+- The HQ perf bench and the room's meshes against the interior budget.
