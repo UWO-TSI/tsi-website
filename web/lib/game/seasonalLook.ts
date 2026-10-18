@@ -2,6 +2,7 @@ import { Color } from "three";
 import type { PaletteColors, SeasonalPalette } from "@/lib/content/types";
 import type { Season, SeasonBlend } from "./season";
 import { SEASONS } from "./season";
+import { CEDAR_SNOW_URL, CEDAR_URL, TREE_SHAPES, flowerUrl, treeUrl } from "./natureParts";
 
 /**
  * Seasonal dressing for the member island (decisions 99, 161, 176): tints are
@@ -22,17 +23,18 @@ export interface SeasonLook {
   season: Season;
 }
 
-const P = "/assets/acnh/plants/";
 /**
- * NatureTree's four slots (oak a, oak b, blossom, cedar) per dominant season.
- * Spring oaks bloom (cherry blossom); summer/autumn oaks are leafy (autumn via
- * the leaf tint); winter uses the dump's snow oak/cedar variants.
+ * NatureTree's four slots per dominant season (game/remodel-trees): our broadleaf trees (art/trees/build_broadleaf.py)
+ * round, wide and tall in the season's dress (cherry blossom in spring, autumn colour, snow in winter), and our cedar
+ * (art/trees/build_conifers.py), snowed on in winter. Each dress is the same silhouette, so a tree keeps its shape
+ * through the year.
  */
+const broadleaf = (season: Season) => TREE_SHAPES.map(shape => treeUrl(shape, season));
 export const SEASON_TREES: Record<Season, readonly string[]> = {
-  spring: [`${P}tree-blossom.glb`, `${P}tree-blossom.glb`, `${P}tree-blossom.glb`, `${P}tree-cedar.glb`],
-  summer: [`${P}tree-hardwood-a.glb`, `${P}tree-hardwood-b.glb`, `${P}tree-hardwood-a.glb`, `${P}tree-cedar.glb`],
-  autumn: [`${P}tree-hardwood-a.glb`, `${P}tree-hardwood-b.glb`, `${P}tree-hardwood-b.glb`, `${P}tree-cedar.glb`],
-  winter: [`${P}tree-hardwood-snow.glb`, `${P}tree-hardwood-snow.glb`, `${P}tree-hardwood-snow.glb`, `${P}tree-cedar-snow.glb`],
+  spring: [...broadleaf("spring"), CEDAR_URL],
+  summer: [...broadleaf("summer"), CEDAR_URL],
+  autumn: [...broadleaf("autumn"), CEDAR_URL],
+  winter: [...broadleaf("winter"), CEDAR_SNOW_URL],
 };
 /**
  * The dump's leafy bushes, closed all round and in season colours (art/nature/close_bushes.py, game/remodel-r2): the
@@ -46,11 +48,11 @@ export const SEASON_BUSHES: Record<Season, string[]> = {
   autumn: [`${B}bush-holly-autumn.glb`, `${B}bush-hydrangea-autumn.glb`],
   winter: [`${B}bush-holly-winter.glb`],
 };
-/** Seasonal flower sets. Winter is empty: no blooms standing in the snow. */
+/** Seasonal flower sets, our flowers (art/trees/build_flowers.py). Winter is empty: no blooms standing in the snow. */
 export const SEASON_FLOWERS: Record<Season, string[]> = {
-  spring: ["tulip", "pansy", "hyacinth", "windflower"].map(f => `${P}flower-${f}.glb`),
-  summer: ["lily", "rose", "cosmos", "hyacinth"].map(f => `${P}flower-${f}.glb`),
-  autumn: ["mum", "cosmos", "rose", "windflower"].map(f => `${P}flower-${f}.glb`),
+  spring: ["tulip", "pansy", "hyacinth", "windflower"].map(flowerUrl),
+  summer: ["lily", "rose", "cosmos", "hyacinth"].map(flowerUrl),
+  autumn: ["mum", "cosmos", "rose", "windflower"].map(flowerUrl),
   winter: [],
 };
 
