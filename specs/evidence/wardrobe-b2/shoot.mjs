@@ -32,7 +32,7 @@ const HIDE = "#island-options, [aria-controls='island-options'], nextjs-portal, 
 const DEFAULT = { skin: 3, hair: -1, eyes: "F1.1", mouth: "M1.1", extras: [], bangs: "", back: "hair_bob_pigtail", top: "top_tee", bottom: "bottom_shorts",
   onepiece: null, shoes: "shoes_slipon", acc: {}, colors: {} };
 const STARTERS = ["top_tee", "top_hoodie", "top_stripe_ls", "bottom_shorts", "bottom_trousers", "bottom_joggers", "shoes_slipon", "shoes_sneakers"];
-const HAIRS = "hair_ribbon_bob,hair_wavy_half_up,hair_curly_pigtails,hair_emo_layers,hair_double_buns,hair_messy_low_pony";   // round 2: in their own colours
+const HAIRS = "hair_ribbon_bob,hair_wavy_half_up,hair_curly_pigtails,hair_emo_layers,hair_double_buns,hair_vkei";   // round 2: in their own colours
 
 /** Open a creator tab (and wear `pick`, a tile's name), then screenshot it, and again scrolled to the bottom of the panel. */
 async function tab(page, cat, name, pick) {

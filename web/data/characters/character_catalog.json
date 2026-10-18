@@ -1971,51 +1971,11 @@
    }
   },
   {
-   "id": "hair_messy_low_pony",
-   "slot": "back",
-   "name": "Messy low ponytail",
-   "glb": "hair/full/hair_messy_low_pony.glb",
-   "tris": 3479,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "full": true,
-   "skull": "v10",
-   "source": "hair/source/david/14-White-Blue-Short-Messy-w-Low-Ponytail-119601543909065.glb",
-   "roblox": {
-    "provisional": true
-   },
-   "map": {
-    "cell": 13,
-    "natural": {
-     "a": [
-      0.9851,
-      0.0,
-      89.88
-     ],
-     "b": [
-      0.6503,
-      0.1441,
-      252.71
-     ]
-    }
-   },
-   "accent": {
-    "default": 11
-   }
-  },
-  {
    "id": "hair_vkei",
    "slot": "back",
    "name": "V-kei layers",
    "glb": "hair/full/hair_vkei.glb",
-   "tris": 2923,
+   "tris": 2922,
    "materials": [
     {
      "name": "M_Hair",
@@ -2454,7 +2414,7 @@
    "slot": "accessory",
    "name": "Ushanka and goggles",
    "glb": "accessories/accessory/acc_ushanka_goggles.glb",
-   "tris": 735,
+   "tris": 723,
    "materials": [
     {
      "name": "M_Hair",
@@ -4816,7 +4776,7 @@
    "slot": "accessory",
    "name": "Drawn top hat",
    "glb": "accessories/roblox/acc_drawn_top_hat.glb",
-   "tris": 702,
+   "tris": 707,
    "materials": [
     {
      "name": "M_Acc",
@@ -4897,7 +4857,7 @@
    "slot": "accessory",
    "name": "Cowboy hat",
    "glb": "accessories/roblox/acc_cowboy_hat.glb",
-   "tris": 757,
+   "tris": 746,
    "materials": [
     {
      "name": "M_Acc",

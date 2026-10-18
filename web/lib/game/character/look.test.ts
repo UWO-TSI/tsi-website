@@ -169,9 +169,9 @@ describe("looks", () => {
     expect(resolveParts(DEFAULT_LOOK).find(p => p.id === "top_tee")!.decal).toBeNull();
     expect(resolveParts(DEFAULT_LOOK).find(p => p.id === "shoes_slipon")!.tints.M_Sole).toBe("#C9A63A");
   });
-  it("wears the hair as one of David's 26 whole hairstyles (21, then wardrobe batch 2's five: #22 is its hat alone), hidden under a hat or hood (head-roblox)", () => {
+  it("wears the hair as one of David's 25 whole hairstyles (21 less #14, then wardrobe batch 2's five: #22 is its hat alone), hidden under a hat or hood (head-roblox)", () => {
     const hair = PARTS.filter(p => p.slot === "bangs" || p.slot === "back");
-    expect(hair).toHaveLength(26);
+    expect(hair).toHaveLength(25);
     expect(hair.every(p => p.slot === "back" && p.full && p.roblox)).toBe(true);
     expect(DEFAULT_LOOK.bangs).toBe("");
     expect(PART_BY_ID.get(DEFAULT_LOOK.back)?.full).toBe(true);
@@ -216,7 +216,9 @@ describe("looks", () => {
     // every style draws its own texture (#09 and #15 one flat texel of it) and has a median to shift
     for (const p of PARTS.filter(q => q.full)) expect(p.map?.natural.a, p.id).toBeDefined();
     // #23's ribbons, #25's curls and #14's streaks are second colours of their own (David)
-    for (const id of ["hair_ribbon_bob", "hair_curly_pigtails", "hair_messy_low_pony"]) expect(PART_BY_ID.get(id)!.map!.natural.b, id).toBeDefined();
+    for (const id of ["hair_ribbon_bob", "hair_curly_pigtails"]) expect(PART_BY_ID.get(id)!.map!.natural.b, id).toBeDefined();
+    expect(PART_BY_ID.has("hair_messy_low_pony")).toBe(false);                       // round 3: #14 removed
+    expect(parseLook({ back: "hair_messy_low_pony" }).back).toBe("hair_wispy_ponytail");
   });
   it("draws every hairstyle as one primitive in one material; a cap or visor is drawn as it is (never recoloured)", () => {
     for (const p of PARTS.filter(p => p.slot === "bangs" || p.slot === "back")) expect(p.materials.map(m => m.name), p.id).toEqual(["M_Hair"]);

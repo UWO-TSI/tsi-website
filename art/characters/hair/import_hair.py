@@ -70,6 +70,7 @@ FACE_CLEAR = 0.003       # jaw rule: hair over our chin stands at least this far
 FACE_FADE = 0.03         # and the move fades out over this much more height (at least twice the move: no folds)
 REST_H = 0.006           # jaw rule: hair this close to Roblox's head (resting on it) follows ours where ours is inside it
 REST_FADE = 0.02         # and that move fades out over this much more height (hair hanging free stays put)
+TIP_KEEP = 0.12          # m: a shortened hair clump keeps its last stretch as Roblox shaped and painted it (shorten "tips")
 SHELL_CLEAR = 0.005      # a scalp shell (undercap false) lies at least this far over the head mesh (lift_shell: no depth fight)
 COVER_REACH = 0.25       # the under-cap goes where the hair is within this of the skin (a dome may stand 10 cm proud)
 FRINGE_LAT = 16.0        # deg (geocentric): the under-cap reaches down the forehead to here, under a fringe that covers it
@@ -198,13 +199,51 @@ def height(p):
 
 
 # ================================================================ 5. jaw: where our head is not Roblox's
-def shorten(ob, head, keep):
+def shorten(ob, head, rule):
     """Round 2 (David, 2026-10-17, #26): Roblox's length on our chibi body reaches the floor; the hair below the chin (the
-    head's lowest point) keeps `keep` of its length, squashed toward the chin height (each strand keeps its shape across)."""
+    head's lowest point) keeps `keep` of its length. Round 3 (David: "make sure the model is the same as the original,
+    why does it fade off"): squashing all of it toward the chin squashed Roblox's own strand tips and the pale ends painted
+    on them into a flat white band. `tips` instead shortens each strand clump (a connected piece) in its middle: its last
+    TIP_KEEP (or half its new length, if less) keeps Roblox's own shape and paint, moved up; the stretch from the chin to
+    there is squashed to make up the rest, so each clump ends `keep` as far below the chin as it did."""
+    keep, mode = (rule, "squash") if isinstance(rule, (int, float)) else (rule["keep"], rule.get("mode", "tips"))
     chin = min((head.matrix_world @ v.co).z for v in head.data.vertices)
-    for v in ob.data.vertices:
-        if v.co.z < chin:
-            v.co.z = chin - (chin - v.co.z) * keep
+    me = ob.data
+    if mode == "squash":
+        for v in me.vertices:
+            if v.co.z < chin:
+                v.co.z = chin - (chin - v.co.z) * keep
+        return
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    seen = set()
+    for v0 in bm.verts:                          # the strand clumps (connected pieces)
+        if v0 in seen:
+            continue
+        piece, st = [], [v0]
+        seen.add(v0)
+        while st:
+            v = st.pop()
+            piece.append(v)
+            for e in v.link_edges:
+                w = e.other_vert(v)
+                if w not in seen:
+                    seen.add(w)
+                    st.append(w)
+        depth = chin - min(v.co.z for v in piece)
+        if depth <= 0.0:
+            continue
+        target = keep * depth
+        tip = min(TIP_KEEP, 0.5 * target)
+        k = (target - tip) / max(depth - tip, 1e-6)
+        for v in piece:
+            d = chin - v.co.z
+            if d <= 0.0:
+                continue
+            v.co.z = chin - (d * k if d <= depth - tip else (target - tip) + (d - (depth - tip)))
+    bm.to_mesh(me)
+    bm.free()
+    me.update()
 
 
 def jaw_rule(ob):
@@ -718,6 +757,19 @@ def split_own(ob):
     return part
 
 
+def fit_own(part, fit):
+    """Round 3 (David, 2026-10-17: "ushanka and goggles smaller and further back"): a split-off hat scaled by
+    fit["scale"] about its own top centre (it stays on the head, its rim and flaps rise), then moved fit["back"] metres
+    back (+Y: the face looks toward -Y)."""
+    co = [v.co.copy() for v in part.data.vertices]
+    top = max(c.z for c in co)
+    cx, cy = sum(c.x for c in co) / len(co), sum(c.y for c in co) / len(co)
+    k, back = float(fit.get("scale", 1.0)), float(fit.get("back", 0.0))
+    for v, c in zip(part.data.vertices, co):
+        v.co = Vector((cx + (c.x - cx) * k, cy + (c.y - cy) * k + back, top + (c.z - top) * k))
+    part.data.update()
+
+
 def logo_colour(px, me, accent):
     """The median colour (sRGB hex) of the accent texels the part samples: a split-off visor's logo keeps its colour."""
     hh, ww = px.shape[:2]
@@ -1029,7 +1081,7 @@ def main():
     built = []
     for spec in MANIFEST["hairs"]:
         pid = spec["id"]
-        if ONLY and pid not in ONLY:
+        if (ONLY and pid not in ONLY) or spec.get("removed"):   # round 3: a hair David removed (#14) keeps its cell, unbuilt
             continue
         att = ATTACH[pid]
         ob, img = import_any(os.path.join(HERE, "source", spec["_who"], spec["file"]))
@@ -1050,6 +1102,8 @@ def main():
         body = body_clip(ob, BODY)
         visor = split_off(ob) if spec.get("split") else None
         own_part = split_own(ob) if spec.get("split_own") else None
+        if own_part is not None and spec["split_own"].get("fit"):
+            fit_own(own_part, spec["split_own"]["fit"])
         if capped:                  # row 314: #22 without its hat keeps a whole under-cap (its crown was the hat)
             undercap(ob, HEAD, undercap_faces(HEAD, None if spec.get("undercap") == "full" else ob))
         cell = cells.get(pid)
@@ -1095,7 +1149,7 @@ def main():
                                  "source": f"hair/source/{spec['_who']}/{spec['file']} (split from {pid})",
                                  "colourAtlas": True, **({"key": sp["key"]} if sp.get("key") else {"grantedBy": pid}),
                                  **({"coversHair": True, "hatCut": sp["hatCut"]} if sp.get("hatCut") is not None else {})}
-            print(f"SPLIT_OWN {sp['id']} from {pid}: {src} -> {kit.ntris(own_part)} tris, granted by {pid}")
+            print(f"SPLIT_OWN {sp['id']} from {pid}: {src} -> {kit.ntris(own_part)} tris, " + (f"sold as {sp['key']}" if sp.get("key") else f"granted by {pid}"))
             bpy.data.objects.remove(own_part, do_unlink=True)
         if visor is not None:                  # its own accessory: the hair can be worn without it (David, 2026-10-14)
             sp = spec["split"]
@@ -1158,7 +1212,7 @@ def main():
     cat = json.load(open(cat_path))
     # the catalogue's hair is exactly the manifest's hairstyles, in its order (head-roblox: David's 21 are all the hair)
     old = {h["id"]: h for h in cat["hair"]}
-    order = [k for _w, m in SETS for k in [h["id"] for h in m["hairs"] if not h.get("accessory_only")] + [h["split"]["id"] for h in m["hairs"] if h.get("split")]
+    order = [k for _w, m in SETS for k in [h["id"] for h in m["hairs"] if not h.get("accessory_only") and not h.get("removed")] + [h["split"]["id"] for h in m["hairs"] if h.get("split")]
              + [h["split_own"]["id"] for h in m["hairs"] if h.get("split_own")]]
     cat["hair"] = [entries.get(k) or old[k] for k in order if k in entries or k in old]
     cat["hairMaps"] = {"atlas": "hair/hair_colour.png", "atlas_world": "hair/hair_colour_world.png", "cells": [NAT_COLS, NAT_ROWS], "cell": NAT_CELL,

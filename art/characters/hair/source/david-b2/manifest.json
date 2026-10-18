@@ -16,7 +16,12 @@
     "name": "Ushanka and goggles",
     "why": "David, 2026-10-17 (row 314): the hat is its own accessory; owning the hair grants it",
     "hatCut": 5,
-    "key": "hair-22"
+    "key": "hair-22",
+    "fit": {
+     "scale": 0.9,
+     "back": 0.015,
+     "why": "David, 2026-10-17 (round 3): smaller and further back"
+    }
    },
    "accessory_only": true,
    "accessory_only_why": "David, 2026-10-17 (round 2): remove the hair entirely; keep only the ushanka and goggles, priced at 200 Gems (key hair-22)"
@@ -52,7 +57,10 @@
    "id": "hair_emo_layers",
    "name": "Emo layers",
    "key": "hair-26",
-   "shorten": 0.6
+   "shorten": {
+    "keep": 0.6,
+    "mode": "tips"
+   }
   },
   {
    "file": "27-Y2K-It-Girl-Double-Buns-Hair-Dark-Teal-139556608863162.glb",

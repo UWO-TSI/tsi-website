@@ -94,8 +94,9 @@ function ensureColourAtlas() {
     COLOUR_ATLAS.value = tex;
   });
 }
-/** Row 314: the hair's soft gloss (David: "matte with subtle gloss"): its roughness, F0 and grazing reflectance. */
-const HAIR_GLOSS = { roughness: 0.5, f0: 0.035, f90: 0.45 };
+/** Row 314: the hair's soft gloss (David: "matte with subtle gloss"): its roughness, F0 and grazing reflectance. Round 3
+ * (David: "why does it fade off"): grazing reflectance 0.45 -> 0.2, which had washed a light hair's edge-on strands white. */
+const HAIR_GLOSS = { roughness: 0.5, f0: 0.035, f90: 0.2 };
 /** Linear sRGB to OKLab and back (hairColour.ts has the same), and a channel's shift: ab' = [p -q; q p] ab + o tent(L). */
 const HAIR_SHIFT = /* glsl */ `
 vec3 toOklab(vec3 c) {

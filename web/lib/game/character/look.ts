@@ -204,13 +204,15 @@ export const DEFAULT_LOOK: CharacterLook = {
 export const OLD_HAIR: Readonly<Record<string, string>> = {
   back_bob: "hair_bob_pigtail", back_bowl: "hair_bowl_cut", back_wolf: "hair_messy_wolf", back_short_spiky: "hair_anime_spikes",
   back_undercut: "hair_swept_fringe", back_long: "hair_long_scruffy", back_wavy_long: "hair_long_scruffy",
-  back_high_pony: "hair_wispy_ponytail", back_bun: "hair_messy_low_pony", back_braid_crown: "hair_hime_short",
+  back_high_pony: "hair_wispy_ponytail", back_bun: "hair_wispy_ponytail", back_braid_crown: "hair_hime_short",
   back_pigtails: "hair_long_pigtails", back_twin_buns: "hair_long_pigtails",
   bangs_straight: "hair_bob_pigtail", bangs_straight_long: "hair_hime_short", bangs_bowl: "hair_bowl_cut", bangs_wispy: "hair_windy_bob",
   bangs_swept_l: "hair_swept_fringe", bangs_swept_r: "hair_swept_fringe", bangs_curtain: "hair_windy_bob",
   bangs_curtain_long: "hair_long_scruffy", bangs_centre_split: "hair_layered_shag", bangs_spiky: "hair_anime_spikes",
   bangs_hime: "hair_hime_short", bangs_choppy: "hair_messy_boy", bangs_swept_back: "hair_waves", bangs_single_strand: "hair_vkei",
   bangs_wavy: "hair_fluffy_boy", bangs_asym_block: "hair_hime_short",
+  // round 3 (David, 2026-10-17): #14, the messy low pony, removed
+  hair_messy_low_pony: "hair_wispy_ponytail",
 };
 /** The whole hairstyle a saved look's hair loads as: its own if it still exists, else its old back's (or lone old fringe's) match. */
 function hairOf(r: Record<string, unknown>): string {

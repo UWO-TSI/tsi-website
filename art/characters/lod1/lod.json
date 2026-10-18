@@ -207,10 +207,6 @@
   "tris": 4340,
   "lod1": 2209
  },
- "hair/full/hair_messy_low_pony.glb": {
-  "tris": 4175,
-  "lod1": 2126
- },
  "hair/full/hair_messy_wolf.glb": {
   "tris": 4381,
   "lod1": 2230
@@ -232,8 +228,8 @@
   "lod1": 1151
  },
  "hair/full/hair_vkei.glb": {
-  "tris": 3797,
-  "lod1": 1938
+  "tris": 3811,
+  "lod1": 1944
  },
  "hair/full/hair_waves.glb": {
   "tris": 1328,
