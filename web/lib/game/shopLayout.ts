@@ -207,9 +207,10 @@ export const SHOP_SLOTS: DisplaySlot[] = [
   ...[2.6, 3.4].map((z, i) => slot(`merch-wear-${i + 6}`, "merch-wear", "merch-counter", [5.62, 0.85, z], [0.42, 0.2, 0.5])),   // folded
   slot("merch-bags-1", "merch-bags", "pegboard", [-2.6, 1.3, 4.9], [0.55, 0.75, 0.08]),
   slot("merch-bags-2", "merch-bags", "pegboard", [-1.8, 1.3, 4.9], [0.55, 0.75, 0.08]),
-  ...[-0.2, 0.6, 1.4].map((x, i) => slot(`merch-small-${i + 1}`, "merch-small", "merch-counter", [x, 0.85, 4.62], [0.55, 0.18, 0.42])),
-  slot("merch-small-4", "merch-small", "merch-counter", [2.9, 0.85, 4.62], [0.45, 0.22, 0.4]),
-  slot("merch-small-5", "merch-small", "merch-counter", [4.1, 0.85, 4.62], [0.45, 0.22, 0.4]),
+  // In shallow trays on the counter (the counter's top at 0.85, a tray's floor at 0.88).
+  ...[-0.2, 0.6, 1.4].map((x, i) => slot(`merch-small-${i + 1}`, "merch-small", "merch-counter", [x, 0.88, 4.62], [0.55, 0.18, 0.42])),
+  slot("merch-small-4", "merch-small", "merch-counter", [2.9, 0.88, 4.62], [0.45, 0.22, 0.4]),
+  slot("merch-small-5", "merch-small", "merch-counter", [4.1, 0.88, 4.62], [0.45, 0.22, 0.4]),
   slot("merch-prints-1", "merch-prints", "pegboard", [-0.25, 1.72, 4.91], [1.0, 0.85, 0.04]),
   slot("merch-prints-2", "merch-prints", "pegboard", [1.05, 1.72, 4.91], [1.0, 0.85, 0.04]),
   // The TSI keycap keychain hangs from its keyring on a hook on the pegboard, between the totes and the posters (SHOP_KEYCHAIN).

@@ -547,7 +547,9 @@ def furnish(k, m):
     for sl in L["slots"]:
         if sl["kind"] == "merch-small" and sl["fixture"] == "merch-counter":
             (x, y0, z), (sx, sy, sz) = sl["at"], sl["size"]
-            k.rbox((x, F + y0 + 0.025, z), (sx + 0.08, 0.05, sz + 0.06), 0.015, m["paint"], CRATE)
+            k.rbox((x, F + 0.85 + 0.015, z), (sx + 0.08, 0.03, sz + 0.06), 0.01, m["paint"], CRATE)                 # the tray's floor
+            for dx, dz, w_, d_ in ((0, -(sz + 0.06) / 2, sx + 0.08, 0.02), (0, (sz + 0.06) / 2, sx + 0.08, 0.02), (-(sx + 0.08) / 2, 0, 0.02, sz + 0.06), ((sx + 0.08) / 2, 0, 0.02, sz + 0.06)):
+                k.rbox((x + dx, F + 0.85 + 0.04, z + dz), (w_, 0.08, d_), 0.006, m["paint"], CRATE)                # its rim
         if sl["kind"] == "merch-bags":
             (x, y0, z), (sx, sy, sz) = sl["at"], sl["size"]
             peg(k, m, (x, F + y0 + sy + 0.02, 4.94))
@@ -568,7 +570,8 @@ def counter_up(k, m):
         c, sz = up(b)
         along_x = sz[0] > sz[2]
         k.rbox((c[0], F + 0.05, c[2]), (sz[0] - 0.06, 0.1, sz[2] - 0.06), 0.01, m["paint"], STEEL_DARK)
-        k.rbox((c[0], F + 0.1 + (sz[1] - 0.14) / 2, c[2]), (sz[0], sz[1] - 0.14, sz[2]), 0.015, m["metal"], "#a7adb2")
+        # painted steel (a soft gloss, grey), the top a brushed steel slab
+        k.rbox((c[0], F + 0.1 + (sz[1] - 0.14) / 2, c[2]), (sz[0], sz[1] - 0.14, sz[2]), 0.015, m["paint"], "#9aa0a5")
         k.rbox((c[0], F + sz[1] - 0.02, c[2]), (sz[0] + 0.03, 0.04, sz[2] + 0.03), 0.012, m["metal"], "#8d9499")
         L_ = sz[0] if along_x else sz[2]
         n = max(1, round(L_ / 0.72))
@@ -578,11 +581,11 @@ def counter_up(k, m):
             for yy in (F + 0.27, F + 0.58):
                 if along_x:
                     face = c[2] - sz[2] / 2 - 0.006
-                    k.rbox((c[0] + u, yy, face), (w - 0.04, 0.27, 0.012), 0.006, m["metal"], "#b4babe")
+                    k.rbox((c[0] + u, yy, face), (w - 0.04, 0.27, 0.012), 0.006, m["paint"], "#a9afb4")
                     k.tube([(c[0] + u - 0.1, yy + 0.06, face - 0.02), (c[0] + u + 0.1, yy + 0.06, face - 0.02)], 0.009, m["metal"], STEEL_DARK, n=6, caps=True)
                 else:
                     face = c[0] - sz[0] / 2 - 0.006
-                    k.rbox((face, yy, c[2] + u), (0.012, 0.27, w - 0.04), 0.006, m["metal"], "#b4babe")
+                    k.rbox((face, yy, c[2] + u), (0.012, 0.27, w - 0.04), 0.006, m["paint"], "#a9afb4")
                     k.tube([(face - 0.02, yy + 0.06, c[2] + u - 0.1), (face - 0.02, yy + 0.06, c[2] + u + 0.1)], 0.009, m["metal"], STEEL_DARK, n=6, caps=True)
 
 

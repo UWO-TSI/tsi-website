@@ -23,6 +23,7 @@ export const SHOP_PICKS: Record<string, string> = {
   // The club merch upstairs: the two real items; the other merch slots hold placeholders until David's merch list.
   "merch-bags-1": "merch-tote", "merch-bags-2": "merch-tote",
   "merch-small-1": "merch-sticker-pack", "merch-small-2": "merch-sticker-pack", "merch-small-3": "merch-sticker-pack",
+  "merch-small-4": "merch-sticker-pack", "merch-small-5": "merch-sticker-pack",
   "merch-featured-1": "merch-tote", "merch-featured-2": "merch-sticker-pack",
   "merch-keychain-1": "merch-tsi-keycap-keychain",
 };
