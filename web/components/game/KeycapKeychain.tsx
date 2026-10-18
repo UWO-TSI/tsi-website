@@ -13,7 +13,7 @@ import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { AudioManager } from "@/lib/game/audio";
 import { prepareModel } from "@/lib/game/modelMaterials";
-import { capOffset, dragSwing, newPress, newSwing, pressDepth, pressKey, spinTwist, stepCap, stepSwingFor, type Swing } from "@/lib/game/keychainSwing";
+import { DRAG_SPIN, TURN_MAX, capOffset, dragSwing, linkDir, newPress, newSwing, pressDepth, pressKey, spinTwist, stepCap, stepSwingFor, type Swing, type Vec3 } from "@/lib/game/keychainSwing";
 
 export const KEYCHAIN_URL = "/assets/game/items/merch-tsi-keycap-keychain.glb";
 /** How far the keycap goes in, bottomed out (model units: the switch's 4 mm travel). */
@@ -22,13 +22,24 @@ const PARTS = ["keychain_ring", "keychain_chain_0", "keychain_chain_1", "keychai
 
 interface Rig { root: THREE.Group; parts: THREE.Object3D[]; keycap: THREE.Object3D; keycapRest: THREE.Vector3; stem: THREE.Object3D; stemRest: THREE.Vector3 }
 /** The model, prepared (the shared presets; the acrylic see-through), taken apart into the parts that swing. */
-function buildRig(scene: THREE.Object3D): Rig {
+function buildRig(scene: THREE.Object3D, onWhite: boolean): Rig {
   const model = prepareModel(scene, KEYCHAIN_URL);
   model.traverse(o => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
     mesh.castShadow = true; mesh.receiveShadow = false; mesh.frustumCulled = false;
-    for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) if (m.name.startsWith("P_Glass")) { m.transparent = true; m.depthWrite = false; mesh.renderOrder = 2; }
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    mats.forEach((m, i) => {
+      if (!m.name.startsWith("P_Glass")) return;
+      // On the overlay's white stage the clear acrylic would vanish: its own copy, a touch grey and less clear.
+      if (onWhite) {
+        const g = (m as THREE.MeshStandardMaterial).clone();
+        g.color.multiplyScalar(0.8); g.opacity = Math.max(g.opacity, 0.5);
+        if (Array.isArray(mesh.material)) mesh.material[i] = g; else mesh.material = g;
+        m = g;
+      }
+      m.transparent = true; m.depthWrite = false; mesh.renderOrder = 2;
+    });
   });
   model.updateMatrixWorld(true);
   const root = new THREE.Group();
@@ -44,15 +55,18 @@ function buildRig(scene: THREE.Object3D): Rig {
 }
 
 const down = new THREE.Vector3(0, -1, 0), dir = new THREE.Vector3(), twistQ = new THREE.Quaternion(), yAxis = new THREE.Vector3(0, 1, 0);
+const want = new THREE.Quaternion(), link: Vec3 = [0, -1, 0];
 /** Module scope (the frame loop writes the three objects): pose each part from its link of the swing; the stem in by
  * the press, and the keycap on it, or `cap` of the way off and aside. */
-function pose(rig: Rig, s: Swing, depth: number, cap: number) {
+function pose(rig: Rig, s: Swing, depth: number, cap: number, dt: number) {
   rig.parts.forEach((part, i) => {
-    const a = s.p[i], b = s.p[i + 1];
+    const a = s.p[i];
     part.position.set(a[0], a[1], a[2]);
-    dir.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]).normalize();
-    part.quaternion.setFromUnitVectors(down, dir);
-    if (i === rig.parts.length - 1) part.quaternion.multiply(twistQ.setFromAxisAngle(yAxis, s.twist));
+    // Along its link (never flipped over the top, linkDir), and turning no faster than TURN_MAX.
+    if (!linkDir(s, i, link)) return;
+    want.setFromUnitVectors(down, dir.set(link[0], link[1], link[2]));
+    if (i === rig.parts.length - 1) want.multiply(twistQ.setFromAxisAngle(yAxis, s.twist));
+    part.quaternion.rotateTowards(want, TURN_MAX * dt);
   });
   const pressIn = depth * KEYCAP_TRAVEL;            // in, toward the block (−z)
   rig.stem.position.set(rig.stemRest.x, rig.stemRest.y, rig.stemRest.z - pressIn);
@@ -65,7 +79,7 @@ const isPart = (o: THREE.Object3D | null, name: string) => { for (let x = o; x; 
 /** The click, as the keycap goes in (the file carries the return too). */
 export function playKeyswitch() { AudioManager.playSFX("keyswitch", { gain: 0.9 }); }
 
-export default function KeycapKeychain({ grab = false, onKeycapDown, scale = 1, position, press, keycapOff = false }: {
+export default function KeycapKeychain({ grab = false, onKeycapDown, scale = 1, position, press, keycapOff = false, onWhite = false }: {
   /** On the shop's wall: drag it about; a click on the keycap presses it. */
   grab?: boolean;
   /** In the detail view: the keycap's pointer-down (the stage decides if it was a tap). */
@@ -75,9 +89,11 @@ export default function KeycapKeychain({ grab = false, onKeycapDown, scale = 1, 
   press?: number;
   /** The keycap off (the merch view's button): it lifts off the stem and hovers beside the block; the stem presses. */
   keycapOff?: boolean;
+  /** On a white backdrop (the overlay's studio stage): the acrylic a little greyer, so it still reads. */
+  onWhite?: boolean;
 }) {
   const { scene } = useGLTF(KEYCHAIN_URL);
-  const rig = useMemo(() => buildRig(scene), [scene]);
+  const rig = useMemo(() => buildRig(scene, onWhite), [scene, onWhite]);
   const swing = useRef<Swing>(newSwing());
   const keyPress = useRef(newPress());
   const cap = useRef(0);
@@ -90,7 +106,7 @@ export default function KeycapKeychain({ grab = false, onKeycapDown, scale = 1, 
   useFrame((_, dt) => {
     stepSwingFor(swing.current, dt);
     cap.current = stepCap(cap.current, keycapOff, Math.min(dt, 0.1));
-    pose(rig, swing.current, pressDepth(keyPress.current, performance.now() / 1000), cap.current);
+    pose(rig, swing.current, pressDepth(keyPress.current, performance.now() / 1000), cap.current, Math.min(dt, 0.1));
   });
 
   const onDown = (e: ThreeEvent<PointerEvent>) => {
@@ -116,7 +132,7 @@ export default function KeycapKeychain({ grab = false, onKeycapDown, scale = 1, 
     if (gs.moved < 5 || !e.ray.intersectPlane(plane, hit)) return;
     group.current!.worldToLocal(hit);
     dragSwing(swing.current, [hit.x, hit.y, hit.z]);
-    spinTwist(swing.current, dx * 0.6);
+    spinTwist(swing.current, dx * DRAG_SPIN);
   };
   const onUp = (e: ThreeEvent<PointerEvent>) => {
     const gs = gesture.current;

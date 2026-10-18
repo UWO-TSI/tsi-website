@@ -52,14 +52,21 @@
 
 /* The item: the model large on the left, what it is and the payment on the right, its specs in a white band below. */
 .detail { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(280px, 1fr); grid-template-rows: minmax(0, 1fr) auto; height: 100%; min-height: 520px; margin-left: -4px; }
-.stageWrap { position: relative; min-height: 0; }
+/* The stage is a product shot (David, 2026-10-18: "white background and studio lighting"): a white seamless sweep that
+   fades softly to the floor, and a soft contact shadow under the item (TurnStage lights it like a studio). */
+.stageWrap { position: relative; min-height: 0; border-radius: 18px; overflow: hidden;
+  background:
+    radial-gradient(ellipse 24% 4.5% at 50% 87%, rgb(0 0 0 / 0.17), rgb(0 0 0 / 0.07) 55%, transparent 100%),
+    linear-gradient(180deg, #ffffff 0%, #ffffff 60%, #f5f5f5 84%, #eeeeee 100%); }
 .stage { position: absolute; inset: 0; display: grid; place-items: center; }
 .stage canvas { image-rendering: pixelated; }
 .stagePicture { width: min(80%, 420px); height: auto; aspect-ratio: 1; }
 .back { all: unset; position: absolute; top: 4px; left: 10px; display: inline-flex; align-items: center; gap: 6px; color: var(--quiet); font: 500 14px var(--gui-font); cursor: pointer; }
 .back:hover { color: var(--ink); }
 .steps { position: absolute; top: 2px; right: 8px; display: inline-flex; gap: 8px; }
-.round { all: unset; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #2a2a2a; color: white; cursor: pointer; }
+/* The stage's previous and next (David, 2026-10-18: "lighter black in a blue color"): the Tethos navy of the keycap and
+   the lanyard, a step lighter so it sits well on the white stage; the arrows stay white. */
+.round { all: unset; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #2e3a63; color: white; cursor: pointer; }
 .dragHint { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); color: #b0b0b0; font: 500 12px var(--gui-font); pointer-events: none; }
 .info { display: grid; align-content: center; gap: 10px; padding: 24px 18px 24px 28px; }
 .kind { margin: 0; color: var(--quiet); font: 500 13px var(--gui-font); }

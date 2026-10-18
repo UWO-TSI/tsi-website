@@ -37,7 +37,8 @@ NAVY, HOUSING, STEM, ACRYLIC = "#222a44", "#eeebe3", "#f2c61f", "#f4eef3"
 # Polished silver and the pins' gold: mid tones, so the look reads them as metal (lookPreset: light paint stays dielectric).
 SILVER, GOLD, SEAM, LED = "#8f949a", "#b8913f", "#d3cfc4", "#b9bbb7"
 # Hanging layout (game units, y down from where the keyring hangs on its hook)
-LINK = 0.0525            # one of the chain's four swinging parts (the end caps and the snake chain's halves)
+LINK = 0.0738            # one of the chain's four swinging parts (the end caps and the snake chain's halves; 3.07 cm cap to cap)
+BODY_S = 1.1             # the block, switch and keycap (IMG_3117-measured: the keycap 1.97 cm at its foot)
 BLOCK = (0.19, 0.20, 0.17)
 KEYCAP_PRESS = 0.035     # how far the stem (and the keycap on it) goes in on a press
 
@@ -167,7 +168,9 @@ class Field:
         dec.use_symmetry, dec.symmetry_axis = True, "Z"      # the same front and back
         ev = ob.evaluated_get(bpy.context.evaluated_depsgraph_get())
         m2 = ev.to_mesh()
-        vs = [k.vert(place(*v.co)) for v in m2.vertices]
+        placed = [place(*v.co) for v in m2.vertices]
+        self.size = tuple(max(q[i] for q in placed) - min(q[i] for q in placed) for i in range(3))   # the part's extent (game x, y, z)
+        vs = [k.vert(q) for q in placed]
         for f in m2.polygons:
             if len(set(f.vertices)) < len(f.vertices):
                 continue
@@ -217,7 +220,7 @@ XY, YZ = ((1, 0, 0), (0, 1, 0)), ((0, 0, 1), (0, 1, 0))
 # the base's right end, takes the gate: a long narrow loop of thin round wire lying across the clasp's plane (face on it
 # reads as one rod), widest at the nose and narrowing to the knuckle, its legs going in front and back. Pixels of
 # IMG_3111's crop (references: 0.8 of the photo's own), mirrored.
-CPX = 0.000213               # one pixel of that crop, in model units (the clasp is 680 px tall: 0.145)
+CPX = 0.000311               # one pixel of that crop, in model units (IMG_3117-measured: the clasp 2.25 cm long, 1.76 wide)
 CLASP_BAR = [((74, 470), 30), ((72, 380), 29), ((80, 280), 28), ((105, 190), 28), ((160, 125), 27), ((235, 85), 26),
              ((330, 70), 25), ((425, 82), 25), ((505, 118), 25), ((560, 175), 25), ((588, 245), 23), ((594, 300), 22),
              ((592, 330), 22)]
@@ -236,9 +239,9 @@ GATE_HALF = (58.0, 85.0)                     # its loop's half-width across the 
 GATE_R = 8.0
 CLASP_TOP = (330, 95)                        # where it hangs on the hook: the inside of the strap's top
 RING_THROUGH = 40                            # the split ring's turn through the eye from straight front-to-back (degrees)
-RING_R, RING_W = 71 * PX, 7.5 * PX           # the split rings: radius to the wire's middle, the wire's radius
+RING_R, RING_W = 0.0339, 0.0036             # the split rings (IMG_3117-measured: 0.75 cm across): to the wire's middle, the wire
 GAP = 0.32                                   # a split ring's cut (radians of the circle left open)
-TAB_HOLE = 0.003                             # the end caps' pierced tabs: the hole's radius
+TAB_HOLE = 0.0048                            # the end caps' pierced tabs: the hole's radius
 
 
 def base_half(x, y):
@@ -292,6 +295,7 @@ def keyring(m):
     hole = (np.sqrt(((f.X - hx) / ha) ** 2 + ((f.Y - hy) / hb) ** 2) - 1.0) * hb
     f.d = -smin(-body, hole, 12.0)         # cut the eye through, its edge bevelled round
     f.mesh(k, m["metal"], SILVER, 1900, place)
+    print(f"SIZE clasp {f.size[1] * 10:.2f} cm long, {f.size[0] * 10:.2f} wide, {f.size[2] * 10:.2f} thick")
     k.tube(gate_loop(place), GATE_R * CPX, m["metal"], SILVER, n=6, closed_path=True)
     # the split ring, threaded through the eye and hanging from its bottom, turned through it; its cut up the side
     low = place(*hole_low)
@@ -307,16 +311,17 @@ def end_cap(k, m, hole_y, down, normal):
     normal: the tab's face (the ring's wire runs through it)."""
     s = -1 if down else 1
     nx, ny, nz = normal
-    k.lathe((0.0, hole_y, 0.0), [(TAB_HOLE, -0.0012), (0.0056, -0.0012), (0.0062, 0.0), (0.0056, 0.0012), (TAB_HOLE, 0.0012),
-                                 (TAB_HOLE, -0.0012)], m["metal"], SILVER, d=(nx, ny, nz), n=10)
-    k.lathe((0.0, hole_y + s * 0.0035, 0.0), [(0, 0), (0.0034, 0.0008), (0.0058, 0.006), (0.0085, 0.017), (0.0107, 0.031),
-                                            (0.0117, 0.0425), (0.0123, 0.0438), (0.0123, 0.047), (0.0104, 0.048), (0, 0.048)],
+    k.lathe((0.0, hole_y, 0.0), [(TAB_HOLE, -0.0018), (0.0084, -0.0018), (0.0093, 0.0), (0.0084, 0.0018), (TAB_HOLE, 0.0018),
+                                 (TAB_HOLE, -0.0018)], m["metal"], SILVER, d=(nx, ny, nz), n=10)
+    # IMG_3117-measured: 0.70 cm from the tab's tip to the collar, 0.37 across
+    k.lathe((0.0, hole_y + s * 0.0042, 0.0), [(0, 0), (0.0051, 0.001), (0.0087, 0.0072), (0.0128, 0.0204), (0.016, 0.0372),
+                                            (0.0176, 0.051), (0.0185, 0.0526), (0.0185, 0.0564), (0.0156, 0.0576), (0, 0.0576)],
             m["metal"], SILVER, d=(0, s, 0), n=8)
 
 
 def snake(k, m, y0, y1):
     """The snake chain: a tight spiral of beaded scales; each turn tilted like a spring's coil."""
-    pitch, r, n = 0.0045, 0.0098, 6
+    pitch, r, n = 0.0077, 0.0167, 6               # IMG_3117-measured: 0.33 cm across
     turns = int(round(abs(y1 - y0) / pitch))
     rings, uvs = [], []
     for j in range(2 * turns + 1):
@@ -341,7 +346,7 @@ def chain(m, i, ring_h):
     elif i == 3:    # the body's split ring hangs from its tab
         end_cap(k, m, -LINK + TAB_HOLE - RING_W, False, (0, 0, 1))
     else:
-        snake(k, m, 0.012 if i == 1 else 0.0, -LINK - (0.012 if i == 2 else 0.0))
+        snake(k, m, 0.02 if i == 1 else 0.0, -LINK - (0.02 if i == 2 else 0.0))
     return finish(k, -(ring_h + LINK * i))
 
 
@@ -370,7 +375,7 @@ def loft(k, mat, col, rings_, n=24, cap=None):
 # ---- the lobster clasp (crop-lobster-clasp-3099.jpg): its tail eye on top; a curved teardrop body, its back convex
 # down the left and round the bottom into the hook; the gate down the right to the hook's tip, a seam groove along
 # where it meets the body; the trigger, a pointed thumb-tab, sticking out to the right near the top.
-LOB_PX = PX * 0.95                                      # its crop is near life size (IMG_3113: about 1.5 split rings long)
+LOB_PX = PX * 0.886                                     # IMG_3117-measured: 0.70 cm long
 LOB_EYE = ((115, 110), 16.0, 5.0)
 LOB_OUT = [(108, 132), (100, 150), (97, 175), (96, 205), (97, 240), (100, 270), (108, 300), (120, 322), (138, 338), (155, 345),
            (175, 343), (193, 333), (207, 318), (216, 300), (220, 280), (221, 255), (218, 232), (210, 215), (200, 203),
@@ -382,7 +387,7 @@ LOB_KNOB = ((222, 198), 7.5)
 LOB_SEAM = [(126, 150), (158, 175), (188, 200), (204, 226), (211, 256), (211, 290), (209, 306), (222, 314)]
 LOB_HANG = (115, 94)                                    # the eye's top wire, on the split ring
 LOB_PULL = (160, 317)                                   # inside the hook's bottom, under the lug's bar
-LUG = (0.012, 0.007, 0.034, 0.013, 0.018)               # the block's clear lug (IMG_3113): thickness, bar, width, hole high, hole wide
+LUG = (0.019, 0.011, 0.054, 0.021, 0.029)               # the block's clear lug (IMG_3113, 3117): thickness, bar, width, hole high, hole wide
 
 
 def seg_dist2(x, y, path):
@@ -413,6 +418,7 @@ def lobster(k, m, hang_y):
     seam = seg_dist2(f.x2, f.y2, LOB_SEAM)[:, :, None]
     f.d = body + 2.4 * np.exp(-(seam / 2.0) ** 2)
     f.mesh(k, m["metal"], SILVER, 1100, place)
+    print(f"SIZE lobster {f.size[1] * 10:.2f} cm long, {f.size[0] * 10:.2f} wide")
     return place(*LOB_PULL)[1]
 
 
@@ -503,11 +509,20 @@ def main():
     ring, ring_h = keyring(m)
     links = [chain(m, i, ring_h) for i in range(4)]
     kb, cy = body(m)
-    body_ob = finish(kb, -(ring_h + 4 * LINK))
-    # the swing's links (lib/game/keychainSwing.ts KEYCHAIN_LINKS): the keyring, the chain's four, the body to the block's middle
-    print(f"LINKS [{ring_h:.4f}, {LINK}, {LINK}, {LINK}, {LINK}, {-cy:.4f}]  hangs {ring_h + 4 * LINK - cy + BLOCK[1] / 2:.4f}")
+    top = cy + BLOCK[1] / 2
     cap = keycap(m, cy)
     st = stem(m, cy)
+    # the block, the switch and the keycap at their measured size: scaled about the middle of the block's top
+    for v in kb.bm.verts:
+        if v.co.z < top + 1e-4:
+            v.co.x, v.co.y, v.co.z = v.co.x * BODY_S, v.co.y * BODY_S, top + (v.co.z - top) * BODY_S
+    for o in (cap, st):
+        for v in o.data.vertices:
+            v.co.x, v.co.y, v.co.z = v.co.x * BODY_S, v.co.y * BODY_S, top + (v.co.z - top) * BODY_S
+    cy = top - (top - cy) * BODY_S
+    body_ob = finish(kb, -(ring_h + 4 * LINK))
+    # the swing's links (lib/game/keychainSwing.ts KEYCHAIN_LINKS): the keyring, the chain's four, the body to the block's middle
+    print(f"LINKS [{ring_h:.4f}, {LINK}, {LINK}, {LINK}, {LINK}, {-cy:.4f}]  hangs {ring_h + 4 * LINK - cy + BLOCK[1] * BODY_S / 2:.4f}")
     # the keycap and the stem: built in the body's frame, children of the body
     for o in (cap, st):
         o.location = (0, 0, 0)

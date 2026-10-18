@@ -34,3 +34,13 @@ David, 2026-10-17. A real TSI item, sold in the shop's club merch section on the
   - The model turns slowly in the middle, with the pixel overlay.
   - Drag to turn it yourself.
 - **Click:** pressing the keycap (in the shop or the merch UI) pushes it down and plays a click sound.
+
+## Status
+
+- **2026-10-18: the model is approved.** David on round 3 (the hardware from his close-ups, IMG_3111 to 3116): "this version looks good".
+- **Measured size:** IMG_3117-measured, on a 1 cm cutting mat, set the sizes. Every part was rescaled with its shape kept.
+  - The keychain is 9.2 cm from the hook to the block's bottom (model units of 10 cm: 0.92).
+  - The split rings are 0.75 cm across.
+  - The chain is 3.1 cm from cap to cap.
+  - The keyring clasp is 2.26 x 1.76 cm.
+  - The table is on `specs/evidence/shop-interior/phase2/keychain-round2-sheet.webp`.

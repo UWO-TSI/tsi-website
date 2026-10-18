@@ -22,10 +22,18 @@ export interface Swing {
 /** The hanging layout (art/merch/build_keycap_keychain.py prints it): the keyring clasp and its split ring, the chain's
  * four parts (the end caps and the snake chain's halves), the body's top (the split ring and the lobster clasp) to
  * its middle. */
-export const KEYCHAIN_LINKS = [0.1722, 0.0525, 0.0525, 0.0525, 0.0525, 0.2175];
-/** From the hook to the block's bottom, at rest (model units). */
-export const KEYCHAIN_HANG = 0.70;
+export const KEYCHAIN_LINKS = [0.2564, 0.0738, 0.0738, 0.0738, 0.0738, 0.2547];
+/** From the hook to the block's bottom, at rest (model units: 9.2 cm, IMG_3117-measured). */
+export const KEYCHAIN_HANG = 0.92;
 export const GRAVITY = 9.8;
+/** The twist spring's damping (critical is about 10.6 for its stiffness of 28). */
+export const TWIST_DAMP = 9;
+/** A drag holds the body at least this share of the keychain's length below the hook. */
+export const DRAG_FLOOR = 0.15;
+/** How far up a part may point before its orientation stops following (the sine of 45° above level). */
+export const UP_MAX = 0.7;
+/** The fastest a part may turn on screen (rad/s): smooths any jump left over. */
+export const TURN_MAX = 20;
 /** Share of velocity kept each second: settles in a few seconds, still swings for a while. */
 export const DAMPING = 0.35;
 const ITER = 12;
@@ -60,8 +68,10 @@ export function stepSwing(s: Swing, dt: number): Swing {
       b[0] -= dx * k * (wb / t); b[1] -= dy * k * (wb / t); b[2] -= dz * k * (wb / t);
     }
   }
-  // The twist: a damped spring back to 0 (the drag winds it, spinTwist).
-  s.spin += (-s.twist * 28 - s.spin * 3.2) * dt;
+  // The twist: a spring back to 0, damped near critical so it settles in a wobble or two (the drag winds it,
+  // spinTwist). Wrapped to a half turn either way first, so a big twist never unwinds through whole turns.
+  s.twist = Math.atan2(Math.sin(s.twist), Math.cos(s.twist));
+  s.spin += (-s.twist * 28 - s.spin * TWIST_DAMP) * dt;
   s.twist += s.spin * dt;
   return s;
 }
@@ -73,18 +83,42 @@ export function stepSwingFor(s: Swing, dt: number): Swing {
   return s;
 }
 
-/** Hold the body's middle at `at` (model units), kept within the chain's reach of the hook. */
+/** Hold the body's middle at `at` (model units), kept within the chain's reach of the hook and no higher than a
+ * little under it (lifted past level, the body would flip over the hook). */
 export function dragSwing(s: Swing, at: Vec3 | null): Swing {
   if (!at) { s.drag = null; return s; }
-  const reach = s.len.reduce((a, b) => a + b, 0) * 0.98, d = Math.hypot(...at);
-  const k = d > reach ? reach / d : 1;
-  s.drag = [at[0] * k, at[1] * k, at[2] * k];
+  const total = s.len.reduce((a, b) => a + b, 0), reach = total * 0.98;
+  const p: Vec3 = [at[0], Math.min(at[1], -DRAG_FLOOR * total), at[2]];
+  const d = Math.hypot(...p), k = d > reach ? reach / d : 1;
+  s.drag = [p[0] * k, p[1] * k, p[2] * k];
   return s;
 }
-/** A drag's sideways sweep winds the body's twist. */
+/** A drag's sideways sweep winds the body's twist a little (rad/s per px of sweep), never past SPIN_MAX. */
+export const DRAG_SPIN = 0.05, SPIN_MAX = 3;
 export function spinTwist(s: Swing, by: number): Swing {
-  s.spin = Math.max(-25, Math.min(25, s.spin + by));
+  s.spin = Math.max(-SPIN_MAX, Math.min(SPIN_MAX, s.spin + by));
   return s;
+}
+
+/**
+ * Which way part i hangs, as a unit vector (for its orientation): from its point to the next. Never within about 45°
+ * of straight up, where turning "down" onto it flips (the part tilts no further instead); false while the link is
+ * too short to say (keep the last orientation).
+ */
+export function linkDir(s: Swing, i: number, out: Vec3): boolean {
+  const a = s.p[i], b = s.p[i + 1];
+  let x = b[0] - a[0], y = b[1] - a[1], z = b[2] - a[2];
+  const d = Math.hypot(x, y, z);
+  if (d < 1e-4) return false;
+  x /= d; y /= d; z /= d;
+  if (y > UP_MAX) {
+    const h = Math.hypot(x, z);
+    if (h < 1e-6) return false;
+    const k = Math.sqrt(1 - UP_MAX * UP_MAX) / h;
+    x *= k; z *= k; y = UP_MAX;
+  }
+  out[0] = x; out[1] = y; out[2] = z;
+  return true;
 }
 
 /** The fastest any point moves (units a step): ~0 once it has settled. */

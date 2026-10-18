@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CAP_ASIDE, CAP_LIFT, CAP_MOVE_S, KEYCHAIN_LINKS, PRESS, capOffset, dragSwing, stepCap, newPress, newSwing, pressDepth, pressKey, spinTwist, stepSwingFor, swingSpeed, type Swing } from "./keychainSwing";
+import { CAP_ASIDE, CAP_LIFT, CAP_MOVE_S, DRAG_FLOOR, DRAG_SPIN, KEYCHAIN_LINKS, PRESS, SPIN_MAX, UP_MAX, capOffset, dragSwing, linkDir, stepCap, newPress, newSwing, pressDepth, pressKey, spinTwist, stepSwingFor, swingSpeed, type Swing, type Vec3 } from "./keychainSwing";
 
 const lengthsOk = (s: Swing, tol: number) => s.len.every((l, i) => Math.abs(Math.hypot(s.p[i + 1][0] - s.p[i][0], s.p[i + 1][1] - s.p[i][1], s.p[i + 1][2] - s.p[i][2]) - l) < tol);
 const finite = (s: Swing) => s.p.every(p => p.every(Number.isFinite)) && Number.isFinite(s.twist);
@@ -106,5 +106,27 @@ describe("the keycap off and on", () => {
     expect(half).toBeCloseTo(0.5, 6);
     expect(capOffset(half)).toEqual(capOffset(0.5));
     expect(stepCap(half, false, 5)).toBe(0);
+  });
+
+});
+
+describe("grabbing it", () => {
+  // David, 2026-10-18: "when grabbing the switch it rotates like crazy". A hard, fast shake keeps the twist calm and
+  // never flips the body over the hook.
+  it("a sustained fast drag never takes the twist past its cap, and the body never flips", () => {
+    const s = newSwing(), d: Vec3 = [0, -1, 0];
+    for (let i = 0; i < 600; i++) {
+      const t = i / 120, side = Math.sin(t * Math.PI * 2 * 4);                 // shaken side to side four times a second
+      dragSwing(s, [side * 0.6, 0.25 + 0.3 * Math.sin(t * 9), 0.2 * side]);   // and up past the hook
+      spinTwist(s, Math.sign(side) * 160 * DRAG_SPIN);                          // a 160 px sweep every move
+      stepSwingFor(s, 1 / 120);
+      expect(Math.abs(s.spin)).toBeLessThanOrEqual(SPIN_MAX + 1e-9);
+      expect(Math.abs(s.twist)).toBeLessThanOrEqual(Math.PI + SPIN_MAX / 120);
+      expect(s.p[6][1]).toBeLessThanOrEqual(-DRAG_FLOOR * total + 1e-6);       // the held body stays under the hook
+      if (linkDir(s, 5, d)) expect(d[1]).toBeLessThanOrEqual(UP_MAX + 1e-9);   // and its orientation never turns over the top
+    }
+    dragSwing(s, null);
+    run(s, 4);
+    expect(Math.abs(s.twist)).toBeLessThan(0.05);                              // settled in a wobble or two
   });
 });

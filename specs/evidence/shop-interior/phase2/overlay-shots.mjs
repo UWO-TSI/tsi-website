@@ -40,6 +40,12 @@ await page.waitForTimeout(4500);
 // It turns: a few frames, to pick the one facing front.
 for (let i = 0; i < 8; i++) { await page.screenshot({ path: join(out, `24-overlay-keychain-${i}.png`) }); await page.waitForTimeout(650); }
 console.log("shot 24-overlay-keychain-*");
+// The keycap off (the stage's button): the bare switch.
+await page.click("[data-testid=keycap-toggle]");
+await page.waitForTimeout(1600);
+await shot("24-overlay-keychain-cap-off");
+await page.click("[data-testid=keycap-toggle]");
+await page.waitForTimeout(1600);
 // A drag turns it: across the stage.
 const box = await page.locator("[data-testid=shop-detail] canvas").first().boundingBox();
 await page.mouse.move(box.x + box.width * 0.35, box.y + box.height * 0.5);
@@ -51,4 +57,8 @@ await shot("25-overlay-keychain-dragged");
 await page.setViewportSize({ width: 390, height: 844 });
 await open("merch");
 await shot("26-overlay-phone");
+await page.getByRole("button", { name: /^TSI keycap keychain/ }).click();
+await page.waitForSelector("[data-testid=shop-detail] canvas", { timeout: 60000 });
+await page.waitForTimeout(4500);
+await shot("27-overlay-phone-keychain");
 await browser.close();

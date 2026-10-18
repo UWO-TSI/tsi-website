@@ -222,11 +222,11 @@ export const SHOP_SLOTS: DisplaySlot[] = [
 /**
  * The keycap keychain on the merch wall (specs/merch/tsi-keycap-keychain.md): the hook it hangs from (upstairs, room
  * space over the mezzanine's floor) and its display scale. The model is in units of 10 cm (its block 0.19 across, the
- * whole keychain 0.70 long); at 1.4 the block is 0.27 game units, about seventeen times life size (a game unit is about
- * 1.2 m beside the 1.36-tall character), as small merch is blown up to read from the walking camera (the sticker packs
- * about six times, the totes about twice); the slot runs from its hook down 0.98.
+ * whole keychain 0.92 long, measured: IMG_3117-measured); at 1.07 the block is 0.24 game units, about thirteen times
+ * life size (a game unit is about 1.2 m beside the 1.36-tall character), as small merch is blown up to read from the
+ * walking camera (the sticker packs about six times, the totes about twice); the slot runs from its hook down 0.98.
  */
-export const SHOP_KEYCHAIN = { hook: [-1.15, 2.15, 4.86] as [number, number, number], scale: 1.4, slot: "merch-keychain-1" } as const;
+export const SHOP_KEYCHAIN = { hook: [-1.15, 2.15, 4.86] as [number, number, number], scale: 1.07, slot: "merch-keychain-1" } as const;
 
 /** A light strip along an edge (the edge lighting), on a floor, from one end to the other. */
 export interface LightStrip { level: Level; fixture: string; from: [number, number, number]; to: [number, number, number] }

@@ -248,3 +248,42 @@ which turned out to be a slightly turned view.
 - **Triangles:** 5,913, under the raised 6k cap.
 - **Shots:** `keychain-round2-sheet.webp` has each photo beside the model at its angle, the side-on thicknesses, the
   merch view, the wall, the viewer and the sprite.
+
+### Approved (2026-10-18), the measured keychain, the grab fix and the studio stage
+
+**Approved by David:**
+- **Shop UI round 4:** "i want you to impliment this type of ui more, its actually really nice and clean and i like it".
+- **The window.**
+- **The keychain, round 3:** "this version looks good". It supersedes the earlier versions.
+- **The white studio stage:** approved, with one tweak, "top right left right picture button lighter black in a blue color". The stage's previous and next buttons are now the Tethos navy a step lighter than the keycap (#2e3a63), with white arrows. Buy and Redeem are unchanged.
+
+**The keychain at its measured size (IMG_3117-measured):** every part is rescaled with its shape kept.
+- The clasp is 1.46x bigger.
+- The split rings are 1.6x bigger.
+- The end caps are 1.2x longer and 1.5x thicker.
+- The spiral is 1.7x bigger.
+- The chain is 3.1 cm from cap to cap.
+- The lug is 1.6x bigger.
+- The lobster is 0.93x.
+- The block, switch and keycap are 1.1x.
+- The whole keychain is 0.92 long, so `KEYCHAIN_LINKS = [0.2564, 0.0738 x4, 0.2547]`.
+- It hangs at display scale 1.07 on the wall (the same height as before) and 1.7 in the merch view.
+- 5,817 triangles.
+
+**Grabbing it calmly (David: "when grabbing the switch it rotates like crazy"):**
+- A drag winds the twist at 0.05 rad/s per px, capped at 3 rad/s. It used to be 0.6, capped at 25.
+- The twist spring is damped near critical (9; critical is 10.6), and the twist is wrapped to a half turn either way.
+- The held body stays under the hook. A part's orientation never turns over the top, and turns at most 20 rad/s.
+- The merch stage's coast after a flick is capped at 2.5 rad/s (it was 6).
+- Headless probe in the viewer, grabbing the block and shaking it hard:
+  - **Before:** body angular speed held mean 92 rad/s (max 196), and a flip at 466 rad/s after letting go.
+  - **After:** held mean 19.6 rad/s (max 21) and 20.7 max after.
+- The swing test has a sustained fast drag case.
+
+**The white studio stage** (every item's detail view):
+- A white seamless sweep with a soft floor fade and a soft contact shadow.
+- A big soft key from the upper front side, a fill from the other side, and a rim from behind.
+- The softbox room environment, with the pixel finish on top.
+- The keychain's acrylic is a touch greyer on it so the block still reads on white.
+- The grid's card pictures are unchanged (the icons keep their own light rig).
+- Shots: `overlay-studio-sheet.webp`.

@@ -1,5 +1,5 @@
 """The review sheets (shop phase 2): the headless shots in a labelled grid, one WebP.
-  python3 sheet.py <raw-dir> <out.webp> [ground|merch|overlay|keychain|keychain2|keychain3|upstairs]"""
+  python3 sheet.py <raw-dir> <out.webp> [ground|merch|overlay|keychain|keychain2|keychain3|upstairs|studio]"""
 import sys
 from PIL import Image, ImageDraw, ImageFont
 
@@ -87,6 +87,18 @@ KEYCHAIN3 = [
     ("33-keychain-press", "The keycap pressed on the wall"),
     ("v-viewer", "The standalone viewer, rebuilt"),
     ("sprite", "The 2D sprite (re-rendered), and the bare switch pressed in the viewer"),
+    ("m-pair", "Measured (IMG_3117): the photo over the model, top down at the same scale"),
+    ("m-table", "The sizes: photo, round 3 and now (parts scaled, shapes kept)"),
+]
+STUDIO = [
+    ("20-overlay-grid", "The grid, in-game items (as approved in round 4)"),
+    ("23-overlay-merch", "The grid, club merch"),
+    ("24-overlay-keychain", "The keychain on the white studio stage: a white sweep, a contact shadow, key, fill and rim lights; pixel finish on top"),
+    ("24-overlay-keychain-cap-off", "Keycap off, on the same stage (the acrylic kept a touch grey so it reads on white)"),
+    ("21-overlay-detail-item", "An in-game item on the same stage (Cedar rod)"),
+    ("22-overlay-detail-clothes", "Clothes on the same stage (Cardigan)"),
+    ("26-overlay-phone", "Phone: the grid"),
+    ("27-overlay-phone-keychain", "Phone: the keychain on the white stage"),
 ]
 UPSTAIRS = [(f"{side}-{n}", f"{'Before' if side == 'b' else 'After'}: {cap}") for n, cap in (
     ("u1-door", "from the door"), ("u2-top-of-stairs", "from the top of the stairs"), ("u3-merch-walk", "at the merch wall"),
@@ -101,14 +113,16 @@ if mode == "keychain":
     CELLS, TITLE = KEYCHAIN, "Shop: the TSI keycap keychain, from David's photos"
 if mode == "upstairs":
     CELLS, TITLE = UPSTAIRS, "Shop upstairs: before (the layout's blocks) and after (furnished after ref 1)"
+if mode == "studio":
+    CELLS, TITLE = STUDIO, "Shop overlay: every item's detail stage as a white studio product shot"
 if mode == "keychain3":
-    CELLS, TITLE = KEYCHAIN3, "The keycap keychain, round 2: each photo beside the model at its angle (5,913 triangles)"
+    CELLS, TITLE = KEYCHAIN3, "The keycap keychain, round 3 (approved) at its measured size: each photo beside the model (5,817 triangles)"
 if mode == "keychain2":
     CELLS, TITLE = KEYCHAIN2, "The keycap keychain: the clasp and keyring, keycap off and on, the bare switch (3,460 triangles)"
 W, H, PAD, CAP = 720, 450, 14, 34
 font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 17)
 title = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 26)
-cols = 2 if mode in ("merch", "keychain", "keychain2", "keychain3", "upstairs") else 3
+cols = 2 if mode in ("merch", "keychain", "keychain2", "keychain3", "upstairs", "studio") else 3
 rows = (len(CELLS) + cols - 1) // cols
 sheet = Image.new("RGB", (cols * (W + PAD) + PAD, rows * (H + CAP + PAD) + PAD + 50), "#1d1f22")
 d = ImageDraw.Draw(sheet)

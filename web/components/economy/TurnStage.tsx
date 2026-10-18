@@ -16,6 +16,8 @@ import * as THREE from "three";
 export const STAGE_PIXEL = 0.33;
 /** The slow turn (rad/s), and how long after a drag before it comes back. */
 export const AUTO_TURN = 0.55, RESUME_S = 1.6;
+/** The fastest it coasts after a drag (rad/s). */
+export const COAST_MAX = 2.5;
 
 /** One stage's turn: where it is, how fast it's going, and the gesture under way. */
 export interface Turn { yaw: number; pitch: number; spin: number; down: boolean; moved: number; lastX: number; lastY: number; idleSince: number }
@@ -35,7 +37,9 @@ export function dragTurn(t: Turn, dx: number, dy: number, dt: number, now: numbe
   t.moved += Math.abs(dx) + Math.abs(dy);
   t.yaw += dx * 0.012;
   t.pitch = Math.max(-0.6, Math.min(0.8, t.pitch + dy * 0.006));
-  t.spin = dt > 0 ? Math.max(-6, Math.min(6, (dx * 0.012) / dt)) : 0;
+  // The coast after: the drag's speed, smoothed over a few moves and held to a calm turn (no flick sends it whirling).
+  const v = dt > 0 ? Math.max(-COAST_MAX, Math.min(COAST_MAX, (dx * 0.012) / dt)) : 0;
+  t.spin += (v - t.spin) * 0.35;
   t.idleSince = now;
   return t;
 }
@@ -62,21 +66,19 @@ function lightStudio(gl: THREE.WebGLRenderer, scene: THREE.Scene): () => void {
   const pmrem = new THREE.PMREMGenerator(gl);
   const target = pmrem.fromScene(new RoomEnvironment(), 0.04);
   scene.environment = target.texture;
-  scene.environmentIntensity = 0.55;
+  scene.environmentIntensity = 0.7;
   pmrem.dispose();
   return () => { if (scene.environment === target.texture) scene.environment = null; target.dispose(); };
 }
-/** A soft studio room for polished metal to reflect (the keychain's silver), made once per stage. */
+/** A soft studio room for every item to reflect (the keychain's silver most of all), made once per stage. */
 function Studio() {
   const { gl, scene } = useThree();
   useEffect(() => lightStudio(gl, scene), [gl, scene]);
   return null;
 }
 
-export default function TurnStage({ children, className, cameraZ = 4.2, label, studio = false }: {
+export default function TurnStage({ children, className, cameraZ = 4.2, label }: {
   children: ReactNode; className?: string; cameraZ?: number; label: string;
-  /** Reflections for polished metal (the keychain): a soft studio room as the environment. */
-  studio?: boolean;
 }) {
   const turn = useRef<Turn>(newTurn());
   const last = useRef(0);
@@ -106,11 +108,14 @@ export default function TurnStage({ children, className, cameraZ = 4.2, label, s
       onPointerCancel={() => { turn.current.down = false; armed.current = null; }}>
       <Canvas dpr={STAGE_PIXEL} camera={{ position: [0, 0.15, cameraZ], fov: 30 }} gl={{ antialias: false, alpha: true }} style={{ imageRendering: "pixelated" }}
         onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
-        <ambientLight intensity={0.75} />
-        <hemisphereLight args={["#ffffff", "#c9ccd1", 0.7]} />
-        <directionalLight position={[2.5, 3.2, 2.4]} intensity={2.1} />
-        <directionalLight position={[-2.6, 1.2, -1.8]} intensity={0.7} />
-        {studio && <Studio />}
+        {/* Studio lighting (on the overlay's white sweep): a big soft key from the upper front side, a fill from the
+            other, a rim from behind to lift the silver and the acrylic off the white, a softbox room to reflect. */}
+        <ambientLight intensity={0.35} />
+        <hemisphereLight args={["#ffffff", "#d9dbe0", 0.55]} />
+        <directionalLight position={[2.4, 3.0, 3.2]} intensity={2.3} />
+        <directionalLight position={[-3.0, 1.0, 2.4]} intensity={0.85} />
+        <directionalLight position={[0.4, 2.4, -3.6]} intensity={1.8} />
+        <Studio />
         <Spinner turn={turn}>{children}</Spinner>
       </Canvas>
     </div>

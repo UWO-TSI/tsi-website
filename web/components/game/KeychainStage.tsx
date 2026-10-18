@@ -21,8 +21,8 @@ const SPRITE = iconUrl(KEYCHAIN_SLUG);
 
 function Hanging({ off }: { off: boolean }) {
   const arm = useStageTap();
-  // Centred on the stage: it hangs KEYCHAIN_HANG (0.70, model units) from its hook, 1.57 tall here.
-  return <KeycapKeychain scale={2.24} position={[0, 0.78, 0]} keycapOff={off} onKeycapDown={press => arm(press)} />;
+  // Centred on the stage: it hangs KEYCHAIN_HANG (0.92, model units) from its hook, 1.57 tall here.
+  return <KeycapKeychain scale={1.7} position={[0, 0.78, 0]} onWhite keycapOff={off} onKeycapDown={press => arm(press)} />;
 }
 
 /** The sprite when the 3D fails to start. */
@@ -38,7 +38,7 @@ export default function KeychainStage({ className, pictureClassName }: { classNa
   const sprite = <div className={className}><PixelImage src={SPRITE} px={72} className={pictureClassName} label="TSI keycap keychain" /></div>;
   if (liteMode) return sprite;
   return <Fallback sprite={sprite}>
-    <TurnStage className={className} label="TSI keycap keychain" cameraZ={4.4} studio><Suspense fallback={null}><Hanging off={off} /></Suspense></TurnStage>
+    <TurnStage className={className} label="TSI keycap keychain" cameraZ={4.4}><Suspense fallback={null}><Hanging off={off} /></Suspense></TurnStage>
     {/* Off and on again: the switch underneath (the Gateron Milky Yellow Pro), pressable bare. */}
     <button type="button" className={s.capButton} aria-pressed={off} onClick={() => setOff(v => !v)} data-testid="keycap-toggle">
       {off ? "Put keycap on" : "Take keycap off"}
