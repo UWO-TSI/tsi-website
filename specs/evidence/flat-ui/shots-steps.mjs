@@ -131,6 +131,24 @@ const SCENES = {
     await page.waitForTimeout(2000);
     await shot(page, "6c-collection-bugs");
   }),
+  // The detail stage's poses (David, via main: fish lie on their side and swim; flying bugs lean so their wings show).
+  "collection-poses": () => harness("surface=collection&collections=demo", undefined, async page => {
+    await page.waitForTimeout(2500);
+    const open = async (page_, name, file) => {
+      if (page_) await tryClick(page, page.getByRole("tab", { name: page_ }), page.getByRole("button", { name: page_ }));
+      await page.waitForTimeout(1500);
+      await tryClick(page, page.getByRole("button", { name }));
+      await page.waitForTimeout(3500);
+      await shot(page, file);
+      await tryClick(page, page.locator("[data-testid=collection-detail] button").first());
+      await page.waitForTimeout(800);
+    };
+    await open(null, /^Black Bass/, "8a-pose-fish");
+    await open(/^Bugs/, /^Common Butterfly/, "8b-pose-butterfly");
+    await open(/^Bugs/, /^Ladybug/, "8c-pose-ladybug");
+    await open(/^Fruit/, /^Apple/, "8d-pose-apple");
+    await open(/^Nature/, /^(Orange )?Tulip/, "8e-pose-flower");
+  }),
   "collection-applicant": () => harness("surface=collection-applicant", undefined, async page => {
     await page.evaluate(() => { try { localStorage.setItem("tsi.collections.local.v1:applicant", JSON.stringify({ fish_dace: 2, flower_tulip: 3, apple: 1 })); } catch {} });
     await page.reload(); await page.waitForTimeout(4000); await hideDev(page); await shot(page, "6e-collection-applicant");
