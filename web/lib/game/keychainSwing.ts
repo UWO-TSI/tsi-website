@@ -108,3 +108,24 @@ export function pressDepth(p: Press, now: number): number {
   if (u >= 1) { p.at = null; return 0; }
   return 1 - u * u * (3 - 2 * u);
 }
+
+// ── The keycap off and on (the merch view's button) ─────────────────────────────────────────────────────────────
+/** How long the keycap takes to come off (or go back on), seconds. */
+export const CAP_MOVE_S = 0.7;
+/** How far it lifts straight off the stem, and where it then hovers beside the block (model units, the body's frame). */
+export const CAP_LIFT = 0.12, CAP_ASIDE: [number, number, number] = [-0.25, 0.0, 0.07];
+/** Step the keycap's off-ness (0 on the stem, 1 off and aside) toward where it's going. */
+export function stepCap(at: number, off: boolean, dt: number): number {
+  const d = dt / CAP_MOVE_S;
+  return off ? Math.min(1, at + d) : Math.max(0, at - d);
+}
+const ease = (t: number) => t * t * (3 - 2 * t);
+/**
+ * Where the keycap is, `at` of the way off: first straight up off the stem (+z, out of the switch), then across to
+ * hover beside the block, turned a little to show its side; going back on retraces it. [x, y, z, turn about y].
+ */
+export function capOffset(at: number): [number, number, number, number] {
+  if (at <= 0.5) return [0, 0, CAP_LIFT * ease(at / 0.5), 0];
+  const t = ease((at - 0.5) / 0.5);
+  return [CAP_ASIDE[0] * t, CAP_ASIDE[1] * t, CAP_LIFT + (CAP_ASIDE[2] - CAP_LIFT) * t, -0.6 * t];
+}

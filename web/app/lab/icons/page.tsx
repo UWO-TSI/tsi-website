@@ -57,6 +57,12 @@ function matte(model: THREE.Object3D, tints?: Record<string, string>) {
       if (/Decal/i.test(src.name)) { mesh.visible = false; return src; }
       const tint = tints && Object.entries(tints).find(([name]) => src.name === name || src.name.endsWith(`_${name}`))?.[1];
       if (tint === "none") { mesh.visible = false; return src; }
+      // Our clear acrylic (the P_Glass preset, the keycap keychain's block) stays see-through: an alpha test would drop it.
+      if (src.name.startsWith("P_Glass") && src.transparent) {
+        mesh.renderOrder = 2;
+        return new THREE.MeshStandardMaterial({ name: src.name, color: src.color?.clone() ?? new THREE.Color("#ffffff"), vertexColors: src.vertexColors,
+          roughness: 0.2, metalness: 0, transparent: true, opacity: Math.max(0.42, src.opacity), depthWrite: false, side: THREE.DoubleSide });
+      }
       return new THREE.MeshStandardMaterial({
         name: src.name, map: src.map ?? null, color: tint ? new THREE.Color(tint) : src.color?.clone() ?? new THREE.Color("#ffffff"),
         // Our models carry their light gradient in vertex colours; the old dump's textured ones carry masks there (black fish).

@@ -1,5 +1,5 @@
 """The review sheets (shop phase 2): the headless shots in a labelled grid, one WebP.
-  python3 sheet.py <raw-dir> <out.webp> [ground|merch|overlay|keychain]"""
+  python3 sheet.py <raw-dir> <out.webp> [ground|merch|overlay|keychain|keychain2]"""
 import sys
 from PIL import Image, ImageDraw, ImageFont
 
@@ -56,6 +56,22 @@ KEYCHAIN = [
     ("viewer-drag", "The standalone viewer: pulled about"),
     ("viewer-press", "The standalone viewer: the keycap pressed"),
 ]
+KEYCHAIN2 = [
+    ("photo-keyring", "David's photo (IMG_3096): the spring-gate keyring"),
+    ("close-keyring", "The model: a pear-shaped ring, its gate bar on the inner side, the collar and its eye, the jump ring"),
+    ("photo-clasp", "David's photo (IMG_3099): the lobster clasp on the block's loop"),
+    ("close-clasp", "The model: the lobster body, its gate and trigger, the tail ring, the snake chain's end cap"),
+    ("cap-on", "Keycap on"),
+    ("cap-off-wide", "Keycap off: lifted straight off the stem, hovering beside the block"),
+    ("photo-switch", "David's photo (IMG_3100): the switch, keycap off"),
+    ("switch-close", "The bare switch: top housing and its four corner clips, the seam, the yellow cross stem"),
+    ("switch-pressed", "Pressed with the keycap off: the stem goes in, with the same click"),
+    ("switch-side", "From the side: the housing's two halves, the gold pins in the acrylic"),
+    ("merch-cap-on", "The merch view with the button: Take keycap off"),
+    ("merch-cap-off", "...and Put keycap on"),
+    ("29-keychain-wall", "On the merch wall: the metal now polished silver, not white"),
+    ("sprite", "The 2D sprite now keeps the acrylic block"),
+]
 TITLE = "Shop, phase 2: the furnished ground floor (headless, in-game)"
 if mode == "merch":
     CELLS, TITLE = MERCH, "Shop, phase 2: the club merch screen, after David's reference"
@@ -63,10 +79,12 @@ if mode == "overlay":
     CELLS, TITLE = OVERLAY, "Shop: the overlay redo after David's three references, and the window pass"
 if mode == "keychain":
     CELLS, TITLE = KEYCHAIN, "Shop: the TSI keycap keychain, from David's photos"
+if mode == "keychain2":
+    CELLS, TITLE = KEYCHAIN2, "The keycap keychain: the clasp and keyring, keycap off and on, the bare switch (3,460 triangles)"
 W, H, PAD, CAP = 720, 450, 14, 34
 font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 17)
 title = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 26)
-cols = 2 if mode in ("merch", "keychain") else 3
+cols = 2 if mode in ("merch", "keychain", "keychain2") else 3
 rows = (len(CELLS) + cols - 1) // cols
 sheet = Image.new("RGB", (cols * (W + PAD) + PAD, rows * (H + CAP + PAD) + PAD + 50), "#1d1f22")
 d = ImageDraw.Draw(sheet)
@@ -76,7 +94,7 @@ for i, (name, cap) in enumerate(CELLS):
     # crop to the cell's 16:10, centred, then fit; a portrait shot (a phone) is fitted whole on the sheet's dark
     r = W / H
     iw, ih = im.size
-    if iw < ih or (mode == "keychain" and abs(iw / ih - r) > 0.05):
+    if iw < ih or (mode in ("keychain", "keychain2") and abs(iw / ih - r) > 0.05):
         k = min(H / ih, W / iw)
         fitted = im.resize((int(iw * k), int(ih * k)), Image.LANCZOS)
         im = Image.new("RGB", (W, H), "#1d1f22")

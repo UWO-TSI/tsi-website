@@ -7,8 +7,9 @@
  * its slow turn after a pause. Something in it that can be pressed (the keychain's keycap) arms a tap as the pointer goes
  * down on it (`useStageTap`); the tap fires as the pointer comes up, only if it hardly moved (a click, not a drag).
  */
-import { createContext, useContext, useRef, useState, type ReactNode } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import * as THREE from "three";
 
 /** How fine the pixels are: the canvas draws at this share of its size (the world's pixel mode draws at 0.5). */
@@ -56,7 +57,27 @@ function Spinner({ turn, children }: { turn: { current: Turn }; children: ReactN
   return <group ref={group}>{children}</group>;
 }
 
-export default function TurnStage({ children, className, cameraZ = 4.2, label }: { children: ReactNode; className?: string; cameraZ?: number; label: string }) {
+/** Module scope (three objects written outside React's state): the studio room baked into the scene's environment. */
+function lightStudio(gl: THREE.WebGLRenderer, scene: THREE.Scene): () => void {
+  const pmrem = new THREE.PMREMGenerator(gl);
+  const target = pmrem.fromScene(new RoomEnvironment(), 0.04);
+  scene.environment = target.texture;
+  scene.environmentIntensity = 0.55;
+  pmrem.dispose();
+  return () => { if (scene.environment === target.texture) scene.environment = null; target.dispose(); };
+}
+/** A soft studio room for polished metal to reflect (the keychain's silver), made once per stage. */
+function Studio() {
+  const { gl, scene } = useThree();
+  useEffect(() => lightStudio(gl, scene), [gl, scene]);
+  return null;
+}
+
+export default function TurnStage({ children, className, cameraZ = 4.2, label, studio = false }: {
+  children: ReactNode; className?: string; cameraZ?: number; label: string;
+  /** Reflections for polished metal (the keychain): a soft studio room as the environment. */
+  studio?: boolean;
+}) {
   const turn = useRef<Turn>(newTurn());
   const last = useRef(0);
   const armed = useRef<(() => void) | null>(null);
@@ -89,6 +110,7 @@ export default function TurnStage({ children, className, cameraZ = 4.2, label }:
         <hemisphereLight args={["#ffffff", "#c9ccd1", 0.7]} />
         <directionalLight position={[2.5, 3.2, 2.4]} intensity={2.1} />
         <directionalLight position={[-2.6, 1.2, -1.8]} intensity={0.7} />
+        {studio && <Studio />}
         <Spinner turn={turn}>{children}</Spinner>
       </Canvas>
     </div>

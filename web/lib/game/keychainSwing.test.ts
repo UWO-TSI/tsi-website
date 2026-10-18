@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { KEYCHAIN_LINKS, PRESS, dragSwing, newPress, newSwing, pressDepth, pressKey, spinTwist, stepSwingFor, swingSpeed, type Swing } from "./keychainSwing";
+import { CAP_ASIDE, CAP_LIFT, CAP_MOVE_S, KEYCHAIN_LINKS, PRESS, capOffset, dragSwing, stepCap, newPress, newSwing, pressDepth, pressKey, spinTwist, stepSwingFor, swingSpeed, type Swing } from "./keychainSwing";
 
 const lengthsOk = (s: Swing, tol: number) => s.len.every((l, i) => Math.abs(Math.hypot(s.p[i + 1][0] - s.p[i][0], s.p[i + 1][1] - s.p[i][1], s.p[i + 1][2] - s.p[i][2]) - l) < tol);
 const finite = (s: Swing) => s.p.every(p => p.every(Number.isFinite)) && Number.isFinite(s.twist);
@@ -79,5 +79,32 @@ describe("the keycap's press", () => {
     const p = pressKey(newPress(), 0);
     pressKey(p, PRESS.down + PRESS.hold + 0.01);
     expect(pressDepth(p, PRESS.down + PRESS.hold + 0.02)).toBeCloseTo(0.01 / PRESS.down, 5);
+  });
+});
+
+describe("the keycap off and on", () => {
+  it("lifts straight off the stem first, then goes aside to hover by the block", () => {
+    expect(capOffset(0)).toEqual([0, 0, 0, 0]);
+    const lifting = capOffset(0.25);
+    expect(lifting[0]).toBe(0);
+    expect(lifting[2]).toBeGreaterThan(0);
+    expect(capOffset(0.5)).toEqual([0, 0, CAP_LIFT, 0]);
+    const off = capOffset(1);
+    expect(off[0]).toBeCloseTo(CAP_ASIDE[0], 6);
+    expect(off[2]).toBeCloseTo(CAP_ASIDE[2], 6);
+    // Clear of the block and its stem the whole way (never sideways while still on the stem).
+    for (let a = 0; a <= 0.5; a += 0.05) expect(capOffset(a)[0]).toBe(0);
+  });
+
+  it("takes CAP_MOVE_S to come off and the same to go back on, and goes back the way it came", () => {
+    let at = 0;
+    for (let t = 0; t < CAP_MOVE_S - 1e-9; t += 1 / 60) at = stepCap(at, true, 1 / 60);
+    expect(at).toBeGreaterThan(0.98);
+    at = stepCap(at, true, 1);
+    expect(at).toBe(1);
+    const half = stepCap(1, false, CAP_MOVE_S / 2);
+    expect(half).toBeCloseTo(0.5, 6);
+    expect(capOffset(half)).toEqual(capOffset(0.5));
+    expect(stepCap(half, false, 5)).toBe(0);
   });
 });
