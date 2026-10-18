@@ -197,6 +197,9 @@ export const ASSET_EXCEPTIONS: Record<string, Partial<AssetBudget> & { why: stri
   "game/weapons/tooth-charm-5.glb": { primitives: 10, materials: 10, why: "tier-5 charm, a material per part" },
   "game/cafe/cafe-room.glb": { triangles: 34_170, primitives: 48, materials: 33, why: "the café interior, one room drawn alone: 48 draws" },
   "game/interiors/kit.glb": { primitives: 35, why: "the interiors' shared kit; pieces are drawn one by one" },
+  // The shop is two floors (David asked for it bigger, specs/interiors/shop.md): each floor is its own room model.
+  "game/interiors/shop/ground.glb": { triangles: 17_088, why: "the shop's approved ground floor, one floor of a two-floor room: 2.70 ms high at the shop's perf check" },
+  "game/interiors/shop/mezz.glb": { triangles: 18_244, why: "the shop's furnished mezzanine (the merch level), the second floor: 2.70 ms high at the shop's perf check" },
   "game/buildings/cafe.glb": { primitives: 34, materials: 25, why: "the café exterior: 34 draws in the village, the most of any building" },
   // Dump models David kept and we only retouched (row 314, art/props/derive_*.py): their own geometry and textures.
   "game/props/beach-parasol.glb": { triangles: 4740, why: "the dump's parasol and two loungers kept as they were, recoloured only (one draw)" },

@@ -1,11 +1,14 @@
 "use client";
 
-/** /dev/economy?view=shop|sell|inventory|wallet|admin[&tab=specials] */
+/** /dev/economy?view=shop|overlay|sell|inventory|wallet|admin[&tab=specials][&section=items|merch: the shop overlay's two answers] */
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { InventorySheet, SellSheet, ShopBody, WalletSheet } from "@/components/economy/EconomySheets";
 import MerchFulfilment from "@/components/economy/MerchFulfilment";
+import ShopOverlay from "@/components/economy/ShopOverlay";
+import { merchViewer } from "@/components/game/ShopCounter";
 import ProgressionPanel from "@/components/progression/ProgressionPanel";
 import { memoryEconomyStore } from "@/lib/wallet/memoryStore";
+import { PENDING_MERCH } from "@/lib/wallet/catalogue";
 import { memoryEconomyTransport } from "@/lib/wallet/memoryTransport";
 import * as S from "@/lib/wallet/service";
 import type { EconomyTransport } from "@/lib/wallet/transport";
@@ -16,6 +19,8 @@ const JORDAN = "00000000-0000-4000-8000-000000000102";
 
 async function seed(): Promise<EconomyTransport> {
   const m = memoryEconomyStore();
+  // Club merch waiting on its migration (lib/wallet/catalogue.ts PENDING_MERCH) is on the dev shelf already.
+  PENDING_MERCH.forEach((c, i) => m.items.push({ ...c, id: `00000000-0000-4000-8000-0000000f${String(i + 1).padStart(4, "0")}`, active: true, available_from: null, available_until: null }));
   m.name(ME, "You");
   m.name(MAYA, "Maya Chen");
   m.name(JORDAN, "Jordan Park");
@@ -55,6 +60,9 @@ export default function EconomyHarness() {
   return (
     <main className="gui" style={{ minHeight: "100dvh", background: view === "admin" ? "var(--gui-page)" : "linear-gradient(180deg,#a9d8e6,#cfe7cf 55%,#9cc58f)", padding: view === "admin" ? 32 : 0 }}>
       {view === "shop" ? <ProgressionPanel open onClose={close} title="Shop" wide><ShopBody transport={t} initialTab={(q.get("tab") as "tools") ?? "tools"} /></ProgressionPanel> : null}
+      {/* The in-game shop overlay (ShopOverlay), as the counter opens it: ?view=overlay[&section=items|merch] */}
+      {view === "overlay" ? <ShopOverlay open onClose={close} transport={t} title={q.get("section") === "merch" ? "Club merch" : "The shop"}
+        section={(q.get("section") as "items" | "merch" | null) ?? undefined} sell={q.get("section") !== "merch"} viewerFor={merchViewer} /> : null}
       {view === "sell" ? <SellSheet open onClose={close} transport={t} /> : null}
       {view === "inventory" ? <InventorySheet open onClose={close} transport={t} /> : null}
       {view === "wallet" ? <WalletSheet open onClose={close} transport={t} /> : null}

@@ -64,7 +64,10 @@ export default function HQInterior({
   talking = false,
   trophyCase = false,
   noticeBoard = false,
+  branded = false,
 }: {
+  /** The member clubhouse: the branded dark round the room (InteriorBackdrop) instead of a flat colour. The applicant island keeps its own. */
+  branded?: boolean;
   /** The member clubhouse's own notice board (lib/game/propModels HQ_NOTICE_BOARD_URL); the applicant island's keeps the dump's. */
   noticeBoard?: boolean;
   /** The member clubhouse's 3D trophy case stands at the display (TrophyCase): the chest and its cups step aside. */
@@ -87,7 +90,7 @@ export default function HQInterior({
   // Lamps at their night strength, eased down by day (lib/game/interiorLight.ts).
   const lamp = CLUBHOUSE_LIGHTING.night, lamps = interiorLight(outside).lamps;
 
-  useEffect(() => applyInteriorBackdrop(scene), [scene]);
+  useEffect(() => applyInteriorBackdrop(scene, branded ? null : undefined), [scene, branded]);
 
   const handleMove = useNearestStation(stations, onNearestStation);
 

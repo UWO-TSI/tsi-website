@@ -17,6 +17,7 @@ import HQInterior from "@/components/game/HQInterior";
 import ShopInterior from "@/components/game/ShopInterior";
 import OracleInterior from "@/components/game/OracleInterior";
 import WharfShackInterior from "@/components/game/WharfShackInterior";
+import InteriorBackdrop from "@/components/game/InteriorBackdrop";
 
 const ROOMS = ["oracle", "shop", "hq", "wharf"] as const;
 
@@ -52,6 +53,7 @@ export default function InteriorBench() {
         ))}
         <span style={{ color: "#8a939a", alignSelf: "center" }}>WASD / click to move · drag to orbit</span>
       </div>
+      {room !== "oracle" && <InteriorBackdrop room={room === "hq" ? "hq" : room === "shop" ? "shop" : "wharf"} />}
       <Canvas
         camera={{ fov: 48, near: 0.1, far: 100, position: [0, 6.5, -9.5] }}
         onCreated={({ gl }) => {
@@ -59,7 +61,8 @@ export default function InteriorBench() {
           gl.outputColorSpace = THREE.SRGBColorSpace;
         }}
       >
-        <Room frozen={false} playerPosRef={playerPosRef} onNearestStation={() => {}} />
+        {room === "hq" ? <HQInterior branded frozen={false} playerPosRef={playerPosRef} onNearestStation={() => {}} />
+          : <Room frozen={false} playerPosRef={playerPosRef} onNearestStation={() => {}} />}
         <OrbitControls target={[0, 1.2, 1]} enablePan={false} minDistance={4} maxDistance={16} />
       </Canvas>
     </div>

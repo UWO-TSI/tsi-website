@@ -1,0 +1,44 @@
+/* The space around the rooms (InteriorBackdrop): behind the canvas, never over it. */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* Deep charcoal, the building's tint gathered toward the middle, and a soft vignette to the corners. */
+  background:
+    radial-gradient(ellipse 120% 95% at 50% 42%, transparent 52%, rgba(0, 0, 0, 0.5) 100%),
+    radial-gradient(ellipse 70% 60% at 50% 40%, color-mix(in srgb, var(--tint) 52%, #17181b) 0%, color-mix(in srgb, var(--tint) 14%, #121315) 72%);
+  background-color: #121315;
+}
+
+/* The Tethos mark, tiled faintly; it drifts one tile a loop, so it never jumps. */
+.backdrop::before {
+  content: "";
+  position: absolute;
+  inset: -200px;
+  background-image: url("/assets/branding/tethos-mark.svg");
+  background-size: 180px 180px;
+  opacity: 0.014;
+  animation: drift 180s linear infinite;
+  will-change: transform;
+}
+
+/* A fine, static grain over it all. */
+.backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.55 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+}
+
+@keyframes drift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(180px, 180px, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop::before { animation: none; }
+}

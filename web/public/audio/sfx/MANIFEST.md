@@ -77,3 +77,9 @@ generated, normalised to match the existing CC0 set (SFX target
   `ambientCandidates`, which already tries `{phase}-{weather}.ogg` /
   `{phase}-{season}.ogg` before the base file and stays silent-extra until
   they exist)
+
+## Shop merch (shop phase 2)
+
+| Event | SFX | Where |
+|---|---|---|
+| Pressing the TSI keycap keychain's keycap (in the shop and in the merch view) | `keyswitch`: its own file, `keyswitch.ogg`. The press at 0 and the return at 0.11 s, in step with the keycap (`lib/game/keychainSwing.ts` PRESS). It's a synthesized stand-in (`art/audio/synth_keyswitch.py`); David is recording the real one, and that recording replaces this one file under the same name. | `KeycapKeychain.tsx` |
