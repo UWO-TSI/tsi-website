@@ -88,3 +88,45 @@ Evidence: `specs/evidence/flat-ui/`, one sheet per step pair, each row before an
 **The detail stage's poses (David):** a fish lies on its side and swims, turning round the vertical; things drawn from above in their icons (butterflies, dragonflies, the ladybug) lean toward you so their wings show.
 
 **Not yet:** step 8, the avatar creator and wardrobe, waits for game/wardrobe-b2 to merge.
+
+## Round 2 (David, 2026-10-18)
+
+David reviewed steps 1 to 7 (the sheets in `specs/evidence/flat-ui/`).
+
+**Approved**
+- **Step 1, the kit.** One addition, verbatim: "make sure to have micro animation when switching between tabs and clicking between icons".
+  - The icon rail's active marker slides to the new icon.
+  - An icon press gives a slight scale-down and a bounce.
+  - Tab content cross-fades and slides a few px.
+  - The tabs' pill slides.
+  - Each is 120 to 200 ms, ease-out, and off under reduced motion. They apply everywhere the kit is used, the shop included.
+- **Step 2, the old shop pages.** Merged (main 43139bc8).
+- **The storage chest, the workbench and the furniture catalogue:** approved as they are.
+
+**Redo: the bag (step 3).** Verbatim: "looks good, but make side tab icon for bag filter for fish adn bug and furnature and stuff. bad doesnt need the zoom in click into item, they can click and a lil tab on the side with action item show dont need item open page. storage looks clean, crafting looks clean"
+- The rail filters by category: all, fish, bugs, forage and fruit, materials, tools, clothes, furniture, as the bag holds them.
+- A click opens a small side panel beside the grid: the name, a small picture and the actions. There is no item page and no studio stage, and the grid stays in view.
+
+**Redo: the collection (step 6).** Verbatim: "looks good, dont need lish fish or bug click into its own page, just hover and it will show small page with info, click will have page with action"
+- Hover, or a long press on a phone, shows a small info card by the tile: the name, rarity, where and when, the record and the museum.
+- A click opens the same side panel as the bag, with that entry's actions.
+
+**Redo: the other menus (step 7).** Verbatim:
+- "the ui overall needs better development and not beause of the new color pallete. I also kinda like the old color palette so keep the color pallete for the quests, cleaner mission board design. notice board design needs to be simple and intuitive. mailbox more subtle"
+- "keep old color pallete but the ui and design needs more work, more space and cleaner more intuitive design needs to be applied"
+- "keep color pallete more intuitive and clean/spacious ui layout"
+
+What that means:
+- **Palette:** these menus keep the cream palette, its paper and accents. The flat recolour comes off them. The flat white and grey look stays only on the shop, the bag, the chest, the workbench, the collection and the furniture catalogue.
+- **Layout:** more space, cleaner and more intuitive.
+  - Fewer boxes and no cards nested in cards.
+  - One obvious primary action per view.
+  - Generous padding and line spacing.
+  - Grouped, aligned content.
+  - Rows that are less dense, at readable sizes.
+- **Notes per menu:** journal and quests, keep the palette, cleaner; the mission board, a cleaner design; the notice board, simple and intuitive; the mailbox, more subtle.
+- **Order:** four first (journal and quests, the mission board, the notice board, the mailbox), before and after on desktop and phone, to David. When he OKs the direction, the rest follow: settings, wallet, tourney, cafe goals, trophies, showcase, donate, the Esc menu and friends.
+
+**Redo: the detail stage.** Verbatim: "i dont think detail stage is needed, remove. also bass is upside down"
+- The 3D studio stage comes off the bag and the collection; the side panel replaces it. It stays in the shop and the merch only.
+- The fish and bug pose code goes too: the shop needs neither.
