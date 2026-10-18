@@ -137,7 +137,7 @@ STICKER = [
     ("38-sticker-easel", "In the shop: both variants on an easel on the counter, under the totes (scale 0.4)"),
     ("39-sticker-easel-other-side", "From the other side: the foil has moved on"),
     ("40-sticker-walk", "From the walking camera"),
-    ("m-grid", "The merch grid (its picture a still of the sheen), and the detail with the variant swatches"),
+    ("m-grid", "The merch grid (the sticker's picture a still of the sheen; keychain and lanyard at 800 gems), the detail with its swatches"),
     ("m-dark", "The dark swatch picked; dragged to tilt"),
     ("m-phone", "On a phone"),
     ("sprites", "The 2D sprites, the sheen baked in (lite graphics, a failed canvas, the swatches)"),

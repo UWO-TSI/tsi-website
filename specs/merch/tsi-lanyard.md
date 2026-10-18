@@ -28,6 +28,7 @@ The keychain's pattern applies:
 
 - **2026-10-18: the item view is approved.** David on round 2 of the detail view (laid flat, front and back together,
   finer pixels): "lanyard looks good".
-- **Price and stock:** from David. Until then it's in `PENDING_MERCH` with no price, off sale ("Price to come").
+- **Price:** 800 gems (in `PENDING_MERCH`). Stock comes from David. It stays off sale, like the keychain, until its
+  catalogue row lands.
 - **The snap hook:** approximate, from a 480 px crop of the photo, until David's close-ups. It needs one face on (flat,
   the trigger and rivet up) and one edge on (the swivel, the collar, the body's thickness).
