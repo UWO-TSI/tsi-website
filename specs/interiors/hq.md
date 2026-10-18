@@ -89,9 +89,8 @@ All of HQ's current functions stay and keep working.
 
 ## Phase 1: the layout (greybox, 2026-10-18, for David's pick)
 
-Every number is in `web/lib/game/hqLayout.ts`, for two options. The room draws an option as matte blocks
-(`components/game/hq/HqGreybox.tsx`) at `/lab/island?hq=inside&hqLayout=a` (or `b`), in development only. The live HQ
-is untouched until David picks. The walking, the stair and the stations use the same numbers. The shots are in
+Every number was in `web/lib/game/hqLayout.ts`, for two options, drawn as matte blocks at
+`/lab/island?hq=inside&hqLayout=a` (or `b`). David picked A (below); the greybox and option B are gone since phase 2. The walking, the stair and the stations use the same numbers. The shots are in
 `specs/evidence/hq-interior/phase1/`: `hq-layout-options.webp` shows A beside B, view by view, made headless by
 `shots.mjs` and `sheet.py` there.
 
@@ -190,3 +189,87 @@ is untouched until David picks. The walking, the stair and the stations use the 
   answers only the ones HQ has now.
 - Wren walking her new post.
 - The HQ perf bench and the room's meshes against the interior budget.
+
+## Phase 2: layout A furnished (2026-10-18)
+
+David picked **option A, the back mezzanine**, and left the exterior as it is ("gonna remodel the buildings maybe
+later"). Layout A is now the member HQ: `/lab/island?hq=inside` and through HQ's door in the village. The applicant
+island keeps its own clubhouse (`HQInterior.tsx`).
+
+**The room** (`components/game/hq/HqInterior.tsx`, `HqRoom.tsx`):
+- **Models:** `art/interiors/build_hq.py` reads `art/interiors/hq_layout.json` (written from `hqLayout.ts` by
+  `web/scripts/hq-layout-json.mjs`; a test keeps it current) and writes `web/public/assets/game/interiors/hq/`:
+  - `ground.glb`, 23.4k triangles: the walnut plank floor, the hall's walls both storeys high, the work floor, the stair;
+  - `upper.glb`, 15.0k: the mezzanine, cut away while you're under it;
+  - `ceiling.glb`, 4.6k: the hall's dark ceiling, the walnut oval ceiling over the upper lounge, the black track spots
+    and the whole front wall with its glazed door and two tall windows. The game shows it only to a camera under the
+    ceiling: the walking camera looks in from above, the evidence's eye-level views see a closed room;
+  - `tank.glb`, 9.2k: the aquarium's inside, reef, glass and surface.
+- **Materials:** textures only up close (the walnut planks 512; the walnut grain, the plaster, the rug pile, the green
+  marble and the magazine covers 256). Everything else is plain colour on the shared presets. The strips, the lamp
+  shades' undersides and the oval lights are `M_Glow`. Budget exceptions for `ground.glb` and `upper.glb` are in
+  `budget.ts`, like the shop's.
+- **Downstairs:**
+  - Wren's walnut desk by the door: a fluted front, a travertine top, a warm strip under the lip, the register open on
+    the ledge and a mushroom lamp;
+  - the green marble coffee bar with an espresso machine and two walnut stools;
+  - the lamp-lit lounge before the aquarium: a cream shag rug, a velvet sofa facing the glass, a travertine table with
+    a mushroom lamp, a lounge chair and a globe floor lamp;
+  - under the mezzanine: the long walnut co-working desk with four monitors and leather office chairs, the work lounge
+    on the deep blue rug (the quilted black daybed, a brown leather sofa, a glass table of books), the library wall
+    (walnut shelving, books in rows and magazines face out, a warm strip under every shelf), the walnut panelled wall
+    with the notice board and the club goals, the clock, the Founder's desk with its chair pushed back and the blank
+    plaque under a picture light, the trophy case and the workbench;
+  - palms by the door, a big framed canvas over the stair.
+- **Upstairs:** the cream shag carpet, the velvet sofas, the travertine table, a round black table with a mushroom lamp,
+  four beanbags by the rail, the chrome arc lamp, the walnut panelling and the lit art piece, the six blank banners hung
+  from the rail facing the door, and the two locked admin doors with their "ADMINS ONLY" plates.
+
+**Light** (lamps, strips and track spots, not ceiling panels; following the time of day):
+- **Day:** the windows (right wall, both storeys; left wall upstairs) show the outside, and a caster closes the room's top
+  and front for the sun, so it only comes in by the windows.
+- **Lamps:** they're always on. Their warm pools, the spots' washes on the library, the board, the plaque and the art,
+  and the aquarium's blue on the lounge are soft additive patches, one draw a floor (`lib/game/hqLight.ts`,
+  `LampPools.tsx`).
+- **Real lights:** four. The hall, the work floor, the upper lounge, and the aquarium's blue.
+- **Night:** the fill and the room's reflections ease down with the daylight, so at night the lamps, the strips and the
+  bright tank carry the room.
+
+**The aquarium** (`components/game/hq/Aquarium.tsx`):
+- **Water:** cyan-blue (the colour reference), deep blue at the sand to bright cyan at the top, slow light shafts and
+  caustics over the back.
+- **Reef:** rock rising to a tall face at the mezzanine's end (the size reference), corals, fans and weed, lit by the
+  tank's own light with caustics on what faces up.
+- **Fish:** four schools of silver and sixteen small orange fish, one instanced draw. Each swims a closed path worked
+  out in the vertex shader (`lib/game/hqAquarium.ts`, tested to stay in the water).
+- **Surface:** rippled, seen from the walking camera above.
+- **The rest:** the warm strip along its base, and every tank shader bends with the curved world.
+
+**Stations** (each on its own floor; nothing answers from the stair):
+- Every station HQ had: the exit, Wren's desk (the visit's report and the register), the notice board, the Founder's
+  desk, the trophy display, the clock, and the workbench (its own prompt).
+- The library replaces the bookshelf: "Browse the library".
+- New stations, their lines drafts for David (`HQ_LINES` in `hqLayout.ts`):
+  - the coffee bar: "Get a coffee" → "Fresh coffee at the marble bar. The cups are already warm.";
+  - the aquarium: "Look at the aquarium" → "Silver fish turn together in the blue. A small orange one goes its own way.";
+  - the admin doors: "Try the door" → "Admins only. It's locked."
+- No reward for any of them (principle 3).
+- Wren stands at her new post behind the desk (`KEEPER_POSTS.memberHq`), seen over its counter from the walking camera
+  (tested).
+
+**Perf** (`specs/evidence/hq-interior/phase2/perf-check.txt`; the `hq` bench scene, from the door):
+- High: 2.70 ms, 104 draws, 77k triangles.
+- Lite: 1.80 ms, 62 draws, 70k triangles.
+- Under the café's budget on every line.
+
+**Shots:** `specs/evidence/hq-interior/phase2/hq-phase2-sheet.webp`, made headless by `shots.mjs` and `sheet.py` there.
+- Day and night side by side: the plans, from the door, walking in, the aquarium from the lounge and close up, the work
+  floor, the upper lounge and its view of the tank, upstairs walking.
+- By day only: the overview, the top of the stairs, the board and the Founder's desk, the coffee bar and Wren's desk, the
+  admin doors, walking under the mezzanine, and the three new stations' lines on screen.
+
+**Not done:**
+- The banners stay blank until David sends the year designs.
+- The plaque stays blank until David writes it.
+- Other players upstairs are drawn on the ground floor's height. The network sends no height, as in the shop.
+
