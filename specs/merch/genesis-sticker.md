@@ -4,7 +4,7 @@ David, 2026-10-18. A real TSI item for the shop's club merch section on the mezz
 
 ## The item
 
-- **Price:** to be set by David.
+- **Price:** 200 gems (David, 2026-10-18).
 - **Shape:** a rectangle (David, 2026-10-18), with slightly rounded corners.
 - **Artwork:** an ASCII-art picture made of monospace characters, with "GEN_26" in a bold monospace face, bottom left, with a soft glow.
 - **Two variants:**
@@ -29,4 +29,5 @@ David, 2026-10-18. A real TSI item for the shop's club merch section on the mezz
 
 - **2026-10-18: built, for David's review.** See `specs/evidence/shop-interior/phase2/sticker-sheet.webp` and
   `specs/interiors/shop.md`.
-- **Price and stock:** from David. Until then it's in `PENDING_MERCH` with no price, off sale.
+- **2026-10-18: approved.** David: "amazing".
+- **Price:** 200 gems, in `PENDING_MERCH`. Stock comes from David. It stays off sale until its catalogue row lands.

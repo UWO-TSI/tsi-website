@@ -340,5 +340,6 @@ which turned out to be a slightly turned view.
   - The two variants are thumbnails down the left of the stage.
   - The grid card's picture is a still of the sheen.
 - **Sprites:** each variant has one with the sheen baked in (`merch-genesis-sticker-{light,dark}-sprite.webp`).
-- **Catalogue:** in `PENDING_MERCH` with no price, so it's off sale ("Price to come").
+- **Catalogue:** in `PENDING_MERCH` at 200 gems (David's price, 2026-10-18; approved: "amazing"). It stays off sale until
+  its catalogue row lands.
 - **Shots:** `sticker-sheet.webp`. The viewer is at the scratch path `sticker-viewer.html`.

@@ -101,10 +101,10 @@ export const PENDING_MERCH: CatalogueEntry[] = [
   withIcon({ slug: "merch-tsi-lanyard", display_name: "TSI lanyard", category: "merch",
     description: "Navy, printed both sides: GENESIS and TETHOS with the Tethos mark outside, the Steve Jobs quote inside. Silver D-ring and swivel snap hook. Pick up at HQ on campus.",
     price_coins: null, price_gems: 800, tier: null, slot: null, special_pool: false, stackable: false, stock: null, catalogue_ref: null, sprite_url: null, position: 39 }),
-  // specs/merch/genesis-sticker.md: no price yet, off sale. Its card's picture is the light variant with its foil baked in.
+  // specs/merch/genesis-sticker.md: 200 gems (David); off sale until its catalogue row lands. Its card's picture is the light variant with its foil baked in.
   { ...withIcon({ slug: "merch-genesis-sticker", display_name: "GENESIS sticker", category: "merch",
     description: "Holographic, in light or dark: the GENESIS ASCII art and GEN_26. Pick up at HQ on campus.",
-    price_coins: null, price_gems: null, tier: null, slot: null, special_pool: false, stackable: false, stock: null, catalogue_ref: null, sprite_url: null, position: 40 }),
+    price_coins: null, price_gems: 200, tier: null, slot: null, special_pool: false, stackable: false, stock: null, catalogue_ref: null, sprite_url: null, position: 40 }),
     sprite_url: "/assets/game/items/merch-genesis-sticker-light-sprite.webp" },
 ];
 
