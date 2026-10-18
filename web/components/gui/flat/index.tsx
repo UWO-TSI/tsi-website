@@ -167,7 +167,8 @@ export function ItemCard({ picture, px = 44, name, line, price, pill: other, tag
   const look = { className: cx(f.card, className), "data-testid": testId, "data-cover": cover || undefined,
     "data-selected": selected || undefined, "data-size": size === "lg" ? undefined : size };
   if (!onClick) return <div {...(rest as HTMLAttributes<HTMLDivElement>)} {...look} role="img" aria-label={label}>{face}</div>;
-  return <button type="button" {...rest} {...look} onClick={onClick} aria-label={label} aria-pressed={selected === undefined ? undefined : selected}>{face}</button>;
+  // A card that is a radio or a tab (a finish to pick) says so by its role, not as a pressed button.
+  return <button type="button" {...rest} {...look} onClick={onClick} aria-label={label} aria-pressed={selected === undefined || rest.role ? undefined : selected}>{face}</button>;
 }
 
 /** The small grey pill (a price, a count). */
