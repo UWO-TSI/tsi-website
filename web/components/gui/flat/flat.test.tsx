@@ -1,7 +1,8 @@
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { CardGrid, DetailView, FlatPanel, HairlineRow, IconRail, ItemCard, PayRow, Purse, SpecBand, badgeText, priced, railStep, type RailItem } from ".";
+import { CardGrid, DetailView, FlatPanel, HairlineRow, IconRail, ItemCard, PayRow, Purse, SidePanel, SpecBand, WithSide, badgeText, priced, railStep, type RailItem } from ".";
+import { markerOf } from "../motion";
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el);
 const RAIL: RailItem[] = [
@@ -138,5 +139,31 @@ describe("the panel, the grid, the detail and the rows", () => {
     const row = html(h(HairlineRow, { title: "Dace", detail: "Common fish", end: h("button", null, "Sell") }));
     expect(row).toMatch(/<b>Dace<\/b><span[^>]*>Common fish<\/span><\/span><button>Sell<\/button>/);
     expect(row).not.toContain("<canvas");
+  });
+});
+
+describe("the side panel (round 2: a small panel beside the grid, no item page)", () => {
+  it("shows the picture, the name, the facts and the actions, with a close", () => {
+    const out = html(h(SidePanel, { title: "Apple", kind: "Common · Fruit", picture: "/apple.webp", facts: [["In your bag", "10"]], actions: h("button", null, "Pin"), onClose: () => {} }));
+    expect(out).toMatch(/^<aside[^>]*aria-label="Apple"/);
+    expect(out).toContain("<canvas");
+    expect(out).toMatch(/<dt>In your bag<\/dt><dd>10<\/dd>/);
+    expect(out).toContain("<button>Pin</button>");
+    expect(out).toContain('aria-label="Close"');
+  });
+  it("keeps the grid beside it, and takes the grid's whole width when nothing is picked", () => {
+    expect(html(h(WithSide, { side: h("aside", null, "x"), children: "grid" }))).toMatch(/data-open=""[\s\S]*grid[\s\S]*<aside>x<\/aside>/);
+    expect(html(h(WithSide, { side: null, children: "grid" }))).not.toContain("data-open");
+  });
+});
+
+describe("the micro animations' marker", () => {
+  it("sits where the chosen one is inside its row, the row's scroll included", () => {
+    expect(markerOf({ left: 100, top: 50, scrollLeft: 0, scrollTop: 0 }, { left: 140, top: 58, width: 48, height: 48 })).toEqual({ x: 40, y: 8, w: 48, h: 48 });
+    expect(markerOf({ left: 0, top: 0, scrollLeft: 120, scrollTop: 0 }, { left: 30, top: 4, width: 80, height: 40 })).toEqual({ x: 150, y: 4, w: 80, h: 40 });
+  });
+  it("leaves the static rail its own dot until it's measured", () => {
+    const out = html(h(IconRail, { items: RAIL, value: "tools", onChange: () => {}, label: "Shelves" }));
+    expect(out).not.toContain("data-marker");
   });
 });

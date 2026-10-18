@@ -338,7 +338,7 @@ export default function CraftingSheet() {
 
   return <>
     {!open && near && !making && <button className={world.interact} onClick={show}><kbd>E</kbd>Use the workbench</button>}
-    <FlatPanel open={open} title="Workbench" onClose={() => setOpen(false)} testId="crafting-sheet" keys="e"
+    <FlatPanel open={open} title="Workbench" onClose={() => setOpen(false)} testId="crafting-sheet" keys="e" contentKey={`${shelf}${selected ? `:${selected.id}` : ""}`}
       purse={book ? <span className={styles.count}>{book.recipes.length} of {book.total} recipes known</span> : undefined}
       rail={book ? <IconRail label="Recipes" value={shelf} onChange={id => { setShelf(id); setPick(null); }} items={shelves} /> : undefined}>
       {error && <StatusLine error><SignInText text={error} /> {!book && <button type="button" className={styles.retry} onClick={() => void load()}>Try again</button>}</StatusLine>}

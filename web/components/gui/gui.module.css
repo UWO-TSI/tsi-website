@@ -71,6 +71,16 @@
   background: transparent; color: var(--gui-ink-2); font: 800 var(--gui-text-sm)/1 var(--gui-font); white-space: nowrap; cursor: pointer; transition: background var(--gui-t-fast) ease, color var(--gui-t-fast) ease; }
 .tab:hover:not([aria-selected="true"]):not(:disabled) { background: rgb(255 255 247 / 0.7); color: var(--gui-ink); }
 .tab[aria-selected="true"] { background: var(--gui-butter); color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-sm); }
+/* Measured, the chosen tab's pill is one element that slides under the next choice (components/gui/motion). */
+.tabPill { position: absolute; top: 0; left: 0; z-index: 0; border-radius: var(--gui-r-pill); background: var(--gui-butter); box-shadow: var(--gui-shadow-sm); pointer-events: none;
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.18s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.tabs[data-pill] .tab { z-index: 1; }
+.tabs[data-pill] .tab[aria-selected="true"] { background: transparent; box-shadow: none; }
+.tab:active:not(:disabled) { transform: scale(0.95); }
+.tab { transition: background var(--gui-t-fast) ease, color var(--gui-t-fast) ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.tabPanel { animation: tabIn 0.18s ease-out; }
+@keyframes tabIn { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) { .tabPill, .tab { transition: none; } .tabPanel { animation: none; } .tab:active { transform: none; } }
 /* The kit's highlighter swipe under the chosen label. */
 .tab[aria-selected="true"] .tabLabel { background: linear-gradient(transparent 55%, var(--gui-highlight) 55% 90%, transparent 90%); border-radius: 3px; }
 .tab:disabled { opacity: 0.45; cursor: default; }
@@ -272,6 +282,8 @@ button.tile:hover { transform: translateY(-2px) scale(1.04); }
 .tabsWrap[data-flat] .tab { min-height: 36px; padding: 0 14px; color: var(--flat-quiet); font-weight: 600; }
 .tabsWrap[data-flat] .tab:hover:not([aria-selected="true"]):not(:disabled) { background: rgb(0 0 0 / 0.04); color: var(--flat-ink); }
 .tabsWrap[data-flat] .tab[aria-selected="true"] { background: var(--flat-dark); color: #ffffff; box-shadow: none; }
+.tabsWrap[data-flat] .tabPill { background: var(--flat-dark); box-shadow: none; }
+.tabsWrap[data-flat] .tabs[data-pill] .tab[aria-selected="true"] { background: transparent; }
 .tabsWrap[data-flat] .tab[aria-selected="true"] .tabLabel { background: none; }
 .tabsWrap[data-flat] .tabKey { background: var(--flat-ink) !important; color: #ffffff !important; }
 /* Rows split by hairlines; the chosen one white, no stripes or glove. */

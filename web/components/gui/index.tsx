@@ -13,6 +13,7 @@ import { inTopDialog, usePresence, useWorldDialog } from "@/lib/game/useWorldDia
 import { Keycap, NPCDialogue, VillageButton, VillageField, VillagePanel, VillageTextArea } from "@/components/recruit/ui";
 import { IconRail } from "./flat";
 import { GuiVariantContext, useGuiVariant, type GuiVariant } from "./variant";
+import { useMarker } from "./motion";
 import styles from "./gui.module.css";
 
 export { Keycap, NPCDialogue as Dialogue, VillageButton as Button, VillageField as Field, VillageTextArea as TextArea, VillagePanel as Panel };
@@ -144,6 +145,8 @@ export function Tabs<T extends string>({ tabs, value, onChange, label, keyHints,
   }, []);
   const onKey = (e: KeyboardEvent) => { if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); stepTab(ref.current, live.current, e.key === "ArrowRight" ? 1 : -1); } };
   const flat = useGuiVariant() === "flat";
+  // The chosen tab's pill slides to the next one (round 2's micro animations; its own background until measured).
+  const pill = useMarker(ref, '[aria-selected="true"]', value);
   // In a flat menu, tabs with icons are the shop's icon rail, across the top (their names for screen readers and the tooltip).
   if (flat && tabs.some(t => t.icon)) return <div className={cx(styles.tabsWrap, className)} data-flat="">
     {keyHints && <Keycap aria-hidden="true" className={styles.tabKey} data-shape="square">{keyHints[0]}</Keycap>}
@@ -153,7 +156,8 @@ export function Tabs<T extends string>({ tabs, value, onChange, label, keyHints,
   </div>;
   return <div className={cx(styles.tabsWrap, className)} data-flat={flat ? "" : undefined}>
     {keyHints && <Keycap aria-hidden="true" className={styles.tabKey} data-shape="square">{keyHints[0]}</Keycap>}
-    <div ref={ref} role="tablist" aria-label={label} className={styles.tabs} data-edges={edges ?? undefined} onKeyDown={onKey}>
+    <div ref={ref} role="tablist" aria-label={label} className={styles.tabs} data-edges={edges ?? undefined} data-pill={pill ? "" : undefined} onKeyDown={onKey}>
+      {pill ? <span className={styles.tabPill} aria-hidden="true" style={{ width: pill.w, height: pill.h, transform: `translate(${pill.x}px, ${pill.y}px)` }} /> : null}
       {tabs.map(t => <button key={t.id} type="button" role="tab" data-tab={t.id} aria-selected={t.id === value} tabIndex={t.id === value ? 0 : -1} disabled={t.disabled}
         className={styles.tab} onClick={() => onChange(t.id)}>
         {t.icon && <span className={styles.tabIcon} aria-hidden="true">{t.icon}</span>}<span className={styles.tabLabel}>{t.label}</span>
@@ -162,6 +166,11 @@ export function Tabs<T extends string>({ tabs, value, onChange, label, keyHints,
     </div>
     {keyHints && <Keycap aria-hidden="true" className={styles.tabKey} data-shape="square">{keyHints[1]}</Keycap>}
   </div>;
+}
+
+/** A tab's content: when the tab changes (`id`), the new content fades in and rises a few px (round 2's micro animations). */
+export function TabPanel({ id, children, className }: { id: string; children: ReactNode; className?: string }) {
+  return <div key={id} role="tabpanel" className={cx(styles.tabPanel, className)}>{children}</div>;
 }
 
 /** Which ends of a sideways-scrolling row hide more (a pixel or two of slack). */

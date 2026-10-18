@@ -195,7 +195,8 @@ export default function ShopOverlay({ open, onClose, title, section, sell = fals
     } finally { setBusy(null); }
   };
 
-  return <FlatPanel open={open} onClose={onClose} title={title} keys={keys} testId="shop-overlay" embedded={embedded}
+  // A new shelf or an item opened fades in (the kit's micro animations, round 2).
+  return <FlatPanel open={open} onClose={onClose} title={title} keys={keys} testId="shop-overlay" embedded={embedded} contentKey={`${current ?? ""}${item ? `:${item.id}` : ""}`}
     purse={<Purse coins={view ? view.coins : null} gems={view ? view.gems : null} coinsRef={coinsEl} gemsRef={gemsEl} />}
     rail={<IconRail label="Shelves" value={current} onChange={id => { setShelf(id); setPicked(null); setNote(null); }}
       items={shelves.map(id => ({ id, label: id === "pickups" ? "Your pickups" : SHELF_LABEL[id], icon: SHELF_ICON[id], badge: id === "specials" && view ? view.tabs.specials.length : undefined }))} />}>

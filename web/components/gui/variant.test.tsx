@@ -1,7 +1,7 @@
 import { createElement as h, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { ConfirmDialog, GuiVariantContext, ItemTile, List, ListRow, Paper, Sheet, Tabs } from ".";
+import { ConfirmDialog, GuiVariantContext, ItemTile, List, ListRow, Paper, Sheet, TabPanel, Tabs } from ".";
 import { FlatPanel } from "./flat";
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el);
@@ -51,5 +51,11 @@ describe("Sheet's flat variant (specs/polish/flat-ui.md step 7)", () => {
     const out = html(h(FlatPanel, { open: true, onClose: () => {}, title: "Bag", children: h(ListRow, { title: "Row" }) }));
     expect(out).toMatch(/<section[^>]*data-gui-flat=""/);
     expect(out).toMatch(/<div[^>]*data-flat=""/);
+  });
+});
+
+describe("a tab's content", () => {
+  it("is a tab panel that plays its entrance when the tab changes", () => {
+    expect(html(h(TabPanel, { id: "quests", children: "body" }))).toMatch(/^<div role="tabpanel" class="[^"]*">body<\/div>$/);
   });
 });

@@ -8,12 +8,13 @@
  * small parts (`Pill`, `DarkButton`, `GhostButton`, `RoundButton`, `HairlineRow`). Colours: the --flat-* tokens in
  * styles/game-tokens.css. Nothing here knows about the shop: every piece takes plain props.
  */
-import type { ButtonHTMLAttributes, CSSProperties, HTMLAttributes, KeyboardEvent, ReactNode, Ref } from "react";
+import { Fragment, useMemo, useRef, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Sparkles, X } from "lucide-react";
 import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import PixelImage from "@/components/economy/PixelImage";
 import { GuiVariantContext } from "../variant";
+import { bothRefs, useMarker } from "../motion";
 import f from "./flat.module.css";
 
 /** The kit's class names, for the odd surface that lays out its own content in the flat style. */
@@ -30,17 +31,20 @@ const cx = (...names: (string | false | null | undefined)[]) => names.filter(Boo
  * the purse slot (`purse`), the title and a round close, the rail (`rail`) down the left and the content. Focus,
  * Escape, the opening key (`keys`), the world's hotkeys held and the paper sound come from the dialog system
  * (lib/game/useWorldDialog), as every sheet's do. `embedded`: the same panel on a page (the portal's shop), with no
- * scrim and no dialog; no close without `onClose`.
+ * scrim and no dialog; no close without `onClose`. `contentKey`: what the content shows (the rail's choice); when it
+ * changes, the new content fades and slides in a few px.
  */
-export function FlatPanel({ open, onClose, title, purse, rail, keys, testId, embedded, children }: {
+export function FlatPanel({ open, onClose, title, purse, rail, keys, testId, embedded, contentKey, children }: {
   open: boolean; onClose?: () => void; title: string;
   /** Top left: the coins and Gems (`Purse`), or anything else short. */
   purse?: ReactNode;
   /** Down the left: an `IconRail`. */
   rail?: ReactNode;
-  keys?: string | readonly string[]; testId?: string; embedded?: boolean; children: ReactNode;
+  keys?: string | readonly string[]; testId?: string; embedded?: boolean; contentKey?: string; children: ReactNode;
 }) {
   const state = usePresence(open);
+  // A new key remounts the content, so it plays its entrance (flat.module.css .main > *).
+  const content = <Fragment key={contentKey ?? ""}>{children}</Fragment>;
   const panel = useWorldDialog<HTMLElement>(open && !embedded, onClose ?? noop, keys);
   const top = <header className={f.top}>
     {purse ?? <span />}
@@ -49,7 +53,7 @@ export function FlatPanel({ open, onClose, title, purse, rail, keys, testId, emb
   </header>;
   // The GUI pieces inside wear the flat look too (components/gui/variant).
   if (embedded) return <GuiVariantContext.Provider value="flat"><section aria-label={title} className={f.panel} data-testid={testId} data-rail={rail ? "" : undefined} data-embedded="" data-gui-flat="">
-    {top}{rail}<div className={f.main}>{children}</div>
+    {top}{rail}<div className={f.main}>{content}</div>
   </section></GuiVariantContext.Provider>;
   if (!state) return null;
   return <div className={f.layer} data-state={state}>
@@ -58,7 +62,7 @@ export function FlatPanel({ open, onClose, title, purse, rail, keys, testId, emb
       <GuiVariantContext.Provider value="flat">
         {top}
         {rail}
-        <main className={f.main}>{children}</main>
+        <main className={f.main}>{content}</main>
       </GuiVariantContext.Provider>
     </section>
   </div>;
@@ -95,8 +99,8 @@ export function railStep<T extends string>(items: readonly RailItem<T>[], value:
 }
 
 /**
- * Icons only (their labels are for screen readers and the tooltip); the chosen one black with a dot under it, a count
- * badge where `badge` is set. Down the left of a `FlatPanel` (across the top on a phone); `horizontal` puts it across
+ * Icons only (their labels are for screen readers and the tooltip); the chosen one black with a dot under it that slides
+ * to the next choice, a press that dips and springs back, a count badge where `badge` is set. Down the left of a `FlatPanel` (across the top on a phone); `horizontal` puts it across
  * the top anywhere. `tabs`: it is a tab list (a flat `Sheet`'s `Tabs`): role tab, aria-selected, and the caller's
  * `onKeyDown` and `listRef` for the arrow keys.
  */
@@ -106,8 +110,13 @@ export function IconRail<T extends string>({ items, value, onChange, label, orie
 }) {
   // A tab list is a div (role tablist); a rail of shelves is the panel's nav.
   const Tag = (tabs ? "div" : "nav") as "nav";
-  return <Tag ref={listRef} className={cx(f.side, className)} aria-label={label} role={tabs ? "tablist" : undefined}
-    data-orientation={orientation === "horizontal" ? "horizontal" : undefined} onKeyDown={onKeyDown}>
+  const own = useRef<HTMLElement | null>(null);
+  const ref = useMemo(() => bothRefs<HTMLElement>(own, listRef), [listRef]);
+  const m = useMarker(own, tabs ? '[aria-selected="true"]' : "[aria-current]", value);
+  return <Tag ref={ref} className={cx(f.side, className)} aria-label={label} role={tabs ? "tablist" : undefined}
+    data-orientation={orientation === "horizontal" ? "horizontal" : undefined} data-marker={m ? "" : undefined} onKeyDown={onKeyDown}>
+    {/* The chosen icon's dot, sliding from one to the next (its own ::after until measured). */}
+    {m ? <span className={f.marker} aria-hidden style={{ transform: `translate(${m.x + m.w / 2 - 2}px, ${m.y + m.h - 7}px)` }} /> : null}
     {items.map(it => {
       const on = it.id === value, badge = badgeText(it.badge);
       return <button key={it.id} type="button" className={f.shelf} aria-label={it.label} title={it.label} disabled={it.disabled}
@@ -178,6 +187,40 @@ export function ItemCard({ picture, px = 44, name, line, price, pill: other, tag
 /** The small grey pill (a price, a count). */
 export function Pill({ children }: { children: ReactNode }) {
   return <span className={f.pill}>{children}</span>;
+}
+
+// ── The side panel ──────────────────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A small panel beside a grid (David, round 2: "a lil tab on the side with action item show dont need item open
+ * page"): a small picture, the name, a quiet line, what to know (`facts`, hairline rows) and what to do (`actions`).
+ * The grid stays in view (`WithSide`); on a phone it sits at the foot of the screen.
+ */
+export function SidePanel({ picture, title, kind, facts, actions, children, onClose, testId }: {
+  picture?: string | ReactNode; title: ReactNode; kind?: ReactNode; facts?: readonly (readonly [string, ReactNode])[] | null; actions?: ReactNode; children?: ReactNode;
+  onClose: () => void; testId?: string;
+}) {
+  return <aside className={f.sidePanel} aria-label={typeof title === "string" ? title : "Details"} data-testid={testId}>
+    <button type="button" className={f.sideClose} aria-label="Close" title="Close" onClick={onClose}><X size={16} aria-hidden /></button>
+    <div className={f.sideHead}>
+      {picture === undefined ? null : typeof picture === "string" ? <PixelImage src={picture} px={40} className={f.sideArt} /> : <span className={f.sideArt} aria-hidden>{picture}</span>}
+      <div className={f.sideText}>
+        {kind !== undefined ? <p className={f.sideKind}>{kind}</p> : null}
+        <h3 className={f.sideTitle}>{title}</h3>
+      </div>
+    </div>
+    {facts && facts.length > 0 ? <dl className={f.facts}>{facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl> : null}
+    {actions ? <div className={f.sideActions}>{actions}</div> : null}
+    {children}
+  </aside>;
+}
+
+/** A grid with a side panel beside it (`side`, or null when nothing is picked): the grid narrows, it doesn't go away. */
+export function WithSide({ side, children }: { side: ReactNode | null; children: ReactNode }) {
+  return <div className={f.withSide} data-open={side ? "" : undefined}>
+    <div className={f.withSideMain}>{children}</div>
+    {side}
+  </div>;
 }
 
 // ── The detail ──────────────────────────────────────────────────────────────────────────────────────────────────────
