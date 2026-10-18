@@ -7,6 +7,7 @@ import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
 const { chromium } = require("playwright");
@@ -14,7 +15,7 @@ const [OUT, ...ONLY] = process.argv.slice(2);
 const PORT = process.env.PORT ?? 3191, HOST = `http://localhost:${PORT}`;
 mkdirSync(OUT, { recursive: true });
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ECO_FILE = process.env.ECONOMY ?? join(HERE, "../../../web/.next-economy.json");
+const ECO_FILE = process.env.ECONOMY ?? join(tmpdir(), "flat-ui-economy.json");
 if (!existsSync(ECO_FILE)) execFileSync("npx", ["vite-node", "-c", "vitest.config.ts", join(HERE, "economy-fixture.ts"), ECO_FILE], { cwd: join(HERE, "../../../web"), stdio: "ignore" });
 const ECONOMY = JSON.parse(readFileSync(ECO_FILE, "utf8"));
 const PRODUCTS = [
