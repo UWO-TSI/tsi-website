@@ -23,6 +23,7 @@ import { useOutside, windowViewMaterial } from "./RoomShell";
 import ShopDisplays from "./ShopDisplays";
 import ShopItemTag from "./ShopItemTag";
 import KeycapKeychain from "./KeycapKeychain";
+import { KEYCHAIN_HANG } from "@/lib/game/keychainSwing";
 import { iconUrl } from "@/lib/icons/keys";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import { SHOP_KEYCHAIN } from "@/lib/game/shopLayout";
@@ -101,7 +102,7 @@ export default function ShopRoom({ walker, light, player, frozen }: {
       <ShopDisplays items={items} level={1} except={[SHOP_KEYCHAIN.slot]} />
       <group position={[0, SHOP_FLOOR_HEIGHT, 0]}>
         {/* The keycap keychain on its hook: take hold of it, or press its keycap (lite graphics: its sprite). */}
-        <mesh position={[SHOP_KEYCHAIN.hook[0], SHOP_KEYCHAIN.hook[1] + 0.012, SHOP_KEYCHAIN.hook[2] + 0.04]} rotation={[Math.PI / 2, 0, 0]}>
+        <mesh position={[SHOP_KEYCHAIN.hook[0], SHOP_KEYCHAIN.hook[1] - 0.012, SHOP_KEYCHAIN.hook[2] + 0.04]} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[0.012, 0.012, 0.13, 8]} /><meshStandardMaterial color="#3b4046" metalness={0.7} roughness={0.4} />
         </mesh>
         {liteMode ? <KeychainSprite /> : <Suspense fallback={null}><group position={SHOP_KEYCHAIN.hook} rotation={[0, Math.PI, 0]}><KeycapKeychain grab scale={SHOP_KEYCHAIN.scale} press={press} /></group></Suspense>}
@@ -117,7 +118,7 @@ function KeychainSprite() {
     t.colorSpace = THREE.SRGBColorSpace; t.magFilter = THREE.NearestFilter;
     return t;
   }, []);
-  const [x, y, z] = SHOP_KEYCHAIN.hook, h = 1.08 * SHOP_KEYCHAIN.scale;
+  const [x, y, z] = SHOP_KEYCHAIN.hook, h = KEYCHAIN_HANG * SHOP_KEYCHAIN.scale;
   return <mesh position={[x, y - h / 2, z - 0.06]} rotation={[0, Math.PI, 0]}>
     <planeGeometry args={[h, h]} />
     <meshBasicMaterial map={texture} transparent alphaTest={0.3} />

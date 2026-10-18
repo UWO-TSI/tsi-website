@@ -21,8 +21,8 @@ const SPRITE = iconUrl(KEYCHAIN_SLUG);
 
 function Hanging({ off }: { off: boolean }) {
   const arm = useStageTap();
-  // Centred on the stage: it hangs 1.08 (model units) from its hook.
-  return <KeycapKeychain scale={1.45} position={[0, 0.78, 0]} keycapOff={off} onKeycapDown={press => arm(press)} />;
+  // Centred on the stage: it hangs KEYCHAIN_HANG (0.70, model units) from its hook, 1.57 tall here.
+  return <KeycapKeychain scale={2.24} position={[0, 0.78, 0]} keycapOff={off} onKeycapDown={press => arm(press)} />;
 }
 
 /** The sprite when the 3D fails to start. */

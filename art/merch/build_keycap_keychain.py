@@ -35,9 +35,9 @@ OUT = "game/items/merch-tsi-keycap-keychain.glb"
 
 NAVY, HOUSING, STEM, ACRYLIC = "#222a44", "#eeebe3", "#f2c61f", "#f4eef3"
 # Polished silver and the pins' gold: mid tones, so the look reads them as metal (lookPreset: light paint stays dielectric).
-SILVER, GOLD, SEAM = "#8f949a", "#b8913f", "#d3cfc4"
+SILVER, GOLD, SEAM, LED = "#8f949a", "#b8913f", "#d3cfc4", "#b9bbb7"
 # Hanging layout (game units, y down from where the keyring hangs on its hook)
-LINK = 0.095             # one of the chain's four links
+LINK = 0.0525            # one of the chain's four swinging parts (the end caps and the snake chain's halves)
 BLOCK = (0.19, 0.20, 0.17)
 KEYCAP_PRESS = 0.035     # how far the stem (and the keycap on it) goes in on a press
 
@@ -104,6 +104,17 @@ class Field:
             d = np.minimum(d, np.sqrt((wx - ex * t) ** 2 + (wy - ey * t) ** 2 + (wz - ez * t) ** 2) - (ra + (rb - ra) * t))
         return d * min(1.0, sz)
 
+    def strap(self, pts, t):
+        """A flat strap along a centreline [((x, y), half-width)]: flat faces t either side of the photo's plane, its
+        edges fully rounded (a stadium section)."""
+        e = np.full(self.x2.shape, 1e3, dtype=np.float32)
+        for ((ax, ay), wa), ((bx, by), wb) in zip(pts, pts[1:]):
+            ex, ey, wx, wy = bx - ax, by - ay, self.x2 - ax, self.y2 - ay
+            h = np.clip((wx * ex + wy * ey) / (ex * ex + ey * ey), 0.0, 1.0)
+            e = np.minimum(e, np.hypot(wx - ex * h, wy - ey * h) - (wa + (wb - wa) * h))
+        e = e[:, :, None]
+        return np.sqrt(np.maximum(e + t, 0.0) ** 2 + self.Z ** 2) - t
+
     def ellipsoid(self, c, r):
         q = np.sqrt(((self.X - c[0]) / r[0]) ** 2 + ((self.Y - c[1]) / r[1]) ** 2 + ((self.Z - (c[2] if len(c) > 2 else 0)) / r[2]) ** 2)
         return (q - 1.0) * min(r)
@@ -169,7 +180,7 @@ class Field:
         bpy.data.meshes.remove(me)
 
 
-def placer(contact, below, at):
+def placer(contact, below, at, px=PX):
     """Hang a part drawn in its photo: turn it in its plane until `below` (where what it carries pulls) is straight
     under `contact` (where it hangs from), and put `contact` at game point `at`. Built facing −z like the rest (the
     whole model turns half round at the end), so the photo's right is game −x and its camera side game −z."""
@@ -179,104 +190,158 @@ def placer(contact, below, at):
     def place(x, y, z=0.0):
         dx, dy = x - contact[0], y - contact[1]
         rx, ry = dx * ca - dy * sa, dx * sa + dy * ca
-        return (at[0] - rx * PX, at[1] - ry * PX, at[2] - z * PX)
+        return (at[0] - rx * px, at[1] - ry * px, at[2] - z * px)
     return place
 
 
-def ring(k, m, c, R, r, plane, n=16, sides=6):
-    """A jump ring or an eye: round wire, centre c, in the plane of the two game directions `plane`."""
+def ring(k, m, c, R, r, plane, n=16, sides=6, gap=None):
+    """A ring of round wire, centre c, in the plane of the two game directions `plane` (angle 0 along the first);
+    `gap`: a split ring, cut open at that angle."""
     (ux, uy, uz), (vx, vy, vz) = plane
+    if gap is None:
+        ts = [math.tau * i / n for i in range(n)]
+    else:
+        ts = [gap + GAP / 2 + (math.tau - GAP) * i / n for i in range(n + 1)]
     pts = [(c[0] + R * (math.cos(t) * ux + math.sin(t) * vx), c[1] + R * (math.cos(t) * uy + math.sin(t) * vy),
-            c[2] + R * (math.cos(t) * uz + math.sin(t) * vz)) for t in (math.tau * i / n for i in range(n))]
-    k.tube(pts, r, m["metal"], SILVER, n=sides, closed_path=True)
+            c[2] + R * (math.cos(t) * uz + math.sin(t) * vz)) for t in ts]
+    k.tube(pts, r, m["metal"], SILVER, n=sides, closed_path=gap is None, caps=gap is not None)
 
 
 XY, YZ = ((1, 0, 0), (0, 1, 0)), ((0, 0, 1), (0, 1, 0))
 
-# ---- the keyring's clasp (crop-keyring-clasp-front-3096.jpg, crop-keyring-clasp-angle-3099.jpg): a die-cast
-# spring-gate snap clasp, a "D" leaning left. A round bar runs up the left, over the top, and curls down into a short
-# nose with a rounded tip; down the left it sweeps into a heavy flat wedge of a base at the bottom left, which tapers
-# right into a rounded knuckle where the gate hinges. The gate is a long narrow loop of thin wire (a stretched
-# paperclip) standing up the right from the knuckle, its tip resting just inside the nose. An oval eye is cast through
-# the base near its bottom, and the jump ring threads straight through it.
-CLASP_BAR = [((69, 335), 20.5), ((69, 300), 20.5), ((61, 240), 20.5), ((64, 195), 20), ((75, 160), 19.5), ((93, 128), 18.5),
-             ((115, 100), 17.5), ((145, 77), 17), ((190, 60), 16.5), ((235, 56), 16.5), ((280, 58), 16.5), ((320, 71), 16),
-             ((355, 92), 15.5), ((380, 113), 15), ((396, 133), 14.5), ((405, 150), 14), ((410, 163), 13.5)]
-CLASP_NOSE = ((412, 171), (14, 14.5, 14))
-CLASP_BASE = [(50, 300), (55, 340), (70, 380), (95, 425), (125, 468), (150, 495), (172, 510), (210, 521), (248, 516),
-              (280, 497), (308, 465), (330, 430), (342, 400), (340, 375),
-              (318, 362), (300, 368), (278, 377), (250, 386), (210, 390), (172, 382), (135, 363), (108, 338), (93, 312), (88, 295)]
-CLASP_KNUCKLE = ((326, 382), (24, 24, 22))
-CLASP_HOLE = ((198, 465), (40, 24))          # the eye, cast front to back
-CLASP_GATE = [(326, 381), (314, 372), (332, 266), (350, 162), (354, 150), (362, 144), (373, 142), (384, 145), (391, 152),
-              (393, 162), (366, 264), (338, 366)]
-GATE_R = 5.0
-CLASP_TOP = (235, 72)                        # where it hangs on the hook: the inside of the bar's top
-RING_THROUGH = 40                            # the jump ring's turn through the eye from straight front-to-back (degrees)
-RING_R, RING_W = 71 * PX, 7.5 * PX           # the jump ring: radius to the wire's middle, the wire's radius
-EYE_R, EYE_W = 0.0045, 0.0015                # the snake chain's end-cap eyes
+# ---- the keyring's clasp: a die-cast spring-gate snap clasp, drawn face on from IMG_3111 (mirrored, so the gate is on
+# the right as in IMG_3096), its thicknesses from IMG_3112 (edge on). A flat strap (wide on the face, thin on the edge)
+# runs from the base up the left, over the top and down the right, curling into a short nose that ends in a rounded,
+# slightly bulbous tip. At the bottom left the strap widens into the base: a heavy wedge, thickest at its knuckle end
+# and tapering to a rounded point, with a round eye cast through its face that the split ring threads. The knuckle, at
+# the base's right end, takes the gate: a long narrow loop of thin round wire lying across the clasp's plane (face on it
+# reads as one rod), widest at the nose and narrowing to the knuckle, its legs going in front and back. Pixels of
+# IMG_3111's crop (references: 0.8 of the photo's own), mirrored.
+CPX = 0.000213               # one pixel of that crop, in model units (the clasp is 680 px tall: 0.145)
+CLASP_BAR = [((74, 470), 30), ((72, 380), 29), ((80, 280), 28), ((105, 190), 28), ((160, 125), 27), ((235, 85), 26),
+             ((330, 70), 25), ((425, 82), 25), ((505, 118), 25), ((560, 175), 25), ((588, 245), 23), ((594, 300), 22),
+             ((592, 330), 22)]
+STRAP_T = 12.0                               # the strap's half-thickness (IMG_3112)
+CLASP_NOSE = ((588, 356), 26.0)              # the bulbous tip
+CLASP_BASE = [(48, 470), (55, 560), (65, 630), (80, 690), (105, 715), (160, 727), (230, 718), (300, 695), (360, 665),
+              (385, 625), (375, 585), (350, 565), (300, 566), (230, 576), (170, 570), (130, 548), (108, 505), (100, 460)]
+# the base's half-thickness over it (IMG_3112): the strap's where they join, fullest at the knuckle, easing to the
+# rounded point round the eye
+BASE_T = [((74, 470), 12.0), ((85, 540), 13.0), ((325, 615), 46.0), ((280, 620), 42.0), ((230, 650), 32.0),
+          ((200, 590), 30.0), ((150, 580), 22.0), ((170, 655), 24.0), ((138, 640), 19.0), ((120, 700), 16.0), ((80, 650), 15.0)]
+CLASP_KNUCKLE = ((325, 615), (42, 42, 49))
+CLASP_HOLE = ((140, 638), (45, 45))          # the eye, cast front to back
+GATE_K, GATE_N = (330, 612), (565, 325)      # the gate's line: from inside the knuckle to just inside the nose
+GATE_HALF = (58.0, 85.0)                     # its loop's half-width across the plane, at the knuckle and at the nose
+GATE_R = 8.0
+CLASP_TOP = (330, 95)                        # where it hangs on the hook: the inside of the strap's top
+RING_THROUGH = 40                            # the split ring's turn through the eye from straight front-to-back (degrees)
+RING_R, RING_W = 71 * PX, 7.5 * PX           # the split rings: radius to the wire's middle, the wire's radius
+GAP = 0.32                                   # a split ring's cut (radians of the circle left open)
+TAB_HOLE = 0.003                             # the end caps' pierced tabs: the hole's radius
 
 
 def base_half(x, y):
-    """The base's half-thickness: thickest low in the wedge, easing to the bar at the top left and to the knuckle."""
-    return 32.0 - 12.0 * np.clip(np.hypot(x - 185.0, y - 455.0) / 180.0, 0.0, 1.0)
+    """The base's half-thickness, blended between the BASE_T points."""
+    num, den = np.zeros(x.shape, dtype=np.float32), np.zeros(x.shape, dtype=np.float32)
+    for (px, py), t in BASE_T:
+        w = np.exp(-((x - px) ** 2 + (y - py) ** 2) / (2 * 45.0 ** 2)) + 1e-6
+        num, den = num + w * t, den + w
+    return num / den
+
+
+def gate_loop(place):
+    """The gate: a closed loop of round wire in the plane through its line and the clasp's normal, a tapered rectangle
+    with rounded corners (narrow at the knuckle, wide at the nose)."""
+    (kx, ky), (nx, ny) = GATE_K, GATE_N
+    L = math.hypot(nx - kx, ny - ky)
+    ux, uy = (nx - kx) / L, (ny - ky) / L
+    hk, hn = GATE_HALF
+    rc = 16.0                                  # corner radius
+    corners = [(0.0, -hk), (L, -hn), (L, hn), (0.0, hk)]
+    pts = []
+    for i, (s0, z0) in enumerate(corners):
+        (sp, zp), (sn, zn) = corners[i - 1], corners[(i + 1) % 4]
+        def toward(sa, za, sb, zb, d):
+            l = math.hypot(sb - sa, zb - za)
+            return sa + (sb - sa) * d / l, za + (zb - za) * d / l
+        a = toward(s0, z0, sp, zp, rc)
+        b = toward(s0, z0, sn, zn, rc)
+        for t in (0.0, 0.5, 1.0):                # a quadratic round over the corner
+            s_ = (1 - t) ** 2 * a[0] + 2 * (1 - t) * t * s0 + t * t * b[0]
+            z_ = (1 - t) ** 2 * a[1] + 2 * (1 - t) * t * z0 + t * t * b[1]
+            pts.append((s_, z_))
+        if i in (0, 2):                          # the long legs: a few points along each
+            for f in (0.33, 0.66):
+                (s1, z1) = corners[(i + 1) % 4]
+                pts.append((b[0] + (toward(s1, z1, s0, z0, rc)[0] - b[0]) * f, b[1] + (toward(s1, z1, s0, z0, rc)[1] - b[1]) * f))
+    return [place(kx + ux * s_, ky + uy * s_, z_) for s_, z_ in pts]
 
 
 def keyring(m):
-    """The spring-gate snap clasp, its gate, and the jump ring through its eye (the keyring's node)."""
+    """The spring-gate snap clasp, its gate, and the split ring through its eye (the keyring's node)."""
     k = K.Kit("keychain_ring")
     hole_low = (CLASP_HOLE[0][0], CLASP_HOLE[0][1] + CLASP_HOLE[1][1])
-    place = placer(CLASP_TOP, hole_low, (0.0, 0.0, 0.0))
-    f = Field(18, 440, 28, 545, -36, 36)
-    body = f.sweep(CLASP_BAR)
-    body = np.minimum(body, f.ellipsoid(CLASP_NOSE[0], CLASP_NOSE[1]))
-    body = smin(body, f.slab(CLASP_BASE, base_half), 7.0)
+    place = placer(CLASP_TOP, hole_low, (0.0, 0.0, 0.0), CPX)
+    f = Field(20, 640, 30, 750, -58, 58, vox=1.9)
+    body = f.strap(CLASP_BAR, STRAP_T)
+    body = smin(body, f.ellipsoid(CLASP_NOSE[0], (CLASP_NOSE[1],) * 3), 5.0)
+    body = smin(body, f.slab(CLASP_BASE, base_half), 8.0)
     body = smin(body, f.ellipsoid(CLASP_KNUCKLE[0], CLASP_KNUCKLE[1]), 8.0)
-    for zs in (1, -1):        # the hinge pin's heads
-        body = smin(body, f.ellipsoid((CLASP_KNUCKLE[0][0], CLASP_KNUCKLE[0][1], zs * 21.5), (6, 6, 2.5)), 1.5)
     (hx, hy), (ha, hb) = CLASP_HOLE
     hole = (np.sqrt(((f.X - hx) / ha) ** 2 + ((f.Y - hy) / hb) ** 2) - 1.0) * hb
-    f.d = -smin(-body, hole, 10.0)         # cut the eye through, its lip rounded
-    f.mesh(k, m["metal"], SILVER, 2100, place)
-    # the gate: thin wire, a closed narrow loop from the knuckle up to the nose
-    k.tube([place(x, y) for x, y in CLASP_GATE], GATE_R * PX, m["metal"], SILVER, n=6, closed_path=True)
-    # the jump ring, threaded through the eye and hanging from its bottom, turned through it
+    f.d = -smin(-body, hole, 12.0)         # cut the eye through, its edge bevelled round
+    f.mesh(k, m["metal"], SILVER, 1900, place)
+    k.tube(gate_loop(place), GATE_R * CPX, m["metal"], SILVER, n=6, closed_path=True)
+    # the split ring, threaded through the eye and hanging from its bottom, turned through it; its cut up the side
     low = place(*hole_low)
     cy = low[1] + RING_W - RING_R
     t = math.radians(RING_THROUGH)
-    ring(k, m, (low[0], cy, 0.0), RING_R, RING_W, ((math.sin(t), 0, math.cos(t)), (0, 1, 0)), n=18)
-    ring_h = -(cy - RING_R) - RING_W - EYE_W  # down to where the chain's top eye hangs from it
-    return finish(k, 0.0), ring_h
+    ring(k, m, (low[0], cy, 0.0), RING_R, RING_W, ((math.sin(t), 0, math.cos(t)), (0, 1, 0)), n=18, gap=0.9)
+    return finish(k, 0.0), -(cy - RING_R)      # the chain's top cap hangs from the ring's bottom
 
 
-def end_cap(k, m, y, down, plane):
-    """A snake chain's crimped end: a bullet-shaped barrel narrowing to the eye a jump ring goes through. `y` is the
-    eye's far wire (where it hangs from, or what hangs from it); `down`: the chain runs down from it."""
-    s = -1 if down else 1                      # from the eye toward the chain
-    ec = y + s * EYE_R
-    ring(k, m, (0.0, ec, 0.0), EYE_R, EYE_W, plane, n=10, sides=5)
-    k.lathe((0, ec + s * (EYE_R - 0.001), 0), [(0, 0), (0.0045, 0.0015), (0.0105, 0.01), (0.0135, 0.024), (0.0135, 0.033),
-                                            (0.0115, 0.036), (0, 0.036)], m["metal"], SILVER, d=(0, s, 0), n=8)
+def end_cap(k, m, hole_y, down, normal):
+    """A snake chain's end cap (IMG_3113-3115): a long smooth bullet, a crimped collar where the chain goes in, and at
+    its tip a flat pierced tab the split ring goes through. hole_y: the tab's hole; down: the bullet runs down from it;
+    normal: the tab's face (the ring's wire runs through it)."""
+    s = -1 if down else 1
+    nx, ny, nz = normal
+    k.lathe((0.0, hole_y, 0.0), [(TAB_HOLE, -0.0012), (0.0056, -0.0012), (0.0062, 0.0), (0.0056, 0.0012), (TAB_HOLE, 0.0012),
+                                 (TAB_HOLE, -0.0012)], m["metal"], SILVER, d=(nx, ny, nz), n=10)
+    k.lathe((0.0, hole_y + s * 0.0035, 0.0), [(0, 0), (0.0034, 0.0008), (0.0058, 0.006), (0.0085, 0.017), (0.0107, 0.031),
+                                            (0.0117, 0.0425), (0.0123, 0.0438), (0.0123, 0.047), (0.0104, 0.048), (0, 0.048)],
+            m["metal"], SILVER, d=(0, s, 0), n=8)
+
+
+def snake(k, m, y0, y1):
+    """The snake chain: a tight spiral of beaded scales; each turn tilted like a spring's coil."""
+    pitch, r, n = 0.0045, 0.0098, 6
+    turns = int(round(abs(y1 - y0) / pitch))
+    rings, uvs = [], []
+    for j in range(2 * turns + 1):
+        yc = y0 + (y1 - y0) * j / (2 * turns)
+        rr = r * (1.0 if j % 2 == 0 else 0.86)
+        rings.append([(math.cos(math.tau * i / n) * rr, yc + 0.3 * pitch * math.sin(math.tau * i / n), math.sin(math.tau * i / n) * rr)
+                      for i in range(n)])
+        uvs.append([(i / n, j / 2) for i in range(n + 1)])
+    for end in (0, -1):                           # closed ends
+        rings.insert(0 if end == 0 else len(rings), [(0.0, y0 if end == 0 else y1, 0.0)])
+        uvs.insert(0 if end == 0 else len(uvs), [(0.5, 0.0)])
+    k.ring_grid(rings, uvs, m["metal"], SILVER)
 
 
 def chain(m, i, ring_h):
-    """One link of the snake chain: tight beads, a spring-like coil (the photos' beaded chain); the first and last carry
-    the crimped end caps (the first's eye turned square to the jump ring above it)."""
+    """The chain between the split rings, as four swinging parts: the top end cap, the snake chain in two, the bottom
+    end cap. Each part's origin is where it hangs."""
     k = K.Kit(f"keychain_chain_{i}")
-    pitch = 0.0058
-    y0 = -0.02 if i == 0 else 0.0
-    y1 = -LINK + 0.02 if i == 3 else -LINK
-    n = int(round((y0 - y1) / pitch))
-    path, radii = [], []
-    for j in range(n + 1):
-        path.append((0.0, y0 + (y1 - y0) * j / n, 0.0))
-        radii.append(1.0 if j % 2 == 0 else 0.72)
-    k.tube(path, 0.0098, m["metal"], SILVER, n=6, caps=True, radii=radii)
-    if i == 0:
-        t = math.radians(RING_THROUGH)
-        end_cap(k, m, 0.0, True, ((math.cos(t), 0, -math.sin(t)), (0, 1, 0)))
-    if i == 3:
-        end_cap(k, m, -LINK, False, XY)
+    t = math.radians(RING_THROUGH)
+    if i == 0:      # hangs from the top split ring's bottom wire: its tab's hole top on the wire
+        end_cap(k, m, RING_W - TAB_HOLE, True, (math.sin(t), 0, math.cos(t)))
+    elif i == 3:    # the body's split ring hangs from its tab
+        end_cap(k, m, -LINK + TAB_HOLE - RING_W, False, (0, 0, 1))
+    else:
+        snake(k, m, 0.012 if i == 1 else 0.0, -LINK - (0.012 if i == 2 else 0.0))
     return finish(k, -(ring_h + LINK * i))
 
 
@@ -305,18 +370,19 @@ def loft(k, mat, col, rings_, n=24, cap=None):
 # ---- the lobster clasp (crop-lobster-clasp-3099.jpg): its tail eye on top; a curved teardrop body, its back convex
 # down the left and round the bottom into the hook; the gate down the right to the hook's tip, a seam groove along
 # where it meets the body; the trigger, a pointed thumb-tab, sticking out to the right near the top.
-LOB_EYE = ((115, 112), 14.0, 5.0)
+LOB_PX = PX * 0.95                                      # its crop is near life size (IMG_3113: about 1.5 split rings long)
+LOB_EYE = ((115, 110), 16.0, 5.0)
 LOB_OUT = [(108, 132), (100, 150), (97, 175), (96, 205), (97, 240), (100, 270), (108, 300), (120, 322), (138, 338), (155, 345),
            (175, 343), (193, 333), (207, 318), (216, 300), (220, 280), (221, 255), (218, 232), (210, 215), (200, 203),
            (186, 188), (168, 170), (148, 152), (131, 138), (122, 130)]
 LOB_HOLE = [(121, 243), (124, 272), (133, 297), (149, 313), (165, 317), (181, 312), (194, 297), (200, 278), (201, 257),
             (197, 243), (188, 236), (170, 234), (146, 235), (128, 237)]
-LOB_TRIGGER = [((194, 213), 10), ((205, 204), 9.5), ((214, 196), 9), ((221, 188), 8), ((225, 181), 7)]
+LOB_TRIGGER = [((168, 176), 9.5), ((186, 180), 9), ((203, 186), 8), ((217, 194), 7)]   # out and down, near the tail
+LOB_KNOB = ((222, 198), 7.5)
 LOB_SEAM = [(126, 150), (158, 175), (188, 200), (204, 226), (211, 256), (211, 290), (209, 306), (222, 314)]
-LOB_HANG = (115, 98)                                    # the eye's top wire, on the jump ring
-LOB_PULL = (150, 323.5)                                 # inside the hook's bottom, on the block's loop
-JR_R, JR_W = 0.019, 0.0024                              # the jump ring from the chain to the lobster
-LOOP_R, LOOP_W = 0.018, 0.0085                          # the block's clear loop
+LOB_HANG = (115, 94)                                    # the eye's top wire, on the split ring
+LOB_PULL = (160, 317)                                   # inside the hook's bottom, under the lug's bar
+LUG = (0.012, 0.007, 0.034, 0.013, 0.018)               # the block's clear lug (IMG_3113): thickness, bar, width, hole high, hole wide
 
 
 def seg_dist2(x, y, path):
@@ -336,12 +402,13 @@ def lob_half(x, y):
 def lobster(k, m, hang_y):
     """The lobster clasp hanging from the jump ring (its eye's top wire at game y hang_y); returns where its hook holds
     the block's loop (game y)."""
-    place = placer(LOB_HANG, LOB_PULL, (0.0, hang_y, 0.0))
+    place = placer(LOB_HANG, LOB_PULL, (0.0, hang_y, 0.0), LOB_PX)
     f = Field(76, 245, 84, 352, -26, 26, vox=1.0)
     (ex, ey), R, r = LOB_EYE
     body = f.slab(LOB_OUT, lob_half, holes=[LOB_HOLE], round_in=34.0)
     body = smin(body, f.torus((ex, ey), R, r), 4.0)
     body = smin(body, f.sweep(LOB_TRIGGER, sz=0.5), 5.0)
+    body = smin(body, f.ellipsoid(LOB_KNOB[0], (LOB_KNOB[1], LOB_KNOB[1], LOB_KNOB[1] * 0.8)), 2.0)
     # the seam: a groove where the gate meets the body, pressed into both faces
     seam = seg_dist2(f.x2, f.y2, LOB_SEAM)[:, :, None]
     f.d = body + 2.4 * np.exp(-(seam / 2.0) ** 2)
@@ -350,18 +417,20 @@ def lobster(k, m, hang_y):
 
 
 def body(m):
-    """The jump ring, the lobster clasp hooked through the block's loop, and the acrylic block with the switch seated
-    in it: the bottom housing in the block, the seam, the top housing with its four corner clips standing out of the
-    block's front (−z here; the whole thing is turned to face +z at the end), the gold pins through the base. Its origin
-    is the chain's bottom eye, where the jump ring hangs."""
+    """The split ring, the lobster clasp hooked through the block's lug, and the acrylic block with the switch seated
+    in it: the bottom housing in the block, the seam, the top housing with its four corner clips and its LED window
+    (IMG_3116) standing out of the block's front (−z here; the whole thing is turned to face +z at the end), the gold
+    pins through the base. Its origin is where the split ring hangs from the chain's bottom end cap."""
     k = K.Kit("keychain_body")
-    jc = EYE_W + JR_W - JR_R                       # the jump ring, square to the chain's eye and to the lobster's
-    ring(k, m, (0.0, jc, 0.0), JR_R, JR_W, YZ, n=16)
-    pull = lobster(k, m, jc - JR_R + JR_W + 5.0 * PX)
-    # the block's loop: a clear ring hanging in the lobster's hook, square to it
-    lc = pull - LOOP_W - LOOP_R
-    ring(k, m, (0.0, lc, 0.0), LOOP_R, LOOP_W, YZ, n=12)
-    top = lc - 0.022
+    ring(k, m, (0.0, -RING_R, 0.0), RING_R, RING_W, YZ, n=18, gap=-0.9)      # the split ring, through the end cap's tab
+    pull = lobster(k, m, -2 * RING_R + RING_W + LOB_EYE[2] * LOB_PX)
+    # the block's lug: a clear tab standing off the block's top with a rectangular hole the lobster's hook goes through
+    # (its top bar resting on the hook), the hole across the lobster's plane
+    lt, lb, lw, lh, lhw = LUG
+    k.rbox((0.0, pull + lb / 2, 0.0), (lt, lb, lw), 0.002, m["glass"], ACRYLIC, segs=1)
+    for zs in (-1, 1):
+        k.rbox((0.0, pull - lh / 2 + 0.001, zs * (lhw + (lw - lhw) / 2) / 2), (lt, lh + 0.004, (lw - lhw) / 2), 0.002, m["glass"], ACRYLIC, segs=1)
+    top = pull - lh
     bx, by, bz = BLOCK
     cy = top - by / 2
     k.rbox((0.0, cy, 0.0), BLOCK, 0.02, m["glass"], ACRYLIC, segs=2)
@@ -376,6 +445,7 @@ def body(m):
     for sx_ in (-1, 1):
         for sy_ in (-1, 1):
             k.rbox((sx_ * 0.07, cy + sy_ * 0.07, zp - 0.014), (0.022, 0.022, 0.02), 0.004, m["paint"], HOUSING, segs=1)  # the corner clips
+    k.rbox((0.043, cy, zp - 0.0602), (0.013, 0.036, 0.002), 0.0008, m["paint"], LED, segs=1)                    # the LED window, clearer
     return k, cy
 
 

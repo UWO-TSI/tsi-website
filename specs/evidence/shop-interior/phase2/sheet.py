@@ -1,5 +1,5 @@
 """The review sheets (shop phase 2): the headless shots in a labelled grid, one WebP.
-  python3 sheet.py <raw-dir> <out.webp> [ground|merch|overlay|keychain|keychain2|upstairs]"""
+  python3 sheet.py <raw-dir> <out.webp> [ground|merch|overlay|keychain|keychain2|keychain3|upstairs]"""
 import sys
 from PIL import Image, ImageDraw, ImageFont
 
@@ -72,6 +72,22 @@ KEYCHAIN2 = [
     ("29-keychain-wall", "On the merch wall: the metal now polished silver, not white"),
     ("sprite", "The 2D sprite now keeps the acrylic block"),
 ]
+KEYCHAIN3 = [
+    ("p-3111", "The keyring clasp face on: the flat strap, the nose's bulbous tip, the base, its eye, the knuckle, the gate"),
+    ("p-3112", "Edge on: the gate's wire loop across the clasp, wide at the nose; the base a thick bullet; the split ring"),
+    ("p-3099", "From below left: the base's thickness, the eye's rounded edge"),
+    ("p-3096", "Turned a little about the gate, so the loop shows its width (the photo the round-1 model was drawn from)"),
+    ("p-side", "Side on, both sides: strap about 2:1, the base about 3.6 times the strap's thickness at the knuckle"),
+    ("p-3113", "The lobster through the block's clear lug (a rectangular hole), the split ring, the end cap's flat tab"),
+    ("p-lob", "The lobster: curved teardrop body, seam groove, trigger tab out and down by the tail, the hook"),
+    ("p-3114", "The chain: smooth bullet caps with crimp collars and pierced tabs, a tight spiral, about 4.5 caps long"),
+    ("p-3116", "The switch top, keycap off: the yellow stem and its cross, the milky housing, the LED window"),
+    ("g-merch", "In the merch view: keycap on, and off"),
+    ("29-keychain-wall", "On the merch wall, its clasp on the peg (display scale 1.4)"),
+    ("33-keychain-press", "The keycap pressed on the wall"),
+    ("v-viewer", "The standalone viewer, rebuilt"),
+    ("sprite", "The 2D sprite (re-rendered), and the bare switch pressed in the viewer"),
+]
 UPSTAIRS = [(f"{side}-{n}", f"{'Before' if side == 'b' else 'After'}: {cap}") for n, cap in (
     ("u1-door", "from the door"), ("u2-top-of-stairs", "from the top of the stairs"), ("u3-merch-walk", "at the merch wall"),
     ("u4-merch-across", "across the mezzanine"), ("u5-counter", "the counter and the pegboard"), ("u6-plinths", "the featured drop"),
@@ -85,12 +101,14 @@ if mode == "keychain":
     CELLS, TITLE = KEYCHAIN, "Shop: the TSI keycap keychain, from David's photos"
 if mode == "upstairs":
     CELLS, TITLE = UPSTAIRS, "Shop upstairs: before (the layout's blocks) and after (furnished after ref 1)"
+if mode == "keychain3":
+    CELLS, TITLE = KEYCHAIN3, "The keycap keychain, round 2: each photo beside the model at its angle (5,913 triangles)"
 if mode == "keychain2":
     CELLS, TITLE = KEYCHAIN2, "The keycap keychain: the clasp and keyring, keycap off and on, the bare switch (3,460 triangles)"
 W, H, PAD, CAP = 720, 450, 14, 34
 font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 17)
 title = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 26)
-cols = 2 if mode in ("merch", "keychain", "keychain2", "upstairs") else 3
+cols = 2 if mode in ("merch", "keychain", "keychain2", "keychain3", "upstairs") else 3
 rows = (len(CELLS) + cols - 1) // cols
 sheet = Image.new("RGB", (cols * (W + PAD) + PAD, rows * (H + CAP + PAD) + PAD + 50), "#1d1f22")
 d = ImageDraw.Draw(sheet)
@@ -100,7 +118,7 @@ for i, (name, cap) in enumerate(CELLS):
     # crop to the cell's 16:10, centred, then fit; a portrait shot (a phone) is fitted whole on the sheet's dark
     r = W / H
     iw, ih = im.size
-    if iw < ih or (mode in ("keychain", "keychain2") and abs(iw / ih - r) > 0.05):
+    if iw < ih or (mode in ("keychain", "keychain2", "keychain3") and abs(iw / ih - r) > 0.05):
         k = min(H / ih, W / iw)
         fitted = im.resize((int(iw * k), int(ih * k)), Image.LANCZOS)
         im = Image.new("RGB", (W, H), "#1d1f22")

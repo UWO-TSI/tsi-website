@@ -214,7 +214,7 @@ export const SHOP_SLOTS: DisplaySlot[] = [
   slot("merch-prints-1", "merch-prints", "pegboard", [-0.25, 1.72, 4.91], [1.0, 0.85, 0.04]),
   slot("merch-prints-2", "merch-prints", "pegboard", [1.05, 1.72, 4.91], [1.0, 0.85, 0.04]),
   // The TSI keycap keychain hangs from its keyring on a hook on the pegboard, between the totes and the posters (SHOP_KEYCHAIN).
-  slot("merch-keychain-1", "merch-small", "pegboard", [-1.15, 1.07, 4.86], [0.25, 1.08, 0.1]),
+  slot("merch-keychain-1", "merch-small", "pegboard", [-1.15, 1.17, 4.86], [0.3, 0.98, 0.1]),
   slot("merch-featured-1", "merch-featured", "merch-plinths", [0, 0.75, 0.35], [0.5, 0.9, 0.35]),
   slot("merch-featured-2", "merch-featured", "merch-plinths", [0.85, 0.4, 1.15], [0.4, 0.3, 0.4]),
 ];
@@ -222,11 +222,11 @@ export const SHOP_SLOTS: DisplaySlot[] = [
 /**
  * The keycap keychain on the merch wall (specs/merch/tsi-keycap-keychain.md): the hook it hangs from (upstairs, room
  * space over the mezzanine's floor) and its display scale. The model is in units of 10 cm (its block 0.19 across, the
- * whole keychain 1.08 long); at 1 the block is 0.19 game units, about twelve times life size (a game unit is about
+ * whole keychain 0.70 long); at 1.4 the block is 0.27 game units, about seventeen times life size (a game unit is about
  * 1.2 m beside the 1.36-tall character), as small merch is blown up to read from the walking camera (the sticker packs
- * about six times, the totes about twice).
+ * about six times, the totes about twice); the slot runs from its hook down 0.98.
  */
-export const SHOP_KEYCHAIN = { hook: [-1.15, 2.15, 4.86] as [number, number, number], scale: 1, slot: "merch-keychain-1" } as const;
+export const SHOP_KEYCHAIN = { hook: [-1.15, 2.15, 4.86] as [number, number, number], scale: 1.4, slot: "merch-keychain-1" } as const;
 
 /** A light strip along an edge (the edge lighting), on a floor, from one end to the other. */
 export interface LightStrip { level: Level; fixture: string; from: [number, number, number]; to: [number, number, number] }

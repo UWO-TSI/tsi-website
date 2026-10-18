@@ -202,7 +202,7 @@ const SHOTS = [
   { id: "12-shopkeeper", title: "E at the counter: the shopkeeper's two answers", hud: true, route: [[0, -1.0], L.spot], press: "e", keep: true, cam: null, labels: [] },
   { id: "27-window-after", title: "The window, after its pass: a recessed frame, a mullion and transom, a deeper sill, softer drapes on a rod", cam: { pos: [1.2, 1.7, -1.4], target: [3.9, 0.6, -3.3], fov: 52 }, labels: [] },
   { id: "28-window-close", title: "The window, close", cam: { pos: [3.6, 1.6, -1.9], target: [6.0, 1.7, -2.9], fov: 50 }, labels: [] },
-  { id: "29-keychain-wall", title: "The TSI keycap keychain on its hook on the merch wall (display scale 1: about twelve times life size)", upstairs: true, route: [[-1.15, 3.7]],
+  { id: "29-keychain-wall", title: "The TSI keycap keychain on its hook on the merch wall (display scale 1.4: about seventeen times life size)", upstairs: true, route: [[-1.15, 3.7]],
     cam: { pos: [-0.35, F + 2.05, 3.05], target: [-1.15, F + 1.65, 4.86], fov: 46 }, labels: [] },
   { id: "30-keychain-walk", title: "The keychain from the walking camera, at the merch wall", upstairs: true, route: [[-1.15, 3.7]], cam: null, labels: [] },
   { id: "31-keychain-drag", title: "Taken hold of and pulled aside (a real pointer drag, in the walking camera; shot close)", upstairs: true, route: [[-1.15, 3.7]],

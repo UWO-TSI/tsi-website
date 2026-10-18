@@ -19,8 +19,12 @@ export interface Swing {
   twist: number; spin: number;
 }
 
-/** The hanging layout (art/merch/build_keycap_keychain.py): the keyring, four chain links, the body's top, its middle. */
-export const KEYCHAIN_LINKS = [0.30, 0.095, 0.095, 0.095, 0.095, 0.28];
+/** The hanging layout (art/merch/build_keycap_keychain.py prints it): the keyring clasp and its split ring, the chain's
+ * four parts (the end caps and the snake chain's halves), the body's top (the split ring and the lobster clasp) to
+ * its middle. */
+export const KEYCHAIN_LINKS = [0.1722, 0.0525, 0.0525, 0.0525, 0.0525, 0.2175];
+/** From the hook to the block's bottom, at rest (model units). */
+export const KEYCHAIN_HANG = 0.70;
 export const GRAVITY = 9.8;
 /** Share of velocity kept each second: settles in a few seconds, still swings for a while. */
 export const DAMPING = 0.35;

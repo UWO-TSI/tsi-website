@@ -219,3 +219,32 @@ My reading, built as `ShopOverlay`. It's one layout for both answers of the shop
   - on the wall: hanging, dragged, swinging back, pressed;
   - in the merch view;
   - in the standalone viewer.
+
+### The keychain, round 2: the hardware redone from David's close-ups (2026-10-18)
+
+David: "the main large clasp is still not the proper shape and specs, some parts or thicker, and the hole threads the
+ring". The new close-ups (IMG_3111 face on, IMG_3112 edge on, IMG_3113 to 3116) replace the round-1 reading of IMG_3096,
+which turned out to be a slightly turned view.
+
+- **The keyring clasp** is cast, modelled as one smooth piece (a signed distance field meshed with OpenVDB in Blender,
+  decimated to its share):
+  - a flat strap, wide on the face and thin on the edge (about 2:1), ending at the nose in a rounded, slightly bulbous tip;
+  - the base, a heavy wedge thickest at its knuckle end (about 3.6 times the strap's thickness) and tapering to a rounded
+    point, with a round eye cast through its face;
+  - the gate, a narrow loop of thin wire lying across the clasp's plane (face on it reads as one rod), wider at the nose
+    than at the knuckle, its legs going into the knuckle front and back;
+  - the outline is traced on IMG_3111 and checked by laying an aligned render over the photo.
+- **The split rings** have their cut showing; the top one threads the clasp's eye, turned 40° through it.
+- **The chain** is short now (about 4.5 end caps long, as in IMG_3114): two smooth bullet end caps with crimp collars and
+  flat pierced tabs, and a tight spiral between them.
+- **The lobster** hooks through the block's clear lug, which has a rectangular hole (it was a round loop); its trigger
+  tab points out and down by the tail.
+- **The switch top** has its LED window beside the stem (IMG_3116).
+- **Size and swing:** the keychain is 0.70 long (it was 1.08), so its swing links are
+  `KEYCHAIN_LINKS = [0.1722, 0.0525 ×4, 0.2175]`.
+  - It hangs at display scale 1.4 on the wall (about seventeen times life size), on a peg whose top is the clasp's
+    hanging point.
+  - The merch view shows it at 2.24.
+- **Triangles:** 5,913, under the raised 6k cap.
+- **Shots:** `keychain-round2-sheet.webp` has each photo beside the model at its angle, the side-on thicknesses, the
+  merch view, the wall, the viewer and the sprite.
