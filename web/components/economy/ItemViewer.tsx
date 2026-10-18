@@ -40,6 +40,19 @@ function measure(o: THREE.Object3D): THREE.Box3 {
   return box.setFromObject(o, true);
 }
 
+/**
+ * A fish lies on its side as it swims (David, 2026-10-18: "lie sideways, swimming, head to one side"): its length along
+ * the stage's x, its depth up the y, its thin side toward you, whatever way its model was authored (the old dump's
+ * fish stand nose-down). The slow turn then spins it round the vertical.
+ */
+function laySideways(inner: THREE.Group) {
+  measure(inner).getSize(size);
+  if (size.y >= size.x && size.y >= size.z) inner.rotation.z += Math.PI / 2;
+  else if (size.z >= size.x && size.z >= size.y) inner.rotation.y += Math.PI / 2;
+  measure(inner).getSize(size);
+  if (size.z > size.y) inner.rotation.x += Math.PI / 2;
+}
+
 /** The model, centred on the stage's middle and scaled to `span` across its biggest side. */
 export function FittedModel({ spec, span = 1.7 }: { spec: IconSpec; span?: number }) {
   const { scene } = useGLTF(spec.url);
@@ -52,6 +65,7 @@ export function FittedModel({ spec, span = 1.7 }: { spec: IconSpec; span?: numbe
     // Character parts face +z, everything else −z: turn so the stage starts on its front.
     if (!spec.skinned) inner.rotation.y = Math.PI;
     if (spec.view === "diagonal") inner.rotation.z = -Math.PI / 4;
+    if (spec.view === "profile") laySideways(inner);
     measure(inner).getSize(size);
     box.getCenter(mid);
     const k = span / Math.max(size.x, size.y, size.z, 1e-3);
@@ -72,5 +86,7 @@ export default function ItemViewer({ spec, picture, name, className, pictureClas
   picture: string; name: string; className?: string; pictureClassName?: string;
 }) {
   if (!spec) return <div className={className}><PixelImage src={picture} px={72} className={pictureClassName} label={name} /></div>;
-  return <TurnStage className={className} label={name}><Suspense fallback={null}><FittedModel spec={spec} /></Suspense></TurnStage>;
+  // Something seen from above in its icon (a butterfly, a dragonfly with its wings spread) leans toward you more, so
+  // its wings read as it turns rather than edge on.
+  return <TurnStage className={className} label={name} restPitch={spec.view === "above" ? 0.62 : undefined}><Suspense fallback={null}><FittedModel spec={spec} /></Suspense></TurnStage>;
 }
