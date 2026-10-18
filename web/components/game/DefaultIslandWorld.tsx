@@ -26,7 +26,7 @@ import { GLBProp, sceneryOf } from "./NatureModels";
 import { InstancedModels } from "./InstancedNature";
 import { ACNHBuilding, ACNHParts, CHALET_VARIANTS } from "./ACNHBuilding";
 import { FenceLine } from "./NatureModels";
-import { MAILBOX_URL } from "@/lib/game/propModels";
+import { BRIDGE_URL, CATCH_BOARD_URL, MAILBOX_URL, MONUMENT_SIGN_URL, NOTICE_BOARD_URL } from "@/lib/game/propModels";
 import Wharf from "./wharf/Wharf";
 import TripVeil from "./wharf/TripVeil";
 import { tripSceneReady, useTripControl } from "./wharf/useTripControl";
@@ -514,8 +514,8 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     <>
       <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} overview={overview} overviewFog={layout.scale.overviewFog}
         ground={island.ground} puddles={layout.puddles} cloudSize={layout.scale.cloudSize} shadowExtent={layout.scale.shadowExtent} fireflyAnchors={layout.fireflies} trees={layout.trees} fauna={fauna} />
-      <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} lite={liteMode} clear={grassClear} terrain={v.terrain} waves />
-      <GridOcean map={island.map} lite={liteMode} skip={layout.underWharf} radius={layout.scale.glintRadius} waves />
+      <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} lite={liteMode} clear={grassClear} terrain={v.terrain} waves ownGround />
+      <GridOcean map={island.map} lite={liteMode} skip={layout.underWharf} radius={layout.scale.glintRadius} waves ownGround />
       <Suspense fallback={null}><Seabed map={island.map} lite={liteMode} skip={layout.underWharf} /></Suspense>
       <WaterContacts map={island.map} player={player} ground={island.ground} rocks={layout.rocks} />
       <GlassWater />
@@ -530,7 +530,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       {layout.fitting && <FittingRoom at={layout.fitting} ground={island.ground} player={player} />}
       <EventDecor event={event} ground={island.ground} light={light} weather={weather} />
       <HalloweenLayer content={traditions.content} v={v} island={island} light={light} night={phase === "night"} fog={fogNight} weather={weather} residents={personas} />
-      {layout.bridges.map(b => <GLBProp key={b.id} url="/assets/acnh/props/bridge-wooden.glb" position={[b.x, b.y, b.z]} rotation={[0, b.yaw ?? 0, 0]} />)}
+      {layout.bridges.map(b => <GLBProp key={b.id} url={BRIDGE_URL} position={[b.x, b.y, b.z]} rotation={[0, b.yaw ?? 0, 0]} />)}
       <Lanterns positions={lampSpots} intensity={light.lampsOn ? light.lamp * 1.5 : 0} glow={light.lampsOn ? 1.2 : 0} />
       {layout.campfire && <Campfire site={layout.campfire} ground={island.ground} phase={phase} player={player} />}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
@@ -550,8 +550,8 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
 
 const F = "/assets/acnh/furniture/";
 /**
- * Club monument (row 182): five build stages from dump furniture, no new
- * modelling. 0 roped-off plot + construction sign; 1 scaffold + materials;
+ * Club monument (row 182): five build stages from dump furniture and our
+ * "coming soon" board. 0 roped-off plot + the board; 1 scaffold + materials;
  * 2 rock monument rises inside the scaffold; 3 banners go up; 4 complete
  * (scaffold, sign and ropes gone, lanterns lit).
  */
@@ -559,7 +559,7 @@ function ClubMonument({ position, stage, ceremony }: { position: [number, number
   const done = stage >= 4;
   return <group position={position}>
     {!done && <>
-      <GLBProp url={`${F}monument-sign.glb`} position={[1.3, 0, -1.25]} scale={0.1} rotation={[0, -0.3, 0]} />
+      <GLBProp url={MONUMENT_SIGN_URL} position={[1.3, 0, -1.25]} rotation={[0, -0.3, 0]} />
       {[[-1.1, -1.1, 0], [1.1, -1.1, 0], [-1.1, 1.1, Math.PI], [1.1, 1.1, Math.PI]].map(([x, z, r], i) => (
         <GLBProp key={i} url="/assets/acnh/props/fence-rope-a.glb" position={[x, 0, z]} rotation={[0, r, 0]} />
       ))}
@@ -634,10 +634,10 @@ function VillageLandmarks({ layout, ground, opened, stage, ceremony, light }: { 
     {ruins && DROPS.ruins && [-1.9, 1.9].map(dz => <GLBProp key={dz} url="/assets/acnh/props/stone-lantern.glb" position={[ruins.x, ground(ruins.x, ruins.z + dz), ruins.z + dz]} />)}
     {monument && <ClubMonument position={at(monument)} stage={stage} ceremony={ceremony} />}
     {mailbox && <GLBProp url={MAILBOX_URL} position={at(mailbox)} />}
-    {/* The board model's notices face +z; the plaza boards stand in front of the HQ, so they turn to face the plaza (a painter yaw adds on). */}
-    {notice && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(notice)} rotation={[0, Math.PI + (notice.yaw ?? 0), 0]} />}
-    {board && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={at(board)} rotation={[0, Math.PI + (board.yaw ?? 0), 0]} />}
-    {missions && DROPS.combat && <GLBProp url="/assets/acnh/props/bulletin-board.glb" position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
+    {/* The boards' cork faces +z; the plaza boards stand in front of the HQ, so they turn to face the plaza (a painter yaw adds on). */}
+    {notice && <GLBProp url={NOTICE_BOARD_URL} position={at(notice)} rotation={[0, Math.PI + (notice.yaw ?? 0), 0]} />}
+    {board && <GLBProp url={CATCH_BOARD_URL} position={at(board)} rotation={[0, Math.PI + (board.yaw ?? 0), 0]} />}
+    {missions && DROPS.combat && <GLBProp url={NOTICE_BOARD_URL} position={[missions.at[0], ground(...missions.at), missions.at[1] + 0.3]} rotation={[0, missions.yaw, 0]} />}
     {wharf && <Wharf dock={{ x: wharf.x, z: wharf.z, yaw: wharf.yaw ?? 0 }} light={light} place="village" dressed />}
     {layout.landmarks.filter(l => SIGNS[l.id] && !opened.includes(l.id as WorldGoalId)).map(l => <LandmarkTag key={l.id} position={[l.x, ground(l.x, l.z) + (l.half && l.half[0] > 1 ? 3.6 : 2.3), l.z - (l.half?.[1] ?? 0)]} closed={!l.open}>
       {SIGNS[l.id]}
@@ -667,7 +667,7 @@ function Clubhouse({ phase, light, player, frozen, talking, member, onNear }: { 
   useEffect(() => { player.current.set(0, 0, -4.2); camera.position.set(0, 8.4, -11.4); onNear(null); }, [camera, onNear, player]);
   const station = useCallback((s: InteriorStation | null) => onNear((s?.id as Near) ?? null), [onNear]);
   return <>
-    <HQInterior clubhouse trophyCase phase={phase} light={light} floorTexture={floor} frozen={frozen} talking={talking} playerPosRef={player} onNearestStation={station} stations={CLUBHOUSE_STATIONS} constrainMove={constrainFounder} />
+    <HQInterior clubhouse trophyCase noticeBoard phase={phase} light={light} floorTexture={floor} frozen={frozen} talking={talking} playerPosRef={player} onNearestStation={station} stations={CLUBHOUSE_STATIONS} constrainMove={constrainFounder} />
     <BotanicalFrames />
     <FounderDesk />
     <Workbench player={player} />

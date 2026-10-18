@@ -31,6 +31,7 @@ import GrassTufts from "./GrassTufts";
 import CliffBoulders from "./CliffBoulders";
 import { applyGrassNormalStrength, advanceWater, drawFoamRings, shadeWaterByClouds } from "./terrainMaterials";
 import { seaOf, type SeaKind } from "@/lib/game/waterShader";
+import { groundOf, type GroundSet } from "@/lib/game/groundTextures";
 import { FOAM_RING_SLOTS } from "@/lib/game/foamRings";
 import { fxOn } from "@/lib/game/perf/fxBench";
 import { cloudLayer } from "../AmbienceFX";
@@ -65,6 +66,11 @@ type GridWorldProps = {
    * island (live for recruits) and every other world keep main's water exactly. Hand GridOcean the same.
    */
   waves?: boolean;
+  /**
+   * Our own ground and water textures (lib/game/groundTextures.ts) instead of the ACNH dump's: every world but the
+   * applicant island (live for recruits, on the dump's until David approves ours). Hand GridOcean the same.
+   */
+  ownGround?: boolean;
   /** The smooth world's heightfield (specs/world-editor.md): drawn and walked in place of the cells. Only the v2 world from the editor's files has one. */
   terrain?: WorldTerrain;
 };
@@ -82,11 +88,11 @@ export default function GridWorld(props: GridWorldProps) {
 }
 
 /** The smooth world: the heightfield, its water and its grass (components/game/world/SmoothTerrain.tsx), the water's frame as the cells have it. */
-function SmoothWorld({ map, light, palette, windScale, lite = false, clear, terrain, waves }: GridWorldProps & { terrain: WorldTerrain }) {
+function SmoothWorld({ map, light, palette, windScale, lite = false, clear, terrain, waves, ownGround }: GridWorldProps & { terrain: WorldTerrain }) {
   const sea = seaOf(waves);
   useEffect(() => { TERRAIN_WET.value = light.wet ?? 0; }, [light.wet]);
   useEffect(() => () => { TERRAIN_WET.value = 0; }, []);
-  useWaterFrame(light, lite, sea);
+  useWaterFrame(light, lite, sea, groundOf(ownGround));
   // The village registered its water for the derived cell map (lib/game/world/village.ts): the same field the fish read,
   // and the waves' calm over it (its rivers and its wharf's berth).
   const shore = useMemo(() => { const f = shoreFieldOf(map) as ShoreSdf & { depth?: Float32Array }; return { ...f, calm: bakeWaveCalm(f, map) }; }, [map]);
@@ -97,22 +103,23 @@ function SmoothWorld({ map, light, palette, windScale, lite = false, clear, terr
  * The water's waves run (Lite fewer trains), or main's swell (`sea`, lib/game/waterShader.ts SeaKind), it catches the
  * sun; the foam rings round what stands in it. One uniform block per frame.
  */
-export function useWaterFrame(light: GridWorldProps["light"], lite: boolean, sea: SeaKind) {
+export function useWaterFrame(light: GridWorldProps["light"], lite: boolean, sea: SeaKind, ground: GroundSet = "dump") {
   const sunDir = useMemo(() => new THREE.Vector3(...light.sunPosition), [light.sunPosition]);
   const sunColor = useMemo(() => new THREE.Color(light.sun), [light.sun]);
   const sky = useMemo(() => ({ zenith: new THREE.Color(light.skyTop ?? light.sky), horizon: new THREE.Color(light.sky) }), [light.sky, light.skyTop]);
   useFrame(({ camera }) => {
-    advanceWater(worldTime(), light.water, sunDir, sunColor, sky, lite, sea);
+    advanceWater(worldTime(), light.water, sunDir, sunColor, sky, lite, sea, ground);
     shadeWaterByClouds(cloudLayer.map, cloudLayer.uv);
     drawFoamRings(camera, lite ? FOAM_RING_SLOTS.lite : FOAM_RING_SLOTS.high, fxOn("foamRings"));
   });
 }
 
 /** The cell world (every world but the smooth one), exactly as it was. */
-function CellWorld({ map, field: suppliedField, light, palette, windScale, lite = false, clear, waves }: GridWorldProps) {
+function CellWorld({ map, field: suppliedField, light, palette, windScale, lite = false, clear, waves, ownGround }: GridWorldProps) {
   const t = useTuning();
   const sea = seaOf(waves);
-  const materials = useTerrainMaterials(palette, sea);
+  const ground = groundOf(ownGround);
+  const materials = useTerrainMaterials(palette, sea, ground);
   // The ground's wetness is the light's (it eases with the weather); dry when the scene goes.
   useEffect(() => { TERRAIN_WET.value = light.wet ?? 0; }, [light.wet]);
   useEffect(() => () => { TERRAIN_WET.value = 0; }, []);
@@ -150,7 +157,7 @@ function CellWorld({ map, field: suppliedField, light, palette, windScale, lite 
   const sunColor = useMemo(() => new THREE.Color(light.sun), [light.sun]);
   const sky = useMemo(() => ({ zenith: new THREE.Color(light.skyTop ?? light.sky), horizon: new THREE.Color(light.sky) }), [light.sky, light.skyTop]);
   useFrame(({ camera }) => {
-    advanceWater(worldTime(), light.water, sunDir, sunColor, sky, lite, sea);
+    advanceWater(worldTime(), light.water, sunDir, sunColor, sky, lite, sea, ground);
     shadeWaterByClouds(cloudLayer.map, cloudLayer.uv);
     drawFoamRings(camera, lite ? FOAM_RING_SLOTS.lite : FOAM_RING_SLOTS.high, fxOn("foamRings"));
   });
@@ -158,7 +165,7 @@ function CellWorld({ map, field: suppliedField, light, palette, windScale, lite 
   return (
     <group>
       <GridTerrain map={map} field={suppliedField} materials={materials} />
-      <GridCliffs map={map} grass={materials.get(Surface.Grass)} drape={materials.get(CLIFF_FRINGE)} />
+      <GridCliffs map={map} grass={materials.get(Surface.Grass)} drape={materials.get(CLIFF_FRINGE)} ground={ground} />
       {/* The cliff-foot boulders go with the field: only a world that names its obstacles (they have no collision of their own).
           Their own boundary: the ground draws while their models stream in. */}
       {grassLayer(clear) === "field" && <Suspense fallback={null}><CliffBoulders map={map} field={suppliedField} /></Suspense>}

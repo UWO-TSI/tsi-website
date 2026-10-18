@@ -21,7 +21,7 @@ const PIECES = [
   "acorn-rug", "altar", "antique-clock", "barrel", "bookshelf", "bronze-hha-trophy",
   "bulletinboard", "candle", "cardboard-pile", "color-box-shelf", "counter-register",
   "gold-hha-trophy", "lighthouse", "magic-circle-rug", "plant-monstera", "plant-yucca",
-  "remains-pillar", "shopping-cart", "silver-hha-trophy", "study-chair", "study-desk",
+  "remains-pillar", "silver-hha-trophy", "study-chair", "study-desk",
   "windmill-retro", "wooden-chest", "yellow-message-mat",
 ];
 

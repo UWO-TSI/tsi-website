@@ -1,0 +1,28 @@
+# Fail-first and mutation checks for the two fixed smokes (throwaway Postgres 16, never Supabase), 2026-10-17.
+
+## sql-smoke.sh 20261017020000 (stop before the resident roster): admin_pass_smoke holds the admin pass's own shape
+skipped 20261017020000_resident_roster
+── admin_pass_smoke.sql
+NOTICE:  admin 1 residents ok
+NOTICE:  admin 2 text-keyed versioning ok
+NOTICE:  admin 3 drafts T1/T2 only ok
+── resident_roster_smoke.sql
+ERROR:  the roster walks: ten residents, got 2
+── taught_tools_off_sale_smoke.sql
+ERROR:  the bug net is off sale
+
+## sql-smoke.sh 20261017163142 (stop before the tools come off sale): taught_tools_off_sale_smoke fails first
+skipped 20261017163142_catalogue_seed
+── taught_tools_off_sale_smoke.sql
+ERROR:  the bug net is off sale
+
+## Mutants on the full chain: a retire that drops owners' rows (trigger), and the mayor's day moved off the path
+── mutant: retiring drops owners
+NOTICE:  taught tools 1 off sale ok
+ERROR:  an owner keeps theirs
+── mutant: mayor off the path
+ERROR:  mayor keeps the path
+
+## The chain's guard, with 20261017163142_catalogue_seed and resident_roster_smoke.sql taken out of the lists
+FAIL chain: 20261017163142_catalogue_seed.sql is not in GAME
+FAIL chain: resident_roster_smoke.sql never runs

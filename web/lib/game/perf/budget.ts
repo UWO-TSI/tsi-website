@@ -195,4 +195,7 @@ export const ASSET_EXCEPTIONS: Record<string, Partial<AssetBudget> & { why: stri
   "game/cafe/cafe-room.glb": { triangles: 34_170, primitives: 48, materials: 33, why: "the café interior, one room drawn alone: 48 draws" },
   "game/interiors/kit.glb": { primitives: 35, why: "the interiors' shared kit; pieces are drawn one by one" },
   "game/buildings/cafe.glb": { primitives: 34, materials: 25, why: "the café exterior: 34 draws in the village, the most of any building" },
+  // Dump models David kept and we only retouched (row 314, art/props/derive_*.py): their own geometry and textures.
+  "game/props/beach-parasol.glb": { triangles: 4740, why: "the dump's parasol and two loungers kept as they were, recoloured only (one draw)" },
+  "game/props/hq-notice-board.glb": { texture: 768, why: "the dump's metal HQ board kept with its own 768 x 384 atlas, the notes made plain; one board, indoors" },
 };

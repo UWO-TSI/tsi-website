@@ -141,13 +141,38 @@ const METAL = /^M_(Blade|Brass|Steel|Iron|Drum)$/;
 const METAL_BODY = /\/(props\/streetlamp|props\/park-clock)\.glb:m(ReBody|Body)$/;
 
 /**
- * Look class of a GLB material (lookPreset.ts, LookMaterials). Glass and metal
- * (row 237) are named materials on outdoor props, buildings and weapons.
+ * Shared material presets for plain-colour parts (lane rules, David 2026-10-17: textures only where they show, and a
+ * plain colour must still read as its material). A GLB part made of one is named `P_<Preset>` (P_Wood, P_Stone,
+ * P_Metal, P_Paint, P_Glass, P_Cloth) with its colour in COLOR_0, so every part of one preset in a model shares a
+ * material and draws as one; prepareModel gives it the preset's roughness and metalness whatever it was authored with,
+ * and lookClassFor its look class (metal and glass reflect, the rest are props). Paint is painted wood and plastic.
+ */
+export const MATERIAL_PRESETS = {
+  wood: { roughness: 0.9, metalness: 0, look: "props" },
+  stone: { roughness: 0.95, metalness: 0, look: "props" },
+  metal: { roughness: 0.4, metalness: 0.75, look: "metal" },
+  paint: { roughness: 0.45, metalness: 0, look: "props" },
+  glass: { roughness: 0.08, metalness: 0, look: "glass" },
+  cloth: { roughness: 1, metalness: 0, look: "props" },
+} as const satisfies Record<string, { roughness: number; metalness: number; look: "props" | "glass" | "metal" }>;
+export type MaterialPreset = keyof typeof MATERIAL_PRESETS;
+const PRESET = /^P_(Wood|Stone|Metal|Paint|Glass|Cloth)(?:\.\d+)?$/;
+/** The preset a material's name asks for (Blender's ".001" suffixes allowed), or null. */
+export function presetFor(name: string): MaterialPreset | null {
+  const m = PRESET.exec(name);
+  return m ? (m[1].toLowerCase() as MaterialPreset) : null;
+}
+
+/**
+ * Look class of a GLB material (lookPreset.ts, LookMaterials). A preset part (P_*) takes its preset's class anywhere.
+ * Glass and metal (row 237) are named materials on outdoor props, buildings and weapons.
  * Furniture is interior dressing (interiors are deferred) except the fitting
  * room that stands outside; the driftwood sword is wood.
  * Characters never come through here: their materials are "Character*".
  */
 export function lookClassFor(url: string, name: string): "foliage" | "props" | "glass" | "metal" {
+  const preset = presetFor(name);
+  if (preset) return MATERIAL_PRESETS[preset].look;
   if (url.includes("/plants/")) return "foliage";
   // The café (cafe-polish §7) and the modelled rooms (interiors polish) are the interiors with the look's glass and metal.
   const outdoor = /\/(props|buildings|weapons|cafe|interiors)\//.test(url) || /\/furniture\/fitting-room\.glb$/.test(url);
@@ -204,6 +229,12 @@ export function prepareModel(source: Object3D, url: string, emissiveIntensity?: 
       const material = original.clone();
       // Material class for the look (lookPreset.ts).
       material.userData.lookClass = lookClassFor(url, material.name);
+      // A plain-colour preset part reflects light like its material (MATERIAL_PRESETS).
+      const preset = presetFor(material.name);
+      if (preset && material instanceof MeshStandardMaterial) {
+        material.roughness = MATERIAL_PRESETS[preset].roughness;
+        material.metalness = MATERIAL_PRESETS[preset].metalness;
+      }
       material.side = glassShell ? FrontSide : DoubleSide;
       if (role.front) material.shadowSide = FrontSide;
       if (glassShell) material.depthWrite = false;

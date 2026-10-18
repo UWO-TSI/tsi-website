@@ -39,7 +39,7 @@ export const HQ_STATIONS: InteriorStation[] = [
 // ── real ACNH furniture (P2 dump extraction 2026-07-13) ──
 // Pieces are floor-origin normalized at extraction; ACNH items face -Z.
 preloadPieces([
-  "bulletinboard", "gold-hha-trophy", "silver-hha-trophy", "bronze-hha-trophy",
+  "bulletinboard", "hq-notice-board", "gold-hha-trophy", "silver-hha-trophy", "bronze-hha-trophy",
   "study-chair", "bookshelf", "acorn-rug", "antique-clock",
   "plant-monstera", "plant-yucca", "yellow-message-mat", "wooden-chest",
   "floor-lamp", "clubhouse-pendant", "lounge-rug", "reading-table", "lounge-sofa", "lounge-table", "lounge-tea", "lounge-book",
@@ -63,7 +63,10 @@ export default function HQInterior({
   light: islandLight,
   talking = false,
   trophyCase = false,
+  noticeBoard = false,
 }: {
+  /** The member clubhouse's own notice board (lib/game/propModels HQ_NOTICE_BOARD_URL); the applicant island's keeps the dump's. */
+  noticeBoard?: boolean;
   /** The member clubhouse's 3D trophy case stands at the display (TrophyCase): the chest and its cups step aside. */
   trophyCase?: boolean;
   /** The island's light now (blended across the phases); the phase's look when not given (the applicant island). */
@@ -138,7 +141,7 @@ export default function HQInterior({
 
       {/* Bulletin Board (→ Directory) hung on the north wall */}
       <Suspense fallback={null}>
-        <Piece name="bulletinboard" {...(clubhouse ? HQ_LAYOUT.board : { position: [-4.5, 1.15, 5.55] as [number, number, number], scale: 0.16 })} />
+        <Piece name={noticeBoard ? "hq-notice-board" : "bulletinboard"} {...(clubhouse ? HQ_LAYOUT.board : { position: [-4.5, 1.15, 5.55] as [number, number, number], scale: 0.16 })} />
 
         {/* Trophy display (→ Leaderboard): chest pedestal + the HHA tier set (the member clubhouse's trophy case replaces it) */}
         {!trophyCase && <>
