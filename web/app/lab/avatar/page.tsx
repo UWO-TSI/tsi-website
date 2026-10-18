@@ -26,6 +26,7 @@
  *                  a row of front, 3/4, side and back (&views= to pick), on one skin and hair colour
  * ?sheet=david     David's 19 faces (face_set_305.py) as they came, eyes + mouth (+ accent), on three skins (&skins=)
  * ?sheet=mix       David's eyes, mouths and accents mixed with each other and with the earlier parts (&skins=)
+ * &pitch= &zoom= &look= the camera's orbit (radians up, closer by, the height looked at)
  * &hair=<0-11> (none: the hairstyles' own colours) &color=RRGGBB &accent=<0-11> &skin=<0-11>&face=512 (the world atlas) &framing=head|hat|body &charlod=1|2 (every cell at LOD 1 or LOD 2)
  * &cut=0 (draw what a hat or hood hides: hidden_cut.py's marks ignored)
  * In ?sheet=roblox an id may carry a head accessory worn with it: &ids=hair_visor_messy+acc_visor (encode the + as %2B in a URL)
@@ -65,11 +66,19 @@ interface Cell { label: string; look: CharacterLook; yaw: number; face?: FaceOve
 /** The camera by framing: the head, the head with room above it for a hat (wardrobe batch 2), the whole body. */
 const FRAMING = { head: { at: [0, 0.86, 1.3], look: 0.8 }, hat: { at: [0, 0.98, 1.7], look: 0.9 }, body: { at: [0.15, 0.6, 2.05], look: 0.5 } } as const;
 
-function Stage({ cell, framing, faceSize }: { cell: Cell; framing: keyof typeof FRAMING; faceSize: number }) {
+/** The camera's orbit (wardrobe round 5: the hat cut judged from above and below, and close up at a rim): &pitch= radians
+ * up (negative: from below), &zoom= closer by that factor, &look= the height it looks at (m). */
+interface Orbit { pitch: number; zoom: number; look: number | null }
+
+function Stage({ cell, framing, faceSize, orbit }: { cell: Cell; framing: keyof typeof FRAMING; faceSize: number; orbit: Orbit }) {
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: cell.yaw, lift: 0, pose: null, play: null, face: cell.face ?? null, talk: cell.talk ? 1e9 : 0 });
   const f = FRAMING[framing] ?? FRAMING.head;
+  const look = orbit.look ?? f.look;
+  const [dy, dz] = [f.at[1] - f.look, f.at[2]];
+  const [cp, sp] = [Math.cos(orbit.pitch), Math.sin(orbit.pitch)];
+  const at: [number, number, number] = [f.at[0] / orbit.zoom, look + (dy * cp + dz * sp) / orbit.zoom, (dz * cp - dy * sp) / orbit.zoom];
   return <>
-    <PerspectiveCamera makeDefault fov={30} position={[...f.at]} onUpdate={c => c.lookAt(0, f.look, 0)} />
+    <PerspectiveCamera makeDefault fov={30} position={at} onUpdate={c => c.lookAt(0, look, 0)} />
     <ambientLight intensity={1.1} color="#fff6e6" />
     <hemisphereLight args={["#fff8ec", "#b7c7a8", 0.9]} />
     <directionalLight position={[1.6, 2.6, 2.2]} intensity={1.7} color="#fff1d8" />
@@ -91,6 +100,7 @@ function AvatarBench() {
     ...(q.get("color") ? { hairColor: `#${q.get("color")!.toUpperCase()}` } : {}), ...(q.get("accent") ? { hairAccent: Number(q.get("accent")) } : {}) };
   const style = (s: string) => ({ ...base, ...STYLES[s] });
   const yaw = Number(q.get("yaw") ?? -0.5);
+  const orbit: Orbit = { pitch: Number(q.get("pitch") ?? 0), zoom: Number(q.get("zoom") ?? 1), look: q.get("look") ? Number(q.get("look")) : null };
   const view = VIEWS[q.get("view") ?? "34"] ?? VIEWS["34"];
   const cells = useMemo<Cell[]>(() => {
     const bob = style(q.get("style") ?? "bob");
@@ -183,7 +193,7 @@ function AvatarBench() {
     <div data-sheet={sheet} style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, ${cols === 1 ? "420px" : "1fr"})`, gap: 8, padding: 8 }}>
       {cells.map(c => <figure key={c.label} style={{ margin: 0 }}>
         <View style={{ width: "100%", aspectRatio: framing === "body" ? "3 / 4" : "1 / 1", background: "#f6efe0", borderRadius: 10 }}>
-          <Stage cell={c} framing={framing} faceSize={faceSize} />
+          <Stage cell={c} framing={framing} faceSize={faceSize} orbit={orbit} />
         </View>
         <figcaption style={{ font: "12px 'IBM Plex Mono', monospace", color: "#5b4a36", textAlign: "center", paddingTop: 4 }}>{c.label}</figcaption>
       </figure>)}
