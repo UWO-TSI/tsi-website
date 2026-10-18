@@ -1,4 +1,4 @@
-# SQL smoke after round 3 (zsh specs/evidence/launch-fixes/sql-smoke.sh), 2026-10-17 22:49, game/wardrobe-b2: main's chain plus 20261017172740_catalogue_seed (regenerated in place: unchanged, #14 had no shop row) and wardrobe_b2_smoke.sql; no FAIL or ERROR line
+# SQL smoke after round 4 (zsh specs/evidence/launch-fixes/sql-smoke.sh), 2026-10-18 03:01, game/wardrobe-b2: main's chain plus 20261017172740_catalogue_seed (unchanged: no price or row changed) and wardrobe_b2_smoke.sql; no FAIL or ERROR line
 chain ok (game)
 ── 029-031_smoke.sql
 NOTICE:  029 ok
@@ -84,9 +84,9 @@ NOTICE:  drops 3 once per recipe ok
 NOTICE:  drops 4 refused catches teach nothing ok
 NOTICE:  column "drop_rarity" of relation "crafting_recipes" already exists, skipping
 NOTICE:  relation "recipe_drop_chances" already exists, skipping
-NOTICE:  drops 5 rate rock_crystal: 115 of 6000 (chance 0.02)
-NOTICE:  drops 5 rate rock_gold_nugget: 212 of 4000 (chance 0.05)
-NOTICE:  drops 5 rate fish_golden_koi: 435 of 3000 (chance 0.15)
+NOTICE:  drops 5 rate rock_crystal: 127 of 6000 (chance 0.02)
+NOTICE:  drops 5 rate rock_gold_nugget: 215 of 4000 (chance 0.05)
+NOTICE:  drops 5 rate fish_golden_koi: 484 of 3000 (chance 0.15)
 NOTICE:  drops 5 rate rock_stone: 0 of 2000 (chance 0)
 recipe drops smoke ok
 ── catalogue_seed_smoke.sql

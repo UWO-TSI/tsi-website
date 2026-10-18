@@ -1975,7 +1975,7 @@
    "slot": "back",
    "name": "V-kei layers",
    "glb": "hair/full/hair_vkei.glb",
-   "tris": 2922,
+   "tris": 2973,
    "materials": [
     {
      "name": "M_Hair",
@@ -4463,7 +4463,7 @@
    "slot": "accessory",
    "name": "Crew visor",
    "glb": "accessories/roblox/acc_crew_visor.glb",
-   "tris": 724,
+   "tris": 734,
    "materials": [
     {
      "name": "M_Acc",
@@ -4776,7 +4776,7 @@
    "slot": "accessory",
    "name": "Drawn top hat",
    "glb": "accessories/roblox/acc_drawn_top_hat.glb",
-   "tris": 707,
+   "tris": 701,
    "materials": [
     {
      "name": "M_Acc",

@@ -133,9 +133,9 @@
    "fit": "visor",
    "hidesBackHair": false,
    "position": [
-    0.0156,
-    0.73773,
-    0.13228
+    0.01235,
+    0.59445,
+    0.10472
    ],
    "orientation": [
     0,
@@ -150,13 +150,13 @@
    "provisional": true,
    "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
    "override": {
-    "scale": 1.2,
+    "scale": 0.95,
     "offset": [
      0,
      0.26,
-     -0.06
+     -0.36
     ],
-    "why": "David, 2026-10-17: properly on the head: a band round the hair; round 2: it sat inside the head, lifted; its bill over the fringe and its band shown over the hair (it faces forward: David); round 3: slightly smaller and more forward"
+    "why": "David, 2026-10-17: properly on the head: a band round the hair; round 2: it sat inside the head, lifted; its bill over the fringe and its band shown over the hair (it faces forward: David); round 3: slightly smaller and more forward; round 4: smaller (0.95) and forward, its band behind the head on the hair (no gap, even over the thinnest hair)"
    },
    "hatCut": 6
   },
@@ -581,9 +581,9 @@
     "offset": [
      0,
      0.5,
-     0.05
+     0.15
     ],
-    "why": "David, 2026-10-17: bigger and higher (it blended into the hair); round 2: too big and too low; round 3: slightly back"
+    "why": "David, 2026-10-17: bigger and higher (it blended into the hair); round 2: too big and too low; round 3: slightly back; round 4: further back (it sat too far forward)"
    }
   },
   {
