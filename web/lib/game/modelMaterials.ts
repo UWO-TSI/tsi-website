@@ -92,11 +92,12 @@ function addTreeSway(shader: WebGLProgramParametersWithUniforms) {
 }
 
 /**
- * The closed bushes (art/nature/close_bushes.py): their normals point out of the bush, and every card is drawn from both
- * sides. Three lights a card's back face with its normal turned over, so a card seen from behind (at the silhouette, or
- * through a gap) read as a dark sliver; here both faces keep the bush's outward normal, and it shades as one soft mass.
+ * The closed bushes (art/nature/close_bushes.py) and our trees and plants (art/trees, game/remodel-trees): their normals
+ * point out of the mass, and every card is drawn from both sides. Three lights a card's back face with its normal
+ * turned over, so a card seen from behind (at the silhouette, or through a gap) read as a dark sliver; here both faces
+ * keep the mass's outward normal, and it shades as one soft mass.
  */
-const CLOSED_BUSH = /\/game\/plants\/bush-/;
+const CLOSED_PLANT = /\/game\/plants\//;
 const BOTH_FACES_OUT = ShaderChunk.normal_fragment_begin.replace("normal *= faceDirection;", "");
 
 /** The shadow pass of ACNH's swaying canopy caster (mShadowShake): the leaves' own wind, so shadow and canopy move together. */
@@ -274,7 +275,7 @@ export function prepareModel(source: Object3D, url: string, emissiveIntensity?: 
         };
         material.customProgramCacheKey = () => "snow-cap-v1";
       }
-      if (CLOSED_BUSH.test(url)) {
+      if (CLOSED_PLANT.test(url)) {
         const base = material.onBeforeCompile;
         material.onBeforeCompile = (shader, renderer) => {
           base.call(material, shader, renderer);
@@ -288,7 +289,8 @@ export function prepareModel(source: Object3D, url: string, emissiveIntensity?: 
           base.call(material, shader, renderer);
           addTreeSway(shader);
         };
-        material.customProgramCacheKey = () => `tree-sway:${material.name}`;
+        const key = CLOSED_PLANT.test(url) ? "closed-bush|" : "";
+        material.customProgramCacheKey = () => `${key}tree-sway:${material.name}`;
       }
       if (url.includes("/critters/")) {
         const base = material.onBeforeCompile, key = material.customProgramCacheKey();

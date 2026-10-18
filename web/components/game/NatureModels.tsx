@@ -10,7 +10,8 @@ import { propsOf } from "@/lib/game/defaultIsland";
 import { BARRIERS, barrierPlacements } from "@/lib/game/barriers";
 import { BUSH_MODELS, FLOWER_MODELS, TREE_MODELS, bushParts, flowerParts, mushroomUrl, treeParts, type NaturePart } from "@/lib/game/natureParts";
 import { SEASON_BUSHES, SEASON_FLOWERS, SEASON_TREES } from "@/lib/game/seasonalLook";
-import type { Season } from "@/lib/game/season";
+import { seasonBlend, type Season } from "@/lib/game/season";
+import { lodOf } from "@/lib/game/natureLod";
 import { objectsOf, type Village } from "@/lib/game/villageMap";
 import { BRIDGE_URL, CAMPFIRE_URL, LOG_BENCH_URL, NOTICE_BOARD_URL, STREETLAMP_URL, propUrl } from "@/lib/game/propModels";
 import { FENCE_POST_URL, FENCE_RAIL_URL, fencePlacements, isJoinedFence } from "@/lib/game/fences";
@@ -135,6 +136,10 @@ const PRELOAD = [
   ...BUSH_MODELS,
   // The village's closed bushes, every season's (about 360 KB in all), so a season change doesn't pop them in.
   ...Object.values(SEASON_BUSHES).flat(),
+  // Our flowers, every season's (art/trees/build_flowers.py).
+  ...new Set(Object.values(SEASON_FLOWERS).flat()),
+  // Our trees in today's season, near and far (about 0.6 MB): the other seasons load when the season turns.
+  ...SEASON_TREES[seasonBlend().season].flatMap(url => [url, lodOf(url)].filter((u): u is string => !!u)),
   ...FLOWER_MODELS,
   "/assets/acnh/plants/stump.glb",
   STREETLAMP_URL,

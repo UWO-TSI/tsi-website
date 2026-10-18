@@ -4,20 +4,36 @@
  * trees (VillageLife) all read these, so they match exactly. ACNH models ship world-scale (2026-07 revamp).
  */
 import { isCedar } from "./defaultIsland";
+import type { Season } from "./season";
 
 export interface NaturePart { url: string; offset: [number, number, number]; yaw: number; scale: number }
 
+/** The dump's trees: the default for callers that pass no season (the applicant island keeps them). */
 export const TREE_MODELS = [
   "/assets/acnh/plants/tree-hardwood-a.glb",
   "/assets/acnh/plants/tree-hardwood-b.glb",
   "/assets/acnh/plants/tree-blossom.glb",
   "/assets/acnh/plants/tree-cedar.glb",
 ];
+/**
+ * The member world's broadleaf trees (art/trees/build_broadleaf.py, game/remodel-trees): leaf cards over closed clumps
+ * on one trunk, in three shapes (a round crown, a wide spreading one, a tall oval), each in four seasons on the same
+ * silhouette (cherry blossom in spring), each with a far model for the distance LOD (lib/game/natureLod.ts).
+ * SEASON_TREES (seasonalLook.ts) picks the season's.
+ */
+export const TREE_SHAPES = ["round", "wide", "tall"] as const;
+export type TreeShape = (typeof TREE_SHAPES)[number];
+/** A broadleaf tree's dress by season: spring is the blossom. */
+export const TREE_DRESS = { spring: "blossom", summer: "summer", autumn: "autumn", winter: "winter" } as const;
+export const treeUrl = (shape: TreeShape, season: Season, lod: 0 | 1 = 0) => `/assets/game/plants/tree-${shape}-${TREE_DRESS[season]}${lod ? ".lod1" : ""}.glb`;
+/** Our cedar (art/trees/build_conifers.py): tiers of fringe cards over closed cones; the snow one wears a lid on each tier. */
+export const CEDAR_URL = "/assets/game/plants/conifer-cedar.glb", CEDAR_SNOW_URL = "/assets/game/plants/conifer-cedar-snow.glb";
 export const BUSH_MODELS = [
   "/assets/acnh/plants/bush-azalea.glb",
   "/assets/acnh/plants/bush-hydrangea.glb",
   "/assets/acnh/plants/bush-holly.glb",
 ];
+/** The dump's flowers: the default for callers that pass no season (the applicant island keeps them). */
 export const FLOWER_MODELS = [
   "/assets/acnh/plants/flower-cosmos.glb",
   "/assets/acnh/plants/flower-lily.glb",
@@ -28,6 +44,12 @@ export const FLOWER_MODELS = [
   "/assets/acnh/plants/flower-pansy.glb",
   "/assets/acnh/plants/flower-windflower.glb",
 ];
+
+/**
+ * The member world's flowers (art/trees/build_flowers.py, game/remodel-trees): clumps of three to five stems with petal
+ * cards on our painted petal atlas, one per kind (cosmos, hyacinth, lily, mum, pansy, rose, tulip, windflower).
+ */
+export const flowerUrl = (kind: string) => `/assets/game/plants/flower-${kind.replace(/^flower_/, "")}.glb`;
 
 /** A woods forage node's model by species key (`mushroom_round` etc.): our clusters, art/nature/build_mushrooms.py. */
 export const mushroomUrl = (key: string) => `/assets/game/forage/mushroom-${key.replace(/^mushroom_/, "")}.glb`;
