@@ -215,6 +215,8 @@ export const SHOP_SLOTS: DisplaySlot[] = [
   slot("merch-prints-2", "merch-prints", "pegboard", [1.05, 1.72, 4.91], [1.0, 0.85, 0.04]),
   // The TSI keycap keychain hangs from its keyring on a hook on the pegboard, between the totes and the posters (SHOP_KEYCHAIN).
   slot("merch-keychain-1", "merch-small", "pegboard", [-1.15, 1.17, 4.86], [0.3, 0.98, 0.1]),
+  // The TSI lanyard hangs folded over its own peg, between the posters and the shirts (SHOP_LANYARD).
+  slot("merch-lanyard-1", "merch-small", "pegboard", [1.84, 1.04, 4.86], [0.3, 1.46, 0.1]),
   slot("merch-featured-1", "merch-featured", "merch-plinths", [0, 0.75, 0.35], [0.5, 0.9, 0.35]),
   slot("merch-featured-2", "merch-featured", "merch-plinths", [0.85, 0.4, 1.15], [0.4, 0.3, 0.4]),
 ];
@@ -227,6 +229,13 @@ export const SHOP_SLOTS: DisplaySlot[] = [
  * walking camera (the sticker packs about six times, the totes about twice); the slot runs from its hook down 0.98.
  */
 export const SHOP_KEYCHAIN = { hook: [-1.15, 2.15, 4.86] as [number, number, number], scale: 1.07, slot: "merch-keychain-1" } as const;
+/**
+ * The lanyard on the merch wall (specs/merch/tsi-lanyard.md): the peg it's folded over and its display scale. The model
+ * is in units of 10 cm (the strap 2 cm wide, 48.6 cm from the peg to the hook's foot); at 0.3 the strap is 0.06 game
+ * units wide and the whole lanyard 1.46 tall, about three times life size, so its words read close up at the wall; its
+ * peg is under the CLUB MERCH sign and its hook clears the counter (the slot runs from the peg down 1.46).
+ */
+export const SHOP_LANYARD = { peg: [1.84, 2.5, 4.86] as [number, number, number], scale: 0.3, slot: "merch-lanyard-1" } as const;
 
 /** A light strip along an edge (the edge lighting), on a floor, from one end to the other. */
 export interface LightStrip { level: Level; fixture: string; from: [number, number, number]; to: [number, number, number] }

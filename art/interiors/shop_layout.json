@@ -2229,6 +2229,22 @@
    ]
   },
   {
+   "id": "merch-lanyard-1",
+   "kind": "merch-small",
+   "level": 1,
+   "fixture": "pegboard",
+   "at": [
+    1.84,
+    1.04,
+    4.86
+   ],
+   "size": [
+    0.3,
+    1.46,
+    0.1
+   ]
+  },
+  {
    "id": "merch-featured-1",
    "kind": "merch-featured",
    "level": 1,

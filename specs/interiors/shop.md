@@ -287,3 +287,28 @@ which turned out to be a slightly turned view.
 - The keychain's acrylic is a touch greyer on it so the block still reads on white.
 - The grid's card pictures are unchanged (the icons keep their own light rig).
 - Shots: `overlay-studio-sheet.webp`.
+
+**Upstairs approved (2026-10-18).** David approved the furnished mezzanine merch level with no notes
+(`upstairs-before-after.webp`).
+
+### The TSI lanyard (2026-10-18, specs/merch/tsi-lanyard.md)
+
+- **Print:** David's two print files (32400 x 720, the whole strap end to end) are resampled to 4590 x 102 per side and
+  cut into rows of one 1024 atlas (`art/merch/lanyard_atlas.py`): outside in rows 0-4, inside in 5-9.
+  - The black is recoloured to the photo's navy; the white artwork stays white.
+  - The print runs along the strap with the neck at its middle and the ends at the sewn tab.
+  - Both strands are checked against the photo: the outside reads up the right strand and down the left; the quote
+    starts at the foot of the back's left strand and ends with "Steve Jobs" at the foot of its right; neither is mirrored.
+- **Model** (`art/merch/build_lanyard.py`, 4,004 triangles):
+  - A flat ribbon 2 cm wide and 90 cm long, folded over a peg, each strand turning a quarter turn to face the room.
+  - The sewn tab with a stitch line, a D-ring, and a swivel snap hook (domed swivel, collar, cast body with its rivet
+    and a trigger tab).
+  - The strap is single-sided (a closed solid) so the two prints never bleed through each other.
+- **Shop:** it hangs over its own peg between the posters and the shirts, at display scale 0.3 (about three times life
+  size; 1.46 tall). It sways a hair on its own, and drag pulls it about and it settles (the keychain's verlet chain down
+  the strands; the strap bends along it, `components/game/Lanyard.tsx`). No walk orders during a drag.
+- **Merch view** (`LanyardStage`): close up by default so the print reads through the pixel finish, turning so both
+  sides come round; "See it whole" shows all of it.
+- **Catalogue:** in `PENDING_MERCH` with no price, so it's off sale. The overlay shows "Price to come" on its card and in
+  its detail, with Redeem disabled (the overlay's two-line change).
+- **Shots:** `lanyard-sheet.webp`. The viewer is at the scratch path `lanyard-viewer.html`.

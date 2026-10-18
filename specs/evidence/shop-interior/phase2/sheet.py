@@ -1,5 +1,5 @@
 """The review sheets (shop phase 2): the headless shots in a labelled grid, one WebP.
-  python3 sheet.py <raw-dir> <out.webp> [ground|merch|overlay|keychain|keychain2|keychain3|upstairs|studio]"""
+  python3 sheet.py <raw-dir> <out.webp> [ground|merch|overlay|keychain|keychain2|keychain3|upstairs|studio|lanyard]"""
 import sys
 from PIL import Image, ImageDraw, ImageFont
 
@@ -100,6 +100,21 @@ STUDIO = [
     ("26-overlay-phone", "Phone: the grid"),
     ("27-overlay-phone-keychain", "Phone: the keychain on the white stage"),
 ]
+LANYARD = [
+    ("p-front", "The front beside David's photo: GENESIS and TETHOS with the mark, from his print file"),
+    ("p-back", "The back: the quote, the right way round on both strands"),
+    ("p-neck", "Over the peg: each strand turns a quarter turn to face the room"),
+    ("p-hook", "The sewn tab and its stitching, the D-ring, the swivel snap hook with its trigger"),
+    ("m-grid", "The merch grid (Price to come, off sale), and the detail stage close up with the pixel finish"),
+    ("m-turn", "Turned round to the quote; and See it whole"),
+    ("34-lanyard-wall", "On its peg on the merch wall (display scale 0.3: about three times life size)"),
+    ("35-lanyard-walk", "From the walking camera"),
+    ("36-lanyard-drag", "Taken hold of and pulled aside (no walk orders during the drag)"),
+    ("37-lanyard-settle", "Let go: it settles back"),
+    ("v-viewer", "The standalone viewer: front, and turned round"),
+    ("sprite", "The 2D sprite; the merch view on a phone"),
+    ("arrows", "The stage arrows (David's tweak): before and after"),
+]
 UPSTAIRS = [(f"{side}-{n}", f"{'Before' if side == 'b' else 'After'}: {cap}") for n, cap in (
     ("u1-door", "from the door"), ("u2-top-of-stairs", "from the top of the stairs"), ("u3-merch-walk", "at the merch wall"),
     ("u4-merch-across", "across the mezzanine"), ("u5-counter", "the counter and the pegboard"), ("u6-plinths", "the featured drop"),
@@ -113,6 +128,8 @@ if mode == "keychain":
     CELLS, TITLE = KEYCHAIN, "Shop: the TSI keycap keychain, from David's photos"
 if mode == "upstairs":
     CELLS, TITLE = UPSTAIRS, "Shop upstairs: before (the layout's blocks) and after (furnished after ref 1)"
+if mode == "lanyard":
+    CELLS, TITLE = LANYARD, "The TSI lanyard, from David's photo and print files (4,004 triangles, one 1024 atlas)"
 if mode == "studio":
     CELLS, TITLE = STUDIO, "Shop overlay: every item's detail stage as a white studio product shot"
 if mode == "keychain3":
@@ -122,7 +139,7 @@ if mode == "keychain2":
 W, H, PAD, CAP = 720, 450, 14, 34
 font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 17)
 title = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 26)
-cols = 2 if mode in ("merch", "keychain", "keychain2", "keychain3", "upstairs", "studio") else 3
+cols = 2 if mode in ("merch", "keychain", "keychain2", "keychain3", "upstairs", "studio", "lanyard") else 3
 rows = (len(CELLS) + cols - 1) // cols
 sheet = Image.new("RGB", (cols * (W + PAD) + PAD, rows * (H + CAP + PAD) + PAD + 50), "#1d1f22")
 d = ImageDraw.Draw(sheet)
@@ -132,7 +149,7 @@ for i, (name, cap) in enumerate(CELLS):
     # crop to the cell's 16:10, centred, then fit; a portrait shot (a phone) is fitted whole on the sheet's dark
     r = W / H
     iw, ih = im.size
-    if iw < ih or (mode in ("keychain", "keychain2", "keychain3") and abs(iw / ih - r) > 0.05):
+    if iw < ih or (mode in ("keychain", "keychain2", "keychain3", "lanyard") and abs(iw / ih - r) > 0.05):
         k = min(H / ih, W / iw)
         fitted = im.resize((int(iw * k), int(ih * k)), Image.LANCZOS)
         im = Image.new("RGB", (W, H), "#1d1f22")
