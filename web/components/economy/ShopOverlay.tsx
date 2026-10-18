@@ -134,8 +134,8 @@ function Pickups({ transport }: { transport: EconomyTransport }) {
   </HairlineRows>;
 }
 
-export default function ShopOverlay({ open, onClose, title, section, sell = false, transport = httpEconomyTransport, keys, onBought, onSold, viewerFor }: {
-  open: boolean; onClose: () => void; title: string;
+export default function ShopOverlay({ open, onClose, title, section, sell = false, transport = httpEconomyTransport, keys, onBought, onSold, viewerFor, embedded, initialShelf }: {
+  open: boolean; onClose?: () => void; title: string;
   /** The shopkeeper's answer: the game's things, or the club merch; both when absent. */
   section?: ShopSection;
   /** At the counter: the Sell shelf. */
@@ -145,11 +145,15 @@ export default function ShopOverlay({ open, onClose, title, section, sell = fals
   onSold?: (line: string, ok: boolean) => void;
   /** An item's own model for the detail's left pane (the keychain), where it has one; it fills `className`. */
   viewerFor?: (e: ShopEntry, className: string, pictureClassName: string) => ReactNode | null;
+  /** On a page (the portal's shop pages): the same panel in the page, not over it. */
+  embedded?: boolean;
+  /** The shelf it opens on. */
+  initialShelf?: ShopShelf | "pickups";
 }) {
   const [view, setView] = useState<ShopView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
-  const [shelf, setShelf] = useState<ShopShelf | "pickups" | null>(null);
+  const [shelf, setShelf] = useState<ShopShelf | "pickups" | null>(initialShelf ?? null);
   const [picked, setPicked] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const coinsEl = useRef<HTMLSpanElement>(null), gemsEl = useRef<HTMLSpanElement>(null);
@@ -191,7 +195,7 @@ export default function ShopOverlay({ open, onClose, title, section, sell = fals
     } finally { setBusy(null); }
   };
 
-  return <FlatPanel open={open} onClose={onClose} title={title} keys={keys} testId="shop-overlay"
+  return <FlatPanel open={open} onClose={onClose} title={title} keys={keys} testId="shop-overlay" embedded={embedded}
     purse={<Purse coins={view ? view.coins : null} gems={view ? view.gems : null} coinsRef={coinsEl} gemsRef={gemsEl} />}
     rail={<IconRail label="Shelves" value={current} onChange={id => { setShelf(id); setPicked(null); setNote(null); }}
       items={shelves.map(id => ({ id, label: id === "pickups" ? "Your pickups" : SHELF_LABEL[id], icon: SHELF_ICON[id], badge: id === "specials" && view ? view.tabs.specials.length : undefined }))} />}>
