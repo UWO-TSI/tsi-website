@@ -4,7 +4,7 @@ David, 2026-10-18. A real TSI item, the next one for the shop's club merch secti
 
 ## The item
 
-- **Price:** to be set by David.
+- **Price:** 800 gems (David, 2026-10-18).
 - **Strap:** a flat navy ribbon, printed on both sides in white. David's print files are the source for the artwork; the photo is the source for the colour and the hardware.
   - **Outside:** "GENESIS" and "TETHOS" in a bold sans, alternating with the Tethos mark (six figures in a ring), along the whole strap.
   - **Inside:** the quote in a monospace face, "Technology is nothing. What's important is that you have faith in people, that they're basically good and smart, and if you give them tools, they'll do wonderful things with them." – Steve Jobs.
