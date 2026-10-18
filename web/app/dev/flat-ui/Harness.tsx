@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * /dev/flat-ui?surface=bag|chest|crafting|collection|collection-applicant|decorate|wallet (specs/polish/flat-ui.md): one in-game menu over a
- * plain sky, on the in-memory services, for the rollout's before and after shots. Add `collections=demo` (the bag, the
+ * /dev/flat-ui?surface=bag|chest|crafting|collection|collection-applicant|decorate|wallet|missions (specs/polish/flat-ui.md): one in-game
+ * menu over a plain sky, on the in-memory services, for the rollout's before and after shots. The mission board takes
+ * `mission=<id>` (that one under way, `done=1` ready to claim) and `cool=<id>` (that one on its cooldown). Add `collections=demo` (the bag, the
  * chest with `chest=1`, the collection; `bag=<slots>` fills the pockets) or `crafting=demo` (the workbench). The
  * economy's inventory (what you own: the bag's second shelf, the decorate catalogue) is answered here.
  */
@@ -19,6 +20,10 @@ import CollectionBook from "@/components/game/CollectionBook";
 import CraftingSheet from "@/components/game/crafting/Workshop";
 import DecorateSheet from "@/components/game/home/DecorateSheet";
 import { WalletSheet } from "@/components/economy/EconomySheets";
+import MissionBoardSheet from "@/components/game/combat/MissionBoardSheet";
+import { MISSIONS } from "@/lib/game/combat/data";
+import { startMission } from "@/lib/game/combat/missions";
+import { setMission } from "@/lib/game/combat/runtime";
 
 const ME = "00000000-0000-4000-8000-000000000001";
 let routed = false;
@@ -37,6 +42,10 @@ async function routeInventory() {
     await S.buy(m.store, ME, { item_id: id(slug), qty, idempotency_key: `flat-${n++}` }, now);
   }
   await S.equip(m.store, ME, { item_id: id("outfit-sage-overalls"), equipped: true });
+  // The board's cooldowns (none on the in-memory services otherwise).
+  const cool = new URLSearchParams(location.search).get("cool");
+  routeDemoFetch("/api/combat/missions", async path => path === "/api/combat/missions"
+    ? reply({ ok: true, data: MISSIONS.map(m => ({ key: m.id, can_start: m.id !== cool, cooldown_until: m.id === cool ? new Date(Date.now() + 14 * 3_600_000).toISOString() : null })) }, "missions") : null);
   routeDemoFetch("/api/economy/", async (path, body, _url, method) => {
     if (path === "/api/economy/inventory") return reply(await S.getInventory(m.store, ME), "inventory");
     if (path === "/api/economy/equip" && method === "POST") return reply(await S.equip(m.store, ME, body), "equip");
@@ -50,6 +59,8 @@ export default function Harness() {
   useEffect(() => {
     if (search === null) return;
     installCollectionsDemo();
+    const q = new URLSearchParams(search), id = q.get("mission"), def = MISSIONS.find(m => m.id === id);
+    if (def) { const m = startMission(def); setMission(q.get("done") ? { ...m, status: "complete", note: "Done. Claim it at the board." } : m); }
     void routeInventory().then(() => setReady(true));
   }, [search]);
   if (search === null || !ready) return null;
@@ -65,6 +76,7 @@ export default function Harness() {
     {surface === "collection-applicant" && <CollectionBook open onClose={close} collectionScope="applicant" />}
     {surface === "crafting" && <CraftingSheet />}
     {surface === "wallet" && <WalletSheet open onClose={close} />}
+    {surface === "missions" && <MissionBoardSheet open onClose={close} gateNote={null} />}
     {/* Docked at the side as the world docks it (its --hud-* edges). */}
     {surface === "decorate" && <div style={{ position: "fixed", inset: 0, ["--hud-edge" as string]: "16px", ["--hud-side-bottom" as string]: "96px" }}>
       <DecorateSheet indoor selected={q.get("pick") ? { piece: q.get("pick")!, rot: 0 } : null} layout={layout} room={layout.rooms[0]}

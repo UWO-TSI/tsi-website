@@ -18,13 +18,14 @@ import { DEFAULT_CHAPTERS, DEFAULT_GOALS, SEASONAL_GOALS } from "@/lib/progressi
 import { memoryStore } from "@/lib/progression/memoryStore";
 import { advanceChapter, contribute, loadState, sendNote, syncRealActivity } from "@/lib/progression/service";
 import { setProgressionState } from "@/lib/progression/useProgression";
-import { routeDemoFetch } from "@/lib/game/demoFetch";
+import { reply, routeDemoFetch } from "@/lib/game/demoFetch";
 import { DEMO_MEMBER as ME, progressionRoutes } from "@/lib/game/progressionDemo";
 
 const FRIENDS = ["Maya Chen", "Jordan Park", "Priya Shah", "Leo Martin"].map((name, i) => ({ id: `00000000-0000-4000-8000-00000000010${i}`, display_name: name }));
 
 async function demo(): Promise<LettersTransport> {
   const m = memoryStore();
+  const transport = demoTransport(m);
   const now = new Date();
   m.addMember(ME, { tier: 4, firstCatchKey: "fish_dace" }, 2400);
   FRIENDS.forEach((f) => m.addMember(f.id, {}, 5000));
@@ -40,13 +41,26 @@ async function demo(): Promise<LettersTransport> {
   await sendNote(m.store, FRIENDS[1].id, { to: ME, body: "Thanks for helping set up the event yesterday. The cafe fund jumped!" }, now);
   const state = await loadState(m.store, ME, now);
   if (state.ok) setProgressionState(state.data);
-  // Route the sheets' own /api/progression and wallet calls to the same in-memory service.
-  routeDemoFetch("/api/", progressionRoutes(m, ME));
+  // Route the sheets' own /api/progression and wallet calls to the same in-memory service (the journal's letters too).
+  const routes = progressionRoutes(m, ME);
+  routeDemoFetch("/api/", async (path, body, url, method) => {
+    if (path === "/api/progression/letters" && method === "GET") return reply({ ok: true, data: await transport.list() }, "letters");
+    if (path.startsWith("/api/progression/letters/") && method === "PATCH") {
+      const id = path.split("/").pop()!;
+      await (body.action === "report" ? transport.report(id, String(body.reason ?? "")) : transport.markRead(id));
+      return reply({ ok: true, data: true }, "ok");
+    }
+    return routes(path, body, url, method);
+  });
   try {
     localStorage.setItem("tsi.collections.local.v1", JSON.stringify({ fish_dace: 3, fish_pale_chub: 1, flower_tulip: 6, apple: 4 }));
   } catch {
     /* preview only */
   }
+  return transport;
+}
+
+function demoTransport(m: ReturnType<typeof memoryStore>): LettersTransport {
   const names = new Map(FRIENDS.map((f) => [f.id, f.display_name]));
   return {
     list: async () => (await m.store.listLetters(ME, 50)).map((l) => ({ ...l, sender_name: l.sender_id ? (names.get(l.sender_id) ?? "Member") : "HQ", recipient_name: names.get(l.recipient_id) ?? "you" })),

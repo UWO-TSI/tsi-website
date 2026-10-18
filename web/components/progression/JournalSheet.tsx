@@ -5,15 +5,16 @@ import { advance, setHudMuted } from "@/lib/progression/client";
 import { ApiError } from "@/lib/apiClient";
 import type { AdvanceAction } from "@/lib/progression/chapters";
 import { refreshProgression, setProgressionState, useProgression } from "@/lib/progression/useProgression";
-import type { ChapterView } from "@/lib/progression/types";
+import type { ChapterView, GoalProgressView } from "@/lib/progression/types";
 import { onBoard } from "@/lib/progression/seasonal";
+import ClubGoal, { UpNextGoal, isUpNext } from "./ClubGoal";
 import ContributeSheet from "./ContributeSheet";
-import GoalCard from "./GoalCard";
 import { LettersBody } from "./LettersSheet";
 import ProgressionPanel, { type ProgressionSheetProps } from "./ProgressionPanel";
-import { Empty, SignInText, Tabs, Toggle } from "@/components/gui";
-import { Flag } from "lucide-react";
-import s from "./progression.module.css";
+import { Button, Empty, Progress, SignInText, TabPanel, Tabs, Toggle } from "@/components/gui";
+import { Fold, Folds, QuietButton, Section } from "@/components/gui/cream";
+import { BookOpen, Check, Flag, Lock } from "lucide-react";
+import m from "./menus.module.css";
 
 type Tab = "quests" | "goals" | "letters";
 
@@ -40,7 +41,11 @@ export function JournalBody({ initialTab = "quests" }: { initialTab?: Tab }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [contributeSlug, setContributeSlug] = useState<string | null>(null);
+  // The chapter that's open: the one under way until you pick another (null: all closed).
+  const [picked, setPicked] = useState<string | null | undefined>(undefined);
   const preview = state.source === "defaults";
+  const current = state.chapters.find((c) => c.status === "active" || c.status === "ready") ?? null;
+  const openSlug = picked === undefined ? current?.slug ?? null : picked;
 
   const act = async (slug: string, action: AdvanceAction) => {
     setBusy(`${slug}:${action}`);
@@ -64,82 +69,87 @@ export function JournalBody({ initialTab = "quests" }: { initialTab?: Tab }) {
     }
   };
 
+  const board = state.goals.filter(onBoard);
+  const open = board.filter((g) => !isUpNext(g)), next = board.filter(isUpNext);
   return (
-    <div>
-      <Tabs label="Journal sections" value={tab} onChange={setTab} className={s.tabsRow}
+    <div className={m.menu}>
+      <Tabs label="Journal sections" value={tab} onChange={setTab} className={m.tabs}
         tabs={[{ id: "quests", label: "Quests" }, { id: "goals", label: "Club goals" }, { id: "letters", label: "Letters", badge: state.unread_letters }]} />
-      {preview ? <p className={`${s.note} ${s.info}`}><SignInText text="Preview: sign in to save quest progress." /></p> : null}
-      {message ? <p role="status" className={`${s.note} ${message.kind === "ok" ? s.ok : s.err}`}>{message.text}</p> : null}
+      {preview ? <p className={m.note}><SignInText text="Preview: sign in to save quest progress." /></p> : null}
+      {message ? <p role="status" className={m.note} data-tone={message.kind}>{message.text}</p> : null}
 
-      {tab === "quests" ? (
-        <div>
-          {state.objective ? (
-            <p className={s.muted} style={{ marginBottom: 10 }}>Now: <span className={s.current}>{state.objective.text}</span></p>
-          ) : null}
-          {state.chapters.map((c) => (
-            <article key={c.slug} className={`${s.card} ${c.status === "locked" ? s.locked : ""}`} aria-label={`Chapter ${c.position}: ${c.title}`}>
-              <div className={s.row}>
-                <div>
-                  <div className={s.eyebrow}>Chapter {c.position}</div>
-                  <h3>{c.title}</h3>
-                </div>
-                <span className={s.status} data-s={c.status}>{STATUS_LABEL[c.status]}</span>
-              </div>
-              <p className={s.muted}>{c.status === "locked" ? "Finish the chapter before this one to begin." : c.summary}</p>
-              {c.status !== "locked" ? (
-                <ul className={s.steps}>
-                  {c.steps.map((step) => (
-                    <li key={step.key} className={s.step} data-done={step.done}>
-                      <span className={s.check} aria-hidden>{step.done ? "✓" : ""}</span>
-                      <span>
-                        {step.label}
-                        {step.hint && !step.done ? <span className={s.hint}>{step.hint}</span> : null}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              {c.requirement === "club_goal" && c.goal_slug && (c.status === "active" || c.status === "ready") ? (
-                (() => {
-                  const g = state.goals.find((x) => x.slug === c.goal_slug);
-                  return g ? <p className={s.muted}>Club progress {g.percent}% · your share {g.my_points.toLocaleString()} pts</p> : null;
-                })()
-              ) : null}
-              <div className={s.actions}>
-                {c.requirement === "club_goal" && c.status === "active" && c.goal_slug ? (
-                  <button className={s.btn} onClick={() => setContributeSlug(c.goal_slug)}>Contribute</button>
-                ) : null}
-                {chapterActions(c).map((a) => (
-                  <button key={a.action} className={a.action === "skip" ? s.ghost : s.btn} disabled={busy !== null || preview} onClick={() => act(c.slug, a.action)}>
-                    {busy === `${c.slug}:${a.action}` ? "…" : a.label}
-                  </button>
-                ))}
-              </div>
-            </article>
-          ))}
-          <Toggle checked={!state.hud_muted} onChange={() => void toggleMute()} disabled={preview}>Show the current objective under the minimap</Toggle>
-        </div>
-      ) : null}
+      <TabPanel id={tab}>
+        {tab === "quests" ? <>
+          <Folds label="Chapters">
+            {state.chapters.map((c) => {
+              const locked = c.status === "locked", done = c.status === "completed" || c.status === "skipped";
+              return <Fold key={c.slug} testId="chapter" label={`Chapter ${c.position}: ${c.title}, ${STATUS_LABEL[c.status]}`}
+                state={done ? "done" : locked ? "locked" : "now"}
+                lead={done ? <Check size={18} strokeWidth={3} /> : locked ? <Lock size={15} /> : c.position}
+                title={c.title} line={`Chapter ${c.position}`}
+                meta={locked ? null : <span className={m.status} data-s={c.status}>{STATUS_LABEL[c.status]}</span>}
+                open={openSlug === c.slug} onToggle={locked ? undefined : () => setPicked(openSlug === c.slug ? null : c.slug)}>
+                <ChapterPage c={c} goal={c.goal_slug ? state.goals.find((g) => g.slug === c.goal_slug) ?? null : null}
+                  now={state.objective?.chapter_slug === c.slug ? state.objective.step_key : null}
+                  busy={busy} preview={preview} onAct={(a) => void act(c.slug, a)} onContribute={setContributeSlug} />
+              </Fold>;
+            })}
+          </Folds>
+          <div className={m.foot}>
+            <Toggle checked={!state.hud_muted} onChange={() => void toggleMute()} disabled={preview}>Show the current objective under the minimap</Toggle>
+          </div>
+        </> : null}
 
-      {tab === "goals" ? (
-        <div>
-          {state.goals.length === 0 ? <Empty icon={<Flag size={32} />} title="No club goals right now">The next one goes up on the notice board.</Empty> : null}
-          {state.goals.filter(onBoard).map((g) => <GoalCard key={g.slug} goal={g} waitingOnTitle={state.goals.find((x) => x.slug === g.locked_by)?.title} onContribute={setContributeSlug} />)}
-          <p className={s.muted}>Real club activity counts most: QR check-ins at events and completed bounties are credited automatically.</p>
-        </div>
-      ) : null}
+        {tab === "goals" ? <>
+          {board.length === 0 ? <Empty icon={<Flag size={32} />} title="No club goals right now">The next one goes up on the notice board.</Empty> : null}
+          <div className={m.goals}>{open.map((g) => <ClubGoal key={g.slug} goal={g} onContribute={setContributeSlug} />)}</div>
+          {next.length ? <Section title="Up next" className={m.after}>
+            {next.map((g) => <UpNextGoal key={g.slug} goal={g} waitingOnTitle={state.goals.find((x) => x.slug === g.locked_by)?.title} />)}
+          </Section> : null}
+          <p className={`${m.aside} ${m.after}`}>Real club activity counts most: QR check-ins at events and completed bounties are credited automatically.</p>
+        </> : null}
 
-      {tab === "letters" ? <LettersBody /> : null}
+        {tab === "letters" ? <LettersBody /> : null}
+      </TabPanel>
 
       <ContributeSheet open={contributeSlug !== null} goalSlug={contributeSlug ?? undefined} onClose={() => setContributeSlug(null)} />
     </div>
   );
 }
 
+/** An open chapter: what it's about, its steps (the one to do now highlighted), and its one action. */
+function ChapterPage({ c, goal, now, busy, preview, onAct, onContribute }: {
+  c: ChapterView; goal: GoalProgressView | null; now: string | null; busy: string | null; preview: boolean;
+  onAct: (a: AdvanceAction) => void; onContribute: (slug: string) => void;
+}) {
+  const actions = chapterActions(c), skip = actions.find((a) => a.action === "skip"), moves = actions.filter((a) => a.action !== "skip");
+  const contribute = c.requirement === "club_goal" && c.status === "active" && c.goal_slug ? c.goal_slug : null;
+  const label = (a: { action: AdvanceAction; label: string }) => (busy === `${c.slug}:${a.action}` ? "One moment…" : a.label);
+  return <>
+    <p className={m.text}>{c.summary}</p>
+    <ul className={m.steps}>
+      {c.steps.map((step) => <li key={step.key} className={m.step} data-done={step.done} data-now={now === step.key || undefined}>
+        <span className={m.check} aria-hidden="true">{step.done ? <Check size={13} strokeWidth={3.5} /> : null}</span>
+        <span className={m.stepText}>
+          <span className={m.stepLabel}>{step.label}{now === step.key ? <span className={m.srOnly}> (do this next)</span> : null}</span>
+          {step.hint && !step.done ? <span className={m.hint}>{step.hint}</span> : null}
+        </span>
+      </li>)}
+    </ul>
+    {goal && (c.status === "active" || c.status === "ready") ? <Progress value={goal.percent} max={100} kind="xp" showLabel label="Club progress" className={m.chapterBar}
+      valueText={`${goal.percent}% · your share ${goal.my_points.toLocaleString()} pts`} /> : null}
+    {contribute || moves.length || skip ? <div className={m.actions}>
+      {contribute ? <Button onClick={() => onContribute(contribute)}>Contribute</Button> : null}
+      {moves.map((a, i) => <Button key={a.action} variant={i === 0 && !contribute ? "primary" : "secondary"} disabled={busy !== null || preview} onClick={() => onAct(a.action)}>{label(a)}</Button>)}
+      {skip ? <QuietButton className={m.end} disabled={busy !== null || preview} onClick={() => onAct("skip")}>{label(skip)}</QuietButton> : null}
+    </div> : null}
+  </>;
+}
+
 /** `keys`: J (fixed), which closes the journal too. */
 export default function JournalSheet({ open, onClose, initialTab, keys }: ProgressionSheetProps & { initialTab?: Tab; keys?: string }) {
   return (
-    <ProgressionPanel open={open} onClose={onClose} title="Journal" wide keys={keys}>
+    <ProgressionPanel open={open} onClose={onClose} title="Journal" wide keys={keys} icon={<BookOpen size={20} />}>
       <JournalBody initialTab={initialTab} />
     </ProgressionPanel>
   );

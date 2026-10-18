@@ -143,3 +143,34 @@ Evidence: `specs/evidence/flat-ui/round2-bag-collection.webp` (before and after,
 - **The bag:** the rail filters the pockets: everything, fish and sea creatures, bugs, forage and fruit, materials (only those the pockets hold), then tools, clothes and furniture. A click opens a small panel beside the grid (`SidePanel` in `WithSide`): a small picture, the name, rarity and kind, what to know (in your bag, sells for, size, museum, used in) and the actions (pin to the wheel across the top, then lock and drop). Clothes and furniture show the same panel, with Equip where the slot allows it. The grid stays in view; on a phone the panel sits at the foot of the screen. A filter shows its stacks only, so rearranging works on "everything".
 - **The collection:** hovering a tile (a long press on a phone, or keyboard focus) shows a small card: the name and rarity, caught, the record, where and when, now, the museum. A click opens the same side panel with those notes, the one-liner, and pin to the wheel when it's in the bag and can be held.
 - **No stage:** the bag and the collection have no 3D stage, so no fish model shows anywhere (the shop sells none, and the workbench makes none).
+
+### Round 2, step 7: the first four menus, cleaner, in the cream palette (game/flat-ui, 2026-10-18)
+
+Evidence: `specs/evidence/flat-ui/round2-step7-first4.webp` (before and after, desktop and phone). Waiting on David's OK on the direction before the rest follow.
+
+- **The palette:** the in-game sheets are cream again (the flat variant is off `IslandSheet`, `ProgressionPanel` and the game's own sheets). The flat look stays on the shop, the bag, the chest, the workbench, the collection and the furniture catalogue.
+- **The pieces** (`components/gui/cream`), for this and the rest:
+  - rows that open in place (`Folds`, `Fold`), with the open row the one piece of paper on the page and its one action;
+  - sections under a quiet heading;
+  - second actions as quiet underlined text;
+  - a back link.
+- **Journal and quests:**
+  - the chapters are rows, and the one under way is open: its steps, the step to do now under the kit's highlighter, and its one action;
+  - skipping is a quiet link, and locked chapters are plain rows;
+  - a club goal has one bar (the monument's stages are its quarters, so the second bar went), its points and percent, and one line of who chipped in and your share;
+  - a goal waiting on another is one line under "Up next".
+- **The ruins mission board:**
+  - the mission under way is on top, with its progress and its one action (Claim rewards, or Abandon as a quiet link);
+  - the ten missions are quiet rows by area, each with a kind icon, difficulty pips and when it's back;
+  - the one you open shows its story, its rewards and Accept, so there's no wall of Accept buttons.
+- **The notice board:** notices pinned up on paper:
+  - the club goal is the big one, with Contribute;
+  - your next step is a sticky note (first on a phone);
+  - what opens next is one line;
+  - HQ's notices are slips you open to read.
+- **The mailbox, more subtle:**
+  - quiet rows: an envelope, who it's from and the subject, a line of the letter, and the date;
+  - unread rows are bold with a small coral dot, with no yellow fill;
+  - "Write a note" is a quiet button;
+  - an opened letter is paper, with Reply, and Report as a quiet link.
+- **The portal pages** `/student/dashboard/journal` and `/letters` render the same bodies, so they follow.

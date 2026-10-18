@@ -1,0 +1,37 @@
+/* The ruins mission board (MissionBoardSheet), cleaner (specs/polish/flat-ui.md round 2, step 7): the cream palette,
+   the mission under way on top, the rest as quiet rows by area, one opened at a time with its Accept. */
+
+.note { margin: 0 0 14px; padding: 10px 14px; border-radius: 14px; background: var(--gui-paper-warm); color: var(--gui-ink-2); font: 700 var(--gui-text-sm)/1.45 var(--gui-font); }
+.lead { margin: 0 0 22px; color: var(--gui-muted); font: 600 var(--gui-text-md)/1.5 var(--gui-font); }
+.kicker { margin: 0 0 2px; color: var(--gui-muted); font: 800 var(--gui-text-xs)/1.3 var(--gui-font); letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* The mission under way: the butter of a chosen thing, its progress and its one action. */
+.now { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 16px; margin: 0 0 26px; padding: 18px 20px; border-radius: var(--gui-r-card); background: var(--gui-butter); box-shadow: var(--gui-shadow-sm); }
+.now[data-status="failed"] { background: var(--gui-paper-warm); }
+.nowIcon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--gui-paper-hi); color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-sm); }
+.nowText { display: grid; gap: 4px; min-width: 0; }
+.nowTitle { margin: 0; color: var(--gui-ink-strong); font: 800 var(--gui-text-lg)/1.25 var(--gui-font); }
+.nowBar { margin: 6px 0 2px; max-width: 360px; }
+.nowNote { margin: 0; color: var(--gui-ink-2); font: 700 var(--gui-text-sm)/1.4 var(--gui-font); }
+.nowActions { display: flex; align-items: center; gap: 8px; }
+
+.zone { margin-top: 0; }
+.zone + .zone { margin-top: 26px; }
+.pips { display: inline-flex; gap: 3px; }
+.pips i { width: 7px; height: 7px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--gui-paper-line); }
+.pips i[data-on] { background: var(--gui-wood-light); box-shadow: none; }
+.tag { padding: 5px 10px; border-radius: var(--gui-r-pill); background: var(--gui-butter); color: var(--gui-ink-strong); font: 800 var(--gui-text-xs)/1 var(--gui-font); }
+.cool { color: var(--gui-muted); font: 700 var(--gui-text-xs)/1 var(--gui-font); }
+.blurb { max-width: 60ch; margin: 0 0 14px; color: var(--gui-ink-2); font: 600 var(--gui-text-md)/1.55 var(--gui-font); }
+.rewards { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.rewards li { display: inline-flex; align-items: center; gap: 5px; min-height: 30px; padding: 0 12px; border-radius: var(--gui-r-pill); background: var(--gui-paper-warm); color: var(--gui-ink-2); font: 700 var(--gui-text-sm)/1 var(--gui-font); }
+.rewards b { color: var(--gui-ink-strong); font-weight: 800; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 18px; }
+.aside { color: var(--gui-muted); font: 600 var(--gui-text-sm)/1.45 var(--gui-font); }
+
+@media (max-width: 560px) {
+  .now { grid-template-columns: auto minmax(0, 1fr); padding: 16px; }
+  .nowActions { grid-column: 1 / -1; justify-content: flex-start; }
+  .lead { font-size: var(--gui-text-sm); }
+}
+:global(html[data-contrast="high"]) .now { background: #ffffff; box-shadow: inset 0 0 0 2px #000000; }

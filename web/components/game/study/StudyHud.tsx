@@ -102,7 +102,7 @@ function Hud({ transport }: { transport?: StudyTransport }) {
       ? <a className={world.interact} href={signIn}>Sign in to study here</a>
       : <button className={world.interact} onClick={act} disabled={study.busy}><kbd>E</kbd>{near === "board" ? "Read the study board" : session ? "Sit back down" : `Sit · ${table?.label ?? "Table"}`}</button>)}
     {/* Seated: the start card is a non-modal sheet beside you (the world stays bright); Escape, like its X, leaves the seat. */}
-    <Sheet open={session?.phase === "seated"} onClose={() => { if (!study.busy) void study.end(); }} modal={false} size="sm" title="Start studying" variant="flat"
+    <Sheet open={session?.phase === "seated"} onClose={() => { if (!study.busy) void study.end(); }} modal={false} size="sm" title="Start studying"
       className={s.startSheet} bodyClassName={s.startBody} testId="study-setup">
       <Setup study={study} />
     </Sheet>

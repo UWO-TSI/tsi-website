@@ -10,10 +10,13 @@ export interface ProgressionSheetProps {
 
 /**
  * The frame shared by the Journal / Contribute / Letters / Notice / wallet sheets: the GUI sheet's one dialog frame, in
- * the flat variant (the game's menus, specs/polish/flat-ui.md step 7). The portal's pages use the bodies, not this.
+ * the cream palette (David, flat UI round 2). The portal's pages use the bodies, not this. `icon` and `eyebrow` go in
+ * its header.
  */
-export default function ProgressionPanel({ open, onClose, title, wide, keys, children }: ProgressionSheetProps & { title: string; wide?: boolean; keys?: string | readonly string[]; children: ReactNode }) {
-  return <Sheet open={open} onClose={onClose} title={title} size={wide ? "lg" : "md"} keys={keys} testId="progression-sheet" variant="flat">
+export default function ProgressionPanel({ open, onClose, title, wide, keys, icon, eyebrow, children }: ProgressionSheetProps & {
+  title: string; wide?: boolean; keys?: string | readonly string[]; icon?: ReactNode; eyebrow?: ReactNode; children: ReactNode;
+}) {
+  return <Sheet open={open} onClose={onClose} title={title} size={wide ? "lg" : "md"} keys={keys} icon={icon} eyebrow={eyebrow} testId="progression-sheet">
     <div data-progression-sheet>{children}</div>
   </Sheet>;
 }

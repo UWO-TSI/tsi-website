@@ -116,7 +116,7 @@ export default function PlayerCard({ children }: { children?: (t: CardTarget) =>
   };
 
   return <>
-    <Sheet open={!!t && !confirmBlock} onClose={close} size="sm" testId="player-card" variant="flat" title={t?.name ?? ""}
+    <Sheet open={!!t && !confirmBlock} onClose={close} size="sm" testId="player-card" title={t?.name ?? ""}
       eyebrow={<span className={s.eyebrow}>{member && <span className={s.dot} role="img" aria-label="TSI member" title="TSI member" />}{member ? "TSI member" : "Islander"}{seen && seen.level > 0 ? ` · Lv ${seen.level}` : ""}</span>}>
       {t && (t.uid === me ? <p className={s.lead}>That&apos;s you!</p> : view === "report" ? <Report t={t} onDone={() => setView("main")} /> : <>
         <FriendRow t={t} />
