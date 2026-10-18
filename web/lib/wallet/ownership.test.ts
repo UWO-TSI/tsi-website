@@ -167,7 +167,7 @@ describe("wardrobe batch 2 (David's modes and prices, specs/wardrobe/batch2-pric
 
   it("sells each item exactly as priced: coins in price_coins, Gems in tc_price (price_gems); free and skipped ones unsold", () => {
     expect(priced).toHaveLength(Object.values(BATCH2_PRICES).filter((x) => x.mode !== "skip").length);
-    expect(priced).toHaveLength(33);
+    expect(priced).toHaveLength(34);
     for (const { key, ref, category } of priced) {
       const { mode, price } = BATCH2_PRICES[key];
       const rows = rowOf(ref);
@@ -193,21 +193,21 @@ describe("wardrobe batch 2 (David's modes and prices, specs/wardrobe/batch2-pric
 });
 
 describe("look save with wardrobe batch 2 (PATCH /api/profile: priced items are owned, free ones anyone's)", () => {
-  const cowboy = () => wear(wear(DEFAULT_LOOK, "back", "hair_goggle_ushanka"), "accessory", "acc_cowboy_hat");
+  const cowboy = () => wear(wear(DEFAULT_LOOK, "back", "hair_curly_pigtails"), "accessory", "acc_cowboy_hat");
   const vampire = { eyes: "caret_hash", mouth: "fangs", extras: ["stitches"] };
 
   it("refuses a priced hairstyle, accessory or whole face's part the member doesn't own, naming each", async () => {
     const res = await saveLook(cowboy());
     expect(res.status).toBe(403);
-    expect((await res.json()).missing.sort()).toEqual(["acc_cowboy_hat", "hair_goggle_ushanka"]);
+    expect((await res.json()).missing.sort()).toEqual(["acc_cowboy_hat", "hair_curly_pigtails"]);
     // a whole face's eyes alone, or its accent mixed with free parts, needs that face
     const eyes = await saveLook({ ...DEFAULT_LOOK, eyes: "caret_hash" });
     expect(await eyes.json()).toMatchObject({ code: "not_owned", missing: ["face:vampire"] });
     const accent = await saveLook({ ...DEFAULT_LOOK, extras: ["stitches", "blush"] });
     expect(await accent.json()).toMatchObject({ code: "not_owned", missing: ["face:vampire"] });
-    // row 314: #22's ushanka and goggles need hair #22
+    // round 2: #22's ushanka and goggles are their own row
     const hat = await saveLook(wear(DEFAULT_LOOK, "accessory", "acc_ushanka_goggles"));
-    expect(await hat.json()).toMatchObject({ code: "not_owned", missing: ["hair_goggle_ushanka"] });
+    expect(await hat.json()).toMatchObject({ code: "not_owned", missing: ["acc_ushanka_goggles"] });
     expect(mock.adminWrites).toEqual([]);
   });
   it("saves the free ones with nothing owned: glasses #06, faces #21 and #22", async () => {
@@ -218,18 +218,18 @@ describe("look save with wardrobe batch 2 (PATCH /api/profile: priced items are 
   });
   it("saves them once bought, in coins or in Gems; one whole face unlocks all its parts", async () => {
     eco.fund(A, 1000, 400);
-    for (const s of ["wear-hair-goggle-ushanka", "wear-acc-cowboy-hat", "face-vampire"]) {
+    for (const s of ["wear-hair-curly-pigtails", "wear-acc-cowboy-hat", "face-vampire"]) {
       expect(await buy(eco.store, A, { item_id: slug(s), qty: 1, idempotency_key: `buy-${s}` }, noon), s).toMatchObject({ ok: true });
     }
     // Gems at David's price; coins at it, or a coin row's daily-special discount
-    expect(eco.gemsOf(A)).toBe(400 - 300);
+    expect(eco.gemsOf(A)).toBe(400 - 200);
     expect(eco.coinsOf(A)).toBeGreaterThanOrEqual(1000 - 150 - 250);
     expect(eco.coinsOf(A)).toBeLessThan(1000 - (150 + 250) / 2);
     expect((await saveLook(cowboy())).status).toBe(200);
     expect((await saveLook({ ...cowboy(), ...vampire })).status).toBe(200);
-    expect(mock.adminWrites.at(-1)).toMatchObject({ avatar_config: { look: { back: "hair_goggle_ushanka", eyes: "caret_hash", mouth: "fangs", extras: ["stitches"], acc: { head: "acc_cowboy_hat" } } } });
-    // row 314: owning hair #22 grants its ushanka and goggles
-    expect((await saveLook(wear(cowboy(), "accessory", "acc_ushanka_goggles"))).status).toBe(200);
+    expect(mock.adminWrites.at(-1)).toMatchObject({ avatar_config: { look: { back: "hair_curly_pigtails", eyes: "caret_hash", mouth: "fangs", extras: ["stitches"], acc: { head: "acc_cowboy_hat" } } } });
+    // round 2: the ushanka and goggles are sold alone, never granted
+    expect(await (await saveLook(wear(cowboy(), "accessory", "acc_ushanka_goggles"))).json()).toMatchObject({ code: "not_owned", missing: ["acc_ushanka_goggles"] });
     // another face's part still needs its own face
     expect(await (await saveLook({ ...DEFAULT_LOOK, ...vampire, eyes: "cat_wide" })).json()).toMatchObject({ code: "not_owned", missing: ["face:silly_cat"] });
   });

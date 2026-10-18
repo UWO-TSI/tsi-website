@@ -1,5 +1,5 @@
 {
- "source": "David's picks in the Tethos New Wardrobe Pricing page, final 2026-10-15; Gem prices x10 (David, 2026-10-17: 5 -> 50, 10 -> 100, 20 -> 200, hair #22 30 -> 300); #12 and #13 deleted (David, 2026-10-17: duplicates of #10 and #07)",
+ "source": "David's picks in the Tethos New Wardrobe Pricing page, final 2026-10-15; Gem prices x10 (David, 2026-10-17: 5 -> 50, 10 -> 100, 20 -> 200, hair #22 30 -> 300); #12 and #13 deleted (David, 2026-10-17: duplicates of #10 and #07); round 2 (David, 2026-10-17): #22 is its ushanka and goggles alone (the hair removed) at 200 Gems, and #07 comes in silver too (acc-07s) at #07's price",
  "items": {
   "acc-01": {
    "mode": "coins",
@@ -26,6 +26,10 @@
    "price": null
   },
   "acc-07": {
+   "mode": "coins",
+   "price": 50
+  },
+  "acc-07s": {
    "mode": "coins",
    "price": 50
   },
@@ -115,7 +119,7 @@
   },
   "hair-22": {
    "mode": "gems",
-   "price": 300
+   "price": 200
   },
   "hair-23": {
    "mode": "coins",

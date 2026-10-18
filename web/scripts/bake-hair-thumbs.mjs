@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Bake the creator's hair tiles (head-v10, row 311): /lab/hairthumbs draws every whole hairstyle with the creator's own
- * thumbnail baker in a neutral colour; this writes them to public/assets/characters/v6/hair/thumbs/<id>.webp. Headless
+ * thumbnail baker in its own colours; this writes them to public/assets/characters/v6/hair/thumbs/<id>.webp. Headless
  * Chromium, muted. Re-run after a hairstyle changes (art/characters/hair/import_hair.py).
  *
  *   PORT=3180 node web/scripts/bake-hair-thumbs.mjs        (a dev server on PORT with the Supabase env blanked)
@@ -18,7 +18,7 @@ const out = join(web, "public/assets/characters/v6/hair/thumbs");
 // Wardrobe batch 2: a hairstyle David priced is a shop row whose icon (lib/icons/keys.ts iconKey) is its creator tile.
 const prices = JSON.parse(readFileSync(join(web, "data/characters/batch2-pricing.json"), "utf8")).items;
 const sold = new Set(JSON.parse(readFileSync(join(web, "data/characters/character_catalog.json"), "utf8")).hair
-  .filter(p => ["coins", "gems"].includes(prices[p.key]?.mode)).map(p => p.id));
+  .filter(p => p.full && ["coins", "gems"].includes(prices[p.key]?.mode)).map(p => p.id));   // round 2: #22's hat is an accessory icon
 mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ headless: true, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"] });
 const page = await browser.newPage({ viewport: { width: 1000, height: 800 }, deviceScaleFactor: 1 });

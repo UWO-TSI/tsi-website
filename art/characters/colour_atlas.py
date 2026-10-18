@@ -28,6 +28,7 @@ TILES = {
     "acc_woven_hat": 256, "acc_monkey_ears": 256,
     "acc_green_sprout": 128, "acc_thin_glasses": 128, "acc_half_rim_glasses": 128, "acc_square_shades": 128,
     "acc_gold_rimless_shades": 128, "acc_apple_stem": 128,
+    "acc_half_rim_glasses_silver": 128,          # round 2: last, so no earlier tile moves
 }
 
 

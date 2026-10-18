@@ -25,12 +25,13 @@ export const LOD2_ROOT = `${CHARACTER_ROOT}lod2/`;
 export const FACE_ATLAS_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas}`, world: `${CHARACTER_ROOT}base/${faceV7.atlas_world}` };
 /** Round 2 (David, 2026-10-17): every mapped hairstyle's own source texture, one cell a piece (art/characters/hair/
  * import_hair.py natural_map): RGB as drawn in Roblox, alpha its recolour channel (1 the hair's colour, 2/3 its second, 1/3
- * fixed). A picked colour is a hue and saturation shift of it (hairColour.ts, Character.tsx). */
-export const HAIR_MAPS_URL = `${CHARACTER_ROOT}${catalog.hairMaps.atlas}`;
+ * fixed), at 512 px a cell (the creator) and its half-size copy (the world, as the face atlas). A picked colour is a hue
+ * and saturation shift of it (hairColour.ts, Character.tsx). */
+export const HAIR_MAPS_URLS = { creator: `${CHARACTER_ROOT}${catalog.hairMaps.atlas}`, world: `${CHARACTER_ROOT}${catalog.hairMaps.atlas_world}` };
 /** Its second page (David's 19 faces, face_set_305.py), loaded only for a look that wears one of them. */
 export const FACE_ATLAS2_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas2}`, world: `${CHARACTER_ROOT}base/${faceV7.atlas2_world}` };
-/** head-v10 (row 311): each whole hairstyle's creator tile, baked once at build time (scripts/bake-hair-thumbs.mjs) in a
- * neutral colour on the default head: the tiles never redraw when the colour changes, and show at once. */
+/** head-v10 (row 311): each whole hairstyle's creator tile, baked once at build time (scripts/bake-hair-thumbs.mjs) in its
+ * own colours (round 2) on the default head: the tiles never redraw when the colour changes, and show at once. */
 export const HAIR_THUMB_URL = (id: string) => `${CHARACTER_ROOT}hair/thumbs/${id}.webp`;
 /** Wardrobe batch 2: the fixed-colour atlas (art/characters/colour_atlas.py): David's Roblox accessories and #22's hat keep
  * their own textures. A vertex whose u is 2 or more draws the texel at (u - 2, v), never tinted (Character.tsx). */
@@ -47,7 +48,7 @@ export interface CatalogPart {
   hidesBackHair: boolean; hides: string[]; variantOf?: string; group?: AccGroup;
   /** A whole hairstyle in the back slot (head fit): the bangs are not worn with it. */
   full?: boolean;
-  /** Its cell in the hair texture atlas (HAIR_MAPS_URL) and each recolour channel's median (OKLCh): `a` the hair's colour,
+  /** Its cell in the hair texture atlas (HAIR_MAPS_URLS) and each recolour channel's median (OKLCh): `a` the hair's colour,
    * `b` a two-colour hair's second; `fixed`: some of it (a cap, a visor) is never recoloured. */
   map?: { cell: number; natural: { a?: Oklch; b?: Oklch }; fixed?: boolean };
   /** A two-tone style's second colour: a hair palette index, or "skin" (a fade to the skin), unless the look picks one;

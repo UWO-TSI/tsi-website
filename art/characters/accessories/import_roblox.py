@@ -120,6 +120,18 @@ def pixels(img):
     return np.array(img.pixels[:], np.float32).reshape(h, w, 4)[::-1].copy()       # top row first, sRGB values
 
 
+SILVER = (np.array([0.68, 0.70, 0.73]), np.array([0.93, 0.94, 0.95]))     # sRGB: the dark and light ends of silver
+
+
+def silver(px):
+    """A texture recoloured silver by its lightness (round 2: #07's silver version): black frames become a mid silver,
+    their highlights a near white; alpha kept."""
+    out = px.copy()
+    lum = px[..., :3] @ np.array([0.2126, 0.7152, 0.0722])
+    out[..., :3] = SILVER[0] + (SILVER[1] - SILVER[0]) * lum[..., None]
+    return out
+
+
 # ================================================================ 2. place
 def item_scale(e):
     """The mesh scale: Roblox's (mesh_scale) times the entry's override.scale (David, 2026-10-17: the hats bigger, so they
@@ -482,6 +494,8 @@ def main():
         if RENDER:
             render(RENDER, ob, e, head, body, img)
         px = pixels(img)
+        if e.get("texture") == "silver":
+            px = silver(px)
         hh, ww = px.shape[:2]
         box = colour_atlas.crop_of(ob.data, ww, hh)
         colour_atlas.claim(e["id"], px[box[1]:box[3], box[0]:box[2]])

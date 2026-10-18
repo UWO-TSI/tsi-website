@@ -95,6 +95,10 @@
   "tris": 422,
   "lod1": 250
  },
+ "accessories/roblox/acc_half_rim_glasses_silver.glb": {
+  "tris": 422,
+  "lod1": 250
+ },
  "accessories/roblox/acc_monkey_ears.glb": {
   "tris": 844,
   "lod1": 379
@@ -161,19 +165,19 @@
  },
  "hair/full/hair_curly_pigtails.glb": {
   "tris": 4208,
-  "lod1": 2144
+  "lod1": 2143
  },
  "hair/full/hair_double_buns.glb": {
   "tris": 4368,
-  "lod1": 2223
+  "lod1": 2224
  },
  "hair/full/hair_dreads_cap.glb": {
   "tris": 4094,
-  "lod1": 2087
+  "lod1": 2086
  },
  "hair/full/hair_emo_layers.glb": {
-  "tris": 4393,
-  "lod1": 2236
+  "tris": 4385,
+  "lod1": 2232
  },
  "hair/full/hair_fluffy_boy.glb": {
   "tris": 1614,
@@ -185,7 +189,7 @@
  },
  "hair/full/hair_layered_shag.glb": {
   "tris": 4333,
-  "lod1": 2206
+  "lod1": 2205
  },
  "hair/full/hair_long_pigtails.glb": {
   "tris": 3316,
@@ -193,7 +197,7 @@
  },
  "hair/full/hair_long_scruffy.glb": {
   "tris": 4350,
-  "lod1": 2215
+  "lod1": 2214
  },
  "hair/full/hair_messy_boy.glb": {
   "tris": 1021,
@@ -209,15 +213,15 @@
  },
  "hair/full/hair_messy_wolf.glb": {
   "tris": 4381,
-  "lod1": 2229
+  "lod1": 2230
  },
  "hair/full/hair_ribbon_bob.glb": {
   "tris": 4291,
-  "lod1": 2185
+  "lod1": 2184
  },
  "hair/full/hair_short_tufts.glb": {
   "tris": 4370,
-  "lod1": 2225
+  "lod1": 2224
  },
  "hair/full/hair_swept_fringe.glb": {
   "tris": 4363,
@@ -225,7 +229,7 @@
  },
  "hair/full/hair_visor_messy.glb": {
   "tris": 2223,
-  "lod1": 1150
+  "lod1": 1151
  },
  "hair/full/hair_vkei.glb": {
   "tris": 3797,
@@ -237,15 +241,15 @@
  },
  "hair/full/hair_wavy_half_up.glb": {
   "tris": 4403,
-  "lod1": 2241
+  "lod1": 2240
  },
  "hair/full/hair_windy_bob.glb": {
   "tris": 4403,
-  "lod1": 2241
+  "lod1": 2240
  },
  "hair/full/hair_wispy_ponytail.glb": {
   "tris": 4238,
-  "lod1": 2158
+  "lod1": 2159
  },
  "outfits/bottom/bottom_joggers.glb": {
   "tris": 314,

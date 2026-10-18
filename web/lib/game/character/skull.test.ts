@@ -61,7 +61,7 @@ describe("the shared skull", () => {
     const data = JSON.parse(readFileSync(join(web, "../art/characters/hair/roblox_attachments.json"), "utf8")) as {
       hairs: { id: string; asset_id: number; position: number[]; orientation: number[]; mesh_scale: number[]; provisional: boolean }[] };
     const roblox = PARTS.filter(p => p.roblox && p.full);
-    expect(roblox.length).toBe(27);   // 21, then wardrobe batch 2's six
+    expect(roblox.length).toBe(26);   // 21, then wardrobe batch 2's five (#22 is its hat alone)
     const byId = new Map(data.hairs.map(h => [h.id, h]));
     for (const p of roblox) {
       const h = byId.get(p.id);
@@ -81,7 +81,7 @@ describe("the shared skull", () => {
     type Entry = { id: string; key: string; attachment: string; position: number[]; orientation: number[]; mesh_scale: number[]; provisional: boolean; override?: { scale?: number }; coversHair?: boolean };
     const data = JSON.parse(readFileSync(join(web, "../art/characters/accessories/roblox_attachments.json"), "utf8")) as { items: Entry[] };
     const roblox = PARTS.filter(p => p.roblox?.attachment);
-    expect(roblox.length).toBe(21);
+    expect(roblox.length).toBe(22);   // round 2: #07 in silver too
     const byId = new Map(data.items.map(e => [e.id, e]));
     for (const p of roblox) {
       const e = byId.get(p.id)!;
@@ -89,11 +89,12 @@ describe("the shared skull", () => {
       expect([e.key, e.attachment, e.provisional, !!e.coversHair], p.id).toEqual([p.key, p.roblox!.attachment, p.roblox!.provisional, !!p.coversHair]);
       for (const v of [e.position, e.orientation, e.mesh_scale]) expect(v.length === 3 && v.every(Number.isFinite), p.id).toBe(true);
     }
-    // row 314 (David, 2026-10-17): the four shrunk ones back at Roblox scale; the hats bigger, covering the hair; #07 smaller
+    // row 314 (David, 2026-10-17): the shrunk ones back at Roblox scale; the hats bigger, covering the hair; #07 smaller;
+    // round 2: #17 a little smaller again, #07's silver version sized as #07
     const scaled = Object.fromEntries(data.items.filter(e => e.override?.scale).map(e => [e.key, e.override!.scale!]));
-    for (const k of ["acc-02", "acc-17", "acc-19", "acc-23"]) expect(scaled[k], k).toBeUndefined();
+    for (const k of ["acc-02", "acc-19", "acc-23"]) expect(scaled[k], k).toBeUndefined();
     for (const k of ["acc-01", "acc-18", "acc-21", "acc-22", "acc-24"]) expect(scaled[k], k).toBeGreaterThan(1);
-    expect(scaled["acc-07"]).toBeLessThan(1);
+    for (const k of ["acc-07", "acc-07s", "acc-17"]) expect(scaled[k], k).toBeLessThan(1);
     // #16 (the sci-fi visor) is skipped; #12 and #13 are deleted
     expect(data.items.some(e => ["acc-12", "acc-13", "acc-16"].includes(e.key))).toBe(false);
   });

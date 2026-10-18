@@ -27,7 +27,8 @@
    "name": "Ribbon bob",
    "key": "hair-23",
    "accent": {
-    "default": 10
+    "default": 10,
+    "rule": "light"
    }
   },
   {
@@ -50,7 +51,8 @@
    "file": "26-cute-fluffy-emo-girl-hair-y2k-114354951912876.glb",
    "id": "hair_emo_layers",
    "name": "Emo layers",
-   "key": "hair-26"
+   "key": "hair-26",
+   "shorten": 0.6
   },
   {
    "file": "27-Y2K-It-Girl-Double-Buns-Hair-Dark-Teal-139556608863162.glb",

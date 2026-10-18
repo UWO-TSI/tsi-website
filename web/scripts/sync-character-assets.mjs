@@ -61,6 +61,10 @@ const face = JSON.parse(readFileSync(join(art, "v7/face/face_v7.json"), "utf8"))
 for (const f of [face.atlas, face.atlas_world, face.atlas2, face.atlas2_world]) copy(join(art, "v7/face", f), join(out, "base", f));
 // head fit: the full hairstyles' shared shading atlas (art/characters/hair/import_hair.py)
 if (catalog.hairMaps) copy(join(art, catalog.hairMaps.atlas), join(out, catalog.hairMaps.atlas));
+// round 2: its world copy at half size (like the face atlas's), a 2 x 2 box filter on each channel alone: cells and their
+// padding halve exactly, and no texel's colour is weighted by its channel alpha (which a premultiplied resize would do)
+if (catalog.hairMaps?.atlas_world) execFileSync("magick", [join(art, catalog.hairMaps.atlas), "-channel", "RGBA", "-separate", "-filter", "box",
+  "-resize", "50%", "-combine", "-define", "png:color-type=6", join(out, catalog.hairMaps.atlas_world)]);
 // wardrobe batch 2: the fixed-colour atlas (art/characters/colour_atlas.py: the Roblox accessories' and #22's hat's own
 // textures) and David's prices for the batch (specs/wardrobe/batch2-pricing.json)
 copy(join(art, "colour_atlas.png"), join(out, "colour_atlas.png"));

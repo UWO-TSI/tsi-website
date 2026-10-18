@@ -49,11 +49,11 @@ describe("creator categories (read from the catalogue)", () => {
     expect(colourTarget(cat("accessories"), two, "acc_shoulder_bag")).toBe("acc_shoulder_bag");
     expect(colourTarget(cat("eyes"), two, null)).toBeNull();
   });
-  it("offer David's 27 whole hairstyles (wardrobe batch 2 added six) as Hair's only row, recolourable (head-roblox)", () => {
+  it("offer David's 26 whole hairstyles (wardrobe batch 2 added five; #22 is its hat alone) as Hair's only row, recolourable (head-roblox)", () => {
     const hair = cat("hair");
     expect(hair.sections.map(s => s.id)).toEqual(["hairstyles"]);
     expect(hair.sections[0].options).toEqual(PARTS.filter(p => p.full).map(p => p.id));
-    expect(hair.sections[0].options).toHaveLength(27);
+    expect(hair.sections[0].options).toHaveLength(26);
     expect(hair.swatch).toBe("hair");
     const full = hair.sections[0];
     const l = choose(DEFAULT_LOOK, full, full.options[0]);
@@ -112,8 +112,8 @@ describe("wardrobe batch 2 in the creator and the closet (David's prices, specs/
     const start = offered("create", new Set(STARTER_PARTS));
     for (const p of b2) expect(start.has(p.id), p.id).toBe(free(p.key!));
     for (const key of Object.keys(FACE.faces)) for (const id of faceParts(key)) expect(start.has(id), id).toBe(free(key));
-    const bought = offered("create", new Set([...STARTER_PARTS, "hair_goggle_ushanka", "acc_cowboy_hat", faceRef("vampire")]));
-    for (const id of ["hair_goggle_ushanka", "acc_cowboy_hat", ...faceParts("face-25")]) expect(bought.has(id), id).toBe(true);
+    const bought = offered("create", new Set([...STARTER_PARTS, "hair_curly_pigtails", "acc_cowboy_hat", faceRef("vampire")]));
+    for (const id of ["hair_curly_pigtails", "acc_cowboy_hat", ...faceParts("face-25")]) expect(bought.has(id), id).toBe(true);
     expect(bought.has("cat_wide")).toBe(false);
   });
   it("shows everything in the closet, the priced ones locked behind their shop row", () => {

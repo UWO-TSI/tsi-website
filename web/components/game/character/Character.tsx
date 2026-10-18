@@ -14,7 +14,7 @@ import { useGLTF } from "@react-three/drei";
 import type { WeaponPaint } from "@/lib/game/combat/primitives";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { BASE_URL, COLOUR_ATLAS_URL, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, HAIR_MAPS_URL, PART_BY_ID, LOD_SKIN_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, usesFacePage2, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
+import { BASE_URL, COLOUR_ATLAS_URL, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, HAIR_MAPS_URLS, PART_BY_ID, LOD_SKIN_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, usesFacePage2, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
 import { characterLod, createLodState, detailSituation, drawnHeight, mixerStep, type DetailSituation } from "@/lib/game/character/lod";
 import { isDetailFocus } from "@/lib/game/character/detailFocus";
 import { readPhoto } from "@/lib/game/photoMode";
@@ -50,22 +50,27 @@ const BODY_MATERIAL = new THREE.MeshPhysicalMaterial({ name: "CharacterBody", ve
  * matte with a soft gloss. A colour the member picks shifts the texture's hue and saturation in OKLab, each texel keeping
  * its lightness (hairColour.ts; rig.ts `hairA`, `hairB`); the alpha names the texel's channel (1 the hair's colour, 2/3 a
  * two-colour hair's second, 1/3 fixed: a cap or visor). Loaded the first time a mapped style is worn (sRGB: it reads back
- * linear); until then a white texel (the under-cap's tint alone).
+ * linear), the world's half-size copy (HAIR_MAPS_URLS) unless a creator-sized face asks for the full one; until then a
+ * white texel (the under-cap's tint alone).
  */
 const HAIR_ATLAS: { value: THREE.Texture } = { value: new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1) };
 HAIR_ATLAS.value.needsUpdate = true;
-let hairAtlasLoading = false;
-function ensureHairAtlas() {
-  if (hairAtlasLoading) return;
-  hairAtlasLoading = true;
-  new THREE.TextureLoader().load(HAIR_MAPS_URL, tex => {
+/** Which copy is loaded or loading: the world's half-size one first; the creator's full one replaces it for good. */
+let hairAtlasSize: "world" | "creator" | null = null;
+function ensureHairAtlas(size: "world" | "creator") {
+  if (hairAtlasSize === "creator" || hairAtlasSize === size) return;
+  hairAtlasSize = size;
+  new THREE.TextureLoader().load(HAIR_MAPS_URLS[size], tex => {
+    if (size === "world" && hairAtlasSize === "creator") { tex.dispose(); return; }   // the full one was asked for meanwhile
     tex.flipY = false;                       // glTF UVs (top-left origin), as the face atlas
     tex.colorSpace = THREE.SRGBColorSpace;   // colour: decoded to linear on sampling; the alpha is the channel, as stored
     tex.generateMipmaps = true;
     tex.minFilter = THREE.LinearMipmapLinearFilter;
     tex.anisotropy = 4;
     tex.needsUpdate = true;
+    const old = HAIR_ATLAS.value;
     HAIR_ATLAS.value = tex;
+    old.dispose();
   });
 }
 /**
@@ -899,7 +904,8 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
   // While a newly chosen part loads, keep showing the previous look instead of suspending.
   const shown = useDeferredValue(look);
   const parts = useMemo(() => resolveParts(shown), [shown]);
-  useEffect(() => { if (parts.some(p => p.map)) ensureHairAtlas(); }, [parts]);   // the first mapped hairstyle loads the shared atlas
+  // the first mapped hairstyle loads the shared atlas: the world's copy, or the full one for a creator-sized face
+  useEffect(() => { if (parts.some(p => p.map)) ensureHairAtlas(faceSize >= 1024 ? "creator" : "world"); }, [parts, faceSize]);
   useEffect(() => { if (parts.some(p => p.colour)) ensureColourAtlas(); }, [parts]);   // the first textured accessory loads the colour atlas
   const loaded = useGLTF([BASE_URL, ...parts.map(p => p.url)]) as unknown as Gltf[];
   const atlas = useLoader(THREE.TextureLoader, faceSize >= 1024 ? FACE_ATLAS_URLS.creator : FACE_ATLAS_URLS.world);

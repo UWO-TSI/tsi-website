@@ -6,7 +6,8 @@
   "override (optional): offset (studs, Roblox's axes: +y up, +z back) applied after the fit, and scale (each piece shrunk by it toward where it meets the head, import_roblox.py shrink), kept when the Roblox values are filled in.",
   "coversHair (optional): a hat whose crown closes over the hair (not a visor, a sprout or ears): a look wearing it draws none of the hair it hides (hidden_cut.py hatcut, rig.ts).",
   "coversHead (optional): the bear hood: a look wearing it draws none of the head skin it hides (hidden_cut.py hoodcut).",
-  "hatCut (optional, an item that is not coversHair): its bit in the hair's `_HATCUT` marks: a band (#04's visor) cuts the hair through its band (hidden_cut.py hatcut); the covering hats take theirs from their order, #22's ushanka 5."
+  "hatCut (optional, an item that is not coversHair): its bit in the hair's `_HATCUT` marks: a band (#04's visor) cuts the hair through its band (hidden_cut.py hatcut); the covering hats take theirs from their order, #22's ushanka 5.",
+  "texture (optional): \"silver\": the item's texture recoloured silver by its lightness (import_roblox.py silver; #07's silver version, acc-07s)."
  ],
  "source": "art/characters/accessories/source/roblox-b2 (~/Downloads/accessories.zip and accessories-2.zip; David's own Roblox items, confirmed by him)",
  "items": [
@@ -63,13 +64,13 @@
    "fit": "top",
    "hidesBackHair": false,
    "position": [
-    0.00056,
+    0.0,
     -0.44977,
-    -0.00045
+    -0.0
    ],
    "orientation": [
     0,
-    -45,
+    -90,
     0
    ],
    "mesh_scale": [
@@ -79,7 +80,7 @@
    ],
    "provisional": true,
    "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
-   "orientation_why": "David, 2026-10-17: turned so the leaves face the camera"
+   "orientation_why": "David, 2026-10-17: turned so the leaves face the camera; round 2 (David, 2026-10-17): another 45 degrees (-90)"
   },
   {
    "n": 3,
@@ -109,7 +110,15 @@
     1
    ],
    "provisional": true,
-   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
+   "override": {
+    "offset": [
+     0,
+     0.03,
+     0
+    ],
+    "why": "David, 2026-10-17 round 2: very slightly up"
+   }
   },
   {
    "n": 4,
@@ -144,10 +153,10 @@
     "scale": 1.3,
     "offset": [
      0,
-     0.2,
+     0.26,
      0
     ],
-    "why": "David, 2026-10-17: properly on the head: a band round the hair; round 2: it sat inside the head, lifted"
+    "why": "David, 2026-10-17: properly on the head: a band round the hair; round 2: it sat inside the head, lifted; its bill over the fringe and its band shown over the hair (it faces forward: David)"
    },
    "hatCut": 6
   },
@@ -194,7 +203,7 @@
    "fit": "eyes",
    "hidesBackHair": false,
    "position": [
-    0.38272,
+    0.38246,
     0.17346,
     -0.0
    ],
@@ -226,7 +235,7 @@
    "position": [
     -0.0,
     0.77346,
-    0.32499
+    0.32528
    ],
    "orientation": [
     0,
@@ -244,11 +253,51 @@
     "scale": 0.85,
     "offset": [
      0,
-     0.0,
+     -0.03,
      0
     ],
-    "why": "David, 2026-10-17: smaller and lower (it sat 0.06 stud high)"
+    "why": "David, 2026-10-17: smaller and lower (it sat 0.06 stud high); round 2: down slightly"
    }
+  },
+  {
+   "n": 7,
+   "key": "acc-07s",
+   "id": "acc_half_rim_glasses_silver",
+   "name": "Silver half-rim glasses",
+   "asset_id": 140483245207161,
+   "title": "Glasses",
+   "file": "head/07-Glasses-140483245207161.glb",
+   "attachment": "HatAttachment",
+   "group": "face",
+   "fit": "eyes",
+   "hidesBackHair": false,
+   "position": [
+    -0.0,
+    0.77346,
+    0.32528
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "mesh_scale": [
+    1,
+    1,
+    1
+   ],
+   "provisional": true,
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh; round 2 (David, 2026-10-17): #07 in silver, the same mesh and fit, its texture silver",
+   "override": {
+    "scale": 0.85,
+    "offset": [
+     0,
+     -0.03,
+     0
+    ],
+    "why": "David, 2026-10-17: smaller and lower (it sat 0.06 stud high); round 2: down slightly"
+   },
+   "texture": "silver"
   },
   {
    "n": 8,
@@ -278,7 +327,15 @@
     1
    ],
    "provisional": true,
-   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
+   "override": {
+    "offset": [
+     0,
+     0.03,
+     0
+    ],
+    "why": "David, 2026-10-17 round 2: very slightly up"
+   }
   },
   {
    "n": 9,
@@ -295,7 +352,7 @@
    "position": [
     -0.0,
     0.17346,
-    -0.27645
+    -0.27581
    ],
    "orientation": [
     0,
@@ -323,9 +380,9 @@
    "fit": "mouth",
    "hidesBackHair": false,
    "position": [
-    0.41662,
-    0.68831,
-    0.19765
+    0.41331,
+    0.6848,
+    0.17809
    ],
    "orientation": [
     0,
@@ -355,9 +412,9 @@
    "fit": "eye_r",
    "hidesBackHair": false,
    "position": [
-    0.16553,
+    0.16554,
     0.28503,
-    0.30457
+    0.3044
    ],
    "orientation": [
     0,
@@ -426,7 +483,7 @@
    "position": [
     -0.0,
     0.17346,
-    -0.3501
+    -0.34976
    ],
    "orientation": [
     0,
@@ -455,7 +512,7 @@
    "hidesBackHair": false,
    "position": [
     -0.0,
-    -0.43115,
+    -0.36648,
     -0.0
    ],
    "orientation": [
@@ -469,7 +526,16 @@
     1
    ],
    "provisional": true,
-   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh"
+   "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
+   "override": {
+    "scale": 0.85,
+    "offset": [
+     -0.2,
+     0,
+     0
+    ],
+    "why": "David, 2026-10-17 round 2: a little smaller and more centred (its stem's foot sat 8 cm to the character's right)"
+   }
   },
   {
    "n": 18,
@@ -552,10 +618,10 @@
    "override": {
     "offset": [
      0,
-     -0.3,
+     -0.4,
      0
     ],
-    "why": "David, 2026-10-17: lower (they stood at the head's rounded top edge, 0.2 stud down, before)"
+    "why": "David, 2026-10-17: lower (it stood at the head's rounded top edge); round 2: down a bit more, so it attaches"
    }
   },
   {
@@ -702,9 +768,9 @@
    "fit": "seat",
    "hidesBackHair": false,
    "position": [
-    0.01375,
-    0.55297,
-    -0.06
+    0.0075,
+    0.46439,
+    -0.025
    ],
    "orientation": [
     0,
@@ -720,8 +786,13 @@
    "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
    "coversHair": true,
    "override": {
-    "scale": 1.2,
-    "why": "David, 2026-10-17: sized to cover the hair (it poked out)"
+    "scale": 1.1,
+    "offset": [
+     0,
+     0.25,
+     0
+    ],
+    "why": "David, 2026-10-17: sized to cover the hair; round 2: smaller and higher"
    }
   }
  ]
