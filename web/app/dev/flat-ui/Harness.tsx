@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * /dev/flat-ui?surface=bag|chest|crafting|collection|decorate|wallet (specs/polish/flat-ui.md): one in-game menu over a
+ * /dev/flat-ui?surface=bag|chest|crafting|collection|collection-applicant|decorate|wallet (specs/polish/flat-ui.md): one in-game menu over a
  * plain sky, on the in-memory services, for the rollout's before and after shots. Add `collections=demo` (the bag, the
  * chest with `chest=1`, the collection; `bag=<slots>` fills the pockets) or `crafting=demo` (the workbench). The
  * economy's inventory (what you own: the bag's second shelf, the decorate catalogue) is answered here.
@@ -61,6 +61,8 @@ export default function Harness() {
     {surface === "bag" && <BagSheet open onClose={close} keys="i" />}
     {surface === "chest" && <ChestSheet open onClose={close} />}
     {surface === "collection" && <CollectionBook open onClose={close} />}
+    {/* The applicant island's card (recruitment keeps its look): shot to show it unchanged. */}
+    {surface === "collection-applicant" && <CollectionBook open onClose={close} collectionScope="applicant" />}
     {surface === "crafting" && <CraftingSheet />}
     {surface === "wallet" && <WalletSheet open onClose={close} />}
     {/* Docked at the side as the world docks it (its --hud-* edges). */}
