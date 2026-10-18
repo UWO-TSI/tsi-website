@@ -20,10 +20,15 @@ export const AUTO_TURN = 0.55, RESUME_S = 1.6;
 export const COAST_MAX = 2.5;
 
 /** One stage's turn: where it is, how fast it's going, and the gesture under way. */
-export interface Turn { yaw: number; pitch: number; spin: number; down: boolean; moved: number; lastX: number; lastY: number; idleSince: number }
+export interface Turn {
+  yaw: number; pitch: number; spin: number; down: boolean; moved: number; lastX: number; lastY: number; idleSince: number;
+  /** Rock side to side this far (rad) instead of turning all the way round (a flat thing, the sticker: its back stays away). */
+  sway?: number;
+}
 /** How far it leans toward you at rest (rad): a little, so its top shows. */
 export const REST_PITCH = 0.12;
-export const newTurn = (yaw = 0.5, pitch = REST_PITCH): Turn => ({ yaw, pitch, spin: AUTO_TURN, down: false, moved: 0, lastX: 0, lastY: 0, idleSince: -Infinity });
+export const newTurn = (yaw = 0.5, sway?: number, pitch = REST_PITCH): Turn =>
+  ({ yaw: sway ? 0 : yaw, pitch, spin: sway ? 0 : AUTO_TURN, down: false, moved: 0, lastX: 0, lastY: 0, idleSince: -Infinity, sway });
 
 /**
  * One frame of the turn (dt seconds, now in seconds): a drag holds it; after one it coasts, then eases back to the slow
@@ -31,6 +36,16 @@ export const newTurn = (yaw = 0.5, pitch = REST_PITCH): Turn => ({ yaw, pitch, s
  */
 export function stepTurn(t: Turn, dt: number, now: number, rest = REST_PITCH): Turn {
   if (t.down) return t;
+  if (t.sway) {
+    // after a drag it coasts a moment, then eases back into rocking (from wherever the drag left it, the short way)
+    if (now - t.idleSince > RESUME_S * 0.5) {
+      t.yaw = Math.atan2(Math.sin(t.yaw), Math.cos(t.yaw));
+      t.yaw += (t.sway * Math.sin(now * 0.6) - t.yaw) * (1 - Math.exp(-dt * 1.2));
+      t.spin = 0;
+    } else { t.spin *= Math.exp(-dt * 3); t.yaw += t.spin * dt; }
+    t.pitch += (rest - t.pitch) * (1 - Math.exp(-dt * 1.5));
+    return t;
+  }
   const target = now - t.idleSince > RESUME_S ? AUTO_TURN : 0;
   t.spin += (target - t.spin) * (1 - Math.exp(-dt * (target ? 1.2 : 3)));
   t.yaw += t.spin * dt;
@@ -82,12 +97,14 @@ function Studio() {
   return null;
 }
 
-export default function TurnStage({ children, className, cameraZ = 4.2, label, restPitch = REST_PITCH }: {
+export default function TurnStage({ children, className, cameraZ = 4.2, label, sway, restPitch = REST_PITCH }: {
   children: ReactNode; className?: string; cameraZ?: number; label: string;
+  /** Rock this far either way (rad) instead of turning all the way round. */
+  sway?: number;
   /** Its resting lean toward you (rad). */
   restPitch?: number;
 }) {
-  const turn = useRef<Turn>(newTurn(0.5, restPitch));
+  const turn = useRef<Turn>(newTurn(0.5, sway, restPitch));
   const last = useRef(0);
   const armed = useRef<(() => void) | null>(null);
   const [ctx] = useState(() => ({ arm: (fn: () => void) => { armed.current = fn; } }));

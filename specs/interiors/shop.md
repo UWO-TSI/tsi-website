@@ -211,7 +211,7 @@ My reading, built as `ShopOverlay`. It's one layout for both answers of the shop
   - Its item tag reads "TSI keycap keychain".
 - **In the merch view:** it hangs in the middle of the turning stage with the pixel finish (`KeychainStage`). Drag turns it, and it eases back to the slow turn; a tap on the keycap presses it, with the click.
 - **The click:** "keyswitch" in the game's audio, so it follows mute and the volume settings (`web/public/audio/sfx/keyswitch.ogg`). It's synthesized for now (`art/audio/synth_keyswitch.py`): the bottom-out at 0 and the return at 0.11 s. David's recording replaces that one file.
-- **Catalogue:** 500 Gems. It's in `lib/wallet/catalogue.ts` as `PENDING_MERCH`, not yet in `CATALOGUE`, and has no migration yet. A `CATALOGUE` row regenerates the economy and shop-icons seeds, and game/wardrobe-b2's unmerged `20261017172740_catalogue_seed.sql` regenerates shop-icons too. The coordinator decides the order.
+- **Catalogue:** 500 Gems at first, 800 since David's prices (2026-10-18). It's in `lib/wallet/catalogue.ts` as `PENDING_MERCH`, not yet in `CATALOGUE`, and has no migration yet. A `CATALOGUE` row regenerates the economy and shop-icons seeds, and game/wardrobe-b2's unmerged `20261017172740_catalogue_seed.sql` regenerates shop-icons too. The coordinator decides the order.
 - **Stock:** not set (unlimited) until David says how many.
 - **Shots:** `keychain-sheet.webp`:
   - David's photos beside the model's turnaround;
@@ -309,6 +309,36 @@ which turned out to be a slightly turned view.
   the strands; the strap bends along it, `components/game/Lanyard.tsx`). No walk orders during a drag.
 - **Merch view** (`LanyardStage`): close up by default so the print reads through the pixel finish, turning so both
   sides come round; "See it whole" shows all of it.
-- **Catalogue:** in `PENDING_MERCH` with no price, so it's off sale. The overlay shows "Price to come" on its card and in
-  its detail, with Redeem disabled (the overlay's two-line change).
+- **Catalogue:** in `PENDING_MERCH`, now at 800 gems (David's price); it stays off sale like the keychain until its
+  catalogue row lands. (Before it had a price, the overlay showed "Price to come" with Redeem disabled.)
 - **Shots:** `lanyard-sheet.webp`. The viewer is at the scratch path `lanyard-viewer.html`.
+
+### The GENESIS sticker (2026-10-18, specs/merch/genesis-sticker.md)
+
+- **Card** (`art/merch/build_genesis_sticker.py`, 112 triangles): 7.5 x 6 cm (the print's 1350:1080), 0.4 mm thick,
+  corners rounded 3 mm.
+  - The light print is in the GLB (1024 x 819). The dark print is a separate WebP the model swaps in
+    (`art/merch/sticker_art.py`).
+  - The backing paper is plain.
+- **Holographic foil** (`components/game/GenesisSticker.tsx`): an onBeforeCompile patch on the card's own material; no
+  extra pass.
+  - A rainbow whose hue runs in bands across the card and shifts with the view angle and the card's tilt.
+  - A fine diffraction grain that sparkles as the angle changes.
+  - Strongest where the print is bare and weaker on the ink.
+  - On the light one it tints the white paper in pastel bands (light added to white would only clip). On the dark one it
+    glows through the black.
+  - It reads through the pixel finish.
+- **Shop** (`StickerEasel`, SHOP_STICKER): both variants on a small wooden easel on the counter under the totes, at
+  scale 0.4 (about four times life size).
+  - The easel is one merged mesh.
+  - The foil moves as you walk past.
+  - Lite graphics shows the sprites.
+- **Merch view** (`StickerStage`):
+  - The card rocks slowly side to side (TurnStage's new `sway` prop) rather than turning all the way round, so its back
+    never shows for long.
+  - Drag tilts it, and the hint says "Drag to tilt".
+  - The two variants are thumbnails down the left of the stage.
+  - The grid card's picture is a still of the sheen.
+- **Sprites:** each variant has one with the sheen baked in (`merch-genesis-sticker-{light,dark}-sprite.webp`).
+- **Catalogue:** in `PENDING_MERCH` with no price, so it's off sale ("Price to come").
+- **Shots:** `sticker-sheet.webp`. The viewer is at the scratch path `sticker-viewer.html`.

@@ -5,6 +5,7 @@ David, 2026-10-18. A real TSI item for the shop's club merch section on the mezz
 ## The item
 
 - **Price:** to be set by David.
+- **Shape:** a rectangle (David, 2026-10-18), with slightly rounded corners.
 - **Artwork:** an ASCII-art picture made of monospace characters, with "GEN_26" in a bold monospace face, bottom left, with a soft glow.
 - **Two variants:**
   - **Light:** navy characters on white.
@@ -23,3 +24,9 @@ David, 2026-10-18. A real TSI item for the shop's club merch section on the mezz
 - **In the merch UI:**
   - The model turns slowly in the middle, with the pixel overlay. Drag to tilt it and watch the foil shift.
   - The two variants are picked from the detail view.
+
+## Status
+
+- **2026-10-18: built, for David's review.** See `specs/evidence/shop-interior/phase2/sticker-sheet.webp` and
+  `specs/interiors/shop.md`.
+- **Price and stock:** from David. Until then it's in `PENDING_MERCH` with no price, off sale.
