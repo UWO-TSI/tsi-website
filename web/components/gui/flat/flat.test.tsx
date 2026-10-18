@@ -104,6 +104,7 @@ describe("the panel, the grid, the detail and the rows", () => {
   it("titles a grid only when it has a title", () => {
     expect(html(h(CardGrid, { title: "Tools", children: "c" }))).toMatch(/^<h3[^>]*>Tools<\/h3><div/);
     expect(html(h(CardGrid, { min: 160, children: "c" }))).toMatch(/^<div[^>]*style="--card-min:160px"/);
+    expect(html(h(CardGrid, { min: 180, phoneMin: 150, children: "c" }))).toMatch(/style="--card-min:180px;--card-min-phone:150px"/);
   });
   it("lays out a detail: back, steps, info and the spec band", () => {
     const out = html(h(DetailView, { stage: h("canvas"), onBack: () => {}, steps: { prev: { label: "Previous: A", onClick: () => {} }, next: { label: "Next: B", onClick: () => {} } },

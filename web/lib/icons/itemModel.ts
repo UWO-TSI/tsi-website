@@ -20,3 +20,9 @@ export function itemModel(row: IconRow): IconSpec | null {
   const s = itemSpec(row);
   return s && s.view !== "roll" && s.view !== "tile" && /\.glb$/.test(s.url) ? s : null;
 }
+
+/** Anything's 3D model by its icon key (a catch, a material, a tool: the bag's and the collection's detail views). */
+export function keyModel(key: string): IconSpec | null {
+  const s = all().get(key) ?? null;
+  return s && s.view !== "roll" && s.view !== "tile" && /\.glb$/.test(s.url) ? s : null;
+}

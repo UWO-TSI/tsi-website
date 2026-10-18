@@ -72,7 +72,9 @@ div.card:hover { transform: none; box-shadow: none; }
 .card[data-size="sm"] .cardArt { width: 56px; height: 56px; margin: 12px 0 8px; }
 .card[data-size="sm"] .cardName { font-size: 13px; }
 .card[data-size="sm"] .cardLine { font-size: 12px; -webkit-line-clamp: 1; }
-.card[data-size="sm"] .pill { padding: 4px 7px; font-size: 12px; }
+/* A small card's pill (the stack, a count) sits top right, so the name keeps the card's width. */
+.card[data-size="sm"] .cardFoot { grid-template-columns: minmax(0, 1fr); }
+.card[data-size="sm"] .pill { position: absolute; top: 8px; right: 8px; padding: 4px 7px; font-size: 12px; }
 .card[data-size="sm"] .arrow { top: 10px; right: 10px; }
 .card[data-size="sm"] .tag { top: 8px; left: 8px; padding: 2px 6px; font-size: 11px; }
 
@@ -141,6 +143,7 @@ div.card:hover { transform: none; box-shadow: none; }
   .detail { grid-template-columns: minmax(0, 1fr); grid-template-rows: 320px auto auto; margin-left: 0; }
   .info { padding: 16px 4px; }
   .specs, .panel:not([data-rail]) .specs { margin: 0 -14px -16px; padding: 16px 18px 18px; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(min(var(--card-min-phone, 100%), 100%), 1fr)); }
   .card { min-height: 250px; }
   .card[data-size="md"] { min-height: 180px; }
   .card[data-size="sm"] { min-height: 120px; }

@@ -8,7 +8,7 @@
  * small parts (`Pill`, `DarkButton`, `GhostButton`, `RoundButton`, `HairlineRow`). Colours: the --flat-* tokens in
  * styles/game-tokens.css. Nothing here knows about the shop: every piece takes plain props.
  */
-import type { ButtonHTMLAttributes, HTMLAttributes, KeyboardEvent, ReactNode, Ref } from "react";
+import type { ButtonHTMLAttributes, CSSProperties, HTMLAttributes, KeyboardEvent, ReactNode, Ref } from "react";
 import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Sparkles, X } from "lucide-react";
 import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { CurrencyIcon } from "@/components/economy/Amount";
@@ -118,11 +118,15 @@ export function IconRail<T extends string>({ items, value, onChange, label, orie
 
 // ── Cards ───────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/** A shelf of cards, with its title above. `min`: the narrowest a card gets (px; 250 by default). */
-export function CardGrid({ title, min, label, children }: { title?: ReactNode; min?: number; label?: string; children: ReactNode }) {
+/**
+ * A shelf of cards, with its title above. `min`: the narrowest a card gets (px; 250 by default); `phoneMin`: on a phone
+ * (one card a row by default, as the shop has it).
+ */
+export function CardGrid({ title, min, phoneMin, label, children }: { title?: ReactNode; min?: number; phoneMin?: number; label?: string; children: ReactNode }) {
+  const style = { ...(min ? { "--card-min": `${min}px` } : {}), ...(phoneMin ? { "--card-min-phone": `${phoneMin}px` } : {}) } as CSSProperties;
   return <>
     {title ? <h3 className={f.shelfTitle}>{title}</h3> : null}
-    <div className={f.grid} role={label ? "list" : undefined} aria-label={label} style={min ? { ["--card-min" as string]: `${min}px` } : undefined}>{children}</div>
+    <div className={f.grid} role={label ? "list" : undefined} aria-label={label} style={min || phoneMin ? style : undefined}>{children}</div>
   </>;
 }
 
