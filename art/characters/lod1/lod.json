@@ -45,7 +45,7 @@
  },
  "accessories/accessory/acc_ushanka_goggles.glb": {
   "tris": 852,
-  "lod1": 380
+  "lod1": 852
  },
  "accessories/accessory/acc_visor.glb": {
   "tris": 766,
@@ -144,8 +144,8 @@
   "lod1": 760
  },
  "hair/full/hair_anime_spikes.glb": {
-  "tris": 2160,
-  "lod1": 1120
+  "tris": 2226,
+  "lod1": 1153
  },
  "hair/full/hair_baby_sprout.glb": {
   "tris": 2960,
@@ -178,10 +178,6 @@
  "hair/full/hair_fluffy_boy.glb": {
   "tris": 1614,
   "lod1": 1614
- },
- "hair/full/hair_goggle_ushanka.glb": {
-  "tris": 2428,
-  "lod1": 1253
  },
  "hair/full/hair_hime_short.glb": {
   "tris": 4385,
@@ -228,8 +224,8 @@
   "lod1": 2220
  },
  "hair/full/hair_visor_messy.glb": {
-  "tris": 2200,
-  "lod1": 1139
+  "tris": 2223,
+  "lod1": 1150
  },
  "hair/full/hair_vkei.glb": {
   "tris": 3797,

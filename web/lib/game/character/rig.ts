@@ -10,6 +10,7 @@
  */
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import type { HairShift } from "./hairColour";
 
 /** Skinned primitives under a loaded GLB scene (GLTFLoader makes one SkinnedMesh per primitive). */
 export function skinnedPrimitives(root: THREE.Object3D): THREE.SkinnedMesh[] {
@@ -19,18 +20,18 @@ export function skinnedPrimitives(root: THREE.Object3D): THREE.SkinnedMesh[] {
 }
 export const materialName = (mesh: THREE.Mesh) => (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material).name;
 
-/** A mapped hairstyle's channels in the hair shading atlas (head fit) and its accent colour. */
-export interface HairMapUse { shade: number; accent?: number; cap?: number; accentColor?: THREE.Color }
+/** A mapped hairstyle's shift for each recolour channel of its texture (hairColour.ts). */
+export interface HairMapUse { a: HairShift; b: HairShift }
 
 /**
  * A primitive's geometry re-expressed for the target skeleton: joint indices
  * remapped by bone name, colour = COLOR_0 (linear) x tint, a uv channel, and
- * the hair map channels every piece carries so they all merge with one
- * attribute set: `hairMap` = (shade, accent, cap channel + 1), 0 for none,
- * and `hairAccent` = the accent colour (linear). The body material tints a
- * mapped hairstyle by its shading map from the shared hair atlas, mixes in
- * the accent and the fixed cap colour by their masks (Character.tsx), and
- * leaves a vertex with u < 0 (the under-cap) to its COLOR_0 and tint alone.
+ * the hair attributes every piece carries so they all merge with one
+ * attribute set: `hairMap` (1 for a mapped hairstyle, 0 for none; then each
+ * channel's median lightness l), and `hairA`, `hairB` its two channels'
+ * shifts (p, q, o): ab' = [p -q; q p] ab + o tent(L, l) in OKLab. The body material draws a mapped hairstyle's own texture
+ * from the shared hair atlas, shifted (Character.tsx), and leaves a vertex
+ * with u < 0 (the under-cap) to its COLOR_0 and tint alone.
  */
 export function adoptPrimitive(mesh: THREE.SkinnedMesh, boneIndex: ReadonlyMap<string, number>, tint: THREE.Color | null, map: HairMapUse | null = null,
   cut: PieceCut | null = null): THREE.BufferGeometry {
@@ -42,15 +43,17 @@ export function adoptPrimitive(mesh: THREE.SkinnedMesh, boneIndex: ReadonlyMap<s
   const uv = src.getAttribute("uv");
   g.setAttribute("uv", uv ?? new THREE.BufferAttribute(new Float32Array(n * 2), 2));
   const mapped = !!(map && uv);
-  const hm = new Float32Array(n * 3), ha = new Float32Array(n * 3);
-  if (mapped) for (let i = 0; i < n; i++) {
-    hm[i * 3] = map!.shade + 1;
-    hm[i * 3 + 1] = map!.accent === undefined ? 0 : map!.accent + 1;
-    hm[i * 3 + 2] = map!.cap === undefined ? 0 : map!.cap + 1;
-    if (map!.accentColor) { ha[i * 3] = map!.accentColor.r; ha[i * 3 + 1] = map!.accentColor.g; ha[i * 3 + 2] = map!.accentColor.b; }
+  const hm = new Float32Array(n * 3), ha = new Float32Array(n * 4), hb = new Float32Array(n * 4);
+  if (mapped) {
+    const pa = [map!.a.m[0], map!.a.m[2], ...map!.a.o], pb = [map!.b.m[0], map!.b.m[2], ...map!.b.o];
+    for (let i = 0; i < n; i++) {
+      hm[i * 3] = 1; hm[i * 3 + 1] = map!.a.l; hm[i * 3 + 2] = map!.b.l;
+      for (let k = 0; k < 4; k++) { ha[i * 4 + k] = pa[k]; hb[i * 4 + k] = pb[k]; }
+    }
   }
   g.setAttribute("hairMap", new THREE.BufferAttribute(hm, 3));
-  g.setAttribute("hairAccent", new THREE.BufferAttribute(ha, 3));
+  g.setAttribute("hairA", new THREE.BufferAttribute(ha, 4));
+  g.setAttribute("hairB", new THREE.BufferAttribute(hb, 4));
   const base = src.getAttribute("color"), color = new Float32Array(n * 3), t = tint ?? new THREE.Color(1, 1, 1);
   for (let i = 0; i < n; i++) {
     color[i * 3] = (base ? base.getX(i) : 1) * t.r;
@@ -102,8 +105,8 @@ function cutIndex(src: THREE.BufferGeometry, cut: PieceCut | null): number[] {
 export interface PieceSource { root: THREE.Object3D; tints: Record<string, string>; keep?: (materialName: string) => boolean;
   /** A vertex mark and bit (`_HATCUT` and the worn hat's, `_HOODCUT` and 0): triangles all three of whose vertices carry it are not drawn. */
   cut?: PieceCut | null;
-  /** A mapped hairstyle (head fit): its hair and cap primitives sample the hair atlas. */
-  map?: { shade: number; accent?: number; cap?: number; accentHex?: string } | null }
+  /** A mapped hairstyle (head fit): its hair primitive draws its texture from the hair atlas, shifted. */
+  map?: HairMapUse | null }
 /**
  * Merge the untextured primitives of every piece into one geometry for
  * `bones`. A primitive is tinted by its material name when the piece lists a
@@ -118,9 +121,7 @@ export function mergeLook(pieces: PieceSource[], bones: readonly THREE.Bone[]): 
     if (piece.keep && !piece.keep(name)) continue;
     const hex = piece.tints[name];
     const own = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as THREE.MeshStandardMaterial;
-    const m = piece.map && name === "M_Hair"
-      ? { shade: piece.map.shade, accent: piece.map.accent, cap: piece.map.cap, accentColor: piece.map.accentHex ? new THREE.Color(piece.map.accentHex) : undefined }
-      : null;
+    const m = piece.map && name === "M_Hair" ? piece.map : null;
     parts.push(adoptPrimitive(mesh, boneIndex, hex ? new THREE.Color(hex) : own.color ?? null, m, piece.cut ?? null));
   }
   // The intermediate pieces share attributes with the loaded GLBs and were never uploaded: no dispose, the GC takes them.

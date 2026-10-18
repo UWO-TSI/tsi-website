@@ -5,7 +5,8 @@
   "group: the creator slot (head: Hats, face: Glasses, neck: Neck, front: Front); #07 is a hat-type item in Roblox (the head folder) that is a pair of glasses: it sits at the eyes and is worn in the Glasses slot. key: the item's key in specs/wardrobe/batch2-pricing.json (#16, the sci-fi visor, is skipped there and not imported).",
   "override (optional): offset (studs, Roblox's axes: +y up, +z back) applied after the fit, and scale (each piece shrunk by it toward where it meets the head, import_roblox.py shrink), kept when the Roblox values are filled in.",
   "coversHair (optional): a hat whose crown closes over the hair (not a visor, a sprout or ears): a look wearing it draws none of the hair it hides (hidden_cut.py hatcut, rig.ts).",
-  "coversHead (optional): the bear hood: a look wearing it draws none of the head skin it hides (hidden_cut.py hoodcut)."
+  "coversHead (optional): the bear hood: a look wearing it draws none of the head skin it hides (hidden_cut.py hoodcut).",
+  "hatCut (optional, an item that is not coversHair): its bit in the hair's `_HATCUT` marks: a band (#04's visor) cuts the hair through its band (hidden_cut.py hatcut); the covering hats take theirs from their order, #22's ushanka 5."
  ],
  "source": "art/characters/accessories/source/roblox-b2 (~/Downloads/accessories.zip and accessories-2.zip; David's own Roblox items, confirmed by him)",
  "items": [
@@ -22,9 +23,9 @@
    "fit": "seat",
    "hidesBackHair": false,
    "position": [
-    0.0075,
-    0.09459,
-    0.2875
+    -0.0025,
+    0.0327,
+    0.2625
    ],
    "orientation": [
     0,
@@ -40,8 +41,13 @@
    "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
    "coversHair": true,
    "override": {
-    "scale": 1.3,
-    "why": "David, 2026-10-17: bigger, covering the hair"
+    "scale": 1.2,
+    "offset": [
+     0,
+     0.05,
+     0
+    ],
+    "why": "David, 2026-10-17: bigger, covering the hair; round 2: slightly higher and smaller"
    }
   },
   {
@@ -136,8 +142,14 @@
    "source": "provisional: position from the fit on the v10 head and body (accessories/import_roblox.py, rule `fit`); orientation: the item's front (a brim, the lenses, a face opening, a scarf's tails) to the front, read off the raw mesh",
    "override": {
     "scale": 1.3,
-    "why": "David, 2026-10-17: properly on the head: a band round the hair"
-   }
+    "offset": [
+     0,
+     0.2,
+     0
+    ],
+    "why": "David, 2026-10-17: properly on the head: a band round the hair; round 2: it sat inside the head, lifted"
+   },
+   "hatCut": 6
   },
   {
    "n": 5,
@@ -472,9 +484,9 @@
    "fit": "seat",
    "hidesBackHair": false,
    "position": [
-    -0.03375,
-    0.75636,
-    -0.09964
+    -0.0,
+    0.45142,
+    0.16529
    ],
    "orientation": [
     0,
@@ -499,13 +511,13 @@
    "drop_outline_why": "its cartoon outline is an inverted hull on a black swatch (UV 0.13-0.149, 0.004-0.021), which our two-sided body drew over the whole hat: dropped",
    "coversHair": true,
    "override": {
-    "scale": 1.6,
+    "scale": 1.3,
     "offset": [
      0,
-     0.22,
+     0.5,
      0
     ],
-    "why": "David, 2026-10-17: bigger and higher (it blended into the hair)"
+    "why": "David, 2026-10-17: bigger and higher (it blended into the hair); round 2: too big and too low"
    }
   },
   {

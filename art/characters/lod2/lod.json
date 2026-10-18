@@ -1,7 +1,7 @@
 {
  "hair/full/hair_anime_spikes.glb": {
-  "tris": 2160,
-  "lod2": 1015
+  "tris": 2226,
+  "lod2": 1044
  },
  "hair/full/hair_baby_sprout.glb": {
   "tris": 2960,
@@ -33,11 +33,7 @@
  },
  "hair/full/hair_fluffy_boy.glb": {
   "tris": 1614,
-  "lod2": 1179
- },
- "hair/full/hair_goggle_ushanka.glb": {
-  "tris": 2428,
-  "lod2": 1135
+  "lod2": 770
  },
  "hair/full/hair_hime_short.glb": {
   "tris": 4385,
@@ -57,7 +53,7 @@
  },
  "hair/full/hair_messy_boy.glb": {
   "tris": 1021,
-  "lod2": 1021
+  "lod2": 502
  },
  "hair/full/hair_messy_dreads.glb": {
   "tris": 4340,
@@ -84,8 +80,8 @@
   "lod2": 1180
  },
  "hair/full/hair_visor_messy.glb": {
-  "tris": 2200,
-  "lod2": 1034
+  "tris": 2223,
+  "lod2": 1044
  },
  "hair/full/hair_vkei.glb": {
   "tris": 3797,
@@ -93,7 +89,7 @@
  },
  "hair/full/hair_waves.glb": {
   "tris": 1328,
-  "lod2": 1180
+  "lod2": 640
  },
  "hair/full/hair_wavy_half_up.glb": {
   "tris": 4403,

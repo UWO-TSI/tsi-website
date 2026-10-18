@@ -496,6 +496,7 @@ def main():
             "key": e["key"], "source": f"accessories/source/roblox-b2/{e['file']}",
             "roblox": {"provisional": bool(e["provisional"]), "attachment": e["attachment"]}, "colourAtlas": True,
             **({"coversHair": True, "hatCut": [x["key"] for x in DATA["items"] if x.get("coversHair")].index(e["key"])} if e.get("coversHair") else {}),
+            **({"hatCut": e["hatCut"]} if e.get("hatCut") is not None and not e.get("coversHair") else {}),   # a band (#04's visor)
             **({"coversHead": True} if e.get("coversHead") else {}),
         }
         report.append(f"IMPORT {e['id']:24s} src_tris={src_tris} tris={kit.ntris(ob)} {e['attachment']} fit={e['fit']} "

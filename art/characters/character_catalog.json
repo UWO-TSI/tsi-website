@@ -1576,7 +1576,14 @@
     "top"
    ],
    "map": {
-    "shade": 0
+    "cell": 0,
+    "natural": {
+     "a": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
    }
   },
   {
@@ -1601,7 +1608,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 1
+    "cell": 1,
+    "natural": {
+     "a": [
+      0.2308,
+      0.0,
+      89.88
+     ]
+    }
    }
   },
   {
@@ -1626,7 +1640,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 2
+    "cell": 2,
+    "natural": {
+     "a": [
+      0.173,
+      0.0,
+      89.88
+     ]
+    }
    }
   },
   {
@@ -1651,7 +1672,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 0
+    "cell": 3,
+    "natural": {
+     "a": [
+      0.2002,
+      0.0,
+      89.88
+     ]
+    }
    }
   },
   {
@@ -1676,7 +1704,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 1
+    "cell": 4,
+    "natural": {
+     "a": [
+      0.2069,
+      0.0017,
+      17.32
+     ]
+    }
    }
   },
   {
@@ -1701,7 +1736,14 @@
     "provisional": false
    },
    "map": {
-    "shade": 2
+    "cell": 5,
+    "natural": {
+     "a": [
+      0.1913,
+      0.0,
+      89.88
+     ]
+    }
    }
   },
   {
@@ -1726,7 +1768,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 0
+    "cell": 6,
+    "natural": {
+     "a": [
+      0.2002,
+      0.0,
+      89.88
+     ]
+    }
    }
   },
   {
@@ -1751,7 +1800,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 1
+    "cell": 7,
+    "natural": {
+     "a": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
    }
   },
   {
@@ -1798,7 +1854,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 0
+    "cell": 9,
+    "natural": {
+     "a": [
+      0.1638,
+      0.0,
+      89.88
+     ]
+    }
    }
   },
   {
@@ -1823,7 +1886,14 @@
     "provisional": false
    },
    "map": {
-    "shade": 1
+    "cell": 10,
+    "natural": {
+     "a": [
+      0.4857,
+      0.0607,
+      74.1
+     ]
+    }
    }
   },
   {
@@ -1848,7 +1918,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 2
+    "cell": 11,
+    "natural": {
+     "a": [
+      0.3932,
+      0.078,
+      262.57
+     ]
+    }
    }
   },
   {
@@ -1873,7 +1950,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 0
+    "cell": 12,
+    "natural": {
+     "a": [
+      0.2837,
+      0.0353,
+      47.43
+     ]
+    }
    }
   },
   {
@@ -1898,8 +1982,19 @@
     "provisional": true
    },
    "map": {
-    "shade": 1,
-    "accent": 2
+    "cell": 13,
+    "natural": {
+     "a": [
+      0.9851,
+      0.0,
+      89.88
+     ],
+     "b": [
+      0.6503,
+      0.1441,
+      252.71
+     ]
+    }
    },
    "accent": {
     "default": 11
@@ -1927,7 +2022,8 @@
     "provisional": true
    },
    "map": {
-    "shade": 0
+    "cell": 14,
+    "natural": {}
    }
   },
   {
@@ -1952,7 +2048,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 1
+    "cell": 15,
+    "natural": {
+     "a": [
+      0.9219,
+      0.0,
+      89.88
+     ]
+    }
    }
   },
   {
@@ -1977,7 +2080,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 2
+    "cell": 16,
+    "natural": {
+     "a": [
+      0.3369,
+      0.0126,
+      41.61
+     ]
+    }
    }
   },
   {
@@ -2002,7 +2112,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 0
+    "cell": 17,
+    "natural": {
+     "a": [
+      0.2046,
+      0.0,
+      89.88
+     ]
+    }
    }
   },
   {
@@ -2027,9 +2144,20 @@
     "provisional": true
    },
    "map": {
-    "shade": 0,
-    "accent": 1,
-    "cap": 2
+    "cell": 18,
+    "natural": {
+     "a": [
+      0.2507,
+      0.0052,
+      24.86
+     ],
+     "b": [
+      0.3897,
+      0.0544,
+      45.06
+     ]
+    },
+    "fixed": true
    },
    "accent": {
     "default": 3
@@ -2057,11 +2185,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 0,
-    "accent": 1
-   },
-   "accent": {
-    "default": "skin"
+    "cell": 19,
+    "natural": {
+     "a": [
+      0.2176,
+      0.0175,
+      44.92
+     ]
+    }
    }
   },
   {
@@ -2086,7 +2217,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 2
+    "cell": 20,
+    "natural": {
+     "a": [
+      0.1908,
+      0.0,
+      89.88
+     ]
+    }
    }
   },
   {
@@ -2109,37 +2247,9 @@
    "skull": "v10",
    "source": "hair/source/david/08-McDonalds-106903086636118.glb (split from hair_visor_messy)",
    "map": {
-    "shade": 0,
-    "accent": 1
-   },
-   "accent": {
-    "default": "#E9B530"
-   }
-  },
-  {
-   "id": "hair_goggle_ushanka",
-   "slot": "back",
-   "name": "Green messy hair",
-   "glb": "hair/full/hair_goggle_ushanka.glb",
-   "tris": 2348,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
-    }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "full": true,
-   "skull": "v10",
-   "source": "hair/source/david-b2/22-Green-Cool-Messy-Boy-Hair-w-Y2K-Goggles-Ushanka-87890006358128.glb",
-   "roblox": {
-    "provisional": true
-   },
-   "key": "hair-22",
-   "map": {
-    "shade": 2
+    "cell": 21,
+    "natural": {},
+    "fixed": true
    }
   },
   {
@@ -2165,11 +2275,14 @@
    },
    "key": "hair-23",
    "map": {
-    "shade": 0,
-    "accent": 1
-   },
-   "accent": {
-    "default": 10
+    "cell": 22,
+    "natural": {
+     "a": [
+      0.3145,
+      0.0096,
+      50.16
+     ]
+    }
    }
   },
   {
@@ -2195,7 +2308,14 @@
    },
    "key": "hair-24",
    "map": {
-    "shade": 2
+    "cell": 23,
+    "natural": {
+     "a": [
+      0.3911,
+      0.0322,
+      51.39
+     ]
+    }
    }
   },
   {
@@ -2221,8 +2341,19 @@
    },
    "key": "hair-25",
    "map": {
-    "shade": 0,
-    "accent": 1
+    "cell": 24,
+    "natural": {
+     "a": [
+      0.2002,
+      0.0,
+      89.88
+     ],
+     "b": [
+      0.8206,
+      0.0333,
+      240.71
+     ]
+    }
    },
    "accent": {
     "default": 11
@@ -2251,7 +2382,14 @@
    },
    "key": "hair-26",
    "map": {
-    "shade": 2
+    "cell": 25,
+    "natural": {
+     "a": [
+      0.6104,
+      0.0201,
+      263.35
+     ]
+    }
    }
   },
   {
@@ -2277,7 +2415,14 @@
    },
    "key": "hair-27",
    "map": {
-    "shade": 0
+    "cell": 26,
+    "natural": {
+     "a": [
+      0.4162,
+      0.0402,
+      200.27
+     ]
+    }
    }
   },
   {
@@ -2300,7 +2445,7 @@
    "skull": "v10",
    "source": "hair/source/david-b2/22-Green-Cool-Messy-Boy-Hair-w-Y2K-Goggles-Ushanka-87890006358128.glb (split from hair_goggle_ushanka)",
    "colourAtlas": true,
-   "grantedBy": "hair_goggle_ushanka",
+   "key": "hair-22",
    "coversHair": true,
    "hatCut": 5
   }
@@ -4239,18 +4384,13 @@
   ]
  },
  "hairMaps": {
-  "atlas": "hair/hair_maps.png",
-  "dl": [
-   -40.0,
-   40.0
-  ],
+  "atlas": "hair/hair_colour.png",
   "cells": [
-   5,
-   3
+   6,
+   5
   ],
   "cell": 512,
-  "cap": "#28282E",
-  "note": "Shading maps of the full hairstyles (hair/import_hair.py): one channel per hair, its accent and cap masks in the next channels of the same cell; each texel's lightness offset from its part's median (CIE L*), stored as (offset - dl[0]) / (dl[1] - dl[0]). The engine mixes the palette tint, the accent colour and the fixed cap colour by their masks, adds the offset to that colour's L* (a luminance-preserving tint, row 314) with a soft gloss, and leaves u < 0 (the under-cap) to the tint (rig.ts, Character.tsx). Every hairstyle is one primitive in one material."
+  "note": "Round 2 (David, 2026-10-17): each hairstyle's own source texture, one cell a piece (hair/import_hair.py natural_map): RGB as drawn in Roblox (sRGB), alpha its recolour channel (0 the hair's colour, 0.5 its second colour, 1 fixed). A part's map names its cell and each channel's median [L, C, h] (OKLCh); a picked colour turns and scales the texels' chroma so the median lands on it, every texel keeping its lightness (look.ts hairShift, Character.tsx). u < 0 (the under-cap) takes the colour of the hair's median, darkened by its COLOR_0."
  },
  "robloxAccessories": [
   {
@@ -4258,7 +4398,7 @@
    "slot": "accessory",
    "name": "Propeller cap",
    "glb": "accessories/roblox/acc_propeller_cap.glb",
-   "tris": 767,
+   "tris": 770,
    "materials": [
     {
      "name": "M_Acc",
@@ -4338,7 +4478,7 @@
    "slot": "accessory",
    "name": "Crew visor",
    "glb": "accessories/roblox/acc_crew_visor.glb",
-   "tris": 683,
+   "tris": 714,
    "materials": [
     {
      "name": "M_Acc",
@@ -4357,7 +4497,8 @@
     "provisional": true,
     "attachment": "HatAttachment"
    },
-   "colourAtlas": true
+   "colourAtlas": true,
+   "hatCut": 6
   },
   {
    "id": "acc_plaid_scarf",
@@ -4624,7 +4765,7 @@
    "slot": "accessory",
    "name": "Drawn top hat",
    "glb": "accessories/roblox/acc_drawn_top_hat.glb",
-   "tris": 726,
+   "tris": 702,
    "materials": [
     {
      "name": "M_Acc",

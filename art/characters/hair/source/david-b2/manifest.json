@@ -15,9 +15,11 @@
     "id": "acc_ushanka_goggles",
     "name": "Ushanka and goggles",
     "why": "David, 2026-10-17 (row 314): the hat is its own accessory; owning the hair grants it",
-    "hatCut": 5
+    "hatCut": 5,
+    "key": "hair-22"
    },
-   "undercap": "full"
+   "accessory_only": true,
+   "accessory_only_why": "David, 2026-10-17 (round 2): remove the hair entirely; keep only the ushanka and goggles, priced at 200 Gems (key hair-22)"
   },
   {
    "file": "23-sweet-cutecore-moe-messy-short-bob-dark-ash-85192073992593.glb",

@@ -9,12 +9,12 @@ Modes (each rewrites the GLBs in place: the triangles and vertex arrays it keeps
            (Full, LOD 1) that no view from outside can reach is dropped: from each of SAMPLES points on it, no ray in any
            of DIRS directions (the whole sphere: the body draws both sides) gets out past the head, the base body and the
            asset itself. The rest are kept as they are; unused vertices go.
-  hatcut   The hair under a hat. For each covering hat (catalogue `coversHair`: the propeller cap, the drawn top hat, the
-           cowboy, woven and straw hats, bit i = its place in that list, `hatCut` in the catalogue), a whole hairstyle's
-           vertex that no view from outside reaches with that hat on (each ray hits the hat, the head, the body or the
-           hair's own outer layers) carries the bit in a `_HATCUT` attribute (the sum of 2^i), per tier on its own mesh. A
-           look wearing hat i draws none of the hair's triangles whose three vertices carry bit i (rig.ts cutIndex). Only
-           what no view reaches goes, so the look is the same.
+  hatcut   The hair a hat wins over (round 2, David: hats always win). For each head item with a `hatCut` bit (the
+           covering hats: the propeller cap, the drawn top hat, the cowboy, woven and straw hats, #22's ushanka; the
+           bands: #04's visor), a whole hairstyle's vertex the item cuts (cut_by: above a covering hat's rim plane within
+           its footprint; through a band's slab) carries the bit in a `_HATCUT` attribute (the sum of 2^i), per tier on
+           its own mesh. A look wearing item i draws none of the hair's triangles whose three vertices carry bit i
+           (rig.ts cutIndex): the hair comes out from under the hat and never through it.
   hoodcut  The head under the hood: the base skin's vertices (the clip base and the LOD 1 skin) the bear hood hides from
            every direction, marked `_HOODCUT`; a look wearing it draws none of the head triangles all marked.
   measure  The heaviest wearable look at Full, LOD 1 and LOD 2 (budget.test.ts's rule, with the hat cut), printed.
@@ -278,13 +278,147 @@ def hidden():
     tris()
 
 
-def covering_hats():
-    """The covering hats in bit order: the Roblox accessories', then the ones split off a hairstyle (#22's ushanka)."""
-    return [p for p in CAT.get("robloxAccessories", []) + CAT["hair"] if p.get("coversHair")]
+def cut_items():
+    """The head items that cut the hair, in bit order: the covering hats (Roblox accessories, then #22's ushanka split off
+    its hairstyle) and the bands (#04's visor), each with its `hatCut` bit."""
+    items = [p for p in CAT.get("robloxAccessories", []) + CAT["hair"] if p.get("hatCut") is not None]
+    return sorted(items, key=lambda p: p["hatCut"])
 
 
-HAT_DEPTH = 0.015          # m: a hair vertex counts as under a hat only if it is still hidden this far further out (from the
-                           # head centre): hair poking up to the hat's surface keeps its triangles, whose middles show
+# Round 2 (David, 2026-10-17: "only #02 and #17 are good with hair"): a worn hat always wins over the hair. Within its
+# footprint (WRAP_MARGIN beyond its reach in each direction round the head), a covering hat cuts every hair vertex above
+# its rim (RIM_MARGIN under it; hat_frame), over the hat (straight down meets it and straight up does not: a strand through
+# a brim or a cone), or inside it (every way out but down meets it: an ear flap's inside): the hair comes out from under
+# the hat and never through it. A band (a visor) cuts the hair within BAND_NEAR of it: a strand goes under the band, never
+# through it. A loose piece of hair (a strand card) mostly cut goes whole (SPLINTER): no splinters by a brim.
+SECTORS = 24               # directions round the head's axis for a hat's rim, top and reach
+RIM_MARGIN = 0.02          # m: under the rim plane, so a strand that crosses the rim ends inside the hat
+WRAP_MARGIN = 0.03         # m: beyond the hat's reach, so a strand that bulges past a crown goes too
+BAND_NEAR = 0.02           # m: a band cuts the hair this close to it
+SPLINTER = 0.6             # a loose piece of hair this much cut (by vertices) goes whole
+
+
+def head_reach():
+    """The head's widest horizontal reach from its axis (m)."""
+    t = tris_of(os.path.join(HERE, CAT["base"]["clips_glb"]), lambda p, j: next(m for m in j["meshes"] if p in m["primitives"])["name"] == "V8_Head")
+    v = t.reshape(-1, 3)
+    return float(np.hypot(v[:, 0] - HC[0], v[:, 2] - HC[2]).max())
+
+
+def angle(pos):
+    """Each point's direction round the head's axis, in sectors (0 .. SECTORS, continuous)."""
+    return (((np.arctan2(pos[:, 0] - HC[0], pos[:, 2] - HC[2]) + math.pi) / (2 * math.pi)) * SECTORS) % SECTORS
+
+
+def sector(pos):
+    return angle(pos).astype(int) % SECTORS
+
+
+def around(values, a):
+    """A per-sector value (NaN: none there) at continuous sector positions a, linear round the circle."""
+    k = np.nonzero(~np.isnan(values))[0]
+    xs = np.r_[k - SECTORS, k, k + SECTORS] + 0.5
+    ys = np.r_[values[k], values[k], values[k]]
+    return np.interp(a, xs, ys)
+
+
+def hat_frame(pos, reach):
+    """A head item's rim, top and footprint per sector round the head's axis (glTF axes): its lowest and highest points
+    near the head (within 1.35 x the head's reach: a band, a crown's foot, a brim's underside at the crown, an ear flap's
+    foot), and its farthest reach (the widest of it and its neighbours). Not a plane: an ushanka's flaps come down at the
+    sides only."""
+    r = np.hypot(pos[:, 0] - HC[0], pos[:, 2] - HC[2])
+    sec = sector(pos)
+    near = r < 1.35 * reach
+    lo, hi, foot = np.full(SECTORS, np.nan), np.full(SECTORS, np.nan), np.zeros(SECTORS)
+    for s_ in range(SECTORS):
+        m = sec == s_
+        if m.any():
+            foot[s_] = r[m].max()
+        m &= near
+        if m.any():
+            lo[s_], hi[s_] = pos[m][:, 1].min(), pos[m][:, 1].max()
+    foot = np.maximum(foot, np.maximum(np.roll(foot, 1), np.roll(foot, -1)))
+    return lo, hi, foot
+
+
+AXES = [Vector(v) for v in ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))]
+
+
+def cut_by(pos, frame, band, tree):
+    """Which hair vertices a head item cuts (see the rule above)."""
+    lo, hi, foot = frame
+    a = angle(pos)
+    near = np.hypot(pos[:, 0] - HC[0], pos[:, 2] - HC[2]) <= foot[sector(pos)] + WRAP_MARGIN
+    if band:
+        return np.array([tree.find_nearest(Vector(p), BAND_NEAR)[0] is not None for p in pos])
+    cut = near & (pos[:, 1] > around(lo, a) - RIM_MARGIN)
+    hits = lambda o, d: tree.ray_cast(o, d, 2.0)[0] is not None
+    for i in np.nonzero(near & ~cut)[0]:
+        o = Vector(pos[i])
+        if not hits(o, AXES[3]):
+            continue                                    # nothing of the hat under it
+        # over the hat (nothing of it above: a strand through a brim or a cone), or inside it (it on every side)
+        cut[i] = not hits(o, AXES[2]) or all(hits(o, d) for d in AXES[:2] + AXES[4:])
+    return cut
+
+
+def pieces(n, tri):
+    """Each vertex's connected piece (the triangles' shared vertices; union-find)."""
+    parent = np.arange(n)
+
+    def root(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+    for a, b, c in tri:
+        ra, rb, rc = root(a), root(b), root(c)
+        parent[rb] = ra
+        parent[rc] = ra
+    return np.array([root(i) for i in range(n)])
+
+
+def hatcut():
+    items = cut_items()
+    assert [h["hatCut"] for h in items] == list(range(len(items))), "the hatCut bits run 0, 1, 2, ... with none missing"
+    reach = head_reach()
+    frames, trees = [], []
+    for h in items:
+        t = tris_of(os.path.join(HERE, h["glb"]))
+        frames.append(hat_frame(t.reshape(-1, 3), reach))
+        trees.append(bvh(t))
+        lo, hi, foot = frames[-1]
+        print(f"HAT {h['hatCut']} {h['id']:24s} {'band' if not h.get('coversHair') else 'covering'} rim y "
+              f"{' '.join('-' if np.isnan(x) else f'{x:.2f}' for x in lo)} top y {np.nanmin(hi):.3f}..{np.nanmax(hi):.3f} "
+              f"reach {foot.min():.3f}..{foot.max():.3f} (head {reach:.3f})")
+    for p in selected([h for h in CAT["hair"] if h.get("full")]):
+        for path in hair_paths(p):
+            j, arrays = load_all(path)
+            cut, n = [0] * len(items), 0
+            for prim in primitives(j):
+                pos = arrays[prim["attributes"]["POSITION"]].astype(float)
+                tri = arrays[prim["indices"]].reshape(-1, 3)
+                bits = np.zeros(len(pos), np.int64)
+                piece = pieces(len(pos), tri)
+                uv = arrays[prim["attributes"]["TEXCOORD_0"]] if "TEXCOORD_0" in prim["attributes"] else np.zeros((len(pos), 2))
+                cap = uv[:, 0] < 0                          # the under-cap is never cut whole: it shades the scalp under the rim
+                for i, (h, fr, tree) in enumerate(zip(items, frames, trees)):
+                    c = cut_by(pos, fr, not h.get("coversHair"), tree)
+                    share = np.bincount(piece, c.astype(float), piece.max() + 1) / np.bincount(piece, minlength=piece.max() + 1)
+                    c |= (share[piece] >= SPLINTER) & ~cap
+                    if h.get("coversHair"):                  # one ring more: a triangle across the rim goes, not its tip
+                        grow = np.zeros(len(pos), bool)
+                        two = c[tri].sum(1) >= 2
+                        grow[tri[two].ravel()] = True
+                        c |= grow & ~cap
+                    bits |= c.astype(np.int64) << h["hatCut"]
+                    cut[i] += int(c[tri].all(1).sum())
+                set_mask(j, arrays, prim, "_HATCUT", bits)
+                n += len(tri)
+            save(path, j, arrays)
+            print(f"HATCUT {p['id']:24s} {os.path.relpath(path, HERE):48s} of {n}: {cut} under each item")
+    print("HATCUT_OK")
 
 
 def mark(path, trees, name, prim_ok=lambda p, j: True, own=True, depth=0.0):
@@ -314,18 +448,6 @@ def mark(path, trees, name, prim_ok=lambda p, j: True, own=True, depth=0.0):
         n += len(tri)
     save(path, j, arrays)
     return cut, n
-
-
-def hatcut():
-    base = bvh(BASE)
-    hats = [[base, bvh(tris_of(os.path.join(HERE, h["glb"])))] for h in covering_hats()]
-    print("HATS", [(h["id"], h.get("hatCut")) for h in covering_hats()])
-    assert [h.get("hatCut") for h in covering_hats()] == list(range(len(hats))), "each covering hat's hatCut is its bit"
-    for p in selected([h for h in CAT["hair"] if h.get("full")]):
-        for path in hair_paths(p):
-            cut, n = mark(path, hats, "_HATCUT", depth=HAT_DEPTH)
-            print(f"HATCUT {p['id']:24s} {os.path.relpath(path, HERE):48s} of {n}: {cut} under each covering hat")
-    print("HATCUT_OK")
 
 
 def hoodcut():
