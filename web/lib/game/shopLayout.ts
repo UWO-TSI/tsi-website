@@ -217,6 +217,8 @@ export const SHOP_SLOTS: DisplaySlot[] = [
   slot("merch-keychain-1", "merch-small", "pegboard", [-1.15, 1.17, 4.86], [0.3, 0.98, 0.1]),
   // The TSI lanyard hangs folded over its own peg, between the posters and the shirts (SHOP_LANYARD).
   slot("merch-lanyard-1", "merch-small", "pegboard", [1.84, 1.04, 4.86], [0.3, 1.46, 0.1]),
+  // The GENESIS sticker, both variants on a small easel on the counter under the totes (SHOP_STICKER).
+  slot("merch-sticker-1", "merch-small", "merch-counter", [-2.2, 0.85, 4.55], [0.7, 0.32, 0.2]),
   slot("merch-featured-1", "merch-featured", "merch-plinths", [0, 0.75, 0.35], [0.5, 0.9, 0.35]),
   slot("merch-featured-2", "merch-featured", "merch-plinths", [0.85, 0.4, 1.15], [0.4, 0.3, 0.4]),
 ];
@@ -236,6 +238,12 @@ export const SHOP_KEYCHAIN = { hook: [-1.15, 2.15, 4.86] as [number, number, num
  * peg is under the CLUB MERCH sign and its hook clears the counter (the slot runs from the peg down 1.46).
  */
 export const SHOP_LANYARD = { peg: [1.84, 2.5, 4.86] as [number, number, number], scale: 0.3, slot: "merch-lanyard-1" } as const;
+/**
+ * The GENESIS sticker on the counter (specs/merch/genesis-sticker.md): a small easel holding both variants side by side,
+ * leaning back, under the totes, its foil catching the light as you walk past. At 0.4 a card (7.5 x 6 cm) is 0.30 x
+ * 0.24 game units, about four times life size.
+ */
+export const SHOP_STICKER = { at: [-2.2, 0.85, 4.55] as [number, number, number], scale: 0.4, lean: 0.28, slot: "merch-sticker-1" } as const;
 
 /** A light strip along an edge (the edge lighting), on a floor, from one end to the other. */
 export interface LightStrip { level: Level; fixture: string; from: [number, number, number]; to: [number, number, number] }

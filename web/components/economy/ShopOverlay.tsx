@@ -80,7 +80,7 @@ function Detail({ e, list, onPick, onBack, busy, onPay, viewer }: {
   // A hair dye's colour dots: the other dyes on the shelf.
   const dyes = e.category === "hair" ? list.filter(x => x.category === "hair") : [];
   const action = merch ? "Redeem" : e.owned > 0 && e.can_buy ? "Buy another" : e.owned > 0 ? "Owned" : "Buy";
-  return <DetailView testId="shop-detail" onBack={onBack}
+  return <DetailView testId="shop-detail" onBack={onBack} hint={e.slug === "merch-tsi-lanyard" ? "Drag to slide along" : e.slug === "merch-genesis-sticker" ? "Drag to tilt" : undefined}
     stage={viewer ?? <ItemViewer key={e.id} spec={spec} picture={picture(e)} name={e.name} className={STAGE.stage} pictureClassName={STAGE.picture} />}
     steps={list.length > 1 ? { prev: { label: `Previous: ${prev.name}`, onClick: () => onPick(prev.id) }, next: { label: `Next: ${next.name}`, onClick: () => onPick(next.id) } } : null}
     info={<>

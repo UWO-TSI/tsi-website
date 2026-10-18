@@ -27,6 +27,7 @@ export const SHOP_PICKS: Record<string, string> = {
   "merch-featured-1": "merch-tote", "merch-featured-2": "merch-sticker-pack",
   "merch-keychain-1": "merch-tsi-keycap-keychain",
   "merch-lanyard-1": "merch-tsi-lanyard",
+  "merch-sticker-1": "merch-genesis-sticker",
 };
 /** The front plinths: today's specials, in order. */
 export const SPECIALS_SLOTS = ["seasonal-1", "seasonal-2", "seasonal-3"] as const;

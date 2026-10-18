@@ -1,5 +1,5 @@
 """The review sheets (shop phase 2): the headless shots in a labelled grid, one WebP.
-  python3 sheet.py <raw-dir> <out.webp> [ground|merch|overlay|keychain|keychain2|keychain3|upstairs|studio|lanyard|lanyard2]"""
+  python3 sheet.py <raw-dir> <out.webp> [ground|merch|overlay|keychain|keychain2|keychain3|upstairs|studio|lanyard|lanyard2|sticker]"""
 import sys
 from PIL import Image, ImageDraw, ImageFont
 
@@ -127,6 +127,21 @@ LANYARD2 = [
     ("v-desk", "The standalone viewer, laid flat the same way"),
     ("v-phone", "The viewer at phone width"),
 ]
+STICKER = [
+    ("p-light", "Light beside David's print file (the foil's pastel bands on the white)"),
+    ("p-dark", "Dark beside its print file (the foil glowing through the black)"),
+    ("t-light", "The foil at three tilts, pixel finish on: the hue shifts with the angle, the grain sparkles"),
+    ("t-dark", "The dark one at the same three tilts"),
+    ("px", "Pixel finish on and off (light)"),
+    ("px-dark", "Pixel finish on and off (dark)"),
+    ("38-sticker-easel", "In the shop: both variants on an easel on the counter, under the totes (scale 0.4)"),
+    ("39-sticker-easel-other-side", "From the other side: the foil has moved on"),
+    ("40-sticker-walk", "From the walking camera"),
+    ("m-grid", "The merch grid (its picture a still of the sheen), and the detail with the variant swatches"),
+    ("m-dark", "The dark swatch picked; dragged to tilt"),
+    ("m-phone", "On a phone"),
+    ("sprites", "The 2D sprites, the sheen baked in (lite graphics, a failed canvas, the swatches)"),
+]
 UPSTAIRS = [(f"{side}-{n}", f"{'Before' if side == 'b' else 'After'}: {cap}") for n, cap in (
     ("u1-door", "from the door"), ("u2-top-of-stairs", "from the top of the stairs"), ("u3-merch-walk", "at the merch wall"),
     ("u4-merch-across", "across the mezzanine"), ("u5-counter", "the counter and the pegboard"), ("u6-plinths", "the featured drop"),
@@ -140,6 +155,8 @@ if mode == "keychain":
     CELLS, TITLE = KEYCHAIN, "Shop: the TSI keycap keychain, from David's photos"
 if mode == "upstairs":
     CELLS, TITLE = UPSTAIRS, "Shop upstairs: before (the layout's blocks) and after (furnished after ref 1)"
+if mode == "sticker":
+    CELLS, TITLE = STICKER, "The GENESIS sticker: holographic foil, light and dark (112 triangles, one 1024 print per variant)"
 if mode == "lanyard2":
     CELLS, TITLE = LANYARD2, "The lanyard's detail view, round 2: horizontal, front and back together, finer pixels"
 if mode == "lanyard":
@@ -153,7 +170,7 @@ if mode == "keychain2":
 W, H, PAD, CAP = 720, 450, 14, 34
 font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 17)
 title = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 26)
-cols = 2 if mode in ("merch", "keychain", "keychain2", "keychain3", "upstairs", "studio", "lanyard", "lanyard2") else 3
+cols = 2 if mode in ("merch", "keychain", "keychain2", "keychain3", "upstairs", "studio", "lanyard", "lanyard2", "sticker") else 3
 rows = (len(CELLS) + cols - 1) // cols
 sheet = Image.new("RGB", (cols * (W + PAD) + PAD, rows * (H + CAP + PAD) + PAD + 50), "#1d1f22")
 d = ImageDraw.Draw(sheet)
@@ -163,7 +180,7 @@ for i, (name, cap) in enumerate(CELLS):
     # crop to the cell's 16:10, centred, then fit; a portrait shot (a phone) is fitted whole on the sheet's dark
     r = W / H
     iw, ih = im.size
-    if iw < ih or (mode in ("keychain", "keychain2", "keychain3", "lanyard", "lanyard2") and abs(iw / ih - r) > 0.05):
+    if iw < ih or (mode in ("keychain", "keychain2", "keychain3", "lanyard", "lanyard2", "sticker") and abs(iw / ih - r) > 0.05):
         k = min(H / ih, W / iw)
         fitted = im.resize((int(iw * k), int(ih * k)), Image.LANCZOS)
         im = Image.new("RGB", (W, H), "#1d1f22")

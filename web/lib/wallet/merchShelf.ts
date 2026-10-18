@@ -42,5 +42,6 @@ export function merchFilters(items: readonly { slug: string; name: string }[]): 
 export const MERCH_SPECS: Readonly<Record<string, [string, string][]>> = {
   "merch-tsi-keycap-keychain": [["Switch", "Gateron Milky Yellow Pro"], ["Keycap", "TSI navy, the Tethos mark"], ["Pick up", "HQ on campus"]],
   "merch-tsi-lanyard": [["Strap", "Navy, printed both sides"], ["Hardware", "Silver D-ring, swivel snap hook"], ["Pick up", "HQ on campus"]],
+  "merch-genesis-sticker": [["Finish", "Holographic"], ["Variants", "Light, dark"], ["Pick up", "HQ on campus"]],
 };
 export const merchSpecs = (slug: string): [string, string][] | null => MERCH_SPECS[slug] ?? null;

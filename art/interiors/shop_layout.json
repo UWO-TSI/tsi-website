@@ -2245,6 +2245,22 @@
    ]
   },
   {
+   "id": "merch-sticker-1",
+   "kind": "merch-small",
+   "level": 1,
+   "fixture": "merch-counter",
+   "at": [
+    -2.2,
+    0.85,
+    4.55
+   ],
+   "size": [
+    0.7,
+    0.32,
+    0.2
+   ]
+  },
+  {
    "id": "merch-featured-1",
    "kind": "merch-featured",
    "level": 1,

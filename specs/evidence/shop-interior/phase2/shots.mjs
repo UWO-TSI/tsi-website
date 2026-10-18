@@ -216,6 +216,12 @@ const SHOTS = [
   { id: "36-lanyard-drag", title: "Taken hold of and pulled aside (a real pointer drag in the walking camera; shot close)", upstairs: true, route: [[1.84, 3.6]],
     cam: { pos: [1.3, F + 1.8, 3.0], target: [1.84, F + 1.8, 4.86], fov: 50 }, labels: [], drag: true, part: "lanyard_hardware", lift: 0.0 },
   { id: "37-lanyard-settle", title: "Let go: it settles back (2.5 s after)", upstairs: true, route: [[1.84, 3.6]], cam: { pos: [1.3, F + 1.8, 3.0], target: [1.84, F + 1.8, 4.86], fov: 50 }, labels: [], release: true, settleMs: 2500, part: "lanyard_hardware", lift: 0.0 },
+  // The GENESIS sticker's easel on the counter under the totes: the foil from two sides (it shifts as you move).
+  { id: "38-sticker-easel", title: "The GENESIS sticker, both variants on an easel on the counter (display scale 0.4: about four times life size)", upstairs: true, route: [[-2.2, 3.5]],
+    cam: { pos: [-1.75, F + 1.3, 3.75], target: [-2.2, F + 1.0, 4.6], fov: 46 }, labels: [] },
+  { id: "39-sticker-easel-other-side", title: "The same, from the other side: the foil has moved on", upstairs: true, route: [[-2.2, 3.5]],
+    cam: { pos: [-2.7, F + 1.15, 3.8], target: [-2.2, F + 1.0, 4.6], fov: 46 }, labels: [] },
+  { id: "40-sticker-walk", title: "From the walking camera, at the counter", upstairs: true, route: [[-2.2, 3.5]], cam: null, labels: [] },
   // Upstairs, before and after it's furnished (the same cameras both times).
   { id: "u1-door", title: "From the door: the merch level above", cam: null, labels: [] },
   { id: "u2-top-of-stairs", title: "From the top of the stairs", upstairs: true, route: [HEAD], cam: null, labels: [] },
