@@ -4,7 +4,7 @@ David, 2026-10-17. A real TSI item, sold in the shop's club merch section on the
 
 ## The item
 
-- **Price:** 500 gems.
+- **Price:** 800 gems (David, 2026-10-18; it was 500).
 - **Switch:** Gateron Milky Yellow Pro. Milky white housing, yellow stem.
 - **Keycap:** custom TSI. Dark navy, with the white Tethos mark (six figures in a ring) printed on top.
 - **Base:** a clear acrylic block the switch sits in, with a small loop on top for the chain.
