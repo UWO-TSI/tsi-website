@@ -12,13 +12,13 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { iconSpecs, type IconSpec } from "@/lib/icons/manifest";
-import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS } from "@/lib/wallet/catalogue";
+import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS, PENDING_MERCH } from "@/lib/wallet/catalogue";
 import { CRAFTED_ITEMS, RECIPE_CARDS } from "@/lib/crafting/recipes";
 import { buildFishStage } from "@/components/lab/FishPreview";
 import { prepareModel } from "@/lib/game/modelMaterials";
 
 const SIZE = 256, PAD = 0.08;
-const SPECS = iconSpecs([...CATALOGUE, ...OWNERSHIP_ITEMS, ...EVENT_ITEMS, ...CRAFTED_ITEMS, ...RECIPE_CARDS]);
+const SPECS = iconSpecs([...CATALOGUE, ...OWNERSHIP_ITEMS, ...EVENT_ITEMS, ...CRAFTED_ITEMS, ...RECIPE_CARDS, ...PENDING_MERCH]);
 const deg = THREE.MathUtils.degToRad;
 /** From the subject toward the camera, per view (three.js: the models' fronts face +Z). */
 const VIEW: Record<IconSpec["view"], { az: number; el: number }> = {

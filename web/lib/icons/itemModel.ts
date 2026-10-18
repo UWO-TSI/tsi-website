@@ -3,11 +3,12 @@
  * (lib/icons/manifest.ts), so the 3D model, its tints and its view match the icon exactly. Finishes (wallpaper and
  * flooring) have a texture, not a model: their spec's view is "roll" or "tile", and the detail view shows their icon.
  */
-import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS } from "@/lib/wallet/catalogue";
-import { iconKey, iconSpecs, type IconRow, type IconSpec } from "./manifest";
+import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS, PENDING_MERCH } from "@/lib/wallet/catalogue";
+import { iconSpecs, type IconSpec } from "./manifest";
+import { iconKey, type IconRow } from "./keys";
 
 let specs: Map<string, IconSpec> | null = null;
-const all = () => (specs ??= new Map(iconSpecs([...CATALOGUE, ...OWNERSHIP_ITEMS, ...EVENT_ITEMS]).map(s => [s.key, s])));
+const all = () => (specs ??= new Map(iconSpecs([...CATALOGUE, ...OWNERSHIP_ITEMS, ...EVENT_ITEMS, ...PENDING_MERCH]).map(s => [s.key, s])));
 
 /** An item's icon spec (null if it has none). */
 export function itemSpec(row: IconRow): IconSpec | null {

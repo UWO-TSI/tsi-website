@@ -28,6 +28,7 @@ export type MerchTag = "staff pick" | "new drop";
 /** The items with a tag on their card. */
 export const MERCH_TAGS: Readonly<Record<string, MerchTag>> = {
   "merch-tote": "staff pick",
+  "merch-tsi-keycap-keychain": "new drop",
 };
 export const merchTag = (slug: string): MerchTag | null => MERCH_TAGS[slug] ?? null;
 
@@ -36,3 +37,9 @@ export function merchFilters(items: readonly { slug: string; name: string }[]): 
   const kinds = new Set(items.map(merchKind));
   return ["all", ...MERCH_KINDS.map(k => k.id).filter(k => kinds.has(k))];
 }
+
+/** The spec row under an item in the shop's detail view, where it has its own (the parts it's made of). */
+export const MERCH_SPECS: Readonly<Record<string, [string, string][]>> = {
+  "merch-tsi-keycap-keychain": [["Switch", "Gateron Milky Yellow Pro"], ["Keycap", "TSI navy, the Tethos mark"], ["Pick up", "HQ on campus"]],
+};
+export const merchSpecs = (slug: string): [string, string][] | null => MERCH_SPECS[slug] ?? null;

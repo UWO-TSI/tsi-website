@@ -2213,6 +2213,22 @@
    ]
   },
   {
+   "id": "merch-keychain-1",
+   "kind": "merch-small",
+   "level": 1,
+   "fixture": "pegboard",
+   "at": [
+    -1.15,
+    1.22,
+    4.86
+   ],
+   "size": [
+    0.22,
+    0.93,
+    0.1
+   ]
+  },
+  {
    "id": "merch-featured-1",
    "kind": "merch-featured",
    "level": 1,

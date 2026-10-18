@@ -40,6 +40,7 @@ SHEER, LINEN = "#f4f1ea", "#adbcaa"
 CRATE, CRATE_SLOT = "#efefeb", "#d4d4cf"
 LEAF, LEAF_LIGHT, SOIL = "#6c8c5a", "#86a670", "#5b4636"
 SAGE = "#8fb39e"
+FRAME = "#f2f0ec"
 
 
 # ================================================================ textures (numpy, sRGB, subtle)
@@ -148,24 +149,28 @@ def strip(k, s, m, lift=0.0):
     k.rbox(c, size, 0.008, m["glow"], "#ffffff", segs=1)
 
 
-def curtain(k, x, z0, z1, y0, y1, mat, col, folds=9, depth=0.05, axis="z", seed=0):
-    """A pleated curtain hanging from y1 to y0: a soft zig-zag along its width (along game z at x, or along x at z)."""
-    n = folds * 4
-    ts = np.linspace(0, 1, n + 1)
-    pts_top, pts_bot = [], []
-    for t in ts:
-        off = math.sin(t * folds * math.tau) * depth
-        w = z0 + (z1 - z0) * t
-        p = (x + off, w) if axis == "z" else (w, x + off)
-        pts_top.append(p)
-        pts_bot.append(p)
-    for i in range(n):
-        (a0, b0), (a1, b1) = pts_top[i], pts_top[i + 1]
-        if axis == "z":
-            quad = [(a0, y0, b0), (a1, y0, b1), (a1, y1, b1), (a0, y1, b0)]
-        else:
-            quad = [(a0, y0, b0), (a1, y0, b1), (a1, y1, b1), (a0, y1, b0)]
-        k.quad(quad, mat, col)
+def curtain(k, x, z0, z1, y0, y1, mat, col, folds=9, depth=0.05, axis="z", seed=0, gather=0.0):
+    """A pleated curtain hanging from y1 to y0: soft round pleats along its width (along game z at x, or along x at z),
+    finely sampled so they shade smooth. `gather` draws the hem in toward the middle (a tied-back drape), a fraction of
+    the width."""
+    n = folds * 12
+    rows = 6 if gather else 1
+    grid = []
+    for j in range(rows + 1):
+        v = j / rows                                   # 0 at the hem, 1 at the rail
+        pull = gather * (1 - v) ** 2
+        row = []
+        for t in np.linspace(0, 1, n + 1):
+            off = math.sin(t * folds * math.tau) * depth * (1 + 0.6 * (1 - v) * (gather > 0))
+            mid = (z0 + z1) / 2
+            w = z0 + (z1 - z0) * t
+            w = w + (mid - w) * pull
+            y = y0 + (y1 - y0) * v
+            row.append((x + off, y, w) if axis == "z" else (w, y, x + off))
+        grid.append(row)
+    for j in range(rows):
+        for i in range(n):
+            k.quad([grid[j][i], grid[j][i + 1], grid[j + 1][i + 1], grid[j + 1][i]], mat, col)
 
 
 # ================================================================ the ground floor
@@ -194,7 +199,8 @@ def ground(m):
     plant(k, m)
     for b in FX["curtains"]["blocks"]:
         (x, y0, z), (sx, sy, sz) = b["at"], b["size"]
-        curtain(k, x, z - sz / 2, z + sz / 2, y0 + 0.05, y0 + sy, m["cloth"], SHEER, folds=3, depth=0.04)
+        curtain(k, x - 0.02, z - sz / 2, z + sz / 2, y0 + 0.04, y0 + sy, m["cloth"], SHEER, folds=3, depth=0.035, gather=0.18)
+    curtain_rod(k, m, L["windows"][0], 0, FX["curtains"]["blocks"])
     window_frame(k, m, L["windows"][0], 0)
     for b in FX["seasonal-plinths"]["blocks"]:
         block(k, b, m["stone"], CONCRETE, r=0.035)
@@ -230,15 +236,33 @@ def walls(k, m, level):
 
 
 def window_frame(k, m, w, level):
+    """A painted steel frame set back in the wall's thickness (its reveal), with a mullion and a transom, and a concrete
+    sill that runs out into the room."""
     y0 = level * F
-    x, z0, z1, a, bb = w["x"], w["z0"], w["z1"], w["y0"] + y0, w["y1"] + y0
-    fw = 0.05
-    for (c, s) in (((x - 0.02, a, (z0 + z1) / 2), (0.08, fw, z1 - z0)), ((x - 0.02, bb, (z0 + z1) / 2), (0.08, fw, z1 - z0)),
-                   ((x - 0.02, (a + bb) / 2, z0), (0.08, bb - a, fw)), ((x - 0.02, (a + bb) / 2, z1), (0.08, bb - a, fw)),
-                   ((x - 0.02, (a + bb) / 2, (z0 + z1) / 2), (0.05, bb - a, 0.03))):
-        k.rbox(c, s, 0.01, m["metal"], STEEL_DARK)
-    # the sill
-    k.rbox((x - 0.08, a - 0.02, (z0 + z1) / 2), (0.2, 0.04, z1 - z0 + 0.1), 0.01, m["stone"], CONCRETE)
+    x, z0, z1, a, bb = w["x"] + 0.06, w["z0"], w["z1"], w["y0"] + y0, w["y1"] + y0
+    fw, depth = 0.07, 0.07
+    zc = (z0 + z1) / 2
+    yt = a + (bb - a) * 0.72
+    for (c, s_) in (((x, a + fw / 2, zc), (depth, fw, z1 - z0)), ((x, bb - fw / 2, zc), (depth, fw, z1 - z0)),
+                    ((x, (a + bb) / 2, z0 + fw / 2), (depth, bb - a, fw)), ((x, (a + bb) / 2, z1 - fw / 2), (depth, bb - a, fw))):
+        k.rbox(c, s_, 0.012, m["paint"], FRAME)
+    k.rbox((x, (a + bb) / 2, zc), (depth * 0.8, bb - a - 2 * fw, 0.04), 0.008, m["paint"], FRAME)      # the mullion
+    k.rbox((x, yt, zc), (depth * 0.8, 0.04, z1 - z0 - 2 * fw), 0.008, m["paint"], FRAME)                # the transom
+    # the sill: concrete, out past the wall into the room
+    k.rbox((w["x"] - 0.06, a - 0.025, zc), (0.3, 0.05, z1 - z0 + 0.16), 0.012, m["stone"], CONCRETE)
+
+
+def curtain_rod(k, m, w, level, drapes):
+    """A slim steel rod over the window, past it on both sides, with round finials; the drapes hang from it."""
+    y = level * F + max(b["at"][1] + b["size"][1] for b in drapes) + 0.03
+    x = w["x"] - 0.07
+    za = min(b["at"][2] - b["size"][2] / 2 for b in drapes) - 0.12
+    zb = max(b["at"][2] + b["size"][2] / 2 for b in drapes) + 0.12
+    k.tube([(x, y, za), (x, y, zb)], 0.014, m["metal"], STEEL_DARK, n=8)
+    for z in (za, zb):
+        k.blob((x, y, z), (0.03, 0.03, 0.03), m["metal"], STEEL_DARK, segs=8, rings=5)
+    for z in (za + 0.08, zb - 0.08):
+        k.tube([(w["x"] - 0.002, y, z), (x, y, z)], 0.01, m["metal"], STEEL_DARK, n=6)            # its brackets
 
 
 def panes(level, name):
@@ -248,7 +272,7 @@ def panes(level, name):
     y0 = level * F
     mat = K.Mat("M_View", "#ffffff", rough=0.1)
     # a thin slab, so its face toward the room faces the room whichever way the exporter winds a lone quad
-    k.rbox((w["x"] - 0.03, y0 + (w["y0"] + w["y1"]) / 2, (w["z0"] + w["z1"]) / 2), (0.01, w["y1"] - w["y0"], w["z1"] - w["z0"]), 0.0, mat, segs=1)
+    k.rbox((w["x"] + 0.075, y0 + (w["y0"] + w["y1"]) / 2, (w["z0"] + w["z1"]) / 2), (0.01, w["y1"] - w["y0"], w["z1"] - w["z0"]), 0.0, mat, segs=1)
     return k.finish(name=name)
 
 

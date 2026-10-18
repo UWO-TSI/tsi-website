@@ -7,7 +7,7 @@
  * window view). A click on a floor walks you there; near an item on show, its tag shows (ShopItemTag). Upstairs is
  * still the layout's blocks until its furnishing.
  */
-import { useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
@@ -22,6 +22,11 @@ import { useOutside, windowViewMaterial } from "./RoomShell";
 import { Contents } from "./ShopGreybox";
 import ShopDisplays from "./ShopDisplays";
 import ShopItemTag from "./ShopItemTag";
+import KeycapKeychain from "./KeycapKeychain";
+import { iconUrl } from "@/lib/icons/keys";
+import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
+import { SHOP_KEYCHAIN } from "@/lib/game/shopLayout";
+import { KEYCHAIN_SLUG } from "./KeychainStage";
 
 const GROUND = "/assets/game/interiors/shop/ground.glb";
 const MEZZ = "/assets/game/interiors/shop/mezz.glb";
@@ -79,6 +84,13 @@ export default function ShopRoom({ walker, light, player, frozen }: {
   useEffect(() => { applyEnvironment(gl, scene, SHOP_ENV); return () => disposeEnvironment(scene); }, [gl, scene]);
   const ground = useRoomModel(GROUND), mezz = useRoomModel(MEZZ);
   const items = useMemo(() => shopDisplay(), []);
+  const [{ liteMode }] = useGraphicsSettings();
+  // The evidence script presses the keychain's keycap (dev): window.__shopKeychainPress().
+  const [press, setPress] = useState(0);
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    Object.assign(window, { __shopKeychainPress: () => setPress(n => n + 1) });
+  }, []);
   const upper = useRef<THREE.Group>(null);
   useFrame(() => { if (upper.current) upper.current.visible = walker.upperShown; });
   return <group>
@@ -87,7 +99,28 @@ export default function ShopRoom({ walker, light, player, frozen }: {
     <ShopItemTag items={items} walker={walker} player={player} hidden={frozen} />
     <group ref={upper}>
       <primitive object={mezz} onClick={walkOn(1)} />
-      <group position={[0, SHOP_FLOOR_HEIGHT, 0]}><Contents level={1} except={MODELLED_UP} paths={false} /></group>
+      <group position={[0, SHOP_FLOOR_HEIGHT, 0]}>
+        <Contents level={1} except={MODELLED_UP} paths={false} exceptSlots={[SHOP_KEYCHAIN.slot]} />
+        {/* The keycap keychain on its hook: take hold of it, or press its keycap (lite graphics: its sprite). */}
+        <mesh position={[SHOP_KEYCHAIN.hook[0], SHOP_KEYCHAIN.hook[1] + 0.012, SHOP_KEYCHAIN.hook[2] + 0.04]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.012, 0.012, 0.13, 8]} /><meshStandardMaterial color="#3b4046" metalness={0.7} roughness={0.4} />
+        </mesh>
+        {liteMode ? <KeychainSprite /> : <Suspense fallback={null}><KeycapKeychain grab position={SHOP_KEYCHAIN.hook} scale={SHOP_KEYCHAIN.scale} press={press} /></Suspense>}
+      </group>
     </group>
   </group>;
+}
+
+/** The keychain's sprite on the hook (lite graphics): the icon, a render of the same model, facing the room. */
+function KeychainSprite() {
+  const texture = useMemo(() => {
+    const t = new THREE.TextureLoader().load(iconUrl(KEYCHAIN_SLUG));
+    t.colorSpace = THREE.SRGBColorSpace; t.magFilter = THREE.NearestFilter;
+    return t;
+  }, []);
+  const [x, y, z] = SHOP_KEYCHAIN.hook, h = 1.08 * SHOP_KEYCHAIN.scale;
+  return <mesh position={[x, y - h / 2, z - 0.06]} rotation={[0, Math.PI, 0]}>
+    <planeGeometry args={[h, h]} />
+    <meshBasicMaterial map={texture} transparent alphaTest={0.3} />
+  </mesh>;
 }

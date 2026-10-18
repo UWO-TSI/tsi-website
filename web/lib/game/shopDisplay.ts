@@ -4,9 +4,10 @@
  * icon, lib/icons/manifest.ts). The front plinths carry today's specials (the shop's own daily picks, rules.ts
  * dailySpecials) until there's seasonal stock; everything else is a fixed pick from what's on sale.
  */
-import { CATALOGUE, OWNERSHIP_ITEMS, onSale, type CatalogueEntry } from "@/lib/wallet/catalogue";
+import { CATALOGUE, OWNERSHIP_ITEMS, PENDING_MERCH, onSale, type CatalogueEntry } from "@/lib/wallet/catalogue";
 import { dailySpecials, torontoDay, type ShopItem } from "@/lib/wallet/rules";
-import { iconKey, iconSpecs, iconUrl, type IconSpec } from "@/lib/icons/manifest";
+import { iconKey, iconUrl, type IconSpec } from "@/lib/icons/manifest";
+import { itemSpec } from "@/lib/icons/itemModel";
 import { SHOP_SLOTS, SHOP_TAG_RANGE, type Level } from "./shopLayout";
 
 /** Every slot but the front plinths' and the merch placeholders': the catalogue row it shows (slug). */
@@ -23,6 +24,7 @@ export const SHOP_PICKS: Record<string, string> = {
   "merch-bags-1": "merch-tote", "merch-bags-2": "merch-tote",
   "merch-small-1": "merch-sticker-pack", "merch-small-2": "merch-sticker-pack", "merch-small-3": "merch-sticker-pack",
   "merch-featured-1": "merch-tote", "merch-featured-2": "merch-sticker-pack",
+  "merch-keychain-1": "merch-tsi-keycap-keychain",
 };
 /** The front plinths: today's specials, in order. */
 export const SPECIALS_SLOTS = ["seasonal-1", "seasonal-2", "seasonal-3"] as const;
@@ -40,10 +42,8 @@ export interface ShopDisplayItem {
   special: boolean;
 }
 
-const ON_SALE: readonly CatalogueEntry[] = [...CATALOGUE, ...OWNERSHIP_ITEMS].filter(onSale);
+const ON_SALE: readonly CatalogueEntry[] = [...CATALOGUE, ...OWNERSHIP_ITEMS, ...PENDING_MERCH].filter(onSale);
 const BY_SLUG = new Map(ON_SALE.map(e => [e.slug, e]));
-let specs: Map<string, IconSpec> | null = null;
-const specFor = (e: CatalogueEntry) => (specs ??= new Map(iconSpecs(ON_SALE).map(s => [s.key, s]))).get(iconKey(e)) ?? null;
 
 /** Today's specials as the shop picks them (the same shuffle the server runs on the same rows). */
 export function todaysSpecials(day: string): CatalogueEntry[] {
@@ -58,7 +58,7 @@ export function shopDisplay(now: Date = new Date()): ShopDisplayItem[] {
   for (const s of SHOP_SLOTS) {
     const i = (SPECIALS_SLOTS as readonly string[]).indexOf(s.id);
     const entry = i >= 0 ? specials[i] : BY_SLUG.get(SHOP_PICKS[s.id] ?? "");
-    const spec = entry && specFor(entry);
+    const spec = entry && itemSpec(entry);
     if (!entry || !spec) continue;
     out.push({ slot: s.id, slug: entry.slug, name: entry.display_name, icon: iconUrl(iconKey(entry)), spec, special: i >= 0 });
   }

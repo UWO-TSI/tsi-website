@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { CATALOGUE, OWNERSHIP_ITEMS, onSale } from "@/lib/wallet/catalogue";
+import { CATALOGUE, OWNERSHIP_ITEMS, PENDING_MERCH, onSale } from "@/lib/wallet/catalogue";
 import { SHOP_PICKS, SPECIALS_SLOTS, nearestDisplay, shopDisplay, todaysSpecials } from "./shopDisplay";
 import { SHOP_SLOTS, SHOP_TAG_RANGE, type ItemKind } from "./shopLayout";
 
-const ON_SALE = new Map([...CATALOGUE, ...OWNERSHIP_ITEMS].filter(onSale).map(e => [e.slug, e]));
+const ON_SALE = new Map([...CATALOGUE, ...OWNERSHIP_ITEMS, ...PENDING_MERCH].filter(onSale).map(e => [e.slug, e]));
 /** The shop categories each kind of display may show. */
 const KIND_CATEGORIES: Record<ItemKind, string[]> = {
   seasonal: ["tool", "outfit", "hair", "accessory", "furniture", "wallpaper", "flooring"],
