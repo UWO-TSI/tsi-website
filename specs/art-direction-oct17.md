@@ -55,3 +55,12 @@
 - **Parasol:** "keep the old lounge chair and the slightly tilted umbrella with its gloss; just tweak the old dump slightly so there are colours instead of only orange".
 - **Plaza boards:** "I like the old bulletin board, no cork, just plain, more notes on it, the subtle lighter texture and build of the old board."
 - **Tree fruit:** "old fruits are way better, it has soul... they aren't just balls". Match that, or keep the old.
+
+## Body rework (David, 2026-10-18) — queued after the wardrobe batch 2 hair pass
+- **David's words:** "the body look like a fat chud and the leg short and stubby maybe thicker legs with proper bit thigh anatomy".
+- **Decision:** "Slimmer, longer legs":
+  - a slimmer torso and waist;
+  - legs about 20–30% longer, with real thighs and knees;
+  - still chibi, with the same big head.
+  - Clothes, accessories and animations get refitted; budgets stay.
+- **Timing:** it starts right after the hair lane lands, to avoid colliding with its fitting work.
