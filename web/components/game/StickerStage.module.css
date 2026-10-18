@@ -1,0 +1,9 @@
+/* The sticker's variants down the left of the stage (David's product-hero reference): a thumbnail each, the picked one
+   outlined in ink. */
+.swatches { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); z-index: 2; display: grid; gap: 10px; }
+.swatch { all: unset; display: grid; place-items: center; width: 64px; height: 52px; border-radius: 10px; background: #ffffff; cursor: pointer;
+  box-shadow: 0 0 0 1px #e0e0e0; overflow: hidden; }
+.swatch img { width: 56px; height: auto; image-rendering: pixelated; }
+.swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px #151515; }
+.swatch:focus-visible { outline: 2px solid #151515; outline-offset: 2px; }
+@media (max-width: 600px) { .swatches { left: 8px; gap: 8px; } .swatch { width: 52px; height: 42px; } .swatch img { width: 46px; } }

@@ -137,7 +137,7 @@ const outsideView = () => (outside ??= new OutsideView());
 
 /** The panes: the outside texture, sampled where the view through the glass meets a plane VIEW_DEPTH behind it. */
 let viewMaterial: THREE.MeshBasicMaterial | null = null;
-function windowViewMaterial(): THREE.MeshBasicMaterial {
+export function windowViewMaterial(): THREE.MeshBasicMaterial {
   if (viewMaterial) return viewMaterial;
   const m = new THREE.MeshBasicMaterial({ name: "WindowView", map: outsideView().texture });
   m.onBeforeCompile = shader => {

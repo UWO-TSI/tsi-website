@@ -53,7 +53,9 @@ export type SFXName =
   | "blip2"
   | "blip3"
   | "blip4"
-  | "blip5";
+  | "blip5"
+  /** The TSI keycap keychain's click: the press and the return in one file (a stand-in until David's recording). */
+  | "keyswitch";
 
 interface AudioManifest {
   ambient: Record<AmbientPhase, string>;
@@ -81,6 +83,7 @@ const MANIFEST: AudioManifest = {
     blip3: "/audio/sfx/blip3.ogg",
     blip4: "/audio/sfx/blip4.ogg",
     blip5: "/audio/sfx/blip5.ogg",
+    keyswitch: "/audio/sfx/keyswitch.ogg",
   },
 };
 

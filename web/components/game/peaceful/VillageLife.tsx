@@ -36,6 +36,7 @@ import type { ClipName } from "@/lib/game/character/clips";
 import { worldTime } from "@/lib/game/worldClock";
 import { FLEE_TIME, WARY_HOP, carryBugs, fleeAt, waryHop, type FleePose } from "@/lib/game/bugFlee";
 import { FRUIT_MODEL, fruitTree, hangAt, nearestHang, type Point, type TreeSpot } from "@/lib/game/treeFruit";
+import { flowerUrl } from "@/lib/game/natureParts";
 import { SHAKE, WORLD_SHAKES, fallAt, restPoint, type Fall } from "@/lib/game/treeShake";
 import { contactDelay, hitDelays, landAt } from "@/lib/game/actTiming";
 import { addDrop, addHole, dropsFor, dropsVersion, fallenOf, holeFrame, holeOpacity, holesNow, pruneHoles, removeDrop, setFallen, subscribeDrops, type Drop, type Hole } from "@/lib/game/forageWorld";
@@ -161,7 +162,7 @@ function NodeVisual({ sp, canopy }: { sp: Species; canopy?: boolean }) {
   if (buried(sp) || sp.category === "mineral") return null;
   if (sp.model) return <GLBProp url={sp.model} position={[0, 0.02, 0]} scale={1} />;
   // A flower to pick: one bloom of its own kind (the cluster's ACNH models), a little smaller than a cluster's.
-  if (sp.sub === "flower") return <GLBProp url={`/assets/acnh/plants/flower-${sp.key.replace(/^flower_/, "")}.glb`} position={[0, 0, 0]} rotation={[0, sp.position * 1.7, 0]} scale={0.42} />;
+  if (sp.sub === "flower") return <GLBProp url={flowerUrl(sp.key)} position={[0, 0, 0]} rotation={[0, sp.position * 1.7, 0]} scale={0.42} />;
   return null;
 }
 

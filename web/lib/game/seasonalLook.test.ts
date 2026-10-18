@@ -46,10 +46,16 @@ describe("seasonal look", () => {
     expect(seasonLook(on("2027-01-15"), palettes).snow).toBe(1);
     expect(seasonLook(on("2026-12-21"), palettes).snow).toBeCloseTo(0.5, 1);
   });
-  it("swaps to blossom oaks in spring and snow trees in winter", () => {
-    expect(SEASON_TREES.spring.slice(0, 3).every(url => url.includes("tree-blossom"))).toBe(true);
+  it("swaps to blossom in spring and snow trees in winter", () => {
+    expect(SEASON_TREES.spring.slice(0, 3).every(url => url.endsWith("-blossom.glb"))).toBe(true);
     expect(SEASON_TREES.summer.some(url => url.includes("blossom"))).toBe(false);
-    expect(SEASON_TREES.winter.every(url => url.includes("snow"))).toBe(true);
+    expect(SEASON_TREES.winter.every(url => /-(winter|snow)\.glb$/.test(url))).toBe(true);
+    // Our broadleaf trees (art/trees/build_broadleaf.py): the same three shapes in every season's dress, each shipped.
+    for (const s of ["spring", "summer", "autumn", "winter"] as const) {
+      const ours = SEASON_TREES[s].slice(0, 3);
+      expect(ours.map(url => url.replace(/^.*tree-([a-z]+)-[a-z]+\.glb$/, "$1"))).toEqual(["round", "wide", "tall"]);
+      for (const url of ours) expect(existsSync(join(__dirname, "../../public", url)), url).toBe(true);
+    }
     expect(SEASON_FLOWERS.winter).toEqual([]);
     // The closed bushes (art/nature/close_bushes.py): each season's own, winter's the dump's snow holly closed.
     for (const s of ["spring", "summer", "autumn", "winter"] as const) for (const url of SEASON_BUSHES[s]) {

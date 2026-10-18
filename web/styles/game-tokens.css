@@ -71,6 +71,31 @@
 
   --gui-scrim: rgb(64 52 36 / 0.3);
 
+  /* ── Flat UI: the shop overlay's style for the game's menus (specs/polish/flat-ui.md, row 315; components/gui/flat).
+     Black and white type on a light grey, white cards, no beige; the Tethos navy for round buttons. ── */
+  --flat-ink: #151515;          /* type */
+  --flat-quiet: #8a8a8a;        /* the muted line, the kind, hints */
+  --flat-body: #5f5f5f;         /* descriptions and spec values */
+  --flat-line: #e0e0e0;         /* hairlines */
+  --flat-ground: #f1f1f1;       /* the panel */
+  --flat-card: #ffffff;         /* cards, the spec band, the close */
+  --flat-card-dim: #f7f7f7;     /* a card for something not found yet */
+  --flat-pill: #ececec;         /* the price pill */
+  --flat-pill-ink: #6f6f6f;
+  --flat-rail: #a3a3a3;         /* an idle rail icon (the active one is ink) */
+  --flat-hint: #b0b0b0;         /* "Drag to turn" */
+  --flat-dark: #2a2a2a;         /* the dark pill button */
+  --flat-dark-hover: #000000;
+  --flat-disabled: #c9c9c9;
+  --flat-navy: #2e3a63;         /* round buttons, white glyphs (David, 2026-10-18) */
+  --flat-error: #c4513d;
+  --flat-accent: var(--gui-tethos-blue);   /* tags and badges */
+  --flat-scrim: rgb(18 18 18 / 0.42);
+  --flat-shadow: 0 24px 80px rgb(0 0 0 / 0.28);
+  /* The white studio stage: a seamless sweep fading to the floor, a soft contact shadow under the item. */
+  --flat-stage: radial-gradient(ellipse 24% 4.5% at 50% 87%, rgb(0 0 0 / 0.17), rgb(0 0 0 / 0.07) 55%, transparent 100%),
+    linear-gradient(180deg, #ffffff 0%, #ffffff 60%, #f5f5f5 84%, #eeeeee 100%);
+
   /* ── Type: one rounded face, 12 px at the smallest ── */
   --gui-font: "Tethos Nunito", "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
   --gui-text-xs: 12px;

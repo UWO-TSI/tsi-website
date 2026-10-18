@@ -87,6 +87,27 @@ export const CATALOGUE: CatalogueEntry[] = [
   e("bag-30", "Roomier pocket", "tool", 1500, { catalogue_ref: "bag:30", description: "Your backpack holds 30 things instead of 20." }),
 ];
 
+/**
+ * Club merch waiting on its migration (specs/merch/tsi-keycap-keychain.md, David 2026-10-17): it joins CATALOGUE when
+ * its seed migration is written. Held back for now: adding a row to CATALOGUE regenerates the economy and shop-icons
+ * seeds, and game/wardrobe-b2's unmerged 20261017172740 regenerates shop-icons too (the coordinator decides the order).
+ * The models, the shop's display and the dev economy read it from here meanwhile.
+ */
+export const PENDING_MERCH: CatalogueEntry[] = [
+  withIcon({ slug: "merch-tsi-keycap-keychain", display_name: "TSI keycap keychain", category: "merch",
+    description: "A Gateron Milky Yellow Pro switch in clear acrylic, under a navy TSI keycap with the Tethos mark. Press it: it clicks. Pick up at HQ on campus.",
+    price_coins: null, price_gems: 800, tier: null, slot: null, special_pool: false, stackable: false, stock: null, catalogue_ref: null, sprite_url: null, position: 38 }),
+  // specs/merch/tsi-lanyard.md: 800 gems (David); off sale like the keychain until its catalogue row lands.
+  withIcon({ slug: "merch-tsi-lanyard", display_name: "TSI lanyard", category: "merch",
+    description: "Navy, printed both sides: GENESIS and TETHOS with the Tethos mark outside, the Steve Jobs quote inside. Silver D-ring and swivel snap hook. Pick up at HQ on campus.",
+    price_coins: null, price_gems: 800, tier: null, slot: null, special_pool: false, stackable: false, stock: null, catalogue_ref: null, sprite_url: null, position: 39 }),
+  // specs/merch/genesis-sticker.md: no price yet, off sale. Its card's picture is the light variant with its foil baked in.
+  { ...withIcon({ slug: "merch-genesis-sticker", display_name: "GENESIS sticker", category: "merch",
+    description: "Holographic, in light or dark: the GENESIS ASCII art and GEN_26. Pick up at HQ on campus.",
+    price_coins: null, price_gems: null, tier: null, slot: null, special_pool: false, stackable: false, stock: null, catalogue_ref: null, sprite_url: null, position: 40 }),
+    sprite_url: "/assets/game/items/merch-genesis-sticker-light-sprite.webp" },
+];
+
 // ── Ownership (coordinator ruling on audit item 22; 20260926180000_ownership.sql) ──
 // Clothes are character parts (catalogue_ref = part id), dyes are `hair:<palette
 // index>`, furniture is every homes piece. Mirrored by scripts/gen-seeds.mjs.

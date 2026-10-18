@@ -159,6 +159,13 @@ room (34,170 triangles, 48 primitives, 33 materials), the interiors' kit (35 pri
 primitives, 25 materials: the most draws of any building in the village). The test fails on any new asset over its
 category and on an exception that is no longer needed.
 
+The shop (2026-10-18) is a two-floor room that David asked for bigger, so each floor is one room model over the 12,000:
+- **`game/interiors/shop/ground.glb`, 17,088 triangles.** The ground floor, approved; the shop measures 2.70 ms median
+  (high) and 1.50 ms (lite) at its perf check.
+- **`game/interiors/shop/mezz.glb`, 18,244 triangles.** The mezzanine, furnished after ref 1 (its layout blocks are already
+  replaced; the before/after is in `specs/evidence/shop-interior/phase2/upstairs-before-after.webp`). Measured in the
+  same check. It is still provisional: revisit it when the merch level next changes.
+
 ## Network, per player (`NETWORK_BUDGET`)
 
 From `specs/multiplayer.md` §4.3 (pose packets at 10 Hz on the ground, 15 while a move is set, one more per event at

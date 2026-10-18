@@ -180,6 +180,14 @@ export const ASSET_CATEGORIES: readonly AssetCategory[] = [
   { name: "shore and forage", prefixes: ["game/forage/mushroom-", "game/forage/shell-"], triangles: 2000, primitives: 1, materials: 1, texture: 256, bones: 0 },
   // game/remodel-r2 (art/nature/close_bushes.py): the dump's bushes closed all round, one primitive on the dump's leaf texture.
   { name: "closed bush", prefixes: ["game/plants/bush-"], triangles: 1000, primitives: 1, materials: 1, texture: 128, bones: 0 },
+  // game/remodel-trees (art/trees): our trees, leaf or needle cards over closed volumes on a trunk, drawn instanced: the
+  // cards with their volume (one cut-out material on the painted atlas) and the bark in colour, the crown's hull and the
+  // trunk only in the sun's map. Triangles count all four; the far model (.lod1) is held under half the near one
+  // (natureLod.test.ts).
+  { name: "tree", prefixes: ["game/plants/tree-", "game/plants/conifer-"], triangles: 3200, primitives: 4, materials: 4, texture: 512, bones: 0 },
+  // game/remodel-trees (art/trees/build_flowers.py): a clump of stems with petal cards, one cut-out material on the
+  // painted petal atlas, one draw for every flower of its kind.
+  { name: "flower", prefixes: ["game/plants/flower-"], triangles: 600, primitives: 1, materials: 1, texture: 512, bones: 0 },
 ];
 /** Shipped before the budget, over their category: each capped where it is today. Shrink, never raise. */
 export const ASSET_EXCEPTIONS: Record<string, Partial<AssetBudget> & { why: string }> = {
@@ -194,6 +202,9 @@ export const ASSET_EXCEPTIONS: Record<string, Partial<AssetBudget> & { why: stri
   "game/weapons/tooth-charm-5.glb": { primitives: 10, materials: 10, why: "tier-5 charm, a material per part" },
   "game/cafe/cafe-room.glb": { triangles: 34_170, primitives: 48, materials: 33, why: "the café interior, one room drawn alone: 48 draws" },
   "game/interiors/kit.glb": { primitives: 35, why: "the interiors' shared kit; pieces are drawn one by one" },
+  // The shop is two floors (David asked for it bigger, specs/interiors/shop.md): each floor is its own room model.
+  "game/interiors/shop/ground.glb": { triangles: 17_088, why: "the shop's approved ground floor, one floor of a two-floor room: 2.70 ms high at the shop's perf check" },
+  "game/interiors/shop/mezz.glb": { triangles: 18_244, why: "the shop's furnished mezzanine (the merch level), the second floor: 2.70 ms high at the shop's perf check" },
   "game/buildings/cafe.glb": { primitives: 34, materials: 25, why: "the café exterior: 34 draws in the village, the most of any building" },
   // Dump models David kept and we only retouched (row 314, art/props/derive_*.py): their own geometry and textures.
   "game/props/beach-parasol.glb": { triangles: 4740, why: "the dump's parasol and two loungers kept as they were, recoloured only (one draw)" },

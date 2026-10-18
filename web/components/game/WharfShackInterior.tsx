@@ -36,7 +36,7 @@ export default function WharfShackInterior({
   onNearestStation: (s: InteriorStation | null) => void;
 }) {
   const { scene } = useThree();
-  useEffect(() => applyInteriorBackdrop(scene, "#152028"), [scene]);
+  useEffect(() => applyInteriorBackdrop(scene, null), [scene]);   // the branded dark behind the canvas (InteriorBackdrop)
   const onMove = useNearestStation(WHARF_STATIONS, onNearestStation);
 
   const onFloorClick = (e: ThreeEvent<MouseEvent>) => {

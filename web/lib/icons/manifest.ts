@@ -13,6 +13,7 @@ import { TREATS } from "@/lib/collections/treats";
 import { WEAPONS } from "@/lib/combat/weapons";
 import { FISH } from "@/lib/game/fishing";
 import { TOOLS } from "@/lib/game/tools";
+import { flowerUrl } from "@/lib/game/natureParts";
 import { RETIRED_DYE, iconKey } from "./keys";
 import { COLOUR_ATLAS_URL, CUSTOM_HAIR_REF, PALETTE, PART_BY_ID, PARTS } from "@/lib/game/character/look";
 import { CATALOGUE as PIECES } from "@/lib/homes/catalogue";
@@ -67,7 +68,7 @@ function speciesSpec(key: string, sp?: { category: string; model: string | null 
   if (CRITTER_MODELS[key]) return { key, view: "above", url: `/assets/acnh/critters/${CRITTER_MODELS[key]}.glb` };
   if (key === "shore_gazami_crab") return { key, view: "above", url: "/assets/acnh/props/crab-gazami.glb" };
   if (key === "shore_hermit_crab") return { key, view: "three-quarter", url: "/assets/acnh/props/crab-hermit.glb" };
-  if (key.startsWith("flower_")) return { key, view: "three-quarter", url: `/assets/acnh/plants/flower-${key.slice(7)}.glb` };
+  if (key.startsWith("flower_")) return { key, view: "three-quarter", url: flowerUrl(key) };
   if (key === "wood_branch") return { key, view: "diagonal", url: "/assets/game/props/branch.glb" };
   if (sp?.model) return { key, view: "three-quarter", url: sp.model };
   // Our own: fruit, rocks and ore, mushrooms and the bugs without a critter (build_items.py).

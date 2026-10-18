@@ -168,7 +168,7 @@ export default function MuseumInterior({ wings, frozen, talking = false, player,
   light?: IslandLight;
 }) {
   const { scene } = useThree();
-  useEffect(() => applyInteriorBackdrop(scene), [scene]);
+  useEffect(() => applyInteriorBackdrop(scene, null), [scene]);   // the branded dark behind the canvas (InteriorBackdrop)
   // The walker snaps the camera onto its arrival (interiorShared); the shared position starts there too.
   useEffect(() => { player.current.set(BOUNDS.spawn[0], 0, BOUNDS.spawn[1]); }, [player]);
   const byWing = useMemo(() => new Map((wings ?? []).map(w => [w.wing, w])), [wings]);
