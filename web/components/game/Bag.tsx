@@ -118,7 +118,7 @@ export function bagKind(key: string): BagKind {
 }
 const SHELVES: { id: Shelf; label: string; icon: ReactNode }[] = [
   { id: "pockets", label: "Everything in your pockets", icon: <Backpack size={22} /> },
-  { id: "fish", label: "Fish", icon: <Fish size={22} /> },
+  { id: "fish", label: "Fish and sea creatures", icon: <Fish size={22} /> },
   { id: "bugs", label: "Bugs", icon: <Bug size={22} /> },
   { id: "forage", label: "Forage and fruit", icon: <Apple size={22} /> },
   { id: "materials", label: "Materials", icon: <Gem size={22} /> },

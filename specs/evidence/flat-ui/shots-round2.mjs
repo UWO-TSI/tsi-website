@@ -47,7 +47,7 @@ const SCENES = {
     await page.waitForTimeout(1500);
     await shot(page, "r2-6a-collection");
     await btn(page, /^Black Bass/).hover(); await shot(page, "r2-6b-collection-hover", { move: false });
-    await btn(page, /^Undiscovered/).nth(3).hover().catch(() => {}); await shot(page, "r2-6c-collection-hover-unknown", { move: false });
+    await page.getByRole("button", { name: /^Undiscovered/ }).nth(8).hover(); await shot(page, "r2-6c-collection-hover-unknown", { move: false });
     await btn(page, /^Black Bass/).click(); await shot(page, "r2-6d-collection-side");
     await btn(page, /^Bugs/).click(); await page.waitForTimeout(1500); await btn(page, /^Common Butterfly/).click(); await shot(page, "r2-6e-collection-bug-side");
     await ctx.close();

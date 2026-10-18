@@ -16,7 +16,8 @@ export function markerOf(box: { left: number; top: number; scrollLeft: number; s
 
 /**
  * The chosen child of `box` (matched by `selector`), measured for a sliding marker: null until measured (a static
- * render shows the chosen one's own highlight instead). Re-measured as `key` changes and as the box resizes.
+ * render shows the chosen one's own highlight instead). Re-measured as `key` changes, as the box or any of its
+ * children resizes, and as children come and go (a rail that gains a filter moves the others along).
  */
 export function useMarker(box: RefObject<HTMLElement | null>, selector: string, key: unknown): Marker | null {
   const [m, setM] = useState<Marker | null>(null);
@@ -32,8 +33,11 @@ export function useMarker(box: RefObject<HTMLElement | null>, selector: string, 
     };
     measure();
     const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
-    ro?.observe(el);
-    return () => ro?.disconnect();
+    const watch = () => { ro?.disconnect(); ro?.observe(el); for (const c of Array.from(el.children)) ro?.observe(c); };
+    watch();
+    const mo = typeof MutationObserver === "undefined" ? null : new MutationObserver(() => { watch(); measure(); });
+    mo?.observe(el, { childList: true });
+    return () => { ro?.disconnect(); mo?.disconnect(); };
   }, [box, selector, key]);
   return m;
 }

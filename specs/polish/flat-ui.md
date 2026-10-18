@@ -130,3 +130,16 @@ What that means:
 **Redo: the detail stage.** Verbatim: "i dont think detail stage is needed, remove. also bass is upside down"
 - The 3D studio stage comes off the bag and the collection; the side panel replaces it. It stays in the shop and the merch only.
 - The fish and bug pose code goes too: the shop needs neither.
+
+### Round 2, built: the bag, the collection and the micro animations (game/flat-ui, 2026-10-18)
+
+Evidence: `specs/evidence/flat-ui/round2-bag-collection.webp` (before and after, desktop and phone) and `round2-motion-filmstrip.webp` (40 ms a frame).
+
+- **Micro animations** (`components/gui/motion.ts`, the kit's CSS), everywhere the kit is used, the shop included:
+  - the rail's dot and the tabs' pill are one marker that slides to the new choice;
+  - an icon or button press dips and springs back;
+  - new content (another shelf, another tab) fades in and rises 4 px; the side panel slides in;
+  - each takes 120 to 200 ms, ease-out, and none plays under reduced motion.
+- **The bag:** the rail filters the pockets: everything, fish and sea creatures, bugs, forage and fruit, materials (only those the pockets hold), then tools, clothes and furniture. A click opens a small panel beside the grid (`SidePanel` in `WithSide`): a small picture, the name, rarity and kind, what to know (in your bag, sells for, size, museum, used in) and the actions (pin to the wheel across the top, then lock and drop). Clothes and furniture show the same panel, with Equip where the slot allows it. The grid stays in view; on a phone the panel sits at the foot of the screen. A filter shows its stacks only, so rearranging works on "everything".
+- **The collection:** hovering a tile (a long press on a phone, or keyboard focus) shows a small card: the name and rarity, caught, the record, where and when, now, the museum. A click opens the same side panel with those notes, the one-liner, and pin to the wheel when it's in the bag and can be held.
+- **No stage:** the bag and the collection have no 3D stage, so no fish model shows anywhere (the shop sells none, and the workbench makes none).

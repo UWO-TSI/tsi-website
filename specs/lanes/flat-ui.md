@@ -5,20 +5,16 @@
 
 ## Status (2026-10-18)
 
-- **Head:** `1b9308e6 [wip]`, on top of `325b45d8`.
-  - The WIP is the previous agent's round 2, in progress:
-    - micro-animations, in the new `web/components/gui/motion.ts` and the kit's CSS;
-    - the bag's side panel (`Bag.tsx`);
-    - the collection's hover card and side panel (`FlatCollection.*`);
-    - kit edits (`gui/flat/*`, `gui/index.tsx`, `gui.module.css`, the tests);
-    - a new `specs/evidence/flat-ui/shots-round2.mjs`.
-  - It was replacing the collection's detail page with the hover card and side panel. Review it, then finish it.
-- **Merged to main:**
-  - step 1, the shared kit (`web/components/gui/flat`, `--flat-*` tokens);
-  - step 2, the old shop pages on the overlay's body.
-- **Done on the branch:**
-  - the detail stage's pose code is removed (`325b45d8`);
-  - David's round-2 notes are in `specs/polish/flat-ui.md` (`3dcd3541`).
+- **Head:** see `git log -1` on `game/flat-ui` (the round 2 bag and collection commit, on top of the reviewed `[wip]` 1b9308e6 and the handoff merge).
+- **Round 2, the bag and the collection: built, waiting on David.** Sheet `specs/evidence/flat-ui/round2-bag-collection.webp`, motion `round2-motion-filmstrip.webp`.
+  - The `[wip]` was reviewed and finished, not reverted:
+    - the micro animations (`components/gui/motion.ts`, kit CSS): the rail's dot and the tabs' pill slide, presses dip, new content fades and rises 4 px, the side panel slides in; all 120 to 200 ms, ease-out, off under reduced motion;
+    - the bag: rail filters (everything, fish and sea creatures, bugs, forage and fruit, materials, then tools, clothes, furniture), only the filters the pockets hold show; a click opens `SidePanel` beside the grid (`WithSide`), no stage;
+    - the collection: a hover card (long press on a phone, keyboard focus), a click opens the same side panel; no stage.
+  - Fixed on top of it: the rail's dot sat on the wrong icon when filters appeared (it now re-measures as children change); the hover card was offset by the panel's entrance transform (now placed inside the grid's own box); the click after a long press was eaten; the card showed on a tap's focus; the side panel's notes repeated the clue and the museum; actions laid out as one dark button across, then grey pills.
+  - No fish model is shown anywhere now: the bag and the collection have no stage; the shop and the workbench never show fish.
+- **Merged to main:** step 1 (the kit), step 2 (the old shop pages).
+- **Approved:** the kit, the chest, the workbench, the furniture catalogue.
 - **Waiting:** step 8, the avatar creator and wardrobe, needs the coordinator's go after `game/wardrobe-b2` merges.
 
 ## David's decisions (round 2, 2026-10-18)
@@ -56,17 +52,12 @@ The verbatim notes are in `specs/polish/flat-ui.md`, under "Round 2".
 
 ## Next
 
-1. Finish and check the WIP:
-   - the micro-animations;
-   - the bag's filters and side panel;
-   - the collection's hover card and side panel;
-   - the stage removed from the bag and the collection.
-2. Shoot before and after (desktop and phone). Make the sheet `specs/evidence/flat-ui/round2-bag-collection.webp`, then report it to the coordinator and keep going.
-3. Redesign FOUR menus first, in the cream palette: journal and quests, the ruins mission board, the notice board, the mailbox.
+1. ~~Finish the WIP, shoot the bag and the collection, report.~~ Done (`round2-bag-collection.webp`).
+2. Redesign FOUR menus first, in the cream palette: journal and quests, the ruins mission board, the notice board, the mailbox.
    - Shoot before and after (desktop and phone) into `round2-step7-first4.webp`.
    - Report it, then STOP for David's OK on the direction.
-4. After his OK, apply the direction to the rest: settings, wallet, tourney, café goals, trophies, showcase, donate, the Esc menu, friends.
-5. Step 8, the creator, only on the coordinator's go.
+3. After his OK, apply the direction to the rest: settings, wallet, tourney, cafe goals, trophies, showcase, donate, the Esc menu, friends.
+4. Step 8, the creator, only on the coordinator's go.
 
 Each step ends with:
 - full tsc;
@@ -85,3 +76,8 @@ Each step ends with:
   - people-here and the player card need multiplayer.
 - **Shop recheck:** 2 club-merch states differ by about 25 px of antialiasing on the panel corner. That's known.
 - **`lib/game/shopRead.ts`** is unused since step 2. It's left in place.
+- **Round 2 shots:** `shots-round2.mjs <out> bag collection motion` on `/dev/flat-ui` (`motion` records a video; frames come out with `ffmpeg -vf fps=25`). Keep raw PNGs in the scratchpad, not the repo. The round 2 "before" panels are cropped from the step 3-4 and 5-6 sheets' "after" column (x 932, y 64 + 618 i + 40, 900 x 562).
+- **Locks:** `withlock.sh` in the scratchpad writes the owner `game/remodel-quick`; use a copy with `game/flat-ui` (`withlock-flat-ui.sh`). Swap has been over 9 GB, so the dev server has to be down before the heavy lock.
+- **A transformed ancestor traps `position: fixed`:** the flat panel's entrance animation (`rise ... both`) makes the panel the containing block. Place pop-overs inside a positioned box of the content instead.
+- **A rail's marker:** `useMarker` re-measures on key, resize and child changes; a rail that gains items after load (the bag's filters) moved the icons under a stale dot before.
+
