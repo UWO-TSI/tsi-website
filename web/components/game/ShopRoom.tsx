@@ -27,7 +27,8 @@ import { KEYCHAIN_HANG } from "@/lib/game/keychainSwing";
 import Lanyard, { LANYARD_HANG, LANYARD_SLUG } from "./Lanyard";
 import { iconUrl } from "@/lib/icons/keys";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
-import { SHOP_KEYCHAIN, SHOP_LANYARD } from "@/lib/game/shopLayout";
+import { SHOP_KEYCHAIN, SHOP_LANYARD, SHOP_STICKER } from "@/lib/game/shopLayout";
+import StickerEasel from "./StickerEasel";
 import { KEYCHAIN_SLUG } from "./KeychainStage";
 
 const GROUND = "/assets/game/interiors/shop/ground.glb";
@@ -100,7 +101,7 @@ export default function ShopRoom({ walker, light, player, frozen }: {
     <group ref={upper}>
       <primitive object={mezz} onClick={walkOn(1)} />
       {/* The merch on show upstairs (the tote, the sticker packs; the garments and prints are the model's stand-ins). */}
-      <ShopDisplays items={items} level={1} except={[SHOP_KEYCHAIN.slot, SHOP_LANYARD.slot]} />
+      <ShopDisplays items={items} level={1} except={[SHOP_KEYCHAIN.slot, SHOP_LANYARD.slot, SHOP_STICKER.slot]} />
       <group position={[0, SHOP_FLOOR_HEIGHT, 0]}>
         {/* The keycap keychain on its hook: take hold of it, or press its keycap (lite graphics: its sprite). */}
         <mesh position={[SHOP_KEYCHAIN.hook[0], SHOP_KEYCHAIN.hook[1] - 0.012, SHOP_KEYCHAIN.hook[2] + 0.04]} rotation={[Math.PI / 2, 0, 0]}>
@@ -113,6 +114,8 @@ export default function ShopRoom({ walker, light, player, frozen }: {
         </mesh>
         {liteMode ? <ItemSprite slug={LANYARD_SLUG} at={SHOP_LANYARD.peg} h={LANYARD_HANG * SHOP_LANYARD.scale} />
           : <Suspense fallback={null}><group position={SHOP_LANYARD.peg} rotation={[0, Math.PI, 0]}><Lanyard grab scale={SHOP_LANYARD.scale} /></group></Suspense>}
+        {/* The GENESIS sticker, both variants on a small easel on the counter under the totes. */}
+        <StickerEasel lite={liteMode} />
       </group>
     </group>
   </group>;
