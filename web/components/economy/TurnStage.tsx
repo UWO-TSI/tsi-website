@@ -25,16 +25,10 @@ export interface Turn {
   /** Rock side to side this far (rad) instead of turning all the way round (a flat thing, the sticker: its back stays away). */
   sway?: number;
 }
-/** How far it leans toward you at rest (rad): a little, so its top shows. */
-export const REST_PITCH = 0.12;
-export const newTurn = (yaw = 0.5, sway?: number, pitch = REST_PITCH): Turn =>
-  ({ yaw: sway ? 0 : yaw, pitch, spin: sway ? 0 : AUTO_TURN, down: false, moved: 0, lastX: 0, lastY: 0, idleSince: -Infinity, sway });
+export const newTurn = (yaw = 0.5, sway?: number): Turn => ({ yaw: sway ? 0 : yaw, pitch: 0.12, spin: sway ? 0 : AUTO_TURN, down: false, moved: 0, lastX: 0, lastY: 0, idleSince: -Infinity, sway });
 
-/**
- * One frame of the turn (dt seconds, now in seconds): a drag holds it; after one it coasts, then eases back to the slow
- * turn and its resting lean (`rest`: more for a thing seen from above, a butterfly with its wings spread).
- */
-export function stepTurn(t: Turn, dt: number, now: number, rest = REST_PITCH): Turn {
+/** One frame of the turn (dt seconds, now in seconds): a drag holds it; after one it coasts, then eases back to the slow turn. */
+export function stepTurn(t: Turn, dt: number, now: number): Turn {
   if (t.down) return t;
   if (t.sway) {
     // after a drag it coasts a moment, then eases back into rocking (from wherever the drag left it, the short way)
@@ -43,13 +37,13 @@ export function stepTurn(t: Turn, dt: number, now: number, rest = REST_PITCH): T
       t.yaw += (t.sway * Math.sin(now * 0.6) - t.yaw) * (1 - Math.exp(-dt * 1.2));
       t.spin = 0;
     } else { t.spin *= Math.exp(-dt * 3); t.yaw += t.spin * dt; }
-    t.pitch += (rest - t.pitch) * (1 - Math.exp(-dt * 1.5));
+    t.pitch += (0.12 - t.pitch) * (1 - Math.exp(-dt * 1.5));
     return t;
   }
   const target = now - t.idleSince > RESUME_S ? AUTO_TURN : 0;
   t.spin += (target - t.spin) * (1 - Math.exp(-dt * (target ? 1.2 : 3)));
   t.yaw += t.spin * dt;
-  t.pitch += (rest - t.pitch) * (1 - Math.exp(-dt * 1.5));
+  t.pitch += (0.12 - t.pitch) * (1 - Math.exp(-dt * 1.5));
   return t;
 }
 /** A drag's move (px): the stage turns with it, and it remembers how fast for the coast after. */
@@ -72,10 +66,10 @@ export function useStageTap(): (fn: () => void) => void {
   return useContext(StageContext)?.arm ?? (() => {});
 }
 
-function Spinner({ turn, rest, children }: { turn: { current: Turn }; rest: number; children: ReactNode }) {
+function Spinner({ turn, children }: { turn: { current: Turn }; children: ReactNode }) {
   const group = useRef<THREE.Group>(null);
   useFrame((_, dt) => {
-    const t = stepTurn(turn.current, Math.min(dt, 0.1), performance.now() / 1000, rest);
+    const t = stepTurn(turn.current, Math.min(dt, 0.1), performance.now() / 1000);
     if (group.current) { group.current.rotation.y = t.yaw; group.current.rotation.x = t.pitch; }
   });
   return <group ref={group}>{children}</group>;
@@ -97,14 +91,12 @@ function Studio() {
   return null;
 }
 
-export default function TurnStage({ children, className, cameraZ = 4.2, label, sway, restPitch = REST_PITCH }: {
+export default function TurnStage({ children, className, cameraZ = 4.2, label, sway }: {
   children: ReactNode; className?: string; cameraZ?: number; label: string;
   /** Rock this far either way (rad) instead of turning all the way round. */
   sway?: number;
-  /** Its resting lean toward you (rad). */
-  restPitch?: number;
 }) {
-  const turn = useRef<Turn>(newTurn(0.5, sway, restPitch));
+  const turn = useRef<Turn>(newTurn(0.5, sway));
   const last = useRef(0);
   const armed = useRef<(() => void) | null>(null);
   const [ctx] = useState(() => ({ arm: (fn: () => void) => { armed.current = fn; } }));
@@ -140,7 +132,7 @@ export default function TurnStage({ children, className, cameraZ = 4.2, label, s
         <directionalLight position={[-3.0, 1.0, 2.4]} intensity={0.85} />
         <directionalLight position={[0.4, 2.4, -3.6]} intensity={1.8} />
         <Studio />
-        <Spinner turn={turn} rest={restPitch}>{children}</Spinner>
+        <Spinner turn={turn}>{children}</Spinner>
       </Canvas>
     </div>
   </StageContext.Provider>;
