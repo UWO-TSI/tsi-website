@@ -9,8 +9,9 @@
  */
 import type { OwnerStation } from "./cafe";
 import type { ResidentPost } from "@/lib/content/residents";
+import { HQ_WREN } from "./hqLayout";
 
-export type KeeperRoom = "hq" | "shop" | "oracle" | "museum" | "wharf";
+export type KeeperRoom = "hq" | "memberHq" | "shop" | "oracle" | "museum" | "wharf";
 export interface KeeperPost {
   post: ResidentPost;
   /** The proposed roster's resident for the post (residentRoster.ts PROPOSED_RESIDENTS and RESIDENT_LOOKS). */
@@ -30,6 +31,9 @@ export const KEEPER_POSTS: Record<KeeperRoom, KeeperPost> = {
     { at: [-4.7, -1.78], yaw: ROOM, stay: 6.5, clip: "Trace" },   // the post tray
     { at: [-5.55, -1.78], yaw: ROOM, stay: 1.3, clip: "Forage" }, // under the counter
   ] },
+  // The member HQ (lib/game/hqLayout.ts, specs/interiors/hq.md): behind her desk by the door, facing it. The applicant
+  // island's clubhouse keeps "hq" above.
+  memberHq: { post: "hq_lead", slug: "wren", title: "HQ lead", stations: HQ_WREN.map(s => ({ at: s.at, yaw: ROOM, stay: s.stay, clip: s.clip })) },
   // Shop: behind the tiled counter (lib/game/shopLayout.ts: counter at 0, 3.3, its back at z 3.675, the till at x -0.55).
   shop: { post: "shopkeeper", slug: "shopkeeper", title: "Shopkeeper", stations: [
     { at: [0.1, 4.25], yaw: ROOM, stay: 7, clip: "Idle" },

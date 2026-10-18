@@ -40,8 +40,9 @@ export interface Rail { from: [number, number]; to: [number, number] }
 export interface Window { wall: "left" | "right"; z0: number; z1: number; y0: number; y1: number }
 /** A run of black track with its spots (y: under what ceiling), each spot aimed at a point. */
 export interface Track { from: [number, number, number]; to: [number, number, number]; spots: { at: number; aim: [number, number, number] }[] }
-/** A lamp: what it is, where its light comes from, and the warm pool it throws on the floor (faked, not a real light). */
-export interface Lamp { id: string; kind: "arc" | "mushroom" | "floor" | "desk"; level: Level; light: [number, number, number]; pool: number }
+/** A lamp: what it is, where its light comes from (above its floor), the height of what it stands on, and the radius of
+ * the warm pool it throws on the floor (faked: lib/game/hqLight.ts, not a real light). */
+export interface Lamp { id: string; kind: "arc" | "mushroom" | "floor"; level: Level; light: [number, number, number]; on: number; pool: number }
 export interface HqOption {
   id: "a"; name: string; summary: string;
   /** The upper floor: where it is (walkable on it, open below everywhere else). */
@@ -72,8 +73,14 @@ export const HQ_WREN: { at: [number, number]; clip: "Idle" | "Trace" | "Forage";
   { at: [HQ_DESK.x + 0.65, HQ_DESK.z + 1.4], clip: "Trace", stay: 6.5 },    // the register
   { at: [HQ_DESK.x - 0.85, HQ_DESK.z + 1.4], clip: "Forage", stay: 1.3 },   // under the counter
 ];
+/** What the new stations say on E (drafts for David; the admin doors' line is the lane brief's). */
+export const HQ_LINES = {
+  coffee: "Fresh coffee at the marble bar. The cups are already warm.",
+  aquarium: "Silver fish turn together in the blue. A small orange one goes its own way.",
+  admin: "Admins only. It's locked.",
+} as const;
 /** The trophy case, the clock, the workbench and the Founder's desk (their components read these). */
-export const HQ_TROPHY = { x: 9.45, z: 4.4, yaw: -Math.PI / 2 } as const;
+export const HQ_TROPHY = { x: 9.45, z: 4.4, yaw: Math.PI / 2 } as const;
 export const HQ_CLOCK_AT = { x: -0.2, z: 7.6 } as const;
 export const HQ_BENCH = { x: -9.25, z: 3.7 } as const;
 export const HQ_FOUNDER = { x: 7.4, z: 7.3 } as const;
@@ -106,12 +113,12 @@ export const HQ: HqOption = {
     { from: [-2.5, 2 * F - 0.06, 7.2], to: [8.0, 2 * F - 0.06, 7.2], spots: [{ at: -1.6, aim: [-1.6, F + 1.6, 7.9] }, { at: 4.4, aim: [4.4, F + 1.7, 7.9] }] },
   ],
   lamps: [
-    { id: "desk-lamp", kind: "mushroom", level: 0, light: [DX - 0.95, 1.18, DZ + 0.62], pool: 1.4 },
-    { id: "lounge-lamp", kind: "mushroom", level: 0, light: [6.6, 0.68, -1.75], pool: 1.8 },
-    { id: "lounge-floor", kind: "floor", level: 0, light: [4.9, 1.5, -4.3], pool: 1.7 },
-    { id: "work-lamp", kind: "mushroom", level: 0, light: [3.2, 0.62, 4.65], pool: 1.6 },
-    { id: "arc", kind: "arc", level: 1, light: [1.7, 1.85, 4.9], pool: 2.6 },
-    { id: "upper-mushroom", kind: "mushroom", level: 1, light: [4.7, 0.75, 5.8], pool: 1.4 },
+    { id: "desk-lamp", kind: "mushroom", level: 0, light: [DX - 0.95, 1.18, DZ + 0.62], on: 0.76, pool: 1.4 },
+    { id: "lounge-lamp", kind: "mushroom", level: 0, light: [6.6, 0.68, -1.75], on: 0.38, pool: 1.8 },
+    { id: "lounge-floor", kind: "floor", level: 0, light: [4.9, 1.5, -4.3], on: 0, pool: 1.7 },
+    { id: "work-lamp", kind: "mushroom", level: 0, light: [3.2, 0.62, 4.65], on: 0.4, pool: 1.6 },
+    { id: "arc", kind: "arc", level: 1, light: [1.7, 1.85, 4.9], on: 0, pool: 2.6 },
+    { id: "upper-mushroom", kind: "mushroom", level: 1, light: [4.7, 0.75, 5.8], on: 0.45, pool: 1.4 },
   ],
   fixtures: [
     // ── Ground floor, the double-height hall: Wren by the door, the coffee bar, the aquarium lounge. ──
@@ -159,7 +166,7 @@ export const HQ: HqOption = {
     fx("admin-doors", 1, "admin", "Admins only (locked)", [
       b([-7.4, 0, 7.92], [1.1, 2.3, 0.1], "door"), b([-4.9, 0, 7.92], [1.1, 2.3, 0.1], "door"),
     ]),
-    ...[-6.0, -3.4, -0.8, 1.8, 4.4, 7.0].map((x, i) => fx(`banner-${i + 1}`, 1, "flags", i === 0 ? "Yearly banners (blank until David's designs)" : "", [b([x, 1.05 - 1.9, UPPER.z0 - 0.05], [1.0, 1.9, 0.04], "banner")])),
+    ...[-6.0, -3.4, -0.8, 1.8, 4.4, 7.0].map((x, i) => fx(`banner-${i + 1}`, 1, "flags", i === 0 ? "Yearly banners (blank until David's designs)" : "", [b([x, 1.05 - 1.9, UPPER.z0 - 0.16], [1.0, 1.9, 0.04], "banner")])),
     fx("upper-plants", 1, "upper-lounge", "", [b([9.2, 0, 7.2], [0.8, 1.7, 0.8], "plant"), b([9.2, 0, 5.6], [0.8, 1.2, 0.8], "plant"), b([-9.25, 0, 7.35], [0.8, 1.7, 0.8], "plant")],
       [[9.2, 7.2, 0.4, 0.4], [9.2, 5.6, 0.4, 0.4], [-9.25, 7.35, 0.4, 0.4]]),
   ],

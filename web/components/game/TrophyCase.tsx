@@ -92,7 +92,12 @@ function Cabinet() {
   return <><primitive object={shell} /><primitive object={plates} /></>;
 }
 
-export default function TrophyCase({ member }: { member: string | null }) {
+export default function TrophyCase({ member, at, yaw = 0 }: {
+  member: string | null;
+  /** Where it stands and which way it faces (its front toward −z at yaw 0): the clubhouse's display when not given. */
+  at?: readonly [number, number];
+  yaw?: number;
+}) {
   const [trophies, setTrophies] = useState<Trophy[] | null>(null);
   const [week, setWeek] = useState("");
   useEffect(() => {
@@ -111,8 +116,8 @@ export default function TrophyCase({ member }: { member: string | null }) {
     void document.fonts?.ready.then(() => { if (alive) trophyLabels().draw(trophies, member, week); });
     return () => { alive = false; };
   }, [trophies, member, week]);
-  const [x, , z] = HQ_LAYOUT.display.position;
-  return <group position={[x, 0, z]}>
+  const [x, z] = at ?? [HQ_LAYOUT.display.position[0], HQ_LAYOUT.display.position[2]];
+  return <group position={[x, 0, z]} rotation={[0, yaw, 0]}>
     <Suspense fallback={null}><Cabinet /></Suspense>
     {(trophies ?? []).map((t, rank) => {
       const [sx, sy] = SLOTS[SLOT_OF_RANK[rank]];

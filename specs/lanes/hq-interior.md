@@ -5,17 +5,17 @@
 
 ## Status (2026-10-18)
 
-- **Head:** `f338d64a [wip]`, on top of `79d02ab0`.
-  - The WIP is the previous agent's start on phase 2:
-    - deleting the greybox components (`HqGreybox.tsx`, `HqLayoutInterior.tsx`);
-    - edits to `hqLayout.ts` and its test;
-    - a new `web/scripts/hq-layout-json.mjs`.
-  - It was about to write the room's model build (`build_hq.py`) from the layout JSON, following the shop's build. Review it, then finish or revert.
-- **Phase 1 is done and David picked a layout.** Commit `015308ee` built two walkable greybox layouts, 20 x 16 over two storeys:
-  - `web/lib/game/hqLayout.ts`, with 16 tests in `hqLayout.test.ts`;
-  - in development at `/lab/island?hq=inside&hqLayout=a`;
-  - the sheet: `specs/evidence/hq-interior/phase1/hq-layout-options.webp`.
-- **Phase 2 has the go.**
+- **Phase 2 in progress** on `game/hq-interior` (main merged at `39c70fd2`). The previous agent's `[wip]` (`f338d64a`) was reviewed and kept: option A only, the greybox removed.
+- **Built so far** (uncommitted parts are listed in Next):
+  - Layout A is the real member HQ: `components/game/hq/HqInterior.tsx` (lights, stations by floor, Wren, trophy case, workbench, clock) and `HqRoom.tsx` (the models, the cut-away, the ceiling for eye-level cameras only).
+  - The models: `art/interiors/build_hq.py` reads `art/interiors/hq_layout.json` (from `web/scripts/hq-layout-json.mjs`; a test keeps it current) and writes `web/public/assets/game/interiors/hq/{ground,upper,ceiling,tank}.glb`. Triangles: ground 23.4k, upper 15.0k, ceiling 4.6k (hidden from the walking camera), tank 9.2k.
+  - The aquarium: `components/game/hq/Aquarium.tsx` (water, surface, reef and fish shaders; one instanced draw for 64 fish, `lib/game/hqAquarium.ts` + test).
+  - Faked lamp light: `lib/game/hqLight.ts` (+ test) and `components/game/hq/LampPools.tsx`.
+  - Wren: `KEEPER_POSTS.memberHq` (lib/game/keepers.ts) from `HQ_WREN`. The applicant island keeps `hq`.
+  - New stations: coffee, aquarium, admin (two doors), lines in `HQ_LINES` (drafts). The library replaces the bookshelf ("Browse the library").
+  - The old member clubhouse (`Clubhouse` in DefaultIslandWorld, `FounderDesk.tsx`, `constrainWorkshop`) is gone; `HQInterior.tsx` stays for the applicant island and /lab/interior.
+  - Perf bench: an `hq` scene in `specs/perf/perf-bench.mjs`.
+  - Evidence script: `specs/evidence/hq-interior/phase2/shots.mjs`.
 
 ## David's decisions (newest first)
 
@@ -40,37 +40,11 @@
 
 ## Next
 
-1. Make layout A the real HQ interior. Remove option B, or keep it behind the lab flag only if that costs nothing.
-   - Every HQ station and E prompt must keep working (`specs/hq-onboarding.md`); the onboarding script follows stations, not positions.
-   - Wren stands at her new post.
-2. Build the room after the references, the way the shop's was built (`specs/interiors/shop.md`):
-   - a layout JSON, then a Blender build script under the Blender lock, then GLBs;
-   - material classes from `lib/game/modelMaterials.ts`;
-   - textures only where they show.
-3. Lighting that follows the time of day:
-   - windows for daylight;
-   - lamps, under-shelf strips, the aquarium's base strip and the track spots always on;
-   - fake the lamp pools with emissive and baked light, and keep real lights few.
-4. The aquarium:
-   - colour from `2026-10-18-ref-aquarium-colour.png` (cyan-blue water, schools of silver fish, coral low down);
-   - size from `2026-10-18-ref-aquarium-wall-size.png` (reef rock, a few orange fish, a warm base strip);
-   - instanced, cheaply animated fish, and caustics from the tank's own shader;
-   - a blue glow on the lounge in front of it.
-5. New stations:
-   - the coffee bar;
-   - the aquarium, with a short look line;
-   - the admin doors: "Admins only. It's locked."
-   Any new lines are drafts for David.
-6. Perf:
-   - an `hq` scene in `specs/perf/perf-bench.mjs`;
-   - exceptions in `web/lib/game/perf/budget.ts`, like the shop's, if they're needed;
-   - one `perf:check` at the end.
-7. A review sheet in `specs/evidence/hq-interior/phase2/`:
-   - the phase 1 views, furnished;
-   - day and night;
-   - the aquarium close up;
-   - the upper lounge, the work floor, and a top-down of each floor.
-8. Run the full vitest, update this file, commit, and report the head and sheet path to the coordinator.
+1. Night shots and the look pass: check the lamps carry the room at night; tune the four point lights and the pool gains in `HqInterior.tsx` / `hqLight.ts`.
+2. The full shot set (`shots.mjs` day and night, plus the prompt pass), then the sheet (`sheet.py`) in `specs/evidence/hq-interior/phase2/`.
+3. Budget exceptions in `web/lib/game/perf/budget.ts` for `game/interiors/hq/ground.glb` and `upper.glb` (over the 12k interior line, like the shop's), then the full vitest and tsc under the heavy lock.
+4. One `perf:check` with `SCENES=hq` (commit first: the measure build refuses dirty gated files).
+5. Update `specs/interiors/hq.md` (phase 2), this file, commit, report to the coordinator.
 
 ## Tools and gotchas
 
@@ -78,3 +52,9 @@
 - **The current HQ** was measured at 16 x 12, door front centre. Its stations: front desk with Wren, notice board, trophy case, bookshelf, clock, Founder's desk, workbench, exit.
 - **Under the mezzanine,** the upper floor is cut away while you're beneath it, so you can see your own floor.
 - **The merch catalogue rows aren't this lane's.**
+- **Building the room:** `/Applications/Blender.app/Contents/MacOS/Blender -b -P art/interiors/build_hq.py` under the Blender lock (it prints triangles per part). Regenerate the JSON first after any layout change: `cd web && node scripts/hq-layout-json.mjs`.
+- **Shots:** `cd web && PORT=3189 node ../specs/evidence/hq-interior/phase2/shots.mjs <out> day,night [ids]` against `NEXT_PUBLIC_SUPABASE_URL= NEXT_PUBLIC_SUPABASE_ANON_KEY= npx next dev -p 3189` (browser lock).
+- **The ceiling** (`ceiling.glb`: the hall's ceiling, the oval ceiling, the tracks and the whole front wall) shows only to a camera under 6.75: `scene.onBeforeRender` decides per rendering camera, so the evidence's eye-level views see a closed room and the walking camera looks in from above.
+- **Custom shaders bend:** the curved world lives in three's shared `project_vertex`; the tank and pool ShaderMaterials include it, or they'd slide off the room.
+- **High swap** (over 9 GB most of the time): stop the dev server and release the browser lock before taking the Blender lock.
+

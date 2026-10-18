@@ -1,5 +1,8 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { HQ, HQ_FLOOR_HEIGHT as F, HQ_SPAWN, HQ_WREN, createHqWalker, onUpper, walkable, type HqOption, type HqWalker } from "./hqLayout";
+import { HQ, HQ_FLOOR_HEIGHT as F, HQ_SPAWN, HQ_WREN, createHqWalker, hqLayoutJson, onUpper, walkable, type HqOption, type HqWalker } from "./hqLayout";
+import { KEEPER_POSTS } from "./keepers";
 
 /** Walk the walker from where it is towards `to`, a step at a time, the way the game's walker does; where it got to. */
 function walkTo(w: HqWalker, from: [number, number], to: [number, number]): [number, number] {
@@ -118,10 +121,21 @@ describe("HQ's room (the back mezzanine)", () => {
     expect(o.stations.filter(s => s.action === "admin" && s.level === 1).length).toBeGreaterThanOrEqual(2);
   });
 
-  it("puts Wren behind her desk, out of the walker's way, facing the door", () => {
+  it("puts Wren behind her desk, out of the walker's way, facing the door, seen over its counter", () => {
+    const counter = o.fixtures.find(f => f.id === "front-desk")!.blocks[0], ledgeZ = counter.at[2] + counter.size[2] / 2, ledge = counter.size[1];
+    const desk = o.stations.find(s => s.id === "desk")!;
+    // The walking camera (interiorShared snapInteriorCamera): 8.4 up and 7.2 behind you at the desk's station.
+    const camZ = desk.pos[1] - 7.2, camY = 8.4, hips = 0.55;
     for (const p of HQ_WREN) {
-      expect(p.at[1]).toBeGreaterThan(-5.2 + 0.4);           // behind the counter
+      expect(p.at[1]).toBeGreaterThan(ledgeZ);                // behind the counter
       expect(walkable(o, 0, p.at[0], p.at[1])).toBe(false);  // inside the desk's footprint: visitors stay on the near side
+      expect(Math.abs(p.at[0] - counter.at[0])).toBeLessThan(counter.size[0] / 2);
+      expect(hips + (camY - hips) * (p.at[1] - ledgeZ) / (p.at[1] - camZ)).toBeGreaterThan(ledge);
     }
+    for (const s of KEEPER_POSTS.memberHq.stations) expect(HQ_WREN.some(p => p.at === s.at)).toBe(true);
+  });
+
+  it("the model build reads the layout the game walks (art/interiors/hq_layout.json is current: node scripts/hq-layout-json.mjs)", () => {
+    expect(readFileSync(join(process.cwd(), "..", "art", "interiors", "hq_layout.json"), "utf8")).toBe(hqLayoutJson());
   });
 });
