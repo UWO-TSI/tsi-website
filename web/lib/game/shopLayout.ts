@@ -185,7 +185,7 @@ export const SHOP_SLOTS: DisplaySlot[] = [
   slot("seasonal-1", "seasonal", "seasonal-plinths", [3.0, 0.45, -3.15], [0.45, 0.45, 0.45]),
   slot("seasonal-2", "seasonal", "seasonal-plinths", [3.85, 0.8, -3.35], [0.45, 0.5, 0.45]),
   slot("seasonal-3", "seasonal", "seasonal-plinths", [4.65, 0.3, -2.95], [0.35, 0.35, 0.35]),
-  ...[-3.0, -2.6, -2.2].map((x, i) => slot(`clothes-${i + 1}`, "clothes", "rail", [x, 0.6, -0.2], [0.36, 0.85, 0.1])),
+  ...[-3.05, -2.6, -2.15].map((x, i) => slot(`clothes-${i + 1}`, "clothes", "rail", [x, 0.55, -0.2], [0.44, 0.9, 0.1])),
   // Laid side by side along the table, each fitted by its length.
   slot("tools-1", "tools", "tools-table", [3.35, 0.72, 0.32], [1.4, 0.06, 0.12]),     // a rod
   slot("tools-2", "tools", "tools-table", [3.3, 0.72, 0.56], [1.1, 0.1, 0.2]),        // a net

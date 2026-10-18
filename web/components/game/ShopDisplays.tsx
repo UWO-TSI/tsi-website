@@ -42,17 +42,22 @@ function tint(model: THREE.Object3D, tints?: Record<string, string>) {
 }
 
 const box = new THREE.Box3(), size = new THREE.Vector3(), mid = new THREE.Vector3();
+/** Bounds as it will draw: a character part's skeleton posed first (its bone matrices are empty until it renders). */
+function measure(o: THREE.Object3D): THREE.Box3 {
+  o.updateMatrixWorld(true);
+  o.traverse(c => { const m = c as THREE.SkinnedMesh; if (m.isSkinnedMesh) m.skeleton.update(); });
+  return box.setFromObject(o, true);
+}
 /** Fit a model into a slot: uniform scale to its box (a thin slot fits by its two big sides), on its floor, centred. */
 function fitted(model: THREE.Object3D, s: DisplaySlot, url: string, rotX?: number): THREE.Group {
   const inner = new THREE.Group();
   inner.add(model);
   if (rotX) model.rotation.x = rotX;
   inner.rotation.y = facing(s) + (facesPlusZ(url) ? Math.PI : 0);
-  inner.updateMatrixWorld(true);
-  box.setFromObject(inner, true).getSize(size);
+  measure(inner).getSize(size);
   // Long things lie down along the slot's long side (a rod or a net on the tools table).
   const lie = s.kind === "tools" && size.y > Math.max(size.x, size.z) * 1.6;
-  if (lie) { inner.rotation.z = Math.PI / 2; inner.updateMatrixWorld(true); box.setFromObject(inner, true).getSize(size); }
+  if (lie) { inner.rotation.z = Math.PI / 2; measure(inner).getSize(size); }
   // Fit: a laid-down tool by its length; a thin slot (a garment face-out) by its two big sides; else all three.
   const dims = s.size, got = [size.x, size.y, size.z];
   const axes = lie ? [0] : dims.filter(v => v >= 0.15).length >= 2 ? [0, 1, 2].filter(i => dims[i] >= 0.15) : [0, 1, 2];
@@ -60,10 +65,10 @@ function fitted(model: THREE.Object3D, s: DisplaySlot, url: string, rotX?: numbe
   const outer = new THREE.Group();
   outer.add(inner);
   outer.scale.setScalar(k);
-  outer.updateMatrixWorld(true);
-  box.setFromObject(outer, true).getCenter(mid);
-  const minY = box.min.y;
-  outer.position.set(s.at[0] - mid.x, s.at[1] - minY, s.at[2] - mid.z);
+  measure(outer).getCenter(mid);
+  // On the rail a garment hangs from its hanger (its top at the slot's top); everything else stands on its slot.
+  const y = s.fixture === "rail" ? s.at[1] + s.size[1] - box.max.y : s.at[1] - box.min.y;
+  outer.position.set(s.at[0] - mid.x, y, s.at[2] - mid.z);
   return outer;
 }
 

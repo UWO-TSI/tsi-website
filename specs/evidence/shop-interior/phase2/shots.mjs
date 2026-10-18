@@ -198,6 +198,9 @@ const SHOTS = [
   { id: "08-showroom", title: "The furniture dais, wallpapers behind, floorings in front", cam: { pos: [3.0, 2.0, 1.2], target: [4.3, 0.9, 4.6], fov: 55 }, labels: [] },
   { id: "09-clothes-stair", title: "The clothes rail and the shoe table by the stair", cam: { pos: [-0.4, 2.2, -2.4], target: [-3.6, 0.8, 1.0], fov: 55 }, labels: [] },
   { id: "10-seasonal", title: "The front plinths by the window: today's specials", cam: { pos: [1.2, 1.7, -1.4], target: [3.9, 0.6, -3.3], fov: 52 }, labels: [] },
+  { id: "11-item-tag", title: "Near an item: its tag, the name and a mini image", hud: true, route: [[0, -1.0], [2.5, -0.2]], cam: null, labels: [] },
+  { id: "12-shopkeeper", title: "E at the counter: the shopkeeper's two answers", hud: true, route: [[0, -1.0], L.spot], press: "e", keep: true, cam: null, labels: [] },
+  { id: "13-merch-ui", title: "Club merch: the item turning in the middle, with the pixel finish", hud: true, click: "Club merch", wait: 3500, cam: null, labels: [] },
 ].filter(s => !only || only.split(",").includes(s.id));
 
 const rect = await page.evaluate(() => { const c = window.__audit.renderers[0].domElement.getBoundingClientRect(); return { x: c.x, y: c.y, width: c.width, height: c.height }; });
@@ -226,13 +229,14 @@ for (const s of [...SHOTS].sort((p, q) => Number(!!p.aerial) - Number(!!q.aerial
     await page.keyboard.press(s.press);
     await page.waitForTimeout(4500);
   }
+  if (s.click) { await page.getByRole("button", { name: s.click }).first().click(); await page.waitForTimeout(s.wait ?? 2500); }
   await settle(page);
   await page.waitForTimeout(500);
   await page.evaluate(LABEL, { labels: s.labels, legend: s.legend, key: s.key, title: s.title, titleLow: s.hud, bend: aerial ? [0, 0] : [0.0032, 0.0011] });
   await page.screenshot({ path: join(outDir, `${s.id}.png`), clip: rect });
   console.log("shot", s.id);
   // Close what the shot opened (the wardrobe), and hide the page's DOM again.
-  if (s.press) { await page.keyboard.press("Escape"); await page.waitForTimeout(1500); }
+  if ((s.press && !s.keep) || s.click) { await page.keyboard.press("Escape"); await page.waitForTimeout(1500); }
   if (s.hud) await page.evaluate(() => { const st = document.getElementById("shop-hide"); if (st) st.disabled = false; });
 }
 await browser.close();

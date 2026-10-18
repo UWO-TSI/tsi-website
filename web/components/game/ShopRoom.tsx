@@ -8,11 +8,12 @@
  * still the layout's blocks until its furnishing.
  */
 import { useEffect, useMemo, useRef } from "react";
-import { useFrame, type ThreeEvent } from "@react-three/fiber";
+import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { AudioManager } from "@/lib/game/audio";
 import { prepareModel } from "@/lib/game/modelMaterials";
+import { applyEnvironment, disposeEnvironment, type EnvPhaseSpec } from "@/lib/game/envLight";
 import * as layout from "@/lib/game/shopLayout";
 import { SHOP_FLOOR_HEIGHT, type ShopWalker } from "@/lib/game/shopLayout";
 import { shopDisplay } from "@/lib/game/shopDisplay";
@@ -26,6 +27,12 @@ const GROUND = "/assets/game/interiors/shop/ground.glb";
 const MEZZ = "/assets/game/interiors/shop/mezz.glb";
 /** The mezzanine's fixtures its model already carries (the rest are blocks until upstairs is furnished). */
 const MODELLED_UP = ["stairwell-rail", "mezz-rail", "edge-sign"] as const;
+
+/**
+ * The room's own light field for reflections and fill (the island's sky isn't here): a bright warm ceiling, the walls,
+ * the oak's bounce from below and the lamps' hot spot overhead. Metal reads as metal and the fill stays even.
+ */
+const SHOP_ENV: EnvPhaseSpec = { skyTop: "#fbf6ec", skyBottom: "#e6dfd4", ground: "#c7a47b", sun: "#fff3d8", intensity: 0.55, sunElev: 0.9, sunAzimuth: 90 };
 
 export function preloadShopRoom() {
   useGLTF.preload(GROUND);
@@ -68,6 +75,8 @@ export default function ShopRoom({ walker, light, player, frozen }: {
     Object.assign(window, { __shopLayout: layout, __shopWalker: walker });
     return () => { delete (window as { __shopLayout?: unknown }).__shopLayout; delete (window as { __shopWalker?: unknown }).__shopWalker; };
   }, [walker]);
+  const { gl, scene } = useThree();
+  useEffect(() => { applyEnvironment(gl, scene, SHOP_ENV); return () => disposeEnvironment(scene); }, [gl, scene]);
   const ground = useRoomModel(GROUND), mezz = useRoomModel(MEZZ);
   const items = useMemo(() => shopDisplay(), []);
   const upper = useRef<THREE.Group>(null);

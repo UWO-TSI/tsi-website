@@ -64,8 +64,8 @@ export default function ShopInterior({
   return (
     <group>
       {/* Bright and even for reading the layout: the day, a warm-neutral fill, and the pendant's pool over the counter. */}
-      <InteriorDaylight light={light} shadows scale={{ key: 1.1, ambient: 0.5, hemisphere: 0.45, extent: 8 }} />
-      <ambientLight color="#fff6ea" intensity={0.35} />
+      <InteriorDaylight light={light} shadows scale={{ key: 1.1, ambient: 0.4, hemisphere: 0.35, extent: 8 }} />
+      <ambientLight color="#fff6ea" intensity={0.2} />
       {[2.6, SHOP_FLOOR_HEIGHT + 2.6].map(y => <pointLight key={y} color="#fff1dc" intensity={22 * lamps} distance={18} position={[0, y, 0]} />)}
       <pointLight color="#ffe9c8" intensity={5} distance={4} position={[(SHOP_PENDANT.x0 + SHOP_PENDANT.x1) / 2, SHOP_PENDANT.y - 0.15, SHOP_PENDANT.z]} />
 

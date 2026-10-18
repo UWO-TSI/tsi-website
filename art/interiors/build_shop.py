@@ -35,7 +35,7 @@ OUT = "game/interiors/shop"
 WALL, SKIRT = "#ece8e1", "#d6d0c6"
 CONCRETE, CONCRETE_DARK = "#cbc7bf", "#b9b4ab"
 STEEL, STEEL_DARK = "#a3a9ae", "#3b4046"
-OAK_TOP, BOOTH_OAK = "#bd8d5f", "#d4b58e"
+OAK_TOP, BOOTH_OAK = "#b8977a", "#d6bb98"
 SHEER, LINEN = "#f4f1ea", "#adbcaa"
 CRATE, CRATE_SLOT = "#efefeb", "#d4d4cf"
 LEAF, LEAF_LIGHT, SOIL = "#6c8c5a", "#86a670", "#5b4636"
@@ -247,7 +247,8 @@ def panes(level, name):
     w = L["windows"][level]
     y0 = level * F
     mat = K.Mat("M_View", "#ffffff", rough=0.1)
-    k.quad([(w["x"] - 0.03, y0 + w["y0"], w["z1"]), (w["x"] - 0.03, y0 + w["y0"], w["z0"]), (w["x"] - 0.03, y0 + w["y1"], w["z0"]), (w["x"] - 0.03, y0 + w["y1"], w["z1"])], mat)
+    # a thin slab, so its face toward the room faces the room whichever way the exporter winds a lone quad
+    k.rbox((w["x"] - 0.03, y0 + (w["y0"] + w["y1"]) / 2, (w["z0"] + w["z1"]) / 2), (0.01, w["y1"] - w["y0"], w["z1"] - w["z0"]), 0.0, mat, segs=1)
     return k.finish(name=name)
 
 

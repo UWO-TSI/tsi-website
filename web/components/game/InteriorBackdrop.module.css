@@ -8,7 +8,7 @@
   /* Deep charcoal, the building's tint gathered toward the middle, and a soft vignette to the corners. */
   background:
     radial-gradient(ellipse 120% 95% at 50% 42%, transparent 52%, rgba(0, 0, 0, 0.5) 100%),
-    radial-gradient(ellipse 70% 60% at 50% 40%, color-mix(in srgb, var(--tint) 34%, #16171a) 0%, #131416 70%);
+    radial-gradient(ellipse 70% 60% at 50% 40%, color-mix(in srgb, var(--tint) 52%, #17181b) 0%, color-mix(in srgb, var(--tint) 14%, #121315) 72%);
   background-color: #121315;
 }
 
@@ -16,10 +16,10 @@
 .backdrop::before {
   content: "";
   position: absolute;
-  inset: -160px;
+  inset: -200px;
   background-image: url("/assets/branding/tethos-mark.svg");
-  background-size: 128px 128px;
-  opacity: 0.045;
+  background-size: 180px 180px;
+  opacity: 0.014;
   animation: drift 180s linear infinite;
   will-change: transform;
 }
@@ -36,7 +36,7 @@
 
 @keyframes drift {
   from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(128px, 128px, 0); }
+  to { transform: translate3d(180px, 180px, 0); }
 }
 
 @media (prefers-reduced-motion: reduce) {

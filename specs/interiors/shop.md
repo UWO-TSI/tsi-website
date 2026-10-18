@@ -108,3 +108,33 @@ Kept from earlier rounds:
   - `11-merch-walk`;
   - `12-merch-across`;
   - `13-mezzanine-edge`: over the glass to the entrance below.
+
+## Phase 2, part 1: the furnished ground floor (2026-10-17)
+Approved for phase 2: round 3. While it was being built, David moved the changing room and chose the background:
+- the changing room is now **three booths right behind the stair**, each with a curtain, a mirror and a bench, each opening the "Try on outfits" wardrobe. Its old spot by the rail is a low concrete table of shoes;
+- the background is **Tethos-branded dark**: deep charcoal, a fine grain, the Tethos mark tiled faintly and drifting slowly, a soft vignette, and a slight tint per building. It's one CSS layer behind the canvas (`InteriorBackdrop`; the room clears to transparent round itself), so it costs no draws. It's used in the shop, HQ, the museum, the café and the wharf shack.
+
+**Models** (`art/interiors/build_shop.py` reads `art/interiors/shop_layout.json`, which `web/scripts/shop-layout-json.mjs` writes from `lib/game/shopLayout.ts`, so the models and the walking never drift; a test keeps the JSON current):
+- the look is simple and rounded, after David's references;
+- only the herringbone oak (512) and the glazed sage tile (256) are textured, both subtle;
+- everything else is plain colour on the shared presets (`P_Stone`, `P_Metal`, `P_Wood`, `P_Paint`, `P_Glass`, `P_Cloth`), so each preset draws once;
+- the edge lights and the pendant's strip are `M_Glow`;
+- the ground floor is 15.9k triangles and 10 materials; the mezzanine's shell (slab, fascia, railings, the "CLUB MERCH" sign, the upper walls) is 4.2k;
+- upstairs fixtures are still the layout's blocks, until part 2;
+- the room bakes its own warm environment, so metal reads as metal and the fill stays even (the island's sky isn't indoors).
+
+**Items on show** (`lib/game/shopDisplay.ts`): each slot shows a real catalogue item, drawn with its icon's model and tints and fitted into its slot:
+- garments hang on hangers on the rail;
+- rods and nets lie along the table;
+- wallpapers are framed panels on the wall and floorings are tiles on the dais;
+- the front plinths carry **today's specials** (the shop's own daily pick), so the front display changes each day.
+
+**Behaviour:**
+- **Item tag:** within 1.7 of an item on your floor, a small cream card over it shows its name and icon, marked "Today's special" when it is one. Nothing shows from the stair or while a sheet is open.
+- **The shopkeeper:** E at the counter asks "What are you after today?", with two answers:
+  - "In-game items" opens the shop without the merch tab;
+  - "Club merch" opens the merch only. The shopkeeper says "It's all upstairs if you want to see it in person.", and the sheet drops the till and the sell tab.
+- **The merch UI:** the picked item turns in the middle on a small canvas drawn at 0.3 of its size and scaled up without smoothing, the game's pixel finish. A click on an item's picture shows that one. The models are the merch icons' models, placeholders until David's merch photos arrive.
+- `/dev/economy?view=shop&section=merch|items` shows either answer over the in-memory economy.
+
+**Shots:** `specs/evidence/shop-interior/phase2/`, with the review sheet `ground-floor-sheet.webp`. They were made headless by `shots.mjs` there, plus the merch screen from the dev economy page.

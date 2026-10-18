@@ -1,6 +1,6 @@
 "use client";
 
-/** /dev/economy?view=shop|sell|inventory|wallet|admin[&tab=specials] */
+/** /dev/economy?view=shop|sell|inventory|wallet|admin[&tab=specials][&section=items|merch: the shopkeeper's two answers] */
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { InventorySheet, SellSheet, ShopBody, WalletSheet } from "@/components/economy/EconomySheets";
 import MerchFulfilment from "@/components/economy/MerchFulfilment";
@@ -54,7 +54,7 @@ export default function EconomyHarness() {
   const close = () => undefined;
   return (
     <main className="gui" style={{ minHeight: "100dvh", background: view === "admin" ? "var(--gui-page)" : "linear-gradient(180deg,#a9d8e6,#cfe7cf 55%,#9cc58f)", padding: view === "admin" ? 32 : 0 }}>
-      {view === "shop" ? <ProgressionPanel open onClose={close} title="Shop" wide><ShopBody transport={t} initialTab={(q.get("tab") as "tools") ?? "tools"} /></ProgressionPanel> : null}
+      {view === "shop" ? <ProgressionPanel open onClose={close} title={q.get("section") === "merch" ? "Club merch" : "Shop"} wide><ShopBody transport={t} initialTab={(q.get("tab") as "tools") ?? "tools"} section={(q.get("section") as "items" | "merch" | null) ?? undefined} /></ProgressionPanel> : null}
       {view === "sell" ? <SellSheet open onClose={close} transport={t} /> : null}
       {view === "inventory" ? <InventorySheet open onClose={close} transport={t} /> : null}
       {view === "wallet" ? <WalletSheet open onClose={close} transport={t} /> : null}
