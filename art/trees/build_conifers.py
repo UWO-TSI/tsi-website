@@ -72,23 +72,37 @@ def cone(b, hem, top, r, rect, col_of, segs, normal_of, lid=False, i=0, rows=4):
         b.face([v(rows, k + 1), v(rows, k), hub], [uv(rows, k + 1), uv(rows, k), uv(rows - 1, k + 0.5)], [col_of(b.verts[x]) for x in (v(rows, k + 1), v(rows, k), hub)])
 
 
-def snow_mound(b, t, hem, top, r, segs, i):
-    """Snow on a tier as the dump's snow cedar holds it (David, rounds 2 and 3: "the snow should collect and stack
-    near the top", "soft, smooth, fully covering, rounded at the tips"): a smooth pillow from the trunk out, its top
-    rounded and nearly flat, rounding down to a thick lip that rolls under. The upper half of the tree (t, 0 the
-    lowest tier .. 1 the top) is snowed over past its fringes' tips, so it reads as one soft cone with a round tip;
-    lower down the pillow stops above the hem and the green fingers hang out beneath it."""
-    covered = t >= 0.55
-    R = r * 1.15 + 0.16 if covered else r * (0.8 + 0.2 * t)  # how far out it reaches (a bulky pile up top, its tip round)
-    rim = hem - 0.12 if covered else hem + (top - hem) * (0.34 - 0.2 * t)  # its edge: a band of green fringe below
-    lift = 0.12 + 0.18 * t                                    # how high it piles over the tier's top
-    apex = top + lift
+def snow_mound(b, t, hem, top, r, segs, i, crown_top=False):
+    """Snow on every tier, organically (David, round 4: "snow in each layer organically"): a soft blanket lying on
+    the tier's slope where it shows, from under the skirt of the tier above out to a rounded crest and over a lip that
+    rolls under just above the tier's hem, so the tier's own green fingers hang out below it and the tier above's
+    fingers hang over its inner edge: white and green in layers, as the dump's snow cedar is. Thickness and reach vary
+    a little tier to tier and grow toward the top (t: 0 the lowest .. 1 the top); the top tier's blanket closes over its
+    tip in a round cap."""
+    rng = random.Random(f"snow-{i}")
+    t0, t1 = top - 0.05, hem - 0.06                       # the fringe cards' slope, from near the trunk to the rim
+
+    def slope(rho):
+        return t0 - (rho - 0.12 * r) / (0.98 * r) * (t0 - t1)
+
+    thick = (0.1 + 0.08 * t) * rng.uniform(0.85, 1.2)
+    R = r * (1.0 + 0.04 * t) * rng.uniform(0.97, 1.04)
+    if crown_top:
+        R = max(R, 0.32)  # a round tip, never a spike
+    fr = [0.0, 0.3, 0.55, 0.75, 0.9, 1.0] if crown_top else [0.64, 0.72, 0.82, 0.91, 1.0]
     prof = []
-    for f in (0.0, 0.18, 0.4, 0.62, 0.8, 0.93, 1.0):
-        # a rounded (elliptical) profile: flat on top, rounding down to the lip
-        prof.append((R * f, rim + (apex - rim) * (1 - f ** 2.2) ** 0.55, 0.15 * max(0, f - 0.7) / 0.3))
-    prof += [(R * 1.03, rim - 0.07, 0.6), (R * 0.9, rim - 0.16, 1.0)]
-    K.snow_pillow(b, 0.0, 0.0, prof, segs, i, waves=0.06, white=0.95 + 0.05 * t)
+    for f in fr:
+        rho = R * f
+        if crown_top:
+            z = slope(max(rho, 0.12 * r)) + thick * 0.6 + 0.08 * (1 - f ** 2) ** 0.6
+        else:
+            bulge = 0.45 + 0.55 * math.sin(math.pi * min(1, (f - 0.62) / 0.4) * 0.75)
+            z = slope(rho) + thick * bulge
+        cool = 0.15 * max(0, f - 0.85) / 0.15 + (0.35 if (not crown_top and f == fr[0]) else 0)
+        prof.append((rho, z, cool))
+    rho, z = prof[-1][0], prof[-1][1]
+    prof += [(rho * 1.03, z - 0.05, 0.6), (rho * 0.95, z - 0.11, 1.0)]
+    K.snow_pillow(b, 0.0, 0.0, prof, segs, i, waves=0.08, white=0.95 + 0.05 * t, zwave=0.04)
 
 
 def build(snow, lod):
@@ -130,11 +144,7 @@ def build(snow, lod):
                 pa, pb = d * ra + Vector((0, 0, za)), d * rb + Vector((0, 0, zb))
                 wa, wb = r * 0.18, math.tau * rb / n * (0.82 + 0.25 * ring) * rng.uniform(0.95, 1.1)
                 corners = [pb - t * wb, pb + t * wb, pa + t * wa, pa - t * wa]
-                # with snow, the upper half is snowed over (snow_mound): its fringes are under the snow
-                if snow and i / (len(TIERS) - 1) >= 0.55:
-                    continue
-                deep = False
-                cell = K.CELLS[8 + rng.randrange(4)] if deep else K.CELLS[rng.randrange(8 if snow else 12)]
+                cell = K.CELLS[rng.randrange(8 if snow else 12)]
                 flip = rng.random() < 0.5
                 uvs = [K.cell_uv(cell, -1, -1, flip), K.cell_uv(cell, 1, -1, flip), K.cell_uv(cell, 1, 1, flip), K.cell_uv(cell, -1, 1, flip)]
                 jit = rng.uniform(0.92, 1.06) * (0.92 + 0.08 * ring)
@@ -146,7 +156,7 @@ def build(snow, lod):
     if snow:
         n = len(TIERS)
         for i, (hem, top, r) in enumerate(TIERS):
-            snow_mound(crown, i / (n - 1), hem, top, r, L["segs"] + (8 if lod == 0 else 2), i)
+            snow_mound(crown, i / (n - 1), hem, top, r, L["segs"] + (4 if lod == 0 else 0), i, crown_top=i == n - 1)
 
     wood = K.Build()
     path = [Vector((0, 0, -0.04)), Vector((0, 0, 0.3)), Vector((0.01, 0, 1.2)), Vector((0, 0.01, 2.4)), Vector((0, 0, top_z - 0.3))]
