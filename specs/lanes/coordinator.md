@@ -39,7 +39,12 @@ Read them with ArtifactData:
 
 - https://claude.ai/artifact/Qvt8ekj8cWHMY4ftTcb8U4: the flat UI round 2 bag and collection, and the micro animations.
 - https://claude.ai/artifact/5VW76H2kqZJePHCobKEY9T: the first four menus in cream (journal, mission board, notice board, mailbox). David's OK on the direction unlocks the rest of step 7.
-- The wardrobe round 5 page and the HQ phase 2 page, published when those lanes report.
+- https://claude.ai/artifact/GdXdjzGaZrF9GgW6A3YF27: HQ phase 2, furnished. The head is `831f3036` on `game/hq-interior`; perf is 2.70 ms high and 1.80 ms lite.
+- https://claude.ai/artifact/XY6Fs3QRo6wWy9ENZAT9XC: wardrobe hat cut round 5 (page "Wardrobe Round 6"). The head is `2ac70250` on `game/wardrobe-b2`, with main merged.
+  - Known leftovers: #18 over #10 shows 3 spikes at the back; #18 over #23 has a strip of hair on the brim; #22 over #27 shows a few wisps.
+  - If David approves: apply the seed to prod (back up first), merge, then the merch catalogue rows.
+
+All three lanes are stopped at end of day with their handoff files current. Nothing is running.
 
 ### Merge plan
 
