@@ -9,12 +9,13 @@ Modes (each rewrites the GLBs in place: the triangles and vertex arrays it keeps
            (Full, LOD 1) that no view from outside can reach is dropped: from each of SAMPLES points on it, no ray in any
            of DIRS directions (the whole sphere: the body draws both sides) gets out past the head, the base body and the
            asset itself. The rest are kept as they are; unused vertices go.
-  hatcut   The hair a hat wins over (round 4, David: from the inside of the hat). For each head item with a `hatCut` bit
-           (the covering hats: the propeller cap, the drawn top hat, the cowboy, woven and straw hats, #22's ushanka;
-           the band: #04's visor), a whole hairstyle's vertex inside the hat's own cavity or poking through its surface
-           (cut_by) carries the bit in a `_HATCUT` attribute (the sum of 2^i), per tier on its own mesh. A look wearing
-           item i draws none of the hair's triangles whose three vertices carry bit i (rig.ts cutIndex): no hair outside
-           the hat goes, and none shows through it.
+  hatcut   The hair a hat wins over (round 5, David: the cut well up inside the hat). For each head item with a `hatCut`
+           bit (the covering hats: the propeller cap, the drawn top hat, the cowboy, woven and straw hats, #22's ushanka;
+           the band: #04's visor), a whole hairstyle's vertex that no view reaches with the hat on, well up inside it, or
+           that pokes out through its surface (cover_cut; the band and the open weave: cut_by) carries the bit in a
+           `_HATCUT` attribute (the sum of 2^i), per tier on its own mesh. A look wearing item i draws none of the hair's
+           triangles whose three vertices carry bit i (rig.ts cutIndex): no hair that shows goes, and none shows through
+           the hat.
   hoodcut  The head under the hood: the base skin's vertices (the clip base and the LOD 1 skin) the bear hood hides from
            every direction, marked `_HOODCUT`; a look wearing it draws none of the head triangles all marked.
   measure  The heaviest wearable look at Full, LOD 1 and LOD 2 (budget.test.ts's rule, with the hat cut), printed.
@@ -285,41 +286,51 @@ def cut_items():
     return sorted(items, key=lambda p: p["hatCut"])
 
 
-# Round 4 (David, 2026-10-17: "the delete hair under hat needs to be better mapped, currently hair is being deleted
-# outside of hat, map from the inside of hat"): a covering hat cuts only the hair inside its own cavity, and the hair
-# that pokes through its surface; never hair outside it. Its cavity is read off its own mesh (hat_frame): round the
-# head, in each direction, the hat's lowest point near the head is its rim (the crown's foot, a flap's foot, where a
-# cone sits on the head) and that point's distance from the head's axis the cavity's width; a hair vertex is inside when
-# it lies above the rim by RIM_CLEAR (round 5: the cut's edge stays well up inside the hat), within that width
-# (CAVITY_PAD over), and every way out of it but down meets the hat (ENCLOSE: an opening, a cap's back strap or a gap
-# under a crown, shows the hair behind it, which stays). Poking through: a hair vertex RIM_CLEAR above the rim with the
-# hat between it and the head's centre, or over the hat with nothing of it above, came out through the hat (a strand through
-# a crown, a brim, a cone or a flap), and so did the strand beyond any edge that crosses the hat's surface from a cut
-# vertex, as long as it stays above the rim within the hat's reach and not under the hat. So the hair under a brim,
-# below a crown's foot, out of a cap's back opening, beside the face past a flap and under a cone's wide skirt stays. A
-# band (a visor) cuts the hair outside it, round the front and sides, that covers it (straight in toward the head's axis
-# meets it, where it shows) or lies on its bill: the band and its bill show over the hair, and the hair inside the band
-# fills its open top, and the hair in front of its logo goes (round 5). A triangle goes only when all three of its
-# vertices go.
+# Round 5 (David, 2026-10-18: "18 hair deletion is showing, map out the hair deletion higher in th hat", and the same for
+# #21, #24 and #22). A covering hat (cover_cut) cuts two things and nothing else:
+#   inside   the hair no view reaches with the hat on: every one of VIEW_N directions from it meets the hat, the head and
+#            body, or the hair itself (its outer layers, and the hair that runs on under the rim). Only hair under the
+#            hat is asked (an up ray meets it). It is asked twice, the second time without the poking hair, which no
+#            longer hides what was behind it. And a hidden vertex goes only when all the hair within CUT_CLEAR of it is
+#            hidden too (or pokes out): so the cut's edge stays well up inside the hat, the hair runs on up under the rim,
+#            and no view, front, side, back, high or low, sees a cut edge, a stub or the scalp between the hair and the hat.
+#   poking   the hair that comes out through the hat's surface: over the hat (straight down meets it) with nothing of
+#            it above (a brim's top, a cone) or the hat between it and the head's centre (out through a crown's wall), or at
+#            the outer end of an edge of the hair that crosses the hat's surface (its inner end goes with it, so the
+#            triangle across goes whole; and a root just under a brim, ROOT_CLEAR, with a strand up through it), and from
+#            there the strand beyond while it stays above the rim within the hat's reach; and what the cut leaves of a
+#            strand out there, a piece of FRAG_MAX points or fewer, goes with it (no floating tips). Hair hanging out
+#            under the hat (straight up meets it, nothing of it below, and not outside a flap: under a brim or a crown)
+#            always stays.
+# Round 4's rule (David, 2026-10-17: "map from the inside of hat") read the cavity off the hat's own mesh and cut hair
+# that still showed under a brim. It stays for the covering hats David did not send back (ROUND4: #01's cap, and the
+# woven hat, an open weave whose gaps are the hat; he accepted the hair under its skirt showing through them).
+# A band (#04's visor, cut_by) cuts the hair outside it, round the front and sides, that covers it (straight in toward
+# the head's axis meets it, where it shows) or lies on its bill: the band and its bill show over the hair, and the hair
+# inside the band fills its open top. Round 5 (David: "04 needs hair deletion near the logo so hair isnt blocking"): and
+# every hair triangle in front of its logo, seen from the front and 3/4 (LOGO_VIEWS), goes.
+# A triangle goes only when all three of its vertices go.
 SECTORS = 24               # directions round the head's axis for a hat's rim, top and reach
 RIM_DIP = 0.03             # m: a rim direction this far under its neighbours' median is a dip, not the rim
 WRAP_MARGIN = 0.03         # m: a hat's reach, a little over (a poking strand is followed this far out)
 BAND_FRONT = 110.0         # degrees from the face: behind that, a band (the visor's strap) lies in the hair, which stays
 BAND_OVER = 0.03           # m: hair this far out over a band covers it (further out, thick hair keeps its outer layer over
                            # the band's back: cutting through it left jagged slots, round 4)
-CAVITY_PAD = 0.01          # m: the cavity's width over its rim's distance from the head's axis
-RIM_CLEAR = 0.035          # m: round 5 (David: "map out the hair deletion higher in the hat"): nothing within this of the
-                           # rim goes but hair lying on the hat, so the hair runs on up under the rim and the cut's edge is
-                           # always inside the hat
-CLEAR_DOWN = 0.03          # m: a cut vertex is hidden this far straight down too (round 5: the edge well up in the hat)
-VIEW_DIRS = None           # the views a cavity vertex is hidden from (fib(VIEW_N), hatcut sets it)
-VIEW_N = 96
-LOGO_HALF = 28.0           # degrees either side of the face: a band's logo (#04's M)
-LOGO_OVER = 0.03           # m: and this far over the band's top
+CAVITY_PAD = 0.01          # m: round 4's cavity: its width over its rim's distance from the head's axis
 CAVITY_REACH = 1.0         # m: how far a way out looks for the hat
 BAND_REST = 0.04           # m: and the hair lying this close over its bill (out past the head's reach)
 REACH = 0.231              # m: the head's widest reach from its axis (hatcut measures it: head_reach)
 HEAD_TREE = None           # the head (hatcut builds it): a band inside it shows nothing
+CUT_CLEAR = 0.035          # m: round 5: a hidden vertex goes only when all the hair this close to it goes too
+ROOT_CLEAR = 0.02          # m: a strand's root this close under a brim it pokes up through goes with it
+FRAG_MAX = 16              # a piece of hair the cut leaves this small (points), above the rim and not under the hat, goes
+FLAP_CLEAR = 0.05          # m: hair this far over a rim with the hat between it and the head's axis is outside a flap
+VIEW_N = 128               # the views a vertex under a hat is hidden from (the whole sphere)
+VIEW_DIRS = None           # fib(VIEW_N) (hatcut sets it)
+LOGO_HALF = 32.0           # degrees either side of the face: the band's logo (#04's M), a little over
+LOGO_VIEWS = [Vector((math.sin(math.radians(y)) * math.cos(math.radians(p)), math.sin(math.radians(p)),
+                      math.cos(math.radians(y)) * math.cos(math.radians(p))))
+              for y in range(-50, 51, 10) for p in (-10, 0, 12, 25, 40)]   # front and 3/4, a little low to high
 
 
 def head_reach():
@@ -379,14 +390,23 @@ def hat_frame(pos, reach):
     return lo, hi, foot, wide
 
 
+def logo_points(t):
+    """Points over a band's logo: its wall (not its bill) within LOGO_HALF of the face."""
+    c = t.mean(1)
+    n = np.cross(t[:, 1] - t[:, 0], t[:, 2] - t[:, 0])
+    n /= np.linalg.norm(n, axis=1, keepdims=True) + 1e-12
+    deg = np.degrees(np.arctan2(c[:, 0] - HC[0], c[:, 2] - HC[2]))
+    wall = (np.abs(deg) <= LOGO_HALF) & (np.abs(n[:, 1]) < 0.6) & (np.hypot(c[:, 0] - HC[0], c[:, 2] - HC[2]) < 1.2 * REACH)
+    return surface_points(t[wall], 4)
+
+
 AXES = [Vector(v) for v in ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))]
 # straight down and four ways 15 degrees off it (an open weave's gaps let one ray through)
 DOWN = [Vector((0, -1, 0))] + [Vector((math.sin(math.radians(15)) * c, -math.cos(math.radians(15)), math.sin(math.radians(15)) * s_))
                                 for c, s_ in ((1, 0), (-1, 0), (0, 1), (0, -1))]
-# the ways out of a hat's cavity but down: straight up, eight round, eight half way up (an opening any of them finds, a
-# cap's back or a gap under a crown, shows the hair there, which stays)
-# Each way is a small cluster (WEAVE degrees round it, any of them counts): an open weave's narrow gaps do not open the
-# cavity, a cap's wide back opening does.
+# Round 4's cavity (ROUND4): the ways out of it but down, straight up, eight round, eight half way up, each a small cluster
+# (WEAVE degrees round it, any of them counts): an open weave's narrow gaps do not open the cavity, a cap's wide back
+# opening does.
 WEAVE = 10.0
 
 
@@ -402,16 +422,136 @@ def _cluster(d):
 # An open weave (the woven hat: its slats and gaps are the hat): a vertex above its rim and under it anywhere within its
 # reach is inside (the weave over it found by any of a wide cluster of up rays), whatever a ray out finds.
 OPEN_WEAVE = {"acc_woven_hat"}
+# The covering hats David did not send back in round 5 (#01's cap, the woven hat) keep round 4's rule (cut_by), as he saw it.
+ROUND4 = {"acc_propeller_cap", "acc_woven_hat"}
 UP_WIDE = [Vector((0, 1, 0))] + [Vector((math.sin(math.radians(25)) * c, math.cos(math.radians(25)), math.sin(math.radians(25)) * s_))
                                   for c, s_ in ((1, 0), (-1, 0), (0, 1), (0, -1), (0.7071, 0.7071), (-0.7071, 0.7071), (0.7071, -0.7071), (-0.7071, -0.7071))]
 ENCLOSE = [_cluster((0, 1, 0))] + [_cluster((math.cos(k * math.pi / 4) * c, s_, math.sin(k * math.pi / 4) * c))
                                    for k in range(8) for c, s_ in ((1.0, 0.0), (0.7071, 0.7071))]
 
 
-def cut_by(pos, frame, band, tree, tri=None, weave=False, occ=None):
-    """Which hair vertices a head item cuts (see the rule above). weave: an open weave (OPEN_WEAVE), its cavity read
-    without the ways out (any ray finds a gap). occ: what else hides the hair (the base and the hair itself): with it,
-    the cavity is what no view reaches (round 5)."""
+def weld(pos):
+    """One point per position (a UV seam splits a vertex; a strand runs on across it): each vertex's point, the points."""
+    _, first, g = np.unique(np.round(pos / 1e-5).astype(np.int64), axis=0, return_index=True, return_inverse=True)
+    return g.ravel(), pos[first]
+
+
+def adjacency(tri, n):
+    nbr = [set() for _ in range(n)]
+    for t in tri:
+        for x, y in ((t[0], t[1]), (t[1], t[2]), (t[2], t[0])):
+            if x != y:
+                nbr[x].add(y)
+                nbr[y].add(x)
+    return nbr
+
+
+def cover_cut(pos, tri, frame, tree, base):
+    """Which hair vertices a covering hat cuts (round 5, see the rule above): hidden with it on, CUT_CLEAR up inside, or
+    poking out through it."""
+    from mathutils.kdtree import KDTree
+    lo, hi, foot, wide = frame
+    g, U = weld(pos)
+    T = g[tri]
+    V = [Vector(p) for p in U]
+    r = np.hypot(U[:, 0] - HC[0], U[:, 2] - HC[2])
+    rim = around(lo, angle(U))
+    near = (U[:, 1] > rim) & (r <= foot[sector(U)] + WRAP_MARGIN)
+    hits = lambda i, d, far=2.0: tree.ray_cast(V[i], d, far)[0] is not None
+    hang = {}
+
+    def hanging(i):
+        """Under the hat with nothing of it below: hair hanging out under a brim or a crown. Not outside a flap: FLAP_CLEAR
+        over the rim (a flap's foot), the hat between it and the head's axis."""
+        if i not in hang:
+            inward = Vector((HC[0] - U[i, 0], 0.0, HC[2] - U[i, 2]))
+            hang[i] = hits(i, AXES[2]) and not any(hits(i, d, 1.0) for d in DOWN) \
+                and not (U[i, 1] > rim[i] + FLAP_CLEAR and inward.length > 1e-6 and hits(i, inward.normalized(), inward.length))
+        return hang[i]
+    under = np.array([near[i] and any(hits(i, e, CAVITY_REACH) for e in UP_WIDE) for i in range(len(U))], bool)
+    cand = np.nonzero(under)[0]
+
+    def hidden(skip):
+        """The candidates hidden from every view with the hat on, the hair's triangles all of whose points are in skip
+        gone."""
+        own = bvh(U[T[~skip[T].all(1)]])
+        out = np.zeros(len(U), bool)
+        c = cand[~skip[cand]]
+        out[c[hidden_everywhere([base, own, tree], U[c], VIEW_DIRS)]] = True
+        return out
+    centre = Vector(HC)
+
+    def through(i):
+        """Over the hat (straight down meets it), and nothing of it above (a brim's top, a cone) or the hat between it
+        and the head's centre (a strand out through a crown's wall, over the brim)."""
+        back = centre - V[i]
+        return any(hits(i, d, 1.0) for d in DOWN) and (not hits(i, AXES[2]) or (
+            back.length > 1e-6 and tree.ray_cast(V[i], back.normalized(), back.length)[0] is not None))
+    nbr = adjacency(T, len(U))
+    edges = {}                                                      # the hair's edges through the hat's surface, each
+    for v in range(len(U)):                                         # way: how far from its first end the hat is
+        for u in nbr[v]:
+            d = V[u] - V[v]
+            h = tree.ray_cast(V[v], d.normalized(), d.length)[3] if d.length > 1e-7 else None
+            if h is not None:
+                edges[(v, u)] = h
+    inside, poke = hidden(np.zeros(len(U), bool)), np.zeros(len(U), bool)
+    for _ in range(4):                                              # the poking hair, then again with what it hid, till
+        root = np.zeros(len(U), bool)                               # nothing more shows
+        poke |= np.array([near[i] and not inside[i] and through(i) and not hanging(i) for i in range(len(U))], bool)
+        for x, y in edges:                                          # an edge through the hat's surface: its end
+            if inside[x]:                                           # outside goes (unless it hangs under the hat), its
+                root[x] = True                                      # end inside goes with it (the triangle across the
+            elif not hanging(x):                                    # surface goes whole)
+                poke[x] = True
+        queue = list(np.nonzero(poke)[0])
+        while queue:                                                # and the strand beyond, out of the hat: above its
+            v = queue.pop()                                         # rim, within its reach, not hanging under it
+            for u in nbr[v]:
+                if poke[u] or (v, u) in edges or not near[u] or hanging(u):
+                    continue
+                poke[u] = True
+                queue.append(u)
+        seen = hidden(poke)
+        if (seen == inside).all():
+            break
+        inside = seen
+    gone = inside | poke | root
+    kd = KDTree(len(U))
+    for i, p in enumerate(U):
+        kd.insert(p, i)
+    kd.balance()
+    cut = poke | root
+    for i in np.nonzero(inside & ~cut)[0]:
+        cut[i] = all(gone[j] for _, j, _ in kd.find_range(U[i], CUT_CLEAR))
+    over = lambda i: any(hits(i, d, 1.0) for d in DOWN)
+    for (v, u), h in edges.items():                                 # and the root of a strand up through a brim, just
+        if cut[u] and not cut[v] and h < ROOT_CLEAR and U[u, 1] > U[v, 1] and over(u):   # under it (ROOT_CLEAR): the
+            cut[v] = True                                           # triangle across goes whole, no spike on the brim
+    kept = T[~cut[T].all(1)]                                        # a small piece the cut leaves floating out there
+    parent = list(range(len(U)))
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+    for t in kept:
+        for x in t[1:]:
+            parent[find(x)] = find(t[0])
+    pieces = {}
+    for i in np.unique(kept):
+        pieces.setdefault(find(i), []).append(i)
+    for vs in pieces.values():
+        rest = [i for i in vs if not cut[i]]
+        if len(rest) < len(vs) and len(rest) <= FRAG_MAX and all(U[i, 1] > rim[i] and not hanging(i) for i in rest):
+            cut[rest] = True
+    return cut[g]
+
+
+def cut_by(pos, frame, band, tree, tri=None, weave=False, logo=None):
+    """Which hair vertices a band (band: #04's visor) or a ROUND4 hat cuts: round 4's rule (an open weave, OPEN_WEAVE: its
+    cavity read with up rays alone, any of which finds the weave), with the logo's views for a band."""
     lo, hi, foot, wide = frame
     a = angle(pos)
     r = np.hypot(pos[:, 0] - HC[0], pos[:, 2] - HC[2])
@@ -421,13 +561,8 @@ def cut_by(pos, frame, band, tree, tri=None, weave=False, occ=None):
         # (the hair inside the band, between it and the head, stays: it fills the visor's open top; above the band, only
         # what lies on the bill goes, never the hair on the scalp over the band's top edge)
         out = np.zeros(len(pos), bool)
-        deg = np.abs(np.degrees(np.arctan2(pos[:, 0] - HC[0], pos[:, 2] - HC[2])))
-        front = deg <= BAND_FRONT
-        # round 5 (David: "04 needs hair deletion near the logo so hair isnt blocking"): the hair in front of the band's
-        # face round its logo (LOGO_HALF either side of the face, from the band's foot to over its top) goes
-        out |= (deg <= LOGO_HALF) & (r >= around(wide, a) - 0.01) & (pos[:, 1] >= around(lo, a) - 0.005) \
-            & (pos[:, 1] <= around(hi, a) + LOGO_OVER)
-        for i in np.nonzero((r <= foot[sector(pos)] + BAND_OVER) & front & ~out)[0]:
+        front = np.abs(np.degrees(np.arctan2(pos[:, 0] - HC[0], pos[:, 2] - HC[2]))) <= BAND_FRONT
+        for i in np.nonzero((r <= foot[sector(pos)] + BAND_OVER) & front)[0]:
             o = Vector(pos[i])
             inward = Vector((HC[0] - pos[i][0], 0.0, HC[2] - pos[i][2]))
             if inward.length < 1e-6 or tree.ray_cast(o, -inward.normalized(), 1.0)[0] is not None:
@@ -438,45 +573,44 @@ def cut_by(pos, frame, band, tree, tri=None, weave=False, occ=None):
             # covering the band where it shows: a part of the band inside the head (straight out from it meets the head)
             # hides nothing
             out[i] = under or (hit is not None and HEAD_TREE.ray_cast(hit - inward.normalized() * 1e-4, -inward.normalized(), 1.0)[0] is None)
+        if logo is not None and tri is not None and len(tri):
+            # round 5: every hair triangle between the logo and a front or 3/4 view, all the way out (the layers behind
+            # the first one show once it goes)
+            own, front_of = bvh(pos[tri]), set()
+            for s_ in logo:
+                for d in LOGO_VIEWS:
+                    o = Vector(s_) + d * 1e-4
+                    if tree.ray_cast(o, d, 2.0)[0] is not None:
+                        continue                                # the band's own back, or its bill, in the way
+                    for _ in range(64):
+                        loc, _n, k, _d = own.ray_cast(o, d, 2.0)
+                        if loc is None:
+                            break
+                        front_of.add(k)
+                        o = loc + d * 1e-4
+            if front_of:
+                out[np.unique(tri[sorted(front_of)])] = True
         return out
     rim, width = around(lo, a), around(wide, a)
-    deep = pos[:, 1] > rim + RIM_CLEAR                          # round 5: the cut starts well up inside the hat
     cut = np.zeros(len(pos), bool)
     hits = lambda o, d, far=2.0: tree.ray_cast(o, d, far)[0] is not None
-    if occ is not None and not weave:
-        # round 5 (David: "map out the hair deletion higher in the hat"): the cavity is the hair no view from outside reaches
-        # with the hat on (it, the head and body, and the hair's own outer layers in the way of every ray), and no view
-        # reaches CLEAR_DOWN under it either: the cut's edge is always inside the hat, from any angle, below too
-        cand = np.nonzero((pos[:, 1] > rim) & (r <= foot[sector(pos)]))[0]
-        cand = np.array([i for i in cand if any(hits(Vector(pos[i]), e, CAVITY_REACH) for e in UP_WIDE)], int)
-        if len(cand):
-            trees = occ + [tree]
-            hid = hidden_everywhere(trees, pos[cand], VIEW_DIRS)
-            k = cand[hid]
-            if len(k):
-                k = k[hidden_everywhere(trees, pos[k] - np.array([0.0, CLEAR_DOWN, 0.0]), VIEW_DIRS)]
-            cut[k] = True
+    centre = Vector(HC)
     for i in np.nonzero(pos[:, 1] > rim)[0]:
-        if cut[i]:
-            continue
         o = Vector(pos[i])
-        if occ is None or weave:
-            if deep[i] and ((r[i] <= foot[sector(pos[i:i + 1])[0]] and any(hits(o, e, CAVITY_REACH) for e in UP_WIDE)) if weave
-                            else (r[i] <= width[i] + CAVITY_PAD and all(any(hits(o, e, CAVITY_REACH) for e in way) for way in ENCLOSE))):
-                cut[i] = True                                   # inside the cavity: within its rim, the hat every way out
-                continue                                        # but down (not where an opening shows it: a cap's back)
-        cut[i] = any(hits(o, d, 1.0) for d in DOWN) and not hits(o, AXES[2])  # lying on the hat (a brim's top, a cone)
+        if (r[i] <= foot[sector(pos[i:i + 1])[0]] and any(hits(o, e, CAVITY_REACH) for e in UP_WIDE)) if weave \
+                else (r[i] <= width[i] + CAVITY_PAD and all(any(hits(o, e, CAVITY_REACH) for e in way) for way in ENCLOSE)):
+            cut[i] = True                                       # inside the cavity: within its rim, the hat every way out
+            continue                                            # but down (not where an opening shows it: a cap's back)
+        back = centre - o                                       # through the hat: between it and the head's centre,
+        cut[i] = (back.length > 1e-6 and hits(o, back.normalized(), back.length)) \
+            or (any(hits(o, d, 1.0) for d in DOWN) and not hits(o, AXES[2]))  # or over it (a brim's top, a cone)
     if tri is None:
         return cut
     # a strand that crosses the hat's surface from a cut vertex: the vertex across goes, and from it the strand beyond, as
     # long as it stays above the rim within the hat's reach (hair poking out through a wall or a brim, not the hair that
     # comes out from under the rim)
-    nbr = [[] for _ in range(len(pos))]
-    for t in tri:
-        for x, y in ((t[0], t[1]), (t[1], t[2]), (t[2], t[0])):
-            nbr[x].append(y)
-            nbr[y].append(x)
-    reach_ok = deep & (r <= foot[sector(pos)] + WRAP_MARGIN)
+    nbr = adjacency(tri, len(pos))
+    reach_ok = (pos[:, 1] > rim) & (r <= foot[sector(pos)] + WRAP_MARGIN)
     queue, outer = list(np.nonzero(cut)[0]), np.zeros(len(pos), bool)
     while queue:
         v = queue.pop()
@@ -485,7 +619,7 @@ def cut_by(pos, frame, band, tree, tri=None, weave=False, occ=None):
             if cut[u]:
                 continue
             d = Vector(pos[u]) - o
-            if deep[u] and d.length > 1e-7 and tree.ray_cast(o, d.normalized(), d.length)[0] is not None:
+            if d.length > 1e-7 and tree.ray_cast(o, d.normalized(), d.length)[0] is not None:
                 cut[u] = outer[u] = True                        # across the hat's surface
                 queue.append(u)
             elif outer[v] and reach_ok[u] and tree.ray_cast(Vector(pos[u]), AXES[2], 2.0)[0] is None:
@@ -502,32 +636,36 @@ def hatcut():
     VIEW_DIRS = fib(VIEW_N)
     base = bvh(BASE)
     HEAD_TREE = bvh(tris_of(os.path.join(HERE, CAT["base"]["clips_glb"]), lambda p, j: next(m for m in j["meshes"] if p in m["primitives"])["name"] == "V8_Head"))
-    frames, trees = [], []
+    frames, trees, logos = [], [], []
     for h in items:
         t = tris_of(os.path.join(HERE, h["glb"]))
         frames.append(hat_frame(surface_points(t), reach))
         trees.append(bvh(t))
+        logos.append(None if h.get("coversHair") else logo_points(t))
         lo, hi, foot, wide = frames[-1]
         print(f"HAT {h['hatCut']} {h['id']:24s} {'band' if not h.get('coversHair') else 'covering'} rim y "
               f"{' '.join('-' if np.isnan(x) else f'{x:.2f}' for x in lo)} top y {np.nanmin(hi):.3f}..{np.nanmax(hi):.3f} "
-              f"reach {foot.min():.3f}..{foot.max():.3f} cavity {np.nanmin(wide):.3f}..{np.nanmax(wide):.3f} (head {reach:.3f})")
+              f"reach {foot.min():.3f}..{foot.max():.3f} cavity {np.nanmin(wide):.3f}..{np.nanmax(wide):.3f} (head {reach:.3f})"
+              + (f" logo points {len(logos[-1])}" if logos[-1] is not None else ""))
     for p in selected([h for h in CAT["hair"] if h.get("full")]):
         for path in hair_paths(p):
             j, arrays = load_all(path)
-            mine = bvh(np.concatenate([arrays[q["attributes"]["POSITION"]].astype(float)[arrays[q["indices"]].reshape(-1, 3)] for q in primitives(j)]))
             cut, n = [0] * len(items), 0
             for prim in primitives(j):
                 pos = arrays[prim["attributes"]["POSITION"]].astype(float)
                 tri = arrays[prim["indices"]].reshape(-1, 3)
                 bits = np.zeros(len(pos), np.int64)
-                for i, (h, fr, tree) in enumerate(zip(items, frames, trees)):
-                    c = cut_by(pos, fr, not h.get("coversHair"), tree, tri, h["id"] in OPEN_WEAVE, [base, mine])
+                for i, (h, fr, tree, logo) in enumerate(zip(items, frames, trees, logos)):
+                    if h.get("coversHair") and h["id"] not in ROUND4:
+                        c = cover_cut(pos, tri, fr, tree, base)
+                    else:
+                        c = cut_by(pos, fr, not h.get("coversHair"), tree, tri, h["id"] in OPEN_WEAVE, logo)
                     bits |= c.astype(np.int64) << h["hatCut"]
                     cut[i] += int(c[tri].all(1).sum())
                 set_mask(j, arrays, prim, "_HATCUT", bits)
                 n += len(tri)
             save(path, j, arrays)
-            print(f"HATCUT {p['id']:24s} {os.path.relpath(path, HERE):48s} of {n}: {cut} under each item")
+            print(f"HATCUT {p['id']:24s} {os.path.relpath(path, HERE):48s} of {n}: {cut} under each item", flush=True)
     print("HATCUT_OK")
 
 

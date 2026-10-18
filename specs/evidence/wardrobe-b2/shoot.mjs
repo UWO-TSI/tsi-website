@@ -10,6 +10,8 @@
 //   creator  the arrival's starting creator (create mode, nothing bought): its Hair, Eyes and Accessories tabs offer the
 //            free items only
 //   hatcut   /lab/avatar?sheet=hatcut: each hat with a hair cut over six hairstyles, with the cut hair drawn (&cut=0) and cut
+//   round5   the round-5 hat cut: each covering hat over #03 long, #10 short, #27 buns, #25 curly pigtails and #23's bob,
+//            front, 3/4, side, back, high and low; the rims of #18, #21, #22 and #24 close up; #04's visor front and 3/4
 import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
@@ -81,6 +83,32 @@ for (const scene of SCENES) {
       await page.locator("[data-sheet]").first().screenshot({ path: `${OUT}/${name}.png` });
       console.log("shot", name);
     }
+    await page.context().close();
+  }
+  if (scene === "round5") {
+    const R5_HAIRS = ["hair_long_scruffy", "hair_messy_wolf", "hair_double_buns", "hair_curly_pigtails", "hair_ribbon_bob"];
+    const ids = hat => R5_HAIRS.map(h => `${h}%2B${hat}`).join(",");
+    const page = await page0(1800, 1700);
+    const only = process.env.R5_ONLY?.split(",");                   // R5_ONLY=r5-acc_propeller_cap,...: those shots alone
+    const bench = async (name, qs, [w, h] = [1800, 1700], wait = 22000) => {
+      if (only && !only.includes(name)) return;
+      await page.setViewportSize({ width: w, height: h });         // the canvas is the viewport: the whole sheet in it
+      await page.goto(`${HOST}/lab/avatar?sheet=roblox&framing=hat&skin=3&${qs}`, { waitUntil: "domcontentloaded" });
+      // the lab's bar and the dev badge hidden; long labels kept to their cells (a column never widens past the canvas)
+      await page.addStyleTag({ content: `${HIDE} nav { display: none !important } [data-sheet] > * { min-width: 0 } [data-sheet] figcaption { font-size: 10px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }` }).catch(() => {});
+      await page.waitForSelector("canvas", { timeout: 300000 });
+      await sleep(wait);
+      await page.locator("[data-sheet]").first().screenshot({ path: `${OUT}/${name}.png` });
+      console.log("shot", name);
+    };
+    for (const hat of ["acc_propeller_cap", "acc_drawn_top_hat", "acc_cowboy_hat", "acc_woven_hat", "acc_red_band_straw_hat", "acc_ushanka_goggles"])
+      await bench(`r5-${hat}`, `views=front,34,side,back,high,low&cols=6&ids=${ids(hat)}`);
+    // the rims close up (David: from no angle a cut edge, a stub or a scalp gap between the hair and the hat)
+    for (const hat of ["acc_drawn_top_hat", "acc_cowboy_hat", "acc_ushanka_goggles", "acc_red_band_straw_hat"])
+      await bench(`r5-zoom-${hat}`, `views=34,side,back,low&cols=4&zoom=1.6&look=0.76&ids=${ids(hat)}`, [1400, 1900]);
+    // #10 with no hat: its nape (the stepped edge low at the back of the head) is the hairstyle's own, not the cut
+    await bench("r5-nohat", "views=34,side,back&cols=3&ids=hair_messy_wolf", [1200, 520]);
+    await bench("r5-visor", `views=front,34,high&cols=3&zoom=1.7&look=0.9&ids=${ids("acc_crew_visor")}`, [1200, 2150]);
     await page.context().close();
   }
   if (scene === "closet") {

@@ -23,7 +23,7 @@
  *                  on one skin and view (&view=front|34|side|back)
  * ?sheet=fullkit   head fit: every whole hairstyle (David's set) on one skin, hair colour (&hair=) and view
  * ?sheet=roblox    head-roblox (specs/characters/head-roblox.md): the whole hairstyles listed in &ids= (default all), each in
- *                  a row of front, 3/4, side and back (&views= to pick), on one skin and hair colour
+ *                  a row of front, 3/4, side and back (&views= to pick; high and low: 3/4 from above and below), on one skin and hair colour
  * ?sheet=david     David's 19 faces (face_set_305.py) as they came, eyes + mouth (+ accent), on three skins (&skins=)
  * ?sheet=mix       David's eyes, mouths and accents mixed with each other and with the earlier parts (&skins=)
  * &pitch= &zoom= &look= the camera's orbit (radians up, closer by, the height looked at)
@@ -54,14 +54,16 @@ const STYLES: Record<string, Pick<CharacterLook, "bangs" | "back">> = {
   long: { bangs: "", back: "hair_long_scruffy" },
 };
 /** Head fit sheets: the three review views (the character faces the camera at yaw 0). */
-const VIEWS: Record<string, number> = { front: 0, "34": -0.6, side: -Math.PI / 2, back: Math.PI };
+const VIEWS: Record<string, number> = { front: 0, "34": -0.6, side: -Math.PI / 2, back: Math.PI, high: -0.6, low: -0.6 };
+/** Wardrobe round 5: the hat cut judged from above and below too (3/4, the camera's orbit pitched up or down, radians). */
+const VIEW_PITCH: Record<string, number> = { high: 0.55, low: -0.3 };
 /** `&cut=0`: every hidden triangle drawn (rig.ts CUTS), for the hat cut's before-and-after sheet. */
 if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("cut") === "0") CUTS.on = false;
 /** `&charlod=1|2`: the cells load their LOD meshes and draw that tier (Character's SHOW_LOD). */
 const LOD_SHEET = typeof window !== "undefined" && !!new URLSearchParams(window.location.search).get("charlod");
 /** Kit sheets hold the eyes open (no blink lands mid-capture). */
 const OPEN: FaceOverride = { eyeFrame: "open" };
-interface Cell { label: string; look: CharacterLook; yaw: number; face?: FaceOverride | null; talk?: boolean }
+interface Cell { label: string; look: CharacterLook; yaw: number; face?: FaceOverride | null; talk?: boolean; pitch?: number }
 
 /** The camera by framing: the head, the head with room above it for a hat (wardrobe batch 2), the whole body. */
 const FRAMING = { head: { at: [0, 0.86, 1.3], look: 0.8 }, hat: { at: [0, 0.98, 1.7], look: 0.9 }, body: { at: [0.15, 0.6, 2.05], look: 0.5 } } as const;
@@ -75,7 +77,7 @@ function Stage({ cell, framing, faceSize, orbit }: { cell: Cell; framing: keyof 
   const f = FRAMING[framing] ?? FRAMING.head;
   const look = orbit.look ?? f.look;
   const [dy, dz] = [f.at[1] - f.look, f.at[2]];
-  const [cp, sp] = [Math.cos(orbit.pitch), Math.sin(orbit.pitch)];
+  const [cp, sp] = [Math.cos(cell.pitch ?? orbit.pitch), Math.sin(cell.pitch ?? orbit.pitch)];
   const at: [number, number, number] = [f.at[0] / orbit.zoom, look + (dy * cp + dz * sp) / orbit.zoom, (dz * cp - dy * sp) / orbit.zoom];
   return <>
     <PerspectiveCamera makeDefault fov={30} position={at} onUpdate={c => c.lookAt(0, look, 0)} />
@@ -143,7 +145,7 @@ function AvatarBench() {
       const views = (q.get("views") ?? "front,34,side,back").split(",");
       return ids.flatMap(item => {
         const [id, acc] = item.split("+");
-        return views.map(v => ({ label: `${item} ${v}`, look: { ...bob, back: id, acc: acc ? { head: acc } : {} }, yaw: VIEWS[v] ?? 0, face: OPEN }));
+        return views.map(v => ({ label: `${item} ${v}`, look: { ...bob, back: id, acc: acc ? { head: acc } : {} }, yaw: VIEWS[v] ?? 0, pitch: VIEW_PITCH[v], face: OPEN }));
       });
     }
     // wardrobe batch 2: David's Roblox accessories over a hairstyle, and his whole faces #20-25
