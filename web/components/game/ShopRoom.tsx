@@ -24,9 +24,10 @@ import ShopDisplays from "./ShopDisplays";
 import ShopItemTag from "./ShopItemTag";
 import KeycapKeychain from "./KeycapKeychain";
 import { KEYCHAIN_HANG } from "@/lib/game/keychainSwing";
+import Lanyard, { LANYARD_HANG, LANYARD_SLUG } from "./Lanyard";
 import { iconUrl } from "@/lib/icons/keys";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
-import { SHOP_KEYCHAIN } from "@/lib/game/shopLayout";
+import { SHOP_KEYCHAIN, SHOP_LANYARD } from "@/lib/game/shopLayout";
 import { KEYCHAIN_SLUG } from "./KeychainStage";
 
 const GROUND = "/assets/game/interiors/shop/ground.glb";
@@ -99,26 +100,32 @@ export default function ShopRoom({ walker, light, player, frozen }: {
     <group ref={upper}>
       <primitive object={mezz} onClick={walkOn(1)} />
       {/* The merch on show upstairs (the tote, the sticker packs; the garments and prints are the model's stand-ins). */}
-      <ShopDisplays items={items} level={1} except={[SHOP_KEYCHAIN.slot]} />
+      <ShopDisplays items={items} level={1} except={[SHOP_KEYCHAIN.slot, SHOP_LANYARD.slot]} />
       <group position={[0, SHOP_FLOOR_HEIGHT, 0]}>
         {/* The keycap keychain on its hook: take hold of it, or press its keycap (lite graphics: its sprite). */}
         <mesh position={[SHOP_KEYCHAIN.hook[0], SHOP_KEYCHAIN.hook[1] - 0.012, SHOP_KEYCHAIN.hook[2] + 0.04]} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[0.012, 0.012, 0.13, 8]} /><meshStandardMaterial color="#3b4046" metalness={0.7} roughness={0.4} />
         </mesh>
-        {liteMode ? <KeychainSprite /> : <Suspense fallback={null}><group position={SHOP_KEYCHAIN.hook} rotation={[0, Math.PI, 0]}><KeycapKeychain grab scale={SHOP_KEYCHAIN.scale} press={press} /></group></Suspense>}
+        {liteMode ? <ItemSprite slug={KEYCHAIN_SLUG} at={SHOP_KEYCHAIN.hook} h={KEYCHAIN_HANG * SHOP_KEYCHAIN.scale} /> : <Suspense fallback={null}><group position={SHOP_KEYCHAIN.hook} rotation={[0, Math.PI, 0]}><KeycapKeychain grab scale={SHOP_KEYCHAIN.scale} press={press} /></group></Suspense>}
+        {/* The lanyard folded over its peg: take hold of it and pull it about (lite graphics: its sprite). */}
+        <mesh position={[SHOP_LANYARD.peg[0], SHOP_LANYARD.peg[1] - 0.021, SHOP_LANYARD.peg[2] + 0.03]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.02, 0.02, 0.16, 8]} /><meshStandardMaterial color="#3b4046" metalness={0.7} roughness={0.4} />
+        </mesh>
+        {liteMode ? <ItemSprite slug={LANYARD_SLUG} at={SHOP_LANYARD.peg} h={LANYARD_HANG * SHOP_LANYARD.scale} />
+          : <Suspense fallback={null}><group position={SHOP_LANYARD.peg} rotation={[0, Math.PI, 0]}><Lanyard grab scale={SHOP_LANYARD.scale} /></group></Suspense>}
       </group>
     </group>
   </group>;
 }
 
-/** The keychain's sprite on the hook (lite graphics): the icon, a render of the same model, facing the room. */
-function KeychainSprite() {
+/** A hanging item's sprite on its hook (lite graphics): its icon, a render of the same model, facing the room. */
+function ItemSprite({ slug, at, h }: { slug: string; at: readonly [number, number, number]; h: number }) {
   const texture = useMemo(() => {
-    const t = new THREE.TextureLoader().load(iconUrl(KEYCHAIN_SLUG));
+    const t = new THREE.TextureLoader().load(iconUrl(slug));
     t.colorSpace = THREE.SRGBColorSpace; t.magFilter = THREE.NearestFilter;
     return t;
-  }, []);
-  const [x, y, z] = SHOP_KEYCHAIN.hook, h = KEYCHAIN_HANG * SHOP_KEYCHAIN.scale;
+  }, [slug]);
+  const [x, y, z] = at;
   return <mesh position={[x, y - h / 2, z - 0.06]} rotation={[0, Math.PI, 0]}>
     <planeGeometry args={[h, h]} />
     <meshBasicMaterial map={texture} transparent alphaTest={0.3} />

@@ -73,7 +73,7 @@ function Card({ e, onOpen }: { e: ShopEntry; onOpen: () => void }) {
         <span className={s.cardName}>{e.name}</span>
         <span className={s.cardLine}>{e.owned > 0 && !e.can_buy ? "Owned" : itemLine(e)}</span>
       </span>
-      <span className={s.pill}>{e.price.toLocaleString()}<CurrencyIcon currency={e.currency} size={14} /></span>
+      <span className={s.pill}>{e.price ? <>{e.price.toLocaleString()}<CurrencyIcon currency={e.currency} size={14} /></> : "Price to come"}</span>
     </span>
     {e.stock === 0 ? <span className={s.soldOut}>Sold out</span> : null}
   </button>;
@@ -112,9 +112,9 @@ function Detail({ e, list, onPick, onBack, busy, onPay, viewer }: {
       <div className={s.pay}>
         <span className={s.price}>
           {e.special && <span className={s.was}>{e.base_price.toLocaleString()}</span>}
-          {e.price.toLocaleString()}<CurrencyIcon currency={e.currency} size={22} />
+          {e.price ? <>{e.price.toLocaleString()}<CurrencyIcon currency={e.currency} size={22} /></> : "Price to come"}
         </span>
-        <button type="button" className={s.buy} disabled={!e.can_buy || busy !== null || e.stock === 0} onClick={() => onPay(e)}>
+        <button type="button" className={s.buy} disabled={!e.price || !e.can_buy || busy !== null || e.stock === 0} onClick={() => onPay(e)}>
           {busy === e.id ? "One moment…" : e.stock === 0 ? "Sold out" : action}
         </button>
       </div>

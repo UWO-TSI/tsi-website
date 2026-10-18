@@ -11,12 +11,15 @@ import { httpEconomyTransport, type EconomyTransport } from "@/lib/wallet/transp
 import type { ShopEntry } from "@/lib/wallet/service";
 import { loadBag } from "@/lib/game/bagStore";
 import KeychainStage, { KEYCHAIN_SLUG } from "./KeychainStage";
+import LanyardStage from "./LanyardStage";
+import { LANYARD_SLUG } from "./Lanyard";
 import type { ShopSection } from "./ShopkeeperChoice";
 
 /** The shopkeeper's word on it, said behind the counter (ShopInterior's Keeper listens). */
-/** Merch with a model of its own in the detail view: the keycap keychain (it hangs, turns and clicks). */
+/** Merch with a model of its own in the detail view: the keycap keychain (it hangs, turns and clicks), the lanyard. */
 export const merchViewer = (e: ShopEntry, className: string, pictureClassName: string) =>
-  e.slug === KEYCHAIN_SLUG ? <KeychainStage className={className} pictureClassName={pictureClassName} /> : null;
+  e.slug === KEYCHAIN_SLUG ? <KeychainStage className={className} pictureClassName={pictureClassName} />
+    : e.slug === LANYARD_SLUG ? <LanyardStage className={className} pictureClassName={pictureClassName} /> : null;
 
 const say = (line: string, clip: "Wave" | "Chat" = "Chat") => window.dispatchEvent(new CustomEvent("tsi:shopkeeper-say", { detail: { line, clip } }));
 

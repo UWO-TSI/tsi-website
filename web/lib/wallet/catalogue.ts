@@ -97,6 +97,10 @@ export const PENDING_MERCH: CatalogueEntry[] = [
   withIcon({ slug: "merch-tsi-keycap-keychain", display_name: "TSI keycap keychain", category: "merch",
     description: "A Gateron Milky Yellow Pro switch in clear acrylic, under a navy TSI keycap with the Tethos mark. Press it: it clicks. Pick up at HQ on campus.",
     price_coins: null, price_gems: 500, tier: null, slot: null, special_pool: false, stackable: false, stock: null, catalogue_ref: null, sprite_url: null, position: 38 }),
+  // specs/merch/tsi-lanyard.md: no price yet (David sets it), so off sale; the shop shows it with "Price to come".
+  withIcon({ slug: "merch-tsi-lanyard", display_name: "TSI lanyard", category: "merch",
+    description: "Navy, printed both sides: GENESIS and TETHOS with the Tethos mark outside, the Steve Jobs quote inside. Silver D-ring and swivel snap hook. Pick up at HQ on campus.",
+    price_coins: null, price_gems: null, tier: null, slot: null, special_pool: false, stackable: false, stock: null, catalogue_ref: null, sprite_url: null, position: 39 }),
 ];
 
 // ── Ownership (coordinator ruling on audit item 22; 20260926180000_ownership.sql) ──

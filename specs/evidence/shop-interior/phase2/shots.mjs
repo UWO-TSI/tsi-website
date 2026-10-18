@@ -209,6 +209,13 @@ const SHOTS = [
     cam: { pos: [-0.35, F + 2.05, 3.05], target: [-1.15, F + 1.65, 4.86], fov: 46 }, labels: [], drag: true },
   { id: "32-keychain-swing", title: "Let go: it swings back", upstairs: true, route: [[-1.15, 3.7]], cam: { pos: [-0.35, F + 2.05, 3.05], target: [-1.15, F + 1.65, 4.86], fov: 46 }, labels: [], release: true },
   { id: "33-keychain-press", title: "Its keycap pressed (in, with the click; the shot is muted)", upstairs: true, route: [[-1.15, 3.7]], cam: { pos: [-0.75, F + 1.75, 4.0], target: [-1.15, F + 1.45, 4.86], fov: 38 }, labels: [], pressKey: true },
+  // The TSI lanyard folded over its peg between the posters and the shirts (SHOP_LANYARD).
+  { id: "34-lanyard-wall", title: "The TSI lanyard over its peg on the merch wall (display scale 0.3: about three times life size)", upstairs: true, route: [[1.84, 3.6]],
+    cam: { pos: [1.3, F + 1.8, 3.0], target: [1.84, F + 1.8, 4.86], fov: 50 }, labels: [] },
+  { id: "35-lanyard-walk", title: "The lanyard from the walking camera, at the merch wall", upstairs: true, route: [[1.84, 3.6]], cam: null, labels: [] },
+  { id: "36-lanyard-drag", title: "Taken hold of and pulled aside (a real pointer drag in the walking camera; shot close)", upstairs: true, route: [[1.84, 3.6]],
+    cam: { pos: [1.3, F + 1.8, 3.0], target: [1.84, F + 1.8, 4.86], fov: 50 }, labels: [], drag: true, part: "lanyard_hardware", lift: 0.0 },
+  { id: "37-lanyard-settle", title: "Let go: it settles back (2.5 s after)", upstairs: true, route: [[1.84, 3.6]], cam: { pos: [1.3, F + 1.8, 3.0], target: [1.84, F + 1.8, 4.86], fov: 50 }, labels: [], release: true, settleMs: 2500, part: "lanyard_hardware", lift: 0.0 },
   // Upstairs, before and after it's furnished (the same cameras both times).
   { id: "u1-door", title: "From the door: the merch level above", cam: null, labels: [] },
   { id: "u2-top-of-stairs", title: "From the top of the stairs", upstairs: true, route: [HEAD], cam: null, labels: [] },
@@ -255,17 +262,17 @@ for (const s of [...SHOTS].sort((p, q) => Number(!!p.aerial) - Number(!!q.aerial
     // Count click-to-walk orders while the keychain is handled: picking it must eat the pointer.
     await page.evaluate(() => { window.__walks = 0; window.addEventListener("tsi:interior-move", () => { window.__walks++; }); });
     // Where the keychain's block is on screen, through the camera the game raycasts with.
-    const at = await page.evaluate(() => {
+    const at = await page.evaluate(([part, lift]) => {
       const A = window.__audit, cam = A.gameCam, c = A.renderers[0].domElement.getBoundingClientRect();
-      let body = null; A.main.traverse(o => { if (o.name === "keychain_body") body = o; });
-      const v = body.getWorldPosition(cam.position.clone()); v.y -= 0.2;
+      let body = null; A.main.traverse(o => { if (o.name === part) body = o; });
+      const v = body.getWorldPosition(cam.position.clone()); v.y -= lift;
       v.project(cam);
       return [c.left + (v.x + 1) / 2 * c.width, c.top + (1 - v.y) / 2 * c.height];
-    });
+    }, [s.part ?? "keychain_body", s.lift ?? 0.2]);
     await page.mouse.move(at[0], at[1]);
     await page.mouse.down();
     for (let i = 1; i <= 14; i++) { await page.mouse.move(at[0] + i * 6, at[1] - i * 1); await page.waitForTimeout(20); }
-    if (s.release) { await page.mouse.up(); await page.waitForTimeout(220); }
+    if (s.release) { await page.mouse.up(); await page.waitForTimeout(s.settleMs ?? 220); }
     else await page.waitForTimeout(200);
     await page.evaluate(AIM, s.cam);
     await settle(page);
