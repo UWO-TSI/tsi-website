@@ -17,7 +17,6 @@ import { walletSheet, type WalletKind } from "@/lib/wallet/walletSheet";
 import { Amount, CurrencyIcon } from "./Amount";
 import { ownedCounts } from "@/lib/wallet/rules";
 import type { InventoryView, SellEntry, ShopEntry, ShopView, WalletView } from "@/lib/wallet/service";
-import MerchShop from "./MerchShop";
 import { ApiError, newKey } from "@/lib/apiClient";
 import { httpEconomyTransport, type EconomyTransport, type MerchView } from "@/lib/wallet/transport";
 import ProgressionPanel, { type ProgressionSheetProps } from "@/components/progression/ProgressionPanel";
@@ -70,18 +69,15 @@ const TABS = [["tools", "Tools"], ["outfits", "Outfits"], ["furniture", "Furnitu
 
 /**
  * `hideBalances`: the shop's counter shows its own till (ShopCounter); `onBought` hears each purchase (the new coin
- * balance and what it cost) for the keeper's thanks and the till. `section` (the shopkeeper's two answers): "items"
- * shows the game's things only; "merch" the real club merch only (MerchShop: the grid of cards, each opening to its model).
+ * balance and what it cost) for the keeper's thanks and the till.
  */
-export function ShopBody({ transport = httpEconomyTransport, initialTab = "tools", hideBalances = false, onBought, section }: {
+export function ShopBody({ transport = httpEconomyTransport, initialTab = "tools", hideBalances = false, onBought }: {
   transport?: EconomyTransport; initialTab?: (typeof TABS)[number][0]; hideBalances?: boolean;
   onBought?: (e: ShopEntry, r: { balance: number; price_each: number; currency: string }) => void;
-  section?: "items" | "merch";
 }) {
   const load = useCallback(() => transport.shop(), [transport]);
   const { data, error, reload, setError } = useLoad<ShopView>(load);
-  const [tab, setTab] = useState<(typeof TABS)[number][0]>(section === "merch" ? "merch" : section === "items" && initialTab === "merch" ? "tools" : initialTab);
-  const tabs = section === "items" ? TABS.filter(([k]) => k !== "merch") : TABS;
+  const [tab, setTab] = useState<(typeof TABS)[number][0]>(initialTab);
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const keys = useRef(new Map<string, string>());
@@ -115,19 +111,17 @@ export function ShopBody({ transport = httpEconomyTransport, initialTab = "tools
   return (
     <div>
       {!hideBalances && <Balances coins={data.coins} gems={data.gems} />}
-      {section !== "merch" && <Tabs label="Shop sections" value={tab} onChange={setTab} className={s.tabs}
-        tabs={tabs.map(([k, label]) => ({ id: k, label, badge: k === "specials" ? data.tabs.specials.length : undefined }))} />}
+      <Tabs label="Shop sections" value={tab} onChange={setTab} className={s.tabs}
+        tabs={TABS.map(([k, label]) => ({ id: k, label, badge: k === "specials" ? data.tabs.specials.length : undefined }))} />
       {tab === "specials" ? <p className={p.muted} style={{ marginBottom: 8 }}>20% off today. New picks at midnight (Toronto time).</p> : null}
-      {tab === "merch" && section !== "merch" ? <p className={p.muted} style={{ marginBottom: 8 }}>Real TSI merch for Gems. Reserve here, then pick it up at HQ on campus.</p> : null}
+      {tab === "merch" ? <p className={p.muted} style={{ marginBottom: 8 }}>Real TSI merch for Gems. Reserve here, then pick it up at HQ on campus.</p> : null}
       {note ? <p role="status" className={`${p.note} ${p.ok}`}>{note}</p> : null}
       {error ? <ErrorNote><SignInText text={error} /></ErrorNote> : null}
       {list.length === 0 ? <Empty icon={<Store size={32} />} title={tab === "specials" ? "No specials today" : tab === "merch" ? "No merch in stock" : "Nothing on this shelf yet"}>
         {tab === "specials" ? "New picks go up at midnight, Toronto time." : tab === "merch" ? "New club merch arrives with the next order." : "The shopkeeper restocks with each update."}
       </Empty> : null}
-      {/* The club merch: David's grid of big white cards, each opening to its model turning (MerchShop). */}
-      {tab === "merch" && list.length > 0 ? <MerchShop items={list} busy={busy} onReserve={act} /> : null}
       <div className={s.grid}>
-        {tab !== "merch" && list.map((e) => (
+        {list.map((e) => (
           <article key={e.id} className={s.tile} aria-label={e.name}>
             {e.special ? <span className={s.sale}>−20%</span> : null}
             {/* Every item's rendered icon (row 281): its sprite_url, or the same icon worked out here. */}
