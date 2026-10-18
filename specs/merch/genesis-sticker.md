@@ -4,7 +4,7 @@ David, 2026-10-18. A real TSI item for the shop's club merch section on the mezz
 
 ## The item
 
-- **Price:** to be set by David.
+- **Price:** 200 gems (David, 2026-10-18).
 - **Shape:** a rectangle (David, 2026-10-18), with slightly rounded corners.
 - **Artwork:** an ASCII-art picture made of monospace characters, with "GEN_26" in a bold monospace face, bottom left, with a soft glow.
 - **Two variants:**
