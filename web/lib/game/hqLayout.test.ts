@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HQ_FLOOR_HEIGHT as F, HQ_OPTIONS, HQ_SPAWN, createHqWalker, onUpper, walkable, type HqOption, type HqWalker } from "./hqLayout";
+import { HQ, HQ_FLOOR_HEIGHT as F, HQ_SPAWN, HQ_WREN, createHqWalker, onUpper, walkable, type HqOption, type HqWalker } from "./hqLayout";
 
 /** Walk the walker from where it is towards `to`, a step at a time, the way the game's walker does; where it got to. */
 function walkTo(w: HqWalker, from: [number, number], to: [number, number]): [number, number] {
@@ -29,8 +29,8 @@ const ground = (o: HqOption) => o.paths.find(p => p.id === "to-stair" || p.id ==
 const flight = (o: HqOption) => o.paths.find(p => p.id === "flight")!.points;
 const upstairsRoute = (o: HqOption): [number, number][] => [...ground(o), ...flight(o), o.paths.find(p => p.id === "upper")!.points[0]];
 
-describe.each(["a", "b"] as const)("HQ layout option %s", id => {
-  const o = HQ_OPTIONS[id];
+describe("HQ's room (the back mezzanine)", () => {
+  const o = HQ, id: string = "a";
 
   it("walks every taped path on the ground floor from the door", () => {
     for (const p of o.paths.filter(p => p.level === 0)) {
@@ -65,7 +65,9 @@ describe.each(["a", "b"] as const)("HQ layout option %s", id => {
 
   it("keeps every station HQ already has (the onboarding's desk, board, Founder's desk, and the rest)", () => {
     const ids = o.stations.map(s => s.id);
-    for (const id of ["exit", "desk", "board", "founder", "display", "shelf", "clock", "bench"]) expect(ids).toContain(id);
+    for (const id of ["exit", "desk", "board", "founder", "display", "shelf", "clock"]) expect(ids).toContain(id);
+    // and the new ones: the coffee bar, the aquarium, the locked admin doors upstairs
+    for (const id of ["coffee", "aquarium", "admin"]) expect(ids).toContain(id);
   });
 
   it("never lets you off the upper floor's edge, and never under or beside the flight", () => {
@@ -113,6 +115,13 @@ describe.each(["a", "b"] as const)("HQ layout option %s", id => {
     const banners = o.fixtures.filter(f => f.id.startsWith("banner-"));
     expect(banners.length).toBeGreaterThanOrEqual(6);
     expect(banners.every(f => f.level === 1 && f.blocks.some(b => b.finish === "banner"))).toBe(true);
-    expect(o.stations.filter(s => s.action === "locked" && s.level === 1).length).toBeGreaterThanOrEqual(2);
+    expect(o.stations.filter(s => s.action === "admin" && s.level === 1).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("puts Wren behind her desk, out of the walker's way, facing the door", () => {
+    for (const p of HQ_WREN) {
+      expect(p.at[1]).toBeGreaterThan(-5.2 + 0.4);           // behind the counter
+      expect(walkable(o, 0, p.at[0], p.at[1])).toBe(false);  // inside the desk's footprint: visitors stay on the near side
+    }
   });
 });
