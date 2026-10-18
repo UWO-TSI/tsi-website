@@ -19,3 +19,8 @@ Round 3 (bf63d632, David's notes on round 2): not re-benched. The broadleaf tree
 (near 2,248-2,480 drawn triangles, from 2,390-2,716; far 870-1,060); the snow cedar's snow grew (near 2,104 drawn, from
 1,588; far 770, from 436), drawn only in winter, where its six far models add about 2k triangles to a village of
 538k. The autumn village the bench draws loses about 2k triangles; no scene moves by more than 1%.
+
+Round 4 (b944587e, David's notes on round 3): not re-benched. Drawn triangles per near model: round 2,436 in leaf
+(+7%, a tenth more cards), 2,536 in winter (+12%); tall and wide within 7% in every dress; the snow cedar 2,632 near
+(+25%) and 1,084 far (+41%), drawn only in winter. The bench's autumn village moves by under 1% (the round tree's
+four placements, mostly far); a winter village by about 1% (its trees mostly far). No scene moves by 10%.
