@@ -1,0 +1,63 @@
+/* The club merch (MerchShop), after David's reference: light and clean, big white cards, the Tethos blue as the accent. */
+.shelf {
+  --merch-bg: #eeeff0;
+  --merch-card: #ffffff;
+  --merch-ink: #2b2d31;
+  --merch-quiet: #9a9da3;
+  --merch-pill: #eceded;
+  --merch-accent: var(--gui-tethos-blue, #1d9bf0);
+  margin: 0 -4px;
+  padding: 14px;
+  border-radius: 20px;
+  background: var(--merch-bg);
+  color: var(--merch-ink);
+}
+
+/* The filter pills, in one white capsule; the active one wears the Tethos mark in the accent. */
+.filters { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; width: max-content; max-width: 100%; margin: 0 auto 14px; padding: 5px; border-radius: 999px; background: var(--merch-card); }
+.filter { all: unset; display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: 999px; cursor: pointer; color: var(--merch-quiet); font: 600 15px/1.2 var(--gui-font); }
+.filter:hover { color: var(--merch-ink); }
+.filter[data-active] { color: var(--merch-accent); }
+.filter:focus-visible { outline: 2px solid var(--merch-accent); outline-offset: 2px; }
+.mark { width: 15px; height: 15px; background: var(--merch-accent); -webkit-mask: url("/assets/branding/tethos-mark.svg") center / 132% no-repeat; mask: url("/assets/branding/tethos-mark.svg") center / 132% no-repeat; }
+
+/* The grid: three big cards across, two then one as it narrows. */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(230px, 100%), 1fr)); gap: 10px; }
+.card { all: unset; position: relative; display: grid; grid-template-rows: 1fr auto; min-height: 290px; padding: 12px 12px 12px 14px; border-radius: 18px; background: var(--merch-card); cursor: pointer; box-sizing: border-box; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgb(0 0 0 / 0.07); }
+.card:focus-visible { outline: 2px solid var(--merch-accent); outline-offset: 2px; }
+.arrow { position: absolute; top: 12px; right: 12px; color: var(--merch-ink); }
+.tag { position: absolute; top: 10px; left: 10px; display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; background: color-mix(in srgb, var(--merch-accent) 13%, white); color: var(--merch-accent); font: 600 13px/1.2 var(--gui-font); }
+.info .tag { position: static; justify-self: start; }
+.art { align-self: center; justify-self: center; width: 128px; height: 128px; object-fit: contain; margin: 26px 0 12px; }
+.foot { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 8px; }
+.text { display: grid; gap: 3px; min-width: 0; }
+.name { font: 600 15px/1.25 var(--gui-font); color: var(--merch-ink); }
+.sub { margin: 0; font: 500 13px/1.25 var(--gui-font); color: var(--merch-quiet); }
+.price { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 8px; background: var(--merch-pill); color: #7d8086; font: 600 14px/1 var(--gui-font); white-space: nowrap; }
+.soldOutBadge { position: absolute; inset: 0; display: grid; place-items: center; border-radius: inherit; background: rgb(255 255 255 / 0.6); color: var(--merch-quiet); font: 700 15px var(--gui-font); }
+
+/* The item, opened: the model turning on the left, what it is and the button on the right. */
+.back { all: unset; display: inline-flex; align-items: center; gap: 6px; margin: 0 0 10px 2px; color: var(--merch-quiet); font: 600 14px var(--gui-font); cursor: pointer; }
+.back:hover { color: var(--merch-ink); }
+.back:focus-visible { outline: 2px solid var(--merch-accent); outline-offset: 2px; border-radius: 6px; }
+.detail { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; }
+.stage { display: grid; place-items: center; min-height: 340px; border-radius: 18px; background: var(--merch-card); }
+.info { display: grid; align-content: center; gap: 8px; padding: 18px 20px; border-radius: 18px; background: var(--merch-card); }
+.detailName { margin: 0; font: 700 24px/1.2 var(--gui-font); color: var(--merch-ink); }
+.description { margin: 4px 0 0; color: #5d6066; font: 500 14px/1.45 var(--gui-font); }
+.priceRow { display: flex; align-items: center; gap: 10px; margin: 6px 0 4px; }
+.stock { color: var(--merch-quiet); font: 600 13px var(--gui-font); }
+.soldOut { color: var(--gui-danger, #c4513d); font: 700 13px var(--gui-font); }
+.redeem { all: unset; display: grid; place-items: center; height: 46px; border-radius: 999px; background: var(--merch-accent); color: white; font: 700 15px var(--gui-font); cursor: pointer; text-align: center; }
+.redeem:hover:not(:disabled) { filter: brightness(1.06); }
+.redeem:disabled { background: #c9ccd1; cursor: default; }
+.redeem:focus-visible { outline: 2px solid var(--merch-ink); outline-offset: 2px; }
+.fine { margin: 2px 0 0; color: var(--merch-quiet); font: 500 12px/1.4 var(--gui-font); text-align: center; }
+
+@media (max-width: 640px) {
+  .detail { grid-template-columns: 1fr; }
+  .stage { min-height: 260px; }
+  .card { min-height: 250px; }
+}
+@media (prefers-reduced-motion: reduce) { .card { transition: none; } .card:hover { transform: none; } }

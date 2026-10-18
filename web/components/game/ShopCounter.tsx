@@ -86,14 +86,14 @@ export default function ShopCounter({ open, onClose, transport = httpEconomyTran
   const counted = (from: number, to: number) => countUp(till.current, coin.current, from, to, timers.current);
   // Club merch is reserved for Gems and picked up on campus: no till, and nothing to sell.
   const merch = section === "merch";
-  return <IslandSheet open={open} title={merch ? "Club merch" : "The counter"} onClose={onClose} testId="shop-counter" keys="e" size="lg">
+  return <IslandSheet open={open} title={merch ? "Club merch" : "The counter"} onClose={onClose} testId="shop-counter" keys="e" size={merch ? "xl" : "lg"}>
     {!merch && <div className={styles.top}>
       <p className={styles.till} aria-live="polite"><span ref={coin} className={styles.coin}><CurrencyIcon size={26} /></span>
         <span ref={till} className={styles.tillValue}>{coins === null ? "…" : coins.toLocaleString()}</span><span className={styles.unit}>coins</span></p>
       <Tabs label="At the counter" value={tab} onChange={setTab} tabs={[{ id: "buy", label: "Buy" }, { id: "sell", label: "Sell" }]} />
     </div>}
     {tab === "buy" || merch
-      ? <ShopBody key={section ?? "all"} section={section} transport={transport} hideBalances onBought={(e, r) => { if (r.currency === "coins") counted(r.balance + r.price_each, r.balance); say(`The ${e.name.toLowerCase()}, all yours. Thanks for stopping by!`, "Wave"); }} />
+      ? <ShopBody key={section ?? "all"} section={section} transport={transport} hideBalances={!merch} onBought={(e, r) => { if (r.currency === "coins") counted(r.balance + r.price_each, r.balance); say(`The ${e.name.toLowerCase()}, all yours. Thanks for stopping by!`, "Wave"); }} />
       : <SellList transport={transport} onSold={counted} />}
   </IslandSheet>;
 }

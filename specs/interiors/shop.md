@@ -138,3 +138,17 @@ Approved for phase 2: round 3. While it was being built, David moved the changin
 - `/dev/economy?view=shop&section=merch|items` shows either answer over the in-memory economy.
 
 **Shots:** `specs/evidence/shop-interior/phase2/`, with the review sheet `ground-floor-sheet.webp`. They were made headless by `shots.mjs` there, plus the merch screen from the dev economy page.
+
+**The club merch screen** (David's reference, `references/ui/shop/2026-10-18-ref-merch-grid.png`, 2026-10-18): `MerchShop`.
+- **Layout:** a light, clean panel with a grid of large white rounded cards: 3 across in the in-shop "Club merch" sheet (xl), 2 on narrower sheets, 1 on a phone.
+- **Each card:**
+  - the item's still render (its icon, a render of its 3D model) centred on white;
+  - its name, over a quiet "kind · Tethos club";
+  - its price in Gems as a grey pill at the bottom right;
+  - a ↗ at the top right;
+  - a tag ("staff pick" or "new drop") at the top left in the Tethos blue.
+- **Filter pills:** "all", then whichever of apparel, accessories, stickers and home have something in them. Today that's all, accessories and stickers. The active pill wears the Tethos mark in blue.
+- **Kinds and tags** (`lib/wallet/merchShelf.ts`): an item's kind comes from its name, so new merch files itself. Tags are a short list there (the tote is a "staff pick") until the catalogue has a column for them.
+- **Detail view:** a card opens the model turning with the pixel finish, with the tag, name, kind line, description, price pill and stock, and "Redeem with Gems". Redeeming reserves the item for pickup at HQ, as before.
+- **In-game items screen:** kept as it was. It lists dozens of cheap items with Buy, Owned and special states. The reference's sparse luxury grid suits a handful of real items, and would make the item lists long and slow to scan.
+- **Shots:** `merch-ui-sheet.webp` and `16-19` in `specs/evidence/shop-interior/phase2/`, from `/dev/economy?view=shop&section=merch`.

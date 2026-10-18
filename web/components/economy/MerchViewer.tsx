@@ -44,11 +44,12 @@ function Turning({ url }: { url: string }) {
   return <group ref={turn} rotation={[0.12, 0.6, 0]}><primitive object={object} /></group>;
 }
 
-export default function MerchViewer({ slug, name }: { slug: string; name: string }) {
+/** `caption`: the item's name under it; `large`: fills its stage (the merch's detail view). */
+export default function MerchViewer({ slug, name, caption = true, large = false }: { slug: string; name: string; caption?: boolean; large?: boolean }) {
   const url = merchModel(slug);
   if (!url) return null;
-  return <figure className={s.merchViewer} data-testid="merch-viewer">
-    <Canvas className={s.merchCanvas} dpr={MERCH_PIXEL} camera={{ position: [0, 0.25, 3.1], fov: 34 }} gl={{ antialias: false, alpha: true }}
+  return <figure className={large ? s.merchViewerLarge : s.merchViewer} data-testid="merch-viewer">
+    <Canvas className={large ? s.merchCanvasLarge : s.merchCanvas} dpr={MERCH_PIXEL} camera={{ position: [0, 0.25, 3.1], fov: 34 }} gl={{ antialias: false, alpha: true }}
       onCreated={({ gl }) => { gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
       <ambientLight intensity={0.7} />
       <hemisphereLight args={["#fff6e8", "#b9c4c8", 0.6]} />
@@ -56,6 +57,6 @@ export default function MerchViewer({ slug, name }: { slug: string; name: string
       <directionalLight position={[-2, 1, -1.5]} intensity={0.5} />
       <Suspense fallback={null}><Turning url={url} /></Suspense>
     </Canvas>
-    <figcaption>{name}</figcaption>
+    {caption ? <figcaption>{name}</figcaption> : <figcaption className={s.srOnly}>{name}</figcaption>}
   </figure>;
 }

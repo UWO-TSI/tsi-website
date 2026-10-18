@@ -17,7 +17,7 @@ import { walletSheet, type WalletKind } from "@/lib/wallet/walletSheet";
 import { Amount, CurrencyIcon } from "./Amount";
 import { ownedCounts } from "@/lib/wallet/rules";
 import type { InventoryView, SellEntry, ShopEntry, ShopView, WalletView } from "@/lib/wallet/service";
-import MerchViewer from "./MerchViewer";
+import MerchShop from "./MerchShop";
 import { ApiError, newKey } from "@/lib/apiClient";
 import { httpEconomyTransport, type EconomyTransport, type MerchView } from "@/lib/wallet/transport";
 import ProgressionPanel, { type ProgressionSheetProps } from "@/components/progression/ProgressionPanel";
@@ -71,7 +71,7 @@ const TABS = [["tools", "Tools"], ["outfits", "Outfits"], ["furniture", "Furnitu
 /**
  * `hideBalances`: the shop's counter shows its own till (ShopCounter); `onBought` hears each purchase (the new coin
  * balance and what it cost) for the keeper's thanks and the till. `section` (the shopkeeper's two answers): "items"
- * shows the game's things only; "merch" the real club merch only, the picked item turning in the middle (MerchViewer).
+ * shows the game's things only; "merch" the real club merch only (MerchShop: the grid of cards, each opening to its model).
  */
 export function ShopBody({ transport = httpEconomyTransport, initialTab = "tools", hideBalances = false, onBought, section }: {
   transport?: EconomyTransport; initialTab?: (typeof TABS)[number][0]; hideBalances?: boolean;
@@ -82,7 +82,6 @@ export function ShopBody({ transport = httpEconomyTransport, initialTab = "tools
   const { data, error, reload, setError } = useLoad<ShopView>(load);
   const [tab, setTab] = useState<(typeof TABS)[number][0]>(section === "merch" ? "merch" : section === "items" && initialTab === "merch" ? "tools" : initialTab);
   const tabs = section === "items" ? TABS.filter(([k]) => k !== "merch") : TABS;
-  const [picked, setPicked] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const keys = useRef(new Map<string, string>());
@@ -113,31 +112,27 @@ export function ShopBody({ transport = httpEconomyTransport, initialTab = "tools
 
   if (!data) return error ? <ErrorNote onRetry={() => void reload()}><SignInText text={error} /></ErrorNote> : <Loading label="Opening the shop…" />;
   const list = data.tabs[tab];
-  // The merch shown turning: the one picked, or the first.
-  const shownMerch = tab === "merch" ? list.find(e => e.id === picked) ?? list[0] : undefined;
   return (
     <div>
       {!hideBalances && <Balances coins={data.coins} gems={data.gems} />}
       {section !== "merch" && <Tabs label="Shop sections" value={tab} onChange={setTab} className={s.tabs}
         tabs={tabs.map(([k, label]) => ({ id: k, label, badge: k === "specials" ? data.tabs.specials.length : undefined }))} />}
-      {shownMerch ? <MerchViewer key={shownMerch.slug} slug={shownMerch.slug} name={shownMerch.name} /> : null}
       {tab === "specials" ? <p className={p.muted} style={{ marginBottom: 8 }}>20% off today. New picks at midnight (Toronto time).</p> : null}
-      {tab === "merch" ? <p className={p.muted} style={{ marginBottom: 8 }}>Real TSI merch for Gems. Reserve here, then pick it up at HQ on campus.</p> : null}
+      {tab === "merch" && section !== "merch" ? <p className={p.muted} style={{ marginBottom: 8 }}>Real TSI merch for Gems. Reserve here, then pick it up at HQ on campus.</p> : null}
       {note ? <p role="status" className={`${p.note} ${p.ok}`}>{note}</p> : null}
       {error ? <ErrorNote><SignInText text={error} /></ErrorNote> : null}
       {list.length === 0 ? <Empty icon={<Store size={32} />} title={tab === "specials" ? "No specials today" : tab === "merch" ? "No merch in stock" : "Nothing on this shelf yet"}>
         {tab === "specials" ? "New picks go up at midnight, Toronto time." : tab === "merch" ? "New club merch arrives with the next order." : "The shopkeeper restocks with each update."}
       </Empty> : null}
+      {/* The club merch: David's grid of big white cards, each opening to its model turning (MerchShop). */}
+      {tab === "merch" && list.length > 0 ? <MerchShop items={list} busy={busy} onReserve={act} /> : null}
       <div className={s.grid}>
-        {list.map((e) => (
-          <article key={e.id} className={s.tile} aria-label={e.name} data-picked={shownMerch?.id === e.id ? "" : undefined}>
+        {tab !== "merch" && list.map((e) => (
+          <article key={e.id} className={s.tile} aria-label={e.name}>
             {e.special ? <span className={s.sale}>−20%</span> : null}
-            {/* Every item's rendered icon (row 281): its sprite_url, or the same icon worked out here. A merch item's shows it turning above. */}
-            {tab === "merch"
-              // eslint-disable-next-line @next/next/no-img-element
-              ? <div className={s.art}><button type="button" aria-label={`Show ${e.name}`} onClick={() => setPicked(e.id)}><img src={e.sprite_url ?? shopIcon({ slug: e.slug, catalogue_ref: e.catalogue_ref, category: e.category })} alt="" width={56} height={56} /></button></div>
-              // eslint-disable-next-line @next/next/no-img-element
-              : <div className={s.art} aria-hidden><img src={e.sprite_url ?? shopIcon({ slug: e.slug, catalogue_ref: e.catalogue_ref, category: e.category })} alt="" width={56} height={56} /></div>}
+            {/* Every item's rendered icon (row 281): its sprite_url, or the same icon worked out here. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <div className={s.art} aria-hidden><img src={e.sprite_url ?? shopIcon({ slug: e.slug, catalogue_ref: e.catalogue_ref, category: e.category })} alt="" width={56} height={56} /></div>
             <h4>{e.name}</h4>
             <Badge tone={e.tier === "premium" ? "gold" : "neutral"} className={s.chip}>{e.tier ?? e.category}</Badge>
             <span className={s.price}>
