@@ -24,3 +24,6 @@ Round 4 (b944587e, David's notes on round 3): not re-benched. Drawn triangles pe
 (+7%, a tenth more cards), 2,536 in winter (+12%); tall and wide within 7% in every dress; the snow cedar 2,632 near
 (+25%) and 1,084 far (+41%), drawn only in winter. The bench's autumn village moves by under 1% (the round tree's
 four placements, mostly far); a winter village by about 1% (its trees mostly far). No scene moves by 10%.
+
+Snow cedar, snow on every tier (51b7dbb3): not re-benched. 2,084 drawn triangles near (round 4's 2,632, round 3's
+2,104) and 819 far (1,084, 770), winter only.

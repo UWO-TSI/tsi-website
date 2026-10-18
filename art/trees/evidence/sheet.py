@@ -255,3 +255,23 @@ if not ONLY or "flowers" in ONLY:
     sh.text("In game, the same camera before and after: the flower spot at (-5, -7), every season (winter has none; a picked flower node can show)", F_H)
     ingame_rows(sh, "flowers")
     sh.save(os.path.join(OUT, "flowers.webp"))
+
+if not ONLY or "cedar-snow" in ONLY:
+    old, new = A + "tree-cedar-snow.glb", G + "conifer-cedar-snow.glb"
+    far = new.replace(".glb", ".lod1.glb")
+    sh = Sheet(16 + 170 + 6 * (T + 6) + 16 + 2 * (T + 6))
+    sh.text("Snow cedar: snow on every tier, organically (row 314, round 4), side by side with the dump's", F_T)
+    sh.text(f"Dump: {fmt([old])}.   Ours, near: {fmt([new])}.   Far (past 24 u): {fmt([far])}.", F_L, colour=MUTED)
+    sh.text("Each tier its own soft blanket of snow on its slope, crest rounded, a lip just above its hem; reach and thickness vary tier to tier, heavier toward the top;", F_L, colour=MUTED)
+    sh.text("every tier's green fringe peeks out beneath its snow, and the tier above's fingers hang over its inner edge.", F_L, colour=MUTED)
+    sh.row([tile(tt("plain", old, "front"), "dump front"), tile(tt("after", new, "front"), "ours front"),
+            tile(tt("plain", old, "q"), "dump 3/4"), tile(tt("after", new, "q"), "ours 3/4"), tile(tt("after", far, "q"), "ours far 3/4")],
+           label="Dump | ours")
+    sh.rule()
+    sh.text("In game, winter, the same camera before and after: the cedar at (6, -14), and the game's own camera west and east", F_H)
+    tiles = []
+    for target in ("cedar", "village-west", "village-east"):
+        tiles += [tile(os.path.join(IG, "before", f"{target}.winter.png"), f"before {target}", 330), tile(os.path.join(IG, "after", f"{target}.winter.png"), f"after {target}", 330)]
+    sh.row(tiles[:4], label="In game\nwinter")
+    sh.row(tiles[4:])
+    sh.save(os.path.join(OUT, "cedar-snow.webp"))
