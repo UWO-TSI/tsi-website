@@ -1,5 +1,7 @@
 # Lane rules (every coordinator lane on the Mac mini)
 
+Every lane has a handoff file in `specs/lanes/` (how it works: `specs/lanes/README.md`). Keep yours current at every milestone: lanes are restarted fresh from it.
+
 These rules are hard. The coordinator merges and pushes; lanes never push.
 
 ## Worktree and git
