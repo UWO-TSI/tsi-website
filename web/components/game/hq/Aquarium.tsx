@@ -197,7 +197,7 @@ export default function Aquarium() {
       mesh.castShadow = mesh.receiveShadow = false;
       const material = /hq_tank_inner/.test(name) ? waterMaterial()
         : /hq_tank_surface/.test(name) ? surfaceMaterial()
-        : /hq_tank_glass/.test(name) ? new THREE.MeshStandardMaterial({ name: "HqTankGlass", color: "#d6f3fb", roughness: 0.05, metalness: 0, transparent: true, opacity: 0.1, depthWrite: false })
+        : /hq_tank_glass/.test(name) ? new THREE.MeshStandardMaterial({ name: "HqTankGlass", color: "#d6f3fb", roughness: 0.3, metalness: 0, transparent: true, opacity: 0.1, depthWrite: false })
         : tankLit(new THREE.MeshStandardMaterial({ name: "HqTankReef", vertexColors: true, roughness: 0.9 }), false);
       mesh.material = material;
       mats.push(material);

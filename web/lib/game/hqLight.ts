@@ -32,7 +32,7 @@ export function hqPools(o: HqOption = HQ): Pool[] {
   for (const lamp of o.lamps) {
     const base = lamp.level * F, [x, , z] = lamp.light;
     // The floor round it: wide and soft.
-    out.push({ id: `${lamp.id}:floor`, level: lamp.level, at: [x, base + LIFT, z], face: "up", half: [lamp.pool, lamp.pool], color: WARM, strength: lamp.kind === "arc" ? 0.5 : 0.42 });
+    out.push({ id: `${lamp.id}:floor`, level: lamp.level, at: [x, base + LIFT, z], face: "up", half: [lamp.pool, lamp.pool], color: WARM, strength: lamp.kind === "arc" ? 0.62 : 0.52 });
     // A table lamp lights what it stands on: a small bright pool on the top.
     if (lamp.on > 0) out.push({ id: `${lamp.id}:top`, level: lamp.level, at: [x, base + lamp.on + 0.006, z], face: "up", half: [0.55, 0.55], color: WARM, strength: 0.55 });
   }

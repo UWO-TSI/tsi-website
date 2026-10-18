@@ -65,17 +65,18 @@ export default function HqInterior({ light = ISLAND_LIGHTING.day, frozen, talkin
     report(last, nearestStation(list, x, z), onNearestStation);
   }, [walker, onNearestStation]);
   const height = useCallback(() => walker.height, [walker]);
-  const lamps = interiorLight(light).lamps;
+  const { lamps, day } = interiorLight(light);
   const a = HQ.aquarium;
 
   return (
     <group>
-      <InteriorDaylight light={light} shadows scale={{ key: 1.0, ambient: 0.3, hemisphere: 0.26, extent: 12 }} />
+      {/* The fill falls away at night, so the lamps, the strips and the tank carry the room (ref 2's lamp-lit lounge). */}
+      <InteriorDaylight light={light} shadows scale={{ key: 1.0, ambient: 0.14 + 0.18 * day, hemisphere: 0.1 + 0.18 * day, extent: 12 }} />
       {/* The hall and the work floor: warm, from the track spots and the lamps (their pools are LampPools). */}
-      <pointLight color="#ffd9a8" intensity={26 * lamps} distance={15} position={[-1.5, 4.6, -3.4]} />
-      <pointLight color="#ffd4a0" intensity={16 * lamps} distance={11} position={[0, 2.6, 5.0]} />
+      <pointLight color="#ffd6a2" intensity={20 * lamps} distance={14} position={[-1.5, 4.2, -3.4]} />
+      <pointLight color="#ffd09a" intensity={13 * lamps} distance={11} position={[0, 1.8, 5.2]} />
       {/* The upper lounge, under the arc lamp's globe. */}
-      <pointLight color="#ffcf98" intensity={12 * lamps} distance={9} position={[1.7, F + 2.0, 4.9]} />
+      <pointLight color="#ffcb92" intensity={12 * lamps} distance={9} position={[1.7, F + 2.0, 4.9]} />
       {/* The aquarium's blue on the lounge before it: always on, the tank lights itself. */}
       <pointLight color="#62c9f2" intensity={14} distance={8} position={[a.x0 - 0.9, 2.4, (a.z0 + a.z1) / 2]} />
 

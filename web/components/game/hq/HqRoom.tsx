@@ -75,6 +75,8 @@ const walkOn = (level: 0 | 1) => (e: ThreeEvent<MouseEvent>) => {
   AudioManager.playSFX("click");
 };
 
+/** The room's reflected fill follows the time of day too: at night most of it goes, and the lamps carry the room. */
+function envForDay(scene: THREE.Scene, day: number) { scene.environmentIntensity = HQ_ENV.intensity * (0.3 + 0.7 * day); }
 /** Module scope (the react compiler forbids writing through hook values): the mezzanine shown or cut away. */
 function showUpper(walker: HqWalker, upper: THREE.Object3D | null) {
   const hide = DEV && (window as { __hqHideUpper?: boolean }).__hqHideUpper;
@@ -104,7 +106,8 @@ export default function HqRoom({ walker, light }: { walker: HqWalker; light: Isl
   const ground = useRoomModel(GROUND), upper = useRoomModel(UPPER), ceiling = useRoomModel(CEILING);
   const pools = useMemo(() => hqPools(), []);
   const low = useMemo(() => pools.filter(p => p.level === 0), [pools]), high = useMemo(() => pools.filter(p => p.level === 1), [pools]);
-  const gain = interiorLight(light).lamps;
+  const { lamps: gain, day } = interiorLight(light);
+  useEffect(() => envForDay(scene, day), [scene, day]);
   const upperRef = useRef<THREE.Group>(null);
   useFrame(() => showUpper(walker, upperRef.current));
   useEffect(() => ceilingForCamera(scene, ceiling), [scene, ceiling]);

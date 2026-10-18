@@ -198,8 +198,12 @@ for (const time of times.split(",")) {
     await page.evaluate(() => document.getElementById("hq-labels")?.remove());
     const prompt = () => page.evaluate(() => [...document.querySelectorAll("button")].find(b => b.querySelector("kbd") && /^E/.test(b.textContent ?? ""))?.textContent ?? null);
     const ground = o.stations.filter(s => s.level === 0), upper = o.stations.filter(s => s.level === 1);
+    // Round the furniture (the taped paths): the library behind the co-working desk, the aquarium past the lounge's sofa.
+    const ROUTES = { shelf: [[0, -3.0], [0, 2.4], [0, 6.0], [-5.3, 6.0], [-5.3, 6.6]], aquarium: [[0, -3.0], [3.6, -3.0], [3.6, 0.6], [7.9, 0.6], [7.9, -2.1]],
+      board: [[0, -3.0], [0, 6.0], [2.6, 6.75]], founder: [[0, -3.0], [0, 2.4], [6.1, 2.6], [7.2, 5.55]], display: [[0, -3.0], [0, 2.4], [6.1, 2.6], [8.45, 4.4]], clock: [[0, -3.0], [0, 6.0], [-0.2, 6.8]] };
     for (const st of ground) {
-      await walk([[0, -3.0], st.pos]);
+      const route = ROUTES[st.id] ?? [[0, -3.0], st.pos];
+      await walk(route);
       const p = await prompt();
       log.push({ station: st.id, level: 0, prompt: p });
       console.log("prompt", st.id, JSON.stringify(p));
@@ -213,7 +217,7 @@ for (const time of times.split(",")) {
         await page.waitForTimeout(700);
         await page.screenshot({ path: join(outDir, `day-18-aquarium-line.png`) });
       }
-      if (st.id === "exit") { await walk([[0, -5.0]]); }
+      await walk([...route].reverse());
     }
     await walk(UP);
     for (const st of upper) {
