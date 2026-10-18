@@ -200,6 +200,15 @@ const SHOTS = [
   { id: "10-seasonal", title: "The front plinths by the window: today's specials", cam: { pos: [1.2, 1.7, -1.4], target: [3.9, 0.6, -3.3], fov: 52 }, labels: [] },
   { id: "11-item-tag", title: "Near an item: its tag, the name and a mini image", hud: true, route: [[0, -1.0], [2.5, -0.2]], cam: null, labels: [] },
   { id: "12-shopkeeper", title: "E at the counter: the shopkeeper's two answers", hud: true, route: [[0, -1.0], L.spot], press: "e", keep: true, cam: null, labels: [] },
+  { id: "27-window-after", title: "The window, after its pass: a recessed frame, a mullion and transom, a deeper sill, softer drapes on a rod", cam: { pos: [1.2, 1.7, -1.4], target: [3.9, 0.6, -3.3], fov: 52 }, labels: [] },
+  { id: "28-window-close", title: "The window, close", cam: { pos: [3.6, 1.6, -1.9], target: [6.0, 1.7, -2.9], fov: 50 }, labels: [] },
+  { id: "29-keychain-wall", title: "The TSI keycap keychain on its hook on the merch wall (display scale 1: about twelve times life size)", upstairs: true, route: [[-1.15, 3.7]],
+    cam: { pos: [-0.35, F + 2.05, 3.05], target: [-1.15, F + 1.65, 4.86], fov: 46 }, labels: [] },
+  { id: "30-keychain-walk", title: "The keychain from the walking camera, at the merch wall", upstairs: true, route: [[-1.15, 3.7]], cam: null, labels: [] },
+  { id: "31-keychain-drag", title: "Taken hold of and pulled aside (a real pointer drag, in the walking camera; shot close)", upstairs: true, route: [[-1.15, 3.7]],
+    cam: { pos: [-0.35, F + 2.05, 3.05], target: [-1.15, F + 1.65, 4.86], fov: 46 }, labels: [], drag: true },
+  { id: "32-keychain-swing", title: "Let go: it swings back", upstairs: true, route: [[-1.15, 3.7]], cam: { pos: [-0.35, F + 2.05, 3.05], target: [-1.15, F + 1.65, 4.86], fov: 46 }, labels: [], release: true },
+  { id: "33-keychain-press", title: "Its keycap pressed (in, with the click; the shot is muted)", upstairs: true, route: [[-1.15, 3.7]], cam: { pos: [-0.75, F + 1.75, 4.0], target: [-1.15, F + 1.45, 4.86], fov: 38 }, labels: [], pressKey: true },
   { id: "13-merch-ui", title: "Club merch: the item turning in the middle, with the pixel finish", hud: true, click: "Club merch", wait: 3500, cam: null, labels: [] },
 ].filter(s => !only || only.split(",").includes(s.id));
 
@@ -230,10 +239,35 @@ for (const s of [...SHOTS].sort((p, q) => Number(!!p.aerial) - Number(!!q.aerial
     await page.waitForTimeout(4500);
   }
   if (s.click) { await page.getByRole("button", { name: s.click }).first().click(); await page.waitForTimeout(s.wait ?? 2500); }
+  if (s.pressKey) { await page.evaluate(() => window.__shopKeychainPress()); await page.waitForTimeout(70); }
+  if (s.drag || s.release) {
+    // The game raycasts through its own camera: drag in that one, then shoot through the close one.
+    await page.evaluate(AIM, null);
+    await settle(page);
+    // Count click-to-walk orders while the keychain is handled: picking it must eat the pointer.
+    await page.evaluate(() => { window.__walks = 0; window.addEventListener("tsi:interior-move", () => { window.__walks++; }); });
+    // Where the keychain's block is on screen, through the camera the game raycasts with.
+    const at = await page.evaluate(() => {
+      const A = window.__audit, cam = A.gameCam, c = A.renderers[0].domElement.getBoundingClientRect();
+      let body = null; A.main.traverse(o => { if (o.name === "keychain_body") body = o; });
+      const v = body.getWorldPosition(cam.position.clone()); v.y -= 0.2;
+      v.project(cam);
+      return [c.left + (v.x + 1) / 2 * c.width, c.top + (1 - v.y) / 2 * c.height];
+    });
+    await page.mouse.move(at[0], at[1]);
+    await page.mouse.down();
+    for (let i = 1; i <= 14; i++) { await page.mouse.move(at[0] + i * 6, at[1] - i * 1); await page.waitForTimeout(20); }
+    if (s.release) { await page.mouse.up(); await page.waitForTimeout(220); }
+    else await page.waitForTimeout(200);
+    await page.evaluate(AIM, s.cam);
+    await settle(page);
+    console.log("walk orders during the drag", s.id, await page.evaluate(() => window.__walks));
+  }
   await settle(page);
   await page.waitForTimeout(500);
   await page.evaluate(LABEL, { labels: s.labels, legend: s.legend, key: s.key, title: s.title, titleLow: s.hud, bend: aerial ? [0, 0] : [0.0032, 0.0011] });
   await page.screenshot({ path: join(outDir, `${s.id}.png`), clip: rect });
+  if (s.drag) { await page.mouse.up(); await page.waitForTimeout(3000); }
   console.log("shot", s.id);
   // Close what the shot opened (the wardrobe), and hide the page's DOM again.
   if ((s.press && !s.keep) || s.click) { await page.keyboard.press("Escape"); await page.waitForTimeout(1500); }

@@ -8,13 +8,14 @@ chain, another jump ring and a spring-gate keyring.
 
 Writes web/public/assets/game/items/merch-tsi-keycap-keychain.glb. Units: one unit is 10 cm (the block is 0.19 across),
 so the shop scales it up to a readable display size. It hangs straight down from the keyring's top at the origin, the
-switch's axis along −z (the keycap faces −z, toward the game's camera), so a static load shows it hanging at rest.
+switch's axis along +z (the keycap faces +z, the front every item's icon is drawn from; the shop turns it to face the
+room), so a static load shows it hanging at rest.
 
 Nodes, each with its origin at the point it hangs from (the engine swings them, components/game/KeycapKeychain.tsx):
   keychain_ring     the spring-gate keyring and the upper jump ring
   keychain_chain_0..3  the snake chain in four links, top to bottom (the first and last carry the crimped ends)
   keychain_body     the lower jump ring, the lobster clasp, the block, the switch and its pins
-  keychain_keycap   (a child of the body) the keycap; it moves +z, into the switch, on a press
+  keychain_keycap   (a child of the body) the keycap; it moves −z, into the switch, on a press
 Materials: P_Metal (the hardware and the pins), P_Glass (the acrylic, see-through), P_Paint (the keycap, the housing
 and the stem, their colours in COLOR_0), M_Logo (the keycap's top: the one texture, the Tethos mark on navy).
 """
@@ -179,6 +180,11 @@ def main():
     cap.parent = body_ob
     cap["press"] = KEYCAP_PRESS
     obs = [ring, *links, body_ob, cap]
+    # Built facing −z; turn every part half a turn about the hanging axis so the keycap faces +z (a turn, not a mirror:
+    # the mark still reads true). Blender's z is the game's up.
+    for o in obs:
+        for v in o.data.vertices:
+            v.co.x, v.co.y = -v.co.x, -v.co.y
     print("tris", sum(len(p.vertices) - 2 for o in obs for p in o.data.polygons))
     K.export(obs, OUT)
 

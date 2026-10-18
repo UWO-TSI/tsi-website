@@ -2,7 +2,7 @@
 
 /**
  * The TSI keycap keychain (specs/merch/tsi-keycap-keychain.md), built from David's photos
- * (art/merch/build_keycap_keychain.py): it hangs from its keyring and swings on its chain (lib/game/keychainSwing.ts),
+ * (art/merch/build_keycap_keychain.py; its keycap faces +z): it hangs from its keyring and swings on its chain (lib/game/keychainSwing.ts),
  * and a click on the keycap presses it in with a click (the "keyswitch" sound, through the game's audio: its mute and
  * volume). On the shop's wall (`grab`) you can take hold of it: drag pulls it about and twists it, and let go it swings
  * back. In the shop's detail view the stage turns it instead (TurnStage), and a tap on the keycap presses it.
@@ -52,7 +52,7 @@ function pose(rig: Rig, s: Swing, depth: number) {
     part.quaternion.setFromUnitVectors(down, dir);
     if (i === rig.parts.length - 1) part.quaternion.multiply(twistQ.setFromAxisAngle(yAxis, s.twist));
   });
-  rig.keycap.position.set(rig.keycapRest.x, rig.keycapRest.y, rig.keycapRest.z + depth * KEYCAP_TRAVEL);
+  rig.keycap.position.set(rig.keycapRest.x, rig.keycapRest.y, rig.keycapRest.z - depth * KEYCAP_TRAVEL);   // in, toward the block
 }
 
 const isKeycap = (o: THREE.Object3D | null) => { for (let x = o; x; x = x.parent) if (x.name === "keychain_keycap") return true; return false; };

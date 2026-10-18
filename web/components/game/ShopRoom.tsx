@@ -105,7 +105,7 @@ export default function ShopRoom({ walker, light, player, frozen }: {
         <mesh position={[SHOP_KEYCHAIN.hook[0], SHOP_KEYCHAIN.hook[1] + 0.012, SHOP_KEYCHAIN.hook[2] + 0.04]} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[0.012, 0.012, 0.13, 8]} /><meshStandardMaterial color="#3b4046" metalness={0.7} roughness={0.4} />
         </mesh>
-        {liteMode ? <KeychainSprite /> : <Suspense fallback={null}><KeycapKeychain grab position={SHOP_KEYCHAIN.hook} scale={SHOP_KEYCHAIN.scale} press={press} /></Suspense>}
+        {liteMode ? <KeychainSprite /> : <Suspense fallback={null}><group position={SHOP_KEYCHAIN.hook} rotation={[0, Math.PI, 0]}><KeycapKeychain grab scale={SHOP_KEYCHAIN.scale} press={press} /></group></Suspense>}
       </group>
     </group>
   </group>;
