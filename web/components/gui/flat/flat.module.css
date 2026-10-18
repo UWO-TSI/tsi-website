@@ -17,6 +17,8 @@
 .panel:not([data-rail]) { grid-template-columns: minmax(0, 1fr); }
 .panel:not([data-rail]) .main { padding-left: 22px; }
 .layer[data-state="closing"] .panel { animation: sink 0.16s ease-in forwards; }
+/* On a page (the portal's shop): in the flow, as tall as the screen allows below the page's own bar. */
+.panel[data-embedded] { width: 100%; height: min(880px, calc(100dvh - 96px)); box-shadow: none; animation: none; color: var(--flat-ink); font-family: var(--gui-font); }
 @keyframes rise { from { opacity: 0; transform: translateY(14px) scale(0.985); } }
 @keyframes sink { to { opacity: 0; transform: translateY(10px) scale(0.99); } }
 
@@ -131,6 +133,7 @@ div.card:hover { transform: none; box-shadow: none; }
   .layer { padding: 0; }
   .panel { width: 100vw; height: 100dvh; border-radius: 0; grid-template-columns: minmax(0, 1fr); grid-template-rows: 56px auto minmax(0, 1fr); }
   .panel:not([data-rail]) { grid-template-rows: 56px minmax(0, 1fr); }
+  .panel[data-embedded] { width: 100%; height: calc(100dvh - 56px); border-radius: 18px; }
   .top { grid-template-columns: 1fr auto; }
   .heading { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .side { flex-direction: row; justify-content: center; padding: 0 12px 6px; overflow-x: auto; }

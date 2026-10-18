@@ -28,32 +28,38 @@ const cx = (...names: (string | false | null | undefined)[]) => names.filter(Boo
  * The flat panel: a scrim, one light-grey panel over most of the screen (the whole screen on a phone), a top bar with
  * the purse slot (`purse`), the title and a round close, the rail (`rail`) down the left and the content. Focus,
  * Escape, the opening key (`keys`), the world's hotkeys held and the paper sound come from the dialog system
- * (lib/game/useWorldDialog), as every sheet's do.
+ * (lib/game/useWorldDialog), as every sheet's do. `embedded`: the same panel on a page (the portal's shop), with no
+ * scrim and no dialog; no close without `onClose`.
  */
-export function FlatPanel({ open, onClose, title, purse, rail, keys, testId, children }: {
-  open: boolean; onClose: () => void; title: string;
+export function FlatPanel({ open, onClose, title, purse, rail, keys, testId, embedded, children }: {
+  open: boolean; onClose?: () => void; title: string;
   /** Top left: the coins and Gems (`Purse`), or anything else short. */
   purse?: ReactNode;
   /** Down the left: an `IconRail`. */
   rail?: ReactNode;
-  keys?: string | readonly string[]; testId?: string; children: ReactNode;
+  keys?: string | readonly string[]; testId?: string; embedded?: boolean; children: ReactNode;
 }) {
   const state = usePresence(open);
-  const panel = useWorldDialog<HTMLElement>(open, onClose, keys);
+  const panel = useWorldDialog<HTMLElement>(open && !embedded, onClose ?? noop, keys);
+  const top = <header className={f.top}>
+    {purse ?? <span />}
+    <h2 className={f.heading}>{title}</h2>
+    {onClose ? <button type="button" className={f.close} aria-label="Close" onClick={onClose}><X size={18} aria-hidden /></button> : <span />}
+  </header>;
+  if (embedded) return <section aria-label={title} className={f.panel} data-testid={testId} data-rail={rail ? "" : undefined} data-embedded="">
+    {top}{rail}<div className={f.main}>{children}</div>
+  </section>;
   if (!state) return null;
   return <div className={f.layer} data-state={state}>
     <div className={f.scrim} onClick={onClose} aria-hidden="true" />
     <section ref={panel} role="dialog" aria-modal aria-label={title} tabIndex={-1} data-gui-dialog data-gui-overlay className={f.panel} data-testid={testId} data-rail={rail ? "" : undefined}>
-      <header className={f.top}>
-        {purse ?? <span />}
-        <h2 className={f.heading}>{title}</h2>
-        <button type="button" className={f.close} aria-label="Close" onClick={onClose}><X size={18} aria-hidden /></button>
-      </header>
+      {top}
       {rail}
       <main className={f.main}>{children}</main>
     </section>
   </div>;
 }
+const noop = () => {};
 
 /** The coins and Gems as plain icon and number pairs (`null`: still loading). The refs let a till count them up. */
 export function Purse({ coins, gems, coinsRef, gemsRef }: {

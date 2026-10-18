@@ -6,7 +6,6 @@ import { InventorySheet, SellSheet, ShopBody, WalletSheet } from "@/components/e
 import MerchFulfilment from "@/components/economy/MerchFulfilment";
 import ShopOverlay from "@/components/economy/ShopOverlay";
 import { merchViewer } from "@/components/game/ShopCounter";
-import ProgressionPanel from "@/components/progression/ProgressionPanel";
 import { memoryEconomyStore } from "@/lib/wallet/memoryStore";
 import { PENDING_MERCH } from "@/lib/wallet/catalogue";
 import { memoryEconomyTransport } from "@/lib/wallet/memoryTransport";
@@ -59,7 +58,8 @@ export default function EconomyHarness() {
   const close = () => undefined;
   return (
     <main className="gui" style={{ minHeight: "100dvh", background: view === "admin" ? "var(--gui-page)" : "linear-gradient(180deg,#a9d8e6,#cfe7cf 55%,#9cc58f)", padding: view === "admin" ? 32 : 0 }}>
-      {view === "shop" ? <ProgressionPanel open onClose={close} title="Shop" wide><ShopBody transport={t} initialTab={(q.get("tab") as "tools") ?? "tools"} /></ProgressionPanel> : null}
+      {/* The shop as the portal's pages show it (the overlay's body on the page): ?view=shop[&tab=specials] */}
+      {view === "shop" ? <div style={{ padding: 20 }}><ShopBody transport={t} initialTab={(q.get("tab") as "tools" | null) ?? undefined} /></div> : null}
       {/* The in-game shop overlay (ShopOverlay), as the counter opens it: ?view=overlay[&section=items|merch] */}
       {view === "overlay" ? <ShopOverlay open onClose={close} transport={t} title={q.get("section") === "merch" ? "Club merch" : "The shop"}
         section={(q.get("section") as "items" | "merch" | null) ?? undefined} sell={q.get("section") !== "merch"} viewerFor={merchViewer} /> : null}
