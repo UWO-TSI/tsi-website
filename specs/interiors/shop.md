@@ -152,3 +152,70 @@ Approved for phase 2: round 3. While it was being built, David moved the changin
 - **Detail view:** a card opens the model turning with the pixel finish, with the tag, name, kind line, description, price pill and stock, and "Redeem with Gems". Redeeming reserves the item for pickup at HQ, as before.
 - **In-game items screen:** kept as it was. It lists dozens of cheap items with Buy, Owned and special states. The reference's sparse luxury grid suits a handful of real items, and would make the item lists long and slow to scan.
 - **Shots:** `merch-ui-sheet.webp` and `16-19` in `specs/evidence/shop-interior/phase2/`, from `/dev/economy?view=shop&section=merch`.
+
+## Round 4: the shop overlay, the window and the keycap keychain (2026-10-18)
+
+**Ground floor: approved.** David: "amazing, maybe window needs a lil work but everythhing nice".
+
+The window pass (`overlay-sheet.webp`, frames 7 to 9, before and after):
+- the frame now sits back in the wall's reveal, white instead of dark;
+- it gains a mullion and a transom;
+- the sill is deeper and runs out into the room;
+- the drapes are finely pleated, gathered toward the hem, and hang from a slim steel rod with finials and brackets.
+
+**The shop overlay.**
+
+David's brief, verbatim: "the ui overlay needs to be bigger, less box in box, have a side bar with icon for filter, less beige coin and gem display top left and cleaner, menu ui has 2d image with name and description, with pixel filter for all, clicking, item 3d large on left rotate, right is title desc stock and price and payment, less box in box, clean simple 1 box or 2 max".
+
+His references are in `references/ui/shop/`:
+- the grid: `2026-10-18-ref-merch-grid.png`;
+- the detail view: `2026-10-18-ref-detail-product-hero.png` (the "Furnituristic" boards);
+- the detail view, alternative: `2026-10-18-ref-detail-object-large.png` (the lamp).
+
+"Use reference here": where the references and my reading of the brief differ, the references win.
+
+My reading, built as `ShopOverlay`. It's one layout for both answers of the shopkeeper's, so the in-game items and the club merch match.
+- **Size and boxes:** one flat light-grey panel over most of the screen, about 95% of it. Black and white type, lots of grey and white space, no beige anywhere. Inside the panel there are no boxes, except the item cards (David asked to keep the grid reference's card look) and the detail view's white spec band (the second panel).
+- **Top:** coins and Gems top left, as plain icon and number pairs; the title in the middle; a round close button on the right.
+- **Sidebar:** shelf icons down the left, icons only (their names are labels for screen readers and tooltips). The active one is black with a dot under it.
+  - In-game items: tools, clothes, home, today's specials (with a count) and, at the counter, Sell.
+  - Club merch: all, then each kind that has something in it (accessories and stickers today), and your pickups.
+- **Grid** (the grid reference): large white cards on the grey.
+  - each card: the item's picture centred with lots of air, small name bottom left, a quiet line under it (its description, or one for its kind), the price in a small grey pill bottom right, a tag top left ("today's special", "staff pick", "new drop") and a tiny ↗ top right;
+  - every picture has the pixel filter: drawn small and scaled up unsmoothed (`PixelImage`).
+- **Detail view** (the two detail references): it opens in the same panel.
+  - Left: the item huge, turning, with the pixel finish. Drag turns it; let go and it eases back into the slow turn (`TurnStage`). Where an item has no model (wallpaper, flooring), its picture shows large, pixelated. Prev and next arrows step through the shelf, and "All" goes back.
+  - Right: a small muted kind, the big title, the description, the price, and a dark rounded Buy (or Redeem for merch), with "Pay with coins" or "Pay with Gems". A hair dye shows the other dyes as colour dots, the variants the hero reference shows.
+  - Along the bottom, a white band of specs (the lamp reference's ORIGIN / MATERIAL / DESIGNER row):
+    - the keychain: switch, keycap, pick up;
+    - other merch: kind, pick up, stock;
+    - in-game items: kind, set (the tier, or today's special) and stock.
+- **The counter:** "In-game items" opens the overlay with Sell. "Club merch" opens it on the merch: "It's all upstairs if you want to see it in person.", with no Sell and no till.
+- **Phone:** the panel fills the screen, the shelves run across the top, one card a row, and the detail stacks.
+- **Shots:** `specs/evidence/shop-interior/phase2/overlay-sheet.webp` (frames 1 to 6). `/dev/economy?view=overlay&section=items|merch` shows it over the in-memory economy.
+
+**The TSI keycap keychain** (`specs/merch/tsi-keycap-keychain.md`, from David's six photos).
+
+- **Model:** `art/merch/build_keycap_keychain.py` writes `web/public/assets/game/items/merch-tsi-keycap-keychain.glb`. It's 2,410 triangles in units of 10 cm (the block is 0.19 across).
+  - P_Glass (the acrylic, see-through), P_Metal (the hardware and the pins) and P_Paint (the keycap, the milky housing and the yellow stem, their colours in COLOR_0).
+  - The only texture is the keycap's top (M_Logo: the Tethos mark, rasterised from the brand SVG on navy, 256 px).
+  - Each part is its own node, hanging from its own point: the keyring, four chain links and the body, with the keycap as the body's child so a press moves it in.
+  - The keycap faces +z, the front every item's icon is drawn from; the shop turns it to face the room.
+- **2D sprite:** its icon, rendered from the model by the icon pipeline. It shows on the wall and in the detail view in lite graphics, or when the 3D viewer fails.
+- **In the shop:** it hangs from its keyring on a steel peg on the mezzanine's pegboard, between the totes and the posters (`SHOP_KEYCHAIN`).
+  - **Display scale 1:** the block is 0.19 game units, about twelve times life size, as small merch is blown up to read (the sticker packs about six times, the totes about twice).
+  - It swings on a small verlet chain with damping and a twisting spring (`lib/game/keychainSwing.ts`, no physics library).
+  - Click and drag pulls it about and twists it; let go and it swings back.
+  - A still click on the keycap presses it: in over 35 ms, held 75 ms, back over 60 ms, in time with the click.
+  - Picking it eats the pointer: no walk is ordered while you handle it (checked, zero walk orders during a drag), and the interior camera doesn't orbit.
+  - Its item tag reads "TSI keycap keychain".
+- **In the merch view:** it hangs in the middle of the turning stage with the pixel finish (`KeychainStage`). Drag turns it, and it eases back to the slow turn; a tap on the keycap presses it, with the click.
+- **The click:** "keyswitch" in the game's audio, so it follows mute and the volume settings (`web/public/audio/sfx/keyswitch.ogg`). It's synthesized for now (`art/audio/synth_keyswitch.py`): the bottom-out at 0 and the return at 0.11 s. David's recording replaces that one file.
+- **Catalogue:** 500 Gems. It's in `lib/wallet/catalogue.ts` as `PENDING_MERCH`, not yet in `CATALOGUE`, and has no migration yet. A `CATALOGUE` row regenerates the economy and shop-icons seeds, and game/wardrobe-b2's unmerged `20261017172740_catalogue_seed.sql` regenerates shop-icons too. The coordinator decides the order.
+- **Stock:** not set (unlimited) until David says how many.
+- **Shots:** `keychain-sheet.webp`:
+  - David's photos beside the model's turnaround;
+  - the sprite;
+  - on the wall: hanging, dragged, swinging back, pressed;
+  - in the merch view;
+  - in the standalone viewer.

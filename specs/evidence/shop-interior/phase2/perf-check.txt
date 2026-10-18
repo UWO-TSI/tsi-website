@@ -1,0 +1,12 @@
+perf:check, shop scene only (SCENES=shop, SKIP_BUILD after specs/perf/measure-build.sh under the heavy lock), 2026-10-17, head 3d0460ea.
+The shop is new to the bench (specs/perf/perf-bench.mjs "shop": /lab/island?shop=inside, from the door, the mezzanine showing);
+it has no baseline row and no budget yet (web/lib/game/perf/budget.ts), so the gate only reports it.
+
+| Scene | Tier | Median frame ms | p95 ms | Frame CPU ms | Draw calls | Triangles | Runs | Spread | Load |
+|---|---|---|---|---|---|---|---|---|---|
+| shop | high | 2.70 | 4.30 | 2.40 | 179 | 52073 | 3 | 4% | 4.5 |
+| shop | lite | 1.80 | 3.10 | 1.70 | 126 | 40583 | 3 | 22% | 4.2 |
+
+For scale, the café's budget (the nearest interior): high 4 ms, 180 draws, 110k triangles; lite 2.5 ms, 140 draws.
+Most of the draws are the mezzanine's layout blocks (each a mesh) until upstairs is furnished.
+perf:check passed

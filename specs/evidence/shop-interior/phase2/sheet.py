@@ -1,5 +1,5 @@
 """The review sheets (shop phase 2): the headless shots in a labelled grid, one WebP.
-  python3 sheet.py <raw-dir> <out.webp> [ground|merch]"""
+  python3 sheet.py <raw-dir> <out.webp> [ground|merch|overlay|keychain]"""
 import sys
 from PIL import Image, ImageDraw, ImageFont
 
@@ -25,13 +25,48 @@ MERCH = [
     ("18-merch-detail", "Opened: the model turning with the pixel finish, the redeem button"),
     ("19-merch-phone", "On a phone: one card across"),
 ]
+OVERLAY = [
+    ("20-overlay-grid", "The shop overlay: one grey panel, shelf icons down the left, white cards, coins and Gems top left"),
+    ("21-overlay-detail-item", "An in-game item opened: the model large and turning (drag it), title, line, price, Buy; specs below"),
+    ("22-overlay-detail-clothes", "Clothes open on their own part, turning"),
+    ("23-overlay-merch", "Club merch: the same grid; the tags (staff pick, new drop)"),
+    ("24-overlay-keychain", "The keychain opened: it hangs and turns; drag turns it, a tap on the keycap clicks"),
+    ("26-overlay-phone", "On a phone: the shelves across the top, one card a row"),
+    ("10-window-before", "The window before (ground floor approved; 'window needs a lil work')"),
+    ("27-window-after", "The window after: a recessed white frame, mullion and transom, a deeper sill, softer drapes on a rod"),
+    ("28-window-close", "The window after, close"),
+]
+KEYCHAIN = [
+    ("photo-3095", "David's photo: hanging from its keyring"),
+    ("turn-0", "The model from the front (1 unit = 10 cm; 2,410 triangles)"),
+    ("photo-3096", "David's photo: the keycap's Tethos mark"),
+    ("turn-45", "Three-quarter: the switch in the acrylic, the keycap"),
+    ("photo-3098", "David's photo: the side, the switch through the acrylic"),
+    ("turn-90", "From the side"),
+    ("photo-3099", "David's photo: three-quarter, the pins"),
+    ("turn-180", "From the back: the pins through the acrylic"),
+    ("sprite", "The 2D sprite (its icon, a render of the model): for lite graphics or a failed viewer"),
+    ("turn-270", "From the other side"),
+    ("29-keychain-wall", "On its hook on the mezzanine's merch wall, display scale 1 (about 12x life size)"),
+    ("31-keychain-drag", "Taken hold of: a real pointer drag pulls it aside and twists it"),
+    ("32-keychain-swing", "Let go: it swings back (no walk is ordered by the drag)"),
+    ("33-keychain-press", "Its keycap pressed, with the click (muted for the shot)"),
+    ("24-overlay-keychain", "In the merch view: turning with the pixel finish"),
+    ("25-overlay-keychain-dragged", "Dragged round in the merch view"),
+    ("viewer-drag", "The standalone viewer: pulled about"),
+    ("viewer-press", "The standalone viewer: the keycap pressed"),
+]
 TITLE = "Shop, phase 2: the furnished ground floor (headless, in-game)"
 if mode == "merch":
     CELLS, TITLE = MERCH, "Shop, phase 2: the club merch screen, after David's reference"
+if mode == "overlay":
+    CELLS, TITLE = OVERLAY, "Shop: the overlay redo after David's three references, and the window pass"
+if mode == "keychain":
+    CELLS, TITLE = KEYCHAIN, "Shop: the TSI keycap keychain, from David's photos"
 W, H, PAD, CAP = 720, 450, 14, 34
 font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 17)
 title = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 26)
-cols = 2 if mode == "merch" else 3
+cols = 2 if mode in ("merch", "keychain") else 3
 rows = (len(CELLS) + cols - 1) // cols
 sheet = Image.new("RGB", (cols * (W + PAD) + PAD, rows * (H + CAP + PAD) + PAD + 50), "#1d1f22")
 d = ImageDraw.Draw(sheet)
@@ -41,11 +76,11 @@ for i, (name, cap) in enumerate(CELLS):
     # crop to the cell's 16:10, centred, then fit; a portrait shot (a phone) is fitted whole on the sheet's dark
     r = W / H
     iw, ih = im.size
-    if iw < ih:
-        k = H / ih
-        fitted = im.resize((int(iw * k), H), Image.LANCZOS)
+    if iw < ih or (mode == "keychain" and abs(iw / ih - r) > 0.05):
+        k = min(H / ih, W / iw)
+        fitted = im.resize((int(iw * k), int(ih * k)), Image.LANCZOS)
         im = Image.new("RGB", (W, H), "#1d1f22")
-        im.paste(fitted, ((W - fitted.width) // 2, 0))
+        im.paste(fitted, ((W - fitted.width) // 2, (H - fitted.height) // 2))
     elif iw / ih > r:
         nw = int(ih * r); im = im.crop(((iw - nw) // 2, 0, (iw - nw) // 2 + nw, ih))
     else:
@@ -55,6 +90,10 @@ for i, (name, cap) in enumerate(CELLS):
     x = PAD + (i % cols) * (W + PAD)
     y = 50 + PAD + (i // cols) * (H + CAP + PAD)
     sheet.paste(im, (x, y))
-    d.text((x + 2, y + H + 8), f"{i + 1}. {cap}", font=font, fill="#e9e5dc")
+    # the caption, cut to the cell's width (the full captions are in specs/interiors/shop.md)
+    text = f"{i + 1}. {cap}"
+    while d.textlength(text, font=font) > W - 4 and len(text) > 8:
+        text = text[:-2].rstrip() + "…" if not text.endswith("…") else text[:-2].rstrip() + "…"
+    d.text((x + 2, y + H + 8), text, font=font, fill="#e9e5dc")
 sheet.save(out, "WEBP", quality=86)
 print(out, sheet.size)
