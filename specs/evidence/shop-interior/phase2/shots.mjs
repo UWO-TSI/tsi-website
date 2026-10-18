@@ -209,6 +209,14 @@ const SHOTS = [
     cam: { pos: [-0.35, F + 2.05, 3.05], target: [-1.15, F + 1.65, 4.86], fov: 46 }, labels: [], drag: true },
   { id: "32-keychain-swing", title: "Let go: it swings back", upstairs: true, route: [[-1.15, 3.7]], cam: { pos: [-0.35, F + 2.05, 3.05], target: [-1.15, F + 1.65, 4.86], fov: 46 }, labels: [], release: true },
   { id: "33-keychain-press", title: "Its keycap pressed (in, with the click; the shot is muted)", upstairs: true, route: [[-1.15, 3.7]], cam: { pos: [-0.75, F + 1.75, 4.0], target: [-1.15, F + 1.45, 4.86], fov: 38 }, labels: [], pressKey: true },
+  // Upstairs, before and after it's furnished (the same cameras both times).
+  { id: "u1-door", title: "From the door: the merch level above", cam: null, labels: [] },
+  { id: "u2-top-of-stairs", title: "From the top of the stairs", upstairs: true, route: [HEAD], cam: null, labels: [] },
+  { id: "u3-merch-walk", title: "At the merch wall (walking camera)", upstairs: true, route: [[1.5, 3.4]], cam: null, labels: [] },
+  { id: "u4-merch-across", title: "Across the mezzanine", upstairs: true, cam: { pos: [-3.6, F + 3.0, -0.8], target: [2.6, F + 1.0, 4.2], fov: 58 }, labels: [] },
+  { id: "u5-counter", title: "The merch counter and the pegboard", upstairs: true, cam: { pos: [2.4, F + 1.75, 2.3], target: [3.8, F + 1.0, 4.8], fov: 52 }, labels: [] },
+  { id: "u6-plinths", title: "The featured drop at the mezzanine's edge", upstairs: true, cam: { pos: [-0.9, F + 1.7, -0.45], target: [0.4, F + 0.6, 0.9], fov: 52 }, labels: [] },
+  { id: "u7-plan", title: "The mezzanine from above", aerial: true, upstairs: true, cam: { pos: [0, 60 + F, 0.15], target: [0, F, 0.15], up: [0, 0, 1], fov: 13.6 }, labels: [] },
   { id: "13-merch-ui", title: "Club merch: the item turning in the middle, with the pixel finish", hud: true, click: "Club merch", wait: 3500, cam: null, labels: [] },
 ].filter(s => !only || only.split(",").includes(s.id));
 

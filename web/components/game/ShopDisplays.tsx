@@ -105,11 +105,11 @@ function FinishItem({ item, s }: { item: ShopDisplayItem; s: DisplaySlot }) {
 }
 
 /** The items on one floor (upstairs, y is the floor's height up). */
-export default function ShopDisplays({ items, level }: { items: ShopDisplayItem[]; level: 0 | 1 }) {
+export default function ShopDisplays({ items, level, except = [] }: { items: ShopDisplayItem[]; level: 0 | 1; except?: readonly string[] }) {
   return <group position={[0, level * SHOP_FLOOR_HEIGHT, 0]}>
     {items.map(item => {
       const s = SLOT.get(item.slot);
-      if (!s || s.level !== level) return null;
+      if (!s || s.level !== level || except.includes(s.id)) return null;
       return <Suspense key={item.slot} fallback={null}>
         {item.spec.view === "roll" || item.spec.view === "tile" ? <FinishItem item={item} s={s} /> : <ModelItem item={item} s={s} />}
       </Suspense>;

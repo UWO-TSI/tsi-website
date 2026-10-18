@@ -4,8 +4,9 @@
  * The furnished shop (specs/interiors/shop.md, phase 2): the modelled ground floor and the mezzanine's shell
  * (art/interiors/build_shop.py, on lib/game/shopLayout.ts's numbers), the items on show (ShopDisplays), and the
  * mezzanine shown or cut away as the room's walker says. The windows show the outside for the time of day (RoomShell's
- * window view). A click on a floor walks you there; near an item on show, its tag shows (ShopItemTag). Upstairs is
- * still the layout's blocks until its furnishing.
+ * window view). A click on a floor walks you there; near an item on show, its tag shows (ShopItemTag). Upstairs, the
+ * merch level after ref 1 (the pegboard wall, the metal counter, the plinths, the edge light) and the keycap keychain
+ * on its peg.
  */
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
@@ -19,7 +20,6 @@ import { SHOP_FLOOR_HEIGHT, type ShopWalker } from "@/lib/game/shopLayout";
 import { shopDisplay } from "@/lib/game/shopDisplay";
 import type { IslandLight } from "@/lib/game/islandLighting";
 import { useOutside, windowViewMaterial } from "./RoomShell";
-import { Contents } from "./ShopGreybox";
 import ShopDisplays from "./ShopDisplays";
 import ShopItemTag from "./ShopItemTag";
 import KeycapKeychain from "./KeycapKeychain";
@@ -30,8 +30,6 @@ import { KEYCHAIN_SLUG } from "./KeychainStage";
 
 const GROUND = "/assets/game/interiors/shop/ground.glb";
 const MEZZ = "/assets/game/interiors/shop/mezz.glb";
-/** The mezzanine's fixtures its model already carries (the rest are blocks until upstairs is furnished). */
-const MODELLED_UP = ["stairwell-rail", "mezz-rail", "edge-sign"] as const;
 
 /**
  * The room's own light field for reflections and fill (the island's sky isn't here): a bright warm ceiling, the walls,
@@ -99,8 +97,9 @@ export default function ShopRoom({ walker, light, player, frozen }: {
     <ShopItemTag items={items} walker={walker} player={player} hidden={frozen} />
     <group ref={upper}>
       <primitive object={mezz} onClick={walkOn(1)} />
+      {/* The merch on show upstairs (the tote, the sticker packs; the garments and prints are the model's stand-ins). */}
+      <ShopDisplays items={items} level={1} except={[SHOP_KEYCHAIN.slot]} />
       <group position={[0, SHOP_FLOOR_HEIGHT, 0]}>
-        <Contents level={1} except={MODELLED_UP} paths={false} exceptSlots={[SHOP_KEYCHAIN.slot]} />
         {/* The keycap keychain on its hook: take hold of it, or press its keycap (lite graphics: its sprite). */}
         <mesh position={[SHOP_KEYCHAIN.hook[0], SHOP_KEYCHAIN.hook[1] + 0.012, SHOP_KEYCHAIN.hook[2] + 0.04]} rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[0.012, 0.012, 0.13, 8]} /><meshStandardMaterial color="#3b4046" metalness={0.7} roughness={0.4} />
