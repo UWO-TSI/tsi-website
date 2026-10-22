@@ -4,9 +4,9 @@ The web home of Tethos (TSI) at Western. One Next.js app, three product surfaces
 
 1. **Marketing site** (`web/app/(site)/`): public landing pages at tethos.ca
 2. **Recruitment system** (`web/app/student/apply/`, `web/components/recruit/`, `web/components/admin/`): exec hiring portal, live in production
-3. **Student portal** (`web/app/student/dashboard/`, `web/components/game/`): a 2.5D game world for active TSI members: 2D sprite characters in a 3D map, bounty board, marketplace, leaderboards
+3. **Member game** (`web/components/game/`, `web/lib/game/`, `realtime/`): a cozy 3D island game for active TSI members, served at play.tethos.ca
 
-If you're an agent or contributor, start with `CLAUDE.md`. It's the entry point that explains roles, file ownership, and which parts of the repo are off limits. `AGENT_LOG.md` tracks the current sprint.
+If you're an agent or contributor, start with `CLAUDE.md`, then `CODEMAP.md` for where things live and `STATE.md` for what's in production.
 
 ---
 
@@ -168,7 +168,7 @@ numbers off a screenshot.
 Lint has a known baseline of pre-existing errors; the bar is not increasing it,
 not reaching zero. `specs/qa.md` records the current numbers.
 
-Agents follow the `[build]` / `[qa]` / `[review]` commit prefixes defined in `AGENT_LOG.md`. Human contributors use conventional prefixes (`feat:`, `fix:`, `docs:`, `refactor:`).
+Agents use the `[build]` / `[qa]` / `[review]` commit prefixes (see `CLAUDE.md`). Human contributors use conventional prefixes (`feat:`, `fix:`, `docs:`, `refactor:`).
 
 Off-limits without an explicit task: marketing site pages, the recruitment system, and applied migrations. See `CLAUDE.md` for the full list.
 
