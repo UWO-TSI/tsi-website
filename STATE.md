@@ -1,7 +1,26 @@
 # STATE.md — where things actually are
 
 > Read this before `AGENT_LOG.md`. It answers "which branch, what's live, what's next"
-> in one page. Update it whenever direction changes. Last updated **2026-10-14**.
+> in one page. Update it whenever direction changes. Last updated **2026-10-22**.
+
+## Now (2026-10-22): v1 launch run, freeze Oct 24, launch Oct 31
+
+- **Run sheet:** `specs/launch/v1-launch.md` (ledger row 317). Feature freeze on Oct 24; from Oct 25, only launch fixes.
+- **Coordinator handoff and lanes:** `specs/lanes/` (the `coordinator.md` file, plus one per lane). Lanes restart fresh from these files.
+- **Main:** `f66bafe6` and later. Merged since Oct 14:
+  - the shop interior and the flat shop UI;
+  - real merch (the keycap keychain, the lanyard, the GENESIS sticker), off sale until their catalogue rows land;
+  - flat UI steps 1 and 2;
+  - wardrobe batch 2.
+- **Prod migrations:** all applied, including `20261017172740_catalogue_seed` (Oct 22). The record is `~/tethos-launch-2026-09-29/migrations.log`. They're applied through the query API, so Supabase's own migration ledger doesn't list them.
+- **Realtime:** Fly `tethos-rt` v4 (Oct 14), current with the chat and friends code.
+- **Supabase:** Pro since Oct 14.
+- **Member world:** still closed in production (`NEXT_PUBLIC_MEMBER_WORLD` unset). It opens on Oct 31.
+- **Running lanes** (each finishes its batch for the freeze):
+  - `game/hq-interior`, layout B with taller ceilings;
+  - `game/flat-ui`, round 3 panels and motion, then the avatar creator;
+  - `game/wardrobe-followup`, the #04 visor logo, then the merch catalogue rows.
+- **Launch work:** the launch lane (Preview, two-account test, env vars, smoke flows, Halloween check) and the perf lane (a quiet-window bench, the village regression).
 
 ## v1 "Arrival" build: lanes and ownership (2026-10-13, coordinator session on the Mac mini)
 
