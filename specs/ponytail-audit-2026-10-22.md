@@ -99,22 +99,18 @@ Paths are under `web/`. Every commit in the Sep 30 "Applied" table is an ancesto
 
 Ordered by what matters for Oct 31. All re-read at HEAD.
 
-**R1. HIGH [DECISION]: placeholder merch is on sale for Gems.**
+**R1. HIGH [DECISION]: placeholder merch is on sale for Gems.** (Oct 22: the coordinator is asking David; the rows stay as they are until he answers.)
 - `lib/wallet/catalogue.ts:84-85` sells "TSI sticker pack" (150 Gems, stock 100) and "TSI tote bag" (600 Gems, stock 30) as active rows. `specs/merch/` lists only the keycap keychain, the lanyard and the GENESIS sticker.
 - The 3D shop puts them on 9 of the 12 merch slots, both featured slots included (`lib/game/shopDisplay.ts:24-27`, whose own comment says "placeholders until David's merch list"). The tote also has a "staff pick" tag (`lib/wallet/merchShelf.ts:30`).
 - If the tote and the sticker pack don't exist, members will reserve them with Gems on Oct 31 and the desk has to cancel.
 - **Fix (if they don't exist):** add both slugs to `RETIRED`, regenerate the seeds (a new migration), point the `SHOP_PICKS` merch slots at the three real slugs, drop the tag.
 - **Test:** economy.test, "the merch tab is exactly the keychain, the lanyard and the GENESIS sticker".
 
-**R2. HIGH [LAUNCH-FIX]: with the moderation env vars unset, blocks and friendships never reach a live room.**
-- `lib/server/realtimeNotify.ts:41` returns "skipped" when `REALTIME_INTERNAL_URL` or the secret is missing; `realtime/src/internal.ts:75` answers 503 without the secret (fail closed, correct).
-- Only sanctions have a fallback: the 60 s poll (`realtime/src/world.ts:200-224`). Blocks and friends are read only at join (`IslandRoom.ts:183`).
-- So today: a mute or removal takes up to 60 s; a block does nothing until both players rejoin; a new or ended friendship doesn't update the Join list.
-- **Fix:** an ops step already on the launch checklist. Set `REALTIME_INTERNAL_SECRET` (32+ characters, the same value on Vercel and on Fly `tethos-rt`) and `REALTIME_INTERNAL_URL` on Vercel.
-- **Test:** block someone on the Preview; the response says `realtime: "applied"`.
+**R2. Corrected (coordinator, 2026-10-22): not a risk. The moderation env vars are set.** `REALTIME_INTERNAL_URL` and `REALTIME_INTERNAL_SECRET` have been on Vercel Preview and Production since Oct 7, and `REALTIME_INTERNAL_SECRET` is on Fly. The launch lane's live test on Oct 22 showed `/internal/friend` applied, and `remove_mute` applied with the muted player's next line refused in 1.2 s. The repo docs that said otherwise were stale.
+- What stays true: `lib/server/realtimeNotify.ts:41` returns "skipped" if either var goes missing, and `realtime/src/internal.ts:75` then answers 503 (fail closed). Only sanctions have a fallback, the 60 s poll (`realtime/src/world.ts:200-224`); blocks and friends are read only at join (`IslandRoom.ts:183`). R3 makes a block hold on the client even when a notify fails.
 
 **R3. HIGH [LAUNCH-FIX]: the client keeps showing new lines from someone you blocked.**
-- `lib/net/chat.ts:122`: `blocked(uid) { this.forget(uid); }` drops past lines and bubbles but never adds `uid` to `muted`. Whenever the server isn't told (R2, or a "failed" notify), the blocked player's new lines and bubbles still show.
+- `lib/net/chat.ts:122`: `blocked(uid) { this.forget(uid); }` drops past lines and bubbles but never adds `uid` to `muted`. Whenever the server isn't told (a "failed" or "skipped" notify), the blocked player's new lines and bubbles still show.
 - **Fix:** `blocked(uid) { this.muted.add(uid); this.forget(uid); }` (1 line).
 - **Test:** after `blocked("u")`, `receive(<a line from "u">)` returns false.
 
@@ -264,7 +260,7 @@ Each is small; lines are lines changed, not removed.
 
 | # | Risk | Change | ~Lines | Test |
 |---|---|---|---|---|
-| F1 | R2 | Set `REALTIME_INTERNAL_SECRET` (Vercel and Fly) and `REALTIME_INTERNAL_URL` (Vercel). Ops, no code. | 0 | A block on the Preview answers `realtime: "applied"`. |
+| F1 | R2 | Dropped: the env vars were already set (correction above). | 0 | |
 | F2 | R3 | `lib/net/chat.ts:122` also adds the uid to `muted`. | 1 | `receive()` of a blocked uid's line returns false. |
 | F3 | R4 | `applySanction` updates `s.card` too (or `overlayCard` in `onFollow`); realtime deploy. | 1 | Mute, follow, chat: `refused: muted`. |
 | F4 | R5 | Mute before closing the report. | 6 moved | A throwing `setMute` leaves the report open. |
@@ -356,7 +352,7 @@ Each is small; lines are lines changed, not removed.
 
 ## Apply first (ranked)
 
-1. **F1 to F4** (moderation: env vars, client block, follow escape, report order): 4 one-to-six-line changes plus an ops step, all on paths the two-account test exercises.
+1. **F2 to F4** (moderation: client block, follow escape, report order): 3 one-to-six-line changes, all on paths the two-account test exercises.
 2. **D1** (placeholder merch): David's one-line answer before Oct 31.
 3. **F5, F6, F10** (stock reset, merch pickups link, award key): money paths, about 11 lines.
 4. **F7, S9, F8** (combat pack off the village): about 22 MiB to 44 MiB of GPU memory.
