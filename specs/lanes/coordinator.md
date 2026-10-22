@@ -39,6 +39,16 @@ The run sheet is `specs/launch/v1-launch.md` (ledger row 317). The freeze is Oct
 
 Wardrobe batch 2 merged on Oct 22 and its seed was applied to prod.
 
+## Merge check: ponytail
+
+Before merging a lane branch that adds more than about 300 lines of code, run a read-only ponytail review of its diff. Use an Explore agent: `git diff main...<branch> -- web realtime`, judged against `~/.claude/skills/ponytail/SKILL.md`. It looks for:
+- duplicates of existing code;
+- dead code left behind;
+- unrequested abstractions;
+- new dependencies.
+
+Fix what's cheap before the merge, and log the rest in the current ponytail audit (`specs/ponytail-audit-*.md`). The codebase audit runs as its own lane (`specs/lanes/ponytail.md`).
+
 ## Waiting on David
 
 - **Merch:** close-ups of the lanyard's snap hook (face-on and side-on) and the D-ring, and a recording of the keychain click.
