@@ -39,10 +39,26 @@ Worktree `/Users/DavidLiu/Developer/uwotsi/.claude/worktrees/launch-v1`, cut fro
   - a fresh Preview `uwotsi-by2hxb24c-davids-projects-e31987e3.vercel.app`, built the same way (flow 3's routes pass there);
   - the night run adds the moderation re-run and a block check after the campfire.
   - Night begins at sunset + 1 h (`lib/game/sunTimes.ts`): 19:31 on Oct 22, so the run starts at 19:33 or later.
-- **Next:**
-  1. Night run at 19:33 Toronto or later (re-queue at 19:25): the campfire with 2 dancers, then moderation and the block.
-  2. Cleanup, the same evening (`cleanup.mjs collect`, then `delete`, then `verify`).
-  3. Report to the coordinator.
+- **Night run (19:43 Toronto, Preview `by2hxb24c`, realtime v5): 21 of 22 steps passed.**
+  - Campfire: both walk to the fire (steered by the minimap dot), both islands report `night`, and each one's dance by the fire turns into the stomp, relayed to the other.
+  - Moderation again: report; remove and mute (`/internal/sanction` applied; A muted in the database, F4); A's next line refused 1.8 s after the mute and never reaches B; unmute applied, and A's line reaches B in 0.9 s.
+  - Block: `/internal/block` applied; lines stop both ways; A's tag still shows for B.
+  - **Failed: joins.** A was refused 6 times (about 100 s to get in) and B once. The first night attempt (19:33) refused A 7 times and B 6 for over 3 minutes, so that run couldn't play.
+- **The join refusals:**
+  - The client sees close 4002: the room throws the deferred "card" refusal (4107) in onJoin. The client backs off 2, 4, 8, 16 s.
+  - On Fly, every refused attempt logs `friends_load_failed: timeout`. 29 of them in the log buffer, plus 3 `sanctions_poll_failed`. The card and blocks reads time out alongside (not logged).
+  - Sampling `/proc/net/tcp` during a refused attempt: the server opens about 5 connections to Supabase that reach ESTABLISHED at once, yet no answer comes inside 3 s. The next attempt, on the still-open sockets, succeeds.
+  - From a fresh process on the same machine, the same three reads, cold and in parallel, take 0.1 to 0.8 s in 30+ batches.
+  - `/health` answered in about 0.17 s throughout, so the event loop isn't blocked, and the load average is 0.
+  - So the slowness is in the server process's first requests on new connections, not the network or the database. The root cause isn't found: it needs the server to log each read's time and which one failed.
+- **Launch fix (`e0712050`):** a block now refreshes the blocker's friends list at once. Before it, the heart stayed on the blocked player's tag until the 60 s sync, though the database had already ended the friendship. Gates: eslint, tsc, vitest (net, world) 287 passed. Not yet seen live. The blocked player's own list still heals at its 60 s sync.
+- **Cleanup done 2026-10-22 ~19:52** (`specs/evidence/launch-v1/cleanup-proof.txt`):
+  - A's mute was undone;
+  - deleted by id: 6 chat lines, 2 reports, 4 moderation_log rows, 1 letter, 2 name log rows;
+  - the 3 users deleted (200 each);
+  - then 162 uuid columns plus `auth.users` and `profiles` hold 0 rows for the three ids, and 0 of the recorded row ids are left.
+- **Still up:** two Previews built with the service key (`3w7kq9vdz`, `by2hxb24c`; SSO-protected), and share links until Oct 23 18:12 and 21:39. They're the coordinator's to delete or keep for David's play-through.
+- **Next:** wait for the coordinator's call on the join hardening; the Preview Halloween check on Oct 25 (the costume closet, pumpkins, knocks, fog night on the real dates).
 
 ## Phase A findings (2026-10-22)
 
