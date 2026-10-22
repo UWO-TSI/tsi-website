@@ -117,16 +117,16 @@ async function player(k, { size = { width: 1280, height: 800 } } = {}) {
   const page = await ctx.newPage();
   page.on("pageerror", e => log(k, "pageerror", e.message.slice(0, 200)));
   page.on("console", m => { if (m.type() === "error" && !/Failed to load resource|favicon/i.test(m.text())) log(k, "console", m.text().slice(0, 200)); });
-  const frames = [];
+  const frames = [], closes = [];
   page.on("websocket", ws => {
     if (!/fly\.dev/.test(ws.url())) return;
     log(k, "socket", ws.url().replace(/\?.*$/, ""));
     ws.on("framereceived", f => frames.push({ t: Date.now(), p: typeof f.payload === "string" ? Buffer.from(f.payload) : f.payload }));
-    ws.on("close", () => log(k, "socket closed"));
+    ws.on("close", () => { closes.push(Date.now()); log(k, "socket closed"); });
   });
   await page.goto(`${PREVIEW}/api/weather?_vercel_share=${process.env.SHARE}`, { waitUntil: "domcontentloaded" });
   await ctx.addCookies(s.cookies);
-  return { k, uid: s.uid, ctx, page, frames, name: WHO[k].world };
+  return { k, uid: s.uid, ctx, page, frames, closes, name: WHO[k].world };
 }
 /** Same-origin JSON from the page (its cookies). */
 const api = (p, path, method = "GET", body) => p.page.evaluate(async ([path, method, body]) => {
@@ -472,6 +472,9 @@ async function night() {
     await enter(A); await enter(B);
     const met = await waitFor(A, async () => (await tagShown(A, B.name)) && (await tagShown(B, A.name)), 90000, 500);
     record("night: both in the island and in view", met);
+    record("night: no join refused or dropped (sockets closed before play)", A.closes.length + B.closes.length === 0, `A ${A.closes.length}, B ${B.closes.length}`);
+    const light = await Promise.all([A, B].map(p => p.page.evaluate(() => document.querySelector("main[data-light]")?.getAttribute("data-light"))));
+    record("night: both islands are in the night phase (the fire is lit)", light.every(l => l === "night"), light.join(", "));
     const [wa, wb] = await Promise.all([walkTo(A, { x: FIRE.x + 2.6, z: FIRE.z }), walkTo(B, { x: FIRE.x - 2.6, z: FIRE.z })]);
     record("campfire: A walks to the fire", wa.ok, JSON.stringify(wa));
     record("campfire: B walks to the fire", wb.ok, JSON.stringify(wb));

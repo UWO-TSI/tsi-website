@@ -21,6 +21,18 @@ Worktree `/Users/DavidLiu/Developer/uwotsi/.claude/worktrees/launch-v1`, cut fro
   - The first flow 4 attempt cast into the sea and caught a sea star, which isn't a fish. That was the test's spot, not a bug. Evidence: `specs/evidence/launch-v1/`.
 - **Halloween, local** (dev server :3166, `?tradition=halloween`): pumpkins by day, the fog night with lit pumpkins, the knock (a treat), the closet's witch hat. Shots: `halloween-local-*`.
 - **Seen in the Fly logs during the day run:** from 19:18:40 to 19:19:52 UTC the realtime server's Supabase reads timed out (3 s): `sanctions_poll_failed` twice, and `friends_load_failed` for A and B. B's join was refused 3 times, so it backed off about 20 s before getting in. Probed afterwards from the machine (`fly ssh`), the same reads take 0.17 to 0.39 s. It looks transient; watch for it in the night run and on launch day.
+- **Fly-to-Supabase read timeouts: regions and options (the coordinator decides after the full report; nothing built):**
+  - Fly `tethos-rt` runs in `yyz` (Toronto); prod Supabase `rtbkrngsdbptbjhfbcud` is in `us-west-2` (Oregon). Every read crosses the continent. Each read has a 3 s budget (`realtime/src/world.ts` `timeoutMs`, `src/auth/card.ts`).
+  - **Already soft:**
+    - the join's friends lookup: a failure logs `friends_load_failed`, the join goes ahead with an empty list, and nothing reloads it later (only a `/internal/friend` notice or the next join fills it);
+    - the sanctions poll: a failed cycle logs and the next one runs 60 s later;
+    - the chat log: failed batches stay queued and retry with backoff.
+  - **Hard:** the card and the blocks reads at join. Either one timing out refuses the join with 4107, and the client backs off 2, 4, 8, 16 then 30 s. That's B's 20 s on Oct 22.
+  - **Smallest hardening, in order of value:**
+    1. One retry with 200 to 600 ms jitter inside `withTimeout`'s callers for the card and blocks reads, before a 4107. Card reads are already cached 60 s, so a retry costs one extra request only on a miss.
+    2. A failed friends lookup schedules one reload about 5 s after the join and sends the list then, instead of staying empty for the session.
+    3. The sanctions poll: no change needed (a missed cycle is already tolerated); optionally retry once 10 s after a failure instead of waiting 60 s.
+  - Blocks stay a hard requirement (a join without them could let a blocked pair chat for a moment), so the retry is the fix there, not failing soft.
 - Browser lock released after the day run.
 - **Next:**
   1. Night run after 19:30 Toronto (re-queue at 19:25): the campfire with 2 dancers.
