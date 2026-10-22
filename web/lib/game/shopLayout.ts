@@ -1,7 +1,7 @@
 /**
  * The shop's layout (specs/interiors/shop.md, row 313): one source for the room, its walking, the counter, the keeper's
- * post, the displays, the lights and the walking path. Phase 1 draws it as a greybox (ShopGreybox) for David's layout
- * review; phase 2 puts the models on the same numbers. Room space as every room's: walls at x ±halfW and z ±halfD, the
+ * post, the displays, the lights and the walking path (the walk test holds the walker to it). The models sit on the
+ * same numbers. Room space as every room's: walls at x ±halfW and z ±halfD, the
  * door in the cut-away near wall (−z), +x on screen left, the camera looking up +z.
  *
  * Two floors (David, 2026-10-17: "real merch is upstairs and in game merch is down stairs"). The ground floor, on
