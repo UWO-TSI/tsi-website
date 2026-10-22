@@ -4,8 +4,19 @@ Worktree `/Users/DavidLiu/Developer/uwotsi/.claude/worktrees/launch-v1`, cut fro
 
 ## Status
 
-- **Phase A (investigate and plan): done 2026-10-22, reported to the coordinator. Waiting for its OK before Phase B.** Nothing outside the worktree was changed. Read-only probes only (Vercel env names, Fly secret names, Supabase read-only queries, Fly `/health`, a CORS preflight, an unsigned `/internal/sanction`).
-- Nothing approved yet.
+- **Phase B approved by the coordinator (2026-10-22):**
+  - one Preview with the service key for that deployment only;
+  - a 23 h share link;
+  - three throwaway prod accounts and the test's writes (cleaned up the same day, proof by counts);
+  - flow 5 skipped (no fake event);
+  - the campfire after 19:30 Toronto;
+  - Halloween checked locally now, on the Preview Oct 25.
+- Main merged at `d251c36e`.
+- **Preview:** `uwotsi-3w7kq9vdz-davids-projects-e31987e3.vercel.app`. Its share token and the account and row ids live in the session scratchpad, never in the repo.
+- **Accounts:** created 2026-10-22 15:08 (A `598ba9ed`, B `3c5d65e4`, M `18a38805`; world names Probe Alder, Probe Birch, Probe Cedar).
+- **Flow 3's routes pass** on the Preview (`results-routes.json`).
+- **Next:** the day run when the browser lock comes round, then the night run, then cleanup.
+- Run sheet facts and runbook flows 3 to 5 are updated.
 
 ## Phase A findings (2026-10-22)
 
