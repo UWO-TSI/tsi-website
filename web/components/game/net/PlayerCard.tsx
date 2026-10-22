@@ -13,7 +13,7 @@ import { useState, type ReactNode } from "react";
 import { Ban, Flag, Hand, Heart, LogIn, UserPlus, Volume2, VolumeX } from "lucide-react";
 import { Badge, Button, ConfirmDialog, List, ListRow, Sheet, toast } from "@/components/gui";
 import { useNetStatus } from "@/lib/net/netStore";
-import { addFriend, answer, joinFriend, useFriends, waveAt, whereOf } from "./friendActions";
+import { addFriend, answer, joinFriend, refreshFriends, useFriends, waveAt, whereOf } from "./friendActions";
 import { chatStore } from "@/lib/net/chat";
 import { REPORT_REASONS, blockWorld, reportWorld } from "@/lib/world/api";
 import { activeNet } from "./active";
@@ -111,6 +111,8 @@ export default function PlayerCard({ children }: { children?: (t: CardTarget) =>
     setConfirmBlock(false);
     if (!r.ok) { toast(r.error); return; }
     chat.blocked(t.uid);
+    // A block ends the friendship (server and database): the heart and the list follow now, not at the next minute's sync.
+    void refreshFriends();
     toast(`${t.name} is blocked. You won't see each other's chat.`);
     close();
   };

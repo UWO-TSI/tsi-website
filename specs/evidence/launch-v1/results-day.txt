@@ -1,0 +1,151 @@
+{
+  "at": "2026-10-22T19:21:22.589Z",
+  "preview": "uwotsi-3w7kq9vdz-davids-projects-e31987e3.vercel.app",
+  "results": [
+    {
+      "step": "tags: each sees the other's name tag",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "presence: A's menu says Here (2)",
+      "ok": true,
+      "detail": "Here (2)"
+    },
+    {
+      "step": "chat: A's line reaches B",
+      "ok": true,
+      "detail": "1287 ms"
+    },
+    {
+      "step": "chat: A's bubble over A on B's screen",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "chat: B's line reaches A",
+      "ok": true,
+      "detail": "1134 ms"
+    },
+    {
+      "step": "chat: B's bubble over B on A's screen",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "friends: A asks by B's code",
+      "ok": true,
+      "detail": "{\"status\":\"requested\"}"
+    },
+    {
+      "step": "friends: B accepts",
+      "ok": true,
+      "detail": "realtime: applied"
+    },
+    {
+      "step": "moderation env: /internal/friend applied (Vercel and Fly secrets match)",
+      "ok": true,
+      "detail": "realtime: applied"
+    },
+    {
+      "step": "join: B listed as Here in A's friends (same shard; cross-shard Join is the local bench's)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "emotes: A's wave reaches B",
+      "ok": true,
+      "detail": "666 ms"
+    },
+    {
+      "step": "dance: A's dance reaches B",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "dance: B's dance reaches A",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "report: B reports A's line",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "step": "moderation: the report is in the T1/T2 queue (World chat)",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "step": "moderation: remove and mute 7 d",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "step": "moderation env: /internal/sanction applied",
+      "ok": true,
+      "detail": "realtime: applied"
+    },
+    {
+      "step": "live mute: A's next line is refused at once",
+      "ok": true,
+      "detail": "1180 ms after the mute"
+    },
+    {
+      "step": "live mute: B never receives the muted line",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "moderation: unmute",
+      "ok": true,
+      "detail": "HTTP 200, realtime: applied"
+    },
+    {
+      "step": "live unmute: A's line reaches B again",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "flow 4: the arrival paid Bram's coins once",
+      "ok": true,
+      "detail": "[[\"quest\",\"arrival\",30]]"
+    },
+    {
+      "step": "flow 4: cast at the wharf with the starter rod",
+      "ok": true,
+      "detail": "HTTP 200 {\"ok\":true,\"catch\":{\"roll\":\"ad98db8a-c438-46d7-8951-b58a0e7162ee\",\"item_key\":\"sea_sea_star\",\"size_cm\":11}}"
+    },
+    {
+      "step": "flow 4: land the fish",
+      "ok": true,
+      "detail": "HTTP 200 sea_sea_star"
+    },
+    {
+      "step": "flow 4: donate the catch (chapter step)",
+      "ok": false,
+      "detail": "HTTP 409 Catch a fish first."
+    },
+    {
+      "step": "flow 4: report to Wren (no plot step in v1)",
+      "ok": false,
+      "detail": "HTTP 409 Donate a catch first."
+    },
+    {
+      "step": "flow 4: a second report is refused",
+      "ok": true,
+      "detail": "HTTP 409"
+    },
+    {
+      "step": "flow 4: 100 coins once (chapter:settle-in)",
+      "ok": false,
+      "detail": "[]"
+    },
+    {
+      "step": "flow 4: the chapter letter is in the mailbox",
+      "ok": false,
+      "detail": "letters: 0"
+    }
+  ]
+}

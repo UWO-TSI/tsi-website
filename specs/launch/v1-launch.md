@@ -15,9 +15,15 @@ David, 2026-10-22. Ledger row 317. The plan is `specs/v1-drop.md`; this is the r
 - **Never run live with two players:** chat, friends, join, report through to a live mute, the campfire.
 - **Prod migrations:** every game migration is applied, per `~/tethos-launch-2026-09-29/migrations.log`. They're applied through the query API, so Supabase's own migration ledger doesn't list them; don't read that ledger as "unapplied".
 - **Realtime (Fly `tethos-rt`):** released v3 on Oct 13 and v4 on Oct 14, after the chat and friends code. It's current as of Oct 22.
+- **Moderation env vars (corrected by the launch lane, Oct 22):**
+  - already set: `REALTIME_INTERNAL_URL` and `REALTIME_INTERNAL_SECRET` on Vercel (Preview and Production, since Oct 7), and `REALTIME_INTERNAL_SECRET` on Fly (its `/internal/*` endpoints are on);
+  - a live route answering `realtime: "applied"` proves the two secrets match.
+- **Previews:**
+  - Preview env has `NEXT_PUBLIC_MEMBER_WORLD=open` and the prod realtime URL, and uses the prod Supabase project;
+  - it has no `SUPABASE_SERVICE_ROLE_KEY`, so every game route answers 503 there;
+  - a test Preview gets the key for that deployment only (`vercel deploy -e SUPABASE_SERVICE_ROLE_KEY=…`), never in the project's Preview env.
 - **Not done:**
   - opening the member world (`NEXT_PUBLIC_MEMBER_WORLD=open` and a redeploy);
-  - the moderation env vars (`REALTIME_INTERNAL_URL` and `REALTIME_INTERNAL_SECRET`, on both Vercel and Fly);
   - a perf baseline on merged main;
   - the MacBook Air check;
   - smoke flows 3 to 5 (flow 4 still says "Claim plot", but the home island is hidden in v1);

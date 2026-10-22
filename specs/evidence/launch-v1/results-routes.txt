@@ -1,0 +1,36 @@
+{
+  "at": "2026-10-22T19:13:02.123Z",
+  "preview": "uwotsi-3w7kq9vdz-davids-projects-e31987e3.vercel.app",
+  "results": [
+    {
+      "step": "flow 3: GET /api/progression/state",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "step": "flow 3: GET /api/economy/wallet",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "step": "flow 3: GET /api/world/arrival",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "step": "flow 3: GET /api/world/friends",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "step": "flow 3: GET /api/profile",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "step": "flow 3: /student/dashboard serves the island (no opening-soon, no sign-in redirect)",
+      "ok": true,
+      "detail": "HTTP 200 "
+    }
+  ]
+}

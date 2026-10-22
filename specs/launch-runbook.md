@@ -119,13 +119,23 @@ Staging's run of this query is in `specs/evidence/launch-fixes/flows.md`.
 
 ## 6. Smoke flows (production, after the deploy)
 
-Signed in, on www.tethos.ca, with two throwaway accounts made for the smoke and deleted after (Dashboard → Authentication → delete user; their game rows cascade):
+Signed in, on www.tethos.ca, with two throwaway accounts made for the smoke and deleted after (Dashboard → Authentication → delete user).
+- Most of their game rows cascade.
+- These only set NULL, so delete them by id first: `world_chat_messages`, `moderation_log`, the `world_reports` they made, and the `letters` they sent.
+- The launch lane's script, `specs/evidence/launch-v1/two-account.mjs`, runs flows 3 and 4 and the two-account test against a Preview.
 
 1. **Sign-up.** `/student/signup` without a code → profile `public`, tier 5. With the new code → `member`, tier 4. `TETHOS-W26` → refused by the page (`invite_code_valid` false).
 2. **Mark member.** As T1/T2: `POST /api/admin/members/<public probe id>/membership {"membership":"member"}` → 200, tier 4; back to `public` → tier 5; a T2 id with `public` → 409.
-3. **Island.** The member probe opens `/student/dashboard`: island loads, `GET /api/progression/state` and `GET /api/economy/wallet` answer 200.
-4. **Chapter 1.** Claim plot, catch, donate, report to HQ: 100 coins once (`wallet_ledger` one `chapter:settle-in` row), the chapter letter in the mailbox.
-5. **RSVP.** On an approved event: RSVP, then cancel: the `event_attendance` row is gone.
+3. **Island (v1).** The member probe opens `/student/dashboard`.
+   - The island loads, with no opening-soon and no sign-in redirect.
+   - `GET /api/progression/state`, `/api/economy/wallet`, `/api/world/arrival`, `/api/world/friends` and `/api/profile` answer 200.
+   - A first login plays the arrival: the reflection, the crossing (Space skips) and Bram's walk-along ("Skip the walk" leaves it).
+   - The menu's "Here (n)" shows the realtime join.
+4. **Chapter 1 (v1).** There's no plot step: the home island is drop 4.
+   - The arrival paid Bram's coins once (one arrival row in `wallet_ledger`).
+   - Catch a fish with the starter rod at the wharf, then donate it.
+   - Report to Wren at HQ: 100 coins once (one `chapter:settle-in` row; a second report is refused), and the chapter letter in the mailbox.
+5. **RSVP: pending.** Prod has no approved upcoming event, so this was skipped on 2026-10-22 (no test event goes in prod). Run it once a real event is approved: on that event, RSVP, then cancel; the `event_attendance` row is gone.
 6. **Security spot checks** with the member probe's JWT against PostgREST (the Phase 1 list, `specs/evidence/phase1/flows.md` §9): own `tier`/`membership`/`tethos_coins` PATCH → 403; `rpc/wallet_apply` → permission denied; `invite_codes` → `[]`; `member_badges` with the anon key → permission denied.
 7. **Members page.** As T1 on `/student/dashboard/admin/members`: change the member probe's tier, then active and alumni; reload: the changes stayed. Your own tier: refused ("You can't change your own tier").
 8. **Recruitment untouched.** `/student/apply` loads; `select status, start_time from cron.job_run_details order by start_time desc limit 3` shows `succeeded`.
