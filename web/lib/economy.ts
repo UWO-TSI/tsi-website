@@ -26,11 +26,6 @@ export const COINS = {
   symbol: "🪙",
 } as const;
 
-/** "1,234 💎" — the standard Gems balance rendering. */
-export function fmtGems(n: number): string {
-  return `${n.toLocaleString()} ${GEMS.symbol}`;
-}
-
 /** "350 🪙" — the standard coins rendering. */
 export function fmtCoins(n: number): string {
   return `${n.toLocaleString()} ${COINS.symbol}`;

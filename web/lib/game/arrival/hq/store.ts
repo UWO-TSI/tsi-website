@@ -82,6 +82,3 @@ async function postTool(tool: TaughtTool): Promise<boolean> {
     return r.ok;
   } catch { return false; }
 }
-
-/** Tests and dev only: forget everything (the next read comes from storage again). */
-export function resetHqStore() { snap = null; listeners.forEach(l => l()); }

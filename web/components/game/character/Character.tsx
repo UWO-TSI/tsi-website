@@ -31,6 +31,7 @@ import { heldTemplate } from "@/lib/game/character/heldMesh";
 import { addContact } from "../ContactShadows";
 import { addGrassBender } from "@/lib/game/grassBenders";
 import { frameStats } from "@/lib/game/perf/frameStats";
+import { MOVE_TUNING } from "@/lib/game/movement/sim";
 import FishingRig from "./FishingRig";
 
 export type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
@@ -901,7 +902,7 @@ export interface CharacterProps {
   keepFace?: boolean;
 }
 
-export default function Character({ look, motion, walkSpeed = 7.4, weapon = null, held = null, leaf = false, verbs = false, faceSize = 512, scale = CHARACTER_SCALE, lod = true, remote = false, keepFace = false, id }: CharacterProps) {
+export default function Character({ look, motion, walkSpeed = MOVE_TUNING.walkSpeed, weapon = null, held = null, leaf = false, verbs = false, faceSize = 512, scale = CHARACTER_SCALE, lod = true, remote = false, keepFace = false, id }: CharacterProps) {
   // While a newly chosen part loads, keep showing the previous look instead of suspending.
   const shown = useDeferredValue(look);
   const parts = useMemo(() => resolveParts(shown), [shown]);
@@ -1022,10 +1023,3 @@ function dressPuppet(puppet: Puppet, look: CharacterLook, parts: ResolvedPart[],
   if (atlas.flipY) prepareFaceAtlas(atlas); // once per (shared) atlas texture
   puppet.dress(look, parts, scenes, atlas, decalMap);
 }
-
-/** Warm the loader for a set of looks (creator pages, residents) so switching never shows a gap. */
-export function preloadLooks(looks: CharacterLook[]) {
-  useGLTF.preload(BASE_URL);
-  for (const look of looks) for (const p of resolveParts(look)) useGLTF.preload(p.url);
-}
-export const clipLength = (name: ClipName) => CLIP_BY_NAME.get(name)?.length ?? 1;

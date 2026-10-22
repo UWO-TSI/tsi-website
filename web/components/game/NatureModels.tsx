@@ -159,11 +159,3 @@ const PRELOAD = [
 for (const url of PRELOAD) useGLTF.preload(url);
 
 // ─── Rock ───────────────────────────────────────────────────────
-export function NatureRock({ position, seed }: { position: [number, number, number]; seed: number }) {
-  const url = seed % 2 === 0 ? "/assets/nature/rock_smallA.glb" : "/assets/nature/rock_smallB.glb";
-  return (
-    <Suspense fallback={null}>
-      <GLBProp url={url} scale={0.5 + (seed % 3) * 0.15} position={position} rotation={[0, seed * 1.9, 0]} />
-    </Suspense>
-  );
-}

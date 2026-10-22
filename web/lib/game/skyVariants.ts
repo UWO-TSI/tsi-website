@@ -320,8 +320,5 @@ export function skyVariant(id: SkyVariantId): SkyVariant {
   return SKY_VARIANTS.find((v) => v.id === id) ?? luxury;
 }
 
-/** Every texture key any variant might bind, so the loader can be eager. */
-export const ALL_SKY_TEXTURES = Array.from(new Set(SKY_VARIANTS.flatMap((v) => v.textures)));
-
 /** Manifest key -> the sampler name a variant's GLSL uses. */
 export const samplerName = (key: string) => "t" + key[0].toUpperCase() + key.slice(1);

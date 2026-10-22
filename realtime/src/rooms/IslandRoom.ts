@@ -710,5 +710,3 @@ export function createIslandRoom(o: IslandRoomOptions) {
     }
   };
 }
-
-export type IslandRoomClass = ReturnType<typeof createIslandRoom>;
