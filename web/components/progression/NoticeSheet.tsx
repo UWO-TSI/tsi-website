@@ -60,7 +60,7 @@ export function NoticeBody({ transport = lettersTransport }: { transport?: Lette
 
 export default function NoticeSheet({ open, onClose, transport, keys }: ProgressionSheetProps & { transport?: LettersTransport; keys?: string }) {
   return (
-    <ProgressionPanel open={open} onClose={onClose} title="Notice board" wide keys={keys} icon={<ClipboardList size={20} />}>
+    <ProgressionPanel flat open={open} onClose={onClose} title="Notice board" wide keys={keys} icon={<ClipboardList size={20} />}>
       <NoticeBody transport={transport} />
     </ProgressionPanel>
   );

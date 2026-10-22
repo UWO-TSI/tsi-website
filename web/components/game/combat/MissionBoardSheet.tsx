@@ -31,7 +31,7 @@ const hoursLeft = (iso: string) => Math.ceil((Date.parse(iso) - Date.now()) / 3_
 
 /** E at the board opens it and E closes it. The board's body subscribes to the combat runtime only while it shows. */
 export default function MissionBoardSheet({ open, onClose, gateNote }: { open: boolean; onClose: () => void; gateNote: string | null }) {
-  return <IslandSheet open={open} title="Ruins mission board" onClose={onClose} testId="mission-board" keys="e" size="lg" icon={<Swords size={20} />}><MissionBoard gateNote={gateNote} /></IslandSheet>;
+  return <IslandSheet flat open={open} title="Ruins mission board" onClose={onClose} testId="mission-board" keys="e" size="lg" icon={<Swords size={20} />}><MissionBoard gateNote={gateNote} /></IslandSheet>;
 }
 
 /** How hard, out of five, as pips. */

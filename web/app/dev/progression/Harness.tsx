@@ -6,7 +6,6 @@
  * the sheets show mid-game state; without it the sheets call the live API.
  * ?admin=goal|chapter|seasonal[&event=<slug>] previews an editor.
  */
-import { MenuPaletteContext } from "@/components/gui/variant";
 import { useEffect, useState } from "react";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import ContributeSheet from "@/components/progression/ContributeSheet";
@@ -113,12 +112,12 @@ function HarnessBody({ params }: { params: URLSearchParams }) {
         ))}
       </nav>
       {ready ? (
-        <MenuPaletteContext.Provider value={params.get("palette") === "flat" ? "flat" : "cream"}>
+        <>
           <JournalSheet open={sheet === "journal" || sheet === "goals"} initialTab={sheet === "goals" ? "goals" : "quests"} onClose={close} />
           <ContributeSheet open={sheet === "contribute"} goalSlug="reopen-cafe" onClose={close} />
           <LettersSheet open={sheet === "letters" || sheet === "reader" || sheet === "compose"} transport={transport} onClose={close} />
           <NoticeSheet open={sheet === "notice"} transport={transport} onClose={close} />
-        </MenuPaletteContext.Provider>
+        </>
       ) : null}
     </main>
   );

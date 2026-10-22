@@ -28,7 +28,6 @@ import { setMission } from "@/lib/game/combat/runtime";
 import WardrobeSheet from "@/components/game/peaceful/WardrobeSheet";
 import CharacterCreator from "@/components/game/character/CharacterCreator";
 import { DEFAULT_LOOK } from "@/lib/game/character/look";
-import { MenuPaletteContext } from "@/components/gui/variant";
 
 const ME = "00000000-0000-4000-8000-000000000001";
 let routed = false;
@@ -81,7 +80,7 @@ export default function Harness() {
     {surface === "collection-applicant" && <CollectionBook open onClose={close} collectionScope="applicant" />}
     {surface === "crafting" && <CraftingSheet />}
     {surface === "wallet" && <WalletSheet open onClose={close} />}
-    {surface === "missions" && <MenuPaletteContext.Provider value={q.get("palette") === "flat" ? "flat" : "cream"}><MissionBoardSheet open onClose={close} gateNote={null} /></MenuPaletteContext.Provider>}
+    {surface === "missions" && <MissionBoardSheet open onClose={close} gateNote={null} />}
     {/* The closet (the fitting room with place=fitting), and the member's first creator as a signed-in member sees it. */}
     {surface === "wardrobe" && <WardrobeSheet open place={q.get("place") === "fitting" ? "fitting" : "closet"} onClose={close} onShop={close} />}
     {surface === "creator" && <CharacterCreator flat initial={DEFAULT_LOOK} askName={{ current: "You" }} onDone={close} />}

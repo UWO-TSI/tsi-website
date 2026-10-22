@@ -149,7 +149,7 @@ function ChapterPage({ c, goal, now, busy, preview, onAct, onContribute }: {
 /** `keys`: J (fixed), which closes the journal too. */
 export default function JournalSheet({ open, onClose, initialTab, keys }: ProgressionSheetProps & { initialTab?: Tab; keys?: string }) {
   return (
-    <ProgressionPanel open={open} onClose={onClose} title="Journal" wide keys={keys} icon={<BookOpen size={20} />}>
+    <ProgressionPanel flat open={open} onClose={onClose} title="Journal" wide keys={keys} icon={<BookOpen size={20} />}>
       <JournalBody initialTab={initialTab} />
     </ProgressionPanel>
   );

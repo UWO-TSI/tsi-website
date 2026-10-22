@@ -258,3 +258,18 @@ Evidence: `specs/evidence/flat-ui/round3b-spring-theme.webp`: the spring frame b
 - **The rail's icons:** 24 px glyphs on a 54 px hit area (were about 22 on 48), set by the kit whatever size the caller drew them at, so every rail matches. Item pictures in a rail are 34 px. On a phone the row keeps its 48 px hit area (23 px glyphs) so it stays in view. The creator's own line drawings are 28 px, as they're thinner.
 - **The four menus in flat:** `MenuPaletteContext` (components/gui/variant) sets the palette the redesigned menus' frames wear (`ProgressionPanel`, `IslandSheet`). It is cream by default, so nothing shipped changes; the dev harnesses take `palette=flat` for the shots. If David picks flat, the default flips in that one place. The layouts are the round 2 redesign's. Letters and the notice board's notices stay paper in the flat palette (`data-gui-paper` on the goal notice, the next-step sticky note and HQ's slips).
 - **Themes (after launch, not built):** a UI theme is a token set (the base flat, dark, cream or ACNH), swapped as a whole; the components read tokens only. `MenuPaletteContext` is a stopgap for this one choice, not the theme system.
+
+## Round 3b verdict (David, relayed 2026-10-22)
+
+APPROVED in full: the springy motion, the hover shadow and the bigger rail icons.
+
+- **The four redesigned menus** (journal and quests, the ruins mission board, the notice board, the mailbox) use the CLEAN FLAT palette. Letters and notices stay paper.
+- Every other `ProgressionPanel` and `IslandSheet` menu (the wallet, Contribute, settings and the rest) stays as it is for launch.
+- **His new request, verbatim:** "i want you to set up the ui so that when i add new ui color schemes, its a easy swap where its just like a css color sheet change with ui change or smth". This is the theme system from the round 3 verdict: dark mode and an ACNH-style theme sold in the shop later. Its doc will be `specs/polish/ui-themes.md`.
+
+### Round 3b, the four menus go flat (game/flat-ui, 2026-10-22)
+
+Evidence: `specs/evidence/flat-ui/round3b-menus-flat.webp` (in game at `/lab/island`, desktop and phone).
+
+- `ProgressionPanel` and `IslandSheet` take `flat`; the journal, the mailbox, the notice board and the ruins mission board pass it. The other menus on those frames stay cream.
+- `MenuPaletteContext` (the stopgap for the choice) and the harnesses' `palette=flat` are deleted.

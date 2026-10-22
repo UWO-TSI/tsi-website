@@ -242,7 +242,7 @@ function LetterComposer({ transport, to: initialTo, onDone }: { transport: Lette
 /** `keys`: the mail key, which closes the mailbox too. */
 export default function LettersSheet({ open, onClose, transport, keys }: ProgressionSheetProps & { transport?: LettersTransport; keys?: string }) {
   return (
-    <ProgressionPanel open={open} onClose={onClose} title="Mailbox" keys={keys} icon={<Mail size={20} />}>
+    <ProgressionPanel flat open={open} onClose={onClose} title="Mailbox" keys={keys} icon={<Mail size={20} />}>
       <LettersBody transport={transport} />
     </ProgressionPanel>
   );

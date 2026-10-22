@@ -5,14 +5,19 @@
 
 ## Status (2026-10-22)
 
-- **Head:** see `git log -1` on `game/flat-ui`. Main (`feat/game-default-island` f66bafe6, wardrobe batch 2) merged in.
-- **Feature freeze Oct 24** (launch Oct 31; `specs/launch/v1-launch.md`, ledger row 317). Step 8 merges only if David approves it by Oct 24, otherwise after launch. Keep it opt-in and behaviour-identical; don't widen scope.
-- **Round 3, step 1 (the side panels and the motion): APPROVED** with notes (the verdict below): a spring instead of ease-in-out, a slight drop shadow on the hovered cell, and the four menus shown in the flat palette beside the cream ones.
-- **Round 3, step 8, the avatar creator and wardrobe: APPROVED** (`round3-creator.webp`), with one note (the rail's icons a little bigger). Opt-in `flat` on `CharacterCreator` (closet, fitting room, the member's first creator); the applicant's is unchanged.
-- **Round 3b: built and reported** (`round3b-spring-theme.webp`): the spring, the hover shadow, the bigger rail icons, and the four redesigned menus in cream beside flat for David to pick. Main d251c36e merged in. The coordinator plans to merge game/flat-ui into main once David OKs round 3b, before the Oct 24 freeze.
-- **Step 7, the first four cream menus:** built (`round2-step7-first4.webp`), NO verdict yet. Leave them as they are; don't roll the direction out to the other menus until the coordinator relays David's OK.
-- **Approved:** the kit, the chest, the workbench, the furniture catalogue, the bag (filters and side panel).
+- **Head:** see `git log -1` on `game/flat-ui`. Main (`feat/game-default-island` 635e9c4a, the ponytail lane rules) merged in.
+- **Feature freeze Oct 24** (launch Oct 31; `specs/launch/v1-launch.md`, ledger row 317).
+- **Round 3b: APPROVED in full.** Task 1 built: the four redesigned menus are flat (`round3b-menus-flat.webp`). The coordinator runs a ponytail review and merges it before the freeze.
+- **Task 2, UI themes:** in progress (`specs/polish/ui-themes.md`). It lands after launch if it can't be pixel-identical by the freeze.
+- **Step 7, the cream menus other than the four:** they stay cream for launch.
+- **Approved:** the kit, the chest, the workbench, the furniture catalogue, the bag, the collection, the motion, the creator and wardrobe, round 3b.
 - **Merged to main:** step 1 (the kit), step 2 (the old shop pages).
+
+## David's decisions (round 3b verdict, relayed 2026-10-22)
+
+APPROVED in full: the springy motion, the hover shadow and the bigger rail icons.
+- The four redesigned menus (journal and quests, the ruins mission board, the notice board, the mailbox) use the CLEAN FLAT palette. Letters and notices stay paper. Every other ProgressionPanel/IslandSheet menu (wallet, Contribute, settings and the rest) stays as it is for launch.
+- His new request, verbatim: "i want you to set up the ui so that when i add new ui color schemes, its a easy swap where its just like a css color sheet change with ui change or smth". The theme system (dark mode and an ACNH-style theme sold in the shop later): CSS custom properties, a theme is one CSS file of token values, no visual change today.
 
 ## David's decisions (step 8 verdict, relayed 2026-10-22)
 
@@ -74,10 +79,9 @@ The verbatim notes are in `specs/polish/flat-ui.md`, under "Round 2".
 
 ## Next
 
-1. ~~Round 3 step 1: the side panels and the cells' motion; shoot; report.~~ Done.
-2. ~~Round 3 step 8, the creator: opt-in `flat`, shoot, report.~~ Done (`round3-creator.webp`).
-3. ~~The verdict's notes: the spring, the hover shadow, the bigger rail icons, the four menus in flat beside cream; `round3b-spring-theme.webp`.~~ Done and reported. Wait for David's pick of the four menus' palette.
-4. When David picks the four menus' palette: if flat, flip `MenuPaletteContext`'s default (components/gui/variant) to "flat" (that's every ProgressionPanel and IslandSheet menu, so check the rest first with the coordinator, since he said not to convert them yet). Either way, after his OK (through the coordinator): apply the direction to the rest, with the `components/gui/cream` pieces: settings, wallet, tourney, cafe goals (it still uses `GoalCard`; move it to `ClubGoal`), trophies, showcase, donate, the Esc menu, friends. Shoot before and after into one sheet.
+1. ~~Round 3b, task 1: the four menus flat, scoped; re-shoot in game; gates; commit; report the SHA.~~ Done.
+2. Task 2, UI themes (`specs/polish/ui-themes.md`): one `--ui-*` token layer, a theme per file in `web/styles/themes/`, `data-ui-theme`, a dev switch (`/dev/flat-ui` and `?uitheme=`), pixel diffs for clean and cream against today, the sheet `ui-themes.webp`. Report, then stop.
+3. After launch, when David OKs it (through the coordinator): the rest of the menus in the redesigned direction, with the `components/gui/cream` pieces: settings, wallet, tourney, cafe goals (it still uses `GoalCard`; move it to `ClubGoal`), trophies, showcase, donate, the Esc menu, friends. Shoot before and after into one sheet.
    - `progression.module.css` still serves the wallet, Contribute and cafe goals. When those move, delete what's left unused there and `GoalCard` (keep `rewardName`).
 
 Each step ends with:
@@ -101,7 +105,8 @@ Each step ends with:
 - **Locks:** `LANE=game/flat-ui /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy <cmd>`. Swap has been over 9 GB, so the dev server has to be down (and the browser lock released) before the heavy lock.
 - **Killing the dev server:** in zsh an unquoted `$PIDS` isn't split; kill the PIDs by number (npm exec, next dev, next-server and its postcss workers).
 - **Round 3 shots:** `shots-round3.mjs <out> panels|stills|film|creator` on port 3192. `film` pauses only the animations under way and seeks them (`document.getAnimations()`), so each frame is its exact time; the finished entrances (the panel's rise, held by its fill) are left alone. The filmstrip sheet is composed by a small script in the scratchpad (`r3/film.py`), the before and after sheet by `sheet.py`.
-- **Palette preview:** `palette=flat` on `/dev/progression` and `/dev/flat-ui?surface=missions` (MenuPaletteContext); `PALETTE=flat` for `shots-round2-step7.mjs`. `sheet.py` takes `LABELS="cream,flat"` for a choice instead of a before and after.
+- **The four menus' frames:** `ProgressionPanel` and `IslandSheet` take `flat` (round 3b); the others stay cream. `sheet.py` takes `LABELS="a,b"` for other column names than before and after.
+- **In-game shots:** `shots-game.mjs <out> journal letters notice missions` and `journal-phone letters-phone notice-phone missions-phone` on `/lab/island`.
 - **The spring:** `--nudge-ease` in the kit's CSS is a damped spring sampled into `linear()` (damping 0.55, 33 points); regenerate it with the formula in the comment if the feel changes. `film` times are 0 to 200 ms (hover) and 0 to 400 ms (select).
 - **Creator shots:** `/dev/flat-ui?surface=wardrobe` (the closet; `place=fitting` for the fitting room), `surface=creator` (the member's first creator, with the name field), `surface=creator-applicant` (the applicant island's, as ApplicantIsland mounts it). "Dreads with a cap" is the free two-colour hairstyle (Own, the second colour). Raw befores: scratchpad `r3/before/c-*.png`.
 - **The cells' motion:** `useNudge()` is a React 19 callback ref with a cleanup; the grid's direct children are the cells. It writes `--nudge-*` variables and `data-nudge` only where they change, and reads offsetLeft/Top (layout without transforms), so the motion never feeds back into itself. A cell with `z-index: 1` paints over a sticky sibling with no z-index: the side panel has `z-index: 2` for the phone.

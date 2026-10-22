@@ -13,14 +13,6 @@ export const GuiVariantContext = createContext<GuiVariant>("cream");
 export const useGuiVariant = (): GuiVariant => useContext(GuiVariantContext);
 
 /**
- * The palette the game's redesigned menus wear (the journal, the mission board, the notice board, the mailbox: their
- * frames, `ProgressionPanel` and `IslandSheet`). Cream until David picks (round 3 verdict: the clean flat palette as the
- * base theme, shown beside the cream for him to choose); the dev harnesses set it for the shots with `palette=flat`.
- * Later UI themes are token sets (specs/polish/flat-ui.md), not more of these.
- */
-export const MenuPaletteContext = createContext<GuiVariant>("cream");
-
-/**
  * A paper thing inside a flat panel (a letter, a notice board card; David: mail and the notice board keep their paper):
  * the cream tokens again (styles/game-tokens.css, [data-gui-paper]) and the cream pieces inside.
  */
