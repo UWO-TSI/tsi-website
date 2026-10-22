@@ -4,6 +4,7 @@ a vertex whose u is 2 or more takes the atlas texel at (u - 2, v), never tinted,
 merges into the one body geometry and draw.
 
   colour_atlas.claim(key, rgba)          the source texture region (sRGB, top row first) resampled into key's tile
+  colour_atlas.put(key, rgba)            a tile's inner square drawn here, written as it is
   colour_atlas.remap(me, key, crop)      the mesh's UVs (inside `crop` of its texture) moved into the tile, + 2 on u
   colour_atlas.save()                    writes colour_atlas.png (loads the existing one first: each importer writes
                                          only its own tiles)
@@ -29,6 +30,7 @@ TILES = {
     "acc_green_sprout": 128, "acc_thin_glasses": 128, "acc_half_rim_glasses": 128, "acc_square_shades": 128,
     "acc_gold_rimless_shades": 128, "acc_apple_stem": 128,
     "acc_half_rim_glasses_silver": 128,          # round 2: last, so no earlier tile moves
+    "acc_crew_visor_logo": 256,                  # #04's logo on its own (accessories/arches_logo.py): last, so no tile moves
 }
 
 
@@ -89,6 +91,16 @@ def claim(key, rgba):
     t[..., 3] = 1.0
     block = np.pad(t, ((PAD, PAD), (PAD, PAD), (0, 0)), mode="edge")
     a[y:y + s, x:x + s] = block
+
+
+def put(key, rgba):
+    """Write `rgba` (sRGB values, top row first), already the tile's inner size, into key's tile as it is (no resample),
+    edges extended over the padding."""
+    x, y, s = LAYOUT[key]
+    t = np.clip(rgba, 0, 1).astype(np.float32).copy()
+    assert t.shape[:2] == (s - 2 * PAD, s - 2 * PAD), (key, t.shape)
+    t[..., 3] = 1.0
+    _load()[y:y + s, x:x + s] = np.pad(t, ((PAD, PAD), (PAD, PAD), (0, 0)), mode="edge")
 
 
 def crop_of(me, w, h, margin=4):

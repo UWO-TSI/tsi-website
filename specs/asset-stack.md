@@ -12,7 +12,7 @@ Kenney/Quaternius. As of David's 2026-07-26 ruling the world model is ACNH grid 
 
 **Read `specs/acnh-system-reference.md` first.** It carries the measured constants
 (1.0u tile, 1.5u level step, 0.078u water drop), the autotile vocabulary, the
-placement rules and the rendering model. `CLAUDE.md` § "World model" is the short form.
+placement rules and the rendering model. `specs/terrain-law.md` is the short form.
 
 Still accurate below: the Colyseus decision, the 2D-sprite character direction, the
 camera/controls notes, and the PS1 shader pipeline (though PostFX has since moved to a

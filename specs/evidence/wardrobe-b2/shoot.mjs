@@ -12,6 +12,8 @@
 //   hatcut   /lab/avatar?sheet=hatcut: each hat with a hair cut over six hairstyles, with the cut hair drawn (&cut=0) and cut
 //   round5   the round-5 hat cut: each covering hat over #03 long, #10 short, #27 buns, #25 curly pigtails and #23's bob,
 //            front, 3/4, side, back, high and low; the rims of #18, #21, #22 and #24 close up; #04's visor front and 3/4
+//   visorlogo  #04's logo, the arches flipped to a W: the visor over #03, #10 and #27 at front, 3/4 and high; the logo close
+//            up; at LOD 1
 import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
 const require = createRequire("/opt/homebrew/lib/node_modules/");
@@ -109,6 +111,25 @@ for (const scene of SCENES) {
     // #10 with no hat: its nape (the stepped edge low at the back of the head) is the hairstyle's own, not the cut
     await bench("r5-nohat", "views=34,side,back&cols=3&ids=hair_messy_wolf", [1200, 520]);
     await bench("r5-visor", `views=front,34,high&cols=3&zoom=1.7&look=0.9&ids=${ids("acc_crew_visor")}`, [1200, 2150]);
+    await page.context().close();
+  }
+  if (scene === "visorlogo") {
+    // #04's logo (David, round 5: "make it the mcdonald m but flip it so its w"): the visor over #03, #10 and #27 at front,
+    // 3/4 and high; the logo close up; and at LOD 1 (characters seen small)
+    const ids = ["hair_long_scruffy", "hair_messy_wolf", "hair_double_buns"].map(h => `${h}%2Bacc_crew_visor`).join(",");
+    const page = await page0(1200, 1300);
+    const bench = async (name, qs, [w, h], wait = 22000) => {
+      await page.setViewportSize({ width: w, height: h });
+      await page.goto(`${HOST}/lab/avatar?sheet=roblox&framing=hat&skin=3&${qs}`, { waitUntil: "domcontentloaded" });
+      await page.addStyleTag({ content: `${HIDE} nav { display: none !important } [data-sheet] > * { min-width: 0 } [data-sheet] figcaption { font-size: 10px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }` }).catch(() => {});
+      await page.waitForSelector("canvas", { timeout: 300000 });
+      await sleep(wait);
+      await page.locator("[data-sheet]").first().screenshot({ path: `${OUT}/${name}.png` });
+      console.log("shot", name);
+    };
+    await bench("logo-visor", `views=front,34,high&cols=3&zoom=1.7&look=0.9&ids=${ids}`, [1200, 1300]);
+    await bench("logo-close", "views=front&cols=2&zoom=4&look=1.0&ids=hair_messy_wolf%2Bacc_crew_visor,hair_double_buns%2Bacc_crew_visor", [1200, 640]);
+    await bench("logo-lod1", "views=front,34&cols=2&zoom=1.7&look=0.9&charlod=1&ids=hair_messy_wolf%2Bacc_crew_visor", [1200, 640]);
     await page.context().close();
   }
   if (scene === "closet") {

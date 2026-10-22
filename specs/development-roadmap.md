@@ -166,4 +166,4 @@ Already decided: live home visits next update (69), guests need permission to ha
 - **Drift from `main`.** The applicant island keeps changing on `main` while the member island ports its code. Merge `main` in at every phase boundary.
 - **Free-tier Supabase.** It paused for two months over the summer and hung under recruitment load. Launch needs a paid tier or a keep-warm job.
 - **Art bottleneck.** Most Phase 2 steps wait on David's reviews and supplied references. Phase 3 is ordered so that systems work continues while art waits.
-- **Principle drift.** Rows 11, 74–76, 200 and 225 override parts of the May design principles in `CLAUDE.md` (online rewards, public access, XP sources). Update `CLAUDE.md` and `STATE.md` so new agents do not follow the old rules.
+- **Principle drift.** Rows 11, 74–76, 200 and 225 override parts of the May design principles in `specs/design-principles.md` (online rewards, public access, XP sources). Update `CLAUDE.md` and `STATE.md` so new agents do not follow the old rules.
