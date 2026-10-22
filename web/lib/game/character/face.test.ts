@@ -205,7 +205,9 @@ describe("David's 19 faces (face set 305, art/characters/v7/face_set_305.py)", (
   const MOUTHS = ["little_v", "drumstick", "drool", "gritted", "pout", "tiny_smirk", "open_smile", "small_frown", "pill", "deadpan", "dash", "side_smirk", "long_drool", "nervous_laugh", "tiny_mouth", "gasp", "kitty", "tired_drool", "buck_tooth"];
   const ACCENTS = ["nose_blush", "sweat_drop"];
   const SET = new Set([...EYES, ...MOUTHS, ...ACCENTS]);
-  const NEW = new Set([...SET, "brow_none"]);
+  // wardrobe batch 2's faces #20-25 (face_set_b2.py) joined later, below this set's band
+  const B2 = new Set(Object.values(FACE.faces).flatMap(f => [f.eyes, f.mouth, ...f.extras].filter((x): x is string => !!x)));
+  const NEW = new Set([...SET, ...B2, "brow_none"]);
   const page2 = (c: FaceCell) => { const [W, H] = FACE.atlas2_size; return [c[0] / W, c[1] / H, c[2] / W, c[3] / H]; };
 
   it("are creator options with short names, on the second atlas page, and static", () => {
@@ -314,5 +316,40 @@ describe("expressions and emote mouths after the wardrobe cut (playtest round 1)
   it("load the second page for every character, so a laugh never shows an empty mouth", () => {
     for (let i = 0; i < 20; i++) expect(usesFacePage2(randomLook(seeded(i))), String(i)).toBe(true);
     for (const e of EXPRESSIONS) for (const sl of faceSlots(DEFAULT_LOOK, restPose(DEFAULT_LOOK, e))) if (sl.page === 1) expect(sl.src).not.toBeNull();
+  });
+});
+
+describe("David's faces #20-25 (wardrobe batch 2, art/characters/v7/face_set_b2.py)", () => {
+  const faces = Object.values(FACE.faces);
+  const page2 = (c: FaceCell) => { const [W, H] = FACE.atlas2_size; return [c[0] / W, c[1] / H, c[2] / W, c[3] / H]; };
+  const cells = faces.flatMap(f => [
+    ...Object.values(FACE.layers.eyes.items[f.eyes]).filter((c): c is FaceCell => !!c),
+    ...(f.mouth ? [FACE.layers.mouth.items[f.mouth]] : []), ...f.extras.map(x => FACE.layers.extras.items[x].cell)]);
+
+  it("are six whole faces on the second page, packed below every earlier cell, static", () => {
+    expect(faces.map(f => f.id)).toEqual(["silly_cat", "silly", "silly_smile", "tired", "weirdcore_eyes", "vampire"]);
+    const earlier = Object.entries(FACE.layers.eyes.items).filter(([id]) => !faces.some(f => f.eyes === id)).flatMap(([, it]) => Object.values(it))
+      .concat(Object.entries(FACE.layers.mouth.items).filter(([id]) => !faces.some(f => f.mouth === id)).map(([, c]) => c))
+      .filter((c): c is FaceCell => !!c && c[6] === 1);
+    const band = Math.max(...earlier.map(c => c[1] + c[3]));
+    for (const c of cells) {
+      expect(c[6]).toBe(1);
+      expect(c[1]).toBeGreaterThanOrEqual(band);
+      expect(c[1] + c[3]).toBeLessThanOrEqual(FACE.atlas2_size[1]);
+    }
+    for (const f of faces) expect(canBlink(f.eyes), f.eyes).toBe(false);
+  });
+  it("draw each face's own cells at their anchors, and mix with any other part", () => {
+    for (const f of faces) {
+      const l = look({ eyes: f.eyes, mouth: f.mouth ?? "M1.1", extras: f.extras });
+      const s = faceSlots(l, restPose(l, "neutral"));
+      const [eyeR, , mouth] = s.slice(-3);
+      expect([eyeR.src, eyeR.page]).toEqual([page2(FACE.layers.eyes.items[f.eyes].open), 1]);
+      if (f.mouth) expect(mouth.src).toEqual(page2(FACE.layers.mouth.items[f.mouth]));
+      for (const sl of s) if (sl.src) expect(sl.dst[0] < 1 && sl.dst[2] > 0 && sl.dst[1] < 1 && sl.dst[3] > 0).toBe(true);
+      expect(parseLook(JSON.parse(JSON.stringify(l)))).toEqual(l);
+    }
+    const mixed = parseLook({ ...DEFAULT_LOOK, eyes: "caret_hash", mouth: "M1.1", extras: ["nose_shade", "blush"] });
+    expect([mixed.eyes, mixed.mouth, mixed.extras]).toEqual(["caret_hash", "M1.1", ["nose_shade", "blush"]]);
   });
 });

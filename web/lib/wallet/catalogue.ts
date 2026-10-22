@@ -5,11 +5,11 @@
  * (lib/seedMigrations.ts, scripts/gen-seeds.mjs). Prices are play coins
  * (or Gems for merch). No real-money value appears anywhere.
  */
-import { dyeRef, FREE_HAIR_COLOURS, PARTS, STARTER_PARTS, type PartSlot } from "@/lib/game/character/look";
+import { CUSTOM_HAIR_REF, dyeRef, FACE, faceRef, FREE_HAIR_COLOURS, PARTS, priceOf, STARTER_PARTS, type Batch2Price, type PartSlot } from "@/lib/game/character/look";
 import { CATALOGUE as PIECES, EVENT_PIECE_IDS } from "@/lib/homes/catalogue";
 import { shopIcon } from "@/lib/icons/keys";
 
-export type ShopCategory ="tool" | "outfit" | "hair" | "accessory" | "furniture" | "wallpaper" | "flooring" | "merch";
+export type ShopCategory ="tool" | "outfit" | "hair" | "accessory" | "face" | "furniture" | "wallpaper" | "flooring" | "merch";
 export type Tier = "basic" | "mid" | "premium";
 export type Slot = "rod" | "net" | "shovel" | "outfit" | "hair" | "accessory";
 
@@ -140,8 +140,41 @@ const CUT_WEARABLES: { id: string; name: string; slot: PartSlot; after: string }
 ];
 const wearSlug = (id: string) => `wear-${id.replace(/_/g, "-")}`;
 const WEARABLES: { id: string; name: string; slot: PartSlot; cut?: boolean }[] =
-  PARTS.filter((p) => p.slot !== "bangs" && p.slot !== "back" && !p.variantOf && !p.item && !p.event).map((p) => ({ id: p.id, name: p.name, slot: p.slot }));
+  PARTS.filter((p) => p.slot !== "bangs" && p.slot !== "back" && !p.variantOf && !p.item && !p.event && !p.key && !p.grantedBy).map((p) => ({ id: p.id, name: p.name, slot: p.slot }));
 for (const c of CUT_WEARABLES) WEARABLES.splice(WEARABLES.findIndex((w) => w.id === c.after) + 1, 0, { ...c, cut: true });
+
+/**
+ * Wardrobe batch 2 (specs/playtest-round1.md "New wardrobe batch"; David's modes and prices, specs/wardrobe/batch2-pricing.json):
+ * every hairstyle, accessory and whole face he priced is a shop row at its price, in play coins (price_coins) or Gems
+ * (tc_price); a free one has no row (the starting creator offers it to everyone: look.ts partRef, facePartRef) and a
+ * skipped one is not imported. A face's row unlocks its eyes, mouth and accent (catalogue_ref face:<id>). Positions from
+ * B2_POS, after every earlier row, so no earlier row moves; coin rows can be a daily special like the other wearables.
+ */
+const B2_POS = 600;
+const b2Row = (slug: string, name: string, category: ShopCategory, price: Batch2Price, ref: string, i: number): CatalogueEntry => withIcon({
+  slug, display_name: name, category, description: "", price_coins: price.mode === "coins" ? price.price : null, price_gems: price.mode === "gems" ? price.price : null,
+  tier: null, slot: null, special_pool: price.mode === "coins", stackable: false, stock: null, catalogue_ref: ref, sprite_url: null, position: B2_POS + i,
+});
+const isSold = (p: Batch2Price | null): p is Batch2Price => p?.mode === "coins" || p?.mode === "gems";
+/** A row's name, with what owning it grants (row 314: hair #22 and its ushanka and goggles). */
+const withGranted = (p: { id: string; name: string }) => {
+  const g = PARTS.find((q) => q.grantedBy === p.id);
+  return g ? `${p.name}, with the ${g.name.toLowerCase()}` : p.name;
+};
+export const WARDROBE_B2_ITEMS: CatalogueEntry[] = [
+  ...PARTS.filter((p) => p.key && isSold(priceOf(p.key))).map((p) => ({ p, cat: (p.slot === "accessory" ? "accessory" : "hair") as ShopCategory })),
+].map(({ p, cat }, i) => b2Row(wearSlug(p.id), withGranted(p), cat, priceOf(p.key)!, p.id, i))
+  .concat(Object.entries(FACE.faces).filter(([key]) => isSold(priceOf(key)))
+    .map(([key, f], i) => b2Row(`face-${f.id.replace(/_/g, "-")}`, f.name, "face", priceOf(key)!, faceRef(f.id), 100 + i)));
+
+/**
+ * The hair colour wheel (David, 2026-10-17): a one-time 250-Gem unlock for any hair colour (look.ts CUSTOM_HAIR_REF), in
+ * place of "owning any dye unlocks it"; the dyes stay preset colours. After the batch-2 rows; never a daily special.
+ */
+export const COLOUR_WHEEL_ITEM: CatalogueEntry = withIcon({
+  slug: "hair-colour-wheel", display_name: "Hair colour wheel", category: "hair", description: "", price_coins: null, price_gems: 250,
+  tier: null, slot: null, special_pool: false, stackable: false, stock: null, catalogue_ref: CUSTOM_HAIR_REF, sprite_url: null, position: 800,
+});
 
 /**
  * Rows the ownership migration adds: every wearable part, the dyes, the homes pieces the shop lacked. Starter clothes are never sold.
@@ -153,6 +186,8 @@ export const OWNERSHIP_ITEMS: CatalogueEntry[] = [
     e(wearSlug(p.id), p.name.replace(/ \(#\d+\)$/, ""), p.slot === "accessory" ? "accessory" : "outfit", WEAR_PRICE[p.slot], { catalogue_ref: p.id, special_pool: !p.cut && !STARTER_REFS.has(p.id) })),
   ...DYES.map((name, i) => e(`dye-${name.toLowerCase().replace(/ /g, "-")}`, `${name} hair dye`, "hair", 140, { catalogue_ref: dyeRef(FREE_HAIR_COLOURS + i), special_pool: true })),
   ...PIECES.filter((p) => !HAS_FURNITURE.has(p.id) && !EVENT_PIECE_IDS.has(p.id)).map((p) => furniture(p.id, p.label, pieceValue(p))),
+  ...WARDROBE_B2_ITEMS,
+  COLOUR_WHEEL_ITEM,
 ];
 /**
  * The tier-1 bug net and shovel: a resident hands them over (row 312, lib/game/arrival/hq/teachers.ts; David

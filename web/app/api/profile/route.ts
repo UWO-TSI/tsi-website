@@ -129,7 +129,7 @@ export async function PATCH(request: Request) {
     if (!owned.ok) return NextResponse.json({ error: owned.error, code: owned.code }, { status: owned.status });
     // A running tradition's costumes are free to wear (the costume closet, lib/content/traditions.ts).
     const events = costumeEvents(await supabaseTraditionsStore(admin).traditions().catch(() => [...DEFAULT_TRADITIONS]), Date.now());
-    // A custom hair colour (the colour wheel, head-v10) needs any shop dye (ownsRef).
+    // A custom hair colour (the colour wheel, head-v10) needs the colour wheel bought (ownsRef; David, 2026-10-17).
     const missing = lookRefs(avatar_config.look).filter((ref) => !ownsRef(owned.data, ref) && !(PART_BY_ID.get(ref)?.event && eventPartOpen(ref, events)));
     if (missing.length) return NextResponse.json({ error: "You don't own everything in that look.", code: "not_owned", missing }, { status: 403 });
   }

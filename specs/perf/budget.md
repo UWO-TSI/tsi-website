@@ -78,6 +78,22 @@ catalogue's clip base (`base/v8_clips.glb` since the head fit: the same 1,264 tr
 effects (below). The multiplayer spec's targets stay: at most 0.12 ms of CPU per Full remote and 3 ms for 24 drawn, at
 most +5 draws per drawn remote on High and +3 on Lite (`PER_PLAYER`).
 
+**Wardrobe batch 2 (2026-10-17, David: the budget stays; "find ways to not render part of hair or smth or find ways to
+lower triangles that aren't displayed"):** David's Roblox accessories over a whole hairstyle first put the heaviest look
+at 10,116 / 5,267 / 4,206 (Full / LOD 1 / LOD 2). `art/characters/hidden_cut.py` cuts what no view reaches, in place:
+1. **Hat cut.** Each covering hat (the propeller cap, the drawn top hat, the cowboy, woven and straw hats) has a bit in
+   the hair's `_HATCUT` marks, per hairstyle and tier: a vertex no outside view reaches with that hat on (the hat, the
+   head, the body or the hair's outer layers stop every ray). A hatted look leaves out the hair's triangles all three of
+   whose vertices carry the worn hat's bit (`rig.ts` cutIndex); the bear hood does the same for the head skin
+   (`_HOODCUT`, 188 of the head's 344). Alone it moved nothing (the heaviest look wears a sprout, which covers nothing).
+2. **Hidden inner geometry.** Every triangle of a hairstyle (three tiers) and an accessory (two) that no ray from it
+   leaves the head, the body and the asset (256 directions from four points on it) is dropped: 121,220 to 102,539 hair
+   triangles, 27,669 to 24,159 accessory ones. 9,313 / 5,041 / 4,025.
+3. **Full no heavier than what shows** (`import_roblox.py` full_cap): the glasses, monocle, wheat and blindfold and the
+   neck items at most 350 (they ran to 1,176 on a few hundred pixels), a front item 300, a covering hat 800, any other
+   head item 780 (the sprout's 1,176), the hood 1,200; the glasses' LOD 1 at 250 (`build_lod.py`).
+Now 7,567 / 4,963 / 3,947. Residents and bots never wear a batch-2 item (`randomLook`).
+
 ## Effects on characters (`EFFECT_BUDGET`)
 
 An effect's **share**: what it may add when every player in view shows it. Draws per player in view for anything a

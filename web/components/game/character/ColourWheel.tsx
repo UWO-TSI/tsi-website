@@ -5,8 +5,9 @@
  * colour, beside the presets. A disc of hue (round) and saturation (out from the centre) at the chosen value, a value
  * slider under it and the hex. Drag or click the disc; on the keyboard the disc takes the arrows (left and right turn
  * the hue, up and down the saturation) and the slider the value. Only the preview re-tints while you drag (Character
- * defers the new look and merges it once); the hair tiles are static pictures and never redraw. Unlocked by owning any
- * shop dye (David: "Unlock by buying a dye"; look.ts customHairUnlocked): locked, it shows greyed with the hint.
+ * defers the new look and merges it once); the hair tiles are static pictures and never redraw. Unlocked by buying the
+ * colour wheel in the shop (David, 2026-10-17: a one-time 250-Gem unlock; look.ts customHairUnlocked): locked, it shows
+ * greyed with the hint and, where the sheet can open the shop, a way there.
  */
 import { useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
 import { Lock } from "lucide-react";
@@ -16,13 +17,15 @@ import styles from "./CharacterCreator.module.css";
 
 const HEX_INPUT = /^#?[0-9a-fA-F]{6}$/;
 
-export default function ColourWheel({ value, active, locked = false, onChange }: {
+export default function ColourWheel({ value, active, locked = false, onShop, onChange }: {
   /** The colour shown now (sRGB hex): the custom one, or the preset worn. */
   value: string;
   /** The look wears a custom colour (the wheel's marker shows as chosen). */
   active: boolean;
-  /** No shop dye owned yet: the wheel shows, greyed, with how to unlock it. */
+  /** The colour wheel not bought yet: the wheel shows, greyed, with how to unlock it. */
   locked?: boolean;
+  /** Opens the shop (the closet and fitting room). */
+  onShop?: () => void;
   onChange: (hex: string) => void;
 }) {
   // The wheel's own last pick, while the look still wears it (it keeps a grey's hue and the exact saturation); a preset
@@ -53,7 +56,7 @@ export default function ColourWheel({ value, active, locked = false, onChange }:
   const hex = hsvToHex(hsv), at = wheelPoint(hsv.h, hsv.s);
   if (locked) return <div className={styles.wheel} data-locked>
     <div className={styles.wheelDisc} style={{ "--dim": 0 } as CSSProperties} aria-hidden="true"><Lock size={22} strokeWidth={2.6} className={styles.wheelLock} /></div>
-    <p className={styles.hint}>Buy any hair dye at the shop to unlock custom colours.</p>
+    <p className={styles.hint}>Unlock any hair colour with the Hair colour wheel in the shop.{onShop && <> <button type="button" className={styles.hintLink} onClick={onShop}>Visit the shop</button></>}</p>
   </div>;
   return <div className={styles.wheel} data-active={active || undefined}>
     <div ref={disc} className={styles.wheelDisc} role="slider" tabIndex={0} aria-label="Hue and saturation (arrow keys)"

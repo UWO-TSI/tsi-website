@@ -12,7 +12,7 @@
  "atlas2_world": "v7_face_atlas_2_512.png",
  "atlas2_size": [
   2048,
-  2688
+  3648
  ],
  "anchors": {
   "eye": [
@@ -54,6 +54,14 @@
   "sweat_drop": [
    0.8135,
    0.8423
+  ],
+  "nose_shade": [
+   0.4995,
+   0.7368
+  ],
+  "stitches": [
+   0.2588,
+   0.7344
   ]
  },
  "layers": {
@@ -133,6 +141,32 @@
       49,
       26.02,
       24.52,
+      1
+     ]
+    },
+    "nose_shade": {
+     "anchor": "nose_shade",
+     "mirror": false,
+     "cell": [
+      370,
+      3516,
+      201,
+      79,
+      100.49,
+      39.48,
+      1
+     ]
+    },
+    "stitches": {
+     "anchor": "stitches",
+     "mirror": false,
+     "cell": [
+      1724,
+      3308,
+      238,
+      86,
+      119.01,
+      43.03,
       1
      ]
     }
@@ -584,6 +618,117 @@
       36.15,
       1
      ]
+    },
+    "cat_wide": {
+     "open": [
+      572,
+      3030,
+      462,
+      244,
+      247.4,
+      64.15,
+      1
+     ],
+     "left": [
+      1240,
+      2704,
+      462,
+      245,
+      214.6,
+      64.15,
+      1
+     ]
+    },
+    "squint_blush": {
+     "open": [
+      446,
+      2704,
+      358,
+      283,
+      195.4,
+      132.15,
+      1
+     ]
+    },
+    "squint": {
+     "open": [
+      648,
+      3308,
+      365,
+      163,
+      124.4,
+      52.15,
+      1
+     ],
+     "left": [
+      1654,
+      3030,
+      318,
+      179,
+      193.6,
+      68.15,
+      1
+     ]
+    },
+    "tired_lines": {
+     "open": [
+      246,
+      3308,
+      369,
+      173,
+      140.4,
+      103.15,
+      1
+     ],
+     "left": [
+      1286,
+      3030,
+      336,
+      202,
+      197.6,
+      132.15,
+      1
+     ]
+    },
+    "weird_eyes": {
+     "open": [
+      16,
+      2704,
+      398,
+      293,
+      189.4,
+      108.15,
+      1
+     ],
+     "left": [
+      836,
+      2704,
+      372,
+      283,
+      168.6,
+      121.15,
+      1
+     ]
+    },
+    "caret_hash": {
+     "open": [
+      16,
+      3308,
+      198,
+      175,
+      35.4,
+      138.15,
+      1
+     ],
+     "left": [
+      1066,
+      3030,
+      188,
+      204,
+      148.6,
+      144.15,
+      1
+     ]
     }
    }
   },
@@ -811,6 +956,51 @@
      229.0,
      220.7,
      1
+    ],
+    "cat_fang": [
+     16,
+     3030,
+     524,
+     245,
+     284.0,
+     179.7,
+     1
+    ],
+    "tongue_out": [
+     1450,
+     3308,
+     242,
+     105,
+     112.0,
+     59.7,
+     1
+    ],
+    "wide_w": [
+     1046,
+     3308,
+     372,
+     134,
+     173.0,
+     129.7,
+     1
+    ],
+    "unsure": [
+     604,
+     3516,
+     174,
+     50,
+     48.0,
+     25.7,
+     1
+    ],
+    "fangs": [
+     16,
+     3516,
+     321,
+     83,
+     162.0,
+     48.7,
+     1
     ]
    }
   },
@@ -1008,6 +1198,67 @@
   "square_dots": "Square dots",
   "buck_tooth": "Buck tooth",
   "nose_blush": "Nose blush",
-  "sweat_drop": "Sweat drop"
+  "sweat_drop": "Sweat drop",
+  "cat_wide": "Wide cat eyes",
+  "cat_fang": "Fang smile",
+  "squint_blush": "Squint and blush",
+  "tongue_out": "Tongue out",
+  "squint": "Squint",
+  "wide_w": "Wide w",
+  "tired_lines": "Tired lines",
+  "unsure": "Unsure",
+  "weird_eyes": "Weirdcore eyes",
+  "caret_hash": "Caret and hash",
+  "fangs": "Fangs",
+  "nose_shade": "Nose shade",
+  "stitches": "Stitches"
+ },
+ "faces": {
+  "face-20": {
+   "id": "silly_cat",
+   "name": "Silly cat face",
+   "eyes": "cat_wide",
+   "mouth": "cat_fang",
+   "extras": []
+  },
+  "face-21": {
+   "id": "silly",
+   "name": "Silly face",
+   "eyes": "squint_blush",
+   "mouth": "tongue_out",
+   "extras": []
+  },
+  "face-22": {
+   "id": "silly_smile",
+   "name": "Silly smile face",
+   "eyes": "squint",
+   "mouth": "wide_w",
+   "extras": [
+    "nose_shade"
+   ]
+  },
+  "face-23": {
+   "id": "tired",
+   "name": "Tired face",
+   "eyes": "tired_lines",
+   "mouth": "unsure",
+   "extras": []
+  },
+  "face-24": {
+   "id": "weirdcore_eyes",
+   "name": "Weirdcore eyes",
+   "eyes": "weird_eyes",
+   "mouth": null,
+   "extras": []
+  },
+  "face-25": {
+   "id": "vampire",
+   "name": "Vampire face",
+   "eyes": "caret_hash",
+   "mouth": "fangs",
+   "extras": [
+    "stitches"
+   ]
+  }
  }
 }

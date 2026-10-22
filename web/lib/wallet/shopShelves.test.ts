@@ -3,6 +3,7 @@ import type { ShopEntry } from "./service";
 import { itemLine, shelfItems, shopShelves } from "./shopShelves";
 import { itemModel, itemSpec } from "@/lib/icons/itemModel";
 import { CATALOGUE, OWNERSHIP_ITEMS, onSale } from "./catalogue";
+import { CUSTOM_HAIR_REF, PART_BY_ID } from "@/lib/game/character/look";
 
 const entry = (slug: string, name: string, category: string, extra: Partial<ShopEntry> = {}): ShopEntry => ({
   id: slug, slug, name, category, description: "", tier: null, currency: category === "merch" ? "gems" : "coins", price: 100, base_price: 100,
@@ -40,6 +41,12 @@ describe("the shop overlay's sidebar (specs/interiors/shop.md, the shop overlay)
 
   it("finds a 3D model for the detail view where an item has one, and none for a finish", () => {
     for (const c of [...CATALOGUE, ...OWNERSHIP_ITEMS].filter(onSale)) {
+      // wardrobe batch 2: a hairstyle, the colour wheel and a whole face show their baked picture (lib/icons/manifest.ts)
+      const ref = c.catalogue_ref ?? "";
+      if (c.category === "face" || (c.category === "hair" && (PART_BY_ID.has(ref) || ref === CUSTOM_HAIR_REF))) {
+        expect(itemModel(c), c.slug).toBeNull();
+        continue;
+      }
       const spec = itemSpec(c);
       expect(spec, c.slug).not.toBeNull();
       if (c.category === "wallpaper" || c.category === "flooring") expect(itemModel(c), c.slug).toBeNull();

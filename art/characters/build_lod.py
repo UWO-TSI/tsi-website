@@ -158,20 +158,68 @@ def covered(ob, others):
 # should look good close up"): Full is the original Roblox mesh; LOD 1 (mid) at most CARD_MAX["lod1"], its shape kept
 # where a ratio under that keeps it; LOD 2 (far, lod2/) about CARD_MAX["lod2"]
 CARD_MAX = {"lod1": 2400, "lod2": 1100}
+# a hairstyle at most this heavy keeps its whole mesh at LOD 1 (wardrobe batch 2: #22 without its hat, 2,348, was kept
+# whole under the old line, CARD_MAX's 2,448, and put the heaviest LOD 1 look over 5,100)
+LOD1_WHOLE = 2000
 OUT2 = os.path.join(HERE, "lod2")
+# David's Roblox accessories (wardrobe batch 2, accessories/import_roblox.py): Full holds the accessory budget (1,200);
+# LOD 1 (a character under 72 px) at most ACC_LOD1_MAX, its shape kept where a ratio under that keeps it, else collapsed
+# until it lands there; where the collapse stalls (loose parts each already minimal), the smallest parts go (shed). A hat, glasses,
+# a neck and a front item at once keep the heaviest look within LOD 1's and LOD 2's budgets (budget.ts CHARACTER_BUDGET).
+ACC_LOD1_MAX = 300
+ACC_LOD1_FACE = 250      # the glasses, monocle, wheat and blindfold: a LOD 1 look with them stays within LOD 2's 4,000
 
 
-def decimate(ob, under, cards=False, snug=SNUG, tier="lod1"):
+def shed(ob, cap):
+    """A capped piece the collapse stalled on (each loose part already minimal: a monocle's chain links, a woven hat's
+    tassels) sheds its smallest loose parts, a pixel or less on a character under 72 px, until it is within the cap.
+    The largest part always stays."""
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    bm.faces.ensure_lookup_table()
+    key = {v.index: tuple(round(c / 1e-5) for c in v.co) for v in bm.verts}
+    parent = {}
+
+    def find(k):
+        while parent.setdefault(k, k) != k:
+            parent[k] = parent[parent[k]]
+            k = parent[k]
+        return k
+    for f in bm.faces:
+        ks = [key[v.index] for v in f.verts]
+        for k in ks[1:]:
+            a, b = find(ks[0]), find(k)
+            if a != b:
+                parent[b] = a
+    parts = {}
+    for f in bm.faces:
+        parts.setdefault(find(key[f.verts[0].index]), []).append(f)
+    total = sum(len(f.verts) - 2 for f in bm.faces)
+    drop = []
+    for faces in sorted(parts.values(), key=len)[:-1]:
+        if total <= cap:
+            break
+        drop += faces
+        total -= sum(len(f.verts) - 2 for f in faces)
+    bmesh.ops.delete(bm, geom=drop, context="FACES")
+    bm.to_mesh(ob.data)
+    bm.free()
+    ob.data.update()
+
+
+def decimate(ob, under, cards=False, snug=SNUG, tier="lod1", cap=None):
     """Decimate `ob` in place at the first ratio that keeps its shape (`under`: something lies on it); returns the
     ratio, or None (kept whole). Card hair only tries ratios that land under its tier's CARD_MAX, and takes the
     largest of them when none keeps the shape (LOD 2 always: it is drawn far and small)."""
     n = ntris(ob)
     ratios = RATIOS
     card_max = CARD_MAX[tier]
-    if cards:
-        ratios = (card_max / n,) if tier == "lod2" else tuple(r for r in RATIOS if n * r <= card_max) or (card_max / n,)
-        if n <= card_max * 1.02 and tier == "lod1":
-            return None                                      # already within the mid tier: kept whole
+    if cap is not None and n > cap:            # a capped piece (a Roblox accessory): ratios under the cap, else the cap
+        ratios = tuple(r for r in RATIOS if n * r <= cap) or (cap / n,)
+    if cards:   # LOD 2 lighter than LOD 1 even for a light hairstyle (LOD 1 halves one past LOD1_WHOLE)
+        ratios = (min(card_max, 0.45 * n) / n,) if tier == "lod2" else tuple(r for r in RATIOS if n * r <= card_max) or (card_max / n,)
+        if n <= LOD1_WHOLE and tier == "lod1":
+            return None                                      # already light: kept whole
     for k, ratio in enumerate(ratios):
         trial = ob.copy()
         trial.data = ob.data.copy()
@@ -186,12 +234,24 @@ def decimate(ob, under, cards=False, snug=SNUG, tier="lod1"):
         # Above the armature: the rest shape is decimated, not the posed one.
         bpy.ops.object.modifier_move_to_index(modifier="LOD", index=0)
         bpy.ops.object.modifier_apply(modifier="LOD")
+        for _ in range(6 if cap is not None and n > cap else 0):     # a capped piece: more passes until within the cap
+            m = ntris(trial)
+            if m <= cap:
+                break
+            mod = trial.modifiers.new("LOD", "DECIMATE")
+            mod.decimate_type = "COLLAPSE"
+            mod.ratio = cap / m * 0.98
+            mod.use_collapse_triangulate = True
+            bpy.ops.object.modifier_move_to_index(modifier="LOD", index=0)
+            bpy.ops.object.modifier_apply(modifier="LOD")
+        if cap is not None and n > cap and ntris(trial) > cap:
+            shed(trial, cap)
         far, out, sink = deviation(ob, trial, CARD_QUANTILE if cards else None)
         if os.environ.get("LOD_DEBUG"):
             print("LODDBG", ob.name, ratio, round(far, 4), round(out, 4), round(sink, 4), under)
         # cards: strand-card hair (thin open sheets over its own opaque under-cap) has no inside to sink into, so only
         # the shape tolerance holds it (the sign of a sheet's normal says nothing about sinking)
-        last_card = cards and k == len(ratios) - 1 and n > card_max
+        last_card = (cards and k == len(ratios) - 1 and n > card_max) or (cap is not None and n > cap and k == len(ratios) - 1)
         if (far <= TOLERANCE and (cards or (sink <= snug and (out <= SNUG or not under)))) or last_card:
             old = ob.data
             ob.data = trial.data
@@ -208,7 +268,7 @@ def decimate(ob, under, cards=False, snug=SNUG, tier="lod1"):
     return None
 
 
-def build(src, dst, skin_only=False, merge=True, cards=False, tier="lod1"):
+def build(src, dst, skin_only=False, merge=True, cards=False, tier="lod1", cap=None):
     """cards (head fit: import_hair.py's full styles, imported unmerged): welded here with the non-manifold junctions
     split, so the collapse can reduce them without shredding the cards."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -243,7 +303,7 @@ def build(src, dst, skin_only=False, merge=True, cards=False, tier="lod1"):
         before += n
         if not whole and n >= KEEP:
             decimate(ob, under[ob.name], cards=cards and material_of(ob) == "M_Hair",
-                     snug=SNUG_HAIR if material_of(ob) == "M_Hair" else SNUG, tier=tier)
+                     snug=SNUG_HAIR if material_of(ob) == "M_Hair" else SNUG, tier=tier, cap=cap)
         after += ntris(ob)
         kept.append(ob)
     if cards:                       # David's hairstyles: the collapse leaves a few degenerate faces in the card sheets
@@ -264,7 +324,7 @@ def build(src, dst, skin_only=False, merge=True, cards=False, tier="lod1"):
 
 def main():
     only = set(sys.argv[sys.argv.index("--") + 1:]) if "--" in sys.argv else set()
-    parts = CAT["outfits"] + CAT["accessories"] + CAT["hair"]
+    parts = CAT["outfits"] + CAT["accessories"] + CAT["hair"] + CAT.get("robloxAccessories", [])   # + David's Roblox accessories (wardrobe batch 2)
     report = {}
     if not only or "base" in only:
         report["base/skin.glb"] = build(os.path.join(HERE, CAT["base"]["clips_glb"]), os.path.join(OUT, "base", "skin.glb"), skin_only=True)
@@ -272,7 +332,9 @@ def main():
     for p in parts:
         if only and p["id"] not in only:
             continue
-        report[p["glb"]] = build(os.path.join(HERE, p["glb"]), os.path.join(OUT, p["glb"]), merge=not p.get("full"), cards=bool(p.get("full")))
+        report[p["glb"]] = build(os.path.join(HERE, p["glb"]), os.path.join(OUT, p["glb"]), merge=not p.get("full"), cards=bool(p.get("full")),
+                                 cap=(ACC_LOD1_FACE if p.get("group") == "face" else ACC_LOD1_MAX)
+                                 if p["glb"].startswith("accessories/roblox/") or p.get("grantedBy") else None)
         if p.get("full"):           # the far tier: whole hairstyles only (everything else draws its LOD 1 there)
             report2[p["glb"]] = build(os.path.join(HERE, p["glb"]), os.path.join(OUT2, p["glb"]), merge=False, cards=True, tier="lod2")
     live = {"base/skin.glb"} | {p["glb"] for p in parts}

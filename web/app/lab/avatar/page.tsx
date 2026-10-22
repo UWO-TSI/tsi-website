@@ -23,18 +23,26 @@
  *                  on one skin and view (&view=front|34|side|back)
  * ?sheet=fullkit   head fit: every whole hairstyle (David's set) on one skin, hair colour (&hair=) and view
  * ?sheet=roblox    head-roblox (specs/characters/head-roblox.md): the whole hairstyles listed in &ids= (default all), each in
- *                  a row of front, 3/4, side and back (&views= to pick), on one skin and hair colour
+ *                  a row of front, 3/4, side and back (&views= to pick; high and low: 3/4 from above and below), on one skin and hair colour
  * ?sheet=david     David's 19 faces (face_set_305.py) as they came, eyes + mouth (+ accent), on three skins (&skins=)
  * ?sheet=mix       David's eyes, mouths and accents mixed with each other and with the earlier parts (&skins=)
- * &hair=<0-11>&skin=<0-11>&face=512 (the world atlas) &framing=head|body &charlod=1|2 (every cell at LOD 1 or LOD 2)
+ * &pitch= &zoom= &look= the camera's orbit (radians up, closer by, the height looked at)
+ * &hair=<0-11> (none: the hairstyles' own colours) &color=RRGGBB &accent=<0-11> &skin=<0-11>&face=512 (the world atlas) &framing=head|hat|body &charlod=1|2 (every cell at LOD 1 or LOD 2)
+ * &cut=0 (draw what a hat or hood hides: hidden_cut.py's marks ignored)
  * In ?sheet=roblox an id may carry a head accessory worn with it: &ids=hair_visor_messy+acc_visor (encode the + as %2B in a URL)
+ * ?sheet=b2acc    wardrobe batch 2: David's Roblox accessories, each worn over a hairstyle (&style=, default the ribbon bob),
+ *                  front and 3/4; &groups=head,face (default all) &framing=body for the neck and front ones
+ * ?sheet=b2faces  wardrobe batch 2: David's whole faces #20-25 on the head, front and 3/4 (&skins=, default 3), then a mix row
+ * ?sheet=hatcut   wardrobe batch 2: each hat with a hair cut (&hats= to pick) over each hairstyle in &ids= (default six), &yaw= one view; with
+ *                  &cut=0 the hair the hat hides is drawn too (the hat cut's before and after)
  */
 import { Suspense, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Canvas } from "@react-three/fiber";
 import { PerspectiveCamera, View } from "@react-three/drei";
 import Character, { type CharacterMotion } from "@/components/game/character/Character";
-import { DEFAULT_LOOK, FACE, parseLook, partsIn, type CharacterLook, type EyeFrame } from "@/lib/game/character/look";
+import { CUTS } from "@/lib/game/character/rig";
+import { DEFAULT_LOOK, FACE, NATURAL_HAIR, PARTS, parseLook, partsIn, type CharacterLook, type EyeFrame } from "@/lib/game/character/look";
 import { RESIDENT_LOOKS } from "@/lib/content/residentRoster";
 import { HQ_LEAD } from "@/lib/game/welcome";
 import { CAFE_OWNER } from "@/lib/game/cafe";
@@ -46,18 +54,33 @@ const STYLES: Record<string, Pick<CharacterLook, "bangs" | "back">> = {
   long: { bangs: "", back: "hair_long_scruffy" },
 };
 /** Head fit sheets: the three review views (the character faces the camera at yaw 0). */
-const VIEWS: Record<string, number> = { front: 0, "34": -0.6, side: -Math.PI / 2, back: Math.PI };
+const VIEWS: Record<string, number> = { front: 0, "34": -0.6, side: -Math.PI / 2, back: Math.PI, high: -0.6, low: -0.6 };
+/** Wardrobe round 5: the hat cut judged from above and below too (3/4, the camera's orbit pitched up or down, radians). */
+const VIEW_PITCH: Record<string, number> = { high: 0.55, low: -0.3 };
+/** `&cut=0`: every hidden triangle drawn (rig.ts CUTS), for the hat cut's before-and-after sheet. */
+if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("cut") === "0") CUTS.on = false;
 /** `&charlod=1|2`: the cells load their LOD meshes and draw that tier (Character's SHOW_LOD). */
 const LOD_SHEET = typeof window !== "undefined" && !!new URLSearchParams(window.location.search).get("charlod");
 /** Kit sheets hold the eyes open (no blink lands mid-capture). */
 const OPEN: FaceOverride = { eyeFrame: "open" };
-interface Cell { label: string; look: CharacterLook; yaw: number; face?: FaceOverride | null; talk?: boolean }
+interface Cell { label: string; look: CharacterLook; yaw: number; face?: FaceOverride | null; talk?: boolean; pitch?: number }
 
-function Stage({ cell, framing, faceSize }: { cell: Cell; framing: "head" | "body"; faceSize: number }) {
+/** The camera by framing: the head, the head with room above it for a hat (wardrobe batch 2), the whole body. */
+const FRAMING = { head: { at: [0, 0.86, 1.3], look: 0.8 }, hat: { at: [0, 0.98, 1.7], look: 0.9 }, body: { at: [0.15, 0.6, 2.05], look: 0.5 } } as const;
+
+/** The camera's orbit (wardrobe round 5: the hat cut judged from above and below, and close up at a rim): &pitch= radians
+ * up (negative: from below), &zoom= closer by that factor, &look= the height it looks at (m). */
+interface Orbit { pitch: number; zoom: number; look: number | null }
+
+function Stage({ cell, framing, faceSize, orbit }: { cell: Cell; framing: keyof typeof FRAMING; faceSize: number; orbit: Orbit }) {
   const motion = useRef<CharacterMotion>({ speed: 0, yaw: cell.yaw, lift: 0, pose: null, play: null, face: cell.face ?? null, talk: cell.talk ? 1e9 : 0 });
-  const head = framing === "head";
+  const f = FRAMING[framing] ?? FRAMING.head;
+  const look = orbit.look ?? f.look;
+  const [dy, dz] = [f.at[1] - f.look, f.at[2]];
+  const [cp, sp] = [Math.cos(cell.pitch ?? orbit.pitch), Math.sin(cell.pitch ?? orbit.pitch)];
+  const at: [number, number, number] = [f.at[0] / orbit.zoom, look + (dy * cp + dz * sp) / orbit.zoom, (dz * cp - dy * sp) / orbit.zoom];
   return <>
-    <PerspectiveCamera makeDefault fov={30} position={head ? [0, 0.86, 1.3] : [0.15, 0.6, 2.05]} onUpdate={c => c.lookAt(0, head ? 0.8 : 0.5, 0)} />
+    <PerspectiveCamera makeDefault fov={30} position={at} onUpdate={c => c.lookAt(0, look, 0)} />
     <ambientLight intensity={1.1} color="#fff6e6" />
     <hemisphereLight args={["#fff8ec", "#b7c7a8", 0.9]} />
     <directionalLight position={[1.6, 2.6, 2.2]} intensity={1.7} color="#fff1d8" />
@@ -73,10 +96,13 @@ function AvatarBench() {
   const q = useSearchParams();
   const sheet = q.get("sheet") ?? "styles";
   const faceSize = q.get("face") === "512" ? 512 : 1024;
-  const framing = (q.get("framing") as "head" | "body") ?? "head";
-  const base: CharacterLook = { ...DEFAULT_LOOK, hair: Number(q.get("hair") ?? 2), skin: Number(q.get("skin") ?? 3) };
+  const framing = (q.get("framing") as keyof typeof FRAMING) ?? "head";
+  // round 2: no &hair= is the hairstyles' own colours (NATURAL_HAIR); &color=RRGGBB a colour wheel pick, &accent= a second colour
+  const base: CharacterLook = { ...DEFAULT_LOOK, hair: Number(q.get("hair") ?? NATURAL_HAIR), skin: Number(q.get("skin") ?? 3),
+    ...(q.get("color") ? { hairColor: `#${q.get("color")!.toUpperCase()}` } : {}), ...(q.get("accent") ? { hairAccent: Number(q.get("accent")) } : {}) };
   const style = (s: string) => ({ ...base, ...STYLES[s] });
   const yaw = Number(q.get("yaw") ?? -0.5);
+  const orbit: Orbit = { pitch: Number(q.get("pitch") ?? 0), zoom: Number(q.get("zoom") ?? 1), look: q.get("look") ? Number(q.get("look")) : null };
   const view = VIEWS[q.get("view") ?? "34"] ?? VIEWS["34"];
   const cells = useMemo<Cell[]>(() => {
     const bob = style(q.get("style") ?? "bob");
@@ -119,8 +145,31 @@ function AvatarBench() {
       const views = (q.get("views") ?? "front,34,side,back").split(",");
       return ids.flatMap(item => {
         const [id, acc] = item.split("+");
-        return views.map(v => ({ label: `${item} ${v}`, look: { ...bob, back: id, acc: acc ? { head: acc } : {} }, yaw: VIEWS[v] ?? 0, face: OPEN }));
+        return views.map(v => ({ label: `${item} ${v}`, look: { ...bob, back: id, acc: acc ? { head: acc } : {} }, yaw: VIEWS[v] ?? 0, pitch: VIEW_PITCH[v], face: OPEN }));
       });
+    }
+    // wardrobe batch 2: David's Roblox accessories over a hairstyle, and his whole faces #20-25
+    if (sheet === "b2acc") {
+      const groups = (q.get("groups") ?? "head,face,neck,front").split(",");
+      const hair = { ...base, back: q.get("style") ?? "hair_ribbon_bob" };
+      return partsIn("accessory").filter(p => p.key && groups.includes(p.group!)).flatMap(p => [
+        { label: `${p.key} ${p.name}`, look: { ...hair, acc: { [p.group!]: p.id } }, yaw: 0, face: OPEN },
+        { label: `${p.key} 3/4`, look: { ...hair, acc: { [p.group!]: p.id } }, yaw: -0.6, face: OPEN }]);
+    }
+    if (sheet === "hatcut") {
+      const hairs = q.get("ids")?.split(",") ?? ["hair_ribbon_bob", "hair_windy_bob", "hair_messy_wolf", "hair_waves", "hair_double_buns", "hair_goggle_ushanka"];
+      const hats = q.get("hats")?.split(",") ?? PARTS.filter(p => p.hatCut !== undefined).map(p => p.id);
+      return hairs.flatMap(h => hats.map(c => ({ label: `${h.replace("hair_", "")} + ${c.replace("acc_", "")}`, look: { ...base, back: h, acc: { head: c } }, yaw: Number(q.get("yaw") ?? -0.6), face: OPEN })));
+    }
+    if (sheet === "b2faces") {
+      const hair = { ...base, back: q.get("style") ?? "hair_waves" };
+      const faces = Object.entries(FACE.faces);
+      return (q.get("skins") ?? "3").split(",").map(Number).flatMap(skin => faces.flatMap(([key, f]) => [0, -0.6].map(y => ({
+        label: `${skin}: ${key} ${f.name}${y ? " 3/4" : ""}`, look: { ...hair, skin, eyes: f.eyes, mouth: f.mouth ?? "M1.1", extras: f.extras }, yaw: y, face: OPEN }))))
+        .concat(([["cat_wide", "fangs", ["stitches"]], ["caret_hash", "cat_fang", []], ["weird_eyes", "wide_w", ["nose_shade"]], ["squint_blush", "M1.1", ["blush"]],
+          ["F1.1", "tongue_out", []], ["tired_lines", "kitty", ["sweat_drop"]]] as [string, string, string[]][]).map(([eyes, mouth, extras]) => ({
+          label: `mix: ${FACE.names[eyes] ?? eyes} / ${FACE.names[mouth] ?? mouth}${extras.length ? ` + ${FACE.names[extras[0]] ?? extras[0]}` : ""}`,
+          look: { ...hair, eyes, mouth, extras }, yaw: 0, face: OPEN })));
     }
     // David's faces: the second atlas page's eyes and mouths, in his order (face_set_305.FACES), with his two accents
     const davidEyes = Object.keys(FACE.layers.eyes.items).filter(id => FACE.layers.eyes.items[id].open[6] === 1);
@@ -141,12 +190,12 @@ function AvatarBench() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sheet, yaw, q]);
   const root = useRef<HTMLDivElement>(null);
-  const cols = sheet === "roblox" ? (q.get("views") ?? "front,34,side,back").split(",").length : sheet === "facekit" ? 13 : sheet === "hairkit" ? 10 : sheet === "fullkit" ? 7 : sheet === "styles" || sheet === "backs" || sheet === "faces" || sheet === "residents" || sheet === "emote" ? 6 : sheet === "hats" || sheet === "mix" ? 8 : sheet === "david" ? 10 : cells.length;
+  const cols = q.get("cols") ? Number(q.get("cols")) : sheet === "hatcut" ? 6 : sheet === "b2acc" ? 8 : sheet === "b2faces" ? 6 : sheet === "roblox" ? (q.get("views") ?? "front,34,side,back").split(",").length : sheet === "facekit" ? 13 : sheet === "hairkit" ? 10 : sheet === "fullkit" ? 7 : sheet === "styles" || sheet === "backs" || sheet === "faces" || sheet === "residents" || sheet === "emote" ? 6 : sheet === "hats" || sheet === "mix" ? 8 : sheet === "david" ? 10 : cells.length;
   return <div ref={root} style={{ position: "relative", paddingTop: 48, minHeight: "100vh", background: "#efe7d6" }}>
     <div data-sheet={sheet} style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, ${cols === 1 ? "420px" : "1fr"})`, gap: 8, padding: 8 }}>
       {cells.map(c => <figure key={c.label} style={{ margin: 0 }}>
-        <View style={{ width: "100%", aspectRatio: framing === "head" ? "1 / 1" : "3 / 4", background: "#f6efe0", borderRadius: 10 }}>
-          <Stage cell={c} framing={framing} faceSize={faceSize} />
+        <View style={{ width: "100%", aspectRatio: framing === "body" ? "3 / 4" : "1 / 1", background: "#f6efe0", borderRadius: 10 }}>
+          <Stage cell={c} framing={framing} faceSize={faceSize} orbit={orbit} />
         </View>
         <figcaption style={{ font: "12px 'IBM Plex Mono', monospace", color: "#5b4a36", textAlign: "center", paddingTop: 4 }}>{c.label}</figcaption>
       </figure>)}

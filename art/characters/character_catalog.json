@@ -1556,7 +1556,7 @@
    "slot": "back",
    "name": "Baby sprout",
    "glb": "hair/full/hair_baby_sprout.glb",
-   "tris": 2880,
+   "tris": 2724,
    "materials": [
     {
      "name": "M_Hair",
@@ -1576,7 +1576,14 @@
     "top"
    ],
    "map": {
-    "shade": 0
+    "cell": 0,
+    "natural": {
+     "a": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
    }
   },
   {
@@ -1584,7 +1591,7 @@
    "slot": "back",
    "name": "Messy boy",
    "glb": "hair/full/hair_messy_boy.glb",
-   "tris": 941,
+   "tris": 827,
    "materials": [
     {
      "name": "M_Hair",
@@ -1601,7 +1608,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 1
+    "cell": 1,
+    "natural": {
+     "a": [
+      0.2308,
+      0.0,
+      89.88
+     ]
+    }
    }
   },
   {
@@ -1609,7 +1623,7 @@
    "slot": "back",
    "name": "Long scruffy",
    "glb": "hair/full/hair_long_scruffy.glb",
-   "tris": 4270,
+   "tris": 4186,
    "materials": [
     {
      "name": "M_Hair",
@@ -1626,7 +1640,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 2
+    "cell": 2,
+    "natural": {
+     "a": [
+      0.173,
+      0.0,
+      89.88
+     ]
+    }
    }
   },
   {
@@ -1634,7 +1655,7 @@
    "slot": "back",
    "name": "Short with tufts",
    "glb": "hair/full/hair_short_tufts.glb",
-   "tris": 4290,
+   "tris": 3816,
    "materials": [
     {
      "name": "M_Hair",
@@ -1651,7 +1672,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 0
+    "cell": 3,
+    "natural": {
+     "a": [
+      0.2002,
+      0.0,
+      89.88
+     ]
+    }
    }
   },
   {
@@ -1659,7 +1687,7 @@
    "slot": "back",
    "name": "Short hime cut",
    "glb": "hair/full/hair_hime_short.glb",
-   "tris": 4305,
+   "tris": 4127,
    "materials": [
     {
      "name": "M_Hair",
@@ -1676,7 +1704,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 1
+    "cell": 4,
+    "natural": {
+     "a": [
+      0.2069,
+      0.0017,
+      17.32
+     ]
+    }
    }
   },
   {
@@ -1684,7 +1719,7 @@
    "slot": "back",
    "name": "Windy bob",
    "glb": "hair/full/hair_windy_bob.glb",
-   "tris": 4323,
+   "tris": 4216,
    "materials": [
     {
      "name": "M_Hair",
@@ -1701,7 +1736,14 @@
     "provisional": false
    },
    "map": {
-    "shade": 2
+    "cell": 5,
+    "natural": {
+     "a": [
+      0.1913,
+      0.0,
+      89.88
+     ]
+    }
    }
   },
   {
@@ -1709,7 +1751,7 @@
    "slot": "back",
    "name": "Wispy ponytail",
    "glb": "hair/full/hair_wispy_ponytail.glb",
-   "tris": 4158,
+   "tris": 4018,
    "materials": [
     {
      "name": "M_Hair",
@@ -1726,7 +1768,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 0
+    "cell": 6,
+    "natural": {
+     "a": [
+      0.2002,
+      0.0,
+      89.88
+     ]
+    }
    }
   },
   {
@@ -1734,7 +1783,7 @@
    "slot": "back",
    "name": "Messy with headset",
    "glb": "hair/full/hair_visor_messy.glb",
-   "tris": 2143,
+   "tris": 2119,
    "materials": [
     {
      "name": "M_Hair",
@@ -1751,7 +1800,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 1
+    "cell": 7,
+    "natural": {
+     "a": [
+      0.0,
+      0.0,
+      0.0
+     ]
+    }
    }
   },
   {
@@ -1759,7 +1815,7 @@
    "slot": "back",
    "name": "Fluffy boy",
    "glb": "hair/full/hair_fluffy_boy.glb",
-   "tris": 1534,
+   "tris": 1297,
    "materials": [
     {
      "name": "M_Hair",
@@ -1774,6 +1830,16 @@
    "source": "hair/source/david/09-Low-Poly-Fluffy-Messy-Boy-Hair-Brown-86495776285585.glb",
    "roblox": {
     "provisional": true
+   },
+   "map": {
+    "cell": 8,
+    "natural": {
+     "a": [
+      0.3886,
+      0.0247,
+      49.66
+     ]
+    }
    }
   },
   {
@@ -1781,7 +1847,7 @@
    "slot": "back",
    "name": "Messy wolf cut",
    "glb": "hair/full/hair_messy_wolf.glb",
-   "tris": 4301,
+   "tris": 3857,
    "materials": [
     {
      "name": "M_Hair",
@@ -1798,7 +1864,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 0
+    "cell": 9,
+    "natural": {
+     "a": [
+      0.1638,
+      0.0,
+      89.88
+     ]
+    }
    }
   },
   {
@@ -1806,7 +1879,7 @@
    "slot": "back",
    "name": "Bowl cut",
    "glb": "hair/full/hair_bowl_cut.glb",
-   "tris": 2560,
+   "tris": 2046,
    "materials": [
     {
      "name": "M_Hair",
@@ -1823,7 +1896,14 @@
     "provisional": false
    },
    "map": {
-    "shade": 1
+    "cell": 10,
+    "natural": {
+     "a": [
+      0.4857,
+      0.0607,
+      74.1
+     ]
+    }
    }
   },
   {
@@ -1831,7 +1911,7 @@
    "slot": "back",
    "name": "Layered shag",
    "glb": "hair/full/hair_layered_shag.glb",
-   "tris": 4253,
+   "tris": 3682,
    "materials": [
     {
      "name": "M_Hair",
@@ -1848,7 +1928,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 2
+    "cell": 11,
+    "natural": {
+     "a": [
+      0.3932,
+      0.078,
+      262.57
+     ]
+    }
    }
   },
   {
@@ -1856,7 +1943,7 @@
    "slot": "back",
    "name": "Anime spikes",
    "glb": "hair/full/hair_anime_spikes.glb",
-   "tris": 2146,
+   "tris": 2080,
    "materials": [
     {
      "name": "M_Hair",
@@ -1873,36 +1960,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 0
-   }
-  },
-  {
-   "id": "hair_messy_low_pony",
-   "slot": "back",
-   "name": "Messy low ponytail",
-   "glb": "hair/full/hair_messy_low_pony.glb",
-   "tris": 4095,
-   "materials": [
-    {
-     "name": "M_Hair",
-     "tint": "hair"
+    "cell": 12,
+    "natural": {
+     "a": [
+      0.2837,
+      0.0353,
+      47.43
+     ]
     }
-   ],
-   "decalSlot": null,
-   "hidesBackHair": false,
-   "hides": [],
-   "full": true,
-   "skull": "v10",
-   "source": "hair/source/david/14-White-Blue-Short-Messy-w-Low-Ponytail-119601543909065.glb",
-   "roblox": {
-    "provisional": true
-   },
-   "map": {
-    "shade": 1,
-    "accent": 2
-   },
-   "accent": {
-    "default": 11
    }
   },
   {
@@ -1910,7 +1975,7 @@
    "slot": "back",
    "name": "V-kei layers",
    "glb": "hair/full/hair_vkei.glb",
-   "tris": 3847,
+   "tris": 2973,
    "materials": [
     {
      "name": "M_Hair",
@@ -1927,7 +1992,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 0
+    "cell": 14,
+    "natural": {
+     "a": [
+      1.0,
+      0.0,
+      89.88
+     ]
+    }
    }
   },
   {
@@ -1935,7 +2007,7 @@
    "slot": "back",
    "name": "Swept fringe",
    "glb": "hair/full/hair_swept_fringe.glb",
-   "tris": 4284,
+   "tris": 3001,
    "materials": [
     {
      "name": "M_Hair",
@@ -1952,7 +2024,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 1
+    "cell": 15,
+    "natural": {
+     "a": [
+      0.9219,
+      0.0,
+      89.88
+     ]
+    }
    }
   },
   {
@@ -1960,7 +2039,7 @@
    "slot": "back",
    "name": "Bob with a pigtail",
    "glb": "hair/full/hair_bob_pigtail.glb",
-   "tris": 4207,
+   "tris": 4023,
    "materials": [
     {
      "name": "M_Hair",
@@ -1977,7 +2056,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 2
+    "cell": 16,
+    "natural": {
+     "a": [
+      0.3369,
+      0.0126,
+      41.61
+     ]
+    }
    }
   },
   {
@@ -1985,7 +2071,7 @@
    "slot": "back",
    "name": "Long pigtails",
    "glb": "hair/full/hair_long_pigtails.glb",
-   "tris": 3236,
+   "tris": 2891,
    "materials": [
     {
      "name": "M_Hair",
@@ -2002,7 +2088,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 0
+    "cell": 17,
+    "natural": {
+     "a": [
+      0.2046,
+      0.0,
+      89.88
+     ]
+    }
    }
   },
   {
@@ -2010,7 +2103,7 @@
    "slot": "back",
    "name": "Dreads with a cap",
    "glb": "hair/full/hair_dreads_cap.glb",
-   "tris": 4014,
+   "tris": 3812,
    "materials": [
     {
      "name": "M_Hair",
@@ -2027,9 +2120,20 @@
     "provisional": true
    },
    "map": {
-    "shade": 0,
-    "accent": 1,
-    "cap": 2
+    "cell": 18,
+    "natural": {
+     "a": [
+      0.2507,
+      0.0052,
+      24.87
+     ],
+     "b": [
+      0.3897,
+      0.0544,
+      45.06
+     ]
+    },
+    "fixed": true
    },
    "accent": {
     "default": 3
@@ -2057,11 +2161,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 0,
-    "accent": 1
-   },
-   "accent": {
-    "default": "skin"
+    "cell": 19,
+    "natural": {
+     "a": [
+      0.2176,
+      0.0175,
+      44.92
+     ]
+    }
    }
   },
   {
@@ -2069,7 +2176,7 @@
    "slot": "back",
    "name": "Messy dreads",
    "glb": "hair/full/hair_messy_dreads.glb",
-   "tris": 4260,
+   "tris": 3613,
    "materials": [
     {
      "name": "M_Hair",
@@ -2086,7 +2193,14 @@
     "provisional": true
    },
    "map": {
-    "shade": 2
+    "cell": 20,
+    "natural": {
+     "a": [
+      0.1908,
+      0.0,
+      89.88
+     ]
+    }
    }
   },
   {
@@ -2094,7 +2208,7 @@
    "slot": "accessory",
    "name": "Visor and headset",
    "glb": "accessories/accessory/acc_visor.glb",
-   "tris": 686,
+   "tris": 677,
    "materials": [
     {
      "name": "M_Hair",
@@ -2109,12 +2223,215 @@
    "skull": "v10",
    "source": "hair/source/david/08-McDonalds-106903086636118.glb (split from hair_visor_messy)",
    "map": {
-    "shade": 0,
-    "accent": 1
+    "cell": 21,
+    "natural": {},
+    "fixed": true
+   }
+  },
+  {
+   "id": "hair_ribbon_bob",
+   "slot": "back",
+   "name": "Ribbon bob",
+   "glb": "hair/full/hair_ribbon_bob.glb",
+   "tris": 3929,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v10",
+   "source": "hair/source/david-b2/23-sweet-cutecore-moe-messy-short-bob-dark-ash-85192073992593.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "key": "hair-23",
+   "map": {
+    "cell": 22,
+    "natural": {
+     "a": [
+      0.3094,
+      0.0096,
+      50.49
+     ],
+     "b": [
+      0.9309,
+      0.039,
+      355.77
+     ]
+    }
    },
    "accent": {
-    "default": "#E9B530"
+    "default": 10
    }
+  },
+  {
+   "id": "hair_wavy_half_up",
+   "slot": "back",
+   "name": "Wavy half-up",
+   "glb": "hair/full/hair_wavy_half_up.glb",
+   "tris": 4131,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v10",
+   "source": "hair/source/david-b2/24-Messy-Wavy-IT-Girl-Hair-100884389158278.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "key": "hair-24",
+   "map": {
+    "cell": 23,
+    "natural": {
+     "a": [
+      0.3911,
+      0.0322,
+      51.39
+     ]
+    }
+   }
+  },
+  {
+   "id": "hair_curly_pigtails",
+   "slot": "back",
+   "name": "Curly pigtails",
+   "glb": "hair/full/hair_curly_pigtails.glb",
+   "tris": 4075,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v10",
+   "source": "hair/source/david-b2/25-Cute-Igaru-Girl-w-Curly-Hair-Blue-n-Black-87890777934843.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "key": "hair-25",
+   "map": {
+    "cell": 24,
+    "natural": {
+     "a": [
+      0.2002,
+      0.0,
+      89.88
+     ],
+     "b": [
+      0.8206,
+      0.0333,
+      240.71
+     ]
+    }
+   },
+   "accent": {
+    "default": 11
+   }
+  },
+  {
+   "id": "hair_emo_layers",
+   "slot": "back",
+   "name": "Emo layers",
+   "glb": "hair/full/hair_emo_layers.glb",
+   "tris": 4199,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v10",
+   "source": "hair/source/david-b2/26-cute-fluffy-emo-girl-hair-y2k-114354951912876.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "key": "hair-26",
+   "map": {
+    "cell": 25,
+    "natural": {
+     "a": [
+      0.6104,
+      0.0201,
+      263.35
+     ]
+    }
+   }
+  },
+  {
+   "id": "hair_double_buns",
+   "slot": "back",
+   "name": "Double buns",
+   "glb": "hair/full/hair_double_buns.glb",
+   "tris": 4020,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": "hair"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "full": true,
+   "skull": "v10",
+   "source": "hair/source/david-b2/27-Y2K-It-Girl-Double-Buns-Hair-Dark-Teal-139556608863162.glb",
+   "roblox": {
+    "provisional": true
+   },
+   "key": "hair-27",
+   "map": {
+    "cell": 26,
+    "natural": {
+     "a": [
+      0.4162,
+      0.0402,
+      200.27
+     ]
+    }
+   }
+  },
+  {
+   "id": "acc_ushanka_goggles",
+   "slot": "accessory",
+   "name": "Ushanka and goggles",
+   "glb": "accessories/accessory/acc_ushanka_goggles.glb",
+   "tris": 723,
+   "materials": [
+    {
+     "name": "M_Hair",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "head",
+   "skull": "v10",
+   "source": "hair/source/david-b2/22-Green-Cool-Messy-Boy-Hair-w-Y2K-Goggles-Ushanka-87890006358128.glb (split from hair_goggle_ushanka)",
+   "colourAtlas": true,
+   "key": "hair-22",
+   "coversHair": true,
+   "hatCut": 5
   }
  ],
  "verbs": {
@@ -4051,14 +4368,599 @@
   ]
  },
  "hairMaps": {
-  "atlas": "hair/hair_maps.png",
-  "gain": 1.25,
+  "atlas": "hair/hair_colour.png",
+  "atlas_world": "hair/hair_colour_world.png",
   "cells": [
-   5,
-   2
+   6,
+   5
   ],
   "cell": 512,
-  "cap": "#28282E",
-  "note": "Shading maps of the full hairstyles (hair/import_hair.py): one channel per hair, its accent and cap masks in the next channels of the same cell; luminance / median / gain. The engine multiplies the palette tint by map x gain, mixes the accent colour and the fixed cap colour in by their masks, and leaves u < 0 (the under-cap) to the tint (rig.ts, Character.tsx). Every hairstyle is one primitive in one material."
- }
+  "note": "Round 2 (David, 2026-10-17): each hairstyle's own source texture, one cell a piece (hair/import_hair.py natural_map): RGB as drawn in Roblox (sRGB), alpha its recolour channel (1 the hair's colour, 2/3 its second colour, 1/3 fixed). A part's map names its cell and each channel's median [L, C, h] (OKLCh); a picked colour turns and scales the texels' chroma so the median lands on it, every texel keeping its lightness (look.ts hairShift, Character.tsx). u < 0 (the under-cap) takes the colour of the hair's median, darkened by its COLOR_0."
+ },
+ "robloxAccessories": [
+  {
+   "id": "acc_propeller_cap",
+   "slot": "accessory",
+   "name": "Propeller cap",
+   "glb": "accessories/roblox/acc_propeller_cap.glb",
+   "tris": 770,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "head",
+   "skull": "v10",
+   "key": "acc-01",
+   "source": "accessories/source/roblox-b2/head/01-propeller-hat-82367619524356.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "HatAttachment"
+   },
+   "colourAtlas": true,
+   "coversHair": true,
+   "hatCut": 0
+  },
+  {
+   "id": "acc_green_sprout",
+   "slot": "accessory",
+   "name": "Green sprout",
+   "glb": "accessories/roblox/acc_green_sprout.glb",
+   "tris": 764,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "head",
+   "skull": "v10",
+   "key": "acc-02",
+   "source": "accessories/source/roblox-b2/head/02-fresh-green-sprout-in-sunlight-81401971947398.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "HatAttachment"
+   },
+   "colourAtlas": true
+  },
+  {
+   "id": "acc_paper_tie",
+   "slot": "accessory",
+   "name": "Paper tie",
+   "glb": "accessories/roblox/acc_paper_tie.glb",
+   "tris": 80,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "front",
+   "skull": "v10",
+   "key": "acc-03",
+   "source": "accessories/source/roblox-b2/front/03-cute-paper-tie-12533982343.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "BodyFrontAttachment"
+   },
+   "colourAtlas": true
+  },
+  {
+   "id": "acc_crew_visor",
+   "slot": "accessory",
+   "name": "Crew visor",
+   "glb": "accessories/roblox/acc_crew_visor.glb",
+   "tris": 734,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "head",
+   "skull": "v10",
+   "key": "acc-04",
+   "source": "accessories/source/roblox-b2/head/04-Mcdonalds-96753684530964.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "HatAttachment"
+   },
+   "colourAtlas": true,
+   "hatCut": 6
+  },
+  {
+   "id": "acc_plaid_scarf",
+   "slot": "accessory",
+   "name": "Plaid scarf",
+   "glb": "accessories/roblox/acc_plaid_scarf.glb",
+   "tris": 181,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "neck",
+   "skull": "v10",
+   "key": "acc-05",
+   "source": "accessories/source/roblox-b2/neck/05-Black-Plaid-Scarf-117926016222909.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "NeckAttachment"
+   },
+   "colourAtlas": true
+  },
+  {
+   "id": "acc_thin_glasses",
+   "slot": "accessory",
+   "name": "Thin glasses",
+   "glb": "accessories/roblox/acc_thin_glasses.glb",
+   "tris": 342,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "face",
+   "skull": "v10",
+   "key": "acc-06",
+   "source": "accessories/source/roblox-b2/face/06-glasses-135223549735037.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "FaceFrontAttachment"
+   },
+   "colourAtlas": true
+  },
+  {
+   "id": "acc_half_rim_glasses",
+   "slot": "accessory",
+   "name": "Half-rim glasses",
+   "glb": "accessories/roblox/acc_half_rim_glasses.glb",
+   "tris": 281,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "face",
+   "skull": "v10",
+   "key": "acc-07",
+   "source": "accessories/source/roblox-b2/head/07-Glasses-140483245207161.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "HatAttachment"
+   },
+   "colourAtlas": true
+  },
+  {
+   "id": "acc_half_rim_glasses_silver",
+   "slot": "accessory",
+   "name": "Silver half-rim glasses",
+   "glb": "accessories/roblox/acc_half_rim_glasses_silver.glb",
+   "tris": 281,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "face",
+   "skull": "v10",
+   "key": "acc-07s",
+   "source": "accessories/source/roblox-b2/head/07-Glasses-140483245207161.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "HatAttachment"
+   },
+   "colourAtlas": true
+  },
+  {
+   "id": "acc_paper_bowtie",
+   "slot": "accessory",
+   "name": "Paper bow tie",
+   "glb": "accessories/roblox/acc_paper_bowtie.glb",
+   "tris": 164,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "neck",
+   "skull": "v10",
+   "key": "acc-08",
+   "source": "accessories/source/roblox-b2/neck/08-cute-paper-bowtie-12460327531.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "NeckAttachment"
+   },
+   "colourAtlas": true
+  },
+  {
+   "id": "acc_square_shades",
+   "slot": "accessory",
+   "name": "Square shades",
+   "glb": "accessories/roblox/acc_square_shades.glb",
+   "tris": 268,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "face",
+   "skull": "v10",
+   "key": "acc-09",
+   "source": "accessories/source/roblox-b2/face/09-Black-and-Silver-Square-Sunglasses-12395517308.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "FaceFrontAttachment"
+   },
+   "colourAtlas": true
+  },
+  {
+   "id": "acc_wheat_stalk",
+   "slot": "accessory",
+   "name": "Wheat stalk",
+   "glb": "accessories/roblox/acc_wheat_stalk.glb",
+   "tris": 342,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "face",
+   "skull": "v10",
+   "key": "acc-10",
+   "source": "accessories/source/roblox-b2/face/10-Wheat-95636038834319.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "FaceFrontAttachment"
+   },
+   "colourAtlas": true
+  },
+  {
+   "id": "acc_gold_monocle",
+   "slot": "accessory",
+   "name": "Gold monocle",
+   "glb": "accessories/roblox/acc_gold_monocle.glb",
+   "tris": 129,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "face",
+   "skull": "v10",
+   "key": "acc-11",
+   "source": "accessories/source/roblox-b2/face/11-Gold-Monocle-102048301262678.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "FaceFrontAttachment"
+   },
+   "colourAtlas": true
+  },
+  {
+   "id": "acc_bandage_blindfold",
+   "slot": "accessory",
+   "name": "Bandage blindfold",
+   "glb": "accessories/roblox/acc_bandage_blindfold.glb",
+   "tris": 339,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "face",
+   "skull": "v10",
+   "key": "acc-14",
+   "source": "accessories/source/roblox-b2/face/14-Face-Bandages-Blindfold-White-115599627815687.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "FaceCenterAttachment"
+   },
+   "colourAtlas": true
+  },
+  {
+   "id": "acc_gold_rimless_shades",
+   "slot": "accessory",
+   "name": "Gold rimless shades",
+   "glb": "accessories/roblox/acc_gold_rimless_shades.glb",
+   "tris": 343,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "face",
+   "skull": "v10",
+   "key": "acc-15",
+   "source": "accessories/source/roblox-b2/face/15-Gold-Clear-Cartier-Shades-134040741374406.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "FaceFrontAttachment"
+   },
+   "colourAtlas": true
+  },
+  {
+   "id": "acc_apple_stem",
+   "slot": "accessory",
+   "name": "Apple stem",
+   "glb": "accessories/roblox/acc_apple_stem.glb",
+   "tris": 544,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "head",
+   "skull": "v10",
+   "key": "acc-17",
+   "source": "accessories/source/roblox-b2/head/17-Apple-Stem-129135999557186.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "HatAttachment"
+   },
+   "colourAtlas": true
+  },
+  {
+   "id": "acc_drawn_top_hat",
+   "slot": "accessory",
+   "name": "Drawn top hat",
+   "glb": "accessories/roblox/acc_drawn_top_hat.glb",
+   "tris": 701,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "head",
+   "skull": "v10",
+   "key": "acc-18",
+   "source": "accessories/source/roblox-b2/head/18-Chopper-Hat-2D-139123581689251.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "HatAttachment"
+   },
+   "colourAtlas": true,
+   "coversHair": true,
+   "hatCut": 1
+  },
+  {
+   "id": "acc_paper_horns",
+   "slot": "accessory",
+   "name": "Paper horns",
+   "glb": "accessories/roblox/acc_paper_horns.glb",
+   "tris": 88,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "head",
+   "skull": "v10",
+   "key": "acc-19",
+   "source": "accessories/source/roblox-b2/head/19-cute-paper-horns-12460135621.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "HatAttachment"
+   },
+   "colourAtlas": true
+  },
+  {
+   "id": "acc_bear_hood",
+   "slot": "accessory",
+   "name": "White bear hood",
+   "glb": "accessories/roblox/acc_bear_hood.glb",
+   "tris": 1004,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": true,
+   "hides": [],
+   "group": "head",
+   "skull": "v10",
+   "key": "acc-20",
+   "source": "accessories/source/roblox-b2/head/20-Finn-The-Human-White-Hood-Beanie-120273922172131.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "HatAttachment"
+   },
+   "colourAtlas": true,
+   "coversHead": true
+  },
+  {
+   "id": "acc_cowboy_hat",
+   "slot": "accessory",
+   "name": "Cowboy hat",
+   "glb": "accessories/roblox/acc_cowboy_hat.glb",
+   "tris": 746,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "head",
+   "skull": "v10",
+   "key": "acc-21",
+   "source": "accessories/source/roblox-b2/head/21-Cowboy-Hat-PBR-110883226886153.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "HatAttachment"
+   },
+   "colourAtlas": true,
+   "coversHair": true,
+   "hatCut": 2
+  },
+  {
+   "id": "acc_woven_hat",
+   "slot": "accessory",
+   "name": "Woven tassel hat",
+   "glb": "accessories/roblox/acc_woven_hat.glb",
+   "tris": 690,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "head",
+   "skull": "v10",
+   "key": "acc-22",
+   "source": "accessories/source/roblox-b2/head/22-Samurai-Ninja-Straw-Hat-95852706400551.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "HatAttachment"
+   },
+   "colourAtlas": true,
+   "coversHair": true,
+   "hatCut": 3
+  },
+  {
+   "id": "acc_monkey_ears",
+   "slot": "accessory",
+   "name": "Monkey ears",
+   "glb": "accessories/roblox/acc_monkey_ears.glb",
+   "tris": 552,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "head",
+   "skull": "v10",
+   "key": "acc-23",
+   "source": "accessories/source/roblox-b2/head/23-Monkey-Ears-with-banana-121179481037374.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "HatAttachment"
+   },
+   "colourAtlas": true
+  },
+  {
+   "id": "acc_red_band_straw_hat",
+   "slot": "accessory",
+   "name": "Red-band straw hat",
+   "glb": "accessories/roblox/acc_red_band_straw_hat.glb",
+   "tris": 358,
+   "materials": [
+    {
+     "name": "M_Acc",
+     "tint": null,
+     "color": "#FFFFFF"
+    }
+   ],
+   "decalSlot": null,
+   "hidesBackHair": false,
+   "hides": [],
+   "group": "head",
+   "skull": "v10",
+   "key": "acc-24",
+   "source": "accessories/source/roblox-b2/head/24-Luffy-Hat-133383352568469.glb",
+   "roblox": {
+    "provisional": true,
+    "attachment": "HatAttachment"
+   },
+   "colourAtlas": true,
+   "coversHair": true,
+   "hatCut": 4
+  }
+ ]
 }

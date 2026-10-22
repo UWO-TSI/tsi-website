@@ -12,8 +12,8 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { Lock } from "lucide-react";
 import { Button, Slider } from "@/components/gui";
 import { iconUrl } from "@/lib/icons/keys";
-import { customHairUnlocked, dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR_COLOURS, HAIR_THUMB_URL, hairAccentHex, hairHex, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, partRef,
-  type CharacterLook, type FaceCell, type Placement } from "@/lib/game/character/look";
+import { customHairUnlocked, dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR_COLOURS, HAIR_THUMB_URL, hairAccentHex, hairHex, NATURAL_HAIR, naturalHex, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, unlockRef,
+  type CatalogPart, type CharacterLook, type FaceCell, type Placement } from "@/lib/game/character/look";
 import { choose, colourTarget, isOn, optionName, shownOptions, type Category, type Section } from "@/lib/game/character/creatorCategories";
 import { PLACE_RANGE } from "@/lib/game/character/face";
 import ColourWheel from "./ColourWheel";
@@ -67,8 +67,9 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
   const [lockNote, setLockNote] = useState<{ cat: string; text: string } | null>(null);
   const note = lockNote?.cat === cat.id ? lockNote.text : null;
   const say = (text: string | null) => setLockNote(text ? { cat: cat.id, text } : null);
-  // Identity (face, hair styles, the free colours) is always free; clothes and dyes are owned (ruling on audit item 22).
-  const has = (id: string | null) => { const ref = id && partRef(id); return !ref || owned.has(ref); };
+  // Identity (face, hair styles, the free colours) is free; clothes and dyes are owned (ruling on audit item 22), and so
+  // are wardrobe batch 2's priced hairstyles, accessories and whole faces (a face's parts: unlockRef).
+  const has = (id: string | null) => { const ref = id && unlockRef(id); return !ref || owned.has(ref); };
   const hasHair = (i: number) => i < FREE_HAIR_COLOURS || owned.has(dyeRef(i));
   const crafted = (id: string | null) => !!id && !!PART_BY_ID.get(id)?.item; // unlocked by a crafted item, never sold
   const target = colourTarget(cat, look, lastAccessory);
@@ -91,7 +92,7 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
     });
     onChange?.("colour");
   };
-  // head-v10: the colour wheel (any colour; unlocked by owning any shop dye); a drag counts as a change at most every WHEEL_MS
+  // head-v10: the colour wheel (any colour; unlocked by buying the colour wheel in the shop); a drag counts as a change at most every WHEEL_MS
   const wheelAt = useRef(0);
   const wheel = (hex: string) => {
     setLook(l => ({ ...l, hairColor: hex }));
@@ -102,7 +103,7 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
   const swatches = !cat.swatch ? [] : cat.swatch === "hair" && mode === "create" ? PALETTE.hair.slice(0, FREE_HAIR_COLOURS) : PALETTE[cat.swatch];
   // head fit: a two-tone hairstyle's second colour (the accent mask of its shading map), picked from the same hair colours
   const backPart = look.back ? PART_BY_ID.get(look.back) : undefined;
-  const accentPart = cat.id === "hair" && backPart?.full && backPart.accent ? backPart : null;
+  const accentPart = cat.id === "hair" && backPart?.full && (backPart.accent || backPart.map?.natural.b) ? backPart : null;
   const accentHex = accentPart ? hairAccentHex(look, accentPart) : null;
   const paintAccent = (i: number) => {
     const locked = !hasHair(i);
@@ -111,6 +112,19 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
     setLook(l => ({ ...l, hairAccent: i }));
     onChange?.("colour");
   };
+  // round 2 (David, 2026-10-17): a hairstyle's own colours, as Roblox draws it (the default), and the same for its second
+  const ownHair = () => {
+    setLook(l => { const next = { ...l, hair: NATURAL_HAIR }; delete next.hairColor; return next; });
+    say(null);
+    onChange?.("colour");
+  };
+  const ownAccent = () => {
+    setLook(l => { const next = { ...l }; delete next.hairAccent; return next; });
+    say(null);
+    onChange?.("colour");
+  };
+  const ownSwatch = (part: CatalogPart | undefined, channel: "a" | "b") => part?.map?.natural.b && channel === "a"
+    ? `linear-gradient(135deg, ${naturalHex(part)} 0 55%, ${naturalHex(part, "b")} 55%)` : naturalHex(part, channel);
   const swatchOn = (i: number) => cat.swatch === "skin" ? look.skin === i : cat.swatch === "hair" ? look.hair === i && !look.hairColor : target !== null && partColor(look, target) === i;
   const place = cat.place ? look.place?.[cat.place] ?? [0, 0, 0, 0] as Placement : null;
   const setPlace = (i: number, v: number) => {
@@ -168,6 +182,8 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
     {swatches.length > 0 && (cat.swatch !== "outfit" || shownTiles.length > 0) && <div className={styles.swatchBlock}>
       <h3>{cat.swatch === "skin" ? "Skin" : cat.swatch === "hair" ? "Hair colour" : target ? `${PART_BY_ID.get(target)?.name ?? "Its"} colour` : "Colour"}</h3>
       <div className={styles.swatches} role="group" aria-label={`${cat.swatch} colours`} data-kind={cat.swatch}>
+        {cat.swatch === "hair" && <button type="button" data-own style={{ "--swatch": ownSwatch(backPart, "a") } as CSSProperties}
+          aria-pressed={look.hair === NATURAL_HAIR && !look.hairColor} aria-label="The hairstyle's own colours" title="Own colours" onClick={ownHair}>Own</button>}
         {swatches.map((hex, i) => {
           const locked = cat.swatch === "hair" && !hasHair(i);
           return <button key={hex} type="button" style={{ "--swatch": hex } as CSSProperties} aria-pressed={swatchOn(i)}
@@ -175,15 +191,17 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
             disabled={cat.swatch === "outfit" && !target} onClick={() => paint(i)} />;
         })}
       </div>
-      {cat.swatch === "hair" && <ColourWheel value={hairHex(look)} active={!!look.hairColor} locked={!customHairUnlocked(owned)} onChange={wheel} />}
+      {cat.swatch === "hair" && <ColourWheel value={hairHex(look) ?? naturalHex(PART_BY_ID.get(look.back))} active={!!look.hairColor} locked={!customHairUnlocked(owned)} onShop={onShop} onChange={wheel} />}
       {cat.swatch === "outfit" && !target && <p className={styles.hint}>Wear something here to colour it.</p>}
     </div>}
     {accentPart && <div className={styles.swatchBlock}>
       <h3>Second colour</h3>
       <div className={styles.swatches} role="group" aria-label="accent colours" data-kind="hair">
+        <button type="button" data-own style={{ "--swatch": ownSwatch(accentPart, "b") } as CSSProperties} aria-pressed={look.hairAccent === undefined}
+          aria-label="The hairstyle's own second colour" title="Own colour" onClick={ownAccent}>Own</button>
         {swatches.map((hex, i) => {
           const locked = !hasHair(i);
-          return <button key={hex} type="button" style={{ "--swatch": hex } as CSSProperties} aria-pressed={accentHex === hex}
+          return <button key={hex} type="button" style={{ "--swatch": hex } as CSSProperties} aria-pressed={look.hairAccent !== undefined && accentHex === hex}
             aria-label={`accent colour ${i + 1}${locked ? " (hair dye in the shop)" : ""}`} data-locked={locked || undefined} onClick={() => paintAccent(i)} />;
         })}
       </div>

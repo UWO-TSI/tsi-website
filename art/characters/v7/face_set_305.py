@@ -115,9 +115,12 @@ def load_glb(path):
     return prims
 
 
-def part(kind, n):
-    name = next(f for f in sorted(os.listdir(os.path.join(SOURCE, kind))) if f.startswith(f"{n:02d}-"))
-    return load_glb(os.path.join(SOURCE, kind, name))
+def part(kind, n, source=SOURCE):
+    """The part's primitives, or [] when the head has none (batch 2's #24 has no mouth)."""
+    if not os.path.isdir(os.path.join(source, kind)):
+        return []
+    name = next((f for f in sorted(os.listdir(os.path.join(source, kind))) if f.startswith(f"{n:02d}-")), None)
+    return load_glb(os.path.join(source, kind, name)) if name else []
 
 
 # ---------------------------------------------------------------- 1. unwrap: arc length over each head's front
@@ -296,10 +299,13 @@ def to_alpha(pm, base):
 
 
 # ---------------------------------------------------------------- the whole set
-def build(PX, anchors):
+def build(PX, anchors, faces=FACES, accents=ACCENTS, source=SOURCE, place=None):
     """Cells of the set at PX px per face canvas: {key: (img, (ax, ay))} with keys as build_face.py's, plus the
-    anchors the set adds and the names. key = ("eyes", id, "open" | "left"), ("mouth", id, None), ("extras", id, None)."""
-    heads = {n: dict(shell=part("face", n)[0], eyes=part("eyes", n), mouth=part("mouth", n)) for n in FACES}
+    anchors the set adds and the names. key = ("eyes", id, "open" | "left"), ("mouth", id, None), ("extras", id, None).
+    faces/accents/source: another set of David's heads split the same way (face_set_b2.py); place: (k, w0), a set
+    placed the way an earlier set was (the same Roblox head, so the same similarity) instead of fitted on itself."""
+    heads = {n: dict(shell=part("face", n, source)[0], face=part("face", n, source), eyes=part("eyes", n, source),
+                     mouth=part("mouth", n, source)) for n in faces}
     unwrap = {n: Unwrap(h["shell"]) for n, h in heads.items()}
 
     def centroid_y(prims, uw):
@@ -310,12 +316,16 @@ def build(PX, anchors):
         return float((ys * a[a > 0.05]).sum() / a[a > 0.05].sum()) / 100 - 2
 
     # 2. place: the median eye line on our eye line, the median mouth on our mouth, the centre lines together
-    ey = np.median([centroid_y(h["eyes"], unwrap[n]) for n, h in heads.items()])
-    my = np.median([centroid_y(h["mouth"], unwrap[n]) for n, h in heads.items()])
     eye_u, eye_w = anchors["eye"]
-    k = (anchors["mouth"][1] - eye_w) / (my - ey)          # canvas units per head half width
-    w0 = eye_w - k * ey
-    place = dict(scale=round(float(k), 4), eye_line=round(float(ey), 4), mouth_line=round(float(my), 4))
+    if place is None:
+        ey = np.median([centroid_y(h["eyes"], unwrap[n]) for n, h in heads.items()])
+        my = np.median([centroid_y(h["mouth"], unwrap[n]) for n, h in heads.items()])
+        k = (anchors["mouth"][1] - eye_w) / (my - ey)          # canvas units per head half width
+        w0 = eye_w - k * ey
+        place = dict(scale=round(float(k), 4), eye_line=round(float(ey), 4), mouth_line=round(float(my), 4), k=float(k), w0=float(w0))
+    else:
+        k, w0 = place
+        place = dict(scale=round(float(k), 4), w0=round(float(w0), 4), from_set="305")
     new_anchors = {"eye_left": (1 - eye_u, eye_w), "eye_pair": (0.5, eye_w)}
     whole = set()          # eye pairs drawn as one cell (on the centre line, at eye_pair)
 
@@ -348,7 +358,7 @@ def build(PX, anchors):
         return c, (round(au * PX - origin[0] - x0, 2), round(aw * PX - origin[1] - y0, 2))
 
     out, names, info = {}, {}, {}
-    for n, (eid, ename, mid, mname) in FACES.items():
+    for n, (eid, ename, mid, mname) in faces.items():
         uw = unwrap[n]
         img, org = render_canvas(heads[n]["eyes"], uw)
         a = img[..., 3]
@@ -377,16 +387,19 @@ def build(PX, anchors):
             else:
                 out[("eyes", eid, "left")] = crop(R, (org[0] + col, org[1]), "eye_left")
                 info[eid] = f"two cells ({info_diff:.3f})"
-        img, org = render_canvas(heads[n]["mouth"], uw)
-        out[("mouth", mid, None)] = crop(img, org, "mouth")
-        names[eid], names[mid] = ename, mname
-    for n, (xid, xname) in ACCENTS.items():
+        names[eid] = ename
+        if mid is not None:
+            img, org = render_canvas(heads[n]["mouth"], uw)
+            out[("mouth", mid, None)] = crop(img, org, "mouth")
+            names[mid] = mname
+    for n, (xid, xname) in accents.items():
         shell = heads[n]["shell"]
         base = np.median(shell["img"][..., :3].reshape(-1, 3), axis=0)
-        lo, lorg = render_canvas([shell], unwrap[n], accent_base=base, region=(0, 0, 1, 1), px=128, ss=2)
+        layers = heads[n]["face"]             # the shell and anything drawn over it (batch 2's #22: a blush primitive)
+        lo, lorg = render_canvas(layers, unwrap[n], accent_base=base, region=(0, 0, 1, 1), px=128, ss=2)
         ys, xs = np.nonzero(lo[..., 3] > 0.02)
         region = ((lorg[0] + xs.min() - 2) / 128, (lorg[1] + ys.min() - 2) / 128, (lorg[0] + xs.max() + 3) / 128, (lorg[1] + ys.max() + 3) / 128)
-        img, org = render_canvas([shell], unwrap[n], accent_base=base, region=region)
+        img, org = render_canvas(layers, unwrap[n], accent_base=base, region=region)
         if img[..., 3].max() < ACCENT_MIN:
             raise RuntimeError(f"accent {xid} carries nothing")
         ys, xs = np.nonzero(img[..., 3] > 0)

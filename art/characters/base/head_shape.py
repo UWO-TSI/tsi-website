@@ -158,6 +158,10 @@ JAW = {
     "front": 0.040,         # m: and this much lower in front (v8's C_BOT_FRONT: room for the mouth and the drool)
     "q": 2.4,               # the jaw's vertical roundness at the sides: 2 an ellipse (round), higher squarer
     "q_front": 4.0,         # and under the face (fuller: keeps the mouth facing forward)
+    # Wardrobe batch 2 round 2 (David, 2026-10-17: "closer, but keep ours"; the halfway jaw approved on the early sheet):
+    # along every ray the skull lies this far from the jaw above toward Roblox's classic head (a fuller jaw, the chin 2 to
+    # 3 cm higher). Above the classic centre the two are one surface, so the hair zone does not move.
+    "classic": 0.5,
 }
 
 
@@ -178,7 +182,8 @@ def _inside(x, y, z):
 
 def skull_radius(d):
     """Distance from HC to the skull (v10) along the unit direction d: bisection on _inside (HC is inside, 0.5 m out is
-    outside in every direction; the skull is star-shaped about HC)."""
+    outside in every direction; the skull is star-shaped about HC), then JAW["classic"] of the way to the classic head
+    (round 2: only below the classic centre does that move anything)."""
     o = HC - CLASSIC_C
     lo, hi = 0.0, 0.5
     for _ in range(32):
@@ -187,7 +192,10 @@ def skull_radius(d):
             hi = m
         else:
             lo = m
-    return 0.5 * (lo + hi)
+    r = 0.5 * (lo + hi)
+    if JAW.get("classic") and o.z + d.z * r < 0.0:
+        r += JAW["classic"] * (classic_radius(d) - r)
+    return r
 
 
 def ray(lat, lon):
