@@ -1,17 +1,19 @@
 "use client";
 
 /**
- * HQ, the member clubhouse (specs/interiors/hq.md, ledger row 316): layout A, the back mezzanine, furnished after
- * David's references. Two storeys: work downstairs (Wren's desk and the register by the door, the green marble coffee
- * bar, the long walnut co-working desk, the library wall, the notice board and the club goals, the Founder's desk, the
- * trophy case, the clock and the workbench), the lamp-lit lounge before the two-storey aquarium; lounging upstairs (the
- * big lounge under the walnut oval ceiling, the banners on the rail, the two locked admin doors).
+ * HQ, the member clubhouse (specs/interiors/hq.md, ledger row 316): layout B, the gallery, furnished after David's
+ * references, two tall storeys. The aquarium fills the back wall straight ahead of the door, the full height of the
+ * room; the upper floor wraps the hall in a U. Downstairs: Wren's desk and the register, the green marble coffee bar and
+ * the work lounge in the entry under the bridge; the lamp-lit lounge before the tank; the library, co-working, the
+ * trophy case, the clock and the Founder's desk under the left arm; the notice board, the club goals and the stair under
+ * the right; the workbench by the door. Upstairs: the big lounge on the bridge under the walnut oval ceiling, facing the
+ * tank; the yearly banners off the arms; the two locked admin doors at the end of the left arm.
  *
  * Every number is lib/game/hqLayout.ts's: the room's walker (createHqWalker) carries you up and down the stair, says
- * when the mezzanine shows, and the stations answer on their own floor only. The light (specs: "from lamps, strips and
- * track spots, not ceiling panels"): the day through the windows (InteriorDaylight), the lamps' pools faked
- * (LampPools), and four real lights: the hall, the work floor under the mezzanine, the upper lounge, and the aquarium's
- * blue on the lounge before it. The lamps are always on and carry the room at night.
+ * which parts of the upper floor show, and the stations answer on their own floor only. The light (specs: "from lamps,
+ * strips and track spots, not ceiling panels"): the day through the windows (InteriorDaylight), the lamps' pools faked
+ * (LampPools), and four real lights: the entry and the hall, the work floor under the left arm, the bridge's lounge, and
+ * the aquarium's blue on the lounge before it. The lamps are always on and carry the room at night.
  */
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useThree } from "@react-three/fiber";
@@ -72,21 +74,22 @@ export default function HqInterior({ light = ISLAND_LIGHTING.day, frozen, talkin
     <group>
       {/* The fill falls away at night, so the lamps, the strips and the tank carry the room (ref 2's lamp-lit lounge). */}
       <InteriorDaylight light={light} shadows scale={{ key: 1.0, ambient: 0.14 + 0.18 * day, hemisphere: 0.1 + 0.18 * day, extent: 12 }} />
-      {/* The hall and the work floor: warm, from the track spots and the lamps (their pools are LampPools). */}
-      <pointLight color="#ffd6a2" intensity={20 * lamps} distance={14} position={[-1.5, 4.2, -3.4]} />
-      <pointLight color="#ffd09a" intensity={13 * lamps} distance={11} position={[0, 1.8, 5.2]} />
-      {/* The upper lounge, under the arc lamp's globe. */}
-      <pointLight color="#ffcb92" intensity={12 * lamps} distance={9} position={[1.7, F + 2.0, 4.9]} />
+      {/* The entry and the hall, and the work floor under the left arm: warm, from the track spots and the lamps (their
+          pools are LampPools). */}
+      <pointLight color="#ffd6a2" intensity={24 * lamps} distance={16} position={[-0.5, 3.6, -2.6]} />
+      <pointLight color="#ffd09a" intensity={13 * lamps} distance={10} position={[7.6, 3.0, 1.2]} />
+      {/* The bridge's lounge, under the arc lamp's globe. */}
+      <pointLight color="#ffcb92" intensity={14 * lamps} distance={11} position={[-0.8, F + 2.2, -5.8]} />
       {/* The aquarium's blue on the lounge before it: always on, the tank lights itself. */}
-      <pointLight color="#62c9f2" intensity={14} distance={8} position={[a.x0 - 0.9, 2.4, (a.z0 + a.z1) / 2]} />
+      <pointLight color="#62c9f2" intensity={18} distance={10} position={[(a.x0 + a.x1) / 2, 2.6, a.z0 - 1.7]} />
 
       <Suspense fallback={null}><HqRoom walker={walker} light={light} /></Suspense>
       {/* This week's biggest catches in 3D (the display's E opens the list), the workbench, the clock on the island's time. */}
       <Suspense fallback={null}><TrophyCase member={member} at={[HQ_TROPHY.x, HQ_TROPHY.z]} yaw={HQ_TROPHY.yaw} /></Suspense>
       <Workbench player={player} at={[HQ_BENCH.x, HQ_BENCH.z]} pile={false} />
-      <Suspense fallback={null}><TickingClock glassMaterial="FtrAntiqueClock_mat0" position={[HQ_CLOCK_AT.x, 0, HQ_CLOCK_AT.z]} rotY={Math.PI} player={player} /></Suspense>
+      <Suspense fallback={null}><TickingClock glassMaterial="FtrAntiqueClock_mat0" position={[HQ_CLOCK_AT.x, 0, HQ_CLOCK_AT.z]} rotY={HQ_CLOCK_AT.yaw} player={player} /></Suspense>
 
-      {/* Wren behind her desk by the door (lib/game/keepers.ts memberHq). */}
+      {/* Wren behind her desk left of the door (lib/game/keepers.ts memberHq). */}
       <Keeper room="memberHq" player={player} frozen={frozen} engaged={talking} />
       <InteriorPlayer frozen={frozen} bounds={BOUNDS} playerPosRef={player} onMove={onMove} constrainMove={walker.constrain} heightAt={height} />
     </group>

@@ -1,10 +1,13 @@
 /**
  * HQ's room (specs/interiors/hq.md, ledger row 316): every number the models stand on, the walker walks and the stations
- * sit at. David picked option A in phase 1, the back mezzanine: a big room of two storeys (20 x 16, the floors 3.4
- * apart), the door in the middle of the front wall, the mezzanine over the back third facing the door with the yearly
- * banners on its rail, the aquarium two storeys tall on the left wall of the double-height hall, the lamp-lit lounge in
- * front of it. Work downstairs (Wren's desk, the coffee bar, co-working, the library, the notice board, the Founder's
- * desk); lounging upstairs (the big lounge under the walnut oval ceiling, the admin doors).
+ * sit at. David's layout is option B, the gallery (2026-10-19: "i said to do plan b, also make roofs taller for both
+ * floors"): a big room of two tall storeys (20 x 16, the floors 4.6 apart, the ceiling at 9.2), the door in the middle
+ * of the front wall, the aquarium filling the back wall straight ahead, the full height of the room. The upper floor
+ * wraps the double-height hall in a U: a bridge over the entrance holds the big lounge under the walnut oval ceiling,
+ * facing the tank head on; an arm runs down each side, the yearly banners hanging off their rails one after another
+ * toward the tank. Downstairs: the entry under the bridge (Wren's desk, the coffee bar, the work lounge), the lamp-lit
+ * lounge before the tank, the library and co-working under the left arm, the notice board and the stair under the
+ * right. The admin doors are upstairs, at the end of the left arm.
  *
  * Room space: the door at z −8, the back wall at z 8; +x is screen left (the walking camera looks from the door towards
  * +z). Level 1 numbers are above its floor (F). The model build (art/interiors/build_hq.py) reads these through
@@ -12,8 +15,8 @@
  */
 export type Level = 0 | 1;
 export const HQ_ROOM = { halfW: 10, halfD: 8, wall: 0.3, lip: 0.9 } as const;
-export const HQ_FLOOR_HEIGHT = 3.4;
-export const HQ_SLAB = 0.25;
+export const HQ_FLOOR_HEIGHT = 4.6;
+export const HQ_SLAB = 0.3;
 export const HQ_DOOR = { x: 0, half: 1.0 } as const;
 export const HQ_SPAWN: [number, number] = [0, -6.4];
 export const HQ_EXIT: [number, number] = [0, -7.2];
@@ -22,37 +25,56 @@ export const HQ_WALK_MARGIN = 0.7;
 export const HQ_PAD = 0.25;
 /** How far in from an open edge (a rail) you can stand. */
 export const HQ_EDGE = 0.4;
+/** The rail's top above its floor. */
+export const HQ_RAIL = 1.05;
+/**
+ * The walking camera (components/game/interiorShared.tsx followInteriorCamera): this far over your floor and behind you
+ * (toward −z), looking at you. The walker cuts away whatever part of the upper floor stands between it and you.
+ */
+export const HQ_CAMERA = { up: 8.4, back: 7.2 } as const;
 
 export type Finish = "walnut" | "concrete" | "leather" | "velvet" | "marble" | "carpet" | "shag" | "books" | "stone" | "metal" | "plant"
   | "glass" | "banner" | "door" | "plaque" | "lamp" | "water" | "cork" | "screen" | "person" | "beanbag";
 export interface Block { at: [number, number, number]; size: [number, number, number]; finish: Finish }
 /** A footprint: centre x, z and half its width and depth. */
 export type Footprint = [number, number, number, number];
+/** Which way a piece faces (its front): the build turns a piece made facing −z to it. */
+export type Facing = "-z" | "+z" | "-x" | "+x";
 export type Zone = "entry" | "work" | "coffee" | "library" | "lounge" | "aquarium" | "founder" | "board" | "upper-lounge" | "admin" | "flags" | "stair";
-export interface Fixture { id: string; level: Level; zone: Zone; label: string; blocks: Block[]; footprint?: Footprint[]; /** Upstairs: which part of the upper floor it belongs to; 0 by default. */ part?: number }
+export interface Fixture {
+  id: string; level: Level; zone: Zone; label: string; blocks: Block[]; footprint?: Footprint[];
+  /** Its front (−z when not given): the build makes it facing −z about its first block and turns it. */
+  facing?: Facing;
+  /** Upstairs: which part of the upper floor it belongs to (cut away with it); 0 when not given. */
+  part?: number;
+}
 export interface Rect { x0: number; x1: number; z0: number; z1: number }
 /** The flight: in a lane x0..x1 along z, its foot at `foot` and its head (the upper floor's edge) at `head`. */
 export interface Stair { x0: number; x1: number; foot: number; head: number; steps: number }
 export interface Station { id: string; name: string; pos: [number, number]; level: Level; range: number; action: string }
 export interface Path { id: string; level: Level | "stair"; label: string; points: [number, number][] }
-export interface Rail { from: [number, number]; to: [number, number] }
-/** A window in a side wall (x ±W), from z0 to z1 and y0 to y1 above the floor (level 0: the ground's floor). */
+/** A rail along an open edge of the upper floor: `slab` points from it toward the floor it guards. */
+export interface Rail { from: [number, number]; to: [number, number]; slab: [number, number] }
+/** A window in a side wall (x ±W), from z0 to z1 and y0 to y1 (absolute heights). */
 export interface Window { wall: "left" | "right"; z0: number; z1: number; y0: number; y1: number }
+/** A window in the front wall (z −D), from x0 to x1 and y0 to y1 (absolute heights). */
+export interface FrontWindow { x0: number; x1: number; y0: number; y1: number }
 /** A run of black track with its spots (y: under what ceiling), each spot aimed at a point. */
 export interface Track { from: [number, number, number]; to: [number, number, number]; spots: { at: number; aim: [number, number, number] }[] }
 /** A lamp: what it is, where its light comes from (above its floor), the height of what it stands on, and the radius of
- * the warm pool it throws on the floor (faked: lib/game/hqLight.ts, not a real light). */
-export interface Lamp { id: string; kind: "arc" | "mushroom" | "floor"; level: Level; light: [number, number, number]; on: number; pool: number }
+ * the warm pool it throws on the floor (faked: lib/game/hqLight.ts, not a real light). Upstairs, its part. */
+export interface Lamp { id: string; kind: "arc" | "mushroom" | "floor"; level: Level; light: [number, number, number]; on: number; pool: number; part?: number }
 export interface HqOption {
-  id: "a"; name: string; summary: string;
-  /** The upper floor: where it is (walkable on it, open below everywhere else). */
+  id: "b"; name: string; summary: string;
+  /** The upper floor's parts (walkable on them, open below everywhere else): the bridge, the left arm, the right arm. */
   upper: Rect[];
   stair: Stair;
-  aquarium: Rect & { y0: number; y1: number; facing: "-x" };
+  aquarium: Rect & { y0: number; y1: number; facing: "-z" };
   rails: Rail[];
-  /** The walnut ceiling with its oval cut-outs: over the upper lounge only (level 1, at the room's ceiling). */
+  /** The walnut ceiling with its oval cut-outs: over the bridge's lounge only (level 1, at the room's ceiling). */
   ovalCeiling: Rect;
   windows: Window[];
+  frontWindows: FrontWindow[];
   tracks: Track[];
   lamps: Lamp[];
   fixtures: Fixture[];
@@ -61,12 +83,13 @@ export interface HqOption {
 }
 
 const b = (at: [number, number, number], size: [number, number, number], finish: Finish): Block => ({ at, size, finish });
-const W = HQ_ROOM.halfW, D = HQ_ROOM.halfD, F = HQ_FLOOR_HEIGHT;
-const fx = (id: string, level: Level, zone: Zone, label: string, blocks: Block[], footprint?: Footprint[]): Fixture => ({ id, level, zone, label, blocks, footprint });
+const W = HQ_ROOM.halfW, D = HQ_ROOM.halfD, F = HQ_FLOOR_HEIGHT, TOP = 2 * F;
+const fx = (id: string, level: Level, zone: Zone, label: string, blocks: Block[], footprint?: Footprint[], more: Partial<Fixture> = {}): Fixture =>
+  ({ id, level, zone, label, blocks, footprint, ...more });
 const st = (id: string, name: string, pos: [number, number], action: string, range = 1.6, level: Level = 0): Station => ({ id, name, pos, level, range, action });
 
 /** Wren's front desk facing the door (its counter towards −z), the register on its ledge, her post behind it. */
-export const HQ_DESK = { x: -3.6, z: -5.2 } as const;
+export const HQ_DESK = { x: 4.2, z: -5.4 } as const;
 /** Where Wren stands and moves behind the desk (lib/game/keepers.ts reads these). */
 export const HQ_WREN: { at: [number, number]; clip: "Idle" | "Trace" | "Forage"; stay: number }[] = [
   { at: [HQ_DESK.x - 0.15, HQ_DESK.z + 1.4], clip: "Idle", stay: 7 },
@@ -80,117 +103,172 @@ export const HQ_LINES = {
   admin: "Admins only. It's locked.",
 } as const;
 /** The trophy case, the clock, the workbench and the Founder's desk (their components read these). */
-export const HQ_TROPHY = { x: 9.45, z: 4.4, yaw: Math.PI / 2 } as const;
-export const HQ_CLOCK_AT = { x: -0.2, z: 7.6 } as const;
-export const HQ_BENCH = { x: -9.25, z: 3.7 } as const;
-export const HQ_FOUNDER = { x: 7.4, z: 7.3 } as const;
+export const HQ_TROPHY = { x: 9.45, z: 4.5, yaw: Math.PI / 2 } as const;
+export const HQ_CLOCK_AT = { x: 6.2, z: 7.6, yaw: Math.PI } as const;
+/** The workbench against the right wall under the bridge (its working side faces +x: crafting/Workshop.tsx). */
+export const HQ_BENCH = { x: -9.25, z: -5.6 } as const;
+export const HQ_FOUNDER = { x: 8.0, z: 7.3 } as const;
 
-const UPPER: Rect = { x0: -W, x1: W, z0: 1.5, z1: D };
-const STAIR: Stair = { x0: -W, x1: -8.2, foot: -4.0, head: 1.5, steps: 16 };
+const BRIDGE: Rect = { x0: -W, x1: W, z0: -D, z1: -3.5 };
+const LEFT: Rect = { x0: 5.5, x1: W, z0: -3.5, z1: D };
+const RIGHT: Rect = { x0: -W, x1: -5.5, z0: -3.5, z1: D };
+/** Up the right wall under the right arm, toward the back: 22 steps of 0.21 rise and 0.3 run. */
+const STAIR: Stair = { x0: -W, x1: -8.2, foot: 0.0, head: 6.6, steps: 22 };
+const TANK = { x0: -5.0, x1: 5.0, z0: 6.6 };
 const { x: DX, z: DZ } = HQ_DESK;
+const CX = -4.6, CZ = -5.2;               // the coffee bar
+/** The banners: off each arm's rail, one after another toward the tank, hanging over the hall's edge, facing the door. */
+const BANNER_Z = [-1.6, 1.4, 4.4];
+const BANNER = { w: 1.2, h: 2.6, top: 1.3, reach: 0.85 } as const;
+const UNDER = F - HQ_SLAB - 0.04;         // a track under the upper floor
 
 export const HQ: HqOption = {
-  id: "a", name: "The back mezzanine",
-  summary: "The mezzanine over the back faces the door, its rail hung with the banners; the aquarium fills the left wall of the double-height hall.",
-  upper: [UPPER],
+  id: "b", name: "The gallery",
+  summary: "The aquarium fills the back wall straight ahead; the upper floor wraps the hall in a U, the lounge on the bridge over the door facing the tank, the banners off the arms.",
+  upper: [BRIDGE, LEFT, RIGHT],
   stair: STAIR,
-  aquarium: { x0: 8.6, x1: W, z0: -5.4, z1: 1.2, y0: 0.25, y1: 2 * F - 0.2, facing: "-x" },
-  rails: [{ from: [STAIR.x1, UPPER.z0], to: [W, UPPER.z0] }],
-  ovalCeiling: { x0: -3.5, x1: 7.6, z0: 1.9, z1: 7.8 },
+  aquarium: { ...TANK, z1: D, y0: 0.25, y1: TOP - 0.2, facing: "-z" },
+  rails: [
+    { from: [-5.5, BRIDGE.z1], to: [5.5, BRIDGE.z1], slab: [0, -1] },
+    { from: [LEFT.x0, BRIDGE.z1], to: [LEFT.x0, TANK.z0], slab: [1, 0] },
+    { from: [RIGHT.x1, BRIDGE.z1], to: [RIGHT.x1, TANK.z0], slab: [-1, 0] },
+    // round the stair's well: along its open side and across its foot
+    { from: [STAIR.x1, STAIR.foot], to: [STAIR.x1, STAIR.head], slab: [1, 0] },
+    { from: [-W, STAIR.foot], to: [STAIR.x1, STAIR.foot], slab: [0, -1] },
+  ],
+  ovalCeiling: { x0: -7.6, x1: 7.6, z0: -7.8, z1: -3.75 },
   windows: [
-    { wall: "right", z0: -7.3, z1: -4.7, y0: 0.9, y1: 6.1 },              // tall, both storeys, by the door
-    { wall: "right", z0: 2.6, z1: 4.4, y0: F + 0.9, y1: F + 2.7 },         // upstairs
-    { wall: "right", z0: 5.1, z1: 6.9, y0: F + 0.9, y1: F + 2.7 },
-    { wall: "left", z0: 2.4, z1: 4.4, y0: F + 0.95, y1: F + 2.65 },
+    { wall: "left", z0: -7.3, z1: -4.5, y0: 0.9, y1: 3.6 },              // behind the work lounge
+    { wall: "left", z0: -7.3, z1: -4.5, y0: F + 0.9, y1: F + 3.7 },      // the bridge's ends
+    { wall: "right", z0: -7.3, z1: -4.5, y0: F + 0.9, y1: F + 3.7 },
+    { wall: "left", z0: 1.4, z1: 4.6, y0: F + 0.9, y1: F + 3.7 },        // the left arm
+    { wall: "right", z0: 1.2, z1: 4.6, y0: F + 0.6, y1: F + 3.7 },       // over the stair
+  ],
+  frontWindows: [
+    { x0: 5.6, x1: 8.8, y0: 0.9, y1: 3.6 }, { x0: -8.8, x1: -5.6, y0: 0.9, y1: 3.6 },
+    { x0: 5.4, x1: 8.6, y0: F + 0.9, y1: F + 3.7 }, { x0: -8.6, x1: -5.4, y0: F + 0.9, y1: F + 3.7 },
   ],
   tracks: [
-    // The hall's ceiling: spots on the desk, the coffee bar and the lounge.
-    { from: [-6.5, 2 * F - 0.06, -5.6], to: [5.5, 2 * F - 0.06, -5.6], spots: [{ at: -3.6, aim: [DX, 1.1, DZ] }, { at: 0.0, aim: [0, 0, -4.5] }, { at: 4.4, aim: [6.6, 0.4, -3.6] }] },
-    { from: [-6.5, 2 * F - 0.06, -1.6], to: [5.5, 2 * F - 0.06, -1.6], spots: [{ at: -5.6, aim: [-5.6, 1.1, -0.6] }, { at: 4.6, aim: [6.6, 0.4, -1.4] }, { at: -1.0, aim: [-1.0, 0, 0.6] }] },
-    // Under the mezzanine: the library, the board, the Founder's plaque.
-    { from: [-9.0, F - HQ_SLAB - 0.04, 6.2], to: [8.6, F - HQ_SLAB - 0.04, 6.2], spots: [{ at: -7.6, aim: [-7.6, 1.6, 7.6] }, { at: -4.0, aim: [-4.0, 1.6, 7.6] }, { at: 2.0, aim: [2.0, 1.7, 7.8] }, { at: 7.4, aim: [7.4, 1.9, 7.8] }] },
-    // Upstairs: the art and the lounge.
-    { from: [-2.5, 2 * F - 0.06, 7.2], to: [8.0, 2 * F - 0.06, 7.2], spots: [{ at: -1.6, aim: [-1.6, F + 1.6, 7.9] }, { at: 4.4, aim: [4.4, F + 1.7, 7.9] }] },
+    // The hall's ceiling: spots on the lounge before the tank.
+    { from: [-4.5, TOP - 0.06, 0.6], to: [4.5, TOP - 0.06, 0.6], spots: [{ at: -3.0, aim: [-1.6, 0.4, 3.8] }, { at: 0.0, aim: [0, 0.4, 3.75] }, { at: 3.0, aim: [1.6, 0.4, 3.8] }] },
+    // Under the bridge: Wren's desk, the coffee bar, the work lounge.
+    { from: [-7.0, UNDER, -6.0], to: [8.8, UNDER, -6.0], spots: [{ at: CX, aim: [CX, 1.1, CZ] }, { at: DX, aim: [DX, 1.1, DZ] }, { at: 8.0, aim: [8.0, 0.5, -5.7] }] },
+    // Under the left arm: the library, the Founder's plaque.
+    { from: [8.6, UNDER, -3.0], to: [8.6, UNDER, 7.0], spots: [{ at: -2.0, aim: [9.55, 1.9, -2.0] }, { at: 0.1, aim: [9.55, 1.9, 0.1] }, { at: 2.2, aim: [9.55, 1.9, 2.2] }, { at: 6.6, aim: [8.0, 2.0, 7.9] }] },
+    // Under the right arm: the notice board and the club goals.
+    { from: [-8.5, UNDER, -3.4], to: [-8.5, UNDER, -0.4], spots: [{ at: -2.6, aim: [-9.85, 1.7, -2.6] }, { at: -0.85, aim: [-9.85, 1.7, -0.85] }] },
+    // Upstairs, under the oval ceiling: the lit art over the bridge's sofas.
+    { from: [-2.6, TOP - 0.06, -7.0], to: [2.6, TOP - 0.06, -7.0], spots: [{ at: -1.6, aim: [0, F + 1.75, -7.95] }, { at: 1.6, aim: [0, F + 1.75, -7.95] }] },
+    // Upstairs, down each arm: the banners.
+    { from: [6.6, TOP - 0.06, -2.6], to: [6.6, TOP - 0.06, 5.6], spots: BANNER_Z.map(z => ({ at: z - 0.9, aim: [LEFT.x0 - BANNER.reach, F + 0.2, z] as [number, number, number] })) },
+    { from: [-6.6, TOP - 0.06, -2.6], to: [-6.6, TOP - 0.06, 5.6], spots: BANNER_Z.map(z => ({ at: z - 0.9, aim: [RIGHT.x1 + BANNER.reach, F + 0.2, z] as [number, number, number] })) },
   ],
   lamps: [
     { id: "desk-lamp", kind: "mushroom", level: 0, light: [DX - 0.95, 1.18, DZ + 0.62], on: 0.76, pool: 1.4 },
-    { id: "lounge-lamp", kind: "mushroom", level: 0, light: [6.6, 0.68, -1.75], on: 0.38, pool: 1.8 },
-    { id: "lounge-floor", kind: "floor", level: 0, light: [4.9, 1.5, -4.3], on: 0, pool: 1.7 },
-    { id: "work-lamp", kind: "mushroom", level: 0, light: [3.2, 0.62, 4.65], on: 0.4, pool: 1.6 },
-    { id: "arc", kind: "arc", level: 1, light: [1.7, 1.85, 4.9], on: 0, pool: 2.6 },
-    { id: "upper-mushroom", kind: "mushroom", level: 1, light: [4.7, 0.75, 5.8], on: 0.45, pool: 1.4 },
+    { id: "lounge-lamp", kind: "mushroom", level: 0, light: [0.5, 0.68, 3.75], on: 0.38, pool: 1.8 },
+    { id: "lounge-floor-l", kind: "floor", level: 0, light: [3.75, 1.5, 2.1], on: 0, pool: 1.7 },
+    { id: "lounge-floor-r", kind: "floor", level: 0, light: [-3.75, 1.5, 2.1], on: 0, pool: 1.7 },
+    { id: "work-lamp", kind: "mushroom", level: 0, light: [8.0, 0.62, -6.0], on: 0.4, pool: 1.5 },
+    { id: "arc", kind: "arc", level: 1, light: [-1.0, 2.2, -5.9], on: 0, pool: 1.95, part: 0 },
+    { id: "upper-mushroom", kind: "mushroom", level: 1, light: [4.6, 0.75, -6.2], on: 0.45, pool: 1.3, part: 0 },
+    { id: "arm-floor", kind: "floor", level: 1, light: [8.95, 1.5, -2.55], on: 0, pool: 1.05, part: 1 },
   ],
   fixtures: [
-    // ── Ground floor, the double-height hall: Wren by the door, the coffee bar, the aquarium lounge. ──
+    // ── Ground floor, the entry under the bridge: Wren's desk left of the door, the coffee bar right, the work lounge. ──
     // Its footprint takes in the space behind it, where Wren works: visitors stay on the door's side.
     fx("front-desk", 0, "entry", "Wren's front desk", [b([DX, 0, DZ], [2.6, 1.05, 0.8], "walnut"), b([DX, 0, DZ + 0.65], [2.6, 0.76, 0.55], "walnut")], [[DX, DZ + 0.55, 1.4, 1.0]]),
     fx("register", 0, "entry", "The island register", [b([DX + 0.75, 1.05, DZ - 0.18], [0.55, 0.07, 0.38], "plaque")]),
     fx("coffee-bar", 0, "coffee", "Coffee bar (green marble)", [
-      b([-5.6, 0, -0.6], [2.6, 1.05, 0.95], "marble"), b([-6.2, 0, -1.6], [0.42, 0.78, 0.42], "leather"), b([-5.0, 0, -1.6], [0.42, 0.78, 0.42], "leather"),
-    ], [[-5.6, -0.85, 1.3, 0.75]]),
-    fx("ground-lounge", 0, "lounge", "Lamp-lit lounge before the aquarium", [
-      b([6.4, 0, -2.1], [3.6, 0.02, 4.6], "shag"), b([4.95, 0, -2.1], [0.9, 0.82, 2.5], "velvet"), b([6.6, 0, -2.1], [0.85, 0.38, 1.4], "stone"),
-      b([6.9, 0, -4.15], [0.85, 0.82, 0.85], "velvet"), b([4.9, 0, -4.3], [0.32, 1.55, 0.32], "lamp"),
-    ], [[4.95, -2.1, 0.45, 1.25], [6.6, -2.1, 0.43, 0.7], [6.9, -4.15, 0.43, 0.43], [4.9, -4.3, 0.16, 0.16]]),
-    fx("palm-front-left", 0, "entry", "", [b([9.0, 0, -7.2], [1.1, 2.4, 1.1], "plant")], [[9.0, -7.2, 0.45, 0.45]]),
-    fx("palm-front-right", 0, "entry", "", [b([-9.0, 0, -7.2], [1.1, 2.4, 1.1], "plant")], [[-9.0, -7.2, 0.45, 0.45]]),
-    fx("plant-aquarium", 0, "lounge", "", [b([7.9, 0, 1.75], [0.8, 1.6, 0.8], "plant")], [[7.9, 1.75, 0.35, 0.35]]),
-    // ── Under the mezzanine: the work floor. ──
-    fx("coworking", 0, "work", "Co-working (long walnut desk, monitors)", [
-      b([-3.8, 0, 4.3], [6.0, 0.76, 1.0], "walnut"),
-      ...[-6.2, -4.6, -3.0, -1.4].map(x => b([x, 0.76, 4.62], [0.62, 0.42, 0.06], "screen")),
-      ...[-6.2, -4.6, -3.0, -1.4].map(x => b([x, 0, 3.35], [0.52, 0.95, 0.52], "leather")),
-    ], [[-3.8, 4.3, 3.0, 0.5], [-3.8, 3.35, 3.0, 0.26]]),
-    // The work lounge on the deep blue rug (ref 1): the black leather daybed, the brown leather sofa, a glass table of books.
+      b([CX, 0, CZ], [2.6, 1.05, 0.95], "marble"), b([CX - 0.6, 0, CZ - 1.0], [0.42, 0.78, 0.42], "leather"), b([CX + 0.6, 0, CZ - 1.0], [0.42, 0.78, 0.42], "leather"),
+    ], [[CX, CZ - 0.25, 1.3, 0.75]]),
+    // The work lounge on the deep blue rug (ref 1), by the library's end: the black leather daybed, the brown leather
+    // sofa against the left wall, a glass table of books between them. Facing −x, into the room.
     fx("work-lounge", 0, "work", "Work lounge on the deep blue rug", [
-      b([3.2, 0, 4.5], [5.0, 0.02, 3.2], "carpet"), b([3.2, 0, 3.6], [2.0, 0.42, 0.72], "leather"), b([3.2, 0, 5.55], [2.3, 0.82, 0.9], "velvet"),
-      b([3.2, 0, 4.6], [1.25, 0.4, 0.62], "glass"),
-    ], [[3.2, 3.6, 1.0, 0.36], [3.2, 5.55, 1.15, 0.45], [3.2, 4.6, 0.63, 0.31]]),
-    fx("library", 0, "library", "Library wall (walnut, books face-out)", [b([-5.3, 0, 7.75], [8.4, 3.1, 0.45], "walnut"), b([-5.3, 0.35, 7.5], [8.1, 2.5, 0.06], "books")], [[-5.3, 7.7, 4.2, 0.3]]),
-    fx("notice-board", 0, "board", "Notice board and club goals", [b([1.8, 1.0, 7.86], [2.1, 1.4, 0.08], "cork"), b([4.1, 1.0, 7.86], [1.6, 1.4, 0.08], "plaque")]),
+      b([7.8, 0, -5.7], [3.6, 0.02, 3.4], "carpet"), b([6.9, 0, -5.7], [0.72, 0.42, 2.0], "leather"), b([9.15, 0, -5.7], [0.9, 0.82, 2.3], "velvet"),
+      b([8.0, 0, -5.7], [0.62, 0.4, 1.25], "glass"),
+    ], [[6.9, -5.7, 0.36, 1.0], [9.15, -5.7, 0.45, 1.15], [8.0, -5.7, 0.31, 0.63]], { facing: "-x" }),
+    fx("workbench", 0, "work", "Workbench (crafting)", [b([HQ_BENCH.x, 0, HQ_BENCH.z], [0.9, 0.9, 1.8], "walnut")], [[HQ_BENCH.x, HQ_BENCH.z, 0.5, 0.95]]),
+    fx("palm-door-left", 0, "entry", "", [b([2.0, 0, -7.4], [1.0, 2.6, 1.0], "plant")], [[2.0, -7.4, 0.42, 0.42]]),
+    fx("palm-door-right", 0, "entry", "", [b([-2.0, 0, -7.4], [1.0, 2.6, 1.0], "plant")], [[-2.0, -7.4, 0.42, 0.42]]),
+    fx("palm-corner", 0, "entry", "", [b([-9.1, 0, -7.3], [1.1, 2.8, 1.1], "plant")], [[-9.1, -7.3, 0.45, 0.45]]),
+    // ── The hall: the lamp-lit lounge before the aquarium (ref 2), facing the tank. ──
+    fx("ground-lounge", 0, "lounge", "Lamp-lit lounge before the aquarium", [
+      b([0, 0, 3.6], [7.4, 0.02, 4.6], "shag"), b([0, 0, 2.0], [3.4, 0.82, 0.9], "velvet"), b([0, 0, 3.75], [1.7, 0.38, 0.85], "stone"),
+      b([2.8, 0, 3.9], [0.85, 0.82, 0.85], "velvet"), b([-2.8, 0, 3.9], [0.85, 0.82, 0.85], "velvet"),
+      b([3.75, 0, 2.1], [0.32, 1.55, 0.32], "lamp"), b([-3.75, 0, 2.1], [0.32, 1.55, 0.32], "lamp"),
+    ], [[0, 2.0, 1.7, 0.45], [0, 3.75, 0.85, 0.43], [2.8, 3.9, 0.43, 0.43], [-2.8, 3.9, 0.43, 0.43], [3.75, 2.1, 0.16, 0.16], [-3.75, 2.1, 0.16, 0.16]], { facing: "+z" }),
+    fx("plant-tank", 0, "lounge", "", [b([-4.75, 0, 6.05], [0.9, 2.2, 0.9], "plant")], [[-4.75, 6.05, 0.4, 0.4]]),
+    // The tank's walnut cladding between its ends and the arms (solid, floor to ceiling).
+    fx("tank-ends", 0, "aquarium", "", [b([5.25, 0, 7.3], [0.5, TOP, 1.4], "walnut"), b([-5.25, 0, 7.3], [0.5, TOP, 1.4], "walnut")], [[5.25, 7.3, 0.25, 0.7], [-5.25, 7.3, 0.25, 0.7]]),
+    // ── Under the left arm: the library on the wall, co-working before it; the trophy case, the clock and the Founder's
+    // desk at the back. ──
+    fx("library", 0, "library", "Library wall (walnut, books face-out)", [b([9.775, 0, 0.1], [0.45, 3.6, 6.6], "walnut"), b([9.5, 0.35, 0.1], [0.06, 2.9, 6.3], "books")],
+      [[9.75, 0.1, 0.3, 3.3]], { facing: "-x" }),
+    fx("coworking", 0, "work", "Co-working (long walnut desk, monitors)", [
+      b([7.4, 0, 0.1], [1.0, 0.76, 5.4], "walnut"),
+      ...[-1.9, -0.6, 0.8, 2.1].map(z => b([7.7, 0.76, z], [0.06, 0.42, 0.62], "screen")),
+      ...[-1.9, -0.6, 0.8, 2.1].map(z => b([6.45, 0, z], [0.52, 0.95, 0.52], "leather")),
+    ], [[7.4, 0.1, 0.5, 2.7], [6.45, 0.1, 0.26, 2.26]], { facing: "-x" }),
+    fx("trophy-case", 0, "work", "Trophy case", [b([HQ_TROPHY.x, 0, HQ_TROPHY.z], [0.7, 2.0, 2.0], "glass")], [[9.5, HQ_TROPHY.z, 0.4, 1.0]]),
     fx("clock", 0, "work", "Clock", [b([HQ_CLOCK_AT.x, 0, 7.75], [0.6, 2.1, 0.4], "walnut")], [[HQ_CLOCK_AT.x, 7.75, 0.3, 0.2]]),
     fx("founder", 0, "founder", "The Founder's desk and plaque", [
       b([HQ_FOUNDER.x, 0, HQ_FOUNDER.z], [1.9, 0.78, 0.9], "walnut"), b([HQ_FOUNDER.x - 0.3, 0, 6.4], [0.6, 1.05, 0.6], "leather"), b([HQ_FOUNDER.x, 1.75, 7.84], [0.9, 0.6, 0.05], "plaque"),
     ], [[HQ_FOUNDER.x, 7.0, 0.95, 0.9]]),
-    fx("trophy-case", 0, "work", "Trophy case", [b([HQ_TROPHY.x, 0, HQ_TROPHY.z], [0.7, 2.0, 2.0], "glass")], [[9.5, HQ_TROPHY.z, 0.4, 1.0]]),
-    fx("workbench", 0, "work", "Workbench (crafting)", [b([HQ_BENCH.x, 0, HQ_BENCH.z], [0.9, 0.9, 1.8], "walnut")], [[HQ_BENCH.x, HQ_BENCH.z, 0.5, 0.95]]),
-    fx("plant-work", 0, "work", "", [b([9.2, 0, 6.3], [0.7, 1.3, 0.7], "plant")], [[9.2, 6.3, 0.3, 0.3]]),
-    // ── The mezzanine: the big lounge under the oval ceiling, the admin doors, the banners on the rail. ──
-    fx("upper-carpet", 1, "upper-lounge", "Big lounge: shag carpet, velvet sofas, beanbags", [b([2.0, 0, 4.8], [10.4, 0.03, 5.8], "shag")]),
-    fx("upper-sofas", 1, "upper-lounge", "", [b([2.0, 0, 7.15], [4.2, 0.82, 0.9], "velvet"), b([6.75, 0, 4.6], [0.9, 0.82, 3.2], "velvet"), b([-1.8, 0, 5.6], [0.85, 0.82, 0.85], "velvet")],
-      [[2.0, 7.15, 2.1, 0.45], [6.75, 4.6, 0.45, 1.6], [-1.8, 5.6, 0.43, 0.43]]),
-    fx("upper-tables", 1, "upper-lounge", "", [b([2.0, 0, 4.9], [1.9, 0.36, 1.0], "stone"), b([4.7, 0, 5.8], [0.8, 0.45, 0.8], "leather")], [[2.0, 4.9, 0.95, 0.5], [4.7, 5.8, 0.4, 0.4]]),
-    fx("beanbags", 1, "upper-lounge", "Beanbags by the rail", [-1.2, 0.6, 2.4, 4.2].map(x => b([x, 0, 2.75], [0.85, 0.5, 0.85], "beanbag")), [[1.5, 2.75, 3.15, 0.43]]),
-    fx("arc-lamp", 1, "upper-lounge", "The arc lamp", [b([-2.6, 0, 6.9], [0.45, 2.75, 0.45], "metal"), b([1.7, 1.85, 4.9], [0.55, 0.55, 0.55], "lamp")], [[-2.6, 6.9, 0.25, 0.25]]),
-    fx("art", 1, "upper-lounge", "Lit art", [b([-1.6, 1.0, 7.92], [1.1, 1.2, 0.06], "plaque")]),
-    fx("admin-doors", 1, "admin", "Admins only (locked)", [
-      b([-7.4, 0, 7.92], [1.1, 2.3, 0.1], "door"), b([-4.9, 0, 7.92], [1.1, 2.3, 0.1], "door"),
-    ]),
-    ...[-6.0, -3.4, -0.8, 1.8, 4.4, 7.0].map((x, i) => fx(`banner-${i + 1}`, 1, "flags", i === 0 ? "Yearly banners (blank until David's designs)" : "", [b([x, 1.05 - 1.9, UPPER.z0 - 0.16], [1.0, 1.9, 0.04], "banner")])),
-    fx("upper-plants", 1, "upper-lounge", "", [b([9.2, 0, 7.2], [0.8, 1.7, 0.8], "plant"), b([9.2, 0, 5.6], [0.8, 1.2, 0.8], "plant"), b([-9.25, 0, 7.35], [0.8, 1.7, 0.8], "plant")],
-      [[9.2, 7.2, 0.4, 0.4], [9.2, 5.6, 0.4, 0.4], [-9.25, 7.35, 0.4, 0.4]]),
+    // ── Under the right arm: the notice board and the club goals on the walnut wall by the stair's foot. ──
+    fx("notice-board", 0, "board", "Notice board and club goals", [b([-9.86, 1.0, -2.6], [0.08, 1.4, 2.1], "cork"), b([-9.86, 1.0, -0.85], [0.08, 1.4, 1.4], "plaque")], undefined, { facing: "+x" }),
+    fx("plant-stair", 0, "stair", "", [b([-6.2, 0, 7.35], [0.9, 2.0, 0.9], "plant")], [[-6.2, 7.35, 0.4, 0.4]]),
+    // ── Upstairs, the bridge: the big lounge facing the tank across the hall, under the walnut oval ceiling. ──
+    fx("upper-carpet", 1, "upper-lounge", "Big lounge: shag carpet, velvet sofas, beanbags", [b([0, 0, -5.75], [14.0, 0.03, 3.7], "shag")]),
+    fx("upper-sofas", 1, "upper-lounge", "", [b([-2.6, 0, -7.3], [3.8, 0.82, 0.9], "velvet"), b([2.6, 0, -7.3], [3.8, 0.82, 0.9], "velvet"), b([6.6, 0, -5.9], [0.85, 0.82, 0.85], "velvet")],
+      [[-2.6, -7.3, 1.9, 0.45], [2.6, -7.3, 1.9, 0.45], [6.6, -5.9, 0.43, 0.43]]),
+    fx("upper-tables", 1, "upper-lounge", "", [b([0, 0, -5.9], [2.0, 0.36, 1.0], "stone"), b([4.6, 0, -6.2], [0.8, 0.45, 0.8], "leather")], [[0, -5.9, 1.0, 0.5], [4.6, -6.2, 0.4, 0.4]]),
+    fx("beanbags", 1, "upper-lounge", "Beanbags by the rail", [-3.9, -1.3, 1.3, 3.9].map(x => b([x, 0, -4.1], [0.85, 0.5, 0.85], "beanbag")), [[0, -4.1, 4.35, 0.43]]),
+    fx("arc-lamp", 1, "upper-lounge", "The arc lamp", [b([-5.2, 0, -7.3], [0.45, 3.6, 0.45], "metal"), b([-1.0, 2.2, -5.9], [0.55, 0.55, 0.55], "lamp")], [[-5.2, -7.3, 0.25, 0.25]]),
+    // On the front wall over the sofas (the front wall is the ceiling model's: seen from inside only).
+    fx("art", 1, "upper-lounge", "Lit art", [b([0, 1.15, -7.92], [1.2, 1.3, 0.06], "plaque")], undefined, { facing: "+z" }),
+    fx("upper-plants", 1, "upper-lounge", "", [b([9.2, 0, -7.3], [0.8, 1.8, 0.8], "plant"), b([-9.2, 0, -7.3], [0.8, 1.8, 0.8], "plant")], [[9.2, -7.3, 0.4, 0.4], [-9.2, -7.3, 0.4, 0.4]]),
+    // ── The left arm: a reading corner by the bridge, the two locked admin doors at its end. ──
+    { ...fx("arm-chairs", 1, "upper-lounge", "", [b([8.45, 0, -1.7], [0.85, 0.82, 0.85], "velvet"), b([8.45, 0, 0.3], [0.85, 0.82, 0.85], "velvet"), b([8.75, 0, -0.7], [0.6, 0.5, 0.6], "stone")],
+      [[8.45, -1.7, 0.43, 0.43], [8.45, 0.3, 0.43, 0.43], [8.75, -0.7, 0.3, 0.3], [8.95, -2.55, 0.18, 0.18]]), part: 1 },
+    { ...fx("admin-doors", 1, "admin", "Admins only (locked)", [
+      b([6.6, 0, 7.92], [1.1, 2.4, 0.1], "door"), b([8.9, 0, 7.92], [1.1, 2.4, 0.1], "door"),
+    ]), part: 1 },
+    { ...fx("arm-plant-left", 1, "upper-lounge", "", [b([9.3, 0, 5.4], [0.8, 1.6, 0.8], "plant")], [[9.3, 5.4, 0.4, 0.4]]), part: 1 },
+    // ── The right arm: the landing at the stair's head. ──
+    { ...fx("arm-plant-right", 1, "stair", "", [b([-6.1, 0, 7.4], [0.8, 1.7, 0.8], "plant")], [[-6.1, 7.4, 0.4, 0.4]]), part: 2 },
+    // ── The banners: on poles off each arm's rail, hanging over the hall's edge, one after another toward the tank. ──
+    ...[LEFT.x0, RIGHT.x1].flatMap((rx, side) => BANNER_Z.map((z, j) => {
+      const inward = rx > 0 ? -1 : 1, mid = rx + inward * BANNER.reach;
+      return fx(`banner-${side * 3 + j + 1}`, 1, "flags", side + j === 0 ? "Yearly banners (blank until David's designs)" : "", [
+        b([rx + inward * (BANNER.reach + BANNER.w / 2 + 0.1) / 2, BANNER.top, z], [BANNER.reach + BANNER.w / 2 + 0.1, 0.05, 0.05], "metal"),
+        b([mid, BANNER.top - BANNER.h, z], [BANNER.w, BANNER.h, 0.04], "banner"),
+      ], undefined, { part: side + 1 });
+    })),
   ],
   stations: [
     st("exit", "Island", HQ_EXIT, "exit", HQ_EXIT_RANGE),
     st("desk", "Front desk", [DX, DZ - 1.1], "desk", 1.8),
-    st("board", "Notice board", [2.6, 6.75], "board", 2.3),
-    st("founder", "The Founder's desk", [HQ_FOUNDER.x - 0.2, 5.55], "founder", 1.35),
-    st("display", "Trophy display", [8.45, HQ_TROPHY.z], "display", 1.6),
-    st("shelf", "Library", [-5.3, 6.6], "shelf", 2.0),
-    st("clock", "Clock", [HQ_CLOCK_AT.x, 6.8], "clock", 1.6),
-    st("coffee", "Coffee bar", [-5.6, -2.3], "coffee", 1.5),
-    st("aquarium", "Aquarium", [7.9, -2.1], "aquarium", 1.4),
-    st("admin", "Admins only", [-7.4, 7.0], "admin", 1.1, 1),
-    st("admin-2", "Admins only", [-4.9, 7.0], "admin", 1.1, 1),
+    st("coffee", "Coffee bar", [CX, CZ - 1.7], "coffee", 1.5),
+    st("board", "Notice board", [-8.6, -1.7], "board", 2.0),
+    st("shelf", "Library", [8.8, -2.2], "shelf", 1.8),
+    st("display", "Trophy display", [8.45, HQ_TROPHY.z], "display", 1.4),
+    st("founder", "The Founder's desk", [HQ_FOUNDER.x - 0.2, 5.55], "founder", 1.2),
+    st("clock", "Clock", [HQ_CLOCK_AT.x, 6.85], "clock", 1.3),
+    st("aquarium", "Aquarium", [0, 5.9], "aquarium", 1.6),
+    st("admin", "Admins only", [6.6, 7.0], "admin", 1.1, 1),
+    st("admin-2", "Admins only", [8.9, 7.0], "admin", 1.1, 1),
   ],
   paths: [
-    { id: "aisle", level: 0, label: "From the door to the back", points: [HQ_SPAWN, [0, -3.0], [0, 1.0], [0, 6.0]] },
-    { id: "to-desk", level: 0, label: "To Wren's desk", points: [[0, -6.3], [DX, -6.3]] },
-    { id: "to-lounge", level: 0, label: "To the aquarium lounge", points: [[0, -3.0], [3.6, -3.0], [3.6, 0.6], [7.9, 0.6]] },
-    { id: "to-stair", level: 0, label: "To the stair", points: [[0, -3.0], [-7.6, -3.0], [-7.6, -4.6], [-8.9, -4.6]] },
-    { id: "work", level: 0, label: "The work floor", points: [[0, 2.4], [-7.6, 2.4], [-7.6, 6.5], [5.9, 6.5], [6.1, 2.6], [0, 2.4]] },
-    { id: "flight", level: "stair", label: "Up the stair", points: [[-8.9, -4.0], [-8.9, 1.5]] },
-    { id: "upper", level: 1, label: "The mezzanine", points: [[-8.9, 2.1], [-6.0, 2.1], [-6.0, 6.7], [-3.2, 6.7], [-3.2, 3.6], [5.6, 3.6], [5.6, 2.2], [8.9, 2.2]] },
+    { id: "aisle", level: 0, label: "From the door to the aquarium", points: [HQ_SPAWN, [0, -3.0], [0, 0.9], [4.6, 0.9], [4.6, 5.9], [0, 5.9]] },
+    { id: "to-desk", level: 0, label: "To Wren's desk", points: [[0, -6.5], [DX, -6.5]] },
+    { id: "to-coffee", level: 0, label: "To the coffee bar", points: [[0, -6.6], [CX, CZ - 1.7]] },
+    { id: "to-stair", level: 0, label: "To the board and the stair", points: [[0, -3.0], [-8.9, -3.0], [-8.9, -0.3]] },
+    { id: "left-arm", level: 0, label: "Under the left arm", points: [[0, -3.0], [5.85, -3.0], [5.85, 5.3], [7.8, 5.55]] },
+    { id: "library", level: 0, label: "Along the library", points: [[5.85, -3.0], [8.8, -3.0], [8.8, 2.6]] },
+    { id: "to-clock", level: 0, label: "To the clock", points: [[0, -3.0], [5.85, -3.0], [5.85, 5.3], [HQ_CLOCK_AT.x, 6.85]] },
+    { id: "right-arm", level: 0, label: "Under the right arm, beside the stair", points: [[0, -3.0], [-6.8, -3.0], [-6.8, 6.6]] },
+    { id: "flight", level: "stair", label: "Up the stair", points: [[-8.9, STAIR.foot], [-8.9, STAIR.head]] },
+    { id: "upper", level: 1, label: "Round the gallery", points: [[-8.9, 7.2], [-6.9, 7.2], [-6.9, -4.95], [6.9, -4.95], [6.9, 2.4], [7.75, 6.9]] },
   ],
 };
 
@@ -219,6 +297,8 @@ export function stairBlocks(o: HqOption, level: Level, x: number, z: number, pad
   // Upstairs: the open well over the flight, up to the head (where you step off it).
   return dirOf(s) > 0 ? z < s.head && z > s.foot - pad : z > s.head && z < s.foot + pad;
 }
+/** The stair's well: the upper floor is open over the whole flight. */
+export const stairWell = (o: HqOption): Rect => ({ x0: o.stair.x0, x1: o.stair.x1, z0: Math.min(o.stair.foot, o.stair.head), z1: Math.max(o.stair.foot, o.stair.head) });
 /** Whether (x, z) is over the upper floor's slab (or past the room's walls, which count as solid, not open). */
 const overSlab = (o: HqOption, x: number, z: number) => Math.abs(x) >= W || Math.abs(z) >= D || o.upper.some(r => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1);
 /** Whether a point is on the upper floor, at least `inset` in from any open edge (a rail): its parts join seamlessly. */
@@ -239,7 +319,7 @@ export function walkable(o: HqOption, level: Level, x: number, z: number, pad = 
   const inRoom = Math.abs(x) <= mx + 1e-9 && Math.abs(z) <= mz + 1e-9;
   return inRoom && (level === 0 || onUpper(o, x, z) || onLanding(o, x, z)) && !solidAt(o, level, x, z, pad) && !stairBlocks(o, level, x, z, pad);
 }
-/** Under a part of the upper floor (the walker hides that part there): inside it by `by` (negative: grown). */
+/** Under a part of the upper floor: inside it by `by` (negative: grown). */
 export function underPart(r: Rect, x: number, z: number, by: number): boolean {
   return x > r.x0 + by && x < r.x1 - by && z > r.z0 + by && z < r.z1 - by;
 }
@@ -250,12 +330,64 @@ export function stairHeight(o: HqOption, z: number): number {
 }
 export const stairLane = (o: HqOption): [number, number] => [Math.max(o.stair.x0, -W + HQ_WALK_MARGIN), o.stair.x1 - HQ_PAD];
 
+// ── The cut-away ──────────────────────────────────────────────────────────────────────────────────────────────────
+/** A box in room space (absolute heights). */
+export interface Box { x0: number; x1: number; y0: number; y1: number; z0: number; z1: number }
+/** A rect less a hole: up to four rects. */
+function less(r: Rect, h: Rect): Rect[] {
+  if (h.x1 <= r.x0 || h.x0 >= r.x1 || h.z1 <= r.z0 || h.z0 >= r.z1) return [r];
+  const out: Rect[] = [];
+  if (h.x0 > r.x0) out.push({ ...r, x1: h.x0 });
+  if (h.x1 < r.x1) out.push({ ...r, x0: h.x1 });
+  const x0 = Math.max(r.x0, h.x0), x1 = Math.min(r.x1, h.x1);
+  if (h.z0 > r.z0) out.push({ x0, x1, z0: r.z0, z1: h.z0 });
+  if (h.z1 < r.z1) out.push({ x0, x1, z0: h.z1, z1: r.z1 });
+  return out;
+}
+/**
+ * What of each part of the upper floor can stand between the walking camera and you: its slab up to the rail's top
+ * (the stair's well left open), and every block of its fixtures (the banners hanging off the arms over the hall).
+ */
+export function partBoxes(o: HqOption): Box[][] {
+  const well = stairWell(o);
+  return o.upper.map((r, i) => [
+    ...less(r, well).map(q => ({ ...q, y0: F - HQ_SLAB, y1: F + HQ_RAIL })),
+    ...o.fixtures.filter(f => f.level === 1 && (f.part ?? 0) === i).flatMap(f => f.blocks.map(k => ({
+      x0: k.at[0] - k.size[0] / 2, x1: k.at[0] + k.size[0] / 2, z0: k.at[2] - k.size[2] / 2, z1: k.at[2] + k.size[2] / 2, y0: F + k.at[1], y1: F + k.at[1] + k.size[1],
+    }))),
+  ]);
+}
+/** Whether the segment (z0, y0)–(z1, y1) crosses the rect [za, zb] × [ya, yb] (Liang–Barsky). */
+function crosses(z0: number, y0: number, z1: number, y1: number, za: number, zb: number, ya: number, yb: number): boolean {
+  let t0 = 0, t1 = 1;
+  const dz = z1 - z0, dy = y1 - y0;
+  for (const [p, q] of [[-dz, z0 - za], [dz, zb - z0], [-dy, y0 - ya], [dy, yb - y0]]) {
+    if (Math.abs(p) < 1e-12) { if (q < 0) return false; continue; }
+    const t = q / p;
+    if (p < 0) { if (t > t1) return false; if (t > t0) t0 = t; } else { if (t < t0) return false; if (t < t1) t1 = t; }
+  }
+  return t0 <= t1;
+}
+/**
+ * Whether any of a part's boxes (grown by `grow`) stands between the walking camera and you, feet to head: you at
+ * (x, z) on a floor at height h, the camera over you and behind (HQ_CAMERA), in your x.
+ */
+export function hidesYou(boxes: readonly Box[], x: number, z: number, h: number, grow = 0): boolean {
+  const cy = h + HQ_CAMERA.up, cz = z - HQ_CAMERA.back;
+  for (const k of boxes) {
+    if (x < k.x0 - grow || x > k.x1 + grow) continue;
+    for (const py of [h + 0.1, h + 1.6]) if (crosses(cz, cy, z, py, k.z0 - grow, k.z1 + grow, k.y0 - grow, k.y1 + grow)) return true;
+  }
+  return false;
+}
+
 export type WalkZone = "ground" | "stair" | "upper";
 export interface HqWalker {
   zone: WalkZone;
   height: number;
-  /** Each part of the upper floor is drawn: on the upper floor or the stair, or downstairs out from under that part
-   * (with hysteresis, so it never flickers); cut away while you're under it, so the walking camera sees your floor. */
+  /** Each part of the upper floor is drawn unless you're under it or it stands between the walking camera and you
+   * (downstairs or on the stair): cut away then, so the camera sees you and your floor, with hysteresis so it never
+   * flickers. Upstairs, all of it. */
   shown: boolean[];
   constrain(x: number, z: number, nx: number, nz: number): [number, number];
 }
@@ -267,10 +399,18 @@ export function createHqWalker(o: HqOption): HqWalker {
   // Past the foot (onto the flight from below) and past the head (off it above), along the flight's direction.
   const pastFoot = (z: number) => dir > 0 ? z > s.foot : z < s.foot;
   const pastHead = (z: number) => dir > 0 ? z >= s.head : z <= s.head;
+  const boxes = partBoxes(o);
+  /** Downstairs or on the stair, a part goes while it's overhead (so the walking camera, looking in under its edge, sees
+   * the hall) or in the way; shown parts hide once they're in the way, hidden ones come back once well clear of it. */
+  const show = (w: HqWalker, x: number, z: number) => {
+    o.upper.forEach((r, i) => {
+      const was = w.shown[i], under = w.zone === "ground" && underPart(r, x, z, was ? 0.5 : -0.25);
+      w.shown[i] = w.zone === "upper" || !(under || hidesYou(boxes[i], x, z, w.height, was ? 0 : 0.35));
+    });
+  };
   const out: [number, number] = [0, 0];
   const w: HqWalker = {
-    // You come in at the door: the parts overhead there start cut away.
-    zone: "ground", height: 0, shown: o.upper.map(r => !underPart(r, HQ_SPAWN[0], HQ_SPAWN[1], 0.5)),
+    zone: "ground", height: 0, shown: o.upper.map(() => true),
     constrain(x, z, nx, nz) {
       const steps = Math.max(1, Math.ceil(Math.hypot(nx - x, nz - z) / 0.1));
       const dx = (nx - x) / steps, dz = (nz - z) / steps;
@@ -293,19 +433,23 @@ export function createHqWalker(o: HqOption): HqWalker {
         else break;
       }
       w.height = w.zone === "ground" ? 0 : w.zone === "upper" ? F : stairHeight(o, z);
-      o.upper.forEach((r, i) => { w.shown[i] = w.zone !== "ground" || (w.shown[i] ? !underPart(r, x, z, 0.5) : !underPart(r, x, z, -0.25)); });
+      show(w, x, z);
       out[0] = x; out[1] = z;
       return out;
     },
   };
+  // You come in at the door: what's overhead there starts cut away.
+  show(w, HQ_SPAWN[0], HQ_SPAWN[1]);
   return w;
 }
 
 /** The plan's zone labels: where each floor's areas are (the evidence script prints them on the top-down plans). */
 export const HQ_ZONES: { text: string; level: Level; at: [number, number] }[] = [
-  { text: "ENTRY", level: 0, at: [-1.2, -5.0] }, { text: "AQUARIUM LOUNGE", level: 0, at: [6.4, 0.4] }, { text: "COFFEE", level: 0, at: [-5.6, 0.5] },
-  { text: "WORK (under the mezzanine)", level: 0, at: [-1.0, 5.6] }, { text: "STAIR", level: 0, at: [-9.1, -1.2] },
-  { text: "BIG LOUNGE", level: 1, at: [2.0, 3.6] }, { text: "ADMINS ONLY", level: 1, at: [-6.1, 6.2] }, { text: "OPEN TO BELOW", level: 1, at: [0, -3.0] },
+  { text: "ENTRY (under the bridge)", level: 0, at: [0, -4.4] }, { text: "HALL: AQUARIUM LOUNGE", level: 0, at: [0, 0.4] },
+  { text: "LIBRARY + WORK (under the left arm)", level: 0, at: [7.6, -3.1] }, { text: "BOARD + STAIR (under the right arm)", level: 0, at: [-7.4, 3.0] },
+  { text: "COFFEE", level: 0, at: [-4.6, -3.9] },
+  { text: "BIG LOUNGE (the bridge)", level: 1, at: [-2.6, -4.6] }, { text: "OPEN TO THE HALL", level: 1, at: [0, 1.0] },
+  { text: "LEFT ARM", level: 1, at: [7.6, 2.0] }, { text: "ADMINS ONLY", level: 1, at: [7.75, 6.1] }, { text: "RIGHT ARM", level: 1, at: [-6.8, 2.6] },
 ];
 
 /**
@@ -313,6 +457,6 @@ export const HQ_ZONES: { text: string; level: Level; at: [number, number] }[] = 
  * scripts/hq-layout-json.mjs): every number the room's models stand on, so the models and the walking never drift.
  */
 export function hqLayoutJson(): string {
-  const { room, floorHeight, slab, door } = { room: HQ_ROOM, floorHeight: HQ_FLOOR_HEIGHT, slab: HQ_SLAB, door: HQ_DOOR };
-  return JSON.stringify({ room, floorHeight, slab, door, desk: HQ_DESK, trophy: HQ_TROPHY, clock: HQ_CLOCK_AT, bench: HQ_BENCH, founder: HQ_FOUNDER, ...HQ }, null, 1) + "\n";
+  const { room, floorHeight, slab, door, rail } = { room: HQ_ROOM, floorHeight: HQ_FLOOR_HEIGHT, slab: HQ_SLAB, door: HQ_DOOR, rail: HQ_RAIL };
+  return JSON.stringify({ room, floorHeight, slab, door, rail, desk: HQ_DESK, trophy: HQ_TROPHY, clock: HQ_CLOCK_AT, bench: HQ_BENCH, founder: HQ_FOUNDER, ...HQ }, null, 1) + "\n";
 }

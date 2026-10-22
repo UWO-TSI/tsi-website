@@ -1,11 +1,13 @@
 "use client";
 
 /**
- * HQ's furnished room (specs/interiors/hq.md, phase 2): the models art/interiors/build_hq.py builds on
- * lib/game/hqLayout.ts's numbers, the aquarium, and the faked lamp light.
- * - The ground floor (ground.glb) always: the hall's walls both storeys high, the work floor under the mezzanine.
- * - The mezzanine (upper.glb) while the walker shows it: from the hall, never while you're under it.
- * - The ceiling (ceiling.glb) only for a camera under it: the walking camera looks in from above, as through the
+ * HQ's furnished room (specs/interiors/hq.md, phases 2 and 3: the gallery): the models art/interiors/build_hq.py builds
+ * on lib/game/hqLayout.ts's numbers, the aquarium, and the faked lamp light.
+ * - The ground floor (ground.glb) always: the walls both storeys high, the entry, the hall, the floor under the arms.
+ * - The upper floor (upper.glb), its three parts (the bridge, the left arm, the right arm: hq_upper_0..2) each while the
+ *   walker shows it: cut away while you're under it or it stands between the walking camera and you.
+ * - The ceiling (ceiling.glb) only for a camera inside the room under it: the walking camera downstairs is inside
+ *   (looking down, it never sees it), upstairs it's above it, and from the door it's outside, looking in over the
  *   cut-away near wall. A caster (hq_caster) closes the room for the sun, so daylight comes in only by the windows.
  * The windows show the outside for the time of day (RoomShell's window view). A click on a floor walks you there.
  */
@@ -17,7 +19,7 @@ import { AudioManager } from "@/lib/game/audio";
 import { prepareModel } from "@/lib/game/modelMaterials";
 import { applyEnvironment, disposeEnvironment, type EnvPhaseSpec } from "@/lib/game/envLight";
 import * as layout from "@/lib/game/hqLayout";
-import { HQ_FLOOR_HEIGHT as F, type HqWalker } from "@/lib/game/hqLayout";
+import { HQ, HQ_FLOOR_HEIGHT as F, HQ_ROOM, type HqWalker } from "@/lib/game/hqLayout";
 import { hqPools } from "@/lib/game/hqLight";
 import { interiorLight } from "@/lib/game/interiorLight";
 import type { IslandLight } from "@/lib/game/islandLighting";
@@ -67,7 +69,7 @@ function useRoomModel(url: string): THREE.Object3D {
   }, [scene, url]);
 }
 
-/** A click on a floor (downstairs, or the mezzanine's top) walks you there; the walls and fittings take none. */
+/** A click on a floor (downstairs, or the upper floor's top) walks you there; the walls and fittings take none. */
 const walkOn = (level: 0 | 1) => (e: ThreeEvent<MouseEvent>) => {
   if (Math.abs(e.point.y - level * F) > 0.3) return;
   e.stopPropagation();
@@ -77,18 +79,34 @@ const walkOn = (level: 0 | 1) => (e: ThreeEvent<MouseEvent>) => {
 
 /** The room's reflected fill follows the time of day too: at night most of it goes, and the lamps carry the room. */
 function envForDay(scene: THREE.Scene, day: number) { scene.environmentIntensity = HQ_ENV.intensity * (0.3 + 0.7 * day); }
-/** Module scope (the react compiler forbids writing through hook values): the mezzanine shown or cut away. */
-function showUpper(walker: HqWalker, upper: THREE.Object3D | null) {
-  const hide = DEV && (window as { __hqHideUpper?: boolean }).__hqHideUpper;
-  if (upper) upper.visible = !hide && (walker.shown[0] ?? true);
+/** The upper floor's parts in its model (hq_upper_0..2), in the layout's order. */
+function upperParts(model: THREE.Object3D): THREE.Object3D[] {
+  const out: THREE.Object3D[] = [];
+  model.traverse(o => { const m = /^hq_upper_(\d)/.exec(o.name); if (m && !out[+m[1]]) out[+m[1]] = o; });
+  return out;
 }
 /**
- * The ceiling shows only to a camera under it, decided for each render by the camera drawing it (the walking camera
- * is above it; an eye-level view, as the evidence's, is under it). Returns the undo.
+ * Module scope (the react compiler forbids writing through hook values): each part of the upper floor, and its lamps'
+ * pools, shown or cut away. Dev (the evidence): `__hqHideUpper` takes it all away (the ground floor's plan),
+ * `__hqShowUpper` shows it all (the eye-level views, the player parked out of the picture).
+ */
+function showUpper(walker: HqWalker, parts: readonly THREE.Object3D[], pools: readonly (THREE.Object3D | null)[]) {
+  const dev = DEV ? window as { __hqHideUpper?: boolean; __hqShowUpper?: boolean } : {};
+  parts.forEach((part, i) => {
+    const shown = !dev.__hqHideUpper && (dev.__hqShowUpper || (walker.shown[i] ?? true));
+    part.visible = shown;
+    if (pools[i]) pools[i].visible = shown;
+  });
+}
+/** Inside the room, under its ceiling. */
+const insideRoom = (p: THREE.Vector3) => p.y < 2 * F - 0.05 && Math.abs(p.x) < HQ_ROOM.halfW && Math.abs(p.z) < HQ_ROOM.halfD;
+/**
+ * The ceiling (and the whole front wall) shows only to a camera inside the room, decided for each render by the camera
+ * drawing it. Returns the undo.
  */
 function ceilingForCamera(scene: THREE.Scene, ceiling: THREE.Object3D) {
   const before = scene.onBeforeRender;
-  const mine: THREE.Scene["onBeforeRender"] = (...args) => { before.apply(scene, args); ceiling.visible = args[2].position.y < 2 * F - 0.05; };
+  const mine: THREE.Scene["onBeforeRender"] = (...args) => { before.apply(scene, args); ceiling.visible = insideRoom(args[2].position); };
   scene.onBeforeRender = mine;
   return () => { if (scene.onBeforeRender === mine) scene.onBeforeRender = before; };
 }
@@ -105,20 +123,20 @@ export default function HqRoom({ walker, light }: { walker: HqWalker; light: Isl
   useEffect(() => { applyEnvironment(gl, scene, HQ_ENV); return () => disposeEnvironment(scene); }, [gl, scene]);
   const ground = useRoomModel(GROUND), upper = useRoomModel(UPPER), ceiling = useRoomModel(CEILING);
   const pools = useMemo(() => hqPools(), []);
-  const low = useMemo(() => pools.filter(p => p.level === 0), [pools]), high = useMemo(() => pools.filter(p => p.level === 1), [pools]);
+  const low = useMemo(() => pools.filter(p => p.level === 0), [pools]);
+  const high = useMemo(() => HQ.upper.map((_, i) => pools.filter(p => p.level === 1 && p.part === i)), [pools]);
   const { lamps: gain, day } = interiorLight(light);
   useEffect(() => envForDay(scene, day), [scene, day]);
-  const upperRef = useRef<THREE.Group>(null);
-  useFrame(() => showUpper(walker, upperRef.current));
+  const parts = useMemo(() => upperParts(upper), [upper]);
+  const poolGroups = useRef<(THREE.Group | null)[]>([]);
+  useFrame(() => showUpper(walker, parts, poolGroups.current));
   useEffect(() => ceilingForCamera(scene, ceiling), [scene, ceiling]);
   return <group>
     <primitive object={ground} onClick={walkOn(0)} />
     <LampPools pools={low} gain={gain} />
     <Suspense fallback={null}><Aquarium /></Suspense>
-    <group ref={upperRef}>
-      <primitive object={upper} onClick={walkOn(1)} />
-      <LampPools pools={high} gain={gain} />
-    </group>
+    <primitive object={upper} onClick={walkOn(1)} />
+    {high.map((list, i) => list.length > 0 && <group key={i} ref={g => { poolGroups.current[i] = g; }}><LampPools pools={list} gain={gain} /></group>)}
     <primitive object={ceiling} />
   </group>;
 }

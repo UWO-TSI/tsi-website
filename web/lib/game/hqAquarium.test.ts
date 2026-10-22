@@ -9,6 +9,8 @@ describe("HQ's aquarium fish", () => {
     const box = swimBox(), a = HQ.aquarium;
     expect(box.x0).toBeGreaterThan(a.x0);
     expect(box.x1).toBeLessThan(a.x1);
+    expect(box.z0).toBeGreaterThan(a.z0);
+    expect(box.z1).toBeLessThan(a.z1);
     expect(box.y0).toBeGreaterThan(a.y0);
     expect(box.y1).toBeLessThan(a.y1);
     for (const f of fish) for (let t = 0; t < 240; t += 0.83) {
@@ -26,11 +28,11 @@ describe("HQ's aquarium fish", () => {
     const silver = fish.filter(f => (SILVER as readonly string[]).includes(f.color)), orange = fish.filter(f => (ORANGE as readonly string[]).includes(f.color));
     expect(silver.length).toBeGreaterThanOrEqual(40);
     expect(orange.length).toBeGreaterThanOrEqual(10);
-    expect(Math.max(...silver.map(f => f.y0))).toBeGreaterThan(HQ.aquarium.y1 / 2 + 1);   // seen from the mezzanine
+    expect(Math.max(...silver.map(f => f.y0))).toBeGreaterThan(HQ.aquarium.y1 / 2 + 2);   // seen from the bridge and the arms
     expect(Math.min(...silver.map(f => f.y0))).toBeLessThan(2.5);                          // and from the ground lounge
     expect(Math.max(...orange.map(f => f.y0))).toBeLessThan(3);
     // a school is fish sharing one path
-    expect(new Set(silver.map(f => `${f.zc}:${f.za}:${f.w}`)).size).toBeLessThanOrEqual(4);
+    expect(new Set(silver.map(f => `${f.ac}:${f.aa}:${f.w}`)).size).toBeLessThanOrEqual(5);
   });
 
   it("faces the way it swims", () => {

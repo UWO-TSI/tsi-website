@@ -1,6 +1,6 @@
-"""HQ's room (specs/interiors/hq.md, phase 2; ledger row 316): both floors, the aquarium and the ceiling, modelled on
-the numbers the game walks (art/interiors/hq_layout.json, written from web/lib/game/hqLayout.ts by
-web/scripts/hq-layout-json.mjs; change the layout there, never here).
+"""HQ's room (specs/interiors/hq.md, phase 3: the gallery, two tall storeys; ledger row 316): both floors, the aquarium
+and the ceiling, modelled on the numbers the game walks (art/interiors/hq_layout.json, written from
+web/lib/game/hqLayout.ts by web/scripts/hq-layout-json.mjs; change the layout there, never here).
 
 The look, from David's four references (references/interiors/hq/): walnut, concrete and plaster, leather and velvet,
 deep carpets and plants, lit by lamps, strips and track spots rather than ceiling panels. Simple and a little cartoony,
@@ -13,17 +13,20 @@ lamp shades' undersides and the oval lights are M_Glow. No downloads, no referen
   /Applications/Blender.app/Contents/MacOS/Blender -b -P art/interiors/build_hq.py
 
 Writes web/public/assets/game/interiors/hq/:
-- ground.glb: hq_ground (the floor; the hall's walls, both storeys high; the ground storey of the walls under the
-  mezzanine; the stair; the aquarium's walnut surround; every ground-floor fixture), hq_windows (the panes the engine
-  fills with the outside) and hq_caster (shadow only: the ceiling and the cut-away front wall, so daylight comes in by
-  the windows);
-- upper.glb: hq_upper (the mezzanine's slab, fascia and rail, the upper storey of the walls round it, the lounge, the
-  admin doors, the banners, the tracks under the slab) and hq_windows_upper. The game cuts it away while you're under it;
-- ceiling.glb: hq_ceiling (the hall's plain dark ceiling, the walnut oval ceiling over the upper lounge, the track
-  spots). The game shows it only to a camera under it: the walking camera looks in from above;
+- ground.glb: hq_ground (the floor; the side and back walls both storeys high with their windows; the entry under the
+  bridge; the hall's lounge; the floor under each arm; the stair; the aquarium's walnut surround), hq_windows (the panes
+  the engine fills with the outside) and hq_caster (shadow only: the ceiling and the cut-away front wall, so daylight
+  comes in by the windows);
+- upper.glb: the upper floor's three parts, hq_upper_0 (the bridge and its lounge), hq_upper_1 (the left arm, its
+  banners and the admin doors) and hq_upper_2 (the right arm, its banners, the stair's well): each its slab, fascia and
+  rails, its fixtures and the tracks under it. The game cuts a part away while you're under it or it's in the way;
+- ceiling.glb: hq_ceiling (the plain dark ceiling, the walnut oval ceiling over the bridge's lounge, the tracks up
+  there, and the whole front wall, both storeys, with its door, windows, panelling and the lit art). The game shows it
+  only to a camera inside the room: the walking camera looks in from the door's side or from above;
 - tank.glb: the aquarium's inside (hq_tank_inner), its reef (hq_tank_reef), its glass (hq_tank_glass) and its water's
   surface (hq_tank_surface). The engine gives them the tank's own shaders (components/game/hq/Aquarium.tsx).
-Game coordinates throughout (propkit.G): x across (+x on screen left), y up, z into the room.
+Game coordinates throughout (propkit.G): x across (+x on screen left), y up, z into the room. A piece standing on a side
+or the front wall is made facing -z about its first block and turned onto its wall (turned), its sizes from the layout.
 """
 import json, math, os, sys
 import numpy as np
@@ -37,7 +40,10 @@ L = json.load(open(os.path.join(HERE, "hq_layout.json")))
 F, SLAB = L["floorHeight"], L["slab"]
 W, D, T, LIP = L["room"]["halfW"], L["room"]["halfD"], L["room"]["wall"], L["room"]["lip"]
 TOP = 2 * F                      # the room's ceiling
-S, A, UP = L["stair"], L["aquarium"], L["upper"][0]
+UNDER = F - SLAB                 # the upper floor's underside
+RAIL = L["rail"]
+S, A, UPPER = L["stair"], L["aquarium"], L["upper"]
+WELL = (S["x0"], S["x1"], min(S["foot"], S["head"]), max(S["foot"], S["head"]))
 FX = {f["id"]: f for f in L["fixtures"]}
 LAMPS = {lp["id"]: lp for lp in L["lamps"]}
 OUT = "game/interiors/hq"
@@ -251,22 +257,6 @@ def side_wall(k, m, x, z0, z1, y0, y1, holes=(), col=PLASTER):
     cx = x + math.copysign(T / 2, x)
     for (a0, a1, b0, b1) in rects:
         k.rbox((cx, (b0 + b1) / 2, (a0 + a1) / 2), (T, b1 - b0, a1 - a0), 0.0, m["plaster"], col, uv_len=2.5)
-
-
-def back_wall(k, m, y0, y1, col=PLASTER):
-    k.rbox((0, (y0 + y1) / 2, D + T / 2), (2 * W + 2 * T, y1 - y0, T), 0.0, m["plaster"], col, uv_len=2.5)
-
-
-def skirting(k, m, y, z0, z1, back=True, sides=(-1, 1)):
-    """Walnut skirting along the back wall and the side walls between z0 and z1, at floor height y."""
-    if back:
-        k.rbox((0, y + 0.06, D - 0.015), (2 * W, 0.12, 0.03), 0.006, m["walnut"], WALNUT_DARK, uv_len=1.5)
-    for s in sides:
-        k.rbox((s * (W - 0.015), y + 0.06, (z0 + z1) / 2), (0.03, 0.12, z1 - z0), 0.006, m["walnut"], WALNUT_DARK, uv_len=1.5)
-
-
-def windows_on(level_windows):
-    return [w for w in L["windows"] if level_windows(w)]
 
 
 def wall_x(w):
@@ -530,21 +520,68 @@ def join(main, others):
     return main
 
 
+# ================================================================ turning a piece onto its wall
+YAW = {"-z": 0.0, "+z": math.pi, "+x": -math.pi / 2, "-x": math.pi / 2}
+
+
+def turned(k, yaw, anchor, fn, *args):
+    """Build a piece made facing -z about the origin (fn), then turn it by yaw (game, about y) and set it at anchor
+    (game x, z)."""
+    before = set(k.bm.verts)
+    fn(*args)
+    c, s = math.cos(yaw), math.sin(yaw)
+    ax, az = anchor
+    for v in k.bm.verts:
+        if v in before:
+            continue
+        gx, gz = v.co.x, -v.co.y          # Blender (x, y, z) is game (x, -z, y)
+        v.co.x, v.co.y = gx * c + gz * s + ax, -(-gx * s + gz * c + az)
+
+
+class Local:
+    """A fixture in its own frame: made facing -z about its first block (its anchor), for turned()."""
+
+    def __init__(self, fid):
+        self.f = FX[fid]
+        self.yaw = YAW[self.f.get("facing", "-z")]
+        a = self.f["blocks"][0]["at"]
+        self.anchor = (a[0], a[2])
+
+    def point(self, p):
+        """A game point (x, y, z) in the frame."""
+        c, s = math.cos(self.yaw), math.sin(self.yaw)
+        dx, dz = p[0] - self.anchor[0], p[2] - self.anchor[1]
+        return (dx * c - dz * s, p[1], dx * s + dz * c)
+
+    def blocks(self):
+        """Its blocks in the frame: (centre, size), the size along the frame's x, y and z."""
+        out = []
+        for b in self.f["blocks"]:
+            sx, sy, sz = b["size"]
+            if abs(math.sin(self.yaw)) > 0.5:
+                sx, sz = sz, sx
+            out.append((self.point(b["at"]), (sx, sy, sz)))
+        return out
+
+    def build(self, k, fn, *args):
+        turned(k, self.yaw, self.anchor, fn, *args)
+
+
 # ================================================================ the ground floor
 def ground(m):
     k = K.Kit("hq_ground")
     floor_quad(k, m["floor"], 0.0, -W, W, -D, D)
-    # The walls: the hall's (in front of the mezzanine) both storeys high; under the mezzanine the ground storey only (its
-    # upper storey is the mezzanine's, cut away with it).
-    hall = [w for w in L["windows"] if w["z1"] <= UP["z0"]]
+    # The side and back walls, both storeys high, with their windows; the front wall is the ceiling model's.
     for x in (-W, W):
-        holes = [(w["z0"], w["z1"], w["y0"], w["y1"]) for w in hall if wall_x(w) == x]
-        side_wall(k, m, x, -D - T, UP["z0"], 0.0, TOP, holes)
-        side_wall(k, m, x, UP["z0"], D + T, 0.0, F)
-    back_wall(k, m, 0.0, F)
-    skirting(k, m, 0.0, -D, D)
-    for w in hall:
+        holes = [(w["z0"], w["z1"], w["y0"], w["y1"]) for w in L["windows"] if wall_x(w) == x]
+        side_wall(k, m, x, -D - T, D + T, 0.0, TOP, holes)
+    # The back wall, open behind the tank: the tank's own back is the wall there (a plaster face 2 cm behind the water
+    # wins the depth test from the walking camera's distance).
+    for (a0, a1, b0, b1) in cut([(-W - T, W + T, 0.0, TOP)], (A["x0"], A["x1"], 0.0, TOP)):
+        k.rbox(((a0 + a1) / 2, (b0 + b1) / 2, D + T / 2), (a1 - a0, b1 - b0, T), 0.0, m["plaster"], PLASTER, uv_len=2.5)
+    for w in L["windows"]:
         window_frame(k, m, w)
+    skirtings(k, m)
     # The cut-away near wall: a low lip either side of the door, capped in walnut; dark jambs; a step outside; a mat in.
     dx, dh = L["door"]["x"], L["door"]["half"]
     for x0, x1 in ((-W - T, dx - dh), (dx + dh, W + T)):
@@ -554,80 +591,72 @@ def ground(m):
         k.rbox((dx + sx * (dh + 0.04), (LIP + 0.3) / 2, -D - T / 2), (0.08, LIP + 0.3, T + 0.06), 0.015, m["paint"], BRONZE)
     k.rbox((dx, -0.03, -D - T - 0.28), (2 * dh + 0.5, 0.06, 0.5), 0.02, m["stone"], STONE_DARK)
     k.rbox((dx, 0.012, -D + 0.62), (1.7, 0.024, 0.95), 0.012, m["rug"], MAT, uv_len=0.6)
-    for name, fn in (("panelling", walnut_panelling), ("stair art", stair_art), ("stair", stair), ("aquarium surround", aquarium_surround), ("front desk", front_desk),
-                     ("coffee bar", coffee_bar), ("aquarium lounge", aquarium_lounge), ("co-working", coworking), ("work lounge", work_lounge),
-                     ("library", library), ("notice board", notice_board), ("founder", founder)):
+    for name, fn in (("panelling", walnut_panelling), ("canvas", landing_canvas), ("stair", stair), ("aquarium surround", aquarium_surround),
+                     ("front desk", front_desk), ("coffee bar", coffee_bar), ("work lounge", work_lounge), ("aquarium lounge", aquarium_lounge),
+                     ("co-working", coworking), ("library", library), ("notice board", notice_board), ("founder", founder)):
         counted(k, name, fn, k, m)
-    for i, fid in enumerate(("palm-front-left", "palm-front-right", "plant-aquarium", "plant-work")):
+    for i, fid in enumerate(("palm-door-left", "palm-door-right", "palm-corner", "plant-tank", "plant-stair")):
         counted(k, "plants", plant, k, m, FX[fid]["blocks"][0], 11 + i)
     return k.finish(name="hq_ground")
 
 
+def skirtings(k, m):
+    """Walnut skirting along the walls at both floors' level (upstairs, round the upper floor's edge at the walls, open
+    over the stair's well)."""
+    def run(x0, z0, x1, z1, y):
+        if abs(x1 - x0) >= abs(z1 - z0):
+            k.rbox(((x0 + x1) / 2, y + 0.06, z0), (abs(x1 - x0), 0.12, 0.03), 0.006, m["walnut"], WALNUT_DARK, uv_len=1.5)
+        else:
+            k.rbox((x0, y + 0.06, (z0 + z1) / 2), (0.03, 0.12, abs(z1 - z0)), 0.006, m["walnut"], WALNUT_DARK, uv_len=1.5)
+    e = 0.015
+    run(-W, D - e, W, D - e, 0.0)
+    run(W - e, -D, W - e, D, 0.0)
+    run(-W + e, -D, -W + e, D, 0.0)
+    for x0, x1 in ((UPPER[1]["x0"], W), (-W, UPPER[2]["x1"])):
+        run(x0, D - e, x1, D - e, F)
+    run(W - e, -D, W - e, D, F)
+    run(-W + e, -D, -W + e, WELL[2], F)
+    run(-W + e, WELL[3], -W + e, D, F)
+
+
 def walnut_panelling(k, m):
-    """The back wall under the mezzanine, from the library's end to the left wall: walnut panels with dark reveals behind
-    the clock, the notice board and the Founder's desk (ref 2's panelled wall)."""
-    x0, x1 = -1.05, W
-    h = F - SLAB
-    k.rbox(((x0 + x1) / 2, h / 2, D - 0.03), (x1 - x0, h, 0.04), 0.0, m["walnut"], WALNUT, uv_len=1.3, v_axis=1)
-    x = x0 + 0.62
-    while x < x1 - 0.1:
-        k.rbox((x, h / 2, D - 0.052), (0.014, h, 0.006), 0.0, m["paint"], WALNUT_DARK)
-        x += 0.62
+    """Walnut panels with dark reveals (ref 2's panelled wall) under the arms: the back wall behind the clock and the
+    Founder's desk, behind the workbench's corner, and the right wall behind the notice board."""
+    h = UNDER
+
+    def panels_back(x0, x1):
+        k.rbox(((x0 + x1) / 2, h / 2, D - 0.03), (x1 - x0, h, 0.04), 0.0, m["walnut"], WALNUT, uv_len=1.3, v_axis=1)
+        x = x0 + 0.62
+        while x < x1 - 0.1:
+            k.rbox((x, h / 2, D - 0.052), (0.014, h, 0.006), 0.0, m["paint"], WALNUT_DARK)
+            x += 0.62
+    panels_back(UPPER[1]["x0"], W)
+    panels_back(-W, UPPER[2]["x1"])
+    z0, z1 = -3.9, S["foot"] - 0.05
+    k.rbox((-W + 0.03, h / 2, (z0 + z1) / 2), (0.04, h, z1 - z0), 0.0, m["walnut"], WALNUT, uv_len=1.3, v_axis=1)
+    z = z0 + 0.62
+    while z < z1 - 0.1:
+        k.rbox((-W + 0.052, h / 2, z), (0.006, h, 0.014), 0.0, m["paint"], WALNUT_DARK)
+        z += 0.62
 
 
-def stair_art(k, m):
-    """A big framed canvas on the hall's right wall over the stair (ref 2's lit art piece, in the room's colours): deep
-    navy, rust and cream blocks with a thin brass line, seen from the hall and from the walking camera."""
-    x = -W + 0.05
-    z0, z1, y0, y1 = -2.9, 0.3, 3.7, 5.7
-    zc, yc = (z0 + z1) / 2, (y0 + y1) / 2
-    k.rbox((x, yc, zc), (0.06, y1 - y0 + 0.1, z1 - z0 + 0.1), 0.012, m["paint"], BLACK)
-    k.rbox((x + 0.035, yc, zc), (0.01, y1 - y0 - 0.06, z1 - z0 - 0.06), 0.0, m["paint"], "#e9e1d2")
-    for (za, zb, ya, yb, col) in ((z0 + 0.25, zc + 0.2, y0 + 0.25, y1 - 0.5, "#24324f"), (zc + 0.45, z1 - 0.25, y0 + 0.6, yc + 0.35, "#b4583a"),
-                                  (zc - 0.4, z1 - 0.6, yc + 0.55, y1 - 0.25, "#d8b878")):
-        k.rbox((x + 0.042, (ya + yb) / 2, (za + zb) / 2), (0.006, yb - ya, zb - za), 0.0, m["paint"], col)
-    k.rbox((x + 0.046, y0 + 0.42, zc), (0.004, 0.025, z1 - z0 - 0.5), 0.0, m["metal"], BRASS)
-
-
-FRONT_WINDOWS = ((-7.6, -4.4), (4.4, 7.6))
-
-
-def front_wall(k, m):
-    """The near wall, whole, for a camera inside the room (the walking camera looks in over its lip, so the game shows
-    this only to a camera under the ceiling): plaster over the lip, the glazed door in its bronze frame, two tall
-    windows either side."""
-    dx, dh = L["door"]["x"], L["door"]["half"]
-    dt = 2.7
-    holes = [(dx - dh, dx + dh, 0.0, dt)] + [(a, b, 0.9, 6.1) for a, b in FRONT_WINDOWS]
-    rects = [(-W - T, W + T, LIP, TOP)]
-    for h in holes:
-        rects = cut(rects, h)
-    for (a0, a1, b0, b1) in rects:
-        k.rbox(((a0 + a1) / 2, (b0 + b1) / 2, -D - T / 2), (a1 - a0, b1 - b0, T), 0.0, m["plaster"], PLASTER, uv_len=2.5)
-    zf = -D + 0.06
-    for (c, s_) in (((dx - dh, dt / 2, zf), (0.07, dt, 0.07)), ((dx + dh, dt / 2, zf), (0.07, dt, 0.07)), ((dx, dt, zf), (2 * dh + 0.07, 0.07, 0.07)),
-                    ((dx, dt * 0.55, zf), (2 * dh, 0.05, 0.05)), ((dx, dt / 2, zf), (0.05, dt, 0.05))):
-        k.rbox(c, s_, 0.01, m["paint"], BRONZE)
-    k.rbox((dx, dt / 2, zf + 0.01), (2 * dh, dt, 0.01), 0.0, m["glass"], "#cfe0e4")
-    for a, b in FRONT_WINDOWS:
-        zc = (a + b) / 2
-        for (c, s_) in (((zc, 0.9, zf), (b - a, 0.06, 0.07)), ((zc, 6.1, zf), (b - a, 0.06, 0.07)), ((a, 3.5, zf), (0.06, 5.2, 0.07)), ((b, 3.5, zf), (0.06, 5.2, 0.07)),
-                        ((zc, 3.5, zf), (0.04, 5.2, 0.05)), ((zc, 0.9 + 5.2 * 0.36, zf), (b - a, 0.035, 0.05)), ((zc, 0.9 + 5.2 * 0.7, zf), (b - a, 0.035, 0.05))):
-            k.rbox(c, s_, 0.008, m["paint"], BRONZE)
-        k.rbox((zc, 0.875, -D + 0.12), (b - a + 0.16, 0.05, 0.26), 0.012, m["stone"], STONE)
-
-
-def front_panes():
-    k = K.Kit("hq_windows_front")
-    mat = K.Mat("M_View", "#ffffff", rough=0.1)
-    for a, b in FRONT_WINDOWS:
-        k.rbox(((a + b) / 2, 3.5, -D - 0.075), (b - a, 5.2, 0.01), 0.0, mat, segs=1)
-    return k.finish(name="hq_windows_front")
+def landing_canvas(k, m):
+    """A big framed canvas on the back wall over the stair's landing (ref 2's lit art piece, in the room's colours):
+    deep navy, rust and cream blocks with a thin brass line, seen across the hall from the bridge."""
+    x0, x1, y0, y1 = -9.5, -6.7, F + 1.0, F + 3.1
+    xc, yc = (x0 + x1) / 2, (y0 + y1) / 2
+    z = D - 0.05
+    k.rbox((xc, yc, z), (x1 - x0 + 0.1, y1 - y0 + 0.1, 0.06), 0.012, m["paint"], BLACK)
+    k.rbox((xc, yc, z - 0.035), (x1 - x0 - 0.06, y1 - y0 - 0.06, 0.01), 0.0, m["paint"], "#e9e1d2")
+    for (xa, xb, ya, yb, col) in ((xc - 0.2, x1 - 0.25, y0 + 0.25, y1 - 0.5, "#24324f"), (x0 + 0.25, xc - 0.45, y0 + 0.6, yc + 0.35, "#b4583a"),
+                                  (x0 + 0.6, xc + 0.4, yc + 0.55, y1 - 0.25, "#d8b878")):
+        k.rbox(((xa + xb) / 2, (ya + yb) / 2, z - 0.042), (xb - xa, yb - ya, 0.006), 0.0, m["paint"], col)
+    k.rbox((xc, y0 + 0.42, z - 0.046), (x1 - x0 - 0.5, 0.025, 0.004), 0.0, m["metal"], BRASS)
 
 
 def stair(k, m):
-    """A straight flight up the right wall: walnut treads floating on two dark steel stringers, a glass balustrade with a
-    walnut handrail up its open side."""
+    """A straight flight up the right wall under the right arm: walnut treads floating on two dark steel stringers, a
+    glass balustrade with a walnut handrail up its open side."""
     n, x0, x1, foot, head = S["steps"], S["x0"], S["x1"], S["foot"], S["head"]
     run, rise = (head - foot) / n, F / n
     for i in range(n):
@@ -643,24 +672,29 @@ def stair(k, m):
     k.face([k.vert((xg, lo(za), za)), k.vert((xg, lo(zb), zb)), k.vert((xg, lo(zb) + 0.9, zb)), k.vert((xg, lo(za) + 0.9, za))],
            [(0, 0), (1, 0), (1, 1), (0, 1)], m["glass"], "#d6e6ea")
     k.tube([(xg, lo(za) + 0.94, za), (xg, lo(zb) + 0.94, zb)], 0.026, m["walnut"], WALNUT, n=10, caps=True)
-    for t in np.linspace(0, 1, 5):
+    for t in np.linspace(0, 1, 7):
         z = za + (zb - za) * t
         k.tube([(xg, lo(z) - 0.05, z), (xg, lo(z) + 0.92, z)], 0.014, m["metal"], STEEL_DARK, n=6)
 
 
 def aquarium_surround(k, m):
-    """The tank built into the left wall of the hall: walnut cladding at its ends and above it, a dark plinth below with
-    the warm strip along its top, a slim bronze bezel round the glass. Open above, so the walking camera sees the water."""
-    x0, z0, z1, y0, y1 = A["x0"], A["z0"], A["z1"], A["y0"], A["y1"]
-    for z, s in ((z0 - 0.11, -1), (z1 + 0.11, 1)):
-        k.rbox(((x0 - 0.05 + W) / 2, TOP / 2, z), (W - x0 + 0.05, TOP, 0.22), 0.01, m["walnut"], WALNUT, uv_len=1.3, v_axis=1)
-    k.rbox((x0 + 0.03, (y1 + TOP) / 2 + 0.02, (z0 + z1) / 2), (0.16, TOP - y1 + 0.04, z1 - z0 + 0.44), 0.01, m["walnut"], WALNUT, uv_len=1.3)
-    k.rbox(((x0 - 0.04 + W) / 2, y0 / 2, (z0 + z1) / 2), (W - x0 + 0.04, y0, z1 - z0), 0.01, m["paint"], CHARCOAL)
-    strip(k, m, (x0 - 0.05, y0 - 0.04, z0 + 0.05), (x0 - 0.05, y0 - 0.04, z1 - 0.05), w=0.03, h=0.03)
+    """The tank filling the hall's back wall: walnut cladding at its ends, floor to ceiling, and above it, a dark plinth
+    below with the warm strip along its top, a slim bronze bezel round the glass. Open above, so the walking camera
+    sees the water."""
+    x0, x1, z0, y0, y1 = A["x0"], A["x1"], A["z0"], A["y0"], A["y1"]
+    for b in FX["tank-ends"]["blocks"]:
+        (x, _, z), (sx, sy, sz) = b["at"], b["size"]
+        k.rbox((x, TOP / 2, (z0 - 0.1 + D) / 2), (sx, TOP, D - z0 + 0.1), 0.01, m["walnut"], WALNUT, uv_len=1.3, v_axis=1)
+    k.rbox(((x0 + x1) / 2, (y1 + TOP) / 2 + 0.02, z0 + 0.03), (x1 - x0 + 0.1, TOP - y1 + 0.04, 0.16), 0.01, m["walnut"], WALNUT, uv_len=1.3)
+    k.rbox(((x0 + x1) / 2, y0 / 2, (z0 - 0.04 + D) / 2), (x1 - x0, y0, D - z0 + 0.04), 0.01, m["paint"], CHARCOAL)
+    strip(k, m, (x0 + 0.05, y0 - 0.04, z0 - 0.05), (x1 - 0.05, y0 - 0.04, z0 - 0.05), w=0.03, h=0.03)
     bz = 0.05
-    for (c, s_) in (((x0 - 0.005, y0 + bz / 2, (z0 + z1) / 2), (0.03, bz, z1 - z0)), ((x0 - 0.005, y1 - bz / 2, (z0 + z1) / 2), (0.03, bz, z1 - z0)),
-                    ((x0 - 0.005, (y0 + y1) / 2, z0 + bz / 2), (0.03, y1 - y0, bz)), ((x0 - 0.005, (y0 + y1) / 2, z1 - bz / 2), (0.03, y1 - y0, bz))):
+    for (c, s_) in ((((x0 + x1) / 2, y0 + bz / 2, z0 - 0.005), (x1 - x0, bz, 0.03)), (((x0 + x1) / 2, y1 - bz / 2, z0 - 0.005), (x1 - x0, bz, 0.03)),
+                    ((x0 + bz / 2, (y0 + y1) / 2, z0 - 0.005), (bz, y1 - y0, 0.03)), ((x1 - bz / 2, (y0 + y1) / 2, z0 - 0.005), (bz, y1 - y0, 0.03))):
         k.rbox(c, s_, 0.008, m["paint"], BRONZE)
+    # the floor slab's edge where it meets the tank: a bronze mullion at the upper floor's level, both ends
+    for x in (x0 + 0.02, x1 - 0.02):
+        k.rbox((x, F, z0 - 0.02), (0.06, 0.06, 0.06), 0.01, m["paint"], BRONZE)
 
 
 def front_desk(k, m):
@@ -681,7 +715,6 @@ def front_desk(k, m):
         k.rbox((bx + ex, (bsy - 0.05) / 2, bz + 0.05), (0.05, bsy - 0.05, bsz - 0.04), 0.01, m["walnut"], WALNUT_DARK)
     lp = LAMPS["desk-lamp"]["light"]
     mushroom(k, m, lp[0], bsy, lp[2], (lp[1] - bsy) / 0.62, r=0.17)
-    # paper trays and a cup on the work surface, a small plant at its far end
     k.rbox((bx + 0.35, bsy + 0.04, bz + 0.1), (0.36, 0.08, 0.28), 0.01, m["paint"], CHARCOAL)
     k.rbox((bx + 0.35, bsy + 0.085, bz + 0.1), (0.3, 0.01, 0.22), 0.0, m["paint"], PAPER)
     k.lathe((bx - 0.3, bsy, bz + 0.15), [(0, 0), (0.045, 0), (0.05, 0.1), (0.044, 0.1), (0.04, 0.01), (0, 0.01)], m["paint"], WHITE, n=12)
@@ -690,7 +723,6 @@ def front_desk(k, m):
         a = i * 2.1
         k.tube([(x + sx / 2 - 0.22, sy + 0.18, z + 0.05), (x + sx / 2 - 0.22 + math.cos(a) * 0.08, sy + 0.42 + 0.04 * i, z + 0.05 + math.sin(a) * 0.06)], 0.005, m["paint"], STEM, n=4)
         k.blob((x + sx / 2 - 0.22 + math.cos(a) * 0.08, sy + 0.44 + 0.04 * i, z + 0.05 + math.sin(a) * 0.06), (0.04, 0.012, 0.025), m["paint"], LEAF_LIGHT, segs=6, rings=4, rot=K.game_rot(yaw=-a))
-    # the register: an open ledger, leather bound, a pen across it
     b = FX["register"]["blocks"][0]
     (rx, ry, rz), (rsx, _, rsz) = b["at"], b["size"]
     k.rbox((rx, ry + 0.008, rz), (rsx, 0.016, rsz), 0.006, m["paint"], LEATHER_BROWN)
@@ -721,7 +753,6 @@ def coffee_bar(k, m):
     k.rbox((x, 0.1 + (sy - 0.18) / 2, z), (sx - 0.04, sy - 0.18, sz - 0.04), 0.03, m["marble"], "#ffffff", uv_len=1.1)
     k.rbox((x, sy - 0.045, z - 0.06), (sx + 0.08, 0.09, sz + 0.2), 0.025, m["marble"], "#ffffff", uv_len=1.1)
     strip(k, m, (x - sx / 2 + 0.1, sy - 0.11, z - sz / 2 - 0.12), (x + sx / 2 - 0.1, sy - 0.11, z - sz / 2 - 0.12))
-    # the espresso machine at the far side, its back to the room's right
     ex, ez = x + 0.55, z + 0.2
     k.rbox((ex, sy + 0.2, ez), (0.56, 0.4, 0.4), 0.04, m["metal"], CHROME)
     k.rbox((ex, sy + 0.41, ez), (0.52, 0.02, 0.36), 0.01, m["paint"], BLACK)
@@ -739,167 +770,182 @@ def coffee_bar(k, m):
 
 
 def aquarium_lounge(k, m):
-    """The small lamp-lit lounge before the tank (ref 2): a cream shag rug, a brown velvet sofa facing the glass, a low
-    travertine table with books and the mushroom lamp, a velvet lounge chair and the globe floor lamp."""
-    f = FX["ground-lounge"]
-    rug, sofa_b, table_b, chair_b, lamp_b = f["blocks"]
+    """The lamp-lit lounge in the hall before the tank (ref 2): a cream shag rug, a long brown velvet sofa facing the
+    glass, a low travertine table with books and the mushroom lamp, two velvet lounge chairs turned in, a globe floor
+    lamp either side."""
+    rug, sofa_b, table_b, c1, c2, l1, l2 = FX["ground-lounge"]["blocks"]
     (x, _, z), (sx, sy, sz) = rug["at"], rug["size"]
     k.rbox((x, 0.016, z), (sx, 0.032, sz), 0.016, m["rug"], CREAM, uv_len=0.7)
     (x, _, z), (sx, sy, sz) = sofa_b["at"], sofa_b["size"]
-    sofa(k, m, x, z, yaw_facing("+x"), sz, sx, sy, m["cloth"], VELVET)
+    sofa(k, m, x, z, yaw_facing("+z"), sx, sz, sy, m["cloth"], VELVET, seats=3)
     (x, _, z), (sx, sy, sz) = table_b["at"], table_b["size"]
     k.rbox((x, 0.08, z), (sx - 0.2, 0.16, sz - 0.2), 0.02, m["stone"], STONE_DARK)
     k.rbox((x, sy - 0.05, z), (sx, 0.1, sz), 0.025, m["stone"], STONE)
     lp = LAMPS["lounge-lamp"]["light"]
     mushroom(k, m, lp[0], sy, lp[2], (lp[1] - sy) / 0.62 * 1.35, r=0.2)
     for i, c in enumerate(("#2f4a6b", "#e9e4d8", "#b5863f")):
-        k.rbox((x - 0.05, sy + 0.025 + i * 0.04, z - 0.35), (0.3 - i * 0.03, 0.04, 0.24 - i * 0.02), 0.004, m["paint"], c, rot=K.game_rot(yaw=0.2 * i))
-    (x, _, z), (sx, sy, sz) = chair_b["at"], chair_b["size"]
-    armchair(k, m, x, z, yaw_facing("+z") - 0.4, sx, m["cloth"], VELVET_DEEP)
-    lp = LAMPS["lounge-floor"]["light"]
-    globe_lamp(k, m, lp[0], 0.0, lp[2], lp[1])
+        k.rbox((x - 0.4, sy + 0.025 + i * 0.04, z + 0.05), (0.3 - i * 0.03, 0.04, 0.24 - i * 0.02), 0.004, m["paint"], c, rot=K.game_rot(yaw=0.2 * i))
+    for b, yaw in ((c1, 0.7 * math.pi), (c2, -0.7 * math.pi)):
+        (x, _, z), (sx, sy, sz) = b["at"], b["size"]
+        armchair(k, m, x, z, yaw, sx, m["cloth"], VELVET_DEEP)
+    for lid in ("lounge-floor-l", "lounge-floor-r"):
+        lp = LAMPS[lid]["light"]
+        globe_lamp(k, m, lp[0], 0.0, lp[2], lp[1])
+
+
+def work_lounge(k, m):
+    """The work lounge on the deep blue rug by the library's end (ref 1): a quilted black leather daybed with its
+    bolster, a brown leather sofa against the wall, a glass coffee table stacked with books and the mushroom lamp. Made
+    facing -z and turned to face into the room."""
+    lo = Local("work-lounge")
+    lamp = lo.point(LAMPS["work-lamp"]["light"])
+
+    def make():
+        (rug, daybed, sofa_b, table_b) = lo.blocks()
+        (x, _, z), (sx, sy, sz) = rug
+        k.rbox((x, 0.016, z), (sx, 0.032, sz), 0.016, m["rug"], RUG_BLUE, uv_len=0.7)
+        (x, _, z), (sx, sy, sz) = daybed
+        for lx in (-sx / 2 + 0.12, sx / 2 - 0.12):
+            for s in (-1, 1):
+                k.tube([(x + lx - 0.08, 0.02, z + s * (sz / 2 - 0.05)), (x + lx + 0.08, sy - 0.12, z + s * (sz / 2 - 0.05))], 0.014, m["metal"], CHROME, n=6, caps=True)
+                k.tube([(x + lx + 0.08, 0.02, z + s * (sz / 2 - 0.05)), (x + lx - 0.08, sy - 0.12, z + s * (sz / 2 - 0.05))], 0.014, m["metal"], CHROME, n=6, caps=True)
+        k.rbox((x, sy - 0.11, z), (sx, 0.05, sz), 0.015, m["walnut"], WALNUT_DARK)
+        cols, rows = 6, 2
+        for i in range(cols):
+            for j in range(rows):
+                k.rbox((x - sx / 2 + sx * (i + 0.5) / cols, sy - 0.03, z - sz / 2 + sz * (j + 0.5) / rows), (sx / cols - 0.01, 0.1, sz / rows - 0.01), 0.04, m["paint"], LEATHER_BLACK, segs=1)
+        k.tube([(x - sx / 2 + 0.12, sy + 0.08, z - sz / 2 + 0.05), (x - sx / 2 + 0.12, sy + 0.08, z + sz / 2 - 0.05)], 0.1, m["paint"], LEATHER_BLACK, n=12, caps=True)
+        (x, _, z), (sx, sy, sz) = sofa_b
+        sofa(k, m, x, z, yaw_facing("-z"), sx, sz, sy, m["paint"], LEATHER_BROWN, seats=2)
+        (x, _, z), (sx, sy, sz) = table_b
+        k.rbox((x, sy - 0.01, z), (sx, 0.02, sz), 0.006, m["glass"], "#dfe9ec")
+        k.rbox((x, 0.12, z), (sx - 0.1, 0.015, sz - 0.08), 0.004, m["glass"], "#dfe9ec")
+        for lx in (-sx / 2 + 0.06, sx / 2 - 0.06):
+            for lz in (-sz / 2 + 0.06, sz / 2 - 0.06):
+                k.tube([(x + lx, 0.0, z + lz), (x + lx, sy - 0.02, z + lz)], 0.012, m["metal"], CHROME, n=6)
+        rng = np.random.default_rng(23)
+        for stack, (ox, oz) in enumerate(((-0.35, -0.08), (0.36, 0.1))):
+            for i in range(4 - stack):
+                c = SPINES[int(rng.integers(0, len(SPINES)))]
+                k.rbox((x + ox, sy + 0.022 + i * 0.044, z + oz), (0.32 - i * 0.02, 0.042, 0.24 - i * 0.015), 0.004, m["paint"], c, rot=K.game_rot(yaw=float(rng.uniform(-0.2, 0.2))))
+        for i in range(3):
+            k.rbox((x + 0.1, 0.14 + i * 0.045, z), (0.34, 0.043, 0.26), 0.004, m["paint"], SPINES[(i * 5) % len(SPINES)])
+        mushroom(k, m, lamp[0], sy, lamp[2], (lamp[1] - sy) / 0.62 * 1.6, r=0.15)
+    lo.build(k, make)
 
 
 def coworking(k, m):
     """The long walnut co-working desk (ref 1): a thick top on dark steel sled legs, four monitors on chrome stands,
-    keyboards, papers, and four black leather office chairs pulled up to it."""
-    f = FX["coworking"]
-    desk = f["blocks"][0]
-    (x, _, z), (sx, sy, sz) = desk["at"], desk["size"]
-    k.rbox((x, sy - 0.025, z), (sx, 0.05, sz), 0.015, m["walnut"], WALNUT, uv_len=1.4)
-    for lx in (-sx / 2 + 0.25, 0.0, sx / 2 - 0.25):
-        k.rbox((x + lx, (sy - 0.05) / 2, z), (0.05, sy - 0.05, sz - 0.12), 0.01, m["paint"], STEEL_DARK)
-        k.rbox((x + lx, 0.02, z), (0.07, 0.04, sz - 0.04), 0.01, m["paint"], STEEL_DARK)
-    k.rbox((x, sy - 0.25, z + sz / 2 - 0.06), (sx - 0.6, 0.36, 0.02), 0.005, m["walnut"], WALNUT_DARK)
-    for b in f["blocks"]:
-        if b["finish"] == "screen":
-            (mx, my, mz), (msx, msy, msz) = b["at"], b["size"]
-            k.rbox((mx, my + 0.005, mz - 0.03), (0.22, 0.01, 0.16), 0.004, m["metal"], CHROME)
-            k.rbox((mx, my + 0.12, mz - 0.01), (0.04, 0.22, 0.02), 0.004, m["metal"], CHROME)
-            k.rbox((mx, my + 0.16 + msy / 2, mz), (msx, msy, 0.025), 0.01, m["paint"], BLACK)
-            k.rbox((mx, my + 0.17 + msy / 2, mz - 0.014), (msx - 0.04, msy - 0.06, 0.004), 0.0, m["paint"], "#20303b")
-            k.rbox((mx, my + 0.012, mz - 0.38), (0.36, 0.018, 0.12), 0.006, m["paint"], "#d8d8d4")
-            k.rbox((mx + 0.3, my + 0.006, mz - 0.25), (0.22, 0.004, 0.3), 0.0, m["paint"], PAPER, rot=K.game_rot(yaw=0.15))
-        elif b["finish"] == "leather":
-            (cx, _, cz), _s = b["at"], b["size"]
-            office_chair(k, m, cx, cz - 0.05, math.pi + 0.1 * math.sin(cx * 3))
+    keyboards, papers, and four black leather office chairs pulled up to it. Made facing -z, turned toward the hall."""
+    lo = Local("coworking")
 
-
-def work_lounge(k, m):
-    """The work lounge on the deep blue rug (ref 1): a quilted black leather daybed with its bolster, a brown leather
-    sofa, a glass coffee table stacked with books, and the mushroom lamp on it."""
-    rug, daybed, sofa_b, table_b = FX["work-lounge"]["blocks"]
-    (x, _, z), (sx, sy, sz) = rug["at"], rug["size"]
-    k.rbox((x, 0.016, z), (sx, 0.032, sz), 0.016, m["rug"], RUG_BLUE, uv_len=0.7)
-    # the daybed: a chrome frame on X legs, quilted cushions in squares, a bolster at one end
-    (x, _, z), (sx, sy, sz) = daybed["at"], daybed["size"]
-    for lx in (-sx / 2 + 0.12, sx / 2 - 0.12):
-        for s in (-1, 1):
-            k.tube([(x + lx - 0.08, 0.02, z + s * (sz / 2 - 0.05)), (x + lx + 0.08, sy - 0.12, z + s * (sz / 2 - 0.05))], 0.014, m["metal"], CHROME, n=6, caps=True)
-            k.tube([(x + lx + 0.08, 0.02, z + s * (sz / 2 - 0.05)), (x + lx - 0.08, sy - 0.12, z + s * (sz / 2 - 0.05))], 0.014, m["metal"], CHROME, n=6, caps=True)
-    k.rbox((x, sy - 0.11, z), (sx, 0.05, sz), 0.015, m["walnut"], WALNUT_DARK)
-    cols, rows = 6, 2
-    for i in range(cols):
-        for j in range(rows):
-            k.rbox((x - sx / 2 + sx * (i + 0.5) / cols, sy - 0.03, z - sz / 2 + sz * (j + 0.5) / rows), (sx / cols - 0.01, 0.1, sz / rows - 0.01), 0.04, m["paint"], LEATHER_BLACK, segs=1)
-    k.tube([(x - sx / 2 + 0.12, sy + 0.08, z - sz / 2 + 0.05), (x - sx / 2 + 0.12, sy + 0.08, z + sz / 2 - 0.05)], 0.1, m["paint"], LEATHER_BLACK, n=12, caps=True)
-    (x, _, z), (sx, sy, sz) = sofa_b["at"], sofa_b["size"]
-    sofa(k, m, x, z, yaw_facing("-z"), sx, sz, sy, m["paint"], LEATHER_BROWN, seats=2)
-    (x, _, z), (sx, sy, sz) = table_b["at"], table_b["size"]
-    k.rbox((x, sy - 0.01, z), (sx, 0.02, sz), 0.006, m["glass"], "#dfe9ec")
-    k.rbox((x, 0.12, z), (sx - 0.1, 0.015, sz - 0.08), 0.004, m["glass"], "#dfe9ec")
-    for lx in (-sx / 2 + 0.06, sx / 2 - 0.06):
-        for lz in (-sz / 2 + 0.06, sz / 2 - 0.06):
-            k.tube([(x + lx, 0.0, z + lz), (x + lx, sy - 0.02, z + lz)], 0.012, m["metal"], CHROME, n=6)
-    rng = np.random.default_rng(23)
-    for stack, (ox, oz) in enumerate(((-0.35, -0.08), (0.36, 0.1))):
-        for i in range(4 - stack):
-            c = SPINES[int(rng.integers(0, len(SPINES)))]
-            k.rbox((x + ox, sy + 0.022 + i * 0.044, z + oz), (0.32 - i * 0.02, 0.042, 0.24 - i * 0.015), 0.004, m["paint"], c, rot=K.game_rot(yaw=float(rng.uniform(-0.2, 0.2))))
-    for i in range(3):
-        k.rbox((x + 0.1, 0.14 + i * 0.045, z), (0.34, 0.043, 0.26), 0.004, m["paint"], SPINES[(i * 5) % len(SPINES)])
-    lp = LAMPS["work-lamp"]["light"]
-    mushroom(k, m, lp[0], sy, lp[2], (lp[1] - sy) / 0.62 * 1.6, r=0.15)
+    def make():
+        blocks = lo.blocks()
+        (x, _, z), (sx, sy, sz) = blocks[0]
+        k.rbox((x, sy - 0.025, z), (sx, 0.05, sz), 0.015, m["walnut"], WALNUT, uv_len=1.4)
+        for lx in (-sx / 2 + 0.25, 0.0, sx / 2 - 0.25):
+            k.rbox((x + lx, (sy - 0.05) / 2, z), (0.05, sy - 0.05, sz - 0.12), 0.01, m["paint"], STEEL_DARK)
+            k.rbox((x + lx, 0.02, z), (0.07, 0.04, sz - 0.04), 0.01, m["paint"], STEEL_DARK)
+        k.rbox((x, sy - 0.25, z + sz / 2 - 0.06), (sx - 0.6, 0.36, 0.02), 0.005, m["walnut"], WALNUT_DARK)
+        for b, (c, size) in zip(lo.f["blocks"], blocks):
+            if b["finish"] == "screen":
+                (mx, my, mz), (msx, msy, msz) = c, size
+                k.rbox((mx, my + 0.005, mz - 0.03), (0.22, 0.01, 0.16), 0.004, m["metal"], CHROME)
+                k.rbox((mx, my + 0.12, mz - 0.01), (0.04, 0.22, 0.02), 0.004, m["metal"], CHROME)
+                k.rbox((mx, my + 0.16 + msy / 2, mz), (msx, msy, 0.025), 0.01, m["paint"], BLACK)
+                k.rbox((mx, my + 0.17 + msy / 2, mz - 0.014), (msx - 0.04, msy - 0.06, 0.004), 0.0, m["paint"], "#20303b")
+                k.rbox((mx, my + 0.012, mz - 0.38), (0.36, 0.018, 0.12), 0.006, m["paint"], "#d8d8d4")
+                k.rbox((mx + 0.3, my + 0.006, mz - 0.25), (0.22, 0.004, 0.3), 0.0, m["paint"], PAPER, rot=K.game_rot(yaw=0.15))
+            elif b["finish"] == "leather":
+                (cx, _, cz) = c
+                office_chair(k, m, cx, cz - 0.05, math.pi + 0.1 * math.sin(cx * 3))
+    lo.build(k, make)
 
 
 def library(k, m):
-    """The library wall (ref 1): tall walnut shelving across the back under the mezzanine, closed cabinets below, open
-    shelves above with books in rows and magazines face out, a warm strip under each shelf."""
-    carcass = FX["library"]["blocks"][0]
-    (x, _, z), (sx, sy, sz) = carcass["at"], carcass["size"]
-    x0, x1, zf, zb = x - sx / 2, x + sx / 2, z - sz / 2, z + sz / 2
-    k.rbox((x, 0.05, z), (sx - 0.06, 0.1, sz - 0.06), 0.01, m["paint"], BLACK)
-    k.rbox((x, sy / 2, zb - 0.02), (sx, sy, 0.04), 0.0, m["walnut"], WALNUT_DARK, uv_len=1.3, v_axis=1)
-    bays = 7
-    bw = sx / bays
-    for i in range(bays + 1):
-        k.rbox((x0 + bw * i, sy / 2, z), (0.045, sy, sz), 0.008, m["walnut"], WALNUT, uv_len=1.3, v_axis=1)
-    # the cabinets below, their doors
-    k.rbox((x, 0.42, z - 0.01), (sx - 0.02, 0.64, sz - 0.02), 0.01, m["walnut"], WALNUT, uv_len=1.3)
-    for i in range(bays):
-        cx = x0 + bw * (i + 0.5)
-        k.rbox((cx, 0.42, zf - 0.006), (0.012, 0.6, 0.01), 0.0, m["paint"], WALNUT_DARK)
-        for s in (-1, 1):
-            k.rbox((cx + s * 0.06, 0.62, zf - 0.02), (0.012, 0.12, 0.02), 0.004, m["metal"], BRASS)
-    shelves = [0.74, 1.24, 1.74, 2.24, 2.74]
-    for y in shelves + [sy - 0.03]:
-        k.rbox((x, y, z), (sx, 0.04, sz), 0.008, m["walnut"], WALNUT, uv_len=1.3)
-    for y in shelves[1:] + [sy - 0.03]:
-        strip(k, m, (x0 + 0.05, y - 0.03, zf + 0.03), (x1 - 0.05, y - 0.03, zf + 0.03), w=0.02, h=0.012)
-    rng = np.random.default_rng(31)
-    i_cover = 0
-    for r, y in enumerate(shelves):
+    """The library wall (ref 1): tall walnut shelving along the left wall under the arm, closed cabinets below, open
+    shelves above with books in rows and magazines face out, a warm strip under each shelf. Made facing -z, turned."""
+    lo = Local("library")
+
+    def make():
+        (x, _, z), (sx, sy, sz) = lo.blocks()[0]
+        x0, x1, zf, zb = x - sx / 2, x + sx / 2, z - sz / 2, z + sz / 2
+        k.rbox((x, 0.05, z), (sx - 0.06, 0.1, sz - 0.06), 0.01, m["paint"], BLACK)
+        k.rbox((x, sy / 2, zb - 0.02), (sx, sy, 0.04), 0.0, m["walnut"], WALNUT_DARK, uv_len=1.3, v_axis=1)
+        bays = 6
+        bw = sx / bays
+        for i in range(bays + 1):
+            k.rbox((x0 + bw * i, sy / 2, z), (0.045, sy, sz), 0.008, m["walnut"], WALNUT, uv_len=1.3, v_axis=1)
+        k.rbox((x, 0.42, z - 0.01), (sx - 0.02, 0.64, sz - 0.02), 0.01, m["walnut"], WALNUT, uv_len=1.3)
         for i in range(bays):
-            bx0, bx1 = x0 + bw * i + 0.03, x0 + bw * (i + 1) - 0.03
-            kind = (i + r * 3) % 5
-            yb = y + 0.02
-            depth = sz - 0.08
-            if kind in (0, 3):           # magazines face out, two or three
-                n = 2 if kind == 0 else 3
-                cw = (bx1 - bx0) / n
-                for c in range(n):
-                    cover(k, m, bx0 + cw * (c + 0.5), yb, zb - 0.16, cw * 0.86, min(0.42, cw * 1.3), i_cover)
-                    i_cover += 1
-            elif kind == 4 and (i + r) % 2 == 0:   # an object: a vase with a stem, or a stone bowl
-                books_row(k, m, bx0, bx0 + (bx1 - bx0) * 0.45, yb, zf + 0.04, depth * 0.9, rng, lean_end=False)
-                vx = bx0 + (bx1 - bx0) * 0.72
-                k.lathe((vx, yb, z), [(0, 0), (0.06, 0), (0.09, 0.12), (0.05, 0.26), (0.04, 0.3), (0, 0.29)], m["stone"], ("#d9cfc2", "#2e2b29", "#b9764f")[(i + r) % 3], n=14)
-            else:                         # a row of books
-                books_row(k, m, bx0, bx1, yb, zf + 0.04, depth * 0.9, rng)
+            cx = x0 + bw * (i + 0.5)
+            k.rbox((cx, 0.42, zf - 0.006), (0.012, 0.6, 0.01), 0.0, m["paint"], WALNUT_DARK)
+            for s in (-1, 1):
+                k.rbox((cx + s * 0.06, 0.62, zf - 0.02), (0.012, 0.12, 0.02), 0.004, m["metal"], BRASS)
+        shelves = [0.74, 1.24, 1.74, 2.24, 2.74, 3.18]
+        for y in shelves + [sy - 0.03]:
+            k.rbox((x, y, z), (sx, 0.04, sz), 0.008, m["walnut"], WALNUT, uv_len=1.3)
+        for y in shelves[1:] + [sy - 0.03]:
+            strip(k, m, (x0 + 0.05, y - 0.03, zf + 0.03), (x1 - 0.05, y - 0.03, zf + 0.03), w=0.02, h=0.012)
+        rng = np.random.default_rng(31)
+        i_cover = 0
+        for r, y in enumerate(shelves):
+            gap = (shelves[r + 1] if r + 1 < len(shelves) else sy - 0.03) - y - 0.06
+            for i in range(bays):
+                bx0, bx1 = x0 + bw * i + 0.03, x0 + bw * (i + 1) - 0.03
+                kind = (i + r * 3) % 5
+                yb = y + 0.02
+                depth = sz - 0.08
+                if kind in (0, 3):
+                    n = 2 if kind == 0 else 3
+                    cw = (bx1 - bx0) / n
+                    for c in range(n):
+                        cover(k, m, bx0 + cw * (c + 0.5), yb, zb - 0.16, cw * 0.86, min(0.42, cw * 1.3, gap), i_cover)
+                        i_cover += 1
+                elif kind == 4 and (i + r) % 2 == 0:
+                    books_row(k, m, bx0, bx0 + (bx1 - bx0) * 0.45, yb, zf + 0.04, depth * 0.9, rng, max_h=min(0.36, gap), lean_end=False)
+                    vx = bx0 + (bx1 - bx0) * 0.72
+                    k.lathe((vx, yb, z), [(0, 0), (0.06, 0), (0.09, 0.12), (0.05, 0.26), (0.04, 0.3), (0, 0.29)], m["stone"], ("#d9cfc2", "#2e2b29", "#b9764f")[(i + r) % 3], n=14)
+                else:
+                    books_row(k, m, bx0, bx1, yb, zf + 0.04, depth * 0.9, rng, max_h=min(0.36, gap))
+    lo.build(k, make)
 
 
 def notice_board(k, m):
-    """The notice board and the club goals on the walnut wall: a cork board in a walnut frame with pinned notes, and a
-    slate goals board with two progress bars (the café and museum funds)."""
-    cork, goals = FX["notice-board"]["blocks"]
-    rng = np.random.default_rng(41)
-    for b, face in ((cork, "cork"), (goals, "slate")):
-        (x, y0, z), (sx, sy, sz) = b["at"], b["size"]
-        zc = D - 0.05 - sz / 2
-        k.rbox((x, y0 + sy / 2, zc), (sx + 0.1, sy + 0.1, sz), 0.015, m["walnut"], WALNUT_DARK)
-        k.rbox((x, y0 + sy / 2, zc - sz / 2 - 0.004), (sx - 0.04, sy - 0.04, 0.012), 0.0, m["stone"] if face == "cork" else m["paint"], CORK if face == "cork" else SLATE)
-        zf = zc - sz / 2 - 0.014
-        if face == "cork":
-            for i in range(9):
-                nx = x - sx / 2 + 0.22 + (i % 3) * (sx - 0.44) / 2 + float(rng.uniform(-0.08, 0.08))
-                ny = y0 + sy - 0.3 - (i // 3) * 0.42 + float(rng.uniform(-0.05, 0.05))
-                c = ("#f4eee2", "#f3dd8c", "#bfd8c6", "#f2c3b0", "#cfdcef")[i % 5]
-                w, h = float(rng.uniform(0.22, 0.32)), float(rng.uniform(0.2, 0.3))
-                k.rbox((nx, ny, zf), (w, h, 0.006), 0.0, m["paint"], c, rot=K.game_rot(roll=float(rng.uniform(-0.12, 0.12))))
-                k.blob((nx, ny + h / 2 - 0.03, zf - 0.008), (0.014, 0.014, 0.01), m["paint"], ("#c9442f", "#2f4a6b", "#bf9a5a")[i % 3], segs=8, rings=4)
-        else:
-            k.rbox((x, y0 + sy - 0.2, zf), (sx * 0.6, 0.07, 0.004), 0.0, m["paint"], CREAM)
-            for j, (fill, col) in enumerate(((0.62, "#8fb39e"), (0.38, "#d9b45a"))):
-                yy = y0 + sy - 0.55 - j * 0.38
-                k.rbox((x, yy + 0.09, zf), (sx * 0.4, 0.035, 0.004), 0.0, m["paint"], "#9aa3aa")
-                k.rbox((x, yy, zf), (sx - 0.3, 0.08, 0.004), 0.0, m["paint"], "#454c52")
-                k.rbox((x + (sx - 0.3) * (1 - fill) / 2, yy, zf - 0.003), ((sx - 0.3) * fill, 0.08, 0.004), 0.0, m["paint"], col)
+    """The notice board and the club goals on the walnut wall by the stair's foot: a cork board in a walnut frame with
+    pinned notes, and a slate goals board with two progress bars (the cafe and museum funds). Made facing -z, turned
+    onto the right wall."""
+    lo = Local("notice-board")
+
+    def make():
+        rng = np.random.default_rng(41)
+        for ((x, y0, z), (sx, sy, sz)), face in zip(lo.blocks(), ("cork", "slate")):
+            zc = z + 0.02
+            k.rbox((x, y0 + sy / 2, zc), (sx + 0.1, sy + 0.1, sz), 0.015, m["walnut"], WALNUT_DARK)
+            k.rbox((x, y0 + sy / 2, zc - sz / 2 - 0.004), (sx - 0.04, sy - 0.04, 0.012), 0.0, m["stone"] if face == "cork" else m["paint"], CORK if face == "cork" else SLATE)
+            zf = zc - sz / 2 - 0.014
+            if face == "cork":
+                for i in range(9):
+                    nx = x - sx / 2 + 0.22 + (i % 3) * (sx - 0.44) / 2 + float(rng.uniform(-0.08, 0.08))
+                    ny = y0 + sy - 0.3 - (i // 3) * 0.42 + float(rng.uniform(-0.05, 0.05))
+                    c = ("#f4eee2", "#f3dd8c", "#bfd8c6", "#f2c3b0", "#cfdcef")[i % 5]
+                    w, h = float(rng.uniform(0.22, 0.32)), float(rng.uniform(0.2, 0.3))
+                    k.rbox((nx, ny, zf), (w, h, 0.006), 0.0, m["paint"], c, rot=K.game_rot(roll=float(rng.uniform(-0.12, 0.12))))
+                    k.blob((nx, ny + h / 2 - 0.03, zf - 0.008), (0.014, 0.014, 0.01), m["paint"], ("#c9442f", "#2f4a6b", "#bf9a5a")[i % 3], segs=8, rings=4)
+            else:
+                k.rbox((x, y0 + sy - 0.2, zf), (sx * 0.6, 0.07, 0.004), 0.0, m["paint"], CREAM)
+                for j, (fill, col) in enumerate(((0.62, "#8fb39e"), (0.38, "#d9b45a"))):
+                    yy = y0 + sy - 0.55 - j * 0.38
+                    k.rbox((x, yy + 0.09, zf), (sx * 0.4, 0.035, 0.004), 0.0, m["paint"], "#9aa3aa")
+                    k.rbox((x, yy, zf), (sx - 0.3, 0.08, 0.004), 0.0, m["paint"], "#454c52")
+                    k.rbox((x + (sx - 0.3) * (1 - fill) / 2, yy, zf - 0.003), ((sx - 0.3) * fill, 0.08, 0.004), 0.0, m["paint"], col)
+    lo.build(k, make)
 
 
 def founder(k, m):
-    """The Founder's desk (specs/hq-onboarding.md): a walnut writing desk against the panelled wall, its leather chair
-    pushed back and turned as if someone just stood up, a closed notebook and a pen; above it the plaque, its canvas
-    blank (only David writes it: lib/game/arrival/hq/lines.ts FOUNDER_PLAQUE)."""
+    """The Founder's desk (specs/hq-onboarding.md): a walnut writing desk against the panelled back wall under the left
+    arm, its leather chair pushed back and turned as if someone just stood up, a closed notebook and a pen; above it the
+    plaque, its canvas blank (only David writes it: lib/game/arrival/hq/lines.ts FOUNDER_PLAQUE)."""
     desk, chair, plaque = FX["founder"]["blocks"]
     (x, _, z), (sx, sy, sz) = desk["at"], desk["size"]
     k.rbox((x, sy - 0.025, z), (sx, 0.05, sz), 0.012, m["walnut"], WALNUT, uv_len=1.2)
@@ -920,74 +966,91 @@ def founder(k, m):
     k.rbox((px, py + psy + 0.13, zc - 0.11), (0.38, 0.006, 0.02), 0.0, m["glow"], "#ffffff")
 
 
-# ================================================================ the mezzanine
-def upper(m):
-    k = K.Kit("hq_upper")
-    z0 = UP["z0"]
-    # the slab: plaster underneath (the tracks hang from it), walnut planks on top, a walnut fascia facing the door
-    k.rbox((0, F - SLAB / 2, (z0 + D) / 2), (2 * W, SLAB, D - z0), 0.0, m["plaster"], PLASTER_UNDER, uv_len=2.5)
-    floor_quad(k, m["floor"], F + 0.002, -W, W, z0, D)
-    k.rbox((0, F - SLAB / 2 + 0.01, z0 - 0.02), (2 * W, SLAB + 0.04, 0.045), 0.01, m["walnut"], WALNUT, uv_len=1.4)
-    # the upper storey of the walls round it, with their windows
-    ups = [w for w in L["windows"] if w["z0"] >= z0]
-    for x in (-W, W):
-        side_wall(k, m, x, z0, D + T, F, TOP, [(w["z0"], w["z1"], w["y0"], w["y1"]) for w in ups if wall_x(w) == x])
-    back_wall(k, m, F, TOP)
-    skirting(k, m, F, z0, D)
-    for w in ups:
-        window_frame(k, m, w)
-    # walnut panelling behind the lounge's back sofa (ref 2)
-    k.rbox((2.8, F + 1.35, D - 0.03), (7.2, 2.7, 0.04), 0.0, m["walnut"], WALNUT, uv_len=1.3, v_axis=1)
-    x = 2.8 - 3.6 + 0.6
-    while x < 2.8 + 3.6 - 0.1:
-        k.rbox((x, F + 1.35, D - 0.052), (0.014, 2.7, 0.006), 0.0, m["paint"], WALNUT_DARK)
-        x += 0.63
-    for name, fn in (("rail", rail), ("lounge", lounge), ("admin doors", admin_doors), ("art", art)):
-        counted(k, "up " + name, fn, k, m)
-    for b in FX["upper-plants"]["blocks"]:
-        counted(k, "up plants", plant, k, m, b, int(abs(b["at"][0] * 10 + b["at"][2] * 3)) + 5, F)
-    for f in L["fixtures"]:
-        if f["id"].startswith("banner-"):
-            counted(k, "up banners", banner, k, m, f["blocks"][0])
-    for t in L["tracks"]:
-        if t["from"][1] < F:
-            counted(k, "up tracks", track, k, m, t)
-    return k.finish(name="hq_upper")
+# ================================================================ the upper floor: the bridge and the two arms
+def part_of(x, z):
+    """Which part of the upper floor (x, z) is on."""
+    for i, r in enumerate(UPPER):
+        if r["x0"] - 1e-6 <= x <= r["x1"] + 1e-6 and r["z0"] - 1e-6 <= z <= r["z1"] + 1e-6:
+            return i
+    return 0
 
 
-def rail(k, m):
-    """The mezzanine's front: glass panels between slim dark posts, a walnut handrail."""
+def upper(m, i):
+    """One part of the upper floor: its slab (plaster under, walnut planks on top, the stair's well left open), the
+    walnut fascia and glass rail along its open edges, its fixtures, and the tracks under it."""
+    k = K.Kit(f"hq_upper_{i}")
+    r = UPPER[i]
+    rects = cut([(r["x0"], r["x1"], r["z0"], r["z1"])], WELL)
+    for (x0, x1, z0, z1) in rects:
+        k.rbox(((x0 + x1) / 2, F - SLAB / 2, (z0 + z1) / 2), (x1 - x0, SLAB, z1 - z0), 0.0, m["plaster"], PLASTER_UNDER, uv_len=2.5)
+        floor_quad(k, m["floor"], F + 0.002, x0, x1, z0, z1)
     for rl in L["rails"]:
         (ax, az), (bx, bz) = rl["from"], rl["to"]
-        z = az - 0.06
-        k.rbox(((ax + bx) / 2, F + 0.52, z), (abs(bx - ax), 0.96, 0.016), 0.004, m["glass"], "#d6e6ea")
-        k.rbox(((ax + bx) / 2, F + 1.02, z), (abs(bx - ax) + 0.04, 0.05, 0.07), 0.018, m["walnut"], WALNUT, uv_len=1.4)
-        n = max(2, int(abs(bx - ax) / 1.5) + 1)
-        for i in range(n):
-            px = ax + (bx - ax) * i / (n - 1)
-            k.rbox((px, F + 0.5, z), (0.035, 1.0, 0.035), 0.008, m["paint"], STEEL_DARK, segs=1)
+        sx_, sz_ = rl["slab"]
+        if part_of((ax + bx) / 2 + sx_ * 0.3, (az + bz) / 2 + sz_ * 0.3) == i:
+            counted(k, "up rails", rail, k, m, rl)
+    if i == 0:
+        counted(k, "up lounge", lounge, k, m)
+    if i == 1:
+        counted(k, "up arm", arm_corner, k, m)
+        counted(k, "up admin doors", admin_doors, k, m)
+    for f in L["fixtures"]:
+        if f["level"] != 1 or f.get("part", 0) != i:
+            continue
+        if f["id"].startswith("banner-"):
+            counted(k, "up banners", banner, k, m, f)
+        elif "plant" in f["id"]:
+            for j, b in enumerate(f["blocks"]):
+                counted(k, "up plants", plant, k, m, b, int(abs(b["at"][0] * 10 + b["at"][2] * 3)) + 5 + j, F)
+    for t in L["tracks"]:
+        if t["from"][1] < F and part_of(t["from"][0], t["from"][2]) == i:
+            counted(k, "up tracks", track, k, m, t)
+    return k.finish(name=f"hq_upper_{i}")
+
+
+def rail(k, m, rl):
+    """An open edge of the upper floor: the walnut fascia on the slab's edge, glass panels between slim dark posts, a
+    walnut handrail."""
+    (ax, az), (bx, bz) = rl["from"], rl["to"]
+    sx_, sz_ = rl["slab"]
+    along_x = abs(bx - ax) >= abs(bz - az)
+    ln = abs(bx - ax) if along_x else abs(bz - az)
+    c = ((ax + bx) / 2 + sx_ * 0.06, (az + bz) / 2 + sz_ * 0.06)
+    edge = ((ax + bx) / 2 - sx_ * 0.02, (az + bz) / 2 - sz_ * 0.02)
+
+    def box(cc, y, h, t, ext, mat, col, r=0.004, uv=1.0):
+        size = (ln + ext, h, t) if along_x else (t, h, ln + ext)
+        k.rbox((cc[0], y, cc[1]), size, r, mat, col, uv_len=uv)
+    box(edge, F - SLAB / 2 + 0.01, SLAB + 0.04, 0.045, 0.0, m["walnut"], WALNUT, r=0.01, uv=1.4)
+    box(c, F + RAIL / 2, RAIL - 0.08, 0.016, 0.0, m["glass"], "#d6e6ea")
+    box(c, F + RAIL - 0.03, 0.05, 0.07, 0.04, m["walnut"], WALNUT, r=0.018, uv=1.4)
+    n = max(2, int(ln / 1.5) + 1)
+    for j in range(n):
+        t = j / (n - 1)
+        px, pz = ax + (bx - ax) * t + sx_ * 0.06, az + (bz - az) * t + sz_ * 0.06
+        k.rbox((px, F + (RAIL - 0.05) / 2, pz), (0.035, RAIL - 0.05, 0.035), 0.008, m["paint"], STEEL_DARK, segs=1)
 
 
 def lounge(k, m):
-    """The big lounge (ref 2): the cream shag carpet, the velvet sofas, the travertine table, the round black table with
-    the mushroom lamp, beanbags by the rail, and the chrome arc lamp."""
+    """The big lounge on the bridge (ref 2), facing the tank across the hall: the cream shag carpet, two long velvet
+    sofas with their backs to the front wall, an olive lounge chair, the travertine table, the round black table with
+    the mushroom lamp, beanbags by the rail, and the chrome arc lamp reaching over the table."""
     b = FX["upper-carpet"]["blocks"][0]
     (x, _, z), (sx, sy, sz) = b["at"], b["size"]
     k.rbox((x, F + 0.018, z), (sx, 0.036, sz), 0.02, m["rug"], CREAM, uv_len=0.7)
-    back, side, chair = FX["upper-sofas"]["blocks"]
-    (x, _, z), (sx, sy, sz) = back["at"], back["size"]
-    sofa_up(k, m, x, z, yaw_facing("-z"), sx, sz, sy, VELVET, seats=4)
-    (x, _, z), (sx, sy, sz) = side["at"], side["size"]
-    sofa_up(k, m, x, z, yaw_facing("-x"), sz, sx, sy, VELVET, seats=3)
+    s1, s2, chair = FX["upper-sofas"]["blocks"]
+    for s in (s1, s2):
+        (x, _, z), (sx, sy, sz) = s["at"], s["size"]
+        sofa(k, m, x, z, yaw_facing("+z"), sx, sz, sy, m["cloth"], VELVET, seats=4, base=F)
     (x, _, z), (sx, sy, sz) = chair["at"], chair["size"]
-    sofa_up(k, m, x, z, yaw_facing("+x"), sx, sz, sy, VELVET_OLIVE, seats=1)
+    sofa(k, m, x, z, 0.6 * math.pi, sx, sz, sy, m["cloth"], VELVET_OLIVE, seats=1, base=F)
     table, round_ = FX["upper-tables"]["blocks"]
     (x, _, z), (sx, sy, sz) = table["at"], table["size"]
     k.rbox((x, F + 0.08, z), (sx - 0.3, 0.16, sz - 0.3), 0.02, m["stone"], STONE_DARK)
     k.rbox((x, F + sy - 0.05, z), (sx, 0.1, sz), 0.03, m["stone"], STONE)
     for i, c in enumerate(("#e9e4d8", "#2f4a6b")):
-        k.rbox((x - 0.4, F + sy + 0.022 + i * 0.04, z + 0.1), (0.34, 0.04, 0.26), 0.004, m["paint"], c, rot=K.game_rot(yaw=0.3 * i))
-    k.lathe((x + 0.35, F + sy, z - 0.05), [(0, 0), (0.16, 0), (0.18, 0.03), (0, 0.03)], m["paint"], BLACK, n=12)
+        k.rbox((x + 0.4, F + sy + 0.022 + i * 0.04, z + 0.1), (0.34, 0.04, 0.26), 0.004, m["paint"], c, rot=K.game_rot(yaw=0.3 * i))
+    k.lathe((x - 0.35, F + sy, z - 0.05), [(0, 0), (0.16, 0), (0.18, 0.03), (0, 0.03)], m["paint"], BLACK, n=12)
     (x, _, z), (sx, sy, sz) = round_["at"], round_["size"]
     r = sx / 2
     k.lathe((x, F, z), [(0, 0), (r * 0.5, 0), (r * 0.45, 0.04), (r * 0.12, 0.08), (r * 0.12, sy - 0.05), (r, sy - 0.04), (r * 1.0, sy), (0, sy)], m["paint"], BLACK, n=16)
@@ -1003,36 +1066,46 @@ def lounge(k, m):
     arc_lamp(k, m)
 
 
-def sofa_up(k, m, x, z, yaw, w, d, h, col, seats):
-    """A velvet sofa on the mezzanine's floor."""
-    sofa(k, m, x, z, yaw, w, d, h, m["cloth"], col, seats=seats, base=F)
-
-
 def arc_lamp(k, m):
-    """The big chrome arc lamp (ref 2): a marble block for a foot, the arc rising and reaching over the lounge, a white
-    globe hanging from its end, lit from the lower half."""
+    """The big chrome arc lamp (ref 2): a marble block for a foot, the arc rising high and reaching over the lounge's
+    table, a white globe hanging from its end, lit from the lower half."""
     b, globe = FX["arc-lamp"]["blocks"]
-    (fx_, _, fz) = b["at"]
+    (fx_, _, fz), (_, fh, _) = b["at"], b["size"]
     (gx, gy, gz), (gs, _, _) = globe["at"], globe["size"]
     gr = gs / 2
     gc = (gx, F + gy + gr, gz)
     k.rbox((fx_, F + 0.13, fz), (0.42, 0.26, 0.42), 0.04, m["stone"], "#ebe6de")
     p0, p3 = np.array((fx_, F + 0.26, fz)), np.array((gx, gc[1] + gr + 0.08, gz))
-    p1, p2 = p0 + np.array((0, 3.1, 0)), p3 + np.array((0, 1.0, 0)) + (p0 - p3) * np.array((0.18, 0, 0.18))
+    p1, p2 = p0 + np.array((0, fh - 0.2, 0)), p3 + np.array((0, 1.2, 0)) + (p0 - p3) * np.array((0.18, 0, 0.18))
     pts = []
     for t in np.linspace(0, 1, 22):
         q = (1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t ** 2 * p2 + t ** 3 * p3
         pts.append(tuple(q))
-    k.tube(pts, 0.024, m["metal"], CHROME, n=8, caps=True)
+    k.tube(pts, 0.026, m["metal"], CHROME, n=8, caps=True)
     k.tube([pts[-1], (gx, gc[1] + gr - 0.02, gz)], 0.012, m["metal"], CHROME, n=6)
     k.blob(gc, (gr, gr, gr), m["paint"], WHITE, segs=18, rings=10, flat_bottom=-gr * 0.1)
     k.lathe((gx, gc[1] - gr * 0.08, gz), [(0, -gr * 0.95), (gr * 0.55, -gr * 0.85), (gr * 0.92, -gr * 0.4), (gr * 1.005, 0)], m["glow"], "#ffffff", n=12)
     k.tube([(gx + math.cos(t) * gr * 1.01, gc[1] - gr * 0.08, gz + math.sin(t) * gr * 1.01) for t in np.linspace(0, TAU, 19)[:-1]], 0.012, m["metal"], CHROME, n=6, closed_path=True)
 
 
+def arm_corner(k, m):
+    """The left arm's reading corner by the bridge: two velvet lounge chairs turned toward the hall, a small travertine
+    side table with a book and a cup, a globe floor lamp."""
+    c1, c2, table = FX["arm-chairs"]["blocks"]
+    for b, yaw in ((c1, 0.58 * math.pi), (c2, 0.42 * math.pi)):
+        (x, _, z), (sx, sy, sz) = b["at"], b["size"]
+        sofa(k, m, x, z, yaw, sx, sz, sy, m["cloth"], VELVET_DEEP if b is c1 else VELVET, seats=1, base=F)
+    (x, _, z), (sx, sy, sz) = table["at"], table["size"]
+    k.lathe((x, F, z), [(0, 0), (sx * 0.3, 0), (sx * 0.22, 0.05), (sx * 0.12, 0.08), (sx * 0.12, sy - 0.06), (sx / 2, sy - 0.05), (sx / 2, sy), (0, sy)], m["stone"], STONE, n=14)
+    k.rbox((x - 0.05, F + sy + 0.02, z + 0.05), (0.28, 0.04, 0.2), 0.004, m["paint"], "#b5863f", rot=K.game_rot(yaw=0.3))
+    k.lathe((x + 0.12, F + sy, z - 0.1), [(0, 0), (0.04, 0), (0.045, 0.07), (0.04, 0.07), (0.036, 0.008), (0, 0.008)], m["paint"], WHITE, n=12)
+    lp = LAMPS["arm-floor"]["light"]
+    globe_lamp(k, m, lp[0], F, lp[2], F + lp[1])
+
+
 def admin_doors(k, m):
-    """Two locked doors at the back of the mezzanine: walnut leaves in black steel frames, a brass lever and a keypad,
-    and an "ADMINS ONLY" plate (its letters joined in main)."""
+    """Two locked doors at the end of the left arm, on the back wall: walnut leaves in black steel frames, a brass lever
+    and a keypad, and an "ADMINS ONLY" plate (its letters joined in main)."""
     for b in FX["admin-doors"]["blocks"]:
         (x, y0, _), (sx, sy, _) = b["at"], b["size"]
         base = F + y0
@@ -1051,43 +1124,34 @@ def admin_doors(k, m):
         k.rbox((x, base + 1.62, zf - 0.07), (0.62, 0.14, 0.02), 0.006, m["paint"], BLACK)
 
 
-def art(k, m):
-    """The lit art piece on the back wall (ref 2): a black frame round a dark panel, light glowing through two slots and
-    four round holes."""
-    b = FX["art"]["blocks"][0]
-    (x, y0, _), (sx, sy, _) = b["at"], b["size"]
-    y = F + y0 + sy / 2
-    zf = D - 0.04
-    k.rbox((x, y, zf - 0.03), (sx, sy, 0.06), 0.01, m["paint"], BLACK)
-    k.rbox((x, y, zf - 0.062), (sx - 0.12, sy - 0.12, 0.004), 0.0, m["paint"], "#3a3633")
-    for sxo in (-0.33, -0.2):
-        k.rbox((x + sxo, y, zf - 0.066), (0.05, sy - 0.32, 0.004), 0.0, m["glow"], "#ffffff")
-    for dx in (0.05, 0.27):
-        for dy in (-0.2, 0.2):
-            k.lathe((x + dx, y + dy, zf - 0.066), [(0, 0), (0.05, 0)], m["glow"], "#ffffff", d=(0, 0, -1), n=14)
-
-
-def banner(k, m, b):
-    """A yearly banner, blank until David's designs: cream cloth with a V at its foot on a walnut dowel with brass caps,
-    hung by two cords from the handrail in front of the rail, facing the door."""
-    (x, y0, z), (sx, sy, _) = b["at"], b["size"]
-    top = F + y0 + sy
-    k.tube([(x - sx / 2 - 0.07, top + 0.02, z), (x + sx / 2 + 0.07, top + 0.02, z)], 0.018, m["walnut"], WALNUT, n=8, caps=True)
+def banner(k, m, f):
+    """A yearly banner, blank until David's designs, on a pole off its arm's rail over the hall's edge, facing the door:
+    a black steel bracket up from the rail, the pole with a brass finial, and the cream cloth with a V at its foot on a
+    walnut dowel hung by two rings."""
+    pole, cloth = f["blocks"]
+    (px, py, pz), (psx, _, _) = pole["at"], pole["size"]
+    (x, _, z), (sx, sy, _) = cloth["at"], cloth["size"]
+    inward = 1 if px < 0 else -1
+    rx = px - inward * psx / 2                        # the rail end
+    end = px + inward * psx / 2
+    k.rbox((rx + inward * 0.02, F + (RAIL + py + 0.08) / 2, pz), (0.05, py + 0.08 - RAIL, 0.05), 0.01, m["paint"], STEEL_DARK, segs=1)
+    k.tube([(rx, F + py, pz), (end, F + py, pz)], 0.022, m["paint"], STEEL_DARK, n=8, caps=True)
+    k.blob((end + inward * 0.03, F + py, pz), (0.04, 0.04, 0.04), m["metal"], BRASS, segs=8, rings=5)
+    top, h = F + py - 0.16, sy - 0.16             # the cloth hangs a hand below the pole
+    k.tube([(x - sx / 2 - 0.05, top + 0.02, z), (x + sx / 2 + 0.05, top + 0.02, z)], 0.018, m["walnut"], WALNUT, n=8, caps=True)
     for s in (-1, 1):
-        k.blob((x + s * (sx / 2 + 0.085), top + 0.02, z), (0.026, 0.026, 0.026), m["metal"], BRASS, segs=6, rings=4)
-        k.tube([(x + s * (sx / 2 - 0.05), top + 0.03, z), (x + s * (sx / 2 - 0.15), F + 1.04, z + 0.03)], 0.005, m["paint"], CHARCOAL, n=4)
+        k.tube([(x + s * (sx / 2 - 0.12), top + 0.02, z), (x + s * (sx / 2 - 0.12), F + py - 0.02, z)], 0.006, m["paint"], CHARCOAL, n=4)
     a = sx / 2
-    outline = [(-a, 0.0), (-a, -sy + 0.24), (0.0, -sy), (a, -sy + 0.24), (a, 0.0)]
+    outline = [(-a, 0.0), (-a, -h + 0.3), (0.0, -h), (a, -h + 0.3), (a, 0.0)]
     k.extrude(outline, -0.012, 0.012, m["cloth"], CREAM, at=(x, top, z))
-    k.rbox((x, top - 0.1, z - 0.014), (sx - 0.06, 0.02, 0.004), 0.0, m["cloth"], "#d9cbb0")
+    k.rbox((x, top - 0.12, z - 0.014), (sx - 0.08, 0.025, 0.004), 0.0, m["cloth"], "#d9cbb0")
 
 
-# ================================================================ the ceiling (seen only from under it)
+# ================================================================ the ceiling (seen only from inside the room)
 def ceiling(m):
     k = K.Kit("hq_ceiling")
     oc = L["ovalCeiling"]
     y = TOP
-    # plain and dark everywhere but the lounge's walnut ovals
     rects = cut([(-W, W, -D, D)], (oc["x0"], oc["x1"], oc["z0"], oc["z1"]))
     for (x0, x1, z0, z1) in rects:
         k.rbox(((x0 + x1) / 2, y + 0.03, (z0 + z1) / 2), (x1 - x0, 0.06, z1 - z0), 0.0, m["plaster"], CEIL, uv_len=2.5)
@@ -1100,10 +1164,10 @@ def ceiling(m):
 
 
 def oval_ceiling(k, m, oc, y):
-    """The walnut ceiling with its oval wells (ref 1), over the upper lounge only: each well a walnut collar rising to a
-    glowing oval of light."""
+    """The walnut ceiling with its oval wells (ref 1), over the bridge's lounge only: each well a walnut collar rising to
+    a glowing oval of light."""
     x0, x1, z0, z1 = oc["x0"], oc["x1"], oc["z0"], oc["z1"]
-    cols, rows, n = 5, 3, 28
+    cols, rows, n = 7, 3, 28
     cw, cd = (x1 - x0) / cols, (z1 - z0) / rows
     rx, rz = cw * 0.38, cd * 0.34
     yb = y - 0.04
@@ -1124,12 +1188,78 @@ def oval_ceiling(k, m, oc, y):
                 hi = yb + 0.3
                 wall = [(ell[q][0], yb, ell[q][1]), (ell[q2][0], yb, ell[q2][1]), (ell[q2][0], hi, ell[q2][1]), (ell[q][0], hi, ell[q][1])]
                 k.face([k.vert(p) for p in wall], [(q / n * 3, 0), ((q + 1) / n * 3, 0), ((q + 1) / n * 3, 0.3), (q / n * 3, 0.3)], m["walnut"], WALNUT_LIGHT)
-            # (a vertical lathe's section runs its sx along game z and its sz along x)
             k.lathe((cx, yb + 0.3, cz), [(0, 0), (1.0, 0)], m["glow"], "#ffffff", n=n, sx=rz, sz=rx)
-    # its edge: a walnut fascia dropping a little below the plain ceiling
     for (c, s_) in ((((x0 + x1) / 2, yb - 0.02, z0), (x1 - x0, 0.1, 0.05)), (((x0 + x1) / 2, yb - 0.02, z1), (x1 - x0, 0.1, 0.05)),
                     ((x0, yb - 0.02, (z0 + z1) / 2), (0.05, 0.1, z1 - z0)), ((x1, yb - 0.02, (z0 + z1) / 2), (0.05, 0.1, z1 - z0))):
         k.rbox(c, s_, 0.01, m["walnut"], WALNUT_DARK)
+
+
+def front_wall(k, m):
+    """The near wall, whole, both storeys, for a camera inside the room (the walking camera looks in over its lip, so the
+    game shows this only to a camera inside): plaster over the lip, the glazed door in its bronze frame, a window either
+    side on each storey; upstairs, walnut panelling behind the bridge's sofas with the lit art in the middle (ref 2)."""
+    dx, dh = L["door"]["x"], L["door"]["half"]
+    dt = 2.7
+    wins = L["frontWindows"]
+    holes = [(dx - dh, dx + dh, 0.0, dt)] + [(w["x0"], w["x1"], w["y0"], w["y1"]) for w in wins]
+    rects = [(-W - T, W + T, LIP, TOP)]
+    for h in holes:
+        rects = cut(rects, h)
+    for (a0, a1, b0, b1) in rects:
+        k.rbox(((a0 + a1) / 2, (b0 + b1) / 2, -D - T / 2), (a1 - a0, b1 - b0, T), 0.0, m["plaster"], PLASTER, uv_len=2.5)
+    zf = -D + 0.06
+    for (c, s_) in (((dx - dh, dt / 2, zf), (0.07, dt, 0.07)), ((dx + dh, dt / 2, zf), (0.07, dt, 0.07)), ((dx, dt, zf), (2 * dh + 0.07, 0.07, 0.07)),
+                    ((dx, dt * 0.55, zf), (2 * dh, 0.05, 0.05)), ((dx, dt / 2, zf), (0.05, dt, 0.05))):
+        k.rbox(c, s_, 0.01, m["paint"], BRONZE)
+    k.rbox((dx, dt / 2, zf + 0.01), (2 * dh, dt, 0.01), 0.0, m["glass"], "#cfe0e4")
+    for w in wins:
+        a, b, y0, y1 = w["x0"], w["x1"], w["y0"], w["y1"]
+        xc, yc, h = (a + b) / 2, (y0 + y1) / 2, y1 - y0
+        for (c, s_) in (((xc, y0, zf), (b - a, 0.06, 0.07)), ((xc, y1, zf), (b - a, 0.06, 0.07)), ((a, yc, zf), (0.06, h, 0.07)), ((b, yc, zf), (0.06, h, 0.07)),
+                        ((xc, yc, zf), (0.04, h, 0.05)), ((xc, y0 + h * 0.68, zf), (b - a, 0.035, 0.05))):
+            k.rbox(c, s_, 0.008, m["paint"], BRONZE)
+        k.rbox((xc, y0 - 0.025, -D + 0.12), (b - a + 0.16, 0.05, 0.26), 0.012, m["stone"], STONE)
+        xr, top = -D + 0.18, y1 + 0.16
+        k.tube([(a - 0.3, top, xr), (b + 0.3, top, xr)], 0.013, m["metal"], BRONZE, n=8, caps=True)
+        fl = 0.0 if y0 < F else F
+        span = (b - a) * 0.24
+        for (xa, xb) in ((a - 0.25, a - 0.25 + span), (b + 0.25 - span, b + 0.25)):
+            turned(k, math.pi / 2, (0, 0), curtain, k, -xr - 0.03 + 0.0, xa, xb, fl + 0.05, top - 0.02, m["cloth"], SHEER, 3, 0.03, 0.15)
+    # upstairs: the walnut panelling behind the sofas, its reveals, and the lit art piece in the middle
+    p0, p1 = -4.9, 4.9
+    k.rbox(((p0 + p1) / 2, F + 1.45, -D + 0.03), (p1 - p0, 2.9, 0.04), 0.0, m["walnut"], WALNUT, uv_len=1.3, v_axis=1)
+    x = p0 + 0.63
+    while x < p1 - 0.1:
+        k.rbox((x, F + 1.45, -D + 0.052), (0.014, 2.9, 0.006), 0.0, m["paint"], WALNUT_DARK)
+        x += 0.63
+    art(k, m)
+
+
+def art(k, m):
+    """The lit art piece over the bridge's sofas (ref 2): a black frame round a dark panel, light glowing through two
+    slots and four round holes. Made facing -z and turned to face the room from the front wall."""
+    lo = Local("art")
+
+    def make():
+        (x, y0, z), (sx, sy, _) = lo.blocks()[0]
+        y = F + y0 + sy / 2
+        zf = z + 0.03
+        k.rbox((x, y, zf - 0.03), (sx, sy, 0.06), 0.01, m["paint"], BLACK)
+        k.rbox((x, y, zf - 0.062), (sx - 0.12, sy - 0.12, 0.004), 0.0, m["paint"], "#3a3633")
+        for sxo in (-0.36, -0.22):
+            k.rbox((x + sxo, y, zf - 0.066), (0.05, sy - 0.32, 0.004), 0.0, m["glow"], "#ffffff")
+        for dx in (0.05, 0.29):
+            for dy in (-0.22, 0.22):
+                k.lathe((x + dx, y + dy, zf - 0.066), [(0, 0), (0.05, 0)], m["glow"], "#ffffff", d=(0, 0, -1), n=14)
+    lo.build(k, make)
+
+
+def front_panes():
+    k = K.Kit("hq_windows_front")
+    mat = K.Mat("M_View", "#ffffff", rough=0.1)
+    for w in L["frontWindows"]:
+        k.rbox(((w["x0"] + w["x1"]) / 2, (w["y0"] + w["y1"]) / 2, -D - 0.075), (w["x1"] - w["x0"], w["y1"] - w["y0"], 0.01), 0.0, mat, segs=1)
+    return k.finish(name="hq_windows_front")
 
 
 def caster():
@@ -1144,79 +1274,80 @@ def caster():
 
 # ================================================================ the aquarium (its shaders are the engine's)
 def tank():
-    x0, z0, z1, y0, y1 = A["x0"], A["z0"], A["z1"], A["y0"], A["y1"]
-    xb = W - 0.02
-    gx = x0 + 0.02
-    zl = z1 - z0
-    # the inside: back, floor and ends, UVs (along, up) across the tank for the water's gradient
+    """The tank on the back wall: along x from x0 to x1, its glass at z0, its back against the wall."""
+    x0, x1, z0, y0, y1 = A["x0"], A["x1"], A["z0"], A["y0"], A["y1"]
+    zb = D - 0.04
+    gz = z0 + 0.02
+    ln = x1 - x0
     ki = K.Kit("hq_tank_inner")
     mi = K.Mat("M_Tank", "#ffffff", rough=1.0)
-    uv = lambda p: ((p[2] - z0) / zl, (p[1] - y0) / (y1 - y0))
-    for pts in ([(xb, y0, z0), (xb, y0, z1), (xb, y1, z1), (xb, y1, z0)],
-                [(gx, y0, z0), (gx, y0, z1), (xb, y0, z1), (xb, y0, z0)],
-                [(gx, y0, z0 + 0.02), (xb, y0, z0 + 0.02), (xb, y1, z0 + 0.02), (gx, y1, z0 + 0.02)],
-                [(gx, y0, z1 - 0.02), (xb, y0, z1 - 0.02), (xb, y1, z1 - 0.02), (gx, y1, z1 - 0.02)]):
+    uv = lambda p: ((p[0] - x0) / ln, (p[1] - y0) / (y1 - y0))
+    for pts in ([(x0, y0, zb), (x1, y0, zb), (x1, y1, zb), (x0, y1, zb)],
+                [(x0, y0, gz), (x1, y0, gz), (x1, y0, zb), (x0, y0, zb)],
+                [(x0 + 0.02, y0, gz), (x0 + 0.02, y0, zb), (x0 + 0.02, y1, zb), (x0 + 0.02, y1, gz)],
+                [(x1 - 0.02, y0, gz), (x1 - 0.02, y0, zb), (x1 - 0.02, y1, zb), (x1 - 0.02, y1, gz)]):
         ki.face([ki.vert(p) for p in pts], [uv(p) for p in pts], mi, "#ffffff")
     inner = ki.finish(name="hq_tank_inner")
-    # the reef: sand, rock rising up both ends (ref 2's size), coral and weed low down (ref 1's colour)
+    # the reef: sand, rock rising at both ends (ref 2's size), coral and weed low down (ref 1's colour)
     kr = K.Kit("hq_tank_reef")
     mr = K.Mat("M_Reef", "#ffffff", rough=0.9)
     rng = np.random.default_rng(97)
-    for i in range(14):
-        z = z0 + 0.3 + (zl - 0.6) * i / 13
-        kr.blob((x0 + 0.7 + float(rng.uniform(-0.05, 0.05)), y0 + 0.02, z), (0.55, 0.12, 0.4), mr, "#d8ccad", segs=10, rings=4, seed=i, lumpy=0.12, flat_bottom=0.0)
-    # Reef rock (ref 2): a ridge along the back, rising to a tall face at the mezzanine's end and a lower one by the door,
-    # piled from irregular lumps of every size, smaller as they climb, in browns, olives and a purplish coralline.
-    peaks = ((z1 - 0.9, 3.7, 1.6), (z0 + 0.9, 2.3, 1.3), (z0 + zl * 0.52, 1.25, 1.1))
+    for i in range(16):
+        x = x0 + 0.35 + (ln - 0.7) * i / 15
+        kr.blob((x, y0 + 0.02, z0 + 0.7 + float(rng.uniform(-0.05, 0.05))), (0.45, 0.12, 0.55), mr, "#d8ccad", segs=10, rings=4, seed=i, lumpy=0.12, flat_bottom=0.0)
+    # Reef rock (ref 2): a ridge along the back, rising to a tall face at the left end (as high as the bridge's floor),
+    # a lower one at the right, a low saddle between; irregular lumps of every size, smaller as they climb, in browns,
+    # olives and a purplish coralline.
+    peaks = ((x1 - 1.3, 4.7, 2.0), (x0 + 1.2, 3.1, 1.7), (x0 + ln * 0.48, 1.4, 1.3))
 
-    def ridge(z):
-        return max(0.7, *(top * max(0.0, 1 - ((z - zc) / w) ** 2) for zc, top, w in peaks))
+    def ridge(x):
+        return max(0.7, *(top * max(0.0, 1 - ((x - xc) / w) ** 2) for xc, top, w in peaks))
     rocks = []
     tones = ("#867a69", "#7b7262", "#7e7a5e", "#7c6b77", "#8f8270", "#6f675b")
-    for i in range(46):
-        z = z0 + 0.3 + float(rng.uniform(0, zl - 0.6))
-        h = ridge(z)
+    for i in range(58):
+        x = x0 + 0.3 + float(rng.uniform(0, ln - 0.6))
+        h = ridge(x)
         yy = y0 + 0.15 + float(rng.uniform(0, 1) ** 1.4) * (h - 0.3)
         t = (yy - y0) / max(h, 0.1)
-        rr = (0.42 - 0.24 * t) * float(rng.uniform(0.7, 1.15))
+        rr = (0.44 - 0.25 * t) * float(rng.uniform(0.7, 1.15))
         ext = rr * 1.05 * 1.3
-        zr = min(max(z, z0 + ext + 0.05), z1 - ext - 0.05)
-        xr = xb - 0.35 - float(rng.uniform(0, 0.35)) * (1 - t)
+        xr = min(max(x, x0 + ext + 0.05), x1 - ext - 0.05)
+        zr = zb - 0.35 - float(rng.uniform(0, 0.35)) * (1 - t)
         rocks.append((xr, yy, zr, rr))
     for i, (x, yy, z, rr) in enumerate(rocks):
-        kr.blob((x, yy, z), (min(rr, 0.38), rr * float(rng.uniform(0.6, 0.85)), rr * 1.05), mr, tones[i % len(tones)], segs=9, rings=5, seed=40 + i, lumpy=0.4,
-                rot=K.game_rot(yaw=float(rng.uniform(-0.5, 0.5)), roll=float(rng.uniform(-0.3, 0.3))))
+        kr.blob((x, yy, z), (rr * 1.05, rr * float(rng.uniform(0.6, 0.85)), min(rr, 0.38)), mr, tones[i % len(tones)], segs=8, rings=5, seed=40 + i, lumpy=0.4,
+                rot=K.game_rot(yaw=float(rng.uniform(-0.5, 0.5)), pitch=float(rng.uniform(-0.3, 0.3))))
     corals = ["#ee8a6a", "#e86b8f", "#f2a54a", "#9b6bc4", "#e8c75a", "#f07a56"]
-    for i in range(40):
-        z = z0 + 0.25 + float(rng.uniform(0, zl - 0.5))
-        x = float(rng.uniform(x0 + 0.35, xb - 0.25))
+    for i in range(46):
+        x = x0 + 0.25 + float(rng.uniform(0, ln - 0.5))
+        z = float(rng.uniform(z0 + 0.35, zb - 0.25))
         yy = y0 + 0.12 + float(rng.uniform(0, 0.3))
-        if i % 3:                     # on a rock: its top, toward the glass
+        if i % 3:
             rk = rocks[int(rng.integers(0, len(rocks)))]
-            z, yy, x = rk[2] + float(rng.uniform(-0.15, 0.15)), rk[1] + rk[3] * 0.55, rk[0] - rk[3] * 0.45
+            x, yy, z = rk[0] + float(rng.uniform(-0.15, 0.15)), rk[1] + rk[3] * 0.55, rk[2] - rk[3] * 0.45
         c = corals[i % len(corals)]
         kind = i % 4
-        if kind == 0:                 # a boulder coral
+        if kind == 0:
             kr.blob((x, yy + 0.1, z), (0.16, 0.12, 0.16), mr, c, segs=10, rings=6, seed=70 + i, lumpy=0.25, flat_bottom=-0.08)
-        elif kind == 1:               # branching
+        elif kind == 1:
             for bi in range(5):
                 a = bi * TAU / 5 + i
                 kr.tube([(x, yy, z), (x + math.cos(a) * 0.08, yy + 0.18, z + math.sin(a) * 0.08), (x + math.cos(a) * 0.14, yy + 0.32 + 0.05 * (bi % 2), z + math.sin(a) * 0.14)], 0.022, mr, c, n=6, caps=True)
-        elif kind == 2:               # a sea fan
-            kr.blob((x, yy + 0.28, z), (0.03, 0.26, 0.22), mr, "#9b6bc4" if i % 3 else "#e86b8f", segs=10, rings=6, seed=90 + i, rot=K.game_rot(yaw=float(rng.uniform(-0.6, 0.6))))
-        else:                         # weed
+        elif kind == 2:
+            kr.blob((x, yy + 0.28, z), (0.22, 0.26, 0.03), mr, "#9b6bc4" if i % 3 else "#e86b8f", segs=10, rings=6, seed=90 + i, rot=K.game_rot(yaw=float(rng.uniform(-0.6, 0.6))))
+        else:
             for bi in range(6):
                 a = bi * 1.7 + i
                 h = 0.3 + 0.25 * ((bi * 7) % 3) / 2
-                kr.tube([(x + math.cos(a) * 0.05, yy - 0.05, z + math.sin(a) * 0.05), (x + math.cos(a) * 0.08, yy + h * 0.5, z + math.sin(a) * 0.1), (x + math.cos(a) * 0.04, yy + h, z + math.sin(a) * 0.12)], 0.012, mr, "#5f9a55" if bi % 2 else "#78ad5f", n=5)
+                kr.tube([(x + math.cos(a) * 0.05, yy - 0.05, z + math.sin(a) * 0.05), (x + math.cos(a) * 0.1, yy + h * 0.5, z + math.sin(a) * 0.08), (x + math.cos(a) * 0.12, yy + h, z + math.sin(a) * 0.04)], 0.012, mr, "#5f9a55" if bi % 2 else "#78ad5f", n=5)
     reef = kr.finish(name="hq_tank_reef")
     kg = K.Kit("hq_tank_glass")
-    kg.rbox((x0 + 0.005, (y0 + y1) / 2, (z0 + z1) / 2), (0.01, y1 - y0, zl), 0.0, K.Mat("M_TankGlass", "#ffffff", rough=0.05), segs=1)
+    kg.rbox(((x0 + x1) / 2, (y0 + y1) / 2, z0 + 0.005), (ln, y1 - y0, 0.01), 0.0, K.Mat("M_TankGlass", "#ffffff", rough=0.05), segs=1)
     glass = kg.finish(name="hq_tank_glass")
     ks = K.Kit("hq_tank_surface")
     ys = y1 - 0.14
-    pts = [(gx, ys, z0), (gx, ys, z1), (xb, ys, z1), (xb, ys, z0)]
-    ks.face([ks.vert(p) for p in pts], [(p[2], p[0]) for p in pts], K.Mat("M_Water", "#ffffff", rough=0.1), "#ffffff")
+    pts = [(x0, ys, gz), (x1, ys, gz), (x1, ys, zb), (x0, ys, zb)]
+    ks.face([ks.vert(p) for p in pts], [(p[0], p[2]) for p in pts], K.Mat("M_Water", "#ffffff", rough=0.1), "#ffffff")
     surface = ks.finish(name="hq_tank_surface")
     return [inner, reef, glass, surface]
 
@@ -1225,19 +1356,19 @@ def main():
     K.reset()
     m = mats()
     g = ground(m)
-    gw = panes([w for w in L["windows"] if w["z1"] <= UP["z0"]], "hq_windows")
+    gw = panes(L["windows"], "hq_windows")
     c = caster()
     K.export([g, gw, c], f"{OUT}/ground.glb")
     K.clear()
     m = mats()
-    u = upper(m)
+    parts = [upper(m, i) for i in range(len(UPPER))]
     texts = []
     for b in FX["admin-doors"]["blocks"]:
         (x, y0, _), _s = b["at"], b["size"]
         texts.append(letters("ADMINS ONLY", (x, F + y0 + 1.62, D - 0.04 - 0.085), 0.06, f"hq_letters_{x}"))
-    u = join(u, texts)
-    uw = panes([w for w in L["windows"] if w["z0"] >= UP["z0"]], "hq_windows_upper")
-    K.export([u, uw], f"{OUT}/upper.glb")
+    parts[1] = join(parts[1], texts)
+    parts[1].name = "hq_upper_1"
+    K.export(parts, f"{OUT}/upper.glb")
     K.clear()
     m = mats()
     K.export([ceiling(m), front_panes()], f"{OUT}/ceiling.glb")

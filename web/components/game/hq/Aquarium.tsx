@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * HQ's aquarium (specs/interiors/hq.md): the two-storey tank built into the hall's left wall. Colour from David's first
+ * HQ's aquarium (specs/interiors/hq.md): the tank filling the hall's back wall, straight ahead of the door, the full
+ * height of the room's two storeys. Colour from David's first
  * aquarium reference (bright cyan-blue water, schools of silver fish, coral low down), size from his second (a whole
  * wall of reef rock, orange fish, a warm strip along its base; the strip is the room's model).
  *
@@ -41,7 +42,7 @@ const tank = {
   uTime: { value: 0 },
   uTankLight: { value: new THREE.Color("#a9e4f6") },
   uWater: { value: new THREE.Color("#1f8fc4") },
-  uGlassX: { value: HQ.aquarium.x0 },
+  uGlassZ: { value: HQ.aquarium.z0 },
 };
 
 const BENT_VERTEX = /* glsl */ `
@@ -67,10 +68,10 @@ ${CAUSTIC}
 void main() {
   float h = clamp(vUv.y, 0.0, 1.0);
   vec3 col = mix(uDeep, uTop, smoothstep(0.0, 1.0, h));
-  float s = vW.z * 1.2 + vW.y * 0.32;
+  float s = vW.x * 1.2 + vW.y * 0.32;
   float rays = pow(0.5 + 0.5 * sin(s * 1.6 + uTime * 0.22), 6.0) * 0.45 + pow(0.5 + 0.5 * sin(s * 2.9 - uTime * 0.17 + 1.3), 9.0) * 0.3;
   col += uRay * rays * smoothstep(0.15, 1.0, h) * 0.55;
-  col += vec3(0.55, 0.85, 1.0) * hqCaustic(vec2(vW.z, vW.y * 0.8 + vW.x) * 1.7, uTime) * (0.05 + 0.17 * h);
+  col += vec3(0.55, 0.85, 1.0) * hqCaustic(vec2(vW.x, vW.y * 0.8 + vW.z) * 1.7, uTime) * (0.05 + 0.17 * h);
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -89,7 +90,7 @@ uniform float uTime; uniform vec3 uTop; uniform vec3 uDeep;
 varying vec2 vUv; varying vec3 vW;
 ${CAUSTIC}
 void main() {
-  float rip = 0.5 + 0.5 * sin(vW.z * 7.0 + uTime * 1.4 + sin(vW.x * 5.0 + uTime) * 1.2);
+  float rip = 0.5 + 0.5 * sin(vW.x * 7.0 + uTime * 1.4 + sin(vW.z * 5.0 + uTime) * 1.2);
   vec3 col = mix(uDeep, uTop, 0.45 + 0.3 * rip) + vec3(0.8, 0.97, 1.0) * hqCaustic(vW.xz * 1.6, uTime * 1.3) * 0.7;
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
@@ -120,8 +121,8 @@ vTankN = normalize(mat3(modelMatrix) * objectNormal);`);
       .replace("#include <beginnormal_vertex>", `
 float fa = aSwim.z * uTime + aSwim.w;
 float fb = 1.3 * aSwim.z * uTime + 0.6 * aSwim.w;
-vec3 fishPos = vec3(aBob.z + aBob.w * sin(fb), aBob.x + aBob.y * sin(2.0 * aSwim.z * uTime + 1.7 * aSwim.w), aSwim.x + aSwim.y * sin(fa));
-float fishYaw = atan(aBob.w * 1.3 * aSwim.z * cos(fb), aSwim.y * aSwim.z * cos(fa));
+vec3 fishPos = vec3(aSwim.x + aSwim.y * sin(fa), aBob.x + aBob.y * sin(2.0 * aSwim.z * uTime + 1.7 * aSwim.w), aBob.z + aBob.w * sin(fb));
+float fishYaw = atan(aSwim.y * aSwim.z * cos(fa), aBob.w * 1.3 * aSwim.z * cos(fb));
 float fc = cos(fishYaw), fs = sin(fishYaw);
 vec3 objectNormal = vec3(fc * normal.x + fs * normal.z, normal.y, -fs * normal.x + fc * normal.z);`)
       .replace("#include <begin_vertex>", `
@@ -131,7 +132,7 @@ transformed.x += sin(uTime * 8.0 + aLook.y) * 0.1 * tail * tail * aLook.x;
 transformed = vec3(fc * transformed.x + fs * transformed.z, transformed.y, -fs * transformed.x + fc * transformed.z) + fishPos;`);
     shader.fragmentShader = shader.fragmentShader
       .replace("#include <common>", `#include <common>
-uniform float uTime; uniform vec3 uTankLight; uniform vec3 uWater; uniform float uGlassX;
+uniform float uTime; uniform vec3 uTankLight; uniform vec3 uWater; uniform float uGlassZ;
 varying vec3 vTankWorld;
 varying vec3 vTankN;
 ${CAUSTIC}`)
@@ -140,7 +141,7 @@ float tankUp = clamp(vTankN.y * 0.5 + 0.5, 0.0, 1.0);
 float tankC = hqCaustic(vTankWorld.xz * 1.1 + vTankWorld.y * 0.2, uTime);
 totalEmissiveRadiance += diffuseColor.rgb * uTankLight * (0.22 + 0.4 * tankUp + tankC * (0.35 + 0.9 * tankUp));`)
       .replace("#include <opaque_fragment>", `#include <opaque_fragment>
-gl_FragColor.rgb = mix(gl_FragColor.rgb, uWater, ${haze} + ${deep} * clamp((vTankWorld.x - uGlassX) / 1.4, 0.0, 1.0));`);
+gl_FragColor.rgb = mix(gl_FragColor.rgb, uWater, ${haze} + ${deep} * clamp((vTankWorld.z - uGlassZ) / 1.4, 0.0, 1.0));`);
   };
   material.customProgramCacheKey = () => (swim ? "hq-tank-fish" : "hq-tank-reef");
   return material;
@@ -168,7 +169,7 @@ function Fish() {
     const fish = tankFish();
     const geometry = fishGeometry();
     const swim = new Float32Array(fish.length * 4), bob = new Float32Array(fish.length * 4), look = new Float32Array(fish.length * 2);
-    fish.forEach((f, i) => { swim.set([f.zc, f.za, f.w, f.ph], i * 4); bob.set([f.y0, f.ya, f.x0, f.xa], i * 4); look.set([f.size, f.beat], i * 2); });
+    fish.forEach((f, i) => { swim.set([f.ac, f.aa, f.w, f.ph], i * 4); bob.set([f.y0, f.ya, f.d0, f.da], i * 4); look.set([f.size, f.beat], i * 2); });
     geometry.setAttribute("aSwim", new THREE.InstancedBufferAttribute(swim, 4));
     geometry.setAttribute("aBob", new THREE.InstancedBufferAttribute(bob, 4));
     geometry.setAttribute("aLook", new THREE.InstancedBufferAttribute(look, 2));
@@ -197,7 +198,8 @@ export default function Aquarium() {
       mesh.castShadow = mesh.receiveShadow = false;
       const material = /hq_tank_inner/.test(name) ? waterMaterial()
         : /hq_tank_surface/.test(name) ? surfaceMaterial()
-        : /hq_tank_glass/.test(name) ? new THREE.MeshStandardMaterial({ name: "HqTankGlass", color: "#d6f3fb", roughness: 0.3, metalness: 0, transparent: true, opacity: 0.1, depthWrite: false })
+        // Unlit: a lit pane catches the blue light in front of it and washes the water out from above.
+        : /hq_tank_glass/.test(name) ? new THREE.MeshBasicMaterial({ name: "HqTankGlass", color: "#d6f3fb", transparent: true, opacity: 0.07, depthWrite: false })
         : tankLit(new THREE.MeshStandardMaterial({ name: "HqTankReef", vertexColors: true, roughness: 0.9 }), false);
       mesh.material = material;
       mats.push(material);

@@ -2,6 +2,13 @@
 
 David, 2026-10-18. Ledger row 316. HQ is the second interior to be reworked from David's references, after the [shop](shop.md). Same process: the layout comes first and gets David's OK before anything is furnished.
 
+**Current layout: B, the gallery, with taller storeys** (phase 3, below). David, 2026-10-19, on the phase 2 review, verbatim:
+
+> "i said to do plan b, also make roofs taller for both floors"
+
+Layout A (phases 1 and 2) is replaced: its code is gone from the game, not kept behind the lab flag (both layouts would have
+needed their own models, walker parts and evidence; keeping A was not free). It stays in git history (phase 2 head `831f3036`).
+
 ## References
 
 In `references/interiors/hq/`:
@@ -90,7 +97,7 @@ All of HQ's current functions stay and keep working.
 ## Phase 1: the layout (greybox, 2026-10-18, for David's pick)
 
 Every number was in `web/lib/game/hqLayout.ts`, for two options, drawn as matte blocks at
-`/lab/island?hq=inside&hqLayout=a` (or `b`). David picked A (below); the greybox and option B are gone since phase 2. The walking, the stair and the stations use the same numbers. The shots are in
+`/lab/island?hq=inside&hqLayout=a` (or `b`). David first picked A, then switched to B on 2026-10-19 (phase 3); the greybox is gone since phase 2. The walking, the stair and the stations use the same numbers. The shots are in
 `specs/evidence/hq-interior/phase1/`: `hq-layout-options.webp` shows A beside B, view by view, made headless by
 `shots.mjs` and `sheet.py` there.
 
@@ -191,6 +198,9 @@ Every number was in `web/lib/game/hqLayout.ts`, for two options, drawn as matte 
 - The HQ perf bench and the room's meshes against the interior budget.
 
 ## Phase 2: layout A furnished (2026-10-18)
+
+> **Superseded by phase 3.** David switched to layout B on 2026-10-19; the room below is gone from the game. The phase 2
+> furniture, materials, aquarium shaders and light carry over to B.
 
 David picked **option A, the back mezzanine**, and left the exterior as it is ("gonna remodel the buildings maybe
 later"). Layout A is now the member HQ: `/lab/island?hq=inside` and through HQ's door in the village. The applicant
