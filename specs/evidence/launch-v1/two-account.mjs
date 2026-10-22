@@ -623,6 +623,30 @@ process.on("SIGTERM", async () => { if (mRaised) await sql(`update profiles set 
 
 if (PHASE === "setup") await setup();
 else if (PHASE === "arrival") await arrival();
+else if (PHASE === "diag") {
+  // Why joins fail: the page's own WebSocket close codes and the HUD's status line while A tries to join for a minute.
+  browser = await chromium.launch({ headless: true, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"] });
+  try {
+    const A = await player("a");
+    await A.ctx.addInitScript(() => {
+      const Native = window.WebSocket;
+      window.__wsLog = [];
+      window.WebSocket = class extends Native {
+        constructor(...a) { super(...a); const t0 = Date.now(); window.__wsLog.push({ open: t0 }); this.addEventListener("close", e => window.__wsLog.push({ close: e.code, reason: e.reason, after: Date.now() - t0 })); }
+      };
+    });
+    await A.page.goto(`${PREVIEW}/student/dashboard`, { waitUntil: "domcontentloaded" });
+    const end = Date.now() + 75000;
+    let lastStatus = "";
+    while (Date.now() < end) {
+      const st = await A.page.evaluate(() => document.querySelector('[role="status"]')?.textContent ?? "").catch(() => "");
+      if (st !== lastStatus) { log("status:", st.slice(0, 80)); lastStatus = st; }
+      await A.page.waitForTimeout(1000);
+    }
+    log("ws log", JSON.stringify(await A.page.evaluate(() => window.__wsLog)));
+    await A.ctx.close();
+  } finally { await browser.close(); }
+}
 else if (PHASE === "flow4") {
   browser = await chromium.launch({ headless: true, args: ["--mute-audio"] });
   try { const A = await player("a"); await flow4(A); await A.ctx.close(); }
