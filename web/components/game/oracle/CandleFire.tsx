@@ -13,7 +13,7 @@ import * as THREE from "three";
 import { FACE, ParticlePool, seedAt, type Recipe } from "@/lib/game/fx/particles";
 import { COMBAT_PACK, COMBAT_PACK_URL, type CombatSprite } from "@/lib/game/fx/combatPack";
 import { RampTable, sharedRamps, type Ramp } from "@/lib/game/fx/combat";
-import { createCombatParticleMaterial, rampMap } from "@/lib/game/fx/fxMaterial";
+import { createCombatParticleMaterial, packTexture, rampMap } from "@/lib/game/fx/fxMaterial";
 import { worldTime } from "@/lib/game/worldClock";
 import { hash01 } from "@/lib/game/worldFx";
 
@@ -28,11 +28,6 @@ const SPARK: Recipe<CombatSprite> = { sprite: "mote", count: [1, 1], life: [1.1,
 /** A spark leaves a candle about this often (s), and only on some beats. */
 const SPARK_BEAT = 0.8, SPARK_CHANCE = 0.62;
 
-let pack: THREE.Texture | null = null;
-function packMap() {
-  if (!pack) { pack = new THREE.TextureLoader().load(COMBAT_PACK_URL); pack.colorSpace = THREE.NoColorSpace; pack.anisotropy = 4; } // heat is data, not colour
-  return pack;
-}
 
 class CandleSystem {
   readonly pool = new ParticlePool(48, COMBAT_PACK);
@@ -53,7 +48,7 @@ class CandleSystem {
       return a;
     });
     this.geometry.instanceCount = 0;
-    this.mesh = new THREE.Mesh(this.geometry, createCombatParticleMaterial(packMap(), rampMap(ramps), true));
+    this.mesh = new THREE.Mesh(this.geometry, createCombatParticleMaterial(packTexture(COMBAT_PACK_URL), rampMap(ramps), true));
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 3.5;
     this.beats = new Int32Array(wicks.length).fill(-1);

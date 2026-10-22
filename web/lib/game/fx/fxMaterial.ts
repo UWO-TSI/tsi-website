@@ -9,6 +9,19 @@ import * as THREE from "three";
 import { COMBAT_PACK_COLS, COMBAT_PACK_ROWS } from "./combatPack";
 import { RAMP_ROWS, RAMP_STEPS, type RampTable } from "./combat";
 
+const packs = new Map<string, THREE.Texture>();
+/** One texture per atlas URL, shared by every effect that draws from it (heat is data, not colour). */
+export function packTexture(url: string): THREE.Texture {
+  let t = packs.get(url);
+  if (!t) {
+    t = new THREE.TextureLoader().load(url);
+    t.colorSpace = THREE.NoColorSpace;
+    t.anisotropy = 4;
+    packs.set(url, t);
+  }
+  return t;
+}
+
 let rampTexture: THREE.DataTexture | null = null;
 /** The ramp table as a texture (rows uploaded as kits' ramps appear). */
 export function rampMap(table: RampTable): THREE.DataTexture {
