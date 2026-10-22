@@ -94,10 +94,11 @@ const live = (el: HTMLElement) => el.matches("button:not(:disabled)") || !!el.qu
  * The cells' motion for a grid whose children are its cells: a callback ref for the grid (pair it with the kit's
  * `NUDGE_GRID` class, which turns the numbers into transforms). It writes each cell's offsets as CSS variables, only
  * where they change; the CSS eases them (in and out, quick for a hover, slower for a pick) and holds still under
- * reduced motion. The picked cell is the one holding `[data-selected]` (ItemCard's `selected`), watched as it moves;
- * a hover is a mouse or pen over a cell (a touch only picks). Transforms only: nothing reflows.
+ * reduced motion. The picked cells are those holding `picked` (ItemCard's `selected` by default; the creator's tiles
+ * are pressed buttons, and several can be on), watched as they change; a neighbour of two steps aside from both. A
+ * hover is a mouse or pen over a cell (a touch only picks). Transforms only: nothing reflows.
  */
-export function useNudge(): (grid: HTMLElement | null) => (() => void) | void {
+export function useNudge(picked = "[data-selected]"): (grid: HTMLElement | null) => (() => void) | void {
   return useCallback((grid: HTMLElement | null) => {
     if (!grid) return;
     let hovered: HTMLElement | null = null, leave = 0;
@@ -110,14 +111,17 @@ export function useNudge(): (grid: HTMLElement | null) => (() => void) | void {
       const cells = Array.from(grid.children) as HTMLElement[];
       // Every read before any write.
       const boxes = cells.map<CellBox>(el => ({ x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight }));
-      const si = cells.findIndex(el => el.matches("[data-selected]") || !!el.querySelector("[data-selected]"));
+      const sel = cells.flatMap((el, i) => (el.matches(picked) || el.querySelector(picked) ? [i] : []));
       const hi = hovered ? cells.indexOf(hovered) : -1;
-      const h = hi >= 0 && hi !== si ? boxes[hi] : null, s = si >= 0 ? boxes[si] : null;
+      const h = hi >= 0 && !sel.includes(hi) ? boxes[hi] : null;
       cells.forEach((el, i) => {
-        const hn = h ? nudgeOf(boxes[i], h, NUDGE.hover) : null, sn = s ? nudgeOf(boxes[i], s, NUDGE.select) : null;
+        const hn = h ? nudgeOf(boxes[i], h, NUDGE.hover) : null;
+        // A picked cell grows; the others add up their steps aside from every picked one.
+        const sn = sel.includes(i) ? nudgeOf(boxes[i], boxes[i], NUDGE.select)
+          : sel.reduce((a, j) => { const n = nudgeOf(boxes[i], boxes[j], NUDGE.select); return { x: r1(a.x + n.x), y: r1(a.y + n.y), s: 1 }; }, { x: 0, y: 0, s: 1 });
         put(el, VARS[0], hn?.x ?? 0, 0, "px"); put(el, VARS[1], hn?.y ?? 0, 0, "px"); put(el, VARS[2], hn?.s ?? 1, 1, "");
-        put(el, VARS[3], sn?.x ?? 0, 0, "px"); put(el, VARS[4], sn?.y ?? 0, 0, "px"); put(el, VARS[5], sn?.s ?? 1, 1, "");
-        const on = i === si ? "select" : i === hi && h ? "hover" : null;
+        put(el, VARS[3], sn.x, 0, "px"); put(el, VARS[4], sn.y, 0, "px"); put(el, VARS[5], sn.s, 1, "");
+        const on = sel.includes(i) ? "select" : i === hi && h ? "hover" : null;
         if (el.getAttribute("data-nudge") !== on) { if (on) el.setAttribute("data-nudge", on); else el.removeAttribute("data-nudge"); }
       });
     };
@@ -141,7 +145,7 @@ export function useNudge(): (grid: HTMLElement | null) => (() => void) | void {
     grid.addEventListener("pointercancel", gone);
     grid.addEventListener("dragstart", gone);
     const mo = typeof MutationObserver === "undefined" ? null : new MutationObserver(apply);
-    mo?.observe(grid, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-selected", "disabled"] });
+    mo?.observe(grid, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-selected", "aria-pressed", "disabled"] });
     const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(apply);
     ro?.observe(grid);
     apply();
@@ -153,5 +157,5 @@ export function useNudge(): (grid: HTMLElement | null) => (() => void) | void {
       grid.removeEventListener("dragstart", gone);
       mo?.disconnect(); ro?.disconnect();
     };
-  }, []);
+  }, [picked]);
 }

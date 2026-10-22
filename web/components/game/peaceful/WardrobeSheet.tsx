@@ -6,7 +6,8 @@
  * face parts (wardrobe batch 2 sells whole faces) and clothes, showing the real
  * character (A-sheet display: three-quarter view on a patterned backdrop).
  * Clothes, dyes and priced items come from /api/economy/inventory; the rest
- * show locked with a link to the shop (ruling on audit item 22).
+ * show locked with a link to the shop (ruling on audit item 22). In the flat
+ * UI's look (specs/polish/flat-ui.md round 3).
  */
 import { useMemo, useState } from "react";
 import CharacterCreator from "../character/CharacterCreator";
@@ -39,6 +40,6 @@ function Wardrobe({ presence, onClose, place, onShop }: { presence: "open" | "cl
   // everyone's while it lasts (the costume closet, lib/content/traditions.ts).
   const events = useCostumeEventsOpen();
   const owned = useMemo(() => new Set([...(inventory ? inventory.keys() : STARTER_PARTS), ...openEventParts(events)]), [inventory, events]);
-  return <CharacterCreator mode="wardrobe" presence={presence} initial={mine.look} owned={owned} onShop={onShop} title={place === "closet" ? "Your closet" : "Fitting room"} onClose={onClose}
+  return <CharacterCreator flat mode="wardrobe" presence={presence} initial={mine.look} owned={owned} onShop={onShop} title={place === "closet" ? "Your closet" : "Fitting room"} onClose={onClose}
     onDone={async look => { await saveMyLook(look); onClose(); }} />;
 }

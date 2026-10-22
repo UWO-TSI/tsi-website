@@ -83,7 +83,7 @@ export default function Harness() {
     {surface === "missions" && <MissionBoardSheet open onClose={close} gateNote={null} />}
     {/* The closet (the fitting room with place=fitting), and the member's first creator as a signed-in member sees it. */}
     {surface === "wardrobe" && <WardrobeSheet open place={q.get("place") === "fitting" ? "fitting" : "closet"} onClose={close} onShop={close} />}
-    {surface === "creator" && <CharacterCreator initial={DEFAULT_LOOK} askName={{ current: "You" }} onDone={close} />}
+    {surface === "creator" && <CharacterCreator flat initial={DEFAULT_LOOK} askName={{ current: "You" }} onDone={close} />}
     {/* The applicant island's creator, as ApplicantIsland mounts it: shot to show it unchanged. */}
     {surface === "creator-applicant" && <CharacterCreator initial={DEFAULT_LOOK} title="Make yourself at home" onDone={close} />}
     {/* Docked at the side as the world docks it (its --hud-* edges). */}

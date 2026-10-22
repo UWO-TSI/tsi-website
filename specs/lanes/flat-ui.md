@@ -6,11 +6,20 @@
 ## Status (2026-10-22)
 
 - **Head:** see `git log -1` on `game/flat-ui`. Main (`feat/game-default-island` f66bafe6, wardrobe batch 2) merged in.
-- **Round 3, step 1, done and reported:** the side panels roomier (the bag's and the collection's, one component) and the cells' new hover and select motion on every kit grid. Sheets: `specs/evidence/flat-ui/round3-panels-motion.webp`, `round3-motion-filmstrip.webp`. Waiting on David.
-- **Round 3, step 2, the avatar creator and wardrobe (step 8): GO, in progress.** Befores are shot (scratchpad; see Tools).
+- **Feature freeze Oct 24** (launch Oct 31; `specs/launch/v1-launch.md`, ledger row 317). Step 8 merges only if David approves it by Oct 24, otherwise after launch. Keep it opt-in and behaviour-identical; don't widen scope.
+- **Round 3, step 1 (the side panels and the motion): APPROVED** with notes (the verdict below): a spring instead of ease-in-out, a slight drop shadow on the hovered cell, and the four menus shown in the flat palette beside the cream ones.
+- **Round 3, step 8, the avatar creator and wardrobe: built and reported** (`round3-creator.webp`), waiting on David. Opt-in `flat` on `CharacterCreator` (closet, fitting room, the member's first creator); the applicant's is unchanged.
 - **Step 7, the first four cream menus:** built (`round2-step7-first4.webp`), NO verdict yet. Leave them as they are; don't roll the direction out to the other menus until the coordinator relays David's OK.
 - **Approved:** the kit, the chest, the workbench, the furniture catalogue, the bag (filters and side panel).
 - **Merged to main:** step 1 (the kit), step 2 (the old shop pages).
+
+## David's decisions (round 3 verdict, relayed 2026-10-22)
+
+The verbatim notes are in `specs/polish/flat-ui.md`, under "Round 3 verdict". APPROVED: the panels, the phone panels and the motion.
+
+1. Motion: "make the fell more bouncy/springy rather than linear". A spring with a small overshoot on hover and select (the cell pops out and settles back a little, the neighbours spring too); a CSS `linear()` curve or a tiny solver, transform-only; hover about 200 ms to settle, select about 400 ms; off under reduced motion.
+2. Phone panel item: "add a slight drop shadow to the hover tab as well". The hovered cell gets a soft, slight drop shadow as it grows out; the selected cell keeps it.
+3. Theme: "i think overall ui can adopt like color theme, this is the basic clean color theme for ui but later will sell ui in shop for like dark mode, and acnh themed and st uff like that, but this looks good". Before the freeze: the four redesigned menus (journal, mission board, notice board, mailbox) in the clean flat palette too, new layouts kept, paper kept for letters and notices, beside the cream versions so David can pick. Don't convert the other menus yet. Themes as token sets come after launch; don't build them now.
 
 ## David's decisions (round 3, 2026-10-18, relayed 2026-10-22)
 
@@ -61,8 +70,9 @@ The verbatim notes are in `specs/polish/flat-ui.md`, under "Round 2".
 ## Next
 
 1. ~~Round 3 step 1: the side panels and the cells' motion; shoot; report.~~ Done.
-2. **Round 3 step 2 (step 8), the creator:** restyle `CharacterCreator` (closet, fitting room, the member's first creator) to the flat look. The applicant island mounts the same `CharacterCreator` (recruitment code, untouched), so the flat look is opt-in by prop and the default stays as it is (prove it unchanged with `surface=creator-applicant`). The reflection creator shares `CreatorControls` and the creator's CSS module: keep its look (scope the flat CSS under the flat root). Shoot after (desktop and phone, several categories) into `round3-creator.webp`, gates, update this file, commit, report, then clean up and stop.
-3. After David's OK on the four cream menus (through the coordinator): apply the direction to the rest, with the `components/gui/cream` pieces: settings, wallet, tourney, cafe goals (it still uses `GoalCard`; move it to `ClubGoal`), trophies, showcase, donate, the Esc menu, friends. Shoot before and after into one sheet.
+2. ~~Round 3 step 8, the creator: opt-in `flat`, shoot, report.~~ Done (`round3-creator.webp`).
+3. **The verdict's notes:** the spring (hover and select, the neighbours too) and the hovered cell's slight shadow; the four first menus in the flat palette beside the cream ones. One short sheet, `round3b-spring-theme.webp`, with a filmstrip of the spring. Report, then clean up and stop.
+4. After David picks a palette for the four menus (through the coordinator): apply the direction to the rest, with the `components/gui/cream` pieces: settings, wallet, tourney, cafe goals (it still uses `GoalCard`; move it to `ClubGoal`), trophies, showcase, donate, the Esc menu, friends. Shoot before and after into one sheet.
    - `progression.module.css` still serves the wallet, Contribute and cafe goals. When those move, delete what's left unused there and `GoalCard` (keep `rewardName`).
 
 Each step ends with:

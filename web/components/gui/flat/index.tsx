@@ -108,11 +108,13 @@ export function railStep<T extends string>(items: readonly RailItem<T>[], value:
  * Icons only (their labels are for screen readers and the tooltip); the chosen one black with a dot under it that slides
  * to the next choice, a press that dips and springs back, a count badge where `badge` is set. Down the left of a `FlatPanel` (across the top on a phone); `horizontal` puts it across
  * the top anywhere. `tabs`: it is a tab list (a flat `Sheet`'s `Tabs`): role tab, aria-selected, and the caller's
- * `onKeyDown` and `listRef` for the arrow keys.
+ * `onKeyDown` and `listRef` for the arrow keys. `itemAttrs`: more attributes for an icon's button (the creator's tab
+ * ids and the panel it controls).
  */
-export function IconRail<T extends string>({ items, value, onChange, label, orientation = "vertical", tabs, listRef, onKeyDown, className }: {
+export function IconRail<T extends string>({ items, value, onChange, label, orientation = "vertical", tabs, listRef, onKeyDown, className, itemAttrs }: {
   items: readonly RailItem<T>[]; value: T | null; onChange: (id: T) => void; label: string;
   orientation?: "vertical" | "horizontal"; tabs?: boolean; listRef?: Ref<HTMLElement>; onKeyDown?: (e: KeyboardEvent) => void; className?: string;
+  itemAttrs?: (item: RailItem<T>) => Record<string, string | undefined>;
 }) {
   // A tab list is a div (role tablist); a rail of shelves is the panel's nav.
   const Tag = (tabs ? "div" : "nav") as "nav";
@@ -127,7 +129,7 @@ export function IconRail<T extends string>({ items, value, onChange, label, orie
       const on = it.id === value, badge = badgeText(it.badge);
       return <button key={it.id} type="button" className={f.shelf} aria-label={it.label} title={it.label} disabled={it.disabled}
         {...(tabs ? { role: "tab", "aria-selected": on, tabIndex: on ? 0 : -1, "data-tab": it.id } : { "aria-current": on || undefined })}
-        onClick={() => onChange(it.id)}>
+        {...itemAttrs?.(it)} onClick={() => onChange(it.id)}>
         {it.icon}
         {badge ? <span className={f.badge}>{badge}</span> : null}
       </button>;

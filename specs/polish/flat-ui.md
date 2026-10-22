@@ -218,3 +218,27 @@ Evidence: `specs/evidence/flat-ui/round3-panels-motion.webp` (before and after, 
   - It's on `CardGrid` (the shop, the workbench, the collection, the bag's clothes and furniture shelves) and, through `NUDGE_GRID` and `useNudge`, on the bag's and the chest's slots and the furniture catalogue's pieces and finishes.
   - The card's old hover lift (2 px up) is gone; its shadow stays. A picked card has a soft shadow under its ring.
   - The panel's rail is 70 px (was 76) and the content's left padding 10 px (was 4), so a first-column card has room to grow without being clipped; the content sits where it did. The chest's grids have the same room inside their scroll.
+
+### Round 3, step 8 built: the avatar creator and wardrobe in the flat look (game/flat-ui, 2026-10-22)
+
+Evidence: `specs/evidence/flat-ui/round3-creator.webp` (before and after: the closet's hair, its colours, eyes, accessories and tops; the first creator's head and skin with the name, its mouth sliders and its shoes; the closet and the first creator on a phone; the applicant island's creator unchanged).
+
+- **Opt-in:** `CharacterCreator` takes `flat`. The closet and the fitting room (`WardrobeSheet`) and the member's first creator (`PlayerCharacterUI`) pass it. The applicant island mounts the same component without it, so its creator is the cream studio as it was: its rail and panel are pixel-identical (only the 3D portrait differs between shots, by the idle pose's timing). The reflection creator shares the controls and keeps its look; the flat CSS is scoped to `.creator[data-flat]`.
+- **The look:** one light-grey screen with the title in the middle and the round close at the end across the top; the kit's `IconRail` down the left (an item's picture grey until it's chosen; the dot slides; on a phone across the top); the character on the white studio sweep under the shop stage's lights (`Portrait studio="white"`: TurnStage's rig, a neutral contact shadow) with the navy round buttons to turn it and "Drag to turn" under it; the options in a roomy white panel (padding 28 to 30 px, the category's name at 26 px, sections split by hairlines).
+- **The controls:** flat grey tiles (the worn one white with an ink ring and lifted, out of the grid with the kit's motion; several can be on); round swatches ringed in ink (the Own swatches keep their word); hairline sliders with an ink thumb; the colour wheel ringed in a hairline, its hex on the grey; the main action the dark pill across the panel, Surprise me and Skip quiet under it (one row on a phone, the main action last).
+- **Unchanged behaviour:** the categories, tiles, owned and locked items, the hair colour wheel and its lock, the Own swatches, two-colour hair, the hat cut, the face sliders, the thumbnails and their bake, the graphics tier's resolution, the name check, Escape, the wardrobe's open and close motion, and the tab keys.
+
+## Round 3 verdict (David, relayed 2026-10-22)
+
+APPROVED: the panels, the phone panels and the motion. His notes, verbatim:
+
+1. **Motion:** "make the fell more bouncy/springy rather than linear".
+   - The ease-in-out becomes a spring with a small overshoot on hover and select: the cell pops out, settles back slightly, and the neighbours spring too.
+   - A CSS `linear()` spring curve or a tiny spring solver; transform-only.
+   - Hover quick (about 200 ms to settle), select slower (about 400 ms).
+   - Off under reduced motion.
+2. **Phone panel item:** "add a slight drop shadow to the hover tab as well". The hovered cell gets a soft, slight drop shadow as it grows out, and the selected cell keeps it.
+3. **Theme:** "i think overall ui can adopt like color theme, this is the basic clean color theme for ui but later will sell ui in shop for like dark mode, and acnh themed and st uff like that, but this looks good".
+   - The coordinator's reading: this clean flat palette becomes the base theme for the whole UI, and later UI themes (dark mode, an ACNH-style cream theme and so on) are sold in the shop.
+   - Before the freeze (Oct 24): the four redesigned menus (journal, mission board, notice board, mailbox) are shown in the clean flat palette too, with their new layouts, and the paper kept for letters and notices, beside the cream versions so David can pick. The remaining menus are not converted yet.
+   - **UI themes come from tokens (after launch, not built now):** a theme is a token set (the base flat, dark, cream or ACNH), swapped as a whole; the components read tokens only.

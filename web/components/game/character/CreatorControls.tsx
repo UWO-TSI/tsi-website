@@ -11,6 +11,8 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Lock } from "lucide-react";
 import { Button, Slider } from "@/components/gui";
+import { useGuiVariant } from "@/components/gui/variant";
+import { IconRail, NUDGE_GRID, useNudge } from "@/components/gui/flat";
 import { iconUrl } from "@/lib/icons/keys";
 import { customHairUnlocked, dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR_COLOURS, HAIR_THUMB_URL, hairAccentHex, hairHex, NATURAL_HAIR, naturalHex, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, unlockRef,
   type CatalogPart, type CharacterLook, type FaceCell, type Placement } from "@/lib/game/character/look";
@@ -30,17 +32,26 @@ const SLIDERS: { i: 0 | 1 | 2 | 3; label: string; say: (v: number) => string }[]
 
 /**
  * The rail of category tiles: arrows move along it (and open the category), Home and End jump to its ends.
- * `orientation` is what assistive tech is told; the layout is the stylesheet's.
+ * `orientation` is what assistive tech is told; the layout is the stylesheet's. In the flat creator (the flat GUI
+ * variant) it is the kit's `IconRail`: icons only, the chosen one's dot sliding to the next, a press that dips.
  */
 export function CategoryRail({ cats, cat, onOpen, className, orientation = "vertical" }: {
   cats: readonly Category[]; cat: Category; onOpen: (c: Category, focus?: boolean) => void; className?: string; orientation?: "vertical" | "horizontal";
 }) {
+  const flat = useGuiVariant() === "flat";
   const step = (by: number) => onOpen(cats[(cats.indexOf(cat) + by + cats.length) % cats.length], true);
   const railKey = (e: React.KeyboardEvent) => {
     const by = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
     if (by) { e.preventDefault(); step(by); }
     else if (e.key === "Home" || e.key === "End") { e.preventDefault(); onOpen(e.key === "Home" ? cats[0] : cats[cats.length - 1], true); }
   };
+  if (flat) return <IconRail tabs label="Categories" value={cat.id} onChange={id => onOpen(cats.find(c => c.id === id)!)} onKeyDown={railKey}
+    className={className ?? styles.rail} orientation={orientation}
+    items={cats.map(c => ({ id: c.id, label: c.label, icon: c.itemIcon
+      // eslint-disable-next-line @next/next/no-img-element
+      ? <img src={iconUrl(c.itemIcon)} alt="" width={30} height={30} draggable={false} />
+      : <CreatorIcon icon={c.icon} size={26} /> }))}
+    itemAttrs={c => ({ "data-cat": c.id, id: `creator-tab-${c.id}`, "aria-controls": "creator-panel" })} />;
   return <nav className={className ?? styles.rail} role="tablist" aria-label="Categories" aria-orientation={orientation} onKeyDown={railKey}>
     {cats.map(c => <button key={c.id} type="button" role="tab" data-cat={c.id} id={`creator-tab-${c.id}`} aria-selected={c.id === cat.id} aria-controls="creator-panel"
       tabIndex={c.id === cat.id ? 0 : -1} aria-label={c.label} title={c.label} onClick={() => onOpen(c)} className={styles.railTab}>
@@ -64,6 +75,9 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
   owned: ReadonlySet<string>; onShop?: () => void; onChange?: (kind: CreatorChange) => void;
 }) {
   const [lastAccessory, setLastAccessory] = useState<string | null>(null);
+  // The flat creator's tiles move as the kit's cards do (a hover grows one, the worn ones stay out).
+  const flat = useGuiVariant() === "flat";
+  const nudge = useNudge('[aria-pressed="true"]');
   const [lockNote, setLockNote] = useState<{ cat: string; text: string } | null>(null);
   const note = lockNote?.cat === cat.id ? lockNote.text : null;
   const say = (text: string | null) => setLockNote(text ? { cat: cat.id, text } : null);
@@ -162,7 +176,7 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
       if (!options.length) return null;
       return <section key={section.id} className={styles.section} aria-label={section.label}>
         {cat.sections.length > 1 && <h3>{section.label}</h3>}
-        <ul className={styles.tiles} data-face={"face" in section.source || undefined}>
+        <ul ref={flat ? nudge : undefined} className={flat ? `${styles.tiles} ${NUDGE_GRID}` : styles.tiles} data-face={"face" in section.source || undefined}>
           {options.map(id => {
             const locked = !has(id);
             const label = optionName(section, id);
