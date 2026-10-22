@@ -14,7 +14,7 @@ import { useGLTF } from "@react-three/drei";
 import type { WeaponPaint } from "@/lib/game/combat/primitives";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
-import { BASE_URL, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, HAIR_CAP_COLOR, HAIR_MAP_GAIN, HAIR_MAPS_URL, LOD_SKIN_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, usesFacePage2, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
+import { BASE_URL, COLOUR_ATLAS_URL, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, HAIR_MAPS_URLS, PART_BY_ID, LOD_SKIN_URL, PALETTE, TSI_DECAL_URL, CLIP_BY_NAME, VERBS_URL, bodyKey, resolveParts, usesFacePage2, type CharacterLook, type ResolvedPart } from "@/lib/game/character/look";
 import { characterLod, createLodState, detailSituation, drawnHeight, mixerStep, type DetailSituation } from "@/lib/game/character/lod";
 import { isDetailFocus } from "@/lib/game/character/detailFocus";
 import { readPhoto } from "@/lib/game/photoMode";
@@ -45,54 +45,117 @@ type Gltf = { scene: THREE.Object3D; animations: THREE.AnimationClip[] };
 // tucked undersides stay behind the head). The shadow pass keeps back faces only, as for a front-sided material.
 const BODY_MATERIAL = new THREE.MeshPhysicalMaterial({ name: "CharacterBody", vertexColors: true, ...MATTE, side: THREE.DoubleSide, shadowSide: THREE.BackSide });
 /**
- * Mapped hairstyles (head fit, specs/characters/head-fit.md): one shared atlas of shading maps, one channel per style
- * (rig.ts `hairMap` names it, 0: no map). The palette tint (the vertex colour) times map x gain; a two-tone style mixes
- * its accent colour in by the accent channel. Matte like every character surface. Loaded the first time a mapped style
- * is worn; until then a white texel (the tint alone).
+ * Mapped hairstyles, round 2 (David, 2026-10-17: "you really messed up the hair"): one shared atlas of every hairstyle's
+ * own source texture (art/characters/hair/import_hair.py natural_map), drawn as Roblox draws it: its colours, its strands,
+ * matte with a soft gloss. A colour the member picks shifts the texture's hue and saturation in OKLab, each texel keeping
+ * its lightness (hairColour.ts; rig.ts `hairA`, `hairB`); the alpha names the texel's channel (1 the hair's colour, 2/3 a
+ * two-colour hair's second, 1/3 fixed: a cap or visor). Loaded the first time a mapped style is worn (sRGB: it reads back
+ * linear), the world's half-size copy (HAIR_MAPS_URLS) unless a creator-sized face asks for the full one; until then a
+ * white texel (the under-cap's tint alone).
  */
 const HAIR_ATLAS: { value: THREE.Texture } = { value: new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1) };
 HAIR_ATLAS.value.needsUpdate = true;
-let hairAtlasLoading = false;
-function ensureHairAtlas() {
-  if (hairAtlasLoading) return;
-  hairAtlasLoading = true;
-  new THREE.TextureLoader().load(HAIR_MAPS_URL, tex => {
+/** Which copy is loaded or loading: the world's half-size one first; the creator's full one replaces it for good. */
+let hairAtlasSize: "world" | "creator" | null = null;
+function ensureHairAtlas(size: "world" | "creator") {
+  if (hairAtlasSize === "creator" || hairAtlasSize === size) return;
+  hairAtlasSize = size;
+  new THREE.TextureLoader().load(HAIR_MAPS_URLS[size], tex => {
+    if (size === "world" && hairAtlasSize === "creator") { tex.dispose(); return; }   // the full one was asked for meanwhile
     tex.flipY = false;                       // glTF UVs (top-left origin), as the face atlas
-    tex.colorSpace = THREE.NoColorSpace;     // data: luminance ratios, not colour
+    tex.colorSpace = THREE.SRGBColorSpace;   // colour: decoded to linear on sampling; the alpha is the channel, as stored
     tex.generateMipmaps = true;
     tex.minFilter = THREE.LinearMipmapLinearFilter;
     tex.anisotropy = 4;
     tex.needsUpdate = true;
+    const old = HAIR_ATLAS.value;
     HAIR_ATLAS.value = tex;
+    old.dispose();
   });
 }
-const HAIR_CHANNEL = /* glsl */ `float hairChannel(vec3 t, float c) { return c < 1.5 ? t.r : (c < 2.5 ? t.g : t.b); }`;
-const CAP = new THREE.Color(HAIR_CAP_COLOR);       // linear: a cap or visor's fixed colour, by its mask channel
-const glsl = (c: THREE.Color) => `vec3(${c.r.toFixed(5)}, ${c.g.toFixed(5)}, ${c.b.toFixed(5)})`;
+/**
+ * Wardrobe batch 2: the fixed-colour atlas (art/characters/colour_atlas.py). David's Roblox accessories and #22's hat keep
+ * their own textures: a vertex whose u is 2 or more takes the texel at (u - 2, v), as drawn, never tinted. Loaded the
+ * first time a look wears one (a white texel until then), sRGB, so it reads back linear.
+ */
+const COLOUR_ATLAS: { value: THREE.Texture } = { value: new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1) };
+COLOUR_ATLAS.value.needsUpdate = true;
+let colourAtlasLoading = false;
+function ensureColourAtlas() {
+  if (colourAtlasLoading) return;
+  colourAtlasLoading = true;
+  new THREE.TextureLoader().load(COLOUR_ATLAS_URL, tex => {
+    tex.flipY = false;                       // glTF UVs (top-left origin)
+    tex.colorSpace = THREE.SRGBColorSpace;   // colour: decoded to linear on sampling
+    tex.generateMipmaps = true;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.anisotropy = 4;
+    tex.needsUpdate = true;
+    COLOUR_ATLAS.value = tex;
+  });
+}
+/** Row 314: the hair's soft gloss (David: "matte with subtle gloss"): its roughness, F0 and grazing reflectance. Round 3
+ * (David: "why does it fade off"): grazing reflectance 0.45 -> 0.2, which had washed a light hair's edge-on strands white. */
+const HAIR_GLOSS = { roughness: 0.5, f0: 0.035, f90: 0.2 };
+/** Linear sRGB to OKLab and back (hairColour.ts has the same), and a channel's shift: ab' = [p -q; q p] ab + o tent(L). */
+const HAIR_SHIFT = /* glsl */ `
+vec3 toOklab(vec3 c) {
+  vec3 lms = vec3(dot(c, vec3(0.4122214708, 0.5363325363, 0.0514459929)), dot(c, vec3(0.2119034982, 0.6806995451, 0.1073969566)),
+    dot(c, vec3(0.0883024619, 0.2817188376, 0.6299787005)));
+  lms = pow(max(lms, vec3(0.0)), vec3(1.0 / 3.0));
+  return vec3(dot(lms, vec3(0.2104542553, 0.7936177850, -0.0040720468)), dot(lms, vec3(1.9779984951, -2.4285922050, 0.4505937099)),
+    dot(lms, vec3(0.0259040371, 0.7827717662, -0.8086757660)));
+}
+vec3 fromOklab(vec3 o) {
+  vec3 lms = vec3(dot(o, vec3(1.0, 0.3963377774, 0.2158037573)), dot(o, vec3(1.0, -0.1055613458, -0.0638541728)),
+    dot(o, vec3(1.0, -0.0894841775, -1.2914855480)));
+  lms = lms * lms * lms;
+  return vec3(dot(lms, vec3(4.0767416621, -3.3077115913, 0.2309699292)), dot(lms, vec3(-1.2684380046, 2.6097574011, -0.3413193965)),
+    dot(lms, vec3(-0.0041960863, -0.7034186147, 1.7076147010)));
+}
+vec3 shiftHair(vec3 c, vec4 s, float l) {
+  if (s == vec4(1.0, 0.0, 0.0, 0.0)) return c;            // the style's own colour: the texel as drawn
+  vec3 o = toOklab(c);
+  float tent = clamp(min(o.x / l, (1.0 - o.x) / (1.0 - l)), 0.0, 1.0);
+  vec2 ab = vec2(s.x * o.y - s.y * o.z, s.y * o.y + s.x * o.z) + s.zw * tent;
+  return clamp(fromOklab(vec3(o.x, ab)), 0.0, 1.0);
+}`;
 BODY_MATERIAL.onBeforeCompile = shader => {
   shader.uniforms.uHairAtlas = HAIR_ATLAS;
+  shader.uniforms.uColourAtlas = COLOUR_ATLAS;
   shader.vertexShader = shader.vertexShader
-    .replace("#include <uv_pars_vertex>", "#include <uv_pars_vertex>\nattribute vec3 hairMap;\nattribute vec3 hairAccent;\nvarying vec2 vHairUv;\nvarying vec3 vHairMap;\nvarying vec3 vHairAccent;")
-    .replace("#include <uv_vertex>", "#include <uv_vertex>\nvHairUv = uv;\nvHairMap = hairMap;\nvHairAccent = hairAccent;");
+    .replace("#include <uv_pars_vertex>", "#include <uv_pars_vertex>\nattribute vec3 hairMap;\nattribute vec4 hairA;\nattribute vec4 hairB;\nvarying vec2 vHairUv;\nvarying vec3 vHairMap;\nvarying vec4 vHairA;\nvarying vec4 vHairB;")
+    .replace("#include <uv_vertex>", "#include <uv_vertex>\nvHairUv = uv;\nvHairMap = hairMap;\nvHairA = hairA;\nvHairB = hairB;");
   shader.fragmentShader = shader.fragmentShader
-    .replace("#include <uv_pars_fragment>", `#include <uv_pars_fragment>\nuniform sampler2D uHairAtlas;\nvarying vec2 vHairUv;\nvarying vec3 vHairMap;\nvarying vec3 vHairAccent;\n${HAIR_CHANNEL}`)
-    // in place of the vertex colour's multiply: u < 0, the under-cap (no map: its COLOR_0 and the tint) and every other
-    // surface take the vertex colour; a mapped hairstyle takes the tint (its vertex colour) mixed with the accent and the
-    // cap's fixed colour by their masks, times the shade. (head-v10: it used to divide the vertex colour back out, which
-    // blew up a tint with a near-zero channel into the accent's mask noise: the "glitching" colours.)
+    .replace("#include <uv_pars_fragment>", `#include <uv_pars_fragment>\nuniform sampler2D uHairAtlas;\nuniform sampler2D uColourAtlas;\nvarying vec2 vHairUv;\nvarying vec3 vHairMap;\nvarying vec4 vHairA;\nvarying vec4 vHairB;\n${HAIR_SHIFT}`)
+    // in place of the vertex colour's multiply: u < 0, the under-cap (no texture: its COLOR_0 and the tint, the texture's
+    // median shifted as the texture is) and every other surface take the vertex colour; a mapped hairstyle takes its texel,
+    // each channel shifted on its own (round 2), the fixed one as drawn.
+    // wardrobe batch 2: u >= 2 is a texel of the fixed-colour atlas, drawn as it is (a Roblox accessory, #22's hat)
     .replace("#include <color_fragment>", `#ifdef USE_COLOR
-    if (vHairMap.x > 0.5 && vHairUv.x >= 0.0) {
-      vec3 t = texture2D(uHairAtlas, vHairUv).rgb;
-      float s = hairChannel(t, vHairMap.x) * ${HAIR_MAP_GAIN.toFixed(4)};
-      float a = vHairMap.y > 0.5 ? hairChannel(t, vHairMap.y) : 0.0;
-      float c = vHairMap.z > 0.5 ? hairChannel(t, vHairMap.z) : 0.0;
-      diffuseColor.rgb *= s * mix(mix(vColor, vHairAccent, a), ${glsl(CAP)}, c);
+    if (vHairUv.x > 1.5) {
+      diffuseColor.rgb *= texture2D(uColourAtlas, vec2(vHairUv.x - 2.0, vHairUv.y)).rgb;
+    } else if (vHairMap.x > 0.5 && vHairUv.x >= 0.0) {
+      vec4 t = texture2D(uHairAtlas, vHairUv);
+      float wa = clamp((t.a - 0.6667) * 3.0, 0.0, 1.0), wf = clamp((0.6667 - t.a) * 3.0, 0.0, 1.0), wb = 1.0 - wa - wf;
+      vec3 c = t.rgb * wf;
+      if (wa > 0.0) c += shiftHair(t.rgb, vHairA, vHairMap.y) * wa;
+      if (wb > 0.0) c += shiftHair(t.rgb, vHairB, vHairMap.z) * wb;
+      diffuseColor.rgb *= c;
     } else {
       diffuseColor.rgb *= vColor;
     }
-    #endif`);
+    #endif`)
+    // row 314: a soft, subtle gloss on the hair alone (the body stays matte): rougher than skin's would be, a faint F0
+    .replace("#include <lights_physical_fragment>", `#include <lights_physical_fragment>
+    if (vHairMap.x > 0.5 && vHairUv.x >= 0.0 && vHairUv.x < 1.5) {
+      material.roughness = ${HAIR_GLOSS.roughness.toFixed(2)};
+      material.specularColor = vec3(${HAIR_GLOSS.f0.toFixed(3)});
+      material.specularColorBlended = material.specularColor;
+      material.specularF90 = ${HAIR_GLOSS.f90.toFixed(2)};
+    }`);
 };
-BODY_MATERIAL.customProgramCacheKey = () => "character-body-hairmap-v3";
+BODY_MATERIAL.customProgramCacheKey = () => "character-body-hairmap-v7";
 let decalMaterial: THREE.MeshPhysicalMaterial | null = null;
 const bodies = refCache<THREE.BufferGeometry>();
 const decals = new Map<string, THREE.BufferGeometry>();
@@ -155,10 +218,17 @@ function localBoneTransform(this: THREE.SkinnedMesh, index: number, target: THRE
   return target.applyMatrix4(toLocal.copy(this.matrixWorld).invert());
 }
 
-/** What a look merges (rig.ts mergeLook): the base's skin in the look's skin colour, then each part but its print. */
+/**
+ * What a look merges (rig.ts mergeLook): the base's skin in the look's skin colour, then each part but its print. A hat
+ * leaves out the hair it wins over (round 2: a covering hat's crown, a visor's band), the hood the head it hides
+ * (hidden_cut.py's marks, rig.ts cutIndex).
+ */
 function lookPieces(look: CharacterLook, parts: ResolvedPart[], base: THREE.Object3D, scenes: THREE.Object3D[]) {
-  return [{ root: base, tints: { M_Skin: PALETTE.skin[look.skin] }, keep: (m: string) => m === "M_Skin" },
-    ...parts.map((p, i) => ({ root: scenes[i], tints: p.tints, keep: (m: string) => m !== "M_Decal", map: p.map }))];
+  const hat = parts.map(p => PART_BY_ID.get(p.id)).find(p => p?.hatCut !== undefined);
+  const hooded = parts.some(p => PART_BY_ID.get(p.id)?.coversHead);
+  return [{ root: base, tints: { M_Skin: PALETTE.skin[look.skin] }, keep: (m: string) => m === "M_Skin", cut: hooded ? { name: "_HOODCUT", bit: 0 } : null },
+    ...parts.map((p, i) => ({ root: scenes[i], tints: p.tints, keep: (m: string) => m !== "M_Decal", map: p.map,
+      cut: hat && PART_BY_ID.get(p.id)?.full ? { name: "_HATCUT", bit: hat.hatCut! } : null }))];
 }
 
 /** One character instance: its own bones and mixer, shared geometry/materials. */
@@ -835,7 +905,9 @@ export default function Character({ look, motion, walkSpeed = 7.4, weapon = null
   // While a newly chosen part loads, keep showing the previous look instead of suspending.
   const shown = useDeferredValue(look);
   const parts = useMemo(() => resolveParts(shown), [shown]);
-  useEffect(() => { if (parts.some(p => p.map)) ensureHairAtlas(); }, [parts]);   // the first mapped hairstyle loads the shared atlas
+  // the first mapped hairstyle loads the shared atlas: the world's copy, or the full one for a creator-sized face
+  useEffect(() => { if (parts.some(p => p.map)) ensureHairAtlas(faceSize >= 1024 ? "creator" : "world"); }, [parts, faceSize]);
+  useEffect(() => { if (parts.some(p => p.colour)) ensureColourAtlas(); }, [parts]);   // the first textured accessory loads the colour atlas
   const loaded = useGLTF([BASE_URL, ...parts.map(p => p.url)]) as unknown as Gltf[];
   const atlas = useLoader(THREE.TextureLoader, faceSize >= 1024 ? FACE_ATLAS_URLS.creator : FACE_ATLAS_URLS.world);
   const decalMap = useLoader(THREE.TextureLoader, TSI_DECAL_URL);

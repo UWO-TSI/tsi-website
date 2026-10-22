@@ -9,7 +9,9 @@
 import catalog from "@/data/characters/character_catalog.json";
 import palette from "@/data/characters/palette.json";
 import faceV7 from "@/data/characters/face_v7.json";
+import batch2Pricing from "@/data/characters/batch2-pricing.json";
 import { LOOK_MAX_BYTES } from "@/lib/net/protocol";
+import { hairShift, NO_SHIFT, oklabToHex, oklchToOklab, shiftedMedian, type HairShift, type Oklch } from "./hairColour";
 
 export const CHARACTER_ROOT = "/assets/characters/v6/";
 /** The clip-bearing base: the v6 body with the hand-modeled v7 head (avatar v7). */
@@ -21,37 +23,54 @@ export const LOD_SKIN_URL = `${LOD_ROOT}base/skin.glb`;
 export const LOD2_ROOT = `${CHARACTER_ROOT}lod2/`;
 /** The face layer atlas: 1024 px per face canvas in the creator, the 512 copy in the world (same layout). */
 export const FACE_ATLAS_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas}`, world: `${CHARACTER_ROOT}base/${faceV7.atlas_world}` };
-/** Head fit: the shared shading atlas of the mapped hairstyles (art/characters/hair/import_hair.py). */
-export const HAIR_MAPS_URL = `${CHARACTER_ROOT}${catalog.hairMaps.atlas}`;
-/** A map stores luminance / median / gain: the shader multiplies the tint by map x gain. */
-export const HAIR_MAP_GAIN = catalog.hairMaps.gain;
-/** The fixed colour a hairstyle's cap or visor takes through its cap mask (never the hair tint). */
-export const HAIR_CAP_COLOR = catalog.hairMaps.cap;
+/** Round 2 (David, 2026-10-17): every mapped hairstyle's own source texture, one cell a piece (art/characters/hair/
+ * import_hair.py natural_map): RGB as drawn in Roblox, alpha its recolour channel (1 the hair's colour, 2/3 its second, 1/3
+ * fixed), at 512 px a cell (the creator) and its half-size copy (the world, as the face atlas). A picked colour is a hue
+ * and saturation shift of it (hairColour.ts, Character.tsx). */
+export const HAIR_MAPS_URLS = { creator: `${CHARACTER_ROOT}${catalog.hairMaps.atlas}`, world: `${CHARACTER_ROOT}${catalog.hairMaps.atlas_world}` };
 /** Its second page (David's 19 faces, face_set_305.py), loaded only for a look that wears one of them. */
 export const FACE_ATLAS2_URLS = { creator: `${CHARACTER_ROOT}base/${faceV7.atlas2}`, world: `${CHARACTER_ROOT}base/${faceV7.atlas2_world}` };
-/** head-v10 (row 311): each whole hairstyle's creator tile, baked once at build time (scripts/bake-hair-thumbs.mjs) in a
- * neutral colour on the default head: the tiles never redraw when the colour changes, and show at once. */
+/** head-v10 (row 311): each whole hairstyle's creator tile, baked once at build time (scripts/bake-hair-thumbs.mjs) in its
+ * own colours (round 2) on the default head: the tiles never redraw when the colour changes, and show at once. */
 export const HAIR_THUMB_URL = (id: string) => `${CHARACTER_ROOT}hair/thumbs/${id}.webp`;
+/** Wardrobe batch 2: the fixed-colour atlas (art/characters/colour_atlas.py): David's Roblox accessories and #22's hat keep
+ * their own textures. A vertex whose u is 2 or more draws the texel at (u - 2, v), never tinted (Character.tsx). */
+export const COLOUR_ATLAS_URL = `${CHARACTER_ROOT}colour_atlas.png`;
 /** Ruling 24: the crewneck carries the site's own TSI mark (public/logo.svg, rasterised by the sync script). */
 export const TSI_DECAL_URL = `${CHARACTER_ROOT}decal_tsi_mark.png`;
 
 export type PartSlot = "bangs" | "back" | "top" | "bottom" | "onepiece" | "shoes" | "accessory";
-/** Accessory sub-slots, one item each (ruling 21). */
-export type AccGroup = "face" | "head" | "bag" | "neck";
+/** Accessory sub-slots, one item each (ruling 21); `front` (a tie on the chest) came with wardrobe batch 2. */
+export type AccGroup = "face" | "head" | "bag" | "neck" | "front";
 export interface PartMaterial { name: string; tint?: "outfit" | "hair" | null; default?: number | string | null; decal?: boolean; color?: string }
 export interface CatalogPart {
   id: string; slot: PartSlot; name: string; glb: string; tris: number; materials: PartMaterial[];
   hidesBackHair: boolean; hides: string[]; variantOf?: string; group?: AccGroup;
   /** A whole hairstyle in the back slot (head fit): the bangs are not worn with it. */
   full?: boolean;
-  /** Its channels in the hair shading atlas: tinted by map, not by COLOR_0 alone. */
-  map?: { shade: number; accent?: number; cap?: number };
+  /** Its cell in the hair texture atlas (HAIR_MAPS_URLS) and each recolour channel's median (OKLCh): `a` the hair's colour,
+   * `b` a two-colour hair's second; `fixed`: some of it (a cap, a visor) is never recoloured. */
+  map?: { cell: number; natural: { a?: Oklch; b?: Oklch }; fixed?: boolean };
   /** A two-tone style's second colour: a hair palette index, or "skin" (a fade to the skin), unless the look picks one;
    * an sRGB hex is a fixed colour no look changes (a split-off visor's logo). */
   accent?: { default: number | "skin" | string };
   /** Attached the Roblox way (head-roblox): by its own HairAttachment from hair/roblox_attachments.json; provisional: the
-   * attachment is a seat fit until David copies the real one from Studio. */
-  roblox?: { provisional: boolean };
+   * attachment is a seat fit until David copies the real one from Studio. Wardrobe batch 2's accessories name theirs
+   * (accessories/roblox_attachments.json). */
+  roblox?: { provisional: boolean; attachment?: string };
+  /** Wardrobe batch 2: the item's key in specs/wardrobe/batch2-pricing.json (its mode and price: priceOf). */
+  key?: string;
+  /** Some of its texels come from the fixed-colour atlas (COLOUR_ATLAS_URL): a Roblox accessory, #22's hat. */
+  colourAtlas?: boolean;
+  /** A hat whose crown closes over the hair: a look wearing it draws none of the hair it hides (the hair's `_HATCUT`
+   * marks, art/characters/hidden_cut.py; rig.ts). */
+  coversHair?: boolean;
+  /** Its bit in the hair's `_HATCUT` marks (hidden_cut.py hatcut). */
+  hatCut?: number;
+  /** The bear hood: a look wearing it draws none of the head skin it hides (the base's `_HOODCUT` marks). */
+  coversHead?: boolean;
+  /** Owned with that part, never sold alone (row 314: #22's ushanka and goggles come with hair #22). */
+  grantedBy?: string;
   /** The economy item (crafted) that unlocks this part; its catalogue_ref is this part's id. Such parts are never sold. */
   item?: string;
   /**
@@ -72,7 +91,7 @@ export interface ClipInfo { name: string; length: number; loop: boolean; endsNeu
   /** HookYank: the phase the rod snaps up (the line goes taut). */
   impact?: number }
 
-export const PARTS = [...catalog.outfits, ...catalog.accessories, ...catalog.hair] as CatalogPart[];
+export const PARTS = [...catalog.outfits, ...catalog.accessories, ...catalog.hair, ...catalog.robloxAccessories] as CatalogPart[];
 export const PART_BY_ID = new Map(PARTS.map(p => [p.id, p]));
 export const CLIPS = catalog.clips as ClipInfo[];
 export const CLIP_BY_NAME = new Map(CLIPS.map(c => [c.name, c]));
@@ -114,6 +133,8 @@ export const FACE = faceV7 as unknown as {
   emoteMouth: Record<string, { frames: string[]; rate: number }>;
   /** Creator names of the parts that have no sheet code (face_set_301.py, face_set_305.py). */
   names: Record<string, string>;
+  /** Wardrobe batch 2 (face_set_b2.py): David's whole faces by their pricing key; a priced one gates its parts (faceRef). */
+  faces: Record<string, { id: string; name: string; eyes: string; mouth: string | null; extras: string[] }>;
 };
 /**
  * The cells every character can show whatever it wears: the expressions' forced eyes and mouths and the emote mouths.
@@ -147,7 +168,11 @@ export const PLACE_STEPS = 10;
 /** Which sliders each part has: the mouth sits on the centre line, so it has no spacing. */
 export const PLACE_PARTS: Record<PlacePart, { apart: boolean }> = { eyes: { apart: true }, mouth: { apart: false } };
 
+/** A look's `hair` when it picks no colour: every hairstyle draws its own texture's colours (round 2, the default). */
+export const NATURAL_HAIR = -1;
+
 export interface CharacterLook {
+  /** `hair`: a hair palette index, or NATURAL_HAIR (the hairstyle's own colours). */
   skin: number; hair: number;
   eyes: string; mouth: string; extras: string[];
   bangs: string; back: string;
@@ -155,17 +180,17 @@ export interface CharacterLook {
   acc: Partial<Record<AccGroup, string>>;
   /** Outfit palette index per part id for its first outfit-tinted material; others keep catalogue defaults. */
   colors: Record<string, number>;
-  /** A two-tone hairstyle's accent (hair palette index); absent: the style's own default. */
+  /** A two-tone hairstyle's second colour (hair palette index); absent: the style's own. */
   hairAccent?: number;
   /** A custom hair colour from the creator's colour wheel (sRGB "#RRGGBB", head-v10): it tints the hair over the palette
-   * index `hair`; absent (every look saved before it): the palette colour. Unlocked by owning any shop dye (ownsRef). */
+   * index `hair`; absent (every look saved before it): the palette colour. Unlocked by buying the colour wheel (ownsRef). */
   hairColor?: string;
   /** Face placement from the creator's sliders; absent is today's placement. */
   place?: Partial<Record<PlacePart, Placement>>;
 }
 
 export const DEFAULT_LOOK: CharacterLook = {
-  skin: palette.base_body_defaults.skin, hair: palette.ref_girl_defaults.hair,
+  skin: palette.base_body_defaults.skin, hair: NATURAL_HAIR,
   eyes: "F1.1", mouth: "M1.1", extras: [],
   // head-roblox: the hair is one of David's whole hairstyles (the back slot); no bangs piece exists any more
   bangs: "", back: "hair_bob_pigtail",
@@ -179,13 +204,15 @@ export const DEFAULT_LOOK: CharacterLook = {
 export const OLD_HAIR: Readonly<Record<string, string>> = {
   back_bob: "hair_bob_pigtail", back_bowl: "hair_bowl_cut", back_wolf: "hair_messy_wolf", back_short_spiky: "hair_anime_spikes",
   back_undercut: "hair_swept_fringe", back_long: "hair_long_scruffy", back_wavy_long: "hair_long_scruffy",
-  back_high_pony: "hair_wispy_ponytail", back_bun: "hair_messy_low_pony", back_braid_crown: "hair_hime_short",
+  back_high_pony: "hair_wispy_ponytail", back_bun: "hair_wispy_ponytail", back_braid_crown: "hair_hime_short",
   back_pigtails: "hair_long_pigtails", back_twin_buns: "hair_long_pigtails",
   bangs_straight: "hair_bob_pigtail", bangs_straight_long: "hair_hime_short", bangs_bowl: "hair_bowl_cut", bangs_wispy: "hair_windy_bob",
   bangs_swept_l: "hair_swept_fringe", bangs_swept_r: "hair_swept_fringe", bangs_curtain: "hair_windy_bob",
   bangs_curtain_long: "hair_long_scruffy", bangs_centre_split: "hair_layered_shag", bangs_spiky: "hair_anime_spikes",
   bangs_hime: "hair_hime_short", bangs_choppy: "hair_messy_boy", bangs_swept_back: "hair_waves", bangs_single_strand: "hair_vkei",
   bangs_wavy: "hair_fluffy_boy", bangs_asym_block: "hair_hime_short",
+  // round 3 (David, 2026-10-17): #14, the messy low pony, removed
+  hair_messy_low_pony: "hair_wispy_ponytail",
 };
 /** The whole hairstyle a saved look's hair loads as: its own if it still exists, else its old back's (or lone old fringe's) match. */
 function hairOf(r: Record<string, unknown>): string {
@@ -213,7 +240,7 @@ export function parseLook(raw: unknown): CharacterLook {
   const colors: Record<string, number> = {};
   if (r.colors && typeof r.colors === "object") for (const [id, v] of Object.entries(r.colors)) if (PART_BY_ID.has(id)) colors[id] = index(v, PALETTE.outfit.length, 0);
   const look: CharacterLook = {
-    skin: index(r.skin, PALETTE.skin.length, d.skin), hair: index(r.hair, PALETTE.hair.length, d.hair),
+    skin: index(r.skin, PALETTE.skin.length, d.skin), hair: r.hair === NATURAL_HAIR ? NATURAL_HAIR : index(r.hair, PALETTE.hair.length, d.hair),
     // A saved look's `brows` (and its brows placement) is dropped: eyebrows were removed.
     eyes: faceItem("eyes", r.eyes, d.eyes), mouth: faceItem("mouth", r.mouth, d.mouth),
     extras: Array.isArray(r.extras) ? [...new Set(r.extras.filter((e): e is string => typeof e === "string" && e in FACE.layers.extras.items))] : [],
@@ -318,17 +345,32 @@ export function wornParts(look: CharacterLook): CatalogPart[] {
 }
 
 export interface ResolvedPart { id: string; url: string; /** Its LOD 1 GLB. */ lod: string; /** Its LOD 2 GLB (a whole hairstyle's own; else its LOD 1). */ lod2: string; tints: Record<string, string>; decal: string | null;
-  /** A mapped hairstyle: its atlas channels and accent colour (sRGB hex). */
-  map: { shade: number; accent?: number; cap?: number; accentHex?: string } | null }
-/** The hair's colour on a look (sRGB hex): the colour wheel's pick, else the palette colour. */
-export const hairHex = (look: CharacterLook) => look.hairColor ?? PALETTE.hair[look.hair];
-/** The accent colour of a two-tone hairstyle on a look: the look's pick, else the style's default (a palette colour or the skin). */
+  /** It draws texels from the fixed-colour atlas (COLOUR_ATLAS_URL). */
+  colour: boolean;
+  /** A mapped hairstyle: its texture's shift for each recolour channel (hairColour.ts; identity: drawn as it is). */
+  map: { a: HairShift; b: HairShift } | null }
+/** The colour a look picks for its hair (sRGB hex): the colour wheel's, else the palette colour; null: the style's own. */
+export const hairHex = (look: CharacterLook): string | null => look.hairColor ?? PALETTE.hair[look.hair] ?? null;
+/** A hairstyle without a texture worn in its own colours (NATURAL_HAIR): the palette's default hair colour. */
+const PLAIN_HAIR = PALETTE.hair[palette.ref_girl_defaults.hair];
+/** A hairstyle's own colour (sRGB hex): its texture's median, or PLAIN_HAIR. */
+export const naturalHex = (part: CatalogPart | undefined, channel: "a" | "b" = "a") => {
+  const m = part?.map?.natural[channel];
+  return m ? oklabToHex(oklchToOklab(m)) : PLAIN_HAIR;
+};
+/** The second colour of a two-tone hairstyle on a look: the look's pick, else the style's own (its texture's, the skin). */
 export function hairAccentHex(look: CharacterLook, part: CatalogPart): string | undefined {
-  if (!part.accent) return undefined;
-  const d = part.accent.default;
+  if (!part.map?.natural.b && !part.accent) return undefined;
+  const d = part.accent?.default;
   if (typeof d === "string" && d.startsWith("#")) return d;         // fixed: a visor's logo
   if (look.hairAccent !== undefined) return PALETTE.hair[look.hairAccent];
+  if (part.map?.natural.b) return naturalHex(part, "b");
   return d === "skin" ? PALETTE.skin[look.skin] : PALETTE.hair[d as number];
+}
+/** A mapped hairstyle's shift on a look for each channel: the picked colour's, identity for its own. */
+function hairShifts(look: CharacterLook, part: CatalogPart): { a: HairShift; b: HairShift } {
+  const { a, b } = part.map!.natural, hex = hairHex(look);
+  return { a: a && hex ? hairShift(a, hex) : NO_SHIFT, b: b && look.hairAccent !== undefined ? hairShift(b, PALETTE.hair[look.hairAccent]) : NO_SHIFT };
 }
 /** Parts with their GLB URL and one sRGB hex per tinted material; decal materials without art are dropped. */
 export function resolveParts(look: CharacterLook): ResolvedPart[] {
@@ -338,15 +380,15 @@ export function resolveParts(look: CharacterLook): ResolvedPart[] {
     let first = true;
     for (const m of part.materials) {
       if (m.decal) { if (m.default) decal = TSI_DECAL_URL; continue; }
-      if (m.tint === "hair") tints[m.name] = hairHex(look);
+      // a mapped hairstyle's under-cap (u < 0, no texture) takes its texture's median, shifted as the texture is
+      if (m.tint === "hair") tints[m.name] = part.map?.natural.a ? shiftedMedian(part.map.natural.a, hairShifts(look, part).a) : hairHex(look) ?? PLAIN_HAIR;
       else if (m.tint === "outfit") {
         tints[m.name] = PALETTE.outfit[first && part.id in look.colors ? look.colors[part.id] : (m.default as number)];
         first = false;
       } else if (m.color) tints[m.name] = m.color;
     }
-    const map = part.map ? { shade: part.map.shade, ...(part.map.cap !== undefined ? { cap: part.map.cap } : {}),
-      ...(part.map.accent !== undefined ? { accent: part.map.accent, accentHex: hairAccentHex(look, part) } : {}) } : null;
-    return { id: part.id, url: CHARACTER_ROOT + part.glb, lod: LOD_ROOT + part.glb, lod2: (part.full ? LOD2_ROOT : LOD_ROOT) + part.glb, tints, decal, map };
+    const map = part.map ? hairShifts(look, part) : null;
+    return { id: part.id, url: CHARACTER_ROOT + part.glb, lod: LOD_ROOT + part.glb, lod2: (part.full ? LOD2_ROOT : LOD_ROOT) + part.glb, tints, decal, map, colour: !!part.colourAtlas };
   });
 }
 
@@ -357,7 +399,7 @@ export function partColor(look: CharacterLook, id: string): number | null {
 }
 
 /** Cache key for the merged body mesh (face and pose excluded). */
-export const bodyKey = (look: CharacterLook) => JSON.stringify([look.skin, look.hair, resolveParts(look).map(p => [p.id, p.tints, p.decal, p.map?.accentHex ?? null])]);
+export const bodyKey = (look: CharacterLook) => JSON.stringify([look.skin, look.hair, resolveParts(look).map(p => [p.id, p.tints, p.decal, p.map ?? null])]);
 
 /** Small seeded PRNG (mulberry32) so residents get the same random look every visit. */
 export function seeded(seed: number): () => number {
@@ -392,29 +434,52 @@ export const FREE_HAIR_COLOURS = 6;
 export const STARTER_PARTS: readonly string[] = ["top_tee", "top_hoodie", "top_stripe_ls", "bottom_shorts", "bottom_trousers", "bottom_joggers", "shoes_slipon", "shoes_sneakers"];
 /** Inventory `catalogue_ref` of a hair dye. */
 export const dyeRef = (hair: number) => `hair:${hair}`;
-/** Inventory ref that unlocks a part (a variant counts as its base part); null for free hair styles and face items. */
+/** Wardrobe batch 2's modes and prices (specs/wardrobe/batch2-pricing.json, David's picks, final 2026-10-15). */
+export interface Batch2Price { mode: "free" | "coins" | "gems" | "skip"; price: number | null }
+export const BATCH2_PRICES = batch2Pricing.items as Record<string, Batch2Price>;
+/** A batch-2 item's mode and price by its key ("hair-22", "acc-01", "face-20"); null for anything else. */
+export const priceOf = (key: string | undefined): Batch2Price | null => (key ? BATCH2_PRICES[key] ?? null : null);
+const sold = (key: string | undefined) => { const m = priceOf(key)?.mode; return m === "coins" || m === "gems"; };
+/**
+ * Inventory ref that unlocks a part (a variant counts as its base part); null for free hair styles and face items.
+ * Wardrobe batch 2 (David's prices): a priced hairstyle or accessory is owned like clothes; a free one is offered to
+ * everyone in the starting creator, like the identity parts.
+ */
 export function partRef(id: string): string | null {
   const p = PART_BY_ID.get(id);
-  return !p || p.slot === "bangs" || p.slot === "back" ? null : p.variantOf ?? p.id;
+  if (!p) return null;
+  if (p.grantedBy) return partRef(p.grantedBy);           // row 314: #22's hat comes with the hair
+  if (priceOf(p.key)) return sold(p.key) ? p.variantOf ?? p.id : null;
+  return p.slot === "bangs" || p.slot === "back" ? null : p.variantOf ?? p.id;
 }
+/** Inventory ref of a whole face (wardrobe batch 2): the shop row's catalogue_ref. */
+export const faceRef = (faceId: string) => `face:${faceId}`;
+/** Each face part (eyes, mouth, accent) of a priced whole face -> that face's ref ("a whole face that's priced gates its parts"). */
+const FACE_PART_REF: ReadonlyMap<string, string> = new Map(Object.entries(FACE.faces ?? {}).filter(([key]) => sold(key))
+  .flatMap(([, f]) => [f.eyes, f.mouth, ...f.extras].filter((id): id is string => !!id).map((id): [string, string] => [id, faceRef(f.id)])));
+/** The ref that unlocks a face part: its whole face's when that face is priced; null for every free face part. */
+export const facePartRef = (id: string): string | null => FACE_PART_REF.get(id) ?? null;
+/** The ref that unlocks any creator option: a part's (partRef) or a face part's (facePartRef). */
+export const unlockRef = (id: string): string | null => partRef(id) ?? facePartRef(id);
 /**
- * The colour wheel (head-v10; David, 2026-10-14: "Unlock by buying a dye"): a custom hair colour is unlocked by owning
- * any of the shop dyes. Free when true (one switch).
+ * The colour wheel (head-v10): a custom hair colour. David, 2026-10-17: a one-time 250-Gem unlock, its own shop row
+ * (lib/wallet/catalogue.ts COLOUR_WHEEL_ITEM), in place of "owning any dye unlocks it" (2026-10-14); the dyes stay
+ * preset colours. Free when true (one switch).
  */
 export const CUSTOM_HAIR_FREE = false;
-/** The ref a look with a custom hair colour needs: any shop dye satisfies it (ownsRef). Never an inventory row. */
-export const CUSTOM_HAIR_REF = "hair:custom";
-/** The shop dyes (the palette colours past the free ones). */
-export const DYE_REFS: readonly string[] = PALETTE.hair.slice(FREE_HAIR_COLOURS).map((_, i) => dyeRef(FREE_HAIR_COLOURS + i));
+/** The colour wheel's shop row's catalogue_ref: what a look with a custom hair colour needs (lookRefs, ownsRef). */
+export const CUSTOM_HAIR_REF = "colour-wheel";
 /** Inventory refs owned: a set, or the server's counts by ref. */
 type Owned = { has(ref: string): boolean };
-/** Whether the colour wheel is open to a member owning `owned` (inventory refs). */
-export const customHairUnlocked = (owned: Owned) => CUSTOM_HAIR_FREE || DYE_REFS.some(r => owned.has(r));
-/** Whether `owned` covers a ref lookRefs asks for (CUSTOM_HAIR_REF: any dye). */
+/** Whether the colour wheel is open to a member owning `owned` (inventory refs): the wheel bought, never a dye. */
+export const customHairUnlocked = (owned: Owned) => CUSTOM_HAIR_FREE || owned.has(CUSTOM_HAIR_REF);
+/** Whether `owned` covers a ref lookRefs asks for (CUSTOM_HAIR_REF: the wheel). */
 export const ownsRef = (owned: Owned, ref: string) => (ref === CUSTOM_HAIR_REF ? customHairUnlocked(owned) : owned.has(ref));
-/** Every inventory ref a look needs: worn clothes, a dyed hair colour, and any dye for a custom one (ownsRef). */
+/** Every inventory ref a look needs: worn clothes, a priced hairstyle (wardrobe batch 2), a priced face's parts, a dyed
+ * hair colour, and the colour wheel for a custom one (ownsRef). */
 export function lookRefs(look: CharacterLook): string[] {
-  const refs = [look.top, look.bottom, look.onepiece, look.shoes, ...Object.values(look.acc)].flatMap(id => (id && partRef(id)) || []);
+  const refs = [...new Set([look.top, look.bottom, look.onepiece, look.shoes, look.back, ...Object.values(look.acc)].flatMap(id => (id && partRef(id)) || [])
+    .concat([look.eyes, look.mouth, ...look.extras].flatMap(id => facePartRef(id) ?? [])))];
   const dyes = [look.hair, ...(look.hairAccent !== undefined ? [look.hairAccent] : [])].filter(i => i >= FREE_HAIR_COLOURS);
   return [...refs, ...[...new Set(dyes)].map(dyeRef), ...(look.hairColor && !CUSTOM_HAIR_FREE ? [CUSTOM_HAIR_REF] : [])];
 }
@@ -425,7 +490,8 @@ export function lookRefs(look: CharacterLook): string[] {
  */
 export function randomLook(rand: () => number = Math.random, owned?: ReadonlySet<string>): CharacterLook {
   const pick = <T,>(xs: readonly T[]) => xs[Math.floor(rand() * xs.length)];
-  const ids = (slot: PartSlot) => partsIn(slot).filter(p => !p.variantOf && (!owned || !partRef(p.id) || owned.has(p.id))).map(p => p.id);
+  // wardrobe batch 2 (p.key) stays a creator and shop pick: residents and bots keep the looks they had
+  const ids = (slot: PartSlot) => partsIn(slot).filter(p => !p.variantOf && !p.key && !p.grantedBy && (!owned || !partRef(p.id) || owned.has(p.id))).map(p => p.id);
   let look: CharacterLook = {
     ...DEFAULT_LOOK,
     skin: Math.floor(rand() * PALETTE.skin.length), hair: Math.floor(rand() * (owned ? FREE_HAIR_COLOURS : PALETTE.hair.length)),

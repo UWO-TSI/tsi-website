@@ -83,7 +83,9 @@
    "name": "Messy low ponytail",
    "accent": {
     "default": 11
-   }
+   },
+   "removed": true,
+   "removed_why": "David, 2026-10-17 (round 3): remove the messy low pony entirely (catalogue, creator, seed); it keeps its atlas cell so no other hair moves"
   },
   {
    "file": "15-Vkei-Moe-Boy-Face-Hair-137700402637392.glb",

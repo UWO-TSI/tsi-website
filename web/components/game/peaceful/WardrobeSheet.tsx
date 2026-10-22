@@ -2,10 +2,11 @@
 
 /**
  * Wardrobe (decision 210): the same sheet opens from the closet at home and
- * the shop's fitting room. It is the character creator limited to hair and
- * clothes, showing the real character (A-sheet display: three-quarter view on
- * a patterned backdrop). Clothes and dyes come from /api/economy/inventory;
- * the rest show locked with a link to the shop (ruling on audit item 22).
+ * the shop's fitting room. It is the character creator limited to hair, the
+ * face parts (wardrobe batch 2 sells whole faces) and clothes, showing the real
+ * character (A-sheet display: three-quarter view on a patterned backdrop).
+ * Clothes, dyes and priced items come from /api/economy/inventory; the rest
+ * show locked with a link to the shop (ruling on audit item 22).
  */
 import { useMemo, useState } from "react";
 import CharacterCreator from "../character/CharacterCreator";

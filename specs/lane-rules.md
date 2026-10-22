@@ -20,7 +20,7 @@ These rules are hard. The coordinator merges and pushes; lanes never push.
   - recruitment and applicant-island code stays untouched.
 
 ## Locks (shared machine)
-- **Heavy lock:** full tsc and vitest run under `/private/tmp/claude-501/uwotsi-heavy.lock`, via `/private/tmp/claude-501/-Users-DavidLiu/62203045-4999-4738-af95-c4357660b05d/scratchpad/withlock.sh heavy <cmd>`. Use `vitest --maxWorkers=2`.
+- **Heavy lock:** full tsc and vitest run under `/private/tmp/claude-501/uwotsi-heavy.lock`, via `/Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh (set LANE=game/<lane> for the owner file) heavy <cmd>`. Use `vitest --maxWorkers=2`.
 - **Browser lock:** dev servers, browsers and benches run only while you hold `/private/tmp/claude-501/uwotsi-devserver.lock`.
   - To queue, append your branch name to `/private/tmp/claude-501/uwotsi-devserver.queue`.
   - To take the lock, mkdir it and write the owner file as `game/<lane> <time>`. Take it only when it's free and you're the first line.

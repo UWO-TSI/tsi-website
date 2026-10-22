@@ -28,7 +28,8 @@ const data = join(web, "data/characters");
 const copy = (from, to) => { mkdirSync(dirname(to), { recursive: true }); copyFileSync(from, to); };
 
 const catalog = JSON.parse(readFileSync(join(art, "character_catalog.json"), "utf8"));
-const parts = [...catalog.outfits, ...catalog.accessories, ...catalog.hair];
+// wardrobe batch 2: David's Roblox accessories (art/characters/accessories/import_roblox.py) in their own section
+const parts = [...catalog.outfits, ...catalog.accessories, ...catalog.hair, ...(catalog.robloxAccessories ?? [])];
 for (const part of parts) copy(join(art, part.glb), join(out, part.glb));
 copy(join(art, catalog.base.clips_glb), join(out, catalog.base.clips_glb));
 // The verb library (classes v2): the rig's combat actions only, loaded by the ruins beside the clip base.
@@ -46,7 +47,9 @@ await MeshoptEncoder.ready;
 await MeshoptDecoder.ready;
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ "meshopt.encoder": MeshoptEncoder, "meshopt.decoder": MeshoptDecoder });
 const hairGlbs = catalog.hair.filter(p => p.full).map(p => p.glb);
-for (const dir of ["", "lod1/", "lod2/"]) for (const glb of hairGlbs) {
+// wardrobe batch 2: the Roblox accessories (up to 1,200 triangles) ship meshopt-compressed too, at Full and LOD 1
+const accGlbs = (catalog.robloxAccessories ?? []).map(p => p.glb);
+for (const [dir, glb] of [...["", "lod1/", "lod2/"].flatMap(d => hairGlbs.map(g => [d, g])), ...["", "lod1/"].flatMap(d => accGlbs.map(g => [d, g]))]) {
   const path = join(out, dir, glb);
   const doc = await io.read(path);
   await doc.transform(reorder({ encoder: MeshoptEncoder }));
@@ -58,6 +61,14 @@ const face = JSON.parse(readFileSync(join(art, "v7/face/face_v7.json"), "utf8"))
 for (const f of [face.atlas, face.atlas_world, face.atlas2, face.atlas2_world]) copy(join(art, "v7/face", f), join(out, "base", f));
 // head fit: the full hairstyles' shared shading atlas (art/characters/hair/import_hair.py)
 if (catalog.hairMaps) copy(join(art, catalog.hairMaps.atlas), join(out, catalog.hairMaps.atlas));
+// round 2: its world copy at half size (like the face atlas's), a 2 x 2 box filter on each channel alone: cells and their
+// padding halve exactly, and no texel's colour is weighted by its channel alpha (which a premultiplied resize would do)
+if (catalog.hairMaps?.atlas_world) execFileSync("magick", [join(art, catalog.hairMaps.atlas), "-channel", "RGBA", "-separate", "-filter", "box",
+  "-resize", "50%", "-combine", "-define", "png:color-type=6", join(out, catalog.hairMaps.atlas_world)]);
+// wardrobe batch 2: the fixed-colour atlas (art/characters/colour_atlas.py: the Roblox accessories' and #22's hat's own
+// textures) and David's prices for the batch (specs/wardrobe/batch2-pricing.json)
+copy(join(art, "colour_atlas.png"), join(out, "colour_atlas.png"));
+copy(resolve(web, "../specs/wardrobe/batch2-pricing.json"), join(data, "batch2-pricing.json"));
 for (const name of ["character_catalog.json", "palette.json", "v7/face/face_v7.json", "skull/skull.json"]) copy(join(art, name), join(data, name.replace(/^.*\//, "")));
 
 // Crewneck decal: the site's own mark in cream on transparency, square with padding.
@@ -67,4 +78,4 @@ writeFileSync(tmp, svg.replace(/<svg ([^>]*)>/, '<svg $1 preserveAspectRatio="xM
 execFileSync("rsvg-convert", ["-w", "192", "-h", "184", "-o", join(out, "decal_tsi_mark.png"), tmp]);
 execFileSync("magick", [join(out, "decal_tsi_mark.png"), "-background", "none", "-gravity", "center", "-extent", "256x256", join(out, "decal_tsi_mark.png")]);
 execFileSync("rm", [tmp]);
-console.log(`synced ${parts.length} parts (${hairGlbs.length} hairstyles meshopt-compressed in 3 tiers), base, ${Object.keys(lod).length} LOD 1 and ${Object.keys(lod2).length} LOD 2 GLBs, 4 face atlases (2 pages), the hair atlas, 4 JSON files, TSI decal`);
+console.log(`synced ${parts.length} parts (${hairGlbs.length} hairstyles meshopt-compressed in 3 tiers, ${accGlbs.length} Roblox accessories in 2), base, ${Object.keys(lod).length} LOD 1 and ${Object.keys(lod2).length} LOD 2 GLBs, 4 face atlases (2 pages), the hair and colour atlases, 5 JSON files, TSI decal`);

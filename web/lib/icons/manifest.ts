@@ -15,7 +15,7 @@ import { FISH } from "@/lib/game/fishing";
 import { TOOLS } from "@/lib/game/tools";
 import { flowerUrl } from "@/lib/game/natureParts";
 import { RETIRED_DYE, iconKey } from "./keys";
-import { PALETTE, PART_BY_ID, PARTS } from "@/lib/game/character/look";
+import { COLOUR_ATLAS_URL, CUSTOM_HAIR_REF, PALETTE, PART_BY_ID, PARTS } from "@/lib/game/character/look";
 import { CATALOGUE as PIECES } from "@/lib/homes/catalogue";
 import { FLOORINGS, WALLPAPERS } from "@/lib/homes/layout";
 import type { CatalogueEntry } from "@/lib/wallet/catalogue";
@@ -35,6 +35,8 @@ export interface IconSpec {
   skinned?: boolean;
   /** Stand a model up that was authored lying down (the HHA trophies, as the clubhouse stands them). */
   rotX?: number;
+  /** Wardrobe batch 2: the part draws its own texture from this atlas (u - 2: the fixed-colour atlas, colour_atlas.py). */
+  atlas?: string;
 }
 
 export { iconKey, iconUrl, shopIcon } from "./keys";
@@ -87,7 +89,8 @@ function partTints(id: string): Record<string, string> {
 }
 const partSpec = (id: string): IconSpec | null => {
   const part = PART_BY_ID.get(id);
-  return part ? { key: id, view: part.slot === "accessory" ? "three-quarter" : "front", url: `/assets/characters/v6/${part.glb}`, skinned: true, tints: partTints(id) } : null;
+  return part ? { key: id, view: part.slot === "accessory" ? "three-quarter" : "front", url: `/assets/characters/v6/${part.glb}`, skinned: true, tints: partTints(id),
+    ...(part.colourAtlas ? { atlas: COLOUR_ATLAS_URL } : {}) } : null;
 };
 
 /** Every icon the game needs, each once. */
@@ -105,6 +108,9 @@ export function iconSpecs(shop: readonly Pick<CatalogueEntry, "slug" | "catalogu
     const key = iconKey(e), ref = e.catalogue_ref ?? "";
     if (out.has(key)) continue;
     if (key === "recipe_card" || key === "bobber-lucky" || key.startsWith("merch-")) add({ key, view: "three-quarter", url: `${ITEMS}${key === "recipe_card" ? "recipe_card" : e.slug}.glb` });
+    // wardrobe batch 2: a hairstyle's icon is its creator tile (scripts/bake-hair-thumbs.mjs), a whole face's its parts on
+    // the skin (art/characters/v7/face_icons.py), the colour wheel's the wheel (face_icons.py too): none is rendered here
+    else if ((e.category === "hair" && (PART_BY_ID.has(ref) || ref === CUSTOM_HAIR_REF)) || e.category === "face") continue;
     else if (e.category === "hair") add({ key, view: "three-quarter", url: `${ITEMS}dye_bottle.glb`, tints: { Dye: ref.startsWith("hair:") ? PALETTE.hair[Number(ref.slice(5))] : RETIRED_DYE[e.slug] ?? "#B9B9B9" } });
     else if (e.category === "wallpaper") add({ key, view: "roll", url: `/assets/acnh/interior/wall-${ref}.png` });
     else if (e.category === "flooring") add({ key, view: "tile", url: `/assets/acnh/interior/floor-${ref}.png` });

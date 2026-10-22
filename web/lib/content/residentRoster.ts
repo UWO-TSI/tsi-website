@@ -33,8 +33,9 @@ export const RESIDENT_LOOKS: Record<string, Look> = {
   // The HQ lead, as the first-login greeting proposes her (lib/game/welcome.ts HQ_LEAD on main): the club crew tee, a ponytail (head-roblox: one of David's whole hairstyles).
   wren: look({ skin: 3, hair: 2, eyes: "mochi", mouth: "open_smile", extras: ["freckles"], back: "hair_wispy_ponytail", top: "top_tsi_crew", bottom: "bottom_trousers", shoes: "shoes_boots",
     acc: { bag: "acc_shoulder_bag" }, colors: { bottom_trousers: 4, shoes_boots: 5, acc_shoulder_bag: 3 } }),
-  // The mayor: the club's warm historian. Grey bun, round glasses, a lavender cardigan and a long brown skirt.
-  mayor: look({ skin: 2, hair: 9, eyes: "F1.2", back: "hair_messy_low_pony", top: "top_cardigan", bottom: "bottom_long_skirt", shoes: "shoes_loafers",
+  // The mayor: the club's warm historian. A grey ponytail (round 3: the low pony was removed), round glasses, a lavender
+  // cardigan and a long brown skirt.
+  mayor: look({ skin: 2, hair: 9, eyes: "F1.2", back: "hair_wispy_ponytail", top: "top_cardigan", bottom: "bottom_long_skirt", shoes: "shoes_loafers",
     acc: { face: "acc_glasses_round" }, colors: { top_cardigan: 13, bottom_long_skirt: 5, shoes_loafers: 5 } }),
   // Shopkeeper: deadpan, tidy. Square glasses, a sage sweater vest, charcoal trousers, work boots.
   shopkeeper: look({ skin: 8, hair: 0, mouth: "tiny_smirk", back: "hair_messy_boy", top: "top_sweater_vest", bottom: "bottom_trousers", shoes: "shoes_boots",
