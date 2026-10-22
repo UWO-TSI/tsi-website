@@ -1,6 +1,7 @@
 """The flat UI rollout's before and after sheets (specs/polish/flat-ui.md): one row per surface, before on the left and
 after on the right, each panel labelled. Portrait (phone) shots are fitted whole on the sheet's dark.
   python3 sheet.py <out.webp> "<title>" "<surface>|<before.png>|<after.png>" ...
+More columns: more paths per row, named by LABELS="a,b,c". NOTE="line|line": lines under the title.
 """
 import os, sys
 from PIL import Image, ImageDraw, ImageFont
@@ -23,14 +24,19 @@ def fit(path):
     return cell
 
 
-sheet = Image.new("RGB", (2 * W + 3 * PAD, TOP + len(rows) * (H + CAP + PAD) + PAD), DARK)
+notes = [n for n in os.environ.get("NOTE", "").split("|") if n]
+TOP += 30 * len(notes)
+cols = len(rows[0]) - 1
+sheet = Image.new("RGB", (cols * W + (cols + 1) * PAD, TOP + len(rows) * (H + CAP + PAD) + PAD), DARK)
 d = ImageDraw.Draw(sheet)
 d.text((PAD, 18), title, font=big, fill="#f2efe8")
-for i, (surface, before, after) in enumerate(rows):
+for k, n in enumerate(notes):
+    d.text((PAD, 58 + 30 * k), n, font=plain, fill="#c9c4b8")
+labels = os.environ.get("LABELS", "before,after").split(",")
+colours = ["#e8b4a0", "#a8d8b0", "#a8c4e8", "#e8d8a0"]
+for i, (surface, *paths) in enumerate(rows):
     y = TOP + i * (H + CAP + PAD)
-    # LABELS="cream,flat": other names for the two columns (a choice, not a before and after).
-    left, right = os.environ.get("LABELS", "before,after").split(",")
-    for j, (label, path, colour) in enumerate(((left, before, "#e8b4a0"), (right, after, "#a8d8b0"))):
+    for j, (label, path, colour) in enumerate(zip(labels, paths, colours)):
         x = PAD + j * (W + PAD)
         d.text((x + 2, y + 8), label, font=bold, fill=colour)
         lw = d.textlength(label + "  ", font=bold)
